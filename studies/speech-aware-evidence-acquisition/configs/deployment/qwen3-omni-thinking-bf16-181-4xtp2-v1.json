@@ -1,0 +1,69 @@
+{
+  "basis": "Resident deployment (host A800I-03 = ssh npu2, 8x Ascend 910B4-1 64 GB) of the port's Thinking BF16 fragment on host 181: four instances x tensor-parallel 2, deployed once and left up (owner decision 2026-10-28). max_num_seqs 32 is a PLACEHOLDER ceiling until the synthetic concurrency sweep (scripts/serving/synthetic_sweep.py) picks the knee; experiments vary client concurrency below it. cpusets pin each instance to its own cards' PCI NUMA node(s) read on 181 (2026-10-28: NPU 0-1 node 6 = 192-223, 2-3 node 4 = 128-159, 4-5 node 0 = 0-31, 6-7 node 2 = 64-95; 32 cores per node). The other 128 cores (nodes 1/3/5/7) stay free for the flight harness and CPU encoder runs on the same host. HCCL_IF_BASE_PORT is distinct per instance because all four share the host network namespace (defensive; unverified on NPU).",
+  "bind_host": "127.0.0.1",
+  "busy_threshold_mib": 4096,
+  "data_mount": "/mnt/cephfs/xingchao/omni",
+  "gpu_memory_utilization": 0.92,
+  "host": "A800I-03",
+  "host_card_count": 8,
+  "host_cpu_count": 256,
+  "image": "saea-base:20261027",
+  "instances": [
+    {
+      "cards": [
+        0,
+        1
+      ],
+      "cpuset": "192-223",
+      "env": {
+        "HCCL_IF_BASE_PORT": "61000"
+      },
+      "name": "saea-omni-i0",
+      "port": 8200
+    },
+    {
+      "cards": [
+        2,
+        3
+      ],
+      "cpuset": "128-159",
+      "env": {
+        "HCCL_IF_BASE_PORT": "61200"
+      },
+      "name": "saea-omni-i1",
+      "port": 8201
+    },
+    {
+      "cards": [
+        4,
+        5
+      ],
+      "cpuset": "0-31",
+      "env": {
+        "HCCL_IF_BASE_PORT": "61400"
+      },
+      "name": "saea-omni-i2",
+      "port": 8202
+    },
+    {
+      "cards": [
+        6,
+        7
+      ],
+      "cpuset": "64-95",
+      "env": {
+        "HCCL_IF_BASE_PORT": "61600"
+      },
+      "name": "saea-omni-i3",
+      "port": 8203
+    }
+  ],
+  "max_num_batched_tokens": null,
+  "max_num_seqs": 32,
+  "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+  "model_relpath": "models/qwen3-omni-30b-a3b-thinking",
+  "profile_id": "qwen3-omni-thinking-bf16-181-4xtp2-v1",
+  "schema": "saea-deployment-profile-v1",
+  "shm_size": "16g",
+  "tensor_parallel_size": 2
+}
