@@ -1657,6 +1657,11 @@ class LlamaServerTransport:
         return json.dumps(envelope).encode("utf-8")
 
 
+#: Sentinel default of ``_llama_server_factory(forced_close_message=...)``: read the message from llama-server's
+#: ``--reasoning-budget-message`` flag, as the factory always has.
+_LLAMA_BUDGET_MESSAGE_FLAG = object()
+
+
 def _llama_server_factory(
     values: Mapping[str, object],
     data_root: Path,
@@ -1666,7 +1671,17 @@ def _llama_server_factory(
     runtime_root: Path,
     feature_cache_guard: PreparedFeatureCacheGuard | None = None,
     reasoning_retention: ReasoningRetention | None = None,
+    transport_cls: "type[LlamaServerTransport] | None" = None,
+    forced_close_message: object = _LLAMA_BUDGET_MESSAGE_FLAG,
+    backend_kwargs: Mapping[str, object] | None = None,
 ):
+    """Read one model fragment into a ``LlamaServerTransport``.
+
+    The three trailing keywords exist only for a serving-backend subclass factory (``vllm_transport``): it names its
+    subclass, supplies the forced-close message read from its own server-flag spelling, and adds its own constructor
+    keywords. Their defaults are exactly the llama-server behaviour, and the registry never passes them.
+    """
+
     if "reasoning_bytes_policy" in values:
         # Ruling 330 A: the retention exception is never declarable in a model fragment; only a diagnostic plan builds it.
         raise SessionError("reasoning_bytes_policy cannot be declared in a model fragment")
@@ -1708,7 +1723,7 @@ def _llama_server_factory(
                 raise SessionError(
                     f"native evidence projection configuration is invalid: {error}"
                 ) from error
-    return LlamaServerTransport(
+    return (transport_cls or LlamaServerTransport)(
         str(values["base_url"]),
         data_root,
         session,
@@ -1754,9 +1769,14 @@ def _llama_server_factory(
             {"reasoning_budget_tokens", "answer_reserve_tokens", "enable_thinking", "forced_close_message_sha256"}
             & set(values)
         ),
-        forced_close_message=budget_message_from_server_args(values.get("server_args")),
+        forced_close_message=(
+            budget_message_from_server_args(values.get("server_args"))
+            if forced_close_message is _LLAMA_BUDGET_MESSAGE_FLAG
+            else forced_close_message
+        ),
         reasoning_bytes_policy=RETAIN_DIAGNOSTIC_POLICY if reasoning_retention is not None else None,
         reasoning_retention=reasoning_retention,
+        **(backend_kwargs or {}),
     )
 
 

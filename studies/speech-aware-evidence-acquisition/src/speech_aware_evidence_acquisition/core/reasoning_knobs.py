@@ -88,6 +88,66 @@ def budget_message_from_server_args(server_args: object) -> str | None:
     return found
 
 
+#: vLLM's spelling of the same server-side forced close (vLLM >= 0.30): ``--reasoning-config`` carries a JSON object whose
+#: ``reasoning_end_str`` is the text the engine forces once ``thinking_token_budget`` is spent. Unlike llama-server's
+#: ``--reasoning-budget-message``, that string must itself END the think block, so it is the message followed by the
+#: natural end marker; the message is everything before that marker.
+VLLM_REASONING_CONFIG_FLAG = "--reasoning-config"
+VLLM_REASONING_END_MARKER = "</think>"
+
+
+def vllm_forced_close_message_from_server_args(server_args: object) -> str | None:
+    """The forced-close message inside vLLM's ``--reasoning-config`` ``reasoning_end_str``, else None.
+
+    ``reasoning_end_str`` must be ``<message><whitespace></think><whitespace>``: an end string that does not close the
+    think block would leave the core reasoning past its budget, and a message that is only whitespace could never be
+    detected in the reasoning bytes, so both are refused rather than read as "no message".
+    """
+
+    if not isinstance(server_args, Sequence) or isinstance(server_args, (str, bytes)):
+        return None
+    tokens = [str(token) for token in server_args]
+    found: str | None = None
+    for index, token in enumerate(tokens):
+        if token == VLLM_REASONING_CONFIG_FLAG:
+            if index + 1 >= len(tokens):
+                raise ReasoningKnobError(f"{VLLM_REASONING_CONFIG_FLAG} has no value in server_args")
+            raw = tokens[index + 1]
+        elif token.startswith(VLLM_REASONING_CONFIG_FLAG + "="):
+            raw = token.split("=", 1)[1]
+        else:
+            continue
+        if found is not None:
+            raise ReasoningKnobError(f"{VLLM_REASONING_CONFIG_FLAG} is declared twice in server_args")
+        try:
+            config = json.loads(raw)
+        except ValueError as error:
+            raise ReasoningKnobError(f"{VLLM_REASONING_CONFIG_FLAG} value is not JSON: {error}") from error
+        if not isinstance(config, Mapping):
+            raise ReasoningKnobError(f"{VLLM_REASONING_CONFIG_FLAG} value must be a JSON object")
+        end = config.get("reasoning_end_str")
+        if end is None:
+            found = ""
+            continue
+        if not isinstance(end, str) or not end.rstrip().endswith(VLLM_REASONING_END_MARKER):
+            raise ReasoningKnobError(
+                f"{VLLM_REASONING_CONFIG_FLAG} reasoning_end_str must end with {VLLM_REASONING_END_MARKER!r}"
+            )
+        message = end.rstrip()[: -len(VLLM_REASONING_END_MARKER)].rstrip()
+        if not message.strip():
+            raise ReasoningKnobError(f"{VLLM_REASONING_CONFIG_FLAG} reasoning_end_str carries no forced-close message")
+        found = message
+    return found or None
+
+
+def forced_close_message_from_values(values: Mapping[str, object]) -> tuple[str | None, str]:
+    """The fragment's forced-close message and the server flag that carries it, read in its own transport's spelling."""
+
+    if values.get("transport") == "vllm":
+        return vllm_forced_close_message_from_server_args(values.get("server_args")), VLLM_REASONING_CONFIG_FLAG
+    return budget_message_from_server_args(values.get("server_args")), BUDGET_MESSAGE_FLAG
+
+
 def message_sha256(message: str) -> str:
     return hashlib.sha256(message.encode("utf-8")).hexdigest()
 
@@ -98,11 +158,11 @@ def validate_fragment_knobs(values: Mapping[str, object]) -> None:
     declared = FRAGMENT_KNOB_KEYS & set(values)
     decoding = values.get("decoding_params")
     decoding = decoding if isinstance(decoding, Mapping) else {}
-    message = budget_message_from_server_args(values.get("server_args"))
+    message, flag = forced_close_message_from_values(values)
     if not declared:
         if message is not None:
             raise ReasoningKnobError(
-                f"server_args carries {BUDGET_MESSAGE_FLAG} but the fragment pins no forced_close_message_sha256"
+                f"server_args carries {flag} but the fragment pins no forced_close_message_sha256"
             )
         _refuse_direct_wire_keys(decoding, declared=False, values=values)
         return
@@ -150,15 +210,15 @@ def validate_fragment_knobs(values: Mapping[str, object]) -> None:
             raise ReasoningKnobError("forced_close_message_sha256 must be a lowercase 64-hex digest")
         if message is None:
             raise ReasoningKnobError(
-                f"forced_close_message_sha256 is pinned but server_args carries no {BUDGET_MESSAGE_FLAG}"
+                f"forced_close_message_sha256 is pinned but server_args carries no {flag}"
             )
         if message_sha256(message) != pinned:
             raise ReasoningKnobError(
-                f"sha256 of the {BUDGET_MESSAGE_FLAG} value in server_args differs from forced_close_message_sha256"
+                f"sha256 of the {flag} value in server_args differs from forced_close_message_sha256"
             )
     elif message is not None:
         raise ReasoningKnobError(
-            f"server_args carries {BUDGET_MESSAGE_FLAG} but the fragment pins no forced_close_message_sha256"
+            f"server_args carries {flag} but the fragment pins no forced_close_message_sha256"
         )
 
 

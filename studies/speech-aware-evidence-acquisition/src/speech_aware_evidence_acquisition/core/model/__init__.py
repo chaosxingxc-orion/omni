@@ -85,6 +85,7 @@ from .transport import (  # noqa: E402
     _default_post,
     _llama_server_factory,
 )
+from .vllm_transport import VllmServerTransport  # noqa: E402,F401  (registers the "vllm" transport)
 from .prepared_feature_cache import (  # noqa: E402
     PreparedFeatureCacheError,
     PreparedFeatureCacheGuard,
@@ -125,6 +126,7 @@ __all__ = [
     "PreparedFeatureCacheError",
     "PreparedFeatureCacheGuard",
     "LlamaServerTransport",
+    "VllmServerTransport",
     "OBS_SLICES_SUBDIR",
     "PARENT_DURATION_TOLERANCE_SECONDS",
     "SliceRecord",
