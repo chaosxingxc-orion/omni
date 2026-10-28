@@ -55,6 +55,9 @@ vllm-ascend implements the state on NPU (`vllm_ascend/worker/npu_input_batch.py`
 Forced string: `<the 266-E message>\n</think>\n\n`. The exact whitespace llama.cpp inserts around the message is
 verified on the first NPU smoke by reading the reasoning bytes of one forced close; until then it is an ASSUMPTION.
 
+That the template does not pre-insert `<think>` is verified offline (section 5.5); only the forced-close bytes need the
+server.
+
 ## 5. Speech input
 
 ### 5.1 What Fold B sends
@@ -89,7 +92,7 @@ through vLLM's chat-form `POST /tokenize` (`measure_vllm_multimodal_request`): t
 `chat_template_kwargs` the transport sends, `add_generation_prompt: true`, `add_special_tokens: false`; the server
 runs the full multimodal processor, so the count includes the audio placeholder tokens. A response is refused unless
 `count` is an integer equal to `len(tokens)`. The row schema is unchanged (`measurement: vllm-chat-tokenize`). That
-the count equals the engine's prompt length for an audio request is checked on the NPU smoke (section 10).
+the count equals the engine's prompt length for an audio request is checked on the NPU smoke (section 11).
 
 ### 5.4 Consequences carried by the port
 
@@ -99,6 +102,25 @@ the count equals the engine's prompt length for an audio request is checked on t
 * Knowledge-store supply and prepared recall resolve speech bindings from packet receipts. Fold B's stores are
   text-only, so the port needs no packet bindings there; an arm with speech-bearing stores would need raw bindings
   first (not in scope).
+
+### 5.5 Chat template under vLLM (verified offline)
+
+The shipped Thinking `chat_template.json` was rendered offline with a transformers-style sandboxed jinja2
+environment, and vLLM 0.30's own content-format detector (`vllm.renderers.hf._detect_content_format`) was run on it:
+
+| finding | consequence |
+|---|---|
+| `enable_thinking: true` ends the prompt at `<\|im_start\|>assistant\n`, no `<think>` | the budget counts from the model's own `<think>` (section 4) |
+| `enable_thinking: false` ends it with the empty block `<think>\n\n</think>\n\n` | the decision-278 answer-only re-ask is supported as sent |
+| an earlier assistant turn's reasoning is not rendered | consistent with `drop-reasoning-v1` |
+| one audio part renders exactly one `<\|audio_start\|>...<\|audio_end\|>` span | the raw query slot is one span |
+| vLLM detects the content format as `openai` and wraps every string content into text parts | the system message reaches the template as parts |
+| with `tools`, the template computes `messages[0].content + '\n\n'`, which raises on parts | a system message beside tools fails on vLLM |
+
+Fold B declares no `phase_tools` (a tool-free native arm), so the baseline never sends tools and is unaffected. A
+tool-bearing arm on vLLM needs a decision first: a port chat template that joins the system text parts (a declared
+template difference), or `--chat-template-content-format string` (which changes how vLLM places the audio and would
+need its own layout proof). Neither is implemented. The NPU smoke records the server's behaviour (section 11).
 
 ## 6. Retrieval encoders (implemented)
 
@@ -161,7 +183,14 @@ verified before the preparation lease; the server is contacted inside the lease,
 that attempt with its receipt. The encoder inventory hash already enters every prepared artifact's identity, so the
 regenerated vectors can never be mistaken for the historical ones.
 
-## 7. Serving geometry (draft, verified on NPU)
+## 7. Serving geometry (implemented; values verified on NPU)
+
+The study keeps one geometry `(slots, slot_tokens)`. `core/session/serving.py` spells it per server dialect
+(`GEOMETRY_FLAGS`, `geometry_flags(transport)`): llama-server `-np slots -c slots*slot_tokens`, vLLM
+`--max-num-seqs slots --max-model-len slot_tokens`. `merge_server_args`, `declared_server_geometry` (used by
+`resolve_serving_profile`) and the SLURP runtime view's `configured_geometry` read the fragment's `transport`; every
+transport other than `vllm` keeps the historical flags and error texts. A vLLM argv carrying llama geometry flags or a
+`--flag=value` spelling is refused, so the session reuse predicate compares one spelling with one spelling.
 
 | llama-server (historical) | vLLM |
 |---|---|
@@ -204,10 +233,39 @@ their values for a Linux host are part of the runtime receipt decision (section 
    image digest) beside the llama one, without loosening the existing schema.
 4. Lock entries for the BF16 Thinking model and the three serving views.
 
-## 10. NPU verification plan (when the cards are free)
+## 10. Port cell (draft) and its offline check
+
+Draft fragments (committed, nothing registered):
+
+* model `bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1`: the historical model
+  fragment's geometry, decoding, knobs, forced-close hash, context policy and guard in the vLLM dialect;
+  `prompt_order: native-raw-speech-query-prefix-v1`; no `id_slot`, packet root or llama server env.
+* baseline `slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1`: the historical baseline with
+  `arm: raw-speech-agent-native-tools` and the packet promotion receipt removed; everything else unchanged.
+* experiment `slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1`: the historical cell under its own
+  `-NPU-PORT-V1` run id and `-npu-port-v1` attempt id.
+
+`core.flight.cli check --read-only` builds the flight runtime (compose, lock, SLURP adapter, geometry) and stops at
+the gate's WSL2 execution-authority check (section 9.1). A diagnostic probe outside the repo, which records each gate
+refusal instead of stopping and changes no repo code, shows what remains:
+
+| stage | result |
+|---|---|
+| gate: execution authority | open owner decision 9.1 |
+| gate: exposure preregistration | no row for the port run id (governance: written by the owner before any contact) |
+| gate: runtime receipt | the vLLM runtime receipt does not exist (owner decision 9.3) |
+| gate: lock, carrier dataset entry, E0 | pass |
+| preflight past the gate | passes on 1,080 rows: config, split identity, prompt-budget estimate (ALLOW, 15,090-token operational margin in a 24,576 window), prepared-artifact identity |
+| `prepare-supply` (offline, no gate) | stops at the first missing data-root asset, `knowledge/slurp/semantic/intent-boundaries-v1/release.json` |
+
+The audio files themselves are present and match the dataset fragment's `audio_sha256` pins.
+
+## 11. NPU verification plan (when the cards are free)
 
 1. Serve the Nemotron view; embed 20 SLURP queries; compare rank agreement with the in-process `transformers` causal
    forward on the same NPU (same weights, same causal mask) to separate kernel noise from the attention change.
-2. Serve Thinking BF16; one forced-close request (budget 16) to fix the section-4 string; one context-overflow request
-   to confirm the section-3 relabel; one tool call through the hermes parser.
+2. Serve Thinking BF16 and run `npu_smoke_thinking.py`: forced close (budget 16) to fix the section-4 string; context
+   overflow to confirm the section-3 relabel; one hermes tool call; `/tokenize` against the engine's prompt length for
+   an audio request (section 5.3); the rendered prompt in both thinking modes; the answer-only re-ask; and a RECORD of
+   the system-plus-tools request (section 5.5).
 3. A four-row dry run of Fold B under the port fragment.
