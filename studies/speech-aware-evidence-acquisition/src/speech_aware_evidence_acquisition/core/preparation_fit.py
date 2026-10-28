@@ -1311,7 +1311,10 @@ def build_native_contact_fit_gate(
                             raise PreparationError(
                                 "resident tokenizer has no media marker"
                             )
-                    from .preparation import measure_multimodal_request
+                    from .preparation import (
+                        measure_multimodal_request,
+                        measure_vllm_multimodal_request,
+                    )
                     speech_counts = (
                         (
                             lambda actual: packet_token_counts(
@@ -1336,7 +1339,11 @@ def build_native_contact_fit_gate(
                         fit_multiple=float(values.get("prompt_fit_multiple", 1.0)),
                         rendered_bodies=(body,),
                         request_measure=(
-                            None if feature_packets else measure_multimodal_request
+                            None
+                            if feature_packets
+                            else measure_vllm_multimodal_request
+                            if values.get("transport") == "vllm"
+                            else measure_multimodal_request
                         ),
                     )
                     contact_counts = guarded.counts - before

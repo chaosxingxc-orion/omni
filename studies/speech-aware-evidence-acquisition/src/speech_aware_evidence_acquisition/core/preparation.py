@@ -777,6 +777,75 @@ def measure_request(
     }
 
 
+#: The request keys that change what vLLM's chat renderer produces; everything else in a transport body
+#: (sampling, budgets, response format) is generation-only and has no effect on the prompt token count.
+_VLLM_RENDER_KEYS = ("messages", "tools", "chat_template_kwargs")
+
+
+def measure_vllm_multimodal_request(
+    client,
+    body: Mapping[str, object],
+    *,
+    slot_tokens: int,
+    fit_multiple: float = 1.0,
+    special_tokens: int = 2,
+):
+    """``measure_multimodal_request`` for a vLLM server (port note, npu-vllm-port 2026-10-28).
+
+    vLLM has no ``/v1/chat/completions/input_tokens``. Its chat-form ``POST /tokenize`` runs the same renderer the
+    completion route runs -- the served chat template with the request's ``chat_template_kwargs`` and tools, then the
+    model's multimodal processor, which expands every audio placeholder to its feature length -- and returns the
+    prompt token ids and their ``count``. It never queues a generation. The count must equal the number of ids
+    returned; anything else is a refusal. The study's reserve and margin are applied exactly as on llama-server.
+    """
+
+    maximum = body.get("max_tokens")
+    for value in (maximum, slot_tokens, special_tokens):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise PreparationError("token counts must be nonnegative integers")
+    if (
+        slot_tokens == 0
+        or not math.isfinite(fit_multiple)
+        or fit_multiple < 1
+        or "messages" not in body
+    ):
+        raise PreparationError("invalid multimodal fit request")
+    request = {key: body[key] for key in _VLLM_RENDER_KEYS if key in body}
+    if "model" in body:
+        request["model"] = body["model"]
+    request.update({"add_generation_prompt": True, "add_special_tokens": False})
+    try:
+        response = client.request_json("POST", "/tokenize", request)
+    except Exception as error:
+        raise PreparationError(
+            "vLLM multimodal tokenize capability unavailable; FIT_READY refused"
+        ) from error
+    count = response.get("count") if isinstance(response, Mapping) else None
+    tokens = response.get("tokens") if isinstance(response, Mapping) else None
+    if (
+        isinstance(count, bool)
+        or not isinstance(count, int)
+        or count < 0
+        or not isinstance(tokens, list)
+        or len(tokens) != count
+    ):
+        raise PreparationError("vLLM tokenize returned no consistent token count")
+    required = count + maximum + special_tokens
+    margin = slot_tokens - math.ceil(fit_multiple * required)
+    return {
+        "request_body_sha256": digest(body),
+        "measured_prompt_tokens": count,
+        "measurement": "vllm-chat-tokenize",
+        "maximum_completion_tokens": maximum,
+        "special_tokens": special_tokens,
+        "required_tokens": required,
+        "slot_tokens": slot_tokens,
+        "fit_multiple": fit_multiple,
+        "margin_tokens": margin,
+        "fits": margin >= 0,
+    }
+
+
 def verify_source_receipts(pins, *, repo_root: Path, data_root: Path):
     """Verify complete frozen source receipts, never a partial or placeholder digest."""
     from .model.paths import _normalized_relative_path, _resolve_confined

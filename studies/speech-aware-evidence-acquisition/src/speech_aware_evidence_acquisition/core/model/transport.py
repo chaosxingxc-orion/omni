@@ -115,6 +115,13 @@ _SPEECH_FEATURE_PROMPT_ORDERS = frozenset(
 )
 
 _RAW_NATIVE_PROMPT_ORDER = "native-raw-speech-v1"
+#: Port order (npu-vllm-port, 2026-10-28): the ``speech-query-prefix-v2`` layout -- query speech first, then the stable
+#: evidence, then the mutable evidence and Agent state, with the SAME stable/mutable split -- carrying the ORIGINAL
+#: query audio (an ``input_audio`` part bound by ``raw_speech_query``) in the slot where prefix-v2 carries the query
+#: packet. It exists for servers that compute audio features themselves (vLLM); it has no key-packet slot because no
+#: raw key speech exists, and like ``native-raw-speech-v1`` it refuses historical speech-feature descriptors.
+_RAW_QUERY_PREFIX_PROMPT_ORDER = "native-raw-speech-query-prefix-v1"
+_RAW_NATIVE_PROMPT_ORDERS = frozenset({_RAW_NATIVE_PROMPT_ORDER, _RAW_QUERY_PREFIX_PROMPT_ORDER})
 
 #: Payload fields a TEXT-ONLY CONSTRUCTION request may never carry (see
 #: :func:`_assert_text_only_construction_payload`). The first six are the
@@ -257,6 +264,34 @@ def _ordered_speech_feature_content(
             *state_parts,
         ]
     raise FrozenCoreError(f"unsupported speech feature prompt order {prompt_order!r}")
+
+
+def _raw_query_prefix_content(
+    *,
+    evidence_texts: list[str],
+    audio_part: dict[str, object],
+    state_texts: Sequence[str],
+    knowledge_roles: Sequence[str | None],
+) -> list[dict[str, object]]:
+    """``native-raw-speech-query-prefix-v1`` content: prefix-v2's exact ordering with the audio in the query slot.
+
+    The ordering itself is NOT reimplemented: ``_ordered_speech_feature_content`` orders one placeholder query packet,
+    and the placeholder -- found by identity, never by value -- is replaced by the audio part.
+    """
+
+    placeholder: dict[str, object] = {"type": "input_speech_features", "speech_features": {"role": "query"}}
+    ordered = _ordered_speech_feature_content(
+        prompt_order="speech-query-prefix-v2",
+        evidence_texts=evidence_texts,
+        feature_parts=[placeholder],
+        state_texts=state_texts,
+        knowledge_roles=knowledge_roles,
+    )
+    slots = [index for index, part in enumerate(ordered) if part is placeholder]
+    if len(slots) != 1:
+        raise FrozenCoreError("raw query prefix ordering must place exactly one query slot")
+    ordered[slots[0]] = audio_part
+    return ordered
 
 
 def _assert_agent_history_suffix(
@@ -588,20 +623,21 @@ class LlamaServerTransport:
             "system-instruction-v1",
             "evidence-first-system-v2",
             "evidence-first-system-v3",
-            _RAW_NATIVE_PROMPT_ORDER,
+            *_RAW_NATIVE_PROMPT_ORDERS,
             *_SPEECH_FEATURE_PROMPT_ORDERS,
         ):
             raise SessionError(
                 f"unknown prompt_order {prompt_order!r}; allowed: "
                 "'system-instruction-v1', 'evidence-first-system-v2', "
                 "'evidence-first-system-v3', 'native-raw-speech-v1', "
+                "'native-raw-speech-query-prefix-v1', "
                 f"{', '.join(repr(item) for item in sorted(_SPEECH_FEATURE_PROMPT_ORDERS))}"
             )
         self._prompt_order = prompt_order
         if native_role_query_placement is not None:
             if not isinstance(native_role_query_placement, str) or native_role_query_placement != "before-speech-v1":
                 raise SessionError("native_role_query_placement must be before-speech-v1 or absent")
-            if prompt_order not in _SPEECH_FEATURE_PROMPT_ORDERS | {_RAW_NATIVE_PROMPT_ORDER}:
+            if prompt_order not in _SPEECH_FEATURE_PROMPT_ORDERS | _RAW_NATIVE_PROMPT_ORDERS:
                 raise SessionError("native_role_query_placement requires a native prompt_order")
         self._native_role_query_placement = native_role_query_placement
         # Owner decision 266-E: an opt-in fail-closed guard for a reasoning (thinking) model. The delivered content channel
@@ -628,9 +664,7 @@ class LlamaServerTransport:
                     "native_evidence_projection must be a registered string policy id "
                     f"or None, got {type(native_evidence_projection).__name__}"
                 )
-            if prompt_order not in _SPEECH_FEATURE_PROMPT_ORDERS | {
-                _RAW_NATIVE_PROMPT_ORDER
-            }:
+            if prompt_order not in _SPEECH_FEATURE_PROMPT_ORDERS | _RAW_NATIVE_PROMPT_ORDERS:
                 raise SessionError(
                     "native_evidence_projection is supported only by the native raw "
                     "and speech-feature prompt orders; got prompt_order "
@@ -696,7 +730,7 @@ class LlamaServerTransport:
                 "user text part would put a meaningless content part on the wire"
             )
         if user_turn_text is not None and prompt_order in (
-            _SPEECH_FEATURE_PROMPT_ORDERS | {_RAW_NATIVE_PROMPT_ORDER}
+            _SPEECH_FEATURE_PROMPT_ORDERS | _RAW_NATIVE_PROMPT_ORDERS
         ):
             # The speech-feature orders build their user content through
             # _ordered_speech_feature_content, whose ordering contract is
@@ -744,7 +778,7 @@ class LlamaServerTransport:
                 "describe a prompt that was never sent"
             )
         if omit_system_message and prompt_order in (
-            _SPEECH_FEATURE_PROMPT_ORDERS | {_RAW_NATIVE_PROMPT_ORDER}
+            _SPEECH_FEATURE_PROMPT_ORDERS | _RAW_NATIVE_PROMPT_ORDERS
         ):
             raise SessionError(
                 f"omit_system_message is not supported under prompt_order "
@@ -1179,7 +1213,7 @@ class LlamaServerTransport:
                 workers=8,
                 expected_decoder_gguf_sha256=decoder_sha256,
             )
-        elif self._prompt_order == _RAW_NATIVE_PROMPT_ORDER:
+        elif self._prompt_order in _RAW_NATIVE_PROMPT_ORDERS:
             if audio_part is None:
                 raise FrozenCoreError(
                     "native raw speech requires exactly one original input_audio query"
@@ -1213,11 +1247,19 @@ class LlamaServerTransport:
                     "native raw speech identity differs from the loaded original audio"
                 )
             state_texts = _speech_history_texts(payload.get("history", []))
-            content = [
-                *({"type": "text", "text": text} for text in evidence_texts),
-                audio_part,
-                *({"type": "text", "text": text} for text in state_texts),
-            ]
+            if self._prompt_order == _RAW_QUERY_PREFIX_PROMPT_ORDER:
+                content = _raw_query_prefix_content(
+                    evidence_texts=evidence_texts,
+                    audio_part=audio_part,
+                    state_texts=state_texts,
+                    knowledge_roles=(knowledge_roles if any(knowledge_roles) else ()),
+                )
+            else:
+                content = [
+                    *({"type": "text", "text": text} for text in evidence_texts),
+                    audio_part,
+                    *({"type": "text", "text": text} for text in state_texts),
+                ]
             _assert_agent_history_suffix(
                 prompt_order=self._prompt_order,
                 content=content,
