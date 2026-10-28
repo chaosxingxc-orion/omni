@@ -5431,6 +5431,28 @@ class FlightRuntime:
             )
         return bindings
 
+    def _query_packet_bindings(self) -> Mapping[str, Mapping[str, str]]:
+        """The query descriptor each of this flight's samples is answered with.
+
+        A packet arm reads it from the promotion receipt
+        (:meth:`speech_packet_bindings`). The raw arm has no packet: its query
+        is the original audio, bound by its relpath and SHA-256 exactly as its
+        phase binding binds it (:meth:`_raw_phase_packet_bindings`), so the
+        supply and prepared-recall seams resolve the same identity the
+        dispatch does instead of demanding a promotion receipt the arm never
+        has.
+        """
+
+        if self._composed.values.get("arm") != "raw-speech-agent-native-tools":
+            return self.speech_packet_bindings()
+        raw = self._raw_phase_packet_bindings()
+        missing = sorted(s.sample_id for s in self._samples if s.sample_id not in raw)
+        if missing:
+            raise FlightRuntimeError(
+                f"{len(missing)} sample(s) have no raw query binding, e.g. {missing[:5]}"
+            )
+        return {sample.sample_id: raw[sample.sample_id] for sample in self._samples}
+
     def source_audio_bindings(self, *, include_address: bool = False) -> Mapping[str, Mapping[str, object]]:
         """Bind each validated source-audio identity to its derived packet.
 
@@ -5440,7 +5462,7 @@ class FlightRuntime:
         without treating the derived packet manifest hash as an audio hash.
         """
 
-        packets = self.speech_packet_bindings()
+        packets = self._query_packet_bindings()
         sample_ids = {sample.sample_id for sample in self._samples}
         if set(packets) != sample_ids:
             raise FlightRuntimeError(
@@ -10994,7 +11016,7 @@ class FlightRuntime:
                     prepared_pin[phase],
                     {
                         "knowledge_snapshot": snapshot,
-                        "speech_packet_bindings": self.speech_packet_bindings(),
+                        "speech_packet_bindings": self._query_packet_bindings(),
                         "source_audio_bindings": source_audio_bindings,
                     },
                     specs[phase],

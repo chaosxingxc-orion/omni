@@ -359,6 +359,58 @@ def test_runtime_source_audio_bindings_keep_packet_descriptor_unchanged(tmp_path
     }
 
 
+def _raw_arm_runtime(tmp_path, split):
+    runtime, binding, program = setup_runtime(tmp_path)
+    runtime._composed.values["arm"] = "raw-speech-agent-native-tools"
+    runtime._samples = [
+        SimpleNamespace(sample_id=sid, audio_ref=SimpleNamespace(path=f"audio/{sid}.flac", sha256=sha))
+        for sid, sha in split
+    ]
+    runtime._adapter = SimpleNamespace(
+        preprocess_plan=lambda: {},
+        load_split=lambda split_id: list(runtime._samples) + [
+            SimpleNamespace(sample_id="other", audio_ref=SimpleNamespace(path="audio/other.flac", sha256="f" * 64))
+        ],
+    )
+    runtime._split_id = "TRAIN"
+    runtime.execution_unit_roster = lambda: None
+
+    def no_receipt():
+        raise AssertionError("the raw arm has no promotion receipt")
+
+    runtime.speech_packet_bindings = no_receipt
+    return runtime, binding, program
+
+
+def test_raw_arm_source_audio_bindings_bind_the_original_audio_without_a_promotion_receipt(tmp_path):
+    runtime, _binding, _program = _raw_arm_runtime(tmp_path, [("s1", "a" * 64), ("s2", "c" * 64)])
+    assert runtime.source_audio_bindings() == {
+        "s1": {"packet_id": "audio/s1.flac", "packet_sha256": "a" * 64, "source_audio_sha256": "a" * 64},
+        "s2": {"packet_id": "audio/s2.flac", "packet_sha256": "c" * 64, "source_audio_sha256": "c" * 64},
+    }
+    assert runtime._query_packet_bindings() == {
+        "s1": {"packet_id": "audio/s1.flac", "sha256": "a" * 64},
+        "s2": {"packet_id": "audio/s2.flac", "sha256": "c" * 64},
+    }
+
+
+def test_raw_arm_segment_query_binding_accepts_its_own_audio_and_refuses_other_audio(tmp_path):
+    runtime, _binding, _program = _raw_arm_runtime(tmp_path, [("s1", "a" * 64)])
+    sources = runtime.source_audio_bindings()
+    packets = runtime._query_packet_bindings()
+    good = {"s1": SimpleNamespace(audio_sha256="a" * 64)}
+    phase_supply.assert_segment_query_bindings(good, packets, sources)
+    with pytest.raises(phase_supply.PhaseSupplyError):
+        phase_supply.assert_segment_query_bindings({"s1": SimpleNamespace(audio_sha256="e" * 64)}, packets, sources)
+
+
+def test_raw_arm_refuses_a_sample_its_split_does_not_bind(tmp_path):
+    runtime, _binding, _program = _raw_arm_runtime(tmp_path, [("s1", "a" * 64)])
+    runtime._adapter.load_split = lambda split_id: []
+    with pytest.raises(Exception, match="no raw query binding"):
+        runtime._query_packet_bindings()
+
+
 def test_segmented_source_binding_is_part_of_prepared_artifact_identity(tmp_path):
     runtime, binding, _program = setup_runtime(tmp_path)
     source_bindings = {
