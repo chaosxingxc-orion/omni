@@ -1030,7 +1030,7 @@ def _proposer_construction_material(
 
 
 def merge_server_args(
-    server_args: Sequence[object], *, slots: int, context_tokens: int
+    server_args: Sequence[object], *, slots: int, context_tokens: int, transport: object = None
 ) -> list[str]:
     """The model fragment's own ``server_args``, with ONLY ``-np``/``-c``
     replaced (or appended when absent) from the adapter's serving geometry.
@@ -1053,7 +1053,9 @@ def merge_server_args(
     """
 
     try:
-        return _merge_server_args(server_args, slots=slots, context_tokens=context_tokens)
+        return _merge_server_args(
+            server_args, slots=slots, context_tokens=context_tokens, transport=transport
+        )
     except ServingSessionError as error:
         raise FlightRuntimeError(str(error)) from error
 
@@ -5798,6 +5800,7 @@ class FlightRuntime:
             values.get("server_args", ()),
             slots=int(geometry["slots"]),
             context_tokens=int(geometry["slot_tokens"]) * int(geometry["slots"]),
+            transport=values.get("transport"),
         )
         extra_env_value = values.get("server_env", {})
         if not isinstance(extra_env_value, Mapping):
@@ -5949,6 +5952,7 @@ class FlightRuntime:
             "server_argv": merge_server_args(
                 values.get("server_args", ()), slots=int(geometry["slots"]),
                 context_tokens=int(geometry["slots"]) * int(geometry["slot_tokens"]),
+                transport=values.get("transport"),
             ),
             "server_env": values.get("server_env", {}),
             "host": self._host, "port": self._port,
@@ -5971,6 +5975,7 @@ class FlightRuntime:
             extra_argv=merge_server_args(
                 values.get("server_args", ()), slots=int(geometry["slots"]),
                 context_tokens=int(geometry["slots"]) * int(geometry["slot_tokens"]),
+                transport=values.get("transport"),
             ), extra_env=values.get("server_env", {}),
             configured_model_root=model_materialization_root(values),
         )

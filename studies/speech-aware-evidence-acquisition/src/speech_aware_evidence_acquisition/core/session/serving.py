@@ -185,11 +185,47 @@ class ServingIdentityMismatch(ServingSessionError):
 # ---------------------------------------------------------------------------
 
 
+#: The serving-geometry flags of each server dialect, keyed by the model fragment's ``transport``:
+#: ``(slot-count flag, context flag, the context flag is per slot)``. llama-server's ``-c`` is the TOTAL context that
+#: ``-np`` slots share; vLLM's ``--max-model-len`` is each sequence's own window and ``--max-num-seqs`` bounds how many
+#: run at once, so the same ``(slots, slot_tokens)`` geometry is ``-np slots -c slots*slot_tokens`` on one and
+#: ``--max-num-seqs slots --max-model-len slot_tokens`` on the other (npu-vllm-port, 2026-10-28).
+GEOMETRY_FLAGS: Mapping[str, tuple[str, str, bool]] = {
+    "llama-server": ("-np", "-c", False),
+    "vllm": ("--max-num-seqs", "--max-model-len", True),
+}
+
+
+def _geometry_dialect(transport: object) -> tuple[str, str, bool]:
+    """vLLM speaks its own dialect; every other transport keeps the historical llama-server flags."""
+
+    return GEOMETRY_FLAGS["vllm" if transport == "vllm" else "llama-server"]
+
+
+def _refuse_foreign_geometry_flags(merged: Sequence[str], transport: object) -> None:
+    """A vLLM argv must not carry llama geometry flags or ``--flag=value`` spellings of its own (one dialect, one
+    spelling, so the reuse predicate compares like with like)."""
+
+    if transport != "vllm":
+        return
+    own = GEOMETRY_FLAGS["vllm"][:2]
+    foreign = sorted({"-np", "-c", "--parallel", "--ctx-size"} & set(merged))
+    inline = sorted(token for token in merged if any(token.startswith(flag + "=") for flag in own))
+    if foreign or inline:
+        raise ServingSessionError(
+            f"a vllm fragment's server_args must declare its geometry only as {list(own)} with separate values; "
+            f"found {foreign + inline}"
+        )
+
+
 def merge_server_args(
-    server_args: Sequence[object], *, slots: int, context_tokens: int
+    server_args: Sequence[object], *, slots: int, context_tokens: int, transport: object = None
 ) -> list[str]:
-    """The model fragment's own ``server_args``, with ONLY ``-np``/``-c``
-    replaced (or appended when absent) from the serving geometry.
+    """The model fragment's own ``server_args``, with ONLY the two geometry
+    flags of its server dialect (:data:`GEOMETRY_FLAGS`; ``-np``/``-c`` for
+    llama-server, the default) replaced (or appended when absent) from the
+    serving geometry. ``context_tokens`` is always the TOTAL (slots x slot
+    tokens), whatever the dialect spells.
 
     Nothing else is invented or discarded: ``-ngl``/``-fa``/``-ctk``/``-ctv``
     and every batch and cache flag the fragment declares ride through
@@ -198,8 +234,18 @@ def merge_server_args(
 
     if isinstance(server_args, (str, bytes)) or not isinstance(server_args, Sequence):
         raise ServingSessionError("model config server_args must be a list of strings")
+    slot_flag, context_flag, per_slot = _geometry_dialect(transport)
     merged = [str(value) for value in server_args]
-    for flag, value in (("-np", slots), ("-c", context_tokens)):
+    _refuse_foreign_geometry_flags(merged, transport)
+    if per_slot:
+        if slots <= 0 or context_tokens % slots:
+            raise ServingSessionError(
+                f"context {context_tokens} is not a whole number of tokens per slot for {slots} slot(s)"
+            )
+        context_value = context_tokens // slots
+    else:
+        context_value = context_tokens
+    for flag, value in ((slot_flag, slots), (context_flag, context_value)):
         if flag in merged:
             index = merged.index(flag)
             if index + 1 >= len(merged):
@@ -210,6 +256,41 @@ def merge_server_args(
         else:
             merged.extend([flag, str(value)])
     return merged
+
+
+def declared_server_geometry(
+    server_args: Sequence[object], *, transport: object = None, model_fragment: str = "?"
+) -> tuple[int, int]:
+    """``(slots, slot_tokens)`` exactly as a fragment's ``server_args`` hand them to its server dialect."""
+
+    slot_flag, context_flag, per_slot = _geometry_dialect(transport)
+    args = [str(value) for value in server_args]
+    _refuse_foreign_geometry_flags(args, transport)
+    if context_flag not in args or slot_flag not in args:
+        raise ServingSessionError(
+            f"model fragment {model_fragment!r} must declare {context_flag} and {slot_flag} in server_args; "
+            f"a serving session is exactly one ({context_flag}, {slot_flag}) geometry"
+        )
+    try:
+        declared_context = int(args[args.index(context_flag) + 1])
+        declared_slots = int(args[args.index(slot_flag) + 1])
+    except (IndexError, ValueError) as error:
+        raise ServingSessionError(
+            f"model fragment {model_fragment!r} declares {context_flag}/{slot_flag} without integer values"
+        ) from error
+    if per_slot:
+        if declared_slots <= 0 or declared_context <= 0:
+            raise ServingSessionError(
+                f"model fragment {model_fragment!r} declares {context_flag} {declared_context} "
+                f"{slot_flag} {declared_slots}; both must be positive"
+            )
+        return declared_slots, declared_context
+    if declared_slots <= 0 or declared_context % declared_slots != 0:
+        raise ServingSessionError(
+            f"model fragment {model_fragment!r} declares -c {declared_context} -np {declared_slots}; "
+            "-c must be a positive multiple of -np (a slot's window is -c / -np)"
+        )
+    return declared_slots, declared_context // declared_slots
 
 
 # ---------------------------------------------------------------------------
@@ -1160,18 +1241,10 @@ def resolve_serving_profile(repo_root: Path, model_fragment: str) -> dict[str, o
 
     values = read_fragment(repo_root, "model", model_fragment)
     server_args = [str(value) for value in values.get("server_args", ())]
-    if "-c" not in server_args or "-np" not in server_args:
-        raise ServingSessionError(
-            f"model fragment {model_fragment!r} must declare -c and -np in server_args; "
-            "a serving session is exactly one (-c, -np) geometry"
-        )
-    declared_c = int(server_args[server_args.index("-c") + 1])
-    declared_np = int(server_args[server_args.index("-np") + 1])
-    if declared_np <= 0 or declared_c % declared_np != 0:
-        raise ServingSessionError(
-            f"model fragment {model_fragment!r} declares -c {declared_c} -np {declared_np}; "
-            "-c must be a positive multiple of -np (a slot's window is -c / -np)"
-        )
+    transport = values.get("transport")
+    slots, slot_tokens = declared_server_geometry(
+        server_args, transport=transport, model_fragment=model_fragment
+    )
     # ``server_args`` is the authority for the SERVING geometry, because it is
     # literally what llama-server is handed. Most fragments (the SLURP/
     # Earnings hbmfree family, for one) declare no ``serving_geometry`` key at
@@ -1180,7 +1253,6 @@ def resolve_serving_profile(repo_root: Path, model_fragment: str) -> dict[str, o
     # DOES declare the key is cross-checked against its own flags, exactly as
     # the flight launchers already do (scripts/flights/run_e22_esb_cell.py),
     # so a drifting pair is refused rather than silently served.
-    slots, slot_tokens = declared_np, declared_c // declared_np
     declared_geometry = values.get("serving_geometry")
     if declared_geometry is not None:
         if not isinstance(declared_geometry, Mapping) or set(declared_geometry) != {
@@ -1197,8 +1269,8 @@ def resolve_serving_profile(repo_root: Path, model_fragment: str) -> dict[str, o
             or int(declared_geometry["slot_tokens"]) != slot_tokens
         ):
             raise ServingSessionError(
-                f"model fragment {model_fragment!r} server_args (-c {declared_c} -np "
-                f"{declared_np}) disagree with its declared serving_geometry "
+                f"model fragment {model_fragment!r} server_args ({slots} slot(s) of "
+                f"{slot_tokens} tokens) disagree with its declared serving_geometry "
                 f"{dict(declared_geometry)!r}"
             )
     decoding = values.get("decoding_params")
@@ -1216,7 +1288,7 @@ def resolve_serving_profile(repo_root: Path, model_fragment: str) -> dict[str, o
         "model_fragment_sha256": fragment_hash(values),
         "serving_geometry": dict(geometry),
         "extra_argv": merge_server_args(
-            server_args, slots=slots, context_tokens=slots * slot_tokens
+            server_args, slots=slots, context_tokens=slots * slot_tokens, transport=transport
         ),
         "server_env": {
             str(key): str(value) for key, value in dict(expand_data_root(values.get("server_env", {}))).items()
