@@ -14,7 +14,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 export DL_LOG=${DL_LOG:-$(dirname "$HERE")/dl_logs/q4km-requant.log}
 source "$HERE/_daemonize.sh"
 
-DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao}
+DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
 SRC_DIR=$DR/models/qwen3-omni-30b-a3b-instruct-gguf
 OUT_DIR=$DR/models/qwen3-omni-30b-a3b-instruct-gguf-q4km
 QUANTIZE=${LLAMA_QUANTIZE:-$DR/src/llama.cpp/build/bin/llama-quantize}

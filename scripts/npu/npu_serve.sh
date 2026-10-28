@@ -8,11 +8,11 @@
 # The container mounts ONLY the named cards, so the harness telemetry (read_gpu -> npu-smi) sees exactly them.
 set -euo pipefail
 KIND=$1; shift
-M=/mnt/cephfs/xingchao/models
-LOGS=/mnt/cephfs/xingchao/work/logs
+M=/mnt/cephfs/xingchao/omni/models
+LOGS=/mnt/cephfs/xingchao/omni/work/logs
 IMAGE=saea-base:20261027
 BUSY_MIB=4096
-SRC=/mnt/cephfs/xingchao/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src
+SRC=/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src
 
 devices() {
   local args=(--device /dev/davinci_manager --device /dev/devmm_svm --device /dev/hisi_hdc)
@@ -42,7 +42,7 @@ run() {
     $(devices "$cards") \
     -v /usr/local/Ascend/driver:/usr/local/Ascend/driver:ro \
     -v /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi:ro \
-    -v /mnt/cephfs/xingchao:/mnt/cephfs/xingchao \
+    -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni \
     --entrypoint vllm "$IMAGE" serve "$@" > "$log" 2>&1 < /dev/null &
   echo "started $name; log $log"
 }
@@ -67,7 +67,7 @@ case $KIND in
     VIEW=$1 CARD=$2 PORT=$3
     refuse_busy "$CARD"
     ARGS=$(PYTHONPATH=$SRC \
-      docker run --rm -v /mnt/cephfs/xingchao:/mnt/cephfs/xingchao -e PYTHONPATH \
+      docker run --rm -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni -e PYTHONPATH \
       --entrypoint /opt/saea-venv/bin/python "$IMAGE" -c '
 import json, sys
 from pathlib import Path

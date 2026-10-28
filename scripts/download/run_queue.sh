@@ -37,7 +37,7 @@ LOGS=$(dirname "$HERE")/dl_logs
 export DL_LOG=${DL_LOG:-$LOGS/queue.log}
 source "$HERE/_daemonize.sh"
 
-export SPEECHRL_DATA_DIR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao}
+export SPEECHRL_DATA_DIR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
 # Official huggingface.co, not hf-mirror (owner 2026-10-27). Measured through the corporate proxy the same
 # evening: 14.5-15.1 MB/s per connection, 108 MB/s over 8 ranged connections.
 export SPEECHRL_HF_ENDPOINT=${SPEECHRL_HF_ENDPOINT:-https://huggingface.co}

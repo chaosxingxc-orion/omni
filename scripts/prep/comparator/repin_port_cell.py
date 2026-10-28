@@ -15,7 +15,7 @@ usage: repin_port_cell.py <sealed-shas.json>
 import json, re, sys
 from pathlib import Path
 
-WT = Path("/mnt/cephfs/xingchao/work/dev/wt-port/studies/speech-aware-evidence-acquisition")
+WT = Path("/mnt/cephfs/xingchao/omni/work/dev/wt-port/studies/speech-aware-evidence-acquisition")
 BASE = WT / "configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json"
 EXP = WT / "configs/experiment/slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1.json"
 

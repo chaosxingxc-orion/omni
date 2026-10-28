@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Resident multi-instance vLLM deployment from a study deployment profile (configs/deployment/<id>.json).
 #
-# usage (on the profile's host, e.g. `ssh npu2 bash /mnt/cephfs/xingchao/work/scripts/npu_deploy.sh up <id>`):
+# usage (on the profile's host, e.g. `ssh npu2 bash /mnt/cephfs/xingchao/omni/work/scripts/npu_deploy.sh up <id>`):
 #   bash npu_deploy.sh plan   <profile>  # print the exact per-instance docker commands; runs nothing on a card
 #   bash npu_deploy.sh up     <profile>  # refuse busy cards, start every instance detached + resident, wait for health
 #   bash npu_deploy.sh wait   <profile>  # wait for /health and /v1/models on every instance port

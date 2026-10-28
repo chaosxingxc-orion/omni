@@ -13,7 +13,7 @@ set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 source "$HERE/_daemonize.sh"
 export PATH="$HOME/.local/bin:$PATH"
-DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao}
+DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
 DEST="$DR/datasets/earnings21-22"
 REV=c05ab6fd8b4b627d123c922a22a39e993dd37635
 MATERIALIZER=/home/xingchao/workspace/omni/exploring-l4-intelligence/scripts/data/materialize_lfs_pointers.py

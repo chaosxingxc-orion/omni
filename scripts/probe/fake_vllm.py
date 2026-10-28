@@ -31,4 +31,4 @@ srv = HTTPServer(("127.0.0.1", 18299), H)
 threading.Thread(target=srv.serve_forever, daemon=True).start()
 with wave.open("/tmp/a.wav", "wb") as w:
     w.setnchannels(1); w.setsampwidth(2); w.setframerate(16000); w.writeframes(struct.pack("<100h", *[0]*100))
-sys.exit(subprocess.call([sys.executable, "/mnt/cephfs/xingchao/work/scripts/npu_smoke_thinking.py", "--base-url", "http://127.0.0.1:18299", "--audio", "/tmp/a.wav", "--out", "/tmp/smoke-out"]))
+sys.exit(subprocess.call([sys.executable, "/mnt/cephfs/xingchao/omni/work/scripts/npu_smoke_thinking.py", "--base-url", "http://127.0.0.1:18299", "--audio", "/tmp/a.wav", "--out", "/tmp/smoke-out"]))

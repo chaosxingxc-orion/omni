@@ -13,7 +13,7 @@ from pathlib import Path
 
 tree, experiment, cell_id = Path(sys.argv[1]), sys.argv[2], sys.argv[3]
 repo = tree / "studies/speech-aware-evidence-acquisition"
-data_root = Path("/mnt/cephfs/xingchao")
+data_root = Path("/mnt/cephfs/xingchao/omni")
 from speech_aware_evidence_acquisition.contracts.gate import FrozenCoreGate
 from speech_aware_evidence_acquisition.core.flight.campaign import load_campaign_cells
 from speech_aware_evidence_acquisition.core.flight.cli import build_flight_runtime
@@ -61,7 +61,7 @@ cell = cells[0]
 runtime = build_flight_runtime(
     repo, data_root, model=cell.document["model_fragment"], dataset=cell.document["dataset_fragment"],
     baseline=cell.document["baseline_fragment"], experiment=experiment, run_id=cell.run_id,
-    attempt_id=cell.attempt_id, runtime_root=Path("/mnt/cephfs/xingchao/work/scratch/runtime-root"),
+    attempt_id=cell.attempt_id, runtime_root=Path("/mnt/cephfs/xingchao/omni/work/scratch/runtime-root"),
     lock_path=tree / "docs/datasets.lock.json", gate_factory=RecordingGate,
 )
 runtime._write_resume_declaration = lambda plan: None

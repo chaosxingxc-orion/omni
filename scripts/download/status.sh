@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Show download progress for every asset under SPEECHRL_DATA_DIR.
-DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao}
+DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
 LOGS=/home/xingchao/workspace/omni/dl_logs
 echo "=== queue"
 tail -n 4 "$LOGS/queue.log" 2>/dev/null

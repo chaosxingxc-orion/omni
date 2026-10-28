@@ -2,11 +2,11 @@
 # Launch the registered port MF-7b KEYS pass (SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1) detached on this host
 # (npu): CPU float32, 4 pinned workers x 16 threads on cores 128-191; when it seals, the model-free kus3 conversion
 # (build_slurp_kus3_vectors.py --facets-only) writes vectors/slurp-kus3/facet-vectors.jsonl.
-# usage: bash port_mf7b_keys.sh       log: /mnt/cephfs/xingchao/work/logs/port-mf7b-keys-<stamp>.log
+# usage: bash port_mf7b_keys.sh       log: /mnt/cephfs/xingchao/omni/work/logs/port-mf7b-keys-<stamp>.log
 set -euo pipefail
-TREE=${TREE:-/mnt/cephfs/xingchao/work/dev/umbrella}
+TREE=${TREE:-/mnt/cephfs/xingchao/omni/work/dev/umbrella}
 S=$TREE/studies/speech-aware-evidence-acquisition
-D=/mnt/cephfs/xingchao
+D=/mnt/cephfs/xingchao/omni
 NAME=saea-port-mf7b-keys
 ROW=SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1
 LOG=$D/work/logs/port-mf7b-keys-$(date +%Y%m%dT%H%M%S).log

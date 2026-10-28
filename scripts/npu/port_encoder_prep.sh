@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Launch ONE registered port encoder preparation (CPU float32 pool, cores 128-191) detached on this host (npu).
-# usage: bash port_encoder_prep.sh <fold-b|keys>    log: /mnt/cephfs/xingchao/work/logs/port-encoder-<run>-<stamp>.log
+# usage: bash port_encoder_prep.sh <fold-b|keys>    log: /mnt/cephfs/xingchao/omni/work/logs/port-encoder-<run>-<stamp>.log
 # The runtime config is written create-only and bound to the clean HEAD. The runtime itself admits the plan
 # (execution authority, exposure row, lock, protocol, inventory pins) before any contact.
 set -euo pipefail
 RUN=$1
-TREE=${TREE:-/mnt/cephfs/xingchao/work/dev/umbrella}
+TREE=${TREE:-/mnt/cephfs/xingchao/omni/work/dev/umbrella}
 S=$TREE/studies/speech-aware-evidence-acquisition
-D=/mnt/cephfs/xingchao
+D=/mnt/cephfs/xingchao/omni
 NAME=saea-port-encoder-$RUN
 LOG=$D/work/logs/port-encoder-$RUN-$(date +%Y%m%dT%H%M%S).log
 mkdir -p "$D/work/logs"

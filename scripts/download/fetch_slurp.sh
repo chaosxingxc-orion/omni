@@ -7,7 +7,7 @@
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 source "$HERE/_daemonize.sh"
-DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao}
+DR=${SPEECHRL_DATA_DIR:-/mnt/cephfs/xingchao/omni}
 REV=8eb16545762be97ace75334109d73824217311f1
 REPO="$DR/repos/slurp" AUDIO="$DR/datasets/slurp"
 
