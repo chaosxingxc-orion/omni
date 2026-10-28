@@ -217,7 +217,11 @@ def encode(
                 "truncation": False,
             }
     inputs = processor(**kwargs)
-    if require_complete_audio and audio is not None:
+    # Coverage is checked on EVERY audio call, bounded or not: without the explicit audio bound the processor hands
+    # the tokenizer's max_length (32,768 for nemotron) to the feature extractor, which silently cuts each clip to
+    # its first 2.048 s. An unbounded call that would truncate is refused rather than returning a vector of a
+    # different clip (npu-vllm-port, 2026-10-29); bounded calls -- every sealed path -- are unchanged.
+    if audio is not None:
         mask = inputs.get("feature_attention_mask")
         hop = int(processor.feature_extractor.hop_length)
         expected = [math.ceil(len(wave) / hop) for wave in audio]

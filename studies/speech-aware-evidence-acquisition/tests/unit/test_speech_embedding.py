@@ -295,3 +295,37 @@ def test_audio_frontend_coverage_and_token_bound_are_checked_before_forward(
         assert np.allclose(encode(*args, **options), [[2**-0.5, 2**-0.5]])
         assert len(calls) == 1
         assert forward_events == ["encoder_forward_started", "encoder_forward_finished"]
+
+
+@pytest.mark.parametrize("audio_frames,error", [(32, "complete frame coverage"), (40, None)])
+def test_an_unbounded_audio_call_that_truncates_is_refused_not_encoded(audio_frames, error):
+    """Without the explicit audio bound the real processor hands the tokenizer's max_length to the feature extractor
+    and silently cuts the clip (nemotron: 32,768 samples = 2.048 s). Coverage is therefore checked on every audio
+    call: a truncated frame count is refused before the forward; a complete one encodes as before."""
+
+    import torch
+
+    class Processor:
+        feature_extractor = SimpleNamespace(hop_length=160)
+
+        def __call__(self, **kwargs):
+            assert "audio_kwargs" not in kwargs
+            return {
+                "feature_attention_mask": torch.ones((1, audio_frames)),
+                "attention_mask": torch.ones((1, 4)),
+            }
+
+    calls = []
+
+    def model(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(hidden_states=[torch.ones((1, 4, 2))])
+
+    args = (Processor(), model, ["query"], [np.zeros(6400, dtype="float32")])
+    if error:
+        with pytest.raises(SpeechEmbeddingError, match=error):
+            encode(*args, device="cpu")
+        assert not calls
+    else:
+        assert np.allclose(encode(*args, device="cpu"), [[2**-0.5, 2**-0.5]])
+        assert len(calls) == 1
