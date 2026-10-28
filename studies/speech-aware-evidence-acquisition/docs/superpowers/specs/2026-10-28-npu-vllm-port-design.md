@@ -183,6 +183,72 @@ verified before the preparation lease; the server is contacted inside the lease,
 that attempt with its receipt. The encoder inventory hash already enters every prepared artifact's identity, so the
 regenerated vectors can never be mistaken for the historical ones.
 
+### 6.4 CPU encoder runtime (implemented; no NPU needed)
+
+The Fold B cell reads only pre-sealed vectors and never contacts an encoder in flight. All three encoder-built
+inputs can therefore be built on the Ascend host's CPUs:
+
+- the kus3 TRAIN texts (11,514);
+- the intent-boundary keys (60);
+- the Fold B speech queries (1,080 recordings, 3,155 s).
+
+**Measurements** (Kunpeng-920, synthetic inputs only):
+
+- **dtype:** fp32 GEMM reaches 644 GFLOPS on 64 threads. bf16 is software-emulated at 74 GFLOPS, so the CPU runtime is
+  `cpu-float32`. On four synthetic inputs, fp32 and bf16 vectors agree to cosine 0.9997-0.9999.
+- **threads:** the saea-base image sets `OMP_NUM_THREADS=1`. Every CPU worker must set its own thread count.
+- **worker split** on cores 128-191 (NUMA nodes 4 and 5, each worker doing batch-one forwards):
+
+  | workers x threads | text/s | audio (3 s)/s |
+  |---|---|---|
+  | 1 x 64 | 1.37 | 0.69 |
+  | 2 x 32 | 2.19 | 1.05 |
+  | 4 x 16 | 2.54 | 1.25 |
+  | 8 x 8 | 2.03 | 1.25 |
+  | 16 x 4 | 1.47 | 0.95 |
+
+  Throughput peaks at 4 x 16, which puts two workers on each 32-core NUMA node. More nodes add throughput
+  roughly linearly.
+
+**Inventory and backend.** The schema `saea-cpu-encoder-inventory-v1` (`core/cpu_encoder_pool.py`) pins:
+
+- the checkpoint files, as the historical inventory does;
+- the runtime;
+- the worker interpreter (the image's system Python, which has torch; the harness venv does not);
+- the worker count, threads per worker and first core;
+- `torch`/`transformers` versions, which each worker verifies in its own interpreter.
+
+`verified_backend` runs this inventory only on the default backend's CPU pool.
+
+**Seals.**
+
+- The speech-query and text-facet preparations seal unique items in windows of `workers` contacts.
+- `prepare_artifact_batch` persists every start marker of a window before one charged `contact(batch=True)`.
+- An interrupted window is therefore never replayed, and the cache bytes, index bytes and accounting equal the
+  single-contact path's.
+- Each contact is its own batch-one forward on a fixed thread count, so the pool size never changes a vector. A live
+  smoke gave bit-identical vectors on two workers.
+
+**MF-7b key pass.** The kus3 TRAIN-text pass keeps its historical 16-item batches and spreads whole batches over pinned
+workers (`--runtime cpu-float32 --workers N --cores A-B`). `build_slurp_kus3_vectors.py --facets-only` writes the one
+file Fold B pins.
+
+**Cost at 4 x 16 on two NUMA nodes:**
+
+| input | time |
+|---|---|
+| kus3 | about 75 min at batch one (batch 16 is faster) |
+| Fold B speech | about 15 min |
+| intent keys | about 1 min |
+
+**Declared difference:** CPU float32, not CUDA bfloat16.
+
+**Still open:**
+
+- The kus3 input `vectors/slurp-mf7/train-facets.jsonl` (11,514 TRAIN content facets) is absent on the port data root,
+  and no repo script builds it.
+- Every registered encoder run still waits on decision 9.1.
+
 ## 7. Serving geometry (implemented; values verified on NPU)
 
 The study keeps one geometry `(slots, slot_tokens)`. `core/session/serving.py` spells it per server dialect
@@ -224,6 +290,7 @@ their values for a Linux host are part of the runtime receipt decision (section 
    historical structure, rules and support, but new card text written by root (this port's agent session) on
    2026-10-28. They were not written by the Thinking model. Every knowledge-bound number is measured against these
    cards, not the sealed ones (`docs/readiness/2026-10-28-slurp-semantic-authoring-root-review-npu-port-v1.md`).
+7. CPU float32 retrieval encoder (section 6.4) instead of CUDA bfloat16; the port's vectors are all built on it.
 
 ## 9. OPEN owner decisions (not implemented)
 

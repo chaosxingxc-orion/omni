@@ -49,12 +49,12 @@
         }
       },
       "release": {
-        "relpath": "knowledge/slurp/semantic/intent-boundaries-v1/release.json",
-        "sha256": "2e51c14b4f1c3a122968bc0fd7809523470aad80923ff87c1ce9992ed8d3beb4"
+        "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/release.json",
+        "sha256": "22242e839627a895d3bcc450002a90fd64ceddef606446febe19a5b8a895dc06"
       },
       "snapshot": {
-        "relpath": "knowledge/slurp/semantic/intent-boundaries-v1/snapshot.json",
-        "sha256": "5520b8449b627530227563d1f8db71f8a391f20f7d0ff7d7bd439e28ec6e48fe"
+        "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/snapshot.json",
+        "sha256": "cb6ef966cb3a68a49c325d0bfa643e9e97402d963a49bc93c0c15024fc62eabc"
       },
       "store_role": "intent-boundaries"
     },
@@ -73,12 +73,12 @@
         }
       },
       "release": {
-        "relpath": "knowledge/slurp/semantic/slot-contracts-v2/release.json",
-        "sha256": "f8e42d4ff1b220f45b26397340149566544cf5b13d7453fbc46a2b5c3400d11b"
+        "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v2/release.json",
+        "sha256": "2f11a748dbd6b61c358ba9283a34b6e96fdabbb1cb1a62ff6468c48f58a1c63c"
       },
       "snapshot": {
-        "relpath": "knowledge/slurp/semantic/slot-contracts-v2/snapshot.json",
-        "sha256": "d5992bd12687cbd0204c14fc4e29f987697b8751321d524d7707229032f5bdec"
+        "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v2/snapshot.json",
+        "sha256": "e035c1b827b10cb711c7c31d345deb5e668489679b0d3979acfc95427f6e2a5e"
       },
       "store_role": "slot-contracts"
     },
@@ -410,24 +410,24 @@
   "preflight_budget_mode": "defer-to-native-contact-fit",
   "preparation_source_receipts": [
     {
-      "relpath": "knowledge/slurp/semantic/intent-boundaries-v1/completion.json",
+      "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/completion.json",
       "root": "data",
-      "sha256": "ebd60aca7e16e647c750a59370fce8010d55f3b57375d202817a4a08da1f4a5e"
+      "sha256": "7b7e4744caec975d9fa000ec14c4f47f2bb072d1f129016e114382e98042b294"
     },
     {
-      "relpath": "knowledge/slurp/semantic/intent-boundaries-v1/release.json",
+      "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/release.json",
       "root": "data",
-      "sha256": "2e51c14b4f1c3a122968bc0fd7809523470aad80923ff87c1ce9992ed8d3beb4"
+      "sha256": "22242e839627a895d3bcc450002a90fd64ceddef606446febe19a5b8a895dc06"
     },
     {
-      "relpath": "knowledge/slurp/semantic/slot-contracts-v1/completion.json",
+      "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v1/completion.json",
       "root": "data",
-      "sha256": "7acb644871b037f7123adec0c8fd7283ab9215d67c12fc0a32748a67a0f9dc51"
+      "sha256": "894937819636aaeed206d96e4e806be03712341a9ed94312d919201807272d19"
     },
     {
-      "relpath": "knowledge/slurp/semantic/slot-contracts-v1/release.json",
+      "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v1/release.json",
       "root": "data",
-      "sha256": "8a29c48bfc5aed2eb27ce38073252d3fc608c9102aa8b8095a072667289b4f3e"
+      "sha256": "19723a2a8996bb189e9c6312ae56903a87c9effc323bdde4bf28aaa2a8952341"
     },
     {
       "relpath": "preparation-runs/SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-V1/encode-v1/receipt.json",
