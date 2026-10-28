@@ -19,6 +19,7 @@ from .plan import (
     MODEL_TOUCH_PROFILES,
     TEXT_ENCODER_PLAN_SCHEMA,
     ExecutionPlan,
+    assert_formal_execution_authority,
     assert_wsl_execution_environment,
 )
 
@@ -68,13 +69,14 @@ def assert_registered_tool_plan(
     """Admit a pinned, local frozen retrieval-encoder preparation plan.
 
     The caller must perform its own encoder invocation only after this returns.
-    This function checks WSL authority, the exact ``ExecutionPlan`` type and
+    This function checks the formal execution authority (WSL2, or the owner-authorized
+    Ascend container of decision 9.1), the exact ``ExecutionPlan`` type and
     attempt id, pinned lock/protocol bytes, and the shared carrier/exposure
     preregistration checks.  It intentionally has no model-runtime or corpus
     dependency.
     """
 
-    assert_wsl_execution_environment()
+    assert_formal_execution_authority(wsl=assert_wsl_execution_environment)
     if type(plan) is not ExecutionPlan:
         raise ExecutionScopeError("tool plan requires the exact ExecutionPlan contract type")
     plan.validate()

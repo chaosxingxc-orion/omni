@@ -243,11 +243,12 @@ file Fold B pins.
 
 **Declared difference:** CPU float32, not CUDA bfloat16.
 
-**Still open:**
+**Inputs and authority (2026-10-28):**
 
-- The kus3 input `vectors/slurp-mf7/train-facets.jsonl` (11,514 TRAIN content facets) is absent on the port data root,
-  and no repo script builds it.
-- Every registered encoder run still waits on decision 9.1.
+- `scripts/build_slurp_mf7_train_facets.py` rebuilds the kus3 input `vectors/slurp-mf7/train-facets.jsonl` model-free:
+  11,514 rows, sha256 `3252d195…`. It refuses unless the `size-full` snapshot rebuilds to its pin `e27b2745…`. No
+  historical pin exists for the file itself.
+- Decision 9.1 is decided. Registered encoder runs execute in the `saea-ascend-authority` container.
 
 ## 7. Serving geometry (implemented; values verified on NPU)
 
@@ -292,11 +293,16 @@ their values for a Linux host are part of the runtime receipt decision (section 
    cards, not the sealed ones (`docs/readiness/2026-10-28-slurp-semantic-authoring-root-review-npu-port-v1.md`).
 7. CPU float32 retrieval encoder (section 6.4) instead of CUDA bfloat16; the port's vectors are all built on it.
 
-## 9. OPEN owner decisions (not implemented)
+## 9. Owner decisions (9.1 and 9.5 decided; 9.2-9.4 open)
 
-1. Execution authority. `CLAUDE.md` names WSL2 as the sole formal execution authority and its gate must not be
-   weakened. The port needs a dated owner decision that ADDS an Ascend NPU container authority (the WSL2 check and its
-   guard tests unchanged), or a ruling that port runs are unofficial and outside the gate.
+1. DECIDED 2026-10-28 (owner: "继续吧，授权执行权限，注意生成的过程后台运行", i.e. continue, execution
+   authority granted, run generation in the background): an Ascend container authority is ADDED beside WSL2.
+   `contracts.plan.assert_ascend_container_execution_environment` admits a process inside a container with
+   hostname `saea-ascend-authority` on a host the record
+   `docs/readiness/2026-10-28-execution-authority-ascend-container-v1.json` names (175 and 181, by machine and
+   kernel release). `assert_formal_execution_authority` tries WSL2 first and is what `FrozenCoreGate` and the
+   tool-plan admission call; `assert_wsl_execution_environment` and its guard tests are unchanged, and a
+   test or probe container under another hostname is still refused. The llama-server spawn stays WSL2-only.
 2. Session identity. The transport re-verifies, on every send, that a live process running the pinned binary owns the
    listening socket. Proposal: run `vllm serve` in the same container as the harness and pin the Python interpreter,
    the vLLM and vllm-ascend source trees and the image digest as the "binary".
@@ -324,7 +330,7 @@ refusal instead of stopping and changes no repo code, shows what remains:
 
 | stage | result |
 |---|---|
-| gate: execution authority | open owner decision 9.1 |
+| gate: execution authority | open owner decision 9.1 at the time; decided 2026-10-28 |
 | gate: exposure preregistration | no row for the port run id (governance: written by the owner before any contact) |
 | gate: runtime receipt | the vLLM runtime receipt does not exist (owner decision 9.3) |
 | gate: lock, carrier dataset entry, E0 | pass |

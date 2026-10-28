@@ -76,6 +76,10 @@ build commit plus per-file GGUF SHA-256. Record every model or tool contact in
 ## Environment and checks
 
 - WSL2 `Ubuntu-24.04`; Python 3.12 in `~/.venvs/speechrl`.
+- Second formal execution authority (owner, 2026-10-28, NPU port decision 9.1): the Ascend container
+  `saea-ascend-authority` on the hosts named in
+  `docs/readiness/2026-10-28-execution-authority-ascend-container-v1.json`, for the NPU port only. The
+  WSL2 check is unchanged; gates call `assert_formal_execution_authority`.
 - Install: `uv pip install -e ".[dev]"`. Test: `pytest`.
 - Hot paths run on Linux-native ext4, never on `/mnt/*` (9p): feature packets, caches, re-pin/flip loops and any git-heavy tooling run from an ext4 worktree or ext4 data path; the `/mnt/d` master is the single writer and takes only fast-forwards from `scripts/flights/batch/flip_in_ext4.sh` (owner 2026-10-12; measured 38 s vs 0.8 s per CLI import, 7.6 s vs 0.4 s per git status).
 - Offline gates: `python scripts/checks/engineering_base_check.py`,

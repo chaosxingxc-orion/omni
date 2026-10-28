@@ -1,0 +1,20 @@
+{
+  "schema": "saea-ascend-container-authority-v1",
+  "dated_owner_decision": "NPU port design decision 9.1, decided by the owner on 2026-10-28: an Ascend NPU container authority is ADDED beside WSL2; the WSL2 check and its guard tests are unchanged",
+  "owner_words": "继续吧，授权执行权限，注意生成的过程后台运行",
+  "scope": "The NPU / vLLM-Ascend port of the Thinking Fold B baseline (docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md): its registered encoder preparations on the CPU float32 runtime (section 6.4) and its flights. Every other gate check still applies; session identity, the vLLM runtime receipt and the lock entries remain open owner decisions 9.2-9.4.",
+  "hosts": [
+    {
+      "name": "npu-host-175",
+      "machine": "aarch64",
+      "kernel_release": "5.15.0-25-generic"
+    },
+    {
+      "name": "npu-host-181",
+      "machine": "aarch64",
+      "kernel_release": "5.15.0-25-generic"
+    }
+  ],
+  "container_hostname": "saea-ascend-authority",
+  "image": "saea-base:20261027 (175: sha256:477228c6fb8bbd4e3646078696051f2a84e3b4dc84fdc021fac6ffa1d1ecd88f; 181: sha256:ebd6a3c104fc76f63b5843429bfa9a398428cfa4e1ca4de0ea9d36c15b19b5ef)"
+}
