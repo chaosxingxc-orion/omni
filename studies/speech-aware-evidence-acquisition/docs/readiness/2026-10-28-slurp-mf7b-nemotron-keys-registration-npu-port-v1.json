@@ -1,0 +1,63 @@
+{
+  "declared_difference": "CPU float32 retrieval encoder (declared difference 8.7, design section 6.4): pinned pool of 4 workers x 16 threads on cores 128-191 of the Ascend host, batch-one forwards; planned_gpu_hours is the attempt's wall-clock ceiling and the actual GPU/NPU hours are 0. Attention geometry FORCED CAUSAL on every text layer and measured on the loaded weights at worker start (declared difference 8.4; as shipped the tower is bidirectional at batch one and causal in a padded batch, design section 6.4)",
+  "entry": [
+    "scripts/slurp_mf7b_nemotron_embedding_pass.py",
+    "--sets",
+    "keys",
+    "--runtime",
+    "cpu-float32",
+    "--workers",
+    "4",
+    "--cores",
+    "128-191",
+    "--attention-geometry",
+    "causal",
+    "--exposure-row",
+    "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1"
+  ],
+  "follow_on": "scripts/build_slurp_kus3_vectors.py --facets-only (model-free) writes vectors/slurp-kus3/facet-vectors.jsonl",
+  "historical_twin": {
+    "preregistration": "docs/readiness/2026-09-06-slurp-retrieval-key-audit-v2-preregistration.md",
+    "run_id": "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-V1"
+  },
+  "input": {
+    "receipt": {
+      "relpath": "vectors/slurp-mf7/train-facets.receipt.json",
+      "sha256": "241d093c4553040b08103c47835d6f79341706cfe2053d09fe05479edb80cd72"
+    },
+    "relpath": "vectors/slurp-mf7/train-facets.jsonl",
+    "rows": 11514,
+    "sha256": "3252d195c2d12f9813ca1ea983057edb5b2b324b7dd88d3f6f7ac216fbac8336"
+  },
+  "ledger_row_cells": [
+    "2026-10-28",
+    "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1",
+    "bounded-discovery-probe",
+    "Port twin of SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-V1, KEYS SET ONLY: encode the 11,514 TRAIN content facet texts with the passage prompt for the kus3 facet vectors Fold B pins; no DEV row, audio, draft or label set",
+    "Pinned local Omni-Embed-Nemotron-3B passage encoder, CPU float32, forced causal, historical 16-item text batches spread over 4 pinned workers x 16 threads",
+    "slurp TRAIN content facets (vectors/slurp-mf7/train-facets.jsonl)",
+    "discovery",
+    "b308eadbd30ea4805b811ed30bdddb5c4c853e11c9edf72ba1f3e8361da6e11e",
+    "no",
+    "11514",
+    "0",
+    "2.0",
+    "The historical MF-7b pass remains recorded; this row adds only the port's key-set contacts",
+    "docs/readiness/2026-10-28-slurp-mf7b-nemotron-keys-registration-npu-port-v1.json",
+    "REGISTERED BEFORE CONTACT. Owner 2026-10-28: experiments run in the saea-base Docker container; WSL2 constraints removed; generation runs in the background. CPU float32 retrieval encoder (declared difference 8.7, design section 6.4): pinned pool of 4 workers x 16 threads on cores 128-191 of the Ascend host, batch-one forwards; planned_gpu_hours is the attempt's wall-clock ceiling and the actual GPU/NPU hours are 0. Attention geometry FORCED CAUSAL on every text layer and measured on the loaded weights at worker start (declared difference 8.4; as shipped the tower is bidirectional at batch one and causal in a padded batch, design section 6.4). Input vectors/slurp-mf7/train-facets.jsonl SHA256 3252d195c2d12f9813ca1ea983057edb5b2b324b7dd88d3f6f7ac216fbac8336. Entry scripts/slurp_mf7b_nemotron_embedding_pass.py --sets keys --runtime cpu-float32 --workers 4 --cores 128-191 --attention-geometry causal --exposure-row SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1; tool-level contacts only, 0 frozen-core."
+  ],
+  "outputs": [
+    "vectors/slurp-mf7b/nemotron-key-vectors.jsonl",
+    "vectors/slurp-mf7b/nemotron.receipt.json"
+  ],
+  "planned_speech_audio_seconds": 0,
+  "planned_tool_contacts": 11514,
+  "planned_wall_hours": 2.0,
+  "registered_at_utc": "2026-10-28",
+  "root_authority": "Owner 2026-10-28: experiments run in the saea-base Docker container; WSL2 constraints removed; generation runs in the background",
+  "run_id": "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1",
+  "schema": "saea-prospective-tool-registration-v1",
+  "split_identity_hash": "b308eadbd30ea4805b811ed30bdddb5c4c853e11c9edf72ba1f3e8361da6e11e",
+  "status": "REGISTERED_BEFORE_CONTACT",
+  "study": "speech-aware-evidence-acquisition"
+}

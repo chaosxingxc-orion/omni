@@ -220,6 +220,11 @@ def main() -> int:
         default=RECEIPT_DIR,
         help="where vectors.json is written (a --facets-only run must not use the historical one)",
     )
+    parser.add_argument(
+        "--mf7b-row",
+        default=MF7B_LEDGER_ROW,
+        help="the exposure row the MF-7b receipt must name (a re-run of MF-7b registers its own)",
+    )
     args = parser.parse_args()
     receipt_dir = args.receipt_dir if args.receipt_dir.is_absolute() else REPO_ROOT / args.receipt_dir
     if args.facets_only and receipt_dir.resolve() == RECEIPT_DIR.resolve():
@@ -229,10 +234,10 @@ def main() -> int:
     source_dir = root / MF7B_DIR_RELPATH
     out_dir = root / OUT_DIR_RELPATH
     receipt = json.loads((source_dir / MF7B_RECEIPT_NAME).read_text(encoding="utf-8"))
-    if receipt.get("exposure_ledger_row") != MF7B_LEDGER_ROW:
+    if receipt.get("exposure_ledger_row") != args.mf7b_row:
         raise SystemExit(
             f"{MF7B_RECEIPT_NAME} names exposure row "
-            f"{receipt.get('exposure_ledger_row')!r}, not {MF7B_LEDGER_ROW!r}"
+            f"{receipt.get('exposure_ledger_row')!r}, not {args.mf7b_row!r}"
         )
 
     plan = (
@@ -380,7 +385,7 @@ def _receipt_document(receipt, sets, readback, started, *, facets_only) -> dict[
             "wall_seconds": round(time.monotonic() - started, 3),
         },
         "produced_by": {
-            "exposure_ledger_row": MF7B_LEDGER_ROW,
+            "exposure_ledger_row": receipt["exposure_ledger_row"],
             "receipt_relpath": f"{MF7B_DIR_RELPATH}/{MF7B_RECEIPT_NAME}",
             "encoder_id": receipt["embedder"]["encoder_id"],
             "dims": receipt["embedder"]["dims"],

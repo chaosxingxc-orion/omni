@@ -1,0 +1,24 @@
+{
+  "answer_authority": "Retrieval-tool passage vectors only. No answering-model generation, task-score, or speech observation contact.",
+  "cache_relpath": "prepared/slurp-intent-boundary-text-facet-cache-npu-port-v1",
+  "contact_policy": "One registered attempt, one passage per forward on the pinned CPU float32 worker pool (4 workers x 16 threads), 60 logical text-encoder contacts, and zero speech seconds. No automatic restart, jitter, or retry.",
+  "cpu_workers": 1,
+  "dimension": 2048,
+  "encoder": {
+    "path": "${SAEA_DATA_ROOT}/coordination/omni-embed-nemotron-3b-cpu-encoder-inventory-npu-port-v1.json",
+    "sha256": "4c92dd1fc4c7c509416882cbc5a39fcf645b6910241a062343f964e57980e25b"
+  },
+  "expected_positive_content_facets": 60,
+  "facet_dimension": "intent-boundary",
+  "facet_rows_relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-NPU-PORT-V1/facets.jsonl",
+  "max_sequence_tokens": 8192,
+  "monitor_interval_seconds": 10,
+  "output_relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-NPU-PORT-V1/index.json",
+  "passage_prompt": "passage: ",
+  "schema": "saea-text-facet-encoding-protocol-v1",
+  "snapshot": {
+    "path": "${SAEA_DATA_ROOT}/knowledge/slurp/semantic/intent-boundaries-npu-port-v1/snapshot.json",
+    "sha256": "08976279d0cb1f033809285cf0c1a4fac31cd982dc9236328d4422448e27129d"
+  },
+  "source_scope": "Only the 60 re-authored TRAIN-derived intent-boundary text facets in the pinned npu-port snapshot are passage inputs. The historical query-axis alias and key source inventory are not on the port data root; query-axis compatibility is checked downstream against the port's own Fold B vectors."
+}

@@ -65,11 +65,12 @@ from speech_aware_evidence_acquisition.analysis.slurp_mf7b_vectors import (  # n
     vector_set_block,
     write_vectors_jsonl,
 )
+from speech_aware_evidence_acquisition.contracts import assert_execution_environment  # noqa: E402
 from speech_aware_evidence_acquisition.data.lock import data_root  # noqa: E402
 from speech_aware_evidence_acquisition.e0.artifacts import write_json_artifact  # noqa: E402
 
 from speech_aware_evidence_acquisition.core.speech_embedding import (  # noqa: E402
-    ENCODER_RUNTIMES, load_stack, render, encode,
+    ATTENTION_GEOMETRIES, ENCODER_RUNTIMES, load_stack, measure_attention_geometry, render, encode,
 )
 from speech_aware_evidence_acquisition.analysis.slurp_mf7b_sharding import (  # noqa: E402
     parse_cores, sharded_text_pass,
@@ -102,6 +103,10 @@ def main() -> int:
                         help="pinned worker processes for the keys set (cpu runtime only)")
     parser.add_argument("--cores", default=None,
                         help="FIRST-LAST inclusive core range split across the key workers")
+    parser.add_argument("--exposure-row", default=ROW_ID,
+                        help="exposure-ledger row this pass spends; a re-run registers its own row")
+    parser.add_argument("--attention-geometry", choices=[g for g in ATTENTION_GEOMETRIES if g], default=None,
+                        help="force and verify the text tower's attention geometry; the default is as shipped")
     args = parser.parse_args()
     wanted = {name.strip() for name in args.sets.split(",") if name.strip()}
     device, dtype = ENCODER_RUNTIMES[args.runtime]
@@ -114,6 +119,9 @@ def main() -> int:
         os.environ.setdefault("TORCH_DEVICE_BACKEND_AUTOLOAD", "0")
         sys.modules.setdefault("torch_npu", None)
 
+    if args.exposure_row != ROW_ID:
+        # A re-run spends a newly registered row, so it runs only inside the saea-base container.
+        assert_execution_environment()
     root = Path(data_root())
     model_dir = root / MODEL_SUBDIR
     out_dir = root / "vectors/slurp-mf7b"
@@ -122,7 +130,12 @@ def main() -> int:
     # In-process stack: every set on the historical path; on a sharded run only the non-key sets,
     # because each key worker loads its own.
     if not sharded or wanted - {"keys"}:
-        processor, model, template = load_stack(model_dir, runtime=args.runtime)
+        processor, model, template = load_stack(
+            model_dir, runtime=args.runtime, attention_geometry=args.attention_geometry)
+        if args.attention_geometry is not None:
+            measured = measure_attention_geometry(processor, model, device=device)
+            if measured != args.attention_geometry:
+                raise SystemExit(f"measured attention geometry {measured!r}, not the forced {args.attention_geometry!r}")
     # Read only what the requested sets use: a keys-only pass needs no DEV row, audio or draft.
     rows = dev_rows(root) if wanted & {"speech", "fused"} else []
     facets = train_facets(root) if "keys" in wanted else []
@@ -148,7 +161,8 @@ def main() -> int:
             # The same consecutive batches as the loop below, spread over pinned workers.
             ids, vectors, sharding, first = sharded_text_pass(
                 items, prompt, model_dir=model_dir, runtime=args.runtime, device=device,
-                batch=args.text_batch, workers=args.workers, cores=cores)
+                batch=args.text_batch, workers=args.workers, cores=cores,
+                attention_geometry=args.attention_geometry)
             rendered = [first]
             forwards += int(sharding["forwards"])
             contacts += len(ids)
@@ -251,6 +265,10 @@ def main() -> int:
     prior = (
         json.loads(receipt_path.read_text(encoding="utf-8")) if receipt_path.is_file() else {}
     )
+    if prior and prior.get("exposure_ledger_row") != args.exposure_row:
+        raise SystemExit(
+            f"{receipt_path} spends row {prior.get('exposure_ledger_row')!r}; a resumed pass must name the same row"
+        )
     prior_embedder = prior.get("embedder") or {}
     if prior_embedder and (prior_embedder.get("device", "cuda"), prior_embedder.get("dtype", "bfloat16")) != (
         device, dtype
@@ -258,6 +276,11 @@ def main() -> int:
         raise SystemExit(
             f"{receipt_path} was produced on {prior_embedder.get('device')}/{prior_embedder.get('dtype')}; "
             f"a resumed pass must use the same runtime, not {device}/{dtype}"
+        )
+    if prior_embedder and prior_embedder.get("attention_geometry", "as-shipped") != (args.attention_geometry or "as-shipped"):
+        raise SystemExit(
+            f"{receipt_path} was produced with attention geometry {prior_embedder.get('attention_geometry', 'as-shipped')!r}; "
+            f"a resumed pass must use the same geometry, not {args.attention_geometry or 'as-shipped'!r}"
         )
     prior_sets = dict(prior.get("sets", {}))
     prior_acct = dict(prior.get("accounting", {}))
@@ -270,7 +293,7 @@ def main() -> int:
 
     write_json_artifact(receipt_path, {
         "schema": RECEIPT_SCHEMA,
-        "exposure_ledger_row": ROW_ID,
+        "exposure_ledger_row": args.exposure_row,
         "embedder": {
             "encoder_id": ENCODER_ID,
             "role": "pinned TOOL-level omni embedder; never the frozen core",
@@ -293,6 +316,7 @@ def main() -> int:
             "prompts": {"query": QUERY_PROMPT, "passage": PASSAGE_PROMPT},
             "device": device,
             "dtype": dtype,
+            "attention_geometry": args.attention_geometry or "as-shipped",
             "torch_version": torch.__version__,
             "transformers_version": transformers.__version__,
             "gpu": device == "cuda",

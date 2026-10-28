@@ -1,0 +1,31 @@
+{
+  "declared_difference": "CPU float32 retrieval encoder (declared difference 8.7, design section 6.4): pinned pool of 4 workers x 16 threads on cores 128-191 of the Ascend host, batch-one forwards; planned_gpu_hours is the attempt's wall-clock ceiling and the actual GPU/NPU hours are 0. Attention geometry FORCED CAUSAL on every text layer and measured on the loaded weights at worker start (declared difference 8.4; as shipped the tower is bidirectional at batch one and causal in a padded batch, design section 6.4)",
+  "historical_twin": "docs/readiness/2026-09-13-slurp-intent-boundary-key-encoding-v1/registration-v1.json",
+  "launch_conditions": [
+    "Use the frozen clean registration commit and a runtime config whose study_head equals it.",
+    "Verify the snapshot, inventory and lock pins before contact (the runtime does so).",
+    "Seal all 60 vectors and verify count, 2048 dimensions and readback."
+  ],
+  "plan": {
+    "attempt_id": "encode-v1",
+    "carrier_lock_key": "slurp",
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.5,
+    "planned_model_calls": 60,
+    "planned_speech_audio_seconds": 0,
+    "protocol_hash": "73ec9ae5129408764a76dbbb7567bd432fb37a57bb3d180d8712401aa01aaa21",
+    "run_id": "SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-NPU-PORT-V1",
+    "schema": "saea-text-encoder-plan-v1",
+    "split_identity_hash": "2baa0bf8615723e3b69a43ce7ade8333f71e8402a1e4db8e9da995b67774a80c",
+    "split_role": "discovery",
+    "study": "speech-aware-evidence-acquisition"
+  },
+  "protocol_repo_path": "configs/preparation/slurp-intent-boundary-key-encoding-protocol-npu-port-v1.json",
+  "protocol_sha256": "73ec9ae5129408764a76dbbb7567bd432fb37a57bb3d180d8712401aa01aaa21",
+  "registered_at": "2026-10-28",
+  "root_authority": "Owner 2026-10-28: experiments run in the saea-base Docker container; WSL2 constraints removed; generation runs in the background",
+  "root_dispatch_state": "READY_AFTER_COMMIT",
+  "runtime_task_authority": false,
+  "schema": "saea-local-text-encoder-registration-v1",
+  "scope": "Source-only passage preparation of the re-authored intent-boundary keys; no task-answer generation or task-score read."
+}
