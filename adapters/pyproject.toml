@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "saea-adapters"
+version = "0.1.0"
+description = "Platform / engine / encoder adapters for reproducing the SAEA study on vLLM-Ascend"
+requires-python = ">=3.12"
+# Deliberately empty, mirroring the study's own zero-dependency stance: torch,
+# transformers and numpy all come from the base image, and declaring them here
+# would invite pip to re-resolve the torch_npu stack this image exists to carry.
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["saea_adapters*"]

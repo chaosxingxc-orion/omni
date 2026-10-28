@@ -1,0 +1,24 @@
+# Datasets, features and model weights are never committed: rebuild them with scripts/download and scripts/prep.
+# Anchored to the repo root so the study's own tracked configs/knowledge and docs/checks are unaffected.
+/datasets/
+/models/
+/vectors/
+/prepared/
+/knowledge/
+/attempts/
+/coordination/
+/preparation-runs/
+/locks/
+/manifests/
+/repos/
+/tmp/
+/work/
+/docker/saea-base/wheelhouse/
+/docker/saea-base/umbrella/
+/docker/saea-base/build-*.log
+*.safetensors
+*.gguf
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
