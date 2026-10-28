@@ -196,7 +196,7 @@ GEOMETRY_FLAGS: Mapping[str, tuple[str, str, bool]] = {
 }
 
 
-def _geometry_dialect(transport: object) -> tuple[str, str, bool]:
+def geometry_flags(transport: object) -> tuple[str, str, bool]:
     """vLLM speaks its own dialect; every other transport keeps the historical llama-server flags."""
 
     return GEOMETRY_FLAGS["vllm" if transport == "vllm" else "llama-server"]
@@ -234,7 +234,7 @@ def merge_server_args(
 
     if isinstance(server_args, (str, bytes)) or not isinstance(server_args, Sequence):
         raise ServingSessionError("model config server_args must be a list of strings")
-    slot_flag, context_flag, per_slot = _geometry_dialect(transport)
+    slot_flag, context_flag, per_slot = geometry_flags(transport)
     merged = [str(value) for value in server_args]
     _refuse_foreign_geometry_flags(merged, transport)
     if per_slot:
@@ -263,7 +263,7 @@ def declared_server_geometry(
 ) -> tuple[int, int]:
     """``(slots, slot_tokens)`` exactly as a fragment's ``server_args`` hand them to its server dialect."""
 
-    slot_flag, context_flag, per_slot = _geometry_dialect(transport)
+    slot_flag, context_flag, per_slot = geometry_flags(transport)
     args = [str(value) for value in server_args]
     _refuse_foreign_geometry_flags(args, transport)
     if context_flag not in args or slot_flag not in args:

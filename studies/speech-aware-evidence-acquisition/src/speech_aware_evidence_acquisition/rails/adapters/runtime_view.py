@@ -103,6 +103,7 @@ def load_runtime_view(
 def configured_geometry(values: Mapping[str, object], *, defaults: tuple[int, int, int]) -> dict:
     """Require the fragment's actual server geometry to match the adapter data."""
     from ...core.config import effective_request_decoding_params
+    from ...core.session.serving import geometry_flags
 
     slots = values.get("serving_slots", defaults[0])
     tokens = values.get("serving_slot_tokens", defaults[1])
@@ -114,7 +115,8 @@ def configured_geometry(values: Mapping[str, object], *, defaults: tuple[int, in
         if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
             raise RuntimeViewError("serving geometry must contain positive integers")
     argv = list(values.get("server_args", ()))
-    for name, expected in (("-np", slots), ("-c", slots * tokens)):
+    slot_flag, context_flag, per_slot = geometry_flags(values.get("transport"))
+    for name, expected in ((slot_flag, slots), (context_flag, tokens if per_slot else slots * tokens)):
         if argv.count(name) != 1:
             raise RuntimeViewError(f"server_args must declare {name} exactly once")
         try:

@@ -91,3 +91,17 @@ def test_the_serving_profile_reads_a_vllm_fragment_in_its_own_dialect(tmp_path):
     repo_root = _repo_with_fragment(tmp_path / "drift", runtime_receipt, fragment)
     with pytest.raises(ServingSessionError, match="disagree with its declared serving_geometry"):
         resolve_serving_profile(repo_root, "frag")
+
+
+def test_the_runtime_view_checks_a_vllm_fragment_in_its_own_dialect():
+    from speech_aware_evidence_acquisition.rails.adapters.runtime_view import RuntimeViewError, configured_geometry
+
+    values = {"transport": "vllm", "server_args": list(_VLLM_ARGS), "serving_slots": 4, "serving_slot_tokens": 24576}
+    assert configured_geometry(values, defaults=(8, 8192, 64)) == {"slots": 4, "slot_tokens": 24576, "max_tokens": 64}
+    values["serving_slot_tokens"] = 6144
+    with pytest.raises(RuntimeViewError, match="--max-model-len differs"):
+        configured_geometry(values, defaults=(8, 8192, 64))
+    values = {"transport": "vllm", "server_args": ["-np", "4", "-c", "98304"], "serving_slots": 4,
+              "serving_slot_tokens": 24576}
+    with pytest.raises(RuntimeViewError, match="--max-num-seqs exactly once"):
+        configured_geometry(values, defaults=(8, 8192, 64))
