@@ -307,7 +307,7 @@ their values for a Linux host are part of the runtime receipt decision (section 
    cards, not the sealed ones (`docs/readiness/2026-10-28-slurp-semantic-authoring-root-review-npu-port-v1.md`).
 7. CPU float32 retrieval encoder (section 6.4) instead of CUDA bfloat16; the port's vectors are all built on it.
 
-## 9. Owner decisions (9.1, 9.2, 9.3 and 9.5 decided; 9.4 open)
+## 9. Owner decisions (9.1-9.5 decided)
 
 1. DECIDED 2026-10-28 (owner, two messages: "继续吧，授权执行权限，注意生成的过程后台运行" and then
    "WSL2这种约束都得删了，我们目前是用之前做的docker来拉起实验的"): the WSL2 authority and every WSL2 constraint
@@ -357,7 +357,25 @@ their values for a Linux host are part of the runtime receipt decision (section 
    to share one protocol, re-hashes the weights, and refuses to write anything that does not pass both the gate-time
    validator and the per-endpoint live check). The multi-endpoint transport and the card allocator are not built yet;
    the interfaces are list-of-instances ready.
-4. Lock entries for the BF16 Thinking model and the three serving views.
+4. DECIDED 2026-10-28 (owner: "go ahead", translated from the owner's Chinese message; the owner asked the agent to
+   draft the entries): lock entries for the BF16 Thinking model and the three serving views. Four entries were added
+   to the umbrella lock's `models`, together with a new profile `speech-aware-npu-port` and one `amendments` record.
+   No existing entry changed.
+
+   | entry | files | bytes | identity |
+   |---|---|---|---|
+   | `qwen3-omni-30b-a3b-thinking-bf16` (`models/qwen3-omni-30b-a3b-thinking`) | 26 | 63,447,489,451 | hf `Qwen/Qwen3-Omni-30B-A3B-Thinking` @ `2f443cfc` |
+   | `omni-embed-nemotron-3b-causal-v1` | 14 | 9,423,118,096 | receipt `a3ddac02…` |
+   | `lco-embedding-omni-3b-2605-v1` | 14 | 9,423,121,465 | receipt `4c95f853…` |
+   | `lco-embedding-omni-7b-v1` | 16 | 17,879,801,172 | receipt `c77fd25b…` |
+
+   - Each entry records the sha256 of every file.
+   - The BF16 files match the official LFS oids and Git blob SHA-1s at the revision.
+   - The view files match their receipts, and the receipts' source hashes match the sources on disk.
+   - The BF16 entry is the port model fragment's `model_lock_key`.
+   - The lock is not versioned on the Ascend hosts. The exact entries, the apply script and the lock hashes are in
+     `docs/readiness/2026-10-28-npu-port-lock-entries-v1/`: before `eb39a1ca…`, after `61f3d111…`. The pristine
+     bytes are kept as `datasets.lock.json.pre-npu-port-v1`.
 5. DECIDED 2026-10-28 (owner: "re-author following the documented procedure"): the authored semantic knowledge is
    re-authored by root from the governed TRAIN support. This is a new knowledge release and declared difference 8.6.
 
