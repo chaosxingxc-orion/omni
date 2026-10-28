@@ -33,6 +33,10 @@ MODEL_LOCK_KEY = "qwen3-omni-30b-a3b-instruct-gguf"
 E0_RECEIPT_SCHEMA = "saea-e0-closure-receipt-v1"
 RUNTIME_RECEIPT_SCHEMA = "saea-runtime-receipt-v2"
 RUNTIME_RECEIPT_SCHEMA_V3 = "saea-runtime-receipt-v3"
+#: The vLLM runtime receipt (owner decision 9.3, 2026-10-28; ``contracts.gate_runtime_vllm``). A separate schema
+#: family beside the llama.cpp receipts above, never a version of them: the llama gate refuses it and the vLLM gate
+#: refuses theirs, so neither schema is loosened to admit the other.
+VLLM_RUNTIME_RECEIPT_SCHEMA = "saea-runtime-receipt-vllm-v1"
 SCORING_PACKAGE_RELPATH = "src/speech_aware_evidence_acquisition/scoring"
 
 # Construction-visible arms (owner decision 2026-09-05, three-dimension

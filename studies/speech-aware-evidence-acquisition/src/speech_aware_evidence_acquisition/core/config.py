@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
 
+from ..contracts.runtime_identity import LLAMA_SERVER_TRANSPORT
 from ..scoring import SCORING_STACK_VERSION
 from .reasoning_knobs import (
     ReasoningKnobError,
@@ -599,6 +600,21 @@ def model_lock_key(values: Mapping[str, object]) -> str:
     value = values.get("model_lock_key")
     if not isinstance(value, str) or not value:
         raise ConfigError(f"model config model_lock_key must be a non-empty string, got {value!r}")
+    return value
+
+
+def runtime_transport(values: Mapping[str, object]) -> str:
+    """Resolve a composed config's ``transport`` -- which serving backend, and therefore which runtime identity.
+
+    The same declaration ``core.base.TRANSPORTS`` already selects the request path with, read here so the GATE can
+    select the matching runtime-receipt validator (``contracts.runtime_identity``). Absent means the historical
+    ``llama-server``, so every fragment that predates the vLLM port resolves exactly as before; a malformed value
+    fails closed rather than silently becoming the default.
+    """
+
+    value = values.get("transport", LLAMA_SERVER_TRANSPORT)
+    if not isinstance(value, str) or not value:
+        raise ConfigError(f"model config transport must be a non-empty string, got {value!r}")
     return value
 
 

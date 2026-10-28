@@ -102,6 +102,7 @@ from ..config import (
     protocol_hash as compute_protocol_hash,
     resolve_runtime_receipt_path,
     runtime_receipt_relpath,
+    runtime_transport,
 )
 from ..configured_transport import build_configured_transport
 from ..model.speech_features import materialize_legacy_cached_speech_feature_packets
@@ -5049,6 +5050,9 @@ class FlightRuntime:
             self._runtime_root,
             runtime_receipt_relpath=runtime_receipt_relpath(values),
             expected_model_lock_key=model_lock_key(values),
+            # Which serving backend answers this flight, and therefore which runtime-identity adapter the gate
+            # uses to re-verify the runtime receipt (decision 9.3). Absent resolves to ``llama-server``.
+            transport=runtime_transport(values),
             model_root=(
                 Path(configured_model_root)
                 if configured_model_root is not None
@@ -8372,6 +8376,9 @@ class FlightRuntime:
             self._repo_root, self._data_root, self._runtime_root,
             runtime_receipt_relpath=runtime_receipt_relpath(values),
             expected_model_lock_key=model_lock_key(values),
+            # Which serving backend answers this flight, and therefore which runtime-identity adapter the gate
+            # uses to re-verify the runtime receipt (decision 9.3). Absent resolves to ``llama-server``.
+            transport=runtime_transport(values),
             model_root=Path(configured_root) if configured_root is not None else None,
             d1_media_supplement_relpath=d1_media_supplement_relpath(values),
             d1_media_supplement_sha256=d1_media_supplement_sha256(values),

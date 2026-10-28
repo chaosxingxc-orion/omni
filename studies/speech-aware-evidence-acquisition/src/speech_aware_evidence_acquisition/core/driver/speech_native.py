@@ -71,6 +71,7 @@ from ..config import (
     protocol_hash,
     resolve_runtime_receipt_path,
     runtime_receipt_relpath,
+    runtime_transport,
 )
 from ..resources import NOT_AVAILABLE, resolve_resource_sampler
 from ..session import (
@@ -11949,6 +11950,9 @@ def _cli_speech_native_profile(args: argparse.Namespace) -> int:
         Path(args.runtime_root),
         runtime_receipt_relpath=runtime_receipt_relpath(values),
         expected_model_lock_key=model_lock_key(values),
+        # Which serving backend answers this run, and therefore which runtime-identity adapter the gate uses
+        # to re-verify the runtime receipt (decision 9.3, 2026-10-28). Absent resolves to ``llama-server``.
+        transport=runtime_transport(values),
         model_root=model_root,
         d1_media_supplement_relpath=d1_media_supplement_relpath(values),
         d1_media_supplement_sha256=d1_media_supplement_sha256(values),

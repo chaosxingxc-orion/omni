@@ -334,9 +334,34 @@ from .lifecycle import (  # noqa: E402
     start_session,
     stop_session,
 )
+# The runtime-identity seam (owner decision 9.3, 2026-10-28) and its vLLM implementation. Imported last: both reach
+# back into this package for ``SessionError`` and the receipt types, and the vLLM adapter reaches into ``lifecycle``
+# for the spawn plumbing it reuses.
+from .runtime_identity import (  # noqa: E402
+    LLAMA_SERVER_TRANSPORT,
+    RUNTIME_IDENTITIES,
+    VLLM_TRANSPORT,
+    RuntimeIdentity,
+    runtime_identity,
+    runtime_identity_for_receipt,
+)
+from .vllm_identity import (  # noqa: E402
+    assert_vllm_session_alive,
+    assert_vllm_sessions_alive,
+    verify_vllm_session,
+)
 
 __all__ = [
     "DEFAULT_STARTUP_MAX_BYTES",
+    "LLAMA_SERVER_TRANSPORT",
+    "RUNTIME_IDENTITIES",
+    "RuntimeIdentity",
+    "VLLM_TRANSPORT",
+    "assert_vllm_session_alive",
+    "assert_vllm_sessions_alive",
+    "runtime_identity",
+    "runtime_identity_for_receipt",
+    "verify_vllm_session",
     "DEFAULT_STARTUP_TIMEOUT_SECONDS",
     "EXT4_MODEL_SHA256_PINS",
     "EXT4_MODELS_ROOT_DEFAULT",

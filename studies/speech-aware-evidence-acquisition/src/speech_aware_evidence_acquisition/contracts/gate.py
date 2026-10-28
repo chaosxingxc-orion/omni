@@ -26,6 +26,7 @@ from .gate_evidence_identity import _EvidenceIdentityMixin
 from .gate_exposure import _ExposureAndCarrierMixin
 from .gate_identity import _MediaReferenceIdentityMixin
 from .gate_runtime import _RuntimeValidationMixin
+from .gate_runtime_vllm import _VllmRuntimeValidationMixin
 from .identifiers import MODEL_LOCK_KEY, STUDY_SLUG
 from .plan import (
     MODEL_TOUCH_PROFILES,
@@ -33,6 +34,7 @@ from .plan import (
     ExecutionPlan,
     assert_execution_environment,
 )
+from .runtime_identity import LLAMA_SERVER_TRANSPORT, runtime_receipt_identity
 
 
 @dataclass(frozen=True)
@@ -41,6 +43,7 @@ class FrozenCoreGate(
     _MediaReferenceIdentityMixin,
     _EvidenceIdentityMixin,
     _RuntimeValidationMixin,
+    _VllmRuntimeValidationMixin,
     _ExposureAndCarrierMixin,
 ):
     """Fail-closed entry gate in front of every frozen-core (model) touch.
@@ -125,6 +128,10 @@ class FrozenCoreGate(
     #: Q8_0 ``contracts.MODEL_LOCK_KEY`` -- every existing caller that never
     #: sets this is byte-identical to before this field existed.
     expected_model_lock_key: str = MODEL_LOCK_KEY
+    #: The model fragment's ``transport`` (owner decision 9.3, 2026-10-28): selects the runtime-identity adapter
+    #: (``contracts.runtime_identity``) that verifies ``runtime_receipt``. Defaults to ``llama-server``, whose adapter
+    #: is exactly the historical ``_validate_runtime``, so every caller that never sets it is unchanged.
+    transport: str = LLAMA_SERVER_TRANSPORT
 
     E0_DELIVERABLES = ("d1_identity", "d2_leakage", "d3_scoring", "d4_trace")
 
@@ -149,6 +156,7 @@ class FrozenCoreGate(
         d1_media_supplement_sha256: str | None = None,
         d1_evidence_supplement_relpath: str | None = None,
         d1_evidence_supplement_sha256: str | None = None,
+        transport: str = LLAMA_SERVER_TRANSPORT,
     ) -> "FrozenCoreGate":
         """The canonical production binding — the only gate a real run may use.
 
@@ -180,6 +188,10 @@ class FrozenCoreGate(
         ``tests/contract/test_model_lock_key_binding.py``. Defaults to the
         frozen Q8_0 ``contracts.MODEL_LOCK_KEY``, so every existing caller
         that omits it keeps exactly its old behaviour.
+
+        ``transport`` is the third half of that pairing (owner decision 9.3): the composed config's ``transport``
+        (``core.config.runtime_transport``) selects the runtime-identity adapter that reads the receipt, so a vLLM
+        fragment is verified only against a vLLM receipt and a llama-server fragment only against a llama.cpp one.
         """
 
         root = Path(repo_root)
@@ -219,6 +231,7 @@ class FrozenCoreGate(
             ),
             d1_evidence_supplement_sha256=d1_evidence_supplement_sha256,
             expected_model_lock_key=expected_model_lock_key,
+            transport=transport,
         )
 
     def __post_init__(self) -> None:
@@ -337,5 +350,9 @@ class FrozenCoreGate(
         self._require_exposure_preregistration(plan, lock)
         self._resolve_carrier_dataset_entry(plan.carrier_lock_key, lock)
         self._validate_e0()
-        self._validate_runtime(lock, full_hash=full_hash, diagnostics=diagnostics)
+        # Owner decision 9.3: one runtime-identity seam. The ``llama-server`` adapter calls ``_validate_runtime``
+        # exactly as this line always did; ``vllm`` calls ``_validate_vllm_runtime``.
+        runtime_receipt_identity(self.transport).validate_runtime_receipt(
+            self, lock, full_hash=full_hash, diagnostics=diagnostics
+        )
         return lock_sha256

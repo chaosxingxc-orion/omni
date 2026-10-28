@@ -35,6 +35,8 @@ import urllib.error
 from pathlib import Path
 from typing import Callable, Mapping
 
+from ...contracts.errors import GateClosed
+from ...contracts.gate_runtime_vllm import classify_server_flags
 from ..base import TRANSPORTS
 from ..reasoning_knobs import (
     BUDGET_MESSAGE_FLAG,
@@ -42,6 +44,7 @@ from ..reasoning_knobs import (
     vllm_forced_close_message_from_server_args,
 )
 from ..session import SessionError
+from ..session.runtime_identity import runtime_identity_for_receipt
 from . import FrozenCoreContextSizeError
 from .transport import (
     _SPEECH_FEATURE_PROMPT_ORDERS,
@@ -202,6 +205,61 @@ class VllmServerTransport(LlamaServerTransport):
             vllm_post(inner, served_model_name), **kwargs,
         )
 
+    def _assert_session_still_valid(self) -> None:
+        """The per-send session re-verification, asked of the runtime-identity seam (decision 9.2/9.3).
+
+        Called at construction and before every single send, exactly where and as often as the base class calls it --
+        this override changes only WHICH identity answers, never how strictly or how often. A vLLM runtime receipt is
+        answered by the vLLM adapter (interpreter image re-hashed, source trees, pinned environment, namespaces, the
+        instance's own device group, and this endpoint's listening socket -- ``core.session.vllm_identity``); anything
+        else is the base class's own call, byte for byte, so a fragment that names this transport while still pinning a
+        llama.cpp runtime receipt is verified exactly as it was before this seam existed.
+        """
+
+        identity = runtime_identity_for_receipt(self._runtime_receipt)
+        if identity.transport != VLLM_TRANSPORT:
+            super()._assert_session_still_valid()
+            return
+        identity.assert_session_alive(self._session, self._runtime_receipt, self._runtime_root)
+
+
+def _assert_fragment_matches_receipt_protocol(
+    values: Mapping[str, object], runtime_receipt: Mapping[str, object]
+) -> None:
+    """Refuse a fragment whose served model name or protocol flags differ from its vLLM runtime receipt's.
+
+    The receipt is written FROM a running server (``scripts/write_vllm_runtime_receipt.py``), so this is the rail that
+    catches a fragment edited after the receipt was taken: the request path would otherwise send
+    ``model: served_model_name`` and a decoding configuration the pinned server never agreed to. Only the receipt's
+    PROTOCOL half is compared -- the deployment half (ports, device groups, ``--max-num-seqs``,
+    ``--gpu-memory-utilization``) is per instance and is checked per endpoint when a session is started or verified.
+    A fragment pinning a llama.cpp receipt is left to the historical checks (module docstring of
+    ``core.session.runtime_identity``).
+    """
+
+    identity = runtime_identity_for_receipt(runtime_receipt)
+    if identity.transport != VLLM_TRANSPORT:
+        return
+    protocol = runtime_receipt["protocol"]
+    if values.get("served_model_name") != protocol["served_model_name"]:
+        raise SessionError(
+            f"the fragment serves {values.get('served_model_name')!r} but the vllm runtime receipt pins "
+            f"{protocol['served_model_name']!r}"
+        )
+    try:
+        served, protocol_tokens, _deployment = classify_server_flags(values.get("server_args") or ())
+    except GateClosed as error:
+        raise SessionError(f"fragment server_args: {error}") from error
+    if served is not None:
+        raise SessionError(
+            "a vllm fragment must not set --served-model-name in server_args; it declares served_model_name"
+        )
+    expected = [str(token) for token in protocol["server_args"]]
+    if list(protocol_tokens) != expected:
+        raise SessionError(
+            f"the fragment's protocol flags {list(protocol_tokens)} differ from the vllm runtime receipt's {expected}"
+        )
+
 
 def _vllm_factory(
     values: Mapping[str, object],
@@ -220,6 +278,7 @@ def _vllm_factory(
         raise SessionError(f"server flags {refused} are llama-server flags; a vllm fragment must not carry them")
     if feature_cache_guard is not None:
         raise SessionError("a vllm fragment has no llama.cpp feature cache to guard")
+    _assert_fragment_matches_receipt_protocol(values, runtime_receipt)
     return _llama_server_factory(
         values,
         data_root,

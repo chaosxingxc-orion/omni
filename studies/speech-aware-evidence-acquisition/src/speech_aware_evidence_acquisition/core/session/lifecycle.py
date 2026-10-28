@@ -555,6 +555,37 @@ def start_session(
     simply lost (module docstring at ``_ServerLogWriter``).
     """
 
+    # Runtime-identity seam (owner decision 9.3, 2026-10-28): a runtime receipt that belongs to another serving
+    # backend is handled by that backend's adapter (``core.session.runtime_identity``). For a llama.cpp receipt --
+    # every receipt that existed before the vLLM port, including an empty one -- this is a no-op, and the body
+    # below is the one that always ran, unchanged. Imported here, not at module scope: the adapter imports this
+    # module.
+    from .runtime_identity import LLAMA_SERVER_TRANSPORT, runtime_identity_for_receipt
+
+    _identity = runtime_identity_for_receipt(runtime_receipt)
+    if _identity.transport != LLAMA_SERVER_TRANSPORT:
+        return _identity.start_session(
+            runtime_root=runtime_root,
+            data_root=data_root,
+            runtime_receipt=runtime_receipt,
+            host=host,
+            port=port,
+            session_id=session_id,
+            extra_argv=extra_argv,
+            extra_env=extra_env,
+            startup_timeout_seconds=startup_timeout_seconds,
+            startup_max_bytes=startup_max_bytes,
+            receipt_path=receipt_path,
+            popen=popen,
+            now=now,
+            ready_timeout_seconds=ready_timeout_seconds,
+            ready_poll_interval_seconds=ready_poll_interval_seconds,
+            http_get_status=http_get_status,
+            server_log_path=server_log_path,
+            role=role,
+            model_root=model_root,
+        )
+
     assert_execution_environment()
     command = build_server_command(
         runtime_root=runtime_root,
@@ -767,6 +798,25 @@ def stop_session(
     says so, naming the observed state in ``final_process_state``.
     """
 
+    # Runtime-identity seam (owner decision 9.3, 2026-10-28): a runtime receipt that belongs to another serving
+    # backend is handled by that backend's adapter (``core.session.runtime_identity``). For a llama.cpp receipt --
+    # every receipt that existed before the vLLM port, including an empty one -- this is a no-op, and the body
+    # below is the one that always ran, unchanged. Imported here, not at module scope: the adapter imports this
+    # module.
+    from .runtime_identity import LLAMA_SERVER_TRANSPORT, runtime_identity_for_receipt
+
+    _identity = runtime_identity_for_receipt(runtime_receipt)
+    if _identity.transport != LLAMA_SERVER_TRANSPORT:
+        return _identity.stop_session(
+            session,
+            runtime_receipt=runtime_receipt,
+            runtime_root=runtime_root,
+            timeout_seconds=timeout_seconds,
+            poll_interval_seconds=poll_interval_seconds,
+            force_after_timeout=force_after_timeout,
+            receipt_path=receipt_path,
+        )
+
     session.validate()
     if (
         isinstance(timeout_seconds, bool)
@@ -893,6 +943,19 @@ def attach_session(
     fails closed: there is no other way to obtain a ``SessionReceipt`` for a
     server this process did not itself spawn.
     """
+
+    # Runtime-identity seam (owner decision 9.3, 2026-10-28): a runtime receipt that belongs to another serving
+    # backend is handled by that backend's adapter (``core.session.runtime_identity``). For a llama.cpp receipt --
+    # every receipt that existed before the vLLM port, including an empty one -- this is a no-op, and the body
+    # below is the one that always ran, unchanged. Imported here, not at module scope: the adapter imports this
+    # module.
+    from .runtime_identity import LLAMA_SERVER_TRANSPORT, runtime_identity_for_receipt
+
+    _identity = runtime_identity_for_receipt(runtime_receipt)
+    if _identity.transport != LLAMA_SERVER_TRANSPORT:
+        return _identity.attach_session(
+            receipt_path, runtime_receipt=runtime_receipt, runtime_root=runtime_root
+        )
 
     receipt = read_session_receipt(receipt_path)
     require_loopback(f"http://{_bracketed(receipt.host)}:{receipt.port}")

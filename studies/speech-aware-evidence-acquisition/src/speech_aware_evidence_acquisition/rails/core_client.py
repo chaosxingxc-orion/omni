@@ -958,6 +958,7 @@ def media_identity_stage(
         model_lock_key,
         model_materialization_root,
         runtime_receipt_relpath,
+        runtime_transport,
     )
 
     try:
@@ -987,6 +988,9 @@ def media_identity_stage(
         Path(runtime_root),
         runtime_receipt_relpath=runtime_receipt_relpath(values),
         expected_model_lock_key=model_lock_key(values),
+        # Which serving backend answers this run, and therefore which runtime-identity adapter the gate uses
+        # to re-verify the runtime receipt (decision 9.3, 2026-10-28). Absent resolves to ``llama-server``.
+        transport=runtime_transport(values),
         model_root=(
             Path(configured_model_root) if configured_model_root is not None else None
         ),

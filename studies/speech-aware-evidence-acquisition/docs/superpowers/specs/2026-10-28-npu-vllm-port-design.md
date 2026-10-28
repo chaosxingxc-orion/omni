@@ -42,7 +42,11 @@ bound to it.
 | forced-close message | `--reasoning-budget-message` | `--reasoning-config {"reasoning_end_str": ...}` | the message is the text before the trailing natural `</think>`; hashed exactly as before |
 
 llama-server-only flags (`--reasoning-budget-message`, `-np`/`--parallel`, `-c`/`--ctx-size`, `--reasoning-format`)
-and a `feature_cache_guard` are refused for a `vllm` fragment.
+and a `feature_cache_guard` are refused for a `vllm` fragment. Two further refusals come from the runtime-identity
+seam (section 9.3): the fragment's `served_model_name` and its PROTOCOL flags must equal the vLLM runtime receipt's,
+and `_assert_session_still_valid` -- the check the base class runs at construction and before every single send --
+asks the seam, so a `vllm` fragment's session is re-proven by the vLLM identity (section 9.2) at exactly the same
+sites and the same frequency as a llama fragment's is by the llama one.
 
 ## 4. Reasoning budget
 
@@ -303,7 +307,7 @@ their values for a Linux host are part of the runtime receipt decision (section 
    cards, not the sealed ones (`docs/readiness/2026-10-28-slurp-semantic-authoring-root-review-npu-port-v1.md`).
 7. CPU float32 retrieval encoder (section 6.4) instead of CUDA bfloat16; the port's vectors are all built on it.
 
-## 9. Owner decisions (9.1 and 9.5 decided; 9.2-9.4 open)
+## 9. Owner decisions (9.1, 9.2, 9.3 and 9.5 decided; 9.4 open)
 
 1. DECIDED 2026-10-28 (owner, two messages: "继续吧，授权执行权限，注意生成的过程后台运行" and then
    "WSL2这种约束都得删了，我们目前是用之前做的docker来拉起实验的"): the WSL2 authority and every WSL2 constraint
@@ -313,11 +317,46 @@ their values for a Linux host are part of the runtime receipt decision (section 
    and the server spawn call it. `assert_wsl_execution_environment` no longer exists. The pytest marker
    `requires_wsl2_execution_authority` became `requires_saea_container` (same 115 tests; CI still deselects and
    counts them).
-2. Session identity. The transport re-verifies, on every send, that a live process running the pinned binary owns the
-   listening socket. Proposal: run `vllm serve` in the same container as the harness and pin the Python interpreter,
-   the vLLM and vllm-ascend source trees and the image digest as the "binary".
-3. Runtime receipt. A new vLLM runtime-receipt schema (served weights by file hash, server argv, package versions,
-   image digest) beside the llama one, without loosening the existing schema.
+2. DECIDED 2026-10-28 (owner, on the proposal below: "按你建议走" -- go with the proposal). Session identity.
+   `vllm serve` runs in the SAME container as the harness, and the pinned "binary" is the Python interpreter plus the
+   vLLM and vllm-ascend source trees plus the image digest. The transport re-verifies on every send, exactly as
+   strictly as the llama path does, that a LIVE process with that identity owns the listening socket.
+   Implemented in `core/session/vllm_identity.py`, reached through the seam of decision 9.3. Per ENDPOINT, never per
+   server: liveness and state from `/proc/<pid>/stat`; the mount and network namespaces equal to this process's (the
+   proof that the harness and the server share one container, so the files the gate hashed are the files the server
+   loaded, and `/proc/net/tcp` is the server's own network); `/proc/<pid>/exe` re-hashed against the pinned
+   interpreter; `/proc/<pid>/cmdline` equal to the receipt's protocol plus THIS instance's deployment flags;
+   `/proc/<pid>/cwd` the pinned working directory; `/proc/<pid>/environ` carrying exactly the receipt's pinned
+   behaviour-relevant variables and this instance's own `ASCEND_RT_VISIBLE_DEVICES`; `/proc/<pid>/maps` with every
+   pinned runtime library mapped, no second libpython and nothing deleted under a pinned root; and the llama path's
+   own address-aware socket-ownership proof (`/proc/net/tcp`(6) plus `/proc/<pid>/fd`) for that endpoint's exact
+   (address, port). Nothing is cached between calls. A vLLM session is recorded in the UNCHANGED `SessionReceipt` v1
+   (role `legacy`), with the interpreter as its pinned binary.
+3. DECIDED 2026-10-28 (owner: "可以，但是最好用adapter模式兼容" -- approved, but preferably compatible via an adapter
+   pattern). Runtime receipt. A new schema `saea-runtime-receipt-vllm-v1` (`contracts/gate_runtime_vllm.py`) sits
+   BESIDE the llama one: served weights by file hash, the interpreter, its runtime libraries, the site directory's
+   import-path files, both editable source trees as exact-set manifests, each package's METADATA/RECORD identity, the
+   server argv, the pinned environment and the attested image id. The llama schemas v2/v3 and their validator are not
+   loosened by one byte.
+   The adapter is the whole shape of it: ONE runtime-identity interface, split across the layers by the rule that
+   `contracts` never imports `core` -- the receipt half in `contracts/runtime_identity.py`
+   (`validate_runtime_receipt`) and the live half in `core/session/runtime_identity.py` (`verify_session`,
+   `assert_session_alive`, `assert_sessions_alive`, `start_session`, `attach_session`, `stop_session`). The model
+   fragment's `transport` field selects the adapter (`core.config.runtime_transport` -> `FrozenCoreGate.transport`);
+   an unregistered transport closes the gate rather than defaulting to anything. The gate, the transport and the
+   session lifecycle each call the seam at ONE site instead of branching on the backend, and the llama
+   implementation is a delegation to the existing functions, called exactly as before.
+   MULTI-INSTANCE (coordinator design input, 2026-10-28, folded in): serving is N instances (e.g. 4 x
+   tensor-parallel 2 on 8 cards), each with its own port and device group, and `--max-num-seqs` is per instance.
+   The receipt therefore records WHAT is computed once (`protocol`: served model name, interpreter invocation,
+   decoding and reasoning flags, cwd, pinned environment -- hashed into `protocol_sha256`) and WHERE/HOW WIDE each
+   instance runs in `deployment.instances` (host, port, device ids, tensor-parallel size, `--max-num-seqs`,
+   `--gpu-memory-utilization`, `--max-num-batched-tokens` -- deliberately outside that hash), so a deployment change
+   never looks like a protocol change. Device groups must be disjoint and endpoints unique. The receipt is PRODUCED
+   from the running servers by `scripts/write_vllm_runtime_receipt.py` (it observes each pid, requires all instances
+   to share one protocol, re-hashes the weights, and refuses to write anything that does not pass both the gate-time
+   validator and the per-endpoint live check). The multi-endpoint transport and the card allocator are not built yet;
+   the interfaces are list-of-instances ready.
 4. Lock entries for the BF16 Thinking model and the three serving views.
 5. DECIDED 2026-10-28 (owner: "re-author following the documented procedure"): the authored semantic knowledge is
    re-authored by root from the governed TRAIN support. This is a new knowledge release and declared difference 8.6.
@@ -342,7 +381,7 @@ refusal instead of stopping and changes no repo code, shows what remains:
 |---|---|
 | gate: execution environment | refused outside the container at the time; decided 2026-10-28 (section 9.1) |
 | gate: exposure preregistration | no row for the port run id (governance: written by the owner before any contact) |
-| gate: runtime receipt | the vLLM runtime receipt does not exist (owner decision 9.3) |
+| gate: runtime receipt | schema, validator, seam and producer exist (decision 9.3, decided 2026-10-28); the receipt itself is written from the running servers by `scripts/write_vllm_runtime_receipt.py` and therefore waits for free cards |
 | gate: lock, carrier dataset entry, E0 | pass |
 | preflight past the gate | passes on 1,080 rows: config, split identity, prompt-budget estimate (ALLOW, 15,090-token operational margin in a 24,576 window), prepared-artifact identity |
 | `prepare-supply` (offline, no gate) | stops at the first missing data-root asset, `knowledge/slurp/semantic/intent-boundaries-v1/release.json` |
