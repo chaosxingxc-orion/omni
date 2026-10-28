@@ -2,7 +2,8 @@
 
 The worker pins itself to its core slice and fixes its thread count BEFORE torch is imported, hides
 ``torch_npu`` (a CPU worker must never initialise an accelerator backend), loads the pinned stack once
-under the inventory's runtime, reports the package versions of ITS interpreter for the parent to verify,
+under the inventory's runtime and attention geometry, reports the package versions of ITS interpreter and the
+MEASURED geometry for the parent to verify,
 then serves batch-one encode requests until its input closes. The protocol is length-prefixed pickle
 frames of builtins only (the parent and worker interpreters may carry different numpy versions, so a
 waveform travels as :func:`pack_wave` bytes plus its dtype and is rebuilt exactly) on a private copy of
@@ -58,7 +59,7 @@ def unpack_wave(packed):
 
 
 def main(argv=None) -> int:
-    model_dir, runtime, cores, threads, packages = (argv or sys.argv[1:])[:5]
+    model_dir, runtime, cores, threads, packages, geometry = (argv or sys.argv[1:])[:6]
     first, last = (int(value) for value in cores.split("-"))
     os.sched_setaffinity(0, range(first, last + 1))
     for name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
@@ -73,16 +74,18 @@ def main(argv=None) -> int:
     import torch
 
     torch.set_num_threads(int(threads))
-    from .speech_embedding import encode, load_stack, render
+    from .speech_embedding import encode, load_stack, measure_attention_geometry, render
 
-    processor, model, template = load_stack(Path(model_dir), local_files_only=True, runtime=runtime)
+    device = "cpu" if runtime.startswith("cpu-") else "cuda"
+    processor, model, template = load_stack(
+        Path(model_dir), local_files_only=True, runtime=runtime, attention_geometry=geometry)
     write_frame(channel, {
         "ready": True,
         "packages": {name: importlib.metadata.version(name) for name in packages.split(",") if name},
         "threads": torch.get_num_threads(),
         "cores": sorted(os.sched_getaffinity(0)),
+        "attention_geometry": measure_attention_geometry(processor, model, device=device),
     })
-    device = "cpu" if runtime.startswith("cpu-") else "cuda"
     while (request := read_frame(requests)) is not None:
         try:
             rendered = render(processor, template, request["content"])

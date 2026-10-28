@@ -170,6 +170,83 @@ def test_local_stack_reuses_pinned_loader_template_and_pooling(tmp_path, monkeyp
     assert calls[1][2]["attn_implementation"] == "sdpa"
 
 
+def _stack_dir(tmp_path):
+    import json
+
+    (tmp_path / "additional_chat_templates").mkdir()
+    (tmp_path / "additional_chat_templates/sentence_transformers.jinja").write_text("pinned")
+    (tmp_path / "1_Pooling").mkdir()
+    (tmp_path / "1_Pooling/config.json").write_text(
+        json.dumps({"pooling_mode": "mean", "include_prompt": True, "embedding_dimension": 2048})
+    )
+    return tmp_path
+
+
+class _Tower:
+    """A model whose text tower ships ``is_causal=False`` on every layer, as nemotron's remote code does."""
+
+    def __init__(self):
+        self.model = SimpleNamespace(layers=[SimpleNamespace(self_attn=SimpleNamespace(is_causal=False))
+                                             for _ in range(3)])
+
+    def to(self, device):
+        return self
+
+    def eval(self):
+        return self
+
+
+@pytest.mark.parametrize("geometry,expected", [(None, [False, False, False]), ("causal", [True, True, True])])
+def test_load_stack_forces_the_requested_attention_geometry(tmp_path, monkeypatch, geometry, expected):
+    import sys
+    from speech_aware_evidence_acquisition.core.speech_embedding import load_stack
+
+    model = _Tower()
+    monkeypatch.setitem(
+        sys.modules, "transformers",
+        SimpleNamespace(AutoProcessor=SimpleNamespace(from_pretrained=lambda *a, **k: object()),
+                        AutoModel=SimpleNamespace(from_pretrained=lambda *a, **k: model)),
+    )
+    load_stack(_stack_dir(tmp_path), local_files_only=True, runtime="cpu-float32", attention_geometry=geometry)
+    assert [layer.self_attn.is_causal for layer in model.model.layers] == expected
+
+
+def test_load_stack_refuses_an_unknown_attention_geometry(tmp_path, monkeypatch):
+    import sys
+    from speech_aware_evidence_acquisition.core.speech_embedding import load_stack
+
+    monkeypatch.setitem(
+        sys.modules, "transformers",
+        SimpleNamespace(AutoProcessor=SimpleNamespace(from_pretrained=lambda *a, **k: object()),
+                        AutoModel=SimpleNamespace(from_pretrained=lambda *a, **k: _Tower())),
+    )
+    with pytest.raises(SystemExit, match="unknown attention geometry"):
+        load_stack(_stack_dir(tmp_path), local_files_only=True, attention_geometry="bidirectional")
+
+
+def test_measure_attention_geometry_reads_prefix_states():
+    import torch
+    from speech_aware_evidence_acquisition.core.speech_embedding import measure_attention_geometry
+
+    class Tokenizer:
+        def __call__(self, text, return_tensors):
+            ids = torch.tensor([[len(word) for word in text.split()]])
+            return {"input_ids": ids, "attention_mask": torch.ones_like(ids)}
+
+    def tower(causal):
+        def forward(*, input_ids, attention_mask):
+            width = input_ids.shape[1]
+            states = torch.arange(width, dtype=torch.float32).unsqueeze(-1).repeat(1, 4)
+            if not causal:
+                states = states + width  # later tokens change every state
+            return SimpleNamespace(last_hidden_state=states.unsqueeze(0))
+
+        return SimpleNamespace(tokenizer=Tokenizer()), SimpleNamespace(model=forward)
+
+    assert measure_attention_geometry(*tower(True)) == "causal"
+    assert measure_attention_geometry(*tower(False)) == "bidirectional"
+
+
 @pytest.mark.parametrize(
     "audio_frames,token_count,error",
     [

@@ -12,8 +12,16 @@ import os
 import numpy as np
 
 
-def load_stack(model_dir, *, local_files_only=False, runtime="cuda-bfloat16"):
-    return "processor", ("model", str(model_dir), runtime), "template"
+def load_stack(model_dir, *, local_files_only=False, runtime="cuda-bfloat16", attention_geometry=None):
+    return "processor", ("model", str(model_dir), runtime, attention_geometry), "template"
+
+
+def measure_attention_geometry(processor, model, *, device="cpu"):
+    """The forced geometry, unless the model dir name asks for a mismatch (``*-mismeasured``)."""
+
+    if model[1].endswith("-mismeasured"):
+        return "bidirectional"
+    return model[3] or "bidirectional"
 
 
 def render(processor, template, content):

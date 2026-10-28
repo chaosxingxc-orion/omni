@@ -47,6 +47,31 @@ def _cores(count):
     return available[0], available[0] + count - 1
 
 
+# ---- attention geometry -----------------------------------------------------------------------------------
+
+
+def test_forced_geometry_reaches_every_shard_and_is_verified():
+    items = _items(40)
+    _ids, _vectors, _block, _rendered = sharding.sharded_text_pass(
+        items, "passage: ", model_dir=Path("m"), runtime="cpu-float32", device="cpu", batch=16, workers=3,
+        cores=_cores(3), attention_geometry="causal", backend=FAKE, launcher=_in_process)
+    specs = []
+    sharding.sharded_text_pass(
+        items, "passage: ", model_dir=Path("m"), runtime="cpu-float32", device="cpu", batch=16, workers=3,
+        cores=_cores(3), attention_geometry="causal", backend=FAKE, launcher=lambda s: specs.extend(s) or _in_process(s))
+    assert {spec.attention_geometry for spec in specs} == {"causal"}
+    with pytest.raises(sharding.ShardingError, match="measured attention geometry 'bidirectional'"):
+        sharding.sharded_text_pass(
+            items, "passage: ", model_dir=Path("m-mismeasured"), runtime="cpu-float32", device="cpu", batch=16,
+            workers=3, cores=_cores(3), attention_geometry="causal", backend=FAKE, launcher=_in_process)
+
+
+def test_as_shipped_geometry_is_never_measured():
+    _ids, _vectors, _block, _rendered = sharding.sharded_text_pass(
+        _items(20), "passage: ", model_dir=Path("m-mismeasured"), runtime="cpu-float32", device="cpu", batch=16,
+        workers=2, cores=_cores(2), backend=FAKE, launcher=_in_process)
+
+
 # ---- partition rules --------------------------------------------------------------------------------------
 
 
@@ -187,10 +212,11 @@ def mf7b(tmp_path, monkeypatch):
 
 def test_default_path_is_the_historical_cuda_bfloat16_recipe(mf7b):
     receipt, data = mf7b.run("--sets", "keys")
-    assert mf7b.calls["load"] == [{"runtime": "cuda-bfloat16"}]
+    assert mf7b.calls["load"] == [{"runtime": "cuda-bfloat16", "attention_geometry": None}]
     assert set(mf7b.calls["encode"]) == {"cuda"}
     embedder = receipt["embedder"]
     assert (embedder["device"], embedder["dtype"], embedder["gpu"]) == ("cuda", "bfloat16", True)
+    assert embedder["attention_geometry"] == "as-shipped"
     assert "dtype=bfloat16" in embedder["loader"]
     assert "gpu_hours" in receipt["accounting"] and "cpu_wall_hours" not in receipt["accounting"]
     block = receipt["sets"]["nemotron-train-text"]
@@ -214,6 +240,14 @@ def test_sharded_cpu_pass_writes_the_unsharded_bytes_and_records_its_runtime(mf7
     assert block["batch_size"] == 16
     assert block["sharding"]["rule"] == sharding.PARTITION_RULE
     assert block["sharding"]["core_slices"] == ["0-1", "2-3", "4-5"]
+
+
+def test_forced_geometry_is_recorded_and_a_resumed_pass_must_keep_it(mf7b):
+    receipt, _data = mf7b.run("--sets", "keys", "--runtime", "cpu-float32", "--workers", "2", "--cores", "0-3",
+                              "--attention-geometry", "causal")
+    assert receipt["embedder"]["attention_geometry"] == "causal"
+    with pytest.raises(SystemExit, match="same geometry"):
+        mf7b.run("--sets", "labels", "--runtime", "cpu-float32")
 
 
 def test_resumed_pass_merges_sets_and_refuses_a_runtime_switch(mf7b):

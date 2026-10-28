@@ -1,9 +1,10 @@
 """The port's CPU encoder runtime: a pool of pinned worker processes behind the preparation backends.
 
 A CPU encoder inventory (``saea-cpu-encoder-inventory-v1``) pins what the historical in-process inventory
-pins (model files by size and SHA-256), plus the runtime (``cpu-float32``), the worker interpreter, the
-worker count, the threads per worker and the first core of the worker slices. Package versions are
-verified inside each worker's own interpreter, because the harness interpreter need not carry torch.
+pins (model files by size and SHA-256), plus the runtime (``cpu-float32``), the attention geometry
+(``causal``), the worker interpreter, the worker count, the threads per worker and the first core of the
+worker slices. Package versions and the geometry are verified inside each worker's own interpreter: the
+harness interpreter need not carry torch, and the geometry is measured on the loaded weights, not assumed.
 
 Concurrency never changes a vector. Every request is its own batch-one forward on one worker with a
 fixed thread count, so the pool size only changes wall-clock time. The preparation lifecycle charges a
@@ -21,12 +22,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .cpu_encoder_worker import pack_wave, read_frame, write_frame
-from .speech_embedding import ENCODER_RUNTIMES
+from .speech_embedding import ATTENTION_GEOMETRIES, ENCODER_RUNTIMES
 
 CPU_INVENTORY_SCHEMA = "saea-cpu-encoder-inventory-v1"
 _CPU_KEYS = {
-    "schema", "model_dir_relpath", "files", "packages", "runtime", "python_executable", "workers",
-    "threads_per_worker", "first_core",
+    "schema", "model_dir_relpath", "files", "packages", "runtime", "attention_geometry", "python_executable",
+    "workers", "threads_per_worker", "first_core",
 }
 _SRC_ROOT = Path(__file__).resolve().parents[2]
 
@@ -44,6 +45,8 @@ def check_cpu_inventory(inventory):
         raise CpuEncoderPoolError("CPU encoder inventory schema is invalid")
     if inventory["runtime"] not in ENCODER_RUNTIMES or not inventory["runtime"].startswith("cpu-"):
         raise CpuEncoderPoolError("CPU encoder inventory must name a CPU runtime")
+    if inventory["attention_geometry"] not in ATTENTION_GEOMETRIES or inventory["attention_geometry"] is None:
+        raise CpuEncoderPoolError("CPU encoder inventory must pin a forced attention geometry")
     for key in ("workers", "threads_per_worker"):
         if type(inventory[key]) is not int or inventory[key] < 1:
             raise CpuEncoderPoolError(f"CPU encoder inventory {key} must be a positive integer")
@@ -78,12 +81,13 @@ class CpuEncoderPool:
             TORCH_DEVICE_BACKEND_AUTOLOAD="0", HF_HUB_OFFLINE="1")
         command = [inventory["python_executable"], "-m", "speech_aware_evidence_acquisition.core.cpu_encoder_worker",
                    str(model_dir), inventory["runtime"]]
+        tail = [str(inventory["threads_per_worker"]), ",".join(sorted(inventory["packages"])),
+                inventory["attention_geometry"]]
         self.workers, self.locks = [], []
         try:
             for spec in slices:
                 self.workers.append(spawn(
-                    [*command, spec, str(inventory["threads_per_worker"]), ",".join(sorted(inventory["packages"]))],
-                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=environment))
+                    [*command, spec, *tail], stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=environment))
                 self.locks.append(threading.Lock())
             for worker in self.workers:  # all workers load concurrently; collect their reports in order
                 report = read_frame(worker.stdout)
@@ -93,6 +97,10 @@ class CpuEncoderPool:
                     raise CpuEncoderPoolError("CPU encoder worker package versions differ from the inventory")
                 if report["threads"] != inventory["threads_per_worker"]:
                     raise CpuEncoderPoolError("CPU encoder worker thread count differs from the inventory")
+                if report.get("attention_geometry") != inventory["attention_geometry"]:
+                    raise CpuEncoderPoolError(
+                        f"CPU encoder worker measured attention geometry {report.get('attention_geometry')!r}, "
+                        f"not the inventory's {inventory['attention_geometry']!r}")
         except BaseException:
             self.close()
             raise
@@ -151,7 +159,8 @@ class _CpuBackend:
     def _pool(self):
         if self.pool is None:
             self.event("model_load_started", workers=self.inventory["workers"],
-                       threads_per_worker=self.inventory["threads_per_worker"], runtime=self.inventory["runtime"])
+                       threads_per_worker=self.inventory["threads_per_worker"], runtime=self.inventory["runtime"],
+                       attention_geometry=self.inventory["attention_geometry"])
             self.pool = self.pool_cls(self.inventory, self.model_dir)
             self.event("model_load_finished")
         return self.pool

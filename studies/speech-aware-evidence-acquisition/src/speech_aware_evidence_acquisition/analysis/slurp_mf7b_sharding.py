@@ -96,6 +96,8 @@ class ShardSpec:
     prompt: str
     chunks: tuple[tuple[int, tuple[tuple[str, str], ...]], ...]
     backend: str = DEFAULT_BACKEND
+    #: ``None`` loads the stack as shipped; ``"causal"`` forces the geometry and verifies it on the loaded weights.
+    attention_geometry: str | None = None
 
 
 def encode_shard(spec: ShardSpec) -> tuple[list[tuple[int, list[str], np.ndarray]], str | None]:
@@ -105,7 +107,13 @@ def encode_shard(spec: ShardSpec) -> tuple[list[tuple[int, list[str], np.ndarray
     """
 
     backend = importlib.import_module(spec.backend)
-    processor, model, template = backend.load_stack(Path(spec.model_dir), runtime=spec.runtime)
+    processor, model, template = backend.load_stack(
+        Path(spec.model_dir), runtime=spec.runtime, attention_geometry=spec.attention_geometry)
+    if spec.attention_geometry is not None:
+        measured = backend.measure_attention_geometry(processor, model, device=spec.device)
+        if measured != spec.attention_geometry:
+            raise ShardingError(f"worker {spec.worker} measured attention geometry {measured!r}, "
+                                f"not the forced {spec.attention_geometry!r}")
     results, first_rendered = [], None
     for index, chunk in spec.chunks:
         rendered = [
@@ -224,6 +232,7 @@ def sharded_text_pass(
     batch: int,
     workers: int,
     cores: tuple[int, int],
+    attention_geometry: str | None = None,
     backend: str = DEFAULT_BACKEND,
     launcher: Callable[[Sequence[ShardSpec]], list] = spawn_launcher,
 ) -> tuple[list[str], list[tuple[float, ...]], dict[str, object], str | None]:
@@ -244,6 +253,7 @@ def sharded_text_pass(
             prompt=prompt,
             chunks=tuple((index, tuple(chunks[index])) for index in part),
             backend=backend,
+            attention_geometry=attention_geometry,
         )
         for worker, part in enumerate(partition_chunks(len(chunks), workers))
     ]

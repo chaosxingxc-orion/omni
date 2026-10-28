@@ -67,11 +67,32 @@ def read_audio_span(source):
 #: float32 because bfloat16 is software-emulated on CPUs without bf16 instructions (Kunpeng-920: 5-10x slower).
 ENCODER_RUNTIMES = {"cuda-bfloat16": ("cuda", "bfloat16"), "cpu-float32": ("cpu", "float32")}
 
+#: Attention geometry of the text tower. As shipped, ``modeling_nv_omni_embed.py`` sets ``is_causal=False`` on
+#: every text layer and overrides ``_update_causal_mask``; on transformers 5.x the override is never called, and
+#: the flag reaches sdpa only when the mask is skipped. Measured 2026-10-28 (CPU float32, transformers 5.14.1):
+#: batch one -> bidirectional; a padded batch -> causal. ``None`` keeps that as-shipped behaviour (the historical
+#: recipe); ``"causal"`` forces ``is_causal=True`` on every text layer, which is causal under both mask paths.
+ATTENTION_GEOMETRIES = (None, "causal")
 
-def load_stack(model_dir: Path, *, local_files_only: bool = False, runtime: str = "cuda-bfloat16"):
+
+def _text_layers(model):
+    layers = getattr(getattr(model, "model", None), "layers", None)
+    if layers is None:
+        raise SystemExit("the encoder has no text tower layers to set an attention geometry on")
+    return layers
+
+
+def load_stack(
+    model_dir: Path,
+    *,
+    local_files_only: bool = False,
+    runtime: str = "cuda-bfloat16",
+    attention_geometry: str | None = None,
+):
     """The three shipped modules, reproduced through plain ``transformers``.
 
     ``runtime`` names one entry of :data:`ENCODER_RUNTIMES`; the default is the historical recipe.
+    ``attention_geometry`` is one of :data:`ATTENTION_GEOMETRIES`; the default is as shipped.
     """
 
     import torch
@@ -91,6 +112,8 @@ def load_stack(model_dir: Path, *, local_files_only: bool = False, runtime: str 
         raise SystemExit(f"unexpected embedding dimension {pooling!r}")
     if runtime not in ENCODER_RUNTIMES:
         raise SystemExit(f"unknown encoder runtime {runtime!r}")
+    if attention_geometry not in ATTENTION_GEOMETRIES:
+        raise SystemExit(f"unknown attention geometry {attention_geometry!r}")
     device, dtype = ENCODER_RUNTIMES[runtime]
     processor = AutoProcessor.from_pretrained(
         str(model_dir), trust_remote_code=True, local_files_only=local_files_only
@@ -103,7 +126,41 @@ def load_stack(model_dir: Path, *, local_files_only: bool = False, runtime: str 
         attn_implementation="sdpa",
     )
     model = model.to(device).eval()
+    if attention_geometry == "causal":
+        for layer in _text_layers(model):
+            layer.self_attn.is_causal = True
     return processor, model, template
+
+
+#: Two synthetic texts, the first a strict token prefix of the second (checked at measurement time).
+_GEOMETRY_PROBE = ("passage: switch the kitchen lights", "passage: switch the kitchen lights to blue please")
+
+
+def measure_attention_geometry(processor, model, *, device: str = "cpu") -> str:
+    """``"causal"`` or ``"bidirectional"``: the text tower's effective geometry at batch one.
+
+    In a causal tower the hidden state at a position cannot depend on later tokens, so the last-layer states
+    over a shared token prefix are identical between a text and its extension; a bidirectional tower changes
+    them. Two batch-one text forwards on the loaded weights; no dataset content.
+    """
+
+    import torch
+
+    tokenizer = processor.tokenizer
+    short, long = (tokenizer(text, return_tensors="pt") for text in _GEOMETRY_PROBE)
+    width = short["input_ids"].shape[1]
+    if not torch.equal(long["input_ids"][0, :width], short["input_ids"][0]):
+        raise SpeechEmbeddingError("geometry probe texts are not a strict token prefix pair")
+    text_model = model.model
+    with torch.inference_mode():
+        states = [
+            text_model(input_ids=batch["input_ids"].to(device), attention_mask=batch["attention_mask"].to(device))
+            .last_hidden_state[0, :width]
+            .float()
+            for batch in (short, long)
+        ]
+    difference = (states[0] - states[1]).abs().max().item()
+    return "causal" if difference < 1e-3 else "bidirectional"
 
 
 def render(processor, template: str, content: list[dict]) -> str:

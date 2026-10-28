@@ -131,7 +131,8 @@ def _inventory(**changes):
     return {
         "schema": CPU_INVENTORY_SCHEMA, "model_dir_relpath": "models/x", "files": {},
         "packages": {"torch": "2.10.0", "transformers": "4.57.1"}, "runtime": "cpu-float32",
-        "python_executable": "/usr/bin/python3", "workers": 2, "threads_per_worker": 1, "first_core": first,
+        "attention_geometry": "causal", "python_executable": "/usr/bin/python3", "workers": 2,
+        "threads_per_worker": 1, "first_core": first,
         **changes,
     }
 
@@ -139,6 +140,7 @@ def _inventory(**changes):
 @pytest.mark.parametrize("changes", [
     {"runtime": "cuda-bfloat16"}, {"runtime": "cpu-int8"}, {"workers": 0}, {"threads_per_worker": True},
     {"first_core": -1}, {"python_executable": "python3"}, {"packages": {"torch": "2.10.0"}}, {"extra": 1},
+    {"attention_geometry": None}, {"attention_geometry": "bidirectional"}, {"attention_geometry": "as-shipped"},
 ])
 def test_cpu_inventory_shape_refuses(changes):
     with pytest.raises(CpuEncoderPoolError):
@@ -157,7 +159,7 @@ class _FakeWorker:
         request_read, request_write = os.pipe()
         reply_read, reply_write = os.pipe()
         self.stdin, self.stdout = os.fdopen(request_write, "wb"), os.fdopen(reply_read, "rb")
-        self.command, self.cores = command, command[-3]
+        self.command, self.cores = command, command[-4]
         inbound, outbound = os.fdopen(request_read, "rb"), os.fdopen(reply_write, "wb")
 
         def serve():
@@ -182,7 +184,8 @@ class _FakeWorker:
 
 def _spawn(report_changes=None):
     def spawn(command, **kwargs):
-        report = {"ready": True, "packages": dict(_inventory()["packages"]), "threads": 1}
+        report = {"ready": True, "packages": dict(_inventory()["packages"]), "threads": 1,
+                  "attention_geometry": "causal"}
         report.update(report_changes or {})
         return _FakeWorker(command, report=report, **kwargs)
     return spawn
@@ -200,10 +203,19 @@ def test_pool_keeps_caller_order_and_spreads_requests_over_workers():
 
 
 @pytest.mark.parametrize("report", [{"packages": {"torch": "2.9.0", "transformers": "4.57.1"}}, {"threads": 4},
-                                    {"ready": False}])
+                                    {"ready": False}, {"attention_geometry": "bidirectional"},
+                                    {"attention_geometry": None}])
 def test_pool_refuses_a_worker_that_differs_from_its_pins(report):
     with pytest.raises(CpuEncoderPoolError):
         CpuEncoderPool(_inventory(), "/models/x", spawn=_spawn(report))
+
+
+def test_pool_hands_each_worker_the_pinned_geometry():
+    pool = CpuEncoderPool(_inventory(), "/models/x", spawn=_spawn())
+    try:
+        assert all(worker.command[-1] == "causal" for worker in pool.workers)
+    finally:
+        pool.close()
 
 
 def test_pool_refuses_core_slices_outside_its_affinity():
