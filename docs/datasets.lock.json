@@ -24,7 +24,8 @@
     "meeting-minutes-speech": "Speech-bearing meeting carriers for the meeting-minutes-agent topic: the ICSI Meeting Corpus mixed-headset signals and their CC BY annotation layers, MeetingBank's complete text/alignment layer with a bounded city-stratified audio subset, and NOTSOFAR-1's single-channel far-field office meetings with multi-judge human verbatim speaker-attributed references. Distinct from meeting-minutes-text, which carries no audio.",
     "meeting-minutes-tools": "Pinned frozen TOOL models for the meeting-minutes-agent topic (segmentation pre-pass only; answer authority stays with the frozen core). Currently the NVIDIA Sortformer streaming diarizer v2 payloads.",
     "speech-aware-tools": "Pinned frozen TOOL models for the speech-aware-evidence-acquisition study, entering under the charter's frozen tool-level retriever/judge clause (encode-only; final answer authority stays with the frozen core). Includes the Qwen3-Embedding-0.6B GGUF diagnostic text embedder and the LCO-Embedding-Omni-3B GGUF speech-native representation comparator.",
-    "deferred": "Cataloged but intentionally not in the current acquisition wave."
+    "deferred": "Cataloged but intentionally not in the current acquisition wave.",
+    "speech-aware-npu-port": "Assets the speech-aware-evidence-acquisition study's NPU/vLLM port serves: the BF16 Qwen3-Omni-30B-A3B-Thinking core and the vLLM serving views of its retrieval encoders (Omni-Embed-Nemotron-3B causal, LCO-Embedding-Omni 3B-2605 and 7B). Owner decision 9.4, 2026-10-28."
   },
   "status_model": {
     "COMPLETE": "Required bytes for this record are present at the recorded identity.",
@@ -45,6 +46,38 @@
     "total_h": "381.0G"
   },
   "amendments": [
+    {
+      "date": "2026-10-28",
+      "task": "Owner decision 9.4 of the speech-aware-evidence-acquisition NPU/vLLM port (owner, 2026-10-28: \"go ahead\" (translated from the owner's Chinese message), approved; the owner asked the agent to draft the entries): register the BF16 Qwen3-Omni-30B-A3B-Thinking serving core and the three vLLM serving views of the retrieval encoders. Registration only: the bytes already exist on the data root of the Ascend hosts; no download, no model load, no forward and no corpus contact. Add-only: no existing entry, profile or total was changed. Readiness record: studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-28-npu-port-lock-entries-v1/README.md.",
+      "changes": [
+        {
+          "kind": "profile-registration",
+          "note": "New fetch profile speech-aware-npu-port for the assets the NPU/vLLM port serves; the three views are also members of speech-aware-tools (encode-only TOOL models).",
+          "entries": [
+            "qwen3-omni-30b-a3b-thinking-bf16",
+            "omni-embed-nemotron-3b-causal-v1",
+            "lco-embedding-omni-3b-2605-v1",
+            "lco-embedding-omni-7b-v1"
+          ]
+        },
+        {
+          "kind": "asset-registration",
+          "note": "qwen3-omni-30b-a3b-thinking-bf16 registered (lifecycle AUXILIARY, kind model, source hf) at revision 2f443cfc4c54b14a815c0e2bb9a9d6cbcd9a748b: all 26 published files, 63,447,489,451 B, sha256 of every file in source.files. Re-hashed 2026-10-28 and checked against the official huggingface.co API the same day: the 16 safetensors shards match their LFS oids and the 10 other files their Git blob SHA-1. It is the model_lock_key of the port model fragment.",
+          "entries": [
+            "qwen3-omni-30b-a3b-thinking-bf16"
+          ]
+        },
+        {
+          "kind": "asset-registration",
+          "note": "Three serving views registered (lifecycle DERIVED, kind model, source derived from core/vllm_serving_view.py): omni-embed-nemotron-3b-causal-v1 14 files 9,423,118,096 B, receipt sha256 a3ddac0294a4d346dcdf5fed39226d6ce2508f3a28a8e70afbbc773d80b6cd81; lco-embedding-omni-3b-2605-v1 14 files 9,423,121,465 B, receipt sha256 4c95f853cdb7e9279f267c9d11f53e819484905dc0c9d195605e0effe8e33f91; lco-embedding-omni-7b-v1 16 files 17,879,801,172 B, receipt sha256 c77fd25b103c189db61624010db4313c93140c6bffbec587ae333c72e1ce9135. Every view file re-hashed 2026-10-28 equals its receipt; the consumed source files equal the receipt's source hashes (LCO sources also checked against the official huggingface.co API). The LCO source checkpoints themselves are recorded in derived_from and have no entry of their own.",
+          "entries": [
+            "omni-embed-nemotron-3b-causal-v1",
+            "lco-embedding-omni-3b-2605-v1",
+            "lco-embedding-omni-7b-v1"
+          ]
+        }
+      ]
+    },
     {
       "date": "2026-09-29",
       "task": "Owner decision 201 (option A, 2026-09-29: the research direction is now to build the system and optimise it at system level; tools such as a pinned ASR are legitimate system components under the unchanged boundary: the frozen core keeps final answer authority, tools are pinned and logged, gold never enters runtime) with coordinator ruling Q3: register the study-pinned openai-whisper large-v3 .pt checkpoint before E5-0 runs. Registration only: no download, no copy, no model load and no forward; the bytes already exist on WSL ext4 from the 2026-09-12 acquisition.",
@@ -1459,6 +1492,810 @@
       "task": "speech-recognition",
       "factor_family": "tool-model",
       "note": "Qwen3-ASR-1.7B (open Qwen3-ASR series; base_model Qwen/Qwen3-ASR-1.7B), official ggml-org GGUF conversion: bf16 language-model GGUF plus bf16 mmproj (audio tower), the highest-fidelity pair published (Q8_0 siblings exist and are NOT fetched). Owner rulings 339 (triggered ASR tool, called by the core's own decision, never a default transcript) and 342 A (ASR candidates = ONLY the open Qwen3-ASR series, 0.6B and 1.7B; VRAM-bounded tool). Served by the pinned llama.cpp-featcache build 04ccc72a2 (mtmd qwen3 audio support, upstream #19441) behind an OpenAI-compatible llama-server sidecar on its own port, CPU only (-ngl 0) while the core holds the GPU; the entry authorises acquisition only, every corpus contact stays behind its own exposure-ledger row."
+    },
+    {
+      "name": "qwen3-omni-30b-a3b-thinking-bf16",
+      "kind": "model",
+      "local_subdir": "models/qwen3-omni-30b-a3b-thinking",
+      "source": {
+        "kind": "hf",
+        "id": "Qwen/Qwen3-Omni-30B-A3B-Thinking",
+        "repo_type": "model",
+        "include": [
+          ".gitattributes",
+          "README.md",
+          "chat_template.json",
+          "config.json",
+          "generation_config.json",
+          "merges.txt",
+          "model-00001-of-00016.safetensors",
+          "model-00002-of-00016.safetensors",
+          "model-00003-of-00016.safetensors",
+          "model-00004-of-00016.safetensors",
+          "model-00005-of-00016.safetensors",
+          "model-00006-of-00016.safetensors",
+          "model-00007-of-00016.safetensors",
+          "model-00008-of-00016.safetensors",
+          "model-00009-of-00016.safetensors",
+          "model-00010-of-00016.safetensors",
+          "model-00011-of-00016.safetensors",
+          "model-00012-of-00016.safetensors",
+          "model-00013-of-00016.safetensors",
+          "model-00014-of-00016.safetensors",
+          "model-00015-of-00016.safetensors",
+          "model-00016-of-00016.safetensors",
+          "model.safetensors.index.json",
+          "preprocessor_config.json",
+          "tokenizer_config.json",
+          "vocab.json"
+        ],
+        "files": [
+          {
+            "filename": ".gitattributes",
+            "size_bytes": 1519,
+            "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361"
+          },
+          {
+            "filename": "README.md",
+            "size_bytes": 90295,
+            "sha256": "0e44065c4c4a27071f7239afd5b5a33af5bc2e437dd7ea9950e51aafabfde3df"
+          },
+          {
+            "filename": "chat_template.json",
+            "size_bytes": 5946,
+            "sha256": "3afb9519448b62e252cefeed1c0c1939b01b4e8ed70adbaf3c9f952969aa0ec7"
+          },
+          {
+            "filename": "config.json",
+            "size_bytes": 8528,
+            "sha256": "e6f8c637528461398ef4e11d48b6112ce73db2458a563dfea548127c2cce253f"
+          },
+          {
+            "filename": "generation_config.json",
+            "size_bytes": 113,
+            "sha256": "4c8ba35b3dfaed05c648b933ef8d9daca74da0a8ef87084fa5738f3209cdbadc"
+          },
+          {
+            "filename": "merges.txt",
+            "size_bytes": 1671839,
+            "sha256": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3"
+          },
+          {
+            "filename": "model-00001-of-00016.safetensors",
+            "size_bytes": 4000129664,
+            "sha256": "ba3b117f1fe9a10f670e87c73321c0651e89f425de598ede20185fdc94df997b"
+          },
+          {
+            "filename": "model-00002-of-00016.safetensors",
+            "size_bytes": 3999992216,
+            "sha256": "0c419d9fc447b83ab36be8243f1da793125f01ce0ca0fc49d4ad8aca5a03b6f0"
+          },
+          {
+            "filename": "model-00003-of-00016.safetensors",
+            "size_bytes": 3997362968,
+            "sha256": "bdd6cc1cb3bf3422eefaca3be1a730d78253bf158a53aa5ec73310cacb2f7d5a"
+          },
+          {
+            "filename": "model-00004-of-00016.safetensors",
+            "size_bytes": 3999984424,
+            "sha256": "c8228f28c83b8355ec441ea8caf33e847ec71192e2a378568289e6653d8d72f4"
+          },
+          {
+            "filename": "model-00005-of-00016.safetensors",
+            "size_bytes": 3999985496,
+            "sha256": "4317632b9dd26e4c950bbd90d1e89304325725f3290db00a642918a364ca1e01"
+          },
+          {
+            "filename": "model-00006-of-00016.safetensors",
+            "size_bytes": 3999985528,
+            "sha256": "c86a2cdcdf7eb7b8d5e6846a778798a12d14344ae4f178d4c9a4842c8fcaf9e5"
+          },
+          {
+            "filename": "model-00007-of-00016.safetensors",
+            "size_bytes": 3997372200,
+            "sha256": "e670918aaab9144dfe7e1132924c706d56b4c6b4c2b6e94a5cf796c3c55e7916"
+          },
+          {
+            "filename": "model-00008-of-00016.safetensors",
+            "size_bytes": 3999985488,
+            "sha256": "1f44c6e93b85b0cc05284beac60a4076caf61c803f569bf5dcb5ab6a6a810312"
+          },
+          {
+            "filename": "model-00009-of-00016.safetensors",
+            "size_bytes": 3999985496,
+            "sha256": "5439c95a4cbbd6a6ea7c498d8a71fcf3dacba64b4dac5bf5ad2834fda4140929"
+          },
+          {
+            "filename": "model-00010-of-00016.safetensors",
+            "size_bytes": 3999985496,
+            "sha256": "c75a2bb738fcb3da89798e5faffd627e3b2592325491bb9df915835afaac64c0"
+          },
+          {
+            "filename": "model-00011-of-00016.safetensors",
+            "size_bytes": 3999985544,
+            "sha256": "35439fa67730c6f2553ac6ae11f97a34dff37a61341275d3416d080423aa689b"
+          },
+          {
+            "filename": "model-00012-of-00016.safetensors",
+            "size_bytes": 3997372160,
+            "sha256": "61415e98a78c64a790c946be3145877886b4e6b681425dc061225df511b76e04"
+          },
+          {
+            "filename": "model-00013-of-00016.safetensors",
+            "size_bytes": 3999985504,
+            "sha256": "70587b5b7e51e8a6e4bf2d069ef465aea913c337f8d951e2790cd1e426bf5378"
+          },
+          {
+            "filename": "model-00014-of-00016.safetensors",
+            "size_bytes": 3999985496,
+            "sha256": "bee3c092d2966c401ef4b9899a4659e1fc2e9112667354c4e7bcb8a2faff2be7"
+          },
+          {
+            "filename": "model-00015-of-00016.safetensors",
+            "size_bytes": 3999985496,
+            "sha256": "80ea0e6c2cb35f485ae7534a3092793c18a429e102c820b77338726758d30e30"
+          },
+          {
+            "filename": "model-00016-of-00016.safetensors",
+            "size_bytes": 3448914464,
+            "sha256": "da33b1078d1b474f83ccc455928b18b731e3b09ad46b21af88e68d7cbb8488a5"
+          },
+          {
+            "filename": "model.safetensors.index.json",
+            "size_bytes": 1928791,
+            "sha256": "13ae0b6fa947acd1ec5e163d493884724999788752b699266eb09b14ba914c90"
+          },
+          {
+            "filename": "preprocessor_config.json",
+            "size_bytes": 603,
+            "sha256": "b10e27fd4542cf89ec7145942b87f3e65408d4e9f9d031a29acdd293c15fb3fc"
+          },
+          {
+            "filename": "tokenizer_config.json",
+            "size_bytes": 7344,
+            "sha256": "dc3c31c3bdaedd5016382bb3cbe07323026775ad51f5a4fb564505992ae4a670"
+          },
+          {
+            "filename": "vocab.json",
+            "size_bytes": 2776833,
+            "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+          }
+        ]
+      },
+      "revision": "2f443cfc4c54b14a815c0e2bb9a9d6cbcd9a748b",
+      "lifecycle": "AUXILIARY",
+      "profiles": [
+        "speech-aware-npu-port"
+      ],
+      "status": "COMPLETE",
+      "license": "apache-2.0 (model card: license other, license_name apache-2.0); ungated",
+      "verification": {
+        "observed_at": "2026-10-28",
+        "resolved_revision": "2f443cfc4c54b14a815c0e2bb9a9d6cbcd9a748b",
+        "payload_files": 26,
+        "payload_size_bytes": 63447489451,
+        "files_missing": 0,
+        "size_mismatches": 0,
+        "sha256_failures": 0,
+        "git_blob_sha1_failures": 0,
+        "byte_closure": true,
+        "gated": false,
+        "method": "Fetched 2026-10-27 from the official https://huggingface.co endpoint at the pinned revision (pinned-revision manifest: total_files=26 total_bytes=63447489451; one round, missing=0; the download-time check against the HF LFS sha256 oids reported bad=0). Re-verified 2026-10-28 for this registration: every file re-hashed with sha256sum on host npu (cores 64-127). The official huggingface.co model API was read again the same day at the pinned revision (sha equal, private false, gated false, 26 siblings): the file set equals the sibling inventory, every size matches, the 16 LFS-tracked safetensors shards match their LFS sha256 oids, and the 10 non-LFS files match their upstream Git blob SHA-1 byte for byte. source.files records the sha256 of every file. The downloader's bookkeeping under .hfd/ (speechrl-complete-revision, verified.tsv, an empty missing.locked.txt) is not governed. Zero partial markers.",
+        "receipt": "models/qwen3-omni-30b-a3b-thinking/.hfd/speechrl-complete-revision",
+        "disposition": "complete pinned model at BF16; the bytes are admitted, but no serving session is: the vLLM runtime receipt (served weights by file hash, server argv, package versions, image digest) is owner decision 9.3 and every corpus contact stays behind its own exposure-ledger row"
+      },
+      "size_h": "59.1G",
+      "size_bytes": 63447489451,
+      "files": 26,
+      "task": "-",
+      "factor_family": "model",
+      "note": "Official BF16 safetensors of Qwen3-Omni-30B-A3B-Thinking, the complete published file set at the pinned revision: 16 safetensors shards plus the shard index, config.json, generation_config.json, chat_template.json, preprocessor_config.json, tokenizer_config.json, vocab.json, merges.txt, README.md and .gitattributes. The BF16 twin of qwen3-omni-30b-a3b-thinking-gguf-q4km and the serving core of the speech-aware-evidence-acquisition NPU/vLLM port (owner decision 9.4, 2026-10-28: approved; design doc studies/speech-aware-evidence-acquisition/docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md). The study's port model fragment configs/model/bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1.json names this entry as its model_lock_key and resolves local_subdir under its model_materialization_root (the data root on the Ascend hosts). vLLM reads 24 of the 26 files; README.md and .gitattributes are governed for byte closure with the published revision only. Declared differences from the historical llama.cpp runs (design doc section 8): BF16 weights and BF16 KV instead of Q4_K_M and q8_0 KV, the server's own audio tower over raw audio instead of mmproj packets, vLLM sampling and kernels.",
+      "research_role": "Frozen serving core (the answering model) of the speech-aware study's NPU/vLLM port cells: the same model and thinking mode as the historical Q4_K_M Thinking core, served at BF16 by vLLM-Ascend.",
+      "claim_limit": "Port runs on these bytes are not bit-comparable with the historical llama.cpp Q4_K_M runs (design doc section 8). A number measured on them is a port measurement carrying the declared differences, never on its own a reproduction of a historical number.",
+      "acquisition_receipt": "studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-28-npu-port-lock-entries-v1/README.md"
+    },
+    {
+      "name": "omni-embed-nemotron-3b-causal-v1",
+      "kind": "model",
+      "local_subdir": "models/serving-views/omni-embed-nemotron-3b-causal-v1",
+      "source": {
+        "kind": "derived",
+        "script": "studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/core/vllm_serving_view.py",
+        "args": [
+          "build",
+          "${DATA_ROOT}/models/omni-embed-nemotron-3b",
+          "${DATA_ROOT}/models/serving-views/omni-embed-nemotron-3b-causal-v1",
+          "--view-id",
+          "omni-embed-nemotron-3b-causal-v1"
+        ],
+        "files": [
+          {
+            "filename": "added_tokens.json",
+            "size_bytes": 579,
+            "sha256": "e81a2cc3bd867a1217019eed202d1d8a07e1063ece716f22060dda14f6cc07d8"
+          },
+          {
+            "filename": "chat_template.jinja",
+            "size_bytes": 805,
+            "sha256": "d8f2304e185d04f627abab102345f9c4af14e020e41c7dceffacbcff1babe2b9"
+          },
+          {
+            "filename": "config.json",
+            "size_bytes": 3082,
+            "sha256": "4af4a75b6cb6e99d702d8b882aad08b9fa265884afdc391001af996bc0fc3f83"
+          },
+          {
+            "filename": "generation_config.json",
+            "size_bytes": 74,
+            "sha256": "4a0ede46fd1d2cbaa71908173ea846fd8203160b7133aec4d3e01e406d72976a"
+          },
+          {
+            "filename": "merges.txt",
+            "size_bytes": 1671853,
+            "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+          },
+          {
+            "filename": "model-00001-of-00002.safetensors",
+            "size_bytes": 4994850880,
+            "sha256": "07cad6f5bac2b6289ff5aace8793ff9c122e68e0a86f3d0f6369cbbfb6904a60"
+          },
+          {
+            "filename": "model-00002-of-00002.safetensors",
+            "size_bytes": 4412251408,
+            "sha256": "230170e0f12619a85e7323c309062990d0fe98bb38f431c7a41e067e22958415"
+          },
+          {
+            "filename": "model.safetensors.index.json",
+            "size_bytes": 127680,
+            "sha256": "89b4a3e73928002f458ba47757a64f997965537b18b6b75e11ec75096bafc077"
+          },
+          {
+            "filename": "preprocessor_config.json",
+            "size_bytes": 667,
+            "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69"
+          },
+          {
+            "filename": "serving_view.json",
+            "size_bytes": 5936,
+            "sha256": "a3ddac0294a4d346dcdf5fed39226d6ce2508f3a28a8e70afbbc773d80b6cd81"
+          },
+          {
+            "filename": "special_tokens_map.json",
+            "size_bytes": 833,
+            "sha256": "db7fd39f5dc9ee37998c3ed04e3a3386989182a550064d2a2a9af16822cf22f4"
+          },
+          {
+            "filename": "tokenizer.json",
+            "size_bytes": 11422137,
+            "sha256": "0c75e6d39795d574e5ec741e767ca690ea08a33bfa024ef2d372b4e4c72db191"
+          },
+          {
+            "filename": "tokenizer_config.json",
+            "size_bytes": 5329,
+            "sha256": "a7e64da8247da43c5feca0af81a42f3232a22517d93de425c16a179d3e48f96d"
+          },
+          {
+            "filename": "vocab.json",
+            "size_bytes": 2776833,
+            "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+          }
+        ]
+      },
+      "revision": "saea-vllm-serving-view-v1 receipt serving_view.json sha256 a3ddac0294a4d346dcdf5fed39226d6ce2508f3a28a8e70afbbc773d80b6cd81",
+      "lifecycle": "DERIVED",
+      "profiles": [
+        "speech-aware-tools",
+        "speech-aware-npu-port"
+      ],
+      "status": "COMPLETE",
+      "license": "inherits the source terms: NVIDIA License shipped with nv-community/omni-embed-nemotron-3b (non-commercial: research or evaluation use only) over the Qwen2.5-Omni-3B base",
+      "dependencies": [
+        "omni-embed-nemotron-3b"
+      ],
+      "derived_from": {
+        "local_subdir": "models/omni-embed-nemotron-3b",
+        "upstream": {
+          "kind": "modelscope",
+          "id": "nv-community/omni-embed-nemotron-3b",
+          "revision": "master (modelscope; unpinned -- content-fingerprinted)"
+        },
+        "files": [
+          {
+            "filename": "added_tokens.json",
+            "size_bytes": 579,
+            "sha256": "e81a2cc3bd867a1217019eed202d1d8a07e1063ece716f22060dda14f6cc07d8"
+          },
+          {
+            "filename": "additional_chat_templates/sentence_transformers.jinja",
+            "size_bytes": 805,
+            "sha256": "d8f2304e185d04f627abab102345f9c4af14e020e41c7dceffacbcff1babe2b9"
+          },
+          {
+            "filename": "config.json",
+            "size_bytes": 2871,
+            "sha256": "327253e63719744eeb97114e92b77f5ec19fb9d4c04b478bc848fa3b0e2a477e"
+          },
+          {
+            "filename": "generation_config.json",
+            "size_bytes": 74,
+            "sha256": "4a0ede46fd1d2cbaa71908173ea846fd8203160b7133aec4d3e01e406d72976a"
+          },
+          {
+            "filename": "merges.txt",
+            "size_bytes": 1671853,
+            "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+          },
+          {
+            "filename": "model-00001-of-00002.safetensors",
+            "size_bytes": 4994841696,
+            "sha256": "ce5d2ff1be32177ae0bc173931f0335a21c5298837257ea1f6d853b222bdf48c"
+          },
+          {
+            "filename": "model-00002-of-00002.safetensors",
+            "size_bytes": 4412249056,
+            "sha256": "dd03af73e3f2843978de3c867fd515e900fa0e9fd331d3f92529380f4e27a27c"
+          },
+          {
+            "filename": "model.safetensors.index.json",
+            "size_bytes": 116144,
+            "sha256": "90428cb934a44377e7a6974b13b3888deabcd5d4edbfcf61bf3d7d17323a21af"
+          },
+          {
+            "filename": "preprocessor_config.json",
+            "size_bytes": 667,
+            "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69"
+          },
+          {
+            "filename": "special_tokens_map.json",
+            "size_bytes": 833,
+            "sha256": "db7fd39f5dc9ee37998c3ed04e3a3386989182a550064d2a2a9af16822cf22f4"
+          },
+          {
+            "filename": "tokenizer.json",
+            "size_bytes": 11422137,
+            "sha256": "0c75e6d39795d574e5ec741e767ca690ea08a33bfa024ef2d372b4e4c72db191"
+          },
+          {
+            "filename": "tokenizer_config.json",
+            "size_bytes": 5329,
+            "sha256": "a7e64da8247da43c5feca0af81a42f3232a22517d93de425c16a179d3e48f96d"
+          },
+          {
+            "filename": "vocab.json",
+            "size_bytes": 2776833,
+            "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+          }
+        ],
+        "lock_entry": "omni-embed-nemotron-3b"
+      },
+      "verification": {
+        "observed_at": "2026-10-28",
+        "receipt_sha256": "a3ddac0294a4d346dcdf5fed39226d6ce2508f3a28a8e70afbbc773d80b6cd81",
+        "payload_files": 14,
+        "payload_size_bytes": 9423118096,
+        "files_missing": 0,
+        "size_mismatches": 0,
+        "sha256_failures": 0,
+        "byte_closure": true,
+        "method": "Built 2026-10-28 by studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/core/vllm_serving_view.py (study commit c105e757) from models/omni-embed-nemotron-3b. Re-verified 2026-10-28 for this registration: every view file re-hashed with sha256sum on host npu (cores 64-127) equals the view_sha256 and view_bytes its receipt records, and the directory holds exactly the receipt's files plus the receipt (no extra or missing file), which is what verify_serving_view enforces. The consumed source files, re-hashed on disk the same day, equal the receipt's source_sha256 and source_bytes; the source is the ModelScope master copy of the locked omni-embed-nemotron-3b entry, which is content-fingerprinted only (no upstream per-file hash exists to compare against).",
+        "receipt": "models/serving-views/omni-embed-nemotron-3b-causal-v1/serving_view.json",
+        "disposition": "complete pinned serving view; admits the bytes only, every encoder run on corpus audio or text stays behind its own exposure-ledger row"
+      },
+      "size_h": "8.8G",
+      "size_bytes": 9423118096,
+      "files": 14,
+      "task": "speech-text-embedding",
+      "factor_family": "tool-model",
+      "note": "vLLM serving view of nv-community/omni-embed-nemotron-3b (the control arm of the encoder ladder: the historical retrieval core, now causal), built for the speech-aware-evidence-acquisition NPU/vLLM port (owner decision 9.4, 2026-10-28: approved; design doc studies/speech-aware-evidence-acquisition/docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md section 6.1). It differs from its source in exactly the declared ways the receipt lists: every tensor name prefixed 'thinker.' with the tensor data regions byte-identical (data SHA-256 recorded on both sides; model-00001-of-00002.safetensors 1148 tensors, model-00002-of-00002.safetensors 294 tensors); config.json rewrapped as thinker_config of a qwen2_5_omni config (Qwen2_5OmniForConditionalGeneration, auto_map dropped, no remote code); chat_template.jinja = the source's additional_chat_templates/sentence_transformers.jinja; attention causal (owner decision 2026-10-28). Recipe: MEAN pooling, L2-normalised, 2048 dims, prompts 'query: ' / 'passage: '. Identity is the receipt hash in revision; the pooling client refuses a view whose receipt differs from its pin. The receipt records the absolute source_dir, so a rebuild reproduces the same receipt bytes only from a source at that same absolute path.",
+      "research_role": "Frozen tool-level retrieval encoder (encode-only) served by vLLM for the port's regenerated retrieval vectors; final answer authority stays with the frozen core.",
+      "claim_limit": "Vectors from this view are causal and come from different kernels than the historical sealed vectors; comparison with history is by ranking agreement only (design doc section 6.2).",
+      "acquisition_receipt": "studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-28-npu-port-lock-entries-v1/README.md"
+    },
+    {
+      "name": "lco-embedding-omni-3b-2605-v1",
+      "kind": "model",
+      "local_subdir": "models/serving-views/lco-embedding-omni-3b-2605-v1",
+      "source": {
+        "kind": "derived",
+        "script": "studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/core/vllm_serving_view.py",
+        "args": [
+          "build",
+          "${DATA_ROOT}/models/lco-embedding-omni-3b-2605",
+          "${DATA_ROOT}/models/serving-views/lco-embedding-omni-3b-2605-v1",
+          "--view-id",
+          "lco-embedding-omni-3b-2605-v1"
+        ],
+        "files": [
+          {
+            "filename": "added_tokens.json",
+            "size_bytes": 579,
+            "sha256": "e81a2cc3bd867a1217019eed202d1d8a07e1063ece716f22060dda14f6cc07d8"
+          },
+          {
+            "filename": "chat_template.jinja",
+            "size_bytes": 2358,
+            "sha256": "3c1d5ac14fd922a04795e7484dc7038275a2fd545f94caf6123eb2b34708ae92"
+          },
+          {
+            "filename": "config.json",
+            "size_bytes": 3938,
+            "sha256": "013da3a04a951852f79fd7bc841afeef37dc0b735a4594387442786d275ed0f4"
+          },
+          {
+            "filename": "generation_config.json",
+            "size_bytes": 152,
+            "sha256": "1ea43963cd4777fa8e70a21f872e064c212b3a19e7d977e747a2480c6e6a1055"
+          },
+          {
+            "filename": "merges.txt",
+            "size_bytes": 1671853,
+            "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+          },
+          {
+            "filename": "model-00001-of-00002.safetensors",
+            "size_bytes": 4994850880,
+            "sha256": "f68272f0e5474491d92a440e875af626d87b065c9ac053c69a940c8b9b4d9c35"
+          },
+          {
+            "filename": "model-00002-of-00002.safetensors",
+            "size_bytes": 4412251408,
+            "sha256": "d7f7948365f99675c0c707be552a0409573401e9d829fcdc65db9980792ec29e"
+          },
+          {
+            "filename": "model.safetensors.index.json",
+            "size_bytes": 127716,
+            "sha256": "12297c80f501853d8bc648920e08c43900c81ee0224dbb5b258f4991fe80e7b3"
+          },
+          {
+            "filename": "preprocessor_config.json",
+            "size_bytes": 667,
+            "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69"
+          },
+          {
+            "filename": "serving_view.json",
+            "size_bytes": 5910,
+            "sha256": "4c95f853cdb7e9279f267c9d11f53e819484905dc0c9d195605e0effe8e33f91"
+          },
+          {
+            "filename": "special_tokens_map.json",
+            "size_bytes": 832,
+            "sha256": "dc241604d085780a33f760f69c47e6622451104c20eee3cd3a12b6e884b43f44"
+          },
+          {
+            "filename": "tokenizer.json",
+            "size_bytes": 11421870,
+            "sha256": "8441917e39ae0244e06d704b95b3124795cec478e297f9afac39ba670d7e9d99"
+          },
+          {
+            "filename": "tokenizer_config.json",
+            "size_bytes": 6469,
+            "sha256": "569aa7a9171e36dfff80f0a7550ab0c9c09e46ac840fea5030641417394fb0d2"
+          },
+          {
+            "filename": "vocab.json",
+            "size_bytes": 2776833,
+            "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+          }
+        ]
+      },
+      "revision": "saea-vllm-serving-view-v1 receipt serving_view.json sha256 4c95f853cdb7e9279f267c9d11f53e819484905dc0c9d195605e0effe8e33f91",
+      "lifecycle": "DERIVED",
+      "profiles": [
+        "speech-aware-tools",
+        "speech-aware-npu-port"
+      ],
+      "status": "COMPLETE",
+      "license": "apache-2.0 (inherited from LCO-Embedding/LCO-Embedding-Omni-3B-2605); ungated",
+      "derived_from": {
+        "local_subdir": "models/lco-embedding-omni-3b-2605",
+        "upstream": {
+          "kind": "hf",
+          "id": "LCO-Embedding/LCO-Embedding-Omni-3B-2605",
+          "revision": "5f6b5329da5141367da30e06a9826d1322d6c9b2"
+        },
+        "files": [
+          {
+            "filename": "added_tokens.json",
+            "size_bytes": 579,
+            "sha256": "e81a2cc3bd867a1217019eed202d1d8a07e1063ece716f22060dda14f6cc07d8"
+          },
+          {
+            "filename": "additional_chat_templates/sentence_transformers.jinja",
+            "size_bytes": 2358,
+            "sha256": "3c1d5ac14fd922a04795e7484dc7038275a2fd545f94caf6123eb2b34708ae92"
+          },
+          {
+            "filename": "config.json",
+            "size_bytes": 3590,
+            "sha256": "d3aff34ee27f30b2fd981a4467500793cea7b34a286bf31cdee0b3cc487638cc"
+          },
+          {
+            "filename": "generation_config.json",
+            "size_bytes": 152,
+            "sha256": "1ea43963cd4777fa8e70a21f872e064c212b3a19e7d977e747a2480c6e6a1055"
+          },
+          {
+            "filename": "merges.txt",
+            "size_bytes": 1671853,
+            "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+          },
+          {
+            "filename": "model-00001-of-00002.safetensors",
+            "size_bytes": 4994841696,
+            "sha256": "fc51541523c5f09ec2111d8590001f5bb78dea618d8980061a4f012e1cfe34ee"
+          },
+          {
+            "filename": "model-00002-of-00002.safetensors",
+            "size_bytes": 4412249056,
+            "sha256": "62e1f89216b4d724ae7fbc7e806fb4e13885e095bb51df98583aee8e4d18e118"
+          },
+          {
+            "filename": "model.safetensors.index.json",
+            "size_bytes": 116180,
+            "sha256": "16cdc3a12e2367844fba64d350edbb6926ada11588083bc54f91a68b31972b99"
+          },
+          {
+            "filename": "preprocessor_config.json",
+            "size_bytes": 667,
+            "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69"
+          },
+          {
+            "filename": "special_tokens_map.json",
+            "size_bytes": 832,
+            "sha256": "dc241604d085780a33f760f69c47e6622451104c20eee3cd3a12b6e884b43f44"
+          },
+          {
+            "filename": "tokenizer.json",
+            "size_bytes": 11421870,
+            "sha256": "8441917e39ae0244e06d704b95b3124795cec478e297f9afac39ba670d7e9d99"
+          },
+          {
+            "filename": "tokenizer_config.json",
+            "size_bytes": 6469,
+            "sha256": "569aa7a9171e36dfff80f0a7550ab0c9c09e46ac840fea5030641417394fb0d2"
+          },
+          {
+            "filename": "vocab.json",
+            "size_bytes": 2776833,
+            "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+          }
+        ]
+      },
+      "verification": {
+        "observed_at": "2026-10-28",
+        "receipt_sha256": "4c95f853cdb7e9279f267c9d11f53e819484905dc0c9d195605e0effe8e33f91",
+        "payload_files": 14,
+        "payload_size_bytes": 9423121465,
+        "files_missing": 0,
+        "size_mismatches": 0,
+        "sha256_failures": 0,
+        "byte_closure": true,
+        "method": "Built 2026-10-28 by studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/core/vllm_serving_view.py (study commit c105e757) from models/lco-embedding-omni-3b-2605. Re-verified 2026-10-28 for this registration: every view file re-hashed with sha256sum on host npu (cores 64-127) equals the view_sha256 and view_bytes its receipt records, and the directory holds exactly the receipt's files plus the receipt (no extra or missing file), which is what verify_serving_view enforces. The consumed source files, re-hashed on disk the same day, equal the receipt's source_sha256 and source_bytes; every consumed source file matches the official huggingface.co model API at revision 5f6b5329da5141367da30e06a9826d1322d6c9b2 (read 2026-10-28): the safetensors shards' source_sha256 equal their LFS sha256 oids and every other consumed file matches its upstream Git blob SHA-1.",
+        "receipt": "models/serving-views/lco-embedding-omni-3b-2605-v1/serving_view.json",
+        "disposition": "complete pinned serving view; admits the bytes only, every encoder run on corpus audio or text stays behind its own exposure-ledger row"
+      },
+      "size_h": "8.8G",
+      "size_bytes": 9423121465,
+      "files": 14,
+      "task": "speech-text-embedding",
+      "factor_family": "tool-model",
+      "note": "vLLM serving view of LCO-Embedding/LCO-Embedding-Omni-3B-2605 (the 3B arm of the encoder ladder), built for the speech-aware-evidence-acquisition NPU/vLLM port (owner decision 9.4, 2026-10-28: approved; design doc studies/speech-aware-evidence-acquisition/docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md section 6.1). It differs from its source in exactly the declared ways the receipt lists: every tensor name prefixed 'thinker.' with the tensor data regions byte-identical (data SHA-256 recorded on both sides; model-00001-of-00002.safetensors 1148 tensors, model-00002-of-00002.safetensors 294 tensors); config.json rewrapped as thinker_config of a qwen2_5_omni config (Qwen2_5OmniForConditionalGeneration, auto_map dropped, no remote code); chat_template.jinja = the source's additional_chat_templates/sentence_transformers.jinja; attention causal (owner decision 2026-10-28). Recipe: LAST pooling, L2-normalised, 2048 dims, prompts 'query: ' / 'passage: '. Identity is the receipt hash in revision; the pooling client refuses a view whose receipt differs from its pin. The receipt records the absolute source_dir, so a rebuild reproduces the same receipt bytes only from a source at that same absolute path.",
+      "research_role": "Frozen tool-level retrieval encoder (encode-only) served by vLLM for the port's regenerated retrieval vectors; final answer authority stays with the frozen core.",
+      "claim_limit": "Vectors from this view are causal and come from different kernels than the historical sealed vectors; comparison with history is by ranking agreement only (design doc section 6.2).",
+      "acquisition_receipt": "studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-28-npu-port-lock-entries-v1/README.md"
+    },
+    {
+      "name": "lco-embedding-omni-7b-v1",
+      "kind": "model",
+      "local_subdir": "models/serving-views/lco-embedding-omni-7b-v1",
+      "source": {
+        "kind": "derived",
+        "script": "studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/core/vllm_serving_view.py",
+        "args": [
+          "build",
+          "${DATA_ROOT}/models/lco-embedding-omni-7b",
+          "${DATA_ROOT}/models/serving-views/lco-embedding-omni-7b-v1",
+          "--view-id",
+          "lco-embedding-omni-7b-v1"
+        ],
+        "files": [
+          {
+            "filename": "added_tokens.json",
+            "size_bytes": 579,
+            "sha256": "e81a2cc3bd867a1217019eed202d1d8a07e1063ece716f22060dda14f6cc07d8"
+          },
+          {
+            "filename": "chat_template.jinja",
+            "size_bytes": 2358,
+            "sha256": "3c1d5ac14fd922a04795e7484dc7038275a2fd545f94caf6123eb2b34708ae92"
+          },
+          {
+            "filename": "config.json",
+            "size_bytes": 3769,
+            "sha256": "489689acf3fa0162c9aaaf1aa71820dfa2453b527e36d020a82f2d8ff7c4068c"
+          },
+          {
+            "filename": "generation_config.json",
+            "size_bytes": 152,
+            "sha256": "1ea43963cd4777fa8e70a21f872e064c212b3a19e7d977e747a2480c6e6a1055"
+          },
+          {
+            "filename": "merges.txt",
+            "size_bytes": 1671853,
+            "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+          },
+          {
+            "filename": "model-00001-of-00004.safetensors",
+            "size_bytes": 4985055536,
+            "sha256": "398d5691dcb16e5392298dbd079d1cc969895aad58f089b1d7e5cc07704a8954"
+          },
+          {
+            "filename": "model-00002-of-00004.safetensors",
+            "size_bytes": 4991496832,
+            "sha256": "7445385e1aaee3f9bd1018cb77ea181ac4f630b781a614de53b39acc3fb9f325"
+          },
+          {
+            "filename": "model-00003-of-00004.safetensors",
+            "size_bytes": 4991496936,
+            "sha256": "1da5b2e18279cbced909dcba36b64615eeba938ba7bc56d54120a93a4cf89ea1"
+          },
+          {
+            "filename": "model-00004-of-00004.safetensors",
+            "size_bytes": 2895740064,
+            "sha256": "5469e50dd7daa3b4742db48c43e56846884ac09f4b86ff0ac6a218f60a0ce1ae"
+          },
+          {
+            "filename": "model.safetensors.index.json",
+            "size_bytes": 119061,
+            "sha256": "d3686b01026e248a535c427e79dd30ba527c22c63656e0c08ba83956172a064a"
+          },
+          {
+            "filename": "preprocessor_config.json",
+            "size_bytes": 667,
+            "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69"
+          },
+          {
+            "filename": "serving_view.json",
+            "size_bytes": 7361,
+            "sha256": "c77fd25b103c189db61624010db4313c93140c6bffbec587ae333c72e1ce9135"
+          },
+          {
+            "filename": "special_tokens_map.json",
+            "size_bytes": 832,
+            "sha256": "dc241604d085780a33f760f69c47e6622451104c20eee3cd3a12b6e884b43f44"
+          },
+          {
+            "filename": "tokenizer.json",
+            "size_bytes": 11421870,
+            "sha256": "8441917e39ae0244e06d704b95b3124795cec478e297f9afac39ba670d7e9d99"
+          },
+          {
+            "filename": "tokenizer_config.json",
+            "size_bytes": 6469,
+            "sha256": "569aa7a9171e36dfff80f0a7550ab0c9c09e46ac840fea5030641417394fb0d2"
+          },
+          {
+            "filename": "vocab.json",
+            "size_bytes": 2776833,
+            "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+          }
+        ]
+      },
+      "revision": "saea-vllm-serving-view-v1 receipt serving_view.json sha256 c77fd25b103c189db61624010db4313c93140c6bffbec587ae333c72e1ce9135",
+      "lifecycle": "DERIVED",
+      "profiles": [
+        "speech-aware-tools",
+        "speech-aware-npu-port"
+      ],
+      "status": "COMPLETE",
+      "license": "apache-2.0 (inherited from LCO-Embedding/LCO-Embedding-Omni-7B); ungated",
+      "derived_from": {
+        "local_subdir": "models/lco-embedding-omni-7b",
+        "upstream": {
+          "kind": "hf",
+          "id": "LCO-Embedding/LCO-Embedding-Omni-7B",
+          "revision": "108f6f1a5de3b2eedd1d1c7b7005aaca6ed3802c"
+        },
+        "files": [
+          {
+            "filename": "added_tokens.json",
+            "size_bytes": 579,
+            "sha256": "e81a2cc3bd867a1217019eed202d1d8a07e1063ece716f22060dda14f6cc07d8"
+          },
+          {
+            "filename": "additional_chat_templates/sentence_transformers.jinja",
+            "size_bytes": 2358,
+            "sha256": "3c1d5ac14fd922a04795e7484dc7038275a2fd545f94caf6123eb2b34708ae92"
+          },
+          {
+            "filename": "config.json",
+            "size_bytes": 3435,
+            "sha256": "fa9c367db750538e4e998d9d45702d3b8d370dc1cb7514ff72b90ad071086e48"
+          },
+          {
+            "filename": "generation_config.json",
+            "size_bytes": 152,
+            "sha256": "1ea43963cd4777fa8e70a21f872e064c212b3a19e7d977e747a2480c6e6a1055"
+          },
+          {
+            "filename": "merges.txt",
+            "size_bytes": 1671853,
+            "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+          },
+          {
+            "filename": "model-00001-of-00004.safetensors",
+            "size_bytes": 4985047208,
+            "sha256": "3081f51bea7183109e3a3d9d8d85c2f0de8ee74c4760d7881f84fe5e8b6f19fa"
+          },
+          {
+            "filename": "model-00002-of-00004.safetensors",
+            "size_bytes": 4991495784,
+            "sha256": "80f511cc48f3435b11d245d7828dc455a55350dbf9da897136097617d40e930b"
+          },
+          {
+            "filename": "model-00003-of-00004.safetensors",
+            "size_bytes": 4991495888,
+            "sha256": "b4c4c9cfb39cbc06a1a1fd499c962ff32bd50cbb5a17aa139c59d280a8de1047"
+          },
+          {
+            "filename": "model-00004-of-00004.safetensors",
+            "size_bytes": 2895739720,
+            "sha256": "8c30926072397c39ed68e3ac30616388e2f3d44555e15263b36392c1bb3f1655"
+          },
+          {
+            "filename": "model.safetensors.index.json",
+            "size_bytes": 108293,
+            "sha256": "71c6410232013220e797d7e431d47ca13322b897ada13ccee652e64e08bf1c30"
+          },
+          {
+            "filename": "preprocessor_config.json",
+            "size_bytes": 667,
+            "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69"
+          },
+          {
+            "filename": "special_tokens_map.json",
+            "size_bytes": 832,
+            "sha256": "dc241604d085780a33f760f69c47e6622451104c20eee3cd3a12b6e884b43f44"
+          },
+          {
+            "filename": "tokenizer.json",
+            "size_bytes": 11421870,
+            "sha256": "8441917e39ae0244e06d704b95b3124795cec478e297f9afac39ba670d7e9d99"
+          },
+          {
+            "filename": "tokenizer_config.json",
+            "size_bytes": 6469,
+            "sha256": "569aa7a9171e36dfff80f0a7550ab0c9c09e46ac840fea5030641417394fb0d2"
+          },
+          {
+            "filename": "vocab.json",
+            "size_bytes": 2776833,
+            "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+          }
+        ]
+      },
+      "verification": {
+        "observed_at": "2026-10-28",
+        "receipt_sha256": "c77fd25b103c189db61624010db4313c93140c6bffbec587ae333c72e1ce9135",
+        "payload_files": 16,
+        "payload_size_bytes": 17879801172,
+        "files_missing": 0,
+        "size_mismatches": 0,
+        "sha256_failures": 0,
+        "byte_closure": true,
+        "method": "Built 2026-10-28 by studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/core/vllm_serving_view.py (study commit c105e757) from models/lco-embedding-omni-7b. Re-verified 2026-10-28 for this registration: every view file re-hashed with sha256sum on host npu (cores 64-127) equals the view_sha256 and view_bytes its receipt records, and the directory holds exactly the receipt's files plus the receipt (no extra or missing file), which is what verify_serving_view enforces. The consumed source files, re-hashed on disk the same day, equal the receipt's source_sha256 and source_bytes; every consumed source file matches the official huggingface.co model API at revision 108f6f1a5de3b2eedd1d1c7b7005aaca6ed3802c (read 2026-10-28): the safetensors shards' source_sha256 equal their LFS sha256 oids and every other consumed file matches its upstream Git blob SHA-1.",
+        "receipt": "models/serving-views/lco-embedding-omni-7b-v1/serving_view.json",
+        "disposition": "complete pinned serving view; admits the bytes only, every encoder run on corpus audio or text stays behind its own exposure-ledger row"
+      },
+      "size_h": "16.7G",
+      "size_bytes": 17879801172,
+      "files": 16,
+      "task": "speech-text-embedding",
+      "factor_family": "tool-model",
+      "note": "vLLM serving view of LCO-Embedding/LCO-Embedding-Omni-7B (the 7B arm of the encoder ladder), built for the speech-aware-evidence-acquisition NPU/vLLM port (owner decision 9.4, 2026-10-28: approved; design doc studies/speech-aware-evidence-acquisition/docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md section 6.1). It differs from its source in exactly the declared ways the receipt lists: every tensor name prefixed 'thinker.' with the tensor data regions byte-identical (data SHA-256 recorded on both sides; model-00001-of-00004.safetensors 1041 tensors, model-00002-of-00004.safetensors 131 tensors, model-00003-of-00004.safetensors 131 tensors, model-00004-of-00004.safetensors 43 tensors); config.json rewrapped as thinker_config of a qwen2_5_omni config (Qwen2_5OmniForConditionalGeneration, auto_map dropped, no remote code); chat_template.jinja = the source's additional_chat_templates/sentence_transformers.jinja; attention causal (owner decision 2026-10-28). Recipe: LAST pooling, L2-normalised, 3584 dims, prompts 'query: ' / 'passage: '. Identity is the receipt hash in revision; the pooling client refuses a view whose receipt differs from its pin. The receipt records the absolute source_dir, so a rebuild reproduces the same receipt bytes only from a source at that same absolute path.",
+      "research_role": "Frozen tool-level retrieval encoder (encode-only) served by vLLM for the port's regenerated retrieval vectors; final answer authority stays with the frozen core.",
+      "claim_limit": "Vectors from this view are causal and come from different kernels than the historical sealed vectors; comparison with history is by ranking agreement only (design doc section 6.2).",
+      "acquisition_receipt": "studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-28-npu-port-lock-entries-v1/README.md"
     }
   ],
   "ref_repos": [
