@@ -1,0 +1,24 @@
+{
+  "schema": "saea-centroid-key-pins-v1",
+  "artifact_id": "SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1",
+  "ib_snapshot": {
+    "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/snapshot.json",
+    "sha256": "cb6ef966cb3a68a49c325d0bfa643e9e97402d963a49bc93c0c15024fc62eabc"
+  },
+  "ib_facets": {
+    "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-NPU-PORT-V1/facets.jsonl",
+    "sha256": "30e29867b1c94bbf5a9df32f92a4a830adbba9dda9ca0064fed44b1b8c3a3781"
+  },
+  "ib_index": {
+    "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-NPU-PORT-V1/index.json"
+  },
+  "pool_m": {
+    "relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars-minus-r01/snapshot.json",
+    "sha256": "6eaa03aea96a1928dd1ac29ecc71c3955c136498c9f8114266eaa830d1207c63"
+  },
+  "pool_facets": {
+    "relpath": "vectors/slurp-kus3/facet-vectors.jsonl",
+    "sha256": "24f0cdf7005f722651631fa91407a6c7e68ac4aa9ec70ac042328fe2020cf2c4",
+    "tool_contact_ledger_row": "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1"
+  }
+}

@@ -57,6 +57,23 @@ printed or persisted value.
     PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=4 python \\
         scripts/build_slurp_intent_boundary_centroid_keys.py \\
         --data-root "$SPEECHRL_DATA_DIR"
+
+PINS. Without ``--pins`` the builder runs against its module-level historical
+pins and the diagnostic's own constants, byte for byte as before. ``--pins
+<relpath>`` names a ``saea-centroid-key-pins-v1`` document (relative to
+``--repo-root``) that re-targets every input path and digest and the artifact
+id -- the NPU port cuts its keys from re-authored stores at different paths
+with different hashes. The diagnostic is still imported unchanged and its
+committed constants are still proven equal to the historical pins; only
+afterwards are its module attributes rebound to the pinned values, before any
+loader runs. The receipt then carries a ``pins`` section naming the document,
+its sha256 and every resolved value. A placeholder digest (``PENDING-...``) in
+a pins document is refused by name at run time.
+
+    PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=4 python \\
+        scripts/build_slurp_intent_boundary_centroid_keys.py \\
+        --data-root "$SPEECHRL_DATA_DIR" \\
+        --pins docs/readiness/2026-10-28-slurp-intent-boundary-centroid-keys-npu-port-v1/pins-v1.json
 """
 
 from __future__ import annotations
@@ -66,6 +83,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import sys
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -94,11 +112,57 @@ DIAGNOSTIC_NOTE = Path("docs/results/2026-09-27-slurp-boundary-key-construction-
 
 #: The diagnostic's own pins, repeated here so a mismatch is refused by name
 #: BEFORE its loaders run; the loaders verify the same digests again.
+IB_SNAPSHOT = "knowledge/slurp/semantic/intent-boundaries-v1/snapshot.json"
 IB_SNAPSHOT_SHA = "5520b8449b627530227563d1f8db71f8a391f20f7d0ff7d7bd439e28ec6e48fe"
+IB_FACETS = "prepared/SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-V1/facets.jsonl"
 IB_FACETS_SHA = "76e8d16a067ebfc5d67a4ecef2966636310815b950a7d9790ec7c0136f01ecd2"
+IB_INDEX = "prepared/SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-V1/index.json"
+POOL_M = ("knowledge/slurp/saea-kb-distmodel-v1/"
+          "size-pool-annotated-exemplars-minus-r01/snapshot.json")
 POOL_M_SHA = "6eaa03aea96a1928dd1ac29ecc71c3955c136498c9f8114266eaa830d1207c63"
+POOL_FACETS = "vectors/slurp-kus3/facet-vectors.jsonl"
 POOL_FACETS_SHA = "5dfe75231c12f2624913988e4643c51b74856465bdbd108358b4f371dacffc1e"
+POOL_FACETS_LEDGER_ROW = "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-V1"
 LABEL_KEY = "task_target"
+
+#: The pins document: every input path and digest the build reads, plus the
+#: artifact id it writes. The default is the historical build, verbatim.
+PINS_SCHEMA = "saea-centroid-key-pins-v1"
+PINS_SHAPE = {
+    "ib_snapshot": ("relpath", "sha256"),
+    "ib_facets": ("relpath", "sha256"),
+    "ib_index": ("relpath",),
+    "pool_m": ("relpath", "sha256"),
+    "pool_facets": ("relpath", "sha256", "tool_contact_ledger_row"),
+}
+PINS_KEYS = ("schema", "artifact_id", *PINS_SHAPE)
+DEFAULT_PINS = {
+    "schema": PINS_SCHEMA,
+    "artifact_id": ARTIFACT_ID,
+    "ib_snapshot": {"relpath": IB_SNAPSHOT, "sha256": IB_SNAPSHOT_SHA},
+    "ib_facets": {"relpath": IB_FACETS, "sha256": IB_FACETS_SHA},
+    "ib_index": {"relpath": IB_INDEX},
+    "pool_m": {"relpath": POOL_M, "sha256": POOL_M_SHA},
+    "pool_facets": {
+        "relpath": POOL_FACETS,
+        "sha256": POOL_FACETS_SHA,
+        "tool_contact_ledger_row": POOL_FACETS_LEDGER_ROW,
+    },
+}
+#: Which diagnostic module attribute each pinned value rebinds.
+DIAGNOSTIC_BINDINGS = (
+    ("IB_SNAPSHOT", "ib_snapshot", "relpath"),
+    ("IB_SNAPSHOT_SHA", "ib_snapshot", "sha256"),
+    ("IB_FACETS", "ib_facets", "relpath"),
+    ("IB_FACETS_SHA", "ib_facets", "sha256"),
+    ("IB_INDEX", "ib_index", "relpath"),
+    ("POOL_M", "pool_m", "relpath"),
+    ("POOL_M_SHA", "pool_m", "sha256"),
+    ("POOL_FACETS", "pool_facets", "relpath"),
+    ("POOL_FACETS_SHA", "pool_facets", "sha256"),
+)
+SHA256_HEX = re.compile(r"[0-9a-f]{64}")
+PLACEHOLDER_PREFIX = "PENDING-"
 
 
 class BuildError(RuntimeError):
@@ -117,8 +181,103 @@ def digest_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _require_relpath(value: object, *, field: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise BuildError(f"pins: {field} must be a non-empty relative path")
+    if value != value.strip() or "\\" in value or value.startswith("/"):
+        raise BuildError(f"pins: {field} must be a clean forward-slash relative path")
+    if any(part in ("", ".", "..") for part in value.split("/")):
+        raise BuildError(f"pins: {field} must not carry empty, '.' or '..' components")
+    return value
+
+
+def _require_sha256(value: object, *, field: str) -> str:
+    if isinstance(value, str) and value.startswith(PLACEHOLDER_PREFIX):
+        raise BuildError(
+            f"pins: {field} is the placeholder {value!r}; the input has not been sealed "
+            "yet -- fill in the sealed sha256 before building"
+        )
+    if not isinstance(value, str) or SHA256_HEX.fullmatch(value) is None:
+        raise BuildError(f"pins: {field} must be a 64-hex lowercase sha256")
+    return value
+
+
+def validate_pins(document: object) -> dict:
+    """The pins document, checked strictly: exact key sets at every level, a
+    64-hex digest wherever a digest is pinned, clean relative paths, and a
+    bare artifact id. Anything else is refused by name. Returns a fresh dict
+    carrying the pinned values only."""
+
+    if not isinstance(document, dict):
+        raise BuildError("pins: the document must be a JSON object")
+    if set(document) != set(PINS_KEYS):
+        missing = sorted(set(PINS_KEYS) - set(document))
+        extra = sorted(set(document) - set(PINS_KEYS))
+        raise BuildError(f"pins: top-level keys are wrong (missing {missing}, unexpected {extra})")
+    if document["schema"] != PINS_SCHEMA:
+        raise BuildError(f"pins: schema must be {PINS_SCHEMA!r}, got {document['schema']!r}")
+    artifact_id = document["artifact_id"]
+    if (
+        not isinstance(artifact_id, str)
+        or not artifact_id
+        or artifact_id != artifact_id.strip()
+        or "/" in artifact_id
+        or "\\" in artifact_id
+        or artifact_id in (".", "..")
+    ):
+        raise BuildError("pins: artifact_id must be a non-empty bare directory name")
+    resolved: dict = {"schema": PINS_SCHEMA, "artifact_id": artifact_id}
+    for section, fields in PINS_SHAPE.items():
+        block = document[section]
+        if not isinstance(block, dict):
+            raise BuildError(f"pins: {section} must be an object")
+        if set(block) != set(fields):
+            missing = sorted(set(fields) - set(block))
+            extra = sorted(set(block) - set(fields))
+            raise BuildError(f"pins: {section} keys are wrong (missing {missing}, unexpected {extra})")
+        out: dict = {}
+        for field in fields:
+            label = f"{section}.{field}"
+            if field == "relpath":
+                out[field] = _require_relpath(block[field], field=label)
+            elif field == "sha256":
+                out[field] = _require_sha256(block[field], field=label)
+            else:
+                value = block[field]
+                if not isinstance(value, str) or not value.strip() or value != value.strip():
+                    raise BuildError(f"pins: {label} must be a non-empty string")
+                out[field] = value
+        resolved[section] = out
+    return resolved
+
+
+def resolve_pins(repo: Path, relpath: str | None) -> dict:
+    """``{"document", "relpath", "sha256"}``: the validated pins, and where
+    they came from. ``relpath`` and ``sha256`` are ``None`` for the default
+    (historical) pins, which never leave this module."""
+
+    if relpath is None:
+        return {"document": validate_pins(DEFAULT_PINS), "relpath": None, "sha256": None}
+    clean = _require_relpath(relpath, field="--pins")
+    path = repo / clean
+    if not path.is_file():
+        raise BuildError(f"pins: {clean} does not exist under the repo root")
+    raw = path.read_bytes()
+    try:
+        document = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise BuildError(f"pins: {clean} is not a UTF-8 JSON document: {error}") from None
+    return {
+        "document": validate_pins(document),
+        "relpath": clean,
+        "sha256": hashlib.sha256(raw).hexdigest(),
+    }
+
+
 def import_diagnostic(repo: Path):
-    """The diagnostic module, imported from its committed path, unchanged."""
+    """The diagnostic module, imported from its committed path, unchanged:
+    its own committed constants must equal the HISTORICAL pins whatever
+    pins document the build runs under, so the file is proven unchanged."""
 
     path = repo / DIAGNOSTIC_RECIPE
     spec = importlib.util.spec_from_file_location("_saea_boundary_key_diagnostic", path)
@@ -135,6 +294,17 @@ def import_diagnostic(repo: Path):
         if getattr(module, name) != expected:
             raise BuildError(f"the diagnostic's {name} is not the pin this builder was written against")
     return module, digest_file(path)
+
+
+def bind_diagnostic_pins(module, pins: dict) -> None:
+    """Rebind the imported diagnostic's input constants to the resolved pins
+    BEFORE any of its loaders runs. Under the default pins this is the
+    identity: every value equals the constant the module already carries."""
+
+    for name, section, field in DIAGNOSTIC_BINDINGS:
+        if not hasattr(module, name):
+            raise BuildError(f"the diagnostic module carries no {name} to rebind")
+        setattr(module, name, pins[section][field])
 
 
 def pool_labels(root: Path, relpath: str, expected_sha: str) -> dict:
@@ -164,10 +334,15 @@ def pool_labels(root: Path, relpath: str, expected_sha: str) -> dict:
     return {"labels": labels, "facets": facet_ids, "content_sha256": snapshot.content_hash()}
 
 
-def build(repo: Path, root: Path, out_root: Path) -> dict:
+def build(repo: Path, root: Path, out_root: Path, pins_relpath: str | None = None) -> dict:
+    pins = resolve_pins(repo, pins_relpath)
+    pinned = pins["document"]
+    artifact_id = pinned["artifact_id"]
+    out_dir_rel = Path("prepared") / artifact_id
     diag, diag_sha = import_diagnostic(repo)
+    bind_diagnostic_pins(diag, pinned)
     store = diag.load_boundary(root)
-    pool = pool_labels(root, diag.POOL_M, POOL_M_SHA)
+    pool = pool_labels(root, diag.POOL_M, pinned["pool_m"]["sha256"])
     unknown = sorted(set(pool["labels"].values()) - set(store["intents"]))
     if unknown:
         raise BuildError(f"{len(unknown)} pool {LABEL_KEY} values name no released intent")
@@ -222,7 +397,7 @@ def build(repo: Path, root: Path, out_root: Path) -> dict:
     if widths != {store["matrix"].shape[1]}:
         raise BuildError("emitted keys do not all carry the store's own width")
 
-    out_dir = out_root / OUT_DIR
+    out_dir = out_root / out_dir_rel
     out_dir.mkdir(parents=True, exist_ok=True)
     facets_path = out_dir / FACETS_NAME
     receipt_path = out_dir / RECEIPT_NAME
@@ -243,7 +418,7 @@ def build(repo: Path, root: Path, out_root: Path) -> dict:
     receipt = {
         "schema": RECEIPT_SCHEMA,
         "kind": RECEIPT_KIND,
-        "artifact_id": ARTIFACT_ID,
+        "artifact_id": artifact_id,
         "builder_id": BUILDER_ID,
         "builder_sha256": digest_file(Path(__file__)),
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -253,7 +428,7 @@ def build(repo: Path, root: Path, out_root: Path) -> dict:
             "tokenizer": 0, "network": 0, "gpu": 0, "paid_api": 0,
         },
         "artifact": {
-            "relpath": str(OUT_DIR / FACETS_NAME).replace("\\", "/"),
+            "relpath": str(out_dir_rel / FACETS_NAME).replace("\\", "/"),
             "sha256": facets_sha,
             "rows": len(lines),
             "line_schema": "sealed-vectors: one object per line with exactly 'id' and 'vectors'",
@@ -291,24 +466,25 @@ def build(repo: Path, root: Path, out_root: Path) -> dict:
         },
         "inputs": {
             "target_store_snapshot": {
-                "relpath": diag.IB_SNAPSHOT, "sha256": store["content_sha256"],
+                "relpath": pinned["ib_snapshot"]["relpath"], "sha256": store["content_sha256"],
                 "facets": 60, "role": "the released intent-boundaries-v1 store; its facet ids and delivered bodies are unchanged",
             },
             "written_key_vectors": {
-                "relpath": diag.IB_FACETS, "sha256": IB_FACETS_SHA,
+                "relpath": pinned["ib_facets"]["relpath"], "sha256": pinned["ib_facets"]["sha256"],
                 "role": "the flown keys; the fallback source for an intent with no pool member",
             },
             "written_key_encoding_index": {
-                "relpath": diag.IB_INDEX, "sha256": store["index_sha256"],
+                "relpath": pinned["ib_index"]["relpath"], "sha256": store["index_sha256"],
                 "encoded_is_representation": store["encoded_is_representation"],
             },
             "construction_pool_snapshot": {
-                "relpath": diag.POOL_M, "sha256": pool["content_sha256"], "utterances": len(pool["facets"]),
+                "relpath": pinned["pool_m"]["relpath"], "sha256": pool["content_sha256"],
+                "utterances": len(pool["facets"]),
             },
             "pool_facet_vectors": {
-                "relpath": diag.POOL_FACETS, "sha256": POOL_FACETS_SHA,
+                "relpath": pinned["pool_facets"]["relpath"], "sha256": pinned["pool_facets"]["sha256"],
                 "role": "one pinned vector per construction-TRAIN utterance; the members",
-                "tool_contact_ledger_row": "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-V1",
+                "tool_contact_ledger_row": pinned["pool_facets"]["tool_contact_ledger_row"],
             },
             "same_space": {
                 "encoder_inventory_sha256": store["encoder_inventory_sha256"],
@@ -341,9 +517,20 @@ def build(repo: Path, root: Path, out_root: Path) -> dict:
             "derived baseline. No gold label, reference transcript or future turn enters it."
         ),
     }
+    if pins["relpath"] is not None:
+        # Only a non-default build names its pins document: the historical
+        # receipt is byte-for-byte what it always was.
+        receipt["pins"] = {
+            "relpath": pins["relpath"],
+            "sha256": pins["sha256"],
+            "schema": PINS_SCHEMA,
+            "resolved": pinned,
+        }
     receipt_text = json.dumps(receipt, ensure_ascii=True, indent=2, sort_keys=True) + "\n"
     receipt_path.write_bytes(receipt_text.encode("utf-8"))
+    summary_pins = {} if pins["relpath"] is None else {"pins": pins["relpath"]}
     return {
+        **summary_pins,
         "facets": str(facets_path),
         "facets_sha256": facets_sha,
         "receipt": str(receipt_path),
@@ -365,6 +552,14 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="where prepared/<artifact id>/ is created; defaults to --data-root",
     )
+    parser.add_argument(
+        "--pins",
+        default=None,
+        help=(
+            f"a {PINS_SCHEMA} document, relative to --repo-root, that re-targets every "
+            "input path, digest and the artifact id; omitted, the historical pins apply"
+        ),
+    )
     args = parser.parse_args(argv)
     if os.environ.get("PYTHONDONTWRITEBYTECODE") != "1":
         print(json.dumps({"error": "PYTHONDONTWRITEBYTECODE=1 is required"}), file=sys.stderr)
@@ -372,7 +567,12 @@ def main(argv: list[str] | None = None) -> int:
     repo = Path(args.repo_root).resolve()
     root = Path(args.data_root).resolve()
     out_root = Path(args.output_root).resolve() if args.output_root else root
-    print(json.dumps(build(repo, root, out_root), indent=2, sort_keys=True))
+    try:
+        summary = build(repo, root, out_root, args.pins)
+    except BuildError as error:
+        print(json.dumps({"error": str(error)}), file=sys.stderr)
+        return 1
+    print(json.dumps(summary, indent=2, sort_keys=True))
     return 0
 
 
