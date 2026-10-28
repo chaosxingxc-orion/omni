@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -68,7 +69,10 @@ from speech_aware_evidence_acquisition.data.lock import data_root  # noqa: E402
 from speech_aware_evidence_acquisition.e0.artifacts import write_json_artifact  # noqa: E402
 
 from speech_aware_evidence_acquisition.core.speech_embedding import (  # noqa: E402
-    load_stack, render, encode,
+    ENCODER_RUNTIMES, load_stack, render, encode,
+)
+from speech_aware_evidence_acquisition.analysis.slurp_mf7b_sharding import (  # noqa: E402
+    parse_cores, sharded_text_pass,
 )
 
 ROW_ID = "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-V1"
@@ -92,18 +96,37 @@ def main() -> int:
     parser.add_argument("--sets", default="speech,fused,keys,labels")
     parser.add_argument("--limit", type=int, default=0, help="dry-run row cap (0 = all)")
     parser.add_argument("--no-write", action="store_true", help="dry run: emit no files")
+    parser.add_argument("--runtime", choices=sorted(ENCODER_RUNTIMES), default="cuda-bfloat16",
+                        help="encoder runtime; the default is the historical 2026-09-06 recipe")
+    parser.add_argument("--workers", type=int, default=1,
+                        help="pinned worker processes for the keys set (cpu runtime only)")
+    parser.add_argument("--cores", default=None,
+                        help="FIRST-LAST inclusive core range split across the key workers")
     args = parser.parse_args()
     wanted = {name.strip() for name in args.sets.split(",") if name.strip()}
+    device, dtype = ENCODER_RUNTIMES[args.runtime]
+    sharded = args.workers != 1 or args.cores is not None
+    if sharded and (device != "cpu" or args.cores is None or args.workers < 1):
+        parser.error("--workers/--cores shard the keys set on the cpu runtime and need both options")
+    cores = parse_cores(args.cores) if sharded else None
+    if device == "cpu":
+        # The Ascend image's torch auto-loads torch_npu, which needs the driver; the CPU runtime has none.
+        os.environ.setdefault("TORCH_DEVICE_BACKEND_AUTOLOAD", "0")
+        sys.modules.setdefault("torch_npu", None)
 
     root = Path(data_root())
     model_dir = root / MODEL_SUBDIR
     out_dir = root / "vectors/slurp-mf7b"
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    processor, model, template = load_stack(model_dir)
-    rows = dev_rows(root)
-    facets = train_facets(root)
-    drafts = draft_texts(root)
+    # In-process stack: every set on the historical path; on a sharded run only the non-key sets,
+    # because each key worker loads its own.
+    if not sharded or wanted - {"keys"}:
+        processor, model, template = load_stack(model_dir, runtime=args.runtime)
+    # Read only what the requested sets use: a keys-only pass needs no DEV row, audio or draft.
+    rows = dev_rows(root) if wanted & {"speech", "fused"} else []
+    facets = train_facets(root) if "keys" in wanted else []
+    drafts = draft_texts(root) if "fused" in wanted else {}
     if args.limit:
         rows = rows[: args.limit]
         facets = facets[: args.limit]
@@ -116,21 +139,31 @@ def main() -> int:
     started_all = time.time()
 
     def text_pass(items: list[tuple[str, str]], prompt: str, name: str, filename: str,
-                  extra: dict) -> None:
+                  extra: dict, *, shard: bool = False) -> None:
         nonlocal contacts, forwards
         ids: list[str] = []
         vectors: list[tuple[float, ...]] = []
         started = time.time()
-        for offset in range(0, len(items), args.text_batch):
-            chunk = items[offset : offset + args.text_batch]
-            rendered = [
-                render(processor, template, [{"type": "text", "text": prompt + text}])
-                for _identifier, text in chunk
-            ]
-            vectors.extend(encode(processor, model, rendered, None))
-            ids.extend(identifier for identifier, _text in chunk)
-            forwards += 1
-            contacts += len(chunk)
+        if shard:
+            # The same consecutive batches as the loop below, spread over pinned workers.
+            ids, vectors, sharding, first = sharded_text_pass(
+                items, prompt, model_dir=model_dir, runtime=args.runtime, device=device,
+                batch=args.text_batch, workers=args.workers, cores=cores)
+            rendered = [first]
+            forwards += int(sharding["forwards"])
+            contacts += len(ids)
+            extra = {**extra, "sharding": sharding}
+        else:
+            for offset in range(0, len(items), args.text_batch):
+                chunk = items[offset : offset + args.text_batch]
+                rendered = [
+                    render(processor, template, [{"type": "text", "text": prompt + text}])
+                    for _identifier, text in chunk
+                ]
+                vectors.extend(encode(processor, model, rendered, None, device=device))
+                ids.extend(identifier for identifier, _text in chunk)
+                forwards += 1
+                contacts += len(chunk)
         wall = time.time() - started
         if args.no_write:
             print(f"{name}: {len(ids)} in {wall:.1f}s (dry run, nothing written)")
@@ -145,7 +178,7 @@ def main() -> int:
     if "keys" in wanted:
         text_pass([(row["facet_id"], row["text"]) for row in facets], PASSAGE_PROMPT,
                   "nemotron-train-text", "nemotron-key-vectors.jsonl",
-                  {"key_space": "TRAIN utterance texts"})
+                  {"key_space": "TRAIN utterance texts"}, shard=sharded)
     if "labels" in wanted:
         text_pass(label_key_texts(root), PASSAGE_PROMPT, "nemotron-label-text",
                   "nemotron-label-key-vectors.jsonl",
@@ -169,14 +202,14 @@ def main() -> int:
             if fused:
                 content.append({"type": "text", "text": "\n" + drafts[row["sample_id"]]})
             rendered = render(processor, template, content)
-            vector = encode(processor, model, [rendered], [wave])[0]
+            vector = encode(processor, model, [rendered], [wave], device=device)[0]
             ids.append(row["sample_id"])
             vectors.append(vector)
             seconds += float(row["audio_seconds"])
             contacts += 1
             forwards += 1
             if index == 0 and not fused:
-                again = encode(processor, model, [rendered], [wave])[0]
+                again = encode(processor, model, [rendered], [wave], device=device)[0]
                 contacts += 1
                 forwards += 1
                 jitter = {
@@ -218,6 +251,14 @@ def main() -> int:
     prior = (
         json.loads(receipt_path.read_text(encoding="utf-8")) if receipt_path.is_file() else {}
     )
+    prior_embedder = prior.get("embedder") or {}
+    if prior_embedder and (prior_embedder.get("device", "cuda"), prior_embedder.get("dtype", "bfloat16")) != (
+        device, dtype
+    ):
+        raise SystemExit(
+            f"{receipt_path} was produced on {prior_embedder.get('device')}/{prior_embedder.get('dtype')}; "
+            f"a resumed pass must use the same runtime, not {device}/{dtype}"
+        )
     prior_sets = dict(prior.get("sets", {}))
     prior_acct = dict(prior.get("accounting", {}))
     prior_passes = list(prior.get("passes", []))
@@ -235,7 +276,7 @@ def main() -> int:
             "role": "pinned TOOL-level omni embedder; never the frozen core",
             "model_dir_relpath": MODEL_SUBDIR,
             "loader": "transformers.AutoModel.from_pretrained(local dir, "
-            "trust_remote_code=True, dtype=bfloat16, attn_implementation='sdpa')",
+            f"trust_remote_code=True, dtype={dtype}, attn_implementation='sdpa')",
             "sentence_transformers_imported": False,
             "config_sha256": sha256_file(model_dir / "config.json"),
             "modeling_sha256": sha256_file(model_dir / "modeling_nv_omni_embed.py"),
@@ -250,11 +291,11 @@ def main() -> int:
             "dims": DIMS,
             "pooling": "mean over the attention mask, include_prompt=true, then L2 normalise",
             "prompts": {"query": QUERY_PROMPT, "passage": PASSAGE_PROMPT},
-            "device": "cuda",
-            "dtype": "bfloat16",
+            "device": device,
+            "dtype": dtype,
             "torch_version": torch.__version__,
             "transformers_version": transformers.__version__,
-            "gpu": True,
+            "gpu": device == "cuda",
         },
         "sets": {**prior_sets, **receipt_sets},
         "jitter_pair": jitter if jitter is not None else prior.get("jitter_pair"),
@@ -268,7 +309,12 @@ def main() -> int:
             "speech_audio_seconds": float(prior_acct.get("speech_audio_seconds", 0.0))
             + audio_seconds,
             "wall_seconds": float(prior_acct.get("wall_seconds", 0.0)) + total_wall,
-            "gpu_hours": (float(prior_acct.get("wall_seconds", 0.0)) + total_wall) / 3600.0,
+            **(
+                {"gpu_hours": (float(prior_acct.get("wall_seconds", 0.0)) + total_wall) / 3600.0}
+                if device == "cuda"
+                else {"gpu_hours": float(prior_acct.get("gpu_hours", 0.0)),
+                      "cpu_wall_hours": float(prior_acct.get("cpu_wall_hours", 0.0)) + total_wall / 3600.0}
+            ),
         },
         "boundary": {
             "held_out_test_split_named": False,
@@ -279,7 +325,8 @@ def main() -> int:
     })
     print(json.dumps({"contacts": contacts, "forwards": forwards,
                       "wall_seconds": round(total_wall, 1),
-                      "gpu_hours": round(total_wall / 3600.0, 4)}, indent=1))
+                      ("gpu_hours" if device == "cuda" else "cpu_wall_hours"):
+                          round(total_wall / 3600.0, 4)}, indent=1))
     return 0
 
 

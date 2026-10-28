@@ -14,6 +14,7 @@ from .preparation import (
     hash_stable_file,
     load_artifact,
     prepare_artifact,
+    prepare_artifact_batch,
 )
 
 KIND = "speech-query-segment-vectors-v1"
@@ -161,6 +162,61 @@ def _checked_vector(value, dimension):
     return values
 
 
+def _batch_size(encode_batch, batch_size):
+    if encode_batch is None:
+        return None
+    if not callable(encode_batch):
+        raise PreparationError("encode_batch must be callable")
+    if type(batch_size) is not int or batch_size < 1:
+        raise PreparationError("batch_size must be a positive integer")
+    return batch_size
+
+
+def _seal_batched(units, *, kind, batch_size, encode_batch, dimension):
+    """Seal unique cache units in windows of ``batch_size`` concurrent encoder contacts.
+
+    Each unit is ``(path, binding, payload, output_for)``. A window persists every missing unit's start
+    marker before one ``encode_batch`` call over the missing payloads (the batch seal of
+    ``prepare_artifact_batch``), so an interrupted window is never replayed, exactly as one interrupted
+    single contact is not. Sealed bytes equal the single-contact path's. Returns the loaded outputs in
+    unit order and ``(encoder_calls, cache_hits)``.
+    """
+
+    saved, calls, hits = [], 0, 0
+    for offset in range(0, len(units), batch_size):
+        window = units[offset : offset + batch_size]
+        spent = []
+
+        def produce(indices, window=window):
+            vectors = encode_batch([window[index][2] for index in indices])
+            if isinstance(vectors, (str, bytes, Mapping)) or len(vectors) != len(indices):
+                raise PreparationError("encoder batch result count differs from its contacts")
+            spent.extend(indices)
+            return [
+                window[index][3](_checked_vector(vector, dimension))
+                for index, vector in zip(indices, vectors, strict=True)
+            ]
+
+        records = prepare_artifact_batch(
+            [{"path": path, "inputs": binding} for path, binding, _payload, _output in window],
+            kind=kind,
+            producer=produce,
+            contact_class="encoder",
+        )
+        calls += len(spent)
+        hits += len(window) - len(spent)
+        for (path, binding, _payload, _output), record in zip(window, records, strict=True):
+            saved.append(
+                load_artifact(
+                    Path(record["path"]),
+                    expected_sha256=record["sha256"],
+                    kind=kind,
+                    inputs=binding,
+                )
+            )
+    return saved, (calls, hits)
+
+
 def prepare_speech_query_vectors(
     path: Path,
     *,
@@ -174,9 +230,17 @@ def prepare_speech_query_vectors(
     max_seconds: float = 120.0,
     overlap_seconds: float = 8.0,
     prepare_sources: Callable[[Sequence[Mapping[str, object]]], None] | None = None,
+    encode_batch: Callable[[Sequence[Mapping[str, object]]], Sequence[Sequence[float]]] | None = None,
+    batch_size: int = 1,
 ) -> dict[str, object]:
-    """Cache every spent segment separately; never replay an ambiguous contact."""
+    """Cache every spent segment separately; never replay an ambiguous contact.
+
+    With ``encode_batch``, unique uncached segments are encoded in windows of ``batch_size`` concurrent
+    contacts (see :func:`_seal_batched`); segment ids, cache bytes, row order and accounting totals are
+    those of the single-contact path.
+    """
     dimension = _positive_int(dimension, "dimension")
+    batch_size = _batch_size(encode_batch, batch_size)
     if not isinstance(protocol_id, str) or not protocol_id.strip():
         raise PreparationError("protocol_id must be non-empty")
     if not isinstance(encoder_identity, Mapping) or not encoder_identity:
@@ -239,6 +303,17 @@ def prepare_speech_query_vectors(
     prepared = {}
     result_rows = []
     accounting = {"encoder_calls": 0, "cache_hits": 0, "deduplicated_references": 0}
+    if batch_size is not None:
+        return _publish_speech_index(
+            path,
+            inputs,
+            *_batched_speech_rows(
+                verified, plans, cache_root=cache_root, encoder_identity=encoder_identity,
+                protocol_id=protocol_id, dimension=dimension, geometry=geometry,
+                batch_size=batch_size, encode_batch=encode_batch,
+            ),
+            encoder_identity=encoder_identity, protocol_id=protocol_id, dimension=dimension, geometry=geometry,
+        )
     for row in verified:
         segments = []
         for span in plans[row["id"]]:
@@ -332,6 +407,95 @@ def prepare_speech_query_vectors(
     }
 
 
+def _segment_saved(saved, segment_id, dimension):
+    if (
+        set(saved) != {"id", "vectors"}
+        or saved["id"] != segment_id
+        or set(saved["vectors"]) != {"content"}
+    ):
+        raise PreparationError("cached speech segment output binding changed")
+    _checked_vector(saved["vectors"]["content"], dimension)
+    return saved
+
+
+def _batched_speech_rows(
+    verified, plans, *, cache_root, encoder_identity, protocol_id, dimension, geometry, batch_size, encode_batch
+):
+    """The single-contact loop's rows and accounting, with unique segments sealed in batches."""
+
+    units, order, deduplicated = {}, [], 0
+    for row in verified:
+        spans = []
+        for span in plans[row["id"]]:
+            source = {
+                k: row[k]
+                for k in ("audio_sha256", "source_frames", "source_sample_rate_hz")
+            } | span
+            binding = {
+                "source": source,
+                "encoder_identity": dict(encoder_identity),
+                "protocol_id": protocol_id,
+                "dimension": dimension,
+                "geometry": geometry,
+            }
+            segment_id = digest(binding)
+            if segment_id in units:
+                deduplicated += 1
+            else:
+                units[segment_id] = (
+                    Path(cache_root) / (segment_id + ".json"),
+                    binding,
+                    dict(row, **source),
+                    lambda vector, segment_id=segment_id: {"id": segment_id, "vectors": {"content": vector}},
+                )
+            spans.append((segment_id, span))
+        order.append((row, spans))
+    saved, (calls, hits) = _seal_batched(
+        list(units.values()), kind=SEGMENT_KIND, batch_size=batch_size,
+        encode_batch=encode_batch, dimension=dimension,
+    )
+    prepared = {
+        segment_id: _segment_saved(item, segment_id, dimension)
+        for segment_id, item in zip(units, saved, strict=True)
+    }
+    result_rows = [
+        {k: row[k] for k in ("id", "audio_sha256", "source_frames", "source_sample_rate_hz")}
+        | {"segments": [{**prepared[segment_id], **span} for segment_id, span in spans]}
+        for row, spans in order
+    ]
+    accounting = {"encoder_calls": calls, "cache_hits": hits, "deduplicated_references": deduplicated}
+    return result_rows, len(prepared), accounting
+
+
+def _publish_speech_index(
+    path, inputs, result_rows, unique_span_count, accounting, *, encoder_identity, protocol_id, dimension, geometry
+):
+    output = {
+        "schema": SCHEMA,
+        "rows": result_rows,
+        "unique_span_count": unique_span_count,
+        "encoder_identity": dict(encoder_identity),
+        "protocol_id": protocol_id,
+        "dimension": dimension,
+        "geometry": geometry,
+    }
+    artifact = prepare_artifact(
+        path,
+        kind=KIND,
+        inputs=inputs,
+        producer=lambda: output,
+        contact_class="model-free",
+    )
+    return {
+        "artifact": {
+            "path": artifact["path"],
+            "sha256": artifact["sha256"],
+            "output": output,
+        },
+        "accounting": accounting,
+    }
+
+
 def prepare_text_facet_vectors(
     path: Path,
     *,
@@ -343,13 +507,19 @@ def prepare_text_facet_vectors(
     protocol_id: str,
     dimension: int,
     facet_dimension: str = "content",
+    encode_batch: Callable[[Sequence[str]], Sequence[Sequence[float]]] | None = None,
+    batch_size: int = 1,
 ) -> dict[str, object]:
     """Seal one passage vector per frozen positive text facet.
 
     This intentionally shares immutable artifact/cache mechanics with speech
-    queries while carrying no media field or audio duration.
+    queries while carrying no media field or audio duration. ``encode_batch``
+    seals facets in windows of ``batch_size`` concurrent batch-one contacts
+    (:func:`_seal_batched`); the geometry's ``batch_size: 1`` still holds,
+    because every contact is its own forward.
     """
     dimension = _positive_int(dimension, "dimension")
+    batch_size = _batch_size(encode_batch, batch_size)
     if (
         not isinstance(facet_dimension, str)
         or not facet_dimension
@@ -450,7 +620,37 @@ def prepare_text_facet_vectors(
             "accounting": {"encoder_calls": 0, "cache_hits": len(ordered)},
         }
     result, calls, hits = [], 0, 0
-    for row in ordered:
+    if batch_size is not None:
+        units = []
+        for row in ordered:
+            binding = {
+                "snapshot_sha256": snapshot_sha256,
+                "facet_id": row["id"],
+                "text_sha256": hashlib.sha256(row["text"].encode("utf-8")).hexdigest(),
+                "encoder_identity": dict(encoder_identity),
+                "protocol_id": protocol_id,
+                "dimension": dimension,
+                "geometry": inputs["geometry"],
+            }
+            units.append((
+                Path(cache_root) / (digest(binding) + ".json"),
+                binding,
+                row["text"],
+                lambda vector, facet_id=row["id"]: {"id": facet_id, "vectors": {facet_dimension: vector}},
+            ))
+        saved_rows, (calls, hits) = _seal_batched(
+            units, kind=TEXT_FACET_KIND, batch_size=batch_size, encode_batch=encode_batch, dimension=dimension
+        )
+        for row, saved in zip(ordered, saved_rows, strict=True):
+            if (
+                set(saved) != {"id", "vectors"}
+                or saved["id"] != row["id"]
+                or set(saved["vectors"]) != {facet_dimension}
+            ):
+                raise PreparationError("cached text facet output binding changed")
+            _checked_vector(saved["vectors"].get(facet_dimension), dimension)
+            result.append(saved)
+    for row in ordered if batch_size is None else ():
         binding = {
             "snapshot_sha256": snapshot_sha256,
             "facet_id": row["id"],

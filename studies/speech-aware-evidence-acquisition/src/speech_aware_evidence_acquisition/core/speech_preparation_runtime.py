@@ -83,6 +83,14 @@ def verify_encoder(inventory, data_root):
         return
     if inventory.get("schema") != "saea-pinned-speech-query-encoder-inventory-v1":
         raise SpeechPreparationError("encoder inventory schema is invalid")
+    _verify_encoder_files(inventory, data_root)
+    for name, version in inventory["packages"].items():
+        if importlib.metadata.version(name) != version:
+            raise SpeechPreparationError(f"encoder package version changed: {name}")
+
+
+def _verify_encoder_files(inventory, data_root):
+    """Every pinned model file by size and SHA-256, and every weight shard pinned."""
     directory = confined(data_root, inventory["model_dir_relpath"])
     files = inventory["files"]
     required = {
@@ -108,23 +116,29 @@ def verify_encoder(inventory, data_root):
     index = json.loads((directory / "model.safetensors.index.json").read_bytes())
     if not set(index["weight_map"].values()) <= set(files):
         raise SpeechPreparationError("encoder inventory omits weight shards")
-    for name, version in inventory["packages"].items():
-        if importlib.metadata.version(name) != version:
-            raise SpeechPreparationError(f"encoder package version changed: {name}")
 
 
-def verified_backend(encoder, data_root, backend_factory, *, default, served_cls):
+def verified_backend(encoder, data_root, backend_factory, *, default, served_cls, cpu_cls=None):
     """Verify the encoder inventory and return the backend factory that will run it.
 
     A pinned checkpoint inventory is verified by :func:`verify_encoder` and runs the given backend, as before. A
     served-encoder inventory (``core.vllm_embedding``) under the DEFAULT in-process backend runs its vLLM client
     instead: an in-process forward over a served inventory would encode with weights the inventory does not pin.
+    A CPU encoder inventory (``core.cpu_encoder_pool``) under the default backend runs the pinned CPU worker pool
+    (``cpu_cls``) over the same verified model files.
     """
 
+    from .cpu_encoder_pool import CPU_INVENTORY_SCHEMA, check_cpu_inventory
     from .vllm_embedding import SERVED_INVENTORY_SCHEMA, served_backend_factory
 
     if encoder.get("schema") == SERVED_INVENTORY_SCHEMA and backend_factory is default:
         return served_backend_factory(encoder, data_root, served_cls)
+    if encoder.get("schema") == CPU_INVENTORY_SCHEMA:
+        if backend_factory is not default or cpu_cls is None:
+            raise SpeechPreparationError("a CPU encoder inventory runs only the default CPU worker pool")
+        check_cpu_inventory(encoder)
+        _verify_encoder_files(encoder, data_root)
+        return cpu_cls
     verify_encoder(encoder, data_root)
     return backend_factory
 
@@ -177,6 +191,32 @@ class BoundedAudioPrefetch:
     def close(self):
         if self.pool is not None:
             self.pool.shutdown(wait=True, cancel_futures=True)
+
+
+def _cpu_speech_backend(inventory, protocol, data_root, event):
+    from .cpu_encoder_pool import CpuSpeechEncoder
+
+    return CpuSpeechEncoder(
+        inventory, protocol, data_root, event,
+        model_dir=confined(data_root, inventory["model_dir_relpath"]),
+        prefetch=BoundedAudioPrefetch(protocol["cpu_workers"]),
+    )
+
+
+def _cpu_passage_backend(inventory, protocol, data_root, event):
+    from .cpu_encoder_pool import CpuPassageEncoder
+
+    return CpuPassageEncoder(
+        inventory, protocol, data_root, event, model_dir=confined(data_root, inventory["model_dir_relpath"]))
+
+
+def _batch_contact(backend, contact):
+    """A concurrent backend receives windows of charged contacts; any other backend stays single-contact."""
+
+    size = getattr(backend, "concurrency", 1)
+    if type(size) is not int or size <= 1:
+        return {}
+    return {"encode_batch": lambda sources: contact(sources, batch=True), "batch_size": size}
 
 
 class NemotronSpeechEncoder:
@@ -386,7 +426,8 @@ def run_preparation(
     from .vllm_embedding import VllmSpeechEncoder
 
     backend_factory = verified_backend(
-        encoder, data_root, backend_factory, default=NemotronSpeechEncoder, served_cls=VllmSpeechEncoder
+        encoder, data_root, backend_factory, default=NemotronSpeechEncoder, served_cls=VllmSpeechEncoder,
+        cpu_cls=_cpu_speech_backend,
     )
 
     def prepare(backend, contact):
@@ -402,6 +443,7 @@ def run_preparation(
             max_seconds=protocol["max_seconds"],
             overlap_seconds=protocol["overlap_seconds"],
             prepare_sources=backend.prepare_sources,
+            **_batch_contact(backend, contact),
         )
 
     return _execute_preparation(
@@ -707,10 +749,11 @@ def run_text_facet_preparation(
     from .vllm_embedding import VllmPassageEncoder
 
     backend_factory = verified_backend(
-        encoder, data_root, backend_factory, default=NemotronPassageEncoder, served_cls=VllmPassageEncoder
+        encoder, data_root, backend_factory, default=NemotronPassageEncoder, served_cls=VllmPassageEncoder,
+        cpu_cls=_cpu_passage_backend,
     )
 
-    def prepare(_backend, contact):
+    def prepare(backend, contact):
         return prepare_text_facet_vectors(
             paths["output_relpath"],
             facets=facets,
@@ -721,6 +764,7 @@ def run_text_facet_preparation(
             protocol_id=plan.protocol_hash,
             dimension=protocol["dimension"],
             facet_dimension=facet_dimension,
+            **_batch_contact(backend, contact),
         )
 
     return _execute_preparation(

@@ -45,6 +45,14 @@ Usage::
 
     python scripts/build_slurp_kus3_vectors.py
     python scripts/build_slurp_kus3_vectors.py --check   # verify, write nothing
+    python scripts/build_slurp_kus3_vectors.py --facets-only --receipt-dir <dir>
+
+``--facets-only`` converts the TRAIN key set alone into ``facet-vectors.jsonl``. That is the only kus3 file
+a cell whose queries come from elsewhere binds; Fold B's solver ``facet_source`` is an example. The DEV-1000
+query sets, the form twin and the sealed closed-list read are skipped. The file's bytes depend only on the
+MF-7b ``nemotron-train-text`` set, so a narrowed run writes the same ``facet-vectors.jsonl`` as a full run
+over the same vectors. Its receipt must go to its own ``--receipt-dir``, never over the historical full
+receipt.
 """
 
 from __future__ import annotations
@@ -201,7 +209,21 @@ def main() -> int:
         action="store_true",
         help="verify the sources and the already-written outputs; write nothing new",
     )
+    parser.add_argument(
+        "--facets-only",
+        action="store_true",
+        help="convert only the TRAIN key set into facet-vectors.jsonl (no DEV query set, no twin)",
+    )
+    parser.add_argument(
+        "--receipt-dir",
+        type=Path,
+        default=RECEIPT_DIR,
+        help="where vectors.json is written (a --facets-only run must not use the historical one)",
+    )
     args = parser.parse_args()
+    receipt_dir = args.receipt_dir if args.receipt_dir.is_absolute() else REPO_ROOT / args.receipt_dir
+    if args.facets_only and receipt_dir.resolve() == RECEIPT_DIR.resolve():
+        parser.error("--facets-only must write its receipt to its own --receipt-dir")
 
     root = data_root()
     source_dir = root / MF7B_DIR_RELPATH
@@ -218,6 +240,8 @@ def main() -> int:
         ("q-speech-nemotron", "query-vectors-speech.jsonl", "query"),
         ("q-speech-nemotron-fused", "query-vectors-speech-state.jsonl", "query"),
     )
+    if args.facets_only:
+        plan = plan[:1]
     sets: dict[str, object] = {}
     speech_rows: list[tuple[str, list[float]]] = []
     started = time.monotonic()
@@ -254,6 +278,22 @@ def main() -> int:
         }
         print(f"{out_name}: {len(rows)} rows, sha256 {sets[out_name]['sha256'][:16]}...")
 
+    twin_rows: list[tuple[str, list[float]]] = []
+    if not args.facets_only:
+        _form_twin(root, out_dir, receipt, speech_rows, sets, twin_rows, check=args.check)
+
+    readback = _readback(out_dir, source_dir, sets, twin_rows)
+    document = _receipt_document(receipt, sets, readback, started, facets_only=args.facets_only)
+    receipt_sha256 = write_json_artifact(receipt_dir / "vectors.json", document)
+    try:
+        shown = receipt_dir.relative_to(REPO_ROOT)
+    except ValueError:
+        shown = receipt_dir
+    print(f"wrote {shown}/vectors.json sha256={receipt_sha256[:16]}...")
+    return 0
+
+
+def _form_twin(root, out_dir, receipt, speech_rows, sets, twin_rows, *, check) -> None:
     # ---- the form twin ----------------------------------------------------
     buckets = _predicted_scenarios(root)
     missing = sorted({sample for sample, _v in speech_rows} - set(buckets))
@@ -261,9 +301,9 @@ def main() -> int:
         raise SystemExit(f"{len(missing)} query rows have no sealed closed-list row")
     mapping = _derangement({sample: buckets[sample] for sample, _v in speech_rows})
     by_id = {sample: vector for sample, vector in speech_rows}
-    twin_rows = [(sample, by_id[mapping[sample]]) for sample, _v in speech_rows]
+    twin_rows.extend((sample, by_id[mapping[sample]]) for sample, _v in speech_rows)
     twin_path = out_dir / "query-vectors-speech-twin.jsonl"
-    if not args.check:
+    if not check:
         _write_sealed(twin_path, twin_rows)
     bucket_sizes = {}
     for scenario in sorted(set(buckets.values())):
@@ -297,6 +337,9 @@ def main() -> int:
         f"sha256 {sets['query-vectors-speech-twin.jsonl']['sha256'][:16]}..."
     )
 
+
+
+def _readback(out_dir, source_dir, sets, twin_rows) -> dict[str, object]:
     # ---- read every written file back through the flight's own reader -----
     readback: dict[str, object] = {}
     for name in sets:
@@ -319,7 +362,10 @@ def main() -> int:
             deltas = max(deltas, max(abs(a - b) for a, b in zip(vector, got)))
         readback[name] = {"rows": len(table), "max_abs_delta": deltas}
         print(f"read back {name}: {len(table)} rows, max |delta| {deltas}")
+    return readback
 
+
+def _receipt_document(receipt, sets, readback, started, *, facets_only) -> dict[str, object]:
     document = {
         "schema": "saea-kus3-vectors-receipt-v1",
         "generator": "scripts/build_slurp_kus3_vectors.py",
@@ -351,9 +397,14 @@ def main() -> int:
             "held_out_test_split_named": False,
         },
     }
-    receipt_sha256 = write_json_artifact(RECEIPT_DIR / "vectors.json", document)
-    print(f"wrote {RECEIPT_DIR.relative_to(REPO_ROOT)}/vectors.json sha256={receipt_sha256[:16]}...")
-    return 0
+    if facets_only:
+        document["narrowed_to"] = {
+            "sets": ["facet-vectors.jsonl"],
+            "skipped": ["query-vectors-speech.jsonl", "query-vectors-speech-state.jsonl",
+                        "query-vectors-speech-twin.jsonl"],
+            "reason": "the binding cell reads only the TRAIN key facets; its queries come from elsewhere",
+        }
+    return document
 
 
 if __name__ == "__main__":

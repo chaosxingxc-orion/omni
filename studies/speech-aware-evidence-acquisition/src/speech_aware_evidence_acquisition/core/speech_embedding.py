@@ -63,8 +63,16 @@ def read_audio_span(source):
     return array
 
 
-def load_stack(model_dir: Path, *, local_files_only: bool = False):
-    """The three shipped modules, reproduced through plain ``transformers``."""
+#: Encoder runtimes: the historical recipe (CUDA, bfloat16) and the port's CPU runtime. The CPU runtime is
+#: float32 because bfloat16 is software-emulated on CPUs without bf16 instructions (Kunpeng-920: 5-10x slower).
+ENCODER_RUNTIMES = {"cuda-bfloat16": ("cuda", "bfloat16"), "cpu-float32": ("cpu", "float32")}
+
+
+def load_stack(model_dir: Path, *, local_files_only: bool = False, runtime: str = "cuda-bfloat16"):
+    """The three shipped modules, reproduced through plain ``transformers``.
+
+    ``runtime`` names one entry of :data:`ENCODER_RUNTIMES`; the default is the historical recipe.
+    """
 
     import torch
     from transformers import AutoModel, AutoProcessor
@@ -81,6 +89,9 @@ def load_stack(model_dir: Path, *, local_files_only: bool = False):
         raise SystemExit(f"unexpected pooling config {pooling!r}")
     if int(pooling.get("embedding_dimension", 0)) != DIMS:
         raise SystemExit(f"unexpected embedding dimension {pooling!r}")
+    if runtime not in ENCODER_RUNTIMES:
+        raise SystemExit(f"unknown encoder runtime {runtime!r}")
+    device, dtype = ENCODER_RUNTIMES[runtime]
     processor = AutoProcessor.from_pretrained(
         str(model_dir), trust_remote_code=True, local_files_only=local_files_only
     )
@@ -88,10 +99,10 @@ def load_stack(model_dir: Path, *, local_files_only: bool = False):
         str(model_dir),
         trust_remote_code=True,
         local_files_only=local_files_only,
-        dtype=torch.bfloat16,
+        dtype=getattr(torch, dtype),
         attn_implementation="sdpa",
     )
-    model = model.to("cuda").eval()
+    model = model.to(device).eval()
     return processor, model, template
 
 
