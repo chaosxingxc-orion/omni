@@ -31,8 +31,7 @@ from .plan import (
     MODEL_TOUCH_PROFILES,
     TEXT_ENCODER_PLAN_SCHEMA,
     ExecutionPlan,
-    assert_formal_execution_authority,
-    assert_wsl_execution_environment,
+    assert_execution_environment,
 )
 
 
@@ -322,7 +321,7 @@ class FrozenCoreGate(
                 f"execution profile {plan.execution_profile!r} does not authorize a model "
                 f"touch; model-facing Stage-2 profiles are {sorted(MODEL_TOUCH_PROFILES)}"
             )
-        assert_formal_execution_authority(wsl=assert_wsl_execution_environment)
+        assert_execution_environment()
         self._require_construction_role_for_visible_targets(plan, arm)
         # Owner decisions 99 and 107 (2026-09-22/23): a ``final-report`` plan
         # carries the one-shot SLURP test-split read or one of its label-free

@@ -197,6 +197,15 @@ inputs can therefore be built on the Ascend host's CPUs:
 - **dtype:** fp32 GEMM reaches 644 GFLOPS on 64 threads. bf16 is software-emulated at 74 GFLOPS, so the CPU runtime is
   `cpu-float32`. On four synthetic inputs, fp32 and bf16 vectors agree to cosine 0.9997-0.9999.
 - **threads:** the saea-base image sets `OMP_NUM_THREADS=1`. Every CPU worker must set its own thread count.
+- **attention geometry** (measured 2026-10-28 on the loaded weights, synthetic text, strict token-prefix test; log
+  `work/logs/geometry-matrix.log`): as shipped, `modeling_nv_omni_embed.py` sets `is_causal=False` on every text
+  layer and overrides `_update_causal_mask`. On transformers 5.14.1 the override is never called; the flag reaches
+  sdpa only when the mask is skipped. Result: **batch one -> bidirectional** (prefix states differ by 11.7),
+  **padded batch -> causal** (0.0). The historical run (transformers 5.12.1, sdpa) therefore mixed geometries:
+  batch-one speech queries bidirectional, 16-item text batches causal whenever padded. The port forces
+  `is_causal=True` on every text layer (`load_stack(..., attention_geometry="causal")`), which measures causal under
+  both mask paths (0.00005 / 0.0); every CPU worker and MF-7b shard re-measures the geometry on its loaded weights
+  and refuses a mismatch. The CPU inventory pins `attention_geometry: "causal"`.
 - **worker split** on cores 128-191 (NUMA nodes 4 and 5, each worker doing batch-one forwards):
 
   | workers x threads | text/s | audio (3 s)/s |
@@ -248,7 +257,7 @@ file Fold B pins.
 - `scripts/build_slurp_mf7_train_facets.py` rebuilds the kus3 input `vectors/slurp-mf7/train-facets.jsonl` model-free:
   11,514 rows, sha256 `3252d195…`. It refuses unless the `size-full` snapshot rebuilds to its pin `e27b2745…`. No
   historical pin exists for the file itself.
-- Decision 9.1 is decided. Registered encoder runs execute in the `saea-ascend-authority` container.
+- Decision 9.1 is decided. Registered encoder runs execute in the `saea-base` container (section 9.1).
 
 ## 7. Serving geometry (implemented; values verified on NPU)
 
@@ -285,7 +294,8 @@ their values for a Linux host are part of the runtime receipt decision (section 
 2. Audio features computed by the server's audio tower from raw audio instead of llama.cpp mmproj packets.
 3. vLLM sampling and kernels; temperature 0 with a fixed seed is deterministic per server build, not bit-identical to
    llama.cpp.
-4. Causal retrieval encoder; all sealed retrieval vectors regenerated.
+4. Causal retrieval encoder (forced and measured; section 6.4); all sealed retrieval vectors regenerated. The
+   historical vectors were not uniformly bidirectional: as shipped the tower is bidirectional only at batch one.
 5. Forced-close whitespace (section 4) until verified.
 6. Re-authored semantic knowledge (section 9.5, decided). The intent-boundaries and slot-contracts stores have the
    historical structure, rules and support, but new card text written by root (this port's agent session) on
@@ -295,14 +305,14 @@ their values for a Linux host are part of the runtime receipt decision (section 
 
 ## 9. Owner decisions (9.1 and 9.5 decided; 9.2-9.4 open)
 
-1. DECIDED 2026-10-28 (owner: "继续吧，授权执行权限，注意生成的过程后台运行", i.e. continue, execution
-   authority granted, run generation in the background): an Ascend container authority is ADDED beside WSL2.
-   `contracts.plan.assert_ascend_container_execution_environment` admits a process inside a container with
-   hostname `saea-ascend-authority` on a host the record
-   `docs/readiness/2026-10-28-execution-authority-ascend-container-v1.json` names (175 and 181, by machine and
-   kernel release). `assert_formal_execution_authority` tries WSL2 first and is what `FrozenCoreGate` and the
-   tool-plan admission call; `assert_wsl_execution_environment` and its guard tests are unchanged, and a
-   test or probe container under another hostname is still refused. The llama-server spawn stays WSL2-only.
+1. DECIDED 2026-10-28 (owner, two messages: "继续吧，授权执行权限，注意生成的过程后台运行" and then
+   "WSL2这种约束都得删了，我们目前是用之前做的docker来拉起实验的"): the WSL2 authority and every WSL2 constraint
+   are REMOVED, not supplemented. The formal execution environment is the `saea-base` Docker container.
+   `contracts.plan.assert_execution_environment` admits a process inside a container (`/.dockerenv`) that carries
+   the image's layout (`/opt/saea-venv/bin/python`, `/opt/umbrella`); `FrozenCoreGate`, the tool-plan admission
+   and the server spawn call it. `assert_wsl_execution_environment` no longer exists. The pytest marker
+   `requires_wsl2_execution_authority` became `requires_saea_container` (same 115 tests; CI still deselects and
+   counts them).
 2. Session identity. The transport re-verifies, on every send, that a live process running the pinned binary owns the
    listening socket. Proposal: run `vllm serve` in the same container as the harness and pin the Python interpreter,
    the vLLM and vllm-ascend source trees and the image digest as the "binary".
@@ -325,12 +335,12 @@ Draft fragments (committed, nothing registered):
   `-NPU-PORT-V1` run id and `-npu-port-v1` attempt id.
 
 `core.flight.cli check --read-only` builds the flight runtime (compose, lock, SLURP adapter, geometry) and stops at
-the gate's WSL2 execution-authority check (section 9.1). A diagnostic probe outside the repo, which records each gate
+the gate's execution-environment check (section 9.1, since decided). A diagnostic probe outside the repo, which records each gate
 refusal instead of stopping and changes no repo code, shows what remains:
 
 | stage | result |
 |---|---|
-| gate: execution authority | open owner decision 9.1 at the time; decided 2026-10-28 |
+| gate: execution environment | refused outside the container at the time; decided 2026-10-28 (section 9.1) |
 | gate: exposure preregistration | no row for the port run id (governance: written by the owner before any contact) |
 | gate: runtime receipt | the vLLM runtime receipt does not exist (owner decision 9.3) |
 | gate: lock, carrier dataset entry, E0 | pass |
@@ -365,8 +375,8 @@ Consequences:
   It was re-authored (section 9.5, decided; difference 8.6). The three port stores are prepared under the
   registrations `docs/readiness/2026-10-28-slurp-{intent-boundaries,slot-contracts}-preparation-registration-npu-port-v*.json`.
   Downstream (key encoding, centroid keys, agreement table) now waits only on the encoder.
-* The authoring support preparation and the encoder runtimes carry the same WSL2 gate and historical host paths
-  (`/mnt/e`, `/mnt/d`, `/home/chao/...`) as the flight; they fall under section 9.1.
+* The authoring support preparation and the encoder runtimes carry the same execution-environment gate and
+  historical host paths (`/mnt/e`, `/mnt/d`, `/home/chao/...`) as the flight; section 9.1 covers them.
 
 ## 11. NPU verification plan (when the cards are free)
 

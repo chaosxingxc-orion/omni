@@ -59,7 +59,7 @@ def test_constants_are_frozen_to_the_expected_scope(world):
     assert not (deny & ALLOWED_CARRIER_PROFILES)
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_p1_exposure_names_earnings21_but_plan_carrier_is_general_audio(world):
     """Campaign probe P1: exposure row names earnings21-original, plan carrier fsd50k.
 
@@ -74,7 +74,7 @@ def test_p1_exposure_names_earnings21_but_plan_carrier_is_general_audio(world):
         world.gate().assert_model_touch_allowed(world.plan(carrier_lock_key="fsd50k"))
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_p1_denylist_path_is_pinned_when_row_also_names_general_audio_carrier(world):
     """Standing regression for the denylist check itself (not just row binding).
 
@@ -90,7 +90,7 @@ def test_p1_denylist_path_is_pinned_when_row_also_names_general_audio_carrier(wo
         world.gate().assert_model_touch_allowed(plan)
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_ambiguous_two_carrier_cell_is_refused(world):
     """A row naming two known carriers cannot authorize either one.
 
@@ -110,7 +110,7 @@ def test_ambiguous_two_carrier_cell_is_refused(world):
         world.gate().assert_model_touch_allowed(plan)
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_substring_prefix_carrier_name_does_not_falsely_match(world):
     """A carrier name that is a textual prefix of another carrier's name must not
     be accepted by an unanchored substring test (e.g. "earnings2" must not match
@@ -139,7 +139,7 @@ def test_resolve_carrier_dataset_entry_directly_refuses_model_and_unknown_keys(w
         gate._resolve_carrier_dataset_entry("totally-unregistered-key")
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_plan_carrier_that_is_a_lock_model_entry_is_refused(world):
     """A model lock key can never authorize as a speech carrier."""
 
@@ -148,7 +148,7 @@ def test_plan_carrier_that_is_a_lock_model_entry_is_refused(world):
         world.gate().assert_model_touch_allowed(plan)
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_valid_carrier_but_exposure_row_names_a_different_carrier_is_refused(world):
     """The plan's carrier is legitimate, but the pre-registered row names another one."""
 
@@ -158,7 +158,7 @@ def test_valid_carrier_but_exposure_row_names_a_different_carrier_is_refused(wor
         world.gate().assert_model_touch_allowed(plan)
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_carrier_lock_entry_without_profiles_field_fails_closed(world):
     """A dataset entry present in the lock but lacking a profiles field is refused,
     not silently treated as in-scope."""
@@ -169,7 +169,7 @@ def test_carrier_lock_entry_without_profiles_field_fails_closed(world):
         world.gate().assert_model_touch_allowed(plan)
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_out_of_scope_profile_is_refused_even_when_not_explicitly_denylisted(world):
     """Defense in depth: a dataset whose profiles simply do not intersect the
     speech-aware scope is refused even if it is not one of the three named
@@ -185,7 +185,7 @@ def test_out_of_scope_profile_is_refused_even_when_not_explicitly_denylisted(wor
         world.gate().assert_model_touch_allowed(plan)
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_legitimate_saea_row_and_earnings22_plan_is_accepted(world):
     """No false positive: a second genuine core carrier with a correctly bound
     exposure row still opens the gate."""

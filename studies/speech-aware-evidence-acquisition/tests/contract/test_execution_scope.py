@@ -5,7 +5,6 @@ exactly three execution profiles; ``paper-scale-confirmatory`` — and any forge
 is refused before any receipt or model asset is read.
 """
 
-import platform
 from dataclasses import asdict
 
 import pytest
@@ -18,8 +17,9 @@ from speech_aware_evidence_acquisition.contracts import (
     ExecutionScopeError,
     FrozenCoreGate,
     assert_execution_scope,
-    assert_wsl_execution_environment,
+    assert_execution_environment,
 )
+from speech_aware_evidence_acquisition.contracts import plan as plan_module
 
 
 def _plan(**overrides: object) -> ExecutionPlan:
@@ -78,57 +78,39 @@ def test_unknown_or_forged_profiles_fail_closed(profile):
 
 
 @pytest.mark.parametrize(
-    ("os_name", "kernel_release"),
+    "facts",
     [
-        ("nt", "10.0.26100"),
-        ("posix", "6.8.0-64-generic"),
-        ("posix", "5.15.0-linuxkit"),
+        dict(os_name="nt", in_container=True, image_layout=True),
+        dict(os_name="posix", in_container=False, image_layout=True),
+        dict(os_name="posix", in_container=True, image_layout=False),
     ],
 )
-def test_formal_execution_refuses_windows_and_non_wsl_linux(os_name, kernel_release):
-    with pytest.raises(ExecutionScopeError, match="WSL2"):
-        assert_wsl_execution_environment(os_name=os_name, kernel_release=kernel_release)
+def test_formal_execution_refuses_the_bare_host_and_other_images(facts):
+    with pytest.raises(ExecutionScopeError, match="saea-base Docker container"):
+        assert_execution_environment(**facts)
 
 
-@pytest.mark.parametrize(
-    "kernel_release",
-    [
-        "6.6.87.2-microsoft-standard-WSL2",
-        "5.15.153.1-MICROSOFT-standard-WSL2",
-    ],
-)
-def test_formal_execution_accepts_only_the_wsl2_compute_authority(kernel_release):
-    assert assert_wsl_execution_environment(
-        os_name="posix", kernel_release=kernel_release
-    ) == "wsl2"
+def test_formal_execution_accepts_the_saea_base_container():
+    assert assert_execution_environment(os_name="posix", in_container=True, image_layout=True) == "saea-container"
 
 
-def test_gate_calls_the_wsl2_authority_check_before_reading_any_receipt(tmp_path, monkeypatch):
-    """MUTATION PROBE. Delete `assert_wsl_execution_environment()` from
+def test_gate_calls_the_execution_environment_check_before_reading_any_receipt(tmp_path, monkeypatch):
+    """MUTATION PROBE. Delete `assert_execution_environment()` from
     `FrozenCoreGate.assert_model_touch_allowed` and this test fails.
 
-    Why it exists (2026-08-26): CI deselects the 115 tests marked
-    `requires_wsl2_execution_authority` because GitHub's `ubuntu-latest` is not
-    WSL2 and the gate correctly refuses there. Those 115 were the only tests that
-    drove the gate past its profile check, so without this probe a later edit
-    could silently remove the WSL2 call and nothing in CI would notice -- the
-    "gate that cannot fail" pathology, reintroduced by the very fix that made CI
-    green. This probe closes that hole and runs EVERYWHERE, on both hosts.
+    The seam is as narrow as it can be: `monkeypatch` points the container marker at a
+    missing path for THIS ONE TEST, so the probe reads the same inside the saea-base
+    container as on a bare host. The production function runs unmodified and makes its
+    own decision.
 
-    The seam is as narrow as it can be: `monkeypatch` swaps `platform.release`
-    for the duration of THIS ONE TEST (pytest restores it at teardown), so the
-    probe reads the same on the WSL2 dev host as on a plain-Linux runner. Nothing
-    in `contracts.plan` is patched -- the production function runs unmodified and
-    makes its own decision from the (faked) kernel string.
-
-    The assertion is about ORDER as much as refusal. Every path this gate is
-    handed is missing on disk, so if the WSL2 call were gone the gate would fail
-    later and DIFFERENTLY -- reading the absent lock/receipts -- and
-    `ExecutionScopeError` would never be raised. A pass therefore proves the
-    authority check fires FIRST, before a single byte of evidence is opened.
+    The assertion is about ORDER as much as refusal. Every path this gate is handed is
+    missing on disk, so if the environment call were gone the gate would fail later and
+    DIFFERENTLY -- reading the absent lock/receipts -- and `ExecutionScopeError` would
+    never be raised. A pass therefore proves the check fires FIRST, before a single byte
+    of evidence is opened.
     """
 
-    monkeypatch.setattr(platform, "release", lambda: "6.11.0-1018-azure")
+    monkeypatch.setattr(plan_module, "_CONTAINER_MARKER", tmp_path / "no-dockerenv")
     gate = FrozenCoreGate(
         e0_receipt=tmp_path / "missing-e0.json",
         runtime_receipt=tmp_path / "missing-runtime.json",
@@ -138,7 +120,7 @@ def test_gate_calls_the_wsl2_authority_check_before_reading_any_receipt(tmp_path
         exposure_ledger=tmp_path / "missing-ledger.md",
         source_root=tmp_path,
     )
-    with pytest.raises(ExecutionScopeError, match="WSL2 compute authority"):
+    with pytest.raises(ExecutionScopeError, match="saea-base Docker container"):
         gate.assert_model_touch_allowed(_plan())
 
 

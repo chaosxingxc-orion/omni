@@ -10,7 +10,6 @@ import hashlib
 import json
 import math
 import os
-import platform
 from dataclasses import InitVar, dataclass
 from pathlib import Path, PurePosixPath
 from typing import Mapping
@@ -303,161 +302,39 @@ def require_owner_split_allowance(
     return document
 
 
-def assert_wsl_execution_environment(
+# The formal execution environment (owner, 2026-10-28). The study runs its
+# experiments in the saea-base Docker image; the former WSL2-only authority and
+# every WSL2 constraint were removed by the owner ("WSL2这种约束都得删了，我们目前是用
+# 之前做的docker来拉起实验的"). A process qualifies when it runs inside a container
+# (``_CONTAINER_MARKER``) that carries the image's own layout (``_IMAGE_MARKERS``).
+_CONTAINER_MARKER = Path("/.dockerenv")
+_IMAGE_MARKERS = (Path("/opt/saea-venv/bin/python"), Path("/opt/umbrella"))
+EXECUTION_ENVIRONMENT = "saea-container"
+
+
+def assert_execution_environment(
     *,
     os_name: str | None = None,
-    kernel_release: str | None = None,
+    in_container: bool | None = None,
+    image_layout: bool | None = None,
 ) -> str:
-    """Require the repository's sole formal execution authority: WSL2.
+    """Require the formal execution environment: a saea-base Docker container.
 
-    Windows is a source-control synchronization surface only. Native Windows,
-    native Linux, containers, and compatibility layers must never perform a
-    formal model touch for this study. Optional arguments make the platform
-    decision independently testable; production callers always omit them and
-    therefore use the running kernel identity.
+    Optional arguments make the decision independently testable; production
+    callers always omit them and therefore use the running process's identity.
     """
 
     resolved_os_name = os.name if os_name is None else os_name
-    resolved_kernel_release = (
-        platform.release() if kernel_release is None else kernel_release
+    resolved_in_container = _CONTAINER_MARKER.exists() if in_container is None else in_container
+    resolved_image_layout = (
+        all(marker.exists() for marker in _IMAGE_MARKERS) if image_layout is None else image_layout
     )
-    normalized_release = resolved_kernel_release.casefold()
-    if (
-        resolved_os_name != "posix"
-        or "microsoft-standard-wsl2" not in normalized_release
-    ):
+    if resolved_os_name != "posix" or not resolved_in_container or not resolved_image_layout:
         raise ExecutionScopeError(
-            "formal execution requires the WSL2 compute authority; native Windows "
-            "is restricted to Git/status synchronization and no experiment or model "
-            "contact may run there"
+            "formal execution requires the saea-base Docker container; no experiment or "
+            "model contact may run on the bare host or in another image"
         )
-    return "wsl2"
-
-
-# --------------------------------------------------------------------------- #
-# The Ascend container authority (owner decision 9.1 of the NPU port, 2026-10-28)
-# --------------------------------------------------------------------------- #
-#
-# Design doc ``docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md``
-# section 9.1: the owner ADDED a second formal execution authority for the
-# NPU / vLLM-Ascend port; WSL2 and its check above are unchanged. The
-# authority is a committed record, not an ambient environment: it names the
-# hosts (machine and kernel release, which a container reports from its host),
-# the container hostname the authority launcher sets, and the image. A test or
-# probe container on the same host runs under another hostname and is refused,
-# so every guard test that simulates "not WSL2" keeps its meaning there.
-ASCEND_CONTAINER_AUTHORITY_SCHEMA = "saea-ascend-container-authority-v1"
-ASCEND_CONTAINER_AUTHORITY_RELPATH = (
-    "docs/readiness/2026-10-28-execution-authority-ascend-container-v1.json"
-)
-_ASCEND_AUTHORITY_KEYS = frozenset(
-    {"schema", "dated_owner_decision", "owner_words", "scope", "hosts", "container_hostname", "image"}
-)
-_STUDY_ROOT = Path(__file__).resolve().parents[3]
-_CONTAINER_MARKER = Path("/.dockerenv")
-
-
-def _load_ascend_container_authority(path: Path) -> dict:
-    try:
-        document = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as error:
-        raise ExecutionScopeError(
-            f"Ascend container authority record {path} is missing or unreadable"
-        ) from error
-    if not isinstance(document, dict) or set(document) != _ASCEND_AUTHORITY_KEYS:
-        raise ExecutionScopeError(f"Ascend container authority record {path} has the wrong keys")
-    if document["schema"] != ASCEND_CONTAINER_AUTHORITY_SCHEMA:
-        raise ExecutionScopeError(f"Ascend container authority record {path} schema is invalid")
-    for key in ("dated_owner_decision", "owner_words", "scope", "container_hostname", "image"):
-        if not isinstance(document[key], str) or not document[key].strip():
-            raise ExecutionScopeError(
-                f"Ascend container authority record {path} must state a non-empty {key!r}"
-            )
-    hosts = document["hosts"]
-    if (
-        not isinstance(hosts, list)
-        or not hosts
-        or any(
-            not isinstance(host, dict)
-            or set(host) != {"name", "machine", "kernel_release"}
-            or any(not isinstance(value, str) or not value for value in host.values())
-            for host in hosts
-        )
-    ):
-        raise ExecutionScopeError(
-            f"Ascend container authority record {path} must list hosts by name, machine and kernel_release"
-        )
-    return document
-
-
-def assert_ascend_container_execution_environment(
-    *,
-    authority_path: Path | None = None,
-    os_name: str | None = None,
-    machine: str | None = None,
-    kernel_release: str | None = None,
-    hostname: str | None = None,
-    in_container: bool | None = None,
-) -> str:
-    """Require the owner-authorized Ascend container authority (decision 9.1).
-
-    The running process must be inside a container (``_CONTAINER_MARKER``) whose
-    hostname is the record's ``container_hostname``, on a host the record names
-    by machine and kernel release. Optional arguments make the decision
-    independently testable; production callers always omit them and therefore
-    use the running process's identity.
-    """
-
-    import socket
-
-    path = _STUDY_ROOT / ASCEND_CONTAINER_AUTHORITY_RELPATH if authority_path is None else authority_path
-    document = _load_ascend_container_authority(Path(path))
-    resolved = {
-        "os_name": os.name if os_name is None else os_name,
-        "machine": platform.machine() if machine is None else machine,
-        "kernel_release": platform.release() if kernel_release is None else kernel_release,
-        "hostname": socket.gethostname() if hostname is None else hostname,
-        "in_container": _CONTAINER_MARKER.exists() if in_container is None else in_container,
-    }
-    if resolved["os_name"] != "posix" or not resolved["in_container"]:
-        raise ExecutionScopeError(
-            "the Ascend container authority admits only a process inside the authorized container"
-        )
-    if resolved["hostname"] != document["container_hostname"]:
-        raise ExecutionScopeError(
-            f"the Ascend container authority admits only container hostname "
-            f"{document['container_hostname']!r}, not {resolved['hostname']!r}"
-        )
-    if not any(
-        host["machine"] == resolved["machine"] and host["kernel_release"] == resolved["kernel_release"]
-        for host in document["hosts"]
-    ):
-        raise ExecutionScopeError(
-            f"the Ascend container authority does not name host machine {resolved['machine']!r} "
-            f"with kernel {resolved['kernel_release']!r}"
-        )
-    return "ascend-container"
-
-
-def assert_formal_execution_authority(
-    *,
-    wsl=assert_wsl_execution_environment,
-    ascend=assert_ascend_container_execution_environment,
-) -> str:
-    """Admit either formal execution authority: WSL2 first, then the Ascend container.
-
-    Callers pass their own module-level ``assert_wsl_execution_environment``
-    name as ``wsl``, so a test that replaces that name still decides the WSL2
-    half. A refusal names both authorities.
-    """
-
-    try:
-        return wsl()
-    except ExecutionScopeError as wsl_refusal:
-        try:
-            return ascend()
-        except ExecutionScopeError as ascend_refusal:
-            raise ExecutionScopeError(f"{wsl_refusal}; {ascend_refusal}") from None
+    return EXECUTION_ENVIRONMENT
 
 
 def assert_execution_scope(profile: object) -> str:

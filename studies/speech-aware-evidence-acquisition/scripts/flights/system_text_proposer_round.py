@@ -10,7 +10,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from speech_aware_evidence_acquisition.contracts import ExecutionPlan, assert_wsl_execution_environment
+from speech_aware_evidence_acquisition.contracts import ExecutionPlan, assert_execution_environment
 from speech_aware_evidence_acquisition.contracts.ledger import _parse_ledger_tables
 from speech_aware_evidence_acquisition.rails.hashing import content_hash
 from speech_aware_evidence_acquisition.rails.system_proposer_capsule import ProposerCapsule, ProposalDispatch, input_references
@@ -159,7 +159,7 @@ def main():
     args = parser.parse_args()
     r = read_pin({"path": str(args.registration), "sha256": args.sha256})
     require(sys.dont_write_bytecode and os.environ.get("PYTHONDONTWRITEBYTECODE") == "1", "disable bytecode writing")
-    assert_wsl_execution_environment()
+    assert_execution_environment()
     root = Path(r["source_root"])
     require(not subprocess.check_output(["git", "-C", str(root), "status", "--porcelain"], text=True).strip(), "worker must be clean")
     require(subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip() == r["source_commit"], "worker commit differs")

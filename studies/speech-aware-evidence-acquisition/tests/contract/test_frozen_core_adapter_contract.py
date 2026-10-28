@@ -40,7 +40,7 @@ def _binding(fixture: GateFixture, sample_id: str = "4000001") -> PayloadBinding
     )
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_adapter_construction_passes_through_a_real_open_gate(tmp_path):
     fixture = GateFixture(tmp_path)
     plan = fixture.plan()
@@ -55,7 +55,7 @@ def test_adapter_construction_passes_through_a_real_open_gate(tmp_path):
     assert adapter.cost_summary()["calls_used"] == 0
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_adapter_refuses_when_the_gate_is_closed(tmp_path):
     fixture = GateFixture(tmp_path)
     # No dedicated tamper helper exists on GateFixture; break the E0 receipt the
@@ -130,7 +130,7 @@ def _proposer_plan(fixture: GateFixture, identity_hash: str):
     )
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_the_proposer_arm_opens_on_a_construction_role_identity(tmp_path):
     fixture = GateFixture(tmp_path)
     identity_hash = _land_construction_roster(fixture, "4000001")
@@ -146,7 +146,7 @@ def test_the_proposer_arm_opens_on_a_construction_role_identity(tmp_path):
     assert adapter.cost_summary()["calls_used"] == 0
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_the_proposer_arm_is_refused_on_an_evaluation_role_identity(tmp_path):
     """The same roster, the same samples, the same hash -- only the role
     differs, and the gold-visible arm is refused."""
@@ -167,7 +167,7 @@ def test_the_proposer_arm_is_refused_on_an_evaluation_role_identity(tmp_path):
         )
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_the_proposer_arm_is_refused_when_no_roster_is_committed(tmp_path):
     fixture = GateFixture(tmp_path)
     plan = _proposer_plan(fixture, "c" * 64)
@@ -182,7 +182,7 @@ def test_the_proposer_arm_is_refused_when_no_roster_is_committed(tmp_path):
         )
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_an_ordinary_arm_is_unaffected_by_the_construction_check(tmp_path):
     """The whole check is arm-scoped: an ordinary arm on the very identity
     hash the proposer arm was refused for still opens the gate."""
@@ -203,7 +203,7 @@ def test_an_ordinary_arm_is_unaffected_by_the_construction_check(tmp_path):
     assert adapter.cost_summary()["calls_used"] == 0
 
 
-@pytest.mark.requires_wsl2_execution_authority
+@pytest.mark.requires_saea_container
 def test_a_gate_that_cannot_receive_the_arm_refuses_the_gold_visible_arm(tmp_path):
     """A duck-typed gate whose ``assert_model_touch_allowed`` has no ``arm``
     parameter cannot perform the construction-roster check, so the one arm

@@ -102,23 +102,23 @@ addopts = "--strict-markers"
 # ENVIRONMENT-EXCLUSION MARKERS (2026-08-26, first-green CI repair).
 #
 # These name PRECONDITIONS OF THE HOST, never a weakening of anything under test.
-# Nothing they mark is skipped, deleted, softened, or made conditional: on the
-# WSL2 dev host every one of them runs, unchanged, exactly as before. They exist
+# Nothing they mark is skipped, deleted, softened, or made conditional: inside the
+# saea-base container every one of them runs, unchanged, exactly as before. They exist
 # so a clean single-repository Linux container can run the subset whose
 # preconditions it actually satisfies, and so the tests it CANNOT run are
 # deselected BY NAME with a visible, asserted count (`.github/workflows/ci.yml`,
 # step "Environment exclusions are exactly the declared inventory") rather than
 # hidden behind a directory ignore.
 #
-# `requires_wsl2_execution_authority` (115 tests) -- the test drives the REAL
+# `requires_saea_container` (115 tests) -- the test drives the REAL
 #   `contracts.FrozenCoreGate.assert_model_touch_allowed` or `core.session.
 #   start_session` past their profile check, at which point
-#   `contracts.plan.assert_wsl_execution_environment()` demands the running
-#   kernel be WSL2 (this repository's sole formal execution authority). GitHub's
-#   `ubuntu-latest` is plain Linux, so the gate REFUSES -- correctly. The gate is
-#   NOT patched, weakened, or bypassed anywhere: `tests/contract/
-#   test_execution_scope.py::test_gate_calls_the_wsl2_authority_check_before_
-#   reading_any_receipt` runs IN CI and fails if that call is ever removed from
+#   `contracts.plan.assert_execution_environment()` demands the saea-base Docker
+#   container (the formal execution environment, owner 2026-10-28). GitHub's
+#   `ubuntu-latest` is not that image, so the gate REFUSES -- correctly. The gate
+#   is NOT patched, weakened, or bypassed anywhere: `tests/contract/
+#   test_execution_scope.py::test_gate_calls_the_execution_environment_check_
+#   before_reading_any_receipt` runs IN CI and fails if that call is ever removed from
 #   the gate, and its `start_session` twin already lives in
 #   `tests/unit/test_session.py`.
 # `requires_umbrella_checkout` (7 tests) -- the test reads the REAL umbrella
@@ -126,7 +126,7 @@ addopts = "--strict-markers"
 #   (`<umbrella>/docs/`, resolved as `REPO_ROOT.parent.parent`). CI checks out
 #   this repository only.
 markers = [
-    "requires_wsl2_execution_authority: needs the WSL2 compute authority (this repository's sole formal execution authority); the real gate refuses elsewhere, by design",
+    "requires_saea_container: needs the saea-base Docker container (the formal execution environment); the real gate refuses elsewhere, by design",
     "requires_umbrella_checkout: reads the real umbrella docs/datasets.lock.json from the adjacent-checkout layout, which is a different Git repository",
     "requires_tfrl_vw: needs the pinned optional vowpalwabbit==9.11.2 binary runtime; base installs skip rather than emulate it",
 ]

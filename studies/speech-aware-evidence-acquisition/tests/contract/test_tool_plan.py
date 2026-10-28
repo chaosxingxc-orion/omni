@@ -73,7 +73,7 @@ def _world(tmp_path, *, consumed="no", carrier="slurp"):
 
 def _allow_wsl(monkeypatch):
     monkeypatch.setattr(
-        "speech_aware_evidence_acquisition.contracts.tool_plan.assert_wsl_execution_environment",
+        "speech_aware_evidence_acquisition.contracts.tool_plan.assert_execution_environment",
         lambda: "wsl2",
     )
 
@@ -177,7 +177,7 @@ def test_refuses_an_unregistered_exposure_row(monkeypatch, tmp_path):
 
 def test_wsl_guard_precedes_missing_inputs(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "speech_aware_evidence_acquisition.contracts.tool_plan.assert_wsl_execution_environment",
+        "speech_aware_evidence_acquisition.contracts.tool_plan.assert_execution_environment",
         lambda: (_ for _ in ()).throw(ExecutionScopeError("WSL2")),
     )
     world = _world(tmp_path)

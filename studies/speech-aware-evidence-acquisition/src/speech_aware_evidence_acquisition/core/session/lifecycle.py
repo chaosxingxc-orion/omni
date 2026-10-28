@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
-from ...contracts import STUDY_SLUG, assert_wsl_execution_environment
+from ...contracts import STUDY_SLUG, assert_execution_environment
 from . import SessionError, _bracketed, assert_session_alive, require_loopback
 from .paths import _resolve_under, _sha256_file
 from .process import (
@@ -453,7 +453,7 @@ def build_server_command(
     ``inference`` role must not smuggle an mmproj through ``extra_argv`` or a
     feature-cache directory through ``extra_env``.
 
-    Deliberately does NOT call ``assert_wsl_execution_environment()``: this
+    Deliberately does NOT call ``assert_execution_environment()``: this
     function starts no process and touches no model, so it is safe to call
     from a check or a test on any host. The spawn itself
     (:func:`start_session`) still asserts the execution environment first.
@@ -555,7 +555,7 @@ def start_session(
     simply lost (module docstring at ``_ServerLogWriter``).
     """
 
-    assert_wsl_execution_environment()
+    assert_execution_environment()
     command = build_server_command(
         runtime_root=runtime_root,
         data_root=data_root,
