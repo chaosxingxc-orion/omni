@@ -203,3 +203,125 @@ def test_backend_factory_builds_drop_in_encoders(view):
     speech.close()
     assert events == ["encoder_forward_started", "encoder_forward_finished", "data_wait_started", "data_wait_finished",
                       "encoder_forward_started", "encoder_forward_finished"]
+
+
+# --- the served-encoder inventory --------------------------------------------------------------------------------------
+
+
+_VERSION = "0.30.0"
+
+
+def _served(view, **updates):
+    import importlib.metadata
+
+    inventory = {
+        "schema": ve.SERVED_INVENTORY_SCHEMA,
+        "source": {**_inventory(view), "model_dir_relpath": "src"},
+        "view_relpath": "view",
+        "view_receipt_sha256": sv.receipt_sha256(view),
+        "served_model_name": _SERVED,
+        "base_url": "http://127.0.0.1:8100",
+        "server_version": _VERSION,
+        "packages": {"numpy": importlib.metadata.version("numpy")},
+    }
+    inventory.update(updates)
+    return inventory
+
+
+class _VersionedServer(_Server):
+    def __init__(self, view, *, version=_VERSION, **kwargs):
+        super().__init__(view, **kwargs)
+        self.version, self.gets = version, []
+
+    def get(self, url):
+        self.gets.append(url)
+        if url.endswith("/version"):
+            return json.dumps({"version": self.version}).encode()
+        return super().get(url)
+
+
+_PROTOCOL = {"passage_prompt": "passage: ", "query_prompt": "query: ", "max_sequence_tokens": 8192,
+             "max_audio_samples": 16000, "cpu_workers": 1}
+
+
+def test_a_served_inventory_verifies_source_view_and_packages(view, tmp_path):
+    assert ve.verify_served_encoder(_served(view), tmp_path) == view.resolve()
+
+
+@pytest.mark.parametrize(
+    "updates, match",
+    [
+        ({"extra": 1}, "keys differ"),
+        ({"base_url": "http://10.0.0.5:8100"}, "loopback"),
+        ({"base_url": "https://127.0.0.1:8100"}, "loopback"),
+        ({"base_url": "http://127.0.0.1:8100/v1"}, "loopback"),
+        ({"base_url": "http://127.0.0.1"}, "loopback"),
+        ({"packages": {"numpy": "0.0.1"}}, "package version changed"),
+        ({"packages": {}}, "pin the harness packages"),
+        ({"server_version": ""}, "server_version"),
+    ],
+)
+def test_a_served_inventory_refuses_anything_unpinned(view, tmp_path, updates, match):
+    with pytest.raises(ve.VllmEmbeddingError, match=match):
+        ve.verify_served_encoder(_served(view, **updates), tmp_path)
+
+
+def test_a_served_inventory_refuses_a_drifted_source_or_view(view, tmp_path):
+    from speech_aware_evidence_acquisition.core.preparation import PreparationError
+
+    with pytest.raises(sv.ServingViewError):
+        ve.verify_served_encoder(_served(view, view_receipt_sha256="0" * 64), tmp_path)
+    (tmp_path / "src" / "tokenizer.json").write_text("drifted")
+    with pytest.raises(PreparationError):
+        ve.verify_served_encoder(_served(view), tmp_path)
+
+
+def test_the_served_factory_checks_the_server_version_inside_the_preparation(view, tmp_path):
+    inventory = _served(view)
+    server = _VersionedServer(view, models=[{"id": _SERVED, "root": str(view.resolve())}])
+    factory = ve.served_backend_factory(inventory, tmp_path, ve.VllmPassageEncoder, post=server.post, get=server.get)
+    assert server.gets == []
+    encoder = factory(inventory, _PROTOCOL, tmp_path, lambda *a, **k: None)
+    assert len(encoder("hello")) == 2048
+    assert server.gets[0].endswith("/version")
+
+    with pytest.raises(ve.VllmEmbeddingError, match="different encoder inventory"):
+        factory(_served(view, served_model_name="other"), _PROTOCOL, tmp_path, lambda *a, **k: None)
+    stale = _VersionedServer(view, version="0.29.1", models=[{"id": _SERVED, "root": str(view.resolve())}])
+    stale_factory = ve.served_backend_factory(inventory, tmp_path, post=stale.post, get=stale.get)
+    with pytest.raises(ve.VllmEmbeddingError, match="not the pinned '0.30.0'"):
+        stale_factory(inventory, _PROTOCOL, tmp_path, lambda *a, **k: None)
+
+
+def test_preparation_runs_a_served_inventory_on_its_vllm_client_not_in_process(view, tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.core import speech_preparation_runtime as spr
+
+    inventory = _served(view)
+    built = []
+    monkeypatch.setattr(ve, "served_backend_factory", lambda inv, root, cls: built.append((inv, cls)) or "served")
+    assert spr.verified_backend(
+        inventory, tmp_path, spr.NemotronSpeechEncoder, default=spr.NemotronSpeechEncoder,
+        served_cls=ve.VllmSpeechEncoder,
+    ) == "served"
+    assert built == [(inventory, ve.VllmSpeechEncoder)]
+
+    verified = []
+    monkeypatch.setattr(spr, "verify_encoder", lambda inv, root: verified.append(inv))
+    injected = object()
+    assert spr.verified_backend(
+        inventory, tmp_path, injected, default=spr.NemotronSpeechEncoder, served_cls=ve.VllmSpeechEncoder,
+    ) is injected
+    pinned = {"schema": "saea-pinned-speech-query-encoder-inventory-v1"}
+    assert spr.verified_backend(
+        pinned, tmp_path, spr.NemotronSpeechEncoder, default=spr.NemotronSpeechEncoder,
+        served_cls=ve.VllmSpeechEncoder,
+    ) is spr.NemotronSpeechEncoder
+    assert verified == [inventory, pinned] and len(built) == 1
+
+
+def test_verify_encoder_routes_a_served_inventory_to_the_served_verifier(view, tmp_path):
+    from speech_aware_evidence_acquisition.core import speech_preparation_runtime as spr
+
+    spr.verify_encoder(_served(view), tmp_path)
+    with pytest.raises(ve.VllmEmbeddingError, match="loopback"):
+        spr.verify_encoder(_served(view, base_url="http://0.0.0.0:1"), tmp_path)

@@ -76,6 +76,11 @@ def admit(**kwargs):
 
 def verify_encoder(inventory, data_root):
     """Verify all recorded model files and package versions before loading."""
+    from .vllm_embedding import SERVED_INVENTORY_SCHEMA, verify_served_encoder
+
+    if inventory.get("schema") == SERVED_INVENTORY_SCHEMA:
+        verify_served_encoder(inventory, data_root)
+        return
     if inventory.get("schema") != "saea-pinned-speech-query-encoder-inventory-v1":
         raise SpeechPreparationError("encoder inventory schema is invalid")
     directory = confined(data_root, inventory["model_dir_relpath"])
@@ -106,6 +111,22 @@ def verify_encoder(inventory, data_root):
     for name, version in inventory["packages"].items():
         if importlib.metadata.version(name) != version:
             raise SpeechPreparationError(f"encoder package version changed: {name}")
+
+
+def verified_backend(encoder, data_root, backend_factory, *, default, served_cls):
+    """Verify the encoder inventory and return the backend factory that will run it.
+
+    A pinned checkpoint inventory is verified by :func:`verify_encoder` and runs the given backend, as before. A
+    served-encoder inventory (``core.vllm_embedding``) under the DEFAULT in-process backend runs its vLLM client
+    instead: an in-process forward over a served inventory would encode with weights the inventory does not pin.
+    """
+
+    from .vllm_embedding import SERVED_INVENTORY_SCHEMA, served_backend_factory
+
+    if encoder.get("schema") == SERVED_INVENTORY_SCHEMA and backend_factory is default:
+        return served_backend_factory(encoder, data_root, served_cls)
+    verify_encoder(encoder, data_root)
+    return backend_factory
 
 
 def _source_key(source):
@@ -362,7 +383,11 @@ def run_preparation(
         or protocol["monitor_interval_seconds"] != 10
     ):
         raise SpeechPreparationError("CPU or monitor configuration is invalid")
-    verify_encoder(encoder, data_root)
+    from .vllm_embedding import VllmSpeechEncoder
+
+    backend_factory = verified_backend(
+        encoder, data_root, backend_factory, default=NemotronSpeechEncoder, served_cls=VllmSpeechEncoder
+    )
 
     def prepare(backend, contact):
         return prepare_speech_query_vectors(
@@ -679,7 +704,11 @@ def run_text_facet_preparation(
         for key in ("output_relpath", "facet_rows_relpath", "cache_relpath")
     }
     encoder = pinned_json(protocol["encoder"])
-    verify_encoder(encoder, data_root)
+    from .vllm_embedding import VllmPassageEncoder
+
+    backend_factory = verified_backend(
+        encoder, data_root, backend_factory, default=NemotronPassageEncoder, served_cls=VllmPassageEncoder
+    )
 
     def prepare(_backend, contact):
         return prepare_text_facet_vectors(

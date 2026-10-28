@@ -28,7 +28,9 @@ import base64
 import io
 import json
 import math
+import importlib.metadata
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
@@ -39,6 +41,17 @@ SAMPLE_RATE_HZ = 16000
 NORM_TOLERANCE = 1e-3
 EMBEDDINGS_PATH = "/v1/embeddings"
 MODELS_PATH = "/v1/models"
+VERSION_PATH = "/version"
+#: The encoder inventory of a vLLM-served encoder. It wraps the pinned source inventory (the checkpoint files the view
+#: was built from) and adds what only exists on this stack: the serving view and its receipt hash, the served model
+#: name, the loopback server address and the vLLM version that server must report, and the harness-side packages that
+#: shape the request (audio decode and WAV encode).
+SERVED_INVENTORY_SCHEMA = "saea-vllm-served-encoder-inventory-v1"
+_SERVED_INVENTORY_KEYS = frozenset({
+    "schema", "source", "view_relpath", "view_receipt_sha256", "served_model_name", "base_url", "server_version",
+    "packages",
+})
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
 class VllmEmbeddingError(ValueError):
@@ -136,10 +149,21 @@ def _default_get(timeout_seconds: float) -> Callable[[str], bytes]:
     return get
 
 
+def source_inventory(inventory: Mapping[str, object]) -> Mapping[str, object]:
+    """The pinned checkpoint inventory: itself, or the ``source`` of a served-encoder inventory."""
+
+    if inventory.get("schema") == SERVED_INVENTORY_SCHEMA:
+        source = inventory.get("source")
+        if not isinstance(source, Mapping):
+            raise VllmEmbeddingError("served encoder inventory carries no source inventory")
+        return source
+    return inventory
+
+
 def assert_view_matches_inventory(receipt: Mapping[str, object], inventory: Mapping[str, object]) -> None:
     """Every source file the view was built from must be a file of the pinned encoder inventory, with its hash."""
 
-    pinned = inventory.get("files")
+    pinned = source_inventory(inventory).get("files")
     if not isinstance(pinned, Mapping):
         raise VllmEmbeddingError("encoder inventory lists no files")
     for view_name, entry in receipt["files"].items():
@@ -165,6 +189,7 @@ class VllmEmbeddingClient:
         timeout_seconds: float = 120.0,
         post: Callable[[str, bytes], bytes] | None = None,
         get: Callable[[str], bytes] | None = None,
+        server_version: str | None = None,
     ) -> None:
         if not served_model_name:
             raise VllmEmbeddingError("served_model_name must be non-empty")
@@ -177,13 +202,24 @@ class VllmEmbeddingClient:
         self.recipe = self.receipt["recipe"]
         self._post = post or _default_post(timeout_seconds)
         self._get = get or _default_get(timeout_seconds)
+        if server_version is not None:
+            self._assert_server_version(server_version)
         self._assert_server_serves_view()
 
-    def _assert_server_serves_view(self) -> None:
+    def _read_json(self, path: str, what: str) -> object:
         try:
-            document = json.loads(self._get(self.base_url + MODELS_PATH).decode("utf-8"))
+            return json.loads(self._get(self.base_url + path).decode("utf-8"))
         except (OSError, UnicodeError, ValueError) as error:
-            raise VllmEmbeddingError(f"cannot read the server's model list: {error}") from error
+            raise VllmEmbeddingError(f"cannot read the server's {what}: {error}") from error
+
+    def _assert_server_version(self, expected: str) -> None:
+        document = self._read_json(VERSION_PATH, "version")
+        reported = document.get("version") if isinstance(document, dict) else None
+        if reported != expected:
+            raise VllmEmbeddingError(f"embedding server reports vLLM {reported!r}, not the pinned {expected!r}")
+
+    def _assert_server_serves_view(self) -> None:
+        document = self._read_json(MODELS_PATH, "model list")
         models = document.get("data") if isinstance(document, dict) else None
         if not isinstance(models, list) or len(models) != 1 or not isinstance(models[0], dict):
             raise VllmEmbeddingError("the embedding server must serve exactly one model")
@@ -272,5 +308,91 @@ def vllm_backend_factory(client: VllmEmbeddingClient, encoder_cls=VllmSpeechEnco
 
     def factory(inventory, protocol, data_root, event):
         return encoder_cls(client, inventory, protocol, data_root, event)
+
+    return factory
+
+
+def _require_text(value: object, field: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise VllmEmbeddingError(f"served encoder inventory {field} must be a non-empty string")
+    return value
+
+
+def _require_loopback(base_url: str) -> str:
+    parsed = urllib.parse.urlsplit(base_url)
+    if (
+        parsed.scheme != "http" or parsed.hostname not in _LOOPBACK_HOSTS or parsed.port is None
+        or parsed.path not in ("", "/") or parsed.query or parsed.fragment or parsed.username or parsed.password
+    ):
+        raise VllmEmbeddingError(f"embedding server address {base_url!r} must be a bare loopback http://host:port")
+    return base_url
+
+
+def verify_served_encoder(inventory: Mapping[str, object], data_root) -> Path:
+    """Verify a served-encoder inventory before any contact; return the verified serving view directory.
+
+    The checkpoint files are re-hashed under ``source.model_dir_relpath``, the serving view is verified against its
+    pinned receipt hash, the view must derive from exactly those files, and the harness packages must be the pinned
+    versions. The server itself is checked when the client connects (``/version`` and ``/v1/models``).
+    """
+
+    from .preparation_runtime import verify_pinned_file
+    from .speech_preparation_runtime import confined
+
+    if inventory.get("schema") != SERVED_INVENTORY_SCHEMA:
+        raise VllmEmbeddingError("encoder inventory is not a served-encoder inventory")
+    if set(inventory) != _SERVED_INVENTORY_KEYS:
+        raise VllmEmbeddingError(
+            f"served encoder inventory keys differ: missing {sorted(_SERVED_INVENTORY_KEYS - set(inventory))}, "
+            f"unknown {sorted(set(inventory) - _SERVED_INVENTORY_KEYS)}"
+        )
+    source = source_inventory(inventory)
+    files = source.get("files")
+    if not isinstance(files, Mapping) or not files:
+        raise VllmEmbeddingError("served encoder source inventory lists no files")
+    directory = confined(data_root, _require_text(source.get("model_dir_relpath"), "source.model_dir_relpath"))
+    for name, entry in files.items():
+        verify_pinned_file(
+            confined(directory, name), expected_size=entry["bytes"], expected_sha256=entry["sha256"],
+            label="frozen served encoder source",
+        )
+    view = confined(data_root, _require_text(inventory["view_relpath"], "view_relpath"))
+    receipt = verify_serving_view(
+        view, expected_receipt_sha256=_require_text(inventory["view_receipt_sha256"], "view_receipt_sha256")
+    )
+    assert_view_matches_inventory(receipt, source)
+    _require_text(inventory["served_model_name"], "served_model_name")
+    _require_text(inventory["server_version"], "server_version")
+    _require_loopback(_require_text(inventory["base_url"], "base_url"))
+    packages = inventory["packages"]
+    if not isinstance(packages, Mapping) or not packages:
+        raise VllmEmbeddingError("served encoder inventory must pin the harness packages")
+    for name, version in packages.items():
+        if importlib.metadata.version(name) != version:
+            raise VllmEmbeddingError(f"served encoder harness package version changed: {name}")
+    return view
+
+
+def served_backend_factory(
+    inventory: Mapping[str, object], data_root, encoder_cls=VllmSpeechEncoder, *,
+    post: Callable[[str, bytes], bytes] | None = None, get: Callable[[str], bytes] | None = None,
+):
+    """A ``backend_factory`` built from a verified served-encoder inventory.
+
+    The view is verified here, before the preparation lease; the server is contacted only when the preparation calls
+    the factory inside its custody, so an unreachable or wrong server aborts that attempt with its receipt.
+    """
+
+    view = verify_served_encoder(inventory, data_root)
+
+    def factory(encoder, protocol, data_root, event):
+        if encoder != inventory:
+            raise VllmEmbeddingError("backend factory was built for a different encoder inventory")
+        client = VllmEmbeddingClient(
+            str(inventory["base_url"]), served_model_name=str(inventory["served_model_name"]), view=view,
+            expected_receipt_sha256=str(inventory["view_receipt_sha256"]), inventory=source_inventory(inventory),
+            server_version=str(inventory["server_version"]), post=post, get=get,
+        )
+        return encoder_cls(client, encoder, protocol, data_root, event)
 
     return factory
