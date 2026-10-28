@@ -1,0 +1,31 @@
+{
+  "cell": "slurp-native-stage3-system-text-smoke-4-v1",
+  "composed_config_hash": "ca0c1b94fdb74a67d57a768a179b28833b304a0a6725ae8444f68e484a59f5cf",
+  "decision_receipt": {
+    "relpath": "coordination/slurp-system-text-engineering-v1/root-admission-v2.json",
+    "sha256": "80cd9b878a7eaa40555d8b13e4d2fdf4c951449ec1febb02d99f32d27eb6cfec"
+  },
+  "execution_plan": {
+    "attempt_id": "attempt-slurp-native-stage3-system-text-smoke-4-fit-v1",
+    "carrier_lock_key": "slurp",
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 1.0,
+    "planned_model_calls": 208,
+    "planned_speech_audio_seconds": 1500,
+    "protocol_hash": "13bad44b914bf8dbf5748709543627d2f21c3c0625b1c5e0c841188866edf606",
+    "run_id": "SAEA-SLURP-SYSTEM-TEXT-SMOKE-4-FIT-V1",
+    "schema": "saea-execution-plan-v1",
+    "split_identity_hash": "ac6c778dcfe9ee4504c32d89c00dd1aaacfae694e7dd481b63d6fba01fa624c3",
+    "split_role": "discovery",
+    "study": "speech-aware-evidence-acquisition"
+  },
+  "experiment": "slurp-native-stage3-system-text-smoke-4-v1",
+  "plan_kind": "fit",
+  "prepared_phase_supply": {
+    "relpath": "prepared/SAEA-SLURP-SYSTEM-TEXT-SMOKE-4-V1/phase-supply-v2.json",
+    "sha256": "44ee49985e35a1b7c8947358bdc02b25f517b94866e2cbbbdd93b0aaa0fe4698"
+  },
+  "read_run_id": "SAEA-SLURP-SYSTEM-TEXT-SMOKE-4-STRUCTURE-V1",
+  "schema": "saea-registered-fit-plan-v1",
+  "status": "ROOT COUNTERSIGNED BEFORE CONTACT"
+}

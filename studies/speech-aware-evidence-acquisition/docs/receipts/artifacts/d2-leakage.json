@@ -1,0 +1,449 @@
+{
+  "artifact_kind": "saea-e0-d2-leakage-v1",
+  "construction_gold_visibility": {
+    "arms": [
+      "construction-proposer-text"
+    ],
+    "arms_declaring_the_field": [
+      "construction-proposer-text"
+    ],
+    "boundary_argument": "Owner decision 2026-09-05. The frozen core may act as a PROPOSER over CONSTRUCTION rows with their gold labels, on this text-only arm alone. (1) Construction identities only: the gate (contracts.gate_exposure._require_construction_role_for_visible_targets) refuses the touch unless the plan's split identity hash equals a committed roster receipt whose carrier is the plan's own and whose roster_role is 'construction', and whose split role is 'discovery'. (2) Block-disjoint from every evaluation identity by construction: a construction roster is drawn from the exposure-free block partition and its zero overlap with the exposure union is recomputed and refused fail-closed before the receipt is written. The exposure union excludes construction-role rosters by design, so the two sets can never converge. (3) Outputs are ARTIFACTS -- proposed prompt text -- never answers to a scored row; they reach an evaluation contact only through the audited instruction fields, hash-pinned in a committed config fragment. (4) The contact is text-only and every FORBIDDEN_RUNTIME_FIELDS name is still rejected inside this payload, exactly as in every other arm. The legality class is the same as TRAIN gold entering a knowledge-base build.",
+    "field": "construction_targets",
+    "no_other_arm_declares_it": true
+  },
+  "dependency_surface": {
+    "note": "No dataset/audio library can pull excluded assets into the E0 dependency graph.",
+    "project_dependencies": []
+  },
+  "enforcement_points": [
+    "contracts.assert_information_boundary (runtime payload choke point)",
+    "contracts.TraceRecord.validate (axis namespace separation)",
+    "data.loader.SampleRef.runtime_view (loader-side boundary check)",
+    "tests/contract (CI-enforced, fails closed)"
+  ],
+  "forbidden_runtime_fields": [
+    "answer_key",
+    "future_turn",
+    "future_turns",
+    "gold",
+    "gold_answer",
+    "gold_label",
+    "gold_transcript",
+    "reference",
+    "reference_answer",
+    "reference_transcript",
+    "test_annotation",
+    "test_label"
+  ],
+  "general_audio_exclusion": {
+    "configured_lock_keys": [
+      "conec",
+      "earnings21-original",
+      "earnings22-original",
+      "qwen3-omni-30b-a3b-instruct-gguf"
+    ],
+    "excluded_lock_keys": [
+      "fsd50k",
+      "audioset-metadata-features",
+      "esc-50"
+    ],
+    "excluded_lock_keys_source": "configs/experiment/e0-model-free-closure.yaml",
+    "note": "Excluded general-audio assets are named only by the experiment config and this receipt; package code never references them.",
+    "package_source_mentions": [],
+    "umbrella_lock_profiles": {
+      "audioset-metadata-features": [
+        "retained-cross-domain"
+      ],
+      "esc-50": [
+        "retained-cross-domain"
+      ],
+      "fsd50k": [
+        "retained-cross-domain"
+      ]
+    }
+  },
+  "generated": "2026-09-05",
+  "negative_controls": {
+    "boundary_injections": {
+      "all_rejected": true,
+      "executed": 36,
+      "results": [
+        {
+          "field": "answer_key",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "answer_key",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "answer_key",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "future_turn",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "future_turn",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "future_turn",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "future_turns",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "future_turns",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "future_turns",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "gold",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "gold",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "gold",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "gold_answer",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "gold_answer",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "gold_answer",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "gold_label",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "gold_label",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "gold_label",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "gold_transcript",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "gold_transcript",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "gold_transcript",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "reference",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "reference",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "reference",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "reference_answer",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "reference_answer",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "reference_answer",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "reference_transcript",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "reference_transcript",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "reference_transcript",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "test_annotation",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "test_annotation",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "test_annotation",
+          "rejected": true,
+          "shape": "list_nested"
+        },
+        {
+          "field": "test_label",
+          "rejected": true,
+          "shape": "top_level"
+        },
+        {
+          "field": "test_label",
+          "rejected": true,
+          "shape": "nested"
+        },
+        {
+          "field": "test_label",
+          "rejected": true,
+          "shape": "list_nested"
+        }
+      ],
+      "shapes_per_field": [
+        "top_level",
+        "nested",
+        "list_nested"
+      ]
+    },
+    "trace_axis_smuggling": {
+      "all_rejected": true,
+      "executed": 4,
+      "results": [
+        {
+          "channel": "OBS",
+          "rejected": true
+        },
+        {
+          "channel": "ORG",
+          "rejected": true
+        },
+        {
+          "channel": "SUPPLY",
+          "rejected": true
+        },
+        {
+          "channel": "USE",
+          "rejected": true
+        }
+      ]
+    }
+  },
+  "runtime_visible_fields_by_arm": {
+    "bare-core": {
+      "clean_payload_accepted": true,
+      "visible_fields": [
+        "request_id",
+        "carrier_lock_key",
+        "sample_id",
+        "speech_ref",
+        "media_relpath",
+        "audio_seconds",
+        "sample_rate_hz",
+        "task_instruction",
+        "history",
+        "decoding_params"
+      ]
+    },
+    "bare-core-native-tools": {
+      "clean_payload_accepted": true,
+      "visible_fields": [
+        "request_id",
+        "carrier_lock_key",
+        "sample_id",
+        "speech_ref",
+        "media_relpath",
+        "audio_seconds",
+        "sample_rate_hz",
+        "task_instruction",
+        "history",
+        "decoding_params",
+        "tool_schemas"
+      ]
+    },
+    "construction-proposer-text": {
+      "clean_payload_accepted": true,
+      "visible_fields": [
+        "request_id",
+        "carrier_lock_key",
+        "sample_id",
+        "speech_ref",
+        "media_relpath",
+        "audio_seconds",
+        "sample_rate_hz",
+        "task_instruction",
+        "history",
+        "decoding_params",
+        "construction_targets"
+      ]
+    },
+    "exemplar-context": {
+      "clean_payload_accepted": true,
+      "visible_fields": [
+        "request_id",
+        "carrier_lock_key",
+        "sample_id",
+        "speech_ref",
+        "media_relpath",
+        "audio_seconds",
+        "sample_rate_hz",
+        "task_instruction",
+        "history",
+        "decoding_params",
+        "supplied_evidence",
+        "evidence_provenance",
+        "exemplar_bank"
+      ]
+    },
+    "fixed-legal-context": {
+      "clean_payload_accepted": true,
+      "visible_fields": [
+        "request_id",
+        "carrier_lock_key",
+        "sample_id",
+        "speech_ref",
+        "media_relpath",
+        "audio_seconds",
+        "sample_rate_hz",
+        "task_instruction",
+        "history",
+        "decoding_params",
+        "supplied_evidence",
+        "evidence_provenance"
+      ]
+    },
+    "fixed-legal-context-replay": {
+      "clean_payload_accepted": true,
+      "visible_fields": [
+        "request_id",
+        "carrier_lock_key",
+        "sample_id",
+        "speech_ref",
+        "media_relpath",
+        "audio_seconds",
+        "sample_rate_hz",
+        "task_instruction",
+        "history",
+        "decoding_params",
+        "supplied_evidence",
+        "evidence_provenance",
+        "exemplar_bank",
+        "delta_candidates"
+      ]
+    },
+    "fixed-retrieval": {
+      "clean_payload_accepted": true,
+      "visible_fields": [
+        "request_id",
+        "carrier_lock_key",
+        "sample_id",
+        "speech_ref",
+        "media_relpath",
+        "audio_seconds",
+        "sample_rate_hz",
+        "task_instruction",
+        "history",
+        "decoding_params",
+        "retrieval_query",
+        "retrieved_evidence",
+        "evidence_provenance"
+      ]
+    },
+    "speech-feature-query": {
+      "clean_payload_accepted": true,
+      "visible_fields": [
+        "request_id",
+        "carrier_lock_key",
+        "sample_id",
+        "speech_ref",
+        "media_relpath",
+        "audio_seconds",
+        "sample_rate_hz",
+        "task_instruction",
+        "history",
+        "decoding_params",
+        "supplied_evidence",
+        "evidence_provenance",
+        "speech_feature_parts",
+        "speech_packet_sha256",
+        "query_source",
+        "key_representation_id",
+        "matcher_policy_id",
+        "mmproj_loaded"
+      ]
+    },
+    "speech-feature-query-native-tools": {
+      "clean_payload_accepted": true,
+      "visible_fields": [
+        "request_id",
+        "carrier_lock_key",
+        "sample_id",
+        "speech_ref",
+        "media_relpath",
+        "audio_seconds",
+        "sample_rate_hz",
+        "task_instruction",
+        "history",
+        "decoding_params",
+        "supplied_evidence",
+        "evidence_provenance",
+        "speech_feature_parts",
+        "speech_packet_sha256",
+        "query_source",
+        "key_representation_id",
+        "matcher_policy_id",
+        "mmproj_loaded",
+        "tool_schemas"
+      ]
+    }
+  }
+}

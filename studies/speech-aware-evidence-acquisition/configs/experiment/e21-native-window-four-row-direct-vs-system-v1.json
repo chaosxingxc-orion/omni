@@ -1,0 +1,95 @@
+{
+  "experiment_id": "SAEA-E21-NATIVE-WINDOW-FOUR-ROW-DIRECT-VS-SYSTEM-V1",
+  "date": "2026-09-22",
+  "execution_profile": "bounded-discovery-probe",
+  "purpose": "Item E35 (owner decision 89, 2026-09-21): a four-row engineering smoke proving the Earnings21+ConEC carrier flies the SAME six-node native episode SLURP flies (Perception -> Solver -> Reviewer x3 -> Planner -> Acquisition -> Delivery normaliser) through the SAME shared harness (rails.controllers.EvidenceAgentController, core.flight.FlightRuntime, the OpenJiuwen executor), alongside its direct-only comparator. NO optimisation, NO new mechanism, NO flight: registered-before-contact configuration only. No score, comparison, decision, effectiveness or generalization claim may be made from this proof.",
+  "failure_policy": "Preserve original failure and contact record. No automatic restart/replay/geometry/output-cap change. At most one separately registered recovery after a named cause and bounded proof.",
+  "population": {
+    "carrier": "earnings21-original",
+    "count": 1,
+    "execution_units": 4,
+    "dataset_fragment": "e21-native-window-four-row-v1",
+    "roster_receipt": "docs/receipts/probe-samples/e21-current-executor-four-row-proof-v1.json",
+    "split_identity_hash": "4d9ea907c05b67c43b5829e3e6c379ee37d39df012028a864aa0cdb7ae0c1992",
+    "historically_exposed": true
+  },
+  "cells": [
+    {
+      "cell_id": "e21-native-window-direct-four-row-v1",
+      "run_id": "SAEA-E21-NATIVE-WINDOW-DIRECT-FOUR-ROW-V1",
+      "attempt_id": "attempt-e21-native-window-direct-four-row-v1",
+      "arm": "speech-feature-query",
+      "policy": "phase-direct-only-v1",
+      "model_fragment": "q4km-e21-native-window-packets-cddb000c-np4-max1024-v1",
+      "dataset_fragment": "e21-native-window-four-row-v1",
+      "baseline_fragment": "e21-native-window-direct-four-row-v1",
+      "allowed_execution_stages": [
+        "check",
+        "worker",
+        "campaign"
+      ],
+      "readiness": {
+        "state": "ready",
+        "reason": "Item E35 (owner decisions 89 / 91): registered before contact 2026-09-22; decision receipt pinned; derived unit subset and per-batch packet artifacts materialised at their pinned hashes; the E21 serving geometry is resident for these cells.",
+        "requirements": [
+          {
+            "kind": "decision",
+            "expected_decision_id": "e21-native-window-flightruntime-e35-admission-v1",
+            "relpath": "coordination/e21-native-window-flightruntime-e35-v1/root-admission-v1.json",
+            "sha256": "bfdfa4b739e79a49a19d14c553f1fd118b08974b61c5965f73271d05fe1ff761",
+            "reason": "Decision e21-native-window-flightruntime-e35-admission-v1 pinned by scripts/flights/repin_cell.py."
+          }
+        ]
+      },
+      "execution_plan": {
+        "split_role": "discovery",
+        "planned_model_calls": 4,
+        "planned_gpu_hours": 0.1,
+        "planned_speech_audio_seconds": 360
+      }
+    },
+    {
+      "cell_id": "e21-native-window-system-four-row-v1",
+      "run_id": "SAEA-E21-NATIVE-WINDOW-SYSTEM-FOUR-ROW-V1",
+      "attempt_id": "attempt-e21-native-window-system-four-row-recovery-v4",
+      "arm": "speech-feature-query",
+      "policy": "phase-native-review-revise-acquire-v1",
+      "model_fragment": "q4km-e21-native-window-packets-cddb000c-np4-max1024-v1",
+      "dataset_fragment": "e21-native-window-four-row-v1",
+      "baseline_fragment": "e21-native-window-system-four-row-v1",
+      "allowed_execution_stages": [
+        "check",
+        "worker",
+        "campaign"
+      ],
+      "readiness": {
+        "state": "ready",
+        "reason": "Item E35 (owner decisions 89 / 91): registered before contact 2026-09-22; decision receipt pinned; derived unit subset and per-batch packet artifacts materialised at their pinned hashes; the E21 serving geometry is resident for these cells.",
+        "requirements": [
+          {
+            "kind": "decision",
+            "expected_decision_id": "e21-native-window-flightruntime-e35-admission-v1",
+            "relpath": "coordination/e21-native-window-flightruntime-e35-v1/root-admission-v1.json",
+            "sha256": "bfdfa4b739e79a49a19d14c553f1fd118b08974b61c5965f73271d05fe1ff761",
+            "reason": "Decision e21-native-window-flightruntime-e35-admission-v1 pinned by scripts/flights/repin_cell.py."
+          }
+        ]
+      },
+      "execution_plan": {
+        "split_role": "discovery",
+        "planned_model_calls": 44,
+        "planned_gpu_hours": 0.5,
+        "planned_speech_audio_seconds": 360
+      },
+      "attempt_note": "attempt-e21-native-window-system-four-row-v1 ABORTED 2026-09-22T13:58Z with zero contacts (the baseline lacked the knowledge_snapshot pins the native episode requires); recovery attempt under the same run id, caps unchanged. attempt-e21-native-window-system-four-row-recovery-v1 ABORTED 2026-09-22T14:38Z with zero contacts (native_contact_fit.contact_cap 44 != the registered maximum endpoint count 176 = 4 units x 11 x 4 endpoints); recovery-v2 under the same run id, caps unchanged; both aborts are pre-contact registration refusals. recovery-v2 ABORTED 2026-09-22T14:54Z after 4 Perception contacts (360 s): the registered speech-second cap counted one pass per window, not the repeated seconds of a multi-contact episode; recovery-v3 with the corrected cap. recovery-v3 ABORTED 2026-09-22T15:04Z with zero contacts (the original fit identity already carried recovery-v2's evidence; fit moved to FIT-RECOVERY-V3); recovery-v4."
+    }
+  ],
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.6,
+    "planned_model_calls": 48,
+    "planned_speech_audio_seconds": 4320,
+    "split_role": "discovery"
+  },
+  "execution_plan_note": "Pair totals (direct + system arms; ceilings, not targets), enforced run-cumulatively per run id by the runtime; the per-arm expectations are in the readiness plans. Speech seconds are REPEATED seconds: every native-episode contact re-sends the window audio, so the system arm's ceiling is windows x 11 x window seconds (four-row 3,960; sub10 334,477) plus the direct arm's one pass."
+}

@@ -1,0 +1,8 @@
+{
+  "arm": "fixed-legal-context",
+  "policy": "fixed",
+  "evidence_source": "conec-contexts",
+  "evidence_mismatch": true,
+  "scorers": ["asr-wer", "cost"],
+  "task_instruction": "Using the supplied context as background only, transcribe the speech verbatim. Output only the transcript text."
+}

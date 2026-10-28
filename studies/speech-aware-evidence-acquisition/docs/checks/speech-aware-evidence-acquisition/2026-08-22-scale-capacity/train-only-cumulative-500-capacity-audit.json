@@ -1,0 +1,762 @@
+{
+  "admission": {
+    "failed_checks": [],
+    "new_model_contact_authorized": false,
+    "reason": "The aggregate train-only ladder is feasible; exact identities remain unfrozen and require a later owner-approved registration.",
+    "status": "feasible"
+  },
+  "agentloop_actionability": {
+    "interpretation": "Stable shared actions expose a candidate boundary action. Exact shared action-plus-entity signatures mark residual cases where entity extraction alone cannot resolve the label.",
+    "minimum_bilateral_train_support": 5,
+    "residual_boundary_scenario_pair_count": 55,
+    "residual_signature_pair_count": 108,
+    "stable_action_pair_count": 59,
+    "stable_boundary_scenario_pair_count": 55
+  },
+  "allocation_policy": {
+    "holdout_prioritizes_unseen_speakers": true,
+    "holdout_quota_by_scenario": {
+      "alarm": 8,
+      "audio": 8,
+      "calendar": 8,
+      "cooking": 8,
+      "datetime": 8,
+      "email": 7,
+      "general": 7,
+      "iot": 8,
+      "lists": 8,
+      "music": 8,
+      "news": 7,
+      "play": 8,
+      "qa": 8,
+      "recommendation": 8,
+      "social": 8,
+      "takeaway": 7,
+      "transport": 8,
+      "weather": 8
+    },
+    "holdout_reserved_before_new_memory": true,
+    "id": "speaker-unseen-holdout-residual-support-memory-v4",
+    "new_memory_prioritizes_residual_pair_completion": true,
+    "new_memory_prioritizes_residual_pair_minimum_support": true,
+    "new_memory_prioritizes_unseen_action_then_signature": true,
+    "new_memory_quota_by_scenario": {
+      "alarm": 14,
+      "audio": 14,
+      "calendar": 14,
+      "cooking": 14,
+      "datetime": 14,
+      "email": 14,
+      "general": 14,
+      "iot": 14,
+      "lists": 14,
+      "music": 14,
+      "news": 14,
+      "play": 14,
+      "qa": 14,
+      "recommendation": 14,
+      "social": 14,
+      "takeaway": 14,
+      "transport": 14,
+      "weather": 14
+    },
+    "study_wide_speaker_unseen_holdout_preferred": true
+  },
+  "allocations": {
+    "available_pool": {
+      "action_count": 46,
+      "action_entity_signature_count": 729,
+      "entity_free_stable_action_query_count": 5048,
+      "per_scenario": {
+        "alarm": {
+          "action_count": 3,
+          "action_entity_signature_count": 41,
+          "query_count": 1749
+        },
+        "audio": {
+          "action_count": 4,
+          "action_entity_signature_count": 17,
+          "query_count": 1698
+        },
+        "calendar": {
+          "action_count": 3,
+          "action_entity_signature_count": 141,
+          "query_count": 5397
+        },
+        "cooking": {
+          "action_count": 2,
+          "action_entity_signature_count": 16,
+          "query_count": 484
+        },
+        "datetime": {
+          "action_count": 2,
+          "action_entity_signature_count": 19,
+          "query_count": 1297
+        },
+        "email": {
+          "action_count": 4,
+          "action_entity_signature_count": 72,
+          "query_count": 2864
+        },
+        "general": {
+          "action_count": 3,
+          "action_entity_signature_count": 35,
+          "query_count": 1930
+        },
+        "iot": {
+          "action_count": 9,
+          "action_entity_signature_count": 51,
+          "query_count": 2520
+        },
+        "lists": {
+          "action_count": 3,
+          "action_entity_signature_count": 31,
+          "query_count": 1637
+        },
+        "music": {
+          "action_count": 4,
+          "action_entity_signature_count": 28,
+          "query_count": 922
+        },
+        "news": {
+          "action_count": 1,
+          "action_entity_signature_count": 25,
+          "query_count": 1503
+        },
+        "play": {
+          "action_count": 5,
+          "action_entity_signature_count": 97,
+          "query_count": 5123
+        },
+        "qa": {
+          "action_count": 5,
+          "action_entity_signature_count": 29,
+          "query_count": 3326
+        },
+        "recommendation": {
+          "action_count": 3,
+          "action_entity_signature_count": 53,
+          "query_count": 1156
+        },
+        "social": {
+          "action_count": 2,
+          "action_entity_signature_count": 33,
+          "query_count": 971
+        },
+        "takeaway": {
+          "action_count": 2,
+          "action_entity_signature_count": 39,
+          "query_count": 681
+        },
+        "transport": {
+          "action_count": 4,
+          "action_entity_signature_count": 82,
+          "query_count": 1693
+        },
+        "weather": {
+          "action_count": 1,
+          "action_entity_signature_count": 23,
+          "query_count": 1744
+        }
+      },
+      "query_count": 36695,
+      "residual_shared_signature_query_count": 9906,
+      "residual_signature_pair_bilateral_coverage": {
+        "covered": 108,
+        "required": 108
+      },
+      "residual_signature_pair_minimum_side_support": {
+        "minimum": 13,
+        "pairs_at_least_2": 108,
+        "pairs_at_least_3": 108,
+        "pairs_at_least_5": 108,
+        "required": 108
+      },
+      "scenario_count": 18,
+      "shared_action_entity_query_count": 11780,
+      "speaker_count": 128,
+      "stable_action_pair_bilateral_coverage": {
+        "covered": 59,
+        "required": 59
+      },
+      "stable_action_pair_minimum_side_support": {
+        "minimum": 301,
+        "pairs_at_least_2": 59,
+        "pairs_at_least_3": 59,
+        "pairs_at_least_5": 59,
+        "required": 59
+      },
+      "stable_shared_action_query_count": 15642,
+      "without_entities_count": 13185,
+      "without_entities_rate": 0.35931326
+    },
+    "cumulative_memory": {
+      "action_count": 46,
+      "action_entity_signature_count": 171,
+      "entity_free_stable_action_query_count": 84,
+      "per_scenario": {
+        "alarm": {
+          "action_count": 3,
+          "action_entity_signature_count": 15,
+          "query_count": 20
+        },
+        "audio": {
+          "action_count": 4,
+          "action_entity_signature_count": 17,
+          "query_count": 20
+        },
+        "calendar": {
+          "action_count": 3,
+          "action_entity_signature_count": 17,
+          "query_count": 20
+        },
+        "cooking": {
+          "action_count": 2,
+          "action_entity_signature_count": 14,
+          "query_count": 20
+        },
+        "datetime": {
+          "action_count": 2,
+          "action_entity_signature_count": 7,
+          "query_count": 20
+        },
+        "email": {
+          "action_count": 4,
+          "action_entity_signature_count": 7,
+          "query_count": 20
+        },
+        "general": {
+          "action_count": 3,
+          "action_entity_signature_count": 18,
+          "query_count": 20
+        },
+        "iot": {
+          "action_count": 9,
+          "action_entity_signature_count": 18,
+          "query_count": 20
+        },
+        "lists": {
+          "action_count": 3,
+          "action_entity_signature_count": 7,
+          "query_count": 20
+        },
+        "music": {
+          "action_count": 4,
+          "action_entity_signature_count": 5,
+          "query_count": 20
+        },
+        "news": {
+          "action_count": 1,
+          "action_entity_signature_count": 7,
+          "query_count": 20
+        },
+        "play": {
+          "action_count": 5,
+          "action_entity_signature_count": 19,
+          "query_count": 20
+        },
+        "qa": {
+          "action_count": 5,
+          "action_entity_signature_count": 18,
+          "query_count": 20
+        },
+        "recommendation": {
+          "action_count": 3,
+          "action_entity_signature_count": 19,
+          "query_count": 20
+        },
+        "social": {
+          "action_count": 2,
+          "action_entity_signature_count": 4,
+          "query_count": 20
+        },
+        "takeaway": {
+          "action_count": 2,
+          "action_entity_signature_count": 6,
+          "query_count": 20
+        },
+        "transport": {
+          "action_count": 4,
+          "action_entity_signature_count": 6,
+          "query_count": 20
+        },
+        "weather": {
+          "action_count": 1,
+          "action_entity_signature_count": 7,
+          "query_count": 20
+        }
+      },
+      "query_count": 360,
+      "residual_shared_signature_query_count": 182,
+      "residual_signature_pair_bilateral_coverage": {
+        "covered": 108,
+        "required": 108
+      },
+      "residual_signature_pair_minimum_side_support": {
+        "minimum": 1,
+        "pairs_at_least_2": 83,
+        "pairs_at_least_3": 71,
+        "pairs_at_least_5": 49,
+        "required": 108
+      },
+      "scenario_count": 18,
+      "shared_action_entity_query_count": 188,
+      "speaker_count": 77,
+      "stable_action_pair_bilateral_coverage": {
+        "covered": 59,
+        "required": 59
+      },
+      "stable_action_pair_minimum_side_support": {
+        "minimum": 4,
+        "pairs_at_least_2": 59,
+        "pairs_at_least_3": 59,
+        "pairs_at_least_5": 56,
+        "required": 59
+      },
+      "stable_shared_action_query_count": 197,
+      "without_entities_count": 133,
+      "without_entities_rate": 0.36944444
+    },
+    "existing_memory": {
+      "action_count": 30,
+      "action_entity_signature_count": 65,
+      "entity_free_stable_action_query_count": 15,
+      "per_scenario": {
+        "alarm": {
+          "action_count": 3,
+          "action_entity_signature_count": 6,
+          "query_count": 6
+        },
+        "audio": {
+          "action_count": 4,
+          "action_entity_signature_count": 4,
+          "query_count": 6
+        },
+        "calendar": {
+          "action_count": 3,
+          "action_entity_signature_count": 6,
+          "query_count": 6
+        },
+        "cooking": {
+          "action_count": 1,
+          "action_entity_signature_count": 1,
+          "query_count": 6
+        },
+        "datetime": {
+          "action_count": 1,
+          "action_entity_signature_count": 3,
+          "query_count": 6
+        },
+        "email": {
+          "action_count": 3,
+          "action_entity_signature_count": 5,
+          "query_count": 6
+        },
+        "general": {
+          "action_count": 2,
+          "action_entity_signature_count": 4,
+          "query_count": 6
+        },
+        "iot": {
+          "action_count": 3,
+          "action_entity_signature_count": 4,
+          "query_count": 6
+        },
+        "lists": {
+          "action_count": 3,
+          "action_entity_signature_count": 6,
+          "query_count": 6
+        },
+        "music": {
+          "action_count": 2,
+          "action_entity_signature_count": 3,
+          "query_count": 6
+        },
+        "news": {
+          "action_count": 1,
+          "action_entity_signature_count": 3,
+          "query_count": 6
+        },
+        "play": {
+          "action_count": 3,
+          "action_entity_signature_count": 5,
+          "query_count": 6
+        },
+        "qa": {
+          "action_count": 2,
+          "action_entity_signature_count": 4,
+          "query_count": 6
+        },
+        "recommendation": {
+          "action_count": 3,
+          "action_entity_signature_count": 5,
+          "query_count": 6
+        },
+        "social": {
+          "action_count": 2,
+          "action_entity_signature_count": 3,
+          "query_count": 6
+        },
+        "takeaway": {
+          "action_count": 2,
+          "action_entity_signature_count": 6,
+          "query_count": 6
+        },
+        "transport": {
+          "action_count": 4,
+          "action_entity_signature_count": 5,
+          "query_count": 6
+        },
+        "weather": {
+          "action_count": 1,
+          "action_entity_signature_count": 5,
+          "query_count": 6
+        }
+      },
+      "query_count": 108,
+      "residual_shared_signature_query_count": 32,
+      "residual_signature_pair_bilateral_coverage": {
+        "covered": 29,
+        "required": 108
+      },
+      "residual_signature_pair_minimum_side_support": {
+        "minimum": 0,
+        "pairs_at_least_2": 7,
+        "pairs_at_least_3": 0,
+        "pairs_at_least_5": 0,
+        "required": 108
+      },
+      "scenario_count": 18,
+      "shared_action_entity_query_count": 37,
+      "speaker_count": 57,
+      "stable_action_pair_bilateral_coverage": {
+        "covered": 59,
+        "required": 59
+      },
+      "stable_action_pair_minimum_side_support": {
+        "minimum": 1,
+        "pairs_at_least_2": 40,
+        "pairs_at_least_3": 15,
+        "pairs_at_least_5": 3,
+        "required": 59
+      },
+      "stable_shared_action_query_count": 47,
+      "without_entities_count": 45,
+      "without_entities_rate": 0.41666667
+    },
+    "holdout": {
+      "action_count": 30,
+      "action_entity_signature_count": 74,
+      "entity_free_stable_action_query_count": 27,
+      "per_scenario": {
+        "alarm": {
+          "action_count": 3,
+          "action_entity_signature_count": 5,
+          "query_count": 8
+        },
+        "audio": {
+          "action_count": 3,
+          "action_entity_signature_count": 4,
+          "query_count": 8
+        },
+        "calendar": {
+          "action_count": 3,
+          "action_entity_signature_count": 7,
+          "query_count": 8
+        },
+        "cooking": {
+          "action_count": 1,
+          "action_entity_signature_count": 4,
+          "query_count": 8
+        },
+        "datetime": {
+          "action_count": 2,
+          "action_entity_signature_count": 4,
+          "query_count": 8
+        },
+        "email": {
+          "action_count": 3,
+          "action_entity_signature_count": 5,
+          "query_count": 7
+        },
+        "general": {
+          "action_count": 1,
+          "action_entity_signature_count": 2,
+          "query_count": 7
+        },
+        "iot": {
+          "action_count": 4,
+          "action_entity_signature_count": 7,
+          "query_count": 8
+        },
+        "lists": {
+          "action_count": 3,
+          "action_entity_signature_count": 5,
+          "query_count": 8
+        },
+        "music": {
+          "action_count": 2,
+          "action_entity_signature_count": 3,
+          "query_count": 8
+        },
+        "news": {
+          "action_count": 1,
+          "action_entity_signature_count": 5,
+          "query_count": 7
+        },
+        "play": {
+          "action_count": 4,
+          "action_entity_signature_count": 6,
+          "query_count": 8
+        },
+        "qa": {
+          "action_count": 2,
+          "action_entity_signature_count": 3,
+          "query_count": 8
+        },
+        "recommendation": {
+          "action_count": 3,
+          "action_entity_signature_count": 8,
+          "query_count": 8
+        },
+        "social": {
+          "action_count": 2,
+          "action_entity_signature_count": 4,
+          "query_count": 8
+        },
+        "takeaway": {
+          "action_count": 2,
+          "action_entity_signature_count": 6,
+          "query_count": 7
+        },
+        "transport": {
+          "action_count": 3,
+          "action_entity_signature_count": 7,
+          "query_count": 8
+        },
+        "weather": {
+          "action_count": 1,
+          "action_entity_signature_count": 5,
+          "query_count": 8
+        }
+      },
+      "query_count": 140,
+      "residual_shared_signature_query_count": 44,
+      "residual_signature_pair_bilateral_coverage": {
+        "covered": 54,
+        "required": 108
+      },
+      "residual_signature_pair_minimum_side_support": {
+        "minimum": 0,
+        "pairs_at_least_2": 18,
+        "pairs_at_least_3": 3,
+        "pairs_at_least_5": 0,
+        "required": 108
+      },
+      "scenario_count": 18,
+      "shared_action_entity_query_count": 47,
+      "speaker_count": 37,
+      "stable_action_pair_bilateral_coverage": {
+        "covered": 59,
+        "required": 59
+      },
+      "stable_action_pair_minimum_side_support": {
+        "minimum": 2,
+        "pairs_at_least_2": 59,
+        "pairs_at_least_3": 30,
+        "pairs_at_least_5": 3,
+        "required": 59
+      },
+      "stable_shared_action_query_count": 60,
+      "without_entities_count": 60,
+      "without_entities_rate": 0.42857143
+    },
+    "new_memory": {
+      "action_count": 35,
+      "action_entity_signature_count": 118,
+      "entity_free_stable_action_query_count": 69,
+      "per_scenario": {
+        "alarm": {
+          "action_count": 3,
+          "action_entity_signature_count": 10,
+          "query_count": 14
+        },
+        "audio": {
+          "action_count": 3,
+          "action_entity_signature_count": 14,
+          "query_count": 14
+        },
+        "calendar": {
+          "action_count": 3,
+          "action_entity_signature_count": 12,
+          "query_count": 14
+        },
+        "cooking": {
+          "action_count": 2,
+          "action_entity_signature_count": 13,
+          "query_count": 14
+        },
+        "datetime": {
+          "action_count": 2,
+          "action_entity_signature_count": 7,
+          "query_count": 14
+        },
+        "email": {
+          "action_count": 2,
+          "action_entity_signature_count": 4,
+          "query_count": 14
+        },
+        "general": {
+          "action_count": 3,
+          "action_entity_signature_count": 14,
+          "query_count": 14
+        },
+        "iot": {
+          "action_count": 9,
+          "action_entity_signature_count": 14,
+          "query_count": 14
+        },
+        "lists": {
+          "action_count": 2,
+          "action_entity_signature_count": 3,
+          "query_count": 14
+        },
+        "music": {
+          "action_count": 3,
+          "action_entity_signature_count": 3,
+          "query_count": 14
+        },
+        "news": {
+          "action_count": 1,
+          "action_entity_signature_count": 5,
+          "query_count": 14
+        },
+        "play": {
+          "action_count": 5,
+          "action_entity_signature_count": 14,
+          "query_count": 14
+        },
+        "qa": {
+          "action_count": 4,
+          "action_entity_signature_count": 14,
+          "query_count": 14
+        },
+        "recommendation": {
+          "action_count": 3,
+          "action_entity_signature_count": 14,
+          "query_count": 14
+        },
+        "social": {
+          "action_count": 1,
+          "action_entity_signature_count": 2,
+          "query_count": 14
+        },
+        "takeaway": {
+          "action_count": 1,
+          "action_entity_signature_count": 1,
+          "query_count": 14
+        },
+        "transport": {
+          "action_count": 1,
+          "action_entity_signature_count": 2,
+          "query_count": 14
+        },
+        "weather": {
+          "action_count": 1,
+          "action_entity_signature_count": 5,
+          "query_count": 14
+        }
+      },
+      "query_count": 252,
+      "residual_shared_signature_query_count": 150,
+      "residual_signature_pair_bilateral_coverage": {
+        "covered": 98,
+        "required": 108
+      },
+      "residual_signature_pair_minimum_side_support": {
+        "minimum": 0,
+        "pairs_at_least_2": 82,
+        "pairs_at_least_3": 52,
+        "pairs_at_least_5": 16,
+        "required": 108
+      },
+      "scenario_count": 18,
+      "shared_action_entity_query_count": 151,
+      "speaker_count": 69,
+      "stable_action_pair_bilateral_coverage": {
+        "covered": 59,
+        "required": 59
+      },
+      "stable_action_pair_minimum_side_support": {
+        "minimum": 1,
+        "pairs_at_least_2": 57,
+        "pairs_at_least_3": 56,
+        "pairs_at_least_5": 55,
+        "required": 59
+      },
+      "stable_shared_action_query_count": 150,
+      "without_entities_count": 88,
+      "without_entities_rate": 0.34920635
+    }
+  },
+  "checks": {
+    "complete_scenario_roster": true,
+    "cumulative_memory_action_complete": true,
+    "cumulative_memory_residual_signature_pair_complete": true,
+    "cumulative_memory_scenario_action_complete": true,
+    "cumulative_memory_stable_action_pair_complete": true,
+    "holdout_capacity": true,
+    "memory_holdout_speaker_disjoint": true,
+    "new_memory_capacity": true,
+    "query_key_speaker_disjoint": true,
+    "stage_identity_disjoint": true
+  },
+  "information_interpretation": {
+    "cumulative_memory_action_coverage_rate": 1.0,
+    "cumulative_memory_scenario_action_coverage_rate": 1.0,
+    "cumulative_memory_shared_signature_query_count": 188,
+    "holdout_shared_signature_query_count": 47,
+    "rule": "The memory adds decision evidence only through train-derived key and boundary information. Generated loop state may denoise speech but is not counted as new label information."
+  },
+  "isolation": {
+    "holdout_historical_nonmemory_speaker_overlap_count": 0,
+    "memory_holdout_speaker_overlap_count": 0,
+    "query_key_speaker_overlap_count": 0,
+    "stage_identity_overlap_count": 0
+  },
+  "query_isolated_capacity": {
+    "action_count": 46,
+    "action_entity_signature_count": 729,
+    "recording_count": 36695,
+    "scenario_count": 18,
+    "shared_action_entity_signature_count": 54,
+    "speaker_count": 128,
+    "utterance_count": 9764
+  },
+  "schema": "saea-speech-native-scale-capacity-audit-v1",
+  "source": {
+    "binding_sha256": "b7bca06170b44234975ae97df2c6e648d8a97edaf93058dbc2ce21620e288ceb",
+    "existing_memory_split": "EVIDENCE-E108",
+    "key_example_count": 94,
+    "key_speaker_count": 33,
+    "new_identity_fields_emitted": false,
+    "registered_query_count": 540,
+    "registered_query_speaker_count": 95,
+    "seed": 20260823,
+    "split": "SLURP train real speech only"
+  },
+  "status": "MODEL-FREE AGGREGATE AUDIT; NOT AN EXPOSURE REGISTRATION",
+  "study_wide_speaker_unseen_holdout": {
+    "allocated_query_count": 140,
+    "feasible": true,
+    "interpretation": "The holdout can be speaker-unseen relative to every registered query.",
+    "target_query_count": 140
+  },
+  "targets": {
+    "cumulative_query_count": 500,
+    "existing_memory_query_count": 108,
+    "holdout_query_count": 140,
+    "memory_query_count": 360,
+    "new_memory_query_count": 252
+  }
+}

@@ -1,0 +1,29 @@
+# E0: model-free data closure. No frozen-core call is authorized while this stage is open.
+experiment_namespace: SAEA-E
+domain: speech-only
+stage: E0
+model_touch: false
+excluded_lock_keys:
+  - fsd50k
+  - audioset-metadata-features
+  - esc-50
+deliverables:
+  # closed 2026-08-04; artifact truth lives in docs/receipts/e0-closure.json,
+  # verified (not trusted) by contracts.FrozenCoreGate against re-measured bytes
+  d1_identity: CLOSED   # carrier/lock identity alignment receipts
+  d2_leakage: CLOSED    # leakage negative controls
+  d3_scoring: CLOSED    # scoring stack freeze
+  d4_trace: CLOSED      # ten-sample end-to-end trace (model-free)
+gate:
+  # Human-readable mirror; the receipts are authoritative and the binding lives in
+  # code: contracts.FrozenCoreGate (canonical construction: FrozenCoreGate.for_study_repo;
+  # dry-run: python -m speech_aware_evidence_acquisition.e0.generate verify).
+  # Schemas saea-e0-closure-receipt-v1 / saea-runtime-receipt-v2; D1-D4 bind artifact
+  # hashes; D3 scoring sources re-hashed against the live tree; GGUF files AND the
+  # full llama.cpp build/bin runtime set re-hashed; reported build hash must prefix
+  # the receipt commit.
+  e0_receipt: docs/receipts/e0-closure.json
+  runtime_receipt: docs/receipts/runtime.json
+  data_root_env: SPEECHRL_DATA_DIR                 # env var NAME holding the asset root
+  lock: ../../docs/datasets.lock.json              # umbrella lock (adjacent-checkout layout)
+  runtime_root_resolution: per-machine             # passed via --runtime-root at receipt time

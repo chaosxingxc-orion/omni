@@ -1,0 +1,166 @@
+{
+  "arms": {
+    "both-off": {
+      "perception": {
+        "enable_thinking": false
+      },
+      "solver": {
+        "enable_thinking": false
+      }
+    },
+    "both-on": "the delivering arm = the 268-B lock form",
+    "both-on-twin": "the request-identical twin (in-flight A/A)",
+    "perception-off": {
+      "perception": {
+        "enable_thinking": false
+      }
+    },
+    "solver-off": {
+      "solver": {
+        "enable_thinking": false
+      }
+    }
+  },
+  "blockers": [],
+  "cells": {
+    "arm": {
+      "attempt_id": "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-generation-rec2-v1",
+      "cell": "slurp-native-stage3-nxt-r1-thinking-policy-fold-b-v1",
+      "composed_config_hash": "51235f09ab8a5c1d62f4f4322773ec3adb82b3ee8e2c1e6a53c5d2c49810289b",
+      "experiment": "slurp-native-stage3-nxt-r1-thinking-policy-fold-b-v1",
+      "fit_attempt_id": "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-fit-rec2-v1",
+      "fit_run_id": "SAEA-SLURP-STAGE3-NXT-R1-THINKING-POLICY-FOLD-B-FIT-REC2-V1",
+      "protocol_hash": "44ce1afce5877c63b90ef18b6945194748e50216cb26eef4cab00db3a44951eb",
+      "rows": 1080,
+      "run_id": "SAEA-SLURP-STAGE3-NXT-R1-THINKING-POLICY-FOLD-B-V1",
+      "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+    },
+    "smoke": {
+      "attempt_id": "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-smoke-4-generation-v1",
+      "cell": "slurp-native-stage3-nxt-r1-thinking-policy-fold-b-smoke-4-v1",
+      "composed_config_hash": "854a2ccc40c3b53460cdd0b10425a4d23c419f3d5d232d3a9d38840b7f3e864f",
+      "experiment": "slurp-native-stage3-nxt-r1-thinking-policy-fold-b-smoke-4-v1",
+      "fit_attempt_id": "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-smoke-4-fit-v1",
+      "fit_run_id": "SAEA-SLURP-STAGE3-NXT-R1-THINKING-POLICY-FOLD-B-SMOKE-4-FIT-V1",
+      "protocol_hash": "fe04e7a64309066474eded309b078f3dd22aca6b4845fd1976d7337517d8937c",
+      "rows": 4,
+      "run_id": "SAEA-SLURP-STAGE3-NXT-R1-THINKING-POLICY-FOLD-B-SMOKE-4-V1",
+      "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32"
+    }
+  },
+  "decision_rule_fixed_here": "The node words and their thresholds are fixed in scripts/analysis/slurp_nxt_thinking_policy_column_read.py and in this package's README: NEEDS-THINKING, NO-RESOLVED-LOSS, GAIN (plus NOT-NEEDED-AT-THE-FLOOR) against the in-flight twin offset and the decision-190 node-column floors.",
+  "failure_policy": "Stop and preserve on the first failure; at most one root-diagnosed recovery re-registration per run id; run-cumulative budgets. Recovery rec1 is spent; rec2 stands under an explicit owner exception (owner ruling 320 B of 2026-10-16) to the rule of one recovery per run id and covers that one re-registration only: a failure of it closes the cell.",
+  "findings": [
+    {
+      "finding": "The Thinking GGUF's chat template carries an enable_thinking branch that pre-fills an empty think block, but the model card calls the checkpoint thinking-only: a no-think answer from it is out of distribution and UNMEASURED (design section 1.3). The smoke-4 cell settles whether enable_thinking false answers with no reasoning bytes and no think marker, and the read reports per arm and node the completion-token and finish-reason table, the reasoning-character and marker counts, so a no-think arm that still reasons is visible.",
+      "id": "no-think-on-a-thinking-only-checkpoint-is-unmeasured",
+      "remedy": "the coordinator reads `nxt_r1_read.sh smoke` before the sign-off marker; a no-think arm that emits markers or empty answers stops the column flight."
+    },
+    {
+      "finding": "Independent chains, no note sharing (coordinator ruling 2): the evidence, the instruction template and the QueryState are identical in every arm, but a non-delivering arm's Solver prompt carries THAT arm's Perception note, which a no-think Perception writes differently. The perception-off and both-off contrasts therefore measure the node together with its downstream effect on the Solver, and solver-off re-contacts Perception (a request-identical contact whose note may differ by np4 batching jitter), which the in-flight twin both-on-twin measures.",
+      "id": "solver-prompt-differs-by-the-arms-own-note",
+      "remedy": "none; stated so the attribution is not over-read."
+    },
+    {
+      "finding": "The column carries its own A/A null, both-on-twin (a request-identical copy of the delivering both-on arm; same policy, same bytes). The 268-B cross-flight twin offset (+1.15 SLU, -0.09 intent) is the external reference, reported beside the in-flight offset and never used in a node word. The receipt schema v5 makes the twin optional, so a later budget round may fly without one.",
+      "id": "in-flight-twin-and-the-external-reference",
+      "remedy": "none."
+    },
+    {
+      "finding": "Ruling 303 A: one experiment in flight. The P3.1 chain (SAEA-Chain-TSYSD) occupies the Thinking session; this package is DRAFT / HELD until it has finished. The session is the 268-B think-budget-np4 session (budget 3072, cap 4096, same model fragment): no per-arm session, the per-request fields carry the arm.",
+      "id": "serial-gpu-and-the-resident-session",
+      "remedy": "the coordinator flips the cells only after the P3.1 chain has sealed."
+    },
+    {
+      "finding": "As in the 268-B cells the model-free preflight counts the payload at 4 bytes per token (a placeholder) and would refuse the Solver render at the 4,096 cap; the cells defer to the registered exact per-contact context-fit gate (preflight_budget_mode defer-to-native-contact-fit), which runs on every arm's REAL request. A no-think arm's smaller cap (1,024) only widens its prompt limit.",
+      "id": "preflight-defers-to-the-exact-gate",
+      "remedy": "none."
+    },
+    {
+      "finding": "scripts/checks/flight_registration_check.py's node-column findings (aa-arm-missing, variant-cost-mismatch, template-summary-mismatch) read only the Solver's template_variants block and are a no-op for a Perception-node group; the declaration is nevertheless complete (aa_arm_id, variant_cost, template_variants summary) and stage3_effect_floor_check validates its shape.",
+      "id": "flight-registration-check-does-not-yet-read-the-thinking-block",
+      "remedy": "widen NODE_COLUMN_PATH when the checker is next touched (not part of this package)."
+    }
+  ],
+  "one_factor": "the per-node thinking decoding of the non-delivering arms; the system is the 268-B Thinking lock on TRAIN Fold B",
+  "predecessor_snapshots": {
+    "arm": [
+      {
+        "path": "docs/readiness/2026-10-13-slurp-nxt-r1-thinking-policy-fold-b-v1/predecessor-snapshot-arm-rec1-v1.json",
+        "sha256": "355fad8f636db6fded99efe0ecaf982ac8d77ce1c34a66181ff599010d2ec3a7"
+      },
+      {
+        "path": "docs/readiness/2026-10-13-slurp-nxt-r1-thinking-policy-fold-b-v1/predecessor-snapshot-arm-rec2-v1.json",
+        "sha256": "185cd54aa8675cd84158cef7b33b1c27505a7be514a94705e222f8af26b6bf16"
+      }
+    ]
+  },
+  "prohibitions": [
+    "No test-split, DEV or Fold A contact (TRAIN Fold B only).",
+    "No supply arm, no template column, no tool schema on any role; no Reviewer or Planner visit; max_revisions 0.",
+    "The system is the 268-B Thinking lock: the knowledge supply, the module graph, the post-processing and the roster are not changed. The per-node thinking decoding of the non-delivering arms is the ONLY varied factor.",
+    "No arm may set any knob other than enable_thinking / reasoning_budget_tokens / answer_reserve_tokens (rails.supply_variants.parse_perception_thinking_variants refuses the rest by name).",
+    "No reasoning text is ever delivered, scored or carried to another node (reasoning_context_policy drop-reasoning-v1); a delivered reasoning marker stops the flight.",
+    "No benefit claim and no admission: claims_benefit is false; the read attributes a thinking cost or gain to a node.",
+    "No flight before the coordinator countersigns the DRAFT rows, mints the decision receipt, the harness commit is on master, the P3.1 chain has finished and the cells are flipped.",
+    "No session is started by this registration. No paper-scale profile. No system-level claim."
+  ],
+  "protocol_id": "slurp-nxt-r1-thinking-policy-fold-b-protocol-v1",
+  "recovery": {
+    "arm": {
+      "amendment": "RECOVERY 2026-10-16 (rec2; owner ruling 320 B of 2026-10-16, coordinator brief, Fable 5.1). MODE A (trace replay), not mode B: the absent-arm fix changes rails/runner.py and a checkpoint resume refuses a code-identity change. `resume_from` names the rec1 attempt and the sha256 of its trace, 3238cd8aedb50c8a142b15e321070ffc7cf2cd055088fdcb0aee83d8a0895835 (667,787,659 bytes), read from the data root into docs/readiness/2026-10-13-slurp-nxt-r1-thinking-policy-fold-b-v1/predecessor-snapshot-arm-rec2-v1.json. The attempt keeps the 1,029 complete rows (each replayed through the seal under the current code; the offline replay proof is a block of the generation plan) and flies the 51 remaining rows: 51 x 10 = 510 program contacts and nothing else. The generation budget is run-cumulative across the attempts of the run id (core/model/adapter.py): the registered plan plus both earlier attempts' recorded spend (11,502 calls, 33399.5 speech-seconds, read from the attempt records into docs/readiness/2026-10-13-slurp-nxt-r1-thinking-policy-fold-b-v1/predecessor-snapshot-arm-rec1-v1.json and docs/readiness/2026-10-13-slurp-nxt-r1-thinking-policy-fold-b-v1/predecessor-snapshot-arm-rec2-v1.json). The FIT cap is structural and unchanged. The FIT run id and the FIT attempt id take the rec2 marker because a (run_id, attempt_id) pair is a one-time key; the generation run id is unchanged. The registered GPU-hour ceiling (41.4 GPU-h) stands; the resume is expected to spend about 1.5 GPU-h (51 rows x 3.25 full-row equivalents / 1.84 rows per minute). `--allow-output-change` is never passed: the rebuilt supply, the roster (1,080 rows) and the read (n = 1,080) are the registered ones.",
+      "base_commit": "5acfbc38b",
+      "fit_cap_rule": "The FIT cap is structural: rows x program contacts x endpoints per contact.",
+      "fix_commit": "60134738e",
+      "owner_exception": "owner ruling 320 B of 2026-10-16",
+      "predecessor_attempt_id": "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-generation-rec1-v1",
+      "predecessor_fit_attempt_id": "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-fit-rec1-v1",
+      "predecessor_fit_run_id": "SAEA-SLURP-STAGE3-NXT-R1-THINKING-POLICY-FOLD-B-FIT-REC1-V1",
+      "predecessor_state": "ABORTED (its attempt record), flight commit 8f9d8e1ee, started 2026-10-14T17:14:43Z, stopped 2026-10-15T22:33:00Z on the finite completion above; 10,298 calls / 30101.20 speech-seconds realised per its attempt record (reserved 18,484 / 53,776); 1,029 complete rows in the trace (sha256 3238cd8a...) and in the row checkpoint; the failing row's records were never flushed; preserved unread.",
+      "predecessors": [
+        {
+          "attempt_id": "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-generation-v1",
+          "contacts_spent": 1204,
+          "speech_seconds_spent": 3298.2618750000015,
+          "state": "OPENED"
+        },
+        {
+          "attempt_id": "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-generation-rec1-v1",
+          "contacts_spent": 10298,
+          "speech_seconds_spent": 30101.20187499958,
+          "state": "ABORTED"
+        }
+      ],
+      "reason": "The rec1 column attempt stopped on a HARNESS defect, not on the infrastructure: after 1,029 complete rows the next row's `both-off` arm sealed a no-think Solver contact that ended on finish_reason `length` at its 1,024-token cap, and the fan-out raised before the delivering arm ran on that row. The absent-arm fix is merged on master (60134738e). Owner ruling 320 B of 2026-10-16 grants an EXPLICIT exception to the package rule of one recovery re-registration per run id: this rec2 keeps the 1,029 complete rows of the stopped attempt by mode-A trace replay and flies the 51 remaining rows (the failing row included) under the fix.",
+      "recovered_at": "2026-10-16",
+      "recovery_index": 2,
+      "registered_at_utc": "2026-10-17T04:53:44Z",
+      "resume_counts": {
+        "flown": 51,
+        "kept": 1029,
+        "partial": 0,
+        "roster": 1080,
+        "unstarted": 51
+      },
+      "resume_from": {
+        "attempt_id": "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-generation-rec1-v1",
+        "trace_sha256": "3238cd8aedb50c8a142b15e321070ffc7cf2cd055088fdcb0aee83d8a0895835"
+      },
+      "resume_mode": "resume-mode-A-keep-1029-fly-51",
+      "root_cause": "the no-think finite completion on a candidate arm: the `both-off` arm's no-think Solver contact (cap 1,024 tokens) ended on finish_reason `length`, FrozenCoreRoleFiniteCompletionError left the branch fan-out so the delivering arm never ran on that row, and the level-2 fold found no Solver record for the arm (RailsRunnerError: perception branch 'both-off' sealed no level-2 Solver column); the first such event in 2,058 earlier no-think Solver contacts (longest 66 tokens)",
+      "rule": "A third recovery is not covered by the owner exception; a second failure of rec2 closes the cell, and the fix is proven on a four-row dry run."
+    }
+  },
+  "recovery_note": "[thinking-policy column flight (five arms in one flight)] The rec1 column attempt stopped on a HARNESS defect, not on the infrastructure: after 1,029 complete rows the next row's `both-off` arm sealed a no-think Solver contact that ended on finish_reason `length` at its 1,024-token cap, and the fan-out raised before the delivering arm ran on that row. The absent-arm fix is merged on master (60134738e). Owner ruling 320 B of 2026-10-16 grants an EXPLICIT exception to the package rule of one recovery re-registration per run id: this rec2 keeps the 1,029 complete rows of the stopped attempt by mode-A trace replay and flies the 51 remaining rows (the failing row included) under the fix.",
+  "registered_at_utc": "2026-10-17T04:53:44Z",
+  "schema": "saea-registered-protocol-v1",
+  "status": "DRAFT-HELD-REGISTERED_BEFORE_CONTACT_AWAITING_COORDINATOR_COUNTERSIGN_AND_READINESS_FLIP",
+  "study_commit_at_registration": "5acfbc38b",
+  "superseded_attempt_ids": [
+    "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-generation-v1",
+    "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-fit-v1",
+    "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-generation-rec1-v1",
+    "attempt-slurp-native-stage3-nxt-r1-thinking-policy-fold-b-fit-rec1-v1"
+  ],
+  "the_question": "Which nodes of the locked Thinking system do not need thinking (owner ruling 304)? Each non-delivering arm is read PAIRED per row against the delivering both-on arm on the same 1,080 Fold B rows in one flight, with the in-flight twin as the null."
+}

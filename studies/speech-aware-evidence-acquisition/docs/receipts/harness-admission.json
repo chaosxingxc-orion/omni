@@ -1,0 +1,1595 @@
+{
+  "created_by": "docs/readiness/2026-09-08-e21-kc-e1f-repair-pass-v2-redecision.md section 9",
+  "gate": "docs/readiness/2026-09-08-agent-system-episode-and-core-pressure-v1.md section 8: every harness module -- a planner rule, an observe mode, a knowledge view, a judge, a tool -- carries a per-carrier admission receipt before it may enter the default plan. The contrast is module ON versus module OFF in the same harness on the same roster (one config key, never a second code path), paired with the carrier's cluster structure, n >= 400, cluster bootstrap, CI90; the guard is non-inferiority with the margin taken from the carrier's own null (family rule of 2026-09-08).",
+  "note": "This table is a LIVING RECEIPT and it is opened with exactly the one module this note had the authority to decide. The other first entries listed in the design note's section 8 are not transcribed here: each needs its own decided row and its own evidence pin, and copying them in from a prose table would manufacture receipts that no verdict issued. EXTENDED 2026-09-09: a second decided row joins it, on a second carrier, and it is the table's first HARMFUL entry -- the SLURP silence tail, whose gating guards failed even though every pooled number rose. The table records negatives as loudly as positives, which is the whole point of a living receipt. EXTENDED 2026-09-09 AGAIN: a third decided row, on the same carrier, and the table's second negative. It records a module that was measured, priced and refused BEFORE it was ever built into a plan -- which is the cheapest kind of negative there is, and the kind a living receipt exists to make visible. EXTENDED 2026-09-19: a ninth entry, and the table's first FAILURE-MODE module rather than a factor -- finite-completion retention, whose ON and OFF arms deliver byte-identical rows on every sealed SLURP arm because no sealed native-episode contact ever met a finite completion. It is recorded because a switch nobody decided is a default nobody chose, and a 1,451-contact flight was lost proving that.",
+  "schema": "saea-harness-admission-v3",
+  "schema_history": {
+    "saea-harness-admission-v1": "opened 2026-09-08 by docs/readiness/2026-09-08-e21-kc-e1f-repair-pass-v2-redecision.md section 9 with one decided entry.",
+    "saea-harness-admission-v2": "WAVE W4 (owner Decision 11-B change #6, 2026-09-08) adds, per entry, the config table and key that switch the module, plus the default_plans list the gate's last two rules read. NO verdict, number, status, evidence pin or provisional obligation was changed: v2 only records, for a module already decided, WHERE its one config key lives. Enforced by scripts/checks/harness_admission_check.py. EXTENDED 2026-09-08 on merge, when W4 met master's cross-call dispatcher: the switch vocabulary gains a fifth class, 'run', for a module whose one config key is a per-run driver knob rather than a per-phase table entry. The schema NAME is unchanged and the field 'switch_classes' is the version marker; no verdict, number, status, evidence pin or provisional obligation moved. EXTENDED 2026-09-09 with the first SLURP entry and the first HARMFUL entry: the silence tail on the delivered clip, decided by docs/readiness/2026-09-09-slurp-silence-tail-v1-verdict.md. NO schema field changed and no existing verdict, number, status, evidence pin or provisional obligation moved. EXTENDED 2026-09-09 with the table's second SLURP entry and second HARMFUL entry: the decode-confidence flag, decided by docs/readiness/2026-09-09-slurp-logprob-judge-probe-v1-verdict.md. It is the first entry whose module NEVER FLEW IN ANY FORM -- its evidence is an offline read of a sealed trace produced by a decoding parameter, not a phase_review that ran -- so it carries the unmet obligation to compose and fly the judges-table key, and a status_basis field naming why HARMFUL rather than NEUTRAL. NO schema field changed and no existing verdict, number, status, evidence pin or provisional obligation moved.",
+    "saea-harness-admission-v3": "Fable E6 (2026-09-16, docs/superpowers/specs/2026-09-16-slurp-v2-base-program-design.md section 3/5) adds two switch classes so the SLURP v2 base program's M0 (review-loop off), M2 (grouped-Solver sampling) and M1 (exemplar-grounded Solver's train-exemplars store) each have a home before their B0/B1/B2 cells are decided: 'episode', for one dotted path under native_episode on the closed allowlist rails.config_tables.EPISODE_LEVEL_SWITCH_KEYS (native_episode.roles.solver, native_episode.review_loop), and 'stores', for a whole named knowledge_stores.<store_id> block. NO verdict, number, status, evidence pin or provisional obligation was changed and NO admission entry was added by this bump: v3 only widens the vocabulary the switch_rule states and scripts/checks/harness_admission_check.py enforces, ahead of the cells that will decide these three modules. EXTENDED 2026-09-17 by Fable E9: the 'stores' class gains a SECOND, explicitly declared arm form, the store RE-PIN ('switch.form': 'repin'), so that a module which REVISES a store the comparator already carries -- cell B4b's module M4b, which re-pins knowledge_stores.slot-contracts from slot-contracts-v1 to slot-contracts-v2 -- can be written honestly instead of being forced into a null OFF arm it never had. The schema NAME is unchanged and 'switch_classes' still names the same seven classes, which is why this is an EXTENSION of v3 rather than a v4, on the convention the v2 entry above set when it added the 'run' class on merge: no class was added, no field of any existing entry changed, and the null form is enforced exactly as before for every entry that declares no form. NO verdict, number, status, evidence pin or provisional obligation moved, and NO admission entry was added by this extension -- the M4b row itself is the coordinator's to write, against the verdict that named this open point. Enforced by scripts/checks/harness_admission_check.py (_check_stores_switch, _check_stores_repin_arms, _check_stores_pin and the plan-arming rule _switch_present) over rails.config_tables.is_stores_repin_arm / stores_pins / stores_arm_matches; the form's own proof node id is tests/unit/test_config_table_module_switches.py::test_the_stores_repin_form_is_one_key. EXTENDED 2026-09-19 by item E13 with the class's sixth key, native_episode.finite_completion_policy, admitted on the closed allowlist rails.config_tables.EPISODE_LEVEL_SWITCH_KEYS with its own null arm (the key absent, or its explicit default 'raise') and its own proof. NO schema field changed and no existing verdict, number, status, evidence pin or provisional obligation moved. EXTENDED 2026-09-20 by item E25 with the EIGHTH switch class, 'phase_tools' (one role's toolkit mapping; rails.config_tables.resolve_phase_tools_switch_key / is_phase_tools_null_arm / phase_tools_role_armed), and the FIFTH status, 'RETIRED', for a module whose ON arm a measured cell withdrew: cell B1-notool's module is the removal of the Reviewer's task-contract tool, and the seven existing classes could only write a removal as an entry whose ON arm was the absence of a mapping. The schema NAME is unchanged; 'switch_classes' and 'status_values' are the version markers, on the convention the v2 entry set. NO existing verdict, number, status, evidence pin or provisional obligation moved; the ONE entry written under the new class is the B1-notool row this extension was made for. Enforced by scripts/checks/harness_admission_check.py (_check_phase_tools_switch, the RETIRED branch of _is_blocked, the RETIRED-owes-a-plan rule and the KNOWN_STATUSES validation of status_values); proof node id tests/unit/test_config_table_module_switches.py::test_the_reviewer_toolkit_withdrawal_is_one_phase_tools_key. EXTENDED 2026-09-30 by migration step 6 of the evidence-consumption module (owner decisions 195, 196 and 204; docs/superpowers/specs/2026-09-29-slurp-consumption-module-design.md section 3.2, coordinator ruling R2) with the NINTH switch class, 'module': the composed consumption policy as ONE key, native_episode.consumption_module (rails.config_tables.MODULE_SWITCH_CLASS / resolve_module_switch_key / module_block_of). Its OFF arm is NOT the key's absence: it is the module block with every component off and no column, naming its carrier's CURRENT lock (lock v2.1 on SLURP), which compiles byte for byte to that lock's policy blocks -- the in-chain A/A of every composed read. The licence is recomputed by the check, not believed: a 'module' entry owes a falsifier of kind 'compiles-to-lock' naming the lock and registered cells, and scripts/checks/harness_admission_check.py (_check_module_switch) compiles the OFF arm, compares it with the named lock version's blocks and requires each named cell's baseline fragment to carry exactly those blocks on its own roster (the AT-M0 proof), and compiles the ON arm. The schema NAME is unchanged; 'switch_classes' is the version marker, on the v2 convention. NO existing verdict, number, status, evidence pin or provisional obligation moved; the ONE entry written under the new class is PENDING (the module's first end-to-end cell is registered and held; each component's own admission stays in its own entry or registry row)."
+  },
+  "switch_rule": "Every entry names the ONE config key that switches its module ON and OFF, as {table, key, on, off}. 'table' is one of the four config tables (rails.config_tables.CONFIG_TABLE_NAMES: judges, knowledge_views, observe, toolkits); 'key' is a dotted path that starts with that table and names one of its entry keys, with '<phase>' as the placeholder for a program's phase because a module's admission is about the module and not about one program's phase names; 'off' is the table's null arm, which composes to the same config hash as the table being absent (core.config.drop_null_arms), which is what makes the OFF arm a twin of the pre-table baseline rather than a third cell identity. 'proof' names the test that composes both arms and asserts they differ in exactly that one key. A FIFTH class, 'run', covers a module that is one config key and has no table entry because it is per-run and the four tables are per-phase: 'key' is the FLAT config key the fragment carries, it must be on the closed allowlist rails.config_tables.RUN_LEVEL_SWITCH_KEYS, 'off' is the key absent or the driver's documented default, and the entry owes a 'falsifier' -- kind 'request-bytes-identical' plus the receipt that proved it -- whose MANIFEST.sha256 the check re-verifies. That falsifier is the whole licence for being outside the tables: a module that moves one byte of the request cannot produce one and belongs in a table. A SIXTH class, 'episode', covers a module that changes the per-run native-role-episode graph itself -- how many times a role runs, or how the Solver samples and aggregates -- rather than what a phase observes, is supplied with, is judged by or may call, and does not claim the 'run' class's zero-request-bytes licence either: 'key' is the literal dotted path the fragment carries under native_episode (not 'episode.<key>', exactly as a run-class key is not 'run.<key>'), drawn from the closed allowlist rails.config_tables.EPISODE_LEVEL_SWITCH_KEYS, and 'off' is that key's own null form (rails.config_tables.is_episode_null_arm) rather than one shared null token, because native_episode.roles.solver's historical shape and native_episode.review_loop's 'off' marker are not the same value. Where a module's OFF arm is, today, more than one native_episode leaf that shares no common dotted prefix (the review-loop pairing of max_revisions and the Reviewer/Planner max_iterations) and an optional marker field declares and validates the one-key view against those leaves, the entry's 'proof' test treats the leaves the marker derives from -- and any policy-id/max_contacts consequence of switching it -- as DERIVED, and shows the composed ON/OFF pair differing only in the marker once those derived keys are set aside, exactly as it shows for any other one-key module otherwise. A SEVENTH class, 'stores', covers a module that adds a whole named store to knowledge_stores (a store's own release/snapshot pins plus its own supply, never one entry of the knowledge_views table, which wraps a PHASE's material/supply and not a STORE): 'key' is 'knowledge_stores.<store_id>', 'off' is null -- the named store absent from the knowledge_stores mapping (rails.config_tables.is_stores_null_arm) -- and 'proof' must show the two committed fragments differing in exactly that one top-level knowledge_stores sub-block, once each fragment's own speech-feature identity ids and free-English 'what_this_is'/'what_the_<store>_store_is' prose are set aside as bookkeeping, exactly as the four tables' own proofs already set comparable bookkeeping aside. The 'stores' class has TWO arm forms and an entry DECLARES which one it is in, in the field 'switch.form'. Form one, the default (no 'form' field), is the NULL form just stated: OFF is the named store absent, which is the shape of a module that ADDS a store the comparator does not carry. Form two, 'repin' (added 2026-09-17 by Fable E9 for cell B4b's module M4b, docs/results/2026-09-17-slurp-b4b-slot-store-v2-verdict.md, section 'The harness-admission consequence'), is the shape of a module that REVISES a store the comparator ALREADY carries: such a module moves neither more nor less than that store's two pinned leaves, so its OFF arm is the incumbent's {release, snapshot} pins and its ON arm is the successor's, each pin an object of 'relpath' and 'sha256' and nothing else (rails.config_tables.is_stores_repin_arm). The two arms must DIFFER -- a re-pin that pins the same bytes twice switches nothing -- and every pin whose relpath resolves to a file in this repository is re-hashed by the check, while a pin that resolves to no such file is a SPEECHRL_DATA_DIR relpath, which this model-free check never opens and checks for shape alone. The form is declared and never inferred: an entry whose OFF arm is not the store's absence and which does not say 'repin' is REFUSED, because an OFF arm silently allowed to be anything at all is exactly the loosening the null form exists to prevent. The re-pin form also changes the question a default plan is asked: 'not the null arm' is not enough, the plan must pin exactly the ON arm's release and snapshot bytes, so a plan still carrying the incumbent's pins -- or carrying no such store -- has NOT armed the module. A re-pin entry's 'proof' shows the same one-key property the null form's does, on the two committed fragments, with the pinned store's own derived artifacts (the prepared phase-supply materialized from it) set aside as DERIVED beside the usual bookkeeping, exactly as the episode class's proof sets aside the leaves its marker derives from. An EIGHTH class, 'phase_tools' (added 2026-09-20 by item E25 for cell B1-notool, repair form 0-B, owner decisions 55 and 56), covers ONE ROLE'S TOOLKIT -- the flat phase_tools.<phase> mapping that grants a role tool AUTHORITY -- which is neither the toolkits table (a task type's catalogue selection) nor the episode class (native_episode.tool_schema_rendering decides how a granted toolkit is rendered and leaves authority alone): 'key' is the literal 'phase_tools.<phase id>' (rails.config_tables.resolve_phase_tools_switch_key; no placeholder, because a toolkit's admission is about one role), 'off' is the role's null arm -- null or {}, the role absent from phase_tools, which the runtime reads as no tool authority (rails.config_tables.is_phase_tools_null_arm, core.flight.runtime.tool_free_native_arm) -- and 'on' is the role's non-empty toolkit mapping. The class exists so that a module which WITHDRAWS a toolkit can be written as the RETIREMENT of the toolkit it withdraws, under the status 'RETIRED': ON is the mapping the comparator carried, OFF is its absence, the plan carries OFF, and the check proves the plan does NOT arm the key (RETIRED blocks a module from every plan exactly as HARMFUL does) and that a plan for the carrier EXISTS (a retirement nobody's plan reflects is refused). A module granting a NEW toolkit uses the class the ordinary way: ADMITTED or NEUTRAL, armed in a plan by a non-null phase_tools.<phase> mapping.",
+  "default_plans": [
+    {
+      "carrier": "earnings21-original",
+      "config": "configs/baseline/e21-buf90-zero-locked-scored4-prefetch1.json",
+      "modules": [
+        "cross-call dispatcher (obs_prefetch_depth 1)"
+      ],
+      "note": "the sealed comparator plus the one NEUTRAL scheduling module; the KC-E1f repair stays out until its replication is met. The fragment differs from the comparator's own configs/baseline/e21-buf90-zero-locked-scored4.json in exactly one key, obs_prefetch_depth, which is what makes it the comparator plus one module rather than a second baseline."
+    },
+    {
+      "carrier": "slurp",
+      "config": "configs/baseline/slurp-native-dual-store-train-fold-a-default-plan-v1.json",
+      "modules": [
+        "review loop (Reviewer x3 + Planner + at most one Solver revision after the initial draft; Perception -> Solver -> Reviewer -> Planner -> deliver)",
+        "date/time slot-contract revision (slot store v2 re-pinned in place of release v1; module M4b, ADMITTED, replication MET 2026-09-19)",
+        "delivery-time normaliser node saea-deliver-normalise-v3 (module M3, ADMITTED 2026-09-19 by the model-free read plus the four-row smoke; native_episode.deliver_normaliser)",
+        "speech-keyed exemplar supply to the Solver (the train-exemplars store at k = 20; module M1, ADMITTED 2026-09-18 after the twin read, replication MET 2026-09-19 by the request-identical replicate B1r; knowledge_stores.train-exemplars)",
+        "withdrawal of the Reviewer's task-contract tool (repair form 0-B; cell B1-notool NEUTRAL under decision 25 with -69 % prefilled tokens per row and 0.418x GPU hours; phase_tools absent)"
+      ],
+      "note": "the sealed dual-store TRAIN Fold A anchor plus the one NEUTRAL module this table decides for SLURP, the review loop, armed by native_episode.review_loop 'on'. Since 2026-09-19 the fragment also pins knowledge_stores.slot-contracts at the slot store v2 release and snapshot bytes (module M4b, ADMITTED, replicated). The fragment differs from the comparator's own configs/baseline/slurp-native-dual-store-train-fold-a-anchor-v1.json in exactly those two decided switches (and in its own what_this_is description), which is what makes it the comparator plus its admitted-or-neutral modules rather than a second baseline. The SLURP v2 base program's later modules (exemplar supply, grouped sampling, the ORG store revisions) enter this plan only through their own decided entries. Since 2026-09-19 the fragment also arms native_episode.deliver_normaliser = {\"normaliser\": \"saea-deliver-normalise-v3\"} (module M3, ADMITTED): every official SLURP number reported from here on comes from a system that contains the node. Since 2026-09-19 (the B1r read) the fragment also carries the whole knowledge_stores.train-exemplars block the M1 entry's switch.on records (release 171aa4a8..., snapshot 4c498dc0..., phase_supply.solver at k = 20), copied byte for byte from the flown B1 fragment; the plan now differs from the anchor in the review-loop marker, the slot-contracts v2 pins, the delivery normaliser node, the finite-completion policy declaration and the train-exemplars store. Since 2026-09-20 (cell B1-notool) the fragment carries NO phase_tools mapping: no role holds tool authority, no request renders a tools array, and the two failure-mode declarations (E13, E22) are armed; the plan now differs from the anchor in the review-loop marker, the slot-contracts v2 pins, the delivery normaliser node, the failure-mode declarations, the train-exemplars store and the absent Reviewer toolkit."
+    }
+  ],
+  "default_plans_note": "ONE plan, for Earnings-21, added 2026-09-08 on merge. It carries exactly one decided module: the cross-call dispatcher, whose verdict (docs/readiness/2026-09-08-e21-dispatcher-admission-v1-verdict.md) states 'NEUTRAL -- ADMITTED TO THE DEFAULT PLAN AS A NO-HARM MODULE' and licenses turning it on for Earnings-21 cells at this geometry. The other entry below is ADMITTED but PROVISIONAL with its replication UNMET, and its own verdict note fixed the consequence before the verdict was known: 'until then NO candidate freeze, NO citation of this as an admitted effect and NO entry into the default plan'. So it may not enter this plan, and scripts/checks/harness_admission_check.py is what keeps that true: it refuses a HARMFUL module in any default plan, refuses a module whose provisional obligation is UNMET in any default plan, and requires every other ADMITTED or NEUTRAL module to appear in at least one default plan for its carrier. EXTENDED 2026-09-17: a second plan, for SLURP, added by docs/results/2026-09-17-slurp-b0-review-off-redecision-v2.md. It carries exactly one decided module, the review loop, whose entry is NEUTRAL under the TRAIN A own null (it may stay; its removal failed non-inferiority twice). The plan fragment is the sealed anchor plus the loop's validated marker. EXTENDED 2026-09-19 (item E13): the SLURP plan gains a second decided module, native_episode.finite_completion_policy 'deliver-latest-or-abstain'. It is NEUTRAL with no provisional obligation, so the gate's rule 2 requires it to reach a plan; it may do so at zero risk to any sealed number because the exposure receipt shows the two arms are byte-identical on all 69,987 sealed native contacts, and at zero risk to any request because the key renders none.",
+  "status_values": {
+    "ADMITTED": "a gain on the carrier's primary metric, disjoint from the carrier's own null, with every gating guard non-inferior at the measured margin",
+    "HARMFUL": "a gating guard fails; stays in the record as a documented negative and never enters a plan",
+    "NEUTRAL": "no harm and no gain; may enter the default plan",
+    "PENDING": "registered, not yet decided",
+    "RETIRED": "the module's ON arm was WITHDRAWN by a measured cell: the OFF arm read NEUTRAL or better against the ON arm and lowered cost, so the default plan carries the OFF arm; barred from every plan exactly as HARMFUL is, and owes a default plan for its carrier (item E25, 2026-09-20)"
+  },
+  "entries": [
+    {
+      "carrier": "earnings21-original",
+      "comparator": {
+        "attempt_id": "attempt-20260904T233816Z-bcd338",
+        "run_id": "SAEA-E21-FULL44-DIRECT-BASELINE-V2"
+      },
+      "date": "2026-09-08",
+      "evidence": {
+        "arm": {
+          "attempt_id": "attempt-20260908T040832Z-ecda9c",
+          "run_id": "SAEA-E21-KC-E1F-REPAIR-44-V1"
+        },
+        "form_twin": {
+          "attempt_id": "attempt-20260908T072231Z-ec8a5b",
+          "run_id": "SAEA-E21-KU-E1FC-PLACEBO-REPAIR-44-V1"
+        },
+        "guards": "corpus WER UB -0.02936 <= +0.05793; numeric-value accuracy (call-pooled) LB -0.02122 >= -0.15651; over-generation UB +0.00255 <= +0.02218; delivery integrity 0 violations on 1,593 windows; the semantic high-impact guard stays advisory because its own null excludes zero. Every gating guard passes under both weightings.",
+        "margins_from": {
+          "attempt_id": "attempt-20260908T113102Z-bdde07",
+          "note": "the margins are that cell's own measured call-clustered CI90 half-widths; the over-generation margin was computed from its per-window rows through the same instrument and is anchored against its published corpus-WER interval",
+          "run_id": "SAEA-E21-FULL44-NULL-REPLICATE-V1"
+        },
+        "primary": "PERSON entity WER reduction, call-clustered CI90, 44 call clusters, 1,593 paired 90-second windows: +3.737 [+2.653, +4.855] against the sealed comparator and +3.840 [+2.752, +4.958] against the token-matched twin; disjoint from the carrier's own PERSON null interval [-0.24338, +0.25680], 10.61 null half-widths at the lower bound",
+        "receipt": "docs/checks/speech-aware-evidence-acquisition/2026-09-08-e21-kc-e1f-verdict-v2/",
+        "verdict_note": "docs/readiness/2026-09-08-e21-kc-e1f-repair-pass-v2-redecision.md"
+      },
+      "module": "substitution-only repair with the ConEC brief",
+      "not_admitted_for": [
+        "corpus WER, ORG entity WER, non-entity WER and numeric-value accuracy: every one of those movements is INSIDE this carrier's own replicate noise and none is a demonstrated effect. The module is non-inferior on them, not better.",
+        "the Earnings-21 evaluation ten (342 paired windows, below the program's n >= 400 rule) and the test split, neither of which this row touches",
+        "any other carrier: SLURP and Audio2Tool have no measured null and none of these margins travels to them"
+      ],
+      "provisional": {
+        "state": "UNMET",
+        "requirement": "COMPOSE AND FLY THE SWITCH FORM THIS TABLE RECORDS. The 'switch' block below already says the sealed arms did NOT fly through judges.<phase>.judges = ['e21-substitution-alignment-flag-v1'] -- they flew the obs-repair-loop policy with the response post-processor -- and no committed config fragment arms that judge. Entering a default plan therefore means arming, on a carrier's default path, a form of this module that has never been flown once. Before that: a config fragment that arms the key, and a cell that flies it and shows it delivers what the sealed form delivered",
+        "reason": "the module is ADMITTED and its replication obligation is MET (see 'replication' above); what still bars it from a default plan is the gap between the form its EVIDENCE was produced in and the form this table now records it under",
+        "supersedes": {
+          "requirement": "before any candidate freeze, any citation of this effect as an admitted effect, or any promotion of this module into the default plan: a second independent pass of the KC-E1f arm on the same 44-call roster and the same 1,593 windows, re-read against the null's measured intervals, whose PERSON effect is again disjoint from [-0.24338, +0.25680]",
+          "state": "MET",
+          "discharged_by": "SAEA-E21-KC-E1F-REPAIR-44-REPLICATE-V1, 2026-09-08",
+          "note": "the candidate-freeze and citation halves of that requirement are DISCHARGED: the effect may now be cited as replicated. Only the default-plan half is still blocked, and by the different reason stated above, not by a missing replication"
+        }
+      },
+      "replication": {
+        "state": "MET",
+        "requirement": "the obligation section 3 of the v2 re-decision fixed before that verdict was known: a second independent pass of the KC-E1f arm on the same 44-call roster and the same 1,593 fixed 90-second windows, under the same configuration, re-read against the null's measured intervals, whose PERSON effect is again disjoint from [-0.24338, +0.25680]",
+        "arm": {
+          "run_id": "SAEA-E21-KC-E1F-REPAIR-44-REPLICATE-V1",
+          "attempt_id": "attempt-20260908T232501Z-36792e"
+        },
+        "identical_configuration": "proved by hash BEFORE the first contact and again in the sealed manifest: composed config hash 05777ca3a3abdc75cd105021fe2104a639440d0ffd4ca2654ad18e50123b3e5f, protocol hash 43b60556bd739192869ac1666612e027c6c1214de242e26ddf5cb0f00f6bd630 and split identity fcc1b0bc...d69e are the first pass's own, obs_prefetch_depth is unset on both, and prompt_tokens_total is 3,550,695 on both -- equal to the digit over 1,593 windows, so only the completions moved",
+        "primary": "PERSON entity WER reduction, call-clustered CI90, 44 call clusters, 1,593 paired 90-second windows: +3.634 [+2.590, +4.690] against the sealed comparator and +3.737 [+2.686, +4.773] against the token-matched twin; both disjoint from the carrier's own PERSON null interval [-0.24338, +0.25680], 10.36 null half-widths at the lower bound of the comparator leg, which clears the band's upper edge by 2.33 points. The first pass measured +3.737 [+2.653, +4.855] on the same contrast and this read reproduces that interval field for field from the v2 decision's own anchored rows before deciding anything",
+        "guards": "corpus WER UB -0.03090 <= +0.05793; numeric-value accuracy (call-pooled) LB -0.07745 >= -0.15651; over-generation UB +0.00328 <= +0.02218; delivery integrity 0 violations on 1,593 windows; the semantic high-impact guard stays advisory and moved EXACTLY zero on this pass (100 HIGH reference words and 56 HIGH insertions, the comparator's own figures). Every gating guard passes under both weightings",
+        "replication_contrast": "first pass versus replicate, signed replicate minus first pass, every metric against this carrier's own null band: INSIDE the band on six of the seven metrics that have one (PERSON +0.103 [-0.331, +0.560], corpus -0.001, ORG -0.298, non-entity +0.001, numeric -0.041, insertions/ref word +0.001). ORG and numeric both EXCLUDE ZERO between two identical passes and both sit inside the band, which is what the band is for. The seventh, the semantic high-impact rate, falls just below its band on a one-word movement -- and that metric's own null EXCLUDES ZERO, so v2 section 2.3 had already ruled it unanswerable on this carrier at any margin. It gates nothing",
+        "verdict_note": "docs/readiness/2026-09-08-e21-kc-e1f-replication-v1-verdict.md",
+        "receipt": "docs/checks/speech-aware-evidence-acquisition/2026-09-08-e21-kc-e1f-replication-v1/",
+        "date": "2026-09-08"
+      },
+      "row": "SAEA-E21-KC-E1F-VERDICT-V2",
+      "status": "ADMITTED",
+      "supersedes_nothing": "SAEA-E21-KC-E1F-VERDICT-V1 decided the same sealed bytes REJECTED under margin-less guards and stays on record beside this entry",
+      "switch": {
+        "added_by": "WAVE W4, 2026-09-08, docs/readiness/2026-09-08-ojw-wave-w4-config-tables-v1.md",
+        "key": "judges.<phase>.judges",
+        "off": null,
+        "on": [
+          "e21-substitution-alignment-flag-v1"
+        ],
+        "proof": "tests/unit/test_config_table_module_switches.py::test_repair_alignment_is_one_key_in_the_judges_table",
+        "table": "judges",
+        "what_flew": "The sealed KC-E1f arm did NOT fly through this key. It flew the obs-repair-loop policy with response_postprocessor 'e21-entity-repair-substitutions-v1' and its params, whose OFF arm was a different policy id -- exactly the defect change #6 removes. This field records the form the module takes from now on, not the form its evidence was produced in; the admission's evidence is the sealed bytes named under 'evidence'.",
+        "why_this_table": "Owner Decision 11-C, 2026-09-08: the Reviewer SCORES and FLAGS and never proposes a revision, and the design note names 'e21-entity-repair-substitutions-v1's refusal reasons' among the frozen checks behind the Reviewer. The module therefore splits along the line the decision already draws: its criticism half -- the alignment rule that decides which proposed edits are legal and refuses the rest -- is the registered judge 'e21-substitution-alignment-flag-v1', whose JudgeVerdict structurally cannot carry replacement text (core.base.assert_criticism_only); its delivery half stays a Solver-side constraint on the revise phase. Not 'observe' (it reads a response, never the audio) and not 'knowledge_views' (it supplies the phase with nothing)."
+      }
+    },
+    {
+      "carrier": "earnings21-original",
+      "comparator": {
+        "attempt_id": "attempt-20260904T233816Z-bcd338",
+        "run_id": "SAEA-E21-FULL44-DIRECT-BASELINE-V2"
+      },
+      "date": "2026-09-08",
+      "evidence": {
+        "advisory": "semantic-high-impact-error-rate-v1 is ADVISORY AND NEVER GATING on this carrier, removed from the gate by section 4 of the preregistration BEFORE any number existed because its own same-request null excludes zero. It moved +0.00222 [+0.00110, +0.00343] against the comparator, 1.5x its margin -- and EXACTLY +0.00000 [-0.00088, +0.00086] against the depth-0 own-null replicate, whose high-impact mass this cell reproduces word for word (108 of 359,765 on both arms, against the comparator's 100). If it were gating the status would be HARMFUL, and verdict/result-summary.json records that as admission.status_if_advisory_were_gating.",
+        "arm": {
+          "attempt_id": "attempt-20260908T191537Z-ba0a08",
+          "run_id": "SAEA-E21-FULL44-DISPATCH-ADMISSION-V1"
+        },
+        "falsifier": "the request did not move: all 1,593 emitted SliceRecords equal the sealed comparator's on sha256, bytes, span, sample rate and parent hash, preprocess empty on both sides, prompt_tokens_total 1,935,965 and metered audio 141,345.8526875 s identical to the digit -- so the only channel open to this module is scheduling",
+        "guards": "conec_non_entity_wer_percent -0.00263 [-0.01994, +0.01574] against margin 0.06475 (inside); conec_org_wer_percent -0.32088 [-0.88314, +0.19584] against margin 0.35609 (inside); conec_overall_wer_percent +0.00778 [-0.02329, +0.03856] against margin 0.05793 (inside); conec_person_wer_percent +0.20569 [-0.07995, +0.51951] against margin 0.25009 (inside); corpus_wer_percent +0.00778 [-0.02329, +0.03856] against margin 0.05793 (inside); numeric_value_accuracy_percent -0.05137 [-0.19511, +0.09794] against margin 0.15651 (inside)",
+        "margins_from": {
+          "attempt_id": "attempt-20260908T113102Z-bdde07",
+          "note": "this carrier's own measured call-clustered CI90 half-widths. The caveat travels with them: that null measured the noise of re-flying at depth 0, where a decode batch can only mix windows of one call",
+          "run_id": "SAEA-E21-FULL44-NULL-REPLICATE-V1"
+        },
+        "primary": "corpus WER (asr-wer-whisper), call-clustered CI90, 44 call clusters, 1,593 paired 90-second windows: +0.00778 [-0.02329, +0.03856] against the sealed comparator and +0.02780 [-0.02052, +0.09427] against the depth-0 own-null replicate",
+        "receipt": "docs/checks/speech-aware-evidence-acquisition/2026-09-08-e21-dispatch-admission-v1/",
+        "residual": "the module removed 82 % of this carrier's boundary idle, not all of it: 10 of the 43 call boundaries still drain the pool (177.5 s of 972.6 s), all of them where a short call precedes a long decode phase that one sample of lookahead cannot cover. The signed +18-23 % throughput prediction FAILED at +16.96 % for exactly that reason; depth >= 2 is the named follow-up and holds no receipt",
+        "second_arm": {
+          "attempt_id": "attempt-20260908T113102Z-bdde07",
+          "note": "the depth-0 own-null replicate, flown on the same resident session, is the like-for-like arm; the two pairings AGREE on the status",
+          "run_id": "SAEA-E21-FULL44-NULL-REPLICATE-V1"
+        },
+        "throughput": "vs_comparator_own_server: 17.770 -> 20.168 windows/min (+13.49 %), zero-slot share 15.40 % -> 3.75 %, mean slot use 77.73 % -> 91.93 %; vs_null_replicate_same_session: 17.244 -> 20.168 windows/min (+16.96 %), zero-slot share 17.55 % -> 3.75 %, mean slot use 75.43 % -> 91.93 %",
+        "verdict_note": "docs/readiness/2026-09-08-e21-dispatcher-admission-v1-verdict.md"
+      },
+      "module": "cross-call dispatcher (obs_prefetch_depth 1)",
+      "not_admitted_for": [
+        "any quality claim whatsoever: this module is a scheduler, the request bytes are provably unchanged, and a NEUTRAL result is a licence to USE it, never evidence about knowledge, evidence supply or the agent layer",
+        "any other carrier: SLURP and Audio2Tool have no measured null, so these margins do not travel and the dispatcher's admission there is a separate receipt",
+        "obs_prefetch_depth >= 2, which was not flown",
+        "the Earnings-21 test split, which this row does not touch"
+      ],
+      "row": "SAEA-E21-FULL44-DISPATCH-ADMISSION-V1",
+      "status": "NEUTRAL",
+      "switch": {
+        "added_by": "merge of wt/ojw-w4 into master, 2026-09-08; the run switch class, docs/readiness/2026-09-08-ojw-wave-w4-config-tables-v1.md",
+        "falsifier": {
+          "kind": "request-bytes-identical",
+          "note": "the cell's own falsifier, run before any score file was opened: all 1,593 emitted SliceRecords equal the sealed comparator's on sha256, bytes, span, sample rate and parent hash, preprocess empty on both sides, prompt_tokens_total 1,935,965 to the digit. That is what puts this module outside the four per-phase tables rather than in one of them.",
+          "receipt": "docs/checks/speech-aware-evidence-acquisition/2026-09-08-e21-dispatch-admission-v1"
+        },
+        "key": "obs_prefetch_depth",
+        "off": 0,
+        "on": 1,
+        "proof": "tests/unit/test_config_table_module_switches.py::test_the_cross_call_dispatcher_is_one_run_level_key",
+        "table": "run",
+        "what_flew": "The sealed arm DID fly through this key: configs/baseline/e21-buf90-zero-locked-scored4-prefetch1.json is the comparator's own baseline fragment plus obs_prefetch_depth 1, and the proof test diffs those two committed fragments.",
+        "why_this_class": "obs_prefetch_depth is read flat by core.driver.run and reproduction.obs_loop and decides how many samples of lookahead the driver keeps in flight. It is per-RUN, while observe, knowledge_views, judges and toolkits are per-PHASE and each of them changes the request the frozen core sees. This one provably changes no request byte, which is both why it has no table entry and why it is allowed to have none."
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "attempt_id": "attempt-20260905T060424Z-2c5596",
+        "run_id": "SAEA-SLURP-DEV1000-CLOSED-LIST-DIRECT-V1"
+      },
+      "date": "2026-09-09",
+      "evidence": {
+        "arm": {
+          "attempt_id": "attempt-20260909T035340Z-95296f",
+          "run_id": "SAEA-SLURP-DEV1000-CLOSED-LIST-TAIL2S-V1"
+        },
+        "smoke": {
+          "attempt_id": "attempt-20260909T034421Z-f00629",
+          "run_id": "SAEA-SLURP-DEV1000-CLOSED-LIST-TAIL2S-SMOKE-V1"
+        },
+        "falsifier": "the media accounting closes on every flown row, checked before any score file was opened: 1,000 of 1,000 delivered media sha256 and byte counts equal the committed @ts2 D1 supplement and the frozen runtime view; 1,000 of 1,000 delivered durations equal the sealed comparator's plus exactly 2.0 s and exactly 32,000 samples at 16 kHz; 1,000 of 1,000 packets equal the promoted @ts2 packets by sha256; zero disagreeing, missing or extra rows. The wire moved by the tail alone: prompt tokens 2,216,161 against 2,190,161, +26 on every single row with no other value in the histogram",
+        "guards": "section 4.1 clause 2 non-inferiority at the imported -0.60 pp margin, speaker-clustered CI90 lower bounds: SLU-F1 +0.1455 (inside), action -0.0987 (inside), scenario -0.6921 (OUTSIDE, by 0.09 pp). Section 4.1 clause 3 per-scenario harm bound: the rule allows at most 2 of 18 scenarios to lose intent and none to lose more than 3.0 pp; measured 5 losing scenarios with a worst of -10.2564 pp (takeaway, 4 harms of 39 rows), plus recommendation -3.3333 and iot -3.2787. BOTH gating guards fail, under both interval families",
+        "margins_from": {
+          "note": "IMPORTED, NOT MEASURED. SLURP has no same-request null of its own. The +-0.60 pp margin is section 4.1's own figure, taken from the Earnings-22 same-request null's half-width on the same scale, and every SLURP margin in this study is borrowed until this carrier's own null is measured. That measurement is the named blocking next cell",
+          "run_id": "IMPORTED FROM EARNINGS-22 (SAEA-E22-DEV-NULL-REPLICATE lineage), section 3 of the preregistration"
+        },
+        "primary": "intent accuracy (scenario+action) under slurp-slu-official-projected-v2, 1,000 paired DEV-1000 rows, 124 speaker clusters, CI90: 73.10 -> 74.40, a paired +1.3000 [+0.1934, +2.4262] speaker-clustered and [+0.2000, +2.4000] stratified by gold scenario; equal-stratum weighting +1.2747 [+0.2040, +2.3332]. The interval EXCLUDES ZERO and its lower bound does NOT clear section 4.1 clause 1's +0.60 pp bar, so clause 1 fails on imprecision against an imported bar rather than on direction",
+        "receipt": "docs/checks/speech-aware-evidence-acquisition/2026-09-09-slurp-silence-tail-v1/",
+        "secondary": "slurp-slu-f1-normalized-v1 agrees in sign on all seven paired metrics; micro SLU-F1 36.43 -> 38.52 and its own intent interval [+0.2783, +2.5748] also fails the +0.60 bar, so the verdict does not change under the normalizer",
+        "verdict_note": "docs/readiness/2026-09-09-slurp-silence-tail-v1-verdict.md"
+      },
+      "module": "silence tail on the delivered clip (tail_silence_seconds 2.0)",
+      "not_admitted_for": [
+        "any SLURP use whatsoever at this margin: the gating guards failed and a HARMFUL module never enters a plan. The sealed comparator does not move to the @ts2 media, and every pending SLURP cell (the KV slot-knowledge-view family, KU-S3, KU-S4 and the logprob judge probe) keeps reading against SAEA-SLURP-DEV1000-CLOSED-LIST-DIRECT-V1 at intent 73.10 / SLU-F1 35.80, unchanged and un-re-run",
+        "any claim that the tail is neutral or absent on SLURP: every headline number ROSE (intent +1.30, SLU-F1 micro 35.80 -> 37.83, entities strict 21.91 -> 24.36, word-F1 33.69 -> 35.77, char-F1 38.20 -> 40.15, unparsed unchanged at 3), and five gains above +4.9 pp sit beside five losses. This is a redistribution with a positive sum, and clause 3 is the clause that refuses to switch a redistribution on for everybody",
+        "the SLURP test split and FINAL60, neither of which this row touches",
+        "any other carrier: Earnings-21 decided its own tail cell separately and NOT ADMITTED for a different reason, and Audio2Tool has not flown. There is no cross-carrier verdict"
+      ],
+      "provisional": {
+        "reason": "the module is HARMFUL under this carrier's own gating guards and is barred from every default plan on that ground alone; this obligation is recorded because the FORM the table names was also never flown here, so a future re-decision cannot read this entry as evidence about the observe-table key",
+        "requirement": "COMPOSE AND FLY THE SWITCH FORM THIS TABLE RECORDS. This cell's evidence was produced by PRE-BUILT @ts2 media and PRE-ENCODED @ts2 packets, not by observe.<phase>.tail_silence_seconds: on this carrier the clip never reaches a runtime cut site, because DEV-1000 flies mmproj-free over packets materialized once by a CPU sidecar. No committed config fragment arms the observe key for SLURP and no SLURP cell has ever flown it. Before any SLURP re-decision of this module: a config fragment that arms the key on this carrier, and a cell that flies it and shows it delivers what the media form delivered",
+        "state": "UNMET"
+      },
+      "row": "SAEA-SLURP-DEV1000-CLOSED-LIST-TAIL2S-V1",
+      "status": "HARMFUL",
+      "switch": {
+        "added_by": "docs/readiness/2026-09-09-slurp-silence-tail-v1-verdict.md section 9",
+        "key": "observe.<phase>.tail_silence_seconds",
+        "off": null,
+        "on": 2.0,
+        "proof": "tests/unit/test_config_table_module_switches.py::test_silence_tail_is_one_key",
+        "table": "observe",
+        "what_flew": "The SLURP arm did NOT fly through this key. The 2.0 s was appended OFFLINE to the sealed media by scripts/build_cross_carrier_tail2s_media.py (row SAEA-SN-MF-SLURP-DEV1000-TS2-MEDIA-V1) and then encoded into SpeechFeaturePacketV1 packets by a CPU-only sidecar pass (row SAEA-SN-DEV1000-TS2-PREPROCESS-V1); the cell's model fragment differs from the comparator's in speech_feature_root and in nothing else. This field records the form the module takes from now on, not the form its evidence was produced in; the admission's evidence is the sealed bytes named under 'evidence', and the gap is carried as the provisional obligation above",
+        "why_this_table": "The module is an Observer-side change to the unit the core is asked to observe -- it changes the delivered clip and nothing else about the request, and observe is the table whose entries are 'the Observer's mode: silence tail, speaker-turn units, relisten'. The Earnings carriers already spell it as the flat obs_slice_tail_silence_seconds knob that observe.<phase>.tail_silence_seconds lifts verbatim (rails.config_tables.LEGACY_OBSERVE_KEYS)"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-DEV1000-CLOSED-LIST-DIRECT-V1",
+        "attempt_id": "attempt-20260905T060424Z-2c5596"
+      },
+      "date": "2026-09-09",
+      "module": "decode-confidence flag from the sealed trace (the judge replay-logprob-flag-v1, fed by decoding_params.logprobs / top_logprobs)",
+      "row": "SAEA-SLURP-DEV1000-CLOSED-LIST-LOGPROB-V1",
+      "status": "HARMFUL",
+      "status_basis": "HARMFUL is this table's status for a module whose gate failed and which therefore NEVER ENTERS A PLAN, and that is the consequence recorded here. The failure is of the probe's OWN preregistered admission bar -- the signal does not predict the core's errors well enough at the primary statistic -- and NOT a measured harm to any metric: this module never changed an answer, because it is a decoding parameter that records a distribution and a judge that was never composed into any arm. The table has no fifth status for 'measured, priced and not worth it', and inventing one would be a schema change; NEUTRAL is refused outright because NEUTRAL may enter a default plan and the preregistration says in advance that a NOT ADMITTED result sends the re-ask module back to the deterministic judges.",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-DEV1000-CLOSED-LIST-LOGPROB-V1",
+          "attempt_id": "attempt-20260909T052142Z-07ca9c"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-DEV1000-CLOSED-LIST-LOGPROB-SMOKE-4-V1",
+          "attempt_id": "attempt-20260909T051251Z-1f2c58"
+        },
+        "precondition": "the four-row smoke was a GATE, not a formality: the cell would not have flown without it. 4 of 4 rows returned a choices[0].logprobs object ON THE SPEECH-FEATURE PACKET ROUTE, with exactly five alternatives on every one of 162 generated tokens, the first alternative equal to the sampled token throughout, four MODEL_LOGPROBS records whose logprobs_sha256 recomputes and whose requested_top_logprobs is 5, and the answer reconstructed from the token stream equal to the sealed text on 4 of 4",
+        "falsifier": "the request did not move: prompt_tokens_total 2,190,161 identical TO THE DIGIT to both the sealed comparator's and the greedy replicate null's, on the same 2,884.7936875 metered speech seconds, the same 7,583-character instruction 4073f79e...0d37db and the same runtime view e148dbbc...0e87. The contact-free wire check receipt of 2026-09-08 (df2f9ca5...) predicted the composed config hash 6be064ba -> 15670eaa before the flight and preflight derived 15670eaa...711e587. Only the completions moved (26,530 against the comparator's 26,495 and the null's 26,570, inside the null's own spread)",
+        "primary": "the preregistered rule, applied mechanically by admission_verdict over the preregistered primary statistic min_token_logprob, 1,000 DEV-1000 rows in 124 speaker clusters, 10,000 replicates, seed 20260908, CI90. ARM A: AUROC for intent error 0.6935 [0.6660, 0.7202] against a bar of >= 0.75 with lower bound >= 0.70 -- fails on both halves. ARM B: precision at 86 flags 51.1628 % [42.5287, 59.0909] against a bar of > 72.09 % with the lower bound strictly above -- fails by 20.93 pp with the whole interval under the bar. BOTH ARMS FAIL, so NOT ADMITTED",
+        "guards": "the flag also loses to a free judge on this arm's own rows: recomputed here, the legality judge flags 42 rows at 66.67 % precision and 10.57 % recall on intent error at zero cost and zero latency, against the confidence flag's 86 rows at 51.16 % and 16.60 %. The union of all three reaches 50.41 % at 123 flags -- adding the confidence flag to the deterministic judges lowers their precision",
+        "cost": "the number nobody could derive from source, measured here for the first time. n_probs > 0 disables backend sampling for the slot (server-context.cpp:1994-2004) and forces a per-token full-vocabulary copy, partial sort and softmax. Against the greedy replicate null -- the same 1,000 requests on the same geometry with no parameter added -- the cost is +0.0898 s per request (+5.30 %), 248.47 s against 229.38 s of wall (+8.33 %), 0.0690 against 0.0637 GPU-h (+8.35 %), 241.5 against 261.6 rows per minute, and a sealed trace of 23.3 MB against ~10 MB. The null's own verdict fixes ~5 % as the floor below which a SLURP wall-clock comparison is meaningless, so this cost is real rather than scheduling noise",
+        "margins_from": {
+          "run_id": "SAEA-SLURP-DEV1000-NULL-REPLICATE-V1",
+          "attempt_id": "attempt-20260909T043847Z-f4306e",
+          "note": "MEASURED, not imported. This row does not read a non-inferiority margin at all -- its rule is an AUROC bar and a precision bar, both fixed before the flight -- but it uses this carrier's own null for two things: as the wall-clock reference the decoding parameter's cost is measured against, and as the warning attached to the per-scenario table (that null moved intent by -5.13 to +5.41 pp across the same 18 strata with nothing changed). The 28.1 % flip floor the preregistration quoted is superseded by that null's measured 5.20 % projected-intent flip rate"
+        },
+        "secondary": "the diagnostic that explains the failure rather than merely recording it. 491 of 1,000 rows put their LEAST-CONFIDENT token on JSON punctuation -- 420 of the 735 rows the official scorer marks correct (57.1 %) against 71 of the 265 intent-error rows (26.8 %) -- and the most common minimum token is ' []', the empty entity list, on 208 rows. The 2026-08-14 P1 ceiling verdict's finding 1 (every logprob-flagged Earnings span landed on function words, 0 of 17 entity errors) therefore repeats in structured form. The intent-span statistics, preregistered in the same table, reach AUROC 0.8497 [0.8262, 0.8729] on intent and 0.4795 -- chance -- on slots, the exact mirror of the primary's 0.6935 and 0.6534: a confidence statistic predicts the thing its tokens are part of and nothing else",
+        "receipt": "docs/checks/speech-aware-evidence-acquisition/2026-09-09-slurp-logprob-judge-probe-v1/",
+        "verdict_note": "docs/readiness/2026-09-09-slurp-logprob-judge-probe-v1-verdict.md"
+      },
+      "switch": {
+        "added_by": "docs/readiness/2026-09-09-slurp-logprob-judge-probe-v1-verdict.md section 7",
+        "table": "judges",
+        "key": "judges.<phase>.judges",
+        "on": [
+          "replay-logprob-flag-v1"
+        ],
+        "off": null,
+        "proof": "tests/unit/test_config_table_module_switches.py::test_every_module_switch_is_one_key_and_they_compose",
+        "why_this_table": "the module is a Reviewer judge: it SCORES and FLAGS a sealed draft and never proposes a revision, which is what the judges table's entries are. core.judges already registers it as replay-logprob-flag-v1 over core.replay_signals.flag_spans",
+        "what_flew": "THE JUDGE DID NOT FLY AT ALL, and this field says so rather than implying otherwise. No arm composed judges.<phase>.judges, no phase_review ran, and no answer was flagged in flight. What flew is the DECODING PARAMETER that produces the signal the judge would consume -- decoding_params.logprobs true and top_logprobs 5 in the model fragment -- and the evidence above is a measurement of THAT SIGNAL's predictive power against the arm's own official per-sample scores, computed offline by the registered read scripts/slurp_logprob_judge_read.py over sealed bytes. This field records the form the module takes from now on, not the form its evidence was produced in; the gap is carried as the provisional obligation below"
+      },
+      "provisional": {
+        "state": "UNMET",
+        "reason": "the module is barred from every plan on the gate result alone, and this obligation is recorded because the FORM the table names was never flown here either, so a future re-decision cannot read this entry as evidence about the judges-table key itself",
+        "requirement": "COMPOSE AND FLY THE SWITCH FORM THIS TABLE RECORDS, if this module is ever re-decided on this carrier. This cell's evidence is an OFFLINE read of a sealed trace, not a phase_review that ran: no committed config fragment arms judges.<phase>.judges with replay-logprob-flag-v1 for SLURP, and the sealed arm is a single direct contact with no review phase to arm it in. Before any SLURP re-decision: a fragment that arms the key on this carrier, and a cell that flies it and shows the judge in flight flags what the offline read said it would"
+      },
+      "not_admitted_for": [
+        "any Reviewer use on SLURP at the primary statistic: both arms of the preregistered rule failed, the re-ask module falls back to the deterministic judges (on this arm the legality judge, 66.67 % precision on 42 rows at zero cost), and a module whose gate failed never enters a default plan",
+        "any quotation of the intent-span statistics as this probe's result. They clear arm A's bar (intent_mean_token_logprob AUROC 0.8497 [0.8262, 0.8729]) and at 86 flags reach 75.58 % precision, with intent_min_token_logprob landing on 72.093 % -- the 72.09 bar to three decimals. NONE OF THAT IS AN ADMISSION: the primary was fixed before the flight and these were computed after the numbers existed. They are recorded in verdict/result-summary.json under successor_diagnostic_NOT_PREREGISTERED so a SUCCESSOR preregistration can name its primary in advance with a price attached, and they authorize nothing here",
+        "any SLURP accuracy claim from this arm's own official numbers (scenario 82.90, action 75.00, intent 73.50, entities strict 23.32, SLU-F1 36.67). They exist to label the confidences and are never a comparator, never read against the locked 73.10 / 35.80, and never a like-for-like reproduction: greedy is not bitwise reproducible across batch compositions and n_probs > 0 additionally changes the sampling path",
+        "the SLURP test split and FINAL60, neither of which this row touches",
+        "any other carrier. The named Earnings-21 follow-up -- window-level and PERSON-span confidence, where a flag has a span to point at rather than only a row to triage -- is NAMED AND NOT REGISTERED in section 10 of the preregistration and needs its own preregistration and owner decision. There is no cross-carrier verdict",
+        "the noise-floor measurement of section 7, which stays priced and unregistered: a second 1,000-contact pass asking whether confidence separates the rows that flip from the rows that do not. The preregistration said it becomes the first thing worth buying IF the primary result is ADMITTED. It is not"
+      ]
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "off_arms": [
+          {
+            "run_id": "SAEA-SLURP-NATIVE-REVIEW-OFF-TRAIN-FOLD-A-V1",
+            "attempt_id": "attempt-slurp-native-review-off-train-fold-a-generation-v1",
+            "study_commit": "5d0d694d"
+          },
+          {
+            "run_id": "SAEA-SLURP-NATIVE-REVIEW-OFF-TRAIN-FOLD-A-REPLICATE-V1",
+            "attempt_id": "attempt-slurp-native-review-off-train-fold-a-replicate-generation-v1",
+            "study_commit": "f38d3c33"
+          }
+        ],
+        "on_arm": {
+          "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+          "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1"
+        },
+        "note": "the module is the loop, so its ON arm is the sealed anchor and its OFF arms are the two review-off cells; the contrast the rule reads is OFF minus ON, twice, at the margins the two OFF arms measure against each other"
+      },
+      "date": "2026-09-17",
+      "module": "review loop (Reviewer x3 + Planner + at most one Solver revision after the initial draft; Perception -> Solver -> Reviewer -> Planner -> deliver)",
+      "row": "SAEA-SLURP-NATIVE-REVIEW-OFF-TRAIN-FOLD-A-REPLICATE-V1",
+      "status": "NEUTRAL",
+      "status_basis": "NEUTRAL is this table's status for a module with no harm and no gain, and that is what the two-pass read says about the loop itself: ON minus OFF is +0.37 / +0.28 pp intent and -0.13 / -0.10 pp SLU, every interval spanning zero and every point estimate inside the own null the two OFF arms measure (half-widths intent 1.0051, pooled SLU 1.1218 pp). The module may therefore stay in the default plan. It may NOT leave it: the preregistered re-decision rule for REMOVING it (docs/readiness/2026-09-17-slurp-b0-replicate-v1-preregistration.md section 6) needed both OFF passes non-inferior to the anchor at those margins, and the intent clause failed on both (CI95 lower bounds -1.527 and -1.313 against -1.005) while the SLU clause failed once (-1.150 against -1.122) and passed once (-1.043). That removal verdict is HARMFUL and is recorded as such in docs/results/2026-09-17-slurp-b0-review-off-redecision-v2.md; the first-pass verdict under the imported margin (docs/results/2026-09-17-slurp-b0-review-off-verdict.md) stays on record beside it. Both anchor legs share the anchor's single realisation; the rule does not adjust for that and none is applied.",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-REVIEW-OFF-TRAIN-FOLD-A-REPLICATE-V1",
+          "attempt_id": "attempt-slurp-native-review-off-train-fold-a-replicate-generation-v1"
+        },
+        "first_pass": {
+          "run_id": "SAEA-SLURP-NATIVE-REVIEW-OFF-TRAIN-FOLD-A-V1",
+          "attempt_id": "attempt-slurp-native-review-off-train-fold-a-generation-v1"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-REVIEW-OFF-SMOKE-4-V1",
+          "attempt_id": "attempt-slurp-native-review-off-smoke-4-generation-v1",
+          "note": "the four-row structural smoke of the OFF form; B0r registered no smoke because its request bytes are B0's on 1,080/1,080 rows"
+        },
+        "primary": "official pooled SLU-F1, 1,080 paired TRAIN A rows, 125 speaker clusters, 10,000 draws, seed 20260915. OFF minus ON: first pass +0.13 pp CI95 [-1.15, +1.45]; second pass +0.10 pp CI95 [-1.04, +1.19]",
+        "guards": "intent (scenario+action) OFF minus ON: first pass -0.37 pp CI95 [-1.53, +0.82]; second pass -0.28 pp CI95 [-1.31, +0.73]; saves / harms 22 / 26 and 22 / 25; the removal clause (lower bound > -1.005) fails on both passes",
+        "own_null": "B0r minus B0, the same request bytes under two batch compositions: pooled SLU -0.04 pp CI95 [-1.22, +1.02] (half-width 1.1218), intent +0.09 pp CI95 [-0.91, +1.10] (half-width 1.0051), scenario +0.37, action +0.28, pooled span F1 +0.32; 77 of 1,080 rows (7.13 %) deliver a different intent",
+        "secondary": "against the released direct anchor the OFF arms keep the dual-store gain: pooled SLU +14.78 and +14.74 pp, intent +3.89 and +3.98 pp. Projection v3 beside every official number: anchor 51.99 / 79.35, B0 52.16 / 79.07, B0r 51.91 / 79.44 (SLU / intent); the symmetric-normalised scorer has no TRAIN sibling, so that number is not available on this roster",
+        "margins_from": {
+          "run_id": "SAEA-SLURP-NATIVE-REVIEW-OFF-TRAIN-FOLD-A-REPLICATE-V1",
+          "attempt_id": "attempt-slurp-native-review-off-train-fold-a-replicate-generation-v1",
+          "note": "MEASURED on this roster, geometry and episode form as the CI95 half-widths of the replicate minus the first pass; they replace the imported DEV1000 CI90 margins (0.92 / 1.18) for every later TRAIN A verdict"
+        },
+        "cost": "the loop is 3.26 contacts per row (5,417 against 2,160 per 1,080 rows), 2.33 GPU hours (3.388 against 1.054 / 1.059), 9,290 repeated speech seconds and 32.7 M prompt tokens for at most two changed delivered intents; the cost is recorded, it is not a gate",
+        "diagnostic": "the anchor's initial Solver intent equals its delivered intent on 1,078 of 1,080 rows; the roughly 77-78 disagreements between any two arms are temperature-zero batch-composition nondeterminism, at most one row is the loop's revision channel",
+        "receipt": "docs/results/2026-09-17-slurp-b0-review-off-redecision-v2.md",
+        "verdict_note": "docs/results/2026-09-17-slurp-b0-review-off-redecision-v2.md"
+      },
+      "not_admitted_for": [
+        "any claim that the loop helps: the point estimates are nil, the loop touched at most two delivered intents, and NEUTRAL licenses only its retention in the plan it already occupies",
+        "any claim that the loop is free: 3.26 contacts and 2.33 GPU hours per 1,080 rows are the recorded price; the owner's contact-budget question stays open",
+        "removal from the default plan: the removal verdict is HARMFUL under the own null on both passes and a third pass is not registered",
+        "any other roster or carrier; DEV1000, Fold B and the test split are untouched by these rows"
+      ],
+      "caveats": [
+        "the two OFF arms are compared with ONE realisation of the ON arm; the consistent sign of the intent deltas is one reading of the anchor's own draw",
+        "the first-pass verdict under the imported margin stays on record beside this entry, as the KC-E1f v1/v2 pair does"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-17-slurp-b0-review-off-redecision-v2.md; class 'episode' of harness-admission v3 (E6, 2026-09-16)",
+        "table": "episode",
+        "key": "native_episode.review_loop",
+        "on": "on",
+        "off": "off",
+        "proof": "tests/unit/test_config_table_module_switches.py::test_review_loop_off_is_one_episode_class_key_once_derived_leaves_are_set_aside",
+        "what_flew": "The ON arm flew configs/baseline/slurp-native-dual-store-train-fold-a-anchor-v1.json WITHOUT the marker (the marker did not exist when the anchor sealed; the loader reads the loop leaves max_revisions 1 / reviewer 3 / planner 1 as the loop ON). The first OFF arm flew the review-off fragment at 5d0d694d WITHOUT the marker (leaves 0 / 0 / 0, policy phase-native-candidates-solve-v1); the second OFF arm flew the same fragment at f38d3c33 WITH the marker 'off', which the envelope receipt proves renders no request byte. The SLURP default plan configs/baseline/slurp-native-dual-store-train-fold-a-default-plan-v1.json is the anchor fragment plus the marker 'on' and its own what_this_is description, nothing else; it is never a cell of its own.",
+        "why_this_table": "the module changes the native episode's role graph (which roles run after the Solver draft), not a per-phase request table entry; harness-admission v3 names that class 'episode' and admits this key on its closed allowlist"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+        "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1",
+        "note": "the sealed dual-store anchor carrying slot-contracts release v1; never re-flown or re-scored"
+      },
+      "date": "2026-09-17",
+      "module": "date/time slot-contract revision (slot store v2: eight revised slot cards authored from construction data only; the same store id re-pinned from release v1 to v2)",
+      "row": "SAEA-SLURP-NATIVE-SLOT-STORE-V2-ANCHOR-TRAIN-FOLD-A-V2",
+      "status": "ADMITTED",
+      "status_basis": "ADMITTED is this table's status for a gain on the carrier's primary metric disjoint from the carrier's own null with every gating guard non-inferior at the measured margin, and all four preregistered clauses pass (docs/readiness/2026-09-17-slurp-b4-org-cells-anchor-v2-preregistration.md section 6): official pooled SLU-F1 48.53 -> 51.09, +2.55 pp CI95 [+1.13, +3.98] (lower bound above zero and above the 1.1218 pp own-null half-width); intent +0.56 pp CI95 [-0.71, +1.82], lower bound above the -1.0051 margin; projection v3 +2.06 pp CI95 [+0.53, +3.51] agreeing in sign (54.05 / 79.72); no scenario's intent CI95 upper bound below zero. The gain is content-driven in the direction the store revision names: time-slot false-negative mass -32.9, filler-distance mass -28 %, date omissions 81 -> 77, exact mentions 272 -> 302 on the roster. The status is provisional on the replication obligation below, as the KC-E1f entry was. Replication MET on 2026-09-19 (see 'replication'): +1.54 pp CI95 [+0.30, +2.93] on a request-identical second realisation; the entry is no longer provisional.",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-SLOT-STORE-V2-ANCHOR-TRAIN-FOLD-A-V2",
+          "attempt_id": "attempt-slurp-native-slot-store-v2-anchor-train-fold-a-generation-v2",
+          "study_commit": "19ad05b4"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-SLOT-STORE-V2-ANCHOR-SMOKE-4-V2",
+          "attempt_id": "attempt-slurp-native-slot-store-v2-anchor-smoke-4-generation-v2"
+        },
+        "primary": "official pooled SLU-F1, 1,080 paired TRAIN A rows, 125 speaker clusters, 10,000 draws, seed 20260915: 48.53 -> 51.09, +2.55 pp, CI95 [+1.13, +3.98], CI90 [+1.38, +3.74]; equal-scenario +2.11; row SLU-F1 saves / harms 112 / 58 (McNemar p 4.2e-5); exact slot F1 saves / harms 63 / 38 (p 0.017)",
+        "guards": "intent (scenario+action) 77.96 -> 78.52, +0.56 pp CI95 [-0.71, +1.82] against the -1.0051 margin: passes; scenario +0.28, action +0.37; no scenario breaches the intent band (0 of 18 with CI95 upper bound below zero), five scenarios (general, recommendation, iot, qa, takeaway) sit exactly on the boundary at 60 rows, recorded as a weakness of the band at that stratum size",
+        "secondary": "against the released direct anchor: pooled SLU +17.20 pp CI95 [+14.00, +20.35], intent +4.81 [+2.56, +7.04], pooled span F1 +11.31; projection v3 beside every official number: anchor 51.99 / 79.35, B4b 54.05 / 79.72, direct 34.31 / 75.37 (SLU / intent); the symmetric-normalised scorer has no TRAIN sibling and is recorded as not evaluable",
+        "margins_from": {
+          "run_id": "SAEA-SLURP-NATIVE-REVIEW-OFF-TRAIN-FOLD-A-REPLICATE-V1",
+          "attempt_id": "attempt-slurp-native-review-off-train-fold-a-replicate-generation-v1",
+          "note": "MEASURED on this roster and geometry (B0r minus B0): pooled SLU half-width 1.1218 pp, intent 1.0051 pp at CI95; the own null of a different configuration of the same harness, and the anchor leg is one shared realisation"
+        },
+        "cost": "5,407 contacts (5.006 per row against the anchor's 5.016), 15,432.81 repeated speech seconds, 1,075 task-contract tool calls, 3.465 GPU hours, wall 12,797 s, slot occupancy 0.925, utilisation 92.4 %, parked 0.025, mean latency 8.76 s; prompt tokens +2.59 % against the anchor for the revised card texts; zero added contacts",
+        "diagnostic": "official-scorer matching reconstructed on the sealed outputs: time exact mentions 8 -> 22 of 76 (FN mass -32.86, FP -18.86, filler-distance mass 74.34 -> 53.48), date exact mentions 28 -> 33 of 138 (omits 81 -> 77), media_type omits 38 -> 29 (FP +8.51); non-revised types also moved (radio_name FN -6.40, news_topic -5.84, person -4.80; food_type +3.78) and are recorded, not attributed",
+        "receipt": "docs/results/2026-09-17-slurp-b4b-slot-store-v2-verdict.md",
+        "verdict_note": "docs/results/2026-09-17-slurp-b4b-slot-store-v2-verdict.md"
+      },
+      "not_admitted_for": [
+        "any default plan carrying v2 pins that differ from the ON arm's release and snapshot bytes; the default plan re-pinned on 2026-09-19 carries exactly the ON arm's pins (the obligation that barred the plan until then was met by the replicate read)",
+        "any claim about the fallback candidate or the intent store v2 (cells B4a / B4c), which are separate modules",
+        "any claim that the non-revised slot types' movements are caused by the revision; they are recorded as unattributed",
+        "any other roster or carrier; DEV1000, Fold B and the test split are untouched",
+        "any paper-scale or generalisation claim; TRAIN A is a discovery roster"
+      ],
+      "provisional": {
+        "state": "MET",
+        "discharged_by": "SAEA-SLURP-NATIVE-SLOT-STORE-V2-ANCHOR-TRAIN-FOLD-A-REPLICATE-V2 (attempt-slurp-native-slot-store-v2-anchor-train-fold-a-replicate-generation-v2-resume2), 2026-09-19, docs/results/2026-09-19-slurp-b4b-replicate-verdict.md",
+        "note": "the replication obligation is discharged: the effect may be cited as replicated and the SLURP default plan now carries the slot-contracts v2 pins (default plan fragment re-pinned 2026-09-19 in the same change)",
+        "supersedes": {
+          "state": "UNMET",
+          "reason": "one realisation of the arm against one realisation of the anchor, under margins measured on a different configuration of the same harness; no twin was registered for this module",
+          "requirement": "replicate on the same roster before the default plan carries the v2 pins: either a request-identical replicate of this cell (about 3.5 GPU hours) or the B5 / B5r combination pair both showing the module's contribution within the own null; a second entry records the replication and this entry stays"
+        }
+      },
+      "replication": {
+        "state": "MET",
+        "date": "2026-09-19",
+        "run_id": "SAEA-SLURP-NATIVE-SLOT-STORE-V2-ANCHOR-TRAIN-FOLD-A-REPLICATE-V2",
+        "attempt_id": "attempt-slurp-native-slot-store-v2-anchor-train-fold-a-replicate-generation-v2-resume2",
+        "study_commit": "f2a2cb21de01e582311391675fb14555bb58604d",
+        "form": "request-identical replicate of the cell on the same 1,080-row roster, flown as an E10 resume-recovery (owner decision 22): 580 rows kept from the aborted predecessor attempt attempt-slurp-native-slot-store-v2-anchor-train-fold-a-replicate-generation-v2 under I7r custody (every kept delivered text hash-identical to the predecessor's), 500 rows flown fresh; officially scored once on the merged manifest",
+        "verdict": {
+          "path": "docs/results/2026-09-19-slurp-b4b-replicate-verdict.md",
+          "sha256": "8a7bfcdddb9188150c7095bfb5f56613e40ccc9cba18307e2b87089697c30f0b"
+        },
+        "primary": "official pooled SLU-F1 48.5336 -> 50.0740, +1.5403 pp CI95 [+0.2992, +2.9287] (CI90 [+0.49, +2.69]; equal-scenario +1.68); the gain replicates in sign and clears zero, with less room than the first pass (+2.55 [+1.13, +3.98])",
+        "guards": "intent 77.9630 -> 78.6111, +0.6481 pp CI95 [-0.6228, +1.8734] against the -1.0051 margin: passes; projection v3 +0.8463 same sign; scenario -0.19, action +0.65 inside the null; no scenario breaches the intent band (0 of 18); no decision-17 net-harmed flag on the replicate contrast",
+        "own_null": {
+          "note": "MEASURED on the admitted configuration itself (B4b-rep minus B4b, request-identical, 1,080 rows, 125 speaker clusters, 10,000 draws, seed 20260915): the margins that replace the borrowed B0r-minus-B0 values for any later contrast against a B4b-based arm",
+          "pooled_slu_half_width": 1.3222,
+          "intent_half_width": 1.0682,
+          "scenario_half_width": 0.8962,
+          "action_half_width": 0.9979,
+          "row_agreement": "792 of 1,080 delivered answers byte-identical (73.33 %), 56 intent flips (5.19 %)"
+        },
+        "mechanism": "date omissions 81 -> 77 -> 76 and exact date mentions 28 -> 33 -> 37 of 138 across anchor -> B4b -> B4b-rep; roster filler-distance mass 814.46 -> 750.76 -> 749.37 (the surface gain replicates almost exactly); the time cell is weaker on the second pass (exact time mentions 8 -> 22 -> 14), which is why the pooled gain is +1.54 rather than +2.55",
+        "cost": "resume attempt 2,501 contacts, 7,592.04 repeated speech seconds, 1.7430 GPU hours (utilisation 90.08 %, parked 0.018); run-cumulative 5,423 calls / 15,487.59 s; 1.72 GPU hours saved against a full re-fly",
+        "caveat": "the kept-versus-flown split is scenario-confounded by construction (the roster order is scenario-blocked), so its -2.08 pp [-4.78, +0.59] kept-minus-flown difference is a scenario-composition contrast and is reported, not read"
+      },
+      "switch": {
+        "added_by": "docs/results/2026-09-17-slurp-b4b-slot-store-v2-verdict.md; the stores re-pin form of harness-admission v3 (E9, 2026-09-17)",
+        "table": "stores",
+        "key": "knowledge_stores.slot-contracts",
+        "form": "repin",
+        "off": {
+          "release": {
+            "relpath": "knowledge/slurp/semantic/slot-contracts-v1/release.json",
+            "sha256": "8a29c48bfc5aed2eb27ce38073252d3fc608c9102aa8b8095a072667289b4f3e"
+          },
+          "snapshot": {
+            "relpath": "knowledge/slurp/semantic/slot-contracts-v1/snapshot.json",
+            "sha256": "11c246e4b815a4f966e8cf8785f06b70515755eca71658862c6f98e9914044e6"
+          }
+        },
+        "on": {
+          "release": {
+            "relpath": "knowledge/slurp/semantic/slot-contracts-v2/release.json",
+            "sha256": "f8e42d4ff1b220f45b26397340149566544cf5b13d7453fbc46a2b5c3400d11b"
+          },
+          "snapshot": {
+            "relpath": "knowledge/slurp/semantic/slot-contracts-v2/snapshot.json",
+            "sha256": "d5992bd12687cbd0204c14fc4e29f987697b8751321d524d7707229032f5bdec"
+          }
+        },
+        "proof": "tests/unit/test_config_table_module_switches.py::test_the_stores_repin_form_is_one_key",
+        "what_flew": "The ON arm flew configs/baseline/slurp-native-anchor-slot-store-v2-train-fold-a-v2.json at 19ad05b4: the sealed anchor fragment with knowledge_stores.slot-contracts re-pinned from the v1 release/snapshot to v2 and nothing else (the request-channel receipt shows Perception byte-identical on 1,080/1,080 rows and the Solver/Reviewer/Planner evidence differing only on the eight revised slot cards). The OFF arm is the sealed anchor itself, which carries the v1 pins.",
+        "why_this_table": "the module is a revision of a named knowledge store's content, switched by that store's release and snapshot pins; the stores class names the store's whole block, and the re-pin form records that OFF is the prior pin rather than the store's absence"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+        "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1",
+        "note": "the sealed dual-store anchor, which carries no train-exemplars store; never re-flown or re-scored"
+      },
+      "date": "2026-09-18",
+      "module": "speech-keyed exemplar supply to the Solver (the train-exemplars store: twenty plain top-20 annotated TRAIN exemplars keyed by the row's own sealed full-utterance speech vector, rendered as typed content reaching the Solver, Reviewer and Planner requests)",
+      "row": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-ANCHOR-TRAIN-FOLD-A-RECOVERY-V2",
+      "status": "ADMITTED",
+      "status_basis": "ADMITTED is this table's status for a gain on the carrier's primary metric disjoint from the carrier's own null with every gating guard non-inferior at the measured margin, and all clauses of the preregistered rule pass (docs/readiness/2026-09-17-slurp-b1-exemplars-k20-anchor-v2-preregistration.md section 7), the twin clause included: official pooled SLU-F1 48.53 -> 61.14, +12.61 pp CI95 [+10.54, +14.60] against the sealed anchor and +7.83 pp CI95 [+5.85, +9.75] against the derangement twin (both lower bounds above zero and above the 1.1218 pp own-null half-width); intent +2.22 pp CI95 [+0.74, +3.71] against the anchor and +2.04 [+0.49, +3.78] against the twin, lower bounds above the -1.0051 margin; the TRAIN symmetric scorer agrees in sign (+10.89 and +7.07); no scenario's intent CI95 upper bound below zero on either contrast. The twin decomposes the gain: twenty unrelated real exemplars alone buy +4.77 pp SLU [+3.20, +6.36] with nil intent (+0.19 [-1.03, +1.39]); the speech key buys the remaining 62 % of the SLU gain and nearly all of the intent gain. Owner decision 18 of 2026-09-18, branch A. The status is provisional on the replication obligation below.",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-ANCHOR-TRAIN-FOLD-A-RECOVERY-V2",
+          "attempt_id": "attempt-slurp-native-exemplars-k20-anchor-train-fold-a-generation-recovery-v2",
+          "study_commit": "a35630c0"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-ANCHOR-SMOKE-4-RECOVERY-V2",
+          "attempt_id": "attempt-slurp-native-exemplars-k20-anchor-smoke-4-generation-recovery-v2"
+        },
+        "twin": {
+          "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-ANCHOR-TWIN-TRAIN-FOLD-A-V2",
+          "attempt_id": "attempt-slurp-native-exemplars-k20-anchor-twin-train-fold-a-generation-v2",
+          "study_commit": "a7ce8f4c",
+          "note": "token-matched retrieval-key control: the same store, k, fuse policy and rendering keyed by another Fold A row's sealed speech vector through the seeded within-delivered-scenario derangement (0 fixed points on 1,080 rows; on 1,080/1,080 rows the twin's twenty values are exactly the twenty the arm supplied to the key's source row); prompt tokens -0.25 % against the arm"
+        },
+        "primary": "official pooled SLU-F1, 1,080 paired TRAIN A rows, 125 speaker clusters, 10,000 draws, seed 20260915: arm minus anchor 48.53 -> 61.14, +12.61 pp, CI95 [+10.54, +14.60]; arm minus twin 53.30 -> 61.14, +7.83 pp, CI95 [+5.85, +9.75]; twin minus anchor +4.77 pp, CI95 [+3.20, +6.36]; equal-scenario +12.13 (arm minus anchor)",
+        "guards": "intent (scenario+action) 77.96 -> 80.19 against the anchor, +2.22 pp CI95 [+0.74, +3.71], and +2.04 [+0.49, +3.78] against the twin, both against the -1.0051 margin: pass; twin minus anchor intent +0.19 [-1.03, +1.39] (nil); no scenario breaches the intent band on arm minus anchor, arm minus twin or twin minus anchor (0 of 18 each); owner decision 17's net-harmed diagnostic fires on no scenario of any gating contrast",
+        "secondary": "against the released direct anchor: arm +27.25 pp SLU CI95 [+23.82, +30.70], intent +6.48; twin +19.42 [+16.31, +22.58], intent +4.44. Projection v3 beside every official number: anchor 51.99 / 79.35, twin 55.76 / 80.09, arm 62.67 / 81.76, direct 34.31 / 75.37 (SLU / intent); TRAIN symmetric pooled SLU: anchor 52.09, twin 55.90, arm 62.97, direct 34.46",
+        "margins_from": {
+          "run_id": "SAEA-SLURP-NATIVE-REVIEW-OFF-TRAIN-FOLD-A-REPLICATE-V1",
+          "attempt_id": "attempt-slurp-native-review-off-train-fold-a-replicate-generation-v1",
+          "note": "MEASURED on this roster and geometry (B0r minus B0): pooled SLU half-width 1.1218 pp, intent 1.0051 pp at CI95; the own null of a different configuration of the same harness"
+        },
+        "cost": "arm 5,425 contacts, 3.68 GPU hours, +7.4 % prompt tokens against the anchor for the rendered exemplar block (mean 1,874 characters per row); twin 5,429 contacts, 15,492.58 repeated speech seconds, 1,082 task-contract tool calls, 3.637 GPU hours, wall 13,800.7 s, slot occupancy 0.881, utilisation 90.3 %, parked 0.051; zero added contacts per row against the anchor's five nominal",
+        "diagnostic": "M1 diagnostics reproduced from the sealed traces: escape-to-neighbour-intent 6 rows (0.56 %) on the arm, 3 on the twin; candidate-union coverage realised in the delivered answer 0.9046 on the twin; exemplar-filler echo 0.500 on the arm against the anchor base rate 0.29 and 0.194 on the twin against a 0.098 base rate (convention transfer needs the key); revisions 7 (arm) / 9 (twin); date omissions 81 -> 48 on the arm; the twin's widest realised request needed 16,869 tokens, 404 above the preregistration's realised upper bound and below its static bound and the 24,576-token slot (every request fits)",
+        "receipt": "docs/results/2026-09-18-slurp-b1-twin-verdict.md",
+        "verdict_note": "docs/results/2026-09-17-slurp-b1-exemplars-k20-verdict.md"
+      },
+      "not_admitted_for": [
+        "any default plan before the replication obligation is met: the entry is provisional and the SLURP default plan does not carry the train-exemplars store until then",
+        "any claim about exemplar presence as a separate module: the twin's +4.77 pp is a measured decomposition fact, and module M1p is not registered (owner decision 18 branch B did not occur)",
+        "any claim about k, the fuse policy, the rank weights or the derangement seed beyond the flown values; no sweep was run",
+        "any other roster or carrier; DEV1000, Fold B and the test split are untouched",
+        "any paper-scale or generalisation claim; TRAIN A is a discovery roster"
+      ],
+      "provisional": {
+        "state": "MET",
+        "discharged_by": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-ANCHOR-REPLICATE-V1 (attempt-slurp-native-exemplars-k20-anchor-replicate-train-fold-a-generation-v1), 2026-09-19, docs/results/2026-09-19-slurp-b1-replicate-verdict.md",
+        "note": "the replication obligation is discharged by the request-identical replicate (owner decisions 37 and 38): the effect may be cited as replicated and the SLURP default plan now carries the whole knowledge_stores.train-exemplars block this entry's switch.on records (default plan fragment re-pinned 2026-09-19 in the same change); the margins every later B1-based comparator reads against are this configuration's own null, h_SLU_M1 1.2350 / h_intent_M1 1.2212",
+        "supersedes": {
+          "state": "UNMET",
+          "reason": "one realisation of the arm against one realisation of the anchor and one of the twin, under margins measured on a different configuration of the same harness; the twin is the attribution control, not a replicate",
+          "requirement": "replicate on the same roster before the default plan carries the store: the B5e / B5er combination pair (owner decision 19 of 2026-09-18) both showing the module's contribution within the own null, or a request-identical replicate of this cell (about 3.7 GPU hours); a second entry records the replication and this entry stays"
+        }
+      },
+      "switch": {
+        "added_by": "docs/results/2026-09-17-slurp-b1-exemplars-k20-verdict.md (proposed) and docs/results/2026-09-18-slurp-b1-twin-verdict.md (completed); the stores null form of harness-admission v3",
+        "table": "stores",
+        "key": "knowledge_stores.train-exemplars",
+        "off": null,
+        "on": {
+          "phase_supply": {
+            "solver": {
+              "dimensions": [
+                "content"
+              ],
+              "expose_facets": false,
+              "facet_source": {
+                "embedded_signal": "text: Omni-Embed-Nemotron-3B over the 11,514 governed SLURP TRAIN utterance texts, prompt 'passage: ', mean-pooled and L2-normalised; one vector per content facet id facet:content:<slurp_id>. The KEY side is knowledge text by construction and is unconstrained by the owner's 2026-09-06 query-signal rule.",
+                "kind": "sealed-vectors",
+                "relpath": "vectors/slurp-kus3/facet-vectors.jsonl",
+                "sha256": "5dfe75231c12f2624913988e4643c51b74856465bdbd108358b4f371dacffc1e",
+                "tool_contact_ledger_row": "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-V1"
+              },
+              "fuse_coverage": {
+                "c": 20,
+                "m": 20,
+                "top_l": 20
+              },
+              "fuse_policy": "saea-fuse-supplyfilter-v1",
+              "k": 20,
+              "provider": "kb-facet-v1",
+              "query_source": {
+                "embedded_signal": "speech: complete original TRAIN Fold A recordings represented by the sealed full-utterance speech vector of the row's own recording, in the content retrieval dimension; flattened from the sealed intent-boundary full-utterance SEGMENT vectors (docs/receipts/knowledge/slurp-kb-size-pool-annotated-exemplars.json's sibling provenance vectors/slurp-exemplars-pool/query-vectors-speech-content-v1.provenance.json -- one segment per row, dimension renamed intent-boundary to content, every float byte-identical to the parent) because docs/results/2026-09-17-slurp-a2-exemplar-headroom-audit-v1.md establishes intent-boundary as an alias of the content embedding space; no flattening of MEANING, re-encoding, transcript, answer or future turn enters this query.",
+                "kind": "sealed-vectors",
+                "relpath": "vectors/slurp-exemplars-pool/query-vectors-speech-content-v1.jsonl",
+                "sha256": "d0f06ed21c6a576d8118d5a914e34807c24a3d3523d89e7b30d90575d24104ff",
+                "tool_contact_ledger_row": "SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-V1"
+              },
+              "rank_policy": "saea-rank-wcos-prior-agree-v1",
+              "rank_weights": {
+                "w_agree": 0.0,
+                "w_cos": 1.0,
+                "w_prior": 0.0
+              },
+              "tau": 0.0
+            }
+          },
+          "release": {
+            "relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars/release.json",
+            "sha256": "171aa4a82c2b15fff2c72e907ea80298be8d72309cca0d7367eb50debb042129"
+          },
+          "snapshot": {
+            "relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars/snapshot.json",
+            "sha256": "4c498dc0282055b9fe036ed7e950af519bd48b5f26e76876d0250727196a72e9"
+          },
+          "store_role": "train-exemplars"
+        },
+        "proof": "tests/unit/test_config_table_module_switches.py::test_exemplar_supply_store_is_the_only_key_moved_on_the_committed_fragments",
+        "what_flew": "The ON arm flew configs/baseline/slurp-native-anchor-exemplars-k20-train-fold-a-recovery-v2.json at a35630c0: the sealed anchor fragment plus the train-exemplars store block (release 171aa4a8..., snapshot 4c498dc0..., phase_supply.solver keyed by the sealed Fold A speech vectors, k = 20, saea-fuse-supplyfilter-v1 at m = c = top_l = 20, saea-rank-wcos-prior-agree-v1 with w_cos = 1, tau 0.0) and nothing else. The OFF arm is the sealed anchor itself, whose knowledge_stores mapping has no train-exemplars entry. The twin flew configs/baseline/slurp-native-anchor-exemplars-k20-twin-train-fold-a-v2.json at a7ce8f4c, the same block keyed by the deranged vectors.",
+        "why_this_table": "the module ADDS a named knowledge store whose supply reaches the Solver phase; the stores class names the store's whole block, and the null form records that OFF is the store's absence"
+      },
+      "replication": {
+        "state": "MET",
+        "date": "2026-09-19",
+        "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-ANCHOR-REPLICATE-V1",
+        "attempt_id": "attempt-slurp-native-exemplars-k20-anchor-replicate-train-fold-a-generation-v1",
+        "study_commit": "c905ddf01dbb6e9c2e62cf154a413add3bf0c506",
+        "form": "request-identical replicate of the cell on the same 1,080-row roster (the first model-facing request byte-identical to cell B1's on 1,080 of 1,080 rows; train-exemplars evidence-id lists identical in order on 1,080 of 1,080; Perception prompt tokens 3,884,813 on both arms); flown once, officially scored once; no derangement twin re-flown (the twin is the attribution control, not a replicate; cell B1's twin decomposition is quoted, not re-measured)",
+        "verdict": {
+          "path": "docs/results/2026-09-19-slurp-b1-replicate-verdict.md",
+          "sha256": "ee45b7b54d91dc2e6bcd05c9d87a0033d84a1eecc8b633c2d49751063383c47c"
+        },
+        "primary": "official pooled SLU-F1 48.5336 -> 62.23, +13.6987 pp CI95 [+11.6386, +15.7263] (clause a: lower bound above zero); intent 77.9630 -> 80.09, +2.1296 pp CI95 [+0.8064, +3.3784] (clause b: lower bound above -1.0051); projection v3 51.99 -> 63.97, +11.9751 pp CI95 [+9.87, +14.05] (clause c: same sign); TRAIN symmetric +12.26; against the released direct anchor SLU +28.35 [+24.99, +31.76]",
+        "guards": "0 of 18 scenarios breach the intent band on either gating contrast; no decision-17 net-harmed flag; the second pass reads +1.09 SLU [-0.10, +2.37] and -0.09 intent [-1.31, +1.13] against the first (saves 28 / harms 29 / ties 1,023 on intent, McNemar p 1.000)",
+        "own_null": {
+          "note": "MEASURED on the admitted configuration itself (B1r minus B1, request-identical, 1,080 rows, 125 speaker clusters, 10,000 draws, seed 20260915): the margins that replace the borrowed B0r-minus-B0 values (1.1218 / 1.0051) for any later contrast against a B1-based arm (owner decision 38); the borrowed intent margin was about 22 % too narrow for this configuration",
+          "pooled_slu_half_width": 1.235,
+          "intent_half_width": 1.2212,
+          "row_agreement": "803 of 1,080 delivered answers byte-identical (74.35 %), 80 intent-pair flips (7.41 %), identical entity set on 864 (80.00 %)"
+        },
+        "diagnostics": "one finite_completion disposition (reviewer, finish_reason length, delivered the latest Solver draft, parsed and scored; the flight would have aborted without item E13); planner_action_illegal 0; 12 REVISE tokens / 12 executed revisions (B1 8/7, anchor 6/5); 0 Solver completions tool-call-shaped as text; unparseable rows 2 (B1 4, anchor 7)",
+        "cost": "5,443 contacts (5.040 per row), 15,542.42 repeated speech seconds, 49,678,439 prompt / 257,424 completion tokens, 1,088 tool calls, 3.8507 GPU hours, wall 14,437.7 s, occupancy 0.868, utilisation 87.09 %, parked 0.039, 5,443 of 5,443 requests fit (minimum margin 8,254); 23.10 contacts per minute from server.log release records (per-role rendering)",
+        "analysis_dir": "SPEECHRL_DATA_DIR/analysis/SAEA-SLURP-B1-REPLICATE-OWN-NULL-PAIRED-ANALYSIS-V1"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+        "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1",
+        "note": "the sealed dual-store anchor, whose Solver role is the samples-1 (greedy) form; never re-flown or re-scored"
+      },
+      "date": "2026-09-19",
+      "module": "grouped Solver sampling with a deterministic commit (module M2: five Solver samples at temperature 0.7 on five pinned seeds, committed by saea-commit-plurality-support-v1 with min_support 3 and similarity 0.8, the committed answer reviewed as the one draft (E2c) with seal-time custody of the samples (E2d))",
+      "row": "SAEA-SLURP-NATIVE-SAMPLES5-ANCHOR-TRAIN-FOLD-A-V3",
+      "status": "NEUTRAL",
+      "status_basis": "NEUTRAL is this table's status for a module that shows neither the gain the admission clause requires nor a measured loss: against the sealed anchor on the same 1,080 rows the official pooled SLU-F1 delta is +0.06 pp CI95 [-1.46, +1.60] (clause a fails: the lower bound is below zero), intent +0.83 pp CI95 [-0.30, +1.88] (non-inferior at the -1.0051 margin), scenario +1.02, action +0.74, pooled span F1 -0.00; no scenario's intent CI95 upper bound below zero (0 of 18); the registered HARMFUL clause does not fire. The three scorings agree on a null effect (official +0.06, v3 -0.00, symmetric -0.23). Mechanism as predicted on false positives and paid on omissions: spurious mentions 362 -> 303, FP mass -152.3, empty-gold rows emitting entities 184 -> 161, against 29 more omissions and 12 fewer exact mentions; labels up, entities down, the pooled metric is their sum. The greedy twin is not due (owner decisions 8/15: the arm's CI95 lower bound is negative), so the arm-versus-twin clause is not reached and the cell closes.",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-SAMPLES5-ANCHOR-TRAIN-FOLD-A-V3",
+          "attempt_id": "attempt-slurp-native-samples5-anchor-train-fold-a-generation-v3",
+          "study_commit": "b97260ed"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-SAMPLES5-ANCHOR-SMOKE-4-RECOVERY-V3",
+          "attempt_id": "attempt-slurp-native-samples5-anchor-smoke-4-generation-recovery-v3",
+          "note": "the recovery smoke on the E2d fix; the first smoke (36 contacts) failed at the seal on the pre-E2d row form"
+        },
+        "primary": "official pooled SLU-F1, 1,080 paired TRAIN A rows, 125 speaker clusters, 10,000 draws, seed 20260915: 48.53 -> 48.60, +0.06 pp, CI95 [-1.46, +1.60]; intent 77.96 -> 78.80, +0.83 [-0.30, +1.88]; secondary against the released direct anchor +14.71 pp SLU CI95 [+11.80, +17.62], intent +5.09",
+        "guards": "intent non-inferior at -1.0051 (lower bound -0.30); no scenario breaches the intent band (0 of 18); owner decision 17's diagnostic fires on no scenario against the anchor; against the direct anchor (secondary) `general` flags (net harmed +9)",
+        "secondary": "projection v3 beside: arm 51.99 / 79.91 against the anchor's 51.99 / 79.35 (delta -0.00 SLU); TRAIN symmetric 51.86 against 52.09 (-0.23); offline sensitivity (reported, never gating): pooled SLU s=2 46.52, s=3 48.60 (registered), s=4 46.22, intent identical at every s; sample agreement: 1,012 unanimous rows deliver a correct intent 81.4 % of the time against 39.7 % on the 68 non-unanimous rows (a free confidence signal for later modules)",
+        "margins_from": {
+          "run_id": "SAEA-SLURP-NATIVE-REVIEW-OFF-TRAIN-FOLD-A-REPLICATE-V1",
+          "attempt_id": "attempt-slurp-native-review-off-train-fold-a-replicate-generation-v1",
+          "note": "MEASURED on this roster and geometry (B0r minus B0): pooled SLU half-width 1.1218 pp, intent 1.0051 pp at CI95"
+        },
+        "cost": "9,807 contacts (9.08 per row against the anchor's 5.02), 28,047.72 repeated speech seconds, 1,090 task-contract tool calls, 3.714 GPU hours (1.096x the anchor's 3.388 for 1.81x the contacts and 1.84x the prompt tokens: the prompt-cache assumption of the preregistration measured and held), wall 13,754 s, slot occupancy 0.863, utilisation 87.5 %, parked 0.027",
+        "diagnostic": "official-scorer matching reconstructed on the sealed outputs: spurious mentions 362 -> 303, FP mass -152.32, entity-emitting empty-gold rows 184 -> 161, omissions +29, exact mentions -12; 1,080/1,080 rows parsed (the anchor delivered 7 unparseable rows); revisions and dispositions per the verdict",
+        "receipt": "docs/results/2026-09-19-slurp-b2-samples5-verdict.md",
+        "verdict_note": "docs/results/2026-09-19-slurp-b2-samples5-verdict.md"
+      },
+      "not_admitted_for": [
+        "any default plan: NEUTRAL with 1.81x the contacts per row lowers no cost, so the module enters no plan",
+        "any claim that sampling at temperature 0.7 differs from five greedy repeats: the twin never flew (not due)",
+        "any claim about other commit thresholds: the sensitivity table is reported, never gating",
+        "any other roster or carrier; DEV1000, Fold B and the test split are untouched",
+        "any paper-scale or generalisation claim; TRAIN A is a discovery roster"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-19-slurp-b2-samples5-verdict.md; class 'episode' of harness-admission v3 (E6, 2026-09-16); the program spec's M2 row named the judges class before the episode class existed and is corrected by this entry",
+        "table": "episode",
+        "key": "native_episode.roles.solver",
+        "off": {
+          "max_iterations": 1,
+          "phase_id": "solver"
+        },
+        "on": {
+          "commit": {
+            "min_support": 3,
+            "policy": "saea-commit-plurality-support-v1",
+            "similarity_threshold": 0.8
+          },
+          "decoding_overrides": {
+            "seed_offset": 0,
+            "temperature": 0.7
+          },
+          "max_iterations": 1,
+          "phase_id": "solver",
+          "samples": 5
+        },
+        "proof": "tests/unit/test_config_table_module_switches.py::test_grouped_solver_sampling_is_one_native_episode_roles_solver_key",
+        "what_flew": "The ON arm flew configs/baseline/slurp-native-anchor-samples5-train-fold-a-v3.json at b97260ed: the sealed anchor fragment with the Solver role carrying samples 5, decoding_overrides {temperature 0.7, seed_offset 0} and commit {policy saea-commit-plurality-support-v1, min_support 3, similarity_threshold 0.8}, nothing else. The OFF arm is the sealed anchor itself, whose Solver role is the samples-1 form (max_iterations 1, phase_id solver).",
+        "why_this_table": "the module changes how one native-episode role is visited (five sampled contacts committed to one draft) and is switched by that role's own block under native_episode; the episode class names one dotted path on its closed allowlist whose null arm is the historical role"
+      },
+      "provisional": {
+        "state": "UNMET",
+        "reason": "NEUTRAL at 1.81x the contacts per row and 1.10x the GPU hours: the program spec's rule lets a no-harm module enter a plan only if it lowers cost, and this form does not; the greedy twin never flew (not due), so nothing separates sampling at temperature 0.7 from five greedy repeats",
+        "requirement": "a cost-neutral form (fewer samples, or a cheaper commit that keeps the false-positive suppression without the omissions) read on this roster with a positive pooled SLU CI95 lower bound, or a positive arm read that makes the twin due; until then the module enters no plan, and the SLURP default plan keeps the samples-1 Solver role"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+        "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1",
+        "note": "the sealed dual-store anchor (gating base 1); the second gating base is the sealed B1 recovery arm SAEA-SLURP-NATIVE-EXEMPLARS-K20-ANCHOR-TRAIN-FOLD-A-RECOVERY-V2; the sealed B5e recovery arm is the reported third base; none re-flown or re-scored, the node was applied to copies"
+      },
+      "date": "2026-09-19",
+      "module": "delivery-time normaliser node (module M3 executed inside the agent: SLURP USE projection v3 -- R_action, then legal-label projection v2, then filler normalisation P2 -- applied once to the accepted answer by rails.runner between the Planner's ACCEPT and delivery; registered in core.base.DELIVERY_NORMALISERS as saea-deliver-normalise-v3; item E11, owner directive 26)",
+      "row": "SAEA-SLURP-B8A-DELIVER-NORMALISE-MODEL-FREE-READ-V1",
+      "status": "ADMITTED",
+      "status_basis": "ADMITTED is this table's status for a gain on the carrier's primary metric disjoint from the carrier's own null with every gating guard non-inferior at the measured margin; here under the registered model-free rule (docs/readiness/2026-09-19-slurp-b8a-deliver-normalise-v1-preregistration.md sections 3-6): node ON minus OFF on the OFFICIAL unprojected pooled SLU-F1, paired whole-speaker bootstrap 10,000 draws seed 20260915, on BOTH gating bases -- anchor 48.5336 -> 51.9946, +3.4609 pp CI95 [+2.7814, +4.1797], intent +1.3889 [+0.7128, +2.0409]; B1 61.1394 -> 62.6672, +1.5278 pp CI95 [+1.0537, +2.0282], intent +1.5741 [+0.7821, +2.4575]; reported B5e 62.3351 -> 63.7757, +1.4406 [+1.0004, +1.9154], intent +1.7593 -- every CI95 lower bound above zero, intent superior rather than merely non-inferior at -1.0051, intent harmed on zero rows of any arm, 0 of 18 scenarios breach the band on all three contrasts, no decision-17 flag; triple equality (official-with-node == v3 scorer == replay) 0 mismatches on 1,073 / 1,076 / 1,079 parsed rows; STOP 27 checks passed. The four-row smoke (SAEA-SLURP-NATIVE-B8A-DELIVER-NORMALISE-V3-EXEMPLARS-K20-SMOKE-4-V1) passed structurally (node receipt on 4 of 4 rows, I7n sealed, 24 of 24 fits; closed at e79ce296). The TRAIN symmetric number moves +0.16 / +0.02 / +0.00 beside the official gain: the node is a surface-convention repair of the official scorer's reading, not new content, and is admitted as such (owner decisions 7 and 23: the official number is the bar).",
+      "evidence": {
+        "read": {
+          "run_id": "SAEA-SLURP-B8A-DELIVER-NORMALISE-MODEL-FREE-READ-V1",
+          "model_free": true,
+          "analysis_dir": "SPEECHRL_DATA_DIR/analysis/SAEA-SLURP-B8A-DELIVERY-NODE-READ-V1",
+          "score_contrasts_sha256": "af79e7b5886f9de878c0a3fe42ac5c94da63c72e658ac0dc61f32bf2cef1c35a",
+          "driver": "src/speech_aware_evidence_acquisition/analysis/b8a_delivery_node_read.py"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-B8A-DELIVER-NORMALISE-V3-EXEMPLARS-K20-SMOKE-4-V1",
+          "attempt_id": "attempt-slurp-native-b8a-deliver-normalise-v3-exemplars-k20-smoke-4-generation-v1",
+          "study_commit": "d5378d07",
+          "closed_at": "e79ce296"
+        },
+        "verdict": {
+          "path": "docs/results/2026-09-19-slurp-b8a-deliver-normalise-verdict.md",
+          "sha256": "959a4ee0e84c7a483ad97f44c70627eae8bae14dfa1bc2b2526e24c876ccea41"
+        },
+        "primary": "official pooled SLU-F1 node ON minus OFF: anchor +3.4609 [+2.7814, +4.1797]; B1 +1.5278 [+1.0537, +2.0282]; B5e +1.4406 [+1.0004, +1.9154] (reported)",
+        "guards": "intent +1.3889 / +1.5741 / +1.7593, all CI95 lower bounds above zero; intent saves / harms 15/0, 17/0, 19/0; span F1 +10.81 / +4.22 / +3.74; per-scenario: the intent gain is one scenario, play (+25.00 / +23.33 / +26.67, the R_action rule); only negative cells social pooled SLU -0.23 (B1) and -0.21 (B5e), inside the null",
+        "mechanism": "repairs 191 / 103 / 102 rows (labels 20 / 24 / 31; fillers 174 / 82 / 75 rows), FN and FP mass fall together (-150.32 / -53.83 / -49.94), exact mentions +100 / +41 / +36, no slot type worse anywhere; time and place_name dominate, date stays the residual; idempotent on 1,079 / 1,080 / 1,080 rows",
+        "cost": "zero contacts: the node is pure and deterministic; the smoke added no contact per row (five contacts per row as on its base) and its request bytes were identical to the base's",
+        "consequence": "from this entry on every official SLURP number this program reports is produced by a system containing the node; a later cell registered against a sealed arm that pre-dates the node compares a node-carrying arm against a node-free one and its verdict must say so (preregistration section 4)"
+      },
+      "not_admitted_for": [
+        "any claim of new content: the symmetric-normalised TRAIN scorer moves at most +0.16 pp, so the gain is the official scorer's reading of surface conventions repaired at delivery",
+        "any scorer-side use of projection v3 as a bar: the v3 scorer keeps its diagnostic role beside the official number (owner decision 23) and equals the official-with-node number by construction",
+        "any other roster or carrier; DEV1000, Fold B and the test split are untouched",
+        "any paper-scale or generalisation claim; TRAIN A is a discovery roster"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-19-slurp-b8a-deliver-normalise-verdict.md; class 'episode' of harness-admission v3 (E6, 2026-09-16); the key was added to the episode allowlist by item E11 (6bd8506a)",
+        "table": "episode",
+        "key": "native_episode.deliver_normaliser",
+        "off": null,
+        "on": {
+          "normaliser": "saea-deliver-normalise-v3"
+        },
+        "proof": "tests/unit/test_config_table_module_switches.py::test_deliver_normaliser_is_one_episode_class_key",
+        "what_flew": "The ON arm of the read is each sealed OFF arm's own delivered bytes after one offline application of saea-deliver-normalise-v3 through analysis.deliver_normaliser_replay (byte-equal to what rails.runner delivers with the key armed, proven by the smoke's 4 of 4 node receipts and the triple equality). The OFF arm is each sealed arm itself, whose native_episode block has no deliver_normaliser key.",
+        "why_this_table": "it is a NODE of the episode, declared beside the roles it runs after and applied by rails.runner between the Planner's ACCEPT and the delivered answer -- not a per-phase request-table entry and not a scorer; the episode class names one dotted path on its closed allowlist whose null arm is the key's absence (rails.config_tables.is_episode_null_arm)"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+        "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1",
+        "note": "the sealed dual-store anchor, whose native_episode block declares no finite_completion_policy and therefore runs the parser default 'raise'; never re-flown or re-scored. Its Reviewer's longest sealed completion is 402 tokens against a 512-token cap"
+      },
+      "date": "2026-09-19",
+      "module": "finite-completion retention (item E13: a valid, source-bound completion the frozen core ended before authoritative delivery -- finish_reason 'length' or 'content_filter' -- retains its row under a finite_completion terminal disposition naming the interrupted role and delivering the latest delivery-eligible Solver draft, or an abstention, instead of aborting the flight)",
+      "row": "SAEA-SLURP-NATIVE-NCP-L1-ANCHOR-TRAIN-FOLD-A-RECOVERY-V1",
+      "status": "NEUTRAL",
+      "status_basis": "NEUTRAL is this table's status for a module with no harm and no gain, and on the sealed record this module has neither because it never fires: across 28 sealed SLURP attempts that ran a native role episode -- 69,987 role-labelled contacts -- every completion ended 'stop' (57,756) or 'tool_calls' (12,231), with zero 'length', zero 'content_filter', zero contacts at their request's own max_tokens and zero at or above 448 tokens; the longest sealed native completion is 402 tokens (the anchor recovery's Reviewer) against a 512-token cap (docs/results/2026-09-19-slurp-finite-completion-exposure-v1.md, receipt docs/receipts/slurp-finite-completion-exposure-v1.json). ON and OFF therefore deliver byte-identical rows on every sealed arm, and the key renders no request byte on either arm (tests/unit/test_slurp_finite_completion_row.py::test_the_key_renders_no_request_byte_on_either_arm). What the switch changes is the FAILURE MODE of a future flight, which is not a task-quality effect and is not measured as one: no paired read, no roster and no scorer is involved, and none is owed, because there is no sealed row on which the two arms differ. The three 'length' completions that do exist anywhere in the sealed SLURP record are on pre-native phase-program cells at 64- and 256-token caps (KU-S3A control recovery 1, output-budget max64 2) which carry no native_episode block at all, so the key is not defined for them.",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-NCP-L1-ANCHOR-TRAIN-FOLD-A-RECOVERY-V1",
+          "attempt_id": "attempt-slurp-native-ncp-l1-anchor-train-fold-a-generation-recovery-v1",
+          "study_commit": "2f039fa6",
+          "note": "the POSITIVE CONTROL, and the only SLURP native flight that ever met a finite completion: ABORTED after 1,451 charged contacts on ONE 512-token Reviewer completion (flight-1360, of that attempt's 588 Reviewer contacts) with NativeEpisodeError [100054] component 'reviewer_1_role' ... reason='metered completion is non-authoritative because finish_reason is 'length''. This attempt is the OFF arm executing its documented behaviour; it is not a comparator and carries no score"
+        },
+        "first_pass": {
+          "run_id": "SAEA-SLURP-NATIVE-NCP-L1-ANCHOR-TRAIN-FOLD-A-V1",
+          "attempt_id": "attempt-slurp-native-ncp-l1-anchor-train-fold-a-generation-v1",
+          "note": "the paired half of the control: 3,278 contacts, zero finite completions, Reviewer maximum 315 tokens; it died of a different cause, which is why the control is read as a pair"
+        },
+        "primary": "finish-reason exposure over every sealed SLURP attempt: 28 native attempts / 69,987 role-labelled contacts with 'length' 0 and 'content_filter' 0, contacts at the configured cap 0, contacts at or above 448 tokens 0, maximum native completion 402 tokens. Every one of those attempts preserved its wire responses, so the finish reason is known rather than assumed for all 69,987",
+        "guards": "the request channel: the composed Solver and Reviewer requests are byte-identical with and without the key on a clean wire (tests/unit/test_slurp_finite_completion_row.py::test_the_key_renders_no_request_byte_on_either_arm), and the two configs differ in exactly that one native_episode leaf (tests/unit/test_config_table_module_switches.py::test_finite_completion_policy_is_one_episode_class_key). No scored guard applies: no sealed row separates the arms",
+        "secondary": "the 75 sealed NON-native SLURP attempts (71,064 contacts at 64/256/512-token caps) reached their configured cap 127 times, and 28,902 of their contacts preserved no wire response so their finish reason is recorded as unknown rather than assumed. That surface lies entirely outside the native episode this key governs and every one of those cells is closed; it is recorded, not claimed",
+        "cost": "zero. The key adds no contact, no token and no GPU second: it is read only where a completion has already come back, and the OFF arm's cost is the same flight minus the rows it abandons. The B7a recovery arm's 1,451 discarded contacts are the price the OFF arm charged once",
+        "diagnostic": "per-role maxima on the sealed native arms: Perception 258, Solver 195, Reviewer 402, Planner 22. The Reviewer is the role that approaches the cap, and the Reviewer is the role the B7a recovery arm lost, so the margin is thin rather than infinite -- which is the argument for arming the key, not against it",
+        "receipt": "docs/receipts/slurp-finite-completion-exposure-v1.json",
+        "verdict_note": "docs/results/2026-09-19-slurp-finite-completion-exposure-v1.md"
+      },
+      "not_admitted_for": [
+        "any task-quality, comparator or admission claim: the module never fired on a sealed row, so it moved no number and none is reported for it",
+        "any claim that a finite completion is impossible on this carrier: one occurred in 1,451 contacts, and the sealed Reviewer maximum of 402 tokens against a 512-token cap says the margin is thin",
+        "any re-reading, re-scoring or re-flight of a sealed arm; the whole point of the exposure receipt is that nothing sealed would change",
+        "any other carrier: the A2T and Earnings native baselines already declare the key and this entry decides SLURP",
+        "any paper-scale or generalisation claim; TRAIN A is a discovery roster"
+      ],
+      "caveats": [
+        "the NEUTRAL status rests on an absence -- no sealed native contact ever met a finite completion -- and an absence is evidence about the past only; a longer output cap, a chattier Reviewer context or a new role could make the module fire, and it would then be doing exactly what it is admitted to do",
+        "28,902 sealed NON-native SLURP contacts preserved no wire response, so their finish reasons are unknown; they are outside this key's surface and are excluded from the claim rather than assumed to be 'stop'"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-19-slurp-finite-completion-exposure-v1.md; class 'episode' of harness-admission v3, whose closed allowlist item E13 extends with this key (rails.config_tables.EPISODE_LEVEL_SWITCH_KEYS, its sixth member)",
+        "table": "episode",
+        "key": "native_episode.finite_completion_policy",
+        "off": null,
+        "on": "deliver-latest-or-abstain",
+        "proof": "tests/unit/test_slurp_finite_completion_row.py::test_the_key_renders_no_request_byte_on_either_arm",
+        "what_flew": "NOTHING flew for this entry, and nothing is owed: the module changes no request byte and no delivered byte of any sealed row, which is what the exposure receipt proves over all 69,987 sealed native contacts. The OFF arm's behaviour is nonetheless on the record in the most expensive form available -- the ABORTED B7a recovery attempt, 1,451 contacts lost to one 512-token Reviewer completion -- and the ON arm's behaviour is proved against the fake model on the REAL anchor fragment's native_episode block, parsed by rails.native_episode_config.load_native_episode_config with the key added and nothing else moved. The SLURP default plan configs/baseline/slurp-native-dual-store-train-fold-a-default-plan-v1.json is the anchor fragment plus the review-loop marker 'on' and this key, and its own what_this_is description; it is never a cell of its own.",
+        "why_this_table": "the module changes how the native episode handles one of its own role's completions -- whether the graph terminates with a retained row or raises -- and is declared inside the native_episode block beside the roles it governs, so it is neither a mode of any of the four per-phase tables nor a per-run driver knob. It does NOT claim the 'run' class's licence even though it renders no request byte: that class exists for a scheduler outside the tables, and a key read inside the role chain is an episode key whose ON arm is composed rather than proved absent by a falsifier receipt."
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+        "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1",
+        "note": "the sealed dual-store anchor; never re-flown or re-scored; both arms node-free; the anchor flew without the finite-completion policy (zero finite completions proven), the arm with it (3 finite-completion rows retained)"
+      },
+      "date": "2026-09-19",
+      "module": "Node Context Policy at level L1: one declared handling policy per (consumer role, semantic class) boundary, structured on the eight model-output boundaries (solver/reviewer candidate-hypothesis, reviewer/planner/solver current-draft, planner/solver review-finding, solver plan-action), raw on the four tool-observation boundaries, no producer response format (items E8a-E8c; cells B7a v1 closed after two aborts, B7a v2 flown with the finite-completion policy armed)",
+      "row": "SAEA-SLURP-NATIVE-NCP-L1-ANCHOR-TRAIN-FOLD-A-V2",
+      "status": "HARMFUL",
+      "status_basis": "HARMFUL is this table's status for a gating guard that fails. Registered rule (docs/readiness/2026-09-19-slurp-b7a-ncp-l1-anchor-v2-preregistration.md, inherited from v1): NEUTRAL needs official pooled SLU-F1 and intent non-inferior against the sealed anchor at the B0r own-null margins (1.1218 / 1.0051). Read: official pooled SLU-F1 48.5336 -> 48.2236, -0.3100 pp CI95 [-1.8072, +1.1211]; intent 77.9630 -> 77.3148, -0.6481 pp CI95 [-2.1849, +0.8688]; projection v3 -0.5029 and TRAIN symmetric -0.6752 agree in sign; 0 of 18 scenarios breach the band; one decision-17 flag (play, net +5 harmed). Both point estimates sit inside the margins and the cell's own half-widths (1.4641 / 1.5269) are 30.5 % and 51.9 % wider than the imported ones, so the status is fixed by interval width, not by a measured loss; owner decision 25 scopes the measured-loss reading to combination cells, so the single-factor rule reads as written. Independently of the label the module buys nothing and costs more: 5.205 contacts per row (anchor 5.016), 3.7809 GPU hours (anchor 3.3880), +7.80 % prompt tokens, 59 executed revisions against the anchor's 6, and the structured review-finding boundaries rendered FALLBACK-RAW on 100 % of 1,243 rows because the Reviewer stays prose. Per-row exact slot F1 +1.33 [+0.15, +2.58] and per-row mean SLU-F1 +1.98 [+0.88, +3.15] move up while the pooled count F1 moves down (reported, not interpreted).",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-NCP-L1-ANCHOR-TRAIN-FOLD-A-V2",
+          "attempt_id": "attempt-slurp-native-ncp-l1-anchor-train-fold-a-generation-v2",
+          "study_commit": "83d6b1b2"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-NCP-L1-ANCHOR-SMOKE-4-V2",
+          "attempt_id": "attempt-slurp-native-ncp-l1-anchor-smoke-4-generation-v2",
+          "study_commit": "3ced28ea"
+        },
+        "verdict": {
+          "path": "docs/results/2026-09-19-slurp-b7a-ncp-l1-anchor-v2-verdict.md",
+          "sha256": "98111be61c428cc82fc618371dcb251b0797fc38126baff85b7ebfe998873660"
+        },
+        "analysis_dir": "SPEECHRL_DATA_DIR/analysis/SAEA-SLURP-B7A-NCP-L1-ANCHOR-V2-PAIRED-ANALYSIS-V1",
+        "primary": "official pooled SLU-F1 -0.3100 pp CI95 [-1.8072, +1.1211] (1,080 paired TRAIN A rows, 125 speaker clusters, 10,000 draws, seed 20260915)",
+        "guards": "intent -0.6481 [-2.1849, +0.8688] against -1.0051: fails; scenario -0.28, action -0.65, pooled span -0.12, all straddle zero; 0 of 18 scenario band breaches",
+        "diagnostics": "finite_completion rows 3 of 1,080 (all Reviewer, finish_reason length, latest Solver draft delivered, 0 abstentions; excluding them moves the primary to -0.3144); planner_action_illegal 2 (retained); 1,133 Planner routes: 1,072 ACCEPT / 59 REVISE / 2 illegal, 3 revision-limit stops; NCP rendering 14,727 boundary rows, 8,334 structured / 6,393 raw, Reviewer parse 0 of 1,243 (100 % FALLBACK-RAW); first model-facing request identical to the anchor's on 1,080 of 1,080 rows and to the v1 recovery's on 276 of 276 comparable rows",
+        "cost": "5,621 contacts, 16,098.67 repeated speech seconds, 49,586,447 prompt / 293,789 completion tokens, 1,136 tool calls, 3.7809 GPU hours, wall 13,930.9 s, occupancy 0.911, utilisation 90.09 %, parked 0.022, 5,621 of 5,621 requests fit (minimum margin 6,703 tokens)",
+        "secondary": "against the released direct anchor: pooled SLU +14.34 [+11.31, +17.33], intent +3.61 [+1.47, +5.75]"
+      },
+      "not_admitted_for": [
+        "any default plan (HARMFUL never enters a plan)",
+        "level L2 (cell B7b): not flown on a HARMFUL L1 base (owner decision 15; B7b superseded)",
+        "cells B7r and B7c, registered on the L1 base: closed unflown under owner decision 32; cell B8b (the Reviewer slot-audit block, attached to the L1 structured Reviewer boundary) is re-based on the anchor and re-registered",
+        "any claim about the per-row gains: pooled count F1 is the registered primary",
+        "any other roster or carrier; DEV-1000, Fold B and the test split are untouched"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-19-slurp-b7a-ncp-l1-anchor-v2-verdict.md; class 'episode' of harness-admission v3 (E6, 2026-09-16); the key was added to the episode allowlist by item E8a (2026-09-17)",
+        "table": "episode",
+        "key": "native_episode.context_policy",
+        "off": null,
+        "on": {
+          "level": "structured",
+          "policy_id": "typed-slurp-node-context-v1",
+          "params": {
+            "draft_response_schema": {
+              "additionalProperties": false,
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "entities": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "filler": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "filler"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "scenario": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "scenario",
+                "action",
+                "entities"
+              ],
+              "type": "object"
+            },
+            "legal_entity_types": [
+              "alarm_type",
+              "app_name",
+              "artist_name",
+              "audiobook_author",
+              "audiobook_name",
+              "business_name",
+              "business_type",
+              "change_amount",
+              "coffee_type",
+              "color_type",
+              "cooking_type",
+              "currency_name",
+              "date",
+              "definition_word",
+              "device_type",
+              "drink_type",
+              "email_address",
+              "email_folder",
+              "event_name",
+              "food_type",
+              "game_name",
+              "game_type",
+              "general_frequency",
+              "house_place",
+              "ingredient",
+              "joke_type",
+              "list_name",
+              "meal_type",
+              "media_type",
+              "movie_name",
+              "movie_type",
+              "music_album",
+              "music_descriptor",
+              "music_genre",
+              "news_topic",
+              "order_type",
+              "person",
+              "personal_info",
+              "place_name",
+              "player_setting",
+              "playlist_name",
+              "podcast_descriptor",
+              "podcast_name",
+              "radio_name",
+              "relation",
+              "song_name",
+              "sport_type",
+              "time",
+              "time_zone",
+              "timeofday",
+              "transport_agency",
+              "transport_descriptor",
+              "transport_name",
+              "transport_type",
+              "weather_descriptor"
+            ],
+            "max_candidates": 3,
+            "projection_policy": "bounded-first-occurrence-distinct-slurp-intent-hypotheses-v1"
+          },
+          "boundaries": {
+            "solver:candidate-hypothesis": {
+              "level": "structured",
+              "template": "probes/ncp_slurp_candidate_hypothesis_v1.txt",
+              "on_parse_failure": "raw"
+            },
+            "reviewer:candidate-hypothesis": {
+              "level": "structured",
+              "template": "probes/ncp_slurp_candidate_hypothesis_v1.txt",
+              "on_parse_failure": "raw"
+            },
+            "reviewer:current-draft": {
+              "level": "structured",
+              "template": "probes/ncp_slurp_current_draft_reviewer_v1.txt",
+              "on_parse_failure": "raw"
+            },
+            "planner:current-draft": {
+              "level": "structured",
+              "template": "probes/ncp_slurp_planner_brief_v1.txt",
+              "on_parse_failure": "raw"
+            },
+            "solver:current-draft": {
+              "level": "structured",
+              "template": "probes/ncp_slurp_current_draft_solver_v1.txt",
+              "on_parse_failure": "raw"
+            },
+            "planner:review-finding": {
+              "level": "structured",
+              "template": "probes/ncp_slurp_review_finding_v1.txt",
+              "on_parse_failure": "raw"
+            },
+            "solver:review-finding": {
+              "level": "structured",
+              "template": "probes/ncp_slurp_review_finding_v1.txt",
+              "on_parse_failure": "raw"
+            },
+            "solver:plan-action": {
+              "level": "structured",
+              "template": "probes/ncp_slurp_plan_action_v1.txt",
+              "on_parse_failure": "refuse"
+            },
+            "perception:tool-observation": {
+              "level": "raw"
+            },
+            "solver:tool-observation": {
+              "level": "raw"
+            },
+            "reviewer:tool-observation": {
+              "level": "raw"
+            },
+            "planner:tool-observation": {
+              "level": "raw"
+            }
+          }
+        },
+        "proof": "tests/unit/test_config_table_module_switches.py::test_node_context_policy_is_one_episode_class_key",
+        "what_flew": "The ON arm flew configs/baseline/slurp-native-anchor-ncp-l1-train-fold-a-v2.json at 83d6b1b2: the sealed anchor fragment with native_episode.context_policy at level structured on the eight model-output boundaries plus native_episode.finite_completion_policy deliver-latest-or-abstain (a harness declaration, not a factor). The OFF arm is the sealed anchor itself, whose native_episode block has no context_policy key.",
+        "why_this_table": "the module changes how every node boundary renders another node's output (a declared handling policy per boundary) and is switched by one dotted path on the closed episode allowlist whose null arm is the key's absence (an absent key, the literal 'raw' and an all-raw object are one null arm, E8a note 4)"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+        "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1",
+        "note": "the sealed dual-store anchor; never re-flown or re-scored; both arms node-free and per-role; the arm carries the finite-completion policy (a harness declaration; zero finite completions on either arm)"
+      },
+      "date": "2026-09-19",
+      "module": "standing general_quirky fallback candidate (A3 FIX-1, appended to the Perception candidate fill and to the Solver candidate supply when absent) together with the intent-boundaries store v2 carrying the one-directional qa/general contrast card (A3 FIX-2); item E5a; cell B4a v2 on the anchor base",
+      "row": "SAEA-SLURP-NATIVE-FALLBACK-QUIRKY-INTENT-V2-ANCHOR-TRAIN-FOLD-A-V2",
+      "status": "HARMFUL",
+      "status_basis": "HARMFUL is this table's status for a gating guard that fails. Registered rule (docs/readiness/2026-09-17-slurp-b4-org-cells-anchor-v2-preregistration.md, B4a): (a) intent (the cell's primary) CI95 lower bound above zero, (b) pooled SLU non-inferior within the 1.1218 own-null margin, (c) v3 same sign, (d) no scenario band breach. Read: intent 77.9630 -> 78.7037, +0.7407 pp CI95 [-0.3031, +1.7544] (fails a); official pooled SLU-F1 48.5336 -> 47.8287, -0.7049 pp CI95 [-2.2930, +0.8861] (the HARMFUL clause: lower bound at or below -1.1218); v3 +0.2778 and TRAIN symmetric +0.7407 agree in sign; 0 of 18 scenarios breach; 0 decision-17 flags. Interval width rather than measured loss (the SLU point estimate sits inside the margin; the cell's own half-width is 1.5895 against the borrowed 1.1218). The mechanism landed and was ignored: the fallback was appended on 1,052 of 1,080 rows, lifted gold-general_quirky candidate coverage 24.44 % -> 100 % and general-scenario coverage 43.33 % -> 100 %, and was selected on zero rows; general intent 36.67 % on both arms, qa intent 75.00 % on both arms with zero saves and zero harms; general_quirky -> qa_* confusion 11 -> 10, the reverse 0 -> 1. Cost: +29.96 % prompt tokens (11,045 vs 8,491 per contact), +39.35 % GPU hours (4.7210 vs 3.388), +40.4 % newly prefilled tokens, for five fewer contacts; pooled span F1 -2.00, per-row exact slot F1 -1.91 [-3.27, -0.54] (60 harms / 35 saves, p 0.013).",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-FALLBACK-QUIRKY-INTENT-V2-ANCHOR-TRAIN-FOLD-A-V2",
+          "attempt_id": "attempt-slurp-native-fallback-quirky-intent-v2-anchor-train-fold-a-generation-v2",
+          "study_commit": "682ee52d"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-FALLBACK-QUIRKY-INTENT-V2-ANCHOR-SMOKE-4-V2",
+          "attempt_id": "attempt-slurp-native-fallback-quirky-intent-v2-anchor-smoke-4-generation-v2r",
+          "study_commit": "f0b6ebb1"
+        },
+        "verdict": {
+          "path": "docs/results/2026-09-19-slurp-b4a-fallback-quirky-anchor-v2-verdict.md",
+          "sha256": "1c09c0fb38f628be33c464f40cd1d827a63f7858f0a02c270721c294d4d0e976"
+        },
+        "analysis_dir": "SPEECHRL_DATA_DIR/analysis/SAEA-SLURP-B4A-ANCHOR-V2-PAIRED-ANALYSIS-V1",
+        "primary": "intent +0.7407 pp CI95 [-0.3031, +1.7544]; official pooled SLU-F1 -0.7049 pp CI95 [-2.2930, +0.8861] (1,080 paired TRAIN A rows, 125 speaker clusters, 10,000 draws, seed 20260915)",
+        "guards": "scenario +0.65, action +0.83, pooled span F1 -2.00, per-row exact slot F1 -1.91 [-3.27, -0.54]; 0 of 18 scenario band breaches; intent saves 30 / harms 22 (McNemar p 0.332)",
+        "diagnostics": "finite_completion 0; planner_action_illegal 0; 4 revisions vs the anchor's 6; median 20 slot values supplied (12 model + 8 fallback), 0 rows at the 28-value cap; first model-facing request identical on 701 rows and different on 379 (the registered request-channel proof), evidence_id lists identical on 1,080",
+        "cost": "5,412 contacts (5.011 per row), 15,456.80 repeated speech seconds, 59,777,211 prompt / 251,599 completion tokens, 1,080 tool calls, 4.7210 GPU hours, wall 17,250.2 s, occupancy 0.943, utilisation 91.77 %, parked 0.014, 5,412 of 5,412 requests fit (minimum margin 6,690)",
+        "secondary": "against the released direct anchor: pooled SLU +13.94, intent +5.00"
+      },
+      "not_admitted_for": [
+        "any default plan (HARMFUL never enters a plan)",
+        "cell B4c (intent store v2 alone): closed unflown under owner decision 9 (it flew only if B4a admitted)",
+        "any claim that a fallback candidate helps: it raised coverage to 100 % and was never chosen; the general and qa holes need a different mechanism (index-based assembly, decisions 48-50)",
+        "any other roster or carrier; DEV-1000, Fold B and the test split are untouched"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-19-slurp-b4a-fallback-quirky-anchor-v2-verdict.md; the stores re-pin form of harness-admission v3 (E9, 2026-09-17). This cell moved TWO stores-class keys; the entry records the re-pin of knowledge_stores.intent-boundaries as its switch and the second key beside it, because cell B4c (the store alone) is closed and no second entry is owed",
+        "table": "stores",
+        "key": "knowledge_stores.intent-boundaries",
+        "form": "repin",
+        "off": {
+          "release": {
+            "relpath": "knowledge/slurp/semantic/intent-boundaries-v1/release.json",
+            "sha256": "2e51c14b4f1c3a122968bc0fd7809523470aad80923ff87c1ce9992ed8d3beb4"
+          },
+          "snapshot": {
+            "relpath": "knowledge/slurp/semantic/intent-boundaries-v1/snapshot.json",
+            "sha256": "5520b8449b627530227563d1f8db71f8a391f20f7d0ff7d7bd439e28ec6e48fe"
+          }
+        },
+        "on": {
+          "release": {
+            "relpath": "knowledge/slurp/semantic/intent-boundaries-v2/release.json",
+            "sha256": "31eb595b54088a21e45daf1acfe790d545e8a4d5330acb3ee4e19f6e1607bc95"
+          },
+          "snapshot": {
+            "relpath": "knowledge/slurp/semantic/intent-boundaries-v2/snapshot.json",
+            "sha256": "8a27424a84d5b419e033391b9bba00f30952de520c993237ea0219a9978c07c5"
+          }
+        },
+        "second_moved_key": "knowledge_stores.slot-contracts.candidate_supply.solver.fallback_candidates = [\"general_quirky\"] (absent on the anchor), mirrored by phase_material.perception.fill_params.fallback_candidates at its own consumption site; release and snapshot pins of slot-contracts unchanged (v1 on both arms)",
+        "proof": "tests/unit/test_config_table_module_switches.py::test_fallback_candidate_is_one_key_in_the_knowledge_views_table",
+        "what_flew": "The ON arm flew configs/baseline/slurp-native-anchor-fallback-quirky-intent-v2-train-fold-a-v2.json at 682ee52d (composed a07e895cf893bf2a8ba348449e949f3b0db18808d4435a3670ef49fa37f452d2): the sealed anchor fragment with intent-boundaries re-pinned to v2 and the fallback candidate leaf on the Solver candidate supply and the Perception fill, plus the finite-completion policy (a harness declaration). The OFF arm is the sealed anchor itself (intent-boundaries v1, no fallback leaf).",
+        "why_this_table": "a whole named knowledge store is one knowledge_stores.<store_id> switch; the re-pin form records the incumbent's pins as the OFF arm and the successor's pins as the ON arm"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+        "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1",
+        "note": "the sealed dual-store anchor; never re-flown or re-scored; both arms node-free; the anchor flew per-role rendering (the Reviewer alone carries the tools array), the arm the same requests with the array rendered on every role at tool_choice none for the tool-free roles; the arm carries the finite-completion policy (a harness declaration; zero finite completions on either arm)"
+      },
+      "date": "2026-09-19",
+      "module": "constant native tool-schema rendering (item E17, lever L1 of the throughput root cause: the Reviewer's task-contract tool schema rendered into every role's system message so the per-slot KV prefix survives the Reviewer-on / Planner-off toggle); efficiency cell EFF-1 on the anchor base",
+      "row": "SAEA-SLURP-NATIVE-TOOL-CONSTANT-ANCHOR-TRAIN-FOLD-A-V1",
+      "status": "HARMFUL",
+      "status_basis": "HARMFUL is this table's status for a gating guard that fails with a measured loss (owner decision 25). Registered rule (docs/readiness/2026-09-19-slurp-eff1-tool-constant-v1-preregistration.md): NEUTRAL iff official pooled SLU-F1 and intent are non-inferior against the sealed anchor at the B0r own-null margins (h_SLU 1.1218 / h_intent 1.0051) with CI95 lower bounds above -h and no scenario band breach; HARMFUL iff a guard fails with a measured loss. Read: official pooled SLU-F1 48.5336 -> 44.1407, -4.3929 pp CI95 [-6.6889, -2.1735]; intent 77.9630 -> 68.7963, -9.1667 pp CI95 [-11.6404, -6.7887]; both point estimates below -h and both CI95 upper bounds below zero; 9 of 18 scenarios breach the band, 12 decision-17 flags, none gains; v3 -4.94 / -9.81 and TRAIN symmetric -4.96 agree in sign. Root cause named to a component: the Solver's delivery shape. With the tools array in its system message the Solver answered 145 of 1,092 contacts with a tool-call-shaped string (a <tool_call> block naming saea-tool-task-contract-v1; the anchor 0 of 1,085); nothing parses it (tool_choice none installs no grammar and no parser), the Reviewer then ran once with no task-contract call, and the string was delivered verbatim: 137 rows the official scorer cannot parse (anchor 7), every one scoring zero on every metric. On the 938 rows both arms parsed (diagnostic only, never a decision quantity) the delta is +0.030 SLU [-1.644, +1.632] and +0.213 intent [-1.091, +1.467]. Authority never moved: tool_choice none / none / auto / none identical to the anchor, zero tool calls from unauthorized roles, distinct_tool_schemas_sha256 == 1 on every row. The efficiency result stands regardless of the verdict: prefilled tokens per row 26,197 (B4b reference) -> 10,127 (-61.3 %), cached share 42.9 % -> 75.2 %, packet re-decodes about 3.0 -> 1.0 per row, first-Reviewer prefill -96.9 %, Planner -80.8 %, GPU hours per 1,080 rows 3.388 -> 1.843 (-45.6 %), contacts per minute 26.06 -> 45.94 (whole flight; 52.70 in the first 600 s), projected 13,078-row read 41.0 h -> 22.3 h.",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-TOOL-CONSTANT-ANCHOR-TRAIN-FOLD-A-V1",
+          "attempt_id": "attempt-slurp-native-tool-constant-anchor-train-fold-a-generation-v1",
+          "study_commit": "711bc6c4"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-TOOL-CONSTANT-ANCHOR-SMOKE-4-V1",
+          "attempt_id": "attempt-slurp-native-tool-constant-anchor-smoke-4-generation-v1",
+          "study_commit": "711bc6c4"
+        },
+        "verdict": {
+          "path": "docs/results/2026-09-19-slurp-eff1-tool-constant-verdict.md",
+          "sha256": "89e7f8e0b97e81cbe359be6a98acaf82cd9216d0cd3e76bb8b13aa6182fe3e42"
+        },
+        "analysis_dir": "SPEECHRL_DATA_DIR/analysis/SAEA-SLURP-EFF1-TOOL-CONSTANT-ANCHOR-V1-PAIRED-ANALYSIS-V1",
+        "primary": "official pooled SLU-F1 -4.3929 pp CI95 [-6.6889, -2.1735]; intent -9.1667 pp CI95 [-11.6404, -6.7887] (1,080 paired TRAIN A rows, 125 speaker clusters, 10,000 draws, seed 20260915)",
+        "guards": "scenario 84.81 -> 74.26, action 79.26 -> 70.00, span F1 29.50 -> 25.41; 9 of 18 scenario band breaches, 12 decision-17 flags, none gains; intent saves 27 / harms 126 / ties 927 (McNemar p 1.7e-16)",
+        "diagnostics": "finite_completion 0; planner_action_illegal 1 (count and digest only); contacts-per-row histogram 3:2, 4:135, 5:931, 7:7, 8:2, 9:3 against the anchor's 4:3, 5:1,072, 9:5; 137 rows with a single Reviewer contact (anchor 3); 939 task-contract tool calls (anchor 1,082); Reviewer request byte-identity to the anchor is not evaluable because the factor changes the Perception request and therefore every downstream request (the registered clause is unsatisfiable by construction); every Perception request identical to the anchor's minus tool_schemas on 1,080 of 1,080 rows",
+        "cost": "5,293 contacts (4.901 per row), 15,111.57 repeated speech seconds, 44,100,253 prompt / 233,956 completion tokens, 939 tool calls, 1.8433 GPU hours, wall 6,913.6 s, occupancy 0.891, utilisation 85.06 %, parked 0.038, 5,293 of 5,293 requests fit (minimum margin 9,087, maximum required 15,489 of 24,576); server-log join exact on 5,293 of 5,293 contacts; the comparator has no flight-receipts.json (its GPU hours come from its session-attach monitor, 12,196.65 s)",
+        "secondary": "against the released direct anchor: pooled SLU +10.26, intent -4.91"
+      },
+      "not_admitted_for": [
+        "any default plan (HARMFUL never enters a plan); per-role rendering remains the SLURP default and every later cell and the test read register against it",
+        "lever L2 (drop the Planner) or any later efficiency cell measured on the per-role base: L1's gain is measured here and must not be credited to them",
+        "any claim that constant rendering changes the answer where delivery survives: the 938-row restricted contrast is a diagnostic that licenses the root-cause statement, not a verdict",
+        "either candidate repair -- a decode-time constraint on the tool-free roles' output shape with the array kept constant, or withdrawing the Reviewer's task-contract tool so no role renders a tool paragraph -- each is a new cell with its own registration and, for the withdrawal, an owner decision on what the Reviewer reads and may do",
+        "the decision-30 headroom trigger: an efficiency cell does not count toward it (the streak stays at two)",
+        "any other roster or carrier; DEV-1000, Fold B and the test split are untouched"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-19-slurp-eff1-tool-constant-verdict.md; class 'episode' of harness-admission v3 (E6, 2026-09-16)",
+        "table": "episode",
+        "key": "native_episode.tool_schema_rendering",
+        "on": "constant",
+        "off": "per-role",
+        "proof": "tests/unit/test_config_table_module_switches.py::test_tool_schema_rendering_is_one_episode_class_key",
+        "what_flew": "The ON arm flew configs/baseline/slurp-native-anchor-tool-constant-train-fold-a-v1.json at 711bc6c4: the sealed anchor fragment plus native_episode.tool_schema_rendering 'constant' and the finite-completion policy (a harness declaration); the E17 receipt saea-native-tool-schema-rendering-v1 carries mode constant, one rendered tool schema on every contact and authority_tool_names [] on perception / solver / planner against [saea-tool-task-contract-v1] on the Reviewer. The OFF arm is the sealed anchor itself (per-role rendering; the key did not exist when it sealed).",
+        "why_this_table": "the rendering of the native tool schemas across the episode's roles is one episode-level switch on the closed allowlist rails.config_tables.EPISODE_LEVEL_SWITCH_KEYS; the null arm is the key's absence or 'per-role'; the OFF value 'per-role' is the key's own null form (rails.config_tables.is_episode_null_arm), which the sealed anchor realises by the key's absence"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DUAL-STORE-TRAIN-FOLD-A-ANCHOR-RECOVERY-V1",
+        "attempt_id": "attempt-slurp-native-dual-store-train-fold-a-anchor-generation-recovery-v1",
+        "note": "the sealed dual-store anchor; never re-flown or re-scored; both arms node-free and per-role; the arm carries the E13 and E22 declarations (6 finite_completion rows, 1 react_exhaustion visit, all retained; the anchor 0 / 0)"
+      },
+      "date": "2026-09-20",
+      "module": "Reviewer slot-audit context block (item E12, re-based by item E19 as the sealed-draft attachment; native_episode.reviewer_audit = slot-audit-v1): the per-row audit of the current draft against the slot contracts (TYPE-UNSEEN / EMPTY-DRAFT / MISSING-COMMON / REPRESENTATION flags) attached to the Reviewer's request; cell B8b-anchor on the anchor base, sealed as an E10 mode-A resume-recovery (378 rows kept under I7r custody, 702 flown)",
+      "row": "SAEA-SLURP-NATIVE-REVIEWER-AUDIT-ANCHOR-TRAIN-FOLD-A-V1",
+      "status": "NEUTRAL",
+      "status_basis": "NEUTRAL is this table's status when the gating guards hold but the admission clause does not. Registered rule (docs/readiness/2026-09-19-slurp-b8b-anchor-reviewer-audit-v1-preregistration.md): ADMITTED iff (1) the CI95 lower bound of the paired official pooled SLU-F1 delta is above zero, (2) intent non-inferior at -1.0051, (3) v3 and the TRAIN symmetric sibling agree in sign, (4) no scenario band breach; HARMFUL iff a guard fails with a measured loss (decision 25). Read (paired per-row bootstrap, 10,000 draws, seed 20260919, the recipe's estimator): official pooled SLU-F1 48.5336 -> 49.4034, +0.8698 pp CI95 [-0.6341, +2.3654] (clause 1 fails); intent 77.9630 -> 79.1667, +1.2037 pp CI95 [-0.1852, +2.5926] (clause 2 holds); v3 +1.1276 and symmetric +1.0559 same sign; 0 of 18 scenarios breach (transport at the band exactly); action +1.39 [+0.09, +2.69]; every metric positive and saves exceed harms on all five per-row metrics: a beneficial but not CI95-proven movement, recorded under owner decision 25. Not HARMFUL: no measured loss anywhere. Cost: +7.14 % contacts per row (5.374 vs 5.016; 101 executed revisions vs 5), Reviewer prompt tokens +4.62 %, GPU hours 3.8464 run-cumulative (2.6253 sealed resume + 1.2211 reconstructed aborted window) vs 3.3880 (+13.5 %). The module raises cost without a proven gain, so NEUTRAL does not carry it into the default plan (the B7c/EFF-1 rule admits a NEUTRAL module only when it lowers cost). Resume custody: 378 of 378 kept rows byte-identical to the predecessor's delivered text and receipts, verify_bundle PASS (I7r), the two exhausted predecessor rows re-flown without exhausting.",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-REVIEWER-AUDIT-ANCHOR-TRAIN-FOLD-A-V1",
+          "attempt_id": "attempt-slurp-native-reviewer-audit-anchor-train-fold-a-generation-v1-resume",
+          "study_commit": "2f185b13",
+          "predecessor_attempt": "attempt-slurp-native-reviewer-audit-anchor-train-fold-a-generation-v1 (ABORTED at 2,016 contacts on the ReAct-exhaustion class repaired by item E22; trace sha256 d495661d...)"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-REVIEWER-AUDIT-ANCHOR-SMOKE-4-V1",
+          "attempt_id": "attempt-slurp-native-reviewer-audit-anchor-smoke-4-generation-v1",
+          "study_commit": "c905ddf0"
+        },
+        "verdict": {
+          "path": "docs/results/2026-09-19-slurp-b8b-anchor-reviewer-audit-verdict.md",
+          "sha256": "57fbcbaee2578f30a5b179128f0c5b4a4d544e29a07e33b5abfe0d4ab9628422"
+        },
+        "analysis_dir": "SPEECHRL_DATA_DIR/analysis/SAEA-SLURP-NATIVE-REVIEWER-AUDIT-ANCHOR-TRAIN-FOLD-A-V1",
+        "primary": "official pooled SLU-F1 +0.8698 pp CI95 [-0.6341, +2.3654]; intent +1.2037 pp CI95 [-0.1852, +2.5926] (1,080 paired TRAIN A rows, per-row bootstrap, 10,000 draws, seed 20260919)",
+        "guards": "scenario +0.74, action +1.39 [+0.09, +2.69], span F1 +0.56, per-row SLU-F1 +1.01, per-row slot F1 +0.51; 0 of 18 scenario band breaches; saves exceed harms on every per-row metric",
+        "diagnostics": "react_exhaustion 1 visit / 1 row (identical_calls true, retained, delivered); finite_completion 6 rows (Reviewer length cap, latest draft delivered); planner_action_illegal 0; Reviewer ReAct depth 1/3: 7, 2/3: 1,176, 3/3: 1 (anchor 3 / 1,082 / 0); Perception requests identical to the anchor's on 1,080 of 1,080; later requests differ on every row (the audit block plus this cell's own prepared-supply provenance; 306 rows still differ once provenance and history are excluded, not attributable without printing request bytes); Reviewer findings parse 0 of 2,362 (anchor 0 of 2,167)",
+        "cost": "5,804 contacts on the delivered manifest (5.374 per row); run-cumulative 5,822 contacts / 16,591.81 repeated speech seconds against the 11,880 / 33,930 ceilings; GPU hours 3.8464 run-cumulative; utilisation 90.82 %, parked 0.021, occupancy 0.931, resume wall 9,658.8 s; 23.66 contacts per minute; 5,822 request-fit receipts, every request fits (minimum margin 7,449); one official score job",
+        "secondary": "none claimed"
+      },
+      "not_admitted_for": [
+        "the SLURP default plan: NEUTRAL with a higher cost (+13.5 % GPU hours, +7 % contacts) enters no plan",
+        "any claim of a proven gain: every point estimate is positive but the SLU CI95 straddles zero (decision 25: beneficial but not CI95-proven, recorded)",
+        "any twin: the twin rule fires only on a positive CI95 lower bound",
+        "any claim that the audit block should stay a per-row attachment: under decisions 48-53 the slot audit is one of the objects the knowledge index renders once in the prefix (index design F-12), so its next test is inside the index cell, not as a second B8b cell",
+        "any other roster or carrier; DEV-1000, Fold B and the test split are untouched"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-19-slurp-b8b-anchor-reviewer-audit-verdict.md; class 'episode' of harness-admission v3 (E6, 2026-09-16)",
+        "table": "episode",
+        "key": "native_episode.reviewer_audit",
+        "on": "slot-audit-v1",
+        "off": null,
+        "proof": "tests/unit/test_b8b_anchor_reviewer_audit_config.py::test_the_only_keys_that_move_against_the_anchor_are_the_factor_and_the_two_failure_mode_declarations",
+        "what_flew": "The ON arm flew configs/baseline/slurp-native-anchor-reviewer-audit-train-fold-a-v1.json at c905ddf0 (the aborted attempt, 378 kept rows) and its resume fragment at 2f185b13 (the 702 flown rows; the same request bytes plus the E22 declaration): the sealed anchor fragment plus native_episode.reviewer_audit slot-audit-v1 and the failure-mode declarations. The OFF arm is the sealed anchor itself.",
+        "why_this_table": "the audit attachment is one episode-level switch on the closed allowlist rails.config_tables.EPISODE_LEVEL_SWITCH_KEYS; the null arm is the key's absence"
+      },
+      "provisional": {
+        "state": "UNMET",
+        "reason": "NEUTRAL by interval width with every metric positive (decision 25: beneficial but not CI95-proven) at +13.5 % GPU hours; a per-row attachment that raises cost enters no plan",
+        "requirement": "the slot audit is one of the objects the knowledge index renders ONCE in the constant prefix (index design F-12; owner decisions 48-53): its next and only test is inside the knowledge-index cell on the 0-B base; this entry stays NEUTRAL until that cell reads, and the per-row attachment form is not registered again"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-ANCHOR-TRAIN-FOLD-A-RECOVERY-V2",
+        "attempt_id": "attempt-slurp-native-exemplars-k20-anchor-train-fold-a-generation-recovery-v2",
+        "note": "the sealed B1 arm (module M1 on the dual-store anchor), never re-flown; margins B1's own null from cell B1r (h_SLU 1.2350 / h_intent 1.2212, decision 38); beside it B1r as the second realisation of the same requests"
+      },
+      "date": "2026-09-20",
+      "module": "the Reviewer's task-contract toolkit (phase_tools.reviewer: saea-tool-task-contract-v1, mode native-tools, knowledge view text, source authority reviewer), which every SLURP native cell from the anchor to B5e carried; RETIRED by cell B1-notool (repair form 0-B, owner decisions 55-56): with the mapping withdrawn from the B1 fragment no role holds tool authority, no request carries a tools array (tool_choice none everywhere), the per-slot prefix is constant by construction and the Reviewer answers on its first contact (5 -> 4 contacts per row)",
+      "row": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-NOTOOL-V1",
+      "status": "RETIRED",
+      "status_basis": "RETIRED = the OFF arm (toolkit withdrawn) read NEUTRAL against the ON arm (the sealed B1 arm, which carried the toolkit) and lowered cost, so the default plan carries the OFF arm. Registered rule (docs/readiness/2026-09-20-slurp-b1-notool-v1-preregistration.md section 3): NEUTRAL iff both CI95 lower bounds exceed -h (1.2350 / 1.2212); HARMFUL iff a guard fails with a measured loss (decision 25). Read (paired whole-speaker cluster bootstrap, 10,000 draws, seed 20260915): official pooled SLU-F1 61.1394 -> 62.1295, +0.9901 pp CI95 [-0.5924, +2.5038] (non-inferior, not a gain); intent 80.1852 -> 80.0000, -0.1852 pp CI95 [-1.3334, +0.9076] -- the lower bound misses -1.2212 by 0.1122 pp. The verdict document writes 'NON-INFERIORITY NOT PROVEN' and leaves the status to the coordinator. Coordinator's application of owner decision 25 and the B5e precedent (2026-09-18: intent -0.09 with a lower bound crossing the margin by 0.29 pp, no measured loss, recorded NEUTRAL): the withdrawal reads NEUTRAL, hence the toolkit is RETIRED. Grounds, all measured: no measured loss on any metric (scenario +0.09, action -0.28, span F1 +0.60, per-row SLU +0.54; intent saves 23 / harms 25, McNemar p 0.885); the arm's own intent half-width 1.1205 is narrower than the margin, so the miss is 0.0845 pp of point estimate; the comparator's own replicate B1r fails the same clause against B1 (lower bound -1.3145), so a pure null cannot pass it; eight rows decide it -- the tool-free Reviewer now writes prose (completion median 28.5 -> 90 tokens) and hit the 512-token cap on 8 rows (finite_completion, retained and scored); with them excluded intent reads -0.0933 [-1.2174, +0.9709] and clears (diagnostic; no row was filtered). Against B1r the withdrawal reads -0.10 SLU / -0.09 intent, inside B1's own null. Decision-56 clause: SLU +1.619 % and intent -0.231 % relative to B1, both within 5 %, so the anchor-base and plan-base withdrawal cells are NOT flown. Efficiency (server.log join exact on 4,432 of 4,432): prefilled tokens per row 26,072 (B1r) -> 8,020 (-69.2 %); GPU hours per 1,080 rows 3.851 -> 1.611 (0.418x); contacts per minute 23.10 -> 42.91 (1.86x); cache hit 43.3 % -> 75.8 %; projected 13,078-row read 46.6 h -> 19.5 h; Reviewer prefill per row 9,276 -> 237 and Planner 9,264 -> 262 (the tools array sat between the shared prefix and the role content and invalidated the row tail's cache); parked 9.2 %, slot occupancy 0.787 (the short row under-fills four slots). Delivery shape healthy: 0 Solver tool-call-shaped completions (EFF-1: 145), 4 unparsed rows (= B1's own 4). One scenario, music, breaches the intent band (-8.33 [-15.72, -1.75], +5 net harmed) and repeats against B1r (-10.00): carried as a diagnostic into the index cell's read. A NEUTRAL form that lowers cost enters the SLURP default plan (the B7c / EFF-1 design rule; decision 50) and becomes the base of the knowledge-index cell (decision 53). The owner may overrule this application of decision 25; the verdict's own status line is quoted verbatim in the status_basis so nothing is hidden.",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-NOTOOL-V1",
+          "attempt_id": "attempt-slurp-native-exemplars-k20-notool-train-fold-a-generation-v1",
+          "study_commit": "23f011dd"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-NOTOOL-SMOKE-4-V1",
+          "attempt_id": "attempt-slurp-native-exemplars-k20-notool-smoke-4-generation-v1r",
+          "study_commit": "0e4cdc05",
+          "note": "the first smoke attempt id was voided with zero contacts after two pre-contact harness refusals repaired by items E23 / E23b (void receipt under coordination/slurp-b1-notool-v1/)"
+        },
+        "verdict": {
+          "path": "docs/results/2026-09-20-slurp-b1-notool-verdict.md",
+          "sha256": "b020a72f68d59eec15d9adf52750ed83f577f4b1f373d3eb60dcec607f763e18"
+        },
+        "analysis_dir": "SPEECHRL_DATA_DIR/analysis/SAEA-SLURP-B1-NOTOOL-PAIRED-ANALYSIS-V1",
+        "primary": "official pooled SLU-F1 +0.9901 pp CI95 [-0.5924, +2.5038]; intent -0.1852 pp CI95 [-1.3334, +0.9076] against -1.2212 (1,080 paired TRAIN A rows, 125 speaker clusters, 10,000 draws, seed 20260915)",
+        "guards": "scenario +0.09, action -0.28, span F1 +0.60, per-row SLU +0.54; intent saves 23 / harms 25 (McNemar p 0.885); 1 of 18 scenarios breaches the intent band (music -8.33, +5 net harmed; repeats vs B1r)",
+        "diagnostics": "requests 4,432, 0 with a tools array, tool_choice none on all, 0 tool calls (B1 1,084); contacts per row 3:8 / 4:1,032 / 7:40; Reviewer visits 1:1,040 / 2:40; finite_completion 8 (all retained and scored), revision_limit 3, react_exhaustion 0, planner_action_illegal 0; 0 Solver tool-call-shaped completions; first request byte-identical to B1r's on 1,080 of 1,080, tool-free contacts in sync 1,310 of 1,310 byte-identical, Reviewer requests identical to B1r's once tool_schemas AND tool_choice (auto -> none) are removed (195 of 195); the Reviewer's answer shape changed (540 of 1,120 load as JSON)",
+        "cost": "4,432 contacts (4.104 per row), 12,687.05 repeated speech seconds, 35,728,582 prompt / 266,131 completion tokens, 0 tool calls, 1.6108 GPU hours, wall 6,400.4 s, occupancy 0.787, utilisation 77.7 %, parked 0.092, 4,432 of 4,432 requests fit (17,728 endpoints), one official score job (152.39 s)",
+        "efficiency": "prefilled tokens per row 8,019.8 (B1r 26,071.9; EFF-1 10,127); GPU-h per 1,080 rows 1.611 (B1r 3.851; EFF-1 1.843); contacts per minute 42.91 (B1r 23.10; EFF-1 45.94); cache hit 75.76 % (43.32 %); packet re-decodes per row 0.996; projected 13,078-row read 19.5 h (46.6 h; 22.3 h)",
+        "secondary": "against B1r: SLU -0.10 [-1.64, +1.33], intent -0.09 [-1.39, +1.23]"
+      },
+      "not_admitted_for": [
+        "any claim of a proven gain: the SLU CI95 straddles zero",
+        "any claim that intent non-inferiority was PROVEN at 1.2212: the lower bound missed by 0.11 pp; the status rests on decision 25 and the B5e precedent, applied by the coordinator and open to the owner's overruling",
+        "the anchor-base and plan-base withdrawal cells: not flown under decision 56 (both numbers within 5 % of B1's)",
+        "0-A (decode-time ban with constant rendering): not registered; it is the fallback only on a HARMFUL read with a measured loss (decision 55)",
+        "any other roster or carrier; DEV-1000, Fold B and the test split are untouched"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-20-slurp-b1-notool-verdict.md; class 'phase_tools' and status 'RETIRED' of harness-admission v3 as extended 2026-09-20 by item E25 (this entry is the one the extension was made for)",
+        "table": "phase_tools",
+        "key": "phase_tools.reviewer",
+        "on": {
+          "reviewer": {
+            "allowed_tools": [
+              "saea-tool-task-contract-v1"
+            ],
+            "knowledge_views": [
+              "text"
+            ],
+            "mode": "native-tools",
+            "source_authority_role": "reviewer"
+          }
+        },
+        "off": null,
+        "proof": "tests/unit/test_config_table_module_switches.py::test_the_reviewer_toolkit_withdrawal_is_one_phase_tools_key",
+        "what_flew": "The OFF arm flew configs/baseline/slurp-native-anchor-exemplars-k20-notool-v1.json at 23f011dd: the B1r fragment (configs/baseline/slurp-native-anchor-exemplars-k20-replicate-v1.json) with the phase_tools mapping removed; native_episode.tool_schema_rendering absent; roles.reviewer.max_iterations 3 (bound by the program ceiling); the E22 react_exhaustion_policy declaration armed as on every cell registered after 2026-09-19 (E13 was already on B1r). The ON arm is the sealed B1 arm (the flown B1 fragment, whose Reviewer held the task-contract tool), never re-flown. The proof test reads the two committed fragments and shows them differing in phase_tools alone once the fit receipt, the prepared-supply binding, the what_this_is prose and the E22 failure-mode declaration are set aside as bookkeeping and derived keys.",
+        "why_this_class": "the module is one role's tool authority, which the toolkits table (a task type's catalogue selection) and the episode class (rendering of a granted toolkit, E17) do not name; and the module is a WITHDRAWAL, which only a class whose ON arm is the toolkit itself can state without calling an absence an ON arm"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-NOTOOL-V1",
+        "attempt_id": "attempt-slurp-native-exemplars-k20-notool-train-fold-a-generation-v1",
+        "note": "the sealed tool-free B1 arm (cell B1-notool, 62.1295 / 80.0000), never re-flown; margins B1r's own null (h_SLU 1.2350 / h_intent 1.2212, decision 38 fallback: the B1-notool configuration has no replicate of its own)"
+      },
+      "date": "2026-09-21",
+      "module": "the knowledge index: native_episode.knowledge_index armed on the released view slurp-knowledge-index-v1 at owner decision 52's provisional defaults (intent L1 Activation boundary / slot L1 Admissible formats / edge L0; ordering taxonomy-frequency-v1; pointers intent 3 / slot 8 / exemplar vote 3; expansions exemplar 5 / slot_card 4 / intent_card 0; Solver citation permitted) -- the constant L0+L1 index rendered once per slot as a suffix of the contract fill, a per-row pointer block and budgeted expansions replacing the per-row slot-contract cards and the raw exemplar block; cell IDX on the tool-free B1 base, with its derangement twin IDXT (view slurp-knowledge-index-twin-v1, seed 20260920) as the form-matched control",
+      "row": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-INDEX-V1",
+      "status": "HARMFUL",
+      "status_basis": "HARMFUL is this table's status for a gating guard that fails with a measured loss (owner decision 25). Registered rule (docs/readiness/2026-09-20-slurp-b1-index-v1-preregistration.md section 3): NEUTRAL iff both CI95 lower bounds exceed -h (1.2350 / 1.2212); HARMFUL iff a guard fails with a measured loss. Read (paired whole-speaker cluster bootstrap, 125 clusters, 10,000 draws, seed 20260915), both guards a measured loss: official pooled SLU-F1 62.1295 -> 54.7576, -7.3719 pp CI95 [-9.7248, -4.7967]; intent 80.0000 -> 77.5926, -2.4074 pp CI95 [-4.5554, -0.3188]; each point estimate below -h and each CI95 upper bound below zero. Twin decomposition (decision 62): FORM (IDXT minus base) SLU -9.9697 [-12.46, -7.32], intent +0.1852 [-2.00, +2.31]; CONTENT (IDX minus IDXT) SLU +2.5978 [+0.80, +4.49], intent -2.5926 [-4.33, -0.86]; additivity exact. The loss is the FORM: replacing the per-row slot-contract cards and the raw exemplar block by a constant index plus pointers and four expansion cards costs about ten SLU points, and restoring the id-to-line correspondence buys back about a quarter of it -- an upper bound, because the IDX expansion block is about 3,000 characters longer per row than the twin's (1,055 of 1,080 rows; loss deepest in the top length quartile). Index-consumption read (decision 64): MISLEADING TERSENESS in the IDX verdict (the core reads the block -- delivered slot types inside the pointed set 86.28 % vs 71.77 % for the base against the same pointer blocks; expanded-stratum recall 0.764 -> 0.859 -- but what the terse line carries is wrong: expanded-stratum precision 0.671 -> 0.516 with +45 % delivered instances, intent-pointer adherence 95.35 % -> 91.76 %, citations near zero and higher on the deranged twin); the twin verdict reads the same evidence as undecided with NON-CONSUMPTION the better-supported branch (the twin equals or beats IDX on pointer adherence: the pointer block supplies a label vocabulary, not content that is read). Either way the contingency fixed by decision 64 is the same for what follows: the richer-granularity route is contraindicated (more terse text is not the remedy) and the form is CLOSED at decision 52's defaults; the owner decides the next form (decision 72). Efficiency, measured whatever the verdict: prefilled tokens per row 8,019.8 -> 3,379.1 (render proof predicted 3,096; +9.1 %), GPU hours per 1,080 rows 1.6108 -> 1.3340 (0.828x), contacts per minute 42.91 -> 53.41, cache share 89.99 %, projected 13,078-row read 19.51 h -> 16.15 h; cost fell and the score fell more, so decision 50's 'lowers cost and loses nothing' fails on its second clause. Scenario diagnostic: play intent 63.33 -> 21.67 (28 harms / 3 saves) carries -2.31 pp of the -2.41 pp intent loss; the base's music breach does not deepen (-3.33 [-12.96, +5.56]).",
+      "evidence": {
+        "arm": {
+          "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-INDEX-V1",
+          "attempt_id": "attempt-slurp-native-exemplars-k20-index-train-fold-a-generation-v1",
+          "study_commit": "38984e80"
+        },
+        "twin": {
+          "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-INDEX-TWIN-V1",
+          "attempt_id": "attempt-slurp-native-exemplars-k20-index-twin-train-fold-a-generation-v1",
+          "study_commit": "9f2997d0",
+          "note": "the form-matched control (HARMFUL as a control reading: SLU -9.9697 [-12.46, -7.32] against the base); enters no plan; its own verdict is docs/results/2026-09-21-slurp-idxt-knowledge-index-twin-verdict.md"
+        },
+        "smoke": {
+          "run_id": "SAEA-SLURP-NATIVE-EXEMPLARS-K20-INDEX-SMOKE-4-V1",
+          "attempt_id": "attempt-slurp-native-exemplars-k20-index-smoke-4-generation-v1",
+          "study_commit": "38984e80"
+        },
+        "verdict": {
+          "path": "docs/results/2026-09-21-slurp-idx-knowledge-index-verdict.md",
+          "sha256": "e05df2be64534475d1da8a1a6c96266d74b037191882b25a59943b6b4dde9d2f"
+        },
+        "twin_verdict": {
+          "path": "docs/results/2026-09-21-slurp-idxt-knowledge-index-twin-verdict.md",
+          "sha256": "7fc3be1b9c17edd5f1d1063985ee07d550365f7e67587d1e5d4a829f53345786"
+        },
+        "analysis_dir": "SPEECHRL_DATA_DIR/analysis/SAEA-SLURP-B1-INDEX-PAIRED-ANALYSIS-V1 (driver index_cell_read.py, every table regenerable by stage) and SPEECHRL_DATA_DIR/analysis/SAEA-SLURP-B1-INDEX-TWIN-PAIRED-ANALYSIS-V1 (driver twin_cell_read.py)",
+        "primary": "official pooled SLU-F1 -7.3719 pp CI95 [-9.7248, -4.7967]; intent -2.4074 pp CI95 [-4.5554, -0.3188] against 1.2350 / 1.2212 (1,080 paired TRAIN A rows, 125 speaker clusters, 10,000 draws, seed 20260915); v3 and the TRAIN symmetric sibling agree in sign",
+        "guards": "both gating guards fail with a measured loss; 16 of 18 scenarios lose SLU on the twin; play intent -41.67 pp on IDX (decision-17 flag); music -3.33 (not flagged)",
+        "diagnostics": "one system-message sha256 over all 4,516 contacts and 1,080 rows; index receipt on every contact; degradation steps 0; 0 tools arrays, tool_choice none everywhere, 0 tool calls; contacts per row 4.182 (3:19 / 4:989 / 6:1 / 7:71) vs base 4.104; the Perception request differs from the base's in exactly {task_instruction, supplied_evidence, history, evidence_provenance_content} on 1,080 of 1,080 rows; finite_completion 20 (base 8), react_exhaustion 0, planner_action_illegal 1 (base 0), revision_limit 9 (base 3), REVISE on 72 rows (base 40); Reviewer completion median 139 / p90 218 tokens (base 90 / 171), 20 contacts at the 512 cap",
+        "consumption": "IDX verdict: MISLEADING TERSENESS (block read, content wrong); twin verdict: undecided, NON-CONSUMPTION better supported (pointer adherence twin 97.69 % vs IDX 91.76 % vs base-on-the-same-blocks 95.35 %; slot-type instances pointed twin 83.32 % vs IDX 86.04 % vs base 69.41 %; citations 24 rows on IDX vs 42 on the twin); format compliance flat (98.16 % vs 98.47 % vs twin 99.01 %; only 4-6 of 54 slot types machine-decidable); expanded-bucket precision 0.675 (base) -> 0.515 (IDX) / 0.488 (twin) with recall up",
+        "cost": "4,516 contacts (4.182 per row), 12,853.98 repeated speech seconds, 36,449,992 prompt / 339,457 completion tokens, 0 tool calls, 1.334 GPU hours, wall 5,302.4 s, occupancy 0.729, utilisation 75.0 %, parked 0.093, 4,516 of 4,516 requests fit (18,064 endpoints, min margin 14,379), one official score job; twin 4,559 contacts, 1.247 GPU hours",
+        "efficiency": "prefilled tokens per row 3,379.1 (base 8,019.8; render proof 3,096); GPU-h per 1,080 rows 1.334 (base 1.611); contacts per minute 53.41 (base 42.91); cache share 89.99 %; packet re-decodes per row 0.996; projected 13,078-row read 16.15 h (base 19.51 h); twin 2,795.7 tokens per row, 1.247 GPU-h, 56.84 contacts per minute, 15.10 h",
+        "secondary": "length difference IDX minus twin expansion block: mean +3,025.9 characters, median +3,040, p90 +5,021, IDX longer on 1,055 of 1,080 rows; Pearson 0.074 / Spearman 0.096 with the per-row SLU difference; quartile means +0.81 / +0.77 / +2.86 / +4.47 pp"
+      },
+      "not_admitted_for": [
+        "any default plan (HARMFUL never enters a plan)",
+        "the richer-granularity variant (expansion_budget.intent_card > 0 or a larger slot_card budget): contraindicated by the MISLEADING TERSENESS / NON-CONSUMPTION reading (decision 64's contingency routes there only on NON-CONSUMPTION with flat diagnostics; here the terse lines were read and misled)",
+        "any claim about the content effect beyond an upper bound: IDX minus IDXT is confounded with about 3,000 characters per row of extra expansion text (decision 62)",
+        "any other roster or carrier; DEV-1000, Fold B and the test split are untouched; the Audio2Tool index (item E28 views) is a separate object under owner decision 70"
+      ],
+      "switch": {
+        "added_by": "docs/results/2026-09-21-slurp-idx-knowledge-index-verdict.md; class 'episode' of harness-admission v3 (native_episode.knowledge_index admitted to the allowlist by item E21)",
+        "table": "episode",
+        "key": "native_episode.knowledge_index",
+        "off": null,
+        "on": {
+          "view": "slurp-knowledge-index-v1",
+          "release": {
+            "relpath": "knowledge/slurp/semantic/slurp-knowledge-index-v1/release.json",
+            "root": "data",
+            "sha256": "bcfc220b11672169f81e9a9f941e6c1bee05e9a5e3ac7aa3bd6dc448017235d2"
+          },
+          "snapshot": {
+            "relpath": "knowledge/slurp/semantic/slurp-knowledge-index-v1/snapshot.json",
+            "root": "data",
+            "sha256": "f6d61056165a41d91e604a55d80a0aef08491a8052dc713e95eae66cfeb2cd4c"
+          },
+          "granularity": {
+            "intent": {
+              "level": "L1",
+              "section": "Activation boundary"
+            },
+            "slot": {
+              "level": "L1",
+              "section": "Admissible formats"
+            },
+            "edge": {
+              "level": "L0",
+              "section": "Confusable exclusions"
+            }
+          },
+          "ordering": "taxonomy-frequency-v1",
+          "pointer_budget": {
+            "intent": 3,
+            "slot": 8,
+            "exemplar_vote": 3
+          },
+          "expansion_budget": {
+            "exemplar": 5,
+            "slot_card": 4,
+            "intent_card": 0
+          },
+          "solver_citation": "permitted"
+        },
+        "proof": "tests/unit/test_e21_knowledge_index.py::test_the_key_resolves_in_the_episode_class_and_its_off_arm_is_its_absence",
+        "what_flew": "The ON arm flew configs/baseline/slurp-native-anchor-exemplars-k20-index-v1.json at 38984e80: the sealed B1-notool fragment plus this one key (the E13 / E22 declarations already on the base). The OFF arm is the sealed B1-notool arm itself (no knowledge_index key). The twin flew configs/baseline/slurp-native-anchor-exemplars-k20-index-twin-v1.json at 9f2997d0: the same block with the view pins of slurp-knowledge-index-twin-v1.",
+        "why_this_table": "the module changes how the Solver, Reviewer and Planner are supplied inside the native episode (a constant index suffix plus a per-row pointer block and expansions) and is declared under native_episode; it moves request bytes, so it is not run-class, and it is not one phase's knowledge_views entry"
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "run_id": "SAEA-SLURP-NATIVE-DEFAULT-PLAN-LOCK-V1",
+        "attempt_id": "attempt-slurp-native-default-plan-lock-train-fold-a-generation-v1",
+        "note": "read 2026-09-22 against the sealed PLAN arm at the plan's own null (h_SLU 1.2485 / h_intent 0.9943, decision 38): SLU +0.58 pp [-0.82, +1.80] non-inferior, intent -0.09 pp [-1.16, +0.94] non-inferiority NOT PROVEN by width; NEUTRAL (decision 25 precedent); parse rate 100 %; enters no plan, serves as the measurable-Reviewer base of the decision-85 pruning cells (decision 97)"
+      },
+      "date": "2026-09-22",
+      "module": "Reviewer verdict as a closed set of primitives: line 1 of the Reviewer's response is exactly one token of vocabulary saea-review-primitives-v1 (ACCEPT / REVISE-INTENT / REVISE-SLOT-MISSING / REVISE-SLOT-EXTRA / REVISE-SLOT-VALUE / REVISE-FORMAT / UNSURE), parsed by rails.review_primitives.parse_review_primitive and recorded as native_episode_receipt.reviewer_verdicts (legal / review_verdict_illegal / react_exhaustion); the verdict is a recommendation only -- the Planner keeps routing authority (item E37, owner decision 84 of 2026-09-21)",
+      "row": "SAEA-SLURP-NATIVE-REVIEW-PRIMITIVES-V1",
+      "status": "NEUTRAL",
+      "status_basis": "NEUTRAL by owner decision 25 (the B1-notool precedent, decision 61): SLU non-inferior (+0.58 pp [-0.82, +1.80] at margin 1.2485); intent -0.09 pp [-1.16, +0.94] misses the margin 0.9943 by 0.17 pp of CI width, no measured loss; cost lower. The module was registered for measurability (decision 84), not for gain, and enters no default plan by itself.",
+      "evidence": {
+        "model_free": "the parser, the config-switch and the wire-through-the-real-role-graph proofs of tests/unit/test_e37_reviewer_verdict.py: every vocabulary token; leading blank lines; trailing rationale kept byte-exact; near-miss tokens (Accept, REVISE, REVISE-SLOT) illegal; empty text illegal; a fake-transport row with a legal, an illegal and a react_exhaustion Reviewer visit carries three reviewer_verdicts marks and renders the raw review text unchanged into the Planner's query; an unarmed episode's receipt carries no reviewer_verdicts key at all (byte-identical to its pre-E37 self). The verifier script's 'primitives' stage (scripts/analysis/slurp_verifier_measurement.py) is proved on a synthetic receipt set with known precision.",
+        "primary": "none: no model, tokenizer, encoder or server contact has been made for this module"
+      },
+      "not_admitted_for": [
+        "any task-quality, comparator or admission claim: the module has not flown",
+        "any request-byte or delivered-byte claim beyond the model-free proofs above",
+        "any carrier other than SLURP"
+      ],
+      "caveats": [
+        "PENDING carries no obligation to enter a default plan (the gate's rule 2 reads only ADMITTED/NEUTRAL); this entry exists so the allowlist admission (rails.config_tables.EPISODE_LEVEL_SWITCH_KEYS, its thirteenth member) has a receipt before the first read, per the gate's own rule"
+      ],
+      "switch": {
+        "added_by": "docs/superpowers/specs/2026-09-22-slurp-reviewer-primitive-verdict-design.md; class 'episode' of harness-admission v3, whose closed allowlist item E37 extends with this key (rails.config_tables.EPISODE_LEVEL_SWITCH_KEYS, its thirteenth member)",
+        "table": "episode",
+        "key": "native_episode.reviewer_verdict",
+        "off": null,
+        "on": {
+          "vocabulary": "saea-review-primitives-v1"
+        },
+        "proof": "tests/unit/test_default_plan_lock_cells.py::test_r_prim_moves_exactly_the_reviewer_verdict_module_against_the_plan",
+        "what_flew": "NOTHING flew for this entry: cell R-PRIM is registered (configs/experiment/slurp-native-review-primitives-v1.json, configs/experiment/slurp-native-review-primitives-smoke-4-v1.json) and HELD; root queues it through the scheduled-task driver (decision 77) once its own decision receipt and prepared supply are in place. The ON arm is proved against the fake model through the real role graph (rails.review_primitives.parse_review_primitive; the Reviewer's _ApplyRole branch in reproduction/ojw/native_episode.py) with three visits -- legal, illegal and react_exhaustion -- each writing its own native_episode_receipt.reviewer_verdicts mark and none of them touching the raw text the Planner's query renders. The OFF arm (the key absent) is proved receipt-byte-identical to the pre-E37 shape by the same test module. The baseline fragment configs/baseline/slurp-native-review-primitives-baseline-v1.json is the locked PLAN fragment plus exactly this key and the Reviewer's swapped instruction_template, proved by tests/unit/test_default_plan_lock_cells.py::test_r_prim_moves_exactly_the_reviewer_verdict_module_against_the_plan.",
+        "why_this_table": "the module reads the Reviewer's own completion inside the episode's role chain and is declared inside the native_episode block beside the roles it governs -- a mode of none of the four per-phase tables (not what a phase observes, is supplied with, is judged by or may call) and not a per-run driver knob, exactly like E13's, E20's and E22's keys. It renders NO request byte of its own -- the parse happens strictly AFTER the Reviewer's response is already in hand -- but it is declared 'episode' rather than 'run' because it is read inside the role chain beside the roles it governs, exactly as E13's, E20's and E22's own zero-request-byte failure-mode keys are."
+      },
+      "verdict": "docs/results/2026-09-22-slurp-review-primitives-verdict.md",
+      "provisional": {
+        "state": "UNMET",
+        "requirement": "Before native_episode.reviewer_verdict may enter a default plan, intent non-inferiority must be PROVEN on a request-identical replicate (R-PRIMr) at the plan's own null, or the module must be carried into the plan by a pruning cell (P1 / P0, decision 85) whose own read admits it. Until then the module is the measurable-Reviewer BASE of the pruning cells only (decision 97) and is barred from every default plan."
+      }
+    },
+    {
+      "carrier": "slurp",
+      "comparator": {
+        "attempt_id": "attempt-slurp-native-default-plan-lock-train-fold-a-generation-v1",
+        "run_id": "SAEA-SLURP-NATIVE-DEFAULT-PLAN-LOCK-V1"
+      },
+      "date": "2026-09-27",
+      "evidence": {
+        "falsifier": "model-free, before any contact: on the REAL locked PLAN cell through the REAL flight dispatch against a recording fake server, every request body, client payload, sealed row, canonical output row and the multiset of trace records are identical with the key on and off (and off and off), modulo the request-id counter and the slot number that today's dispatcher already assigns by arrival; the minted first-phase supplies agree on their output bytes",
+        "registration": "docs/readiness/2026-09-27-slurp-stage3-slotfill-fold-a-v1/README.md",
+        "status_note": "PENDING: registered and held; the no-harm read (intent 0.9943 / SLU 1.2485 at the in-chain A/A) and the throughput read are the cell's own and do not exist yet. Nothing here enters a plan."
+      },
+      "module": "dispatcher slot fill (dispatch: recall prefetch, role input off the shared event loop, frozen static heap)",
+      "row": "SAEA-SLURP-STAGE3-SLOTFILL-FOLD-A-V1",
+      "status": "PENDING",
+      "switch": {
+        "added_by": "owner decision 159, 2026-09-27; rails.dispatch_slot_fill, read by core.flight.runtime.FlightRuntime._dispatch_phase_program",
+        "falsifier": {
+          "kind": "request-bytes-identical",
+          "note": "the proof bench's own falsifier (scripts/analysis/slotfill_fake_server_harness.py): the fake server records the exact body bytes the flight's own LlamaServerTransport renders, and the key-on run's bodies equal the key-off run's per (row, contact) with id_slot masked. That is what puts this module outside the four per-phase tables.",
+          "receipt": "docs/checks/speech-aware-evidence-acquisition/2026-09-27-dispatch-slot-fill-byte-identity-v1"
+        },
+        "key": "dispatch",
+        "off": null,
+        "on": {
+          "gc_freeze": true,
+          "recall_prefetch": true,
+          "role_input_offload": true,
+          "schema": "saea-dispatch-slot-fill-v1"
+        },
+        "proof": "tests/unit/test_dispatch_slot_fill.py::test_every_switch_on_sends_the_same_requests_and_seals_the_same_rows",
+        "table": "run",
+        "what_flew": "Nothing yet: the SLOTFILL arm's baseline fragment is the locked PLAN baseline plus this one key, and its in-chain A/A is the same fragment without it (tests/unit/test_slotfill_config.py).",
+        "why_this_class": "dispatch is read flat by the flight runtime and decides how the native role episode is SCHEDULED -- a row's Perception-independent recall computed ahead, the role-input builder off the shared event loop, the loaded heap frozen out of the collector. It is per-RUN, while the four tables are per-PHASE and each of them changes the request the frozen core sees; this one provably changes no request byte, which is both why it has no table entry and why it is allowed to have none."
+      }
+    },
+    {
+      "carrier": "slurp",
+      "date": "2026-09-30",
+      "evidence": {
+        "admitting_read_of_the_components": "docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md",
+        "lock": "docs/results/2026-09-30-slurp-v2-1-lock-v1.md",
+        "registration": "docs/readiness/2026-09-30-slurp-stage3-module-comp1b-dev2000-added-v1/README.md",
+        "byte_proof": "python -B scripts/analysis/module_equivalence_proof.py --at m0 m6",
+        "status_note": "PENDING: the module is a COMPOSITION, not a new mechanism. Its ON arm here is COMP-1b (agree-vote-seed + centroid-boundary-key), whose components were REPLICATED and ADMITTED on DEV-2000-ADDED by the A2 read (intent +4.60 [+2.58, +6.73], SLU-F1 +0.53 [-1.04, +2.09], lock v2.0 bytes); the module cell compiling it onto lock v2.1 is registered and HELD. Nothing here enters a plan."
+      },
+      "module": "the evidence-consumption module saea-evidence-consumption-module-v1 (profile slurp): the composed consumption policy as one block, compiled onto the lock",
+      "row": "SAEA-SLURP-STAGE3-MODULE-COMP1B-DEV2000-ADDED-V1",
+      "status": "PENDING",
+      "switch": {
+        "added_by": "migration step 6 of the consumption module, 2026-09-30 (owner decisions 195/196/204; coordinator ruling R2)",
+        "falsifier": {
+          "kind": "compiles-to-lock",
+          "lock": "v2.1",
+          "cells": [
+            "slurp-native-stage3-g5-fold-a-v1",
+            "slurp-native-stage3-g5-fold-a-smoke-4-v1",
+            "slurp-native-stage3-module-comp1b-aa-dev2000-added-v1"
+          ],
+          "note": "The check compiles the OFF arm and requires it to equal lock v2.1's policy blocks, and each named cell to carry exactly those blocks on its own roster: cell G5's arm and smoke flew the lock-v2.1 bytes on TRAIN Fold A (the lock record's own evidence), and the module cell's in-chain A/A carries them on DEV-2000-ADDED."
+        },
+        "key": "native_episode.consumption_module",
+        "lock_superseded_by": "v2.3",
+        "off": {
+          "columns": [],
+          "components": [
+            {
+              "component_id": "agree-vote-seed",
+              "state": "off"
+            },
+            {
+              "component_id": "centroid-boundary-key",
+              "state": "off"
+            },
+            {
+              "component_id": "solver-citation-contract",
+              "state": "off"
+            },
+            {
+              "component_id": "reviewer-g5-repair",
+              "state": "off"
+            },
+            {
+              "component_id": "relisten",
+              "state": "off"
+            },
+            {
+              "component_id": "top2-contrast",
+              "state": "off"
+            },
+            {
+              "component_id": "forced-candidate-list",
+              "state": "off"
+            },
+            {
+              "component_id": "key-source:k6p",
+              "state": "off"
+            },
+            {
+              "component_id": "scope-rule",
+              "state": "off"
+            },
+            {
+              "component_id": "e3-progressive-slots",
+              "state": "off"
+            },
+            {
+              "component_id": "supply-abstain",
+              "state": "off"
+            }
+          ],
+          "lock": "v2.1",
+          "module_id": "saea-evidence-consumption-module-v1",
+          "profile": "slurp"
+        },
+        "on": {
+          "columns": [],
+          "components": [
+            {
+              "admitted_by": "docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md",
+              "component_id": "agree-vote-seed",
+              "params": {
+                "agreement_source": {
+                  "embedded_signal": "derived: the share of this row's own top-20 sealed TRAIN-exemplar recall whose frozen build-time task_target equals each boundary intent, self-excluded by the row's utterance identity and normalised to 1. Speech-keyed by construction -- the recall it summarises is the row's own sealed speech vector against the frozen pool -- and gold-free: the key is a released store property, never a label, transcript or future turn. Built model-free by scripts/build_slurp_intent_exemplar_agreement.py with zero model, server, encoder, embedder, scorer, network and GPU contacts; receipt beside the artifact.",
+                  "kind": "sealed-agreement",
+                  "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-DEV2000-ADDED-V1/agreement.jsonl",
+                  "sha256": "283bd9f58025b98a7c92f3b5f3495fce1e4b352bae52a3fc62bb8781b79e92d8",
+                  "tool_contact_ledger_row": "SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-DEV2000-ADDED-V1"
+                },
+                "k": 60,
+                "w_agree": 1.0
+              },
+              "record": "docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md",
+              "state": "on"
+            },
+            {
+              "admitted_by": "docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md",
+              "component_id": "centroid-boundary-key",
+              "params": {
+                "facet_source": {
+                  "embedded_signal": "text: the intent's unit-normalised MEAN construction-TRAIN utterance vector (R01-excluded pool, one centroid per released intent-boundary facet; the one intent with no pool member keeps the flown written key), arithmetic over the pinned pool key vectors at zero encoder contacts; the key side is knowledge, the delivered body is unchanged.",
+                  "kind": "sealed-vectors",
+                  "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-V1/facets.jsonl",
+                  "sha256": "16c33640151cff6428bc50e4f00ced93b35f76fa186b8d08fcefdfdb33fd5532",
+                  "tool_contact_ledger_row": "SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-V1"
+                }
+              },
+              "record": "docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md",
+              "state": "on"
+            },
+            {
+              "component_id": "solver-citation-contract",
+              "state": "off"
+            },
+            {
+              "component_id": "reviewer-g5-repair",
+              "state": "off"
+            },
+            {
+              "component_id": "relisten",
+              "state": "off"
+            },
+            {
+              "component_id": "top2-contrast",
+              "state": "off"
+            },
+            {
+              "component_id": "forced-candidate-list",
+              "state": "off"
+            },
+            {
+              "component_id": "key-source:k6p",
+              "state": "off"
+            },
+            {
+              "component_id": "scope-rule",
+              "state": "off"
+            },
+            {
+              "component_id": "e3-progressive-slots",
+              "state": "off"
+            },
+            {
+              "component_id": "supply-abstain",
+              "state": "off"
+            }
+          ],
+          "lock": "v2.1",
+          "module_id": "saea-evidence-consumption-module-v1",
+          "profile": "slurp"
+        },
+        "proof": "tests/unit/test_consumption_module_step6.py::test_the_module_switch_is_one_key_whose_off_arm_compiles_to_the_lock",
+        "table": "module",
+        "what_flew": "Nothing under the module key yet: the module cell and its A/A are registered and held; the byte proof shows the ON arm's policy blocks are cell A2's flown bytes except the lock-v2.1 Reviewer pin.",
+        "why_this_class": "The composed policy is one key whose OFF arm is the LOCK, not the key's absence: every episode-class key's OFF arm is its own null form, while the module's OFF arm is a declared block (every component off) that compiles to the lock the composed read is compared against. It is neither a per-phase table entry nor a run-level scheduler, and it moves request bytes whenever a component is on."
+      }
+    }
+  ],
+  "switch_classes": [
+    "judges",
+    "knowledge_views",
+    "observe",
+    "toolkits",
+    "run",
+    "episode",
+    "stores",
+    "phase_tools",
+    "module"
+  ]
+}

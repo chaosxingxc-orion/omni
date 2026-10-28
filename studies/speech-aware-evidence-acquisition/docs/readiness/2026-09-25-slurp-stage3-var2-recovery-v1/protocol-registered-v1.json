@@ -1,0 +1,69 @@
+{
+  "actions": [
+    "exk10",
+    "exk30",
+    "exdiv",
+    "plan"
+  ],
+  "analysis": "Official pooled word/char counts, intent, empty-target FP, per-scenario natural/equal summaries; paired utterance bootstrap 10000 seed20260915. No borrowed pooled-F1 detection threshold. Frozen feedback F0 from sealed VAR1 PLAN source.",
+  "authority": "Root diagnosis of the aborted VAR-2 full attempt on 2026-09-25; one recovery only.",
+  "cells": {
+    "full": {
+      "attempt_id": "attempt-slurp-native-stage3-var2-supply-variants-r01c-recovery-v1-generation",
+      "audio_cap": 46357,
+      "baseline": "slurp-native-stage3-var2-supply-variants-r01c-recovery-baseline-v1",
+      "cell_id": "slurp-native-stage3-var2-supply-variants-r01c-recovery-v1",
+      "composed_config_hash": "71c86e04a2fc07a229cb1c59d955236ed83fb5adaf17fd0f4b16fde34bfae7c6",
+      "experiment": "slurp-native-stage3-var2-supply-variants-r01c-recovery-v1",
+      "fit_attempt_id": "attempt-slurp-native-stage3-var2-supply-variants-r01c-recovery-v1-fit",
+      "fit_cap": 42500,
+      "fit_cell_id": "slurp-native-stage3-var2-supply-variants-r01c-recovery-fit-v1",
+      "fit_run_id": "SAEA-SLURP-STAGE3-VAR2-SUPPLY-VARIANTS-R01C-RECOVERY-FIT-V1",
+      "gen_cap": 10625,
+      "gpu_hours": 8.0,
+      "protocol_hash": "e04ed15bae2236654bc95f23237707d060af57eed715832a9359a3832829bcf4",
+      "rows": 625,
+      "run_id": "SAEA-SLURP-STAGE3-VAR2-SUPPLY-VARIANTS-R01C-RECOVERY-V1",
+      "split_identity_hash": "f56bc386776421aec2d8001d8697611b01c9b0562885a462759b15531e2f4515"
+    },
+    "smoke": {
+      "attempt_id": "attempt-slurp-native-stage3-var2-supply-variants-r01c-recovery-smoke-4-v1-generation",
+      "audio_cap": 290,
+      "baseline": "slurp-native-stage3-var2-supply-variants-r01c-recovery-smoke-4-baseline-v1",
+      "cell_id": "slurp-native-stage3-var2-supply-variants-r01c-recovery-smoke-4-v1",
+      "composed_config_hash": "dfc412b7f90d4ac71a7be89aaa46100edb20f762a4969ea3ed97a2adf0d86a5a",
+      "experiment": "slurp-native-stage3-var2-supply-variants-r01c-recovery-smoke-4-v1",
+      "fit_attempt_id": "attempt-slurp-native-stage3-var2-supply-variants-r01c-recovery-smoke-4-v1-fit",
+      "fit_cap": 272,
+      "fit_cell_id": "slurp-native-stage3-var2-supply-variants-r01c-recovery-smoke-4-fit-v1",
+      "fit_run_id": "SAEA-SLURP-STAGE3-VAR2-SUPPLY-VARIANTS-R01C-RECOVERY-SMOKE-4-FIT-V1",
+      "gen_cap": 68,
+      "gpu_hours": 1.0,
+      "protocol_hash": "06fca971751349305f7d032562ff8141404b0c53aa349e6e0677acb73e6fd2c5",
+      "rows": 4,
+      "run_id": "SAEA-SLURP-STAGE3-VAR2-SUPPLY-VARIANTS-R01C-RECOVERY-SMOKE-4-V1",
+      "split_identity_hash": "e9dcea536028d17737b999c65267e47645ca7b3f6f9c4f57622961cf29363ed5"
+    }
+  },
+  "claim_boundary": "The recovery's complete manifest alone may be scored; the aborted predecessor has no outcome read. The smoke is structural proof.",
+  "delivery": "Only last plan arm continues downstream. Side arms are raw local Solver actions.",
+  "invariants": "Same R01C roster, existing first-four smoke subset, four actions exk10/exk30/exdiv/plan in fixed order, last PLAN continuation, policy, service geometry and 512-token cap.",
+  "order_limitation": "Fixed arm order is not counterbalanced; a favorable difference needs complete-system validation. No claim that earlier ROLL-AA removes order effects.",
+  "recovery": {
+    "all_generation_upper_bound_including_smokes": 10945,
+    "cause": "On an OpenJiuwen revision revisit, the resolver returned unseen supply increments while the runner compared those increments to cumulative acquired ids.",
+    "form": "Fresh complete 625-row re-flight; no resume or partial-row selection.",
+    "original_plus_recovery_generation_upper_bound": 10849,
+    "predecessor_model_contacts": 224,
+    "predecessor_run_id": "SAEA-SLURP-STAGE3-VAR2-SUPPLY-VARIANTS-R01C-V1",
+    "predecessor_state": "aborted-before-complete-manifest",
+    "recoveries_used": 1,
+    "recovery_attempt_generation_cap": 10625,
+    "repair": "Runner accumulates selected ids per arm before comparing revisit state; first visit and ordinary final PLAN baseline are unchanged.",
+    "scope_of_10849": "Full original actual plus full recovery ceiling; excludes the two engineering proofs.",
+    "second_failure": "Close VAR-2."
+  },
+  "schema": "saea-var2-recovery-protocol-v1",
+  "state": "Same pre-Solver QueryState for each group. Primary first visit; revisits conditioned on the plan path and reported separately.",
+  "status": "registered-before-contact"
+}

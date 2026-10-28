@@ -1,0 +1,80 @@
+{
+  "experiment_id": "SAEA-SLURP-LIVE-INTENT-SLOTS-CONTROL-V1",
+  "fragment_kind": "saea-slurp-live-phase-experiment-v1",
+  "migration_status": "ROOT_REGISTERED: independent live no-supply system control; real phase fits are mandatory before each phase generation.",
+  "date": "2026-09-10",
+  "purpose": "Full DEV-1000 live two-stage SLURP no-supply control; direct intent/action state is transferred to a slots phase through the shared controller.",
+  "split_id": "DEV-1000",
+  "population": {
+    "dataset_fragment": "slurp-speech-native-dev1000",
+    "split_identity_hash": "8580d199bffc95a51ad6d8c5b2a2e9e39faa2c551dd095f8afcd78174a1e3c84",
+    "count": 1000,
+    "roster": "the frozen full DEV-1000 runtime view, id for id",
+    "decision_population": "Historically exposed NEW500 primary; OLD500 and pooled DEV-1000 separately. No fresh holdout claim."
+  },
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "split_role": "dev",
+    "planned_model_calls": 2100,
+    "planned_gpu_hours": 4.0,
+    "planned_speech_audio_seconds": 6000
+  },
+  "execution_plan_basis": {
+    "generation": "A ceiling of 2,100 calls for exactly 2,000 planned phase contacts over 1,000 rows. No extra probes or adaptive repeats.",
+    "fit": "The live phase gate declares 1 GET /props plus 3 per-row endpoints for each of two phases: 6,002 contacts for DEV-1000. This is separate from the proposed generation ceiling."
+  },
+  "cells": [
+    {
+      "cell_id": "live-intent-slots-control-generation-v1",
+      "run_id": "SAEA-SLURP-LIVE-INTENT-SLOTS-CONTROL-V1",
+      "attempt_id": "attempt-live-intent-slots-control-generation-v1",
+      "allowed_execution_stages": [
+        "check",
+        "wire-check",
+        "worker",
+        "campaign"
+      ],
+      "arm": "speech-feature-query",
+      "baseline_fragment": "slurp-live-intent-slots-control-v1",
+      "model_fragment": "q4km-mmproj-free-speech-native-np4-base-speech-query-prefix-max64",
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "readiness": {
+        "state": "ready",
+        "reason": "Root admits the independent no-supply live control after full model-free wiring and prospective full-stage registration; no S3 treatment decision is required for this fixed baseline.",
+        "requirements": [
+          {
+            "kind": "preparation",
+            "relpath": "coordination/g6-slurp-live-control-model-free-wire-receipt-v1.json",
+            "sha256": "f3936eb620f3133af934cf32dbd75fa3cc40388f6524a3d7a580e7af0b71dbeb",
+            "reason": "Verified full-roster model-free two-stage wiring; not capacity evidence"
+          }
+        ]
+      }
+    }
+  ],
+  "request_decoding_overrides": {
+    "max_tokens": 256
+  },
+  "preserve_wire_responses": true,
+  "comparison_basis": "Freeze both live arms before generation; compare their deterministic joined intent/slots deliveries on historically exposed NEW500, and report OLD500/DEV1000, natural/equal-scenario weighting, speaker sensitivity, output failures, model contacts and actual full-stage cost. The direct phase is regenerated in each arm. Components based on sealed predecessors are descriptive references.",
+  "live_fit_execution": "The baseline live_phase_fit declares the distinct tokenizer run and attempt. It is an internal bounded phase gate; do not dispatch a standalone prompt-fit over synthetic predecessors.",
+  "delivery_derivatives": [
+    {
+      "cell_id": "live-intent-slots-control-delivery-v1",
+      "parent_cell_id": "live-intent-slots-control-generation-v1",
+      "response_postprocessor": "slurp-intent-slots-delivery-v1",
+      "response_postprocessor_params": {},
+      "source_selector": {
+        "schema": "saea-phase-response-pair-v1",
+        "program_id": "phase-direct-then-slots-v1",
+        "program_sha256": "ed19883304997d7e1daa8b1cc57b5691212bb50914a97a83da836e7b12373045",
+        "predecessor_phase": "direct",
+        "response_phase": "slots"
+      }
+    }
+  ],
+  "scientific_analysis": {
+    "repo_relpath": "docs/readiness/2026-09-10-slurp-live-system-v1/analysis-plan.json",
+    "sha256": "646304a6540eda1483c8d92be7990f075edb0e9b420fef65960c103b58422ef0"
+  }
+}

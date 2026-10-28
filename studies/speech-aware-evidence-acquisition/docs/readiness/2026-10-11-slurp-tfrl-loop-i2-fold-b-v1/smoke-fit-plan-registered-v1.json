@@ -1,0 +1,54 @@
+{
+  "cell": "slurp-native-stage3-tfrl-loop-i2-fold-b-smoke-4-v1",
+  "composed_config_hash": "a9b6763f5f185cfae62466d26c4cbc827fb6a13fbadcfcb3f3f8c06811ddd877",
+  "execution_plan": {
+    "attempt_id": "attempt-slurp-native-stage3-tfrl-loop-i2-fold-b-smoke-4-fit-v1",
+    "carrier_lock_key": "slurp",
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 1.0,
+    "planned_model_calls": 64,
+    "planned_speech_audio_seconds": 41,
+    "protocol_hash": "bab76fb08ede2078c537e8bc2080d34b001e27f60def8c7051b0fe1843a1b3dd",
+    "run_id": "SAEA-SLURP-STAGE3-TFRL-LOOP-I2-FOLD-B-SMOKE-4-FIT-V1",
+    "schema": "saea-execution-plan-v1",
+    "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32",
+    "split_role": "discovery",
+    "study": "speech-aware-evidence-acquisition"
+  },
+  "execution_route": "The shared core.flight.cli FIT path under this cell's own native_contact_fit ids; request envelopes only, no generation.",
+  "expected_session_id": "serving-slurp-native-candidate-five-train-a-np4-v1",
+  "experiment": "slurp-native-stage3-tfrl-loop-i2-fold-b-smoke-4-v1",
+  "family_budget": {
+    "asr_calls": 0,
+    "ceilings_are_not_targets": true,
+    "encoder_calls": 0,
+    "fit_endpoint_calls_cap": 64,
+    "generation_calls_cap": 16,
+    "gpu_hours_fit_inclusive": 1.0,
+    "native_task_contract_calls_cap": 16,
+    "official_complete_scoring_jobs": 0,
+    "repeated_speech_audio_seconds_cap": 41
+  },
+  "loop_protocol": {
+    "relpath": "docs/readiness/2026-10-11-slurp-tfrl-loop-v1/tfrl-loop-protocol-v1.json",
+    "status": "DRAFT-HELD"
+  },
+  "plan_kind": "fit",
+  "preparation_base_commit": "0000000000000000000000000000000000000000",
+  "prepared_phase_supply": {
+    "relpath": "prepared/SAEA-SLURP-STAGE3-TFRL-LOOP-I2-FOLD-B-SMOKE-4-V1/phase-supply-v1.json",
+    "sha256": "0e8e0fc8e2db7fb26b9397f95e996605b9d8b80ea5598f40f877664042e2becf"
+  },
+  "prepared_phase_supply_annotations": {
+    "note": "the flip mints this cell's own first-phase supply under its own run id (item E16)"
+  },
+  "protocol_document": {
+    "relpath": "docs/readiness/2026-10-11-slurp-tfrl-loop-i2-fold-b-v1/protocol-registered-v1.json",
+    "sha256": "1c2857f57ae3d52b1c3dc1da551c040cea445ac90a23a4764cbfb5defd7f3aa9"
+  },
+  "purpose": "SAEA-SLURP-STAGE3-TFRL-LOOP-I2-FOLD-B-SMOKE-4-FIT-V1: request envelopes only; reads nothing.",
+  "registered_at_utc": "2026-10-11T00:00:00.000000+00:00",
+  "schema": "saea-registered-fit-plan-v1",
+  "status": "DRAFT-HELD-REGISTERED_BEFORE_CONTACT_AWAITING_COORDINATOR_COUNTERSIGN_AND_READINESS_FLIP",
+  "unused_budget_is_not_attempt_authority": true
+}

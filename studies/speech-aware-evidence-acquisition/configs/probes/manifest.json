@@ -1,0 +1,534 @@
+{
+  "decode": {
+    "note": "greedy decoding for all scoring arms; sampling-based arms (R7 n-best) get their own entry when designed",
+    "temperature": 0
+  },
+  "manifest_version": "probe-manifest-v1",
+  "probes": {
+    "A2T-PHASE-SELECT-THEN-FILL": {
+      "arms": {
+        "select_then_fill": [
+          "a2t_phase_select.txt",
+          "a2t_phase_fill.txt"
+        ]
+      },
+      "note": "E1/MF-5. Neither template is the system message -- that stays the adapter's own legacy registry instruction, exactly as the sealed P0-legacy-packets cell sent it. These two are the per-phase CONTROL turns of phase-select-then-fill-v1, and they carry NO registry fill on purpose: rails.runner refuses a contact instruction containing any facet or value text of the bound knowledge snapshot, and the compact registry rendering contains several. configs/baseline/a2t-phase-select-then-fill-v1.json.",
+      "profile": "bounded-discovery-probe",
+      "sample_receipt": "r1-audio2tool-sample.json",
+      "sampling": {
+        "design": "no new draw: the four frozen-400 rows the sealed calibration wiring proof already flew, reused id-for-id",
+        "seed": 20260807
+      },
+      "scorer": "a2t-toolcall and a2t-toolcall-v2, run through core.scoring_batch",
+      "success": "a wiring gate, not a threshold: 8 of 8 contacts, exactly two phases in the run_phases receipt, ONE sealed outputs row per sample carrying the fill phase's text, both summaries in the phases file, and every declared scorer running to completion over the complete manifest"
+    },
+    "R1-audio2tool-direct": {
+      "arms": {
+        "direct": [
+          "r1_audio2tool_direct.txt"
+        ]
+      },
+      "profile": "baseline-reproduction",
+      "sample_receipt": "r1-audio2tool-sample.json",
+      "sampling": {
+        "design": "50 per tier x 8 tiers = 400 items",
+        "seed": 20260807
+      },
+      "scorer": "a2t-scorer-v1 (toolcall_scoring)",
+      "success": "tier rank order preserved; per-tier |delta| <= 5pp vs published Qwen-3-Omni-30B row"
+    },
+    "R1-audio2tool-official-protocol": {
+      "arms": {
+        "direct": [
+          "r1_audio2tool_official.txt"
+        ]
+      },
+      "note": "The README's own fidelity caveat, discharged: R1's templates were this repository's reconstruction of an unreleased protocol, and the caveat says R1 re-runs under the released prompts with a NEW manifest entry once they appear. They appeared on 2026-09-03 (github.com/audio2tool/Audio2Tool, MIT, commit b9d5383ca30945fbafb965a04bea40117e1e8a82). This is that entry: the template below is the release's own system message shape and the run adds the release's user-turn sentence after the audio (configs/baseline/a2t-direct-official-protocol.json). r1_audio2tool_direct.txt is UNCHANGED and stays the reconstruction R1/A0/A0' flew.",
+      "profile": "baseline-reproduction",
+      "sample_receipt": "r1-audio2tool-sample.json",
+      "sampling": {
+        "design": "the SAME frozen 400 as R1-audio2tool-direct",
+        "seed": 20260807
+      },
+      "scorer": "a2t-scorer-official-b9d5383c (the pinned Audio2Tool release's own metrics.py)",
+      "success": "three outcomes: PASS = per-tier official tool accuracy |delta| <= 5pp vs the published Qwen3-Omni-30B row on tiers 1, 2, 5 and 6 with the tier rank order preserved; CONSISTENT-WITHIN-NOISE = the paper value inside the tier's Wilson CI90 (n=50) on those tiers but outside 5pp; FAIL otherwise"
+    },
+    "R1-audio2tool-official-protocol-yaml": {
+      "arms": {
+        "direct": [
+          "r1_audio2tool_official_yaml.txt"
+        ]
+      },
+      "note": "The released code has TWO spellings of the same four-sentence system prompt: the adapter's hard-coded default separates them with single spaces (flown as r1_audio2tool_official.txt) and configs/example_config.yaml carries them as a YAML block scalar, newline-separated with a trailing newline, which run_benchmark.py passes to the adapter whenever a config file is used. This template is that second spelling; it differs from r1_audio2tool_official.txt in whitespace alone (identical under str.split()). r1_audio2tool_official.txt is UNCHANGED and stays what the sealed R-official-raw cell flew.",
+      "profile": "baseline-reproduction",
+      "sample_receipt": "r1-audio2tool-sample.json",
+      "sampling": {
+        "design": "the SAME frozen 400 as R1-audio2tool-direct",
+        "seed": 20260807
+      },
+      "scorer": "a2t-scorer-official-b9d5383c (the pinned Audio2Tool release's own metrics.py)",
+      "success": "reported as a paired contrast against the sealed R-official-raw manifest on the same 400 rows, plus the same three-outcome alignment rule on tiers 1, 2, 5 and 6"
+    },
+    "R1-audio2tool-official-tier1-population": {
+      "arms": {
+        "direct": [
+          "r1_audio2tool_official.txt"
+        ]
+      },
+      "note": "Same template and same request as R1-audio2tool-official-protocol; only the POPULATION differs. The 2026-09-04 replication verdict ranked the roster first among the remaining Tier-1 suspects because the release evaluates the first successful speaker of every query of a tier while the frozen 400 is 50 mixed-speaker rows per tier. The receipt named above carries the 489 sample ids of that draw which no earlier receipt covers; the other 11 resolve through r1-audio2tool-sample.json and the two 104-row post-seal AgentLoop scoring receipts.",
+      "profile": "baseline-reproduction",
+      "sample_receipt": "a2t-tier1-official-population-500.json",
+      "sampling": {
+        "design": "500 of the 2,146 tier-1 queries of the RELEASE's own population (first successful speaker of every query_* directory), drawn uniformly without replacement",
+        "seed": 20260803
+      },
+      "scorer": "a2t-scorer-official-b9d5383c (the pinned Audio2Tool release's own metrics.py)",
+      "success": "three outcomes on the owner's 2026-09-04 alignment standard: ALIGNED = official tier-1 tool accuracy within 3 pp of the published 92.4 or better; CONSISTENT-WITHIN-NOISE = 92.4 inside the Wilson CI90 at n = 500 but outside 3 pp; FAIL otherwise"
+    },
+    "R1-audio2tool-official-tier258-population": {
+      "arms": {
+        "direct": [
+          "r1_audio2tool_official.txt"
+        ]
+      },
+      "note": "Same template and same request as R1-audio2tool-official-tier1-population; only the tiers and the stratification differ. The 2026-09-04 tier-1 official-population verdict left tiers 2, 5 and 8 undecided on the frozen 400: 74.0 / 78.0 / 34.0 against a published 84.6 / 90.6 / 41.7, all inside a CI90 of about +/-11 pp at n = 50. This draw takes 500 queries from each of those three tiers' own released populations. The receipt named above carries the 1,423 sample ids of that draw which no earlier receipt covers; the other 77 resolve through r1-audio2tool-sample.json and the two 104-row post-seal AgentLoop scoring receipts.",
+      "profile": "baseline-reproduction",
+      "sample_receipt": "a2t-tier258-official-population-1500.json",
+      "sampling": {
+        "design": "500 queries from each of the released tier2_parametric (3,160), tier5_needle (2,146) and tier8_intent_blending (821) populations -- the first recording the released loader resolves in every query_* directory -- drawn uniformly without replacement per tier",
+        "seed": 20260803
+      },
+      "scorer": "a2t-scorer-official-b9d5383c (the pinned Audio2Tool release's own metrics.py)",
+      "success": "three outcomes per tier on the owner's 2026-09-04 alignment standard: ALIGNED = official tool accuracy within 3 pp of the published row (tier 2 84.6, tier 5 90.6, tier 8 41.7) or better; CONSISTENT-WITHIN-NOISE = the paper value inside the Wilson CI90 at n = 500 but outside 3 pp; FAIL otherwise. Reported against the Qwen-2.5-Omni-7B and weakest-published-SpeechLM floors whatever the outcome"
+    },
+    "R1-audio2tool-official-tier3467-population": {
+      "arms": {
+        "direct": [
+          "r1_audio2tool_official.txt"
+        ]
+      },
+      "note": "Same template and same request as R1-audio2tool-official-tier258-population; only the tiers differ. The frozen 400 placed all four of these tiers inside the owner's 3-point band at n = 50 -- tier 3 72.0 against 74.7, tier 4 28.0 against 33.4, tier 6 84.0 against 81.5, tier 7 58.0 against 54.6 -- with a CI90 of about +/-11 pp, which cannot decide a 3-point rule either way. This draw takes 500 queries from each of those four tiers' own released populations and completes the eight-tier table at one resolution. The receipt named above carries the 1,954 sample ids of that draw which no earlier receipt covers; the other 46 resolve through r1-audio2tool-sample.json and the two 104-row post-seal AgentLoop scoring receipts.",
+      "profile": "baseline-reproduction",
+      "sample_receipt": "a2t-tier3467-official-population-2000.json",
+      "sampling": {
+        "design": "500 queries from each of the released tier3_multi_intent (2,146), tier4_implicit (2,132), tier6_correction (2,146) and tier7_multiturn (2,092 after this repository's two identity exclusions of the released 2,146) populations -- the first recording the released loader resolves in every query_* directory, which on tier 7 is the FIRST user turn's wav -- drawn uniformly without replacement per tier",
+        "seed": 20260803
+      },
+      "scorer": "a2t-scorer-official-b9d5383c (the pinned Audio2Tool release's own metrics.py)",
+      "success": "three outcomes per tier on the owner's 2026-09-04 alignment standard: ALIGNED = official tool accuracy within 3 pp of the published row (tier 3 74.7, tier 4 33.4, tier 6 81.5, tier 7 54.6) or better; CONSISTENT-WITHIN-NOISE = the paper value inside the Wilson CI90 at n = 500 but outside 3 pp; FAIL otherwise. Reported against the Qwen-2.5-Omni-7B and weakest-published-SpeechLM floors whatever the outcome"
+    },
+    "R1-audio2tool-org1-domain-grouped": {
+      "arms": {
+        "direct": [
+          "r1_audio2tool_official_grouped.txt"
+        ]
+      },
+      "note": "The pinned release ships TWO registry renderers. The sealed cells flew format_tools_compact, which drops the registry's domain and category columns; this template's fill is format_tools_for_prompt(tools, include_constraints=False), which groups the same 152 rows by domain. No system in the published Table 3 was run with it (the HF adapter hard-codes the compact form), so this is an ORGANIZATION of the same registry, never a claim about the paper's protocol. The template file's bytes are IDENTICAL to r1_audio2tool_official.txt -- only the fill differs -- and r1_audio2tool_official.txt is UNCHANGED. No sample_receipt: this roster's 4,000 ids are already bound by a2t-tier1-official-population-500.json, a2t-tier258-official-population-1500.json, a2t-tier3467-official-population-2000.json, r1-audio2tool-sample.json and the two 104-row post-seal AgentLoop scoring receipts, and a receipt that repeated them would be refused as a duplicate.",
+      "profile": "baseline-reproduction",
+      "sampling": {
+        "design": "no new draw: the UNION of the three sealed official-population rosters -- tier 1 (500), tiers 2/5/8 (1,500) and tiers 3/4/6/7 (2,000) = 4,000 rows -- reused id for id, so every row is paired with its own sealed official-protocol output",
+        "seed": 20260803
+      },
+      "scorer": "a2t-scorer-official-b9d5383c (the pinned Audio2Tool release's own metrics.py)",
+      "success": "pooled paired delta on official tool accuracy against the sealed official-protocol outputs of the same 4,000 rows (10,000 replicates stratified by tier, seed 20260903, CI90, exact sign test): ADMITTED = CI90 lower bound above 0 AND the gain concentrated on smart_home cross-domain twins; NULL = CI90 contains 0; HARMFUL = CI90 upper bound below 0"
+    },
+    "R2-bba-cascade-vs-direct": {
+      "arms": {
+        "direct": [
+          "r2_bba_direct.txt"
+        ],
+        "self_cascade": [
+          "shared_transcribe.txt",
+          "r2_bba_cascade_answer.txt"
+        ]
+      },
+      "profile": "bounded-discovery-probe",
+      "sample_receipt": "r2-bba-sample.json",
+      "sampling": {
+        "design": "50 x 4 BBH categories = 200 items, paired arms",
+        "seed": 20260807
+      },
+      "scorer": "deterministic: normalized match of text after final 'Answer:' vs official_answer",
+      "success": "cascade > direct, paired-significant (McNemar)"
+    },
+    "R3-airbench-slurp-ic": {
+      "arms": {
+        "direct": [
+          "r3_airbench_ic_direct.txt"
+        ],
+        "self_cascade": [
+          "shared_transcribe.txt",
+          "r3_airbench_ic_cascade_answer.txt"
+        ]
+      },
+      "profile": "bounded-discovery-probe",
+      "sampling": {
+        "design": "200 of the AIR-Bench 1k SLURP-IC items, paired arms",
+        "seed": 20260807
+      },
+      "scorer": "deterministic: choice-letter match against gold choice",
+      "status": "BLOCKED: AIR-Bench data not on disk; acquisition needs the umbrella lock path",
+      "success": "cascade > direct; absolute rows recorded to baseline wiki"
+    },
+    "R4-context-dose": {
+      "arms": {
+        "matched_context": [
+          "r4_transcribe_with_context.txt"
+        ],
+        "mismatched_context": [
+          "r4_transcribe_with_context.txt"
+        ],
+        "no_context": [
+          "r4_transcribe_nocontext.txt"
+        ]
+      },
+      "note": "matched arm uses the call's own ConEC contexts layer; mismatched arm uses the deterministic rotation derangement; oracle/gold evidence hard-raises on the runtime path",
+      "profile": "bounded-discovery-probe",
+      "runtime_binding": "2026-08-08 Route-1 retarget: under the R0 core driver the arm instructions are the task_instruction fields of configs/baseline/{bare-core,fixed-legal-context,mismatched-evidence}.json (bound into protocol_hash via config_hash); the r4_*.txt templates above are the design-time reference, not runtime-wired. The mismatched arm's instruction was equalized to the matched arm's on 2026-08-08 (a design-leak fix: the negative-control explanation must never reach the model).",
+      "sample_receipt": "r4-e21-sub10-sample.json",
+      "sampling": {
+        "design": "Route 1 (2026-08-08): e21 discovery carrier (e22 dev subset10 has no registered ConEC evidence layer). Mini-arm revision (same day, after the smoke measured RTF~0.57): seeded 10-of-44 subset of the frozen discovery split; segmented execution per the owner's agentic long-form directive (segments receipt derives from this parent receipt via scripts/build_segments.py)",
+        "seed": 20260807
+      },
+      "scorer": "frozen scoring stack (asr-wer + cost); per-entity-class WER deferred until an owner-pinned wer_tags adapter exists",
+      "success": "WER monotone in evidence quality (Siskos direction): matched < no-context and matched < mismatched"
+    },
+    "R5-vab-oneshot": {
+      "arms": {
+        "one_shot": [
+          "r5_vab_oneshot.txt"
+        ],
+        "zero_shot": [
+          "r5_vab_zeroshot.txt"
+        ]
+      },
+      "profile": "bounded-discovery-probe",
+      "sample_receipt": "r5-vab-sample.json",
+      "sampling": {
+        "design": "50 per EN complex stratum (parallel/seqdep/multi-turn); strata under 50 taken whole = 140 items, paired arms",
+        "seed": 20260807
+      },
+      "scorer": "a2t-scorer-v1 components (tool selection / structure); semantic PF only via pinned local judge if unavoidable",
+      "success": "one-shot > zero-shot; magnitude compared to published +10-17pp"
+    },
+    "SLURP-CONSUMPTION-KU-S1": {
+      "arms": {
+        "direct_evidence": [
+          "slurp_phase_direct.txt",
+          "slurp_phase_evidence.txt"
+        ]
+      },
+      "note": "Cell KU-S1 of the 2026-09-05 three-dimension experiment program: the SLURP consumption dimension's RETRIEVAL cell, unblocked by enabler E6. Neither template is the system message -- that stays the closed-list instruction (slurp_direct_closed_list.txt rendered through the slurp-label-inventory fill), byte-identical to the sealed SLURP direct baseline's and to KU-S1c's. They are the two per-phase CONTROL turns of phase-direct-evidence-alpha-blend-v1: slurp_phase_direct.txt (reused unchanged from SLURP-PHASE-DIRECT-ONLY and KU-S1c) asks phase 'direct' for the answer, and slurp_phase_evidence.txt asks phase 'evidence' for the answer again with the retrieved knowledge in view. The retrieved values are NOT in either template and never can be: E6 removed the fold-a-packet-into-the-instruction path, and the supply travels the successor QueryState as typed content blocks instead. Measured against the FULL slurp-kb-size-full snapshot (23,267 protected payloads, content dimension included): 0 collisions for slurp_phase_direct.txt (262 chars) and 0 for slurp_phase_evidence.txt (475 chars). configs/baseline/slurp-phase-blend-cl-v1.json.",
+      "profile": "bounded-discovery-probe",
+      "sample_receipt": "DEV-1000.json",
+      "sampling": {
+        "design": "the same DEV-1000 roster KU-S1c and the closed-list comparator flew, id-for-id",
+        "seed": 20260823
+      },
+      "scorer": "slurp-slu-official (the same pinned official evaluate.py as SLURP-DEV1000-CLOSED-LIST-DIRECT), run through core.scoring_batch",
+      "success": "Preregistered in docs/readiness/2026-09-05-slurp-consumption-ku-s1-v1-preregistration.md and unchanged by E6: the decision population is the unexposed NEW500 and the comparator is the one-contact closed-list direct arm, with KU-S1c's own draft row quoted as the contact-matched and control-turn-matched view"
+    },
+    "SLURP-CONSUMPTION-KU-S1C": {
+      "arms": {
+        "draft_revise": [
+          "slurp_phase_direct.txt",
+          "slurp_phase_revise.txt"
+        ]
+      },
+      "note": "Cell KU-S1c of the 2026-09-05 three-dimension experiment program: the EQUAL-CONTACT, NO-KNOWLEDGE control of the SLURP consumption dimension. Neither template is the system message -- that stays the closed-list instruction (slurp_direct_closed_list.txt rendered through the slurp-label-inventory fill), byte-identical to the sealed SLURP direct baseline's. They are the two per-phase CONTROL turns of phase-draft-revise-v1: slurp_phase_direct.txt (reused unchanged from SLURP-PHASE-DIRECT-ONLY) asks phase 'draft' for the answer, and slurp_phase_revise.txt asks phase 'revise' to correct or repeat it, with the model's own draft appended after it by the append-sealed-state predecessor binding. Both directives are short and name no scenario, no action, no entity type and no example filler, so no ontology text rides the control turn -- the KC-S1 leakage finding applied by construction. configs/baseline/slurp-phase-draft-revise-v1.json.",
+      "profile": "bounded-discovery-probe",
+      "sample_receipt": "DEV-1000.json",
+      "sampling": {
+        "design": "no new draw: the frozen DEV-1000 roster the sealed closed-list direct baseline flew, reused id-for-id, with the DEV-500 / NEW500 partition preserved for reporting",
+        "seed": 20260823
+      },
+      "scorer": "slurp-slu-official (the same pinned official evaluate.py at commit 8eb16545762be97ace75334109d73824217311f1 as SLURP-DEV1000-CLOSED-LIST-DIRECT), run once per complete manifest through core.scoring_batch. The sealed response is a FULL SLU object, the same shape the closed-list baseline sealed, so the whole official table comes straight from the sealed rows with no projection anywhere.",
+      "success": "KU-S1c is REPORTED, NEVER DECIDED: it carries no admission gate of its own. It delivers the official-metric table beside the closed-list comparator, the paired per-sample contrasts on NEW500 and pooled under both weightings, the realized contacts per row and the gain per extra contact, and every later two-contact SLURP cell states its delta net of it."
+    },
+    "SLURP-DEV1000-CLOSED-LIST-DIRECT": {
+      "arms": {
+        "direct": [
+          "slurp_direct_closed_list.txt"
+        ]
+      },
+      "note": "The template's fixed half is byte-identical to rails.adapters.slurp._INSTRUCTION and its {tool_schemas} fill (slurp-label-inventory) renders the UNCHANGED render_slurp_ontology task contract followed by the compact closed inventory, so the rendered instruction is the sealed DEV-1000 M0 instruction (sha256 cef52789...86b8, 5,747 chars) plus a pure 1,836-char suffix and nothing else. Correction to the premise of the 2026-09-04 audit's caveat 4: the sealed M0 prompt DID carry the 18 scenarios, the 46 actions and the 55 entity types; what it never carried is the 60-pair scenario/action intent inventory, which is what this template adds.",
+      "profile": "baseline-reproduction",
+      "sample_receipt": "DEV-1000.json",
+      "sampling": {
+        "design": "no new draw: the frozen DEV-1000 roster the sealed 2026-08-25 SAEA-DEV1000-BASELINE-LOCK arms already flew, reused id-for-id",
+        "seed": 20260823
+      },
+      "scorer": "slurp-slu-official (the real, unmodified official evaluate.py at pinned commit 8eb16545762be97ace75334109d73824217311f1 in ~/.venvs/slurp-official-eval, --average micro), run through core.scoring_batch",
+      "success": "protocol alignment, not a threshold: this arm becomes the study's SLURP direct baseline regardless of outcome, because it is the one that matches the published prompt-only protocol (He & Garner arXiv:2305.13512 put the intent inventory IN the prompt). Reported as the official-metric table beside the sealed M0 comparator, the locked BLEND arm and the published brackets, with a paired per-sample contrast."
+    },
+    "SLURP-PHASE-DIRECT-ONLY": {
+      "arms": {
+        "direct": [
+          "slurp_phase_direct.txt"
+        ]
+      },
+      "note": "E1/MF-5. This template is NOT the system message -- that stays the closed-list instruction (slurp_direct_closed_list.txt). It is the per-phase CONTROL turn of phase-direct-only-v1, which rails.core_client._agent_history appends to the payload's history, and is the ONE thing this cell adds to the sealed closed-list direct arm's request. configs/baseline/slurp-phase-direct-only-v1.json.",
+      "profile": "bounded-discovery-probe",
+      "sample_receipt": "DEV-1000.json",
+      "sampling": {
+        "design": "no new draw: the four DEV-1000 rows the sealed closed-list wiring proof already flew, reused id-for-id",
+        "seed": 20260823
+      },
+      "scorer": "slurp-slu-official (the same pinned official evaluate.py as SLURP-DEV1000-CLOSED-LIST-DIRECT), run through core.scoring_batch",
+      "success": "a wiring gate, not a threshold: 4 of 4 contacts, exactly one phase in the run_phases receipt, one sealed outputs row per sample, a phases file whose sha256 the seal receipt records, and every declared scorer running to completion over the complete manifest"
+    },
+    "SLURP-SLOT-STAGE-KC-S1": {
+      "arms": {
+        "slots": [
+          "slurp_phase_slots.txt"
+        ]
+      },
+      "note": "Cells KC-S1a and KC-S1b of the 2026-09-05 three-dimension experiment program. This template is NOT the system message -- that stays the closed-list instruction (slurp_direct_closed_list.txt, rendered through the slurp-label-inventory fill), byte-identical to the sealed SLURP direct baseline's. It is the per-phase CONTROL turn of phase-slots-given-intent-v1, asking for the entity list alone, and it is IDENTICAL in both cells. KC-S1a sends it followed by the sealed closed-list response for the row (predecessor_binding sealed-manifest). KC-S1b sends the same bytes plus one per-sample suffix: the TRAIN slot schema block of the intent that sealed response names, appended by the registered state fill slurp-intent-slot-schema-for-state. The two cells therefore differ by a pure per-sample suffix and by nothing else. configs/baseline/slurp-phase-slots-given-intent-v1.json and configs/baseline/slurp-phase-slots-given-intent-schema-v1.json.",
+      "profile": "bounded-discovery-probe",
+      "sample_receipt": "DEV-1000.json",
+      "sampling": {
+        "design": "no new draw: the frozen DEV-1000 roster the sealed closed-list direct baseline flew, reused id-for-id, with the DEV-500 / NEW500 partition preserved for reporting",
+        "seed": 20260823
+      },
+      "scorer": "slurp-slu-official (the same pinned official evaluate.py at commit 8eb16545762be97ace75334109d73824217311f1 as SLURP-DEV1000-CLOSED-LIST-DIRECT), run once per complete manifest through core.scoring_batch; the paper-facing full-row table additionally comes from a post-seal, model-free projection that joins the sealed closed-list scenario/action to these entities and is scored by the SAME registered scorer over the complete roster.",
+      "success": "KC-S1b is ADMITTED iff its paired SLU-F1 CI90 lower bound is above 0 against the sealed closed-list direct baseline on the unexposed NEW500 AND the (KC-S1b minus KC-S1a) lower bound is above 0; NULL if either includes 0; HARMFUL if an upper bound is below 0. KC-S1a is the contact-count control and has no gate of its own."
+    },
+    "SLURP-STAGE3-VERIFY-1": {
+      "arms": {
+        "choose": [
+          "slurp_verify_select_context_v1.txt",
+          "slurp_verify_select_v1.txt"
+        ]
+      },
+      "note": "Cell VERIFY-1 (Stage-3 board route F11, the verifier-selection probe). The PAIR: slurp_verify_select_context_v1.txt IS the system message (task_instruction_template, rendered through the slurp-label-inventory fill, so the closed label inventory is available for judging label legality) and slurp_verify_select_v1.txt is the ONE phase's CONTROL turn. Neither carries any knowledge fill: rails.runner refuses a contact instruction containing any facet or value text of the bound snapshot, and the registration proved zero containment for both templates and for all 625 rendered candidate blocks against the bound MINUS-R01 exemplar snapshot's 17,108 protected payloads. The candidate block itself is NOT a template: it is the appended predecessor state, rendered at contact time from cell ROLL-1's sealed grouped-Solver bundle by rails.phase_material.load_sealed_sample_groups under predecessor_binding 'sealed-samples-manifest'. configs/baseline/slurp-native-stage3-verify-1-baseline-v1.json and configs/baseline/slurp-native-stage3-verify-1-smoke-4-baseline-v1.json.",
+      "profile": "bounded-discovery-probe",
+      "sample_receipt": "slurp-stage3-construction-r01c.json",
+      "sampling": {
+        "design": "no new draw: all 625 rows of the committed SLURP-STAGE3-CONSTRUCTION-R01C construction roster cell ROLL-1 already flew, id for id. The per-row candidate PRESENTATION ORDER is drawn from the pinned permutation seed and nothing else.",
+        "seed": 20260925
+      },
+      "scorer": "cost only, and zero official complete scoring jobs: the delivered text is a CHOICE, not a SLURP answer. The read resolves each chosen position to a sealed ROLL-1 sample index through the recorded permutation and reads that sample's EXISTING official score.",
+      "success": "a probe, not a threshold: 625 delivered rows, one contact each, every response parsing under rails.artifact_results.parse_slurp_verifier_choice, and the two registered populations (420 informative / 205 position-bias control) reported separately."
+    }
+  },
+  "samples": {
+    "A2T-PHASE-SELECT-THEN-FILL": {
+      "n_items": 400,
+      "receipt": "r1-audio2tool-sample.json",
+      "seed": 20260807,
+      "split_identity_hash": "e1d751e6c76e49d087620842ba17c34e432a4602169dc2b93ee7e0a529ca332c",
+      "split_role": "discovery"
+    },
+    "R1-audio2tool-direct": {
+      "n_items": 400,
+      "receipt": "r1-audio2tool-sample.json",
+      "seed": 20260807,
+      "split_identity_hash": "e1d751e6c76e49d087620842ba17c34e432a4602169dc2b93ee7e0a529ca332c",
+      "split_role": "discovery"
+    },
+    "R1-audio2tool-official-protocol": {
+      "n_items": 400,
+      "receipt": "r1-audio2tool-sample.json",
+      "seed": 20260807,
+      "split_identity_hash": "e1d751e6c76e49d087620842ba17c34e432a4602169dc2b93ee7e0a529ca332c",
+      "split_role": "discovery"
+    },
+    "R1-audio2tool-official-protocol-yaml": {
+      "n_items": 400,
+      "receipt": "r1-audio2tool-sample.json",
+      "seed": 20260807,
+      "split_identity_hash": "e1d751e6c76e49d087620842ba17c34e432a4602169dc2b93ee7e0a529ca332c",
+      "split_role": "discovery"
+    },
+    "R1-audio2tool-official-tier1-population": {
+      "n_items": 489,
+      "receipt": "a2t-tier1-official-population-500.json",
+      "seed": 20260803,
+      "split_identity_hash": "89515aac56db4acc7eaf11537bb62ce0388a49fb3616a45d984a0f50aa2903db",
+      "split_role": "discovery"
+    },
+    "R1-audio2tool-official-tier258-population": {
+      "n_items": 1423,
+      "receipt": "a2t-tier258-official-population-1500.json",
+      "seed": 20260803,
+      "split_identity_hash": "3a03e75e9131657741061f64450d337d69f120addb6a6c740a607ddecc028b73",
+      "split_role": "discovery"
+    },
+    "R1-audio2tool-official-tier3467-population": {
+      "n_items": 1954,
+      "receipt": "a2t-tier3467-official-population-2000.json",
+      "seed": 20260803,
+      "split_identity_hash": "4da261f6c7161cbeffd82a58fe4718d83346bcbd894560a254cab6def2e6cceb",
+      "split_role": "discovery"
+    },
+    "R2-bba-cascade-vs-direct": {
+      "n_items": 200,
+      "receipt": "r2-bba-sample.json",
+      "seed": 20260807,
+      "split_identity_hash": "c602bd7ee650b35f767eb4e7064e17452dc1bd0b813909ea2caef20db80cf262",
+      "split_role": "discovery"
+    },
+    "R4-context-dose": {
+      "n_items": 10,
+      "receipt": "r4-e21-sub10-sample.json",
+      "seed": 20260807,
+      "split_identity_hash": "fa1d298208b1324d60a379ba06ec730c005e376369ddede114d29ae746134cc2",
+      "split_role": "discovery"
+    },
+    "R5-vab-oneshot": {
+      "n_items": 140,
+      "receipt": "r5-vab-sample.json",
+      "seed": 20260807,
+      "split_identity_hash": "7205f865eda0fc8f3195e7ec2cb741a4fefe475f6db819373be040f83ace5069",
+      "split_role": "discovery"
+    },
+    "SLURP-CONSUMPTION-KU-S1": {
+      "n_items": 1000,
+      "receipt": "DEV-1000.json",
+      "seed": 20260823,
+      "split_identity_hash": "9fb44e3384b8ad8e0d8f825b88eb0a3051c218b699975051d8a0481aabc0243b",
+      "split_role": "dev"
+    },
+    "SLURP-CONSUMPTION-KU-S1C": {
+      "n_items": 1000,
+      "receipt": "DEV-1000.json",
+      "seed": 20260823,
+      "split_identity_hash": "9fb44e3384b8ad8e0d8f825b88eb0a3051c218b699975051d8a0481aabc0243b",
+      "split_role": "dev"
+    },
+    "SLURP-DEV1000-CLOSED-LIST-DIRECT": {
+      "n_items": 1000,
+      "receipt": "DEV-1000.json",
+      "seed": 20260823,
+      "split_identity_hash": "9fb44e3384b8ad8e0d8f825b88eb0a3051c218b699975051d8a0481aabc0243b",
+      "split_role": "dev"
+    },
+    "SLURP-PHASE-DIRECT-ONLY": {
+      "n_items": 1000,
+      "receipt": "DEV-1000.json",
+      "seed": 20260823,
+      "split_identity_hash": "9fb44e3384b8ad8e0d8f825b88eb0a3051c218b699975051d8a0481aabc0243b",
+      "split_role": "dev"
+    }
+  },
+  "sampling_policy": "Each carrier is sampled exactly once, by scripts/build_probe_samples.py (seeded, order-independent, metadata-only); the receipt under docs/receipts/probe-samples/ is frozen and every later experiment on that carrier resolves its items through the binding in this manifest \u2014 never through a fresh draw. Adding a carrier means adding a new receipt through the same script and regenerating this manifest; changing an existing receipt requires owner approval and a new probe entry. R4 draws from the already-frozen dev subset10 split receipt (docs/receipts/splits.json); R3 has no sample yet (data acquisition blocked).",
+  "templates": {
+    "a2t_native_role_perception_v1.txt": {
+      "sha256": "41b4a3b4d1c1293f815b63023f46efc3ae0137e8bb6d5499738e96566ec1a22e"
+    },
+    "a2t_native_role_planner_v1.txt": {
+      "sha256": "cc7d57b2d303283366c73bf1df0aa95bf45e82a482628e5447c90d0b795e5bab"
+    },
+    "a2t_native_role_reviewer_v1.txt": {
+      "sha256": "79bdf7b6340d358c83490894649f32e7256c9c9127888543d0e032a3f67858ea"
+    },
+    "a2t_native_role_solver_v1.txt": {
+      "sha256": "89327bf1d84de6edf495da9eb527a58ba4ab97b1acd22c6a0558b157db2e6547"
+    },
+    "a2t_phase_fill.txt": {
+      "sha256": "4a0b4cb11e1b866035f5a9cfa84348f4a99889a05f1998b02d85a90fefc03245"
+    },
+    "a2t_phase_select.txt": {
+      "sha256": "2e561f986520c177612cd901c670476045b0de9393f73f6afbb1f8eaf597cdb8"
+    },
+    "r1_audio2tool_direct.txt": {
+      "sha256": "8ea2849d9f1d948ab46734fdc99e37efaba0b78216fdd2add0f8fccb3997da9a"
+    },
+    "r1_audio2tool_official.txt": {
+      "sha256": "9005ea0a512fca7c2f4ab75e65835f03454f956b3ee3dcfe7570ef5d41fc1e65"
+    },
+    "r1_audio2tool_official_grouped.txt": {
+      "sha256": "9005ea0a512fca7c2f4ab75e65835f03454f956b3ee3dcfe7570ef5d41fc1e65"
+    },
+    "r1_audio2tool_official_yaml.txt": {
+      "sha256": "67f224aa4064baa6337f4eb4638626ccdf84558fc8913d1df3380bb6d74cd172"
+    },
+    "r2_bba_cascade_answer.txt": {
+      "sha256": "974b65e34d419ae4fbdf520ec68f6c97fde75388709a4e37031a27647ff30703"
+    },
+    "r2_bba_direct.txt": {
+      "sha256": "a39a81fb03b73ae6dfe182bf480d47425588bcb24ac47dc10778a7b09cc0fa33"
+    },
+    "r3_airbench_ic_cascade_answer.txt": {
+      "sha256": "6d78ecc72139eae2991c121609c1c7818a3dfa5f22a7bc863e1246b96cbae500"
+    },
+    "r3_airbench_ic_direct.txt": {
+      "sha256": "c04dccd37b6767db8674317284c390246fb11bfd4136809734b6782699769f94"
+    },
+    "r4_transcribe_nocontext.txt": {
+      "sha256": "4b41c8ba551a01c2dc29f28649d12fccdc02f64a6654fc204e26e8fc63b3b230"
+    },
+    "r4_transcribe_with_context.txt": {
+      "sha256": "0385829ec3f1f444b8724ce0ef523bcce70064d7a339443cac058611cedda43e"
+    },
+    "r5_vab_oneshot.txt": {
+      "sha256": "2d8f85ecc2b6def70f40538325b59d9386b138d8f78d184aa125cfa1fbac19be"
+    },
+    "r5_vab_zeroshot.txt": {
+      "sha256": "53f9efee71d8772f54526c2373415b045e35c0ed62a17b618c161f17c5b13ada"
+    },
+    "shared_transcribe.txt": {
+      "sha256": "44365d551299d86097791e02e931614872ee503f6d3f3d689a8a12c0c311e677"
+    },
+    "slurp_direct_closed_list.txt": {
+      "sha256": "9f2017c1b9a5cbf561a3437377ea4777d418ed19a7607f05e471f71a51dc0413"
+    },
+    "slurp_intent_hypothesis_source_phase_v1.txt": {
+      "sha256": "80023f2222ccf86e4a9bc618c381673a20b5115c9aee245195ee8cb92e8be259"
+    },
+    "slurp_intent_hypothesis_source_system_v1.txt": {
+      "sha256": "1c695a68452c8858f91eff6e683f9a6983d53328fc86b2884b50381532e0132b"
+    },
+    "slurp_native_role_perception_refresh_v1.txt": {
+      "sha256": "d4ee4cf9991089c6f9e0cf4bf1ab27c83d209f801beb5662398028fdc52800be"
+    },
+    "slurp_native_role_planner_refresh_v1.txt": {
+      "sha256": "83820ab6fb77de89a7cdb45aa00149557364aa3a5833cdd772807be5d6d58272"
+    },
+    "slurp_native_role_reviewer_refresh_tools_v1.txt": {
+      "sha256": "b71e89bb06601d4328af904370d38dfca8859bb576fd19282054a673d441e97f"
+    },
+    "slurp_native_role_reviewer_refresh_tools_v2.txt": {
+      "sha256": "47ced90af55361e6f59c1570351b3ca75daf07ad461f9bc94aa0ba75c18a54f0"
+    },
+    "slurp_native_role_solver_refresh_v1.txt": {
+      "sha256": "3c3c83bec3625d13006344fb9777655e658b0c2715cc70665dcd25194b73c303"
+    },
+    "slurp_phase_direct.txt": {
+      "sha256": "d02f194c3c8a8375a15c28f7ca874f30bd2ad34d60e8ff9cdbc654572ebf9d50"
+    },
+    "slurp_phase_evidence.txt": {
+      "sha256": "f7af111e48468b89c3549a27bd07a0b76fa377be06b0a9c6fbfc0dabaa560224"
+    },
+    "slurp_phase_revise.txt": {
+      "sha256": "236d1ee5a31300912b3e2404a4baf24b47a2c01f190f701467417e0c047cc518"
+    },
+    "slurp_phase_slots.txt": {
+      "sha256": "221ed0d343b0a543eda98008312938da25bde204a131efe8427ea8e3934a5e1f"
+    },
+    "slurp_stage3_advantage_system_v1.txt": {
+      "sha256": "e2d8ae4368ff35f23c433cffb18f5c6e86bb721cc587041b7c9f4c515e79844f"
+    },
+    "slurp_stage3_advantage_system_v2.txt": {
+      "sha256": "12c213d0572ef5cd63e3a53e184de441c6b8426a3384a6d65c60cd134bb167e0"
+    },
+    "slurp_stage3_advantage_v1.txt": {
+      "sha256": "a047ff8c8a35f3139b9ed2570f9b70e7117a6450f3d74382410b61e1c29da7fc"
+    },
+    "slurp_stage3_advantage_v2.txt": {
+      "sha256": "663ca3da0569511e901d961d439024f7df303fc8ab00c3d94432d06db17d31b9"
+    },
+    "slurp_top3_closed_joint_slots_v1.txt": {
+      "sha256": "db7168bf4adab7ece0616add41ffa98809f7f1508c1f9069ba2327229dd01dee"
+    },
+    "slurp_top3_hard_first_slots_v1.txt": {
+      "sha256": "c814d07822aa47368adad9b2ee60de0b0036e05ade964ca56e2c98b24ee5bcab"
+    },
+    "slurp_verify_select_context_v1.txt": {
+      "sha256": "ae78c227648e7ae7fea11eee357ddce5296a34b49fd27a5e106e5b9863d579ab"
+    },
+    "slurp_verify_select_v1.txt": {
+      "sha256": "67898dac032684a0d120abbb43807a72e8c1ef183157a29d8f6686fc87f55674"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "saea-prospective-held-plan-v1",
+  "status": "ROOT_REGISTERED_AWAITING_E21_SEAL_AND_REQUIRED_SERVICE",
+  "family_id": "SAEA-SLURP-LIVE-PROGRAM-MATCHED-V1",
+  "service_session": "serving-slurp-live-program-matched-np4-v1",
+  "arms": [
+    {
+      "arm": "control",
+      "run_id": "SAEA-SLURP-LIVE-PROGRAM-MATCHED-CONTROL-V1",
+      "attempt_id": "attempt-live-program-matched-control-generation-v1",
+      "fit_run_id": "SAEA-SLURP-LIVE-PROGRAM-MATCHED-CONTROL-FIT-V1",
+      "fit_attempt_id": "attempt-live-program-matched-control-fit-v1",
+      "gpu_hours": 0.5,
+      "generation_ceiling": 2100,
+      "fit_contacts": 6002,
+      "speech_seconds": 6000
+    },
+    {
+      "arm": "speech",
+      "run_id": "SAEA-SLURP-LIVE-PROGRAM-MATCHED-SPEECH-V1",
+      "attempt_id": "attempt-live-program-matched-speech-generation-v1",
+      "fit_run_id": "SAEA-SLURP-LIVE-PROGRAM-MATCHED-SPEECH-FIT-V1",
+      "fit_attempt_id": "attempt-live-program-matched-speech-fit-v1",
+      "gpu_hours": 0.5,
+      "generation_ceiling": 2100,
+      "fit_contacts": 6002,
+      "speech_seconds": 6000
+    }
+  ],
+  "family_limits": {
+    "generation_contacts": 4200,
+    "fit_contacts": 12004,
+    "gpu_hours": 1
+  },
+  "pending": [
+    "E21 repair seal verification and release of its root lease",
+    "root service switch and same-source exclusive dispatch",
+    "actual per-phase fit, generation, seal, joined delivery, complete scoring and fixed decision"
+  ],
+  "registered_plan_files": {
+    "control-generation-plan-v1.json": "7f53943a09092cd69ccc3b602e3e1cc2a645bf6398964b3e09009c04ba268775",
+    "speech-fit-plan-v1.json": "103383cbc0a666632a20c67eedf4068021bdcf8e9b413f8e3ff8acf79bd00829",
+    "speech-generation-plan-v1.json": "ebc18d8de55ee64e3a7673e894fa0c887ffa18a4e7307dd539f17d6fcebadec0",
+    "control-fit-plan-v1.json": "02d224ebefe0dd2a6be3f341fdd40fb1b0baa4ae5a5cb5c2ac9e40eb92dc297f"
+  }
+}

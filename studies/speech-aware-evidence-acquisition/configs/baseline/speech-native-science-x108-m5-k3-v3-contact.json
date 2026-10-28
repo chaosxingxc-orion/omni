@@ -1,0 +1,28 @@
+{
+  "arm": "speech-feature-query",
+  "policy": "fixed",
+  "speech_native_agent_executor_id": "legacy-contact-dag-v1",
+  "speech_native_agent_executor_basis": "2026-09-08, owner Decision 12-F item #9. This fragment reached the legacy contact-DAG executor by declaring nothing at all; the silent default is now a refusal (core.driver.speech_native.build_speech_native_profile), so the executor is named rather than inferred and this cell can state which harness produced its number. The value is 'legacy-contact-dag-v1' and not 'openjiuwen-workflow-v1' because the openJiuwen speech-native executor is an M1/M2 one-or-two-contact vertical slice and this cell's matcher policy and contact ceiling do not compose into it -- re-pointing it would refuse it, not port it. Its successor is a phase program on core.flight.FlightRuntime, as configs/baseline/slurp-phase-direct-only-v1.json already demonstrates for the simplest of these.",
+  "evidence_source": "none",
+  "evidence_mismatch": false,
+  "obs_batch_samples": 1,
+  "allow_empty_speech_feature_evidence": false,
+  "speech_packet_promotion_receipt": "/home/chao/feat-cache/slurp-q4km-packets-x108-04ccc72a/DISCOVERY-X108-promotion.json",
+  "speech_packet_promotion_receipt_sha256": "6b396735aa8b4812795ffcc3c9d47ee07ba137f4842c1217b42440a7c5cca37b",
+  "speech_native_binding": "configs/probes/g0-binding/speech-native-train-binding-x108.json",
+  "speech_native_binding_file_sha256": "34860b5204f5bfc5ecc6452b9d228942787a5590d61b8b53598d9fba26be5985",
+  "profile_key_order_ids": [
+    "canonical"
+  ],
+  "profile_queue_depth_multiplier": 4,
+  "profile_validation_workers": 16,
+  "speech_native_result_mode": "predictions",
+  "speech_native_contact_ceiling_per_task": 16,
+  "speech_native_top_k": 3,
+  "speech_native_dispatch_granularity": "contact",
+  "matcher_prompt_policy_id": "speech-native-json-copy-v3",
+  "scorers": [
+    "cost"
+  ],
+  "task_instruction": "Match the original speech-feature query against the frozen candidate representation. Gold labels and reference transcripts are unavailable at runtime."
+}

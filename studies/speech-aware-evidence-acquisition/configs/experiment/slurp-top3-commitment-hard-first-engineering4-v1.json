@@ -1,0 +1,105 @@
+{
+  "cells": [
+    {
+      "allowed_execution_stages": [
+        "check",
+        "wire-check",
+        "worker",
+        "campaign"
+      ],
+      "arm": "speech-feature-query",
+      "attempt_id": "attempt-slurp-top3-hard-first-engineering-generation-v1",
+      "baseline_fragment": "slurp-top3-commitment-hard-first-engineering4-v1",
+      "cell_id": "slurp-top3-commitment-hard-first-engineering4-generation-v1",
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "model_fragment": "q4km-mmproj-free-speech-native-np8-base-speech-query-prefix-max64",
+      "readiness": {
+        "reason": "Root admitted source-bound engineering proof. Actual fit and complete service matching remain mandatory.",
+        "requirements": [
+          {
+            "expected_decision_id": "SAEA-SLURP-TOP3-SUCCESSOR-ENGINEERING-ADMISSION-V1",
+            "kind": "decision",
+            "relpath": "coordination/slurp-top3-commitment-v1/successor-engineering-admission-v1.json",
+            "sha256": "e41fc0102d52765db49d6304e0c1071394acfbb8bedad0671b2e8e1fb823d5f7"
+          },
+          {
+            "kind": "preparation",
+            "relpath": "prepared/SAEA-SLURP-NATIVE-CANDIDATE-CONTRACTS-PREPARE-V1/receipt.json",
+            "sha256": "7b93a1ae1912c97b4be7813cf394629042c0dcc976cf8f74993647aee7213c2b"
+          }
+        ],
+        "state": "ready"
+      },
+      "run_id": "SAEA-SLURP-TOP3-HARD-FIRST-ENGINEERING-V1"
+    }
+  ],
+  "date": "2026-09-13",
+  "delivery_derivatives": [
+    {
+      "cell_id": "slurp-top3-commitment-hard-first-engineering4-delivery-v1",
+      "parent_cell_id": "slurp-top3-commitment-hard-first-engineering4-generation-v1",
+      "response_postprocessor": "slurp-hard-first-hypothesis-delivery-v1",
+      "response_postprocessor_params": {
+        "max_candidates": 3
+      },
+      "source_selector": {
+        "program_id": "phase-slots-given-intent-v1",
+        "program_sha256": "3ebb3afa30b6072b22ed2fb00f39db2ff8744b6adbe494d31efa76e47c452abd",
+        "response_phase": "slots",
+        "schema": "saea-sealed-state-response-pair-v1"
+      }
+    }
+  ],
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.25,
+    "planned_model_calls": 4,
+    "planned_speech_audio_seconds": 60,
+    "split_role": "dev"
+  },
+  "experiment_id": "SAEA-SLURP-TOP3-HARD-FIRST-ENGINEERING-V1",
+  "family_budget": {
+    "asr_calls": 0,
+    "encoder_calls": 0,
+    "fit_and_generation_gpu_hours_shared": 0.5,
+    "fit_audio_seconds_cap": 120,
+    "fit_endpoint_calls_cap": 26,
+    "generation_audio_seconds_cap": 120,
+    "generation_calls_cap": 8,
+    "generation_calls_target": 8,
+    "official_complete_derivative_scoring_jobs": 2
+  },
+  "fragment_kind": "saea-slurp-task-agent-experiment-v1",
+  "generation_budget": {
+    "cap": 4,
+    "target": 4
+  },
+  "population": {
+    "count": 4,
+    "dataset_fragment": "slurp-speech-native-dev1000",
+    "decision_population": "Deterministic normalized first four DEV rows; engineering only.",
+    "split_identity_hash": "e335c74149794af0f2301954b6e92cde2a4134d65ebe6069173a1a556b7a04b3"
+  },
+  "populations": [
+    {
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "ids": [
+        "slurp:devel:000011:audio-1497266596",
+        "slurp:devel:000053:audio-1498758443",
+        "slurp:devel:000058:audio-1488637952",
+        "slurp:devel:000068:audio-1488550098"
+      ],
+      "source_roster": {
+        "repo_relpath": "docs/receipts/rosters/slurp-dev1000-intent-hypothesis-source-engineering4-v1.json",
+        "sha256": "0d9fab6b7274aa941699d1b944e908afd68e18e7dfdad2acaada6cc1ebd2009c"
+      }
+    }
+  ],
+  "preserve_wire_responses": true,
+  "purpose": "Four-row hard-first source-to-delivery engineering proof; no efficacy conclusion.",
+  "request_decoding_overrides": {
+    "max_tokens": 256
+  },
+  "service_session": "serving-slurp-top3-commitment-np8-v1",
+  "split_id": "DEV-1000"
+}

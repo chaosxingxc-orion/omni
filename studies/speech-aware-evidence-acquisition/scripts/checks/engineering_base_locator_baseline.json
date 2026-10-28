@@ -1,0 +1,6 @@
+{
+ "schema": "saea-engineering-base-locator-baseline-v1",
+ "literal": "/mnt/e/chao_workspace/exploring-l4-intelligence/speechrl-data",
+ "note": "RETIRED and empty (owner rulings 289 B / 290 B, 2026-10-12): no file may name the data root by absolute path. The ratchet refuses every hard-coded data-root path and refuses a non-empty list here.",
+ "legacy_literal_files": []
+}

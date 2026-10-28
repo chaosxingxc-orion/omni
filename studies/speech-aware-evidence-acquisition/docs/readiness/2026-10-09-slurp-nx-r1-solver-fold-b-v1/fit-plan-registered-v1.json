@@ -1,0 +1,49 @@
+{
+  "cell": "slurp-native-stage3-nx-r1-solver-fold-b-v1",
+  "composed_config_hash": "a31825ae0c0f8b03312911403c86cee3ee8f03420d2a5cf21860c6ea7284eae2",
+  "execution_plan": {
+    "attempt_id": "attempt-slurp-native-stage3-nx-r1-solver-fold-b-fit-v1",
+    "carrier_lock_key": "slurp",
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 3.5,
+    "planned_model_calls": 34560,
+    "planned_speech_audio_seconds": 25239,
+    "protocol_hash": "82c4f0a521eeb83e88b6dac0187ce2fb0e03514ffa95971cd50a75c76f1002ae",
+    "run_id": "SAEA-SLURP-STAGE3-NX-R1-SOLVER-FOLD-B-FIT-V1",
+    "schema": "saea-execution-plan-v1",
+    "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a",
+    "split_role": "discovery",
+    "study": "speech-aware-evidence-acquisition"
+  },
+  "execution_route": "The shared core.flight.cli FIT path under this cell's own native_contact_fit ids; request envelopes only, no generation.",
+  "expected_session_id": "serving-slurp-native-candidate-five-train-a-np4-v1",
+  "experiment": "slurp-native-stage3-nx-r1-solver-fold-b-v1",
+  "family_budget": {
+    "asr_calls": 0,
+    "ceilings_are_not_targets": true,
+    "encoder_calls": 0,
+    "fit_endpoint_calls_cap": 34560,
+    "generation_calls_cap": 8640,
+    "gpu_hours_fit_inclusive": 3.5,
+    "native_task_contract_calls_cap": 8640,
+    "official_complete_scoring_jobs": 1,
+    "repeated_speech_audio_seconds_cap": 25239
+  },
+  "one_factor": "the Solver instruction template (phase_material.solver.instruction_template) of each non-delivering arm: ONE hash-pinned path per arm under probes/nx/solver/r1/, nothing else (no supply knob, decoding, response format or tool authority); the base, the Fold B pins, the review-off program and the module block are the instrument's carrier, shared by every arm",
+  "plan_kind": "fit",
+  "preparation_base_commit": "50777775b2f6fe0b5e8356d3606fd32aecb0f725",
+  "prepared_phase_supply": {
+    "relpath": "prepared/SAEA-SLURP-STAGE3-NX-R1-SOLVER-FOLD-B-V1/phase-supply-v2.json",
+    "sha256": "bdc6a1970a0ee44088d061748e318158e18fcd5e8686214209fcc2a01e546e71"
+  },
+  "protocol_document": {
+    "relpath": "docs/readiness/2026-10-09-slurp-nx-r1-solver-fold-b-v1/protocol-registered-v1.json",
+    "sha256": "736551c7d6ed022c5016039ea9fedc271ed9eb9a61e72c1af16e4192c47b3663"
+  },
+  "purpose": "SAEA-SLURP-STAGE3-NX-R1-SOLVER-FOLD-B-FIT-V1: request envelopes only; reads nothing.",
+  "registered_at_utc": "2026-10-09T12:00:00.000000+00:00",
+  "schema": "saea-registered-fit-plan-v1",
+  "source_tree": "studies/speech-aware-evidence-acquisition, worktree /home/chao/saea-worktrees/fable-nx-r1-register, branch fable/nx-r1-register",
+  "status": "REGISTERED_BEFORE_CONTACT_AWAITING_COORDINATOR_READINESS_FLIP",
+  "unused_budget_is_not_attempt_authority": true
+}

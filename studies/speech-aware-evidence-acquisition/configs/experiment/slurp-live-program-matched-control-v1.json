@@ -1,0 +1,91 @@
+{
+  "cells": [
+    {
+      "allowed_execution_stages": [
+        "check",
+        "wire-check",
+        "worker",
+        "campaign"
+      ],
+      "arm": "speech-feature-query",
+      "attempt_id": "attempt-live-program-matched-control-generation-v1",
+      "baseline_fragment": "slurp-live-program-matched-control-v1",
+      "cell_id": "live-program-matched-control-generation-v1",
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "model_fragment": "q4km-mmproj-free-speech-native-np4-base-speech-query-prefix-max64",
+      "readiness": {
+        "reason": "Owner-approved scientific comparison and full model-free preparation are complete. Root dispatch waits for E21 repair seal and the separately attested required SLURP service. Both actual live phase fits remain mandatory inside the exclusive lease before each generation phase.",
+        "requirements": [
+          {
+            "expected_decision_id": "slurp-program-matched-owner011-eligibility-v1",
+            "kind": "decision",
+            "relpath": "coordination/slurp-program-matched-owner011-eligibility-v1.json",
+            "sha256": "4fb2836b4e53caedbb7bd3b2100222bb928ea08cadce4ca5fbe67c0de97df1be"
+          },
+          {
+            "kind": "preparation",
+            "relpath": "coordination/slurp-program-matched-root-wire-verdict-v1.json",
+            "sha256": "6ddf799922869f1adcdbad502acea13287efc9fb91b909f52669b1f9cf6da927"
+          }
+        ],
+        "state": "ready"
+      },
+      "run_id": "SAEA-SLURP-LIVE-PROGRAM-MATCHED-CONTROL-V1"
+    }
+  ],
+  "comparison_basis": "Freeze both live arms before generation; compare their deterministic joined intent/slots deliveries on historically exposed NEW500, and report OLD500/DEV1000, natural/equal-scenario weighting, speaker sensitivity, output failures, model contacts and actual full-stage cost. The direct phase is regenerated in each arm. Components based on sealed predecessors are descriptive references.",
+  "date": "2026-09-11",
+  "delivery_derivatives": [
+    {
+      "cell_id": "live-program-matched-control-delivery-v1",
+      "parent_cell_id": "live-program-matched-control-generation-v1",
+      "response_postprocessor": "slurp-intent-slots-delivery-v1",
+      "response_postprocessor_params": {},
+      "source_selector": {
+        "predecessor_phase": "direct",
+        "program_id": "phase-direct-then-slots-supplied-v1",
+        "program_sha256": "1ba92c066aef7a399075ba32d657a33e8e49dfcf2947c98ab6055f39600caa6d",
+        "response_phase": "slots",
+        "schema": "saea-phase-response-pair-v1"
+      }
+    }
+  ],
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.5,
+    "planned_model_calls": 2100,
+    "planned_speech_audio_seconds": 6000,
+    "split_role": "dev"
+  },
+  "execution_plan_basis": {
+    "fit": "Two registered phase fits per arm require 6,002 endpoint contacts per arm; fit registration remains pending.",
+    "generation": "Two phases over DEV-1000: 2,000 target contacts with a 2,100 per-arm ceiling. Bounded retries, if needed, stay within that registered ceiling; no extra probe or unregistered recovery."
+  },
+  "experiment_id": "SAEA-SLURP-LIVE-PROGRAM-MATCHED-CONTROL-V1",
+  "family_budget": {
+    "fit_contacts_total": 12004,
+    "generation_calls_total": 4200,
+    "gpu_hours_total": 1.0
+  },
+  "fragment_kind": "saea-slurp-live-phase-experiment-v1",
+  "live_fit_execution": "The baseline live_phase_fit declares the distinct tokenizer run and attempt. It is an internal bounded phase gate; do not dispatch a standalone prompt-fit over synthetic predecessors.",
+  "migration_status": "OWNER_APPROVED_PROSPECTIVE_HELD: fresh matched-program pair; exposure, wire, fit and service admission remain pending.",
+  "population": {
+    "count": 1000,
+    "dataset_fragment": "slurp-speech-native-dev1000",
+    "decision_population": "Historically exposed NEW500 primary; OLD500 and pooled DEV-1000 separately. No fresh holdout claim.",
+    "roster": "the frozen full DEV-1000 runtime view, id for id",
+    "split_identity_hash": "8580d199bffc95a51ad6d8c5b2a2e9e39faa2c551dd095f8afcd78174a1e3c84"
+  },
+  "preserve_wire_responses": true,
+  "purpose": "Prospective held matched-program SLURP comparison: identical direct-then-slots-supplied program identity, empty null supply versus existing speech-keyed slots supply.",
+  "request_decoding_overrides": {
+    "max_tokens": 256
+  },
+  "scientific_analysis": {
+    "repo_relpath": "docs/readiness/2026-09-11-slurp-program-matched-v1/analysis-plan.json",
+    "sha256": "471e0d7ab6f900b5f2f31a6a7c74dd4d0d7bda22471f1db82da53141e20c5893"
+  },
+  "service_session": "serving-slurp-live-program-matched-np4-v1",
+  "split_id": "DEV-1000"
+}

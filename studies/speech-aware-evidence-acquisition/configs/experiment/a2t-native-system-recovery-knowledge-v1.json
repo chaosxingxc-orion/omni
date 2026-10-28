@@ -1,0 +1,106 @@
+{
+  "cells": [
+    {
+      "allowed_execution_stages": [
+        "check",
+        "wire-check",
+        "prepare-phase-recall",
+        "prompt-fit",
+        "campaign"
+      ],
+      "arm": "speech-feature-query",
+      "attempt_id": "attempt-native-system-recovery-knowledge-generation-v1",
+      "baseline_fragment": "a2t-native-system-recovery-knowledge-v1",
+      "cell_id": "a2t-native-system-recovery-knowledge-v1",
+      "dataset_fragment": "audio2tool-org1-union-4000",
+      "model_fragment": "q4km-mmproj-free-a2t-native-system-np3-v1",
+      "readiness": {
+        "reason": "Root manually admits sole matched recovery; unchanged sources and wire proof sealed. Actual complete live-phase fitting remains mandatory before each generation wave.",
+        "requirements": [
+          {
+            "kind": "preparation",
+            "relpath": "prepared/SAEA-A2T-NATIVE-SYSTEM-PACKETS-V1/promotion.json",
+            "sha256": "720d81f63a1923f19893c0ee171e1ab7b47f9a946c1e62a06bdddd839243de8a"
+          },
+          {
+            "kind": "preparation",
+            "relpath": "coordination/a2t-native-system-recovery-root-wire-verdict-v1.json",
+            "sha256": "568d1fa1305f0a11ff6e9888c20048bfdce81ba5b898a6aef8b9056012808865"
+          },
+          {
+            "kind": "preparation",
+            "relpath": "coordination/a2t-native-system-recovery-cumulative-budget-v1.json",
+            "sha256": "f407f15c636a8eca25b229b27ee8b9268e51c6e4d5816b8c55f57533f07a294b"
+          },
+          {
+            "expected_decision_id": "ROOT-A2T-NATIVE-SYSTEM-MANUAL-RECOVERY-V1",
+            "kind": "decision",
+            "relpath": "coordination/a2t-native-system-recovery-root-eligibility-v1.json",
+            "sha256": "1d34101bf00100760ea191e93224631ab3af3e85472e7870270c1daebde0a707"
+          },
+          {
+            "kind": "preparation",
+            "relpath": "prepared/SAEA-A2T-NATIVE-SYSTEM-RECOVERY-KNOWLEDGE-CAMPAIGN-PREPARE-V1/recall.json",
+            "sha256": "8e8426eca470d8e9233accacc2b26d0fe252439453ee0b2b2c8daf6b7ad2c2f4"
+          }
+        ],
+        "state": "ready"
+      },
+      "run_id": "SAEA-A2T-NATIVE-SYSTEM-RECOVERY-KNOWLEDGE-V1"
+    }
+  ],
+  "date": "2026-09-12",
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 4.0,
+    "planned_model_calls": 8400,
+    "planned_speech_audio_seconds": 50000,
+    "split_role": "discovery"
+  },
+  "experiment_id": "SAEA-A2T-NATIVE-SYSTEM-RECOVERY-KNOWLEDGE-V1",
+  "family_budget": {
+    "fit_contacts_total": 108009,
+    "generation_calls_total": 36864,
+    "gpu_hours_total": 12.2345,
+    "speech_audio_seconds_total": 217897.6323333201
+  },
+  "fragment_kind": "saea-native-task-system-experiment-v1",
+  "fresh_pass_budget": {
+    "fit_contacts_total": 60005,
+    "generation_calls_total": 21000,
+    "gpu_hours_total": 10.0,
+    "speech_audio_seconds_total": 125000
+  },
+  "generation_budget": {
+    "cap": 8400,
+    "target": 8000
+  },
+  "population": {
+    "count": 4000,
+    "dataset_fragment": "audio2tool-org1-union-4000",
+    "decision_population": "Historically exposed complete union4000, eight tiers of500; no new draw.",
+    "split_identity_hash": "ed8946ddf99f9e898af1c8cb94932c538165cd591c2cff3021321749e52103d6"
+  },
+  "preparation_source_receipts": [
+    {
+      "relpath": "coordination/a2t-query-encoding-root-closure-v1.json",
+      "root": "data",
+      "sha256": "8127de087876b43a22ba26f0564a61b8e00619148a5c664e19d09556c46da91d"
+    },
+    {
+      "relpath": "coordination/a2t-native-key-root-closure-v1.json",
+      "root": "data",
+      "sha256": "95b74158f1c5356288e5a42c6a0012e7a38957a3618a2d3e7ef7af792a4e42cd"
+    }
+  ],
+  "preserve_wire_responses": true,
+  "recovery_accounting": {
+    "closure_receipt": "coordination/a2t-native-system-interruption-closure-result-v1.json",
+    "closure_receipt_sha256": "c3c33f86073bb039ada533468633ac3fc7b41d4ac155ce53d9e4badeb89612ea",
+    "cumulative_budget_receipt": "coordination/a2t-native-system-recovery-cumulative-budget-v1.json",
+    "cumulative_budget_receipt_sha256": "f407f15c636a8eca25b229b27ee8b9268e51c6e4d5816b8c55f57533f07a294b",
+    "original_campaign": "SAEA-A2T-NATIVE-SYSTEM-V1",
+    "recovery_number": 1
+  },
+  "service_session": "serving-a2t-native-system-recovery-np3-v1"
+}

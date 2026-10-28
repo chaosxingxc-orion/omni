@@ -1,0 +1,153 @@
+{
+  "_draft_note": "A DRAFT for root to mint on the data root with scripts/flights/direct/direct_fb_mint_receipt.py (status decided, recorded_at_utc stamped, antecedents re-hashed, never overwrites). It authorises nothing while its status is not 'decided'.",
+  "antecedents": {
+    "analysis_recipe": {
+      "path": "docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1/analysis-recipe-v1.json",
+      "sha256": null
+    },
+    "derive_script": {
+      "path": "scripts/flights/direct/direct_fb_derive_cells.py",
+      "sha256": null
+    },
+    "owner_decisions": {
+      "path": "docs/readiness/2026-09-16-slurp-next-stage-owner-decisions-v1.md",
+      "sha256": null
+    },
+    "preregistration": {
+      "path": "docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1-preregistration.md",
+      "sha256": null
+    },
+    "protocol": {
+      "path": "docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1/protocol-registered-v1.json",
+      "sha256": null
+    },
+    "readiness_readme": {
+      "path": "docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1/README.md",
+      "sha256": null
+    },
+    "registered_facts": {
+      "path": "docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1/registered-facts-v1.json",
+      "sha256": null
+    }
+  },
+  "authorization_basis": "Owner decision 266-E (2026-10-11), 261, 242, 28/86; docs/readiness/2026-09-26-slurp-stage3-measurement-instrument-v1.md.",
+  "budget": {
+    "instruct": {
+      "asr_calls": 0,
+      "ceilings_are_not_targets": true,
+      "encoder_calls": 0,
+      "fit_endpoint_calls_cap": 3241,
+      "generation_calls_cap": 1080,
+      "gpu_hours_fit_inclusive": 0.5,
+      "native_task_contract_calls_cap": 0,
+      "official_complete_scoring_jobs": 1,
+      "repeated_speech_audio_seconds_cap": 3155
+    },
+    "replicate": {
+      "asr_calls": 0,
+      "ceilings_are_not_targets": true,
+      "encoder_calls": 0,
+      "fit_endpoint_calls_cap": 3241,
+      "generation_calls_cap": 1080,
+      "gpu_hours_fit_inclusive": 0.5,
+      "native_task_contract_calls_cap": 0,
+      "official_complete_scoring_jobs": 1,
+      "repeated_speech_audio_seconds_cap": 3155
+    },
+    "smoke": {
+      "asr_calls": 0,
+      "ceilings_are_not_targets": true,
+      "encoder_calls": 0,
+      "fit_endpoint_calls_cap": 13,
+      "generation_calls_cap": 8,
+      "gpu_hours_fit_inclusive": 0.5,
+      "native_task_contract_calls_cap": 0,
+      "official_complete_scoring_jobs": 0,
+      "repeated_speech_audio_seconds_cap": 20
+    },
+    "thinking": {
+      "asr_calls": 0,
+      "ceilings_are_not_targets": true,
+      "encoder_calls": 0,
+      "fit_endpoint_calls_cap": 3241,
+      "generation_calls_cap": 1080,
+      "gpu_hours_fit_inclusive": 4.5,
+      "native_task_contract_calls_cap": 0,
+      "official_complete_scoring_jobs": 1,
+      "repeated_speech_audio_seconds_cap": 3155
+    }
+  },
+  "cell_kind": "Stage-3 bare-core capability read: direct-only, TRAIN Fold B, Instruct arm + in-chain replicate + Thinking arm, and a four-row Thinking decode-cost smoke (claims_benefit false).",
+  "claim_boundary": "No system-level, superiority, generalisation, held-out, confirmatory or paper-scale claim; a development-fold capability read.",
+  "coordinator": "Fable5.1",
+  "decision": "Fly the 266-E bare-core read: the sealed direct-only form on TRAIN Fold B on the Instruct core (twice, same chain) and on the Thinking core, after a four-row Thinking decode-cost smoke and the coordinator's sign-off.",
+  "decision_id": "slurp-direct-only-fold-b-thinking-vs-instruct-admission-v1",
+  "eligible_run_ids": [
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-SMOKE-4-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-SMOKE-4-FIT-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-FIT-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-INSTRUCT-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-INSTRUCT-FIT-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-INSTRUCT-REPLICATE-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-INSTRUCT-REPLICATE-FIT-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-SMOKE-4-FIT-REC1-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-FIT-REC1-V1",
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-INSTRUCT-FIT-REC1-V1"
+  ],
+  "failure_policy": "Stop and preserve on the first failure. AT MOST ONE root-diagnosed recovery re-registration per run id; a second failure closes the cell and the fix is proven on a four-row dry run. The budget is run-cumulative across attempts.",
+  "not_authorized": [
+    "any flight before the cells are flipped and the receipt is minted",
+    "touching the serving geometry by anyone but the coordinator",
+    "any ASR, transcript or paid-API contact",
+    "the Thinking packet-preparation encoder pass (its own row, lease and owner authorisation)",
+    "persisting reasoning text or raw wire responses",
+    "--allow-output-change on the re-pin tool",
+    "using the Thinking model as the serving core of any system cell"
+  ],
+  "owner": "root",
+  "population": {
+    "count": 1080,
+    "fold_a_contact_authorized": false,
+    "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a",
+    "split_role": "discovery",
+    "test_contact_authorized": false
+  },
+  "recorded_at_utc": null,
+  "recovery_note": "[four-row Thinking decode-cost smoke] The predecessor attempt made its four contacts on the Thinking session (completion cap 2,048): completions of 363, 921 and 977 tokens delivered 99, 111 and 60 characters of content, and ONE contact spent all 2,048 completion tokens (prompt 2,285) and delivered content of length 0, because the whole budget went to reasoning, which the server routes to message.reasoning_content and the transport never reads. That empty content raised in the OpenJiuwen wave (ExecutionError 100054, component aggregate_agent_wave: AgentStateArtifact.content must be a non-empty string), the smoke step exited 1, the driver wrote its STOP and the Thinking arm never opened. Measured decode speed: 37 tokens per second per slot (58 with one slot busy); prompt evaluation 0.9 to 1.7 ms per token. The smoke is re-flown whole under the rec1 ids with the completion cap amended to 8,192; the Thinking arm's attempt never opened and keeps its ids; the Instruct cells are untouched. [Thinking arm] The predecessor attempt aborted before any model contact: \"GateClosed: execution plan claims 4.5 gpu hours but only 3.0 were pre-registered; model touch refused\". The exposure gate reads the FIT-inclusive pre-registration, and the live phase-fit row SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-FIT-V1 still read 3.0 GPU hours although the plan (gpu_hours_fit_inclusive) claimed 4.5. A (run_id, attempt_id) pair is a one-time key, so the arm is re-flown whole under the rec1 ids. The smoke, the Instruct arm and its replicate are untouched. [Instruct arm] The predecessor attempt aborted before any model contact: \"RailsRunnerError: AgentLoop query samples overlap the TRAIN knowledge source roster\" (raised by the runner's roster guard, rails/runner.py). The guard compares the query roster with the pinned knowledge snapshot's source roster even when the program supplies no evidence. The Instruct arm is re-flown whole under the rec1 ids; the replicate, the Thinking arm and the smoke are untouched (their attempts never opened) and only take the knowledge pin.",
+  "registered_hashes": {
+    "instruct": {
+      "composed_config": "4ede3a96f1b83d8960e72085984f71d1fb204af2984012af7342e42f659ad849",
+      "protocol": "28b031f7b033f5586ff12a1d7a9d04a39216098d33f0fe548f0ba3cf7c05ed61"
+    },
+    "replicate": {
+      "composed_config": "8b2bf50826d232cb6d5fda038a082e04bf077d284f72154ec1998226b81f589d",
+      "protocol": "63d1d1e9ccfc7a6452cbea51de1e6055a2c31519fae7363f2e692246bb37b8ae"
+    },
+    "smoke": {
+      "composed_config": "96d6fc2c21b0f1f70fbce0bb161085266923224084a4f0183c5ea09f7b5c2449",
+      "protocol": "c52053f7c46bb86a0fa38d5006264402e80b4ac3beb2bafb75576f959978e5bd"
+    },
+    "thinking": {
+      "composed_config": "3cc0aaa963dfdd030d22f5efd264c31355a1a3d874d44ec585fd960b01992c17",
+      "protocol": "1d8e73e5f5d5457178cecf135196c96e4573e5cb230e1394bd25b25946f2498c"
+    }
+  },
+  "schema": "saea-campaign-decision-v1",
+  "service": {
+    "instruct_session": "serving-slurp-native-candidate-five-train-a-np4-v1",
+    "no_child_start_stop": true,
+    "slot_tokens": 24576,
+    "slots": 4,
+    "thinking_session": "serving-slurp-thinking-direct-fold-b-np4-max8192-v1"
+  },
+  "status": "DRAFT-NOT-MINTED",
+  "superseded_attempt_ids": [
+    "attempt-slurp-direct-only-fold-b-thinking-smoke-4-generation-v1",
+    "attempt-slurp-direct-only-fold-b-thinking-smoke-4-fit-v1",
+    "attempt-slurp-direct-only-fold-b-thinking-generation-v1",
+    "attempt-slurp-direct-only-fold-b-thinking-fit-v1",
+    "attempt-slurp-direct-only-fold-b-instruct-generation-v1",
+    "attempt-slurp-direct-only-fold-b-instruct-fit-v1"
+  ]
+}

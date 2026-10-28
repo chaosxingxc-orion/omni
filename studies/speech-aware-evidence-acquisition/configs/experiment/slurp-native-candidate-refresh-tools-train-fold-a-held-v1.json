@@ -1,0 +1,31 @@
+{
+  "cells": [
+    {
+      "allowed_execution_stages": [
+        "check"
+      ],
+      "attempt_id": "HELD-NO-CONTACT-REFRESH-TOOLS-A",
+      "baseline_fragment": "slurp-native-candidate-refresh-tools-train-fold-a-held-v1",
+      "cell_id": "slurp-native-candidate-refresh-tools-train-fold-a-held-v1",
+      "dataset_fragment": "slurp-speech-native-evo-fold-a-1080",
+      "model_fragment": "q4km-mmproj-free-slurp-native-bounded-perception-proof-np4-ctx24k-max512-v1",
+      "readiness": {
+        "reason": "Full TRAIN A diagnostic, root admission, valid generation/fit/ASR plans and final supply are absent. Source metadata is exported through a separate preparation-only configuration.",
+        "state": "held"
+      },
+      "run_id": "HELD-NO-CONTACT-REFRESH-TOOLS-A"
+    }
+  ],
+  "date": "2026-09-14",
+  "execution_profile": "model-free-check",
+  "experiment_id": "SAEA-SLURP-NATIVE-CANDIDATE-REFRESH-TOOLS-TRAIN-FOLD-A-HELD-V1",
+  "failure_policy": "HELD: no worker, campaign, prompt-fit, preparation or neural/tool stage is admitted by this experiment.",
+  "preserve_wire_responses": true,
+  "protocol": {
+    "relpath": "docs/readiness/2026-09-14-slurp-native-candidate-refresh-tools-train-fold-a-v1/README.md",
+    "sha256": "23d33bfe48b4360c2dfbebb63ca1c1dc8f441b305bf65b00407fc0aaa72364a8"
+  },
+  "purpose": "Prepare the complete-system successor described in the source-pinned prospective protocol; no runtime contact.",
+  "service_session": "HELD-NO-SERVICE",
+  "split_id": "SLURP-EVO-FOLD-A-V2"
+}

@@ -1,0 +1,155 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "speech-aware-evidence-acquisition"
+version = "0.0.1"
+description = "Training-free, reward-guided evidence acquisition for speech-domain tasks over a frozen omni core (API-only)."
+requires-python = ">=3.12"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE"]
+dependencies = []
+
+# R0 operator-path repair (independent rereview finding B1): a second,
+# equally-real way to reach `core.driver.main` besides
+# `python -m speech_aware_evidence_acquisition.core.driver` (that module form
+# needs `core/driver/__main__.py`, added alongside this) -- both call exactly
+# the same `main`, so there is exactly one CLI dispatch implementation
+# either way. Cheap to add (no new code, `main` already existed and is
+# already covered by the model-free CLI tests); kept because the CLI's own
+# `argparse.ArgumentParser(prog="saea-driver")` already names this program.
+[project.scripts]
+saea-driver = "speech_aware_evidence_acquisition.core.driver.cli:main"
+saea-materialize-provisional-candidates = "speech_aware_evidence_acquisition.core.provisional_candidate_materialization:main"
+
+# TEST-TIME dependencies (numpy / soundfile / jiwer).
+#
+# The package itself still declares no runtime dependencies (`dependencies = []`
+# above) and must stay importable with zero heavy packages installed: every use
+# of these three inside `src/` is a deliberate function-local import, so
+# importing the package never pulls them in. The TEST SUITE is a different
+# contract -- it imports them to build fixtures and to exercise the analysis
+# paths -- and that contract was simply undeclared. It passed locally only
+# because the shared WSL ML venv happens to carry a full stack, while CI's
+# `uv sync --frozen` installed none of them (numpy reached the lock only as a
+# transitive of the OPTIONAL `tracking` extra: mlflow -> matplotlib -> numpy).
+# Measured on a clean `uv sync --frozen` environment, the undeclared set is
+# exactly these three: 526 of 526 collection/`ModuleNotFoundError` failures were
+# `soundfile` (520), `jiwer` (6), plus the `numpy` collection error that
+# interrupted CI before the rest could even be seen.
+#
+# Floors, each stated rather than guessed:
+#   numpy>=2.0     -- this suite has only ever been exercised on the 2.x line
+#                     (shared venv 2.2.6; this lock resolves 2.5.1) and 2.0 is
+#                     the API/ABI break, so a lower floor would nominally admit
+#                     a 1.x nothing here has run against. No ceiling: the APIs
+#                     used (`asarray`, `zeros`, `load`, `int64`, `float64`) are
+#                     core-stable.
+#   soundfile>=0.12 -- 0.12 is the first release whose wheels bundle libsndfile,
+#                     which is the capability a bare runner actually needs.
+#                     Looser than "the exercised version" (0.14.0) on purpose:
+#                     soundfile is used only for fixture I/O and frame/sample-
+#                     rate reads, so no research quantity depends on its version.
+#   jiwer>=4.0      -- TIGHT on purpose, unlike soundfile: `jiwer.wer` IS a
+#                     research measurement here (`reproduction.slurp_scoring.
+#                     _word_distance` reproduces the official SLURP script's
+#                     WordDistance), and 4.0.0 is the version every landed
+#                     SLURP number was computed with.
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "build>=1.2",
+    "ruff>=0.6",
+    "numpy>=2.0",
+    "soundfile>=0.12",
+    "jiwer>=4.0",
+]
+tracking = ["mlflow>=2.14"]
+# The external training-free controller reuses upstream Vowpal Wabbit rather
+# than carrying a study-owned RL implementation. Keep its compiled runtime out
+# of the zero-dependency base package and pin the exact version recorded by
+# controller receipts.
+tfrl-vw = ["vowpalwabbit==9.11.2"]
+
+# Kept byte-identical to `[project.optional-dependencies].dev` above: the extra
+# is what `uv pip install -e ".[dev]"` reads, the group is what a bare
+# `uv sync` / `uv sync --frozen` installs by default (which is what CI runs).
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "build>=1.2",
+    "ruff>=0.6",
+    "numpy>=2.0",
+    "soundfile>=0.12",
+    "jiwer>=4.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# `--strict-markers` (2026-08-26): an unregistered `@pytest.mark.<typo>` is an
+# ERROR, not a silently inert decorator. Without it, misspelling either marker
+# below would silently put a test back into the CI selection (or, worse, quietly
+# take one out of the local selection) with nothing to see. The suite used no
+# custom marks before this change -- only `parametrize` and `skipif` -- so the
+# flag costs nothing today and pins the two markers' spelling forever.
+addopts = "--strict-markers"
+
+# ENVIRONMENT-EXCLUSION MARKERS (2026-08-26, first-green CI repair).
+#
+# These name PRECONDITIONS OF THE HOST, never a weakening of anything under test.
+# Nothing they mark is skipped, deleted, softened, or made conditional: on the
+# WSL2 dev host every one of them runs, unchanged, exactly as before. They exist
+# so a clean single-repository Linux container can run the subset whose
+# preconditions it actually satisfies, and so the tests it CANNOT run are
+# deselected BY NAME with a visible, asserted count (`.github/workflows/ci.yml`,
+# step "Environment exclusions are exactly the declared inventory") rather than
+# hidden behind a directory ignore.
+#
+# `requires_wsl2_execution_authority` (115 tests) -- the test drives the REAL
+#   `contracts.FrozenCoreGate.assert_model_touch_allowed` or `core.session.
+#   start_session` past their profile check, at which point
+#   `contracts.plan.assert_wsl_execution_environment()` demands the running
+#   kernel be WSL2 (this repository's sole formal execution authority). GitHub's
+#   `ubuntu-latest` is plain Linux, so the gate REFUSES -- correctly. The gate is
+#   NOT patched, weakened, or bypassed anywhere: `tests/contract/
+#   test_execution_scope.py::test_gate_calls_the_wsl2_authority_check_before_
+#   reading_any_receipt` runs IN CI and fails if that call is ever removed from
+#   the gate, and its `start_session` twin already lives in
+#   `tests/unit/test_session.py`.
+# `requires_umbrella_checkout` (7 tests) -- the test reads the REAL umbrella
+#   `docs/datasets.lock.json`, which lives in a DIFFERENT Git repository
+#   (`<umbrella>/docs/`, resolved as `REPO_ROOT.parent.parent`). CI checks out
+#   this repository only.
+markers = [
+    "requires_wsl2_execution_authority: needs the WSL2 compute authority (this repository's sole formal execution authority); the real gate refuses elsewhere, by design",
+    "requires_umbrella_checkout: reads the real umbrella docs/datasets.lock.json from the adjacent-checkout layout, which is a different Git repository",
+    "requires_tfrl_vw: needs the pinned optional vowpalwabbit==9.11.2 binary runtime; base installs skip rather than emulate it",
+]
+
+[tool.ruff]
+# The quarantined W1 snapshot is frozen, program-internal prior authorship
+# (see reference/w1-snapshot/SNAPSHOT.md, NOTICE) -- it is read-only for this
+# study and must never be reformatted or otherwise edited by this repo's
+# tooling.
+extend-exclude = ["reference/w1-snapshot"]
+
+[tool.ruff.lint]
+# Explicit, not implicit: ruff's own "default" rule set has changed across
+# versions (observed: 0.15.x resolves E4/E7/E9/F only; 0.16.x resolves a much
+# broader set -- UP/I/S/B/ASYNC/YTT and more -- even with zero config). Pin
+# the classic Flake8-equivalent subset (pycodestyle errors + Pyflakes) this
+# R0 repair task actually scoped and fixed, so the lint gate does not
+# silently balloon in scope (or findings) on the next `uv lock` bump.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# `typing.Mapping` is unused in this module. It cannot be fixed by this task:
+# src/speech_aware_evidence_acquisition/e0/** is out of scope for R0 repair
+# (see .superpowers/sdd/r0-repair/task-9-brief.md Global Constraints); the
+# fix is deferred to a task with authority over e0/.
+"src/speech_aware_evidence_acquisition/e0/d2_leakage.py" = ["F401"]

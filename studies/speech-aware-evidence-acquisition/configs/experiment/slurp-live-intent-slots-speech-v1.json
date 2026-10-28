@@ -1,0 +1,103 @@
+{
+  "experiment_id": "SAEA-SLURP-LIVE-INTENT-SLOTS-SPEECH-V1",
+  "fragment_kind": "saea-slurp-live-phase-experiment-v1",
+  "migration_status": "Shared live speech-system configuration with prospective analysis frozen; actual readiness is governed by the cell receipts and committed fit/generation exposure rows.",
+  "date": "2026-09-10",
+  "purpose": "Full DEV-1000 live two-stage SLURP speech-keyed slot-filler treatment; direct intent/action state is transferred to a supplied slot-filler phase through the shared controller.",
+  "split_id": "DEV-1000",
+  "population": {
+    "dataset_fragment": "slurp-speech-native-dev1000",
+    "split_identity_hash": "8580d199bffc95a51ad6d8c5b2a2e9e39faa2c551dd095f8afcd78174a1e3c84",
+    "count": 1000,
+    "roster": "the frozen full DEV-1000 runtime view, id for id",
+    "decision_population": "Historically exposed NEW500 primary; OLD500 and pooled DEV-1000 separately. No fresh holdout claim."
+  },
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "split_role": "dev",
+    "planned_model_calls": 2100,
+    "planned_gpu_hours": 4.0,
+    "planned_speech_audio_seconds": 6000
+  },
+  "execution_plan_basis": {
+    "generation": "Root-proposed ceiling for2000phase contacts over1000rows; no extra probes or adaptive repeat. Exposure registration is still pending.",
+    "fit": "The live phase gate declares 1 GET /props plus 3 per-row endpoints for each of two phases: 6,002 contacts for DEV-1000. This is separate from the proposed generation ceiling."
+  },
+  "cells": [
+    {
+      "cell_id": "live-intent-slots-speech-generation-v1",
+      "run_id": "SAEA-SLURP-LIVE-INTENT-SLOTS-SPEECH-V1",
+      "attempt_id": "attempt-live-intent-slots-speech-generation-v1",
+      "allowed_execution_stages": [
+        "check",
+        "wire-check",
+        "worker",
+        "campaign",
+        "prepare-phase-recall"
+      ],
+      "arm": "speech-feature-query",
+      "baseline_fragment": "slurp-live-intent-slots-speech-v1",
+      "model_fragment": "q4km-mmproj-free-speech-native-np4-base-speech-query-prefix-max64",
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "readiness": {
+        "state": "ready",
+        "reason": "Root registers the fixed live speech arm after independent S3 repeat PASS and complete cached versus uncached request-material equivalence; actual per-phase capacity remains mandatory under the same root service.",
+        "requirements": [
+          {
+            "kind": "decision",
+            "relpath": "coordination/slurp-s3-independent-repeat-root-decision-v1.json",
+            "sha256": "4bb6edce6dfb02dbbadf3ccc5b80fda1d80b6570bff0e5f4ad55627dd9b839cd",
+            "expected_decision_id": "slurp-s3-independent-repeat-root-v1"
+          },
+          {
+            "kind": "preparation",
+            "relpath": "coordination/g6-slurp-live-speech-cached-wire-equivalence-v1.json",
+            "sha256": "0af5431fb0ec57f6f4466426eb0033f6e8a3f4dcd405b84e05b05db91e8e5684"
+          },
+          {
+            "kind": "preparation",
+            "relpath": "prepared/SAEA-SLURP-LIVE-INTENT-SLOTS-SPEECH-PREPARE-V1/recall.json",
+            "sha256": "20d0cd443972cc9fc954222da9bd355af59dea930b316f3ffd4ba60e7831caa3"
+          }
+        ]
+      }
+    }
+  ],
+  "request_decoding_overrides": {
+    "max_tokens": 256
+  },
+  "preserve_wire_responses": true,
+  "comparison_basis": "Freeze both live arms before generation; compare their deterministic joined intent/slots deliveries on historically exposed NEW500, and report OLD500/DEV1000, natural/equal-scenario weighting, speaker sensitivity, output failures, model contacts and actual full-stage cost. The direct phase is regenerated in each arm. Components based on sealed predecessors are descriptive references.",
+  "live_fit_execution": "The baseline live_phase_fit declares the distinct tokenizer run and attempt. It is an internal bounded phase gate; do not dispatch a standalone prompt-fit over synthetic predecessors.",
+  "delivery_derivatives": [
+    {
+      "cell_id": "live-intent-slots-speech-delivery-v1",
+      "parent_cell_id": "live-intent-slots-speech-generation-v1",
+      "response_postprocessor": "slurp-intent-slots-delivery-v1",
+      "response_postprocessor_params": {},
+      "source_selector": {
+        "schema": "saea-phase-response-pair-v1",
+        "program_id": "phase-direct-then-slots-supplied-v1",
+        "program_sha256": "1ba92c066aef7a399075ba32d657a33e8e49dfcf2947c98ab6055f39600caa6d",
+        "predecessor_phase": "direct",
+        "response_phase": "slots"
+      }
+    }
+  ],
+  "scientific_analysis": {
+    "repo_relpath": "docs/readiness/2026-09-10-slurp-live-system-v1/analysis-plan.json",
+    "sha256": "646304a6540eda1483c8d92be7990f075edb0e9b420fef65960c103b58422ef0"
+  },
+  "preparation_source_receipts": [
+    {
+      "root": "repository",
+      "relpath": "docs/receipts/knowledge/slurp-kb-size-full-content-slot-fillers.json",
+      "sha256": "2abda571900bfcb5bf4a384eac1cb858fa8841ab3873d034b862c85671af443c"
+    },
+    {
+      "root": "repository",
+      "relpath": "docs/checks/speech-aware-evidence-acquisition/2026-09-07-slurp-kus3-vectors/vectors.json",
+      "sha256": "3c213ad4f4787e32d92fe30dd1119395817a73ba48d46cbed292a8f471aa86e5"
+    }
+  ]
+}

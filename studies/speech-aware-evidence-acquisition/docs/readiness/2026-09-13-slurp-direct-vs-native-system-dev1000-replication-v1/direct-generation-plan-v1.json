@@ -1,0 +1,28 @@
+{
+  "schema": "saea-registered-generation-plan-v1",
+  "cell": "slurp-direct-vs-native-direct-dev1000-replication-v1",
+  "experiment": "slurp-direct-vs-native-direct-dev1000-replication-v1",
+  "expected_session_id": "serving-slurp-direct-vs-native-np4-ctx24k-v1",
+  "protocol_document": {
+    "relpath": "docs/readiness/2026-09-13-slurp-direct-vs-native-system-dev1000-replication-v1/protocol-v1.json",
+    "sha256": "0e745a715271294c57b6a92b3574d50b4beed88531c1470ef20646328cb5b489"
+  },
+  "root_registration_required": false,
+  "execution_plan": {
+    "schema": "saea-execution-plan-v1",
+    "study": "speech-aware-evidence-acquisition",
+    "run_id": "SAEA-SLURP-DIRECT-VS-NATIVE-DIRECT-DEV1000-REPLICATION-V1",
+    "attempt_id": "attempt-slurp-direct-vs-native-direct-generation-replication-v1",
+    "execution_profile": "bounded-discovery-probe",
+    "carrier_lock_key": "slurp",
+    "split_role": "dev",
+    "split_identity_hash": "8580d199bffc95a51ad6d8c5b2a2e9e39faa2c551dd095f8afcd78174a1e3c84",
+    "planned_model_calls": 1050,
+    "planned_gpu_hours": 1.0,
+    "planned_speech_audio_seconds": 3500,
+    "protocol_hash": "85a16c6b941469ced47592fd19b6024b15c061dc5e4c3d1ca8cf756727323071"
+  },
+  "scoring": "Complete official scoring once after seal with per-sample fields; quality read waits for both receipts.",
+  "execution_location": "Shared direct-only controller and executor.",
+  "registration_state": "REGISTERED by root before contact; this plan binds its fresh unconsumed exposure-ledger row and root admission."
+}

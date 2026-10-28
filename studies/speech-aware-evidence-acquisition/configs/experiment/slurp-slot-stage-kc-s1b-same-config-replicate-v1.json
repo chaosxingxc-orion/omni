@@ -1,0 +1,149 @@
+{
+  "experiment_id": "SAEA-SLURP-KC-S1B-SAME-CONFIG-REPLICATE-V1",
+  "fragment_kind": "saea-slurp-slot-stage-experiment-v1",
+  "date": "2026-09-09",
+  "purpose": "Prospective same-profile KC-S1b replication using the unchanged frozen DEV-1000 roster, model/dataset/baseline fragments and example-bearing schema. Complete-roster shared-controller payload parity passed at boundary f5710feb4d222963e47bd6a2fdebad6c8bcb70fc9e7ad9ee3c68a18fe5fea1df; capacity and scientific generation remain separately gated.",
+  "split_id": "DEV-1000",
+  "replication_source": {
+    "run_id": "SAEA-SLURP-KC-S1B-SLOTS-SCHEMA-DEV1000-V1",
+    "attempt_id": "attempt-20260906T025102Z-af6b04",
+    "manifest_relpath": "runs/SAEA-SLURP-KC-S1B-SLOTS-SCHEMA-DEV1000-V1/attempt-20260906T025102Z-af6b04/SAEA-SLURP-KC-S1B-SLOTS-SCHEMA-DEV1000-V1.run-manifest.json",
+    "manifest_sha256": "088c9307a39f38db124a5204793806e9a8589d942259b15e7826ad2685fe8d08",
+    "binding": "sealed-manifest; this is the prior KC-S1b replication comparator and is not the runtime predecessor state source"
+  },
+  "runtime_predecessor": {
+    "run_id": "SAEA-SLURP-DEV1000-CLOSED-LIST-DIRECT-V1",
+    "attempt_id": "attempt-20260905T060424Z-2c5596",
+    "manifest_relpath": "runs/SAEA-SLURP-DEV1000-CLOSED-LIST-DIRECT-V1/attempt-20260905T060424Z-2c5596/SAEA-SLURP-DEV1000-CLOSED-LIST-DIRECT-V1.run-manifest.json",
+    "manifest_sha256": "f908ff4c7b0267322b34c7bf2ca9ad29d6db97ee8bb3cf18bf8824a057ebc94c",
+    "binding": "baseline.phase_material.slots.predecessor_source; this sealed closed-list-direct manifest remains the unchanged per-row runtime state source"
+  },
+  "runtime_version_bridge_requirement": "Bind the same receipt-pinned llama.cpp featcache build and decoder as the historical run. Whole-roster payload equality is passed; root must complete the transport source and local runtime identity checks before service access.",
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "split_role": "dev",
+    "planned_model_calls": 1050,
+    "planned_gpu_hours": 1.0,
+    "planned_speech_audio_seconds": 3000
+  },
+  "execution_plan_basis": {
+    "generation": "1,000 roster generations under a 1,050-contact, 3,000-audio-second, 1-GPU-hour ceiling. Do not add a new performance trial or smoke by implication; any inherited audit canary must be separately identified and counted.",
+    "fit": "The shared fitter's actual endpoint sequence is 1 GET /props + 1,000 POST /apply-template + 2,000 POST /tokenize = 3,001 tokenizer contacts for the complete roster. The fit exposure proposal must therefore use a 3,001 contact cap (with any additional margin separately approved), not the 1,050 generation cap."
+  },
+  "cells": [
+    {
+      "cell_id": "kc-s1b-same-config-replicate-fit",
+      "run_id": "SAEA-SLURP-KC-S1B-SAME-CONFIG-REPLICATE-FIT-V1",
+      "attempt_id": "attempt-20260909T135929Z-8223cb",
+      "allowed_execution_stages": [
+        "check",
+        "wire-check",
+        "prompt-fit"
+      ],
+      "arm": "speech-feature-query",
+      "baseline_fragment": "slurp-phase-slots-given-intent-schema-v1",
+      "model_fragment": "q4km-mmproj-free-speech-native-np4-base-speech-query-prefix-max64",
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "readiness": {
+        "state": "held",
+        "reason": "Full-roster payload parity passed. Root must commit the tokenizer exposure and structured plan, verify the same runtime and acquire the root service lease before fitting.",
+        "requirements": []
+      }
+    },
+    {
+      "cell_id": "kc-s1b-same-config-replicate-generation",
+      "run_id": "SAEA-SLURP-KC-S1B-SAME-CONFIG-REPLICATE-V1",
+      "attempt_id": "attempt-20260909T135929Z-cd0731",
+      "allowed_execution_stages": [
+        "check",
+        "wire-check",
+        "prepare-supply",
+        "worker",
+        "campaign"
+      ],
+      "arm": "speech-feature-query",
+      "baseline_fragment": "slurp-phase-slots-given-intent-schema-v1",
+      "model_fragment": "q4km-mmproj-free-speech-native-np4-base-speech-query-prefix-max64",
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "readiness": {
+        "state": "ready",
+        "reason": "Full-roster source/request parity and registered actual capacity fit passed. Root admits the independent same-profile repeat under its final generation registration; no new mechanism is introduced.",
+        "requirements": [
+          {
+            "kind": "preparation",
+            "relpath": "prepared/SAEA-SLURP-KC-S1B-SAME-CONFIG-REPLICATE-FIT-V1/request-fit.json",
+            "sha256": "0aea29658079cda3fc227bd688f66f787bedbc6235ff5851bdf56302175f5dae",
+            "reason": "Complete real-request fit must match"
+          }
+        ]
+      }
+    }
+  ],
+  "prompt_fit": {
+    "run_id": "SAEA-SLURP-KC-S1B-SAME-CONFIG-REPLICATE-FIT-V1",
+    "contact_class": "tokenizer",
+    "contact_cap_proposal": 3001,
+    "endpoint_count_basis": {
+      "props": 1,
+      "apply_template_total": 1000,
+      "tokenize_total": 2000,
+      "roster_rows": 1000,
+      "total": 3001
+    },
+    "scope": "Full frozen DEV-1000 roster, same four fragments and same composed configuration as the generation cell; zero generated tokens.",
+    "artifact_binding": "The shared fitter artifact_inputs config digest must bind this composed experiment while stripping only readiness and fit receipt self-reference fields. It must bind the same split identity, runtime receipt, required session identity, implementation hashes and request boundary used by generation.",
+    "dispatch_constraint": "Fit and generation are separate cells in this same experiment fragment. The fit cell allows only check, wire-check and prompt-fit; the generation cell allows check, wire-check, prepare-supply, worker and campaign. The generation campaign must hold automatically until the fit artifact is verified."
+  },
+  "request_identity_comparison": {
+    "unchanged_source_fragments_expected": [
+      "model=q4km-mmproj-free-speech-native-np4-base-speech-query-prefix-max64",
+      "dataset=slurp-speech-native-dev1000",
+      "baseline=slurp-phase-slots-given-intent-schema-v1",
+      "experiment semantics=KC-S1b original example-bearing schema, closed-list-direct runtime predecessor state, one slot contact per row"
+    ],
+    "unchanged_request_fields": [
+      "same frozen DEV-1000 sample IDs and split identity",
+      "same system instruction and response format",
+      "same closed-list-direct runtime predecessor source and per-row state",
+      "same schema fill and fallback behavior",
+      "same packets, prompt order, -np 4 geometry and decoding parameters"
+    ],
+    "identity_changes_by_design": [
+      "experiment_id and generation run_id",
+      "generation attempt_id, fit run_id and fit attempt registration",
+      "preparation and readiness metadata"
+    ],
+    "comparison_rule": "Any request-visible difference or source-receipt drift fails the same-config claim and stops the flight for root review."
+  },
+  "decision": {
+    "test_tuning": false,
+    "paper_scale": false
+  },
+  "claim_surface": "No superiority, generalization, confirmatory or Stage-3 conclusion is authorized by this preparation.",
+  "prospective_replication_analysis": {
+    "population": "historically exposed NEW500 primary; OLD500 and full DEV-1000 reported separately",
+    "comparators": [
+      "sealed KC-S1b same-profile predecessor run",
+      "sealed closed-list-direct runtime predecessor",
+      "sealed KC-S1a equal-contact control"
+    ],
+    "metrics": [
+      "official strict entity F1 per sample",
+      "official SLU-F1 per sample",
+      "official corpus micro SLU-F1",
+      "scenario/action/intent after deterministic predecessor join"
+    ],
+    "estimator": "paired speaker-cluster bootstrap, 10000 replicates, seed20260903; historical scenario-stratified bootstrap reported as sensitivity",
+    "weights": [
+      "natural mixture",
+      "equal scenario strata"
+    ],
+    "decision": "Report same-profile replication of the historical improvement only if both entity-F1 and per-sample SLU-F1 paired CI90 lower bounds exceed zero versus both historical closed-list-direct and KC-S1a on NEW500. Any upper bound below zero is harmful; otherwise unresolved. Record agreement with sealed KC-S1b descriptively; do not use nonsignificance as equivalence.",
+    "claim_limit": "This is a same-profile repeat. Historical different-geometry rung2 and independent-roster requirements remain unfulfilled.",
+    "guard": "The deterministic predecessor join must preserve scenario/action/intent exactly row by row; report failures, retries, saturation, raw/derived delivery and contact costs."
+  },
+  "prepared_request_fit": {
+    "relpath": "prepared/SAEA-SLURP-KC-S1B-SAME-CONFIG-REPLICATE-FIT-V1/request-fit.json",
+    "sha256": "0aea29658079cda3fc227bd688f66f787bedbc6235ff5851bdf56302175f5dae"
+  }
+}

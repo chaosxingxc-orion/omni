@@ -1,0 +1,38 @@
+{
+  "model_lock_key": "qwen3-omni-30b-a3b-instruct-gguf-q4km",
+  "transport": "llama-server",
+  "base_url": "http://127.0.0.1:8080",
+  "timeout_seconds": 420.0,
+  "runtime_receipt": "receipts/runtime-q4km-featcache-04ccc72a.json",
+  "server_args": [
+    "-c",
+    "49152",
+    "-np",
+    "2",
+    "-fa",
+    "on",
+    "-ngl",
+    "999",
+    "-ctk",
+    "q8_0",
+    "-ctv",
+    "q8_0"
+  ],
+  "serving_geometry": {
+    "slots": 2,
+    "slot_tokens": 24576,
+    "max_tokens": 1024
+  },
+  "serving_geometry_basis": "Raw-audio direct cells on build 04ccc72a with the bf16 mmproj loaded. -np 2, applying the preregistration section 8 rule against the MEASURED prompt fit of 2026-09-04 (docs/checks/speech-aware-evidence-acquisition/2026-09-04-a2t-direct-calibration-400-v1/prompt-fit/prompt-fit.json): the native tool-calling envelope renders to 13,914 text tokens through the pinned template -- 678 MORE than the 13,236-token legacy registry text, not fewer -- so the A1 worst request needs 13,914 + 468 measured speech tokens + 1,024 completion ceiling + 2 special = 15,408 tokens. That exceeds the 14,800-token threshold at which the rule requires -np 2, and it left only 976 tokens of margin in a 16,384-token slot. At -c 49152 / -np 2 each slot holds 24,576 tokens, a margin of 9,168 for A1 and 9,846 for A0'. core.flight.FlightRuntime.serve derives -np/-c from the adapter's serving_geometry(), so slots x slot_tokens must equal the -c above exactly; 24,576 is a multiple of 512 and the server does not round it.",
+  "decoding_params": {
+    "temperature": 0,
+    "seed": 20260803,
+    "max_tokens": 1024,
+    "id_slot": "per-sample"
+  },
+  "prompt_order": "evidence-first-system-v2",
+  "server_env": {
+    "LLAMA_MTMD_FEAT_CACHE_DIR": "/home/chao/feat-cache/audio2tool-q4km-04ccc72a"
+  },
+  "model_materialization_root": "/home/chao"
+}

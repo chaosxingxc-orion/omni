@@ -1,0 +1,26 @@
+{
+  "deliverables": {
+    "d1_identity": {
+      "artifact": "artifacts/d1-identity.json",
+      "sha256": "9c10fad1e5b625f977a5bdc71ed0c782e5d5c76c7a13af11ce811c5e152d35e3",
+      "status": "CLOSED"
+    },
+    "d2_leakage": {
+      "artifact": "artifacts/d2-leakage.json",
+      "sha256": "d4b4516c8a49f006f83563b9d6a8d32034c6cd74b7b83c4fd39f358587938a35",
+      "status": "CLOSED"
+    },
+    "d3_scoring": {
+      "artifact": "artifacts/d3-scoring.json",
+      "sha256": "9ea7e671f51f0c64e985bcfef1d5ad73f7f178369d9e628aa004f95b771069ff",
+      "status": "CLOSED"
+    },
+    "d4_trace": {
+      "artifact": "artifacts/d4-trace.json",
+      "sha256": "23ee3ee44cba548d96dc59a2a159752f1cb364f094187246772a611674c469dc",
+      "status": "CLOSED"
+    }
+  },
+  "schema": "saea-e0-closure-receipt-v1",
+  "study": "speech-aware-evidence-acquisition"
+}

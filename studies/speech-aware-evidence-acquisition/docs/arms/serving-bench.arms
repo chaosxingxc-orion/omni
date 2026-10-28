@@ -1,0 +1,41 @@
+# SAEA-BENCH-serving-q4km — pick the deployment configuration BEFORE running
+# any more science.
+#
+# Serving arguments live inside the config hash, so changing them after arms
+# have run invalidates those arms. That has already been paid for twice in this
+# study. One arm, one split, three model fragments; the launcher is invoked
+# once per fragment and the three attempts accumulate under this one run id,
+# distinguishable by their config hashes.
+#
+#   --model qwen3-omni-llamacpp-q4km    mmproj on GPU,  -np 4 -c 49152   (A)
+#   --model q4km-mmprojcpu              mmproj on CPU,  -np 4 -c 49152   (B)
+#   --model q4km-mmprojcpu-np8          mmproj on CPU,  -np 8 -c 98304   (C)
+#
+# What is already measured, so the prediction is falsifiable rather than a
+# preference: the audio encode is a FIXED 3.32 s per 60 s slice on GPU (n=622,
+# p10 3.17 / p90 3.46) against 6.79 s on CPU — 2.05x, +3.5 s per slice — and it
+# is 5% of a 64.4 s long-prompt request whose decode is 76%. On GPU that encode
+# occupies the device for 3.32 s x 4 slots per wave; on CPU it can in principle
+# overlap the GPU's decoding. So: if the overlap is real, B and C match or beat
+# A despite the 2x encode; if llama.cpp serialises encode and decode per slot,
+# B loses roughly 8%.
+#
+# Read wall clock AND the transcripts. Identical WER across the three is the
+# expected outcome; a divergence would mean serving configuration perturbs
+# numerics, which must be known before any arm's numbers are trusted.
+#
+# RESULT (read 2026-08-10, docs/readiness/2026-08-10-serving-config-verdict.md):
+# A LOCKED — 22.8 min net / 10.8 s/slice / WER 0.2359, vs B 29.1 min / 0.2601
+# and C 31.0 min / 0.3451 (+1 saturated runaway slice). No encode/decode
+# overlap: B's +3.2 s/slice is the full CPU-encode delta on the critical path.
+# The identical-WER expectation was FALSIFIED — serving configuration perturbs
+# numerics (±3–7 pp per sample) and even slice counts (126/125/125), so the
+# serving args are load-bearing and stay frozen inside the config hash.
+# B/C fragments deleted from configs/model/ (bytes at fb234a8). Determinism
+# repeat under A: CLOSED 2026-08-11, NON-DETERMINISTIC — repeat 54a5e7 vs
+# fd7ba3 diverges on every sample (mean WER 0.2359 vs 0.2680, slice counts
+# 126 vs 124); run-to-run noise floor ±3.2 pp mean / ±10 pp per-sample. See
+# the 2026-08-11 ledger read-out and the segmentation-efficiency-frontier doc.
+#
+# run_id:baseline_fragment
+SAEA-BENCH-serving-q4km:bare-core-ojw

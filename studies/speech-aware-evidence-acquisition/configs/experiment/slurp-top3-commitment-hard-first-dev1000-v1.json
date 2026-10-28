@@ -1,0 +1,79 @@
+{
+  "cells": [
+    {
+      "allowed_execution_stages": [
+        "check",
+        "wire-check",
+        "worker",
+        "campaign"
+      ],
+      "arm": "speech-feature-query",
+      "attempt_id": "attempt-slurp-top3-hard-first-generation-v1",
+      "baseline_fragment": "slurp-top3-commitment-hard-first-v1",
+      "cell_id": "slurp-top3-commitment-hard-first-dev1000-generation-v1",
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "model_fragment": "q4km-mmproj-free-speech-native-np8-base-speech-query-prefix-max64",
+      "readiness": {
+        "reason": "HELD. Bind the exact FINALIZED shared source manifest in the baseline, freeze config/source identities, register generation and fit plans, and record root admission before any contact.",
+        "requirements": [],
+        "state": "held"
+      },
+      "run_id": "SAEA-SLURP-TOP3-HARD-FIRST-V1"
+    }
+  ],
+  "date": "2026-09-13",
+  "delivery_derivatives": [
+    {
+      "cell_id": "slurp-top3-commitment-hard-first-dev1000-delivery-v1",
+      "parent_cell_id": "slurp-top3-commitment-hard-first-dev1000-generation-v1",
+      "response_postprocessor": "slurp-hard-first-hypothesis-delivery-v1",
+      "response_postprocessor_params": {
+        "max_candidates": 3
+      },
+      "source_selector": {
+        "program_id": "phase-slots-given-intent-v1",
+        "program_sha256": "3ebb3afa30b6072b22ed2fb00f39db2ff8744b6adbe494d31efa76e47c452abd",
+        "response_phase": "slots",
+        "schema": "saea-sealed-state-response-pair-v1"
+      }
+    }
+  ],
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 1.0,
+    "planned_model_calls": 1050,
+    "planned_speech_audio_seconds": 3500,
+    "split_role": "dev"
+  },
+  "experiment_id": "SAEA-SLURP-TOP3-HARD-FIRST-V1",
+  "family_budget": {
+    "asr_calls": 0,
+    "common_source_counted_once": true,
+    "encoder_calls": 0,
+    "fit_audio_seconds_cap": 9000,
+    "fit_endpoint_calls_cap": 9003,
+    "generation_audio_seconds_cap": 10500,
+    "generation_calls_cap": 3150,
+    "generation_calls_target": 3000,
+    "gpu_hours_fit_inclusive": 3.0,
+    "official_complete_derivative_scoring_jobs": 2
+  },
+  "fragment_kind": "saea-slurp-task-agent-experiment-v1",
+  "generation_budget": {
+    "cap": 1050,
+    "target": 1000
+  },
+  "population": {
+    "count": 1000,
+    "dataset_fragment": "slurp-speech-native-dev1000",
+    "decision_population": "Exact retained exposed DEV1000 roster; NEW500 primary, OLD500 and pooled secondary under a later registered analysis.",
+    "split_identity_hash": "8580d199bffc95a51ad6d8c5b2a2e9e39faa2c551dd095f8afcd78174a1e3c84"
+  },
+  "preserve_wire_responses": true,
+  "purpose": "HELD matched hard-first successor over the same future sealed ordered Top-3 source; component comparison only.",
+  "request_decoding_overrides": {
+    "max_tokens": 256
+  },
+  "service_session": "serving-slurp-top3-commitment-np8-v1",
+  "split_id": "DEV-1000"
+}

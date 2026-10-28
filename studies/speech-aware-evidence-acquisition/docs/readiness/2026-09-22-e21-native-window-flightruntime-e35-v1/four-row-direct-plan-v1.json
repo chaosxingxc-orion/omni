@@ -1,0 +1,33 @@
+{
+  "schema": "saea-registered-generation-plan-v1",
+  "cell": "e21-native-window-direct-four-row-v1",
+  "experiment": "e21-native-window-four-row-direct-vs-system-v1",
+  "protocol_document": {
+    "relpath": "docs/readiness/2026-09-22-e21-native-window-flightruntime-e35-v1/protocol-v1.json",
+    "sha256": "33d847f257a1791e6372ed419c31f0cda4a66ad6b9cf0181f6324ac4fc87bfaa"
+  },
+  "root_registration_required": true,
+  "execution_plan": {
+    "schema": "saea-execution-plan-v1",
+    "study": "speech-aware-evidence-acquisition",
+    "run_id": "SAEA-E21-NATIVE-WINDOW-DIRECT-FOUR-ROW-V1",
+    "attempt_id": "attempt-e21-native-window-direct-four-row-v1",
+    "execution_profile": "bounded-discovery-probe",
+    "carrier_lock_key": "earnings21-original",
+    "split_role": "discovery",
+    "split_identity_hash": "4d9ea907c05b67c43b5829e3e6c379ee37d39df012028a864aa0cdb7ae0c1992",
+    "planned_model_calls": 4,
+    "planned_gpu_hours": 0.1,
+    "planned_speech_audio_seconds": 4320,
+    "protocol_hash": "51cf5d3e2cd0c4845b965d19eb829ae440baa4ee2fb99ee120418dc1791fc8fe"
+  },
+  "scoring": "One complete official score after seal (asr-wer-whisper, conec-entity-wer-official, numeric-value-accuracy-v1, semantic-high-impact-error-rate-v1, cost), run once through core.scoring_batch.",
+  "execution_location": "Shared direct-only controller (phase-direct-only-v1) and the OpenJiuwen executor.",
+  "requires_before_flight": [
+    "Materialize analysis/SAEA-E21-NATIVE-WINDOW-FOUR-ROW-V1/window-inventory.json via scripts/build_e21_native_window_unit_subset.py (expected file_sha256 e5f3cfbcbc407fbb3a7b59469b86ab9d405f7b43963cb2d18b655790c5f4a32b, unit_count 4)."
+  ],
+  "registration_state": "REGISTERED by root before contact on 2026-09-22 (owner decision 91): decision receipt coordination/e21-native-window-flightruntime-e35-v1/root-admission-v1.json (e21-native-window-flightruntime-e35-admission-v1); fresh unconsumed exposure-ledger rows; readiness flipped through core.flight.repin.apply_decision_and_readiness (no supply to prepare: item E38 path).",
+  "composed_config_hash": "0be9930984774ebdf1d0e7a90fa785ad094720ff7f830178dfb938123b3e228b",
+  "registered_at_utc": "2026-09-22T12:00:00.000000+00:00",
+  "expected_session_id": "serving-e21-native-window-flightruntime-np4-max1024-v1"
+}

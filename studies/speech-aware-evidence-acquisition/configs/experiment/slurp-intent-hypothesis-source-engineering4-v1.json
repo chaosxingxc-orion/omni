@@ -1,0 +1,85 @@
+{
+  "cells": [
+    {
+      "allowed_execution_stages": [
+        "check",
+        "wire-check",
+        "worker",
+        "campaign"
+      ],
+      "arm": "speech-feature-query",
+      "attempt_id": "attempt-slurp-intent-hypothesis-source-engineering-generation-v1",
+      "baseline_fragment": "slurp-intent-hypothesis-source-engineering4-v1",
+      "cell_id": "slurp-intent-hypothesis-source-engineering4-v1",
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "model_fragment": "q4km-mmproj-free-speech-native-np8-base-speech-query-prefix-max64",
+      "readiness": {
+        "reason": "Root admitted four-row typed-artifact engineering only. Actual live request fitting and complete service identity are required before generation.",
+        "requirements": [
+          {
+            "expected_decision_id": "SAEA-SLURP-INTENT-HYPOTHESIS-SOURCE-ENGINEERING-ADMISSION-V1",
+            "kind": "decision",
+            "relpath": "coordination/slurp-top3-commitment-v1/source-engineering-admission-v1.json",
+            "sha256": "3f734466a334bd7951c065c02fa1ee1ae58c80b0bb2e498bbb03f63148e43c61"
+          },
+          {
+            "kind": "preparation",
+            "relpath": "prepared/SAEA-SLURP-NATIVE-CANDIDATE-CONTRACTS-PREPARE-V1/receipt.json",
+            "sha256": "7b93a1ae1912c97b4be7813cf394629042c0dcc976cf8f74993647aee7213c2b"
+          }
+        ],
+        "state": "ready"
+      },
+      "run_id": "SAEA-SLURP-INTENT-HYPOTHESIS-SOURCE-ENGINEERING-V1"
+    }
+  ],
+  "date": "2026-09-13",
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.25,
+    "planned_model_calls": 4,
+    "planned_speech_audio_seconds": 60,
+    "split_role": "dev"
+  },
+  "experiment_id": "SAEA-SLURP-INTENT-HYPOTHESIS-SOURCE-ENGINEERING-V1",
+  "family_budget": {
+    "asr_calls": 0,
+    "encoder_calls": 0,
+    "fit_contacts": 13,
+    "fit_speech_seconds_cap": 60,
+    "generation_cap": 4,
+    "generation_speech_seconds_cap": 60,
+    "generation_target": 4,
+    "gpu_hours_fit_inclusive": 0.25,
+    "scorer_calls": 0
+  },
+  "fragment_kind": "saea-slurp-task-agent-experiment-v1",
+  "generation_budget": {
+    "cap": 4,
+    "target": 4
+  },
+  "population": {
+    "count": 4,
+    "dataset_fragment": "slurp-speech-native-dev1000",
+    "decision_population": "Deterministic first four retained rows; engineering only.",
+    "split_identity_hash": "e335c74149794af0f2301954b6e92cde2a4134d65ebe6069173a1a556b7a04b3"
+  },
+  "populations": [
+    {
+      "dataset_fragment": "slurp-speech-native-dev1000",
+      "ids": [
+        "slurp:devel:000011:audio-1497266596",
+        "slurp:devel:000053:audio-1498758443",
+        "slurp:devel:000058:audio-1488637952",
+        "slurp:devel:000068:audio-1488550098"
+      ]
+    }
+  ],
+  "preserve_wire_responses": true,
+  "purpose": "Connectivity-only four-row check of the typed source contract.",
+  "request_decoding_overrides": {
+    "max_tokens": 512
+  },
+  "service_session": "serving-slurp-top3-commitment-np8-v1",
+  "split_id": "DEV-1000"
+}
