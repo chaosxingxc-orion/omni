@@ -75,7 +75,7 @@ def test_the_181_profile_is_four_tp2_instances_on_disjoint_cards_ports_and_cores
     assert [i.name for i in profile.instances] == [f"saea-omni-i{k}" for k in range(4)]
     assert [i.cards for i in profile.instances] == [(0, 1), (2, 3), (4, 5), (6, 7)]
     assert [i.port for i in profile.instances] == [8200, 8201, 8202, 8203]
-    assert (profile.tensor_parallel_size, profile.max_num_seqs, profile.gpu_memory_utilization) == (2, 32, 0.92)
+    assert (profile.tensor_parallel_size, profile.max_num_seqs, profile.gpu_memory_utilization) == (2, 64, 0.92)
     cpus = [dep.parse_cpuset(i.cpuset) for i in profile.instances]
     # Each instance owns its cards' NUMA node (32 cores); nodes 1/3/5/7 stay free for the harness and CPU encoders.
     assert [len(c) for c in cpus] == [32] * 4 and len(frozenset().union(*cpus)) == 128
@@ -199,14 +199,14 @@ def test_the_serve_argv_keeps_the_protocol_window_and_takes_only_max_num_seqs_fr
     assert argv[:2] == ["serve", "/mnt/cephfs/xingchao/omni/models/qwen3-omni-30b-a3b-thinking"]
     pairs = dict(zip(argv[2::2], argv[3::2]))
     assert pairs["--max-model-len"] == "24576"
-    assert pairs["--max-num-seqs"] == "32"
+    assert pairs["--max-num-seqs"] == "64"
     assert pairs["--port"] == "8202" and pairs["--host"] == "127.0.0.1"
     assert pairs["--tensor-parallel-size"] == "2" and pairs["--gpu-memory-utilization"] == "0.92"
     assert pairs["--served-model-name"] == fragment["served_model_name"]
     assert argv.count("--max-num-seqs") == 1 and argv.count("--max-model-len") == 1
     # Every other fragment flag rides through untouched and in order.
     rest = [token for token in fragment["server_args"]]
-    rest[rest.index("--max-num-seqs") + 1] = "32"
+    rest[rest.index("--max-num-seqs") + 1] = "64"
     assert argv[-len(rest):] == rest
     assert "id_slot" not in " ".join(argv) and "--max-num-batched-tokens" not in argv
 
@@ -262,7 +262,7 @@ def test_the_data_root_is_one_overridable_path(fragment):
 def test_the_deployment_record_is_the_unhashed_deployment_facts(profile):
     record = dep.deployment_record(profile)
     assert record["schema"] == dep.DEPLOYMENT_RECORD_SCHEMA and record["hashed"] is False
-    assert (record["instance_count"], record["tensor_parallel_size"], record["max_num_seqs_per_instance"]) == (4, 2, 32)
+    assert (record["instance_count"], record["tensor_parallel_size"], record["max_num_seqs_per_instance"]) == (4, 2, 64)
     assert record["card_count"] == 8 and record["protocol_window_tokens"] == 24576
     assert [i["base_url"] for i in record["instances"]] == [f"http://127.0.0.1:{8200 + k}" for k in range(4)]
     assert record["profile_sha256"] == profile.sha256

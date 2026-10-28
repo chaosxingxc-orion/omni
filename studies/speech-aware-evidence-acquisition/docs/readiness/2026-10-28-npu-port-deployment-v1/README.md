@@ -35,10 +35,10 @@ start. Experiments vary only the client-side concurrency below it.
 - `qwen3-omni-thinking-bf16-181-4xtp2-v1` is the resident deployment:
   - four instances, TP2 each;
   - cards [0,1] [2,3] [4,5] [6,7], ports 8200-8203, containers `saea-omni-i0..i3`;
-  - `max_num_seqs` 32 (a PLACEHOLDER until the sweep picks the knee), `gpu_memory_utilization` 0.92.
+  - `max_num_seqs` 64 (the resident scheduling ceiling, fixed at deploy time and at least the sweep's top level 48; it reserves no KV, and each experiment's client concurrency comes from the sweep's knee), `gpu_memory_utilization` 0.92.
 
   The cpusets follow each card's PCI NUMA node, as read on 181: NPU 0-1 are on node 6, 2-3 on node 4, 4-5 on node 0
-  and 6-7 on node 2. The cpusets split all 256 cores with no overlap. `HCCL_IF_BASE_PORT` is set to a different value
+  and 6-7 on node 2. Each instance is pinned to its own node's 32 cores (192-223, 128-159, 0-31, 64-95); the other 128 cores (nodes 1/3/5/7) stay free for the flight harness and CPU encoder runs. `HCCL_IF_BASE_PORT` is set to a different value
   per instance because all four instances share the host network namespace. This is defensive and has not been
   verified.
 - `qwen3-omni-thinking-bf16-181-2xtp4-v1` is the TP4 comparison arm for the sweep only. It runs two instances on cards
@@ -166,12 +166,11 @@ The deployment's `max_num_seqs` must be at least the highest level swept. Otherw
 
 ### Open questions
 
-- `max_num_seqs` 32 is a placeholder. The KV estimate is about 96 KB per token and roughly 25 GB of KV per card after
+- The ceiling `max_num_seqs` 64 only bounds scheduling; whether the knee fits the KV budget is the sweep's question. The KV estimate is about 96 KB per token and roughly 25 GB of KV per card after
   the weights at 0.92 utilisation. Both must be checked against vLLM's reported KV block count when the instances
   first start.
 - `HCCL_IF_BASE_PORT` per instance, and simultaneous starts of four TP2 instances on one host network: confirm on the
   first `up`, or start the instances one at a time if they collide.
-- The cpusets give each instance 64 cores. Harness clients and CPU encoder runs on 181 will share those cores. Should
-  some cores be reserved for them?
+- Resolved (main thread): each instance owns its NUMA node's 32 cores and 128 cores stay free for harness and encoders.
 - Does `usage.prompt_tokens` equal the `/tokenize` count for an audio request? The sweep records
   `prompt_tokens_server_matches_tokenize` for each level. The NPU smoke checks the same thing.
