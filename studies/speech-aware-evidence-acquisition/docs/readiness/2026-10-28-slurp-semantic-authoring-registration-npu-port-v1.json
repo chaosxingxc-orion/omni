@@ -1,0 +1,85 @@
+{
+  "admitted_read": "Load governed TRAIN through existing slurp_kb_rows. Exclude the whole utterance if any recording is in A or B; require exact remaining pool identity and snapshot membership before releasing text/labels. Do not read DEV/test content or results for authoring.",
+  "authoring_rules": [
+    "Use support examples to explain semantics, ambiguity, inclusion and exclusion; do not copy TRAIN as memory.",
+    "Do not add rules extracted from DEV failures or task-score feedback.",
+    "Treat observed label/type co-occurrence as evidence, not an unconditional required-slot schema.",
+    "Only root-reviewed authored values enter the registered semantic builders and named store releases."
+  ],
+  "authority": "Owner-approved task-specific, separate intent and slot knowledge construction; root native role integration decision.",
+  "carrier_lock_key": "slurp",
+  "contacts": {
+    "encoder": 0,
+    "gpu": 0,
+    "model": 0,
+    "scorer": 0,
+    "tokenizer": 0,
+    "tool_backend": 0
+  },
+  "data_root": "/mnt/cephfs/xingchao",
+  "execution_profile": "model-free-check",
+  "expected_pool": {
+    "entity_types": 54,
+    "intents": 60,
+    "recordings": 37407,
+    "source_split_identity_hash": "22f6092dfdb4a160376e529d8e59e9215bc7701e274620d35feb1c4d82f309e9",
+    "utterances": 9354
+  },
+  "forbidden_rosters": [
+    {
+      "path": "/mnt/cephfs/xingchao/work/dev/umbrella/studies/speech-aware-evidence-acquisition/docs/receipts/rosters/slurp-evo-fold-a-v2.json",
+      "sha256": "1fe7908c31396774d7535fdf37bd791762215c324999d66ed7beb9e7b2f9033d"
+    },
+    {
+      "path": "/mnt/cephfs/xingchao/work/dev/umbrella/studies/speech-aware-evidence-acquisition/docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+      "sha256": "47b89b9e33b1aed553ad94a1819acba6ac8837130ca546c33219d91a1ab944a8"
+    },
+    {
+      "path": "/mnt/cephfs/xingchao/work/dev/umbrella/studies/speech-aware-evidence-acquisition/docs/receipts/probe-samples/DEV-1000.json",
+      "sha256": "653c7556edf88e56af2e18a25239426b2efc3b080af0173fd65c87fe8e4f528b"
+    }
+  ],
+  "loader_sources": [
+    {
+      "path": "/mnt/cephfs/xingchao/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/rails/knowledge_build.py",
+      "sha256": "455d1db317158066709d0a99e3b2bb2812b36697c3f1bfd12a5bb6b76fd97c48"
+    },
+    {
+      "path": "/mnt/cephfs/xingchao/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/data/slurp.py",
+      "sha256": "2593aa0a4dbe765a4c20b5d7a4829158418a41e581fcac10627b8acddc56d772"
+    }
+  ],
+  "lock": {
+    "path": "/mnt/cephfs/xingchao/work/dev/umbrella/docs/datasets.lock.json",
+    "sha256": "eb39a1caa93605dabc25e8eb692d0d306b8a4aa572157449736cd921d286966d"
+  },
+  "outputs": {
+    "material": "English source text, token spans, entity types/fillers, intent, exact source IDs and group membership; no runtime release yet.",
+    "namespace": "prepared/SAEA-SLURP-SEMANTIC-AUTHORING-PREPARE-V1",
+    "receipts": "Create-only outer and two support construction rosters, source hash bindings, counts and decontamination receipt."
+  },
+  "pool_receipt": {
+    "path": "/mnt/cephfs/xingchao/work/dev/umbrella/studies/speech-aware-evidence-acquisition/docs/receipts/knowledge/slurp-kb-size-full-content-slot-fillers-intent-slot-frame-tfrl-folds-v1.json",
+    "sha256": "5db718d38426e5e6d2311efbed0c4faf36bf30473c8d00b14e06618257889766"
+  },
+  "pool_snapshot": {
+    "content_sha256": "9c64e8ec48a0fce4f172bd190932f99c98c7efa18bbfb14526d54c62fdf7032b",
+    "path": "/mnt/cephfs/xingchao/knowledge/slurp/saea-kb-distmodel-v1/size-full-content-slot-fillers-intent-slot-frame-tfrl-folds-v1/snapshot.json",
+    "sha256": "f2785aa3521b08e874d4075154e65cc639284497afc789a3654c2c70a65405ef"
+  },
+  "port_note": "NPU / vLLM-Ascend port (docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md section 10.2): SAEA-SLURP-SEMANTIC-AUTHORING-PREPARE-V1 with this host's absolute paths and the current umbrella lock. Selection, rules, expected pool, forbidden rosters (same sha256), pool receipt and pool snapshot (same sha256, rebuilt byte-identically) are unchanged; the loader sources are pinned at the port branch's versions.",
+  "purpose": "Prepare governed TRAIN support for stable intent boundaries and explanatory slot contracts; root authors and reviews final values.",
+  "registered_at_utc": "2026-09-13T10:13:40.687255+00:00",
+  "registration_id": "SAEA-SLURP-SEMANTIC-AUTHORING-PREPARE-V1",
+  "roster_role": "construction",
+  "schema": "saea-semantic-authoring-read-registration-v1",
+  "selection": {
+    "coverage": "Report all observed intent/type relations and unsupported or sparse cases. Do not infer mandatory fields from frequency.",
+    "intent_support": "Take at most eight utterances per intent; retain all available when fewer than eight.",
+    "ordering": "Sort each group by SHA-256 of UTF-8 string semantic-authoring-v1: plus utterance_id; break ties by utterance_id.",
+    "slot_support": "Take at most three utterances per observed (intent,entity_type) pair; retain all available when fewer than three. Deduplicate selected utterances across pairs.",
+    "source_bindings": "Retain all recording IDs of each selected utterance; freeze separate exact construction rosters for the intent and slot support sets through core.roster."
+  },
+  "source_partition": "train",
+  "split_role": "discovery"
+}

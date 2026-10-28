@@ -1,0 +1,8 @@
+{
+  "registration": {
+    "relpath": "docs/readiness/2026-10-28-slurp-semantic-authoring-registration-npu-port-v1.json",
+    "sha256": "d3e9e849d609b914174998c507dc8321eda76b9678b066a5165357796a38bd1d"
+  },
+  "schema": "saea-slurp-semantic-authoring-support-config-v1",
+  "selection_policy_id": "semantic-authoring-v1"
+}
