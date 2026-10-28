@@ -1,0 +1,226 @@
+{
+  "_note": "The NPU port's retrieval pins of the L338 lever-column cells, extracted ONCE from the committed port flight baseline configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json and experiment at study commit 7db9d7cd (written there by the port re-pin of the sealed artifacts). scripts/flights/nx/l338_port_derive_cells.py applies them to the historical L338 cells; it refuses if the port flight it derives differs from the committed one beyond its declared moved leaves. Data only: no contact.",
+  "agreement_requirement": {
+    "kind": "preparation",
+    "reason": "The port's Fold B exemplar-intent AGREEMENT table this cell's boundary channel ranks with (w_agree 1.0), built model-free by scripts/build_slurp_intent_exemplar_agreement.py (the historical builder, same sha) from the committed agreement-free port COMPARATOR cell slurp-native-stage3-l338-lever-column-fold-b-comparator-npu-port-v1 -- zero model, server, encoder, embedder, scorer, network and GPU contacts. Measured: 1,080 rows, every row 20 votes, 0 self-excluded exemplars, 0 rows without a vote, 60 facets voted for (the historical table's statistics). Ledger row SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1.",
+    "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1/agreement.jsonl",
+    "sha256": "db4614a3f8f644c8514cd76bf596446cc9b7043eb222a97973eb8b807f113918"
+  },
+  "arm": "raw-speech-agent-native-tools",
+  "component_params": {
+    "agree-vote-seed": {
+      "agreement_source": {
+        "embedded_signal": "derived: the share of this row's own top-20 sealed TRAIN-exemplar recall whose frozen build-time task_target equals each boundary intent, self-excluded by the row's utterance identity and normalised to 1. Speech-keyed by construction -- the recall it summarises is the row's own sealed TRAIN Fold B speech vector against the frozen pool -- and gold-free: the key is a released store property, never a label, transcript or future turn. Built model-free by scripts/build_slurp_intent_exemplar_agreement.py with zero model, server, encoder, embedder, scorer, network and GPU contacts; receipt beside the artifact.",
+        "kind": "sealed-agreement",
+        "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1/agreement.jsonl",
+        "sha256": "db4614a3f8f644c8514cd76bf596446cc9b7043eb222a97973eb8b807f113918",
+        "tool_contact_ledger_row": "SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1"
+      }
+    },
+    "centroid-boundary-key": {
+      "facet_source": {
+        "embedded_signal": "text: the intent's unit-normalised MEAN construction-TRAIN utterance vector (R01-excluded pool, one centroid per released intent-boundary facet; the one intent with no pool member keeps the flown written key), arithmetic over the pinned pool key vectors at zero encoder contacts; the key side is knowledge, the delivered body is unchanged.",
+        "kind": "sealed-vectors",
+        "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1/facets.jsonl",
+        "sha256": "f05287550e2ee895a6444b2e909db643df6f8d586c648eb7cc32c7b9f2c46d31",
+        "tool_contact_ledger_row": "SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1"
+      }
+    }
+  },
+  "flight_phase_supply": {
+    "relpath": "prepared/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1/phase-supply-v1.json",
+    "sha256": "1141f08c7cd4eb64574e38ecb95cffb3012057ad27ce2c62862c230c776aa630"
+  },
+  "flight_phase_supply_reason": "This cell's OWN prepared first-phase Perception supply, built model-free under its own run id with core.flight.cli prepare-supply from the port's sealed TRAIN Fold B speech-query segment vectors, the port centroid key file SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1 and the port Fold B agreement table (item E16). --allow-output-change must never be passed.",
+  "knowledge_stores": {
+    "intent-boundaries": {
+      "phase_supply": {
+        "perception": {
+          "agreement_source": {
+            "embedded_signal": "derived: the share of this row's own top-20 sealed TRAIN-exemplar recall whose frozen build-time task_target equals each boundary intent, self-excluded by the row's utterance identity and normalised to 1. Speech-keyed by construction -- the recall it summarises is the row's own sealed TRAIN Fold B speech vector against the frozen pool -- and gold-free: the key is a released store property, never a label, transcript or future turn. Built model-free by scripts/build_slurp_intent_exemplar_agreement.py with zero model, server, encoder, embedder, scorer, network and GPU contacts; receipt beside the artifact.",
+            "kind": "sealed-agreement",
+            "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1/agreement.jsonl",
+            "sha256": "db4614a3f8f644c8514cd76bf596446cc9b7043eb222a97973eb8b807f113918",
+            "tool_contact_ledger_row": "SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1"
+          },
+          "dimensions": [
+            "intent-boundary"
+          ],
+          "expose_facets": false,
+          "facet_source": {
+            "embedded_signal": "text: the intent's unit-normalised MEAN construction-TRAIN utterance vector (R01-excluded pool, one centroid per released intent-boundary facet; the one intent with no pool member keeps the flown written key), arithmetic over the pinned pool key vectors at zero encoder contacts; the key side is knowledge, the delivered body is unchanged.",
+            "kind": "sealed-vectors",
+            "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1/facets.jsonl",
+            "sha256": "f05287550e2ee895a6444b2e909db643df6f8d586c648eb7cc32c7b9f2c46d31",
+            "tool_contact_ledger_row": "SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1"
+          },
+          "fuse_coverage": {
+            "c": 1,
+            "m": 8,
+            "top_l": 8
+          },
+          "fuse_policy": "saea-fuse-associated-values-v1",
+          "k": 60,
+          "provider": "kb-facet-v1",
+          "query_source": {
+            "embedded_signal": "speech: complete original TRAIN Fold B recordings represented by sealed full-utterance segments in the intent-boundary retrieval dimension; segment identities are preserved and no flattening, re-encoding, transcript, answer or future turn enters this query.",
+            "kind": "sealed-segment-vectors",
+            "relpath": "vectors/slurp-intent-boundaries-train-fold-b-1080-npu-port-v1/query-vectors-speech-segments.jsonl",
+            "sha256": "fe23703a429d4a655b51d0cee921f28eba0e5be8a5511d9fe0f13dc73eb28181",
+            "tool_contact_ledger_row": "SAEA-SLURP-TFRL-FOLD-B-SPEECH-QUERY-ENCODING-NPU-PORT-V1"
+          },
+          "rank_policy": "saea-rank-wcos-prior-agree-v1",
+          "rank_weights": {
+            "w_agree": 1.0,
+            "w_cos": 1.0,
+            "w_prior": 0.0
+          },
+          "tau": 0.0
+        }
+      },
+      "release": {
+        "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/release.json",
+        "sha256": "22242e839627a895d3bcc450002a90fd64ceddef606446febe19a5b8a895dc06"
+      },
+      "snapshot": {
+        "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/snapshot.json",
+        "sha256": "cb6ef966cb3a68a49c325d0bfa643e9e97402d963a49bc93c0c15024fc62eabc"
+      },
+      "store_role": "intent-boundaries"
+    },
+    "slot-contracts": {
+      "candidate_supply": {
+        "solver": {
+          "candidate_state_phase": "perception",
+          "compact_source_phase": "perception",
+          "fuse_policy": "saea-candidate-semantic-passthrough-v1",
+          "max_candidates": 3,
+          "max_total_values": 28,
+          "max_values_per_candidate": 16,
+          "projection_policy": "bounded-first-occurrence-distinct-slurp-intent-hypotheses-v1",
+          "provider": "slurp-candidate-semantic-v1",
+          "rank_policy": "saea-ranked-candidate-round-robin-v1"
+        }
+      },
+      "release": {
+        "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v2/release.json",
+        "sha256": "2f11a748dbd6b61c358ba9283a34b6e96fdabbb1cb1a62ff6468c48f58a1c63c"
+      },
+      "snapshot": {
+        "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v2/snapshot.json",
+        "sha256": "e035c1b827b10cb711c7c31d345deb5e668489679b0d3979acfc95427f6e2a5e"
+      },
+      "store_role": "slot-contracts"
+    },
+    "train-exemplars": {
+      "phase_supply": {
+        "solver": {
+          "dimensions": [
+            "content"
+          ],
+          "expose_facets": false,
+          "facet_source": {
+            "embedded_signal": "text: Omni-Embed-Nemotron-3B over the 11,514 governed SLURP TRAIN utterance texts, prompt 'passage: ', mean-pooled and L2-normalised; one vector per content facet id facet:content:<slurp_id>. The KEY side is knowledge text by construction and is unconstrained by the owner's 2026-09-06 query-signal rule.",
+            "kind": "sealed-vectors",
+            "relpath": "vectors/slurp-kus3/facet-vectors.jsonl",
+            "sha256": "24f0cdf7005f722651631fa91407a6c7e68ac4aa9ec70ac042328fe2020cf2c4",
+            "tool_contact_ledger_row": "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1"
+          },
+          "fuse_coverage": {
+            "c": 20,
+            "m": 20,
+            "top_l": 20
+          },
+          "fuse_policy": "saea-fuse-supplyfilter-v1",
+          "k": 20,
+          "provider": "kb-facet-v1",
+          "query_source": {
+            "embedded_signal": "speech: complete original TRAIN Fold B recordings represented by the sealed full-utterance speech vector of the row's own recording, in the content retrieval dimension; flattened by scripts/build_slurp_query_content_derivative.py from the sealed intent-boundary full-utterance SEGMENT vectors (one segment per row, dimension renamed intent-boundary to content, every float byte-identical to the parent; provenance beside the file) -- the exact transform cell ROLL-2's Fold A pin was built with -- because docs/results/2026-09-17-slurp-a2-exemplar-headroom-audit-v1.md establishes intent-boundary as an alias of the content embedding space; no flattening of MEANING, re-encoding, transcript, answer or future turn enters this query.",
+            "kind": "sealed-vectors",
+            "relpath": "vectors/slurp-stage3-filler-fold-b-npu-port-v1/query-vectors-speech-content-v1.jsonl",
+            "sha256": "e1d3230ed517685f6d0e963bb48a0a5bf205e3c31a7c7aaae22e88b1ac27196f",
+            "tool_contact_ledger_row": "SAEA-SLURP-TFRL-FOLD-B-SPEECH-QUERY-ENCODING-NPU-PORT-V1"
+          },
+          "rank_policy": "saea-rank-wcos-prior-agree-v1",
+          "rank_weights": {
+            "w_agree": 0.0,
+            "w_cos": 1.0,
+            "w_prior": 0.0
+          },
+          "tau": 0.0
+        }
+      },
+      "release": {
+        "relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars/release.json",
+        "sha256": "171aa4a82c2b15fff2c72e907ea80298be8d72309cca0d7367eb50debb042129"
+      },
+      "snapshot": {
+        "relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars/snapshot.json",
+        "sha256": "4c498dc0282055b9fe036ed7e950af519bd48b5f26e76876d0250727196a72e9"
+      },
+      "store_role": "train-exemplars"
+    }
+  },
+  "preparation_source_receipts_common": [
+    {
+      "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/completion.json",
+      "root": "data",
+      "sha256": "7b7e4744caec975d9fa000ec14c4f47f2bb072d1f129016e114382e98042b294"
+    },
+    {
+      "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/release.json",
+      "root": "data",
+      "sha256": "22242e839627a895d3bcc450002a90fd64ceddef606446febe19a5b8a895dc06"
+    },
+    {
+      "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v1/completion.json",
+      "root": "data",
+      "sha256": "894937819636aaeed206d96e4e806be03712341a9ed94312d919201807272d19"
+    },
+    {
+      "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v1/release.json",
+      "root": "data",
+      "sha256": "19723a2a8996bb189e9c6312ae56903a87c9effc323bdde4bf28aaa2a8952341"
+    },
+    {
+      "relpath": "preparation-runs/SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-NPU-PORT-V1/encode-v1/receipt.json",
+      "root": "data",
+      "sha256": "8aff65483afd4e1aba98ecb8456976650783dea1a2e87aea003b2a73fb887964"
+    },
+    {
+      "relpath": "preparation-runs/SAEA-SLURP-TFRL-FOLD-B-SPEECH-QUERY-ENCODING-NPU-PORT-V1/encode-v1/receipt.json",
+      "root": "data",
+      "sha256": "3e52357c4871b2cb8e7c67b9586b6001cefc484090b8d2bb64831302dcd84da5"
+    },
+    {
+      "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1/receipt.json",
+      "root": "data",
+      "sha256": "200f769444ca5e41381cf28151daa11cef05b86dc8d0eaf26ced8300e342d914"
+    },
+    {
+      "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-B-ALIAS-NPU-PORT-V1/query-dimension-alias.json",
+      "root": "data",
+      "sha256": "f59dc040b05e2e87637a91d8d677392c50a010701986a8db33bbdfdfdd008adf"
+    },
+    {
+      "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1/receipt.json",
+      "root": "data",
+      "sha256": "2e032013857b6e36c5c267fe32827d1982949515d6006cacb4ab568897358c92"
+    },
+    {
+      "relpath": "vectors/slurp-stage3-filler-fold-b-npu-port-v1/query-vectors-speech-content-v1.provenance.json",
+      "root": "data",
+      "sha256": "59c285768247d3f6abb0fea68dfbd5e2f0246074038d7318218f834e232c890c"
+    },
+    {
+      "relpath": "docs/receipts/knowledge/slurp-kb-size-pool-annotated-exemplars.json",
+      "root": "repository",
+      "sha256": "48d0f34cf536ebf9806d55b5dcced1b607080bec3c68ca7dea27cdb01478cc72"
+    }
+  ],
+  "removed_keys": [
+    "speech_packet_promotion_receipt",
+    "speech_packet_promotion_receipt_sha256"
+  ],
+  "schema": "saea-l338-port-pins-v1"
+}

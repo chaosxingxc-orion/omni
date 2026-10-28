@@ -1,0 +1,106 @@
+{
+  "_draft_note": "A DRAFT for the MAIN THREAD to mint on the data root with scripts/flights/nx/l338_port_mint_receipt.py (owner decision 2026-10-28 item 5). It authorises nothing while its status is not 'decided'. Before minting, the measured sweep fills PORT_DEPLOYMENT_PROFILE and the PROVISIONAL accelerator bound below is replaced by the re-derived number.",
+  "antecedents": {
+    "plans": {
+      "fit-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/fit-plan-registered-v1.json",
+        "sha256": "488dac0eb92fc3ce5f359c4ecc6f55dda0fdbc78e5755b91b0de496ce43caa4d"
+      },
+      "generation-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/generation-plan-registered-v1.json",
+        "sha256": "9e482a77b17b8a909d342dad121caec276b98621007cb3a7d322eb97b6a87248"
+      },
+      "smoke-fit-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/smoke-fit-plan-registered-v1.json",
+        "sha256": "90df133e0dd6101118f1226e80638b8c248e88a77520d2b80121ee48287a1894"
+      },
+      "smoke-generation-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/smoke-generation-plan-registered-v1.json",
+        "sha256": "a5598d5cda847ed11c877d1b73224f895d777dc21edc432724d3a53b93a26aad"
+      }
+    },
+    "protocol": {
+      "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/protocol-registered-v1.json",
+      "sha256": "e0884e4973bd183b2ca5d0d5bc562cf179f021db21807036cee1f08662ad3906"
+    },
+    "registered_facts": {
+      "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/registered-facts-v1.json",
+      "sha256": "b7db26c76bbab7c74d30bdc40074a619f17b1886f69abf128d8ef4cab541577d"
+    },
+    "registration_base_commit": "7db9d7cd"
+  },
+  "authorization_basis": "owner decisions of 2026-10-28 on the NPU port (design doc section 9.1: the saea-base Docker container is the execution authority; item 4: the agent drafts the exposure preregistration rows; item 5: the admission receipt is authorised and minted by the main thread; item 6: model-free-check rows for the port preparations; the multi-instance deployment input: the deployment is a named placeholder filled from a measured speed sweep); docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md; historical authority owner rulings 338 and 341 A (2026-10-19), 335 B and 336 A (2026-10-18), 326 A and 327 A (2026-10-17), 313 A (2026-10-14) and 304/307 (2026-10-13), coordinator approval of the decision-338 lever-column design (docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1).",
+  "budget": {
+    "accelerator_bound": {
+      "formula": {
+        "arm": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 7.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+      },
+      "note": "gpu_hours_fit_inclusive above is the historical numeric placeholder, not the NPU card-hour bound",
+      "status": "PROVISIONAL"
+    },
+    "asr_calls": 0,
+    "ceilings_are_not_targets": true,
+    "encoder_calls": 0,
+    "fit_endpoint_calls_cap": 64800,
+    "generation_calls_cap": 32400,
+    "gpu_hours_fit_inclusive": 90.3,
+    "native_task_contract_calls_cap": 32400,
+    "official_complete_scoring_jobs": 1,
+    "paid_api_calls": 0,
+    "plan_budget_is_run_cumulative": true,
+    "repeated_speech_audio_seconds_cap": 94644,
+    "smoke": {
+      "asr_calls": 0,
+      "ceilings_are_not_targets": true,
+      "encoder_calls": 0,
+      "fit_endpoint_calls_cap": 240,
+      "generation_calls_cap": 120,
+      "gpu_hours_fit_inclusive": 0.5,
+      "native_task_contract_calls_cap": 120,
+      "official_complete_scoring_jobs": 0,
+      "repeated_speech_audio_seconds_cap": 306
+    }
+  },
+  "claim_boundary": "No benefit, system-level, superiority, generalisation, held-out, confirmatory or paper-scale claim.",
+  "decision": "Fly the NPU-port twin of the L338 lever column on the BF16 / vLLM-Ascend Thinking core on TRAIN Fold B: four-row smoke, then the 4-arm column flight (with the twin), on the deployment PORT_DEPLOYMENT_PROFILE once it is filled.",
+  "decision_id": "slurp-l338-lever-column-fold-b-npu-port-admission-v1",
+  "eligible_attempt_ids": [
+    "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-generation-npu-port-v1",
+    "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-fit-npu-port-v1",
+    "attempt-slurp-native-stage3-l338-lever-column-fold-b-generation-npu-port-v1",
+    "attempt-slurp-native-stage3-l338-lever-column-fold-b-fit-npu-port-v1"
+  ],
+  "eligible_run_ids": [
+    "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1",
+    "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+    "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1",
+    "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1"
+  ],
+  "not_authorized": [
+    "any flight before the cells are flipped and the receipt is minted",
+    "any flight before PORT_DEPLOYMENT_PROFILE is filled",
+    "starting or touching any serving session outside the registered deployment",
+    "any ASR, transcript, encoder or paid-API contact",
+    "--allow-output-change on the re-pin tool",
+    "any change beyond the registered sampling axes",
+    "Fold A, DEV or test-split contact"
+  ],
+  "owner": "root",
+  "population": {
+    "count": 1080,
+    "fold_a_contact_authorized": false,
+    "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a",
+    "split_role": "discovery",
+    "test_contact_authorized": false
+  },
+  "recorded_at_utc": null,
+  "schema": "saea-campaign-decision-v1",
+  "service": {
+    "deployment_profile": "PORT_DEPLOYMENT_PROFILE (pending)",
+    "expected_session_id": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+    "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+    "no_child_start_stop": true
+  },
+  "status": "DRAFT-NOT-MINTED"
+}

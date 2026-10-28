@@ -1,0 +1,246 @@
+{
+  "accelerator_bound": {
+    "carried_over_caps": {
+      "arm": {
+        "fit_endpoint_calls": 64800,
+        "generation_calls": 32400,
+        "speech_audio_seconds": 94644
+      },
+      "smoke": {
+        "fit_endpoint_calls": 240,
+        "generation_calls": 120,
+        "speech_audio_seconds": 306
+      }
+    },
+    "formula": {
+      "arm": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 7.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+      "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+    },
+    "illustration_not_registered": {
+      "card_hours_per_unit_tensor_parallel": 90.3,
+      "lock_rows_per_minute_per_instance": 1.95,
+      "note": "at the historical llama.cpp lock rate the flight bound would read 90.3 x T card-hours; the port's r is measured, not assumed"
+    },
+    "inputs": {
+      "arm_mix_rows": 7.52,
+      "margin": 1.3,
+      "round_hours": 0.1,
+      "rows": 1080,
+      "smoke_wall_clock_hours": 0.5
+    },
+    "plan_field_note": "execution_plan.planned_gpu_hours and family_budget.gpu_hours_fit_inclusive carry the historical figures (90.3 / 0.5) only because the plan field must be a number; they are NOT the NPU bound. The ledger gpu-hours cells carry the formula and fail the exposure gate closed until the sweep re-derives the bound and the main thread re-writes plan, rows and receipt together.",
+    "plan_field_placeholder": {
+      "arm": 90.3,
+      "smoke": 0.5
+    },
+    "status": "PROVISIONAL",
+    "unknowns_from_the_deployment_profile": [
+      "T = tensor_parallel_size",
+      "r = measured lock-only rows per minute of one instance at its sequences_per_instance",
+      "instances (wall-clock only; cancels in the card-hours)"
+    ]
+  },
+  "arm_order": [
+    "l1-support",
+    "l2-union",
+    "aa",
+    "lock"
+  ],
+  "arm_visits": "first",
+  "cell": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
+  "composed_config_hash": "14d06e305218ce8060c3a17897cd3841d45fea7df50d371876697294fb5df714",
+  "context_fit": {
+    "checks": {
+      "bound_is_positive": true,
+      "estimate_at_bound_fits_every_arm": true,
+      "observed_solver_prompt_max_fits": true,
+      "slot_holds_prompt_plus_cap": true
+    },
+    "completion_cap": 4096,
+    "estimate_at_bound_tokens": 15248,
+    "estimate_headroom_tokens": 2158,
+    "fit_estimate": {
+      "base_prompt_tokens": 2000,
+      "completion_ceiling": 4096,
+      "slot_tokens": 24576,
+      "tokens_per_supplied_item": 235
+    },
+    "longest_added_tokens_over_lock": 0,
+    "max_supplied_items": 55,
+    "note": "The Solver prompt mean is about 8,500 tokens against the 4,096 cap (prompt limit 17,406). Every arm renders the lock's template and the lock's evidence; a sampling parameter adds no prompt token, so the sealed Fold B Solver prompt maximum is the bound of every arm. The context-fit policy is compact-or-abstain, and the exact per-contact gate runs on every arm's REAL request. The port keeps the per-sequence window (--max-model-len 24576); the token counts are the historical llama.cpp tokenizer estimates and observations, re-checked on every REAL request by the exact per-contact gate.",
+    "observations": {
+      "268b-thinking-system-lock-fold-b": {
+        "id": "268b-thinking-system-lock-fold-b",
+        "solver_contacts": 1080,
+        "solver_prompt_tokens_max": 13465,
+        "solver_prompt_tokens_p99": 12486
+      },
+      "nxt-r1-fold-b-all-five-arms": {
+        "id": "nxt-r1-fold-b-all-five-arms",
+        "solver_contacts": 5400,
+        "solver_prompt_tokens_max": 13918,
+        "solver_prompt_tokens_p99": 13443
+      }
+    },
+    "observed_headroom_tokens": 3488,
+    "observed_solver_prompt_tokens_max": 13918,
+    "ok": true,
+    "per_sequence_window_tokens": 24576,
+    "prompt_limit_tokens": 17406,
+    "reserve_tokens": 3072,
+    "sequences_per_instance": "PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+    "slot_tokens": 24576,
+    "special_reserve_tokens": 2,
+    "template_token_method": "ceil(bytes / 3.5); no tokenizer contact (the NX R1 estimate method)",
+    "template_tokens": 323
+  },
+  "declared_differences": [
+    "8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0",
+    "8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets",
+    "8.3 vLLM sampling and kernels: temperature 0 with a fixed seed is deterministic per server build, not bit-identical to llama.cpp",
+    "8.4 causal retrieval encoder (forced and measured); every sealed retrieval vector regenerated",
+    "8.5 forced-close whitespace (vLLM reasoning_end_str) until verified",
+    "8.6 re-authored semantic knowledge (intent-boundaries-npu-port-v1, slot-contracts-npu-port-v2; decision 9.5)",
+    "8.7 CPU float32 retrieval encoder instead of CUDA bfloat16"
+  ],
+  "execution_plan": {
+    "attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-fit-npu-port-v1",
+    "carrier_lock_key": "slurp",
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.5,
+    "planned_model_calls": 240,
+    "planned_speech_audio_seconds": 306,
+    "protocol_hash": "521bf157d60754e3273a720137d82829a1e927e51ce05cd0024b237fb637fe6c",
+    "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+    "schema": "saea-execution-plan-v1",
+    "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32",
+    "split_role": "discovery",
+    "study": "speech-aware-evidence-acquisition"
+  },
+  "execution_route": "The shared core.flight.cli FIT path under this cell's own native_contact_fit ids; request envelopes only, no generation.",
+  "expected_session_id": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+  "experiment": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
+  "family_budget": {
+    "asr_calls": 0,
+    "ceilings_are_not_targets": true,
+    "encoder_calls": 0,
+    "fit_endpoint_calls_cap": 240,
+    "generation_calls_cap": 120,
+    "gpu_hours_fit_inclusive": 0.5,
+    "native_task_contract_calls_cap": 120,
+    "official_complete_scoring_jobs": 0,
+    "repeated_speech_audio_seconds_cap": 306
+  },
+  "historical_twin": {
+    "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-V1",
+    "package": "docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1",
+    "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-V1"
+  },
+  "no_think_node": null,
+  "one_factor": "None within the cell beyond the historical sampling levers; against the historical twin the port changes the serving stack, the speech input path, the retrieval vectors and the authored knowledge together (the declared differences), so it is read beside the historical flight, never as a one-factor contrast with it.",
+  "plan_kind": "fit",
+  "preparation_base_commit": "7db9d7cd",
+  "prepared_phase_supply": {
+    "note": "this cell's own first-phase supply under its own run id (item E16), prepared or re-prepared by scripts/flights/repin_cell.py at the flip",
+    "relpath": "prepared/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1/phase-supply-v1.json",
+    "sha256": "MINTED_AT_THE_FLIP"
+  },
+  "protocol_document": {
+    "relpath": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/protocol-registered-v1.json",
+    "sha256": "e0884e4973bd183b2ca5d0d5bc562cf179f021db21807036cee1f08662ad3906"
+  },
+  "purpose": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1: request envelopes only; reads nothing.",
+  "registered_at_utc": "2026-10-28T13:19:53.257535+00:00",
+  "sampling_arms": {
+    "aa": {
+      "axes": null,
+      "role": "twin (replicate_of lock)"
+    },
+    "l1-support": {
+      "axes": {
+        "solver_samples": {
+          "commit": {
+            "empty_votes_min": 3,
+            "min_support": 2,
+            "n1_min": 0.2,
+            "policy": "saea-commit-first-support-v1",
+            "similarity_threshold": 0.8
+          },
+          "decoding": {
+            "temperature": 0.6,
+            "top_k": 20,
+            "top_p": 0.95
+          },
+          "n": 5
+        }
+      },
+      "role": "candidate (L1)"
+    },
+    "l2-union": {
+      "axes": {
+        "perception_samples": {
+          "cap": 3,
+          "decoding": {
+            "temperature": 0.6,
+            "top_k": 20,
+            "top_p": 0.95
+          },
+          "k": 4,
+          "merge_policy": "saea-perception-candidate-union-v1"
+        }
+      },
+      "role": "candidate (L2)"
+    },
+    "lock": {
+      "axes": null,
+      "role": "delivering"
+    }
+  },
+  "schema": "saea-registered-fit-plan-v1",
+  "serving": {
+    "deployment_profile": {
+      "fields": {
+        "devices": null,
+        "instances": null,
+        "sequences_per_instance": null,
+        "tensor_parallel_size": null
+      },
+      "filled_by": "a later deployment profile chosen from a measured speed sweep of the BF16 / vLLM-Ascend Thinking server (several vLLM instances, each tensor-parallel over a group of Ascend cards; per-instance concurrency chosen from the sweep)",
+      "name": "PORT_DEPLOYMENT_PROFILE",
+      "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment's current server_args (--max-num-seqs) and profile_slot_count and the baselines' serving_slots are pre-sweep values the main thread moves with the profile.",
+      "status": "PENDING"
+    },
+    "lock_entries": "open owner decision 9.4 (design doc section 9)",
+    "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+    "per_sequence_window_tokens": 24576,
+    "runtime_receipt": "open owner decision 9.3 (design doc section 9)",
+    "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+    "session_identity": "open owner decision 9.2 (design doc section 9)",
+    "transport": "vllm"
+  },
+  "status": "DRAFT-HELD-REGISTERED_BEFORE_CONTACT_AWAITING_COORDINATOR_COUNTERSIGN_AND_READINESS_FLIP",
+  "thinking_knobs": {
+    "answer_fallback": {
+      "enable_thinking": false,
+      "id": "saea-thinking-answer-fallback-v1",
+      "max_tokens": 1024,
+      "mode": "answer-only re-ask",
+      "per_node": 1
+    },
+    "answer_reserve_tokens": 1024,
+    "budget_message": "Considering the limited time by the user, I have to give the solution based on the thinking directly now.",
+    "completion_cap": 4096,
+    "decoding": {
+      "seed": 20260913,
+      "temperature": 0
+    },
+    "node_modes": {
+      "perception": "think",
+      "solver": "think"
+    },
+    "reasoning_context_policy": "drop-reasoning-v1",
+    "reasoning_format": "deepseek",
+    "thinking_budget_tokens": 3072
+  },
+  "unused_budget_is_not_attempt_authority": true
+}

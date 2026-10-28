@@ -384,7 +384,8 @@ def test_the_effect_floor_gate_resolves_the_node_column(tmp_path):
                          capture_output=True, text=True, cwd=REPO)
     assert out.returncode == 0, out.stderr[-500:]
     report = json.loads(out.stdout[out.stdout.find("{"):])
-    mine = [c for c in report["in_scope_cells"] if "l338-lever-column" in c["cell_id"]]
+    # the historical family only: the NPU-port twin (cell ids ...-npu-port-v1) has its own DRAFT rows in the ledger and resolves on its own
+    mine = [c for c in report["in_scope_cells"] if "l338-lever-column" in c["cell_id"] and "npu-port" not in c["cell_id"]]
     assert {c["cell_id"] for c in mine} == {fam.CELLS[k]["cell"] for k in fam.ALL_KEYS}
     assert not [f for f in report["findings"] if "l338-lever-column" in json.dumps(f)]
     column = {c["cell_id"]: c["declaration"] for c in mine}[fam.CELLS["arm"]["cell"]]
