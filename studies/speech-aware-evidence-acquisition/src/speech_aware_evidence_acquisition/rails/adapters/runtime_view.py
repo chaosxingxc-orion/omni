@@ -116,7 +116,16 @@ def configured_geometry(values: Mapping[str, object], *, defaults: tuple[int, in
             raise RuntimeViewError("serving geometry must contain positive integers")
     argv = list(values.get("server_args", ()))
     slot_flag, context_flag, per_slot = geometry_flags(values.get("transport"))
-    for name, expected in ((slot_flag, slots), (context_flag, tokens if per_slot else slots * tokens)):
+    checked = ((slot_flag, slots), (context_flag, tokens if per_slot else slots * tokens))
+    if per_slot:
+        # vllm: only the per-sequence window is a protocol flag. Sequences per instance (--max-num-seqs) is a
+        # deployment fact owned by the deployment profile, so the hashed fragment must not carry it.
+        if slot_flag in argv:
+            raise RuntimeViewError(
+                f"server_args must not declare {slot_flag}: sequences per instance is a deployment fact"
+            )
+        checked = checked[1:]
+    for name, expected in checked:
         if argv.count(name) != 1:
             raise RuntimeViewError(f"server_args must declare {name} exactly once")
         try:

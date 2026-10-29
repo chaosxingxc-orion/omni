@@ -194,6 +194,11 @@ GEOMETRY_FLAGS: Mapping[str, tuple[str, str, bool]] = {
     "llama-server": ("-np", "-c", False),
     "vllm": ("--max-num-seqs", "--max-model-len", True),
 }
+#: vLLM only (owner decision 2026-10-28, deployment layer split out of the protocol hash). ``--max-model-len`` is the
+#: per-sequence window and stays a protocol flag a fragment declares; ``--max-num-seqs`` is a DEPLOYMENT flag, owned by
+#: the selected deployment profile (``core.deployment``): a vllm fragment must not carry it, and the merge below never
+#: writes it. Nothing here changes the llama-server dialect.
+VLLM_DEPLOYMENT_SLOT_FLAG = GEOMETRY_FLAGS["vllm"][0]
 
 
 def geometry_flags(transport: object) -> tuple[str, str, bool]:
@@ -218,6 +223,16 @@ def _refuse_foreign_geometry_flags(merged: Sequence[str], transport: object) -> 
         )
 
 
+def _refuse_vllm_slot_flag(args: Sequence[str], model_fragment: str = "?") -> None:
+    """A vllm fragment's ``server_args`` must not carry ``--max-num-seqs`` (either spelling): it is a deployment fact."""
+
+    if any(token == VLLM_DEPLOYMENT_SLOT_FLAG or token.startswith(VLLM_DEPLOYMENT_SLOT_FLAG + "=") for token in args):
+        raise ServingSessionError(
+            f"model fragment {model_fragment!r} carries {VLLM_DEPLOYMENT_SLOT_FLAG} in server_args; sequences per "
+            "instance is a deployment fact owned by the deployment profile (configs/deployment), never the hashed fragment"
+        )
+
+
 def merge_server_args(
     server_args: Sequence[object], *, slots: int, context_tokens: int, transport: object = None
 ) -> list[str]:
@@ -226,6 +241,10 @@ def merge_server_args(
     llama-server, the default) replaced (or appended when absent) from the
     serving geometry. ``context_tokens`` is always the TOTAL (slots x slot
     tokens), whatever the dialect spells.
+
+    The ``vllm`` dialect is PROTOCOL-only: it sets ``--max-model-len`` (the per-sequence window, ``context_tokens``
+    divided by ``slots``) and never writes ``--max-num-seqs``, which the deployment profile owns; a fragment that
+    declares it is refused.
 
     Nothing else is invented or discarded: ``-ngl``/``-fa``/``-ctk``/``-ctv``
     and every batch and cache flag the fragment declares ride through
@@ -243,9 +262,12 @@ def merge_server_args(
                 f"context {context_tokens} is not a whole number of tokens per slot for {slots} slot(s)"
             )
         context_value = context_tokens // slots
+        _refuse_vllm_slot_flag(merged)
+        geometry_pairs = ((context_flag, context_value),)
     else:
         context_value = context_tokens
-    for flag, value in ((slot_flag, slots), (context_flag, context_value)):
+        geometry_pairs = ((slot_flag, slots), (context_flag, context_value))
+    for flag, value in geometry_pairs:
         if flag in merged:
             index = merged.index(flag)
             if index + 1 >= len(merged):
@@ -260,12 +282,35 @@ def merge_server_args(
 
 def declared_server_geometry(
     server_args: Sequence[object], *, transport: object = None, model_fragment: str = "?"
-) -> tuple[int, int]:
-    """``(slots, slot_tokens)`` exactly as a fragment's ``server_args`` hand them to its server dialect."""
+) -> tuple[int | None, int]:
+    """``(slots, slot_tokens)`` exactly as a fragment's ``server_args`` hand them to its server dialect.
+
+    For ``vllm`` the fragment declares only the protocol window (``--max-model-len``); ``slots`` is ``None`` because
+    sequences per instance is a deployment fact (:data:`VLLM_DEPLOYMENT_SLOT_FLAG`), and a fragment that declares it
+    is refused.
+    """
 
     slot_flag, context_flag, per_slot = geometry_flags(transport)
     args = [str(value) for value in server_args]
     _refuse_foreign_geometry_flags(args, transport)
+    if per_slot:
+        _refuse_vllm_slot_flag(args, model_fragment)
+        if context_flag not in args:
+            raise ServingSessionError(
+                f"model fragment {model_fragment!r} must declare {context_flag} in server_args; the per-sequence "
+                "window is a protocol fact"
+            )
+        try:
+            window = int(args[args.index(context_flag) + 1])
+        except (IndexError, ValueError) as error:
+            raise ServingSessionError(
+                f"model fragment {model_fragment!r} declares {context_flag} without an integer value"
+            ) from error
+        if window <= 0:
+            raise ServingSessionError(
+                f"model fragment {model_fragment!r} declares {context_flag} {window}; it must be positive"
+            )
+        return None, window
     if context_flag not in args or slot_flag not in args:
         raise ServingSessionError(
             f"model fragment {model_fragment!r} must declare {context_flag} and {slot_flag} in server_args; "
@@ -278,13 +323,6 @@ def declared_server_geometry(
         raise ServingSessionError(
             f"model fragment {model_fragment!r} declares {context_flag}/{slot_flag} without integer values"
         ) from error
-    if per_slot:
-        if declared_slots <= 0 or declared_context <= 0:
-            raise ServingSessionError(
-                f"model fragment {model_fragment!r} declares {context_flag} {declared_context} "
-                f"{slot_flag} {declared_slots}; both must be positive"
-            )
-        return declared_slots, declared_context
     if declared_slots <= 0 or declared_context % declared_slots != 0:
         raise ServingSessionError(
             f"model fragment {model_fragment!r} declares -c {declared_context} -np {declared_slots}; "
@@ -1265,7 +1303,7 @@ def resolve_serving_profile(repo_root: Path, model_fragment: str) -> dict[str, o
                 "an exact {slots, slot_tokens, max_tokens} object"
             )
         if (
-            int(declared_geometry["slots"]) != slots
+            (slots is not None and int(declared_geometry["slots"]) != slots)
             or int(declared_geometry["slot_tokens"]) != slot_tokens
         ):
             raise ServingSessionError(
@@ -1279,6 +1317,11 @@ def resolve_serving_profile(repo_root: Path, model_fragment: str) -> dict[str, o
         if isinstance(declared_geometry, Mapping)
         else (decoding.get("max_tokens") if isinstance(decoding, Mapping) else None)
     )
+    if slots is None:
+        # vllm: sequences per instance is a deployment fact, not the fragment's. The client-side geometry is whatever
+        # the fragment's optional serving_geometry declares (None when it declares none); extra_argv below is
+        # protocol-only.
+        slots = int(declared_geometry["slots"]) if isinstance(declared_geometry, Mapping) else None
     geometry = {"slots": slots, "slot_tokens": slot_tokens, "max_tokens": max_tokens}
     receipt_path = resolve_runtime_receipt_path(repo_root, values)
     runtime_receipt = load_runtime_receipt(receipt_path)
@@ -1288,7 +1331,10 @@ def resolve_serving_profile(repo_root: Path, model_fragment: str) -> dict[str, o
         "model_fragment_sha256": fragment_hash(values),
         "serving_geometry": dict(geometry),
         "extra_argv": merge_server_args(
-            server_args, slots=slots, context_tokens=slots * slot_tokens, transport=transport
+            server_args,
+            slots=slots if slots is not None else 1,
+            context_tokens=(slots if slots is not None else 1) * slot_tokens,
+            transport=transport,
         ),
         "server_env": {
             str(key): str(value) for key, value in dict(expand_data_root(values.get("server_env", {}))).items()

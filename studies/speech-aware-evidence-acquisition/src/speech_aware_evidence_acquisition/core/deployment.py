@@ -25,9 +25,10 @@ deployment profile. This module is the one place the two meet:
   process. A refusal names every refused card and why; nothing is ever started on a card it could not prove free.
 * :func:`instance_server_argv` derives one instance's ``vllm serve`` argv: the deployment flags this module owns,
   then the fragment's ``server_args`` passed through :func:`~.session.serving.merge_server_args` -- the SAME merge a
-  serving session and a flight use -- with only ``--max-num-seqs`` taken from the profile. ``--max-model-len`` stays
-  the fragment's own window (it is protocol), and a fragment that carries a deployment flag is refused (one owner per
-  fact).
+  serving session and a flight use -- with ``--max-num-seqs`` written from the profile into the deployment block
+  (the same position :func:`~.contracts.gate_runtime_vllm.instance_argv` gives it). ``--max-model-len`` stays the
+  fragment's own window (it is protocol), and a fragment that carries a deployment flag, ``--max-num-seqs`` included,
+  is refused (one owner per fact): the hashed fragment holds no deployment knob.
 * :func:`deployment_record` yields the canonical recorded facts for a manifest or receipt.
 
 vLLM has no slots: nothing here reads or writes llama.cpp ``id_slot``. Per-trajectory affinity across instances is the
@@ -76,7 +77,7 @@ _SHM_PATTERN = re.compile(r"[1-9][0-9]*[mg]")
 #: deployment value would silently enter the protocol hash (or a protocol value would be overridden per instance).
 DEPLOYMENT_ONLY_FLAGS = frozenset({
     "--served-model-name", "--host", "--port", "--tensor-parallel-size", "-tp", "--pipeline-parallel-size", "-pp",
-    "--data-parallel-size", "-dp", "--gpu-memory-utilization", "--max-num-batched-tokens",
+    "--data-parallel-size", "-dp", "--gpu-memory-utilization", "--max-num-batched-tokens", "--max-num-seqs",
 })
 #: The Ascend control devices every NPU container needs beside its own ``/dev/davinci<N>`` cards (as ``npu_serve.sh``).
 ASCEND_CONTROL_DEVICES = ("/dev/davinci_manager", "/dev/devmm_svm", "/dev/hisi_hdc")
@@ -423,8 +424,8 @@ def model_fragment_values(profile: DeploymentProfile, repo_root: Path = REPO_ROO
 def instance_server_argv(
     profile: DeploymentProfile, instance: InstanceSpec, fragment: Mapping[str, object]
 ) -> list[str]:
-    """The arguments after ``vllm`` for one instance: ``serve <model>``, the deployment flags, then the fragment's
-    protocol ``server_args`` with ``--max-num-seqs`` set from the profile (``--max-model-len`` untouched)."""
+    """The arguments after ``vllm`` for one instance: ``serve <model>``, the deployment flags (``--max-num-seqs``
+    from the profile), then the fragment's protocol ``server_args`` (``--max-model-len`` untouched)."""
 
     server_args = fragment.get("server_args") or []
     flags = {str(token).split("=", 1)[0] for token in server_args}  # type: ignore[union-attr]
@@ -432,14 +433,13 @@ def instance_server_argv(
     if owned:
         raise DeploymentError(f"model fragment {profile.model_fragment!r} carries deployment flags {owned}")
     _, window = declared_server_geometry(server_args, transport="vllm", model_fragment=profile.model_fragment)
-    protocol = merge_server_args(
-        server_args, slots=profile.max_num_seqs, context_tokens=profile.max_num_seqs * window, transport="vllm"
-    )
+    protocol = merge_server_args(server_args, slots=1, context_tokens=window, transport="vllm")
     deployment = [
         "--served-model-name", str(fragment["served_model_name"]),
         "--host", profile.bind_host,
         "--port", str(instance.port),
         "--tensor-parallel-size", str(profile.tensor_parallel_size),
+        "--max-num-seqs", str(profile.max_num_seqs),
         "--gpu-memory-utilization", repr(profile.gpu_memory_utilization),
     ]
     if profile.max_num_batched_tokens is not None:

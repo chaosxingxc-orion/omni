@@ -9,8 +9,6 @@
   "server_args": [
     "--max-model-len",
     "24576",
-    "--max-num-seqs",
-    "4",
     "--dtype",
     "bfloat16",
     "--reasoning-parser",
@@ -36,7 +34,6 @@
   "reasoning_context_policy": "drop-reasoning-v1",
   "forced_close_message_sha256": "aab2abbe2767036ab7019b3bc28d76e9ce288359f56c92774fe029069e166adf",
   "prompt_order": "native-raw-speech-query-prefix-v1",
-  "profile_slot_count": 4,
   "reasoning_content_guard": "refuse-think-marker-in-content",
-  "geometry_basis": "NPU / vLLM-Ascend port (docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md) of q4km-thinking-mmproj-free-slurp-module-fold-b-np4-ctx24k-budget3072-max4096-v1: the same four 24576-token sequences (--max-num-seqs 4 --max-model-len 24576), the same 3072 + 1024 = 4096 reasoning budget, answer reserve and forced-close message (now vLLM's --reasoning-config reasoning_end_str), the same drop-reasoning context policy and reasoning-content guard. Declared differences (design doc section 8): BF16 safetensors weights and BF16 KV instead of GGUF Q4_K_M and q8_0 KV; the server's audio tower over the original audio under native-raw-speech-query-prefix-v1 (the speech-query-prefix-v2 layout) instead of mmproj packets; automatic prefix caching instead of per-sample id_slot. DRAFT: the model lock entry and the vLLM runtime receipt are open owner decisions (design doc section 9)."
+  "geometry_basis": "NPU / vLLM-Ascend port (docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md) of q4km-thinking-mmproj-free-slurp-module-fold-b-np4-ctx24k-budget3072-max4096-v1: the same 24576-token per-sequence window (--max-model-len 24576), the same 3072 + 1024 = 4096 reasoning budget, answer reserve and forced-close message (now vLLM's --reasoning-config reasoning_end_str), the same drop-reasoning context policy and reasoning-content guard. The number of concurrent sequences per instance (--max-num-seqs), the instance count, the tensor-parallel size, the memory utilisation and the card assignment are deployment facts: they live in the selected deployment profile (configs/deployment/*.json, core/deployment.py), are recorded in the run manifest and the vLLM runtime receipt's deployment.instances, and are NOT part of this fragment or of the protocol hash (owner decision 2026-10-28). Declared differences (design doc section 8): BF16 safetensors weights and BF16 KV instead of GGUF Q4_K_M and q8_0 KV; the server's audio tower over the original audio under native-raw-speech-query-prefix-v1 (the speech-query-prefix-v2 layout) instead of mmproj packets; automatic prefix caching instead of per-sample id_slot. DRAFT: the model lock entry and the vLLM runtime receipt are open owner decisions (design doc section 9)."
 }

@@ -204,15 +204,16 @@ def test_the_serve_argv_keeps_the_protocol_window_and_takes_only_max_num_seqs_fr
     assert pairs["--tensor-parallel-size"] == "2" and pairs["--gpu-memory-utilization"] == "0.92"
     assert pairs["--served-model-name"] == fragment["served_model_name"]
     assert argv.count("--max-num-seqs") == 1 and argv.count("--max-model-len") == 1
-    # Every other fragment flag rides through untouched and in order.
+    # Every fragment flag rides through untouched and in order: the hashed fragment holds no deployment knob.
     rest = [token for token in fragment["server_args"]]
-    rest[rest.index("--max-num-seqs") + 1] = "64"
+    assert "--max-num-seqs" not in rest
     assert argv[-len(rest):] == rest
     assert "id_slot" not in " ".join(argv) and "--max-num-batched-tokens" not in argv
 
 
 def test_a_fragment_carrying_a_deployment_flag_or_llama_geometry_is_refused(profile, fragment):
-    for extra in (["--tensor-parallel-size", "4"], ["--port=9000"], ["--gpu-memory-utilization", "0.5"]):
+    for extra in (["--tensor-parallel-size", "4"], ["--port=9000"], ["--gpu-memory-utilization", "0.5"],
+                  ["--max-num-seqs", "4"], ["--max-num-seqs=4"]):
         bad = dict(fragment, server_args=[*fragment["server_args"], *extra])
         with pytest.raises(dep.DeploymentError, match="deployment flags"):
             dep.instance_server_argv(profile, profile.instances[0], bad)
