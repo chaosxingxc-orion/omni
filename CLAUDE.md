@@ -81,11 +81,13 @@ Not ours, never touch: `/mnt/cephfs/xingchao/docker/rl_ascend_20261026`, `docker
 - Dev host (this machine): no sudo, outbound network only through the proxy exported in
   `~/.bashrc` (never print it). The GitHub git pack protocol hangs here; finish clones over HTTPS
   with object-id verification.
-- `npu` (host 175, 910B3) and `npu2` (host 181, 910B4-1), reached only by their ssh aliases: 8 x 64 GB cards each,
-  256 cores, 2 TB RAM, same CephFS mount, NO internet. Build images from a staged offline context.
-  All NPU experiments run on 181; never use a busy card; wait for the owner's job to finish.
+- **Use ONLY `npu2` (host 181, 910B4-1). Host `npu` (175, 910B3) is NOT ours (owner rule 2026-10-29):
+  run nothing there, no tests, no containers, no watchdog, no builds, no card reads.** `npu2` is reached
+  only by its ssh alias: 8 x 64 GB cards, 256 cores, 2 TB RAM, the shared CephFS mount, NO internet.
+  Build images from a staged offline context. Never use a busy card; wait for the owner's job to finish.
 - Formal execution environment is the `saea-base` Docker container (decision 9.1): run study
-  commands through `work/scripts/port_py.sh` / `port_cli.sh` over `ssh npu`. Do not pass `-I` to
+  commands through `work/scripts/port_py.sh` / `port_cli.sh` over `ssh npu2`, with a CPUSET that
+  avoids the NUMA nodes of the cards and the client in use. Do not pass `-I` to
   Python there (it drops `PYTHONPATH`). Encoders run on torch_npu or CPU fp32, not vLLM.
 - One resident vLLM deployment, declared by a profile under `configs/deployment/`; the deployment
   layer (instances, cards, `--max-num-seqs`) is recorded in the run manifest but is NOT part of

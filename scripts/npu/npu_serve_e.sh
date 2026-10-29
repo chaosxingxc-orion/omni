@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# COPY of npu_serve.sh for the E1/E2 crash experiments (plan 3.8). npu_serve.sh itself is NOT edited. Differences:
+#   * EXTRA_ARGS (env, whitespace-separated words) is appended to the end of the thinking argv, e.g.
+#     EXTRA_ARGS="--mm-processor-cache-type shm"; unset or empty leaves the argv identical to npu_serve.sh;
+#   * E_PRINT_ONLY=1 prints the docker command line and exits (no busy-card check, no docker, no log follower);
+#     used by the offline tests and the dry-run. Everything else (flags, mounts, cpuset, HCCL, --restart no) is unchanged.
+# Serve one model for the port's NPU smoke, on explicitly named free NPU cards only.
+# NOT for use while the GLM job holds the cards: check `npu-smi info` first; this script refuses busy cards.
+#
+# usage (on an NPU host):
+#   bash npu_serve.sh thinking <cards e.g. 0,1> <port> [tp]
+#     optional env overrides: NAME and MAX_NUM_SEQS (thinking only; container name default saea-serve-thinking),
+#     default MAX_NUM_SEQS 4; CPUSET (default 128-191) and HCCL_BASE_PORT (default unset: the HCCL default applies;
+#     set a distinct value per instance when several instances share the host network).
+#   bash npu_serve.sh embed <view-id> <card> <port>
+# The container mounts ONLY the named cards, so the harness telemetry (read_gpu -> npu-smi) sees exactly them.
+set -euo pipefail
+KIND=$1; shift
+M=/mnt/cephfs/xingchao/omni/models
+LOGS=/mnt/cephfs/xingchao/omni/work/logs
+IMAGE=saea-base:20261027
+BUSY_MIB=4096
+SRC=/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src
+
+devices() {
+  local args=(--device /dev/davinci_manager --device /dev/devmm_svm --device /dev/hisi_hdc)
+  local card
+  for card in ${1//,/ }; do args+=(--device "/dev/davinci$card"); done
+  echo "${args[@]}"
+}
+
+refuse_busy() {
+  # The study's own npu-smi table parser (core/session/telemetry.py), loaded as a standalone file.
+  npu-smi info | python3 -I -c '
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("telemetry", sys.argv[1])
+telemetry = importlib.util.module_from_spec(spec); spec.loader.exec_module(telemetry)
+rows = {row["npu_id"]: row for row in telemetry.parse_npu_smi_table(sys.stdin.read())}
+bad = [c for c in map(int, sys.argv[2].split(",")) if c not in rows or rows[c]["memory_used_mib"] > int(sys.argv[3])]
+if bad:
+    sys.exit("refused: NPU(s) %s busy or unreadable: %s" % (bad, {c: rows.get(c, {}).get("memory_used_mib") for c in bad}))
+' "$SRC/speech_aware_evidence_acquisition/core/session/telemetry.py" "$1" "$BUSY_MIB"
+}
+
+run() {
+  local name=$1 cards=$2; shift 2
+  local cpuset=${CPUSET:-128-191}
+  local hccl_args=()
+  if [[ -n "${HCCL_BASE_PORT:-}" ]]; then hccl_args=(-e "HCCL_IF_BASE_PORT=$HCCL_BASE_PORT"); fi
+  local log=$LOGS/$name-$(date +%Y%m%dT%H%M%S).log
+  # HCCL needs the host NIC that carries the node's IPv4 address, else hcclGetRootInfo fails (code 19). Verified on 181.
+  local nic; nic=$(ip -o -4 addr show scope global | awk '{print $2; exit}')
+  # Daemon-managed container (docker run -d): it is not a child of this shell or of any ssh session, so a dropped
+  # connection cannot stop it. --restart no: a crashed server stays down for the owner to read, never loops.
+  # The log follower is detached (setsid, no tty, SIGHUP ignored) and writes the same CephFS log path as before.
+  if [[ "${E_PRINT_ONLY:-}" == "1" ]]; then
+    printf 'E_PRINT_ONLY name=%s cards=%s cpuset=%s hccl=%s nic=%s\n' "$name" "$cards" "$cpuset" "${HCCL_BASE_PORT:-}" "$nic"
+    printf 'E_PRINT_ARG %s\n' "$@"
+    return 0
+  fi
+  # shellcheck disable=SC2046
+  docker run -d --rm --restart no --name "$name" --network host --shm-size 16g --cpuset-cpus "$cpuset" \
+    "${hccl_args[@]}" -e HCCL_SOCKET_IFNAME="$nic" -e GLOO_SOCKET_IFNAME="$nic" -e TP_SOCKET_IFNAME="$nic" \
+    $(devices "$cards") \
+    -v /usr/local/Ascend/driver:/usr/local/Ascend/driver:ro \
+    -v /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi:ro \
+    -v /etc/hccn.conf:/etc/hccn.conf:ro -v /etc/ascend_install.info:/etc/ascend_install.info:ro \
+    -v /usr/local/Ascend/firmware:/usr/local/Ascend/firmware:ro -v /usr/local/dcmi:/usr/local/dcmi:ro \
+    -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni \
+    --entrypoint vllm "$IMAGE" serve "$@" > /dev/null
+  setsid nohup docker logs -f "$name" > "$log" 2>&1 < /dev/null &
+  echo "started $name; log $log"
+}
+
+case $KIND in
+  thinking)
+    CARDS=$1 PORT=$2 TP=${3:-1}
+    if [[ "${E_PRINT_ONLY:-}" != "1" ]]; then refuse_busy "$CARDS"; fi
+    # EXTRA_ARGS words are appended after the fixed argv (copy-only knob); an empty value adds nothing.
+    EXTRA=()
+    if [[ -n "${EXTRA_ARGS:-}" ]]; then read -r -a EXTRA <<< "$EXTRA_ARGS"; fi
+    MESSAGE="Considering the limited time by the user, I have to give the solution based on the thinking directly now."
+    # The forced string's whitespace around the message is the section-4 ASSUMPTION the smoke verifies.
+    REASONING=$(python3 -c 'import json,sys; print(json.dumps({"reasoning_end_str": sys.argv[1] + "\n</think>\n\n"}))' "$MESSAGE")
+    run "${NAME:-saea-serve-thinking}" "$CARDS" "$M/qwen3-omni-30b-a3b-thinking" \
+      --served-model-name qwen3-omni-30b-a3b-thinking --host 127.0.0.1 --port "$PORT" \
+      --dtype bfloat16 --tensor-parallel-size "$TP" \
+      --max-model-len 24576 --max-num-seqs "${MAX_NUM_SEQS:-4}" \
+      --reasoning-parser qwen3 --reasoning-config "$REASONING" \
+      --enable-auto-tool-choice --tool-call-parser hermes \
+      --limit-mm-per-prompt '{"audio": 1, "image": 0, "video": 0}' \
+      --seed 0 ${EXTRA[@]+"${EXTRA[@]}"}
+    ;;
+  embed)
+    VIEW=$1 CARD=$2 PORT=$3
+    refuse_busy "$CARD"
+    ARGS=$(PYTHONPATH=$SRC \
+      docker run --rm -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni -e PYTHONPATH \
+      --entrypoint /opt/saea-venv/bin/python "$IMAGE" -c '
+import json, sys
+from pathlib import Path
+from speech_aware_evidence_acquisition.core import vllm_serving_view as sv
+view = Path(sys.argv[1])
+receipt = sv.verify_serving_view(view)
+argv = sv.vllm_embedding_serve_args(view, receipt, served_model_name=sys.argv[2], max_model_len=8192,
+                                    host="127.0.0.1", port=int(sys.argv[3]))
+assert not any("\n" in a for a in argv)
+print("\n".join(argv[2:]))' "$M/serving-views/$VIEW" "$VIEW" "$PORT")
+    mapfile -t SERVE <<< "$ARGS"
+    run "saea-serve-embed-$VIEW" "$CARD" "${SERVE[@]}"
+    ;;
+  *) echo "unknown kind $KIND" >&2; exit 1 ;;
+esac

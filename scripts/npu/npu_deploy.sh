@@ -11,7 +11,7 @@
 #
 # The profile, the card check and every docker argv come from the study's own module
 # (speech_aware_evidence_acquisition.core.deployment), run in a throwaway saea-base container with no devices and no
-# network; this script only executes the NUL-delimited argv it emits (no eval). Nothing here uses llama.cpp slots.
+# network; the host NIC is derived HERE (the container has no network) and passed as --nic; this script only executes the NUL-delimited argv it emits (no eval). Nothing here uses llama.cpp slots.
 # Env (every path derives from ONE root):
 #   OMNI_ROOT            the data root, mounted at the same path in every container; the weights are
 #                        $OMNI_ROOT/<profile model_relpath>. Default /mnt/cephfs/xingchao/omni.
@@ -27,13 +27,18 @@ IMAGE=saea-base:20261027
 WAIT_SECONDS=${DEPLOY_WAIT_SECONDS:-2400}
 LABEL=saea.deployment.profile
 
+# HCCL needs the host NIC that carries the node's global IPv4 address (hcclGetRootInfo fails with code 19 otherwise).
+# Derived exactly as npu_serve.sh does; empty is a refusal, never a default. It becomes HCCL/GLOO/TP_SOCKET_IFNAME.
+NIC=$(ip -o -4 addr show scope global | awk '{print $2; exit}')
+[[ -n "$NIC" ]] || { echo "refused: no global IPv4 NIC on $(hostname); cannot set HCCL_SOCKET_IFNAME" >&2; exit 1; }
+
 helper() {
   # The study's deployment CLI in a device-free, network-free container; extra stdin is passed through.
   # The profile's data_mount is overridden by OMNI_ROOT here, so the root lives in exactly one variable.
   docker run --rm -i --network none --user "$(id -u):$(id -g)" -e HOME=/tmp \
     -v "$REPO:$REPO:ro" -e PYTHONPATH="$SAEA_SRC" -e PYTHONDONTWRITEBYTECODE=1 \
     --entrypoint /opt/saea-venv/bin/python "$IMAGE" \
-    -m speech_aware_evidence_acquisition.core.deployment "$@" --repo-root "$REPO" --data-root "$OMNI_ROOT"
+    -m speech_aware_evidence_acquisition.core.deployment "$@" --repo-root "$REPO" --data-root "$OMNI_ROOT" --nic "$NIC"
 }
 
 npu_table() { command -v npu-smi >/dev/null 2>&1 && npu-smi info; }
