@@ -1,0 +1,736 @@
+{
+  "_skeleton": {
+    "authority": "Port engineering record only. It grants no contact authority, no readiness flip and no exposure entry.",
+    "companion": "docs/readiness/2026-10-29-engineering-base-lock-npu-port-v1.md",
+    "profiles_note": "Two candidate arm A profiles are carried (-v2 ceiling 32; -v3 = -v2 plus mm_processor_cache_type shm, untracked S16b output, adopted only if E3 passes). The verifier reads only profiles.<the profile it is run with>; the losing entry is deleted when R0 fills the record. Branch (i) of plan 3.10 (arm B resident) replaces both with a 2xtp4 entry.",
+    "status": "SKELETON (2026-10-29). Leaves whose value starts with 'TODO-R0:' are placeholders that only the R0 receipt or a --print-observed run can supply; the verifier compares every leaf for equality, so each placeholder FAILS its check closed until it is replaced. Keys under _skeleton and record are not compared by scripts/serving/verify_engineering_base.py."
+  },
+  "cann": {
+    "image_files": {
+      "/usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/ascend_toolkit_install.info": {
+        "bytes": "TODO-R0: byte size",
+        "sha256": "TODO-R0: sha256 of the file in the image"
+      }
+    }
+  },
+  "encoders": {
+    "lco-embedding-omni-3b-2605-v1": {
+      "file_names": [
+        "added_tokens.json",
+        "chat_template.jinja",
+        "config.json",
+        "generation_config.json",
+        "merges.txt",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors",
+        "model.safetensors.index.json",
+        "preprocessor_config.json",
+        "serving_view.json",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "vocab.json"
+      ],
+      "files": {
+        "added_tokens.json": {
+          "sha256": "e81a2cc3bd867a1217019eed202d1d8a07e1063ece716f22060dda14f6cc07d8",
+          "size_bytes": 579
+        },
+        "chat_template.jinja": {
+          "sha256": "3c1d5ac14fd922a04795e7484dc7038275a2fd545f94caf6123eb2b34708ae92",
+          "size_bytes": 2358
+        },
+        "config.json": {
+          "sha256": "013da3a04a951852f79fd7bc841afeef37dc0b735a4594387442786d275ed0f4",
+          "size_bytes": 3938
+        },
+        "generation_config.json": {
+          "sha256": "1ea43963cd4777fa8e70a21f872e064c212b3a19e7d977e747a2480c6e6a1055",
+          "size_bytes": 152
+        },
+        "merges.txt": {
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "size_bytes": 1671853
+        },
+        "model-00001-of-00002.safetensors": {
+          "sha256": "f68272f0e5474491d92a440e875af626d87b065c9ac053c69a940c8b9b4d9c35",
+          "size_bytes": 4994850880
+        },
+        "model-00002-of-00002.safetensors": {
+          "sha256": "d7f7948365f99675c0c707be552a0409573401e9d829fcdc65db9980792ec29e",
+          "size_bytes": 4412251408
+        },
+        "model.safetensors.index.json": {
+          "sha256": "12297c80f501853d8bc648920e08c43900c81ee0224dbb5b258f4991fe80e7b3",
+          "size_bytes": 127716
+        },
+        "preprocessor_config.json": {
+          "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69",
+          "size_bytes": 667
+        },
+        "serving_view.json": {
+          "sha256": "4c95f853cdb7e9279f267c9d11f53e819484905dc0c9d195605e0effe8e33f91",
+          "size_bytes": 5910
+        },
+        "special_tokens_map.json": {
+          "sha256": "dc241604d085780a33f760f69c47e6622451104c20eee3cd3a12b6e884b43f44",
+          "size_bytes": 832
+        },
+        "tokenizer.json": {
+          "sha256": "8441917e39ae0244e06d704b95b3124795cec478e297f9afac39ba670d7e9d99",
+          "size_bytes": 11421870
+        },
+        "tokenizer_config.json": {
+          "sha256": "569aa7a9171e36dfff80f0a7550ab0c9c09e46ac840fea5030641417394fb0d2",
+          "size_bytes": 6469
+        },
+        "vocab.json": {
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size_bytes": 2776833
+        }
+      },
+      "local_subdir": "models/serving-views/lco-embedding-omni-3b-2605-v1",
+      "lock_key": "lco-embedding-omni-3b-2605-v1",
+      "other_entries": [],
+      "payload_size_bytes": 9423121465
+    },
+    "lco-embedding-omni-7b-v1": {
+      "file_names": [
+        "added_tokens.json",
+        "chat_template.jinja",
+        "config.json",
+        "generation_config.json",
+        "merges.txt",
+        "model-00001-of-00004.safetensors",
+        "model-00002-of-00004.safetensors",
+        "model-00003-of-00004.safetensors",
+        "model-00004-of-00004.safetensors",
+        "model.safetensors.index.json",
+        "preprocessor_config.json",
+        "serving_view.json",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "vocab.json"
+      ],
+      "files": {
+        "added_tokens.json": {
+          "sha256": "e81a2cc3bd867a1217019eed202d1d8a07e1063ece716f22060dda14f6cc07d8",
+          "size_bytes": 579
+        },
+        "chat_template.jinja": {
+          "sha256": "3c1d5ac14fd922a04795e7484dc7038275a2fd545f94caf6123eb2b34708ae92",
+          "size_bytes": 2358
+        },
+        "config.json": {
+          "sha256": "489689acf3fa0162c9aaaf1aa71820dfa2453b527e36d020a82f2d8ff7c4068c",
+          "size_bytes": 3769
+        },
+        "generation_config.json": {
+          "sha256": "1ea43963cd4777fa8e70a21f872e064c212b3a19e7d977e747a2480c6e6a1055",
+          "size_bytes": 152
+        },
+        "merges.txt": {
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "size_bytes": 1671853
+        },
+        "model-00001-of-00004.safetensors": {
+          "sha256": "398d5691dcb16e5392298dbd079d1cc969895aad58f089b1d7e5cc07704a8954",
+          "size_bytes": 4985055536
+        },
+        "model-00002-of-00004.safetensors": {
+          "sha256": "7445385e1aaee3f9bd1018cb77ea181ac4f630b781a614de53b39acc3fb9f325",
+          "size_bytes": 4991496832
+        },
+        "model-00003-of-00004.safetensors": {
+          "sha256": "1da5b2e18279cbced909dcba36b64615eeba938ba7bc56d54120a93a4cf89ea1",
+          "size_bytes": 4991496936
+        },
+        "model-00004-of-00004.safetensors": {
+          "sha256": "5469e50dd7daa3b4742db48c43e56846884ac09f4b86ff0ac6a218f60a0ce1ae",
+          "size_bytes": 2895740064
+        },
+        "model.safetensors.index.json": {
+          "sha256": "d3686b01026e248a535c427e79dd30ba527c22c63656e0c08ba83956172a064a",
+          "size_bytes": 119061
+        },
+        "preprocessor_config.json": {
+          "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69",
+          "size_bytes": 667
+        },
+        "serving_view.json": {
+          "sha256": "c77fd25b103c189db61624010db4313c93140c6bffbec587ae333c72e1ce9135",
+          "size_bytes": 7361
+        },
+        "special_tokens_map.json": {
+          "sha256": "dc241604d085780a33f760f69c47e6622451104c20eee3cd3a12b6e884b43f44",
+          "size_bytes": 832
+        },
+        "tokenizer.json": {
+          "sha256": "8441917e39ae0244e06d704b95b3124795cec478e297f9afac39ba670d7e9d99",
+          "size_bytes": 11421870
+        },
+        "tokenizer_config.json": {
+          "sha256": "569aa7a9171e36dfff80f0a7550ab0c9c09e46ac840fea5030641417394fb0d2",
+          "size_bytes": 6469
+        },
+        "vocab.json": {
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size_bytes": 2776833
+        }
+      },
+      "local_subdir": "models/serving-views/lco-embedding-omni-7b-v1",
+      "lock_key": "lco-embedding-omni-7b-v1",
+      "other_entries": [],
+      "payload_size_bytes": 17879801172
+    },
+    "omni-embed-nemotron-3b-causal-v1": {
+      "file_names": [
+        "added_tokens.json",
+        "chat_template.jinja",
+        "config.json",
+        "generation_config.json",
+        "merges.txt",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors",
+        "model.safetensors.index.json",
+        "preprocessor_config.json",
+        "serving_view.json",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "vocab.json"
+      ],
+      "files": {
+        "added_tokens.json": {
+          "sha256": "e81a2cc3bd867a1217019eed202d1d8a07e1063ece716f22060dda14f6cc07d8",
+          "size_bytes": 579
+        },
+        "chat_template.jinja": {
+          "sha256": "d8f2304e185d04f627abab102345f9c4af14e020e41c7dceffacbcff1babe2b9",
+          "size_bytes": 805
+        },
+        "config.json": {
+          "sha256": "4af4a75b6cb6e99d702d8b882aad08b9fa265884afdc391001af996bc0fc3f83",
+          "size_bytes": 3082
+        },
+        "generation_config.json": {
+          "sha256": "4a0ede46fd1d2cbaa71908173ea846fd8203160b7133aec4d3e01e406d72976a",
+          "size_bytes": 74
+        },
+        "merges.txt": {
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "size_bytes": 1671853
+        },
+        "model-00001-of-00002.safetensors": {
+          "sha256": "07cad6f5bac2b6289ff5aace8793ff9c122e68e0a86f3d0f6369cbbfb6904a60",
+          "size_bytes": 4994850880
+        },
+        "model-00002-of-00002.safetensors": {
+          "sha256": "230170e0f12619a85e7323c309062990d0fe98bb38f431c7a41e067e22958415",
+          "size_bytes": 4412251408
+        },
+        "model.safetensors.index.json": {
+          "sha256": "89b4a3e73928002f458ba47757a64f997965537b18b6b75e11ec75096bafc077",
+          "size_bytes": 127680
+        },
+        "preprocessor_config.json": {
+          "sha256": "b47055ce61463ce143e9aab741d55c0aa520801a0a5d63be73c5b17cecb6bc69",
+          "size_bytes": 667
+        },
+        "serving_view.json": {
+          "sha256": "a3ddac0294a4d346dcdf5fed39226d6ce2508f3a28a8e70afbbc773d80b6cd81",
+          "size_bytes": 5936
+        },
+        "special_tokens_map.json": {
+          "sha256": "db7fd39f5dc9ee37998c3ed04e3a3386989182a550064d2a2a9af16822cf22f4",
+          "size_bytes": 833
+        },
+        "tokenizer.json": {
+          "sha256": "0c75e6d39795d574e5ec741e767ca690ea08a33bfa024ef2d372b4e4c72db191",
+          "size_bytes": 11422137
+        },
+        "tokenizer_config.json": {
+          "sha256": "a7e64da8247da43c5feca0af81a42f3232a22517d93de425c16a179d3e48f96d",
+          "size_bytes": 5329
+        },
+        "vocab.json": {
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size_bytes": 2776833
+        }
+      },
+      "local_subdir": "models/serving-views/omni-embed-nemotron-3b-causal-v1",
+      "lock_key": "omni-embed-nemotron-3b-causal-v1",
+      "other_entries": [],
+      "payload_size_bytes": 9423118096
+    }
+  },
+  "execution": {
+    "environment": "saea-container"
+  },
+  "hosts": {
+    "A800I-03": {
+      "cann_files": {
+        "/etc/ascend_install.info": {
+          "bytes": "TODO-R0: byte size",
+          "sha256": "TODO-R0: sha256 of the host file"
+        },
+        "/usr/local/Ascend/ascend-toolkit/8.2.RC1/aarch64-linux/ascend_toolkit_install.info": {
+          "bytes": "TODO-R0: byte size",
+          "sha256": "TODO-R0: sha256 of the host file"
+        },
+        "/usr/local/Ascend/driver/version.info": {
+          "bytes": "TODO-R0: byte size",
+          "sha256": "TODO-R0: sha256 of the host file"
+        }
+      },
+      "card_count": 8,
+      "cpu_count": 256,
+      "global_nic": "enp61s0f2"
+    }
+  },
+  "image": {
+    "base": {
+      "local_id": "4d683043e4bd",
+      "ref": "quay.io/ascend/vllm-ascend:v0.30.0rc2"
+    },
+    "created": "TODO-R0: docker image inspect saea-base:20261027 on npu2 -> Created",
+    "id": "sha256:ebd6a3c104fc76f63b5843429bfa9a398428cfa4e1ca4de0ea9d36c15b19b5ef",
+    "ref": "saea-base:20261027",
+    "repo_digests": []
+  },
+  "network_env": {
+    "network_mode": "host",
+    "ro_mounts": [
+      "/etc/ascend_install.info",
+      "/etc/hccn.conf",
+      "/usr/local/Ascend/driver",
+      "/usr/local/Ascend/firmware",
+      "/usr/local/dcmi",
+      "/usr/local/sbin/npu-smi"
+    ]
+  },
+  "profiles": {
+    "qwen3-omni-thinking-bf16-181-4xtp2-v2": {
+      "instances": {
+        "saea-omni-i0": {
+          "cards": [
+            0,
+            1
+          ],
+          "cpuset": "192-223",
+          "engine": {
+            "block_size": "TODO-R0: block size from /metrics cache_config_info",
+            "chunked_prefill": "TODO-R0: enable_chunked_prefill from the startup log (preliminary True)",
+            "cudagraph_capture_sizes": "TODO-R0: capture sizes from the startup log (derived from max_num_seqs 32)",
+            "cudagraph_mode": "TODO-R0: cudagraph_mode from the startup log (preliminary FULL_AND_PIECEWISE)",
+            "execute_model_timeout_seconds": null,
+            "kv_tokens": "TODO-R0: KV cache size tokens from this instance's startup log (preliminary 564224 at max-num-seqs 64; capture sizes change at 32)",
+            "max_concurrency": "TODO-R0: maximum concurrency for 24576 tokens from the startup log (preliminary 22.96)",
+            "prefix_caching": "TODO-R0: enable_prefix_caching from the startup log (preliminary True)"
+          },
+          "gpu_memory_utilization": 0.92,
+          "max_num_batched_tokens": null,
+          "max_num_seqs": 32,
+          "mm_processor_cache_type": null,
+          "port": 8200,
+          "server_argv_sha256": "0cbe1c70a238e8b4c3d781267959a4c705fe4609d469240740d0749e4a8a87ff",
+          "tensor_parallel_size": 2
+        },
+        "saea-omni-i1": {
+          "cards": [
+            2,
+            3
+          ],
+          "cpuset": "128-159",
+          "engine": {
+            "block_size": "TODO-R0: block size from /metrics cache_config_info",
+            "chunked_prefill": "TODO-R0: enable_chunked_prefill from the startup log (preliminary True)",
+            "cudagraph_capture_sizes": "TODO-R0: capture sizes from the startup log (derived from max_num_seqs 32)",
+            "cudagraph_mode": "TODO-R0: cudagraph_mode from the startup log (preliminary FULL_AND_PIECEWISE)",
+            "execute_model_timeout_seconds": null,
+            "kv_tokens": "TODO-R0: KV cache size tokens from this instance's startup log (preliminary 564224 at max-num-seqs 64; capture sizes change at 32)",
+            "max_concurrency": "TODO-R0: maximum concurrency for 24576 tokens from the startup log (preliminary 22.96)",
+            "prefix_caching": "TODO-R0: enable_prefix_caching from the startup log (preliminary True)"
+          },
+          "gpu_memory_utilization": 0.92,
+          "max_num_batched_tokens": null,
+          "max_num_seqs": 32,
+          "mm_processor_cache_type": null,
+          "port": 8201,
+          "server_argv_sha256": "6eb9a1b06dcf73122ed659ef7812207cbf63b80859fa51dfb23071bd8333fa23",
+          "tensor_parallel_size": 2
+        },
+        "saea-omni-i2": {
+          "cards": [
+            4,
+            5
+          ],
+          "cpuset": "0-31",
+          "engine": {
+            "block_size": "TODO-R0: block size from /metrics cache_config_info",
+            "chunked_prefill": "TODO-R0: enable_chunked_prefill from the startup log (preliminary True)",
+            "cudagraph_capture_sizes": "TODO-R0: capture sizes from the startup log (derived from max_num_seqs 32)",
+            "cudagraph_mode": "TODO-R0: cudagraph_mode from the startup log (preliminary FULL_AND_PIECEWISE)",
+            "execute_model_timeout_seconds": null,
+            "kv_tokens": "TODO-R0: KV cache size tokens from this instance's startup log (preliminary 564224 at max-num-seqs 64; capture sizes change at 32)",
+            "max_concurrency": "TODO-R0: maximum concurrency for 24576 tokens from the startup log (preliminary 22.96)",
+            "prefix_caching": "TODO-R0: enable_prefix_caching from the startup log (preliminary True)"
+          },
+          "gpu_memory_utilization": 0.92,
+          "max_num_batched_tokens": null,
+          "max_num_seqs": 32,
+          "mm_processor_cache_type": null,
+          "port": 8202,
+          "server_argv_sha256": "8f767801405b4c49edcab526b60e67586919a3a31dd36ce239edc5eb473d46e6",
+          "tensor_parallel_size": 2
+        },
+        "saea-omni-i3": {
+          "cards": [
+            6,
+            7
+          ],
+          "cpuset": "64-95",
+          "engine": {
+            "block_size": "TODO-R0: block size from /metrics cache_config_info",
+            "chunked_prefill": "TODO-R0: enable_chunked_prefill from the startup log (preliminary True)",
+            "cudagraph_capture_sizes": "TODO-R0: capture sizes from the startup log (derived from max_num_seqs 32)",
+            "cudagraph_mode": "TODO-R0: cudagraph_mode from the startup log (preliminary FULL_AND_PIECEWISE)",
+            "execute_model_timeout_seconds": null,
+            "kv_tokens": "TODO-R0: KV cache size tokens from this instance's startup log (preliminary 564224 at max-num-seqs 64; capture sizes change at 32)",
+            "max_concurrency": "TODO-R0: maximum concurrency for 24576 tokens from the startup log (preliminary 22.96)",
+            "prefix_caching": "TODO-R0: enable_prefix_caching from the startup log (preliminary True)"
+          },
+          "gpu_memory_utilization": 0.92,
+          "max_num_batched_tokens": null,
+          "max_num_seqs": 32,
+          "mm_processor_cache_type": null,
+          "port": 8203,
+          "server_argv_sha256": "cc58402903c6d78e86f6e1802488e5a064a24aa2392cbedabee0723f8235b818",
+          "tensor_parallel_size": 2
+        }
+      },
+      "profile_sha256": "bd0c356005830ad52cbcc3bcd822018616650698b7c64d92c38ff4f2a00c1ca6"
+    },
+    "qwen3-omni-thinking-bf16-181-4xtp2-v3": {
+      "instances": {
+        "saea-omni-i0": {
+          "cards": [
+            0,
+            1
+          ],
+          "cpuset": "192-223",
+          "engine": {
+            "block_size": "TODO-R0: block size from /metrics cache_config_info",
+            "chunked_prefill": "TODO-R0: enable_chunked_prefill from the startup log (preliminary True)",
+            "cudagraph_capture_sizes": "TODO-R0: capture sizes from the startup log (derived from max_num_seqs 32)",
+            "cudagraph_mode": "TODO-R0: cudagraph_mode from the startup log (preliminary FULL_AND_PIECEWISE)",
+            "execute_model_timeout_seconds": null,
+            "kv_tokens": "TODO-R0: KV cache size tokens from this instance's startup log (preliminary 564224 at max-num-seqs 64; capture sizes change at 32)",
+            "max_concurrency": "TODO-R0: maximum concurrency for 24576 tokens from the startup log (preliminary 22.96)",
+            "prefix_caching": "TODO-R0: enable_prefix_caching from the startup log (preliminary True)"
+          },
+          "gpu_memory_utilization": 0.92,
+          "max_num_batched_tokens": null,
+          "max_num_seqs": 32,
+          "mm_processor_cache_type": "shm",
+          "port": 8200,
+          "server_argv_sha256": "70a8a50c1321a6191c27e125c0c0da6df9dbd0551e75099fdd8647bffe18e5d5",
+          "tensor_parallel_size": 2
+        },
+        "saea-omni-i1": {
+          "cards": [
+            2,
+            3
+          ],
+          "cpuset": "128-159",
+          "engine": {
+            "block_size": "TODO-R0: block size from /metrics cache_config_info",
+            "chunked_prefill": "TODO-R0: enable_chunked_prefill from the startup log (preliminary True)",
+            "cudagraph_capture_sizes": "TODO-R0: capture sizes from the startup log (derived from max_num_seqs 32)",
+            "cudagraph_mode": "TODO-R0: cudagraph_mode from the startup log (preliminary FULL_AND_PIECEWISE)",
+            "execute_model_timeout_seconds": null,
+            "kv_tokens": "TODO-R0: KV cache size tokens from this instance's startup log (preliminary 564224 at max-num-seqs 64; capture sizes change at 32)",
+            "max_concurrency": "TODO-R0: maximum concurrency for 24576 tokens from the startup log (preliminary 22.96)",
+            "prefix_caching": "TODO-R0: enable_prefix_caching from the startup log (preliminary True)"
+          },
+          "gpu_memory_utilization": 0.92,
+          "max_num_batched_tokens": null,
+          "max_num_seqs": 32,
+          "mm_processor_cache_type": "shm",
+          "port": 8201,
+          "server_argv_sha256": "5e94f82d46642decf0bc2924c1d2eae8dd27632ff88e67ed7df7e2ed5111cabc",
+          "tensor_parallel_size": 2
+        },
+        "saea-omni-i2": {
+          "cards": [
+            4,
+            5
+          ],
+          "cpuset": "0-31",
+          "engine": {
+            "block_size": "TODO-R0: block size from /metrics cache_config_info",
+            "chunked_prefill": "TODO-R0: enable_chunked_prefill from the startup log (preliminary True)",
+            "cudagraph_capture_sizes": "TODO-R0: capture sizes from the startup log (derived from max_num_seqs 32)",
+            "cudagraph_mode": "TODO-R0: cudagraph_mode from the startup log (preliminary FULL_AND_PIECEWISE)",
+            "execute_model_timeout_seconds": null,
+            "kv_tokens": "TODO-R0: KV cache size tokens from this instance's startup log (preliminary 564224 at max-num-seqs 64; capture sizes change at 32)",
+            "max_concurrency": "TODO-R0: maximum concurrency for 24576 tokens from the startup log (preliminary 22.96)",
+            "prefix_caching": "TODO-R0: enable_prefix_caching from the startup log (preliminary True)"
+          },
+          "gpu_memory_utilization": 0.92,
+          "max_num_batched_tokens": null,
+          "max_num_seqs": 32,
+          "mm_processor_cache_type": "shm",
+          "port": 8202,
+          "server_argv_sha256": "7e6a2fd61e36f4f9e23a639e33439f6468d8dd7191f9630a7664f9b552df4d2f",
+          "tensor_parallel_size": 2
+        },
+        "saea-omni-i3": {
+          "cards": [
+            6,
+            7
+          ],
+          "cpuset": "64-95",
+          "engine": {
+            "block_size": "TODO-R0: block size from /metrics cache_config_info",
+            "chunked_prefill": "TODO-R0: enable_chunked_prefill from the startup log (preliminary True)",
+            "cudagraph_capture_sizes": "TODO-R0: capture sizes from the startup log (derived from max_num_seqs 32)",
+            "cudagraph_mode": "TODO-R0: cudagraph_mode from the startup log (preliminary FULL_AND_PIECEWISE)",
+            "execute_model_timeout_seconds": null,
+            "kv_tokens": "TODO-R0: KV cache size tokens from this instance's startup log (preliminary 564224 at max-num-seqs 64; capture sizes change at 32)",
+            "max_concurrency": "TODO-R0: maximum concurrency for 24576 tokens from the startup log (preliminary 22.96)",
+            "prefix_caching": "TODO-R0: enable_prefix_caching from the startup log (preliminary True)"
+          },
+          "gpu_memory_utilization": 0.92,
+          "max_num_batched_tokens": null,
+          "max_num_seqs": 32,
+          "mm_processor_cache_type": "shm",
+          "port": 8203,
+          "server_argv_sha256": "8a972aafc585315fc3d7829c635c2366d1ea4d66d0266e93a0337f5b60a8f4c8",
+          "tensor_parallel_size": 2
+        }
+      },
+      "profile_sha256": "5d18e04d8f99bd5a1ebc36c8aac072f0f7693990c92173fc8522a63b0674dfc0"
+    }
+  },
+  "protocol": {
+    "decoding": {
+      "answer_reserve_tokens": 1024,
+      "enable_thinking": true,
+      "forced_close_message_sha256": "aab2abbe2767036ab7019b3bc28d76e9ce288359f56c92774fe029069e166adf",
+      "max_tokens": 4096,
+      "reasoning_budget_tokens": 3072,
+      "reasoning_context_policy": "drop-reasoning-v1",
+      "seed": 20260913,
+      "temperature": 0,
+      "timeout_seconds": 420
+    },
+    "protocol_sha256": "TODO-R0: protocol_sha256 recomputed from the R0 runtime receipt",
+    "served_model_name": "qwen3-omni-30b-a3b-thinking",
+    "server_args": [
+      "--max-model-len",
+      "24576",
+      "--dtype",
+      "bfloat16",
+      "--reasoning-parser",
+      "qwen3",
+      "--reasoning-config",
+      "{\"reasoning_end_str\": \"Considering the limited time by the user, I have to give the solution based on the thinking directly now.\\n</think>\\n\\n\"}",
+      "--enable-auto-tool-choice",
+      "--tool-call-parser",
+      "hermes",
+      "--limit-mm-per-prompt",
+      "{\"audio\": 1, \"image\": 0, \"video\": 0}",
+      "--seed",
+      "0"
+    ]
+  },
+  "python": {
+    "interpreters": {
+      "/opt/saea-venv/bin/python": {
+        "realpath": "/usr/local/python3.12.13/bin/python3.12",
+        "sha256": "TODO-R0: sha256 of the interpreter executable"
+      },
+      "/usr/local/python3.12.13/bin/python3": {
+        "realpath": "/usr/local/python3.12.13/bin/python3.12",
+        "sha256": "TODO-R0: sha256 of the interpreter executable"
+      }
+    },
+    "version": "3.12.13"
+  },
+  "receipt": {
+    "path": "TODO-R0: absolute path of the R0 runtime receipt"
+  },
+  "schema": "saea-engineering-base-lock-v1",
+  "template": {
+    "audio_spans": {
+      "thinking_false": [
+        1,
+        1
+      ],
+      "thinking_true": [
+        1,
+        1
+      ]
+    },
+    "chat_template_sha256": "3afb9519448b62e252cefeed1c0c1939b01b4e8ed70adbaf3c9f952969aa0ec7",
+    "tails": {
+      "thinking_false": "TODO-R0: last 48 decoded characters of the /tokenize prompt, thinking off",
+      "thinking_true": "TODO-R0: last 48 decoded characters of the /tokenize prompt, thinking on"
+    },
+    "tokenizer_config_has_chat_template": false
+  },
+  "versions": {
+    "torch": "2.10.0+cpu",
+    "torch_npu": "2.10.0.post7",
+    "transformers": "5.14.1",
+    "triton": "3.6.0",
+    "vllm": "0.30.0+empty",
+    "vllm-ascend": "0.30.0rc2"
+  },
+  "weights": {
+    "file_names": [
+      ".gitattributes",
+      "README.md",
+      "chat_template.json",
+      "config.json",
+      "generation_config.json",
+      "merges.txt",
+      "model-00001-of-00016.safetensors",
+      "model-00002-of-00016.safetensors",
+      "model-00003-of-00016.safetensors",
+      "model-00004-of-00016.safetensors",
+      "model-00005-of-00016.safetensors",
+      "model-00006-of-00016.safetensors",
+      "model-00007-of-00016.safetensors",
+      "model-00008-of-00016.safetensors",
+      "model-00009-of-00016.safetensors",
+      "model-00010-of-00016.safetensors",
+      "model-00011-of-00016.safetensors",
+      "model-00012-of-00016.safetensors",
+      "model-00013-of-00016.safetensors",
+      "model-00014-of-00016.safetensors",
+      "model-00015-of-00016.safetensors",
+      "model-00016-of-00016.safetensors",
+      "model.safetensors.index.json",
+      "preprocessor_config.json",
+      "tokenizer_config.json",
+      "vocab.json"
+    ],
+    "files": {
+      ".gitattributes": {
+        "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361",
+        "size_bytes": 1519
+      },
+      "README.md": {
+        "sha256": "0e44065c4c4a27071f7239afd5b5a33af5bc2e437dd7ea9950e51aafabfde3df",
+        "size_bytes": 90295
+      },
+      "chat_template.json": {
+        "sha256": "3afb9519448b62e252cefeed1c0c1939b01b4e8ed70adbaf3c9f952969aa0ec7",
+        "size_bytes": 5946
+      },
+      "config.json": {
+        "sha256": "e6f8c637528461398ef4e11d48b6112ce73db2458a563dfea548127c2cce253f",
+        "size_bytes": 8528
+      },
+      "generation_config.json": {
+        "sha256": "4c8ba35b3dfaed05c648b933ef8d9daca74da0a8ef87084fa5738f3209cdbadc",
+        "size_bytes": 113
+      },
+      "merges.txt": {
+        "sha256": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3",
+        "size_bytes": 1671839
+      },
+      "model-00001-of-00016.safetensors": {
+        "sha256": "ba3b117f1fe9a10f670e87c73321c0651e89f425de598ede20185fdc94df997b",
+        "size_bytes": 4000129664
+      },
+      "model-00002-of-00016.safetensors": {
+        "sha256": "0c419d9fc447b83ab36be8243f1da793125f01ce0ca0fc49d4ad8aca5a03b6f0",
+        "size_bytes": 3999992216
+      },
+      "model-00003-of-00016.safetensors": {
+        "sha256": "bdd6cc1cb3bf3422eefaca3be1a730d78253bf158a53aa5ec73310cacb2f7d5a",
+        "size_bytes": 3997362968
+      },
+      "model-00004-of-00016.safetensors": {
+        "sha256": "c8228f28c83b8355ec441ea8caf33e847ec71192e2a378568289e6653d8d72f4",
+        "size_bytes": 3999984424
+      },
+      "model-00005-of-00016.safetensors": {
+        "sha256": "4317632b9dd26e4c950bbd90d1e89304325725f3290db00a642918a364ca1e01",
+        "size_bytes": 3999985496
+      },
+      "model-00006-of-00016.safetensors": {
+        "sha256": "c86a2cdcdf7eb7b8d5e6846a778798a12d14344ae4f178d4c9a4842c8fcaf9e5",
+        "size_bytes": 3999985528
+      },
+      "model-00007-of-00016.safetensors": {
+        "sha256": "e670918aaab9144dfe7e1132924c706d56b4c6b4c2b6e94a5cf796c3c55e7916",
+        "size_bytes": 3997372200
+      },
+      "model-00008-of-00016.safetensors": {
+        "sha256": "1f44c6e93b85b0cc05284beac60a4076caf61c803f569bf5dcb5ab6a6a810312",
+        "size_bytes": 3999985488
+      },
+      "model-00009-of-00016.safetensors": {
+        "sha256": "5439c95a4cbbd6a6ea7c498d8a71fcf3dacba64b4dac5bf5ad2834fda4140929",
+        "size_bytes": 3999985496
+      },
+      "model-00010-of-00016.safetensors": {
+        "sha256": "c75a2bb738fcb3da89798e5faffd627e3b2592325491bb9df915835afaac64c0",
+        "size_bytes": 3999985496
+      },
+      "model-00011-of-00016.safetensors": {
+        "sha256": "35439fa67730c6f2553ac6ae11f97a34dff37a61341275d3416d080423aa689b",
+        "size_bytes": 3999985544
+      },
+      "model-00012-of-00016.safetensors": {
+        "sha256": "61415e98a78c64a790c946be3145877886b4e6b681425dc061225df511b76e04",
+        "size_bytes": 3997372160
+      },
+      "model-00013-of-00016.safetensors": {
+        "sha256": "70587b5b7e51e8a6e4bf2d069ef465aea913c337f8d951e2790cd1e426bf5378",
+        "size_bytes": 3999985504
+      },
+      "model-00014-of-00016.safetensors": {
+        "sha256": "bee3c092d2966c401ef4b9899a4659e1fc2e9112667354c4e7bcb8a2faff2be7",
+        "size_bytes": 3999985496
+      },
+      "model-00015-of-00016.safetensors": {
+        "sha256": "80ea0e6c2cb35f485ae7534a3092793c18a429e102c820b77338726758d30e30",
+        "size_bytes": 3999985496
+      },
+      "model-00016-of-00016.safetensors": {
+        "sha256": "da33b1078d1b474f83ccc455928b18b731e3b09ad46b21af88e68d7cbb8488a5",
+        "size_bytes": 3448914464
+      },
+      "model.safetensors.index.json": {
+        "sha256": "13ae0b6fa947acd1ec5e163d493884724999788752b699266eb09b14ba914c90",
+        "size_bytes": 1928791
+      },
+      "preprocessor_config.json": {
+        "sha256": "b10e27fd4542cf89ec7145942b87f3e65408d4e9f9d031a29acdd293c15fb3fc",
+        "size_bytes": 603
+      },
+      "tokenizer_config.json": {
+        "sha256": "dc3c31c3bdaedd5016382bb3cbe07323026775ad51f5a4fb564505992ae4a670",
+        "size_bytes": 7344
+      },
+      "vocab.json": {
+        "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+        "size_bytes": 2776833
+      }
+    },
+    "hf_id": "Qwen/Qwen3-Omni-30B-A3B-Thinking",
+    "local_subdir": "models/qwen3-omni-30b-a3b-thinking",
+    "lock_key": "qwen3-omni-30b-a3b-thinking-bf16",
+    "other_entries": [
+      ".hfd"
+    ],
+    "payload_size_bytes": 63447489451,
+    "revision": "2f443cfc4c54b14a815c0e2bb9a9d6cbcd9a748b"
+  }
+}
