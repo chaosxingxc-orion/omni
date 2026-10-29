@@ -25,7 +25,12 @@ import pytest
 
 from _vllm_world import MODEL_LOCK_KEY, SUBDIR, VllmWorld, sha
 from speech_aware_evidence_acquisition.contracts import GateClosed
-from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import protocol_sha256
+from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import (
+    DEPLOYMENT_ENV_KEYS,
+    assert_deployment_env_keys,
+    pinned_environment,
+    protocol_sha256,
+)
 from speech_aware_evidence_acquisition.contracts.runtime_identity import (
     LLAMA_SERVER_TRANSPORT,
     VLLM_TRANSPORT,
@@ -322,6 +327,74 @@ def test_a_deployment_change_is_not_a_protocol_change(world):
     assert receipt["protocol_sha256"] == before
     diagnostics = _validate(world, receipt=receipt)
     assert diagnostics["vllm_instances"] == ["tp2-a", "tp2-b", "tp2-c"]
+
+
+def test_the_deployment_env_keys_are_exactly_the_four_per_instance_variables():
+    assert DEPLOYMENT_ENV_KEYS == {"HCCL_IF_BASE_PORT", "HCCL_SOCKET_IFNAME", "GLOO_SOCKET_IFNAME", "TP_SOCKET_IFNAME"}
+
+
+def test_the_pinned_environment_excludes_exactly_the_deployment_keys_and_the_device_key():
+    environ = {
+        "HCCL_IF_BASE_PORT": "61000",
+        "HCCL_SOCKET_IFNAME": "eth0",
+        "GLOO_SOCKET_IFNAME": "eth0",
+        "TP_SOCKET_IFNAME": "eth0",
+        "ASCEND_RT_VISIBLE_DEVICES": "0,1",
+        "HCCL_CONNECT_TIMEOUT": "1200",  # another HCCL_ variable: still protocol
+        "VLLM_USE_V1": "1",
+        "HOSTNAME": "x",
+    }
+    assert pinned_environment(environ) == {"HCCL_CONNECT_TIMEOUT": "1200", "VLLM_USE_V1": "1"}
+
+
+def test_four_instances_with_distinct_base_ports_are_one_protocol_and_validate(world):
+    four = world.receipt_with_instances(4)
+    assert [i["env"]["HCCL_IF_BASE_PORT"] for i in four["deployment"]["instances"]] == ["61000", "61200", "61400", "61600"]
+    assert four["protocol_sha256"] == world.receipt()["protocol_sha256"] == protocol_sha256(four)
+    assert "HCCL_IF_BASE_PORT" not in four["protocol"]["env"]
+    diagnostics = _validate(world, receipt=four)
+    assert diagnostics["vllm_instances"] == ["tp2-0", "tp2-1", "tp2-2", "tp2-3"]
+
+
+def test_the_recorded_deployment_env_does_not_move_the_protocol_hash(world):
+    receipt = world.receipt_with_instances(2)
+    before = receipt["protocol_sha256"]
+    receipt["deployment"]["instances"][0]["env"]["HCCL_IF_BASE_PORT"] = "62000"
+    assert protocol_sha256(receipt) == before
+
+
+@pytest.mark.parametrize("key", ["VLLM_FOO", "HCCL_CONNECT_TIMEOUT", "ASCEND_RT_VISIBLE_DEVICES", "PYTHONPATH", "PATH"])
+def test_an_instance_env_key_outside_the_deployment_set_is_refused(world, key):
+    receipt = world.receipt_with_instances(2)
+    receipt["deployment"]["instances"][1]["env"][key] = "1"
+    receipt["protocol_sha256"] = protocol_sha256(receipt)
+    with pytest.raises(GateClosed) as error:
+        _validate(world, receipt=receipt)
+    assert key in str(error.value) and "deployment.instances[1].env" in str(error.value)
+
+
+def test_a_deployment_variable_in_the_protocol_env_is_refused(world):
+    env = dict(world.receipt()["protocol"]["env"], HCCL_IF_BASE_PORT="61000")
+    receipt = world.receipt(env=env)
+    with pytest.raises(GateClosed) as error:
+        _validate(world, receipt=receipt)
+    assert "deployment.instances[].env" in str(error.value)
+
+
+@pytest.mark.parametrize("bad", [["HCCL_IF_BASE_PORT"], {"HCCL_IF_BASE_PORT": 61000}, {"HCCL_IF_BASE_PORT": ""}])
+def test_a_malformed_instance_env_is_refused(world, bad):
+    receipt = world.receipt_with_instances(2)
+    receipt["deployment"]["instances"][0]["env"] = bad
+    with pytest.raises(GateClosed) as error:
+        _validate(world, receipt=receipt)
+    assert "env" in str(error.value)
+
+
+def test_the_profile_side_refusal_helper_names_the_stray_keys():
+    assert_deployment_env_keys(["HCCL_IF_BASE_PORT", "TP_SOCKET_IFNAME"], "profile instances[0].env")
+    with pytest.raises(GateClosed) as error:
+        assert_deployment_env_keys(["HCCL_IF_BASE_PORT", "VLLM_FOO"], "profile instances[0].env")
+    assert "VLLM_FOO" in str(error.value) and "HCCL_IF_BASE_PORT" not in str(error.value).split("; ", 1)[1]
 
 
 def test_a_protocol_change_does_move_the_protocol_hash(world):

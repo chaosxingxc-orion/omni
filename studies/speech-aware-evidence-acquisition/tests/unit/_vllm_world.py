@@ -137,6 +137,7 @@ class VllmWorld:
                 "max_num_seqs": 8,
                 "gpu_memory_utilization": 0.9,
                 "max_num_batched_tokens": None,
+                "env": {},
             },
             {
                 "instance_id": "tp2-b",
@@ -147,6 +148,7 @@ class VllmWorld:
                 "max_num_seqs": 8,
                 "gpu_memory_utilization": 0.9,
                 "max_num_batched_tokens": None,
+                "env": {},
             },
         ]
         self._receipt = self._build_receipt()
@@ -206,6 +208,32 @@ class VllmWorld:
             },
             "deployment": {"instances": copy.deepcopy(self.instances)},
             "protocol_sha256": "0" * 64,
+        }
+        receipt["protocol_sha256"] = protocol_sha256(receipt)
+        return receipt
+
+    def receipt_with_instances(self, count: int = 4, base_port: int = 61000) -> dict:
+        """A fresh receipt with ``count`` tensor-parallel-2 instances, each with its own HCCL base port in ``env``.
+
+        The protocol half is untouched, so ``protocol_sha256`` equals the two-instance world's.
+        """
+
+        receipt = copy.deepcopy(self._receipt)
+        receipt["deployment"] = {
+            "instances": [
+                {
+                    "instance_id": f"tp2-{index}",
+                    "host": "127.0.0.1",
+                    "port": 8200 + index,
+                    "device_ids": [2 * index, 2 * index + 1],
+                    "tensor_parallel_size": 2,
+                    "max_num_seqs": 8,
+                    "gpu_memory_utilization": 0.9,
+                    "max_num_batched_tokens": None,
+                    "env": {"HCCL_IF_BASE_PORT": str(base_port + 200 * index), "HCCL_SOCKET_IFNAME": "eth0"},
+                }
+                for index in range(count)
+            ]
         }
         receipt["protocol_sha256"] = protocol_sha256(receipt)
         return receipt
@@ -299,6 +327,8 @@ class VllmWorld:
         (process / "cmdline").write_bytes(b"\0".join(part.encode("utf-8") for part in command) + b"\0")
         live_env = dict(PINNED_ENV if environ is None else environ)
         live_env.setdefault(DEVICE_ENV_KEY, device_env_value(instance["device_ids"]))
+        if environ is None:  # an explicit environ is taken as given (tests that tamper with it)
+            live_env.update(dict(instance.get("env") or {}))
         live_env.update(UNPINNED_ENV)
         (process / "environ").write_bytes(
             b"\0".join(f"{key}={value}".encode("utf-8") for key, value in live_env.items()) + b"\0"

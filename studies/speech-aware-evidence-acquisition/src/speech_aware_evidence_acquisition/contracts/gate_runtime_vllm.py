@@ -35,8 +35,12 @@ a request, and the gate re-measures each one from bytes on every model touch:
   ``-m vllm.entrypoints.cli.main serve``, the protocol server flags, the working directory and the behaviour-relevant
   environment (``PINNED_ENV_PREFIXES`` / ``PINNED_ENV_NAMES``).
 * ``deployment``: one entry per serving instance (owner input 2026-10-28: serving is multi-instance). Each entry holds
-  the loopback host, port, device ids, tensor-parallel size, ``--max-num-seqs``, ``--gpu-memory-utilization`` and
-  optional ``--max-num-batched-tokens``.
+  the loopback host, port, device ids, tensor-parallel size, ``--max-num-seqs``, ``--gpu-memory-utilization``,
+  optional ``--max-num-batched-tokens`` and an ``env`` map holding exactly the per-instance deployment variables
+  (``DEPLOYMENT_ENV_KEYS``: the HCCL base port and the network interface names). Those variables differ per instance
+  by construction (all instances share ``--network host``, so their HCCL base ports must differ), which is why they
+  are recorded here and kept out of ``protocol.env``. ``env`` may name nothing else: a ``VLLM_`` or other protocol
+  variable placed there would escape ``protocol_sha256``, so it is refused.
 
 ``protocol_sha256`` is the canonical hash of everything except ``deployment``. A change of cards, ports, TP or
 per-instance concurrency changes only ``deployment``, so it does not look like a protocol change. Any other change
@@ -65,7 +69,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Iterable, Mapping, Sequence
 
 import speech_aware_evidence_acquisition.contracts as _contracts_pkg
 
@@ -125,6 +129,11 @@ PINNED_ENV_PREFIXES: tuple[str, ...] = (
 PINNED_ENV_NAMES = frozenset({"PATH", "SOC_VERSION", "CANN_VERSION"})
 #: The per-instance device-visibility variable: deployment, derived from ``device_ids``.
 DEVICE_ENV_KEY = "ASCEND_RT_VISIBLE_DEVICES"
+#: The per-instance deployment variables: they differ between instances that share one protocol (the HCCL base port
+#: cannot be uniform because every instance runs with ``--network host``; interface names are per host), so they live
+#: in ``deployment.instances[].env``, never in ``protocol.env``. Exactly this set, no prefix: anything else an instance
+#: carries that is behaviour-relevant stays protocol and must be identical across instances.
+DEPLOYMENT_ENV_KEYS = frozenset({"HCCL_IF_BASE_PORT", "HCCL_SOCKET_IFNAME", "GLOO_SOCKET_IFNAME", "TP_SOCKET_IFNAME"})
 #: The user site directory must be off, so ``~/.local`` cannot shadow a pinned package.
 REQUIRED_ENV = {"PYTHONNOUSERSITE": "1"}
 #: The packages a vLLM receipt must bind (normalized names).
@@ -166,6 +175,9 @@ _INSTANCE_KEYS = frozenset(
         "max_num_batched_tokens",
     }
 )
+#: ``env`` is optional in a recorded instance (absent means no deployment variables: the live process must then carry
+#: none of ``DEPLOYMENT_ENV_KEYS``). The producer always writes it.
+_INSTANCE_OPTIONAL_KEYS = frozenset({"env"})
 
 
 def _fail(message: str) -> GateClosed:
@@ -370,13 +382,49 @@ def split_vllm_server_argv(argv: Sequence[str]) -> VllmServerArgv:
 
 
 def pinned_environment(environ: Mapping[str, str]) -> dict[str, str]:
-    """The behaviour-relevant part of an environment (module docstring), without the device key."""
+    """The behaviour-relevant part of an environment (module docstring), without the device key and without the
+    per-instance deployment variables (``DEPLOYMENT_ENV_KEYS``)."""
 
     return {
         key: value
         for key, value in environ.items()
-        if key != DEVICE_ENV_KEY and (key.startswith(PINNED_ENV_PREFIXES) or key in PINNED_ENV_NAMES)
+        if key != DEVICE_ENV_KEY
+        and key not in DEPLOYMENT_ENV_KEYS
+        and (key.startswith(PINNED_ENV_PREFIXES) or key in PINNED_ENV_NAMES)
     }
+
+
+def deployment_environment(environ: Mapping[str, str]) -> dict[str, str]:
+    """The per-instance deployment variables an environment carries (exactly ``DEPLOYMENT_ENV_KEYS``)."""
+
+    return {key: value for key, value in environ.items() if key in DEPLOYMENT_ENV_KEYS}
+
+
+def undeclared_deployment_env_keys(keys: Iterable[str]) -> list[str]:
+    """The names in ``keys`` that are NOT deployment variables, sorted. Non-empty means the caller must refuse.
+
+    The single rule for every place that accepts a per-instance ``env`` (the receipt's ``deployment.instances[].env``
+    and a deployment profile's ``instances[].env``): only ``DEPLOYMENT_ENV_KEYS`` may leave ``protocol_sha256``.
+    """
+
+    return sorted(set(keys) - DEPLOYMENT_ENV_KEYS)
+
+
+def assert_deployment_env_keys(keys: Iterable[str], label: str) -> None:
+    """Fail closed when ``keys`` holds a name outside ``DEPLOYMENT_ENV_KEYS``."""
+
+    stray = undeclared_deployment_env_keys(keys)
+    if stray:
+        raise _fail(
+            f"{label} may hold only the per-instance deployment variables {sorted(DEPLOYMENT_ENV_KEYS)}; {stray} "
+            "would move protocol environment out of protocol_sha256"
+        )
+
+
+def instance_deployment_env(instance: Mapping[str, object]) -> dict[str, str]:
+    """The deployment variables recorded for one receipt instance (empty when the record carries none)."""
+
+    return dict(instance.get("env") or {})
 
 
 def device_env_value(device_ids: Sequence[int]) -> str:
@@ -645,7 +693,10 @@ def validate_vllm_receipt_document(receipt: object) -> Mapping[str, object]:
     if not isinstance(env, Mapping) or not all(isinstance(k, str) and isinstance(v, str) for k, v in env.items()):
         raise _fail("protocol.env must map strings to strings")
     if dict(env) != pinned_environment(env):
-        raise _fail("protocol.env may hold only the pinned behaviour-relevant variables (no device key)")
+        raise _fail(
+            "protocol.env may hold only the pinned behaviour-relevant variables (no device key, no per-instance "
+            f"deployment variable {sorted(DEPLOYMENT_ENV_KEYS)}; those belong in deployment.instances[].env)"
+        )
     for key, value in REQUIRED_ENV.items():
         if env.get(key) != value:
             raise _fail(f"protocol.env must set {key}={value}")
@@ -661,8 +712,18 @@ def validate_vllm_receipt_document(receipt: object) -> Mapping[str, object]:
     seen_devices: set[int] = set()
     for index, instance in enumerate(instances):
         label = f"deployment.instances[{index}]"
-        if not isinstance(instance, Mapping) or set(instance) != _INSTANCE_KEYS:
-            raise _fail(f"{label} must have exact keys {sorted(_INSTANCE_KEYS)}")
+        if (
+            not isinstance(instance, Mapping)
+            or not _INSTANCE_KEYS <= set(instance)
+            or set(instance) - _INSTANCE_KEYS - _INSTANCE_OPTIONAL_KEYS
+        ):
+            raise _fail(f"{label} must have exact keys {sorted(_INSTANCE_KEYS)} plus optional {sorted(_INSTANCE_OPTIONAL_KEYS)}")
+        instance_env = instance.get("env", {})
+        if not isinstance(instance_env, Mapping) or not all(
+            isinstance(k, str) and isinstance(v, str) and v for k, v in instance_env.items()
+        ):
+            raise _fail(f"{label}.env must map deployment variable names to non-empty strings")
+        assert_deployment_env_keys(instance_env, f"{label}.env")
         instance_id = instance["instance_id"]
         if not isinstance(instance_id, str) or _INSTANCE_ID.fullmatch(instance_id) is None or instance_id in seen_ids:
             raise _fail(f"{label}.instance_id must be a unique identifier")

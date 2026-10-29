@@ -23,7 +23,8 @@ Serving is N instances (e.g. 4 x tensor-parallel 2 on 8 cards), each with its ow
 therefore records WHAT each instance computes once (``protocol``: served model name, the interpreter invocation, the
 decoding and reasoning flags, cwd, pinned environment -- hashed into ``protocol_sha256``) and WHERE/HOW WIDE each one
 runs per instance (``deployment.instances``: host, port, device ids, tensor-parallel size, ``--max-num-seqs``,
-``--gpu-memory-utilization``, ``--max-num-batched-tokens`` -- deliberately outside that hash). Every instance named on
+``--gpu-memory-utilization``, ``--max-num-batched-tokens`` and the per-instance ``env`` -- the HCCL base port and
+interface names, ``DEPLOYMENT_ENV_KEYS`` -- deliberately outside that hash). Every instance named on
 the command line must share one protocol; a difference is refused rather than averaged. Adding, moving or resizing an
 instance therefore changes the deployment half only, and never looks like a change to what the model computes.
 
@@ -62,6 +63,7 @@ from speech_aware_evidence_acquisition.contracts.errors import GateClosed  # noq
 from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import (  # noqa: E402
     DEVICE_ENV_KEY,
     VLLM_RUNTIME_RECEIPT_SCHEMA,
+    deployment_environment,
     device_env_value,
     file_entry,
     import_path_file_names,
@@ -193,6 +195,8 @@ def deployment_of(observation: dict[str, object], instance_id: str, deployment: 
         "max_num_seqs": int(deployment["--max-num-seqs"]),
         "gpu_memory_utilization": float(deployment["--gpu-memory-utilization"]),
         "max_num_batched_tokens": int(batched) if batched is not None else None,
+        # The per-instance deployment variables (HCCL base port, interface names): outside protocol.env by design.
+        "env": deployment_environment(observation["environ"]),
     }
 
 

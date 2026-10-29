@@ -22,8 +22,10 @@ actually has (``contracts.gate_runtime_vllm`` re-verified every one of them from
 ``/proc/<pid>/cmdline``  the live command line is EXACTLY the receipt's protocol plus this instance's deployment flags
                          (``assert_argv_matches_instance``) and exactly what the session receipt recorded.
 ``/proc/<pid>/cwd``      the working directory is the pinned one (the entrypoint is ``-m``: cwd is import path).
-``/proc/<pid>/environ``  every behaviour-relevant variable equals the receipt's pinned environment, and the device
-                         variable equals this instance's own device group.
+``/proc/<pid>/environ``  every behaviour-relevant variable equals the receipt's pinned environment, the device
+                         variable equals this instance's own device group, and the per-instance deployment variables
+                         (``DEPLOYMENT_ENV_KEYS``, e.g. the HCCL base port) equal this instance's own recorded
+                         ``env`` -- exactly, so a missing, extra or different one is refused.
 ``/proc/<pid>/maps``     every pinned runtime library is mapped, no OTHER libpython is mapped (a second interpreter
                          runtime would make the re-hashed ``exe`` meaningless), and nothing mapped under a pinned root
                          was deleted from disk after being loaded.
@@ -69,7 +71,9 @@ from ...contracts.gate_runtime_vllm import (
     assert_argv_matches_instance,
     classify_server_flags,
     device_env_value,
+    deployment_environment,
     instance_argv,
+    instance_deployment_env,
     instance_for_endpoint,
     pinned_environment,
     validate_vllm_receipt_document,
@@ -443,6 +447,16 @@ def verify_vllm_process_identity(
         raise _refuse(
             f"pid {pid}'s behaviour-relevant environment differs from the receipt's at {drift}"
         )
+    live_deployment = deployment_environment(environ)
+    recorded_deployment = instance_deployment_env(instance)
+    if live_deployment != recorded_deployment:
+        drift = sorted(set(live_deployment) ^ set(recorded_deployment)) or sorted(
+            key for key in recorded_deployment if live_deployment.get(key) != recorded_deployment[key]
+        )
+        raise _refuse(
+            f"pid {pid}'s deployment environment {live_deployment} differs from instance "
+            f"{instance['instance_id']!r}'s recorded {recorded_deployment} at {drift}"
+        )
     devices = device_env_value(instance["device_ids"])
     if environ.get(DEVICE_ENV_KEY) != devices:
         raise _refuse(
@@ -588,7 +602,8 @@ def start_vllm_session(
     - the argv is NOT assembled from the caller's flags: it is the receipt instance's canonical command line
       (``instance_argv``), and the caller's serving geometry must already equal it
       (:func:`assert_extra_argv_matches_instance`);
-    - the environment is the receipt's pinned environment plus this instance's device group, NOT the harness's
+    - the environment is the receipt's pinned environment plus this instance's device group and its recorded
+      deployment variables, NOT the harness's
       inherited environment with overrides -- the whole point of the pinned environment is that it is not an
       operator-shell accident;
     - the interpreter is re-hashed immediately before the spawn (the llama path re-hashes its binary at the same
@@ -626,6 +641,7 @@ def start_vllm_session(
     protocol = runtime_receipt["protocol"]
     env = {str(key): str(value) for key, value in protocol["env"].items()}
     env[DEVICE_ENV_KEY] = device_env_value(instance["device_ids"])
+    env.update(instance_deployment_env(instance))
     if extra_env:
         for key, value in extra_env.items():
             if not isinstance(key, str) or not isinstance(value, str):

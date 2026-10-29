@@ -117,6 +117,26 @@ def test_the_written_receipt_is_byte_identical_to_the_fixtures_own(world, tmp_pa
     assert document == world.receipt()
 
 
+def test_distinct_hccl_base_ports_become_per_instance_env_and_leave_one_protocol(world, tmp_path):
+    """S12: the producer records the deployment variables per instance and keeps them out of ``protocol.env``."""
+
+    from _vllm_world import PINNED_ENV
+
+    world.spawn("tp2-a", pid=PID_A, environ=dict(PINNED_ENV, HCCL_IF_BASE_PORT="61000", HCCL_SOCKET_IFNAME="eth0"))
+    world.spawn("tp2-b", pid=PID_B, environ=dict(PINNED_ENV, HCCL_IF_BASE_PORT="61200", HCCL_SOCKET_IFNAME="eth0"))
+    output = tmp_path / "runtime-vllm.json"
+    assert _module().main(_argv(world, output)) == 0
+    document = json.loads(output.read_text(encoding="utf-8"))
+    assert [i["env"] for i in document["deployment"]["instances"]] == [
+        {"HCCL_IF_BASE_PORT": "61000", "HCCL_SOCKET_IFNAME": "eth0"},
+        {"HCCL_IF_BASE_PORT": "61200", "HCCL_SOCKET_IFNAME": "eth0"},
+    ]
+    assert document["protocol"]["env"] == world.receipt()["protocol"]["env"]
+    assert document["protocol_sha256"] == world.receipt()["protocol_sha256"]
+    gate = world.gate(receipt=document)
+    runtime_receipt_identity(gate.transport).validate_runtime_receipt(gate, world.lock, full_hash=True)
+
+
 def test_a_second_instance_only_changes_the_deployment_half(world, tmp_path):
     """The coordinator's requirement: attaching an instance must not move ``protocol_sha256``."""
 

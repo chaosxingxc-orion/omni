@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 
 from _vllm_world import PINNED_ENV, VllmWorld
-from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import DEVICE_ENV_KEY
+from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import DEVICE_ENV_KEY, protocol_sha256
 from speech_aware_evidence_acquisition.core.session import (
     SESSION_RECEIPT_SCHEMA_V2,
     SessionError,
@@ -64,6 +64,53 @@ def test_two_instances_verify_independently(world):
     world.spawn("tp2-b", pid=PID_B)
     sessions = [world.session("tp2-a", PID_A), world.session("tp2-b", PID_B)]
     vllm_module.assert_vllm_sessions_alive(sessions, world.receipt(), None, proc_root=world.proc_root)
+
+
+def test_four_instances_with_distinct_hccl_base_ports_share_one_protocol_hash_and_all_verify(world):
+    """S12: the base port differs per instance (all share ``--network host``) and is deployment, not protocol."""
+
+    four = world.receipt_with_instances(4)
+    ports = [instance["env"]["HCCL_IF_BASE_PORT"] for instance in four["deployment"]["instances"]]
+    assert ports == ["61000", "61200", "61400", "61600"]
+    assert four["protocol_sha256"] == world.receipt()["protocol_sha256"]
+    assert protocol_sha256(four) == four["protocol_sha256"]
+    sessions = []
+    for index in range(4):
+        pid = PID_A + index
+        world.spawn(f"tp2-{index}", pid=pid, receipt=four)
+        sessions.append(world.session(f"tp2-{index}", pid, receipt=four))
+    vllm_module.assert_vllm_sessions_alive(sessions, four, None, proc_root=world.proc_root)
+
+
+def test_a_live_hccl_base_port_that_differs_from_the_instance_record_is_refused(world):
+    four = world.receipt_with_instances(4)
+    # Instance 1 is recorded at 61200 but its process carries instance 0's 61000: one protocol hash must not hide it.
+    environ = dict(PINNED_ENV, HCCL_IF_BASE_PORT="61000", HCCL_SOCKET_IFNAME="eth0")
+    world.spawn("tp2-1", pid=PID_A, receipt=four, environ=environ)
+    with pytest.raises(SessionError) as error:
+        _alive(world, world.session("tp2-1", PID_A, receipt=four), four)
+    assert "HCCL_IF_BASE_PORT" in str(error.value)
+
+
+def test_a_missing_or_extra_deployment_variable_is_refused(world):
+    four = world.receipt_with_instances(2)
+    missing = dict(PINNED_ENV, HCCL_SOCKET_IFNAME="eth0")  # no base port although the record has one
+    world.spawn("tp2-0", pid=PID_A, receipt=four, environ=missing)
+    with pytest.raises(SessionError) as error:
+        _alive(world, world.session("tp2-0", PID_A, receipt=four), four)
+    assert "HCCL_IF_BASE_PORT" in str(error.value)
+    extra = dict(PINNED_ENV, HCCL_IF_BASE_PORT="61200", HCCL_SOCKET_IFNAME="eth0", TP_SOCKET_IFNAME="eth0")
+    world.spawn("tp2-1", pid=PID_B, receipt=four, environ=extra)
+    with pytest.raises(SessionError) as error:
+        _alive(world, world.session("tp2-1", PID_B, receipt=four), four)
+    assert "TP_SOCKET_IFNAME" in str(error.value)
+
+
+def test_a_record_without_env_refuses_a_process_that_carries_a_deployment_variable(world):
+    world.spawn("tp2-a", pid=PID_A, environ=dict(PINNED_ENV, HCCL_IF_BASE_PORT="61000"))
+    with pytest.raises(SessionError) as error:
+        _alive(world, world.session("tp2-a", PID_A))
+    assert "HCCL_IF_BASE_PORT" in str(error.value)
 
 
 def test_a_serving_set_may_not_reuse_an_endpoint_or_a_pid(world):
@@ -418,6 +465,35 @@ def test_start_spawns_the_receipts_own_command_line_and_environment(world, tmp_p
     assert session.argv == tuple(world.argv_for("tp2-a"))
     assert receipt_path.exists()
     _alive(world, session)
+
+
+def test_start_spawns_with_the_instances_recorded_deployment_environment(world):
+    four = world.receipt_with_instances(2)
+    world.spawn("tp2-1", pid=PID_B, receipt=four)
+    calls: dict = {}
+
+    def popen(argv, **kwargs):
+        calls.update(argv=argv, kwargs=kwargs)
+        return _FakeProcess(PID_B)
+
+    vllm_module.start_vllm_session(
+        runtime_receipt=four,
+        host="127.0.0.1",
+        port=8201,
+        session_id="SAEA-vllm-start-env",
+        extra_argv=["--max-model-len", "24576", "--dtype", "bfloat16", "--reasoning-parser", "qwen3",
+                    "--enable-auto-tool-choice", "--tool-call-parser", "hermes", "--seed", "0",
+                    "--max-num-seqs", "8"],
+        popen=popen,
+        ready_timeout_seconds=0,
+        proc_root=world.proc_root,
+    )
+    assert calls["kwargs"]["env"] == {
+        **PINNED_ENV,
+        DEVICE_ENV_KEY: "2,3",
+        "HCCL_IF_BASE_PORT": "61200",
+        "HCCL_SOCKET_IFNAME": "eth0",
+    }
 
 
 def test_start_refuses_a_geometry_that_drifted_from_the_receipt(world):
