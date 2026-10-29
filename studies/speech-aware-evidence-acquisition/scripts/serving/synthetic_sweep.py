@@ -43,6 +43,13 @@ tok/s at p50/p10, latency p50/p95/max, TTFT, and the instances' ``/metrics`` bef
 cache queries/hits, prompt/generation token counters) plus ``vllm:kv_cache_usage_perc`` / ``num_requests_running`` /
 ``num_requests_waiting`` sampled every ``--metrics-interval`` seconds.
 
+Liveness (owner rule, plan 3.8 item 2 / 3.9): a :class:`LivenessPoller` thread runs beside the metrics sampler and polls
+``GET /v1/models`` of every instance every ``--liveness-interval`` seconds (default 30; 0 disables), then once more when
+a level's workers finish. A dead endpoint (unreachable, non-200, or no longer serving the model, two attempts in a row)
+ABORTS the level: the report carries an explicit ``endpoint_died`` field on the level and at the top, no later level is
+run, a level with ``endpoint_died`` is never a knee candidate, and the CLI exits with status 3 AFTER writing the report.
+A dead endpoint is never absorbed as "some errors"; the tool never restarts anything.
+
 The knee (:func:`recommend_knee`): the highest level with zero errors, zero timeouts, a READABLE and zero preemption
 delta, and per-sequence end-to-end tok/s p10 >= ``--min-seq-tok-s`` (default 10). An unreadable counter fails the
 level closed. The report is JSON (``indent=2, sort_keys=True``).
@@ -112,6 +119,12 @@ METRIC_GAUGES = {
     "num_requests_running": "vllm:num_requests_running",
     "num_requests_waiting": "vllm:num_requests_waiting",
 }
+
+
+#: Exit status of the CLI when an endpoint died during the sweep (the report is still written).
+EXIT_ENDPOINT_DIED = 3
+#: Seconds between the two probes that must both fail before an endpoint counts as dead.
+LIVENESS_RETRY_GAP_S = 2.0
 
 
 class SweepError(RuntimeError):
@@ -498,6 +511,71 @@ class MetricsSampler(threading.Thread):
         return out
 
 
+def probe_endpoint(base_url: str, model: str, timeout: float = 10.0) -> str | None:
+    """``None`` when ``GET /v1/models`` answers 200 and lists ``model``; otherwise a short reason string."""
+
+    try:
+        document = _http_json("GET", base_url + "/v1/models", timeout=timeout)
+    except (OSError, ValueError) as error:  # URLError, HTTPError (non-200), timeouts, refused, bad JSON
+        return f"{type(error).__name__}: {error}"[:200]
+    entries = document.get("data") if isinstance(document, dict) else None
+    if not isinstance(entries, list) or not any(isinstance(e, dict) and e.get("id") == model for e in entries):
+        return f"/v1/models does not list {model!r}"
+    return None
+
+
+class LivenessPoller(threading.Thread):
+    """Polls every instance's ``/v1/models`` every ``interval`` seconds (first poll immediately) until stopped.
+
+    An endpoint is DEAD when ``attempts`` probes in a row (``retry_gap`` seconds apart) all fail, so one slow answer
+    under load is not a death. The first death is recorded in :attr:`died` and :attr:`dead_event` is set; the thread
+    then stops (the level is aborted by its owner). ``probe`` is injectable for tests."""
+
+    def __init__(self, base_urls: Sequence[str], model: str, interval: float, *, timeout: float = 10.0,
+                 attempts: int = 2, retry_gap: float | None = None,
+                 probe: Callable[[str, str, float], str | None] | None = None) -> None:
+        super().__init__(daemon=True)
+        self.base_urls, self.model, self.interval = list(base_urls), model, interval
+        self.timeout, self.attempts = timeout, max(1, attempts)
+        self.retry_gap = LIVENESS_RETRY_GAP_S if retry_gap is None else retry_gap
+        self.probe = probe or probe_endpoint
+        self.polls = 0
+        self.died: dict[str, object] | None = None
+        self.dead_event = threading.Event()
+        self.stop_event = threading.Event()
+        self._t0 = time.monotonic()
+
+    def _check(self, index: int) -> dict[str, object] | None:
+        error: str | None = None
+        for attempt in range(self.attempts):
+            error = self.probe(self.base_urls[index], self.model, self.timeout)
+            if error is None:
+                return None
+            if attempt + 1 < self.attempts:
+                time.sleep(self.retry_gap)
+        return {"instance": index, "base_url": self.base_urls[index], "error": error}
+
+    def poll_once(self, detected_by: str = "poll") -> dict[str, object] | None:
+        """One round over all instances (in parallel); the ``endpoint_died`` record if any is dead, else ``None``."""
+
+        with ThreadPoolExecutor(max_workers=len(self.base_urls)) as pool:
+            verdicts = list(pool.map(self._check, range(len(self.base_urls))))
+        self.polls += 1
+        dead = [verdict for verdict in verdicts if verdict]
+        if not dead:
+            return None
+        self.died = {"detected_by": detected_by, "detected_at_s": round(time.monotonic() - self._t0, 3),
+                     "endpoints": dead}
+        self.dead_event.set()
+        return self.died
+
+    def run(self) -> None:
+        while not self.stop_event.is_set():
+            if self.poll_once():
+                return
+            self.stop_event.wait(self.interval)
+
+
 # ---------------------------------------------------------------------------
 # Statistics and the knee.
 # ---------------------------------------------------------------------------
@@ -567,6 +645,8 @@ def recommend_knee(levels: Sequence[Mapping[str, object]], *, min_seq_tok_s: flo
     passing: list[Mapping[str, object]] = []
     for level in levels:
         reasons = []
+        if level.get("endpoint_died"):
+            reasons.append("endpoint died")
         if level["errors"]:
             reasons.append(f"{level['errors']} error(s)")
         if level["timeouts"]:
@@ -623,6 +703,8 @@ class SweepConfig:
     warmup: int = 1
     fit_workers: int = 16
     idle_wait_s: float = 120.0
+    liveness_interval_s: float = 30.0
+    liveness_timeout_s: float = 10.0
     label: str | None = None
     deployment_profile: dict[str, object] | None = field(default=None, repr=False)
 
@@ -635,6 +717,8 @@ class SweepConfig:
             raise SweepError("contacts, max_tokens and thinking budget are inconsistent")
         if not 0 < self.audio_min_seconds <= self.audio_max_seconds:
             raise SweepError("audio seconds range is invalid")
+        if self.liveness_interval_s < 0 or self.liveness_timeout_s <= 0:
+            raise SweepError("liveness interval must be >= 0 (0 disables) and the liveness timeout > 0")
         lognormal_mu_for_mean(self.prompt_mean, self.prompt_sigma, self.prompt_min, self.prompt_max)
 
 
@@ -738,6 +822,7 @@ def run_level(config: SweepConfig, level: int) -> tuple[dict[str, object], list[
     lock = threading.Lock()
     barrier = threading.Barrier(workers + 1)
     clock: dict[str, float] = {}
+    abort = threading.Event()
 
     def worker(w: int) -> None:
         instance = w % instances
@@ -749,6 +834,8 @@ def run_level(config: SweepConfig, level: int) -> tuple[dict[str, object], list[
             fits = fitted[trajectory.index]
             words = trajectory.words(max(fit.n_words for fit in fits))
             for contact, fit in enumerate(fits):
+                if abort.is_set():
+                    return
                 result = RequestResult(level, w, instance, trajectory.index, contact,
                                        f"sweep-c{level}-w{w}-t{trajectory.index}-k{contact}", fit.target, fit.tokenized)
                 result.started_s = time.monotonic() - clock["start"]
@@ -764,23 +851,43 @@ def run_level(config: SweepConfig, level: int) -> tuple[dict[str, object], list[
     before = [read_metrics(url) for url in config.base_urls]
     sampler = MetricsSampler(config.base_urls, config.metrics_interval_s)
     sampler.start()
+    poller: LivenessPoller | None = None
+    if config.liveness_interval_s > 0:
+        poller = LivenessPoller(config.base_urls, config.model, config.liveness_interval_s,
+                                timeout=config.liveness_timeout_s)
+        poller.start()
     clock["start"] = time.monotonic()
     barrier.wait()
-    for thread in threads:
-        thread.join()
+    died: dict[str, object] | None = None
+    while any(thread.is_alive() for thread in threads):
+        if poller is not None and poller.dead_event.wait(0.25):
+            died = poller.died
+            abort.set()  # blocked requests to the dead endpoint are abandoned (daemon threads), not awaited
+            break
+        if poller is None:
+            time.sleep(0.25)
     wall = time.monotonic() - clock["start"]
+    if poller is not None:
+        if died is None:  # a death between two polls, or after the last poll, is still a death
+            died = poller.poll_once("level-end-check")
+        poller.stop_event.set()
     sampler.stop_event.set()
     sampler.join()
     after = [read_metrics(url) for url in config.base_urls]
-    results.sort(key=lambda r: (r.worker, r.trajectory, r.contact))
-    summary = summarize_level(level, results, wall, before, after, sampler.summary())
+    with lock:
+        finished = list(results)  # snapshot: abandoned workers of an aborted level may still append to ``results``
+    finished.sort(key=lambda r: (r.worker, r.trajectory, r.contact))
+    summary = summarize_level(level, finished, wall, before, after, sampler.summary())
+    summary["endpoint_died"] = died
+    summary["liveness"] = {"interval_s": config.liveness_interval_s, "polls": poller.polls if poller else 0}
+    summary["aborted"] = abort.is_set()
     summary["instances_idle_at_start"] = idle
     summary["fit"] = {
         "contacts": sum(len(f) for f in fitted),
         "exact": sum(fit.exact for fits in fitted for fit in fits),
         "tokenize_calls": sum(fit.tokenize_calls for fits in fitted for fit in fits),
     }
-    return summary, results
+    return summary, finished
 
 
 def run_sweep(config: SweepConfig, *, log: Callable[[str], None] = lambda line: None) -> dict[str, object]:
@@ -789,6 +896,7 @@ def run_sweep(config: SweepConfig, *, log: Callable[[str], None] = lambda line: 
     if config.warmup:
         warmup(config)
     levels, requests = [], []
+    endpoint_died: dict[str, object] | None = None
     for level in config.levels:
         log(f"level {level}/instance x {len(config.base_urls)} instance(s): fitting and running")
         summary, results = run_level(config, level)
@@ -797,6 +905,10 @@ def run_sweep(config: SweepConfig, *, log: Callable[[str], None] = lambda line: 
                         for result in results)
         log(f"level {level}: {summary['ok']}/{summary['requests']} ok, {summary['output_tok_s']} out tok/s, "
             f"p10 e2e {summary['e2e_tok_s']['p10']} tok/s, preemptions {summary['preemptions_delta']}")
+        if summary["endpoint_died"]:
+            endpoint_died = dict(summary["endpoint_died"], level=level)  # type: ignore[arg-type]
+            log(f"level {level}: ENDPOINT DIED {json.dumps(endpoint_died, sort_keys=True)}; sweep stopped")
+            break
     settings = {key: value for key, value in asdict(config).items() if key != "deployment_profile"}
     profile = config.deployment_profile
     return {
@@ -811,6 +923,8 @@ def run_sweep(config: SweepConfig, *, log: Callable[[str], None] = lambda line: 
             "sha256": hashlib.sha256(json.dumps(profile, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
             "document": profile,
         },
+        "endpoint_died": endpoint_died,
+        "levels_requested": list(config.levels),
         "levels": levels,
         "knee": recommend_knee(levels, min_seq_tok_s=config.min_seq_tok_s),
         "requests": requests,
@@ -841,6 +955,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--metrics-interval", type=float, default=5.0)
     parser.add_argument("--warmup", type=int, default=1, help="short unmeasured requests per instance first")
     parser.add_argument("--fit-workers", type=int, default=16)
+    parser.add_argument("--liveness-interval", type=float, default=30.0,
+                        help="seconds between /v1/models polls of every instance during a level (0 disables)")
+    parser.add_argument("--liveness-timeout", type=float, default=10.0, help="timeout of one liveness probe")
     parser.add_argument("--deployment-profile", type=Path, help="embed this deployment profile JSON in the report")
     parser.add_argument("--label")
     parser.add_argument("--out", type=Path, required=True)
@@ -859,6 +976,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         min_tokens=args.min_tokens, decoding_seed=args.decoding_seed, timeout_s=args.timeout,
         min_seq_tok_s=args.min_seq_tok_s, stream=not args.no_stream, metrics_interval_s=args.metrics_interval,
         warmup=args.warmup, fit_workers=args.fit_workers, label=args.label,
+        liveness_interval_s=args.liveness_interval, liveness_timeout_s=args.liveness_timeout,
         deployment_profile=(json.loads(args.deployment_profile.read_text(encoding="utf-8"))
                             if args.deployment_profile else None),
     )
@@ -866,8 +984,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     knee = report["knee"]
-    print(json.dumps({"out": str(args.out), "knee": knee}, indent=2, sort_keys=True))
-    return 0
+    print(json.dumps({"out": str(args.out), "knee": knee, "endpoint_died": report["endpoint_died"]},
+                     indent=2, sort_keys=True))
+    return EXIT_ENDPOINT_DIED if report["endpoint_died"] else 0
 
 
 if __name__ == "__main__":

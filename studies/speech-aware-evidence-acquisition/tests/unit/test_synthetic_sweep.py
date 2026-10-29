@@ -330,3 +330,127 @@ def test_the_knee_is_the_highest_level_passing_every_gate():
     assert knee["failing_reasons"]["32"] == ["preemption counter unreadable"]
     assert knee["failing_reasons"]["48"] == ["2 error(s)", "1 timeout(s)"]
     assert sweep.recommend_knee([_level(8, p10=None)], min_seq_tok_s=10.0)["recommended_concurrency_per_instance"] is None
+
+
+# --- min_tokens payload -----------------------------------------------------------------------------------------------
+
+
+def test_min_tokens_is_sent_on_measured_requests_only_when_set(servers):
+    (plain,), (floored,) = servers(1), servers(1)
+    sweep.run_sweep(_config([plain], levels=[1], liveness_interval_s=0))
+    sweep.run_sweep(_config([floored], levels=[1], min_tokens=48, liveness_interval_s=0))
+    measured = lambda fake: [body for rid, body in fake.chat_requests if not rid.startswith("sweep-warmup")]
+    warmups = lambda fake: [body for rid, body in fake.chat_requests if rid.startswith("sweep-warmup")]
+    assert measured(plain) and all("min_tokens" not in body for body in measured(plain))
+    assert measured(floored) and all(body["min_tokens"] == 48 and body["max_tokens"] == 64 for body in measured(floored))
+    # the unmeasured warmup (max_tokens 16) never carries the floor, which could exceed its max_tokens
+    assert warmups(floored) and all("min_tokens" not in body for body in warmups(floored))
+
+
+def test_the_cli_passes_min_tokens_through(servers, tmp_path):
+    (fake,) = servers(1)
+    out = tmp_path / "report.json"
+    assert sweep.main([
+        "--base-url", fake.url, "--model", MODEL, "--levels", "1", "--seed", "s", "--contacts-per-trajectory", "1",
+        "--prompt-mean", "300", "--prompt-min", "150", "--prompt-max", "600", "--audio-min-seconds", "0.2",
+        "--audio-max-seconds", "0.3", "--max-tokens", "64", "--thinking-budget", "16", "--min-tokens", "40",
+        "--metrics-interval", "0.05", "--liveness-interval", "0", "--out", str(out),
+    ]) == 0
+    assert json.loads(out.read_text(encoding="utf-8"))["settings"]["min_tokens"] == 40
+    assert {body["min_tokens"] for rid, body in fake.chat_requests if not rid.startswith("sweep-warmup")} == {40}
+
+
+# --- liveness poll ----------------------------------------------------------------------------------------------------
+
+
+def test_probe_endpoint_reads_v1_models(servers):
+    (fake,) = servers(1)
+    assert sweep.probe_endpoint(fake.url, MODEL) is None
+    assert "does not list" in sweep.probe_endpoint(fake.url, "another-model")
+    fake.close()
+    assert sweep.probe_endpoint(fake.url, MODEL, timeout=1.0)
+
+
+def test_the_poller_needs_consecutive_failures_and_records_the_dead_endpoint():
+    calls = []
+
+    def flaky(url, model, timeout):  # one slow answer on the first attempt only: not a death
+        calls.append(url)
+        return "timed out" if len(calls) == 1 else None
+
+    poller = sweep.LivenessPoller(["http://a"], MODEL, 30.0, retry_gap=0.0, probe=flaky)
+    assert poller.poll_once() is None and not poller.dead_event.is_set() and poller.polls == 1
+
+    dead = sweep.LivenessPoller(["http://a", "http://b"], MODEL, 30.0, retry_gap=0.0,
+                                probe=lambda url, model, timeout: "refused" if url == "http://b" else None)
+    record = dead.poll_once("poll")
+    assert dead.dead_event.is_set() and dead.died is record
+    assert record["detected_by"] == "poll"
+    assert record["endpoints"] == [{"instance": 1, "base_url": "http://b", "error": "refused"}]
+
+
+def test_the_poller_thread_polls_immediately_then_on_the_interval_and_stops_on_death():
+    seen = []
+    poller = sweep.LivenessPoller(["http://a"], MODEL, 0.05, retry_gap=0.0,
+                                  probe=lambda url, model, timeout: seen.append(url) or ("down" if len(seen) >= 3 else None))
+    poller.start()
+    assert poller.dead_event.wait(5.0)
+    poller.join(5.0)
+    assert not poller.is_alive() and len(seen) == 4  # 2 healthy polls, then 2 failed attempts of the third
+
+
+def test_a_healthy_sweep_reports_no_death_and_polls_the_endpoints(servers):
+    fakes = servers(2)
+    report = sweep.run_sweep(_config(fakes, levels=[1], liveness_interval_s=0.05))
+    assert report["endpoint_died"] is None and report["levels"][0]["endpoint_died"] is None
+    assert report["levels"][0]["liveness"]["polls"] >= 2 and report["levels"][0]["aborted"] is False
+    assert report["knee"]["recommended_concurrency_per_instance"] == 1
+
+
+def test_a_dead_endpoint_aborts_the_level_and_the_sweep_with_an_explicit_field(servers, monkeypatch):
+    monkeypatch.setattr(sweep, "LIVENESS_RETRY_GAP_S", 0.05)
+    fakes = servers(2, delay=3.0)
+    killer = threading.Timer(0.8, fakes[1].close)  # listener gone, in-flight handlers keep running
+    killer.start()
+    started = time.monotonic()
+    report = sweep.run_sweep(_config(fakes, levels=[1, 2], liveness_interval_s=0.1, liveness_timeout_s=1.0, warmup=0))
+    killer.join()
+    assert time.monotonic() - started < 10  # aborted, not awaited to the end of the level
+    died = report["endpoint_died"]
+    assert died["level"] == 1 and died["endpoints"][0]["instance"] == 1
+    assert died["endpoints"][0]["base_url"] == fakes[1].url
+    assert [level["concurrency_per_instance"] for level in report["levels"]] == [1]  # level 2 never started
+    assert report["levels_requested"] == [1, 2]
+    assert report["levels"][0]["aborted"] is True and report["levels"][0]["endpoint_died"]["endpoints"]
+    knee = report["knee"]
+    assert knee["recommended_concurrency_per_instance"] is None
+    assert "endpoint died" in knee["failing_reasons"]["1"]
+    json.dumps(report, sort_keys=True)
+
+
+def test_the_cli_exits_non_zero_after_writing_the_report_when_an_endpoint_died(servers, tmp_path, monkeypatch):
+    monkeypatch.setattr(sweep, "LIVENESS_RETRY_GAP_S", 0.05)
+    fakes = servers(2, delay=3.0)
+    threading.Timer(0.8, fakes[0].close).start()
+    out = tmp_path / "report.json"
+    status = sweep.main([
+        "--base-url", ",".join(fake.url for fake in fakes), "--model", MODEL, "--levels", "1", "--seed", "s",
+        "--contacts-per-trajectory", "1", "--prompt-mean", "300", "--prompt-min", "150", "--prompt-max", "600",
+        "--audio-min-seconds", "0.2", "--audio-max-seconds", "0.3", "--max-tokens", "64", "--thinking-budget", "16",
+        "--metrics-interval", "0.05", "--liveness-interval", "0.1", "--liveness-timeout", "1", "--warmup", "0",
+        "--out", str(out),
+    ])
+    assert status == sweep.EXIT_ENDPOINT_DIED == 3
+    assert json.loads(out.read_text(encoding="utf-8"))["endpoint_died"]["endpoints"][0]["instance"] == 0
+
+
+def test_a_level_with_endpoint_died_is_never_a_knee_even_if_every_other_gate_passes():
+    dead = _level(16) | {"endpoint_died": {"endpoints": [{"instance": 0}]}}
+    knee = sweep.recommend_knee([_level(8), dead], min_seq_tok_s=10.0)
+    assert knee["recommended_concurrency_per_instance"] == 8
+    assert knee["failing_reasons"]["16"] == ["endpoint died"]
+
+
+def test_liveness_arguments_are_validated():
+    with pytest.raises(sweep.SweepError, match="liveness"):
+        _config(["http://127.0.0.1:1"], liveness_interval_s=-1).validate()
