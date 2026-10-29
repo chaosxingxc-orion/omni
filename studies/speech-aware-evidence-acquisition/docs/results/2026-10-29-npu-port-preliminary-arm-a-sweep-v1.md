@@ -21,13 +21,19 @@ seed 20261028); no dataset row was read.
 
 ## Results
 
-| level per instance | output tok/s per instance | host output tok/s | per-sequence tok/s p50 / p10 | latency s p50 / p95 / max | TTFT s p50 / p95 | preemptions | min HBM free per card | KV peak |
+Correction (2026-10-29, after the planner's review): an earlier version of this table reported the sweep tool's
+`output_tok_s` as per-instance and multiplied it by four. The tool sums completion tokens over all ok requests of
+the level, across all four instances, and divides by the level's wall time (`scripts/serving/synthetic_sweep.py`,
+`summarize_level`), so `output_tok_s` IS the host aggregate. The table below is corrected; per instance is host / 4.
+Cross-check at 48: 13.1 contacts/min per instance x about 2.0k completion tokens = about 437 tok/s per instance.
+
+| level per instance | output tok/s per instance (host / 4) | host output tok/s | per-sequence tok/s p50 / p10 | latency s p50 / p95 / max | TTFT s p50 / p95 | preemptions | min HBM free per card | KV peak |
 |---|---|---|---|---|---|---|---|---|
-| 8 | 904.9 | 3,620 | 39.6 / 32.0 | 64 / 81 / 81 | 0.74 / 2.90 | 0 | 4.0 GiB | 15 % |
-| 16 | 1,098.1 | 4,392 | 25.2 / 20.4 | 104 / 129 / 131 | 0.93 / 5.11 | 0 | 4.0 GiB | 30 % |
-| 24 | 1,257.4 | 5,030 | 20.3 / 15.5 | 99 / 161 / 170 | 0.92 / 9.09 | 0 | 4.0 GiB | 43 % |
-| 32 | 1,422.6 | 5,690 | 18.3 / 14.3 | 121 / 183 / 244 | 0.90 / 11.57 | 0 | 4.0 GiB | 53 % |
-| 48 | 1,795.3 | 7,181 | 14.3 / 11.4 | 170 / 229 / 249 | 1.08 / 13.75 | 0 | 4.0 GiB | 80 % |
+| 8 | 226.2 | 904.9 | 39.6 / 32.0 | 64 / 81 / 81 | 0.74 / 2.90 | 0 | 4.0 GiB | 15 % |
+| 16 | 274.5 | 1,098.1 | 25.2 / 20.4 | 104 / 129 / 131 | 0.93 / 5.11 | 0 | 4.0 GiB | 30 % |
+| 24 | 314.4 | 1,257.4 | 20.3 / 15.5 | 99 / 161 / 170 | 0.92 / 9.09 | 0 | 4.0 GiB | 43 % |
+| 32 | 355.7 | 1,422.6 | 18.3 / 14.3 | 121 / 183 / 244 | 0.90 / 11.57 | 0 | 4.0 GiB | 53 % |
+| 48 | 448.8 | 1,795.3 | 14.3 / 11.4 | 170 / 229 / 249 | 1.08 / 13.75 | 0 | 4.0 GiB | 80 % |
 
 Zero errors and zero timeouts at every level (96 to 576 requests per level). Mean prompt about 8.5k tokens, mean
 completion about 2.0k tokens (most requests reached the 3,112-token thinking cutoff), prefix-cache hit rate 51-54 %.
@@ -39,7 +45,7 @@ per card. Every level passed; the stopping rule never fired.
 ## Reading
 
 - The knee is NOT bracketed: throughput still rose 26 % from 32 to 48. By the plan's selection rule the best measured
-  level is 48 per instance (about 7.2k output tok/s for the host), with the p10 margin the tightest (11.4 vs 10).
+  level is 48 per instance (about 1.8k output tok/s for the host, about 450 per instance), with the p10 margin the tightest (11.4 vs 10).
 - Plan predictions refuted: level 48 did not preempt, and the knee is not at or below 32. Prefix-cache reuse across
   the three contacts of a trajectory was not in the prediction.
 - HBM was sampled every 30 s, so a short peak could be missed; AI Core means rest on 8-22 samples per level.

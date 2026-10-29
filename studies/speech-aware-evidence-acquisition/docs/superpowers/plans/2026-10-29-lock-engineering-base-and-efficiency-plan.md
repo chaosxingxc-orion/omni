@@ -16,6 +16,11 @@ experiment-efficiency configuration and run plan."
 > wave. (7) 2.2c is a per-request `chat_template` probe, no scratch server; `--chat-template` is a refused flag.
 > (8) Q1-Q6 re-derived: Q3 answered by facts, Q2 narrowed, Q5/Q6 restated as protocol-hash questions. (9) Waves
 > re-ordered: no card is touched before S10, S12 land and the verification script passes offline.
+>
+> **Revision 3 (2026-10-29, after the preliminary arm A sweep).** Section 3.7 records the result, the next-level
+> predictions and the planner decisions (knee bracketing at the ceiling, arm B at equal host concurrency, arm C dropped,
+> arm D conditional, preliminary-versus-recorded run list, card time). Wave 2 is split into 2a (preliminary, now) and
+> 2b (recorded, after R2). Where 3.7 differs from 3.2 or 3.6, 3.7 wins.
 
 Scope rails for every stream. Synthetic load only; no dataset row is read (the registered 4-row smoke waits for an
 exposure row). No GitHub push. No design-doc section 9 decision beyond 9.1-9.5 is implemented. Never use a busy card
@@ -197,6 +202,8 @@ mix represents the Solver population (conservative for cost).
 
 `--max-num-seqs` stays 64 in every arm; the measured quantity is client concurrency below it. C, D, E need redeploys
 and run after A/B decide the shape.
+Revision 3: A adds levels 56 and 64 (the ceiling); B runs 16, 32, 48, 64, 96 per instance with a 128 ceiling (equal
+host concurrency to A); C is not run; D is conditional; see 3.7.
 
 ### 3.3 Load shape
 
@@ -254,6 +261,101 @@ throughput at the knee, ties within 5 % -> A (Q4). Record the losing arm too.
 
 Levels get slower as concurrency rises and four instances compiling in parallel start slower than the measured single
 instance (`DEPLOY_WAIT_SECONDS` default 2400 s covers it). The resident deployment stays up afterwards.
+
+---
+
+### 3.7 Preliminary arm A result and next sweep steps (revision 3, 2026-10-29, planner decision from the summary)
+
+Input: the preliminary arm A sweep (`docs/results/2026-10-29-npu-port-preliminary-arm-a-sweep-v1.md`; launched by
+`work/scripts/npu_serve.sh`, 4 x TP2 on cards 0-7, `--max-num-seqs 64`, NUMA-pinned, levels 8-48 per instance, one
+pass = 3 contacts per worker, seed 20261028). Every level passed every 3.4 threshold: zero errors, timeouts and
+preemptions; KV peak 80 % at 48; throughput still +26 % from 32 to 48; p10 11.4 tok/s at 48 (14 % above the floor);
+max latency 249 s (gate 420); min HBM free 4.1 GiB per card on 30 s samples. The knee is NOT bracketed. 3.1
+predictions marked: "preemption at 48" REFUTED (80 % of 564 k = ~451 k tokens for 192 host sequences = ~9.4 k per
+sequence, below the 10.5 k mix; prefix reuse across the three contacts of a trajectory was not in the estimate);
+"knee at or below 32" REFUTED; "KV shrinks at `max-num-seqs 64`" REFUTED (25.83 GiB per card, unchanged).
+
+**Correction for S8 (OPUS) before any number is quoted.** The summary's "output tok/s per instance" column is the
+HOST aggregate: `scripts/serving/synthetic_sweep.py:527-543` sums `completion_tokens` over every ok result of the
+level (all instances) and divides by the level's wall time, and the driver copies that field as
+`aggregate_output_tok_s`. Arithmetic agrees: at level 8, 904.9 tok/s per instance would need 113 tok/s from 8
+sequences whose p50 is 39.6; at 48, 13.1 contacts/min/instance x ~2.0 k tokens = ~437 tok/s per instance = 1,795 / 4.
+The preliminary result document's "host output tok/s" column (3,620 ... 7,181) is therefore a 4x over-count; the
+per-instance figures are ~226 ... ~449 tok/s and the host figures are the first column (905 ... 1,795). S8 corrects
+the result document with a successor edit and uses the host figure in the hour-bound cross-check (3.5 item 2).
+Contacts/min and r (6.5 lock rows/min/instance at 48) are unaffected; no decision below depends on this.
+
+**Predictions for the next levels (written before the runs; S8 marks each confirmed/refuted).** Per-sequence rate
+fell 20 % from 32 to 48 (x1.5 concurrency), so p10 is expected at 10.3-10.6 tok/s at 56 and 9.5-9.8 at 64; KV peak
+~93 % at 56 and over 100 % at 64 (linear from 80 % at 48). So 64 FAILS on p10 and preempts; 56 PASSES narrowly with
+a p10 margin under 6 %; throughput +8-12 % at 56 over 48 (outside the 5 % tie band), +0-10 % at 64 if it runs. The
+`--min-tokens 4096` worst case (every completion 4,096 tokens; ~12.6 k KV tokens per sequence) PASSES at 48 with max
+latency 370-420 s (the binding gate) and FAILS at 56 (max latency over 420 s or preemption). Expected outcome:
+knee 48 per instance after the worst-case confirmation; 56 only if the worst case passes there. Arm B (2 x TP4):
+AI Core is already 83 % mean / 100 % max at A's 48, so the host is compute-bound; TP4 buys 2x KV per card at the
+price of all-reduce over four cards and half the number of independent schedulers; B lands within +-5 % of A or
+below at equal host concurrency, so A stays resident (Q4).
+
+**Decisions.**
+1. **Bracket the knee at the ceiling; do not raise it.** Run 56 and 64 per instance on the deployment that is up
+   (64 equals `--max-num-seqs`, so the client never exceeds the scheduler ceiling; at 64 the sampled `waiting`
+   gauge must stay 0, otherwise the level is reported as ceiling-bound, not as a knee). The ceiling is a deployment
+   fact (`DEPLOYMENT_FLAGS`, profile `max_num_seqs`), so raising it would not re-mint `protocol_sha256`, but it is a
+   profile revision and changes the graph capture sizes; it happens only if 64 PASSES every threshold (then a `-v2`
+   profile with 96, after the base lock). The p10 risk: 11.4 at 48 leaves 14 %; one pass of 576 requests puts p10 on
+   the 58th-worst sequence, so a narrow pass at 56 is a tail statistic and is decided by the 3x run, not by one pass.
+   Stopping rule unchanged: 56 fails -> 64 is not run.
+2. **Requests per level.** The one-pass scan is completed by 56 and 64. The two candidate levels for the 3x re-run
+   are the highest passing level and the next lower measured level (the fallback keeps a 3x measurement if the top
+   level fails at 3x): expected 56 and 48; if 56 fails one pass, 48 and 32. The `--min-tokens 4096` worst case runs
+   at the highest passing level, one pass; if it fails max latency, p10 or preemption, the knee drops one level and
+   the worst case repeats there. The 3x re-runs are NOT run preliminarily: they are the recorded measurement and the
+   engine bytes are the same, so a preliminary 3x is paid twice. The worst case IS run preliminarily: it is the run
+   most likely to fail and its outcome fixes the recorded level list.
+3. **Arm B is still measured** because Q4 is a measured rule, and it runs AFTER (1) and the preliminary worst case:
+   those use the deployment already up, B needs all eight cards redeployed. B is compared at equal HOST concurrency:
+   B levels per instance 16, 32, 48, 64, 96 = host 32, 64, 96, 128, 192 (A's 48 = host 192). B's profile ceiling 64
+   would cap it at host 128, so the preliminary B launch uses `MAX_NUM_SEQS=128` (launcher env override; the B
+   profile JSON is revised to 128 only if B is ever recorded). B is preliminary-only unless it beats A's host
+   throughput at the knee by more than 5 %, in which case B AND A are re-measured on the locked base before the
+   residency changes. A preliminary B loss confirms the owner's default and is cited in the base-lock record as such,
+   labelled preliminary: the only thing a preliminary number may decide is "do not displace the default".
+4. **Arm C (0.95): NOT run.** 4.1 GiB free at 0.92 on 30 s samples; 0.95 asks ~1.8 GiB more and leaves ~2.3 GiB at
+   a sampled peak, at the 2 GiB gate, for a 7 % KV gain, and the knee is not KV-bound (80 % at 48). Reopened only
+   if 64 fails SOLELY by preemption with p10 >= 10. **Arm D (`--max-num-batched-tokens 8192`): conditional.** TTFT
+   p95 13.8 s at 48 is 6 % of the p95 latency; capping prefill cannot raise throughput and only trades TTFT for the
+   decode tail. D runs at the knee (one redeploy, one level, one pass) only if the recorded 3x run at the knee shows
+   p10 within 5 % of the floor; otherwise S8 records it as not run with this reason. E stays ruled out (Q6).
+5. **Preliminary now versus recorded.** NOW, on the preliminary path (`npu_serve.sh`; `--label` and file names carry
+   `prelim`; cards must be free; no dataset row): **P1** levels 56, 64 on arm A; **P2** the worst case at the highest
+   passing level (repeated one level down if it fails); **P3** arm B redeploy with `MAX_NUM_SEQS=128`, levels 16, 32,
+   48, 64, 96, one pass, stopping rule; **P4** arm A redeployed so the cards are in the resident shape (or left down
+   if S7 is imminent). Sampler cadence for P1-P3: `npu-smi` every 10 s (30 s can miss a peak at the ceiling). S10
+   does not edit `npu_serve.sh` while a P3/P4 launch is in progress (the coordinator sequences it; the sweep client
+   is unaffected). ONLY after S10 and S12 land and R2 passes (the RECORDED run, S7: `npu_deploy.sh up`, receipt,
+   `npu_verify_base.sh` all 11 PASS, smoke re-run, then the sweep): **R-A1** one pass at the non-candidate levels
+   (8, 16, 24, 32 and whichever of 48/56/64 were measured but are not candidates, so the S8 table is complete from
+   the locked base); **R-A2** the two candidates at 3x requests; **R-A3** the worst case at the knee; **R-D** only
+   under the condition in (4); **R-B** only if B won preliminarily. The recorded baseline and the hour bound quote
+   R-* reports only; preliminary reports appear in the baseline document as context, labelled, never in the bound.
+6. **Card time remaining** (8 cards; spent so far ~0.8 h wall = ~6.5 card-hours for the preliminary scan).
+
+| run | wall h | card-hours |
+|---|---|---|
+| P1 56 + 64 one pass (672 + 768 requests at ~55/min host) | 0.5 | 4 |
+| P2 worst case, one level, possibly a second | 0.5-0.9 | 4-7 |
+| P3 arm B redeploy + 5 levels, P4 arm A redeploy | 1.2 | 10 |
+| R0 deploy + receipt + verify + smoke re-run | 0.8 | 6 |
+| R-A1 one pass at 5 non-candidate levels | 0.6 | 5 |
+| R-A2 two candidates at 3x (~1,700-2,000 requests each) | 1.2 | 10 |
+| R-A3 worst case at the knee | 0.5 | 4 |
+| R-D conditional | 0.4 | 3 |
+| **remaining** | **5.7-6.1** | **46-49** (52-56 with the spent scan; inside the 60-66 of 3.6) |
+| R-B only if B wins preliminarily | +1.5 | +12 |
+
+Run list in order: P1 (56, then 64) -> P2 -> P3 (B: 16, 32, 48, 64, 96) -> P4 -> [R2 gate] -> R0 -> R-A1 -> R-A2 ->
+R-A3 -> R-D (conditional) -> R-B (conditional). This section supersedes the level lists of 3.2 and the timings of
+3.6 where they differ.
 
 ---
 
@@ -364,7 +466,8 @@ the four-instance case; the S10 dry-argv test passes; llama-path diff empty; no 
 |---|---|---|---|
 | 0 | commit in-flight work in the R1 order: translation (with the section-9 hunks of the design doc), S3 (5.5 hunk), S1, S6, G (stale-package guard), S4, this plan; host scripts stay outside git | now | R1 PASSED 2026-10-29 (conditional, see "R1 review" below): suite green, files disjoint, nothing committed by a stream |
 | 1 (off-NPU, parallel) | S10, S12, S13, S1b, S15 | R1 passed; S6 and S3 committed | R2 (see above) |
-| 2 (cards, 181) | S7 | R2 passed | all arms done or stopped by rule; verification PASS on arm A |
+| 2a (cards, 181, PRELIMINARY) | P1-P4 of 3.7 on `npu_serve.sh` | arm A up, no busy card, S10 holds `npu_serve.sh` edits during launches | reports labelled `prelim`; 3.7 predictions marked; B compared under Q4 |
+| 2b (cards, 181, RECORDED) | S7: R0, R-A1..R-A3, R-D/R-B conditional | R2 passed | all recorded runs done or stopped by rule; verification PASS on arm A |
 | 3 (parallel) | S5, S8 | S7 reports + receipts exist | R3: numbers trace, formula is the registered one |
 | 4 | S9 | S5, S8 committed | R4: gaps listed; main thread writes the memory successor note (G8) |
 
@@ -414,7 +517,10 @@ one-line fix below landing in the translation commit. Diffs read in full: S1, S3
 
 | risk | mitigation |
 |---|---|
-| Level 48 at TP2 preempts | predicted in 3.1; stopping rule; utilisation stays 0.92 until arm C |
+| Level 48 at TP2 preempts | REFUTED by the preliminary sweep (3.7); the risk moves to 64 at the ceiling: `waiting` must read 0, 10 s `npu-smi` samples, stopping rule |
+| the worst case (`--min-tokens 4096`) fails at the one-pass knee | predicted in 3.7; the knee drops one level and the worst case repeats; run preliminarily so the recorded level list is known before R2 |
+| a preliminary number is treated as recorded | every preliminary report and file name carries `prelim`; the hour bound quotes R-* reports only; the only decision a preliminary number may carry is "do not displace the default" (Q4) |
+| the summary's "per instance" throughput column is a host aggregate | S8 reads the report field definition before quoting; the result document gets a successor edit (3.7) |
 | `npu_deploy.sh up` fails HCCL init (error 19) | S10 lands before any card; R2 checks the emitted env/mount set equals `npu_serve.sh` |
 | receipt refuses the live cmdline | S10 entrypoint form + dry-argv test; S7 writes the receipt before the sweep |
 | identity check fails on instances 1-3 | S12; four-instance fixture in R2 |
