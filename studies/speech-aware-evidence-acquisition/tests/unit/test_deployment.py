@@ -9,15 +9,25 @@ from __future__ import annotations
 
 import copy
 import json
+import os
+import re
 import shlex
+from pathlib import Path
 
 import pytest
 
+from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import (
+    VLLM_ENTRYPOINT,
+    protocol_sha256,
+    split_vllm_server_argv,
+)
 from speech_aware_evidence_acquisition.core import deployment as dep
 from speech_aware_evidence_acquisition.core.session import telemetry
 from speech_aware_evidence_acquisition.core.session.serving import ServingSessionError
 
 PROFILE_ID = "qwen3-omni-thinking-bf16-181-4xtp2-v1"
+NIC = "enp61s0f2"
+SCRIPTS = Path(os.environ.get("OMNI_ROOT", "/mnt/cephfs/xingchao/omni")) / "work" / "scripts"
 _BUS = ("C1", "C2", "81", "82", "01", "02", "41", "42")
 
 
@@ -106,6 +116,9 @@ def test_every_committed_profile_validates_and_is_named_by_its_file():
         (lambda d: d["instances"][0].update(cpuset="9-3"), "reversed"),
         (lambda d: d["instances"][0].update(name="omni-i0"), "name"),
         (lambda d: d["instances"][0]["env"].update(HF_HUB_OFFLINE="0"), "common environment"),
+        (lambda d: d["instances"][0]["env"].update(VLLM_USE_V1="0"), "deployment variables"),
+        (lambda d: d["instances"][0]["env"].update(PYTHONHASHSEED="0"), "deployment variables"),
+        (lambda d: d["instances"][0]["env"].update(HCCL_SOCKET_IFNAME="eth0"), "--nic"),
         (lambda d: d["instances"][0].update(server_args=["--max-model-len", "1"]), "exactly the keys"),
         (lambda d: d.update(gpu_memory_utilization=1.2), "gpu_memory_utilization"),
         (lambda d: d.update(max_num_seqs=0), "max_num_seqs"),
@@ -230,26 +243,116 @@ def test_max_num_batched_tokens_is_a_deployment_flag_when_declared(fragment):
 
 
 def test_the_docker_command_mounts_only_its_own_cards_and_is_resident(profile, fragment):
-    argv = dep.docker_run_argv(profile, profile.instances[1], fragment)
+    argv = dep.docker_run_argv(profile, profile.instances[1], fragment, nic=NIC)
     assert argv[:5] == ["docker", "run", "--detach", "--name", "saea-omni-i1"]
     assert "--rm" not in argv
     devices = [argv[k + 1] for k, token in enumerate(argv) if token == "--device"]
     assert devices == ["/dev/davinci_manager", "/dev/devmm_svm", "/dev/hisi_hdc", "/dev/davinci2", "/dev/davinci3"]
     pairs = dict(zip(argv[::1], argv[1::1]))
     assert pairs["--restart"] == "unless-stopped" and pairs["--network"] == "host"
-    assert pairs["--cpuset-cpus"] == "128-159" and pairs["--entrypoint"] == "vllm"
+    assert pairs["--cpuset-cpus"] == "128-159"
+    assert pairs["--entrypoint"] == dep.CONTAINER_INTERPRETER == "/usr/local/python3.12.13/bin/python3"
     assert "/mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni" in argv
     assert f"{dep.LABEL_PROFILE}={PROFILE_ID}" in argv and f"{dep.LABEL_INSTANCE}=1" in argv
     assert "HCCL_IF_BASE_PORT=61200" in argv and "HF_HUB_OFFLINE=1" in argv
     image = argv.index("saea-base:20261027")
-    assert argv[image + 1:] == dep.instance_server_argv(profile, profile.instances[1], fragment)
+    assert argv[image + 1:] == dep.instance_container_args(profile, profile.instances[1], fragment)
+    assert argv[image + 1:image + 4] == ["-m", "vllm.entrypoints.cli.main", "serve"]
+    assert argv[image + 4:] == dep.instance_server_argv(profile, profile.instances[1], fragment)[1:]
+
+
+def test_the_live_argv_is_the_gate_entrypoint_form(profile, fragment):
+    """The container's live command line is [entrypoint, *args after the image token]; the receipt gate parses it."""
+
+    for instance in profile.instances:
+        argv = dep.docker_run_argv(profile, instance, fragment, nic=NIC)
+        image = argv.index(profile.image)
+        live = [argv[argv.index("--entrypoint") + 1], *argv[image + 1:]]
+        assert tuple(live[1:4]) == tuple(VLLM_ENTRYPOINT)
+        parsed = split_vllm_server_argv(live)
+        assert parsed.argv0 == dep.CONTAINER_INTERPRETER and parsed.model_dir == profile.model_path
+        assert parsed.served_model_name == fragment["served_model_name"]
+        assert parsed.deployment["--port"] == str(instance.port)
+        assert parsed.deployment["--tensor-parallel-size"] == str(profile.tensor_parallel_size)
+
+
+def _flag_values(argv, flag):
+    return [argv[k + 1] for k, token in enumerate(argv) if token == flag]
+
+
+def test_the_socket_ifnames_are_the_nic_and_the_nic_is_required(profile, fragment):
+    argv = dep.docker_run_argv(profile, profile.instances[0], fragment, nic=NIC)
+    env = _flag_values(argv, "-e")
+    for key in dep.NIC_ENV_KEYS:
+        assert f"{key}={NIC}" in env
+    assert dep.NIC_ENV_KEYS == ("HCCL_SOCKET_IFNAME", "GLOO_SOCKET_IFNAME", "TP_SOCKET_IFNAME")
+    for bad in (None, "", "   ", "a b", "eth0;rm", "x" * 16, "-eth0", 3):
+        with pytest.raises(dep.DeploymentError, match="NIC"):
+            dep.docker_run_argv(profile, profile.instances[0], fragment, nic=bad)
+    with pytest.raises(TypeError):  # keyword-only, no default: a caller cannot forget it
+        dep.docker_run_argv(profile, profile.instances[0], fragment)
+
+
+def test_a_profile_cannot_override_the_nic_or_common_environment(profile, fragment):
+    for key in (*dep.NIC_ENV_KEYS, "HF_HUB_OFFLINE"):
+        instance = dep.InstanceSpec(0, "saea-x", (0, 1), 9000, "0-3", ((key, "other"),))
+        with pytest.raises(dep.DeploymentError, match="owned by the deployment layer"):
+            dep.docker_run_argv(profile, instance, fragment, nic=NIC)
+
+
+def _script_docker_block(name):
+    path = SCRIPTS / name
+    if not path.is_file():
+        pytest.skip(f"{path} is not on this host")
+    text = path.read_text(encoding="utf-8")
+    block = text[text.index("docker run -d"):]
+    block = block[:block.index("> /dev/null")]
+    return text, block
+
+
+@pytest.mark.parametrize("script", ["npu_serve.sh", "npu_serve.sh.s10-next"])
+def test_the_emitted_env_and_mounts_equal_the_sidecar_serve_script(profile, fragment, script):
+    """``work/scripts/npu_serve.sh`` is the launcher known to bring up multi-card servers: same env names, same
+    read-only mounts (the profile adds only its own per-instance keys and the data root)."""
+
+    text, block = _script_docker_block(script)
+    script_env = set(re.findall(r"-e \"?(\w+)=", text))
+    script_mounts = set(re.findall(r"-v (\S+):\1:ro", block))
+    argv = dep.docker_run_argv(profile, profile.instances[0], fragment, nic=NIC)
+    emitted_env = {token.split("=")[0] for token in _flag_values(argv, "-e")}
+    emitted_mounts = {token[:-3].split(":")[0] for token in _flag_values(argv, "-v") if token.endswith(":ro")}
+    assert emitted_mounts == script_mounts == set(dep.ASCEND_READONLY_MOUNTS)
+    assert set(dep.NIC_ENV_KEYS) <= script_env <= emitted_env  # the script's HCCL_IF_BASE_PORT is the profile's env
+    assert emitted_env - script_env == {"HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"}
+    assert "ip -o -4 addr show scope global | awk '{print $2; exit}'" in text
+
+
+def test_the_s10_next_serve_script_uses_the_gate_entrypoint_form():
+    # The sidecar is promoted over npu_serve.sh by a later mv; prefer it while it exists, else the promoted script.
+    name = "npu_serve.sh.s10-next" if (SCRIPTS / "npu_serve.sh.s10-next").is_file() else "npu_serve.sh"
+    text, block = _script_docker_block(name)
+    assert f"--entrypoint {dep.CONTAINER_INTERPRETER} " in block
+    assert '"$IMAGE" -m vllm.entrypoints.cli.main serve "$@"' in block
+    assert "--entrypoint vllm" not in text
+    thinking = text[text.index("  thinking)"):text.index("  embed)")]
+    assert '--gpu-memory-utilization "${GPU_MEM_UTIL:-0.92}"' in thinking
+    assert "GPU_MEM_UTIL" in text[:text.index("set -euo pipefail")]
+
+
+def test_the_host_launcher_derives_the_nic_as_the_serve_script_does():
+    path = SCRIPTS / "npu_deploy.sh"
+    if not path.is_file():
+        pytest.skip(f"{path} is not on this host")
+    text = path.read_text(encoding="utf-8")
+    assert "ip -o -4 addr show scope global | awk '{print $2; exit}'" in text
+    assert '--nic "$NIC"' in text and "refused: no global IPv4 NIC" in text
 
 
 def test_the_data_root_is_one_overridable_path(fragment):
     moved = dep.load_deployment_profile(PROFILE_ID, data_root="/srv/data")
     assert (moved.data_mount, moved.model_path) == ("/srv/data", "/srv/data/models/qwen3-omni-30b-a3b-thinking")
     assert moved.sha256 == dep.load_deployment_profile(PROFILE_ID).sha256
-    argv = dep.docker_run_argv(moved, moved.instances[0], fragment)
+    argv = dep.docker_run_argv(moved, moved.instances[0], fragment, nic=NIC)
     assert "/srv/data:/srv/data" in argv and "/srv/data/models/qwen3-omni-30b-a3b-thinking" in argv
     assert not any("cephfs" in token for token in argv)
     assert dep.deployment_record(moved)["data_mount"] == "/srv/data"
@@ -269,26 +372,61 @@ def test_the_deployment_record_is_the_unhashed_deployment_facts(profile):
     assert record["profile_sha256"] == profile.sha256
     assert json.loads(json.dumps(record, sort_keys=True)) == record
     assert len({i["server_argv_sha256"] for i in record["instances"]}) == 4
+    assert record["nic"] is None  # a profile-only read records no NIC; plan/emit never run without one
+
+
+def test_the_deployment_record_carries_the_nic_and_the_nic_moves_no_protocol_hash(profile):
+    record = dep.deployment_record(profile, nic=NIC)
+    assert record["nic"] == NIC and json.loads(json.dumps(record, sort_keys=True)) == record
+    plain = dep.deployment_record(profile)
+    assert {k: v for k, v in record.items() if k not in {"nic", "instances"}} == {
+        k: v for k, v in plain.items() if k not in {"nic", "instances"}}
+    for with_nic, without in zip(record["instances"], plain["instances"]):
+        assert with_nic["server_argv_sha256"] == without["server_argv_sha256"]  # the NIC is not a server flag
+        assert with_nic["env"] == without["env"]  # per-instance env stays the profile's own; the NIC is one host fact
+    with pytest.raises(dep.DeploymentError, match="NIC"):
+        dep.deployment_record(profile, nic="bad nic")
+    # The NIC is a deployment fact: the profile hash does not see it, and a receipt carries it in its deployment
+    # block, which protocol_sha256 excludes.
+    assert dep.load_deployment_profile(PROFILE_ID).sha256 == profile.sha256
+    receipt = {"schema": "x", "protocol": {"served_model_name": "m", "server_args": ["--max-model-len", "24576"]},
+               "deployment": {"instances": [{"max_num_seqs": 64, "env": {}}]}}
+    moved = json.loads(json.dumps(receipt))
+    moved["deployment"]["instances"][0]["env"] = dict.fromkeys(dep.NIC_ENV_KEYS, NIC)
+    assert protocol_sha256(moved) == protocol_sha256(receipt)
 
 
 def test_plan_prints_one_parseable_docker_command_per_instance(capsys):
-    assert dep._main(["plan", PROFILE_ID]) == 0
+    assert dep._main(["plan", PROFILE_ID, "--nic", NIC]) == 0
     out = capsys.readouterr().out
+    assert f"HCCL_SOCKET_IFNAME={NIC}" in out
     commands = [shlex.split(line) for line in out.splitlines() if line.startswith("docker run")]
     assert [command[4] for command in commands] == [f"saea-omni-i{k}" for k in range(4)]
 
 
+def test_plan_and_emit_refuse_without_a_nic(tmp_path, capsysbinary):
+    idle = tmp_path / "idle.txt"
+    idle.write_text(IDLE, encoding="utf-8")
+    for command in (["plan", PROFILE_ID], ["emit", PROFILE_ID, "--npu-smi-file", str(idle)],
+                    ["plan", PROFILE_ID, "--nic", ""], ["emit", PROFILE_ID, "--npu-smi-file", str(idle), "--nic", "a b"]):
+        with pytest.raises(dep.DeploymentError, match="NIC"):
+            dep._main(command)
+    assert capsysbinary.readouterr().out == b""
+    assert dep._main(["record", PROFILE_ID, "--nic", NIC]) == 0
+    assert json.loads(capsysbinary.readouterr().out)["nic"] == NIC
+
+
 def test_emit_refuses_without_a_card_check_and_on_busy_cards(tmp_path, capsysbinary):
     with pytest.raises(dep.DeploymentError, match="requires --npu-smi-file"):
-        dep._main(["emit", PROFILE_ID])
+        dep._main(["emit", PROFILE_ID, "--nic", NIC])
     busy = tmp_path / "busy.txt"
     busy.write_text(BUSY_181, encoding="utf-8")
     with pytest.raises(dep.CardRefusal):
-        dep._main(["emit", PROFILE_ID, "--npu-smi-file", str(busy)])
+        dep._main(["emit", PROFILE_ID, "--npu-smi-file", str(busy), "--nic", NIC])
     assert capsysbinary.readouterr().out == b""
     idle = tmp_path / "idle.txt"
     idle.write_text(IDLE, encoding="utf-8")
-    assert dep._main(["emit", PROFILE_ID, "--npu-smi-file", str(idle)]) == 0
+    assert dep._main(["emit", PROFILE_ID, "--npu-smi-file", str(idle), "--nic", NIC]) == 0
     tokens = capsysbinary.readouterr().out.split(b"\0")
     assert tokens[-1] == b""
     names, cursor = [], 0

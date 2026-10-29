@@ -81,9 +81,12 @@ for _entry in (str(_REPO / "src"), str(_HERE)):
 import synthetic_sweep as sweep  # noqa: E402  (synthetic_wav; shares the sweep's synthetic content rules)
 from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import (  # noqa: E402
     DEVICE_ENV_KEY,
+    VLLM_ENTRYPOINT,
     assert_argv_matches_instance,
     classify_server_flags,
+    deployment_environment,
     device_env_value,
+    instance_deployment_env,
     instance_for_endpoint,
     pinned_environment,
     protocol_sha256,
@@ -547,14 +550,19 @@ def container_env(inspect: Mapping[str, Any]) -> dict[str, str]:
 
 
 def live_vllm_args(inspect: Mapping[str, Any]) -> tuple[str, list[str]]:
-    """``(model dir, flag tokens)`` of a container started with ``--entrypoint vllm <image> serve <model> <flags>``."""
+    """``(model dir, flag tokens)`` of a container started with ``--entrypoint <python> <image> -m
+    vllm.entrypoints.cli.main serve <model> <flags>`` (``dep.CONTAINER_INTERPRETER``, the gate's ``VLLM_ENTRYPOINT``)."""
 
     path, args = inspect.get("Path"), inspect.get("Args")
-    if not isinstance(path, str) or not isinstance(args, list) or len(args) < 2:
+    head = len(VLLM_ENTRYPOINT)
+    if not isinstance(path, str) or not isinstance(args, list) or len(args) < head + 1:
         raise ReadError("container inspect lacks Path/Args")
-    if PurePosixPath(path).name != "vllm" or args[0] != "serve":
-        raise ReadError(f"container does not run 'vllm serve' (Path {path!r}, Args[0] {args[0]!r})")
-    return str(args[1]), [str(token) for token in args[2:]]
+    if path != dep.CONTAINER_INTERPRETER or tuple(str(token) for token in args[:head]) != tuple(VLLM_ENTRYPOINT):
+        raise ReadError(
+            f"container does not run '{dep.CONTAINER_INTERPRETER} {' '.join(VLLM_ENTRYPOINT)}' "
+            f"(Path {path!r}, Args[:{head}] {args[:head]!r})"
+        )
+    return str(args[head]), [str(token) for token in args[head + 1:]]
 
 
 def instance_base_url(ctx: Context, instance: dep.InstanceSpec) -> str:
@@ -860,8 +868,8 @@ def check_deployment(ctx: Context) -> Result:
         model_dir, flags = live_vllm_args(state)
         _served, _tokens, deployment = classify_server_flags(flags)
         labels = (state.get("Config") or {}).get("Labels") or {}
-        argv = ["vllm", *state["Args"]] if isinstance(state.get("Args"), list) else []
-        expected_argv = ["vllm", *ctx.expected_argv(instance)]
+        argv = [state.get("Path"), *state["Args"]] if isinstance(state.get("Args"), list) else []
+        expected_argv = [dep.CONTAINER_INTERPRETER, *dep.instance_container_args(ctx.profile, instance, ctx.fragment)]
         batched = deployment.get("--max-num-batched-tokens")
         facts = {
             "cards": devices, "cpuset": cpuset, "port": int(deployment.get("--port", -1)),
@@ -869,7 +877,7 @@ def check_deployment(ctx: Context) -> Result:
             "max_num_seqs": int(deployment.get("--max-num-seqs", -1)),
             "gpu_memory_utilization": float(deployment.get("--gpu-memory-utilization", -1)),
             "max_num_batched_tokens": int(batched) if batched is not None else None,
-            "server_argv_sha256": hashlib.sha256(json.dumps(argv[1:]).encode("utf-8")).hexdigest(),
+            "server_argv_sha256": hashlib.sha256(json.dumps(["serve", model_dir, *flags]).encode("utf-8")).hexdigest(),
         }
         for key, value in facts.items():
             r.claim(*base, instance.name, key, value=value)
@@ -1122,10 +1130,10 @@ def check_receipt(ctx: Context) -> Result:
             cmdline = readers.container_cmdline(instance.name)
             entry["cmdline_head"] = cmdline[:4]
             assert_argv_matches_instance(cmdline, receipt, ri)
-            owned = {key for key, _ in instance.env}
             env = container_env(ctx.inspect(instance.name))
-            live_pinned = {k: v for k, v in pinned_environment(env).items() if k not in owned}
-            wanted_pinned = {k: v for k, v in receipt["protocol"]["env"].items() if k not in owned}
+            live_deployment, wanted_deployment = deployment_environment(env), instance_deployment_env(ri)
+            r.require(live_deployment == wanted_deployment, f"{instance.name}: live deployment environment {live_deployment!r} differs from the receipt instance's {wanted_deployment!r}")
+            live_pinned, wanted_pinned = pinned_environment(env), dict(receipt["protocol"]["env"])
             r.require(live_pinned == wanted_pinned, f"{instance.name}: pinned environment differs from the receipt at {sorted(set(live_pinned) ^ set(wanted_pinned)) or sorted(k for k in wanted_pinned if live_pinned.get(k) != wanted_pinned[k])}")
             devices = device_env_value(ri["device_ids"])
             r.require(env.get(DEVICE_ENV_KEY) == devices, f"{instance.name}: {DEVICE_ENV_KEY} is {env.get(DEVICE_ENV_KEY)!r}, the receipt's device group is {devices!r}")

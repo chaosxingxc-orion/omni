@@ -237,7 +237,7 @@ class World:
         inst0 = PROFILE.instances[0]
         argv = dep.instance_server_argv(PROFILE, inst0, FRAGMENT)
         served, tokens, _ = classify_server_flags(argv[2:])
-        env = dict(PINNED_ENV, HCCL_SOCKET_IFNAME=NIC, HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1")
+        env = dict(PINNED_ENV, HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1")  # per-instance HCCL keys live in deployment.env
         receipt = vw.receipt(served_model_name=served, server_args=list(tokens), env=env)
         receipt["model_lock_key"] = LOCK_KEY
         receipt["container"] = {"image_ref": PROFILE.image, "image_id": IMAGE_ID}
@@ -250,7 +250,8 @@ class World:
         receipt["deployment"] = {"instances": [
             {"instance_id": f"i{inst.index}", "host": "127.0.0.1", "port": inst.port, "device_ids": list(inst.cards),
              "tensor_parallel_size": PROFILE.tensor_parallel_size, "max_num_seqs": PROFILE.max_num_seqs,
-             "gpu_memory_utilization": PROFILE.gpu_memory_utilization, "max_num_batched_tokens": None}
+             "gpu_memory_utilization": PROFILE.gpu_memory_utilization, "max_num_batched_tokens": None,
+             "env": {**dict(inst.env), **dict.fromkeys(dep.NIC_ENV_KEYS, NIC)}}
             for inst in PROFILE.instances]}
         receipt["protocol_sha256"] = protocol_sha256(receipt)
         self.receipt = receipt
@@ -264,16 +265,15 @@ class World:
         devices = [{"PathOnHost": p} for p in dep.ASCEND_CONTROL_DEVICES] + [
             {"PathOnHost": f"/dev/davinci{card}"} for card in inst.cards]
         rd.containers[inst.name] = {
-            "Name": f"/{inst.name}", "Image": IMAGE_ID, "Path": "vllm",
-            "Args": dep.instance_server_argv(PROFILE, inst, FRAGMENT), "RestartCount": 0,
+            "Name": f"/{inst.name}", "Image": IMAGE_ID, "Path": dep.CONTAINER_INTERPRETER,
+            "Args": dep.instance_container_args(PROFILE, inst, FRAGMENT), "RestartCount": 0,
             "State": {"Status": "running", "Running": True},
             "Config": {"Env": [f"{k}={v}" for k, v in env.items()],
                        "Labels": {dep.LABEL_PROFILE: PROFILE.profile_id, dep.LABEL_PROFILE_SHA256: PROFILE.sha256,
                                   dep.LABEL_INSTANCE: str(inst.index)}},
             "HostConfig": {"CpusetCpus": inst.cpuset, "NetworkMode": "host", "ShmSize": 16 * 1024 ** 3,
                            "Devices": devices},
-            "Mounts": [{"Destination": "/usr/local/Ascend/driver", "RW": False},
-                       {"Destination": "/usr/local/sbin/npu-smi", "RW": False},
+            "Mounts": [{"Destination": mount, "RW": False} for mount in dep.ASCEND_READONLY_MOUNTS] + [
                        {"Destination": PROFILE.data_mount, "RW": True}],
         }
         rd.logs[inst.name] = [
@@ -407,7 +407,7 @@ def test_print_observed_has_the_documented_lock_shape(world):
     assert lock["receipt"]["path"] == RECEIPT_PATH
     assert sorted(lock["profiles"][PROFILE_ID]["instances"]) == [i.name for i in PROFILE.instances]
     assert lock["hosts"][HOSTNAME]["cpu_count"] == 256
-    assert lock["network_env"]["ro_mounts"] == ["/usr/local/Ascend/driver", "/usr/local/sbin/npu-smi"]
+    assert lock["network_env"]["ro_mounts"] == sorted(dep.ASCEND_READONLY_MOUNTS)
     assert lock["template"]["tokenizer_config_has_chat_template"] is False
     assert sorted(lock["cann"]["image_files"]) == list(veb.DEFAULT_IMAGE_CANN_FILES)
 
@@ -650,6 +650,20 @@ def test_receipt_cmdline_in_the_wrong_shape_fails_receipt(world):
     _, report, _ = world.verify("--only", "receipt")
     assert report["checks"]["receipt"]["verdict"] == "fail"
     assert any(name in line for line in report["checks"]["receipt"]["failures"])
+
+
+def test_live_vllm_args_accept_only_the_gate_entrypoint_form():
+    inspect = {"Path": dep.CONTAINER_INTERPRETER, "Args": ["-m", "vllm.entrypoints.cli.main", "serve", "/m", "--port", "1"]}
+    assert veb.live_vllm_args(inspect) == ("/m", ["--port", "1"])
+    for bad in (
+        {"Path": "vllm", "Args": ["serve", "/m", "--port", "1"]},  # the retired --entrypoint vllm form
+        {"Path": dep.CONTAINER_INTERPRETER, "Args": ["serve", "/m", "--port", "1"]},
+        {"Path": "/usr/bin/python3", "Args": inspect["Args"]},
+        {"Path": dep.CONTAINER_INTERPRETER, "Args": ["-m", "vllm.entrypoints.cli.main", "serve"]},
+        {"Path": dep.CONTAINER_INTERPRETER},
+    ):
+        with pytest.raises(veb.ReadError):
+            veb.live_vllm_args(bad)
 
 
 def test_receipt_missing_device_group_variable_fails_receipt(world):

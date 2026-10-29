@@ -36,7 +36,9 @@ client's routing decision (instance ``slot mod instance_count``), not a server f
 
 Run inside the ``saea-base`` image (``python -m speech_aware_evidence_acquisition.core.deployment``): ``plan`` prints
 the exact docker commands, ``emit`` writes them NUL-delimited for the host launcher (``work/scripts/npu_deploy.sh``)
-after the card check passes, ``instances`` lists name/port/cards, ``record`` prints :func:`deployment_record`.
+after the card check passes, ``instances`` lists name/port/cards, ``record`` prints :func:`deployment_record`. ``plan``
+and ``emit`` require ``--nic`` (the host interface with the global IPv4 address, derived by the launcher) and refuse
+without it; the container entrypoint is the image's python so the live argv is the gate's ``VLLM_ENTRYPOINT`` form.
 """
 
 from __future__ import annotations
@@ -51,6 +53,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Iterable, Mapping, Sequence
 
+from ..contracts.gate_runtime_vllm import VLLM_ENTRYPOINT, undeclared_deployment_env_keys
 from .config import read_fragment
 from .session.serving import declared_server_geometry, merge_server_args
 from .session.telemetry import parse_npu_smi_table
@@ -81,8 +84,22 @@ DEPLOYMENT_ONLY_FLAGS = frozenset({
 })
 #: The Ascend control devices every NPU container needs beside its own ``/dev/davinci<N>`` cards (as ``npu_serve.sh``).
 ASCEND_CONTROL_DEVICES = ("/dev/davinci_manager", "/dev/devmm_svm", "/dev/hisi_hdc")
-#: Host paths mounted read-only so ``npu-smi`` inside the container reads exactly the mounted cards.
-ASCEND_READONLY_MOUNTS = ("/usr/local/Ascend/driver", "/usr/local/sbin/npu-smi")
+#: Host paths mounted read-only: ``npu-smi`` inside the container reads exactly the mounted cards, and HCCL finds its
+#: device network config (``hccn.conf``), the CANN install record, the firmware and the dcmi library -- the same set
+#: ``work/scripts/npu_serve.sh`` mounts, without which a multi-card (TP > 1) server does not come up.
+ASCEND_READONLY_MOUNTS = (
+    "/usr/local/Ascend/driver", "/usr/local/sbin/npu-smi",
+    "/etc/hccn.conf", "/etc/ascend_install.info", "/usr/local/Ascend/firmware", "/usr/local/dcmi",
+)
+#: The three variables that name the host NIC carrying the node's global IPv4 address (HCCL fails with code 19
+#: without it). The NIC is a deployment fact of the host: ``--nic`` on the CLI, recorded in :func:`deployment_record`,
+#: never in the protocol hash and never in a profile (a profile ``env`` key of this set is refused).
+NIC_ENV_KEYS = ("HCCL_SOCKET_IFNAME", "GLOO_SOCKET_IFNAME", "TP_SOCKET_IFNAME")
+#: Linux interface names: at most 15 bytes, no whitespace, no ``/``.
+_NIC_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:@-]{0,14}")
+#: ``docker run --entrypoint``: the image's python 3.12, so the container's live command line is exactly the gate's
+#: ``<interpreter> -m vllm.entrypoints.cli.main serve <model_dir> ...`` form (``contracts.gate_runtime_vllm``).
+CONTAINER_INTERPRETER = "/usr/local/python3.12.13/bin/python3"
 #: Environment every instance gets: the NPU hosts have no internet, so a hub lookup must fail at once, not hang.
 COMMON_ENV = (("HF_HUB_OFFLINE", "1"), ("TRANSFORMERS_OFFLINE", "1"))
 #: docker's json-file log grows without bound for a resident container; cap it (``docker logs`` keeps the tail).
@@ -252,6 +269,14 @@ def validate_deployment_profile(
             raise DeploymentError(f"{where}.env must map UPPER_CASE names to strings")
         if set(env) & {key for key, _ in COMMON_ENV}:
             raise DeploymentError(f"{where}.env must not override the common environment {[k for k, _ in COMMON_ENV]}")
+        stray = undeclared_deployment_env_keys(env)
+        if stray:
+            raise DeploymentError(
+                f"{where}.env may hold only per-instance deployment variables (gate DEPLOYMENT_ENV_KEYS); {stray} "
+                "would move protocol environment out of the protocol hash"
+            )
+        if set(env) & set(NIC_ENV_KEYS):
+            raise DeploymentError(f"{where}.env must not set {sorted(set(env) & set(NIC_ENV_KEYS))}: the host's --nic owns them")
         for kind, value, seen in (("card", set(cards), seen_cards), ("cpu", set(cpus), seen_cpus),
                                   ("port", {port}, seen_ports), ("name", {name}, seen_names)):
             overlap = sorted(value & seen)
@@ -447,12 +472,41 @@ def instance_server_argv(
     return ["serve", profile.model_path, *deployment, *protocol]
 
 
-def docker_run_argv(
+def validated_nic(nic: object) -> str:
+    """The host NIC name for the three socket-ifname variables, or :class:`DeploymentError`. There is no default and
+    no guess: a missing or malformed NIC refuses the whole argv (fail closed)."""
+
+    if not isinstance(nic, str) or not _NIC_PATTERN.fullmatch(nic):
+        raise DeploymentError(
+            f"a host NIC name (--nic, the interface holding the node's global IPv4 address) is required; got {nic!r}"
+        )
+    return nic
+
+
+def instance_container_args(
     profile: DeploymentProfile, instance: InstanceSpec, fragment: Mapping[str, object]
+) -> list[str]:
+    """The arguments after the image token: ``-m vllm.entrypoints.cli.main serve <model> <flags>``. With
+    :data:`CONTAINER_INTERPRETER` as the entrypoint, the live command line is ``[interpreter, *this]``, which
+    :func:`~.contracts.gate_runtime_vllm.split_vllm_server_argv` parses."""
+
+    serve = instance_server_argv(profile, instance, fragment)
+    assert serve[0] == "serve" and tuple(VLLM_ENTRYPOINT[-1:]) == ("serve",)
+    return [*VLLM_ENTRYPOINT, *serve[1:]]
+
+
+def docker_run_argv(
+    profile: DeploymentProfile, instance: InstanceSpec, fragment: Mapping[str, object], *, nic: str
 ) -> list[str]:
     """The full detached, named, resident ``docker run`` for one instance: only its own cards, host network, its own
     cpuset, the data root bind-mounted at the same path, ``--restart unless-stopped``, deployment labels so ``down``
-    can prove a container is ours before stopping it."""
+    can prove a container is ours before stopping it. ``nic`` (required, no default) is written to the three
+    socket-ifname variables; the entrypoint is :data:`CONTAINER_INTERPRETER` (see :func:`instance_container_args`)."""
+
+    nic = validated_nic(nic)
+    clash = sorted({key for key, _ in instance.env} & {*NIC_ENV_KEYS, *(key for key, _ in COMMON_ENV)})
+    if clash:
+        raise DeploymentError(f"{instance.name}: profile env {clash} is owned by the deployment layer, not the profile")
 
     argv = [
         "docker", "run", "--detach", "--name", instance.name,
@@ -469,16 +523,21 @@ def docker_run_argv(
     for mount in ASCEND_READONLY_MOUNTS:
         argv += ["-v", f"{mount}:{mount}:ro"]
     argv += ["-v", f"{profile.data_mount}:{profile.data_mount}"]
-    for key, value in (*COMMON_ENV, *instance.env):
+    for key, value in (*COMMON_ENV, *instance.env, *((key, nic) for key in NIC_ENV_KEYS)):
         argv += ["-e", f"{key}={value}"]
-    argv += ["--entrypoint", "vllm", profile.image]
-    return argv + instance_server_argv(profile, instance, fragment)
+    argv += ["--entrypoint", CONTAINER_INTERPRETER, profile.image]
+    return argv + instance_container_args(profile, instance, fragment)
 
 
-def deployment_record(profile: DeploymentProfile, repo_root: Path = REPO_ROOT) -> dict[str, object]:
+def deployment_record(
+    profile: DeploymentProfile, repo_root: Path = REPO_ROOT, *, nic: str | None = None
+) -> dict[str, object]:
     """The canonical recorded (NOT hashed) deployment facts for a run manifest or runtime receipt.
 
-    ``server_argv_sha256`` pins each instance's exact ``vllm serve`` argv so a receipt can tell two deployments of the
+    ``nic`` is the host NIC the instances were (or will be) started with; it is recorded as given (``None`` only for a
+    profile-only read such as the host launcher's field lookups -- ``plan``/``emit`` never run without one).
+
+    ``server_argv_sha256`` pins each instance's exact ``vllm serve`` argv (``serve <model> <flags>``, entrypoint form aside) so a receipt can tell two deployments of the
     same profile apart if the fragment changed under it; ``protocol_window_tokens`` is copied from the fragment only so
     a reader can see the deployment did not change it.
     """
@@ -487,6 +546,7 @@ def deployment_record(profile: DeploymentProfile, repo_root: Path = REPO_ROOT) -
     _, window = declared_server_geometry(
         fragment.get("server_args") or [], transport="vllm", model_fragment=profile.model_fragment
     )
+    recorded_nic = None if nic is None else validated_nic(nic)
     return {
         "schema": DEPLOYMENT_RECORD_SCHEMA,
         "hashed": False,
@@ -497,6 +557,7 @@ def deployment_record(profile: DeploymentProfile, repo_root: Path = REPO_ROOT) -
         "model_fragment": profile.model_fragment,
         "served_model_name": fragment["served_model_name"],
         "data_mount": profile.data_mount,
+        "nic": recorded_nic,
         "model_relpath": profile.model_relpath,
         "model_path": profile.model_path,
         "protocol_window_tokens": window,
@@ -536,6 +597,8 @@ def _main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--npu-smi-file", help="captured `npu-smi info` text ('-' for stdin); emit requires it")
     parser.add_argument("--repo-root", default=str(REPO_ROOT))
     parser.add_argument("--data-root", help="override the profile's data_mount (the data root moved)")
+    parser.add_argument("--nic", help="host NIC holding the node's global IPv4 address (the launcher derives it); "
+                        "plan and emit require it, record writes it into the record")
     args = parser.parse_args(argv)
     repo_root = Path(args.repo_root)
     profile = load_deployment_profile(args.profile, repo_root, data_root=args.data_root)
@@ -543,7 +606,7 @@ def _main(argv: Sequence[str] | None = None) -> int:
     if args.npu_smi_file:
         table = sys.stdin.read() if args.npu_smi_file == "-" else Path(args.npu_smi_file).read_text(encoding="utf-8")
     if args.command == "record":
-        print(json.dumps(deployment_record(profile, repo_root), indent=2, sort_keys=True))
+        print(json.dumps(deployment_record(profile, repo_root, nic=args.nic), indent=2, sort_keys=True))
         return 0
     if args.command == "instances":
         for instance in profile.instances:
@@ -551,7 +614,8 @@ def _main(argv: Sequence[str] | None = None) -> int:
                              profile.base_url(instance)]))
         return 0
     fragment = model_fragment_values(profile, repo_root)
-    commands = [(instance, docker_run_argv(profile, instance, fragment)) for instance in profile.instances]
+    nic = validated_nic(args.nic)  # plan and emit refuse before any argv exists
+    commands = [(instance, docker_run_argv(profile, instance, fragment, nic=nic)) for instance in profile.instances]
     if args.command == "emit":
         if table is None:
             raise DeploymentError("emit requires --npu-smi-file: nothing is started without a card check")
@@ -566,6 +630,7 @@ def _main(argv: Sequence[str] | None = None) -> int:
         return 0
     print(f"# deployment profile {profile.profile_id} (sha256 {profile.sha256})")
     print(f"# host {profile.host}; data root {profile.data_mount}; weights {profile.model_path}")
+    print(f"# NIC {nic} (HCCL/GLOO/TP socket ifname)")
     print(f"# {len(profile.instances)} instance(s) x TP{profile.tensor_parallel_size}; "
           f"max-num-seqs {profile.max_num_seqs}/instance; gpu-memory-utilization {profile.gpu_memory_utilization}")
     if table is not None:
