@@ -29,6 +29,29 @@ sys.path.insert(0, str(HERE.parent / "direct"))
 import l338_port_family as pf  # noqa: E402
 import thinking_system_mint_receipt as base  # noqa: E402
 
+sys.path.insert(0, str(HERE.parents[2] / "src"))
+from speech_aware_evidence_acquisition.core.config import compose  # noqa: E402
+
+
+def stale_cells(root: str | Path) -> list[str]:
+    """Return one English line per port cell whose live composed config hash differs from the registered package (empty when fresh).
+
+    Guard G: the package's ``protocol-registered-v1.json`` quotes each cell's ``composed_config_hash``; a later change to any hashed fragment moves the live hash
+    and leaves the package stale until the registration writer is re-run. Every contact path already refuses a mismatch; the mint refuses it too.
+    """
+
+    root = Path(root)
+    registered = json.loads((root / pf.PACKAGE / "protocol-registered-v1.json").read_text(encoding="utf-8"))["cells"]
+    problems = []
+    for key in pf.ALL_KEYS:
+        spec = pf.CELLS[key]
+        cell = json.loads((root / "configs" / "experiment" / f"{spec['cell']}.json").read_text(encoding="utf-8"))["cells"][0]
+        live = compose(root, cell["model_fragment"], cell["dataset_fragment"], cell["baseline_fragment"], spec["cell"]).config_hash
+        quoted = registered[key]["composed_config_hash"]
+        if live != quoted:
+            problems.append(f"cell {key} ({spec['cell']}): live composed_config_hash {live} != registered {quoted}")
+    return problems
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
@@ -39,6 +62,10 @@ def main(argv: list[str] | None = None) -> int:
     draft = json.loads((Path(root) / pf.PACKAGE / "root-admission-draft-v1.json").read_text(encoding="utf-8"))
     if draft.get("eligible_run_ids") != pf.eligible_run_ids() or draft.get("decision_id") != pf.DECISION_ID:
         raise SystemExit("the port draft's decision id or eligible run ids are not the port family's; re-run l338_port_write_registration.py")
+    problems = stale_cells(root)
+    if problems:
+        raise SystemExit("refusing to mint: the port package is STALE against the live configs (" + "; ".join(problems)
+                         + "); re-run l338_port_write_registration.py and re-commit the package first")
     out = os.path.join(base.DATA, pf.DECISION_RELPATH)
     if os.path.exists(out) and not args.dry:
         raise SystemExit(f"refusing to overwrite an existing receipt: {out}")
