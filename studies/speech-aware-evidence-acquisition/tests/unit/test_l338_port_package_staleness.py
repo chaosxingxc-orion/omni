@@ -1,9 +1,9 @@
 """Guard G: the DRAFT port registration package must quote the live composed config hashes of both port cells.
 
 Commit db798a83 moved ``--max-num-seqs`` out of the hashed port model fragment (fragment hash df95b65b -> a35b2740), so the composed and protocol hashes
-of the two port cells moved and ``protocol-registered-v1.json`` is stale until the registration writer is re-run (stream S13). Every contact path recomputes the
-protocol hash and refuses a mismatch, so the package is inert; this module makes the staleness visible. The strict xfail turns into a failure the moment the
-package is re-minted, which forces the marker's removal. The mint entry point refuses a stale package (fail closed), covered below.
+of the two port cells moved and ``protocol-registered-v1.json`` was stale until the registration writer was re-run (stream S13). Every contact path recomputes the
+protocol hash and refuses a mismatch; this module keeps any future drift visible: the package must quote the live composed hash of both cells, and the mint
+entry point refuses a stale package (fail closed), covered below.
 """
 
 from __future__ import annotations
@@ -26,6 +26,11 @@ import l338_port_mint_receipt as mint  # noqa: E402
 from speech_aware_evidence_acquisition.core.config import compose  # noqa: E402
 
 REGISTERED = REPO / pf.PACKAGE / "protocol-registered-v1.json"
+#: The composed hashes the package quoted before db798a83 moved the fragment (flight, smoke): what a stale package looks like.
+STALE_HASHES = {
+    "arm": "21bf1af0b91a47d2a9870aaffa0d619f1555bc82834e87b3c51196f019477d40",
+    "smoke": "14d06e305218ce8060c3a17897cd3841d45fea7df50d371876697294fb5df714",
+}
 
 
 def _live_hash(root: Path, key: str) -> str:
@@ -34,7 +39,6 @@ def _live_hash(root: Path, key: str) -> str:
     return compose(root, cell["model_fragment"], cell["dataset_fragment"], cell["baseline_fragment"], spec["cell"]).config_hash
 
 
-@pytest.mark.xfail(strict=True, reason="stale since db798a83 (fragment df95b65b -> a35b2740); S13 re-runs the registration writer")
 @pytest.mark.parametrize("key", list(pf.ALL_KEYS))
 def test_registered_package_quotes_the_live_composed_hash(key):
     registered = json.loads(REGISTERED.read_text(encoding="utf-8"))["cells"][key]["composed_config_hash"]
@@ -42,16 +46,15 @@ def test_registered_package_quotes_the_live_composed_hash(key):
 
 
 def _fixture_root(tmp_path: Path, *, matching: bool) -> Path:
-    """A minimal study root: the real configs (symlinked) plus a copy of the package whose quoted hashes are live (matching) or as committed."""
+    """A minimal study root: the real configs (symlinked) plus a copy of the package whose quoted hashes are live (matching) or the pre-db798a83 ones (stale)."""
 
     for name in ("configs", "src"):
         (tmp_path / name).symlink_to(REPO / name, target_is_directory=True)
     package = tmp_path / pf.PACKAGE
     package.mkdir(parents=True)
     doc = json.loads(REGISTERED.read_text(encoding="utf-8"))
-    if matching:
-        for key in pf.ALL_KEYS:
-            doc["cells"][key]["composed_config_hash"] = _live_hash(REPO, key)
+    for key in pf.ALL_KEYS:
+        doc["cells"][key]["composed_config_hash"] = _live_hash(REPO, key) if matching else STALE_HASHES[key]
     (package / REGISTERED.name).write_text(json.dumps(doc), encoding="utf-8")
     return tmp_path
 

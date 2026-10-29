@@ -120,7 +120,7 @@ def configured_geometry(values: Mapping[str, object], *, defaults: tuple[int, in
     if per_slot:
         # vllm: only the per-sequence window is a protocol flag. Sequences per instance (--max-num-seqs) is a
         # deployment fact owned by the deployment profile, so the hashed fragment must not carry it.
-        if slot_flag in argv:
+        if any(str(token) == slot_flag or str(token).startswith(slot_flag + "=") for token in argv):
             raise RuntimeViewError(
                 f"server_args must not declare {slot_flag}: sequences per instance is a deployment fact"
             )

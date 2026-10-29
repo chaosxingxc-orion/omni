@@ -90,12 +90,12 @@
     "arm": {
       "attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-generation-npu-port-v1",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
-      "composed_config_hash": "21bf1af0b91a47d2a9870aaffa0d619f1555bc82834e87b3c51196f019477d40",
+      "composed_config_hash": "77185307f7d3e058f8f7f34e269ec20d20cc8b1a5a0d9fe016d12289b8ebd28f",
       "experiment": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
       "fit_attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-fit-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1",
       "historical_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-V1",
-      "protocol_hash": "2de630287d94b4c79d491a975d7c68f6ef77080412e70ac8127a4806d28da9a5",
+      "protocol_hash": "de9937afaf379ef13141caf70ab094321954f211ae7970b1b2b1fc5685cad467",
       "rows": 1080,
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1",
       "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
@@ -103,12 +103,12 @@
     "smoke": {
       "attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-generation-npu-port-v1",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
-      "composed_config_hash": "14d06e305218ce8060c3a17897cd3841d45fea7df50d371876697294fb5df714",
+      "composed_config_hash": "22f715bf06036e7b682881ff88ffe165695abb09a72aa5438478870da180ba30",
       "experiment": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
       "fit_attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-fit-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
       "historical_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-V1",
-      "protocol_hash": "521bf157d60754e3273a720137d82829a1e927e51ce05cd0024b237fb637fe6c",
+      "protocol_hash": "205ae3fc444ac9aaba0d03a696dfd7489fe261a31941d182c88fa5f014c9e3b7",
       "rows": 4,
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1",
       "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32"
@@ -194,7 +194,7 @@
   ],
   "port_findings": [
     {
-      "finding": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment's current server_args (--max-num-seqs) and profile_slot_count and the baselines' serving_slots are pre-sweep values the main thread moves with the profile.",
+      "finding": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment carries no --max-num-seqs and no profile_slot_count (moved to the deployment profile, commit db798a83); the baselines' serving_slots 4 is the client-side geometry value of the owner ruling, not a deployment fact.",
       "id": "deployment-is-a-placeholder",
       "remedy": "the measured speed sweep fills the profile"
     },
@@ -234,7 +234,7 @@
       },
       "filled_by": "a later deployment profile chosen from a measured speed sweep of the BF16 / vLLM-Ascend Thinking server (several vLLM instances, each tensor-parallel over a group of Ascend cards; per-instance concurrency chosen from the sweep)",
       "name": "PORT_DEPLOYMENT_PROFILE",
-      "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment's current server_args (--max-num-seqs) and profile_slot_count and the baselines' serving_slots are pre-sweep values the main thread moves with the profile.",
+      "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment carries no --max-num-seqs and no profile_slot_count (moved to the deployment profile, commit db798a83); the baselines' serving_slots 4 is the client-side geometry value of the owner ruling, not a deployment fact.",
       "status": "PENDING"
     },
     "lock_entries": "open owner decision 9.4 (design doc section 9)",
@@ -246,6 +246,6 @@
     "transport": "vllm"
   },
   "status": "DRAFT-HELD-REGISTERED_BEFORE_CONTACT_AWAITING_COORDINATOR_COUNTERSIGN_AND_READINESS_FLIP",
-  "study_commit_at_registration": "7db9d7cd",
+  "study_commit_at_registration": "32589378",
   "the_question": "Does the L338 lever column read the same way on the BF16 / vLLM-Ascend Thinking core with the port's knowledge and vectors? Each candidate arm and the twin aa are read PAIRED per row against the delivering lock arm on the same 1,080 Fold B rows in one flight, beside (never as a byte replay of) the historical flight."
 }

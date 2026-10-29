@@ -65,23 +65,27 @@ PORT_DEPLOYMENT_PROFILE = {
     "filled_by": ("a later deployment profile chosen from a measured speed sweep of the BF16 / vLLM-Ascend Thinking server (several vLLM instances, each "
                   "tensor-parallel over a group of Ascend cards; per-instance concurrency chosen from the sweep)"),
     "not_a_fact_here": ("No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model "
-                        f"fragment's current server_args (--max-num-seqs) and profile_slot_count and the baselines' serving_slots are pre-sweep values the "
-                        "main thread moves with the profile."),
+                        "fragment carries no --max-num-seqs and no profile_slot_count (moved to the deployment profile, commit db798a83); the baselines' "
+                        "serving_slots 4 is the client-side geometry value of the owner ruling, not a deployment fact."),
 }
 DEPLOYMENT_REF = "PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
-#: Every place in this package that still depends on the fragment's pre-sweep ``--max-num-seqs 4`` (reported, not edited here).
+#: Every place in this package that depended on the fragment's pre-sweep ``--max-num-seqs 4``, with where it went. The move was made by commit db798a83
+#: (owner decision 2026-10-28: sequences per instance is a recorded deployment fact, not protocol) and carried through its dependents by stream S13.
 MAX_NUM_SEQS_DEPENDENTS = [
-    f"configs/model/{MODEL_FRAGMENT}.json server_args --max-num-seqs 4 (core.session.serving geometry flag of transport vllm)",
-    f"configs/model/{MODEL_FRAGMENT}.json profile_slot_count 4 (core.driver.speech_native requires it to equal the server's slot flag)",
-    f"configs/model/{MODEL_FRAGMENT}.json geometry_basis text ('the same four 24576-token sequences')",
-    "configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json serving_slots 4 / serving_slot_tokens 24576 "
-    "(rails.adapters.runtime_view.configured_geometry checks them against server_args)",
-    "configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-smoke-4-baseline-raw-port-v1.json serving_slots 4 / serving_slot_tokens 24576 (same)",
-    "the prepared first-phase supply identity (core.preparation.artifact_inputs digests the composed config, model fragment included): moving "
-    "--max-num-seqs or profile_slot_count makes every phase supply of these cells stale and the re-pin tool mints the next phase-supply-v<N> "
-    "(output-equality asserted)",
-    "the composed_config_hash / protocol_hash of every plan in this package (re-run the writer after the move)",
-    "the historical cost inputs (l338_cost_inputs.json, 4 slots) behind the illustrative 1.95 lock rows per minute; the port bound uses the measured r",
+    f"moved: configs/model/{MODEL_FRAGMENT}.json no longer carries server_args --max-num-seqs; the vLLM argv takes it from the selected deployment profile "
+    "(core.deployment.instance_server_argv) and a vllm fragment that declares it is REFUSED (core.session.serving, rails.adapters.runtime_view)",
+    f"moved: configs/model/{MODEL_FRAGMENT}.json no longer carries profile_slot_count (core.driver.speech_native requires it, with -np / -c, only on its "
+    "llama-profile CLI paths -- prompt-audit, profile, finalize-from-disk -- which a vllm fragment fails closed on)",
+    f"moved: configs/model/{MODEL_FRAGMENT}.json geometry_basis text now names the 24576-token per-sequence window and puts the sequence count in the deployment profile",
+    "unchanged by owner ruling: configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json serving_slots 4 / serving_slot_tokens 24576 "
+    "(rails.adapters.runtime_view.configured_geometry now checks only the --max-model-len window of a vllm fragment against serving_slot_tokens)",
+    "unchanged by owner ruling: configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-smoke-4-baseline-raw-port-v1.json serving_slots 4 / "
+    "serving_slot_tokens 24576 (same)",
+    "moved: the prepared first-phase supply identity (core.preparation.artifact_inputs digests the composed config, model fragment included): moving "
+    "the fragment makes every phase supply of these cells stale and the re-pin tool mints the next phase-supply-v<N> (output-equality asserted); "
+    "prepared/<port run>/phase-supply-v1.json exists for the flight run and is re-pinned by repin_cell.py at the flip, not by the writer",
+    "moved: the composed_config_hash / protocol_hash of every plan in this package (the registration writer was re-run after the move)",
+    "open: the historical cost inputs (l338_cost_inputs.json, 4 slots) behind the illustrative 1.95 lock rows per minute; the port bound uses the measured r",
 ]
 
 # ---- ids -------------------------------------------------------------------------------------------------------------------------------

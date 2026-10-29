@@ -48,7 +48,7 @@
   ],
   "arm_visits": "first",
   "cell": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
-  "composed_config_hash": "21bf1af0b91a47d2a9870aaffa0d619f1555bc82834e87b3c51196f019477d40",
+  "composed_config_hash": "77185307f7d3e058f8f7f34e269ec20d20cc8b1a5a0d9fe016d12289b8ebd28f",
   "context_fit": {
     "checks": {
       "bound_is_positive": true,
@@ -110,7 +110,7 @@
     "planned_gpu_hours": 90.3,
     "planned_model_calls": 64800,
     "planned_speech_audio_seconds": 94644,
-    "protocol_hash": "2de630287d94b4c79d491a975d7c68f6ef77080412e70ac8127a4806d28da9a5",
+    "protocol_hash": "de9937afaf379ef13141caf70ab094321954f211ae7970b1b2b1fc5685cad467",
     "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1",
     "schema": "saea-execution-plan-v1",
     "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a",
@@ -139,7 +139,7 @@
   "no_think_node": null,
   "one_factor": "None within the cell beyond the historical sampling levers; against the historical twin the port changes the serving stack, the speech input path, the retrieval vectors and the authored knowledge together (the declared differences), so it is read beside the historical flight, never as a one-factor contrast with it.",
   "plan_kind": "fit",
-  "preparation_base_commit": "7db9d7cd",
+  "preparation_base_commit": "32589378",
   "prepared_phase_supply": {
     "note": "this cell's own first-phase supply under its own run id (item E16), prepared or re-prepared by scripts/flights/repin_cell.py at the flip; the committed phase-supply-v1 (1141f08c...) predates this registration's config change and is superseded by phase-supply-v2 (output equality asserted)",
     "relpath": "prepared/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1/phase-supply-v1.json",
@@ -147,7 +147,7 @@
   },
   "protocol_document": {
     "relpath": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/protocol-registered-v1.json",
-    "sha256": "e0884e4973bd183b2ca5d0d5bc562cf179f021db21807036cee1f08662ad3906"
+    "sha256": "32c7d2a40a18c23ba96ecc8d135c6abe26abd72da0b9ce6d1e76c1495af8256e"
   },
   "purpose": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1: request envelopes only; reads nothing.",
   "registered_at_utc": "2026-10-28T13:19:53.257535+00:00",
@@ -207,7 +207,7 @@
       },
       "filled_by": "a later deployment profile chosen from a measured speed sweep of the BF16 / vLLM-Ascend Thinking server (several vLLM instances, each tensor-parallel over a group of Ascend cards; per-instance concurrency chosen from the sweep)",
       "name": "PORT_DEPLOYMENT_PROFILE",
-      "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment's current server_args (--max-num-seqs) and profile_slot_count and the baselines' serving_slots are pre-sweep values the main thread moves with the profile.",
+      "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment carries no --max-num-seqs and no profile_slot_count (moved to the deployment profile, commit db798a83); the baselines' serving_slots 4 is the client-side geometry value of the owner ruling, not a deployment fact.",
       "status": "PENDING"
     },
     "lock_entries": "open owner decision 9.4 (design doc section 9)",
