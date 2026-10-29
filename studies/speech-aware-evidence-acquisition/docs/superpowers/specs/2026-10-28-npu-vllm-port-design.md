@@ -119,12 +119,37 @@ environment, and vLLM 0.30's own content-format detector (`vllm.renderers.hf._de
 | an earlier assistant turn's reasoning is not rendered | consistent with `drop-reasoning-v1` |
 | one audio part renders exactly one `<\|audio_start\|>...<\|audio_end\|>` span | the raw query slot is one span |
 | vLLM detects the content format as `openai` and wraps every string content into text parts | the system message reaches the template as parts |
-| with `tools`, the template computes `messages[0].content + '\n\n'`, which raises on parts | a system message beside tools fails on vLLM |
+| with `tools`, the template computes `messages[0].content + '\n\n'`, which raises on parts | predicted offline: a system message beside tools fails on vLLM (superseded by the measurement below) |
 
 Fold B declares no `phase_tools` (a tool-free native arm), so the baseline never sends tools and is unaffected. A
 tool-bearing arm on vLLM needs a decision first: a port chat template that joins the system text parts (a declared
 template difference), or `--chat-template-content-format string` (which changes how vLLM places the audio and would
 need its own layout proof). Neither is implemented. The NPU smoke records the server's behaviour (section 11).
+
+Measured on 2026-10-29 (NPU smoke against a live vLLM 0.30.0 server, `--enable-auto-tool-choice --tool-call-parser
+hermes`; raw outputs `tool-call.json` and `system-tools.json` in the smoke output directory). The prediction above was
+not what happened. Both tool-bearing requests were rejected with HTTP 400 before any template ran on message parts:
+`As of transformers v4.44, default chat template is no longer allowed, so you must provide a chat template if the
+tokenizer does not define one.` The failing requests were (a) a `/v1/chat/completions` request with `tools` and NO
+system message, and (b) a `/tokenize` request with a system string beside `tools`. Verified on disk in the weights
+directory: `chat_template.json` exists (key `chat_template`, 5715 characters) and `tokenizer_config.json` has no
+`chat_template` key (21 keys, none of them a template). The same server renders tool-free requests normally (the
+`template`, `audio-count` and `answer-only` checks returned 200), and its startup log reports a detected content format
+of `openai` from a template resolved with no tools, then `string` when the first tool request arrived. This is
+consistent with the weights' template being reachable through the processor (tool-free path) but not through the
+tokenizer (the path the tool-bearing request takes). The exact vLLM branch that selects the tokenizer for requests with
+`tools` was not read from vLLM source in this session, so that mechanism is an inference; it can be confirmed cheaply
+by repeating the tool request with a per-request `chat_template` field. The `messages[0].content + '\n\n'` failure on
+text parts has therefore not been observed on the server; it remains an offline prediction. Fold B declares no tools,
+sends none, and is unaffected: its checks all ran on the tool-free path. The smoke records this as RECORD, not FAIL.
+
+Open questions, not decided here:
+
+- Q1. Is a tool-bearing arm in scope for the port at all? If not, nothing below is needed.
+- Q2. If one is wanted later, the remedy options are: `--chat-template <weights>/chat_template.json` (it enters
+  `server_args`, which is hashed, so it is a protocol change); a port chat template that also joins system text parts
+  (a declared template difference); or `--chat-template-content-format string` (changes how vLLM places the audio and
+  needs its own layout proof). Each still has to be re-checked against the system-parts prediction above.
 
 ## 6. Retrieval encoders (implemented)
 
@@ -309,15 +334,16 @@ their values for a Linux host are part of the runtime receipt decision (section 
 
 ## 9. Owner decisions (9.1-9.5 decided)
 
-1. DECIDED 2026-10-28 (owner, two messages: "继续吧，授权执行权限，注意生成的过程后台运行" and then
-   "WSL2这种约束都得删了，我们目前是用之前做的docker来拉起实验的"): the WSL2 authority and every WSL2 constraint
+1. DECIDED 2026-10-28 (owner, two messages, translated from Chinese: "Continue; execution authority is granted; make sure
+   the generation runs in the background" and then "constraints like WSL2 must all be deleted; we now launch
+   experiments with the Docker image built earlier"): the WSL2 authority and every WSL2 constraint
    are REMOVED, not supplemented. The formal execution environment is the `saea-base` Docker container.
    `contracts.plan.assert_execution_environment` admits a process inside a container (`/.dockerenv`) that carries
    the image's layout (`/opt/saea-venv/bin/python`, `/opt/umbrella`); `FrozenCoreGate`, the tool-plan admission
    and the server spawn call it. `assert_wsl_execution_environment` no longer exists. The pytest marker
    `requires_wsl2_execution_authority` became `requires_saea_container` (same 115 tests; CI still deselects and
    counts them).
-2. DECIDED 2026-10-28 (owner, on the proposal below: "按你建议走" -- go with the proposal). Session identity.
+2. DECIDED 2026-10-28 (owner, on the proposal below, translated from Chinese: "go with the proposal"). Session identity.
    `vllm serve` runs in the SAME container as the harness, and the pinned "binary" is the Python interpreter plus the
    vLLM and vllm-ascend source trees plus the image digest. The transport re-verifies on every send, exactly as
    strictly as the llama path does, that a LIVE process with that identity owns the listening socket.
@@ -332,8 +358,8 @@ their values for a Linux host are part of the runtime receipt decision (section 
    own address-aware socket-ownership proof (`/proc/net/tcp`(6) plus `/proc/<pid>/fd`) for that endpoint's exact
    (address, port). Nothing is cached between calls. A vLLM session is recorded in the UNCHANGED `SessionReceipt` v1
    (role `legacy`), with the interpreter as its pinned binary.
-3. DECIDED 2026-10-28 (owner: "可以，但是最好用adapter模式兼容" -- approved, but preferably compatible via an adapter
-   pattern). Runtime receipt. A new schema `saea-runtime-receipt-vllm-v1` (`contracts/gate_runtime_vllm.py`) sits
+3. DECIDED 2026-10-28 (owner, translated from Chinese: "approved, but preferably compatible via an adapter
+   pattern"). Runtime receipt. A new schema `saea-runtime-receipt-vllm-v1` (`contracts/gate_runtime_vllm.py`) sits
    BESIDE the llama one: served weights by file hash, the interpreter, its runtime libraries, the site directory's
    import-path files, both editable source trees as exact-set manifests, each package's METADATA/RECORD identity, the
    server argv, the pinned environment and the attested image id. The llama schemas v2/v3 and their validator are not
