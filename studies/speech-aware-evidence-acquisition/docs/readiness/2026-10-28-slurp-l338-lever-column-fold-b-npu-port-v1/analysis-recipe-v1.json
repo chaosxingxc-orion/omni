@@ -1,0 +1,348 @@
+{
+  "arms": [
+    "l1-support",
+    "l2-union",
+    "aa",
+    "lock"
+  ],
+  "authority": "docs/readiness/2026-09-16-slurp-next-stage-owner-decisions-v1.md (owner rulings 338 and 341 A (2026-10-19), 335 B and 336 A (2026-10-18), 326 A and 327 A (2026-10-17), 313 A (2026-10-14) and 304/307 (2026-10-13), coordinator approval of the decision-338 lever-column design); docs/superpowers/specs/2026-10-12-thinking-core-engineering-base-design.md; docs/readiness/2026-09-26-slurp-stage3-measurement-instrument-v1.md; docs/superpowers/specs/2026-10-19-slurp-338-lever-column-design.md; NPU port: docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md (owner decisions of 2026-10-28, section 9); docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md (Decision 1 comparison reference, Decision 4 revised: aa is the twin, gap F); historical recipe docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1/analysis-recipe-v1.json",
+  "candidates": [
+    "l1-support",
+    "l2-union"
+  ],
+  "cell_kind": "SAME-FLIGHT NODE COLUMN of two sampling levers -- 2 candidate arms (L1 Solver sample-and-commit, L2 Perception sample-and-merge) + the twin aa paired per row against the delivering lock arm; claim ceiling nominated",
+  "claim_boundary": "No benefit, system-level, superiority, generalisation, held-out, confirmatory or paper-scale claim.",
+  "contacts": {
+    "asr": 0,
+    "encoder": 0,
+    "model": 0,
+    "scorer": "CPU official scorer jobs over derived copies only",
+    "server": 0,
+    "tokenizer": 0
+  },
+  "delivering": "lock",
+  "execution_profile": "model-free-check (the read); bounded-discovery-probe (the flights themselves)",
+  "external_references": {
+    "thinking_system_slu": 71.61,
+    "twin_offset_268b_intent_pp": -0.09,
+    "twin_offset_268b_slu_pp": 1.15,
+    "twin_offset_p31_intent_pp": 1.6,
+    "twin_offset_p31_slu_pp": -0.61
+  },
+  "guard": {
+    "floors_pp": {
+      "intent": 0.65,
+      "slu": 1.49
+    },
+    "l1_metric": "intent accuracy (scenario_action exact)",
+    "l2_metric": "SLU-F1"
+  },
+  "levers": {
+    "l1-support": "L1",
+    "l2-union": "L2"
+  },
+  "locked_template": {
+    "relpath": "configs/probes/slurp_native_role_solver_v2.txt",
+    "sha256": "18bff5c557cac7ac14be6b08aa0a1a6ad54c1b9820199c3b6749b2271d756fbd"
+  },
+  "measurement_design": "same-flight-node-column",
+  "next_step": "a NOMINATED arm goes to the 335 B Fold A column (stated, not built); the composed L1+L2 arm is not flown here; on the port the S0 parity reading (port_extensions.parity_band) is read first and S2 does not start if the port lock arm is outside the band (docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md section 2)",
+  "port_extensions": {
+    "_note": "Port-only additions (Opus 5.5 DRAFT for gap F of docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md). The historical schema saea-stage3-rollout-analysis-recipe-v1 has no slot for a cross-run comparison reference, a parity band, a cross-run bar or a twin admissibility rule, so they live here. Every existing loader ignores this object: scripts/checks/flight_registration_check.py reads only read_run_id / run_ids.read, schema and the system-text binding keys (family_id, context_learning_registration, system_panel_registration, pilot_registration, measurement_profile), and scripts/analysis/slurp_l338_column_read.py reads no recipe key (its ids, arms, floors and seed come from scripts/flights/nx/l338_family.py). Every top-level key outside this object keeps the historical recipe's key and scoring definition; only the ids, the authority, the registration time, the stage notes and the next-step sentence differ. DRAFT: registers a reading rule, authorises nothing.",
+    "comparison_reference": {
+      "intent": 85.0,
+      "role": "the recipe's pinned point reference (docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md Decision 1). Reported beside the band; the port is never read against this point alone.",
+      "slu_f1": 71.61,
+      "sources": {
+        "intent": [
+          "docs/results/2026-10-13-slurp-268b-thinking-system-fold-b-read.md:33 (Thinking system (lock) column)",
+          "scripts/flights/nx/l338_family.py:250 (THINKING_SYSTEM_INTENT)"
+        ],
+        "slu_f1": [
+          "docs/results/2026-10-13-slurp-268b-thinking-system-fold-b-read.md:32 (Thinking system (lock) column)",
+          "docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1/analysis-recipe-v1.json:26 (external_references.thinking_system_slu)",
+          "scripts/flights/nx/l338_family.py:250 (THINKING_SYSTEM_SLU)"
+        ]
+      },
+      "system": "the 268-B Thinking lock arm: the L338 delivering arm lock is the 268-B lock form, its requests the lock's byte for byte (scripts/flights/nx/l338_family.py module docstring; docs/results/2026-10-29-fold-b-comparison-baseline-read.md headline)"
+    },
+    "cross_run_bar": {
+      "bar_slu_pp": 2.5,
+      "design": "cross-flight-with-in-chain-replicate",
+      "floor_form": "max(sampling 1.2485, admission bar 2.5) at n = 1,080",
+      "floor_slu_pp": 2.5,
+      "improvement_rule": "IMPROVEMENT-ADMISSIBLE when, in one admissible port run (registered_comparisons[0]), an arm's official pooled SLU-F1 is at or above 75.25 (the band top 72.75 + 2.5 pp) AND its paired SLU delta against the port's own lock arm has a CI95 lower bound above zero (this recipe's primary interval) AND the twin arm aa agrees (aa inside the band). Otherwise no cross-run improvement statement is made; the within-run words stand on their own.",
+      "n": 1080,
+      "refused": "cross-flight-no-replicate: a run without the twin arm supports no cross-run statement (instrument rule 4; scripts/checks/stage3_effect_floor_check.py cross-flight-no-replicate)",
+      "requires_twin_arm_in_the_same_run": true,
+      "rule_3_note": "the instrument's rule 3 admits a cross-flight arm only when its delta's CI95 lower bound is above zero AND the delta exceeds the in-chain replicate's own measured offset plus that offset's half-width; 2.5 pp is the value of that bar at n = 1,080 as the floor check registers it, so a measured twin offset larger than the registered one raises the bar for that run",
+      "sampling_half_width_slu_pp": 1.2485,
+      "sources": [
+        "scripts/checks/stage3_effect_floor_check.py:447-455 (bar ((625, 3.0), (1080, 2.5)), sampling (1080, 1.2485), requires_replicate True)",
+        "docs/readiness/2026-09-26-slurp-stage3-measurement-instrument-v1.md:116-122 (rules 3 and 4)",
+        "docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md:21 and :33-34 (>= 75.25 above the band top)",
+        "docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md:98 (Decision 4 revised: aa is the cross-run twin)"
+      ],
+      "twin_arm": "aa"
+    },
+    "historical_recipe": {
+      "path": "docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1/analysis-recipe-v1.json",
+      "sha256": "4a72277d8a9efd4c4a6ea6b32b7fb774e4745a06c04b21e4643a4ee312aa8116"
+    },
+    "open_items": [
+      "the reader and the read script bind the historical family ids: scripts/analysis/slurp_l338_column_read.py:784-801 (fam.ANALYSIS_ROOT, fam.CELLS) and scripts/flights/nx/l338_read.sh:15-16 and :29 (the historical run, analysis root and READ run id); a port mode is needed before this recipe's stages can run (gap F, writer stream)",
+      "the port writer does not emit an analysis recipe and its admission draft carries no analysis_recipe antecedent (scripts/flights/nx/l338_port_write_registration.py:490); the writer re-run should emit this recipe and pin it",
+      "the READ run id above has no exposure-ledger row yet (draft text: read-row-draft-v1.md in this package)",
+      "the reader computes no PARITY, OUTSIDE-BAND, ADMISSIBLE or IMPROVEMENT-ADMISSIBLE word today; until it does, these are read by hand from the reader's per-arm table and the twin contrast"
+    ],
+    "parity_band": {
+      "applies_to": [
+        "lock",
+        "aa"
+      ],
+      "basis": "8 lock-form readings of the same Thinking system on this roster (SLURP-EVO-FOLD-B-V2, n = 1,080), Q4_K_M llama.cpp, development numbers; band = [min, max] over the 8 readings of each metric (docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md section 1 Decision 1 table; collected in docs/results/2026-10-29-fold-b-comparison-baseline-read.md section 3)",
+      "consequence": "OUTSIDE-BAND on the port lock arm: S2 does not start; the declared deviations (design doc section 8, items 8.1-8.7) are read first, by arm and by contact node, and the owner decides whether the port is the comparison base (docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md section 2).",
+      "enters_no_lever_word": true,
+      "intent": {
+        "high": 85.74,
+        "low": 84.91
+      },
+      "readings": [
+        {
+          "intent": 85.0,
+          "label": "268-B Thinking system, lock arm",
+          "slu_f1": 71.61,
+          "source": "docs/results/2026-10-13-slurp-268b-thinking-system-fold-b-read.md:32-33"
+        },
+        {
+          "intent": 84.91,
+          "label": "268-B Thinking system, twin aa",
+          "slu_f1": 72.75,
+          "source": "docs/results/2026-10-13-slurp-268b-thinking-system-fold-b-read.md:32-33"
+        },
+        {
+          "intent": 85.74,
+          "label": "NX-T R1 both-on (delivering)",
+          "slu_f1": 72.35,
+          "source": "docs/results/2026-10-17-slurp-nxt-r1-thinking-policy-column-read.md:72"
+        },
+        {
+          "intent": 85.74,
+          "label": "NX-T R1 both-on-twin",
+          "slu_f1": 72.23,
+          "source": "docs/results/2026-10-17-slurp-nxt-r1-thinking-policy-column-read.md:73"
+        },
+        {
+          "intent": 85.37,
+          "label": "NX-T R2b budget-3072 (delivering)",
+          "slu_f1": 72.74,
+          "source": "docs/results/2026-10-18-slurp-nxt-r2b-solver-budget-column-read.md:54"
+        },
+        {
+          "intent": 84.91,
+          "label": "NX-T R2 budget-3072 (delivering)",
+          "slu_f1": 72.21,
+          "source": "docs/results/2026-10-24-slurp-nxt-r2-thinking-budget-column-read.md:35"
+        },
+        {
+          "intent": 85.28,
+          "label": "NX-T R3 lock (delivering)",
+          "slu_f1": 72.04,
+          "source": "docs/results/2026-10-25-slurp-nxt-r3-solver-template-column-read.md:36"
+        },
+        {
+          "intent": 85.19,
+          "label": "NX-T R3 twin aa",
+          "slu_f1": 72.49,
+          "source": "docs/results/2026-10-25-slurp-nxt-r3-solver-template-column-read.md:37"
+        }
+      ],
+      "rule": "PARITY when the arm's official pooled SLU-F1 lies in [71.61, 72.75] AND its intent accuracy lies in [84.91, 85.74], both inclusive, on the official scorer's two-decimal percent. Otherwise OUTSIDE-BAND, reported with the metric, the side (below / above) and the distance in pp. S0 PARITY needs lock and aa inside the band and the run admissible under registered_comparisons[0] (docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md Decision 4 revised, :98).",
+      "slu_f1": {
+        "high": 72.75,
+        "low": 71.61
+      },
+      "words": [
+        "PARITY",
+        "OUTSIDE-BAND"
+      ]
+    },
+    "registered_comparisons": [
+      {
+        "admissibility_rule": "the run is ADMISSIBLE as a cross-run comparison only when |SLU-F1(aa) - SLU-F1(lock)| <= 1.20 pp (the point delta of the two official column scorings); otherwise NOT-ADMISSIBLE",
+        "against": "lock",
+        "arm": "aa",
+        "contrast": "aa minus lock, paired per row, official pooled SLU-F1 and intent accuracy, this recipe's interval (10,000 draws, seed 20261018); reported beside the words exactly as the historical recipe does",
+        "enters_no_lever_word": true,
+        "historical_twin_offsets_slu_pp": [
+          {
+            "offset": 1.15,
+            "pair": "268-B aa minus lock",
+            "passes": true,
+            "source": "docs/results/2026-10-13-slurp-268b-thinking-system-fold-b-read.md:32"
+          },
+          {
+            "offset": -0.12,
+            "pair": "NX-T R1 both-on-twin minus both-on",
+            "passes": true,
+            "source": "docs/results/2026-10-17-slurp-nxt-r1-thinking-policy-column-read.md:73"
+          },
+          {
+            "offset": 0.45,
+            "pair": "NX-T R3 aa minus lock",
+            "passes": true,
+            "source": "docs/results/2026-10-25-slurp-nxt-r3-solver-template-column-read.md:37"
+          }
+        ],
+        "id": "aa-vs-lock",
+        "on_not_admissible": "no cross-run statement (parity, improvement over the band) is made from the run; the same-flight within-run words are unaffected because both sides of each within-run contrast share the run",
+        "registration_status": "REGISTERED (part of the port cell and of the historical recipe's twin key)",
+        "role": "the cross-run twin: the registered in-flight A/A (replicate_of lock: the lock's request byte for byte, seed 20260913, temperature 0); no lock-twin arm is registered, contacts stay 15 per row and every registered cap is unchanged",
+        "sources": [
+          "scripts/flights/nx/l338_family.py:101 (DELIVERING, TWIN)",
+          "scripts/flights/nx/l338_family.py:107 (LOCKED_DECODING)"
+        ],
+        "threshold_basis": "the parity band width 72.75 - 71.61 = 1.14 pp, rounded up to 1.2 (docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md Decision 4 revised, :98)",
+        "threshold_slu_pp": 1.2,
+        "words": [
+          "ADMISSIBLE",
+          "NOT-ADMISSIBLE"
+        ]
+      }
+    ],
+    "status": "DRAFT",
+    "within_run_bar": {
+      "design": "same-flight-node-column",
+      "draws": 10000,
+      "floors_pp": {
+        "intent": 0.65,
+        "slu": 1.49
+      },
+      "seed": 20261018,
+      "sources": [
+        "docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1/analysis-recipe-v1.json:50-56 (primary) and :32-39 (guard.floors_pp)",
+        "scripts/checks/stage3_effect_floor_check.py:371-382 (same-flight-node-column floor)",
+        "scripts/flights/nx/l338_family.py:253 (FLOOR_SLU_PP, FLOOR_INTENT_PP)",
+        "docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md:20"
+      ],
+      "unchanged": "identical to this recipe's primary, guard, word_rules and word_order (byte-identical to the historical recipe): arm minus lock, paired per row (one row = one utterance recording, so the utterance-cluster bootstrap is row-paired), CI95, 10,000 draws, seed 20261018, floors 1.49 pp SLU / 0.65 pp intent at n = 1,080 (design same-flight-node-column)"
+    }
+  },
+  "primary": {
+    "contrast": "arm minus lock, paired per row",
+    "draws": 10000,
+    "interval": "utterance-cluster bootstrap CI95",
+    "metric": "official SLURP SLU-F1 (L1) and intent accuracy (L2) per arm column (one complete scoring per column, slurp-slu-official-train)",
+    "seed": 20261018
+  },
+  "primary_by_lever": {
+    "L1": "slu",
+    "L2": "intent"
+  },
+  "read_run_id": "SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1",
+  "recipe_id": "slurp-l338-lever-column-fold-b-read-npu-port-v1",
+  "registered_at_utc": "2026-10-29T16:27:55Z",
+  "roster": {
+    "relpath": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+    "roster_id": "SLURP-EVO-FOLD-B-V2",
+    "rows": 1080,
+    "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+  },
+  "run_ids": {
+    "arm": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1",
+    "fit": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1",
+    "read": "SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1",
+    "smoke": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1",
+    "smoke_fit": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1"
+  },
+  "sampling_arms": {
+    "aa": null,
+    "l1-support": {
+      "solver_samples": {
+        "commit": {
+          "empty_votes_min": 3,
+          "min_support": 2,
+          "n1_min": 0.2,
+          "policy": "saea-commit-first-support-v1",
+          "similarity_threshold": 0.8
+        },
+        "decoding": {
+          "temperature": 0.6,
+          "top_k": 20,
+          "top_p": 0.95
+        },
+        "n": 5
+      }
+    },
+    "l2-union": {
+      "perception_samples": {
+        "cap": 3,
+        "decoding": {
+          "temperature": 0.6,
+          "top_k": 20,
+          "top_p": 0.95
+        },
+        "k": 4,
+        "merge_policy": "saea-perception-candidate-union-v1"
+      }
+    },
+    "lock": null
+  },
+  "schema": "saea-stage3-rollout-analysis-recipe-v1",
+  "secondaries": [
+    "l1_pure_filter_delta",
+    "l1_forms_s3_filter_only_gate_only_n1_gated",
+    "l1_false_fills_removed_nonempty_exact_lost_gained",
+    "l2_merged_recall_vs_sample0_newly_listed_lost_gold",
+    "l2_conversion_by_gold_position",
+    "forced_close_share_by_list_size",
+    "support_count_table",
+    "union_size_table",
+    "completion_tokens",
+    "seconds_per_contact",
+    "empty_gold_false_fill",
+    "nonempty_exact_set",
+    "per_scenario_natural_mixture_and_equal_scenario",
+    "discordance_of_every_sampled_stream_against_the_twin"
+  ],
+  "stages": {
+    "1_columns": "bash scripts/flights/nx/l338_read.sh columns  (stage3_rollout_score --mode perception-branches: one complete official scoring per arm; no number printed) -- PORT: against run SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1 and analysis root analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1; the script binds the historical family ids today (port_extensions.open_items[0])",
+    "2_read": "python -B scripts/analysis/slurp_l338_column_read.py --stage read --data-root $SPEECHRL_DATA_DIR (through scripts/flights/nx/l338_read.sh) -- PORT: against run SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1 and analysis root analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1; the script binds the historical family ids today (port_extensions.open_items[0])",
+    "smoke": "python -B scripts/analysis/slurp_l338_column_read.py --stage smoke (per-arm decode cost and the v6 sampling receipt; no countersignature; the machine sign-off input for the column flight) -- PORT: against run SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1 and analysis root analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1; the script binds the historical family ids today (port_extensions.open_items[0])"
+  },
+  "twin": "aa",
+  "verdict_words": [
+    "HARM",
+    "NEUTRAL",
+    "NOMINATED"
+  ],
+  "what_is_not_here": "No margins block and no admission: nothing is locked here.",
+  "word_order": {
+    "L1": [
+      "NOMINATED",
+      "HARM",
+      "NEUTRAL"
+    ],
+    "L2": [
+      "NOMINATED",
+      "HARM",
+      "NEUTRAL"
+    ]
+  },
+  "word_rules": {
+    "L1": {
+      "HARM": "SLU delta CI95 upper bound < -1.49 pp, or intent delta CI95 upper bound < -0.65 pp",
+      "NEUTRAL": "none of the above",
+      "NOMINATED": "SLU delta CI95 lower bound >= 1.49 pp AND intent delta CI95 upper bound >= -0.65 pp (no resolved intent loss)",
+      "guard": "intent",
+      "primary": "slu"
+    },
+    "L2": {
+      "HARM": "intent delta CI95 upper bound < -0.65 pp, or SLU delta CI95 upper bound < -1.49 pp",
+      "NEUTRAL": "none of the above",
+      "NOMINATED": "intent delta CI95 lower bound >= 0.65 pp AND SLU delta CI95 upper bound >= -1.49 pp (no resolved SLU loss)",
+      "guard": "slu",
+      "primary": "intent"
+    }
+  }
+}

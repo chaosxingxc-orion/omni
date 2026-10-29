@@ -95,6 +95,8 @@ cpuset and crash isolation. Owner item 9.2 says "same container"; the owner must
 **Decision 4 (twin arm).** S0 needs a `lock-twin` arm (second seed, same protocol). It is a registration change to
 the port cell before the flip (writer re-run, re-mint); the smoke-4 cell gets it too. Cost: +2 contacts per row.
 
+**Decision 4, revised (Fable, 2026-10-30, after the recipe read).** The registered `aa` arm is already a request-identical repeat of `lock` in the same run (the rails accept exactly one twin, `supply_variants.py:2749-2754`, and no arm may carry its own seed); at temperature 0 a second seed changes nothing. So `aa` IS the twin: no `lock-twin` arm, no re-registration, 15 contacts per row and the registered caps unchanged; owner item O2 is withdrawn. Admissibility of the run as a cross-run comparison: |aa - lock| <= 1.2 pp SLU (the measured band width, 72.75 - 71.61 = 1.14, rounded up; the 268-B twin at +1.15 passes). S0 reports `lock` and `aa` against the band.
+
 **Decision 5 (ceiling-bound rule restated).** Preliminary `waiting` peaks are non-zero well below the ceiling (5 at 32,
 13 in the worst case), so "waiting = 0" is wrong. A level is ceiling-bound only if `running == ceiling` and
 `waiting > 0` in more than 20 % of the 5 s samples. S8 applies this to R-A2.
@@ -120,7 +122,7 @@ Earliest first scored read: engineering (2 days) + base lock (1 day) + countersi
 | id | question | recommendation |
 |---|---|---|
 | O1 | Decision 3: `--pid host` + relaxed namespace check, or one container for all instances? | `--pid host` + relaxed check |
-| O2 | Register the `lock-twin` arm (+2 contacts/row, +13 % cost) before the flip? | yes; without it no cross-run claim is admissible |
+| O2 | withdrawn: `aa` is the twin (Decision 4 revised) | none |
 | O3 | Countersign the port rows once the profile is filled (step 3) | when the R0 verification is 11/11 |
 | O4 | Launch P3/P3b and E3 now (commands already given) | yes; both chains restore arm A |
 | O5 | S2 order V1 -> V2 -> V3 | yes |
