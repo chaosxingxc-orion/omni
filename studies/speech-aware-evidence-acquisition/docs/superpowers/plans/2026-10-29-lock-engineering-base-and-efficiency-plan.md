@@ -357,6 +357,160 @@ Run list in order: P1 (56, then 64) -> P2 -> P3 (B: 16, 32, 48, 64, 96) -> P4 ->
 R-A3 -> R-D (conditional) -> R-B (conditional). This section supersedes the level lists of 3.2 and the timings of
 3.6 where they differ.
 
+### 3.8 Preemption crash and revised run list (revision 4, 2026-10-29)
+
+Input: the Opus bad-case note `work/scratch/badcase/2026-10-29-arm-a-exit-under-worst-case.md` (planner read the note,
+no raw log) and P1. Facts: P1-L56 FAILED (p10 9.13, 1 preemption; host 1,952.8 tok/s = +8.8 % over 48; max latency
+265 s); 64 skipped by rule. P2 worst case at 48: preemptions on all four instances (11 and 14 on the survivors, one
+with 9 timeouts); instances 0 and 3 exited on `AssertionError ... len(mm_embeddings)=0` in `gpu_model_runner.py:3187
+_execute_mm_encoder` while recomputing a preempted audio request from `num_computed_tokens=0`; 476/576 ok; the chain
+stopped at p2-L32 against dead ports, so 32 is UNMEASURED. The engine default utilisation is 0.92
+(`vllm/config/cache.py:103`): the preliminary numbers are at 0.92, R2's Arm C re-derivation is moot, the sidecar now
+passes the flag. 3.7 predictions: "56 passes narrowly" REFUTED; "p10 10.3-10.6 at 56" REFUTED (9.13); "KV ~93 % at
+56" REFUTED (preemption = 100 %); "+8-12 % at 56" CONFIRMED (+8.8 %); "worst case PASSES at 48, max latency 370-420 s"
+REFUTED (all instances preempted, two crashed); "knee 48" REFUTED; "B within +-5 % of A" untested, now doubtful.
+
+**Decision 1, operating rule: a preemption is a CRASH risk for the locked base, not a latency penalty.** In the shipped
+engine any preemption of an audio request can kill the instance (2 of 4 survived 11-14 preemptions, so not every
+resume is fatal) and with `--restart no` it stays down. Rules: (a) a level is admissible for recording only if the
+one-pass `--min-tokens 4096` worst case shows a preemption delta of exactly 0 on EVERY instance with a readable counter
+AND a sampled KV peak <= 90 %, so another seed or real prompts cannot cross 100 %; (b) client concurrency of every
+recorded run and of any flight is at most the admitted level; (c) a dead endpoint mid-level is a level FAIL and a chain
+STOP, never absorbed. KV-safe counts per TP2 instance (564,224 tokens): full window 24,576 -> 22 sequences (guaranteed,
+but level 24 is -30 % host throughput: REJECTED); mean mix 12,596 -> 44 (an expectation, not a bound); measured
+worst-case footprint 99.8 % at 48 = ~11.7 k tokens per sequence with prefix reuse -> 90 % at 43, 83 % at 40, 66 % at
+32. Expected admitted level 40 per instance (host 160), fallback 32. `--max-num-seqs` is a deployment fact (3.5 item
+3): lowering it from 64 to the admitted level in a `-v2` profile is defence in depth with no `protocol_sha256` movement
+(S12's equality test; capture sizes shrink, so S7 re-reads KV per card from the startup line) but NOT a guarantee (that
+needs 22) and does not replace (a). Consequence: knee 48/56 -> 40 or 32; host ~1,610 tok/s interpolated at 40 (-10 % vs
+48) or 1,423 at 32 (-21 %); r ~5.8 or 5.2 lock rows/min/instance instead of 6.5, hour bound +12 % or +26 %. C not run.
+
+**Decision 2, the engine bug: understand, reproduce, mitigate in the deployment layer; no engine patch before the lock**
+(patching vLLM in the image is a new base: follow-up, section 7).
+- **E0 (OPUS, card-free, today).** Read the vLLM / vllm-ascend source in the image (`/vllm-workspace/vllm`, device-less
+  `docker run --rm saea-base` on 181): `_execute_mm_encoder`, the resumed-request path that schedules
+  `scheduled_encoder_inputs` at `num_computed_tokens=0`, `encoder_cache_manager`, the MM processor cache (82 % hit rate
+  seen) and any vllm-ascend override. Deliverable: English note (<= 60 lines) in `work/scratch/badcase/` naming the path
+  by which a resumed request's audio input is empty (or exactly what stays unknown) and each candidate knob
+  (`--mm-processor-cache-gb 0`, `--disable-mm-preprocessor-cache`, encoder cache budget, preemption mode) with its
+  protocol-or-deployment placement. Acceptance: line-cited; no output-changing knob proposed for the deployment layer.
+- **E1 / E2 (SONNET, 181 only, free cards only, detached, `prelim` label, in parallel on cards 0,1 and 6,7).** E1: one
+  `npu_serve.sh` TP2 instance, worst case at 48 then 56, one pass; accepted if the same assertion recurs, else 3 passes
+  with >= 10 preemptions each and no exit = "not reproduced in isolation". E2: same load with E0's top knob
+  (`--mm-processor-cache-gb 0` if E0 is not ready); accepted at 3 passes, >= 10 preemptions each, zero exits, and a test
+  that the knob leaves `protocol_sha256` unchanged. Bundles under `work/logs/`; OPUS writes the result note.
+- **Launcher policy.** `--restart` is REFUSED for recorded runs: a restart drops the in-flight set and resets counters,
+  so a run looks complete and is not. SONNET adds a per-level liveness poll (30 s, `/v1/models` per instance) to
+  `work/scripts/prelim_chain.py` (host script) and to S7's driver (study change, tested): dead endpoint = FAIL + STOP.
+
+**Decision 3, revised preliminary run list (all `prelim`; cards must read free; 181 only).**
+1. **P2b** (0.5-0.9 h, 8 cards): stop arm-a-1/-2, fresh arm A (captured argv, equal cold cache); worst case at 40, one
+   pass; if it preempts (a crash is possible) relaunch and repeat at 32. SONNET first changes the chain's P2 descent to
+   48 -> 40 -> 32 and adds the poll. P2b runs first: the admitted level gates S7's sweep plan file and S8's bound.
+2. **E1 + E2** (1 h, 4 cards) after P2b: they fix R0's deployment flags, which must be final before `up`.
+3. **P3** arm B (`MAX_NUM_SEQS=128`; 16, 32, 48, 64, 96 per instance = host 32-192; one pass; stopping rule) plus
+   **P3b**, B's worst case at its highest passing level under rule (a) (1.6 h, 8 cards). B matters more now: TP4 holds
+   ~1.7 M KV tokens per instance, so host 192 (96 x 11.7 k = 66 %) does not preempt where A's 48 does; if B's admitted
+   host level is one step above A's, B can beat A by more than 5 % at the knee and Q4 makes B resident (then R-B and A
+   are re-measured on the locked base, 3.7 (3)). Arms compare at equal HOST concurrency, each at its admitted level.
+4. **P4** per the R2 gate: skipped if R2 has passed by the end of P3; otherwise arm A relaunched. Cards are left free
+   for R0 or holding arm A, never a half shape.
+
+**Decision 4, recorded runs, S7 gate, hour bound.** Candidates 40 and 32 if 40 passes P2b, else 32 and 24. R-A1 one
+pass at 8, 16, 24, 48; 56 is NOT re-run on the locked base (it preempted; a recorded crash costs an R0 redo), S8 cites
+the preliminary 56 and 48-worst-case rows as labelled context. R-A2 two candidates at 3x; R-A3 worst case at the knee
+with the poll; R-D as in 3.7 (4); R-B only if B won. S7 gate additions: a zero-preemption worst-case pass at the
+admitted level (P2b or P3b); E0 written and the E1/E2 verdict known before `up`; the `-v2` ceiling profile (if Q-B yes)
+and any E2 knob in the tree with the equality test; the driver poll tested. Card time: spent ~10.6 ch (scan 6.5, P1 1.6,
+P2 2.5); remaining P2b 4-7, E1/E2 4, P3+P3b 13, R0 6, R-A1 4, R-A2 10, R-A3 4, R-D 3 = 48-51 -> 59-62 ch total, top of
+the 3.6 band; R-B +12 (FYI).
+
+**Owner questions (recommendation in brackets).**
+- **Q-A.** Accept a crash-safe knee (rule (a)), expected 40 per instance (host 160), ~10 % less host throughput than 48
+  and ~12 % more card-hours in the bound, rather than wait for an engine fix? [Yes: the fix is a new image, a base
+  change that delays the lock; the knee is re-measured once the engine is fixed.]
+- **Q-B.** Lower `--max-num-seqs` 64 -> admitted level in a `-v2` deployment profile for R0 (deployment layer, no
+  protocol hash movement)? [Yes if S12's test shows no registered-fact movement; otherwise keep 64 and record (b).]
+- **Q-C.** If E2 proves a cache-only knob prevents the crash, carry it in R0's deployment flags? [Yes if output-neutral
+  and crash-free over 3 passes; a knob that changes outputs or the hash (chunked prefill off, eager) is NOT adopted.]
+
+### 3.9 Worst-case knee, crash trials and determinism (revision 5, 2026-10-29)
+
+Input: P2b, E1, E2 and the equality probe (chain status files relayed by the coordinator; no raw log read) and the E0
+note `work/scratch/badcase/2026-10-29-e0-mm-encoder-preemption-source.md`. Facts: P2b worst case on a fresh arm A, one
+pass: 40 -> 9 preemptions (2/4/0/3), KV peak 96.7-100 %, p10 13.85, max latency 306 s, no exit = NOT admissible under
+rule (a); 32 -> 0 preemptions on all four, KV peak 80.1-88.1 %, p10 15.76, max latency 266 s = ADMISSIBLE. E1 (one TP2
+instance, baseline flags): 13 preemptions at 48, 19 and 22 at 56, many 420 s timeouts, zero exits, no assertion = "not
+reproduced in isolation". E2 (`--mm-processor-cache-type shm`): 25/26/22 preemptions, zero exits = passes the 3.8
+letter, but the baseline did not crash either, so E2 does NOT discriminate. Equality probe (16 greedy requests,
+temperature 0, fixed seed): E1 vs E2 16/16 byte-identical; E1 vs ITSELF 9/16, max |delta logprob| 1.97 (indices 0, 2, 3,
+4, 10, 12, 14). 3.8 predictions: "admitted 40" REFUTED, "fallback 32" CONFIRMED, "E1 reproduces the assertion" REFUTED.
+Full suite: zero true regressions against HEAD (2 shard-race flakes, 3 identical hangs, 566 shared environment
+failures); nothing to decide.
+
+**Decision 1, the admitted knee is 32 per instance (host 128).** Rule (a) holds: 0 preemptions everywhere, 88.1 % <= 90
+%. R-A2 candidates are 32 and 24. Rule (b) binds R-A1 too: no recorded run exceeds 32, so R-A1 is one pass at 8 and 16
+only; 40, 48 and 56 are NOT re-run on the locked base (a crash costs an R0 redo) and the S8 table quotes the preliminary
+48, 56 and worst-case 48/40/32 rows as labelled context. This supersedes 3.8 Decision 4's "R-A1 at 8, 16, 24, 48". Cost:
+normal-mix host throughput 1,422.6 tok/s at 32 against 1,795.3 at 48 = -20.8 %; r ~5.2 lock rows/min/instance instead of
+6.5; hour bound +26 % (3.8's better case is gone). (The worst-case 2,050 tok/s at 32 is not mix throughput: every
+completion is 4,096 tokens.) Card time: spent ~24 ch (3.8's 10.6 + P2b ~7 + E1/E2 ~6; S8 takes exact walls from the
+status files); remaining P3+P3b 13, R0 6, R-A1 2, R-A2 10, R-A3 4, R-D 3 = 38 -> ~62 ch total, inside the 60-66 band of
+3.6. P3 is now the decisive run: B holds ~1.7 M KV tokens per TP4 instance, so worst-case host 128 is ~44 % and host 192
+~66 % of KV. Prediction (S8 marks it): B's admitted host level is 192 and B's host throughput there lands within +-5 %
+of A's 1,795 at 48, so B beats A's admitted 1,423 by ~20-25 % and Q4 makes B resident; refuted if B's four-card
+all-reduce costs more than ~20 %. If B wins, the recorded run list is re-planned in a revision 6.
+
+**Decision 2, the crash: rule (a) stays, shm is deferred, no discriminating test before the lock.** The assertion
+appeared once (P2, 2 of 4 engines, caches warmed by ~5,000 requests) and not in E1, E2 or P2b despite 9-26 preemptions
+per pass: E0's path needs a contact-2 request to be preempted AND to miss both the prefix cache and the 2,048-token
+encoder cache on resume, a race whose RATE E1 did not reach (cold single instance; 420 s client aborts free KV early),
+so E0's path stays the working hypothesis, unconfirmed. Rule (a) does not depend on it: zero worst-case preemptions
+remove the precondition, the only guard that needs no understanding of the race. Q-C: shm is NOT carried into R0. It is
+non-discriminating; by E0 it sits in the hashed `server_args` fragment today, so adopting it moves `protocol_sha256` or
+needs a flag reclassified into `DEPLOYMENT_FLAGS` (a study change) before the lock; and its output-neutrality evidence
+is void (Decision 3). The discriminating test, if the owner ever wants shm, is **E3**: fresh arm A 4 x TP2, worst case
+at 48, shm on all four, TWO passes (P2 crashed 2 of 4 in one pass; one clean pass has ~6 % chance under no effect, two
+~0.4 %) = ~1.2 h wall, ~10 ch, outside the 3.6 band, AFTER P3 and AFTER the lock, gating a `-v3` profile only. It is a
+section 7 follow-up with the engine fix; the lock does not wait for it.
+
+**Decision 3, determinism: byte-identity is not an acceptance criterion on this stack.** Two runs of one instance agree
+on 9/16 greedy outputs while two configurations agreed on 16/16: the E1-vs-E2 identity is an artefact of the pair
+compared, and self-agreement is the ceiling of any equality test. Candidate causes (MoE routing flips from tiny numeric
+differences; batch composition with 16 requests in flight; prefix-cache state of a second run; TP2 all-reduce order) are
+not separable yet. Consequences: (i) L-facts pin bytes, hashes and flags, never outputs; the base-lock record gains a
+measured "greedy self-agreement" fact (rate and max |delta logprob| under a stated send protocol), recorded, not gated.
+(ii) Every output-equality acceptance in this plan (3.8 E2, Q-C, any knob test) becomes an A/A/B test: a knob is
+output-neutral if its B-vs-A disagreement lies within the A-vs-A band (same probe, same send protocol, >= 3 repeats
+each); hash equality tests (S12, registered facts) compare hashes, not outputs, and are unaffected. (iii) Protocol: the
+study seeds and `--seed 0` fix sampling, not kernel or batch numerics; S7 records in the manifest the client seed, the
+`--seed` server flag and a sequential-send probe before and after each recorded level with its agreement rate; the
+baseline document states that outputs are reproducible statistically, not bit-wise. Card-free now:
+- **D1 (SONNET).** `greedy_probe.py` (host script, `work/scripts/`): fixed 16-request set, `--send sequential` (one in
+  flight, fixed order) or `--send burst`; records text, token ids, logprobs; `compare` reports exact-match rate, first
+  divergent token position per request, max |delta logprob| before divergence. Acceptance: unit test on synthetic files;
+  `compare` reproduces 9/16 and 1.97 on the two existing E1 probe outputs.
+- **D2 (OPUS).** Note (<= 40 lines, `work/scratch/badcase/`) on the three existing probe outputs: which E1 run E2 was
+  compared against and whether the other pairing also matches; for each of the seven mismatches the first divergent
+  position (0 = prefill numerics, later = decode) and the logprob gap there (near-tie flip or large). Acceptance: the
+  compared pair named, positions and gaps tabulated, no cause claimed beyond the evidence.
+- **D3 (SONNET, 2 cards, minutes, on the idle arm A before P3 stops it).** 3 sequential-send and 3 burst-send probe
+  runs; sequential 16/16 across repeats with burst disagreeing = batch composition; sequential disagreeing = kernel or
+  cache nondeterminism. The classification goes into S7's manifest and the base-lock record.
+
+**Decision 4, Q-B: the `-v2` ceiling is 32, not 40.** With no recorded run above 32, headroom buys nothing; a ceiling
+equal to the admitted level turns rule (b) from a client convention into an engine-enforced bound (excess requests
+queue, they do not preempt); the only cost is 3.7's ceiling-bound check, the sampled `waiting` gauge must read 0 at the
+recorded level 32. Conditional, as before, on S12's test showing no registered-fact movement.
+
+**Owner questions (one-word answers; recommendation in brackets).**
+- **Q-A.** Accept the crash-safe knee 32 per instance (host 128): -20.8 % host throughput vs 48, hour bound +26 %? [Yes]
+- **Q-B.** `--max-num-seqs` 64 -> 32 in a `-v2` deployment profile for R0? [Yes]
+- **Q-C.** Carry `--mm-processor-cache-type shm` in R0? [No: deferred to the E3 follow-up after the lock]
+- **Q-D.** Accept a locked base that is not bit-reproducible (greedy self-agreement measured and recorded; equality
+  acceptance replaced by the A/A band) rather than seek a deterministic engine mode before the lock? [Yes]
+- **Q-E.** Permit the P3 launch now (stop arm A, redeploy arm B on 8 cards, ~1.6 h, `prelim`, after D3)? [Yes]
+
 ---
 
 ## 4. Streams (disjoint files), with ready-to-paste brief headers
@@ -510,6 +664,92 @@ one-line fix below landing in the translation commit. Diffs read in full: S1, S3
   `--user 1008:1008` (5 files), the fixture literal `10.0.0.5` (RFC 1918, pre-existing). New but harmless: NIC name
   `enp61s0f2`, log name `saea-serve-thinking-20261029T063554`. Cosmetic: this plan says "host 181"; the ssh alias
   `npu2` is the preferred spelling.
+
+### R2 review (Fable 5.1, 2026-10-29)
+
+Scope: working tree over HEAD `32589378`, read with `git diff` / `git status` (28 modified, 1 new file) plus the host
+scripts `work/scripts/npu_deploy.sh` and `npu_serve.sh.s10-next`; no card, no log, no model call. Owner rule today:
+host 175 is not ours; every run of this plan is on `npu2` (181). Verdict: **PASS, conditional** on (1) the full-suite
+run on the tree being green and (2) the HEAD-vs-tree comparison classifying `tests/contract/test_real_receipts.py` and
+the `test_flight_repin_requirement_identity.py` collection error as pre-existing at HEAD (both are outside wave 1's
+files). Common checks: `grep -rlP '[\x{4e00}-\x{9fff}]'` clean over every touched file and both host scripts; files
+disjoint per stream (S10 took the verifier and its test from the committed S4 as R1 (a) assigned; S12 owns the shared
+fixture `_vllm_world.py`, S10 only reads it); nothing committed by a stream; readiness `status` values identical HEAD
+vs tree (`DRAFT-HELD`, `DRAFT-NOT-MINTED`, 5 x `DRAFT-HELD-REGISTERED...`, 6 x `PENDING`, 7 x `PROVISIONAL`); no
+exposure entry, no dataset row, no push. Hash movement: only S13's re-mint (below); S12 showed `protocol_sha256`
+`3b79f78a` unchanged on the fixed fixture; S10's NIC lives in `deployment` (test proves `protocol_sha256` equality).
+
+- **S1b: ACCEPT.** Fourth pattern is `fullmatch`, the 400 + `BadRequestError` gate is untouched (near-miss tests refuse
+  `NotFoundError`, status 500, a prefix, a suffix, one changed word, the wrong parameter clause). Making both "at
+  least " fragments optional is correct: `params.py:494-517` prints the qualifier only at `max_input_tokens + 1`.
+- **S12: ACCEPT.** `DEPLOYMENT_ENV_KEYS` is closed and pinned by a test; `pinned_environment` excludes exactly it plus
+  the device key, `HCCL_CONNECT_TIMEOUT` stays protocol; a deployment key in `protocol.env` is refused; an instance
+  `env` key outside the set is refused (5 cases); the live check is an exact per-instance comparison (missing, extra
+  and differing all refused); `start_vllm_session` spawns with the recorded instance env. The OPTIONAL `env` does not
+  weaken fail-closed: absent is read as `{}` and the exact comparison then refuses any live process carrying one of
+  the four keys (tested); the producer always writes the field. No fix.
+- **S10: ACCEPT-with-fix.** Verified: six read-only mounts equal the launcher's; `nic` keyword-only with no default
+  (`TypeError` test) and `validated_nic` fullmatch refuses `None`, empty, whitespace, `;`, 16 bytes, leading `-`;
+  `plan`/`emit` validate the NIC before any argv exists; profile env outside `DEPLOYMENT_ENV_KEYS` and NIC keys in a
+  profile both refused; live argv parses through `split_vllm_server_argv`; verifier `live_vllm_args` accepts only the
+  interpreter + `VLLM_ENTRYPOINT` form and `server_argv_sha256` hashes the same `serve <model> <flags>` list as
+  `deployment_record`. Fix (SONNET, sidecar only, before the swap): add `--gpu-memory-utilization
+  "${GPU_MEM_UTIL:-0.92}"` to `npu_serve.sh.s10-next` so a preliminary server satisfies `REQUIRED_DEPLOYMENT_FLAGS`;
+  `--seed 0` stays, it is in the hashed fragment and is not a defect. Finding for S8: neither launcher passes
+  `--gpu-memory-utilization`, so the preliminary arm A ran at the engine default, not at 0.92 as 3.7 assumes; S8
+  quotes the value from the watchdog status (engine start line), and the Arm C margin in 3.7 (4) is re-derived.
+- **S13: ACCEPT-with-fix.** Re-mint is the intended movement only: flight `21bf1af0`->`77185307` / `2de63028`->
+  `de9937af`, smoke `14d06e30`->`22f715bf` / `521bf157`->`205ae3fc`, `study_commit_at_registration` and the two
+  `*_base_commit` fields `7db9d7cd`->`32589378`; the old hashes survive only as the `STALE_HASHES` fixture of guard G
+  and in this plan. Guard G's strict xfail became the live assertion and the stale fixture now uses the pre-move
+  hashes (good: it tests the refusal, not the committed bytes). The inline `--max-num-seqs=4` spelling is refused and
+  tested, as is `profile_slot_count`. Fix: the ledger successor line, decision (1) below.
+- **S15: ACCEPT-with-fix.** `hf.py:263-314`, `804-809`, `599-616` cited; Q2 corrected and its gate lines verified at
+  `32589378` (`:76`, `:89-106`, `:333-334`); the section 7 note is explicitly the pre-fix state with line numbers at
+  `32589378`; no section 9 text moved (diff hunks end at line 397, section 9 starts at 403). Fix: decision (c).
+
+**Decisions on the open items.**
+1. S13 (1), ledger rows 9175-9178: four plan-file pins (`488dac0e`, `90df133e`, `9e482a77`, `a5598d5c`) and `7db9d7cd`
+   are stale. The rows are DRAFT, unconsumed, countersignature pending; the writer's `draft-ledger-rows.md` is the
+   authority and the rows are re-copied at countersign. OPUS appends one English successor line directly under the
+   DRAFT block heading (line ~9170) naming the four superseded pins, the re-minted package and the commit; the rows
+   themselves are not edited. MAIN commits it with S15 (commit 5).
+2. S13 (2): NO second writer run. `32589378` is the commit the registered facts were computed from (configs unchanged
+   since `db798a83`); the precedent is `a50581d4`, registered at `7db9d7cd`. A re-run would move only the commit
+   string and need its own commit. The mint step re-checks the live hashes anyway (guard G).
+3. S13 (3): the phase supply stays stale and un-pinned. `core/flight/runtime.py:359, 402` binds `config_sha256`
+   explicitly, so the stale supply cannot be consumed; `repin_cell.py` flips readiness and rewrites the baseline pin,
+   which is the flip step (package README) and needs the OWNER's countersign. MAIN runs it then, on a clean tree.
+4. S10 (b): see the S10 fix. Smoke servers from `npu_serve.sh` remain preliminary; the RECORDED smoke re-run (R0)
+   runs on the `npu_deploy.sh up` service, as 3.7 (5) already says. S10 (c): OPUS writes the post-fix successor
+   paragraph in design-doc section 7 (new line numbers, "done" state) AFTER commits 2-3 land; not an S7 gate, but a
+   gate for S5 (the base-lock record cites section 7). Owner FYI only: no question.
+5. S15 open-vs-ruled: Q1/Q4/Q5/Q6 are RULED in 2.4 and recorded in this plan; they are serving and sweep rulings,
+   not section 9 entries (section 9 is the port's authority registry), so S15's wording is right. Section 6 item 3 is
+   read from R2 on as "ruled in 2.4, recorded in the plan, no section 9 entry; a tool arm (Q1) still needs its own
+   readiness package". No owner question.
+
+**Commit order (MAIN, study branch).** S12 must precede S10: `core/deployment.py` imports
+`undeclared_deployment_env_keys` and the verifier imports `deployment_environment` / `instance_deployment_env`.
+1. S1b — "Relabel vLLM's character-level context refusal and the plain serving-layer token wording"
+2. S12 — "Move the per-instance HCCL and NIC environment out of protocol_sha256 into the recorded deployment layer"
+3. S10 — "Emit the gate's launch form, the HCCL mounts and a required host NIC from the deployment profile"
+4. S13 — "Re-mint the L338 NPU-port registration package after the --max-num-seqs move; refuse the inline spelling"
+5. S15 + this subsection + the ledger successor line — "Design doc: tool-template mechanism from vLLM source,
+   deployment-env successor note, Q1/Q4-Q6 recorded; plan R2 review"
+Host scripts stay outside git. After each commit: `git status` clean except the next stream's files.
+
+**R2 gate: what S7 still needs before R0.**
+- [ ] Full suite green on the tree (Sonnet run) and the two regression items classified pre-existing or fixed.
+- [ ] Commits 1-5 landed; `git diff HEAD` empty; publish scrub (no proxy, no host address, no id) before any push.
+- [ ] S10 sidecar fix applied and its test re-pointed (`SONNET`): the swap `mv npu_serve.sh.s10-next npu_serve.sh`
+      happens only after the last `npu_serve.sh` launch of P3 has started (P1-P3 never re-launch); the test
+      hard-coded to `.s10-next` is re-pointed to `npu_serve.sh`, not dropped, and the parametrised pair becomes one.
+- [ ] P4 is SKIPPED if R2 has passed by the end of P3: R0 (`npu_deploy.sh up`) produces the resident shape itself and a
+      `npu_serve.sh` service is not receipt-able. Prelim containers are stopped before `up` (it refuses a listening port).
+- [ ] `npu-smi` on 181 reads every card below 4096 MiB; a refusal is STOP. Nothing on 175.
+- [ ] S7's sweep plan file carries the 3.1/3.7 predictions and the P1-P3 outcomes (knee candidates) before `up`.
+- [ ] S8 corrects the preliminary memory-utilisation value (S10 finding) before quoting Arm C's margin.
 
 ---
 

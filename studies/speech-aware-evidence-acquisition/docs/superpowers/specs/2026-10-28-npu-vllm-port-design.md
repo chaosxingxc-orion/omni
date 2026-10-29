@@ -137,19 +137,39 @@ directory: `chat_template.json` exists (key `chat_template`, 5715 characters) an
 `template`, `audio-count` and `answer-only` checks returned 200), and its startup log reports a detected content format
 of `openai` from a template resolved with no tools, then `string` when the first tool request arrived. This is
 consistent with the weights' template being reachable through the processor (tool-free path) but not through the
-tokenizer (the path the tool-bearing request takes). The exact vLLM branch that selects the tokenizer for requests with
-`tools` was not read from vLLM source in this session, so that mechanism is an inference; it can be confirmed cheaply
-by repeating the tool request with a per-request `chat_template` field. The `messages[0].content + '\n\n'` failure on
+tokenizer (the path the tool-bearing request takes).
+
+Mechanism, read from the vLLM source (successor note 2026-10-29; it replaces the earlier "mechanism is an inference"
+caveat). Source: `/vllm-workspace/vllm` inside `saea-base:20261027` on 181, git `ced6857a` (tag `v0.30.0`).
+`resolve_chat_template` (`vllm/renderers/hf.py:263-314`) tries a per-request `chat_template` first (`hf.py:270-274`),
+then the AutoProcessor template only when `tools is None` (`hf.py:276-285`), so a request carrying `tools` never
+reaches the weights' `chat_template.json`. Its third step, `tokenizer.get_chat_template` inside a bare `try/except`
+(`hf.py:287-295`), raises because `tokenizer_config.json` has no `chat_template` (transformers 5.14.1
+`tokenization_utils_base.py:3277-3288`; the 21-key file is fact L14 of
+`docs/superpowers/plans/2026-10-29-lock-engineering-base-and-efficiency-plan.md:70`), and the model-type fallback
+(`hf.py:297-312`) finds none. `safe_apply_chat_template` then raises the observed message on the `None` template
+(`hf.py:804-809`). Content-format detection resolves the template the same way and defaults to `string` when none
+resolves (`hf.py:599-616`), which is the `string` line in the startup log. So on this build every request carrying
+`tools` fails, with or without a system message, and tool-free requests render through the processor template
+(`hf.py:277-285`). The per-request `chat_template` probe stays as the live confirmation of the first step; it is part
+of the plan's smoke re-run (plan `:121-122`). The `messages[0].content + '\n\n'` failure on
 text parts has therefore not been observed on the server; it remains an offline prediction. Fold B declares no tools,
 sends none, and is unaffected: its checks all ran on the tool-free path. The smoke records this as RECORD, not FAIL.
 
 Open questions, not decided here:
 
-- Q1. Is a tool-bearing arm in scope for the port at all? If not, nothing below is needed.
-- Q2. If one is wanted later, the remedy options are: `--chat-template <weights>/chat_template.json` (it enters
-  `server_args`, which is hashed, so it is a protocol change); a port chat template that also joins system text parts
-  (a declared template difference); or `--chat-template-content-format string` (changes how vLLM places the audio and
-  needs its own layout proof). Each still has to be re-checked against the system-parts prediction above.
+- Q1. Is a tool-bearing arm in scope for the port at all? Not a section 9 entry; this document records no decision.
+  The plan recommended no for its own scope, keeping `--enable-auto-tool-choice --tool-call-parser hermes` in the
+  hashed `server_args` (plan `:139-141`). The plan records an owner ruling of 2026-10-29: yes, sequenced after the
+  plan's baseline metrics; the tool-free base and sweep run first, unchanged (plan `:155-158`).
+- Q2. The remedy options are: `--chat-template <weights>/chat_template.json`; a port chat template that also joins
+  system text parts (a declared template difference); or `--chat-template-content-format string` (changes how vLLM
+  places the audio and needs its own layout proof). Correction (2026-10-29): the first option is refused by the
+  runtime receipt gate, not merely a hash change, because `--chat-template` is in `REFUSED_SERVER_FLAGS`
+  (`contracts/gate_runtime_vllm.py:89-106` at commit `32589378`) and `classify_server_flags` fails closed on it
+  (`gate_runtime_vllm.py:333-334`). Only the other two remain; per the plan they need a Fable proposal and an owner
+  choice before a tool arm runs (plan `:156-158`). Each still has to be re-checked against the system-parts
+  prediction above.
 
 ## 6. Retrieval encoders (implemented)
 
@@ -310,6 +330,48 @@ transport other than `vllm` keeps the historical flags and error texts. A vLLM a
 
 Tensor parallel size and NPU placement are chosen when the cards are free.
 
+Deployment environment, mounts and launch form (successor note 2026-10-29; state of the working tree, which plan
+streams S10 and S12 are fixing, plan `:387-399` and `:401-414`; neither fix is described here as done). Engineering
+runs on host 181 (`npu2`) only; both deployment profiles name it (`configs/deployment/qwen3-omni-thinking-bf16-181-4xtp2-v1.json:2,7`).
+Line numbers in `contracts/gate_runtime_vllm.py` are those of commit `32589378`, because S12 is editing that file;
+`core/deployment.py` and the profiles are unchanged from that commit.
+
+- Interface variables. The working launcher `work/scripts/npu_serve.sh` (outside git) derives the NIC that carries
+  the host's global IPv4 address (`npu_serve.sh:47`) and sets `HCCL_SOCKET_IFNAME`, `GLOO_SOCKET_IFNAME` and
+  `TP_SOCKET_IFNAME` to it (`npu_serve.sh:53`); without them `hcclGetRootInfo` fails with code 19 on multi-card init,
+  verified on 181 (`npu_serve.sh:46`). `core/deployment.py` emits none of them: `docker_run_argv`
+  (`deployment.py:450-475`) passes only `COMMON_ENV` (`deployment.py:87`) and the profile's instance env
+  (`deployment.py:472-473`).
+- Base port. Each instance needs its own `HCCL_IF_BASE_PORT` because all instances share `--network host`
+  (`deployment.py:462`); the launcher sets it from `HCCL_BASE_PORT` (`npu_serve.sh:44`) and the TP2 profile carries
+  61000/61200/61400/61600 (`qwen3-omni-thinking-bf16-181-4xtp2-v1.json:19,31,43,55`). `HCCL_` is a pinned prefix
+  (`gate_runtime_vllm.py:114`), so `pinned_environment` (`gate_runtime_vllm.py:372-379`) puts the per-instance base
+  port and `HCCL_SOCKET_IFNAME` into `protocol.env`, and one `protocol_sha256` cannot cover four instances; S12 moves
+  the four interface/port keys into the recorded deployment layer (plan `:401-408`, `:166-167`).
+- Mounts. The launcher mounts `/etc/hccn.conf`, `/etc/ascend_install.info`, `/usr/local/Ascend/firmware` and
+  `/usr/local/dcmi` read-only beside the driver and `npu-smi` (`npu_serve.sh:55-58`); `ASCEND_READONLY_MOUNTS`
+  holds only the driver and `npu-smi` (`deployment.py:85`, mounted at `deployment.py:469-470`).
+- Launch form. The receipt gate accepts only `<interpreter> -m vllm.entrypoints.cli.main serve <model_dir> ...`
+  (`VLLM_ENTRYPOINT`, `gate_runtime_vllm.py:76`; `split_vllm_server_argv`, `gate_runtime_vllm.py:352-357`; receipt
+  check `gate_runtime_vllm.py:638-639`), i.e. `--entrypoint /usr/local/python3.12.13/bin/python3` followed by
+  `-m vllm.entrypoints.cli.main serve`. Both launchers use `--entrypoint vllm` today (`deployment.py:474`,
+  `npu_serve.sh:60`), whose live cmdline the gate refuses (plan `:72`, fact L16).
+- NIC as a deployment fact. The NIC is recorded, not hashed (plan `:68`, fact L12). `deployment_record` records each
+  instance's profile env (`deployment.py:517`) but no NIC today; S10 adds it and refuses to emit argv without one
+  (plan `:390-392`).
+
+Serving and sweep questions carried by the plan. None is a section 9 entry, and this document records no decision;
+each is stated as the plan records it.
+
+- Q4. Plan recommendation: the four-instance TP2 layout (arm A) stays resident unless arm B (TP4) wins aggregate
+  throughput by more than 5 % (plan `:142-143`). The plan records the owner ruling: as recommended (plan `:159-160`).
+- Q5. `VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS` has the pinned `VLLM_` prefix (`gate_runtime_vllm.py:111`), so setting
+  it changes `protocol_sha256`; plan recommendation: not for the sweep (plan `:144-147`). The plan records the owner
+  ruling: not set for the sweep, set after the configuration is locked as its own recorded change with the base-lock
+  record and verification re-run (plan `:161-163`).
+- Q6. `--enforce-eager` is not in `DEPLOYMENT_FLAGS` (`gate_runtime_vllm.py:79-86`), so an eager arm is a protocol
+  change; plan recommendation: no arm E (plan `:148-150`). The plan records the owner ruling: no arm E (plan `:164`).
+
 Telemetry (`core/session/telemetry.py`). The serving resource guard and the preparation monitor read accelerator
 memory through `read_gpu`. On a host without `nvidia-smi` it reads `npu-smi info`'s device table (HBM used/total,
 power, AI Core utilisation, health) and reports the visible card with the least free HBM, the safe direction for an
@@ -331,6 +393,12 @@ their values for a Linux host are part of the runtime receipt decision (section 
    2026-10-28. They were not written by the Thinking model. Every knowledge-bound number is measured against these
    cards, not the sealed ones (`docs/readiness/2026-10-28-slurp-semantic-authoring-root-review-npu-port-v1.md`).
 7. CPU float32 retrieval encoder (section 6.4) instead of CUDA bfloat16; the port's vectors are all built on it.
+
+Informational, not a declared difference (wire translation; plan `:107-109`, `:134`): vLLM's serving-layer refusal
+"you requested N output tokens and your prompt contains at least N input tokens" (`vllm/renderers/params.py:494-517`)
+is relabelled by the third `fullmatch` pattern in `core/model/vllm_transport.py:78-83` (added in `454b7c3d`; line
+numbers at `32589378`; applied at `vllm_transport.py:157-160`); the character-level `parameter="input_text"` form
+(`params.py:354-375`) is stream S1b (plan `:381-385`).
 
 ## 9. Owner decisions (9.1-9.5 decided)
 
