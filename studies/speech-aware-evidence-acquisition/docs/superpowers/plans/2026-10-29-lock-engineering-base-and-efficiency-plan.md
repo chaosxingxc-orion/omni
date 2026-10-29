@@ -613,6 +613,36 @@ placeholders, the D3 fact); the design-doc section 7 post-fix successor (gates S
 
 **Owner answers (2026-10-29, translated; recorded by the planner).** Q-A knee 32: YES. Q-B `-v2` ceiling 32: YES (the `-v2` profiles are committed with this revision). Q-C shm in the recorded runs: YES, against the recommendation; by item 3 this means a `-v3` profile with `--mm-processor-cache-type shm` reclassified as a deployment flag (SONNET S16b: `DEPLOYMENT_FLAGS` entry, S12-style equality test proving `protocol_sha256` unchanged, refusal of any other `--mm-*` value), and the discriminating test E3 (fresh 4xTP2, worst case at 48 per instance, shm on all four, two passes, PRELIMINARY, ~10 ch) BEFORE R0; E3 is accepted when no engine exits in either pass; if an engine exits, Q-C is re-asked with that evidence. Q-D non-bit-reproducible base: YES. Q-E (P3 launch): the launch command was denied by the session permission system twice; retried after these answers.
 
+
+### 3.11 Arbitration and final judgement (Fable 5.1, main session, 2026-10-29)
+
+The owner asked for a final ruling on the points discussed today. Evidence: 3.7-3.10, the Opus notes under
+`work/scratch/badcase/` (crash, E0 source read, D2), the P1/P2/P2b/E1/E2/D3 preliminary results, and the owner's answers.
+
+1. **Base lock proceeds on this image.** The crash is real but bounded: it needs preemption, and preemption needs the
+   worst case above 32 per instance on 4xTP2. The admissibility rule (zero worst-case preemptions, KV peak <= 90 %)
+   keeps the recorded runs out of that regime. Waiting for an upstream fix is not justified. FINAL: lock now.
+2. **Knee and ceiling.** Admitted knee 32 per instance (host 128) for arm A; `-v2` ceiling 32 so the engine enforces it.
+   The 21 % throughput cost against 48 is the price of a base that cannot lose an instance mid-flight. FINAL.
+3. **The shm knob (owner YES, planner NO).** Both positions are correct on their own terms: the planner's "no" is about
+   evidence (E2 did not discriminate) and hash placement; the owner's "yes" is about robustness over the many hours the
+   base will run, where a real flight's mix can preempt even if the synthetic worst case does not. Ruling: the owner's
+   choice stands, conditioned on evidence rather than on E2. (a) `--mm-processor-cache-type` is a cache-transport knob
+   that by source changes no logits; it is reclassified as a DEPLOYMENT flag (S16b), with the S12-style test that
+   `protocol_sha256` is unchanged and a refusal of any other `--mm-*` flag. (b) E3 runs on 4xTP2 in the known crash
+   regime (worst case at 48 per instance): one baseline pass, then two shm passes, all four instances. shm is ADOPTED
+   into `-v3` if its two passes show zero engine exits AND a warm sequential A/A probe (D3 protocol) agrees 16/16 with
+   the baseline instance. If a shm pass exits, shm is DROPPED and the owner is told with the evidence. The baseline pass
+   is informative only: a second crash strengthens E0's hypothesis; no crash does not change the ruling, because the
+   owner has chosen robustness and the rule in (1) already protects the recorded runs. Cost ~12 ch. E3 precedes R0.
+4. **Determinism.** Accepted as answered. The base-lock record states the measured fact: warm sequential greedy output
+   repeats (16/16, n = 1 pair); a cold first run and burst batches differ at near-tie tokens. No gate uses byte identity.
+5. **Arm B.** P3/P3b is the one remaining measurement; 3.10's table resolves the resident arm mechanically from it, and the
+   shm flag, being a deployment flag, carries to whichever arm is resident. Order of card work: P3/P3b -> E3 -> R0 on the
+   resident arm with the final profile -> the 3.10 recorded list. The P3 launch command was denied twice by the session
+   permission system; the main thread retries it now and otherwise hands the owner the one-line launch command.
+6. **What ends the task.** The 3.10 completion checklist, unchanged. The planner's remaining actions are R3/R4 only.
+
 ---
 
 ## 4. Streams (disjoint files), with ready-to-paste brief headers
