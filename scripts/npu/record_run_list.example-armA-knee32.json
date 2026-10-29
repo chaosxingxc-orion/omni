@@ -1,0 +1,24 @@
+{
+  "schema": "saea-record-run-list-v1",
+  "example": true,
+  "label": "EXAMPLE ONLY - not a plan. Arm A at the admitted knee 32 (plan 3.9): R-A1 at 8 and 16, R-A2 candidates 32 and 24 at 3x requests, R-A3 worst case at 32. The planner writes the real list per branch; the -v2 profile is a DRAFT pending the owner (Q-B).",
+  "profile": "qwen3-omni-thinking-bf16-181-4xtp2-v2",
+  "admitted_level": 32,
+  "seed": "20261028",
+  "client_cpuset": "224-255",
+  "ceiling_bound_is_failure": true,
+  "r0": {
+    "base_lock": "/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-29-engineering-base-lock-npu-port-v1/base-lock-v1.json",
+    "min_free_gib": 50,
+    "deploy_wait_seconds": 2400,
+    "smoke_audio": "/mnt/cephfs/xingchao/omni/work/scratch/smoke-181/tone.wav"
+  },
+  "runs": [
+    {"id": "R-A1", "levels": [8, 16], "passes": 1, "min_tokens": null, "admissibility": false, "on_fail": "stop_run",
+     "note": "one pass at the non-candidate levels so the S8 table is complete from the locked base"},
+    {"id": "R-A2", "levels": [32, 24], "passes": 3, "min_tokens": null, "admissibility": false, "on_fail": "continue",
+     "note": "the two candidates at 3x requests; both are measured even if the first fails"},
+    {"id": "R-A3", "levels": [32], "passes": 1, "min_tokens": 4096, "admissibility": true, "on_fail": "stop_chain",
+     "note": "worst case at the admitted knee; zero preemptions on every instance and KV peak <= 90 %"}
+  ]
+}
