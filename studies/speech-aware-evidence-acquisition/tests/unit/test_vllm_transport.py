@@ -282,6 +282,79 @@ def test_serving_layer_near_misses_are_not_relabelled():
     assert vllm_context_error_body(500, _error_body(_SERVING_CONTEXT_400)) is None
 
 
+# The plain form of the serving-layer token wording (vllm/renderers/params.py:494-517): the qualifier is "" unless the
+# counted tokens equal max_input_tokens + 1, built from the exact f-string with realistic numbers.
+_TOK_MAX_TOTAL, _TOK_MAX_OUT, _TOK_COUNT = 24576, 16, 30212
+_PLAIN_TOKEN_400 = (
+    f"This model's maximum context length is "
+    f"{_TOK_MAX_TOTAL} tokens. However, you requested "
+    f"{_TOK_MAX_OUT} output tokens and your prompt "
+    f"contains {''}{_TOK_COUNT} input tokens, "
+    f"for a total of {''}{_TOK_COUNT + _TOK_MAX_OUT} tokens. "
+    f"Please reduce the length of the input prompt or the "
+    f"number of requested output tokens."
+    f" (parameter=input_tokens, value={_TOK_COUNT})"
+)
+
+
+def test_serving_layer_plain_token_wording_is_relabelled():
+    relabelled = json.loads(vllm_context_error_body(400, _error_body(_PLAIN_TOKEN_400, param="input_tokens")))
+    assert relabelled["error"]["type"] == FrozenCoreContextSizeError.WIRE_ERROR_TYPE
+    assert relabelled["error"]["message"] == _PLAIN_TOKEN_400
+    # without the parameter clause
+    assert vllm_context_error_body(400, _error_body(_PLAIN_TOKEN_400.split(" (parameter=")[0])) is not None
+    # the "at least" form is still relabelled
+    assert vllm_context_error_body(400, _error_body(_SERVING_CONTEXT_400)) is not None
+
+
+def test_serving_layer_plain_token_near_misses_are_not_relabelled():
+    assert vllm_context_error_body(400, _error_body(_PLAIN_TOKEN_400.replace("input tokens", "input text"))) is None
+    assert vllm_context_error_body(400, _error_body(_PLAIN_TOKEN_400.replace("for a total of", "for a total of about"))) is None
+    assert vllm_context_error_body(400, _error_body(_PLAIN_TOKEN_400.replace("contains ", "contains about "))) is None
+    assert vllm_context_error_body(400, _error_body(_PLAIN_TOKEN_400.replace("contains ", "contains at most "))) is None
+    assert vllm_context_error_body(400, _error_body(_PLAIN_TOKEN_400 + " extra")) is None
+    assert vllm_context_error_body(400, _error_body(_PLAIN_TOKEN_400, "NotFoundError")) is None
+    assert vllm_context_error_body(500, _error_body(_PLAIN_TOKEN_400)) is None
+
+
+# The character-level wording of vLLM 0.30.0 (vllm/renderers/params.py:354-375, _text_len_check, param input_text),
+# built from the exact format string with realistic numbers.
+_MAX_TOTAL, _MAX_OUT, _MAX_IN, _CHARS, _MAX_CHARS = 24576, 16, 24560, 3_100_000, 3_063_760
+_CHAR_LEVEL_400 = (
+    f"This model's maximum context length is {_MAX_TOTAL} tokens. However, you requested "
+    f"{_MAX_OUT} output tokens and your prompt "
+    f"contains {_CHARS} characters (more than "
+    f"{_MAX_CHARS} characters, which is the upper bound "
+    f"for {_MAX_IN} input tokens). "
+    f"Please reduce the length of the input prompt or the "
+    f"number of requested output tokens."
+    f" (parameter=input_text, value={_CHARS})"
+)
+
+
+def test_character_level_context_overflow_wording_is_relabelled():
+    relabelled = json.loads(vllm_context_error_body(400, _error_body(_CHAR_LEVEL_400, param="input_text")))
+    assert relabelled["error"]["type"] == FrozenCoreContextSizeError.WIRE_ERROR_TYPE
+    assert relabelled["error"]["message"] == _CHAR_LEVEL_400
+    assert relabelled["error"]["code"] == 400
+    # the trailing parameter clause is optional
+    without_clause = _CHAR_LEVEL_400.split(" (parameter=")[0]
+    assert vllm_context_error_body(400, _error_body(without_clause)) is not None
+
+
+def test_character_level_near_misses_are_not_relabelled():
+    # one changed word, a prefix, a suffix, a different parameter clause, a foreign error type, a foreign status
+    assert vllm_context_error_body(400, _error_body(_CHAR_LEVEL_400.replace("reduce", "shorten"))) is None
+    assert vllm_context_error_body(400, _error_body(_CHAR_LEVEL_400.replace("upper bound", "lower bound"))) is None
+    assert vllm_context_error_body(400, _error_body(_CHAR_LEVEL_400.replace("characters (more", "characters, (more"))) is None
+    assert vllm_context_error_body(400, _error_body("note: " + _CHAR_LEVEL_400)) is None
+    assert vllm_context_error_body(400, _error_body(_CHAR_LEVEL_400 + " extra")) is None
+    assert vllm_context_error_body(400, _error_body(_CHAR_LEVEL_400.replace(f"value={_CHARS}", "value=x"))) is None
+    assert vllm_context_error_body(400, _error_body(_CHAR_LEVEL_400.replace("input_text", "input_tokens"))) is None
+    assert vllm_context_error_body(400, _error_body(_CHAR_LEVEL_400, "NotFoundError")) is None
+    assert vllm_context_error_body(500, _error_body(_CHAR_LEVEL_400)) is None
+
+
 # --- the full transport path ----------------------------------------------------------------------------------------
 
 

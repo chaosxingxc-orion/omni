@@ -62,7 +62,7 @@ VLLM_REFUSED_REQUEST_KEYS = frozenset({"id_slot"})
 VLLM_REFUSED_SERVER_FLAGS = frozenset({BUDGET_MESSAGE_FLAG, "-np", "--parallel", "-c", "--ctx-size", "--reasoning-format"})
 
 # The prompt-length refusals of vLLM 0.30 matched whole: the two engine-level wordings
-# (vllm/v1/engine/input_processor.py) and the serving-layer wording.
+# (vllm/v1/engine/input_processor.py), the serving-layer token wording and the character-level wording.
 _VLLM_CONTEXT_MESSAGES = (
     re.compile(
         r"The (?:decoder |encoder )?prompt \(length \d+\) is longer than the maximum model length of \d+\. "
@@ -76,10 +76,20 @@ _VLLM_CONTEXT_MESSAGES = (
         r"of text tokens \(prompt \+ requested output tokens\)\."
     ),
     # The serving-layer refusal of vLLM 0.30.0 (HTTP 400, param ``input_tokens``), seen in the smoke check "overflow".
+    # vllm/renderers/params.py:494-517 prints "at least " only when the counted tokens equal max_input_tokens + 1
+    # (the encode cap of :332-335); every other count prints the plain form, so both fragments are optional.
     re.compile(
         r"This model's maximum context length is \d+ tokens\. However, you requested \d+ output tokens and your "
-        r"prompt contains at least \d+ input tokens, for a total of at least \d+ tokens\. Please reduce the length "
+        r"prompt contains (?:at least )?\d+ input tokens, for a total of (?:at least )?\d+ tokens\. Please reduce the length "
         r"of the input prompt or the number of requested output tokens\.(?: \(parameter=input_tokens, value=\d+\))?"
+    ),
+    # The character-level pre-tokenization refusal of vLLM 0.30.0 (vllm/renderers/params.py:354-375, ``_text_len_check``,
+    # param ``input_text``): the rendered chat prompt is checked as text before it is tokenized.
+    re.compile(
+        r"This model's maximum context length is \d+ tokens\. However, you requested \d+ output tokens and your "
+        r"prompt contains \d+ characters \(more than \d+ characters, which is the upper bound for \d+ input tokens\)\. "
+        r"Please reduce the length of the input prompt or the number of requested output tokens\."
+        r"(?: \(parameter=input_text, value=\d+\))?"
     ),
 )
 
