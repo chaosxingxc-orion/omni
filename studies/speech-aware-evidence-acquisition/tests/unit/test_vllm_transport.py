@@ -244,6 +244,44 @@ def test_only_vllms_exact_context_overflow_messages_are_relabelled():
     assert vllm_context_error_body(400, b"<html>") is None
 
 
+# The serving-layer wording of vLLM 0.30.0 (raw evidence: the smoke check "overflow", HTTP 400, param input_tokens).
+_SERVING_CONTEXT_400 = (
+    "This model's maximum context length is 24576 tokens. However, you requested 16 output tokens and your prompt "
+    "contains at least 24561 input tokens, for a total of at least 24577 tokens. Please reduce the length of the "
+    "input prompt or the number of requested output tokens. (parameter=input_tokens, value=24561)"
+)
+
+
+def _error_body(message, error_type="BadRequestError", param=None):
+    return json.dumps({"error": {"message": message, "type": error_type, "param": param, "code": 400}}).encode()
+
+
+def test_serving_layer_context_overflow_wording_is_relabelled():
+    relabelled = json.loads(vllm_context_error_body(400, _error_body(_SERVING_CONTEXT_400, param="input_tokens")))
+    assert relabelled["error"]["type"] == FrozenCoreContextSizeError.WIRE_ERROR_TYPE
+    assert relabelled["error"]["message"] == _SERVING_CONTEXT_400
+    assert relabelled["error"]["code"] == 400
+    # the trailing parameter clause is optional
+    without_clause = _SERVING_CONTEXT_400.split(" (parameter=")[0]
+    assert vllm_context_error_body(400, _error_body(without_clause)) is not None
+
+
+def test_engine_level_context_overflow_wording_is_still_relabelled():
+    relabelled = json.loads(vllm_context_error_body(400, _error_body(_CONTEXT_400)))
+    assert relabelled["error"]["type"] == FrozenCoreContextSizeError.WIRE_ERROR_TYPE
+
+
+def test_serving_layer_near_misses_are_not_relabelled():
+    # one changed word, a prefix, a different parameter clause, a foreign error type, a foreign status
+    assert vllm_context_error_body(400, _error_body(_SERVING_CONTEXT_400.replace("reduce", "shorten"))) is None
+    assert vllm_context_error_body(400, _error_body(_SERVING_CONTEXT_400.replace("maximum", "minimum"))) is None
+    assert vllm_context_error_body(400, _error_body("note: " + _SERVING_CONTEXT_400)) is None
+    assert vllm_context_error_body(400, _error_body(_SERVING_CONTEXT_400 + " extra")) is None
+    assert vllm_context_error_body(400, _error_body(_SERVING_CONTEXT_400.replace("value=24561", "value=x"))) is None
+    assert vllm_context_error_body(400, _error_body(_SERVING_CONTEXT_400, "NotFoundError")) is None
+    assert vllm_context_error_body(500, _error_body(_SERVING_CONTEXT_400)) is None
+
+
 # --- the full transport path ----------------------------------------------------------------------------------------
 
 

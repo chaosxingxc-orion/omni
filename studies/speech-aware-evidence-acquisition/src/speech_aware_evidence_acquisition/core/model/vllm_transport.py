@@ -61,7 +61,8 @@ VLLM_REFUSED_REQUEST_KEYS = frozenset({"id_slot"})
 #: llama-server flags a vLLM fragment must not carry (they would be read as if a llama-server were answering).
 VLLM_REFUSED_SERVER_FLAGS = frozenset({BUDGET_MESSAGE_FLAG, "-np", "--parallel", "-c", "--ctx-size", "--reasoning-format"})
 
-# The two prompt-length refusals of vLLM 0.30 (vllm/v1/engine/input_processor.py), matched whole.
+# The prompt-length refusals of vLLM 0.30 matched whole: the two engine-level wordings
+# (vllm/v1/engine/input_processor.py) and the serving-layer wording.
 _VLLM_CONTEXT_MESSAGES = (
     re.compile(
         r"The (?:decoder |encoder )?prompt \(length \d+\) is longer than the maximum model length of \d+\. "
@@ -73,6 +74,12 @@ _VLLM_CONTEXT_MESSAGES = (
         r"The (?:decoder |encoder )?prompt \(length \d+\) plus the number of requested output tokens \(at least 1\) is "
         r"longer than the maximum model length of \d+\. Make sure that `max_model_len` is no smaller than the number "
         r"of text tokens \(prompt \+ requested output tokens\)\."
+    ),
+    # The serving-layer refusal of vLLM 0.30.0 (HTTP 400, param ``input_tokens``), seen in the smoke check "overflow".
+    re.compile(
+        r"This model's maximum context length is \d+ tokens\. However, you requested \d+ output tokens and your "
+        r"prompt contains at least \d+ input tokens, for a total of at least \d+ tokens\. Please reduce the length "
+        r"of the input prompt or the number of requested output tokens\.(?: \(parameter=input_tokens, value=\d+\))?"
     ),
 )
 
