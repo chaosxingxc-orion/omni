@@ -1,6 +1,6 @@
 """The vLLM runtime identity's LIVE half: a process proves, per endpoint, that it is the pinned runtime (decision 9.2).
 
-Owner decision 9.2 (2026-10-28, "按你建议走" -- go with the proposal): ``vllm serve`` runs in the SAME container as the
+Owner decision 9.2 (2026-10-28, translated from Chinese: "go with the proposal"): ``vllm serve`` runs in the SAME container as the
 harness; the pinned "binary" is the Python interpreter plus the vLLM / vllm-ascend source trees plus the image digest;
 and the transport must re-verify ON EVERY SEND that a LIVE process with that identity owns the listening socket, as
 strictly as the llama path does. The llama path's four checks (receipt agreement, pid liveness, ``/proc/<pid>/exe``

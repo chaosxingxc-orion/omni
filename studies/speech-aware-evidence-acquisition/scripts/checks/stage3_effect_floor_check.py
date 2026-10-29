@@ -147,7 +147,7 @@ to the cell's own n by ``anchor * sqrt(anchor_n / rows)`` from the anchor
 NEAREST in log n, so an anchored n reproduces the note's own number exactly
 instead of being re-derived from a neighbour.
 
-**Owner decision 190 (2026-09-29, "好" = approved).** The three per-metric rows
+**Owner decision 190 (2026-09-29, approved by the owner's one-word reply).** The three per-metric rows
 above replace the single provisional SLU anchor (0.735 at n = 200, scaling to
 0.3163 at n = 1,080) that every same-flight design but ``same-flight-paired``
 carried until this decision. The new anchors are the LARGER of the two
@@ -342,7 +342,7 @@ FLOOR_TABLE: dict[str, Floor] = {
     ),
     "same-flight-supply-variant": Floor(
         source=(
-            "owner decision 190 (2026-09-29, \"好\" = approved): per-metric anchors, the "
+            "owner decision 190 (2026-09-29, approved by the owner's one-word reply): per-metric anchors, the "
             "LARGER of the two measured same-flight CONTRAST half-widths at n = 1,080 -- "
             "cell W-SV-1 (intent 0.5093, SLU 1.4866; "
             "docs/results/2026-09-29-slurp-wsv1-fold-a-column-read.md) and cell W4-SV "

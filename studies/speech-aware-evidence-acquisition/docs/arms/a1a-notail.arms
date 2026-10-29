@@ -1,5 +1,5 @@
 # SAEA-E-004F-a1a-notail — the LAST serialization dependency (owner directive
-# 2026-08-12 "排上,tail=0 对比先跑").
+# 2026-08-12 "schedule it; run the tail=0 comparison first" (translated from Chinese)).
 #
 # Fixed windows killed the boundary dependency (slice positions known
 # upfront); the rolling tail (obs_condition_tail_chars: 400) is the one

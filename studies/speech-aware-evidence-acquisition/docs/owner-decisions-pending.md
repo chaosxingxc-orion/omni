@@ -18,7 +18,7 @@ The owner accepted the two items put to them at the close of the R0 repair campa
    external anchor); (b) the GGUF cheap-identity fast path cannot detect an in-place byte
    replacement that preserves size and mtime.
 
-**Interpretation note (recorded because the directive was terse):** "前两项接受" is read as accepting
+**Interpretation note (recorded because the directive was terse):** "the first two items are accepted" (translated from Chinese) is read as accepting
 the *proposed dispositions* — defer entity/QA out of R0, and accept (a) and (b) as boundaries. If the
 owner instead intended entity/QA adapters to be built inside R0, that is the opposite of what is
 recorded here and should be corrected before the fresh third-party review consumes this file.
@@ -59,7 +59,7 @@ frozen, hash-pinned pure functions with no adapter wiring them to a reference la
   already named "entity/QA reference extraction from `wer_tags`/ConEC annotations" as a known,
   intentional deferral pending a **readiness memo that pins the format** — that memo was never
   written. The R0 repair design spec (`docs/superpowers/specs/2026-08-05-saea-r0-repair-trust-boundary-design.md`
-  §6.1, umbrella) independently lists "entity/QA scorer adapter 是否属于 R0 交付（其参考层格式尚未冻结）"
+  §6.1, umbrella) independently lists "whether the entity/QA scorer adapter belongs to the R0 delivery (its reference-layer format is not yet frozen)" (translated from Chinese)
   as an owner-disposition item, not an implementer one.
 - **QA.** No spoken-QA reference layer is wired into this study at all. `data/identity.py` defines
   no QA layer for any carrier. `slue-sqa-5` and `contextasr-bench` (the secondary carriers named in

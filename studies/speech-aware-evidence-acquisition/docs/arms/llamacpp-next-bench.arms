@@ -1,5 +1,5 @@
 # SAEA-BENCH-llamacpp-next — the engine version-upgrade bench (owner
-# approval 2026-08-11 "批准 llama.cpp 升级 bench"). The decode-attribution
+# approval 2026-08-11 "the llama.cpp upgrade bench is approved" (translated from Chinese)). The decode-attribution
 # probe exhausted the configuration space: M1 (VRAM spill) and M2
 # (quantized-KV FA kernel) refuted, batched-MoE scaling badly sublinear
 # (aggregate ~13.1/19.5/27.0 tok/s at 1/2/4 slots), single-slot 13 tok/s

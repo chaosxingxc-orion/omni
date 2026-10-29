@@ -49,7 +49,7 @@ Numeric global caps stay abolished per the 2026-08-06 owner amendment; pre-regis
 and one-shot attempt semantics unchanged.
 
 ## Candidate A (SUBSYSTEM, frozen jointly): the error-pattern multimodal KB
-## ("错题集" — the model's own confusion pairs as retrievable knowledge)
+## (the "error notebook" — the model's own confusion pairs as retrievable knowledge)
 
 FROZEN HYPOTHESIS (superseded 2026-08-14 — see MEASURED CLOSURE). A KB of (speech span,
 gold text, model-error text) triples built OFFLINE from the isolated kb-construction split

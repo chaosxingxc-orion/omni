@@ -4,7 +4,7 @@
 # One bare-core arm on the fast split under the LOCKED serving configuration A;
 # the ONLY delta vs bare-core-ojw is buffer geometry: 10 s buffer with
 # proportionally scaled advance 3/9/8 (the A-2a scaling convention). Owner
-# approved 2026-08-11 ("60s 跑科学 + 10s 探针").
+# approved 2026-08-11 ("60 s for the science runs plus a 10 s probe", translated from Chinese).
 #
 # Pre-registered falsifiable predictions (exposure ledger row 2026-08-11):
 #   (i)  decode-context thesis  -> net wall < the 22.8 min of 60 s attempt

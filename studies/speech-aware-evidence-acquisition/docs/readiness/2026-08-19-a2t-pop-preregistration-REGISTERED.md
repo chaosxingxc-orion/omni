@@ -1,8 +1,8 @@
 # V4 — whole-population regression arm — REGISTERED
 
 Date: 2026-08-19. Status: **REGISTERED — flyable once the machinery lands**. Profile:
-`bounded-discovery-probe`. Owner GO: 2026-08-19 blanket exploration release ("该跑的探索都
-可以跑"); design per the adversarial panel's Finding 3 (refuter-corrected scoping).
+`bounded-discovery-probe`. Owner GO: 2026-08-19 blanket exploration release (translated from Chinese: "every exploration that
+should run may run"); design per the adversarial panel's Finding 3 (refuter-corrected scoping).
 
 ## 1. Question
 

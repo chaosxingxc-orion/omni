@@ -1,7 +1,7 @@
 # Config A″ re-lock: the feature cache earns its keep by vacating the GPU (2026-08-12)
 
-Owner value ruling (2026-08-12): "我是希望我们的方案能够腾出hbm,如果没法空出HBM的话,我们的
-缓存方案没有价值" — the cache scheme's value IS the freed HBM. This document records the
+Owner value ruling (2026-08-12): (translated from Chinese) "I want our scheme to free up HBM; if it cannot free HBM, our cache scheme
+has no value" — the cache scheme's value IS the freed HBM. This document records the
 measured chain that satisfies that ruling and the resulting baseline re-lock A′ → A″.
 
 ## The chain, all measured (no step estimated)

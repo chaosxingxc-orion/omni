@@ -50,11 +50,11 @@ longest call, RTF ≈ 0.57).
 
 | directive element | construct | concrete v1 |
 |---|---|---|
-| 断句 segmentation | 1 — agent construction (OBS policy) | 300s fixed windows, 16kHz mono, no overlap; segment-as-sample; window length is the first OBS knob (substrate being built) |
-| 上下文管理 context management | 2 — knowledge construction (ORG) | bounded carry-state per call: entity/number/term glossary accumulated from already-produced segment transcripts, capacity-capped |
-| 上下文压缩 compression | 2 (ORG policy) | v1 deterministic extraction (pure function, no extra calls); v2 model-made rolling summary via self-cascade (same frozen core) |
-| 多段推理 multi-pass | 1 (pass structure) | ordered per-call segment loop threading the carry state |
-| 状态注入 | 3 — knowledge use (SUPPLY) | carry state enters the next segment's prompt through the existing `supplied_evidence` field, provenance `self-rolling-v1` — reuses the frozen 12-field arm shape (D2 re-freeze expected unnecessary; verify) |
+| segmentation | 1 — agent construction (OBS policy) | 300s fixed windows, 16kHz mono, no overlap; segment-as-sample; window length is the first OBS knob (substrate being built) |
+| context management | 2 — knowledge construction (ORG) | bounded carry-state per call: entity/number/term glossary accumulated from already-produced segment transcripts, capacity-capped |
+| compression | 2 (ORG policy) | v1 deterministic extraction (pure function, no extra calls); v2 model-made rolling summary via self-cascade (same frozen core) |
+| multi-pass | 1 (pass structure) | ordered per-call segment loop threading the carry state |
+| state injection | 3 — knowledge use (SUPPLY) | carry state enters the next segment's prompt through the existing `supplied_evidence` field, provenance `self-rolling-v1` — reuses the frozen 12-field arm shape (D2 re-freeze expected unnecessary; verify) |
 
 Key scientific link: a self-built rolling glossary IS a self-generated
 contextual-biasing list — the same mechanism family as Siskos/ConEC external
@@ -67,10 +67,10 @@ Both workflow nodes have knowledge slots, of different types and sources:
 
 | node | knowledge | source | axis | precedent |
 |---|---|---|---|---|
-| Node-1 断句 | rolling tail conditioning (previous ACCEPTED span's tail in the prompt; model output, never gold) | self | ORG→SUPPLY | Whisper condition-on-previous (strong) — **v1, in scope** |
+| Node-1 segmentation | rolling tail conditioning (previous ACCEPTED span's tail in the prompt; model output, never gold) | self | ORG→SUPPLY | Whisper condition-on-previous (strong) — **v1, in scope** |
 | Node-1 | entity glossary guarding boundaries (never cut inside a name) | external (ConEC participants/bias lists) + self-accumulated | SUPPLY | none (bucket 3) — phase 2 |
 | Node-1 | structural priors (call phases, Q&A turn cadence) | external/static | ORG | meeting-ASR adjacent — phase 3 |
-| Node-2 任务 | bias/keyword lists injected per iteration | ConEC materials (on disk) | SUPPLY | Siskos — the R4 arms |
+| Node-2 task | bias/keyword lists injected per iteration | ConEC materials (on disk) | SUPPLY | Siskos — the R4 arms |
 | Node-2 | **confusable sets** ("heard form" → phonetically-near entity candidates), dual-sourced: deterministic phonetic keying over ConEC entities AND self-detected cross-segment spelling inconsistencies | external-derived + self | ORG+SUPPLY | RECOVER/DeRAGEC class (R6 in-loop) — phase 2 |
 | Node-2.5 | confusable-driven correction re-ask | same | USE | RECOVER-style — phase 2 |
 

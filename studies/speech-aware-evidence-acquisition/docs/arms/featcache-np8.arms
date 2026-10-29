@@ -1,5 +1,5 @@
 # SAEA-BENCH-featcache-np8 — the feature cache retried on the PACKED
-# substrate (owner directive 2026-08-12 "先锁定featcache").
+# substrate (owner directive 2026-08-12 "lock featcache first" (translated from Chinese)).
 #
 # The earlier "efficiency zero" verdict was measured on the idle-rich np4
 # sample-level substrate, where inline encode hid in scheduling gaps. np8

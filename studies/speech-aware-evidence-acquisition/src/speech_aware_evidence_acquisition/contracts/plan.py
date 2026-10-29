@@ -304,8 +304,8 @@ def require_owner_split_allowance(
 
 # The formal execution environment (owner, 2026-10-28). The study runs its
 # experiments in the saea-base Docker image; the former WSL2-only authority and
-# every WSL2 constraint were removed by the owner ("WSL2这种约束都得删了，我们目前是用
-# 之前做的docker来拉起实验的"). A process qualifies when it runs inside a container
+# every WSL2 constraint were removed by the owner (translated from Chinese: "constraints like WSL2 must all be
+# deleted; we now launch experiments with the Docker image built earlier"). A process qualifies when it runs inside a container
 # (``_CONTAINER_MARKER``) that carries the image's own layout (``_IMAGE_MARKERS``).
 _CONTAINER_MARKER = Path("/.dockerenv")
 _IMAGE_MARKERS = (Path("/opt/saea-venv/bin/python"), Path("/opt/umbrella"))
@@ -356,7 +356,7 @@ def assert_execution_scope(profile: object) -> str:
         raise ExecutionScopeError(
             f"execution profile {profile!r} is paper-scale: this Stage-2 study repository "
             f"never runs it; Stage-3 requires {PAPER_GATE_TOKEN} and an independent "
-            "papers/<slug> repository (Decision-Log 续91/续92)"
+            "papers/<slug> repository (Decision-Log 2026-08-04, entries 91/92)"
         )
     raise ExecutionScopeError(
         f"unknown execution profile {profile!r}; allowed Stage-2 profiles are "

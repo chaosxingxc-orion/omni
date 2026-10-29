@@ -1,5 +1,5 @@
 # SAEA-BENCH-decode-q4km — decode-rate ATTRIBUTION probe (owner directive
-# 2026-08-11: "decode 探针跑完把归因结果给我"). The observed decode is 10-20x
+# 2026-08-11: "when the decode probe finishes, give me the attribution results" (translated from Chinese)). The observed decode is 10-20x
 # below what a 3B-active MoE on this card should give (6.31 tok/s per slot at
 # ~1.0k context, 3-4 at ~4.7k, vs a 60-150 tok/s realistic band), and THAT —
 # not token accounting — is what makes large campaigns take days. Three

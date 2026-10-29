@@ -1,6 +1,6 @@
 """Contract: the Stage-2 execution-scope guard is fail-closed (consolidated contract §6/§7).
 
-This repository is a Stage-2 study carrier (umbrella Decision-Log 续91/续92). It accepts
+This repository is a Stage-2 study carrier (umbrella Decision-Log 2026-08-04, entries 91/92). It accepts
 exactly three execution profiles; ``paper-scale-confirmatory`` — and any forged variant —
 is refused before any receipt or model asset is read.
 """

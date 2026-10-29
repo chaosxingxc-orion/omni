@@ -1,5 +1,5 @@
 # SAEA-BENCH-featcache — the owner's feature-cache vision, measured for real
-# (owner directive 2026-08-11 "不能靠观测去进行方案决策,要实际跑出效果来,再lock").
+# (owner directive 2026-08-11 "do not decide the scheme from observation alone; run it, measure the effect, then lock" (translated from Chinese)).
 #
 # Patched llama-server (local commit b3dc62149 on the pinned fdbd6abee, the
 # 93-line diff archived at docs/patches/2026-08-11-mtmd-feature-cache.diff,

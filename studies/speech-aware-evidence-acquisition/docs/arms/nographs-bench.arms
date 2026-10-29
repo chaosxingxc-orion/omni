@@ -1,5 +1,5 @@
 # SAEA-BENCH-nographs — W3: CUDA graphs OFF as a config-hashed server_env
-# (owner directive 2026-08-11 "把W3跑了,之后锁定一个配置基线").
+# (owner directive 2026-08-11 "run W3, then lock one configuration baseline" (translated from Chinese)).
 #
 # W2 measured graphs actively HURTING at batch>1: np4 aligned-concurrency
 # decode 10.75 tok/s with graphs vs 14.43 without (+34%) — re-capture

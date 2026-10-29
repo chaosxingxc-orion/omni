@@ -1,7 +1,7 @@
 """The vLLM runtime receipt at GATE time: what it must say, and that every word of it is re-verified from bytes.
 
-Owner decision 9.3 (2026-10-28, "可以，但是最好用adapter模式兼容" -- approved, but preferably compatible via an adapter
-pattern): a vLLM runtime-receipt schema sits BESIDE the llama.cpp one without loosening it, reached through one
+Owner decision 9.3 (2026-10-28, translated from Chinese: "approved, but preferably compatible via an adapter
+pattern"): a vLLM runtime-receipt schema sits BESIDE the llama.cpp one without loosening it, reached through one
 runtime-identity seam (``contracts.runtime_identity``) that the gate, the transport and the session lifecycle call
 instead of branching on the backend. These tests cover the receipt half of that seam:
 

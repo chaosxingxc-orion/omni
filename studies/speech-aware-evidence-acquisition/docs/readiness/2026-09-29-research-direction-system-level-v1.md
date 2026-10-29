@@ -2,16 +2,14 @@
 
 Date 2026-09-29. Readiness note, docs only; it grants no contact and admits nothing.
 
-## Owner directives (verbatim, with English glosses)
+## Owner directives (translated from Chinese)
 
-The two quotes below are owner-record text kept verbatim, as the decision registry keeps owner rulings; the English
-gloss beside each is the working text.
+The two quotes below are English translations of the owner's messages of 2026-09-29; the originals stay in the chat
+record and are never passed to a model.
 
-1. 「我们调整下课题方向，0906的时候还是聚焦在如何用好主模型，现在调整为如何搭建系统并进行系统级优化」
-   -- "We are adjusting the research direction: on 09-06 the focus was still on how to make good use of the main
+1. "We are adjusting the research direction: on 09-06 the focus was still on how to make good use of the main
    model; it now becomes how to build the system and optimise it at system level."
-2. 「工具应该是模型主动发起调用，而不是系统默认调用，否则就会陷入到自证陷阱，为什么不是ASR+LLM的组合来完成任务，而得用omni agent system！」
-   -- "Tools should be invoked by the model on its own initiative, not called by the system by default; otherwise we
+2. "Tools should be invoked by the model on its own initiative, not called by the system by default; otherwise we
    fall into the self-proof trap -- why would the task not be done by an ASR + LLM combination, and why would it need
    an omni agent system!"
 

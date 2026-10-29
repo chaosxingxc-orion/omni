@@ -1,6 +1,6 @@
 # SAEA-BENCH-b90base — the 90 s-window re-baseline endpoints (owner locked
-# the 90 s window for new campaigns; feature re-cut accepted: "特征该重新做
-# 就重新做"). Zero-evidence (ctx instruction) and matched endpoints on the
+# the 90 s window for new campaigns; feature re-cut accepted: "if the features need
+# to be redone, redo them" (translated from Chinese)). Zero-evidence (ctx instruction) and matched endpoints on the
 # canonical EVIDENCE shape at 90 s windows (evidence 7.6k + audio 1,386 +
 # gen fits the existing 10,240 slot). 90 s cuts are already cached from the
 # buf90 runs (same windows -> same keys), so both arms run warm.

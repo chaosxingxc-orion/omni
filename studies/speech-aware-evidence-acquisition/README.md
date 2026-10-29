@@ -14,7 +14,7 @@ assets in the umbrella lock and are never loaded by this repository.
   `wiki/experiments/speech-aware-evidence-acquisition/README.md` and `docs/datasets.lock.json`.
 - Current execution authority: the single self-contained consolidated owner contract, 2026-08-04
   (`wiki/experiments/speech-aware-evidence-acquisition/2026-08-04-owner-consolidated-execution-contract.md`).
-- **Stage boundary (umbrella Decision-Log 续91/续92):** this is a Stage-2 study carrier. Its
+- **Stage boundary (umbrella Decision-Log 2026-08-04, entries 91/92):** this is a Stage-2 study carrier. Its
   endpoint is one or more qualified paper candidates. Production-scale confirmatory campaigns,
   final superiority claims, manuscripts and publication belong to a separately admitted
   `papers/<slug>` repository via `OWNER_GO_AND_PAPER_EXECUTION_CONTRACT` — this repository never

@@ -12,7 +12,7 @@ Notation per item: **[axis]** · *precedent* (from the R0.1 mechanism map:
 
 ---
 
-## W-A · Agent-system construction （智能体系统搭建）
+## W-A · Agent-system construction
 
 The substrate itself. Every other group's results are conditional on this, so
 W-A owns the "same-substrate" guarantee: when a W-A item changes, the A0
@@ -33,7 +33,7 @@ A-5 built (batch determinism proven). A-6 measured 2026-08-09.
 
 ---
 
-## W-B · Knowledge construction （知识构建）
+## W-B · Knowledge construction
 
 Building the evidence store, independent of any single query. This is where
 the "multimodal knowledge base" belongs.
@@ -52,7 +52,7 @@ the "multimodal knowledge base" belongs.
 
 ---
 
-## W-C · Knowledge consumption （知识消费）
+## W-C · Knowledge consumption
 
 How constructed knowledge reaches the frozen core and changes its output.
 
@@ -70,7 +70,7 @@ none/matched/mismatched). C-1/C-2/C-4/C-5 designed only.
 
 ---
 
-## W-D · System optimization （系统优化）
+## W-D · System optimization
 
 Closing the loop: use signals the agent can actually observe (no logits) to
 choose its own policy. This is construct 4 and the study's contribution core.

@@ -2,7 +2,7 @@
 
 Date: 2026-08-18. Status: **REGISTERED — executable once the suite extension lands and is
 reviewed** (model-free re-read; zero GPU, zero core contact). Profile: `model-free-check`.
-Owner GO: 2026-08-18 ("基本认可" of the coordinator's speech-term program; this is probe ①).
+Owner GO: 2026-08-18 ("broadly approved", translated from Chinese, of the coordinator's speech-term program; this is probe ①).
 Purpose: first evidence on the study's identity question — **does speech knowledge
 participate in the supply loop, or is the audio only a retrieval key?** — by asking WHICH
 KIND of failure supply converts.

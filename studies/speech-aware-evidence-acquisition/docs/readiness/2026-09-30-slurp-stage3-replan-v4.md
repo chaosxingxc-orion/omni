@@ -11,10 +11,8 @@ notes under `docs/results/` named beside each number, the consumption-module des
 
 ## 1. What the survey and the instrument settle
 
-1. **The research direction changed (rows 205, 206).** Owner, 2026-09-29: 「我们调整下课题方向，0906的时候还是聚焦在如何用好主模型，现在调整为如何搭建系统并进行系统级优化」
-   -- "We adjust the research direction: on 09-06 the focus was still how to use the main model well; now it is how to
-   build the system and optimise at system level." And: 「工具应该是模型主动发起调用，而不是系统默认调用，否则就会陷入到自证陷阱，为什么不是ASR+LLM的组合来完成任务，而得用omni agent system！」
-   -- "Tools should be invoked by the model on its own initiative, not called by the system by default; otherwise we fall
+1. **The research direction changed (rows 205, 206).** Owner, 2026-09-29 (translated from Chinese): "We adjust the research direction: on 09-06 the focus was still how to use the main model well; now it is how to
+   build the system and optimise at system level." And: "Tools should be invoked by the model on its own initiative, not called by the system by default; otherwise we fall
    into the self-proof trap -- why would the task not be done by an ASR + LLM combination, and why would it need an omni
    agent system!" Consequences: the object optimised is the model's control decisions through the control plane (what
    to supply, what to present, when to consult a tool); a pinned, logged tool is a system component (the 2026-09-06 "no

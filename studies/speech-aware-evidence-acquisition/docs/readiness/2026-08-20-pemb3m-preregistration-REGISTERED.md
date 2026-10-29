@@ -2,7 +2,7 @@
 
 Date: 2026-08-20. Status: **REGISTERED — flyable once the machinery lands.** Profile:
 `bounded-discovery-probe`. Authority chain: owner approval of the design
-(`2026-08-20-embedder-charter-adjudication.md` §3, "好，认可" recorded 2026-08-20) +
+(`2026-08-20-embedder-charter-adjudication.md` §3, "good, approved" (translated from Chinese) recorded 2026-08-20) +
 P-EMB-3L verdict **LOCAL-EXHAUSTED** (`2026-08-20-pemb3l-verdict.md`), which triggers the
 registered branch "the external dedicated-embedder path becomes the routing-tier's
 representation instrument". Identity/feasibility basis:

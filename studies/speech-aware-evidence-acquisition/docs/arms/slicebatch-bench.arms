@@ -1,5 +1,5 @@
 # SAEA-BENCH-slicebatch — step-2 equivalence + throughput bench (owner
-# directive 2026-08-12 "直接进入step2").
+# directive 2026-08-12 "go straight to step 2" (translated from Chinese)).
 #
 # obs_batch_slices=4 on the fixed-window/no-tail substrate: every window cut
 # and registered before the first model touch, then dispatched through a

@@ -73,20 +73,19 @@ of four study-facing constructs, which sit on top of the contract's
 OBS/ORG/SUPPLY/USE axes as the working vocabulary for what is being built
 and measured:
 
-1. **Agent construction（智能体构建）** — how the inference-time agent is
+1. **Agent construction** — how the inference-time agent is
    assembled around the frozen core: prompt scaffolds, pass structure
    (direct / self-cascade / multi-pass), routing policy, tool wiring,
    output contracts. Primarily OBS plus the control plane itself.
-2. **Knowledge construction（知识构建）** — building and organizing the
+2. **Knowledge construction** — building and organizing the
    evidence store independent of any single query: context materials →
    biasing lists (ConEC), tool-schema registries, exemplar banks,
    retrieval indexes. Primarily ORG.
-3. **Knowledge use（知识使用）** — delivering and consuming knowledge at
+3. **Knowledge use** — delivering and consuming knowledge at
    inference time: evidence injection and dose control, schema supply,
    uncertainty/n-best surfacing, retrieval-grounded correction. Primarily
    SUPPLY + USE.
-4. **Knowledge-utilization-driven agent optimization（基于知识利用优化智能
-   体性能）** — the closed loop: measure whether and how supplied knowledge
+4. **Knowledge-utilization-driven agent optimization** — the closed loop: measure whether and how supplied knowledge
    changed the answer (per-entity-class deltas, dose–response, attribution),
    then adapt the agent — routing between direct and mediated paths, dose
    selection, re-ask policies — with zero parameter training. Cross-axis;

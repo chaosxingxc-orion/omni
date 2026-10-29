@@ -612,10 +612,7 @@ below the bar. Coordinator recommends A.
 - **245** (proposed 2026-10-10 in the coordinator's briefing: R6 = (A) a Perception-side entity-presence / heard-value
   column as a level-2 measurement cell and (B) a Fold A two-arm confirmation of the "lock + core empty verdict + N1 >=
   0.2 gate" delivery rule, both below the 1.5 pp bar, with a waiver of decision 192 requested). Owner, verbatim:
-  「决策245：可以先各自优化后，再级联优化，各自优化过程中，不需要考虑彼此之间的连接关系。在级联优化过程中，前置节点要考虑如何
-  传递更有效的信息给到后置节点，这里面更重要的是优化通信模板，明确好对后续判定最有效的要素长什么样，同时可以返回多选项连同执行
-  度让后续节点去选择，或者后续节点把这个任务当做是一个重排序任务。你注意，这里面最重要的是提供稳定且额外的信息增益！」
-  English: "Optimise each node on its own first, then optimise the cascade. In the node-local phase, ignore the
+  "Decision 245: optimise each node on its own first, then optimise the cascade. In the node-local phase, ignore the
   connections between nodes. In the cascade phase, the upstream node must work out how to pass more effective
   information to the downstream node; what matters most is optimising the COMMUNICATION TEMPLATE: define what the
   elements most useful to the downstream judgement look like. The upstream may also return several options together
@@ -644,7 +641,7 @@ below the bar. Coordinator recommends A.
 
 ## Decisions 246-248 ruled by the owner, 2026-10-10
 
-Owner, verbatim: 「决策246：同意；247：同意；248：按你建议。」 ("246: agreed; 247: agreed; 248: as you recommend.")
+Owner, verbatim (translated from Chinese): "Decision 246: agreed; 247: agreed; 248: as you recommend."
 
 - **246** RULED: R6-P1 (three Perception candidates p1-p3 + twin + lock, TRAIN Fold B 1,080 rows, ceiling 10, ~4.1
   GPU-h; node-local measurement with the free locked-consumer cascade read) is registered during the R5 read and flies
@@ -741,11 +738,7 @@ cell is registered on it.
 
 ## Decisions 249-252 ruled by the owner, 2026-10-10 (verbatim Chinese, English translation, consequences)
 
-Owner: 「决策249：同意；250：A；251：A，许可v3签字；252：我认为这里面分为两个模式，系统优于单次模型调用证明工程基座可行，同时
-training free RL证明通过系统级强化学习后能够看到明确的收益，并且优化和改进这个training free RL算法在多模态知识构建和消费上的
-使用方式，同时在测试集上能够观测到对比业内SOTA的基线水平才可以锁定基线。」
-
-English: "Decision 249: agreed; 250: A; 251: A, allowance v3 signed; 252: I think this splits into two modes: the
+Owner (translated from Chinese): "Decision 249: agreed; 250: A; 251: A, allowance v3 signed; 252: I think this splits into two modes: the
 system beating a single model call proves the engineering base is viable, and training-free RL proves that clear
 gains appear after system-level reinforcement learning, with the use of that training-free RL algorithm in
 multimodal knowledge construction and consumption optimised and improved; and only when a comparison against the
@@ -855,8 +848,8 @@ per row) without loss; those freed contacts can buy verification instead of the 
 
 ## Decisions 253-257 ruled by the owner, 2026-10-10
 
-Owner, verbatim: 「决策253：A；254：按你建议改为VER-1；255-257：同意。」 ("253: A; 254: as you recommend, replaced by
-VER-1; 255-257: agreed.")
+Owner, verbatim (translated from Chinese): "Decision 253: A; 254: as you recommend, replaced by
+VER-1; 255-257: agreed."
 
 - **253** RULED A: the Perception-entity presence line is CLOSED after one round; the p1 presence tag and the K6p key
   remain available as features / actions; the heard-mention channel is recorded as contract-bound (v2 contract only
@@ -875,7 +868,7 @@ VER-1; 255-257: agreed.")
   runtime delivery component `verification-delivery-v1` (support filter over samples + verdict contact) -> DEV
   composed read (lock v2.3 = v2.2 + VER-1) -> test sample.
 
-Decision 257 boundary, confirmed by the owner 2026-10-10 (「好，继续吧」 after the coordinator's clarification): VER-1 is
+Decision 257 boundary, confirmed by the owner 2026-10-10 ("Fine, carry on" after the coordinator's clarification): VER-1 is
 a NODE-LOCAL change at the Solver (three decodes, one c3 verdict contact) followed by a DETERMINISTIC verifier
 (support filter x verdict x N1 gate x v4g) and delivery; no model node consumes the samples (the Reviewer loop stays
 removed, decision 232); no template and no inter-node message schema changes (the communication-template line of
@@ -949,9 +942,9 @@ greedy sample) has CI95 lower bound > 0 and a point >= 0.67 pp (the offline floo
 (decision 247 "stable"); disclosed: the c3 template was authored from Fold A aggregate tables (the rule's thresholds
 were tuned on Fold B, named as the tuning roster).
 
-## Decision 258 ruled A ("继续"); 259 deferred until its proposal; carrier model-free proof on file (2026-10-10)
+## Decision 258 ruled A ("continue"); 259 deferred until its proposal; carrier model-free proof on file (2026-10-10)
 
-Owner: 「决策258：A，继续；259 等方案出来再说。」 -- 258 RULED A: the Fold A confirmation flies with the rule fixed
+Owner (translated from Chinese): "Decision 258: A, continue; 259: wait until the proposal is out." -- 258 RULED A: the Fold A confirmation flies with the rule fixed
 (VER-1b pool + VER-1c c3 column; rows countersigned d3e29c843, receipts minted, flipped to flight commits 4088bb95c /
 e9629b3d4, gates PASS; VER-1b's first launch at 23:35:50Z was refused by the chain's own one-batch guard because the
 VER-1c flip loop's `core.flight.cli check` was alive -- no contact; relaunched after the flip chain ended). 259 (the
@@ -1066,11 +1059,7 @@ registered. Carriers' GPU remains held (242 / 252).
 
 ## Decisions 259-261 ruled by the owner, 2026-10-11; the owner's question on where training-free RL acts
 
-Owner, verbatim: 「决策259：同意；260：A；261：我们本地的GPU的型号只是一个显存只有24GB的便携，在这个基础上，我倾向于认为最多去
-找一下llama.cpp社区是否存在thinging模式的模型，可以提前下载。同步你按照B去处理。我现在疑惑的是，training free RL发生在什么环节，
-提供了怎样的有益增益？我们论文的核心还是去看training free RL这套方案是否有稳定的增益的！」
-
-English: "259: agreed; 260: A; 261: our local GPU is a portable card with only 24 GB of VRAM; on that basis I lean to
+Owner, verbatim (translated from Chinese): "259: agreed; 260: A; 261: our local GPU is a portable card with only 24 GB of VRAM; on that basis I lean to
 at most checking whether the llama.cpp community has a thinking-mode model, which can be downloaded in advance; in
 parallel proceed with B. What puzzles me now is: at which step does training-free RL act, and what beneficial gain
 has it provided? The core of our paper is still whether this training-free RL scheme has a STABLE gain!"
@@ -1136,12 +1125,7 @@ text: those updates never cleared noise. That negative result is as replicated a
 
 ## Owner request 2026-10-11: return to the algorithm; the lineage analysis and decision 263 PROPOSED (coordinator, 2026-10-11)
 
-Owner, verbatim: 「我认为不够，我们需要回归到算法本身，要识别算法本身是否有缺陷，你可以参考下从training free GRPO提出至今的
-training free RL的演进，每一个学术研究工作具体识别和发现了哪些问题，是怎样通过设计和优化学习算法去解决的？具体回答三个问题：
-1）面对我们的具体任务，应该采用哪一种学术基线更优？2）这个学术基线在我们的任务上还有哪些不足？3）我们对已经识别到的不足是否有
-提升和改进的措施和方案？」
-
-English: "I think that is not enough. We need to return to the algorithm itself and identify whether the algorithm has
+Owner, verbatim (translated from Chinese): "I think that is not enough. We need to return to the algorithm itself and identify whether the algorithm has
 defects. Refer to the evolution of training-free RL from the proposal of Training-Free GRPO to now: which problems did
 each academic work identify, and how did it solve them by designing and optimising the learning algorithm? Answer three
 questions: (1) for our specific task, which academic baseline is the better one to adopt? (2) what does that baseline
@@ -1190,22 +1174,14 @@ Answer: `docs/readiness/2026-10-11-slurp-tfrl-lineage-and-algorithm-baseline-ana
 
 ## Owner directions 2026-10-11 (three dimensions + knowledge-side TF-RL); decision 263 AMENDED to v2, decisions 264-265 PROPOSED (coordinator)
 
-Owner, verbatim (message 1): 「这里面你要分成三个维度去看：第一个维度是，training free RL里面，我们的学习要素是什么，谁负责观测，谁负责
-分析和整合，谁负责反思和进一步迭代和优化，比如说模版生成是否还要使用omni模型去生成，是否需要用本地的其他文本能力增强的模型？第二个
-维度是，GRPO这种优化方向和指标，更多的是通过脚本的客观评分去指导优化，而不是通过模型去优化；第三个维度是，你可以参考下skillopt等类
-RSI的优化方案，我们现在面向系统级优化更多的适合RSI的技术方案，当然核心还是要按照training free RL来承载和优化！」
-
-English: "Look at this along three dimensions. First: in training-free RL, what are our learning elements; who observes,
+Owner, verbatim (message 1, translated from Chinese): "Look at this along three dimensions. First: in training-free RL, what are our learning elements; who observes,
 who analyses and integrates, who reflects and iterates / optimises further; for example, should template generation still
 use the Omni model, or do we need another local model with stronger text ability? Second: GRPO's optimisation direction
 and metric are guided by objective script scoring, not by a model's judgement. Third: look at SkillOpt and similar
 RSI-class schemes; for system-level optimisation an RSI-style technical scheme fits us better, while the core is still
 carried and optimised as training-free RL."
 
-Owner, verbatim (message 2): 「同步你还要思考下，从知识构建和消费的维度，我们是否有一些training free RL的方式，比如说基于评价指标和
-bad cases，基于训练集选择性的扩充和添加一些知识等」
-
-English: "In parallel, also think about whether, along the knowledge construction and consumption dimension, we have
+Owner, verbatim (message 2, translated from Chinese): "In parallel, also think about whether, along the knowledge construction and consumption dimension, we have
 training-free RL methods, for example selectively expanding and adding knowledge from the training set based on the
 evaluation metric and the bad cases."
 
@@ -1318,7 +1294,7 @@ Three points the spec needs ruled inside 263-A:
 
 ## Decisions 263-265 ruled by the owner, 2026-10-11
 
-Owner, verbatim: 「决策263：A；264：A；265：同意」 ("263: A; 264: A; 265: agreed.")
+Owner, verbatim (translated from Chinese): "Decision 263: A; 264: A; 265: agreed."
 
 - **263 RULED A** (v2 form): the autonomous typed loop in the RSI / SkillOpt shape with the ACE comparator column at equal
   budget, per the merged spec `docs/superpowers/specs/2026-10-11-slurp-autonomous-typed-loop-with-ace-comparator-design.md`.
@@ -1398,7 +1374,7 @@ two pre-existing test failures.
 
 ## Decision 266 ruled by the owner, 2026-10-11: A + E
 
-Owner, verbatim: 「决策266：A + E」 ("266: A + E.")
+Owner, verbatim (translated from Chinese): "Decision 266: A + E."
 
 - **266-A RULED**: iteration 1 of the typed loop flies the stall default -- one TRAIN Fold B cell with the lock, its
   request-identical twin and the ACE i1 column (the typed arm empty by measurement; delivery-rule candidates read offline);
@@ -1423,7 +1399,7 @@ Owner, verbatim: 「决策266：A + E」 ("266: A + E.")
 
 ## Decision 262 ruled by the owner, 2026-10-11: agreed
 
-Owner, verbatim: 「决策262：同意」 ("262: agreed.")
+Owner, verbatim (translated from Chinese): "Decision 262: agreed."
 
 - **262 RULED**: the paper's core claim is the training-free algorithm named and frozen as "sealed-credit policy search
   over typed system components" (rollout -> per-row typed official credit -> candidate from aggregate tables -> offline or
@@ -1518,7 +1494,7 @@ mint -> flip -> plan pins -> flip -> gates -> queue (GPU resumes).
 
 ### Construction-source column launched; Thinking packet driver merged (coordinator, 2026-10-11)
 
-Owner, verbatim: 「继续，代理回报后合并并起飞 i1」 ("Continue; after the agents report, merge and take off i1.")
+Owner, verbatim (translated from Chinese): "Continue; after the agents report, merge and take off i1."
 
 - Construction column: rows countersigned 08:57Z (1f9070d97), receipt minted, flip chain as task SAEA-Flip-TFRLConst (smoke
   87cb5e960, arm 2b8670a52, pins refreshed, re-converged), **flight commit 70eabd973**, both launch gates PASS, chain task
@@ -1577,11 +1553,9 @@ rows, 5,453.7 speech-audio seconds, smoke 4 rows rc 0, driver rc 0, 09:32-10:36Z
 
 ### Owner directive on the Thinking packets (2026-10-11): reuse analysis, root cause of the encoder rate, CPU pass stopped; i1 proposers launched
 
-Owner, verbatim: 「这个特征处理的速度我们无法接受，你分析两个事情：第一个是特征是否可以重用？也就是比对下thinking和nothinking两个模型的
-mmproj权重，如果是一致的话，就不需要再重新制作了。第二个是假设要重新制作，那你就需要去解决效率问题，当前这个效率我们无法接受，分析下
-瓶颈的根因，并解决它！」 ("This feature-processing rate is unacceptable. Analyse two things: (1) can the features be reused, i.e. compare
+Owner, verbatim (translated from Chinese): "This feature-processing rate is unacceptable. Analyse two things: (1) can the features be reused, i.e. compare
 the Thinking and non-thinking mmproj weights; if identical, no re-encoding is needed; (2) if they must be rebuilt, solve the
-efficiency problem: find the root cause of the bottleneck and fix it.")
+efficiency problem: find the root cause of the bottleneck and fix it."
 
 - **Reuse: no.** Per-tensor data-hash comparison of the two mmproj GGUF files (860 tensors each, identical shapes and dtypes):
   audio encoder `a.` 475 of 522 tensors differ (the 47 equal ones are LayerNorm weights), projector `mm.` 8 of 8 differ, vision
@@ -1628,7 +1602,7 @@ efficiency problem: find the root cause of the bottleneck and fix it.")
 
 ### Fold B column FLYING; GPU packet pass merged (coordinator, 2026-10-11 13:21Z)
 
-- Owner: 「继续，收敛后排队 Fold B 列」. Column flip converged (smoke 4150b157f, arm 88ccd0b7c, siblings, pins refreshed, second loop)
+- Owner: "Continue; once converged, queue the Fold B column". Column flip converged (smoke 4150b157f, arm 88ccd0b7c, siblings, pins refreshed, second loop)
   at **flight commit 6cbd9c707**, both launch gates PASS 13:20:55Z; chain task SAEA-Queue-TFRLi1Col started 13:21:21Z (four-row
   smoke, then 1,080 Fold B rows x 4 contacts: lock delivering, aa twin, ace column at the prepared i1 release; typed arm empty by
   measurement; ceiling 1.5 GPU-h).
@@ -1672,7 +1646,7 @@ efficiency problem: find the root cause of the bottleneck and fix it.")
 
 ### Fold B column re-launched under the rec1 smoke (coordinator, 2026-10-11 15:36Z)
 
-- Owner: 「继续，收敛后排队 Fold B 列」 and the monitoring cadence moved to 30-minute windows; the owner also asked whether GPU work could
+- Owner: "Continue; once converged, queue the Fold B column" and the monitoring cadence moved to 30-minute windows; the owner also asked whether GPU work could
   start and ruled that model rotation follows the experiments, not only the 12-h threshold -- answered: the guard is already
   idle-only and HALTed; the Instruct restore at 13:48Z reset its clock; rotation plan = column (Instruct) -> swap to Thinking for
   266-E smoke + arm -> swap back for the Instruct arm + replicate and the iteration-2 text contacts.
@@ -1837,8 +1811,7 @@ fly the ACE reflector i2 (flip running) and return to the Thinking session when 
 
 ### Owner directive 2026-10-12 (decision 267, RULED): hot paths on Linux-native ext4, never on the Windows filesystem; flip acceleration
 
-Owner, verbatim: 「可以，你注意这个教训是我们之前就有过结论的！不要用windows原有的文件系统，要用linux原生的文件系统进行特征和缓存的制作！」
-English: "Fine, but note this lesson was already concluded before: do not use the original Windows filesystem; make features and caches
+Owner, verbatim (translated from Chinese): "Fine, but note this lesson was already concluded before: do not use the original Windows filesystem; make features and caches
 on the Linux-native filesystem." Context: the coordinator's analysis of the flip chains (40-80 minutes per package) measured the cause as
 9p latency, not CPU: `import core.flight.cli` 38.3 s cold / 11.4 s warm from `/mnt/d/.../src` versus 0.84 s from an ext4 worktree;
 `git status` 7.6 s on /mnt/d versus 0.39 s on ext4 (18,575 tracked files); 20-40 python and 30-60 git calls per cell per flip. Threads
@@ -1973,10 +1946,7 @@ the gap; (3) carriers: A2T all-off A/A (~2 GPU-h), E21 all-off (~4), E22 packets
 
 ### Owner rulings 2026-10-12: 268 B, 269 A, 270 A, 271 A, 272 B, 273 A; Thinking-mode directive (coordinator record)
 
-Owner, verbatim: 「决策268：B；269：A；270：A；271：A；272：B；273：A，我给你一个明确的输入：如果thinking模式的模型效果在系统上可以叠加且更好的话，
-我们就需要基于thinking模式去优化和调整整个工程基座，注意一定要能够让thinking模式做完任务而不是中途截断！同时，注意上下文工程是否要带着thinking的
-中间结果，还是不带？另外你也要分析下llama.cpp是否可以通过外界配置哪些node可以开放thinking，哪些node其实不需要开放thinking来提高系统的吞吐效率！」
-English: "268: B; 269: A; 270: A; 271: A; 272: B; 273: A. A clear input: if the Thinking model's effect stacks on the system and is better,
+Owner, verbatim (translated from Chinese): "268: B; 269: A; 270: A; 271: A; 272: B; 273: A. A clear input: if the Thinking model's effect stacks on the system and is better,
 we must optimise and adjust the whole engineering base around Thinking mode -- and make sure Thinking mode FINISHES the task instead of
 being truncated midway. Also consider whether context engineering should carry Thinking's intermediate results or not. And analyse whether
 llama.cpp can be configured externally so that some nodes open thinking and others do not, to raise system throughput."
@@ -1994,8 +1964,7 @@ throughput model from the measured 22.8 s per contact and 1,032 tokens mean.
 
 ### Owner directive 2026-10-12 09:20Z: unify the engineering base first (model, features, disk); lock experiment efficiency before any further experiment (decision 274 PROPOSED, coordinator record)
 
-Owner, verbatim: 「先把工程基座归一了，用什么模型，读取什么特征，从哪个盘读取，先锁定实验效率，而不是在一些明知道有缺陷的地方反复跑实验」
-English: "First unify the engineering base -- which model is used, which features are read, from which disk they are read -- and lock
+Owner, verbatim (translated from Chinese): "First unify the engineering base -- which model is used, which features are read, from which disk they are read -- and lock
 experiment efficiency first, instead of repeatedly running experiments on spots we already know are defective."
 Coordinator reading: a single declared base (one manifest, one gate) for (1) the core model(s): Instruct and Thinking Q4_K_M with their GGUF +
 mmproj hashes, serving geometry per core, decode policy per core (cap, reasoning budget, context policy); (2) the features: one speech-packet
@@ -2061,9 +2030,7 @@ for today, no headroom for derived media (179 GB) and feature caches (105 GB) gr
 
 ### Decision 284 RULED (owner, 2026-10-12): the data-disk migration in three steps (coordinator record and execution log)
 
-Owner, verbatim: 「我理解我们得做一次数据盘变迁的内容，你这样去做，第一步是按照方案1，划分一块2TB的存储区出来，mount到linux里面，第二步，把E盘已经使用的部分，
-分析下哪些需要搬迁的，搬到ext4盘里面；第三步，删除E盘已经存量的内容，后再剥离一块盘出来，mount到ext4里面，最后给E盘留下500GB的空间就够了」
-English: "We need a data-disk migration. Do it this way: step 1, per option 1 carve out a 2 TB storage area and mount it into Linux; step 2,
+Owner, verbatim (translated from Chinese): "We need a data-disk migration. Do it this way: step 1, per option 1 carve out a 2 TB storage area and mount it into Linux; step 2,
 analyse which of E:'s used content needs to migrate and move it to the ext4 disk; step 3, delete the existing content on E:, then carve
 out another disk and mount it into ext4; in the end leaving E: with 500 GB of free space is enough."
 Execution log: step 1 done 10:05Z -- `E:\saea-data-1.vhdx` (2 TB expandable, diskpart), attached with `wsl --mount --vhd`, formatted
@@ -2077,7 +2044,7 @@ migration and the cut-over of `SPEECHRL_DATA_DIR`; the deletion is executed only
 
 ### Decision 284 step 2 (owner 2026-10-12 10:20Z): delete the ChatGPT-era and Stage-1 artefacts, migrate everything else; no hot/cold by current use (coordinator record)
 
-Owner, verbatim: 「ChatGPT和Stage1产物删掉，其他的都搬到ext4区，不能基于我们现在是否使用来判断冷热」 -- "Delete the ChatGPT-line and Stage-1
+Owner, verbatim (translated from Chinese): "Delete the ChatGPT-line and Stage-1
 products; move everything else to the ext4 area; do not judge hot/cold by whether we currently use it."
 Inventory of E: (1,556 GB, all under speechrl-data; Windows-side sizes): datasets 1,006 (cn-celeb2 144, contextasr-bench 134, librispeech 115,
 slue-sqa-5 110, air-bench 46, cn-celeb1 42, m3-slu 40, meld 32, speech-massive 30, notsofar1 26, fleurs-r 25, fsd50k 23, ... slurp 12.6,
@@ -2097,14 +2064,14 @@ program-archives, manifests, archive, ...) started 10:22Z as task SAEA-Migrate-S
 /home/chao/saea-migration/); the subtrees the flying i3 column writes (runs, attempts, analysis, knowledge, coordination minus the
 deleted packages, serving, locks, receipts, logs) follow after the seal with a final `--delete` pass; verification manifests per subtree;
 then the `SPEECHRL_DATA_DIR` cut-over; then step 3.
-Owner 2026-10-12 10:30Z: 「_repro/ 删除」 -- `_repro/` (29 GB) is DELETED with the ChatGPT-line and Stage-1 artefacts. The running static
+Owner 2026-10-12 10:30Z: "delete `_repro/`" (translated from Chinese) -- `_repro/` (29 GB) is DELETED with the ChatGPT-line and Stage-1 artefacts. The running static
 migration task copies it before the ruling takes effect in the script's list; the ext4 copy is removed right after STATIC_DONE and the E:
 original goes with step 3. Final deletion set: system-text-search, the 2026-10-01..09 ChatGPT-line coordination packages, survey-*, _repro
 (about 104 GB).
 
 ### Terminal clean-up (owner 2026-10-12 10:35Z) and the SOTA comparator table (273 delivered); decision 285 PROPOSED (coordinator)
 
-Owner: 「我们为什么开启了这么多terminal？哪些是必要的，那些是不需要的，这块要清理下！」 Finding: 81 orphaned `conhost.exe` console windows on the
+Owner (translated from Chinese): "Why have we opened so many terminals? Which are necessary and which are not? This needs cleaning up." Finding: 81 orphaned `conhost.exe` console windows on the
 Windows side -- every scheduled-task launch (`wsl.exe` as an interactive task action) opened a visible console and the idle watchdog spawned a
 new one every five minutes; plus console hosts of agents' finished WSL calls and of unrelated programs. Necessary and kept: the serving
 session + its monitor (SAEA-Serving, SAEA-Monitor), the flying i3 column chain (SAEA-Queue-TFRLi3Col), the migration (SAEA-Migrate-Static-284),
@@ -2170,10 +2137,7 @@ owner rulings 285 / 286, i3 closed.
 
 ### Owner input 2026-10-12 11:05Z: the SOTA table is provisional until the Thinking-mode base is locked (285 deferred); 286 RULED -- the native reasoning trajectory is not a controllable input, so its bytes are not part of the end-to-end trace (coordinator record)
 
-Owner, verbatim: 「SOTA对照表里面，我们之前没有用thinking模式作为同意的工程基座，所以这个对照目前看起来不足以支撑我们的结论，我们后续如果锁定thinking模式下的工程基座
-作为我们统一的工程基座的话，再做详细对比，你调研业内明确基线这件事情很有价值！决策286：这里面我们其实发现了一个很有价值的点，我们是否能够操控和优化模型原生
-的推理轨迹呢？我倾向于我们无法做到这件事情，那这样的话，是否还需要把它记录在我们端到端的轨迹中呢？他既不是阶段目标也不是可控的输入？」
-English: "The SOTA table compared systems that did not use Thinking mode as the unified engineering base, so it cannot yet support our
+Owner, verbatim (translated from Chinese): "The SOTA table compared systems that did not use Thinking mode as the unified engineering base, so it cannot yet support our
 conclusions; once the Thinking-mode base is locked as the unified base we redo the detailed comparison -- the survey of explicit industry
 baselines is valuable. 286: a valuable point surfaced here: can we manipulate and optimise the model's native reasoning trajectory? I lean
 to no. If so, does it even belong in our end-to-end trace? It is neither a stage goal nor a controllable input."
@@ -2258,8 +2222,8 @@ the unified base. P5: consolidation: results notes, claim surface under 252 with
 
 ### Owner rulings 2026-10-12 12:10Z: 287 A, 288 A (cut over right after the i3 seal), 289 B, 290 B, 291 = 1.6 TB and try to fold it into the existing 2 TB disk, 292 A, 293 B, 294 A, 295 A (coordinator record)
 
-Owner, verbatim: 「决策287：A；288：按你建议；决策289：B，决策290：B，决策291：按照1.6TB划分吧，另外看下能不能合到之前划分出的2TB空间里面；决策292：A；决策293：B；
-决策294：A，决策295：A」. Consequences: (287) base v1 + the locator gate become standing offline gates; (288) the data-root cut-over runs
+Owner, verbatim (translated from Chinese): "Decision 287: A; 288: as you recommend; 289: B; 290: B; 291: partition 1.6 TB, and see whether it can
+be merged into the 2 TB space carved out earlier; 292: A; 293: B; 294: A; 295: A". Consequences: (287) base v1 + the locator gate become standing offline gates; (288) the data-root cut-over runs
 right after the i3 column seals; (289 B + 290 B) NO compatibility link and NO frozen absolute pins: every `/mnt/e/...` literal in configs,
 scripts and tests is rewritten to the new root (or to a data-root-relative form) in one sweep after the cut-over -- flown cells keep their
 historical identity at their flight commits in git history, unflown cells (Audio2Tool, E21, E22 all-off) re-register with their new
@@ -2371,8 +2335,7 @@ note (Opus) and this ledger entry; no Fold A / DEV flights for refused states. R
 
 ### Owner rulings 297-300 and the 14:33Z incident cause (owner, 2026-10-12 15:25Z; recorded by the coordinator)
 
-Owner (verbatim): 「决策297：同意建议；决策298：同意建议，尽快启动实验；决策299：按你的建议走，最终目标是经过多轮training free RL迭代后能够逼近训练方案；决策300：按你建议到时修复；事实：手动关闭」
-English: "Decision 297: agree with the recommendation; 298: agree with the recommendation, start the experiments as soon as possible;
+Owner (verbatim, translated from Chinese): "Decision 297: agree with the recommendation; 298: agree with the recommendation, start the experiments as soon as possible;
 299: follow your recommendation -- the final goal is that after several rounds of training-free RL iteration we approach the trained
 solutions; 300: fix as you recommend, when the time comes; fact: closed manually."
 
@@ -2599,9 +2562,7 @@ alive; the serving session is swapped, never restarted mid-flight.
 
 ### Owner rulings 301-306 and the priority correction 307 (owner, 2026-10-13 17:40Z; recorded by the coordinator)
 
-Owner (verbatim): 「决策301：A，决策302：A，决策303：A；决策304：可以lock，但是要考虑一个问题，是否有一些节点不需要开思考模式？；决策305/306：按你建议；
-你的实验安排我有些疑问，我们为什么不是优先把training free RL在SLURP上的优化方向和优势都迭代好了之后，算法都按照speech agentic system的模式都进行了相应的适配和改造之后，再开展其他内容的实验呢？」
-English: "301: A; 302: A; 303: A; 304: the lock is fine, but consider one question -- are there nodes that do not need thinking mode at
+Owner (verbatim, translated from Chinese): "301: A; 302: A; 303: A; 304: the lock is fine, but consider one question -- are there nodes that do not need thinking mode at
 all?; 305/306: as you recommend. I have a doubt about your experiment ordering: why do we not first iterate the training-free RL
 optimisation directions and advantages on SLURP to completion, adapt and rework the algorithms into the speech agentic system pattern,
 and only then start the other experiments?"
@@ -2774,9 +2735,7 @@ receipt's `authored` / `source` fields. The loop is ready for its next use on th
 
 ### Owner rulings 308-311 (owner, 2026-10-14 about 16:00Z; recorded by the coordinator)
 
-Owner (verbatim): 「决策308：按你的建议走；决策309：这里面 暴露了一个问题，我们的实验中断后恢复的能力太差了，你要系统性整改，另外分析下为什么需要用这么多gpu hours?我们目前应该不涉及大规模实验才对，即便要做大规模实验，你现在的实验基线锁定了吗？决策310：授权；决策311：可以；」 and, a few minutes later:
-「我认为现在的实验效率太低了，你分析下根因，以及寻找下如何提升实验效率的方式和方法！」
-English: "308: go with your recommendation. 309: this exposes a problem -- our ability to recover an interrupted experiment is far too weak; rectify it
+Owner (verbatim, translated from Chinese; two messages a few minutes apart): "Decision 308: go with your recommendation. 309: this exposes a problem -- our ability to recover an interrupted experiment is far too weak; rectify it
 systematically; also analyse why so many GPU hours are needed -- we should not be running large-scale experiments at this point, and even if we
 were, is your experimental baseline locked? 310: authorised. 311: fine." / "I think the experiments are far too inefficient now; analyse the root
 causes and find ways and methods to raise experimental efficiency."
@@ -2847,7 +2806,7 @@ not an unlocked baseline (v3.0 is the delivering arm of every round).
 
 ### Owner rulings 312-315 (owner, 2026-10-14 about 16:40Z; recorded by the coordinator)
 
-Owner (verbatim): 「决策312：不加，决策313,314,315：按照你的建议走；」 English: "312: no (no second GPU); 313, 314, 315: go with your recommendations."
+Owner (verbatim, translated from Chinese): "312: no (no second GPU); 313, 314, 315: go with your recommendations."
 
 - **312 B (RULED):** no second GPU and no rented GPU; one serial RTX 5090 remains the budget.
 - **313 A (RULED):** from NX-T R2 onward, same-flight node columns carry no twin arm (the in-flight A/A offset on this core is measured twice:
@@ -2902,8 +2861,7 @@ Owner (verbatim): 「决策312：不加，决策313,314,315：按照你的建议
 
 ### Owner rulings 316-318 (owner, 2026-10-15 about 14:10Z; recorded by the coordinator)
 
-Owner (verbatim): 「决策316：A，决策317：如果识别到本机不可都行，不要因为特殊的量化方案而改变基线配置，我们后期去寻找更优的GPU服务器解决这个问题，决策318：A」
-English: "316: A. 317: if the local machine cannot do it, fine -- do not change the baseline configuration for a special quantisation scheme; we will
+Owner (verbatim, translated from Chinese): "316: A. 317: if the local machine cannot do it, fine -- do not change the baseline configuration for a special quantisation scheme; we will
 look for a better GPU server later to solve this. 318: A."
 
 - **316 A (RULED):** a resumed test-sample read is admitted under the narrow reading: the one-attempt budget exempts only the predecessor attempts a
@@ -3009,7 +2967,7 @@ look for a better GPU server later to solve this. 318: A."
 
 ### Owner ruling 320 B (owner, 2026-10-16 about 23:25Z; recorded by the coordinator)
 
-Owner (verbatim): 「决策320：B」 English: "Decision 320: B" -- the B' option as proposed at 23:55Z on 2026-10-15: a resume that keeps the 1,029 complete
+Owner (verbatim, translated from Chinese): "Decision 320: B" -- the B' option as proposed at 23:55Z on 2026-10-15: a resume that keeps the 1,029 complete
 rows of the stopped rec1 attempt and flies the 51 remaining rows (the failing row included) under the merged absent-arm fix; an EXPLICIT owner
 exception to the package rule "at most one root-diagnosed recovery re-registration per run id" (this is the second, rec2); mode A (trace
 replay, predecessor trace sha 3238cd8a...) because `rails/runner.py` moved; no `--allow-output-change`; the registered roster (1,080) and the
@@ -3024,7 +2982,7 @@ read at n = 1,080 intact. Cost about 1.5 GPU-h after the successor-3 seal; the s
   wake 2026-10-17 04:44:25Z (power button). The first matches the "85-minute stall" recorded at 07:30Z on 2026-10-16 (that section attributed
   it to Windows memory compression; the compression was real but the stall was the sleep); the second cost 5 h 10 min of the test read
   (checkpoint 2,538 -> 2,587 across the night; rows and log agree: 2,586 checkpointed vs 2,585 workflow ends at 04:47Z, so no durability
-  defect). The owner confirmed in conversation: 「服务器休眠了，后面继续吧」 ("the server went to sleep; carry on").
+  defect). The owner confirmed in conversation (translated from Chinese): "the server went to sleep; carry on".
 - AC standby and hibernate timeouts were already 0 (never); the sleeps were therefore triggered by an action, most likely the lid. Change made:
   lid-close action on AC set to "do nothing" (`powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0`); monitor timeout on AC 0.
   The periodic WSL cache drop stays (it still protects the host from the page-cache growth). GPU after the wake: 1,430 MHz, 93 W against a
@@ -3312,7 +3270,7 @@ read at n = 1,080 intact. Cost about 1.5 GPU-h after the successor-3 seal; the s
   FN, intent unchanged; rough ceiling of removing it ~+1.4 pp word-level SLU). Root cause: exhaustive verification over every candidate
   intent and supplied item with no stopping rule, under greedy decoding. NX-T R3 (326 A template column, Sonnet building) arms: t1
   decide-once, t2 grounded-or-empty, t3 supply-focus (replaces type-inventory), t4 = t1 + t2; twin aa; lock delivering.
-- Owner, verbatim: 「决策329：A，决策330：A」 (English: "Decision 329: A; decision 330: A").
+- Owner, verbatim (translated from Chinese): "Decision 329: A; decision 330: A".
 - **329 A:** a DECODING-POLICY control axis is opened: a same-flight column whose arms differ only in the Solver's sampling parameters
   (temperature / top_p / top_k / presence penalty, fixed seed), with a twin and the greedy lock delivering. Instrument work is model-free
   (Sonnet) and starts after the R3 package lands (both touch the column instrument). It flies after R3.
@@ -3323,7 +3281,7 @@ read at n = 1,080 intact. Cost about 1.5 GPU-h after the successor-3 seal; the s
 
 ### Owner rulings 331 A, 332 A, 333 B, 322 A (coordinator, 2026-10-18 16:10Z)
 
-Owner, verbatim: 「决策331：A，决策332：A，决策333：B，决策322：A」 (English: "Decision 331: A; decision 332: A; decision 333: B; decision 322: A").
+Owner, verbatim (translated from Chinese): "Decision 331: A; decision 332: A; decision 333: B; decision 322: A".
 - **331 A:** when the NX-T R2 rec2 chain exits rc 0, the queue proceeds without an owner read: the 330 diagnostic probe (< 1 GPU-h), then
   NX-T R3 (Solver instruction-template column, ~35 GPU-h). The 324-B Fold A confirm (Perception no-think, ~5 GPU-h) moves after R3 and flies
   only if the R2 same-roster replicate reads no resolved loss.
@@ -3382,8 +3340,8 @@ Owner, verbatim: 「决策331：A，决策332：A，决策333：B，决策322：
 
 ### Owner decision brief 2026-10-19 02:15Z: open decisions 334-337, stage, plan (coordinator, on the owner's request)
 
-Owner, verbatim: 「把需要我决策的事项，详细的梳理出来并解释给我听，同时把当前的工作阶段和在之后的工作计划也列一个详细的方案出来！」 (English: "Lay out
-the items that need my decision in detail and explain them to me; also give a detailed plan of the current work stage and the work after it.")
+Owner, verbatim (translated from Chinese): "Lay out
+the items that need my decision in detail and explain them to me; also give a detailed plan of the current work stage and the work after it."
 - State: R2 rec2 487 / 1,054 flown rows checkpointed at 02:05Z (~42 rows/h, GPU 93 %); seal re-estimated ~2026-10-19 15:30Z (was 14:00Z);
   projected spend ~25 GPU-h under the 31.3 ceiling. SAEA-Queue-W322 Running (armed); carrier / NXT4 hooks Ready; master clean. No decision
   blocks the queue.
@@ -3402,10 +3360,9 @@ the items that need my decision in detail and explain them to me; also give a de
 
 ### Owner rulings 334 B, 335 B, 336 A, 337 (= 285) fine-tuned target (coordinator, 2026-10-19 02:20Z)
 
-Owner, verbatim: 「决策334：B，决策335：B，决策336：A，决策337：还是要把目标靶放到训练的对比上，虽然我们叫training free RL，但也是在针对任务做training，只是不调参数而已，我们要摸一下这类方法的天花板」
-(English: "Decision 334: B; decision 335: B; decision 336: A; decision 337: the target must still be set against the trained systems --
+Owner, verbatim (translated from Chinese): "Decision 334: B; decision 335: B; decision 336: A; decision 337: the target must still be set against the trained systems --
 although we call it training-free RL, it is still training on the task, only without changing parameters; we want to find the ceiling of
-this class of methods.")
+this class of methods."
 - **334 B:** the 324-B Fold A confirm of Perception no-think (only if the R2 replicate reads no resolved loss) flies after R4, inside the Fold A
   confirm batch; the armed queue is unchanged.
 - **335 B:** one Fold A column holds each nominated single arm (R1 Perception no-think, R3 template, R4 decoding), the composed arm, a twin and
@@ -3440,8 +3397,8 @@ this class of methods.")
 
 ### Owner ruling 340: test-sample error analysis allowed, no tuning on it (coordinator, 2026-10-19 02:50Z)
 
-Owner, verbatim: 「面向测试集的分析也可以开展，我们不基于测试集调优就好了」 (English: "Analysis aimed at the test set may also be carried out;
-we just must not tune on the test set.")
+Owner, verbatim (translated from Chinese): "Analysis aimed at the test set may also be carried out;
+we just must not tune on the test set."
 - **340:** a model-free error analysis of the SEALED successor-3 run on the 3,010-row test sample (v3.0) is allowed: the same decomposition as
   the DEV / Fold B note, plus a transfer check (does the test decomposition match DEV / Fold B). Guards: (1) no model, server or GPU contact; no
   new test generation; (2) aggregates only in documents (no utterance, transcript or output text); (3) no lever, arm, prompt, threshold,
@@ -3452,10 +3409,9 @@ we just must not tune on the test set.")
 
 ### Owner rulings 338 and 339 (coordinator, 2026-10-19 02:55Z)
 
-Owner, verbatim: 「决策338：如果我们当前没有锁定SLURP的完整技术方案，就先去锁定SLURP的方案，其他数据集上的实验都可以推迟；决策339：之前就放开过啊，我们是接受主动调用ASR工具进行转写的，但是不要做默认转写，要进行触发式转写」
-(English: "Decision 338: if we have not yet locked the complete SLURP technical scheme, lock the SLURP scheme first; the experiments on the
+Owner, verbatim (translated from Chinese): "Decision 338: if we have not yet locked the complete SLURP technical scheme, lock the SLURP scheme first; the experiments on the
 other datasets can all be postponed. Decision 339: that was already opened before -- we accept a model-initiated call of an ASR tool for
-transcription, but no default transcription: the transcription must be triggered.")
+transcription, but no default transcription: the transcription must be triggered."
 - **338:** SLURP lock first. The P3.2 / P3.3 carrier runs (A2T / E21 / E22) are DEFERRED until the composed SLURP lock v3.x is sealed (their
   packages stay registered / built, unflown). The queue is rewired (02:55Z): `window_322_post_restart.sh` starts only SAEA-Queue-NXT4, and the
   installed wrapper `/home/chao/saea-queue/queue_nxt4.sh` now waits for `CHAIN_NXT3_EXIT rc=0` in `/home/chao/nxt3-chain.out` (backup
@@ -3510,9 +3466,8 @@ transcription, but no default transcription: the transcription must be triggered
 
 ### Owner rulings 341 A and 342 A (Qwen3-ASR only; VRAM-bounded) (coordinator, 2026-10-19 03:45Z)
 
-Owner, verbatim: 「决策341：A，决策342：A，工具的话，你考虑下qwen3-ASR系列的模型其他的都不用太关注了，而且要考虑下我们的显存容量限制」
-(English: "Decision 341: A; decision 342: A. For the tool, consider the Qwen3-ASR series of models and do not pay much attention to the
-others; also take our GPU-memory capacity limit into account.")
+Owner, verbatim (translated from Chinese): "Decision 341: A; decision 342: A. For the tool, consider the Qwen3-ASR series of models and do not pay much attention to the
+others; also take our GPU-memory capacity limit into account."
 - **341 A:** the 338 lever column is built now (model-free, Sonnet worktree, from `docs/superpowers/specs/2026-10-19-slurp-338-lever-column-design.md`)
   and flies after R4: `l1-support`, `l2-union`, `aa`, `lock`; L1 subject to the free check over R4's sealed decodes (drop below +0.67 pp).
 - **342 A, amended to the Qwen3-ASR series:** the tool is built now (model-free) from
@@ -3564,10 +3519,9 @@ Fold B (n = 1,080), CPU passes sealed (ledger row consumed). Canonical WER / sen
 
 ### Owner direction 2026-10-19 ~11:00Z: proper-noun-enhanced ASR decoding; single-module optimisation continues; decision 344 PROPOSED (coordinator, 11:10Z)
 
-Owner, verbatim: 「我在想这部分你是不是可以考虑做一些专有名词强化的ASR解码，来提升下模型的表现？像qwen-ASR这种模式，我们是否能够对他做一些优化，提升和改进呗」
-(English: "I am thinking: for this part, could you consider proper-noun-enhanced ASR decoding to raise the model's performance? For a model
-of the Qwen-ASR kind, can we optimise, raise and improve it?") and 「要注意我们之前讨论的内容，单模块的优化还是要进行的！」 (English: "Mind
-what we discussed before: the single-module optimisation must still go on!").
+Owner, verbatim (translated from Chinese): "I am thinking: for this part, could you consider proper-noun-enhanced ASR decoding to raise the model's performance? For a model
+of the Qwen-ASR kind, can we optimise, raise and improve it?" and "Mind
+what we discussed before: the single-module optimisation must still go on!".
 - Reading: 343 is HELD (not closed) pending a biasing study; the ASR line is pursued as contextual biasing of the pinned Qwen3-ASR (in scope:
   "contextual biasing" is a named boundary task), training-free: Qwen3-ASR accepts context terms in its text prompt (hf card hotword example;
   arXiv 2608.05759), plus llama-server `logit_bias` and n-best union. Knowledge source = the TRAIN folds view excluding Fold A / B; scope per
@@ -3580,8 +3534,8 @@ what we discussed before: the single-module optimisation must still go on!").
 
 ### Owner ruling 344 A; 322 window incident (data VHDX detached by wsl --shutdown); power plug replaced, GPU at 175 W; resumption (coordinator, 2026-10-24 13:30Z)
 
-Owner, verbatim: 「决策344：A」 (2026-10-20) and 「继续吧，我们换了原装电池插头，GPU配置可以调的更高一些」 (2026-10-24; English: "Continue; we
-replaced the original battery/power plug, the GPU configuration can be set higher.").
+Owner, verbatim (translated from Chinese): "Decision 344: A" (2026-10-20) and "Continue; we replaced the original battery/power plug,
+the GPU configuration can be set higher." (2026-10-24).
 - 322 window, 2026-10-20 11:29-11:38Z: R2 rec2 sealed rc 0 at 11:29:29Z (the rec2 column took ~45 h against the 23.5 h estimate: the laptop
   ran on a degraded power plug; see below); the orchestrator stopped the server, wrote memory=36GB, shut WSL down and ran the post step, which
   REFUSED: `wsl --shutdown` detaches the data VHDX (/mnt/saea-data-1; mounted only by the boot-time task SAEA-Mount-Data1), so the data root
@@ -3589,7 +3543,7 @@ replaced the original battery/power plug, the GPU configuration can be set highe
   8b27c67ce: the post step starts SAEA-Mount-Data1 and waits for the data root. The coordinator's rerun on 10-20 was lost with the session
   (exit 4, no log); the host then rebooted (power work). GPU idle 2026-10-20 11:29Z -> 2026-10-24 (resumed today).
 - Power: nvidia-smi now reports Current / Requested Power Limit 175 W (Default 95 W, Max 175 W; before the plug change the card was held at
-  the lower cap, which explains the 2x slowdown of R2 rec2). Windows scheme 高性能 (High performance). No geometry change (VRAM unchanged:
+  the lower cap, which explains the 2x slowdown of R2 rec2). Windows power scheme "High performance". No geometry change (VRAM unchanged:
   np4 x 24,576 holds 22,976 of 24,463 MiB); the expected effect is throughput back to the measured 1.84 rows/min or better. Verified on the
   R3 flight by the throughput table.
 - 344 A: the biasing instrument merged (d38ef3f7f, Sonnet 8658908dc; smoke: context rendered as the ChatML system turn, output changed on
@@ -3636,9 +3590,8 @@ replaced the original battery/power plug, the GPU configuration can be set highe
 
 ### 2026-10-24 17:30Z -- Owner directive on the Solver forced-close share; within-row analysis across two same-form flights; 345 proposed
 
-- Owner, verbatim: 「强制截断率的配置，我们要分析调整和优化！你想如果我们的强制截断率都达到了45%的话，我们的solver基本上处于不可用的状态！」
-  (English: "The forced-close configuration must be analysed, adjusted and optimised. Think about it: if our forced-close share reaches 45 %,
-  our Solver is basically in an unusable state.")
+- Owner, verbatim (translated from Chinese): "The forced-close configuration must be analysed, adjusted and optimised. Think about it: if our forced-close share reaches 45 %,
+  our Solver is basically in an unusable state."
 - Coordinator analysis (model-free; `scripts/analysis/forced_close/within_row_forced_close.py`, output
   `forced-close-within-row-r2b-vs-r2rec2.json`; development numbers on TRAIN Fold B; no reasoning text exists in the seals). The Solver lock arm
   (`budget-3072`, same form, same roster) was decoded twice: R2b (2026-10-18, 1,080 rows, forced 433 = 40.1 %) and R2 rec2 (2026-10-20, 1,054
@@ -3671,7 +3624,7 @@ replaced the original battery/power plug, the GPU configuration can be set highe
 
 ### 2026-10-24 17:50Z -- Owner ruling 345 A
 
-- Owner, verbatim: 「决策345：A」 (English: "Decision 345: A").
+- Owner, verbatim (translated from Chinese): "Decision 345: A".
 - **345 A RULED: the forced-close efficiency rule.** A Solver arm that cuts the Solver forced-close share by >= 15 pp (absolute, against the
   in-flight twin / delivering lock of the same flight) with no resolved loss (SLU-F1 delta CI95 lower bound >= -1.49 pp AND intent delta CI95
   lower bound >= -0.65 pp against the twin) enters the composed lock v3.x as an EFFICIENCY component even when its pre-registered score word is
@@ -3714,7 +3667,7 @@ replaced the original battery/power plug, the GPU configuration can be set highe
 
 ### 2026-10-24 20:05Z -- Owner ruling 343 A
 
-- Owner, verbatim: 「决策343：A」 (English: "Decision 343: A").
+- Owner, verbatim (translated from Chinese): "Decision 343: A".
 - **343 A RULED: the triggered-ASR line on SLURP is CLOSED.** No Fold B triggered-transcription column flies. Measured record of the line
   (TRAIN Fold B, development numbers): ceilings +4.64 (Qwen3-ASR 1.7B unbiased), +5.18 (best biasing variant V4 n-best union N = 100),
   +5.47 (two-tool union with Whisper) perfect conversion, +2.1 to +2.5 pp at the measured uptake 0.457, against Whisper's +5.07 and the
@@ -3824,7 +3777,7 @@ replaced the original battery/power plug, the GPU configuration can be set highe
 
 ### Owner ruling 346 A (coordinator, 2026-10-25 23:30Z): the 345 intent no-loss test is the preregistered NO-RESOLVED-LOSS (upper-bound) form
 
-Owner, verbatim: 「决策346：A，继续，R4读数出来后告诉我」 (English: "Decision 346: A; continue; tell me once the R4 read is out").
+Owner, verbatim (translated from Chinese): "Decision 346: A; continue; tell me once the R4 read is out".
 
 - **346 A:** in ruling 345 A the no-resolved-loss test reads: SLU-F1 delta CI95 LOWER bound >= -1.49 pp (unchanged) AND intent delta CI95
   UPPER bound >= -0.65 pp (the NX-T R1 NO-RESOLVED-LOSS form already preregistered in the R3 and R4 readers: no resolved intent loss). The

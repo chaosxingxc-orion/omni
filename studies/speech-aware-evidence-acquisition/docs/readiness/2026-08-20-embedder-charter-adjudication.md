@@ -1,6 +1,6 @@
 # Owner adjudication — embedding models enter under the retriever clause, encode-only enforced
 
-Date: 2026-08-20. Authority: owner decision ("好，认可", same day), on the selection ticket's
+Date: 2026-08-20. Authority: owner decision ("good, approved", translated from Chinese, same day), on the selection ticket's
 charter question (`2026-08-20-omni-embedding-selection.md`).
 
 ## The ruling

@@ -270,7 +270,7 @@ proof, its allowance receipt and its draft rows byte-identical.
 
 ## 9. Allowance signed for the SAMPLE under owner decision 151; the closure is not
 
-Owner decision 151 (2026-09-27, "决策3：现在签" -- "Decision 3: sign now.") signed the section 7.2 receipt
+Owner decision 151 (2026-09-27, "Decision 3: sign now.", translated from Chinese) signed the section 7.2 receipt
 for the sample: `docs/receipts/owner/2026-09-27-slurp-test-sample-allowance-v1.json`, schema
 `saea-owner-split-allowance-v1`, status `authorised`, binding `SLURP-TEST-SAMPLE-3010-V1` (split identity
 `0164dabf…`, both identity hashes recomputed from the committed item ids when the receipt was written) and

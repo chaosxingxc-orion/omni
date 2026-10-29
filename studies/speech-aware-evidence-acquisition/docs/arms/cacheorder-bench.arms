@@ -1,6 +1,6 @@
 # SAEA-BENCH-cacheorder-q4km — the combined cache bench: slot affinity +
 # stable-first prompt order + evidence-sized timeout (owner GO 2026-08-11
-# "V1 补丁和组合 bench 落下去").
+# "land the V1 patch and the combined bench" (translated from Chinese)).
 #
 # Supersedes SAEA-BENCH-idslot-q4km, whose read-out (ABORTED, 95 calls,
 # 1 cache hit in 91 evidence slices) proved pinning alone cannot help while

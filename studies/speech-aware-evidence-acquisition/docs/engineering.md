@@ -447,7 +447,7 @@ current, R0-form entrypoint contract (not the retired pre-R0 "always refuses" be
 arguments refuses with exit 2, neither entrypoint contains a model-touch code path, and
 `reproduce.sh` forwards a runtime root to the verify gate (`tests/contract/test_scripts_fail_closed.py`).
 
-Execution scope (consolidated contract §6/§7; umbrella 续93): every model touch must present a
+Execution scope (consolidated contract §6/§7; umbrella Decision-Log 2026-08-04, entry 93): every model touch must present a
 structured `contracts.ExecutionPlan` — profile, carrier lock key, split role (`discovery`/`dev`
 only), split identity hash, planned calls/GPU-hours/audio-seconds (each a finite positive number,
 integral where applicable — no numeric ceiling since the 2026-08-06 owner amendment retired the

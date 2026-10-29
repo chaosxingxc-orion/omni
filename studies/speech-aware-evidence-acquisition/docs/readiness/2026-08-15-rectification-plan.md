@@ -10,7 +10,7 @@ Sonnet=scoped code.
 
 - R1 Literature backfill [Opus, IN FLIGHT]: every paper cited by the two 2026-08-14/15
   survey notes fetched via scripts/survey/sf_fulltext_fetch.py, ledger-registered
-  (FETCH 即登记), receipts committed. Done = 100% of citations registered or failure-annotated.
+  (a fetch is itself a registration), receipts committed. Done = 100% of citations registered or failure-annotated.
 - R2 Survey protocol hardening [DONE]: standing memory written — every future survey brief
   carries fetch-and-register + local-ledger-first dedupe (1,459 rows of prior holdings).
 - R3 Compliance check script [Sonnet, low priority]: offline diff of survey-note citations

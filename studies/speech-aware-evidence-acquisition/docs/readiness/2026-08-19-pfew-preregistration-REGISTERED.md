@@ -2,7 +2,7 @@
 
 Date: 2026-08-19. Status: **REGISTERED — flyable once the machinery lands** (GPU gap-filler
 behind the M-line queue). Profile: `bounded-discovery-probe`. Owner GO: 2026-08-19 second-arc
-design order ("重新设计一组探索任务计划…让GPU利用率拉满"). Arc: probe 1 of the
+design order (translated from Chinese: "redesign a set of exploration task plans ... so that GPU utilisation is maxed out"). Arc: probe 1 of the
 routing-tier × filling-tier program. Samples: the SAME frozen 60 SLURP devel samples (seed
 20260807); decode config identical to the consumed P-SLU flights.
 
