@@ -4,6 +4,9 @@
 #
 # usage (on an NPU host):
 #   bash npu_serve.sh thinking <cards e.g. 0,1> <port> [tp]
+#     optional env overrides: NAME and MAX_NUM_SEQS (thinking only; container name default saea-serve-thinking),
+#     default MAX_NUM_SEQS 4; CPUSET (default 128-191) and HCCL_BASE_PORT (default unset: the HCCL default applies;
+#     set a distinct value per instance when several instances share the host network).
 #   bash npu_serve.sh embed <view-id> <card> <port>
 # The container mounts ONLY the named cards, so the harness telemetry (read_gpu -> npu-smi) sees exactly them.
 set -euo pipefail
@@ -36,14 +39,26 @@ if bad:
 
 run() {
   local name=$1 cards=$2; shift 2
+  local cpuset=${CPUSET:-128-191}
+  local hccl_args=()
+  if [[ -n "${HCCL_BASE_PORT:-}" ]]; then hccl_args=(-e "HCCL_IF_BASE_PORT=$HCCL_BASE_PORT"); fi
   local log=$LOGS/$name-$(date +%Y%m%dT%H%M%S).log
+  # HCCL needs the host NIC that carries the node's IPv4 address, else hcclGetRootInfo fails (code 19). Verified on 181.
+  local nic; nic=$(ip -o -4 addr show scope global | awk '{print $2; exit}')
+  # Daemon-managed container (docker run -d): it is not a child of this shell or of any ssh session, so a dropped
+  # connection cannot stop it. --restart no: a crashed server stays down for the owner to read, never loops.
+  # The log follower is detached (setsid, no tty, SIGHUP ignored) and writes the same CephFS log path as before.
   # shellcheck disable=SC2046
-  nohup docker run --rm --name "$name" --network host --shm-size 16g --cpuset-cpus 128-191 \
+  docker run -d --rm --restart no --name "$name" --network host --shm-size 16g --cpuset-cpus "$cpuset" \
+    "${hccl_args[@]}" -e HCCL_SOCKET_IFNAME="$nic" -e GLOO_SOCKET_IFNAME="$nic" -e TP_SOCKET_IFNAME="$nic" \
     $(devices "$cards") \
     -v /usr/local/Ascend/driver:/usr/local/Ascend/driver:ro \
     -v /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi:ro \
+    -v /etc/hccn.conf:/etc/hccn.conf:ro -v /etc/ascend_install.info:/etc/ascend_install.info:ro \
+    -v /usr/local/Ascend/firmware:/usr/local/Ascend/firmware:ro -v /usr/local/dcmi:/usr/local/dcmi:ro \
     -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni \
-    --entrypoint vllm "$IMAGE" serve "$@" > "$log" 2>&1 < /dev/null &
+    --entrypoint vllm "$IMAGE" serve "$@" > /dev/null
+  setsid nohup docker logs -f "$name" > "$log" 2>&1 < /dev/null &
   echo "started $name; log $log"
 }
 
@@ -54,10 +69,10 @@ case $KIND in
     MESSAGE="Considering the limited time by the user, I have to give the solution based on the thinking directly now."
     # The forced string's whitespace around the message is the section-4 ASSUMPTION the smoke verifies.
     REASONING=$(python3 -c 'import json,sys; print(json.dumps({"reasoning_end_str": sys.argv[1] + "\n</think>\n\n"}))' "$MESSAGE")
-    run saea-serve-thinking "$CARDS" "$M/qwen3-omni-30b-a3b-thinking" \
+    run "${NAME:-saea-serve-thinking}" "$CARDS" "$M/qwen3-omni-30b-a3b-thinking" \
       --served-model-name qwen3-omni-30b-a3b-thinking --host 127.0.0.1 --port "$PORT" \
       --dtype bfloat16 --tensor-parallel-size "$TP" \
-      --max-model-len 24576 --max-num-seqs 4 \
+      --max-model-len 24576 --max-num-seqs "${MAX_NUM_SEQS:-4}" \
       --reasoning-parser qwen3 --reasoning-config "$REASONING" \
       --enable-auto-tool-choice --tool-call-parser hermes \
       --limit-mm-per-prompt '{"audio": 1, "image": 0, "video": 0}' \
