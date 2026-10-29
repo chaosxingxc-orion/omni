@@ -360,6 +360,92 @@ Line numbers in `contracts/gate_runtime_vllm.py` are those of commit `32589378`,
   instance's profile env (`deployment.py:517`) but no NIC today; S10 adds it and refuses to emit argv without one
   (plan `:390-392`).
 
+Successor note (2026-10-29, after commits `8fd6a533`, `444de239`, `d7c8f17a`): state after the fixes. The note above
+stays as the record of what the working tree looked like before them; the items below say what is true now. Line
+numbers are those of the current tree (study commit `74b56ac7`); host scripts under `work/scripts/` are outside git.
+
+- Interface variables. `DEPLOYMENT_ENV_KEYS` is exactly `HCCL_IF_BASE_PORT`, `HCCL_SOCKET_IFNAME`,
+  `GLOO_SOCKET_IFNAME`, `TP_SOCKET_IFNAME` (`contracts/gate_runtime_vllm.py:132-136`). `pinned_environment` drops them
+  (`gate_runtime_vllm.py:384-394`, the exclusion at `:392`) and `deployment_environment` returns exactly that set
+  (`gate_runtime_vllm.py:397-400`), so none of the four can reach `protocol.env`: a receipt naming one there is refused
+  (`gate_runtime_vllm.py:695-699`). They are recorded per instance under `deployment.instances[].env` (optional key,
+  `gate_runtime_vllm.py:178-180`; typed and exact-set checked at `:721-726`; written by the producer at
+  `scripts/write_vllm_runtime_receipt.py:198-199`) and compared against the live process exactly, so a missing, extra
+  or different one is a refusal (`core/session/vllm_identity.py:450-458`, contract stated at
+  `core/session/vllm_identity.py:25-28`). A name outside the set is refused wherever a per-instance `env` is accepted:
+  `assert_deployment_env_keys` for a receipt (`gate_runtime_vllm.py:413-421`, called at `:726`) and
+  `undeclared_deployment_env_keys` for a deployment profile (`core/deployment.py:272-277`). `docker_run_argv` emits the
+  three `*_SOCKET_IFNAME` keys itself from the host NIC (`core/deployment.py:526`, key tuple at `:97`), so a profile
+  may not set them (`core/deployment.py:278-279`) and an instance env that collides with the deployment layer refuses
+  the argv (`core/deployment.py:507-509`).
+- Base port. The fact is unchanged: all instances share the host network namespace (`core/deployment.py:516`), so each
+  needs its own `HCCL_IF_BASE_PORT`, and the TP2 profile still carries 61000/61200/61400/61600
+  (`configs/deployment/qwen3-omni-thinking-bf16-181-4xtp2-v1.json:19,31,43,55`). What changed is where it lands:
+  `HCCL_` remains a pinned prefix (`gate_runtime_vllm.py:118`), but the four names above are taken out of
+  `pinned_environment` by name (`gate_runtime_vllm.py:136`, `:392`), and `protocol_sha256` hashes every receipt field
+  except `deployment` (`gate_runtime_vllm.py:197-200`). One protocol hash therefore covers four instances with four
+  different base ports; the ports travel in the recorded instance env (`gate_runtime_vllm.py:721-726`) and in the
+  deployment record (`core/deployment.py:578`).
+- Mounts. `ASCEND_READONLY_MOUNTS` holds six host paths -- the driver, `npu-smi`, `/etc/hccn.conf`,
+  `/etc/ascend_install.info`, `/usr/local/Ascend/firmware` and `/usr/local/dcmi` (`core/deployment.py:90-93`) -- and
+  `docker_run_argv` binds each of them read-only (`core/deployment.py:523-524`), the set a multi-card server needs.
+  Mounts are a recorded deployment fact, not a hashed one: the verifier reads each container's read-only destinations
+  back and records them (`scripts/serving/verify_engineering_base.py:933`, claim at `:947`).
+- Launch form. `docker_run_argv` sets the container entrypoint to the image interpreter
+  `/usr/local/python3.12.13/bin/python3` (`core/deployment.py:102`, emitted at `:528`), and the tokens after the image
+  begin with `-m vllm.entrypoints.cli.main serve` (`instance_container_args`, `core/deployment.py:486-495`). The live
+  command line is therefore the only form the receipt gate accepts (`VLLM_ENTRYPOINT`, `gate_runtime_vllm.py:80`;
+  `split_vllm_server_argv`, `:364-369`; receipt check `:686-687`). The engineering-base verifier refuses a container
+  whose `Path`/`Args` are not that form (`scripts/serving/verify_engineering_base.py:552-565`).
+- NIC as a deployment fact. The NIC is required and fail-closed, never defaulted or guessed: `validated_nic` refuses a
+  missing or malformed name (`core/deployment.py:475-483`), `plan` and `emit` call it before any argv exists
+  (`core/deployment.py:617`), and `deployment_record` carries `nic` beside `"hashed": false`
+  (`core/deployment.py:549`, `:552`, `:560`). The host launcher derives the interface holding the node's global IPv4
+  address and passes it as `--nic`, refusing when there is none (`work/scripts/npu_deploy.sh:32-33`, `:41`); the
+  verifier re-derives it and requires all three variables in every container to equal it
+  (`scripts/serving/verify_engineering_base.py:924-926`, `:940-941`), beside the per-instance profile env (`:942-943`).
+- Geometry spelling. The hashed fragment may not declare sequences per instance in either spelling:
+  `configured_geometry` refuses both `--max-num-seqs N` and `--max-num-seqs=N`
+  (`rails/adapters/runtime_view.py:122-125`). The L338 NPU-port
+  registration package was re-minted after the move (`d7c8f17a`); every row of it stays DRAFT.
+- Transport refusal patterns. The vLLM 0.30 prompt-length refusals are matched whole by four patterns: the two
+  engine-level wordings, the serving-layer token wording with both `at least` fragments optional and the
+  character-level pre-tokenization wording (`core/model/vllm_transport.py:66-94`, third pattern `:81-85`, fourth
+  `:88-93`).
+
+What is hashed and what is recorded only. `protocol_sha256` is the canonical hash of every receipt field except
+`deployment` (`gate_runtime_vllm.py:197-200`): the served model name, the interpreter argv[0], the fixed entry point,
+the protocol `server_args` (`--max-model-len` among them), the working directory and the pinned environment
+(`_PROTOCOL_KEYS`, `gate_runtime_vllm.py:165`; validated at `:680-701`). Recorded with no effect on that hash: the host
+NIC, the per-instance HCCL base port, the read-only mounts, `--max-num-seqs`, `--gpu-memory-utilization`,
+`--max-num-batched-tokens`, the cards, the endpoint and the tensor-parallel width (`gate_runtime_vllm.py:166-177`,
+instance validation `:704-757`; the deployment record's own `"hashed": false`, `core/deployment.py:552`, fields at
+`:560-585`).
+
+Still open after these commits. (a) The smoke launcher is not swapped: `work/scripts/npu_serve.sh` still starts a
+server with `--entrypoint vllm` (`npu_serve.sh:60`), and the replacement in the gate's entrypoint form, which also
+passes `--gpu-memory-utilization "${GPU_MEM_UTIL:-0.92}"`, is staged beside it as
+`work/scripts/npu_serve.sh.s10-next:63`, `:79`, not yet in place. (b) A `-v2` deployment profile lowering
+`--max-num-seqs` from the resident ceiling 64 (`configs/deployment/qwen3-omni-thinking-bf16-181-4xtp2-v1.json:62`) to
+the admitted level is a plan recommendation awaiting the owner (plan Q-B, `:508`); at commit `74b56ac7` the committed
+`configs/deployment/` carries only the two `-v1` profiles, so the resident ceiling is still 64. (c) The
+multimodal-cache `shm` knob is not carried in the deployment flags and is deferred to a follow-up after the lock
+(plan Q-C, `:509`). This note records code and configuration state only: no run, flip, readiness entry
+or section 9 decision is claimed by it.
+
+Successor (same day, later): the owner answered Q-B YES; `configs/deployment/qwen3-omni-thinking-bf16-181-4xtp2-v2.json` (ceiling 32) and `...-2xtp4-v2.json` are committed with `tests/unit/test_deployment_v2_profiles.py`, which proves the fragment hash and `protocol_sha256` are unchanged by the ceiling. Q-C was answered YES, so the shm flag goes into a `-v3` profile after a deployment-flag reclassification and the discriminating test; see plan 3.10.
+
+Engine behaviour under preemption (preliminary, 2026-10-29). Under the forced worst case (`--min-tokens 4096`) at a
+client concurrency of 48 per instance, two of the four arm A engines exited with an assertion raised inside the
+multimodal encoder step (`_execute_mm_encoder`) while recomputing a preempted audio request from zero computed tokens;
+the other two instances survived their own preemptions. This is one preliminary observation, not a characterised engine
+defect: the raw evidence, the working hypothesis and the analysis of the candidate knobs are in the bad-case note
+`/mnt/cephfs/xingchao/omni/work/scratch/badcase/2026-10-29-e0-mm-encoder-preemption-source.md` (not reproduced here),
+and the planner's admissibility rule that follows from it -- a level may be recorded only when the worst case shows a
+preemption delta of zero on every instance with a readable counter and a sampled KV peak at or below 90 % -- is plan
+section 3.8 (plan `:373-382`). It changes nothing in the geometry above: sequences per instance stays a recorded
+deployment fact.
+
 Serving and sweep questions carried by the plan. None is a section 9 entry, and this document records no decision;
 each is stated as the plan records it.
 

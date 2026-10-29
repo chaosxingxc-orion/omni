@@ -610,6 +610,9 @@ placeholders, labelled preliminary rows, the bound with A's numbers); S5 skeleto
 placeholders, the D3 fact); the design-doc section 7 post-fix successor (gates S5, R2 decision 4); the D3 note in
 `work/scratch/badcase/` (<= 30 lines). FABLE: R3/R4 and the owner relay only.
 
+
+**Owner answers (2026-10-29, translated; recorded by the planner).** Q-A knee 32: YES. Q-B `-v2` ceiling 32: YES (the `-v2` profiles are committed with this revision). Q-C shm in the recorded runs: YES, against the recommendation; by item 3 this means a `-v3` profile with `--mm-processor-cache-type shm` reclassified as a deployment flag (SONNET S16b: `DEPLOYMENT_FLAGS` entry, S12-style equality test proving `protocol_sha256` unchanged, refusal of any other `--mm-*` value), and the discriminating test E3 (fresh 4xTP2, worst case at 48 per instance, shm on all four, two passes, PRELIMINARY, ~10 ch) BEFORE R0; E3 is accepted when no engine exits in either pass; if an engine exits, Q-C is re-asked with that evidence. Q-D non-bit-reproducible base: YES. Q-E (P3 launch): the launch command was denied by the session permission system twice; retried after these answers.
+
 ---
 
 ## 4. Streams (disjoint files), with ready-to-paste brief headers
