@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Step 8 (flight chain): the preregistered READ by an analysis recipe (model-free).
-# The recipe path is a parameter (the port recipe, open item F, does not exist yet). The step refuses unless the recipe's
+# The recipe path is a parameter (the port recipe: docs/readiness/<port package>/analysis-recipe-v1.json). The default reader is the PORT reader
+# (scripts/analysis/slurp_l338_port_column_read.py: port cell ids, port analysis root, port-verdicts.json). The step refuses unless the recipe's
 # READ run id has a root-countersigned exposure-ledger row (read_gate.py), then runs the reader.
 set -uo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
@@ -10,10 +11,11 @@ fs_usage() {
   cat <<EOF
 usage: step_read.sh --recipe REPO_RELATIVE_PATH [--reader REPO_RELATIVE_SCRIPT] [--pass-recipe] [--confirm]
   --recipe       analysis recipe JSON in the study tree (required), e.g. docs/readiness/<port package>/analysis-recipe-v1.json
-  --reader       reader script (default scripts/analysis/slurp_l338_column_read.py); invoked as
+  --reader       reader script (default scripts/analysis/slurp_l338_port_column_read.py); invoked as
                  <reader> --stage read --data-root <root> --repo-root <study> --analysis-root <root>/analysis/<READ run id>
                  (<READ run id> comes from the recipe; these flags are inferred, see the README)
-  --pass-recipe  also append "--recipe <recipe>" for a reader that takes one
+  --pass-recipe  also append "--recipe <recipe>" for a reader that takes one (always done for the port reader, which validates the recipe's port ids)
+  Writes read.json, README.md and port-verdicts.json under <root>/analysis/<READ id> (write-once).
   Requires score.done and a countersigned READ row.
 EOF
   fs_usage_common
@@ -23,8 +25,9 @@ fs_unknown_flags recipe reader pass-recipe:bool
 fs_load_cell flight
 
 RECIPE=$(fs_flag recipe "")
-READER=$(fs_flag reader scripts/analysis/slurp_l338_column_read.py)
+READER=$(fs_flag reader scripts/analysis/slurp_l338_port_column_read.py)
 PASS_RECIPE=0
+case "$READER" in *slurp_l338_port_column_read.py) PASS_RECIPE=1 ;; esac
 for a in "${FS_ARGS[@]}"; do [ "$a" = --pass-recipe ] && PASS_RECIPE=1; done
 if [ -z "$RECIPE" ]; then
   if [ "$FS_CONFIRM" = 1 ]; then echo "REFUSED: --recipe is required" >&2; exit 2; fi

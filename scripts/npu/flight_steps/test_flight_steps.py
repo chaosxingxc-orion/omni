@@ -23,8 +23,8 @@ STUDY = Path(cellinfo.DEFAULT_STUDY)
 SAMPLE_SMI = Path("/mnt/cephfs/xingchao/omni/work/npu-smi-sample.txt")
 PROFILE_ID = pf.DEFAULT_PROFILE
 PROFILE = json.loads((STUDY / "configs/deployment" / f"{PROFILE_ID}.json").read_text())
-STEPS = ["lease", "smoke_worker", "fit", "signoff", "campaign", "seal", "score", "read", "ledger_close"]
-RECIPE_REL = "docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1/analysis-recipe-v1.json"  # exists; stands in for the port recipe
+STEPS = ["lease", "smoke_worker", "fit", "smoke_read", "signoff", "campaign", "seal", "score", "read", "ledger_close"]
+RECIPE_REL = "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/analysis-recipe-v1.json"  # the port recipe
 
 
 # ----------------------------------------------------------------------------------------------- preflight (python)
@@ -373,7 +373,7 @@ def test_refuses_when_preflight_fails(env, name):
 
 
 def test_preflight_stage_per_step(env):
-    mark(env, *STEPS[:3])
+    mark(env, *STEPS[:4])
     step(env, "signoff", FAKE_PF_RC=0)       # dry-run still consults preflight for the report
     (env["state"] / "smoke_worker.done").unlink()
     step(env, "smoke_worker")
@@ -385,7 +385,7 @@ def test_preflight_stage_per_step(env):
 
 def test_unknown_flag_and_missing_recipe(env):
     assert step(env, "lease", "--bogus").returncode == 2
-    mark(env, *STEPS[:7])
+    mark(env, *STEPS[: STEPS.index("read")])
     assert step(env, "read", "--confirm").returncode == 2
     done = step(env, "read", "--confirm", "--recipe", "docs/nope.json")
     assert done.returncode == 6 and "does not exist" in done.stderr
@@ -399,7 +399,7 @@ def test_commit_pin_moved_refuses(env):
 
 
 def test_already_done_refuses(env):
-    mark(env, *STEPS[:3], "signoff")
+    mark(env, *STEPS[:4], "signoff")
     done = step(env, "signoff", "--confirm")
     assert done.returncode == 5 and "already done" in done.stderr
 
@@ -424,12 +424,20 @@ def test_command_strings(env):
     assert ledger.count("ledger_mark_consumed.py") == 2 and ledger.count("--run-id") == 8 and ledger.count("--apply") == 1
     signoff = step(env, "signoff").stdout
     assert "smoke_signoff.py --conditions docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/signoff-conditions-v1.json" in signoff
+    table_rel = json.loads((STUDY / "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/signoff-conditions-v1.json").read_text())["table_relpath"]
+    assert table_rel == "analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1/smoke-decode-cost.json"
+    smoke_read = step(env, "smoke_read").stdout
+    assert "scripts/analysis/slurp_l338_port_column_read.py --stage smoke" in smoke_read and "--stage read" not in smoke_read
+    assert f"--data-root {env['omni']}" in smoke_read and f"--analysis-root {env['omni']}/analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1" in smoke_read
+    assert f"--repo-root {STUDY}" in smoke_read and "--recipe" not in smoke_read
     seal = step(env, "seal").stdout
     assert "batch_inspect.py %s SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1" % env["omni"] in seal and " arm 1080 15 1 " in seal
     fit = step(env, "fit").stdout
     assert "fit_evidence.py" in fit and " smoke 4 15 1 " in fit
     read = step(env, "read", "--recipe", RECIPE_REL).stdout
-    assert f"read_gate.py --recipe {RECIPE_REL}" in read and "--stage read" in read and "SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-V1" in read
+    assert f"read_gate.py --recipe {RECIPE_REL}" in read and "--stage read" in read
+    assert "scripts/analysis/slurp_l338_port_column_read.py" in read and f"--recipe {RECIPE_REL}" in read
+    assert "analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1" in read and "FOLD-B-READ-V1" not in read
 
 
 def test_full_chain_with_fake_ops_in_order(env):
@@ -457,9 +465,14 @@ def test_full_chain_with_fake_ops_in_order(env):
     (run_dir / "flight-receipts.json").write_text("{}")
     done = step(env, "fit", "--confirm")
     assert done.returncode == 0, (done.stdout, done.stderr)
+    # smoke_read: signoff needs its marker; the step runs the port smoke reader (the fake runner stands in) and writes its own marker
+    assert step(env, "signoff", "--confirm").returncode == 3
+    done = step(env, "smoke_read", "--confirm")
+    assert done.returncode == 0, (done.stdout, done.stderr) and (state / "smoke_read.done").exists()
     # signoff: refuses without the table, passes with it (the fake runner stands in for smoke_signoff.py)
     assert step(env, "signoff", "--confirm").returncode == 6
     rel = json.loads((STUDY / cell["SIGNOFF_CONDITIONS"]).read_text())["table_relpath"]
+    assert rel.startswith("analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1/")
     (omni / rel).parent.mkdir(parents=True)
     (omni / rel).write_text("{}")
     assert step(env, "signoff", "--confirm").returncode == 0
@@ -477,7 +490,7 @@ def test_full_chain_with_fake_ops_in_order(env):
     for name in STEPS:
         assert (state / f"{name}.done").exists(), name
     commands = " ".join(log_lines(env))
-    order = ["lease_cli", "cli worker", "batch_inspect.py", "smoke_signoff.py", "cli campaign", "stage3_rollout_score.py", "read_gate.py", "ledger_mark_consumed.py"]
+    order = ["lease_cli", "cli worker", "batch_inspect.py", "port_column_read.py --stage smoke", "smoke_signoff.py", "cli campaign", "stage3_rollout_score.py", "read_gate.py", "ledger_mark_consumed.py"]
     positions = [commands.find(token) for token in order]
     assert -1 not in positions and positions == sorted(positions)
 
@@ -493,7 +506,7 @@ def test_failed_detached_step_writes_failed_marker_and_preserves_lease(env):
 
 
 def test_failed_foreground_step_writes_failed_marker(env):
-    mark(env, *STEPS[:5])
+    mark(env, *STEPS[: STEPS.index("seal")])
     done = step(env, "seal", "--confirm", FAKE_RC=4)
     assert done.returncode == 8 and (env["state"] / "seal.failed").exists() and not (env["state"] / "seal.done").exists()
 
@@ -530,3 +543,49 @@ def test_steps_never_call_docker_or_ssh_directly():
     for path in HERE.glob("step_*.sh"):
         code = "\n".join(line for line in path.read_text().splitlines() if not line.lstrip().startswith("#"))
         assert not re.search(r"\bdocker run\b|\bssh\b|\bnpu-smi\b", code), path
+
+
+def test_smoke_read_is_dry_by_default_write_once_and_runs_the_port_reader_for_the_smoke_cell(env):
+    mark(env, *STEPS[: STEPS.index("smoke_read")])
+    dry = step(env, "smoke_read")
+    assert dry.returncode == 0 and "DRY-RUN" in dry.stdout and log_lines(env) == [] and not (env["state"] / "smoke_read.done").exists()
+    table = env["omni"] / "analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1/smoke-decode-cost.json"
+    table.parent.mkdir(parents=True)
+    table.write_text("{}")
+    assert step(env, "smoke_read", "--confirm").returncode == 6 and "write-once" in step(env, "smoke_read", "--confirm").stderr
+    table.unlink()
+    done = step(env, "smoke_read", "--confirm")
+    assert done.returncode == 0 and (env["state"] / "smoke_read.done").exists()
+    assert len([l for l in log_lines(env) if "port_column_read.py --stage smoke" in l]) == 1
+    custom = step(env, "smoke_read", "--read-id", "OTHER-READ")
+    assert "analysis/OTHER-READ" in custom.stdout or custom.returncode == 5          # a done step reports instead of re-planning
+
+
+def test_signoff_requires_the_smoke_read_marker(env):
+    mark(env, *STEPS[: STEPS.index("smoke_read")])
+    done = step(env, "signoff", "--confirm")
+    assert done.returncode == 3 and "smoke_read" in done.stderr
+
+
+def test_signoff_conditions_never_read_the_null_gpu_hours_ceiling(env):
+    """registered_gpu_hours_ceiling is null in the port smoke table (the historical 4-slot GPU-hour figures do not describe the port); confirm
+    smoke_signoff.evaluate() never looks it up, so null is "not checked", not a failure. Only arm_mix reads throughput (the slot-independent
+    measured/registered row-mix ratio); no condition path names registered_gpu_hours_ceiling or the slot count."""
+    sys.path.insert(0, str(STUDY / "scripts" / "flights" / "batch"))
+    import smoke_signoff  # noqa: PLC0415
+
+    cell = cellinfo.load("smoke")
+    conditions = json.loads((STUDY / cell["SIGNOFF_CONDITIONS"]).read_text())
+    assert not any("gpu_hours" in c.get("path", "") for c in conditions.get("extras", []))
+    table = {
+        "schema": conditions["table_schema"], "arms": {arm: {"perception": {"contacts": 1, "mode": "think", "cap_hits": 0, "empty_content": 0,
+                 "no_json_object": 0, "finish_reason_length": 0}, "solver": {"contacts": 1, "mode": "think", "cap_hits": 0, "empty_content": 0,
+                 "no_json_object": 0, "finish_reason_length": 0}} for arm in conditions["expected_arms"]},
+        "throughput": {"arm_mix_measured_rows": 1.0, "arm_mix_registered_rows": 1.0}, "unattributed_contacts": 0, "absent_columns": 0,
+        "registered_gpu_hours_ceiling": None,
+    }
+    checks = smoke_signoff.evaluate(conditions, table)
+    assert checks and all(c["ok"] for c in checks)
+    assert not any("gpu_hours" in c["id"] for c in checks)
+    table["registered_gpu_hours_ceiling"] = "not a number"           # even a malformed value changes nothing: no condition reads the key
+    assert smoke_signoff.evaluate(conditions, table) == checks

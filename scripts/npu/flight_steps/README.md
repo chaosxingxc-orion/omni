@@ -21,7 +21,8 @@ bash step_<name>.sh --confirm             # executes (only if every gate passes)
 | 1 | operator | `step_lease.sh` | pins the study HEAD (`commit.txt`), starts `lease_cli --stage worker` detached in `saea-base` (`docker run -i --name saea-flight-lease`), waits for the token | holder only | `lease.done` |
 | 2 | operator | `step_smoke_worker.sh` | `core.flight.cli worker` for the smoke-4 cell (120 generation calls; the native contact FIT runs inline). On exit 0 it sends `release` to the lease holder, on failure it sends `preserve` | yes | `smoke_worker.done` or `.failed`, `lease.released` |
 | 3 | operator | `step_fit.sh` | FIT acceptance, read-only: FIT directory and flight receipts exist, then `batch_inspect.py smoke` (4 rows, ceilings, tool surface, study commit) | no | `fit.done` |
-| 4 | operator | `step_signoff.sh [--table P]` | `smoke_signoff.py` against `signoff-conditions-v1.json`; needs the smoke decode-cost table (see below) | no | `signoff.done`, `signoff.marker` (PASS) or `signoff.marker.refused` |
+| 3b | operator | `step_smoke_read.sh [--read-id ID]` | the port smoke reader (`slurp_l338_port_column_read.py --stage smoke`) writes `analysis/<port READ id>/smoke-decode-cost.json` (write-once; nothing is scored). Needs `fit.done` | no | `smoke_read.done` |
+| 4 | operator | `step_signoff.sh [--table P]` | `smoke_signoff.py` against `signoff-conditions-v1.json` over that table. Needs `smoke_read.done` | no | `signoff.done`, `signoff.marker` (PASS) or `signoff.marker.refused` |
 | 5 | operator | `step_campaign.sh` | `core.flight.cli campaign` for the flight cell (1,080 rows); takes its own custody, no lease step. Needs `signoff.marker` | yes | `campaign.done` or `.failed` |
 | 6 | operator | `step_seal.sh` | seal acceptance, read-only: `batch_inspect.py arm` (attempt FINALIZED, manifest COMPLETED at the pinned commit, 1,080 rows, ceilings, one score job). The campaign seals the run itself; there is no separate seal command | no | `seal.done` |
 | 7 | operator | `step_score.sh [--read-id ID]` | `stage3_rollout_score.py --mode perception-branches --stage all`: one complete official scoring per arm column | yes | `score.done` or `.failed` |
@@ -70,9 +71,10 @@ before any new lease.
 
 ## Known limits (read before the first `--confirm`)
 
-- The smoke decode-cost table (`analysis/<READ id>/smoke-decode-cost.json`) is written by the smoke reader
-  (`slurp_l338_column_read.py --stage smoke` is bound to the historical L338 family); the port has no smoke reader yet, so
-  `step_signoff.sh` refuses until the table exists or you pass `--table`.
+- The smoke decode-cost table (`analysis/<port READ id>/smoke-decode-cost.json`) is written by the port reader
+  (`scripts/analysis/slurp_l338_port_column_read.py --stage smoke --data-root $OMNI`, run in saea-base through `port_py.sh` after the
+  smoke is sealed); `step_smoke_read.sh` runs it (dry-run by default) and `step_signoff.sh` refuses until `smoke_read.done` and the table exist (or you pass `--table`). A null `registered_gpu_hours_ceiling` in the table is not read by any sign-off condition. `step_read.sh` runs the same script with
+  `--stage read` and writes `read.json`, `README.md` and `port-verdicts.json` (parity, twin admissibility, improvement) beside it.
 - FIT is not a separate model run: the cells permit only `check`, `prepare-supply`, `worker`, `campaign` (no `prompt-fit`),
   and the native contact FIT is an inline gate of the worker and campaign. `step_fit.sh` therefore verifies the evidence.
 - `--stage smoke` preflight will report `resident-session` until a session record exists at
@@ -84,5 +86,5 @@ before any new lease.
 ## Files
 
 `preflight.py`, `cellinfo.py` (identities from the committed fragments), `fit_evidence.py`, `read_gate.py` (runs in the
-container), `_common.sh`, `_detached.sh`, `_lease_holder.sh`, `step_*.sh`, `test_flight_steps.py` (62 tests, fake ops, CPU
+container), `_common.sh`, `_detached.sh`, `_lease_holder.sh`, `step_*.sh`, `test_flight_steps.py` (tests, fake ops, CPU
 only: `ssh npu2 'cd .../flight_steps && taskset -c 176-191 python3 -m pytest -q -p no:cacheprovider test_flight_steps.py'`).

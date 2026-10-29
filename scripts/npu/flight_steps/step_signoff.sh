@@ -2,8 +2,9 @@
 # Step 4 (smoke chain): machine sign-off of the smoke against the registered conditions (smoke_signoff.py).
 # Reads the smoke decode-cost table and decides PASS or FAIL against signoff-conditions-v1.json. It touches no run data;
 # the only file it writes is the sign-off marker (PASS) or <marker>.refused (FAIL) under the state directory.
-# The decode-cost table is written by the smoke reader (slurp_l338_column_read.py --stage smoke, or its port successor, open
-# item F); this step does not produce it and refuses when it is missing.
+# The decode-cost table is written by step_smoke_read.sh, i.e. the PORT smoke reader (scripts/analysis/slurp_l338_port_column_read.py --stage smoke), to
+# <data root>/analysis/<port READ id>/smoke-decode-cost.json, the path signoff-conditions-v1.json names; this step does not produce
+# it and refuses when it is missing.
 set -uo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 STEP=signoff
@@ -13,7 +14,7 @@ fs_usage() {
 usage: step_signoff.sh [--table PATH] [--confirm]
   smoke_signoff.py --conditions <package>/signoff-conditions-v1.json --data-root --marker $STATE/signoff.marker
   --table defaults to <data root>/<conditions.table_relpath>. Exit 3 of smoke_signoff (FAIL) leaves $STATE/signoff.failed.
-  Requires fit.done.
+  Requires smoke_read.done (step_smoke_read.sh writes the table).
 EOF
   fs_usage_common
 }
@@ -33,4 +34,4 @@ fs_extra_check() {
   fi
   [ -s "$table" ] || { echo "the smoke decode-cost table $table does not exist; write it with the smoke reader first"; return 1; }
 }
-fs_main fit post foreground
+fs_main smoke_read post foreground
