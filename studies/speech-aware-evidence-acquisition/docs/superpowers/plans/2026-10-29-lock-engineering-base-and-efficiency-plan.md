@@ -511,6 +511,105 @@ recorded level 32. Conditional, as before, on S12's test showing no registered-f
   acceptance replaced by the A/A band) rather than seek a deterministic engine mode before the lock? [Yes]
 - **Q-E.** Permit the P3 launch now (stop arm A, redeploy arm B on 8 cards, ~1.6 h, `prelim`, after D3)? [Yes]
 
+### 3.10 Final configuration and run plan (revision 6, 2026-10-29)
+
+Input: 3.9, the D2 note (`work/scratch/badcase/2026-10-29-d2-greedy-self-agreement.md`) and D3 (idle `saea-arm-a-0`, 16
+fixed requests, temperature 0, seed 777, max_tokens 64; sequential S1-S3 then burst B1-B3): S1-S2 9/16, S1-S3 9/16, S2-S3
+16/16; B1-B2 8/16, B1-B3 15/16, B2-B3 8/16; sequential-vs-burst 6-7/16; every divergence at decode position 13-58, never
+0, top-2 gap 0.0-0.25. Reading: a WARM sequential run repeats exactly, the cold first run differs (cache state), burst
+adds batch composition; D2: the E1-vs-E2 16/16 was two cold first runs and 1.97 is a post-divergence logprob. 3.9
+Decision 3 stands; the manifest and base-lock classification is "cache-state and batch-composition nondeterminism; warm
+sequential greedy repeatable (16/16, n = 1 pair)". This subsection is the whole remaining plan: the P3/P3b branch and the
+five owner answers fill the cells and nothing else is re-planned. Reference: A admitted 32 per instance = host 128 =
+1,422.6 tok/s normal mix (P2b); B's admitted host level is the highest P3 level whose P3b worst case meets rule (a).
+
+**1. Resident configuration by P3/P3b branch.** Common to every branch: image `saea-base:20261027`, `--gpu-memory-utilization
+0.92` (C not run), `--max-num-batched-tokens null`, `--shm-size 16g` (docker, unrelated to the shm knob), `--network host`,
+NIC = the host's global-IPv4 interface derived by `npu_deploy.sh` (`enp61s0f2` on 181) into `HCCL/GLOO/TP_SOCKET_IFNAME`,
+the four read-only Ascend mounts, bind `127.0.0.1`, hashed fragment unchanged (`--seed 0` stays). Shm knob: ABSENT (Q-C no).
+
+| cell | (i) B beats 1,422.6 by > 5 % (> 1,493.7) | (ii) B within +-5 % | (iii) B worse | (iv) B crashes / no admissible level |
+|---|---|---|---|---|
+| resident arm, TP, instances | B, TP4, 2 | A, TP2, 4 (Q4 tie -> A) | A, TP2, 4 | A, TP2, 4 |
+| cards / ports / `HCCL_IF_BASE_PORT` | i0 0-3 :8200 61000; i1 4-7 :8201 61200 | i0 0,1 :8200 61000; i1 2,3 :8201 61200; i2 4,5 :8202 61400; i3 6,7 :8203 61600 | as (ii) | as (ii) |
+| NUMA cpuset | i0 `128-159,192-223`; i1 `0-31,64-95` | i0 `192-223`; i1 `128-159`; i2 `0-31`; i3 `64-95` | as (ii) | as (ii) |
+| `--max-num-seqs` ceiling (Q-B yes / no) | B's admitted per-instance level (expected 96) / 128 (the P3 launch value) | 32 / 64 | 32 / 64 | 32 / 64 |
+| profile file | `qwen3-omni-thinking-bf16-181-2xtp4-v2.json` (needed in both Q-B cases: -v1 says 64) | `...-4xtp2-v2.json` (Q-B yes) or `-v1` unchanged (Q-B no) | as (ii) | as (ii) |
+| admitted level / host concurrency | expected 96 / 192 (measured by P3b) | 32 / 128 | 32 / 128 | 32 / 128 |
+| expected host tok/s (normal mix) | measured P3 value, expected 1,705-1,885 (3.9 prediction) | 1,422.6 | 1,422.6 | 1,422.6 |
+| r (lock rows/min/instance), T | contacts/min per TP4 instance / 2, expected ~13.1; T = 4 | ~5.2; T = 2 | ~5.2; T = 2 | ~5.2; T = 2 |
+
+Base-port note (coordinator, 2026-10-29): the table's `HCCL_IF_BASE_PORT` values are the profile's (61000-61600 for A), which `npu_deploy.sh up` launches with. The PRELIMINARY arm A launched by `npu_serve.sh` ran with 60000/60100/60200/60300 (captured in `work/logs/prelim-chain-20261029T094933Z/arm-a-launch.json`); arm B preliminary used 60400/60500. Base ports are a recorded deployment fact (S12), outside `protocol_sha256`, so the preliminary and recorded runs differ in this fact and S8 states it when it quotes preliminary rows as context.
+
+Q-C yes changes one cell in every column: the profile becomes `-v3` (= `-v2` plus `--mm-processor-cache-type shm`), which
+first needs the flag reclassified into `DEPLOYMENT_FLAGS` with the hash-equality test (study change, SONNET) and E3 (two
+clean worst-case passes at 48 on 4 x TP2, ~10 ch) BEFORE R0; the lock then waits for both. Branch (i) is provisional
+until item 2's recorded comparison confirms it (3.7 (3): a preliminary number cannot displace the default).
+
+**2. Recorded run list.** All runs: `npu_deploy.sh up` on the branch's profile, receipt, `npu_verify_base.sh` 11/11 PASS,
+smoke re-run; `--restart` refused; liveness poll every 30 s (dead endpoint = level FAIL + chain STOP, R0 redo); `npu-smi`
+every 10 s; per-level checkpoint and `--resume`; client seed 20261028 and server `--seed 0` in the manifest; the greedy
+probe (D3 set, `--send sequential`) once as a discarded warm-up after `up`, then before and after every recorded level,
+agreement rate and first-divergence positions recorded, NOT gated (Q-D). Stopping rules: a level failing any 3.4 threshold
+stops the arm there; preemption delta > 0 in an R-x3 worst case drops the admitted level one measured step and R-x3
+repeats there (+4 ch), the R-x2 row at that level becomes the knee; with the ceiling equal to the admitted level the
+sampled `waiting` gauge must read 0 at the knee, else the row is reported ceiling-bound and the ceiling is raised one
+step in a profile revision (no hash movement). `VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS` is NOT set in any run below (owner
+ruling Q5); it is the first post-lock recorded change: `COMMON_ENV` -> `protocol.env`, re-minted `protocol_sha256`,
+base-lock successor note, verification re-run, no re-sweep; value rule: never below the engine default 300 s, the smallest
+multiple of 60 s that is >= 10 x the recorded max TTFT of R-x3 at the admitted level.
+
+| run | (ii)/(iii)/(iv): A resident | (i): B resident, A compared on the locked base |
+|---|---|---|
+| R0 | deploy A, receipt, verify, smoke: 0.8 h, 6 ch | R0-A as left (6 ch), then after R-A2 `down` and R0-B (0.8 h, 6 ch) |
+| R-x1 one pass, non-candidates | R-A1: 8, 16 per instance (0.25 h, 2 ch); 40/48/56 never on the locked base | R-B1: 16, 32, 48 per instance (0.5 h, 4 ch) |
+| R-x2 candidates at 3x requests | R-A2: 32 and 24 (1.2 h, 10 ch) | R-A2: 32 only (0.6 h, 5 ch); R-B2: admitted (96) and the next lower measured (64) (1.2 h, 10 ch) |
+| R-x3 worst case `--min-tokens 4096`, one pass | R-A3 at 32 (0.5 h, 4 ch) | R-B3 at B's admitted level (0.5 h, 4 ch) |
+| R-D (`--max-num-batched-tokens 8192`) | only if R-A2 at 32 shows p10 within 5 % of 10 tok/s (0.4 h, 3 ch) | same rule on R-B2 at the admitted level (3 ch) |
+| residency check | none (Q4 default) | recorded R-B2 (admitted) vs recorded R-A2 (32): B stays only if > 5 %; else redeploy A (+6 ch) and run R-A1, R-A3 (+6 ch) |
+| remaining / total card-hours | 25 / ~62 ch (24 spent + 13 P3, less in (iv)); wall ~3.1 h | 39 / ~76 ch (88 if the check overturns); wall ~4.9 h; above the 3.6 band, the price of the Q4 rule |
+
+**3. Owner answers (defaults = the 3.9 recommendations; the cells that move if the owner says otherwise).**
+- **Q-A yes** (crash-safe knee). No: no lock on this image; items 2, 4 and 5 wait for the engine-fix image (section 7, a new
+  base); P3/P3b still run as context; nothing else in this subsection changes.
+- **Q-B yes** (ceiling = admitted level). No: the ceiling row reads 64 (A) / 128 (B); rule (b) stays client-enforced; the
+  `waiting` = 0 check is dropped; A keeps `-v1` and needs no profile commit.
+- **Q-C no** (no shm). Yes: the `-v3` paragraph above; +10 ch and one study change before R0.
+- **Q-D yes** (statistical reproducibility). No: same consequence as Q-A no (no deterministic mode exists on this stack, 3.9).
+- **Q-E yes** (P3 now). No: branch (iv) applies with "B not measured (owner)" in S8; the 13 P3 ch are not spent (~49 ch total).
+
+**4. Experiment-efficiency plan for the flights.** The locked service is used at exactly the admitted level per instance
+(32 on A, B's measured level on B), never above (rule (b)); flight workers = instances x admitted level, each trajectory
+pinned to one instance. Until the flight-side multi-endpoint transport exists (section 7: route by profile, strip
+`id_slot`) a flight may use ONE instance at its admitted level, 1/4 (A) or 1/2 (B) of the host figure; the baseline
+document states this caveat. The flight mix must stay within the synthetic one (prompt mean 8,500 in [3,000, 20,000],
+`max_tokens 4096`, budget 3,072, one clip per trajectory, 3 contacts); longer prompts or more audio per prompt raise the
+worst-case KV footprint and re-trigger R-x3 before the flight. Hour bound, registered form: `card-hours = ceil_0.1(1.3 x
+1,080 x 7.52 x T / r / 60)`. A: T 2, r ~5.2 -> 67.7 ch (~8.5 h wall on 8 cards); cross-check 16,200 x ~2,050 tokens /
+1,422.6 tok/s = 6.5 h x 8 = ~52 ch, ~67 with the 1.3 margin, inside the 20 % band. B expected: T 4, r ~13.1 -> ~53.7 ch
+(~6.7 h); S8 quotes r from R-B2 only. Re-measure triggers (R0 + R-x2 at the admitted level + R-x3; the full ladder only
+for an image change): image id, any hashed `server_args` or `DEPLOYMENT_FLAGS` value, profile revision (`-vN`),
+driver/CANN/firmware, any `VLLM_` env except the timeout above (verification re-run only), shm adoption after E3.
+
+**5. Completion criteria ("base locked, configuration and run plan explicit").** [ ] Q-A..Q-E answered and the resolved
+cells recorded here; [ ] P3/P3b outcome recorded, branch named; [ ] R2 gate list ticked; [ ] `-v2` (or `-v3`) profile
+committed with the S12 equality test; [ ] S7 driver tested offline (poll, probes, checkpoint/resume); [ ] R0 receipt,
+11/11 verification, smoke re-run on the resident profile; [ ] R-x1, R-x2, R-x3 (R-D if triggered; the (i) residency
+check) done or stopped by rule; [ ] S8 baseline: per-level table, r, registered bound and cross-check, every 3.1-3.9
+prediction marked; [ ] S5 base-lock record: L1-L16, the greedy self-agreement fact (D3 + S7 probes), design-doc section 7
+post-fix successor cited; [ ] R3; [ ] S9 read-back; [ ] R4; [ ] memory successor note for
+`saea-serving-deployment-decision.md`; [ ] commit on `npu-vllm-port`, scrub, publish to `chaosxingxc-orion/omni` `main`
+when the owner asks. Post-lock, not gating: the timeout change (item 2), E3/shm, the engine-fix image, the transport.
+
+**6. Card-free work that starts now (disjoint files).** SONNET S7 driver (`scripts/serving/record_runs.py`, not yet
+existing; the liveness poll in `synthetic_sweep.py` is in the tree, uncommitted): R0 sequence, poll, seed and sequential
+probes, per-level checkpoint/resume, fixture-tested; plus the S7 sweep plan file carrying every prediction above. SONNET
+S16: `-v2` profiles for both arms (A ceiling 32; B ceiling 96 with a 128 variant) and the `-v3` shm reclassification as a
+separate patch, each with the S12 equality output; nothing committed until Q-B/Q-C. OPUS: S8 skeleton (branch
+placeholders, labelled preliminary rows, the bound with A's numbers); S5 skeleton (L1-L16 read methods, receipt
+placeholders, the D3 fact); the design-doc section 7 post-fix successor (gates S5, R2 decision 4); the D3 note in
+`work/scratch/badcase/` (<= 30 lines). FABLE: R3/R4 and the owner relay only.
+
 ---
 
 ## 4. Streams (disjoint files), with ready-to-paste brief headers
