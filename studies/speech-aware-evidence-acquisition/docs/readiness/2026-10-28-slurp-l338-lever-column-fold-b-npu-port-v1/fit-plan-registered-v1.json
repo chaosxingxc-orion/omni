@@ -139,7 +139,7 @@
   "no_think_node": null,
   "one_factor": "None within the cell beyond the historical sampling levers; against the historical twin the port changes the serving stack, the speech input path, the retrieval vectors and the authored knowledge together (the declared differences), so it is read beside the historical flight, never as a one-factor contrast with it.",
   "plan_kind": "fit",
-  "preparation_base_commit": "32589378",
+  "preparation_base_commit": "ad67226f",
   "prepared_phase_supply": {
     "note": "this cell's own first-phase supply under its own run id (item E16), prepared or re-prepared by scripts/flights/repin_cell.py at the flip; the committed phase-supply-v1 (1141f08c...) predates this registration's config change and is superseded by phase-supply-v2 (output equality asserted)",
     "relpath": "prepared/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1/phase-supply-v1.json",
@@ -147,7 +147,7 @@
   },
   "protocol_document": {
     "relpath": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/protocol-registered-v1.json",
-    "sha256": "32c7d2a40a18c23ba96ecc8d135c6abe26abd72da0b9ce6d1e76c1495af8256e"
+    "sha256": "26e4a2bc0b09cbeb005404845abe5ece4b06f6eb7b2c23523c5181daefd1aad3"
   },
   "purpose": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1: request envelopes only; reads nothing.",
   "registered_at_utc": "2026-10-28T13:19:53.257535+00:00",

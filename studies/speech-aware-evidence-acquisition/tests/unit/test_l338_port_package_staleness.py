@@ -1,6 +1,8 @@
 """Guard G: the DRAFT port registration package must quote the live composed config hashes of both port cells.
 
-Commit db798a83 moved ``--max-num-seqs`` out of the hashed port model fragment (fragment hash df95b65b -> a35b2740), so the composed and protocol hashes
+Commit db798a83 moved ``--max-num-seqs`` out of the hashed port model fragment (fragment hash df95b65b -> a35b2740; full a35b274058d7ac7558d3d0ac32cca8bb3c9321cb13ea89f16b38003fdd18c720 with
+SPEECHRL_DATA_DIR=/mnt/cephfs/xingchao/omni set, the formal environment: ``core.config.fragment_hash`` collapses the data root
+the fragment's ``model_materialization_root`` spells; with NO data-root variable set the same fragment hashes bcb98207...), so the composed and protocol hashes
 of the two port cells moved and ``protocol-registered-v1.json`` was stale until the registration writer was re-run (stream S13). Every contact path recomputes the
 protocol hash and refuses a mismatch; this module keeps any future drift visible: the package must quote the live composed hash of both cells, and the mint
 entry point refuses a stale package (fail closed), covered below.

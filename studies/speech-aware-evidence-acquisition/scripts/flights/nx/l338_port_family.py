@@ -124,6 +124,29 @@ def _spec(key: str) -> dict:
 
 CELLS = {key: _spec(key) for key in fam.ALL_KEYS}
 ALL_KEYS = fam.ALL_KEYS
+
+# ---- the READ: ids, paths and the sign-off conditions of the port (the historical reader binds the historical ids; the port reader binds these) ------
+READ_RUN_ID = _port_upper(fam.READ_RUN_ID)
+RECIPE_ID = _port_lower(fam.RECIPE_ID)
+ANALYSIS_ROOT = f"analysis/{READ_RUN_ID}"
+RECIPE_RELPATH = f"{PACKAGE}/analysis-recipe-v1.json"
+SIGNOFF_CONDITIONS_RELPATH = f"{PACKAGE}/signoff-conditions-v1.json"
+PORT_READER = "scripts/analysis/slurp_l338_port_column_read.py"
+SMOKE_TABLE_RELPATH = f"{ANALYSIS_ROOT}/smoke-decode-cost.json"
+VERDICTS_NAME = "port-verdicts.json"
+if READ_RUN_ID != "SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1":
+    raise ValueError("the port id rule no longer reproduces the port READ run id")
+
+
+def signoff_conditions() -> dict:
+    """The port's machine sign-off conditions: the historical conditions for the same arm table (``l338_family.signoff_conditions``) with the package name and the
+    smoke decode-cost table path moved to the PORT READ run id. The table is written by the port smoke reader (:data:`PORT_READER` ``--stage smoke``)."""
+
+    doc = dict(fam.signoff_conditions(), package=PKG_NAME, table_relpath=SMOKE_TABLE_RELPATH)
+    doc["_note"] = ("L338 NPU port: " + fam.signoff_conditions()["_note"] + " Copied from l338_family.signoff_conditions() with the package and the table path "
+                    f"({SMOKE_TABLE_RELPATH}) replaced: the smoke decode-cost table is written by the port reader {PORT_READER} --stage smoke, under the PORT READ run id.")
+    return doc
+
 if CELLS["arm"]["run"] != "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1" or CELLS["arm"]["cell"] != "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1":
     raise ValueError("the port id rule no longer reproduces the committed port flight's ids")
 if CELLS["arm"]["baseline"] != "slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1":

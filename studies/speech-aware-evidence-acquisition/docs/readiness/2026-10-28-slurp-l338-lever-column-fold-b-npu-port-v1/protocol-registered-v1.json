@@ -246,6 +246,6 @@
     "transport": "vllm"
   },
   "status": "DRAFT-HELD-REGISTERED_BEFORE_CONTACT_AWAITING_COORDINATOR_COUNTERSIGN_AND_READINESS_FLIP",
-  "study_commit_at_registration": "32589378",
+  "study_commit_at_registration": "ad67226f",
   "the_question": "Does the L338 lever column read the same way on the BF16 / vLLM-Ascend Thinking core with the port's knowledge and vectors? Each candidate arm and the twin aa are read PAIRED per row against the delivering lock arm on the same 1,080 Fold B rows in one flight, beside (never as a byte replay of) the historical flight."
 }

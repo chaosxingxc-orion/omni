@@ -4,30 +4,30 @@
     "plans": {
       "fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/fit-plan-registered-v1.json",
-        "sha256": "3056fdbd984a909dc9a7b4362f70bb3307e786bafd28e3d7a5089615460e0d2d"
+        "sha256": "bd8b5de6a990e0141ee0f86b782335f06a22eb810e3e79ac452dea46ef86ee2e"
       },
       "generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/generation-plan-registered-v1.json",
-        "sha256": "66e223906b2430e51db32a11c04efce10e1fdd5986598bb82efdd19c23894056"
+        "sha256": "8d6d481a966d44e8f10d2c836333bae63f92ae3c9358c7f4590c4249730b36b5"
       },
       "smoke-fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/smoke-fit-plan-registered-v1.json",
-        "sha256": "5279cded783008801a50737055017459d9b6526dafbf9318b7dece232de1b875"
+        "sha256": "bb7d6e9e76d0740d17c467fdec02f7f051fe20e1ce3a39a4ae45494cdc7aab09"
       },
       "smoke-generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/smoke-generation-plan-registered-v1.json",
-        "sha256": "637daf147d0b9c6b6f2418a97ddfd4e442e439c888a57917eabfe74113868e1d"
+        "sha256": "a176af2a5f66f9de1b1394be5f832aea8654b95728e3bef2a6f825e9838ea264"
       }
     },
     "protocol": {
       "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/protocol-registered-v1.json",
-      "sha256": "32c7d2a40a18c23ba96ecc8d135c6abe26abd72da0b9ce6d1e76c1495af8256e"
+      "sha256": "26e4a2bc0b09cbeb005404845abe5ece4b06f6eb7b2c23523c5181daefd1aad3"
     },
     "registered_facts": {
       "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/registered-facts-v1.json",
-      "sha256": "1ce6af21b20d9fb85a87bacc76c1ff5c7ef6b9f01eba49681569c2aaab2ffe6b"
+      "sha256": "00cdee47bc31e071c6707426825d6661fdac7f37310e411004e6b40ed1565169"
     },
-    "registration_base_commit": "32589378"
+    "registration_base_commit": "ad67226f"
   },
   "authorization_basis": "owner decisions of 2026-10-28 on the NPU port (design doc section 9.1: the saea-base Docker container is the execution authority; item 4: the agent drafts the exposure preregistration rows; item 5: the admission receipt is authorised and minted by the main thread; item 6: model-free-check rows for the port preparations; the multi-instance deployment input: the deployment is a named placeholder filled from a measured speed sweep); docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md; historical authority owner rulings 338 and 341 A (2026-10-19), 335 B and 336 A (2026-10-18), 326 A and 327 A (2026-10-17), 313 A (2026-10-14) and 304/307 (2026-10-13), coordinator approval of the decision-338 lever-column design (docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1).",
   "budget": {

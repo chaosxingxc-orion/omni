@@ -341,7 +341,7 @@
     },
     "signoff_conditions": {
       "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/signoff-conditions-v1.json",
-      "sha256": "441ad582da9108f39f7e0df54cee09c484c24d7d3e6a596cc9848748a80658e2"
+      "sha256": "aae80c8cc7e31418e7d73978ae0da9845d04c7fc7a5efee196738664be6c1088"
     }
   },
   "prohibitions": [
@@ -362,12 +362,16 @@
       "intent": 0.65,
       "slu": 1.49
     },
+    "historical_reader": "scripts/analysis/slurp_l338_column_read.py",
     "levers": {
       "l1-support": "L1",
       "l2-union": "L2"
     },
-    "reader": "scripts/analysis/slurp_l338_column_read.py",
+    "read_run_id": "SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1",
+    "reader": "scripts/analysis/slurp_l338_port_column_read.py",
+    "recipe": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/analysis-recipe-v1.json",
     "twin": "aa",
+    "verdicts_file": "analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1/port-verdicts.json",
     "word_order": {
       "L1": [
         "NOMINATED",
@@ -484,7 +488,7 @@
     }
   },
   "status": "DRAFT-HELD",
-  "study_commit_at_registration": "32589378",
+  "study_commit_at_registration": "ad67226f",
   "thinking_knobs": {
     "answer_fallback": {
       "enable_thinking": false,

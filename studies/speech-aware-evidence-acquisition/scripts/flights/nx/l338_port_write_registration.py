@@ -414,7 +414,8 @@ def readme_text(ids: Mapping[str, Mapping], commit: str) -> str:
         "4. Re-pin and flip with `scripts/flights/repin_cell.py` from a clean tree (both cells, `--decision coordination/... --decision-id "
         f"{pf.DECISION_ID}`): it prepares the smoke's phase supply, re-prepares the flight's as phase-supply-v2 (output equality asserted; never "
         "`--allow-output-change`) and pins the decision receipt. `SAEA_ALLOW_9P_FLIP=1` is needed because the tree is under `/mnt/` (CephFS, not 9p).\n"
-        "5. Open items: the analysis recipe and READ row of the port, the port chain script, the session identity, runtime receipt and lock entries (9.2-9.4).\n"
+        "5. The port reader is `" + pf.PORT_READER + "` (stages smoke and read; it writes `" + pf.SMOKE_TABLE_RELPATH + "` and `" + pf.ANALYSIS_ROOT + "/" + pf.VERDICTS_NAME + "`). "
+        "Open items: the READ row of the port, the port chain script, the session identity, runtime receipt and lock entries (9.2-9.4).\n"
     )
 
 
@@ -456,8 +457,7 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
     plans = plan_docs(ids, commit, at, protocol_sha)
     shas = {name: reg.wjson(root, f"{PKG}/{name}", doc) for name, doc in plans.items()}
     shas["protocol-registered-v1.json"] = protocol_sha
-    signoff = dict(fam.signoff_conditions(), package=pf.PKG_NAME)
-    signoff["_note"] = "L338 NPU port: " + signoff["_note"] + " Copied from l338_family.signoff_conditions(); the port smoke's reader output path is the historical reader's."
+    signoff = pf.signoff_conditions()
     shas["signoff-conditions-v1.json"] = reg.wjson(root, f"{PKG}/signoff-conditions-v1.json", signoff)
     facts = {
         "_note": ("Every model-free fact this DRAFT port registration rests on, and the canonical stage3_measurement blocks keyed by the port run ids "
@@ -475,7 +475,8 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
         "max_num_seqs_dependents": list(pf.MAX_NUM_SEQS_DEPENDENTS), "declared_differences": list(pf.DECLARED_DIFFERENCES),
         "prohibitions": protocol["prohibitions"], "registered_at_utc": at,
         "registration_basis": f"{pf.OWNER_DECISIONS}; {pf.DESIGN_DOC}. DRAFT: nothing here authorises a flip or a flight.",
-        "read_rule": {"reader": fam.READER, "words": hw.WORD_RULES, "word_order": hw.WORD_ORDER, "twin": fam.TWIN,
+        "read_rule": {"reader": pf.PORT_READER, "historical_reader": fam.READER, "recipe": pf.RECIPE_RELPATH, "read_run_id": pf.READ_RUN_ID,
+                      "verdicts_file": f"{pf.ANALYSIS_ROOT}/{pf.VERDICTS_NAME}", "words": hw.WORD_RULES, "word_order": hw.WORD_ORDER, "twin": fam.TWIN,
                       "floors_pp": {"slu": fam.FLOOR_SLU_PP, "intent": fam.FLOOR_INTENT_PP}, "levers": dict(fam.ARM_LEVER), "delivering": fam.DELIVERING},
         "roster": {"arm": fam.ROSTER["arm"], "smoke": fam.ROSTER["smoke"], "roster_id": fam.READ_ROSTER, "split_identity_hash": arm["split_identity_hash"]},
         "rows": fam.ROWS, "schema": "saea-registered-facts-v1", "stage3_measurement": hw.measurement_blocks(ids),
