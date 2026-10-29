@@ -136,7 +136,7 @@ Two smaller defects, both recorded rather than removed:
   and `4483338-364` *"Um."*, `4483338-309` *"<inaudible>."*). They contribute zero reference words to
   the denominator while the 13 hypothesis words they draw count as insertions in the numerator.
   Four rows of 2,735; worth a few hundredths of a point.
-* **Three hypotheses come back in Chinese**, all on sub-second clips: `4432298-287` (`呃，对对对。`, Chinese for "uh, yes, yes, yes",
+* **Three hypotheses come back in Chinese**, all on sub-second clips: `4432298-287` (a Chinese hypothesis meaning "uh, yes, yes, yes"; the raw text stays in the run's sealed check outputs,
   for *"Sorry."*), `4432298-312` and `4485244-268` (for *"Thank you."*). A real defect of the frozen
   core on near-empty audio, three rows of 2,735.
 
