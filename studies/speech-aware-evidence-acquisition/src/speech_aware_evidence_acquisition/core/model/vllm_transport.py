@@ -8,9 +8,14 @@ seam ``LlamaServerTransport`` already has for it (its injected ``post`` callable
 
 request   ``thinking_budget_tokens`` (llama-server budget sampler) is sent as ``thinking_token_budget`` (vLLM's per-request
           field, same meaning); ``model`` is always set to the fragment's ``served_model_name``, so a server serving any
-          other model answers 404 instead of silently answering; ``id_slot`` is REFUSED -- it is llama-server slot
-          affinity, vLLM has no slots (prefix caching is automatic), and a fragment that declares it was written for the
-          other server.
+          other model answers 404 instead of silently answering; ``id_slot`` (Gap A, 2026-10-30) is runner slot-affinity
+          bookkeeping with no vLLM server meaning -- vLLM has no slots, prefix caching is automatic -- and the runner
+          sets it on EVERY contact regardless of deployment shape (``rails/runner.py``), so a single-endpoint transport
+          must not fail a request merely for carrying it. It is therefore accepted and silently stripped before the
+          request reaches the wire, never forwarded and never validated here (its one use, dispatch to one of several
+          resident instances by ``id_slot mod instance_count``, is ``VllmRouterTransport``'s, which reads it from the
+          UNTRANSLATED payload before delegating to the instance's own ``VllmServerTransport`` -- this transport's job
+          ends at "the server never sees it").
 response  vLLM names the reasoning channel ``message.reasoning`` (it renames the deprecated ``reasoning_content``); it is
           moved to ``reasoning_content``, the only name the decision-286 projection strips, so reasoning bytes can never
           ride past it under a name it does not read. ``usage`` entries vLLM sends as ``null`` (``*_tokens_details``) are
@@ -56,8 +61,11 @@ from .transport import (
 VLLM_TRANSPORT = "vllm"
 #: vLLM's per-request spelling of the reasoning budget.
 VLLM_WIRE_BUDGET_KEY = "thinking_token_budget"
-#: llama-server request fields that have no meaning on vLLM and are refused rather than silently ignored.
-VLLM_REFUSED_REQUEST_KEYS = frozenset({"id_slot"})
+#: Request fields the runner sets that have no vLLM server meaning: silently stripped before the wire, never
+#: forwarded and never refused (Gap A, 2026-10-30) -- ``id_slot`` is llama-server slot-affinity bookkeeping the
+#: runner adds to EVERY contact (vLLM has no slots: prefix caching is automatic); the router reads it before this
+#: translation (see module docstring, "request").
+VLLM_ROUTING_ONLY_REQUEST_KEYS = frozenset({"id_slot"})
 #: llama-server flags a vLLM fragment must not carry (they would be read as if a llama-server were answering).
 VLLM_REFUSED_SERVER_FLAGS = frozenset({BUDGET_MESSAGE_FLAG, "-np", "--parallel", "-c", "--ctx-size", "--reasoning-format"})
 
@@ -97,17 +105,16 @@ _VLLM_CONTEXT_MESSAGES = (
 def vllm_request_body(body: Mapping[str, object], served_model_name: str) -> dict[str, object]:
     """Translate one rendered chat-completions body into vLLM's dialect (module docstring, "request")."""
 
-    refused = sorted(VLLM_REFUSED_REQUEST_KEYS & set(body))
-    if refused:
-        raise SessionError(
-            f"request fields {refused} are llama-server controls with no vLLM meaning; a vllm fragment must not declare them"
-        )
     if VLLM_WIRE_BUDGET_KEY in body:
         raise SessionError(f"{VLLM_WIRE_BUDGET_KEY} must come from the fragment's reasoning knobs, never directly")
     if "model" in body and body["model"] != served_model_name:
         raise SessionError(f"request model {body['model']!r} is not the served model {served_model_name!r}")
     translated: dict[str, object] = {}
     for key, value in body.items():
+        if key in VLLM_ROUTING_ONLY_REQUEST_KEYS:
+            # id_slot: routing metadata the runner adds to every contact (module docstring, "request") -- dropped
+            # here, never forwarded, regardless of its value or shape; a router reads it upstream of this call.
+            continue
         translated[VLLM_WIRE_BUDGET_KEY if key == WIRE_BUDGET_KEY else key] = value
     translated["model"] = served_model_name
     return translated

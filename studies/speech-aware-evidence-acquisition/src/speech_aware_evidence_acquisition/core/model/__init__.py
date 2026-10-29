@@ -86,6 +86,11 @@ from .transport import (  # noqa: E402
     _llama_server_factory,
 )
 from .vllm_transport import VllmServerTransport  # noqa: E402,F401  (registers the "vllm" transport)
+from .vllm_router_transport import (  # noqa: E402,F401
+    VllmRouterTransport,
+    VllmRouterTransportError,
+    build_vllm_router_transport,
+)
 from .prepared_feature_cache import (  # noqa: E402
     PreparedFeatureCacheError,
     PreparedFeatureCacheGuard,

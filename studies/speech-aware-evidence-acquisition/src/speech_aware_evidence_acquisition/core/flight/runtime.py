@@ -105,7 +105,19 @@ from ..config import (
     runtime_transport,
 )
 from ..configured_transport import build_configured_transport
+# Gap B (2026-10-30 plan section 4; Decision 2): ``core.deployment`` is another stream's module (S16b/Gap C also
+# read it) -- imported here READ-ONLY, for the facts a multi-instance deployment profile already carries (its
+# instances' endpoints, cards and ceiling, and the model fragment it names); this module never derives, writes or
+# validates a profile's OWN shape, only consumes what ``core.deployment`` already validated.
+from ..deployment import (
+    DeploymentProfile,
+    deployment_record,
+    load_deployment_profile,
+    resolve_profile_path,
+    validate_deployment_profile,
+)
 from ..model.speech_features import materialize_legacy_cached_speech_feature_packets
+from ..model.vllm_router_transport import VllmRouterTransportError, build_vllm_router_transport
 from ..preparation_runtime import (
     assert_stable_file_fingerprint as _assert_file_fingerprint,
     verify_feature_encoder_runtime,
@@ -125,6 +137,12 @@ from ..session.serving import (
     summarize_monitor_file,
 )
 from ..session.serving import merge_server_args as _merge_server_args
+from ..session.serving import (
+    SESSION_DOCUMENT_NAME,
+    SESSION_STOP_NAME,
+    read_session_document,
+    serving_root,
+)
 from ..split_receipt import VerifiedSplit
 from .lease import WorkerExecutionPolicy
 from .receipts import FLIGHT_STAGES, FlightReceipts, require_mandatory_throughput_fields
@@ -1405,6 +1423,26 @@ def _default_packet_promoter(
     )
 
 
+def _find_resident_deployment_instance_session(
+    data_root: Path, instance_name: str
+) -> tuple[Path, dict[str, object]] | None:
+    """One deployment instance's resident session, or ``None`` -- the per-instance analog of
+    ``core.session.serving.find_resident_session`` (Gap B, 2026-10-30 plan section 4).
+
+    Convention: ``serving/<instance name>`` (one level namespaced below the single-instance convention's own
+    ``serving/<session id>``), holding the SAME ``session.json`` / ``session-stop.json`` / ``session-receipt.json``
+    triple a single-instance resident session does -- started externally by the host launcher
+    (``work/scripts/npu_deploy.sh``), never by this flight. "Resident" means exactly what it means for one
+    instance: a ``session.json`` exists and no ``session-stop.json`` sits beside it.
+    """
+
+    candidate = serving_root(data_root) / instance_name
+    document_path = candidate / SESSION_DOCUMENT_NAME
+    if not document_path.is_file() or (candidate / SESSION_STOP_NAME).is_file():
+        return None
+    return candidate, read_session_document(document_path)
+
+
 class FlightRuntime:
     """One flight's hash-bound harness: compose config, load the split,
     build and validate an :class:`~contracts.ExecutionPlan`, open the gate,
@@ -1440,6 +1478,16 @@ class FlightRuntime:
         # exactly as before: spawn, own, stop.
         serving_session_finder: Callable[[Path], object | None] = find_resident_session,
         session_attacher: Callable[..., object] = attach_session,
+        # Gap B (2026-10-30 plan section 4): the per-INSTANCE analog of ``serving_session_finder``, used only when
+        # a deployment profile with more than one instance is attached (``deployment_profile=``). Each instance's
+        # resident session is recorded under its own ``serving/<instance name>`` directory (one level namespaced
+        # below the single-instance convention), started externally -- a multi-instance deployment's N containers
+        # are ``docker run -d`` from the host launcher (``work/scripts/npu_deploy.sh``, ``core.deployment``'s own
+        # module docstring), never spawned by this flight. Default is the real primitive; the single-instance path
+        # never calls this and is therefore untouched by its existence.
+        deployment_instance_session_finder: Callable[[Path, str], object | None] = (
+            _find_resident_deployment_instance_session
+        ),
         transport_factory: Callable[..., object] | None = None,
         gate_factory: Callable[..., object] = FrozenCoreGate.for_study_repo,
         rails_runner: Callable[..., object] = run_rails_experiment,
@@ -1500,6 +1548,16 @@ class FlightRuntime:
         speech_tokens_per_second: float = 14.4,
         execution_policy: WorkerExecutionPolicy | None = None,
         resume_from: Mapping[str, object] | None = None,
+        # Gap B (2026-10-30 plan, section 4; Decision 2): the OPTIONAL deployment profile/record this flight
+        # serves against -- a ``core.deployment.DeploymentProfile``, a deployment-record mapping, a bare profile
+        # id/path, or ``None``. ``None`` (every existing caller) and a one-instance profile are BYTE-IDENTICAL to
+        # this flight never having heard of deployment profiles: ``serve`` spawns/attaches exactly one session and
+        # one transport, as it always has. A profile with more than one instance makes ``serve`` build one session
+        # per instance and combine their transports into one ``VllmRouterTransport`` (``core.model.
+        # vllm_router_transport``); see ``serve``'s own docstring. ``core.flight.width.flight_width`` (Gap C,
+        # imported read-only, never edited here) reads the same attribute to widen a flight's in-flight row count
+        # by ``admitted_level`` when the profile declares one.
+        deployment_profile: object | None = None,
     ) -> None:
         if not isinstance(run_id, str) or not run_id:
             raise FlightRuntimeError("run_id must be a non-empty string")
@@ -1508,6 +1566,7 @@ class FlightRuntime:
         if not callable(adapter_factory):
             raise FlightRuntimeError("adapter_factory must be callable")
         self._execution_policy = execution_policy
+        self._deployment_profile = deployment_profile
         self._serve_fingerprint: str | None = None
         self._repo_root = Path(repo_root)
         self._data_root = Path(data_root)
@@ -1523,6 +1582,7 @@ class FlightRuntime:
         self._session_stopper = session_stopper
         self._serving_session_finder = serving_session_finder
         self._session_attacher = session_attacher
+        self._deployment_instance_session_finder = deployment_instance_session_finder
         self._transport_factory = transport_factory
         self._gate_factory = gate_factory
         self._rails_runner = rails_runner
@@ -5795,6 +5855,25 @@ class FlightRuntime:
         self._serve_fingerprint = self.serving_profile_fingerprint()
         self._gate_touch(self._gate, self._plan)
 
+        # Gap B (2026-10-30 plan section 4; Decision 2): a deployment profile with MORE THAN ONE instance takes a
+        # completely separate path -- attach to N resident sessions and combine their transports into one
+        # VllmRouterTransport (never spawn: a multi-instance deployment's containers are started externally,
+        # ``core.deployment``'s own module docstring). ``None`` or a one-instance profile falls straight through
+        # to the single-instance body below, UNCHANGED -- this is what keeps that body byte-identical to before
+        # this branch existed.
+        profile = self._deployment_profile_object()
+        if profile is not None and len(profile.instances) > 1:
+            multi = self._attach_resident_multi_instance_session(
+                profile=profile, values=values, runtime_receipt=runtime_receipt, geometry=geometry,
+            )
+            if multi is not None:
+                return multi
+            raise FlightRuntimeError(
+                f"deployment profile {profile.profile_id!r} declares {len(profile.instances)} instances but none "
+                "has a resident session yet; a multi-instance deployment is started externally "
+                "(work/scripts/npu_deploy.sh, core.deployment) -- this flight does not spawn multiple servers itself"
+            )
+
         # The fragment's own server_args, with ONLY -np/-c overridden from
         # the adapter geometry (:func:`merge_server_args`). Passing the two
         # derived flags alone -- what this stage used to do -- silently
@@ -6049,6 +6128,155 @@ class FlightRuntime:
                 "model_path": model_path,
             },
         )
+
+    # -- Gap B (2026-10-30 plan section 4; Decision 2): deployment-profile multi-instance serving -------------
+
+    def _deployment_profile_object(self) -> "DeploymentProfile | None":
+        """``self._deployment_profile`` resolved to a ``core.deployment.DeploymentProfile``, or ``None``.
+
+        Read-only use of ``core.deployment`` (another stream's module): this flight never derives, writes or
+        edits a profile, only resolves whatever shape it was handed (an already-loaded ``DeploymentProfile``, a
+        raw profile mapping, or a bare profile id/path) to the one object the rest of this file reads instances,
+        endpoints and the model fragment from.
+        """
+
+        profile = self._deployment_profile
+        if profile is None:
+            return None
+        if isinstance(profile, DeploymentProfile):
+            return profile
+        if isinstance(profile, Mapping):
+            return validate_deployment_profile(
+                dict(profile), source="<deployment_profile>", data_root=self._data_root
+            )
+        return load_deployment_profile(profile, self._repo_root, data_root=self._data_root)
+
+    def _declared_admitted_level(self, profile: "DeploymentProfile") -> int | None:
+        """The profile's OPTIONAL ``admitted_level`` field, read from the same raw document ``core.flight.width.
+        flight_width`` reads (Gap C) -- not a field of ``DeploymentProfile`` itself (``core.deployment`` owns no
+        flight-width concept), so it is read directly from ``self._deployment_profile`` here, independently of
+        ``flight_width``'s own private document resolution.
+        """
+
+        source = self._deployment_profile
+        if isinstance(source, Mapping):
+            document: object = source
+        else:
+            reference = profile.profile_id if isinstance(source, DeploymentProfile) else source
+            try:
+                path = resolve_profile_path(reference, self._repo_root)
+                document = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                return None
+        level = document.get("admitted_level") if isinstance(document, Mapping) else None
+        return level if isinstance(level, int) and not isinstance(level, bool) else None
+
+    def _attach_resident_multi_instance_session(
+        self,
+        *,
+        profile: "DeploymentProfile",
+        values: Mapping[str, object],
+        runtime_receipt: Mapping[str, object],
+        geometry: Mapping[str, object],
+    ) -> Mapping[str, object] | None:
+        """Attach to every instance's resident session and combine their transports into one
+        ``VllmRouterTransport``, or return ``None`` when NONE of the instances has a resident session yet
+        (``serve`` turns that into a refusal -- this method itself never spawns anything).
+
+        Instance 0's endpoint MUST equal the fragment's own ``base_url`` -- the protocol fact
+        (``build_vllm_router_transport`` refuses otherwise, before any instance is attached). A deployment that is
+        only PARTIALLY resident (some instances up, some not) is refused outright: a flight must never dispatch a
+        runner contact to N-1 instances while believing it has N (Gap B acceptance: no silent failover, and no
+        silent under-provisioning either).
+        """
+
+        instances = profile.instances
+        declared_base_url = values.get("base_url")
+        endpoints = [profile.base_url(instance) for instance in instances]
+
+        resolved = [
+            self._deployment_instance_session_finder(self._data_root, instance.name) for instance in instances
+        ]
+        if all(found is None for found in resolved):
+            return None
+        missing = [instance.name for instance, found in zip(instances, resolved) if found is None]
+        if missing:
+            raise FlightRuntimeError(
+                f"deployment profile {profile.profile_id!r} is missing a resident session for instance(s) "
+                f"{missing}; a multi-instance deployment must be FULLY resident before a flight attaches to it "
+                "(no partial attach)"
+            )
+
+        sessions = []
+        for instance, (session_dir, _document) in zip(instances, resolved):
+            session = self._session_attacher(
+                session_dir / SESSION_RECEIPT_NAME,
+                runtime_receipt=runtime_receipt,
+                runtime_root=self._runtime_root,
+            )
+            if (session.host, session.port) != (profile.bind_host, instance.port):
+                raise FlightRuntimeError(
+                    f"the resident session at {session_dir} answers {session.host}:{session.port}, not instance "
+                    f"{instance.name!r}'s deployed endpoint {profile.bind_host}:{instance.port}"
+                )
+            sessions.append(session)
+
+        def build_transport(index: int, endpoint: str):
+            instance_values = dict(values)
+            instance_values["base_url"] = endpoint
+            return build_configured_transport(
+                instance_values,
+                self._data_root,
+                repo_root=self._repo_root,
+                session=sessions[index],
+                runtime_receipt=runtime_receipt,
+                runtime_root=self._runtime_root,
+                transport_factory=self._transport_factory,
+            )
+
+        try:
+            router = build_vllm_router_transport(
+                declared_base_url, endpoints, build_transport, instance_ids=[instance.name for instance in instances],
+            )
+        except VllmRouterTransportError as error:
+            raise FlightRuntimeError(
+                f"deployment profile {profile.profile_id!r}: {error}"
+            ) from error
+
+        self._session = sessions[0]
+        self._sessions = tuple(sessions)
+        self._owns_session = False
+        self._transport = router
+        self._session_receipt_path = resolved[0][0] / SESSION_RECEIPT_NAME
+        self._serving_session_dir = resolved[0][0]
+        self._serving_monitor_path = None
+
+        record = deployment_record(profile, self._repo_root)
+        record = {**record, "admitted_level": self._declared_admitted_level(profile)}
+        payload = {
+            "session_id": f"{self._plan.run_id}-{self._plan.attempt_id}",
+            "host": profile.bind_host,
+            "port": instances[0].port,
+            "pid": sessions[0].pid,
+            "serving_geometry": geometry,
+            "session_role": str(runtime_receipt.get("role", "legacy")),
+            "startup_seconds": 0.0,
+            "reused": True,
+            "session_reused": True,
+            "session_source": "attached-multi-instance-serving-session",
+            "deployment_record": record,
+            "instance_sessions": [
+                {
+                    "instance": instance.name,
+                    "session_id": session.session_id,
+                    "host": session.host,
+                    "port": session.port,
+                    "pid": session.pid,
+                }
+                for instance, session in zip(instances, sessions)
+            ],
+        }
+        return self.receipts.record("serve", payload)
 
     def _attach_resident_serving_session(
         self,
@@ -7200,7 +7428,7 @@ class FlightRuntime:
             )
         packets = self.uses_speech_feature_packets()
         resolved = (
-            int(self._adapter.serving_geometry()["slots"]) if workers is None else int(workers)
+            self._flight_width() if workers is None else int(workers)
         )
         if resolved > 1:
             rows, dispatch = self._dispatch_concurrent(client, workers=resolved)
@@ -7592,6 +7820,23 @@ class FlightRuntime:
             policy, program, binding=binding, sink=sink, client=None
         )
 
+    def _flight_width(self) -> int:
+        """Rows in flight for this flight: ``instances x admitted_level`` when the attached deployment profile
+        declares an admitted level, else the hashed ``serving_geometry()["slots"]`` -- a deployment fact widening a
+        protocol fact, never reinterpreting it (Gap C, 2026-10-30 plan section 4, Decision 2).
+
+        ``core.flight.width.flight_width`` is imported read-only here (never edited by this stream); ``None`` --
+        every flight that never attached a profile -- returns ``serving_geometry()["slots"]`` unchanged, so every
+        existing call site of this method is byte-identical to reading ``serving_geometry()["slots"]`` directly.
+        """
+
+        from .width import flight_width
+
+        # getattr: a stub FlightRuntime built without __init__ (several binding tests do) has no attribute -> no profile.
+        return flight_width(
+            getattr(self, "_deployment_profile", None), int(self._adapter.serving_geometry()["slots"])
+        )
+
     def _native_prefix_slots(self, native_config=None):
         """Bind an optional role schedule to the actual serving geometry."""
         from ...rails.dispatch_slot_fill import (
@@ -7610,7 +7855,7 @@ class FlightRuntime:
                 native_config = load_native_episode_config(
                     self._composed.values, default_phase_program(policy),
                 )
-            parsed.validate(native_config, slot_count=self._adapter.serving_geometry()["slots"])
+            parsed.validate(native_config, slot_count=self._flight_width())
             return parsed
         except NativePrefixSlotsError as error:
             raise FlightRuntimeError(str(error)) from error
@@ -7650,7 +7895,7 @@ class FlightRuntime:
                 raise PolicyError("measured schedule requires a native role episode")
             if getattr(self, "_native_workflow_panel", None) is not None:
                 raise PolicyError("measured sequential schedule cannot use a workflow panel")
-            return runtime_options(values, slot_count=self._adapter.serving_geometry()["slots"])
+            return runtime_options(values, slot_count=self._flight_width())
         except PolicyError as error:
             raise FlightRuntimeError(str(error)) from error
 
@@ -7686,7 +7931,7 @@ class FlightRuntime:
                     raise NativeNodeBatchError("node batch requires a native role episode")
                 native_config = load_native_episode_config(self._composed.values, default_phase_program(policy))
             # The ordinary continuous phase runner admits four workflows/slot.
-            parsed.validate(native_config, queue_depth=4 * self._adapter.serving_geometry()["slots"])
+            parsed.validate(native_config, queue_depth=4 * self._flight_width())
             return parsed
         except NativeNodeBatchError as error:
             raise FlightRuntimeError(str(error)) from error

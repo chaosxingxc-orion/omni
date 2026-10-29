@@ -35,6 +35,8 @@ from speech_aware_evidence_acquisition.core.flight.runtime import (
     FlightServingSessionMismatchError,
     FlightStageOrderError,
 )
+from speech_aware_evidence_acquisition.core.model.vllm_router_transport import VllmRouterTransport
+from speech_aware_evidence_acquisition.core.session.serving import SESSION_RECEIPT_NAME
 from speech_aware_evidence_acquisition.e0.d2_leakage import ARM_VISIBLE_FIELDS
 from speech_aware_evidence_acquisition.rails.context_budget import ContextBudgetRefusal
 from speech_aware_evidence_acquisition.rails.task_adapter import TaskAdapter
@@ -523,6 +525,337 @@ def test_full_happy_path_runs_every_stage_in_order(tmp_path):
     assert document["run_id"] == "SAEA-TEST-RUN-001"
     for stage_payload in document["stages"].values():
         assert "stage_hash" in stage_payload
+
+
+# ---------------------------------------------------------------------------
+# Gap B / Gap C (2026-10-30 plan section 4, Decision 2): flight width reads an attached deployment profile; no
+# profile is byte-identical to reading the hashed serving geometry directly.
+# ---------------------------------------------------------------------------
+
+
+def test_flight_width_with_no_deployment_profile_is_the_hashed_serving_slots(tmp_path):
+    runtime = _make_runtime(tmp_path, happy_path=True)
+    runtime.preflight()
+    assert runtime._deployment_profile is None
+    assert runtime._flight_width() == runtime.adapter.serving_geometry()["slots"] == 2
+
+
+def test_flight_width_with_a_one_instance_profile_without_admitted_level_is_unchanged(tmp_path):
+    profile = {"instances": [{}], "max_num_seqs": 8}
+    runtime = _make_runtime(tmp_path, happy_path=True, deployment_profile=profile)
+    runtime.preflight()
+    assert runtime._flight_width() == 2
+
+
+def test_flight_width_widens_to_instances_times_admitted_level(tmp_path):
+    profile = {"instances": [{}, {}, {}, {}], "admitted_level": 32, "max_num_seqs": 32}
+    runtime = _make_runtime(tmp_path, happy_path=True, deployment_profile=profile)
+    runtime.preflight()
+    assert runtime._flight_width() == 128
+
+
+def test_flight_width_refuses_an_admitted_level_above_the_profile_ceiling(tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.width import FlightWidthError
+
+    profile = {"instances": [{}, {}], "admitted_level": 64, "max_num_seqs": 32}
+    runtime = _make_runtime(tmp_path, happy_path=True, deployment_profile=profile)
+    runtime.preflight()
+    with pytest.raises(FlightWidthError):
+        runtime._flight_width()
+
+
+# ---------------------------------------------------------------------------
+# Gap B (2026-10-30 plan section 4; Decision 2): serve() attaches to N resident sessions behind a multi-instance
+# deployment profile and combines their transports into one VllmRouterTransport. Never spawns: a multi-instance
+# deployment's containers are started externally (work/scripts/npu_deploy.sh); serve() only attaches.
+# ---------------------------------------------------------------------------
+
+_INSTANCE_BASE_URL = "http://127.0.0.1:8200"
+
+
+def _deployment_profile_document(
+    data_root: Path, *, instance_count: int = 2, admitted_level: int | None = None, max_num_seqs: int = 8
+):
+    document = {
+        "schema": "saea-deployment-profile-v1",
+        "profile_id": "test-multi",
+        "host": "test-host",
+        "image": "saea-base:test",
+        "model_fragment": "m",
+        "model_relpath": "models/fake",
+        "data_mount": str(data_root),
+        "bind_host": "127.0.0.1",
+        "tensor_parallel_size": 1,
+        "max_num_seqs": max_num_seqs,
+        "gpu_memory_utilization": 0.9,
+        "max_num_batched_tokens": None,
+        "busy_threshold_mib": 1024,
+        "host_card_count": instance_count,
+        "host_cpu_count": 8,
+        "shm_size": "1g",
+        "basis": "test",
+        "instances": [
+            {
+                "name": f"saea-test-i{index}",
+                "cards": [index],
+                "port": 8200 + index,
+                "cpuset": f"{2 * index}-{2 * index + 1}",
+                "env": {},
+            }
+            for index in range(instance_count)
+        ],
+    }
+    if admitted_level is not None:
+        document["admitted_level"] = admitted_level
+    return document
+
+
+
+_MULTI_INSTANCE_MODEL_EXTRA = {
+    "transport": "vllm",
+    "served_model_name": "qwen3-omni-30b-a3b-thinking",
+    "base_url": _INSTANCE_BASE_URL,
+    "server_args": ["--max-model-len", "24576"],
+}
+
+
+def _resident_instance(run_root: Path, instance_name: str, *, host: str, port: int, pid: int):
+    """One fake resident instance directory plus the session the fake attacher resolves it to."""
+
+    session_dir = run_root / "serving" / instance_name
+    session_dir.mkdir(parents=True)
+    (session_dir / "session.json").write_text("{}", encoding="utf-8")
+    session = _FakeSession(f"vllm-{instance_name}", host=host, port=port, pid=pid)
+    return session_dir, session
+
+
+def _multi_instance_seams(resident: Mapping[str, tuple[Path, object]]):
+    """``deployment_instance_session_finder``/``session_attacher`` fakes closed over a fixed resident map
+    (``{instance_name: (session_dir, session)}``, built by :func:`_resident_instance`)."""
+
+    def finder(data_root, instance_name):
+        found = resident.get(instance_name)
+        return None if found is None else (found[0], {})
+
+    def attacher(receipt_path, *, runtime_receipt, runtime_root):
+        for session_dir, session in resident.values():
+            if receipt_path == session_dir / SESSION_RECEIPT_NAME:
+                return session
+        raise AssertionError(f"no fake resident session for {receipt_path}")
+
+    return finder, attacher
+
+
+def test_serve_attaches_a_fully_resident_multi_instance_deployment(tmp_path):
+    data_root = tmp_path / "data"
+    data_root.mkdir(parents=True, exist_ok=True)
+    profile = _deployment_profile_document(data_root, admitted_level=6)
+    run_root = tmp_path / "runtime"
+    resident = {
+        "saea-test-i0": _resident_instance(run_root, "saea-test-i0", host="127.0.0.1", port=8200, pid=1001),
+        "saea-test-i1": _resident_instance(run_root, "saea-test-i1", host="127.0.0.1", port=8201, pid=1002),
+    }
+    finder, attacher = _multi_instance_seams({name: value for name, value in resident.items()})
+
+    runtime = _make_runtime(
+        tmp_path,
+        happy_path=True,
+        deployment_profile=profile,
+        deployment_instance_session_finder=finder,
+        session_attacher=attacher,
+        config_kwargs={"model_extra": _MULTI_INSTANCE_MODEL_EXTRA},
+    )
+    runtime.preflight()
+    runtime.preprocess()
+    payload = runtime.serve()
+
+    assert isinstance(runtime._transport, VllmRouterTransport)
+    assert runtime._transport.instance_count == 2
+    assert runtime._owns_session is False
+
+    record = payload["deployment_record"]
+    assert record["instance_count"] == 2
+    assert record["admitted_level"] == 6
+    assert [entry["base_url"] for entry in record["instances"]] == [
+        "http://127.0.0.1:8200",
+        "http://127.0.0.1:8201",
+    ]
+    assert payload["session_source"] == "attached-multi-instance-serving-session"
+    assert [row["instance"] for row in payload["instance_sessions"]] == ["saea-test-i0", "saea-test-i1"]
+
+
+def test_serve_refuses_a_deployment_profile_with_no_resident_instances_at_all(tmp_path):
+    data_root = tmp_path / "data"
+    data_root.mkdir(parents=True, exist_ok=True)
+    profile = _deployment_profile_document(data_root)
+    finder, attacher = _multi_instance_seams({})
+
+    runtime = _make_runtime(
+        tmp_path,
+        happy_path=True,
+        deployment_profile=profile,
+        deployment_instance_session_finder=finder,
+        session_attacher=attacher,
+        config_kwargs={"model_extra": _MULTI_INSTANCE_MODEL_EXTRA},
+    )
+    runtime.preflight()
+    runtime.preprocess()
+    with pytest.raises(FlightRuntimeError, match="does not spawn multiple servers itself"):
+        runtime.serve()
+
+
+def test_serve_refuses_a_partially_resident_deployment_no_partial_attach(tmp_path):
+    data_root = tmp_path / "data"
+    data_root.mkdir(parents=True, exist_ok=True)
+    profile = _deployment_profile_document(data_root)
+    run_root = tmp_path / "runtime"
+    resident = {"saea-test-i0": _resident_instance(run_root, "saea-test-i0", host="127.0.0.1", port=8200, pid=1001)}
+    finder, attacher = _multi_instance_seams(resident)
+
+    runtime = _make_runtime(
+        tmp_path,
+        happy_path=True,
+        deployment_profile=profile,
+        deployment_instance_session_finder=finder,
+        session_attacher=attacher,
+        config_kwargs={"model_extra": _MULTI_INSTANCE_MODEL_EXTRA},
+    )
+    runtime.preflight()
+    runtime.preprocess()
+    with pytest.raises(FlightRuntimeError, match="saea-test-i1"):
+        runtime.serve()
+
+
+def test_serve_refuses_when_instance_zero_differs_from_the_fragments_base_url(tmp_path):
+    data_root = tmp_path / "data"
+    data_root.mkdir(parents=True, exist_ok=True)
+    profile = _deployment_profile_document(data_root)
+    run_root = tmp_path / "runtime"
+    resident = {
+        "saea-test-i0": _resident_instance(run_root, "saea-test-i0", host="127.0.0.1", port=8200, pid=1001),
+        "saea-test-i1": _resident_instance(run_root, "saea-test-i1", host="127.0.0.1", port=8201, pid=1002),
+    }
+    finder, attacher = _multi_instance_seams(resident)
+
+    model_extra = {**_MULTI_INSTANCE_MODEL_EXTRA, "base_url": "http://127.0.0.1:9999"}
+    runtime = _make_runtime(
+        tmp_path,
+        happy_path=True,
+        deployment_profile=profile,
+        deployment_instance_session_finder=finder,
+        session_attacher=attacher,
+        config_kwargs={"model_extra": model_extra},
+    )
+    runtime.preflight()
+    runtime.preprocess()
+    with pytest.raises(FlightRuntimeError, match="instance 0"):
+        runtime.serve()
+
+
+def test_serve_with_a_one_instance_profile_takes_the_single_instance_path_unchanged(tmp_path):
+    """A one-instance profile must never reach the multi-instance branch: ``serve()``'s single-instance body,
+    byte for byte, exactly as with no profile at all (Gap B acceptance)."""
+
+    data_root = tmp_path / "data"
+    data_root.mkdir(parents=True, exist_ok=True)
+    profile = _deployment_profile_document(data_root, instance_count=1)
+
+    def _never_called(*args, **kwargs):
+        raise AssertionError("the one-instance path must never call the multi-instance instance session finder")
+
+    runtime = _make_runtime(
+        tmp_path,
+        happy_path=True,
+        deployment_profile=profile,
+        deployment_instance_session_finder=_never_called,
+    )
+    runtime.preflight()
+    runtime.preprocess()
+    payload = runtime.serve()
+    assert payload["session_source"] == "spawned"
+    assert not isinstance(runtime._transport, VllmRouterTransport)
+
+
+def test_run_phases_concurrent_worker_pool_widens_to_instances_times_admitted_level(tmp_path):
+    """Planner ruling (2026-10-30): the worker pool is actual concurrency and must widen with ``_flight_width()``,
+    not stay pinned to the hashed ``serving_geometry()["slots"]`` -- the 4xTP2 ``-v2`` shape (4 instances, admitted
+    level 32) reaches 128 concurrent workers."""
+
+    data_root = tmp_path / "data"
+    data_root.mkdir(parents=True, exist_ok=True)
+    profile = _deployment_profile_document(data_root, instance_count=4, admitted_level=32, max_num_seqs=32)
+    run_root = tmp_path / "runtime"
+    resident = {
+        f"saea-test-i{i}": _resident_instance(run_root, f"saea-test-i{i}", host="127.0.0.1", port=8200 + i, pid=1000 + i)
+        for i in range(4)
+    }
+    finder, attacher = _multi_instance_seams(resident)
+
+    runtime = _make_runtime(
+        tmp_path,
+        happy_path=True,
+        deployment_profile=profile,
+        deployment_instance_session_finder=finder,
+        session_attacher=attacher,
+        config_kwargs={"model_extra": _MULTI_INSTANCE_MODEL_EXTRA},
+    )
+    runtime.preflight()
+    runtime.preprocess()
+    runtime.serve()
+    receipt = runtime.run_phases()  # workers=None: the fixed-policy dispatch resolves its own width
+
+    assert receipt["dispatch"]["workers"] == 128
+    # The hashed geometry fact is unmoved: it is still the baseline's own serving_slots, never reinterpreted.
+    assert receipt["serving_slots"] == runtime.adapter.serving_geometry()["slots"] == 2
+
+
+def test_native_node_batch_queue_depth_widens_to_instances_times_admitted_level(tmp_path, monkeypatch):
+    """The same ruling, at the ``native_node_batch`` queue-depth call site: a batch size that the hashed geometry's
+    4-deep queue (``4 * serving_slots``) could never admit fits once a 4x32 deployment profile widens it to 512.
+
+    ``preflight()`` validates ``native_node_batch`` itself (``_prepare`` calls ``_native_node_batch()`` with no
+    ``native_config``), so a phase-program policy and a stubbed ``load_native_episode_config`` stand in for a real
+    native role episode -- the same stub shape ``tests/unit/test_native_node_batch_binding.py`` uses, just reached
+    through the FlightRuntime seam instead of calling ``NativeNodeBatch.validate`` directly.
+    """
+
+    from types import SimpleNamespace
+
+    from speech_aware_evidence_acquisition.rails import native_episode_config as native_episode_config_module
+
+    block = {
+        "schema": "saea-native-node-batch-v1",
+        "node_order": ["perception", "solver", "reviewer", "planner"],
+        "batch_size": 100,
+    }
+    stub_config = SimpleNamespace(
+        roles=tuple(SimpleNamespace(phase_id=r, max_iterations=1) for r in block["node_order"]),
+        relisten_json=None,
+        context_policy_json=None,
+    )
+    monkeypatch.setattr(native_episode_config_module, "load_native_episode_config", lambda *a, **k: stub_config)
+
+    narrow = _make_runtime(
+        tmp_path,
+        happy_path=True,
+        config_kwargs={"policy": "phase-direct-only-v1", "baseline_extra": {"native_node_batch": block}},
+    )
+    # No profile: width is the hashed 2 slots, queue_depth = 8 -- too narrow for a 100-row batch.
+    with pytest.raises(FlightRuntimeError, match="queue"):
+        narrow.preflight()
+
+    # core.flight.width.flight_width reads a bare mapping directly (no profile-file schema needed): the same
+    # shape the width tests above use, mirroring the 4xTP2 -v2 profile (4 instances, admitted level 32).
+    wide_profile = {"instances": [{}, {}, {}, {}], "admitted_level": 32, "max_num_seqs": 32}
+    wide = _make_runtime(
+        tmp_path / "wide",
+        run_id="SAEA-TEST-WIDE-BATCH",
+        happy_path=True,
+        deployment_profile=wide_profile,
+        config_kwargs={"policy": "phase-direct-only-v1", "baseline_extra": {"native_node_batch": block}},
+    )
+    wide.preflight()
+    assert wide._flight_width() == 128
 
 
 # ---------------------------------------------------------------------------

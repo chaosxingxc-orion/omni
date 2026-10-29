@@ -193,14 +193,23 @@ def test_request_carries_the_served_model_and_vllms_budget_field():
 @pytest.mark.parametrize(
     "body",
     [
-        {"messages": [], "id_slot": 0},
         {"messages": [], "thinking_token_budget": 10},
         {"messages": [], "model": "some-other-model"},
     ],
 )
-def test_request_refuses_llama_controls_direct_budget_and_a_foreign_model(body):
+def test_request_refuses_direct_budget_and_a_foreign_model(body):
     with pytest.raises(SessionError):
         vllm_request_body(body, _SERVED)
+
+
+@pytest.mark.parametrize("id_slot", [0, 2, 127])
+def test_request_silently_strips_the_runners_id_slot(id_slot):
+    """Gap A (2026-10-30): the runner sets ``decoding_params.id_slot`` on every contact (``rails/runner.py``), single
+    or multi instance alike; a single-endpoint vllm transport must accept it and never forward it to the server."""
+
+    body = vllm_request_body({"messages": [], "id_slot": id_slot, "max_tokens": 4096}, _SERVED)
+    assert "id_slot" not in body
+    assert body == {"messages": [], "max_tokens": 4096, "model": _SERVED}
 
 
 def test_response_moves_vllms_reasoning_channel_to_the_name_the_projection_strips():
@@ -406,11 +415,17 @@ def test_full_path_keeps_the_reasoning_guard(tmp_path):
         transport(json.dumps(_payload(tmp_path)).encode())
 
 
-def test_full_path_refuses_a_fragment_that_still_declares_slot_affinity(tmp_path):
+def test_full_path_accepts_and_strips_a_runner_shaped_contacts_slot_affinity(tmp_path):
+    """Gap A contract test: a payload shaped exactly as the runner builds one (``decoding_params`` carrying
+    ``id_slot``, set on every contact at ``rails/runner.py:2128,4353,4978,5195,7367``) must succeed end to end
+    against a vllm transport, and the id_slot must never reach the wire."""
+
     post = _Recorder(_vllm_response("PlayMusic"))
-    with pytest.raises(SessionError, match="id_slot"):
-        _transport(tmp_path, post)(json.dumps(_payload(tmp_path, id_slot=2)).encode())
-    assert post.calls == []
+    transport = _transport(tmp_path, post)
+    envelope = json.loads(transport(json.dumps(_payload(tmp_path, id_slot=2)).encode()))
+    (url, sent), = post.calls
+    assert "id_slot" not in sent
+    assert envelope["text"] == "PlayMusic"
 
 
 def test_speech_feature_packet_orders_are_refused(tmp_path):
