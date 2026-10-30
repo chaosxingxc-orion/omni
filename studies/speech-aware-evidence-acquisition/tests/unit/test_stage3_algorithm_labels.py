@@ -43,6 +43,7 @@ EXPECTED_IDS = {
     "system-text-black-box-v1",
     "tfgrpo-semantic-advantage-v1",
     "tfgrpo-system-memory-disjoint-v1",
+    "tfrl-v2",
 }
 
 LABELLED_FRAGMENTS = {

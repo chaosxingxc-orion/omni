@@ -264,6 +264,10 @@
       "planned_policy": "saea-commit-vote-v1"
     }
   },
+  "bank_release": {
+    "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/bank-release-v1.json",
+    "sha256": "ac377eb6a51f38f5dbbc39cfb6f0ecac08bf2698a61f8d7556b1f052f45ad711"
+  },
   "budget_switch": {
     "active": "default",
     "per_switch": {
@@ -456,9 +460,9 @@
       "remedy": "choose the bound (O-switch-bound)."
     },
     {
-      "finding": "As a control, verify_declared_module on the committed L338 port flight fails: the re-authored stores differ from the lock layer the compiler re-applies. It is pre-existing, not a T defect; T never calls apply_to (it moves only the compiler's policy and role leaves), as the L338 port derive does.",
+      "finding": "verify_declared_module refuses the committed L338 port flight, and it refuses the T cells for the same reason: the config loader (rails.native_episode_config) checks EVERY declared consumption_module block, and the T cells declare lock v2.2, whose compiled knowledge_stores carry the historical 268-B store pins while the port re-authored stores differ at ten leaves (docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md). T never calls apply_to (it moves only the compiler's policy and role leaves, as the L338 port derive does), so the derive does not hide the clash from the loader.",
       "id": "l338-control-fails-verify-declared-module",
-      "remedy": "none for T; a port lock layer entry (owner decision 9.4) would close it."
+      "remedy": "T's module lock switches to the port lock version v2.2-npu-port once that registry entry lands (lock plan 3.14, owner-run in a parallel stream); until then the T cells keep lock v2.2 and the loader refuses them, as it refuses the L338 port flight."
     },
     {
       "finding": "The FIT caps are rows x contacts x 1 counting endpoint (native_contact_required_cap, raw-audio arm), checked at import against the gate's own helper; the packet-arm factor of 4 is not used.",
@@ -1042,6 +1046,35 @@
       }
     ]
   },
+  "rails_status": {
+    "deliverables": {
+      "analysis_recipe_and_reader": {
+        "ok": true,
+        "read_row": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/read-row-draft-v1.md",
+        "reader": "scripts/analysis/slurp_tfrl_v2_port_read.py",
+        "reader_file": true,
+        "recipe": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/analysis-recipe-v1.json",
+        "recipe_sha256": "303d238a1fb0979862607b2ccb931ce492c7650c6f5629fd6092aa5fc8cce3ab",
+        "recipe_sha_pinned_in_read_row": true
+      },
+      "bank_release_registration": {
+        "ok": true,
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/bank-release-v1.json",
+        "problems": [],
+        "sha256": "ac377eb6a51f38f5dbbc39cfb6f0ecac08bf2698a61f8d7556b1f052f45ad711"
+      },
+      "stage3_label_and_consumption_rail": {
+        "label": "tfrl-v2",
+        "label_registered": true,
+        "module_accepts_frame": true,
+        "ok": true,
+        "rail": "src/speech_aware_evidence_acquisition/rails/tfrl_v2_consumption.py",
+        "rail_file": true
+      }
+    },
+    "marker": "rails_declared",
+    "meaning": "the rails are declared (label, consumption declaration with its refusals, analysis recipe and reader, bank-release registration); the five T cells keep their closest registered labels and zero-sentinel bank pins until the main thread re-mints them at the flip"
+  },
   "read_rule": {
     "acceptance": {
       "confirmed_only_if": "in the Fold A flight of the accepted state the widened CI95 lower bound of t-v2 - lock is > 0 (M2); the optimism term (Fold B delta - Fold A delta) is reported always",
@@ -1060,12 +1093,24 @@
         "at most 3 iterations"
       ]
     },
-    "analysis_recipe": "not part of this package: the T reader and its recipe are an open item; this block is the rule it must implement",
+    "analysis_recipe": {
+      "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/analysis-recipe-v1.json",
+      "read_row_draft": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/read-row-draft-v1.md",
+        "sha256": "20a4fafaf732db2fa29ea9886ba1c83d72e6894d626723bb369a3867a4ed2c1c"
+      },
+      "reader": "scripts/analysis/slurp_tfrl_v2_port_read.py",
+      "sha256": "303d238a1fb0979862607b2ccb931ce492c7650c6f5629fd6092aa5fc8cce3ab",
+      "stop_rule": {
+        "construction_gain_pp": 1.0,
+        "max_iterations": 3
+      }
+    },
     "bootstrap": {
       "draws": 10000,
       "level": "CI95",
-      "note": "the 266-E / L338 recipe values; the T analysis recipe (task T2 successor) may fix others before the read",
-      "seed": 20261011
+      "note": "the L338 port reader's values (slurp_l338_column_read.SEED / DRAWS), fixed by the T analysis recipe docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/analysis-recipe-v1.json",
+      "seed": 20261018
     },
     "construction_gain_pp": 1.0,
     "delivering": "lock",

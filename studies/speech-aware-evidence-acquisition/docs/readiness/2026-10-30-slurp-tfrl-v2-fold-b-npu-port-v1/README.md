@@ -46,6 +46,14 @@ Kill and stop:
 
 Expected: +2 to +4 pp SLU over A if consumption (P5) is the bottleneck, else 0 (plan section 4); claims_benefit is false either way.
 
+## Rails status: `rails_declared`
+
+The marker is `rails_declared` only when all three deliverables below exist (checked from disk by the writer, `tfrl_v2_port_rails.rails_status`); it is `rails_pending` otherwise. the rails are declared (label, consumption declaration with its refusals, analysis recipe and reader, bank-release registration); the five T cells keep their closest registered labels and zero-sentinel bank pins until the main thread re-mints them at the flip.
+
+- stage-3 label and consumption rail: `tfrl-v2` (`core.stage3_algorithms`) and `src/speech_aware_evidence_acquisition/rails/tfrl_v2_consumption.py` (the `tfrl_v2_bank` frame the module block accepts, the flight-start refusals, the Solver composition, `used_basis` read from the trace): ok True
+- analysis recipe and reader: `analysis-recipe-v1.json` (sha256 `303d238a1fb0979862607b2ccb931ce492c7650c6f5629fd6092aa5fc8cce3ab`, pinned in `read-row-draft-v1.md`) and `scripts/analysis/slurp_tfrl_v2_port_read.py`: ok True
+- bank-release registration: `bank-release-v1.json` (sha256 `ac377eb6a51f38f5dbbc39cfb6f0ecac08bf2698a61f8d7556b1f052f45ad711`; per iteration the source halves and split identities, the bank receipt hashes (PENDING), the union hash, the measure, the token counts, the consuming cell ids, and the rule that T0 rows are never bank sources): ok True
+
 ## What the rails still lack
 
 - `stage3-algorithm-label`: no 'tfrl-v2' record in core.stage3_algorithms. The cells wear the closest registered labels (shared-rollout for the sampling cells, tfgrpo-semantic-advantage-v1 for the Fold B cells).
@@ -100,7 +108,7 @@ The experiments' numeric planned_gpu_hours are the formula at the historical rat
 
 ## Files
 
-`protocol-registered-v1.json`, ten plan files (generation and FIT of each cell), `registered-facts-v1.json` (stage3_measurement blocks keyed by the T run ids), `signoff-conditions-construction-v1.json`, `signoff-conditions-fold-b-v1.json`, `root-admission-draft-v1.json` (decision `slurp-tfrl-v2-npu-port-admission-v1`, relpath `coordination/slurp-tfrl-v2-npu-port-v1/root-admission-v1.json`), `countersign-row-texts-v1.json` and `draft-ledger-rows.md` (six preparation rows and the loop rows in chain order). The configs are `configs/{baseline,experiment}/slurp-native-stage3-tfrl-v2-*` and two campaigns.
+`protocol-registered-v1.json`, ten plan files (generation and FIT of each cell), `registered-facts-v1.json` (stage3_measurement blocks keyed by the T run ids), `signoff-conditions-construction-v1.json`, `signoff-conditions-fold-b-v1.json`, `root-admission-draft-v1.json` (decision `slurp-tfrl-v2-npu-port-admission-v1`, relpath `coordination/slurp-tfrl-v2-npu-port-v1/root-admission-v1.json`), `countersign-row-texts-v1.json` and `draft-ledger-rows.md` (six preparation rows and the loop rows in chain order), and the rails files `analysis-recipe-v1.json`, `read-row-draft-v1.md` and `bank-release-v1.json`. The configs are `configs/{baseline,experiment}/slurp-native-stage3-tfrl-v2-*` and two campaigns.
 
 ## What the main thread does (in order)
 

@@ -7803,6 +7803,11 @@ class FlightRuntime:
         from ...rails.native_episode_config import load_native_episode_config
 
         load_native_episode_config(self._composed.values, program)
+        # TFRL-v2 (additive): a cell that declares a bank frame is refused here, before the first contact, when the bank's receipt hash differs from the pin, its
+        # sources include the consuming roster, or its measure is an estimate. A cell without the frame passes through unchanged.
+        from ...rails.tfrl_v2_consumption import verify_for_flight  # noqa: PLC0415
+
+        verify_for_flight(self._composed.values, self._data_root, split_identity_hash=self._plan.split_identity_hash)
         specs = self._phase_tool_specs(policy)
         if not specs:
             return

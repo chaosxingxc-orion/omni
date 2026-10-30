@@ -337,9 +337,9 @@
       "remedy": "choose the bound (O-switch-bound)."
     },
     {
-      "finding": "As a control, verify_declared_module on the committed L338 port flight fails: the re-authored stores differ from the lock layer the compiler re-applies. It is pre-existing, not a T defect; T never calls apply_to (it moves only the compiler's policy and role leaves), as the L338 port derive does.",
+      "finding": "verify_declared_module refuses the committed L338 port flight, and it refuses the T cells for the same reason: the config loader (rails.native_episode_config) checks EVERY declared consumption_module block, and the T cells declare lock v2.2, whose compiled knowledge_stores carry the historical 268-B store pins while the port re-authored stores differ at ten leaves (docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md). T never calls apply_to (it moves only the compiler's policy and role leaves, as the L338 port derive does), so the derive does not hide the clash from the loader.",
       "id": "l338-control-fails-verify-declared-module",
-      "remedy": "none for T; a port lock layer entry (owner decision 9.4) would close it."
+      "remedy": "T's module lock switches to the port lock version v2.2-npu-port once that registry entry lands (lock plan 3.14, owner-run in a parallel stream); until then the T cells keep lock v2.2 and the loader refuses them, as it refuses the L338 port flight."
     },
     {
       "finding": "The FIT caps are rows x contacts x 1 counting endpoint (native_contact_required_cap, raw-audio arm), checked at import against the gate's own helper; the packet-arm factor of 4 is not used.",

@@ -256,3 +256,21 @@ next gate asks for the runtime receipt, which the base-lock R0 step mints. Both 
    complete enough to HOLD the rows.
 6. The existing `verify_declared_module` failure on the L338 port flight (re-authored stores differ from the lock layer)
    is a known control defect, tracked separately; not touched by the writers.
+
+## 13. Rulings on the T rails (T5b; Fable, 2026-10-30)
+
+1. Stage-3 label `tfrl-v2` (family `training-free-rl-v2`, status planned), the `tfrl_v2_bank` consumption declaration
+   with its flight-start refusals (pending sentinel, hash mismatch, estimate measure, roster overlap, sources outside
+   the construction scope: T0, Fold A, Fold B and DEV-1000 rows are never bank sources), the T analysis recipe
+   (`303d238a…`, pinned in the read-row draft and the facts), the reader (construction and Fold B stages, write-once),
+   and `bank-release-v1.json` (iteration 1, sentinel hashes until a bank is released) are accepted. The package marker
+   is `rails_declared`: the rails exist; the cells adopt them at the flip re-mint together with the `v2.2-npu-port` lock.
+2. Stop rule reading confirmed: the loop stops when the construction gain is below +1 pp (+1.0 continues, +0.9 stops),
+   and never past three iterations. Mean best-of-K gain is the mean over usable rows of the best trajectory's reward
+   minus lock, negatives included.
+3. Remaining T engineering before any T flight (T5c, SONNET, after the base lock): (a) the runner renders the exemplar
+   block and rule bank into the Solver request through `compose_solver_messages` behind the declaration (snapshot test
+   on an existing cell proves bytes unchanged without the frame); (b) a scorer driver for the derived `vote` column so the
+   construction gain is a number, not UNDETERMINED; (c) T cells switch to the port lock, and the construction cells get
+   the minus-R01 exemplar-store leaves layered over it; (d) the flight-start hook re-checks Fold B row disjointness
+   against the bank's source rows, not only the split identity.

@@ -88,6 +88,8 @@ _BLOCK_REQUIRED = frozenset({"module_id", "profile", "components"})
 _BLOCK_OPTIONAL = frozenset({
     "columns", "lock", "review_loop", "solver_tool_access", "template_frame", "supply_frame", "construction_roster",
     "thinking_frame", "decoding_frame", "sampling_frame",
+    #: TFRL-v2 (2026-10-30): the bank-consumption declaration (``rails.tfrl_v2_consumption``); parsed fail-closed, compiles to nothing.
+    "tfrl_v2_bank",
 })
 #: A lock-version name a block may declare (migration step 6, owner decision
 #: 204): ``v<major>.<minor>`` with an optional lowercase ``-suffix`` (``v2.2-npu-port``), resolved through the carrier's ``lock_versions``.
@@ -784,6 +786,14 @@ def parse_consumption_module_block(
         raise ConsumptionModuleConfigError(
             f"consumption_module.construction_roster must match {_PROFILE.pattern}, got {construction_roster!r}"
         )
+    if "tfrl_v2_bank" in raw:
+        # Additive (TFRL-v2): the declaration is validated here, before any contact; the bank's receipt hash, sources and measure are refused at flight start.
+        from .tfrl_v2_consumption import TfrlV2BankError, parse_bank_declaration  # noqa: PLC0415
+
+        try:
+            parse_bank_declaration(raw["tfrl_v2_bank"])
+        except TfrlV2BankError as error:
+            raise ConsumptionModuleConfigError(str(error)) from error
     components = raw["components"]
     if not isinstance(components, list):
         raise ConsumptionModuleConfigError("consumption_module.components must be a list")

@@ -183,7 +183,7 @@
   },
   "protocol_document": {
     "relpath": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/protocol-registered-v1.json",
-    "sha256": "094e59a2f88d69cc03cc639e032afeef42978ce5f6e7d9e4d9dc9bd52b363452"
+    "sha256": "9982f6020f43c3fc3871b203f8d419a104ea88fe6813bf458140804436c79e35"
   },
   "purpose": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1: four-row form smoke of the Fold B selection flight, NPU port.",
   "rails_pending": [

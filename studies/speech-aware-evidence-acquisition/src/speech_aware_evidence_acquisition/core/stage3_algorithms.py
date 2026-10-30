@@ -408,6 +408,42 @@ SHARED_ROLLOUT = _register(
     )
 )
 
+TFRL_V2 = _register(
+    Stage3Algorithm(
+        id="tfrl-v2",
+        family="training-free-rl-v2",
+        display_name=(
+            "TFRL-v2 (row-level trajectory credit, exemplar bank, contrast-pair rule bank, "
+            "Solver vote)"
+        ),
+        citation=(
+            "this repository: docs/superpowers/plans/"
+            "2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md sections 4, 9, 11 "
+            "and 12; consumption rail rails/tfrl_v2_consumption.py. No external identifier "
+            "is recorded for it because it is not an external algorithm."
+        ),
+        operators=(
+            "rollout",
+            "scoring",
+            "credit_assignment",
+            "update",
+            "selection",
+            "context_application",
+        ),
+        status="planned",
+        what_it_changes=(
+            "Trajectories, not rule proposals, are sampled: K Solver trajectories per row on a "
+            "construction column that is split into two interleaved halves, credited per row "
+            "against the lock arm. Positives are distilled, model-free, into a scenario-keyed "
+            "exemplar bank (at most 2,000 tokens, replacing supplied items) and a contrast-pair "
+            "rule bank (at most 400 tokens of Solver instruction text); each half consumes only "
+            "the bank distilled from the other half, and the selection flight consumes their "
+            "union. No parameter is trained; no bank is consumed unless its receipt hash is "
+            "pinned in the module declaration and its token counts were measured."
+        ),
+    )
+)
+
 NONE = _register(
     Stage3Algorithm(
         id=NONE_ALGORITHM_ID,

@@ -1,0 +1,293 @@
+{
+  "caps": {
+    "exemplar_block_tokens": 2000,
+    "exemplars_replace_supplied_items": 8,
+    "rule_bank_tokens": 400
+  },
+  "claim_boundary": "No benefit claim; a registration of how banks are released and consumed. Authorises nothing.",
+  "iterations": [
+    {
+      "construction_flights_of_the_iteration": {
+        "consume_no_bank": true,
+        "note": "iteration-1 construction flights are seed-only and consume no bank; from iteration 2 a half consumes the bank distilled from the OTHER half"
+      },
+      "frame_note": "the frame the consuming cell's native_episode.consumption_module carries at the flip, with bank_receipt.sha256 replaced by the minted union hash; rails.tfrl_v2_consumption refuses the zero sentinel, a different hash, a source that includes the consuming roster, and an estimate measure",
+      "iteration": 1,
+      "releases": {
+        "half-R01C-H1": {
+          "bank_receipt": {
+            "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/R01C-H1/bank-receipt.json",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "state": "PENDING (zero sentinel): minted when the bank is released"
+          },
+          "consuming": {
+            "consumer": "R01C-H2",
+            "planned_attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-i2-h2-generation-npu-port-v1",
+            "planned_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I2-H2-NPU-PORT-V1",
+            "registered": "after the iteration is read; not a cell yet"
+          },
+          "consuming_roster": "R01C-H2",
+          "exemplar_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "kind": "half",
+          "measure": {
+            "exemplar_text_required": "resolved",
+            "observed": null,
+            "refused": [
+              "estimate"
+            ],
+            "required": "vllm-tokenize"
+          },
+          "rule_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "source_halves": [
+            "R01C-H1"
+          ],
+          "source_split_identities": {
+            "R01C-H1": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14"
+          },
+          "token_counts": {
+            "exemplar_block_token_cap": 2000,
+            "exemplar_max_block_tokens": null,
+            "rule_bank_rendered_tokens": null,
+            "rule_bank_token_cap": 400
+          }
+        },
+        "half-R01C-H2": {
+          "bank_receipt": {
+            "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/R01C-H2/bank-receipt.json",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "state": "PENDING (zero sentinel): minted when the bank is released"
+          },
+          "consuming": {
+            "consumer": "R01C-H1",
+            "planned_attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-i2-h1-generation-npu-port-v1",
+            "planned_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I2-H1-NPU-PORT-V1",
+            "registered": "after the iteration is read; not a cell yet"
+          },
+          "consuming_roster": "R01C-H1",
+          "exemplar_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "kind": "half",
+          "measure": {
+            "exemplar_text_required": "resolved",
+            "observed": null,
+            "refused": [
+              "estimate"
+            ],
+            "required": "vllm-tokenize"
+          },
+          "rule_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "source_halves": [
+            "R01C-H2"
+          ],
+          "source_split_identities": {
+            "R01C-H2": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72"
+          },
+          "token_counts": {
+            "exemplar_block_token_cap": 2000,
+            "exemplar_max_block_tokens": null,
+            "rule_bank_rendered_tokens": null,
+            "rule_bank_token_cap": 400
+          }
+        },
+        "union": {
+          "bank_receipt": {
+            "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/union/bank-receipt.json",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "state": "PENDING (zero sentinel): minted when the bank is released"
+          },
+          "consuming": {
+            "also_consumed_by": "the Fold A confirmation flight of the accepted state (FOLD-A); a separate package",
+            "cell_ids": [
+              "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1",
+              "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1"
+            ],
+            "consumer": "FOLD-B",
+            "run_ids": [
+              "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1",
+              "SAEA-SLURP-TFRL-V2-FOLD-B-I1-NPU-PORT-V1"
+            ]
+          },
+          "consuming_roster": "FOLD-B",
+          "exemplar_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "kind": "union",
+          "knowledge_release_dirs": {
+            "exemplar_bank": "knowledge/slurp/tfrl-v2/exemplar-bank-i1-npu-port-v1",
+            "rule_bank": "knowledge/slurp/tfrl-v2/rule-bank-i1-npu-port-v1"
+          },
+          "measure": {
+            "exemplar_text_required": "resolved",
+            "observed": null,
+            "refused": [
+              "estimate"
+            ],
+            "required": "vllm-tokenize"
+          },
+          "rule_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "source_halves": [
+            "R01C-H1",
+            "R01C-H2"
+          ],
+          "source_split_identities": {
+            "R01C-H1": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
+            "R01C-H2": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72"
+          },
+          "token_counts": {
+            "exemplar_block_token_cap": 2000,
+            "exemplar_max_block_tokens": null,
+            "rule_bank_rendered_tokens": null,
+            "rule_bank_token_cap": 400
+          },
+          "union_hash": {
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "state": "PENDING (zero sentinel): the content hash of the union bank receipt"
+          }
+        }
+      },
+      "status": "REGISTERED, PENDING RELEASE (every receipt hash is the zero sentinel)",
+      "tfrl_v2_bank_frames": {
+        "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1": {
+          "algorithm_id": "tfrl-v2",
+          "bank_kind": "union",
+          "bank_receipt": {
+            "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/union/bank-receipt.json",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "consumer": "FOLD-B",
+          "exemplar_block": {
+            "replaces_supplied_items": 8,
+            "text": "resolved",
+            "token_cap": 2000
+          },
+          "iteration": 1,
+          "measure": "vllm-tokenize",
+          "rule_bank": {
+            "delivery": "solver-instruction",
+            "token_cap": 400
+          },
+          "schema": "saea-tfrl-v2-bank-consumption-v1",
+          "source_scope": {
+            "R01C-H1": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
+            "R01C-H2": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72"
+          },
+          "used_basis": "trace"
+        },
+        "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1": {
+          "algorithm_id": "tfrl-v2",
+          "bank_kind": "union",
+          "bank_receipt": {
+            "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/union/bank-receipt.json",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "consumer": "FOLD-B",
+          "exemplar_block": {
+            "replaces_supplied_items": 8,
+            "text": "resolved",
+            "token_cap": 2000
+          },
+          "iteration": 1,
+          "measure": "vllm-tokenize",
+          "rule_bank": {
+            "delivery": "solver-instruction",
+            "token_cap": 400
+          },
+          "schema": "saea-tfrl-v2-bank-consumption-v1",
+          "source_scope": {
+            "R01C-H1": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
+            "R01C-H2": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72"
+          },
+          "used_basis": "trace"
+        }
+      }
+    }
+  ],
+  "loop_id": "SAEA-SLURP-TFRL-V2-NPU-PORT-V1",
+  "max_iterations": 3,
+  "measure": {
+    "exemplar_text_required": "resolved",
+    "note": "the FIT gate's vLLM tokenize measure through an injected registered client; an estimate-measured or ids-only bank is refused by the sampler's plan builder and by the flight-start refusal",
+    "refused": [
+      "estimate"
+    ],
+    "required": "vllm-tokenize"
+  },
+  "package": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1",
+  "plan": "docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md",
+  "receipt_hash_definition": "sha256 of the canonical compact JSON of bank-receipt.json (rails.tfrl_v2_consumption.receipt_sha256); it covers both banks' file hashes, the sources, the measure and the counts",
+  "refusals": [
+    "the bank receipt hash is the zero sentinel (PENDING)",
+    "the bank receipt hash differs from the hash pinned in the module declaration",
+    "the measure is not vllm-tokenize (estimate)",
+    "a source half is the consuming roster",
+    "a source is outside the declared construction halves (T0, Fold A, Fold B, DEV-1000 or any other roster)",
+    "a source split identity is not the pinned construction identity",
+    "a consuming row is a source row",
+    "a token count is over its cap"
+  ],
+  "schema": "saea-tfrl-v2-bank-release-registration-v1",
+  "sources": {
+    "R01C-H1": {
+      "file_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+      "roster": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
+      "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C-H1",
+      "rows": 313,
+      "split_identity_hash": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14"
+    },
+    "R01C-H2": {
+      "file_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+      "roster": "docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json",
+      "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C-H2",
+      "rows": 312,
+      "split_identity_hash": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72"
+    }
+  },
+  "status": "DRAFT-HELD",
+  "t0_never_a_bank_source": {
+    "allowed_source_halves": [
+      "R01C-H1",
+      "R01C-H2"
+    ],
+    "allowed_source_identities": {
+      "R01C-H1": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
+      "R01C-H2": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72"
+    },
+    "forbidden_rosters": {
+      "DEV-1000": {
+        "file_sha256": "46330f24f22228bdafa1714beaceb4d65e8c4ead588906b8c99378bae12ea740",
+        "roster": "docs/receipts/rosters/slurp-dev-1000-ts2-v1.json",
+        "roster_id": "SLURP-DEV-1000-TS2-V1",
+        "rows": 1000,
+        "rows_shared_with_r01c": 0,
+        "split_identity_hash": "9f78d0ff2dbaf81f5e9f666ee036a3c994d69a7f464e555089e25decfd97f5c5"
+      },
+      "Fold A v2": {
+        "file_sha256": "1fe7908c31396774d7535fdf37bd791762215c324999d66ed7beb9e7b2f9033d",
+        "roster": "docs/receipts/rosters/slurp-evo-fold-a-v2.json",
+        "roster_id": "SLURP-EVO-FOLD-A-V2",
+        "rows": 1080,
+        "rows_shared_with_r01c": 0,
+        "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6"
+      },
+      "Fold B v2": {
+        "file_sha256": "47b89b9e33b1aed553ad94a1819acba6ac8837130ca546c33219d91a1ab944a8",
+        "roster": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+        "roster_id": "SLURP-EVO-FOLD-B-V2",
+        "rows": 1080,
+        "rows_shared_with_r01c": 0,
+        "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+      },
+      "T0 official SLURP test split": {
+        "note": "no roster is registered; excluded structurally (only the two construction halves are admitted sources)",
+        "roster": null,
+        "roster_id": null,
+        "rows": null,
+        "rows_shared_with_r01c": null,
+        "split_identity_hash": null
+      }
+    },
+    "proofs": {
+      "fold_b_rows_shared_with_r01c": 0,
+      "halves_union_equals_r01c": true,
+      "r01c_rows": 625
+    },
+    "rule": "T0, the official SLURP test split, is never a source of the exemplar bank or the rule bank (comparison plan 2026-10-30, section on the evaluation tiers: 'T0 rows are never exemplar or bank sources'). No T0 roster is registered in this repository; the rule is therefore structural: the only admitted bank sources are the two construction halves R01C-H1 and R01C-H2 by roster id AND pinned split identity, and the flight-start refusal (rails.tfrl_v2_consumption.verify_bank) names any other source, so a T0 row cannot enter a bank even if a T0 roster is registered later."
+  }
+}

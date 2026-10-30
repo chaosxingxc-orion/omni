@@ -39,6 +39,7 @@ import l338_port_family as pf  # noqa: E402
 import l338_port_write_registration as lw  # noqa: E402
 import tfrl_v2_port_derive_cells as tdc  # noqa: E402
 import tfrl_v2_port_family as tf  # noqa: E402
+import tfrl_v2_port_rails as rails  # noqa: E402
 
 from speech_aware_evidence_acquisition.core.config import compose, protocol_hash  # noqa: E402
 
@@ -65,7 +66,7 @@ RULE_BANK_I0_RUN = "SAEA-SLURP-TFRL-V2-RULE-BANK-I0-RELEASE-NPU-PORT-V1"
 HALVES_RUN = "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-HALVES-NPU-PORT-V1"
 CONSTRUCTION_SCOPE_SPLIT = "slurp SLURP-STAGE3-CONSTRUCTION-R01C TRAIN construction"
 EXPECTED_EFFECT_PP = 2.0                                   # the low end of the plan's +2 to +4 pp expectation (a registration number, never a claim)
-BOOTSTRAP = {"seed": 20261011, "draws": 10000, "level": "CI95", "note": "the 266-E / L338 recipe values; the T analysis recipe (task T2 successor) may fix others before the read"}
+BOOTSTRAP = {"seed": rails.SEED, "draws": rails.DRAWS, "level": "CI95", "note": f"the L338 port reader's values (slurp_l338_column_read.SEED / DRAWS), fixed by the T analysis recipe {rails.RECIPE_RELPATH}"}
 
 DIFF_TEXT = "declared differences (design doc section 8 and T): " + "; ".join(tf.declared_differences())
 BAR_SLU_PP, BAR_INTENT_PP, TWIN_BAR_PP, CONSTRUCTION_GAIN_PP = fam.FLOOR_SLU_PP, fam.FLOOR_INTENT_PP, 1.2, 1.0
@@ -134,9 +135,12 @@ FINDINGS = [
                  "limit of 17,406 (fits). Budget switch 6,144 / 7,168: 43 items, 14,828 against 14,334 (does not fit); the largest fitting bound is 40. The writer refuses under the switch."),
      "remedy": "choose the bound (O-switch-bound)."},
     {"id": "l338-control-fails-verify-declared-module",
-     "finding": ("As a control, verify_declared_module on the committed L338 port flight fails: the re-authored stores differ from the lock layer the compiler re-applies. It is pre-existing, "
-                 "not a T defect; T never calls apply_to (it moves only the compiler's policy and role leaves), as the L338 port derive does."),
-     "remedy": "none for T; a port lock layer entry (owner decision 9.4) would close it."},
+     "finding": ("verify_declared_module refuses the committed L338 port flight, and it refuses the T cells for the same reason: the config loader (rails.native_episode_config) checks EVERY "
+                 "declared consumption_module block, and the T cells declare lock v2.2, whose compiled knowledge_stores carry the historical 268-B store pins while the port re-authored "
+                 "stores differ at ten leaves (docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md). T never calls apply_to (it moves only the compiler's policy and role "
+                 "leaves, as the L338 port derive does), so the derive does not hide the clash from the loader."),
+     "remedy": ("T's module lock switches to the port lock version v2.2-npu-port once that registry entry lands (lock plan 3.14, owner-run in a parallel stream); until then the T cells keep "
+                "lock v2.2 and the loader refuses them, as it refuses the L338 port flight.")},
     {"id": "fit-cap-is-the-raw-arm-rule",
      "finding": ("The FIT caps are rows x contacts x 1 counting endpoint (native_contact_required_cap, raw-audio arm), checked at import against the gate's own helper; the packet-arm factor of 4 "
                  "is not used."),
@@ -548,7 +552,19 @@ def cell_table(ids: Mapping[str, Mapping]) -> str:
     return "\n".join(lines)
 
 
-def readme_text(ids: Mapping[str, Mapping], commit: str) -> str:
+def rails_status_text(state: Mapping, shas: Mapping[str, str]) -> str:
+    """The README section that states the rails marker and the three deliverables it rests on."""
+
+    d = state["deliverables"]
+    return (f"## Rails status: `{state['marker']}`\n\n"
+            f"The marker is `{rails.MARKER_DECLARED}` only when all three deliverables below exist (checked from disk by the writer, `tfrl_v2_port_rails.rails_status`); it is `{rails.MARKER_PENDING}` otherwise. "
+            f"{state['meaning']}.\n\n"
+            f"- stage-3 label and consumption rail: `{d['stage3_label_and_consumption_rail']['label']}` (`core.stage3_algorithms`) and `{rails.CONSUMPTION_RAIL}` (the `tfrl_v2_bank` frame the module block accepts, the flight-start refusals, the Solver composition, `used_basis` read from the trace): ok {d['stage3_label_and_consumption_rail']['ok']}\n"
+            f"- analysis recipe and reader: `{rails.RECIPE_NAME}` (sha256 `{shas[rails.RECIPE_NAME]}`, pinned in `{rails.READ_ROW_NAME}`) and `{rails.READER}`: ok {d['analysis_recipe_and_reader']['ok']}\n"
+            f"- bank-release registration: `{rails.BANK_RELEASE_NAME}` (sha256 `{shas[rails.BANK_RELEASE_NAME]}`; per iteration the source halves and split identities, the bank receipt hashes (PENDING), the union hash, the measure, the token counts, the consuming cell ids, and the rule that T0 rows are never bank sources): ok {d['bank_release_registration']['ok']}\n\n")
+
+
+def readme_text(ids: Mapping[str, Mapping], commit: str, rails_state: Mapping | None = None, rails_shas: Mapping[str, str] | None = None) -> str:
     view = pf.budget_view()
     table = tf.fit_table()
     totals = (tf.cell_total(0), tf.cell_total(1), tf.cell_total(2))
@@ -577,7 +593,8 @@ def readme_text(ids: Mapping[str, Mapping], commit: str) -> str:
         "## Acceptance and kill rules (plan section 4 with M1 / M2)\n\n"
         "An iteration is ACCEPTED only if every one of:\n\n" + bullets(ACCEPTANCE["iteration_accepted_only_if"]) + "\n\n"
         f"CONFIRMED only if: {ACCEPTANCE['confirmed_only_if']}.\n\nKill and stop:\n\n" + bullets(ACCEPTANCE["kill_and_stop"]) + f"\n\nExpected: {ACCEPTANCE['expected']}.\n\n"
-        "## What the rails still lack\n\n"
+        + (rails_status_text(rails_state, rails_shas) if rails_state is not None else "")
+        + "## What the rails still lack\n\n"
         + bullets(f"`{r['id']}`: {r['lacks']}. {r['consequence'][0].upper()}{r['consequence'][1:]}." for r in tdc.rails_pending("fb") + tdc.rails_pending("ch1")[1:]) + "\n\n"
         "## Serving and accelerator bound (PROVISIONAL)\n\n"
         f"Model fragment `{pf.MODEL_FRAGMENT}`; the deployment is the placeholder `PORT_DEPLOYMENT_PROFILE` ({pf.PORT_DEPLOYMENT_PROFILE['filled_by']}). Bounds:\n\n"
@@ -590,8 +607,8 @@ def readme_text(ids: Mapping[str, Mapping], commit: str) -> str:
         "## Files\n\n"
         "`protocol-registered-v1.json`, ten plan files (generation and FIT of each cell), `registered-facts-v1.json` (stage3_measurement blocks keyed by the T run ids), "
         "`signoff-conditions-construction-v1.json`, `signoff-conditions-fold-b-v1.json`, `root-admission-draft-v1.json` (decision `" + tf.DECISION_ID + "`, relpath `" + tf.DECISION_RELPATH + "`), "
-        "`countersign-row-texts-v1.json` and `draft-ledger-rows.md` (six preparation rows and the loop rows in chain order). The configs are `configs/{baseline,experiment}/slurp-native-stage3-tfrl-v2-*` "
-        "and two campaigns.\n\n"
+        "`countersign-row-texts-v1.json` and `draft-ledger-rows.md` (six preparation rows and the loop rows in chain order), and the rails files `" + rails.RECIPE_NAME + "`, `" + rails.READ_ROW_NAME + "` and `" + rails.BANK_RELEASE_NAME + "`. "
+        "The configs are `configs/{baseline,experiment}/slurp-native-stage3-tfrl-v2-*` and two campaigns.\n\n"
         "## What the main thread does (in order)\n\n"
         "1. Commit this package, the five cells and the campaigns; do not append the ledger rows before the owner countersigns.\n"
         "2. Resolve the owner items; run the speed sweep and fill `PORT_DEPLOYMENT_PROFILE`; re-derive the card-hour bounds; re-run the derive and this writer.\n"
@@ -636,6 +653,9 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
     shas["protocol-registered-v1.json"] = protocol_sha
     for name, doc in signoff_docs().items():
         shas[name] = reg.wjson(root, f"{PKG}/{name}", doc)
+    rails_shas = rails.write_rails_files(root, reg.wjson, reg.wr)           # the analysis recipe, the READ row draft (recipe sha pinned) and the bank-release registration
+    shas.update(rails_shas)
+    rails_state = rails.rails_status(root)                                   # reads the three deliverables from disk; flips rails_pending -> rails_declared
     measurement = measurement_blocks(ids)
     facts = {
         "_note": ("Every model-free fact this DRAFT T registration rests on, and the canonical stage3_measurement blocks keyed by the T run ids "
@@ -666,12 +686,14 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
                          "supplies": {k: tf.CELLS[k]["supply_relpath"] for k in tf.ALL_KEYS}},
         "acceptance_and_kill_rules": ACCEPTANCE, "owner_items": OWNER_ITEMS, "open_questions": OPEN_QUESTIONS, "findings": FINDINGS,
         "rails_pending": {"construction": tdc.rails_pending("ch1"), "fold-b": tdc.rails_pending("fb")},
+        "rails_status": rails_state, "bank_release": {"path": rails.BANK_RELEASE_RELPATH, "sha256": rails_shas[rails.BANK_RELEASE_NAME]},
         "declared_differences": tf.declared_differences(), "prohibitions": PROHIBITIONS, "registered_at_utc": at,
         "registration_basis": f"{tf.OWNER_DECISIONS}; {tf.DESIGN_DOC}. DRAFT: nothing here authorises a flip or a flight.",
         "read_rule": {"acceptance": ACCEPTANCE, "floors_pp": {"slu": BAR_SLU_PP, "intent": BAR_INTENT_PP}, "twin_bar_pp": TWIN_BAR_PP, "construction_gain_pp": CONSTRUCTION_GAIN_PP,
                       "bootstrap": BOOTSTRAP, "read_run_id": tf.READ_RUN_ID, "trace_read_ids": {k: tf.CELLS[k]["trace_read_id"] for k in ("ch1", "ch2")},
                       "replicates": [tf.TWIN, tf.REPLICATE], "delivering": tf.DELIVERING,
-                      "analysis_recipe": "not part of this package: the T reader and its recipe are an open item; this block is the rule it must implement"},
+                      "analysis_recipe": {"path": rails.RECIPE_RELPATH, "sha256": rails_shas[rails.RECIPE_NAME], "read_row_draft": {"path": rails.READ_ROW_RELPATH, "sha256": rails_shas[rails.READ_ROW_NAME]},
+                                          "reader": rails.READER, "stop_rule": {"construction_gain_pp": rails.STOP_GAIN_PP, "max_iterations": rails.MAX_ITERATIONS}}},
         "roster": {k: {"roster": tf.ROSTERS[k], "roster_id": tf.CELLS[k]["roster_id"], "split_identity_hash": tf.CELLS[k]["split_identity_hash"], "rows": tf.CELLS[k]["rows"]} for k in tf.ALL_KEYS},
         "rows_only_items": {"r01c_encoding": tdc.R01C_ENCODE_RUN, "alias": tdc.R01C_ALIAS_RUN, "content_derivative": tdc.R01C_INPUTS_RUN, "agreement": tdc.R01C_AGREEMENT_RUN, "halves": HALVES_RUN,
                             "rule_bank_i0_release": RULE_BANK_I0_RUN, "credit_and_distillation": CREDIT_RUN, "reflector": [REFLECTOR_RUN, REFLECTOR_FIT_RUN], "bank_release": BANK_RELEASE_RUN},
@@ -718,7 +740,7 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
         "refuses these rows until the measured speed sweep fills PORT_DEPLOYMENT_PROFILE and the bound is re-derived."), tf.LEDGER_MARK + " (DRAFT, owner countersignature pending)")
     shas["draft-ledger-rows.md"] = reg.wr(root, f"{PKG}/draft-ledger-rows.md", prep_text + "\n" + loop_text)
     shas["countersign-row-texts-v1.json"] = reg.wjson(root, f"{PKG}/countersign-row-texts-v1.json", countersign_texts(ids))
-    shas["README.md"] = reg.wr(root, f"{PKG}/README.md", readme_text(ids, commit))
+    shas["README.md"] = reg.wr(root, f"{PKG}/README.md", readme_text(ids, commit, rails_state, rails_shas))
     prereg = (f"# T cell, iteration 1: the agent system plus TFRL-v2, preregistration (DRAFT / HELD)\n\nRegistered {at[:10]} at study commit `{commit}` by script. Development numbers only; claims_benefit false.\n\n"
               + "Runs: " + "; ".join(f"`{ids[k]['run_id']}` / `{ids[k]['fit_run_id']}`" for k in tf.ALL_KEYS) + ".\n\n"
               f"The package is `{PKG}/`; the acceptance and kill rules are in its README and facts.\n\n## The measurement declaration\n\n```json\n"
