@@ -17,6 +17,7 @@ fs_parse "$@"
 fs_unknown_flags
 fs_load_cell smoke
 
+fs_trace "$CI_TRACE_READ_ID"   # smoke trace file: analysis/<READ id>-SMOKE/rollout-trace.jsonl (never the flight file)
 TOKEN=$OMNI_ROOT/coordination/$CI_CELL.worker-lease.json
 mapfile -t COMMON < <(fs_cli_common)
 fs_add_study "worker (smoke-4)" -m speech_aware_evidence_acquisition.core.flight.cli worker "${COMMON[@]}" \

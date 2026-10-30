@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shlex
 import sys
 from pathlib import Path
@@ -27,6 +28,10 @@ STAGES = {
     "flight": {"experiment": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1", "rows": 1080},
 }
 CEILING_PER_ROW = 15
+# Rollout-trace READ ids (study core.rollout_trace, env SAEA_ROLLOUT_TRACE_READ_ID): one file analysis/<id>/rollout-trace.jsonl per flight.
+# The flight (campaign, score, read) uses the port READ run id; the smoke worker uses the same id plus this suffix, so the two never share a file.
+SMOKE_TRACE_SUFFIX = "-SMOKE"
+TRACE_READ_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")  # the study's RUN_ID_PATTERN (contracts.identifiers)
 READ_RUN_ID_FALLBACK = "SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1"  # used only while the package carries no analysis recipe
 
 
@@ -74,6 +79,7 @@ def load(stage: str, study: str = DEFAULT_STUDY, omni: str = DEFAULT_OMNI) -> di
         "SCORER_ID": SCORER_ID,
         "SIGNOFF_CONDITIONS": f"{PACKAGE}/signoff-conditions-v1.json",
         "READ_RUN_ID_DEFAULT": read_id,
+        "TRACE_READ_ID": read_id + (SMOKE_TRACE_SUFFIX if stage == "smoke" else ""),
         "DATA_ROOT": omni,
     }
 

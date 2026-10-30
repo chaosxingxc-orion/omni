@@ -18,6 +18,7 @@ fs_parse "$@"
 fs_unknown_flags
 fs_load_cell flight
 
+fs_trace "$CI_TRACE_READ_ID"   # flight trace file: analysis/<port READ id>/rollout-trace.jsonl
 mapfile -t COMMON < <(fs_cli_common)
 fs_add_study "campaign (flight)" -m speech_aware_evidence_acquisition.core.flight.cli campaign "${COMMON[@]}" \
   --experiment "$CI_EXPERIMENT" --owner "$CI_OWNER" --expected-session-id "$CI_SESSION_ID"

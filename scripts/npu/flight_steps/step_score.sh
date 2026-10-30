@@ -21,6 +21,7 @@ fs_load_cell flight
 
 READ_ID=$(fs_flag read-id "$CI_READ_RUN_ID_DEFAULT")
 ANALYSIS=$OMNI_ROOT/analysis/$READ_ID/columns
+fs_trace "$READ_ID"   # score lines land in the same file as the flight contact lines
 fs_add_study "official scoring, every arm column" scripts/analysis/stage3_rollout_score.py --mode perception-branches --stage all \
   --run "$CI_RUN_ID" --attempt "$CI_ATTEMPT_ID" --roster "$CI_ROSTER" --analysis-root "$ANALYSIS" --scorer-id "$CI_SCORER_ID" \
   --repo-root "$STUDY" --data-root "$OMNI_ROOT"

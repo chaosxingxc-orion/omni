@@ -37,6 +37,7 @@ READ_ID="<READ run id from the recipe>"
 if [ -f "$STUDY/$RECIPE" ]; then
   READ_ID=$($HOST_PY -c "import json,sys;d=json.load(open(sys.argv[1]));print(d.get('read_run_id') or (d.get('run_ids') or {}).get('read') or '')" "$STUDY/$RECIPE") || READ_ID=""
 fi
+case "$READ_ID" in "<"*) ;; *) fs_trace "$READ_ID" ;; esac   # an unresolved recipe is refused by fs_extra_check
 READ_ARGS=("$READER" --stage read --data-root "$OMNI_ROOT" --repo-root "$STUDY" --analysis-root "$OMNI_ROOT/analysis/$READ_ID")
 [ $PASS_RECIPE = 1 ] && READ_ARGS+=(--recipe "$RECIPE")
 fs_add_study "READ gate (countersigned READ row)" "$FS_DIR/read_gate.py" --recipe "$RECIPE" --repo-root "$STUDY"

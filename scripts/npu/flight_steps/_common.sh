@@ -7,6 +7,8 @@
 # Exit codes: 0 ok (or dry-run), 2 usage, 3 previous step's done marker absent, 4 preflight failed, 5 step already
 # done or running, 6 other refusal (wrong host, missing input), 7 flight commit moved, 8 the step's own command failed.
 #
+# Rollout trace: a step that contacts the model or scores calls fs_trace <READ id> before registering its study commands (see fs_trace).
+#
 # Test/override environment (all optional):
 #   OMNI_ROOT, FLIGHT_STEPS_STUDY, FLIGHT_STEPS_STATE, FLIGHT_STEPS_RUNNER (port_py.sh), FLIGHT_STEPS_PREFLIGHT,
 #   FLIGHT_STEPS_LEASE_RUNNER, FLIGHT_STEPS_PYTHON (host python3), CPUSET (default 160-191, the free NUMA node).
@@ -21,6 +23,11 @@ PREFLIGHT_CMD=${FLIGHT_STEPS_PREFLIGHT:-"$HOST_PY $FS_DIR/preflight.py"}
 CPUSET=${CPUSET:-160-191}
 RUNTIME_ROOT=$OMNI_ROOT/work/scratch/runtime-root
 IMAGE=saea-base:20261027
+
+TRACE_ENV=SAEA_ROLLOUT_TRACE_READ_ID
+TRACE_ID_RE='^[A-Za-z0-9][A-Za-z0-9._-]*$'   # the study's RUN_ID_PATTERN
+FS_TRACE=0          # 1 once a step has called fs_trace
+FS_TRACE_READ_ID=""
 
 FS_CONFIRM=0
 FS_ARGS=()
@@ -94,9 +101,23 @@ fs_add_cmd() {
   FS_CMD_STR+=("$(printf '%q ' "$@")")
 }
 
+# fs_trace <READ id>: arm the study's rollout trace (core.rollout_trace) for every study command this step registers afterwards.
+# port_py.sh passes environment only through PORT_DOCKER_FLAGS, so the variable travels as "-e SAEA_ROLLOUT_TRACE_READ_ID=<id>" appended
+# to whatever PORT_DOCKER_FLAGS already holds (a stale copy of the same -e flag is dropped). An empty or malformed id is refused by fs_gate.
+fs_trace() { FS_TRACE=1; FS_TRACE_READ_ID=$1; }
+
 # fs_study_py <python args...>: the argv of a study command run inside saea-base through port_py.sh.
 fs_study_py_argv() {
-  printf '%s\0' env "CPUSET=$CPUSET" "SPEECHRL_DATA_DIR=$OMNI_ROOT" bash "$RUNNER" "$@"
+  local flags=${PORT_DOCKER_FLAGS:-}
+  if [ "$FS_TRACE" = 1 ] && [ -n "$FS_TRACE_READ_ID" ]; then
+    flags=$(printf '%s' "$flags" | sed -E "s/(^| )-e ${TRACE_ENV}=[^ ]*//g")
+    flags="${flags:+$flags }-e ${TRACE_ENV}=$FS_TRACE_READ_ID"
+  fi
+  if [ -n "$flags" ]; then
+    printf '%s\0' env "CPUSET=$CPUSET" "PORT_DOCKER_FLAGS=$flags" "SPEECHRL_DATA_DIR=$OMNI_ROOT" bash "$RUNNER" "$@"
+  else
+    printf '%s\0' env "CPUSET=$CPUSET" "SPEECHRL_DATA_DIR=$OMNI_ROOT" bash "$RUNNER" "$@"
+  fi
 }
 
 fs_add_study() {  # fs_add_study <label> <python args...>
@@ -131,7 +152,13 @@ fs_gate() {
   if [ -n "$pin" ] && [ -n "$head" ] && [ "$pin" != "$head" ]; then
     FS_GATE_REASON="the study HEAD moved: pinned ${pin:0:12}, now ${head:0:12} (all steps fly from one commit)"; return 7
   fi
-  if ! out=$($PREFLIGHT_CMD --stage "$stage" 2>&1); then
+  if [ "$FS_TRACE" = 1 ]; then
+    if [ -z "$FS_TRACE_READ_ID" ]; then FS_GATE_REASON="the READ id for the rollout trace ($TRACE_ENV) is empty; refusing to fly untraced"; return 6; fi
+    if ! [[ $FS_TRACE_READ_ID =~ $TRACE_ID_RE ]]; then FS_GATE_REASON="the READ id for the rollout trace ($TRACE_ENV) is not a safe id: $FS_TRACE_READ_ID"; return 6; fi
+  fi
+  local pf_args=(--stage "$stage")
+  [ "$FS_TRACE" = 1 ] && pf_args+=(--trace-read-id "$FS_TRACE_READ_ID")
+  if ! out=$($PREFLIGHT_CMD "${pf_args[@]}" 2>&1); then
     FS_GATE_REASON="preflight (--stage $stage) failed"; FS_GATE_DETAIL=$out; return 4
   fi
   FS_GATE_DETAIL=$out

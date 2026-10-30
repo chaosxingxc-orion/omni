@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """Read-only preflight for the operator flight steps (smoke-4 cell and the Fold B port flight).
 
-usage: preflight.py --stage {smoke,flight,post} [--profile ID] [--json] [--min-free-gib N]
+usage: preflight.py --stage {smoke,flight,post} [--profile ID] [--json] [--min-free-gib N] [--trace-read-id ID]
 
-No side effects: it reads, it never starts, stops, writes or contacts a model. Exit 0 = no blocker; exit 1 = at least
-one blocker (each is printed); exit 2 = the preflight itself could not run.
+It reads, it never starts, stops or contacts a model. The one thing it writes is the rollout-trace directory
+<data root>/analysis/<READ id>/ (created if absent, probed with a temporary file that is removed again). Exit 0 = no blocker;
+exit 1 = at least one blocker (each is printed); exit 2 = the preflight itself could not run.
+
+Rollout trace (study core.rollout_trace, env SAEA_ROLLOUT_TRACE_READ_ID): `--trace-read-id ID` is the READ id the step is about to
+export. The check `trace-read-id` refuses an empty id, an id that does not match the study's run-id pattern, the smoke id when the
+stage is flight/post (and the flight id when the stage is smoke: the two never share a file), and an analysis directory that cannot
+be created or written. Without the flag the stage's own id is checked for smoke and flight, nothing for post.
 
 Stages
   smoke   smoke-4 cell, full checks (registration, `core.flight.cli check --read-only`, cards, endpoints, receipt, disk)
@@ -94,6 +100,17 @@ class Ops:
     def read_text(self, path: Path) -> str:
         return Path(path).read_text(encoding="utf-8")
 
+    def ensure_writable_dir(self, path: Path) -> str | None:
+        """Create `path` (parents too) and prove a file can be written and removed there; None = fine, else the error text."""
+        try:
+            Path(path).mkdir(parents=True, exist_ok=True)
+            probe = Path(path) / f".trace-write-probe-{os.getpid()}"
+            probe.write_bytes(b"")
+            probe.unlink()
+        except OSError as error:
+            return f"{type(error).__name__}: {error}"
+        return None
+
 
 # --------------------------------------------------------------------------------------------- parsing helpers
 
@@ -141,9 +158,10 @@ def parse_docker_time(text: str) -> float | None:
 
 class Preflight:
     def __init__(self, ops: Ops, *, stage: str, study: str, omni: str, profile_id: str, state_root: str,
-                 min_free_gib: float):
+                 min_free_gib: float, trace_read_id: str | None = None):
         self.ops, self.stage, self.study, self.omni = ops, stage, Path(study), omni
         self.profile_id, self.state_root, self.min_free_gib = profile_id, Path(state_root), min_free_gib
+        self.trace_read_id = trace_read_id
         self.findings: list[Finding] = []
         self.profile: dict | None = None
         self.cell: dict | None = None
@@ -190,6 +208,36 @@ class Preflight:
             self.add("cephfs-free-space", False, f"cannot stat {self.omni}: {error}")
             return
         self.add("cephfs-free-space", free >= self.min_free_gib, f"{free:,.0f} GiB free, need >= {self.min_free_gib:,.0f} GiB")
+
+    def check_trace_dir(self) -> None:
+        """The rollout-trace READ id (SAEA_ROLLOUT_TRACE_READ_ID of the step) is well formed, belongs to this stage, and its directory is writable."""
+        read_id = self.trace_read_id
+        if read_id is None:
+            if self.stage not in ("smoke", "flight"):
+                return
+            try:
+                read_id = cellinfo.load(self.stage, str(self.study), self.omni)["TRACE_READ_ID"]
+            except cellinfo.CellInfoError as error:
+                self.add("trace-read-id", False, f"cannot derive the {self.stage} trace READ id: {error}")
+                return
+        if not read_id:
+            self.add("trace-read-id", False, "the READ id for the rollout trace (SAEA_ROLLOUT_TRACE_READ_ID) is empty; the flight would run untraced")
+            return
+        if cellinfo.TRACE_READ_ID_PATTERN.fullmatch(read_id) is None:
+            self.add("trace-read-id", False, f"READ id {read_id!r} does not match the run-id pattern {cellinfo.TRACE_READ_ID_PATTERN.pattern}")
+            return
+        try:
+            ids = {s: cellinfo.load(s, str(self.study), self.omni)["TRACE_READ_ID"] for s in ("smoke", "flight")}
+        except cellinfo.CellInfoError:
+            ids = {}
+        other = {"smoke": "flight", "flight": "smoke", "post": "smoke"}[self.stage]
+        if ids and read_id == ids[other]:
+            self.add("trace-read-id", False, f"READ id {read_id} is the {other} trace id; the {self.stage} stage must write its own file")
+            return
+        directory = Path(self.omni) / "analysis" / read_id
+        error = self.ops.ensure_writable_dir(directory)
+        self.add("trace-read-id", error is None,
+                 f"{directory} is writable (rollout-trace.jsonl goes there)" if error is None else f"{directory} is not writable: {error}")
 
     def check_registration(self) -> None:
         info = self.cell
@@ -331,6 +379,7 @@ class Preflight:
         self.check_host()
         self.check_tree()
         self.check_disk()
+        self.check_trace_dir()
         if any(f.name == "host" and not f.ok for f in self.findings):
             self.add("live-checks", False, "skipped: this is not host 181; run the steps on npu2 only")
             return self.findings
@@ -368,10 +417,12 @@ def main(argv=None, ops: Ops | None = None) -> int:
     parser.add_argument("--omni-root", default=os.environ.get("OMNI_ROOT", cellinfo.DEFAULT_OMNI))
     parser.add_argument("--state-root", default=os.environ.get("FLIGHT_STEPS_STATE", DEFAULT_STATE_ROOT))
     parser.add_argument("--min-free-gib", type=float, default=float(os.environ.get("FLIGHT_STEPS_MIN_FREE_GIB", DEFAULT_MIN_FREE_GIB)))
+    parser.add_argument("--trace-read-id", default=None,
+                        help="the READ id the step exports as SAEA_ROLLOUT_TRACE_READ_ID (default: the stage's own id for smoke/flight)")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     checker = Preflight(ops or Ops(), stage=args.stage, study=args.study, omni=args.omni_root, profile_id=args.profile,
-                        state_root=args.state_root, min_free_gib=args.min_free_gib)
+                        state_root=args.state_root, min_free_gib=args.min_free_gib, trace_read_id=args.trace_read_id)
     findings = checker.run()
     if args.json:
         print(json.dumps([f.__dict__ for f in findings], indent=2))

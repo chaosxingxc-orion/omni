@@ -62,6 +62,24 @@ Exit codes: 0 ok or dry-run, 2 usage, 3 previous marker absent, 4 preflight fail
 `SPEECHRL_DATA_DIR=$OMNI` on cpuset `160-191` (override with `CPUSET=...`; never `128-159`, which is the cpuset of
 instance `saea-omni-i1`).
 
+## Rollout trace (SAEA_ROLLOUT_TRACE_READ_ID)
+
+The study writes a per-contact trace to `$OMNI/analysis/<READ id>/rollout-trace.jsonl` only when `SAEA_ROLLOUT_TRACE_READ_ID` is set in the
+process that runs the flight. `port_py.sh` passes environment only through `PORT_DOCKER_FLAGS`, so `_common.sh` (`fs_trace <READ id>`) appends
+`-e SAEA_ROLLOUT_TRACE_READ_ID=<id>` to whatever `PORT_DOCKER_FLAGS` already holds (a stale copy of the same flag is dropped).
+
+| step | READ id exported | file |
+|---|---|---|
+| `step_smoke_worker.sh` | `<port READ id>-SMOKE` (`cellinfo.py` `TRACE_READ_ID` of the smoke cell) | `analysis/<port READ id>-SMOKE/rollout-trace.jsonl` |
+| `step_campaign.sh` | the port READ run id (recipe `read_run_id`, `TRACE_READ_ID` of the flight cell) | `analysis/<port READ id>/rollout-trace.jsonl` |
+| `step_score.sh` | `--read-id` (default: the port READ run id), so score lines join the campaign file | same file |
+| `step_read.sh` | the recipe's `read_run_id` | same file |
+
+`step_lease.sh`, `step_fit.sh`, `step_smoke_read.sh`, `step_signoff.sh`, `step_seal.sh` and `step_ledger_close.sh` neither contact the model nor
+score, and export nothing. Every traced step passes `--trace-read-id <id>` to `preflight.py`; the check `trace-read-id` refuses an empty id, an id
+outside the run-id pattern, the other cell's id (smoke and flight never share a file), and an analysis directory that cannot be created and written
+(it creates the directory, probing with a temporary file). `_common.sh` also refuses an empty or malformed id itself (exit 6) before preflight runs.
+
 ## Watching a detached step
 
 `worker`, `campaign` and `score` return at once. Watch the watchdog (`work/watchdog/status-npu2.json`, `events-npu2.log`),

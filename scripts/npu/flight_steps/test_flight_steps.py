@@ -114,11 +114,15 @@ class FakeOps(pf.Ops):
     def mtime(self, path):
         return self.state["receipt_mtime"]
 
+    def ensure_writable_dir(self, path):
+        self.calls.append(["ensure_writable_dir", str(path)])
+        return self.state["trace_dir_error"] if "trace_dir_error" in self.state else super().ensure_writable_dir(path)
 
-def run_pf(tmp_path, stage="smoke", **over):
+
+def run_pf(tmp_path, stage="smoke", trace_read_id=None, **over):
     ops = FakeOps(tmp_path, **over)
     checker = pf.Preflight(ops, stage=stage, study=str(STUDY), omni=str(tmp_path), profile_id=PROFILE_ID,
-                           state_root=str(tmp_path / "state"), min_free_gib=100)
+                           state_root=str(tmp_path / "state"), min_free_gib=100, trace_read_id=trace_read_id)
     findings = checker.run()
     return {f.name: f for f in findings}, ops
 
@@ -127,7 +131,7 @@ def test_preflight_all_good(tmp_path):
     found, _ = run_pf(tmp_path)
     assert all(f.ok for f in found.values()), [f for f in found.values() if not f.ok]
     assert {"registration", "cli-check-read-only", "npu-smi", "endpoints", "runtime-receipt", "cephfs-free-space",
-            "resident-session", "study-tree-clean", "flight-commit-pin", "host"} <= set(found)
+            "resident-session", "study-tree-clean", "flight-commit-pin", "host", "trace-read-id"} <= set(found)
 
 
 def test_preflight_registration_blockers_are_printed(tmp_path):
@@ -250,9 +254,77 @@ def test_preflight_has_no_side_effect_calls(tmp_path):
     for call in ops.calls:
         if call[0] == "docker":
             assert call[1] in ("inspect", "image"), call
-        assert call[0] in ("git", "npu-smi", "docker", "study_python")
+        assert call[0] in ("git", "npu-smi", "docker", "study_python", "ensure_writable_dir")
         if call[0] == "git":
             assert call[3] in ("status", "rev-parse")
+
+
+# ----------------------------------------------------------------------------------------------- rollout trace (preflight)
+
+SMOKE_TRACE_ID = cellinfo.load("smoke")["TRACE_READ_ID"]
+FLIGHT_TRACE_ID = cellinfo.load("flight")["TRACE_READ_ID"]
+
+
+def test_trace_ids_are_distinct_and_the_flight_id_is_the_port_read_id():
+    assert FLIGHT_TRACE_ID == cellinfo.load("flight")["READ_RUN_ID_DEFAULT"] == "SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1"
+    assert SMOKE_TRACE_ID == FLIGHT_TRACE_ID + "-SMOKE" and SMOKE_TRACE_ID != FLIGHT_TRACE_ID
+    assert cellinfo.TRACE_READ_ID_PATTERN.fullmatch(SMOKE_TRACE_ID) and cellinfo.TRACE_READ_ID_PATTERN.fullmatch(FLIGHT_TRACE_ID)
+
+
+@pytest.mark.parametrize("stage,expected", [("smoke", SMOKE_TRACE_ID), ("flight", FLIGHT_TRACE_ID)])
+def test_preflight_defaults_to_the_stage_trace_id_and_creates_the_directory(tmp_path, stage, expected):
+    found, _ = run_pf(tmp_path, stage=stage)
+    assert found["trace-read-id"].ok and expected in found["trace-read-id"].detail
+    assert (tmp_path / "analysis" / expected).is_dir()
+    assert list((tmp_path / "analysis" / expected).iterdir()) == []                  # the write probe is removed again
+
+
+def test_preflight_refuses_an_empty_trace_id(tmp_path):
+    for stage in ("smoke", "flight", "post"):
+        found, _ = run_pf(tmp_path, stage=stage, trace_read_id="")
+        assert not found["trace-read-id"].ok and "empty" in found["trace-read-id"].detail
+    assert not (tmp_path / "analysis").exists()
+
+
+@pytest.mark.parametrize("bad", ["has space", "../escape", "a/b", "-leading-dash", ".hidden", "weird$id", "READ\nID"])
+def test_preflight_refuses_an_id_outside_the_run_id_pattern(tmp_path, bad):
+    found, _ = run_pf(tmp_path, stage="post", trace_read_id=bad)
+    assert not found["trace-read-id"].ok and "pattern" in found["trace-read-id"].detail
+    assert not (tmp_path / "analysis").exists()
+
+
+def test_preflight_smoke_and_flight_never_share_a_trace_id(tmp_path):
+    found, _ = run_pf(tmp_path, stage="smoke", trace_read_id=FLIGHT_TRACE_ID)
+    assert not found["trace-read-id"].ok and "flight trace id" in found["trace-read-id"].detail
+    for stage in ("flight", "post"):
+        found, _ = run_pf(tmp_path, stage=stage, trace_read_id=SMOKE_TRACE_ID)
+        assert not found["trace-read-id"].ok and "smoke trace id" in found["trace-read-id"].detail
+    assert not (tmp_path / "analysis").exists()
+
+
+def test_preflight_post_stage_checks_the_trace_id_it_is_given(tmp_path):
+    found, ops = run_pf(tmp_path, stage="post", trace_read_id=FLIGHT_TRACE_ID)
+    assert found["trace-read-id"].ok and (tmp_path / "analysis" / FLIGHT_TRACE_ID).is_dir()
+    assert not any(c[0] in ("npu-smi", "docker", "study_python") for c in ops.calls)
+
+
+def test_preflight_unwritable_trace_directory_blocks(tmp_path):
+    found, _ = run_pf(tmp_path, stage="flight", trace_dir_error="PermissionError: [Errno 13] Permission denied")
+    assert not found["trace-read-id"].ok and "not writable" in found["trace-read-id"].detail
+
+
+def test_preflight_real_ops_probe_is_writable_and_detects_a_file_in_the_way(tmp_path):
+    ops = pf.Ops()
+    assert ops.ensure_writable_dir(tmp_path / "a" / "b") is None
+    (tmp_path / "file").write_text("x")
+    assert "Error" in ops.ensure_writable_dir(tmp_path / "file" / "sub")
+
+
+def test_preflight_main_trace_flag(tmp_path, capsys):
+    argv = ["--stage", "post", "--omni-root", str(tmp_path), "--state-root", str(tmp_path / "s"), "--min-free-gib", "1"]
+    assert pf.main(argv + ["--trace-read-id", ""], ops=FakeOps(tmp_path)) == 1
+    assert "trace-read-id: the READ id for the rollout trace" in capsys.readouterr().out
+    assert pf.main(argv + ["--trace-read-id", FLIGHT_TRACE_ID], ops=FakeOps(tmp_path)) == 0
 
 
 # ----------------------------------------------------------------------------------------------- cellinfo
@@ -261,7 +333,7 @@ def test_cellinfo_smoke_and_flight():
     smoke, flight = cellinfo.load("smoke"), cellinfo.load("flight")
     assert smoke["ROWS"] == "4" and flight["ROWS"] == "1080"
     assert smoke["RUN_ID"].endswith("SMOKE-4-NPU-PORT-V1") and flight["RUN_ID"].endswith("FOLD-B-NPU-PORT-V1")
-    assert smoke["FIT_CONTACT_CAP"] == "240" and flight["FIT_CONTACT_CAP"] == "64800"
+    assert smoke["FIT_CONTACT_CAP"] == "68" and flight["FIT_CONTACT_CAP"] == "18360"
     assert smoke["SESSION_ID"] == flight["SESSION_ID"]
     with pytest.raises(cellinfo.CellInfoError):
         cellinfo.load("nope")
@@ -509,6 +581,105 @@ def test_failed_foreground_step_writes_failed_marker(env):
     mark(env, *STEPS[: STEPS.index("seal")])
     done = step(env, "seal", "--confirm", FAKE_RC=4)
     assert done.returncode == 8 and (env["state"] / "seal.failed").exists() and not (env["state"] / "seal.done").exists()
+
+
+# ----------------------------------------------------------------------------------------------- rollout trace (shell steps)
+
+TRACE_FLAG = "-e SAEA_ROLLOUT_TRACE_READ_ID="
+
+
+def unescaped(stdout):
+    return stdout.replace("\\ ", " ")          # printf %q escapes blanks
+
+
+def rendered_flags(stdout):
+    """The PORT_DOCKER_FLAGS value of every rendered command of a dry-run."""
+    return re.findall(r"PORT_DOCKER_FLAGS=(.*?) SPEECHRL_DATA_DIR=", unescaped(stdout))
+
+
+def trace_ids(stdout):
+    return re.findall(r"SAEA_ROLLOUT_TRACE_READ_ID=(\S+)", unescaped(stdout))
+
+
+def test_smoke_worker_exports_the_smoke_trace_id_not_the_flight_id(env):
+    out = step(env, "smoke_worker").stdout
+    assert rendered_flags(out) == [TRACE_FLAG + SMOKE_TRACE_ID]
+    assert trace_ids(out) == [SMOKE_TRACE_ID]
+    assert "core.flight.cli worker" in unescaped(out).split("PORT_DOCKER_FLAGS=")[1]      # the variable sits on the worker command itself
+
+
+def test_campaign_exports_the_flight_read_id(env):
+    out = step(env, "campaign").stdout
+    assert rendered_flags(out) == [TRACE_FLAG + FLIGHT_TRACE_ID] and trace_ids(out) == [FLIGHT_TRACE_ID]
+    assert "core.flight.cli campaign" in unescaped(out).split("PORT_DOCKER_FLAGS=")[1]
+
+
+def test_score_exports_its_read_id_default_and_override(env):
+    assert trace_ids(step(env, "score").stdout) == [FLIGHT_TRACE_ID]
+    out = step(env, "score", "--read-id", "OTHER-READ-ID").stdout
+    assert trace_ids(out) == ["OTHER-READ-ID"] and "--analysis-root %s/analysis/OTHER-READ-ID/columns" % env["omni"] in out
+
+
+def test_read_exports_the_recipe_read_id_on_both_commands(env):
+    out = step(env, "read", "--recipe", RECIPE_REL).stdout
+    assert trace_ids(out) == [FLIGHT_TRACE_ID, FLIGHT_TRACE_ID] and rendered_flags(out) == [TRACE_FLAG + FLIGHT_TRACE_ID] * 2
+
+
+def test_read_with_an_unresolved_recipe_exports_nothing_and_still_refuses(env):
+    mark(env, *STEPS[: STEPS.index("read")])
+    out = step(env, "read", "--recipe", "docs/nope.json")
+    assert "SAEA_ROLLOUT_TRACE_READ_ID" not in out.stdout
+    assert step(env, "read", "--confirm", "--recipe", "docs/nope.json").returncode == 6
+
+
+@pytest.mark.parametrize("name", ["lease", "fit", "smoke_read", "signoff", "seal", "ledger_close"])
+def test_steps_that_neither_contact_the_model_nor_score_export_no_trace_id(env, name):
+    assert "SAEA_ROLLOUT_TRACE_READ_ID" not in step(env, name).stdout
+
+
+def test_preflight_is_told_the_trace_id_of_each_traced_step(env):
+    mark(env, "lease", "smoke_read", "signoff", "seal")
+    (env["state"] / "signoff.marker").write_text("ok")
+    for args in (("smoke_worker",), ("campaign",), ("score", "--read-id", "OTHER-READ-ID")):
+        step(env, *args)
+    mark(env, "smoke_worker")                    # fit is untraced: its preflight call carries no --trace-read-id
+    step(env, "fit")
+    seen = [l for l in env["log"].read_text().splitlines() if l.startswith("fake preflight")]
+    assert seen == [f"fake preflight --stage smoke --trace-read-id {SMOKE_TRACE_ID}", f"fake preflight --stage flight --trace-read-id {FLIGHT_TRACE_ID}",
+                    "fake preflight --stage post --trace-read-id OTHER-READ-ID", "fake preflight --stage post"]
+
+
+def test_inherited_port_docker_flags_are_kept_and_a_stale_trace_flag_is_replaced(env):
+    out = step(env, "campaign", PORT_DOCKER_FLAGS="--shm-size 8g -e SAEA_ROLLOUT_TRACE_READ_ID=STALE -e X=1").stdout
+    assert rendered_flags(out) == [f"--shm-size 8g -e X=1 {TRACE_FLAG}{FLIGHT_TRACE_ID}"] and "STALE" not in out
+
+
+def test_empty_or_malformed_trace_id_is_refused_by_the_step_itself(env):
+    mark(env, *STEPS[: STEPS.index("score")])
+    for bad in ("", "has space", "a/b"):
+        done = step(env, "score", "--confirm", f"--read-id={bad}")
+        assert done.returncode == 6 and "rollout trace" in done.stderr, (bad, done.stdout, done.stderr)
+    assert log_lines(env) == [] and not (env["state"] / "score.done").exists()
+
+
+def test_the_trace_variable_reaches_the_container_launcher(env):
+    """Run the traced steps for real against the fake runner: its recorded PORT_DOCKER_FLAGS carries the id of that step."""
+    assert step(env, "lease", "--confirm").returncode == 0
+    assert step(env, "smoke_worker", "--confirm").returncode == 0 and wait_for(env["state"] / "smoke_worker.done")
+    mark(env, "fit", "smoke_read", "signoff", "seal")
+    (env["state"] / "signoff.marker").write_text("ok")
+    assert step(env, "campaign", "--confirm").returncode == 0 and wait_for(env["state"] / "campaign.done")
+    assert step(env, "score", "--confirm").returncode == 0 and wait_for(env["state"] / "score.done")
+    lines = log_lines(env)
+    lease = [l for l in lines if "lease_cli" in l]
+    worker = [l for l in lines if "cli worker" in l]
+    campaign = [l for l in lines if "cli campaign" in l]
+    score = [l for l in lines if "stage3_rollout_score.py" in l]
+    assert len(lease) == len(worker) == len(campaign) == len(score) == 1
+    assert "SAEA_ROLLOUT_TRACE_READ_ID" not in lease[0]                                   # the lease holder calls no model
+    assert f"PORT_DOCKER_FLAGS={TRACE_FLAG}{SMOKE_TRACE_ID} ::" in worker[0]
+    assert f"PORT_DOCKER_FLAGS={TRACE_FLAG}{FLIGHT_TRACE_ID} ::" in campaign[0]
+    assert f"PORT_DOCKER_FLAGS={TRACE_FLAG}{FLIGHT_TRACE_ID} ::" in score[0]
 
 
 # ----------------------------------------------------------------------------------------------- static checks
