@@ -937,3 +937,19 @@ cards had been idle under the resident arm A deployment since the E chain finish
 Next in the card queue once E3 is FINAL (the queue runner is being built, plan 2026-10-30 TFRL section 8 R1): the
 budget-6,144 worst-case sweep at 32/24/16, then the recorded runs `record_run_list.example-armA-knee32.json` and
 `record_run_list.budget6144-worstcase.json`. The base is chosen by the accuracy-first rule (section 8) from those results.
+
+### 3.12 addendum: the card queue (2026-10-30)
+
+A detached queue runner (`work/scripts/card_queue.py`, queue `card_queue.base-lock-v1.json`, state under
+`work/card-queue/base-lock-v1/`, watchdog kind `card_queue`) now chains the card work after the E3 chain is FINAL:
+
+1. `R-A3-b6144-prelim`: budget-6,144 worst case at 32, 24, 16 against the resident arm A that E3 restores (min_tokens =
+   max_tokens 7,168, thinking budget 6,144, prompt max 17,408, latency rule 735 s); failing levels are data.
+2. `stop-idle-arm-a`: stops the four arm A instances only when every one reports zero running and zero waiting.
+3. `recorded-base-lock-v1`: `record_runs.py` on the real list `record_run_list.base-lock-v1.json`: R0 once (deploy from
+   the profile, receipt, 11/11 base verification, smoke, manifest), then `R-A2-L32` (normal mix, 3 passes), `R-A3-L32`
+   (worst case 4,096, admissibility), `R-A3-b6144` (32/24/16 at 7,168, `continue` so the whole descent is measured).
+   The first two runs stop the chain on failure; a stop is a bad case for Opus, not a retry.
+
+The base is then chosen by the section 8 rule of the TFRL plan (budget 6,144 if admissible at 16 or more per instance),
+the lock record's open fields are filled from the recorded runs, and the record goes to the owner for countersign.
