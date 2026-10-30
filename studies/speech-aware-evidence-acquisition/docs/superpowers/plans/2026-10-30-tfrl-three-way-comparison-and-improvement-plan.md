@@ -147,3 +147,25 @@ SLU-F1 and intent with CI95, the A-to-D gap, the T-to-A gap, Fold A confirmation
    the record carry `a35b2740…`. The earlier note in the base-lock skeleton is amended by this line.
 6. **D writer.** D is emitted by the 266-E writer (`direct_fb_write_registration.py`) with the port settings imported from
    `l338_port_family`; T and Fold A by the L338 port writer with a family switch and a per-roster preparation table. SONNET.
+
+## 10. Rulings on the delivered T1 and T2 streams (Fable, 2026-10-30)
+
+1. **T1 trace switch.** Tracing is enabled by `SAEA_ROLLOUT_TRACE_READ_ID` set by the launcher, not by the manifest; accepted
+   for the base-lock recorded runs and the Fold B three-way. The launch step scripts under `work/scripts/flight_steps/`
+   must export it from the READ id they already carry (engineering item, before the first recorded run). Promoting it to a
+   deployment-profile field is deferred; it would move the manifest, not the protocol hash.
+2. **T2 replicate arm.** `lock-rep2` is a request-identical fifth arm (17 contacts per row: 8 Perception, 9 Solver;
+   program `phase-native-module-v1-c17`). Accepted. The replicate spread is reported; the twin-admissibility rule stays on
+   `aa` alone.
+3. **T2 widened CI.** `SE_t = sqrt(SE_b^2 + V_rep)` with `V_rep` the mean squared pairwise delta over {lock, aa, lock-rep2}
+   (two degrees of freedom; recorded as such). Accepted as the M1 fix; the point estimate is unchanged and the copies keep
+   their raw intervals.
+4. **NOMINATED rule.** The engineer's design choice (pooled AND per-row lower bound above zero, and no resolved per-row loss)
+   is accepted under the owner's accuracy-first rule, with two conditions: the per-row F1 (2TP / (2TP + FP + FN) over
+   summed word and char counts, 1.0 for empty gold and empty prediction) is a repo diagnostic, never reported as an official
+   SLURP number; and the official pooled SLU-F1 and intent accuracy remain the only numbers placed beside public baselines
+   (comparison plan Decision 6). The rule is written into `analysis-recipe-v1.json` by the re-mint.
+5. **Re-mint order.** The T2 re-mint predates the FIT-cap fix; exactly one combined re-mint is run on the committed package
+   after both streams are in the tree, then the package, writer files and tests are staged together by path.
+6. **Sweep failures.** The 35 + 68 failures in the T2 regression shards are not accepted as pre-existing until the same files
+   are run at clean HEAD `56d3c1c3`; the combined gate carries that table.
