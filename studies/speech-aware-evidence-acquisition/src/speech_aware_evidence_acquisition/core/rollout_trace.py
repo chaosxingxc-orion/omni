@@ -470,7 +470,8 @@ def supplied_values_from_payload(payload: Mapping[str, object]) -> list[tuple[st
         evidence_id = entry.get("evidence_id")
         if not isinstance(evidence_id, str) or not evidence_id:
             continue
-        if entry.get("knowledge_role") == "key" or evidence_id.startswith(("key:", "candidate-proposal:")):
+        # ``tfrl-v2/``: the TFRL-v2 exemplar block (``rails.tfrl_v2_consumption.EXEMPLAR_EVIDENCE_ID``) is a worked-example text part, not a supplied value.
+        if entry.get("knowledge_role") == "key" or evidence_id.startswith(("key:", "candidate-proposal:", "tfrl-v2/")):
             continue
         if _REQUEST_DERIVED_ID.fullmatch(evidence_id):
             continue
@@ -549,9 +550,11 @@ def record_contact(
     contact_index: object, sample_index: object, request_id: object, outcome: str, error_type: str | None,
     id_slot: object, instance: object, supply_variant_id: object, supply_values: Sequence[tuple[str, str]],
     supply_scores: Mapping[str, float] | None, costs: Sequence[Mapping[str, object]], decoding: Mapping[str, object] | None,
-    finish_reason_fallback: object, answer_text: object, response_text_sha256: object,
+    finish_reason_fallback: object, answer_text: object, response_text_sha256: object, bank_receipt: object = None,
 ) -> bool:
-    """Assemble and write one ``contact`` line. A no-op without a writer; never raises."""
+    """Assemble and write one ``contact`` line. A no-op without a writer; never raises.
+
+    ``bank_receipt`` is the TFRL-v2 bank receipt hash a Solver contact consumed (``rails.runner``); ``None`` -- written as ``null`` -- for every contact that consumed none."""
 
     if writer is None:
         return False
@@ -571,7 +574,8 @@ def record_contact(
             contact_id=_id_or_none(contact_id), contact_index=_count(contact_index), sample_index=_count(sample_index),
             request_id=_id_or_none(request_id), outcome=outcome, error_type=error_type,
             id_slot=_count(id_slot), instance=_count(instance), supply_variant_id=_id_or_none(supply_variant_id),
-            supply_items=supply_items(list(texts), supply_scores, used, bases), max_tokens=max_tokens, answer=answer,
+            supply_items=supply_items(list(texts), supply_scores, used, bases), bank_receipt=bank_receipt if isinstance(bank_receipt, str) else None,
+            max_tokens=max_tokens, answer=answer,
             response_text_sha256=response_text_sha256 if isinstance(response_text_sha256, str) else None, **facts,
         )
     except Exception as error:  # noqa: BLE001

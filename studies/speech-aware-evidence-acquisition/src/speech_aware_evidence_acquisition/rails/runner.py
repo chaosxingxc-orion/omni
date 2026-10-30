@@ -2560,6 +2560,23 @@ def _perception_branch_min_candidates_sentence(branch, max_candidates=None):
     }
 
 
+def _tfrl_bank_consumes(request, solver_phase_id, supply_variant_group, perception_branch_group) -> bool:
+    """TFRL-v2: whether this contact renders the bank. Only a Solver contact of a CANDIDATE arm does: the delivering lock arm, its twin and the registered replicates
+    are the control and render exactly the bytes the cell without the frame renders; a Solver contact of no arm group (an ordinary cell) consumes."""
+
+    if request.role_id != solver_phase_id:
+        return False
+    arm_id = getattr(request.context, "variant_arm_id", None)
+    if supply_variant_group is not None and arm_id is not None:
+        arm = supply_variant_group.arm(arm_id)
+        return not arm.deliver and arm.replicate_of is None
+    branch_id = getattr(request.context, "perception_branch_id", None)
+    if perception_branch_group is not None and branch_id is not None:
+        branch = perception_branch_group.branch(branch_id)
+        return not branch.deliver and branch.replicate_of is None
+    return True
+
+
 async def _invoke_native_role_episode(
     *, state, run_contact, session, binding, adapter, core_client, snapshot,
     snapshot_sha256, protected_material, base_decoding_params, run_id,
@@ -2943,6 +2960,8 @@ async def _invoke_native_role_episode(
     rollout_supply_scores = _RolloutSupplyScores()
     rollout_solver_answers: dict[str, str] = {}
     rollout_nodes = {role.phase_id: _rollout_node_of(role.role_kind) for role in config.roles}
+    #: TFRL-v2: ``{contact id: bank receipt hash}`` of the Solver contacts that consumed the bank (empty unless the cell declares ``tfrl_v2_bank``).
+    tfrl_bank_contacts: dict[str, str] = {}
 
     def trace_native_contact(
         request, prepared, completion, trace, slot_id, contact_index, *, error=None, node=None,
@@ -2978,6 +2997,7 @@ async def _invoke_native_role_episode(
                 finish_reason_fallback=None if completion is None else completion.finish_reason,
                 answer_text=answer_text,
                 response_text_sha256=None if completion is None else completion.response_text_sha256,
+                bank_receipt=tfrl_bank_contacts.get(context.agent_contact_id),
             )
         except Exception:  # noqa: BLE001 -- the trace never fails a contact
             import logging  # noqa: PLC0415
@@ -4177,6 +4197,29 @@ async def _invoke_native_role_episode(
             phase_id=perception_branch_phase_id,
         )
 
+    def compose_tfrl_bank_messages(messages, render_ctx, contact_id):
+        """TFRL-v2 (plan section 13 ruling 3 (a)): the exemplar block of the Perception-predicted scenario (one trailing text part, after the supplied items) and
+        the rule bank (a suffix of the Solver instruction), through ``compose_solver_messages``; the supply bound of the module frame is enforced first."""
+
+        from .tfrl_v2_consumption import compose_solver_messages, predicted_intent_id  # noqa: PLC0415
+
+        supplied = sum(
+            1 for part in messages[1]["content"]
+            if isinstance(part, Mapping) and part.get("type") == "text" and part.get("knowledge_role") == "value"
+        )
+        if supplied > tfrl_supply_bound:
+            raise RailsRunnerError(
+                f"a TFRL-v2 Solver contact carries {supplied} supplied items, above the cell's bound of {tfrl_supply_bound} "
+                "(exemplars replace supplied items, plan section 9 ruling 4)"
+            )
+        intent = predicted_intent_id(render_ctx.agent_states, f"phase:{config.role('perception').phase_id}")
+        composed = compose_solver_messages(
+            messages, exemplar_block_text=tfrl_bank.exemplar_block_for_intent(intent), rule_text=tfrl_bank.rule_text(),
+            exemplar_source_uri=tfrl_bank.source_uri,
+        )
+        tfrl_bank_contacts[contact_id] = tfrl_bank.receipt_sha256
+        return composed
+
     def speech_binding(request):
         from .native_episode_config import select_native_role_history
 
@@ -4471,6 +4514,12 @@ async def _invoke_native_role_episode(
                 raise RailsRunnerError(
                     "one perception-branch Solver contact composed two different renderings"
                 )
+        framework_system = None
+        if tfrl_bank is not None and _tfrl_bank_consumes(request, solver_phase_id, supply_variant_group, perception_branch_group):
+            framework_system = messages[0]["content"]          # the role node's own (constant) system text; the wire system message grows by the rule suffix
+            messages = compose_tfrl_bank_messages(messages, render_ctx, plan.contact_id)
+            if messages[0]["content"] == framework_system:
+                framework_system = None
         return NativeRoleSpeechBinding(
             role_id=request.role_id, sample_id=ctx.sample_id,
             role_query=contact_query, base_messages=messages,
@@ -4490,6 +4539,8 @@ async def _invoke_native_role_episode(
             # ``"constant"``. None -- the default -- renders exactly
             # ``names``, byte-identically to the pre-E17 tree.
             rendered_tool_names=constant_tool_names,
+            # TFRL-v2: None unless this contact's wire system message carries the rule-bank suffix.
+            framework_system=framework_system,
         )
 
     def capture_completion(request, completion):
@@ -5511,6 +5562,32 @@ async def _invoke_native_role_episode(
             "native_episode.knowledge_index is not armed; an index no config "
             "hash claims would move request bytes outside the cell identity"
         )
+    # TFRL-v2 (plan section 13 ruling 3 (a)): the bank is rendered ONLY when the module block carries the ``tfrl_v2_bank`` frame AND the flight verified the bank
+    # (``verify_for_flight``, which hands it over on the binding). Both directions are refused by name before any contact, exactly as E21w's index binding is: a
+    # declared frame with no verified bank would claim bytes the request does not carry, and a bank with no frame would move bytes no config hash claims.
+    from .tfrl_v2_consumption import declaration_of_block_json as _tfrl_declaration  # noqa: PLC0415
+
+    tfrl_declared = _tfrl_declaration(config.consumption_module_json)
+    tfrl_bank = binding.tfrl_v2_bank
+    tfrl_supply_bound = None
+    if tfrl_declared is not None and tfrl_bank is None:
+        raise RailsRunnerError(
+            "native_episode.consumption_module declares tfrl_v2_bank but the episode binding carries no verified bank (verify_for_flight did not hand one over)"
+        )
+    if tfrl_declared is None and tfrl_bank is not None:
+        raise RailsRunnerError(
+            "the episode binding carries a TFRL-v2 bank but native_episode.consumption_module declares no tfrl_v2_bank frame; a bank no config hash claims would "
+            "move request bytes outside the cell identity"
+        )
+    if tfrl_declared is not None:
+        if tfrl_bank.receipt_sha256 != tfrl_declared[0].receipt_sha256:
+            raise RailsRunnerError("the verified TFRL-v2 bank is not the bank the module declaration pins")
+        tfrl_supply_bound = tfrl_declared[1]
+        if tfrl_supply_bound is None:
+            raise RailsRunnerError(
+                "tfrl_v2_bank is declared but the module block's arm frame carries no max_supplied_items; the supply bound (A's bound minus the 8 items the "
+                "exemplar block replaces) cannot be enforced"
+            )
     # Item E42 (2026-09-25): the arm group and its resolver are ONE module, in
     # both directions -- a declared group with no resolver would compose an arm
     # from nothing, and a resolver with no declared group would move request

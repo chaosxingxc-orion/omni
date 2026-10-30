@@ -43,20 +43,20 @@ COMMIT = "28bf3176ba9798208ae1e1e22ecf6412efa91755"
 AT = "2026-10-30T00:00:00+00:00"
 #: composed-config hash / protocol hash of each T cell at the default fragment.
 HASHES = {
-    "csmoke": ("c656076e3a2ffa162a5f96188b3b4f6f4d6a8ad93cc6c003b9a6b8fa0f36122c", "6fa9cf6da9020031d460a35cc269feb08c970465e0ae0c85f2d1a15a268cf75c"),
-    "ch1": ("86125d03d68c4cefb01cf3b1031842509036e80eeeb4f8d694b74ee1cbf40a85", "36f08eeb02f8f5e020876277b2a72ad8dbbb550d3b0dd0f3ce8c820a2b5b67da"),
-    "ch2": ("f1a9749d0ec04e665b5e6c5599c2ae803f94a599be531072bb2554050f70fabb", "16db3d67fba5fdaaca8aa7a214753c3ce41af824515d72f3dacafefd846d5259"),
-    "fsmoke": ("b6669e39e1248fb98da80d6dc4e82ffc81e0d4bd535dd9293b27f0e5a45c9907", "3bb9257e69948172a2e60512987d2e8297833fec6b075e8d8e541fee7a108db3"),
-    "fb": ("9edcbb4f2337fac6468b2ec22d2c0282274268e6d7bc7e2ae35937f7a7a30c18", "edcffc2564f3a6a2913d2eafca300c9df84928b131ee57707e6dca38aa1b4082"),
+    "csmoke": ("12b29fbc9cda0476e5d9bdf06f5da5f28c9bd663ed62258cde3249ea61b8dc4b", "8f7e8ab90b4610a104aa7ef9050d76927efed9fb581dfce1afb2efa99713bf87"),
+    "ch1": ("2541c59edefd239b6a857beb65a2b1b87f643402a53393d4de0b55b95c4660cb", "abcbd5516d8896d7c31d7bd90263faac145286040c8162faaf2ead8f1a8d0932"),
+    "ch2": ("8f011fd7cedd18db4c3d304f12adfd0ea74f8b2d377ee1668a997d29b2130223", "028af52935bc4e579a70fdbef7cfa679400f26fb1bffd26234f92962b6cf9db1"),
+    "fsmoke": ("4e5b34dcc91c426b025caef5ff15ff390146cf0ed701f8483b65c1474e8c9776", "772ca03a0564407051f12ef44fa5d00a5a5bd9029449bd5bfbf654cc82b9b414"),
+    "fb": ("b0bb469500d39b6a3482390eed3fafafe127312e328494284b2fe2ff28fdfb49", "fc02fa2426c9e58055ed4c8d47bf65adfba9df7277f3af0de042b78d9b676cb2"),
 }
 CAPS = {"csmoke": (56, 28, 239), "ch1": (4382, 2191, 18474), "ch2": (4368, 2184, 19703), "fsmoke": (80, 40, 204), "fb": (21600, 10800, 63096)}
 #: sha256 of every file the writer emits for the default fragment at COMMIT / AT (the five baselines, five experiments, two campaigns, the package and the preregistration).
 GOLDEN = {
-    "configs/baseline/slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-baseline-raw-port-v1.json": "5011a02c319efa5473c55290227e67a1188b85349da6fecdc26dc798fa1fc773",
-    "configs/baseline/slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-baseline-raw-port-v1.json": "d5ca613c33efcfcacf21aae8ee07208f99ddf8700d7a12bb9a0f49c5ffc4244b",
-    "configs/baseline/slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-baseline-raw-port-v1.json": "3aaf6a2995797472946676d24fa7204132686d9d461389b4ba2d8de82907bf3d",
-    "configs/baseline/slurp-native-stage3-tfrl-v2-fold-b-i1-baseline-raw-port-v1.json": "719573e3f37d63654e49570ea8df1a6ef933812cdcdba5cd064bb5bc6bd7b5b7",
-    "configs/baseline/slurp-native-stage3-tfrl-v2-fold-b-smoke-4-baseline-raw-port-v1.json": "02d19f826476ff0d0b5896eada0febb57ccfc7f35d4c6790c9e163a38b8625fc",
+    "configs/baseline/slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-baseline-raw-port-v1.json": "11c53e75599408172148479367278ea1dc2485d94a5fbc08dd6256283acdafac",
+    "configs/baseline/slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-baseline-raw-port-v1.json": "bfe27ec2fddab7b879b11980092eced38f07ef78b95098545c7e6442713918d8",
+    "configs/baseline/slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-baseline-raw-port-v1.json": "66cb00ed8558826277222e85e4cde9999b4756270b9fd554aaa2692088dac18e",
+    "configs/baseline/slurp-native-stage3-tfrl-v2-fold-b-i1-baseline-raw-port-v1.json": "4356d62ba127017875cbd33e646f6640faf0757e93b01f28e8554f5c9c7b308f",
+    "configs/baseline/slurp-native-stage3-tfrl-v2-fold-b-smoke-4-baseline-raw-port-v1.json": "6bd28484d7107b1646957ac67f06dba925b027cc4944adff8d38a080def15c6f",
     "configs/campaign/slurp-native-stage3-tfrl-v2-construction-r01c-i1-npu-port-v1.json": "13377668cfa68ca7a7d9336a06646120f8a1279882da3802daa3750be4633e23",
     "configs/campaign/slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1.json": "d2b3d507921ffabf8826940d107d9eba4c8e28cba736562892853b9a45aa94b3",
     "configs/experiment/slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-npu-port-v1.json": "f2cbf84afe6997d6fb47da09f62e1456afa1eeb7e13ea36ad5f39cd5fb735680",
@@ -65,25 +65,25 @@ GOLDEN = {
     "configs/experiment/slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1.json": "6d67464d551405b3b3507d9ca6c5c2435fc455a9af2115824673224642cd6b4a",
     "configs/experiment/slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1.json": "a430b03bd8a0a76381bb3be0910621bc9ed8b0509a6cddbcd817cd990c05ac1a",
     "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1-preregistration.md": "2b691f65e92748e2c57df2d8cc671f0f52c195344cf9c23f65aeae8c55152fb0",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/README.md": "00b1043d215707a9d2f493834730ccf4195419ab78a5d6b0bd08fee10e2e9c8a",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/README.md": "713fa64e9d1f527de27fe2c0992a424f8e6a08389d00dad20123167086154b82",
     "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/analysis-recipe-v1.json": "303d238a1fb0979862607b2ccb931ce492c7650c6f5629fd6092aa5fc8cce3ab",
     "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/bank-release-v1.json": "ac377eb6a51f38f5dbbc39cfb6f0ecac08bf2698a61f8d7556b1f052f45ad711",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h1-fit-plan-registered-v1.json": "7aa091320386ee1ea1d1b44b97b1fcb161d0cb2a1bea338cc6812093b877c9a0",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h1-generation-plan-registered-v1.json": "92ba9901dd20ff583fe533eaf26aedbfa67d24a7bca4540ff5930ece9e06a982",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h2-fit-plan-registered-v1.json": "f5617ae0a909b0c3eddb1aaec39bf31007feb02822057070fcb1a18c33a033c0",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h2-generation-plan-registered-v1.json": "fcc306b98dec2752d46aaa86f8a777d2685b5265e1e0a9f69e6b626d003df47b",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-smoke-fit-plan-registered-v1.json": "f5bef816014b890c589b61223b3e3597ac378a220bd365119ebd2a38d2305bb6",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-smoke-generation-plan-registered-v1.json": "5e7c3ffc35be32678a917889d56aba26c05618f5b3fd365a3d5f281b94a33506",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h1-fit-plan-registered-v1.json": "b1e9b6b611eba8a91544ffc78c9aa771ac67d94e7e7ee15d3f02a59dab1f5075",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h1-generation-plan-registered-v1.json": "8d14bb02c893ec447c9058bac1c7f6cbfba1c27acf3b90737fcf6295680db3d3",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h2-fit-plan-registered-v1.json": "a03fc3239abe089c246692dfda7f99f90aedbee7a30160682fc69675a2359476",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h2-generation-plan-registered-v1.json": "ad1e8194338a09683ebb8c0b3afba1274e1ca08c4eefa274879c6ebd55e761b6",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-smoke-fit-plan-registered-v1.json": "18d83f671a01e238c439b5ff6281d1911e4b76aec066507bf64c2b3ad6124575",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-smoke-generation-plan-registered-v1.json": "38a77711d27e061e6ffc3ef1c1a501fd56ee8c04e9c8ef94f71f1d2632397f77",
     "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/countersign-row-texts-v1.json": "a5644190f19c802de4fddea46157e57a7aa7ae08865249ac4ff84a93c12115e1",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/draft-ledger-rows.md": "a3a532d1fe5f7bd71e7b2dce9d0f28ef4d47dd6751ca15c18cd87f22ad8cba01",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-i1-fit-plan-registered-v1.json": "238fc5ec1ced77c4f5761dab88edf36fa6dcc898d11ef87be7095a2dc6c7093b",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-i1-generation-plan-registered-v1.json": "965bf7b00dd8489bd55ce248113797e9ddd21642425ae538b6f15ce570368d4e",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-smoke-fit-plan-registered-v1.json": "e632750250a7a8d0854dd171027c5260d349f6c358cbc7b82e5c0b6474208b79",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-smoke-generation-plan-registered-v1.json": "038193d127486945bdd45e3a2a543a4eb86b4cb9bf876ba2cd5cb5a2cfb9d407",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/protocol-registered-v1.json": "6660dec28f414992e47c714c460c6c58684c874e4d769f11983814930000709a",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/draft-ledger-rows.md": "d027fb16f5896d875e57a6d0ee08e7f40cbc277a588a1d4799ae418e9be079d6",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-i1-fit-plan-registered-v1.json": "0d4b8263754ad3ffd86cc5e6c3459ae930c33c126b80bc69e3bc787d061f8298",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-i1-generation-plan-registered-v1.json": "d83b70da3ba9ae23d7d70466713fcaf1e7d6a30f6b0249fd0038fdb03cdd36b0",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-smoke-fit-plan-registered-v1.json": "621a35380794555c7f2cec08762cbb7ad69b770a1e80e390efed13d01bde8a1a",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-smoke-generation-plan-registered-v1.json": "2579f8883d2be6752ea37efbd9a30bc78b73419095b6bccd72753f2246babfa5",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/protocol-registered-v1.json": "95393d5ad69256f91fd62db5102d49a50d4373b92a7561dc7ad9329aa624e0d1",
     "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/read-row-draft-v1.md": "20a4fafaf732db2fa29ea9886ba1c83d72e6894d626723bb369a3867a4ed2c1c",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/registered-facts-v1.json": "2892eb5b12dd524ec8a27808feeff2a61f42f38ca67511fb95dfdd639cc6bcf0",
-    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/root-admission-draft-v1.json": "65b7cd3e3a13f322219445b82cc75b03f01d9677bfa9020e7fc663e5d6284940",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/registered-facts-v1.json": "ca72896e7cf6f28c7cb842b440139b040a74763f9a21430e2d71b82618241657",
+    "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/root-admission-draft-v1.json": "ce3d16dbe3d3771538080578136cfa9247c541841ef24dedeb2f3ea74e06338d",
     "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/signoff-conditions-construction-v1.json": "aac5f0d52d2eeb665bce9e709ee1842dac81d399a383d2f2bdc24302df9e9a01",
     "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/signoff-conditions-fold-b-v1.json": "e00755ca504dd7156ebb0d0d6ab74ecdd94466324ddee435b3264c87dec9ec57",
 }
@@ -615,3 +615,65 @@ def test_dispatcher_reaches_the_t_writer_with_the_family_switch(tmp_path, capsys
     pf.select_model_fragment("default")
     with pytest.raises(SystemExit, match="largest fitting T bound is 40"):
         lw.main(["--family", "tfrl-v2", "--model-fragment", "budget6144-max7168", "--study-commit", COMMIT, "--data-root", str(DATA_ROOT), "--root", str(root), "--no-derive"])
+
+
+# ---- the T lock switch (lock plan 3.14 addendum item 6; plan section 13 ruling 3 (c)) ----------------------------------------------------------------------
+
+
+def test_t_cells_declare_the_port_locks_and_pass_the_loaders_module_check(derived_root):
+    """Fold B cells name ``v2.2-npu-port``; the three construction cells (minus-R01 pool) name ``v2.2-npu-port-r01c``; every composed T cell passes ``verify_declared_module``."""
+
+    expected = {"csmoke": "v2.2-npu-port-r01c", "ch1": "v2.2-npu-port-r01c", "ch2": "v2.2-npu-port-r01c", "fsmoke": "v2.2-npu-port", "fb": "v2.2-npu-port"}
+    assert tdc.MODULE_LOCK == expected
+    for key in tf.ALL_KEYS:
+        base = _load(derived_root, "baseline", tf.CELLS[key]["baseline"])
+        assert base["native_episode"]["consumption_module"]["lock"] == expected[key], key
+        cm.verify_declared_module(base["native_episode"]["consumption_module"], base, repo_root=derived_root)
+        values = compose(derived_root, pf.MODEL_FRAGMENT, tf.CELLS[key]["dataset"], tf.CELLS[key]["baseline"], tf.CELLS[key]["cell"]).values
+        tdc.pdc.verify_composed_module(derived_root, values, key)
+
+
+def test_a_construction_cell_on_the_plain_port_lock_is_refused_at_exactly_the_four_exemplar_store_leaves(derived_root):
+    base = _load(derived_root, "baseline", tf.CELLS["ch1"]["baseline"])
+    base["native_episode"]["consumption_module"]["lock"] = "v2.2-npu-port"
+    with pytest.raises(cm.ConsumptionModuleConfigError, match="differ from what its consumption_module"):
+        cm.verify_declared_module(base["native_episode"]["consumption_module"], base, repo_root=derived_root)
+    composed = cm.compile_module(cm.parse_consumption_module_block(base["native_episode"]["consumption_module"], repo_root=derived_root), carrier_module_hooks(repo_root=derived_root),
+                                 repo_root=derived_root)
+    assert sorted(cm.differing_paths(composed.values_on_roster_of(base), cm.policy_owned_values(base))) == [
+        "knowledge_stores.train-exemplars.release.relpath", "knowledge_stores.train-exemplars.release.sha256",
+        "knowledge_stores.train-exemplars.snapshot.relpath", "knowledge_stores.train-exemplars.snapshot.sha256"]
+
+
+def test_the_t_derive_refuses_to_write_when_a_cell_declares_the_wrong_lock(tmp_path, monkeypatch):
+    root = make_t_root(tmp_path / "root")
+    before = {p: p.read_bytes() for p in (root / "configs").rglob("*.json")}
+    monkeypatch.setitem(tdc.MODULE_LOCK, "ch1", "v2.2-npu-port")
+    with pytest.raises(ValueError, match="verify_declared_module refuses .*nothing was written"):
+        tdc.derive(root)
+    assert {p: p.read_bytes() for p in (root / "configs").rglob("*.json")} == before
+
+
+def test_the_t_identities_run_the_loaders_module_check_on_every_composed_cell(tmp_path, monkeypatch):
+    root = make_t_root(tmp_path / "root")
+    tdc.derive(root)
+    seen = []
+    real = tdc.pdc.verify_composed_module
+    monkeypatch.setattr(tdc.pdc, "verify_composed_module", lambda r, values, label: (seen.append(label), real(r, values, label))[1])
+    tw.identities(root)
+    assert seen == [tf.CELLS[k]["cell"] for k in tf.ALL_KEYS]
+    # a cell whose lock is wrong is stopped here, at the writer, not at the loader
+    path = root / "configs" / "baseline" / f"{tf.CELLS['fb']['baseline']}.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    doc["native_episode"]["consumption_module"]["lock"] = "v2.2"
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(SystemExit, match="refused by verify_declared_module"):
+        tw.identities(root)
+
+
+def test_the_finding_names_the_lock_switch_and_no_longer_claims_the_cells_keep_v2_2():
+    ids = {f["id"]: f for f in tw.FINDINGS}
+    assert "l338-control-fails-verify-declared-module" not in ids
+    finding = ids["t-cells-lock-switched-to-the-port-lock"]
+    text = finding["finding"] + " " + finding["remedy"]
+    assert "v2.2-npu-port-r01c" in text and "v2.2-npu-port" in text and "until then" not in text

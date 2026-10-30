@@ -133,7 +133,7 @@
   ],
   "arm_visits": "first",
   "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-npu-port-v1",
-  "composed_config_hash": "86125d03d68c4cefb01cf3b1031842509036e80eeeb4f8d694b74ee1cbf40a85",
+  "composed_config_hash": "2541c59edefd239b6a857beb65a2b1b87f643402a53393d4de0b55b95c4660cb",
   "declared_differences": [
     "8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0",
     "8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets",
@@ -153,7 +153,7 @@
     "planned_gpu_hours": 12.6,
     "planned_model_calls": 4382,
     "planned_speech_audio_seconds": 18474,
-    "protocol_hash": "36f08eeb02f8f5e020876277b2a72ad8dbbb550d3b0dd0f3ce8c820a2b5b67da",
+    "protocol_hash": "abcbd5516d8896d7c31d7bd90263faac145286040c8162faaf2ead8f1a8d0932",
     "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-NPU-PORT-V1",
     "schema": "saea-execution-plan-v1",
     "split_identity_hash": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
@@ -185,7 +185,7 @@
   },
   "protocol_document": {
     "relpath": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/protocol-registered-v1.json",
-    "sha256": "9982f6020f43c3fc3871b203f8d419a104ea88fe6813bf458140804436c79e35"
+    "sha256": "2fb4191c088d29cffd2b57b9e3c605d6c7b3b874c9f61130152cbb8486808c9a"
   },
   "purpose": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-NPU-PORT-V1: iteration-1 trajectory-sampling flight on the construction half R01C-H1, NPU port.",
   "rails_pending": [

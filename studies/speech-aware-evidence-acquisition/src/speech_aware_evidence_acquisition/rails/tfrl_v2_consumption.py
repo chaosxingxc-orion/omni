@@ -11,9 +11,9 @@ instruction text. Both come from a bank the distiller wrote (``scripts/flights/n
 
 This module is MODEL-FREE and PURE: it contacts nothing, reads only the files it is handed, and changes no rendering path. It is reached from the module
 declaration (``rails.consumption_module``: the optional block key ``tfrl_v2_bank``, parsed here by :func:`parse_bank_declaration`) and from a flight start
-(:func:`verify_for_flight`, called from ``core.flight.runtime.FlightRuntime._prepare_native_phase_runtime``; it returns ``None`` for a cell with no frame).
-``rails/runner.py`` is not edited: no composition function here is reachable from a request until a later change calls :func:`compose_solver_messages`, so
-every existing label's bytes are exactly what they were.
+(:func:`verify_for_flight`, called from ``core.flight.runtime.FlightRuntime._prepare_native_phase_runtime`` with the flight's own row ids; it returns ``None`` for a cell with no frame).
+``rails/runner.py`` calls :func:`compose_solver_messages` for a Solver contact only when the cell's module block carries the frame AND the bank passed :func:`verify_for_flight`
+(plan section 13 ruling 3 (a)); without the frame no composition function is reachable from a request, so every existing label's bytes are exactly what they were.
 
 Message composition (:func:`compose_solver_messages`) follows the runner's own message shape (``system`` text message, ``user`` content list): the rule bank is a
 pure SUFFIX of the system text (the pattern of the knowledge index) and the exemplar block is one trailing text part without a ``knowledge_role`` (so the SUPPLY
@@ -298,6 +298,20 @@ class LoadedBank:
         block = (self.exemplar_bank.get("by_scenario") or {}).get(scenario) if scenario else None
         return "" if not block else str(block["block_text"])
 
+    def scenarios(self) -> tuple[str, ...]:
+        return tuple(sorted(self.exemplar_bank.get("by_scenario") or {}))
+
+    def exemplar_block_for_intent(self, intent_id: str | None) -> str:
+        """The block of the scenario ``intent_id`` (``<scenario>_<action>``) belongs to, or the empty string when the intent is unknown or the bank has no block for it."""
+
+        return self.exemplar_block_text(scenario_of_intent(intent_id, self.scenarios()))
+
+    @property
+    def source_uri(self) -> str:
+        """The ``source_uri`` the exemplar part carries (the raw-native request refuses a text part without one); it names the pinned receipt."""
+
+        return f"{BANK_SOURCE_SCHEME}{self.receipt_sha256}/exemplar-block"
+
     def rule_text(self) -> str:
         return str(self.rule_bank.get("rendered_text") or "")
 
@@ -347,11 +361,19 @@ def verify_for_flight(
     """The flight-start entry: refuse, before the first contact, a cell whose declared bank may not be consumed; ``None`` for a cell with no declaration.
 
     The consuming roster is the declared consumer; its identity is the flight's own split identity. A half consumer must BE the half it names (the flight's
-    identity equals the pinned half identity); a Fold B / Fold A consumer must carry an identity that is none of the bank's source identities."""
+    identity equals the pinned half identity); a Fold B / Fold A consumer must carry an identity that is none of the bank's source identities.
+
+    ROW DISJOINTNESS (plan section 13 ruling 3 (d)): a cell that declares a bank must hand over the flight's own row ids (``consuming_row_ids``); they are re-checked
+    against the receipt's ``source_row_ids`` here, so a bank whose contributing rows include a consuming row is refused even when the split identities differ. A declared
+    cell with no row ids (``None`` or empty) is refused: the disjointness cannot be re-checked, and an unchecked bank is never consumed."""
 
     decl = declaration_of_values(values)
     if decl is None:
         return None
+    if not consuming_row_ids:
+        raise TfrlV2BankRefusal(
+            "tfrl-v2 bank refused: the flight handed over no consuming row ids, so row disjointness from the bank's source_row_ids cannot be re-checked"
+        )
     scope = decl.scope
     if decl.consumer in scope and scope[decl.consumer] != split_identity_hash:
         raise TfrlV2BankRefusal(
@@ -369,12 +391,13 @@ EXEMPLAR_EVIDENCE_ID = "tfrl-v2/exemplar-block"
 
 
 def compose_solver_messages(
-    messages: Sequence[Mapping[str, Any]], *, exemplar_block_text: str = "", rule_text: str = "",
+    messages: Sequence[Mapping[str, Any]], *, exemplar_block_text: str = "", rule_text: str = "", exemplar_source_uri: str | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """The Solver's two messages with the bank added; the input is not modified.
 
     ``messages`` is the runner's pair: ``{"role": "system", "content": <text>}`` and ``{"role": "user", "content": [<parts>]}``. The rule text is appended to the
-    system text as a suffix; the exemplar block is appended as one text part with no ``knowledge_role``. With both texts empty the result equals the input."""
+    system text as a suffix; the exemplar block is appended as one text part with no ``knowledge_role`` (and, when ``exemplar_source_uri`` is given, that ``source_uri``,
+    which the raw-audio request requires of every text part). With both texts empty the result equals the input."""
 
     if len(messages) != 2 or messages[0].get("role") != "system" or messages[1].get("role") != "user":
         raise TfrlV2BankError("compose_solver_messages needs exactly the system and user messages")
@@ -384,8 +407,76 @@ def compose_solver_messages(
     if rule_text:
         system["content"] = f"{system['content']}{RULES_SEPARATOR}{rule_text}"
     if exemplar_block_text:
-        user["content"].append({"type": "text", "text": exemplar_block_text, "evidence_id": EXEMPLAR_EVIDENCE_ID})
+        part = {"type": "text", "text": exemplar_block_text, "evidence_id": EXEMPLAR_EVIDENCE_ID}
+        if exemplar_source_uri is not None:
+            part["source_uri"] = exemplar_source_uri
+        user["content"].append(part)
     return system, user
+
+
+# ---------------------------------------------------------------------------
+# the runner's seams (pure helpers; rails/runner.py applies them behind the declaration)
+# ---------------------------------------------------------------------------
+
+BANK_SOURCE_SCHEME = "tfrl-v2-bank://"
+
+
+def scenario_of_intent(intent_id: object, scenarios: Sequence[str]) -> str | None:
+    """The scenario an intent id ``<scenario>_<action>`` belongs to: the LONGEST bank scenario ``s`` with ``intent_id`` starting ``s + "_"``; ``None`` when none does."""
+
+    if not isinstance(intent_id, str) or not intent_id:
+        return None
+    best = None
+    for scenario in scenarios:
+        if intent_id.startswith(f"{scenario}_") and (best is None or len(scenario) > len(best)):
+            best = scenario
+    return best
+
+
+def predicted_intent_id(states: Sequence[Any], perception_state_kind: str) -> str | None:
+    """The top candidate's intent id of the LATEST Perception state (``state_kind`` equal to ``perception_state_kind``) whose content is the ``{"candidates": [{"intent_id": ...}]}``
+    document; ``None`` when there is no such state or it does not parse (the contact then gets no exemplar block, and the rule bank still applies)."""
+
+    for state in reversed(list(states)):
+        if getattr(state, "state_kind", None) != perception_state_kind:
+            continue
+        try:
+            document = json.loads(getattr(state, "content", ""))
+        except (TypeError, ValueError):
+            return None
+        rows = document.get("candidates") if isinstance(document, Mapping) else None
+        if isinstance(rows, list) and rows and isinstance(rows[0], Mapping) and isinstance(rows[0].get("intent_id"), str):
+            return rows[0]["intent_id"]
+        return None
+    return None
+
+
+_FRAME_KEYS = ("decoding_frame", "sampling_frame", "supply_frame")
+
+
+def supply_bound_of_block(block: Mapping[str, Any]) -> int | None:
+    """The supplied-item bound the module block's arm frame declares (``max_supplied_items`` of its decoding / sampling frame); ``None`` when the block declares none.
+
+    In a T cell this is A's bound minus the 8 items the exemplar block replaces (plan section 9 ruling 4): 43 where A's is 51."""
+
+    for key in _FRAME_KEYS:
+        frame = block.get(key)
+        if isinstance(frame, Mapping):
+            bound = frame.get("max_supplied_items")
+            if isinstance(bound, int) and not isinstance(bound, bool) and bound > 0:
+                return bound
+    return None
+
+
+def declaration_of_block_json(block_json: str | None) -> tuple[BankDeclaration, int | None] | None:
+    """``(declaration, supply bound)`` of a config's canonical module block text, or ``None`` when the block (or the text) carries no ``tfrl_v2_bank`` frame."""
+
+    if not block_json:
+        return None
+    block = json.loads(block_json)
+    if not isinstance(block, Mapping) or BLOCK_KEY not in block:
+        return None
+    return parse_bank_declaration(block[BLOCK_KEY]), supply_bound_of_block(block)
 
 
 # ---------------------------------------------------------------------------
@@ -421,5 +512,5 @@ __all__ = [
     "ALGORITHM_ID", "BANK_RECEIPT_SCHEMA", "BLOCK_KEY", "BankDeclaration", "CONSUMER_FOLD_A", "CONSUMER_FOLD_B", "DECLARATION_SCHEMA", "EXEMPLAR_BLOCK_TOKEN_CAP",
     "EXEMPLAR_ITEM_EQUIVALENT", "HALF_IDS", "KIND_HALF", "KIND_UNION", "LoadedBank", "MEASURE_ESTIMATE", "MEASURE_VLLM", "RULE_BANK_TOKEN_CAP", "TfrlV2BankError",
     "TfrlV2BankRefusal", "ZERO_SHA256", "canonical_json", "compose_solver_messages", "content_sha256", "declaration_block", "parse_bank_declaration",
-    "declaration_of_values", "receipt_sha256", "used_basis_summary", "verify_bank", "verify_bank_dir", "verify_for_flight",
+    "declaration_of_values", "declaration_of_block_json", "predicted_intent_id", "scenario_of_intent", "supply_bound_of_block", "BANK_SOURCE_SCHEME", "receipt_sha256", "used_basis_summary", "verify_bank", "verify_bank_dir", "verify_for_flight",
 ]

@@ -14,7 +14,7 @@ Stage ``construction`` (one iteration, both R01C halves; write-once ``constructi
                the union bank holds at least one exemplar for it); read from the distiller's bank receipts when they exist, null with a note when they do not;
   construction gain  SLU-F1(vote over s1..s4) - SLU-F1(lock) in pp over the usable rows of both halves, pooled. The vote is derived here, model-free, from the trace (scenario_action
                by plurality, ties to the lowest k; an entity kept at support >= 2 of 4) and written to ``vote-answers-i<t>-<half>.jsonl`` for the OFFICIAL scorer to score as
-               column ``vote`` outside this reader; when the vote column is not scored the gain is null and the stop word is UNDETERMINED, never a pass. The gain is never taken
+               column ``vote`` outside this reader (``slurp_tfrl_v2_port_vote_score.py`` does, and writes ``construction-gain-i<t>.json``, which the Fold B stage prefers); when the vote column is not scored the gain is null and the stop word is UNDETERMINED, never a pass. The gain is never taken
                from the loop adapter (plan section 11 addendum ruling 6).
 
 Stage ``read`` (one iteration, the Fold B selection flight; write-once ``read-i<t>.json`` and ``tfrl-v2-verdicts-i<t>.json``)
@@ -480,6 +480,14 @@ def run_read(args: argparse.Namespace, root: Path, recipe: Mapping) -> tuple[dic
     construction_path = root / f"construction-i{args.iteration}.json"
     construction = json.loads(construction_path.read_text(encoding="utf-8")) if construction_path.is_file() else None
     gain = None if construction is None else construction["construction_gain"]["gain_pp"]
+    # construction-i<t>.json is write-once and carries a null gain when it was written before the `vote` column was scored; the vote scorer
+    # (slurp_tfrl_v2_port_vote_score.py) then writes construction-gain-i<t>.json, which takes precedence (its gain is the same function over the scored columns).
+    gain_path = root / f"construction-gain-i{args.iteration}.json"
+    scored_gain = json.loads(gain_path.read_text(encoding="utf-8")) if gain_path.is_file() else None
+    if scored_gain is not None:
+        gain = scored_gain["construction_gain"]["gain_pp"]
+        if construction is not None:
+            construction = dict(construction, construction_gain=scored_gain["construction_gain"], stop=scored_gain["stop"])
     read = foldb_read(scored, ids, cluster_of, iteration=args.iteration, gain_pp=gain, seed=args.seed, draws=args.draws)
     read["sealed_hashes"] = {n: base.sha256_file(paths[n]) for n in ("trace", "outputs", "manifest")}
     inputs = {"recipe": _input(args.recipe_path, args.repo_root), "roster": _input(roster_path, args.repo_root), "manifest": _input(paths["manifest"], args.data_root),
@@ -488,6 +496,8 @@ def run_read(args: argparse.Namespace, root: Path, recipe: Mapping) -> tuple[dic
         inputs[f"column_scores:{arm}"] = _input(columns / COLUMN_SCORE_NAME.format(arm=arm, scorer=args.scorer), args.data_root)
     if construction is not None:
         inputs["construction_read"] = _input(construction_path, args.data_root)
+    if scored_gain is not None:
+        inputs["construction_gain"] = _input(gain_path, args.data_root)
     read_text = _json_text(read)
     inputs["read_json"] = {"path": f"read-i{args.iteration}.json", "sha256": hashlib.sha256(read_text.encode("utf-8")).hexdigest()}
     return read, verdicts_document(read, construction, inputs)

@@ -1007,6 +1007,9 @@ class NativeEpisodeRunBinding:
     # Thinking-core harness knobs (decision 283 A): the composed config's per-node ``thinking_policy`` map, keyed by role kind,
     # or None -- byte-identical to before. Resolved per contact at the request-composition seam.
     thinking_policy: Mapping[str, object] | None = None
+    # TFRL-v2 (plan section 13 ruling 3 (a)): the flight-verified bank (``rails.tfrl_v2_consumption.LoadedBank``) the cell's ``tfrl_v2_bank`` declaration pins, or None --
+    # byte-identical to before. Required exactly when the module block carries the frame; the runner refuses either direction by name. Declared LAST.
+    tfrl_v2_bank: object = None
 
 
 @dataclass(frozen=True)

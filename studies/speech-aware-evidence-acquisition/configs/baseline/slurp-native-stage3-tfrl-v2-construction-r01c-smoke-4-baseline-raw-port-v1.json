@@ -279,7 +279,7 @@
         "template_tokens": 323,
         "twin": true
       },
-      "lock": "v2.2",
+      "lock": "v2.2-npu-port-r01c",
       "module_id": "saea-evidence-consumption-module-v1",
       "profile": "slurp",
       "review_loop": "off"

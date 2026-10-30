@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Mapping, Sequence
 
 from ..consumption_module import POLICY_OWNED_KEYS, CarrierHooks
-from . import slurp_module_construction, slurp_module_lock_v2_2 as lock_v2_2, slurp_module_lock_v2_2_npu_port as lock_v2_2_npu_port, slurp_module_lock_v2_3 as lock_v2_3  # noqa: E501
+from . import slurp_module_construction, slurp_module_lock_v2_2 as lock_v2_2, slurp_module_lock_v2_2_npu_port as lock_v2_2_npu_port, slurp_module_lock_v2_2_npu_port_r01c as lock_v2_2_npu_port_r01c, slurp_module_lock_v2_3 as lock_v2_3  # noqa: E501
 
 PROFILE = "slurp"
 
@@ -247,8 +247,9 @@ def carrier_module_hooks(*, repo_root: Path | None = None) -> CarrierHooks:
         flown_branch_programs=FLOWN_BRANCH_PROGRAMS,
         delivered_path_admissions=DELIVERED_PATH_ADMISSIONS,
         lock_versions={LOCK_V2_0: lock_layer, LOCK_V2_1: lock_layer_v2_1, lock_v2_2.LOCK_V2_2: lock_layer_v2_2,
-                       lock_v2_3.LOCK_V2_3: lock_layer_v2_3, lock_v2_2_npu_port.LOCK_V2_2_NPU_PORT: lambda: lock_v2_2_npu_port.layer_from_v2_2(lock_layer_v2_2(), root)},  # plan 3.14: v2.2 + ten port leaves
-        lock_deliver_normalisers=lock_v2_2_npu_port.lock_deliver_normalisers(),
+                       lock_v2_3.LOCK_V2_3: lock_layer_v2_3, lock_v2_2_npu_port.LOCK_V2_2_NPU_PORT: lambda: lock_v2_2_npu_port.layer_from_v2_2(lock_layer_v2_2(), root),  # plan 3.14: v2.2 + ten port leaves
+                       lock_v2_2_npu_port_r01c.LOCK_V2_2_NPU_PORT_R01C: lambda: lock_v2_2_npu_port_r01c.layer_from_port(lock_v2_2_npu_port.layer_from_v2_2(lock_layer_v2_2(), root), root)},  # T construction: + four minus-R01 pool leaves
+        lock_deliver_normalisers=lock_v2_2_npu_port_r01c.lock_deliver_normalisers(),
         current_lock=CURRENT_LOCK,
         roster_pin_paths=ROSTER_PIN_PATHS, template_variant_frame=TEMPLATE_VARIANT_FRAME,
         perception_template_variant_frame=PERCEPTION_TEMPLATE_VARIANT_FRAME,

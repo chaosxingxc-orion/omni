@@ -4,52 +4,52 @@
     "plans": {
       "construction-i1-h1-fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h1-fit-plan-registered-v1.json",
-        "sha256": "4b6032c12ccfc4866fa4ac9618f5b5b2c44a19d01e14514e02019ea4e2b2e6d2"
+        "sha256": "96367c650bf0ccbbc1f1a79c66094c3e01d582f3cd9fcc67835931c788689804"
       },
       "construction-i1-h1-generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h1-generation-plan-registered-v1.json",
-        "sha256": "b055768775babfd7caa8a485cf04e39bc6f02fddd43531a22121fc9bb0c37d21"
+        "sha256": "40474198d1305260b5842e5bdc43cc2a51fe5a99226067f2f1567c8386afd8b9"
       },
       "construction-i1-h2-fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h2-fit-plan-registered-v1.json",
-        "sha256": "5755da5ad331069fc9e47ccfedafe2ae67d1368b1b07815136c58e1ce4fc38e8"
+        "sha256": "7f6fa72ecb37effc36969c653dd6731c463605575d027684040a2ed1603188d6"
       },
       "construction-i1-h2-generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h2-generation-plan-registered-v1.json",
-        "sha256": "64a6ab2d7c21fb82aa18e1e7828c026b093dcf0dbe1a5c5ee4faff8d66fddefa"
+        "sha256": "9e15f6100bb6249dfed186672f4a858afe47d1718d1431a696d995846703950b"
       },
       "construction-smoke-fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-smoke-fit-plan-registered-v1.json",
-        "sha256": "1f42b257481bf111eaa52966437965ce44aaff8c2a7dab85b5e3c3f8f702c0be"
+        "sha256": "613c7d76c05c95a21d86d60a693522e2ce3328d12e4eaa82f42fce3938db8dcb"
       },
       "construction-smoke-generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-smoke-generation-plan-registered-v1.json",
-        "sha256": "25520c8c70303c66a24b869da72edab8f84e9fef9b35d6ce4e59752314272866"
+        "sha256": "58e2c81d10564e6330e0c4e73f0e4e4dcddb671565721e6f0dca9219130f3f01"
       },
       "foldb-i1-fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-i1-fit-plan-registered-v1.json",
-        "sha256": "21281917a7a60da46d082ce566b700ec2dba191d676d896441ae400d77980796"
+        "sha256": "c8f955d941fb5bc9bb4cb4021d1c1ac266e3da9ef92c3d9d41d9e01bc15ec3a1"
       },
       "foldb-i1-generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-i1-generation-plan-registered-v1.json",
-        "sha256": "aca89f9cffa88c9ba436110448a358fd8dbe204d3241193ab53b66684bae767c"
+        "sha256": "efa9e16beeae560a790de689bdd531a678e06e1dab6fc8d7a9fad354931fa97f"
       },
       "foldb-smoke-fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-smoke-fit-plan-registered-v1.json",
-        "sha256": "8dee323dd9da3900755726f9545d8863e83ce6c203544aae7f6af51cf360bd7e"
+        "sha256": "0fa49627242f00cbc7c4cc146ed325d668798f2db4368051fd0ff0facd7ae361"
       },
       "foldb-smoke-generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-smoke-generation-plan-registered-v1.json",
-        "sha256": "c530c78fc217bdaf134a034374a3033a8ff1cbfb11a688bf11fdff5d9302b343"
+        "sha256": "b488c856b1266b46cb1f1ba4ccdf1e2a3b320bb354b8f042a608e0331f98fc67"
       }
     },
     "protocol": {
       "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/protocol-registered-v1.json",
-      "sha256": "9982f6020f43c3fc3871b203f8d419a104ea88fe6813bf458140804436c79e35"
+      "sha256": "2fb4191c088d29cffd2b57b9e3c605d6c7b3b874c9f61130152cbb8486808c9a"
     },
     "registered_facts": {
       "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/registered-facts-v1.json",
-      "sha256": "f4b1d0a6b88a10fc3eba37037bf31d29ff7dd95ec7b3b1ba9a60f7d44e9ae2ca"
+      "sha256": "c879b988bcb93de4954f21a61c89a3f8e93b37486c51ff777f006aed2dae4ee3"
     },
     "registration_base_commit": "534b543ff154ca23be8287c1730b040940a3d038"
   },

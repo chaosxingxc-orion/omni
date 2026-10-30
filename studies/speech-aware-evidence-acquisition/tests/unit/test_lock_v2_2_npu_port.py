@@ -25,6 +25,7 @@ import l338_port_family as pf  # noqa: E402
 from speech_aware_evidence_acquisition.rails import consumption_module as cm  # noqa: E402
 from speech_aware_evidence_acquisition.rails.adapters import slurp_module_hooks as smh  # noqa: E402
 from speech_aware_evidence_acquisition.rails.adapters import slurp_module_lock_v2_2_npu_port as port  # noqa: E402
+from speech_aware_evidence_acquisition.rails.adapters import slurp_module_lock_v2_2_npu_port_r01c as r01c  # noqa: E402
 
 LOCK = "v2.2-npu-port"
 V4G = "saea-deliver-normalise-v4g"
@@ -72,7 +73,7 @@ def _verify(doc: dict) -> str:
 def test_the_port_lock_is_registered_and_is_not_the_current_lock():
     hooks = _hooks()
     assert LOCK == port.LOCK_V2_2_NPU_PORT and LOCK in hooks.lock_versions
-    assert sorted(hooks.lock_versions) == ["v2.0", "v2.1", "v2.2", "v2.2-npu-port", "v2.3"]
+    assert sorted(hooks.lock_versions) == ["v2.0", "v2.1", "v2.2", "v2.2-npu-port", "v2.2-npu-port-r01c", "v2.3"]
     assert smh.CURRENT_LOCK == hooks.current_lock == "v2.3"
     assert {k: v() for k, v in hooks.lock_deliver_normalisers.items()}[LOCK] == V4G
     assert _json(hooks.lock_versions[LOCK]())["native_episode"]["deliver_normaliser"] == {"normaliser": V4G}
@@ -224,3 +225,70 @@ def test_the_fold_a_derive_is_deterministic_and_reproduces_the_committed_configs
     assert first["native_episode"]["consumption_module"]["lock"] == LOCK
     name = fdc.fa.CELLS["arm"]["baseline"]
     assert _dump(first) == (REPO / "configs" / "baseline" / f"{name}.json").read_text(encoding="utf-8")
+
+
+# ---- the T construction lock: v2.2-npu-port-r01c (lock plan 3.14 addendum item 6; plan section 13 ruling 3 (c)) --------------------------------------------------------
+
+LOCK_R01C = "v2.2-npu-port-r01c"
+#: The minus-R01 build receipt the four leaves are read from (committed; nothing is typed in the lock module).
+MINUS_R01 = json.loads((REPO / "docs" / "receipts" / "knowledge" / "slurp-kb-size-pool-annotated-exemplars-minus-r01.json").read_text(encoding="utf-8"))
+FOUR = sorted([
+    "knowledge_stores.train-exemplars.release.relpath", "knowledge_stores.train-exemplars.release.sha256",
+    "knowledge_stores.train-exemplars.snapshot.relpath", "knowledge_stores.train-exemplars.snapshot.sha256",
+])
+
+
+def test_the_r01c_lock_is_registered_and_is_not_the_current_lock():
+    hooks = _hooks()
+    assert LOCK_R01C == r01c.LOCK_V2_2_NPU_PORT_R01C and LOCK_R01C in hooks.lock_versions
+    assert smh.CURRENT_LOCK == hooks.current_lock == "v2.3"
+    assert {k: v() for k, v in hooks.lock_deliver_normalisers.items()}[LOCK_R01C] == V4G
+    assert _json(hooks.lock_versions[LOCK_R01C]())["native_episode"]["deliver_normaliser"] == {"normaliser": V4G}
+
+
+def test_the_r01c_lock_is_the_port_lock_with_exactly_four_exemplar_store_leaves_moved_to_the_minus_r01_receipt():
+    hooks = _hooks()
+    port_layer, layer = _json(hooks.lock_versions[LOCK]()), _json(hooks.lock_versions[LOCK_R01C]())
+    assert sorted(cm.differing_paths(port_layer, layer)) == FOUR and len(FOUR) == 4
+    assert len(r01c.R01C_LEAVES) == 4 and sorted(".".join(p) for p in r01c.R01C_LEAVES) == FOUR
+    leaves, before = cm._leaf_paths(layer), cm._leaf_paths(port_layer)
+    expected = {
+        "knowledge_stores.train-exemplars.release.relpath": MINUS_R01["release_artifact_relpath"],
+        "knowledge_stores.train-exemplars.release.sha256": MINUS_R01["release_file_sha256"],
+        "knowledge_stores.train-exemplars.snapshot.relpath": MINUS_R01["snapshot_artifact_relpath"],
+        "knowledge_stores.train-exemplars.snapshot.sha256": MINUS_R01["snapshot_sha256"],
+    }
+    for leaf, value in expected.items():                                    # read from the receipt, never typed
+        assert leaves[leaf] == value and before[leaf] != value, leaf
+    assert all("minus-r01" in expected[leaf] for leaf in FOUR if leaf.endswith("relpath"))
+    # the ten port leaves are still the port's, and the roster pins are untouched
+    for leaf in TEN:
+        assert leaves[leaf] == before[leaf], leaf
+    assert port_layer["knowledge_stores"]["train-exemplars"]["phase_supply"] == layer["knowledge_stores"]["train-exemplars"]["phase_supply"]
+    # against v2.2 the r01c layer differs at the ten port leaves plus the same four
+    assert sorted(cm.differing_paths(_json(hooks.lock_versions["v2.2"]()), layer)) == sorted(TEN + FOUR)
+
+
+def test_the_r01c_lock_layer_is_fail_closed_on_the_receipt(tmp_path):
+    port_layer = _hooks().lock_versions[LOCK]()
+    with pytest.raises(cm.ConsumptionModuleConfigError, match="minus-R01 build receipt .* is missing"):
+        r01c.layer_from_port(port_layer, tmp_path)
+    receipt_dir = tmp_path / "docs" / "receipts" / "knowledge"
+    receipt_dir.mkdir(parents=True)
+    receipt_path = receipt_dir / "slurp-kb-size-pool-annotated-exemplars-minus-r01.json"
+    broken = {k: v for k, v in MINUS_R01.items() if k != "snapshot_sha256"}
+    receipt_path.write_text(json.dumps(broken), encoding="utf-8")
+    with pytest.raises(cm.ConsumptionModuleConfigError, match="no usable 'snapshot_sha256'"):
+        r01c.layer_from_port(port_layer, tmp_path)
+    # a pin equal to the port lock's value did not move
+    stale = dict(MINUS_R01, release_file_sha256=PINS["knowledge_stores"]["train-exemplars"]["release"]["sha256"],
+                 release_artifact_relpath=PINS["knowledge_stores"]["train-exemplars"]["release"]["relpath"])
+    receipt_path.write_text(json.dumps(stale), encoding="utf-8")
+    with pytest.raises(cm.ConsumptionModuleConfigError, match="train-exemplars.release.relpath: the minus-R01 pin .* equals"):
+        r01c.layer_from_port(port_layer, tmp_path)
+
+
+def test_the_r01c_lock_name_is_accepted_by_the_lock_key_grammar():
+    block = copy.deepcopy(_baseline(PORT_BASELINES[0])["native_episode"]["consumption_module"])
+    block["lock"] = LOCK_R01C
+    cm.parse_consumption_module_block(block, repo_root=REPO)

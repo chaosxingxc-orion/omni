@@ -134,13 +134,14 @@ FINDINGS = [
      "finding": ("T's supply bound is A's bound minus 8 and both caps (2,000 + 400 tokens) are folded into the frame's base prompt tokens. Default: 47 items, 15,768 estimated tokens against a "
                  "limit of 17,406 (fits). Budget switch 6,144 / 7,168: 43 items, 14,828 against 14,334 (does not fit); the largest fitting bound is 40. The writer refuses under the switch."),
      "remedy": "choose the bound (O-switch-bound)."},
-    {"id": "l338-control-fails-verify-declared-module",
-     "finding": ("verify_declared_module refuses the committed L338 port flight, and it refuses the T cells for the same reason: the config loader (rails.native_episode_config) checks EVERY "
-                 "declared consumption_module block, and the T cells declare lock v2.2, whose compiled knowledge_stores carry the historical 268-B store pins while the port re-authored "
-                 "stores differ at ten leaves (docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md). T never calls apply_to (it moves only the compiler's policy and role "
-                 "leaves, as the L338 port derive does), so the derive does not hide the clash from the loader."),
-     "remedy": ("T's module lock switches to the port lock version v2.2-npu-port once that registry entry lands (lock plan 3.14, owner-run in a parallel stream); until then the T cells keep "
-                "lock v2.2 and the loader refuses them, as it refuses the L338 port flight.")},
+    {"id": "t-cells-lock-switched-to-the-port-lock",
+     "finding": ("The config loader (rails.native_episode_config) checks EVERY declared consumption_module block with verify_declared_module. Lock v2.2 carries the historical 268-B store pins, "
+                 "so a cell that pins the port's re-authored stores differs from what its block compiles to at ten leaves (docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md). "
+                 "T never calls apply_to (it moves only the compiler's policy and role leaves, as the L338 port derive does), so the derive cannot hide such a clash from the loader."),
+     "remedy": ("Resolved in the T lock switch (plan 3.14 addendum, plan section 13 ruling 3 (c)): the two Fold B cells declare lock v2.2-npu-port (v2.2 + the ten port store-pin leaves); the three "
+                "construction cells pin the minus-R01 train-exemplars pool and declare lock v2.2-npu-port-r01c (v2.2-npu-port + exactly four train-exemplars release / snapshot leaves, read from "
+                "the minus-R01 build receipt). The derive runs module_self_check before it writes and identities() runs verify_composed_module on every composed T cell, so a lock clash stops "
+                "the writer; the loader accepts all five cells.")},
     {"id": "fit-cap-is-the-raw-arm-rule",
      "finding": ("The FIT caps are rows x contacts x 1 counting endpoint (native_contact_required_cap, raw-audio arm), checked at import against the gate's own helper; the packet-arm factor of 4 "
                  "is not used."),
@@ -231,6 +232,7 @@ def identities(root: Path) -> dict:
         cell = document["cells"][0]
         composed = compose(Path(root), cell["model_fragment"], cell["dataset_fragment"], cell["baseline_fragment"], spec["cell"])
         values, split = composed.values, document["population"]["split_identity_hash"]
+        tdc.pdc.verify_composed_module(Path(root), values, spec["cell"])          # writer self-check (lock plan 3.14): the loader's own call on the composed T cell
         fit = dict(values.get("native_contact_fit") or {})
         budget = document["family_budget"]
         if (fit.get("run_id"), fit.get("attempt_id"), fit.get("contact_cap")) != (spec["fit_run"], spec["fit_attempt"], tf.fit_calls(key)):

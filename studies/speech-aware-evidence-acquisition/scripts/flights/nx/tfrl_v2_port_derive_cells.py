@@ -39,6 +39,7 @@ import l338_port_family as pf  # noqa: E402
 import tfrl_v2_port_family as tf  # noqa: E402
 
 from speech_aware_evidence_acquisition.rails import consumption_module as cm  # noqa: E402
+from speech_aware_evidence_acquisition.rails.adapters import slurp_module_lock_v2_2_npu_port_r01c as lock_r01c  # noqa: E402
 from speech_aware_evidence_acquisition.rails.adapters.slurp_module_hooks import carrier_module_hooks  # noqa: E402
 
 REPO_ROOT = tf.REPO_ROOT
@@ -47,6 +48,10 @@ T_STALE = re.compile(r"\bc15\b|\bc17\b|-c15\b|-c17\b|\b32,400\b|\b94,644\b|\bnp4
 HIST_CONSTRUCTION = {"flight": "slurp-native-stage3-tfrl-construction-lock-r01c-v1", "smoke": "slurp-native-stage3-tfrl-construction-lock-r01c-smoke-4-v1"}
 HIST_CONSTRUCTION_BASELINE = {"flight": "slurp-native-stage3-tfrl-construction-lock-r01c-baseline-v1", "smoke": "slurp-native-stage3-tfrl-construction-lock-r01c-smoke-4-baseline-v1"}
 L338_SOURCE = {"fsmoke": "smoke", "fb": "arm", "csmoke": "arm", "ch1": "arm", "ch2": "arm"}
+#: The consumption-module lock each T cell declares (lock plan 3.14 addendum item 6, plan section 13 ruling 3 (c)): the Fold B cells name the port lock (`v2.2-npu-port`); the three
+#: construction cells pin the minus-R01 train-exemplars store and so name the port lock with those four leaves layered over it (`v2.2-npu-port-r01c`).
+MODULE_LOCK = {"fsmoke": pdc.PORT_MODULE_LOCK, "fb": pdc.PORT_MODULE_LOCK,
+               "csmoke": lock_r01c.LOCK_V2_2_NPU_PORT_R01C, "ch1": lock_r01c.LOCK_V2_2_NPU_PORT_R01C, "ch2": lock_r01c.LOCK_V2_2_NPU_PORT_R01C}
 
 # ---- the PENDING R01C port artifacts the construction cells pin (none exists yet; paths are the proposed names, shas the zero sentinel) -----------------------------
 R01C_ENCODE_RUN = "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-SPEECH-QUERY-ENCODING-NPU-PORT-V1"
@@ -195,9 +200,9 @@ def construction_pins(base: dict, key: str, root: Path) -> dict:
     out = copy.deepcopy(base)
     stores = out["knowledge_stores"]
     pool = stores["train-exemplars"]
-    pool["release"] = {"relpath": f"knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars-minus-r01/release.json", "sha256": "83620eb0b02f12424a00cd5572904f4df48a49c329b1b0e1a9321d4b9ec14fd0"}
-    pool["snapshot"] = {"relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars-minus-r01/snapshot.json",
-                        "sha256": "6eaa03aea96a1928dd1ac29ecc71c3955c136498c9f8114266eaa830d1207c63"}
+    pins = lock_r01c.r01c_pins(root)                          # the four minus-R01 leaves, read from the build receipt (the same values the r01c lock layer carries)
+    for side in ("release", "snapshot"):
+        pool[side] = {"relpath": pins[lock_r01c.POOL_PATH + (side, "relpath")], "sha256": pins[lock_r01c.POOL_PATH + (side, "sha256")]}
     solver_q = pool["phase_supply"]["solver"]["query_source"]
     pool["phase_supply"]["solver"]["query_source"] = _pending(R01C_PENDING["content"], embedded_signal=_swap_signal(solver_q["embedded_signal"]), kind=solver_q["kind"],
                                                               tool_contact_ledger_row=R01C_PENDING["content"]["ledger_row"])
@@ -274,7 +279,7 @@ def tfrl_v2_block(key: str) -> dict:
 
 def t_baseline(key: str, root: Path = REPO_ROOT) -> dict:
     spec = tf.CELLS[key]
-    base = pdc.port_baseline(L338_SOURCE[key], root)
+    base = pdc.port_baseline(L338_SOURCE[key], root, module_lock=MODULE_LOCK[key])
     if tf.kind_of(key) == "construction":
         base = construction_pins(base, key, root)                 # the module block is read AFTER the pins: its agree-vote-seed component carries the R01C agreement pin
         base = apply_compiled(base, construction_block(base["native_episode"]["consumption_module"]), key, root)
@@ -445,9 +450,12 @@ def derive(repo_root: Path = REPO_ROOT, dry_run: bool = False) -> dict:
     tf.select_model_fragment()
     tf.require_fit()
     result = {}
+    docs = {key: (t_baseline(key, root), t_experiment(key, root)) for key in tf.ALL_KEYS}
+    # Writer self-check (lock plan 3.14): the loader's verify_declared_module on every emitted baseline BEFORE anything is written.
+    module_report = pdc.module_self_check(root, {tf.CELLS[k]["baseline"]: docs[k][0] for k in docs}, {tf.CELLS[k]["cell"]: docs[k][1] for k in docs})
     for key in tf.ALL_KEYS:
         spec = tf.CELLS[key]
-        base, exp = t_baseline(key, root), t_experiment(key, root)
+        base, exp = docs[key]
         leaks = [f"{kind}:{p}" for kind, doc in (("baseline", base), ("experiment", exp)) for p in pdc.scan_geometry(doc)]
         stale = [f"{kind}:{p}" for kind, doc in (("baseline", base), ("experiment", exp)) for p, v in pdc._leaves(doc) if isinstance(v, str) and T_STALE.search(v)]
         if leaks or stale:
@@ -457,7 +465,7 @@ def derive(repo_root: Path = REPO_ROOT, dry_run: bool = False) -> dict:
             (root / "configs" / "baseline" / f"{spec['baseline']}.json").write_text(_dump(base), encoding="utf-8")
             (root / "configs" / "experiment" / f"{spec['cell']}.json").write_text(_dump(exp), encoding="utf-8")
         result[key] = {"cell": spec["cell"], "baseline": spec["baseline"], "run_id": spec["run"], "fit_run_id": spec["fit_run"], "program": tf.program_id(key),
-                       "versus_disk": check}
+                       "versus_disk": check, "module_self_check": {"lock": MODULE_LOCK[key], "verify_declared_module": module_report[spec["baseline"]]}}
     for name, doc in t_campaigns().items():
         if not dry_run:
             (root / "configs" / "campaign" / f"{name}.json").write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")

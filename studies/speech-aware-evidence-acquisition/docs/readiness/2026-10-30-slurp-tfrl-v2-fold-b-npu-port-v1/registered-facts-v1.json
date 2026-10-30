@@ -294,11 +294,11 @@
     }
   },
   "composed_config_hashes": {
-    "ch1": "86125d03d68c4cefb01cf3b1031842509036e80eeeb4f8d694b74ee1cbf40a85",
-    "ch2": "f1a9749d0ec04e665b5e6c5599c2ae803f94a599be531072bb2554050f70fabb",
-    "csmoke": "c656076e3a2ffa162a5f96188b3b4f6f4d6a8ad93cc6c003b9a6b8fa0f36122c",
-    "fb": "9edcbb4f2337fac6468b2ec22d2c0282274268e6d7bc7e2ae35937f7a7a30c18",
-    "fsmoke": "b6669e39e1248fb98da80d6dc4e82ffc81e0d4bd535dd9293b27f0e5a45c9907"
+    "ch1": "2541c59edefd239b6a857beb65a2b1b87f643402a53393d4de0b55b95c4660cb",
+    "ch2": "8f011fd7cedd18db4c3d304f12adfd0ea74f8b2d377ee1668a997d29b2130223",
+    "csmoke": "12b29fbc9cda0476e5d9bdf06f5da5f28c9bd663ed62258cde3249ea61b8dc4b",
+    "fb": "b0bb469500d39b6a3482390eed3fafafe127312e328494284b2fe2ff28fdfb49",
+    "fsmoke": "4e5b34dcc91c426b025caef5ff15ff390146cf0ed701f8483b65c1474e8c9776"
   },
   "context_fit": {
     "a_bound": 55,
@@ -361,6 +361,10 @@
       "baseline": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-baseline-raw-port-v1",
       "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-FIT-NPU-PORT-V1",
+      "module_self_check": {
+        "lock": "v2.2-npu-port-r01c",
+        "verify_declared_module": "ok"
+      },
       "program": "phase-native-module-v1-c7",
       "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-NPU-PORT-V1",
       "versus_disk": {
@@ -376,6 +380,10 @@
       "baseline": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-baseline-raw-port-v1",
       "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-FIT-NPU-PORT-V1",
+      "module_self_check": {
+        "lock": "v2.2-npu-port-r01c",
+        "verify_declared_module": "ok"
+      },
       "program": "phase-native-module-v1-c7",
       "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-NPU-PORT-V1",
       "versus_disk": {
@@ -391,6 +399,10 @@
       "baseline": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-baseline-raw-port-v1",
       "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-FIT-NPU-PORT-V1",
+      "module_self_check": {
+        "lock": "v2.2-npu-port-r01c",
+        "verify_declared_module": "ok"
+      },
       "program": "phase-native-module-v1-c7",
       "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1",
       "versus_disk": {
@@ -406,6 +418,10 @@
       "baseline": "slurp-native-stage3-tfrl-v2-fold-b-i1-baseline-raw-port-v1",
       "cell": "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-FIT-NPU-PORT-V1",
+      "module_self_check": {
+        "lock": "v2.2-npu-port",
+        "verify_declared_module": "ok"
+      },
       "program": "phase-native-module-v1-c10",
       "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-NPU-PORT-V1",
       "versus_disk": {
@@ -421,6 +437,10 @@
       "baseline": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-baseline-raw-port-v1",
       "cell": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+      "module_self_check": {
+        "lock": "v2.2-npu-port",
+        "verify_declared_module": "ok"
+      },
       "program": "phase-native-module-v1-c10",
       "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1",
       "versus_disk": {
@@ -460,9 +480,9 @@
       "remedy": "choose the bound (O-switch-bound)."
     },
     {
-      "finding": "verify_declared_module refuses the committed L338 port flight, and it refuses the T cells for the same reason: the config loader (rails.native_episode_config) checks EVERY declared consumption_module block, and the T cells declare lock v2.2, whose compiled knowledge_stores carry the historical 268-B store pins while the port re-authored stores differ at ten leaves (docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md). T never calls apply_to (it moves only the compiler's policy and role leaves, as the L338 port derive does), so the derive does not hide the clash from the loader.",
-      "id": "l338-control-fails-verify-declared-module",
-      "remedy": "T's module lock switches to the port lock version v2.2-npu-port once that registry entry lands (lock plan 3.14, owner-run in a parallel stream); until then the T cells keep lock v2.2 and the loader refuses them, as it refuses the L338 port flight."
+      "finding": "The config loader (rails.native_episode_config) checks EVERY declared consumption_module block with verify_declared_module. Lock v2.2 carries the historical 268-B store pins, so a cell that pins the port's re-authored stores differs from what its block compiles to at ten leaves (docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md). T never calls apply_to (it moves only the compiler's policy and role leaves, as the L338 port derive does), so the derive cannot hide such a clash from the loader.",
+      "id": "t-cells-lock-switched-to-the-port-lock",
+      "remedy": "Resolved in the T lock switch (plan 3.14 addendum, plan section 13 ruling 3 (c)): the two Fold B cells declare lock v2.2-npu-port (v2.2 + the ten port store-pin leaves); the three construction cells pin the minus-R01 train-exemplars pool and declare lock v2.2-npu-port-r01c (v2.2-npu-port + exactly four train-exemplars release / snapshot leaves, read from the minus-R01 build receipt). The derive runs module_self_check before it writes and identities() runs verify_composed_module on every composed T cell, so a lock clash stops the writer; the loader accepts all five cells."
     },
     {
       "finding": "The FIT caps are rows x contacts x 1 counting endpoint (native_contact_required_cap, raw-audio arm), checked at import against the gate's own helper; the packet-arm factor of 4 is not used.",
@@ -482,7 +502,7 @@
       "baseline_fragment": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-baseline-raw-port-v1",
       "carrier_lock_key": "slurp",
       "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-npu-port-v1",
-      "composed_config_hash": "86125d03d68c4cefb01cf3b1031842509036e80eeeb4f8d694b74ee1cbf40a85",
+      "composed_config_hash": "2541c59edefd239b6a857beb65a2b1b87f643402a53393d4de0b55b95c4660cb",
       "contacts_per_row": 7,
       "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
       "execution_plan": {
@@ -517,7 +537,7 @@
       "key": "ch1",
       "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
       "program": "phase-native-module-v1-c7",
-      "protocol_hash": "36f08eeb02f8f5e020876277b2a72ad8dbbb550d3b0dd0f3ce8c820a2b5b67da",
+      "protocol_hash": "abcbd5516d8896d7c31d7bd90263faac145286040c8162faaf2ead8f1a8d0932",
       "role": "iteration-1 trajectory-sampling flight on the construction half R01C-H1",
       "roster_receipt": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
       "rows": 313,
@@ -532,7 +552,7 @@
       "baseline_fragment": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-baseline-raw-port-v1",
       "carrier_lock_key": "slurp",
       "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-npu-port-v1",
-      "composed_config_hash": "f1a9749d0ec04e665b5e6c5599c2ae803f94a599be531072bb2554050f70fabb",
+      "composed_config_hash": "8f011fd7cedd18db4c3d304f12adfd0ea74f8b2d377ee1668a997d29b2130223",
       "contacts_per_row": 7,
       "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
       "execution_plan": {
@@ -567,7 +587,7 @@
       "key": "ch2",
       "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
       "program": "phase-native-module-v1-c7",
-      "protocol_hash": "16db3d67fba5fdaaca8aa7a214753c3ce41af824515d72f3dacafefd846d5259",
+      "protocol_hash": "028af52935bc4e579a70fdbef7cfa679400f26fb1bffd26234f92962b6cf9db1",
       "role": "iteration-1 trajectory-sampling flight on the construction half R01C-H2",
       "roster_receipt": "docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json",
       "rows": 312,
@@ -582,7 +602,7 @@
       "baseline_fragment": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-baseline-raw-port-v1",
       "carrier_lock_key": "slurp",
       "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-npu-port-v1",
-      "composed_config_hash": "c656076e3a2ffa162a5f96188b3b4f6f4d6a8ad93cc6c003b9a6b8fa0f36122c",
+      "composed_config_hash": "12b29fbc9cda0476e5d9bdf06f5da5f28c9bd663ed62258cde3249ea61b8dc4b",
       "contacts_per_row": 7,
       "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
       "execution_plan": {
@@ -617,7 +637,7 @@
       "key": "csmoke",
       "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
       "program": "phase-native-module-v1-c7",
-      "protocol_hash": "6fa9cf6da9020031d460a35cc269feb08c970465e0ae0c85f2d1a15a268cf75c",
+      "protocol_hash": "8f7e8ab90b4610a104aa7ef9050d76927efed9fb581dfce1afb2efa99713bf87",
       "role": "four-row form smoke of the iteration-1 construction flight (R01C smoke roster)",
       "roster_receipt": "docs/receipts/rosters/slurp-stage3-roll-aa-r01c-smoke-4-v1.json",
       "rows": 4,
@@ -632,7 +652,7 @@
       "baseline_fragment": "slurp-native-stage3-tfrl-v2-fold-b-i1-baseline-raw-port-v1",
       "carrier_lock_key": "slurp",
       "cell": "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1",
-      "composed_config_hash": "9edcbb4f2337fac6468b2ec22d2c0282274268e6d7bc7e2ae35937f7a7a30c18",
+      "composed_config_hash": "b0bb469500d39b6a3482390eed3fafafe127312e328494284b2fe2ff28fdfb49",
       "contacts_per_row": 10,
       "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
       "execution_plan": {
@@ -667,7 +687,7 @@
       "key": "fb",
       "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
       "program": "phase-native-module-v1-c10",
-      "protocol_hash": "edcffc2564f3a6a2913d2eafca300c9df84928b131ee57707e6dca38aa1b4082",
+      "protocol_hash": "fc02fa2426c9e58055ed4c8d47bf65adfba9df7277f3af0de042b78d9b676cb2",
       "role": "iteration-1 selection flight on TRAIN Fold B",
       "roster_receipt": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
       "rows": 1080,
@@ -682,7 +702,7 @@
       "baseline_fragment": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-baseline-raw-port-v1",
       "carrier_lock_key": "slurp",
       "cell": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1",
-      "composed_config_hash": "b6669e39e1248fb98da80d6dc4e82ffc81e0d4bd535dd9293b27f0e5a45c9907",
+      "composed_config_hash": "4e5b34dcc91c426b025caef5ff15ff390146cf0ed701f8483b65c1474e8c9776",
       "contacts_per_row": 10,
       "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
       "execution_plan": {
@@ -717,7 +737,7 @@
       "key": "fsmoke",
       "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
       "program": "phase-native-module-v1-c10",
-      "protocol_hash": "3bb9257e69948172a2e60512987d2e8297833fec6b075e8d8e541fee7a108db3",
+      "protocol_hash": "772ca03a0564407051f12ef44fa5d00a5a5bd9029449bd5bfbf654cc82b9b414",
       "role": "four-row form smoke of the Fold B selection flight",
       "roster_receipt": "docs/receipts/rosters/slurp-stage3-filler-fold-b-c01-smoke-4-v1.json",
       "rows": 4,
@@ -910,11 +930,11 @@
     "No flight before the coordinator countersigns the DRAFT rows, mints the decision receipt, every PENDING pin is produced and re-pinned and the cells are flipped."
   ],
   "protocol_hashes": {
-    "ch1": "36f08eeb02f8f5e020876277b2a72ad8dbbb550d3b0dd0f3ce8c820a2b5b67da",
-    "ch2": "16db3d67fba5fdaaca8aa7a214753c3ce41af824515d72f3dacafefd846d5259",
-    "csmoke": "6fa9cf6da9020031d460a35cc269feb08c970465e0ae0c85f2d1a15a268cf75c",
-    "fb": "edcffc2564f3a6a2913d2eafca300c9df84928b131ee57707e6dca38aa1b4082",
-    "fsmoke": "3bb9257e69948172a2e60512987d2e8297833fec6b075e8d8e541fee7a108db3"
+    "ch1": "abcbd5516d8896d7c31d7bd90263faac145286040c8162faaf2ead8f1a8d0932",
+    "ch2": "028af52935bc4e579a70fdbef7cfa679400f26fb1bffd26234f92962b6cf9db1",
+    "csmoke": "8f7e8ab90b4610a104aa7ef9050d76927efed9fb581dfce1afb2efa99713bf87",
+    "fb": "fc02fa2426c9e58055ed4c8d47bf65adfba9df7277f3af0de042b78d9b676cb2",
+    "fsmoke": "772ca03a0564407051f12ef44fa5d00a5a5bd9029449bd5bfbf654cc82b9b414"
   },
   "r01c": {
     "audio_pins": {

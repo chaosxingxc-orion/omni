@@ -197,6 +197,11 @@ class NativeRoleSpeechBinding:
     # elsewhere (``native_roles._RoleAuthorityRail``, plus the
     # ``tool_choice`` this binding still derives from ``tool_names`` alone).
     rendered_tool_names: tuple[str, ...] | None = None
+    # TFRL-v2 (plan section 13 ruling 3 (a)): the system text the FRAMEWORK role node holds (its constant ``prompt_template``) when this contact's wire system message
+    # is that text plus the rule-bank suffix (``rails.tfrl_v2_consumption.compose_solver_messages``). The framework prompt is one string per node, so a contact that
+    # renders a longer system message names the node's own text here. ``None`` -- every binding written before TFRL-v2 -- compares the framework system text with
+    # the wire system message exactly as before.
+    framework_system: str | None = None
     _messages_bytes: bytes = field(init=False, repr=False)
     _kwargs_bytes: bytes = field(init=False, repr=False)
 
@@ -212,6 +217,8 @@ class NativeRoleSpeechBinding:
                 raise NativeSpeechRequestError("tool and local result IDs must be ordered unique tuples")
         if self.query_source not in {"speech_features", "speech_audio"}:
             raise NativeSpeechRequestError("unsupported speech query source")
+        if self.framework_system is not None and (not isinstance(self.framework_system, str) or not self.framework_system):
+            raise NativeSpeechRequestError("framework_system must be non-empty text or None")
         if self.rendered_tool_names is not None:
             rendered = self.rendered_tool_names
             if (
@@ -457,9 +464,10 @@ class MeteredNativeSpeechRequest:
             raise NativeSpeechRequestError("framework role, sample or tool scope differs")
         messages = binding.messages()
         framework = _model_messages(request.messages)
+        expected_system = messages[0] if binding.framework_system is None else {**messages[0], "content": binding.framework_system}
         if (
             len(framework) < 2
-            or framework[0] != messages[0]
+            or framework[0] != expected_system
             or framework[1] != {"role": "user", "content": binding.role_query}
         ):
             raise NativeSpeechRequestError("framework system or original query differs")
@@ -569,9 +577,12 @@ class MeteredNativeSpeechRequest:
             except ReasoningKnobError as error:
                 raise NativeSpeechRequestError(str(error)) from error
         kwargs["decoding_params"] = decoding
+        # The control envelope restates the sequence against the WIRE system text (``native_framework_history`` requires ``messages[0]`` to equal the payload's
+        # ``task_instruction``); for a contact with ``framework_system`` set that is the longer wire text, for every other contact the framework's own.
+        envelope_messages = framework if binding.framework_system is None else [messages[0], *framework[1:]]
         instruction = framework_contact_instruction(
             role_id=binding.role_id, sample_id=binding.sample_id,
-            contact_id=request.context.agent_contact_id, messages=framework,
+            contact_id=request.context.agent_contact_id, messages=envelope_messages,
             local_tool_result_ids=binding.local_tool_result_ids,
         )
         source_selector = (

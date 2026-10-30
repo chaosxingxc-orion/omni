@@ -131,7 +131,7 @@
   ],
   "arm_visits": "first",
   "cell": "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1",
-  "composed_config_hash": "9edcbb4f2337fac6468b2ec22d2c0282274268e6d7bc7e2ae35937f7a7a30c18",
+  "composed_config_hash": "b0bb469500d39b6a3482390eed3fafafe127312e328494284b2fe2ff28fdfb49",
   "context_fit": {
     "a_bound": 55,
     "active_switch": "default",
@@ -191,7 +191,7 @@
     "planned_gpu_hours": 60.5,
     "planned_model_calls": 10800,
     "planned_speech_audio_seconds": 63096,
-    "protocol_hash": "edcffc2564f3a6a2913d2eafca300c9df84928b131ee57707e6dca38aa1b4082",
+    "protocol_hash": "fc02fa2426c9e58055ed4c8d47bf65adfba9df7277f3af0de042b78d9b676cb2",
     "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-FIT-NPU-PORT-V1",
     "schema": "saea-execution-plan-v1",
     "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a",
@@ -223,7 +223,7 @@
   },
   "protocol_document": {
     "relpath": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/protocol-registered-v1.json",
-    "sha256": "9982f6020f43c3fc3871b203f8d419a104ea88fe6813bf458140804436c79e35"
+    "sha256": "2fb4191c088d29cffd2b57b9e3c605d6c7b3b874c9f61130152cbb8486808c9a"
   },
   "purpose": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-FIT-NPU-PORT-V1: request envelopes only; reads nothing.",
   "rails_pending": [

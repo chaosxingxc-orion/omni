@@ -20,7 +20,7 @@ def contact_line(**over):
         "schema": schema.SCHEMA, "kind": "contact", "ts": TS, "run_id": "RUN-1", "attempt_id": "attempt-1",
         "row_id": "slurp-1", "arm": "lock", "node": "solver", "role_id": "solver", "contact_id": "c-1",
         "contact_index": 1, "sample_index": None, "request_id": "r-0001", "outcome": "ok", "error_type": None,
-        "id_slot": 5, "instance": 1, "supply_variant_id": None,
+        "id_slot": 5, "instance": 1, "supply_variant_id": None, "bank_receipt": None,
         "supply_items": [
             {"item_id": "store::a", "rank": 1, "score": 0.91, "used": True, "used_basis": "json-form"},
             {"item_id": "store::b", "rank": 2, "score": None, "used": None, "used_basis": "none"},
@@ -115,6 +115,9 @@ def test_missing_and_extra_fields_are_refused(maker):
         {"latency_seconds": -0.1},
         {"latency_seconds": float("nan")},
         {"response_text_sha256": "abc"},
+        {"bank_receipt": "abc"},                                  # TFRL-v2: a sha256 or null, never a short or empty string
+        {"bank_receipt": ""},
+        {"bank_receipt": 7},
         {"supply_items": "none"},
         {"supply_items": [{"item_id": "a", "rank": 2, "score": None, "used": None, "used_basis": "none"}]},
         {"supply_items": [{"item_id": "a", "rank": 1, "score": "high", "used": None, "used_basis": "none"}]},
@@ -346,6 +349,7 @@ def test_supplied_values_skip_keys_proposals_and_request_derived_ids():
         {"evidence_id": "store::v1", "content": "v1", "knowledge_role": "value"},
         {"evidence_id": "store::k", "content": "kk", "knowledge_role": "key"},
         {"evidence_id": "candidate-proposal:abc", "content": "p"},
+        {"evidence_id": "tfrl-v2/exemplar-block", "content": "Worked examples for alarm requests:"},      # the TFRL-v2 exemplar block is not a supplied value
         {"evidence_id": "rails-0007-supply-3", "content": "positional"},
         {"evidence_id": "store::v2", "content": "v2"},
     ]}
@@ -435,6 +439,7 @@ def test_record_contact_writes_one_valid_line_and_never_raises(tmp_path):
     assert line["supply_items"] == [{"item_id": "s::a", "rank": 1, "score": 0.8, "used": True, "used_basis": "json-form"}]
     assert line["thinking_tokens"] == 3112 and line["truncated"] is True and line["max_tokens"] == 4096
     assert line["answer"]["entities"] == [{"type": "time", "filler": "nine am"}]
+    assert line["bank_receipt"] is None                           # no bank consumed: the required field is written as null
     # nothing to write to: a no-op; a bad field: logged, no raise
     assert not trace.record_contact(
         None, row_id="r", arm=None, node="solver", role_id=None, contact_id="c", contact_index=0, sample_index=None,
@@ -447,3 +452,21 @@ def test_record_contact_writes_one_valid_line_and_never_raises(tmp_path):
         supply_scores=None, costs=[], decoding=None, finish_reason_fallback=None, answer_text=None, response_text_sha256=None,
     )
     assert writer.failures == 1
+
+
+def test_bank_receipt_is_a_required_field_null_without_a_bank_and_the_receipt_hash_with_one(tmp_path):
+    assert "bank_receipt" in schema.field_names("contact") and "bank_receipt" not in schema.field_names("score") and "bank_receipt" not in schema.field_names("tfrl")
+    line = contact_line()
+    del line["bank_receipt"]
+    with pytest.raises(schema.RolloutTraceSchemaError, match="missing"):
+        schema.validate_line(line)
+    assert schema.validate_line(contact_line(bank_receipt=SHA))["bank_receipt"] == SHA
+    writer = make_writer(tmp_path)
+    kwargs = dict(
+        row_id="slurp-1", arm="t-v2", node="solver", role_id="solver", contact_id="c-1", contact_index=1, sample_index=None, request_id="r-1", outcome="ok",
+        error_type=None, id_slot=5, instance=1, supply_variant_id=None, supply_values=[], supply_scores=None, costs=[cost()], decoding=None,
+        finish_reason_fallback=None, answer_text=None, response_text_sha256=None,
+    )
+    assert trace.record_contact(writer, bank_receipt=SHA, **kwargs) and trace.record_contact(writer, **dict(kwargs, contact_id="c-2"))
+    first, second = read_lines(writer.path)
+    assert first["bank_receipt"] == SHA and second["bank_receipt"] is None

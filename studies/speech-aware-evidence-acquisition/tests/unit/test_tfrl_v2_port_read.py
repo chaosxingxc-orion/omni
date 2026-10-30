@@ -45,7 +45,7 @@ def contact(half, row, arm, answer, iteration=1):
     run, att = sp.run_id_for(half, iteration), sp.attempt_id_for(half, iteration)
     line = {"schema": rt.SCHEMA, "kind": "contact", "ts": TS, "run_id": run, "attempt_id": att, "row_id": row, "arm": arm, "node": "solver", "role_id": None,
             "contact_id": f"{run}/{row}/solver/{arm}", "contact_index": 1, "sample_index": 0, "request_id": None, "outcome": "ok", "error_type": None, "id_slot": 0, "instance": 0,
-            "supply_variant_id": None, "supply_items": [], "prompt_tokens": 100, "completion_tokens": 50, "thinking_tokens": 30, "thinking_tokens_basis": "server-usage-details",
+            "supply_variant_id": None, "bank_receipt": None, "supply_items": [], "prompt_tokens": 100, "completion_tokens": 50, "thinking_tokens": 30, "thinking_tokens_basis": "server-usage-details",
             "reasoning_chars": 10, "thinking_budget": 3072, "max_tokens": 4096, "truncated": False, "finish_reason": "stop", "forced_close": False, "answer_only_reask": False,
             "answer": answer, "response_text_sha256": None, "latency_seconds": 1.0}
     return rt.validate_line(line)

@@ -133,7 +133,7 @@
   ],
   "arm_visits": "first",
   "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-npu-port-v1",
-  "composed_config_hash": "c656076e3a2ffa162a5f96188b3b4f6f4d6a8ad93cc6c003b9a6b8fa0f36122c",
+  "composed_config_hash": "12b29fbc9cda0476e5d9bdf06f5da5f28c9bd663ed62258cde3249ea61b8dc4b",
   "context_fit": {
     "a_bound": 55,
     "active_switch": "default",
@@ -193,7 +193,7 @@
     "planned_gpu_hours": 0.5,
     "planned_model_calls": 28,
     "planned_speech_audio_seconds": 239,
-    "protocol_hash": "6fa9cf6da9020031d460a35cc269feb08c970465e0ae0c85f2d1a15a268cf75c",
+    "protocol_hash": "8f7e8ab90b4610a104aa7ef9050d76927efed9fb581dfce1afb2efa99713bf87",
     "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-FIT-NPU-PORT-V1",
     "schema": "saea-execution-plan-v1",
     "split_identity_hash": "e9dcea536028d17737b999c65267e47645ca7b3f6f9c4f57622961cf29363ed5",
@@ -225,7 +225,7 @@
   },
   "protocol_document": {
     "relpath": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/protocol-registered-v1.json",
-    "sha256": "9982f6020f43c3fc3871b203f8d419a104ea88fe6813bf458140804436c79e35"
+    "sha256": "2fb4191c088d29cffd2b57b9e3c605d6c7b3b874c9f61130152cbb8486808c9a"
   },
   "purpose": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-FIT-NPU-PORT-V1: request envelopes only; reads nothing.",
   "rails_pending": [

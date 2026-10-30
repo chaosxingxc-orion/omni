@@ -551,6 +551,8 @@ class _ActualEpisodeHarness:
             prefix_slots=getattr(self, "prefix_slots", None),
             node_batch=getattr(self, "node_batch", None),
             node_pipeline=getattr(self, "node_pipeline", None),
+            # TFRL-v2: the flight-verified bank a cell that declares ``tfrl_v2_bank`` consumes. None -- every harness written before it -- binds as before.
+            tfrl_v2_bank=getattr(self, "tfrl_v2_bank", None),
         )
         source_kwargs = (
             {}

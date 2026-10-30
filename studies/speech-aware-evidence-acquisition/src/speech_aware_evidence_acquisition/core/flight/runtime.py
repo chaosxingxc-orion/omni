@@ -7807,7 +7807,10 @@ class FlightRuntime:
         # sources include the consuming roster, or its measure is an estimate. A cell without the frame passes through unchanged.
         from ...rails.tfrl_v2_consumption import verify_for_flight  # noqa: PLC0415
 
-        verify_for_flight(self._composed.values, self._data_root, split_identity_hash=self._plan.split_identity_hash)
+        self._tfrl_v2_bank = verify_for_flight(
+            self._composed.values, self._data_root, split_identity_hash=self._plan.split_identity_hash,
+            consuming_row_ids=tuple(str(sample.sample_id) for sample in getattr(self, "_samples", ())),
+        )
         specs = self._phase_tool_specs(policy)
         if not specs:
             return
@@ -8184,6 +8187,8 @@ class FlightRuntime:
                 )
             native_binding = NativeEpisodeRunBinding(
                 thinking_policy=self._composed.values.get("thinking_policy") or None,
+                # TFRL-v2: the bank ``_prepare_native_phase_runtime`` verified at flight start (None unless the cell declares ``tfrl_v2_bank``).
+                tfrl_v2_bank=getattr(self, "_tfrl_v2_bank", None),
                 config=native_config, program=program,
                 material_for_phase=binding["material_for_phase"],
                 render_request=render_request, request_gate=native_fit_gate,

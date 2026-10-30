@@ -36,6 +36,7 @@ H1, H2 = "R01C-H1", "R01C-H2"
 ID1, ID2 = "1" * 64, "2" * 64
 SCOPE = {H1: ID1, H2: ID2}
 FOLD_B_ID = "b" * 64
+FOLD_B_ROWS = ("fold-b-1", "fold-b-2")
 EXISTING = "slurp-native-stage3-thinking-system-fold-b-lock-baseline-v1"          # an existing stage-3 baseline that declares a module block
 #: Pinned bytes of the existing config and of what it renders (the label's "no existing label moves" proof).
 EXISTING_FILE_SHA = "5f0d506f2eb906af54f34acfae4e0b9a1c328433b08c676f107fe25dc807215e"
@@ -257,16 +258,34 @@ def _values_with(frame):
 
 def test_verify_for_flight_is_a_no_op_without_a_frame_and_checks_the_declared_consumer(tmp_path):
     assert rail.verify_for_flight(_values_with(None), tmp_path, split_identity_hash=FOLD_B_ID) is None
+    assert rail.verify_for_flight(_values_with(None), tmp_path, split_identity_hash=FOLD_B_ID, consuming_row_ids=("fold-b-1",)) is None
     _, receipt = make_bank(tmp_path)
     frame = rail.declaration_block(iteration=1, consumer="FOLD-B", bank_kind="union", receipt_relpath="banks/union/bank-receipt.json", receipt_sha=rail.receipt_sha256(receipt), source_scope=SCOPE)
-    assert rail.verify_for_flight(_values_with(frame), tmp_path, split_identity_hash=FOLD_B_ID).receipt_sha256 == rail.receipt_sha256(receipt)
+    assert rail.verify_for_flight(_values_with(frame), tmp_path, split_identity_hash=FOLD_B_ID, consuming_row_ids=FOLD_B_ROWS).receipt_sha256 == rail.receipt_sha256(receipt)
     with pytest.raises(rail.TfrlV2BankRefusal, match="consuming split identity equals a source split identity"):
-        rail.verify_for_flight(_values_with(frame), tmp_path, split_identity_hash=ID2)
+        rail.verify_for_flight(_values_with(frame), tmp_path, split_identity_hash=ID2, consuming_row_ids=FOLD_B_ROWS)
     _, half = make_bank(tmp_path / "h", kind="half", sources=(H1,))
     half_frame = rail.declaration_block(iteration=1, consumer=H2, bank_kind="half", receipt_relpath="banks/half/bank-receipt.json", receipt_sha=rail.receipt_sha256(half), source_scope=SCOPE)
-    assert rail.verify_for_flight(_values_with(half_frame), tmp_path / "h", split_identity_hash=ID2).receipt_sha256 == rail.receipt_sha256(half)
+    assert rail.verify_for_flight(_values_with(half_frame), tmp_path / "h", split_identity_hash=ID2, consuming_row_ids=("h2-row",)).receipt_sha256 == rail.receipt_sha256(half)
     with pytest.raises(rail.TfrlV2BankRefusal, match="declares consumer R01C-H2 but its split identity is not the pinned identity of that half"):
-        rail.verify_for_flight(_values_with(half_frame), tmp_path / "h", split_identity_hash=FOLD_B_ID)
+        rail.verify_for_flight(_values_with(half_frame), tmp_path / "h", split_identity_hash=FOLD_B_ID, consuming_row_ids=("h2-row",))
+
+
+def test_the_flight_start_rechecks_row_disjointness_against_the_banks_source_rows_not_only_the_split_identity(tmp_path):
+    """Plan section 13 ruling 3 (d): a Fold B flight whose split identity is NOT a source identity is still refused when one of its rows is a source row of the bank."""
+
+    _, receipt = make_bank(tmp_path, source_rows=("r1", "r2", "r3"))
+    frame = rail.declaration_block(iteration=1, consumer="FOLD-B", bank_kind="union", receipt_relpath="banks/union/bank-receipt.json", receipt_sha=rail.receipt_sha256(receipt), source_scope=SCOPE)
+    values = _values_with(frame)
+    # disjoint rows pass (the split identity alone would also pass: it is no source identity)
+    assert rail.verify_for_flight(values, tmp_path, split_identity_hash=FOLD_B_ID, consuming_row_ids=("f1", "f2")).receipt_sha256 == rail.receipt_sha256(receipt)
+    # one shared row is refused, by name and count, although the split identity differs from every source identity
+    with pytest.raises(rail.TfrlV2BankRefusal, match=r"1 consuming rows are source rows of the bank \(first: r3\)"):
+        rail.verify_for_flight(values, tmp_path, split_identity_hash=FOLD_B_ID, consuming_row_ids=("f1", "r3", "f2"))
+    # a declared cell that hands over no row ids cannot be re-checked and is refused (never silently skipped)
+    for missing in (None, (), []):
+        with pytest.raises(rail.TfrlV2BankRefusal, match="no consuming row ids"):
+            rail.verify_for_flight(values, tmp_path, split_identity_hash=FOLD_B_ID, consuming_row_ids=missing)
 
 
 # ---- (5) the module block: no frame is byte for byte what it was ---------------------------------------------------------------------------------
@@ -347,3 +366,63 @@ def test_used_basis_is_read_from_the_trace_and_a_missing_basis_is_refused():
     assert summary["by_used"] == {"true": 2, "false": 1, "null": 1} and summary["judged_items"] == 3 and summary["judged_share"] == 0.75 and summary["source"] == "trace"
     with pytest.raises(rail.TfrlV2BankError, match="without a closed used_basis"):
         rail.used_basis_summary([_contact("solver", [{"item_id": "a", "rank": 1, "score": None, "used": True}])])
+
+
+# ---- (7) the runner's seams (pure helpers; the episode proof is test_tfrl_v2_runner_render.py) -------------------------------------------------------
+
+
+def test_the_lock_baselines_rendered_messages_are_byte_identical_without_the_frame_and_the_bank_appends_after_the_supplied_items():
+    """The pin ``f6fed233...b8b9`` is the lock baseline's rendered Solver messages. Without a bank the composition is the identity; with a fake released bank the exemplar
+    block is the LAST user part, after every supplied item, and the rule bank is the system suffix."""
+
+    messages = _render_existing_solver_messages()
+    assert sha(json.dumps(messages, sort_keys=True, separators=(",", ":")).encode("utf-8")) == RENDERED_SNAPSHOT_SHA
+    assert sha(json.dumps(list(rail.compose_solver_messages(messages)), sort_keys=True, separators=(",", ":")).encode("utf-8")) == RENDERED_SNAPSHOT_SHA
+    block, rules = "Worked examples for alarm requests:\n- [evidence ex-1] wake me up at nine | alarm_set", "Consumption rules:\n- r"
+    system, user = rail.compose_solver_messages(messages, exemplar_block_text=block, rule_text=rules, exemplar_source_uri="tfrl-v2-bank://" + "a" * 64 + "/exemplar-block")
+    parts = user["content"]
+    values = [i for i, part in enumerate(parts) if part.get("knowledge_role") == "value"]
+    assert values and parts[-1]["text"] == block and parts[-1]["source_uri"].startswith("tfrl-v2-bank://") and len(parts) == len(messages[1]["content"]) + 1
+    assert max(values) < len(parts) - 1 and system["content"].endswith("\n\n" + rules)
+    assert [part for part in parts[:-1]] == list(messages[1]["content"])                         # the supplied items are untouched, and the block comes after them
+
+
+def test_the_scenario_of_an_intent_is_the_longest_bank_scenario_prefix():
+    assert rail.scenario_of_intent("alarm_set", ("alarm", "weather")) == "alarm"
+    assert rail.scenario_of_intent("email_sendemail", ("email", "email_x")) == "email"
+    assert rail.scenario_of_intent("email_x_send", ("email", "email_x")) == "email_x"            # the longest scenario that prefixes the intent wins
+    assert rail.scenario_of_intent("unknown_thing", ("alarm",)) is None and rail.scenario_of_intent(None, ("alarm",)) is None and rail.scenario_of_intent("", ("alarm",)) is None
+
+
+def test_the_predicted_intent_is_the_first_candidate_of_the_latest_perception_state():
+    state = lambda kind, content: SimpleNamespace(state_kind=kind, content=content)  # noqa: E731
+    older = state("phase:perception", json.dumps({"candidates": [{"intent_id": "weather_query"}]}))
+    latest = state("phase:perception", json.dumps({"candidates": [{"intent_id": "alarm_set"}, {"intent_id": "alarm_query"}]}))
+    other = state("phase:solver", "{}")
+    assert rail.predicted_intent_id([older, other, latest], "phase:perception") == "alarm_set"
+    assert rail.predicted_intent_id([other], "phase:perception") is None
+    assert rail.predicted_intent_id([state("phase:perception", "not json")], "phase:perception") is None
+    assert rail.predicted_intent_id([state("phase:perception", json.dumps({"candidates": []}))], "phase:perception") is None
+
+
+def test_the_supply_bound_is_read_from_the_blocks_arm_frame_and_a_block_without_the_frame_declares_none():
+    frame = rail.declaration_block(iteration=1, consumer="FOLD-B", bank_kind="union", receipt_relpath="banks/union/bank-receipt.json", source_scope=SCOPE)
+    assert rail.declaration_of_block_json(None) is None and rail.declaration_of_block_json(json.dumps({"columns": []})) is None
+    decl, bound = rail.declaration_of_block_json(json.dumps({"tfrl_v2_bank": frame, "sampling_frame": {"max_supplied_items": 43}}))
+    assert bound == 43 and decl.consumer == "FOLD-B"
+    assert rail.declaration_of_block_json(json.dumps({"tfrl_v2_bank": frame}))[1] is None
+    assert rail.supply_bound_of_block({"decoding_frame": {"max_supplied_items": 43}}) == 43 and rail.supply_bound_of_block({"sampling_frame": {"max_supplied_items": True}}) is None
+
+
+def test_only_a_candidate_arm_solver_contact_consumes_the_bank_the_control_arms_render_the_cells_own_bytes():
+    from speech_aware_evidence_acquisition.rails.runner import _tfrl_bank_consumes
+
+    request = lambda role, arm=None, branch=None: SimpleNamespace(role_id=role, context=SimpleNamespace(variant_arm_id=arm, perception_branch_id=branch))  # noqa: E731
+    arm = lambda deliver=False, twin=None: SimpleNamespace(deliver=deliver, replicate_of=twin)  # noqa: E731
+    group = SimpleNamespace(arm=lambda arm_id: {"t": arm(), "aa": arm(twin="lock"), "lock": arm(deliver=True)}[arm_id])
+    branches = SimpleNamespace(branch=lambda branch_id: {"t-v2": arm(), "aa": arm(twin="lock"), "lock-rep2": arm(twin="lock"), "lock": arm(deliver=True)}[branch_id])
+    assert not _tfrl_bank_consumes(request("perception"), "solver", None, None) and _tfrl_bank_consumes(request("solver"), "solver", None, None)
+    assert _tfrl_bank_consumes(request("solver", arm="t"), "solver", group, None) and not any(_tfrl_bank_consumes(request("solver", arm=a), "solver", group, None) for a in ("aa", "lock"))
+    assert _tfrl_bank_consumes(request("solver", branch="t-v2"), "solver", None, branches)
+    assert not any(_tfrl_bank_consumes(request("solver", branch=b), "solver", None, branches) for b in ("aa", "lock-rep2", "lock"))
+    assert not _tfrl_bank_consumes(request("perception", branch="t-v2"), "solver", None, branches)

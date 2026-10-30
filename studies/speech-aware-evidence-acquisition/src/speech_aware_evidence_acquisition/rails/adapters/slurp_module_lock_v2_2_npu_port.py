@@ -21,7 +21,7 @@ Everything else is v2.2 byte for byte: the deliver normaliser stays v4g, the ros
 (``slurp_module_hooks.ROSTER_PIN_PATHS``), and the module's components still write their own pin sites (the centroid facet source, the
 agreement source, ``k``) exactly as under v2.2. The layer is fail-closed on the pins file: a missing file, a missing leaf, or a pin equal
 to the v2.2 value (a port pin that did not move) is refused. The CURRENT lock stays v2.3. A block selects this lock only through its
-``lock`` key. T construction cells (minus-R01 exemplar store) are NOT covered by this lock.
+``lock`` key. T construction cells (minus-R01 exemplar store) are NOT covered by this lock; they select ``v2.2-npu-port-r01c`` (see ``slurp_module_lock_v2_2_npu_port_r01c``).
 """
 
 from __future__ import annotations

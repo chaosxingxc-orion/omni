@@ -4,7 +4,8 @@ One JSONL file per flight, one line per event, three line kinds:
 
 ``contact``  one model contact (one dispatched request that returned): who asked (run, attempt, row, arm, node, contact index
              in the program, the slot and the vLLM instance it routed to), what was supplied (item ids with retrieval scores,
-             the supply variant), what it cost (prompt, thinking and completion tokens, the truncation flag), what came back
+             the supply variant, and ``bank_receipt``: the TFRL-v2 bank receipt hash the contact consumed, ``null`` when it consumed no
+             bank), what it cost (prompt, thinking and completion tokens, the truncation flag), what came back
              (the parsed answer fields as emitted) and how long it took.
 ``score``    the per-row official score of one arm's delivered answer, emitted by the scorer once it is known, keyed by
              (row, arm).
@@ -221,6 +222,7 @@ _CONTACT: dict[str, Checker] = {
     "instance": _count_or_null,
     "supply_variant_id": _text_or_null,
     "supply_items": _supply_items,
+    "bank_receipt": _sha256_or_null,
     "prompt_tokens": _count_or_null,
     "completion_tokens": _count_or_null,
     "thinking_tokens": _count_or_null,
