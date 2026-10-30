@@ -106,6 +106,7 @@ leaf-by-leaf diff against this skeleton. Every FILLED leaf that differs is a fin
   the pre-`db798a83` fragment gives `14308a22...`, and no plain canonical-JSON variant gives `a35b2740` or `df95b65b`. The
   record carries the reproducible `bcb98207` and the file sha256. Which hash the docstring meant is open, and that docstring
   may need correcting.
+- **D2 correction (Fable, 2026-10-30).** The claim above is WRONG. Recomputed inside `saea-base` with `speech_aware_evidence_acquisition.core.config.fragment_hash` on the committed port fragment at HEAD: `a35b274058d7ac7558d3d0ac32cca8bb3c9321cb13ea89f16b38003fdd18c720` (file sha256 prefix `bceb079d`). The `bcb98207` value did not come from `fragment_hash` on this file. The record carries `a35b2740…`; the test docstring is correct.
 - **D3.** Host CANN file paths. The verifier default is `/usr/local/Ascend/ascend-toolkit/8.2.RC1/aarch64-linux/ascend_toolkit_install.info`;
   plan L5 names the host toolkit dir `.../ascend-toolkit/8.2`. The image default is `.../latest/aarch64-linux/ascend_toolkit_install.info`;
   plan L5 names `cann-9.2.0/compiler/version.info`. An unreadable listed file fails check 3, so the paths must be read once on
