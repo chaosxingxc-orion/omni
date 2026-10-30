@@ -922,3 +922,18 @@ confirmed/refuted. 11. Card hygiene recorded. 12. CephFS checked; no artifact ov
   `id_slot`, flight workers from the profile. Needed before any flight uses the knee; not needed for the sweep.
 - Memory successor note for `saea-serving-deployment-decision.md` (superseded KV estimate, 93 % CephFS), main thread.
 - Q1/Q2 tool-bearing arm remedy, only if the owner answers Q1 yes.
+
+## 3.12 Launch record (2026-10-30, planner session)
+
+Owner rule 2026-10-30 (translated): "We must keep the NPUs fully loaded with experiments as much as possible." The eight
+cards had been idle under the resident arm A deployment since the E chain finished on 2026-10-29. Launched detached on
+`npu2` from this session after a read-only `--preflight` (all four arm A endpoints healthy, cards at 0 % AI core):
+
+| chain | command (from `/mnt/cephfs/xingchao/omni/work/scripts`) | log | watchdog entries |
+| --- | --- | --- | --- |
+| P3 + P3b + P4 (arm B 2xTP4 levels, worst case, arm A relaunch) | `nohup setsid python3 prelim_chain.py --p3 --ts 20261030T041529Z` | `work/logs/prelim-chain-p3-20261030T041529Z/chain.log` | `prelim-chain-p3`, `sweep-armB-prelim-P3`, `sweep-armB-prelim-P3b-mintok4096` |
+| E3 (shm baseline pass, shm passes, verdict), gated on the P3 chain being FINAL | `nohup setsid python3 e3_chain.py --ts 20261030T041647Z` | `work/logs/e3-chain-20261030T041647Z/chain.log` | `prelim-E3-chain` |
+
+Next in the card queue once E3 is FINAL (the queue runner is being built, plan 2026-10-30 TFRL section 8 R1): the
+budget-6,144 worst-case sweep at 32/24/16, then the recorded runs `record_run_list.example-armA-knee32.json` and
+`record_run_list.budget6144-worstcase.json`. The base is chosen by the accuracy-first rule (section 8) from those results.
