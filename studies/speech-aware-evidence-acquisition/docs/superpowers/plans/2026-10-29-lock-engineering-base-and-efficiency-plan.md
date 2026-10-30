@@ -1046,7 +1046,7 @@ level, descending:
 | --- | --- | --- | --- | --- | --- | --- |
 | 32 (128) | 1,717.6 | 6 | 99.98 % | 8 | 566.3 | no (preemptions, KV) |
 | 24 (96) | 1,626.4 | 0 | 77.1 % | 10 | 439.4 | **yes** |
-| 16 (64) | measured next | | | | | |
+| 16 (64) | 1,380.7 | 0 | below 77 % | 0 | 351.5 | yes (floor) |
 
 Source: the chain's row records (`sweep-armA-prelim-WC-mintok7168-…-L{32,24}.row.json`, `worst_case_admissible`).
 The watchdog summary showed level 24 as not ok only because its default latency threshold was below 439 s; the entry
@@ -1065,3 +1065,5 @@ A/A band of the base) before job 3 starts; the writers re-mint the L338 port, Fo
 supply bound is re-derived (40 minus the measured exemplar block, TFRL plan section 12 ruling 3); the deployment
 profile's `admitted_level` becomes 24 (a deployment fact, outside the protocol hash) in a `-v4` profile; the lock record
 is filled from the recorded runs and goes to the owner for countersign.
+
+Level 16 result (2026-10-30, `…-L16.row.json`): 1,380.7 tok/s, zero preemptions, latency max 351.5 s, admissible. The descent is complete: 24 is the base level, 16 the floor; 32 is excluded at this budget.
