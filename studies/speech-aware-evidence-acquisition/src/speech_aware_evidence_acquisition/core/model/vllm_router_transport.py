@@ -120,6 +120,21 @@ class VllmRouterTransport:
             )
         return self.instance_for_slot(decoding_params[ROUTING_DECODING_KEY])
 
+    def render_request(self, request_bytes: bytes) -> dict[str, object]:
+        """Render with the same instance that will send this contact, without sending.
+
+        Native speech execution and its FIT gate require the concrete renderer.
+        Preserve slot validation and the selected transport's identity checks;
+        rendering must not silently use a different deployment member.
+        """
+        index = self._route(request_bytes)
+        try:
+            return self._transports[index].render_request(request_bytes)
+        except SessionError as error:
+            raise VllmRouterTransportError(
+                f"{_instance_label(index, self._instance_ids)} cannot render: {error}"
+            ) from error
+
     def __call__(self, request_bytes: bytes) -> bytes:
         index = self._route(request_bytes)
         try:

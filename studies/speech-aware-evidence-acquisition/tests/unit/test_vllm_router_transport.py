@@ -129,6 +129,33 @@ def test_protocol_sha256_is_unchanged_by_instance_count(world):
 # ---------------------------------------------------------------------------
 
 
+def test_native_renderer_survives_lease_wrapper_without_model_contact(world):
+    from speech_aware_evidence_acquisition.core.session.worker import LeaseCheckedTransport
+
+    _, recorders, transports, _ = _four_instance_setup(world)
+    router = VllmRouterTransport(transports)
+    wrapped = LeaseCheckedTransport(router, lambda: None)
+    for slot in (0, 5, 10, 15):
+        request = _payload(slot)
+        assert wrapped.render_request(request) == transports[slot % 4].render_request(request)
+    assert all(not recorder.calls for recorder in recorders)
+
+    # A broken selected member must not be hidden by rendering on instance zero.
+    _kill_listener(world, transports[1]._session.port)
+    with pytest.raises(VllmRouterTransportError, match="instance 1.*cannot render"):
+        wrapped.render_request(_payload(5))
+    assert all(not recorder.calls for recorder in recorders)
+
+
+def test_renderer_requires_runner_slot(world):
+    _, recorders, transports, _ = _four_instance_setup(world)
+    payload = json.loads(_payload(0))
+    del payload["decoding_params"]["id_slot"]
+    with pytest.raises(VllmRouterTransportError, match="id_slot"):
+        VllmRouterTransport(transports).render_request(json.dumps(payload).encode())
+    assert all(not recorder.calls for recorder in recorders)
+
+
 def test_routes_each_contact_to_id_slot_mod_instance_count(world):
     _, recorders, transports, _ = _four_instance_setup(world)
     router = VllmRouterTransport(transports, instance_ids=[f"tp2-{i}" for i in range(4)])
