@@ -1035,3 +1035,33 @@ superseded by the packages' `registered-facts-v1.json`. Consequences: the L338 p
 re-prepared with `repin_cell.py` at the flip (output equality asserted); the T cells switch to the port lock in the
 T rails stream, and T's construction cells additionally need the minus-R01 exemplar-store leaves layered over the port
 lock. The never-flown port comparators fail separately (15 leaves) and are exempt; they feed only the agreement table.
+
+## 3.16 Budget-6,144 worst case and the base decision (Fable, 2026-10-30)
+
+Card-queue job `R-A3-b6144-prelim` (chain `prelim-chain-wc-20261030T063723Z`, resident arm A on the v3 profile, seed
+20261028, min_tokens = max_tokens 7,168, thinking budget 6,144, prompt max 17,408, latency rule 735 s), one pass per
+level, descending:
+
+| level per instance (in flight) | host tok/s | preemptions | KV peak | waiting peak | latency max, s | admissible |
+| --- | --- | --- | --- | --- | --- | --- |
+| 32 (128) | 1,717.6 | 6 | 99.98 % | 8 | 566.3 | no (preemptions, KV) |
+| 24 (96) | 1,626.4 | 0 | 77.1 % | 10 | 439.4 | **yes** |
+| 16 (64) | measured next | | | | | |
+
+Source: the chain's row records (`sweep-armA-prelim-WC-mintok7168-…-L{32,24}.row.json`, `worst_case_admissible`).
+The watchdog summary showed level 24 as not ok only because its default latency threshold was below 439 s; the entry
+now carries the 735 s rule. The waiting peak of 10 at level 24 is the client's burst at start and clears; the admitted
+rule is zero worst-case preemptions and KV peak <= 90 %, both met.
+
+Decision (owner rule R1 2026-10-30, accuracy first; TFRL plan section 8: budget 6,144 if admissible at >= 16 per
+instance): **the engineering base is the budget-6,144 / max-7,168 fragment**
+(`configs/model/bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget6144-max7168-port-v1.json`, hash
+`062d1698…`) **at admitted level 24 per instance, flight width 96**, on the 4xTP2 v3 (shm) resident deployment. The
+throughput cost against the 4,096 budget at 32 is about 14 % of host tok/s in the normal mix (1,422.6 at 32 vs the
+recorded value of `R-A2-b6144-L24`, measured next) and is accepted for the 45.9 % of Solver contacts that the 4,096
+budget truncated (section 2 P6). Consequences: the recorded run list gains `R-A2-b6144-L24` (normal mix, 3 passes, the
+A/A band of the base) before job 3 starts; the writers re-mint the L338 port, Fold A and D packages with
+`--model-fragment budget6144-max7168` (supply bound 55 -> 51, prompt limit 14,334, latency rule 735 s); the T package's
+supply bound is re-derived (40 minus the measured exemplar block, TFRL plan section 12 ruling 3); the deployment
+profile's `admitted_level` becomes 24 (a deployment fact, outside the protocol hash) in a `-v4` profile; the lock record
+is filled from the recorded runs and goes to the owner for countersign.
