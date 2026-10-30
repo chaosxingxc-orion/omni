@@ -331,3 +331,28 @@ def test_dry_chain_passes_the_overrides_to_the_sweep_command(tmp_path):
     sweeps = [cmd for cmd in ops.commands if "scripts/serving/synthetic_sweep.py" in cmd]
     assert any("--max-tokens" in cmd and cmd[cmd.index("--max-tokens") + 1] == "7168" for cmd in sweeps)
     assert sum("--max-tokens" in cmd for cmd in sweeps) == 1  # only the run that declared it
+
+
+def test_base_lock_v1_combined_list_has_one_r0_and_three_runs():
+    doc = json.loads((HERE / "record_run_list.base-lock-v1.json").read_text())
+    rl = rr.validate_run_list(doc, PROFILE)
+    assert rl["example"] is False
+    assert [r["id"] for r in rl["runs"]] == ["R-A2-L32", "R-A3-L32", "R-A3-b6144"]
+    assert [r["levels"] for r in rl["runs"]] == [[32], [32], [32, 24, 16]]
+    assert [r["min_tokens"] for r in rl["runs"]] == [None, 4096, 7168]
+    assert {r["on_fail"] for r in rl["runs"]} == {"stop_chain"}
+    b = json.loads((HERE / "record_run_list.budget6144-worstcase.json").read_text())["runs"][0]
+    assert rl["runs"][2]["sweep"] == b["sweep"] and rl["runs"][2]["max_latency_s"] == b["max_latency_s"] == 735.0
+    assert rl["runs"][1]["admissibility"] and rl["runs"][2]["admissibility"]
+
+
+def test_base_lock_v1_combined_list_runs_r0_once_then_every_run(tmp_path):
+    import subprocess
+    out = subprocess.run([sys.executable, str(HERE / "record_runs.py"), "--dry-run", "--run-list",
+                          str(HERE / "record_run_list.base-lock-v1.json"), "--out-root", str(tmp_path)],
+                         capture_output=True, text=True)
+    text = out.stdout + out.stderr
+    assert out.returncode == 0 and "CHAIN DONE" in text
+    steps = [l.split("STEP ")[1] for l in text.splitlines() if "STEP " in l]
+    assert steps.count("deploy-up") == 1
+    assert steps[-5:] == ["R-A2-L32-L32", "R-A3-L32-L32", "R-A3-b6144-L32", "R-A3-b6144-L24", "R-A3-b6144-L16"]

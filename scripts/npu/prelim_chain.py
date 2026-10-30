@@ -34,6 +34,19 @@ usage (on the NPU host 181, detached):
       down through the measured passing levels until one is admissible (zero preemptions on EVERY instance, KV peak <= 90 %);
       a dead endpoint is a FAIL and STOPS the chain; finally B is stopped and arm A relaunched from the captured argv (P4)
       and waited healthy. Resume with --resume --chain-dir (the mode and the gate file are stored in config.json).
+  Resident worst case (card-queue job R-A3-b6144-prelim): python3 prelim_chain.py --resident-worstcase --levels 32,24,16
+      --min-tokens 7168 --max-latency-s 735 --sweep-json '{"max_tokens":7168,"thinking_budget":6144,"prompt_max":17408,"timeout":800}'
+      measures the listed per-instance levels IN ORDER, all of them (a failing level is data, not a stop), against the
+      RESIDENT saea-arm-a-0..3 as they run now: nothing is stopped, launched or restarted, arm A is left UP. A dead
+      endpoint is a FAIL and STOPS the chain. Per level the plan 3.4 thresholds with the max latency rule scaled by
+      --max-latency-s (default 420) and, with --min-tokens, the plan 3.8 admissibility rule. Resume as above.
+  Stop the idle resident arm A (card-queue job stop-idle-arm-a): python3 prelim_chain.py --stop-idle-arm-a
+      reads vllm:num_requests_running and vllm:num_requests_waiting of every saea-arm-a-* endpoint; if ANY is above 0 or
+      unreadable the chain REFUSES (CHAIN-BAD, nothing is stopped); otherwise removes their watchdog entries, runs
+      `docker stop -t 120` on them (the same stop step P2b uses), waits until all 8 cards are below 4096 MiB and prints
+      CHAIN DONE. Nothing is launched afterwards. Rehearsal: --dry-run --stop-idle-arm-a [--busy].
+  --sweep-json (any mode): per-run synthetic_sweep.py overrides, a JSON object or a path to one, keys max_tokens,
+      thinking_budget, prompt_max, timeout (positive integers; the same block as record_runs.py's per-run "sweep").
 Layout: <logs>/prelim-chain-<ts>/{config.json,chain-status.json,arm-a-launch.json,steps/<step>.done.json,chain.log};
 reports <logs>/sweep-arm{A,B}-prelim-P{1,2,2b,3,3b}-<ts>[-mintok4096]-L<level>.json (+ .row.json, summary, -npu-smi.json).
 """
@@ -78,6 +91,10 @@ P1_LEVELS = (56, 64)
 P2_LADDER = (48, 40, 32)  # plan 3.8: the allowed worst-case levels, descent order
 P2B_LADDER = (40, 32)  # 48 already failed the worst case (P2-L48); P2b starts one level down
 P2_MIN_TOKENS = 4096
+#: Optional sweep-client overrides ({key: synthetic_sweep.py flag}); identical to record_runs.SWEEP_FLAGS (a test pins that).
+SWEEP_FLAGS = {"max_tokens": "--max-tokens", "thinking_budget": "--thinking-budget", "prompt_max": "--prompt-max",
+               "timeout": "--timeout"}
+SWEEP_DEFAULT_MAX_TOKENS, SWEEP_DEFAULT_TIMEOUT = 4096, 420
 PRIOR_PASS = {48}  # measured and passed in the earlier preliminary scan (sweep-armA-prelim-20261029T162735)
 KV_PEAK_MAX = 0.90  # plan 3.8 rule (a): sampled KV peak of every instance (fraction of the cache) <= 90 %
 LIVENESS_SECONDS = 30  # plan 3.8: per-instance liveness poll during every level
@@ -111,6 +128,35 @@ class EndpointDied(ChainStop):
     def __init__(self, name: str, detail: dict | None = None) -> None:
         super().__init__(f"endpoint_died:{name}")
         self.name, self.detail = name, detail or {}
+
+
+def parse_sweep_json(text: str | None) -> dict:
+    """--sweep-json: a JSON object or the path of a JSON file; only SWEEP_FLAGS keys with positive integers."""
+    if not text:
+        return {}
+    raw = text.strip()
+    try:
+        doc = json.loads(raw if raw.startswith("{") else Path(raw).read_text())
+    except (OSError, ValueError) as error:
+        raise ChainStop(f"--sweep-json is neither a JSON object nor a readable JSON file: {error}")
+    if not isinstance(doc, dict) or set(doc) - set(SWEEP_FLAGS) or \
+            any(not isinstance(v, int) or isinstance(v, bool) or v < 1 for v in doc.values()):
+        raise ChainStop(f"--sweep-json must be an object over {sorted(SWEEP_FLAGS)} with positive integer values")
+    return doc
+
+
+def validate_wc(wc: dict, sweep: dict) -> dict:
+    """Resident worst-case settings (levels, min_tokens, max_latency_s) against the sweep overrides (record_runs rules)."""
+    levels = wc.get("levels") or []
+    if not levels or any(not isinstance(v, int) or v < 1 for v in levels) or len(set(levels)) != len(levels):
+        raise ChainStop(f"--levels must be distinct positive integers, got {levels}")
+    cap = sweep.get("max_tokens", SWEEP_DEFAULT_MAX_TOKENS)
+    if wc.get("min_tokens") is not None and wc["min_tokens"] > cap:
+        raise ChainStop(f"--min-tokens {wc['min_tokens']} exceeds the sweep max_tokens {cap} (set max_tokens in --sweep-json)")
+    limit, timeout = wc.get("max_latency_s"), sweep.get("timeout", SWEEP_DEFAULT_TIMEOUT)
+    if limit is not None and limit > timeout:
+        raise ChainStop(f"--max-latency-s {limit:g} exceeds the sweep client timeout {timeout} (set timeout in --sweep-json)")
+    return {"levels": list(levels), "min_tokens": wc.get("min_tokens"), "max_latency_s": limit}
 
 
 def utc_now() -> str:
@@ -396,7 +442,7 @@ class RealOps:
         return set(done.stdout.split()) if done.returncode == 0 else None
 
     def measure_level(self, step: str, prefix: str, level: int, urls: list[str], min_tokens: int | None,
-                      label: str, names: list[str] | None = None) -> dict:
+                      label: str, names: list[str] | None = None, sweep: dict | None = None) -> dict:
         names = names or [f"instance-{i}" for i in range(len(urls))]
         out = Path(f"{prefix}-L{level}.json")
         name = f"saea-sweep-{Path(prefix).name}-L{level}"
@@ -411,6 +457,9 @@ class RealOps:
         command += ["--model", MODEL, "--levels", str(level), "--seed", SEED, "--label", label, "--out", str(out)]
         if min_tokens is not None:
             command += ["--min-tokens", str(min_tokens)]
+        for key, flag in SWEEP_FLAGS.items():
+            if sweep and key in sweep:
+                command += [flag, str(sweep[key])]
         self.set_phase(prefix, level)
         poll = {"waiting": 0.0, "running": 0.0, "stop": threading.Event(), "kv": [None] * len(urls),
                 "pre_first": [None] * len(urls), "pre_last": [None] * len(urls)}
@@ -512,6 +561,14 @@ class RealOps:
         """vllm:num_requests_running of one endpoint, None when unreadable."""
         got = http_get(url + "/metrics", timeout=5)
         return prom_sum(got[1], "vllm:num_requests_running") if got and got[0] == 200 else None
+
+    def load_gauges(self, url: str):
+        """(vllm:num_requests_running, vllm:num_requests_waiting) of one endpoint, None when unreadable."""
+        got = http_get(url + "/metrics", timeout=5)
+        if not got or got[0] != 200:
+            return None
+        running, waiting = prom_sum(got[1], "vllm:num_requests_running"), prom_sum(got[1], "vllm:num_requests_waiting")
+        return None if running is None or waiting is None else (running, waiting)
 
     def stop_containers(self, names: list[str]) -> None:
         self._check_ours(names)
@@ -635,16 +692,20 @@ class RealOps:
 # ---------------------------------------------------------------- the chain
 class Chain:
     def __init__(self, ops, chain_dir: Path, ts: str, logs: str, mode: str = "chain", gate_path: str | None = None,
-                 gate_poll: float = GATE_POLL_S, sleep=time.sleep) -> None:
+                 gate_poll: float = GATE_POLL_S, sleep=time.sleep, sweep: dict | None = None,
+                 wc: dict | None = None) -> None:
         self.ops, self.dir, self.ts, self.logs, self.mode = ops, chain_dir, ts, logs, mode
         self.gate_path, self.gate_poll, self.sleep = gate_path, gate_poll, sleep
+        self.sweep = dict(sweep or {})  # --sweep-json: sweep-client overrides applied to every level of this chain
+        self.wc = wc  # resident worst-case settings (mode "wc"): levels, min_tokens, max_latency_s
+        wc_tag = f"-mintok{wc['min_tokens']}" if wc and wc.get("min_tokens") else ""
         self.steps_dir = chain_dir / "steps"
         self.steps_dir.mkdir(parents=True, exist_ok=True)
         self.url_name: dict[str, str] = {}
         self.p = {  # report prefixes
             "P1": f"{logs}/sweep-armA-prelim-P1-{ts}", "P2": f"{logs}/sweep-armA-prelim-P2-mintok4096-{ts}",
             "P2b": f"{logs}/sweep-armA-prelim-P2b-mintok4096-{ts}", "P3": f"{logs}/sweep-armB-prelim-P3-{ts}",
-            "P3b": f"{logs}/sweep-armB-prelim-P3b-mintok4096-{ts}"}
+            "P3b": f"{logs}/sweep-armB-prelim-P3b-mintok4096-{ts}", "WC": f"{logs}/sweep-armA-prelim-WC{wc_tag}-{ts}"}
         self.status = {"chain": chain_dir.name, "mode": mode, "state": "running", "current_step": None,
                        "started": utc_now(), "updated": utc_now(), "pid": os.getpid(), "reason": None,
                        "decisions": {}, "steps": {}, "prefixes": self.p}
@@ -688,6 +749,8 @@ class Chain:
     def write_summary(self, phase: str, done: bool, stopped_at: int | None, extra: dict | None = None) -> None:
         arm = "B" if phase in ("P3", "P3b") else "A"
         shape = "2 x TP4, max-num-seqs 128" if arm == "B" else "4 x TP2, max-num-seqs 64"
+        if phase == "WC":
+            shape = "the resident deployment as it runs"
         doc = {"label": f"PRELIMINARY arm {arm} engine measurement ({shape}), phase {phase}, not the recorded "
                         f"locked baseline", "synthetic": True, "dataset_rows": 0, "seed": SEED,
                "host_output_tok_s_definition": "sum of completion tokens over all instances / level wall time",
@@ -697,7 +760,7 @@ class Chain:
 
     # --- one level step
     def level_step(self, phase: str, step: str, level: int, urls: list[str], max_num_seqs: int,
-                   min_tokens: int | None = None) -> dict:
+                   min_tokens: int | None = None, max_latency_s: float | None = None) -> dict:
         arm = "B" if phase in ("P3", "P3b") else "A"
         prior = self.done(step)
         if prior and "row" in prior["decision"]:
@@ -707,15 +770,20 @@ class Chain:
             return row
         self.set_current(step)
         mode = f", forced min_tokens {min_tokens}" if min_tokens else ""
+        if self.sweep:
+            mode += f", sweep overrides {self.sweep}"
         label = f"PRELIMINARY arm {arm} engine measurement (phase {phase}{mode}), not the recorded locked baseline"
         try:
+            extra = {"sweep": self.sweep} if self.sweep else {}  # absent = the sweep client's own defaults
             measure = self.ops.measure_level(step, self.p[phase], level, urls, min_tokens, label,
-                                             names=[self.url_name.get(u, u) for u in urls])
+                                             names=[self.url_name.get(u, u) for u in urls], **extra)
         except EndpointDied as died:
             self.record_died(phase, step, level, died)
             raise
-        reasons, row = evaluate(measure, level, max_num_seqs, worst_case=min_tokens is not None)
+        reasons, row = evaluate(measure, level, max_num_seqs, worst_case=min_tokens is not None,
+                                max_latency_s=max_latency_s)
         row.update({"step": step, "phase": phase, "arm": arm, "min_tokens": min_tokens,
+                    "sweep_overrides": dict(self.sweep), "max_latency_s_rule": max_latency_s or MAX_LATENCY_S,
                     "max_tokens_sent": measure.get("max_tokens_sent"),
                     "min_tokens_sent": measure.get("min_tokens_sent")})  # read back from the report's settings
         write_atomic(f"{self.p[phase]}-L{level}.row.json", json.dumps(row, indent=2, sort_keys=True) + "\n")
@@ -1109,6 +1177,86 @@ class Chain:
         log("CHAIN DONE")
         return 0
 
+    # --- resident worst case: the listed levels in order against the arm A that is up now (card-queue job R-A3-b6144-prelim)
+    def wc_job_entries(self) -> list[dict]:
+        return [{"id": f"prelim-chain-wc-{self.ts}", "kind": "generic_log", "host": "npu2", "stall_s": 3600,
+                 "note": "resident worst case (sweep overrides); BAD means the chain stopped (endpoint_died or an error)",
+                 "params": {"path": str(self.dir / "chain.log"), "bad_regex": "CHAIN-BAD|Traceback",
+                            "done_regex": "CHAIN DONE", "status_file": str(self.dir / "chain-status.json")}},
+                {"id": f"sweep-armA-prelim-WC-{self.ts}", "kind": "sweep", "host": "npu2", "stall_s": 5400,
+                 "note": "resident arm A worst case at the raised output cap; a failing level is data",
+                 "params": {"run_prefix": self.p["WC"]}}]
+
+    def run_wc(self) -> int:
+        wc = validate_wc(self.wc or {}, self.sweep)
+        a_specs = self.capture_arm_a()
+        if not self.done("wc-preflight"):
+            self.set_current("wc-preflight")
+            self.ops.wait_healthy(a_specs, 120)
+            self.mark("wc-preflight", {"healthy": [s["name"] for s in a_specs], "wc": wc, "sweep": self.sweep})
+        self.ops.patch_jobs(self.wc_job_entries())
+        self.ops.set_phase(self.p["WC"])
+        self.ops.start_sampler()
+        urls, mns = self.urls(a_specs), a_specs[0]["max_num_seqs"]
+        log(f"WC: resident arm A, worst case --min-tokens {wc['min_tokens']}, levels {wc['levels']}, "
+            f"max latency {wc['max_latency_s']}, sweep overrides {self.sweep}")
+        results = []
+        for level in wc["levels"]:
+            row = self.level_step("WC", f"wc-L{level}", level, urls, mns, min_tokens=wc["min_tokens"],
+                                  max_latency_s=wc["max_latency_s"])
+            results.append({"level": level, "passes": row["passes"], "worst_case_admissible": row["worst_case_admissible"],
+                            "failing_reasons": row["failing_reasons"], "ceiling_bound": row["ceiling_bound"],
+                            "host_output_tok_s": row["host_output_tok_s"], "per_instance": row["per_instance"]})
+        self.ops.stop_sampler()
+        admissible = [r["level"] for r in results if r["worst_case_admissible"]]
+        passing = [r["level"] for r in results if r["passes"]]
+        self.write_summary("WC", True, None, {"min_tokens": wc["min_tokens"], "sweep_overrides": self.sweep,
+                                              "max_latency_s_rule": wc["max_latency_s"], "levels_measured": wc["levels"],
+                                              "admissible_levels": admissible, "passing_levels": passing})
+        self.status["decisions"]["WC"] = {"wc": wc, "sweep_overrides": self.sweep, "results": results,
+                                          "admissible_levels": admissible, "passing_levels": passing,
+                                          "highest_admissible_level": max(admissible) if admissible else None,
+                                          "arm_a_left_up": True}
+        self.status.update(state="done", current_step=None, reason=None)
+        self.write_status()
+        log(f"WC result: admissible levels {admissible}, passing levels {passing} of {wc['levels']}; arm A left up")
+        log("CHAIN DONE")
+        return 0
+
+    # --- stop the idle resident arm A and leave the cards free (card-queue job stop-idle-arm-a)
+    def run_stop(self) -> int:
+        if not self.done("stop"):
+            self.set_current("stop")
+            alive = self.ops.running_ours("saea-arm-a-")
+            if alive:
+                specs = self.ops.inspect_arm_a()  # ChainStop unless saea-arm-a-0..3 are all running
+                busy = {}
+                for spec in specs:
+                    gauges = self.ops.load_gauges(f"http://127.0.0.1:{spec['port']}")
+                    if gauges is None or gauges[0] > 0 or gauges[1] > 0:
+                        busy[spec["name"]] = {"running": None if gauges is None else gauges[0],
+                                              "waiting": None if gauges is None else gauges[1]}
+                if busy:
+                    raise ChainStop(f"refusing to stop arm A: not idle or unreadable {busy}; nothing was stopped")
+            self.ops.patch_jobs([], remove=[f"vllm-arm-a-{i}" for i in range(4)] if alive else [])
+            if alive:
+                self.ops.stop_containers(alive)
+            deadline = time.time() + 240
+            while self.ops.running_ours("saea-arm-a-") and time.time() < deadline:
+                time.sleep(3)
+            if self.ops.running_ours("saea-arm-a-"):
+                raise ChainStop("saea-arm-a-* containers still running 240 s after docker stop")
+            self.mark("stop", {"stopped": alive, "all_idle_before_stop": True})
+        if not self.done("cards-free"):
+            self.set_current("cards-free")
+            used = self.ops.wait_cards_free()
+            self.mark("cards-free", {"hbm_used_mib": used, "threshold_mib": BUSY_MIB})
+        self.status.update(state="done", current_step=None, reason=None)
+        self.write_status()
+        log("all 8 cards below 4096 MiB; arm A stopped, nothing launched")
+        log("CHAIN DONE")
+        return 0
+
     def run_p2b(self) -> int:
         a_specs = self.capture_arm_a()
         knee = self.phase_p2b(a_specs)
@@ -1131,6 +1279,10 @@ class Chain:
                 return self.run_p2b()
             if self.mode == "p3":
                 return self.run_p3()
+            if self.mode == "wc":
+                return self.run_wc()
+            if self.mode == "stop":
+                return self.run_stop()
             a_specs = self.capture_arm_a()
             if not self.done("p1-L56"):
                 self.set_current("preflight-arm-a")
@@ -1179,6 +1331,8 @@ class FakeOps:
         self.preempt, self.die, self.kv_peak = set(preempt), set(die), dict(kv_peak or {})
         self.free_mib = free_mib
         self.calls: list[str] = []
+        self.sweeps: list[dict] = []
+        self.load: dict = {}  # url -> (running, waiting) override for load_gauges (dry-run --busy, tests)
         self.running = {f"saea-arm-a-{i}" for i in range(4)}
         self.jobs: dict = {}
 
@@ -1197,8 +1351,11 @@ class FakeOps:
     def set_phase(self, prefix, level=None) -> None: self.note(f"phase {prefix}")
     def flush(self, prefix) -> None: pass
 
-    def measure_level(self, step, prefix, level, urls, min_tokens, label, names=None) -> dict:
+    def measure_level(self, step, prefix, level, urls, min_tokens, label, names=None, sweep=None) -> dict:
         self.note(f"measure {step} level {level} urls {urls} min_tokens {min_tokens}")
+        self.sweeps.append(dict(sweep or {}))
+        if sweep:
+            self.note(f"sweep overrides {step} {json.dumps(sweep, sort_keys=True)}")
         names = names or [f"instance-{i}" for i in range(len(urls))]
         if step in self.die:
             self.running.discard("saea-arm-a-0")
@@ -1219,11 +1376,13 @@ class FakeOps:
                                "kv_cache_usage_perc": {"max": kvs[i]}} for i in range(len(urls))]}
         return {"summary": summary, "report": f"{Path(prefix).name}-L{level}.json", "report_sha256": "0" * 64,
                 "min_hbm_free_mib": self.free_mib, "aicore_mean": 70.0, "aicore_max": 100.0, "samples": 50,
-                "poll_waiting_max": 0.0, "names": names, "instances": len(urls), "max_tokens_sent": 4096,
+                "poll_waiting_max": 0.0, "names": names, "instances": len(urls),
+                "max_tokens_sent": (sweep or {}).get("max_tokens", 4096),
                 "min_tokens_sent": min_tokens}
 
     def running_ours(self, prefix) -> list[str]: return sorted(n for n in self.running if n.startswith(prefix))
     def running_requests(self, url) -> float | None: return 0.0
+    def load_gauges(self, url): return self.load.get(url, (0.0, 0.0))
     def container_running(self, name) -> bool: return name in self.running
 
     def stop_containers(self, names) -> None:
@@ -1305,6 +1464,20 @@ def main() -> int:
                     help="dry-run only: step=fraction pairs, e.g. p3b-L96=0.93,p3b-L64=0.95")
     ap.add_argument("--arm-a-launch", default=f"{LOGS}/prelim-chain-20261029T094933Z/arm-a-launch.json",
                     help="--p2b and --p3: captured arm A argv to relaunch (copied into the new chain directory)")
+    ap.add_argument("--sweep-json", default="",
+                    help="sweep-client overrides, a JSON object or a path (keys max_tokens, thinking_budget, prompt_max, "
+                         "timeout; positive integers), applied to every level; absent = the sweep's own defaults")
+    ap.add_argument("--resident-worstcase", action="store_true",
+                    help="measure --levels in order against the RESIDENT arm A (nothing stopped or launched), "
+                         "worst case with --min-tokens; arm A left up")
+    ap.add_argument("--levels", default="", help="--resident-worstcase only: per-instance levels in order, e.g. 32,24,16")
+    ap.add_argument("--min-tokens", type=int, default=None, help="--resident-worstcase only: forced completion length")
+    ap.add_argument("--max-latency-s", type=float, default=None,
+                    help="--resident-worstcase only: max-latency rule in seconds (default 420, the 4096-token rule)")
+    ap.add_argument("--stop-idle-arm-a", action="store_true",
+                    help="refuse unless every saea-arm-a-* is idle, then docker stop -t 120 them and wait until all 8 cards "
+                         "are below 4096 MiB (nothing is launched)")
+    ap.add_argument("--busy", action="store_true", help="dry-run only: instance 0 reports running requests")
     ap.add_argument("--preflight", action="store_true",
                     help="read-only checks on the real host: argv capture, endpoints, cards, sweep flags; changes nothing")
     ap.add_argument("--out-root", help="dry-run only: output root (default: a temporary directory)")
@@ -1313,6 +1486,16 @@ def main() -> int:
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
     if args.preflight:
         return preflight()
+    try:
+        sweep = parse_sweep_json(args.sweep_json)
+        wc = None
+        if args.resident_worstcase:
+            if args.p2b or args.p3 or args.stop_idle_arm_a:
+                sys.exit("--resident-worstcase cannot be combined with --p2b, --p3 or --stop-idle-arm-a")
+            wc = validate_wc({"levels": [int(x) for x in args.levels.split(",") if x.strip()], "min_tokens": args.min_tokens,
+                              "max_latency_s": args.max_latency_s}, sweep)
+    except (ChainStop, ValueError) as error:
+        sys.exit(f"refused: {error}")
     if args.dry_run:
         root = Path(args.out_root or tempfile.mkdtemp(prefix="prelim-chain-dry-"))
         ts = args.ts or "DRYRUN"
@@ -1328,9 +1511,11 @@ def main() -> int:
             chain_dir.mkdir(parents=True, exist_ok=True)
             write_atomic(chain_dir / "arm-a-launch.json", json.dumps(
                 {"captured": utc_now(), "instances": ops.inspect_arm_a()}, indent=2) + "\n")
-        mode = "p3" if args.p3 else "p2b" if args.p2b else "chain"
+        mode = "wc" if wc else "stop" if args.stop_idle_arm_a else "p3" if args.p3 else "p2b" if args.p2b else "chain"
+        if args.busy:
+            ops.load["http://127.0.0.1:8200"] = (2.0, 0.0)
         code = Chain(ops, chain_dir, ts, logs, mode=mode, gate_path="/dry/gate.json", gate_poll=0.0,
-                     sleep=lambda _s: None).run()
+                     sleep=lambda _s: None, sweep=sweep, wc=wc).run()
         print(json.dumps(read_json(chain_dir / "chain-status.json")["decisions"], indent=1, sort_keys=True))
         return code
     hostname = Path("/etc/hostname").read_text().strip()
@@ -1341,11 +1526,13 @@ def main() -> int:
         config = read_json(chain_dir / "config.json")
         ts, mode = config["ts"], config.get("mode", "chain")
         gate_file = config.get("gate_file")
+        sweep, wc = config.get("sweep") or {}, config.get("wc")  # the stored settings win: a resume never changes the shape
     else:
-        mode = "p3" if args.p3 else "p2b" if args.p2b else "chain"
+        mode = "wc" if wc else "stop" if args.stop_idle_arm_a else "p3" if args.p3 else "p2b" if args.p2b else "chain"
         gate_file = args.gate_file if args.p3 else None
         ts = args.ts or dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        chain_dir = Path(args.chain_dir or f"{LOGS}/prelim-chain{'-p3' if args.p3 else '-p2b' if args.p2b else ''}-{ts}")
+        suffix = "-wc" if wc else "-stop" if args.stop_idle_arm_a else "-p3" if args.p3 else "-p2b" if args.p2b else ""
+        chain_dir = Path(args.chain_dir or f"{LOGS}/prelim-chain{suffix}-{ts}")
         if (chain_dir / "config.json").exists():
             sys.exit(f"{chain_dir} already holds a chain; use --resume")
         chain_dir.mkdir(parents=True, exist_ok=True)
@@ -1353,6 +1540,10 @@ def main() -> int:
         config = {"ts": ts, "mode": mode, "created": utc_now(), "script": str(Path(__file__).resolve())}
         if args.p3:
             config["gate_file"] = gate_file
+        if sweep:
+            config["sweep"] = sweep
+        if wc:
+            config["wc"] = wc
         if args.p2b or args.p3:
             source = Path(args.arm_a_launch)
             captured = read_json(source)
@@ -1366,7 +1557,7 @@ def main() -> int:
     os.chmod(chain_dir / "steps", 0o777)
     ops = RealOps(LOGS, ts, args.resume)
     log(f"chain {chain_dir.name} mode {mode} pid {os.getpid()} resume={args.resume} dir {chain_dir}")
-    return Chain(ops, chain_dir, ts, LOGS, mode=mode, gate_path=gate_file).run()
+    return Chain(ops, chain_dir, ts, LOGS, mode=mode, gate_path=gate_file, sweep=sweep, wc=wc).run()
 
 
 if __name__ == "__main__":

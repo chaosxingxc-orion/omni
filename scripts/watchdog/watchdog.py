@@ -65,6 +65,13 @@ class Env:
         except OSError:
             return None
 
+    def pid_alive(self, pid):
+        try:
+            os.kill(int(pid), 0)
+            return True
+        except (OSError, ValueError, TypeError):
+            return False
+
     def http_get(self, url, timeout=5):
         try:
             with urllib.request.urlopen(url, timeout=timeout) as r:
@@ -429,7 +436,79 @@ def npu_cards(job, env, st):
     grp = lambda k: [int(n) for n, v in sorted(cls.items(), key=lambda x: int(x[0])) if v == k]
     m = {"hbm_mib": [cards[n]["hbm"] for n in sorted(cards)], "ai_pct": [cards[n]["ai"] for n in sorted(cards)],
          "ours": grp("ours"), "other": grp("other"), "free": grp("free")}
-    return result("running", "ours=%s other=%s free=%s" % (m["ours"], m["other"], m["free"]), m, events=events)
+    note = idle_cards(p, env, st, cards, m["ours"], events)
+    return result("running", "ours=%s other=%s free=%s" % (m["ours"], m["other"], m["free"]), m, note=note, events=events)
+
+
+def idle_cards(p, env, st, cards, ours, events):
+    """Owner rule 2026-10-30 (keep the cards loaded): when EVERY card of ours shows AICore 0 % for more than idle_after_s
+    (default 600 s, state across ticks) emit one change-only `idle-cards` event and return the status note; clear it
+    (one INFO event) as soon as any of those cards shows load or none of ours is left."""
+    now, limit = env.now(), p.get("idle_after_s", 600)
+    idle = bool(ours) and all(cards[n]["ai"] == 0 for n in ours)
+    if not idle:
+        if st.pop("idle_since", None) is not None and st.pop("idle_flagged", False):
+            events.append(event("INFO", "idle-cards cleared (ours=%s now %s)" % (
+                ours, "busy" if ours else "none")))
+        st.pop("idle_flagged", None)
+        return ""
+    st.setdefault("idle_since", now)
+    since = iso(st["idle_since"])
+    if now - st["idle_since"] > limit:
+        if not st.get("idle_flagged"):
+            st["idle_flagged"] = True
+            events.append(event("WARN", "idle-cards ours=%s since=%s" % (ours, since)))
+        return "idle-cards since %s (%d min)" % (since, (now - st["idle_since"]) // 60)
+    return ""
+
+
+# ---------------------------------------------------------------- kind: card_queue
+@kind("card_queue")
+def card_queue(job, env, st):
+    """Summarise <dir>/state.json written by card_queue.py: current job, done/failed counts, why it waits."""
+    d = job["params"]["dir"]
+    s = load_json(os.path.join(d, "state.json"))
+    if not s:
+        return result("unknown", note="no queue state in %s" % d)
+    jobs = s.get("jobs", {})
+    order = [i for i in s.get("order", []) if i in jobs] or list(jobs)
+    c = s.get("counts", {})
+    cur = s.get("current")
+    wait = s.get("waiting")
+    alive = getattr(env, "pid_alive", lambda pid: True)(s.get("runner_pid"))
+    state_name = s.get("state")
+    bits = ["job %s/%d" % (order.index(cur) + 1, len(order)) if cur in jobs else "no job running",
+            cur or "", "done=%d failed=%d pending=%d" % (c.get("done", 0), c.get("failed", 0),
+                                                         c.get("pending", 0) + c.get("waiting", 0))]
+    if wait:
+        bits.append("WAITING %s: %s" % (wait.get("job"), short(wait.get("reason", ""), 80)))
+    progress = " ".join(b for b in bits if b)
+    events = []
+    seen = st.setdefault("jobs", {})
+    for jid, r in jobs.items():
+        old, new = seen.get(jid), r["status"]
+        if old is not None and old != new and new in ("running", "done", "failed"):
+            sev = "BAD" if new == "failed" else "INFO"
+            evid = [ev(r["log"], why="job log")] if r.get("log") else []
+            events.append(event(sev, "queue job %s %s -> %s%s" % (jid, old, new, (": " + short(r["reason"], 120))
+                                                                  if r.get("reason") else ""), *evid))
+        seen[jid] = new
+    wkey = (wait or {}).get("reason")
+    if wkey != st.get("wait") and wkey:
+        events.append(event("INFO", "queue waits for cards: job %s: %s" % (wait.get("job"), short(wkey, 160))))
+    st["wait"] = wkey
+    metrics = {"counts": c, "current": cur, "queue_state": state_name,
+               "waiting": ({"job": wait.get("job"), "since": wait.get("since"), "reason": short(wait.get("reason", ""), 120)}
+                           if wait else None)}
+    if state_name == "running" and not alive:
+        return result("failed", progress, metrics, note="queue runner pid %s is gone; rerun with --resume" % s.get("runner_pid"),
+                      events=events, evidence=[ev(os.path.join(d, "state.json"))])
+    if state_name == "done":
+        return result("done", progress, metrics, events=events)
+    if state_name in ("failed", "stopped", "interrupted"):
+        return result("failed", progress, metrics, note=s.get("reason") or state_name, events=events,
+                      evidence=[ev(os.path.join(d, "state.json"))])
+    return result("running", progress, metrics, note="waiting for cards" if wait else "", events=events)
 
 
 # ---------------------------------------------------------------- kind: generic_log

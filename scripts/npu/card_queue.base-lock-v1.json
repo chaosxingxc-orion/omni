@@ -1,0 +1,70 @@
+{
+ "schema": "saea-card-queue-v1",
+ "id": "base-lock-v1",
+ "note": "Base-lock card queue v2 (planner rulings 2026-10-30). P3 and E3 were launched directly and are not in this queue; job 1 waits for the E3 chain (which restores arm A) to be final. Synthetic-prompt work only; no dataset row is contacted. Timeouts are generous upper bounds.",
+ "jobs": [
+  {
+   "id": "R-A3-b6144-prelim",
+   "kind": "sweep",
+   "cmd": [
+    "python3",
+    "/mnt/cephfs/xingchao/omni/work/scripts/prelim_chain.py",
+    "--resident-worstcase",
+    "--levels",
+    "32,24,16",
+    "--min-tokens",
+    "7168",
+    "--max-latency-s",
+    "735",
+    "--sweep-json",
+    "{\"max_tokens\":7168,\"thinking_budget\":6144,\"prompt_max\":17408,\"timeout\":800}"
+   ],
+   "cwd": "/mnt/cephfs/xingchao/omni/work/scripts",
+   "log": "{queue_dir}/jobs/R-A3-b6144-prelim.log",
+   "done_marker": "CHAIN DONE",
+   "fail_marker": "CHAIN-BAD|CHAIN FAILED",
+   "timeout_s": 14400,
+   "requires_cards_free": true,
+   "on_fail": "continue",
+   "cards_policy": "no_other",
+   "wait_for_final": "/mnt/cephfs/xingchao/omni/work/logs/prelim-E3-chain-20261030T041647Z/chain-status.json",
+   "note": "Budget-6144 worst case at 32, 24, 16 per instance against the RESIDENT arm A that E3 restores (nothing stopped or launched; arm A left up). PRELIMINARY."
+  },
+  {
+   "id": "stop-idle-arm-a",
+   "kind": "chain",
+   "cmd": [
+    "python3",
+    "/mnt/cephfs/xingchao/omni/work/scripts/prelim_chain.py",
+    "--stop-idle-arm-a"
+   ],
+   "cwd": "/mnt/cephfs/xingchao/omni/work/scripts",
+   "log": "{queue_dir}/jobs/stop-idle-arm-a.log",
+   "done_marker": "CHAIN DONE",
+   "fail_marker": "CHAIN-BAD|CHAIN FAILED",
+   "timeout_s": 1800,
+   "requires_cards_free": false,
+   "on_fail": "stop",
+   "note": "Refuses (CHAIN-BAD) unless every saea-arm-a-* reports 0 running and 0 waiting requests; then docker stop -t 120 and waits for all 8 cards below 4096 MiB. Nothing is launched."
+  },
+  {
+   "id": "recorded-base-lock-v1",
+   "kind": "record",
+   "cmd": [
+    "python3",
+    "/mnt/cephfs/xingchao/omni/work/scripts/record_runs.py",
+    "--run-list",
+    "/mnt/cephfs/xingchao/omni/work/scripts/record_run_list.base-lock-v1.json"
+   ],
+   "cwd": "/mnt/cephfs/xingchao/omni/work/scripts",
+   "log": "{queue_dir}/jobs/recorded-base-lock-v1.log",
+   "done_marker": "CHAIN DONE",
+   "fail_marker": "CHAIN-BAD|CHAIN FAILED",
+   "timeout_s": 43200,
+   "requires_cards_free": true,
+   "on_fail": "stop",
+   "cards_policy": "all_free",
+   "note": "R0 once (npu_deploy.sh up on the -v2 profile, receipt, verify 11/11, smoke) then R-A2-L32, R-A3-L32, R-A3-b6144. cards_policy all_free: npu_deploy.sh up refuses any busy card."
+  }
+ ]
+}

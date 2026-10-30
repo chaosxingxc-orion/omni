@@ -552,6 +552,224 @@ class RealMeasureLivenessTests(unittest.TestCase):
         self.assertEqual(caught.exception.name, "saea-arm-a-2")
 
 
+SWEEP_B6144 = {"max_tokens": 7168, "thinking_budget": 6144, "prompt_max": 17408, "timeout": 800}
+WC_B6144 = {"levels": [32, 24, 16], "min_tokens": 7168, "max_latency_s": 735.0}
+
+
+class ResidentWorstcaseTests(unittest.TestCase):
+    """--resident-worstcase / --sweep-json: the budget-6144 worst case against the resident arm A (card-queue job R-A3-b6144-prelim)."""
+
+    def run_chain(self, d, sweep=None, wc=None, **kw):
+        ops = pc.FakeOps(**kw)
+        chain_dir = Path(d) / "prelim-chain-wc-T"
+        chain_dir.mkdir(exist_ok=True)
+        code = pc.Chain(ops, chain_dir, "T", str(d), mode="wc", sweep=SWEEP_B6144 if sweep is None else sweep,
+                        wc=WC_B6144 if wc is None else wc).run()
+        return code, json.loads((chain_dir / "chain-status.json").read_text()), ops, chain_dir
+
+    def measured(self, ops):
+        return [c.split()[1] for c in ops.calls if c.startswith("measure")]
+
+    def test_levels_in_order_with_overrides_and_resident_arm_untouched(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, status, ops, chain_dir = self.run_chain(d)
+            summary = json.loads(next(Path(d).glob("sweep-armA-prelim-WC-mintok7168-T.json")).read_text())
+        self.assertEqual(code, 0)
+        self.assertEqual(self.measured(ops), ["wc-L32", "wc-L24", "wc-L16"])
+        self.assertEqual(ops.sweeps, [SWEEP_B6144] * 3)
+        self.assertTrue(all(c.endswith("min_tokens 7168") for c in ops.calls if c.startswith("measure")))
+        self.assertFalse([c for c in ops.calls if c.startswith(("docker stop", "launch", "cards "))])  # nothing stopped or launched
+        self.assertEqual(ops.running, {f"saea-arm-a-{i}" for i in range(4)})
+        wcd = status["decisions"]["WC"]
+        self.assertEqual(wcd["admissible_levels"], [32, 24, 16])
+        self.assertEqual(wcd["highest_admissible_level"], 32)
+        self.assertTrue(wcd["arm_a_left_up"])
+        self.assertEqual(status["state"], "done")
+        self.assertEqual(summary["sweep_overrides"], SWEEP_B6144)
+        self.assertEqual(summary["levels"][0]["max_latency_s_rule"], 735.0)
+        self.assertEqual(summary["levels"][0]["sweep_overrides"], SWEEP_B6144)
+
+    def test_a_failing_level_is_data_every_level_is_still_measured(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, status, ops, _ = self.run_chain(d, fail={"wc-L32"}, preempt={"wc-L24"})
+        self.assertEqual(code, 0)
+        self.assertEqual(self.measured(ops), ["wc-L32", "wc-L24", "wc-L16"])
+        wcd = status["decisions"]["WC"]
+        self.assertEqual(wcd["passing_levels"], [16])
+        self.assertEqual(wcd["admissible_levels"], [32, 16])  # L32 fails only the p10 floor; L24 preempts
+        self.assertEqual(wcd["results"][1]["failing_reasons"][0][:2], "2 ")  # preemption delta recorded
+
+    def test_no_admissible_level_is_still_done_with_the_facts(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, status, _, _ = self.run_chain(d, kv_peak={"wc-L32": 0.95, "wc-L24": 0.95, "wc-L16": 0.95})
+        self.assertEqual(code, 0)
+        self.assertEqual(status["decisions"]["WC"]["admissible_levels"], [])
+        self.assertIsNone(status["decisions"]["WC"]["highest_admissible_level"])
+
+    def test_dead_endpoint_stops_the_chain_and_nothing_is_restarted(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, status, ops, _ = self.run_chain(d, die={"wc-L24"})
+        self.assertNotEqual(code, 0)
+        self.assertEqual(self.measured(ops), ["wc-L32", "wc-L24"])
+        self.assertEqual(status["state"], "failed")
+        self.assertFalse([c for c in ops.calls if c.startswith("launch")])
+
+    def test_resume_skips_finished_levels(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.run_chain(d, die={"wc-L24"})
+            code, status, ops, _ = self.run_chain(d)
+        self.assertEqual(code, 0)
+        self.assertEqual(self.measured(ops), ["wc-L24", "wc-L16"])  # wc-L32 resumed from its checkpoint
+
+    def test_latency_rule_scales_with_the_cap(self):
+        m = measure(lat=500.0)
+        self.assertTrue(pc.evaluate(m, 32, 64)[0])                       # 420 s rule: fails
+        self.assertEqual(pc.evaluate(m, 32, 64, max_latency_s=735)[0], [])  # 735 s rule (7168 tokens): passes
+        self.assertTrue(pc.evaluate(measure(lat=735.0), 32, 64, max_latency_s=735)[0])
+
+    def test_sweep_json_parsing_and_validation(self):
+        self.assertEqual(pc.parse_sweep_json(""), {})
+        self.assertEqual(pc.parse_sweep_json(json.dumps(SWEEP_B6144)), SWEEP_B6144)
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / "s.json").write_text(json.dumps({"max_tokens": 5000}))
+            self.assertEqual(pc.parse_sweep_json(str(Path(d) / "s.json")), {"max_tokens": 5000})
+        for bad in ('{"temperature": 1}', '{"max_tokens": 0}', '{"max_tokens": true}', '{"max_tokens": 1.5}', '[1]', "/no/such/file"):
+            with self.assertRaises(pc.ChainStop, msg=bad):
+                pc.parse_sweep_json(bad)
+
+    def test_wc_validation_mirrors_record_runs(self):
+        pc.validate_wc(WC_B6144, SWEEP_B6144)
+        with self.assertRaises(pc.ChainStop):
+            pc.validate_wc(WC_B6144, {})  # min_tokens 7168 > default max_tokens 4096
+        with self.assertRaises(pc.ChainStop):
+            pc.validate_wc(dict(WC_B6144, max_latency_s=900.0), SWEEP_B6144)  # latency rule above the client timeout 800
+        with self.assertRaises(pc.ChainStop):
+            pc.validate_wc(dict(WC_B6144, levels=[32, 32]), SWEEP_B6144)
+        with self.assertRaises(pc.ChainStop):
+            pc.validate_wc(dict(WC_B6144, levels=[]), SWEEP_B6144)
+
+    def test_sweep_flags_equal_record_runs(self):
+        import record_runs as rr
+        self.assertEqual(pc.SWEEP_FLAGS, rr.SWEEP_FLAGS)
+
+    def test_cli_dry_run(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as d:
+            out = subprocess.run([sys.executable, str(Path(pc.__file__)), "--dry-run", "--resident-worstcase", "--levels", "32,24,16",
+                                  "--min-tokens", "7168", "--max-latency-s", "735", "--sweep-json", json.dumps(SWEEP_B6144),
+                                  "--out-root", d], capture_output=True, text=True)
+            self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+            self.assertIn("CHAIN DONE", out.stdout + out.stderr)
+            self.assertIn("sweep overrides wc-L32", out.stdout + out.stderr)
+            bad = subprocess.run([sys.executable, str(Path(pc.__file__)), "--dry-run", "--resident-worstcase", "--levels", "32",
+                                  "--min-tokens", "7168", "--out-root", d], capture_output=True, text=True)
+            self.assertNotEqual(bad.returncode, 0)  # min_tokens above the default max_tokens: refused
+            self.assertIn("refused", bad.stdout + bad.stderr)
+
+    def test_real_measure_level_appends_the_sweep_flags_only_when_given(self):
+        base = RealMeasureLivenessTests("test_container_dying_mid_level_kills_the_client_and_raises_endpoint_died")
+        base.setUp()
+        try:
+            base.client_ends_by_itself = True
+            seen = []
+            inner = pc.subprocess.run
+
+            def spy(command, **kw):
+                if command[:2] == ["docker", "run"]:
+                    seen.append(command)
+                return inner(command, **kw)
+
+            pc.subprocess.run = spy
+            with tempfile.TemporaryDirectory() as d:
+                ops = pc.RealOps(d, "T", False)
+                for sweep in (SWEEP_B6144, None):
+                    with self.assertRaises(pc.ChainStop):  # the fake client writes no report
+                        ops.measure_level("wc-L32", f"{d}/p", 32, ["http://127.0.0.1:8201"], 7168, "label",
+                                          names=["saea-arm-a-1"], sweep=sweep)
+            with_flags, without = seen
+            tail = with_flags[with_flags.index("--min-tokens"):]
+            self.assertEqual(tail, ["--min-tokens", "7168", "--max-tokens", "7168", "--thinking-budget", "6144",
+                                    "--prompt-max", "17408", "--timeout", "800"])
+            self.assertEqual(without[without.index("--min-tokens"):], ["--min-tokens", "7168"])
+        finally:
+            base.tearDown()
+
+
+class StopIdleArmATests(unittest.TestCase):
+    """--stop-idle-arm-a (card-queue job stop-idle-arm-a): refuse unless idle, docker stop, wait for free cards, CHAIN DONE."""
+
+    def run_chain(self, d, load=None, running=None):
+        ops = pc.FakeOps()
+        ops.load.update(load or {})
+        if running is not None:
+            ops.running = set(running)
+        chain_dir = Path(d) / "prelim-chain-stop-T"
+        chain_dir.mkdir(exist_ok=True)
+        code = pc.Chain(ops, chain_dir, "T", str(d), mode="stop").run()
+        return code, json.loads((chain_dir / "chain-status.json").read_text()), ops
+
+    def test_idle_instances_are_stopped_then_cards_checked_and_nothing_launched(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, status, ops = self.run_chain(d)
+            marked = pc.read_json(Path(d) / "prelim-chain-stop-T" / "steps" / "stop.done.json")
+        self.assertEqual(code, 0)
+        self.assertEqual(status["state"], "done")
+        self.assertEqual(ops.running, set())
+        calls = ops.calls
+        removed = next(i for i, c in enumerate(calls) if c.startswith("jobs upsert=[] remove=['vllm-arm-a-0'"))
+        stopped = calls.index("docker stop ['saea-arm-a-0', 'saea-arm-a-1', 'saea-arm-a-2', 'saea-arm-a-3']")
+        cards = calls.index("cards 0-7 below 4096 MiB")
+        self.assertLess(removed, stopped)
+        self.assertLess(stopped, cards)
+        self.assertFalse([c for c in calls if c.startswith(("launch", "measure"))])
+        self.assertEqual(status["decisions"], {})
+        self.assertTrue(marked["decision"]["all_idle_before_stop"])
+
+    def test_any_running_or_waiting_request_or_unreadable_endpoint_refuses_and_stops_nothing(self):
+        for load in ({"http://127.0.0.1:8203": (1.0, 0.0)}, {"http://127.0.0.1:8200": (0.0, 3.0)},
+                     {"http://127.0.0.1:8201": None}):
+            with tempfile.TemporaryDirectory() as d:
+                code, status, ops = self.run_chain(d, load=load)
+            self.assertNotEqual(code, 0, load)
+            self.assertEqual(status["state"], "failed")
+            self.assertIn("refusing to stop arm A", status["reason"])
+            self.assertEqual(ops.running, {f"saea-arm-a-{i}" for i in range(4)})
+            self.assertFalse([c for c in ops.calls if c.startswith(("docker stop", "jobs ", "cards "))])
+
+    def test_nothing_running_is_a_no_op_that_still_requires_free_cards(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, _, ops = self.run_chain(d, running=set())
+        self.assertEqual(code, 0)
+        self.assertFalse([c for c in ops.calls if c.startswith("docker stop")])
+        self.assertIn("cards 0-7 below 4096 MiB", ops.calls)
+
+    def test_cli_dry_run_and_busy_refusal(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as d:
+            ok = subprocess.run([sys.executable, str(Path(pc.__file__)), "--dry-run", "--stop-idle-arm-a", "--out-root", d],
+                                capture_output=True, text=True)
+            self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+            self.assertIn("CHAIN DONE", ok.stdout + ok.stderr)
+            busy = subprocess.run([sys.executable, str(Path(pc.__file__)), "--dry-run", "--stop-idle-arm-a", "--busy",
+                                   "--out-root", d + "/b"], capture_output=True, text=True)
+            self.assertNotEqual(busy.returncode, 0)
+            self.assertIn("CHAIN-BAD", busy.stdout + busy.stderr)
+            self.assertNotIn("CHAIN DONE", busy.stdout + busy.stderr)
+
+    def test_real_load_gauges_reads_both_gauges(self):
+        saved = pc.http_get
+        try:
+            text = "vllm:num_requests_running{engine=\"0\"} 2.0\nvllm:num_requests_waiting{engine=\"0\"} 0.0\n"
+            pc.http_get = lambda url, timeout=5.0: (200, text)
+            self.assertEqual(pc.RealOps("/tmp", "T", False).load_gauges("http://x"), (2.0, 0.0))
+            pc.http_get = lambda url, timeout=5.0: None
+            self.assertIsNone(pc.RealOps("/tmp", "T", False).load_gauges("http://x"))
+            pc.http_get = lambda url, timeout=5.0: (200, "vllm:num_requests_running 0\n")  # waiting gauge missing
+            self.assertIsNone(pc.RealOps("/tmp", "T", False).load_gauges("http://x"))
+        finally:
+            pc.http_get = saved
+
+
 class GuardTests(unittest.TestCase):
     def test_only_our_arm_containers_can_be_touched(self):
         pc.RealOps._check_ours(["saea-arm-a-0", "saea-arm-b-1"])

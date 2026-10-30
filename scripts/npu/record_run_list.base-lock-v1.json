@@ -1,0 +1,60 @@
+{
+ "schema": "saea-record-run-list-v1",
+ "example": false,
+ "label": "Base-lock v1 combined recorded list on the resident arm A (4 x TP2, -v2 profile, ceiling 32): R0 once, then R-A2-L32 (normal mix at the admitted knee 32, 3 passes), R-A3-L32 (worst case at 32, min_tokens 4096, admissibility) and R-A3-b6144 (worst case at the raised 7168-token cap, levels 32, 24, 16, thinking budget 6144). Whole list on_fail stop_chain (planner ruling 2026-10-30). Synthetic prompts only; no dataset row.",
+ "profile": "qwen3-omni-thinking-bf16-181-4xtp2-v2",
+ "admitted_level": 32,
+ "seed": "20261028",
+ "client_cpuset": "224-255",
+ "ceiling_bound_is_failure": true,
+ "r0": {
+  "base_lock": "/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-29-engineering-base-lock-npu-port-v1/base-lock-v1.json",
+  "min_free_gib": 50,
+  "deploy_wait_seconds": 2400,
+  "smoke_audio": "/mnt/cephfs/xingchao/omni/work/scratch/smoke-181/tone.wav"
+ },
+ "runs": [
+  {
+   "id": "R-A2-L32",
+   "levels": [
+    32
+   ],
+   "passes": 3,
+   "min_tokens": null,
+   "admissibility": false,
+   "on_fail": "stop_chain",
+   "note": "normal mix at the admitted knee 32 per instance at 3x requests (the example list's R-A2 restricted to 32)"
+  },
+  {
+   "id": "R-A3-L32",
+   "levels": [
+    32
+   ],
+   "passes": 1,
+   "min_tokens": 4096,
+   "admissibility": true,
+   "on_fail": "stop_chain",
+   "note": "worst case at 32 with every completion forced to 4096 tokens; zero preemptions on every instance and KV peak <= 90 % (the example list's R-A3)"
+  },
+  {
+   "id": "R-A3-b6144",
+   "levels": [
+    32,
+    24,
+    16
+   ],
+   "passes": 1,
+   "min_tokens": 7168,
+   "sweep": {
+    "max_tokens": 7168,
+    "thinking_budget": 6144,
+    "prompt_max": 17408,
+    "timeout": 800
+   },
+   "max_latency_s": 735,
+   "admissibility": true,
+   "on_fail": "continue",
+   "note": "worst case at the 7168-token cap in descent order; on_fail continue so 32, 24 and 16 are all measured; admitted_level 32 is only the upper bound the validator needs (rule (b)) and is left for the planner to lower; the planner reads worst_case_admissible and the per-instance preemption and KV-peak columns per level. The plan 3.4 max-latency threshold scales with the output cap: 420 s bounds 4096 tokens at about 9.8 tok/s, so the same floor at 7168 tokens is 735 s (= the fragment timeout_seconds); the p10 e2e floor of 10 tok/s is unchanged. prompt_max 17408 = 24576 - 7168 (the sweep preflight refuses more); sweep timeout 800 s is above the 735 s latency rule so a slow request is a latency failure, not a client timeout. In this combined list on_fail is stop_chain (planner ruling), so a failing level ends the chain and the lower levels are not measured."
+  }
+ ]
+}

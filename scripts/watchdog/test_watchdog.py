@@ -27,6 +27,9 @@ class FakeEnv:
     def pid_container(self, pid):
         return self.cgroup.get(pid)
 
+    def pid_alive(self, pid):
+        return pid in getattr(self, "alive_pids", ())
+
 
 def read(path):
     with open(path) as f:
@@ -287,6 +290,169 @@ class CardTests(Base):
     def test_npu_smi_missing_is_unknown(self):
         self.env.smi = None
         self.assertEqual(self.cyc()[0]["cards"]["state"], "unknown")
+
+
+SMI_AI = """\
+| NPU   Name                | Health        | Power(W)             Temp(C)                 Hugepages-Usage(page)   |
+| Chip                      | Bus-Id        | AICore(%%)            Memory-Usage(MB)        HBM-Usage(MB)           |
+| 0     910B4-1             | OK            | 115.9                44                      0    / 0                |
+| 0                         | 0000:C1:00.0  | %d                   0    / 0                60000 / 65536            |
+| 1     910B4-1             | OK            | 97.1                 31                      0    / 0                |
+| 0                         | 0000:C2:00.0  | %d                   0    / 0                60000 / 65536            |
+| NPU     Chip              | Process id    | Process name       | Process memory(MB)    | Process id in container |
+| 0       0                 | 111           | VLLMWorker_TP      | 57000                 | NA |
+| 1       0                 | 111           | VLLMWorker_TP      | 57000                 | NA |
+"""
+
+
+class IdleCardsTests(Base):
+    def setUp(self):
+        super().setUp()
+        self.start({"id": "cards", "kind": "npu_cards", "params": {}})
+        self.env.containers = [{"id": "a" * 64, "name": "saea-arm-a-0", "image": "i"}]
+        self.env.cgroup = {111: "a" * 64}
+
+    def idle_lines(self, lines):
+        return [l for l in lines if "idle-cards" in l]
+
+    def test_idle_for_more_than_ten_minutes_emits_one_event_and_a_note(self):
+        self.env.smi = SMI_AI % (0, 0)
+        out, _ = self.cyc(60)  # baseline tick: idle starts now
+        self.assertEqual(out["cards"]["note"], "")
+        out, lines = self.cyc(540)  # 9 min idle: not yet
+        self.assertEqual((out["cards"]["note"], self.idle_lines(lines)), ("", []))
+        out, lines = self.cyc(61)  # 10 min 1 s: flagged
+        flagged = self.idle_lines(lines)
+        self.assertEqual(len(flagged), 1)
+        self.assertIn("WARN", flagged[0])
+        self.assertRegex(flagged[0], r"idle-cards ours=\[0, 1\] since=\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
+        self.assertIn("idle-cards since", out["cards"]["note"])
+        out, lines = self.cyc(60)  # change-only: nothing repeated, the note stays
+        self.assertEqual(self.idle_lines(lines), [])
+        self.assertIn("idle-cards since", out["cards"]["note"])
+
+    def test_any_busy_card_clears_it_and_restarts_the_clock(self):
+        self.env.smi = SMI_AI % (0, 0)
+        self.cyc(60)
+        self.cyc(700)
+        self.assertIn("idle-cards", self.cyc(10)[0]["cards"]["note"])
+        self.env.smi = SMI_AI % (0, 35)  # card 1 works
+        out, lines = self.cyc(60)
+        self.assertEqual(out["cards"]["note"], "")
+        self.assertEqual(len(self.idle_lines(lines)), 1)
+        self.assertIn("INFO", self.idle_lines(lines)[0])
+        self.assertIn("cleared", self.idle_lines(lines)[0])
+        self.env.smi = SMI_AI % (0, 0)
+        out, lines = self.cyc(60)  # idle again: the clock restarts here
+        self.assertEqual((out["cards"]["note"], self.idle_lines(lines)), ("", []))
+        out, lines = self.cyc(300)  # 5 min later: still no new event
+        self.assertEqual((out["cards"]["note"], self.idle_lines(lines)), ("", []))
+        out, lines = self.cyc(400)  # now 11+ min since the new idle start
+        self.assertEqual(len(self.idle_lines(lines)), 1)
+
+    def test_a_busy_blip_resets_the_clock(self):
+        self.env.smi = SMI_AI % (0, 0)
+        self.cyc(60)
+        self.cyc(500)
+        self.env.smi = SMI_AI % (3, 0)
+        self.cyc(30)
+        self.env.smi = SMI_AI % (0, 0)
+        out, lines = self.cyc(300)  # 800 s since the first idle tick, but only 5 min since the blip
+        self.assertEqual(self.idle_lines(lines), [])
+
+    def test_no_card_of_ours_is_not_idle_cards(self):
+        self.env.smi = SMI % (3400, 3400, "")  # both cards free, none ours
+        self.cyc(60)
+        out, lines = self.cyc(2000)
+        self.assertEqual((out["cards"]["note"], self.idle_lines(lines)), ("", []))
+
+    def test_threshold_is_a_job_parameter(self):
+        self.start({"id": "cards", "kind": "npu_cards", "params": {"idle_after_s": 100}})
+        self.env.smi = SMI_AI % (0, 0)
+        self.cyc(10)
+        _, lines = self.cyc(101)
+        self.assertEqual(len(self.idle_lines(lines)), 1)
+
+
+def queue_state(**kw):
+    jobs = {"A": {"status": "done", "log": "/x/a.log", "reason": None},
+            "B": {"status": "running", "log": "/x/b.log", "reason": None},
+            "C": {"status": "pending", "log": "/x/c.log", "reason": None}}
+    s = {"schema": "saea-card-queue-state-v1", "queue_id": "q", "state": "running", "runner_pid": 4242, "current": "B",
+         "waiting": None, "jobs": jobs, "counts": {"done": 1, "running": 1, "pending": 1}}
+    s.update(kw)
+    return s
+
+
+class CardQueueKindTests(Base):
+    def setUp(self):
+        super().setUp()
+        self.qd = os.path.join(self.d, "queue")
+        os.makedirs(self.qd)
+        self.env.alive_pids = {4242}
+        self.start({"id": "queue", "kind": "card_queue", "params": {"dir": self.qd}})
+
+    def put(self, **kw):
+        write(os.path.join(self.qd, "state.json"), json.dumps(queue_state(**kw)))
+
+    def test_missing_state_is_unknown(self):
+        self.assertEqual(self.cyc()[0]["queue"]["state"], "unknown")
+
+    def test_running_summary_and_job_transitions(self):
+        self.put()
+        out, _ = self.cyc()
+        q = out["queue"]
+        self.assertEqual(q["state"], "running")
+        self.assertIn("job 2/3 B", q["progress"])
+        self.assertIn("done=1 failed=0 pending=1", q["progress"])
+        self.assertEqual(q["metrics"]["current"], "B")
+        st = queue_state(current="C")
+        st["jobs"]["B"]["status"] = "done"
+        st["jobs"]["C"]["status"] = "running"
+        st["counts"] = {"done": 2, "running": 1}
+        write(os.path.join(self.qd, "state.json"), json.dumps(st))
+        _, lines = self.cyc()
+        self.assertTrue(any("queue job B running -> done" in l for l in lines))
+        self.assertTrue(any("queue job C pending -> running" in l for l in lines))
+        self.assertEqual(self.cyc()[1], [])
+
+    def test_failed_job_is_a_bad_event_with_bundle(self):
+        self.put()
+        self.cyc()
+        st = queue_state(current=None, counts={"done": 1, "failed": 1, "pending": 1})
+        st["jobs"]["B"].update(status="failed", reason="fail marker in log: CHAIN-BAD x")
+        write(os.path.join(self.qd, "state.json"), json.dumps(st))
+        _, lines = self.cyc()
+        bad = [l for l in lines if "queue job B running -> failed" in l]
+        self.assertEqual(len(bad), 1)
+        self.assertIn("BAD", bad[0])
+        self.assertIn("bundle=", bad[0])
+        self.assertEqual(load(os.path.join(self.d, "bundles", self.bundles()[0]))["evidence"][0]["path"], "/x/b.log")
+
+    def test_waiting_for_cards_reason_is_reported_once(self):
+        wait = {"job": "C", "reason": "card 0 held (vllm): VLLMWorker_TP [saea-arm-a-0]", "since": "t", "policy": "all_free"}
+        self.put(current=None, waiting=wait)
+        out, lines = self.cyc()
+        self.assertIn("WAITING C: card 0 held (vllm)", out["queue"]["progress"])
+        self.assertEqual(out["queue"]["note"], "waiting for cards")
+        self.assertTrue(any("queue waits for cards: job C" in l for l in lines))
+        self.assertEqual([l for l in self.cyc()[1] if "waits for cards" in l], [])
+
+    def test_dead_runner_while_running_is_failed(self):
+        self.put()
+        self.env.alive_pids = set()
+        out, lines = self.cyc()
+        self.assertEqual(out["queue"]["state"], "failed")
+        self.assertIn("resume", out["queue"]["note"])
+        self.assertTrue(any("BAD" in l for l in lines))
+
+    def test_final_states(self):
+        self.put(state="done", current=None, counts={"done": 3})
+        self.assertEqual(self.cyc()[0]["queue"]["state"], "done")
+        self.put(state="stopped", reason="job B failed with on_fail=stop", current=None)
+        out, _ = self.cyc()
+        self.assertEqual(out["queue"]["state"], "failed")
+        self.assertIn("on_fail=stop", out["queue"]["note"])
 
 
 class GenericAndShardTests(Base):
