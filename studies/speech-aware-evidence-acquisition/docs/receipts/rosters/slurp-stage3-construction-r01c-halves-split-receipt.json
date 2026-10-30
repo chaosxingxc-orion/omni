@@ -1,0 +1,85 @@
+{
+  "halves": {
+    "R01C-H1": {
+      "count": 313,
+      "cross_fit_stratum_coverage": 1.0,
+      "file_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+      "first_sample_id": "slurp:train:000049:audio-1434542455",
+      "item_ids_sha256": "85eadce5f9893b9ac21934392e416cf7ff1f0454671c9f0b21ad8f7bf05e97bd",
+      "last_sample_id": "slurp:train:017150:audio-1490183310",
+      "relpath": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
+      "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C-H1",
+      "split_identity_hash": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
+      "strata_counts": {
+        "alarm": 12,
+        "audio": 15,
+        "calendar": 21,
+        "cooking": 16,
+        "datetime": 20,
+        "email": 18,
+        "general": 20,
+        "iot": 16,
+        "lists": 19,
+        "music": 16,
+        "news": 18,
+        "play": 17,
+        "qa": 19,
+        "recommendation": 14,
+        "social": 17,
+        "takeaway": 15,
+        "transport": 17,
+        "weather": 23
+      }
+    },
+    "R01C-H2": {
+      "count": 312,
+      "cross_fit_stratum_coverage": 1.0,
+      "file_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+      "first_sample_id": "slurp:train:000051:audio-1434531302-headset",
+      "item_ids_sha256": "42fb52a8f2f120ae2aba28326a52897b636327958c234e5f003acca03d34c68f",
+      "last_sample_id": "slurp:train:017132:audio-1497865321",
+      "relpath": "docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json",
+      "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C-H2",
+      "split_identity_hash": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72",
+      "strata_counts": {
+        "alarm": 14,
+        "audio": 15,
+        "calendar": 21,
+        "cooking": 15,
+        "datetime": 19,
+        "email": 15,
+        "general": 22,
+        "iot": 17,
+        "lists": 18,
+        "music": 11,
+        "news": 18,
+        "play": 20,
+        "qa": 19,
+        "recommendation": 15,
+        "social": 18,
+        "takeaway": 22,
+        "transport": 15,
+        "weather": 18
+      }
+    }
+  },
+  "loop_id": "SAEA-SLURP-TFRL-V2-NPU-PORT-V1",
+  "parent": {
+    "count": 625,
+    "file_sha256": "e8abc65ba4626cccb4aae9d2eb1bd73f077a6e9a407b3dba9c18bbe4c03eeddd",
+    "item_ids_sha256": "945f1803fe070cfe9537920bfb14687be5a6c89a32e180358ba398d864dff27a",
+    "relpath": "docs/receipts/rosters/slurp-stage3-construction-r01c.json",
+    "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C",
+    "split_identity_hash": "f56bc386776421aec2d8001d8697611b01c9b0562885a462759b15531e2f4515"
+  },
+  "proof": {
+    "counts_sum": true,
+    "disjoint": true,
+    "halves_keep_parent_order": true,
+    "model_calls": 0,
+    "union_equals_parent": true
+  },
+  "rule": "H1 = items[0::2] (even positions, 313 items), H2 = items[1::2] (odd positions, 312 items) of the R01C roster file; no draw, no seed",
+  "schema": "saea-tfrl-v2-r01c-halves-split-receipt-v1",
+  "split_mode": "interleave"
+}

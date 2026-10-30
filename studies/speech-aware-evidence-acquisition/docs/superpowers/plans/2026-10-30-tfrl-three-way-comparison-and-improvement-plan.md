@@ -178,3 +178,28 @@ The read-only flight `check` refuses both configs, as expected for HELD rows, an
 exposure-ledger rows (lines 9177 and 9179) still describe the c15 draft (32,400 / 120 calls) while the plans say 36,720 /
 136. The ledger needs the `--append-ledger` successor block for the c17 rows and the owner's countersign; after that the
 next gate asks for the runtime receipt, which the base-lock R0 step mints. Both are on the base-lock path, not blockers now.
+
+## 11. Rulings on the delivered T3 (TFRL-v2 split, sampler, distiller; Fable, 2026-10-30)
+
+1. **Split mode: interleaved, not contiguous.** The R01C roster is sorted by sample id and SLURP ids cluster by scenario,
+   so contiguous halves share scenarios for only 16-26 % of rows (H1 holds 25 alarm rows, H2 one; H2 holds 31 cooking
+   rows, H1 none) and a cross-fitted scenario-keyed bank would cover almost nothing. Section 9 ruling 3 is amended:
+   R01C-H1 = even roster positions (313), R01C-H2 = odd positions (312); 100 % scenario coverage both ways; no draw, no
+   seed. Written write-once under `docs/receipts/rosters/` (`slurp-stage3-construction-r01c-h1.json`, `-h2.json`, split
+   receipt), R01C file sha256 `e8abc65b…`, H1 identity `1a88c40b…`, H2 identity `c7b16e13…`.
+2. **Sampling shape.** One fresh Perception contact plus K=4 Solver contacts per row per iteration; trajectory k differs
+   by decoding seed only in iteration 1 (`seed-only`); from iteration 2 the opt-in `rule-variants` mode is used when the
+   rule bank is non-empty, so a rule's effect is sampled and not assumed. Rows where `lock` and `aa` disagree are not
+   counted as positives.
+3. **Budget.** The 4,372-token figure is the 268-B lock's median Solver completion, applied by the sampler to every
+   contact; measured cost per iteration is read from the trace after iteration 1 and the budget line is re-derived.
+   Planning numbers: 21-28 card-hours per iteration (both halves, K=4), 64-84 over three iterations, above the 25-30
+   first estimate in section 5; accepted under the keep-NPUs-loaded rule, with K raised to 8 only if iteration 1 shows a
+   positive rate above 20 % of rows.
+4. **Exemplar text (open engineering item T3b, SONNET).** The trace carries supplied item ids, not text; the distiller
+   must resolve ids to the knowledge-store text when it renders an exemplar, and the exemplar block cap (2,000 tokens)
+   must be measured with the repo's tokenizer measure, not `chars / 3.5`. The union bank for the Fold B flight (both
+   halves' banks) and the loop-driver wiring (`tfrl_port_loop.py` Sampler/Distiller protocols take contact lines and one
+   bank per source half) are the same item.
+5. **Runner input.** The sampler's run list is the pre-registration table from which the T writer derives the c7 arm
+   group; no runner consumes it directly. Correct; the T cell draft reads accordingly.
