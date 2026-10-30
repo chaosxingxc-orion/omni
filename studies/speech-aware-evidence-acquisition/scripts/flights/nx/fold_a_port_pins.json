@@ -1,0 +1,5 @@
+{
+  "_note": "Fold A port pins (the FA6 pins file of docs/readiness/2026-10-30-three-way-fold-b-npu-port-v1/fold-a-confirmation-fragment-draft-v1.md section 3). Maps the relpath of a sealed Fold A artefact (FA1-FA4 receipts and outputs, the cell's first-phase supply) to its sha256. EMPTY until those preparations are run: an artefact without an entry is pinned in the Fold A configs by the zero sentinel, which no flip accepts. Edit only after the artefact exists; then re-run the Fold A derive and writer.",
+  "pins": {},
+  "schema": "saea-fold-a-port-pins-v1"
+}

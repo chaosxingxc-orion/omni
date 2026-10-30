@@ -26,6 +26,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -327,10 +328,59 @@ def identities(root: Path) -> dict:
     return out
 
 
+def switched_fit_proof(proof: dict) -> dict:
+    """``fam.fit_proof()`` restated at the active thinking-budget switch: the raised cap, the lower Solver prompt limit, the smaller supply bound; every check is
+    recomputed (the sealed Solver prompt maxima must still fit the lower limit and the slot must still hold prompt + cap)."""
+
+    view = pf.budget_view()
+    estimate_fit = dict(fam.FIT_ESTIMATE, completion_ceiling=view["completion_cap"])
+    estimate = fam.estimated_prompt_tokens(view["max_supplied_items"], fam.DELIVERING_TEMPLATE_TOKENS)
+    checks = {
+        "estimate_at_bound_fits_every_arm": estimate <= view["prompt_limit_tokens"],
+        "observed_solver_prompt_max_fits": fam.OBSERVED_SOLVER_PROMPT_MAX <= view["prompt_limit_tokens"],
+        "slot_holds_prompt_plus_cap": fam.OBSERVED_SOLVER_PROMPT_MAX + view["completion_cap"] <= fam.SLOT_TOKENS,
+        "bound_is_positive": view["max_supplied_items"] >= 1,
+    }
+    out = dict(proof, completion_cap=view["completion_cap"], prompt_limit_tokens=view["prompt_limit_tokens"], fit_estimate=estimate_fit,
+               max_supplied_items=view["max_supplied_items"], estimate_at_bound_tokens=estimate,
+               estimate_headroom_tokens=view["prompt_limit_tokens"] - estimate,
+               observed_headroom_tokens=view["prompt_limit_tokens"] - fam.OBSERVED_SOLVER_PROMPT_MAX, checks=checks, ok=all(checks.values()))
+    out["note"] = proof["note"].replace("against the 4,096 cap (prompt limit 17,406)", f"against the {view['completion_cap']:,} cap (prompt limit {view['prompt_limit_tokens']:,})")
+    if out["note"] == proof["note"]:
+        raise SystemExit("the fit-proof note no longer states the 4,096 cap sentence the switch rewrites")
+    out["thinking_budget_switch"] = view["switch"]
+    return out
+
+
+def port_thinking_knobs() -> dict:
+    """``fam.THINKING_KNOBS`` at the active switch (identical bytes for ``default``)."""
+
+    knobs = json.loads(json.dumps(fam.THINKING_KNOBS))
+    if pf.active_switch() != "default":
+        view = pf.budget_view()
+        knobs["thinking_budget_tokens"], knobs["completion_cap"] = view["thinking_budget_tokens"], view["completion_cap"]
+    return knobs
+
+
+def switch_record() -> dict | None:
+    """The record a non-default switch leaves in the protocol, facts and plans (absent for ``default``, so a default run's bytes are unchanged)."""
+
+    if pf.active_switch() == "default":
+        return None
+    view = pf.budget_view()
+    return {"option": "--model-fragment", "choice": view["switch"], "model_fragment": view["model_fragment"], "replaces": pf.DEFAULT_MODEL_FRAGMENT,
+            "thinking_budget_tokens": view["thinking_budget_tokens"], "completion_cap": view["completion_cap"], "solver_prompt_limit_tokens": view["prompt_limit_tokens"],
+            "max_supplied_items": view["max_supplied_items"], "latency_rule_timeout_seconds": view["timeout_seconds"],
+            "latency_rule_scaled_from": pf.DEFAULT_TIMEOUT_SECONDS,
+            "status": "WRITER OPTION ONLY: the base decision is pending and no committed package names this fragment"}
+
+
 def port_fit_proof() -> dict:
     """The historical context-fit proof restated per sequence: the slot count (a deployment value) is dropped; the window is the protocol fact."""
 
     proof = fam.fit_proof()
+    if pf.active_switch() != "default":
+        proof = switched_fit_proof(proof)
     proof.pop("slots", None)
     proof["per_sequence_window_tokens"] = pf.PER_SEQUENCE_WINDOW_TOKENS
     proof["sequences_per_instance"] = pf.DEPLOYMENT_REF
@@ -385,7 +435,7 @@ def plan_docs(ids: Mapping[str, Mapping], commit: str, at: str, protocol_sha: st
                                                        "; the committed phase-supply-v1 (1141f08c...) predates this registration's config change and is "
                                                        "superseded by phase-supply-v2 (output equality asserted)" if key == "arm" else ""))},
                 "protocol_document": {"relpath": f"{PKG}/protocol-registered-v1.json", "sha256": protocol_sha}, "registered_at_utc": at, "status": STATUS,
-                "thinking_knobs": json.loads(json.dumps(fam.THINKING_KNOBS)), "no_think_node": None,
+                "thinking_knobs": port_thinking_knobs(), "no_think_node": None,
                 "sampling_arms": json.loads(json.dumps(arms_doc)), "arm_order": list(pf.ARM_ORDER), "unused_budget_is_not_attempt_authority": True,
                 "arm_visits": "first", "serving": serving_block(), "accelerator_bound": cost_block(),
                 "historical_twin": {"run_id": i["historical_run_id"], "fit_run_id": i["historical_fit_run_id"], "package": pf.HISTORICAL_PACKAGE},
@@ -393,6 +443,8 @@ def plan_docs(ids: Mapping[str, Mapping], commit: str, at: str, protocol_sha: st
                 "one_factor": ("None within the cell beyond the historical sampling levers; against the historical twin the port changes the serving stack, the speech "
                                "input path, the retrieval vectors and the authored knowledge together (the declared differences), so it is read beside the "
                                "historical flight, never as a one-factor contrast with it.")}
+        if switch_record():
+            base["model_fragment_switch"] = switch_record()
         gen = dict(i["execution_plan"], attempt_id=i["attempt_id"], carrier_lock_key=i["carrier_lock_key"], protocol_hash=i["protocol_hash"],
                    run_id=i["run_id"], schema="saea-execution-plan-v1", split_identity_hash=i["split_identity_hash"], study="speech-aware-evidence-acquisition")
         route = ("Shared core.flight.cli worker on this cell alone (the smoke step); never scored." if key == "smoke" else
@@ -458,6 +510,53 @@ def ledger_block(rows: list[list[str]], intro: str, mark: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+LEDGER_SUCCESSOR_MARK = ("## Cell L338 NPU port, c17 successor: the lever column with the registered replicate lock-rep2 and the raw-arm FIT cap "
+                         "(DRAFT, owner countersignature pending)")
+_PLAN_SHA = re.compile(r"plan SHA256 ([0-9a-f]{64})")
+
+
+def committed_ledger_rows(ledger_text: str, run_ids) -> dict:
+    """The committed DRAFT rows of ``run_ids`` in the exposure ledger: ``{run id: {"calls", "audio", "plan_sha"}}`` (the first row that names the run id; the rows are
+    never edited, so these are the c15 figures the successor supersedes)."""
+
+    out = {}
+    for line in ledger_text.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split(" | ")] if line.startswith("| 20") else None
+        if cells and len(cells) == len(reg.LEDGER_COLUMNS) and cells[1] in run_ids and cells[1] not in out:
+            sha = _PLAN_SHA.search(cells[14])
+            out[cells[1]] = {"calls": cells[9], "audio": cells[10], "plan_sha": sha.group(1) if sha else None}
+    return out
+
+
+def ledger_successor_text(ids: Mapping[str, Mapping], rows: list[list[str]], ledger_text: str, shas: Mapping[str, str], commit: str) -> str:
+    """The text of the ledger SUCCESSOR block of the c17 re-mint: a note (old committed figures -> the package's), then the package's four DRAFT rows re-copied from
+    ``draft-ledger-rows.md``. Nothing is appended to the ledger; the owner's countersign folds the superseded rows (the 266-E recovery precedent)."""
+
+    run_ids = {i["run_id"]: ("generation", k) for k, i in ids.items()} | {i["fit_run_id"]: ("fit", k) for k, i in ids.items()}
+    old = committed_ledger_rows(ledger_text, run_ids)
+    notes = []
+    for key in pf.ALL_KEYS:
+        i = ids[key]
+        for kind, run in (("generation", i["run_id"]), ("FIT", i["fit_run_id"])):
+            new_calls = i["family_budget"]["generation_calls_cap" if kind == "generation" else "fit_endpoint_calls_cap"]
+            audio = i["family_budget"]["repeated_speech_audio_seconds_cap"]
+            was = old.get(run)
+            name = fam.plan_file_name(key, "generation" if kind == "generation" else "fit")
+            notes.append(f"`{run}` ({kind}): calls {was['calls'] if was else 'n/a'} -> {new_calls:,}, speech-seconds {was['audio'] if was else 'n/a'} -> {audio:,}, "
+                         f"`{name}` sha256 {was['plan_sha'] if was and was['plan_sha'] else 'n/a'} -> {shas.get(name, 'pending')}")
+    note = (f"**SUCCESSOR NOTE (c17, plan docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md section 9 ruling 1 and section 10 rulings 2-5 "
+            f"with their addendum): THE PACKAGE WAS RE-MINTED AT STUDY COMMIT `{commit}` WITH THE REGISTERED REPLICATE `lock-rep2` (program `{pf.PROGRAM}`, "
+            f"{pf.CONTACTS_PER_ROW} contacts per row) AND THE RAW-ARM FIT CAP; THE FOUR ROWS OF THE EARLIER BLOCK ABOVE ARE NOT EDITED, STAY DRAFT AND ARE SUPERSEDED BY THE FOUR "
+            "ROWS BELOW (same run ids; the owner's countersign folds the earlier rows into these, the 266-E recovery precedent).** Old committed row -> package figure: "
+            + "; ".join(notes) + f". Composed config / protocol hashes of the package: "
+            + "; ".join(f"{k} `{ids[k]['composed_config_hash']}` / `{ids[k]['protocol_hash']}`" for k in pf.ALL_KEYS)
+            + ". The package's draft-ledger-rows.md carries these rows and is the authority; the rows below are re-copied from it at countersign, never edited in place. "
+            "No row authorises a contact; the gpu-hours cells stay the PROVISIONAL formula until the measured sweep fills PORT_DEPLOYMENT_PROFILE.")
+    return ledger_block(rows, note + "\n\n" + (
+        f"4 unconsumed DRAFT rows (generation and live-phase-fit identity of the port smoke and the port flight) at the c17 arm table, package {PKG}. "
+        "Each gpu-hours cell is the PROVISIONAL NPU card-hour formula, not a number."), LEDGER_SUCCESSOR_MARK)
+
+
 def readme_text(ids: Mapping[str, Mapping], commit: str) -> str:
     arm, smoke = ids["arm"], ids["smoke"]
     deps = "\n".join(f"- {d}" for d in pf.MAX_NUM_SEQS_DEPENDENTS)
@@ -478,7 +577,7 @@ def readme_text(ids: Mapping[str, Mapping], commit: str) -> str:
         f"replicate's contacts, except the FIT cap, which is rows x contacts x {pf.RAW_FIT_ENDPOINTS_PER_CONTACT} counting endpoint on the raw-audio arm (the packet arm made {fam.tf.FIT_ENDPOINTS_PER_CONTACT}), "
         f"the value the native contact fit gate demands. The arms ({', '.join(pf.ARM_ORDER)}), program (`{pf.PROGRAM}`, {pf.CONTACTS_PER_ROW} contacts per row: {pf.PERCEPTION_CONTACTS_PER_ROW} "
         f"Perception + {pf.SOLVER_CONTACTS_PER_ROW} Solver), the arm mix ({pf.ARM_MIX_ROWS} lock-row equivalents), the within-run CI95 (widened by the replicate variance) and the "
-        f"NOMINATED rule (pooled and per-row) are the port's; the roster, templates, thinking budget {fam.DELIVERING_BUDGET} / cap {fam.COMPLETION_CAP} and decoding "
+        f"NOMINATED rule (pooled and per-row) are the port's; the roster, templates, thinking budget {pf.budget_view()['thinking_budget_tokens']} / cap {pf.budget_view()['completion_cap']} and decoding "
         f"(greedy, seed {fam.LOCKED_DECODING['seed']}) are the historical cell's.\n\n"
         "## Serving: protocol facts and the deployment placeholder\n\n"
         f"Model fragment `{pf.MODEL_FRAGMENT}` (transport vLLM, BF16). Protocol facts: the per-sequence context window of {pf.PER_SEQUENCE_WINDOW_TOKENS:,} tokens, "
@@ -520,7 +619,8 @@ def file_sha256(root: Path, relpath: str) -> str:
     return hashlib.sha256((Path(root) / relpath).read_bytes()).hexdigest()
 
 
-def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, append_ledger: bool = False, derive: bool = True) -> dict:
+def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, append_ledger: bool = False, derive: bool = True,
+                  successor_path: str | None = None) -> dict:
     root = Path(root)
     facts_path = root / PKG / "registered-facts-v1.json"
     at = at or (json.loads(facts_path.read_text(encoding="utf-8"))["registered_at_utc"] if facts_path.is_file() else datetime.now(timezone.utc).isoformat())
@@ -550,6 +650,8 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
         "the_question": ("Does the L338 lever column read the same way on the BF16 / vLLM-Ascend Thinking core with the port's knowledge and vectors? Each candidate "
                          f"arm, the twin {fam.TWIN} and the replicate {', '.join(pf.REPLICATE_ARMS)} are read PAIRED per row against the delivering {fam.DELIVERING} arm on the same 1,080 Fold B "
                          "rows in one flight, with the decoding term of the three request-identical copies in every CI95, beside (never as a byte replay of) the historical flight.")}
+    if switch_record():
+        protocol["model_fragment_switch"] = switch_record()
     protocol_sha = reg.wjson(root, f"{PKG}/protocol-registered-v1.json", protocol)
     plans = plan_docs(ids, commit, at, protocol_sha)
     shas = {name: reg.wjson(root, f"{PKG}/{name}", doc) for name, doc in plans.items()}
@@ -580,9 +682,11 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
                       "floors_pp": {"slu": fam.FLOOR_SLU_PP, "intent": fam.FLOOR_INTENT_PP}, "levers": dict(fam.ARM_LEVER), "delivering": fam.DELIVERING},
         "roster": {"arm": fam.ROSTER["arm"], "smoke": fam.ROSTER["smoke"], "roster_id": fam.READ_ROSTER, "split_identity_hash": arm["split_identity_hash"]},
         "rows": fam.ROWS, "schema": "saea-registered-facts-v1", "stage3_measurement": port_measurement_blocks(ids),
-        "study_commit_at_registration": commit, "thinking_knobs": json.loads(json.dumps(fam.THINKING_KNOBS)), "no_think_node": None,
+        "study_commit_at_registration": commit, "thinking_knobs": port_thinking_knobs(), "no_think_node": None,
         "sampling_arms": {row["arm"]: row["axes"] for row in port_arm_table_rows()}, "locked_decoding": dict(fam.LOCKED_DECODING),
         "status": "DRAFT-HELD"}
+    if switch_record():
+        facts["model_fragment_switch"] = switch_record()
     shas["registered-facts-v1.json"] = reg.wjson(root, f"{PKG}/registered-facts-v1.json", facts)
     draft = {
         "_draft_note": (f"A DRAFT for the MAIN THREAD to mint on the data root with {pf.TOOL_MINT} (owner decision 2026-10-28 item 5). It authorises nothing while "
@@ -632,6 +736,9 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
               + json.dumps({"stage3_measurement": port_measurement_blocks(ids)}, indent=2, ensure_ascii=False, sort_keys=True) + "\n```\n")
     shas["__prereg__"] = reg.wr(root, pf.PREREG, prereg)
     result = {"package": PKG, "shas": shas, "derive": derived, "ledger_appended": None}
+    if successor_path:
+        ledger_text = io.open(Path(root) / reg.LEDGER, encoding="utf-8", newline="").read()
+        result["ledger_successor"] = {"path": successor_path, "sha256": reg.wr(root, successor_path, ledger_successor_text(ids, cell_rows, ledger_text, shas, commit))}
     if append_ledger:
         ledger = root / reg.LEDGER
         current = io.open(ledger, encoding="utf-8", newline="").read()
@@ -643,19 +750,47 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
     return result
 
 
+FAMILIES = ("l338-port", "tfrl-v2", "fold-a-confirmation")
+
+
+def family_module(name: str):
+    """The writer module of a family: ``l338-port`` is this module; the others are imported on demand (they import helpers from this module)."""
+
+    if name == "l338-port":
+        return sys.modules[__name__]
+    import importlib  # noqa: PLC0415
+
+    return importlib.import_module({"tfrl-v2": "tfrl_v2_port_write_registration", "fold-a-confirmation": "fold_a_port_write_registration"}[name])
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
+    parser.add_argument("--family", choices=FAMILIES, default="l338-port",
+                        help="l338-port: this package (default; bytes unchanged); tfrl-v2: the T cell (construction and Fold B selection flights); "
+                             "fold-a-confirmation: the L338 port arm table on the Fold A roster")
+    parser.add_argument("--model-fragment", choices=pf.MODEL_FRAGMENT_CHOICES, default="default",
+                        help="default: the registered fragment; budget6144-max7168: the thinking-budget successor (supply bound 55 -> 51, prompt limit 14,334, "
+                             "latency rule 420 -> 735 s). A writer option for a temp root: the base decision is pending, so do not apply it to a committed package.")
     parser.add_argument("--study-commit", required=True)
     parser.add_argument("--registered-at", default=None, help="default: the stamp already in registered-facts-v1.json, else now")
     parser.add_argument("--root", default=str(REPO_ROOT))
     parser.add_argument("--data-root", default=os.environ.get("SAEA_DATA_ROOT") or os.environ.get("SPEECHRL_DATA_DIR"), required=False)
     parser.add_argument("--append-ledger", action="store_true", help="append both DRAFT blocks at the END of docs/exposure-ledger.md (idempotent)")
+    parser.add_argument("--render-ledger-successor", default=None, metavar="RELPATH",
+                        help="l338-port only: render the c17 ledger SUCCESSOR block text (the four package rows plus the old -> new note) to RELPATH under --root; "
+                             "the exposure ledger is not touched")
     parser.add_argument("--no-derive", action="store_true")
     args = parser.parse_args(argv)
     if not args.data_root:
         parser.error("--data-root (or SAEA_DATA_ROOT / SPEECHRL_DATA_DIR) is required to re-read the preparation receipts")
-    result = write_package(Path(args.root), args.study_commit, args.registered_at, Path(args.data_root), append_ledger=args.append_ledger,
-                           derive=not args.no_derive)
+    pf.select_model_fragment(args.model_fragment)
+    module = family_module(args.family)
+    kwargs = {"append_ledger": args.append_ledger, "derive": not args.no_derive}
+    if args.render_ledger_successor:
+        if args.family != "l338-port":
+            parser.error("--render-ledger-successor is for --family l338-port")
+        kwargs["successor_path"] = args.render_ledger_successor
+    result = module.write_package(Path(args.root), args.study_commit, args.registered_at, Path(args.data_root), **kwargs)
     print(json.dumps({k: v for k, v in result.items() if k != "derive"}, indent=2, sort_keys=True))
     return 0
 

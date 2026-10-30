@@ -324,7 +324,7 @@ def model_text() -> str:
     """The ledger model/tool text of a port cell: the per-sequence window and a pointer to the pending deployment profile, never a slot geometry."""
 
     return (f"Frozen Qwen3-Omni-30B-A3B-Thinking BF16 safetensors ({MODEL_LOCK_KEY}) on vLLM-Ascend, BF16 KV, per-sequence window "
-            f"{PER_SEQUENCE_WINDOW_TOKENS:,} tokens, max_tokens {fam.COMPLETION_CAP} (reasoning budget {fam.DELIVERING_BUDGET} + answer reserve 1024 on both nodes), "
+            f"{PER_SEQUENCE_WINDOW_TOKENS:,} tokens, max_tokens {budget_view()['completion_cap']} (reasoning budget {budget_view()['thinking_budget_tokens']} + answer reserve 1024 on both nodes), "
             f"--reasoning-parser qwen3 with the registered forced-close reasoning_end_str (model fragment {MODEL_FRAGMENT}); deployment "
             f"(instances, tensor-parallel size, sequences per instance, devices) = {DEPLOYMENT_REF}; the server's own audio tower over the original "
             f"recordings under {PROMPT_ORDER}; module program {PROGRAM}; per-arm sampling axes (perception_samples / solver_samples at temperature 0.6, "
@@ -341,5 +341,72 @@ DECLARED_DIFFERENCES = [
     "8.7 CPU float32 retrieval encoder instead of CUDA bfloat16",
 ]
 DIFFERENCES_TEXT = "declared differences (design doc section 8): " + "; ".join(DECLARED_DIFFERENCES)
+
+# ---- the thinking-budget switch (writer option ``--model-fragment``; plan 2026-10-30 sections 2 M3 and 8 R1) ----------------------------------------
+#: ``default`` is the registered fragment (budget 3,072 / cap 4,096: every committed package). ``budget6144-max7168`` is its successor fragment: the budget raised to
+#: 6,144 and the cap to 7,168, so the Solver prompt limit falls to 24,576 - 3,072 - 7,168 - 2 = 14,334 and the lock's 55-item supply bound (15,248 estimated tokens)
+#: no longer fits; 51 items is the largest bound that does. The switch is a WRITER option: it changes what a run of the derive and writer emits into the root it is
+#: pointed at, and nothing else. The base decision is pending, so no committed package uses it.
+DEFAULT_MODEL_FRAGMENT = MODEL_FRAGMENT
+MODEL_FRAGMENT_CHOICES = ("default", "budget6144-max7168")
+BUDGET6144_MODEL_FRAGMENT = "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget6144-max7168-port-v1"
+BUDGET6144_EXPECTED = {"thinking_budget_tokens": 6144, "completion_cap": 7168, "max_supplied_items": 51, "prompt_limit_tokens": 14334, "timeout_seconds": 735}
+DEFAULT_TIMEOUT_SECONDS = 420
+_ACTIVE_SWITCH = "default"
+
+
+def active_switch() -> str:
+    return _ACTIVE_SWITCH
+
+
+def _budget6144_view() -> dict:
+    cap = fam.COMPLETION_CAP * 7168 // 4096                         # 7,168 = 6,144 + the unchanged 1,024 answer reserve
+    budget = cap - 1024
+    limit = fam.SLOT_TOKENS - fam.RESERVE_TOKENS - cap - fam.SPECIAL_RESERVE
+    base = fam.FIT_ESTIMATE["base_prompt_tokens"] + fam.DELIVERING_TEMPLATE_TOKENS
+    items = (limit - base) // fam.FIT_ESTIMATE["tokens_per_supplied_item"]
+    view = {"switch": "budget6144-max7168", "model_fragment": BUDGET6144_MODEL_FRAGMENT, "thinking_budget_tokens": budget, "completion_cap": cap,
+            "prompt_limit_tokens": limit, "max_supplied_items": items, "timeout_seconds": DEFAULT_TIMEOUT_SECONDS * cap // fam.COMPLETION_CAP}
+    if {k: view[k] for k in BUDGET6144_EXPECTED} != BUDGET6144_EXPECTED:
+        raise ValueError(f"the budget-6144 arithmetic moved: {view}")
+    return view
+
+
+def budget_view() -> dict:
+    """The thinking-budget numbers the active switch states: budget, completion cap, Solver prompt limit, the L338 supply bound, the latency rule (the fragment's
+    ``timeout_seconds``) and the fragment name. ``default`` reads the historical family exactly as before the switch existed."""
+
+    if _ACTIVE_SWITCH == "default":
+        return {"switch": "default", "model_fragment": DEFAULT_MODEL_FRAGMENT, "thinking_budget_tokens": fam.DELIVERING_BUDGET, "completion_cap": fam.COMPLETION_CAP,
+                "prompt_limit_tokens": fam.PROMPT_LIMIT, "max_supplied_items": fam.MAX_SUPPLIED_ITEMS, "timeout_seconds": DEFAULT_TIMEOUT_SECONDS}
+    return _budget6144_view()
+
+
+def select_model_fragment(choice: str) -> dict:
+    """Make the module state follow ``choice``: ``MODEL_FRAGMENT`` and every cell's ``model``. Returns :func:`budget_view`. Idempotent; ``default`` restores."""
+
+    global MODEL_FRAGMENT, _ACTIVE_SWITCH
+    if choice not in MODEL_FRAGMENT_CHOICES:
+        raise ValueError(f"--model-fragment must be one of {list(MODEL_FRAGMENT_CHOICES)}, not {choice!r}")
+    _ACTIVE_SWITCH = choice
+    MODEL_FRAGMENT = DEFAULT_MODEL_FRAGMENT if choice == "default" else BUDGET6144_MODEL_FRAGMENT
+    for spec in CELLS.values():
+        spec["model"] = MODEL_FRAGMENT
+    return budget_view()
+
+
+def switch_text(text: str) -> str:
+    """The carried-over prose with the budget sentences moved to the active switch (a no-op for ``default``; an absent sentence is not an error, a present
+    one is rewritten everywhere)."""
+
+    if _ACTIVE_SWITCH == "default":
+        return text
+    view = budget_view()
+    for old, new in ((f"budget {fam.DELIVERING_BUDGET}, cap {fam.COMPLETION_CAP}", f"budget {view['thinking_budget_tokens']}, cap {view['completion_cap']}"),
+                     (f"thinking budget {fam.DELIVERING_BUDGET} and max_tokens {fam.COMPLETION_CAP}",
+                      f"thinking budget {view['thinking_budget_tokens']} and max_tokens {view['completion_cap']}")):
+        text = text.replace(old, new)
+    return text
+
 
 __all__ = [name for name in globals() if not name.startswith("_")]

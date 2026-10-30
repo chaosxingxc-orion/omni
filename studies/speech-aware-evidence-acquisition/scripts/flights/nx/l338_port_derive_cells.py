@@ -53,6 +53,22 @@ FLIGHT_MOVED_LEAVES = {
                    # noise model M1: the caps follow the port arm table (c17)
                    "execution_plan.planned_model_calls", "execution_plan.planned_speech_audio_seconds", "family_budget."),
 }
+#: Under the thinking-budget switch (``l338_port_family.select_model_fragment``) the derive additionally moves the supply bound, the fit-estimate completion ceiling
+#: (both sites of the baseline) and the experiment's model fragment name; nothing else. Empty for ``default``.
+SWITCH_MOVED_LEAVES = {
+    "baseline": ("native_episode.consumption_module.sampling_frame.max_supplied_items", "native_episode.consumption_module.sampling_frame.fit_estimate.",
+                 "native_episode.roles.perception.sampling_variants.max_supplied_items", "native_episode.roles.perception.sampling_variants.fit_estimate."),
+    "experiment": ("cells[0].model_fragment",),
+}
+
+
+def moved_leaf_allowance(kind: str) -> tuple[str, ...]:
+    """The prefixes of the committed port flight the derive may move: :data:`FLIGHT_MOVED_LEAVES` plus, under a non-default switch, :data:`SWITCH_MOVED_LEAVES`."""
+
+    extra = () if pf.active_switch() == "default" else SWITCH_MOVED_LEAVES[kind]
+    return tuple(FLIGHT_MOVED_LEAVES[kind]) + tuple(extra)
+
+
 PORT_SESSION_TEXT = f"the port's BF16 / vLLM-Ascend Thinking deployment ({pf.DEPLOYMENT_REF})"
 #: Historical phrases that state the llama.cpp np4 geometry, replaced in every carried-over text (and refused if any survives).
 GEOMETRY_PHRASES = (
@@ -180,6 +196,11 @@ def port_arm_table(base: dict, key: str, root: Path) -> dict:
     if "replicates" in frame:
         raise ValueError("the historical baseline already names replicates")
     frame["replicates"] = list(pf.REPLICATE_ARMS)
+    if pf.active_switch() != "default":
+        # thinking-budget switch: the supply bound and the fit-estimate completion ceiling follow the raised cap (the compiler's fit refusal is the proof)
+        view = pf.budget_view()
+        frame["max_supplied_items"] = view["max_supplied_items"]
+        frame["fit_estimate"] = dict(frame["fit_estimate"], completion_ceiling=view["completion_cap"])
     composed = cm.compile_module(block, carrier_module_hooks(repo_root=root), repo_root=root)
     if composed.program_id != pf.PROGRAM or composed.program_ceiling != pf.CONTACTS_PER_ROW:
         raise ValueError(f"compiled program {composed.program_id} / {composed.program_ceiling}, expected {pf.PROGRAM} / {pf.CONTACTS_PER_ROW}")
@@ -195,6 +216,8 @@ def port_arm_table(base: dict, key: str, root: Path) -> dict:
         raise ValueError(f"the compiled sampling arms {arms} are not the port arm order {list(pf.ARM_ORDER)}")
     moved = moved_leaves(base, out)
     allowed = ("policy", "native_episode.consumption_module.sampling_frame.replicates", "native_episode.roles.perception.sampling_variants.arms[")
+    if pf.active_switch() != "default":
+        allowed += SWITCH_MOVED_LEAVES["baseline"]
     bad = [leaf for leaf in moved if not leaf_allowed(leaf, allowed)]
     if bad:
         raise ValueError(f"adding the replicate moved undeclared baseline leaves: {bad[:12]}")
@@ -235,7 +258,7 @@ def port_baseline(key: str, root: Path = REPO_ROOT) -> dict:
         "re-authored semantic stores (intent-boundaries-npu-port-v1, slot-contracts-npu-port-v2) and every retrieval input re-pinned to the port's own "
         "sealed artifacts (scripts/flights/nx/l338_port_pins.json); native_contact_fit under the port FIT ids. The serving deployment is "
         f"{pf.DEPLOYMENT_REF}; the per-sequence window is {pf.PER_SEQUENCE_WINDOW_TOKENS:,} tokens. Everything else is the historical cell's: "
-        + port_text(port_what_this_is(key, base["what_this_is"])))
+        + pf.switch_text(port_text(port_what_this_is(key, base["what_this_is"]))))
     base = port_arm_table(base, key, root)
     if key == "arm":
         base["prepared_phase_supply"] = copy.deepcopy(pins["flight_phase_supply"])
@@ -321,7 +344,7 @@ def verify_against_committed(key: str, base: dict, exp: dict, root: Path) -> dic
             out[kind] = {"committed": False, "moved": []}
             continue
         moved = moved_leaves(json.loads(path.read_text(encoding="utf-8")), derived)
-        bad = [leaf for leaf in moved if not leaf_allowed(leaf, FLIGHT_MOVED_LEAVES[kind])]
+        bad = [leaf for leaf in moved if not leaf_allowed(leaf, moved_leaf_allowance(kind))]
         if key == "arm" and bad:
             raise ValueError(f"the derived port flight {kind} moves undeclared leaves: {bad[:12]}")
         out[kind] = {"committed": True, "moved": moved}
