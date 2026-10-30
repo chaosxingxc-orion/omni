@@ -405,3 +405,15 @@ publicly reported industry baselines." Two items only the owner can settle (fact
 2. **Full-split allowance.** `docs/receipts/owner/2026-09-23-slurp-test-split-allowance-v1.json` is `pending-owner`. Proposed:
    grant it for the three reads, with the 3,010-recording sample disclosed as previously exposed and the closure number
    reported beside the full-split number (plan ruling 1). Cost about 200 card-hours (260 with margin) for all three.
+
+## Open 2026-10-30: Fold A confirmation preparations need a countersigned encoder row
+
+The Fold A confirmation cell (`docs/readiness/2026-10-30-slurp-l338-fold-a-confirmation-npu-port-v1/`) carries zero-sentinel
+pins for its five preparations. The first, the speech-query encoding of the 1,080 Fold A recordings with the retrieval
+encoder (CPU fp32, forced-causal, about 40 minutes on 40 cores), is a model contact on dataset rows: the runtime admits
+the plan only against a committed protocol fragment, a registration JSON and a countersigned exposure-ledger row (the
+same admission the Fold B port encoding had). Proposed: the planner authors the three artefacts for the encoding only
+(protocol fragment `configs/preparation/slurp-tfrl-fold-a-speech-query-encoding-protocol-npu-port-v1.json`, the
+registration JSON, the DRAFT ledger row) and the owner countersigns the row; the alias, content-derivative and
+agreement steps are arithmetic over those vectors and run in the same detached CPU chain; the phase supply is prepared
+at the flight's flip. Nothing is contacted until the countersign.

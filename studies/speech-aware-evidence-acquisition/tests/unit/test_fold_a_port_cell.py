@@ -210,6 +210,22 @@ def test_the_committed_pins_file_is_empty_until_the_preparations_are_run():
     assert doc["pins"] == {} and doc["schema"] == "saea-fold-a-port-pins-v1"
 
 
+def test_the_filled_pins_file_leaves_no_zero_sentinel_for_a_preparation(tmp_path):
+    """Once the Fold A preparations are run and pinned, no pin of the pins file or of a preparation artefact may be the zero sentinel.
+
+    While the pins file is still empty (preparations not run) the check is skipped, never passed: the empty state is covered by the test above.
+    """
+
+    doc = json.loads((REPO / "scripts/flights/nx/fold_a_port_pins.json").read_text(encoding="utf-8"))
+    if not doc["pins"]:
+        pytest.skip("PENDING: fold_a_port_pins.json is empty; the Fold A preparations FA1-FA5 are not run")
+    assert all(re.fullmatch("[0-9a-f]{64}", sha) and sha != ZERO for sha in doc["pins"].values())
+    assert set(fw.PREPARATION_ARTIFACTS.values()) <= set(doc["pins"]), "every preparation artefact needs a real pin"
+    root = make_root(tmp_path / "root", packages=("2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1",))
+    report = fdc.derive(root, dry_run=True)
+    assert not set(report["pending_pins"]) & set(fw.PREPARATION_ARTIFACTS.values())
+
+
 # ---- the writer ---------------------------------------------------------------------------------------------------------------------------------
 
 
