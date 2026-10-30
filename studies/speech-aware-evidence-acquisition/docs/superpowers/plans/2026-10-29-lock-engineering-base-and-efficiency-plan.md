@@ -986,3 +986,21 @@ while P4 or the E3 restore is ahead would make those steps CHAIN-BAD. The swap r
 render must show `--gpu-memory-utilization 0.92` (the image default; the memory budget does not change). The card
 queue's recorded runs deploy through `npu_deploy.sh` from the profile and never read `npu_serve.sh`, so they are not
 gated on the swap. After the swap, `tests/unit/test_deployment.py` is re-pointed to the single launcher name.
+
+## 3.14 Bad case: `verify_declared_module` refuses the port cells (Fable decision, 2026-10-30)
+
+Opus note: `docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md`. The port cells declare the consumption
+module on lock `v2.2`, whose compiled policy blocks carry the historical 268-B knowledge-store pins (intent-boundaries,
+slot-contracts release and snapshot hashes, the kus3 facet source and its ledger row); the port fragments pin the
+re-authored forced-causal stores, so ten leaves differ and the loader refuses. The writer pins are correct; the lock
+layer has no port version. Not a hash-format false alarm. Affected: L338 port (10 leaves), Fold A (10), T Fold B (10),
+T construction (14, plus the minus-R01 exemplar store); D is unaffected (no module block).
+
+Decision: add the lock version `v2.2-npu-port` to the module lock registry (`rails/adapters/slurp_module_hooks.py`
+`lock_versions`): identical to `v2.2` except exactly those leaves set to the port values, with its own registry entry
+and an English note naming the ten leaves and their source (`l338_port_pins.json`). The port blocks of the L338 port,
+Fold A and T cells declare `"lock": "v2.2-npu-port"`; the composed-config and protocol hashes move and the three packages
+are re-minted (rows stay DRAFT). The roster-pin exemption is NOT widened. The T writer's "none for T" claim at
+`tfrl_v2_port_write_registration.py:138` is corrected. A writer step runs `verify_declared_module` on its own output so
+this class of defect is caught at mint time. Order: hooks + L338 + Fold A first (SONNET); T's lock switch after the
+T rails stream lands, then one T re-mint.
