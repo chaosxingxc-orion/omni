@@ -133,3 +133,41 @@ Earliest first scored read: engineering (2 days) + base lock (1 day) + countersi
 
 Every status report leads with: port lock SLU-F1 / intent vs the band; each arm's delta vs lock with CI95; what the
 next flight tests; then the serving numbers only as cost (wall, card-hours, crash count).
+
+## Decision 6 (owner rule 2026-10-30): the headline is the official test-split metric against public baselines
+
+Owner instruction (translated): "The final evaluation metric is the test-set metric, and it must be compared against
+publicly reported industry baselines." This supersedes the framing above in which the repo's own 268-B reference
+(71.61 SLU-F1 / 85.00 intent on Fold B) was the comparison target. The repo reference stays as the regression bar for
+engineering parity; it is no longer the deliverable.
+
+Three tiers, in order of authority:
+
+| tier | rows | purpose | flown how often |
+| --- | --- | --- | --- |
+| T0 official SLURP test split | the whole official test split, scored with the official SLURP metric definitions (scenario, action, intent accuracy; SLU-F1 with word- and char-level distance) | the headline number, placed in a cited public-baseline table with matching data conditions | ONCE per frozen method (D, A, T each once); never used for tuning |
+| T1 Fold B (dev) | current column | choosing the base, TFRL iterations, improvement decisions | as needed |
+| T2 Fold A (confirmation) | current confirmation fragment | confirming a Fold B improvement before it earns a T0 flight | once per candidate |
+
+Rules:
+
+1. **Test-set hygiene.** No prompt, knowledge bank, rule bank, decoding setting or harness change may be chosen by
+   looking at a T0 result. T0 rows are never exemplar or bank sources. A method earns a T0 flight only after it clears
+   the Fold B bar AND the Fold A confirmation; the frozen method hash (protocol hash + knowledge-bank hash + prompt
+   fragment hashes) is recorded before the T0 flight is registered.
+2. **Like-for-like first.** The public table separates (a) zero-shot speech-LLM systems with no SLURP fine-tuning,
+   which is our condition, from (b) end-to-end SLU systems fine-tuned on SLURP train, and (c) gold-text NLU upper
+   bounds. We report against all three but claim parity only within (a); against (b) the gap is reported as the
+   remaining distance to fine-tuned systems.
+3. **Metric identity.** Before T0, the repo scorer is checked against the official SLURP evaluation script on a shared
+   fixture; any difference is either fixed or declared in the table footnote. The analysis read
+   `docs/results/2026-10-30-public-slurp-baselines-and-test-set-alignment.md` carries the check.
+4. **Public numbers are cited and verified.** Every baseline row names the paper or leaderboard and the data
+   condition; an unverifiable number is marked and not used in the claim.
+5. **Order of flights after the base lock:** Fold B three-way (D, A, T) -> Fold A confirmation of the winner(s) ->
+   T0 for D, A and the best T, each once. The T0 cells are registered as their own DRAFT rows with the same
+   countersign rule as every other flight.
+
+Open facts (filled by the analysis read): whether Fold B/Fold A rows come from the official test split (if they do,
+the folds are themselves part of T0 and T0 must be the full split flown fresh), the official test-split row count,
+and the card-hour estimate at the measured rate.
