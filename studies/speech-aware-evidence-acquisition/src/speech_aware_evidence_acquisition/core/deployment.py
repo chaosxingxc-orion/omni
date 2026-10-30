@@ -55,8 +55,11 @@ from pathlib import Path, PurePosixPath
 from typing import Iterable, Mapping, Sequence
 
 from ..contracts.gate_runtime_vllm import (
+    DEFAULT_NAMESPACE_POLICY,
     MM_PROCESSOR_CACHE_FLAG,
     MM_PROCESSOR_CACHE_TYPES,
+    NAMESPACE_POLICIES,
+    NAMESPACE_POLICY_SHARED_PID_HOST,
     VLLM_ENTRYPOINT,
     undeclared_deployment_env_keys,
 )
@@ -75,12 +78,15 @@ _PROFILE_KEYS = frozenset({
     "schema", "profile_id", "host", "image", "model_fragment", "model_relpath", "bind_host", "data_mount",
     "tensor_parallel_size", "max_num_seqs", "gpu_memory_utilization", "max_num_batched_tokens",
     "busy_threshold_mib", "host_card_count", "host_cpu_count", "shm_size", "instances", "basis",
-    "mm_processor_cache_type", "admitted_level",
+    "mm_processor_cache_type", "admitted_level", "namespace_policy",
 })
 #: Profile keys that may be absent (absent = the engine default; the flag is then not emitted). ``-v1``/``-v2`` omit it.
 #: ``admitted_level`` is the requests per instance the owner admitted (at most ``max_num_seqs``): a deployment-only
 #: fact read by ``core.flight.width``; it is never emitted to the argv and moves no hash.
-_OPTIONAL_PROFILE_KEYS = frozenset({"mm_processor_cache_type", "admitted_level"})
+#: ``namespace_policy`` (``same-container`` default | ``shared-pid-host``) says how the harness proves it faces the
+#: server processes (``core.session.vllm_identity._verify_namespaces``); ``shared-pid-host`` also makes
+#: :func:`docker_run_argv` emit ``--pid host``. Deployment-only: recorded, never hashed into the protocol.
+_OPTIONAL_PROFILE_KEYS = frozenset({"mm_processor_cache_type", "admitted_level", "namespace_policy"})
 _INSTANCE_KEYS = frozenset({"name", "cards", "port", "cpuset", "env"})
 _ID_PATTERN = re.compile(r"[a-z0-9][a-z0-9.-]*")
 _NAME_PATTERN = re.compile(r"saea-[a-z0-9][a-z0-9-]*")
@@ -169,6 +175,13 @@ class DeploymentProfile:
     sha256: str
     mm_processor_cache_type: str | None = None
     admitted_level: int | None = None
+    namespace_policy: str | None = None
+
+    @property
+    def effective_namespace_policy(self) -> str:
+        """The policy in force: the profile's, or the default ``same-container`` when it names none."""
+
+        return DEFAULT_NAMESPACE_POLICY if self.namespace_policy is None else self.namespace_policy
 
     def base_url(self, instance: InstanceSpec) -> str:
         return f"http://{self.bind_host}:{instance.port}"
@@ -255,6 +268,11 @@ def validate_deployment_profile(
             f"deployment profile mm_processor_cache_type must be one of {list(MM_PROCESSOR_CACHE_TYPES)} or absent; "
             f"got {mm_cache!r}"
         )
+    policy = document.get("namespace_policy")
+    if policy is not None and policy not in NAMESPACE_POLICIES:
+        raise DeploymentError(
+            f"deployment profile namespace_policy must be one of {list(NAMESPACE_POLICIES)} or absent; got {policy!r}"
+        )
     max_seqs = _int(document["max_num_seqs"], "max_num_seqs", minimum=1)
     admitted = document.get("admitted_level")
     if admitted is not None:
@@ -333,6 +351,7 @@ def validate_deployment_profile(
         sha256=_canonical_sha256(document),
         mm_processor_cache_type=mm_cache,
         admitted_level=admitted,
+        namespace_policy=policy,
     )
 
 
@@ -547,6 +566,8 @@ def docker_run_argv(
         "--restart", RESTART_POLICY, "--network", "host", "--shm-size", profile.shm_size,
         "--cpuset-cpus", instance.cpuset,
     ]
+    if profile.effective_namespace_policy == NAMESPACE_POLICY_SHARED_PID_HOST:
+        argv += ["--pid", "host"]  # the harness sees the server pids (vllm_identity, shared-pid-host policy)
     for option in LOG_OPTS:
         argv += ["--log-opt", option]
     for device in (*ASCEND_CONTROL_DEVICES, *(f"/dev/davinci{card}" for card in instance.cards)):
@@ -599,6 +620,7 @@ def deployment_record(
         "max_num_batched_tokens": profile.max_num_batched_tokens,
         "mm_processor_cache_type": profile.mm_processor_cache_type,
         "admitted_level": profile.admitted_level,
+        "namespace_policy": profile.effective_namespace_policy,
         "restart_policy": RESTART_POLICY,
         "card_count": len(profile.cards),
         "instances": [

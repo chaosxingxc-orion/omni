@@ -114,6 +114,10 @@ def test_the_written_receipt_is_byte_identical_to_the_fixtures_own(world, tmp_pa
     output = tmp_path / "runtime-vllm.json"
     assert _module().main(_argv(world, output)) == 0
     document = json.loads(output.read_text(encoding="utf-8"))
+    # The producer also records the namespace policy and the harness hostname under deployment (unhashed).
+    deployment = document["deployment"]
+    assert deployment.pop("namespace_policy") == "same-container"
+    assert isinstance(deployment.pop("harness_hostname"), str)
     assert document == world.receipt()
 
 

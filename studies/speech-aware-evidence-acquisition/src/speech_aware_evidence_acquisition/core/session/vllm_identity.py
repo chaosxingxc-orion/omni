@@ -32,6 +32,10 @@ actually has (``contracts.gate_runtime_vllm`` re-verified every one of them from
 ``/proc/net/tcp``(6) + ``/proc/<pid>/fd``  the pid owns the LISTEN socket on this instance's exact (address, port) --
                          the llama path's own address-aware proof, ported to a caller-supplied ``/proc`` root.
 
+Namespace policy (optional ``shared-pid-host``; default ``same-container``, unchanged): the receipt's
+``deployment.namespace_policy``, set from the deployment profile, replaces the namespace line above by: same host, pid
+visible, pinned executable and command line, and an endpoint that answers ``/v1/models`` with the recorded model.
+
 Multi-instance (coordinator design input, 2026-10-28)
 =====================================================
 
@@ -66,15 +70,19 @@ from typing import Callable, Mapping, Sequence
 from ...contracts import STUDY_SLUG, assert_execution_environment
 from ...contracts.errors import GateClosed
 from ...contracts.gate_runtime_vllm import (
+    DEFAULT_NAMESPACE_POLICY,
     DEVICE_ENV_KEY,
+    NAMESPACE_POLICY_SHARED_PID_HOST,
     SERVED_MODEL_NAME_FLAG,
     assert_argv_matches_instance,
     classify_server_flags,
     device_env_value,
     deployment_environment,
+    harness_hostname,
     instance_argv,
     instance_deployment_env,
     instance_for_endpoint,
+    namespace_policy,
     pinned_environment,
     validate_vllm_receipt_document,
 )
@@ -275,9 +283,34 @@ def _mapped_paths(proc_root: Path, pid: int) -> tuple[list[str], list[str]]:
     return mapped, deleted
 
 
-def _verify_namespaces(proc_root: Path, pid: int) -> None:
-    """The pid shares this process's mount and network namespaces: it is in THIS container (decision 9.2)."""
+#: Seconds the ``shared-pid-host`` policy waits for the endpoint to answer ``/v1/models``.
+NAMESPACE_PROBE_TIMEOUT_SECONDS = 5.0
 
+
+def _http_get_json(url: str, timeout_seconds: float) -> object:
+    """The decoded JSON body of a loopback GET. A module seam: tests replace :data:`http_get_json`."""
+
+    import json
+    import urllib.request
+
+    with urllib.request.urlopen(url, timeout=timeout_seconds) as response:  # loopback only (require_loopback)
+        return json.loads(response.read().decode("utf-8"))
+
+
+http_get_json: Callable[[str, float], object] = _http_get_json
+
+
+def current_hostname(proc_root: "Path | None" = None) -> str:
+    """The harness's own hostname: ``<proc_root>/sys/kernel/hostname``, else ``uname`` ``nodename``."""
+
+    try:
+        text = (_proc_root(proc_root) / "sys" / "kernel" / "hostname").read_text(encoding="utf-8").strip()
+    except OSError:
+        text = ""
+    return text or os.uname().nodename
+
+
+def _verify_same_container(proc_root: Path, pid: int) -> None:
     for namespace in ("mnt", "net"):
         ours = _readlink(Path(proc_root) / "self" / "ns" / namespace, f"own {namespace} namespace", os.getpid())
         theirs = _readlink(Path(proc_root) / str(pid) / "ns" / namespace, f"{namespace} namespace", pid)
@@ -286,6 +319,91 @@ def _verify_namespaces(proc_root: Path, pid: int) -> None:
                 f"pid {pid} is in the {namespace} namespace {theirs!r}, not this process's {ours!r} -- the harness "
                 "and the server must share one container, so the files the gate hashed are the files it loaded"
             )
+
+
+def _verify_shared_pid_host(
+    proc_root: Path,
+    pid: int,
+    runtime_receipt: Mapping[str, object],
+    instance: Mapping[str, object],
+    host: str,
+    port: int,
+) -> None:
+    """The relaxed policy (plan Decision 3, option a): servers in their own containers with ``--pid host``.
+
+    Mount and network namespaces are NOT compared. What replaces them, each refusal naming the instance and the
+    failed condition: the harness is on the host the receipt was written on; the server pid is visible here and its
+    executable and command line are the receipt instance's; the endpoint answers ``/v1/models`` with the recorded
+    model. The image, the argv and the environment are pinned per instance by the receipt (re-checked by the live
+    checks that follow), so a separate mount namespace cannot hide a different binary.
+    """
+
+    label = f"instance {instance['instance_id']!r} (pid {pid}, policy {NAMESPACE_POLICY_SHARED_PID_HOST!r})"
+
+    def fail(condition: str, detail: str) -> SessionError:
+        return _refuse(f"{label}: condition {condition!r} failed: {detail}")
+
+    recorded = harness_hostname(runtime_receipt)
+    if recorded is None:
+        raise fail("same-host", "the runtime receipt records no deployment.harness_hostname")
+    here = current_hostname(proc_root)
+    if here != recorded:
+        raise fail("same-host", f"this harness is on host {here!r} but the receipt was written on {recorded!r}")
+
+    process = Path(proc_root) / str(pid)
+    if not process.is_dir():
+        raise fail(
+            "pid-visible",
+            f"{process} does not exist; the servers must run with --pid host and the harness must see the host's pids",
+        )
+    interpreter, _sha, _size = interpreter_identity(runtime_receipt)
+    try:
+        target = os.readlink(process / "exe")
+    except OSError as error:
+        raise fail("executable-image", f"cannot read {process / 'exe'}: {error}") from error
+    if target != interpreter:
+        raise fail("executable-image", f"the server runs {target!r}, not the pinned interpreter {interpreter!r}")
+    try:
+        assert_argv_matches_instance(_live_argv(proc_root, pid), runtime_receipt, instance)
+    except (GateClosed, SessionError) as error:
+        raise fail("command-line", str(error)) from error
+
+    url = f"http://{_bracketed(host)}:{port}/v1/models"
+    served = runtime_receipt["protocol"]["served_model_name"]
+    try:
+        body = http_get_json(url, NAMESPACE_PROBE_TIMEOUT_SECONDS)
+    except Exception as error:  # noqa: BLE001 - any transport failure is the same refusal
+        raise fail("endpoint-reachable", f"GET {url} failed: {error}") from error
+    entries = body.get("data") if isinstance(body, Mapping) else None
+    ids = [entry.get("id") for entry in entries if isinstance(entry, Mapping)] if isinstance(entries, list) else []
+    if served not in ids:
+        raise fail("endpoint-reachable", f"GET {url} lists models {ids}, not the recorded {served!r}")
+
+
+def _verify_namespaces(
+    proc_root: Path,
+    pid: int,
+    runtime_receipt: Mapping[str, object] | None = None,
+    instance: Mapping[str, object] | None = None,
+    host: str | None = None,
+    port: int | None = None,
+) -> None:
+    """The pid is where the receipt's namespace policy says it must be.
+
+    ``same-container`` (default; owner decision 9.2): the pid shares this process's mount and network namespaces, i.e.
+    it is in THIS container. ``shared-pid-host`` (``deployment.namespace_policy`` of the receipt): see
+    :func:`_verify_shared_pid_host`. A call without a receipt is the default policy.
+    """
+
+    try:
+        policy = namespace_policy(runtime_receipt) if runtime_receipt is not None else DEFAULT_NAMESPACE_POLICY
+    except GateClosed as error:
+        raise _as_session_error(f"pid {pid}", error) from error
+    if policy == NAMESPACE_POLICY_SHARED_PID_HOST:
+        assert instance is not None and host is not None and port is not None
+        _verify_shared_pid_host(Path(proc_root), pid, runtime_receipt, instance, host, port)
+        return
+    _verify_same_container(Path(proc_root), pid)
 
 
 def _verify_executable_image(proc_root: Path, pid: int, path: str, sha: str, size: int) -> None:
@@ -421,7 +539,7 @@ def verify_vllm_process_identity(
         raise _refuse(f"pid {pid} is not a live process ({proc_root}/{pid}/stat cannot be read)")
     if state == "Z":
         raise _refuse(f"pid {pid} has exited and is awaiting reaping (state Z); it serves nothing")
-    _verify_namespaces(proc_root, pid)
+    _verify_namespaces(proc_root, pid, runtime_receipt, instance, host, port)
     interpreter, sha, size = interpreter_identity(runtime_receipt)
     _verify_executable_image(proc_root, pid, interpreter, sha, size)
     live_argv = _live_argv(proc_root, pid)

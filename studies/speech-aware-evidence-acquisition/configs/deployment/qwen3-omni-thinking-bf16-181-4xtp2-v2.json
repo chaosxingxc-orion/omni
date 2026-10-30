@@ -66,5 +66,6 @@
   "profile_id": "qwen3-omni-thinking-bf16-181-4xtp2-v2",
   "schema": "saea-deployment-profile-v1",
   "shm_size": "16g",
-  "tensor_parallel_size": 2
+  "tensor_parallel_size": 2,
+  "namespace_policy": "shared-pid-host"
 }

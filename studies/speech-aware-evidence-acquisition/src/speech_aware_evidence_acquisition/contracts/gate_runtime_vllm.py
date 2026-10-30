@@ -221,6 +221,36 @@ _INSTANCE_KEYS = frozenset(
 #: ``MM_PROCESSOR_CACHE_TYPES`` and the live argv must carry exactly it.
 _INSTANCE_OPTIONAL_KEYS = frozenset({"env", "mm_processor_cache_type"})
 
+#: How the harness and the server processes relate (owner item 9.2 and its open successor, plan Decision 3,
+#: 2026-10-30). ``same-container`` (default, today's behaviour) requires one mount and one network namespace;
+#: ``shared-pid-host`` (servers started with ``--pid host`` on one host) requires the same host, a visible server pid
+#: with the pinned executable and command line, and an endpoint that answers with the recorded model. The policy is a
+#: DEPLOYMENT fact: it lives under ``deployment`` (outside ``protocol_sha256``), absent means the default.
+NAMESPACE_POLICY_SAME_CONTAINER = "same-container"
+NAMESPACE_POLICY_SHARED_PID_HOST = "shared-pid-host"
+NAMESPACE_POLICIES = (NAMESPACE_POLICY_SAME_CONTAINER, NAMESPACE_POLICY_SHARED_PID_HOST)
+DEFAULT_NAMESPACE_POLICY = NAMESPACE_POLICY_SAME_CONTAINER
+#: Optional keys of the receipt's ``deployment`` section (besides the required ``instances``).
+_DEPLOYMENT_OPTIONAL_KEYS = frozenset({"namespace_policy", "harness_hostname"})
+
+
+def namespace_policy(receipt: Mapping[str, object]) -> str:
+    """The receipt's recorded namespace policy; :data:`DEFAULT_NAMESPACE_POLICY` when it records none."""
+
+    deployment = receipt.get("deployment") if isinstance(receipt, Mapping) else None
+    policy = deployment.get("namespace_policy", DEFAULT_NAMESPACE_POLICY) if isinstance(deployment, Mapping) else None
+    if policy not in NAMESPACE_POLICIES:
+        raise _fail(f"deployment.namespace_policy must be one of {list(NAMESPACE_POLICIES)}; got {policy!r}")
+    return policy
+
+
+def harness_hostname(receipt: Mapping[str, object]) -> str | None:
+    """The harness hostname recorded when the receipt was written, or ``None`` when it records none."""
+
+    deployment = receipt["deployment"]
+    value = deployment.get("harness_hostname")
+    return value if isinstance(value, str) and value else None
+
 
 def _fail(message: str) -> GateClosed:
     return GateClosed(f"vllm runtime receipt: {message}")
@@ -756,8 +786,22 @@ def validate_vllm_receipt_document(receipt: object) -> Mapping[str, object]:
             raise _fail(f"protocol.env must set {key}={value}")
 
     deployment = receipt["deployment"]
-    if not isinstance(deployment, Mapping) or set(deployment) != {"instances"}:
-        raise _fail("deployment must have exactly an instances list")
+    if (
+        not isinstance(deployment, Mapping)
+        or "instances" not in deployment
+        or set(deployment) - {"instances"} - _DEPLOYMENT_OPTIONAL_KEYS
+    ):
+        raise _fail(
+            f"deployment must have an instances list plus optional {sorted(_DEPLOYMENT_OPTIONAL_KEYS)} and nothing else"
+        )
+    policy = namespace_policy(receipt)
+    recorded_host = deployment.get("harness_hostname")
+    if recorded_host is not None and (not isinstance(recorded_host, str) or not recorded_host.strip()):
+        raise _fail("deployment.harness_hostname must be a non-empty string")
+    if policy == NAMESPACE_POLICY_SHARED_PID_HOST and recorded_host is None:
+        raise _fail(
+            f"deployment.namespace_policy {policy!r} needs deployment.harness_hostname (the host the receipt was written on)"
+        )
     instances = deployment["instances"]
     if not isinstance(instances, list) or not instances:
         raise _fail("deployment.instances must be a non-empty list")

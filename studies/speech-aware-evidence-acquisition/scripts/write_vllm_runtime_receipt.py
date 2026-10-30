@@ -61,7 +61,9 @@ if str(_REPO / "src") not in sys.path:
 from speech_aware_evidence_acquisition.contracts import STUDY_SLUG  # noqa: E402
 from speech_aware_evidence_acquisition.contracts.errors import GateClosed  # noqa: E402
 from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import (  # noqa: E402
+    DEFAULT_NAMESPACE_POLICY,
     DEVICE_ENV_KEY,
+    NAMESPACE_POLICIES,
     VLLM_RUNTIME_RECEIPT_SCHEMA,
     deployment_environment,
     device_env_value,
@@ -79,6 +81,7 @@ from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import (  # n
 )
 from speech_aware_evidence_acquisition.core.session import SessionError  # noqa: E402
 from speech_aware_evidence_acquisition.core.session.vllm_identity import (  # noqa: E402
+    current_hostname,
     verify_vllm_process_identity,
 )
 
@@ -281,8 +284,16 @@ def build_receipt(
     packages: list[str],
     runtime_libraries: list[str],
     proc_root: Path,
+    namespace_policy: str = DEFAULT_NAMESPACE_POLICY,
 ) -> dict[str, object]:
-    """Observe every instance, assemble the document, then re-verify it exactly as the gate will."""
+    """Observe every instance, assemble the document, then re-verify it exactly as the gate will.
+
+    ``namespace_policy`` (the deployment profile's field) and the harness hostname are recorded under ``deployment``,
+    outside ``protocol_sha256``; the live verification below already runs under that policy.
+    """
+
+    if namespace_policy not in NAMESPACE_POLICIES:
+        raise ProducerError(f"--namespace-policy must be one of {list(NAMESPACE_POLICIES)}; got {namespace_policy!r}")
 
     observations = [(instance_id, observe_process(proc_root, pid)) for instance_id, pid in instances]
     protocols = [(instance_id, protocol_of(observation)) for instance_id, observation in observations]
@@ -333,7 +344,9 @@ def build_receipt(
             "instances": [
                 deployment_of(observation, instance_id, dict(protocol["_deployment"]))
                 for (instance_id, observation), (_same_id, protocol) in zip(observations, protocols)
-            ]
+            ],
+            "namespace_policy": namespace_policy,
+            "harness_hostname": current_hostname(proc_root),
         },
         "protocol_sha256": "0" * 64,
     }
@@ -410,6 +423,10 @@ def main(argv: list[str] | None = None) -> int:
         "--runtime-library", action="append", metavar="PATH",
         help="pin this library explicitly instead of the libpython the servers have mapped",
     )
+    parser.add_argument(
+        "--namespace-policy", choices=list(NAMESPACE_POLICIES), default=DEFAULT_NAMESPACE_POLICY,
+        help="the deployment profile's namespace_policy (default same-container); recorded under deployment, unhashed",
+    )
     parser.add_argument("--proc-root", type=Path, default=Path("/proc"), help="for tests against a fake /proc")
     parser.add_argument("--output", required=True, type=Path, help="where to create the receipt (never overwritten)")
     args = parser.parse_args(argv)
@@ -431,6 +448,7 @@ def main(argv: list[str] | None = None) -> int:
             packages=packages,
             runtime_libraries=args.runtime_library or [],
             proc_root=args.proc_root,
+            namespace_policy=args.namespace_policy,
         )
     except (ProducerError, GateClosed, SessionError) as error:
         print(f"refused: {error}", file=sys.stderr)
