@@ -1,0 +1,99 @@
+{
+  "cells": [
+    {
+      "allowed_execution_stages": [
+        "check",
+        "prepare-supply",
+        "worker"
+      ],
+      "attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-smoke-4-generation-npu-port-v1",
+      "baseline_fragment": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-baseline-raw-port-v1",
+      "cell_id": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-npu-port-v1",
+      "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "readiness": {
+        "reason": "Four-row form smoke of the iteration-1 construction flight (R01C smoke roster), T cell of the three-way comparison, NPU port. Registered before contact on 2026-10-30 by script (scripts/flights/nx/tfrl_v2_port_derive_cells.py) from the L338 port cell (owner decisions of 2026-10-28 on the NPU port (design doc section 9.1: the saea-base Docker container is the execution authority; item 4: the agent drafts the exposure preregistration rows; item 5: the admission receipt is authorised and minted by the main thread; item 6: model-free-check rows for the port preparations; the multi-instance deployment input: the deployment is a named placeholder filled from a measured speed sweep); the owner direction of 2026-10-30 (three-way comparison D / A / T on Fold B with Fold A confirmation; the end goal is a better training-free RL algorithm; plan sections 8-11 rulings)). HELD: root countersigns the DRAFT rows, the main thread mints the admission receipt coordination/slurp-tfrl-v2-npu-port-v1/root-admission-v1.json, the deployment profile is filled from the measured speed sweep, every PENDING pin (zero sentinel) is produced by its row and re-pinned, the cell's own supply is prepared at the flip and the cell is flipped. Nothing here authorises a flight, a readiness flip or an admission entry.",
+        "requirements": [
+          {
+            "expected_decision_id": "slurp-tfrl-v2-npu-port-admission-v1",
+            "kind": "decision",
+            "reason": "Decision slurp-tfrl-v2-npu-port-admission-v1 pinned by scripts/flights/repin_cell.py.",
+            "relpath": "coordination/slurp-tfrl-v2-npu-port-v1/root-admission-v1.json",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "kind": "preparation",
+            "reason": "The R01C exemplar-intent AGREEMENT table on the port (rows-only item, model-free arithmetic against the minus-r01 snapshot, the port pool key vectors and the port R01C speech query vectors); PENDING until that row is run.",
+            "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-R01C-NPU-PORT-V1/agreement.jsonl",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "kind": "preparation",
+            "reason": "This cell's OWN first-phase supply, built model-free under its own run id with core.flight.cli prepare-supply at the flip (item E16); PENDING until the main thread prepares it with scripts/flights/repin_cell.py (--allow-output-change must never be passed).",
+            "relpath": "prepared/SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1/phase-supply-v1.json",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "state": "held"
+      },
+      "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1"
+    }
+  ],
+  "date": "2026-10-30",
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.5,
+    "planned_model_calls": 56,
+    "planned_speech_audio_seconds": 239,
+    "split_role": "discovery"
+  },
+  "execution_profile": "bounded-discovery-probe",
+  "experiment_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1",
+  "failure_policy": "Stop on the first failure and preserve every contact. No retry, no scoring, no partial quality read. The smoke is re-flown whole if it is re-flown at all, under at most one root-diagnosed recovery re-registration; a second failure closes the cell and the fix is proven on a four-row dry run.",
+  "family_budget": {
+    "asr_calls": 0,
+    "ceilings_are_not_targets": true,
+    "encoder_calls": 0,
+    "fit_endpoint_calls_cap": 28,
+    "generation_calls_cap": 56,
+    "gpu_hours_fit_inclusive": 0.5,
+    "native_task_contract_calls_cap": 56,
+    "official_complete_scoring_jobs": 0,
+    "repeated_speech_audio_seconds_cap": 239
+  },
+  "fragment_kind": "saea-slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-npu-port-v1",
+  "generation_budget": {
+    "cap": 56,
+    "definition": "The review-off module graph (perception 1, solver 1; Reviewer and Planner never visited) under program phase-native-module-v1-c7 with the Solver decoding group of 4 trajectories, the twin and lock (1 Perception + 6 Solver contacts per row): 4 x 7 = 28 is the exact program maximum; the plan ceiling adds 7 answer-only fallback contacts per row (one per budgeted-thinking contact): 56 = 4 x 14. The live phase fit makes 4 x 7 x 1 = 28 tokenizer endpoint calls (raw-audio arm). The accelerator bound is PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep); it is PROVISIONAL, a BOUND never a target, and planned_gpu_hours (0.5) is the numeric placeholder the plan field requires until the sweep re-derives it. Fallback contacts and the FIT identity follow the run ids of this cell.",
+    "target": 56
+  },
+  "population": {
+    "count": 4,
+    "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
+    "decision_population": "4 rows of docs/receipts/rosters/slurp-stage3-roll-aa-r01c-smoke-4-v1.json (roster SLURP-STAGE3-ROLL-AA-R01C-SMOKE-4-V1), a subset of the clean construction column SLURP-STAGE3-CONSTRUCTION-R01C (TRAIN rows outside Fold A and Fold B); discovery role, never a test claim; the rows are the construction source of the TFRL-v2 banks, which never read Fold A or Fold B",
+    "roster_receipt": "docs/receipts/rosters/slurp-stage3-roll-aa-r01c-smoke-4-v1.json",
+    "split_identity_hash": "e9dcea536028d17737b999c65267e47645ca7b3f6f9c4f57622961cf29363ed5"
+  },
+  "populations": [
+    {
+      "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
+      "ids": [
+        "slurp:train:000049:audio-1434542455",
+        "slurp:train:000051:audio-1434531302-headset",
+        "slurp:train:000234:audio-1499688528",
+        "slurp:train:000260:audio-1488549919"
+      ]
+    }
+  ],
+  "preserve_wire_responses": true,
+  "purpose": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1: four-row form smoke of the iteration-1 construction flight (R01C smoke roster), NPU port (package docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1); BF16 / vLLM-Ascend Thinking core (bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1; per-sequence window 24,576 tokens; deployment PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)) over the original recordings (native-raw-speech-query-prefix-v1) with the port's re-authored knowledge and regenerated retrieval vectors. Arms: the Solver decoding group s1, s2, s3, s4 (temperature 0.7, top_p 0.80 / 0.90 / 0.95 / 1.00, top_k 20, the lock seed), the twin aa and the delivering lock arm LAST. T1 (plan section 9 ruling 4): in the T arm exemplars REPLACE supplied items, they do not add to them (supply bound = A's bound minus 8 plus an exemplar block of at most 2,000 tokens; the rule bank is Solver instruction text of at most 400 tokens); A keeps its bound and no bank. A declared T-vs-A protocol difference, not a confound. declared differences (design doc section 8): 8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0; 8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets; 8.3 vLLM sampling and kernels: temperature 0 with a fixed seed is deterministic per server build, not bit-identical to llama.cpp; 8.4 causal retrieval encoder (forced and measured); every sealed retrieval vector regenerated; 8.5 forced-close whitespace (vLLM reasoning_end_str) until verified; 8.6 re-authored semantic knowledge (intent-boundaries-npu-port-v1, slot-contracts-npu-port-v2; decision 9.5); 8.7 CPU float32 retrieval encoder instead of CUDA bfloat16. Read by the acceptance and kill rules of docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/README.md, never as a byte replay of a historical flight.",
+  "service_session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+  "split_id": "STAGE3-CONSTRUCTION-R01C",
+  "stage3_algorithm": {
+    "id": "shared-rollout",
+    "note": "TFRL-v2 trajectory sampling: K = 4 Solver trajectories per row on the construction column, scored once by the official scorer; the per-row credit, the exemplar distillation and the rule bank are model-free steps outside this cell (tfrl-v2 has no registry record).",
+    "operators_used": [
+      "rollout"
+    ]
+  }
+}

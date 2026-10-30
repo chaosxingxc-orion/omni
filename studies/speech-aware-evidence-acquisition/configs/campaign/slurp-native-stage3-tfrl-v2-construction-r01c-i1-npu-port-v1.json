@@ -1,0 +1,13 @@
+{
+  "cells": [
+    {
+      "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-npu-port-v1",
+      "experiment": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-npu-port-v1"
+    },
+    {
+      "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-npu-port-v1",
+      "experiment": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-npu-port-v1"
+    }
+  ],
+  "schema": "saea-campaign-plan-v1"
+}

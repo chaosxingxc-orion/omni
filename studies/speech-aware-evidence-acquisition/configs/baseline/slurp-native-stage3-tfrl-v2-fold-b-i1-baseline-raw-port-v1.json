@@ -1,0 +1,561 @@
+{
+  "arm": "raw-speech-agent-native-tools",
+  "evidence_mismatch": false,
+  "evidence_source": "none",
+  "knowledge_stores": {
+    "intent-boundaries": {
+      "phase_supply": {
+        "perception": {
+          "agreement_source": {
+            "embedded_signal": "derived: the share of this row's own top-20 sealed TRAIN-exemplar recall whose frozen build-time task_target equals each boundary intent, self-excluded by the row's utterance identity and normalised to 1. Speech-keyed by construction -- the recall it summarises is the row's own sealed TRAIN Fold B speech vector against the frozen pool -- and gold-free: the key is a released store property, never a label, transcript or future turn. Built model-free by scripts/build_slurp_intent_exemplar_agreement.py with zero model, server, encoder, embedder, scorer, network and GPU contacts; receipt beside the artifact.",
+            "kind": "sealed-agreement",
+            "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1/agreement.jsonl",
+            "sha256": "db4614a3f8f644c8514cd76bf596446cc9b7043eb222a97973eb8b807f113918",
+            "tool_contact_ledger_row": "SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1"
+          },
+          "dimensions": [
+            "intent-boundary"
+          ],
+          "expose_facets": false,
+          "facet_source": {
+            "embedded_signal": "text: the intent's unit-normalised MEAN construction-TRAIN utterance vector (R01-excluded pool, one centroid per released intent-boundary facet; the one intent with no pool member keeps the flown written key), arithmetic over the pinned pool key vectors at zero encoder contacts; the key side is knowledge, the delivered body is unchanged.",
+            "kind": "sealed-vectors",
+            "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1/facets.jsonl",
+            "sha256": "f05287550e2ee895a6444b2e909db643df6f8d586c648eb7cc32c7b9f2c46d31",
+            "tool_contact_ledger_row": "SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1"
+          },
+          "fuse_coverage": {
+            "c": 1,
+            "m": 8,
+            "top_l": 8
+          },
+          "fuse_policy": "saea-fuse-associated-values-v1",
+          "k": 60,
+          "provider": "kb-facet-v1",
+          "query_source": {
+            "embedded_signal": "speech: complete original TRAIN Fold B recordings represented by sealed full-utterance segments in the intent-boundary retrieval dimension; segment identities are preserved and no flattening, re-encoding, transcript, answer or future turn enters this query.",
+            "kind": "sealed-segment-vectors",
+            "relpath": "vectors/slurp-intent-boundaries-train-fold-b-1080-npu-port-v1/query-vectors-speech-segments.jsonl",
+            "sha256": "fe23703a429d4a655b51d0cee921f28eba0e5be8a5511d9fe0f13dc73eb28181",
+            "tool_contact_ledger_row": "SAEA-SLURP-TFRL-FOLD-B-SPEECH-QUERY-ENCODING-NPU-PORT-V1"
+          },
+          "rank_policy": "saea-rank-wcos-prior-agree-v1",
+          "rank_weights": {
+            "w_agree": 1.0,
+            "w_cos": 1.0,
+            "w_prior": 0.0
+          },
+          "tau": 0.0
+        }
+      },
+      "release": {
+        "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/release.json",
+        "sha256": "22242e839627a895d3bcc450002a90fd64ceddef606446febe19a5b8a895dc06"
+      },
+      "snapshot": {
+        "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/snapshot.json",
+        "sha256": "cb6ef966cb3a68a49c325d0bfa643e9e97402d963a49bc93c0c15024fc62eabc"
+      },
+      "store_role": "intent-boundaries"
+    },
+    "slot-contracts": {
+      "candidate_supply": {
+        "solver": {
+          "candidate_state_phase": "perception",
+          "compact_source_phase": "perception",
+          "fuse_policy": "saea-candidate-semantic-passthrough-v1",
+          "max_candidates": 3,
+          "max_total_values": 28,
+          "max_values_per_candidate": 16,
+          "projection_policy": "bounded-first-occurrence-distinct-slurp-intent-hypotheses-v1",
+          "provider": "slurp-candidate-semantic-v1",
+          "rank_policy": "saea-ranked-candidate-round-robin-v1"
+        }
+      },
+      "release": {
+        "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v2/release.json",
+        "sha256": "2f11a748dbd6b61c358ba9283a34b6e96fdabbb1cb1a62ff6468c48f58a1c63c"
+      },
+      "snapshot": {
+        "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v2/snapshot.json",
+        "sha256": "e035c1b827b10cb711c7c31d345deb5e668489679b0d3979acfc95427f6e2a5e"
+      },
+      "store_role": "slot-contracts"
+    },
+    "train-exemplars": {
+      "phase_supply": {
+        "solver": {
+          "dimensions": [
+            "content"
+          ],
+          "expose_facets": false,
+          "facet_source": {
+            "embedded_signal": "text: Omni-Embed-Nemotron-3B over the 11,514 governed SLURP TRAIN utterance texts, prompt 'passage: ', mean-pooled and L2-normalised; one vector per content facet id facet:content:<slurp_id>. The KEY side is knowledge text by construction and is unconstrained by the owner's 2026-09-06 query-signal rule.",
+            "kind": "sealed-vectors",
+            "relpath": "vectors/slurp-kus3/facet-vectors.jsonl",
+            "sha256": "24f0cdf7005f722651631fa91407a6c7e68ac4aa9ec70ac042328fe2020cf2c4",
+            "tool_contact_ledger_row": "SAEA-SLURP-MF7B-NEMOTRON-EMBEDDING-NPU-PORT-V1"
+          },
+          "fuse_coverage": {
+            "c": 20,
+            "m": 20,
+            "top_l": 20
+          },
+          "fuse_policy": "saea-fuse-supplyfilter-v1",
+          "k": 20,
+          "provider": "kb-facet-v1",
+          "query_source": {
+            "embedded_signal": "speech: complete original TRAIN Fold B recordings represented by the sealed full-utterance speech vector of the row's own recording, in the content retrieval dimension; flattened by scripts/build_slurp_query_content_derivative.py from the sealed intent-boundary full-utterance SEGMENT vectors (one segment per row, dimension renamed intent-boundary to content, every float byte-identical to the parent; provenance beside the file) -- the exact transform cell ROLL-2's Fold A pin was built with -- because docs/results/2026-09-17-slurp-a2-exemplar-headroom-audit-v1.md establishes intent-boundary as an alias of the content embedding space; no flattening of MEANING, re-encoding, transcript, answer or future turn enters this query.",
+            "kind": "sealed-vectors",
+            "relpath": "vectors/slurp-stage3-filler-fold-b-npu-port-v1/query-vectors-speech-content-v1.jsonl",
+            "sha256": "e1d3230ed517685f6d0e963bb48a0a5bf205e3c31a7c7aaae22e88b1ac27196f",
+            "tool_contact_ledger_row": "SAEA-SLURP-TFRL-FOLD-B-SPEECH-QUERY-ENCODING-NPU-PORT-V1"
+          },
+          "rank_policy": "saea-rank-wcos-prior-agree-v1",
+          "rank_weights": {
+            "w_agree": 0.0,
+            "w_cos": 1.0,
+            "w_prior": 0.0
+          },
+          "tau": 0.0
+        }
+      },
+      "release": {
+        "relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars/release.json",
+        "sha256": "171aa4a82c2b15fff2c72e907ea80298be8d72309cca0d7367eb50debb042129"
+      },
+      "snapshot": {
+        "relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars/snapshot.json",
+        "sha256": "4c498dc0282055b9fe036ed7e950af519bd48b5f26e76876d0250727196a72e9"
+      },
+      "store_role": "train-exemplars"
+    }
+  },
+  "native_contact_fit": {
+    "attempt_id": "attempt-slurp-tfrl-v2-fold-b-i1-fit-npu-port-v1",
+    "contact_cap": 10800,
+    "max_speech_packets": 1,
+    "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-FIT-NPU-PORT-V1"
+  },
+  "native_episode": {
+    "actions": {
+      "accept": "ACCEPT",
+      "acquire": "ACQUIRE",
+      "revise": "REVISE"
+    },
+    "consumption_module": {
+      "columns": [
+        {
+          "column_id": "t-v2",
+          "kind": "sampling",
+          "node": "perception",
+          "solver_samples": {
+            "commit": {
+              "min_support": 2,
+              "policy": "saea-commit-plurality-support-v1",
+              "similarity_threshold": 0.8
+            },
+            "decoding": {
+              "temperature": 0.6,
+              "top_k": 20,
+              "top_p": 0.95
+            },
+            "n": 3
+          }
+        }
+      ],
+      "components": [
+        {
+          "component_id": "node-context-presentation",
+          "state": "off"
+        },
+        {
+          "component_id": "knowledge-consumption-opportunity",
+          "state": "off"
+        },
+        {
+          "component_id": "construction-store-binding",
+          "state": "off"
+        },
+        {
+          "admitted_by": "docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md",
+          "component_id": "agree-vote-seed",
+          "params": {
+            "agreement_source": {
+              "embedded_signal": "derived: the share of this row's own top-20 sealed TRAIN-exemplar recall whose frozen build-time task_target equals each boundary intent, self-excluded by the row's utterance identity and normalised to 1. Speech-keyed by construction -- the recall it summarises is the row's own sealed TRAIN Fold B speech vector against the frozen pool -- and gold-free: the key is a released store property, never a label, transcript or future turn. Built model-free by scripts/build_slurp_intent_exemplar_agreement.py with zero model, server, encoder, embedder, scorer, network and GPU contacts; receipt beside the artifact.",
+              "kind": "sealed-agreement",
+              "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1/agreement.jsonl",
+              "sha256": "db4614a3f8f644c8514cd76bf596446cc9b7043eb222a97973eb8b807f113918",
+              "tool_contact_ledger_row": "SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1"
+            },
+            "k": 60,
+            "w_agree": 1.0
+          },
+          "record": "docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md",
+          "state": "on"
+        },
+        {
+          "admitted_by": "docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md",
+          "component_id": "centroid-boundary-key",
+          "params": {
+            "facet_source": {
+              "embedded_signal": "text: the intent's unit-normalised MEAN construction-TRAIN utterance vector (R01-excluded pool, one centroid per released intent-boundary facet; the one intent with no pool member keeps the flown written key), arithmetic over the pinned pool key vectors at zero encoder contacts; the key side is knowledge, the delivered body is unchanged.",
+              "kind": "sealed-vectors",
+              "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1/facets.jsonl",
+              "sha256": "f05287550e2ee895a6444b2e909db643df6f8d586c648eb7cc32c7b9f2c46d31",
+              "tool_contact_ledger_row": "SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1"
+            }
+          },
+          "record": "docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md",
+          "state": "on"
+        },
+        {
+          "component_id": "solver-citation-contract",
+          "state": "off"
+        },
+        {
+          "component_id": "reviewer-g5-repair",
+          "state": "off"
+        },
+        {
+          "component_id": "relisten",
+          "state": "off"
+        },
+        {
+          "component_id": "top2-contrast",
+          "state": "off"
+        },
+        {
+          "component_id": "forced-candidate-list",
+          "state": "off"
+        },
+        {
+          "component_id": "key-source:k6p",
+          "state": "off"
+        },
+        {
+          "component_id": "scope-rule",
+          "state": "off"
+        },
+        {
+          "component_id": "e3-progressive-slots",
+          "state": "off"
+        },
+        {
+          "component_id": "supply-abstain",
+          "state": "off"
+        }
+      ],
+      "lock": "v2.2",
+      "module_id": "saea-evidence-consumption-module-v1",
+      "profile": "slurp",
+      "review_loop": "off",
+      "sampling_frame": {
+        "fit_estimate": {
+          "base_prompt_tokens": 4723,
+          "completion_ceiling": 4096,
+          "slot_tokens": 24576,
+          "tokens_per_supplied_item": 235
+        },
+        "max_supplied_items": 47,
+        "replicates": [
+          "lock-rep2"
+        ],
+        "twin": true
+      }
+    },
+    "context_fit_policy": "compact-or-abstain",
+    "deliver_normaliser": {
+      "normaliser": "saea-deliver-normalise-v4g"
+    },
+    "episode_id": "slurp-native-dual-store-dev1000-v1",
+    "exhaustion_policy": "deliver-latest-solver",
+    "finite_completion_policy": "deliver-latest-or-abstain",
+    "max_revisions": 0,
+    "react_exhaustion_policy": "continue-without-answer",
+    "review_loop": "off",
+    "roles": {
+      "perception": {
+        "max_iterations": 1,
+        "phase_id": "perception",
+        "sampling_variants": {
+          "arms": [
+            {
+              "arm_id": "t-v2",
+              "solver_samples": {
+                "commit": {
+                  "min_support": 2,
+                  "policy": "saea-commit-plurality-support-v1",
+                  "similarity_threshold": 0.8
+                },
+                "decoding": {
+                  "temperature": 0.6,
+                  "top_k": 20,
+                  "top_p": 0.95
+                },
+                "n": 3
+              }
+            },
+            {
+              "arm_id": "aa",
+              "replicate_of": "lock"
+            },
+            {
+              "arm_id": "lock-rep2",
+              "arm_kind": "replicate",
+              "replicate_of": "lock"
+            },
+            {
+              "arm_id": "lock",
+              "deliver": true
+            }
+          ],
+          "fit_estimate": {
+            "base_prompt_tokens": 4723,
+            "completion_ceiling": 4096,
+            "slot_tokens": 24576,
+            "tokens_per_supplied_item": 235
+          },
+          "max_supplied_items": 47,
+          "node": "perception"
+        }
+      },
+      "planner": {
+        "max_iterations": 0,
+        "phase_id": "planner"
+      },
+      "reviewer": {
+        "max_iterations": 0,
+        "phase_id": "reviewer"
+      },
+      "solver": {
+        "max_iterations": 1,
+        "phase_id": "solver"
+      }
+    },
+    "schema": "saea-native-episode-config-v1"
+  },
+  "phase_material": {
+    "perception": {
+      "fill_params": {
+        "id": "slurp-intent-hypotheses-v1",
+        "max_candidates": 3,
+        "max_distinction_chars": 128,
+        "max_evidence_refs": 0,
+        "max_unresolved_fields": 0,
+        "min_candidates": 1,
+        "source_catalog": {
+          "data_relpath": "prepared/SAEA-SLURP-NATIVE-CANDIDATE-CONTRACTS-PREPARE-V1/catalog.json",
+          "sha256": "3e60268b3f940c3018ab8b8c80ccd988b1d1efd6c5a198929c6af05ba21f8263",
+          "source_sha256": "deb4e097459157a719e34b3fb46014d5f9bcb86c9e952014c1e02f26474db201"
+        }
+      },
+      "instruction_fill": null,
+      "instruction_template": "probes/slurp_native_role_perception_v3.txt",
+      "predecessor_binding": "none",
+      "response_format_id": "slurp-intent-hypotheses-v1",
+      "state_fill": null
+    },
+    "planner": {
+      "fill_params": {},
+      "instruction_fill": null,
+      "instruction_template": "probes/slurp_native_role_planner_v1.txt",
+      "predecessor_binding": "none",
+      "response_format_id": null,
+      "state_fill": null
+    },
+    "reviewer": {
+      "fill_params": {},
+      "instruction_fill": null,
+      "instruction_template": "probes/slurp_native_role_reviewer_v1_g5_v1.txt",
+      "predecessor_binding": "none",
+      "response_format_id": null,
+      "state_fill": null
+    },
+    "solver": {
+      "fill_params": {},
+      "instruction_fill": null,
+      "instruction_template": "probes/slurp_native_role_solver_v2.txt",
+      "predecessor_binding": "none",
+      "response_format_id": null,
+      "state_fill": null
+    }
+  },
+  "phase_tools": {},
+  "policy": "phase-native-module-v1-c10",
+  "preflight_budget_mode": "defer-to-native-contact-fit",
+  "preparation_source_receipts": [
+    {
+      "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/completion.json",
+      "root": "data",
+      "sha256": "7b7e4744caec975d9fa000ec14c4f47f2bb072d1f129016e114382e98042b294"
+    },
+    {
+      "relpath": "knowledge/slurp/semantic/intent-boundaries-npu-port-v1/release.json",
+      "root": "data",
+      "sha256": "22242e839627a895d3bcc450002a90fd64ceddef606446febe19a5b8a895dc06"
+    },
+    {
+      "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v1/completion.json",
+      "root": "data",
+      "sha256": "894937819636aaeed206d96e4e806be03712341a9ed94312d919201807272d19"
+    },
+    {
+      "relpath": "knowledge/slurp/semantic/slot-contracts-npu-port-v1/release.json",
+      "root": "data",
+      "sha256": "19723a2a8996bb189e9c6312ae56903a87c9effc323bdde4bf28aaa2a8952341"
+    },
+    {
+      "relpath": "preparation-runs/SAEA-SLURP-INTENT-BOUNDARY-KEY-ENCODING-NPU-PORT-V1/encode-v1/receipt.json",
+      "root": "data",
+      "sha256": "8aff65483afd4e1aba98ecb8456976650783dea1a2e87aea003b2a73fb887964"
+    },
+    {
+      "relpath": "preparation-runs/SAEA-SLURP-TFRL-FOLD-B-SPEECH-QUERY-ENCODING-NPU-PORT-V1/encode-v1/receipt.json",
+      "root": "data",
+      "sha256": "3e52357c4871b2cb8e7c67b9586b6001cefc484090b8d2bb64831302dcd84da5"
+    },
+    {
+      "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1/receipt.json",
+      "root": "data",
+      "sha256": "200f769444ca5e41381cf28151daa11cef05b86dc8d0eaf26ced8300e342d914"
+    },
+    {
+      "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-B-ALIAS-NPU-PORT-V1/query-dimension-alias.json",
+      "root": "data",
+      "sha256": "f59dc040b05e2e87637a91d8d677392c50a010701986a8db33bbdfdfdd008adf"
+    },
+    {
+      "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1/receipt.json",
+      "root": "data",
+      "sha256": "2e032013857b6e36c5c267fe32827d1982949515d6006cacb4ab568897358c92"
+    },
+    {
+      "relpath": "vectors/slurp-stage3-filler-fold-b-npu-port-v1/query-vectors-speech-content-v1.provenance.json",
+      "root": "data",
+      "sha256": "59c285768247d3f6abb0fea68dfbd5e2f0246074038d7318218f834e232c890c"
+    },
+    {
+      "relpath": "docs/receipts/knowledge/slurp-kb-size-pool-annotated-exemplars.json",
+      "root": "repository",
+      "sha256": "48d0f34cf536ebf9806d55b5dcced1b607080bec3c68ca7dea27cdb01478cc72"
+    },
+    {
+      "relpath": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+      "root": "repository",
+      "sha256": "47b89b9e33b1aed553ad94a1819acba6ac8837130ca546c33219d91a1ab944a8"
+    }
+  ],
+  "scorers": [
+    "slurp-slu-official-train",
+    "cost"
+  ],
+  "serving_slot_tokens": 24576,
+  "serving_slots": 4,
+  "speech_feature_key_representation_id": "saea-slurp-task-agent-anchor-exemplars-k20-replicate-v1:query-speech",
+  "speech_feature_matcher_policy_id": "saea-slurp-task-agent-anchor-exemplars-k20-replicate-v1",
+  "task_instruction_fill": "slurp-label-inventory",
+  "task_instruction_template": "probes/slurp_native_role_context_v3.txt",
+  "task_instruction_template_active": true,
+  "tfrl_v2": {
+    "a_supply_bound_items": 55,
+    "banks": {
+      "exemplar_bank": {
+        "pin_state": "PENDING (zero sentinel): released after the iteration-1 credit and reflector steps",
+        "release": {
+          "relpath": "knowledge/slurp/tfrl-v2/exemplar-bank-i1-npu-port-v1/release.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "snapshot": {
+          "relpath": "knowledge/slurp/tfrl-v2/exemplar-bank-i1-npu-port-v1/snapshot.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "store_role": "tfrl-exemplar-bank"
+      },
+      "rule_bank": {
+        "pin_state": "PENDING (zero sentinel): released after the iteration-1 credit and reflector steps",
+        "release": {
+          "relpath": "knowledge/slurp/tfrl-v2/rule-bank-i1-npu-port-v1/release.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "snapshot": {
+          "relpath": "knowledge/slurp/tfrl-v2/rule-bank-i1-npu-port-v1/snapshot.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "store_role": "tfrl-rule-bank"
+      }
+    },
+    "caps": {
+      "exemplar_block_tokens": 2000,
+      "rule_bank_tokens": 400
+    },
+    "context_fit": {
+      "base_is": "2000 + 323 template + 2000 exemplar cap + 400 rule cap",
+      "estimated_prompt_tokens_at_bound": 15768,
+      "frame_base_prompt_tokens": 4723,
+      "largest_fitting_bound": 53,
+      "solver_prompt_limit_tokens": 17406
+    },
+    "cross_fit": "R01C is split into interleaved halves H1 (even positions) and H2 (odd positions). From iteration 2 the bank a half consumes is distilled from the OTHER half's positives; the iteration-1 construction flights are seed-only and consume no bank",
+    "exemplar_policy": "replaces supplied items",
+    "exemplar_policy_note": "plan section 9 ruling 4: a declared T-vs-A protocol difference, not a confound",
+    "iteration": 1,
+    "kind": "selection-flight",
+    "loop_id": "SAEA-SLURP-TFRL-V2-NPU-PORT-V1",
+    "plan": "docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md",
+    "rails_pending": [
+      {
+        "consequence": "the cells wear the closest registered labels (shared-rollout for the sampling cells, tfgrpo-semantic-advantage-v1 for the Fold B cells)",
+        "id": "stage3-algorithm-label",
+        "lacks": "no 'tfrl-v2' record in core.stage3_algorithms"
+      },
+      {
+        "consequence": "the bank pins live in this block (zero sentinel), not in knowledge_stores; nothing reads them, so the bank is not consumed until the rail exists",
+        "id": "bank-store-roles",
+        "lacks": "no store roles 'tfrl-exemplar-bank' and 'tfrl-rule-bank' and no scenario-conditioned supply from them"
+      },
+      {
+        "consequence": "the closest registered policy saea-commit-plurality-support-v1 (min_support 2, similarity 0.8) is used; greedy_first makes n = 3 one greedy plus two drawn",
+        "id": "vote-commit-policy",
+        "lacks": "'saea-commit-vote-v1' does not exist (entity union-vote rule unfixed)"
+      },
+      {
+        "consequence": "the three votes differ in seed only; the rule text is declared, not delivered",
+        "id": "top-rule-per-vote",
+        "lacks": "no rail puts one of the top-3 rules into each of the three vote contacts"
+      },
+      {
+        "consequence": "the cap is folded into the frame's base prompt tokens so the context fit is already honest",
+        "id": "exemplar-block",
+        "lacks": "no rail renders the exemplar block (2,000-token cap) into the Solver prompt"
+      }
+    ],
+    "role": "iteration-1 selection flight on TRAIN Fold B",
+    "schema": "saea-tfrl-v2-declaration-v1",
+    "status": "DECLARATION: no rail reads this block yet (see rails_pending); it is part of the composed config, so the protocol hash covers it",
+    "supply_bound_items": 47,
+    "supply_bound_rule": "A's bound minus 8 (the exemplar block of at most 2000 tokens is about 8 items' worth at 235 tokens each)",
+    "union": "the Fold B flight consumes the union of both halves' banks; their sources (R01C) are disjoint from Fold A and Fold B",
+    "vote_harness": {
+      "arm": "t-v2",
+      "commit": {
+        "min_support": 2,
+        "policy": "saea-commit-plurality-support-v1",
+        "similarity_threshold": 0.8
+      },
+      "decoding": {
+        "temperature": 0.6,
+        "top_k": 20,
+        "top_p": 0.95
+      },
+      "entity_rule": "entities kept at support >= 2 of 3 (the planned union-vote rule is not fixed)",
+      "greedy_first": true,
+      "intent_rule": "scenario_action by plurality",
+      "n": 3,
+      "per_vote_consumption": "the exemplar-bank items of the Perception-predicted scenario plus one of the top-3 ranked rules (declared, not yet delivered)",
+      "planned_commit_policy": "saea-commit-vote-v1"
+    }
+  },
+  "what_the_train_exemplars_store_is": "SLURP v2 base program module M1 / cell B1 (docs/superpowers/specs/2026-09-16-slurp-v2-base-program-design.md section 3-4; A2 decision docs/results/2026-09-17-slurp-a2-exemplar-headroom-audit-v1.md): the top-20 TRAIN construction-pool exemplars (excluding every utterance with a recording in TRAIN Fold A, Fold B or DEV-1000; 9,354-facet pool) recalled by cosine against this row's OWN sealed TRAIN Fold B speech vector, ranked by saea-rank-wcos-prior-agree-v1 (identity on cosine: w_cos=1, w_prior=0, w_agree=0) and passed through saea-fuse-supplyfilter-v1 with m=c=top_l=20 -- twenty in, twenty out on every row, the same 'no coverage reshaping' discipline cell KU-S3 established. Each value renders as '<utterance> | <scenario>_<action> | type=filler; ...' (KB view annotated-exemplars, scripts/build_knowledge_snapshot.py). The decision is delivered to the SOLVER phase (the program's LAST phase) through the E6 acquire transition -- NOT the bootstrap seam intent-boundaries uses, because solver is not the first phase -- as typed content blocks (evidence_id/source_uri/knowledge_role='value', store-prefixed 'train-exemplars::...'); the Solver's instruction bytes are byte-identical to the unmodified anchor's. The composed acquire transition also carries the slot-contracts store's own candidate_supply.solver decision on the same wave; both compose into one PhaseSupply via rails.knowledge_stores._compose_supplies. Phase-2 re-target (P-SV-1/P-SV-2): only the query file moves (TRAIN Fold A -> TRAIN Fold B, the pin the filler family uses); the store, its release and its snapshot are byte-identical.",
+  "what_this_is": "T cell of the three-way comparison (plan docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md), iteration 1: iteration-1 selection flight on TRAIN Fold B. The L338 port baseline (the lock harness A, the port's re-authored stores and regenerated retrieval vectors, raw-audio arm) on TRAIN Fold B with the candidate t-v2 (one Perception contact and a Solver vote of n = 3 at temperature 0.6, top_p 0.95, top_k 20, commit saea-commit-plurality-support-v1 with min_support 2), the twin aa, the registered replicate lock-rep2 and the delivering lock arm LAST. Program phase-native-module-v1-c10: 4 Perception + 6 Solver contacts per row. The `tfrl_v2` block declares the TFRL-v2 inputs the rails do not read yet (bank pins at the zero sentinel, caps 2000 / 400, vote harness, rails_pending). Development numbers only; claims_benefit false."
+}

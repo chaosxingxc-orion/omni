@@ -1,0 +1,14 @@
+{
+  "_note": "The Fold A confirmation cell has no smoke: the programs and harness bytes were smoked and signed off on Fold B (docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/signoff-conditions-v1.json). There is no decode-cost table to read for this package; the Fold B sign-off is the antecedent.",
+  "antecedent": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/signoff-conditions-v1.json",
+  "applicable": false,
+  "expected_arms": [
+    "aa",
+    "l1-support",
+    "l2-union",
+    "lock",
+    "lock-rep2"
+  ],
+  "package": "slurp-l338-fold-a-confirmation-npu-port-v1",
+  "schema": "saea-smoke-signoff-conditions-v1"
+}

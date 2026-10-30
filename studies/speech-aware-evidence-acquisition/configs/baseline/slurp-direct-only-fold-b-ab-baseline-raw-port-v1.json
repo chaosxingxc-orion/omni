@@ -1,0 +1,33 @@
+{
+  "arm": "raw-speech-agent-native-tools",
+  "evidence_mismatch": false,
+  "evidence_source": "none",
+  "knowledge_snapshot_relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-full-content-slot-fillers-intent-slot-frame-tfrl-folds-v1/snapshot.json",
+  "knowledge_snapshot_sha256": "9c64e8ec48a0fce4f172bd190932f99c98c7efa18bbfb14526d54c62fdf7032b",
+  "live_phase_fit": {
+    "attempt_id": "attempt-slurp-direct-only-fold-b-ab-fit-npu-port-v1",
+    "contact_cap": 1080,
+    "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AB-FIT-NPU-PORT-V1"
+  },
+  "live_phase_fit_audio_seconds_cap": 6310,
+  "phase_material": {
+    "direct": {
+      "instruction_fill": null,
+      "instruction_template": "probes/slurp_phase_direct.txt",
+      "predecessor_binding": "none",
+      "response_format_id": null
+    }
+  },
+  "policy": "phase-direct-only-v1",
+  "scorers": [
+    "slurp-slu-official-train",
+    "cost"
+  ],
+  "serving_slot_tokens": 24576,
+  "serving_slots": 4,
+  "task_instruction_fill": "slurp-label-inventory",
+  "task_instruction_template": "probes/slurp_direct_closed_list.txt",
+  "task_instruction_template_active": true,
+  "what_this_is": "The NPU-port twin of slurp-direct-only-fold-b-thinking-v1 (cell 266-E Thinking arm; plan docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md section 5, draft docs/readiness/2026-10-30-three-way-fold-b-npu-port-v1/direct-only-cell-draft-v1.md): the historical baseline slurp-direct-only-fold-b-thinking-baseline-v1 with the BF16 / vLLM-Ascend serving path (arm raw-speech-agent-native-tools: the original recordings under native-raw-speech-query-prefix-v1, no promoted speech packets), live_phase_fit under the port FIT ids with the cap of core.preparation_fit.build_direct_only_raw_fit_gate (rows x 1 contact x 1 counting endpoint). The serving deployment is PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep); the per-sequence window is 24,576 tokens. Arm D of the three-way comparison, arm D, second request-identical replicate pass ab (3 of 3): the sealed direct-only form, one complete answer per row through the shared controller's direct-only phase program, on TRAIN Fold B 1,080. No knowledge supply, no Perception node, no analytical tool, no native tool authority. Request-identical to the lock pass: only the live_phase_fit identity and this prose differ, and neither enters a request.",
+  "whole_roster_wave_barrier": true
+}

@@ -1,0 +1,209 @@
+{
+  "_draft_note": "A DRAFT for the MAIN THREAD to mint on the data root (owner decision 2026-10-28 item 5). It authorises nothing while its status is not 'decided'. Before minting, the measured sweep fills PORT_DEPLOYMENT_PROFILE and the PROVISIONAL accelerator bound below is replaced by the re-derived number.",
+  "antecedents": {
+    "plans": {
+      "construction-i1-h1-fit-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h1-fit-plan-registered-v1.json",
+        "sha256": "6e1f61c9a3547b41370e00c70de4129df91fe3920aa3db1322577219d49bf682"
+      },
+      "construction-i1-h1-generation-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h1-generation-plan-registered-v1.json",
+        "sha256": "dd850c9038b80651d2b47ec79f15def092ba0d12515a65c41bac57fde27b06bb"
+      },
+      "construction-i1-h2-fit-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h2-fit-plan-registered-v1.json",
+        "sha256": "b037b5ca40a0e187bbc21e373fb281796952d3ea78c88af794b03a873625cd28"
+      },
+      "construction-i1-h2-generation-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-i1-h2-generation-plan-registered-v1.json",
+        "sha256": "a7cf5c9b918448ce07730d3f3edc20e1931d458f93d70786ac4620eca21c831a"
+      },
+      "construction-smoke-fit-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-smoke-fit-plan-registered-v1.json",
+        "sha256": "f7040ec563c4c4dd4d7e57609b15d100f81bfa4b170abb6365318d4ea7fb1752"
+      },
+      "construction-smoke-generation-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/construction-smoke-generation-plan-registered-v1.json",
+        "sha256": "018f8fcfa4c66b8ccc9550f229336eaa3b5d2a4d17a69ef179c850fa0650785d"
+      },
+      "foldb-i1-fit-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-i1-fit-plan-registered-v1.json",
+        "sha256": "0ceb2a149471140515df484a4b509a1ca568aee34f3812ce53367699c76678b7"
+      },
+      "foldb-i1-generation-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-i1-generation-plan-registered-v1.json",
+        "sha256": "d9c19a52604bdddf12548305c7919d7fb6be3bfa7fa24a912493e5e898f99326"
+      },
+      "foldb-smoke-fit-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-smoke-fit-plan-registered-v1.json",
+        "sha256": "a9c00a7cd485b782b635d616716202002011d10a185ed3e968e92581c1edd3f6"
+      },
+      "foldb-smoke-generation-plan-registered-v1.json": {
+        "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/foldb-smoke-generation-plan-registered-v1.json",
+        "sha256": "41dadd8c7cf03b5a3ddebd2fc0281130b36bc691509994192c0703080fb04d77"
+      }
+    },
+    "protocol": {
+      "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/protocol-registered-v1.json",
+      "sha256": "094e59a2f88d69cc03cc639e032afeef42978ce5f6e7d9e4d9dc9bd52b363452"
+    },
+    "registered_facts": {
+      "path": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/registered-facts-v1.json",
+      "sha256": "2c02e1a9fb8c00185e3ebb4f3c2f7a1b2f1da457da0da6815af55735bf9037a0"
+    },
+    "registration_base_commit": "534b543ff154ca23be8287c1730b040940a3d038"
+  },
+  "authorization_basis": "owner decisions of 2026-10-28 on the NPU port (design doc section 9.1: the saea-base Docker container is the execution authority; item 4: the agent drafts the exposure preregistration rows; item 5: the admission receipt is authorised and minted by the main thread; item 6: model-free-check rows for the port preparations; the multi-instance deployment input: the deployment is a named placeholder filled from a measured speed sweep); the owner direction of 2026-10-30 (three-way comparison D / A / T on Fold B with Fold A confirmation; the end goal is a better training-free RL algorithm; plan sections 8-11 rulings); docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md; the port authority docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1.",
+  "budget": {
+    "accelerator_bound": {
+      "formula": {
+        "ch1": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 313 rows x 3.6 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "ch2": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 312 rows x 3.6 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "csmoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "fb": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 5.04 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "fsmoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+      },
+      "note": "gpu_hours_fit_inclusive in the cells is a numeric placeholder, not the NPU card-hour bound",
+      "status": "PROVISIONAL"
+    },
+    "cells": {
+      "ch1": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 2191,
+        "generation_calls_cap": 4382,
+        "gpu_hours_fit_inclusive": 12.6,
+        "native_task_contract_calls_cap": 4382,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 18474
+      },
+      "ch2": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 2184,
+        "generation_calls_cap": 4368,
+        "gpu_hours_fit_inclusive": 12.5,
+        "native_task_contract_calls_cap": 4368,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 19703
+      },
+      "csmoke": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 28,
+        "generation_calls_cap": 56,
+        "gpu_hours_fit_inclusive": 0.5,
+        "native_task_contract_calls_cap": 56,
+        "official_complete_scoring_jobs": 0,
+        "repeated_speech_audio_seconds_cap": 239
+      },
+      "fb": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 10800,
+        "generation_calls_cap": 21600,
+        "gpu_hours_fit_inclusive": 60.5,
+        "native_task_contract_calls_cap": 21600,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 63096
+      },
+      "fsmoke": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 40,
+        "generation_calls_cap": 80,
+        "gpu_hours_fit_inclusive": 0.5,
+        "native_task_contract_calls_cap": 80,
+        "official_complete_scoring_jobs": 0,
+        "repeated_speech_audio_seconds_cap": 204
+      }
+    },
+    "family_total_iteration_1": {
+      "fit_endpoint_calls": 15243,
+      "generation_calls": 30486,
+      "speech_audio_seconds": 101716
+    },
+    "paid_api_calls": 0,
+    "plan_budget_is_run_cumulative": true,
+    "rows_only_caps": {
+      "r01c_encoding": {
+        "calls": 625,
+        "npu_hours": 0,
+        "speech_audio_seconds": 2727,
+        "wall_clock_hours_ceiling": 2.0
+      },
+      "reflector_per_iteration": {
+        "fit_endpoint_calls": 37,
+        "generation_calls": 36,
+        "speech_audio_seconds": 0
+      }
+    }
+  },
+  "claim_boundary": "No benefit, system-level, superiority, generalisation, held-out, confirmatory or paper-scale claim.",
+  "decision": "Fly the T cell of the three-way comparison on the BF16 / vLLM-Ascend Thinking core, iteration 1: construction smoke, the two construction halves, the contrast-pair reflector, then the Fold B smoke and the Fold B selection flight, on the deployment PORT_DEPLOYMENT_PROFILE once it is filled and every PENDING pin is produced.",
+  "decision_id": "slurp-tfrl-v2-npu-port-admission-v1",
+  "eligible_attempt_ids": [
+    "attempt-slurp-tfrl-v2-construction-r01c-smoke-4-generation-npu-port-v1",
+    "attempt-slurp-tfrl-v2-construction-r01c-smoke-4-fit-npu-port-v1",
+    "attempt-slurp-tfrl-v2-construction-r01c-i1-h1-generation-npu-port-v1",
+    "attempt-slurp-tfrl-v2-construction-r01c-i1-h1-fit-npu-port-v1",
+    "attempt-slurp-tfrl-v2-construction-r01c-i1-h2-generation-npu-port-v1",
+    "attempt-slurp-tfrl-v2-construction-r01c-i1-h2-fit-npu-port-v1",
+    "attempt-slurp-tfrl-v2-fold-b-smoke-4-generation-npu-port-v1",
+    "attempt-slurp-tfrl-v2-fold-b-smoke-4-fit-npu-port-v1",
+    "attempt-slurp-tfrl-v2-fold-b-i1-generation-npu-port-v1",
+    "attempt-slurp-tfrl-v2-fold-b-i1-fit-npu-port-v1",
+    "attempt-slurp-tfrl-v2-reflector-i1-generation-npu-port-v1",
+    "attempt-slurp-tfrl-v2-reflector-i1-fit-npu-port-v1"
+  ],
+  "eligible_run_ids": [
+    "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-FIT-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-FIT-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-FIT-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-FOLD-B-I1-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-FOLD-B-I1-FIT-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-REFLECTOR-I1-NPU-PORT-V1",
+    "SAEA-SLURP-TFRL-V2-REFLECTOR-I1-FIT-NPU-PORT-V1"
+  ],
+  "not_authorized": [
+    "any flight before the cells are flipped and the receipt is minted",
+    "any flight before PORT_DEPLOYMENT_PROFILE is filled",
+    "any Fold A, DEV or test-split contact",
+    "starting or touching any serving session outside the registered deployment",
+    "any ASR, transcript, encoder or paid-API contact beyond the registered rows",
+    "--allow-output-change on the re-pin tool",
+    "iteration 2 or 3 before the previous iteration is read"
+  ],
+  "owner": "root",
+  "population": {
+    "fold_a_contact_authorized": false,
+    "rosters": {
+      "ch1": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
+      "ch2": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72",
+      "csmoke": "e9dcea536028d17737b999c65267e47645ca7b3f6f9c4f57622961cf29363ed5",
+      "fb": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a",
+      "fsmoke": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32"
+    },
+    "split_role": "discovery",
+    "test_contact_authorized": false
+  },
+  "recorded_at_utc": null,
+  "schema": "saea-campaign-decision-v1",
+  "service": {
+    "deployment_profile": "PORT_DEPLOYMENT_PROFILE (pending)",
+    "expected_session_id": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+    "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+    "no_child_start_stop": true
+  },
+  "status": "DRAFT-NOT-MINTED"
+}

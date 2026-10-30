@@ -1,0 +1,1283 @@
+{
+  "_note": "Every model-free fact this DRAFT T registration rests on, and the canonical stage3_measurement blocks keyed by the T run ids (scripts/checks/stage3_effect_floor_check.py, scripts/checks/flight_registration_check.py).",
+  "acceptance_and_kill_rules": {
+    "confirmed_only_if": "in the Fold A flight of the accepted state the widened CI95 lower bound of t-v2 - lock is > 0 (M2); the optimism term (Fold B delta - Fold A delta) is reported always",
+    "expected": "+2 to +4 pp SLU over A if consumption (P5) is the bottleneck, else 0 (plan section 4); claims_benefit is false either way",
+    "iteration_accepted_only_if": [
+      "SLU-F1(t-v2) - SLU-F1(lock) has point >= 1.49 pp and a CI95 lower bound > 0 after the CI is WIDENED by the replicate variance of lock / aa / lock-rep2 (noise model M1)",
+      "the intent guard holds: intent CI95 lower bound >= -0.65 pp and intent point >= 0",
+      "the per-row mean delta (mean of per-row F1) is >= 0; an arm whose per-row delta is negative cannot be nominated",
+      "twin admissibility: |SLU-F1(aa) - SLU-F1(lock)| <= 1.2 pp",
+      "the construction-column gain is >= +1.0 pp: SLU-F1 of the vote over s1..s4 (scenario_action by majority, entity support >= 2 of 4) minus SLU-F1 of lock on the construction rows of the iteration, computed model-free from the sealed flight scores, never from the loop adapter (plan section 11 addendum ruling 6)"
+    ],
+    "kill_and_stop": [
+      "iteration 1 construction gain < +1 pp: stop the family",
+      "an accepted iteration fails Fold A: revert to the previous accepted state and report the optimism term",
+      "an iteration that accepts nothing: stop",
+      "at most 3 iterations"
+    ]
+  },
+  "accounting": {
+    "accelerator_bound": {
+      "caps": {
+        "ch1": {
+          "fit_endpoint_calls": 2191,
+          "generation_calls": 4382,
+          "speech_audio_seconds": 18474
+        },
+        "ch2": {
+          "fit_endpoint_calls": 2184,
+          "generation_calls": 4368,
+          "speech_audio_seconds": 19703
+        },
+        "csmoke": {
+          "fit_endpoint_calls": 28,
+          "generation_calls": 56,
+          "speech_audio_seconds": 239
+        },
+        "fb": {
+          "fit_endpoint_calls": 10800,
+          "generation_calls": 21600,
+          "speech_audio_seconds": 63096
+        },
+        "fsmoke": {
+          "fit_endpoint_calls": 40,
+          "generation_calls": 80,
+          "speech_audio_seconds": 204
+        }
+      },
+      "caps_note": "generation = rows x (program contacts + one fallback contact per budgeted-thinking contact), FIT = rows x contacts x 1 counting endpoint (the raw-audio arm; native_contact_required_cap), audio = ceil(roster speech-seconds x the generation contacts per row). Construction cells: 7 contacts per row (c7); Fold B cells: 10 (c10).",
+      "family_total_iteration_1": {
+        "fit_endpoint_calls": 15243,
+        "generation_calls": 30486,
+        "speech_audio_seconds": 101716
+      },
+      "formula": {
+        "ch1": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 313 rows x 3.6 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "ch2": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 312 rows x 3.6 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "csmoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "fb": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 5.04 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "fsmoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+      },
+      "illustration_not_registered": {
+        "card_hours_per_unit_tensor_parallel": {
+          "ch1": 12.6,
+          "ch2": 12.5,
+          "csmoke": 0.5,
+          "fb": 60.5,
+          "fsmoke": 0.5
+        },
+        "lock_rows_per_minute_per_instance": 1.95,
+        "note": "at the historical lock rate the formulas read these numbers x T card-hours; the port's r is measured, not assumed"
+      },
+      "inputs": {
+        "contacts_per_row": {
+          "ch1": [
+            1,
+            6
+          ],
+          "ch2": [
+            1,
+            6
+          ],
+          "csmoke": [
+            1,
+            6
+          ],
+          "fb": [
+            4,
+            6
+          ],
+          "fsmoke": [
+            4,
+            6
+          ]
+        },
+        "margin": 1.3,
+        "mix_rows": {
+          "ch1": 3.6,
+          "ch2": 3.6,
+          "csmoke": 3.6,
+          "fb": 5.04,
+          "fsmoke": 5.04
+        },
+        "node_seconds": {
+          "perception": 59.0,
+          "solver": 64.07
+        },
+        "round_hours": 0.1,
+        "smoke_wall_clock_hours": 0.5
+      },
+      "plan_field_note": "execution_plan.planned_gpu_hours and family_budget.gpu_hours_fit_inclusive carry the formula evaluated at the historical rate with T = 1 (smokes 0.5) only because the plan field must be a number; they are NOT the NPU bound. The ledger gpu-hours cells carry the formula and fail the exposure gate closed until the sweep re-derives the bound and the main thread re-writes plan, rows and receipt together.",
+      "plan_field_placeholder": {
+        "ch1": 12.6,
+        "ch2": 12.5,
+        "csmoke": 0.5,
+        "fb": 60.5,
+        "fsmoke": 0.5
+      },
+      "rows_only_caps": {
+        "r01c_encoding": {
+          "calls": 625,
+          "npu_hours": 0,
+          "speech_audio_seconds": 2727,
+          "wall_clock_hours_ceiling": 2.0
+        },
+        "reflector_per_iteration": {
+          "fit_endpoint_calls": 37,
+          "generation_calls": 36,
+          "speech_audio_seconds": 0
+        }
+      },
+      "status": "PROVISIONAL",
+      "three_iteration_upper_bound": {
+        "fit_endpoint_calls": 45704,
+        "generation_calls": 91294,
+        "note": "smokes once, then three iterations of the two construction halves, the Fold B flight and the reflector",
+        "speech_audio_seconds": 304262
+      },
+      "unknowns_from_the_deployment_profile": [
+        "T = tensor_parallel_size",
+        "r = measured lock-only rows per minute of one instance at its sequences_per_instance",
+        "instances (wall-clock only; cancels in the card-hours)"
+      ]
+    },
+    "arms": {
+      "construction": [
+        "s1",
+        "s2",
+        "s3",
+        "s4",
+        "aa",
+        "lock"
+      ],
+      "fold-b": [
+        "t-v2",
+        "aa",
+        "lock-rep2",
+        "lock"
+      ]
+    },
+    "caps": {
+      "ch1": {
+        "fit_endpoint_calls": 2191,
+        "generation_calls": 4382,
+        "speech_audio_seconds": 18474
+      },
+      "ch2": {
+        "fit_endpoint_calls": 2184,
+        "generation_calls": 4368,
+        "speech_audio_seconds": 19703
+      },
+      "csmoke": {
+        "fit_endpoint_calls": 28,
+        "generation_calls": 56,
+        "speech_audio_seconds": 239
+      },
+      "fb": {
+        "fit_endpoint_calls": 10800,
+        "generation_calls": 21600,
+        "speech_audio_seconds": 63096
+      },
+      "fsmoke": {
+        "fit_endpoint_calls": 40,
+        "generation_calls": 80,
+        "speech_audio_seconds": 204
+      }
+    },
+    "construction_group": {
+      "alternative": "perception-sampling",
+      "alternative_contacts": [
+        3,
+        7
+      ],
+      "alternative_program": "phase-native-module-v1-c10",
+      "chosen": "solver-decoding",
+      "decoding": [
+        {
+          "temperature": 0.7,
+          "top_k": 20,
+          "top_p": 0.8
+        },
+        {
+          "temperature": 0.7,
+          "top_k": 20,
+          "top_p": 0.9
+        },
+        {
+          "temperature": 0.7,
+          "top_k": 20,
+          "top_p": 0.95
+        },
+        {
+          "temperature": 0.7,
+          "top_k": 20,
+          "top_p": 1.0
+        }
+      ]
+    },
+    "contacts_per_row": {
+      "ch1": {
+        "perception": 1,
+        "solver": 6
+      },
+      "ch2": {
+        "perception": 1,
+        "solver": 6
+      },
+      "csmoke": {
+        "perception": 1,
+        "solver": 6
+      },
+      "fb": {
+        "perception": 4,
+        "solver": 6
+      },
+      "fsmoke": {
+        "perception": 4,
+        "solver": 6
+      }
+    },
+    "family_total_iteration_1": {
+      "fit_endpoint_calls": 15243,
+      "generation_calls": 30486,
+      "speech_audio_seconds": 101716
+    },
+    "iteration": 1,
+    "loop_id": "SAEA-SLURP-TFRL-V2-NPU-PORT-V1",
+    "programs": {
+      "construction": "phase-native-module-v1-c7",
+      "fold-b": "phase-native-module-v1-c10"
+    },
+    "vote": {
+      "commit": {
+        "min_support": 2,
+        "policy": "saea-commit-plurality-support-v1",
+        "similarity_threshold": 0.8
+      },
+      "decoding": {
+        "temperature": 0.6,
+        "top_k": 20,
+        "top_p": 0.95
+      },
+      "n": 3,
+      "planned_policy": "saea-commit-vote-v1"
+    }
+  },
+  "budget_switch": {
+    "active": "default",
+    "per_switch": {
+      "budget6144-max7168": {
+        "a_bound": 51,
+        "base_prompt_tokens": 4723,
+        "estimate_tokens": 14828,
+        "fits": false,
+        "headroom_tokens": -494,
+        "largest_fitting_bound": 40,
+        "solver_prompt_limit_tokens": 14334,
+        "t_bound": 43
+      },
+      "default": {
+        "a_bound": 55,
+        "base_prompt_tokens": 4723,
+        "estimate_tokens": 15768,
+        "fits": true,
+        "headroom_tokens": 1638,
+        "largest_fitting_bound": 53,
+        "solver_prompt_limit_tokens": 17406,
+        "t_bound": 47
+      }
+    }
+  },
+  "composed_config_hashes": {
+    "ch1": "86125d03d68c4cefb01cf3b1031842509036e80eeeb4f8d694b74ee1cbf40a85",
+    "ch2": "f1a9749d0ec04e665b5e6c5599c2ae803f94a599be531072bb2554050f70fabb",
+    "csmoke": "c656076e3a2ffa162a5f96188b3b4f6f4d6a8ad93cc6c003b9a6b8fa0f36122c",
+    "fb": "9edcbb4f2337fac6468b2ec22d2c0282274268e6d7bc7e2ae35937f7a7a30c18",
+    "fsmoke": "b6669e39e1248fb98da80d6dc4e82ffc81e0d4bd535dd9293b27f0e5a45c9907"
+  },
+  "context_fit": {
+    "a_bound": 55,
+    "active_switch": "default",
+    "checks": {
+      "bound_is_positive": true,
+      "estimate_at_bound_fits": true,
+      "slot_holds_prompt_plus_cap": true
+    },
+    "completion_cap": 4096,
+    "estimate_at_bound_tokens": 15768,
+    "frame_base_prompt_tokens": 4723,
+    "headroom_tokens": 1638,
+    "largest_fitting_bound": 53,
+    "note": "estimate = 2,000 + 323 template + 2,000 exemplar cap + 400 rule cap + bound x 235 (the registered FIT estimate); the exact per-contact gate re-checks every REAL request. Observed lock Solver prompt maximum 13918 tokens (l338_cost_inputs.json).",
+    "ok": true,
+    "per_switch": {
+      "budget6144-max7168": {
+        "a_bound": 51,
+        "base_prompt_tokens": 4723,
+        "estimate_tokens": 14828,
+        "fits": false,
+        "headroom_tokens": -494,
+        "largest_fitting_bound": 40,
+        "solver_prompt_limit_tokens": 14334,
+        "t_bound": 43
+      },
+      "default": {
+        "a_bound": 55,
+        "base_prompt_tokens": 4723,
+        "estimate_tokens": 15768,
+        "fits": true,
+        "headroom_tokens": 1638,
+        "largest_fitting_bound": 53,
+        "solver_prompt_limit_tokens": 17406,
+        "t_bound": 47
+      }
+    },
+    "solver_prompt_limit_tokens": 17406,
+    "t_bound": 47
+  },
+  "declared_differences": [
+    "8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0",
+    "8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets",
+    "8.3 vLLM sampling and kernels: temperature 0 with a fixed seed is deterministic per server build, not bit-identical to llama.cpp",
+    "8.4 causal retrieval encoder (forced and measured); every sealed retrieval vector regenerated",
+    "8.5 forced-close whitespace (vLLM reasoning_end_str) until verified",
+    "8.6 re-authored semantic knowledge (intent-boundaries-npu-port-v1, slot-contracts-npu-port-v2; decision 9.5)",
+    "8.7 CPU float32 retrieval encoder instead of CUDA bfloat16",
+    "T1 (plan section 9 ruling 4): in the T arm exemplars REPLACE supplied items, they do not add to them (supply bound = A's bound minus 8 plus an exemplar block of at most 2,000 tokens; the rule bank is Solver instruction text of at most 400 tokens); A keeps its bound and no bank. A declared T-vs-A protocol difference, not a confound.",
+    "T2 (plan section 4 and section 11 ruling 2): iteration-1 trajectories differ in decoding only (no bank exists yet); from iteration 2 the rule-variants mode applies.",
+    "T3 (plan section 9 ruling 3 and section 11 ruling 1): the construction column R01C is sampled over two interleaved halves; the bank a half consumes in iteration t+1 is distilled from the OTHER half's positives; the Fold B flight consumes the union."
+  ],
+  "derive": {
+    "campaigns": [
+      "slurp-native-stage3-tfrl-v2-construction-r01c-i1-npu-port-v1",
+      "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1"
+    ],
+    "ch1": {
+      "baseline": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-baseline-raw-port-v1",
+      "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-FIT-NPU-PORT-V1",
+      "program": "phase-native-module-v1-c7",
+      "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-NPU-PORT-V1",
+      "versus_disk": {
+        "baseline": {
+          "moved": []
+        },
+        "experiment": {
+          "moved": []
+        }
+      }
+    },
+    "ch2": {
+      "baseline": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-baseline-raw-port-v1",
+      "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-FIT-NPU-PORT-V1",
+      "program": "phase-native-module-v1-c7",
+      "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-NPU-PORT-V1",
+      "versus_disk": {
+        "baseline": {
+          "moved": []
+        },
+        "experiment": {
+          "moved": []
+        }
+      }
+    },
+    "csmoke": {
+      "baseline": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-baseline-raw-port-v1",
+      "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-FIT-NPU-PORT-V1",
+      "program": "phase-native-module-v1-c7",
+      "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1",
+      "versus_disk": {
+        "baseline": {
+          "moved": []
+        },
+        "experiment": {
+          "moved": []
+        }
+      }
+    },
+    "fb": {
+      "baseline": "slurp-native-stage3-tfrl-v2-fold-b-i1-baseline-raw-port-v1",
+      "cell": "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-FIT-NPU-PORT-V1",
+      "program": "phase-native-module-v1-c10",
+      "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-NPU-PORT-V1",
+      "versus_disk": {
+        "baseline": {
+          "moved": []
+        },
+        "experiment": {
+          "moved": []
+        }
+      }
+    },
+    "fsmoke": {
+      "baseline": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-baseline-raw-port-v1",
+      "cell": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+      "program": "phase-native-module-v1-c10",
+      "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1",
+      "versus_disk": {
+        "baseline": {
+          "moved": []
+        },
+        "experiment": {
+          "moved": []
+        }
+      }
+    }
+  },
+  "findings": [
+    {
+      "finding": "The construction program is the Solver node's decoding column group s1..s4 + the twin aa + the delivering lock LAST (phase-native-module-v1-c7, 1 Perception + 6 Solver contacts per row), compiled by the real module compiler. It is chosen over the Perception-level sampling column because the sampler, the trace writer and the credit tooling key scores and delivered contacts by arm label s1..s4, which a sampling column (arms of draws) does not give. The alternative (n = 5, c10) is implemented as an option (tfrl_v2_port_derive_cells.construction_block) and tested, not registered.",
+      "id": "construction-group-is-the-solver-decoding-column",
+      "remedy": "none; the owner confirms or redirects (O-construction-group)."
+    },
+    {
+      "finding": "The plan's iteration-1 trajectories differ by decoding seed only; the Solver decoding group refuses a seed override and two equal overrides, so s1..s4 share the lock seed and differ in top_p (0.80 / 0.90 / 0.95 / 1.00) at temperature 0.7, top_k 20.",
+      "id": "seed-only-is-not-expressible-in-c7",
+      "remedy": "a per-arm seed offset in the Solver decoding group would restore seed-only (rails_pending)."
+    },
+    {
+      "finding": "saea-commit-vote-v1 does not exist. The Fold B vote uses saea-commit-plurality-support-v1 (plurality over scenario_action, entity clusters kept at support >= 2). The sampling axis requires greedy_first, so n = 3 is one greedy contact plus two drawn at lock seed + offset.",
+      "id": "vote-commit-policy-is-the-closest-existing",
+      "remedy": "fix the entity rule and register the policy (O-commit-policy)."
+    },
+    {
+      "finding": "slurp_module_construction.check_cell accepts the r01c variant only for vectors under vectors/slurp-stage3-construction-r01c-v1/ and the historical R01C agreement pin, which the port names do not satisfy. The construction cells therefore pin the minus-r01 train-exemplars twins directly (the committed VAR-2 R01C precedent) and do not name construction_roster.",
+      "id": "construction-variant-not-named",
+      "remedy": "generalise the adapter to the port prefix and agreement pin before the variant is named."
+    },
+    {
+      "finding": "T's supply bound is A's bound minus 8 and both caps (2,000 + 400 tokens) are folded into the frame's base prompt tokens. Default: 47 items, 15,768 estimated tokens against a limit of 17,406 (fits). Budget switch 6,144 / 7,168: 43 items, 14,828 against 14,334 (does not fit); the largest fitting bound is 40. The writer refuses under the switch.",
+      "id": "budget-switch-refuses-the-t-bound",
+      "remedy": "choose the bound (O-switch-bound)."
+    },
+    {
+      "finding": "As a control, verify_declared_module on the committed L338 port flight fails: the re-authored stores differ from the lock layer the compiler re-applies. It is pre-existing, not a T defect; T never calls apply_to (it moves only the compiler's policy and role leaves), as the L338 port derive does.",
+      "id": "l338-control-fails-verify-declared-module",
+      "remedy": "none for T; a port lock layer entry (owner decision 9.4) would close it."
+    },
+    {
+      "finding": "The FIT caps are rows x contacts x 1 counting endpoint (native_contact_required_cap, raw-audio arm), checked at import against the gate's own helper; the packet-arm factor of 4 is not used.",
+      "id": "fit-cap-is-the-raw-arm-rule",
+      "remedy": "none."
+    },
+    {
+      "finding": "The twin aa is in the construction group so that per-row credit counts a positive or negative only where lock and aa agree (8.5 % of rows differ within one flight).",
+      "id": "credit-counts-only-where-lock-and-aa-agree",
+      "remedy": "none."
+    }
+  ],
+  "identity": {
+    "ch1": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-i1-h1-generation-npu-port-v1",
+      "baseline_fragment": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-npu-port-v1",
+      "composed_config_hash": "86125d03d68c4cefb01cf3b1031842509036e80eeeb4f8d694b74ee1cbf40a85",
+      "contacts_per_row": 7,
+      "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 12.6,
+        "planned_model_calls": 4382,
+        "planned_speech_audio_seconds": 18474,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h1-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 2191,
+        "generation_calls_cap": 4382,
+        "gpu_hours_fit_inclusive": 12.6,
+        "native_task_contract_calls_cap": 4382,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 18474
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-i1-h1-fit-npu-port-v1",
+        "contact_cap": 2191,
+        "max_speech_packets": 1,
+        "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-i1-h1-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-FIT-NPU-PORT-V1",
+      "half": "R01C-H1",
+      "key": "ch1",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-native-module-v1-c7",
+      "protocol_hash": "36f08eeb02f8f5e020876277b2a72ad8dbbb550d3b0dd0f3ce8c820a2b5b67da",
+      "role": "iteration-1 trajectory-sampling flight on the construction half R01C-H1",
+      "roster_receipt": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
+      "rows": 313,
+      "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
+      "trace_read_id": "SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1-I1-H1"
+    },
+    "ch2": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-i1-h2-generation-npu-port-v1",
+      "baseline_fragment": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-npu-port-v1",
+      "composed_config_hash": "f1a9749d0ec04e665b5e6c5599c2ae803f94a599be531072bb2554050f70fabb",
+      "contacts_per_row": 7,
+      "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 12.5,
+        "planned_model_calls": 4368,
+        "planned_speech_audio_seconds": 19703,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-native-stage3-tfrl-v2-construction-r01c-i1-h2-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 2184,
+        "generation_calls_cap": 4368,
+        "gpu_hours_fit_inclusive": 12.5,
+        "native_task_contract_calls_cap": 4368,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 19703
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-i1-h2-fit-npu-port-v1",
+        "contact_cap": 2184,
+        "max_speech_packets": 1,
+        "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-i1-h2-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-FIT-NPU-PORT-V1",
+      "half": "R01C-H2",
+      "key": "ch2",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-native-module-v1-c7",
+      "protocol_hash": "16db3d67fba5fdaaca8aa7a214753c3ce41af824515d72f3dacafefd846d5259",
+      "role": "iteration-1 trajectory-sampling flight on the construction half R01C-H2",
+      "roster_receipt": "docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json",
+      "rows": 312,
+      "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72",
+      "trace_read_id": "SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1-I1-H2"
+    },
+    "csmoke": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-smoke-4-generation-npu-port-v1",
+      "baseline_fragment": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-npu-port-v1",
+      "composed_config_hash": "c656076e3a2ffa162a5f96188b3b4f6f4d6a8ad93cc6c003b9a6b8fa0f36122c",
+      "contacts_per_row": 7,
+      "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 0.5,
+        "planned_model_calls": 56,
+        "planned_speech_audio_seconds": 239,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-native-stage3-tfrl-v2-construction-r01c-smoke-4-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 28,
+        "generation_calls_cap": 56,
+        "gpu_hours_fit_inclusive": 0.5,
+        "native_task_contract_calls_cap": 56,
+        "official_complete_scoring_jobs": 0,
+        "repeated_speech_audio_seconds_cap": 239
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-smoke-4-fit-npu-port-v1",
+        "contact_cap": 28,
+        "max_speech_packets": 1,
+        "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-tfrl-v2-construction-r01c-smoke-4-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-FIT-NPU-PORT-V1",
+      "half": null,
+      "key": "csmoke",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-native-module-v1-c7",
+      "protocol_hash": "6fa9cf6da9020031d460a35cc269feb08c970465e0ae0c85f2d1a15a268cf75c",
+      "role": "four-row form smoke of the iteration-1 construction flight (R01C smoke roster)",
+      "roster_receipt": "docs/receipts/rosters/slurp-stage3-roll-aa-r01c-smoke-4-v1.json",
+      "rows": 4,
+      "run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "e9dcea536028d17737b999c65267e47645ca7b3f6f9c4f57622961cf29363ed5",
+      "trace_read_id": null
+    },
+    "fb": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-tfrl-v2-fold-b-i1-generation-npu-port-v1",
+      "baseline_fragment": "slurp-native-stage3-tfrl-v2-fold-b-i1-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1",
+      "composed_config_hash": "9edcbb4f2337fac6468b2ec22d2c0282274268e6d7bc7e2ae35937f7a7a30c18",
+      "contacts_per_row": 10,
+      "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 60.5,
+        "planned_model_calls": 21600,
+        "planned_speech_audio_seconds": 63096,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 10800,
+        "generation_calls_cap": 21600,
+        "gpu_hours_fit_inclusive": 60.5,
+        "native_task_contract_calls_cap": 21600,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 63096
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-tfrl-v2-fold-b-i1-fit-npu-port-v1",
+        "contact_cap": 10800,
+        "max_speech_packets": 1,
+        "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-tfrl-v2-fold-b-i1-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-FIT-NPU-PORT-V1",
+      "half": null,
+      "key": "fb",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-native-module-v1-c10",
+      "protocol_hash": "edcffc2564f3a6a2913d2eafca300c9df84928b131ee57707e6dca38aa1b4082",
+      "role": "iteration-1 selection flight on TRAIN Fold B",
+      "roster_receipt": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+      "rows": 1080,
+      "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-I1-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a",
+      "trace_read_id": null
+    },
+    "fsmoke": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-tfrl-v2-fold-b-smoke-4-generation-npu-port-v1",
+      "baseline_fragment": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1",
+      "composed_config_hash": "b6669e39e1248fb98da80d6dc4e82ffc81e0d4bd535dd9293b27f0e5a45c9907",
+      "contacts_per_row": 10,
+      "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 0.5,
+        "planned_model_calls": 80,
+        "planned_speech_audio_seconds": 204,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 40,
+        "generation_calls_cap": 80,
+        "gpu_hours_fit_inclusive": 0.5,
+        "native_task_contract_calls_cap": 80,
+        "official_complete_scoring_jobs": 0,
+        "repeated_speech_audio_seconds_cap": 204
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-tfrl-v2-fold-b-smoke-4-fit-npu-port-v1",
+        "contact_cap": 40,
+        "max_speech_packets": 1,
+        "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-tfrl-v2-fold-b-smoke-4-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+      "half": null,
+      "key": "fsmoke",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-native-module-v1-c10",
+      "protocol_hash": "3bb9257e69948172a2e60512987d2e8297833fec6b075e8d8e541fee7a108db3",
+      "role": "four-row form smoke of the Fold B selection flight",
+      "roster_receipt": "docs/receipts/rosters/slurp-stage3-filler-fold-b-c01-smoke-4-v1.json",
+      "rows": 4,
+      "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32",
+      "trace_read_id": null
+    }
+  },
+  "locked_decoding": {
+    "seed": 20260913,
+    "temperature": 0
+  },
+  "no_think_node": null,
+  "open_questions": [
+    "Does the runner's knowledge-source guard cover every module store or only the single knowledge snapshot, and can a store role be swapped per arm (the cross-fit from iteration 2 needs both)?",
+    "Every T cell keeps preserve_wire_responses true, as the L338 port cell and the historical R01C column do. Does the M4 trace need the preserved wire responses, or do the sealed per-contact records suffice (the setting only costs disk)?",
+    "Which rail renders the exemplar block and the per-vote rule text (rails_pending), and when is the first-phase supply of the Fold B cells re-prepared with it?",
+    "The R01C encoder, the alias, the content derivative and the agreement chain have no registration documents or chain scripts yet (rows-only here).",
+    "Iterations 2 and 3 (cells, plans, rows) are registered only after the previous read."
+  ],
+  "owner_items": [
+    {
+      "id": "O-switch-bound",
+      "item": "Under the thinking-budget switch (6,144 / 7,168) the Solver prompt limit is 14,334 and T's bound of 43 items plus both caps estimates 14,828 tokens: it does NOT fit. The largest fitting T bound is 40 items. The owner / planner chooses the bound (40 items, a smaller cap, or a larger window) before the switch is used for T; the writer refuses until then. The default fragment fits (47 items, 15,768 of 17,406)."
+    },
+    {
+      "id": "O-construction-group",
+      "item": "The construction program is the Solver decoding column group (c7): the plan's seed-only iteration-1 trajectories need a per-arm seed that the group refuses, so s1..s4 differ in top_p at temperature 0.7. The seed-true alternative is the Perception-level sampling column (c10), which the arm-keyed trace and credit tooling cannot label. Confirm the c7 form or fund the labelling change."
+    },
+    {
+      "id": "O-commit-policy",
+      "item": "saea-commit-vote-v1 does not exist; the vote uses saea-commit-plurality-support-v1 (min_support 2, similarity 0.8). Fix the entity union-vote rule or accept the plurality-support rule before the first Fold B contact."
+    },
+    {
+      "id": "O-fold-a-timing",
+      "item": "Plan section 10: confirming every accepted iteration on Fold A makes Fold A a second selection fold; the draft recommends one confirmation of the final accepted state. M2 as written confirms each accepted iteration. Decide before iteration 2."
+    },
+    {
+      "id": "O-deployment",
+      "item": "PORT_DEPLOYMENT_PROFILE (instances, tensor-parallel size, sequences per instance) is filled from the measured speed sweep; the card-hour bounds are PROVISIONAL until then."
+    }
+  ],
+  "pending_pins": {
+    "banks": {
+      "exemplar_bank": {
+        "release": "knowledge/slurp/tfrl-v2/exemplar-bank-i1-npu-port-v1/release.json",
+        "snapshot": "knowledge/slurp/tfrl-v2/exemplar-bank-i1-npu-port-v1/snapshot.json",
+        "state": "PENDING (zero sentinel)",
+        "store_role": "tfrl-exemplar-bank"
+      },
+      "rule_bank": {
+        "release": "knowledge/slurp/tfrl-v2/rule-bank-i1-npu-port-v1/release.json",
+        "snapshot": "knowledge/slurp/tfrl-v2/rule-bank-i1-npu-port-v1/snapshot.json",
+        "state": "PENDING (zero sentinel)",
+        "store_role": "tfrl-rule-bank"
+      }
+    },
+    "decision_receipt": "coordination/slurp-tfrl-v2-npu-port-v1/root-admission-v1.json",
+    "r01c_port_artifacts": {
+      "agreement": {
+        "ledger_row": "SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-R01C-NPU-PORT-V1",
+        "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-R01C-NPU-PORT-V1/agreement.jsonl",
+        "sha256": null,
+        "state": "PENDING (zero sentinel in the composed config)"
+      },
+      "agreement_receipt": {
+        "relpath": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-R01C-NPU-PORT-V1/receipt.json",
+        "sha256": null,
+        "state": "PENDING (zero sentinel in the composed config)"
+      },
+      "alias_receipt": {
+        "relpath": "prepared/SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-ALIAS-NPU-PORT-V1/query-dimension-alias.json",
+        "sha256": null,
+        "state": "PENDING (zero sentinel in the composed config)"
+      },
+      "content": {
+        "ledger_row": "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-SPEECH-QUERY-ENCODING-NPU-PORT-V1",
+        "relpath": "vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-content-v1.jsonl",
+        "sha256": null,
+        "state": "PENDING (zero sentinel in the composed config)"
+      },
+      "content_provenance": {
+        "relpath": "vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-content-v1.provenance.json",
+        "sha256": null,
+        "state": "PENDING (zero sentinel in the composed config)"
+      },
+      "encode_receipt": {
+        "relpath": "preparation-runs/SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-SPEECH-QUERY-ENCODING-NPU-PORT-V1/encode-v1/receipt.json",
+        "sha256": null,
+        "state": "PENDING (zero sentinel in the composed config)"
+      },
+      "segments": {
+        "ledger_row": "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-SPEECH-QUERY-ENCODING-NPU-PORT-V1",
+        "relpath": "vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-segments.jsonl",
+        "sha256": null,
+        "state": "PENDING (zero sentinel in the composed config)"
+      }
+    },
+    "seed_rule_bank_i0": "knowledge/slurp/tfrl-v2/rule-bank-i0-npu-port-v1/release.json",
+    "supplies": {
+      "ch1": "prepared/SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-NPU-PORT-V1/phase-supply-v1.json",
+      "ch2": "prepared/SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-NPU-PORT-V1/phase-supply-v1.json",
+      "csmoke": "prepared/SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1/phase-supply-v1.json",
+      "fb": "prepared/SAEA-SLURP-TFRL-V2-FOLD-B-I1-NPU-PORT-V1/phase-supply-v1.json",
+      "fsmoke": "prepared/SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1/phase-supply-v1.json"
+    }
+  },
+  "pins": {
+    "fold_b_audio_pins": {
+      "audio_seconds_total": 3154.797375,
+      "checked": 1080,
+      "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+      "dataset_fragment_sha256": "1d30c501612686004936b5dd295885d9452175e6449b4a66187c08227a322cea",
+      "matching": 1080,
+      "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+    },
+    "fold_b_preparations_reused": {
+      "agreement": {
+        "artifact": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1/agreement.jsonl",
+        "artifact_sha256": "db4614a3f8f644c8514cd76bf596446cc9b7043eb222a97973eb8b807f113918",
+        "receipt": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-B-NPU-PORT-V1/receipt.json",
+        "receipt_sha256": "2e032013857b6e36c5c267fe32827d1982949515d6006cacb4ab568897358c92"
+      },
+      "alias": {
+        "artifact": "vectors/slurp-intent-boundaries-train-fold-b-1080-npu-port-v1/query-vectors-speech-segments.jsonl",
+        "artifact_sha256": "fe23703a429d4a655b51d0cee921f28eba0e5be8a5511d9fe0f13dc73eb28181",
+        "receipt": "prepared/SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-B-ALIAS-NPU-PORT-V1/query-dimension-alias.json",
+        "receipt_sha256": "f59dc040b05e2e87637a91d8d677392c50a010701986a8db33bbdfdfdd008adf"
+      },
+      "centroid": {
+        "artifact": "prepared/SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1/facets.jsonl",
+        "artifact_sha256": "f05287550e2ee895a6444b2e909db643df6f8d586c648eb7cc32c7b9f2c46d31",
+        "receipt": "prepared/SAEA-SLURP-INTENT-BOUNDARY-CENTROID-KEYS-NPU-PORT-V1/receipt.json",
+        "receipt_sha256": "200f769444ca5e41381cf28151daa11cef05b86dc8d0eaf26ced8300e342d914"
+      },
+      "content": {
+        "artifact": "vectors/slurp-stage3-filler-fold-b-npu-port-v1/query-vectors-speech-content-v1.jsonl",
+        "artifact_sha256": "e1d3230ed517685f6d0e963bb48a0a5bf205e3c31a7c7aaae22e88b1ac27196f",
+        "receipt": "vectors/slurp-stage3-filler-fold-b-npu-port-v1/query-vectors-speech-content-v1.provenance.json",
+        "receipt_sha256": "59c285768247d3f6abb0fea68dfbd5e2f0246074038d7318218f834e232c890c"
+      },
+      "minus_r01": {
+        "artifact": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars-minus-r01/snapshot.json",
+        "artifact_sha256": null,
+        "receipt": "knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars-minus-r01/release.json",
+        "receipt_sha256": "83620eb0b02f12424a00cd5572904f4df48a49c329b1b0e1a9321d4b9ec14fd0"
+      }
+    },
+    "fold_b_supply_not_reused": "the L338 flight's phase supply is a different run's; each T cell prepares its own",
+    "locked_template": {
+      "relpath": "configs/probes/slurp_native_role_solver_v2.txt",
+      "sha256": "18bff5c557cac7ac14be6b08aa0a1a6ad54c1b9820199c3b6749b2271d756fbd"
+    },
+    "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+    "port_pins": {
+      "path": "scripts/flights/nx/l338_port_pins.json",
+      "sha256": "8d920b3a146f2385a76d5fbd0a8eb9dfe3355b8fff49409f9e99cbfc2f13e219"
+    },
+    "serving": {
+      "deployment_profile": {
+        "fields": {
+          "devices": null,
+          "instances": null,
+          "sequences_per_instance": null,
+          "tensor_parallel_size": null
+        },
+        "filled_by": "a later deployment profile chosen from a measured speed sweep of the BF16 / vLLM-Ascend Thinking server (several vLLM instances, each tensor-parallel over a group of Ascend cards; per-instance concurrency chosen from the sweep)",
+        "name": "PORT_DEPLOYMENT_PROFILE",
+        "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment carries no --max-num-seqs and no profile_slot_count (moved to the deployment profile, commit db798a83); the baselines' serving_slots 4 is the client-side geometry value of the owner ruling, not a deployment fact.",
+        "status": "PENDING"
+      },
+      "lock_entries": "open owner decision 9.4 (design doc section 9)",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "per_sequence_window_tokens": 24576,
+      "runtime_receipt": "open owner decision 9.3 (design doc section 9)",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "session_identity": "open owner decision 9.2 (design doc section 9)",
+      "transport": "vllm"
+    }
+  },
+  "prohibitions": [
+    "No test-split, DEV or Fold A contact in any cell here; Fold A is the confirmation cell of a separate package and is never a bank source.",
+    "No Fold A or Fold B row is ever a source of the exemplar or rule bank (the construction scope is R01C; forbidden rosters Fold A v2, Fold B v2, DEV-1000).",
+    "No Reviewer or Planner visit; no tool schema on any role; max_revisions 0; no reasoning text is delivered, scored or carried to another node.",
+    "The delivering lock arm is the L338 port lock, byte for byte; the twin and the replicate are request-identical copies of it.",
+    "Every sampled contact carries the lock's thinking fields (budget and cap of the active model fragment); a sampled contact's decoding override changes only the sampling keys.",
+    "No deployment value (instances, tensor-parallel size, sequences per instance, devices) is registered here; nothing is flown before PORT_DEPLOYMENT_PROFILE is filled and the bound re-derived.",
+    "No benefit claim and no admission: claims_benefit is false; rows stay unconsumed; the loop never advances to iteration 2 or 3 without reading the previous one.",
+    "No flight before the coordinator countersigns the DRAFT rows, mints the decision receipt, every PENDING pin is produced and re-pinned and the cells are flipped."
+  ],
+  "protocol_hashes": {
+    "ch1": "36f08eeb02f8f5e020876277b2a72ad8dbbb550d3b0dd0f3ce8c820a2b5b67da",
+    "ch2": "16db3d67fba5fdaaca8aa7a214753c3ce41af824515d72f3dacafefd846d5259",
+    "csmoke": "6fa9cf6da9020031d460a35cc269feb08c970465e0ae0c85f2d1a15a268cf75c",
+    "fb": "edcffc2564f3a6a2913d2eafca300c9df84928b131ee57707e6dca38aa1b4082",
+    "fsmoke": "3bb9257e69948172a2e60512987d2e8297833fec6b075e8d8e541fee7a108db3"
+  },
+  "r01c": {
+    "audio_pins": {
+      "audio_seconds_total": 2726.8471875,
+      "checked": 625,
+      "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
+      "dataset_fragment_sha256": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba",
+      "matching": 625,
+      "split_identity_hash": "f56bc386776421aec2d8001d8697611b01c9b0562885a462759b15531e2f4515"
+    },
+    "audio_seconds": 2726.8471875,
+    "halves": {
+      "R01C-H1": {
+        "audio_seconds": 1319.5439,
+        "count": 313,
+        "file_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+        "roster": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
+        "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C-H1",
+        "split_identity_hash": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
+        "strata_counts": {
+          "alarm": 12,
+          "audio": 15,
+          "calendar": 21,
+          "cooking": 16,
+          "datetime": 20,
+          "email": 18,
+          "general": 20,
+          "iot": 16,
+          "lists": 19,
+          "music": 16,
+          "news": 18,
+          "play": 17,
+          "qa": 19,
+          "recommendation": 14,
+          "social": 17,
+          "takeaway": 15,
+          "transport": 17,
+          "weather": 23
+        }
+      },
+      "R01C-H2": {
+        "audio_seconds": 1407.3032,
+        "count": 312,
+        "file_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+        "roster": "docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json",
+        "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C-H2",
+        "split_identity_hash": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72",
+        "strata_counts": {
+          "alarm": 14,
+          "audio": 15,
+          "calendar": 21,
+          "cooking": 15,
+          "datetime": 19,
+          "email": 15,
+          "general": 22,
+          "iot": 17,
+          "lists": 18,
+          "music": 11,
+          "news": 18,
+          "play": 20,
+          "qa": 19,
+          "recommendation": 15,
+          "social": 18,
+          "takeaway": 22,
+          "transport": 15,
+          "weather": 18
+        }
+      }
+    },
+    "halves_split_receipt": {
+      "path": "docs/receipts/rosters/slurp-stage3-construction-r01c-halves-split-receipt.json",
+      "sha256": "e0a0559ee341b3338d62ecff536ff87e41620ea3524771b4176e7c4c0532b217",
+      "split_mode": "interleave"
+    },
+    "roster": "docs/receipts/rosters/slurp-stage3-construction-r01c.json",
+    "roster_file_sha256": "e8abc65ba4626cccb4aae9d2eb1bd73f077a6e9a407b3dba9c18bbe4c03eeddd",
+    "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C",
+    "rows": 625,
+    "split_identity_hash": "f56bc386776421aec2d8001d8697611b01c9b0562885a462759b15531e2f4515"
+  },
+  "rails_pending": {
+    "construction": [
+      {
+        "consequence": "the cells wear the closest registered labels (shared-rollout for the sampling cells, tfgrpo-semantic-advantage-v1 for the Fold B cells)",
+        "id": "stage3-algorithm-label",
+        "lacks": "no 'tfrl-v2' record in core.stage3_algorithms"
+      },
+      {
+        "consequence": "the cell pins the minus-r01 train-exemplars twins directly (the committed VAR-2 R01C precedent) and does NOT name construction_roster; the adapter needs the port prefix and port agreement pin before the variant can be named",
+        "id": "construction-variant-port-names",
+        "lacks": "slurp_module_construction.check_cell accepts the r01c variant only under vectors/slurp-stage3-construction-r01c-v1/ and the historical R01C agreement pin"
+      },
+      {
+        "consequence": "the plan's seed-only iteration-1 trajectories cannot be a Solver decoding group; s1..s4 differ in top_p at temperature 0.7 on the lock seed. The seed-true alternative is the Perception-level sampling column (c10), which the sampler's arm-keyed trace and credit tooling cannot label",
+        "id": "solver-decoding-seed-override",
+        "lacks": "the Solver decoding group refuses a seed override and two equal overrides"
+      },
+      {
+        "consequence": "the rule-variants mode (iteration 2 and later) cannot run",
+        "id": "rule-variants",
+        "lacks": "no rail applies a rule-bank text to a Solver arm"
+      }
+    ],
+    "fold-b": [
+      {
+        "consequence": "the cells wear the closest registered labels (shared-rollout for the sampling cells, tfgrpo-semantic-advantage-v1 for the Fold B cells)",
+        "id": "stage3-algorithm-label",
+        "lacks": "no 'tfrl-v2' record in core.stage3_algorithms"
+      },
+      {
+        "consequence": "the bank pins live in this block (zero sentinel), not in knowledge_stores; nothing reads them, so the bank is not consumed until the rail exists",
+        "id": "bank-store-roles",
+        "lacks": "no store roles 'tfrl-exemplar-bank' and 'tfrl-rule-bank' and no scenario-conditioned supply from them"
+      },
+      {
+        "consequence": "the closest registered policy saea-commit-plurality-support-v1 (min_support 2, similarity 0.8) is used; greedy_first makes n = 3 one greedy plus two drawn",
+        "id": "vote-commit-policy",
+        "lacks": "'saea-commit-vote-v1' does not exist (entity union-vote rule unfixed)"
+      },
+      {
+        "consequence": "the three votes differ in seed only; the rule text is declared, not delivered",
+        "id": "top-rule-per-vote",
+        "lacks": "no rail puts one of the top-3 rules into each of the three vote contacts"
+      },
+      {
+        "consequence": "the cap is folded into the frame's base prompt tokens so the context fit is already honest",
+        "id": "exemplar-block",
+        "lacks": "no rail renders the exemplar block (2,000-token cap) into the Solver prompt"
+      }
+    ]
+  },
+  "read_rule": {
+    "acceptance": {
+      "confirmed_only_if": "in the Fold A flight of the accepted state the widened CI95 lower bound of t-v2 - lock is > 0 (M2); the optimism term (Fold B delta - Fold A delta) is reported always",
+      "expected": "+2 to +4 pp SLU over A if consumption (P5) is the bottleneck, else 0 (plan section 4); claims_benefit is false either way",
+      "iteration_accepted_only_if": [
+        "SLU-F1(t-v2) - SLU-F1(lock) has point >= 1.49 pp and a CI95 lower bound > 0 after the CI is WIDENED by the replicate variance of lock / aa / lock-rep2 (noise model M1)",
+        "the intent guard holds: intent CI95 lower bound >= -0.65 pp and intent point >= 0",
+        "the per-row mean delta (mean of per-row F1) is >= 0; an arm whose per-row delta is negative cannot be nominated",
+        "twin admissibility: |SLU-F1(aa) - SLU-F1(lock)| <= 1.2 pp",
+        "the construction-column gain is >= +1.0 pp: SLU-F1 of the vote over s1..s4 (scenario_action by majority, entity support >= 2 of 4) minus SLU-F1 of lock on the construction rows of the iteration, computed model-free from the sealed flight scores, never from the loop adapter (plan section 11 addendum ruling 6)"
+      ],
+      "kill_and_stop": [
+        "iteration 1 construction gain < +1 pp: stop the family",
+        "an accepted iteration fails Fold A: revert to the previous accepted state and report the optimism term",
+        "an iteration that accepts nothing: stop",
+        "at most 3 iterations"
+      ]
+    },
+    "analysis_recipe": "not part of this package: the T reader and its recipe are an open item; this block is the rule it must implement",
+    "bootstrap": {
+      "draws": 10000,
+      "level": "CI95",
+      "note": "the 266-E / L338 recipe values; the T analysis recipe (task T2 successor) may fix others before the read",
+      "seed": 20261011
+    },
+    "construction_gain_pp": 1.0,
+    "delivering": "lock",
+    "floors_pp": {
+      "intent": 0.65,
+      "slu": 1.49
+    },
+    "read_run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1",
+    "replicates": [
+      "aa",
+      "lock-rep2"
+    ],
+    "trace_read_ids": {
+      "ch1": "SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1-I1-H1",
+      "ch2": "SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1-I1-H2"
+    },
+    "twin_bar_pp": 1.2
+  },
+  "registered_at_utc": "2026-10-30T00:00:00+00:00",
+  "registration_basis": "owner decisions of 2026-10-28 on the NPU port (design doc section 9.1: the saea-base Docker container is the execution authority; item 4: the agent drafts the exposure preregistration rows; item 5: the admission receipt is authorised and minted by the main thread; item 6: model-free-check rows for the port preparations; the multi-instance deployment input: the deployment is a named placeholder filled from a measured speed sweep); the owner direction of 2026-10-30 (three-way comparison D / A / T on Fold B with Fold A confirmation; the end goal is a better training-free RL algorithm; plan sections 8-11 rulings); docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md. DRAFT: nothing here authorises a flip or a flight.",
+  "roster": {
+    "ch1": {
+      "roster": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
+      "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C-H1",
+      "rows": 313,
+      "split_identity_hash": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14"
+    },
+    "ch2": {
+      "roster": "docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json",
+      "roster_id": "SLURP-STAGE3-CONSTRUCTION-R01C-H2",
+      "rows": 312,
+      "split_identity_hash": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72"
+    },
+    "csmoke": {
+      "roster": "docs/receipts/rosters/slurp-stage3-roll-aa-r01c-smoke-4-v1.json",
+      "roster_id": "SLURP-STAGE3-ROLL-AA-R01C-SMOKE-4-V1",
+      "rows": 4,
+      "split_identity_hash": "e9dcea536028d17737b999c65267e47645ca7b3f6f9c4f57622961cf29363ed5"
+    },
+    "fb": {
+      "roster": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+      "roster_id": "SLURP-EVO-FOLD-B-V2",
+      "rows": 1080,
+      "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+    },
+    "fsmoke": {
+      "roster": "docs/receipts/rosters/slurp-stage3-filler-fold-b-c01-smoke-4-v1.json",
+      "roster_id": "SLURP-STAGE3-FILLER-FOLD-B-C01-SMOKE-4-V1",
+      "rows": 4,
+      "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32"
+    }
+  },
+  "rows_only_items": {
+    "agreement": "SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-R01C-NPU-PORT-V1",
+    "alias": "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-ALIAS-NPU-PORT-V1",
+    "bank_release": "SAEA-SLURP-TFRL-V2-BANK-RELEASE-I1-NPU-PORT-V1",
+    "content_derivative": "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-INPUTS-PREPARE-NPU-PORT-V1",
+    "credit_and_distillation": "SAEA-SLURP-TFRL-V2-CREDIT-I1-NPU-PORT-V1",
+    "halves": "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-HALVES-NPU-PORT-V1",
+    "r01c_encoding": "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-SPEECH-QUERY-ENCODING-NPU-PORT-V1",
+    "reflector": [
+      "SAEA-SLURP-TFRL-V2-REFLECTOR-I1-NPU-PORT-V1",
+      "SAEA-SLURP-TFRL-V2-REFLECTOR-I1-FIT-NPU-PORT-V1"
+    ],
+    "rule_bank_i0_release": "SAEA-SLURP-TFRL-V2-RULE-BANK-I0-RELEASE-NPU-PORT-V1"
+  },
+  "sampling_arms": {
+    "construction": {
+      "aa": null,
+      "lock": null,
+      "s1": {
+        "decoding": {
+          "temperature": 0.7,
+          "top_k": 20,
+          "top_p": 0.8
+        }
+      },
+      "s2": {
+        "decoding": {
+          "temperature": 0.7,
+          "top_k": 20,
+          "top_p": 0.9
+        }
+      },
+      "s3": {
+        "decoding": {
+          "temperature": 0.7,
+          "top_k": 20,
+          "top_p": 0.95
+        }
+      },
+      "s4": {
+        "decoding": {
+          "temperature": 0.7,
+          "top_k": 20,
+          "top_p": 1.0
+        }
+      }
+    },
+    "fold-b": {
+      "aa": null,
+      "lock": null,
+      "lock-rep2": null,
+      "t-v2": {
+        "solver_samples": {
+          "commit": {
+            "min_support": 2,
+            "policy": "saea-commit-plurality-support-v1",
+            "similarity_threshold": 0.8
+          },
+          "decoding": {
+            "temperature": 0.6,
+            "top_k": 20,
+            "top_p": 0.95
+          },
+          "n": 3
+        }
+      }
+    }
+  },
+  "schema": "saea-registered-facts-v1",
+  "stage3_measurement": {
+    "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H1-NPU-PORT-V1": {
+      "claims_benefit": false,
+      "expected_effect_pp": 0.0,
+      "measurement_design": "material-source",
+      "note": "A measurement-free trajectory-sampling column on the construction roster: it carries no contrast, no floor and no benefit claim; its sealed per-row scores feed the model-free credit, the contrast pairs and the exemplar distillation. The construction gain is read from the sealed scores by the acceptance rule.",
+      "primary_metric": "none: per-row scores are read OFFLINE as the credit and distillation material of TFRL-v2",
+      "read_roster": "SLURP-STAGE3-CONSTRUCTION-R01C-H1",
+      "rows": 313,
+      "tuning_roster": "none"
+    },
+    "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-I1-H2-NPU-PORT-V1": {
+      "claims_benefit": false,
+      "expected_effect_pp": 0.0,
+      "measurement_design": "material-source",
+      "note": "A measurement-free trajectory-sampling column on the construction roster: it carries no contrast, no floor and no benefit claim; its sealed per-row scores feed the model-free credit, the contrast pairs and the exemplar distillation. The construction gain is read from the sealed scores by the acceptance rule.",
+      "primary_metric": "none: per-row scores are read OFFLINE as the credit and distillation material of TFRL-v2",
+      "read_roster": "SLURP-STAGE3-CONSTRUCTION-R01C-H2",
+      "rows": 312,
+      "tuning_roster": "none"
+    },
+    "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1": {
+      "claims_benefit": false,
+      "expected_effect_pp": 0.0,
+      "measurement_design": "form-proof",
+      "note": "Four rows prove FORM only: the phase-native-module-v1-c7 module program with the Solver decoding group s1, s2, s3, s4 (temperature 0.7, top_p 0.80 / 0.90 / 0.95 / 1.00, top_k 20, the lock seed), the twin aa and the delivering lock arm LAST loads on the port deployment, no node hits its cap, the live phase fit passes and the receipt seals. Scored by no one; four rows claim nothing under instrument rule 5.",
+      "primary_metric": "none (structural form, per-arm decode cost and the request form only)",
+      "read_roster": "SLURP-STAGE3-ROLL-AA-R01C-SMOKE-4-V1",
+      "rows": 4,
+      "tuning_roster": "none"
+    },
+    "SAEA-SLURP-TFRL-V2-FOLD-B-I1-NPU-PORT-V1": {
+      "aa_arm_id": "aa",
+      "claim": "nominated",
+      "claims_benefit": false,
+      "expected_effect_pp": 2.0,
+      "measurement_design": "same-flight-node-column",
+      "note": "A nomination read, not a benefit claim: expected_effect_pp 2.0 is the low end of the plan's +2 to +4 pp if consumption is the bottleneck (else 0). The null is the in-flight twin aa and the replicate lock-rep2; the design resolves 1.49 pp SLU / 0.65 pp intent at n = 1,080 (decision 190 node-column floors), with the replicate variance in every CI95.",
+      "primary_metric": "official SLURP pooled SLU-F1 (micro; scorer slurp-slu-official-train, the pinned official evaluate.py), natural-mixture weighting, with intent accuracy (scenario_action) beside it",
+      "primary_metric_key": "slu",
+      "read_roster": "SLURP-EVO-FOLD-B-V2",
+      "replicate_arm_ids": [
+        "lock-rep2"
+      ],
+      "rows": 1080,
+      "template_variants": {
+        "candidate_arms": 1,
+        "node": "perception",
+        "twin": true
+      },
+      "tuning_roster": "none",
+      "variant_cost": {
+        "extra_audio_seconds": 25238.38,
+        "extra_contacts_per_row": 8
+      },
+      "variant_kind": "solver-sampling"
+    },
+    "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1": {
+      "claims_benefit": false,
+      "expected_effect_pp": 0.0,
+      "measurement_design": "form-proof",
+      "note": "Four rows prove FORM only: the phase-native-module-v1-c10 module program with the candidate t-v2 (one Perception contact and a Solver vote of n = 3 at temperature 0.6, top_p 0.95, top_k 20, commit saea-commit-plurality-support-v1 with min_support 2), the twin aa, the registered replicate lock-rep2 and the delivering lock arm LAST loads on the port deployment, no node hits its cap, the live phase fit passes and the receipt seals. Scored by no one; four rows claim nothing under instrument rule 5.",
+      "primary_metric": "none (structural form, per-arm decode cost and the request form only)",
+      "read_roster": "SLURP-STAGE3-FILLER-FOLD-B-C01-SMOKE-4-V1",
+      "rows": 4,
+      "tuning_roster": "none"
+    }
+  },
+  "status": "DRAFT-HELD",
+  "study_commit_at_registration": "534b543ff154ca23be8287c1730b040940a3d038",
+  "thinking_knobs": {
+    "answer_fallback": {
+      "enable_thinking": false,
+      "id": "saea-thinking-answer-fallback-v1",
+      "max_tokens": 1024,
+      "mode": "answer-only re-ask",
+      "per_node": 1
+    },
+    "answer_reserve_tokens": 1024,
+    "budget_message": "Considering the limited time by the user, I have to give the solution based on the thinking directly now.",
+    "completion_cap": 4096,
+    "decoding": {
+      "seed": 20260913,
+      "temperature": 0
+    },
+    "node_modes": {
+      "perception": "think",
+      "solver": "think"
+    },
+    "reasoning_context_policy": "drop-reasoning-v1",
+    "reasoning_format": "deepseek",
+    "thinking_budget_tokens": 3072
+  }
+}

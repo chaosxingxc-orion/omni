@@ -1,0 +1,96 @@
+{
+  "cells": [
+    {
+      "allowed_execution_stages": [
+        "check",
+        "worker"
+      ],
+      "attempt_id": "attempt-slurp-direct-only-fold-b-smoke-4-generation-npu-port-v1",
+      "baseline_fragment": "slurp-direct-only-fold-b-smoke-4-baseline-raw-port-v1",
+      "cell_id": "slurp-direct-only-fold-b-smoke-4-npu-port-v1",
+      "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "readiness": {
+        "reason": "Four-row decode-cost smoke of arm D, NPU port: the twin of SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-SMOKE-4-V1 on the BF16 / vLLM-Ascend Thinking core. Registered before contact on 2026-10-30 by script (scripts/flights/direct/direct_port_derive_cells.py) from the committed 266-E cell (docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md, ruling 6 of section 9). HELD: root countersigns the DRAFT rows, the main thread mints the admission receipt (scripts/flights/nx/l338_port_mint_receipt.py pattern; the D receipt is coordination/slurp-direct-only-fold-b-npu-port-v1/root-admission-v1.json), the deployment profile is filled from the measured speed sweep (PORT_DEPLOYMENT_PROFILE) and the provisional NPU card-hour bound re-derived from it, and the cells are re-pinned and flipped by scripts/flights/repin_cell.py (the program declares no supplied first phase, so the re-pin creates no prepared artifact; --allow-output-change must never be passed). Nothing here authorises a flight, a readiness flip or an admission entry.",
+        "requirements": [
+          {
+            "expected_decision_id": "slurp-direct-only-fold-b-npu-port-admission-v1",
+            "kind": "decision",
+            "reason": "Decision slurp-direct-only-fold-b-npu-port-admission-v1 pinned by scripts/flights/repin_cell.py.",
+            "relpath": "coordination/slurp-direct-only-fold-b-npu-port-v1/root-admission-v1.json",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "state": "held"
+      },
+      "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-NPU-PORT-V1"
+    }
+  ],
+  "core_read_design": {
+    "arms": {
+      "aa": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AA-NPU-PORT-V1",
+      "ab": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AB-NPU-PORT-V1",
+      "lock": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-NPU-PORT-V1",
+      "smoke": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-NPU-PORT-V1"
+    },
+    "chain": "deployment per PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep) -> smoke -> machine sign-off (coordinator veto window) -> lock -> aa -> ab (one resident deployment, sequential runs)",
+    "reading": "official pooled SLU-F1 and intent (scenario_action_exact) of lock, with the per-row F1 beside it; the replicate variance is read from lock / aa / ab (noise model M1, k = 2 replicates); twin admissibility |SLU(aa) - SLU(lock)| <= 1.20 pp; the A-to-D gap is a cross-run reading at the 2.5 pp bar",
+    "stage3_measurement_discipline": "docs/superpowers/specs/2026-09-21-slurp-stage3-training-free-rl-design.md",
+    "this_cell": "four-row decode-cost smoke of arm D"
+  },
+  "date": "2026-10-30",
+  "execution_plan": {
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.5,
+    "planned_model_calls": 8,
+    "planned_speech_audio_seconds": 20,
+    "split_role": "discovery"
+  },
+  "execution_profile": "bounded-discovery-probe",
+  "experiment_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-NPU-PORT-V1",
+  "failure_policy": "Stop on the first failure and preserve every contact. No retry, no scoring, no partial quality read. A failed smoke stops the cell and the Thinking arm does not open. A smoke is re-flown whole at most once under one root-diagnosed recovery re-registration.",
+  "family_budget": {
+    "asr_calls": 0,
+    "ceilings_are_not_targets": true,
+    "encoder_calls": 0,
+    "fit_endpoint_calls_cap": 4,
+    "generation_calls_cap": 8,
+    "gpu_hours_fit_inclusive": 0.5,
+    "native_task_contract_calls_cap": 0,
+    "official_complete_scoring_jobs": 0,
+    "repeated_speech_audio_seconds_cap": 20
+  },
+  "fragment_kind": "saea-slurp-direct-only-fold-b-npu-port-v1",
+  "generation_budget": {
+    "cap": 8,
+    "definition": "The direct-only phase program (configs/policy/phase-direct-only-v1.json: one phase, max_contacts 1, always-run-full-program) makes exactly ONE contact per row, so 4 x 1 = 4 is the program's exact maximum; the plan ceiling adds 1 answer-only fallback contact per row (one per budgeted-thinking contact, core.reasoning_knobs): 8 = 4 x 2. The live phase fit (core.preparation_fit.build_direct_only_raw_fit_gate) makes 4 x 1 x 1 = 4 tokenizer endpoint calls under its own run id SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1. The accelerator bound is PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep); it is PROVISIONAL, a BOUND never a target, and planned_gpu_hours (0.5) is the 266-E figure kept only as the numeric placeholder the plan field requires until the sweep re-derives it. Budgets are run-cumulative across every attempt of a run id.",
+    "target": 8
+  },
+  "population": {
+    "count": 4,
+    "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+    "decision_population": "TRAIN Fold B (SLURP-DIRECT-FOLD-B-THINKING-SMOKE-4-V1): 4 rows of docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1/smoke-roster-receipt-v1.json, the first four rows in roster order; structural decode-cost proof only, no score and no read.",
+    "roster_receipt": "docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1/smoke-roster-receipt-v1.json",
+    "split_identity_hash": "26b306e5ccbfbe48ece85c7a3d07dacd947db9265cf5193bcb6e6d6e7f6500fe"
+  },
+  "populations": [
+    {
+      "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+      "ids": [
+        "slurp:train:000006:audio-1488559711",
+        "slurp:train:000010:audio-1502199193",
+        "slurp:train:000025:audio-1490262826",
+        "slurp:train:000029:audio-1488538279"
+      ]
+    }
+  ],
+  "preserve_wire_responses": false,
+  "purpose": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-NPU-PORT-V1: four-row decode-cost smoke of arm D on the BF16 / vLLM-Ascend Thinking core: that the raw-audio request form, the direct-only live phase fit and the seal work, and what one Solver contact costs under the port budget (completion tokens per answer, seconds per contact). Scored by no one and read by no one: four rows are never evidence. Served by the BF16 / vLLM-Ascend Thinking core (bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1; per-sequence window 24,576 tokens; deployment PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)) over the original recordings (native-raw-speech-query-prefix-v1); declared differences (design doc section 8): 8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0; 8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets; 8.3 vLLM sampling and kernels: temperature 0 with a fixed seed is deterministic per server build, not bit-identical to llama.cpp; 8.5 forced-close whitespace (vLLM reasoning_end_str) until verified; D1 reasoning budget 3072 with forced close and one answer-only fallback instead of the historical 8,192-token uncapped completion (36 of 1,080 266-E rows ran to the cap). Read beside the 266-E Thinking arm, never as a byte replay of it.",
+  "service_session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+  "split_id": "SLURP-EVO-FOLD-B-V2",
+  "stage3_algorithm": {
+    "id": "none",
+    "note": "The D port cell carries NO training-free RL operator and says so explicitly: it is a bare-core capability read -- the sealed direct-only form on the port core -- with no rollout, no per-sample scoring, no credit assignment, no update operator, no evolving store and no mechanism.",
+    "operators_used": []
+  }
+}

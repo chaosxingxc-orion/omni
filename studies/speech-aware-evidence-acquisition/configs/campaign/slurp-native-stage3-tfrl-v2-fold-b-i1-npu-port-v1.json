@@ -1,0 +1,9 @@
+{
+  "cells": [
+    {
+      "cell": "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1",
+      "experiment": "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1"
+    }
+  ],
+  "schema": "saea-campaign-plan-v1"
+}

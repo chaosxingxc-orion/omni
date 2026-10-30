@@ -1,0 +1,470 @@
+{
+  "_note": "Every model-free fact this DRAFT Fold A confirmation registration rests on, and the canonical stage3_measurement block keyed by the Fold A run id. The Fold A preparations are PENDING: they are named, not read.",
+  "accounting": {
+    "accelerator_bound": {
+      "caps": {
+        "arm": {
+          "fit_endpoint_calls": 18360,
+          "generation_calls": 36720,
+          "speech_audio_seconds": 104874
+        }
+      },
+      "caps_note": "The caps follow the PORT arm table (phase-native-module-v1-c17, 17 contacts per row: the historical 15 plus the replicate's Perception and Solver contact): generation = rows x (17 + 17 fallback), FIT = rows x 17 x 1 counting endpoint (the raw-audio arm; the historical packet arm made 4), audio = ceil(roster speech-seconds x the generation contacts per row).",
+      "formula": {
+        "arm": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 8.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+      },
+      "historical_caps": {
+        "arm": {
+          "fit_endpoint_calls": 64800,
+          "generation_calls": 32400,
+          "speech_audio_seconds": 94644
+        },
+        "smoke": {
+          "fit_endpoint_calls": 240,
+          "generation_calls": 120,
+          "speech_audio_seconds": 306
+        }
+      },
+      "illustration_not_registered": {
+        "card_hours_per_unit_tensor_parallel": 102.3,
+        "lock_rows_per_minute_per_instance": 1.95,
+        "note": "at the historical llama.cpp lock rate the flight bound would read 90.3 x T card-hours; the port's r is measured, not assumed"
+      },
+      "inputs": {
+        "arm_mix_rows": 8.52,
+        "margin": 1.3,
+        "round_hours": 0.1,
+        "rows": 1080,
+        "smoke_wall_clock_hours": 0.5
+      },
+      "plan_field_note": "execution_plan.planned_gpu_hours and family_budget.gpu_hours_fit_inclusive carry the historical figures (90.3 / 0.5) only because the plan field must be a number; they are NOT the NPU bound. The ledger gpu-hours cells carry the formula and fail the exposure gate closed until the sweep re-derives the bound and the main thread re-writes plan, rows and receipt together.",
+      "plan_field_placeholder": {
+        "arm": 90.3
+      },
+      "status": "PROVISIONAL",
+      "unknowns_from_the_deployment_profile": [
+        "T = tensor_parallel_size",
+        "r = measured lock-only rows per minute of one instance at its sequences_per_instance",
+        "instances (wall-clock only; cancels in the card-hours)"
+      ]
+    },
+    "arms": [
+      "l1-support",
+      "l2-union",
+      "aa",
+      "lock-rep2",
+      "lock"
+    ],
+    "caps": {
+      "arm": {
+        "fit_endpoint_calls": 18360,
+        "generation_calls": 36720,
+        "speech_audio_seconds": 104874
+      }
+    },
+    "contacts_per_row": 17,
+    "lock": "v2.2",
+    "perception_contacts_per_row": 8,
+    "program": "phase-native-module-v1-c17",
+    "replicate_arms": [
+      "lock-rep2"
+    ],
+    "request_identical_copies": [
+      "lock",
+      "aa",
+      "lock-rep2"
+    ],
+    "rows": 1080,
+    "solver_contacts_per_row": 9
+  },
+  "composed_config_hashes": {
+    "arm": "7379b5b0dba7043e991bf33436110702cc74c8a207a94013cdc5a3018f1a0e92"
+  },
+  "context_fit": {
+    "checks": {
+      "bound_is_positive": true,
+      "estimate_at_bound_fits_every_arm": true,
+      "observed_solver_prompt_max_fits": true,
+      "slot_holds_prompt_plus_cap": true
+    },
+    "completion_cap": 4096,
+    "estimate_at_bound_tokens": 15248,
+    "estimate_headroom_tokens": 2158,
+    "fit_estimate": {
+      "base_prompt_tokens": 2000,
+      "completion_ceiling": 4096,
+      "slot_tokens": 24576,
+      "tokens_per_supplied_item": 235
+    },
+    "longest_added_tokens_over_lock": 0,
+    "max_supplied_items": 55,
+    "note": "The Solver prompt mean is about 8,500 tokens against the 4,096 cap (prompt limit 17,406). Every arm renders the lock's template and the lock's evidence; a sampling parameter adds no prompt token, so the sealed Fold B Solver prompt maximum is the bound of every arm. The context-fit policy is compact-or-abstain, and the exact per-contact gate runs on every arm's REAL request. The port keeps the per-sequence window (--max-model-len 24576); the token counts are the historical llama.cpp tokenizer estimates and observations, re-checked on every REAL request by the exact per-contact gate.",
+    "observations": {
+      "268b-thinking-system-lock-fold-b": {
+        "id": "268b-thinking-system-lock-fold-b",
+        "solver_contacts": 1080,
+        "solver_prompt_tokens_max": 13465,
+        "solver_prompt_tokens_p99": 12486
+      },
+      "nxt-r1-fold-b-all-five-arms": {
+        "id": "nxt-r1-fold-b-all-five-arms",
+        "solver_contacts": 5400,
+        "solver_prompt_tokens_max": 13918,
+        "solver_prompt_tokens_p99": 13443
+      }
+    },
+    "observed_headroom_tokens": 3488,
+    "observed_solver_prompt_tokens_max": 13918,
+    "ok": true,
+    "per_sequence_window_tokens": 24576,
+    "prompt_limit_tokens": 17406,
+    "reserve_tokens": 3072,
+    "sequences_per_instance": "PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+    "slot_tokens": 24576,
+    "special_reserve_tokens": 2,
+    "template_token_method": "ceil(bytes / 3.5); no tokenizer contact (the NX R1 estimate method)",
+    "template_tokens": 323
+  },
+  "declared_differences": [
+    "8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0",
+    "8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets",
+    "8.3 vLLM sampling and kernels: temperature 0 with a fixed seed is deterministic per server build, not bit-identical to llama.cpp",
+    "8.4 causal retrieval encoder (forced and measured); every sealed retrieval vector regenerated",
+    "8.5 forced-close whitespace (vLLM reasoning_end_str) until verified",
+    "8.6 re-authored semantic knowledge (intent-boundaries-npu-port-v1, slot-contracts-npu-port-v2; decision 9.5)",
+    "8.7 CPU float32 retrieval encoder instead of CUDA bfloat16"
+  ],
+  "derive": {
+    "baseline": "slurp-native-stage3-l338-lever-column-fold-a-baseline-raw-port-v1",
+    "cell": "slurp-native-stage3-l338-lever-column-fold-a-npu-port-v1",
+    "comparator": "slurp-native-stage3-l338-lever-column-fold-a-comparator-npu-port-v1",
+    "files": [
+      "configs/baseline/slurp-native-stage3-l338-lever-column-fold-a-baseline-raw-port-v1.json",
+      "configs/experiment/slurp-native-stage3-l338-lever-column-fold-a-npu-port-v1.json",
+      "configs/baseline/slurp-native-stage3-l338-lever-column-fold-a-comparator-npu-port-v1.json",
+      "configs/experiment/slurp-native-stage3-l338-lever-column-fold-a-comparator-npu-port-v1.json"
+    ],
+    "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-FIT-NPU-PORT-V1",
+    "pending_pins": [
+      "coordination/slurp-l338-lever-column-fold-a-npu-port-v1/root-admission-v1.json",
+      "preparation-runs/SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-NPU-PORT-V1/encode-v1/receipt.json",
+      "prepared/SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-A-ALIAS-NPU-PORT-V1/query-dimension-alias.json",
+      "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-A-NPU-PORT-V1/agreement.jsonl",
+      "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-A-NPU-PORT-V1/receipt.json",
+      "prepared/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-NPU-PORT-V1/phase-supply-v1.json",
+      "vectors/slurp-intent-boundaries-train-fold-a-1080-npu-port-v1/query-vectors-speech-segments.jsonl",
+      "vectors/slurp-stage3-filler-fold-a-npu-port-v1/query-vectors-speech-content-v1.jsonl",
+      "vectors/slurp-stage3-filler-fold-a-npu-port-v1/query-vectors-speech-content-v1.provenance.json"
+    ],
+    "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-NPU-PORT-V1"
+  },
+  "identity": {
+    "arm": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-a-generation-npu-port-v1",
+      "baseline_fragment": "slurp-native-stage3-l338-lever-column-fold-a-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-native-stage3-l338-lever-column-fold-a-npu-port-v1",
+      "composed_config_hash": "7379b5b0dba7043e991bf33436110702cc74c8a207a94013cdc5a3018f1a0e92",
+      "dataset_fragment": "slurp-speech-native-evo-fold-a-1080",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 90.3,
+        "planned_model_calls": 36720,
+        "planned_speech_audio_seconds": 104874,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-native-stage3-l338-lever-column-fold-a-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 18360,
+        "generation_calls_cap": 36720,
+        "gpu_hours_fit_inclusive": 90.3,
+        "native_task_contract_calls_cap": 36720,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 104874
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-a-fit-npu-port-v1",
+        "contact_cap": 18360,
+        "max_speech_packets": 1,
+        "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-a-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-FIT-NPU-PORT-V1",
+      "historical_fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1",
+      "historical_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1",
+      "key": "arm",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-native-module-v1-c17",
+      "protocol_hash": "22f61f7b8142f15e9551d4f8a7cd35e63460c74197772125f935e355b0161df6",
+      "roster_receipt": "docs/receipts/rosters/slurp-evo-fold-a-v2.json",
+      "rows": 1080,
+      "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6"
+    }
+  },
+  "locked_decoding": {
+    "seed": 20260913,
+    "temperature": 0
+  },
+  "max_num_seqs_dependents": [
+    "moved: configs/model/bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1.json no longer carries server_args --max-num-seqs; the vLLM argv takes it from the selected deployment profile (core.deployment.instance_server_argv) and a vllm fragment that declares it is REFUSED (core.session.serving, rails.adapters.runtime_view)",
+    "moved: configs/model/bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1.json no longer carries profile_slot_count (core.driver.speech_native requires it, with -np / -c, only on its llama-profile CLI paths -- prompt-audit, profile, finalize-from-disk -- which a vllm fragment fails closed on)",
+    "moved: configs/model/bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1.json geometry_basis text now names the 24576-token per-sequence window and puts the sequence count in the deployment profile",
+    "unchanged by owner ruling: configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json serving_slots 4 / serving_slot_tokens 24576 (rails.adapters.runtime_view.configured_geometry now checks only the --max-model-len window of a vllm fragment against serving_slot_tokens)",
+    "unchanged by owner ruling: configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-smoke-4-baseline-raw-port-v1.json serving_slots 4 / serving_slot_tokens 24576 (same)",
+    "moved: the prepared first-phase supply identity (core.preparation.artifact_inputs digests the composed config, model fragment included): moving the fragment makes every phase supply of these cells stale and the re-pin tool mints the next phase-supply-v<N> (output-equality asserted); prepared/<port run>/phase-supply-v1.json exists for the flight run and is re-pinned by repin_cell.py at the flip, not by the writer",
+    "moved: the composed_config_hash / protocol_hash of every plan in this package (the registration writer was re-run after the move)",
+    "open: the historical cost inputs (l338_cost_inputs.json, 4 slots) behind the illustrative 1.95 lock rows per minute; the port bound uses the measured r"
+  ],
+  "no_think_node": null,
+  "pins": {
+    "comparator_cell": "slurp-native-stage3-l338-lever-column-fold-a-comparator-npu-port-v1",
+    "dataset_fragment": "slurp-speech-native-evo-fold-a-1080",
+    "fold_a_pins": {
+      "path": "scripts/flights/nx/fold_a_port_pins.json",
+      "sha256": "9ca83f84819636147ad2d2c93fbd87d1a720f7ba5dde81c5d6bc37ee78adf0de"
+    },
+    "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+    "port_pins": {
+      "path": "scripts/flights/nx/l338_port_pins.json",
+      "sha256": "8d920b3a146f2385a76d5fbd0a8eb9dfe3355b8fff49409f9e99cbfc2f13e219"
+    },
+    "preparations": {
+      "agreement": {
+        "receipt": "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-A-NPU-PORT-V1/receipt.json",
+        "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "run_id": "SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-FOLD-A-NPU-PORT-V1",
+        "status": "PENDING"
+      },
+      "alias": {
+        "receipt": "prepared/SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-A-ALIAS-NPU-PORT-V1/query-dimension-alias.json",
+        "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "run_id": "SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-A-ALIAS-NPU-PORT-V1",
+        "status": "PENDING"
+      },
+      "content": {
+        "receipt": "vectors/slurp-stage3-filler-fold-a-npu-port-v1/query-vectors-speech-content-v1.provenance.json",
+        "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "run_id": "SAEA-SLURP-FOLD-A-INPUTS-PREPARE-NPU-PORT-V1",
+        "status": "PENDING"
+      },
+      "encode": {
+        "receipt": "preparation-runs/SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-NPU-PORT-V1/encode-v1/receipt.json",
+        "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "run_id": "SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-NPU-PORT-V1",
+        "status": "PENDING"
+      },
+      "supply": {
+        "receipt": "prepared/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-NPU-PORT-V1/phase-supply-v1.json",
+        "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-NPU-PORT-PHASE-SUPPLY-V1",
+        "status": "PENDING"
+      }
+    },
+    "roster": {
+      "audio_seconds_total": 3084.5284375,
+      "items": 1080,
+      "relpath": "docs/receipts/rosters/slurp-evo-fold-a-v2.json",
+      "sha256": "1fe7908c31396774d7535fdf37bd791762215c324999d66ed7beb9e7b2f9033d",
+      "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6"
+    },
+    "serving": {
+      "deployment_profile": {
+        "fields": {
+          "devices": null,
+          "instances": null,
+          "sequences_per_instance": null,
+          "tensor_parallel_size": null
+        },
+        "filled_by": "a later deployment profile chosen from a measured speed sweep of the BF16 / vLLM-Ascend Thinking server (several vLLM instances, each tensor-parallel over a group of Ascend cards; per-instance concurrency chosen from the sweep)",
+        "name": "PORT_DEPLOYMENT_PROFILE",
+        "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment carries no --max-num-seqs and no profile_slot_count (moved to the deployment profile, commit db798a83); the baselines' serving_slots 4 is the client-side geometry value of the owner ruling, not a deployment fact.",
+        "status": "PENDING"
+      },
+      "lock_entries": "open owner decision 9.4 (design doc section 9)",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "per_sequence_window_tokens": 24576,
+      "runtime_receipt": "open owner decision 9.3 (design doc section 9)",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "session_identity": "open owner decision 9.2 (design doc section 9)",
+      "transport": "vllm"
+    },
+    "signoff_conditions": {
+      "path": "docs/readiness/2026-10-30-slurp-l338-fold-a-confirmation-npu-port-v1/signoff-conditions-v1.json",
+      "sha256": "787e0aa480a1f70324f748dece5dc3b46744fb9d3f5c6f65932cd808a6601567"
+    }
+  },
+  "preparations_status": "PENDING: FA1-FA5 are not run; the cell pins them by the zero sentinel (no flip accepts it)",
+  "prohibitions": [
+    "No test-split, DEV or Fold A contact (TRAIN Fold B only).",
+    "No supply arm, no thinking column, no tool schema on any role; no Reviewer or Planner visit; max_revisions 0.",
+    "The system is the 268-B Thinking lock: the knowledge supply, the module graph, the post-processing, the Solver instruction template, the per-node thinking budget and cap, the request seed and the roster are not changed. The two sampling levers (Solver sample-and-commit, Perception sample-and-merge) are the ONLY varied factors, one per arm.",
+    "Every sampled contact carries the lock's thinking fields (budget 3072, cap 4096); sample 0 of every axis is greedy at the lock seed 20260913, samples 1.. take the arm's decoding with seed = lock seed + its recorded offset; no arm may set a cap, a response format, a thinking switch or a tool (refused by name at config load).",
+    "arm_visits is first: the fan-out happens at the one visit; the delivering arm's request is the locked plan's request, byte for byte (invariant I7v), and so is the twin's.",
+    "No reasoning text is ever delivered, scored or carried to another node (reasoning_context_policy drop-reasoning-v1); a delivered reasoning marker stops the flight.",
+    "No benefit claim and no admission: claims_benefit is false; a NOMINATED arm goes to the 335 B Fold A column (not built here). The composed L1+L2 arm is NOT flown here.",
+    "No flight before the coordinator countersigns the DRAFT rows, mints the decision receipt, the harness commit is on master, the predecessor chain named to the queue hook has exited rc 0 and the cells are flipped.",
+    "No session is started by this registration. No paper-scale profile. No system-level claim.",
+    "No deployment value (instances, tensor-parallel size, sequences per instance, devices) is registered here; the cell is not flown before PORT_DEPLOYMENT_PROFILE is filled and the Fold A preparations FA1-FA5 are run and pinned."
+  ],
+  "read_rule": {
+    "confirmation_rule": "widened CI95 lower bound of every confirmed lever above zero (plan M2); optimism term = Fold B delta minus Fold A delta",
+    "delivering": "lock",
+    "floors_pp": {
+      "intent": 0.65,
+      "slu": 1.49
+    },
+    "levers": {
+      "l1-support": "L1",
+      "l2-union": "L2"
+    },
+    "read_run_id": "SAEA-SLURP-L338-LEVER-COLUMN-FOLD-A-READ-NPU-PORT-V1",
+    "reader": "scripts/analysis/slurp_l338_port_column_read.py",
+    "reader_status": "bound to the Fold B roster; re-pointing at Fold A is a separate item",
+    "recipe": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/analysis-recipe-v1.json",
+    "replicates": [
+      "lock-rep2"
+    ],
+    "twin": "aa",
+    "word_order": {
+      "L1": [
+        "NOMINATED",
+        "HARM",
+        "NEUTRAL"
+      ],
+      "L2": [
+        "NOMINATED",
+        "HARM",
+        "NEUTRAL"
+      ]
+    },
+    "words": {
+      "L1": {
+        "HARM": "SLU delta CI95 upper bound < -1.49 pp, or intent delta CI95 upper bound < -0.65 pp",
+        "NEUTRAL": "none of the above",
+        "NOMINATED": "SLU delta CI95 lower bound >= 1.49 pp AND intent delta CI95 upper bound >= -0.65 pp (no resolved intent loss) Noise model M1: every CI95 is the bootstrap interval widened by the replicate variance, and NOMINATED additionally needs BOTH the pooled and the per-row (mean of per-row F1) lower bound of the primary metric above zero, and the per-row SLU-F1 upper bound at or above minus the SLU floor.",
+        "guard": "intent",
+        "primary": "slu"
+      },
+      "L2": {
+        "HARM": "intent delta CI95 upper bound < -0.65 pp, or SLU delta CI95 upper bound < -1.49 pp",
+        "NEUTRAL": "none of the above",
+        "NOMINATED": "intent delta CI95 lower bound >= 0.65 pp AND SLU delta CI95 upper bound >= -1.49 pp (no resolved SLU loss) Noise model M1: every CI95 is the bootstrap interval widened by the replicate variance, and NOMINATED additionally needs BOTH the pooled and the per-row (mean of per-row F1) lower bound of the primary metric above zero, and the per-row SLU-F1 upper bound at or above minus the SLU floor.",
+        "guard": "slu",
+        "primary": "intent"
+      }
+    }
+  },
+  "registered_at_utc": "2026-10-30T00:00:00+00:00",
+  "registration_basis": "owner decisions of 2026-10-28 on the NPU port (design doc section 9.1: the saea-base Docker container is the execution authority; item 4: the agent drafts the exposure preregistration rows; item 5: the admission receipt is authorised and minted by the main thread; item 6: model-free-check rows for the port preparations; the multi-instance deployment input: the deployment is a named placeholder filled from a measured speed sweep); docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md. DRAFT: nothing here authorises a flip or a flight.",
+  "roster": {
+    "arm": "docs/receipts/rosters/slurp-evo-fold-a-v2.json",
+    "roster_id": "SLURP-EVO-FOLD-A-V2",
+    "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6"
+  },
+  "rows": 1080,
+  "sampling_arms": {
+    "aa": null,
+    "l1-support": {
+      "solver_samples": {
+        "commit": {
+          "empty_votes_min": 3,
+          "min_support": 2,
+          "n1_min": 0.2,
+          "policy": "saea-commit-first-support-v1",
+          "similarity_threshold": 0.8
+        },
+        "decoding": {
+          "temperature": 0.6,
+          "top_k": 20,
+          "top_p": 0.95
+        },
+        "n": 5
+      }
+    },
+    "l2-union": {
+      "perception_samples": {
+        "cap": 3,
+        "decoding": {
+          "temperature": 0.6,
+          "top_k": 20,
+          "top_p": 0.95
+        },
+        "k": 4,
+        "merge_policy": "saea-perception-candidate-union-v1"
+      }
+    },
+    "lock": null,
+    "lock-rep2": null
+  },
+  "schema": "saea-registered-facts-v1",
+  "stage3_measurement": {
+    "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-NPU-PORT-V1": {
+      "aa_arm_id": "aa",
+      "claim": "nominated",
+      "claims_benefit": false,
+      "confirmation_of": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1",
+      "expected_effect_pp": 0.0,
+      "measurement_design": "same-flight-node-column",
+      "note": "A per-arm nomination, not a benefit claim: the round maps two sampling levers on the Thinking core, so no effect is assumed (0.0 pp SLU-F1) and the deliverable is the paired contrast with its cost. The null is the in-flight twin aa; the design resolves a per-arm contrast of 1.49 pp SLU / 0.65 pp intent at n = 1,080 (decision 190 node-column floors). L1 is judged on SLU with an intent guard, L2 on intent with an SLU guard. The summary key template_variants names the node-column summary of the effect-floor gate, not the template axis. Noise model M1: lock-rep2 is a second request-identical replicate of lock; the CI95 carries the replicate variance of the three copies. Fold A CONFIRMATION (plan section 8 R2 / M2): one pass of the same arm table on TRAIN Fold A (SLURP-EVO-FOLD-A-V2); a lever is accepted only if its Fold A lower CI95 is above zero; the optimism term is the Fold B delta minus the Fold A delta. Fold A is a held-out discovery fold, rollout-exposed by prior cells, never a test claim.",
+      "primary_metric": "official SLURP pooled SLU-F1 (micro; scorer slurp-slu-official-train, the pinned official evaluate.py), natural-mixture weighting, with intent accuracy (scenario_action) beside it",
+      "primary_metric_key": "slu",
+      "primary_metric_key_by_arm": {
+        "l1-support": "slu",
+        "l2-union": "intent"
+      },
+      "read_roster": "SLURP-EVO-FOLD-A-V2",
+      "replicate_arm_ids": [
+        "lock-rep2"
+      ],
+      "rows": 1080,
+      "template_variants": {
+        "candidate_arms": 2,
+        "node": "perception",
+        "twin": true
+      },
+      "tuning_roster": "none",
+      "variant_cost": {
+        "extra_audio_seconds": 47321.96,
+        "extra_contacts_per_row": 15
+      },
+      "variant_kind": "solver-sampling",
+      "variant_kind_by_arm": {
+        "l1-support": "solver-sampling",
+        "l2-union": "perception-sampling"
+      }
+    }
+  },
+  "status": "DRAFT-HELD",
+  "study_commit_at_registration": "28bf317600000000000000000000000000000000",
+  "thinking_knobs": {
+    "answer_fallback": {
+      "enable_thinking": false,
+      "id": "saea-thinking-answer-fallback-v1",
+      "max_tokens": 1024,
+      "mode": "answer-only re-ask",
+      "per_node": 1
+    },
+    "answer_reserve_tokens": 1024,
+    "budget_message": "Considering the limited time by the user, I have to give the solution based on the thinking directly now.",
+    "completion_cap": 4096,
+    "decoding": {
+      "seed": 20260913,
+      "temperature": 0
+    },
+    "node_modes": {
+      "perception": "think",
+      "solver": "think"
+    },
+    "reasoning_context_policy": "drop-reasoning-v1",
+    "reasoning_format": "deepseek",
+    "thinking_budget_tokens": 3072
+  }
+}

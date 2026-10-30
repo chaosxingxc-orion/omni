@@ -1,0 +1,587 @@
+{
+  "_note": "Every model-free fact this DRAFT port registration rests on, and the canonical stage3_measurement blocks keyed by the port run ids (scripts/checks/stage3_effect_floor_check.py, scripts/checks/flight_registration_check.py).",
+  "accounting": {
+    "accelerator_bound": {
+      "arm_mix_note": "0.52 = one Solver contact in lock-row equivalents, solver / (perception + solver) node seconds of scripts/flights/nx/l338_cost_inputs.json; a direct-only contact carries no knowledge, so the prefill side is an over-estimate and the reasoning length is not; the smoke measures the real mix",
+      "caps": {
+        "aa": {
+          "fit_endpoint_calls": 1080,
+          "generation_calls": 2160,
+          "speech_audio_seconds": 6310
+        },
+        "ab": {
+          "fit_endpoint_calls": 1080,
+          "generation_calls": 2160,
+          "speech_audio_seconds": 6310
+        },
+        "lock": {
+          "fit_endpoint_calls": 1080,
+          "generation_calls": 2160,
+          "speech_audio_seconds": 6310
+        },
+        "smoke": {
+          "fit_endpoint_calls": 4,
+          "generation_calls": 8,
+          "speech_audio_seconds": 20
+        }
+      },
+      "caps_note": "generation = rows x (1 contact + 1 answer-only fallback), FIT = rows x 1 x 1 counting endpoint (core.preparation_fit.direct_only_fit_contact_cap, the value build_direct_only_raw_fit_gate demands), audio = ceil(roster speech-seconds x the generation contacts per row). The ceiling per Fold B row is 2 contacts per pass with the fallback re-ask; the plan's '2 per row' counts the twin only, so the cell makes 3 programme contacts per Fold B row over its three passes.",
+      "cell_total": {
+        "fit_endpoint_calls": 3244,
+        "generation_calls": 6488,
+        "speech_audio_seconds": 18950
+      },
+      "formula": {
+        "aa": "PROVISIONAL NPU card-hours of ONE pass = ceil_0.1(1.3 x 1,080 rows x 0.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep); three passes in the cell",
+        "ab": "PROVISIONAL NPU card-hours of ONE pass = ceil_0.1(1.3 x 1,080 rows x 0.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep); three passes in the cell",
+        "lock": "PROVISIONAL NPU card-hours of ONE pass = ceil_0.1(1.3 x 1,080 rows x 0.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep); three passes in the cell",
+        "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+      },
+      "inputs": {
+        "arm_mix_rows": 0.52,
+        "margin": 1.3,
+        "round_hours": 0.1,
+        "rows": 1080,
+        "smoke_wall_clock_hours": 0.5
+      },
+      "plan_field_note": "execution_plan.planned_gpu_hours and family_budget.gpu_hours_fit_inclusive carry the 266-E figures (0.5 / 4.5) only because the plan field must be a number; they are NOT the NPU bound. The ledger gpu-hours cells carry the formula and fail the exposure gate closed until the sweep re-derives the bound and the main thread re-writes plan, rows and receipt together.",
+      "plan_field_placeholder": {
+        "aa": 4.5,
+        "ab": 4.5,
+        "lock": 4.5,
+        "smoke": 0.5
+      },
+      "status": "PROVISIONAL",
+      "unknowns_from_the_deployment_profile": [
+        "T = tensor_parallel_size",
+        "r = measured lock-only rows per minute of one instance at its sequences_per_instance",
+        "instances (wall-clock only; cancels in the card-hours)"
+      ]
+    },
+    "arm": "raw-speech-agent-native-tools",
+    "caps": {
+      "aa": {
+        "fit_endpoint_calls": 1080,
+        "generation_calls": 2160,
+        "speech_audio_seconds": 6310
+      },
+      "ab": {
+        "fit_endpoint_calls": 1080,
+        "generation_calls": 2160,
+        "speech_audio_seconds": 6310
+      },
+      "lock": {
+        "fit_endpoint_calls": 1080,
+        "generation_calls": 2160,
+        "speech_audio_seconds": 6310
+      },
+      "smoke": {
+        "fit_endpoint_calls": 4,
+        "generation_calls": 8,
+        "speech_audio_seconds": 20
+      }
+    },
+    "cell_total": {
+      "fit_endpoint_calls": 3244,
+      "generation_calls": 6488,
+      "speech_audio_seconds": 18950
+    },
+    "contacts_per_row": 1,
+    "fallback_contacts_per_row": 1,
+    "passes": [
+      "lock",
+      "aa",
+      "ab"
+    ],
+    "program": "phase-direct-only-v1",
+    "rows": 1080
+  },
+  "audio_pins": {
+    "audio_seconds_total": 3154.797375,
+    "checked": 1080,
+    "dataset_fragment_sha256": "1d30c501612686004936b5dd295885d9452175e6449b4a66187c08227a322cea",
+    "matching": 1080,
+    "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+  },
+  "composed_config_hashes": {
+    "aa": "3833b1943eee8e1a831024d394dd1e04289f3e769f01c9bc4635618f6b1a4c9a",
+    "ab": "4260ac28ac4dc994dec9582260c00577547aced463dc857dd0a4ab080e256a48",
+    "lock": "7d2f51cba7c379c5104ebb38fffad631b7c89082da307e39ce2532672203faef",
+    "smoke": "e73523aff9716066686fff6926369a2bdd596b6c0f780cce9087fdfc65832749"
+  },
+  "declared_differences": [
+    "8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0",
+    "8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets",
+    "8.3 vLLM sampling and kernels: temperature 0 with a fixed seed is deterministic per server build, not bit-identical to llama.cpp",
+    "8.5 forced-close whitespace (vLLM reasoning_end_str) until verified",
+    "D1 reasoning budget 3072 with forced close and one answer-only fallback instead of the historical 8,192-token uncapped completion (36 of 1,080 266-E rows ran to the cap)"
+  ],
+  "derive": {
+    "aa": {
+      "baseline": "slurp-direct-only-fold-b-aa-baseline-raw-port-v1",
+      "cell": "slurp-direct-only-fold-b-aa-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AA-FIT-NPU-PORT-V1",
+      "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AA-NPU-PORT-V1",
+      "versus_committed_266e": {
+        "historical": "slurp-direct-only-fold-b-thinking-baseline-v1",
+        "moved": [
+          "arm",
+          "live_phase_fit.attempt_id",
+          "live_phase_fit.contact_cap",
+          "live_phase_fit.run_id",
+          "live_phase_fit_audio_seconds_cap",
+          "speech_feature_key_representation_id",
+          "speech_feature_matcher_policy_id",
+          "speech_packet_promotion_receipt",
+          "speech_packet_promotion_receipt_sha256",
+          "what_this_is"
+        ],
+        "versus_lock": [
+          "live_phase_fit.attempt_id",
+          "live_phase_fit.run_id",
+          "what_this_is"
+        ]
+      }
+    },
+    "ab": {
+      "baseline": "slurp-direct-only-fold-b-ab-baseline-raw-port-v1",
+      "cell": "slurp-direct-only-fold-b-ab-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AB-FIT-NPU-PORT-V1",
+      "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AB-NPU-PORT-V1",
+      "versus_committed_266e": {
+        "historical": "slurp-direct-only-fold-b-thinking-baseline-v1",
+        "moved": [
+          "arm",
+          "live_phase_fit.attempt_id",
+          "live_phase_fit.contact_cap",
+          "live_phase_fit.run_id",
+          "live_phase_fit_audio_seconds_cap",
+          "speech_feature_key_representation_id",
+          "speech_feature_matcher_policy_id",
+          "speech_packet_promotion_receipt",
+          "speech_packet_promotion_receipt_sha256",
+          "what_this_is"
+        ],
+        "versus_lock": [
+          "live_phase_fit.attempt_id",
+          "live_phase_fit.run_id",
+          "what_this_is"
+        ]
+      }
+    },
+    "lock": {
+      "baseline": "slurp-direct-only-fold-b-baseline-raw-port-v1",
+      "cell": "slurp-direct-only-fold-b-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-FIT-NPU-PORT-V1",
+      "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-NPU-PORT-V1",
+      "versus_committed_266e": {
+        "historical": "slurp-direct-only-fold-b-thinking-baseline-v1",
+        "moved": [
+          "arm",
+          "live_phase_fit.attempt_id",
+          "live_phase_fit.contact_cap",
+          "live_phase_fit.run_id",
+          "live_phase_fit_audio_seconds_cap",
+          "speech_feature_key_representation_id",
+          "speech_feature_matcher_policy_id",
+          "speech_packet_promotion_receipt",
+          "speech_packet_promotion_receipt_sha256",
+          "what_this_is"
+        ]
+      }
+    },
+    "outputs": [
+      "configs/baseline/slurp-direct-only-fold-b-aa-baseline-raw-port-v1.json",
+      "configs/baseline/slurp-direct-only-fold-b-ab-baseline-raw-port-v1.json",
+      "configs/baseline/slurp-direct-only-fold-b-baseline-raw-port-v1.json",
+      "configs/baseline/slurp-direct-only-fold-b-smoke-4-baseline-raw-port-v1.json",
+      "configs/campaign/slurp-direct-only-fold-b-npu-port-v1.json",
+      "configs/experiment/slurp-direct-only-fold-b-aa-npu-port-v1.json",
+      "configs/experiment/slurp-direct-only-fold-b-ab-npu-port-v1.json",
+      "configs/experiment/slurp-direct-only-fold-b-npu-port-v1.json",
+      "configs/experiment/slurp-direct-only-fold-b-smoke-4-npu-port-v1.json"
+    ],
+    "smoke": {
+      "baseline": "slurp-direct-only-fold-b-smoke-4-baseline-raw-port-v1",
+      "cell": "slurp-direct-only-fold-b-smoke-4-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+      "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-NPU-PORT-V1",
+      "versus_committed_266e": {
+        "historical": "slurp-direct-only-fold-b-thinking-smoke-4-baseline-v1",
+        "moved": [
+          "arm",
+          "live_phase_fit.attempt_id",
+          "live_phase_fit.contact_cap",
+          "live_phase_fit.run_id",
+          "live_phase_fit_audio_seconds_cap",
+          "speech_feature_key_representation_id",
+          "speech_feature_matcher_policy_id",
+          "speech_packet_promotion_receipt",
+          "speech_packet_promotion_receipt_sha256",
+          "what_this_is"
+        ]
+      }
+    }
+  },
+  "fit_path": {
+    "audio_ceiling_source": "live_phase_fit_audio_seconds_cap (core.flight.runtime._fit_base_plan) = the generation plan's audio ceiling",
+    "cap_rule": "live_phase_fit.contact_cap == direct_only_fit_contact_cap(rows) == rows x 1 contact x 1 counting endpoint",
+    "envelope_checks": [
+      "sealed direct-only program",
+      "configured cap equals rows x 1",
+      "generation plan covers one contact per row",
+      "complete unique roster in one wave",
+      "every request carries exactly the original audio it names",
+      "audio seconds of the wave (WAV headers) fit the plan's audio ceiling"
+    ],
+    "gate": "core.preparation_fit.build_direct_only_raw_fit_gate (reached from build_live_phase_fit_gate behind the program id phase-direct-only-v1 on the raw-audio arm)",
+    "status": "landed (commit 56d3c1c3, tests/unit/test_direct_only_fit.py); no longer OPEN"
+  },
+  "identity": {
+    "aa": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-direct-only-fold-b-aa-generation-npu-port-v1",
+      "baseline_fragment": "slurp-direct-only-fold-b-aa-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-direct-only-fold-b-aa-npu-port-v1",
+      "composed_config_hash": "3833b1943eee8e1a831024d394dd1e04289f3e769f01c9bc4635618f6b1a4c9a",
+      "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 4.5,
+        "planned_model_calls": 2160,
+        "planned_speech_audio_seconds": 6310,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-direct-only-fold-b-aa-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 1080,
+        "generation_calls_cap": 2160,
+        "gpu_hours_fit_inclusive": 4.5,
+        "native_task_contract_calls_cap": 0,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 6310
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-direct-only-fold-b-aa-fit-npu-port-v1",
+        "contact_cap": 1080,
+        "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AA-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-direct-only-fold-b-aa-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AA-FIT-NPU-PORT-V1",
+      "historical_fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-FIT-REC1-V1",
+      "historical_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-V1",
+      "key": "aa",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-direct-only-v1",
+      "protocol_hash": "c3e1e4fc4dc14f6848b22e3c2c032ee5abf57813e00edf7508bb67509e31140a",
+      "role": "arm D, request-identical twin pass aa (2 of 3)",
+      "roster_receipt": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+      "rows": 1080,
+      "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AA-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+    },
+    "ab": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-direct-only-fold-b-ab-generation-npu-port-v1",
+      "baseline_fragment": "slurp-direct-only-fold-b-ab-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-direct-only-fold-b-ab-npu-port-v1",
+      "composed_config_hash": "4260ac28ac4dc994dec9582260c00577547aced463dc857dd0a4ab080e256a48",
+      "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 4.5,
+        "planned_model_calls": 2160,
+        "planned_speech_audio_seconds": 6310,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-direct-only-fold-b-ab-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 1080,
+        "generation_calls_cap": 2160,
+        "gpu_hours_fit_inclusive": 4.5,
+        "native_task_contract_calls_cap": 0,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 6310
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-direct-only-fold-b-ab-fit-npu-port-v1",
+        "contact_cap": 1080,
+        "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AB-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-direct-only-fold-b-ab-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AB-FIT-NPU-PORT-V1",
+      "historical_fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-FIT-REC1-V1",
+      "historical_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-V1",
+      "key": "ab",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-direct-only-v1",
+      "protocol_hash": "fb371c718e70690a06dfb5d3323b71a9047a5df2af1daf007157de803b8e1fec",
+      "role": "arm D, second request-identical replicate pass ab (3 of 3)",
+      "roster_receipt": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+      "rows": 1080,
+      "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AB-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+    },
+    "lock": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-direct-only-fold-b-generation-npu-port-v1",
+      "baseline_fragment": "slurp-direct-only-fold-b-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-direct-only-fold-b-npu-port-v1",
+      "composed_config_hash": "7d2f51cba7c379c5104ebb38fffad631b7c89082da307e39ce2532672203faef",
+      "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 4.5,
+        "planned_model_calls": 2160,
+        "planned_speech_audio_seconds": 6310,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-direct-only-fold-b-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 1080,
+        "generation_calls_cap": 2160,
+        "gpu_hours_fit_inclusive": 4.5,
+        "native_task_contract_calls_cap": 0,
+        "official_complete_scoring_jobs": 1,
+        "repeated_speech_audio_seconds_cap": 6310
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-direct-only-fold-b-fit-npu-port-v1",
+        "contact_cap": 1080,
+        "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-direct-only-fold-b-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-FIT-NPU-PORT-V1",
+      "historical_fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-FIT-REC1-V1",
+      "historical_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-V1",
+      "key": "lock",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-direct-only-v1",
+      "protocol_hash": "784edd2ca49bcb3bc41ff6c404dac92fad8333be058528ab09b24d8c49a6e2ca",
+      "role": "arm D, pass lock (1 of 3 request-identical passes)",
+      "roster_receipt": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+      "rows": 1080,
+      "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+    },
+    "smoke": {
+      "arm": "raw-speech-agent-native-tools",
+      "attempt_id": "attempt-slurp-direct-only-fold-b-smoke-4-generation-npu-port-v1",
+      "baseline_fragment": "slurp-direct-only-fold-b-smoke-4-baseline-raw-port-v1",
+      "carrier_lock_key": "slurp",
+      "cell": "slurp-direct-only-fold-b-smoke-4-npu-port-v1",
+      "composed_config_hash": "e73523aff9716066686fff6926369a2bdd596b6c0f780cce9087fdfc65832749",
+      "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+      "execution_plan": {
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 0.5,
+        "planned_model_calls": 8,
+        "planned_speech_audio_seconds": 20,
+        "split_role": "discovery"
+      },
+      "execution_profile": "bounded-discovery-probe",
+      "experiment": "slurp-direct-only-fold-b-smoke-4-npu-port-v1",
+      "family_budget": {
+        "asr_calls": 0,
+        "ceilings_are_not_targets": true,
+        "encoder_calls": 0,
+        "fit_endpoint_calls_cap": 4,
+        "generation_calls_cap": 8,
+        "gpu_hours_fit_inclusive": 0.5,
+        "native_task_contract_calls_cap": 0,
+        "official_complete_scoring_jobs": 0,
+        "repeated_speech_audio_seconds_cap": 20
+      },
+      "fit": {
+        "attempt_id": "attempt-slurp-direct-only-fold-b-smoke-4-fit-npu-port-v1",
+        "contact_cap": 4,
+        "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1"
+      },
+      "fit_attempt_id": "attempt-slurp-direct-only-fold-b-smoke-4-fit-npu-port-v1",
+      "fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+      "historical_fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-SMOKE-4-FIT-REC1-V1",
+      "historical_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-SMOKE-4-V1",
+      "key": "smoke",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "program": "phase-direct-only-v1",
+      "protocol_hash": "601b536bdc9a69643a25458ea28bd3218afbc296755fd33e1417ff81acdb9737",
+      "role": "four-row decode-cost smoke of arm D",
+      "roster_receipt": "docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1/smoke-roster-receipt-v1.json",
+      "rows": 4,
+      "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-NPU-PORT-V1",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "split_identity_hash": "26b306e5ccbfbe48ece85c7a3d07dacd947db9265cf5193bcb6e6d6e7f6500fe"
+    }
+  },
+  "locked_decoding": {
+    "seed": 20260913,
+    "temperature": 0
+  },
+  "pins": {
+    "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
+    "knowledge_view": {
+      "note": "the fold-excluded view the direct-only baseline pins for the runner's roster guard only; the program supplies no evidence",
+      "relpath": "knowledge/slurp/saea-kb-distmodel-v1/size-full-content-slot-fillers-intent-slot-frame-tfrl-folds-v1/snapshot.json",
+      "sha256": "9c64e8ec48a0fce4f172bd190932f99c98c7efa18bbfb14526d54c62fdf7032b"
+    },
+    "model": {
+      "answer_reserve_tokens": 1024,
+      "file_sha256": "bceb079d59853ca10ebdd772940720f92a4ef41370736d82e9de432cee9f7fc5",
+      "fragment_hash_with_data_root_set": "a35b274058d7ac7558d3d0ac32cca8bb3c9321cb13ea89f16b38003fdd18c720",
+      "max_tokens": 4096,
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "note": "fragment_hash is taken with SAEA_DATA_ROOT / SPEECHRL_DATA_DIR resolved, as flights run (plan section 9 ruling 5); without a data root the materialization path does not collapse to the placeholder and the same function returns another value",
+      "reasoning_budget_tokens": 3072,
+      "timeout_seconds": 420
+    },
+    "serving": {
+      "deployment_profile": {
+        "fields": {
+          "devices": null,
+          "instances": null,
+          "sequences_per_instance": null,
+          "tensor_parallel_size": null
+        },
+        "filled_by": "a later deployment profile chosen from a measured speed sweep of the BF16 / vLLM-Ascend Thinking server (several vLLM instances, each tensor-parallel over a group of Ascend cards; per-instance concurrency chosen from the sweep)",
+        "name": "PORT_DEPLOYMENT_PROFILE",
+        "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment carries no --max-num-seqs and no profile_slot_count (moved to the deployment profile, commit db798a83); the baselines' serving_slots 4 is the client-side geometry value of the owner ruling, not a deployment fact.",
+        "status": "PENDING"
+      },
+      "lock_entries": "open owner decision 9.4 (design doc section 9)",
+      "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+      "per_sequence_window_tokens": 24576,
+      "runtime_receipt": "open owner decision 9.3 (design doc section 9)",
+      "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+      "session_identity": "open owner decision 9.2 (design doc section 9)",
+      "transport": "vllm"
+    },
+    "signoff_conditions": {
+      "path": "docs/readiness/2026-10-30-slurp-direct-only-fold-b-npu-port-v1/signoff-conditions-v1.json",
+      "sha256": "ef010bf7d5ae6b5647e8a571b5b5c847b8fcc9e602ae80755239c9a0eb1731ea"
+    }
+  },
+  "prohibitions": [
+    "No system-level, superiority, generalisation or admission claim from this read; the Thinking model is admitted ONLY for this read.",
+    "No reasoning text delivered, persisted (beyond hashes) or scored; preserve_wire_responses stays false on every cell.",
+    "No pass before the four-row smoke has sealed and the machine sign-off conditions hold.",
+    "No deployment value (instances, tensor-parallel size, sequences per instance, devices) is registered here; the cell is not flown before PORT_DEPLOYMENT_PROFILE is filled from the measured sweep and the card-hour bound re-derived.",
+    "No test-split, Fold A or DEV contact; no flight before root countersigns the DRAFT rows, the receipt is minted and the cells are flipped; --allow-output-change is never passed."
+  ],
+  "read_rule": {
+    "a_to_d_gap": "A-to-D is a cross-run, cross-program comparison read at the cross-run bar of 2.5 pp; the expected gap is about 26 pp, so the bar does not bind",
+    "analysis_recipe": "not part of this package: the D reader and its recipe are an open item; this block is the rule it must implement",
+    "bootstrap": {
+      "draws": 10000,
+      "level": "CI95",
+      "note": "the 266-E values unless the T2 recipe for D fixes others",
+      "seed": 20261011
+    },
+    "claim_boundary": "No system-level, superiority, generalisation, test or confirmatory claim; a development-fold capability read of the bare core.",
+    "kind": "PREREGISTERED reading of arm D; development numbers only",
+    "primary": "official SLURP pooled SLU-F1 (micro; scorer slurp-slu-official-train, the pinned official evaluate.py), natural-mixture weighting, with intent accuracy (scenario_action_exact) beside it; the per-row F1 is a repo diagnostic reported beside the pooled F1, never an official SLURP number",
+    "replicates": {
+      "k": 2,
+      "note": "lock is the delivering pass; aa and ab are request-identical replicates in the same chain (noise model M1: separate runs, not the in-flight twin, because the direct-only program has no arm table). Same-chain replicates also absorb session drift, so they measure at least the within-run decoding term.",
+      "passes": [
+        "lock",
+        "aa",
+        "ab"
+      ]
+    },
+    "truncation": "A cap-hit row is sealed as a receipted empty answer (saea-empty-completion-v1 and saea-thinking-answer-fallback-v1) and scored as such; never re-asked beyond the one registered answer-only fallback (266-E preregistration section 3; decision 199). The M4 trace logs the truncation flag per contact.",
+    "twin_admissibility": "|SLU-F1(aa) - SLU-F1(lock)| <= 1.2 pp (the port analysis recipe's twin rule)"
+  },
+  "registered_at_utc": "2026-10-30T00:00:00+00:00",
+  "registration_basis": "owner decisions of 2026-10-28 on the NPU port (design doc section 9.1: the saea-base Docker container is the execution authority; item 4: the agent drafts the exposure preregistration rows; item 5: the admission receipt is authorised and minted by the main thread; item 6: model-free-check rows for the port preparations; the multi-instance deployment input: the deployment is a named placeholder filled from a measured speed sweep); docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md; docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md section 9. DRAFT: nothing here authorises a flip or a flight.",
+  "request_identity_proof": {
+    "compared_to": "lock",
+    "differing_composed_keys_outside_the_fit_identity_and_prose": {
+      "aa": [],
+      "ab": []
+    },
+    "none_of_them_enters_a_request": true
+  },
+  "roster": {
+    "arm": "SLURP-EVO-FOLD-B-V2",
+    "audio_seconds_total": 3154.797375,
+    "count": 1080,
+    "receipt": {
+      "relpath": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+      "sha256": "47b89b9e33b1aed553ad94a1819acba6ac8837130ca546c33219d91a1ab944a8"
+    },
+    "smoke_receipt": {
+      "ids_are_first_four_of_arm_roster": true,
+      "relpath": "docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1/smoke-roster-receipt-v1.json",
+      "sha256": "856933c205082b16070dbfab84c077b93f43b43641319460004ce9dbd40a1c9e"
+    },
+    "smoke_split_identity_hash": "26b306e5ccbfbe48ece85c7a3d07dacd947db9265cf5193bcb6e6d6e7f6500fe",
+    "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+  },
+  "rows": 1080,
+  "schema": "saea-registered-facts-v1",
+  "stage3_measurement": {
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AA-NPU-PORT-V1": {
+      "claims_benefit": false,
+      "expected_effect_pp": 0.0,
+      "measurement_design": "cross-flight-with-in-chain-replicate",
+      "note": "A capability read of the bare core on the port, no mechanism and no claim: expected_effect_pp is 0.0 and claims_benefit false. lock, aa and ab are three request-identical passes in one chain (noise model M1); the replicate variance enters every CI95 of the A-to-D and T-to-D contrasts.",
+      "primary_metric": "official SLURP pooled SLU-F1 (micro; scorer slurp-slu-official-train, the pinned official evaluate.py), natural-mixture weighting, with intent accuracy (scenario_action_exact) beside it; the per-row F1 is a repo diagnostic reported beside the pooled F1, never an official SLURP number",
+      "read_roster": "SLURP-EVO-FOLD-B-V2",
+      "replicate_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-NPU-PORT-V1",
+      "rows": 1080,
+      "tuning_roster": "none"
+    },
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AB-NPU-PORT-V1": {
+      "claims_benefit": false,
+      "expected_effect_pp": 0.0,
+      "measurement_design": "cross-flight-with-in-chain-replicate",
+      "note": "A capability read of the bare core on the port, no mechanism and no claim: expected_effect_pp is 0.0 and claims_benefit false. lock, aa and ab are three request-identical passes in one chain (noise model M1); the replicate variance enters every CI95 of the A-to-D and T-to-D contrasts.",
+      "primary_metric": "official SLURP pooled SLU-F1 (micro; scorer slurp-slu-official-train, the pinned official evaluate.py), natural-mixture weighting, with intent accuracy (scenario_action_exact) beside it; the per-row F1 is a repo diagnostic reported beside the pooled F1, never an official SLURP number",
+      "read_roster": "SLURP-EVO-FOLD-B-V2",
+      "replicate_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-NPU-PORT-V1",
+      "rows": 1080,
+      "tuning_roster": "none"
+    },
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-NPU-PORT-V1": {
+      "claims_benefit": false,
+      "expected_effect_pp": 0.0,
+      "measurement_design": "cross-flight-with-in-chain-replicate",
+      "note": "A capability read of the bare core on the port, no mechanism and no claim: expected_effect_pp is 0.0 and claims_benefit false. lock, aa and ab are three request-identical passes in one chain (noise model M1); the replicate variance enters every CI95 of the A-to-D and T-to-D contrasts.",
+      "primary_metric": "official SLURP pooled SLU-F1 (micro; scorer slurp-slu-official-train, the pinned official evaluate.py), natural-mixture weighting, with intent accuracy (scenario_action_exact) beside it; the per-row F1 is a repo diagnostic reported beside the pooled F1, never an official SLURP number",
+      "read_roster": "SLURP-EVO-FOLD-B-V2",
+      "replicate_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-AA-NPU-PORT-V1",
+      "rows": 1080,
+      "tuning_roster": "none"
+    },
+    "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-NPU-PORT-V1": {
+      "claims_benefit": false,
+      "expected_effect_pp": 0.0,
+      "measurement_design": "form-proof",
+      "note": "Four Fold B rows prove FORM only: the raw-audio direct-only request form, the live phase fit of the direct-only raw gate and the seal work, and what one Solver contact costs under the port budget. Scored by no one; four rows claim nothing under instrument rule 5.",
+      "primary_metric": "none: a four-row decode-cost smoke reads no metric",
+      "read_roster": "SLURP-EVO-FOLD-B-V2",
+      "rows": 4,
+      "tuning_roster": "none"
+    }
+  },
+  "status": "DRAFT-HELD",
+  "study_commit_at_registration": "534b543ff154ca23be8287c1730b040940a3d038"
+}

@@ -1,0 +1,151 @@
+{
+  "accelerator_bound": {
+    "arm_mix_note": "0.52 = one Solver contact in lock-row equivalents, solver / (perception + solver) node seconds of scripts/flights/nx/l338_cost_inputs.json; a direct-only contact carries no knowledge, so the prefill side is an over-estimate and the reasoning length is not; the smoke measures the real mix",
+    "caps": {
+      "aa": {
+        "fit_endpoint_calls": 1080,
+        "generation_calls": 2160,
+        "speech_audio_seconds": 6310
+      },
+      "ab": {
+        "fit_endpoint_calls": 1080,
+        "generation_calls": 2160,
+        "speech_audio_seconds": 6310
+      },
+      "lock": {
+        "fit_endpoint_calls": 1080,
+        "generation_calls": 2160,
+        "speech_audio_seconds": 6310
+      },
+      "smoke": {
+        "fit_endpoint_calls": 4,
+        "generation_calls": 8,
+        "speech_audio_seconds": 20
+      }
+    },
+    "caps_note": "generation = rows x (1 contact + 1 answer-only fallback), FIT = rows x 1 x 1 counting endpoint (core.preparation_fit.direct_only_fit_contact_cap, the value build_direct_only_raw_fit_gate demands), audio = ceil(roster speech-seconds x the generation contacts per row). The ceiling per Fold B row is 2 contacts per pass with the fallback re-ask; the plan's '2 per row' counts the twin only, so the cell makes 3 programme contacts per Fold B row over its three passes.",
+    "cell_total": {
+      "fit_endpoint_calls": 3244,
+      "generation_calls": 6488,
+      "speech_audio_seconds": 18950
+    },
+    "formula": {
+      "aa": "PROVISIONAL NPU card-hours of ONE pass = ceil_0.1(1.3 x 1,080 rows x 0.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep); three passes in the cell",
+      "ab": "PROVISIONAL NPU card-hours of ONE pass = ceil_0.1(1.3 x 1,080 rows x 0.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep); three passes in the cell",
+      "lock": "PROVISIONAL NPU card-hours of ONE pass = ceil_0.1(1.3 x 1,080 rows x 0.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep); three passes in the cell",
+      "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+    },
+    "inputs": {
+      "arm_mix_rows": 0.52,
+      "margin": 1.3,
+      "round_hours": 0.1,
+      "rows": 1080,
+      "smoke_wall_clock_hours": 0.5
+    },
+    "plan_field_note": "execution_plan.planned_gpu_hours and family_budget.gpu_hours_fit_inclusive carry the 266-E figures (0.5 / 4.5) only because the plan field must be a number; they are NOT the NPU bound. The ledger gpu-hours cells carry the formula and fail the exposure gate closed until the sweep re-derives the bound and the main thread re-writes plan, rows and receipt together.",
+    "plan_field_placeholder": {
+      "aa": 4.5,
+      "ab": 4.5,
+      "lock": 4.5,
+      "smoke": 0.5
+    },
+    "status": "PROVISIONAL",
+    "unknowns_from_the_deployment_profile": [
+      "T = tensor_parallel_size",
+      "r = measured lock-only rows per minute of one instance at its sequences_per_instance",
+      "instances (wall-clock only; cancels in the card-hours)"
+    ]
+  },
+  "attached_generation_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-NPU-PORT-V1",
+  "cell": "slurp-direct-only-fold-b-smoke-4-npu-port-v1",
+  "composed_config_hash": "e73523aff9716066686fff6926369a2bdd596b6c0f780cce9087fdfc65832749",
+  "contact_cap": 4,
+  "declared_differences": [
+    "8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0",
+    "8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets",
+    "8.3 vLLM sampling and kernels: temperature 0 with a fixed seed is deterministic per server build, not bit-identical to llama.cpp",
+    "8.5 forced-close whitespace (vLLM reasoning_end_str) until verified",
+    "D1 reasoning budget 3072 with forced close and one answer-only fallback instead of the historical 8,192-token uncapped completion (36 of 1,080 266-E rows ran to the cap)"
+  ],
+  "execution_plan": {
+    "attempt_id": "attempt-slurp-direct-only-fold-b-smoke-4-fit-npu-port-v1",
+    "carrier_lock_key": "slurp",
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.5,
+    "planned_model_calls": 4,
+    "planned_speech_audio_seconds": 20,
+    "protocol_hash": "601b536bdc9a69643a25458ea28bd3218afbc296755fd33e1417ff81acdb9737",
+    "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+    "schema": "saea-execution-plan-v1",
+    "split_identity_hash": "26b306e5ccbfbe48ece85c7a3d07dacd947db9265cf5193bcb6e6d6e7f6500fe",
+    "split_role": "discovery",
+    "study": "speech-aware-evidence-acquisition"
+  },
+  "execution_route": "The shared live phase-fit path (core.preparation_fit.build_direct_only_raw_fit_gate) under this cell's own live_phase_fit identity; request envelopes only, no generation.",
+  "expected_session_id": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+  "experiment": "slurp-direct-only-fold-b-smoke-4-npu-port-v1",
+  "family_budget": {
+    "asr_calls": 0,
+    "ceilings_are_not_targets": true,
+    "encoder_calls": 0,
+    "fit_endpoint_calls_cap": 4,
+    "generation_calls_cap": 8,
+    "gpu_hours_fit_inclusive": 0.5,
+    "native_task_contract_calls_cap": 0,
+    "official_complete_scoring_jobs": 0,
+    "repeated_speech_audio_seconds_cap": 20
+  },
+  "fit_path": {
+    "audio_ceiling_source": "live_phase_fit_audio_seconds_cap (core.flight.runtime._fit_base_plan) = the generation plan's audio ceiling",
+    "cap_rule": "live_phase_fit.contact_cap == direct_only_fit_contact_cap(rows) == rows x 1 contact x 1 counting endpoint",
+    "envelope_checks": [
+      "sealed direct-only program",
+      "configured cap equals rows x 1",
+      "generation plan covers one contact per row",
+      "complete unique roster in one wave",
+      "every request carries exactly the original audio it names",
+      "audio seconds of the wave (WAV headers) fit the plan's audio ceiling"
+    ],
+    "gate": "core.preparation_fit.build_direct_only_raw_fit_gate (reached from build_live_phase_fit_gate behind the program id phase-direct-only-v1 on the raw-audio arm)",
+    "status": "landed (commit 56d3c1c3, tests/unit/test_direct_only_fit.py); no longer OPEN"
+  },
+  "historical_twin": {
+    "fit_run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-SMOKE-4-FIT-REC1-V1",
+    "package": "docs/readiness/2026-10-11-slurp-direct-only-fold-b-thinking-vs-instruct-v1",
+    "run_id": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-THINKING-SMOKE-4-V1"
+  },
+  "one_factor": "None within the cell: three request-identical passes. Against the 266-E twin the port changes the core precision and serving stack, the speech input path and the thinking budget together (the declared differences), so it is read beside the historical arm, never as a one-factor contrast with it.",
+  "plan_kind": "fit",
+  "preparation_base_commit": "534b543ff154ca23be8287c1730b040940a3d038",
+  "protocol_document": {
+    "relpath": "docs/readiness/2026-10-30-slurp-direct-only-fold-b-npu-port-v1/protocol-registered-v1.json",
+    "sha256": "eb7f6c1f1a77a4099b82d94b02956907e96c36e2ab76736b6385c904827c9568"
+  },
+  "purpose": "SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1: the live phase-fit spend identity of SAEA-SLURP-DIRECT-ONLY-FOLD-B-SMOKE-4-NPU-PORT-V1; request envelopes only; reads nothing.",
+  "registered_at_utc": "2026-10-30T00:00:00+00:00",
+  "schema": "saea-registered-fit-plan-v1",
+  "scoring": "No fit score.",
+  "serving": {
+    "deployment_profile": {
+      "fields": {
+        "devices": null,
+        "instances": null,
+        "sequences_per_instance": null,
+        "tensor_parallel_size": null
+      },
+      "filled_by": "a later deployment profile chosen from a measured speed sweep of the BF16 / vLLM-Ascend Thinking server (several vLLM instances, each tensor-parallel over a group of Ascend cards; per-instance concurrency chosen from the sweep)",
+      "name": "PORT_DEPLOYMENT_PROFILE",
+      "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment carries no --max-num-seqs and no profile_slot_count (moved to the deployment profile, commit db798a83); the baselines' serving_slots 4 is the client-side geometry value of the owner ruling, not a deployment fact.",
+      "status": "PENDING"
+    },
+    "lock_entries": "open owner decision 9.4 (design doc section 9)",
+    "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+    "per_sequence_window_tokens": 24576,
+    "runtime_receipt": "open owner decision 9.3 (design doc section 9)",
+    "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+    "session_identity": "open owner decision 9.2 (design doc section 9)",
+    "transport": "vllm"
+  },
+  "status": "DRAFT-HELD-REGISTERED_BEFORE_CONTACT_AWAITING_COORDINATOR_COUNTERSIGN_AND_READINESS_FLIP",
+  "unused_budget_is_not_attempt_authority": true
+}

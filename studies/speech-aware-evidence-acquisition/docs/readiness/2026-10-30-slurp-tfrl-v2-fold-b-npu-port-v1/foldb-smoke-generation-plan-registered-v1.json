@@ -1,0 +1,277 @@
+{
+  "accelerator_bound": {
+    "caps": {
+      "ch1": {
+        "fit_endpoint_calls": 2191,
+        "generation_calls": 4382,
+        "speech_audio_seconds": 18474
+      },
+      "ch2": {
+        "fit_endpoint_calls": 2184,
+        "generation_calls": 4368,
+        "speech_audio_seconds": 19703
+      },
+      "csmoke": {
+        "fit_endpoint_calls": 28,
+        "generation_calls": 56,
+        "speech_audio_seconds": 239
+      },
+      "fb": {
+        "fit_endpoint_calls": 10800,
+        "generation_calls": 21600,
+        "speech_audio_seconds": 63096
+      },
+      "fsmoke": {
+        "fit_endpoint_calls": 40,
+        "generation_calls": 80,
+        "speech_audio_seconds": 204
+      }
+    },
+    "caps_note": "generation = rows x (program contacts + one fallback contact per budgeted-thinking contact), FIT = rows x contacts x 1 counting endpoint (the raw-audio arm; native_contact_required_cap), audio = ceil(roster speech-seconds x the generation contacts per row). Construction cells: 7 contacts per row (c7); Fold B cells: 10 (c10).",
+    "family_total_iteration_1": {
+      "fit_endpoint_calls": 15243,
+      "generation_calls": 30486,
+      "speech_audio_seconds": 101716
+    },
+    "formula": {
+      "ch1": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 313 rows x 3.6 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+      "ch2": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 312 rows x 3.6 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+      "csmoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+      "fb": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 5.04 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+      "fsmoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+    },
+    "illustration_not_registered": {
+      "card_hours_per_unit_tensor_parallel": {
+        "ch1": 12.6,
+        "ch2": 12.5,
+        "csmoke": 0.5,
+        "fb": 60.5,
+        "fsmoke": 0.5
+      },
+      "lock_rows_per_minute_per_instance": 1.95,
+      "note": "at the historical lock rate the formulas read these numbers x T card-hours; the port's r is measured, not assumed"
+    },
+    "inputs": {
+      "contacts_per_row": {
+        "ch1": [
+          1,
+          6
+        ],
+        "ch2": [
+          1,
+          6
+        ],
+        "csmoke": [
+          1,
+          6
+        ],
+        "fb": [
+          4,
+          6
+        ],
+        "fsmoke": [
+          4,
+          6
+        ]
+      },
+      "margin": 1.3,
+      "mix_rows": {
+        "ch1": 3.6,
+        "ch2": 3.6,
+        "csmoke": 3.6,
+        "fb": 5.04,
+        "fsmoke": 5.04
+      },
+      "node_seconds": {
+        "perception": 59.0,
+        "solver": 64.07
+      },
+      "round_hours": 0.1,
+      "smoke_wall_clock_hours": 0.5
+    },
+    "plan_field_note": "execution_plan.planned_gpu_hours and family_budget.gpu_hours_fit_inclusive carry the formula evaluated at the historical rate with T = 1 (smokes 0.5) only because the plan field must be a number; they are NOT the NPU bound. The ledger gpu-hours cells carry the formula and fail the exposure gate closed until the sweep re-derives the bound and the main thread re-writes plan, rows and receipt together.",
+    "plan_field_placeholder": {
+      "ch1": 12.6,
+      "ch2": 12.5,
+      "csmoke": 0.5,
+      "fb": 60.5,
+      "fsmoke": 0.5
+    },
+    "rows_only_caps": {
+      "r01c_encoding": {
+        "calls": 625,
+        "npu_hours": 0,
+        "speech_audio_seconds": 2727,
+        "wall_clock_hours_ceiling": 2.0
+      },
+      "reflector_per_iteration": {
+        "fit_endpoint_calls": 37,
+        "generation_calls": 36,
+        "speech_audio_seconds": 0
+      }
+    },
+    "status": "PROVISIONAL",
+    "three_iteration_upper_bound": {
+      "fit_endpoint_calls": 45704,
+      "generation_calls": 91294,
+      "note": "smokes once, then three iterations of the two construction halves, the Fold B flight and the reflector",
+      "speech_audio_seconds": 304262
+    },
+    "unknowns_from_the_deployment_profile": [
+      "T = tensor_parallel_size",
+      "r = measured lock-only rows per minute of one instance at its sequences_per_instance",
+      "instances (wall-clock only; cancels in the card-hours)"
+    ]
+  },
+  "arm_order": [
+    "t-v2",
+    "aa",
+    "lock-rep2",
+    "lock"
+  ],
+  "arm_visits": "first",
+  "cell": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1",
+  "composed_config_hash": "b6669e39e1248fb98da80d6dc4e82ffc81e0d4bd535dd9293b27f0e5a45c9907",
+  "declared_differences": [
+    "8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0",
+    "8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets",
+    "8.3 vLLM sampling and kernels: temperature 0 with a fixed seed is deterministic per server build, not bit-identical to llama.cpp",
+    "8.4 causal retrieval encoder (forced and measured); every sealed retrieval vector regenerated",
+    "8.5 forced-close whitespace (vLLM reasoning_end_str) until verified",
+    "8.6 re-authored semantic knowledge (intent-boundaries-npu-port-v1, slot-contracts-npu-port-v2; decision 9.5)",
+    "8.7 CPU float32 retrieval encoder instead of CUDA bfloat16",
+    "T1 (plan section 9 ruling 4): in the T arm exemplars REPLACE supplied items, they do not add to them (supply bound = A's bound minus 8 plus an exemplar block of at most 2,000 tokens; the rule bank is Solver instruction text of at most 400 tokens); A keeps its bound and no bank. A declared T-vs-A protocol difference, not a confound.",
+    "T2 (plan section 4 and section 11 ruling 2): iteration-1 trajectories differ in decoding only (no bank exists yet); from iteration 2 the rule-variants mode applies.",
+    "T3 (plan section 9 ruling 3 and section 11 ruling 1): the construction column R01C is sampled over two interleaved halves; the bank a half consumes in iteration t+1 is distilled from the OTHER half's positives; the Fold B flight consumes the union."
+  ],
+  "execution_plan": {
+    "attempt_id": "attempt-slurp-tfrl-v2-fold-b-smoke-4-generation-npu-port-v1",
+    "carrier_lock_key": "slurp",
+    "execution_profile": "bounded-discovery-probe",
+    "planned_gpu_hours": 0.5,
+    "planned_model_calls": 80,
+    "planned_speech_audio_seconds": 204,
+    "protocol_hash": "3bb9257e69948172a2e60512987d2e8297833fec6b075e8d8e541fee7a108db3",
+    "run_id": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1",
+    "schema": "saea-execution-plan-v1",
+    "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32",
+    "split_role": "discovery",
+    "study": "speech-aware-evidence-acquisition"
+  },
+  "execution_route": "Shared core.flight.cli worker on this cell alone (the smoke step); never scored.",
+  "expected_session_id": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+  "experiment": "slurp-native-stage3-tfrl-v2-fold-b-smoke-4-npu-port-v1",
+  "family_budget": {
+    "asr_calls": 0,
+    "ceilings_are_not_targets": true,
+    "encoder_calls": 0,
+    "fit_endpoint_calls_cap": 40,
+    "generation_calls_cap": 80,
+    "gpu_hours_fit_inclusive": 0.5,
+    "native_task_contract_calls_cap": 80,
+    "official_complete_scoring_jobs": 0,
+    "repeated_speech_audio_seconds_cap": 204
+  },
+  "no_think_node": null,
+  "one_factor": "T changes the harness against A in the declared ways (exemplars replace supplied items, a rule bank, a Solver vote); it is read against A's lock arm inside the same flight, with the replicate variance in every CI95, never as a one-factor contrast.",
+  "plan_kind": "generation",
+  "preparation_base_commit": "534b543ff154ca23be8287c1730b040940a3d038",
+  "prepared_phase_supply": {
+    "note": "this cell's own first-phase supply under its own run id (item E16), prepared by scripts/flights/repin_cell.py at the flip",
+    "relpath": "prepared/SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1/phase-supply-v1.json",
+    "sha256": "MINTED_AT_THE_FLIP"
+  },
+  "protocol_document": {
+    "relpath": "docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/protocol-registered-v1.json",
+    "sha256": "094e59a2f88d69cc03cc639e032afeef42978ce5f6e7d9e4d9dc9bd52b363452"
+  },
+  "purpose": "SAEA-SLURP-TFRL-V2-FOLD-B-SMOKE-4-NPU-PORT-V1: four-row form smoke of the Fold B selection flight, NPU port.",
+  "rails_pending": [
+    "stage3-algorithm-label",
+    "bank-store-roles",
+    "vote-commit-policy",
+    "top-rule-per-vote",
+    "exemplar-block"
+  ],
+  "registered_at_utc": "2026-10-30T00:00:00+00:00",
+  "sampling_arms": {
+    "aa": {
+      "axes": null,
+      "role": "twin (replicate_of lock)"
+    },
+    "lock": {
+      "axes": null,
+      "role": "delivering arm, LAST (greedy, the lock seed)"
+    },
+    "lock-rep2": {
+      "axes": null,
+      "role": "replicate (replicate_of lock, arm_kind replicate)"
+    },
+    "t-v2": {
+      "axes": {
+        "solver_samples": {
+          "commit": {
+            "min_support": 2,
+            "policy": "saea-commit-plurality-support-v1",
+            "similarity_threshold": 0.8
+          },
+          "decoding": {
+            "temperature": 0.6,
+            "top_k": 20,
+            "top_p": 0.95
+          },
+          "n": 3
+        }
+      },
+      "role": "candidate: Solver vote n = 3 with the iteration's banks"
+    }
+  },
+  "schema": "saea-registered-generation-plan-v1",
+  "scoring": "None: the smoke is never scored.",
+  "serving": {
+    "deployment_profile": {
+      "fields": {
+        "devices": null,
+        "instances": null,
+        "sequences_per_instance": null,
+        "tensor_parallel_size": null
+      },
+      "filled_by": "a later deployment profile chosen from a measured speed sweep of the BF16 / vLLM-Ascend Thinking server (several vLLM instances, each tensor-parallel over a group of Ascend cards; per-instance concurrency chosen from the sweep)",
+      "name": "PORT_DEPLOYMENT_PROFILE",
+      "not_a_fact_here": "No instance count, tensor-parallel size, sequences-per-instance value or device list is a fact of this registration. The model fragment carries no --max-num-seqs and no profile_slot_count (moved to the deployment profile, commit db798a83); the baselines' serving_slots 4 is the client-side geometry value of the owner ruling, not a deployment fact.",
+      "status": "PENDING"
+    },
+    "lock_entries": "open owner decision 9.4 (design doc section 9)",
+    "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+    "per_sequence_window_tokens": 24576,
+    "runtime_receipt": "open owner decision 9.3 (design doc section 9)",
+    "session": "serving-slurp-thinking-module-fold-b-npu-port-pending-deployment-profile-v1",
+    "session_identity": "open owner decision 9.2 (design doc section 9)",
+    "transport": "vllm"
+  },
+  "status": "DRAFT-HELD-REGISTERED_BEFORE_CONTACT_AWAITING_COORDINATOR_COUNTERSIGN_AND_READINESS_FLIP",
+  "thinking_knobs": {
+    "answer_fallback": {
+      "enable_thinking": false,
+      "id": "saea-thinking-answer-fallback-v1",
+      "max_tokens": 1024,
+      "mode": "answer-only re-ask",
+      "per_node": 1
+    },
+    "answer_reserve_tokens": 1024,
+    "budget_message": "Considering the limited time by the user, I have to give the solution based on the thinking directly now.",
+    "completion_cap": 4096,
+    "decoding": {
+      "seed": 20260913,
+      "temperature": 0
+    },
+    "node_modes": {
+      "perception": "think",
+      "solver": "think"
+    },
+    "reasoning_context_policy": "drop-reasoning-v1",
+    "reasoning_format": "deepseek",
+    "thinking_budget_tokens": 3072
+  },
+  "unused_budget_is_not_attempt_authority": true
+}
