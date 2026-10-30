@@ -391,3 +391,17 @@ this study's runtime is allowed to read, not an implementer one.
 **Requested disposition:** accept the current earnings21-original-only evidence-identity coverage, and
 the pre-rotation scoping decision above, as this fix wave's closure level; revisit only if and when an
 earnings22-aware (or other-carrier) evidence source is ever registered.
+
+## Open 2026-10-30: test-split headline under the public-baseline rule
+
+Owner rule 2026-10-30 (translated): "The final evaluation metric is the test-set metric, and it must be compared against
+publicly reported industry baselines." Two items only the owner can settle (facts and costs in
+`docs/results/2026-10-30-public-slurp-baselines-and-test-set-alignment.md`; ruling in the comparison plan, Decision 6):
+
+1. **Decision 141 amendment.** It names `SLURP-TEST-CLOSURE-10068-V1` as "the roster of the ONE final read" of one system.
+   The three-way comparison needs three methods (direct-only D, agent A, best TFRL T) flown once each on the same roster(s).
+   Proposed: allow the three reads, each registered as its own DRAFT row, all three methods frozen (method hash recorded)
+   before any of them is flown; the test split is never used for tuning.
+2. **Full-split allowance.** `docs/receipts/owner/2026-09-23-slurp-test-split-allowance-v1.json` is `pending-owner`. Proposed:
+   grant it for the three reads, with the 3,010-recording sample disclosed as previously exposed and the closure number
+   reported beside the full-split number (plan ruling 1). Cost about 200 card-hours (260 with margin) for all three.

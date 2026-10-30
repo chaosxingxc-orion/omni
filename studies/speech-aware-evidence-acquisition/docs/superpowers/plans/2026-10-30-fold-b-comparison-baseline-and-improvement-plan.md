@@ -171,3 +171,35 @@ Rules:
 Open facts (filled by the analysis read): whether Fold B/Fold A rows come from the official test split (if they do,
 the folds are themselves part of T0 and T0 must be the full split flown fresh), the official test-split row count,
 and the card-hour estimate at the measured rate.
+
+### Decision 6, facts filled and ruling (Fable, 2026-10-30, from `docs/results/2026-10-30-public-slurp-baselines-and-test-set-alignment.md`)
+
+Facts: Fold B (`SLURP-EVO-FOLD-B-V2`) and Fold A are 1,080 recordings each, drawn from the official TRAIN split, disjoint
+from each other, from the test and devel splits, and from every knowledge source; both carried many development flights,
+so Fold A is a reused fold, not a clean confirmation fold. The repo runs the unmodified official SLURP `evaluate.py`
+(pinned commit `8eb16545`) and its reimplementation must agree to 1e-6; the only difference is stricter (missing rows
+refuse instead of being skipped). The official test split is 13,078 recordings (2,974 prompts, 10.25 h). Under owner
+decision 141 (2026-09-27) the split is partitioned into `SLURP-TEST-SAMPLE-3010-V1` (3,010 recordings, flown four times,
+row-level analysed; Thinking system v3.0 scored 73.05 SLU-F1 / 86.33 intent there) and `SLURP-TEST-CLOSURE-10068-V1`
+(10,068 recordings, never contacted, "the roster of the ONE final read"). No published row matches our condition exactly
+(prompted speech LLM with in-context SLURP train labels, no fine-tuning); the closest analogue is few-shot prompting.
+Cost at the measured rate: full split about 89 card-hours for a two-contact agent arm and 21 for the direct arm; three
+methods once each about 200 card-hours (260 with the 1.3 margin), re-derived before registration.
+
+Ruling (within my authority):
+
+1. The T0 tier is reported as two numbers, always together: the FULL split (the population the public baselines report
+   on) and the CLOSURE remainder (the never-contacted 10,068 rows). If they differ by more than the within-run floor, the
+   closure number is the headline and the full-split number is reported as "including 3,010 previously exposed rows".
+2. The public table separates (a) prompted speech LLMs without fine-tuning (our condition, few-shot analogue; no published
+   row yet), (b) systems fine-tuned on SLURP train, (c) gold-text NLU upper bounds. The three comparator-table errors found
+   by the read get an English successor note, not an in-place edit.
+3. Fold A's confirmation role stands, with the caveat recorded: it is a reused fold, so a Fold A confirmation is a
+   second development number, not an untouched hold-out; the closure roster is the only untouched set, and it is spent
+   by the T0 flight.
+4. Engineering to prepare now (no card): a port flight config and FIT envelope for the two test rosters (both arms,
+   direct and agent), forced-causal speech vectors for the test rows regenerated on CPU, and a card-hour re-derivation
+   from the recorded runs. Nothing is registered or flown without the owner items below.
+
+Needs the owner (recorded in `docs/owner-decisions-pending.md`): amend decision 141 from "one final read of one system" to
+"D, A and best T, once each, on the same roster(s)", and grant the full-split allowance that is `pending-owner`.

@@ -706,6 +706,22 @@ def build_live_phase_fit_gate(
             raise PreparationError(
                 "native active roster requires the native-answer-or-tool stop rule"
             )
+    if (
+        getattr(program, "program_id", None) == DIRECT_ONLY_PROGRAM_ID
+        and not runtime.uses_speech_feature_packets()
+        and runtime._arm() == RAW_NATIVE_ARM
+    ):
+        # The direct-only program on the raw-audio arm has its own fit path
+        # (one raw contact per row); every other program and arm below is
+        # unchanged.
+        return build_direct_only_raw_fit_gate(
+            runtime,
+            program,
+            plan,
+            client_factory=client_factory,
+            active_roster=active_roster,
+            native_active_roster=native_active_roster,
+        )
     if spec["run_id"] == plan.run_id or spec["attempt_id"] == plan.attempt_id:
         raise PreparationError(
             "tokenizer fit requires distinct run and attempt identities"
@@ -980,6 +996,27 @@ def validate_native_contact_fit_config(values, program):
     return {**dict(spec), "max_speech_packets": max_speech_packets}
 
 
+def native_contact_endpoints_per_contact(
+    *, feature_packets: bool, max_speech_packets: int = 1
+) -> int:
+    """Endpoint calls one native contact fit makes.
+
+    Feature contacts need /props, /apply-template, and one /tokenize per
+    feature packet plus one prompt tokenization. Raw contacts instead use the
+    resident multimodal counting endpoint on the rendered WAV body.
+    """
+    return max_speech_packets + 3 if feature_packets else 1
+
+
+def native_contact_required_cap(
+    maximum_requests: int, *, feature_packets: bool, max_speech_packets: int = 1
+) -> int:
+    """The ``native_contact_fit.contact_cap`` the gate demands (registration writers call this)."""
+    return maximum_requests * native_contact_endpoints_per_contact(
+        feature_packets=feature_packets, max_speech_packets=max_speech_packets
+    )
+
+
 def _native_contact_control_identity(
     payload: Mapping[str, object],
 ) -> tuple[str, str]:
@@ -1126,11 +1163,11 @@ def build_native_contact_fit_gate(
     maximum_requests = (
         len(unit_roster.units) if unit_roster is not None else len(expected_ids)
     ) * program.max_contacts
-    # Feature contacts need /props, /apply-template, and one /tokenize per
-    # feature packet plus one prompt tokenization. Raw contacts instead use
-    # the resident multimodal counting endpoint on the rendered WAV body.
-    endpoints_per_contact = spec["max_speech_packets"] + 3 if feature_packets else 1
-    required_cap = maximum_requests * endpoints_per_contact
+    required_cap = native_contact_required_cap(
+        maximum_requests,
+        feature_packets=feature_packets,
+        max_speech_packets=spec["max_speech_packets"],
+    )
     if spec["contact_cap"] != required_cap:
         raise PreparationError(
             "native contact fit cap must equal the registered maximum endpoint count"
@@ -1392,6 +1429,331 @@ def build_native_contact_fit_gate(
     fit_contact.receipts = completed
     fit_contact.execution_plan = fit_plan
     return fit_contact
+
+
+#: The direct-only program: one phase, one Solver contact per row, no knowledge, no program (configs/policy/phase-direct-only-v1.json).
+DIRECT_ONLY_PROGRAM_ID = "phase-direct-only-v1"
+DIRECT_ONLY_PHASE = "direct"
+#: The arm whose contacts carry the original recording; the direct-only fit path serves this arm only.
+RAW_NATIVE_ARM = "raw-speech-agent-native-tools"
+#: Endpoint calls one raw direct-only contact makes: the resident multimodal counting endpoint on the rendered body (the raw rule of the native fit).
+DIRECT_ONLY_ENDPOINTS_PER_CONTACT = 1
+
+
+def direct_only_fit_contact_cap(row_count: int) -> int:
+    """The ``live_phase_fit.contact_cap`` the direct-only raw gate demands: rows x one contact x one counting endpoint (registration writers call this)."""
+    if isinstance(row_count, bool) or not isinstance(row_count, int) or row_count < 1:
+        raise PreparationError("direct-only fit requires a positive row count")
+    return row_count * 1 * DIRECT_ONLY_ENDPOINTS_PER_CONTACT
+
+
+def require_direct_only_program(program) -> None:
+    """Refuse every program that is not the sealed direct-only form (one contact per row, no knowledge)."""
+    phases = tuple(getattr(program, "phases", ()) or ())
+    if (
+        getattr(program, "program_id", None) != DIRECT_ONLY_PROGRAM_ID
+        or tuple(program.phase_names()) != (DIRECT_ONLY_PHASE,)
+        or getattr(program, "max_contacts", None) != 1
+        or getattr(program, "stop_rule", None) != "always-run-full-program"
+    ):
+        raise PreparationError(
+            "direct-only fitting requires the one-phase, one-contact "
+            f"{DIRECT_ONLY_PROGRAM_ID} program"
+        )
+    if any(getattr(phase, "knowledge", None) != "none" for phase in phases):
+        raise PreparationError("direct-only fitting refuses a knowledge-bearing program")
+
+
+def rendered_wav_seconds(body: Mapping[str, object]) -> float:
+    """Return the duration of the one rendered input_audio WAV, from its header only (frames / sample rate)."""
+    import io
+    import wave
+
+    messages = body.get("messages")
+    if not isinstance(messages, Sequence) or isinstance(messages, (str, bytes)):
+        raise PreparationError("rendered request messages must be a sequence")
+    audio_parts = [
+        part["input_audio"]
+        for message in messages
+        if isinstance(message, Mapping) and isinstance(message.get("content"), list)
+        for part in message["content"]
+        if isinstance(part, Mapping)
+        and part.get("type") == "input_audio"
+        and isinstance(part.get("input_audio"), Mapping)
+    ]
+    if len(audio_parts) != 1:
+        raise PreparationError("direct-only fit requires exactly one rendered input_audio")
+    encoded = audio_parts[0].get("data")
+    if not isinstance(encoded, str) or not encoded:
+        raise PreparationError("direct-only fit rendered input_audio data is malformed")
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as error:
+        raise PreparationError("direct-only fit rendered input_audio is not base64") from error
+    try:
+        with wave.open(io.BytesIO(raw), "rb") as handle:
+            frames, rate = handle.getnframes(), handle.getframerate()
+    except (wave.Error, EOFError) as error:
+        raise PreparationError(
+            "direct-only fit requires a WAV input_audio with a readable header"
+        ) from error
+    if rate < 1:
+        raise PreparationError("direct-only fit input_audio has no sample rate")
+    return frames / rate
+
+
+def _direct_only_raw_identity(payload: Mapping[str, object]) -> tuple[str, dict[str, str]]:
+    """Validate one raw direct-only request payload: one sample, original audio, no packets, no supplied knowledge."""
+    sample_id = payload.get("sample_id")
+    if not isinstance(sample_id, str) or not sample_id:
+        raise PreparationError("direct-only contact has no sample_id")
+    if "speech_feature_parts" in payload:
+        raise PreparationError("direct-only raw contact refuses mixed feature input")
+    if payload.get("supplied_evidence") or payload.get("evidence_provenance"):
+        raise PreparationError("direct-only contact refuses supplied knowledge")
+    raw = payload.get("raw_speech_query")
+    media_relpath = payload.get("media_relpath")
+    if (
+        not isinstance(raw, Mapping)
+        or set(raw) != {"media_relpath", "sha256"}
+        or not isinstance(media_relpath, str)
+        or not media_relpath
+        or raw.get("media_relpath") != media_relpath
+        or not isinstance(raw.get("sha256"), str)
+        or len(raw["sha256"]) != 64
+        or any(character not in "0123456789abcdef" for character in raw["sha256"])
+    ):
+        raise PreparationError("direct-only raw contact source identity is malformed")
+    return sample_id, {"media_relpath": media_relpath, "sha256": raw["sha256"]}
+
+
+def build_direct_only_raw_fit_gate(
+    runtime,
+    program,
+    plan,
+    *,
+    client_factory=None,
+    active_roster=None,
+    native_active_roster=False,
+):
+    """Fit the direct-only program's single raw-audio wave under one generation lease.
+
+    One contact per row, no knowledge, no program: the registered
+    ``live_phase_fit`` block (``whole_roster_wave_barrier``) names the fit
+    identity and a cap of rows x 1 x 1 counting endpoint. The gate has the
+    shape of :func:`build_live_phase_fit_gate` (``gate(phase, batch)``,
+    ``.receipts``, ``.execution_plan``; one ``direct.request-fit.json`` under the
+    fit run) so the runtime and the runner treat it as the live phase gate. Its
+    envelope checks, all made before any tokenizer contact: the program is the
+    sealed direct-only form; the configured cap equals rows x 1; the generation
+    plan covers one contact per row; the wave is the complete unique roster, one
+    request per row; every request carries exactly the original audio it names;
+    the audio seconds of the wave (read from the WAV headers) fit the plan's
+    audio ceiling. The prompt fit at the window is the actual rendered request
+    measured on the resident server (vLLM chat tokenize, or the llama multimodal
+    counting route), with the completion reserve, exactly as the native raw fit.
+    """
+    import math
+    import os
+    from dataclasses import asdict, replace
+
+    from ..rails.core_client import PreparedCoreRequest
+    from .driver.speech_native import _LoopbackPromptAuditClient
+    from .preparation import (
+        measure_multimodal_request,
+        measure_vllm_multimodal_request,
+        prepare_artifact,
+    )
+
+    require_direct_only_program(program)
+    if active_roster is not None or native_active_roster:
+        raise PreparationError("direct-only fitting has one wave and no active roster")
+    values = runtime._composed.values
+    spec = validate_live_phase_fit_config(values, program)
+    if spec is None:
+        raise PreparationError("live phase fitting was not configured")
+    if values.get("native_episode") is not None:
+        raise PreparationError("direct-only fitting refuses a native episode")
+    if spec["run_id"] == plan.run_id or spec["attempt_id"] == plan.attempt_id:
+        raise PreparationError(
+            "tokenizer fit requires distinct run and attempt identities"
+        )
+    if runtime.uses_speech_feature_packets() or runtime._arm() != RAW_NATIVE_ARM:
+        raise PreparationError(
+            "direct-only fitting requires the raw-speech-agent-native-tools arm"
+        )
+    if runtime._session is None or runtime._transport is None:
+        raise PreparationError("direct-only fitting requires an attached root session")
+    expected_ids = tuple(sample.sample_id for sample in runtime._samples)
+    if (
+        not expected_ids
+        or any(not isinstance(sample_id, str) or not sample_id for sample_id in expected_ids)
+        or len(set(expected_ids)) != len(expected_ids)
+    ):
+        raise PreparationError(
+            "direct-only fitting requires a unique registered sample roster"
+        )
+    required_contacts = direct_only_fit_contact_cap(len(expected_ids))
+    if spec["contact_cap"] != required_contacts:
+        raise PreparationError(
+            "direct-only fit cap must equal rows x one contact x one counting "
+            f"endpoint: expected {required_contacts}, got {spec['contact_cap']}"
+        )
+    if plan.planned_model_calls < len(expected_ids) * program.max_contacts:
+        raise PreparationError(
+            "direct-only generation plan cannot cover one contact per row"
+        )
+    fit_plan = replace(
+        plan,
+        run_id=spec["run_id"],
+        attempt_id=spec["attempt_id"],
+        planned_model_calls=spec["contact_cap"],
+    ).validate()
+    runtime.assert_generation_lease()
+    runtime._gate_touch(runtime._gate, fit_plan)
+    runtime._require_exposure_row_unconsumed(fit_plan.run_id)
+    fit_root = runtime._data_root / "prepared" / fit_plan.run_id / fit_plan.attempt_id
+    fit_root.mkdir(parents=True, exist_ok=True)
+    identity = runtime.session_required_identity()
+    session = runtime._session
+    guarded = GuardedTokenizer(
+        None,
+        guard=runtime.assert_generation_lease,
+        contact_cap=spec["contact_cap"],
+    )
+    completed: list[dict[str, object]] = []
+
+    def fit_wave(phase, batch):
+        if completed or phase != DIRECT_ONLY_PHASE:
+            raise PreparationError("direct-only fit phase order changed or repeated")
+        if (
+            not isinstance(batch, tuple)
+            or not batch
+            or any(not isinstance(request, PreparedCoreRequest) for request in batch)
+        ):
+            raise PreparationError("direct-only fit requires immutable prepared core requests")
+        if len(batch) > len(expected_ids) * program.max_contacts:
+            raise PreparationError("direct-only fit wave exceeds one contact per row")
+        payloads = tuple(request.as_payload() for request in batch)
+        identities = {}
+        for payload in payloads:
+            sample_id, source = _direct_only_raw_identity(payload)
+            if sample_id in identities:
+                raise PreparationError("direct-only fit wave exceeds one contact per row")
+            identities[sample_id] = source
+        if set(identities) != set(expected_ids):
+            raise PreparationError(
+                "direct-only fit requires the full registered roster in one wave"
+            )
+        runtime.assert_generation_lease()
+        bodies = []
+        audio_seconds = 0.0
+        for payload in payloads:
+            body = runtime._transport.render_request(canonical_bytes(payload))
+            if not isinstance(body, Mapping):
+                raise PreparationError("rendered fit body must be a mapping")
+            if rendered_raw_speech_sha256(body) != payload["raw_speech_query"]["sha256"]:
+                raise PreparationError(
+                    "direct-only raw contact rendered audio differs from its prepared request"
+                )
+            audio_seconds += rendered_wav_seconds(body)
+            bodies.append(body)
+        # Integer-second ceiling as the registered speech cap (1e-9 guards float noise).
+        audio_seconds_ceiled = math.ceil(audio_seconds - 1e-9)
+        if audio_seconds_ceiled > fit_plan.planned_speech_audio_seconds:
+            raise PreparationError(
+                "direct-only fit audio exceeds the registered audio ceiling: "
+                f"{audio_seconds_ceiled} > {fit_plan.planned_speech_audio_seconds} seconds"
+            )
+        inputs = runtime.request_fit_inputs(payloads)
+        inputs = {
+            **inputs,
+            "live_phase": phase,
+            "fit_plan": asdict(fit_plan),
+            "direct_only": {
+                "program_id": DIRECT_ONLY_PROGRAM_ID,
+                "contacts_per_row": 1,
+                "rows": len(expected_ids),
+                "audio_seconds_ceiled": audio_seconds_ceiled,
+                "audio_seconds_ceiling": fit_plan.planned_speech_audio_seconds,
+            },
+        }
+        path = fit_root / (phase + ".request-fit.json")
+        journal = path.with_name(path.name + ".contacts.jsonl")
+        if path.exists() or journal.exists():
+            raise PreparationError(
+                "live fit identity already has contact or result evidence"
+            )
+
+        def produce():
+            guarded.client = (client_factory or _LoopbackPromptAuditClient)(
+                host=session.host, port=session.port, timeout_seconds=600.0
+            )
+            before = guarded.counts.total()
+            with journal.open("x", encoding="utf-8") as stream:
+
+                def record_contact(method, route):
+                    stream.write(
+                        canonical_bytes(
+                            {
+                                "contact": guarded.counts.total(),
+                                "method": method,
+                                "route": route,
+                                "run_id": fit_plan.run_id,
+                                "attempt_id": fit_plan.attempt_id,
+                                "generation_run_id": plan.run_id,
+                                "session_id": session.session_id,
+                                "phase": phase,
+                            }
+                        ).decode()
+                        + "\n"
+                    )
+                    stream.flush()
+                    os.fsync(stream.fileno())
+
+                guarded.contact_sink = record_contact
+                result = fit_requests(
+                    payloads,
+                    expected_sample_ids=expected_ids,
+                    transport=runtime._transport,
+                    client=guarded,
+                    speech_counts=lambda _payload: (),
+                    media_marker=None,
+                    slot_tokens=int(runtime._adapter.serving_geometry()["slot_tokens"]),
+                    fit_multiple=float(values.get("prompt_fit_multiple", 1.0)),
+                    rendered_bodies=tuple(bodies),
+                    request_measure=(
+                        measure_vllm_multimodal_request
+                        if values.get("transport") == "vllm"
+                        else measure_multimodal_request
+                    ),
+                )
+                return {
+                    **result,
+                    "phase": phase,
+                    "session_id": session.session_id,
+                    "session_identity_sha256": digest(identity),
+                    "contacts": guarded.counts.total() - before,
+                    "cumulative_contacts": guarded.counts.total(),
+                    "generation_contacts": 0,
+                }
+
+        receipt = prepare_artifact(
+            path,
+            kind="request-fit",
+            inputs=inputs,
+            producer=produce,
+            contact_class="tokenizer",
+        )
+        document = json.loads(path.read_text(encoding="utf-8"))
+        if document["output"].get("every_request_fits") is not True:
+            raise PreparationError("live phase requests exceed the registered capacity")
+        runtime.assert_generation_lease()
+        completed.append({"phase": phase, **receipt})
+
+    fit_wave.receipts = completed
+    fit_wave.execution_plan = fit_plan
+    return fit_wave
 
 
 def revalidate_phase_fit(runtime, *, registration, registration_sha256, data_root):
