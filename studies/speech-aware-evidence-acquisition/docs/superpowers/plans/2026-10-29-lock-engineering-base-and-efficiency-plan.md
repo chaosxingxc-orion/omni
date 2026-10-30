@@ -953,3 +953,26 @@ A detached queue runner (`work/scripts/card_queue.py`, queue `card_queue.base-lo
 
 The base is then chosen by the section 8 rule of the TFRL plan (budget 6,144 if admissible at 16 or more per instance),
 the lock record's open fields are filled from the recorded runs, and the record goes to the owner for countersign.
+
+## 3.13 Arm B result and deployment decision (Fable, 2026-10-30)
+
+Preliminary synthetic sweep, seed 20261028, host-aggregate throughput, both arms at the same flight width of 128 requests
+in flight (A: 32 per instance x 4 instances of TP2; B: 64 per instance x 2 instances of TP4). Source: watchdog summaries
+of `sweep-armB-prelim-P3`, `sweep-armB-prelim-P3b-mintok4096`, `sweep-armA-prelim`, `sweep-armA-prelim-P2b-mintok4096`.
+
+| regime | arm A 4xTP2 (32/instance) | arm B 2xTP4 (64/instance) | B relative to A |
+| --- | --- | --- | --- |
+| normal mix, tok/s | 1,422.6 | 1,288.3 | -9.4 % |
+| worst case (min_tokens 4,096), tok/s | 2,050.7 | 1,632.0 | -20.4 % |
+| normal-mix p10 tok/s per sequence | 14.31 | 10.02 | lower |
+| normal-mix max latency, s | 243.6 | 250.2 | about equal |
+| admissible (zero preemptions, KV peak <= 90 %) | yes at 32 | yes at 64 | both |
+
+Arm B's level 96 (192 in flight) failed the stopping rule (p10 7.13 tok/s); 64 is its highest passing and admissible
+level. B never reaches A's throughput at any admissible level (B at 96 would be 1,409.9 tok/s, still below A at 32 and
+not admissible).
+
+Decision (owner rule 2026-10-29: 4xTP2 stays unless 2xTP4 wins by more than 5 %): **4xTP2 stays the resident
+deployment.** Arm B is closed; no further 2xTP4 measurement is scheduled. The lock record's deployment line is
+`qwen3-omni-thinking-bf16-181-4xtp2-v2`, admitted level 32, flight width 128. The E3 shm verdict and the budget-6,144
+worst case can still change the admitted level or the model fragment, not the arm.
