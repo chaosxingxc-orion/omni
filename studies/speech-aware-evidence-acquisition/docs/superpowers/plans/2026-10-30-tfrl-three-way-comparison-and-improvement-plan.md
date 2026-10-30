@@ -234,3 +234,25 @@ next gate asks for the runtime receipt, which the base-lock R0 step mints. Both 
    emits `<data root>/analysis/<READ id>/rollout-trace.jsonl`. Ruling: the sampling flights' READ ids are
    `<T cell READ id>-I<t>-<H1|H2>` and the adapters read from the data-root analysis directory of that id; no copy, no
    symlink. Implemented with the T writer work (section 9 ruling 6), not as a separate item.
+
+## 12. Rulings on the T4b registration packages (Fable, 2026-10-30)
+
+1. **Sampling mechanism.** The base decoding is greedy, so K samples that differ only by seed would be near-identical.
+   The T construction cells therefore use program c7 with the Solver decoding group top_p {0.80, 0.90, 0.95, 1.00} at the
+   fragment's sampling temperature as the K=4 trajectories; this is the operational meaning of section 11 ruling 2's
+   "seed-only" for iteration 1. The Fold B flight of T uses program c10 (lock, aa, and the bank-consuming arms).
+2. **Caps per cell** (calls / FIT cap / audio seconds): Fold A arm 36,720 / 18,360 / 104,874; D lock, aa, ab 2,160 /
+   1,080 / 6,310 each, D smoke 8 / 4 / 20; T construction i1-h1 4,382 / 2,191 / 18,474, i1-h2 4,368 / 2,184 / 19,703,
+   T Fold B i1 21,600 / 10,800 / 63,096; T family total 30,486 / 15,243 / 101,716 plus R01C encoding (625 calls) and the
+   reflector (36 generation, 37 FIT calls). All rows DRAFT, HELD.
+3. **Budget-6,144 interaction.** Under the budget fragment the L338 package would move to config `925ec28d…` / protocol
+   `d3da01fc…` (arm) and `db324bab…` / `ba2f1739…` (smoke); T does not fit at 51 items (14,828 > 14,334) and fits at 40.
+   T's budget variant is derived only if the base decision picks that fragment; then T's supply bound is 40 minus the
+   measured exemplar block.
+4. **Fold A** is the Fold B port cell with a declared roster swap; its preparations (encode, alias, content, agreement,
+   supply) are zero-sentinel pins until they run on CPU, which is queued engineering (no card).
+5. **Open rows-only items in T** (R01C artifacts, `rails_pending` block, rule-bank release, credit/distillation,
+   reflector, no stage-3 label, no reader) are the next engineering stream after the base lock; the registration is
+   complete enough to HOLD the rows.
+6. The existing `verify_declared_module` failure on the L338 port flight (re-authored stores differ from the lock layer)
+   is a known control defect, tracked separately; not touched by the writers.
