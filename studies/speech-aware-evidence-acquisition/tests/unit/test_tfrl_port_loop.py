@@ -30,6 +30,7 @@ for _p in (str(REPO / "src"), str(NX)):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from speech_aware_evidence_acquisition.contracts import rollout_trace as rt  # noqa: E402
 import tfrl_port_loop as pl  # noqa: E402
 
 DRIVER = NX / "tfrl_port_loop.py"
@@ -145,9 +146,10 @@ def test_fold_a_confirmation():
 # ---- sampler contract ------------------------------------------------------------------------------------------------------
 
 def line(row, k, f1, lock_f1, iteration=1):
-    return {"schema": pl.TRACE_SCHEMA, "kind": pl.TRACE_KIND, "iteration": iteration, "row_id": row, "trajectory_id": f"i{iteration}-{row}-{k}",
-            "k_index": k, "temperature": 0.7, "rule_ids": ["r1"], "exemplar_ids": [], "row_f1": f1, "lock_row_f1": lock_f1,
-            "reward": f1 - lock_f1, "truncated": False}
+    trace = {"schema": rt.SCHEMA, "kind": rt.KIND_TFRL, "ts": "2026-10-30T00:00:00Z", "run_id": "run-fx", "attempt_id": "attempt-fx", "row_id": row,
+             "arm": pl.TRACE_ARM, "iteration": iteration, "trajectory_id": f"i{iteration}-{row}-{k}", "reward": f1 - lock_f1,
+             "selected": False, "reason": None}
+    return pl.Trajectory(trace=trace, k_index=k, temperature=0.7, row_f1=f1, lock_row_f1=lock_f1, rule_ids=("r1",), exemplar_ids=())
 
 
 class FixtureSampler:
@@ -172,18 +174,29 @@ def test_stub_sampler_fails_closed():
         pl.StubSampler().sample(req)
 
 
-def test_validate_tfrl_line_and_check_sample():
+def test_validate_trajectory_uses_the_t1_contract_and_check_sample():
     good = line("a", 0, 0.75, 0.5)
-    assert pl.validate_tfrl_line(good) == []
-    assert pl.validate_tfrl_line({**good, "reward": 9.0})
-    assert pl.validate_tfrl_line({k: v for k, v in good.items() if k != "row_id"})
-    assert pl.validate_tfrl_line({**good, "surprise": 1})
+    assert pl.validate_trajectory(good) == []
+    bad_reward = pl.Trajectory(trace={**good.trace, "reward": 9.0}, k_index=0, temperature=0.7, row_f1=0.75, lock_row_f1=0.5)
+    assert any("reward" in p for p in pl.validate_trajectory(bad_reward))
+    missing = pl.Trajectory(trace={k: v for k, v in good.trace.items() if k != "row_id"}, k_index=0, temperature=0.7, row_f1=0.75, lock_row_f1=0.5)
+    assert any("trace line" in p for p in pl.validate_trajectory(missing))
+    extra = pl.Trajectory(trace={**good.trace, "row_f1": 0.75}, k_index=0, temperature=0.7, row_f1=0.75, lock_row_f1=0.5)      # the T1 line is closed
+    assert any("unknown fields" in p for p in pl.validate_trajectory(extra))
+    wrong_kind = pl.Trajectory(trace={**good.trace, "kind": "score"}, k_index=0, temperature=0.7, row_f1=0.75, lock_row_f1=0.5)
+    assert pl.validate_trajectory(wrong_kind)
     req = pl.SamplerRequest(1, ["a"], 4, 0.7, {}, {}, {"a": 0.5})
     pl.check_sample(FixtureSampler().sample(req), req)
     with pytest.raises(pl.PortLoopError):
         pl.check_sample(FixtureSampler("short").sample(req), req)
     summary = pl.credit_summary(FixtureSampler().sample(req))
     assert (summary["positives"], summary["negatives"], summary["contrast_rows"]) == (1, 0, 1)   # lock wrong (0.5): no negatives by definition
+
+
+def test_negative_means_breaking_a_row_lock_gets_right():
+    req = pl.SamplerRequest(1, ["a"], 4, 0.7, {}, {}, {"a": 1.0})
+    summary = pl.credit_summary(FixtureSampler().sample(req))
+    assert (summary["positives"], summary["negatives"]) == (0, 1)
 
 
 # ---- the loop on fixtures --------------------------------------------------------------------------------------------------
@@ -273,10 +286,10 @@ def _forbidden_patterns():
         re.compile("/" + "home" + "/chao"),
         re.compile("chao" + "_workspace"),
         re.compile("[A-Za-z]:" + r"\\"),
-        re.compile("(?i)" + "wsl"),
-        re.compile("(?i)" + "powershell"),
+        re.compile("(?i)" + "w" + "sl"),
+        re.compile("(?i)" + "power" + "shell"),
         re.compile("(?i)" + "llama" + r"[._ -]?cpp"),
-        re.compile("(?i)" + "q4_k_m"),
+        re.compile("(?i)" + "q4_k" + "_m"),
     ]
 
 
@@ -285,7 +298,7 @@ def test_no_windows_path_and_english_only(path):
     text = path.read_text(encoding="utf-8")
     for pattern in _forbidden_patterns():
         assert not pattern.search(text), f"{path.name}: matches {pattern.pattern}"
-    assert not re.search("[一-鿿]", text)
+    assert not re.search(r"[\u4e00-\u9fff]", text)
     assert text.isascii()
 
 

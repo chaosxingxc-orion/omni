@@ -24,15 +24,15 @@ ITERATION (at most 3). Each iteration is five resumable steps; every step writes
 STOP RULE. At most 3 iterations; stop when an iteration accepts nothing, or when the construction-column gain is under +1 pp
 (iteration 1 under +1 pp is the kill criterion of the family).
 
-SAMPLER INTERFACE (filled by task T3). ``SamplerRequest`` -> ``Sequence[Mapping]`` of ``saea-rollout-trace-v1`` lines of kind ``tfrl``:
+SAMPLER INTERFACE (filled by task T3). ``SamplerRequest`` -> ``Sequence[Trajectory]``:
 
     inputs   iteration, column_rows (row ids of the construction column), k (trajectories per row, default 4), temperature (default 0.7),
              rule_bank (opaque mapping: {"rules": [{"rule_id", "kind", "text"}]}), exemplar_bank (opaque mapping keyed by scenario),
              lock_row_f1 (row id -> the lock column's row F1, from the construction lock column re-flown on the port), seed
-    outputs  exactly ``len(column_rows) * k`` lines, each carrying the keys of ``TFRL_LINE_REQUIRED``; ``reward == row_f1 - lock_row_f1``
-
-TODO-T1: the line shape is the minimal dict of ``TFRL_LINE_REQUIRED`` until task T1 lands ``contracts/rollout_trace.py``; when that
-module exists, ``validate_tfrl_line`` delegates to its validator.
+    outputs  exactly ``len(column_rows) * k`` ``Trajectory`` records. Each carries ``trace``, a ``tfrl`` line of ``saea-rollout-trace-v1``
+             exactly as ``contracts/rollout_trace.py`` (task T1) closes it (validated by ``rollout_trace.validate_line``: ts, run_id,
+             attempt_id, row_id, arm, iteration, trajectory_id, reward, selected, reason), plus the credit fields the trace does not
+             carry: k_index, temperature, row_f1, lock_row_f1, rule_ids, exemplar_ids, truncated. ``trace["reward"] == row_f1 - lock_row_f1``.
 
 No utterance text, gold label or model output is written by this module; the archive is identifiers, hashes and numbers only.
 """
@@ -41,7 +41,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib
 import json
 import math
 import os
@@ -56,6 +55,7 @@ for _path in (str(REPO_ROOT / "src"), str(REPO_ROOT / "scripts" / "flights" / "t
     if _path not in sys.path:
         sys.path.insert(0, _path)
 
+from speech_aware_evidence_acquisition.contracts import rollout_trace as rt  # noqa: E402  (task T1: the closed trace schema)
 import tfrl_family as tf  # noqa: E402  (shared hashing helpers; model-free)
 import tfrl_loop_lib as lib  # noqa: E402  (write-once receipts, archive helpers; model-free)
 
@@ -91,16 +91,7 @@ CONSTRUCTION = {
     "must_reflight_on_port": True,
 }
 
-# The minimal `tfrl` line of `saea-rollout-trace-v1` (TODO-T1: replaced by the T1 contract when it lands).
-TRACE_SCHEMA = "saea-rollout-trace-v1"
-TRACE_KIND = "tfrl"
-TFRL_LINE_REQUIRED = (
-    "schema", "kind", "iteration", "row_id", "trajectory_id", "k_index", "temperature", "rule_ids", "exemplar_ids",
-    "row_f1", "lock_row_f1", "reward", "truncated",
-)
-TFRL_LINE_OPTIONAL = ("selected", "evidence_order", "supply_item_ids", "thinking_tokens", "answer_sha256", "node", "arm")
-_TRACE_MODULE = "speech_aware_evidence_acquisition.contracts.rollout_trace"
-_TRACE_VALIDATOR_NAMES = ("validate_tfrl_line", "validate_line", "validate_trace_line", "validate")
+TRACE_ARM = "tfrl-v2"
 
 # ARTEFACT slots of the archive used by a TFRL-v2 state (the archive's slot names are fixed; the algorithm label lives in the receipts).
 SLOT_EXEMPLAR_BANK = "exemplar_index_release"
@@ -117,66 +108,62 @@ class SamplerNotImplemented(PortLoopError):
 
 
 # ---------------------------------------------------------------------------------------------------------------------------
-# trace line validation
-# ---------------------------------------------------------------------------------------------------------------------------
-
-
-def _finite(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
-
-
-def _local_validate_tfrl_line(line: Mapping[str, Any]) -> list[str]:
-    problems: list[str] = []
-    if not isinstance(line, Mapping):
-        return ["line is not an object"]
-    missing = [k for k in TFRL_LINE_REQUIRED if k not in line]
-    if missing:
-        problems.append(f"missing keys {missing}")
-        return problems
-    unknown = sorted(set(line) - set(TFRL_LINE_REQUIRED) - set(TFRL_LINE_OPTIONAL))
-    if unknown:
-        problems.append(f"unknown keys {unknown}")
-    if line["schema"] != TRACE_SCHEMA or line["kind"] != TRACE_KIND:
-        problems.append(f"schema/kind must be {TRACE_SCHEMA}/{TRACE_KIND}")
-    for key in ("iteration", "k_index"):
-        if not isinstance(line[key], int) or isinstance(line[key], bool) or line[key] < 0:
-            problems.append(f"{key} must be a non-negative integer")
-    for key in ("row_id", "trajectory_id"):
-        if not isinstance(line[key], str) or not line[key]:
-            problems.append(f"{key} must be a non-empty string")
-    for key in ("temperature", "row_f1", "lock_row_f1", "reward"):
-        if not _finite(line[key]):
-            problems.append(f"{key} must be a finite number")
-    for key in ("rule_ids", "exemplar_ids"):
-        if not isinstance(line[key], list) or not all(isinstance(x, str) for x in line[key]):
-            problems.append(f"{key} must be a list of strings")
-    if not isinstance(line["truncated"], bool):
-        problems.append("truncated must be a boolean")
-    if not problems and abs(line["reward"] - (line["row_f1"] - line["lock_row_f1"])) > 1e-9:
-        problems.append("reward must equal row_f1 - lock_row_f1")
-    return problems
-
-
-def validate_tfrl_line(line: Mapping[str, Any]) -> list[str]:
-    """Problems of one `tfrl` trace line (empty list = valid). Delegates to the T1 contract when ``contracts/rollout_trace.py`` exists."""
-
-    local = _local_validate_tfrl_line(line)       # the port's own reward arithmetic is checked in every case
-    try:
-        module = importlib.import_module(_TRACE_MODULE)
-    except ImportError:
-        return local                              # TODO-T1: the contract module is not in the tree yet
-    for name in _TRACE_VALIDATOR_NAMES:
-        fn = getattr(module, name, None)
-        if callable(fn):
-            result = fn(line)
-            extra = [] if result in (None, True) else (list(result) if isinstance(result, (list, tuple)) else [str(result)])
-            return local + extra
-    return local
-
-
-# ---------------------------------------------------------------------------------------------------------------------------
 # interfaces
 # ---------------------------------------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Trajectory:
+    """One sampled trajectory: the closed T1 ``tfrl`` trace line plus the credit fields the trace does not carry."""
+
+    trace: Mapping[str, Any]
+    k_index: int
+    temperature: float
+    row_f1: float
+    lock_row_f1: float
+    rule_ids: tuple[str, ...] = ()
+    exemplar_ids: tuple[str, ...] = ()
+    truncated: bool = False
+
+    @property
+    def row_id(self) -> str:
+        return self.trace["row_id"]
+
+    @property
+    def reward(self) -> float:
+        return self.trace["reward"]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"trace": dict(self.trace), "k_index": self.k_index, "temperature": self.temperature, "row_f1": self.row_f1,
+                "lock_row_f1": self.lock_row_f1, "rule_ids": list(self.rule_ids), "exemplar_ids": list(self.exemplar_ids),
+                "truncated": self.truncated}
+
+    @staticmethod
+    def from_dict(doc: Mapping[str, Any]) -> "Trajectory":
+        return Trajectory(trace=doc["trace"], k_index=int(doc["k_index"]), temperature=float(doc["temperature"]), row_f1=float(doc["row_f1"]),
+                          lock_row_f1=float(doc["lock_row_f1"]), rule_ids=tuple(doc["rule_ids"]), exemplar_ids=tuple(doc["exemplar_ids"]),
+                          truncated=bool(doc["truncated"]))
+
+
+def validate_trajectory(t: Trajectory) -> list[str]:
+    """Problems of one trajectory (empty list = valid): the T1 validator on the trace line, then the credit arithmetic."""
+
+    problems: list[str] = []
+    try:
+        rt.validate_line(t.trace)
+    except rt.RolloutTraceSchemaError as exc:
+        return [f"trace line: {exc}"]
+    if t.trace["kind"] != rt.KIND_TFRL:
+        problems.append("trace line must be of kind tfrl")
+    for name in ("temperature", "row_f1", "lock_row_f1"):
+        value = getattr(t, name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            problems.append(f"{name} must be a finite number")
+    if not problems and abs(t.trace["reward"] - (t.row_f1 - t.lock_row_f1)) > 1e-9:
+        problems.append("reward must equal row_f1 - lock_row_f1")
+    if not isinstance(t.k_index, int) or t.k_index < 0:
+        problems.append("k_index must be a non-negative integer")
+    return problems
 
 
 @dataclass(frozen=True)
@@ -192,13 +179,13 @@ class SamplerRequest:
 
 
 class Sampler(Protocol):
-    def sample(self, request: SamplerRequest) -> Sequence[Mapping[str, Any]]: ...
+    def sample(self, request: SamplerRequest) -> Sequence[Trajectory]: ...
 
 
 class StubSampler:
     """The call site task T3 fills (trajectory sampling through the router transport). Fails closed."""
 
-    def sample(self, request: SamplerRequest) -> Sequence[Mapping[str, Any]]:
+    def sample(self, request: SamplerRequest) -> Sequence[Trajectory]:
         raise SamplerNotImplemented("TODO-T3: the TFRL-v2 trajectory sampler is not implemented; no model call is made here")
 
 
@@ -213,7 +200,7 @@ class DistilResult:
 
 
 class Distiller(Protocol):
-    def distil(self, iteration: int, trajectories: Sequence[Mapping[str, Any]], rule_bank: Mapping[str, Any],
+    def distil(self, iteration: int, trajectories: Sequence[Trajectory], rule_bank: Mapping[str, Any],
                exemplar_bank: Mapping[str, Any]) -> DistilResult: ...
 
 
@@ -261,43 +248,44 @@ class FileCandidateReader:
 # ---------------------------------------------------------------------------------------------------------------------------
 
 
-def check_sample(lines: Sequence[Mapping[str, Any]], request: SamplerRequest) -> None:
-    """Refuse a sampler result that is not exactly K valid lines per column row with consistent rewards."""
+def check_sample(lines: Sequence[Trajectory], request: SamplerRequest) -> None:
+    """Refuse a sampler result that is not exactly K valid trajectories per column row with consistent rewards."""
 
     expected = len(request.column_rows) * request.k
     if len(lines) != expected:
-        raise PortLoopError(f"the sampler returned {len(lines)} lines, expected {expected} ({len(request.column_rows)} rows x K={request.k})")
+        raise PortLoopError(f"the sampler returned {len(lines)} trajectories, expected {expected} ({len(request.column_rows)} rows x K={request.k})")
     per_row: dict[str, int] = {}
     seen: set[str] = set()
-    for line in lines:
-        problems = validate_tfrl_line(line)
+    for t in lines:
+        problems = validate_trajectory(t)
         if problems:
-            raise PortLoopError(f"invalid tfrl line {line.get('trajectory_id', '?')!r}: {problems}")
-        if line["iteration"] != request.iteration:
-            raise PortLoopError("a line carries another iteration")
-        if line["trajectory_id"] in seen:
-            raise PortLoopError(f"duplicate trajectory id {line['trajectory_id']!r}")
-        seen.add(line["trajectory_id"])
-        per_row[line["row_id"]] = per_row.get(line["row_id"], 0) + 1
-        if abs(line["lock_row_f1"] - request.lock_row_f1[line["row_id"]]) > 1e-9:
-            raise PortLoopError(f"row {line['row_id']!r}: lock_row_f1 differs from the construction lock column")
+            raise PortLoopError(f"invalid trajectory {t.trace.get('trajectory_id', '?')!r}: {problems}")
+        if t.trace["iteration"] != request.iteration:
+            raise PortLoopError("a trajectory carries another iteration")
+        tid = t.trace["trajectory_id"]
+        if tid in seen:
+            raise PortLoopError(f"duplicate trajectory id {tid!r}")
+        seen.add(tid)
+        per_row[t.row_id] = per_row.get(t.row_id, 0) + 1
+        if t.row_id not in request.lock_row_f1 or abs(t.lock_row_f1 - request.lock_row_f1[t.row_id]) > 1e-9:
+            raise PortLoopError(f"row {t.row_id!r}: lock_row_f1 differs from the construction lock column")
     if set(per_row) != set(request.column_rows) or any(n != request.k for n in per_row.values()):
         raise PortLoopError("the sampler did not return exactly K trajectories for every column row")
 
 
-def credit_summary(lines: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def credit_summary(lines: Sequence[Trajectory]) -> dict[str, Any]:
     """Aggregate counts: positives fix a row the lock gets wrong, negatives break a row the lock gets right, contrast rows have both signs."""
 
-    rows: dict[str, list[Mapping[str, Any]]] = {}
-    for line in lines:
-        rows.setdefault(line["row_id"], []).append(line)
-    positives = sum(1 for l in lines if l["lock_row_f1"] < 1.0 and l["reward"] > 0)
-    negatives = sum(1 for l in lines if l["lock_row_f1"] >= 1.0 and l["reward"] < 0)
-    contrast_rows = sum(1 for ls in rows.values() if any(l["reward"] > 0 for l in ls) and any(l["reward"] < 0 for l in ls))
+    rows: dict[str, list[Trajectory]] = {}
+    for t in lines:
+        rows.setdefault(t.row_id, []).append(t)
+    positives = sum(1 for t in lines if t.lock_row_f1 < 1.0 and t.reward > 0)
+    negatives = sum(1 for t in lines if t.lock_row_f1 >= 1.0 and t.reward < 0)
+    contrast_rows = sum(1 for ts in rows.values() if any(t.reward > 0 for t in ts) and any(t.reward < 0 for t in ts))
     n = len(lines)
     return {"trajectories": n, "rows": len(rows), "positives": positives, "negatives": negatives, "contrast_rows": contrast_rows,
-            "truncated": sum(1 for l in lines if l["truncated"]),
-            "mean_reward_pp": round(100.0 * sum(l["reward"] for l in lines) / n, 6) if n else 0.0}
+            "truncated": sum(1 for t in lines if t.truncated),
+            "mean_reward_pp": round(100.0 * sum(t.reward for t in lines) / n, 6) if n else 0.0}
 
 
 # ---------------------------------------------------------------------------------------------------------------------------
@@ -499,7 +487,7 @@ def run_loop(cfg: LoopConfig, sampler: Sampler, distiller: Distiller, reader: Ca
         # 1 sample
         traj_path = idir / "trajectories.jsonl"
         if traj_path.is_file():
-            lines = [json.loads(x) for x in traj_path.read_text(encoding="utf-8").splitlines() if x.strip()]
+            lines = [Trajectory.from_dict(json.loads(x)) for x in traj_path.read_text(encoding="utf-8").splitlines() if x.strip()]
         else:
             try:
                 lines = list(sampler.sample(request))
@@ -508,7 +496,8 @@ def run_loop(cfg: LoopConfig, sampler: Sampler, distiller: Distiller, reader: Ca
                 return report
             check_sample(lines, request)
             idir.mkdir(parents=True, exist_ok=True)
-            traj_path.write_text("".join(json.dumps(l, sort_keys=True) + "\n" for l in lines), encoding="utf-8", newline="\n")
+            traj_path.write_text("".join(json.dumps(t.to_dict(), sort_keys=True) + "\n" for t in lines), encoding="utf-8", newline="\n")
+            (idir / "trace.jsonl").write_text("".join(rt.dumps_line(t.trace) for t in lines), encoding="utf-8", newline="\n")   # the T1 lines only
         check_sample(lines, request)
         summary = credit_summary(lines)
         lib.write_receipt(idir, "sample", {"summary": summary}, inputs=inputs)
