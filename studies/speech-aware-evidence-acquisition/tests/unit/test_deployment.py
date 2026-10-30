@@ -310,7 +310,7 @@ def _script_docker_block(name):
     return text, block
 
 
-@pytest.mark.parametrize("script", ["npu_serve.sh", "npu_serve.sh.s10-next"])
+@pytest.mark.parametrize("script", ["npu_serve.sh"])
 def test_the_emitted_env_and_mounts_equal_the_sidecar_serve_script(profile, fragment, script):
     """``work/scripts/npu_serve.sh`` is the launcher known to bring up multi-card servers: same env names, same
     read-only mounts (the profile adds only its own per-instance keys and the data root)."""
@@ -328,8 +328,8 @@ def test_the_emitted_env_and_mounts_equal_the_sidecar_serve_script(profile, frag
 
 
 def test_the_s10_next_serve_script_uses_the_gate_entrypoint_form():
-    # The sidecar is promoted over npu_serve.sh by a later mv; prefer it while it exists, else the promoted script.
-    name = "npu_serve.sh.s10-next" if (SCRIPTS / "npu_serve.sh.s10-next").is_file() else "npu_serve.sh"
+    # S10 swap done 2026-10-30: npu_serve.sh is the interpreter-entrypoint launcher (the old one is kept as .pre-s10-20261030).
+    name = "npu_serve.sh"
     text, block = _script_docker_block(name)
     assert f"--entrypoint {dep.CONTAINER_INTERPRETER} " in block
     assert '"$IMAGE" -m vllm.entrypoints.cli.main serve "$@"' in block

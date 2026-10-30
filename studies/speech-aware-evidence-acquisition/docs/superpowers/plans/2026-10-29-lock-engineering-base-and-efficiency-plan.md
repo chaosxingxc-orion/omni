@@ -1004,3 +1004,21 @@ are re-minted (rows stay DRAFT). The roster-pin exemption is NOT widened. The T 
 `tfrl_v2_port_write_registration.py:138` is corrected. A writer step runs `verify_declared_module` on its own output so
 this class of defect is caught at mint time. Order: hooks + L338 + Fold A first (SONNET); T's lock switch after the
 T rails stream lands, then one T re-mint.
+
+## 3.15 E3 verdict and the resident profile (Fable, 2026-10-30)
+
+E3 chain `prelim-E3-chain-20261030T041647Z` ended `CHAIN DONE` with **verdict ADOPTED** (no reasons). Watchdog
+summaries at 48 per instance, worst case (min_tokens 4,096): baseline pass 1,649.8 tok/s with 90 client errors; shm
+pass 1 2,111.1 tok/s (55 preemptions, 21 errors), shm pass 2 2,058.3 tok/s (59 preemptions, 21 errors); both shm
+passes had zero engine exits and the warm sequential probe agreed 16/16 with the baseline instance, which is the adoption
+rule of plan 3.11 ruling 3. The 48-per-instance level is the crash regime by design and not admissible for either
+variant; the admitted level stays 32.
+
+Decision: the resident deployment profile is `qwen3-omni-thinking-bf16-181-4xtp2-v3` (= v2 plus
+`mm_processor_cache_type: shm`, a deployment fact outside the protocol hash). The recorded base-lock run list
+(`record_run_list.base-lock-v1.json`) now names the v3 profile, so R0 deploys with shm and the lock record's deployment
+line reads v3; the v2 entry is deleted from the record when R0 fills it (as the record's `profiles_note` says).
+
+S10 swap performed 2026-10-30 after both chains were FINAL: `npu_serve.sh` is the interpreter-entrypoint launcher
+(dry render shows `--gpu-memory-utilization 0.92`, `--max-num-seqs`), the old launcher is kept as
+`npu_serve.sh.pre-s10-20261030`; `tests/unit/test_deployment.py` is re-pointed to the single name (87 tests pass).
