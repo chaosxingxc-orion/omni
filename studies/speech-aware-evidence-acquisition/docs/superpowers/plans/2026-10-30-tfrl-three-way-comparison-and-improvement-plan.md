@@ -122,3 +122,28 @@ SLU-F1 and intent with CI95, the A-to-D gap, the T-to-A gap, Fold A confirmation
   raise K to 8 on the rows where the reward variance is highest, within the same card budget, and records the change.
 - **R2: YES.** Fold A confirmation is required for every accepted lever and for the D/A/T comparison.
 - **R4: launch authorised** (arm B P3/P3b and E3).
+
+## 9. Rulings on the T4 registration drafts (Fable, 2026-10-30; drafts under `docs/readiness/2026-10-30-three-way-fold-b-npu-port-v1/`)
+
+1. **L338 port FIT cap defect.** The registered port cell carries `native_contact_fit.contact_cap` 64,800, but the raw-audio
+   arm's FIT check (`preparation_fit.py:1130-1137`) requires 16,200 (smoke: 60, not 240). Fix in the writer
+   (`l338_port_write_registration.py` / `l338_port_family.py`), re-mint with the next writer run; rows stay DRAFT. SONNET.
+2. **D has no FIT path.** The live-phase fit refuses the raw-audio arm and the native-contact fit refuses the direct-only
+   program. Add a direct-only FIT path (one contact per row, raw audio, the same envelope checks) behind the program id;
+   no change to any existing path's bytes (snapshot test). SONNET, 4-6 h.
+3. **T's banks and their own rows.** The runner's knowledge-source guard refuses a construction flight whose bank was built
+   from the same rows. Ruling: split the 625-row column R01C into two fixed halves (R01C-H1: 313 rows, R01C-H2: 312 rows,
+   by the roster order, pinned); iteration t samples on both halves, and the bank each half consumes in iteration t+1 is
+   distilled from the OTHER half's positives (cross-fitted banks). Section 4's "update: knowledge" row reads accordingly.
+   This also removes within-column leakage from the reward. The Fold B flight of iteration t consumes the union bank.
+4. **Window competition (budget 6,144 vs the exemplar bank).** Under R1 the Solver prompt limit is 14,334 tokens and the
+   measured maximum lock prompt is 13,465, so the bank has no room on top of 51 supplied items. Ruling: in the T arm,
+   exemplars REPLACE supplied items, they do not add to them; T's supply bound is 43 items plus an exemplar block capped at
+   2,000 tokens (about 8 items' worth); A keeps 51 items and no bank. The difference is the thing T tests (consumption over
+   supply, P5); it is a declared T-vs-A protocol difference, not a confound. If the bank proves worth more than 8 items,
+   the trade is re-measured as its own lever. The rule bank is text in the Solver instruction, capped at 400 tokens.
+5. **Fragment hash clarification.** `a35b2740…` is `fragment_hash` WITH `SAEA_DATA_ROOT` set (as flights run);
+   `bcb98207…` is the same function without a data root (the materialization path collapses to a placeholder). Flights and
+   the record carry `a35b2740…`. The earlier note in the base-lock skeleton is amended by this line.
+6. **D writer.** D is emitted by the 266-E writer (`direct_fb_write_registration.py`) with the port settings imported from
+   `l338_port_family`; T and Fold A by the L338 port writer with a family switch and a per-roster preparation table. SONNET.
