@@ -28,6 +28,7 @@ from speech_aware_evidence_acquisition.contracts import rollout_trace as rt  # n
 import tfrl_v2_common as cm  # noqa: E402
 import tfrl_v2_distiller as dd  # noqa: E402
 import tfrl_v2_sampler as sp  # noqa: E402
+import tfrl_v2_text as tx  # noqa: E402
 
 HALF = cm.HALF_H1
 RUN = sp.run_id_for(HALF, 1)
@@ -267,8 +268,20 @@ def test_bank_receipt_names_the_source_half_and_the_guard_uses_it(tmp_path):
         cm.check_cross_fit(receipt, cm.HALF_H2, consuming_row_ids=["r000"])
 
 
+class _FakeTokenizer:
+    """A fake tokenizer client: 4 characters per token plus a 7-token chat wrapper (the contract of the vLLM chat-form /tokenize)."""
+
+    def request_json(self, method, path, payload):
+        text = payload["messages"][0]["content"][0]["text"]
+        n = -(-len(text) // 4) + 7
+        return {"count": n, "tokens": list(range(n))}
+
+
 def test_sampler_accepts_the_receipt_for_the_other_half_and_refuses_it_for_the_source_half(tmp_path):
-    receipt = dd.write_outputs(base_fixture().distil(), tmp_path)
+    fx = base_fixture()
+    ids = {i for c in fx.contacts for item in c["supply_items"] for i in [item["item_id"]]}
+    resolver = tx.ItemTextResolver({i: f"text of {i}" for i in ids})
+    receipt = dd.write_outputs(fx.distil(resolver=resolver, measure=tx.VllmTokenizeMeasure(_FakeTokenizer())), tmp_path)
     other = {"roster_id": cm.HALF_ROSTER_ID[cm.HALF_H2], "split_identity_hash": "d" * 64, "items": [{"sample_id": "h2-row", "audio_seconds": 1.0}]}
     sp.build_plan(other, cm.HALF_H2, 2, bank_receipt=receipt)
     with pytest.raises(sp.SamplerError, match="cross-fit guard"):

@@ -14,7 +14,7 @@ What it builds, for ONE half and ONE iteration:
   ``request_identity_sha256``, which excludes only the seed, the arm label and the contact id). Mode ``rule-variants`` additionally gives trajectory
   k the k-th consumption variant of a seed rule bank (plan section 4 "varied consumption instructions and evidence orderings"); it is opt-in.
 * ONE Perception contact per row, shared by the K Solver contacts.
-* The bank pin: from iteration 2 the half consumes the bank distilled from the OTHER half; :func:`tfrl_v2_common.check_cross_fit` refuses a bank
+* The bank pin (a bank counted with an estimate, or whose exemplars do not quote the resolved item text, is refused): from iteration 2 the half consumes the bank distilled from the OTHER half; :func:`tfrl_v2_common.check_cross_fit` refuses a bank
   whose source half is the consuming half (plan section 9 ruling 3). Exemplars REPLACE supplied items (the T supply bound is 43 items plus an
   exemplar block of at most 2,000 tokens); the rule bank is Solver instruction text of at most 400 tokens.
 * A dry-run budget line: calls, audio seconds (the L338 convention: the row's audio seconds counted once per generation contact), completion
@@ -197,6 +197,10 @@ def build_plan(
             cm.check_cross_fit(bank_receipt, half, consuming_row_ids=row_ids, consuming_split_identity=half_roster.get("split_identity_hash"))
         except cm.CrossFitError as error:
             raise SamplerError(str(error)) from error
+        try:
+            cm.check_bank_measured(bank_receipt)
+        except cm.BankNotMeasuredError as error:
+            raise SamplerError(str(error)) from error
 
     variants: list[Mapping[str, Any]] = []
     if variation == "rule-variants":
@@ -213,6 +217,7 @@ def build_plan(
         "exemplar_bank_sha256": bank_receipt["exemplar_bank"]["content_sha256"] if bank_receipt else None,
         "bank_receipt_sha256": cm.content_sha256(bank_receipt) if bank_receipt else None,
         "bank_source_halves": list(bank_receipt["source_halves"]) if bank_receipt else [],
+        "bank_measure": bank_receipt["measure"] if bank_receipt else None,
         "exemplar_block_token_cap": cm.EXEMPLAR_BLOCK_TOKEN_CAP, "rule_bank_token_cap": cm.RULE_BANK_TOKEN_CAP,
         "supply_bound_items": 43 if bank_receipt else 51,
         "seed_rule_bank_sha256": cm.content_sha256(dict(seed_rule_bank)) if seed_rule_bank else None,

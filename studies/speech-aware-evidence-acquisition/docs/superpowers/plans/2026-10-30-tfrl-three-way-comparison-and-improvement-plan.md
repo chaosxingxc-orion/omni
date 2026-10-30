@@ -203,3 +203,21 @@ next gate asks for the runtime receipt, which the base-lock R0 step mints. Both 
    bank per source half) are the same item.
 5. **Runner input.** The sampler's run list is the pre-registration table from which the T writer derives the c7 arm
    group; no runner consumes it directly. Correct; the T cell draft reads accordingly.
+
+### Section 11 addendum: rulings on T3b (exemplar text, measure, union bank, loop adapters; Fable, 2026-10-30)
+
+1. Exemplars now quote the exact `[evidence <id>] <content>` line the Solver read (resolver over the pinned knowledge
+   stores, content sha256 per item, unknown ids refused). The two fixture edits in the existing sampler and distiller
+   tests are accepted; no assertion was weakened. The RANKVIS rank label is not reproduced (`rank_label: none`); fine.
+2. The plan builder refuses estimate-measured or ids-only banks; a real bank is measured with the FIT gate's tokenize
+   measure through an injected registered client. Open engineering (T3c, SONNET): a driver that injects the client, and
+   the loop command line wired to the V2 adapters (the stubs stay as the default until the first flight exists).
+3. `used` flag defect in the trace writer: `core.rollout_trace.item_strings` judges only the JSON exemplar form, so on
+   the real pipe-form `train-exemplars` store every `used` is null. Ruling: fix in the trace writer (T3c) with the same
+   rule on the pipe form and a `used_basis` field; the resolver's interim judgement stays until then and is recorded.
+4. Vote pooling across halves is not done (survivor banks only); accepted, the union keeps the per-half 3-row rule.
+5. `rule-variants` mode for iteration 2 and later: trajectory k uses (k=0) no rule bank, (k=1) the full bank, (k=2) the
+   rules of the row's scenario only, (k=3) the top half of the bank by support. Same seed scheme. This makes a rule's
+   effect measurable per row; T3c implements `variants_fn` accordingly.
+6. The construction-column gain and the +1 pp stop rule are measured from the bank-consuming flight, never from the
+   adapter; accepted.

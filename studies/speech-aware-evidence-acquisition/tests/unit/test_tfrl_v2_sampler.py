@@ -36,7 +36,8 @@ def half_roster(half: str = cm.HALF_H1, rows: int = 6, audio: float = 2.0) -> di
 
 def bank_receipt(source: str = cm.HALF_H2, rows=("H2:rowX",)) -> dict:
     return {"source_halves": [source], "source_split_identities": {source: ("a" if source == cm.HALF_H1 else "b") * 64}, "source_row_ids": list(rows),
-            "rule_bank": {"content_sha256": "1" * 64}, "exemplar_bank": {"content_sha256": "2" * 64}}
+            "rule_bank": {"content_sha256": "1" * 64}, "exemplar_bank": {"content_sha256": "2" * 64},
+            "measure": cm.MEASURE_VLLM, "exemplar_text": cm.EXEMPLAR_TEXT_RESOLVED}
 
 
 def plan(half=cm.HALF_H1, iteration=1, **kw):

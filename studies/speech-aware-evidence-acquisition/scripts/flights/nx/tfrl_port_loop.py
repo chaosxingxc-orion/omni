@@ -197,6 +197,8 @@ class DistilResult:
     contrast_pairs: int = 0
     refused_rules: int = 0
     construction_gain_pp: float | None = None
+    bank_receipts: Mapping[str, Any] | None = None     # task T3b: compact receipts of the banks distilled (one per source half, and the union)
+    budget_line: str | None = None                      # task T3b: the iteration's dry-run budget line (calls, audio seconds, tokens, card-hours)
 
 
 class Distiller(Protocol):
@@ -350,6 +352,17 @@ def fold_a_confirms(fold_a_credit: Mapping[str, Any]) -> bool:
 
 def bank_digest(bank: Mapping[str, Any]) -> str:
     return tf.canonical_sha256(dict(bank))
+
+
+def result_extras(result: "DistilResult") -> dict[str, Any]:
+    """The optional fields of a distil result that an iteration record carries (empty for a distiller that supplies none)."""
+
+    extras: dict[str, Any] = {}
+    if result.bank_receipts is not None:
+        extras["bank_receipts"] = dict(result.bank_receipts)
+    if result.budget_line is not None:
+        extras["budget_line"] = result.budget_line
+    return extras
 
 
 def state_hashes(rule_bank: Mapping[str, Any], exemplar_bank: Mapping[str, Any], vote_n: int) -> dict[str, str]:
@@ -511,10 +524,11 @@ def run_loop(cfg: LoopConfig, sampler: Sampler, distiller: Distiller, reader: Ca
             report.status, report.halt_reason = "halted", str(exc)
             return report
         hashes = state_hashes(result.rule_bank, result.exemplar_bank, result.vote_n)
-        lib.write_receipt(idir, "distil", {"hashes": hashes, "contrast_pairs": result.contrast_pairs, "refused_rules": result.refused_rules},
+        lib.write_receipt(idir, "distil", {"hashes": hashes, "contrast_pairs": result.contrast_pairs, "refused_rules": result.refused_rules,
+                                           **result_extras(result)},
                           inputs={**inputs, "trajectories_sha256": tf.sha256_file(traj_path)})
         if hashes == state_hashes(rule_bank, exemplar_bank, vote_n):
-            report.iterations.append({"iteration": t, "verdict": "no-change"})
+            report.iterations.append({"iteration": t, "verdict": "no-change", **result_extras(result)})
             report.status, report.halt_reason = "stopped", f"iteration {t}: the distilled state equals its parent (nothing accepted)"
             return report
 
@@ -522,7 +536,7 @@ def run_loop(cfg: LoopConfig, sampler: Sampler, distiller: Distiller, reader: Ca
         read = reader.read(t, hashes)
         if read is None:
             report.status, report.halt_reason = "awaiting-read", f"iteration {t}: no Fold B read of the candidate yet"
-            report.iterations.append({"iteration": t, "verdict": "awaiting-read", "hashes": hashes})
+            report.iterations.append({"iteration": t, "verdict": "awaiting-read", "hashes": hashes, **result_extras(result)})
             return report
 
         # 4 accept
@@ -533,7 +547,7 @@ def run_loop(cfg: LoopConfig, sampler: Sampler, distiller: Distiller, reader: Ca
         # 5 admit
         state_id = admit_state(archive, iteration=t, parent_id=parent_id, hashes=hashes, verdict=verdict["status"], read=read)
         record = {"iteration": t, "verdict": verdict["status"], "failed": verdict["failed"], "state_id": state_id,
-                  "construction_gain_pp": result.construction_gain_pp}
+                  "construction_gain_pp": result.construction_gain_pp, **result_extras(result)}
         report.iterations.append(record)
         out(f"iteration {t}: {verdict['status']} {verdict['failed'] or ''} state {state_id[:12]}")
         if not verdict["accepted"]:

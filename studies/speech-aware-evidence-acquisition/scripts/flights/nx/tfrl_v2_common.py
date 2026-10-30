@@ -55,6 +55,13 @@ MAX_EXEMPLARS_PER_SCENARIO = 8
 MAX_EVIDENCE_ITEMS_PER_EXEMPLAR = 6
 CHARS_PER_TOKEN = 3.5
 
+# ---- token measures and exemplar text modes (task T3b); the measure classes live in tfrl_v2_text ---------------------------------------------
+MEASURE_ESTIMATE = "estimate"             # ceil(chars / 3.5): offline estimate; a bank counted with it is refused by the plan builder
+MEASURE_VLLM = "vllm-tokenize"            # the FIT gate's vLLM tokenize measure
+EXEMPLAR_TEXT_RESOLVED = "resolved"       # exemplars quote the knowledge-store text of the supplied items
+EXEMPLAR_TEXT_IDS_ONLY = "ids-only"       # legacy: exemplars name item ids only
+FOLD_B_CONSUMER = "FOLD-B"                # the consumer id of the union bank (never a construction half)
+
 # ---- budget constants given by the planner ---------------------------------------------------------------------------------------------------
 MEDIAN_COMPLETION_TOKENS = 4372
 HOST_OUTPUT_TOK_S = 1422.59          # host output tokens per second at 32 sequences per instance (npu-port synthetic speed baseline)
@@ -64,6 +71,10 @@ MARGIN = 1.3
 
 class CommonError(ValueError):
     """A refusal of the shared helpers (a write-once clash, a malformed id)."""
+
+
+class BankNotMeasuredError(CommonError):
+    """A bank receipt whose counts are estimates, or whose exemplars do not carry the resolved item text: it cannot enter a flight."""
 
 
 class CrossFitError(CommonError):
@@ -184,3 +195,33 @@ def check_cross_fit(
         overlap = sorted(set(consuming_row_ids) & set(bank_receipt.get("source_row_ids") or []))
         if overlap:
             raise CrossFitError(f"cross-fit guard: {len(overlap)} consuming rows are source rows of the bank (first: {overlap[0]})")
+
+
+def check_bank_measured(bank_receipt: Mapping[str, Any]) -> None:
+    """Refuse a bank receipt that a flight may not consume: its token counts must come from the vLLM tokenize measure and its exemplars must quote
+    the resolved supplied-item text (``measure == "vllm-tokenize"`` and ``exemplar_text == "resolved"``)."""
+
+    measure = bank_receipt.get("measure")
+    if measure != MEASURE_VLLM:
+        raise BankNotMeasuredError(f"the bank's token counts were produced by measure {measure!r}, not {MEASURE_VLLM!r}: re-measure it with the vLLM tokenize measure")
+    if bank_receipt.get("exemplar_text") != EXEMPLAR_TEXT_RESOLVED:
+        raise BankNotMeasuredError("the bank's exemplars do not carry the resolved supplied-item text (exemplar_text must be 'resolved')")
+
+
+def check_union_for_fold_b(
+    bank_receipt: Mapping[str, Any], fold_b_row_ids: Sequence[str], *, half_row_ids: Mapping[str, Sequence[str]] | None = None,
+    fold_b_split_identity: str | None = None, require_measured: bool = True,
+) -> None:
+    """The Fold B flight consumes the UNION bank only: both halves as sources, Fold B rows disjoint from every source row (and, when the full row
+    lists of the halves are given, from every row of either half). A construction half is refused by :func:`check_cross_fit` (it is a source)."""
+
+    if bank_receipt.get("kind") != "union" or sorted(bank_receipt.get("source_halves") or []) != sorted(HALVES):
+        raise CrossFitError("the Fold B flight consumes the union bank of both halves; this receipt is not one")
+    check_cross_fit(bank_receipt, FOLD_B_CONSUMER, consuming_row_ids=fold_b_row_ids, consuming_split_identity=fold_b_split_identity)
+    if half_row_ids is not None:
+        every = {r for half in HALVES for r in half_row_ids.get(half, ())}
+        overlap = sorted(set(fold_b_row_ids) & every)
+        if overlap:
+            raise CrossFitError(f"cross-fit guard: {len(overlap)} Fold B rows are rows of a construction half (first: {overlap[0]})")
+    if require_measured:
+        check_bank_measured(bank_receipt)
