@@ -7,7 +7,9 @@
 #     optional env overrides (thinking only): NAME (container name, default saea-serve-thinking), MAX_NUM_SEQS
 #     (default 4), GPU_MEM_UTIL (default 0.92, the deployment profile's gpu_memory_utilization, passed as
 #     --gpu-memory-utilization), CPUSET (default 128-191) and HCCL_BASE_PORT (default unset: the HCCL default
-#     applies; set a distinct value per instance when several instances share the host network).
+#     applies; set a distinct value per instance when several instances share the host network) and MM_CACHE_TYPE
+#     (default unset: the engine default and no flag; `lru` or `shm` appends `--mm-processor-cache-type <value>`, a
+#     DEPLOYMENT flag outside protocol_sha256 -- plan 3.11 ruling 3 / S16b; any other value is refused).
 #   bash npu_serve.sh embed <view-id> <card> <port>
 # The container mounts ONLY the named cards, so the harness telemetry (read_gpu -> npu-smi) sees exactly them.
 set -euo pipefail
@@ -72,6 +74,12 @@ case $KIND in
     MESSAGE="Considering the limited time by the user, I have to give the solution based on the thinking directly now."
     # The forced string's whitespace around the message is the section-4 ASSUMPTION the smoke verifies.
     REASONING=$(python3 -c 'import json,sys; print(json.dumps({"reasoning_end_str": sys.argv[1] + "\n</think>\n\n"}))' "$MESSAGE")
+    MM_ARGS=()
+    case "${MM_CACHE_TYPE:-}" in
+      "") ;;
+      lru|shm) MM_ARGS=(--mm-processor-cache-type "$MM_CACHE_TYPE") ;;
+      *) echo "refused: MM_CACHE_TYPE must be unset, lru or shm; got '$MM_CACHE_TYPE'" >&2; exit 1 ;;
+    esac
     run "${NAME:-saea-serve-thinking}" "$CARDS" "$M/qwen3-omni-30b-a3b-thinking" \
       --served-model-name qwen3-omni-30b-a3b-thinking --host 127.0.0.1 --port "$PORT" \
       --dtype bfloat16 --tensor-parallel-size "$TP" \
@@ -80,7 +88,7 @@ case $KIND in
       --reasoning-parser qwen3 --reasoning-config "$REASONING" \
       --enable-auto-tool-choice --tool-call-parser hermes \
       --limit-mm-per-prompt '{"audio": 1, "image": 0, "video": 0}' \
-      --seed 0
+      --seed 0 "${MM_ARGS[@]}"
     ;;
   embed)
     VIEW=$1 CARD=$2 PORT=$3
