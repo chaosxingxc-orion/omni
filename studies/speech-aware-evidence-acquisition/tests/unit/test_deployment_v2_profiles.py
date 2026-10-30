@@ -35,9 +35,10 @@ def test_a_v2_profile_validates_is_named_by_its_file_and_differs_only_in_identit
     profile = dep.load_deployment_profile(v2)
     assert profile.profile_id == v2 and profile.max_num_seqs == ceiling
     old, new = _document(v1), _document(v2)
-    # admitted_level (Gap C, Decision 2) is an OPTIONAL deployment field added to the 4xTP2 -v2 only; outside every hash
+    # admitted_level (Gap C, Decision 2) and namespace_policy (Decision 3, owner 2026-10-30) are OPTIONAL deployment
+    # fields added to the 4xTP2 -v2 only; outside every hash
     assert {key for key in set(old) | set(new) if old.get(key) != new.get(key)} <= {
-        "profile_id", "basis", "max_num_seqs", "admitted_level"}
+        "profile_id", "basis", "max_num_seqs", "admitted_level", "namespace_policy"}
     assert new["profile_id"] == v2 and new["max_num_seqs"] == ceiling
     # cards, cpusets, ports, env and the memory budget are untouched: the same deployment, a different scheduling ceiling
     for key in ("instances", "gpu_memory_utilization", "max_num_batched_tokens", "tensor_parallel_size", "shm_size"):

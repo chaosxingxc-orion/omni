@@ -63,9 +63,9 @@
   "max_num_seqs": 32,
   "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
   "model_relpath": "models/qwen3-omni-30b-a3b-thinking",
+  "namespace_policy": "shared-pid-host",
   "profile_id": "qwen3-omni-thinking-bf16-181-4xtp2-v2",
   "schema": "saea-deployment-profile-v1",
   "shm_size": "16g",
-  "tensor_parallel_size": 2,
-  "namespace_policy": "shared-pid-host"
+  "tensor_parallel_size": 2
 }
