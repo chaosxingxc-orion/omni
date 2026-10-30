@@ -55,6 +55,24 @@
    "admissibility": true,
    "on_fail": "continue",
    "note": "worst case at the 7168-token cap in descent order; on_fail continue so 32, 24 and 16 are all measured; admitted_level 32 is only the upper bound the validator needs (rule (b)) and is left for the planner to lower; the planner reads worst_case_admissible and the per-instance preemption and KV-peak columns per level. The plan 3.4 max-latency threshold scales with the output cap: 420 s bounds 4096 tokens at about 9.8 tok/s, so the same floor at 7168 tokens is 735 s (= the fragment timeout_seconds); the p10 e2e floor of 10 tok/s is unchanged. prompt_max 17408 = 24576 - 7168 (the sweep preflight refuses more); sweep timeout 800 s is above the 735 s latency rule so a slow request is a latency failure, not a client timeout. In this combined list on_fail is stop_chain (planner ruling), so a failing level ends the chain and the lower levels are not measured."
+  },
+  {
+   "id": "R-A2-b6144-L24",
+   "levels": [
+    24
+   ],
+   "passes": 3,
+   "min_tokens": null,
+   "sweep": {
+    "max_tokens": 7168,
+    "thinking_budget": 6144,
+    "prompt_max": 17408,
+    "timeout": 800
+   },
+   "max_latency_s": 735,
+   "admissibility": false,
+   "on_fail": "stop_chain",
+   "note": "Normal mix at the budget-6144 base level (24 per instance, flight width 96) chosen by the accuracy-first rule (TFRL plan section 8, lock plan 3.16): the recorded throughput of the base; three passes for the A/A band."
   }
  ]
 }

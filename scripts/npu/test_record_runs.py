@@ -337,10 +337,10 @@ def test_base_lock_v1_combined_list_has_one_r0_and_three_runs():
     doc = json.loads((HERE / "record_run_list.base-lock-v1.json").read_text())
     rl = rr.validate_run_list(doc, rr.load_profile("qwen3-omni-thinking-bf16-181-4xtp2-v3"))  # E3 ADOPTED 2026-10-30
     assert rl["example"] is False
-    assert [r["id"] for r in rl["runs"]] == ["R-A2-L32", "R-A3-L32", "R-A3-b6144"]
-    assert [r["levels"] for r in rl["runs"]] == [[32], [32], [32, 24, 16]]
-    assert [r["min_tokens"] for r in rl["runs"]] == [None, 4096, 7168]
-    assert [r["on_fail"] for r in rl["runs"]] == ["stop_chain", "stop_chain", "continue"]
+    assert [r["id"] for r in rl["runs"]] == ["R-A2-L32", "R-A3-L32", "R-A3-b6144", "R-A2-b6144-L24"]
+    assert [r["levels"] for r in rl["runs"]] == [[32], [32], [32, 24, 16], [24]]
+    assert [r["min_tokens"] for r in rl["runs"]] == [None, 4096, 7168, None]
+    assert [r["on_fail"] for r in rl["runs"]] == ["stop_chain", "stop_chain", "continue", "stop_chain"]
     b = json.loads((HERE / "record_run_list.budget6144-worstcase.json").read_text())["runs"][0]
     assert rl["runs"][2]["sweep"] == b["sweep"] and rl["runs"][2]["max_latency_s"] == b["max_latency_s"] == 735.0
     assert rl["runs"][1]["admissibility"] and rl["runs"][2]["admissibility"]
@@ -355,4 +355,4 @@ def test_base_lock_v1_combined_list_runs_r0_once_then_every_run(tmp_path):
     assert out.returncode == 0 and "CHAIN DONE" in text
     steps = [l.split("STEP ")[1] for l in text.splitlines() if "STEP " in l]
     assert steps.count("deploy-up") == 1
-    assert steps[-5:] == ["R-A2-L32-L32", "R-A3-L32-L32", "R-A3-b6144-L32", "R-A3-b6144-L24", "R-A3-b6144-L16"]
+    assert steps[-6:] == ["R-A2-L32-L32", "R-A3-L32-L32", "R-A3-b6144-L32", "R-A3-b6144-L24", "R-A3-b6144-L16", "R-A2-b6144-L24-L24"]
