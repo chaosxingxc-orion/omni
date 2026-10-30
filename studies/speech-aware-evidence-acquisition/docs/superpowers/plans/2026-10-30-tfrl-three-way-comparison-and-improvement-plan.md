@@ -274,3 +274,19 @@ next gate asks for the runtime receipt, which the base-lock R0 step mints. Both 
    construction gain is a number, not UNDETERMINED; (c) T cells switch to the port lock, and the construction cells get
    the minus-R01 exemplar-store leaves layered over it; (d) the flight-start hook re-checks Fold B row disjointness
    against the bank's source rows, not only the split identity.
+
+### Section 12 addendum: Fold A encoding admission trio (Fable, 2026-10-30)
+
+Drafted by script: protocol fragment `configs/preparation/slurp-tfrl-fold-a-speech-query-encoding-protocol-npu-port-v1.json`
+(sha256 `5099b95d…`; differs from the Fold B port fragment only in the roster, id, output and source-inventory leaves;
+encoder pin, forced-causal geometry, fp32 4 x 16 pool, pooling and layout byte-identical), the registration JSON
+(`ae8edd9d…`, pinned to the live datasets lock), and the DRAFT ledger row (`encoding-ledger-row-draft-v1.md`,
+`5220a9f0…`; 1,080 encoder contacts, 3,085 audio seconds, 0 NPU, no contact before the countersign). The Fold A source
+inventory (`coordination/slurp-tfrl-fold-a-speech-query-source-inventory-npu-port-v1.json`, `c81c631f…`) is model-free.
+
+Ruling on the CPU pool: the pinned encoder inventory fixes cores 128-191 (4 workers x 16 threads). A different pool would
+change the float32 reduction order and break vector parity with Fold B, so the inventory stays. Cores 128-159 belong to
+one resident vLLM instance, so the encode is NOT run while a recorded throughput run is active: it is queued as a card-queue
+job after `recorded-base-lock-v1`, once the owner countersigns the row. The chain is
+`bash work/scripts/port_encoder_prep.sh fold-a 128-191` (dry-run verified; the launcher refuses a cpuset that does not
+contain the pool).

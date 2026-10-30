@@ -1,0 +1,113 @@
+{
+  "declared_difference": "CPU float32 retrieval encoder (declared difference 8.7, design section 6.4): pinned pool of 4 workers x 16 threads on cores 128-191 of the Ascend host, batch-one forwards; planned_gpu_hours is the attempt's wall-clock ceiling and the actual GPU/NPU hours are 0. Attention geometry FORCED CAUSAL on every text layer and measured on the loaded weights at worker start (declared difference 8.4; as shipped the tower is bidirectional at batch one and causal in a padded batch, design section 6.4)",
+  "encoder": {
+    "encoder_id": "omni-embed-nemotron-3b",
+    "path": "${SAEA_DATA_ROOT}/coordination/omni-embed-nemotron-3b-cpu-encoder-inventory-npu-port-v1.json",
+    "sha256": "4c92dd1fc4c7c509416882cbc5a39fcf645b6910241a062343f964e57980e25b"
+  },
+  "historical_twin": {
+    "registration": "docs/readiness/2026-09-12-slurp-training-query-embedding-registration-v1.json",
+    "run_id": "SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-V1"
+  },
+  "plans": [
+    {
+      "actual_source_audio_seconds": 3084.5284374999947,
+      "dataset_config": {
+        "relpath": "configs/dataset/slurp-speech-native-evo-fold-a-1080.json",
+        "sha256": "4ba55688e80d8d768ec6cfc3ff4bacc9802fb34e4dab54913934015184497215"
+      },
+      "execution_plan": {
+        "attempt_id": "encode-v1",
+        "carrier_lock_key": "slurp",
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 2.0,
+        "planned_model_calls": 1080,
+        "planned_speech_audio_seconds": 3085,
+        "protocol_hash": "5099b95d1cb431d7ddf05c43260db8f4f0d6cb09700a59cfac7fb01fc8e5faad",
+        "run_id": "SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-NPU-PORT-V1",
+        "schema": "saea-execution-plan-v1",
+        "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6",
+        "split_role": "discovery",
+        "study": "speech-aware-evidence-acquisition"
+      },
+      "fold": "fold-a",
+      "ledger_row_cells": [
+        "2026-10-30",
+        "SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-NPU-PORT-V1",
+        "bounded-discovery-probe",
+        "Port twin of SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-V1: complete-speech retrieval-query encoding for TRAIN fold A; no answers or scoring",
+        "Frozen local Omni-Embed-Nemotron-3B retrieval tool on the CPU float32 worker pool; no answering core",
+        "slurp SLURP-EVO-FOLD-A-V2 TRAIN discovery",
+        "discovery",
+        "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6",
+        "no",
+        "1080",
+        "3085",
+        "2.0",
+        "The historical Fold A roster, packet and query-encoding exposures carried forward; this row adds only the port's pinned retrieval-encoder contacts",
+        "docs/readiness/2026-10-30-slurp-tfrl-fold-a-speech-query-encoding-registration-npu-port-v1.json",
+        "DRAFT (owner countersignature pending); NO CONTACT BEFORE THE COUNTERSIGN. Admission rule: the runtime admits this plan only against the committed protocol fragment, the committed registration and this row once countersigned and appended to the ledger; the encoder is not contacted before then. CPU float32 retrieval encoder (declared difference 8.7, design section 6.4): pinned pool of 4 workers x 16 threads on the cores recorded in the encoder inventory (first_core 128, cores 128-191 of the Ascend host), batch-one forwards; planned_gpu_hours is the attempt's wall-clock ceiling and the actual GPU/NPU hours are 0. Attention geometry FORCED CAUSAL on every text layer and measured on the loaded weights at worker start (declared difference 8.4; as shipped the tower is bidirectional at batch one and causal in a padded batch, design section 6.4). Protocol SHA256 5099b95d1cb431d7ddf05c43260db8f4f0d6cb09700a59cfac7fb01fc8e5faad. One encode-v1 attempt; no retry, fallback, scorer, answer read, or cross-fold feedback. The runtime config study_head binds the clean registration commit."
+      ],
+      "output_relpath": "prepared/SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-NPU-PORT-V1/index.json",
+      "protocol": {
+        "relpath": "configs/preparation/slurp-tfrl-fold-a-speech-query-encoding-protocol-npu-port-v1.json",
+        "sha256": "5099b95d1cb431d7ddf05c43260db8f4f0d6cb09700a59cfac7fb01fc8e5faad"
+      },
+      "query_rows_relpath": "prepared/SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-NPU-PORT-V1/queries.jsonl",
+      "roster_receipt": {
+        "relpath": "docs/receipts/rosters/slurp-evo-fold-a-v2.json",
+        "sha256": "1fe7908c31396774d7535fdf37bd791762215c324999d66ed7beb9e7b2f9033d"
+      },
+      "runtime_config_shape": {
+        "plan": {
+          "attempt_id": "encode-v1",
+          "carrier_lock_key": "slurp",
+          "execution_profile": "bounded-discovery-probe",
+          "planned_gpu_hours": 2.0,
+          "planned_model_calls": 1080,
+          "planned_speech_audio_seconds": 3085,
+          "protocol_hash": "5099b95d1cb431d7ddf05c43260db8f4f0d6cb09700a59cfac7fb01fc8e5faad",
+          "run_id": "SAEA-SLURP-TFRL-FOLD-A-SPEECH-QUERY-ENCODING-NPU-PORT-V1",
+          "schema": "saea-execution-plan-v1",
+          "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6",
+          "split_role": "discovery",
+          "study": "speech-aware-evidence-acquisition"
+        },
+        "protocol": "the protocol above, by absolute path",
+        "session_id": "local-nemotron-cpu-slurp-tfrl-fold-a-query-npu-port-v1",
+        "study_head": "SET_TO_THE_FINAL_CLEAN_REGISTRATION_COMMIT",
+        "umbrella_lock": {
+          "path": "/mnt/cephfs/xingchao/omni/work/dev/umbrella/docs/datasets.lock.json",
+          "sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+        }
+      },
+      "session_id": "local-nemotron-cpu-slurp-tfrl-fold-a-query-npu-port-v1",
+      "source_inventory": {
+        "path": "${SAEA_DATA_ROOT}/coordination/slurp-tfrl-fold-a-speech-query-source-inventory-npu-port-v1.json",
+        "sha256": "c81c631f0db5d8715cce54a9bf272eceee71d10023e5eeb332eb86496b46f4fb"
+      }
+    }
+  ],
+  "registered_at_utc": "2026-10-30",
+  "registration_requirements": [
+    "Do not contact the encoder before the owner countersigns the ledger row text (encoding-ledger-row-draft-v1.md).",
+    "Commit the protocol, this registration and the countersigned exposure row before any contact.",
+    "Write the external runtime config with study_head equal to that clean commit.",
+    "Keep consumed=no until the attempt is admitted; never replay an interrupted contact."
+  ],
+  "root_authority": "Owner 2026-10-28: experiments run in the saea-base Docker container; WSL2 constraints removed; generation runs in the background. The Fold A confirmation encoding additionally needs the owner's countersign of the ledger row (docs/owner-decisions-pending.md, 2026-10-30).",
+  "runtime_class": "speech_aware_evidence_acquisition.core.cpu_encoder_pool.CpuSpeechEncoder",
+  "runtime_entry": "python -m speech_aware_evidence_acquisition.core.speech_preparation_runtime",
+  "schema": "saea-prospective-tool-registration-v1",
+  "service": {
+    "endpoint": null,
+    "kind": "pinned CPU worker pool, local frozen retrieval tool",
+    "resident_server": false
+  },
+  "status": "DRAFT_PENDING_COUNTERSIGN",
+  "study": "speech-aware-evidence-acquisition",
+  "umbrella_lock": {
+    "path": "/mnt/cephfs/xingchao/omni/work/dev/umbrella/docs/datasets.lock.json",
+    "sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  }
+}

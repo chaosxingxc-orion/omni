@@ -243,7 +243,8 @@ def written(tmp_path_factory):
 def test_package_file_set_and_determinism(written, tmp_path):
     root, result = written
     pkg = root / fa.PACKAGE
-    assert sorted(p.name for p in pkg.iterdir()) == sorted(FOLD_A_FILES)
+    # encoding-ledger-row-draft-v1.md belongs to fold_a_encoding_write_registration.py (the encoder admission trio), not to this writer
+    assert sorted(p.name for p in pkg.iterdir() if p.name != "encoding-ledger-row-draft-v1.md") == sorted(FOLD_A_FILES)
     assert (root / fa.PREREG).is_file() and result["ledger_appended"] is None
     second = fw.write_package(make_root(tmp_path / "root2"), COMMIT, AT, DATA_ROOT)
     assert {k: v for k, v in second["shas"].items()} == result["shas"]
