@@ -74,6 +74,8 @@ from ..core.model.binding import _PayloadBindingMixin
 from ..core.model.request_types import CoreResponse, wire_response_message
 from ..core.model.paths import _normalized_relative_path, _resolve_confined_any
 from ..core.model.slices import SliceRecord
+from ..core.rollout_trace import instance_for_slot as _trace_instance_for_slot
+from ..core.rollout_trace import open_writer as _open_rollout_trace
 from ..core.tracing import DispatchingSink, TraceBuffer, TraceSink
 from ..e0.d2_leakage import ARM_VISIBLE_FIELDS
 from .errors import RailsError
@@ -1510,6 +1512,12 @@ class FrozenCoreClient:
         self._sink = TraceSink(Path(run_dir), plan.run_id)
         self._dispatching_sink = DispatchingSink(self._sink)
         self._slice_registry = slice_registry
+        # Plan T1 / M4: the flight's rollout-trace writer (``core.rollout_trace``), None unless the launcher armed it. Observation
+        # only: it changes no payload, hash, decision or trace record, and its failures never reach a contact.
+        self._rollout_trace = _open_rollout_trace(
+            data_root=binding.data_root, run_id=plan.run_id, attempt_id=plan.attempt_id or "no-attempt",
+        )
+        self._rollout_transport = transport
         self._adapter = FrozenCoreAdapter(
             gate=gate,
             plan=plan,
@@ -1681,6 +1689,15 @@ class FrozenCoreClient:
     @property
     def flight_lock(self) -> Mapping[str, object] | None:
         return self._flight_lock
+
+    @property
+    def rollout_trace(self):
+        """The flight's ``core.rollout_trace.RolloutTraceWriter``, or None when tracing is off."""
+        return self._rollout_trace
+
+    def rollout_instance_for_slot(self, id_slot: object) -> int | None:
+        """The vLLM instance an ``id_slot`` routes to (``id_slot mod N`` by the router transport); None when unknown."""
+        return _trace_instance_for_slot(self._rollout_transport, id_slot)
 
     @property
     def timings(self) -> tuple[RequestTiming, ...]:

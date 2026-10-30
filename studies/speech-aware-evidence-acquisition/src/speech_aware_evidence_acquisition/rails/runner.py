@@ -27,6 +27,11 @@ from ..contracts import ExecutionPlan, assert_execution_scope
 from ..core.base import AGENT_CONTROLLERS, CoreError, Registry
 from ..core.flight.width import FlightWidthError, flight_width
 from ..core.flight_lock import read_flight_lock
+from ..core.rollout_trace import RowSupplyScores as _RolloutSupplyScores
+from ..core.rollout_trace import cost_records as _rollout_cost_records
+from ..core.rollout_trace import node_of as _rollout_node_of
+from ..core.rollout_trace import record_contact as _rollout_record_contact
+from ..core.rollout_trace import supplied_value_ids_from_payload as _rollout_supplied_ids
 from ..core.tracing import TraceBuffer, set_current_trace_buffer
 from .consumption import ConsumptionTrace
 from .core_client import CoreClient, CoreCompletion, FrozenCoreClient, PreparedCoreRequest
@@ -1994,7 +1999,64 @@ def _complete_agent_request(
     *, core_client: CoreClient, messages, arguments, trace_buffer: TraceBuffer,
     prepared_request: PreparedCoreRequest | None = None,
 ) -> tuple[str, CoreCompletion | None]:
-    """Preserve response-local native metadata on the same metered request path."""
+    """Preserve response-local native metadata on the same metered request path.
+
+    Plan T1 / M4: the dispatch seam of the controller-driven (non-native-graph) agent paths. The contact is dispatched by
+    :func:`_complete_agent_request_untraced`, unchanged; when the flight armed a rollout trace, one ``contact`` line is written
+    AFTER the result is in hand. The trace never alters the result or raises into the contact.
+    """
+
+    writer = getattr(core_client, "rollout_trace", None)
+    if writer is None:
+        return _complete_agent_request_untraced(
+            core_client=core_client, messages=messages, arguments=arguments, trace_buffer=trace_buffer,
+            prepared_request=prepared_request,
+        )
+    try:
+        result = _complete_agent_request_untraced(
+            core_client=core_client, messages=messages, arguments=arguments, trace_buffer=trace_buffer,
+            prepared_request=prepared_request,
+        )
+    except Exception as error:
+        _trace_agent_request(core_client, arguments, trace_buffer, None, None, error)
+        raise
+    _trace_agent_request(core_client, arguments, trace_buffer, result[0], result[1], None)
+    return result
+
+
+def _trace_agent_request(core_client, arguments, trace_buffer, text, completion, error) -> None:
+    try:
+        decoding = arguments.get("decoding_params") if isinstance(arguments.get("decoding_params"), Mapping) else {}
+        row_id = (
+            arguments.get("raw_agent_sample_id") or arguments.get("speech_feature_sample_id")
+            or arguments.get("text_only_sample_id")
+        )
+        slot = decoding.get("id_slot")
+        _rollout_record_contact(
+            core_client.rollout_trace, row_id=row_id, arm=None, node="other", role_id=None,
+            contact_id=arguments.get("agent_contact_id"), contact_index=None, sample_index=None,
+            request_id=None if completion is None else completion.request_id,
+            outcome="ok" if error is None else "error", error_type=None if error is None else type(error).__name__,
+            id_slot=slot, instance=core_client.rollout_instance_for_slot(slot), supply_variant_id=None,
+            supply_ids=(), supply_scores=None, costs=_rollout_cost_records(trace_buffer), decoding=decoding,
+            finish_reason_fallback=None if completion is None else completion.finish_reason,
+            answer_text=text,
+            response_text_sha256=(
+                completion.response_text_sha256 if completion is not None
+                else hashlib.sha256(text.encode("utf-8")).hexdigest() if isinstance(text, str) else None
+            ),
+        )
+    except Exception:  # noqa: BLE001 -- the trace never fails a contact
+        import logging  # noqa: PLC0415
+
+        logging.getLogger(__name__).warning("rollout trace contact skipped", exc_info=True)
+
+
+def _complete_agent_request_untraced(
+    *, core_client: CoreClient, messages, arguments, trace_buffer: TraceBuffer,
+    prepared_request: PreparedCoreRequest | None = None,
+) -> tuple[str, CoreCompletion | None]:
+    """The dispatch itself; see :func:`_complete_agent_request`."""
     native = "tool_choice" in arguments.get("decoding_params", {})
     method_name = (
         "complete_prepared_with_metadata" if native else "complete_prepared"
@@ -2874,6 +2936,53 @@ async def _invoke_native_role_episode(
     # ``saea-solver-cited-answer-v1``.
     citation_contacts: dict[str, dict[str, object]] = {}
     citation_records: list[dict[str, object]] = []
+    # Plan T1 / M4 (``core.rollout_trace``, schema ``saea-rollout-trace-v1``): one trace line per dispatched contact. Observation
+    # only -- every value below is read from objects this function already holds AFTER the contact returned; nothing here
+    # touches a request byte, a hash or a decision, and a failure is logged and swallowed (``record_contact`` never raises).
+    rollout_trace = getattr(core_client, "rollout_trace", None)
+    rollout_supply_scores = _RolloutSupplyScores()
+    rollout_solver_answers: dict[str, str] = {}
+    rollout_nodes = {role.phase_id: _rollout_node_of(role.role_kind) for role in config.roles}
+
+    def trace_native_contact(
+        request, prepared, completion, trace, slot_id, contact_index, *, error=None, node=None,
+    ):
+        if rollout_trace is None:
+            return
+        try:
+            refused = getattr(error, "seal_refusal_completion", None) if error is not None else None
+            completion = completion if completion is not None else refused
+            context = request.context
+            row_id = context.sample_id
+            arm = context.variant_arm_id or context.perception_branch_id
+            node = node if node is not None else rollout_nodes.get(request.role_id, "other")
+            payload = {}
+            if prepared is not None:
+                payload = prepared.request.as_payload()
+            decoding = payload.get("decoding_params") if isinstance(payload.get("decoding_params"), Mapping) else {}
+            answer_text = None
+            if node == "solver":
+                answer_text = rollout_solver_answers.get(context.agent_contact_id)
+                if answer_text is None and completion is not None and not completion.tool_calls:
+                    answer_text = completion.text
+            _rollout_record_contact(
+                rollout_trace, row_id=row_id, arm=arm, node=node, role_id=request.role_id,
+                contact_id=context.agent_contact_id, contact_index=contact_index, sample_index=context.sample_index,
+                request_id=None if completion is None else completion.request_id,
+                outcome="ok" if error is None else ("refused" if refused is not None else "error"),
+                error_type=None if error is None else type(error).__name__,
+                id_slot=slot_id, instance=core_client.rollout_instance_for_slot(slot_id),
+                supply_variant_id=context.variant_arm_id, supply_ids=_rollout_supplied_ids(payload),
+                supply_scores=rollout_supply_scores.lookup(row_id, arm),
+                costs=_rollout_cost_records(trace), decoding=decoding,
+                finish_reason_fallback=None if completion is None else completion.finish_reason,
+                answer_text=answer_text,
+                response_text_sha256=None if completion is None else completion.response_text_sha256,
+            )
+        except Exception:  # noqa: BLE001 -- the trace never fails a contact
+            import logging  # noqa: PLC0415
+
+            logging.getLogger(__name__).warning("rollout trace contact skipped", exc_info=True)
 
     def context():
         return _runtime_context(
@@ -3675,6 +3784,11 @@ async def _invoke_native_role_episode(
             # ride the accumulated QueryState. Acquire only what is new; the
             # first visit of every phase is returned unchanged.
             supply = restrict_repeat_visit_supply(supply, before, phase_name=next_phase)
+        if rollout_trace is not None and supply is not None:
+            rollout_supply_scores.note(
+                before.sample_id, None, rank_result=supply.rank_result, fusion_decision=supply.fusion_decision,
+                values=snapshot.values,
+            )
         if (
             next_phase is not None and next_phase == solver_phase_id
             and perception_branch_group is not None
@@ -3713,6 +3827,11 @@ async def _invoke_native_role_episode(
                     () if branch_supply is None
                     else tuple(branch_supply.fusion_decision.selected_value_ids)
                 )
+                if rollout_trace is not None and branch_supply is not None:
+                    rollout_supply_scores.note(
+                        before.sample_id, branch.branch_id, rank_result=branch_supply.rank_result,
+                        fusion_decision=branch_supply.fusion_decision, values=snapshot.values,
+                    )
         if (
             next_phase is not None and next_phase == supply_variant_phase_id
             and not template_variant_mode
@@ -3741,6 +3860,11 @@ async def _invoke_native_role_episode(
                 arm_supply = binding.supply_variant_for_phase(
                     arm_id=arm.arm_id, phase_id=next_phase, context=staged,
                 )
+                if rollout_trace is not None and arm_supply is not None:
+                    rollout_supply_scores.note(
+                        before.sample_id, arm.arm_id, rank_result=arm_supply.rank_result,
+                        fusion_decision=arm_supply.fusion_decision, values=snapshot.values,
+                    )
                 selected = (
                     () if arm_supply is None
                     else tuple(arm_supply.fusion_decision.selected_value_ids)
@@ -4466,6 +4590,10 @@ async def _invoke_native_role_episode(
             # Preserve the raw empty response hash while allowing the later wire
             # projection to apply its existing non-stop completion disposition.
             state_content = '{"schema":"saea-empty-phase-response-v1","response_text":""}'
+        if rollout_trace is not None and rollout_nodes.get(request.role_id) == "solver":
+            # Plan T1 / M4: the answer text the Solver node takes into custody (the cited-answer contract's answer, not its
+            # envelope); the contact line parses it as emitted.
+            rollout_solver_answers[plan.contact_id] = state_content
         source = seal_phase_response_state(
             phase_name=request.role_id, sample_id=before.sample_id,
             state_content=state_content, raw_response_text=completion.text,
@@ -5008,10 +5136,12 @@ async def _invoke_native_role_episode(
         )
         trace = TraceBuffer(run_id, spool=state.trace_spool)
         state.trace_buffers[(state.scheduled_contacts, 0)] = trace
+        rollout_contact_index = state.scheduled_contacts
         state.scheduled_contacts += 1
         state.seen_contact_ids.add(contact_id)
         consumer_trace = get_current_trace_buffer()
         set_current_trace_buffer(trace)
+        prepared = None
         try:
             prepared = cleaning_request.prepare(role_request)
             binding.request_gate(prepared.request)
@@ -5023,6 +5153,14 @@ async def _invoke_native_role_episode(
                 "use_response_text_sha256": completion.response_text_sha256,
                 "use_agent_contact_id": completion.agent_contact_id,
             })
+            trace_native_contact(
+                role_request, prepared, completion, trace, visit["slot_id"], rollout_contact_index, node="other",
+            )
+        except Exception as error:
+            trace_native_contact(
+                role_request, prepared, None, trace, visit["slot_id"], rollout_contact_index, error=error, node="other",
+            )
+            raise
         finally:
             cleaning_bindings.pop(contact_id, None)
             set_current_trace_buffer(consumer_trace)
@@ -5216,10 +5354,12 @@ async def _invoke_native_role_episode(
         )
         trace = TraceBuffer(run_id, spool=state.trace_spool)
         state.trace_buffers[(state.scheduled_contacts, 0)] = trace
+        rollout_contact_index = state.scheduled_contacts
         state.scheduled_contacts += 1
         state.seen_contact_ids.add(contact_id)
         prior_trace = get_current_trace_buffer()
         set_current_trace_buffer(trace)
+        prepared = None
         try:
             prepared = relisten_request.prepare(role_request, binding_override=relisten_binding)
             binding.request_gate(prepared.request)
@@ -5231,6 +5371,14 @@ async def _invoke_native_role_episode(
                 "use_response_text_sha256": completion.response_text_sha256,
                 "use_agent_contact_id": completion.agent_contact_id,
             })
+            trace_native_contact(
+                role_request, prepared, completion, trace, slot_id, rollout_contact_index, node="other",
+            )
+        except Exception as error:
+            trace_native_contact(
+                role_request, prepared, None, trace, slot_id, rollout_contact_index, error=error, node="other",
+            )
+            raise
         finally:
             set_current_trace_buffer(prior_trace)
         if completion.agent_contact_id != contact_id:
@@ -5616,9 +5764,11 @@ async def _invoke_native_role_episode(
             state.seen_contact_ids.add(request.context.agent_contact_id)
             trace = TraceBuffer(run_id, spool=state.trace_spool)
             state.trace_buffers[(state.scheduled_contacts, 0)] = trace
+            rollout_contact_index = state.scheduled_contacts
             state.scheduled_contacts += 1
             visits[request.role_id]["slot_id"] = slot_id
             set_current_trace_buffer(trace)
+            prepared = None
             try:
                 prepared = adapter_request.prepare(request)
                 prepared, compaction = fit_contact_to_slot(request, prepared)
@@ -5665,7 +5815,11 @@ async def _invoke_native_role_episode(
                     "use_response_text_sha256": completion.response_text_sha256,
                     "use_agent_contact_id": completion.agent_contact_id,
                 })
+                trace_native_contact(request, prepared, completion, trace, slot_id, rollout_contact_index)
                 return completion
+            except Exception as error:
+                trace_native_contact(request, prepared, None, trace, slot_id, rollout_contact_index, error=error)
+                raise
             finally:
                 set_current_trace_buffer(None)
         options = {"prefix_family": request.role_id} if binding.prefix_slots is not None or binding.node_batch is not None or binding.node_pipeline is not None else {}

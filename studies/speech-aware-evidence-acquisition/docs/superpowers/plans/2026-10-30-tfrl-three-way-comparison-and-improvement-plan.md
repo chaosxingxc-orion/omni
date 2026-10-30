@@ -107,3 +107,18 @@ SLU-F1 and intent with CI95, the A-to-D gap, the T-to-A gap, Fold A confirmation
 | R2 | M2: adopt the two-fold rule (Fold A confirmation flight per accepted lever) | yes |
 | R3 | T's sampling budget: K = 4, 3 iterations, 625-row column | yes |
 | R4 | start T1-T5 now, in parallel with the base lock | yes |
+
+## 8. Owner answers (2026-10-30, translated) and the planner's resulting rules
+
+- **R1 and R3: delegated to the planner, "lock a clear baseline configuration from experimental feedback, accuracy first".**
+  Rule: among admissible configurations (zero worst-case preemptions, KV peak <= 90 %, every 3.4 threshold), choose the one
+  with the highest expected task accuracy; efficiency breaks ties only. Applied to the thinking budget: the budget is
+  raised to 6,144 and the worst case is re-measured at 32, then 24, then 16 per instance; the base is the highest
+  admissible level at 6,144. Only if NO level >= 16 is admissible at 6,144 does the base stay at 3,072 and 32. The budget
+  lives in the hashed model fragment (`...-budget3072-...` -> a `-budget6144-` successor fragment), so the port package
+  is re-minted by the writer before the countersign, and "thinking budget" is added to the declared differences against
+  the 268-B reference; S0 parity is still read against the band, because the band is the system's reading and the
+  budget is part of our system. TFRL-v2 sampling starts at K = 4, three iterations; after iteration 1 the planner may
+  raise K to 8 on the rows where the reward variance is highest, within the same card budget, and records the change.
+- **R2: YES.** Fold A confirmation is required for every accepted lever and for the D/A/T comparison.
+- **R4: launch authorised** (arm B P3/P3b and E3).
