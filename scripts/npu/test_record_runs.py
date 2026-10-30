@@ -340,7 +340,7 @@ def test_base_lock_v1_combined_list_has_one_r0_and_three_runs():
     assert [r["id"] for r in rl["runs"]] == ["R-A2-L32", "R-A3-L32", "R-A3-b6144"]
     assert [r["levels"] for r in rl["runs"]] == [[32], [32], [32, 24, 16]]
     assert [r["min_tokens"] for r in rl["runs"]] == [None, 4096, 7168]
-    assert {r["on_fail"] for r in rl["runs"]} == {"stop_chain"}
+    assert [r["on_fail"] for r in rl["runs"]] == ["stop_chain", "stop_chain", "continue"]
     b = json.loads((HERE / "record_run_list.budget6144-worstcase.json").read_text())["runs"][0]
     assert rl["runs"][2]["sweep"] == b["sweep"] and rl["runs"][2]["max_latency_s"] == b["max_latency_s"] == 735.0
     assert rl["runs"][1]["admissibility"] and rl["runs"][2]["admissibility"]

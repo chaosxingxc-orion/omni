@@ -10,6 +10,7 @@
 #     applies; set a distinct value per instance when several instances share the host network) and MM_CACHE_TYPE
 #     (default unset: the engine default and no flag; `lru` or `shm` appends `--mm-processor-cache-type <value>`, a
 #     DEPLOYMENT flag outside protocol_sha256 -- plan 3.11 ruling 3 / S16b; any other value is refused).
+#     DRY_RUN=1 prints the container shape and the serve argv and starts nothing (thinking only; no busy-card check).
 #   bash npu_serve.sh embed <view-id> <card> <port>
 # The container mounts ONLY the named cards, so the harness telemetry (read_gpu -> npu-smi) sees exactly them.
 set -euo pipefail
@@ -48,6 +49,16 @@ run() {
   local log=$LOGS/$name-$(date +%Y%m%dT%H%M%S).log
   # HCCL needs the host NIC that carries the node's IPv4 address, else hcclGetRootInfo fails (code 19). Verified on 181.
   local nic; nic=$(ip -o -4 addr show scope global | awk '{print $2; exit}')
+  if [[ "${DRY_RUN:-}" == "1" ]]; then
+    # Render only: print what would be launched and start nothing (no docker, no log follower). The preliminary
+    # chains never set DRY_RUN, so the live path below is unchanged.
+    printf 'DRY_RUN name=%s cards=%s cpuset=%s hccl=%s nic=%s\n' "$name" "$cards" "$cpuset" "${HCCL_BASE_PORT:-}" "$nic"
+    printf 'DRY_DEVICE %s\n' $(devices "$cards")
+    printf 'DRY_ENTRYPOINT %s\n' /usr/local/python3.12.13/bin/python3
+    printf 'DRY_IMAGE %s\n' "$IMAGE"
+    printf 'DRY_ARG %s\n' "$@"
+    return 0
+  fi
   # Daemon-managed container (docker run -d): it is not a child of this shell or of any ssh session, so a dropped
   # connection cannot stop it. --restart no: a crashed server stays down for the owner to read, never loops.
   # The entrypoint is the image's python so the live cmdline is the receipt gate's VLLM_ENTRYPOINT form
@@ -70,7 +81,7 @@ run() {
 case $KIND in
   thinking)
     CARDS=$1 PORT=$2 TP=${3:-1}
-    refuse_busy "$CARDS"
+    if [[ "${DRY_RUN:-}" != "1" ]]; then refuse_busy "$CARDS"; fi
     MESSAGE="Considering the limited time by the user, I have to give the solution based on the thinking directly now."
     # The forced string's whitespace around the message is the section-4 ASSUMPTION the smoke verifies.
     REASONING=$(python3 -c 'import json,sys; print(json.dumps({"reasoning_end_str": sys.argv[1] + "\n</think>\n\n"}))' "$MESSAGE")

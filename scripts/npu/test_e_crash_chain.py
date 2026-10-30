@@ -169,12 +169,17 @@ class LauncherCopyTests(unittest.TestCase):
         self.assertEqual(args, spec["cmd"][1:] + ["--no-enable-prefix-caching"])
 
     def test_original_launcher_is_untouched_and_the_copy_differs_only_by_the_extra_hooks(self):
-        original = (HERE / "npu_serve.sh").read_text().splitlines()
+        # The copy was cut from the pre-S10 launcher; after the S10 swap that file is kept as npu_serve.sh.pre-s10-20261030.
+        pre_s10 = HERE / "npu_serve.sh.pre-s10-20261030"
+        original = (pre_s10 if pre_s10.exists() else HERE / "npu_serve.sh").read_text().splitlines()
         copy = (HERE / "npu_serve_e.sh").read_text().splitlines()
         removed = [l for l in original if l not in copy]
         self.assertEqual(removed, ["    refuse_busy \"$CARDS\"", "      --seed 0"])  # only these two lines are replaced
-        self.assertNotIn("EXTRA_ARGS", "\n".join(original))
-        self.assertTrue((HERE / "npu_serve.sh.s10-next").exists())
+        self.assertNotIn("EXTRA_ARGS", (HERE / "npu_serve.sh").read_text())
+        # The serving launcher (the sidecar until the swap, npu_serve.sh after it) passes --gpu-memory-utilization.
+        sidecar = HERE / "npu_serve.sh.s10-next"
+        launcher = (sidecar if sidecar.exists() else HERE / "npu_serve.sh").read_text()
+        self.assertIn('--gpu-memory-utilization "${GPU_MEM_UTIL:-0.92}"', launcher)
 
     def test_container_name_guard(self):
         ops = e.EReal.__new__(e.EReal)
