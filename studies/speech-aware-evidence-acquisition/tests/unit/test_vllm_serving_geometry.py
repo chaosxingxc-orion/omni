@@ -143,3 +143,18 @@ def test_the_runtime_view_checks_a_vllm_fragment_in_its_own_dialect():
     llama["server_args"] = ["-c", "98304"]
     with pytest.raises(RuntimeViewError, match="-np exactly once"):
         configured_geometry(llama, defaults=(8, 8192, 64))
+
+
+@pytest.mark.parametrize("tokens", [["--mm-processor-cache-type", "shm"], ["--mm-processor-cache-type=lru"],
+                                    ["--mm-processor-cache-gb", "8"], ["--disable-mm-preprocessor-cache"]])
+def test_a_vllm_fragment_may_not_carry_a_multimodal_cache_flag(tokens):
+    flag = tokens[0].split("=", 1)[0]
+    with pytest.raises(ServingSessionError, match=flag):
+        merge_server_args([*_VLLM_ARGS, *tokens], slots=4, context_tokens=4 * 24576, transport="vllm")
+    with pytest.raises(ServingSessionError, match=flag):
+        declared_server_geometry([*_VLLM_ARGS, *tokens], transport="vllm")
+    from speech_aware_evidence_acquisition.rails.adapters.runtime_view import RuntimeViewError, configured_geometry
+
+    values = {"transport": "vllm", "server_args": [*_VLLM_ARGS, *tokens], "serving_slots": 4, "serving_slot_tokens": 24576}
+    with pytest.raises(RuntimeViewError, match=flag):
+        configured_geometry(values, defaults=(8, 8192, 64))

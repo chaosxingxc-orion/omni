@@ -249,7 +249,7 @@ def test_the_docker_command_mounts_only_its_own_cards_and_is_resident(profile, f
     devices = [argv[k + 1] for k, token in enumerate(argv) if token == "--device"]
     assert devices == ["/dev/davinci_manager", "/dev/devmm_svm", "/dev/hisi_hdc", "/dev/davinci2", "/dev/davinci3"]
     pairs = dict(zip(argv[::1], argv[1::1]))
-    assert pairs["--restart"] == "unless-stopped" and pairs["--network"] == "host"
+    assert pairs["--restart"] == "no" == dep.RESTART_POLICY and pairs["--network"] == "host"
     assert pairs["--cpuset-cpus"] == "128-159"
     assert pairs["--entrypoint"] == dep.CONTAINER_INTERPRETER == "/usr/local/python3.12.13/bin/python3"
     assert "/mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni" in argv
@@ -442,3 +442,43 @@ def test_the_fixture_tables_parse_like_the_real_capture():
     assert [row["memory_used_mib"] for row in telemetry.parse_npu_smi_table(BUSY_181)][:2] == [62846.0, 62788.0]
     assert dep.npu_smi_process_cards(IDLE) == frozenset()
     assert len(telemetry.parse_npu_smi_table(copy.copy(IDLE))) == 8
+
+
+def test_mm_processor_cache_type_is_emitted_from_the_profile_only_when_set(fragment):
+    document = _document()
+    assert "mm_processor_cache_type" not in document
+    plain = dep.instance_server_argv(dep.validate_deployment_profile(document), dep.validate_deployment_profile(document).instances[0], fragment)
+    assert "--mm-processor-cache-type" not in plain
+    document["mm_processor_cache_type"] = "shm"
+    profile = dep.validate_deployment_profile(document)
+    argv = dep.instance_server_argv(profile, profile.instances[0], fragment)
+    assert argv[argv.index("--mm-processor-cache-type") + 1] == "shm"
+    assert split_vllm_server_argv(["/p", *VLLM_ENTRYPOINT, *argv[1:]]).deployment["--mm-processor-cache-type"] == "shm"
+    assert "--mm-processor-cache-type" in dep.DEPLOYMENT_ONLY_FLAGS
+
+
+def test_a_recorded_run_never_restarts_itself_and_the_record_says_so(profile, fragment):
+    for instance in profile.instances:
+        argv = dep.docker_run_argv(profile, instance, fragment, nic=NIC)
+        assert argv.count("--restart") == 1 and argv[argv.index("--restart") + 1] == "no"
+        assert "unless-stopped" not in argv and "always" not in argv
+    assert dep.deployment_record(profile, nic=NIC)["restart_policy"] == "no"
+
+
+def test_admitted_level_is_an_optional_deployment_only_profile_field():
+    document = _document()
+    base = dep.validate_deployment_profile(document)
+    assert base.admitted_level is None
+    document["admitted_level"] = 16
+    profile = dep.validate_deployment_profile(document)
+    assert profile.admitted_level == 16 and profile.sha256 != base.sha256
+    fragment = dep.model_fragment_values(profile)
+    # never emitted to the argv: the argv is byte-identical with and without it
+    assert dep.instance_server_argv(profile, profile.instances[0], fragment) == dep.instance_server_argv(
+        base, base.instances[0], fragment
+    )
+    assert dep.deployment_record(profile)["admitted_level"] == 16
+    assert dep.deployment_record(base)["admitted_level"] is None
+    for bad in (0, -1, True, 1.5, "8", base.max_num_seqs + 1):
+        with pytest.raises(dep.DeploymentError, match="admitted_level"):
+            dep.validate_deployment_profile(dict(document, admitted_level=bad))

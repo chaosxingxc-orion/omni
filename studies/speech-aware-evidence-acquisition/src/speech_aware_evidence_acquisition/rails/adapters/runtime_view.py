@@ -124,6 +124,17 @@ def configured_geometry(values: Mapping[str, object], *, defaults: tuple[int, in
             raise RuntimeViewError(
                 f"server_args must not declare {slot_flag}: sequences per instance is a deployment fact"
             )
+        from ...contracts.gate_runtime_vllm import MM_PROCESSOR_CACHE_FLAG, refuse_unclassified_mm_flag
+
+        for token in map(str, argv):
+            if token.split("=", 1)[0] == MM_PROCESSOR_CACHE_FLAG:
+                raise RuntimeViewError(
+                    f"server_args must not declare {MM_PROCESSOR_CACHE_FLAG}: the multimodal processor cache "
+                    "transport is a deployment fact"
+                )
+            refusal = refuse_unclassified_mm_flag(token)
+            if refusal is not None:
+                raise RuntimeViewError(f"server_args: {refusal}")
         checked = checked[1:]
     for name, expected in checked:
         if argv.count(name) != 1:

@@ -144,3 +144,25 @@ def test_changing_a_protocol_field_moves_the_fragment_composed_and_receipt_hashe
     moved = {"protocol": {"server_args": list(changed["server_args"])}, "deployment": {"instances": []}}
     if changed["server_args"] != original["server_args"]:
         assert protocol_sha256(moved) != protocol_sha256(receipt)
+
+
+def test_mm_processor_cache_type_moves_no_protocol_hash_and_is_recorded(fragment):
+    first, second = _profile(), _profile(mm_processor_cache_type="shm")
+    assert fragment_hash(dep.model_fragment_values(first)) == fragment_hash(dep.model_fragment_values(second))
+    argv_first = dep.instance_server_argv(first, first.instances[0], fragment)
+    argv_second = dep.instance_server_argv(second, second.instances[0], fragment)
+    _s, protocol_first, deployment_first = classify_server_flags(argv_first[2:])
+    _s, protocol_second, deployment_second = classify_server_flags(argv_second[2:])
+    assert list(protocol_first) == list(protocol_second)
+    assert "--mm-processor-cache-type" not in deployment_first
+    assert deployment_second["--mm-processor-cache-type"] == "shm"
+    assert dep.deployment_record(first)["mm_processor_cache_type"] is None
+    assert dep.deployment_record(second)["mm_processor_cache_type"] == "shm"
+    receipt = {
+        "schema": "x",
+        "protocol": {"served_model_name": fragment["served_model_name"], "server_args": list(fragment["server_args"])},
+        "deployment": {"instances": [{"max_num_seqs": 64}]},
+    }
+    moved = copy.deepcopy(receipt)
+    moved["deployment"]["instances"][0]["mm_processor_cache_type"] = "shm"
+    assert protocol_sha256(moved) == protocol_sha256(receipt)

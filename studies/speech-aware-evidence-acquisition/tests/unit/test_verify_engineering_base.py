@@ -81,6 +81,7 @@ class FixtureReaders(veb.Readers):
         self.logs: dict[str, list[str]] = {}
         self.cmdlines: dict[str, list[str]] = {}
         self.versions: dict[str, str | None] = {}
+        self.version_interpreters: set[str | None] = set()
         self.python = "3.12.13"
         self.execution: str | Exception = "saea-container"
         self.runtime_files_check = None
@@ -156,8 +157,9 @@ class FixtureReaders(veb.Readers):
             raise veb.ReadError(f"fixture has no cmdline for {name}")
         return list(self.cmdlines[name])
 
-    def dist_version(self, name):
+    def dist_version(self, name, interpreter=None):
         self._log("dist_version")
+        self.version_interpreters.add(interpreter)
         return self.versions.get(name)
 
     def python_version(self):
@@ -753,3 +755,32 @@ def test_select_global_nic_skips_bridges_and_virtual_pairs():
 def test_cache_config_info_labels_are_parsed():
     labels = veb.parse_cache_config_info('x 1\nvllm:cache_config_info{block_size="128",num_gpu_blocks="4408"} 1.0\n')
     assert labels == {"block_size": "128", "num_gpu_blocks": "4408"}
+
+
+def test_the_versions_check_reads_the_serving_interpreter_not_the_verifiers_own(world):
+    assert veb.SERVING_INTERPRETER == "/usr/local/python3.12.13/bin/python3"
+    assert veb.SERVING_INTERPRETER in veb.DEFAULT_INTERPRETERS
+    _, report, _ = world.verify("--only", "versions")
+    assert report["checks"]["versions"]["verdict"] == "pass"
+    assert world.readers.version_interpreters == {veb.SERVING_INTERPRETER}
+
+
+def test_live_readers_read_package_metadata_of_another_interpreters_site_packages(tmp_path):
+    prefix = tmp_path / "py"
+    (prefix / "bin").mkdir(parents=True)
+    interpreter = prefix / "bin" / "python3"
+    interpreter.write_bytes(b"ELF-stub")
+    site = prefix / "lib" / "python3.12" / "site-packages"
+    for dist, version in (("vllm_ascend", "0.30.0rc2"), ("torch_npu", "2.10.0.post7")):
+        info = site / f"{dist}-{version}.dist-info"
+        info.mkdir(parents=True)
+        (info / "METADATA").write_text(f"Metadata-Version: 2.1\nName: {dist.replace('_', '-')}\nVersion: {version}\n")
+    readers = veb.LiveReaders(None)
+    assert readers.dist_version("vllm-ascend", str(interpreter)) == "0.30.0rc2"
+    assert readers.dist_version("torch_npu", str(interpreter)) == "2.10.0.post7"
+    assert readers.dist_version("vllm", str(interpreter)) is None  # absent there, whatever the verifier's own has
+    with pytest.raises(veb.ReadError):
+        readers.dist_version("vllm", str(tmp_path / "missing" / "bin" / "python3"))
+    from importlib import metadata
+
+    assert readers.dist_version("pytest") == metadata.version("pytest")  # the verifier's own interpreter, in process

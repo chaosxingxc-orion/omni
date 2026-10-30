@@ -1,0 +1,50 @@
+{
+  "basis": "REVISION v3 (DRAFT, adopted only if E3 passes): the v2 profile plus mm_processor_cache_type shm. Plan 3.11 ruling 3 (owner choice, planner-conditioned): --mm-processor-cache-type shm (vLLM 0.30.0; choices lru/shm; cache size stays at the engine default) is a cache-transport knob that by source changes no logits, so it is a DEPLOYMENT fact recorded in the deployment layer and never in protocol_sha256 (S16b). The source read is in /mnt/cephfs/xingchao/omni/work/scratch/badcase/2026-10-29-e0-mm-encoder-preemption-source.md. Adoption rule: E3 on 4xTP2 shows zero engine exits in two shm passes AND a warm sequential A/A probe agrees 16/16 with the baseline instance; otherwise shm is dropped and v2 stays. Everything else is the v2 profile, whose basis follows. Sweep-only comparison arm: two instances x tensor-parallel 4 on host A800I-03 (ssh npu2), measured against the 4xtp2 profile by the synthetic concurrency sweep (owner decision 2026-10-28). REVISION v2 (DRAFT, pending the owner's answer to Q-B): max_num_seqs 64 is a PLACEHOLDER ceiling, TODO-PLANNER: the planner sets the value from the arm B admitted level (P3b) before any use. It is a deployment fact (outside protocol_sha256). Each experiment's client concurrency comes from the synthetic sweep's knee (scripts/serving/synthetic_sweep.py) and stays below it. cpusets pin each instance to its own cards' PCI NUMA node(s) read on 181 (2026-10-28: NPU 0-1 node 6 = 192-223, 2-3 node 4 = 128-159, 4-5 node 0 = 0-31, 6-7 node 2 = 64-95; 32 cores per node). The other 128 cores (nodes 1/3/5/7) stay free for the flight harness and CPU encoder runs on the same host.",
+  "bind_host": "127.0.0.1",
+  "busy_threshold_mib": 4096,
+  "data_mount": "/mnt/cephfs/xingchao/omni",
+  "gpu_memory_utilization": 0.92,
+  "host": "A800I-03",
+  "host_card_count": 8,
+  "host_cpu_count": 256,
+  "image": "saea-base:20261027",
+  "instances": [
+    {
+      "cards": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "cpuset": "128-159,192-223",
+      "env": {
+        "HCCL_IF_BASE_PORT": "61000"
+      },
+      "name": "saea-omni-i0",
+      "port": 8200
+    },
+    {
+      "cards": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "cpuset": "0-31,64-95",
+      "env": {
+        "HCCL_IF_BASE_PORT": "61200"
+      },
+      "name": "saea-omni-i1",
+      "port": 8201
+    }
+  ],
+  "max_num_batched_tokens": null,
+  "max_num_seqs": 64,
+  "mm_processor_cache_type": "shm",
+  "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
+  "model_relpath": "models/qwen3-omni-30b-a3b-thinking",
+  "profile_id": "qwen3-omni-thinking-bf16-181-2xtp4-v3",
+  "schema": "saea-deployment-profile-v1",
+  "shm_size": "16g",
+  "tensor_parallel_size": 4
+}

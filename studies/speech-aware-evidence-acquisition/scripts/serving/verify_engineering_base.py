@@ -32,7 +32,7 @@ same shape from a live run::
     image.base.ref / local_id                                      L2  (12-hex local id of the base image)
     python.version                                                 L3  (running interpreter)
     python.interpreters.<path>.realpath / sha256                   L3  (exe sha256 of each listed interpreter)
-    versions.<dist>                                                L4  (importlib.metadata version; null = absent)
+    versions.<dist>                                                L4  (importlib.metadata version read from the SERVING interpreter; null = absent)
     cann.image_files.<path>.sha256 / bytes                         L5  (files inside the verifier image)
     hosts.<hostname>.cann_files.<host path>.sha256 / bytes         L5  (host files, read through --host-root)
     hosts.<hostname>.card_count / cpu_count / global_nic           L6, L12
@@ -44,7 +44,7 @@ same shape from a live run::
         forced_close_message_sha256,reasoning_context_policy,timeout_seconds,enable_thinking}   L10
     profiles.<profile_id>.profile_sha256                           L11
     profiles.<profile_id>.instances.<name>.{cards,cpuset,port,tensor_parallel_size,max_num_seqs,
-        gpu_memory_utilization,max_num_batched_tokens,server_argv_sha256}                       L11
+        gpu_memory_utilization,max_num_batched_tokens,mm_processor_cache_type,server_argv_sha256}                     L11
     profiles.<profile_id>.instances.<name>.engine.{kv_tokens,max_concurrency,block_size,prefix_caching,
         chunked_prefill,cudagraph_mode,cudagraph_capture_sizes,execute_model_timeout_seconds}   L13
     network_env.network_mode / ro_mounts[]                         L12
@@ -102,6 +102,10 @@ CHECK_NAMES = (
 )
 DEFAULT_BASE_IMAGE_REF = "quay.io/ascend/vllm-ascend:v0.30.0rc2"
 DEFAULT_INTERPRETERS = ("/opt/saea-venv/bin/python", "/usr/local/python3.12.13/bin/python3")
+#: The interpreter that RUNS vLLM (the serving stack). Check 2 reads package versions from ITS metadata: the harness venv
+#: (``/opt/saea-venv``) carries no vllm, vllm-ascend or torch_npu, so reading the verifier's own interpreter observes
+#: different values from what serves (base-lock record D1).
+SERVING_INTERPRETER = "/usr/local/python3.12.13/bin/python3"
 DEFAULT_DISTS = ("vllm", "vllm-ascend", "torch", "torch_npu", "transformers", "triton")
 REQUIRED_DISTS = ("vllm", "vllm-ascend", "torch", "torch_npu", "transformers")
 DEFAULT_HOST_CANN_FILES = (
@@ -175,7 +179,8 @@ class Readers:
     def container_cmdline(self, name: str) -> list[str]:
         raise NotImplementedError
 
-    def dist_version(self, name: str) -> str | None:
+    def dist_version(self, name: str, interpreter: str | None = None) -> str | None:
+        """``importlib.metadata`` version of ``name`` as seen by ``interpreter`` (``None``: the verifier's own)."""
         raise NotImplementedError
 
     def python_version(self) -> str:
@@ -322,13 +327,32 @@ class LiveReaders(Readers):
         return [part.decode("utf-8", "replace") for part in raw.split(b"\0") if part]
 
     # -- python environment ----------------------------------------------------
-    def dist_version(self, name: str) -> str | None:
+    def dist_version(self, name: str, interpreter: str | None = None) -> str | None:
         from importlib import metadata
 
-        try:
-            return metadata.version(name)
-        except metadata.PackageNotFoundError:
-            return None
+        if interpreter is None:
+            try:
+                return metadata.version(name)
+            except metadata.PackageNotFoundError:
+                return None
+        # Another interpreter: read its site-packages ``*.dist-info`` in this process (no child process; the verifier
+        # never executes anything). The layout is the CPython prefix layout: <prefix>/lib/python3.X/site-packages.
+        # The spelled path first (a venv's ``bin/python`` is a symlink into the base install, whose prefix is NOT the
+        # venv's), then the resolved one.
+        prefixes = [Path(os.path.abspath(interpreter)).parent.parent, Path(os.path.realpath(interpreter)).parent.parent]
+        sites = []
+        for prefix in prefixes:
+            found = sorted(str(path) for path in prefix.glob("lib/python3*/site-packages") if path.is_dir())
+            if found:
+                sites = found
+                break
+        if not sites:
+            raise ReadError(f"no site-packages directory below {prefixes[0]} for the interpreter {interpreter}")
+        wanted = re.sub(r"[-_.]+", "-", name).lower()
+        for dist in metadata.distributions(path=sites):
+            if re.sub(r"[-_.]+", "-", str(dist.metadata["Name"] or "")).lower() == wanted:
+                return dist.version
+        return None
 
     def python_version(self) -> str:
         import platform
@@ -646,7 +670,7 @@ def check_versions(ctx: Context) -> Result:
     dists = ctx.lock_keys(("versions",), DEFAULT_DISTS)
     r.require(set(REQUIRED_DISTS) <= set(dists), f"base-lock does not pin the required packages {sorted(set(REQUIRED_DISTS) - set(dists))}")
     for dist in dists:
-        version = readers.dist_version(dist)
+        version = readers.dist_version(dist, SERVING_INTERPRETER)
         r.claim("versions", dist, value=version)
         r.require(version is not None or dist not in REQUIRED_DISTS, f"required package {dist} is not installed")
     r.claim("execution", "environment", value=readers.assert_execution_environment())
@@ -877,6 +901,7 @@ def check_deployment(ctx: Context) -> Result:
             "max_num_seqs": int(deployment.get("--max-num-seqs", -1)),
             "gpu_memory_utilization": float(deployment.get("--gpu-memory-utilization", -1)),
             "max_num_batched_tokens": int(batched) if batched is not None else None,
+            "mm_processor_cache_type": deployment.get("--mm-processor-cache-type"),
             "server_argv_sha256": hashlib.sha256(json.dumps(["serve", model_dir, *flags]).encode("utf-8")).hexdigest(),
         }
         for key, value in facts.items():
@@ -886,6 +911,7 @@ def check_deployment(ctx: Context) -> Result:
             "tensor_parallel_size": profile.tensor_parallel_size, "max_num_seqs": profile.max_num_seqs,
             "gpu_memory_utilization": profile.gpu_memory_utilization,
             "max_num_batched_tokens": profile.max_num_batched_tokens,
+            "mm_processor_cache_type": profile.mm_processor_cache_type,
         }
         for key, value in wanted.items():
             r.require(facts[key] == value, f"{instance.name}: {key} is {facts[key]!r}, the profile says {value!r}")
@@ -1124,9 +1150,10 @@ def check_receipt(ctx: Context) -> Result:
             entry["receipt_instance_id"] = ri["instance_id"]
             expected = {"device_ids": list(instance.cards), "tensor_parallel_size": profile.tensor_parallel_size,
                         "max_num_seqs": profile.max_num_seqs, "gpu_memory_utilization": profile.gpu_memory_utilization,
-                        "max_num_batched_tokens": profile.max_num_batched_tokens}
+                        "max_num_batched_tokens": profile.max_num_batched_tokens,
+                        "mm_processor_cache_type": profile.mm_processor_cache_type}
             for key, value in expected.items():
-                r.require(ri[key] == value, f"{instance.name}: receipt {key} is {ri[key]!r}, the profile says {value!r}")
+                r.require(ri.get(key) == value, f"{instance.name}: receipt {key} is {ri.get(key)!r}, the profile says {value!r}")
             cmdline = readers.container_cmdline(instance.name)
             entry["cmdline_head"] = cmdline[:4]
             assert_argv_matches_instance(cmdline, receipt, ri)

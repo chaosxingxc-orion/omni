@@ -26,8 +26,9 @@ deployment profile. This module is the one place the two meet:
 * :func:`instance_server_argv` derives one instance's ``vllm serve`` argv: the deployment flags this module owns,
   then the fragment's ``server_args`` passed through :func:`~.session.serving.merge_server_args` -- the SAME merge a
   serving session and a flight use -- with ``--max-num-seqs`` written from the profile into the deployment block
-  (the same position :func:`~.contracts.gate_runtime_vllm.instance_argv` gives it). ``--max-model-len`` stays the
-  fragment's own window (it is protocol), and a fragment that carries a deployment flag, ``--max-num-seqs`` included,
+  (the same position :func:`~.contracts.gate_runtime_vllm.instance_argv` gives it) and the optional
+  ``--mm-processor-cache-type`` (S16b: a cache-transport knob that changes no logits) likewise from the profile.
+  ``--max-model-len`` stays the fragment's own window (it is protocol), and a fragment that carries a deployment flag, ``--max-num-seqs`` included,
   is refused (one owner per fact): the hashed fragment holds no deployment knob.
 * :func:`deployment_record` yields the canonical recorded facts for a manifest or receipt.
 
@@ -53,7 +54,12 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Iterable, Mapping, Sequence
 
-from ..contracts.gate_runtime_vllm import VLLM_ENTRYPOINT, undeclared_deployment_env_keys
+from ..contracts.gate_runtime_vllm import (
+    MM_PROCESSOR_CACHE_FLAG,
+    MM_PROCESSOR_CACHE_TYPES,
+    VLLM_ENTRYPOINT,
+    undeclared_deployment_env_keys,
+)
 from .config import read_fragment
 from .session.serving import declared_server_geometry, merge_server_args
 from .session.telemetry import parse_npu_smi_table
@@ -69,7 +75,12 @@ _PROFILE_KEYS = frozenset({
     "schema", "profile_id", "host", "image", "model_fragment", "model_relpath", "bind_host", "data_mount",
     "tensor_parallel_size", "max_num_seqs", "gpu_memory_utilization", "max_num_batched_tokens",
     "busy_threshold_mib", "host_card_count", "host_cpu_count", "shm_size", "instances", "basis",
+    "mm_processor_cache_type", "admitted_level",
 })
+#: Profile keys that may be absent (absent = the engine default; the flag is then not emitted). ``-v1``/``-v2`` omit it.
+#: ``admitted_level`` is the requests per instance the owner admitted (at most ``max_num_seqs``): a deployment-only
+#: fact read by ``core.flight.width``; it is never emitted to the argv and moves no hash.
+_OPTIONAL_PROFILE_KEYS = frozenset({"mm_processor_cache_type", "admitted_level"})
 _INSTANCE_KEYS = frozenset({"name", "cards", "port", "cpuset", "env"})
 _ID_PATTERN = re.compile(r"[a-z0-9][a-z0-9.-]*")
 _NAME_PATTERN = re.compile(r"saea-[a-z0-9][a-z0-9-]*")
@@ -81,6 +92,7 @@ _SHM_PATTERN = re.compile(r"[1-9][0-9]*[mg]")
 DEPLOYMENT_ONLY_FLAGS = frozenset({
     "--served-model-name", "--host", "--port", "--tensor-parallel-size", "-tp", "--pipeline-parallel-size", "-pp",
     "--data-parallel-size", "-dp", "--gpu-memory-utilization", "--max-num-batched-tokens", "--max-num-seqs",
+    MM_PROCESSOR_CACHE_FLAG,
 })
 #: The Ascend control devices every NPU container needs beside its own ``/dev/davinci<N>`` cards (as ``npu_serve.sh``).
 ASCEND_CONTROL_DEVICES = ("/dev/davinci_manager", "/dev/devmm_svm", "/dev/hisi_hdc")
@@ -104,6 +116,9 @@ CONTAINER_INTERPRETER = "/usr/local/python3.12.13/bin/python3"
 COMMON_ENV = (("HF_HUB_OFFLINE", "1"), ("TRANSFORMERS_OFFLINE", "1"))
 #: docker's json-file log grows without bound for a resident container; cap it (``docker logs`` keeps the tail).
 LOG_OPTS = ("max-size=200m", "max-file=5")
+#: ``docker run --restart``: a recorded run never restarts itself (a crashed engine stays down for the owner to read; a
+#: silent restart would put a second, unrecorded start inside one recorded run). Recorded in :func:`deployment_record`.
+RESTART_POLICY = "no"
 LABEL_PROFILE = "saea.deployment.profile"
 LABEL_PROFILE_SHA256 = "saea.deployment.profile_sha256"
 LABEL_INSTANCE = "saea.deployment.instance"
@@ -152,6 +167,8 @@ class DeploymentProfile:
     instances: tuple[InstanceSpec, ...]
     basis: str
     sha256: str
+    mm_processor_cache_type: str | None = None
+    admitted_level: int | None = None
 
     def base_url(self, instance: InstanceSpec) -> str:
         return f"http://{self.bind_host}:{instance.port}"
@@ -218,7 +235,7 @@ def validate_deployment_profile(
 
     if not isinstance(document, dict):
         raise DeploymentError(f"deployment profile {source} must be a JSON object")
-    unknown, missing = sorted(set(document) - _PROFILE_KEYS), sorted(_PROFILE_KEYS - set(document))
+    unknown, missing = sorted(set(document) - _PROFILE_KEYS), sorted(_PROFILE_KEYS - _OPTIONAL_PROFILE_KEYS - set(document))
     if unknown or missing:
         raise DeploymentError(f"deployment profile {source}: unknown keys {unknown}, missing keys {missing}")
     if document["schema"] != DEPLOYMENT_PROFILE_SCHEMA:
@@ -232,6 +249,16 @@ def validate_deployment_profile(
     batched = document["max_num_batched_tokens"]
     if batched is not None:
         batched = _int(batched, "max_num_batched_tokens", minimum=1)
+    mm_cache = document.get("mm_processor_cache_type")
+    if mm_cache is not None and mm_cache not in MM_PROCESSOR_CACHE_TYPES:
+        raise DeploymentError(
+            f"deployment profile mm_processor_cache_type must be one of {list(MM_PROCESSOR_CACHE_TYPES)} or absent; "
+            f"got {mm_cache!r}"
+        )
+    max_seqs = _int(document["max_num_seqs"], "max_num_seqs", minimum=1)
+    admitted = document.get("admitted_level")
+    if admitted is not None:
+        admitted = _int(admitted, "admitted_level", minimum=1, maximum=max_seqs)
     data_mount = _absolute(document["data_mount"] if data_root is None else str(data_root), "data_mount")
     relpath = PurePosixPath(_str(document["model_relpath"], "model_relpath"))
     if relpath.is_absolute() or ".." in relpath.parts or not relpath.parts:
@@ -294,7 +321,7 @@ def validate_deployment_profile(
         bind_host=_str(document["bind_host"], "bind_host"),
         data_mount=str(data_mount),
         tensor_parallel_size=tp,
-        max_num_seqs=_int(document["max_num_seqs"], "max_num_seqs", minimum=1),
+        max_num_seqs=max_seqs,
         gpu_memory_utilization=float(utilization),
         max_num_batched_tokens=batched,
         busy_threshold_mib=_int(document["busy_threshold_mib"], "busy_threshold_mib", minimum=0),
@@ -304,6 +331,8 @@ def validate_deployment_profile(
         instances=tuple(instances),
         basis=_str(document["basis"], "basis"),
         sha256=_canonical_sha256(document),
+        mm_processor_cache_type=mm_cache,
+        admitted_level=admitted,
     )
 
 
@@ -469,6 +498,8 @@ def instance_server_argv(
     ]
     if profile.max_num_batched_tokens is not None:
         deployment += ["--max-num-batched-tokens", str(profile.max_num_batched_tokens)]
+    if profile.mm_processor_cache_type is not None:
+        deployment += [MM_PROCESSOR_CACHE_FLAG, profile.mm_processor_cache_type]
     return ["serve", profile.model_path, *deployment, *protocol]
 
 
@@ -499,7 +530,7 @@ def docker_run_argv(
     profile: DeploymentProfile, instance: InstanceSpec, fragment: Mapping[str, object], *, nic: str
 ) -> list[str]:
     """The full detached, named, resident ``docker run`` for one instance: only its own cards, host network, its own
-    cpuset, the data root bind-mounted at the same path, ``--restart unless-stopped``, deployment labels so ``down``
+    cpuset, the data root bind-mounted at the same path, ``--restart no``, deployment labels so ``down``
     can prove a container is ours before stopping it. ``nic`` (required, no default) is written to the three
     socket-ifname variables; the entrypoint is :data:`CONTAINER_INTERPRETER` (see :func:`instance_container_args`)."""
 
@@ -513,7 +544,7 @@ def docker_run_argv(
         "--label", f"{LABEL_PROFILE}={profile.profile_id}",
         "--label", f"{LABEL_PROFILE_SHA256}={profile.sha256}",
         "--label", f"{LABEL_INSTANCE}={instance.index}",
-        "--restart", "unless-stopped", "--network", "host", "--shm-size", profile.shm_size,
+        "--restart", RESTART_POLICY, "--network", "host", "--shm-size", profile.shm_size,
         "--cpuset-cpus", instance.cpuset,
     ]
     for option in LOG_OPTS:
@@ -566,6 +597,9 @@ def deployment_record(
         "max_num_seqs_per_instance": profile.max_num_seqs,
         "gpu_memory_utilization": profile.gpu_memory_utilization,
         "max_num_batched_tokens": profile.max_num_batched_tokens,
+        "mm_processor_cache_type": profile.mm_processor_cache_type,
+        "admitted_level": profile.admitted_level,
+        "restart_policy": RESTART_POLICY,
         "card_count": len(profile.cards),
         "instances": [
             {

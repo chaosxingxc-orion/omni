@@ -463,3 +463,21 @@ def test_the_world_itself_is_internally_consistent(world):
     }
     assert json.loads(json.dumps(receipt)) == receipt
     assert copy.deepcopy(receipt) == world.receipt()
+
+
+@pytest.mark.parametrize("flag", ["--mm-processor-cache-type", "--mm-processor-cache-gb", "--mm-encoder-tp-mode"])
+def test_a_multimodal_flag_may_not_hide_in_the_protocol_args(world, flag):
+    # the cache-type flag is a deployment flag (own field); any other --mm-* flag is unclassified and refused by name
+    receipt = world.receipt(server_args=["--max-model-len", "24576", flag, "shm"])
+    with pytest.raises(GateClosed) as error:
+        _validate(world, receipt=receipt)
+    assert flag in str(error.value) or "protocol.server_args must hold only protocol flag groups" in str(error.value)
+
+
+def test_the_gate_accepts_a_recorded_cache_type_and_refuses_a_bad_one(world):
+    receipt = world.receipt_with_instances(2)
+    receipt["deployment"]["instances"][0]["mm_processor_cache_type"] = "shm"
+    _validate(world, receipt=receipt)
+    receipt["deployment"]["instances"][0]["mm_processor_cache_type"] = "disk"
+    with pytest.raises(GateClosed, match="mm_processor_cache_type"):
+        _validate(world, receipt=receipt)

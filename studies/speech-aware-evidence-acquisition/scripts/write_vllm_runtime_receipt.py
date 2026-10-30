@@ -186,6 +186,8 @@ def deployment_of(observation: dict[str, object], instance_id: str, deployment: 
             f"(expected {device_env_value(devices)!r})"
         )
     batched = deployment.get("--max-num-batched-tokens")
+    mm_cache = deployment.get("--mm-processor-cache-type")
+    extra = {} if mm_cache is None else {"mm_processor_cache_type": mm_cache}  # optional: absent = engine default
     return {
         "instance_id": instance_id,
         "host": deployment["--host"],
@@ -197,6 +199,7 @@ def deployment_of(observation: dict[str, object], instance_id: str, deployment: 
         "max_num_batched_tokens": int(batched) if batched is not None else None,
         # The per-instance deployment variables (HCCL base port, interface names): outside protocol.env by design.
         "env": deployment_environment(observation["environ"]),
+        **extra,
     }
 
 

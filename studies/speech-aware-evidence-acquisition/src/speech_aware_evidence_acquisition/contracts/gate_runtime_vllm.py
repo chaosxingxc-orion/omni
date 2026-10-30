@@ -36,7 +36,8 @@ a request, and the gate re-measures each one from bytes on every model touch:
   environment (``PINNED_ENV_PREFIXES`` / ``PINNED_ENV_NAMES``).
 * ``deployment``: one entry per serving instance (owner input 2026-10-28: serving is multi-instance). Each entry holds
   the loopback host, port, device ids, tensor-parallel size, ``--max-num-seqs``, ``--gpu-memory-utilization``,
-  optional ``--max-num-batched-tokens`` and an ``env`` map holding exactly the per-instance deployment variables
+  optional ``--max-num-batched-tokens``, optional ``--mm-processor-cache-type`` (S16b: a cache-transport knob that
+  changes no logits, so a deployment fact) and an ``env`` map holding exactly the per-instance deployment variables
   (``DEPLOYMENT_ENV_KEYS``: the HCCL base port and the network interface names). Those variables differ per instance
   by construction (all instances share ``--network host``, so their HCCL base ports must differ), which is why they
   are recorded here and kept out of ``protocol.env``. ``env`` may name nothing else: a ``VLLM_`` or other protocol
@@ -58,7 +59,9 @@ deployment groups. Each takes exactly one value and may appear only once. ``--ho
 ``--tensor-parallel-size``, ``--max-num-seqs`` and ``--gpu-memory-utilization`` are required. Every other group is a
 protocol group, compared in order with ``protocol.server_args``. ``--flag=value`` spellings and short options are
 refused, because they would let a flag change its class unseen. Flags that load a file or code the receipt does not
-pin (``REFUSED_SERVER_FLAGS``) are also refused, as is any value that names a filesystem path.
+pin (``REFUSED_SERVER_FLAGS``) are also refused, as is any value that names a filesystem path. Any multimodal flag
+(a ``mm`` word in its name) other than ``--mm-processor-cache-type`` (deployment) and ``--limit-mm-per-prompt``
+(protocol) is refused by name until it is classified on purpose.
 """
 
 from __future__ import annotations
@@ -87,8 +90,45 @@ DEPLOYMENT_FLAGS: Mapping[str, str] = {
     "--max-num-seqs": "max_num_seqs",
     "--gpu-memory-utilization": "gpu_memory_utilization",
     "--max-num-batched-tokens": "max_num_batched_tokens",
+    "--mm-processor-cache-type": "mm_processor_cache_type",
 }
-REQUIRED_DEPLOYMENT_FLAGS = frozenset(set(DEPLOYMENT_FLAGS) - {"--max-num-batched-tokens"})
+#: Optional deployment flags: absent means the engine default, and the flag is then not emitted.
+OPTIONAL_DEPLOYMENT_FLAGS = frozenset({"--max-num-batched-tokens", "--mm-processor-cache-type"})
+REQUIRED_DEPLOYMENT_FLAGS = frozenset(set(DEPLOYMENT_FLAGS) - OPTIONAL_DEPLOYMENT_FLAGS)
+#: ``--mm-processor-cache-type`` (S16b, plan 3.11 ruling 3): how the multimodal processor cache is transported between
+#: the API process and the engine. By vLLM source it changes no logits, so it is a DEPLOYMENT flag (recorded, never in
+#: ``protocol_sha256``). The cache size flags stay at the engine default and are not part of this study's surface.
+MM_PROCESSOR_CACHE_FLAG = "--mm-processor-cache-type"
+MM_PROCESSOR_CACHE_TYPES = ("lru", "shm")
+#: Multimodal flags that are already classified as PROTOCOL (the fragment pins them, so they are hashed). Every other
+#: multimodal flag is refused by name wherever it appears, until it is classified on purpose.
+CLASSIFIED_MM_PROTOCOL_FLAGS = frozenset({"--limit-mm-per-prompt"})
+
+
+def is_unclassified_mm_flag(token: object) -> bool:
+    """True for a multimodal flag (a ``mm`` word in its name, e.g. ``--mm-processor-cache-gb``,
+    ``--disable-mm-preprocessor-cache``, ``--mm-encoder-tp-mode``) that is neither the deployment flag
+    ``--mm-processor-cache-type`` nor a classified protocol flag. Either spelling (``--flag value``/``--flag=value``)."""
+
+    text = str(token)
+    if not text.startswith("--"):
+        return False
+    flag = text.split("=", 1)[0]
+    if flag == MM_PROCESSOR_CACHE_FLAG or flag in CLASSIFIED_MM_PROTOCOL_FLAGS:
+        return False
+    return "mm" in flag[2:].split("-")
+
+
+def refuse_unclassified_mm_flag(token: object) -> str | None:
+    """The refusal text for an unclassified multimodal flag, or ``None``; the message names the flag."""
+
+    if not is_unclassified_mm_flag(token):
+        return None
+    flag = str(token).split("=", 1)[0]
+    return (
+        f"multimodal flag {flag} is not classified: only {MM_PROCESSOR_CACHE_FLAG} (deployment) and "
+        f"{sorted(CLASSIFIED_MM_PROTOCOL_FLAGS)} (protocol) are accepted"
+    )
 #: Flags that make the server read a file, a model or code the receipt does not pin.
 REFUSED_SERVER_FLAGS = frozenset(
     {
@@ -177,7 +217,9 @@ _INSTANCE_KEYS = frozenset(
 )
 #: ``env`` is optional in a recorded instance (absent means no deployment variables: the live process must then carry
 #: none of ``DEPLOYMENT_ENV_KEYS``). The producer always writes it.
-_INSTANCE_OPTIONAL_KEYS = frozenset({"env"})
+#: ``mm_processor_cache_type`` is optional too: absent means the engine default (no flag), a recorded value is one of
+#: ``MM_PROCESSOR_CACHE_TYPES`` and the live argv must carry exactly it.
+_INSTANCE_OPTIONAL_KEYS = frozenset({"env", "mm_processor_cache_type"})
 
 
 def _fail(message: str) -> GateClosed:
@@ -344,6 +386,9 @@ def classify_server_flags(tokens: Sequence[str]) -> tuple[str | None, tuple[str,
         flag, values = group[0], group[1:]
         if flag in REFUSED_SERVER_FLAGS:
             raise _fail(f"flag {flag} loads a file, model or code the receipt does not pin")
+        mm_refusal = refuse_unclassified_mm_flag(flag)
+        if mm_refusal is not None:
+            raise _fail(mm_refusal)
         if flag == SERVED_MODEL_NAME_FLAG:
             if served is not None or len(values) != 1 or not values[0]:
                 raise _fail(f"{SERVED_MODEL_NAME_FLAG} must appear once with one value")
@@ -352,6 +397,8 @@ def classify_server_flags(tokens: Sequence[str]) -> tuple[str | None, tuple[str,
         if flag in DEPLOYMENT_FLAGS:
             if flag in deployment or len(values) != 1:
                 raise _fail(f"deployment flag {flag} must appear once with one value")
+            if flag == MM_PROCESSOR_CACHE_FLAG and values[0] not in MM_PROCESSOR_CACHE_TYPES:
+                raise _fail(f"{flag} must be one of {list(MM_PROCESSOR_CACHE_TYPES)}, got {values[0]!r}")
             deployment[flag] = values[0]
             continue
         for value in values:
@@ -445,6 +492,8 @@ def instance_argv(receipt: Mapping[str, object], instance: Mapping[str, object])
     ]
     if instance.get("max_num_batched_tokens") is not None:
         deployment += ["--max-num-batched-tokens", str(instance["max_num_batched_tokens"])]
+    if instance.get("mm_processor_cache_type") is not None:
+        deployment += [MM_PROCESSOR_CACHE_FLAG, str(instance["mm_processor_cache_type"])]
     return (
         str(protocol["argv0"]),
         *VLLM_ENTRYPOINT,
@@ -498,6 +547,11 @@ def assert_argv_matches_instance(
             else None
         ),
     }
+    if deployment.get(MM_PROCESSOR_CACHE_FLAG) != instance.get("mm_processor_cache_type"):
+        raise _fail(
+            f"instance {instance['instance_id']!r} mm_processor_cache_type is "
+            f"{instance.get('mm_processor_cache_type')!r} but argv says {deployment.get(MM_PROCESSOR_CACHE_FLAG)!r}"
+        )
     for key, value in observed.items():
         if instance[key] != value:
             raise _fail(f"instance {instance['instance_id']!r} {key} is {instance[key]!r} but argv says {value!r}")
@@ -756,6 +810,10 @@ def validate_vllm_receipt_document(receipt: object) -> Mapping[str, object]:
             raise _fail(f"{label}.gpu_memory_utilization must be a number in (0, 1]")
         if instance["max_num_batched_tokens"] is not None:
             _positive_int(instance["max_num_batched_tokens"], f"{label}.max_num_batched_tokens")
+        if "mm_processor_cache_type" in instance and instance["mm_processor_cache_type"] not in MM_PROCESSOR_CACHE_TYPES:
+            raise _fail(
+                f"{label}.mm_processor_cache_type must be one of {list(MM_PROCESSOR_CACHE_TYPES)} or absent"
+            )
     served, protocol_tokens, deployment_flags = classify_server_flags(server_args)
     if served is not None or deployment_flags or list(protocol_tokens) != list(server_args):
         raise _fail(

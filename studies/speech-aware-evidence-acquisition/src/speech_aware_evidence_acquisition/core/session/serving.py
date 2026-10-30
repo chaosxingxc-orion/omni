@@ -233,6 +233,24 @@ def _refuse_vllm_slot_flag(args: Sequence[str], model_fragment: str = "?") -> No
         )
 
 
+def _refuse_vllm_mm_flags(args: Sequence[str], model_fragment: str = "?") -> None:
+    """A vllm fragment's ``server_args`` must not carry ``--mm-processor-cache-type`` (a deployment fact owned by the
+    deployment profile, S16b) nor any other unclassified multimodal flag; the refusal names the flag."""
+
+    from ...contracts.gate_runtime_vllm import MM_PROCESSOR_CACHE_FLAG, refuse_unclassified_mm_flag
+
+    for token in args:
+        if token.split("=", 1)[0] == MM_PROCESSOR_CACHE_FLAG:
+            raise ServingSessionError(
+                f"model fragment {model_fragment!r} carries {MM_PROCESSOR_CACHE_FLAG} in server_args; the multimodal "
+                "processor cache transport is a deployment fact owned by the deployment profile "
+                "(configs/deployment), never the hashed fragment"
+            )
+        refusal = refuse_unclassified_mm_flag(token)
+        if refusal is not None:
+            raise ServingSessionError(f"model fragment {model_fragment!r}: {refusal}")
+
+
 def merge_server_args(
     server_args: Sequence[object], *, slots: int, context_tokens: int, transport: object = None
 ) -> list[str]:
@@ -263,6 +281,7 @@ def merge_server_args(
             )
         context_value = context_tokens // slots
         _refuse_vllm_slot_flag(merged)
+        _refuse_vllm_mm_flags(merged)
         geometry_pairs = ((context_flag, context_value),)
     else:
         context_value = context_tokens
@@ -295,6 +314,7 @@ def declared_server_geometry(
     _refuse_foreign_geometry_flags(args, transport)
     if per_slot:
         _refuse_vllm_slot_flag(args, model_fragment)
+        _refuse_vllm_mm_flags(args, model_fragment)
         if context_flag not in args:
             raise ServingSessionError(
                 f"model fragment {model_fragment!r} must declare {context_flag} in server_args; the per-sequence "

@@ -35,7 +35,9 @@ def test_a_v2_profile_validates_is_named_by_its_file_and_differs_only_in_identit
     profile = dep.load_deployment_profile(v2)
     assert profile.profile_id == v2 and profile.max_num_seqs == ceiling
     old, new = _document(v1), _document(v2)
-    assert {key for key in old if old[key] != new[key]} <= {"profile_id", "basis", "max_num_seqs"}
+    # admitted_level (Gap C, Decision 2) is an OPTIONAL deployment field added to the 4xTP2 -v2 only; outside every hash
+    assert {key for key in set(old) | set(new) if old.get(key) != new.get(key)} <= {
+        "profile_id", "basis", "max_num_seqs", "admitted_level"}
     assert new["profile_id"] == v2 and new["max_num_seqs"] == ceiling
     # cards, cpusets, ports, env and the memory budget are untouched: the same deployment, a different scheduling ceiling
     for key in ("instances", "gpu_memory_utilization", "max_num_batched_tokens", "tensor_parallel_size", "shm_size"):
@@ -105,3 +107,16 @@ def test_the_deployment_record_names_the_ceiling():
     record = dep.deployment_record(dep.load_deployment_profile("qwen3-omni-thinking-bf16-181-4xtp2-v2"), nic=NIC)
     assert record["hashed"] is False and record["max_num_seqs_per_instance"] == 32
     assert record["protocol_window_tokens"] == 24576
+
+
+def test_admitted_level_is_a_deployment_field_that_moves_no_protocol_hash():
+    v1, v2 = dep.load_deployment_profile("qwen3-omni-thinking-bf16-181-4xtp2-v1"), dep.load_deployment_profile(
+        "qwen3-omni-thinking-bf16-181-4xtp2-v2")
+    assert _document(v2.profile_id)["admitted_level"] == 32 == v2.max_num_seqs
+    assert "admitted_level" not in _document(v1.profile_id)
+    fragment_before, fragment_after = dep.model_fragment_values(v1), dep.model_fragment_values(v2)
+    assert fragment_hash(fragment_before) == fragment_hash(fragment_after)
+    before = classify_server_flags(dep.instance_server_argv(v1, v1.instances[0], fragment_before)[2:])
+    after = classify_server_flags(dep.instance_server_argv(v2, v2.instances[0], fragment_after)[2:])
+    assert list(before[1]) == list(after[1])
+    assert "admitted_level" not in " ".join(dep.instance_server_argv(v2, v2.instances[0], fragment_after))

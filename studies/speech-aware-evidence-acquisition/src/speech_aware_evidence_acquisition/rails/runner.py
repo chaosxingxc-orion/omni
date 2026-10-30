@@ -25,6 +25,7 @@ from typing import Callable, Generic, Hashable, Mapping, Protocol, Sequence, Typ
 
 from ..contracts import ExecutionPlan, assert_execution_scope
 from ..core.base import AGENT_CONTROLLERS, CoreError, Registry
+from ..core.flight.width import FlightWidthError, flight_width
 from ..core.flight_lock import read_flight_lock
 from ..core.tracing import TraceBuffer, set_current_trace_buffer
 from .consumption import ConsumptionTrace
@@ -7930,6 +7931,10 @@ def run_speech_native_agent_loop(
     # (see _restricted_split_samples). ``None`` -- every other caller -- runs
     # the whole split exactly as before.
     flown_sample_ids: Sequence[str] | None = None,
+    # Gap C / Decision 2: the OPTIONAL deployment profile (id, path, mapping or DeploymentProfile). When attached and it
+    # declares ``admitted_level``, the flight width is instances x admitted level (a deployment fact); ``None`` -- every
+    # existing caller -- keeps ``slot_count`` (the hashed ``serving_slots``) exactly.
+    deployment_profile: object = None,
 ) -> AgentLoopSummary:
     """Run a bounded, batched, speech-native AgentLoop over one DEV split.
 
@@ -8035,6 +8040,13 @@ def run_speech_native_agent_loop(
     queue_depth = _positive_int(queue_depth, field="queue_depth")
     if queue_depth < slot_count:
         raise RailsRunnerError("queue_depth must be at least slot_count")
+    if deployment_profile is not None:
+        try:
+            slot_count = flight_width(deployment_profile, slot_count)
+        except FlightWidthError as error:
+            raise RailsRunnerError(str(error)) from error
+        # the submit window must cover the width, or the extra slots could never fill
+        queue_depth = max(queue_depth, slot_count)
     if agent_executor_id not in {
         "reference-trajectory-v1",
         "openjiuwen-workflow-v1",
