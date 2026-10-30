@@ -169,3 +169,12 @@ SLU-F1 and intent with CI95, the A-to-D gap, the T-to-A gap, Fold A confirmation
    after both streams are in the tree, then the package, writer files and tests are staged together by path.
 6. **Sweep failures.** The 35 + 68 failures in the T2 regression shards are not accepted as pre-existing until the same files
    are run at clean HEAD `56d3c1c3`; the combined gate carries that table.
+
+### Section 10 addendum (2026-10-30): re-mint result and what the flight `check` now needs
+
+The combined re-mint landed (commit after `2466f300`): flight composed config `8ccf5578…`, protocol `1bb05a55…`; smoke
+`5d528040…` / `26e8bd51…`; protocol document `c255b182…`; analysis recipe `1ef6e660…` (pinned in the read-row draft).
+The read-only flight `check` refuses both configs, as expected for HELD rows, and now for one more reason: the committed
+exposure-ledger rows (lines 9177 and 9179) still describe the c15 draft (32,400 / 120 calls) while the plans say 36,720 /
+136. The ledger needs the `--append-ledger` successor block for the c17 rows and the owner's countersign; after that the
+next gate asks for the runtime receipt, which the base-lock R0 step mints. Both are on the base-lock path, not blockers now.
