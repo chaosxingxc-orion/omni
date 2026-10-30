@@ -221,3 +221,16 @@ next gate asks for the runtime receipt, which the base-lock R0 step mints. Both 
    effect measurable per row; T3c implements `variants_fn` accordingly.
 6. The construction-column gain and the +1 pp stop rule are measured from the bank-consuming flight, never from the
    adapter; accepted.
+
+### Section 11 addendum 2: rulings on T3c (Fable, 2026-10-30)
+
+1. `used_basis` is a required closed field on trace supply items (`json-form` | `content-pipe-form` | `none`, `none`
+   iff `used` is null); no schema bump because no trace file existed yet. Accepted.
+2. Rule variants per ruling 5 are implemented; K must be 4 in `rule-variants`; K=8 is only reachable in `seed-only`.
+   Accepted. When a bank's rules all sit in one scenario, k1/k2/k3 coincide in content and the per-rule effect is not
+   isolated; that is reported in the iteration record, not patched.
+3. Defaults `--variation rule-variants` and `--measure vllm-tokenize` accepted; estimate banks are refused in real runs.
+4. Trace location: the adapters expect `<analysis-root>/v2/flights/i<t>-<half>/rollout-trace.jsonl` while the writer
+   emits `<data root>/analysis/<READ id>/rollout-trace.jsonl`. Ruling: the sampling flights' READ ids are
+   `<T cell READ id>-I<t>-<H1|H2>` and the adapters read from the data-root analysis directory of that id; no copy, no
+   symlink. Implemented with the T writer work (section 9 ruling 6), not as a separate item.

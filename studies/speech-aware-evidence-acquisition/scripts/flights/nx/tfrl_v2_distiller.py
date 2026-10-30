@@ -328,6 +328,45 @@ def render_rules(texts: Sequence[str]) -> str:
     return "\n".join(["Consumption rules:"] + [f"- {t}" for t in texts])
 
 
+RULE_VARIANTS_SCHEMA = "saea-tfrl-v2-rule-variants-v1"
+
+
+def rule_variants_seed_bank(iteration: int, rule_bank: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """The seed rule bank of the ``rule-variants`` sampling mode (plan section 11 addendum, ruling 5), from the rule bank a half consumes.
+
+    Four variants in trajectory order k = 0..3, so a rule's effect is sampled per row and not assumed:
+
+    * ``k0-no-rules``      no rule bank;
+    * ``k1-full-bank``     the full bank;
+    * ``k2-row-scenario``  the rules whose scenario is the row's scenario (``by_scenario``, resolved per row from the roster's stratum);
+    * ``k3-top-half``      the top ``ceil(n / 2)`` rules by support (ties by candidate key), kept in bank order.
+
+    Every subset renders with :func:`render_rules`, so it stays inside the bank's token cap. ``None`` for an empty or absent bank (the session then
+    samples ``seed-only``). Signature ``(iteration, rule bank)`` is the ``V2Session.variants_fn`` contract; the iteration is recorded only.
+    """
+
+    rules = list((rule_bank or {}).get("rules") or [])
+    if not rules:
+        return None
+
+    def block(chosen: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+        return {"rule_ids": [r["rule_id"] for r in chosen], "rendered_text": render_rules([r["text"] for r in chosen]) if chosen else ""}
+
+    top = sorted(rules, key=lambda r: (-r["support_count"], r["candidate_key"]))[: (len(rules) + 1) // 2]
+    top_ids = {r["rule_id"] for r in top}
+    scenarios = sorted({r["scenario"] for r in rules})
+    return {
+        "schema": RULE_VARIANTS_SCHEMA, "iteration": iteration, "source_rule_bank_content_sha256": cm.content_sha256(dict(rule_bank)),
+        "variants": [
+            {"variant_id": "k0-no-rules", "kind": "none", "rule_ids": [], "rendered_text": ""},
+            {"variant_id": "k1-full-bank", "kind": "full", **block(rules)},
+            {"variant_id": "k2-row-scenario", "kind": "scenario",
+             "by_scenario": {scn: block([r for r in rules if r["scenario"] == scn]) for scn in scenarios}},
+            {"variant_id": "k3-top-half", "kind": "top-half", **block([r for r in rules if r["rule_id"] in top_ids])},
+        ],
+    }
+
+
 # ----------------------------------------------------------------------------------------------------------------------------------------
 # trace lines
 # ----------------------------------------------------------------------------------------------------------------------------------------

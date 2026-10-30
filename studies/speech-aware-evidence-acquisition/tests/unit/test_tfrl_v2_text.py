@@ -147,6 +147,23 @@ def test_pipe_form_usage_rule():
     assert tx.used_items(items, answer, resolver, 1) == [{"item_id": "a", "basis": "content-pipe-form"}]
 
 
+def test_used_items_prefers_the_writers_judgement_and_falls_back_only_when_it_has_none():
+    answer = base.ans("alarm", "set", [("date", "friday")])
+    play = "play jazz | music_play | genre=jazz"
+    wake = "wake me up | alarm_set | date=friday"
+    resolver = tx.ItemTextResolver({"w": wake, "x": wake, "y": wake, "z": play})
+    items = [
+        {"item_id": "w", "used": True, "used_basis": "content-pipe-form"},      # the writer judged it: kept, basis names the form
+        {"item_id": "x", "used": False, "used_basis": "content-pipe-form"},     # the writer said no: never re-judged although the content would say yes
+        {"item_id": "y", "used": None, "used_basis": "none"},                   # the writer could not judge: the resolver's rule applies
+        {"item_id": "z", "used": None, "used_basis": "none"},                   # ... and says no
+    ]
+    assert tx.used_items(items, answer, resolver, 6) == [
+        {"item_id": "w", "basis": "trace"}, {"item_id": "y", "basis": "content-pipe-form"},
+    ]
+    assert tx.used_items([{"item_id": "w", "used": True, "used_basis": "json-form"}], answer, None, 6) == [{"item_id": "w", "basis": "trace"}]
+
+
 # ---- the token measures ------------------------------------------------------------------------------------------------------------------
 
 

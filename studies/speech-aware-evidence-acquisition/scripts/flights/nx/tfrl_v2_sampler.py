@@ -12,7 +12,10 @@ What it builds, for ONE half and ONE iteration:
 * K = 4 Solver trajectories per row. Decoding seeds are ``derive_seed(iteration seed, row id, k)``: distinct per k, a pure function of the inputs.
   Default variation mode ``seed-only``: the K Solver requests of a row are REQUEST-IDENTICAL except the seed (every request field is pinned by
   ``request_identity_sha256``, which excludes only the seed, the arm label and the contact id). Mode ``rule-variants`` additionally gives trajectory
-  k the k-th consumption variant of a seed rule bank (plan section 4 "varied consumption instructions and evidence orderings"); it is opt-in.
+  k the k-th consumption variant of a seed rule bank (plan section 4 "varied consumption instructions and evidence orderings"; plan section 11
+  addendum ruling 5: k=0 no rule bank, k=1 the full bank, k=2 the rules of the row's scenario only, k=3 the top half of the bank by support); it is
+  opt-in, needs exactly K = 4, and records on every Solver contact a ``rule_variant`` field ``{variant_id, kind, rule_ids, content_sha256}``
+  (the field is absent in ``seed-only`` plans, whose bytes are unchanged).
 * ONE Perception contact per row, shared by the K Solver contacts.
 * The bank pin (a bank counted with an estimate, or whose exemplars do not quote the resolved item text, is refused): from iteration 2 the half consumes the bank distilled from the OTHER half; :func:`tfrl_v2_common.check_cross_fit` refuses a bank
   whose source half is the consuming half (plan section 9 ruling 3). Exemplars REPLACE supplied items (the T supply bound is 43 items plus an
@@ -53,6 +56,10 @@ SAMPLER_ARM_PREFIX = "s"
 BASELINE_ARM = "lock"
 TWIN_ARM = "aa"
 VARIATIONS = ("seed-only", "rule-variants")
+#: ``rule-variants`` gives trajectory k the k-th variant of the seed rule bank, so it needs exactly K = 4 variants (plan section 11 addendum, ruling 5:
+#: k=0 no rule bank, k=1 the full bank, k=2 the rules of the row's scenario only, k=3 the top half of the bank by support).
+RULE_VARIANT_COUNT = 4
+RULE_VARIANT_KINDS = ("none", "full", "scenario", "top-half")
 BASELINE_TOLERANCE = 1e-9
 GAIN_EPSILON = 1e-12
 
@@ -154,6 +161,29 @@ def sum_budgets(parts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 # ----------------------------------------------------------------------------------------------------------------------------------------
 
 
+def resolve_rule_variant(variant: Mapping[str, Any], scenario: str | None) -> dict[str, Any]:
+    """The variant one row's trajectory carries: ``{"variant_id", "kind", "rule_ids", "content_sha256"}``.
+
+    A bank variant (``kind`` in :data:`RULE_VARIANT_KINDS`, built by ``tfrl_v2_distiller.rule_variants_seed_bank``) carries ``rule_ids`` and
+    ``rendered_text``; the ``scenario`` kind carries them per scenario in ``by_scenario`` and is resolved with the row's scenario (a row whose scenario
+    has no rule gets the empty set). ``content_sha256`` is taken over the id, the kind, the resolved rule ids and the resolved rendered text, so two
+    rows with the same variant and the same rules carry the same hash. Any other variant (no ``kind``) is opaque: its hash is over the whole variant.
+    """
+
+    kind = variant.get("kind")
+    if kind not in RULE_VARIANT_KINDS:
+        return {"variant_id": variant["variant_id"], "kind": "opaque", "rule_ids": None, "content_sha256": cm.content_sha256(dict(variant))}
+    if kind == "scenario":
+        if not scenario:
+            raise SamplerError("the 'scenario' rule variant needs the row's scenario (the roster item's stratum); this row has none")
+        chosen = (variant.get("by_scenario") or {}).get(scenario) or {"rule_ids": [], "rendered_text": ""}
+    else:
+        chosen = variant
+    rule_ids, rendered = list(chosen.get("rule_ids") or []), chosen.get("rendered_text") or ""
+    return {"variant_id": variant["variant_id"], "kind": kind, "rule_ids": rule_ids,
+            "content_sha256": cm.content_sha256({"variant_id": variant["variant_id"], "kind": kind, "rule_ids": rule_ids, "rendered_text": rendered})}
+
+
 def _half_rows(half_roster: Mapping[str, Any], half: str) -> list[Mapping[str, Any]]:
     expected = cm.HALF_ROSTER_ID[half]
     if half_roster.get("roster_id") != expected:
@@ -204,9 +234,13 @@ def build_plan(
 
     variants: list[Mapping[str, Any]] = []
     if variation == "rule-variants":
+        if k != RULE_VARIANT_COUNT:
+            raise SamplerError(f"variation 'rule-variants' needs K = {RULE_VARIANT_COUNT} (one variant per trajectory); K is {k}")
         variants = list((seed_rule_bank or {}).get("variants") or [])
         if not variants:
             raise SamplerError("variation 'rule-variants' needs a seed rule bank with at least one variant")
+        if len(variants) != RULE_VARIANT_COUNT:
+            raise SamplerError(f"variation 'rule-variants' needs exactly {RULE_VARIANT_COUNT} variants; the seed rule bank has {len(variants)}")
         if len({v["variant_id"] for v in variants}) != len(variants):
             raise SamplerError("seed rule bank variant ids must be unique")
 
@@ -234,16 +268,20 @@ def build_plan(
         for index, arm in enumerate(arms):
             seed = cm.derive_seed(it_seed, row_id, index)
             seeds.append(seed)
-            variant = variants[index % len(variants)] if variants else None
+            variant = variants[index] if variants else None
+            resolved = resolve_rule_variant(variant, item.get("stratum")) if variant else None
             identity = cm.content_sha256({
                 "node": "solver", "row_id": row_id, "run_id": run_id, "decoding": decoding, "banks": {kk: banks[kk] for kk in ("rule_bank_sha256", "exemplar_bank_sha256")},
-                "variant": dict(variant) if variant else None, "perception": f"{run_id}/{row_id}/perception",
+                "variant": resolved, "perception": f"{run_id}/{row_id}/perception",
             })
-            contacts.append({
+            contact = {
                 "contact_id": f"{run_id}/{row_id}/solver/{arm}", "node": "solver", "arm": arm, "sample_index": index, "seed": seed,
                 "trajectory_id": trajectory_id(iteration, row_id, index), "variant_id": variant["variant_id"] if variant else None,
                 "request_identity_sha256": identity,
-            })
+            }
+            if resolved is not None:
+                contact["rule_variant"] = resolved
+            contacts.append(contact)
         if len(set(seeds)) != len(seeds):
             raise SamplerError(f"row {row_id}: the K seeds are not distinct (change the base seed)")
         rows_doc.append({"row_id": row_id, "audio_seconds": float(item["audio_seconds"]), "contacts": contacts})

@@ -113,6 +113,7 @@ class V2Session:
     roster_sha256: Mapping[str, str | None] = field(default_factory=dict)
     variation: str = "seed-only"
     variants_fn: Callable[[int, Mapping[str, Any]], Mapping[str, Any] | None] | None = None   # (iteration, consumed rule bank) -> seed rule bank
+    # ^ ``tfrl_v2_distiller.rule_variants_seed_bank`` for ``variation="rule-variants"`` (k0 none, k1 full, k2 row scenario, k3 top half; K must be 4)
     scorer_id: str | None = None
     with_twin: bool = True
     allow_missing_rows: bool = False
@@ -185,6 +186,73 @@ class V2Session:
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------------
+# the tokenizer driver and the session builder (the loop command line's --v2)
+# ----------------------------------------------------------------------------------------------------------------------------------------
+
+DEFAULT_TOKENIZE_CONTACT_CAP = 20000
+DEFAULT_TOKENIZE_TIMEOUT_SECONDS = 600.0
+
+
+def tokenize_client(endpoint: str, *, timeout_seconds: float = DEFAULT_TOKENIZE_TIMEOUT_SECONDS, contact_cap: int = DEFAULT_TOKENIZE_CONTACT_CAP,
+                    guard: Callable[[], None] | None = None, client_factory: Callable[..., Any] | None = None) -> Any:
+    """The registered FIT-gate tokenizer client for ``endpoint`` (``http://host:port``): ``core.preparation_fit.GuardedTokenizer`` over the
+    keep-alive ``core.driver.speech_native._LoopbackPromptAuditClient`` -- the very stack ``run_live_fit`` / the port FIT gate build (``client_factory
+    or _LoopbackPromptAuditClient``, then ``GuardedTokenizer``). Only the tokenizer routes pass the guard (``POST /tokenize`` here); every contact counts
+    against ``contact_cap`` and a cap hit is a refusal. ``guard`` is the per-contact lease check (the flight runtime passes
+    ``assert_generation_lease``; this offline driver has no lease and passes none). Constructing the client opens no connection; the first measured
+    text does. A test injects ``client_factory`` (called with ``host``, ``port``, ``timeout_seconds``) and never reaches a socket.
+    """
+
+    from urllib.parse import urlsplit  # noqa: PLC0415
+
+    from speech_aware_evidence_acquisition.core.preparation_fit import GuardedTokenizer  # noqa: PLC0415
+
+    parts = urlsplit(endpoint if "://" in endpoint else f"http://{endpoint}")
+    if parts.scheme != "http" or not parts.hostname or parts.port is None or parts.path not in ("", "/") or parts.query or parts.fragment:
+        raise pl.PortLoopError(f"the tokenize endpoint {endpoint!r} must be http://host:port")
+    if client_factory is None:
+        from speech_aware_evidence_acquisition.core.driver.speech_native import _LoopbackPromptAuditClient  # noqa: PLC0415
+
+        client_factory = _LoopbackPromptAuditClient
+    try:
+        return GuardedTokenizer(client_factory(host=parts.hostname, port=parts.port, timeout_seconds=timeout_seconds),
+                                guard=guard or (lambda: None), contact_cap=contact_cap)
+    except Exception as error:  # noqa: BLE001 -- a malformed client configuration or cap
+        raise pl.PortLoopError(f"cannot build the tokenize client for {endpoint!r}: {error}") from error
+
+
+def build_measure(name: str, *, endpoint: str | None = None, model: str | None = None, client_factory: Callable[..., Any] | None = None,
+                  contact_cap: int = DEFAULT_TOKENIZE_CONTACT_CAP) -> tx.TokenMeasure:
+    """``estimate`` (offline) or ``vllm-tokenize`` over :func:`tokenize_client`; the latter needs ``endpoint``."""
+
+    if name == cm.MEASURE_ESTIMATE:
+        return tx.EstimateMeasure()
+    if name != cm.MEASURE_VLLM:
+        raise pl.PortLoopError(f"unknown measure {name!r}; known: {list(tx.MEASURES)}")
+    if not endpoint:
+        raise pl.PortLoopError(f"measure {cm.MEASURE_VLLM!r} needs a tokenize endpoint")
+    return tx.VllmTokenizeMeasure(tokenize_client(endpoint, client_factory=client_factory, contact_cap=contact_cap), model=model)
+
+
+def build_session(*, data_root: Path, analysis_root: Path, measure: str, tokenize_endpoint: str | None = None, tokenize_model: str | None = None,
+                  variation: str = "seed-only", repo_root: Path = REPO_ROOT, resolver: tx.ItemTextResolver | None = None,
+                  flight_lines: FlightLines | None = None, client_factory: Callable[..., Any] | None = None, **session_kw: Any) -> "V2Session":
+    """A :class:`V2Session` from the command-line inputs: committed half rosters (and their file hashes), the item-text resolver over the registered
+    knowledge stores of ``data_root`` (``ItemTextResolver.from_pins``), the chosen measure, and the write-once store under ``<analysis root>/v2``.
+    ``variation='rule-variants'`` sets ``variants_fn`` to ``tfrl_v2_distiller.rule_variants_seed_bank``. The session itself refuses an estimate measure."""
+
+    try:
+        docs, shas = load_half_rosters(repo_root)
+        the_resolver = resolver or tx.ItemTextResolver.from_pins(Path(data_root))
+        the_measure = build_measure(measure, endpoint=tokenize_endpoint, model=tokenize_model, client_factory=client_factory)
+    except (OSError, ValueError, KeyError, tx.ItemTextError) as error:
+        raise pl.PortLoopError(f"cannot build the V2 session: {error}") from error
+    root = Path(analysis_root) / "v2"
+    return V2Session(root=root, rosters=docs, flight_lines=flight_lines or TraceFileLines(root), resolver=the_resolver, measure=the_measure,
+                     roster_sha256=shas, variation=variation, variants_fn=dd.rule_variants_seed_bank if variation == "rule-variants" else None, **session_kw)
+
+
+# ----------------------------------------------------------------------------------------------------------------------------------------
 # the adapters
 # ----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -223,6 +291,9 @@ class V2Sampler:
         except sp.SamplerError as error:
             raise pl.PortLoopError(f"{half} iteration {request.iteration}: {error}") from error
         rule_ids = tuple(r["rule_id"] for r in (consumed_rules or {}).get("rules", []))
+        variant_rules = {(row["row_id"], c["sample_index"]): tuple(c["rule_variant"]["rule_ids"])
+                         for row in plan["row_plan"] for c in row["contacts"]
+                         if c["node"] == "solver" and isinstance(c.get("rule_variant"), Mapping) and c["rule_variant"].get("rule_ids") is not None}
         out: list[pl.Trajectory] = []
         for row in credit:
             for traj in row["trajectories"]:
@@ -233,7 +304,8 @@ class V2Sampler:
                          "row_id": row["row_id"], "arm": traj["arm"], "iteration": request.iteration, "trajectory_id": traj["trajectory_id"],
                          "reward": traj["reward"], "selected": False, "reason": SAMPLED_REASON}
                 out.append(pl.Trajectory(trace=trace, k_index=traj["k_index"], temperature=request.temperature, row_f1=traj["row_f1"],
-                                         lock_row_f1=row["baseline_f1"], rule_ids=rule_ids, exemplar_ids=(), truncated=bool(contact["truncated"])))
+                                         lock_row_f1=row["baseline_f1"],
+                                         rule_ids=variant_rules.get((row["row_id"], traj["k_index"]), rule_ids), exemplar_ids=(), truncated=bool(contact["truncated"])))
         return out
 
 

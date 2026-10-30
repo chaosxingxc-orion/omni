@@ -41,8 +41,8 @@ def ans(scenario="alarm", action="set", entities=()):
 
 
 def contact(row, arm, answer, used=(), unused=()):
-    items = [{"item_id": i, "rank": n + 1, "score": 0.5, "used": True} for n, i in enumerate(used)]
-    items += [{"item_id": i, "rank": len(items) + n + 1, "score": 0.1, "used": False} for n, i in enumerate(unused)]
+    items = [{"item_id": i, "rank": n + 1, "score": 0.5, "used": True, "used_basis": "json-form"} for n, i in enumerate(used)]
+    items += [{"item_id": i, "rank": len(items) + n + 1, "score": 0.1, "used": False, "used_basis": "json-form"} for n, i in enumerate(unused)]
     line = {"schema": rt.SCHEMA, "kind": "contact", "ts": TS, "run_id": RUN, "attempt_id": ATT, "row_id": row, "arm": arm, "node": "solver",
             "role_id": None, "contact_id": f"{RUN}/{row}/solver/{arm}", "contact_index": 1, "sample_index": 0, "request_id": None, "outcome": "ok",
             "error_type": None, "id_slot": 0, "instance": 0, "supply_variant_id": None, "supply_items": items, "prompt_tokens": 100,
@@ -376,3 +376,33 @@ def test_module_imports_no_network_or_model_library_and_text_is_ascii():
         assert all(ord(ch) < 128 for ch in text), path
     assert "NO MODEL CALL" in (NX / "tfrl_v2_distiller.py").read_text(encoding="utf-8")
     assert all(ord(ch) < 128 for ch in Path(__file__).read_text(encoding="utf-8"))
+
+
+# ---- the rule-variants seed bank (plan section 11 addendum, ruling 5) --------------------------------------------------------------------
+
+
+def _rule(rule_id, scenario, support, key):
+    return {"rule_id": rule_id, "scenario": scenario, "text": f"text of {rule_id}", "support_count": support, "candidate_key": key}
+
+
+def test_rule_variants_seed_bank_has_the_four_ruled_variants():
+    bank = {"rules": [_rule("r-a", "alarm", 5, "k|alarm|date"), _rule("r-b", "music", 4, "k|music|genre"), _rule("r-c", "alarm", 4, "k|alarm|time"),
+                      _rule("r-d", "weather", 3, "k|weather|place"), _rule("r-e", "alarm", 3, "k|alarm|zone")]}
+    seed = dd.rule_variants_seed_bank(2, bank)
+    names = [v["variant_id"] for v in seed["variants"]]
+    assert names == ["k0-no-rules", "k1-full-bank", "k2-row-scenario", "k3-top-half"] and seed["iteration"] == 2
+    k0, k1, k2, k3 = seed["variants"]
+    assert k0["rule_ids"] == [] and k0["rendered_text"] == ""
+    assert k1["rule_ids"] == ["r-a", "r-b", "r-c", "r-d", "r-e"] and k1["rendered_text"].startswith("Consumption rules:\n- text of r-a")
+    assert k2["by_scenario"]["alarm"]["rule_ids"] == ["r-a", "r-c", "r-e"] and k2["by_scenario"]["music"]["rule_ids"] == ["r-b"]
+    assert sorted(k2["by_scenario"]) == ["alarm", "music", "weather"]
+    # top half = ceil(5 / 2) = 3 rules by support desc, ties by candidate key (k|alarm|time < k|music|genre), kept in bank order
+    assert k3["rule_ids"] == ["r-a", "r-b", "r-c"]
+    # a tie broken by candidate key, not by bank order
+    swapped = {"rules": [_rule("r-x", "music", 4, "k|music|genre"), _rule("r-y", "alarm", 4, "k|alarm|time")]}
+    assert dd.rule_variants_seed_bank(2, swapped)["variants"][3]["rule_ids"] == ["r-y"]
+    # one rule: the top half is that rule, not the empty set
+    assert dd.rule_variants_seed_bank(2, {"rules": [_rule("r-a", "alarm", 3, "k")]})["variants"][3]["rule_ids"] == ["r-a"]
+    # deterministic, and absent for an empty or missing bank
+    assert dd.rule_variants_seed_bank(2, bank) == seed
+    assert dd.rule_variants_seed_bank(2, {"rules": []}) is None and dd.rule_variants_seed_bank(2, None) is None

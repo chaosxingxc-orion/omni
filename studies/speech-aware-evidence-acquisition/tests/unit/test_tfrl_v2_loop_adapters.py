@@ -24,6 +24,7 @@ for _p in (str(REPO / "src"), str(REPO / "scripts" / "analysis"), str(NX), str(P
 from speech_aware_evidence_acquisition.contracts import rollout_trace as rt  # noqa: E402
 import tfrl_port_loop as pl  # noqa: E402
 import tfrl_v2_common as cm  # noqa: E402
+import tfrl_v2_distiller as dd  # noqa: E402
 import tfrl_v2_loop_adapters as ad  # noqa: E402
 import tfrl_v2_sampler as sp  # noqa: E402
 import tfrl_v2_text as tx  # noqa: E402
@@ -55,7 +56,7 @@ FIXTURES = {H1: half_fixture("a"), H2: half_fixture("b")}
 
 def rosters():
     return {half: {"roster_id": cm.HALF_ROSTER_ID[half], "split_identity_hash": ("a" if half == H1 else "b") * 64,
-                   "items": [{"sample_id": r, "audio_seconds": 2.0} for r in fx.rows]} for half, fx in FIXTURES.items()}
+                   "items": [{"sample_id": r, "audio_seconds": 2.0, "stratum": "alarm"} for r in fx.rows]} for half, fx in FIXTURES.items()}
 
 
 def resolver():
@@ -238,3 +239,143 @@ def test_a_distiller_without_receipts_leaves_the_iteration_record_unchanged(tmp_
     report = pl.run_loop(lt.cfg_for(tmp_path, iterations=1), lt.FixtureSampler(), lt.FixtureDistiller(), reader, lock_row_f1=lt.lock_scores(), out=lambda s: None)
     assert report.iterations[0].keys() == {"iteration", "verdict", "failed", "state_id", "construction_gain_pp"}
     assert pl.result_extras(pl.DistilResult(rule_bank={}, exemplar_bank={})) == {}
+
+
+# ---- rule-variants mode through the session ----------------------------------------------------------------------------------------------
+
+
+def test_rule_variants_session_gives_each_trajectory_its_variant_from_iteration_two(tmp_path):
+    reader = lt.FixtureReader({1: lt.read(), 2: lt.read(lt.credit(slu=3.0, slu_lo=1.0))})
+    s = session(tmp_path, ALL_FLOWN, variation="rule-variants", variants_fn=dd.rule_variants_seed_bank)
+    report = pl.run_loop(cfg(tmp_path, 2), ad.V2Sampler(s), ad.V2Distiller(s), reader, lock_row_f1=lock_scores(), out=lambda t: None)
+    assert report.status == "complete"
+    p1 = json.loads(s.plan_path(1, H1).read_text(encoding="utf-8"))
+    assert p1["variation"] == "seed-only" and all("rule_variant" not in c for r in p1["row_plan"] for c in r["contacts"])      # no bank yet
+    p2 = json.loads(s.plan_path(2, H1).read_text(encoding="utf-8"))
+    assert p2["variation"] == "rule-variants" and p2["banks"]["seed_rule_bank_sha256"] is not None
+    row = p2["row_plan"][0]
+    solvers = [c for c in row["contacts"] if c["node"] == "solver"]
+    assert [c["rule_variant"]["kind"] for c in solvers] == ["none", "full", "scenario", "top-half"]
+    traj = [json.loads(x) for x in (tmp_path / pl.ANALYSIS_ROOT / "i2" / "trajectories.jsonl").read_text(encoding="utf-8").splitlines()]
+    mine = {t["k_index"]: t["rule_ids"] for t in traj if t["trace"]["row_id"] == row["row_id"]}
+    assert mine[0] == [] and len(mine[1]) >= 1 and mine[2] == mine[1] and set(mine[3]) <= set(mine[1])        # all fixture rules are alarm rules
+
+
+def test_rule_variants_session_refuses_k_other_than_four_once_a_bank_exists(tmp_path):
+    reader = lt.FixtureReader({1: lt.read()})
+    s = session(tmp_path, ALL_FLOWN, variation="rule-variants", variants_fn=dd.rule_variants_seed_bank)
+    pl.run_loop(cfg(tmp_path, 1), ad.V2Sampler(s), ad.V2Distiller(s), reader, lock_row_f1=lock_scores(), out=lambda t: None)
+    request = pl.SamplerRequest(2, sorted(lock_scores()), 8, 0.7, {}, {}, lock_scores())
+    with pytest.raises(pl.PortLoopError, match="needs K = 4"):
+        ad.V2Sampler(s).sample(request)
+
+
+# ---- the tokenizer driver and the --v2 command line ---------------------------------------------------------------------------------------
+
+
+class RecordingFactory:
+    """A ``client_factory`` for ``GuardedTokenizer``: records its construction arguments and answers /tokenize like the fake tokenizer; no socket."""
+
+    def __init__(self):
+        self.built = []
+        self.client = FakeTokenizer()
+
+    def __call__(self, **kwargs):
+        self.built.append(kwargs)
+        return self.client
+
+
+def test_tokenize_client_is_the_registered_guarded_tokenizer_over_the_loopback_client():
+    from speech_aware_evidence_acquisition.core.preparation_fit import GuardedTokenizer
+
+    factory = RecordingFactory()
+    client = ad.tokenize_client("http://127.0.0.1:8123", client_factory=factory, contact_cap=2)
+    assert isinstance(client, GuardedTokenizer) and client.contact_cap == 2
+    assert factory.built == [{"host": "127.0.0.1", "port": 8123, "timeout_seconds": 600.0}]
+    assert client.request_json("POST", "/tokenize", {"messages": [{"role": "user", "content": [{"type": "text", "text": "abcd"}]}]})["count"] == 1 + 7
+    with pytest.raises(Exception, match="non-tokenizer route"):
+        client.request_json("POST", "/v1/chat/completions", {})                                         # the guard refuses generation routes
+    for bad in ("https://h:1", "http://h", "http://h:1/path", "ftp://h:1"):
+        with pytest.raises(pl.PortLoopError, match="must be http://host:port"):
+            ad.tokenize_client(bad, client_factory=factory)
+    assert ad.tokenize_client("localhost:9000", client_factory=factory).client is factory.client           # a bare host:port is read as http
+
+
+def test_build_measure_selects_the_measure_and_never_contacts_the_endpoint_at_construction():
+    factory = RecordingFactory()
+    assert ad.build_measure("estimate").name == "estimate"
+    measure = ad.build_measure("vllm-tokenize", endpoint="http://127.0.0.1:1", model="m", client_factory=factory)
+    assert measure.name == "vllm-tokenize" and measure.calls == 0
+    assert measure.count("abcdefgh") == 2 + 7 and measure.calls == 1
+    with pytest.raises(pl.PortLoopError, match="needs a tokenize endpoint"):
+        ad.build_measure("vllm-tokenize")
+    with pytest.raises(pl.PortLoopError, match="unknown measure"):
+        ad.build_measure("chars")
+
+
+def test_build_session_uses_the_committed_rosters_and_the_injected_resolver_and_client(tmp_path):
+    factory = RecordingFactory()
+    s = ad.build_session(data_root=tmp_path, analysis_root=tmp_path / "an", measure="vllm-tokenize", tokenize_endpoint="http://127.0.0.1:1",
+                         variation="rule-variants", repo_root=REPO, resolver=tx.ItemTextResolver({"x": "t"}), client_factory=factory)
+    assert s.root == tmp_path / "an" / "v2" and sorted(s.rosters) == sorted(cm.HALVES) and s.variation == "rule-variants"
+    assert s.variants_fn is dd.rule_variants_seed_bank and all(len(v) == 64 for v in s.roster_sha256.values())
+    assert [len(s.rosters[h]["items"]) for h in cm.HALVES] == [313, 312] and len(s.column_rows()) == 625
+    assert ad.build_session(data_root=tmp_path, analysis_root=tmp_path, measure="vllm-tokenize", tokenize_endpoint="http://127.0.0.1:1", repo_root=REPO,
+                            resolver=tx.ItemTextResolver({"x": "t"}), client_factory=factory).variants_fn is None
+    with pytest.raises(pl.PortLoopError, match="needs 'vllm-tokenize'"):
+        ad.build_session(data_root=tmp_path, analysis_root=tmp_path, measure="estimate", repo_root=REPO, resolver=tx.ItemTextResolver({"x": "t"}))
+
+
+def test_cli_v2_dry_run_prints_the_budget_lines_and_writes_nothing(tmp_path, capsys):
+    before = sorted(tmp_path.rglob("*"))
+    assert pl.main(["--v2", "--dry-run", "--iterations", "2", "--data-root", str(tmp_path), "--analysis-root", str(tmp_path / "an")]) == 0
+    text = capsys.readouterr().out
+    assert "iteration 1 R01C-H1 program c7" in text and "313 rows x 7 contacts (K=4, with aa+lock)" in text
+    assert "iteration 1 both halves program c7: 625 rows x 7 contacts" in text and "iteration 2 both halves program c7: 625 rows" in text
+    assert "rule-variants mode" in text and "card-hours" in text
+    assert sorted(tmp_path.rglob("*")) == before                                                      # nothing written, no data root needed either
+    assert pl.main(["--v2", "--dry-run", "--iterations", "1", "--k", "8", "--variation", "seed-only"]) == 0
+    assert "625 rows x 11 contacts (K=8" in capsys.readouterr().out
+
+
+def test_cli_without_v2_keeps_the_stub_dry_run(capsys):
+    assert pl.main(["--dry-run", "--iterations", "1"]) == 0
+    assert "TODO-T3 stub" in capsys.readouterr().out
+
+
+def test_cli_v2_argument_rules(tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        pl.main(["--v2", "--data-root", str(tmp_path)])                                                 # vllm-tokenize needs an endpoint
+    assert "requires --tokenize-endpoint" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        pl.main(["--v2", "--data-root", str(tmp_path), "--tokenize-endpoint", "http://127.0.0.1:1", "--k", "8"])
+    assert "needs K=4" in capsys.readouterr().err
+    assert pl.main(["--v2", "--data-root", str(tmp_path), "--measure", "estimate"]) == 2                 # the session refuses an estimate measure
+    assert "REFUSED" in capsys.readouterr().err
+
+
+def test_cli_v2_halts_awaiting_the_lock_scores_through_the_injected_client(tmp_path, capsys):
+    factory = RecordingFactory()
+    code = pl.main(["--v2", "--iterations", "1", "--data-root", str(tmp_path), "--analysis-root", str(tmp_path / "an"),
+                    "--tokenize-endpoint", "http://127.0.0.1:1", "--tokenize-model", "m", "--base-seed", "7"],
+                   v2_overrides={"resolver": tx.ItemTextResolver({"x": "t"}), "client_factory": factory})
+    out = capsys.readouterr().out
+    assert code == 3 and '"status": "halted"' in out and "construction-lock-row-scores.json" in out
+    assert factory.built == [{"host": "127.0.0.1", "port": 1, "timeout_seconds": 600.0}] and factory.client is not None
+
+
+def test_cli_v2_runs_the_loop_to_the_first_missing_flight(tmp_path, capsys):
+    """With the lock scores of the real 625 rows present, the V2 sampler writes both iteration-1 plans and halts at the missing flights."""
+
+    import tfrl_v2_loop_adapters as adapters
+
+    docs, _ = adapters.load_half_rosters(REPO)
+    rows = sorted(str(i["sample_id"]) for h in cm.HALVES for i in docs[h]["items"])
+    adir = tmp_path / "an"
+    adir.mkdir()
+    (adir / "construction-lock-row-scores.json").write_text(json.dumps({"arms": {"lock": {r: 0.5 for r in rows}}}), encoding="utf-8")
+    code = pl.main(["--v2", "--iterations", "1", "--data-root", str(tmp_path), "--analysis-root", str(adir), "--tokenize-endpoint", "http://127.0.0.1:1",
+                    "--base-seed", "7"], v2_overrides={"resolver": tx.ItemTextResolver({"x": "t"}), "client_factory": RecordingFactory()})
+    assert code == 3 and "no trace lines yet" in capsys.readouterr().out
+    plan = json.loads((adir / "v2" / "plans" / "i1-R01C-H1.json").read_text(encoding="utf-8"))
+    assert plan["base_seed"] == 7 and plan["k"] == 4 and (adir / "v2" / "plans" / "i1-R01C-H2.json").is_file()

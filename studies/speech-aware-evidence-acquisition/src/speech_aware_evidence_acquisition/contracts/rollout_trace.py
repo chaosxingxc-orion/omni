@@ -42,6 +42,13 @@ NODES = ("perception", "solver", "reviewer", "planner", "acquisition", "other")
 
 OUTCOMES = ("ok", "refused", "error")
 
+#: Which item form a supply item's ``used`` judgement read: the JSON exemplar document, the pipe-form exemplar line of the real
+#: ``train-exemplars`` store, or ``none`` (``used`` is null: no parsed answer, or the content carries nothing comparable).
+USED_BASIS_JSON = "json-form"
+USED_BASIS_PIPE = "content-pipe-form"
+USED_BASIS_NONE = "none"
+USED_BASES = (USED_BASIS_JSON, USED_BASIS_PIPE, USED_BASIS_NONE)
+
 #: Where ``thinking_tokens`` came from.
 THINKING_BASES = ("server-usage-details", "not-reported-by-server")
 
@@ -132,18 +139,23 @@ def _literal(expected: str) -> Checker:
 
 
 def _supply_items(value: object) -> str | None:
-    """``[{"item_id", "rank", "score", "used"}, ...]`` in supplied order.
+    """``[{"item_id", "rank", "score", "used", "used_basis"}, ...]`` in supplied order.
 
     ``rank`` is 1..n; ``score`` is the retrieval score of the item's best supporting facet or null when it is not known;
     ``used`` is true when a string the item carries (an observed intent or slot example) appears in the contact's parsed answer,
-    false when it does not, and null when the contact has no parsed answer or the item carries no checkable string.
+    false when it does not, and null when the contact has no parsed answer or the item carries no checkable string. ``used_basis``
+    names the item form the judgement read (``json-form`` or ``content-pipe-form``) and is ``none`` exactly when ``used`` is null.
+
+    ``used_basis`` is REQUIRED (the item key set stays closed). Migration note: when it was added no rollout-trace file existed on any
+    data root (the trace had not yet been written by a flight), so no line without the field needs to be read; a reader that meets such a
+    legacy line must treat it as ``used_basis`` unknown, not as ``none``.
     """
 
     if not isinstance(value, list):
         return "must be a list"
     for index, item in enumerate(value):
-        if not isinstance(item, Mapping) or set(item) != {"item_id", "rank", "score", "used"}:
-            return f"item {index} must have exactly the keys item_id, rank, score, used"
+        if not isinstance(item, Mapping) or set(item) != {"item_id", "rank", "score", "used", "used_basis"}:
+            return f"item {index} must have exactly the keys item_id, rank, score, used, used_basis"
         if not isinstance(item["item_id"], str) or item["item_id"] == "":
             return f"item {index} item_id must be a non-empty string"
         if not _is_int(item["rank"]) or item["rank"] != index + 1:
@@ -152,6 +164,10 @@ def _supply_items(value: object) -> str | None:
             return f"item {index} score must be a finite number or null"
         if item["used"] is not None and not isinstance(item["used"], bool):
             return f"item {index} used must be a boolean or null"
+        if item["used_basis"] not in USED_BASES:
+            return f"item {index} used_basis must be one of {list(USED_BASES)}"
+        if (item["used"] is None) != (item["used_basis"] == USED_BASIS_NONE):
+            return f"item {index} used_basis is 'none' exactly when used is null"
     ids = [item["item_id"] for item in value]
     if len(ids) != len(set(ids)):
         return "item ids must be unique"

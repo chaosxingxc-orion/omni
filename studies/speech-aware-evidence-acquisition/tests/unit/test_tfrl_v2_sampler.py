@@ -111,6 +111,75 @@ def test_rule_variants_mode_varies_requests_and_needs_variants():
         plan(variation="temperature-ladder")
 
 
+def variant_bank():
+    """A seed rule bank in the shape ``tfrl_v2_distiller.rule_variants_seed_bank`` builds (two scenarios)."""
+
+    def block(ids):
+        return {"rule_ids": list(ids), "rendered_text": "\n".join(["Consumption rules:"] + [f"- {i}" for i in ids]) if ids else ""}
+
+    return {"variants": [
+        {"variant_id": "k0-no-rules", "kind": "none", "rule_ids": [], "rendered_text": ""},
+        {"variant_id": "k1-full-bank", "kind": "full", **block(["r1", "r2", "r3"])},
+        {"variant_id": "k2-row-scenario", "kind": "scenario", "by_scenario": {"alarm": block(["r1", "r2"]), "music": block(["r3"])}},
+        {"variant_id": "k3-top-half", "kind": "top-half", **block(["r1", "r2"])},
+    ]}
+
+
+def stratified_roster(half=cm.HALF_H1):
+    doc = half_roster(half, rows=4)
+    for index, item in enumerate(doc["items"]):
+        item["stratum"] = ["alarm", "music", "weather", "alarm"][index]
+    return doc
+
+
+def test_rule_variants_record_the_variant_and_its_hash_per_trajectory():
+    doc = sp.build_plan(stratified_roster(), cm.HALF_H1, 1, variation="rule-variants", seed_rule_bank=variant_bank())
+    by_row = {}
+    for row in doc["row_plan"]:
+        solvers = [c for c in row["contacts"] if c["node"] == "solver"]
+        assert [c["rule_variant"]["variant_id"] for c in solvers] == ["k0-no-rules", "k1-full-bank", "k2-row-scenario", "k3-top-half"]
+        assert [c["rule_variant"]["kind"] for c in solvers] == ["none", "full", "scenario", "top-half"]
+        assert all(len(c["rule_variant"]["content_sha256"]) == 64 and c["variant_id"] == c["rule_variant"]["variant_id"] for c in solvers)
+        assert len({c["rule_variant"]["content_sha256"] for c in solvers}) == 4 and len({c["request_identity_sha256"] for c in solvers}) == 4
+        by_row[row["row_id"]] = [c["rule_variant"]["rule_ids"] for c in solvers]
+    # k0 none, k1 the full bank, k2 only the rules of the row's own scenario (none for a scenario without rules), k3 the top half
+    assert by_row["R01C-H1:row000"] == [[], ["r1", "r2", "r3"], ["r1", "r2"], ["r1", "r2"]]          # alarm
+    assert by_row["R01C-H1:row001"] == [[], ["r1", "r2", "r3"], ["r3"], ["r1", "r2"]]                 # music
+    assert by_row["R01C-H1:row002"] == [[], ["r1", "r2", "r3"], [], ["r1", "r2"]]                     # weather: no rule of its own
+    # the hash of a shared variant is shared across rows; the scenario variant's hash follows the rules the row gets
+    contacts = {r["row_id"]: [c for c in r["contacts"] if c["node"] == "solver"] for r in doc["row_plan"]}
+    assert contacts["R01C-H1:row000"][1]["rule_variant"]["content_sha256"] == contacts["R01C-H1:row001"][1]["rule_variant"]["content_sha256"]
+    assert contacts["R01C-H1:row000"][2]["rule_variant"]["content_sha256"] != contacts["R01C-H1:row001"][2]["rule_variant"]["content_sha256"]
+    assert contacts["R01C-H1:row000"][2]["rule_variant"]["content_sha256"] == contacts["R01C-H1:row003"][2]["rule_variant"]["content_sha256"]
+
+
+def test_rule_variants_plan_is_deterministic_and_keeps_the_seed_scheme():
+    one = sp.build_plan(stratified_roster(), cm.HALF_H1, 1, variation="rule-variants", seed_rule_bank=variant_bank())
+    two = sp.build_plan(stratified_roster(), cm.HALF_H1, 1, variation="rule-variants", seed_rule_bank=variant_bank())
+    assert cm.file_bytes(one) == cm.file_bytes(two)
+    seed_only = sp.build_plan(stratified_roster(), cm.HALF_H1, 1)
+    seeds = lambda doc: [[c["seed"] for c in r["contacts"] if c["node"] == "solver"] for r in doc["row_plan"]]
+    assert seeds(one) == seeds(seed_only)                                                             # same seed scheme in both modes
+
+
+def test_rule_variants_refuse_k_other_than_four_and_a_wrong_variant_count():
+    for k in (2, 3, 8):
+        with pytest.raises(sp.SamplerError, match="needs K = 4"):
+            sp.build_plan(stratified_roster(), cm.HALF_H1, 1, k=k, variation="rule-variants", seed_rule_bank=variant_bank())
+    with pytest.raises(sp.SamplerError, match="exactly 4 variants"):
+        sp.build_plan(stratified_roster(), cm.HALF_H1, 1, variation="rule-variants", seed_rule_bank={"variants": variant_bank()["variants"][:3]})
+    no_stratum = half_roster(rows=2)
+    with pytest.raises(sp.SamplerError, match="needs the row's scenario"):
+        sp.build_plan(no_stratum, cm.HALF_H1, 1, variation="rule-variants", seed_rule_bank=variant_bank())
+    sp.build_plan(stratified_roster(), cm.HALF_H1, 1, k=8)                                            # seed-only is not restricted to K = 4
+
+
+def test_seed_only_plans_carry_no_rule_variant_and_are_unaffected_by_a_seed_rule_bank_argument_shape():
+    doc = sp.build_plan(stratified_roster(), cm.HALF_H1, 1)
+    assert all("rule_variant" not in c for r in doc["row_plan"] for c in r["contacts"])
+    assert all(c["variant_id"] is None for r in doc["row_plan"] for c in r["contacts"] if c["node"] == "solver")
+
+
 def test_iteration_rules_and_run_ids():
     with pytest.raises(sp.SamplerError, match="iteration must be"):
         plan(iteration=4)

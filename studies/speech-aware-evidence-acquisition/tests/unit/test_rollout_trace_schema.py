@@ -22,8 +22,8 @@ def contact_line(**over):
         "contact_index": 1, "sample_index": None, "request_id": "r-0001", "outcome": "ok", "error_type": None,
         "id_slot": 5, "instance": 1, "supply_variant_id": None,
         "supply_items": [
-            {"item_id": "store::a", "rank": 1, "score": 0.91, "used": True},
-            {"item_id": "store::b", "rank": 2, "score": None, "used": None},
+            {"item_id": "store::a", "rank": 1, "score": 0.91, "used": True, "used_basis": "json-form"},
+            {"item_id": "store::b", "rank": 2, "score": None, "used": None, "used_basis": "none"},
         ],
         "prompt_tokens": 4100, "completion_tokens": 3300, "thinking_tokens": 3112,
         "thinking_tokens_basis": "server-usage-details", "reasoning_chars": 9000, "thinking_budget": 3112,
@@ -116,12 +116,17 @@ def test_missing_and_extra_fields_are_refused(maker):
         {"latency_seconds": float("nan")},
         {"response_text_sha256": "abc"},
         {"supply_items": "none"},
-        {"supply_items": [{"item_id": "a", "rank": 2, "score": None, "used": None}]},
-        {"supply_items": [{"item_id": "a", "rank": 1, "score": "high", "used": None}]},
-        {"supply_items": [{"item_id": "a", "rank": 1, "score": None, "used": "yes"}]},
+        {"supply_items": [{"item_id": "a", "rank": 2, "score": None, "used": None, "used_basis": "none"}]},
+        {"supply_items": [{"item_id": "a", "rank": 1, "score": "high", "used": None, "used_basis": "none"}]},
+        {"supply_items": [{"item_id": "a", "rank": 1, "score": None, "used": "yes", "used_basis": "json-form"}]},
         {"supply_items": [{"item_id": "a", "rank": 1, "score": None}]},
+        {"supply_items": [{"item_id": "a", "rank": 1, "score": None, "used": None}]},                                  # no used_basis
+        {"supply_items": [{"item_id": "a", "rank": 1, "score": None, "used": True, "used_basis": "guess"}]},
+        {"supply_items": [{"item_id": "a", "rank": 1, "score": None, "used": True, "used_basis": "none"}]},
+        {"supply_items": [{"item_id": "a", "rank": 1, "score": None, "used": None, "used_basis": "json-form"}]},
         {"supply_items": [
-            {"item_id": "a", "rank": 1, "score": None, "used": None}, {"item_id": "a", "rank": 2, "score": None, "used": None},
+            {"item_id": "a", "rank": 1, "score": None, "used": None, "used_basis": "none"},
+            {"item_id": "a", "rank": 2, "score": None, "used": None, "used_basis": "none"},
         ]},
         {"answer": {"parsed": True, "scenario": "a", "action": "b"}},
         {"answer": {"parsed": True, "scenario": "a", "action": "b", "entities": [{"type": "t"}]}},
@@ -324,11 +329,15 @@ def test_parse_answer_as_emitted():
 
 
 def test_supply_items_ranks_scores_and_dedupes():
-    items = trace.supply_items(["a", "b", "a", "", "c"], {"a": 0.9, "c": 1}, {"a": True, "b": False})
-    assert [(i["item_id"], i["rank"], i["score"], i["used"]) for i in items] == [
-        ("a", 1, 0.9, True), ("b", 2, None, False), ("c", 3, 1.0, None),
+    items = trace.supply_items(
+        ["a", "b", "a", "", "c"], {"a": 0.9, "c": 1}, {"a": True, "b": False}, {"a": "json-form", "b": "content-pipe-form"},
+    )
+    assert [(i["item_id"], i["rank"], i["score"], i["used"], i["used_basis"]) for i in items] == [
+        ("a", 1, 0.9, True, "json-form"), ("b", 2, None, False, "content-pipe-form"), ("c", 3, 1.0, None, "none"),
     ]
     schema.validate_line(contact_line(supply_items=items))
+    with pytest.raises(ValueError, match="names no basis"):
+        trace.supply_items(["a"], None, {"a": True})                                                       # a judgement names its basis
 
 
 def test_supplied_values_skip_keys_proposals_and_request_derived_ids():
@@ -357,6 +366,50 @@ def test_usage_flags_intent_and_slot_strings():
     assert trace.usage_flags({"a": exemplar}, only_string) == {"a": True}
 
 
+PIPE_ALARM = "wake me up at nine am on friday | alarm_set | date=friday; time=nine am"
+PIPE_MUSIC = "play some jazz | music_play | genre=jazz"
+
+
+def test_usage_flags_pipe_form_true_and_false():
+    answer = {"parsed": True, "scenario": "alarm", "action": "set", "entities": [{"type": "time", "filler": "at nine am"}]}
+    assert trace.usage_flags({"a": PIPE_ALARM, "b": PIPE_MUSIC}, answer) == {"a": True, "b": False}
+    # intent alone makes it used; a slot filler alone makes it used; neither makes it false
+    slot_only = {"parsed": True, "scenario": "x", "action": "y", "entities": [{"type": "date", "filler": "next Friday"}]}
+    assert trace.usage_flags({"a": PIPE_ALARM, "b": PIPE_MUSIC}, slot_only) == {"a": True, "b": False}
+    intent_only = {"parsed": True, "scenario": "music", "action": "play", "entities": []}
+    assert trace.usage_flags({"a": PIPE_ALARM, "b": PIPE_MUSIC}, intent_only) == {"a": False, "b": True}
+    # no slot pairs is still a pipe exemplar; prose with pipes (multi-word middle part) and plain prose carry nothing
+    assert trace.usage_flags({"a": "hello | alarm_set |"}, answer) == {"a": True}
+    assert trace.usage_flags({"a": "a | not an intent | b=c", "b": "Slot contracts: time is a clock time."}, answer) == {"a": None, "b": None}
+    assert trace.usage_flags({"a": PIPE_ALARM}, None) == {"a": None}
+    assert trace.item_strings(PIPE_ALARM) == ("alarm_set", ["friday", "nine am"])
+
+
+def test_usage_judgements_name_the_form_read():
+    answer = {"parsed": True, "scenario": "alarm", "action": "set", "entities": []}
+    exemplar = json.dumps({"observed_intent": "alarm_set", "observed_slot_examples": {}})
+    assert trace.usage_judgements({"j": exemplar, "p": PIPE_MUSIC, "n": "prose"}, answer) == {
+        "j": (True, "json-form"), "p": (False, "content-pipe-form"), "n": (None, "none"),
+    }
+    assert trace.usage_judgements({"j": exemplar}, None) == {"j": (None, "none")}
+
+
+def test_record_contact_pipe_form_item_carries_used_and_basis(tmp_path):
+    writer = make_writer(tmp_path)
+    answer = json.dumps({"scenario": "alarm", "action": "set", "entities": [{"type": "time", "filler": "nine am"}]})
+    assert trace.record_contact(
+        writer, row_id="slurp-1", arm="lock", node="solver", role_id="solver", contact_id="c-1", contact_index=1,
+        sample_index=None, request_id="r-1", outcome="ok", error_type=None, id_slot=5, instance=1, supply_variant_id=None,
+        supply_values=[("train-exemplars::value:1", PIPE_ALARM), ("train-exemplars::value:2", PIPE_MUSIC), ("cards::c", "prose")],
+        supply_scores=None, costs=[cost()], decoding={"max_tokens": 4096, "thinking_budget_tokens": 3112},
+        finish_reason_fallback=None, answer_text=answer, response_text_sha256=SHA,
+    )
+    (line,) = read_lines(writer.path)
+    assert [(i["used"], i["used_basis"]) for i in line["supply_items"]] == [
+        (True, "content-pipe-form"), (False, "content-pipe-form"), (None, "none"),
+    ]
+
+
 def test_node_and_instance_helpers():
     assert trace.node_of("solver") == "solver" and trace.node_of("judge") == "other" and trace.node_of(None) == "other"
 
@@ -379,7 +432,7 @@ def test_record_contact_writes_one_valid_line_and_never_raises(tmp_path):
         finish_reason_fallback=None, answer_text=answer, response_text_sha256=SHA,
     )
     (line,) = read_lines(writer.path)
-    assert line["supply_items"] == [{"item_id": "s::a", "rank": 1, "score": 0.8, "used": True}]
+    assert line["supply_items"] == [{"item_id": "s::a", "rank": 1, "score": 0.8, "used": True, "used_basis": "json-form"}]
     assert line["thinking_tokens"] == 3112 and line["truncated"] is True and line["max_tokens"] == 4096
     assert line["answer"]["entities"] == [{"type": "time", "filler": "nine am"}]
     # nothing to write to: a no-op; a bad field: logged, no raise

@@ -406,6 +406,7 @@ class LoopConfig:
     rows: int = CONSTRUCTION["rows"]
     seed: int = 20261030
     repo_root: Path = REPO_ROOT
+    analysis_root: Path | None = None             # default: <data root>/analysis/<LOOP_ID>
 
     def __post_init__(self) -> None:
         if not 1 <= self.iterations <= MAX_ITERATIONS:
@@ -415,7 +416,7 @@ class LoopConfig:
 
     @property
     def analysis_dir(self) -> Path:
-        return Path(self.data_root) / ANALYSIS_ROOT
+        return Path(self.analysis_root) if self.analysis_root else Path(self.data_root) / ANALYSIS_ROOT
 
 
 def iteration_plan(iterations: int = MAX_ITERATIONS, k: int = DEFAULT_K, temperature: float = DEFAULT_TEMPERATURE,
@@ -569,24 +570,91 @@ def run_loop(cfg: LoopConfig, sampler: Sampler, distiller: Distiller, reader: Ca
 # ---------------------------------------------------------------------------------------------------------------------------
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def _v2_dry_run(args: argparse.Namespace, repo_root: Path = REPO_ROOT) -> list[str]:
+    """The budget lines of the V2 plans (model-free; writes nothing, builds no resolver and contacts no tokenizer).
+
+    Iteration 1 is planned for real (``tfrl_v2_sampler.build_plan`` over the committed half rosters, in memory); a later iteration needs the bank the
+    earlier one distils, so its budget is the same arithmetic over the same rosters (the budget does not depend on the bank).
+    """
+
+    import tfrl_v2_common as cm  # noqa: PLC0415
+    import tfrl_v2_sampler as sp  # noqa: PLC0415
+
+    lines = [f"TFRL-v2 plans {LOOP_ID}: K={args.k} temperature={args.temperature} base seed {args.base_seed} variation {args.variation} "
+             f"measure {args.measure} (dry run: nothing written, no tokenizer contacted)"]
+    audio: dict[str, list[float]] = {}
+    for half in cm.HALVES:
+        raw = (Path(repo_root) / cm.HALF_ROSTER_RELPATH[half]).read_bytes()
+        document = json.loads(raw.decode("utf-8"))
+        plan = sp.build_plan(document, half, 1, k=args.k, base_seed=args.base_seed, temperature=args.temperature, variation="seed-only",
+                             roster_file_sha256=cm.sha256_bytes(raw))
+        audio[half] = [r["audio_seconds"] for r in plan["row_plan"]]
+        lines.append(sp.budget_line(f"iteration 1 {half} program c7 (run {plan['run_id']})", plan["budget"]["program_c7"]))
+    for t in range(1, args.iterations + 1):
+        parts = [sp.budget(audio[half], args.k, include_twin_and_lock=True) for half in cm.HALVES]
+        lines.append(sp.budget_line(f"iteration {t} both halves program c7", sp.sum_budgets(parts)))
+    if args.iterations >= 2 and args.variation == "rule-variants":
+        lines.append("from iteration 2 a non-empty consumed rule bank is sampled in rule-variants mode (k0 none, k1 full, k2 row scenario, k3 top half)")
+    return lines
+
+
+def main(argv: Sequence[str] | None = None, *, v2_overrides: Mapping[str, Any] | None = None) -> int:
     parser = argparse.ArgumentParser(description=(__doc__ or "").strip().splitlines()[0])
-    parser.add_argument("--dry-run", action="store_true", help="print the iteration plan and exit; touches no file")
+    parser.add_argument("--dry-run", action="store_true", help="print the iteration plan (with --v2: the plans' budget lines) and exit; touches no file")
     parser.add_argument("--iterations", type=int, default=MAX_ITERATIONS, help=f"at most {MAX_ITERATIONS}")
     parser.add_argument("--k", type=int, default=DEFAULT_K)
     parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE)
     parser.add_argument("--rows", type=int, default=CONSTRUCTION["rows"])
     parser.add_argument("--data-root", default=os.environ.get("SPEECHRL_DATA_DIR") or os.environ.get("SAEA_DATA_ROOT"))
+    parser.add_argument("--v2", action="store_true", help="drive the TFRL-v2 sampler and distiller (V2Session) instead of the stubs")
+    parser.add_argument("--analysis-root", help=f"loop output directory (default <data root>/{ANALYSIS_ROOT}); the V2 plans and banks go under <analysis root>/v2")
+    parser.add_argument("--base-seed", type=int, default=20261030, help="base decoding seed of the loop")
+    parser.add_argument("--measure", choices=("estimate", "vllm-tokenize"), default="vllm-tokenize",
+                        help="token measure of the V2 banks; 'estimate' is refused by the session (a flight-bound bank needs vllm-tokenize)")
+    parser.add_argument("--tokenize-endpoint", help="http://host:port of the vLLM server whose POST /tokenize measures the banks (required for vllm-tokenize)")
+    parser.add_argument("--tokenize-model", help="served model name sent with each tokenize request")
+    parser.add_argument("--variation", choices=("seed-only", "rule-variants"), default="rule-variants",
+                        help="V2 sampling mode; rule-variants applies from iteration 2 when the consumed rule bank is non-empty and needs K=4")
     args = parser.parse_args(argv)
     if not 1 <= args.iterations <= MAX_ITERATIONS:
         parser.error(f"--iterations must be between 1 and {MAX_ITERATIONS}")
     if args.dry_run:
+        if args.v2:
+            try:
+                print("\n".join(_v2_dry_run(args)))
+            except Exception as error:  # noqa: BLE001 -- a refusal of the plan builder or a missing roster
+                print(f"REFUSED: {error}", file=sys.stderr)
+                return 2
+            return 0
         print("\n".join(iteration_plan(args.iterations, args.k, args.temperature, args.rows)))
         return 0
     if not args.data_root:
         parser.error("--data-root (or SPEECHRL_DATA_DIR) is required without --dry-run")
-    cfg = LoopConfig(data_root=Path(args.data_root), iterations=args.iterations, k=args.k, temperature=args.temperature, rows=args.rows)
-    report = run_loop(cfg, StubSampler(), StubDistiller(), FileCandidateReader(cfg.analysis_dir))
+    if args.v2:
+        if args.measure == "vllm-tokenize" and not args.tokenize_endpoint:
+            parser.error("--measure vllm-tokenize requires --tokenize-endpoint")
+        if args.variation == "rule-variants" and args.iterations >= 2 and args.k != DEFAULT_K:
+            parser.error(f"--variation rule-variants needs K={DEFAULT_K} (iteration 2 and later); use --variation seed-only for K={args.k}")
+    cfg = LoopConfig(data_root=Path(args.data_root), iterations=args.iterations, k=args.k, temperature=args.temperature, rows=args.rows,
+                     seed=args.base_seed, analysis_root=Path(args.analysis_root) if args.analysis_root else None)
+    if args.v2:
+        import tfrl_v2_loop_adapters as ad  # noqa: PLC0415  (imports this module; loaded only for --v2)
+
+        try:
+            session = ad.build_session(data_root=cfg.data_root, analysis_root=cfg.analysis_dir, measure=args.measure,
+                                       tokenize_endpoint=args.tokenize_endpoint, tokenize_model=args.tokenize_model, variation=args.variation,
+                                       repo_root=cfg.repo_root, **dict(v2_overrides or {}))
+            sampler, distiller = ad.V2Sampler(session), ad.V2Distiller(session)
+        except PortLoopError as error:
+            print(f"REFUSED: {error}", file=sys.stderr)
+            return 2
+    else:
+        sampler, distiller = StubSampler(), StubDistiller()
+    try:
+        report = run_loop(cfg, sampler, distiller, FileCandidateReader(cfg.analysis_dir))
+    except PortLoopError as error:
+        print(f"REFUSED: {error}", file=sys.stderr)
+        return 2
     print(json.dumps({"status": report.status, "halt_reason": report.halt_reason, "iterations": report.iterations,
                       "accepted_states": report.accepted_states}, indent=1, sort_keys=True))
     return 0 if report.status in ("complete", "stopped") else 3

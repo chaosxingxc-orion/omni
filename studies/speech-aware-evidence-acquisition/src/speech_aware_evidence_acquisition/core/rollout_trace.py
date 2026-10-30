@@ -312,8 +312,14 @@ def parse_answer(text: object, parser: Callable[[str], tuple] | None = None) -> 
 
 def supply_items(
     item_ids: Iterable[str], scores: Mapping[str, float] | None = None, used: Mapping[str, bool | None] | None = None,
+    bases: Mapping[str, str] | None = None,
 ) -> list[dict[str, object]]:
-    """``supply_items`` of a contact line: supplied ids in supplied order, 1-based rank, retrieval score and usage when known."""
+    """``supply_items`` of a contact line: supplied ids in supplied order, 1-based rank, retrieval score, usage and its basis.
+
+    ``used_basis`` is ``json-form`` or ``content-pipe-form`` when ``used`` is a boolean (the item form the judgement read) and ``none``
+    when ``used`` is null; ``bases`` supplies the form per item. A judged item without a form raises (the contact line is then dropped
+    and logged by :func:`record_contact`).
+    """
 
     out: list[dict[str, object]] = []
     seen: set[str] = set()
@@ -323,10 +329,14 @@ def supply_items(
         seen.add(item_id)
         score = None if scores is None else scores.get(item_id)
         flag = None if used is None else used.get(item_id)
+        flag = flag if isinstance(flag, bool) else None
+        basis = schema.USED_BASIS_NONE if flag is None else (None if bases is None else bases.get(item_id))
+        if basis is None:
+            raise ValueError(f"supply item {item_id!r} is judged but names no basis")
         out.append({
             "item_id": item_id, "rank": len(out) + 1,
             "score": float(score) if isinstance(score, (int, float)) and not isinstance(score, bool) else None,
-            "used": flag if isinstance(flag, bool) else None,
+            "used": flag, "used_basis": basis,
         })
     return out
 
@@ -335,15 +345,10 @@ def _fold(text: str) -> str:
     return " ".join(re.sub(r"[^\w\s]", " ", text.casefold()).split())
 
 
-def item_strings(content: object) -> tuple[str | None, list[str]]:
-    """``(observed intent, slot example strings)`` of one supplied item's content, or ``(None, [])`` when it carries neither.
+_PIPE_TOKEN = re.compile(r"\S+\Z")
 
-    The exemplar stores render ``{"observed_intent": "<scenario>_<action>", "observed_slot_examples": {"<type>": ["<string>", ...]}}``
-    as the item text; any other content (cards, prose) carries nothing this check can compare.
-    """
 
-    if not isinstance(content, str):
-        return None, []
+def _json_item_strings(content: str) -> tuple[str | None, list[str]]:
     try:
         document = json.loads(content.strip())
     except ValueError:
@@ -360,22 +365,79 @@ def item_strings(content: object) -> tuple[str | None, list[str]]:
     return (intent if isinstance(intent, str) and intent else None), strings
 
 
+def _pipe_item_strings(content: str) -> tuple[str | None, list[str]]:
+    """``<utterance> | <intent> | <slot>=<filler>; <slot>=<filler>`` (the real ``train-exemplars`` store form): ``(intent, fillers)``.
+
+    The intent must be a single token (no whitespace), so prose that merely contains two pipes is not mistaken for an exemplar. A third
+    part without any ``slot=filler`` pair is a valid exemplar with no slots.
+    """
+
+    parts = [part.strip() for part in content.split("|")]
+    if len(parts) != 3 or not parts[1] or _PIPE_TOKEN.fullmatch(parts[1]) is None:
+        return None, []
+    strings: list[str] = []
+    for chunk in parts[2].split(";"):
+        _, separator, filler = chunk.partition("=")
+        if separator and filler.strip():
+            strings.append(filler.strip())
+    return parts[1], strings
+
+
+def item_form(content: object) -> tuple[str, str | None, list[str]]:
+    """``(basis, intent, strings)`` of one supplied item's content.
+
+    ``basis`` is ``json-form`` (an ``observed_intent`` / ``observed_slot_examples`` document), ``content-pipe-form`` (the pipe form of
+    :func:`_pipe_item_strings`) or ``none`` (the content carries neither, so nothing can be compared). The JSON form is tried first.
+    """
+
+    if not isinstance(content, str):
+        return schema.USED_BASIS_NONE, None, []
+    intent, strings = _json_item_strings(content)
+    if intent is not None or strings:
+        return schema.USED_BASIS_JSON, intent, strings
+    intent, strings = _pipe_item_strings(content)
+    if intent is not None:
+        return schema.USED_BASIS_PIPE, intent, strings
+    return schema.USED_BASIS_NONE, None, []
+
+
+def item_strings(content: object) -> tuple[str | None, list[str]]:
+    """``(observed intent, slot example strings)`` of one supplied item's content, or ``(None, [])`` when it carries neither.
+
+    Two forms are read: the JSON exemplar form ``{"observed_intent": "<scenario>_<action>", "observed_slot_examples": {"<type>": ["<string>", ...]}}``
+    and the pipe form of the real ``train-exemplars`` store, ``<utterance> | <scenario>_<action> | <slot>=<filler>; ...``. Any other
+    content (cards, prose) carries nothing this check can compare.
+    """
+
+    _, intent, strings = item_form(content)
+    return intent, strings
+
+
 def usage_flags(texts: Mapping[str, str], answer: Mapping[str, object] | None) -> dict[str, bool | None]:
     """For each supplied item, whether a string it carries appears in the parsed answer (None when not checkable).
 
     An item is used when its observed intent equals the answer's ``<scenario>_<action>``, or one of its slot example strings equals
-    or occurs (on word boundaries, case- and punctuation-folded) in one of the answer's entity fillers.
+    or occurs (on word boundaries, case- and punctuation-folded) in one of the answer's entity fillers. See :func:`usage_judgements`
+    for the same flags together with the item form each judgement read.
     """
 
+    return {item_id: flag for item_id, (flag, _) in usage_judgements(texts, answer).items()}
+
+
+def usage_judgements(
+    texts: Mapping[str, str], answer: Mapping[str, object] | None,
+) -> dict[str, tuple[bool | None, str]]:
+    """``{item id: (used, used_basis)}``; ``used`` is None exactly when ``used_basis`` is ``none``."""
+
     if not isinstance(answer, Mapping) or answer.get("parsed") is not True:
-        return {item_id: None for item_id in texts}
+        return {item_id: (None, schema.USED_BASIS_NONE) for item_id in texts}
     label = f"{answer.get('scenario', '')}_{answer.get('action', '')}"
     fillers = [_fold(entity["filler"]) for entity in answer.get("entities", []) if isinstance(entity, Mapping)]
-    flags: dict[str, bool | None] = {}
+    flags: dict[str, tuple[bool | None, str]] = {}
     for item_id, content in texts.items():
-        intent, strings = item_strings(content)
-        if intent is None and not strings:
-            flags[item_id] = None
+        basis, intent, strings = item_form(content)
+        if basis == schema.USED_BASIS_NONE:
+            flags[item_id] = (None, schema.USED_BASIS_NONE)
             continue
         hit = intent == label
         for string in strings:
@@ -383,7 +445,7 @@ def usage_flags(texts: Mapping[str, str], answer: Mapping[str, object] | None) -
             if needle and any(f" {needle} " in f" {filler} " for filler in fillers):
                 hit = True
                 break
-        flags[item_id] = hit
+        flags[item_id] = (hit, basis)
     return flags
 
 
@@ -501,13 +563,15 @@ def record_contact(
         max_tokens = _count(decoding.get("max_tokens"))
         answer = parse_answer(answer_text) if node == "solver" and outcome != "error" else None
         texts = {item_id: content for item_id, content in supply_values}
-        used = usage_flags(texts, answer)
+        judged = usage_judgements(texts, answer)
+        used = {item_id: flag for item_id, (flag, _) in judged.items()}
+        bases = {item_id: basis for item_id, (_, basis) in judged.items()}
         return writer.contact(
             row_id=_id_or_none(row_id), arm=_id_or_none(arm), node=node, role_id=_id_or_none(role_id),
             contact_id=_id_or_none(contact_id), contact_index=_count(contact_index), sample_index=_count(sample_index),
             request_id=_id_or_none(request_id), outcome=outcome, error_type=error_type,
             id_slot=_count(id_slot), instance=_count(instance), supply_variant_id=_id_or_none(supply_variant_id),
-            supply_items=supply_items(list(texts), supply_scores, used), max_tokens=max_tokens, answer=answer,
+            supply_items=supply_items(list(texts), supply_scores, used, bases), max_tokens=max_tokens, answer=answer,
             response_text_sha256=response_text_sha256 if isinstance(response_text_sha256, str) else None, **facts,
         )
     except Exception as error:  # noqa: BLE001

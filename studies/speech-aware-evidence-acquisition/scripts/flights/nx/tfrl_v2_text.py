@@ -255,9 +255,11 @@ class ItemTextResolver:
 def used_items(contact_items: Sequence[Mapping[str, Any]], answer: Mapping[str, Any], resolver: ItemTextResolver | None, limit: int) -> list[dict[str, Any]]:
     """The supplied items an exemplar's answer used, in supplied order, at most ``limit``.
 
-    An item is used when the trace says so (``used`` true). With a resolver, an item the trace could not judge (``used`` null: the contact line was
-    written for a store whose content is not the JSON exemplar form) is judged by :func:`pipe_item_used` on its resolved content.
-    Returns ``[{"item_id", "basis"}]`` with ``basis`` ``trace`` or ``content-pipe-form``.
+    The trace writer's judgement is preferred: an item with ``used`` true is used, basis ``trace`` (the form the writer read is
+    its own ``used_basis`` field and is not repeated here); an item with ``used`` false is
+    not used and is never re-judged. Only an item the writer could not judge (``used`` null, ``used_basis`` ``none`` or absent: a trace written
+    before the writer read the pipe form) is judged by :func:`pipe_item_used` on its resolved content, basis ``content-pipe-form``.
+    Returns ``[{"item_id", "basis"}]``.
     """
 
     out: list[dict[str, Any]] = []
