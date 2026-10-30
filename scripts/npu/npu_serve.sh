@@ -4,9 +4,13 @@
 #
 # usage (on an NPU host):
 #   bash npu_serve.sh thinking <cards e.g. 0,1> <port> [tp]
-#     optional env overrides: NAME and MAX_NUM_SEQS (thinking only; container name default saea-serve-thinking),
-#     default MAX_NUM_SEQS 4; CPUSET (default 128-191) and HCCL_BASE_PORT (default unset: the HCCL default applies;
-#     set a distinct value per instance when several instances share the host network).
+#     optional env overrides (thinking only): NAME (container name, default saea-serve-thinking), MAX_NUM_SEQS
+#     (default 4), GPU_MEM_UTIL (default 0.92, the deployment profile's gpu_memory_utilization, passed as
+#     --gpu-memory-utilization), CPUSET (default 128-191) and HCCL_BASE_PORT (default unset: the HCCL default
+#     applies; set a distinct value per instance when several instances share the host network) and MM_CACHE_TYPE
+#     (default unset: the engine default and no flag; `lru` or `shm` appends `--mm-processor-cache-type <value>`, a
+#     DEPLOYMENT flag outside protocol_sha256 -- plan 3.11 ruling 3 / S16b; any other value is refused).
+#     DRY_RUN=1 prints the container shape and the serve argv and starts nothing (thinking only; no busy-card check).
 #   bash npu_serve.sh embed <view-id> <card> <port>
 # The container mounts ONLY the named cards, so the harness telemetry (read_gpu -> npu-smi) sees exactly them.
 set -euo pipefail
@@ -45,8 +49,20 @@ run() {
   local log=$LOGS/$name-$(date +%Y%m%dT%H%M%S).log
   # HCCL needs the host NIC that carries the node's IPv4 address, else hcclGetRootInfo fails (code 19). Verified on 181.
   local nic; nic=$(ip -o -4 addr show scope global | awk '{print $2; exit}')
+  if [[ "${DRY_RUN:-}" == "1" ]]; then
+    # Render only: print what would be launched and start nothing (no docker, no log follower). The preliminary
+    # chains never set DRY_RUN, so the live path below is unchanged.
+    printf 'DRY_RUN name=%s cards=%s cpuset=%s hccl=%s nic=%s\n' "$name" "$cards" "$cpuset" "${HCCL_BASE_PORT:-}" "$nic"
+    printf 'DRY_DEVICE %s\n' $(devices "$cards")
+    printf 'DRY_ENTRYPOINT %s\n' /usr/local/python3.12.13/bin/python3
+    printf 'DRY_IMAGE %s\n' "$IMAGE"
+    printf 'DRY_ARG %s\n' "$@"
+    return 0
+  fi
   # Daemon-managed container (docker run -d): it is not a child of this shell or of any ssh session, so a dropped
   # connection cannot stop it. --restart no: a crashed server stays down for the owner to read, never loops.
+  # The entrypoint is the image's python so the live cmdline is the receipt gate's VLLM_ENTRYPOINT form
+  # (<interpreter> -m vllm.entrypoints.cli.main serve <model_dir> ...), as core/deployment.py docker_run_argv emits.
   # The log follower is detached (setsid, no tty, SIGHUP ignored) and writes the same CephFS log path as before.
   # shellcheck disable=SC2046
   docker run -d --rm --restart no --name "$name" --network host --shm-size 16g --cpuset-cpus "$cpuset" \
@@ -57,7 +73,7 @@ run() {
     -v /etc/hccn.conf:/etc/hccn.conf:ro -v /etc/ascend_install.info:/etc/ascend_install.info:ro \
     -v /usr/local/Ascend/firmware:/usr/local/Ascend/firmware:ro -v /usr/local/dcmi:/usr/local/dcmi:ro \
     -v /mnt/cephfs/xingchao/omni:/mnt/cephfs/xingchao/omni \
-    --entrypoint vllm "$IMAGE" serve "$@" > /dev/null
+    --entrypoint /usr/local/python3.12.13/bin/python3 "$IMAGE" -m vllm.entrypoints.cli.main serve "$@" > /dev/null
   setsid nohup docker logs -f "$name" > "$log" 2>&1 < /dev/null &
   echo "started $name; log $log"
 }
@@ -65,18 +81,25 @@ run() {
 case $KIND in
   thinking)
     CARDS=$1 PORT=$2 TP=${3:-1}
-    refuse_busy "$CARDS"
+    if [[ "${DRY_RUN:-}" != "1" ]]; then refuse_busy "$CARDS"; fi
     MESSAGE="Considering the limited time by the user, I have to give the solution based on the thinking directly now."
     # The forced string's whitespace around the message is the section-4 ASSUMPTION the smoke verifies.
     REASONING=$(python3 -c 'import json,sys; print(json.dumps({"reasoning_end_str": sys.argv[1] + "\n</think>\n\n"}))' "$MESSAGE")
+    MM_ARGS=()
+    case "${MM_CACHE_TYPE:-}" in
+      "") ;;
+      lru|shm) MM_ARGS=(--mm-processor-cache-type "$MM_CACHE_TYPE") ;;
+      *) echo "refused: MM_CACHE_TYPE must be unset, lru or shm; got '$MM_CACHE_TYPE'" >&2; exit 1 ;;
+    esac
     run "${NAME:-saea-serve-thinking}" "$CARDS" "$M/qwen3-omni-30b-a3b-thinking" \
       --served-model-name qwen3-omni-30b-a3b-thinking --host 127.0.0.1 --port "$PORT" \
       --dtype bfloat16 --tensor-parallel-size "$TP" \
       --max-model-len 24576 --max-num-seqs "${MAX_NUM_SEQS:-4}" \
+      --gpu-memory-utilization "${GPU_MEM_UTIL:-0.92}" \
       --reasoning-parser qwen3 --reasoning-config "$REASONING" \
       --enable-auto-tool-choice --tool-call-parser hermes \
       --limit-mm-per-prompt '{"audio": 1, "image": 0, "video": 0}' \
-      --seed 0
+      --seed 0 "${MM_ARGS[@]}"
     ;;
   embed)
     VIEW=$1 CARD=$2 PORT=$3

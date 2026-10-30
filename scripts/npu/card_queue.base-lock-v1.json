@@ -64,7 +64,7 @@
    "requires_cards_free": true,
    "on_fail": "stop",
    "cards_policy": "all_free",
-   "note": "R0 once (npu_deploy.sh up on the -v2 profile, receipt, verify 11/11, smoke) then R-A2-L32, R-A3-L32, R-A3-b6144. cards_policy all_free: npu_deploy.sh up refuses any busy card."
+   "note": "R0 once (npu_deploy.sh up on the -v3 profile = v2 plus mm_processor_cache_type shm, E3 ADOPTED 2026-10-30, receipt, verify 11/11, smoke) then R-A2-L32, R-A3-L32, R-A3-b6144. cards_policy all_free: npu_deploy.sh up refuses any busy card."
   }
  ]
 }

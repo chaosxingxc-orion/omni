@@ -335,7 +335,7 @@ def test_dry_chain_passes_the_overrides_to_the_sweep_command(tmp_path):
 
 def test_base_lock_v1_combined_list_has_one_r0_and_three_runs():
     doc = json.loads((HERE / "record_run_list.base-lock-v1.json").read_text())
-    rl = rr.validate_run_list(doc, PROFILE)
+    rl = rr.validate_run_list(doc, rr.load_profile("qwen3-omni-thinking-bf16-181-4xtp2-v3"))  # E3 ADOPTED 2026-10-30
     assert rl["example"] is False
     assert [r["id"] for r in rl["runs"]] == ["R-A2-L32", "R-A3-L32", "R-A3-b6144"]
     assert [r["levels"] for r in rl["runs"]] == [[32], [32], [32, 24, 16]]

@@ -2,7 +2,7 @@
  "schema": "saea-record-run-list-v1",
  "example": false,
  "label": "Base-lock v1 combined recorded list on the resident arm A (4 x TP2, -v2 profile, ceiling 32): R0 once, then R-A2-L32 (normal mix at the admitted knee 32, 3 passes), R-A3-L32 (worst case at 32, min_tokens 4096, admissibility) and R-A3-b6144 (worst case at the raised 7168-token cap, levels 32, 24, 16, thinking budget 6144). Whole list on_fail stop_chain (planner ruling 2026-10-30). Synthetic prompts only; no dataset row.",
- "profile": "qwen3-omni-thinking-bf16-181-4xtp2-v2",
+ "profile": "qwen3-omni-thinking-bf16-181-4xtp2-v3",
  "admitted_level": 32,
  "seed": "20261028",
  "client_cpuset": "224-255",
