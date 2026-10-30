@@ -323,6 +323,136 @@ class GenericAndShardTests(Base):
         self.assertEqual(self.cyc()[0]["rg"]["state"], "done")
 
 
+def rt_contact(row, arm, node="solver", trunc=False, think=900, used=(), outcome="ok", prompt=4000, compl=1200):
+    """One contact line in the schema of saea-rollout-trace-v1 (only the fields the watchdog reads, plus the fixed envelope)."""
+    return {"schema": "saea-rollout-trace-v1", "kind": "contact", "ts": "2026-10-30T10:00:00.000Z", "run_id": "RUN-1",
+            "attempt_id": "attempt-1", "row_id": row, "arm": arm, "node": node, "outcome": outcome, "truncated": trunc,
+            "thinking_tokens": think, "prompt_tokens": prompt, "completion_tokens": compl,
+            "supply_items": [{"item_id": "s::%d" % i, "rank": i + 1, "score": 0.5, "used": u} for i, u in enumerate(used)]}
+
+
+def rt_score(row, arm, f1, exact):
+    return {"schema": "saea-rollout-trace-v1", "kind": "score", "run_id": "RUN-1", "attempt_id": "attempt-1", "row_id": row,
+            "arm": arm, "scorer_id": "s", "scenario_action_exact": exact, "slu_f1": f1}
+
+
+def rt_tfrl(row, reward, selected):
+    return {"schema": "saea-rollout-trace-v1", "kind": "tfrl", "run_id": "RUN-1", "attempt_id": "attempt-1", "row_id": row,
+            "arm": None, "trajectory_id": "t-%s" % row, "reward": reward, "selected": selected}
+
+
+def rt_write(path, docs, mode="a"):
+    write(path, "".join(json.dumps(d) + "\n" for d in docs), mode)
+
+
+class RolloutTraceTests(Base):
+    def setUp(self):
+        super().setUp()
+        self.f = os.path.join(self.d, "rollout-trace.jsonl")
+        self.params = {"path": self.f, "min_contacts_for_rates": 4}
+        self.start({"id": "rt", "kind": "rollout_trace", "params": self.params})
+
+    def test_missing_file_is_unknown_then_summary_per_arm_node_supply_and_scores(self):
+        out, _ = self.cyc()
+        self.assertEqual(out["rt"]["state"], "unknown")
+        rt_write(self.f, [
+            rt_contact("r1", "lock", node="perception", think=2000),
+            rt_contact("r1", "lock", trunc=True, think=3112, used=(True, False, None)),
+            rt_contact("r2", "lock", think=1000, used=(False, False)),
+            rt_contact("r1", "aa", trunc=False, think=800, used=(True,)),
+            rt_score("r1", "lock", 0.5, True), rt_score("r2", "lock", 1.0, False), rt_score("r1", "aa", 0.0, False),
+        ])
+        out, lines = self.cyc()
+        m = out["rt"]["metrics"]
+        self.assertEqual(out["rt"]["state"], "running")
+        self.assertEqual(m["contacts"], 4)
+        self.assertEqual(m["arms"], {"aa": 1, "lock": 3})
+        self.assertEqual(m["nodes"]["solver"]["n"], 3)
+        self.assertAlmostEqual(m["nodes"]["solver"]["trunc_pct"], 33.3)
+        self.assertEqual(m["nodes"]["solver"]["think_mean"], 1637)  # (3112 + 1000 + 800) / 3
+        self.assertEqual(m["nodes"]["perception"]["think_mean"], 2000)
+        self.assertEqual(m["supply"]["solver_contacts"], 3)
+        self.assertEqual(m["supply"]["item_use_pct"], 40.0)  # 2 used of 5 checkable (the None item is not counted)
+        self.assertAlmostEqual(m["supply"]["contact_use_pct"], 66.7)
+        self.assertEqual(m["scored"]["lock"], {"rows": 2, "slu_f1_mean": 0.75, "sa_exact_pct": 50.0})
+        self.assertEqual(m["scored"]["aa"]["rows"], 1)
+        self.assertIn("contacts 4", out["rt"]["progress"])
+        self.assertIn("scored 3", out["rt"]["progress"])
+        self.assertEqual(len(lines), 1)  # only the unknown -> running state change
+
+    def test_incremental_reads_count_each_line_once_and_partial_lines_wait(self):
+        rt_write(self.f, [rt_contact("r1", "lock")])
+        self.assertEqual(self.cyc()[0]["rt"]["metrics"]["contacts"], 1)
+        rt_write(self.f, [rt_contact("r2", "lock")])
+        write(self.f, json.dumps(rt_contact("r3", "lock"))[:40], "a")  # a line still being written
+        self.assertEqual(self.cyc()[0]["rt"]["metrics"]["contacts"], 2)
+        write(self.f, json.dumps(rt_contact("r3", "lock"))[40:] + "\n", "a")
+        self.assertEqual(self.cyc()[0]["rt"]["metrics"]["contacts"], 3)
+        self.assertEqual(self.cyc()[0]["rt"]["metrics"]["contacts"], 3)
+
+    def test_tfrl_reward_distribution_and_acceptance(self):
+        rt_write(self.f, [rt_tfrl("r1", 0.5, True), rt_tfrl("r2", -0.3, False), rt_tfrl("r3", 0.0, False),
+                          rt_tfrl("r4", 0.25, True), rt_tfrl("r5", 0.02, False)])
+        out, _ = self.cyc()
+        t = out["rt"]["metrics"]["tfrl"]
+        self.assertEqual((t["n"], t["accepted"], t["pos"], t["zero"], t["neg"]), (5, 2, 2, 2, 1))
+        self.assertEqual((t["reward_min"], t["reward_max"]), (-0.3, 0.5))
+        self.assertAlmostEqual(t["reward_mean"], 0.094, places=4)
+        self.assertIn("tfrl n=5 acc=2", out["rt"]["progress"])
+
+    def test_truncation_warning_once_and_error_bad_once(self):
+        rt_write(self.f, [rt_contact("r%d" % i, "lock", trunc=True) for i in range(4)])
+        _, lines = self.cyc()
+        self.assertTrue(any(" WARN " in l and "solver truncation rate 100.0% over 4" in l for l in lines))
+        rt_write(self.f, [rt_contact("e%d" % i, "lock", outcome="error") for i in range(2)])
+        _, lines = self.cyc()
+        self.assertEqual(len([l for l in lines if "truncation" in l]), 0)  # warned once already
+        self.assertTrue(any(" BAD " in l and "2 of 6 contacts ended in error" in l for l in lines))
+        self.assertEqual(len(self.bundles()), 1)
+        rt_write(self.f, [rt_contact("e9", "lock", outcome="error")])
+        self.assertEqual([l for l in self.cyc()[1] if "ended in error" in l], [])
+
+    def test_invalid_lines_are_bad_with_exact_line_numbers(self):
+        rt_write(self.f, [rt_contact("r1", "lock")])
+        write(self.f, "{not json\n" + json.dumps({"schema": "old", "kind": "contact"}) + "\n", "a")
+        out, lines = self.cyc()
+        self.assertEqual(out["rt"]["metrics"]["invalid"], 2)
+        self.assertEqual(out["rt"]["metrics"]["contacts"], 1)
+        bad = [l for l in lines if " BAD " in l]
+        self.assertEqual(len(bad), 1)
+        b = load(os.path.join(self.d, "bundles", self.bundles()[0]))
+        self.assertEqual(b["evidence"][0]["hit_lines"], [2, 3])
+
+    def test_done_when_expected_counts_reached_and_status_stays_small(self):
+        self.params.update(expected_contacts=3, expected_scores=1)
+        write(os.path.join(self.d, "jobs.json"), json.dumps([{"id": "rt", "kind": "rollout_trace", "host": "h",
+                                                              "params": self.params}]))
+        rt_write(self.f, [rt_contact("r%d" % i, "lock") for i in range(3)])
+        self.assertEqual(self.cyc()[0]["rt"]["state"], "running")
+        rt_write(self.f, [rt_score("r1", "lock", 1.0, True)])
+        out, lines = self.cyc()
+        self.assertEqual(out["rt"]["state"], "done")
+        self.assertTrue(any("running -> done" in l for l in lines))
+        self.assertLess(os.path.getsize(os.path.join(self.d, "status-h.json")), 5000)
+
+    def test_done_file_and_state_survives_restart_without_double_counting(self):
+        rt_write(self.f, [rt_contact("r1", "lock"), rt_contact("r2", "lock")])
+        self.cyc()
+        w2 = wd.Watchdog("h", os.path.join(self.d, "jobs.json"), self.d, env=self.env)
+        out, lines = w2.cycle()
+        self.assertEqual(out["rt"]["metrics"]["contacts"], 2)
+        self.assertEqual(lines, [])
+        rt_write(self.f, [rt_contact("r3", "lock")])
+        self.assertEqual(w2.cycle()[0]["rt"]["metrics"]["contacts"], 3)
+
+    def test_stalled_when_file_stops_growing(self):
+        rt_write(self.f, [rt_contact("r1", "lock")])
+        self.cyc()
+        out, lines = self.cyc(advance=2000)
+        self.assertEqual(out["rt"]["state"], "stalled")
+        self.assertTrue(any(" BAD " in l for l in lines))
+
+
 class FrameworkTests(Base):
     def test_only_own_host_jobs_and_files_and_limits(self):
         log = os.path.join(self.d, "g.log")

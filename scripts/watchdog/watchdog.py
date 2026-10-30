@@ -453,6 +453,164 @@ def generic_log(job, env, st):
                   sig=file_sig([f]), events=events, evidence=[ev(f)])
 
 
+# ---------------------------------------------------------------- kind: rollout_trace
+ROLLOUT_SCHEMA = "saea-rollout-trace-v1"
+
+
+def _rt_agg():
+    return {"lines": 0, "invalid": 0, "foreign": 0, "run": None, "attempt": None,
+            "arms": {}, "nodes": {}, "outcomes": {}, "supply": {"items": 0, "checked": 0, "used": 0, "contacts": 0,
+                                                                "contacts_used": 0},
+            "scores": {}, "tfrl": {"n": 0, "selected": 0, "pos": 0, "zero": 0, "neg": 0, "sum": 0.0,
+                                   "min": None, "max": None, "sel_reward": 0.0}}
+
+
+def _rt_num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def rt_apply(agg, d):
+    """Fold one parsed trace line into the aggregate (only the fields the summary reads; a closed schema is not re-validated here)."""
+    kind_ = d.get("kind")
+    agg["run"], agg["attempt"] = d.get("run_id", agg["run"]), d.get("attempt_id", agg["attempt"])
+    arm = d.get("arm") or "-"
+    if kind_ == "contact":
+        a = agg["arms"].setdefault(arm, {"n": 0, "err": 0})
+        a["n"] += 1
+        outcome = d.get("outcome", "ok")
+        agg["outcomes"][outcome] = agg["outcomes"].get(outcome, 0) + 1
+        a["err"] += outcome == "error"
+        n = agg["nodes"].setdefault(d.get("node", "other"), {"n": 0, "trunc": 0, "think_n": 0, "think_sum": 0,
+                                                              "prompt_n": 0, "prompt_sum": 0, "compl_n": 0, "compl_sum": 0})
+        n["n"] += 1
+        n["trunc"] += d.get("truncated") is True
+        if _rt_num(d.get("thinking_tokens")):
+            n["think_n"] += 1
+            n["think_sum"] += d["thinking_tokens"]
+        if _rt_num(d.get("prompt_tokens")):
+            n["prompt_n"] += 1
+            n["prompt_sum"] += d["prompt_tokens"]
+        if _rt_num(d.get("completion_tokens")):
+            n["compl_n"] += 1
+            n["compl_sum"] += d["completion_tokens"]
+        if d.get("node") == "solver" and isinstance(d.get("supply_items"), list):
+            items = d["supply_items"]
+            sp = agg["supply"]
+            sp["contacts"] += 1
+            sp["items"] += len(items)
+            checked = [i for i in items if isinstance(i, dict) and isinstance(i.get("used"), bool)]
+            sp["checked"] += len(checked)
+            used = sum(1 for i in checked if i["used"])
+            sp["used"] += used
+            sp["contacts_used"] += used > 0
+    elif kind_ == "score":
+        sc = agg["scores"].setdefault(arm, {"n": 0, "f1": 0.0, "exact": 0})
+        sc["n"] += 1
+        sc["f1"] += d["slu_f1"] if _rt_num(d.get("slu_f1")) else 0.0
+        sc["exact"] += d.get("scenario_action_exact") is True
+    elif kind_ == "tfrl":
+        t = agg["tfrl"]
+        r = d.get("reward")
+        if not _rt_num(r):
+            return
+        t["n"] += 1
+        t["sum"] += r
+        t["min"] = r if t["min"] is None else min(t["min"], r)
+        t["max"] = r if t["max"] is None else max(t["max"], r)
+        t["pos"] += r > 0.05
+        t["neg"] += r < -0.05
+        t["zero"] += -0.05 <= r <= 0.05
+        if d.get("selected") is True:
+            t["selected"] += 1
+            t["sel_reward"] += r
+    else:
+        agg["foreign"] += 1
+
+
+def _pct(a, b):
+    return round(100.0 * a / b, 1) if b else None
+
+
+def rt_metrics(agg):
+    """Compact, rounded view of the aggregate for status.json."""
+    nodes = {}
+    for k, n in sorted(agg["nodes"].items()):
+        nodes[k] = {"n": n["n"], "trunc_pct": _pct(n["trunc"], n["n"]),
+                    "think_mean": round(n["think_sum"] / n["think_n"]) if n["think_n"] else None,
+                    "prompt_mean": round(n["prompt_sum"] / n["prompt_n"]) if n["prompt_n"] else None,
+                    "compl_mean": round(n["compl_sum"] / n["compl_n"]) if n["compl_n"] else None}
+    sp = agg["supply"]
+    t = agg["tfrl"]
+    m = {"run": agg["run"], "attempt": agg["attempt"], "lines": agg["lines"], "invalid": agg["invalid"],
+         "contacts": sum(a["n"] for a in agg["arms"].values()), "outcomes": agg["outcomes"],
+         "arms": {k: a["n"] for k, a in sorted(agg["arms"].items())}, "nodes": nodes,
+         "supply": {"solver_contacts": sp["contacts"], "item_use_pct": _pct(sp["used"], sp["checked"]),
+                    "contact_use_pct": _pct(sp["contacts_used"], sp["contacts"]), "items_per_contact":
+                        round(sp["items"] / sp["contacts"], 1) if sp["contacts"] else None},
+         "scored": {k: {"rows": s["n"], "slu_f1_mean": round(s["f1"] / s["n"], 4) if s["n"] else None,
+                        "sa_exact_pct": _pct(s["exact"], s["n"])} for k, s in sorted(agg["scores"].items())}}
+    if t["n"]:
+        m["tfrl"] = {"n": t["n"], "accepted": t["selected"], "pos": t["pos"], "zero": t["zero"], "neg": t["neg"],
+                     "reward_mean": round(t["sum"] / t["n"], 4), "reward_min": t["min"], "reward_max": t["max"]}
+    return m
+
+
+@kind("rollout_trace")
+def rollout_trace(job, env, st):
+    """One flight's rollout trace (`<analysis>/<READ id>/rollout-trace.jsonl`, schema saea-rollout-trace-v1, written by the study
+    runner and scorer). Reads only new complete lines, folds them into a small aggregate kept in the job state and reports:
+    contacts per arm, truncation rate and mean thinking tokens per node, supply usage rate (a supplied item's string appears in the
+    Solver answer), rows scored per arm, and for TFRL the reward distribution and acceptance count.
+    params: path; optional expected_contacts, expected_scores (done when both reached), done_file (done when it exists),
+    trunc_warn_pct (default 40, needs >= 30 contacts of the node), error_bad_pct (default 5), min_contacts_for_rates (default 30)."""
+    p = job["params"]
+    f = p["path"]
+    new = scan_new(f, st.setdefault("log", {}))
+    if new is None:
+        return result("unknown", note="trace %s missing" % f)
+    agg = st.setdefault("agg", _rt_agg())
+    for n, l in new:
+        try:
+            d = json.loads(l)
+        except ValueError:
+            d = None
+        if not isinstance(d, dict) or d.get("schema") != ROLLOUT_SCHEMA:
+            agg["invalid"] += 1
+            st.setdefault("bad_at", []).append(n)
+            del st["bad_at"][:-5]
+            continue
+        agg["lines"] += 1
+        rt_apply(agg, d)
+    m = rt_metrics(agg)
+    events = []
+    if agg["invalid"] and once(st, "invalid:%d" % len(str(agg["invalid"]))):
+        at = st.get("bad_at", [1])
+        events.append(event("BAD", "%d trace line(s) are not valid %s, e.g. line %d" % (agg["invalid"], ROLLOUT_SCHEMA, at[0]),
+                            ev(f, at[0], at[-1]), ev(f)))
+    floor = p.get("min_contacts_for_rates", 30)
+    for node_name, nd in m["nodes"].items():
+        if nd["n"] >= floor and nd["trunc_pct"] is not None and nd["trunc_pct"] >= p.get("trunc_warn_pct", 40) \
+                and once(st, "trunc:" + node_name):
+            events.append(event("WARN", "%s truncation rate %.1f%% over %d contacts" % (node_name, nd["trunc_pct"], nd["n"]), ev(f)))
+    err, total = agg["outcomes"].get("error", 0), m["contacts"]
+    if total >= floor and err * 100.0 / total >= p.get("error_bad_pct", 5) and once(st, "errors"):
+        events.append(event("BAD", "%d of %d contacts ended in error (%.1f%%)" % (err, total, 100.0 * err / total), ev(f)))
+    scored = sum(s["rows"] for s in m["scored"].values())
+    done = False
+    if p.get("expected_contacts") is not None or p.get("expected_scores") is not None:
+        done = total >= p.get("expected_contacts", 0) and scored >= p.get("expected_scores", 0)
+    if p.get("done_file") and os.path.exists(p["done_file"]):
+        done = True
+    nodes_txt = " ".join("%s %s%% trunc think %s" % (k, v["trunc_pct"], v["think_mean"]) for k, v in m["nodes"].items()
+                         if k in ("perception", "solver"))
+    prog = "contacts %d%s | %s | use %s%% | scored %d" % (
+        total, "/%d" % p["expected_contacts"] if p.get("expected_contacts") is not None else "", nodes_txt or "no nodes",
+        m["supply"]["item_use_pct"], scored)
+    if "tfrl" in m:
+        prog += " | tfrl n=%d acc=%d" % (m["tfrl"]["n"], m["tfrl"]["accepted"])
+    return result("done" if done else "running", prog, m, sig=file_sig([f]), events=events, evidence=[ev(f)])
+
+
 # ---------------------------------------------------------------- framework
 class Watchdog:
     def __init__(self, host, jobs_file, outdir, env=None, interval=60):
