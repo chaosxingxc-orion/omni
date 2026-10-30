@@ -1,6 +1,23 @@
 {
   "accelerator_bound": {
-    "carried_over_caps": {
+    "caps": {
+      "arm": {
+        "fit_endpoint_calls": 18360,
+        "generation_calls": 36720,
+        "speech_audio_seconds": 107264
+      },
+      "smoke": {
+        "fit_endpoint_calls": 68,
+        "generation_calls": 136,
+        "speech_audio_seconds": 347
+      }
+    },
+    "caps_note": "The caps follow the PORT arm table (phase-native-module-v1-c17, 17 contacts per row: the historical 15 plus the replicate's Perception and Solver contact): generation = rows x (17 + 17 fallback), FIT = rows x 17 x 1 counting endpoint (the raw-audio arm; the historical packet arm made 4), audio = ceil(roster speech-seconds x the generation contacts per row).",
+    "formula": {
+      "arm": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 8.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+      "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+    },
+    "historical_caps": {
       "arm": {
         "fit_endpoint_calls": 64800,
         "generation_calls": 32400,
@@ -12,17 +29,13 @@
         "speech_audio_seconds": 306
       }
     },
-    "formula": {
-      "arm": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 7.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
-      "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
-    },
     "illustration_not_registered": {
-      "card_hours_per_unit_tensor_parallel": 90.3,
+      "card_hours_per_unit_tensor_parallel": 102.3,
       "lock_rows_per_minute_per_instance": 1.95,
       "note": "at the historical llama.cpp lock rate the flight bound would read 90.3 x T card-hours; the port's r is measured, not assumed"
     },
     "inputs": {
-      "arm_mix_rows": 7.52,
+      "arm_mix_rows": 8.52,
       "margin": 1.3,
       "round_hours": 0.1,
       "rows": 1080,
@@ -44,11 +57,12 @@
     "l1-support",
     "l2-union",
     "aa",
+    "lock-rep2",
     "lock"
   ],
   "arm_visits": "first",
   "cell": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
-  "composed_config_hash": "22f715bf06036e7b682881ff88ffe165695abb09a72aa5438478870da180ba30",
+  "composed_config_hash": "5d528040888927dd767ce4f4669ef61ab3e8bd082f0d05ca3e13c01d30b98e18",
   "declared_differences": [
     "8.1 BF16 weights instead of GGUF Q4_K_M; BF16 KV instead of q8_0",
     "8.2 audio features computed by the server's audio tower from the raw audio instead of llama.cpp mmproj packets",
@@ -63,9 +77,9 @@
     "carrier_lock_key": "slurp",
     "execution_profile": "bounded-discovery-probe",
     "planned_gpu_hours": 0.5,
-    "planned_model_calls": 120,
-    "planned_speech_audio_seconds": 306,
-    "protocol_hash": "205ae3fc444ac9aaba0d03a696dfd7489fe261a31941d182c88fa5f014c9e3b7",
+    "planned_model_calls": 136,
+    "planned_speech_audio_seconds": 347,
+    "protocol_hash": "26e8bd51091cb6b32a7f43312db9b35eedda80e3c23b2123b1fdb8d9ed7b855d",
     "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1",
     "schema": "saea-execution-plan-v1",
     "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32",
@@ -79,12 +93,12 @@
     "asr_calls": 0,
     "ceilings_are_not_targets": true,
     "encoder_calls": 0,
-    "fit_endpoint_calls_cap": 240,
-    "generation_calls_cap": 120,
+    "fit_endpoint_calls_cap": 68,
+    "generation_calls_cap": 136,
     "gpu_hours_fit_inclusive": 0.5,
-    "native_task_contract_calls_cap": 120,
+    "native_task_contract_calls_cap": 136,
     "official_complete_scoring_jobs": 0,
-    "repeated_speech_audio_seconds_cap": 306
+    "repeated_speech_audio_seconds_cap": 347
   },
   "historical_twin": {
     "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-V1",
@@ -94,7 +108,7 @@
   "no_think_node": null,
   "one_factor": "None within the cell beyond the historical sampling levers; against the historical twin the port changes the serving stack, the speech input path, the retrieval vectors and the authored knowledge together (the declared differences), so it is read beside the historical flight, never as a one-factor contrast with it.",
   "plan_kind": "generation",
-  "preparation_base_commit": "ad67226f",
+  "preparation_base_commit": "890643114fc1f2d851737e1202f7e32e4bba2ea0",
   "prepared_phase_supply": {
     "note": "this cell's own first-phase supply under its own run id (item E16), prepared or re-prepared by scripts/flights/repin_cell.py at the flip",
     "relpath": "prepared/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1/phase-supply-v1.json",
@@ -102,7 +116,7 @@
   },
   "protocol_document": {
     "relpath": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/protocol-registered-v1.json",
-    "sha256": "26e4a2bc0b09cbeb005404845abe5ece4b06f6eb7b2c23523c5181daefd1aad3"
+    "sha256": "c255b1822e8d4eaa0166060186c4ee2f71bbddc8bf3fc95fd6b0e630ce9a85c5"
   },
   "purpose": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1: four-row form smoke of the lever column of L338, NPU port.",
   "registered_at_utc": "2026-10-28T13:19:53.257535+00:00",
@@ -149,6 +163,10 @@
     "lock": {
       "axes": null,
       "role": "delivering"
+    },
+    "lock-rep2": {
+      "axes": null,
+      "role": "replicate (replicate_of lock, arm_kind replicate)"
     }
   },
   "schema": "saea-registered-generation-plan-v1",

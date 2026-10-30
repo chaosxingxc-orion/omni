@@ -52,6 +52,95 @@ FOLD_B_CARRIER = "slurp TRAIN Fold B SLURP-EVO-FOLD-B-V2 1080"
 FOLD_B_SPLIT = "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
 MF_TAIL = "It constructs no ExecutionPlan, reserves no contact, releases no store beyond the one named, re-pins no committed config and authorises nothing."
 
+# ---- the PORT arm table views of the historical writer's texts (noise model M1: the registered replicate of lock) -----------------------------------
+REPLICATE_TEXT = (f"the registered replicate{'s' if len(pf.REPLICATE_ARMS) > 1 else ''} {', '.join(pf.REPLICATE_ARMS)} (replicate_of {fam.DELIVERING}, arm_kind replicate: "
+                  f"a further request-identical copy of {fam.DELIVERING} beside the twin {fam.TWIN}; no axis, no seed and no override of its own, so it differs from "
+                  f"{fam.DELIVERING} in its arm id alone; it is its own Perception and first-visit Solver visit, +1 Perception and +1 Solver contact per row)")
+
+
+def port_arm_table_rows() -> list[dict]:
+    """``hw.arm_table_rows()`` with the replicate row after the twin (declared order: candidates, twin, replicate(s), lock LAST)."""
+
+    rows = hw.arm_table_rows()
+    at = next(i for i, row in enumerate(rows) if row["arm"] == fam.TWIN) + 1
+    for offset, arm in enumerate(pf.REPLICATE_ARMS):
+        rows.insert(at + offset, {"arm": arm, "role": f"replicate (replicate_of {fam.DELIVERING}, arm_kind replicate)", "axes": None,
+                                  "evidence": "a second request-identical copy of the lock for the decoding-noise term of the CI95 (noise model M1)"})
+    if [row["arm"] for row in rows] != list(pf.ARM_ORDER):
+        raise SystemExit("the port arm table rows are not the port arm order")
+    return rows
+
+
+def _exact(text: str, old: str, new: str) -> str:
+    if text.count(old) != 1:
+        raise SystemExit(f"expected exactly one carried-over sentence, found {text.count(old)}: {old[:80]!r}")
+    return text.replace(old, new)
+
+
+def port_scope() -> str:
+    """``hw.SCOPE`` at the port arm table."""
+
+    old = (f"with the {fam.K}-arm sampling lever column (" + ", ".join(fam.ARM_ORDER) + f") at the Perception node (program {fam.PROGRAM}, {fam.CONTACTS_PER_ROW} contacts per row)")
+    new = (f"with the {pf.K}-arm sampling lever column (" + ", ".join(pf.ARM_ORDER) + f") at the Perception node (program {pf.PROGRAM}, {pf.CONTACTS_PER_ROW} contacts per row)")
+    return _exact(hw.SCOPE, old, new)
+
+
+def port_findings() -> list[dict]:
+    """The historical findings; the two that state the arm table (the in-flight twin and the cost) are restated for the port arm table, one finding is added."""
+
+    out = []
+    for finding in hw.FINDINGS:
+        finding = dict(finding)
+        if finding["id"] == "in-flight-aa-twin":
+            finding["finding"] = _exact(finding["finding"], "are the offsets o_SLU / o_int of the read.",
+                                        f"are the offsets o_SLU / o_int of the read. {REPLICATE_TEXT[0].upper()}{REPLICATE_TEXT[1:]} gives the third request-identical copy.")
+        elif finding["id"] == "cost-is-an-estimate-from-the-lock-seconds":
+            finding["finding"] = _exact(
+                finding["finding"], f"A row costs {fam.PERCEPTION_CONTACTS_PER_ROW} Perception contacts plus {fam.SOLVER_CONTACTS_PER_ROW} Solver contacts;",
+                f"A row costs {pf.PERCEPTION_CONTACTS_PER_ROW} Perception contacts plus {pf.SOLVER_CONTACTS_PER_ROW} Solver contacts (the historical table's {fam.PERCEPTION_CONTACTS_PER_ROW} + "
+                f"{fam.SOLVER_CONTACTS_PER_ROW} and the replicate's one of each);")
+            finding["finding"] = _exact(finding["finding"], f"so the arm mix is {fam.ARM_MIX_ROWS} lock-row equivalents and the expected cost "
+                                                            f"{fam.expected_gpu_hours(fam.ROWS):.1f} GPU-h against",
+                                        f"so the arm mix is {pf.ARM_MIX_ROWS} lock-row equivalents (the historical {fam.ARM_MIX_ROWS}; the llama.cpp cost model's expected cost was "
+                                        f"{fam.expected_gpu_hours(fam.ROWS):.1f} GPU-h, now about {fam.expected_gpu_hours(fam.ROWS) * pf.ARM_MIX_ROWS / fam.ARM_MIX_ROWS:.1f}) against")
+        out.append(finding)
+    out.append({"id": "noise-model-m1-replicate-and-widened-ci",
+                "finding": (f"Noise model M1 (plan docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md, section 5 M1; task T2): the port arm table carries "
+                            f"{REPLICATE_TEXT}. lock, {fam.TWIN} and {', '.join(pf.REPLICATE_ARMS)} are three request-identical copies, so three pairwise deltas per row-metric measure "
+                            "the decoding noise. The CI95 of every arm delta is the row-paired bootstrap interval widened by the replicate variance (mean squared pairwise delta, summed "
+                            "with the bootstrap variance); per-row F1 is reported beside pooled F1; the within-run word NOMINATED needs the pooled AND the per-row lower bounds above "
+                            "zero (scripts/analysis/paired_ci.py, scripts/analysis/slurp_l338_port_column_read.py, recipe port_extensions.noise_model). The program is "
+                            f"{pf.PROGRAM}, {pf.CONTACTS_PER_ROW} contacts per row, and the three caps follow it."),
+                "remedy": "none; the registered caps and the card-hour formula are re-derived for the port arm table."})
+    return out
+
+
+#: The within-run words of the port: the historical rules over the widened CI95, plus the pooled-and-per-row condition (recipe ``port_extensions.noise_model.words``).
+PORT_NOMINATED_SUFFIX = (" Noise model M1: every CI95 is the bootstrap interval widened by the replicate variance, and NOMINATED additionally needs BOTH the pooled and the per-row "
+                         "(mean of per-row F1) lower bound of the primary metric above zero, and the per-row SLU-F1 upper bound at or above minus the SLU floor.")
+
+
+def port_word_rules() -> dict:
+    rules = copy.deepcopy(hw.WORD_RULES)
+    for lever in rules:
+        rules[lever]["NOMINATED"] += PORT_NOMINATED_SUFFIX
+    return rules
+
+
+def port_measurement_blocks(ids: Mapping[str, Mapping]) -> dict:
+    """``hw.measurement_blocks`` at the port arm table: the variant cost follows the port contacts per row; the replicate arms are named beside the twin."""
+
+    blocks = hw.measurement_blocks(ids)
+    flight = blocks[ids["arm"]["run_id"]]
+    flight["variant_cost"] = {"extra_contacts_per_row": pf.CONTACTS_PER_ROW - 2, "extra_audio_seconds": round(pf.extra_audio_seconds("arm"), 2)}
+    flight["replicate_arm_ids"] = list(pf.REPLICATE_ARMS)
+    flight["note"] += (f" Noise model M1: {', '.join(pf.REPLICATE_ARMS)} is a second request-identical replicate of {fam.DELIVERING}; the CI95 carries the replicate variance of "
+                       "the three copies.")
+    smoke = blocks[ids["smoke"]["run_id"]]
+    smoke["note"] = _exact(smoke["note"], f"the {fam.PROGRAM} module program with {fam.K} sampling arms", f"the {pf.PROGRAM} module program with {pf.K} sampling arms")
+    return blocks
+
+
 # ---- the port preparations the flight pins (model-free; facts re-read from the receipts) -------------------------------------------------------------
 PREPARATIONS = {
     "alias": {"receipt": "prepared/SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-B-ALIAS-NPU-PORT-V1/query-dimension-alias.json",
@@ -273,14 +362,18 @@ def cost_block() -> dict:
         "plan_field_note": ("execution_plan.planned_gpu_hours and family_budget.gpu_hours_fit_inclusive carry the historical figures (90.3 / 0.5) only because the "
                             "plan field must be a number; they are NOT the NPU bound. The ledger gpu-hours cells carry the formula and fail the exposure gate "
                             "closed until the sweep re-derives the bound and the main thread re-writes plan, rows and receipt together."),
-        "carried_over_caps": {k: {"generation_calls": pf.generation_calls(k), "fit_endpoint_calls": pf.fit_calls(k), "speech_audio_seconds": pf.audio_seconds(k)}
-                              for k in pf.ALL_KEYS},
+        "caps": {k: {"generation_calls": pf.generation_calls(k), "fit_endpoint_calls": pf.fit_calls(k), "speech_audio_seconds": pf.audio_seconds(k)}
+                 for k in pf.ALL_KEYS},
+        "caps_note": (f"The caps follow the PORT arm table ({pf.PROGRAM}, {pf.CONTACTS_PER_ROW} contacts per row: the historical {fam.CONTACTS_PER_ROW} plus the replicate's Perception "
+                      f"and Solver contact): generation = rows x ({pf.CONTACTS_PER_ROW} + {pf.FALLBACK_CONTACTS_PER_ROW_CEILING} fallback), FIT = rows x {pf.CONTACTS_PER_ROW} x {pf.RAW_FIT_ENDPOINTS_PER_CONTACT} counting endpoint (the raw-audio arm; the historical packet arm made {fam.tf.FIT_ENDPOINTS_PER_CONTACT}), audio = "
+                      "ceil(roster speech-seconds x the generation contacts per row)."),
+        "historical_caps": {k: {"generation_calls": v[0], "fit_endpoint_calls": v[1], "speech_audio_seconds": v[2]} for k, v in pf.HISTORICAL_CAPS.items()},
     }
 
 
 def plan_docs(ids: Mapping[str, Mapping], commit: str, at: str, protocol_sha: str) -> dict:
     docs = {}
-    arms_doc = {row["arm"]: {"role": row["role"], "axes": row["axes"]} for row in hw.arm_table_rows()}
+    arms_doc = {row["arm"]: {"role": row["role"], "axes": row["axes"]} for row in port_arm_table_rows()}
     fit_block = port_fit_proof()
     for key in pf.ALL_KEYS:
         i, spec = ids[key], pf.CELLS[key]
@@ -293,7 +386,7 @@ def plan_docs(ids: Mapping[str, Mapping], commit: str, at: str, protocol_sha: st
                                                        "superseded by phase-supply-v2 (output equality asserted)" if key == "arm" else ""))},
                 "protocol_document": {"relpath": f"{PKG}/protocol-registered-v1.json", "sha256": protocol_sha}, "registered_at_utc": at, "status": STATUS,
                 "thinking_knobs": json.loads(json.dumps(fam.THINKING_KNOBS)), "no_think_node": None,
-                "sampling_arms": json.loads(json.dumps(arms_doc)), "arm_order": list(fam.ARM_ORDER), "unused_budget_is_not_attempt_authority": True,
+                "sampling_arms": json.loads(json.dumps(arms_doc)), "arm_order": list(pf.ARM_ORDER), "unused_budget_is_not_attempt_authority": True,
                 "arm_visits": "first", "serving": serving_block(), "accelerator_bound": cost_block(),
                 "historical_twin": {"run_id": i["historical_run_id"], "fit_run_id": i["historical_fit_run_id"], "package": pf.HISTORICAL_PACKAGE},
                 "declared_differences": list(pf.DECLARED_DIFFERENCES),
@@ -320,7 +413,7 @@ def plan_docs(ids: Mapping[str, Mapping], commit: str, at: str, protocol_sha: st
 
 def scope_text(key: str) -> str:
     spec = pf.CELLS[key]
-    return (f"DRAFT -- REGISTERED. NPU-port twin of {spec['historical_run']}. {spec['role'][0].upper()}{spec['role'][1:]}: {hw.SCOPE}; served by the BF16 / "
+    return (f"DRAFT -- REGISTERED. NPU-port twin of {spec['historical_run']}. {spec['role'][0].upper()}{spec['role'][1:]}: {port_scope()}; served by the BF16 / "
             f"vLLM-Ascend Thinking core over the original recordings ({pf.PROMPT_ORDER}) with the port's re-authored knowledge (intent-boundaries-npu-port-v1, "
             "slot-contracts-npu-port-v2) and the port's regenerated retrieval vectors (CPU float32, forced causal), the agreement table, centroid keys and "
             f"first-phase supply of the port preparations; {pf.DIFFERENCES_TEXT}")
@@ -380,9 +473,13 @@ def readme_text(ids: Mapping[str, Mapping], commit: str) -> str:
         f"{smoke['family_budget']['fit_endpoint_calls_cap']} | {smoke['family_budget']['repeated_speech_audio_seconds_cap']} | PROVISIONAL: {pf.CARD_HOUR_FORMULA['smoke']} |\n"
         f"| `{arm['cell']}` | `{arm['run_id']}` | `{arm['fit_run_id']}` | {arm['rows']} | {arm['family_budget']['generation_calls_cap']} | "
         f"{arm['family_budget']['fit_endpoint_calls_cap']} | {arm['family_budget']['repeated_speech_audio_seconds_cap']} | PROVISIONAL: {pf.CARD_HOUR_FORMULA['arm']} |\n\n"
-        "The calls, FIT and audio caps are the historical registration's (they do not depend on the deployment). The arms, program "
-        f"(`{fam.PROGRAM}`, {fam.CONTACTS_PER_ROW} contacts per row), roster, templates, thinking budget {fam.DELIVERING_BUDGET} / cap {fam.COMPLETION_CAP}, decoding "
-        f"(greedy, seed {fam.LOCKED_DECODING['seed']}) and read rule are the historical cell's.\n\n"
+"The calls, FIT and audio caps do not depend on the deployment; they follow the port arm table (the historical arm table plus the registered replicate "
+        f"`{', '.join(pf.REPLICATE_ARMS)}` of the lock: noise model M1), so they are the historical 32,400 / 64,800 / 94,644 (flight) and 120 / 240 / 306 (smoke) plus the "
+        f"replicate's contacts, except the FIT cap, which is rows x contacts x {pf.RAW_FIT_ENDPOINTS_PER_CONTACT} counting endpoint on the raw-audio arm (the packet arm made {fam.tf.FIT_ENDPOINTS_PER_CONTACT}), "
+        f"the value the native contact fit gate demands. The arms ({', '.join(pf.ARM_ORDER)}), program (`{pf.PROGRAM}`, {pf.CONTACTS_PER_ROW} contacts per row: {pf.PERCEPTION_CONTACTS_PER_ROW} "
+        f"Perception + {pf.SOLVER_CONTACTS_PER_ROW} Solver), the arm mix ({pf.ARM_MIX_ROWS} lock-row equivalents), the within-run CI95 (widened by the replicate variance) and the "
+        f"NOMINATED rule (pooled and per-row) are the port's; the roster, templates, thinking budget {fam.DELIVERING_BUDGET} / cap {fam.COMPLETION_CAP} and decoding "
+        f"(greedy, seed {fam.LOCKED_DECODING['seed']}) are the historical cell's.\n\n"
         "## Serving: protocol facts and the deployment placeholder\n\n"
         f"Model fragment `{pf.MODEL_FRAGMENT}` (transport vLLM, BF16). Protocol facts: the per-sequence context window of {pf.PER_SEQUENCE_WINDOW_TOKENS:,} tokens, "
         f"the reasoning budget and cap, the decoding, the prompt order `{pf.PROMPT_ORDER}`. The DEPLOYMENT -- instances, tensor-parallel size, sequences per instance, "
@@ -434,8 +531,8 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
     protocol = {
         "cells": {k: {kk: v[kk] for kk in ("attempt_id", "cell", "composed_config_hash", "experiment", "fit_attempt_id", "fit_run_id", "protocol_hash",
                                            "rows", "run_id", "split_identity_hash", "historical_run_id")} for k, v in ids.items()},
-        "arms": {row["arm"]: {"role": row["role"], "axes": row["axes"]} for row in hw.arm_table_rows()},
-        "blockers": [], "findings": hw.FINDINGS, "port_findings": [
+        "arms": {row["arm"]: {"role": row["role"], "axes": row["axes"]} for row in port_arm_table_rows()},
+        "blockers": [], "findings": port_findings(), "port_findings": [
             {"id": "deployment-is-a-placeholder", "finding": pf.PORT_DEPLOYMENT_PROFILE["not_a_fact_here"], "remedy": "the measured speed sweep fills the profile"},
             {"id": "historical-findings-are-context", "finding": ("The historical findings are carried for context; those that name the resident np4 llama.cpp "
                                                                   "session, its batching or its cost model describe the historical flight, not the port deployment."),
@@ -451,8 +548,8 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
         "protocol_id": "slurp-l338-lever-column-fold-b-npu-port-protocol-v1", "registered_at_utc": at,
         "schema": "saea-registered-protocol-v1", "status": STATUS, "study_commit_at_registration": commit,
         "the_question": ("Does the L338 lever column read the same way on the BF16 / vLLM-Ascend Thinking core with the port's knowledge and vectors? Each candidate "
-                         f"arm and the twin {fam.TWIN} are read PAIRED per row against the delivering {fam.DELIVERING} arm on the same 1,080 Fold B rows in one flight, "
-                         "beside (never as a byte replay of) the historical flight.")}
+                         f"arm, the twin {fam.TWIN} and the replicate {', '.join(pf.REPLICATE_ARMS)} are read PAIRED per row against the delivering {fam.DELIVERING} arm on the same 1,080 Fold B "
+                         "rows in one flight, with the decoding term of the three request-identical copies in every CI95, beside (never as a byte replay of) the historical flight.")}
     protocol_sha = reg.wjson(root, f"{PKG}/protocol-registered-v1.json", protocol)
     plans = plan_docs(ids, commit, at, protocol_sha)
     shas = {name: reg.wjson(root, f"{PKG}/{name}", doc) for name, doc in plans.items()}
@@ -462,8 +559,10 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
     facts = {
         "_note": ("Every model-free fact this DRAFT port registration rests on, and the canonical stage3_measurement blocks keyed by the port run ids "
                   "(scripts/checks/stage3_effect_floor_check.py, scripts/checks/flight_registration_check.py)."),
-        "accounting": {"program": fam.PROGRAM, "lock": fam.LOCK, "contacts_per_row": fam.CONTACTS_PER_ROW, "arms": list(fam.ARM_ORDER), "rows": fam.ROWS,
-                       "caps": cost_block()["carried_over_caps"], "accelerator_bound": cost_block()},
+        "accounting": {"program": pf.PROGRAM, "lock": fam.LOCK, "contacts_per_row": pf.CONTACTS_PER_ROW, "arms": list(pf.ARM_ORDER), "rows": fam.ROWS,
+                       "perception_contacts_per_row": pf.PERCEPTION_CONTACTS_PER_ROW, "solver_contacts_per_row": pf.SOLVER_CONTACTS_PER_ROW,
+                       "replicate_arms": list(pf.REPLICATE_ARMS), "request_identical_copies": list(pf.REPLICATE_SET),
+                       "caps": cost_block()["caps"], "accelerator_bound": cost_block()},
         "composed_config_hashes": {k: v["composed_config_hash"] for k, v in ids.items()},
         "context_fit": port_fit_proof(), "identity": ids, "derive": derived,
         "pins": {"model_fragment": pf.MODEL_FRAGMENT, "serving": serving_block(), "port_pins": {"path": "scripts/flights/nx/l338_port_pins.json",
@@ -476,12 +575,13 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
         "prohibitions": protocol["prohibitions"], "registered_at_utc": at,
         "registration_basis": f"{pf.OWNER_DECISIONS}; {pf.DESIGN_DOC}. DRAFT: nothing here authorises a flip or a flight.",
         "read_rule": {"reader": pf.PORT_READER, "historical_reader": fam.READER, "recipe": pf.RECIPE_RELPATH, "read_run_id": pf.READ_RUN_ID,
-                      "verdicts_file": f"{pf.ANALYSIS_ROOT}/{pf.VERDICTS_NAME}", "words": hw.WORD_RULES, "word_order": hw.WORD_ORDER, "twin": fam.TWIN,
+                      "verdicts_file": f"{pf.ANALYSIS_ROOT}/{pf.VERDICTS_NAME}", "words": port_word_rules(), "word_order": hw.WORD_ORDER, "twin": fam.TWIN,
+                      "replicates": list(pf.REPLICATE_ARMS), "ci_definition": "recipe port_extensions.noise_model (paired_ci.FORMULA)",
                       "floors_pp": {"slu": fam.FLOOR_SLU_PP, "intent": fam.FLOOR_INTENT_PP}, "levers": dict(fam.ARM_LEVER), "delivering": fam.DELIVERING},
         "roster": {"arm": fam.ROSTER["arm"], "smoke": fam.ROSTER["smoke"], "roster_id": fam.READ_ROSTER, "split_identity_hash": arm["split_identity_hash"]},
-        "rows": fam.ROWS, "schema": "saea-registered-facts-v1", "stage3_measurement": hw.measurement_blocks(ids),
+        "rows": fam.ROWS, "schema": "saea-registered-facts-v1", "stage3_measurement": port_measurement_blocks(ids),
         "study_commit_at_registration": commit, "thinking_knobs": json.loads(json.dumps(fam.THINKING_KNOBS)), "no_think_node": None,
-        "sampling_arms": {row["arm"]: row["axes"] for row in hw.arm_table_rows()}, "locked_decoding": dict(fam.LOCKED_DECODING),
+        "sampling_arms": {row["arm"]: row["axes"] for row in port_arm_table_rows()}, "locked_decoding": dict(fam.LOCKED_DECODING),
         "status": "DRAFT-HELD"}
     shas["registered-facts-v1.json"] = reg.wjson(root, f"{PKG}/registered-facts-v1.json", facts)
     draft = {
@@ -498,7 +598,7 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
                                          "note": "gpu_hours_fit_inclusive above is the historical numeric placeholder, not the NPU card-hour bound"}},
         "claim_boundary": "No benefit, system-level, superiority, generalisation, held-out, confirmatory or paper-scale claim.",
         "decision": (f"Fly the NPU-port twin of the L338 lever column on the BF16 / vLLM-Ascend Thinking core on TRAIN Fold B: four-row smoke, then the "
-                     f"{fam.K}-arm column flight (with the twin), on the deployment PORT_DEPLOYMENT_PROFILE once it is filled."),
+                     f"{pf.K}-arm column flight (with the twin and the replicate {', '.join(pf.REPLICATE_ARMS)}), on the deployment PORT_DEPLOYMENT_PROFILE once it is filled."),
         "decision_id": pf.DECISION_ID, "eligible_attempt_ids": pf.eligible_attempt_ids(), "eligible_run_ids": pf.eligible_run_ids(),
         "not_authorized": ["any flight before the cells are flipped and the receipt is minted", "any flight before PORT_DEPLOYMENT_PROFILE is filled",
                            "starting or touching any serving session outside the registered deployment", "any ASR, transcript, encoder or paid-API contact",
@@ -529,7 +629,7 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
               "Development numbers only.\n\n"
               f"Runs: `{smoke['run_id']}` / `{smoke['fit_run_id']}`; `{arm['run_id']}` / `{arm['fit_run_id']}`.\n\n"
               f"The package is `{PKG}/`; the read rule is the historical package's.\n\n## The measurement declaration\n\n```json\n"
-              + json.dumps({"stage3_measurement": hw.measurement_blocks(ids)}, indent=2, ensure_ascii=False, sort_keys=True) + "\n```\n")
+              + json.dumps({"stage3_measurement": port_measurement_blocks(ids)}, indent=2, ensure_ascii=False, sort_keys=True) + "\n```\n")
     shas["__prereg__"] = reg.wr(root, pf.PREREG, prereg)
     result = {"package": PKG, "shas": shas, "derive": derived, "ledger_appended": None}
     if append_ledger:

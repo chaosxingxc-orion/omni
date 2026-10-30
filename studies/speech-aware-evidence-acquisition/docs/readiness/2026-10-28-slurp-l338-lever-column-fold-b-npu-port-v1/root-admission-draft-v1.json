@@ -4,36 +4,36 @@
     "plans": {
       "fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/fit-plan-registered-v1.json",
-        "sha256": "bd8b5de6a990e0141ee0f86b782335f06a22eb810e3e79ac452dea46ef86ee2e"
+        "sha256": "3ca6fc2b2fd12ef6dcc6f923d5e68cc32a62811bdb031e79812838d432dce6e8"
       },
       "generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/generation-plan-registered-v1.json",
-        "sha256": "8d6d481a966d44e8f10d2c836333bae63f92ae3c9358c7f4590c4249730b36b5"
+        "sha256": "25223acdb2ec158c0f3ccef9455732cb12c8dcd01b948b47f10be801d1a75f1b"
       },
       "smoke-fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/smoke-fit-plan-registered-v1.json",
-        "sha256": "bb7d6e9e76d0740d17c467fdec02f7f051fe20e1ce3a39a4ae45494cdc7aab09"
+        "sha256": "7134a01f2c8a39b60cf719b2fc56c6ac48840009bbed361c305f54b95c54ab35"
       },
       "smoke-generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/smoke-generation-plan-registered-v1.json",
-        "sha256": "a176af2a5f66f9de1b1394be5f832aea8654b95728e3bef2a6f825e9838ea264"
+        "sha256": "61da086ad7a259b6824e5392ac8ea343802a2f9df401d6bb54bf010d9b7262d9"
       }
     },
     "protocol": {
       "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/protocol-registered-v1.json",
-      "sha256": "26e4a2bc0b09cbeb005404845abe5ece4b06f6eb7b2c23523c5181daefd1aad3"
+      "sha256": "c255b1822e8d4eaa0166060186c4ee2f71bbddc8bf3fc95fd6b0e630ce9a85c5"
     },
     "registered_facts": {
       "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/registered-facts-v1.json",
-      "sha256": "00cdee47bc31e071c6707426825d6661fdac7f37310e411004e6b40ed1565169"
+      "sha256": "b4d24d79347ab9c9cec1f779b85d3ad4ffcacc967c621a1a8d8d37912dafff64"
     },
-    "registration_base_commit": "ad67226f"
+    "registration_base_commit": "890643114fc1f2d851737e1202f7e32e4bba2ea0"
   },
   "authorization_basis": "owner decisions of 2026-10-28 on the NPU port (design doc section 9.1: the saea-base Docker container is the execution authority; item 4: the agent drafts the exposure preregistration rows; item 5: the admission receipt is authorised and minted by the main thread; item 6: model-free-check rows for the port preparations; the multi-instance deployment input: the deployment is a named placeholder filled from a measured speed sweep); docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md; historical authority owner rulings 338 and 341 A (2026-10-19), 335 B and 336 A (2026-10-18), 326 A and 327 A (2026-10-17), 313 A (2026-10-14) and 304/307 (2026-10-13), coordinator approval of the decision-338 lever-column design (docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1).",
   "budget": {
     "accelerator_bound": {
       "formula": {
-        "arm": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 7.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+        "arm": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 8.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
         "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
       },
       "note": "gpu_hours_fit_inclusive above is the historical numeric placeholder, not the NPU card-hour bound",
@@ -42,28 +42,28 @@
     "asr_calls": 0,
     "ceilings_are_not_targets": true,
     "encoder_calls": 0,
-    "fit_endpoint_calls_cap": 64800,
-    "generation_calls_cap": 32400,
+    "fit_endpoint_calls_cap": 18360,
+    "generation_calls_cap": 36720,
     "gpu_hours_fit_inclusive": 90.3,
-    "native_task_contract_calls_cap": 32400,
+    "native_task_contract_calls_cap": 36720,
     "official_complete_scoring_jobs": 1,
     "paid_api_calls": 0,
     "plan_budget_is_run_cumulative": true,
-    "repeated_speech_audio_seconds_cap": 94644,
+    "repeated_speech_audio_seconds_cap": 107264,
     "smoke": {
       "asr_calls": 0,
       "ceilings_are_not_targets": true,
       "encoder_calls": 0,
-      "fit_endpoint_calls_cap": 240,
-      "generation_calls_cap": 120,
+      "fit_endpoint_calls_cap": 68,
+      "generation_calls_cap": 136,
       "gpu_hours_fit_inclusive": 0.5,
-      "native_task_contract_calls_cap": 120,
+      "native_task_contract_calls_cap": 136,
       "official_complete_scoring_jobs": 0,
-      "repeated_speech_audio_seconds_cap": 306
+      "repeated_speech_audio_seconds_cap": 347
     }
   },
   "claim_boundary": "No benefit, system-level, superiority, generalisation, held-out, confirmatory or paper-scale claim.",
-  "decision": "Fly the NPU-port twin of the L338 lever column on the BF16 / vLLM-Ascend Thinking core on TRAIN Fold B: four-row smoke, then the 4-arm column flight (with the twin), on the deployment PORT_DEPLOYMENT_PROFILE once it is filled.",
+  "decision": "Fly the NPU-port twin of the L338 lever column on the BF16 / vLLM-Ascend Thinking core on TRAIN Fold B: four-row smoke, then the 5-arm column flight (with the twin and the replicate lock-rep2), on the deployment PORT_DEPLOYMENT_PROFILE once it is filled.",
   "decision_id": "slurp-l338-lever-column-fold-b-npu-port-admission-v1",
   "eligible_attempt_ids": [
     "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-generation-npu-port-v1",

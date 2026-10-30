@@ -108,8 +108,10 @@ from .native_episode_receipt import (
     PERCEPTION_BRANCH_RECEIPT_SCHEMA_V4,
     PERCEPTION_BRANCH_RECEIPT_SCHEMA_V5,
     PERCEPTION_BRANCH_RECEIPT_SCHEMA_V6,
+    MAX_LOCK_REPLICATES,
     SAMPLING_AXES,
     perception_branch_sampling_error,
+    perception_branch_twin_and_replicates,
     parse_perception_branch_note,
     perception_branch_thinking_policy_error,
     perception_branch_key_source_error,
@@ -2086,10 +2088,26 @@ class PerceptionBranch:
     # by :func:`parse_perception_sampling_variants`. Declared LAST, so every branch parsed before composes byte-identically.
     perception_samples: "PerceptionSamplesAxis | None" = None
     solver_samples: "SolverSamplesAxis | None" = None
+    # Noise model M1 (2026-10-30): True for a REPLICATE (``arm_kind: replicate``), a further request-identical copy of A beside the single twin T. It
+    # names ``replicate_of`` A like T does, so every request-identity path (``is_twin``) treats it exactly as T; only the group parser, the receipt
+    # validator and the readers tell the two apart. Declared LAST: a branch parsed before this field existed composes byte-identically.
+    replicate: bool = False
 
     @property
     def is_twin(self) -> bool:
+        """True for every request-identical copy of A (the single twin AND a replicate): the runtime renders both as A's own request."""
+
         return self.replicate_of is not None
+
+    @property
+    def is_replicate(self) -> bool:
+        return self.replicate
+
+    @property
+    def is_primary_twin(self) -> bool:
+        """True for the one twin T (not a replicate)."""
+
+        return self.replicate_of is not None and not self.replicate
 
     @property
     def is_b(self) -> bool:
@@ -2133,6 +2151,7 @@ class PerceptionBranch:
                 {} if self.solver_samples is None
                 else {"solver_samples": self.solver_samples.as_json()}
             ),
+            **({"arm_kind": SAMPLING_ARM_KIND_REPLICATE} if self.replicate else {}),
         }
 
 
@@ -2194,9 +2213,15 @@ class PerceptionBranchGroup:
     @property
     def twin_branch(self) -> PerceptionBranch:  # raises when the group declares none (a v5 column may)
         for branch in self.branches:
-            if branch.is_twin:
+            if branch.is_primary_twin:
                 return branch
         raise PerceptionBranchError("perception branch group has no twin (T) branch")
+
+    @property
+    def replicate_branches(self) -> tuple[PerceptionBranch, ...]:
+        """The ``arm_kind: replicate`` copies of A beside the single twin, in declared order (empty for every group declared before M1)."""
+
+        return tuple(branch for branch in self.branches if branch.is_replicate)
 
     def branch(self, branch_id: str) -> PerceptionBranch:
         for branch in self.branches:
@@ -2443,7 +2468,12 @@ def parse_perception_thinking_variants(block: object, *, phase_id: str) -> Perce
 #: delivering branch and the twin run the locked form and declare neither axis, so any delivery-time rule (the v4g
 #: normaliser) stays scoped to the delivering branch alone.
 SAMPLING_VARIANT_BLOCK_KEYS = frozenset({"node", "arms", "max_supplied_items", "fit_estimate"})
-SAMPLING_VARIANT_ARM_KEYS = frozenset({"arm_id", "deliver", "replicate_of", *SAMPLING_AXES})
+#: Noise model M1 (2026-10-30): ``arm_kind`` marks a REPLICATE -- a further request-identical copy of the delivering arm beside the single twin
+#: (``replicate_of`` without ``arm_kind``). A replicate names ``replicate_of`` the delivering arm, carries no axis, no seed and no other key (the row is
+#: ``{arm_id, replicate_of, arm_kind}`` and nothing else), so it differs from the delivering arm in its arm id alone. The twin plus the replicates number at most
+#: :data:`MAX_LOCK_REPLICATES`; three request-identical copies (the delivering arm, the twin and one replicate) give three pairwise deltas per row.
+SAMPLING_ARM_KIND_REPLICATE = "replicate"
+SAMPLING_VARIANT_ARM_KEYS = frozenset({"arm_id", "deliver", "replicate_of", "arm_kind", *SAMPLING_AXES})
 SAMPLING_VARIANT_KIND_PERCEPTION = "perception-sampling"
 SAMPLING_VARIANT_KIND_SOLVER = "solver-sampling"
 SAMPLING_VARIANT_KINDS = (SAMPLING_VARIANT_KIND_PERCEPTION, SAMPLING_VARIANT_KIND_SOLVER)
@@ -2728,6 +2758,11 @@ def parse_perception_sampling_variants(block: object, *, phase_id: str) -> Perce
     Every candidate arm declares ``perception_samples``, ``solver_samples`` or both (one fan-out per node, so each key at most
     once). The delivering arm is LAST and declares no axis; exactly one twin ``replicate_of`` the delivering arm is REQUIRED (the
     within-flight A/A every node-column read needs). 1..6 candidate arms; two arms with the same axes are refused.
+
+    Noise model M1 (2026-10-30): beside the twin the block may declare further REPLICATES, rows ``{arm_id, replicate_of, arm_kind:
+    "replicate"}`` naming the delivering arm and nothing else (no axis, no seed, no override: a replicate differs from the delivering
+    arm in its arm id alone). The twin plus the replicates number at most :data:`MAX_LOCK_REPLICATES` (2); the replicates sit after
+    the twin and before the delivering arm. A block without ``arm_kind`` parses exactly as before.
     """
 
     if not isinstance(block, Mapping) or set(block) != SAMPLING_VARIANT_BLOCK_KEYS:
@@ -2746,17 +2781,40 @@ def parse_perception_sampling_variants(block: object, *, phase_id: str) -> Perce
         or not all(isinstance(row, Mapping) for row in rows)
     ):
         raise PerceptionBranchError("sampling_variants.arms must be an ordered list of arm objects")
-    twins = [row for row in rows if row.get("replicate_of") is not None]
+    for position, row in enumerate(rows):
+        kind = row.get("arm_kind")
+        if kind is not None and kind != SAMPLING_ARM_KIND_REPLICATE:
+            raise PerceptionBranchError(
+                f"sampling_variants.arms[{position}].arm_kind {kind!r} is not registered; the only arm kind is "
+                f"{SAMPLING_ARM_KIND_REPLICATE!r} (a further request-identical copy of the delivering arm beside the twin)"
+            )
+        if kind is not None and row.get("replicate_of") is None:
+            raise PerceptionBranchError(
+                f"sampling_variants.arms[{position}] declares arm_kind {SAMPLING_ARM_KIND_REPLICATE!r} without replicate_of: "
+                "a replicate is a copy of the delivering arm and names it"
+            )
+    twins = [row for row in rows if row.get("replicate_of") is not None and row.get("arm_kind") is None]
+    replicates = [row for row in rows if row.get("arm_kind") == SAMPLING_ARM_KIND_REPLICATE]
     if len(twins) != 1:
         raise PerceptionBranchError(
             "sampling_variants must declare exactly one twin (replicate_of the delivering arm): the within-flight A/A "
             f"null the column read requires; this block declares {len(twins)}"
         )
-    candidates = len(rows) - len(twins) - 1
+    if len(twins) + len(replicates) > MAX_LOCK_REPLICATES:
+        raise PerceptionBranchError(
+            f"sampling_variants admits at most {MAX_LOCK_REPLICATES} request-identical replicates of the delivering arm "
+            f"(the twin plus {MAX_LOCK_REPLICATES - 1} arm_kind {SAMPLING_ARM_KIND_REPLICATE!r}); this block declares "
+            f"{len(twins) + len(replicates)}"
+        )
+    if replicates:
+        twin_position = next(i for i, row in enumerate(rows) if row.get("replicate_of") is not None and row.get("arm_kind") is None)
+        if any(i < twin_position for i, row in enumerate(rows) if row.get("arm_kind") == SAMPLING_ARM_KIND_REPLICATE):
+            raise PerceptionBranchError("sampling_variants replicates must be declared after the twin (the order twin, replicates, delivering)")
+    candidates = len(rows) - len(twins) - len(replicates) - 1
     if not MIN_SAMPLING_CANDIDATE_ARMS <= candidates <= MAX_SAMPLING_CANDIDATE_ARMS:
         raise PerceptionBranchError(
             f"sampling_variants must declare between {MIN_SAMPLING_CANDIDATE_ARMS} and {MAX_SAMPLING_CANDIDATE_ARMS} "
-            f"candidate arms (plus the delivering arm and the twin); this block declares {max(candidates, 0)}"
+            f"candidate arms (plus the delivering arm, the twin and any replicate); this block declares {max(candidates, 0)}"
         )
     fit_estimate = parse_supply_variant_fit_estimate(block["fit_estimate"])
     branches: list[PerceptionBranch] = []
@@ -2781,7 +2839,7 @@ def parse_perception_sampling_variants(block: object, *, phase_id: str) -> Perce
         if deliver or replicate_of is not None:
             if axes:
                 raise PerceptionBranchError(
-                    f"{where} is the delivering arm or the twin and must declare no sampling axis: it runs the locked "
+                    f"{where} is the delivering arm, the twin or a replicate and must declare no sampling axis: it runs the locked "
                     "form, so delivery-time rules apply to it alone"
                 )
         else:
@@ -2796,6 +2854,7 @@ def parse_perception_sampling_variants(block: object, *, phase_id: str) -> Perce
         branches.append(PerceptionBranch(
             branch_id=arm_id, deliver=deliver, knobs=(), max_supplied_items=max_items,
             replicate_of=replicate_of, perception_samples=perception_axis, solver_samples=solver_axis,
+            replicate=row.get("arm_kind") == SAMPLING_ARM_KIND_REPLICATE,
         ))
     ids = [branch.branch_id for branch in branches]
     if len(set(ids)) != len(ids):
@@ -4036,11 +4095,11 @@ def replay_perception_branch_block(
     )
     result["branches"] = rebuilt
     branch_ids = [row.get("branch_id") for row in rebuilt]
-    twin = next((row.get("branch_id") for row in rebuilt if row.get("replicate_of") is not None), None)
+    twin, replicates = perception_branch_twin_and_replicates(rebuilt)
     validate_perception_branch_receipt(
         result, branch_ids=branch_ids, delivered_branch_id=branch_ids[-1],
         twin_branch_id=twin, phase_id=str(block.get("phase_id")), level=level,
-        error_type=PerceptionBranchError,
+        error_type=PerceptionBranchError, replicate_branch_ids=replicates,
     )
     return result
 
@@ -4058,6 +4117,8 @@ __all__ = [
     "sampling_decoding_table",
     "parse_perception_samples",
     "parse_perception_sampling_variants",
+    "MAX_LOCK_REPLICATES",
+    "SAMPLING_ARM_KIND_REPLICATE",
     "parse_solver_samples",
     "perception_samples_record",
     "sampling_extra_contacts",

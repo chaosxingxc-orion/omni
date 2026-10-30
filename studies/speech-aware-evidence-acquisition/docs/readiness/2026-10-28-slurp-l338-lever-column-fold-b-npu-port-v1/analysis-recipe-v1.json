@@ -3,6 +3,7 @@
     "l1-support",
     "l2-union",
     "aa",
+    "lock-rep2",
     "lock"
   ],
   "authority": "docs/readiness/2026-09-16-slurp-next-stage-owner-decisions-v1.md (owner rulings 338 and 341 A (2026-10-19), 335 B and 336 A (2026-10-18), 326 A and 327 A (2026-10-17), 313 A (2026-10-14) and 304/307 (2026-10-13), coordinator approval of the decision-338 lever-column design); docs/superpowers/specs/2026-10-12-thinking-core-engineering-base-design.md; docs/readiness/2026-09-26-slurp-stage3-measurement-instrument-v1.md; docs/superpowers/specs/2026-10-19-slurp-338-lever-column-design.md; NPU port: docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md (owner decisions of 2026-10-28, section 9); docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md (Decision 1 comparison reference, Decision 4 revised: aa is the twin, gap F); historical recipe docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1/analysis-recipe-v1.json",
@@ -48,7 +49,7 @@
   "measurement_design": "same-flight-node-column",
   "next_step": "a NOMINATED arm goes to the 335 B Fold A column (stated, not built); the composed L1+L2 arm is not flown here; on the port the S0 parity reading (port_extensions.parity_band) is read first and S2 does not start if the port lock arm is outside the band (docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md section 2)",
   "port_extensions": {
-    "_note": "Port-only additions (Opus 5.5 DRAFT for gap F of docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md). The historical schema saea-stage3-rollout-analysis-recipe-v1 has no slot for a cross-run comparison reference, a parity band, a cross-run bar or a twin admissibility rule, so they live here. Every existing loader ignores this object: scripts/checks/flight_registration_check.py reads only read_run_id / run_ids.read, schema and the system-text binding keys (family_id, context_learning_registration, system_panel_registration, pilot_registration, measurement_profile), and scripts/analysis/slurp_l338_column_read.py reads no recipe key (its ids, arms, floors and seed come from scripts/flights/nx/l338_family.py). Every top-level key outside this object keeps the historical recipe's key and scoring definition; only the ids, the authority, the registration time, the stage notes and the next-step sentence differ. DRAFT: registers a reading rule, authorises nothing.",
+    "_note": "Port-only additions (Opus 5.5 DRAFT for gap F of docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md). The historical schema saea-stage3-rollout-analysis-recipe-v1 has no slot for a cross-run comparison reference, a parity band, a cross-run bar or a twin admissibility rule, so they live here. Every existing loader ignores this object: scripts/checks/flight_registration_check.py reads only read_run_id / run_ids.read, schema and the system-text binding keys (family_id, context_learning_registration, system_panel_registration, pilot_registration, measurement_profile), and scripts/analysis/slurp_l338_column_read.py reads no recipe key (its ids, arms, floors and seed come from scripts/flights/nx/l338_family.py). Every top-level key outside this object keeps the historical recipe's key and scoring definition; only the ids, the authority, the registration time, the stage notes, the next-step sentence and the arm lists (arms, sampling_arms: they name the registered replicate lock-rep2, noise model M1) differ. DRAFT: registers a reading rule, authorises nothing.",
     "comparison_reference": {
       "intent": 85.0,
       "role": "the recipe's pinned point reference (docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md Decision 1). Reported beside the band; the port is never read against this point alone.",
@@ -71,7 +72,7 @@
       "design": "cross-flight-with-in-chain-replicate",
       "floor_form": "max(sampling 1.2485, admission bar 2.5) at n = 1,080",
       "floor_slu_pp": 2.5,
-      "improvement_rule": "IMPROVEMENT-ADMISSIBLE when, in one admissible port run (registered_comparisons[0]), an arm's official pooled SLU-F1 is at or above 75.25 (the band top 72.75 + 2.5 pp) AND its paired SLU delta against the port's own lock arm has a CI95 lower bound above zero (this recipe's primary interval) AND the twin arm aa agrees (aa inside the band). Otherwise no cross-run improvement statement is made; the within-run words stand on their own.",
+      "improvement_rule": "IMPROVEMENT-ADMISSIBLE when, in one admissible port run (registered_comparisons[0]), an arm's official pooled SLU-F1 is at or above 75.25 (the band top 72.75 + 2.5 pp) AND its paired SLU delta against the port's own lock arm has a CI95 lower bound above zero (the widened CI95 of port_extensions.noise_model) AND its per-row SLU-F1 delta has a widened CI95 lower bound above zero AND the twin arm aa agrees (aa inside the band). Otherwise no cross-run improvement statement is made; the within-run words stand on their own.",
       "n": 1080,
       "refused": "cross-flight-no-replicate: a run without the twin arm supports no cross-run statement (instrument rule 4; scripts/checks/stage3_effect_floor_check.py cross-flight-no-replicate)",
       "requires_twin_arm_in_the_same_run": true,
@@ -89,11 +90,124 @@
       "path": "docs/readiness/2026-10-19-slurp-l338-lever-column-fold-b-v1/analysis-recipe-v1.json",
       "sha256": "4a72277d8a9efd4c4a6ea6b32b7fb774e4745a06c04b21e4643a4ee312aa8116"
     },
+    "noise_model": {
+      "_note": "Noise model M1 (plan docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md section 5 M1 and section 6 T2; closes P3 and P4): a second request-identical replicate of lock as a registered arm kind, a CI95 with the decoding term, and per-row F1 beside pooled F1. DRAFT: registers a reading rule, authorises nothing. Read by scripts/analysis/slurp_l338_port_column_read.py through scripts/analysis/paired_ci.py; the reader refuses this recipe unless copies, formula, max_replicates and replicate_arms equal the code's.",
+      "amended_at": "2026-10-30",
+      "copies": [
+        "lock",
+        "aa",
+        "lock-rep2"
+      ],
+      "formula": "V_rep = mean over the pairwise deltas of D**2; SE_b = (hi - lo) / (2 z); SE_t = sqrt(SE_b**2 + V_rep); widening w = z (SE_t - SE_b); reported CI95 = [lo - w, hi + w]; z = 1.959964",
+      "max_replicates": 2,
+      "module": "scripts/analysis/paired_ci.py",
+      "pairwise_deltas": {
+        "definition": "D_ab = m(a) - m(b) for the pairs (aa, lock), (lock-rep2, lock), (lock-rep2, aa): three pairwise deltas per metric; m is the whole-roster level in percentage points",
+        "metrics": [
+          "slu_f1 (pooled)",
+          "intent",
+          "per_row_slu_f1 (mean over rows of the per-row F1)"
+        ]
+      },
+      "per_row_f1": {
+        "definition": "per-row F1 of a row = 2 TP / (2 TP + FP + FN) with TP, FP, FN the row's word and char counts summed (the scorer's own per-row fields); 1.0 for a row with no gold and no prediction; the per-row F1 of an arm is the mean over rows. per_row_delta = the mean over rows of F1_i(arm) - F1_i(lock), with its own row-paired bootstrap interval (same draws and seed) widened by the per-row V_rep.",
+        "reported_beside": "pooled SLU-F1 in read.json contrast.levels.<arm>.per_row_slu_f1_pct and contrast.versus_delivering.<arm>.per_row_slu_f1",
+        "why": "pooled F1 can rise while the typical row falls (a lever that makes the Solver answer emptier); P4 of the plan"
+      },
+      "reader": "scripts/analysis/slurp_l338_port_column_read.py",
+      "replicate_arms": [
+        "lock-rep2"
+      ],
+      "replicate_rule": {
+        "arm_kind": "replicate",
+        "arm_mix_registered_rows": 8.52,
+        "caps": {
+          "flight": {
+            "fit_endpoint_calls": 18360,
+            "generation_calls": 36720,
+            "speech_audio_seconds": 107264
+          },
+          "smoke": {
+            "fit_endpoint_calls": 68,
+            "generation_calls": 136,
+            "speech_audio_seconds": 347
+          }
+        },
+        "contacts_per_row": {
+          "historical": 15,
+          "perception": 8,
+          "port": 17,
+          "program": "phase-native-module-v1-c17",
+          "solver": 9
+        },
+        "delivering": "lock",
+        "family": "scripts/flights/nx/l338_port_family.py (REPLICATE_ARMS, ARM_ORDER, sampling_block); scripts/flights/nx/l338_arms.json and the historical family are untouched",
+        "max_replicates": 2,
+        "meaning": "The rails (rails.supply_variants.parse_perception_sampling_variants) admit exactly one twin (replicate_of the delivering arm, no arm_kind) plus replicates (rows {arm_id, replicate_of, arm_kind: 'replicate'} and nothing else), the twin and the replicates numbering at most 2 (R = 2); a third copy, a replicate that carries an axis, a seed, a decoding or any other key, a replicate before the twin, an arm_kind on a non-replicate arm and any other arm_kind are refused by name. A replicate differs from lock in its arm id alone; it is its own Perception and first-visit Solver visit, so it adds one Perception AND one Solver contact per row.",
+        "replicate_arms": [
+          "lock-rep2"
+        ],
+        "twin_arm": "aa"
+      },
+      "status": "DRAFT",
+      "twin_admissibility": "unchanged: |SLU-F1(aa) - SLU-F1(lock)| <= 1.2 pp; the other replicate deltas are reported beside it (port-verdicts.json noise_model) and enter no word",
+      "verdict_fields": {
+        "added": [
+          "noise_model (copies, formula, ci_definition, per-metric pairwise deltas, variance and rms, each cited to read_json)",
+          "improvement.<arm>.per_row_slu_f1_pct / per_row_slu_delta_vs_lock_pp / per_row_slu_delta_ci95_pp",
+          "improvement.<arm>.conditions.per_row_slu_delta_ci95_lower_above_zero"
+        ],
+        "changed": [
+          "every ci95 field is the widened interval; interval.kind names the widening; rule_text.ci95 states it"
+        ],
+        "file": "port-verdicts.json, schema saea-l338-port-verdicts-v2"
+      },
+      "widened_ci": {
+        "applies_to": [
+          "slu_f1 (pooled)",
+          "intent",
+          "per_row_slu_f1"
+        ],
+        "definition": "The reported CI95 of every arm delta (arm minus lock) is the row-paired utterance-cluster bootstrap interval [lo, hi] (10,000 draws, seed 20261018: unchanged) widened symmetrically by w, the amount that turns the bootstrap standard error into the conservative sum of variances SE_t = sqrt(SE_b**2 + V_rep). The point estimate is unchanged. V_rep is the second moment of the pairwise deltas of the three request-identical copies: the copies are one configuration, so the true mean of a delta is zero and the second moment is the variance of a delta between two independent decodes, which is the decoding variance of lock-vs-arm when the arm decodes as noisily as lock. The copies themselves keep their interval-only CI95 (they are the noise). Identical replicates give V_rep = 0 and w = 0.",
+        "interval_only_record": "read.json keeps the interval-only contrast under contrast_bootstrap_only and its words under arm_words_bootstrap_only",
+        "small_sample_note": "three pairwise deltas of three copies in one run are a two-degree-of-freedom estimate; the record carries n_pairs and the deltas themselves",
+        "worked_example": {
+          "V_rep_pp2": 0.806667,
+          "aa_slu_f1": 73.1,
+          "bootstrap_ci95_pp": [
+            -1.0,
+            1.0
+          ],
+          "lock_rep2_slu_f1": 72.0,
+          "lock_slu_f1": 72.0,
+          "pairwise_deltas_pp": [
+            1.1,
+            0.0,
+            -1.1
+          ],
+          "se_b_pp": 0.510213,
+          "se_t_pp": 1.032949,
+          "widened_ci95_pp": [
+            -2.024544,
+            2.024544
+          ],
+          "widening_pp": 1.024544
+        }
+      },
+      "words": {
+        "HARM": "unchanged (the historical rule over the widened CI95)",
+        "NEUTRAL": "unchanged",
+        "NOMINATED": "the historical NOMINATED rule read over the widened CI95 (word_rules: lower bound >= the floor on the lever's primary metric, no resolved loss on the guard) AND the pooled lower bound of the primary metric > 0 AND the per-row lower bound of the primary metric > 0 (for intent accuracy the per-row mean is the pooled mean; for SLU-F1 it is per_row_slu_f1) AND the per-row SLU-F1 upper bound >= minus the SLU floor (no resolved per-row loss).",
+        "withheld": "a lever whose historical word would be NOMINATED but fails one of the extra conditions is read NEUTRAL; arm_words.words.<arm> keeps hist_word and nominated_withheld_by"
+      },
+      "z": 1.959964
+    },
     "open_items": [
       "the reader and the read script bind the historical family ids: scripts/analysis/slurp_l338_column_read.py:784-801 (fam.ANALYSIS_ROOT, fam.CELLS) and scripts/flights/nx/l338_read.sh:15-16 and :29 (the historical run, analysis root and READ run id); a port mode is needed before this recipe's stages can run (gap F, writer stream)",
       "the port writer does not emit an analysis recipe and its admission draft carries no analysis_recipe antecedent (scripts/flights/nx/l338_port_write_registration.py:490); the writer re-run should emit this recipe and pin it",
       "the READ run id above has no exposure-ledger row yet (draft text: read-row-draft-v1.md in this package)",
-      "the reader computes no PARITY, OUTSIDE-BAND, ADMISSIBLE or IMPROVEMENT-ADMISSIBLE word today; until it does, these are read by hand from the reader's per-arm table and the twin contrast"
+      "the reader computes no PARITY, OUTSIDE-BAND, ADMISSIBLE or IMPROVEMENT-ADMISSIBLE word today; until it does, these are read by hand from the reader's per-arm table and the twin contrast",
+      "noise model M1: the CI95 widening rests on the pairwise deltas of three copies in ONE run (two degrees of freedom); the plan's acceptance uses the widened CI, but the variance estimate is only as good as that one run, which the record shows (n_pairs and the deltas)"
     ],
     "parity_band": {
       "applies_to": [
@@ -197,7 +311,7 @@
         "id": "aa-vs-lock",
         "on_not_admissible": "no cross-run statement (parity, improvement over the band) is made from the run; the same-flight within-run words are unaffected because both sides of each within-run contrast share the run",
         "registration_status": "REGISTERED (part of the port cell and of the historical recipe's twin key)",
-        "role": "the cross-run twin: the registered in-flight A/A (replicate_of lock: the lock's request byte for byte, seed 20260913, temperature 0); no lock-twin arm is registered, contacts stay 15 per row and every registered cap is unchanged",
+        "role": "the cross-run twin: the registered in-flight A/A (replicate_of lock: the lock's request byte for byte, seed 20260913, temperature 0); one further request-identical replicate lock-rep2 is registered beside it (port_extensions.noise_model), so the port program is phase-native-module-v1-c17 (17 contacts per row) and the registered caps follow it (generation 36,720 / FIT 73,440 / audio 107,264 for the flight; 136 / 272 / 347 for the smoke)",
         "sources": [
           "scripts/flights/nx/l338_family.py:101 (DELIVERING, TWIN)",
           "scripts/flights/nx/l338_family.py:107 (LOCKED_DECODING)"
@@ -225,7 +339,8 @@
         "scripts/flights/nx/l338_family.py:253 (FLOOR_SLU_PP, FLOOR_INTENT_PP)",
         "docs/superpowers/plans/2026-10-30-fold-b-comparison-baseline-and-improvement-plan.md:20"
       ],
-      "unchanged": "identical to this recipe's primary, guard, word_rules and word_order (byte-identical to the historical recipe): arm minus lock, paired per row (one row = one utterance recording, so the utterance-cluster bootstrap is row-paired), CI95, 10,000 draws, seed 20261018, floors 1.49 pp SLU / 0.65 pp intent at n = 1,080 (design same-flight-node-column)"
+      "unchanged": "the bootstrap is unchanged: arm minus lock, paired per row (one row = one utterance recording, so the utterance-cluster bootstrap is row-paired), CI95, 10,000 draws, seed 20261018, floors 1.49 pp SLU / 0.65 pp intent at n = 1,080 (design same-flight-node-column). Noise model M1 changes what is REPORTED as the CI95: the bootstrap interval widened by the replicate variance (port_extensions.noise_model); the interval-only record is kept beside it, and the recipe's primary, guard, word_rules and word_order keys stay byte-identical to the historical recipe (the port words are the historical words read over the widened CI95 plus the pooled-and-per-row condition of noise_model.words).",
+      "widened_ci": "port_extensions.noise_model"
     }
   },
   "primary": {
@@ -286,7 +401,8 @@
         "merge_policy": "saea-perception-candidate-union-v1"
       }
     },
-    "lock": null
+    "lock": null,
+    "lock-rep2": null
   },
   "schema": "saea-stage3-rollout-analysis-recipe-v1",
   "secondaries": [
@@ -303,7 +419,9 @@
     "empty_gold_false_fill",
     "nonempty_exact_set",
     "per_scenario_natural_mixture_and_equal_scenario",
-    "discordance_of_every_sampled_stream_against_the_twin"
+    "discordance_of_every_sampled_stream_against_the_twin",
+    "per_row_f1_beside_pooled_f1",
+    "replicate_pairwise_deltas_and_variance"
   ],
   "stages": {
     "1_columns": "bash scripts/flights/nx/l338_read.sh columns  (stage3_rollout_score --mode perception-branches: one complete official scoring per arm; no number printed) -- PORT: against run SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1 and analysis root analysis/SAEA-SLURP-L338-LEVER-COLUMN-FOLD-B-READ-NPU-PORT-V1; the script binds the historical family ids today (port_extensions.open_items[0])",

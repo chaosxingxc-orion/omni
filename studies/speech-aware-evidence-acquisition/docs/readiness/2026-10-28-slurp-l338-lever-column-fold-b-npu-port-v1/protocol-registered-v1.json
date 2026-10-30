@@ -1,6 +1,23 @@
 {
   "accelerator_bound": {
-    "carried_over_caps": {
+    "caps": {
+      "arm": {
+        "fit_endpoint_calls": 18360,
+        "generation_calls": 36720,
+        "speech_audio_seconds": 107264
+      },
+      "smoke": {
+        "fit_endpoint_calls": 68,
+        "generation_calls": 136,
+        "speech_audio_seconds": 347
+      }
+    },
+    "caps_note": "The caps follow the PORT arm table (phase-native-module-v1-c17, 17 contacts per row: the historical 15 plus the replicate's Perception and Solver contact): generation = rows x (17 + 17 fallback), FIT = rows x 17 x 1 counting endpoint (the raw-audio arm; the historical packet arm made 4), audio = ceil(roster speech-seconds x the generation contacts per row).",
+    "formula": {
+      "arm": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 8.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
+      "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
+    },
+    "historical_caps": {
       "arm": {
         "fit_endpoint_calls": 64800,
         "generation_calls": 32400,
@@ -12,17 +29,13 @@
         "speech_audio_seconds": 306
       }
     },
-    "formula": {
-      "arm": "PROVISIONAL NPU card-hours = ceil_0.1(1.3 x 1,080 rows x 7.52 lock-row equivalents x T / r / 60), T = tensor-parallel size (cards per instance), r = the measured lock-only rows per minute of ONE instance at its chosen sequences per instance; the instance count cancels (wall-clock = card-hours / (instances x T)); T and r from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)",
-      "smoke": "PROVISIONAL NPU card-hours = 0.5 h wall-clock allowance x instances x T (every held card), from PORT_DEPLOYMENT_PROFILE (pending; filled from the measured speed sweep)"
-    },
     "illustration_not_registered": {
-      "card_hours_per_unit_tensor_parallel": 90.3,
+      "card_hours_per_unit_tensor_parallel": 102.3,
       "lock_rows_per_minute_per_instance": 1.95,
       "note": "at the historical llama.cpp lock rate the flight bound would read 90.3 x T card-hours; the port's r is measured, not assumed"
     },
     "inputs": {
-      "arm_mix_rows": 7.52,
+      "arm_mix_rows": 8.52,
       "margin": 1.3,
       "round_hours": 0.1,
       "rows": 1080,
@@ -83,6 +96,10 @@
     "lock": {
       "axes": null,
       "role": "delivering"
+    },
+    "lock-rep2": {
+      "axes": null,
+      "role": "replicate (replicate_of lock, arm_kind replicate)"
     }
   },
   "blockers": [],
@@ -90,12 +107,12 @@
     "arm": {
       "attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-generation-npu-port-v1",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
-      "composed_config_hash": "77185307f7d3e058f8f7f34e269ec20d20cc8b1a5a0d9fe016d12289b8ebd28f",
+      "composed_config_hash": "8ccf5578f58dd41d13d0af2983bcff61a8627c0c3190f87cf3f65c133242ae3e",
       "experiment": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
       "fit_attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-fit-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1",
       "historical_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-V1",
-      "protocol_hash": "de9937afaf379ef13141caf70ab094321954f211ae7970b1b2b1fc5685cad467",
+      "protocol_hash": "1bb05a55e9e1a8e503d5ba4d46545b3d1e4d6efd6bba135fa07cbb71c81c3a6f",
       "rows": 1080,
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1",
       "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
@@ -103,12 +120,12 @@
     "smoke": {
       "attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-generation-npu-port-v1",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
-      "composed_config_hash": "22f715bf06036e7b682881ff88ffe165695abb09a72aa5438478870da180ba30",
+      "composed_config_hash": "5d528040888927dd767ce4f4669ef61ab3e8bd082f0d05ca3e13c01d30b98e18",
       "experiment": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
       "fit_attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-fit-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
       "historical_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-V1",
-      "protocol_hash": "205ae3fc444ac9aaba0d03a696dfd7489fe261a31941d182c88fa5f014c9e3b7",
+      "protocol_hash": "26e8bd51091cb6b32a7f43312db9b35eedda80e3c23b2123b1fdb8d9ed7b855d",
       "rows": 4,
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1",
       "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32"
@@ -142,7 +159,7 @@
       "remedy": "none."
     },
     {
-      "finding": "The twin aa (replicate_of lock) is the in-flight A/A: its request is the lock's in every declared field, so its SLU and intent deltas against lock are the offsets o_SLU / o_int of the read. The l1 branch's own sample 0 is a second A/A (reported, used in no word). The 268-B cross-flight offsets (SLU +1.15, P3.1 -0.61) are reported beside, never used in a word.",
+      "finding": "The twin aa (replicate_of lock) is the in-flight A/A: its request is the lock's in every declared field, so its SLU and intent deltas against lock are the offsets o_SLU / o_int of the read. The registered replicate lock-rep2 (replicate_of lock, arm_kind replicate: a further request-identical copy of lock beside the twin aa; no axis, no seed and no override of its own, so it differs from lock in its arm id alone; it is its own Perception and first-visit Solver visit, +1 Perception and +1 Solver contact per row) gives the third request-identical copy. The l1 branch's own sample 0 is a second A/A (reported, used in no word). The 268-B cross-flight offsets (SLU +1.15, P3.1 -0.61) are reported beside, never used in a word.",
       "id": "in-flight-aa-twin",
       "remedy": "none."
     },
@@ -172,7 +189,7 @@
       "remedy": "none."
     },
     {
-      "finding": "A row costs 7 Perception contacts plus 8 Solver contacts; every contact is costed at the lock's measured seconds for its node (Perception 59.00 s, Solver 64.07 s), so the arm mix is 7.52 lock-row equivalents and the expected cost 69.4 GPU-h against the lock flight's 9.23 GPU-h. A sampled contact may reason for more or fewer tokens than a greedy one and L2's Solver sees longer lists, so the cost is an estimate, not an envelope. Runs of 24 GPU-h or more are intended (owner).",
+      "finding": "A row costs 8 Perception contacts plus 9 Solver contacts (the historical table's 7 + 8 and the replicate's one of each); every contact is costed at the lock's measured seconds for its node (Perception 59.00 s, Solver 64.07 s), so the arm mix is 8.52 lock-row equivalents (the historical 7.52; the llama.cpp cost model's expected cost was 69.4 GPU-h, now about 78.6) against the lock flight's 9.23 GPU-h. A sampled contact may reason for more or fewer tokens than a greedy one and L2's Solver sees longer lists, so the cost is an estimate, not an envelope. Runs of 24 GPU-h or more are intended (owner).",
       "id": "cost-is-an-estimate-from-the-lock-seconds",
       "remedy": "the smoke measures the real mix; the machine sign-off refuses unless it is within 1.3x of the registered one."
     },
@@ -190,6 +207,11 @@
       "finding": "The chain waits for the smoke's sign-off with chain_lib.sh wait_or_machine_signoff (reader l338_read.sh smoke, the conditions file the derive emits INSIDE this package, marker /home/chao/l338-decode-signoff.marker, veto window 20 minutes). A refused machine sign-off falls back to waiting for a coordinator marker (12 h).",
       "id": "machine-signoff-with-a-veto-window",
       "remedy": "the coordinator may veto by deleting the marker or creating /home/chao/batch-STOP during the window."
+    },
+    {
+      "finding": "Noise model M1 (plan docs/superpowers/plans/2026-10-30-tfrl-three-way-comparison-and-improvement-plan.md, section 5 M1; task T2): the port arm table carries the registered replicate lock-rep2 (replicate_of lock, arm_kind replicate: a further request-identical copy of lock beside the twin aa; no axis, no seed and no override of its own, so it differs from lock in its arm id alone; it is its own Perception and first-visit Solver visit, +1 Perception and +1 Solver contact per row). lock, aa and lock-rep2 are three request-identical copies, so three pairwise deltas per row-metric measure the decoding noise. The CI95 of every arm delta is the row-paired bootstrap interval widened by the replicate variance (mean squared pairwise delta, summed with the bootstrap variance); per-row F1 is reported beside pooled F1; the within-run word NOMINATED needs the pooled AND the per-row lower bounds above zero (scripts/analysis/paired_ci.py, scripts/analysis/slurp_l338_port_column_read.py, recipe port_extensions.noise_model). The program is phase-native-module-v1-c17, 17 contacts per row, and the three caps follow it.",
+      "id": "noise-model-m1-replicate-and-widened-ci",
+      "remedy": "none; the registered caps and the card-hour formula are re-derived for the port arm table."
     }
   ],
   "port_findings": [
@@ -246,6 +268,6 @@
     "transport": "vllm"
   },
   "status": "DRAFT-HELD-REGISTERED_BEFORE_CONTACT_AWAITING_COORDINATOR_COUNTERSIGN_AND_READINESS_FLIP",
-  "study_commit_at_registration": "ad67226f",
-  "the_question": "Does the L338 lever column read the same way on the BF16 / vLLM-Ascend Thinking core with the port's knowledge and vectors? Each candidate arm and the twin aa are read PAIRED per row against the delivering lock arm on the same 1,080 Fold B rows in one flight, beside (never as a byte replay of) the historical flight."
+  "study_commit_at_registration": "890643114fc1f2d851737e1202f7e32e4bba2ea0",
+  "the_question": "Does the L338 lever column read the same way on the BF16 / vLLM-Ascend Thinking core with the port's knowledge and vectors? Each candidate arm, the twin aa and the replicate lock-rep2 are read PAIRED per row against the delivering lock arm on the same 1,080 Fold B rows in one flight, with the decoding term of the three request-identical copies in every CI95, beside (never as a byte replay of) the historical flight."
 }

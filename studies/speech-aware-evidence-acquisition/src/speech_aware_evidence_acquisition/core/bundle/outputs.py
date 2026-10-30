@@ -1162,22 +1162,19 @@ def _verify_perception_branch_trace_binding(
         PERCEPTION_BRANCH_NOTE_FIELD_SCHEMAS,
         PERCEPTION_BRANCH_RECEIPT_SCHEMA_V5,
         parse_perception_branch_note,
+        perception_branch_twin_and_replicates,
         validate_perception_branch_receipt,
     )
 
     delivered_branch_id = branch_ids[-1]
-    twin_branch_id = None
-    for item in branch_rows:
-        if isinstance(item, Mapping) and item.get("replicate_of") is not None:
-            twin_branch_id = item.get("branch_id")
-            break
+    twin_branch_id, replicate_branch_ids = perception_branch_twin_and_replicates(branch_rows)
     if twin_branch_id is None and branches.get("schema") != PERCEPTION_BRANCH_RECEIPT_SCHEMA_V5:
         refuse("perception_branches has no declared twin")
     try:
         validate_perception_branch_receipt(
             branches, branch_ids=branch_ids, delivered_branch_id=delivered_branch_id,
             twin_branch_id=twin_branch_id, phase_id=str(perception_visit.get("role_id")),
-            level=branches.get("level"), error_type=BundleError,
+            level=branches.get("level"), error_type=BundleError, replicate_branch_ids=replicate_branch_ids,
         )
     except BundleError as error:
         refuse(f"perception-branch receipt is invalid: {error}")

@@ -14,6 +14,13 @@ Stages (both write-once):
   read   the historical read (``read.json`` and ``README.md``, same format as the historical read) plus ``port-verdicts.json``: the port's three cross-run verdicts.
          Run ``stage3_rollout_score.py --mode perception-branches`` first (``step_score.sh``) so the per-arm column score files exist.
 
+Noise model M1 (plan 2026-10-30, task T2). The port flight carries THREE request-identical copies of the lock (``lock``, the twin ``aa`` and the replicate ``lock-rep2``); the read
+adds the decoding term to every arm delta (``scripts/analysis/paired_ci.py``, formula in its docstring and in the recipe ``port_extensions.noise_model``): the CI95 of an arm
+minus lock is the row-paired utterance-cluster bootstrap interval widened by the replicate variance (the mean squared pairwise delta among the three copies, summed with the
+bootstrap variance). ``read.json`` keeps the interval-only record under ``contrast_bootstrap_only``. Per-row F1 (the mean over rows of each row's F1) is reported beside pooled F1
+with its own paired delta and its own widened CI95, and the within-run word NOMINATED additionally needs BOTH the pooled and the per-row lower bound of the primary metric above
+zero (``port_arm_words``): a lever that lifts pooled F1 by emptying rows is withheld.
+
 Port verdicts (every number carries ``source`` and ``locator`` naming the input file in ``inputs`` and the place in it; ``inputs`` lists path and sha256 of each)
 
   PARITY       per arm in ``port_extensions.parity_band.applies_to`` (lock, aa): official pooled SLU-F1 in [71.61, 72.75] AND intent accuracy in [84.91, 85.74], both
@@ -49,11 +56,12 @@ for _path in (str(_REPO / "src"), str(_HERE), str(_REPO / "scripts" / "flights" 
 
 import l338_family as fam  # noqa: E402
 import l338_port_family as pf  # noqa: E402
+import paired_ci  # noqa: E402  (noise model M1: the replicate variance, the widened CI95, per-row F1)
 import slurp_l338_column_read as hist  # noqa: E402  (the historical reader: every scoring function is used unchanged)
 
 base, npc = hist.base, hist.npc
 ReadError = hist.ReadError
-VERDICTS_SCHEMA = "saea-l338-port-verdicts-v1"
+VERDICTS_SCHEMA = "saea-l338-port-verdicts-v2"
 RECIPE_SCHEMA = "saea-stage3-rollout-analysis-recipe-v1"
 WORD_PARITY, WORD_OUTSIDE = "PARITY", "OUTSIDE-BAND"
 WORD_ADMISSIBLE, WORD_NOT_ADMISSIBLE = "ADMISSIBLE", "NOT-ADMISSIBLE"
@@ -92,8 +100,8 @@ def load_recipe(path: Path) -> dict:
         problems.append(f"read_run_id {recipe.get('read_run_id')!r} != {pf.READ_RUN_ID!r}")
     if recipe.get("delivering") != fam.DELIVERING or recipe.get("twin") != fam.TWIN:
         problems.append("delivering / twin are not lock / aa")
-    if sorted(recipe.get("arms") or []) != sorted(fam.ARM_ORDER):
-        problems.append(f"arms {recipe.get('arms')!r} != {sorted(fam.ARM_ORDER)!r}")
+    if sorted(recipe.get("arms") or []) != sorted(pf.ARM_ORDER):
+        problems.append(f"arms {recipe.get('arms')!r} != {sorted(pf.ARM_ORDER)!r}")
     primary = recipe.get("primary") or {}
     if primary.get("draws") != hist.DRAWS or primary.get("seed") != hist.SEED:
         problems.append(f"primary draws/seed {primary.get('draws')!r}/{primary.get('seed')!r} != {hist.DRAWS}/{hist.SEED}")
@@ -101,6 +109,17 @@ def load_recipe(path: Path) -> dict:
         problems.append("guard.floors_pp is not the historical floors")
     if not isinstance(recipe.get("port_extensions"), Mapping):
         problems.append("no port_extensions object")
+    else:
+        model = recipe["port_extensions"].get("noise_model")
+        if not isinstance(model, Mapping):
+            problems.append("port_extensions.noise_model is absent (the replicate rule and the widened CI definition)")
+        else:
+            if list(model.get("copies") or []) != list(pf.REPLICATE_SET):
+                problems.append(f"noise_model.copies {model.get('copies')!r} != {list(pf.REPLICATE_SET)!r}")
+            if model.get("formula") != paired_ci.FORMULA:
+                problems.append("noise_model.formula is not paired_ci.FORMULA")
+            if model.get("max_replicates") != 2 or model.get("replicate_arms") != list(pf.REPLICATE_ARMS):
+                problems.append("noise_model.max_replicates / replicate_arms are not 2 / the port replicate arms")
     if problems:
         raise ReadError(f"the port recipe {path} is refused: " + "; ".join(problems))
     return recipe
@@ -168,6 +187,42 @@ def admissibility(contrast: Mapping, rules: Mapping) -> dict:
             "threshold_slu_pp": rules["cites"]["twin_threshold_slu_pp"]}
 
 
+def port_arm_words(contrast: Mapping, *, floor_slu_pp: float = fam.FLOOR_SLU_PP, floor_intent_pp: float = fam.FLOOR_INTENT_PP) -> dict:
+    """The within-run words of the port: the historical ``arm_words`` over the WIDENED CI95 (``contrast`` from ``paired_ci.noise_adjusted_contrast``), with the
+    pooled-and-per-row condition added to NOMINATED.
+
+    The primary metric of a lever (L1: SLU-F1, L2: intent accuracy) must have BOTH its pooled and its per-row delta lower bound above zero; for intent accuracy the per-row
+    mean IS the pooled one, for SLU-F1 the per-row delta is ``versus_delivering[arm][per_row_slu_f1]``. The guard is checked at both levels too: the L2 SLU guard needs the
+    per-row SLU upper bound at or above minus the SLU floor as well. A lever whose historical word would be NOMINATED but fails one of these keeps ``hist_word`` and is
+    read NEUTRAL with ``nominated_withheld_by``; HARM is never softened (it only needs the pooled bounds the historical rule uses)."""
+
+    words = hist.arm_words(contrast, floor_slu_pp=floor_slu_pp, floor_intent_pp=floor_intent_pp)
+    versus = contrast["versus_delivering"]
+    for arm, entry in words["words"].items():
+        per_row = versus[arm].get("per_row_slu_f1")
+        if per_row is None:
+            raise ReadError(f"{arm}: the contrast has no per_row_slu_f1 delta; run it through paired_ci.noise_adjusted_contrast")
+        lever = entry["lever"]
+        primary_pooled = versus[arm]["slu_f1" if lever == "L1" else "intent"]
+        primary_per_row = per_row if lever == "L1" else versus[arm]["intent"]               # intent accuracy is already a mean over rows
+        extra = {
+            "pooled_primary_ci_lo_above_zero": primary_pooled["ci95_lo_pp"] > 0,
+            "per_row_primary_ci_lo_above_zero": primary_per_row["ci95_lo_pp"] > 0,
+            "per_row_slu_no_resolved_loss": per_row["ci95_hi_pp"] >= -floor_slu_pp,
+        }
+        entry["hist_word"] = entry["word"]
+        entry["conditions"] = dict(entry["conditions"], **extra)
+        entry["per_row_slu_delta_pp"] = per_row["point_pp"]
+        entry["per_row_slu_ci95"] = [per_row["ci95_lo_pp"], per_row["ci95_hi_pp"]]
+        entry["ci_definition"] = "widened: bootstrap + replicate variance (paired_ci)"
+        failed = [name for name, ok in extra.items() if not ok]
+        entry["nominated_withheld_by"] = failed if entry["word"] == "NOMINATED" and failed else []
+        if entry["nominated_withheld_by"]:
+            entry["word"], entry["next_step"] = "NEUTRAL", None
+    words["ci_definition"] = contrast.get("ci_definition")
+    return words
+
+
 def improvement_of_arm(arm: str, contrast: Mapping, rules: Mapping, parity: Mapping, admissible: Mapping, within_run_word: str | None) -> dict:
     """IMPROVEMENT-ADMISSIBLE / NO-CROSS-RUN-STATEMENT for one lever arm (see the module docstring for the four conditions)."""
 
@@ -181,6 +236,9 @@ def improvement_of_arm(arm: str, contrast: Mapping, rules: Mapping, parity: Mapp
         "slu_delta_ci95_lower_above_zero": delta["ci95_lo_pp"] > 0,
         "twin_aa_inside_band": parity[fam.TWIN]["word"] == WORD_PARITY,
     }
+    per_row = contrast["versus_delivering"][arm].get("per_row_slu_f1")
+    if per_row is not None:                                    # noise model M1: the per-row delta must clear zero as well (a record without it is a pre-M1 fixture)
+        conditions["per_row_slu_delta_ci95_lower_above_zero"] = per_row["ci95_lo_pp"] > 0
     return {
         "arm": arm, "word": WORD_IMPROVEMENT if all(conditions.values()) else WORD_NO_STATEMENT, "conditions": conditions,
         "slu_f1_pct": cite(level, "read_json", f"contrast.levels.{arm}.slu_f1_pct"), "slu_f1_pct_2dp": level2,
@@ -192,6 +250,11 @@ def improvement_of_arm(arm: str, contrast: Mapping, rules: Mapping, parity: Mapp
         "intent_delta_vs_lock_pp": cite(contrast["versus_delivering"][arm]["intent"]["point_pp"], "read_json", f"contrast.versus_delivering.{arm}.intent.point_pp"),
         "intent_delta_ci95_pp": [cite(contrast["versus_delivering"][arm]["intent"]["ci95_lo_pp"], "read_json", f"contrast.versus_delivering.{arm}.intent.ci95_lo_pp"),
                                  cite(contrast["versus_delivering"][arm]["intent"]["ci95_hi_pp"], "read_json", f"contrast.versus_delivering.{arm}.intent.ci95_hi_pp")],
+        **({} if per_row is None else {
+            "per_row_slu_f1_pct": cite(contrast["levels"][arm]["per_row_slu_f1_pct"], "read_json", f"contrast.levels.{arm}.per_row_slu_f1_pct"),
+            "per_row_slu_delta_vs_lock_pp": cite(per_row["point_pp"], "read_json", f"contrast.versus_delivering.{arm}.per_row_slu_f1.point_pp"),
+            "per_row_slu_delta_ci95_pp": [cite(per_row["ci95_lo_pp"], "read_json", f"contrast.versus_delivering.{arm}.per_row_slu_f1.ci95_lo_pp"),
+                                          cite(per_row["ci95_hi_pp"], "read_json", f"contrast.versus_delivering.{arm}.per_row_slu_f1.ci95_hi_pp")]}),
         "within_run_word": cite(within_run_word, "read_json", f"arm_words.words.{arm}.word")}
 
 
@@ -207,6 +270,15 @@ def port_verdicts(contrast: Mapping, arm_words: Mapping, rules: Mapping, *, inpu
     words = (arm_words or {}).get("words") or {}
     improvement = {arm: improvement_of_arm(arm, contrast, rules, parity, admissible, (words.get(arm) or {}).get("word"))
                    for arm in hist.CANDIDATES if arm in contrast["versus_delivering"]}
+    noise = contrast.get("noise_model")
+    noise_block = None if noise is None else {
+        "copies": list(noise["copies"]), "formula": noise["formula"], "ci_definition": contrast.get("ci_definition"),
+        "metrics": {name: {"variance_pp2": cite(m["variance_pp2"], "read_json", f"contrast.noise_model.metrics.{name}.variance_pp2"),
+                           "rms_pp": cite(m["rms_pp"], "read_json", f"contrast.noise_model.metrics.{name}.rms_pp"), "n_pairs": m["n_pairs"],
+                           "pairs": [{"pair": d["pair"], "delta_pp": cite(d["delta_pp"], "read_json", f"contrast.noise_model.metrics.{name}.pairs[{i}].delta_pp")}
+                                     for i, d in enumerate(m["pairs"])]}
+                    for name, m in noise["metrics"].items()},
+        "note": ("admissibility keeps the registered aa-vs-lock rule; the replicate spread (the other pairwise deltas) is reported beside it and enters no word")}
     reasons = [f"{arm} is {parity[arm]['word']}" for arm in rules["applies_to"] if parity[arm]["word"] != WORD_PARITY]
     if admissible["word"] != WORD_ADMISSIBLE:
         reasons.append(f"the run is {admissible['word']}")
@@ -218,13 +290,63 @@ def port_verdicts(contrast: Mapping, arm_words: Mapping, rules: Mapping, *, inpu
         "rule_text": {
             "parity": "arm's SLU-F1 in [band.slu_f1.low, band.slu_f1.high] AND intent in [band.intent.low, band.intent.high], inclusive, two-decimal percent",
             "admissible": "|SLU-F1(aa) - SLU-F1(lock)| <= twin_threshold_slu_pp (point delta; rounded to 6 decimals before the comparison)",
-            "improvement": ("IMPROVEMENT-ADMISSIBLE iff run_admissible AND SLU-F1 (2dp) >= improvement_floor_slu AND SLU delta vs lock CI95 lower bound > 0 AND aa PARITY; "
-                            "otherwise NO-CROSS-RUN-STATEMENT")},
-        "parity": parity, "twin_admissibility": admissible, "improvement": improvement,
+            "improvement": ("IMPROVEMENT-ADMISSIBLE iff run_admissible AND SLU-F1 (2dp) >= improvement_floor_slu AND SLU delta vs lock CI95 lower bound > 0 (widened CI95) AND "
+                            "the per-row SLU-F1 delta CI95 lower bound > 0 AND aa PARITY; otherwise NO-CROSS-RUN-STATEMENT"),
+            "ci95": "every CI95 is the row-paired bootstrap interval widened by the replicate variance of {lock, aa, lock-rep2} (noise_model.formula)"},
+        "parity": parity, "twin_admissibility": admissible, "improvement": improvement, "noise_model": noise_block,
         "summary": {"s0": {"word": s0, "reasons": reasons, "needs": "lock PARITY and aa PARITY and the run ADMISSIBLE"},
                     "s2_may_start": parity[fam.DELIVERING]["word"] == WORD_PARITY,
                     "s2_basis": "recipe port_extensions.parity_band.consequence: OUTSIDE-BAND on the port lock arm -> S2 does not start (a reading; the owner decides)",
                     "improvement": {arm: v["word"] for arm, v in improvement.items()}}}
+
+
+# --------------------------------------------------------------------------- the noise model (M1): columns, widened contrast, words
+
+
+def load_port_column_rows(analysis_columns: Path, scorer_id: str = hist.SCORER) -> dict[str, dict]:
+    """Per-column per-row official scores of the PORT arm table (the historical four plus the replicate ``lock-rep2``) and the stream columns; refuses a missing file."""
+
+    out: dict[str, dict] = {}
+    for arm in [*pf.ARM_ORDER, *hist.stream_column_names()]:
+        path = Path(analysis_columns) / hist.COLUMN_SCORE_NAME.format(arm=arm, scorer=scorer_id)
+        if not path.exists():
+            raise ReadError(f"missing column score file {path}; run `l338_read.sh columns` first")
+        out[arm] = base.rows_table(json.loads(path.read_text(encoding="utf-8")), scorer_id)
+    return out
+
+
+def apply_noise_model(result: dict, scored: Mapping, ids: Sequence[str], cluster_of, *, seed: int, draws: int) -> dict:
+    """Replace ``result['contrast']`` / ``result['arm_words']`` / ``result['interval']`` by the noise-adjusted ones; the interval-only contrast stays under
+    ``contrast_bootstrap_only`` (and its words under ``arm_words_bootstrap_only``) so nothing the historical reader wrote is lost."""
+
+    result["contrast_bootstrap_only"], result["arm_words_bootstrap_only"] = result["contrast"], result["arm_words"]
+    contrast = paired_ci.noise_adjusted_contrast(scored, ids, cluster_of, result["contrast"], copies=pf.REPLICATE_SET, delivering=fam.DELIVERING, seed=seed, draws=draws)
+    result["contrast"] = contrast
+    result["arm_words"] = port_arm_words(contrast)
+    result["noise_model"] = contrast["noise_model"]
+    result["interval"] = {"kind": "utterance-cluster bootstrap widened by the replicate variance (noise model M1)", "draws": draws, "seed": seed, "level": "CI95",
+                          "bootstrap": {"draws": draws, "seed": seed}, "formula": paired_ci.FORMULA, "copies": list(pf.REPLICATE_SET)}
+    return result
+
+
+def noise_markdown(result: Mapping) -> str:
+    """The port appendix of the README: the replicate deltas, the widening, the per-row F1 beside the pooled one and the NOMINATED conditions."""
+
+    contrast, model = result["contrast"], result["noise_model"]
+    lines = ["## Noise model (M1): decoding term and per-row F1", "", f"CI95 = {contrast['ci_definition']}", "",
+             "| metric | replicate pairs (delta pp) | V_rep (pp^2) | rms (pp) |", "| --- | --- | ---: | ---: |"]
+    for name, m in model["metrics"].items():
+        pairs = "; ".join(f"{'-'.join(p['pair'])} {p['delta_pp']:+.2f}" for p in m["pairs"])
+        lines.append(f"| {name} | {pairs} | {m['variance_pp2']:.3f} | {m['rms_pp']:.2f} |")
+    lines += ["", "| arm | SLU-F1 | per-row SLU-F1 | SLU d (pp) | CI95 (bootstrap) | CI95 (widened) | per-row d (pp) | per-row CI95 (widened) |", "| --- | ---: | ---: | ---: | --- | --- | ---: | --- |"]
+    for arm, entry in contrast["versus_delivering"].items():
+        s, r, lv = entry["slu_f1"], entry["per_row_slu_f1"], contrast["levels"][arm]
+        lines.append(f"| {arm} | {lv['slu_f1_pct']:.2f} | {lv['per_row_slu_f1_pct']:.2f} | {s['point_pp']:+.2f} | [{s['bootstrap_ci95_lo_pp']:+.2f}, {s['bootstrap_ci95_hi_pp']:+.2f}] | "
+                     f"[{s['ci95_lo_pp']:+.2f}, {s['ci95_hi_pp']:+.2f}] | {r['point_pp']:+.2f} | [{r['ci95_lo_pp']:+.2f}, {r['ci95_hi_pp']:+.2f}] |")
+    lines += ["", "| arm | word | historical word | withheld by |", "| --- | --- | --- | --- |"]
+    for arm, w in result["arm_words"]["words"].items():
+        lines.append(f"| {arm} | {w['word']} | {w['hist_word']} | {', '.join(w['nominated_withheld_by']) or ''} |")
+    return "\n".join(lines) + "\n"
 
 
 # --------------------------------------------------------------------------- the sealed-run adapter and the CLI
@@ -244,7 +366,8 @@ def _smoke(args: argparse.Namespace, root: Path) -> tuple[dict, Path]:
     outputs_rows = hist.load_outputs_rows(paths["outputs"])
     contacts = npc.trace_contacts(paths["trace"], fam.THINKING_KNOBS["budget_message"])
     by_arm = npc.attribute(contacts, hist.arm_contact_map(outputs_rows))
-    result = hist.smoke_stage(by_arm, missing=hist.missing_columns(outputs_rows, contacts))
+    result = hist.smoke_stage(by_arm, missing=hist.missing_columns(outputs_rows, contacts, pf.ARM_ORDER))
+    result["throughput"]["arm_mix_registered_rows"] = pf.ARM_MIX_ROWS              # the PORT arm mix (c17: the replicate adds a Perception and a Solver contact)
     result["sealed_hashes"] = {n: base.sha256_file(paths[n]) for n in ("trace", "outputs")}
     result["port"] = {"read_run_id": pf.READ_RUN_ID, "run_id": cell["run"], "attempt_id": cell["attempt"],
                       "note": "slot-normalised GPU hours in `throughput` use the historical 4 slots; the port card-hour bound is PROVISIONAL (l338_port_family.CARD_HOUR_FORMULA)"}
@@ -264,7 +387,7 @@ def _read(args: argparse.Namespace, root: Path) -> tuple[dict, Path, dict, Path]
     manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
     if str(manifest.get("status", "")).upper() != "COMPLETED":
         raise ReadError(f"manifest status is {manifest.get('status')!r}, not COMPLETED")
-    arms = hist.load_column_rows(root / "columns")
+    arms = load_port_column_rows(root / "columns")
     roster_path = args.repo_root / fam.ROSTER[cell["roster"]]
     ids, cluster_of, scenario_of = base.roster_maps(roster_path)
     for arm, rows in arms.items():
@@ -279,16 +402,18 @@ def _read(args: argparse.Namespace, root: Path) -> tuple[dict, Path, dict, Path]
     sampling_rows = json.loads(sampling_path.read_text(encoding="utf-8"))["rows"] if sampling_path.exists() else None
     gold, n1 = hist._load_json(args.gold_intents), hist._load_json(args.n1_json)
     result = hist.read_stage(arms, ids, cluster_of, scenario_of, by_arm, hist.contact_rows(outputs_rows, contacts), seed=args.seed, draws=args.draws,
-                             missing=hist.missing_columns(outputs_rows, contacts), stream_disc=hist.stream_discordance(streams, ids),
+                             missing=hist.missing_columns(outputs_rows, contacts, pf.ARM_ORDER), stream_disc=hist.stream_discordance(streams, ids),
                              perception_disc=hist.stream_discordance(hist.perception_stream_keys(outputs_rows), ids), sampling_rows=sampling_rows, gold=gold,
                              outputs_rows=outputs_rows, forms=hist.l1_forms_from_trace(outputs_rows, paths["trace"], n1))
+    apply_noise_model(result, arms, ids, cluster_of, seed=args.seed, draws=args.draws)
+    result["throughput"]["arm_mix_registered_rows"] = pf.ARM_MIX_ROWS
     result["sealed_hashes"] = {n: base.sha256_file(paths[n]) for n in ("trace", "outputs", "manifest")}
     result["throughput"]["registered_gpu_hours_ceiling"] = None
     result["port"] = {"read_run_id": pf.READ_RUN_ID, "run_id": cell["run"], "attempt_id": cell["attempt"], "recipe": str(args.recipe),
                       "note": "slot-normalised GPU hours in `throughput` use the historical 4 slots; the port card-hour bound is PROVISIONAL (l338_port_family.CARD_HOUR_FORMULA)"}
     inputs = {"recipe": _input(recipe_path, args.repo_root), "roster": _input(roster_path, args.repo_root), "manifest": _input(paths["manifest"], args.data_root),
               "trace": _input(paths["trace"], args.data_root), "outputs": _input(paths["outputs"], args.data_root)}
-    for arm in hist.ARMS:
+    for arm in pf.ARM_ORDER:
         inputs[f"column_scores:{arm}"] = _input(root / "columns" / hist.COLUMN_SCORE_NAME.format(arm=arm, scorer=hist.SCORER), args.data_root)
     meta = {"recipe": recipe, "rules": rules, "inputs": inputs}
     return result, root / "read.json", meta, root / pf.VERDICTS_NAME
@@ -330,7 +455,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         verdicts = port_verdicts(result["contrast"], result["arm_words"], meta["rules"], inputs=inputs, interval=interval,
                                  recipe_status=(meta["recipe"].get("port_extensions") or {}).get("status"))
         out.write_text(read_text, encoding="utf-8")
-        out.with_name("README.md").write_text(hist.render_markdown(result), encoding="utf-8")
+        out.with_name("README.md").write_text(hist.render_markdown(result) + "\n" + noise_markdown(result), encoding="utf-8")
         verdict_out.write_text(json.dumps(verdicts, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(json.dumps({"written": [str(out), str(verdict_out)], "arm_words": {a: w["word"] for a, w in result["arm_words"]["words"].items()},
                           "parity": {a: v["word"] for a, v in verdicts["parity"].items()}, "twin": verdicts["twin_admissibility"]["word"],

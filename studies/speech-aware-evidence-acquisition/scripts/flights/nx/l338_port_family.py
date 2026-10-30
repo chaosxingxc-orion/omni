@@ -13,8 +13,11 @@ One module, imported by the port derive, writer and mint scripts, so no port id 
   The experiment's numeric ``planned_gpu_hours`` carries the historical ceiling only because the plan field must be a number; the ledger rows carry the
   formula, not a number, so the exposure gate fails closed on them until the sweep fills the profile.
 
-The caps that do not depend on the deployment carry over from the historical registration unchanged: generation 32,400, FIT 64,800, audio 94,644
-seconds for the flight; 120 / 240 / 306 for the smoke.
+The caps that do not depend on the deployment and the arm table carry over from the historical registration; the arm table does not (noise model M1, plan
+2026-10-30, task T2): the PORT arm table is the historical one plus ONE registered replicate of ``lock`` (:data:`REPLICATE_ARMS`, ``lock-rep2``: a further
+request-identical copy beside the twin ``aa``, ``arm_kind: replicate`` in the rails' ``sampling_variants``), so the port's K, contacts per row, program id, arm mix and
+the three caps are re-derived here (:data:`ARM_ORDER`, :data:`CONTACTS_PER_ROW`, :data:`PROGRAM`, :func:`generation_calls`, :func:`fit_calls`, :func:`audio_seconds`).
+The historical family (``l338_family``, ``l338_arms.json``) is NOT touched: every historical figure is still ``fam.*``.
 """
 
 from __future__ import annotations
@@ -29,6 +32,10 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import l338_family as fam  # noqa: E402
+from speech_aware_evidence_acquisition.core.preparation_fit import (  # noqa: E402
+    native_contact_endpoints_per_contact,
+    native_contact_required_cap,
+)
 
 REPO_ROOT = fam.REPO_ROOT
 
@@ -88,6 +95,57 @@ MAX_NUM_SEQS_DEPENDENTS = [
     "open: the historical cost inputs (l338_cost_inputs.json, 4 slots) behind the illustrative 1.95 lock rows per minute; the port bound uses the measured r",
 ]
 
+# ---- the PORT arm table: the historical arms plus the registered replicate of lock (noise model M1) --------------------------------------------
+#: The further request-identical copies of ``lock`` beside the twin ``aa``. The rails admit the twin plus at most
+#: ``rails.native_episode_receipt.MAX_LOCK_REPLICATES`` (2) copies, so R = 2 here: {aa, lock-rep2}; with lock itself that is three request-identical copies and three
+#: pairwise deltas per row. A replicate carries no axis, no seed and no override: it differs from lock in its arm id alone.
+REPLICATE_ARMS = ("lock-rep2",)
+if len(fam.ARM_ORDER) < 2 or fam.ARM_ORDER[-2:] != (fam.TWIN, fam.DELIVERING) or any(a in fam.ARM_ORDER for a in REPLICATE_ARMS):
+    raise ValueError("the historical arm order no longer ends twin, delivering, or already names a replicate")
+#: Declared order: the candidates, the twin, the replicate(s), the delivering arm LAST.
+ARM_ORDER = (*fam.CANDIDATE_ARMS, fam.TWIN, *REPLICATE_ARMS, fam.DELIVERING)
+CANDIDATE_ARMS = fam.CANDIDATE_ARMS
+#: The request-identical copies of lock whose pairwise deltas estimate the decoding noise (lock first, then the twin, then the replicates).
+REPLICATE_SET = (fam.DELIVERING, fam.TWIN, *REPLICATE_ARMS)
+K = len(ARM_ORDER)
+#: Each branch is its own Perception and first-visit Solver visit, so a replicate adds ONE Perception AND ONE Solver contact per row (the replicate's Solver reads
+#: its OWN Perception note, as the twin's does; that is what makes it a replicate of the whole lock pipeline, not of the Solver call alone): +2 contacts per row.
+PERCEPTION_CONTACTS_PER_ROW = fam.PERCEPTION_CONTACTS_PER_ROW + len(REPLICATE_ARMS)
+SOLVER_CONTACTS_PER_ROW = fam.SOLVER_CONTACTS_PER_ROW + len(REPLICATE_ARMS)
+CONTACTS_PER_ROW = PERCEPTION_CONTACTS_PER_ROW + SOLVER_CONTACTS_PER_ROW
+PROGRAM = f"phase-native-module-v1-c{CONTACTS_PER_ROW}"
+THINKING_CONTACTS_PER_ROW = CONTACTS_PER_ROW
+FALLBACK_CONTACTS_PER_ROW_CEILING = THINKING_CONTACTS_PER_ROW
+ARM_MIX_ROWS = fam.round_hundredth((PERCEPTION_CONTACTS_PER_ROW * fam.NODE_SECONDS["perception"] + SOLVER_CONTACTS_PER_ROW * fam.NODE_SECONDS["solver"])
+                                   / (fam.NODE_SECONDS["perception"] + fam.NODE_SECONDS["solver"]))
+if (fam.PROGRAM, fam.CONTACTS_PER_ROW) != ("phase-native-module-v1-c15", 15):
+    raise ValueError("the historical family's program moved; the port arithmetic below is stated against c15")
+
+
+def sampling_block() -> dict:
+    """The ``roles.perception.sampling_variants`` block of the PORT arm table: the historical candidate arms, the twin, the replicate(s) (``arm_kind: replicate``), lock LAST."""
+
+    block = fam.sampling_block()
+    rows = [dict(row) for row in block["arms"]]
+    position = next(i for i, row in enumerate(rows) if row["arm_id"] == fam.TWIN) + 1
+    for offset, arm in enumerate(REPLICATE_ARMS):
+        rows.insert(position + offset, {"arm_id": arm, "replicate_of": fam.DELIVERING, "arm_kind": "replicate"})
+    return dict(block, arms=rows)
+
+
+def sampling_group():
+    """The port block parsed by the rails' own parser (the replicate rule is refused there by name); the contact count must equal this module's arithmetic."""
+
+    from speech_aware_evidence_acquisition.rails.supply_variants import parse_perception_sampling_variants, sampling_extra_contacts  # noqa: PLC0415
+
+    group = parse_perception_sampling_variants(sampling_block(), phase_id="perception")
+    if 2 + 2 * (K - 1) + sampling_extra_contacts(group) != CONTACTS_PER_ROW or tuple(b.branch_id for b in group.branches) != ARM_ORDER:
+        raise ValueError("the rails' sampling contact count / arm order does not match the port family")
+    return group
+
+
+SAMPLING_GROUP = sampling_group()
+
 # ---- ids -------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -107,7 +165,7 @@ def _spec(key: str) -> dict:
     hist = fam.CELLS[key]
     run = _port_upper(hist["run"])
     return {
-        "key": key, "role": hist["role"], "rows": hist["rows"], "roster": hist["roster"], "scoring_jobs": hist["scoring_jobs"],
+        "key": key, "role": hist["role"] if key != "arm" else f"lever-column flight ({K} arms in one flight)", "rows": hist["rows"], "roster": hist["roster"], "scoring_jobs": hist["scoring_jobs"],
         "historical_cell": hist["cell"], "historical_baseline": hist["baseline"], "historical_run": hist["run"], "historical_fit_run": hist["fit_run"],
         "cell": _port_lower(hist["cell"]),
         "baseline": _port_lower(hist["baseline"], "-raw-port-v1"),
@@ -119,6 +177,7 @@ def _spec(key: str) -> dict:
         "prefix": hist["prefix"],
         "supply_relpath": f"prepared/{run}/phase-supply-v1.json",
         "plan_gpu_hours_placeholder": hist["gpu_hours"],
+        "historical_role": hist["role"],
     }
 
 
@@ -142,9 +201,10 @@ def signoff_conditions() -> dict:
     """The port's machine sign-off conditions: the historical conditions for the same arm table (``l338_family.signoff_conditions``) with the package name and the
     smoke decode-cost table path moved to the PORT READ run id. The table is written by the port smoke reader (:data:`PORT_READER` ``--stage smoke``)."""
 
-    doc = dict(fam.signoff_conditions(), package=PKG_NAME, table_relpath=SMOKE_TABLE_RELPATH)
-    doc["_note"] = ("L338 NPU port: " + fam.signoff_conditions()["_note"] + " Copied from l338_family.signoff_conditions() with the package and the table path "
-                    f"({SMOKE_TABLE_RELPATH}) replaced: the smoke decode-cost table is written by the port reader {PORT_READER} --stage smoke, under the PORT READ run id.")
+    doc = dict(fam.signoff_conditions(), package=PKG_NAME, table_relpath=SMOKE_TABLE_RELPATH, expected_arms=sorted(ARM_ORDER))
+    doc["_note"] = ("L338 NPU port: " + fam.signoff_conditions()["_note"] + " Copied from l338_family.signoff_conditions() with the package, the table path "
+                    f"({SMOKE_TABLE_RELPATH}) and the expected arms (the port arm table adds the replicate {', '.join(REPLICATE_ARMS)}) replaced: the smoke decode-cost table "
+                    f"is written by the port reader {PORT_READER} --stage smoke, under the PORT READ run id.")
     return doc
 
 if CELLS["arm"]["run"] != "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1" or CELLS["arm"]["cell"] != "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1":
@@ -173,25 +233,52 @@ def eligible_attempt_ids() -> list[str]:
 
 
 def generation_calls(key: str) -> int:
-    return fam.original_generation_calls(key)
+    """rows x (program contacts + fallback contacts per row) at the PORT arm table (the historical figure is ``fam.original_generation_calls``)."""
+
+    return CELLS[key]["rows"] * (CONTACTS_PER_ROW + FALLBACK_CONTACTS_PER_ROW_CEILING)
+
+
+def program_calls(key: str) -> int:
+    return CELLS[key]["rows"] * CONTACTS_PER_ROW
+
+
+#: Endpoint calls one native contact fit makes on the PORT's raw-audio arm (``raw-speech-agent-native-tools``): one resident multimodal counting endpoint per
+#: contact. The historical packet arm made ``max_speech_packets + 3`` = 4 (``fam.tf.FIT_ENDPOINTS_PER_CONTACT``). Both come from the gate's own rule.
+RAW_FIT_ENDPOINTS_PER_CONTACT = native_contact_endpoints_per_contact(feature_packets=False)
 
 
 def fit_calls(key: str) -> int:
-    return fam.fit_contact_cap(CELLS[key]["rows"])
+    """rows x program contacts x endpoints per contact, structural, never run-cumulative; on the raw-audio arm the endpoint factor is 1, so this is the
+    value ``core.preparation_fit.build_native_contact_fit_gate`` demands for ``native_contact_fit.contact_cap`` (computed by the gate's own helper)."""
+
+    return native_contact_required_cap(CELLS[key]["rows"] * CONTACTS_PER_ROW, feature_packets=False)
 
 
 def audio_seconds(key: str) -> int:
-    return fam.audio_cap(CELLS[key]["roster"])
+    """Every contact re-sends the row's speech packet, a fallback re-ask included: ceil(roster audio seconds x (contacts + fallback contacts per row))."""
+
+    return math.ceil(fam.roster_audio(CELLS[key]["roster"]) * (CONTACTS_PER_ROW + FALLBACK_CONTACTS_PER_ROW_CEILING) - 1e-9)
 
 
-EXPECTED_CAPS = {"arm": (32400, 64800, 94644), "smoke": (120, 240, 306)}
+def extra_audio_seconds(kind: str) -> float:
+    """The audio the extra contacts (all but the lock's Perception and Solver) re-send: roster audio x (contacts per row - 2)."""
+
+    return fam.roster_audio(kind) * (CONTACTS_PER_ROW - 2)
+
+
+#: The historical caps (c15) and the port caps (c17 = c15 + the replicate's Perception and Solver contact; fallback +2 as well).
+HISTORICAL_CAPS = {"arm": (32400, 64800, 94644), "smoke": (120, 240, 306)}
+#: FIT = rows x contacts x 1 counting endpoint (raw-audio arm): 1,080 x 17 and 4 x 17; the packet-arm factor 4 gave 73,440 / 272 and was refused by the gate.
+EXPECTED_CAPS = {"arm": (36720, 18360, 107264), "smoke": (136, 68, 347)}
+for _key, _caps in HISTORICAL_CAPS.items():
+    if (fam.original_generation_calls(_key), fam.fit_contact_cap(CELLS[_key]["rows"]), fam.audio_cap(CELLS[_key]["roster"])) != _caps:
+        raise ValueError(f"the historical caps of {_key} moved")
 for _key, _caps in EXPECTED_CAPS.items():
     if (generation_calls(_key), fit_calls(_key), audio_seconds(_key)) != _caps:
-        raise ValueError(f"the carried-over caps of {_key} moved: {(generation_calls(_key), fit_calls(_key), audio_seconds(_key))} != {_caps}")
+        raise ValueError(f"the port caps of {_key} moved: {(generation_calls(_key), fit_calls(_key), audio_seconds(_key))} != {_caps}")
 
 # ---- the PROVISIONAL accelerator card-hour bound ---------------------------------------------------------------------------------------
 GPU_MARGIN, GPU_ROUND_H = fam.GPU_MARGIN, fam.GPU_ROUND_H
-ARM_MIX_ROWS = fam.ARM_MIX_ROWS
 SMOKE_WALL_CLOCK_HOURS = fam.SMOKE_GPU_HOURS
 
 
@@ -218,7 +305,7 @@ CARD_HOUR_FORMULA = {
             f"cancels (wall-clock = card-hours / (instances x T)); T and r from {DEPLOYMENT_REF}"),
     "smoke": (f"PROVISIONAL NPU card-hours = {SMOKE_WALL_CLOCK_HOURS} h wall-clock allowance x instances x T (every held card), from {DEPLOYMENT_REF}"),
 }
-#: Illustration only, NOT a registered figure: at the historical lock rate (1.95 rows per minute per server) the formula reads 90.3 x T card-hours.
+#: Illustration only, NOT a registered figure: at the historical lock rate (1.95 rows per minute per server) the formula reads ILLUSTRATION_AT_HISTORICAL_RATE x T card-hours.
 ILLUSTRATION_AT_HISTORICAL_RATE = {"lock_rows_per_minute_per_instance": fam.ROWS_PER_MINUTE_FULL,
                                    "card_hours_per_unit_tensor_parallel": provisional_card_hours(fam.ROWS, lock_rows_per_minute_per_instance=fam.ROWS_PER_MINUTE_FULL,
                                                                                                  tensor_parallel_size=1)}
@@ -240,7 +327,7 @@ def model_text() -> str:
             f"{PER_SEQUENCE_WINDOW_TOKENS:,} tokens, max_tokens {fam.COMPLETION_CAP} (reasoning budget {fam.DELIVERING_BUDGET} + answer reserve 1024 on both nodes), "
             f"--reasoning-parser qwen3 with the registered forced-close reasoning_end_str (model fragment {MODEL_FRAGMENT}); deployment "
             f"(instances, tensor-parallel size, sequences per instance, devices) = {DEPLOYMENT_REF}; the server's own audio tower over the original "
-            f"recordings under {PROMPT_ORDER}; module program {fam.PROGRAM}; per-arm sampling axes (perception_samples / solver_samples at temperature 0.6, "
+            f"recordings under {PROMPT_ORDER}; module program {PROGRAM}; per-arm sampling axes (perception_samples / solver_samples at temperature 0.6, "
             "top_p 0.95, top_k 20); no tool authority")
 
 

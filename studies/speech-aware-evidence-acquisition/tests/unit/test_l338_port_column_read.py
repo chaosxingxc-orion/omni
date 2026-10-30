@@ -33,6 +33,36 @@ RECIPE = REPO / pf.RECIPE_RELPATH
 HIST_READ_ID = fam.READ_RUN_ID
 
 
+# --------------------------------------------------------------------------- the PORT arm table fixtures (the historical rows plus the replicate lock-rep2)
+
+
+def port_outputs_rows(n=4, lists=(2, 3)):
+    """``fx._outputs_rows`` (the historical four-arm sealed rows) with the replicate branch after the twin: a copy of the twin's branch under the replicate's own ids."""
+
+    rows = fx._outputs_rows(n, lists=lists)
+    for row in rows:
+        branches = []
+        for branch in row["branches"]:
+            branches.append(branch)
+            if branch["branch_id"] == fam.TWIN:
+                for arm in pf.REPLICATE_ARMS:
+                    p, s = f"{row['sample_id']}:{arm}:p0", f"{row['sample_id']}:{arm}:s0"
+                    row["requests"][s] = f"req-{s}"
+                    branches.append(dict(branch, branch_id=arm, contact_id=p, solver_contact_id=s))
+        row["branches"] = branches
+        assert [b["branch_id"] for b in branches] == list(pf.ARM_ORDER)
+    return rows
+
+
+def port_arms_scores(ids, *, gain=0.0, intent=1.0):
+    """``fx._arms_scores`` with the replicate column: an exact repeat of lock (a zero replicate delta)."""
+
+    scores = fx._arms_scores(ids, gain=gain, intent=intent)
+    for arm in pf.REPLICATE_ARMS:
+        scores[arm] = dict(scores[fam.DELIVERING])
+    return scores
+
+
 # --------------------------------------------------------------------------- synthetic contrasts with controlled levels and intervals
 
 
@@ -203,7 +233,7 @@ def test_the_verdict_words_are_the_recipes_and_the_within_run_words_stay_the_his
 
 
 def _smoke_run(tmp_path):
-    rows = fx._outputs_rows(4)
+    rows = port_outputs_rows(4)
     for row in rows:
         for b in row["branches"]:
             for sample in (b["solver_samples"] or {}).get("samples", []) + (b["perception_samples"] or {}).get("samples", []):
@@ -219,10 +249,10 @@ def test_the_port_signoff_conditions_point_at_the_port_read_id_and_validate():
     smoke_signoff.validate_conditions(committed)
     assert committed["table_relpath"] == f"analysis/{pf.READ_RUN_ID}/smoke-decode-cost.json" and HIST_READ_ID not in committed["table_relpath"]
     assert committed["package"] == pf.PKG_NAME and committed["table_schema"] == fam.SMOKE_SCHEMA == hist.SCHEMA_SMOKE
-    assert committed["expected_arms"] == sorted(fam.ARM_ORDER) and pf.PORT_READER in committed["_note"]
-    # only the package name, the table path and the note differ from the historical conditions
+    assert committed["expected_arms"] == sorted(pf.ARM_ORDER) and "lock-rep2" in committed["expected_arms"] and pf.PORT_READER in committed["_note"]
+    # only the package name, the table path, the expected arms (the port arm table adds the replicate) and the note differ from the historical conditions
     historical = fam.signoff_conditions()
-    assert {k for k in committed if committed[k] != historical.get(k)} == {"package", "table_relpath", "_note"}
+    assert {k for k in committed if committed[k] != historical.get(k)} == {"package", "table_relpath", "expected_arms", "_note"}
 
 
 def test_the_smoke_reader_writes_the_table_the_signoff_accepts(tmp_path):
@@ -231,7 +261,7 @@ def test_the_smoke_reader_writes_the_table_the_signoff_accepts(tmp_path):
     assert port.main(["--stage", "smoke", "--data-root", str(tmp_path)]) == 0
     table_path = out / "smoke-decode-cost.json"
     table = json.loads(table_path.read_text(encoding="utf-8"))
-    assert table["schema"] == fam.SMOKE_SCHEMA and set(table["arms"]) == set(fam.ARM_ORDER) and table["absent_columns"] == 0 and table["unattributed_contacts"] == 0
+    assert table["schema"] == fam.SMOKE_SCHEMA and set(table["arms"]) == set(pf.ARM_ORDER) and table["absent_columns"] == 0 and table["unattributed_contacts"] == 0
     assert table["port"]["read_run_id"] == pf.READ_RUN_ID and table["port"]["run_id"] == pf.CELLS["smoke"]["run"] and "A-SECRET-TRANSCRIPT" not in table_path.read_text()
     assert port.main(["--stage", "smoke", "--data-root", str(tmp_path)]) == 6                       # write-once
     # the committed port conditions, resolved against the data root exactly as step_signoff.sh / smoke_signoff.py do (no --table)
@@ -243,12 +273,12 @@ def test_the_smoke_reader_writes_the_table_the_signoff_accepts(tmp_path):
 
 
 def test_the_smoke_signoff_fails_on_a_capped_port_table(tmp_path):
-    rows = fx._outputs_rows(4)
+    rows = port_outputs_rows(4)
     mapping = {}
     for row in rows:
         mapping.update(hist.arm_contact_map([row]))
     contacts = fx._synthetic_contacts(rows, cap_hit=True)
-    table = hist.smoke_stage(hist.npc.attribute(contacts, mapping), missing=hist.missing_columns(rows, contacts))
+    table = hist.smoke_stage(hist.npc.attribute(contacts, mapping), missing=hist.missing_columns(rows, contacts, pf.ARM_ORDER))
     assert any(not c["ok"] for c in smoke_signoff.evaluate(pf.signoff_conditions(), table))
 
 
@@ -262,7 +292,7 @@ def test_the_smoke_reader_refuses_a_missing_sealed_smoke(tmp_path, capsys):
 
 def _read_run(tmp_path, n=40, *, gain=1.0):
     ids = [f"s{i}" for i in range(n)]
-    rows = fx._outputs_rows(n)
+    rows = port_outputs_rows(n)
     for row in rows:
         for b in row["branches"]:
             for sample in (b["solver_samples"] or {}).get("samples", []) + (b["perception_samples"] or {}).get("samples", []):
@@ -275,7 +305,7 @@ def _read_run(tmp_path, n=40, *, gain=1.0):
     roster.write_text(json.dumps({"items": [{"sample_id": i, "utterance_id": i, "stratum": "alarm" if int(i[1:]) % 2 else "play"} for i in ids]}), encoding="utf-8")
     columns = tmp_path / pf.ANALYSIS_ROOT / "columns"
     columns.mkdir(parents=True)
-    scores = fx._arms_scores(ids, gain=gain, intent=1.0)
+    scores = port_arms_scores(ids, gain=gain, intent=1.0)
     for arm, per_row in scores.items():
         doc = {hist.SCORER: {"per_sample": [dict(sample_id=i, **per_row[i]) for i in ids]}}
         (columns / hist.COLUMN_SCORE_NAME.format(arm=arm, scorer=hist.SCORER)).write_text(json.dumps(doc), encoding="utf-8")
@@ -321,7 +351,7 @@ def test_the_read_stage_writes_the_table_the_verdicts_and_cites_every_number(tmp
     assert set(verdicts_doc["improvement"]) == set(fam.CANDIDATE_ARMS) and verdicts_doc["summary"]["s2_may_start"] is False
     # every cited number names an input that exists, matches its sha256 and (for read_json) the place it was read from
     inputs = verdicts_doc["inputs"]
-    assert {"recipe", "read_json", "roster", "manifest", "column_scores:lock", "column_scores:aa", "column_scores:l1-support", "column_scores:l2-union"} <= set(inputs)
+    assert {"recipe", "read_json", "roster", "manifest", "column_scores:lock", "column_scores:aa", "column_scores:lock-rep2", "column_scores:l1-support", "column_scores:l2-union"} <= set(inputs)
     assert inputs["read_json"]["sha256"] == hashlib.sha256((out / "read.json").read_bytes()).hexdigest()
     assert inputs["recipe"]["sha256"] == hashlib.sha256(RECIPE.read_bytes()).hexdigest()
     for name, entry in inputs.items():
@@ -353,3 +383,117 @@ def test_the_read_stage_refuses_an_incomplete_manifest_and_a_missing_column(tmp_
     (tmp_path / pf.ANALYSIS_ROOT / "columns" / hist.COLUMN_SCORE_NAME.format(arm="aa", scorer=hist.SCORER)).unlink()
     assert port.main(argv) == 2 and "missing column score file" in capsys.readouterr().err
     assert not (tmp_path / pf.ANALYSIS_ROOT / "port-verdicts.json").exists()                      # nothing is written on a refusal
+
+
+# --------------------------------------------------------------------------- (7) noise model M1: the replicate, the widened CI95, per-row F1 and the words
+
+
+def _versus(point, lo, hi, *, per_row=None):
+    entry = {"slu_f1": iv(point, lo, hi), "intent": iv(0.0, -0.5, 0.5), "intent_saves_harms_ties_vs_delivering": {"saves": 0, "harms": 0, "ties": 0}}
+    if per_row is not None:
+        entry["per_row_slu_f1"] = iv(*per_row)
+    return entry
+
+
+def _l1_contrast(slu, per_row, intent=(0.0, -0.5, 0.5)):
+    """A noise-adjusted-shaped record with one L1 arm: ``slu`` / ``per_row`` are (point, lo, hi) in pp."""
+
+    versus = {"aa": _versus(0.1, -0.9, 1.1, per_row=(0.0, -0.5, 0.5)), "l1-support": _versus(*slu, per_row=per_row)}
+    versus["l1-support"]["intent"] = iv(*intent)
+    return {"n": 1080, "delivering": "lock", "levels": {"lock": {}, "aa": {}, "l1-support": {}}, "versus_delivering": versus}
+
+
+def test_the_recipe_carries_the_noise_model_and_the_reader_refuses_a_recipe_that_disagrees(tmp_path):
+    recipe = json.loads(RECIPE.read_text(encoding="utf-8"))
+    model = recipe["port_extensions"]["noise_model"]
+    assert model["copies"] == list(pf.REPLICATE_SET) == ["lock", "aa", "lock-rep2"] and model["max_replicates"] == 2 and model["replicate_arms"] == ["lock-rep2"]
+    assert model["formula"] == port.paired_ci.FORMULA and recipe["arms"] == sorted(recipe["arms"], key=pf.ARM_ORDER.index) == list(pf.ARM_ORDER)
+    for edit, message in ((lambda d: d["port_extensions"]["noise_model"].update(formula="x"), "noise_model.formula"),
+                          (lambda d: d["port_extensions"].pop("noise_model"), "noise_model is absent"),
+                          (lambda d: d["port_extensions"]["noise_model"].update(copies=["lock", "aa"]), "noise_model.copies"),
+                          (lambda d: d["arms"].remove("lock-rep2"), "arms")):
+        doc = json.loads(RECIPE.read_text(encoding="utf-8"))
+        edit(doc)
+        bad = tmp_path / "recipe.json"
+        bad.write_text(json.dumps(doc), encoding="utf-8")
+        with pytest.raises(port.ReadError, match=message):
+            port.load_recipe(bad)
+
+
+def test_nominated_needs_both_the_pooled_and_the_per_row_lower_bound_above_zero():
+    ok = port.port_arm_words(_l1_contrast((3.0, 1.6, 4.4), (1.0, 0.2, 1.8)))["words"]["l1-support"]
+    assert ok["word"] == "NOMINATED" and ok["hist_word"] == "NOMINATED" and ok["nominated_withheld_by"] == [] and ok["next_step"] == "335 B Fold A column"
+    # pooled lower bound clears the 1.49 floor but the per-row lower bound is below zero: the historical word is NOMINATED, the port word is withheld
+    withheld = port.port_arm_words(_l1_contrast((3.0, 1.6, 4.4), (-0.3, -1.1, 0.5)))["words"]["l1-support"]
+    assert withheld["hist_word"] == "NOMINATED" and withheld["word"] == "NEUTRAL" and withheld["nominated_withheld_by"] == ["per_row_primary_ci_lo_above_zero"]
+    assert withheld["next_step"] is None and withheld["per_row_slu_delta_pp"] == -0.3
+    # a per-row lower bound of exactly zero is not above zero
+    assert port.port_arm_words(_l1_contrast((3.0, 1.6, 4.4), (0.5, 0.0, 1.0)))["words"]["l1-support"]["word"] == "NEUTRAL"
+    # the per-row loss is resolved (upper bound below minus the floor): still withheld, and the pooled rule alone would have said NOMINATED
+    loss = port.port_arm_words(_l1_contrast((3.0, 1.6, 4.4), (-3.0, -4.0, -2.0)))["words"]["l1-support"]
+    assert loss["hist_word"] == "NOMINATED" and loss["word"] == "NEUTRAL" and set(loss["nominated_withheld_by"]) >= {"per_row_primary_ci_lo_above_zero"}
+    # HARM is the historical pooled rule and is never softened
+    harm = port.port_arm_words(_l1_contrast((-3.0, -4.4, -1.6), (0.5, 0.1, 0.9)))["words"]["l1-support"]
+    assert harm["word"] == "HARM" and harm["hist_word"] == "HARM"
+    with pytest.raises(port.ReadError, match="per_row_slu_f1"):
+        port.port_arm_words(contrast(arms={"l1-support": (75.0, 1.6, 4.9, 85.0)}))
+
+
+def test_the_l2_lever_is_judged_on_intent_with_the_per_row_slu_guard():
+    versus = {"aa": _versus(0.0, -1.0, 1.0, per_row=(0.0, -0.5, 0.5)),
+              "l2-union": dict(_versus(0.2, -1.0, 1.4, per_row=(0.1, -0.4, 0.6)), intent=iv(1.2, 0.8, 1.6))}
+    c = {"n": 1080, "delivering": "lock", "levels": {}, "versus_delivering": versus}
+    assert port.port_arm_words(c)["words"]["l2-union"]["word"] == "NOMINATED"
+    versus["l2-union"]["per_row_slu_f1"] = iv(-3.0, -4.5, -2.0)                       # pooled SLU is fine, the typical row lost 3 pp: the guard fails at the per-row level
+    out = port.port_arm_words(c)["words"]["l2-union"]
+    assert out["word"] == "NEUTRAL" and "per_row_slu_no_resolved_loss" in out["nominated_withheld_by"]
+
+
+def test_the_improvement_verdict_adds_the_per_row_condition_only_when_the_record_carries_it(rules):
+    c = contrast(lock=(72.0, 85.0), aa=(72.3, 85.2), arms={"l1-support": (76.0, 0.5, 6.0, 85.0)})
+    assert "per_row_slu_delta_ci95_lower_above_zero" not in verdicts(rules, c)["improvement"]["l1-support"]["conditions"]       # a pre-M1 record
+    c["versus_delivering"]["l1-support"]["per_row_slu_f1"] = iv(0.8, -0.2, 1.8)
+    c["levels"]["l1-support"]["per_row_slu_f1_pct"] = 70.0
+    out = verdicts(rules, c)["improvement"]["l1-support"]
+    assert out["conditions"]["per_row_slu_delta_ci95_lower_above_zero"] is False and out["word"] == "NO-CROSS-RUN-STATEMENT"
+    c["versus_delivering"]["l1-support"]["per_row_slu_f1"] = iv(0.8, 0.1, 1.8)
+    assert verdicts(rules, c)["improvement"]["l1-support"]["word"] == "IMPROVEMENT-ADMISSIBLE"
+
+
+def test_the_read_stage_widens_every_ci_and_reports_per_row_f1(tmp_path):
+    _read_run(tmp_path)
+    argv = ["--stage", "read", "--data-root", str(tmp_path), "--repo-root", str(tmp_path / "repo"), "--recipe", str(RECIPE), "--draws", "200"]
+    assert port.main(argv) == 0
+    out = tmp_path / pf.ANALYSIS_ROOT
+    read = json.loads((out / "read.json").read_text(encoding="utf-8"))
+    verdicts_doc = json.loads((out / "port-verdicts.json").read_text(encoding="utf-8"))
+    contrast_doc = read["contrast"]
+    assert set(contrast_doc["versus_delivering"]) >= {"aa", "lock-rep2", "l1-support", "l2-union"} and set(read["contrast_bootstrap_only"]["versus_delivering"]) == set(contrast_doc["versus_delivering"])
+    model = read["noise_model"]
+    assert model["copies"] == ["lock", "aa", "lock-rep2"] and [m["n_pairs"] for m in model["metrics"].values()] == [3, 3, 3]
+    # the fixture's copies are exact repeats of lock: zero replicate variance, zero widening, the reported CI95 IS the bootstrap interval
+    for metric in ("slu_f1", "intent", "per_row_slu_f1"):
+        assert model["metrics"][metric]["variance_pp2"] == 0.0
+    for arm in ("l1-support", "l2-union"):
+        entry = contrast_doc["versus_delivering"][arm]
+        assert entry["slu_f1"]["widening_pp"] == 0.0 and entry["slu_f1"]["ci95_lo_pp"] == entry["slu_f1"]["bootstrap_ci95_lo_pp"] == read["contrast_bootstrap_only"]["versus_delivering"][arm]["slu_f1"]["ci95_lo_pp"]
+        assert set(entry["per_row_slu_f1"]) >= {"point_pp", "ci95_lo_pp", "ci95_hi_pp", "widening_pp"} and "per_row_slu_f1_pct" in contrast_doc["levels"][arm]
+    assert read["interval"]["bootstrap"]["draws"] == 200 and "widened" in read["interval"]["kind"] and read["arm_words"]["ci_definition"] == contrast_doc["ci_definition"]
+    assert {"hist_word", "nominated_withheld_by"} <= set(read["arm_words"]["words"]["l1-support"])
+    assert read["arm_words_bootstrap_only"]["words"]["l1-support"]["word"] in ("NOMINATED", "NEUTRAL", "HARM")
+    text = (out / "README.md").read_text(encoding="utf-8")
+    assert "Noise model (M1)" in text and "lock-rep2" in text
+    # the verdict file carries the noise model and the per-row fields, every number cited
+    assert verdicts_doc["schema"] == "saea-l338-port-verdicts-v2" and verdicts_doc["noise_model"]["copies"] == ["lock", "aa", "lock-rep2"]
+    assert verdicts_doc["noise_model"]["metrics"]["slu_f1"]["pairs"][0]["pair"] == ["aa", "lock"] and verdicts_doc["noise_model"]["metrics"]["slu_f1"]["n_pairs"] == 3
+    improvement = verdicts_doc["improvement"]["l1-support"]
+    assert "per_row_slu_delta_ci95_lower_above_zero" in improvement["conditions"] and improvement["per_row_slu_delta_vs_lock_pp"]["source"] == "read_json"
+    assert verdicts_doc["rule_text"]["ci95"].startswith("every CI95 is the row-paired bootstrap interval widened")
+
+
+def test_the_read_stage_refuses_a_missing_replicate_column(tmp_path, capsys):
+    _read_run(tmp_path)
+    (tmp_path / pf.ANALYSIS_ROOT / "columns" / hist.COLUMN_SCORE_NAME.format(arm="lock-rep2", scorer=hist.SCORER)).unlink()
+    argv = ["--stage", "read", "--data-root", str(tmp_path), "--repo-root", str(tmp_path / "repo"), "--recipe", str(RECIPE), "--draws", "50"]
+    assert port.main(argv) == 2 and "lock-rep2" in capsys.readouterr().err
+    assert not (tmp_path / pf.ANALYSIS_ROOT / "port-verdicts.json").exists()

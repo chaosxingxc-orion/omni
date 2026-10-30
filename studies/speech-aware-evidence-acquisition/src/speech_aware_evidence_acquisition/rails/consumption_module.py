@@ -202,6 +202,10 @@ _SAMPLING_COLUMN_AXES = frozenset({"perception_samples", "solver_samples"})
 #: The block-level frame every sampling column set shares: ``twin`` adds the request-identical A/A arm the carrier's hook names;
 #: ``max_supplied_items`` bounds the evidence every arm renders; ``fit_estimate`` is the measured fail-closed fit estimate.
 _SAMPLING_FRAME_KEYS = frozenset({"max_supplied_items", "twin", "fit_estimate"})
+#: Noise model M1 (2026-10-30): ``replicates`` names the arm ids of the further request-identical copies of the delivering arm (``arm_kind: replicate``) beside
+#: the twin. Optional: a frame without it (every frame written before M1) hashes and compiles exactly as before. The twin plus the replicates number at most
+#: ``MAX_LOCK_REPLICATES`` (2), so the list holds at most one id.
+_SAMPLING_FRAME_OPTIONAL_KEYS = frozenset({"replicates"})
 #: Loop engineering item E-S1 (2026-10-11): the node-SUPPLY column. It IS one
 #: non-delivering arm of the Solver's ``supply_variants`` block (the E42
 #: mechanism): the arm named ``column_id``, resolving its own supply -- knob-tail
@@ -900,10 +904,24 @@ def _parse_sampling_frame(raw: object, *, has_sampling_columns: bool) -> str | N
         return None
     if not has_sampling_columns:
         raise ConsumptionModuleConfigError("consumption_module.sampling_frame is declared but no sampling column is")
-    if not isinstance(raw, Mapping) or set(raw) != _SAMPLING_FRAME_KEYS:
+    if not isinstance(raw, Mapping) or not _SAMPLING_FRAME_KEYS <= set(raw) <= (_SAMPLING_FRAME_KEYS | _SAMPLING_FRAME_OPTIONAL_KEYS):
         raise ConsumptionModuleConfigError(
-            f"consumption_module.sampling_frame keys must be exactly {sorted(_SAMPLING_FRAME_KEYS)}"
+            f"consumption_module.sampling_frame keys must be exactly {sorted(_SAMPLING_FRAME_KEYS)} plus optionally {sorted(_SAMPLING_FRAME_OPTIONAL_KEYS)}"
         )
+    if "replicates" in raw:
+        from .native_episode_receipt import MAX_LOCK_REPLICATES  # noqa: PLC0415
+
+        replicates = raw["replicates"]
+        if (
+            not isinstance(replicates, list) or not replicates or len(replicates) > MAX_LOCK_REPLICATES - 1
+            or any(not isinstance(item, str) or not item.strip() for item in replicates) or len(set(replicates)) != len(replicates)
+        ):
+            raise ConsumptionModuleConfigError(
+                "consumption_module.sampling_frame.replicates must be a list of 1.."
+                f"{MAX_LOCK_REPLICATES - 1} distinct non-empty arm ids (the twin plus the replicates number at most {MAX_LOCK_REPLICATES})"
+            )
+        if raw.get("twin") is not True:
+            raise ConsumptionModuleConfigError("consumption_module.sampling_frame.replicates requires twin: true (a replicate is a further copy beside the twin)")
     if isinstance(raw["max_supplied_items"], bool) or not isinstance(raw["max_supplied_items"], int) or raw["max_supplied_items"] < 1:
         raise ConsumptionModuleConfigError("consumption_module.sampling_frame.max_supplied_items must be a positive integer")
     if not isinstance(raw["twin"], bool):
@@ -1865,6 +1883,12 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
             if lv == level
         }
     )
+    if block.sampling_columns:
+        # A sampling-column composition is the review-off module graph. The flown-program table is keyed by contact ceiling and belongs to REVIEW-ON cells
+        # (ceiling 17, uncited, is the re-listen program): a sampling column that lands on a flown ceiling (c17 once the lock replicate of noise model M1 is
+        # added) must resolve to its own module-family program, never to a flown program of another graph. No sampling cell lands on a flown ceiling before M1
+        # (c15), so every composition written before is unchanged.
+        flown = {}
     program_id = flown.get((ceiling, contract))
     reviewer_material = layer["phase_material"].get("reviewer")
     reviewer_contract = (reviewer_material.get("response_format_id")
@@ -2078,6 +2102,8 @@ def _compile_sampling_columns(
         if frame.get("twin_arm_id") is None:
             raise ConsumptionModuleConfigError(f"profile {hooks.profile!r} names no twin arm id for sampling columns")
         rows.append({"arm_id": frame["twin_arm_id"], "replicate_of": frame["delivering_arm_id"]})
+        for replicate_id in sf.get("replicates", ()):
+            rows.append({"arm_id": replicate_id, "replicate_of": frame["delivering_arm_id"], "arm_kind": "replicate"})
     rows.append({"arm_id": frame["delivering_arm_id"], "deliver": True})
     sampling_block = {
         "node": frame["node"], "arms": rows, "max_supplied_items": sf["max_supplied_items"],

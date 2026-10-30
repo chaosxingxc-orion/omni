@@ -2244,6 +2244,19 @@ def perception_branch_sampling_error(sampling: object, *, is_b: bool) -> str | N
 
 
 _PERCEPTION_BRANCH_LEVELS = (1, 2)
+#: Noise model M1 (2026-10-30): the request-identical copies of the delivering branch a group may declare -- the single twin plus ``arm_kind:
+#: replicate`` copies -- at most this many in all (the twin and one replicate). ``rails.supply_variants`` imports it.
+MAX_LOCK_REPLICATES = 2
+
+
+def perception_branch_twin_and_replicates(branch_rows: Sequence[object]) -> tuple[str | None, tuple[str, ...]]:
+    """``(twin id, replicate ids)`` of a sealed receipt's branch rows: the first row naming ``replicate_of`` is the twin, every later one a replicate.
+
+    A sealed row carries ``replicate_of`` for the twin and for each replicate alike (the request-identical copies of the delivering branch), and the group
+    declares the twin first, so the declared order tells them apart. ``(None, ())`` when no row names ``replicate_of``."""
+
+    ids = [item.get("branch_id") for item in branch_rows if isinstance(item, Mapping) and item.get("replicate_of") is not None]
+    return (ids[0] if ids else None), tuple(ids[1:])
 _PERCEPTION_BRANCH_VISITS = "first"
 
 
@@ -2256,9 +2269,17 @@ def validate_perception_branch_receipt(
     phase_id: str,
     level: int,
     error_type: type[Exception] = ValueError,
+    replicate_branch_ids: Sequence[str] = (),
 ) -> None:
     """Validate the custody a Perception branch visit keeps (phase 2, item
     merge set C).
+
+    ``replicate_branch_ids`` (noise model M1, 2026-10-30): the ``arm_kind:
+    replicate`` copies of the delivering branch beside the single twin; each is
+    validated exactly like the twin (it names the delivering branch, carries
+    no axis and resolves exactly its supplied ids); the twin plus the
+    replicates number at most :data:`MAX_LOCK_REPLICATES`. Empty by default,
+    so every caller written before M1 validates unchanged.
 
     Structurally :func:`validate_supply_variant_receipt`'s twin, checked
     against the SAME row-identity discipline: distinct branch ids, EVERY
@@ -2321,6 +2342,19 @@ def validate_perception_branch_receipt(
         pass                                     # a v5 (thinking-policy) column may fly without a twin
     elif not isinstance(twin_branch_id, str) or twin_branch_id not in declared:
         _raise(error_type, "perception branch receipt names an undeclared twin branch")
+    replicate_ids = tuple(replicate_branch_ids)
+    if replicate_ids:
+        if twin_branch_id is None:
+            _raise(error_type, "perception branch receipt names replicates but no twin")
+        if len(set(replicate_ids)) != len(replicate_ids) or twin_branch_id in replicate_ids or any(
+            not isinstance(item, str) or item not in declared or item == delivered_branch_id for item in replicate_ids
+        ):
+            _raise(error_type, "perception branch receipt names an undeclared, repeated or delivering replicate branch")
+        if 1 + len(replicate_ids) > MAX_LOCK_REPLICATES:
+            _raise(
+                error_type,
+                f"perception branch receipt names {1 + len(replicate_ids)} request-identical replicates; at most {MAX_LOCK_REPLICATES} are registered",
+            )
     if level not in _PERCEPTION_BRANCH_LEVELS:
         _raise(error_type, "perception branch receipt level must be 1 or 2")
     if not isinstance(perception_branches, Mapping) or set(perception_branches) != _PERCEPTION_BRANCH_FIELDS:
@@ -2382,6 +2416,7 @@ def validate_perception_branch_receipt(
     delivering_ids: tuple[str, ...] | None = None
     delivering_request_sha256: str | None = None
     twin_seen = False
+    replicates_seen = 0
     for index, row in enumerate(rows):
         if not isinstance(row, Mapping) or set(row) not in (
             expected_fields, expected_fields | PERCEPTION_BRANCH_ABSENT_FIELDS,
@@ -2413,7 +2448,8 @@ def validate_perception_branch_receipt(
             _raise(error_type, "perception branch lacks its contact identity")
         contact_ids.append(contact_id)
         replicate_of = row.get("replicate_of")
-        is_twin = twin_branch_id is not None and row["branch_id"] == twin_branch_id
+        is_replicate = row["branch_id"] in replicate_ids
+        is_twin = (twin_branch_id is not None and row["branch_id"] == twin_branch_id) or is_replicate
         if is_twin:
             if replicate_of != delivered_branch_id:
                 _raise(
@@ -2423,7 +2459,10 @@ def validate_perception_branch_receipt(
                 )
             if deliver:
                 _raise(error_type, "the delivering perception branch cannot also be the twin")
-            twin_seen = True
+            if is_replicate:
+                replicates_seen += 1
+            else:
+                twin_seen = True
         elif replicate_of is not None:
             _raise(
                 error_type,
@@ -2689,8 +2728,10 @@ def validate_perception_branch_receipt(
         _raise(error_type, "perception branches must have distinct contact ids")
     if not twin_seen and not (twin_branch_id is None and twin_optional):
         _raise(error_type, "perception branch receipt does not carry the declared twin")
+    if replicates_seen != len(replicate_ids):
+        _raise(error_type, "perception branch receipt does not carry every declared replicate")
     for row in rows:
-        if twin_branch_id is None or row["branch_id"] != twin_branch_id:
+        if row["branch_id"] != twin_branch_id and row["branch_id"] not in replicate_ids:
             continue
         if delivering_ids is None or tuple(row["supplied_value_ids"]) != delivering_ids:
             _raise(
@@ -2735,5 +2776,7 @@ __all__ = [
     "PERCEPTION_BRANCH_NOTE_PARSE_STATUSES",
     "parse_perception_branch_note",
     "perception_branch_note_fields_error",
+    "perception_branch_twin_and_replicates",
+    "MAX_LOCK_REPLICATES",
     "validate_perception_branch_receipt",
 ]
