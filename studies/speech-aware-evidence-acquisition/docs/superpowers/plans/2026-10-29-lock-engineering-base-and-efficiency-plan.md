@@ -976,3 +976,13 @@ Decision (owner rule 2026-10-29: 4xTP2 stays unless 2xTP4 wins by more than 5 %)
 deployment.** Arm B is closed; no further 2xTP4 measurement is scheduled. The lock record's deployment line is
 `qwen3-omni-thinking-bf16-181-4xtp2-v2`, admitted level 32, flight width 128. The E3 shm verdict and the budget-6,144
 worst case can still change the admitted level or the model fragment, not the arm.
+
+### 3.13 addendum: S10 swap timing (2026-10-30)
+
+The engineer stopped before the swap, correctly: both live chains relaunch arm A through `npu_serve.sh` and compare the
+new container's `Cmd` with the captured argv (`entrypoint: vllm`), so swapping to the interpreter-entrypoint launcher
+while P4 or the E3 restore is ahead would make those steps CHAIN-BAD. The swap runs by hand after the E3 chain is FINAL:
+`cp -p npu_serve.sh npu_serve.sh.pre-s10-20261030 && mv npu_serve.sh.s10-next npu_serve.sh`, then the `DRY_RUN=1`
+render must show `--gpu-memory-utilization 0.92` (the image default; the memory budget does not change). The card
+queue's recorded runs deploy through `npu_deploy.sh` from the profile and never read `npu_serve.sh`, so they are not
+gated on the swap. After the swap, `tests/unit/test_deployment.py` is re-pointed to the single launcher name.
