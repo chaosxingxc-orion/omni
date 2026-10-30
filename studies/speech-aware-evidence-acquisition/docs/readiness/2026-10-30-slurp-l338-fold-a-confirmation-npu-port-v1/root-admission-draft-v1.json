@@ -4,20 +4,20 @@
     "plans": {
       "fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-l338-fold-a-confirmation-npu-port-v1/fit-plan-registered-v1.json",
-        "sha256": "1f42d36ed56bd6051cd040563837495acd489d2d570ab1dd40dfef22480f5194"
+        "sha256": "3c920ebc19d6ae004e972136d4f0d844c5e48aeb4582e6b5d4af43b8b30ad292"
       },
       "generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-30-slurp-l338-fold-a-confirmation-npu-port-v1/generation-plan-registered-v1.json",
-        "sha256": "175ff65b7c977c895a3aea16afcbed04650d2dbcfb9f1d5f14d13c8d576ee796"
+        "sha256": "652349bd9520631b2930128b3ca988f41dda86884d0175156e3104fd5bee7de5"
       }
     },
     "protocol": {
       "path": "docs/readiness/2026-10-30-slurp-l338-fold-a-confirmation-npu-port-v1/protocol-registered-v1.json",
-      "sha256": "1974ead2d36d4741ad150db6a9b3bf93c74a12b39114684091eb5dbd819115ce"
+      "sha256": "cebd9100cd52ff704b4f0e504752500774215036f6367359ff0ab1791831204e"
     },
     "registered_facts": {
       "path": "docs/readiness/2026-10-30-slurp-l338-fold-a-confirmation-npu-port-v1/registered-facts-v1.json",
-      "sha256": "62d3455961ea0b7c95b1942627c696b9dadfcc474ca9192ec409ce2df7e9518c"
+      "sha256": "67955a769d45d7a5700b648cb551a176c8da25b2396694fea86132c6501e92dc"
     },
     "registration_base_commit": "28bf317600000000000000000000000000000000"
   },

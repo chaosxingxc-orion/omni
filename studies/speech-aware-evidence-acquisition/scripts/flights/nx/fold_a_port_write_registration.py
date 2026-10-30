@@ -266,6 +266,11 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
         "port_findings": [{"id": "findings-are-fold-b-context", "finding": ("The findings above are the Fold B port package's, carried for context; those that name the Fold B roster describe "
                                                                           "the Fold B flight."), "remedy": "none"},
                           {"id": "deployment-is-a-placeholder", "finding": pf.PORT_DEPLOYMENT_PROFILE["not_a_fact_here"], "remedy": "the measured speed sweep fills the profile"},
+                          {"id": "module-lock-port", "finding": ("The port cells declare the consumption module on the lock v2.2-npu-port (rails/adapters/slurp_module_lock_v2_2_npu_port.py: lock v2.2 with ten knowledge-store "
+                                                                  "leaves set from scripts/flights/nx/l338_port_pins.json: intent-boundaries and slot-contracts release and snapshot relpath and sha256, and the kus3 facet source "
+                                                                  "sha256 and ledger row). Lock v2.2 carries the historical 268-B store pins, so the config loader's verify_declared_module refused the port cells before this lock "
+                                                                  "(docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md; plan section 3.14)."),
+                           "remedy": "none; the derive and the writer run verify_declared_module on every emitted cell and refuse to write when it fails"},
                           {"id": "no-smoke", "finding": ("No Fold A smoke is registered: the Fold A cell reuses the programs and harness bytes that are smoked and signed off on Fold B, "
                                                           "and its inputs are verified model-free (owner item O6 of the three-way README)."), "remedy": "none"}],
         "decision_rule_fixed_here": (f"The arm words and thresholds are the Fold B port package's ({pf.PACKAGE}); the confirmation rule is the widened CI95 lower bound above zero "

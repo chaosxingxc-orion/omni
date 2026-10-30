@@ -73,7 +73,7 @@ def test_the_slurp_default_resolves_per_lock_id():
         l22.default_deliver_normaliser_for_lock("v9.9")
     hooks = _hooks()
     assert hooks.default_deliver_normaliser() == V3  # the no-lock default is untouched
-    assert {k: v() for k, v in hooks.lock_deliver_normalisers.items()} == {"v2.0": V3, "v2.1": V3, "v2.2": V4G, "v2.3": V4G}
+    assert {k: v() for k, v in hooks.lock_deliver_normalisers.items()} == {"v2.0": V3, "v2.1": V3, "v2.2": V4G, "v2.3": V4G, "v2.2-npu-port": V4G}
     assert V4G in DELIVERY_NORMALISERS.names()
     assert l22.LOCK_V2_2_COMPONENT_STATES["delivery-normaliser"]["state"] == "on (lock)"
 
@@ -138,7 +138,7 @@ def test_no_committed_consumption_module_block_relies_on_the_current_lock():
         except ValueError:
             continue
     slurp = [b for b in blocks if b.get("profile") == "slurp"]
-    assert slurp and all(b.get("lock") in ("v2.1", "v2.2") for b in slurp)
+    assert slurp and all(b.get("lock") in ("v2.1", "v2.2", "v2.2-npu-port") for b in slurp)
 
 
 def test_lock_v2_2_is_the_v2_1_layer_with_exactly_the_normaliser_leaf_moved():

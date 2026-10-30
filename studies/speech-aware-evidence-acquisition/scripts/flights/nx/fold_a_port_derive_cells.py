@@ -126,7 +126,7 @@ def _prose_heads(kind: str, key: str) -> dict:
 
 
 def fold_a_baseline(root: Path = REPO_ROOT) -> dict:
-    base = pdc.port_baseline("arm", root)
+    base = pdc.port_baseline("arm", root, module_lock=pdc.PORT_MODULE_LOCK)
     out = _swap_leaves(base, "baseline", root, _prose_heads("baseline", "arm"))
     spec = fa.CELLS["arm"]
     # the receipts list stays sorted by (root, relpath) after the swap
@@ -216,7 +216,7 @@ def _dump(doc: dict) -> str:
 def derive(repo_root: Path = REPO_ROOT, dry_run: bool = False) -> dict:
     root = Path(repo_root)
     spec = fa.CELLS["arm"]
-    fold_b_base, fold_b_exp = pdc.port_baseline("arm", root), pdc.port_experiment("arm", root)
+    fold_b_base, fold_b_exp = pdc.port_baseline("arm", root, module_lock=pdc.PORT_MODULE_LOCK), pdc.port_experiment("arm", root)
     base, exp = fold_a_baseline(root), fold_a_experiment(root)
     leaks = [f"baseline:{p}" for p in scan_fold_b(base, "baseline")] + [f"experiment:{p}" for p in scan_fold_b(exp, "experiment")]
     if leaks:
@@ -232,11 +232,15 @@ def derive(repo_root: Path = REPO_ROOT, dry_run: bool = False) -> dict:
     cmp_leaks = [p for p in scan_fold_b(cmp_base, "baseline") + scan_fold_b(cmp_exp, "experiment")]
     if cmp_leaks:
         raise ValueError(f"the Fold A comparator still carries Fold B tokens: {cmp_leaks}")
+    # writer self-check (plan 3.14): the loader's verify_declared_module on the emitted cell, BEFORE anything is written. The never-flown comparator pair declares the lock
+    # v2.2 with k 60 against the lock's 8 (a separate, check-only defect): it is checked and reported, never refused.
+    module_report = pdc.module_self_check(root, {spec["baseline"]: base, fa.COMPARATOR_CELL: cmp_base}, {spec["cell"]: exp, fa.COMPARATOR_CELL: cmp_exp}, exempt=(fa.COMPARATOR_CELL,))
     outputs = (("baseline", spec["baseline"], base), ("experiment", spec["cell"], exp), ("baseline", fa.COMPARATOR_CELL, cmp_base), ("experiment", fa.COMPARATOR_CELL, cmp_exp))
     if not dry_run:
         for kind, name, doc in outputs:
             (root / "configs" / kind / f"{name}.json").write_text(_dump(doc), encoding="utf-8")
     return {"cell": spec["cell"], "baseline": spec["baseline"], "run_id": spec["run"], "fit_run_id": spec["fit_run"], "comparator": fa.COMPARATOR_CELL,
+            "module_self_check": {"lock": pdc.PORT_MODULE_LOCK, "verify_declared_module": module_report},
             "files": [f"configs/{kind}/{name}.json" for kind, name, _ in outputs], "pending_pins": sorted(
                 {leaf["relpath"] for doc in (base, exp) for leaf in _iter_pins(doc) if leaf.get("sha256") == ZERO})}
 

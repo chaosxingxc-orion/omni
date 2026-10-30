@@ -4,28 +4,28 @@
     "plans": {
       "fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/fit-plan-registered-v1.json",
-        "sha256": "3ca6fc2b2fd12ef6dcc6f923d5e68cc32a62811bdb031e79812838d432dce6e8"
+        "sha256": "532a23148e92aa7cdd9c8d919c7a08cd2497dafb1dd2c77b67602be0eeed7f93"
       },
       "generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/generation-plan-registered-v1.json",
-        "sha256": "25223acdb2ec158c0f3ccef9455732cb12c8dcd01b948b47f10be801d1a75f1b"
+        "sha256": "dc33b4c2907dcd364531ef45d0eb2cb6b8465b6ce669b8de276c6b6a0d8b9251"
       },
       "smoke-fit-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/smoke-fit-plan-registered-v1.json",
-        "sha256": "7134a01f2c8a39b60cf719b2fc56c6ac48840009bbed361c305f54b95c54ab35"
+        "sha256": "ab5ce60fd02c7ad902a0b196208cd22ad9fb58bc70da6fe9e8be4e5bc163989b"
       },
       "smoke-generation-plan-registered-v1.json": {
         "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/smoke-generation-plan-registered-v1.json",
-        "sha256": "61da086ad7a259b6824e5392ac8ea343802a2f9df401d6bb54bf010d9b7262d9"
+        "sha256": "882aa23789701f07cc6ecf9fc9eaf002452651ecd1e107e93c925e84fb086382"
       }
     },
     "protocol": {
       "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/protocol-registered-v1.json",
-      "sha256": "c255b1822e8d4eaa0166060186c4ee2f71bbddc8bf3fc95fd6b0e630ce9a85c5"
+      "sha256": "b5f22dedbcbeda8af808d468908741a8d057190d67694a1bde29db3622c5dfa6"
     },
     "registered_facts": {
       "path": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/registered-facts-v1.json",
-      "sha256": "b4d24d79347ab9c9cec1f779b85d3ad4ffcacc967c621a1a8d8d37912dafff64"
+      "sha256": "27523efa04e05995a47d26f4b60b3dcc45f800d8aff26ec0e4ef05c0d9ad940c"
     },
     "registration_base_commit": "890643114fc1f2d851737e1202f7e32e4bba2ea0"
   },

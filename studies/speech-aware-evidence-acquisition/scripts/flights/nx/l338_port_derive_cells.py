@@ -41,10 +41,13 @@ from speech_aware_evidence_acquisition.rails.adapters.slurp_module_hooks import 
 
 REPO_ROOT = pf.REPO_ROOT
 ZERO = "0" * 64
+#: The consumption-module lock the port cells declare (plan 3.14; ``rails/adapters/slurp_module_lock_v2_2_npu_port.py``): lock v2.2 with the ten port store-pin leaves. The
+#: historical cells name ``v2.2``, whose layer carries the historical 268-B store pins, so ``verify_declared_module`` refuses a config that pins the re-authored stores.
+PORT_MODULE_LOCK = "v2.2-npu-port"
 ROSTER_PREFIX = "docs/receipts/rosters/"
 #: Leaves of the committed port flight this derive is allowed to move (prefix match on the dotted leaf path); anything else must be reproduced exactly.
 FLIGHT_MOVED_LEAVES = {
-    "baseline": ("native_contact_fit.run_id", "native_contact_fit.attempt_id", "what_this_is",
+    "baseline": ("native_contact_fit.run_id", "native_contact_fit.attempt_id", "what_this_is", "native_episode.consumption_module.lock",
                  # noise model M1 (the registered replicate of lock): the frame names it, the compiled block carries its row, the program grows by 2 contacts
                  "native_contact_fit.contact_cap", "policy", "native_episode.consumption_module.sampling_frame.replicates",
                  "native_episode.roles.perception.sampling_variants.arms["),
@@ -224,9 +227,14 @@ def port_arm_table(base: dict, key: str, root: Path) -> dict:
     return out
 
 
-def port_baseline(key: str, root: Path = REPO_ROOT) -> dict:
+def port_baseline(key: str, root: Path = REPO_ROOT, *, module_lock: str | None = None) -> dict:
+    """The port baseline of ``key``. ``module_lock`` (default: keep the historical block's lock) is the ``lock`` key the module block declares; the L338 port and Fold A
+    derives pass :data:`PORT_MODULE_LOCK`, so the block compiles onto the layer that carries the re-authored store pins."""
+
     spec = pf.CELLS[key]
     base = copy.deepcopy(_load("baseline", spec["historical_baseline"], root))
+    if module_lock is not None:
+        base["native_episode"]["consumption_module"]["lock"] = module_lock
     pins = pf.PINS
     base["arm"] = pins["arm"]
     for name in pins["removed_keys"]:
@@ -357,12 +365,65 @@ def scan_geometry(doc: dict) -> list[str]:
     return [path for path, value in _leaves(doc) if isinstance(value, str) and FORBIDDEN.search(value)]
 
 
+def module_self_check(root: Path, baselines: dict, experiments: dict, exempt: tuple[str, ...] = ()) -> dict:
+    """Writer self-check (plan 3.14): run ``verify_declared_module`` -- the call the config loader makes at ``native_episode_config.py:1924`` -- on every emitted baseline
+    (``{name: document}``) and on the baseline fragment each emitted experiment (``{name: document}``) names (an emitted baseline, else the one on disk). Raises ``ValueError``
+    naming every failing config BEFORE anything is written. ``exempt`` lists baseline names that are known to fail for a separate reason (the never-flown comparators,
+    whose ``k`` and component pins differ from the lock); they are checked and REPORTED, never refused. Returns ``{name: "ok" | "exempt: <leaves>"}``."""
+
+    def check(doc: dict) -> str | None:
+        block = (doc.get("native_episode") or {}).get(cm.CONSUMPTION_MODULE_CONFIG_KEY)
+        if block is None:
+            return None
+        try:
+            cm.verify_declared_module(block, doc, repo_root=Path(root))
+        except cm.ConsumptionModuleConfigError as error:
+            return str(error)[:600]
+        return None
+
+    needed = dict(baselines)
+    for name, exp in experiments.items():
+        for cell in exp["cells"]:
+            fragment = cell["baseline_fragment"]
+            if fragment not in needed:
+                needed[fragment] = _load("baseline", fragment, root)
+    report, failures = {}, []
+    for name in sorted(needed):
+        error = check(needed[name])
+        if error is None:
+            report[name] = "ok"
+        elif name in exempt:
+            report[name] = f"exempt: {error}"
+        else:
+            failures.append(f"{name}: {error}")
+    if failures:
+        raise ValueError("verify_declared_module refuses the derived configs (nothing was written): " + "; ".join(failures))
+    return report
+
+
+def verify_composed_module(root: Path, values: dict, label: str) -> None:
+    """The loader's call (``rails.native_episode_config`` :1924) on a COMPOSED config: ``verify_declared_module(values["native_episode"]["consumption_module"], values)``.
+    Raises ``SystemExit`` naming ``label`` when it refuses; a config that declares no module block passes."""
+
+    block = (values.get("native_episode") or {}).get(cm.CONSUMPTION_MODULE_CONFIG_KEY)
+    if block is None:
+        return
+    try:
+        cm.verify_declared_module(block, values, repo_root=Path(root))
+    except cm.ConsumptionModuleConfigError as error:
+        raise SystemExit(f"{label}: the composed config is refused by verify_declared_module (the config loader would refuse it): {str(error)[:600]}") from error
+
+
 def derive(repo_root: Path = REPO_ROOT, dry_run: bool = False) -> dict:
     root = Path(repo_root)
     result = {}
+    docs = {}
+    for key in pf.ALL_KEYS:
+        docs[key] = (port_baseline(key, root, module_lock=PORT_MODULE_LOCK), port_experiment(key, root))
+    module_report = module_self_check(root, {pf.CELLS[k]["baseline"]: docs[k][0] for k in docs}, {pf.CELLS[k]["cell"]: docs[k][1] for k in docs})
     for key in pf.ALL_KEYS:
         spec = pf.CELLS[key]
-        base, exp = port_baseline(key, root), port_experiment(key, root)
+        base, exp = docs[key]
         leaks = [f"baseline:{p}" for p in scan_geometry(base)] + [f"experiment:{p}" for p in scan_geometry(exp)]
         if leaks:
             raise ValueError(f"port {key} texts still state a slot geometry: {leaks}")
@@ -373,7 +434,8 @@ def derive(repo_root: Path = REPO_ROOT, dry_run: bool = False) -> dict:
         if not dry_run:
             for kind, doc, name in (("baseline", base, spec["baseline"]), ("experiment", exp, spec["cell"])):
                 (root / "configs" / kind / f"{name}.json").write_text(json.dumps(doc, ensure_ascii=True, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        result[key] = {"cell": spec["cell"], "baseline": spec["baseline"], "run_id": spec["run"], "fit_run_id": spec["fit_run"], "versus_committed": check}
+        result[key] = {"cell": spec["cell"], "baseline": spec["baseline"], "run_id": spec["run"], "fit_run_id": spec["fit_run"], "versus_committed": check,
+                       "module_self_check": {"lock": PORT_MODULE_LOCK, "verify_declared_module": module_report[spec["baseline"]]}}
     return result
 
 

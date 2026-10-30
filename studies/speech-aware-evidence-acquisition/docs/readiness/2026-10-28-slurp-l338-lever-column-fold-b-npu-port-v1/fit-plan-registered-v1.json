@@ -62,7 +62,7 @@
   ],
   "arm_visits": "first",
   "cell": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
-  "composed_config_hash": "8ccf5578f58dd41d13d0af2983bcff61a8627c0c3190f87cf3f65c133242ae3e",
+  "composed_config_hash": "15fc16341ac7b5c2053d718b7f2e5507eb63e0b733c09070203fb7592186b748",
   "context_fit": {
     "checks": {
       "bound_is_positive": true,
@@ -124,7 +124,7 @@
     "planned_gpu_hours": 90.3,
     "planned_model_calls": 18360,
     "planned_speech_audio_seconds": 107264,
-    "protocol_hash": "1bb05a55e9e1a8e503d5ba4d46545b3d1e4d6efd6bba135fa07cbb71c81c3a6f",
+    "protocol_hash": "22430cf316a58db45de1a64f935c57a5538e2f099e0669b9593e0b2d966363a8",
     "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1",
     "schema": "saea-execution-plan-v1",
     "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a",
@@ -161,7 +161,7 @@
   },
   "protocol_document": {
     "relpath": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1/protocol-registered-v1.json",
-    "sha256": "c255b1822e8d4eaa0166060186c4ee2f71bbddc8bf3fc95fd6b0e630ce9a85c5"
+    "sha256": "b5f22dedbcbeda8af808d468908741a8d057190d67694a1bde29db3622c5dfa6"
   },
   "purpose": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1: request envelopes only; reads nothing.",
   "registered_at_utc": "2026-10-28T13:19:53.257535+00:00",

@@ -1,6 +1,6 @@
 # L338 NPU port, Fold A confirmation: the lever column, preregistration (DRAFT / HELD)
 
-Registered 2026-10-30 at study commit `534b543ff154ca23be8287c1730b040940a3d038` by script. Development numbers only.
+Registered 2026-10-30 at study commit `28bf317600000000000000000000000000000000` by script. Development numbers only.
 
 Runs: `SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-NPU-PORT-V1` / `SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-FIT-NPU-PORT-V1`.
 

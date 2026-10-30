@@ -38,7 +38,7 @@ ZERO = "0" * 64
 COMMIT = "28bf3176" + "0" * 32
 AT = "2026-10-30T00:00:00+00:00"
 #: composed-config hash / protocol hash of the Fold A cell by fragment choice (the arm table, caps and pins are the port family's; only the identities and the zero-sentinel pins differ).
-FOLD_A_HASHES = {"default": ("7379b5b0dba7043e991bf33436110702cc74c8a207a94013cdc5a3018f1a0e92", "22f61f7b8142f15e9551d4f8a7cd35e63460c74197772125f935e355b0161df6")}
+FOLD_A_HASHES = {"default": ("f26ec1315303783a2ab5b6bd5335a3d60512c5d976dc056f544f62622702afd5", "86a2d5e20f3a3d5568a671e04a8cdc8818157916ef24096cb1b38df697e4817c")}
 FOLD_A_FILES = ["README.md", "countersign-row-texts-v1.json", "draft-ledger-rows.md", "fit-plan-registered-v1.json", "generation-plan-registered-v1.json", "protocol-registered-v1.json",
                 "registered-facts-v1.json", "root-admission-draft-v1.json", "signoff-conditions-v1.json"]
 

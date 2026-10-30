@@ -263,7 +263,7 @@
           "state": "off"
         }
       ],
-      "lock": "v2.2",
+      "lock": "v2.2-npu-port",
       "module_id": "saea-evidence-consumption-module-v1",
       "profile": "slurp",
       "review_loop": "off",

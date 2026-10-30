@@ -43,22 +43,22 @@ needs_data = pytest.mark.skipif(not (DATA_ROOT / "prepared").is_dir(), reason="t
 GOLDEN = {
     "README.md": "f1c016f071e8f3dd7e4d33e9feeeb2ae9f0d2f1673fce2f9d52dcb92e1538ac2",
     "countersign-row-texts-v1.json": "47f0b84c6e8110ecc636ce1e5ade040f68120a68662f02692283a0dfdd81e67b",
-    "draft-ledger-rows.md": "b3b9658059c2aac3bd3f1c73229b40a68410a5988135770e8895e5f8c6204cb2",
-    "fit-plan-registered-v1.json": "3ca6fc2b2fd12ef6dcc6f923d5e68cc32a62811bdb031e79812838d432dce6e8",
-    "generation-plan-registered-v1.json": "25223acdb2ec158c0f3ccef9455732cb12c8dcd01b948b47f10be801d1a75f1b",
-    "protocol-registered-v1.json": "c255b1822e8d4eaa0166060186c4ee2f71bbddc8bf3fc95fd6b0e630ce9a85c5",
-    "registered-facts-v1.json": "aaa682d472798212f566fd91ff95eb18b813497dedc0445194d971c27706810d",
-    "root-admission-draft-v1.json": "226ecd4ebcd09af4846b406ff049eecc340575f415c533f78b53a0c69a0b0ee3",
+    "draft-ledger-rows.md": "47a841e702524af94a35fb414e480bf5c771dd73f3d83b639f11a017cb41a2f1",
+    "fit-plan-registered-v1.json": "532a23148e92aa7cdd9c8d919c7a08cd2497dafb1dd2c77b67602be0eeed7f93",
+    "generation-plan-registered-v1.json": "dc33b4c2907dcd364531ef45d0eb2cb6b8465b6ce669b8de276c6b6a0d8b9251",
+    "protocol-registered-v1.json": "b5f22dedbcbeda8af808d468908741a8d057190d67694a1bde29db3622c5dfa6",
+    "registered-facts-v1.json": "27523efa04e05995a47d26f4b60b3dcc45f800d8aff26ec0e4ef05c0d9ad940c",
+    "root-admission-draft-v1.json": "42561d25d5bf654b96ea58e0487cd715a38dbdb5effcfb88407d19eeea5977da",
     "signoff-conditions-v1.json": "dead4b432b86c8693b98e92fbb0ceff03ce41d16657440ed0bdff812e9277109",
-    "smoke-fit-plan-registered-v1.json": "7134a01f2c8a39b60cf719b2fc56c6ac48840009bbed361c305f54b95c54ab35",
-    "smoke-generation-plan-registered-v1.json": "61da086ad7a259b6824e5392ac8ea343802a2f9df401d6bb54bf010d9b7262d9",
+    "smoke-fit-plan-registered-v1.json": "ab5ce60fd02c7ad902a0b196208cd22ad9fb58bc70da6fe9e8be4e5bc163989b",
+    "smoke-generation-plan-registered-v1.json": "882aa23789701f07cc6ecf9fc9eaf002452651ecd1e107e93c925e84fb086382",
 }
 GOLDEN_PREREG = "35202fec4284cc7e5da9ef2836436b756b35c3139fe7f006580a0404d1364ed0"
 #: composed-config hash / protocol hash of the two port cells (``smoke`` and ``arm``) by fragment choice.
-DEFAULT_HASHES = {"arm": ("8ccf5578f58dd41d13d0af2983bcff61a8627c0c3190f87cf3f65c133242ae3e", "1bb05a55e9e1a8e503d5ba4d46545b3d1e4d6efd6bba135fa07cbb71c81c3a6f"),
-                  "smoke": ("5d528040888927dd767ce4f4669ef61ab3e8bd082f0d05ca3e13c01d30b98e18", "26e8bd51091cb6b32a7f43312db9b35eedda80e3c23b2123b1fdb8d9ed7b855d")}
-SWITCH_HASHES = {"arm": ("925ec28dc9472c3ae4930d37f7b2a552c864314b8c213871e1635e9ffb485004", "d3da01fc7697c20e90d18144f24f8072c7bc8d537b0236c7c66e7fd59c320a3e"),
-                 "smoke": ("db324bab29be4dd850196b73691d3401b4aa866b0361238a7c65e5f13c883a5e", "ba2f17395fba14960236a5abc102b3f1932ce74c7b0397fa3e7ed982e505f98d")}
+DEFAULT_HASHES = {"arm": ("15fc16341ac7b5c2053d718b7f2e5507eb63e0b733c09070203fb7592186b748", "22430cf316a58db45de1a64f935c57a5538e2f099e0669b9593e0b2d966363a8"),
+                  "smoke": ("a45c48ef8972e67adc891bfcee9b2230bc8f4805445c1d30743aed071dc79c32", "19ad703be5892a730cc7244a29b1b93f808201d07cd25fea9f4ad90fe8f888b3")}
+SWITCH_HASHES = {"arm": ("ba3f28f919db05d9c8d7ec524c71982bcf8c499eb2ca4d771c9267c58fa7cb0b", "fdadfbf50737a03ea30b3e68b06142991d3fa28a39f6775b51e0c7759ac5ef92"),
+                 "smoke": ("30a8c03f44f8930603344d8e419f969226a20c00eb275262c6e487e3e7b95d85", "d85ab5269b014cdeac4bc6da4eaad0ea3e34a8058a0aedba774292068ab6fef6")}
 
 
 def _sha(path: Path) -> str:

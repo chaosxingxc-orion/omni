@@ -90,8 +90,8 @@ _BLOCK_OPTIONAL = frozenset({
     "thinking_frame", "decoding_frame", "sampling_frame",
 })
 #: A lock-version name a block may declare (migration step 6, owner decision
-#: 204): ``v<major>.<minor>``, resolved through the carrier's ``lock_versions``.
-_LOCK_VERSION = re.compile(r"^v[0-9]+\.[0-9]+$")
+#: 204): ``v<major>.<minor>`` with an optional lowercase ``-suffix`` (``v2.2-npu-port``), resolved through the carrier's ``lock_versions``.
+_LOCK_VERSION = re.compile(r"^v[0-9]+\.[0-9]+(-[a-z0-9]+)*$")
 _COMPONENT_REQUIRED = frozenset({"component_id", "state"})
 _COMPONENT_OPTIONAL = frozenset({"admitted_by", "record", "params"})
 _PROFILE = re.compile(r"^[a-z][a-z0-9]*$")

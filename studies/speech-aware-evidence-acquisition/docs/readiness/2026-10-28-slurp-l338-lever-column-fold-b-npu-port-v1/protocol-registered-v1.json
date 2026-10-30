@@ -107,12 +107,12 @@
     "arm": {
       "attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-generation-npu-port-v1",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
-      "composed_config_hash": "8ccf5578f58dd41d13d0af2983bcff61a8627c0c3190f87cf3f65c133242ae3e",
+      "composed_config_hash": "15fc16341ac7b5c2053d718b7f2e5507eb63e0b733c09070203fb7592186b748",
       "experiment": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
       "fit_attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-fit-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1",
       "historical_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-V1",
-      "protocol_hash": "1bb05a55e9e1a8e503d5ba4d46545b3d1e4d6efd6bba135fa07cbb71c81c3a6f",
+      "protocol_hash": "22430cf316a58db45de1a64f935c57a5538e2f099e0669b9593e0b2d966363a8",
       "rows": 1080,
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1",
       "split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
@@ -120,12 +120,12 @@
     "smoke": {
       "attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-generation-npu-port-v1",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
-      "composed_config_hash": "5d528040888927dd767ce4f4669ef61ab3e8bd082f0d05ca3e13c01d30b98e18",
+      "composed_config_hash": "a45c48ef8972e67adc891bfcee9b2230bc8f4805445c1d30743aed071dc79c32",
       "experiment": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
       "fit_attempt_id": "attempt-slurp-native-stage3-l338-lever-column-fold-b-smoke-4-fit-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
       "historical_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-V1",
-      "protocol_hash": "26e8bd51091cb6b32a7f43312db9b35eedda80e3c23b2123b1fdb8d9ed7b855d",
+      "protocol_hash": "19ad703be5892a730cc7244a29b1b93f808201d07cd25fea9f4ad90fe8f888b3",
       "rows": 4,
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1",
       "split_identity_hash": "bdd025a1f1c0a4a1ebd1b1204e7d3e781c3ae2543db7be324420f85171576e32"
@@ -229,6 +229,11 @@
       "finding": "The committed port flight baseline still carried the historical FIT run and attempt ids; the port derive moves them to the port FIT identity, which changes the composed config and makes phase-supply-v1 stale.",
       "id": "fit-ids-fixed",
       "remedy": "repin_cell.py re-prepares phase-supply-v2 with output equality asserted"
+    },
+    {
+      "finding": "The port cells declare the consumption module on the lock v2.2-npu-port (rails/adapters/slurp_module_lock_v2_2_npu_port.py: lock v2.2 with ten knowledge-store leaves set from scripts/flights/nx/l338_port_pins.json: intent-boundaries and slot-contracts release and snapshot relpath and sha256, and the kus3 facet source sha256 and ledger row). Lock v2.2 carries the historical 268-B store pins, so the config loader's verify_declared_module refused the port cells before this lock (docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md; plan section 3.14).",
+      "id": "module-lock-port",
+      "remedy": "none; the derive and the writer run verify_declared_module on every emitted cell and refuse to write when it fails"
     }
   ],
   "prohibitions": [

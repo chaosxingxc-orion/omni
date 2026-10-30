@@ -1022,3 +1022,16 @@ line reads v3; the v2 entry is deleted from the record when R0 fills it (as the 
 S10 swap performed 2026-10-30 after both chains were FINAL: `npu_serve.sh` is the interpreter-entrypoint launcher
 (dry render shows `--gpu-memory-utilization 0.92`, `--max-num-seqs`), the old launcher is kept as
 `npu_serve.sh.pre-s10-20261030`; `tests/unit/test_deployment.py` is re-pointed to the single name (87 tests pass).
+
+### 3.14 addendum: lock version landed (2026-10-30)
+
+`v2.2-npu-port` is registered (`rails/adapters/slurp_module_lock_v2_2_npu_port.py`, derived from `l338_port_pins.json`,
+exactly ten leaves differ from v2.2; the lock-key grammar now allows a lowercase suffix). The L338 port flight and smoke
+baselines and the Fold A baseline declare it and pass `verify_declared_module`; the historical Fold B cell still passes.
+The writers refuse to emit a package whose module check fails. Re-minted hashes: L338 flight composed `15fc1634…` /
+protocol `22430cf3…`, smoke `a45c48ef…` / `19ad703b…`, protocol document `b5f22ded…`; Fold A composed `f26ec131…` /
+protocol `86a2d5e2…`. Earlier hash mentions in plan sections (3.12 addendum of the TFRL plan, section 12 ruling 3) are
+superseded by the packages' `registered-facts-v1.json`. Consequences: the L338 port cell's first-phase supply must be
+re-prepared with `repin_cell.py` at the flip (output equality asserted); the T cells switch to the port lock in the
+T rails stream, and T's construction cells additionally need the minus-R01 exemplar-store leaves layered over the port
+lock. The never-flown port comparators fail separately (15 leaves) and are exempt; they feed only the agreement table.

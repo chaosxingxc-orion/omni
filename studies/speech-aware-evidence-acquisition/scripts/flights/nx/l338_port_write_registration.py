@@ -311,6 +311,7 @@ def identities(root: Path) -> dict:
         document = json.loads((Path(root) / "configs" / "experiment" / f"{spec['cell']}.json").read_text(encoding="utf-8"))
         cell = document["cells"][0]
         composed = compose(Path(root), cell["model_fragment"], cell["dataset_fragment"], cell["baseline_fragment"], spec["cell"])
+        pdc.verify_composed_module(Path(root), composed.values, spec["cell"])    # writer self-check (plan 3.14): the loader's own call, on the composed config
         split = document["population"]["split_identity_hash"]
         out[key] = {
             "key": key, "experiment": spec["cell"], "cell": cell["cell_id"], "run_id": cell["run_id"], "attempt_id": cell["attempt_id"],
@@ -639,7 +640,12 @@ def write_package(root: Path, commit: str, at: str | None, data_root: Path, *, a
              "remedy": "none"},
             {"id": "fit-ids-fixed", "finding": ("The committed port flight baseline still carried the historical FIT run and attempt ids; the port derive moves "
                                                 "them to the port FIT identity, which changes the composed config and makes phase-supply-v1 stale."),
-             "remedy": "repin_cell.py re-prepares phase-supply-v2 with output equality asserted"}],
+             "remedy": "repin_cell.py re-prepares phase-supply-v2 with output equality asserted"},
+            {"id": "module-lock-port", "finding": ("The port cells declare the consumption module on the lock v2.2-npu-port (rails/adapters/slurp_module_lock_v2_2_npu_port.py: lock v2.2 with ten knowledge-store "
+                                                    "leaves set from scripts/flights/nx/l338_port_pins.json: intent-boundaries and slot-contracts release and snapshot relpath and sha256, and the kus3 facet source "
+                                                    "sha256 and ledger row). Lock v2.2 carries the historical 268-B store pins, so the config loader's verify_declared_module refused the port cells before this lock "
+                                                    "(docs/results/2026-10-30-badcase-verify-declared-module-l338-port.md; plan section 3.14)."),
+             "remedy": "none; the derive and the writer run verify_declared_module on every emitted cell and refuse to write when it fails"}],
         "decision_rule_fixed_here": f"The arm words and thresholds are the historical package's ({pf.HISTORICAL_PACKAGE}/README.md, {fam.READER}).",
         "failure_policy": "Stop and preserve on the first failure; at most one root-diagnosed recovery re-registration per run id; run-cumulative budgets.",
         "declared_differences": list(pf.DECLARED_DIFFERENCES), "serving": serving_block(), "accelerator_bound": cost_block(),

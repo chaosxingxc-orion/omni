@@ -56,7 +56,7 @@
   ],
   "arm_visits": "first",
   "cell": "slurp-native-stage3-l338-lever-column-fold-a-npu-port-v1",
-  "composed_config_hash": "7379b5b0dba7043e991bf33436110702cc74c8a207a94013cdc5a3018f1a0e92",
+  "composed_config_hash": "f26ec1315303783a2ab5b6bd5335a3d60512c5d976dc056f544f62622702afd5",
   "confirmation_of": {
     "package": "docs/readiness/2026-10-28-slurp-l338-lever-column-fold-b-npu-port-v1",
     "rule": "plan M2: widened CI95 lower bound above zero",
@@ -123,7 +123,7 @@
     "planned_gpu_hours": 90.3,
     "planned_model_calls": 18360,
     "planned_speech_audio_seconds": 104874,
-    "protocol_hash": "22f61f7b8142f15e9551d4f8a7cd35e63460c74197772125f935e355b0161df6",
+    "protocol_hash": "86a2d5e20f3a3d5568a671e04a8cdc8818157916ef24096cb1b38df697e4817c",
     "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-FIT-NPU-PORT-V1",
     "schema": "saea-execution-plan-v1",
     "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6",
@@ -160,7 +160,7 @@
   },
   "protocol_document": {
     "relpath": "docs/readiness/2026-10-30-slurp-l338-fold-a-confirmation-npu-port-v1/protocol-registered-v1.json",
-    "sha256": "1974ead2d36d4741ad150db6a9b3bf93c74a12b39114684091eb5dbd819115ce"
+    "sha256": "cebd9100cd52ff704b4f0e504752500774215036f6367359ff0ab1791831204e"
   },
   "purpose": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-A-FIT-NPU-PORT-V1: request envelopes only; reads nothing.",
   "registered_at_utc": "2026-10-30T00:00:00+00:00",

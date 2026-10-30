@@ -90,8 +90,8 @@
     "solver_contacts_per_row": 9
   },
   "composed_config_hashes": {
-    "arm": "8ccf5578f58dd41d13d0af2983bcff61a8627c0c3190f87cf3f65c133242ae3e",
-    "smoke": "5d528040888927dd767ce4f4669ef61ab3e8bd082f0d05ca3e13c01d30b98e18"
+    "arm": "15fc16341ac7b5c2053d718b7f2e5507eb63e0b733c09070203fb7592186b748",
+    "smoke": "a45c48ef8972e67adc891bfcee9b2230bc8f4805445c1d30743aed071dc79c32"
   },
   "context_fit": {
     "checks": {
@@ -152,20 +152,19 @@
       "baseline": "slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NPU-PORT-V1",
+      "module_self_check": {
+        "lock": "v2.2-npu-port",
+        "verify_declared_module": "ok"
+      },
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1",
       "versus_committed": {
         "baseline": {
           "committed": true,
-          "moved": [
-            "native_contact_fit.contact_cap"
-          ]
+          "moved": []
         },
         "experiment": {
           "committed": true,
-          "moved": [
-            "family_budget.fit_endpoint_calls_cap",
-            "generation_budget.definition"
-          ]
+          "moved": []
         }
       }
     },
@@ -173,20 +172,19 @@
       "baseline": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-baseline-raw-port-v1",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
       "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-FIT-NPU-PORT-V1",
+      "module_self_check": {
+        "lock": "v2.2-npu-port",
+        "verify_declared_module": "ok"
+      },
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1",
       "versus_committed": {
         "baseline": {
           "committed": true,
-          "moved": [
-            "native_contact_fit.contact_cap"
-          ]
+          "moved": []
         },
         "experiment": {
           "committed": true,
-          "moved": [
-            "family_budget.fit_endpoint_calls_cap",
-            "generation_budget.definition"
-          ]
+          "moved": []
         }
       }
     }
@@ -198,7 +196,7 @@
       "baseline_fragment": "slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1",
       "carrier_lock_key": "slurp",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1",
-      "composed_config_hash": "8ccf5578f58dd41d13d0af2983bcff61a8627c0c3190f87cf3f65c133242ae3e",
+      "composed_config_hash": "15fc16341ac7b5c2053d718b7f2e5507eb63e0b733c09070203fb7592186b748",
       "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
       "execution_plan": {
         "execution_profile": "bounded-discovery-probe",
@@ -233,7 +231,7 @@
       "key": "arm",
       "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
       "program": "phase-native-module-v1-c17",
-      "protocol_hash": "1bb05a55e9e1a8e503d5ba4d46545b3d1e4d6efd6bba135fa07cbb71c81c3a6f",
+      "protocol_hash": "22430cf316a58db45de1a64f935c57a5538e2f099e0669b9593e0b2d966363a8",
       "roster_receipt": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
       "rows": 1080,
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1",
@@ -246,7 +244,7 @@
       "baseline_fragment": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-baseline-raw-port-v1",
       "carrier_lock_key": "slurp",
       "cell": "slurp-native-stage3-l338-lever-column-fold-b-smoke-4-npu-port-v1",
-      "composed_config_hash": "5d528040888927dd767ce4f4669ef61ab3e8bd082f0d05ca3e13c01d30b98e18",
+      "composed_config_hash": "a45c48ef8972e67adc891bfcee9b2230bc8f4805445c1d30743aed071dc79c32",
       "dataset_fragment": "slurp-speech-native-evo-fold-b-1080",
       "execution_plan": {
         "execution_profile": "bounded-discovery-probe",
@@ -281,7 +279,7 @@
       "key": "smoke",
       "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1",
       "program": "phase-native-module-v1-c17",
-      "protocol_hash": "26e8bd51091cb6b32a7f43312db9b35eedda80e3c23b2123b1fdb8d9ed7b855d",
+      "protocol_hash": "19ad703be5892a730cc7244a29b1b93f808201d07cd25fea9f4ad90fe8f888b3",
       "roster_receipt": "docs/receipts/rosters/slurp-stage3-filler-fold-b-c01-smoke-4-v1.json",
       "rows": 4,
       "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-SMOKE-4-NPU-PORT-V1",
