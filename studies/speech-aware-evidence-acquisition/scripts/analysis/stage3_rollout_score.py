@@ -295,6 +295,28 @@ def correctness_fields(row: Mapping[str, Any]) -> dict[str, Any]:
     return out
 
 
+def open_score_trace(out_dir: Path, run_id: str, attempt_id: str):
+    """Plan T1 / M4: the rollout-trace writer of this read, ``<analysis root>/rollout-trace.jsonl`` (the flight's own file when the
+    analysis root is the flight's ``analysis/<READ id>``). Observation only; ``None`` when it cannot be opened."""
+
+    try:
+        from speech_aware_evidence_acquisition.core.rollout_trace import RolloutTraceWriter  # noqa: PLC0415
+
+        return RolloutTraceWriter(Path(out_dir) / "rollout-trace.jsonl", run_id=run_id, attempt_id=attempt_id)
+    except Exception:  # noqa: BLE001 -- the trace never fails a scoring
+        return None
+
+
+def emit_score_trace(trace_writer, arm: str, scorer_id: str, per_sample: Sequence[Mapping[str, Any]]) -> None:
+    """Append the per-row ``score`` lines of one arm's column (idempotent; a failure is logged by the writer and ignored)."""
+
+    if trace_writer is None:
+        return
+    from speech_aware_evidence_acquisition.core.rollout_trace import emit_arm_scores  # noqa: PLC0415
+
+    emit_arm_scores(trace_writer, arm=arm, scorer_id=scorer_id, rows=per_sample)
+
+
 # ---------------------------------------------------------------------------
 # S3-4s: the sealed trajectory, rebuilt model-free
 # ---------------------------------------------------------------------------
@@ -810,7 +832,7 @@ def score_copy(
 
 def score(
     scorer_id: str, manifest: Mapping[str, Any], out_dir: Path, lock: Mapping[str, object],
-    root: Path, *, workers: int | None = None,
+    root: Path, *, workers: int | None = None, trace_writer=None,
 ) -> dict[str, Any]:
     """One complete registered scoring per rendered copy, the copies in parallel.
 
@@ -858,6 +880,7 @@ def score(
             "per_sample": {str(r["sample_id"]): correctness_fields(r) for r in result["per_sample"]},
             "scoring_seconds": elapsed,
         }
+        emit_score_trace(trace_writer, name, scorer_id, result["per_sample"])
     write_json(
         out_dir / "score-summary.json",
         {
@@ -1157,6 +1180,7 @@ def render_supply_variant_first_visit(
 def score_supply_variant_copies(
     scorer_id: str, manifest: Mapping[str, Any], out_dir: Path,
     lock: Mapping[str, object], data_root: Path, delivered: Mapping[str, Mapping[str, Any]],
+    trace_writer=None,
 ) -> dict[str, Any]:
     """Use score_copy once per whole-roster first-visit arm, then cache summary."""
     from speech_aware_evidence_acquisition.core.scoring_batch import (
@@ -1204,12 +1228,16 @@ def score_supply_variant_copies(
                 or {row.get("sample_id") for row in scores} != current
                 or not aggregate.get("identity_check", {}).get("passed")):
             raise Stage3ScoreError(f"official scorer returned incomplete arm {arm}")
+        emit_score_trace(trace_writer, arm, scorer_id, scores)
         sides[arm] = {
             "copy_sha256": entry["sha256"], "scores_sha256": sha256_file(score_path),
             "official": aggregate["official"], "rows": len(scores),
         }
     if set(delivered) != ids:
         raise Stage3ScoreError("sealed delivered scores differ from complete roster")
+    emit_score_trace(trace_writer, "delivered", scorer_id, [
+        {"sample_id": sample_id, **correctness_fields(row)} for sample_id, row in sorted(delivered.items())
+    ])
     summary = {
         "schema": SUPPLY_RENDER_SCHEMA, "stage": "score",
         "source": manifest["source"], "scorer_id": scorer_id,
@@ -1711,6 +1739,7 @@ def render_perception_branch_columns(
             twin_branch_id=(group.twin_branch.branch_id if group.has_twin else None),
             phase_id=branches_receipt.get("phase_id"), level=2,
             error_type=Stage3ScoreError,
+            replicate_branch_ids=tuple(branch.branch_id for branch in group.replicate_branches),
         )
         solver = [visit for visit in visits if isinstance(visit, Mapping)
                   and visit.get("stage") == "solver"]
@@ -1886,6 +1915,7 @@ def render_perception_branch_columns(
 def score_perception_branch_copies(
     scorer_id: str, manifest: Mapping[str, Any], out_dir: Path,
     lock: Mapping[str, object], data_root: Path, delivered: Mapping[str, Mapping[str, Any]],
+    trace_writer=None,
 ) -> dict[str, Any]:
     """Use score_copy once per whole-roster first-visit branch, then cache summary.
 
@@ -1941,6 +1971,7 @@ def score_perception_branch_copies(
                 or {row.get("sample_id") for row in scores} != current
                 or not aggregate.get("identity_check", {}).get("passed")):
             raise Stage3ScoreError(f"official scorer returned incomplete branch {branch_id}")
+        emit_score_trace(trace_writer, branch_id, scorer_id, scores)
         sides[branch_id] = {
             "copy_sha256": entry["sha256"], "scores_sha256": sha256_file(score_path),
             "official": aggregate["official"], "rows": len(scores),
@@ -2093,6 +2124,7 @@ def perception_branch_main(args, repo_root: Path, root: Path, lock) -> int:
         sealed = {row.get("sample_id"): row for row in bundle.outputs_rows}
         summary = score_perception_branch_copies(
             args.scorer_id, manifest, out_dir, lock, root, sealed,
+            trace_writer=open_score_trace(out_dir, args.run, args.attempt),
         )
         print(json.dumps({"stage": "score", "branches": list(summary["branch_order"]),
                           "rows": summary["sealed_delivered_rows"]}))
@@ -2215,6 +2247,7 @@ def supply_variant_main(args, repo_root: Path, root: Path, lock) -> int:
         delivered = sealed_per_sample(directory, args.run, args.scorer_id)
         summary = score_supply_variant_copies(
             args.scorer_id, manifest, out_dir, lock, root, delivered,
+            trace_writer=open_score_trace(out_dir, args.run, args.attempt),
         )
         print(json.dumps({"stage": "score", "arms": list(summary["arms"]),
                           "rows": summary["sealed_delivered_rows"]}))
@@ -2574,7 +2607,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     scored = None
     if args.stage in ("score", "all"):
-        scored = score(args.scorer_id, manifest, out_dir, lock, root, workers=args.workers)
+        scored = score(args.scorer_id, manifest, out_dir, lock, root, workers=args.workers,
+                       trace_writer=open_score_trace(out_dir, args.run, args.attempt))
         print(json.dumps(
             {"stage": "score", "sides": {k: v["official_slu_f1_pp"] for k, v in scored.items()}},
             indent=2,

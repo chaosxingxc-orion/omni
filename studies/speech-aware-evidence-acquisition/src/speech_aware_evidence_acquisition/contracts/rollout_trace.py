@@ -132,19 +132,26 @@ def _literal(expected: str) -> Checker:
 
 
 def _supply_items(value: object) -> str | None:
-    """``[{"item_id": str, "rank": int >= 1, "score": number | null}, ...]`` in supplied order; ranks are 1..n."""
+    """``[{"item_id", "rank", "score", "used"}, ...]`` in supplied order.
+
+    ``rank`` is 1..n; ``score`` is the retrieval score of the item's best supporting facet or null when it is not known;
+    ``used`` is true when a string the item carries (an observed intent or slot example) appears in the contact's parsed answer,
+    false when it does not, and null when the contact has no parsed answer or the item carries no checkable string.
+    """
 
     if not isinstance(value, list):
         return "must be a list"
     for index, item in enumerate(value):
-        if not isinstance(item, Mapping) or set(item) != {"item_id", "rank", "score"}:
-            return f"item {index} must have exactly the keys item_id, rank, score"
+        if not isinstance(item, Mapping) or set(item) != {"item_id", "rank", "score", "used"}:
+            return f"item {index} must have exactly the keys item_id, rank, score, used"
         if not isinstance(item["item_id"], str) or item["item_id"] == "":
             return f"item {index} item_id must be a non-empty string"
         if not _is_int(item["rank"]) or item["rank"] != index + 1:
             return f"item {index} rank must be {index + 1}"
         if item["score"] is not None and not _is_number(item["score"]):
             return f"item {index} score must be a finite number or null"
+        if item["used"] is not None and not isinstance(item["used"], bool):
+            return f"item {index} used must be a boolean or null"
     ids = [item["item_id"] for item in value]
     if len(ids) != len(set(ids)):
         return "item ids must be unique"

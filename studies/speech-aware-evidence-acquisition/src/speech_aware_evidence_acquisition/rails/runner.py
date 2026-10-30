@@ -31,7 +31,7 @@ from ..core.rollout_trace import RowSupplyScores as _RolloutSupplyScores
 from ..core.rollout_trace import cost_records as _rollout_cost_records
 from ..core.rollout_trace import node_of as _rollout_node_of
 from ..core.rollout_trace import record_contact as _rollout_record_contact
-from ..core.rollout_trace import supplied_value_ids_from_payload as _rollout_supplied_ids
+from ..core.rollout_trace import supplied_values_from_payload as _rollout_supplied_values
 from ..core.tracing import TraceBuffer, set_current_trace_buffer
 from .consumption import ConsumptionTrace
 from .core_client import CoreClient, CoreCompletion, FrozenCoreClient, PreparedCoreRequest
@@ -2038,7 +2038,7 @@ def _trace_agent_request(core_client, arguments, trace_buffer, text, completion,
             request_id=None if completion is None else completion.request_id,
             outcome="ok" if error is None else "error", error_type=None if error is None else type(error).__name__,
             id_slot=slot, instance=core_client.rollout_instance_for_slot(slot), supply_variant_id=None,
-            supply_ids=(), supply_scores=None, costs=_rollout_cost_records(trace_buffer), decoding=decoding,
+            supply_values=(), supply_scores=None, costs=_rollout_cost_records(trace_buffer), decoding=decoding,
             finish_reason_fallback=None if completion is None else completion.finish_reason,
             answer_text=text,
             response_text_sha256=(
@@ -2972,7 +2972,7 @@ async def _invoke_native_role_episode(
                 outcome="ok" if error is None else ("refused" if refused is not None else "error"),
                 error_type=None if error is None else type(error).__name__,
                 id_slot=slot_id, instance=core_client.rollout_instance_for_slot(slot_id),
-                supply_variant_id=context.variant_arm_id, supply_ids=_rollout_supplied_ids(payload),
+                supply_variant_id=context.variant_arm_id, supply_values=_rollout_supplied_values(payload),
                 supply_scores=rollout_supply_scores.lookup(row_id, arm),
                 costs=_rollout_cost_records(trace), decoding=decoding,
                 finish_reason_fallback=None if completion is None else completion.finish_reason,

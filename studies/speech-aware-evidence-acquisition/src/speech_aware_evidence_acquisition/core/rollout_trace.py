@@ -20,6 +20,7 @@ call here is a no-op. The READ id is not a field of the hashed execution plan, s
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -149,6 +150,53 @@ class RolloutTraceWriter:
     def contact(self, **fields: object) -> bool:
         return self.emit(schema.KIND_CONTACT, **fields)
 
+    def score_keys(self) -> set[tuple[str, str | None, str]]:
+        """The ``(row, arm, scorer)`` keys of the score lines already in the file (so a re-run of a scorer appends nothing twice)."""
+
+        keys: set[tuple[str, str | None, str]] = set()
+        try:
+            with open(self._path, "rb") as handle:
+                for raw in handle:
+                    try:
+                        line = json.loads(raw)
+                    except ValueError:
+                        continue
+                    if isinstance(line, Mapping) and line.get("kind") == schema.KIND_SCORE:
+                        keys.add((line.get("row_id"), line.get("arm"), line.get("scorer_id")))
+        except OSError:
+            pass
+        return keys
+
+
+def emit_arm_scores(
+    writer: RolloutTraceWriter | None, *, arm: str | None, scorer_id: str, rows: Iterable[Mapping[str, object]],
+) -> int:
+    """Append one ``score`` line per scored row of one arm's column (rows as the official scorer returns them); returns how many.
+
+    A row already scored for the same (row, arm, scorer) in the file is skipped, so a scorer re-run is idempotent. Never raises.
+    """
+
+    if writer is None:
+        return 0
+    try:
+        existing = writer.score_keys()
+        written = 0
+        for row in rows:
+            row_id = str(row["sample_id"])
+            key = (row_id, arm, scorer_id)
+            if key in existing:
+                continue
+            if writer.score(
+                row_id=row_id, arm=arm, scorer_id=scorer_id,
+                scenario_action_exact=float(row["scenario_action_exact"]) >= 1.0, slu_f1=float(row["slu_f1_f1"]),
+            ):
+                existing.add(key)
+                written += 1
+        return written
+    except Exception as error:  # noqa: BLE001 -- the trace never fails a scoring
+        _LOG.warning("rollout trace scores skipped (%s: %s)", type(error).__name__, error)
+        return 0
+
 
 def open_writer(
     *, data_root: str | os.PathLike[str] | None, run_id: str, attempt_id: str,
@@ -262,8 +310,10 @@ def parse_answer(text: object, parser: Callable[[str], tuple] | None = None) -> 
     }
 
 
-def supply_items(item_ids: Iterable[str], scores: Mapping[str, float] | None = None) -> list[dict[str, object]]:
-    """``supply_items`` of a contact line: supplied ids in supplied order, 1-based rank, retrieval score when known."""
+def supply_items(
+    item_ids: Iterable[str], scores: Mapping[str, float] | None = None, used: Mapping[str, bool | None] | None = None,
+) -> list[dict[str, object]]:
+    """``supply_items`` of a contact line: supplied ids in supplied order, 1-based rank, retrieval score and usage when known."""
 
     out: list[dict[str, object]] = []
     seen: set[str] = set()
@@ -272,24 +322,83 @@ def supply_items(item_ids: Iterable[str], scores: Mapping[str, float] | None = N
             continue
         seen.add(item_id)
         score = None if scores is None else scores.get(item_id)
+        flag = None if used is None else used.get(item_id)
         out.append({
             "item_id": item_id, "rank": len(out) + 1,
             "score": float(score) if isinstance(score, (int, float)) and not isinstance(score, bool) else None,
+            "used": flag if isinstance(flag, bool) else None,
         })
     return out
+
+
+def _fold(text: str) -> str:
+    return " ".join(re.sub(r"[^\w\s]", " ", text.casefold()).split())
+
+
+def item_strings(content: object) -> tuple[str | None, list[str]]:
+    """``(observed intent, slot example strings)`` of one supplied item's content, or ``(None, [])`` when it carries neither.
+
+    The exemplar stores render ``{"observed_intent": "<scenario>_<action>", "observed_slot_examples": {"<type>": ["<string>", ...]}}``
+    as the item text; any other content (cards, prose) carries nothing this check can compare.
+    """
+
+    if not isinstance(content, str):
+        return None, []
+    try:
+        document = json.loads(content.strip())
+    except ValueError:
+        return None, []
+    if not isinstance(document, Mapping):
+        return None, []
+    intent = document.get("observed_intent")
+    examples = document.get("observed_slot_examples")
+    strings: list[str] = []
+    if isinstance(examples, Mapping):
+        for values in examples.values():
+            if isinstance(values, list):
+                strings.extend(value for value in values if isinstance(value, str) and value.strip())
+    return (intent if isinstance(intent, str) and intent else None), strings
+
+
+def usage_flags(texts: Mapping[str, str], answer: Mapping[str, object] | None) -> dict[str, bool | None]:
+    """For each supplied item, whether a string it carries appears in the parsed answer (None when not checkable).
+
+    An item is used when its observed intent equals the answer's ``<scenario>_<action>``, or one of its slot example strings equals
+    or occurs (on word boundaries, case- and punctuation-folded) in one of the answer's entity fillers.
+    """
+
+    if not isinstance(answer, Mapping) or answer.get("parsed") is not True:
+        return {item_id: None for item_id in texts}
+    label = f"{answer.get('scenario', '')}_{answer.get('action', '')}"
+    fillers = [_fold(entity["filler"]) for entity in answer.get("entities", []) if isinstance(entity, Mapping)]
+    flags: dict[str, bool | None] = {}
+    for item_id, content in texts.items():
+        intent, strings = item_strings(content)
+        if intent is None and not strings:
+            flags[item_id] = None
+            continue
+        hit = intent == label
+        for string in strings:
+            needle = _fold(string)
+            if needle and any(f" {needle} " in f" {filler} " for filler in fillers):
+                hit = True
+                break
+        flags[item_id] = hit
+    return flags
 
 
 _REQUEST_DERIVED_ID = re.compile(r".+-supply-\d+\Z")
 
 
-def supplied_value_ids_from_payload(payload: Mapping[str, object]) -> list[str]:
-    """The value ids a request rendered as supplied knowledge, in rendered order (``supplied_evidence`` of the request payload).
+def supplied_values_from_payload(payload: Mapping[str, object]) -> list[tuple[str, str]]:
+    """``(value id, rendered content)`` of each value a request rendered as supplied knowledge, in rendered order.
 
-    Key-facet parts (``knowledge_role`` ``key`` or an ``evidence_id`` starting ``key:``), candidate proposals and request-derived
-    ids (``<request id>-supply-<n>``, which name a position, not a value) are not supplied VALUES and are skipped.
+    Read from ``supplied_evidence`` of the request payload. Key-facet parts (``knowledge_role`` ``key`` or an ``evidence_id``
+    starting ``key:``), candidate proposals and request-derived ids (``<request id>-supply-<n>``, which name a position, not a
+    value) are not supplied VALUES and are skipped.
     """
 
-    out: list[str] = []
+    out: list[tuple[str, str]] = []
     entries = payload.get("supplied_evidence") if isinstance(payload, Mapping) else None
     if not isinstance(entries, Sequence) or isinstance(entries, (str, bytes)):
         return out
@@ -303,7 +412,8 @@ def supplied_value_ids_from_payload(payload: Mapping[str, object]) -> list[str]:
             continue
         if _REQUEST_DERIVED_ID.fullmatch(evidence_id):
             continue
-        out.append(evidence_id)
+        content = entry.get("content")
+        out.append((evidence_id, content if isinstance(content, str) else ""))
     return out
 
 
@@ -375,7 +485,7 @@ def _id_or_none(value: object) -> str | None:
 def record_contact(
     writer: RolloutTraceWriter | None, *, row_id: object, arm: object, node: str, role_id: object, contact_id: object,
     contact_index: object, sample_index: object, request_id: object, outcome: str, error_type: str | None,
-    id_slot: object, instance: object, supply_variant_id: object, supply_ids: Iterable[str],
+    id_slot: object, instance: object, supply_variant_id: object, supply_values: Sequence[tuple[str, str]],
     supply_scores: Mapping[str, float] | None, costs: Sequence[Mapping[str, object]], decoding: Mapping[str, object] | None,
     finish_reason_fallback: object, answer_text: object, response_text_sha256: object,
 ) -> bool:
@@ -390,12 +500,14 @@ def record_contact(
         )
         max_tokens = _count(decoding.get("max_tokens"))
         answer = parse_answer(answer_text) if node == "solver" and outcome != "error" else None
+        texts = {item_id: content for item_id, content in supply_values}
+        used = usage_flags(texts, answer)
         return writer.contact(
             row_id=_id_or_none(row_id), arm=_id_or_none(arm), node=node, role_id=_id_or_none(role_id),
             contact_id=_id_or_none(contact_id), contact_index=_count(contact_index), sample_index=_count(sample_index),
             request_id=_id_or_none(request_id), outcome=outcome, error_type=error_type,
             id_slot=_count(id_slot), instance=_count(instance), supply_variant_id=_id_or_none(supply_variant_id),
-            supply_items=supply_items(supply_ids, supply_scores), max_tokens=max_tokens, answer=answer,
+            supply_items=supply_items(list(texts), supply_scores, used), max_tokens=max_tokens, answer=answer,
             response_text_sha256=response_text_sha256 if isinstance(response_text_sha256, str) else None, **facts,
         )
     except Exception as error:  # noqa: BLE001
