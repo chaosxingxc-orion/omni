@@ -102,3 +102,5 @@ Cost of the later flights: one 625-row lock column (1,250 contacts), then per it
 
 - T3 fills the sampler and the distiller; T2 replaces `widen_credit`; the Fold A confirmation flight (M2) is a separate step the driver reports but does not run.
 - No exposure entry, readiness flip or flight is implied by any file here.
+
+**Successor note (2026-10-30, pool-pin check):** the "pool pins differ on disk" item above is withdrawn. `4c498dc0…` and `6eaa03ae…` are `KnowledgeSnapshot.content_hash()` values (`rails/knowledge_stores.py:403`), not file sha256s; recomputed on the data root they match, and the files are byte-identical to the historical pools (file sha256 `fcb5506c…` / `f549466f…`, 9,354 / 8,554 utterances). No re-pin. Report: `work/scratch/brief/2026-10-30-pool-pin-check.md`.
