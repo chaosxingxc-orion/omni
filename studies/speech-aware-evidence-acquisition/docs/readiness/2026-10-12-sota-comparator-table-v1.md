@@ -315,3 +315,16 @@ cited.
 - **Class C** is not reached on any task. The nearest is SLURP intent against the dataset paper's trained pipelines
   (+4.03 over HerMiT). Fine-tuned SLURP SOTA is 8 pp (intent) and 13 pp (SLU-F1) away. Audio2Tool has no class-C
   line.
+
+## Successor note (2026-10-30)
+
+Three entries above are corrected by the verified read
+`docs/results/2026-10-30-public-slurp-baselines-and-test-set-alignment.md` (section 3); the rows above are left as
+written and this note is the correction of record:
+
+1. The Gold/HerMiT value 78.19 is the exact-span entity F1 from the SLURP paper, not SLU-F1.
+2. The row reported as UniverSLU-14 at 90.3 / 79.5 is UniverSLU-17.
+3. The UniverSLU-3 task-type row is 90.5 / 80.5, not 90.4 / 80.4.
+
+Under the owner rule of 2026-10-30 the headline comparison moves to the official test split with the three-tier table of
+that read (prompted speech LLMs without fine-tuning; systems fine-tuned on SLURP train; gold-text NLU upper bounds).
