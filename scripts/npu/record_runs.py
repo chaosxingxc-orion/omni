@@ -65,6 +65,11 @@ EXPECTED_CHECKS = 11
 STARTUP_RE = re.compile(r"KV cache size|Available KV cache memory|Initializing a V1 LLM engine|Block size is set")
 RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,40}$")
 ON_FAIL = ("stop_run", "continue", "stop_chain")
+#: Optional per-run sweep-client overrides (run key "sweep"): {run-list key: synthetic_sweep.py flag}. Absent = the sweep's own
+#: defaults (max_tokens 4096, thinking budget 3072, prompt max 20000, timeout 420 s), i.e. the pre-existing behaviour. They exist
+#: so a run list can measure a worst case at a RAISED output cap (--min-tokens must not exceed --max-tokens).
+SWEEP_FLAGS = {"max_tokens": "--max-tokens", "thinking_budget": "--thinking-budget", "prompt_max": "--prompt-max",
+               "timeout": "--timeout"}
 PROBE_DECODING_SEED = 777  # greedy_probe.py's fixed decoding seed
 EXIT_STOP, EXIT_INTERRUPTED, EXIT_UNEXPECTED, EXIT_GATE_FAILED, EXIT_DIED = 2, 3, 4, 5, 6
 
@@ -126,7 +131,22 @@ def validate_run_list(doc: dict, profile: dict) -> dict:
         on_fail = run.get("on_fail", "stop_run")
         if on_fail not in ON_FAIL:
             raise pc.ChainStop(f"{rid}: on_fail must be one of {ON_FAIL}")
-        out.append({"id": rid, "levels": list(levels), "passes": passes, "min_tokens": min_tokens,
+        sweep = run.get("sweep") or {}
+        if not isinstance(sweep, dict) or set(sweep) - set(SWEEP_FLAGS) or \
+                any(not isinstance(v, int) or isinstance(v, bool) or v < 1 for v in sweep.values()):
+            raise pc.ChainStop(f"{rid}: sweep must be an object over {sorted(SWEEP_FLAGS)} with positive integer values")
+        if min_tokens is not None and min_tokens > sweep.get("max_tokens", 4096):
+            raise pc.ChainStop(f"{rid}: min_tokens {min_tokens} exceeds the sweep max_tokens "
+                               f"{sweep.get('max_tokens', 4096)} (set sweep.max_tokens)")
+        max_latency = run.get("max_latency_s", pc.MAX_LATENCY_S)
+        if isinstance(max_latency, bool) or not isinstance(max_latency, (int, float)) or max_latency < pc.MAX_LATENCY_S:
+            raise pc.ChainStop(f"{rid}: max_latency_s must be a number >= {pc.MAX_LATENCY_S:g} (the plan 3.4 rule can only "
+                               f"scale UP with the output cap, never down)")
+        if max_latency > sweep.get("timeout", 420):
+            raise pc.ChainStop(f"{rid}: max_latency_s {max_latency:g} exceeds the sweep client timeout "
+                               f"{sweep.get('timeout', 420)} (set sweep.timeout above it)")
+        out.append({"id": rid, "levels": list(levels), "passes": passes, "min_tokens": min_tokens, "sweep": dict(sweep),
+                    "max_latency_s": float(max_latency),
                     "admissibility": bool(run.get("admissibility", False)), "on_fail": on_fail,
                     "note": str(run.get("note", ""))})
     r0 = dict(doc.get("r0") or {})
@@ -199,7 +219,7 @@ def compare_cmd(a: str, b: str, out: str) -> list[str]:
 
 
 def sweep_cmd(name: str, urls: list[str], level: int, requests: int, min_tokens: int | None, seed: str, label: str,
-              out: str, cpuset: str) -> list[str]:
+              out: str, cpuset: str, sweep: dict | None = None) -> list[str]:
     cmd = ["docker", "run", "--rm", "--name", name, "--network", "host", "--user", docker_user(), "-e", "HOME=/tmp",
            "--cpuset-cpus", cpuset, "-v", f"{ROOT}:{ROOT}", "-w", TREE, "-e", f"PYTHONPATH={TREE}/src",
            "-e", "PYTHONDONTWRITEBYTECODE=1", "--entrypoint", "/opt/saea-venv/bin/python", IMAGE,
@@ -210,6 +230,9 @@ def sweep_cmd(name: str, urls: list[str], level: int, requests: int, min_tokens:
             "--liveness-interval", str(pc.LIVENESS_SECONDS), "--label", label, "--out", out]
     if min_tokens is not None:
         cmd += ["--min-tokens", str(min_tokens)]
+    for key in SWEEP_FLAGS:
+        if sweep and key in sweep:
+            cmd += [SWEEP_FLAGS[key], str(sweep[key])]
     return cmd
 
 
@@ -328,12 +351,12 @@ class RecordOps(pc.RealOps):
                                                                  "max_abs_logprob_diff")}
 
     def measure_level(self, step, prefix, level, urls, min_tokens, label, names=None, *, requests=None,
-                      seed=pc.SEED, cpuset=pc.CLIENT_CPUSET) -> dict:
+                      seed=pc.SEED, cpuset=pc.CLIENT_CPUSET, sweep=None) -> dict:
         names = names or [f"instance-{i}" for i in range(len(urls))]
         out = Path(f"{prefix}-L{level}.json")
         client = f"saea-rec-{Path(prefix).name}-L{level}"[:120]
         subprocess.run(["docker", "rm", "-f", client], capture_output=True)  # our own client only, from a dead chain
-        command = sweep_cmd(client, urls, level, requests, min_tokens, seed, label, str(out), cpuset)
+        command = sweep_cmd(client, urls, level, requests, min_tokens, seed, label, str(out), cpuset, sweep)
         self.set_phase(prefix, level)
         poll = {"waiting": 0.0, "stop": threading.Event(), "kv": [None] * len(urls)}
         dead: dict = {"names": []}
@@ -622,20 +645,22 @@ class RecordChain:
                      f"admissibility {run['admissibility']}){' EXAMPLE' if self.rl['example'] else ''}")
             measure = self.ops.measure_level(step, prefix, level, self.urls, run["min_tokens"], label, names=self.names,
                                              requests=requests_for(run, level, len(self.urls)), seed=self.rl["seed"],
-                                             cpuset=self.rl["client_cpuset"])
+                                             cpuset=self.rl["client_cpuset"],
+                                             **({"sweep": run["sweep"]} if run["sweep"] else {}))
             after = self.probe_pair(prefix, level, "after")
             self.check_alive(step, level, run)
         except pc.EndpointDied as died:
             self.record_died(run, step, level, died)
             raise
-        reasons, row = pc.evaluate(measure, level, self.ceiling, worst_case=run["admissibility"])
+        reasons, row = pc.evaluate(measure, level, self.ceiling, worst_case=run["admissibility"],
+                                     max_latency_s=run["max_latency_s"])
         if row["ceiling_bound"] and self.rl["ceiling_bound_is_failure"]:
             reasons.append("ceiling-bound: waiting gauge > 0 at the scheduler ceiling")
         agreement = None
         if before and after:
             agreement = [self.ops.compare(b, a, f"{prefix}-L{level}-probe-compare-i{n}.json")
                          for n, (b, a) in enumerate(zip(before, after))]
-        row.update({"step": step, "run": run["id"], "passes_requested": run["passes"], "min_tokens": run["min_tokens"],
+        row.update({"step": step, "run": run["id"], "passes_requested": run["passes"], "min_tokens": run["min_tokens"], "sweep_overrides": run["sweep"], "max_latency_s_rule": run["max_latency_s"],
                     "admissibility_rule": run["admissibility"], "admitted_level": self.rl["admitted_level"],
                     "max_num_seqs_ceiling": self.ceiling, "client_seed": self.rl["seed"],
                     "client_decoding_seed": measure.get("client_decoding_seed"),
@@ -674,7 +699,7 @@ class RecordChain:
                         f"{' (EXAMPLE run list)' if self.rl['example'] else ''}",
                "synthetic": True, "dataset_rows": 0, "seed": self.rl["seed"],
                "host_output_tok_s_definition": "sum of completion tokens over all instances / level wall time",
-               "run": {k: run[k] for k in ("id", "levels", "passes", "min_tokens", "admissibility", "on_fail")},
+               "run": {k: run[k] for k in ("id", "levels", "passes", "min_tokens", "sweep", "max_latency_s", "admissibility", "on_fail")},
                "stopped_at_level": stopped_at, "done": done, "levels": self.rows[run["id"]]}
         doc.update(extra or {})
         pc.write_atomic(f"{prefix_for(self.logs, self.ts, run)}.json", json.dumps(doc, indent=2, sort_keys=True) + "\n")
@@ -849,9 +874,9 @@ class FakeRecordOps(pc.FakeOps):
         return {"requests": 16, "byte_identical": 16, "mismatched_indices": [], "max_abs_logprob_diff": 0.0}
 
     def measure_level(self, step, prefix, level, urls, min_tokens, label, names=None, *, requests=None,
-                      seed=pc.SEED, cpuset=pc.CLIENT_CPUSET):
+                      seed=pc.SEED, cpuset=pc.CLIENT_CPUSET, sweep=None):
         self.cmd(sweep_cmd(f"saea-rec-{Path(prefix).name}-L{level}", urls, level, requests, min_tokens, seed, label,
-                           f"{prefix}-L{level}.json", cpuset))
+                           f"{prefix}-L{level}.json", cpuset, sweep))
         if step in self.dead_after:
             self.dead_now = [self.dead_after[step]]
         names = names or [f"instance-{i}" for i in range(len(urls))]

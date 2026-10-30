@@ -173,18 +173,20 @@ def admissibility(per_instance: list[dict]) -> list[str]:
     return reasons
 
 
-def evaluate(measure: dict, level: int, max_num_seqs: int, worst_case: bool = False) -> tuple[list[str], dict]:
+def evaluate(measure: dict, level: int, max_num_seqs: int, worst_case: bool = False,
+             max_latency_s: float | None = None) -> tuple[list[str], dict]:
     """Plan 3.4 thresholds on one measured level; with worst_case also the plan 3.8 admissibility rule. Returns
     (failing reasons, row). A waiting queue at the scheduler ceiling is not a failure; it marks the level ceiling_bound."""
     summary = measure["summary"]
     lat, e2e = summary["latency_s"], summary["e2e_tok_s"]
+    limit = MAX_LATENCY_S if max_latency_s is None else float(max_latency_s)  # the 420 s rule scales with the output cap
     reasons: list[str] = []
     if summary["errors"] or summary["timeouts"]:
         reasons.append(f"{summary['errors']} errors, {summary['timeouts']} timeouts")
     if summary["ok"] != summary["requests"]:
         reasons.append(f"ok {summary['ok']} of {summary['requests']} requests")
-    if lat["max"] is None or lat["max"] >= MAX_LATENCY_S:
-        reasons.append(f"max latency {lat['max']} >= {MAX_LATENCY_S}")
+    if lat["max"] is None or lat["max"] >= limit:
+        reasons.append(f"max latency {lat['max']} >= {limit}")
     if e2e["p10"] is None or e2e["p10"] < MIN_P10:
         reasons.append(f"p10 e2e {e2e['p10']} < {MIN_P10}")
     pre = summary["preemptions_delta"]

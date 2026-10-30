@@ -1,0 +1,23 @@
+{
+  "schema": "saea-record-run-list-v1",
+  "example": false,
+  "label": "Thinking budget 6144 / max_tokens 7168 worst-case re-measure (plan 2026-10-30 section 2 M3, section 8 R1): R-A3 at 32, 24, 16 per instance, all three measured. Fragment bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget6144-max7168-port-v1 (6144 + 1024 answer reserve). The sweep client is raised to the new cap (it defaults to 4096), so min_tokens 7168 == max_tokens 7168 forces every sequence to the full cap.",
+  "profile": "qwen3-omni-thinking-bf16-181-4xtp2-v2",
+  "admitted_level": 32,
+  "seed": "20261028",
+  "client_cpuset": "224-255",
+  "ceiling_bound_is_failure": true,
+  "r0": {
+    "base_lock": "/mnt/cephfs/xingchao/omni/work/dev/umbrella/studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-29-engineering-base-lock-npu-port-v1/base-lock-v1.json",
+    "min_free_gib": 50,
+    "deploy_wait_seconds": 2400,
+    "smoke_audio": "/mnt/cephfs/xingchao/omni/work/scratch/smoke-181/tone.wav"
+  },
+  "runs": [
+    {"id": "R-A3-b6144", "levels": [32, 24, 16], "passes": 1, "min_tokens": 7168,
+     "sweep": {"max_tokens": 7168, "thinking_budget": 6144, "prompt_max": 17408, "timeout": 800},
+     "max_latency_s": 735,
+     "admissibility": true, "on_fail": "continue",
+     "note": "worst case at the 7168-token cap in descent order; on_fail continue so 32, 24 and 16 are all measured; admitted_level 32 is only the upper bound the validator needs (rule (b)) and is left for the planner to lower; the planner reads worst_case_admissible and the per-instance preemption and KV-peak columns per level. The plan 3.4 max-latency threshold scales with the output cap: 420 s bounds 4096 tokens at about 9.8 tok/s, so the same floor at 7168 tokens is 735 s (= the fragment timeout_seconds); the p10 e2e floor of 10 tok/s is unchanged. prompt_max 17408 = 24576 - 7168 (the sweep preflight refuses more); sweep timeout 800 s is above the 735 s latency rule so a slow request is a latency failure, not a client timeout."}
+  ]
+}

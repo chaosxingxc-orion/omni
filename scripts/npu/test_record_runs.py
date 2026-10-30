@@ -274,3 +274,60 @@ def test_dry_run_cli_prints_commands_and_exits_zero(tmp_path, monkeypatch, capsy
     assert rr.main() == 0
     out = capsys.readouterr().out
     assert "npu_deploy.sh up qwen3-omni-thinking-bf16-181-4xtp2-v2" in out and "CHAIN DONE" in out
+
+
+# ---------------------------------------------------------------- per-run sweep overrides and latency rule (raised-cap worst case)
+def test_sweep_overrides_default_to_none_and_leave_the_command_unchanged():
+    rl = rr.validate_run_list(run_list(), PROFILE)
+    assert all(r["sweep"] == {} and r["max_latency_s"] == 420.0 for r in rl["runs"])
+    base = rr.sweep_cmd("n", ["http://a"], 8, 72, 4096, "s", "l", "/o.json", "1")
+    assert base == rr.sweep_cmd("n", ["http://a"], 8, 72, 4096, "s", "l", "/o.json", "1", {})
+    assert "--max-tokens" not in base and "--timeout" not in base
+
+
+def test_sweep_overrides_become_sweep_client_flags():
+    sweep = {"max_tokens": 7168, "thinking_budget": 6144, "prompt_max": 17408, "timeout": 800}
+    cmd = rr.sweep_cmd("n", ["http://a"], 32, 96, 7168, "s", "l", "/o.json", "1", sweep)
+    for flag, value in (("--max-tokens", "7168"), ("--thinking-budget", "6144"), ("--prompt-max", "17408"),
+                        ("--timeout", "800"), ("--min-tokens", "7168")):
+        assert cmd[cmd.index(flag) + 1] == value
+
+
+def _raised(doc):
+    doc["runs"][2].update(min_tokens=7168, sweep={"max_tokens": 7168, "timeout": 800}, max_latency_s=735)
+
+
+@pytest.mark.parametrize("mutate,msg", [
+    (lambda d: d["runs"][2].update(min_tokens=8192), "exceeds the sweep max_tokens"),
+    (lambda d: d["runs"][2].update(sweep={"max_tokens": 8192, "bogus": 1}, min_tokens=8192), "sweep must be"),
+    (lambda d: d["runs"][2].update(sweep={"max_tokens": 0}), "sweep must be"),
+    (lambda d: d["runs"][2].update(sweep={"max_tokens": True}), "sweep must be"),
+    (lambda d: d["runs"][2].update(max_latency_s=300), "max_latency_s"),
+    (lambda d: d["runs"][2].update(max_latency_s="735"), "max_latency_s"),
+    (lambda d: d["runs"][2].update(max_latency_s=735), "exceeds the sweep client timeout"),
+])
+def test_bad_sweep_overrides_and_latency_rules_are_refused(mutate, msg):
+    doc = run_list()
+    mutate(doc)
+    with pytest.raises(pc.ChainStop, match=msg):
+        rr.validate_run_list(doc, PROFILE)
+
+
+def test_max_latency_scales_the_evaluate_rule_and_defaults_to_420():
+    ops = rr.FakeRecordOps(PROFILE)
+    measure = ops.measure_level("R-A3-L32", "/tmp/p", 32, ["http://a"], 7168, "l", names=["i0"], requests=96)
+    measure["summary"]["latency_s"]["max"] = 600.0
+    assert any("max latency" in r for r in pc.evaluate(measure, 32, 32)[0])
+    assert any("max latency" in r for r in pc.evaluate(measure, 32, 32, max_latency_s=420.0)[0])
+    assert not any("max latency" in r for r in pc.evaluate(measure, 32, 32, max_latency_s=735.0)[0])
+
+
+def test_dry_chain_passes_the_overrides_to_the_sweep_command(tmp_path):
+    doc = run_list()
+    _raised(doc)
+    doc["runs"][2]["sweep"]["thinking_budget"] = 6144
+    c, ops = chain(tmp_path, doc)
+    c.run()
+    sweeps = [cmd for cmd in ops.commands if "scripts/serving/synthetic_sweep.py" in cmd]
+    assert any("--max-tokens" in cmd and cmd[cmd.index("--max-tokens") + 1] == "7168" for cmd in sweeps)
+    assert sum("--max-tokens" in cmd for cmd in sweeps) == 1  # only the run that declared it
