@@ -173,6 +173,15 @@ def start(config_path: Path, state_dir: Path) -> dict[str, Any]:
                 # never silently use --retry-failed or replay its identities.
                 queues[kind] = {"state": "terminal", "queue_state": qstate.get("state"), "pid": None}
                 continue
+            # A partial coordinator restart must not duplicate a guardian that
+            # survived the SSH/session loss.  The old all-or-nothing check
+            # above is only a fast path for the fully live pair; recover each
+            # missing side independently.
+            prior = old.get("queues", {}).get(kind, {}) if isinstance(old, dict) else {}
+            if _alive(prior.get("pid")):
+                queues[kind] = dict(prior)
+                queues[kind]["state"] = "existing"
+                continue
             cmd = _guardian_cmd(cfg, kind)
             log_path = state_dir / (kind + ".guardian.log")
             with log_path.open("ab") as log:

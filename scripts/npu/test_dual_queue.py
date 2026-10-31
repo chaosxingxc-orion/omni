@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from unittest import mock
 import tempfile
 import unittest
 
@@ -58,6 +59,30 @@ class DualQueueTests(unittest.TestCase):
             out = dual_queue.start(config, root / "dual-state")
             self.assertEqual(out["queues"]["npu"]["state"], "terminal")
             self.assertEqual(out["queues"]["cpu"]["state"], "terminal")
+
+    def test_partial_restart_does_not_duplicate_live_guardian(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            npu = self.queue(root, "npu", [self.job("experiment", requires_cards_free=True, cards_policy="no_other")])
+            cpu = self.queue(root, "cpu", [self.job("analysis")])
+            config = root / "dual.json"
+            config.write_text(json.dumps({"schema": "saea-dual-queue-v1", "npu_queue": str(npu), "cpu_queue": str(cpu),
+                                          "npu_queue_dir": str(root / "npu-state"), "cpu_queue_dir": str(root / "cpu-state"),
+                                          "guardian": str(root / "guardian.py")}))
+            (root / "guardian.py").write_text("# fixture")
+            state_dir = root / "dual-state"
+            state_dir.mkdir()
+            (state_dir / "state.json").write_text(json.dumps({
+                "schema": dual_queue.STATE_SCHEMA,
+                "queues": {"npu": {"pid": os.getpid(), "state": "started"}, "cpu": {"pid": 99999999}},
+            }))
+            fake = mock.Mock(pid=424242)
+            with mock.patch.object(dual_queue.subprocess, "Popen", return_value=fake) as popen:
+                out = dual_queue.start(config, state_dir)
+            self.assertEqual(out["queues"]["npu"]["state"], "existing")
+            self.assertEqual(out["queues"]["npu"]["pid"], os.getpid())
+            self.assertEqual(popen.call_count, 1)
+            self.assertEqual(out["queues"]["cpu"]["pid"], 424242)
 
     def test_npu_queue_must_be_card_gated(self):
         with tempfile.TemporaryDirectory() as tmp:
