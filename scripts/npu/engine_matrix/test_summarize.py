@@ -40,3 +40,15 @@ def test_partial_counts_failures_unknowns_and_resume_without_rate(tmp_path):
     assert result['errors'] == 1 and result['inflight_or_unresolved_intents'] == 1
     assert result['ETA_s'] is None and result['output_tokens_s'] is None
     assert not result['uninterrupted_comparison_eligible']
+
+
+def test_interrupted_terminal_is_not_running_and_has_no_eta(tmp_path):
+    write(tmp_path / 'segments/1/metrics.jsonl', {'time': 100, 'metrics': {}})
+    write(tmp_path / 'segments/1/result.json', {'wall_s': 20, 'interrupted': True, 'fit_wall_s': 5})
+    for k in range(3):
+        write(tmp_path / f'requests/{k}.result.json', {'result': {'status': 'ok', 'trajectory': 0, 'contact': k}})
+    result = m.trial(tmp_path, {'id': 'x', 'client_concurrency': 32}, 2, 1000)
+    assert result['state'] == 'stopped'
+    assert result['generation_wall_s'] == 20
+    assert result['completed_trajectories'] == 1
+    assert result['ETA_s'] is None and result['seconds_per_complete_trajectory'] is None

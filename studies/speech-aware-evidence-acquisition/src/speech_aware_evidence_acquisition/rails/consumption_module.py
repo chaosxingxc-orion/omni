@@ -87,7 +87,7 @@ COMPONENT_STATES: tuple[str, ...] = (STATE_ON, STATE_OFF, STATE_SHADOW, STATE_CO
 _BLOCK_REQUIRED = frozenset({"module_id", "profile", "components"})
 _BLOCK_OPTIONAL = frozenset({
     "columns", "lock", "review_loop", "solver_tool_access", "template_frame", "supply_frame", "construction_roster",
-    "thinking_frame", "decoding_frame", "sampling_frame",
+    "thinking_frame", "decoding_frame", "sampling_frame", "prompt_contact_limits",
     #: TFRL-v2 (2026-10-30): the bank-consumption declaration (``rails.tfrl_v2_consumption``); parsed fail-closed, compiles to nothing.
     "tfrl_v2_bank",
 })
@@ -633,6 +633,7 @@ class ConsumptionModuleBlock:
     decoding_frame_json: str | None = None
     #: Decision 338: the sampling columns' shared frame (canonical JSON), or ``None`` when the block declares no sampling column.
     sampling_frame_json: str | None = None
+    prompt_contact_limits: str | None = None
 
     @property
     def sampling_columns(self) -> tuple[ColumnDecl, ...]:
@@ -756,6 +757,9 @@ def parse_consumption_module_block(
     columns = raw.get("columns", [])
     if not isinstance(columns, list):
         raise ConsumptionModuleConfigError("consumption_module.columns must be a list")
+    prompt_contact_limits = raw.get("prompt_contact_limits")
+    if prompt_contact_limits not in (None, "legacy-c17-lock-v1"):
+        raise ConsumptionModuleConfigError("invalid prompt_contact_limits")
     review_loop = raw.get("review_loop")
     if "review_loop" in raw and review_loop != "off":
         raise ConsumptionModuleConfigError("the prospective review_loop profile must be off or absent")
@@ -898,6 +902,7 @@ def parse_consumption_module_block(
         construction_roster=construction_roster,
         decoding_frame_json=decoding_frame_json,
         sampling_frame_json=sampling_frame_json,
+        prompt_contact_limits=prompt_contact_limits,
     )
 
 
@@ -1868,6 +1873,11 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
             writer.set(("native_episode", "tool_schema_rendering"), "per-role",
                        component_id="review-off-profile", replace_only="tool_schema_rendering" in layer["native_episode"])
         ceiling = sum(layer["native_episode"]["roles"][kind]["max_iterations"] for kind in ("perception", "solver"))
+    if block.prompt_contact_limits is not None:
+        if block.review_loop != "off" or block.columns or ceiling != 2 or block.solver_tool_access:
+            raise ConsumptionModuleConfigError("legacy prompt limits require a two-contact lock without columns")
+        writer.set(("native_episode", "prompt_contact_limits"), block.prompt_contact_limits,
+                   component_id="legacy-lock-prompt", replace_only=False)
     if block.template_columns:
         ceiling += _compile_template_columns(block, hooks, writer, layer)
     if block.supply_columns:

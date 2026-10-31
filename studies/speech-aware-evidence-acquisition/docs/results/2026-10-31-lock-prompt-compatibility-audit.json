@@ -1,0 +1,17 @@
+{
+  "checkpoint_sha256": "8fc5edc100096930c9cd78a0eed582d463249343111da766bf04c34220eea091",
+  "contact_indices": {
+    "perception": 7,
+    "solver": 8
+  },
+  "limitation": "Legacy side verified; fresh actual-data request equivalence and registered migration still required.",
+  "new_model_calls": 0,
+  "prompt_remaining_contacts": {
+    "perception": 17,
+    "solver": 9
+  },
+  "row_proofs_sha256": "4a70e8b326ad09b9787f1dd5c0cbb1bbc240b4c71484eb6e2a53d80aa21959fc",
+  "rows": 427,
+  "schema": "saea-legacy-lock-prompt-audit-v1",
+  "verified_contacts": 854
+}

@@ -44,10 +44,12 @@ def trial(root, candidate, trajectories, now):
         if samples:
             generation_starts.append(samples[0]['time'])
             metrics.extend(samples)
-    elapsed = final['wall_s'] if final else (now - generation_starts[-1] if generation_starts else None)
+    terminal_paths = [segment / 'result.json' for segment in segments if (segment / 'result.json').exists()]
+    terminal = read(terminal_paths[-1]) if terminal_paths and terminal_paths[-1].parent == segments[-1] else None
+    elapsed = (final or terminal)['wall_s'] if (final or terminal) else (now - generation_starts[-1] if generation_starts else None)
     comparable = len(generation_starts) == 1 and bool(final) and not final['resumed'] and not final['interrupted']
     # Partial or resumed runs retain counts but never manufacture a new baseline.
-    efficiency_valid = len(generation_starts) == 1 and elapsed is not None and elapsed > 0
+    efficiency_valid = len(generation_starts) == 1 and elapsed is not None and elapsed > 0 and not (terminal and terminal.get('interrupted'))
     rate = done / elapsed if efficiency_valid and done else None
     output = sum(r['result'].get('completion_tokens') or 0 for r in completed)
     counters = {}
@@ -63,13 +65,13 @@ def trial(root, candidate, trajectories, now):
         gauges[key] = {'max': max(values), 'mean': sum(values) / len(values)} if values else None
     steady = (final or {}).get('steady', {})
     return {'candidate': candidate['id'], 'concurrency': candidate['client_concurrency'],
-            'state': 'complete' if final else ('generating' if generation_starts else ('fitting' if segments else 'waiting')),
+            'state': 'complete' if final else ('stopped' if terminal else ('generating' if generation_starts else ('fitting' if segments else 'waiting'))),
             'cards': 2, 'instances': 1, 'completed_requests': len(completed), 'total_requests': total,
             'completed_trajectories': done, 'total_trajectories': trajectories,
             'errors': len(records) - len(completed), 'inflight_or_unresolved_intents': intents - len(records),
             'fit_completed_trajectories': len(list((root / 'fit').glob('*.json'))),
             'generation_start': generation_starts[0] if len(generation_starts) == 1 else None,
-            'generation_wall_s': elapsed, 'fit_wall_s': (final or progress).get('fit_wall_s'),
+            'generation_wall_s': elapsed, 'fit_wall_s': (final or terminal or progress).get('fit_wall_s'),
             'seconds_per_complete_trajectory': 1 / rate if rate else None,
             'complete_trajectories_h': rate * 3600 if rate else None,
             'ETA_s': (trajectories - done) / rate if rate else None,

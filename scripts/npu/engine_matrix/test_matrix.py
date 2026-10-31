@@ -127,3 +127,37 @@ def test_generation_error_stops_trajectory(tmp_path,monkeypatch):
     monkeypatch.setattr(tool,'send_chat',send)
     stop=threading.Event();r=m.run_trial(tool,c,tmp_path,t,stop)
     assert stop.is_set() and r['errors']==1 and len(sent)==1 and not (tmp_path/'complete.json').exists()
+
+
+def test_failed_candidate_does_not_cancel_healthy_peer(tmp_path, monkeypatch):
+    failed = threading.Event()
+    def trial(tool, candidate, root, trajectories, stop, barrier):
+        if candidate['id'] == 'bad':
+            stop.set(); failed.set()
+            return {'errors': 1, 'interrupted': True}
+        assert failed.wait(3)
+        assert not stop.is_set()
+        (root / 'healthy-complete').write_text('done')
+        return {'errors': 0, 'interrupted': False}
+    monkeypatch.setattr(m, 'run_trial', trial)
+    with pytest.raises(RuntimeError, match='bad'):
+        m.run_candidates(None, [{'id': 'bad'}, {'id': 'good'}], [tmp_path, tmp_path], [], threading.Event())
+    assert (tmp_path / 'healthy-complete').read_text() == 'done'
+
+
+def test_global_stop_reaches_all_candidates(tmp_path, monkeypatch):
+    global_stop = threading.Event(); global_stop.set()
+    seen = []
+    def trial(tool, candidate, root, trajectories, stop, barrier):
+        assert stop.wait(3); seen.append(candidate['id'])
+        return {'interrupted': True}
+    monkeypatch.setattr(m, 'run_trial', trial)
+    with pytest.raises(RuntimeError):
+        m.run_candidates(None, [{'id': 'a'}, {'id': 'b'}], [tmp_path, tmp_path], [], global_stop)
+    assert sorted(seen) == ['a', 'b']
+
+
+@pytest.mark.parametrize('value', [0, True, 3601, '1800'])
+def test_invalid_request_timeout(value):
+    plan=m.read(P/'plan.json');plan['rounds'][0][0]['request_timeout_s']=value
+    with pytest.raises(ValueError,match='timeout'):m.validate_plan(plan,0)

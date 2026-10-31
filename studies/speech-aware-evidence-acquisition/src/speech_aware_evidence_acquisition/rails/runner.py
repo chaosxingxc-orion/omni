@@ -4013,10 +4013,13 @@ async def _invoke_native_role_episode(
                 )
             node_context_binding = prepared_policy
         revision_index = episode_state["revision_count"]
+        from .native_episode_config import prompt_remaining_contacts
         limits = {
             "revision_index": revision_index,
             "max_revisions": config.max_revisions,
-            "remaining_model_contacts": config.max_contacts - state.scheduled_contacts,
+            "remaining_model_contacts": prompt_remaining_contacts(
+                config, role_configs[phase_id].role_kind,
+                config.max_contacts - state.scheduled_contacts),
             "role_max_iterations": role_configs[phase_id].max_iterations,
             "available_planner_actions": [
                 config.actions[0],
@@ -5998,10 +6001,21 @@ async def _invoke_native_role_episode(
                 continue
 
             def contact_context(index, role=role):
+                contact_program, contact_index = program.program_id, index
+                if config.prompt_contact_limits == "legacy-c17-lock-v1":
+                    # Keep the delivering lock's historical state namespace:
+                    # its Perception was index 7, Solver index 8. These are
+                    # opaque contact IDs, not executed-contact counters.
+                    from .native_episode_config import validate_prompt_contact_limits
+                    validate_prompt_contact_limits(config)
+                    if index != 0:
+                        raise RailsRunnerError("legacy lock cannot make another role contact")
+                    contact_program = "phase-native-module-v1-c17"
+                    contact_index = {"perception": 7, "solver": 8}[role.role_kind]
                 kwargs = dict(
                     sample_id=state.prepared.sample.sample_id,
                     agent_contact_id=scoped_execution_contact_id(
-                        f"{program.program_id}:{role.phase_id}:{index}:{state.prepared.sample.sample_id}",
+                        f"{contact_program}:{role.phase_id}:{contact_index}:{state.prepared.sample.sample_id}",
                         state.prepared.execution_unit_id,
                     ),
                     evidence_pins={"knowledge_snapshot": snapshot_sha256},

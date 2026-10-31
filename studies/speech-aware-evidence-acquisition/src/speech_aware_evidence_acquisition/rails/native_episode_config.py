@@ -726,6 +726,8 @@ class NativeEpisodeConfig:
     review_handoff: str | None = None
     # Absent preserves historical Solver tool prohibition and request bytes.
     solver_tool_access: str | None = None
+    # Rendering-only legacy c17 limits; never changes the executable c2 cap.
+    prompt_contact_limits: str | None = None
 
     @property
     def knowledge_value_rendering(self) -> dict[str, object] | None:
@@ -1280,6 +1282,7 @@ def load_native_episode_config(
         "consumption_module",
         "review_handoff",
         "solver_tool_access",
+        "prompt_contact_limits",
     }
     if (
         not isinstance(raw, Mapping)
@@ -2602,6 +2605,9 @@ def load_native_episode_config(
     review_handoff = raw.get("review_handoff")
     if review_handoff not in (None, "slot-issues-v1"):
         raise ValueError("native_episode.review_handoff is invalid")
+    prompt_contact_limits = raw.get("prompt_contact_limits")
+    if prompt_contact_limits not in (None, "legacy-c17-lock-v1"):
+        raise ValueError("native_episode.prompt_contact_limits is invalid")
     result = NativeEpisodeConfig(
         raw["episode_id"],
         revisions,
@@ -2636,7 +2642,9 @@ def load_native_episode_config(
         carrier_profile=_carrier_profile(values),
         review_handoff=review_handoff,
         solver_tool_access=solver_access,
+        prompt_contact_limits=prompt_contact_limits,
     )
+    validate_prompt_contact_limits(result)
     if solver_access:
         stores = values.get("knowledge_stores")
         if not isinstance(stores, Mapping) or "slot-contracts" not in stores:
@@ -2868,3 +2876,24 @@ def _load_knowledge_index(
                 "bind slot types to the candidates"
             )
     return canonical
+
+
+def validate_prompt_contact_limits(config):
+    """Legacy render compatibility is only valid on a non-iterative c2 lock."""
+    if config.prompt_contact_limits is None:
+        return
+    if (config.prompt_contact_limits != "legacy-c17-lock-v1" or config.max_contacts != 2
+            or config.max_revisions != 0 or config.review_loop_enabled
+            or config.acquisition_role is not None or config.relisten_json is not None
+            or any(r.max_iterations != (1 if r.role_kind in {"perception", "solver"} else 0)
+                   or r.tool_names or r.perception_branches is not None for r in config.roles)):
+        raise ValueError("legacy prompt limits require a tool-free, two-contact lock")
+
+
+def prompt_remaining_contacts(config, role_kind, actual_remaining):
+    validate_prompt_contact_limits(config)
+    if config.prompt_contact_limits is None:
+        return actual_remaining
+    if role_kind not in {"perception", "solver"}:
+        raise ValueError("legacy prompt limits cannot render another role")
+    return {"perception": 17, "solver": 9}[role_kind]

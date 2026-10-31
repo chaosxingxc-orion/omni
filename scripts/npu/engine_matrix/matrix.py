@@ -163,7 +163,8 @@ def steady_summary(samples, start, end):
 def run_trial(tool, candidate, root, trajectories, stop, barrier=None):
     root = Path(root); root.mkdir(parents=True, exist_ok=True)
     config = tool.SweepConfig(base_urls=[candidate['url']], model=candidate['model'],
-                             levels=[candidate['client_concurrency']], warmup=0)
+                             levels=[candidate['client_concurrency']], warmup=0,
+                             timeout_s=candidate.get('request_timeout_s', 420))
     binding = {'candidate': candidate, 'live': validate_live(candidate),
                'workload_sha256': digest([dataclasses.asdict(t) for t in trajectories]),
                'tool_sha256': hashlib.sha256(TOOL.read_bytes()).hexdigest(),
@@ -275,6 +276,10 @@ def validate_plan(plan, round_index):
         raise ValueError('at least three trajectories per worker required to measure fed interval')
     for c in selected:
         if not (0 < c['client_concurrency'] <= c['max_num_seqs']): raise ValueError('client exceeds recorded server sequences')
+        if (not isinstance(c.get('request_timeout_s', 420), (int, float))
+                or isinstance(c.get('request_timeout_s', 420), bool)
+                or not 60 <= c.get('request_timeout_s', 420) <= 3600):
+            raise ValueError('request timeout must be 60..3600 seconds')
         if c['image'] != IMAGE or c['model'] != MODEL: raise ValueError('unreviewed image/model')
         if c['enable_prefix_caching'] is not True or c['enable_chunked_prefill'] is not True: raise ValueError('baseline flags must remain enabled')
     return selected
@@ -299,15 +304,42 @@ def main():
             trajectories = plan_requests(plan['trajectories'], 3, plan['seed'], tool, content_seed=f"{plan['seed']}:round-{a.round}")
             trial_roots = [a.out / f'round-{a.round}' / c['id'] for c in selected]
             barrier = threading.Barrier(4) if not any((root / 'complete.json').exists() for root in trial_roots) else None
-            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
-                futures = [pool.submit(run_trial, tool, c, root, trajectories, stop, barrier) for c, root in zip(selected, trial_roots)]
+            run_candidates(tool, selected, trial_roots, trajectories, stop, barrier)
+
+
+def run_candidates(tool, candidates, roots, trajectories, global_stop, barrier=None):
+    # A candidate's timeout must not cancel unrelated healthy endpoints.
+    # Host/user stop still propagates to every candidate.
+    stops = [threading.Event() for _ in candidates]
+    watcher_done = threading.Event()
+    def watch_stop():
+        while not watcher_done.wait(.1):
+            if global_stop.is_set():
+                for event in stops: event.set()
+                if barrier is not None: barrier.abort()
+                return
+    watcher = threading.Thread(target=watch_stop, daemon=True); watcher.start()
+    failures = []
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(candidates)) as pool:
+            futures = {pool.submit(run_trial, tool, c, root, trajectories, event, barrier): c['id']
+                       for c, root, event in zip(candidates, roots, stops)}
+            for future in concurrent.futures.as_completed(futures):
                 try:
-                    for f in concurrent.futures.as_completed(futures):
-                        result = f.result(); print(json.dumps(result), flush=True)
-                        if result.get('errors') or result.get('interrupted'):
-                            raise RuntimeError('trial incomplete or failed; preserve checkpoints')
-                except BaseException:
-                    stop.set()
+                    result = future.result()
+                    print(json.dumps({'candidate': futures[future], **result}), flush=True)
+                    if result.get('errors') or result.get('interrupted'):
+                        failures.append(futures[future])
+                except Exception as error:
+                    failures.append(futures[future])
+                    # Break the preparation barrier if a peer never arrives;
+                    # once generation started this has no effect on peers.
                     if barrier is not None: barrier.abort()
-                    raise
+                    print(json.dumps({'candidate': futures[future], 'error': repr(error)}), flush=True)
+    finally:
+        watcher_done.set(); watcher.join(timeout=2)
+    if failures:
+        raise RuntimeError('candidate failures; successful peers retained: ' + ','.join(failures))
+
+
 if __name__ == '__main__': main()

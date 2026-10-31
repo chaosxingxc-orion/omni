@@ -29,6 +29,7 @@ def derive(source, *, repo=ROOT):
     block = copy.deepcopy(native['consumption_module'])
     block['columns'] = []
     block.pop('sampling_frame')
+    block['prompt_contact_limits'] = 'legacy-c17-lock-v1'
     composed = cm.compile_module(block, carrier_module_hooks(repo_root=repo), repo_root=repo)
     if composed.program_id != 'phase-native-module-v1-c2' or composed.program_ceiling != 2:
         raise ValueError('lock compiler did not produce two contacts')
@@ -38,6 +39,9 @@ def derive(source, *, repo=ROOT):
     # Replacing all policy-owned fields would silently restore lock defaults.
     del out['native_episode']['roles']['perception']['sampling_variants']
     out['native_episode']['consumption_module'] = block
+    # c17 leaks 17/9 remaining contacts into P/S prompts; preserve those bytes
+    # while the compiled c2 program independently enforces two actual calls.
+    out['native_episode']['prompt_contact_limits'] = 'legacy-c17-lock-v1'
     for role in ('perception', 'solver'):
         if out['native_episode']['roles'][role]['max_iterations'] != 1:
             raise ValueError('lock role is not one visit')
