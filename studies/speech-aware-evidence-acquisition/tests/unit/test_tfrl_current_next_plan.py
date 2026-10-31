@@ -37,3 +37,11 @@ def test_refuses_invalid_crossfit_handoff(tmp_path,fault):
     elif fault=='source_identity':b['h2']['source_split_identities']={H2:'f'*64}
     else:iteration=4
     with pytest.raises((ValueError,m.sampler.SamplerError)):m.derive(r,b,iteration=iteration)
+
+
+def test_explicit_actual_bounds_replace_legacy_forecast(tmp_path):
+    rosters,receipts=inputs(tmp_path)
+    plans=m.derive(rosters,receipts,iteration=2,control_bounds={'h1':55,'h2':55})
+    for plan in plans.values():
+        assert plan['banks']['supply_bound_items']==47
+        assert plan['banks']['supply_allocation']['control_max_items']==55

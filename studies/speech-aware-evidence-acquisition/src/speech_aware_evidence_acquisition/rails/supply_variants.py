@@ -1720,7 +1720,7 @@ def supply_variant_receipt(
     """
 
     return {
-        "schema": group.receipt_schema,
+        "schema": "saea-supply-variant-arms-v7" if any("bank_supply_allocation" in r for r in records) else group.receipt_schema,
         "phase_id": _nonempty_str(
             phase_id, field="supply_variant_receipt.phase_id"
         ),

@@ -1065,6 +1065,8 @@ def _verify_supply_variant_trace_binding(
     try:
         requests = [payload["payload"] for record_id, payload in trace_records.items()
                     if record_id.endswith("/request") and isinstance(payload.get("payload"), Mapping)]
+        if variants.get('schema') == 'saea-supply-variant-arms-v7' and not (bank_context or {}).get('allocation'):
+            raise ValueError('allocated bank receipt lacks verified configuration')
         if bank_context is None:
             verify_recorded_group(row.get("sample_id"), arms, requests)
         else:

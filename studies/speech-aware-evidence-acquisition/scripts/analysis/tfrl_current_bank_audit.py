@@ -14,7 +14,7 @@ from speech_aware_evidence_acquisition.rails.tfrl_bank_request_audit import (
 )
 
 
-def verify(plan,outputs,trace,*,bank,perception_phase='perception'):
+def verify(plan,outputs,trace,*,bank,perception_phase='perception',allocation=None):
     """Require whole-half custody and exact planned previous-iteration bank."""
     import tfrl_v2_sampler as sampler
     from tfrl_seed_request_audit import no_solver_abstention
@@ -41,10 +41,11 @@ def verify(plan,outputs,trace,*,bank,perception_phase='perception'):
     for row in outputs:
         if no_solver_abstention(row):abstentions+=1;continue
         receipt=row['supply_variants'];arms=receipt['arms']
-        if (receipt['schema']!='saea-supply-variant-arms-v6' or [a['arm_id'] for a in arms]!=list(expected)
+        schema='saea-supply-variant-arms-v7' if allocation is not None else 'saea-supply-variant-arms-v6'
+        if (receipt['schema']!=schema or [a['arm_id'] for a in arms]!=list(expected)
                 or any(a['decoding_override']!=expected[a['arm_id']] for a in arms)):
             raise ValueError('bank arm group differs from actual registered plan')
-        checked=verify_group(row['sample_id'],arms,requests,bank=bank,perception_phase=perception_phase)
+        checked=verify_group(row['sample_id'],arms,requests,bank=bank,perception_phase=perception_phase,allocation=allocation)
         total+=checked['solver_requests_verified'];candidates+=checked['bank_candidate_requests']
     return {'schema':'saea-tfrl-banked-plan-request-check-v1','rows':len(ids),'solver_requests_verified':total,
             'bank_candidate_requests':candidates,'no_solver_abstention_rows':abstentions,
@@ -64,4 +65,9 @@ def verify_for_values(plan,outputs,trace,*,values,data):
                                consuming_row_ids=[r['row_id'] for r in plan['row_plan']])
     role=values['native_episode']['roles']['perception']
     phase=role.get('phase_id','perception')
-    return verify(plan,outputs,trace,bank=bank,perception_phase=phase)
+    from speech_aware_evidence_acquisition.rails.tfrl_supply_allocation import from_block
+    allocation=from_block(values['native_episode']['consumption_module'])
+    if allocation is not None and (plan['banks'].get('supply_allocation')!=allocation
+            or plan['banks'].get('supply_bound_items')!=allocation['candidate_max_items']):
+        raise ValueError('plan supply allocation differs from configuration')
+    return verify(plan,outputs,trace,bank=bank,perception_phase=phase,allocation=allocation)

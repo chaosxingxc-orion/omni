@@ -31,6 +31,8 @@ def seal(composed,data,split,run_dir):
     if declaration is None:return None
     data=Path(data).resolve();run_dir=Path(run_dir).resolve()
     if _canonical_hash(composed.values)!=composed.config_hash:raise BundleError('bank composed hash differs')
+    from ...rails.tfrl_supply_allocation import from_block
+    from_block(composed.values['native_episode']['consumption_module'])
     _bank_paths(declaration,data)
     rail.verify_for_flight(composed.values,data,split_identity_hash=split.identity_hash,consuming_row_ids=split.ids)
     doc={'schema':'saea-tfrl-bundle-config-v1','values':dict(composed.values),'data_root':str(data)}
@@ -65,6 +67,9 @@ def load(manifest,manifest_path,split_ids,split_identity):
         _bank_paths(decl,data)
         bank=rail.verify_for_flight(values,data,split_identity_hash=split_identity,consuming_row_ids=tuple(split_ids))
         role=values['native_episode']['roles']['perception']
-        return {'bank':bank,'perception_phase':role.get('phase_id','perception')}
+        from ...rails.tfrl_supply_allocation import from_block
+        allocation=from_block(values['native_episode']['consumption_module'])
+        return {'bank':bank,'perception_phase':role.get('phase_id','perception'),
+                **({'allocation':allocation} if allocation is not None else {})}
     except (KeyError,TypeError,ValueError,OSError) as error:
         raise BundleError(f'banked bundle source binding failed: {error}') from error

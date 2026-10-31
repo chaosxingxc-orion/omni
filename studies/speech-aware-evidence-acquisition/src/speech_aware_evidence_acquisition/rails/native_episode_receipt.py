@@ -1404,6 +1404,17 @@ def validate_supply_variant_receipt(
     arm's. The "at least one knob" rule is replaced by "exactly one template".
     """
 
+    if isinstance(supply_variants, Mapping) and supply_variants.get('schema') == 'saea-supply-variant-arms-v7':
+        from .tfrl_supply_allocation import project_receipt
+        try:
+            projected = project_receipt(supply_variants)
+        except (ValueError, KeyError, TypeError) as error:
+            _raise(error_type, f'bank supply allocation receipt invalid: {error}')
+        return validate_supply_variant_receipt(
+            projected, arm_ids=arm_ids, delivered_arm_id=delivered_arm_id,
+            phase_id=phase_id, retrieved_value_ids=retrieved_value_ids,
+            arm_visits=arm_visits, error_type=error_type,
+        )
     declared = list(arm_ids)
     if not declared or len(set(declared)) != len(declared):
         _raise(error_type, "supply variant receipt requires distinct declared arm ids")

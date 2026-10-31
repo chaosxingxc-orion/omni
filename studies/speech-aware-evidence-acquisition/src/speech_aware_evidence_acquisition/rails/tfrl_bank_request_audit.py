@@ -23,7 +23,7 @@ def checked_control(request):
     return value
 
 
-def project_candidate(request,lock,bank,perception_phase):
+def project_candidate(request,lock,bank,perception_phase,allocation=None):
     """Verify each augmentation against bank bytes before removing it for audit."""
     result=copy.deepcopy(request);control=checked_control(request);checked_control(lock)
     expected_instruction=lock['task_instruction']
@@ -34,7 +34,12 @@ def project_candidate(request,lock,bank,perception_phase):
     block=bank.exemplar_block_for_intent(intent)
     evidence=result['supplied_evidence'];provenance=result['evidence_provenance']
     if len(evidence)!=len(provenance):raise ValueError('evidence and provenance cardinalities differ')
-    expected=list(lock['supplied_evidence'])
+    original=list(lock['supplied_evidence'])
+    indices=list(range(len(original)))
+    if allocation is not None:
+        from .tfrl_supply_allocation import keep_indices
+        indices=keep_indices(original,allocation)
+    expected=[original[i] for i in indices]
     if block:
         expected.append({'evidence_id':rail.EXEMPLAR_EVIDENCE_ID,'source_uri':bank.source_uri,'content':block})
     if evidence!=expected:raise ValueError('candidate exemplar or ordinary evidence differs')
@@ -43,6 +48,26 @@ def project_candidate(request,lock,bank,perception_phase):
         if provenance[-1]!={'lock_key':'rails-supply','relpath':f"rails-message/{request['request_id']}/{index}",'sha256':digest(block)}:
             raise ValueError('bank exemplar provenance differs')
         evidence.pop();provenance.pop()
+    if allocation is not None:
+        # Verify retained source provenance before restoring the control view
+        # on this audit-only copy. Dropped bytes are never sent to the model.
+        def owned(source,request_id,index):
+            if source.get('lock_key')=='rails-supply':
+                if source.get('relpath')!=f'rails-message/{request_id}/{index}':
+                    raise ValueError('supply provenance has wrong request ownership')
+                return {**source,'relpath':'<request-owned>'}
+            return source
+        if len(lock['evidence_provenance'])!=len(original):raise ValueError('control provenance cardinality differs')
+        for j,i in enumerate(indices):
+            if owned(provenance[j],request['request_id'],j)!=owned(lock['evidence_provenance'][i],lock['request_id'],i):
+                raise ValueError('allocated supply provenance differs')
+        restored=[]
+        for i,source in enumerate(lock['evidence_provenance']):
+            owned(source,lock['request_id'],i)
+            restored.append({**source,'relpath':f"rails-message/{request['request_id']}/{i}"}
+                            if source.get('lock_key')=='rails-supply' else copy.deepcopy(source))
+        result['supplied_evidence']=copy.deepcopy(original)
+        result['evidence_provenance']=restored
     result['task_instruction']=lock['task_instruction']
     control['messages'][0]={'role':'system','content':lock['task_instruction']}
     result['history'][-1]['content']=canonical(control)
@@ -50,10 +75,18 @@ def project_candidate(request,lock,bank,perception_phase):
     return result
 
 
-def verify_group(row_id,arms,requests,*,bank,perception_phase='perception'):
+def verify_group(row_id,arms,requests,*,bank,perception_phase='perception',allocation=None):
     if [a.get('arm_id') for a in arms] != ['s1','s2','s3','s4','aa','lock']:
         raise ValueError('banked seed audit requires the registered K4 arm order')
     if bank.receipt_sha256!=rail.receipt_sha256(bank.receipt):raise ValueError('verified bank receipt changed')
+    if allocation is not None:
+        from .tfrl_supply_allocation import validate, project_receipt
+        allocation=validate(allocation)
+        project_receipt({'arms':arms})
+        if any(a['bank_supply_allocation']!=allocation for a in arms):
+            raise ValueError('receipt allocation differs from sealed configuration')
+    elif any('bank_supply_allocation' in a for a in arms):
+        raise ValueError('allocation receipt lacks verified configuration')
     indexed={a['contact_id']:a for a in arms};own=[]
     for req in requests:
         if req.get('sample_id')!=row_id:continue
@@ -65,11 +98,16 @@ def verify_group(row_id,arms,requests,*,bank,perception_phase='perception'):
     lock=lock_rows[0]
     if any(e.get('evidence_id')==rail.EXEMPLAR_EVIDENCE_ID for e in lock['supplied_evidence']):
         raise ValueError('bank leaked into control evidence')
+    if allocation is not None:
+        for request in own:
+            arm=indexed[request['history'][-1]['contact_id']]
+            ids=[e['evidence_id'] for e in request['supplied_evidence'] if e.get('knowledge_role')=='value']
+            if ids!=arm['supplied_value_ids']:raise ValueError('arm supplied ids differ from actual request')
     projected=[];augmented=0
     for request in own:
         arm=indexed[request['history'][-1]['contact_id']]
         if arm['arm_id'] in ('s1','s2','s3','s4'):
-            request=project_candidate(request,lock,bank,perception_phase);augmented+=1
+            request=project_candidate(request,lock,bank,perception_phase,allocation);augmented+=1
         # Reask content is verified by its recorded request custody; initial
         # context equality remains the existing first-request seed check.
         projected.append(request)

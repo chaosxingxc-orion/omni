@@ -13,11 +13,11 @@ from tfrl_current_seed_cells import discard_synthetic_cost_forecasts
 from tfrl_current_sources import read,sha,pinned
 from tfrl_current_pool import pool
 from tfrl_current_distill import distiller
-from tfrl_recovered_consumers import BANK,POOL
+from tfrl_recovered_consumers import BANK,POOL,REL as RECOVERED_REL
 import stage3_rollout_score as s3
 
 
-def derive(rosters,receipts,*,iteration):
+def derive(rosters,receipts,*,iteration,control_bounds=None):
     if type(iteration)is not int or iteration not in (2,3):raise ValueError('at most three iterations')
     if set(rosters)!={'h1','h2'} or set(receipts)!={'h1','h2'}:raise ValueError('two halves required')
     ids={h:[r['sample_id'] for r in d['items']] for h,d in rosters.items()}
@@ -38,7 +38,14 @@ def derive(rosters,receipts,*,iteration):
         # Legacy sampler has a hardcoded51/43 item forecast, not the current
         # actual55-item module. Do not silently present it as an executable cap.
         plan['banks']['supply_bound_items']=None
-        plan['banks']['supply_allocation_status']='unresolved: reserve bank budget without altering aa/lock controls'
+        plan['banks']['supply_allocation_status']='unresolved: current source module bounds required'
+        if control_bounds is not None:
+            from speech_aware_evidence_acquisition.rails.tfrl_supply_allocation import declaration
+            if set(control_bounds)!=set(rosters):raise ValueError('two actual control bounds required')
+            allocation=declaration(control_bounds[h])
+            plan['banks']['supply_allocation']=allocation
+            plan['banks']['supply_bound_items']=allocation['candidate_max_items']
+            plan['banks']['supply_allocation_status']='declared; actual source rendering and FIT required'
         sampler.execution_columns(plan)
         result[h]=plan
     return result
@@ -59,16 +66,35 @@ def run(repo,data,out):
         if sha(path)!=completion['banks'][h]['receipt_sha256']:raise ValueError('bank receipt changed')
         distiller.load_bank(path)  # Rehash all bank artifacts before planning.
         receipts[h]=read(path);pins[h]={'relpath':str(path.relative_to(data)),'sha256':sha(path)}
-    plans=derive(rosters,receipts,iteration=2)
+    # Bind the allocation to the exact source trees that produced the banks.
+    recovered=read(repo/RECOVERED_REL)
+    if completion['recipe_sha256']!=sha(repo/RECOVERED_REL):raise ValueError('bank source recipe differs')
+    bounds={};allocation_sources={}
+    from speech_aware_evidence_acquisition.core.config import compose
+    for h,source in recovered['sources'].items():
+        root=(data/source['repo_relpath']).resolve()
+        if not root.is_relative_to(data.resolve()):raise ValueError('source escapes data root')
+        actual=require_clean_study_repo(root)
+        if actual!=source['commit']:raise ValueError('allocation source commit differs')
+        pinned(root,source['recipe'])
+        name='slurp-tfrl-current-seed-i1-h1-context-repair-v1' if h=='h1' else 'slurp-tfrl-current-seed-i1-h2-v1'
+        exp_path=root/f'configs/experiment/{name}.json';exp=read(exp_path);cell,=exp['cells']
+        cfg=compose(root,cell['model_fragment'],cell['dataset_fragment'],cell['baseline_fragment'],name)
+        module=cfg.values['native_episode']['consumption_module']
+        bounds[h]=module['decoding_frame']['max_supplied_items']
+        allocation_sources[h]={'commit':actual,'experiment_sha256':sha(exp_path),
+            'config_hash':cfg.config_hash,'module_sha256':sampler.cm.content_sha256(module)}
+    plans=derive(rosters,receipts,iteration=2,control_bounds=bounds)
     if out.exists() or not out.resolve().is_relative_to(data.resolve()/'work/codex'):raise ValueError('fresh owned plan output required')
     for h,p in plans.items():
         p['roster']['file_sha256']=sha(repo/sampler.cm.HALF_ROSTER_RELPATH['R01C-'+h.upper()])
+        p['banks']['allocation_source']=allocation_sources[h]
         s3._immutable_json(out/f'{h}-sampling-plan.json',p)
     result={'schema':'saea-tfrl-current-next-held-plans-v1','source_commit':head,'iteration':2,'rows':625,
         'plans':{h:sha(out/f'{h}-sampling-plan.json') for h in plans},'bank_receipts':pins,
         'parent_pool_sha256':sha(data/'analysis'/POOL/'complete.json'),'parent_banks_sha256':sha(bankroot/'complete.json'),
         'new_model_calls':0,'readiness':'held','generation_authorized_by_this_file':False,
-        'remaining':['review complete construction gain and stop rule','resolve actual bank supply allocation while preserving controls',
+        'remaining':['review complete construction gain and stop rule','verify declared allocation on actual source inputs while preserving controls',
             'compile and actual shared-render bank request proof','own supply and exact FIT','register/admit/preflight',
             'independent confirmation before improvement claim']}
     s3._immutable_json(out/'complete.json',result);return result

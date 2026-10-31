@@ -3186,17 +3186,26 @@ async def _invoke_native_role_episode(
         from .supply_variants import SupplyVariantError, supply_variant_arm_record
 
         messages = base_messages(ctx)
+        supplied = tuple(ctx.query_state.retrieved_value_ids)
+        if tfrl_allocation is not None and arm.arm_id in ('s1','s2','s3','s4'):
+            from .tfrl_supply_allocation import render
+            messages = render(messages, tfrl_allocation)
+            supplied = supplied[:tfrl_allocation['candidate_max_items']]
+            if _rendered_candidate_value_ids(messages) != supplied:
+                raise RailsRunnerError('candidate render order differs from declared value order')
         try:
             record = supply_variant_arm_record(
                 arm=arm,
                 arm_index=supply_variant_group.arm_ids.index(arm.arm_id),
                 contact_id=plan.contact_id,
-                supplied_value_ids=tuple(ctx.query_state.retrieved_value_ids),
+                supplied_value_ids=supplied,
                 template_group=not supply_variant_group.is_decoding,
                 decoding_group=supply_variant_group.is_decoding,
             )
         except SupplyVariantError as error:
             raise RailsRunnerError(str(error)) from error
+        if tfrl_allocation is not None:
+            record['bank_supply_allocation'] = dict(tfrl_allocation)
         existing = supply_variant_records.setdefault(plan.contact_id, record)
         if existing != record:
             raise RailsRunnerError(
@@ -4209,6 +4218,11 @@ async def _invoke_native_role_episode(
 
         from .tfrl_v2_consumption import compose_solver_messages, predicted_intent_id  # noqa: PLC0415
 
+        if tfrl_allocation is not None:
+            actual_ids = _rendered_candidate_value_ids(messages)
+            if (actual_ids != tuple(supply_variant_records[contact_id]['supplied_value_ids'])
+                    or len(actual_ids) > tfrl_allocation['candidate_max_items']):
+                raise RailsRunnerError('rendered bank supply differs from declared arm allocation')
         supplied = sum(
             1 for part in messages[1]["content"]
             if isinstance(part, Mapping) and part.get("type") == "text" and part.get("knowledge_role") == "value"
@@ -5576,6 +5590,14 @@ async def _invoke_native_role_episode(
     tfrl_declared = _tfrl_declaration(config.consumption_module_json)
     tfrl_bank = binding.tfrl_v2_bank
     tfrl_supply_bound = None
+    from .tfrl_supply_allocation import from_block as allocation_from_block
+    tfrl_allocation = allocation_from_block(json.loads(config.consumption_module_json or '{}'))
+    if tfrl_allocation is not None and (
+        supply_variant_group is None or not supply_variant_group.is_decoding
+        or supply_variant_group.arm_ids != ('s1','s2','s3','s4','aa','lock')
+        or supply_variant_group.arm_visits != 'first'
+    ):
+        raise RailsRunnerError('bank supply allocation requires first-visit K4 decoding arms')
     if tfrl_declared is not None and tfrl_bank is None:
         raise RailsRunnerError(
             "native_episode.consumption_module declares tfrl_v2_bank but the episode binding carries no verified bank (verify_for_flight did not hand one over)"

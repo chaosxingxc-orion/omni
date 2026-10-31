@@ -967,11 +967,16 @@ def render_supply_variant_first_visit(
         "sealed_scores_sha256": bundle.manifest["scores"]["sha256"],
         "config_hash": config_hash, "roster_sha256": roster_sha256,
     }
+    bank_context = None
+    if any((row.get('supply_variants') or {}).get('schema') == 'saea-supply-variant-arms-v7' for row in bundle.outputs_rows):
+        from speech_aware_evidence_acquisition.core.bundle.tfrl_bank import load
+        bank_context = load(bundle.manifest, bundle.manifest_path, bundle.split_ids,
+                            bundle.manifest['split']['identity_hash'])
     return render_supply_source_rows(bundle.outputs_rows, bundle.trace_records, group, roster,
-                                     out_dir, source=source)
+                                     out_dir, source=source, bank_context=bank_context)
 
 
-def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_dir, *, source):
+def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_dir, *, source, bank_context=None):
     """Render audited source rows without claiming a generation bundle.
 
     Callers must verify source custody first. This renderer checks the exact
@@ -1049,13 +1054,19 @@ def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_di
         if not isinstance(final, Mapping):
             raise Stage3ScoreError(f"{sid}: Solver visit has no final supply-variant custody")
         if (final.get("schema") == SUPPLY_VARIANT_RECEIPT_SCHEMA_V4) != is_template or (
-            final.get("schema") == SUPPLY_VARIANT_RECEIPT_SCHEMA_V6
+            final.get("schema") in (SUPPLY_VARIANT_RECEIPT_SCHEMA_V6, 'saea-supply-variant-arms-v7')
         ) != is_decoding:
             raise Stage3ScoreError(
                 f"{sid}: the sealed arm receipt kind does not match the declared arm group kind "
                 f"(receipt {final.get('schema')!r}, declared "
                 f"{'template_variants' if is_template else 'decoding_variants' if is_decoding else 'supply_variants'})"
             )
+        if final.get('schema') == 'saea-supply-variant-arms-v7':
+            if not (bank_context or {}).get('allocation'):
+                raise Stage3ScoreError('allocated source requires verified bank configuration')
+            from speech_aware_evidence_acquisition.rails.tfrl_bank_request_audit import verify_group
+            requests=[v['payload'] for k,v in trace_records.items() if k.endswith('/request')]
+            verify_group(sid,final['arms'],requests,**bank_context)
         validate_supply_variant_receipt(
             final, arm_ids=names, delivered_arm_id=names[-1],
             phase_id=solver[-1].get("role_id"), error_type=Stage3ScoreError,

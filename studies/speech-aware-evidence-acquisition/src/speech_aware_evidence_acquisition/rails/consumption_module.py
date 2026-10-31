@@ -89,7 +89,7 @@ _BLOCK_OPTIONAL = frozenset({
     "columns", "lock", "review_loop", "solver_tool_access", "template_frame", "supply_frame", "construction_roster",
     "thinking_frame", "decoding_frame", "sampling_frame", "prompt_contact_limits",
     #: TFRL-v2 (2026-10-30): the bank-consumption declaration (``rails.tfrl_v2_consumption``); parsed fail-closed, compiles to nothing.
-    "tfrl_v2_bank",
+    "tfrl_v2_bank", "tfrl_supply_allocation",
 })
 #: A lock-version name a block may declare (migration step 6, owner decision
 #: 204): ``v<major>.<minor>`` with an optional lowercase ``-suffix`` (``v2.2-npu-port``), resolved through the carrier's ``lock_versions``.
@@ -107,6 +107,7 @@ NODE_RECEIPT_SCHEMAS = frozenset({
     "saea-supply-variant-arms-v4",
     "saea-supply-variant-arms-v5",
     "saea-supply-variant-arms-v6",
+    "saea-supply-variant-arms-v7",
     "saea-solver-citations-v1",
     "saea-deliver-normaliser-v1",
     "saea-relisten-v1",
@@ -797,6 +798,12 @@ def parse_consumption_module_block(
         try:
             parse_bank_declaration(raw["tfrl_v2_bank"])
         except TfrlV2BankError as error:
+            raise ConsumptionModuleConfigError(str(error)) from error
+    if "tfrl_supply_allocation" in raw:
+        from .tfrl_supply_allocation import from_block
+        try:
+            from_block(raw)
+        except ValueError as error:
             raise ConsumptionModuleConfigError(str(error)) from error
     components = raw["components"]
     if not isinstance(components, list):

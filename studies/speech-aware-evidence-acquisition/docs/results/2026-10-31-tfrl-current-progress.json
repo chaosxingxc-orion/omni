@@ -1,7 +1,7 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T20:17:03Z",
-  "completed_rows": 63,
+  "observed_at_utc": "2026-10-31T20:27:05Z",
+  "completed_rows": 172,
   "total_rows": 625,
   "h1": {
     "state": "preflight_passed_waiting_h2",
@@ -50,29 +50,29 @@
   },
   "h2": {
     "state": "running",
-    "completed_rows": 63,
+    "completed_rows": 172,
     "total_rows": 312,
-    "remaining_rows": 249,
+    "remaining_rows": 140,
     "cards": 8,
     "instances": 2,
-    "estimated_remaining_seconds": null,
+    "estimated_remaining_seconds": 2372.5017101542894,
     "started_at_utc": "2026-10-31T19:38:31.113885Z",
     "previous_dispatch": "Failed before lease acquisition; no model calls. Stale metadata reconciled after liveness and guard checks.",
     "attempt_state": "OPENED",
     "observed_fit_receipts": 396,
     "fit_observation_at_utc": "2026-10-31T19:46:16Z",
-    "checkpoint_sha256": "8579801eb4916584ce40b1371b5e02c1047d1981537f1d46a8273bc03bbd20d6",
-    "elapsed_seconds": 2311.9871022701263,
+    "checkpoint_sha256": "92a378989ed46f2c8804a02bbd872d482cfc3e4d4d52642d7cb170a830ca2105",
+    "elapsed_seconds": 2914.7878153324127,
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 441,
-      "audio_seconds": 1718.6868125000005,
-      "latency_seconds": 99560.03974969001,
-      "prompt_tokens": 3427109,
-      "completion_tokens": 575156
+      "calls": 1204,
+      "audio_seconds": 4833.636937499997,
+      "latency_seconds": 365366.5705309501,
+      "prompt_tokens": 9357303,
+      "completion_tokens": 2137107
     },
-    "admitted_to_finished_mean_seconds": 1649.0016659420635,
-    "wall_seconds_per_complete_row": 36.69820797254169,
-    "efficiency_note": "Partial completion rate only;41 new rows since preceding600-second snapshot. No stable full-run baseline or reliable ETA."
+    "admitted_to_finished_mean_seconds": 2221.02270436407,
+    "wall_seconds_per_complete_row": 16.946440786816353,
+    "efficiency_note": "Partial completion rate only;109 new rows since preceding600-second snapshot. Linear ETA about40min is provisional; recent completion rate differs materially from cumulative rate."
   },
   "resources": {
     "cards": 8,
@@ -96,7 +96,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "H2 63/312;3 historical H1 reuse candidates separate. H1 remaining310 queued. Reliable ETA unavailable.",
+  "eta_note": "H2 linear cumulative-rate ETA about40min; provisional, not whole625 ETA.3 historical H1 reuse candidates separate;310 fresh H1 rows remain queued.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -105,7 +105,7 @@
     "scoring_jobs": 0
   },
   "state": "h2_running_h1_preflight_passed_waiting_generation_queue",
-  "remaining_rows": 562,
+  "remaining_rows": 453,
   "bank_read": {
     "registered": true,
     "state": "failed_upstream",
