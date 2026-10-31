@@ -1,5 +1,6 @@
 """Fold A registration preserves drafts and admits only the exact unspent plan."""
 import copy
+import os
 import json
 from pathlib import Path
 import shutil
@@ -11,7 +12,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / 'scripts/flights/nx'))
 import fold_a_encoding_admission as admission
 
-DATA = Path('/mnt/cephfs/xingchao/omni')
+DATA = Path(os.environ.get('SPEECHRL_DATA_DIR', '/nonexistent/saea-test-data'))
 LOCK = DATA / admission.draft.LIVE_LOCK_RELPATH
 AT = '2026-10-30T22:00:00+00:00'
 
