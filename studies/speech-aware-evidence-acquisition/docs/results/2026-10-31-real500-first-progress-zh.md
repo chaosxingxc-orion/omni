@@ -51,4 +51,4 @@ TP4-96另有嵌套计时：FIT均值11.290秒（含锁等待）、上下文构�
 
 ## 后续任务
 
-剩余353条A0接续已于17:59启动，完整1080条收益待统一评分与Direct配对分析后锁定，再进入training-free RL。最新运行状态统一维护在[Wiki](https://github.com/chaosxingxc-orion/omni/wiki/2026-10-31-A0-and-NPU-Scheduling)。工程基线使用训练集真实抽样；完整13078条测试集仍按方法冻结后的方案汇报。
+剩余353条A0接续、完整1080条统一评分与Direct配对分析均已完成，首轮收益已锁定；真实K4的313/312条队列现已启动。最新运行状态统一维护在[Wiki](https://github.com/chaosxingxc-orion/omni/wiki/2026-10-31-A0-and-NPU-Scheduling)。工程基线使用训练集真实抽样；完整13078条测试集仍按方法冻结后的方案汇报。

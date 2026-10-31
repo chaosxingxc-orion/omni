@@ -1,0 +1,52 @@
+{
+  "schema": "saea-tfrl-current-generation-preparation-summary-v1",
+  "gain_lock_sha256": "6b76ec8fcc232c2e1b33a9c3221bed93a437f180ab8102ad9706082f5b81ae69",
+  "halves": {
+    "h1": {
+      "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-V1",
+      "rows": 313,
+      "normal_calls": 2191,
+      "fallback_cap": 4382,
+      "sampling_plan_sha256": "3938322e70bcdc007ae044d9e6270c9a04f56fca6658a0a78e2202c451b5ff19",
+      "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+      "dataset_sha256": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba",
+      "admission_sha256": "3810ccb3e821ec3f803208569f584718eb8820239899e99b370fa901b3129dce",
+      "prepared_supply": {
+        "relpath": "prepared/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-V1/phase-supply-v2.json",
+        "sha256": "ecc5980e64d53652424749a0f5f452fb02c7328a8bf26881a041b6556d1c45f2"
+      },
+      "registration_check_passed": true,
+      "full_preflight_passed": true,
+      "preflight_log_sha256": "6b8294114e08f7391dad3ddf94eff6499b9ad51ee13bc9f38001385d15f90f91"
+    },
+    "h2": {
+      "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1",
+      "rows": 312,
+      "normal_calls": 2184,
+      "fallback_cap": 4368,
+      "sampling_plan_sha256": "009d57e4085fa44febc4740efb36d468b4b3129cefc02fb4736b972d18f02aba",
+      "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+      "dataset_sha256": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba",
+      "admission_sha256": "bc507c392fad6433c2392de7b7142aa7322d5638b92973710d098abaf829f4b7",
+      "prepared_supply": {
+        "relpath": "prepared/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1/phase-supply-v2.json",
+        "sha256": "ed790b82a1b9a4eedceab9d5206fc184289fed08a33caa0a82cd9b7c3bafce60"
+      },
+      "registration_check_passed": true,
+      "full_preflight_passed": true,
+      "preflight_log_sha256": "8d1fc2c9e5ac2a1322ff2e98e856e68dfa79adeaa4161d92ac501ee50d6d84a9"
+    }
+  },
+  "new_model_calls": 0,
+  "generation_started": true,
+  "tests": {
+    "generation_and_seed": 37,
+    "queue": 4
+  },
+  "status": "queue_started_h1_container_confirmed",
+  "verified_at_utc": "2026-10-31T18:44:00Z",
+  "profile": "qwen3-omni-real500-2xtp4-s128-b2048-v1",
+  "runtime_verified": true,
+  "execution_commit": "5e42f20ed617c6eddd8fc844587366b3d8c252b7",
+  "completed_rows_at_dispatch": 0
+}
