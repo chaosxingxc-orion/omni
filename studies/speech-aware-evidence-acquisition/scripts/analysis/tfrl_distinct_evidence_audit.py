@@ -57,12 +57,18 @@ def audit_one(sample_id):
         fused.append(selected);ranked.append(ordered_values(ranking.entries,values,selected))
     alternative,fallback=variant(*ranked)
     if len(alternative)>20:raise ValueError('candidate evidence bound exceeded')
+    if len(providers)==3:
+        provider=providers[2]
+        ranking=provider.candidates({'query_state':state,'query_vectors':dict(queries[sample_id])},k=40)
+        actual=provider.fuse([ranking],k=40,policy_id='saea-fuse-supplyfilter-odd40-v1')
+        if list(actual.selected_value_ids)!=sorted(alternative):
+            raise ValueError('shared odd40 supply differs from audited candidate')
     return {'sample_id':sample_id,'original_render_ids':fused[0],'original_rank_ids':ranked[0],
         'wide_rank_ids':ranked[1],'alternative_render_ids':sorted(alternative),'fallback':fallback,
         'changed':set(alternative)!=set(fused[0]),'overlap':len(set(alternative)&set(fused[0]))}
 
 
-def run(repo,source,data,out):
+def run(repo,source,data,out,verify_odd40=False):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
@@ -103,9 +109,10 @@ def run(repo,source,data,out):
     if (phase['k']!=20 or phase['fuse_coverage']!={'m':20,'c':20,'top_l':20}
             or phase['rank_weights']!={'w_cos':1.,'w_prior':0.,'w_agree':0.}):raise ValueError('original top20 baseline required')
     providers=[];query_table=None;data_pins={}
-    for k in (20,40):
+    for k in ((20,40,40) if verify_odd40 else (20,40)):
         config=copy.deepcopy(original_store['phase_supply']);config['solver']['k']=k
         config['solver']['fuse_coverage']={'m':k,'c':k,'top_l':k}
+        if len(providers)==2:config['solver']['fuse_policy']='saea-fuse-supplyfilter-odd40-v1'
         specs=load_phase_supply_specs({'phase_supply':config},default_phase_program('phase-native-module-v1-c7'))
         callback=build_supply_for_phase(specs,snapshot=snapshot,snapshot_sha256=snapshot_sha,data_root=data,seed_phases=('solver',))
         queries=callback.query_tables['solver']
@@ -119,7 +126,7 @@ def run(repo,source,data,out):
     out.mkdir(parents=True)
     publish_new(out/'intent.json',raw({'schema':'saea-tfrl-distinct-evidence-audit-intent-v1','source_commit':source_head,
         'implementation_commit':head,'source_hashes':pins,'data_hashes':data_pins,'rows':625,'new_model_calls':0,
-        'query_gold_read':False,'candidate_rule':'original rank1..20 vs odd ranks1..39 from top40; retain original if fewer than40',
+        'shared_odd40_verification':verify_odd40,'query_gold_read':False,'candidate_rule':'original rank1..20 vs odd ranks1..39 from top40; retain original if fewer than40',
         'preparation_gate':'strict majority of625 rows have changed supply; otherwise stop evidence intervention preparation'}))
     with ProcessPoolExecutor(max_workers=16,mp_context=multiprocessing.get_context('fork'),initializer=initialize,
             initargs=(providers,query_table,packets,split,snapshot.values)) as pool:
@@ -135,7 +142,7 @@ def run(repo,source,data,out):
         'changed_rows':changed,'fallback_rows':fallback,'mean_overlap':sum(r['overlap'] for r in results)/625,
         'pool_utterance_overlap':0,'snapshot_sha256':snapshot_sha,'source_hashes':pins,'data_hashes':data_pins,
         'row_artifact_sha256':sha(out/'rows.jsonl'),'new_model_calls':0,'tokenizer_calls':0,'scoring_jobs':0,
-        'query_gold_read':False,'preparation_gate_passed':changed>312,'generation_authorized':False,
+        'shared_odd40_verified':verify_odd40,'query_gold_read':False,'preparation_gate_passed':changed>312,'generation_authorized':False,
         'scope':'Model-free real query ranking diversity; no inference performance or quality claim.',
         'remaining':['delivery rule and cross-fit adaptation','actual candidate runtime integration','FIT budgets','prospective generation registration']}
     publish_new(out/'complete.json',raw(result));return result
@@ -144,4 +151,5 @@ def run(repo,source,data,out):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('repo','source','data','out'):p.add_argument('--'+k,type=Path,required=True)
+    p.add_argument('--verify-odd40',action='store_true')
     print(json.dumps(run(**vars(p.parse_args()))))

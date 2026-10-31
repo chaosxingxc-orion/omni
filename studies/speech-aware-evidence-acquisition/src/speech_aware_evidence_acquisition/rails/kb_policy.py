@@ -116,6 +116,7 @@ _ALPHA_BLEND_INSTRUCTIONS = {
 
 RANK_POLICY_ID = "saea-rank-wcos-prior-agree-v1"
 FUSE_POLICY_ID = "saea-fuse-supplyfilter-v1"
+ODD40_FUSE_POLICY_ID = "saea-fuse-supplyfilter-odd40-v1"
 ASSOCIATED_VALUES_FUSE_POLICY_ID = "saea-fuse-associated-values-v1"
 #: Knowledge-wave item W3 (owner decision 164): the supply-filter selection
 #: with a PER-TARGET cap and a TOTAL width, so a block of exemplars can
@@ -1147,6 +1148,45 @@ def fuse_supplyfilter_factory(
     return fuser
 
 
+def fuse_odd40_factory(knobs: FuseKnobs | None = None) -> Callable[..., FusionDecision]:
+    """Opt-in fixed top40 odd-rank intervention, at most20 whole values.
+
+    Rank selected values by best supporting facet score, then value ID. Keep
+    the original top20 fuser's result if fewer than40 legal values remain.
+    Requires a40-deep recall configured by the caller; no default behavior changes.
+    """
+    if knobs is None or (knobs.m,knobs.c,knobs.top_l)!=(40,40,40) or knobs.tau!=0:
+        raise RailsError("odd40 requires explicit m=c=top_l=40 and tau=0")
+    knobs.validate()
+
+    def fuser(*,snapshot,snapshot_sha256,query_state,rank_result,recall_scores):
+        kwargs=dict(snapshot=snapshot,snapshot_sha256=snapshot_sha256,query_state=query_state,
+                    rank_result=rank_result,recall_scores=recall_scores)
+        wide=_fuse_supply_filter(knobs,**kwargs)
+        original=_fuse_supply_filter(FuseKnobs(tau=0,m=20,c=20,top_l=20),**kwargs)
+        by_id={v.value_id:v for v in snapshot.values}
+        scores={c.facet_id:c.score for c in rank_result.candidates[:40]}
+        def ordered(ids):
+            pairs=[]
+            for vid in ids:
+                supporting=[scores[f] for f in by_id[vid].associated_facet_ids if f in scores]
+                if not supporting:raise RailsError("odd40 selected value lacks ranked support")
+                pairs.append((max(supporting),vid))
+            return [vid for _,vid in sorted(pairs,key=lambda item:(-item[0],item[1]))]
+        wide_ids=ordered(wide.selected_value_ids);original_ids=ordered(original.selected_value_ids)
+        if wide_ids[:len(original_ids)]!=original_ids:
+            raise RailsError("odd40 original top20 is not the top40 prefix")
+        selected=original_ids if len(original_ids)!=20 or len(wide_ids)<40 else wide_ids[:40:2]
+        if len(selected)>20:raise RailsError("odd40 exceeds20 supplied values")
+        supports=set()
+        for vid in selected:
+            supports.update(set(by_id[vid].associated_facet_ids)&set(wide.supporting_facet_ids))
+        return FusionDecision(snapshot_sha256=snapshot_sha256,query_state_sha256=query_state.content_hash(),
+            rank_result_sha256=rank_result.content_hash(),fusion_policy_id=ODD40_FUSE_POLICY_ID,
+            supporting_facet_ids=tuple(sorted(supports)),selected_value_ids=tuple(sorted(selected))).validate()
+    return fuser
+
+
 def fuse_associated_values_factory(
     knobs: FuseKnobs | None = None,
 ) -> Callable[..., FusionDecision]:
@@ -2100,6 +2140,8 @@ def register_kb_policy_v1() -> None:
         KNOWLEDGE_RANKERS.register(RANK_POLICY_ID, rank_wcos_prior_agree_factory)
     if FUSE_POLICY_ID not in KNOWLEDGE_FUSERS.names():
         KNOWLEDGE_FUSERS.register(FUSE_POLICY_ID, fuse_supplyfilter_factory)
+    if ODD40_FUSE_POLICY_ID not in KNOWLEDGE_FUSERS.names():
+        KNOWLEDGE_FUSERS.register(ODD40_FUSE_POLICY_ID, fuse_odd40_factory)
     if ASSOCIATED_VALUES_FUSE_POLICY_ID not in KNOWLEDGE_FUSERS.names():
         KNOWLEDGE_FUSERS.register(
             ASSOCIATED_VALUES_FUSE_POLICY_ID, fuse_associated_values_factory
