@@ -94,8 +94,11 @@ def mint(root: str, data: str, coordinator: str = "Fable5.1", dry: bool = False,
         return {**summary, "dry": True, "text": text}
     if os.path.exists(out):
         raise SystemExit(f"refusing to overwrite an existing receipt: {out}")
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    io.open(out, "w", encoding="utf-8", newline="\n").write(text)
+    from speech_aware_evidence_acquisition.core.atomic_file import publish_new
+    try:
+        publish_new(Path(out), text.encode('utf-8'))
+    except FileExistsError as error:
+        raise SystemExit(f"refusing to overwrite an existing receipt: {out}") from error
     return summary
 
 

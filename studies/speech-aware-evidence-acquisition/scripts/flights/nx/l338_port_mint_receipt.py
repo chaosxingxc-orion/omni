@@ -33,7 +33,7 @@ sys.path.insert(0, str(HERE.parents[2] / "src"))
 from speech_aware_evidence_acquisition.core.config import compose  # noqa: E402
 
 
-def stale_cells(root: str | Path) -> list[str]:
+def stale_cells(root: str | Path, family=None) -> list[str]:
     """Return one English line per port cell whose live composed config hash differs from the registered package (empty when fresh).
 
     Guard G: the package's ``protocol-registered-v1.json`` quotes each cell's ``composed_config_hash``; a later change to any hashed fragment moves the live hash
@@ -41,10 +41,11 @@ def stale_cells(root: str | Path) -> list[str]:
     """
 
     root = Path(root)
-    registered = json.loads((root / pf.PACKAGE / "protocol-registered-v1.json").read_text(encoding="utf-8"))["cells"]
+    family = family or pf
+    registered = json.loads((root / family.PACKAGE / "protocol-registered-v1.json").read_text(encoding="utf-8"))["cells"]
     problems = []
-    for key in pf.ALL_KEYS:
-        spec = pf.CELLS[key]
+    for key in family.ALL_KEYS:
+        spec = family.CELLS[key]
         cell = json.loads((root / "configs" / "experiment" / f"{spec['cell']}.json").read_text(encoding="utf-8"))["cells"][0]
         live = compose(root, cell["model_fragment"], cell["dataset_fragment"], cell["baseline_fragment"], spec["cell"]).config_hash
         quoted = registered[key]["composed_config_hash"]
