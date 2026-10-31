@@ -1,7 +1,7 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T20:27:05Z",
-  "completed_rows": 172,
+  "observed_at_utc": "2026-10-31T20:37:09Z",
+  "completed_rows": 312,
   "total_rows": 625,
   "h1": {
     "state": "preflight_passed_waiting_h2",
@@ -49,38 +49,41 @@
     "union_recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
   },
   "h2": {
-    "state": "running",
-    "completed_rows": 172,
+    "state": "generation_sealed_waiting_driver_terminal",
+    "completed_rows": 312,
     "total_rows": 312,
-    "remaining_rows": 140,
+    "remaining_rows": 0,
     "cards": 8,
     "instances": 2,
-    "estimated_remaining_seconds": 2372.5017101542894,
+    "estimated_remaining_seconds": null,
     "started_at_utc": "2026-10-31T19:38:31.113885Z",
     "previous_dispatch": "Failed before lease acquisition; no model calls. Stale metadata reconciled after liveness and guard checks.",
     "attempt_state": "OPENED",
     "observed_fit_receipts": 396,
     "fit_observation_at_utc": "2026-10-31T19:46:16Z",
-    "checkpoint_sha256": "92a378989ed46f2c8804a02bbd872d482cfc3e4d4d52642d7cb170a830ca2105",
-    "elapsed_seconds": 2914.7878153324127,
+    "checkpoint_sha256": "4c6ec6cb0cb7b4a56a42a6022c4120670b571f362bcd2b9f96e614147af04508",
+    "elapsed_seconds": 3518.8346922397614,
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 1204,
-      "audio_seconds": 4833.636937499997,
-      "latency_seconds": 365366.5705309501,
-      "prompt_tokens": 9357303,
-      "completion_tokens": 2137107
+      "calls": 2184,
+      "audio_seconds": 9851.122749999993,
+      "latency_seconds": 695068.9753442102,
+      "prompt_tokens": 17515993,
+      "completion_tokens": 4641118
     },
-    "admitted_to_finished_mean_seconds": 2221.02270436407,
-    "wall_seconds_per_complete_row": 16.946440786816353,
-    "efficiency_note": "Partial completion rate only;109 new rows since preceding600-second snapshot. Linear ETA about40min is provisional; recent completion rate differs materially from cumulative rate."
+    "admitted_to_finished_mean_seconds": 2571.0506348710896,
+    "wall_seconds_per_complete_row": 11.278316321281286,
+    "efficiency_note": "312 checkpoints complete; generation and run manifests COMPLETED. Driver still live, successful terminal not observed.58.65min/11.28s per row uses observation time, not sealed boundary; not final baseline.",
+    "generation_manifest_status": "COMPLETED",
+    "run_manifest_status": "COMPLETED",
+    "driver_exit": null
   },
   "resources": {
     "cards": 8,
     "instances": 2,
     "tensor_parallel": 4,
     "max_num_seqs_per_instance": 128,
-    "generation_active": true,
-    "note": "Live runtime, OPENED attempt and actual FIT receipts verified.8 allocated cards; sustained utilization not established."
+    "generation_active": null,
+    "note": "8 cards and2 TP4 instances allocated. H2 generation sealed; driver remains live, H1 awaits successful upstream terminal. Current inference activity and sustained utilization not established."
   },
   "hardware_snapshot": {
     "observed_at_utc": "2026-10-31T18:54:25Z",
@@ -96,7 +99,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "H2 linear cumulative-rate ETA about40min; provisional, not whole625 ETA.3 historical H1 reuse candidates separate;310 fresh H1 rows remain queued.",
+  "eta_note": "H2 generation rows remaining0; final driver/scoring completion ETA unknown. H1new310 waiting; historical3 separate until full313union.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -105,7 +108,7 @@
     "scoring_jobs": 0
   },
   "state": "h2_running_h1_preflight_passed_waiting_generation_queue",
-  "remaining_rows": 453,
+  "remaining_rows": 313,
   "bank_read": {
     "registered": true,
     "state": "failed_upstream",
