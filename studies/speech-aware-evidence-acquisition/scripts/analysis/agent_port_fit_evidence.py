@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter, defaultdict
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -20,7 +21,14 @@ from speech_aware_evidence_acquisition.core.preparation import digest
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 import port_serving_evidence as serving
 import direct_port_score_evidence as scored
-import direct_port_read_manifest as registered
+
+
+def require_read(repo, read_id):
+    # Registration loads research-family artifacts. Defer it until an actual
+    # report build; checkpoint/FIT readers do not need those unrelated files.
+    import direct_port_read_manifest as registered
+    registered.require_read(repo, read_id)
+
 
 
 def trace_contacts(path, expected):
@@ -48,7 +56,7 @@ def trace_contacts(path, expected):
                 if contact in fallback or value['attempt'] != 1 or value['reask_enable_thinking'] is not False:
                     raise ValueError('invalid duplicate fallback receipt')
                 fallback[contact] = value
-    if not requests or set(requests) != set(responses):
+    if (not requests and expected) or set(requests) != set(responses):
         raise ValueError('every actual request must have exactly one wire response')
     pairs = defaultdict(list)
     for request, value in requests.items():
@@ -130,18 +138,22 @@ def check_fit(path, spec, expected, member_identity):
 
 def audit_source(data, fit, run_id, expected, full_roster, trace, sessions, *, predecessor=False):
     """Audit one attempt independently; retain even non-kept predecessor FIT costs."""
-    primary, generation_count, fallback_count = trace_contacts(trace, expected)
+    primary, generation_count, fallback_count = trace_contacts(trace, expected) if trace is not None else ({}, 0, 0)
+    if trace is None and (expected or not predecessor):
+        raise ValueError('missing generation trace')
     fit_cap = fit['contact_cap']
-    if fit_cap % len(full_roster) or max(Counter(pair[0] for pair in primary).values()) > fit_cap // len(full_roster):
+    if fit_cap % len(full_roster) or max(Counter(pair[0] for pair in primary).values(), default=0) > fit_cap // len(full_roster):
         raise ValueError('per-row logical contact cap exceeded')
     spec = {'run_id': run_id, 'fit_run_id': fit['run_id'], 'fit_attempt_id': fit['attempt_id'],
             'fit_cap': fit_cap, 'fit_session': sessions['primary_fit_session']}
     fit_dir = data / 'prepared' / fit['run_id'] / fit['attempt_id']
     paths = sorted(fit_dir.glob('*.request-fit.json'))
-    if len(paths) != len(list(fit_dir.glob('*.contacts.jsonl'))) or not 0 < len(paths) <= fit_cap:
+    if len(paths) != len(list(fit_dir.glob('*.contacts.jsonl'))) or not 0 <= len(paths) <= fit_cap or (expected and not paths):
         raise ValueError('incomplete FIT envelopes or journals')
     observed, counts, selected = {}, [], {}
-    pins = {**sessions['inputs'], str(trace): serving.sha(trace)}
+    pins = dict(sessions['inputs'])
+    if trace is not None:
+        pins[str(trace)] = serving.sha(trace)
     for path in paths:
         pair, value, contact, inputs = check_fit(path, spec, full_roster if predecessor else expected,
                                                 sessions['members'][spec['fit_session']])
@@ -163,31 +175,69 @@ def audit_source(data, fit, run_id, expected, full_roster, trace, sessions, *, p
             'primary_fit_session': spec['fit_session'], 'inputs': pins}
 
 
-def predecessor_source(repo, data, cell, doc, bundle):
-    """Resolve only the registered operational checkpoint predecessor from pinned Git."""
+def predecessor_sources(repo, data, cell, doc, bundle):
+    """Resolve all registered ancestors, including attempts with no retained rows.
+
+    Request IDs are local to each attempt. Empty ancestors still retain their
+    paid generation and FIT costs; a missing retained manifest is accepted only
+    when the pinned checkpoint proves it has no keepable rows.
+    """
     from speech_aware_evidence_acquisition.core.config import compose
-    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import CheckpointCompatibility, git
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import (
+        CheckpointCompatibility, MultiCheckpointCompatibility, validate_bridge_declarations)
+    from speech_aware_evidence_acquisition.core.flight.resume import resume_declarations_from_document
     blocks = bundle.manifest.get('predecessor_attempts')
     single = bundle.manifest.get('predecessor_attempt')
     if blocks and single:
         raise ValueError('ambiguous predecessor custody')
     blocks = blocks or ([single] if single else [])
-    if not blocks:
-        return None
-    if len(blocks) != 1:
-        raise ValueError('FIT audit requires one registered checkpoint predecessor')
+    declarations = resume_declarations_from_document(cell['resume_from']) if cell.get('resume_from') is not None else ()
+    if not declarations:
+        if blocks:
+            raise ValueError('unregistered predecessor custody')
+        return []
     bridge = CheckpointCompatibility.from_document(cell.get('checkpoint_compatibility'), attempt_id=cell['attempt_id'])
-    old = blocks[0]
-    declaration = cell.get('resume_from', {})
-    if (old.get('mode') != 'checkpoint' or old.get('run_id') != cell['run_id']
-            or old.get('attempt_id') != declaration.get('attempt_id')
-            or old.get('checkpoint_sha256') != declaration.get('checkpoint_sha256')):
-        raise ValueError('FIT predecessor differs from registered checkpoint')
+    validate_bridge_declarations(bridge, declarations)
+    if isinstance(bridge, MultiCheckpointCompatibility):
+        bridge.validate_ancestry(repo, declarations)
+    by_id = {block['attempt_id']: block for block in blocks}
+    if len(by_id) != len(blocks) or not set(by_id) <= {d.attempt_id for d in declarations}:
+        raise ValueError('duplicate or undeclared predecessor custody')
     current = compose(repo, **bundle.manifest['config']['fragments'])
     if current.config_hash != bundle.manifest['config']['config_hash']:
         raise ValueError('FIT configuration differs from sealed execution')
-    receipts = scored.read_flight_receipts(bundle.manifest_path.parent / 'flight-receipts.json')
+    if current.values['cells'][0] != cell:
+        raise ValueError('FIT cell differs from sealed configuration')
+    receipt_path = bundle.manifest_path.parent / 'flight-receipts.json'
+    receipts = scored.read_flight_receipts(receipt_path)
     proof = receipts['stages']['preflight'].get('checkpoint_compatibility', {})
+    if isinstance(bridge, MultiCheckpointCompatibility):
+        if (proof.get('schema') != 'saea-checkpoint-compatibility-proofs-v2'
+                or set(proof.get('predecessors', {})) != {d.attempt_id for d in declarations}):
+            raise ValueError('missing executed ancestor proof')
+        proofs = proof['predecessors']
+    else:
+        proofs = {declarations[0].attempt_id: proof}
+    sources, seen, fit_ids = [], set(), set()
+    for declaration in declarations:
+        item = bridge.bridge_for(declaration.attempt_id) if isinstance(bridge, MultiCheckpointCompatibility) else bridge
+        source = _predecessor_source(repo, data, cell, doc, bundle, declaration,
+                                     item, proofs[declaration.attempt_id], by_id.get(declaration.attempt_id))
+        if seen.intersection(source['expected']):
+            raise ValueError('overlapping retained predecessor rows')
+        seen.update(source['expected'])
+        fit_id = (source['fit']['run_id'], source['fit']['attempt_id'])
+        if fit_id in fit_ids:
+            raise ValueError('duplicate ancestor FIT cost source')
+        fit_ids.add(fit_id)
+        source['pins'][str(receipt_path)] = serving.sha(receipt_path)
+        sources.append(source)
+    return sources
+
+
+def _predecessor_source(repo, data, cell, doc, bundle, declaration, bridge, proof, block):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import git
+    from speech_aware_evidence_acquisition.core.row_checkpoint import checkpoint_path, read_checkpoint, kept_trace_text
     if (proof.get('predecessor_commit') != bridge.predecessor_commit
             or proof.get('reviewed_source_changes') != bridge.reviewed_source_changes
             or proof.get('change') != bridge.change):
@@ -197,29 +247,75 @@ def predecessor_source(repo, data, cell, doc, bundle):
         return json.loads(git(repo, 'show', bridge.predecessor_commit + ':configs/' + kind + '/' + name + '.json'))
     old_doc, old_base = pinned('experiment'), pinned('baseline')
     old_cell, = old_doc['cells']
-    if ((old_cell['run_id'], old_cell['attempt_id']) != (cell['run_id'], old['attempt_id'])
+    if ((old_cell['run_id'], old_cell['attempt_id']) != (cell['run_id'], declaration.attempt_id)
             or old_doc['populations'] != doc['populations']
             or old_doc['service_session'] != doc['service_session']
             or old_cell['model_fragment'] != cell['model_fragment']):
-        raise ValueError('pinned predecessor roster or attempt differs')
-    kept = old['kept_sample_ids']
-    if not kept or len(kept) != len(set(kept)) or not set(kept) <= set(doc['populations'][0]['ids']):
+        raise ValueError('pinned predecessor roster, serving identity or attempt differs')
+    path = checkpoint_path(data / 'runs' / cell['run_id'] / declaration.attempt_id, cell['run_id'])
+    checkpoint = read_checkpoint(path, expected_sha256=declaration.checkpoint_sha256)
+    header = checkpoint.header
+    if (header['run_id'] != cell['run_id'] or header['attempt_id'] != declaration.attempt_id
+            or header['protocol_hash'] != proof.get('protocol_hash')
+            or header['implementation'] != proof.get('implementation')):
+        raise ValueError('checkpoint differs from executed compatibility proof')
+    # Mirror the shared resume reader's additional single-output/trace custody
+    # checks, so malformed complete flags never become retained FIT rows.
+    kept_rows = []
+    for row in checkpoint.rows:
+        if row.keep_defect() is not None or len(row.output_rows) != 1:
+            continue
+        record = row.output_rows[0]
+        if record.get('sample_id') != row.sample_id:
+            continue
+        wanted = {str(record.get('request_id')) + '/request', str(record.get('request_id')) + '/response'}
+        if not wanted <= {json.loads(line)['record_id'] for line in row.trace_lines}:
+            continue
+        kept_rows.append(row)
+    kept = [row.sample_id for row in kept_rows]
+    if len(kept) != len(set(kept)) or not set(kept) <= set(doc['populations'][0]['ids']):
         raise ValueError('invalid kept predecessor roster')
-    trace = scored.within(Path(old['trace_path']), bundle.manifest_path.parent)
-    if serving.sha(trace) != old['trace_sha256']:
-        raise ValueError('predecessor trace hash differs')
-    record_path = data / 'attempts' / cell['run_id'] / (old['attempt_id'] + '.json')
+    pins = {str(path): serving.sha(path)}
+    trace = None
+    if block is None:
+        if kept:
+            raise ValueError('missing retained predecessor manifest')
+    else:
+        if (block.get('mode') != 'checkpoint' or block.get('run_id') != cell['run_id']
+                or block.get('checkpoint_sha256') != declaration.checkpoint_sha256
+                or sorted(block['kept_sample_ids']) != sorted(kept)):
+            raise ValueError('FIT predecessor differs from registered checkpoint')
+        trace = scored.within(Path(block['trace_path']), bundle.manifest_path.parent)
+        if (serving.sha(trace) != block['trace_sha256']
+                or trace.read_text() != kept_trace_text(kept_rows)):
+            raise ValueError('predecessor trace differs from pinned checkpoint')
+        pins[str(trace)] = serving.sha(trace)
+    record_path = data / 'attempts' / cell['run_id'] / (declaration.attempt_id + '.json')
     record = serving.read(record_path)
     if (record.get('state') != 'ABORTED' or record.get('run_id') != cell['run_id']
-            or record.get('attempt_id') != old['attempt_id']):
+            or record.get('attempt_id') != declaration.attempt_id):
         raise ValueError('predecessor attempt must remain ABORTED')
+    actual = record['actual']
+    if (type(actual.get('calls')) is not int or actual['calls'] < 0
+            or type(actual.get('audio_seconds')) not in (int, float)
+            or not math.isfinite(actual['audio_seconds']) or actual['audio_seconds'] < 0):
+        raise ValueError('invalid predecessor actual cost')
+    pins[str(record_path)] = serving.sha(record_path)
     return {'fit': old_base['native_contact_fit'], 'doc': old_doc, 'cell': old_cell,
-            'trace': trace, 'expected': kept, 'attempt_record': record_path,
-            'predecessor_commit': bridge.predecessor_commit, 'actual': record['actual']}
+            'trace': trace, 'expected': kept, 'attempt_record': record_path, 'pins': pins,
+            'predecessor_commit': bridge.predecessor_commit, 'actual': actual}
+
+
+def predecessor_source(repo, data, cell, doc, bundle):
+    """Compatibility entry point for callers explicitly expecting one ancestor."""
+    sources = predecessor_sources(repo, data, cell, doc, bundle)
+    if len(sources) > 1:
+        raise ValueError('multiple predecessors; use predecessor_sources')
+    return sources[0] if sources else None
 
 
 def build(repo, data, experiment, read_id):
-    registered.require_read(repo, read_id)
+    require_read(repo, read_id)
     if Path(experiment).name != experiment:
         raise ValueError('invalid experiment')
     experiment_path = repo / 'configs/experiment' / (experiment + '.json')
@@ -245,10 +341,12 @@ def build(repo, data, experiment, read_id):
     trace = scored.within(trace, directory)
     if serving.sha(trace) != bundle.manifest['raw_trace']['sha256']:
         raise ValueError('sealed trace hash differs')
-    predecessor = predecessor_source(repo, data, cell, doc, bundle)
-    current_expected = set(expected) - set(predecessor['expected']) if predecessor else set(expected)
+    predecessors = predecessor_sources(repo, data, cell, doc, bundle)
+    current_expected = set(expected) - {sample for p in predecessors for sample in p['expected']}
     reports = []
-    if predecessor:
+    if any((p['fit']['run_id'], p['fit']['attempt_id']) == (fit['run_id'], fit['attempt_id']) for p in predecessors):
+        raise ValueError('current FIT identity reuses ancestor cost source')
+    for predecessor in predecessors:
         old_doc, old_cell = predecessor['doc'], predecessor['cell']
         # An interrupted predecessor may have no flight-receipts.json. Its
         # per-contact FIT artifacts and journals bind the same pinned resident
@@ -258,7 +356,11 @@ def build(repo, data, experiment, read_id):
                               expected, predecessor['trace'], old_sessions, predecessor=True)
         report.update(attempt_id=old_cell['attempt_id'], rows=len(predecessor['expected']),
                       predecessor_commit=predecessor['predecessor_commit'], prior_actual=predecessor['actual'])
-        report['inputs'][str(predecessor['attempt_record'])] = serving.sha(predecessor['attempt_record'])
+        report['inputs'].update(predecessor['pins'])
+        if predecessor['actual']['calls'] and not report['fit_contacts']:
+            raise ValueError('paid predecessor lacks FIT evidence')
+        if predecessor['actual']['calls'] < report['generation_contacts']:
+            raise ValueError('predecessor actual cost is below kept contacts')
         reports.append(report)
     report = audit_source(data, fit, cell['run_id'], current_expected, expected, trace, sessions)
     report.update(attempt_id=cell['attempt_id'], rows=len(current_expected))
@@ -266,9 +368,7 @@ def build(repo, data, experiment, read_id):
     totals = {key: sum(report[key] for report in reports) for key in
               ('generation_contacts', 'logical_contacts', 'fit_contacts', 'fallback_contacts',
                'kept_fit_contacts', 'non_kept_fit_contacts')}
-    accounted_generation = report['generation_contacts'] + (int(predecessor['actual']['calls']) if predecessor else 0)
-    if predecessor and int(predecessor['actual']['calls']) < reports[0]['generation_contacts']:
-        raise ValueError('predecessor actual cost is below kept contacts')
+    accounted_generation = report['generation_contacts'] + sum(p['actual']['calls'] for p in predecessors)
     if accounted_generation > doc['family_budget']['generation_calls_cap']:
         raise ValueError('generation exceeds registered cap')
     pins = {str(p): serving.sha(p) for p in (experiment_path, base_path, manifest_path)}

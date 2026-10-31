@@ -158,7 +158,8 @@ def test_unregistered_predecessor_is_rejected(tmp_path):
         audit.predecessor_source(tmp_path, tmp_path, {'attempt_id': 'new'}, {}, bundle)
 
 
-def test_build_combines_attempts_and_preserves_noncheckpoint_generation_cost(tmp_path, monkeypatch):
+@pytest.mark.parametrize('cost_only', [False, True])
+def test_build_combines_attempts_and_preserves_noncheckpoint_generation_cost(tmp_path, monkeypatch, cost_only):
     from types import SimpleNamespace
     repo, data = tmp_path / 'repo', tmp_path / 'data'
     cell = {'run_id': 'generation', 'attempt_id': 'new', 'model_fragment': 'model', 'baseline_fragment': 'base'}
@@ -175,23 +176,145 @@ def test_build_combines_attempts_and_preserves_noncheckpoint_generation_cost(tmp
     old_record = data / 'old.json'; old_record.write_text('{}')
     bundle = SimpleNamespace(split_ids={'old-row', 'new-row'}, manifest={
         'status': 'COMPLETED', 'raw_trace': {'path': str(trace), 'sha256': audit.serving.sha(trace)}})
-    monkeypatch.setattr(audit.registered, 'require_read', lambda *a: None)
+    monkeypatch.setattr(audit, 'require_read', lambda *a: None)
     monkeypatch.setattr(audit.scored, 'verify_bundle', lambda *a: bundle)
     sessions = {'primary_fit_session': 'i0', 'members': {}, 'inputs': {}}
     monkeypatch.setattr(audit.serving, 'sessions', lambda *a, **k: sessions)
-    monkeypatch.setattr(audit, 'predecessor_source', lambda *a: {
-        'doc': doc, 'cell': {**cell, 'attempt_id': 'old'}, 'fit': {}, 'expected': ['old-row'],
-        'trace': trace, 'attempt_record': old_record, 'predecessor_commit': 'a' * 40, 'actual': {'calls': 7}})
+    sources = [{
+        'doc': doc, 'cell': {**cell, 'attempt_id': 'old'}, 'fit': {'run_id':'fit-old','attempt_id':'old'}, 'expected': ['old-row'],
+        'trace': trace, 'attempt_record': old_record, 'predecessor_commit': 'a' * 40,
+        'actual': {'calls': 7}, 'pins': {}}]
+    if cost_only:
+        sources.append({**sources[0], 'cell': {**cell, 'attempt_id': 'middle'},
+                        'expected': [], 'actual': {'calls': 4}, 'trace': None})
+    monkeypatch.setattr(audit, 'predecessor_sources', lambda *a: sources)
     seen = []
     def source(data, fit, run, expected, full, trace, sessions, predecessor=False):
         seen.append((expected, predecessor))
+        if not expected:
+            return {'generation_contacts': 0, 'logical_contacts': 0, 'fit_contacts': 4,
+                    'kept_fit_contacts': 0, 'non_kept_fit_contacts': 4, 'fallback_contacts': 0,
+                    'primary_fit_session': 'i0', 'inputs': {}}
         return {'generation_contacts': 3 if predecessor else 2, 'logical_contacts': 1,
                 'fit_contacts': 7 if predecessor else 2, 'kept_fit_contacts': 3 if predecessor else 2,
                 'non_kept_fit_contacts': 4 if predecessor else 0, 'fallback_contacts': 0,
                 'primary_fit_session': 'i0', 'inputs': {}}
     monkeypatch.setattr(audit, 'audit_source', source)
     result = audit.build(repo, data, 'experiment', 'read')
-    assert seen == [({'old-row'}, True), ({'new-row'}, False)]
+    assert seen == [({'old-row'}, True)] + ([(set(), True)] if cost_only else []) + [({'new-row'}, False)]
     assert result['generation_contacts'] == 5
-    assert result['accounted_generation_contacts'] == 9
-    assert result['non_kept_fit_contacts'] == 4 and result['rows'] == 2
+    assert result['accounted_generation_contacts'] == 9 + 4 * cost_only
+    assert result['non_kept_fit_contacts'] == 4 + 4 * cost_only and result['rows'] == 2
+
+
+def test_cost_only_ancestor_retains_fit_contacts_without_complete_rows(tmp_path, monkeypatch):
+    fit = {'run_id': 'fit', 'attempt_id': 'empty', 'contact_cap': 4}
+    directory = tmp_path / 'prepared/fit/empty'; directory.mkdir(parents=True)
+    (directory / 'one.request-fit.json').write_text('{}')
+    (directory / 'one.contacts.jsonl').write_text('{}')
+    monkeypatch.setattr(audit, 'check_fit', lambda *args: (('sample', 'contact'), {}, 1, {}))
+    sessions = {'primary_fit_session': 'i0', 'members': {'i0': {}}, 'inputs': {}}
+    result = audit.audit_source(tmp_path, fit, 'generation', set(), ['sample'], None, sessions, predecessor=True)
+    assert result['generation_contacts'] == result['kept_fit_contacts'] == 0
+    assert result['fit_contacts'] == result['non_kept_fit_contacts'] == 1
+    with pytest.raises(ValueError, match='missing generation trace'):
+        audit.audit_source(tmp_path, fit, 'generation', {'sample'}, ['sample'], None, sessions, predecessor=True)
+
+
+def test_empty_trace_allowed_only_with_empty_expected_roster(tmp_path):
+    path = tmp_path / 'empty.jsonl'; path.write_text('')
+    assert audit.trace_contacts(path, set()) == ({}, 0, 0)
+    with pytest.raises(ValueError):
+        audit.trace_contacts(path, {'sample'})
+
+
+def test_no_ancestry_is_supported_without_compatibility(tmp_path):
+    from types import SimpleNamespace
+    bundle = SimpleNamespace(manifest={})
+    assert audit.predecessor_sources(tmp_path, tmp_path, {}, {}, bundle) == []
+
+
+@pytest.mark.parametrize('fault', [None, 'missing-proof', 'wrong-protocol', 'wrong-cost', 'missing-retained-block'])
+def test_cost_only_source_requires_pinned_checkpoint_and_executed_proof(tmp_path, monkeypatch, fault):
+    from types import SimpleNamespace
+    import speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility as compat
+    from speech_aware_evidence_acquisition.core.row_checkpoint import RowCheckpointWriter, sha256_file
+    cell = {'run_id': 'run', 'attempt_id': 'new', 'model_fragment': 'model'}
+    old_cell = {**cell, 'attempt_id': 'old'}
+    doc = {'populations': [{'ids': ['sample']}], 'service_session': 'parent'}
+    old_doc = {**doc, 'cells': [old_cell]}
+    base = {'native_contact_fit': {'run_id': 'fit-old', 'attempt_id': 'old', 'contact_cap': 4}}
+    monkeypatch.setattr(compat, 'git', lambda repo, *a: json.dumps(old_doc if '/experiment/' in a[-1] else base).encode())
+    identity = {'config_hash': 'a'*64, 'protocol_hash': 'b'*64, 'split_identity_hash': 'c'*64, 'implementation': {'runtime': 'd'*64}}
+    writer = RowCheckpointWriter(tmp_path/'runs/run/old', 'run', 'old', identity=identity)
+    if fault == 'missing-retained-block':
+        rows = [json.dumps({'record_id': 'r1/'+kind, 'channel': channel, 'payload': {}})
+                for kind, channel in [('request','MODEL_REQUEST'),('response','MODEL_RESPONSE')]]
+        writer.append_row(sample_id='sample', complete=True, output_rows=[{'sample_id':'sample','request_id':'r1','text':'answer'}], trace_lines=rows)
+    writer.close()
+    declaration = SimpleNamespace(attempt_id='old', checkpoint_sha256=sha256_file(writer.path))
+    bridge = SimpleNamespace(predecessor_commit='e'*40, predecessor_fragments={'experiment':'old','baseline':'base'}, reviewed_source_changes={}, change='contact-executor-width-v1')
+    proof = {'predecessor_commit':bridge.predecessor_commit,'reviewed_source_changes':{},'change':bridge.change,
+             'protocol_hash':identity['protocol_hash'],'implementation':identity['implementation']}
+    if fault == 'missing-proof':proof = {}
+    if fault == 'wrong-protocol':proof['protocol_hash']='f'*64
+    record = tmp_path/'attempts/run/old.json';record.parent.mkdir(parents=True)
+    record.write_text(json.dumps({'run_id':'run','attempt_id':'old','state':'ABORTED','actual':{'calls':-1 if fault=='wrong-cost' else 599,'audio_seconds':1569.6}}))
+    bundle = SimpleNamespace(manifest_path=tmp_path/'new/run.run-manifest.json')
+    if fault:
+        with pytest.raises(ValueError):audit._predecessor_source(tmp_path,tmp_path,cell,doc,bundle,declaration,bridge,proof,None)
+    else:
+        source=audit._predecessor_source(tmp_path,tmp_path,cell,doc,bundle,declaration,bridge,proof,None)
+        assert source['expected']==[] and source['trace'] is None and source['actual']['calls']==599
+        assert str(writer.path) in source['pins'] and str(record) in source['pins']
+
+
+@pytest.mark.parametrize('fault', [None, 'missing-proof', 'duplicate-block', 'foreign-block', 'overlap', 'duplicate-fit'])
+def test_v2_resolution_checks_all_proofs_and_attempt_cost_namespaces(tmp_path, monkeypatch, fault):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.flight import checkpoint_compatibility as compat
+    from speech_aware_evidence_acquisition.core import config
+    bridge = {'schema': compat.SCHEMA, 'predecessor_commit': 'a'*40,
+              'predecessor_fragments': dict(model='m', dataset='d', baseline='b', experiment='e'),
+              'successor_attempt_id': 'next', 'change':'contact-executor-width-v1', 'reviewed_source_changes': {}}
+    declarations = [{'attempt_id': name, 'checkpoint_sha256': 'b'*64} for name in ['old','empty']]
+    cell = {'attempt_id':'next', 'resume_from': declarations,
+            'checkpoint_compatibility': {'schema':compat.MULTI_SCHEMA,'successor_attempt_id':'next',
+                                         'bridges':{'old':bridge,'empty':bridge}}}
+    blocks = [{'attempt_id':'old'}]
+    if fault == 'duplicate-block':blocks.append(dict(blocks[0]))
+    if fault == 'foreign-block':blocks.append({'attempt_id':'foreign'})
+    bundle = SimpleNamespace(manifest={'predecessor_attempts':blocks,
+                             'config':{'fragments':{},'config_hash':'config'}},
+                             manifest_path=tmp_path/'manifest.json')
+    (tmp_path/'flight-receipts.json').write_text('{}')
+    monkeypatch.setattr(config,'compose',lambda *a,**k:SimpleNamespace(config_hash='config',values={'cells':[cell]}))
+    monkeypatch.setattr(compat.MultiCheckpointCompatibility,'validate_ancestry',lambda *a:None)
+    proofs = {'old':{'proof':'old'},'empty':{'proof':'empty'}}
+    if fault == 'missing-proof':proofs.pop('empty')
+    monkeypatch.setattr(audit.scored,'read_flight_receipts',lambda *a:{'stages':{'preflight':{
+        'checkpoint_compatibility':{'schema':'saea-checkpoint-compatibility-proofs-v2','predecessors':proofs}}}})
+    seen=[]
+    def source(repo,data,cell,doc,bundle,declaration,item,proof,block):
+        seen.append((declaration.attempt_id,proof,block))
+        return {'expected':['row'] if declaration.attempt_id=='old' or fault=='overlap' else [],
+                'fit':{'run_id':'fit','attempt_id':'same' if fault=='duplicate-fit' else declaration.attempt_id},'pins':{}}
+    monkeypatch.setattr(audit,'_predecessor_source',source)
+    if fault:
+        with pytest.raises(ValueError):audit.predecessor_sources(tmp_path,tmp_path,cell,{},bundle)
+    else:
+        result=audit.predecessor_sources(tmp_path,tmp_path,cell,{},bundle)
+        assert len(result)==2 and result[1]['expected']==[]
+        assert seen==[('old',{'proof':'old'},{'attempt_id':'old'}),('empty',{'proof':'empty'},None)]
+
+
+def test_actual_build_enforces_read_registration_before_loading_files(tmp_path, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    seen=[]
+    def require(repo, read_id):
+        seen.append((repo,read_id));raise ValueError('not registered')
+    monkeypatch.setitem(sys.modules,'direct_port_read_manifest',SimpleNamespace(require_read=require))
+    with pytest.raises(ValueError,match='not registered'):
+        audit.build(tmp_path,tmp_path,'absent','read-id')
+    assert seen==[(tmp_path,'read-id')]
