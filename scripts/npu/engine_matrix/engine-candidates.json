@@ -1,0 +1,59 @@
+{
+  "schema": "saea-engine-candidate-argv-v1",
+  "status": "prepared-not-deployed",
+  "fixed": {
+    "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "tp": 2,
+    "max_model_len": 24576,
+    "dtype": "bfloat16",
+    "prefix_caching": true,
+    "chunked_prefill": true
+  },
+  "candidates": [
+    {
+      "id": "seq32-b2048",
+      "argv_delta": [
+        "--max-num-seqs",
+        "32",
+        "--max-num-batched-tokens",
+        "2048"
+      ]
+    },
+    {
+      "id": "seq48-b2048",
+      "argv_delta": [
+        "--max-num-seqs",
+        "48",
+        "--max-num-batched-tokens",
+        "2048"
+      ]
+    },
+    {
+      "id": "seq64-b2048",
+      "argv_delta": [
+        "--max-num-seqs",
+        "64",
+        "--max-num-batched-tokens",
+        "2048"
+      ]
+    },
+    {
+      "id": "seq96-b2048",
+      "argv_delta": [
+        "--max-num-seqs",
+        "96",
+        "--max-num-batched-tokens",
+        "2048"
+      ]
+    }
+  ],
+  "conditions": [
+    "Archive actual container args/image/env and session receipts before any restart.",
+    "Quiesce endpoints and hold generation.guard; do not mutate current services while run-v1 executes.",
+    "Re-register changed serving identity before scientific contacts.",
+    "KV capacity564224 tokens is only22.96 fully occupied24576-token requests; higher sequence counts require actual-length and worst-case validation.",
+    "Record graph capture sizes, startup failure, memory, preemption, errors, throughput; high concurrency is not automatically winner."
+  ],
+  "rollback": "Restore exact archived deployment argv/image/env via existing deployment owner; do not synthesize or overwrite historical session receipts.",
+  "search_policy": "continue128andhigher when repeatable throughput improves; then batchtoken tuning"
+}

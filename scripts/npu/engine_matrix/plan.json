@@ -1,0 +1,207 @@
+{
+  "schema": "saea-engine-matrix-plan-v1",
+  "seed": "20261031-engine-matrix-v2",
+  "trajectories": 128,
+  "rounds": [
+    [
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r0-l24-i0",
+        "url": "http://127.0.0.1:8200",
+        "container": "saea-omni-i0",
+        "client_concurrency": 24
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r0-l28-i1",
+        "url": "http://127.0.0.1:8201",
+        "container": "saea-omni-i1",
+        "client_concurrency": 28
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r0-l32-i2",
+        "url": "http://127.0.0.1:8202",
+        "container": "saea-omni-i2",
+        "client_concurrency": 32
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r0-l24-i3",
+        "url": "http://127.0.0.1:8203",
+        "container": "saea-omni-i3",
+        "client_concurrency": 24
+      }
+    ],
+    [
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r1-l28-i0",
+        "url": "http://127.0.0.1:8200",
+        "container": "saea-omni-i0",
+        "client_concurrency": 28
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r1-l32-i1",
+        "url": "http://127.0.0.1:8201",
+        "container": "saea-omni-i1",
+        "client_concurrency": 32
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r1-l24-i2",
+        "url": "http://127.0.0.1:8202",
+        "container": "saea-omni-i2",
+        "client_concurrency": 24
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r1-l24-i3",
+        "url": "http://127.0.0.1:8203",
+        "container": "saea-omni-i3",
+        "client_concurrency": 24
+      }
+    ],
+    [
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r2-l32-i0",
+        "url": "http://127.0.0.1:8200",
+        "container": "saea-omni-i0",
+        "client_concurrency": 32
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r2-l24-i1",
+        "url": "http://127.0.0.1:8201",
+        "container": "saea-omni-i1",
+        "client_concurrency": 24
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r2-l24-i2",
+        "url": "http://127.0.0.1:8202",
+        "container": "saea-omni-i2",
+        "client_concurrency": 24
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r2-l28-i3",
+        "url": "http://127.0.0.1:8203",
+        "container": "saea-omni-i3",
+        "client_concurrency": 28
+      }
+    ],
+    [
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r3-l24-i0",
+        "url": "http://127.0.0.1:8200",
+        "container": "saea-omni-i0",
+        "client_concurrency": 24
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r3-l24-i1",
+        "url": "http://127.0.0.1:8201",
+        "container": "saea-omni-i1",
+        "client_concurrency": 24
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r3-l28-i2",
+        "url": "http://127.0.0.1:8202",
+        "container": "saea-omni-i2",
+        "client_concurrency": 28
+      },
+      {
+        "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+        "model": "qwen3-omni-30b-a3b-thinking",
+        "max_num_seqs": 32,
+        "max_num_batched_tokens": null,
+        "enable_prefix_caching": true,
+        "enable_chunked_prefill": true,
+        "id": "r3-l32-i3",
+        "url": "http://127.0.0.1:8203",
+        "container": "saea-omni-i3",
+        "client_concurrency": 32
+      }
+    ]
+  ]
+}
