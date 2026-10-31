@@ -1289,7 +1289,11 @@ def decoding_override_error(value: object) -> str | None:
 
     if not isinstance(value, Mapping) or not value:
         return "must be a non-empty object of sampling parameters"
+    from .trajectory_seeds import RECIPE_KEYS, recipe_error
+    reason = recipe_error(value)
+    if reason is not None: return reason
     for name, number in value.items():
+        if name in RECIPE_KEYS: continue
         spec = DECODING_VARIANT_KNOBS.get(name) if isinstance(name, str) else None
         if spec is None:
             return f"names {name!r}, which is not in the closed set {sorted(DECODING_VARIANT_KNOBS)}"
@@ -1776,6 +1780,10 @@ def validate_supply_variant_receipt(
                 error_type,
                 "node-template supply variant arms must name distinct templates",
             )
+    if is_v6:
+        from .trajectory_seeds import group_error
+        reason = group_error([json.loads(pin) for pin in decoding_pins])
+        if reason: _raise(error_type, reason)
     if is_v6 and len(set(decoding_pins)) != len(decoding_pins):
         _raise(
             error_type,

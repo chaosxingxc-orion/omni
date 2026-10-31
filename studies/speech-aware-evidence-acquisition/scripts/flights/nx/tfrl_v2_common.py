@@ -148,20 +148,8 @@ def estimate_tokens(text: str, chars_per_token: float = CHARS_PER_TOKEN) -> int:
 # ---- seeds -----------------------------------------------------------------------------------------------------------------------------------
 
 
-def iteration_seed(base_seed: int, iteration: int) -> int:
-    """The base seed of one iteration: a pure function of the loop's base seed and the iteration number."""
-
-    return _seed_from(f"tfrl-v2-iteration|{int(base_seed)}|{int(iteration)}")
-
-
-def derive_seed(base_seed: int, row_id: str, k: int) -> int:
-    """The decoding seed of trajectory ``k`` of ``row_id``: a pure function of (base seed, row id, k), in ``[1, 2**31 - 2]``."""
-
-    return _seed_from(f"tfrl-v2-seed|{int(base_seed)}|{row_id}|{int(k)}")
-
-
-def _seed_from(text: str) -> int:
-    return int(hashlib.sha256(text.encode("utf-8")).hexdigest()[:8], 16) % (2**31 - 2) + 1
+# Runtime and planning use exactly the same seed implementation.
+from speech_aware_evidence_acquisition.rails.trajectory_seeds import iteration_seed, derive_seed
 
 
 # ---- cross-fit guard -------------------------------------------------------------------------------------------------------------------------

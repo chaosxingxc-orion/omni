@@ -202,6 +202,7 @@ def build_plan(
     temperature: float = cm.DEFAULT_TEMPERATURE, top_p: float = cm.DEFAULT_TOP_P, top_k: int = cm.DEFAULT_TOP_K,
     variation: str = "seed-only", bank_receipt: Mapping[str, Any] | None = None, seed_rule_bank: Mapping[str, Any] | None = None,
     include_twin_and_lock: bool = True, roster_file_sha256: str | None = None,
+    execution_run_id: str | None = None, execution_attempt_id: str | None = None,
 ) -> dict[str, Any]:
     """The run-list of one half and one iteration (a plain document; deterministic: same inputs, same bytes).
 
@@ -245,7 +246,7 @@ def build_plan(
             raise SamplerError("seed rule bank variant ids must be unique")
 
     it_seed = cm.iteration_seed(base_seed, iteration)
-    run_id, attempt_id = run_id_for(half, iteration), attempt_id_for(half, iteration)
+    run_id, attempt_id = execution_run_id or run_id_for(half, iteration), execution_attempt_id or attempt_id_for(half, iteration)
     banks = {
         "rule_bank_sha256": bank_receipt["rule_bank"]["content_sha256"] if bank_receipt else None,
         "exemplar_bank_sha256": bank_receipt["exemplar_bank"]["content_sha256"] if bank_receipt else None,
@@ -305,6 +306,38 @@ def build_plan(
         "budget": {"sampler_contacts": sampler_budget, "program_c7": program_budget},
         "model_calls_made_by_this_file": 0,
     }
+
+
+def execution_columns(plan):
+    """Compile the seed-only K4 request plan into executable Solver declarations.
+
+    Recheck every planned seed; do not convert historical top-p ladders or rule
+    variants into a seed-only experiment. Cell registration remains separate.
+    """
+    if (plan['schema'] != RUN_LIST_SCHEMA or plan['variation'] != 'seed-only'
+            or plan['k'] != 4 or plan['banks']['seed_rule_bank_sha256'] is not None):
+        raise SamplerError('exact seed-only K4 plan required')
+    if plan['iteration_seed'] != cm.iteration_seed(plan['base_seed'], plan['iteration']):
+        raise SamplerError('iteration seed differs')
+    arms = sampler_arms(4)
+    if plan['program']['solver_sampler_arms'] != arms:
+        raise SamplerError('trajectory arms differ')
+    rows = plan['row_plan']
+    if not rows or len({r['row_id'] for r in rows}) != len(rows):
+        raise SamplerError('unique real row plan required')
+    for row in rows:
+        contacts = [c for c in row['contacts'] if c['node'] == 'solver']
+        if [c['arm'] for c in contacts] != arms:
+            raise SamplerError('ordered trajectory contacts differ')
+        if len({c['request_identity_sha256'] for c in contacts}) != 1:
+            raise SamplerError('seed-only request identities differ')
+        for k, contact in enumerate(contacts):
+            if contact['seed'] != cm.derive_seed(plan['iteration_seed'], row['row_id'], k):
+                raise SamplerError('planned trajectory seed differs')
+    decoding = {k: plan['decoding'][k] for k in ('temperature', 'top_p', 'top_k')}
+    return [{'column_id': arm, 'kind': 'decoding', 'node': 'solver',
+             'decoding': {**decoding, 'trajectory_seed_base': plan['iteration_seed'], 'trajectory_index': k}}
+            for k, arm in enumerate(arms)]
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------------

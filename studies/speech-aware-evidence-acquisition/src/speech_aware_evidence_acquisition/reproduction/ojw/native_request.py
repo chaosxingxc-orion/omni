@@ -389,6 +389,9 @@ class MeteredNativeSpeechRequest:
             reason = decoding_override_error(entry)
             if not arm_id or reason is not None:
                 raise NativeSpeechRequestError(f"solver_arm_decoding[{arm_id!r}] is invalid: {reason or 'empty arm id'}")
+        from ...rails.trajectory_seeds import group_error as trajectory_group_error
+        reason = trajectory_group_error(list(arm_decoding.values()))
+        if reason: raise NativeSpeechRequestError(reason)
         if bool(arm_decoding) != (solver_arm_decoding_role_id is not None) or (
             solver_arm_decoding_role_id is not None
             and (not isinstance(solver_arm_decoding_role_id, str) or not solver_arm_decoding_role_id)
@@ -569,7 +572,8 @@ class MeteredNativeSpeechRequest:
             and request.role_id == self._solver_arm_decoding_role_id
             and solver_arm in self._solver_arm_decoding
         ):
-            decoding.update(self._solver_arm_decoding[solver_arm])
+            from ...rails.trajectory_seeds import resolve as resolve_trajectory_seed
+            decoding.update(resolve_trajectory_seed(self._solver_arm_decoding[solver_arm], request.context.sample_id))
         if answer_only:
             # The one receipted answer-only re-ask (decision 278): thinking off, max_tokens = the reserve.
             try:

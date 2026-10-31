@@ -1316,7 +1316,11 @@ def _decoding_override(
             f"{field} must be a non-empty object of sampling parameters "
             f"{sorted(DECODING_VARIANT_KNOBS)}"
         )
+    from .trajectory_seeds import RECIPE_KEYS, recipe_error
+    reason = recipe_error(value)
+    if reason: raise SupplyVariantError(f"{field}: {reason}")
     for name in sorted(value, key=str):
+        if name in RECIPE_KEYS: continue
         if name in DECODING_VARIANT_REFUSED_KNOBS:
             raise SupplyVariantError(
                 f"{field} names {name!r}: {DECODING_VARIANT_REFUSED_KNOBS[name]}; a "
@@ -1330,6 +1334,9 @@ def _decoding_override(
     out: dict[str, float | int] = {}
     for name in sorted(value):
         number = value[name]
+        if name in RECIPE_KEYS:
+            out[name] = number
+            continue
         kind, low, high, low_exclusive = DECODING_VARIANT_KNOBS[name]
         if isinstance(number, bool) or not isinstance(number, (int, float)):
             raise SupplyVariantError(f"{field}.{name} must be a number, got {number!r}")
@@ -1504,6 +1511,9 @@ def parse_decoding_variants(
                 f"{arm.replicate_of!r}, which is not the delivering arm {arms[-1].arm_id!r}"
             )
     overrides = [arm.decoding_override for arm in arms if arm.decoding_override is not None]
+    from .trajectory_seeds import group_error
+    reason = group_error([dict(override) for override in overrides])
+    if reason: raise SupplyVariantError(reason)
     if len(set(overrides)) != len(overrides):
         raise SupplyVariantError(
             "two decoding_variants arms declare the same sampling override; two "
