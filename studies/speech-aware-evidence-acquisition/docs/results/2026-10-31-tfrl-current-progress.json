@@ -444,5 +444,26 @@
     "system_accepted": false,
     "generation_authorized": false,
     "result": "docs/results/2026-10-31-tfrl-whole-answer-result.json"
+  },
+  "distinct_evidence_preparation": {
+    "state": "real_supply_audit_complete_runtime_pending",
+    "rows": 625,
+    "changed_rows": 625,
+    "fallback_rows": 0,
+    "mean_overlap_items": 10,
+    "evidence_items_per_candidate": 20,
+    "pool_utterance_overlap": 0,
+    "new_model_calls": 0,
+    "new_tokenizer_calls": 0,
+    "new_scoring_jobs": 0,
+    "generation_authorized": false,
+    "delivery_rule": "equal canonical answers deliver A; otherwise one constrained A/B adjudicator; invalid parsed selection falls back to A",
+    "normal_calls_per_row_min": 4,
+    "normal_calls_per_row_max": 5,
+    "proposed_generation_cap": 6250,
+    "proposed_fit_cap": 3125,
+    "budgets_compiled": false,
+    "rank_tests_passed": 5,
+    "delivery_tests_passed": 11
   }
 }

@@ -1,6 +1,6 @@
 # A0、真实数据工程基线与后续优化
 
-更新：2026-10-31 22:33 UTC。真实500工程基准与完整1080条A0收益已锁定；首轮construction625/625官方评分完成。K4 vote相对lock下降0.4040pp，按预定门槛停止当前家族。
+更新：2026-10-31 22:42 UTC（Fold A最近硬件快照仍为22:33:24，十分钟观察器运行中）。真实500工程基准与完整1080条A0收益已锁定；首轮construction625/625官方评分完成。K4 vote相对lock下降0.4040pp，按预定门槛停止当前家族。
 
 ## 当前结论
 
@@ -130,3 +130,9 @@ H1完整313条由修复后310条和3条历史上下文完整记录合并并完�
 [失败诊断与具体实验草案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-next-method-plan-zh.md)；[Fold A真实配置准备结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-fold-a-confirmation-inputs-zh.md)。
 
 Fold A完整1080条任务已完成登记、现有S128服务核验、准入与共享预检，并于22:32:55 UTC建立独立后台启动记录。22:33:24 UTC观察：**0/1080条，8卡、2×TP4，生成容器存活，仍在启动准备**；两实例请求与八卡AI利用率均为0，暂无有效秒/条和ETA，不宣称满载或精度结果。每600秒观察，完整结果CPU导出已独立排队；102项登记验证测试、15项导出验证测试、2项观察器测试通过。原准备产物1080/1080及向量数值不变核验继续有效。
+
+## 不同证据方案的CPU准备结果
+
+真实construction625供给审计完成：625/625条供给变化、0条回退、每条平均重合10/20条，查询语句与知识池重叠0。采用共享检索器排名，未把ID排序误当检索排名；新增模型/tokenizer/评分调用均0。5项审计规则测试与11项整答案交付测试通过。这不是新精度结果。
+
+新方案固定为原始证据答案A与替代证据答案B，答案相同时交付A，不同时最多一次受约束A/B裁决；非法选择回退A，不拼接实体。A兼作lock，保留A/A，正常4–5调用/条。仍待实际运行时、FIT及登记；旧K4与完整答案medoid方案保持停止。[设计与完整审计结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-next-method-plan-zh.md)。

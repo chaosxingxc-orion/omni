@@ -1,0 +1,36 @@
+{
+  "changed_rows": 625,
+  "data_hashes": {
+    "vectors/slurp-kus3/facet-vectors.jsonl": "24f0cdf7005f722651631fa91407a6c7e68ac4aa9ec70ac042328fe2020cf2c4",
+    "vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-content-v1.jsonl": "be1a0f201598e8330576d99038edc50dcac7547b97811c703c10499e48714845"
+  },
+  "fallback_rows": 0,
+  "generation_authorized": false,
+  "implementation_commit": "f38604d70c53940bde50b58b0a7a5d05a52aec8e",
+  "mean_overlap": 10.0,
+  "new_model_calls": 0,
+  "pool_utterance_overlap": 0,
+  "preparation_gate_passed": true,
+  "query_gold_read": false,
+  "remaining": [
+    "delivery rule and cross-fit adaptation",
+    "actual candidate runtime integration",
+    "FIT budgets",
+    "prospective generation registration"
+  ],
+  "row_artifact_sha256": "87645c053cb26ceab402b05f75fbd1c628af5289d88c049c51665ed71aaa5cc1",
+  "rows": 625,
+  "schema": "saea-tfrl-distinct-evidence-audit-v1",
+  "scope": "Model-free real query ranking diversity; no inference performance or quality claim.",
+  "scoring_jobs": 0,
+  "snapshot_sha256": "6eaa03aea96a1928dd1ac29ecc71c3955c136498c9f8114266eaa830d1207c63",
+  "source_commit": "d0b9d593444732ff4e1f2ae6959ed1830bc1f511",
+  "source_hashes": {
+    "configs/baseline/slurp-tfrl-current-seed-i1-h1-v1.json": "27577f77fe612ee0e3241d518035a80bc9ad3328afa6f226cde9fb647488a2f5",
+    "configs/baseline/slurp-tfrl-current-seed-i1-h2-v1.json": "37a23e465f2dd666ca081b08e41b2d3438d16a718db1ede03bd8020566d7edf1",
+    "configs/dataset/slurp-speech-native-stage3-construction-r01c.json": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba",
+    "configs/experiment/slurp-tfrl-current-seed-i1-h1-v1.json": "2aa9d2ea337f783730588d43a712bbc58e177a4f4aaa04a6c1c2e3d5610cc9b7",
+    "configs/experiment/slurp-tfrl-current-seed-i1-h2-v1.json": "7f661c993dece21e94997a710f8a01f631377dce84088e930531695fb226a9af"
+  },
+  "tokenizer_calls": 0
+}
