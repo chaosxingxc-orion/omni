@@ -173,3 +173,48 @@ def test_preflight_failure_is_terminal_across_repeated_polls(tmp_path):
     assert queue.next_ready() is None
     assert calls == ["preflight"]
     assert queue.states["broken-once"].state == "preflight-failed"
+
+
+@pytest.mark.parametrize("failure", ["run_phases", "seal", "release_context"])
+def test_failed_generation_or_context_never_publishes_release(tmp_path, failure):
+    flight = _make_flight(tmp_path, run_id="release-failure", attempt_id="a")
+    events = []
+    def fail():
+        raise ValueError("injected failure")
+    @contextmanager
+    def context(_flight):
+        yield
+        if failure == "release_context":
+            fail()
+    if failure != "release_context":
+        setattr(flight, failure, fail)
+    queue = FlightQueue([flight], execution_context_factory=context,
+                        on_generation_released=lambda f: events.append(f.run_id))
+    with pytest.raises(ValueError, match="injected failure"):
+        queue.run()
+    assert events == []
+    assert queue.states[flight.run_id].state == "failed"
+    queue.shutdown()
+
+
+def test_release_publication_failure_does_not_score_or_retry(tmp_path):
+    flight = _make_flight(tmp_path, run_id="publish-failure", attempt_id="a")
+    def fail(_flight):
+        raise OSError("publication failed")
+    def forbidden(**kwargs):
+        pytest.fail("must not score after failed release publication")
+    flight.score = forbidden
+    queue = FlightQueue([flight], on_generation_released=fail)
+    with pytest.raises(OSError, match="publication failed"):
+        queue.run()
+    assert flight.receipts.has("seal")
+    assert queue.run() == ()
+    queue.shutdown()
+
+
+def test_dry_run_does_not_publish_generation_release(tmp_path):
+    flight = _make_flight(tmp_path, run_id="dry", attempt_id="a")
+    queue = FlightQueue([flight], dry_run=True,
+                        on_generation_released=lambda f: pytest.fail("dry release"))
+    queue.run()
+    queue.shutdown()

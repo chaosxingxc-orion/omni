@@ -13,7 +13,7 @@ import re
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Mapping, Sequence
+from typing import TYPE_CHECKING, Callable, Mapping, Sequence
 
 from ..bundle.git_commit import require_clean_study_repo
 from ..session.serving import assert_identity_matches, find_resident_session
@@ -242,6 +242,7 @@ def run_campaign(
     flights: Sequence[FlightRuntime], *, cells: Sequence[CampaignCell],
     repo_root: Path, data_root: Path, owner: str, expected_session_id: str,
     resident_finder=find_resident_session,
+    on_generation_released: Callable[[FlightRuntime], None] | None = None,
 ) -> Mapping[str, object]:
     """Run ready workers serially; overlap full-manifest scoring between leases."""
     if not owner.strip() or not expected_session_id.strip():
@@ -321,6 +322,7 @@ def run_campaign(
         flights, readiness=readiness,
         dependencies={cell.run_id: cell.dependencies() for cell in cells},
         execution_context_factory=custody, include_per_sample=True,
+        on_generation_released=on_generation_released,
     )
     try:
         while queue.pending:

@@ -75,6 +75,7 @@ class FlightQueue:
         dependencies: Mapping[str, Sequence[FlightDependency]] | None = None,
         execution_context_factory: Callable[[FlightRuntime], ContextManager] | None = None,
         include_per_sample: bool = False,
+        on_generation_released: Callable[[FlightRuntime], None] | None = None,
     ) -> None:
         self._pending: list[FlightRuntime] = []
         self._known: set[str] = set()
@@ -97,6 +98,7 @@ class FlightQueue:
         self._dependencies = {key: tuple(value) for key, value in (dependencies or {}).items()}
         self._execution_context_factory = execution_context_factory
         self._include_per_sample = include_per_sample
+        self._on_generation_released = on_generation_released
         self.completed: list[FlightQueueEntry] = []
 
     def add(self, flight: FlightRuntime) -> None:
@@ -269,6 +271,8 @@ class FlightQueue:
                                 )
                             raise
                     self._states[flight.run_id] = FlightReadiness("sealed")
+                    if self._on_generation_released is not None:
+                        self._on_generation_released(flight)
                     kwargs = {"include_per_sample": True} if self._include_per_sample else {}
                     future = self._score_pool().submit(flight.score, **kwargs)
                     entry = FlightQueueEntry(flight, False, self._served_geometry, future)

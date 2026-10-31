@@ -66,9 +66,16 @@ def test_root_campaign_runs_existing_harness_and_complete_score_under_lease(tmp_
     repo, runtime_root, data = _serving_world(tmp_path)
     session_dir = _write_serving_session(repo, runtime_root, data)
     scored = []
+    released = []
+    def release(flight):
+        assert not (data / "locks/flight.lock").exists()
+        assert not scored
+        assert flight.receipts.has("seal")
+        released.append(flight.run_id)
     runtime, starter, attached = _serving_runtime(tmp_path, repo)
     original_score = runtime.score
     def score(**kwargs):
+        assert released == [_SERVING_RUN_ID]
         assert not (data / "locks/flight.lock").exists()
         sealed = read_flight_receipts(
             data / "runs" / _SERVING_RUN_ID / "attempt-serving" / "flight-receipts.json"
@@ -80,6 +87,7 @@ def test_root_campaign_runs_existing_harness_and_complete_score_under_lease(tmp_
     report = run_campaign(
         [runtime], cells=[cell()], repo_root=repo, data_root=data,
         owner="coordinator", expected_session_id="serving-test",
+        on_generation_released=release,
     )
     assert report["states"][_SERVING_RUN_ID]["state"] == "scored"
     assert scored == [{"include_per_sample": True}]
