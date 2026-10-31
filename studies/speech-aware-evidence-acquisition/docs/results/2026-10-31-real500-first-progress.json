@@ -1196,44 +1196,44 @@
   },
   "tp8_progress_observation": {
     "schema": "saea-real-engine-progress-v1",
-    "state": "running",
-    "completed_rows": 497,
+    "state": "complete",
+    "completed_rows": 500,
     "total_rows": 500,
-    "checkpoint_rows": 497,
+    "checkpoint_rows": 500,
     "unusable_checkpoint_rows": 0,
-    "remaining_rows": 3,
-    "checkpoint_sha256": "1f12db569a11e852e350440a58eeccefdff0290380200532ca7f727703171f06",
+    "remaining_rows": 0,
+    "checkpoint_sha256": "c6f1cb7789b6995c8e4c0ba294f700c191d4b0b4c2a420bd94723a5753173b59",
     "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
     "torn_tail_bytes": 0,
     "cards": 8,
     "instances": 1,
-    "elapsed_seconds": 2287.011569738388,
-    "wall_seconds_per_complete_row": 4.601632937099373,
-    "rows_per_second": 0.21731416079230942,
-    "estimated_remaining_seconds": 13.804898811298116,
-    "eta_basis": "Linear observed whole-task completion rate; startup and tail may change it.",
-    "full_roster_comparison_eligible": false,
+    "elapsed_seconds": 2330.706417798996,
+    "wall_seconds_per_complete_row": 4.661412835597992,
+    "rows_per_second": 0.21452723353813705,
+    "estimated_remaining_seconds": 0,
+    "eta_basis": null,
+    "full_roster_comparison_eligible": true,
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 994.0,
-      "audio_seconds": 2933.3448750000016,
-      "latency_seconds": 444436.3792167399,
-      "prompt_tokens": 6111837.0,
-      "completion_tokens": 1598459.0,
+      "calls": 1000.0,
+      "audio_seconds": 2947.1688750000017,
+      "latency_seconds": 447065.7544451999,
+      "prompt_tokens": 6158192.0,
+      "completion_tokens": 1617376.0,
       "tool_calls": 0.0
     },
     "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
     "complete_sample_timings": {
       "admission_wait": {
-        "n": 497,
-        "mean_s": 3.6472105984507044,
-        "p50_s": 3.71223723,
+        "n": 500,
+        "mean_s": 3.6598316329,
+        "p50_s": 3.7238979600000004,
         "p95_s": 5.84688077
       },
       "admitted_to_finished": {
-        "n": 497,
-        "mean_s": 1365.4066413056742,
-        "p50_s": 1420.28531494,
-        "p95_s": 2068.90376122
+        "n": 500,
+        "mean_s": 1370.0541508763,
+        "p50_s": 1429.74387816,
+        "p95_s": 2078.46949717
       }
     },
     "new_model_calls": 0,
@@ -1243,10 +1243,10 @@
       "Partial or failed candidates cannot establish a full-roster throughput winner.",
       "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
     ],
-    "observed_at": 1793465713.469152,
-    "generation_sealed": false,
+    "observed_at": 1793466317.4874177,
+    "generation_sealed": true,
     "duration_scope": "Runner start to generation seal when sealed; excludes scoring",
-    "official_scoring_state": "pending_or_running"
+    "official_scoring_state": "succeeded"
   },
   "a0_automatic_handoff": {
     "state": "waiting_verified_full_comparison",
@@ -1264,5 +1264,154 @@
     "interval_seconds": 600,
     "tests_passed": 16,
     "full_production_scoring_verified": false
+  },
+  "tp8_complete_result": {
+    "allocated_card_hours_until_seal": 5.17934759510888,
+    "candidate": "slurp-real500-tp8-s256-v1",
+    "cards": 8,
+    "checkpoint_cost_reconciled": true,
+    "checkpoint_sha256": "c6f1cb7789b6995c8e4c0ba294f700c191d4b0b4c2a420bd94723a5753173b59",
+    "cost": {
+      "audio_seconds_used": 2947.1688749999917,
+      "calls_used": 1000,
+      "completion_tokens_total": 1617376,
+      "latency_seconds_total": 447065.75444520044,
+      "prompt_tokens_total": 6158192,
+      "tool_calls": 0,
+      "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+    },
+    "generation_sealed": true,
+    "generation_seconds_per_row": 4.661412835597992,
+    "generation_start_to_seal_seconds": 2330.706417798996,
+    "instances": 1,
+    "limitations": [
+      "Generation duration includes runner preparation and seal; excludes deployment and official scoring.",
+      "Allocated card-hours are not measured utilization; serving counters and FIT require separate reconciliation.",
+      "Real500 train comparison does not replace full1080 A0 or full13078 test evaluation."
+    ],
+    "max_num_seqs_per_instance": 256,
+    "new_model_calls": 0,
+    "new_scoring_jobs": 0,
+    "official_finalized": true,
+    "profile": "qwen3-omni-real500-1xtp8-s256-b2048-v1",
+    "quality": {
+      "intent_accuracy": 0.858,
+      "scenario_accuracy": 0.8960000000000001,
+      "slu_f1": 0.7114003035532468,
+      "span_f1": 0.6297502714440825
+    },
+    "quality_identity_passed": true,
+    "remaining_rows": 0,
+    "rows": 500,
+    "run_id": "SAEA-SLURP-REAL500-TP8-S256-V1",
+    "schema": "saea-real500-verified-result-v1",
+    "scores_sha256": "081be9bf525d0f933ab1eefb797f620c9ad1a5a70d4db3acd5809f9b1d5038d2",
+    "selection_evidence": {
+      "generation_elapsed_seconds": 2330.706417798996,
+      "generation_manifest": {
+        "relpath": "runs/SAEA-SLURP-REAL500-TP8-S256-V1/attempt-real500-tp8-s256-v1/SAEA-SLURP-REAL500-TP8-S256-V1.generation-manifest.json",
+        "sha256": "4c2e84733452f1afa6bcf2945ecfd5ffe757346c6ce640d540b6fa1de512841f"
+      },
+      "manifest": {
+        "relpath": "runs/SAEA-SLURP-REAL500-TP8-S256-V1/attempt-real500-tp8-s256-v1/SAEA-SLURP-REAL500-TP8-S256-V1.run-manifest.json",
+        "sha256": "31527e8e0611a87251fc0a5030e6bdb83e63f6a1e8e5ff4ae79e4190210dc624"
+      },
+      "started": {
+        "relpath": "work/codex/real500-successor-queue-v1/slurp-real500-tp8-s256-v1/run/started.json",
+        "sha256": "feb3634d4190e4b938e94143eb598d6ade8b75a5483ff1b4de2e8e6f4b97af77"
+      }
+    },
+    "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0"
+  },
+  "tp8_complete_phase_timing": {
+    "schema": "saea-real-phase-timing-v1",
+    "checkpoint_sha256": "c6f1cb7789b6995c8e4c0ba294f700c191d4b0b4c2a420bd94723a5753173b59",
+    "timing_partial_tail": false,
+    "rows": 500,
+    "metrics": {
+      "perception/scientific_request": {
+        "n": 500,
+        "mean_s": 436.81786427733994,
+        "p50_s": 369.66873593000037,
+        "p95_s": 913.1678304199995
+      },
+      "perception/request_total": {
+        "n": 500,
+        "mean_s": 436.93082099828,
+        "p50_s": 369.8276625549988,
+        "p95_s": 913.280752839999
+      },
+      "perception/http_request": {
+        "n": 500,
+        "mean_s": 436.72957352518,
+        "p50_s": 369.3589246349993,
+        "p95_s": 913.0902490100016
+      },
+      "solver/scientific_request": {
+        "n": 500,
+        "mean_s": 457.3136446130599,
+        "p50_s": 391.2036086650005,
+        "p95_s": 978.0859885699992
+      },
+      "solver/request_total": {
+        "n": 500,
+        "mean_s": 457.4286474453999,
+        "p50_s": 391.46589056999983,
+        "p95_s": 978.1530110900003
+      },
+      "solver/http_request": {
+        "n": 500,
+        "mean_s": 457.2061867392801,
+        "p50_s": 391.1091735500004,
+        "p95_s": 978.0103357599983
+      },
+      "perception_end_to_solver_request_start": {
+        "n": 500,
+        "mean_s": 1.237654769560042,
+        "p50_s": 1.1367574899995816,
+        "p95_s": 2.5259765000009793
+      },
+      "perception_start_to_solver_end": {
+        "n": 500,
+        "mean_s": 895.5971232132399,
+        "p50_s": 831.9258846450002,
+        "p95_s": 1506.9931427400006
+      },
+      "admission_to_perception_request_start": {
+        "n": 500,
+        "mean_s": 474.31152758638,
+        "p50_s": 97.06359890499971,
+        "p95_s": 1323.6205837199996
+      },
+      "solver_request_end_to_sample_finished": {
+        "n": 500,
+        "mean_s": 0.14550007668000034,
+        "p50_s": 0.0470043049999731,
+        "p95_s": 0.7319102199999179
+      },
+      "admission_to_sample_finished": {
+        "n": 500,
+        "mean_s": 1370.0541508763,
+        "p50_s": 1429.7438781599985,
+        "p95_s": 2078.469497170001
+      }
+    },
+    "missing_timing_entries": 0,
+    "missing_sample_count": 0,
+    "limitations": [
+      "Completed subset is descriptive and may be biased toward faster samples.",
+      "P\u2192S gap contains preparation/FIT/scheduling; not pure CPU time.",
+      "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+      "Nested intervals overlap; do not sum as whole-task wall time."
+    ],
+    "new_model_calls": 0
+  },
+  "paired_full1080_read": {
+    "state": "waiting_full1080_official_score",
+    "pid": 1283192,
+    "interval_seconds": 600,
+    "tests_passed": 20,
+    "direct_full1080_reverification_passed": true,
+    "a0_full_comparison_complete": false
   }
 }
