@@ -60,3 +60,7 @@ def test_closure_revalidates_content_before_accepting_receipts(tmp_path, monkeyp
         with pytest.raises(ValueError): m.verify_derivatives(tmp_path, source, retrieval, agreed, ids)
     else:
         assert len(m.verify_derivatives(tmp_path, source, retrieval, agreed, ids)) == 1080
+
+
+def test_alias_identity_matches_actual_receipt_path():
+    assert m.ALIAS_RUN == Path(m.inputs.ALIAS_RECEIPT).parent.name

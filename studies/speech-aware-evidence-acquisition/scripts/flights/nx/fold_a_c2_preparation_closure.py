@@ -17,7 +17,7 @@ from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 read, sha, raw, confined = inputs.read, inputs.sha, inputs.raw, inputs.confined
 PACKAGE = 'docs/readiness/2026-10-31-fold-a-c2-preparation-closure-v1'
 REPORT = PACKAGE + '/closure-v1.json'
-ALIAS_RUN = 'SAEA-SLURP-STAGE3-CONSTRUCTION-Fold A-ALIAS-NPU-PORT-V1'
+ALIAS_RUN = 'SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-A-ALIAS-NPU-PORT-V1'
 
 
 def verify_derivatives(data, source_rows, retrieval, agreement_complete, ids):
