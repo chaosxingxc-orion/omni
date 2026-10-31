@@ -44,6 +44,8 @@
     "tokenize_results": 1050,
     "unknown_tokenize_intents": 18,
     "new_trial": "fresh synthetic seed, host-local durable checkpoints",
-    "shared_archive_complete": false
+    "shared_archive_complete": false,
+    "periodic_snapshot_verified": true,
+    "archive_status": "periodic snapshots running; final complete archive pending"
   }
 }
