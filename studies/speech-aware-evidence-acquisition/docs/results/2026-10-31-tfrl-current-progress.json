@@ -193,10 +193,12 @@
     "banked_stage_read_tests_passed": 118,
     "banked_stage_read_deployed": false,
     "execution_tree": {
-      "study_commit": "e024408d7ec5db87353e514216043f4443574780",
+      "study_commit": "6eebf88a1eb40dcd40a350b2228b04ad96ee1d53",
       "runtime_source_preserved": true,
       "tests_passed": 205,
-      "generation_started": false
+      "generation_started": false,
+      "install_entry_tests_passed": 99,
+      "actual_configs_installed": false
     }
   },
   "successor_preparation_queue": {
