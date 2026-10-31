@@ -13,6 +13,9 @@ def validate_workload(repo, data, name, spec):
     if spec.get("workload_kind") == "tfrl-real-seed-half":
         from tfrl_current_generation import validate_half
         return validate_half(repo, name, spec, exp, view)
+    if spec.get("workload_kind") == "tfrl-context-repair-complement":
+        from tfrl_h1_remaining import validate
+        return validate(repo,data,name,spec,exp,view)
     ids = [row["sample_id"] for row in view["items"]]
     if len(ids) != spec["rows"] or view["count"] != spec["rows"] or len(set(ids)) != len(ids) or view["split_identity_hash"] != spec["split_identity_hash"]:
         raise ValueError("registered population differs")

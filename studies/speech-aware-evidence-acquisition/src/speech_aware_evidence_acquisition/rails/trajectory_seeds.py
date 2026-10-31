@@ -88,13 +88,25 @@ def verify_recorded_group(row_id, arms, requests):
     if any(not rows for rows in indexed.values()):raise ValueError('seed group lacks actual arm requests')
     lock=indexed[arms[-1]['contact_id']][0]
     fields=('speech_feature_parts','speech_packet_sha256','query_source','supplied_evidence',
-            'evidence_provenance','task_instruction','tool_schemas')
+            'task_instruction','tool_schemas')
     def context(request):
         history=request['history']
         control=json.loads(history[-1]['content'])
         control.pop('contact_id',None)
         return history[:-1],control
+    def provenance(request):
+        # rails-supply relpath is a request-owned trace address, not evidence.
+        # Validate its exact ownership before normalizing that routing field.
+        sources=[]
+        for index, source in enumerate(request.get('evidence_provenance', [])):
+            if source.get('lock_key') == 'rails-supply':
+                if source.get('relpath') != f"rails-message/{request['request_id']}/{index}":
+                    raise ValueError('seed group supply provenance has wrong request ownership')
+                source={**source,'relpath':f'rails-message/<request>/{index}'}
+            sources.append(source)
+        return sources
     common=context(lock)
+    common_provenance=provenance(lock)
     count=0
     for arm in arms:
         rows=indexed[arm['contact_id']]
@@ -111,7 +123,8 @@ def verify_recorded_group(row_id, arms, requests):
                 raise ValueError('twin or lock sampling changed')
             count+=1
         first=rows[0]
-        if any(first.get(k)!=lock.get(k) for k in fields) or context(first)!=common:
+        if (any(first.get(k)!=lock.get(k) for k in fields) or context(first)!=common
+                or provenance(first)!=common_provenance):
             raise ValueError('seed-only trajectory changed the actual context')
         target={**lock['decoding_params'],**(expected or {})}
         if first['decoding_params']!=target:

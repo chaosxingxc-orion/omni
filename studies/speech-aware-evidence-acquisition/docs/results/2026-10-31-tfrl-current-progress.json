@@ -1,13 +1,13 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T19:04:01.629839+00:00",
-  "completed_rows": 25,
+  "observed_at_utc": "2026-10-31T19:41:00Z",
+  "completed_rows": 0,
   "total_rows": 625,
   "h1": {
-    "state": "failed",
-    "completed_rows": 25,
+    "state": "admitted_preflight_queued",
+    "completed_rows": 0,
     "total_rows": 313,
-    "remaining_rows": 288,
+    "remaining_rows": 313,
     "checkpoint_sha256": "5ac8ce266b26288e05854adde933101959ca43e145971872b910e5dd3352f87d",
     "torn_tail_bytes": 0,
     "unusable_checkpoint_rows": 0,
@@ -36,24 +36,34 @@
     "elapsed_seconds": 923.612692117691,
     "wall_seconds_per_complete_row": 36.944507684707645,
     "estimated_remaining_seconds": null,
-    "timing_basis": "driver started receipt to generation exit; excludes post-exit observation delay"
+    "timing_basis": "driver started receipt to generation exit; excludes post-exit observation delay",
+    "original_checkpoint_rows": 25,
+    "reuse_candidate_rows": 3,
+    "context_affected_rows": 22,
+    "remaining_inference_rows": 310,
+    "wall_seconds_per_complete_row_note": "Historical failed-run diagnostic only; 22 of 25 rows had erroneous context compaction.",
+    "recovery_source_commit": "a56669d48d06170c8feed429c4a9bf111ab82c76",
+    "generation_dependency": "H2 generation successful terminal; poll 600 seconds",
+    "official_union": "pending"
   },
   "h2": {
-    "state": "running",
+    "state": "dispatch_started_generation_unconfirmed",
     "completed_rows": 0,
     "total_rows": 312,
     "remaining_rows": 312,
     "cards": 8,
     "instances": 2,
     "estimated_remaining_seconds": null,
-    "started_at_utc": "2026-10-31T19:24:36.106294+00:00"
+    "started_at_utc": "2026-10-31T19:38:31.113885Z",
+    "previous_dispatch": "Failed before lease acquisition; no model calls. Stale metadata reconciled after liveness and guard checks."
   },
   "resources": {
     "cards": 8,
     "instances": 2,
     "tensor_parallel": 4,
     "max_num_seqs_per_instance": 128,
-    "generation_active": true
+    "generation_active": null,
+    "note": "Selected resident service: 8 cards, 2 TP4 instances. New dispatch started; actual requests not yet confirmed."
   },
   "hardware_snapshot": {
     "observed_at_utc": "2026-10-31T18:54:25Z",
@@ -69,7 +79,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "H2 restarted on repaired code; no new completion snapshot yet. H1 retains 25 rows and needs source-bound recovery. ETA unknown.",
+  "eta_note": "ETA unknown. H2 dispatch passed fresh preflight; generation not yet confirmed. H1 requires 310 corrected inferences and source-bound reuse of 3 verified candidates.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -77,8 +87,8 @@
     "model_calls": 0,
     "scoring_jobs": 0
   },
-  "state": "h2_running_h1_checkpoint_preserved",
-  "remaining_rows": 600,
+  "state": "h2_dispatch_started_generation_unconfirmed_h1_recovery_prepared",
+  "remaining_rows": 625,
   "bank_read": {
     "registered": true,
     "state": "failed_upstream",
@@ -96,9 +106,14 @@
   "repair": {
     "implemented": true,
     "recovery_runtime_tests_passed": 84,
-    "production_resumed": true,
+    "production_resumed": false,
     "h2_preflight": "passed_exit0",
     "h1_checkpoint_preserved": true,
-    "source_commit": "c3d347231efbae61627b7955f9ed7d6e92f1e2d0"
-  }
+    "source_commit": "d0b9d593444732ff4e1f2ae6959ed1830bc1f511",
+    "h1_wire_replay_rows": 3,
+    "h1_wire_replay_contacts": 21,
+    "h1_wire_replay_new_model_calls": 0
+  },
+  "reuse_candidate_rows": 3,
+  "completion_note": "No current repaired complete-row observation. Three historical rows passed wire replay; official source-bound union still pending."
 }

@@ -1,0 +1,27 @@
+{
+  "schema": "saea-tfrl-h1-recovery-audit-summary-v1",
+  "original_rows": 25,
+  "context_affected_rows": 22,
+  "reuse_candidate_rows": 3,
+  "remaining_inference_rows": 310,
+  "parent_rows": 313,
+  "custody_sha256": "3558805799b23bd3ad4d39313c94c5d29cddbc08c739d0cf26edc0cd5e3fedec",
+  "remaining_roster_sha256": "be3b3a74e9ab85164ada3919d9566e2c456d2b5521d4a10b3ebd838deaba2685",
+  "offline_replay": {
+    "rows": 3,
+    "contacts": 21,
+    "wire_equal": true,
+    "delivered_output_equal": true,
+    "raw_boundary_equal": false,
+    "boundary_equal_after_custody_projection": true,
+    "custody_transition_rows": 18,
+    "new_model_calls": 0,
+    "limitation": "Recorded response replay, not an independent inference or capacity measurement; official source-bound union pending."
+  },
+  "formal_tests": {
+    "custody_and_live_seed_and_bundle": 34,
+    "remaining_roster_and_derivation": 7
+  },
+  "original_costs_retained": true,
+  "selection_uses_scores": false
+}

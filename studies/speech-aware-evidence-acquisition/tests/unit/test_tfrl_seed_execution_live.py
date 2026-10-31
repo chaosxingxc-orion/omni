@@ -147,3 +147,20 @@ def test_registered_fit_count_controls_seed_group_without_byte_heuristic(tmp_pat
         output["native_episode_receipt"] = {"role_visits": []}
         with pytest.raises(ValueError):
             verify(plan, [output], trace)
+
+
+@pytest.mark.parametrize('fault',[None,'owner','hash'])
+def test_seed_context_accepts_only_owned_trace_provenance_routes(tmp_path,fault):
+    import copy
+    from dataclasses import replace
+    _,_,g=group();h=_decoding_harness(tmp_path,g,rows=1)
+    h.config=replace(h.config,prompt_contact_limits='legacy-c17-lock-v1')
+    summary,_=_run(h);row=summary.results[0];requests=copy.deepcopy(_requests(h))
+    for req in requests:
+        req['evidence_provenance']=[{'lock_key':'rails-supply',
+            'relpath':f"rails-message/{req['request_id']}/0",'sha256':'a'*64}]
+    if fault=='owner':requests[1]['evidence_provenance'][0]['relpath']='rails-message/not-owned/0'
+    elif fault=='hash':requests[1]['evidence_provenance'][0]['sha256']='b'*64
+    if fault:
+        with pytest.raises(ValueError):verify_recorded_group(row.sample_id,row.supply_variants['arms'],requests)
+    else:assert verify_recorded_group(row.sample_id,row.supply_variants['arms'],requests)==6
