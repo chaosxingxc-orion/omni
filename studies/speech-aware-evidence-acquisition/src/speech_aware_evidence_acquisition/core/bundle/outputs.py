@@ -1060,6 +1060,15 @@ def _verify_supply_variant_trace_binding(
             or row.get("response_sha256") != last.get("response_sha256")):
         refuse("output identity is not the final delivering arm contact")
 
+    from ...rails.trajectory_seeds import verify_recorded_group
+    try:
+        verify_recorded_group(row.get("sample_id"), arms, [
+            payload["payload"] for record_id, payload in trace_records.items()
+            if record_id.endswith("/request") and isinstance(payload.get("payload"), Mapping)
+        ])
+    except (ValueError, KeyError, TypeError) as error:
+        refuse(f"seed-only request binding failed: {error}")
+
 
 def _verify_perception_branch_trace_binding(
     row: Mapping[str, object], trace_records: Mapping[str, Mapping[str, object]],

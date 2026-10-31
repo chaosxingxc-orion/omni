@@ -4,7 +4,7 @@ pytest.importorskip('openjiuwen')
 from test_llama_server_transport import _spawn_live_matching_process
 from test_tfrl_seed_execution import group
 from test_decoding_variants_live import _decoding_harness,_requests,_run,seam
-from speech_aware_evidence_acquisition.rails.trajectory_seeds import resolve
+from speech_aware_evidence_acquisition.rails.trajectory_seeds import resolve, verify_recorded_group
 from speech_aware_evidence_acquisition.rails.native_episode_receipt import validate_supply_variant_receipt
 
 
@@ -28,6 +28,7 @@ def test_real_shared_runner_delivers_seed_only_candidates_and_valid_receipt(tmp_
         assert all(x==normalized[0] for x in normalized)
         assert len({r['decoding_params']['seed'] for r in candidates})==4
         assert twin['decoding_params']==lock['decoding_params']
+        assert verify_recorded_group(result.sample_id,result.supply_variants['arms'],requests)==6
         validate_supply_variant_receipt(result.supply_variants,arm_ids=g.arm_ids,delivered_arm_id='lock',
             phase_id='solver',retrieved_value_ids=result.final_query_state.retrieved_value_ids,arm_visits='first')
 
@@ -39,3 +40,44 @@ def test_request_seam_resolves_recipe_and_fallback_keeps_seed(seam):
     body=adapter.prepare(req).rendered_body()['decoding_params']
     assert body['seed']==resolve(g.arm('s1').decoding,'s1')['seed']
     assert 'trajectory_index' not in body and 'trajectory_seed_base' not in body
+
+
+@pytest.mark.parametrize('fault',['seed','evidence','instruction','missing_arm','recipe_on_wire','twin','extra_decoding'])
+def test_seed_request_audit_refuses_runtime_mismatch(tmp_path,fault):
+    import copy
+    from dataclasses import replace
+    p,b,g=group();h=_decoding_harness(tmp_path,g,rows=1)
+    h.config=replace(h.config,prompt_contact_limits='legacy-c17-lock-v1')
+    summary,_=_run(h);result=summary.results[0];requests=copy.deepcopy(_requests(h))
+    target=requests[1]
+    if fault=='seed':target['decoding_params']['seed']+=1
+    elif fault=='evidence':target['supplied_evidence']=[{'changed':True}]
+    elif fault=='instruction':target['task_instruction']='changed'
+    elif fault=='missing_arm':requests.pop(1)
+    elif fault=='recipe_on_wire':target['decoding_params']['trajectory_index']=0
+    elif fault=='twin':requests[-2]['decoding_params']['seed']=999
+    elif fault=='extra_decoding':target['decoding_params']['max_tokens']+=1
+    with pytest.raises(ValueError):verify_recorded_group(result.sample_id,result.supply_variants['arms'],requests)
+
+
+@pytest.mark.parametrize('fault',[None,'plan_seed','plan_row','receipt_seed'])
+def test_real_runner_receipts_bind_back_to_plan(tmp_path,fault):
+    import copy
+    from dataclasses import replace
+    import tfrl_v2_sampler as sampler
+    from tfrl_seed_request_audit import verify
+    _,_,g=group();h=_decoding_harness(tmp_path,g,rows=1)
+    h.config=replace(h.config,prompt_contact_limits='legacy-c17-lock-v1')
+    summary,_=_run(h);result=summary.results[0]
+    plan=sampler.build_plan({'roster_id':sampler.cm.HALF_ROSTER_ID['R01C-H1'],
+        'split_identity_hash':'a'*64,'items':[{'sample_id':result.sample_id,'audio_seconds':2.}]},'R01C-H1',1)
+    row={'sample_id':result.sample_id,'supply_variants':copy.deepcopy(result.supply_variants)}
+    trace={rid:p for channel,rid,p in h.trace.records}
+    if fault=='plan_seed':plan['row_plan'][0]['contacts'][1]['seed']+=1
+    elif fault=='plan_row':row['sample_id']='different'
+    elif fault=='receipt_seed':row['supply_variants']['arms'][0]['decoding_override']['trajectory_seed_base']+=1
+    if fault:
+        with pytest.raises(ValueError):verify(plan,[row],trace)
+    else:
+        audit=verify(plan,[row],trace)
+        assert audit['rows']==1 and audit['solver_requests_verified']==6
