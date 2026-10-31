@@ -468,6 +468,39 @@ def run_preparation(
     )
 
 
+def preparation_lease_root(protocol, encoder, plan, data_root, backend_factory, contact_kind):
+    """Use separate custody only for a registered, confined CPU speech pool.
+
+    The opt-in declaration is part of the hashed protocol, never an environment
+    switch. Default preparation retains the ordinary generation lease. CPU-only
+    custody serializes isolated preparations and preserves failure metadata using
+    the same durable kernel-lock implementation as generation.
+    """
+    isolation = protocol.get("cpu_isolation")
+    if isolation is None:
+        return data_root
+    from .cpu_encoder_pool import CPU_INVENTORY_SCHEMA, check_cpu_inventory
+    if (contact_kind != "speech" or backend_factory is not _cpu_speech_backend
+            or encoder.get("schema") != CPU_INVENTORY_SCHEMA):
+        raise SpeechPreparationError("isolated preparation requires the verified CPU speech backend")
+    check_cpu_inventory(encoder)
+    first = encoder["first_core"]
+    cpus = list(range(first, first + encoder["workers"] * encoder["threads_per_worker"]))
+    if isolation != {"schema": "saea-cpu-preparation-isolation-v1", "cpu_ids": cpus,
+                     "generation_overlap": True}:
+        raise SpeechPreparationError("CPU isolation declaration differs from the registered pool")
+    if set(os.sched_getaffinity(0)) != set(cpus):
+        raise SpeechPreparationError("isolated preparation requires its exact CPU affinity")
+    if any(Path("/dev").glob("davinci*")) or any(Path("/dev").glob("nvidia*")):
+        raise SpeechPreparationError("isolated CPU container must not expose accelerator devices")
+    prefix = f"prepared/{plan.run_id}/"
+    if any(protocol.get(k) != prefix + suffix for k, suffix in (
+            ("output_relpath", "index.json"), ("query_rows_relpath", "queries.jsonl"),
+            ("cache_relpath", "span-cache"))):
+        raise SpeechPreparationError("isolated CPU outputs and cache must belong to its own run")
+    return data_root / "coordination" / "cpu-preparation-custody"
+
+
 def _execute_preparation(
     *,
     config,
@@ -488,6 +521,7 @@ def _execute_preparation(
     forward_phase="encoder_forward_started",
 ):
     """Share custody, pre-contact accounting, sealing and aborts across modalities."""
+    lease_root = preparation_lease_root(protocol, encoder, plan, data_root, backend_factory, contact_kind)
     attempt_dir = data_root / "preparation-runs" / plan.run_id / str(plan.attempt_id)
     attempt_dir.mkdir(parents=True, exist_ok=False)
     started = time.monotonic()
@@ -520,7 +554,7 @@ def _execute_preparation(
             os.fsync(handle.fileno())
 
     with GenerationLease.acquire(
-        data_root,
+        lease_root,
         owner="root-speech-preparation"
         if contact_kind == "speech"
         else "root-text-facet-preparation",
@@ -604,6 +638,7 @@ def _execute_preparation(
                         else "saea-text-facet-preparation-receipt-v1"
                     ),
                     "status": "SEALED",
+                    **({"cpu_isolation": protocol["cpu_isolation"]} if "cpu_isolation" in protocol else {}),
                     "run_id": plan.run_id,
                     "attempt_id": plan.attempt_id,
                     "protocol_sha256": plan.protocol_hash,

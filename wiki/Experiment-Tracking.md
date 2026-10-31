@@ -1,6 +1,6 @@
 # 实验总账
 
-更新时间：2026-10-31 04:58 UTC
+更新时间：2026-10-31 05:18 UTC
 
 研究顺序：先完成 Direct/A0 收益、稳定性、成本及错误分析，再开展 training-free RL，保留固定 A0 控制组。方法冻结后，Direct、A0、最佳 TFRL 均在完整 13,078 条 SLURP test 上报告指标；此前 test 子样本报告未用于调优，不视为污染。
 
@@ -9,7 +9,7 @@
 | Direct lock | TRAIN Fold B 1,080 行 | FINALIZED/PASS | 45.1178% | 完整官方评分 |
 | Direct aa | 同上 | FINALIZED/PASS | 45.6633% | 重复噪声估计 |
 | Direct ab | 同上 | FINALIZED/PASS | 45.2940% | 重复噪声估计 |
-| 初始 Agent A0 | 同上 | 正在推理，已核验 153 个持久化样本 | 待完成 | 局部 checkpoint 非全量官方评分 |
+| 初始 Agent A0 | 同上 | 正在推理，已核验 190 个持久化样本 | 待完成 | 局部 checkpoint 非全量官方评分 |
 | Fold A 编码、检索准备 | TRAIN Fold A 1,080 行 | 已排队，等待 A0 和 paired read 成功 | 不适用 | 准备工作不是任务指标 |
 | 当前 A0 方法的 Fold A 评估 | TRAIN Fold A 1,080 行 | 独立准入、完整推理及六列诊断已入队，待上游 | 待运行 | 真实预检与推理尚未执行 |
 | TFRL | 首轮 625 条 construction rows | 等待 D0/A0 lock | 待运行 | 313/312 split，K=4，最多三轮 |
