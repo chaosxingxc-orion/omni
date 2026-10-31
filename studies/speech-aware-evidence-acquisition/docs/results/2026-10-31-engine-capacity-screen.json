@@ -1,6 +1,6 @@
 {
   "schema": "saea-engine-capacity-screen-summary-v1",
-  "status": "wide-aborted-host-kernel-failure-reboot-approval-pending",
+  "status": "screen-complete-provisional",
   "dataset_rows": 0,
   "cards": 8,
   "instances": 4,
@@ -58,5 +58,45 @@
     "performance_eligible": false,
     "cause": "host RCU/expand_files stalls affect API and client",
     "reboot_performed": false
-  }
+  },
+  "levels": [
+    {
+      "concurrency": 24,
+      "requests": 384,
+      "wall_s": 658.9249580700416,
+      "requests_per_hour": 2097.9627240846676,
+      "output_tokens_per_s": 1153.2314730127825,
+      "errors": 0,
+      "timeouts": 0,
+      "preemptions": 0,
+      "kv_peak": 0.41547538007715,
+      "waiting_peak": 6
+    },
+    {
+      "concurrency": 28,
+      "requests": 384,
+      "wall_s": 686.4790402299259,
+      "requests_per_hour": 2013.7541264726535,
+      "output_tokens_per_s": 1226.304010269623,
+      "errors": 0,
+      "timeouts": 0,
+      "preemptions": 0,
+      "kv_peak": 0.5277966870887225,
+      "waiting_peak": 8
+    },
+    {
+      "concurrency": 32,
+      "requests": 384,
+      "wall_s": 518.18154203007,
+      "requests_per_hour": 2667.790895415143,
+      "output_tokens_per_s": 1579.8690875648624,
+      "errors": 0,
+      "timeouts": 0,
+      "preemptions": 0,
+      "kv_peak": 0.5847515316541861,
+      "waiting_peak": 3
+    }
+  ],
+  "provisional_winner": 32,
+  "locked": false
 }
