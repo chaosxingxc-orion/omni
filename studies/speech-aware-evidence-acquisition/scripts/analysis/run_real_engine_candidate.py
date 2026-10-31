@@ -1,4 +1,4 @@
-"""Run one registered real500 candidate using shared campaign/lease/checkpoints.
+"""Run one registered real workload using shared campaign/lease/checkpoints.
 
 The host launches this once in a detached formal container. No auto-retry,
 synthetic request path, alternate gate, or historical response injection exists.
@@ -34,14 +34,16 @@ def run(repo,data,name,out):
     commit=require_clean_study_repo(repo)
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned output required; inspect existing attempts before resume')
     spec=json.loads((repo/'docs/readiness'/name/'candidate.json').read_bytes())
-    if spec['rows']!=500 or name!=spec['cell'] or os.environ.get('SAEA_DEPLOYMENT_PROFILE')!=spec['profile']:raise ValueError('candidate topology/roster differs')
+    from registered_workload import validate_workload
+    rows=validate_workload(repo,data,name,spec)
+    if os.environ.get('SAEA_DEPLOYMENT_PROFILE')!=spec['profile']:raise ValueError('candidate topology differs')
     cells=load_campaign_cells(repo,name);cell,=cells
     if declared_readiness(cell,data).state!='ready':raise ValueError('candidate not ready')
     for rid,aid in [(spec['run_id'],spec['attempt_id']),(spec['fit_run_id'],spec['fit_attempt_id'])]:
         if (data/'attempts'/rid/(aid+'.json')).exists() or (data/'runs'/rid/aid).exists():raise ValueError('existing attempt: no blind replay')
     out.mkdir(parents=True)
     def save(name,doc):publish_new(out/name,(json.dumps(doc,indent=2)+'\n').encode())
-    save('started.json',{'pid':os.getpid(),'time':time.time(),'study_commit':commit,'candidate':name,'profile':spec['profile'],'rows':500})
+    save('started.json',{'pid':os.getpid(),'time':time.time(),'study_commit':commit,'candidate':name,'profile':spec['profile'],'rows':rows})
     try:
         runtime=build_flight_runtime(repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],baseline=cell.document['baseline_fragment'],experiment=name,run_id=cell.run_id,attempt_id=cell.attempt_id,runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json')
         assert_prepared_artifacts_current([runtime])
@@ -49,8 +51,8 @@ def run(repo,data,name,out):
         result=run_campaign([runtime],cells=cells,repo_root=repo,data_root=data,owner='Codex-real500',expected_session_id=spec['service_session'])
         save('campaign.json',result)
         assert_campaign_success(result, cell.run_id)
-        save('complete.json',{'candidate':name,'rows':500,'campaign_wall_seconds':time.monotonic()-started,'includes_preflight_preprocess_scoring':True,'profile':spec['profile'],'result':result})
-        return {'candidate':name,'rows':500,'completed':True}
+        save('complete.json',{'candidate':name,'rows':rows,'campaign_wall_seconds':time.monotonic()-started,'includes_preflight_preprocess_scoring':True,'profile':spec['profile'],'result':result})
+        return {'candidate':name,'rows':rows,'completed':True}
     except BaseException as error:
         save('failed.json',{'type':type(error).__name__,'error':str(error),'automatic_retry':False,'preserve':'attempt costs, FIT contacts, complete-row checkpoints and unresolved requests'})
         raise

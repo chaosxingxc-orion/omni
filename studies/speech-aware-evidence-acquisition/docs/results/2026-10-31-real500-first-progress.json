@@ -909,43 +909,43 @@
   "successor_progress": {
     "schema": "saea-real-engine-progress-v1",
     "state": "running",
-    "completed_rows": 173,
+    "completed_rows": 500,
     "total_rows": 500,
-    "checkpoint_rows": 173,
+    "checkpoint_rows": 500,
     "unusable_checkpoint_rows": 0,
-    "remaining_rows": 327,
-    "checkpoint_sha256": "b5cd1d8a3063545ccadf9330b9e7c3353654f12ada527a1acc38e86fb01ed891",
+    "remaining_rows": 0,
+    "checkpoint_sha256": "9baeb692078a743fd5c0b87c7788747fd4b8040bc1986e0985579194fb79c2b0",
     "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
     "torn_tail_bytes": 0,
     "cards": 8,
     "instances": 2,
-    "elapsed_seconds": 756.9189610481262,
-    "wall_seconds_per_complete_row": 4.375254110104776,
-    "rows_per_second": 0.2285581533859876,
-    "estimated_remaining_seconds": 1430.7080940042617,
-    "eta_basis": "Linear observed whole-task completion rate; startup and tail may change it.",
+    "elapsed_seconds": 1359.5794472694397,
+    "wall_seconds_per_complete_row": 2.7191588945388796,
+    "rows_per_second": 0.3677607814712064,
+    "estimated_remaining_seconds": 0.0,
+    "eta_basis": null,
     "full_roster_comparison_eligible": false,
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 346.0,
-      "audio_seconds": 922.4474999999999,
-      "latency_seconds": 58067.358582969995,
-      "prompt_tokens": 2056635.0,
-      "completion_tokens": 404035.0,
+      "calls": 1000.0,
+      "audio_seconds": 2947.168875000001,
+      "latency_seconds": 235264.62052101034,
+      "prompt_tokens": 6194007.0,
+      "completion_tokens": 1636795.0,
       "tool_calls": 0.0
     },
     "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
     "complete_sample_timings": {
       "admission_wait": {
-        "n": 173,
-        "mean_s": 2.4710811754335262,
-        "p50_s": 2.47235503,
-        "p95_s": 3.74802166
+        "n": 500,
+        "mean_s": 3.72946311162,
+        "p50_s": 3.785353995,
+        "p95_s": 6.01728509
       },
       "admitted_to_finished": {
-        "n": 173,
-        "mean_s": 421.2438487245665,
-        "p50_s": 418.50315685,
-        "p95_s": 584.47841211
+        "n": 500,
+        "mean_s": 756.59682438562,
+        "p50_s": 797.5200851449999,
+        "p95_s": 1140.20482909
       }
     },
     "new_model_calls": 0,
@@ -955,7 +955,7 @@
       "Partial or failed candidates cannot establish a full-roster throughput winner.",
       "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
     ],
-    "observed_at": 1793461432.808399,
+    "observed_at": 1793462035.4688852,
     "generation_sealed": false,
     "duration_scope": "Runner start to generation seal when sealed; excludes scoring",
     "official_scoring_state": "pending_or_running"
@@ -982,6 +982,111 @@
     "all_real_audio": true,
     "identical_dataset_sha256": "3bd1570048b13ae456e822d986be163a83228b5772f98e50118e8531d92fef77",
     "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
+    "new_model_calls": 0
+  },
+  "a0_remaining_registration": {
+    "schema": "saea-a0-remaining-registration-summary-v1",
+    "rows": 353,
+    "normal_generation_calls": 706,
+    "fallback_inclusive_cap": 1412,
+    "fit_cap": 706,
+    "state": "registered-held",
+    "profile_selection_state": "pending",
+    "admission_minted": false,
+    "new_model_calls": 0,
+    "prepared_evidence_equal": true,
+    "prepared_phase_supply": {
+      "relpath": "prepared/SAEA-SLURP-A0-REMAINING353-C2-V1/phase-supply-v1.json",
+      "sha256": "d5dd8abbcbe86c5f134d7c77824c85ba364a8db718dc52086090d4550e7b1142",
+      "identity_ok": true,
+      "seed_ok": true
+    },
+    "execution_commit": "974b3c2b300a7d616b4314c68a3382a12d280885",
+    "actual_guard_validation": "real500 accepted; source-bound353 refused because profile selection pending",
+    "tests_passed": 13,
+    "profile_binding_full_path_tested": false
+  },
+  "successor_complete_phase_timing": {
+    "schema": "saea-real-phase-timing-v1",
+    "checkpoint_sha256": "9baeb692078a743fd5c0b87c7788747fd4b8040bc1986e0985579194fb79c2b0",
+    "timing_partial_tail": false,
+    "rows": 500,
+    "metrics": {
+      "perception/scientific_request": {
+        "n": 500,
+        "mean_s": 227.5462438642801,
+        "p50_s": 193.60619698500068,
+        "p95_s": 473.0159559399999
+      },
+      "perception/request_total": {
+        "n": 500,
+        "mean_s": 227.90278557788,
+        "p50_s": 194.04304928499914,
+        "p95_s": 473.2167565799991
+      },
+      "perception/http_request": {
+        "n": 500,
+        "mean_s": 227.42246429824,
+        "p50_s": 193.53611679499954,
+        "p95_s": 472.94477689999985
+      },
+      "solver/scientific_request": {
+        "n": 500,
+        "mean_s": 242.98299717774003,
+        "p50_s": 214.57213956500073,
+        "p95_s": 504.89745955000035
+      },
+      "solver/request_total": {
+        "n": 500,
+        "mean_s": 243.43628439652002,
+        "p50_s": 215.20144376999997,
+        "p95_s": 505.1429385499996
+      },
+      "solver/http_request": {
+        "n": 500,
+        "mean_s": 242.7596196419799,
+        "p50_s": 214.48408930999994,
+        "p95_s": 504.83174577000136
+      },
+      "perception_end_to_solver_request_start": {
+        "n": 500,
+        "mean_s": 3.14372387229999,
+        "p50_s": 1.7451924849992793,
+        "p95_s": 10.689508739998928
+      },
+      "perception_start_to_solver_end": {
+        "n": 500,
+        "mean_s": 474.4827938467,
+        "p50_s": 437.0756532250007,
+        "p95_s": 796.6374966299991
+      },
+      "admission_to_perception_request_start": {
+        "n": 500,
+        "mean_s": 281.81528863896,
+        "p50_s": 104.73652364499958,
+        "p95_s": 713.7022513299999
+      },
+      "solver_request_end_to_sample_finished": {
+        "n": 500,
+        "mean_s": 0.29874189996002315,
+        "p50_s": 0.04824693499995192,
+        "p95_s": 1.282970700000078
+      },
+      "admission_to_sample_finished": {
+        "n": 500,
+        "mean_s": 756.59682438562,
+        "p50_s": 797.520085144999,
+        "p95_s": 1140.2048290900002
+      }
+    },
+    "missing_timing_entries": 0,
+    "missing_sample_count": 0,
+    "limitations": [
+      "Completed subset is descriptive and may be biased toward faster samples.",
+      "P→S gap contains preparation/FIT/scheduling; not pure CPU time.",
+      "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+      "Nested intervals overlap; do not sum as whole-task wall time."
+    ],
     "new_model_calls": 0
   }
 }

@@ -1,4 +1,4 @@
-"""Bind a real500 candidate to an observed resident and refresh shared preparation.
+"""Bind a registered real workload to an observed resident and refresh shared preparation.
 
 Owner authorization is already recorded. This command makes no inference calls;
 the normal clean-tree/preflight/lease/FIT checks still precede dispatch.
@@ -26,7 +26,8 @@ def admit(repo,data,name):
     pkg=repo/'docs/readiness'/name;spec=read(pkg/'candidate.json')
     exp=read(repo/'configs/experiment'/f'{name}.json');cell,=exp['cells']
     if cell['readiness']['state']!='held':raise ValueError('candidate not held')
-    if name!=spec['cell'] or spec['rows']!=500:raise ValueError('candidate identity mismatch')
+    from registered_workload import validate_workload
+    rows=validate_workload(repo,data,name,spec)
     receipt=repo/'docs'/spec['runtime_receipt']
     if not receipt.is_file():raise ValueError('observed runtime receipt missing')
     lock=repo.parents[1]/'docs/datasets.lock.json'
@@ -41,7 +42,7 @@ def admit(repo,data,name):
         s=SessionReceipt.from_json(read(data/'serving'/instance['instance_id']/'session-receipt.json'))
         verify_vllm_session(s,doc)
     runs=[spec['run_id'],spec['fit_run_id']]
-    draft={'schema':'saea-campaign-decision-v1','status':'DRAFT-NOT-MINTED','decision_id':spec['decision_id'],'eligible_run_ids':runs,'eligible_attempt_ids':[spec['attempt_id'],spec['fit_attempt_id']],'authorization_basis':spec['authority'],'owner':'root','decision':'Execute one real500 whole-machine candidate through shared c2 runtime under the recorded owner topology amendment; no synthetic precondition or test tuning.','antecedents':{'owner':{'path':spec['authority'],'sha256':sha(repo/spec['authority'])},'protocol':{'path':str((pkg/'protocol-registered-v1.json').relative_to(repo)),'sha256':sha(pkg/'protocol-registered-v1.json')},'runtime':{'path':str(receipt.relative_to(repo)),'sha256':sha(receipt)}},'service':{'expected_session_id':spec['service_session'],'profile':spec['profile'],'session_sha256':sha(resident[0]/'session.json')},'population':{'count':500,'split_identity_hash':spec['split_identity_hash'],'test_contact_authorized':False},'budget':{kind:read(pkg/f'{kind}-plan-registered-v1.json')['execution_plan'] for kind in ('generation','fit')}}
+    draft={'schema':'saea-campaign-decision-v1','status':'DRAFT-NOT-MINTED','decision_id':spec['decision_id'],'eligible_run_ids':runs,'eligible_attempt_ids':[spec['attempt_id'],spec['fit_attempt_id']],'authorization_basis':spec['authority'],'owner':'root','decision':'Execute the exact registered real population through shared c2 runtime under recorded owner authority; no synthetic replay or test tuning.','antecedents':{'owner':{'path':spec['authority'],'sha256':sha(repo/spec['authority'])},'protocol':{'path':str((pkg/'protocol-registered-v1.json').relative_to(repo)),'sha256':sha(pkg/'protocol-registered-v1.json')},'runtime':{'path':str(receipt.relative_to(repo)),'sha256':sha(receipt)}},'service':{'expected_session_id':spec['service_session'],'profile':spec['profile'],'session_sha256':sha(resident[0]/'session.json')},'population':{'count':rows,'split_identity_hash':spec['split_identity_hash'],'test_contact_authorized':False},'budget':{kind:read(pkg/f'{kind}-plan-registered-v1.json')['execution_plan'] for kind in ('generation','fit')}}
     write(pkg/'root-admission-draft-v1.json',draft)
     family=SimpleNamespace(PACKAGE=str(pkg.relative_to(repo)),DECISION_ID=spec['decision_id'],DECISION_RELPATH=spec['decision_relpath'],eligible_run_ids=lambda:runs)
     result=mint(str(repo),str(data),'Codex',False,family=family,tool='scripts/analysis/admit_real_engine_candidate.py')
