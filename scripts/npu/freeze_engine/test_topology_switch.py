@@ -12,4 +12,16 @@ class IdentityTest(unittest.TestCase):
             changed=copy.deepcopy(good);changed[key]=value
             with self.subTest(key=key),self.assertRaises(ValueError):m.validate(changed,c,'original')
 
+class RecoveryTest(unittest.TestCase):
+    def test_only_exact_stopped_owned_archive_is_accepted(self):
+        c={'name':'old','profile_id':'owned'}
+        good={'Name':'/archive','Id':'original','Image':m.common.IMAGE,
+              'Config':{'Labels':{m.common.LABEL:'owned'}},'State':{'Running':False},'RestartCount':0}
+        m.validate_stopped_archive(good,c,'original','archive')
+        for key,value in [('Id','new'),('Name','/wrong'),('Image','foreign'),
+                          ('Config',{'Labels':{}}),('State',{'Running':True}),('RestartCount',1)]:
+            changed=copy.deepcopy(good);changed[key]=value
+            with self.subTest(key=key),self.assertRaises(ValueError):
+                m.validate_stopped_archive(changed,c,'original','archive')
+
 if __name__=='__main__':unittest.main()

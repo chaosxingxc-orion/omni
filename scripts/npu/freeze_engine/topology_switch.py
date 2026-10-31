@@ -30,9 +30,18 @@ def validate(doc, candidate, expected_id=None):
     if expected_id is not None and doc['Id']!=expected_id:raise ValueError('container identity differs')
 
 
+def validate_stopped_archive(doc, candidate, expected_id, archive_name):
+    if not doc or doc['Name'] != '/' + archive_name or doc['Id'] != expected_id:
+        raise ValueError('archived original identity differs')
+    if doc['Image'] != common.IMAGE or doc['Config'].get('Labels', {}).get(common.LABEL) != candidate['profile_id']:
+        raise ValueError('archived original ownership differs')
+    if doc['State']['Running'] or doc['RestartCount']:
+        raise ValueError('archived original running or restarted')
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('mode',choices=['plan','apply']);p.add_argument('--record',type=Path,required=True)
+    p.add_argument('mode',choices=['plan','apply','resume-after-stop']);p.add_argument('--record',type=Path,required=True)
     p.add_argument('--source');p.add_argument('--target');p.add_argument('--recreate',action='store_true');a=p.parse_args()
     root=a.record.resolve()
     if not root.is_relative_to(common.RECORDS.resolve()) or not common.re.fullmatch('[A-Za-z0-9_-]+',root.name):raise ValueError('owned record path required')
@@ -59,6 +68,27 @@ def main():
     with (common.D/'locks/generation.guard').open('r+') as guard:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
         if (common.D/'locks/flight.lock').exists():raise ValueError('scientific lease present')
+        if a.mode == 'resume-after-stop':
+            # Explicit recovery only before any target creation; never replay a model job.
+            if not (root/'apply.intent.json').exists():raise ValueError('no stopped transition')
+            for name in ('apply.complete.json','candidate-container-ids.json','resume-after-stop.intent.json'):
+                if (root/name).exists():raise ValueError('creation already attempted or complete; inspect exact state')
+            if commands(plan['target']) != plan['after']:raise ValueError('target profile changed')
+            for c in plan['before']:
+                validate_stopped_archive(common.inspect(plan['old_names'][c['name']]), c,
+                                         plan['original_ids'][c['name']], plan['old_names'][c['name']])
+            for c in plan['after']:
+                if common.inspect(c['name']):raise ValueError('target occupied')
+            smi=root/'cards-before-resume.txt'
+            if smi.exists():raise ValueError('recovery already inspected; preserve evidence')
+            smi.write_text(common.call(['npu-smi','info']))
+            commands(plan['target'],smi)
+            common.write(root/'resume-after-stop.intent.json',{'time':time.time(),'pid':os.getpid(),'model_calls':0})
+            ids=common.parallel(lambda c:common.call(c['argv']),plan['after'])
+            common.write(root/'candidate-container-ids.json',dict(zip([c['name'] for c in plan['after']],ids)))
+            common.wait_ready(plan['after'])
+            common.write(root/'apply.complete.json',{'time':time.time(),'containers':[common.inspect(c['name']) for c in plan['after']],'model_calls':0,'scientific_records_unchanged':True,'recovered_after_stop':True})
+            print(json.dumps({'ready':True,'profile':plan['target'],'model_calls':0}));return
         if (root/'apply.intent.json').exists():raise ValueError('existing attempt: inspect; no blind replay')
         if commands(plan['source'])!=plan['before'] or commands(plan['target'])!=plan['after']:raise ValueError('profile changed')
         for c in plan['before']:
