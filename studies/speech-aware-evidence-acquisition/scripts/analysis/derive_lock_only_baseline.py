@@ -46,10 +46,29 @@ def derive(source, *, repo=ROOT):
     return out
 
 
+def budget_candidates(lock, model):
+    """Prepare single-node budget contrasts; retain the other node's baseline."""
+    from speech_aware_evidence_acquisition.core.reasoning_knobs import validate_thinking_policy
+    if lock['policy'] != 'phase-native-module-v1-c2' or 'thinking_policy' in lock:
+        raise ValueError('requires the unmodified two-contact budget control')
+    if model.get('reasoning_budget_tokens') != 3072 or model.get('answer_reserve_tokens') != 1024:
+        raise ValueError('unexpected control budget')
+    result = {'control-3072': copy.deepcopy(lock)}
+    for node in ('perception', 'solver'):
+        for budget in (512, 1024, 2048):
+            candidate = copy.deepcopy(lock)
+            candidate['thinking_policy'] = {node: {'reasoning_budget_tokens': budget,
+                                                   'answer_reserve_tokens': 1024}}
+            validate_thinking_policy(candidate['thinking_policy'], {**model, **candidate})
+            result[f'{node}-{budget}'] = candidate
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--model', type=Path, help='Prepare single-node thinking budget contrasts too')
     args = parser.parse_args()
     raw = args.source.read_bytes()
     source = json.loads(raw)
@@ -58,6 +77,9 @@ def main():
               'candidate_baseline': candidate, 'status': 'PREPARATION_ONLY',
               'new_model_calls': 0, 'remaining': ['fresh preparation and FIT identity',
               'request equivalence', 'registered checkpoint projection', 'registration and smoke']}
+    if args.model:
+        result['model_sha256'] = hashlib.sha256(args.model.read_bytes()).hexdigest()
+        result['budget_candidates'] = budget_candidates(candidate, json.loads(args.model.read_bytes()))
     with args.out.open('x') as handle:
         json.dump(result, handle, indent=2, sort_keys=True)
         handle.write('\n')

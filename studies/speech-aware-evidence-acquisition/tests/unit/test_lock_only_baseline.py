@@ -37,3 +37,18 @@ def test_refuse_unreviewed_source(fault):
     if fault == 'revisions': native['max_revisions'] = 1
     if fault == 'iterations': native['roles']['solver']['max_iterations'] = 2
     with pytest.raises(ValueError): module.derive(value)
+
+
+def test_budget_candidates_change_only_one_node():
+    lock = module.derive(source())
+    model = {'reasoning_budget_tokens': 3072, 'answer_reserve_tokens': 1024,
+             'enable_thinking': True, 'reasoning_content_guard': 'refuse-think-marker-in-content',
+             'decoding_params': {'max_tokens': 4096}}
+    candidates = module.budget_candidates(lock, model)
+    assert len(candidates) == 7
+    assert candidates.pop('control-3072') == lock
+    for name, candidate in candidates.items():
+        node, budget = name.split('-')
+        policy = candidate.pop('thinking_policy')
+        assert policy == {node: {'reasoning_budget_tokens': int(budget), 'answer_reserve_tokens': 1024}}
+        assert candidate == lock
