@@ -1,0 +1,52 @@
+{
+  "admitted_level": 96,
+  "basis": "Owner 2026-10-31: 500 unique sampled real SLURP train rows through actual c2 perception/solver and context preparation. One bounded run per candidate; TP8 seq384 conditional on seq256 benefit. PREPARED, not deployed or scientifically admitted.",
+  "bind_host": "127.0.0.1",
+  "busy_threshold_mib": 4096,
+  "data_mount": "/mnt/cephfs/xingchao/omni",
+  "gpu_memory_utilization": 0.92,
+  "host": "A800I-03",
+  "host_card_count": 8,
+  "host_cpu_count": 256,
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "instances": [
+    {
+      "name": "saea-real500-tp4-i0",
+      "port": 8200,
+      "cards": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "cpuset": "128-159",
+      "env": {
+        "HCCL_IF_BASE_PORT": "61000"
+      }
+    },
+    {
+      "name": "saea-real500-tp4-i1",
+      "port": 8201,
+      "cards": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "cpuset": "64-95",
+      "env": {
+        "HCCL_IF_BASE_PORT": "61200"
+      }
+    }
+  ],
+  "max_num_batched_tokens": 2048,
+  "max_num_seqs": 96,
+  "mm_processor_cache_type": "shm",
+  "model_fragment": "bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-closemarker-port-v2",
+  "model_relpath": "models/qwen3-omni-30b-a3b-thinking",
+  "namespace_policy": "shared-pid-host",
+  "profile_id": "qwen3-omni-real500-2xtp4-s96-b2048-v1",
+  "schema": "saea-deployment-profile-v1",
+  "shm_size": "16g",
+  "tensor_parallel_size": 4
+}
