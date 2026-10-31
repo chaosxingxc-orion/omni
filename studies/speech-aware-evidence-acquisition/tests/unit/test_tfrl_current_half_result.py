@@ -56,7 +56,8 @@ def test_vote_uses_real_copy_answers_and_rejects_tamper(tmp_path):
 
 def test_request_audit_failure_precedes_scoring(tmp_path,monkeypatch):
     from speech_aware_evidence_acquisition import contracts
-    from speech_aware_evidence_acquisition.core import bundle,scoring_batch
+    from speech_aware_evidence_acquisition.core import bundle,scoring_batch,config
+    import tfrl_current_bank_audit as bank_audit
     from types import SimpleNamespace
     monkeypatch.setattr(contracts,'assert_execution_environment',lambda:None)
     plan={'run_id':'run','attempt_id':'attempt','roster':{'rows':313,'split_identity_hash':'a'*64}}
@@ -65,9 +66,11 @@ def test_request_audit_failure_precedes_scoring(tmp_path,monkeypatch):
         'sampling_plan':{'relpath':'plan.json','sha256':m.sha(pp)},'roster':{'relpath':'roster.json','sha256':m.sha(rp)}}
     monkeypatch.setattr(m,'validate_recipe',lambda *a:recipe)
     monkeypatch.setattr(bundle,'verify_bundle',lambda *a:SimpleNamespace(attempt_state='FINALIZED',
-        manifest={'status':'COMPLETED','run_id':'run','attempt':{'attempt_id':'attempt'}},outputs_rows=[],trace_records={}))
-    def refuse(*a):raise ValueError('request mismatch')
-    monkeypatch.setattr(m.audit,'verify',refuse)
+        manifest={'status':'COMPLETED','run_id':'run','attempt':{'attempt_id':'attempt'},
+                  'config':{'fragments':dict.fromkeys(('model','dataset','baseline','experiment'),'x'),'config_hash':'cfg'}},outputs_rows=[],trace_records={}))
+    monkeypatch.setattr(config,'compose',lambda *a:SimpleNamespace(config_hash='cfg',values={}))
+    def refuse(*a,**kw):raise ValueError('request mismatch')
+    monkeypatch.setattr(bank_audit,'verify_for_values',refuse)
     def no_score(**kw):pytest.fail('scorer called before request audit')
     monkeypatch.setattr(scoring_batch,'score_complete_derived_copy',no_score)
     out=tmp_path/'analysis/result'

@@ -110,9 +110,10 @@ def run(repo,data,recipe_path,out):
     if (bundle.attempt_state!='FINALIZED' or bundle.manifest['status']!='COMPLETED'
             or bundle.manifest['run_id']!=plan['run_id']
             or bundle.manifest['attempt']['attempt_id']!=plan['attempt_id']):raise ValueError('finalized planned half required')
-    check=audit.verify(plan,bundle.outputs_rows,bundle.trace_records)
     f=bundle.manifest['config']['fragments'];cfg=compose(repo,*(f[k] for k in ('model','dataset','baseline','experiment')))
     if cfg.config_hash!=bundle.manifest['config']['config_hash']:raise ValueError('sealed config changed')
+    from tfrl_current_bank_audit import verify_for_values
+    check=verify_for_values(plan,bundle.outputs_rows,bundle.trace_records,values=cfg.values,data=data)
     roles=cfg.values['native_episode']['roles']
     group=s3.parse_solver_arm_group(cfg.values,roles['solver'],roles['perception'],cfg.values['knowledge_stores'])
     roster,roster_sha,_=s3.load_roster(repo,str(rp.relative_to(repo)))
