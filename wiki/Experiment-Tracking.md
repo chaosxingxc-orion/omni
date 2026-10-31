@@ -16,4 +16,4 @@
 
 旧 Agent 部分运行已封存，不与当前 A0 混合。中间准备失败保留为工程诊断，不纳入效果表。TFRL 相对固定 A0 至少提升 1 个百分点且通过完整评估后才接受。
 
-[详细运行与工程记录](2026-10-31-A0-and-NPU-Scheduling.md)
+[详细运行与工程记录](https://github.com/chaosxingxc-orion/omni/wiki/2026-10-31-A0-and-NPU-Scheduling)
