@@ -1197,25 +1197,35 @@
     }
   },
   "tp8_progress_observation": {
-    "observed_at_utc": "2026-10-31 16:35:07 UTC",
+    "observed_at_utc": "2026-10-31 16:45:10 UTC",
     "started_at_utc": "2026-10-31 16:17:06 UTC",
     "state": "running",
-    "completed_rows": 139,
+    "completed_rows": 274,
     "total_rows": 500,
-    "remaining_rows": 361,
+    "remaining_rows": 226,
     "cards": 8,
     "instances": 1,
-    "elapsed_seconds": 1081.3970453739166,
-    "wall_seconds_per_complete_row": 7.779834858805156,
-    "eta_seconds": 2808.5203840286613,
+    "elapsed_seconds": 1683.9155941009521,
+    "wall_seconds_per_complete_row": 6.145677350733402,
+    "eta_seconds": 1388.9230812657488,
     "eta_limitation": "Linear completed-row rate; in-flight requests and tail can change it. Not a full-roster comparison.",
     "generation_sealed": false,
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 278,
-      "prompt_tokens": 1646837,
-      "completion_tokens": 298462,
-      "audio_seconds": 713.31875
+      "calls": 548,
+      "prompt_tokens": 3261484,
+      "completion_tokens": 733046,
+      "audio_seconds": 1460.715
     },
-    "live_generation_process_verified_at_utc": "2026-10-31 16:35 UTC"
+    "live_generation_process_verified_at_utc": "2026-10-31 16:45 UTC"
+  },
+  "a0_automatic_handoff": {
+    "state": "waiting_verified_full_comparison",
+    "rows": 353,
+    "routine_interval_seconds": 600,
+    "source_commit": "d453ff7d3f6a207de967d5fd425343581df2c8c1",
+    "new_model_contacts": 0,
+    "production_handoff_verified": false,
+    "public_tests_passed": 27,
+    "execution_tree_tests_passed": 24
   }
 }

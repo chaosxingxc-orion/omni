@@ -47,5 +47,18 @@
     "covered_facets": 8554,
     "utterance_overlap": 0,
     "audit_sha256": "06de69f628fcd92842a1c0a2caab843a1a1e560d6af2ea33c503bc9ffb210ae7"
+  },
+  "agreement_completion": {
+    "rows": 625,
+    "status": "complete",
+    "generated_at": "2026-10-31T16:44:44.932484+00:00",
+    "votes_per_row": 20,
+    "rows_with_no_vote": 0,
+    "self_excluded_exemplars": 0,
+    "distinct_facets": 59,
+    "new_model_contacts": 0,
+    "artifact_sha256": "c493e47f9e6c6572b5d809909af650319bfa6136f26db94d118930b2dd8668e7",
+    "receipt_sha256": "a4286ec47ab66e69764d867c752a344ad1c1698e3fbfeb62a89cc48b526766bf",
+    "completion_sha256": "ea6d99cb5fec15fb951874d5d0c6708f50865a2878750eb3cc86cbb4819af15c"
   }
 }
