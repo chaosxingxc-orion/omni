@@ -342,7 +342,7 @@
     "missing_sample_count": 0,
     "limitations": [
       "Completed subset is descriptive and may be biased toward faster samples.",
-      "P→S gap contains preparation/FIT/scheduling; not pure CPU time.",
+      "P\u2192S gap contains preparation/FIT/scheduling; not pure CPU time.",
       "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
       "Nested intervals overlap; do not sum as whole-task wall time."
     ],
@@ -518,7 +518,7 @@
       "missing_sample_count": 0,
       "limitations": [
         "Completed subset is descriptive and may be biased toward faster samples.",
-        "P→S gap contains preparation/FIT/scheduling; not pure CPU time.",
+        "P\u2192S gap contains preparation/FIT/scheduling; not pure CPU time.",
         "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
         "Nested intervals overlap; do not sum as whole-task wall time."
       ],
@@ -970,19 +970,17 @@
     "recipe_sha256": "efb43a80731ccc01dfb0fa038664687b188f416d56063e23628ae29937e0db38"
   },
   "roster_reverification": {
-    "checked_at_utc": "2026-10-31T15:43:29Z",
-    "candidate_trees": [
-      "TP4-96",
-      "TP4-128",
-      "TP8-256"
+    "observed_at_utc": "2026-10-31T17:00:00Z",
+    "trees": [
+      "real500-runtime",
+      "real500-successors",
+      "real500-successors-tp8"
     ],
-    "rows_each": 500,
-    "unique_sample_ids_each": 500,
-    "unique_audio_sha256_each": 500,
-    "all_real_audio": true,
-    "identical_dataset_sha256": "3bd1570048b13ae456e822d986be163a83228b5772f98e50118e8531d92fef77",
-    "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
-    "new_model_calls": 0
+    "dataset_sha256": "3bd1570048b13ae456e822d986be163a83228b5772f98e50118e8531d92fef77",
+    "rows_per_candidate": 500,
+    "unique_sample_ids": 500,
+    "unique_audio_hashes": 500,
+    "all_real_train": true
   },
   "a0_remaining_registration": {
     "schema": "saea-a0-remaining-registration-summary-v1",
@@ -1083,7 +1081,7 @@
     "missing_sample_count": 0,
     "limitations": [
       "Completed subset is descriptive and may be biased toward faster samples.",
-      "P→S gap contains preparation/FIT/scheduling; not pure CPU time.",
+      "P\u2192S gap contains preparation/FIT/scheduling; not pure CPU time.",
       "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
       "Nested intervals overlap; do not sum as whole-task wall time."
     ],
@@ -1197,26 +1195,58 @@
     }
   },
   "tp8_progress_observation": {
-    "observed_at_utc": "2026-10-31 16:45:10 UTC",
-    "started_at_utc": "2026-10-31 16:17:06 UTC",
+    "schema": "saea-real-engine-progress-v1",
     "state": "running",
-    "completed_rows": 274,
+    "completed_rows": 497,
     "total_rows": 500,
-    "remaining_rows": 226,
+    "checkpoint_rows": 497,
+    "unusable_checkpoint_rows": 0,
+    "remaining_rows": 3,
+    "checkpoint_sha256": "1f12db569a11e852e350440a58eeccefdff0290380200532ca7f727703171f06",
+    "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
+    "torn_tail_bytes": 0,
     "cards": 8,
     "instances": 1,
-    "elapsed_seconds": 1683.9155941009521,
-    "wall_seconds_per_complete_row": 6.145677350733402,
-    "eta_seconds": 1388.9230812657488,
-    "eta_limitation": "Linear completed-row rate; in-flight requests and tail can change it. Not a full-roster comparison.",
-    "generation_sealed": false,
+    "elapsed_seconds": 2287.011569738388,
+    "wall_seconds_per_complete_row": 4.601632937099373,
+    "rows_per_second": 0.21731416079230942,
+    "estimated_remaining_seconds": 13.804898811298116,
+    "eta_basis": "Linear observed whole-task completion rate; startup and tail may change it.",
+    "full_roster_comparison_eligible": false,
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 548,
-      "prompt_tokens": 3261484,
-      "completion_tokens": 733046,
-      "audio_seconds": 1460.715
+      "calls": 994.0,
+      "audio_seconds": 2933.3448750000016,
+      "latency_seconds": 444436.3792167399,
+      "prompt_tokens": 6111837.0,
+      "completion_tokens": 1598459.0,
+      "tool_calls": 0.0
     },
-    "live_generation_process_verified_at_utc": "2026-10-31 16:45 UTC"
+    "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
+    "complete_sample_timings": {
+      "admission_wait": {
+        "n": 497,
+        "mean_s": 3.6472105984507044,
+        "p50_s": 3.71223723,
+        "p95_s": 5.84688077
+      },
+      "admitted_to_finished": {
+        "n": 497,
+        "mean_s": 1365.4066413056742,
+        "p50_s": 1420.28531494,
+        "p95_s": 2068.90376122
+      }
+    },
+    "new_model_calls": 0,
+    "limitations": [
+      "Duration and state must come from an authoritative run boundary/process observation.",
+      "Allocated cards are not measured utilization.",
+      "Partial or failed candidates cannot establish a full-roster throughput winner.",
+      "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
+    ],
+    "observed_at": 1793465713.469152,
+    "generation_sealed": false,
+    "duration_scope": "Runner start to generation seal when sealed; excludes scoring",
+    "official_scoring_state": "pending_or_running"
   },
   "a0_automatic_handoff": {
     "state": "waiting_verified_full_comparison",
@@ -1227,5 +1257,12 @@
     "production_handoff_verified": false,
     "public_tests_passed": 27,
     "execution_tree_tests_passed": 24
+  },
+  "full1080_cpu_result_queue": {
+    "state": "waiting_finalized353",
+    "pid": 1242477,
+    "interval_seconds": 600,
+    "tests_passed": 16,
+    "full_production_scoring_verified": false
   }
 }
