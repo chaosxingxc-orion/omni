@@ -110,3 +110,27 @@ def test_allocated_snapshot_is_bound_to_config(tmp_path):
     manifest['tfrl_bank_config']=tfrl_bank.seal(cfg,data,split,target)
     context=tfrl_bank.load(manifest,target/'manifest.json',split.ids,split.identity_hash)
     assert context['allocation']==m.declaration(55)
+
+
+def test_actual_banked_answers_do_not_recycle_inherited_exemplar(tmp_path,monkeypatch):
+    from types import SimpleNamespace
+    import tfrl_current_distill as distill
+    result,requests,bank,trace=execute(tmp_path,monkeypatch)
+    row={'sample_id':result.sample_id,'native_episode_receipt':result.native_episode_receipt,'supply_variants':result.supply_variants}
+    bundle=SimpleNamespace(outputs_rows=[row],trace_records=trace,manifest={'raw_trace':{'sha256':'fixture'}})
+    plan={'row_plan':[{'row_id':result.sample_id}],'iteration':2,'run_id':'fixture','attempt_id':'fixture'}
+    context={'bank':bank,'allocation':m.declaration(55)}
+    answers,resolver,provenance=distill.sealed_answers(bundle,plan,bank_context=context)
+    import tfrl_real_supply_allocation_audit as real_audit
+    audited=real_audit.audit_rows([row],trace,55)
+    assert audited['row_summaries'][0]['control_value_items']==55
+    assert audited['row_summaries'][0]['candidate_value_items']==47
+    assert len(answers)==6
+    assert all(item['item_id']!='tfrl-v2/exemplar-block' for a in answers.values() for item in a['supply_items'])
+    assert len(answers[result.sample_id,'s1']['supply_items'])==47
+    assert len(answers[result.sample_id,'lock']['supply_items'])==55
+    assert sum(bool(p.get('inherited_bank_context')) for p in provenance)==4
+    bad=copy.deepcopy(trace)
+    bad[requests[1]['request_id']+'/request']['payload']['supplied_evidence'][-1]['content']='tampered'
+    bundle.trace_records=bad
+    with pytest.raises(ValueError):distill.sealed_answers(bundle,plan,bank_context=context)

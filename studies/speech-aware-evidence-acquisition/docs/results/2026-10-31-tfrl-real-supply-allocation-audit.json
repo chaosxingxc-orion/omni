@@ -1,0 +1,56 @@
+{
+  "allocation": {
+    "candidate_max_items": 47,
+    "control_max_items": 55,
+    "empty_exemplar": "reserve-anyway",
+    "order": "existing-render-order",
+    "reserved_items": 8,
+    "schema": "saea-tfrl-keep-prefix-values-v1",
+    "scope": "s1-s4-only"
+  },
+  "checkpoint_sha256": "5ac8ce266b26288e05854adde933101959ca43e145971872b910e5dd3352f87d",
+  "custody_sha256": "3558805799b23bd3ad4d39313c94c5d29cddbc08c739d0cf26edc0cd5e3fedec",
+  "labels_read": false,
+  "new_model_calls": 0,
+  "remaining": [
+    "actual bank source bytes",
+    "full next-half shared rendering",
+    "final multimodal FIT",
+    "registered generation"
+  ],
+  "row_summaries": [
+    {
+      "candidate_evidence_sha256": "f849f4cb2e8307b6fd3a0ec0c534a0c557a18cc8ac4ec5d93cc8f9c3fdc4b6fb",
+      "candidate_value_items": 29,
+      "control_evidence_sha256": "f849f4cb2e8307b6fd3a0ec0c534a0c557a18cc8ac4ec5d93cc8f9c3fdc4b6fb",
+      "control_value_items": 29,
+      "kept_nonvalue_items": 0,
+      "removed_value_items": 0,
+      "source_request_sha256": "67fe4ed2c1c44691dec8e03645ef40b08f68ca2fbdf4a310b16ce3474536afe2"
+    },
+    {
+      "candidate_evidence_sha256": "31d2123db2f5ff6ceaaa669c681e8bb1992317663e4b44ba40445ce4e590ab90",
+      "candidate_value_items": 30,
+      "control_evidence_sha256": "31d2123db2f5ff6ceaaa669c681e8bb1992317663e4b44ba40445ce4e590ab90",
+      "control_value_items": 30,
+      "kept_nonvalue_items": 0,
+      "removed_value_items": 0,
+      "source_request_sha256": "c755226ce807d4ea4214ba193a922149befca7de4e17a2196b99fa7873eb4fba"
+    },
+    {
+      "candidate_evidence_sha256": "96e0469f4dfd70f2d199ab8507b7cea95db506601d4a2715af1c4b5b25ccbc4a",
+      "candidate_value_items": 30,
+      "control_evidence_sha256": "96e0469f4dfd70f2d199ab8507b7cea95db506601d4a2715af1c4b5b25ccbc4a",
+      "control_value_items": 30,
+      "kept_nonvalue_items": 0,
+      "removed_value_items": 0,
+      "source_request_sha256": "f34a9dacac8231fb2956a1c11982ffded593e1255315ceeea6d5703b03d2c7b1"
+    }
+  ],
+  "rows": 3,
+  "schema": "saea-tfrl-real-source-allocation-audit-v1",
+  "scope": "Immutable context-intact original K4 lock request evidence; allocation only, no bank or FIT.",
+  "scoring_jobs": 0,
+  "source_commit": "3391fab7ee0c030c6ef6f0bbc958e84fbb6c7f2b",
+  "tokenizer_calls": 0
+}

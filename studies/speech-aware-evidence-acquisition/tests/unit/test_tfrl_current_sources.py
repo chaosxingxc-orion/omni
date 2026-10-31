@@ -15,12 +15,14 @@ def put(root,rel,obj):
 
 
 @pytest.fixture
-def source_fixture(tmp_path,monkeypatch):
+def source_fixture(tmp_path,monkeypatch,request):
     from speech_aware_evidence_acquisition.core import bundle,config
-    source=tmp_path/'source';data=tmp_path/'data';run='SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-V1';n=313
+    iteration=getattr(request,'param',1)
+    prefix='SEED' if iteration==1 else 'BANK'
+    source=tmp_path/'source';data=tmp_path/'data';run=f'SAEA-SLURP-TFRL-CURRENT-{prefix}-I{iteration}-H1-V1';n=313
     ids=[f'fixture:{i}' for i in range(n)];items=[{'sample_id':sid} for sid in ids]
     rp=put(source,'roster.json',{'items':items,'split_identity_hash':'split'})
-    plan={'half':'R01C-H1','run_id':run,'attempt_id':'generation-v1','iteration':1,'row_plan':[{'row_id':i} for i in ids],
+    plan={'half':'R01C-H1','run_id':run,'attempt_id':'generation-v1','iteration':iteration,'row_plan':[{'row_id':i} for i in ids],
         'roster':{'file_sha256':m.sha(rp),'split_identity_hash':'split'}}
     pp=put(source,'plan.json',plan)
     recipe={'run_id':run,'attempt_id':'generation-v1','rows':n,'split_identity_hash':'split',
@@ -32,8 +34,11 @@ def source_fixture(tmp_path,monkeypatch):
         'config':{'config_hash':'cfg','fragments':dict.fromkeys(('model','dataset','baseline','experiment'),'fragment')},'outputs':{'sha256':'output'}},
         outputs_rows=[],trace_records={})
     monkeypatch.setattr(bundle,'verify_bundle',lambda _:b)
-    monkeypatch.setattr(config,'compose',lambda *a:SimpleNamespace(config_hash='cfg'))
-    check={'rows':n};monkeypatch.setattr(m.audit,'verify',lambda *a:check)
+    monkeypatch.setattr(config,'compose',lambda *a:SimpleNamespace(config_hash='cfg',values={'fixture_iteration':iteration}))
+    import tfrl_current_bank_audit as bank_audit
+    from speech_aware_evidence_acquisition.core.bundle import tfrl_bank
+    check={'rows':n};monkeypatch.setattr(bank_audit,'verify_for_values',lambda *a,**kw:check)
+    monkeypatch.setattr(tfrl_bank,'load',lambda *a:{'bank':'fixture-bank','allocation':{'fixture':True}})
     directory=data/'analysis'/(run+'-READ');columns=directory/'columns';copies={};declarations=[]
     for arm in m.ARMS:
         p=columns/f'arm-{arm}-first-visit-outputs.jsonl';p.parent.mkdir(parents=True,exist_ok=True);p.write_text('{}\n')
@@ -56,7 +61,7 @@ def source_fixture(tmp_path,monkeypatch):
     credit,summary=m.analyze(plan,results)
     cp=directory/'credit.jsonl';cp.write_text('\n'.join(json.dumps(r) for r in credit)+'\n')
     complete={**summary,'schema':'saea-tfrl-current-half-result-v1','rows':n,'run_id':run,'attempt_id':'generation-v1','half':'R01C-H1',
-        'iteration':1,'recipe_sha256':m.sha(recipe_path),'plan_sha256':m.sha(pp),'manifest_sha256':m.sha(mp),'credit_sha256':m.sha(cp),
+        'iteration':iteration,'recipe_sha256':m.sha(recipe_path),'plan_sha256':m.sha(pp),'manifest_sha256':m.sha(mp),'credit_sha256':m.sha(cp),
         'new_model_calls':0,'official_scoring_jobs':7,'request_audit':check,
         'artifacts':{str(p.relative_to(directory)):m.sha(p) for p in columns.iterdir()}}
     put(directory,'complete.json',complete)
@@ -82,8 +87,9 @@ def test_complete_source_revalidation(source_fixture,fault,monkeypatch):
         c=m.read(directory/'complete.json');c['vote_minus_lock_pp']=99;put(directory,'complete.json',c)
     elif fault=='unfinished':b.attempt_state='OPENED'
     elif fault=='request':
-        def reject(*a):raise ValueError('request differs')
-        monkeypatch.setattr(m.audit,'verify',reject)
+        import tfrl_current_bank_audit as bank_audit
+        def reject(*a,**kw):raise ValueError('request differs')
+        monkeypatch.setattr(bank_audit,'verify_for_values',reject)
     elif fault=='escape':
         c=m.read(directory/'complete.json');c['artifacts']['../outside']='0'*64;put(directory,'complete.json',c)
     if fault:
@@ -107,3 +113,23 @@ def test_pool_refuses_sources_before_any_output(tmp_path,monkeypatch):
     monkeypatch.setattr(p,'load_half',refuse)
     with pytest.raises(ValueError,match='incomplete'):p.run(tmp_path,tmp_path,tmp_path)
     assert not (tmp_path/'analysis').exists()
+
+
+@pytest.mark.parametrize('source_fixture',[2,3],indirect=True)
+def test_later_halves_require_explicit_iteration_and_audited_bank(source_fixture):
+    source,data,pin,directory,b=source_fixture
+    iteration=m.read(source/'plan.json')['iteration']
+    with pytest.raises(ValueError,match='unexpected real half recipe'):
+        m.load_half(source,data,'h1',pin)
+    loaded=m.load_half(source,data,'h1',pin,iteration=iteration)
+    assert loaded['plan']['iteration']==iteration
+    assert loaded['bank_context']['bank']=='fixture-bank'
+
+
+@pytest.mark.parametrize('source_fixture',[2],indirect=True)
+def test_later_half_refuses_missing_sealed_context(source_fixture,monkeypatch):
+    from speech_aware_evidence_acquisition.core.bundle import tfrl_bank
+    source,data,pin,_,_=source_fixture
+    monkeypatch.setattr(tfrl_bank,'load',lambda *a:None)
+    with pytest.raises(ValueError,match='sealed bank'):
+        m.load_half(source,data,'h1',pin,iteration=2)

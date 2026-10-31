@@ -95,3 +95,9 @@ def test_binding_mismatch_rejected_before_measurement(monkeypatch):
     measure=Measure();resolver=m.text.ItemTextResolver({'train::one':'wrong'})
     with pytest.raises(ValueError,match='knowledge binding'):m.build(fixture(),measure,resolver=resolver)
     assert measure.calls==0
+
+
+def test_later_distillation_refuses_missing_bank_before_tokenization(monkeypatch):
+    loaded=fixture();loaded['plan']['iteration']=2;measure=Measure()
+    with pytest.raises(ValueError,match='verified request context'):m.build(loaded,measure)
+    assert measure.calls==0

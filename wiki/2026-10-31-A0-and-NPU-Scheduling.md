@@ -96,3 +96,6 @@ H1的310条新名单已完成CPU供给准备、登记和配置固定，供给逐
 ## 下一轮执行准备
 
 经验库候选请求审计、原对照保护与跨半组计划共93项测试通过；独立名单核验确认construction625、Fold A1080、Fold B1080两两无样本重叠。实际经验库尚未产出，第二轮未启动。本轮封存及相关回归163项通过。封存层已增加哈希固定的完整配置快照、经验库文件复核与候选请求审计；异常终止记录不依赖经验库继续可读。已实现显式55/47候选供给分配：保留原顺序前47条，aa/lock不变，新v7凭证核对实际请求及来源。公开与维护研究运行时分别295项测试通过。仍需真实经验库产出后的整链路验证、精确FIT与下一轮登记；工程测试不代表实验收益。详见[下一轮准备与缺口](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-next-iteration-readiness-zh.md)。
+
+
+后续轮次工程验证：第2/3轮来源读取、旧经验块来源保留与非递归提炼、保持held的后继配置派生及首轮construction停止门限已接入；扩展回归353项通过。真实3条不可变完整上下文的供给分别29/30/30条，均低于47，0新增模型、tokenizer和评分调用；此检查不代表完整下一轮输入或FIT。真实经验库尚未产出，第二轮未开始。详见[供给和迭代接续说明](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-bank-supply-allocation-zh.md)。

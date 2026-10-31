@@ -28,17 +28,20 @@ def verify_score_receipt(receipt,*,manifest,manifest_sha,outputs_sha,run,attempt
     if receipt!=expected:raise ValueError('official score receipt differs from exact source column')
 
 
-def load_half(source,data,half,recipe_pin):
+def load_half(source,data,half,recipe_pin,*,iteration=1):
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
     from speech_aware_evidence_acquisition.core.config import compose
     if half not in ('h1','h2'):raise ValueError('fixed half required')
+    if type(iteration) is not int or iteration not in (1,2,3):raise ValueError('registered iteration1..3 required')
     recipe_path=pinned(source,recipe_pin);recipe=validate_recipe(source,recipe_path)
-    run=f'SAEA-SLURP-TFRL-CURRENT-SEED-I1-{half.upper()}-V1';attempt='generation-v1';n=313 if half=='h1' else 312
+    prefix='SEED' if iteration==1 else 'BANK'
+    run=f'SAEA-SLURP-TFRL-CURRENT-{prefix}-I{iteration}-{half.upper()}-V1'
+    attempt='generation-v1';n=313 if half=='h1' else 312
     if (recipe['run_id']!=run or recipe['attempt_id']!=attempt or recipe['rows']!=n):
         raise ValueError('unexpected real half recipe')
     pp=pinned(source,recipe['sampling_plan']);rp=pinned(source,recipe['roster']);plan=read(pp);roster=read(rp)
     ids=[r['sample_id'] for r in roster['items']]
-    if (plan['half']!='R01C-'+half.upper() or plan['run_id']!=run or plan['attempt_id']!=attempt
+    if (plan['iteration']!=iteration or plan['half']!='R01C-'+half.upper() or plan['run_id']!=run or plan['attempt_id']!=attempt
             or len(ids)!=n or len(set(ids))!=n or [r['row_id'] for r in plan['row_plan']]!=ids
             or plan['roster']['file_sha256']!=sha(rp)
             or plan['roster']['split_identity_hash']!=recipe['split_identity_hash']
@@ -49,10 +52,11 @@ def load_half(source,data,half,recipe_pin):
     if (bundle.attempt_state!='FINALIZED' or bundle.manifest['status']!='COMPLETED'
             or bundle.manifest['run_id']!=run or bundle.manifest['attempt']['attempt_id']!=attempt):
         raise ValueError('complete finalized source required')
-    check=audit.verify(plan,bundle.outputs_rows,bundle.trace_records)
     fragments=bundle.manifest['config']['fragments']
     cfg=compose(source,*(fragments[k] for k in ('model','dataset','baseline','experiment')))
     if cfg.config_hash!=bundle.manifest['config']['config_hash']:raise ValueError('source configuration differs')
+    from tfrl_current_bank_audit import verify_for_values
+    check=verify_for_values(plan,bundle.outputs_rows,bundle.trace_records,values=cfg.values,data=data)
     expected={'schema':'saea-tfrl-current-half-result-v1','rows':n,'run_id':run,'attempt_id':attempt,
         'half':plan['half'],'iteration':plan['iteration'],'recipe_sha256':sha(recipe_path),'plan_sha256':sha(pp),
         'manifest_sha256':sha(manifest),'credit_sha256':sha(directory/'credit.jsonl'),
@@ -90,6 +94,12 @@ def load_half(source,data,half,recipe_pin):
     if credit!=[json.loads(line) for line in (directory/'credit.jsonl').read_text().splitlines()]:
         raise ValueError('recorded credit differs from complete official scores')
     if any(complete.get(k)!=v for k,v in summary.items()):raise ValueError('half summary differs from official scores')
-    return {'plan':plan,'roster':roster,'results':results,'credit':credit,'bundle':bundle,'config':cfg,
+    bank_context=None
+    if iteration>1:
+        from speech_aware_evidence_acquisition.core.bundle.tfrl_bank import load
+        bank_context=load(bundle.manifest,manifest,ids,recipe['split_identity_hash'])
+        if bank_context is None or bank_context.get('allocation') is None:
+            raise ValueError('later half lacks sealed bank and allocation context')
+    return {**({'bank_context':bank_context} if bank_context is not None else {}),'plan':plan,'roster':roster,'results':results,'credit':credit,'bundle':bundle,'config':cfg,
         'source':{'run_id':run,'attempt_id':attempt,'complete_relpath':str(complete_path.relative_to(data)),
             'complete_sha256':sha(complete_path),'manifest_sha256':sha(manifest),'recipe_sha256':sha(recipe_path)}}

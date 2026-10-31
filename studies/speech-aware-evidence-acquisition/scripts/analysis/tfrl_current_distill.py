@@ -18,7 +18,7 @@ import tfrl_v2_common as common
 from speech_aware_evidence_acquisition.core.rollout_trace import usage_judgements,supply_items
 
 
-def sealed_answers(bundle,plan,*,resolver=None):
+def sealed_answers(bundle,plan,*,resolver=None,bank_context=None):
     """First-visit answers and exact evidence, keyed by real row and arm.
 
     Requires verify_bundle and the plan/request audit before invocation. The
@@ -29,6 +29,18 @@ def sealed_answers(bundle,plan,*,resolver=None):
     rows={r['sample_id']:r for r in bundle.outputs_rows}
     if len(rows)!=len(bundle.outputs_rows) or set(rows)!=set(expected):raise ValueError('whole-half answers required')
     answers={};texts={};provenance=[]
+    if plan['iteration'] not in (1,2,3):raise ValueError('registered iteration1..3 required')
+    if plan['iteration']>1 and bank_context is None:
+        raise ValueError('banked distillation requires verified request context')
+    if bank_context is not None:
+        from speech_aware_evidence_acquisition.rails.tfrl_bank_request_audit import verify_group
+        requests=[v['payload'] for k,v in bundle.trace_records.items() if k.endswith('/request')]
+        for row in rows.values():
+            if row.get('supply_variants') is None and any(v.get('stage')=='solver' for v in row['native_episode_receipt']['role_visits']):
+                raise ValueError('banked Solver row lacks arm custody')
+            if row.get('supply_variants') is not None:
+                verify_group(row['sample_id'],row['supply_variants']['arms'],requests,**bank_context)
+
     for sid in expected:
         from tfrl_seed_request_audit import no_solver_abstention
         if (not any(v.get('stage')=='solver' for v in rows[sid]['native_episode_receipt']['role_visits'])
@@ -52,9 +64,17 @@ def sealed_answers(bundle,plan,*,resolver=None):
                 raise ValueError('sealed contact provenance differs')
             rendered,ok=s3.normalise_arm_answer(raw,normaliser)
             answer=json.loads(rendered);answer['parsed']=ok
-            evidence={}
+            evidence={};inherited=[]
             for item in payload.get('supplied_evidence',[]):
                 key,content=item['evidence_id'],item['content']
+                from speech_aware_evidence_acquisition.rails.tfrl_v2_consumption import EXEMPLAR_EVIDENCE_ID
+                if key==EXEMPLAR_EVIDENCE_ID:
+                    if bank_context is None:raise ValueError('inherited exemplar lacks verified bank context')
+                    inherited.append({'evidence_id':key,'source_uri':item['source_uri'],
+                        'content_sha256':hashlib.sha256(content.encode()).hexdigest(),
+                        'bank_receipt_sha256':bank_context['bank'].receipt_sha256,
+                        'distillation':'inherited context; excluded from fresh evidence exemplars'})
+                    continue
                 if not isinstance(content,str) or not content:raise ValueError('empty evidence content')
                 if key in evidence:raise ValueError('duplicate supplied evidence identity')
                 if key in texts and texts[key]!=content:raise ValueError('one evidence identity has different actual text')
@@ -63,7 +83,8 @@ def sealed_answers(bundle,plan,*,resolver=None):
             used={k:v[0] for k,v in judged.items()};bases={k:v[1] for k,v in judged.items()}
             answers[sid,arm]={'answer':answer,'supply_items':supply_items(evidence,used=used,bases=bases)}
             provenance.append({'row_id':sid,'arm':arm,'request_id':rid,'request_sha256':contact['request_sha256'],
-                'response_text_sha256':contact['response_text_sha256'],'normalized_answer_sha256':hashlib.sha256(rendered.encode()).hexdigest()})
+                'response_text_sha256':contact['response_text_sha256'],'normalized_answer_sha256':hashlib.sha256(rendered.encode()).hexdigest(),
+                **({'inherited_bank_context':inherited} if inherited else {})})
     if not texts and resolver is None:raise ValueError('verified knowledge resolver required without supplied evidence')
     if resolver is None:
         resolver=text.ItemTextResolver(texts,source={'kind':'verified-sealed-model-requests','run_id':plan['run_id'],
@@ -78,7 +99,7 @@ def sealed_answers(bundle,plan,*,resolver=None):
 def answers_for_loaded(loaded,*,resolver=None):
     """Keep trace namespaces separate when a half is an explicit source union."""
     if 'segments' not in loaded:
-        return sealed_answers(loaded['bundle'],loaded['plan'],resolver=resolver)
+        return sealed_answers(loaded['bundle'],loaded['plan'],resolver=resolver,bank_context=loaded.get('bank_context'))
     if resolver is None:raise ValueError('source union requires verified common knowledge resolver')
     ids=[r['row_id'] for r in loaded['plan']['row_plan']];seen=set();answers={};provenance=[]
     for segment in loaded['segments']:
@@ -129,7 +150,7 @@ def build(loaded,measure,*,resolver=None):
             'vote_min':common.VOTE_MIN_ROWS,'measure':measure.name},
         'credit_summary':sampler.credit_summary(credit),
         'counts':{'rows_in_half':len(ids),'rows_used':len(ids)-len(abstentions),'rows_skipped':len(abstentions),'no_solver_abstentions':len(abstentions),'scored_rows':len(ids),'contrast_pairs':len(pairs),'rules_refused':len(refused)},
-        'method':'Existing deterministic answer-contrast rules and resolved evidence exemplars; verified current seed-only trajectories.',
+        'method':'Existing deterministic answer-contrast rules and resolved evidence exemplars; verified current seed-only trajectories.' if iteration==1 else 'Verified banked K4 answers; fresh exemplars use original knowledge evidence only, inherited bank blocks retain provenance and are not recursively quoted.',
         'model_calls':0,'tokenizer_calls':measure.calls-calls_before,'next_iteration_authorized':False}
     # Actual timestamps are not available here; do not fabricate rollout contact/TFRL lines.
     return {'credit':credit,'pairs':pairs,'exemplar_bank':exemplar,'rule_bank':rules,'refused':refused,

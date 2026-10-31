@@ -45,3 +45,15 @@ def test_explicit_actual_bounds_replace_legacy_forecast(tmp_path):
     for plan in plans.values():
         assert plan['banks']['supply_bound_items']==47
         assert plan['banks']['supply_allocation']['control_max_items']==55
+
+
+@pytest.mark.parametrize('gain,flag',[(.9,False),(float('nan'),True),(1.1,False)])
+def test_first_iteration_kill_gate_cannot_be_bypassed(gain,flag):
+    with pytest.raises(ValueError):m.require_first_construction_gate({'rows':625,'iteration':1,
+        'vote_minus_lock_pp':gain,'construction_gate_passed':flag,'threshold_pp':1.0})
+
+
+def test_construction_pass_is_not_system_acceptance():
+    result=m.require_first_construction_gate({'rows':625,'iteration':1,'vote_minus_lock_pp':1.,
+        'construction_gate_passed':True,'threshold_pp':1.0})
+    assert result['preparation_gate_passed'] and not result['system_accepted']

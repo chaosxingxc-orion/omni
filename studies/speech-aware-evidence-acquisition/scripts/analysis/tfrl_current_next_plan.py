@@ -51,6 +51,21 @@ def derive(rosters,receipts,*,iteration,control_bounds=None):
     return result
 
 
+
+def require_first_construction_gate(record):
+    """Existing i1 kill rule; a pass allows preparation, not system acceptance."""
+    import math
+    gain=record.get('vote_minus_lock_pp')
+    if (record.get('rows')!=625 or record.get('iteration')!=1
+            or type(gain) not in (int,float) or not math.isfinite(gain)
+            or record.get('threshold_pp')!=1.0
+            or record.get('construction_gate_passed') is not (round(gain,6)>=1.0)):
+        raise ValueError('complete consistent first construction gate required')
+    if not record['construction_gate_passed']:
+        raise ValueError('iteration1 construction gain below1pp: stop family under registered rule')
+    return {'construction_gain_pp':gain,'preparation_gate_passed':True,
+            'system_accepted':False,'independent_confirmation_required':True}
+
 def run(repo,data,out):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
@@ -59,6 +74,14 @@ def run(repo,data,out):
     pooled=read(data/'analysis'/POOL/'complete.json')
     if (completion['rows']!=625 or pooled['rows']!=625 or completion['sources']!=pooled['sources']):
         raise ValueError('matching complete recovered625 bank and score sources required')
+    # Recompute from exact registered source halves; a completion flag alone
+    # cannot authorize successor preparation.
+    from tfrl_recovered_consumers import load as load_recovered
+    _,_,verified_halves=load_recovered(repo,data)
+    verified_pool=pool({v['plan']['half']:(v['plan'],v['results']) for v in verified_halves.values()})
+    if any(pooled.get(k)!=v for k,v in verified_pool.items()):raise ValueError('recorded pool differs from verified source scores')
+    if pooled['sources']!={h:v['source'] for h,v in verified_halves.items()}:raise ValueError('pool source custody differs')
+    gate=require_first_construction_gate(verified_pool)
     rosters={h:read(repo/sampler.cm.HALF_ROSTER_RELPATH['R01C-'+h.upper()]) for h in ('h1','h2')}
     receipts={};pins={}
     for h in ('h1','h2'):
@@ -91,7 +114,7 @@ def run(repo,data,out):
         p['banks']['allocation_source']=allocation_sources[h]
         s3._immutable_json(out/f'{h}-sampling-plan.json',p)
     result={'schema':'saea-tfrl-current-next-held-plans-v1','source_commit':head,'iteration':2,'rows':625,
-        'plans':{h:sha(out/f'{h}-sampling-plan.json') for h in plans},'bank_receipts':pins,
+        'plans':{h:sha(out/f'{h}-sampling-plan.json') for h in plans},'bank_receipts':pins,'construction_gate':gate,
         'parent_pool_sha256':sha(data/'analysis'/POOL/'complete.json'),'parent_banks_sha256':sha(bankroot/'complete.json'),
         'new_model_calls':0,'readiness':'held','generation_authorized_by_this_file':False,
         'remaining':['review complete construction gain and stop rule','verify declared allocation on actual source inputs while preserving controls',
