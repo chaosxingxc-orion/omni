@@ -99,3 +99,99 @@ def test_native_fit_artifact_and_journal(tmp_path, fault):
     else:
         pair, value, count, pins = audit.check_fit(path, spec, ['sample'], identity)
         assert pair == ('sample', 'contact') and count == 1 and len(pins) == 2
+
+
+def test_predecessor_fit_keeps_unfinished_costs_and_scopes_attempts(tmp_path, monkeypatch):
+    data = tmp_path / 'data'
+    fit = {'run_id': 'fit-old', 'attempt_id': 'old', 'contact_cap': 4}
+    fit_dir = data / 'prepared' / 'fit-old' / 'old'
+    fit_dir.mkdir(parents=True)
+    for name in ('one', 'two'):
+        (fit_dir / (name + '.request-fit.json')).write_text('{}')
+        (fit_dir / (name + '.request-fit.json.contacts.jsonl')).write_text('{}')
+    path = tmp_path / 'trace.jsonl'
+    trace(path)
+    primary = {'boundary': audit.boundary_identity((payload(),)), 'raw': payload()['raw_speech_query']}
+    def check(path, spec, expected, identity):
+        sample = 'sample' if path.name.startswith('one') else 'unfinished'
+        assert sample in expected
+        return (sample, 'contact'), primary, 1 if sample == 'sample' else 2, {}
+    monkeypatch.setattr(audit, 'check_fit', check)
+    sessions = {'primary_fit_session': 'i0', 'members': {'i0': {}}, 'inputs': {}}
+    result = audit.audit_source(data, fit, 'generation', {'sample'}, ['sample', 'unfinished'],
+                                path, sessions, predecessor=True)
+    assert result['fit_contacts'] == 2
+    assert result['kept_fit_contacts'] == result['generation_contacts'] == 1
+    assert result['non_kept_fit_contacts'] == 1
+    # Current attempts cannot hide a foreign FIT contact as an interrupted predecessor.
+    with pytest.raises(AssertionError):
+        audit.audit_source(data, fit, 'generation', {'sample'}, ['sample', 'unfinished'], path, sessions)
+
+
+def test_predecessor_fit_still_rejects_kept_boundary_mismatch(tmp_path, monkeypatch):
+    fit = {'run_id': 'fit', 'attempt_id': 'old', 'contact_cap': 2}
+    directory = tmp_path / 'prepared/fit/old'
+    directory.mkdir(parents=True)
+    (directory / 'one.request-fit.json').write_text('{}')
+    (directory / 'one.contacts.jsonl').write_text('{}')
+    path = tmp_path / 'trace.jsonl'; trace(path)
+    monkeypatch.setattr(audit, 'check_fit', lambda *args: (('sample', 'contact'),
+                        {'boundary': 'wrong', 'raw': payload()['raw_speech_query']}, 1, {}))
+    sessions = {'primary_fit_session': 'i0', 'members': {'i0': {}}, 'inputs': {}}
+    with pytest.raises(ValueError, match='actual FIT boundary'):
+        audit.audit_source(tmp_path, fit, 'generation', {'sample'}, ['sample'], path, sessions, predecessor=True)
+
+
+def test_request_ids_are_local_to_each_attempt(tmp_path):
+    old, new = tmp_path / 'old.jsonl', tmp_path / 'new.jsonl'
+    trace(old); trace(new)
+    # Both attempts legitimately start at r1; no cross-attempt dictionary merge.
+    left = audit.trace_contacts(old, ['sample'])
+    right = audit.trace_contacts(new, ['sample'])
+    assert left == right and left[1] + right[1] == 2
+
+
+def test_unregistered_predecessor_is_rejected(tmp_path):
+    from types import SimpleNamespace
+    bundle = SimpleNamespace(manifest={'predecessor_attempt': {'attempt_id': 'old'}})
+    with pytest.raises(ValueError):
+        audit.predecessor_source(tmp_path, tmp_path, {'attempt_id': 'new'}, {}, bundle)
+
+
+def test_build_combines_attempts_and_preserves_noncheckpoint_generation_cost(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    repo, data = tmp_path / 'repo', tmp_path / 'data'
+    cell = {'run_id': 'generation', 'attempt_id': 'new', 'model_fragment': 'model', 'baseline_fragment': 'base'}
+    doc = {'cells': [cell], 'populations': [{'ids': ['old-row', 'new-row']}], 'population': {'count': 2},
+           'service_session': 'parent', 'family_budget': {'generation_calls_cap': 20}}
+    base = {'arm': 'raw-speech-agent-native-tools', 'native_episode': {'enabled': True},
+            'native_contact_fit': {'run_id': 'fit-new', 'attempt_id': 'new', 'contact_cap': 4}}
+    for kind, name, value in [('experiment', 'experiment', doc), ('baseline', 'base', base)]:
+        path = repo / 'configs' / kind / (name + '.json'); path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(value))
+    directory = data / 'runs/generation/new'; directory.mkdir(parents=True)
+    trace = directory / 'trace.jsonl'; trace.write_text('trace')
+    manifest = directory / 'generation.run-manifest.json'; manifest.write_text('{}')
+    old_record = data / 'old.json'; old_record.write_text('{}')
+    bundle = SimpleNamespace(split_ids={'old-row', 'new-row'}, manifest={
+        'status': 'COMPLETED', 'raw_trace': {'path': str(trace), 'sha256': audit.serving.sha(trace)}})
+    monkeypatch.setattr(audit.registered, 'require_read', lambda *a: None)
+    monkeypatch.setattr(audit.scored, 'verify_bundle', lambda *a: bundle)
+    sessions = {'primary_fit_session': 'i0', 'members': {}, 'inputs': {}}
+    monkeypatch.setattr(audit.serving, 'sessions', lambda *a, **k: sessions)
+    monkeypatch.setattr(audit, 'predecessor_source', lambda *a: {
+        'doc': doc, 'cell': {**cell, 'attempt_id': 'old'}, 'fit': {}, 'expected': ['old-row'],
+        'trace': trace, 'attempt_record': old_record, 'predecessor_commit': 'a' * 40, 'actual': {'calls': 7}})
+    seen = []
+    def source(data, fit, run, expected, full, trace, sessions, predecessor=False):
+        seen.append((expected, predecessor))
+        return {'generation_contacts': 3 if predecessor else 2, 'logical_contacts': 1,
+                'fit_contacts': 7 if predecessor else 2, 'kept_fit_contacts': 3 if predecessor else 2,
+                'non_kept_fit_contacts': 4 if predecessor else 0, 'fallback_contacts': 0,
+                'primary_fit_session': 'i0', 'inputs': {}}
+    monkeypatch.setattr(audit, 'audit_source', source)
+    result = audit.build(repo, data, 'experiment', 'read')
+    assert seen == [({'old-row'}, True), ({'new-row'}, False)]
+    assert result['generation_contacts'] == 5
+    assert result['accounted_generation_contacts'] == 9
+    assert result['non_kept_fit_contacts'] == 4 and result['rows'] == 2
