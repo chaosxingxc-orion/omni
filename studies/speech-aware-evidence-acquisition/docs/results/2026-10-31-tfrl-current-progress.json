@@ -1,30 +1,30 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T20:49:10Z",
-  "completed_rows": 312,
+  "observed_at_utc": "2026-10-31T20:59:12Z",
+  "completed_rows": 315,
   "total_rows": 625,
   "h1": {
     "state": "recovery_generation_running",
     "completed_rows": 0,
     "total_rows": 313,
     "remaining_rows": 313,
-    "checkpoint_sha256": "eff01661b1997622ff8206f01584d157931aca1aa32114645597e2b3e67fc9bd",
+    "checkpoint_sha256": "eddeb3f5e3ef1c1a5783df797c46c1da0e8e33913a79b055b122ffa23072d9c7",
     "torn_tail_bytes": 0,
     "unusable_checkpoint_rows": 0,
     "estimated_remaining_seconds": null,
     "original_checkpoint_rows": 25,
     "reuse_candidate_rows": 3,
     "context_affected_rows": 22,
-    "remaining_inference_rows": 310,
+    "remaining_inference_rows": 307,
     "recovery_source_commit": "3391fab7ee0c030c6ef6f0bbc958e84fbb6c7f2b",
     "generation_dependency": "H2 successful driver terminal satisfied; detached generation running",
     "official_union": "registered; three preserved rows validated against real traces; score full313 after complete310",
     "recovery_model_calls": null,
     "union_recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7",
     "recovery_started_at_utc": "2026-10-31T20:41:30.205884Z",
-    "recovery_completed_rows": 0,
+    "recovery_completed_rows": 3,
     "recovery_total_rows": 310,
-    "recovery_elapsed_seconds": 460.3956210613251,
+    "recovery_elapsed_seconds": 1062.346500635147,
     "original_failed_attempt_diagnostic": {
       "elapsed_seconds": 923.612692117691,
       "wall_seconds_per_complete_row": 36.944507684707645,
@@ -53,11 +53,20 @@
       },
       "wall_seconds_per_complete_row_note": "Historical failed-run diagnostic only; 22 of 25 rows had erroneous context compaction."
     },
-    "elapsed_seconds": 460.3956210613251,
+    "elapsed_seconds": 1062.346500635147,
     "wall_seconds_per_complete_row": null,
-    "timing_basis": "Recovery driver start to20:49:10 observation;no completed recovery rows yet",
-    "checkpoint_recorded_cost_lower_bound": {},
-    "complete_sample_timings": {}
+    "timing_basis": "Recovery driver start to20:59:12 observation;3/310partial,not throughputbaseline",
+    "checkpoint_recorded_cost_lower_bound": {
+      "calls": 21,
+      "audio_seconds": 49.273875,
+      "latency_seconds": 2220.85902464,
+      "prompt_tokens": 159867,
+      "completion_tokens": 13527
+    },
+    "complete_sample_timings": {
+      "admission_wait_mean_s": 1.67627754,
+      "admitted_to_finished_mean_s": 795.39325351
+    }
   },
   "h2": {
     "state": "official_complete",
@@ -112,7 +121,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "H2complete;H1remaining310new plus3preserved pendingunion. Early H1snapshot has0complete; reliableETAunknown.",
+  "eta_note": "H2complete312;H1new3/310complete,307remaining plus3preservedpendingunion. Early subset ETAunknown.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -121,7 +130,7 @@
     "scoring_jobs": 0
   },
   "state": "h2_official_complete_h1_recovery_running",
-  "remaining_rows": 313,
+  "remaining_rows": 310,
   "bank_read": {
     "registered": true,
     "state": "failed_upstream",
@@ -148,7 +157,7 @@
     "h1_wire_replay_new_model_calls": 0
   },
   "reuse_candidate_rows": 3,
-  "completion_note": "H2official312complete. H1new310started;3preservedrows pendingcomplete313union. No625gateyet.",
+  "completion_note": "315/625generationcomplete,312officialcomplete;3historicalpreservedseparate. No complete625gateyet.",
   "recovered_consumers": {
     "state": "waiting_two_complete_official_halves",
     "rows": 625,
@@ -163,11 +172,13 @@
     "actual_bank_used": false,
     "generation_started": false,
     "remaining": [
-      "actual measured banks and full625gate",
-      "actual held config staging",
-      "full real rendering and exact FIT",
-      "registration/admission/preflight",
+      "actual625result and bank",
+      "full real rendered request and FIT",
+      "generation registration/admission",
+      "actual next iteration execution",
       "independent confirmation"
-    ]
+    ],
+    "later_consumer_implementation": true,
+    "later_consumer_deployed": false
   }
 }

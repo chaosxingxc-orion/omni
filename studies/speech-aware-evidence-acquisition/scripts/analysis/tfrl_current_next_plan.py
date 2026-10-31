@@ -94,22 +94,35 @@ def stage_cells(repo,data,sources,rosters,plans,receipts,pins):
     return result
 
 
-def run(repo,data,out):
+def run(repo,data,out,iteration=2):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     assert_execution_environment();head=require_clean_study_repo(repo)
-    bankroot=data/'analysis'/BANK;completion=read(bankroot/'complete.json')
-    pooled=read(data/'analysis'/POOL/'complete.json')
+    if type(iteration) is not int or iteration not in (2,3):raise ValueError('successor iteration2/3 required')
+    from tfrl_recovered_consumers import identities
+    pool_id,bank_id,recovered_rel=identities(iteration-1)
+    bankroot=data/'analysis'/bank_id;completion=read(bankroot/'complete.json')
+    pooled=read(data/'analysis'/pool_id/'complete.json')
     if (completion['rows']!=625 or pooled['rows']!=625 or completion['sources']!=pooled['sources']):
         raise ValueError('matching complete recovered625 bank and score sources required')
     # Recompute from exact registered source halves; a completion flag alone
     # cannot authorize successor preparation.
     from tfrl_recovered_consumers import load as load_recovered
-    _,_,verified_halves=load_recovered(repo,data)
+    _,_,verified_halves=load_recovered(repo,data,iteration=iteration-1)
     verified_pool=pool({v['plan']['half']:(v['plan'],v['results']) for v in verified_halves.values()})
     if any(pooled.get(k)!=v for k,v in verified_pool.items()):raise ValueError('recorded pool differs from verified source scores')
     if pooled['sources']!={h:v['source'] for h,v in verified_halves.items()}:raise ValueError('pool source custody differs')
-    gate=require_first_construction_gate(verified_pool)
+    if verified_pool['iteration']!=iteration-1:raise ValueError('previous iteration source required')
+    if iteration==2:
+        gate=require_first_construction_gate(verified_pool)
+    else:
+        # The first-family kill rule remains bound to verified first results;
+        # a later pool never substitutes for that evidence.
+        _,_,first_halves=load_recovered(repo,data,iteration=1)
+        first_pool=pool({v['plan']['half']:(v['plan'],v['results']) for v in first_halves.values()})
+        gate=require_first_construction_gate(first_pool)
+        gate['previous_iteration']=2
+        gate['later_acceptance_pending']=True
     rosters={h:read(repo/sampler.cm.HALF_ROSTER_RELPATH['R01C-'+h.upper()]) for h in ('h1','h2')}
     receipts={};pins={}
     for h in ('h1','h2'):
@@ -118,8 +131,8 @@ def run(repo,data,out):
         distiller.load_bank(path)  # Rehash all bank artifacts before planning.
         receipts[h]=read(path);pins[h]={'relpath':str(path.relative_to(data)),'sha256':sha(path)}
     # Bind the allocation to the exact source trees that produced the banks.
-    recovered=read(repo/RECOVERED_REL)
-    if completion['recipe_sha256']!=sha(repo/RECOVERED_REL):raise ValueError('bank source recipe differs')
+    recovered=read(repo/recovered_rel)
+    if completion['recipe_sha256']!=sha(repo/recovered_rel):raise ValueError('bank source recipe differs')
     bounds={};allocation_sources={};source_documents={}
     from speech_aware_evidence_acquisition.core.config import compose
     for h,source in recovered['sources'].items():
@@ -129,6 +142,7 @@ def run(repo,data,out):
         if actual!=source['commit']:raise ValueError('allocation source commit differs')
         pinned(root,source['recipe'])
         name='slurp-tfrl-current-seed-i1-h1-context-repair-v1' if h=='h1' else 'slurp-tfrl-current-seed-i1-h2-v1'
+        if iteration>2:name=f'slurp-tfrl-current-bank-i{iteration-1}-{h}-v1'
         exp_path=root/f'configs/experiment/{name}.json';exp=read(exp_path);cell,=exp['cells']
         cfg=compose(root,cell['model_fragment'],cell['dataset_fragment'],cell['baseline_fragment'],name)
         module=cfg.values['native_episode']['consumption_module']
@@ -138,7 +152,7 @@ def run(repo,data,out):
         allocation_sources[h]={'commit':actual,'experiment_sha256':sha(exp_path),
             'config_hash':cfg.config_hash,'module_sha256':sampler.cm.content_sha256(module),
             'baseline_sha256':sha(baseline_path), 'repo_relpath':source['repo_relpath']}
-    plans=derive(rosters,receipts,iteration=2,control_bounds=bounds)
+    plans=derive(rosters,receipts,iteration=iteration,control_bounds=bounds)
     # Compile both halves before publishing any output. Pins in executable
     # declarations use canonical receipt content hashes, not file hashes.
     staged=stage_cells(repo,data,source_documents,rosters,plans,receipts,pins)
@@ -148,10 +162,10 @@ def run(repo,data,out):
         p['banks']['allocation_source']=allocation_sources[h]
         s3._immutable_json(out/f'{h}-sampling-plan.json',p)
     for rel,doc in staged.items():s3._immutable_json(out/rel,doc)
-    result={'schema':'saea-tfrl-current-next-held-plans-v1','source_commit':head,'iteration':2,'rows':625,
+    result={'schema':'saea-tfrl-current-next-held-plans-v1','source_commit':head,'iteration':iteration,'rows':625,
         'plans':{h:sha(out/f'{h}-sampling-plan.json') for h in plans},
         'held_cell_files':{rel:sha(out/rel) for rel in staged},'bank_receipts':pins,'construction_gate':gate,
-        'parent_pool_sha256':sha(data/'analysis'/POOL/'complete.json'),'parent_banks_sha256':sha(bankroot/'complete.json'),
+        'parent_pool_sha256':sha(data/'analysis'/pool_id/'complete.json'),'parent_banks_sha256':sha(bankroot/'complete.json'),
         'new_model_calls':0,'readiness':'held','generation_authorized_by_this_file':False,
         'remaining':['review complete construction gain and stop rule','verify declared allocation on actual source inputs while preserving controls',
             'compile and actual shared-render bank request proof','own supply and exact FIT','register/admit/preflight',
@@ -162,4 +176,5 @@ def run(repo,data,out):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('repo','data','out'):p.add_argument('--'+k,type=Path,required=True)
+    p.add_argument('--iteration',type=int,default=2)
     print(json.dumps(run(**vars(p.parse_args()))))

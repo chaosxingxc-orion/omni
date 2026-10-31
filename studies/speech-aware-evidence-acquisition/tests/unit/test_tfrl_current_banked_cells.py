@@ -97,3 +97,18 @@ def test_staging_refuses_tampered_bank_or_spent_identity(tmp_path,fault):
         suffix='-FIT' if fault=='existing_fit' else ''
         (tmp_path/'runs'/('SAEA-SLURP-TFRL-CURRENT-BANK-I2-H1-V1'+suffix)).mkdir(parents=True)
     with pytest.raises(ValueError):staging.stage_cells(ROOT,tmp_path,*args)
+
+
+def test_third_iteration_uses_previous_bank_and_keeps_held(tmp_path):
+    args=list(documents(tmp_path))
+    _,second_base,second_exp=m.derive(ROOT,*args,SCOPE)
+    args[:2]=[second_base,second_exp]
+    rosters,receipts=inputs(tmp_path/'third')
+    for r in receipts.values():r['iteration']=2
+    plan=plans(rosters,receipts,iteration=3,control_bounds={'h1':55,'h2':55})['h1']
+    args[2:]=[rosters['h1'],plan,receipts['h2'],{
+        'relpath':'analysis/second/h2/bank-receipt.json','sha256':m.rail.receipt_sha256(receipts['h2'])}]
+    name,base,exp=m.derive(ROOT,*args,SCOPE)
+    assert name=='slurp-tfrl-current-bank-i3-h1-v1'
+    assert base['native_episode']['consumption_module']['tfrl_v2_bank']['iteration']==2
+    assert exp['cells'][0]['readiness']['state']=='held'
