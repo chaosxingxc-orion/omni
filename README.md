@@ -32,3 +32,20 @@ One resident deployment, declared by a profile in
 `studies/speech-aware-evidence-acquisition/configs/deployment/` (four instances x tensor-parallel 2 on 8 Ascend
 910B cards); `scripts/npu/npu_deploy.sh plan|up|status|down <profile>` refuses busy cards. Client concurrency comes
 from `scripts/serving/synthetic_sweep.py` (synthetic load only).
+
+## Queue separation
+
+Long-running work uses two independent detached queue families. The NPU queue contains only authorised model experiments and remains guarded by `card_queue_guardian.py`; the CPU queue contains checkpoint readers, scoring, diagnostics, preparation, and baseline locking, and is rejected if a job requests NPU cards. Both queues preserve their own state and runner lock, so CPU analysis can consume durable evidence while the next NPU identity is admitted. A terminal queue is never retried automatically.
+
+Start the coordinator after preparing separate queue files:
+
+```bash
+python3 scripts/npu/dual_queue.py start \
+  --config ./dual-queue.json \
+  --state-dir ./dual-queue-state
+python3 scripts/npu/dual_queue.py status \
+  --config ./dual-queue.json \
+  --state-dir ./dual-queue-state
+```
+
+The NPU queue remains the only owner of card admission. SSH is used only to control and observe detached guardians; reconnect with the queue's explicit resume path after an interruption, and reconcile terminal or unknown identities before any retry.

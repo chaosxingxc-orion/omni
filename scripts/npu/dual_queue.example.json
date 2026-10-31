@@ -1,0 +1,9 @@
+{
+  "schema": "saea-dual-queue-v1",
+  "npu_queue": "./queue-npu.json",
+  "cpu_queue": "./queue-cpu.json",
+  "npu_queue_dir": "./queue-npu-state",
+  "cpu_queue_dir": "./queue-cpu-state",
+  "guardian": "./card_queue_guardian.py",
+  "poll_s": 15
+}
