@@ -19,7 +19,11 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.mark.skipif(not openjiuwen_available(), reason='OpenJiuwen unavailable')
-def test_two_contact_wire_matches_five_branch_delivering_lock(tmp_path):
+def test_two_contact_wire_matches_five_branch_delivering_lock(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.core import stage_timing
+    monkeypatch.setenv("SAEA_STAGE_TIMING_PATH", str(tmp_path / "stages.jsonl"))
+    monkeypatch.setattr(stage_timing, "_fd", None)
+    monkeypatch.setattr(stage_timing, "_path", None)
     source = json.loads((ROOT / 'configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json').read_bytes())
     group = parse_perception_sampling_variants(source['native_episode']['roles']['perception']['sampling_variants'], phase_id='perception')
     runs = []
@@ -55,3 +59,9 @@ def test_two_contact_wire_matches_five_branch_delivering_lock(tmp_path):
         right = json.dumps(new[0][1], sort_keys=True, indent=2)
         import difflib
         assert left == right, "\n".join(difflib.unified_diff(left.splitlines(), right.splitlines()))
+
+    events = [json.loads(line) for line in (tmp_path / "stages.jsonl").read_text().splitlines()]
+    assert any(e["stage"] == "context_build" and e.get("sample_id") and e.get("phase") for e in events)
+    assert all(e["status"] == "ok" for e in events)
+    import os
+    os.close(stage_timing._fd)

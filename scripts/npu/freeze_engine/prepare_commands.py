@@ -5,8 +5,8 @@ from speech_aware_evidence_acquisition.contracts import assert_execution_environ
 from speech_aware_evidence_acquisition.core.deployment import load_deployment_profile,model_fragment_values,docker_run_argv,allocate_from_npu_smi
 assert_execution_environment()
 S=Path('/mnt/cephfs/xingchao/omni/publish/omni/studies/speech-aware-evidence-acquisition')
-p=argparse.ArgumentParser();p.add_argument('--nic',required=True);p.add_argument('--smi');a=p.parse_args()
-profile=load_deployment_profile('qwen3-omni-thinking-bf16-4xtp2-s48-b2048-lock-v1',S)
+p=argparse.ArgumentParser();p.add_argument('--nic',required=True);p.add_argument('--smi');p.add_argument('--profile',default='qwen3-omni-thinking-bf16-4xtp2-s48-b2048-lock-v1');a=p.parse_args()
+profile=load_deployment_profile(a.profile,S)
 if a.smi:allocate_from_npu_smi(profile,Path(a.smi).read_text())
 out=[]
 for instance in profile.instances:

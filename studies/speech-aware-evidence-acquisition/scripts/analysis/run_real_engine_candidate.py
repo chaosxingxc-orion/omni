@@ -1,0 +1,54 @@
+"""Run one registered real500 candidate using shared campaign/lease/checkpoints.
+
+The host launches this once in a detached formal container. No auto-retry,
+synthetic request path, alternate gate, or historical response injection exists.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import sys
+import time
+
+ROOT=Path(__file__).resolve().parents[2]
+sys.path.insert(0,str(ROOT/'src'))
+
+
+def run(repo,data,name,out):
+    from speech_aware_evidence_acquisition.contracts import assert_execution_environment
+    from speech_aware_evidence_acquisition.core.atomic_file import publish_new
+    from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
+    from speech_aware_evidence_acquisition.core.flight.campaign import load_campaign_cells,declared_readiness,run_campaign
+    from speech_aware_evidence_acquisition.core.flight.cli import assert_prepared_artifacts_current
+    from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
+    assert_execution_environment()
+    commit=require_clean_study_repo(repo)
+    if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned output required; inspect existing attempts before resume')
+    spec=json.loads((repo/'docs/readiness'/name/'candidate.json').read_bytes())
+    if spec['rows']!=500 or name!=spec['cell'] or os.environ.get('SAEA_DEPLOYMENT_PROFILE')!=spec['profile']:raise ValueError('candidate topology/roster differs')
+    cells=load_campaign_cells(repo,name);cell,=cells
+    if declared_readiness(cell,data).state!='ready':raise ValueError('candidate not ready')
+    for rid,aid in [(spec['run_id'],spec['attempt_id']),(spec['fit_run_id'],spec['fit_attempt_id'])]:
+        if (data/'attempts'/rid/(aid+'.json')).exists() or (data/'runs'/rid/aid).exists():raise ValueError('existing attempt: no blind replay')
+    out.mkdir(parents=True)
+    def save(name,doc):publish_new(out/name,(json.dumps(doc,indent=2)+'\n').encode())
+    save('started.json',{'pid':os.getpid(),'time':time.time(),'study_commit':commit,'candidate':name,'profile':spec['profile'],'rows':500})
+    try:
+        runtime=build_flight_runtime(repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],baseline=cell.document['baseline_fragment'],experiment=name,run_id=cell.run_id,attempt_id=cell.attempt_id,runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json')
+        assert_prepared_artifacts_current([runtime])
+        started=time.monotonic()
+        result=run_campaign([runtime],cells=cells,repo_root=repo,data_root=data,owner='Codex-real500',expected_session_id=spec['service_session'])
+        save('campaign.json',result)
+        if result['pending'] or result['completed']!=[cell.run_id]:raise RuntimeError('shared campaign did not complete the candidate; inspect campaign state')
+        save('complete.json',{'candidate':name,'rows':500,'campaign_wall_seconds':time.monotonic()-started,'includes_preflight_preprocess_scoring':True,'profile':spec['profile'],'result':result})
+        return {'candidate':name,'rows':500,'completed':True}
+    except BaseException as error:
+        save('failed.json',{'type':type(error).__name__,'error':str(error),'automatic_retry':False,'preserve':'attempt costs, FIT contacts, complete-row checkpoints and unresolved requests'})
+        raise
+
+
+if __name__=='__main__':
+    p=argparse.ArgumentParser(description=__doc__)
+    for key in ('repo','data','out'):p.add_argument('--'+key,type=Path,required=True)
+    p.add_argument('--candidate',required=True);a=p.parse_args()
+    print(json.dumps(run(a.repo,a.data,a.candidate,a.out)))

@@ -14,6 +14,8 @@ receipt-bound resident llama.cpp service; unit tests use in-process clients.
 
 from __future__ import annotations
 
+from ..core.stage_timing import measure
+
 import hashlib
 import json
 from collections import deque
@@ -3961,6 +3963,7 @@ async def _invoke_native_role_episode(
         state.query_state = next_state
         pending.clear()
 
+    @measure("context_build", lambda phase_id, episode_state: {"sample_id": state.prepared.sample.sample_id, "phase": phase_id})
     def role_input(phase_id, episode_state):
         nonlocal context_binding, node_context_binding
         settle(next_phase=phase_id)

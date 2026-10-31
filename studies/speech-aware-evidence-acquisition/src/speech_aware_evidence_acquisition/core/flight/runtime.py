@@ -25,6 +25,8 @@ method's own docstring for exactly which existing function it calls.
 
 from __future__ import annotations
 
+from ..stage_timing import measure
+
 import copy
 import hashlib
 import json
@@ -11683,6 +11685,7 @@ class FlightRuntime:
             return False
         return True
 
+    @measure("checkpoint_total", lambda self, **kwargs: {"sample_id": kwargs["outcome"].prepared.sample.sample_id})
     def _checkpoint_row(
         self, *, outcome: object, trace_records: Sequence[object], client: object,
         program: object, policy: str,
@@ -11788,6 +11791,7 @@ class FlightRuntime:
         seal any execution-unit (E21 window) cell."""
         self._trace_execution_unit_deliveries(client, canonical_rows, run_id=run_id)
 
+    @measure("output_normalize")
     def _canonical_output_rows(
         self, client: object, *, output_rows=None, timings=None, phase_summaries=None,
     ) -> list[Mapping[str, object]]:

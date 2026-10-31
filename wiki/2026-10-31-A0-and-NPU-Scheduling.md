@@ -1,6 +1,6 @@
 # A0 精度与推理工程基线
 
-更新时间：2026-10-31 13:50 UTC。181 已恢复，四个 TP2 实例已统一为48并发并通过健康检查；用户已批准拆分两调用基线与五分支诊断。当前没有等待用户决策的事项。
+更新时间：2026-10-31 14:15 UTC。181 已恢复，当前正部署修正后的TP4-96两实例、共8卡；用户已批准拆分两调用基线与五分支诊断。当前没有等待用户决策的事项。
 
 ## 已有研究结果
 
@@ -30,12 +30,14 @@
 
 | 候选 | 全机资源 | 完成/总样本 | 秒/条与ETA |
 | --- | --- | --- | --- |
-| TP4，每实例96并发 | 8卡、2实例 | 0/500，已准备配置 | 尚未实测 |
+| TP4，每实例96并发 | 8卡、2实例 | 0/500，部署环境修复中 | 尚未实测 |
 | TP4，每实例128并发 | 8卡、2实例 | 0/500，已准备配置 | 尚未实测 |
 | TP8，256并发 | 8卡、1实例 | 0/500，已准备配置 | 尚未实测 |
 | TP8，384并发 | 8卡、1实例 | 0/500，条件候选 | 256有收益再上探 |
 
-每种整机配置共500条，两TP4实例共同处理500条。各候选用同一抽样名单，每条各执行一次真实P→S；本次P输出进入本次S。真实500条推理尚未启动，服务/FIT绑定、登记和科学断点验收待完成。旧合成队列不再重启。[抽样身份、真实链路与完整测量口径](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-engine-baseline-zh.md)。
+每种整机配置共500条，两TP4实例共同处理500条。各候选用同一抽样名单，每条各执行一次真实P→S；本次P输出进入本次S。真实500条推理尚未启动，首候选登记与完整样本恢复测试已完成，服务绑定及最终预检待完成。旧合成队列不再重启。[抽样身份、真实链路与完整测量口径](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-engine-baseline-zh.md)。
+
+首次TP4启动后，正式身份登记发现公开启动器遗漏 `PYTHONNOUSERSITE=1`，已修复并启动有记录的重建；没有数据集调用。完整样本恢复/FIT87项、计时相关54项、公开部署/FIT79项测试通过，真实链路新增分段计时。[验证范围与当前状态](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-runtime-readiness-zh.md)。
 
 ## 单样本耗时
 

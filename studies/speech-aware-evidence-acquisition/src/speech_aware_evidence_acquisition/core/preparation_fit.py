@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .stage_timing import measure
+
 import base64
 import binascii
 import hashlib
@@ -1205,6 +1207,7 @@ def build_native_contact_fit_gate(
     sample_contacts: Counter[str] = Counter()
     fit_lock = threading.Lock()
 
+    @measure("native_fit", lambda prepared_request, **kwargs: {"sample_id": prepared_request.as_payload()["sample_id"], "request_id": prepared_request.as_payload()["request_id"]})
     def fit_contact(prepared_request):
         if not isinstance(prepared_request, PreparedCoreRequest):
             raise PreparationError(

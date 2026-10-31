@@ -12,6 +12,8 @@ importable from exactly ``core.model`` (this package's own ``__init__.py``).
 
 from __future__ import annotations
 
+from ..stage_timing import measure
+
 import base64
 import hashlib
 import json
@@ -184,6 +186,7 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         # never has to invent a parallel accounting path.
         self._tool_calls = 0
 
+    @measure("request_total", lambda self, payload: {"sample_id": payload.get("sample_id"), "request_id": payload.get("request_id")})
     def request(self, payload: Mapping[str, object]) -> CoreResponse:
         keys = set(payload)
         if keys != self._allowlist:

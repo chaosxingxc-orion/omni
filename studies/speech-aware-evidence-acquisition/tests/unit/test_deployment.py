@@ -323,7 +323,7 @@ def test_the_emitted_env_and_mounts_equal_the_sidecar_serve_script(profile, frag
     emitted_mounts = {token[:-3].split(":")[0] for token in _flag_values(argv, "-v") if token.endswith(":ro")}
     assert emitted_mounts == script_mounts == set(dep.ASCEND_READONLY_MOUNTS)
     assert set(dep.NIC_ENV_KEYS) <= script_env <= emitted_env  # the script's HCCL_IF_BASE_PORT is the profile's env
-    assert emitted_env - script_env == {"HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"}
+    assert emitted_env - script_env == {"HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "PYTHONNOUSERSITE"}
     assert "ip -o -4 addr show scope global | awk '{print $2; exit}'" in text
 
 
@@ -482,3 +482,11 @@ def test_admitted_level_is_an_optional_deployment_only_profile_field():
     for bad in (0, -1, True, 1.5, "8", base.max_num_seqs + 1):
         with pytest.raises(dep.DeploymentError, match="admitted_level"):
             dep.validate_deployment_profile(dict(document, admitted_level=bad))
+
+
+def test_deployment_environment_satisfies_receipt_import_isolation(profile, fragment):
+    from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import REQUIRED_ENV
+    for instance in profile.instances:
+        argv = dep.docker_run_argv(profile, instance, fragment, nic=NIC)
+        env = dict(value.split("=", 1) for value in _flag_values(argv, "-e"))
+        assert all(env.get(key) == value for key, value in REQUIRED_ENV.items())

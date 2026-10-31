@@ -11,8 +11,6 @@
   "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
   "instances": [
     {
-      "name": "saea-real500-tp4-i0",
-      "port": 8200,
       "cards": [
         0,
         1,
@@ -22,11 +20,11 @@
       "cpuset": "128-159",
       "env": {
         "HCCL_IF_BASE_PORT": "61000"
-      }
+      },
+      "name": "saea-real500-tp4-i0",
+      "port": 8200
     },
     {
-      "name": "saea-real500-tp4-i1",
-      "port": 8201,
       "cards": [
         4,
         5,
@@ -36,7 +34,9 @@
       "cpuset": "64-95",
       "env": {
         "HCCL_IF_BASE_PORT": "61200"
-      }
+      },
+      "name": "saea-real500-tp4-i1",
+      "port": 8201
     }
   ],
   "max_num_batched_tokens": 2048,

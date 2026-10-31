@@ -35,6 +35,8 @@ and the resume reader can both use it.
 
 from __future__ import annotations
 
+from .stage_timing import measure
+
 import hashlib
 import json
 import os
@@ -324,6 +326,7 @@ class RowCheckpointWriter:
         self._last_sha = digest
         return digest
 
+    @measure("checkpoint_append_fsync", lambda self, **kwargs: {"sample_id": kwargs["sample_id"]})
     def append_row(
         self,
         *,

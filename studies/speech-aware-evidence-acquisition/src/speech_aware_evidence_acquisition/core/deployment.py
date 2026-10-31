@@ -56,6 +56,7 @@ from typing import Iterable, Mapping, Sequence
 
 from ..contracts.gate_runtime_vllm import (
     DEFAULT_NAMESPACE_POLICY,
+    REQUIRED_ENV,
     MM_PROCESSOR_CACHE_FLAG,
     MM_PROCESSOR_CACHE_TYPES,
     NAMESPACE_POLICIES,
@@ -119,7 +120,7 @@ _NIC_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:@-]{0,14}")
 #: ``<interpreter> -m vllm.entrypoints.cli.main serve <model_dir> ...`` form (``contracts.gate_runtime_vllm``).
 CONTAINER_INTERPRETER = "/usr/local/python3.12.13/bin/python3"
 #: Environment every instance gets: the NPU hosts have no internet, so a hub lookup must fail at once, not hang.
-COMMON_ENV = (("HF_HUB_OFFLINE", "1"), ("TRANSFORMERS_OFFLINE", "1"))
+COMMON_ENV = (("HF_HUB_OFFLINE", "1"), ("TRANSFORMERS_OFFLINE", "1"), *sorted(REQUIRED_ENV.items()))
 #: docker's json-file log grows without bound for a resident container; cap it (``docker logs`` keeps the tail).
 LOG_OPTS = ("max-size=200m", "max-file=5")
 #: ``docker run --restart``: a recorded run never restarts itself (a crashed engine stays down for the owner to read; a

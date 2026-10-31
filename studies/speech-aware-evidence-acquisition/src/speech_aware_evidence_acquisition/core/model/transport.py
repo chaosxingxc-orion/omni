@@ -64,6 +64,8 @@ The historical
 
 from __future__ import annotations
 
+from ..stage_timing import measure
+
 import base64
 import hashlib
 import json
@@ -453,6 +455,7 @@ def _exceed_context_message(status: int, detail: str) -> str | None:
 
 
 def _default_post(timeout_seconds: float) -> Callable[[str, bytes], bytes]:
+    @measure("http_request")
     def post(url: str, body: bytes) -> bytes:
         request = urllib.request.Request(
             url, data=body, headers={"Content-Type": "application/json"}, method="POST"
@@ -463,6 +466,7 @@ def _default_post(timeout_seconds: float) -> Callable[[str, bytes], bytes]:
     return post
 
 
+@measure("audio_read_encode")
 def _load_audio_part(
     data_root: Path, media_relpath: object, field: str
 ) -> tuple[str, dict[str, object]]:
@@ -939,6 +943,7 @@ class LlamaServerTransport:
                 "the bank travels in the system message and would be silently dropped"
             )
 
+    @measure("request_render")
     def render_request_with_receipt(
         self, request_bytes: bytes
     ) -> tuple[dict[str, object], dict[str, object] | None]:
@@ -1479,6 +1484,7 @@ class LlamaServerTransport:
         body, _receipt = self.render_request_with_receipt(request_bytes)
         return body
 
+    @measure("transport_total")
     def __call__(self, request_bytes: bytes) -> bytes:
         body, projection_receipt = self.render_request_with_receipt(request_bytes)
         # The text-only construction receipt (2026-09-23, ADV-1) rides the
