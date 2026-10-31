@@ -64,23 +64,30 @@
   "downstream_adoption_scope": "Held actual two-contact R01C construction baseline; no generation admission",
   "current_baseline": {
     "rows": 625,
-    "state": "derived_held",
+    "state": "supply_bound_held",
     "completion_sha256": "f31c8e1c62a662a93bd4d8be4090588d30aee7190926c846e48fdbae7fe5f50e",
     "source_commit": "5b3c02c8998771304dd428ad5ce7c041f63e550b",
-    "execution_tree_commit": "0765ad82",
+    "execution_tree_commit": "4be76c8a",
     "agreement_enabled": true,
     "model_calls": 0,
     "normal_generation_calls": 1250,
     "fallback_inclusive_cap": 2500,
-    "tests_passed": 37
+    "tests_passed": 43
   },
   "own_supply": {
-    "state": "running_confirmed",
-    "observed_at_utc": "2026-10-31T17:18:00Z",
-    "container_pid": 1318938,
+    "state": "complete_bound_verified",
+    "observed_at_utc": "2026-10-31T17:30:00Z",
     "cpu_cores": "160-175",
     "cards": 0,
     "model_calls": 0,
-    "complete": false
+    "complete": true,
+    "rows": 625,
+    "preparation_sha256": "94fc8c6542168bcf44e01441e920378818c0a87de5755a378c2f42d502bbc975",
+    "supply_sha256": "ba5f184fc991059adaad8c885d44fa5bee5d6e96d976706f79c609f120db5fc8",
+    "binding_sha256": "e26f3046d8f672d42def780fa47383a67971b2f763722758624a6268e5919c74",
+    "identity_ok": true,
+    "seed_ok": true,
+    "readiness": "held",
+    "registered": false
   }
 }

@@ -1,0 +1,39 @@
+{
+  "schema": "saea-real500-dataset-identity-audit-v1",
+  "verified_at_utc": "2026-10-31T17:29:10.370743+00:00",
+  "scope": "Recorded dataset identities in all three execution trees; original audio bytes and execution traces are not rehashed by this audit.",
+  "configurations": [
+    {
+      "configuration": "TP4-96",
+      "dataset_sha256": "3bd1570048b13ae456e822d986be163a83228b5772f98e50118e8531d92fef77",
+      "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
+      "rows": 500,
+      "unique_sample_ids": 500,
+      "unique_audio_hashes": 500,
+      "all_slurp_train": true,
+      "all_slurp_real": true
+    },
+    {
+      "configuration": "TP4-128",
+      "dataset_sha256": "3bd1570048b13ae456e822d986be163a83228b5772f98e50118e8531d92fef77",
+      "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
+      "rows": 500,
+      "unique_sample_ids": 500,
+      "unique_audio_hashes": 500,
+      "all_slurp_train": true,
+      "all_slurp_real": true
+    },
+    {
+      "configuration": "TP8-256",
+      "dataset_sha256": "3bd1570048b13ae456e822d986be163a83228b5772f98e50118e8531d92fef77",
+      "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
+      "rows": 500,
+      "unique_sample_ids": 500,
+      "unique_audio_hashes": 500,
+      "all_slurp_train": true,
+      "all_slurp_real": true
+    }
+  ],
+  "matched_roster": true,
+  "new_model_calls": 0
+}
