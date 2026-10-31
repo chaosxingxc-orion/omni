@@ -1,0 +1,96 @@
+{
+  "schema": "saea-real500-input-provenance-audit-v1",
+  "created_at_utc": "2026-10-31T22:55:12.826071+00:00",
+  "run_id": "SAEA-SLURP-REAL500-TP4-S128-V1",
+  "manifest": "/mnt/cephfs/xingchao/omni/runs/SAEA-SLURP-REAL500-TP4-S128-V1/attempt-real500-tp4-s128-v1/SAEA-SLURP-REAL500-TP4-S128-V1.run-manifest.json",
+  "manifest_sha256": "4aae9de7eaee68da8b54cb534206504fee17068657520bc3e9b3dfba778ec63b",
+  "dataset": "SLURP train real recordings",
+  "split_name": "SLURP-REAL-ENGINE-500-V1",
+  "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
+  "rows": 500,
+  "unique_sample_ids": 500,
+  "sampling_replacement": "without replacement at sample_id level (verified unique)",
+  "sample_id_prefixes": [
+    "slurp:train"
+  ],
+  "audio_root": "/mnt/cephfs/xingchao/omni/datasets/slurp/slurp_real",
+  "audio_filename_rule": "sample_id final component + .flac",
+  "missing_real_audio": [],
+  "missing_train_metadata_or_recording_association": [],
+  "synthetic_audio_rows": 0,
+  "real_audio_rows": 500,
+  "train_scenario_counts": {
+    "alarm": 27,
+    "audio": 19,
+    "calendar": 28,
+    "cooking": 29,
+    "datetime": 34,
+    "email": 28,
+    "general": 33,
+    "iot": 26,
+    "lists": 25,
+    "music": 25,
+    "news": 26,
+    "play": 30,
+    "qa": 29,
+    "recommendation": 31,
+    "social": 29,
+    "takeaway": 34,
+    "transport": 20,
+    "weather": 27
+  },
+  "train_intent_top10": [
+    [
+      "general_quirky",
+      30
+    ],
+    [
+      "datetime_query",
+      29
+    ],
+    [
+      "cooking_recipe",
+      29
+    ],
+    [
+      "news_query",
+      26
+    ],
+    [
+      "weather_query",
+      26
+    ],
+    [
+      "takeaway_order",
+      22
+    ],
+    [
+      "social_post",
+      18
+    ],
+    [
+      "calendar_query",
+      16
+    ],
+    [
+      "recommendation_events",
+      16
+    ],
+    [
+      "play_music",
+      15
+    ]
+  ],
+  "distribution_claim": "The roster is an exactly reproducible real SLURP-train subset: a seeded uniform hash draw of the balanced 1080-row Fold B real roster. It is suitable for paired engine throughput/cost comparison. It is not a full-test estimate and should not be used as an unbiased estimate of the natural SLURP train/test mixture without post-stratification or a population-proportional design.",
+  "synthetic_boundary": "Synthetic inputs were used only for serving-capacity/scheduling probes and are excluded from accuracy and real-cost claims.",
+  "status": "PASS_REAL_INPUT_IDENTITY; PASS_REPRODUCIBLE_SEEDED_SELECTION; NOT_FULL_POPULATION_ESTIMATE",
+  "sampling_seed": "20261031-real-engine-500-v1",
+  "selection_rule": "Uniform SHA-256 hash ranking of every sample in the 1080-row Fold B real roster, keyed by seed + NUL + sample_id; first 500 selected, then sorted by sample_id. No outcome, label, completion, or model output enters selection.",
+  "parent_roster": {
+    "split_name": "SLURP-EVO-FOLD-B-V2",
+    "count": 1080,
+    "per_scenario": 60,
+    "source": "governed SLURP train real recordings",
+    "parent_split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a"
+  }
+}
