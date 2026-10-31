@@ -158,7 +158,10 @@ from .resume import (
     read_predecessor_attempt,
     resume_declarations_from_document,
 )
-from .checkpoint_compatibility import CheckpointCompatibility, CheckpointCompatibilityError
+from .checkpoint_compatibility import (
+    CheckpointCompatibility, MultiCheckpointCompatibility, CheckpointCompatibilityError,
+    validate_bridge_declarations,
+)
 
 # ``core.driver.speech_native`` is imported lazily (function-local, inside
 # the one method that needs it) rather than at module scope: ``core.driver``
@@ -1649,10 +1652,9 @@ class FlightRuntime:
                 self._checkpoint_compatibility = CheckpointCompatibility.from_document(
                     checkpoint_compatibility, attempt_id=attempt_id
                 )
+                validate_bridge_declarations(self._checkpoint_compatibility, self._resume_declarations)
             except CheckpointCompatibilityError as error:
                 raise FlightRuntimeError(str(error)) from error
-            if len(self._resume_declarations) != 1 or self._resume_declarations[0].mode != "checkpoint":
-                raise FlightRuntimeError("compatibility requires exactly one checkpoint predecessor")
         self_named = [
             declaration.attempt_id
             for declaration in self._resume_declarations
@@ -1984,6 +1986,13 @@ class FlightRuntime:
             )
         program = default_phase_program(policy)
         predecessors: list[PredecessorAttempt] = []
+        compatibility = getattr(self, "_checkpoint_compatibility", None)
+        if isinstance(compatibility, MultiCheckpointCompatibility):
+            try:
+                compatibility.validate_ancestry(self._repo_root, declarations)
+            except CheckpointCompatibilityError as error:
+                raise FlightRuntimeError(str(error)) from error
+        proofs = {}
         for declaration in declarations:
             attempt_dir = self._predecessor_attempt_dir(declaration.attempt_id)
             try:
@@ -1995,6 +2004,8 @@ class FlightRuntime:
                     protocol = self._plan.protocol_hash
                     implementation = self.row_checkpoint_implementation()
                     compatibility = getattr(self, "_checkpoint_compatibility", None)
+                    if isinstance(compatibility, MultiCheckpointCompatibility):
+                        compatibility = compatibility.bridge_for(declaration.attempt_id)
                     if compatibility is not None:
                         from ..row_checkpoint import read_checkpoint, checkpoint_path
                         header = read_checkpoint(
@@ -2014,7 +2025,12 @@ class FlightRuntime:
                                          "checkpoint_sha256": declaration.checkpoint_sha256},
                         )
                         protocol, implementation = verified["protocol_hash"], verified["implementation"]
-                        self._checkpoint_compatibility_receipt = verified
+                        proofs[declaration.attempt_id] = verified
+                        self._checkpoint_compatibility_receipt = (
+                            {"schema": "saea-checkpoint-compatibility-proofs-v2", "predecessors": dict(proofs)}
+                            if isinstance(getattr(self, "_checkpoint_compatibility", None), MultiCheckpointCompatibility)
+                            else verified
+                        )
                     predecessor = read_checkpoint_predecessor(
                         run_id=self._run_id,
                         attempt_id=declaration.attempt_id,

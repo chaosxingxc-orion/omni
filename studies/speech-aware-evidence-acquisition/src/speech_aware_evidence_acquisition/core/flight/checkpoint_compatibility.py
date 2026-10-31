@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from typing import Mapping
 
 SCHEMA = 'saea-checkpoint-compatibility-v1'
+MULTI_SCHEMA = 'saea-checkpoint-compatibility-v2'
 PREFIX = 'src/speech_aware_evidence_acquisition/'
 IMPLEMENTATION = {'runtime': PREFIX + 'core/flight/runtime.py',
                   'runner': PREFIX + 'rails/runner.py',
@@ -45,6 +46,31 @@ def git(repo, *args):
     return subprocess.check_output(['git', '-c', 'safe.directory=' + str(repo), *args], cwd=repo)
 
 
+def _declaration_map(document):
+    from .resume import resume_declarations_from_document, ResumeRecoveryError
+    try:
+        declarations = resume_declarations_from_document(document)
+    except ResumeRecoveryError as error:
+        raise CheckpointCompatibilityError(str(error)) from error
+    require(all(item.mode == 'checkpoint' for item in declarations),
+            'compatibility requires checkpoint predecessors')
+    return {item.attempt_id: {'attempt_id': item.attempt_id,
+                             'checkpoint_sha256': item.checkpoint_sha256}
+            for item in declarations}
+
+
+def validate_bridge_declarations(compatibility, declarations):
+    require(bool(declarations) and all(item.mode == 'checkpoint' for item in declarations),
+            'compatibility requires checkpoint predecessors')
+    ids = {item.attempt_id for item in declarations}
+    require(compatibility.successor_attempt_id not in ids, 'successor cannot be its own predecessor')
+    if isinstance(compatibility, MultiCheckpointCompatibility):
+        require(set(compatibility.bridges) == ids,
+                'multi compatibility bridges must exactly match resume predecessors')
+    else:
+        require(len(declarations) == 1, 'v1 compatibility requires exactly one checkpoint predecessor')
+
+
 @dataclass(frozen=True)
 class CheckpointCompatibility:
     predecessor_commit: str
@@ -55,6 +81,8 @@ class CheckpointCompatibility:
 
     @classmethod
     def from_document(cls, document, *, attempt_id=None):
+        if isinstance(document, Mapping) and document.get('schema') == MULTI_SCHEMA:
+            return MultiCheckpointCompatibility.from_document(document, attempt_id=attempt_id)
         fields = {'schema', 'predecessor_commit', 'predecessor_fragments',
                   'successor_attempt_id', 'change', 'reviewed_source_changes'}
         require(isinstance(document, Mapping) and set(document) == fields
@@ -71,7 +99,7 @@ class CheckpointCompatibility:
         require(attempt_id is None or attempt_id == successor, 'successor attempt differs')
         require(document['change'] == 'contact-executor-width-v1', 'unreviewed transition kind')
         changes = document['reviewed_source_changes']
-        require(isinstance(changes, Mapping) and changes and set(changes) <= REVIEWABLE,
+        require(isinstance(changes, Mapping) and set(changes) <= REVIEWABLE,
                 'unreviewed source path')
         for value in changes.values():
             require(isinstance(value, Mapping) and set(value) == {'before', 'after'}, 'invalid source pin')
@@ -102,8 +130,17 @@ class CheckpointCompatibility:
                 and record.get('state') == 'ABORTED', 'predecessor must be ABORTED')
         current = compose(repo, **current_fragments)
         cells = current.values.get('cells', [])
-        require(len(cells) == 1 and self.from_document(cells[0].get('checkpoint_compatibility'),
-                attempt_id=self.successor_attempt_id) == self, 'registered compatibility differs from runtime')
+        require(len(cells) == 1, 'registered compatibility requires one runtime cell')
+        registered = cells[0].get('checkpoint_compatibility')
+        if isinstance(registered, Mapping) and registered.get('schema') == MULTI_SCHEMA:
+            multi = MultiCheckpointCompatibility.from_document(registered,
+                                                                attempt_id=self.successor_attempt_id)
+            require(multi.bridges.get(predecessor_attempt_id) == self,
+                    'registered compatibility bridge differs from runtime')
+        else:
+            require(self.from_document(registered,
+                    attempt_id=self.successor_attempt_id) == self,
+                    'registered compatibility differs from runtime')
         require(protocol_hash(current.config_hash, current.values['arm'], current_split_identity_hash)
                 == current_protocol_hash, 'current protocol does not match actual config')
         names = git(repo, 'ls-tree', '-r', '--name-only', self.predecessor_commit, '--', 'configs', 'src').decode().splitlines()
@@ -152,6 +189,87 @@ class CheckpointCompatibility:
                 'reviewed_source_changes': self.reviewed_source_changes}
 
 
+
+@dataclass(frozen=True)
+class MultiCheckpointCompatibility:
+    """A reviewed bridge for every checkpoint predecessor in a multi-hop resume.
+
+    The v1 bridge remains unchanged.  v2 carries one v1-shaped bridge per
+    predecessor attempt, so each pinned commit/config/source delta is verified
+    independently before ``MergedPredecessors`` combines rows.
+    """
+    successor_attempt_id: str
+    bridges: Mapping[str, CheckpointCompatibility]
+
+    @classmethod
+    def from_document(cls, document, *, attempt_id=None):
+        require(isinstance(document, Mapping)
+                and document.get('schema') == MULTI_SCHEMA
+                and set(document) == {'schema', 'successor_attempt_id', 'bridges'},
+                'invalid multi checkpoint compatibility fields/schema')
+        successor = document['successor_attempt_id']
+        require(isinstance(successor, str)
+                and re.fullmatch('[A-Za-z0-9][A-Za-z0-9._-]*', successor),
+                'invalid successor attempt')
+        require(attempt_id is None or attempt_id == successor,
+                'successor attempt differs')
+        raw = document['bridges']
+        require(isinstance(raw, Mapping) and raw, 'multi compatibility requires bridges')
+        bridges = {}
+        for predecessor, value in raw.items():
+            require(isinstance(predecessor, str)
+                    and re.fullmatch('[A-Za-z0-9][A-Za-z0-9._-]*', predecessor),
+                    'invalid predecessor attempt key')
+            # The nested bridge is deliberately v1-shaped and names the same
+            # successor. This prevents a bridge from silently targeting a
+            # different recovery attempt.
+            require(isinstance(value, Mapping) and value.get('schema') == SCHEMA,
+                    'nested compatibility bridge must use v1 schema')
+            bridge = CheckpointCompatibility.from_document(value, attempt_id=successor)
+            bridges[predecessor] = bridge
+        require(successor not in bridges, 'multi compatibility cannot name itself as predecessor')
+        return cls(successor, bridges)
+
+    def validate_ancestry(self, repo, declarations):
+        """Require a closed, acyclic ancestry graph from actual pinned configs."""
+        validate_bridge_declarations(self, declarations)
+        declared = {item.attempt_id: {'attempt_id': item.attempt_id,
+                                     'checkpoint_sha256': item.checkpoint_sha256}
+                    for item in declarations}
+        graph = {}
+        for predecessor, bridge in self.bridges.items():
+            path = 'configs/experiment/' + bridge.predecessor_fragments['experiment'] + '.json'
+            document = json.loads(git(repo, 'show', bridge.predecessor_commit + ':' + path))
+            cells = document.get('cells', [])
+            require(len(cells) == 1 and cells[0].get('attempt_id') == predecessor,
+                    'pinned predecessor attempt differs from bridge key')
+            value = cells[0].get('resume_from')
+            ancestors = _declaration_map(value) if value is not None else {}
+            require(all(declared.get(key) == value for key, value in ancestors.items()),
+                    'resume omits or changes a pinned ancestor')
+            graph[predecessor] = set(ancestors)
+        visiting, visited = set(), set()
+        def visit(node):
+            require(node not in visiting, 'cyclic checkpoint ancestry')
+            if node in visited:
+                return
+            visiting.add(node)
+            for ancestor in graph[node]:
+                visit(ancestor)
+            visiting.remove(node)
+            visited.add(node)
+        for predecessor in graph:
+            visit(predecessor)
+
+    def bridge_for(self, predecessor_attempt_id):
+        try:
+            return self.bridges[predecessor_attempt_id]
+        except KeyError as error:
+            raise CheckpointCompatibilityError(
+                f'no compatibility bridge for predecessor {predecessor_attempt_id!r}'
+            ) from error
+
+
 def verify_config_delta(old, new, *, data, run_id, predecessor_attempt_id,
                         successor_attempt_id, declaration):
     """Reject any change beyond fresh bookkeeping and output-identical supply."""
@@ -180,10 +298,18 @@ def verify_config_delta(old, new, *, data, run_id, predecessor_attempt_id,
     require(old_cell['run_id'] == new_cell['run_id'] == run_id, 'run changed')
     require(old_cell['attempt_id'] == predecessor_attempt_id and new_cell['attempt_id'] == successor_attempt_id
             and successor_attempt_id != predecessor_attempt_id, 'attempt transition differs')
-    require(new_cell.get('resume_from') == declaration, 'checkpoint declaration differs')
+    declared = _declaration_map(new_cell.get('resume_from'))
+    require(declared.get(predecessor_attempt_id) == declaration, 'checkpoint declaration differs')
+    require(successor_attempt_id not in declared, 'successor cannot be its own predecessor')
+    ancestors = _declaration_map(old_cell.get('resume_from')) if old_cell.get('resume_from') is not None else {}
+    require(predecessor_attempt_id not in ancestors, 'predecessor cannot be its own ancestor')
+    require(all(declared.get(key) == value for key, value in ancestors.items()),
+            'resume omits or changes a pinned ancestor')
     require('checkpoint_compatibility' in new_cell, 'missing registered compatibility')
     new_cell.pop('resume_from')
     new_cell.pop('checkpoint_compatibility')
+    old_cell.pop('resume_from', None)
+    old_cell.pop('checkpoint_compatibility', None)
     new_cell['attempt_id'] = old_cell['attempt_id']
     new_cell['baseline_fragment'] = old_cell['baseline_fragment']
     # Readiness remains independently checked by the ordinary campaign gates;

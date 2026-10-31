@@ -21,7 +21,9 @@ from .lease import GenerationLease, WorkerExecutionPolicy
 from .queue import FlightDependency, FlightQueue, FlightReadiness
 from .receipts import persist_flight_receipts
 from .resume import ResumeRecoveryError, resume_declarations_from_document
-from .checkpoint_compatibility import CheckpointCompatibility, CheckpointCompatibilityError
+from .checkpoint_compatibility import (
+    CheckpointCompatibility, CheckpointCompatibilityError, validate_bridge_declarations,
+)
 
 if TYPE_CHECKING:  # annotations only; keeps the re-pin / light paths off the runtime stack
     from .runtime import FlightRuntime
@@ -101,10 +103,13 @@ class CampaignCell:
                 )
         compatibility = document.get("checkpoint_compatibility")
         if compatibility is not None:
-            if resume is None or len(declarations) != 1 or declarations[0].mode != "checkpoint":
-                raise CampaignError("compatibility requires exactly one checkpoint predecessor")
+            if resume is None or any(item.mode != "checkpoint" for item in declarations):
+                raise CampaignError("compatibility requires checkpoint predecessors")
             try:
-                CheckpointCompatibility.from_document(compatibility, attempt_id=str(document["attempt_id"]))
+                parsed = CheckpointCompatibility.from_document(
+                    compatibility, attempt_id=str(document["attempt_id"])
+                )
+                validate_bridge_declarations(parsed, declarations)
             except CheckpointCompatibilityError as error:
                 raise CampaignError(f"cell checkpoint_compatibility is invalid: {error}") from error
         return cls(dict(document))

@@ -32,7 +32,7 @@ def transition(tmp_path):
     base = {'arm':'test-arm','native_contact_fit':{'run_id':'fit-old','attempt_id':'fit-old-a','contact_cap':20},
             'prepared_phase_supply':{'relpath':supply.name,'sha256':digest(supply)}, 'policy':'phase-direct-only-v1'}
     cell={'run_id':'run','attempt_id':'old','baseline_fragment':'b','readiness':{'state':'ready'}}
-    exp={'cells':[cell], 'population':{'ids':['s1','s2']}}
+    exp={'cells':[cell], 'population':{'ids':['s1','s2','s3']}}
     for kind, obj in zip(fragments, ({'model':'frozen'}, {'dataset':'frozen'}, base, exp)):
         write(repo/'configs'/kind/(fragments[kind]+'.json'), obj)
     for path in IMPLEMENTATION.values():
@@ -127,10 +127,149 @@ def test_runtime_keeps_every_completed_row_and_dispatches_only_missing(transitio
     runtime.shows_construction_targets=lambda:False
     runtime.execution_unit_roster=lambda:None
     runtime._result_kind=lambda:'task-answer'
-    result=runtime._load_resume_predecessor(cfg.values,('s1','s2'))
-    assert result['counts']=={'roster':2,'kept':1,'flown':1,'partial':0,'unstarted':1}
-    assert runtime._resume_dispatch_roster()==('s2',)
+    result=runtime._load_resume_predecessor(cfg.values,('s1','s2','s3'))
+    assert result['counts']=={'roster':3,'kept':1,'flown':2,'partial':0,'unstarted':2}
+    assert runtime._resume_dispatch_roster()==('s2','s3')
     assert runtime._resume.complete_sample_ids == ('s1',)
     runtime._checkpoint_compatibility=None
     with pytest.raises(FlightRuntimeError,match='protocol'):
         runtime._load_resume_predecessor(cfg.values,('s1','s2'))
+
+
+@pytest.fixture
+def multihop(transition):
+    """Two real Git ancestors with distinct protocol/source identities."""
+    repo, data, header, first, old_bridge, verify = transition
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import MULTI_SCHEMA
+    fragments = old_bridge['predecessor_fragments']
+    exp_path = repo/'configs/experiment/e.json'
+    exp = json.loads(exp_path.read_bytes())
+    # The first successor's config declares inherited s1 but checkpoints only
+    # its own newly completed s2. This is the production runtime contract.
+    for args in (['add','.'], ['-c','user.name=Test','-c','user.email=test@example.invalid','commit','-qm','middle']):
+        subprocess.run(['git',*args],cwd=repo,check=True,capture_output=True)
+    middle_commit = subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
+    cfg = compose(repo, **fragments)
+    identity = {'config_hash':cfg.config_hash,'protocol_hash':protocol_hash(cfg.config_hash,'test-arm','a'*64),
+                'split_identity_hash':'a'*64,'implementation':{k:digest(repo/p) for k,p in IMPLEMENTATION.items()}}
+    writer=RowCheckpointWriter(data/'runs/run/new','run','new',identity=identity)
+    trace=[json.dumps({'record_id':'q1/'+kind,'channel':channel,'payload':{}})
+           for kind,channel in (('request','MODEL_REQUEST'),('response','MODEL_RESPONSE'))]
+    writer.append_row(sample_id='s2',complete=True,output_rows=[{'sample_id':'s2','request_id':'q1','text':'middle'}],trace_lines=trace)
+    writer.close()
+    middle={'attempt_id':'new','checkpoint_sha256':sha256_file(writer.path)}
+    write(data/'attempts/run/new.json',{'state':'ABORTED','run_id':'run','attempt_id':'new'})
+    executor=repo/PREFIX/'reproduction/ojw/runner.py'
+    middle_before=digest(executor);executor.write_text('# reviewed next pool\n')
+    first_bridge=copy.deepcopy(old_bridge)
+    first_bridge['successor_attempt_id']='next'
+    first_bridge['reviewed_source_changes'][str(executor.relative_to(repo))]['after']=digest(executor)
+    middle_bridge=copy.deepcopy(first_bridge)
+    middle_bridge['predecessor_commit']=middle_commit
+    middle_bridge['reviewed_source_changes'][str(executor.relative_to(repo))]['before']=middle_before
+    bridge={'schema':MULTI_SCHEMA,'successor_attempt_id':'next','bridges':{'old':first_bridge,'new':middle_bridge}}
+    cell=exp['cells'][0];cell.update(attempt_id='next',resume_from=[first,middle],checkpoint_compatibility=bridge)
+    write(exp_path,exp)
+    base_path=repo/'configs/baseline/b.json';base=json.loads(base_path.read_bytes())
+    base['native_contact_fit'].update(run_id='fit-next',attempt_id='fit-next-a');write(base_path,base)
+    return repo,data,first,middle,bridge
+
+
+def multi_runtime(world):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntime
+    from speech_aware_evidence_acquisition.core.flight.resume import resume_declarations_from_document
+    repo,data,first,middle,bridge=world
+    cfg=compose(repo,'m','d','b','e')
+    cell=cfg.values['cells'][0]
+    runtime=object.__new__(FlightRuntime)
+    runtime._repo_root,runtime._data_root=repo,data
+    runtime._run_id,runtime._attempt_id='run','next'
+    runtime._model,runtime._dataset,runtime._baseline,runtime._experiment='m','d','b','e'
+    runtime._explicit_run_dir=None
+    runtime._plan=SimpleNamespace(protocol_hash=protocol_hash(cfg.config_hash,'test-arm','a'*64),split_identity_hash='a'*64)
+    runtime._resume_declarations=resume_declarations_from_document(cell['resume_from'])
+    runtime._checkpoint_compatibility=CheckpointCompatibility.from_document(cell['checkpoint_compatibility'],attempt_id='next')
+    runtime.row_checkpoint_implementation=lambda:{k:digest(repo/p) for k,p in IMPLEMENTATION.items()}
+    runtime.shows_construction_targets=lambda:False
+    runtime.execution_unit_roster=lambda:None
+    runtime._result_kind=lambda:'task-answer'
+    return runtime,cfg
+
+
+def test_multihop_keeps_ancestors_and_only_dispatches_complement(multihop):
+    runtime,cfg=multi_runtime(multihop)
+    result=runtime._load_resume_predecessor(cfg.values,('s1','s2','s3'))
+    assert result['counts']['kept']==2
+    assert runtime._resume_dispatch_roster()==('s3',)
+    assert set(runtime._resume.complete_sample_ids)=={'s1','s2'}
+    assert set(runtime._checkpoint_compatibility_receipt['predecessors'])=={'old','new'}
+
+
+@pytest.mark.parametrize('fault', ['missing-ancestor','changed-ancestor-pin','missing-bridge','extra-bridge','model','source','middle-open','middle-config'])
+def test_multihop_refuses_custody_or_scientific_changes(multihop,fault):
+    from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntimeError
+    repo,data,first,middle,bridge=multihop
+    p=repo/'configs/experiment/e.json';exp=json.loads(p.read_bytes());cell=exp['cells'][0]
+    if fault=='missing-ancestor':
+        cell['resume_from']=[middle];cell['checkpoint_compatibility']['bridges'].pop('old')
+    elif fault=='changed-ancestor-pin':cell['resume_from'][0]['checkpoint_sha256']='f'*64
+    elif fault=='missing-bridge':cell['checkpoint_compatibility']['bridges'].pop('old')
+    elif fault=='extra-bridge':cell['checkpoint_compatibility']['bridges']['foreign']=copy.deepcopy(bridge['bridges']['old'])
+    elif fault=='model':write(repo/'configs/model/m.json',{'model':'different'})
+    elif fault=='source':(repo/IMPLEMENTATION['runner']).write_text('# changed semantics\n')
+    elif fault=='middle-open':write(data/'attempts/run/new.json',{'state':'OPENED','run_id':'run','attempt_id':'new'})
+    elif fault=='middle-config':cell['checkpoint_compatibility']['bridges']['new']['predecessor_commit']=bridge['bridges']['old']['predecessor_commit']
+    write(p,exp)
+    runtime,cfg=multi_runtime(multihop)
+    with pytest.raises((FlightRuntimeError,CheckpointCompatibilityError)):
+        runtime._load_resume_predecessor(cfg.values,('s1','s2','s3'))
+
+
+def test_v1_does_not_accept_multiple_predecessors(multihop):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import validate_bridge_declarations
+    from speech_aware_evidence_acquisition.core.flight.resume import resume_declarations_from_document
+    _,_,first,middle,bridge=multihop
+    parsed=CheckpointCompatibility.from_document(bridge['bridges']['old'],attempt_id='next')
+    with pytest.raises(CheckpointCompatibilityError,match='exactly one'):
+        validate_bridge_declarations(parsed,resume_declarations_from_document([first,middle]))
+
+
+def test_multi_bridge_rejects_self_and_recursive_envelope(multihop):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import MULTI_SCHEMA
+    _,_,_,_,bridge=multihop
+    bad=copy.deepcopy(bridge);bad['bridges']['next']=bad['bridges'].pop('old')
+    with pytest.raises(CheckpointCompatibilityError,match='itself'):
+        CheckpointCompatibility.from_document(bad,attempt_id='next')
+    bad=copy.deepcopy(bridge);bad['bridges']['old']={'schema':MULTI_SCHEMA}
+    with pytest.raises(CheckpointCompatibilityError,match='v1 schema'):
+        CheckpointCompatibility.from_document(bad,attempt_id='next')
+
+
+def test_cycle_is_rejected_before_checkpoint_materialization(multihop,monkeypatch):
+    import speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility as compat
+    from speech_aware_evidence_acquisition.core.flight.resume import resume_declarations_from_document
+    repo,_,first,middle,bridge=multihop
+    by_commit={bridge['bridges']['old']['predecessor_commit']:{'cells':[{'attempt_id':'old','resume_from':middle}]},
+               bridge['bridges']['new']['predecessor_commit']:{'cells':[{'attempt_id':'new','resume_from':first}]}}
+    monkeypatch.setattr(compat,'git',lambda repo,*args:json.dumps(by_commit[args[1].split(':')[0]]).encode())
+    parsed=CheckpointCompatibility.from_document(bridge,attempt_id='next')
+    with pytest.raises(CheckpointCompatibilityError,match='cyclic'):
+        parsed.validate_ancestry(repo,resume_declarations_from_document([first,middle]))
+
+
+def test_config_only_bridge_can_explicitly_pin_empty_source_delta(transition):
+    _,_,_,_,bridge,_=transition
+    bridge=copy.deepcopy(bridge);bridge['reviewed_source_changes']={}
+    assert CheckpointCompatibility.from_document(bridge).reviewed_source_changes=={}
+
+
+def test_campaign_accepts_only_exact_v2_bridge_set(multihop):
+    from speech_aware_evidence_acquisition.core.flight.campaign import CampaignCell, CampaignError
+    repo,_,_,_,_=multihop
+    exp=json.loads((repo/'configs/experiment/e.json').read_bytes());cell=exp['cells'][0]
+    cell.update(cell_id='c',model_fragment='m',dataset_fragment='d')
+    assert CampaignCell.from_document(cell).attempt_id=='next'
+    cell['checkpoint_compatibility']['bridges'].pop('old')
+    with pytest.raises(CampaignError,match='exactly match'):
+        CampaignCell.from_document(cell)
