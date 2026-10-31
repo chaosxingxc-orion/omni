@@ -67,3 +67,31 @@ def test_source_bound_distillation(fault,monkeypatch):
         assert '[evidence train::one] set alarm at six | alarm_set | time=six' in block
         assert len(built['provenance'])==18 and receipt['tokenizer_calls']>0
         assert not receipt['next_iteration_authorized']
+
+
+def test_common_resolver_banks_roundtrip_and_union(tmp_path,monkeypatch):
+    monkeypatch.setattr(m.s3,'normalise_arm_answer',lambda raw,_:(raw,True))
+    halves=[fixture(),fixture()]
+    h2=halves[1]
+    # Disjoint H2 source rows, identical verified knowledge identity.
+    h2=json.loads(json.dumps({k:v for k,v in h2.items() if k!='bundle'}).replace('fixture:', 'second:')) | {
+        'bundle':SimpleNamespace(**json.loads(json.dumps(vars(halves[1]['bundle'])).replace('fixture:','second:')))}
+    h2['plan']['half']='R01C-H2';h2['roster']['split_identity_hash']='b'*64
+    resolver=m.text.ItemTextResolver({'train::one':'set alarm at six | alarm_set | time=six'},source={'kind':'verified binding'})
+    banks=[];measure=Measure()
+    for i,half in enumerate((halves[0],h2)):
+        built=m.build(half,measure,resolver=resolver);m.write_bank(built,tmp_path/str(i))
+        banks.append(m.distiller.load_bank(tmp_path/str(i)/'bank-receipt.json'))
+    assert banks[0][0]['exemplar_text_source']==banks[1][0]['exemplar_text_source']
+    union=m.distiller.union_banks(*banks,measure=measure)
+    assert union['receipt_core']['kind']=='union' and union['receipt_core']['rule_bank']['rules']==1
+    m.common.check_cross_fit(banks[0][0],'R01C-H2',consuming_row_ids=['second:0'],consuming_split_identity='b'*64)
+    with pytest.raises(m.common.CrossFitError):m.common.check_cross_fit(banks[0][0],'R01C-H1')
+    m.write_bank(m.build(halves[0],Measure(),resolver=resolver),tmp_path/'0')
+
+
+def test_binding_mismatch_rejected_before_measurement(monkeypatch):
+    monkeypatch.setattr(m.s3,'normalise_arm_answer',lambda raw,_:(raw,True))
+    measure=Measure();resolver=m.text.ItemTextResolver({'train::one':'wrong'})
+    with pytest.raises(ValueError,match='knowledge binding'):m.build(fixture(),measure,resolver=resolver)
+    assert measure.calls==0

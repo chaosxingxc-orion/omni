@@ -18,7 +18,7 @@ import tfrl_v2_common as common
 from speech_aware_evidence_acquisition.core.rollout_trace import usage_judgements,supply_items
 
 
-def sealed_answers(bundle,plan):
+def sealed_answers(bundle,plan,*,resolver=None):
     """First-visit answers and exact evidence, keyed by real row and arm.
 
     Requires verify_bundle and the plan/request audit before invocation. The
@@ -58,12 +58,17 @@ def sealed_answers(bundle,plan):
             provenance.append({'row_id':sid,'arm':arm,'request_id':rid,'request_sha256':contact['request_sha256'],
                 'response_text_sha256':contact['response_text_sha256'],'normalized_answer_sha256':hashlib.sha256(rendered.encode()).hexdigest()})
     if not texts:raise ValueError('actual supplied evidence required for resolved experience')
-    resolver=text.ItemTextResolver(texts,source={'kind':'verified-sealed-model-requests','run_id':plan['run_id'],
-        'attempt_id':plan['attempt_id'],'raw_trace_sha256':bundle.manifest['raw_trace']['sha256']})
+    if resolver is None:
+        resolver=text.ItemTextResolver(texts,source={'kind':'verified-sealed-model-requests','run_id':plan['run_id'],
+            'attempt_id':plan['attempt_id'],'raw_trace_sha256':bundle.manifest['raw_trace']['sha256']})
+    else:
+        for key,content in texts.items():
+            if resolver.resolve(key).content!=content:
+                raise ValueError('actual supplied text differs from verified knowledge binding')
     return answers,resolver,provenance
 
 
-def build(loaded,measure):
+def build(loaded,measure,*,resolver=None):
     """Build banks from load_half's verified results; no filesystem mutation.
 
     The injected vLLM measure may contact the registered tokenizer; this is
@@ -71,7 +76,8 @@ def build(loaded,measure):
     """
     if measure.name!=common.MEASURE_VLLM:raise ValueError('exact registered tokenizer measure required')
     plan=loaded['plan'];half=plan['half'];iteration=plan['iteration']
-    answers,resolver,provenance=sealed_answers(loaded['bundle'],plan)
+    answers,resolver,provenance=sealed_answers(loaded['bundle'],plan,resolver=resolver)
+    calls_before=measure.calls
     ids=[r['row_id'] for r in plan['row_plan']]
     tables={a:{r['sample_id']:r for r in result['per_sample']} for a,result in loaded['results'].items()}
     credit=sampler.credit_rows(ids,iteration,4,sampler.scores_from_counts(tables),twin_arm='aa')
@@ -97,7 +103,43 @@ def build(loaded,measure):
         'credit_summary':sampler.credit_summary(credit),
         'counts':{'rows_in_half':len(ids),'rows_used':len(ids),'rows_skipped':0,'contrast_pairs':len(pairs),'rules_refused':len(refused)},
         'method':'Existing deterministic answer-contrast rules and resolved evidence exemplars; verified current seed-only trajectories.',
-        'model_calls':0,'tokenizer_calls':measure.calls,'next_iteration_authorized':False}
+        'model_calls':0,'tokenizer_calls':measure.calls-calls_before,'next_iteration_authorized':False}
     # Actual timestamps are not available here; do not fabricate rollout contact/TFRL lines.
     return {'credit':credit,'pairs':pairs,'exemplar_bank':exemplar,'rule_bank':rules,'refused':refused,
         'provenance':provenance,'fate':fate,'receipt_core':receipt}
+
+
+def common_resolver(halves,data):
+    from speech_aware_evidence_acquisition.rails.knowledge_stores import load_knowledge_store_binding
+    first,second=halves['h1']['config'].values,halves['h2']['config'].values
+    if first['knowledge_stores']!=second['knowledge_stores']:
+        raise ValueError('halves must use the same verified knowledge stores')
+    binding=load_knowledge_store_binding(first,data_root=data)
+    if binding is None:raise ValueError('resolved knowledge binding required')
+    resolver=text.ItemTextResolver.from_binding(binding)
+    # Check BOTH halves before any token contact, including evidence of non-positive rows.
+    for loaded in halves.values():sealed_answers(loaded['bundle'],loaded['plan'],resolver=resolver)
+    return resolver
+
+
+def write_bank(result,out):
+    from speech_aware_evidence_acquisition.core.atomic_file import publish_new
+    files={'credit.jsonl':common.jsonl_bytes(result['credit']),
+        'contrast-pairs.jsonl':common.jsonl_bytes(result['pairs']),
+        'exemplar-bank.json':common.file_bytes(result['exemplar_bank']),
+        'rule-bank.json':common.file_bytes(result['rule_bank']),
+        'refused-rules.jsonl':common.jsonl_bytes(result['refused']),
+        'trajectory-source.jsonl':common.jsonl_bytes(result['provenance']),
+        'exemplar-fate.json':common.file_bytes(result['fate'])}
+    receipt=dict(result['receipt_core'])
+    receipt['files']={name:{'sha256':common.sha256_bytes(raw),'bytes':len(raw)} for name,raw in files.items()}
+    for key in ('exemplar_bank','rule_bank'):
+        receipt[key]=dict(receipt[key],file=key.replace('_','-')+'.json')
+    files['bank-receipt.json']=common.file_bytes(receipt)
+    out.mkdir(parents=True,exist_ok=True)
+    for name,raw in files.items():
+        path=out/name
+        if path.exists():
+            if path.read_bytes()!=raw:raise ValueError('existing bank artifact differs')
+        else:publish_new(path,raw)
+    return receipt
