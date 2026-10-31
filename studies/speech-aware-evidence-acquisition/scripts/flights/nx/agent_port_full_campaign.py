@@ -1,7 +1,8 @@
 """Run one admitted full Agent campaign and its registered diagnostics, detached.
 
 Every step has an exclusive intent and terminal result. On failure or interruption,
-inspect the existing attempt; this coordinator never resumes or retries contacts.
+inspect the existing attempt. A registered checkpoint successor uses a fresh
+attempt and coordinator directory; an existing attempt is never retried.
 """
 from __future__ import annotations
 import argparse
@@ -23,6 +24,40 @@ from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 from speech_aware_evidence_acquisition.contracts import assert_execution_environment
 
 
+def require_fresh_generation(repo, data, cell):
+    """Allow only pinned ABORTED predecessors, never reuse the successor."""
+    from speech_aware_evidence_acquisition.core.flight.campaign import CampaignCell
+    from speech_aware_evidence_acquisition.core.flight.resume import resume_declarations_from_document
+    from speech_aware_evidence_acquisition.core.row_checkpoint import checkpoint_path
+    CampaignCell.from_document(cell)
+    run, attempt = cell['run_id'], cell['attempt_id']
+    if cell.get('resume_from') is None:
+        if any((data / kind / run).exists() for kind in ('runs', 'attempts')):
+            raise ValueError('Agent attempt already started; never replay')
+        return []
+    declarations = resume_declarations_from_document(cell['resume_from'])
+    if any(d.mode != 'checkpoint' for d in declarations):
+        raise ValueError('full Agent coordinator requires checkpoint predecessors')
+    allowed = {d.attempt_id for d in declarations}
+    for kind in ('runs', 'attempts'):
+        root = data / kind / run
+        present = {p.name if kind == 'runs' else p.stem for p in root.iterdir()} if root.exists() else set()
+        if present - allowed:
+            raise ValueError('undeclared or already started successor attempt; never replay')
+    result = []
+    for declaration in declarations:
+        record = registration.read(data / 'attempts' / run / (declaration.attempt_id + '.json'))
+        if (record.get('state') != 'ABORTED' or record.get('run_id') != run
+                or record.get('attempt_id') != declaration.attempt_id):
+            raise ValueError('checkpoint predecessor must be the named ABORTED attempt')
+        path = checkpoint_path(data / 'runs' / run / declaration.attempt_id, run)
+        if registration.sha(path) != declaration.checkpoint_sha256:
+            raise ValueError('checkpoint predecessor pin differs')
+        result.append({'attempt_id':declaration.attempt_id, 'checkpoint_sha256':declaration.checkpoint_sha256,
+                       'actual':record['actual']})
+    return result
+
+
 def validate(repo, data):
     spec = registration.read(repo / registration.PKG / 'successor-draft-v1.json')
     exp = registration.read(repo / 'configs/experiment' / (spec['cell'] + '.json'))
@@ -37,9 +72,9 @@ def validate(repo, data):
     ids = exp['populations'][0]['ids']
     if len(ids) != 1080 or len(set(ids)) != 1080 or exp['population']['count'] != 1080:
         raise ValueError('complete unique Fold B roster required')
-    for run in (spec['run_id'], spec['fit_run_id']):
-        if any((data / directory / run).exists() for directory in ('runs', 'attempts')):
-            raise ValueError('Agent attempt already started; never replay')
+    predecessors = require_fresh_generation(repo, data, cell)
+    if any((data / directory / spec['fit_run_id']).exists() for directory in ('runs', 'attempts')):
+        raise ValueError('Agent FIT attempt already started; never replay')
     # A prepared phase-supply is intentionally published under the generation
     # run id during the model-free preparation step.  The FIT run is consumed
     # only when its own attempt directory or a request-fit artifact exists.
@@ -66,7 +101,7 @@ def validate(repo, data):
     if exp['service_session'] != binding['session_id']:
         raise ValueError('Agent and accepted proof use different deployments')
     return {'spec': spec, 'session': exp['service_session'], 'recipe': recipe,
-            'supply': supply, 'rows': len(ids)}
+            'supply': supply, 'rows': len(ids), 'predecessors': predecessors}
 
 
 def commands(repo, data, runtime, lock, plan, gold_intents=None, n1_json=None):
@@ -120,7 +155,12 @@ def execute(repo, data, runtime, lock, out, gold_intents=None, n1_json=None):
             raise RuntimeError(name + ' failed; preserve partial effects, never retry coordinator')
     try:
         for name, args in checks: run(name, args, spec['read_run_id'])
-        validate(repo, data)
+        # Runtime preflight revalidates every predecessor and refuses any used
+        # attempt. The read-only check may have written its resume declaration.
+        if not plan["predecessors"]:
+            validate(repo, data)
+        elif (data / "attempts" / spec["run_id"] / (spec["attempt_id"] + ".json")).exists():
+            raise ValueError("successor attempt was spent during preflight")
         if (subprocess.check_output(['git', 'status', '--porcelain'], cwd=repo).strip()
                 or subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip() != head
                 or any(registration.sha(Path(p)) != h for p, h in pins.items())):

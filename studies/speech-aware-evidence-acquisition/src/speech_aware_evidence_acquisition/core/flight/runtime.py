@@ -158,6 +158,7 @@ from .resume import (
     read_predecessor_attempt,
     resume_declarations_from_document,
 )
+from .checkpoint_compatibility import CheckpointCompatibility, CheckpointCompatibilityError
 
 # ``core.driver.speech_native`` is imported lazily (function-local, inside
 # the one method that needs it) rather than at module scope: ``core.driver``
@@ -1548,6 +1549,7 @@ class FlightRuntime:
         speech_tokens_per_second: float = 14.4,
         execution_policy: WorkerExecutionPolicy | None = None,
         resume_from: Mapping[str, object] | None = None,
+        checkpoint_compatibility: Mapping[str, object] | None = None,
         # Gap B (2026-10-30 plan, section 4; Decision 2): the OPTIONAL deployment profile/record this flight
         # serves against -- a ``core.deployment.DeploymentProfile``, a deployment-record mapping, a bare profile
         # id/path, or ``None``. ``None`` (every existing caller) and a one-instance profile are BYTE-IDENTICAL to
@@ -1641,6 +1643,16 @@ class FlightRuntime:
         self._resume_declarations: tuple[ResumeDeclaration, ...] = (
             () if resume_from is None else resume_declarations_from_document(resume_from)
         )
+        self._checkpoint_compatibility = None
+        if checkpoint_compatibility is not None:
+            try:
+                self._checkpoint_compatibility = CheckpointCompatibility.from_document(
+                    checkpoint_compatibility, attempt_id=attempt_id
+                )
+            except CheckpointCompatibilityError as error:
+                raise FlightRuntimeError(str(error)) from error
+            if len(self._resume_declarations) != 1 or self._resume_declarations[0].mode != "checkpoint":
+                raise FlightRuntimeError("compatibility requires exactly one checkpoint predecessor")
         self_named = [
             declaration.attempt_id
             for declaration in self._resume_declarations
@@ -1980,6 +1992,29 @@ class FlightRuntime:
                     # durable (core.row_checkpoint); keep what it made durable.
                     # The kept rows' trace is materialized under THIS attempt's
                     # directory, never in the predecessor's.
+                    protocol = self._plan.protocol_hash
+                    implementation = self.row_checkpoint_implementation()
+                    compatibility = getattr(self, "_checkpoint_compatibility", None)
+                    if compatibility is not None:
+                        from ..row_checkpoint import read_checkpoint, checkpoint_path
+                        header = read_checkpoint(
+                            checkpoint_path(attempt_dir, self._run_id),
+                            expected_sha256=declaration.checkpoint_sha256,
+                        ).header
+                        verified = compatibility.verify(
+                            repo_root=self._repo_root, data_root=self._data_root,
+                            current_fragments={"model": self._model, "dataset": self._dataset,
+                                               "baseline": self._baseline, "experiment": self._experiment},
+                            header=header, run_id=self._run_id,
+                            predecessor_attempt_id=declaration.attempt_id,
+                            current_protocol_hash=protocol,
+                            current_split_identity_hash=self._plan.split_identity_hash,
+                            current_implementation=implementation,
+                            declaration={"attempt_id": declaration.attempt_id,
+                                         "checkpoint_sha256": declaration.checkpoint_sha256},
+                        )
+                        protocol, implementation = verified["protocol_hash"], verified["implementation"]
+                        self._checkpoint_compatibility_receipt = verified
                     predecessor = read_checkpoint_predecessor(
                         run_id=self._run_id,
                         attempt_id=declaration.attempt_id,
@@ -1988,9 +2023,9 @@ class FlightRuntime:
                         materialize_dir=(
                             self._run_dir() / "resume-predecessors" / declaration.attempt_id
                         ),
-                        protocol_hash=self._plan.protocol_hash,
+                        protocol_hash=protocol,
                         split_identity_hash=self._plan.split_identity_hash,
-                        implementation=self.row_checkpoint_implementation(),
+                        implementation=implementation,
                     )
                 else:
                     predecessor = read_predecessor_attempt(
@@ -2003,7 +2038,7 @@ class FlightRuntime:
                         # carry their re-derived saea-relisten-v1 receipts.
                         relisten=self._declared_relisten_block(),
                     )
-            except ResumeRecoveryError as error:
+            except (ResumeRecoveryError, CheckpointCompatibilityError) as error:
                 raise FlightRuntimeError(str(error)) from error
             predecessors.append(predecessor)
         roster = tuple(str(sample_id) for sample_id in sample_ids)
@@ -5246,6 +5281,8 @@ class FlightRuntime:
             "prepared_artifacts": [dict(report) for report in prepared_artifacts],
             "prepared_artifacts_ok": prepared_artifacts_ok,
             **({"resume": resume_receipt} if resume_receipt is not None else {}),
+            **({"checkpoint_compatibility": self._checkpoint_compatibility_receipt}
+               if getattr(self, "_checkpoint_compatibility_receipt", None) is not None else {}),
         }
         return self.receipts.record("preflight", payload)
 

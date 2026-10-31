@@ -21,6 +21,7 @@ from .lease import GenerationLease, WorkerExecutionPolicy
 from .queue import FlightDependency, FlightQueue, FlightReadiness
 from .receipts import persist_flight_receipts
 from .resume import ResumeRecoveryError, resume_declarations_from_document
+from .checkpoint_compatibility import CheckpointCompatibility, CheckpointCompatibilityError
 
 if TYPE_CHECKING:  # annotations only; keeps the re-pin / light paths off the runtime stack
     from .runtime import FlightRuntime
@@ -98,6 +99,14 @@ class CampaignCell:
                     "of its predecessors; every predecessor must be an ABORTED "
                     "attempt, never this recovery attempt"
                 )
+        compatibility = document.get("checkpoint_compatibility")
+        if compatibility is not None:
+            if resume is None or len(declarations) != 1 or declarations[0].mode != "checkpoint":
+                raise CampaignError("compatibility requires exactly one checkpoint predecessor")
+            try:
+                CheckpointCompatibility.from_document(compatibility, attempt_id=str(document["attempt_id"]))
+            except CheckpointCompatibilityError as error:
+                raise CampaignError(f"cell checkpoint_compatibility is invalid: {error}") from error
         return cls(dict(document))
 
     def assert_mode(self, mode: str) -> None:
@@ -138,6 +147,11 @@ class CampaignCell:
         if isinstance(resume, list):
             return [dict(item) for item in resume]
         return dict(resume)
+
+    @property
+    def checkpoint_compatibility(self) -> Mapping[str, object] | None:
+        value = self.document.get("checkpoint_compatibility")
+        return dict(value) if isinstance(value, Mapping) else None
 
     def dependencies(self) -> tuple[FlightDependency, ...]:
         return tuple(

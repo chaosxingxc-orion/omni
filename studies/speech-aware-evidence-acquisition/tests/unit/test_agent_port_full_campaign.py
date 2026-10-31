@@ -14,6 +14,13 @@ from test_agent_port_full_registration import setup
 @pytest.fixture
 def ready(setup):
     repo, data, spec, binding = setup
+    # A disposable proof fixture supplies only the two identity fields this
+    # coordinator test uses. No private deployment evidence is needed here;
+    # accepted_proof is already substituted by the registration fixture.
+    proof_base = repo / 'configs/baseline/coordinator-proof-fixture.json'
+    proof_base.write_text(json.dumps({'native_contact_fit': {'run_id': 'FIT-PROOF-FIXTURE'}}))
+    (repo / 'configs/experiment/slurp-delivery-assets-proof-4-npu-v1.json').write_text(
+        json.dumps({'cells': [{'run_id': 'PROOF-FIXTURE', 'baseline_fragment': 'coordinator-proof-fixture'}]}))
     coordinator.registration.register(repo, data, binding, data / 'archive')
     ep = repo / 'configs/experiment' / (spec['cell'] + '.json')
     exp = coordinator.registration.read(ep)
@@ -92,3 +99,35 @@ def test_execution_records_terminal_steps_without_replay(ready, monkeypatch, fai
     with pytest.raises(ValueError, match='fresh external'):
         coordinator.execute(repo, data, data / 'runtime', repo / 'lock', out)
     assert calls == before
+
+
+def checkpoint_ready(ready):
+    repo,data,spec=ready
+    ep=repo/'configs/experiment'/(spec['cell']+'.json')
+    exp=coordinator.registration.read(ep)
+    old='attempt-prior'
+    p=data/'runs'/spec['run_id']/old/(spec['run_id']+'.rows.ckpt.jsonl')
+    p.parent.mkdir(parents=True); p.write_text('fixture pinned bytes; runtime performs full read\n')
+    a=data/'attempts'/spec['run_id']/(old+'.json'); a.parent.mkdir(parents=True)
+    a.write_text(json.dumps({'run_id':spec['run_id'],'attempt_id':old,'state':'ABORTED','actual':{'calls':3,'audio_seconds':2}}))
+    exp['cells'][0]['resume_from']={'attempt_id':old,'checkpoint_sha256':coordinator.registration.sha(p)}
+    ep.write_text(json.dumps(exp))
+    return repo,data,spec,ep,p,a
+
+
+def test_pinned_aborted_predecessor_allows_fresh_successor(ready):
+    repo,data,spec,*_=checkpoint_ready(ready)
+    plan=coordinator.validate(repo,data)
+    assert plan['predecessors'][0]['actual']['calls']==3
+
+
+@pytest.mark.parametrize('fault', ['open','corrupt','undeclared','spent','started'])
+def test_checkpoint_coordinator_refuses_replay_or_bad_predecessor(ready,fault):
+    repo,data,spec,ep,p,a=checkpoint_ready(ready)
+    if fault=='open':
+        record=json.loads(a.read_text());record['state']='OPENED';a.write_text(json.dumps(record))
+    elif fault=='corrupt': p.write_text('changed')
+    elif fault=='undeclared': (p.parent.parent/'unknown').mkdir()
+    elif fault=='spent': (a.parent/(spec['attempt_id']+'.json')).write_text('{}')
+    else: (p.parent.parent/spec['attempt_id']).mkdir()
+    with pytest.raises(ValueError): coordinator.validate(repo,data)

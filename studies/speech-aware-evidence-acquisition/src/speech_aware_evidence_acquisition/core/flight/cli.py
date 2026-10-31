@@ -253,6 +253,8 @@ def main(argv=None) -> int:
             # line flag for it: which rows a run keeps is registered, not
             # typed at launch.
             **({"resume_from": cell.resume_from} if cell.resume_from is not None else {}),
+            **({"checkpoint_compatibility": cell.checkpoint_compatibility}
+               if cell.checkpoint_compatibility is not None else {}),
         )
         for experiment, cell in selected
     ]

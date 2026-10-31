@@ -85,7 +85,7 @@ def cite(value: Any, source: str, locator: str) -> dict:
 # --------------------------------------------------------------------------- the rules, read from the port recipe
 
 
-def load_recipe(path: Path) -> dict:
+def load_recipe(path: Path, *, family=pf) -> dict:
     """The port recipe, refused by name unless it binds the port ids and the historical scoring constants."""
 
     recipe = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -93,11 +93,11 @@ def load_recipe(path: Path) -> dict:
     if recipe.get("schema") != RECIPE_SCHEMA:
         problems.append(f"schema {recipe.get('schema')!r} != {RECIPE_SCHEMA!r}")
     ids = recipe.get("run_ids") or {}
-    for key, expected in (("read", pf.READ_RUN_ID), ("arm", pf.CELLS["arm"]["run"]), ("smoke", pf.CELLS["smoke"]["run"])):
+    for key, expected in (("read", family.READ_RUN_ID), ("arm", family.CELLS["arm"]["run"]), ("smoke", family.CELLS["smoke"]["run"])):
         if ids.get(key) != expected:
             problems.append(f"run_ids.{key} {ids.get(key)!r} != {expected!r}")
-    if recipe.get("read_run_id") != pf.READ_RUN_ID:
-        problems.append(f"read_run_id {recipe.get('read_run_id')!r} != {pf.READ_RUN_ID!r}")
+    if recipe.get("read_run_id") != family.READ_RUN_ID:
+        problems.append(f"read_run_id {recipe.get('read_run_id')!r} != {family.READ_RUN_ID!r}")
     if recipe.get("delivering") != fam.DELIVERING or recipe.get("twin") != fam.TWIN:
         problems.append("delivering / twin are not lock / aa")
     if sorted(recipe.get("arms") or []) != sorted(pf.ARM_ORDER):
@@ -258,7 +258,7 @@ def improvement_of_arm(arm: str, contrast: Mapping, rules: Mapping, parity: Mapp
         "within_run_word": cite(within_run_word, "read_json", f"arm_words.words.{arm}.word")}
 
 
-def port_verdicts(contrast: Mapping, arm_words: Mapping, rules: Mapping, *, inputs: Mapping, interval: Mapping, recipe_status: str | None = None) -> dict:
+def port_verdicts(contrast: Mapping, arm_words: Mapping, rules: Mapping, *, inputs: Mapping, interval: Mapping, recipe_status: str | None = None, family=pf) -> dict:
     """The ``port-verdicts.json`` document from a paired-contrast record (``npc.paired_contrasts``), the historical ``arm_words`` and the recipe rules."""
 
     levels = contrast["levels"]
@@ -285,7 +285,7 @@ def port_verdicts(contrast: Mapping, arm_words: Mapping, rules: Mapping, *, inpu
     s0 = WORD_PARITY if not reasons else WORD_OUTSIDE
     return {
         "schema": VERDICTS_SCHEMA, "status": "PORT-VERDICTS (development numbers; claims_benefit false; a reading, never an admission)",
-        "read_run_id": pf.READ_RUN_ID, "run_id": pf.CELLS["arm"]["run"], "recipe_status": recipe_status, "inputs": dict(inputs), "interval": dict(interval),
+        "read_run_id": family.READ_RUN_ID, "run_id": family.CELLS["arm"]["run"], "recipe_status": recipe_status, "inputs": dict(inputs), "interval": dict(interval),
         "rules": {k: v for k, v in rules["cites"].items()},
         "rule_text": {
             "parity": "arm's SLU-F1 in [band.slu_f1.low, band.slu_f1.high] AND intent in [band.intent.low, band.intent.high], inclusive, two-decimal percent",
@@ -375,11 +375,11 @@ def _smoke(args: argparse.Namespace, root: Path) -> tuple[dict, Path]:
     return result, root / "smoke-decode-cost.json"
 
 
-def _read(args: argparse.Namespace, root: Path) -> tuple[dict, Path, dict, Path]:
+def _read(args: argparse.Namespace, root: Path, *, family=pf) -> tuple[dict, Path, dict, Path]:
     recipe_path = args.recipe if args.recipe.is_absolute() else args.repo_root / args.recipe
-    recipe = load_recipe(recipe_path)
+    recipe = load_recipe(recipe_path, family=family)
     rules = rules_from_recipe(recipe)
-    cell = pf.CELLS["arm"]
+    cell = family.CELLS["arm"]
     paths = base.run_paths(args.data_root, cell["run"], cell["attempt"])
     for name in ("trace", "outputs", "manifest"):
         if not paths[name].exists():
@@ -409,7 +409,7 @@ def _read(args: argparse.Namespace, root: Path) -> tuple[dict, Path, dict, Path]
     result["throughput"]["arm_mix_registered_rows"] = pf.ARM_MIX_ROWS
     result["sealed_hashes"] = {n: base.sha256_file(paths[n]) for n in ("trace", "outputs", "manifest")}
     result["throughput"]["registered_gpu_hours_ceiling"] = None
-    result["port"] = {"read_run_id": pf.READ_RUN_ID, "run_id": cell["run"], "attempt_id": cell["attempt"], "recipe": str(args.recipe),
+    result["port"] = {"read_run_id": family.READ_RUN_ID, "run_id": cell["run"], "attempt_id": cell["attempt"], "recipe": str(args.recipe),
                       "note": "slot-normalised GPU hours in `throughput` use the historical 4 slots; the port card-hour bound is PROVISIONAL (l338_port_family.CARD_HOUR_FORMULA)"}
     inputs = {"recipe": _input(recipe_path, args.repo_root), "roster": _input(roster_path, args.repo_root), "manifest": _input(paths["manifest"], args.data_root),
               "trace": _input(paths["trace"], args.data_root), "outputs": _input(paths["outputs"], args.data_root)}
