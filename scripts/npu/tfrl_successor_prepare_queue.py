@@ -20,7 +20,7 @@ def decision_state(document):
     raise ValueError('inconsistent verified decision')
 
 
-def run(tree,upstream,out):
+def run(tree,upstream,out,install=False):
     if out.exists() or not out.resolve().is_relative_to(D/'work/codex'):raise ValueError('fresh owned preparation queue required')
     study=tree/'studies/speech-aware-evidence-acquisition'
     def git(*args):return subprocess.check_output(['git','-C',str(study),*args],text=True).strip()
@@ -33,7 +33,7 @@ def run(tree,upstream,out):
     roots=[(D/s['repo_relpath']).resolve() for s in recipe['sources'].values()]
     if not all(p.is_relative_to(D) for p in roots):raise ValueError('source outside data root')
     safe=list(dict.fromkeys([git('rev-parse','--show-toplevel'),*[str(p) for p in roots]]))
-    flags=['--network','none','--name','saea-tfrl-successor-held-preparation-v1','-e',f'GIT_CONFIG_COUNT={len(safe)}']
+    flags=['--network','none','--name','saea-tfrl-successor-install-v1' if install else 'saea-tfrl-successor-held-preparation-v1','-e',f'GIT_CONFIG_COUNT={len(safe)}']
     for i,path in enumerate(safe):
         if any(c.isspace() for c in path):raise ValueError('unsupported whitespace in directory')
         flags+=['-e',f'GIT_CONFIG_KEY_{i}=safe.directory','-e',f'GIT_CONFIG_VALUE_{i}={path}']
@@ -41,7 +41,7 @@ def run(tree,upstream,out):
          'PORT_IMAGE':IMAGE,'PORT_DOCKER_FLAGS':' '.join(flags)}
     out.mkdir(parents=True)
     write(out/'intent.json',{'implementation_commit':commit,'interval_seconds':600,'generation_calls':0,
-        'tokenizer_calls':0,'scoring_jobs':0,'automatic_replay':False})
+        'tokenizer_calls':0,'scoring_jobs':0,'automatic_replay':False,'install_held_configs':install})
     def wait_for(target,phase):
         status(out,phase)
         while not target.exists():
@@ -49,7 +49,8 @@ def run(tree,upstream,out):
             time.sleep(600)
         check()
     def execute(name,target,decision=False):
-        command=['bash',str(D/'work/scripts/port_py.sh'),'scripts/analysis/tfrl_current_next_plan.py',
+        script='scripts/analysis/tfrl_banked_install.py' if install and not decision else 'scripts/analysis/tfrl_current_next_plan.py'
+        command=['bash',str(D/'work/scripts/port_py.sh'),script,
             '--repo',str(study),'--data',str(D),'--out',str(target)]
         if decision:command+=['--decision-only']
         with (out/(name+'.log')).open('x') as log:
@@ -66,6 +67,20 @@ def run(tree,upstream,out):
         wait_for(D/'analysis'/BANK/'complete.json','waiting_measured_banks')
         execute('held-staging',out/'held-successor')
         complete=read(out/'held-successor/complete.json')
+        if install:
+            if (complete.get('schema')!='saea-tfrl-banked-install-v1' or complete.get('rows')!=625
+                    or complete.get('iteration')!=2 or complete.get('readiness')!='held'
+                    or complete.get('registered') is not False or complete.get('new_model_calls')!=0
+                    or complete.get('source_commit')!=commit or len(complete.get('output_hashes',{}))!=6):
+                raise ValueError('unexpected held installation completion')
+            for rel,digest in complete['output_hashes'].items():
+                path=(study/rel).resolve()
+                if not path.is_relative_to(study.resolve()) or hashlib.sha256(path.read_bytes()).hexdigest()!=digest:
+                    raise ValueError('installed configuration changed')
+            status(out,'held-successor-installed',rows=625,generation_authorized=False,
+                complete_sha256=hashlib.sha256((out/'held-successor/complete.json').read_bytes()).hexdigest(),
+                review_and_commit_required=True)
+            return
         if (complete.get('rows')!=625 or complete.get('iteration')!=2 or complete.get('readiness')!='held'
                 or complete.get('generation_authorized_by_this_file') is not False):
             raise ValueError('unexpected held successor completion')
@@ -78,4 +93,5 @@ def run(tree,upstream,out):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('tree','upstream','out'):p.add_argument('--'+k,type=Path,required=True)
+    p.add_argument('--install',action='store_true')
     run(**vars(p.parse_args()))

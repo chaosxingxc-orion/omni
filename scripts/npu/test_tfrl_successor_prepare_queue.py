@@ -16,8 +16,9 @@ def test_stop_is_a_named_terminal_and_pass_is_only_preparation():
         with pytest.raises(ValueError):decision_state(d)
 
 
+@pytest.mark.parametrize('install',[False,True])
 @pytest.mark.parametrize('passed',[False,True])
-def test_queue_stops_or_stages_without_model_work(tmp_path,monkeypatch,passed):
+def test_queue_stops_or_stages_without_model_work(tmp_path,monkeypatch,passed,install):
     import json
     import tfrl_successor_prepare_queue as m
     monkeypatch.setattr(m,'D',tmp_path)
@@ -39,17 +40,27 @@ def test_queue_stops_or_stages_without_model_work(tmp_path,monkeypatch,passed):
             if '--decision-only' in self.command:
                 target.write_text(json.dumps({**decision(passed),'construction_gain_pp':1.1 if passed else .5}))
             else:
-                target.mkdir();(target/'complete.json').write_text(json.dumps({'rows':625,'iteration':2,
-                    'readiness':'held','generation_authorized_by_this_file':False}))
+                target.mkdir()
+                doc={'rows':625,'iteration':2,'readiness':'held','generation_authorized_by_this_file':False}
+                if install:
+                    import hashlib
+                    assert 'scripts/analysis/tfrl_banked_install.py' in self.command
+                    pins={}
+                    for i in range(6):
+                        p=study/f'configs/fixture{i}.json';p.parent.mkdir(exist_ok=True);p.write_text('{}')
+                        pins[str(p.relative_to(study))]=hashlib.sha256(p.read_bytes()).hexdigest()
+                    doc.update(schema='saea-tfrl-banked-install-v1',registered=False,new_model_calls=0,
+                        source_commit='a'*40,output_hashes=pins)
+                (target/'complete.json').write_text(json.dumps(doc))
             return 0
     def launch(command,**kwargs):
         assert kwargs['start_new_session']
         assert '--network none' in kwargs['env']['PORT_DOCKER_FLAGS']
         calls.append(command);return Child(command)
     monkeypatch.setattr(m.subprocess,'Popen',launch)
-    out=tmp_path/'work/codex/queue';m.run(tree,tmp_path/'upstream',out)
+    out=tmp_path/'work/codex/queue';m.run(tree,tmp_path/'upstream',out,install=install)
     assert len(calls)==(2 if passed else 1)
     state=json.loads((out/'status.json').read_bytes())
-    assert state['state']==('held-successor-prepared' if passed else 'stopped-family')
+    assert state['state']==(('held-successor-installed' if install else 'held-successor-prepared') if passed else 'stopped-family')
     assert state['generation_authorized'] is False
     assert (out/'held-successor').exists()==passed

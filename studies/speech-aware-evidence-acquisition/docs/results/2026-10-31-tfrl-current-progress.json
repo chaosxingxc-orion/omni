@@ -218,5 +218,14 @@
     "tests_passed": 85,
     "event_driven": true,
     "fallback_check_seconds": 600
+  },
+  "successor_install_queue": {
+    "deployed": true,
+    "state": "waiting_verified_full625",
+    "study_commit": "6eebf88a1eb40dcd40a350b2228b04ad96ee1d53",
+    "poll_seconds": 600,
+    "generation_authorized": false,
+    "tests_passed": 41,
+    "actual_configs_installed": false
   }
 }
