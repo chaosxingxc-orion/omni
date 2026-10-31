@@ -7,7 +7,7 @@
   "threads_per_worker": 16,
   "cpuset": "192-255",
   "network": "none",
-  "state": "running-confirmed",
+  "state": "encoding_and_retrieval_complete",
   "registered": true,
   "preflight_passed": true,
   "execution_commit": "477bc06f",
@@ -15,7 +15,7 @@
   "ETA_seconds": null,
   "monitor_interval_seconds": 600,
   "new_model_calls_during_registration": 0,
-  "downstream_adopted": false,
+  "downstream_adopted": true,
   "tests_passed": 86,
   "verified_completion": {
     "rows": 625,
@@ -60,5 +60,27 @@
     "artifact_sha256": "c493e47f9e6c6572b5d809909af650319bfa6136f26db94d118930b2dd8668e7",
     "receipt_sha256": "a4286ec47ab66e69764d867c752a344ad1c1698e3fbfeb62a89cc48b526766bf",
     "completion_sha256": "ea6d99cb5fec15fb951874d5d0c6708f50865a2878750eb3cc86cbb4819af15c"
+  },
+  "downstream_adoption_scope": "Held actual two-contact R01C construction baseline; no generation admission",
+  "current_baseline": {
+    "rows": 625,
+    "state": "derived_held",
+    "completion_sha256": "f31c8e1c62a662a93bd4d8be4090588d30aee7190926c846e48fdbae7fe5f50e",
+    "source_commit": "5b3c02c8998771304dd428ad5ce7c041f63e550b",
+    "execution_tree_commit": "0765ad82",
+    "agreement_enabled": true,
+    "model_calls": 0,
+    "normal_generation_calls": 1250,
+    "fallback_inclusive_cap": 2500,
+    "tests_passed": 37
+  },
+  "own_supply": {
+    "state": "running_confirmed",
+    "observed_at_utc": "2026-10-31T17:18:00Z",
+    "container_pid": 1318938,
+    "cpu_cores": "160-175",
+    "cards": 0,
+    "model_calls": 0,
+    "complete": false
   }
 }

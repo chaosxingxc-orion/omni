@@ -1413,5 +1413,69 @@
     "tests_passed": 20,
     "direct_full1080_reverification_passed": true,
     "a0_full_comparison_complete": false
+  },
+  "engineering_selection": {
+    "selected_profile": "qwen3-omni-real500-2xtp4-s128-b2048-v1",
+    "all_candidates_complete": true,
+    "handoff_state": "switching_to_selected_profile",
+    "last_observed_at_utc": "2026-10-31T17:17:00Z",
+    "continuation_generation_started": false
+  },
+  "tp8_counter_reconciliation": {
+    "before": {
+      "totals": {
+        "vllm:prefix_cache_queries_total": 0.0,
+        "vllm:prefix_cache_hits_total": 0.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:prompt_tokens_total": 0.0,
+        "vllm:generation_tokens_total": 0.0,
+        "vllm:request_success_total": 0.0
+      },
+      "finished_reasons": {
+        "stop": 0.0,
+        "length": 0.0,
+        "abort": 0.0,
+        "error": 0.0,
+        "repetition": 0.0
+      }
+    },
+    "release": {
+      "totals": {
+        "vllm:prefix_cache_queries_total": 6158192.0,
+        "vllm:prefix_cache_hits_total": 2849664.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:prompt_tokens_total": 6158192.0,
+        "vllm:generation_tokens_total": 1617376.0,
+        "vllm:request_success_total": 1000.0
+      },
+      "finished_reasons": {
+        "stop": 1000.0,
+        "length": 0.0,
+        "abort": 0.0,
+        "error": 0.0,
+        "repetition": 0.0
+      }
+    },
+    "delta": {
+      "vllm:prefix_cache_queries_total": 6158192.0,
+      "vllm:prefix_cache_hits_total": 2849664.0,
+      "vllm:num_preemptions_total": 0.0,
+      "vllm:prompt_tokens_total": 6158192.0,
+      "vllm:generation_tokens_total": 1617376.0,
+      "vllm:request_success_total": 1000.0
+    },
+    "fit_file_suffix_counts": {
+      ".json": 1000,
+      ".lock": 1000,
+      ".jsonl": 1000
+    },
+    "fit_semantics_independently_reverified": false,
+    "prefix_token_hit_fraction": 0.4627436104622915,
+    "pins": {
+      "work/codex/real500-successor-queue-v1/slurp-real500-tp8-s256-v1/metrics-before.json": "cfcd013b35f1e8badf709665d40f68197a0133949d0372314c81885d95743d2f",
+      "work/codex/a0-after-real500-queue-v1/handoff/tp8-final-metrics.json": "5e42e57274f087d6eef78c20088ac39d48f4162143509363d4e66beee2de089a",
+      "work/codex/real500-result-queue-v1/slurp-real500-tp8-s256-v1.json": "28be16ebc9f07f4c10d49be334c14689ce0887501ac1add4d5b9f06d5970af6f"
+    },
+    "new_model_calls": 0
   }
 }
