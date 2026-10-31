@@ -66,6 +66,34 @@ def require_first_construction_gate(record):
     return {'construction_gain_pp':gain,'preparation_gate_passed':True,
             'system_accepted':False,'independent_confirmation_required':True}
 
+def stage_cells(repo,data,sources,rosters,plans,receipts,pins):
+    """Build reviewable real-bank successor configs, without touching the repo."""
+    from tfrl_current_banked_cells import derive as derive_cell,rail
+    if any(set(mapping)!={'h1','h2'} for mapping in (sources,rosters,plans,receipts,pins)):
+        raise ValueError('two complete source halves required for staging')
+    scope={'R01C-'+h.upper():r['split_identity_hash'] for h,r in rosters.items()}
+    result={}
+    for h in ('h1','h2'):
+        other='h2' if h=='h1' else 'h1'
+        # Verify the exact receipt bytes before deriving the canonical content pin.
+        path=pinned(data,pins[other])
+        if read(path)!=receipts[other]:raise ValueError('bank receipt document differs')
+        content_pin={'relpath':pins[other]['relpath'],
+                     'sha256':rail.receipt_sha256(receipts[other])}
+        original,experiment=sources[h]
+        name,base,exp=derive_cell(repo,original,experiment,rosters[h],plans[h],
+                                  receipts[other],content_pin,scope)
+        run=exp['cells'][0]['run_id']
+        for rid in (run,run+'-FIT'):
+            if any((data/k/rid).exists() for k in ('attempts','runs','prepared')):
+                raise ValueError('successor identity already used; inspect before resuming')
+        for kind,doc in (('baseline',base),('experiment',exp)):
+            rel=f'configs/{kind}/{name}.json'
+            if (repo/rel).exists():raise ValueError('successor config already exists')
+            result[rel]=doc
+    return result
+
+
 def run(repo,data,out):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
@@ -92,7 +120,7 @@ def run(repo,data,out):
     # Bind the allocation to the exact source trees that produced the banks.
     recovered=read(repo/RECOVERED_REL)
     if completion['recipe_sha256']!=sha(repo/RECOVERED_REL):raise ValueError('bank source recipe differs')
-    bounds={};allocation_sources={}
+    bounds={};allocation_sources={};source_documents={}
     from speech_aware_evidence_acquisition.core.config import compose
     for h,source in recovered['sources'].items():
         root=(data/source['repo_relpath']).resolve()
@@ -104,17 +132,25 @@ def run(repo,data,out):
         exp_path=root/f'configs/experiment/{name}.json';exp=read(exp_path);cell,=exp['cells']
         cfg=compose(root,cell['model_fragment'],cell['dataset_fragment'],cell['baseline_fragment'],name)
         module=cfg.values['native_episode']['consumption_module']
+        baseline_path=root/f"configs/baseline/{cell['baseline_fragment']}.json"
+        source_documents[h]=(read(baseline_path),exp)
         bounds[h]=module['decoding_frame']['max_supplied_items']
         allocation_sources[h]={'commit':actual,'experiment_sha256':sha(exp_path),
-            'config_hash':cfg.config_hash,'module_sha256':sampler.cm.content_sha256(module)}
+            'config_hash':cfg.config_hash,'module_sha256':sampler.cm.content_sha256(module),
+            'baseline_sha256':sha(baseline_path), 'repo_relpath':source['repo_relpath']}
     plans=derive(rosters,receipts,iteration=2,control_bounds=bounds)
+    # Compile both halves before publishing any output. Pins in executable
+    # declarations use canonical receipt content hashes, not file hashes.
+    staged=stage_cells(repo,data,source_documents,rosters,plans,receipts,pins)
     if out.exists() or not out.resolve().is_relative_to(data.resolve()/'work/codex'):raise ValueError('fresh owned plan output required')
     for h,p in plans.items():
         p['roster']['file_sha256']=sha(repo/sampler.cm.HALF_ROSTER_RELPATH['R01C-'+h.upper()])
         p['banks']['allocation_source']=allocation_sources[h]
         s3._immutable_json(out/f'{h}-sampling-plan.json',p)
+    for rel,doc in staged.items():s3._immutable_json(out/rel,doc)
     result={'schema':'saea-tfrl-current-next-held-plans-v1','source_commit':head,'iteration':2,'rows':625,
-        'plans':{h:sha(out/f'{h}-sampling-plan.json') for h in plans},'bank_receipts':pins,'construction_gate':gate,
+        'plans':{h:sha(out/f'{h}-sampling-plan.json') for h in plans},
+        'held_cell_files':{rel:sha(out/rel) for rel in staged},'bank_receipts':pins,'construction_gate':gate,
         'parent_pool_sha256':sha(data/'analysis'/POOL/'complete.json'),'parent_banks_sha256':sha(bankroot/'complete.json'),
         'new_model_calls':0,'readiness':'held','generation_authorized_by_this_file':False,
         'remaining':['review complete construction gain and stop rule','verify declared allocation on actual source inputs while preserving controls',

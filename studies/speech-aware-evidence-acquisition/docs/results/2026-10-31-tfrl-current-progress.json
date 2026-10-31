@@ -1,68 +1,79 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T20:37:09Z",
+  "observed_at_utc": "2026-10-31T20:49:10Z",
   "completed_rows": 312,
   "total_rows": 625,
   "h1": {
-    "state": "preflight_passed_waiting_h2",
+    "state": "recovery_generation_running",
     "completed_rows": 0,
     "total_rows": 313,
     "remaining_rows": 313,
-    "checkpoint_sha256": "5ac8ce266b26288e05854adde933101959ca43e145971872b910e5dd3352f87d",
+    "checkpoint_sha256": "eff01661b1997622ff8206f01584d157931aca1aa32114645597e2b3e67fc9bd",
     "torn_tail_bytes": 0,
     "unusable_checkpoint_rows": 0,
-    "checkpoint_recorded_cost_lower_bound": {
-      "calls": 175.0,
-      "audio_seconds": 302.8200000000001,
-      "latency_seconds": 9057.597115030003,
-      "prompt_tokens": 808881.0,
-      "completion_tokens": 287623.0,
-      "tool_calls": 0.0
-    },
-    "complete_sample_timings": {
-      "admission_wait": {
-        "n": 25,
-        "mean_s": 2.343254048,
-        "p50_s": 2.32270565,
-        "p95_s": 3.4696062
-      },
-      "admitted_to_finished": {
-        "n": 25,
-        "mean_s": 527.895885996,
-        "p50_s": 556.2629344,
-        "p95_s": 641.22553292
-      }
-    },
-    "elapsed_seconds": 923.612692117691,
-    "wall_seconds_per_complete_row": 36.944507684707645,
     "estimated_remaining_seconds": null,
-    "timing_basis": "driver started receipt to generation exit; excludes post-exit observation delay",
     "original_checkpoint_rows": 25,
     "reuse_candidate_rows": 3,
     "context_affected_rows": 22,
     "remaining_inference_rows": 310,
-    "wall_seconds_per_complete_row_note": "Historical failed-run diagnostic only; 22 of 25 rows had erroneous context compaction.",
     "recovery_source_commit": "3391fab7ee0c030c6ef6f0bbc958e84fbb6c7f2b",
-    "generation_dependency": "H2 generation successful terminal; detached queue every600s",
+    "generation_dependency": "H2 successful driver terminal satisfied; detached generation running",
     "official_union": "registered; three preserved rows validated against real traces; score full313 after complete310",
-    "recovery_model_calls": 0,
-    "union_recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+    "recovery_model_calls": null,
+    "union_recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7",
+    "recovery_started_at_utc": "2026-10-31T20:41:30.205884Z",
+    "recovery_completed_rows": 0,
+    "recovery_total_rows": 310,
+    "recovery_elapsed_seconds": 460.3956210613251,
+    "original_failed_attempt_diagnostic": {
+      "elapsed_seconds": 923.612692117691,
+      "wall_seconds_per_complete_row": 36.944507684707645,
+      "timing_basis": "driver started receipt to generation exit; excludes post-exit observation delay",
+      "checkpoint_recorded_cost_lower_bound": {
+        "calls": 175.0,
+        "audio_seconds": 302.8200000000001,
+        "latency_seconds": 9057.597115030003,
+        "prompt_tokens": 808881.0,
+        "completion_tokens": 287623.0,
+        "tool_calls": 0.0
+      },
+      "complete_sample_timings": {
+        "admission_wait": {
+          "n": 25,
+          "mean_s": 2.343254048,
+          "p50_s": 2.32270565,
+          "p95_s": 3.4696062
+        },
+        "admitted_to_finished": {
+          "n": 25,
+          "mean_s": 527.895885996,
+          "p50_s": 556.2629344,
+          "p95_s": 641.22553292
+        }
+      },
+      "wall_seconds_per_complete_row_note": "Historical failed-run diagnostic only; 22 of 25 rows had erroneous context compaction."
+    },
+    "elapsed_seconds": 460.3956210613251,
+    "wall_seconds_per_complete_row": null,
+    "timing_basis": "Recovery driver start to20:49:10 observation;no completed recovery rows yet",
+    "checkpoint_recorded_cost_lower_bound": {},
+    "complete_sample_timings": {}
   },
   "h2": {
-    "state": "generation_sealed_waiting_driver_terminal",
+    "state": "official_complete",
     "completed_rows": 312,
     "total_rows": 312,
     "remaining_rows": 0,
     "cards": 8,
     "instances": 2,
-    "estimated_remaining_seconds": null,
+    "estimated_remaining_seconds": 0,
     "started_at_utc": "2026-10-31T19:38:31.113885Z",
     "previous_dispatch": "Failed before lease acquisition; no model calls. Stale metadata reconciled after liveness and guard checks.",
-    "attempt_state": "OPENED",
+    "attempt_state": "FINALIZED",
     "observed_fit_receipts": 396,
     "fit_observation_at_utc": "2026-10-31T19:46:16Z",
     "checkpoint_sha256": "4c6ec6cb0cb7b4a56a42a6022c4120670b571f362bcd2b9f96e614147af04508",
-    "elapsed_seconds": 3518.8346922397614,
+    "elapsed_seconds": 3551.4381153583527,
     "checkpoint_recorded_cost_lower_bound": {
       "calls": 2184,
       "audio_seconds": 9851.122749999993,
@@ -71,19 +82,21 @@
       "completion_tokens": 4641118
     },
     "admitted_to_finished_mean_seconds": 2571.0506348710896,
-    "wall_seconds_per_complete_row": 11.278316321281286,
-    "efficiency_note": "312 checkpoints complete; generation and run manifests COMPLETED. Driver still live, successful terminal not observed.58.65min/11.28s per row uses observation time, not sealed boundary; not final baseline.",
+    "wall_seconds_per_complete_row": 11.382814472302412,
+    "efficiency_note": "Driver start to immutable generation seal;3551.438s/312. Includes setup and sealing, excludes post-seal default and seven-column scoring.",
     "generation_manifest_status": "COMPLETED",
     "run_manifest_status": "COMPLETED",
-    "driver_exit": null
+    "driver_exit": 0,
+    "official_read_exit": 0,
+    "official_summary": "docs/results/2026-10-31-tfrl-h2-complete-summary.json"
   },
   "resources": {
     "cards": 8,
     "instances": 2,
     "tensor_parallel": 4,
     "max_num_seqs_per_instance": 128,
-    "generation_active": null,
-    "note": "8 cards and2 TP4 instances allocated. H2 generation sealed; driver remains live, H1 awaits successful upstream terminal. Current inference activity and sustained utilization not established."
+    "generation_active": true,
+    "note": "H1 driver/container live with checkpoint header;8cards/2TP4 allocated. No sustained full utilization measurement."
   },
   "hardware_snapshot": {
     "observed_at_utc": "2026-10-31T18:54:25Z",
@@ -99,7 +112,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "H2 generation rows remaining0; final driver/scoring completion ETA unknown. H1new310 waiting; historical3 separate until full313union.",
+  "eta_note": "H2complete;H1remaining310new plus3preserved pendingunion. Early H1snapshot has0complete; reliableETAunknown.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -107,7 +120,7 @@
     "model_calls": 0,
     "scoring_jobs": 0
   },
-  "state": "h2_running_h1_preflight_passed_waiting_generation_queue",
+  "state": "h2_official_complete_h1_recovery_running",
   "remaining_rows": 313,
   "bank_read": {
     "registered": true,
@@ -135,7 +148,7 @@
     "h1_wire_replay_new_model_calls": 0
   },
   "reuse_candidate_rows": 3,
-  "completion_note": "No current repaired complete-row observation. Three historical rows passed wire replay; official source-bound union still pending.",
+  "completion_note": "H2official312complete. H1new310started;3preservedrows pendingcomplete313union. No625gateyet.",
   "recovered_consumers": {
     "state": "waiting_two_complete_official_halves",
     "rows": 625,
@@ -146,13 +159,14 @@
     "actual_bank_produced": false
   },
   "next_iteration_preparation": {
-    "tests_passed": 93,
+    "tests_passed": 69,
     "actual_bank_used": false,
     "generation_started": false,
     "remaining": [
-      "bundle-level bank context audit",
-      "real supply allocation and FIT",
-      "actual bank source handoff",
+      "actual measured banks and full625gate",
+      "actual held config staging",
+      "full real rendering and exact FIT",
+      "registration/admission/preflight",
       "independent confirmation"
     ]
   }

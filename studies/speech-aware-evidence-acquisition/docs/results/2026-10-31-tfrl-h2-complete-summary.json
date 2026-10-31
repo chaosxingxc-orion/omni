@@ -1,0 +1,283 @@
+{
+  "schema": "saea-tfrl-h2-complete-summary-v1",
+  "rows": 312,
+  "iteration": 1,
+  "half": "R01C-H2",
+  "source_result_sha256": "1857ee6dcb9a2a03a356727895f2179e0163e06c0b991e33ef53d1a459aeca5a",
+  "manifest_sha256": "a15827d8278bc959fe5c43d3a1c022d731c5f071904051798d5dd9aa07df6940",
+  "checkpoint_sha256": "4c6ec6cb0cb7b4a56a42a6022c4120670b571f362bcd2b9f96e614147af04508",
+  "official_scoring_jobs": 7,
+  "official": {
+    "aa": {
+      "slu_f1": 0.6579154260890894,
+      "intent_accuracy": 0.7852564102564104
+    },
+    "lock": {
+      "slu_f1": 0.6612659907555688,
+      "intent_accuracy": 0.7884615384615384
+    },
+    "s1": {
+      "slu_f1": 0.6605506811610914,
+      "intent_accuracy": 0.7884615384615384
+    },
+    "s2": {
+      "slu_f1": 0.6539878387094183,
+      "intent_accuracy": 0.7788461538461539
+    },
+    "s3": {
+      "slu_f1": 0.6600069593260213,
+      "intent_accuracy": 0.7692307692307693
+    },
+    "s4": {
+      "slu_f1": 0.6729857029140275,
+      "intent_accuracy": 0.7788461538461539
+    },
+    "vote": {
+      "slu_f1": 0.6653403637253114,
+      "intent_accuracy": 0.7756410256410257
+    }
+  },
+  "vote_minus_lock_pp": 0.4074372969742557,
+  "vote_minus_lock_intent_pp": -1.2820512820512775,
+  "credit": {
+    "positive_share": 0.102564,
+    "positives": 32,
+    "reasons": {
+      "baseline-unstable": 52,
+      "no-gain-over-baseline": 169,
+      "no-intent-correct-trajectory": 59,
+      "positive": 32
+    },
+    "rows": 312
+  },
+  "request_audit": {
+    "new_model_calls": 0,
+    "no_solver_abstention_rows": 0,
+    "rows": 312,
+    "schema": "saea-tfrl-seed-plan-request-check-v1",
+    "scope": "Plan and request identity; requires independently verified bundle and official scores.",
+    "solver_requests_verified": 1872
+  },
+  "elapsed_to_generation_seal_seconds": 3551.4381153583527,
+  "wall_seconds_per_complete_row": 11.382814472302412,
+  "generation_sealed_at_utc": "2026-10-31T20:37:42.552Z",
+  "driver_exited_at_utc": "2026-10-31T20:38:36.952Z",
+  "official_read_exited_at_utc": "2026-10-31T20:42:34.064Z",
+  "resources": {
+    "cards": 8,
+    "instances": 2,
+    "tensor_parallel": 4,
+    "max_num_seqs_per_instance": 128
+  },
+  "checkpoint_recorded_cost": {
+    "calls": 2184.0,
+    "audio_seconds": 9851.122749999993,
+    "latency_seconds": 695068.9753442102,
+    "prompt_tokens": 17515993.0,
+    "completion_tokens": 4641118.0,
+    "tool_calls": 0.0
+  },
+  "complete_sample_timings": {
+    "admission_wait": {
+      "n": 312,
+      "mean_s": 2.596353961153846,
+      "p50_s": 2.560238115,
+      "p95_s": 3.91703558
+    },
+    "admitted_to_finished": {
+      "n": 312,
+      "mean_s": 2571.0506348710896,
+      "p50_s": 2709.113819075,
+      "p95_s": 3233.080348
+    }
+  },
+  "timing_summary_sha256": "9272827666ace255a8df8665a236d461ab748d0fcc0563b8f65b34bff4c67e41",
+  "stage_timings": {
+    "audio_read_encode": {
+      "invocations": {
+        "count": 4368,
+        "mean_s": 0.0022048497595793318,
+        "p50_s": 0.0007199049996415852,
+        "p95_s": 0.0030297899975266773,
+        "total_s": 9.630783749842522
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 0.030867896634110645,
+        "p50_s": 0.016299494998747832,
+        "p95_s": 0.09133790999112534,
+        "total_s": 9.630783749842522
+      },
+      "errors": 0
+    },
+    "checkpoint_append_fsync": {
+      "invocations": {
+        "count": 312,
+        "mean_s": 0.014606059391028863,
+        "p50_s": 0.014054524999664864,
+        "p95_s": 0.01805004000198096,
+        "total_s": 4.557090530001005
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 0.014606059391028863,
+        "p50_s": 0.014054524999664864,
+        "p95_s": 0.01805004000198096,
+        "total_s": 4.557090530001005
+      },
+      "errors": 0
+    },
+    "checkpoint_total": {
+      "invocations": {
+        "count": 312,
+        "mean_s": 0.0311290218910355,
+        "p50_s": 0.0302473599986115,
+        "p95_s": 0.037519890000112355,
+        "total_s": 9.712254830003076
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 0.0311290218910355,
+        "p50_s": 0.0302473599986115,
+        "p95_s": 0.037519890000112355,
+        "total_s": 9.712254830003076
+      },
+      "errors": 0
+    },
+    "context_build": {
+      "invocations": {
+        "count": 624,
+        "mean_s": 0.25305656362174656,
+        "p50_s": 0.17790470499858202,
+        "p95_s": 0.8082478199976322,
+        "total_s": 157.90729569996984
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 0.5061131272434931,
+        "p50_s": 0.3969878449988755,
+        "p95_s": 0.8701331099982781,
+        "total_s": 157.90729569996984
+      },
+      "errors": 0
+    },
+    "http_request": {
+      "invocations": {
+        "count": 2184,
+        "mean_s": 318.1692304451237,
+        "p50_s": 289.1056261350004,
+        "p95_s": 585.8120274299981,
+        "total_s": 694881.5992921501
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 2227.1846131158654,
+        "p50_s": 2433.924779145007,
+        "p95_s": 2936.2523185200007,
+        "total_s": 694881.5992921501
+      },
+      "errors": 0
+    },
+    "native_fit": {
+      "invocations": {
+        "count": 2184,
+        "mean_s": 4.048275241185868,
+        "p50_s": 0.15613727500021923,
+        "p95_s": 36.441137159999926,
+        "total_s": 8841.433126749936
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 28.337926688301078,
+        "p50_s": 26.798697739997806,
+        "p95_s": 61.637678099996265,
+        "total_s": 8841.433126749936
+      },
+      "errors": 0
+    },
+    "output_normalize": {
+      "invocations": {
+        "count": 312,
+        "mean_s": 0.0005044852885079401,
+        "p50_s": 0.0004920149985991884,
+        "p95_s": 0.0005175900005269796,
+        "total_s": 0.15739941001447733
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 0.0005044852885079401,
+        "p50_s": 0.0004920149985991884,
+        "p95_s": 0.0005175900005269796,
+        "total_s": 0.15739941001447733
+      },
+      "errors": 0
+    },
+    "request_render": {
+      "invocations": {
+        "count": 4368,
+        "mean_s": 0.08494973716577349,
+        "p50_s": 0.060836814998765476,
+        "p95_s": 0.1371558399987407,
+        "total_s": 371.0604519400986
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 1.1892963203208287,
+        "p50_s": 1.061273795006855,
+        "p95_s": 1.7792630700023437,
+        "total_s": 371.0604519400986
+      },
+      "errors": 0
+    },
+    "request_total": {
+      "invocations": {
+        "count": 2184,
+        "mean_s": 318.42624064116296,
+        "p50_s": 289.3056565250008,
+        "p95_s": 586.0051101399986,
+        "total_s": 695442.9095603
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 2228.983684488141,
+        "p50_s": 2435.624636390001,
+        "p95_s": 2938.0894657299978,
+        "total_s": 695442.9095603
+      },
+      "errors": 0
+    },
+    "transport_total": {
+      "invocations": {
+        "count": 2184,
+        "mean_s": 318.25250898407506,
+        "p50_s": 289.16830861499875,
+        "p95_s": 585.8750322100022,
+        "total_s": 695063.4796212199
+      },
+      "per_observed_sample": {
+        "count": 312,
+        "mean_s": 2227.7675628885254,
+        "p50_s": 2434.442706400001,
+        "p95_s": 2936.877214380005,
+        "total_s": 695063.4796212199
+      },
+      "errors": 0
+    }
+  },
+  "timing_coverage": {
+    "rows": 312,
+    "events": 19032,
+    "missing_complete_rows": 0,
+    "partial_tail": false
+  },
+  "limitations": [
+    "Single construction half, not full625 or independent confirmation; no family or improvement decision yet.",
+    "Nested stage durations and concurrent sample latencies cannot be summed as task wall time.",
+    "HTTP includes queue, network, audio processing, prefill and decode; TTFT and pure device compute are not separately measured.",
+    "Timing includes successful and failed observed invocations; stage errors are retained.",
+    "FIT tokenizer costs and failed original attempts remain separate; checkpoint costs are not complete project spend."
+  ],
+  "claims_benefit": false,
+  "next_iteration_authorized": false,
+  "new_model_calls_for_this_read": 0
+}
