@@ -1,0 +1,72 @@
+{
+  "schema": "saea-tfrl-current-progress-summary-v1",
+  "observed_at_utc": "2026-10-31T18:53:59.556855+00:00",
+  "completed_rows": 7,
+  "total_rows": 625,
+  "h1": {
+    "completed_rows": 7,
+    "total_rows": 313,
+    "remaining_rows": 306,
+    "elapsed_seconds": 609.8746495246887,
+    "wall_seconds_per_complete_row": 87.12494993209839,
+    "estimated_remaining_seconds": null,
+    "checkpoint_sha256": "26dd5855192c30939be13addc35f95ccee01dd9d9cb8d1c4ccf8b3e8a55be241",
+    "torn_tail_bytes": 0,
+    "unusable_checkpoint_rows": 0,
+    "checkpoint_recorded_cost_lower_bound": {
+      "calls": 49.0,
+      "audio_seconds": 81.97481250000001,
+      "latency_seconds": 1521.3732738799954,
+      "prompt_tokens": 225692.0,
+      "completion_tokens": 42758.0,
+      "tool_calls": 0.0
+    },
+    "complete_sample_timings": {
+      "admission_wait": {
+        "n": 7,
+        "mean_s": 1.7184819,
+        "p50_s": 1.39834717,
+        "p95_s": 2.21319201
+      },
+      "admitted_to_finished": {
+        "n": 7,
+        "mean_s": 380.00597485857145,
+        "p50_s": 378.94875088,
+        "p95_s": 394.63076099
+      }
+    }
+  },
+  "h2": {
+    "completed_rows": 0,
+    "total_rows": 312,
+    "state": "queued"
+  },
+  "resources": {
+    "cards": 8,
+    "instances": 2,
+    "tensor_parallel": 4,
+    "max_num_seqs_per_instance": 128
+  },
+  "hardware_snapshot": {
+    "observed_at_utc": "2026-10-31T18:54:25Z",
+    "aicore_percent_by_card": [
+      38,
+      44,
+      43,
+      43,
+      45,
+      46,
+      44,
+      46
+    ],
+    "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
+  },
+  "eta_note": "Initial completion wave; partial rate is not a stable engineering baseline or forecast.",
+  "pool_read": {
+    "registered": true,
+    "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
+    "state": "waiting_two_complete_halves",
+    "model_calls": 0,
+    "scoring_jobs": 0
+  }
+}
