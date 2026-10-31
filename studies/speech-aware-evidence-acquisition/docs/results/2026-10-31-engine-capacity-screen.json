@@ -1,6 +1,6 @@
 {
   "schema": "saea-engine-capacity-screen-summary-v1",
-  "status": "screen-complete-wide-engines-loading",
+  "status": "screen-complete-wide-local-recovery-fitting",
   "dataset_rows": 0,
   "cards": 8,
   "instances": 4,
@@ -37,5 +37,13 @@
     "errors": 0,
     "timeouts": 0,
     "preemptions_delta": 0.0
+  },
+  "wide_interruption": {
+    "cause": "CephFS kernel fsync and metadata lockup",
+    "generation_requests": 0,
+    "tokenize_results": 1050,
+    "unknown_tokenize_intents": 18,
+    "new_trial": "fresh synthetic seed, host-local durable checkpoints",
+    "shared_archive_complete": false
   }
 }
