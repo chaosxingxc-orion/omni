@@ -1,7 +1,7 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T19:51:26Z",
-  "completed_rows": 0,
+  "observed_at_utc": "2026-10-31T19:56:58Z",
+  "completed_rows": 2,
   "total_rows": 625,
   "h1": {
     "state": "preflight_passed_waiting_h2",
@@ -50,9 +50,9 @@
   },
   "h2": {
     "state": "running",
-    "completed_rows": 0,
+    "completed_rows": 2,
     "total_rows": 312,
-    "remaining_rows": 312,
+    "remaining_rows": 310,
     "cards": 8,
     "instances": 2,
     "estimated_remaining_seconds": null,
@@ -60,7 +60,20 @@
     "previous_dispatch": "Failed before lease acquisition; no model calls. Stale metadata reconciled after liveness and guard checks.",
     "attempt_state": "OPENED",
     "observed_fit_receipts": 396,
-    "fit_observation_at_utc": "2026-10-31T19:46:16Z"
+    "fit_observation_at_utc": "2026-10-31T19:46:16Z",
+    "checkpoint_sha256": "f51b472d95fb0556bf150a03313785c661cf32b9ff4dfa4c9ab7983407e92810",
+    "elapsed_seconds": 1107.821872472763,
+    "checkpoint_recorded_cost_lower_bound": {
+      "calls": 14.0,
+      "audio_seconds": 40.762750000000004,
+      "latency_seconds": 1628.5861561999918,
+      "prompt_tokens": 102459.0,
+      "completion_tokens": 10115.0,
+      "tool_calls": 0.0
+    },
+    "admitted_to_finished_mean_seconds": 883.85595759,
+    "wall_seconds_per_complete_row": 553.9109362363815,
+    "efficiency_note": "Startup diagnostic from only2 complete rows, not a stable throughput baseline. ETA suppressed; pending many in-flight samples."
   },
   "resources": {
     "cards": 8,
@@ -84,7 +97,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "No newly complete K4 rows in19:46snapshot; ETA unknown. H1 waiting H2 successful generation terminal.",
+  "eta_note": "H2 has2 complete checkpoints of312 at19:56. Three historical H1 candidates separately verified; corrected H1needs310 inferences. Reliable ETA unavailable.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -93,7 +106,7 @@
     "scoring_jobs": 0
   },
   "state": "h2_running_h1_preflight_passed_waiting_generation_queue",
-  "remaining_rows": 625,
+  "remaining_rows": 623,
   "bank_read": {
     "registered": true,
     "state": "failed_upstream",
