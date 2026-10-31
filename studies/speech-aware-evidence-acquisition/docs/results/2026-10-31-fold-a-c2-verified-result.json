@@ -1,0 +1,58 @@
+{
+  "allocated_card_hours_until_seal": 6.16354834927453,
+  "candidate": "slurp-a0-fold-a-current-c2-v1",
+  "cards": 8,
+  "checkpoint_cost_reconciled": true,
+  "checkpoint_sha256": "23ddab92e0af05a207ac2ccd70a2e2efaf850b71401038f3bc1dbd84e3cf6bfc",
+  "cost": {
+    "audio_seconds_used": 6169.056875000009,
+    "calls_used": 2160,
+    "completion_tokens_total": 3507701,
+    "latency_seconds_total": 557821.3227993491,
+    "prompt_tokens_total": 13239312,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "generation_sealed": true,
+  "generation_seconds_per_row": 2.5681451455310538,
+  "generation_start_to_seal_seconds": 2773.596757173538,
+  "instances": 2,
+  "limitations": [
+    "Generation duration includes runner preparation and seal; excludes deployment and official scoring.",
+    "Allocated card-hours are not measured utilization; serving counters and FIT require separate reconciliation.",
+    "Fold A control alone does not establish candidate gains or replace full13078 test evaluation."
+  ],
+  "max_num_seqs_per_instance": 128,
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "official_finalized": true,
+  "profile": "qwen3-omni-real500-2xtp4-s128-b2048-v1",
+  "quality": {
+    "intent_accuracy": 0.8574074074074074,
+    "scenario_accuracy": 0.8953703703703704,
+    "slu_f1": 0.7331392140771492,
+    "span_f1": 0.6446280991735537
+  },
+  "quality_identity_passed": true,
+  "remaining_rows": 0,
+  "rows": 1080,
+  "run_id": "SAEA-SLURP-A0-FOLD-A-CURRENT-C2-V1",
+  "schema": "saea-fold-a-c2-verified-result-v1",
+  "scores_sha256": "9c6a54f51b677f1e4e0ae8664add280a28f8916d6fa4cbf191c0f5e9c4d90f98",
+  "selection_evidence": {
+    "generation_elapsed_seconds": 2773.596757173538,
+    "generation_manifest": {
+      "relpath": "runs/SAEA-SLURP-A0-FOLD-A-CURRENT-C2-V1/generation-v1/SAEA-SLURP-A0-FOLD-A-CURRENT-C2-V1.generation-manifest.json",
+      "sha256": "4b12c4f38a2d0aadf0edc2c4dd11518953c5b197d3be31f2c08b6d80975715ce"
+    },
+    "manifest": {
+      "relpath": "runs/SAEA-SLURP-A0-FOLD-A-CURRENT-C2-V1/generation-v1/SAEA-SLURP-A0-FOLD-A-CURRENT-C2-V1.run-manifest.json",
+      "sha256": "b892cb26ae182d3f733bef9dc2d03321ac196bfaad309d0fef24d5eceb7b3163"
+    },
+    "started": {
+      "relpath": "work/codex/fold-a-c2-generation-v1/started.json",
+      "sha256": "5077e6e345ddab2d8e0b09f5082b236ec33af8b68f0d4cc531b42dd8931eb988"
+    }
+  },
+  "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6"
+}
