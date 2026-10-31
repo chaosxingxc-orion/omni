@@ -1,6 +1,6 @@
 # A0、真实数据工程基线与后续优化
 
-更新：2026-10-31 22:10 UTC。真实500工程基准与完整1080条A0收益已锁定；首轮construction625/625官方评分完成。K4 vote相对lock下降0.4040pp，按预定门槛停止当前家族。
+更新：2026-10-31 22:18 UTC。真实500工程基准与完整1080条A0收益已锁定；首轮construction625/625官方评分完成。K4 vote相对lock下降0.4040pp，按预定门槛停止当前家族。
 
 ## 当前结论
 
@@ -30,7 +30,7 @@
 
 ## 数据与测量口径
 
-从SLURP train Fold B的1080条按固定种子无放回抽取500条，500个ID和500个音频哈希均不同。17:59再次复核三个执行目录，dataset文件哈希完全相同，媒体路径均登记为真实录音；[逐配置核验记录](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-dataset-identity-audit.json)保存计数和哈希，不公开原始数据。跨配置共用名单用于配对比较；配置内不重复样本制造并发。抽样不读取答案、正确率或历史完成状态。
+从SLURP train Fold B的1080条按固定种子无放回抽取500条，500个ID和500个音频哈希均不同。17:59再次复核三个执行目录，dataset文件哈希完全相同，媒体路径均登记为真实录音；[逐配置核验记录](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-dataset-identity-audit.json)保存计数和哈希，不公开原始数据。跨配置共用名单用于配对比较；配置内不重复样本制造并发。 “相同500条”指各配置共用500条不同真实录音，绝非重复同一条合成样本。抽样不读取答案、正确率或历史完成状态。
 
 真实音频→检索/上下文→本次P感知→本次S求解→解析/断点。允许自然公共前缀缓存，不重放历史P答案。此前合成轨迹只保留为压力诊断，撤回据此锁定48并发及外推真实成本的结论。后续真实K4采样计划也已移除合成吞吐、token及卡时预测，保留精确调用数和音频量；耗时须由对应真实流程测量。原计划保留归档，修正有独立哈希记录。
 
@@ -128,3 +128,5 @@ H1完整313条由修复后310条和3条历史上下文完整记录合并并完�
 [完整七列结果、成本与下一阶段方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-first625-result-and-next-plan-zh.md)。工程实现详情保留在仓库历史报告，本页只原位维护结果及当前状态。
 
 [失败诊断与具体实验草案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-next-method-plan-zh.md)；[Fold A真实配置准备结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-fold-a-confirmation-inputs-zh.md)。
+
+Fold A独立供给准备已完成1080/1080条，0新增推理调用；实际绑定共享运行时身份校验中。准备完成不等于NPU任务启动。
