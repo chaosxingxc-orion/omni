@@ -89,5 +89,16 @@
     "seed_ok": true,
     "readiness": "held",
     "registered": false
+  },
+  "preparation_ledger_closure": {
+    "complete": true,
+    "rows": 625,
+    "ledger_rows": 4,
+    "new_model_contacts": 0,
+    "tests_passed": 47,
+    "closure_sha256": "1595eb525b521fc5784b210e710f26f6bf2719f9cf5a9900f427e847b688eaa9",
+    "execution_commit": "f06d51b3",
+    "generation_admitted": false,
+    "derivative_records_retrospective": true
   }
 }
