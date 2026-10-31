@@ -70,6 +70,7 @@ def test_plan_columns_compile_load_and_reject_changed_method():
     from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
     from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
     block=_decoding_block();block['columns']=sampler.execution_columns(plan())
+    block['prompt_contact_limits']='legacy-c17-lock-v1'
     compiled=cm.compile_module(block,carrier_module_hooks())
     values=compiled.values();values['carrier_lock_key']='slurp'
     values['native_episode']['consumption_module']=block

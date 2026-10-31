@@ -2879,10 +2879,17 @@ def _load_knowledge_index(
 
 
 def validate_prompt_contact_limits(config):
-    """Legacy render compatibility is only valid on a non-iterative c2 lock."""
+    """Preserve the same prompt budget on c2 and its seed-only Solver group."""
     if config.prompt_contact_limits is None:
         return
-    if (config.prompt_contact_limits != "legacy-c17-lock-v1" or config.max_contacts != 2
+    group = config.supply_variant_group
+    seed_group = False
+    if group is not None and group.is_decoding and group.arm_count == 6:
+        from .trajectory_seeds import RECIPE_KEYS, recipe_error, group_error
+        overrides = [a.decoding for a in group.arms if a.decoding is not None]
+        seed_group = (len(overrides) == 4 and all(RECIPE_KEYS <= set(d) and recipe_error(d) is None for d in overrides)
+                      and group_error(overrides) is None)
+    if (config.prompt_contact_limits != "legacy-c17-lock-v1" or config.max_contacts != (7 if seed_group else 2)
             or config.max_revisions != 0 or config.review_loop_enabled
             or config.acquisition_role is not None or config.relisten_json is not None
             or any(r.max_iterations != (1 if r.role_kind in {"perception", "solver"} else 0)

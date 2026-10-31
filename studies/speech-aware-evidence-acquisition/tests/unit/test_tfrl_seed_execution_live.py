@@ -9,7 +9,9 @@ from speech_aware_evidence_acquisition.rails.native_episode_receipt import valid
 
 
 def test_real_shared_runner_delivers_seed_only_candidates_and_valid_receipt(tmp_path):
+    from dataclasses import replace
     p,b,g=group();h=_decoding_harness(tmp_path,g,rows=2)
+    h.config=replace(h.config,prompt_contact_limits='legacy-c17-lock-v1')
     summary,close=_run(h)
     assert close['request_count']==14
     requests=_requests(h)

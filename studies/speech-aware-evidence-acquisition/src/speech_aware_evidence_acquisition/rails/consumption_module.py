@@ -1874,8 +1874,14 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
                        component_id="review-off-profile", replace_only="tool_schema_rendering" in layer["native_episode"])
         ceiling = sum(layer["native_episode"]["roles"][kind]["max_iterations"] for kind in ("perception", "solver"))
     if block.prompt_contact_limits is not None:
-        if block.review_loop != "off" or block.columns or ceiling != 2 or block.solver_tool_access:
-            raise ConsumptionModuleConfigError("legacy prompt limits require a two-contact lock without columns")
+        seed_columns = bool(block.columns) and len(block.decoding_columns) == len(block.columns) == 4
+        if seed_columns:
+            from .trajectory_seeds import RECIPE_KEYS, recipe_error, group_error
+            overrides = [c.decoding for c in block.decoding_columns]
+            seed_columns = (all(RECIPE_KEYS <= set(d) and recipe_error(d) is None for d in overrides)
+                            and group_error(overrides) is None)
+        if block.review_loop != "off" or (block.columns and not seed_columns) or ceiling != 2 or block.solver_tool_access:
+            raise ConsumptionModuleConfigError("legacy prompt limits require a two-contact lock or its seed-only K4 Solver group")
         writer.set(("native_episode", "prompt_contact_limits"), block.prompt_contact_limits,
                    component_id="legacy-lock-prompt", replace_only=False)
     if block.template_columns:
