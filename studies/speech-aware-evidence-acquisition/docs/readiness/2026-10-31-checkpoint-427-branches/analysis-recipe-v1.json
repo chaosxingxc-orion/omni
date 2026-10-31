@@ -1,0 +1,26 @@
+{
+  "baseline": {
+    "relpath": "configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json",
+    "sha256": "c228c873b39c1c9bd7eccedcf8c7c6f1c975deb008a5e8d2fd5d1c57e7c01b80"
+  },
+  "checkpoint": {
+    "relpath": "runs/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-PHASE-WIDTH-V5-NPU-V1/attempt-slurp-l338-fold-b-generation-phase-width-v5-npu-v1/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-PHASE-WIDTH-V5-NPU-V1.rows.ckpt.jsonl",
+    "sha256": "8fc5edc100096930c9cd78a0eed582d463249343111da766bf04c34220eea091"
+  },
+  "claims_full_roster_benefit": false,
+  "columns": [
+    "l1-support",
+    "l2-union",
+    "aa",
+    "lock-rep2",
+    "lock",
+    "l1-support-sample0"
+  ],
+  "new_model_calls": 0,
+  "new_official_scoring_jobs": 6,
+  "owner_decision": "docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md",
+  "read_run_id": "SAEA-SLURP-CHECKPOINT-427-BRANCHES-READ-V1",
+  "rows": 427,
+  "schema": "saea-checkpoint-branch-read-v1",
+  "scorer": "slurp-slu-official-train"
+}
