@@ -32,3 +32,23 @@ def test_session_or_topology_mismatch_refused():
         elif mutation=='members':args[3]['parent']['deployment_instance_ids']=['unknown']
         else:args[0]['source']='foreign'
         with pytest.raises(ValueError):m.validate_predecessor(*args)
+
+
+def test_directory_move_preserves_old_bundle_receipt_address(tmp_path):
+    import hashlib
+    import json
+    from speech_aware_evidence_acquisition.core.session.receipt import resolve_pinned_session_receipt
+    archive = tmp_path / 'archive'; source = archive / 'i0'; source.mkdir(parents=True)
+    raw = b'{"old":"receipt"}\n'; digest = hashlib.sha256(raw).hexdigest()
+    (source / 'session-receipt.json').write_bytes(raw)
+    (archive / 'manifest.json').write_text(json.dumps({'i0': {'session-receipt.json': digest}}))
+    assert m.restore_receipt_addresses(tmp_path, archive) == 1
+    path = tmp_path / 'serving/i0/session-receipt.json'
+    assert not path.exists()
+    assert not (path.parent / 'session.json').exists()
+    path.write_bytes(b'{"new":"receipt"}')
+    assert resolve_pinned_session_receipt(path, digest) == raw
+    assert m.restore_receipt_addresses(tmp_path, archive) == 1
+    (source / 'session-receipt.json').write_bytes(b'tampered')
+    with pytest.raises(ValueError, match='bytes differ'):
+        m.restore_receipt_addresses(tmp_path, archive)

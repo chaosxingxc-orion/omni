@@ -835,5 +835,75 @@
       "Explicit source/projection custody and full1080 scoring integration",
       "Retain all historical and candidate costs; no outcome selection"
     ]
+  },
+  "a0_source_custody_preparation": {
+    "covered_rows": 727,
+    "remaining_rows": 353,
+    "full_rows": 1080,
+    "new_model_calls": 0,
+    "new_scoring_calls": 0,
+    "scientific_baseline_complete": false,
+    "registered_for_inference": false,
+    "schema": "saea-a0-custody-preparation-summary-v1",
+    "artifacts": {
+      "remaining-dataset.json": "cf5a476854f1e57a0f04a209164f3d300dff2b0d5e4a1ca17000705839ecc7db",
+      "source-map.json": "72e971de9dd36e7be169f83ae7bcfa68fb9a9759d8b04a9407948782dba117b4",
+      "preserved-canonical-outputs.jsonl": "77cd43aec4e3aaffcc0103bdc21a96db0b234b5850a495edcd156c8fc781d21d",
+      "custody.json": "2b2b88eb407270601e17b01e9d262192fe0500d119ab4918bdf2fc20367aaea4"
+    },
+    "remaining_split_identity_hash": "7ac86aed3fe8f2d6139b9736c1732fb52beae44ee4bc3e5cc963f68608d1dbfe"
+  },
+  "a0_remaining_preparation": {
+    "schema": "saea-a0-remaining-preparation-v1",
+    "rows": 353,
+    "split_identity_hash": "7ac86aed3fe8f2d6139b9736c1732fb52beae44ee4bc3e5cc963f68608d1dbfe",
+    "custody_summary_sha256": "737ba46c43c28c748cdfc5aeadd1c232c34faf3daf7e874a22ae208a7bd993d0",
+    "phase_supply_sha256": "fe995f1bd2682de3c738f0b7162b67ca5266694315b02cc97c74739ee7ec40d4",
+    "evidence_equal_to_full_parent": true,
+    "compared_supply_entries": 353,
+    "new_model_calls": 0,
+    "registered_for_inference": false,
+    "state": "prepared-held",
+    "normal_generation_calls": 706,
+    "fallback_inclusive_cap": 1412,
+    "remaining": [
+      "Freeze measured final serving profile",
+      "Register generation/FIT and source-custody full1080 read",
+      "Admit, repin and preflight before dispatch"
+    ]
+  },
+  "scheduling_analysis": {
+    "rows": 500,
+    "width_queue_depth_counts": {
+      "(192, 768)": 500
+    },
+    "admission_wave_first_P_wait_seconds": {
+      "0": {
+        "n": 192,
+        "mean": 61.96293068036462,
+        "min": 39.6711296500016,
+        "max": 84.91696675999992
+      },
+      "1": {
+        "n": 192,
+        "mean": 401.3545516480209,
+        "min": 177.37380936999944,
+        "max": 609.5965457800012
+      },
+      "2": {
+        "n": 116,
+        "mean": 756.1442950147414,
+        "min": 611.8415958599999,
+        "max": 903.9556232900013
+      }
+    },
+    "observed_request_interval_peak": 192,
+    "observed_request_interval_mean": 158.95978451895917,
+    "request_interval_span_seconds": 1231.1281272399992,
+    "limitations": [
+      "Request intervals include client work and service wait; not NPU device occupancy.",
+      "Admission waves are descriptive ordered groups, not proof of avoidable scheduling overhead."
+    ],
+    "new_model_calls": 0
   }
 }

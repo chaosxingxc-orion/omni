@@ -42,6 +42,38 @@ def validate_predecessor(plan, originals, archived, sessions, previous):
         if archive['Image']!=original['Image'] or archive['Config'].get('Labels',{}).get('saea.deployment.profile')!=plan['source']:raise ValueError('archive ownership differs')
 
 
+def restore_receipt_addresses(data, archive):
+    """Keep every archived receipt resolvable at its original content address.
+
+    Whole serving directories move out of the resident scan. Their immutable
+    receipt stores must also exist beside the old path referenced by bundles.
+    Recreate only content-addressed bytes, never a resident session marker.
+    """
+    from speech_aware_evidence_acquisition.core.session.receipt import store_session_receipt_bytes
+    manifest = read(archive / 'manifest.json')
+    restored = 0
+    for name, files in manifest.items():
+        if Path(name).name != name or name in ('.', '..'):
+            raise ValueError('unsafe archived session name')
+        source = archive / name
+        for rel, digest in files.items():
+            path = (source / rel).resolve()
+            if not path.is_relative_to(source.resolve()) or sha(path) != digest:
+                raise ValueError('archived serving bytes differ')
+        receipt = source / 'session-receipt.json'
+        if 'session-receipt.json' not in files:
+            raise ValueError('archived session receipt absent')
+        candidates = [receipt] + [source / rel for rel in files
+            if rel.startswith('session-receipt.json.archive/')]
+        for path in candidates:
+            raw = path.read_bytes()
+            if path != receipt and path.name != hashlib.sha256(raw).hexdigest() + '.json':
+                raise ValueError('archived content address differs')
+            store_session_receipt_bytes(data / 'serving' / name / 'session-receipt.json', raw)
+            restored += 1
+    return restored
+
+
 def register(repo,data,candidate,previous_candidate,runtime,transition,archived_inspect):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.atomic_file import publish_new
@@ -85,6 +117,7 @@ def register(repo,data,candidate,previous_candidate,runtime,transition,archived_
             manifest={n:{str(p.relative_to(data/'serving'/n)):sha(p) for p in (data/'serving'/n).rglob('*') if p.is_file()} for n in old_names}
             publish_new(archive/'manifest.json',(json.dumps(manifest,sort_keys=True)+'\n').encode())
             for n in old_names:os.rename(data/'serving'/n,archive/n)
+            restore_receipt_addresses(data, archive)
             publish_new(archive/'complete.json',b'{"archived":true}\n')
         paths=register_deployment(data_root=data,fragment=read_fragment(repo,'model',spec['model_fragment']),model_fragment=spec['model_fragment'],receipt_path=target,instances=observations,session_id=spec['service_session'])
         publish_new(runtime/'registration-complete.json',(json.dumps({'session':spec['service_session'],'files':[str(p) for p in paths],'model_calls':0})+'\n').encode())
