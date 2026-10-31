@@ -5,6 +5,7 @@ be finalized; retain each full result and the explicit throughput/quality reason
 """
 import argparse
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -21,6 +22,12 @@ def verify_selection(data, decision):
     if decision.get("schema") != "saea-real500-profile-selection-v1" or decision.get("complete_roster_comparison") is not True or not decision.get("reason"):
         raise ValueError("explicit complete-roster selection required")
     runs, population = set(), None
+    expected_profiles = {
+        "SAEA-SLURP-REAL500-TP4-S96-V1": ("slurp-real500-tp4-s96-v1", "qwen3-omni-real500-2xtp4-s96-b2048-v1"),
+        "SAEA-SLURP-REAL500-TP4-S128-V1": ("slurp-real500-tp4-s128-v1", "qwen3-omni-real500-2xtp4-s128-b2048-v1"),
+        "SAEA-SLURP-REAL500-TP8-S256-V1": ("slurp-real500-tp8-s256-v1", "qwen3-omni-real500-1xtp8-s256-b2048-v1"),
+        "SAEA-SLURP-REAL500-TP8-S384-V1": ("slurp-real500-tp8-s384-v1", "qwen3-omni-real500-1xtp8-s384-b2048-v1"),
+    }
     selected = None
     for item in decision["candidates"]:
         path = pin(data, item["manifest"])
@@ -33,14 +40,33 @@ def verify_selection(data, decision):
             raise ValueError("comparison populations differ")
         population = current; runs.add(rid)
         timing = item["generation_elapsed_seconds"]
-        if not isinstance(timing, (float, int)) or isinstance(timing, bool) or timing <= 0:
+        if not isinstance(timing, (float, int)) or isinstance(timing, bool) or not math.isfinite(timing) or timing <= 0:
             raise ValueError("positive whole-generation timing required")
         started = read(pin(data, item["started"]))
         seal = pin(data, item["generation_manifest"])
         generation = read(seal)
         if generation["run_id"] != rid or generation["status"] != "COMPLETED" or abs(seal.stat().st_mtime - started["time"] - timing) > .01:
             raise ValueError("generation timing disagrees with sealed source boundaries")
+        if rid not in expected_profiles:
+            raise ValueError("unknown comparison candidate")
+        candidate, profile = expected_profiles[rid]
+        if started.get("candidate") != candidate or started.get("profile") != profile or started.get("rows") != 500:
+            raise ValueError("start identity differs from comparison candidate")
+        for field in ("config", "cost", "outputs", "row_checkpoint", "protocol_hash", "study_commit"):
+            if generation.get(field) != bundle.manifest.get(field):
+                raise ValueError("generation/final source differs: " + field)
+        if started.get("study_commit") != bundle.manifest.get("study_commit"):
+            raise ValueError("started source commit differs")
+        score_meta = bundle.manifest["scores"]
+        score_path = Path(score_meta["path"])
+        if sha(score_path) != score_meta["sha256"]:
+            raise ValueError("official score hash differs")
+        aggregate = read(score_path)["slurp-slu-official-train"]["aggregate"]
+        if aggregate["samples"] != 500 or not aggregate["identity_check"]["passed"] or aggregate["split_id"] != "train":
+            raise ValueError("complete official train score required")
         if rid == decision["selected_run_id"]:
+            if decision["profile"] != profile:
+                raise ValueError("selected profile differs from measured candidate")
             selected = bundle
     if not required <= runs or not runs <= required | {"SAEA-SLURP-REAL500-TP8-S384-V1"} or selected is None:
         raise ValueError("required engineering comparison missing or unknown candidate")

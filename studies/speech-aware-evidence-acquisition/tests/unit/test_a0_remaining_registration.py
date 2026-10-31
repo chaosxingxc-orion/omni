@@ -76,3 +76,39 @@ def test_selection_refuses_fabricated_wall_timing(tmp_path, monkeypatch):
             'generation_manifest':{'relpath':'seal.json'},'generation_elapsed_seconds':1}]}
     with pytest.raises(ValueError,match='timing disagrees'):
         binding.verify_selection(tmp_path,doc)
+    doc['candidates'][0]['generation_elapsed_seconds']=float('nan')
+    with pytest.raises(ValueError,match='positive whole-generation'):
+        binding.verify_selection(tmp_path,doc)
+
+
+def test_complete_selection_requires_real_score_and_start_identity(tmp_path, monkeypatch):
+    import bind_a0_selected_profile as binding
+    import speech_aware_evidence_acquisition.core.bundle as bundle_module
+    import hashlib
+    import os
+    from types import SimpleNamespace
+    manifests={}; items=[]
+    triples=[('TP4-S96','tp4-s96','2xtp4-s96'),('TP4-S128','tp4-s128','2xtp4-s128'),('TP8-S256','tp8-s256','1xtp8-s256')]
+    for token, suffix, topology in triples:
+        rid='SAEA-SLURP-REAL500-'+token+'-V1'
+        profile='qwen3-omni-real500-'+topology+'-b2048-v1'
+        score=tmp_path/(suffix+'-score.json')
+        score.write_text(json.dumps({'slurp-slu-official-train':{'aggregate':{'samples':500,'split_id':'train','identity_check':{'passed':True}}}}))
+        manifest={'run_id':rid,'scores':{'path':str(score),'sha256':hashlib.sha256(score.read_bytes()).hexdigest()},'study_commit':'a'*40}
+        m=tmp_path/(suffix+'-manifest.json');m.write_text(json.dumps(manifest))
+        manifests[m]=SimpleNamespace(manifest=manifest,attempt_state='FINALIZED',outputs_rows=[{'sample_id':str(i)} for i in range(500)])
+        s=tmp_path/(suffix+'-start.json');s.write_text(json.dumps({'candidate':'slurp-real500-'+suffix+'-v1','profile':profile,'rows':500,'time':100,'study_commit':'a'*40}))
+        g=tmp_path/(suffix+'-seal.json');g.write_text(json.dumps({**manifest,'status':'COMPLETED'}));os.utime(g,(130,130))
+        items.append({'manifest':{'relpath':m.name},'started':{'relpath':s.name},'generation_manifest':{'relpath':g.name},'generation_elapsed_seconds':30})
+    monkeypatch.setattr(binding,'pin',lambda root,value: root/value['relpath'])
+    monkeypatch.setattr(bundle_module,'verify_bundle',lambda path:manifests[path])
+    doc={'schema':'saea-real500-profile-selection-v1','complete_roster_comparison':True,'reason':'all complete',
+         'selected_run_id':'SAEA-SLURP-REAL500-TP4-S96-V1','profile':'qwen3-omni-real500-2xtp4-s96-b2048-v1','candidates':items}
+    binding.verify_selection(tmp_path,doc)
+    doc['profile']='qwen3-omni-real500-1xtp8-s256-b2048-v1'
+    with pytest.raises(ValueError,match='selected profile'):
+        binding.verify_selection(tmp_path,doc)
+    doc['profile']='qwen3-omni-real500-2xtp4-s96-b2048-v1'
+    s=tmp_path/items[0]['started']['relpath'];v=json.loads(s.read_bytes());v['candidate']='wrong';s.write_text(json.dumps(v))
+    with pytest.raises(ValueError,match='start identity'):
+        binding.verify_selection(tmp_path,doc)

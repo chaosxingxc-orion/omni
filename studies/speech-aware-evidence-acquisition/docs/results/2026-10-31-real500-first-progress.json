@@ -389,7 +389,7 @@
       "One official full1080 manifest score; never average subset F1"
     ]
   },
-  "snapshot_note": "Complete result supersedes intermediate snapshots; progress duration includes initial failed scoring, use complete_result generation duration for throughput.",
+  "snapshot_note": "Complete96 and128 results supersede progress snapshots; use generation_start_to_seal_seconds for throughput.",
   "complete_result": {
     "schema": "saea-real500-complete-result-v1",
     "rows": 500,
@@ -1088,5 +1088,112 @@
       "Nested intervals overlap; do not sum as whole-task wall time."
     ],
     "new_model_calls": 0
+  },
+  "successor_complete_result": {
+    "allocated_card_hours_until_seal": 3.0736590268876816,
+    "candidate": "slurp-real500-tp4-s128-v1",
+    "cards": 8,
+    "checkpoint_cost_reconciled": true,
+    "checkpoint_sha256": "9baeb692078a743fd5c0b87c7788747fd4b8040bc1986e0985579194fb79c2b0",
+    "cost": {
+      "audio_seconds_used": 2947.1688749999907,
+      "calls_used": 1000,
+      "completion_tokens_total": 1636795,
+      "latency_seconds_total": 235264.62052101042,
+      "prompt_tokens_total": 6194007,
+      "tool_calls": 0,
+      "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+    },
+    "generation_sealed": true,
+    "generation_seconds_per_row": 2.7662931241989135,
+    "generation_start_to_seal_seconds": 1383.1465620994568,
+    "instances": 2,
+    "limitations": [
+      "Generation duration includes runner preparation and seal; excludes deployment and official scoring.",
+      "Allocated card-hours are not measured utilization; serving counters and FIT require separate reconciliation.",
+      "Real500 train comparison does not replace full1080 A0 or full13078 test evaluation."
+    ],
+    "max_num_seqs_per_instance": 128,
+    "new_model_calls": 0,
+    "new_scoring_jobs": 0,
+    "official_finalized": true,
+    "profile": "qwen3-omni-real500-2xtp4-s128-b2048-v1",
+    "quality": {
+      "intent_accuracy": 0.8619999999999999,
+      "scenario_accuracy": 0.898,
+      "slu_f1": 0.7268765260575426,
+      "span_f1": 0.6452304394426582
+    },
+    "quality_identity_passed": true,
+    "remaining_rows": 0,
+    "rows": 500,
+    "run_id": "SAEA-SLURP-REAL500-TP4-S128-V1",
+    "schema": "saea-real500-verified-result-v1",
+    "scores_sha256": "abc1f5f874e4f0726df8a7bb1d0b4b83797e44bbeba58a93232dac38c11056ee",
+    "selection_evidence": {
+      "generation_elapsed_seconds": 1383.1465620994568,
+      "generation_manifest": {
+        "relpath": "runs/SAEA-SLURP-REAL500-TP4-S128-V1/attempt-real500-tp4-s128-v1/SAEA-SLURP-REAL500-TP4-S128-V1.generation-manifest.json",
+        "sha256": "320398586e384e2462464d1c8348080115c433453c5d91242aa6e34d0d8a9916"
+      },
+      "manifest": {
+        "relpath": "runs/SAEA-SLURP-REAL500-TP4-S128-V1/attempt-real500-tp4-s128-v1/SAEA-SLURP-REAL500-TP4-S128-V1.run-manifest.json",
+        "sha256": "4aae9de7eaee68da8b54cb534206504fee17068657520bc3e9b3dfba778ec63b"
+      },
+      "started": {
+        "relpath": "work/codex/real500-successor-queue-v1/slurp-real500-tp4-s128-v1/run/started.json",
+        "sha256": "72b79ffd3253bd34aa0aedfc7a944fede40127710f86e81265332c739f921116"
+      }
+    },
+    "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0"
+  },
+  "successor_counter_reconciliation": {
+    "before": {
+      "totals": {
+        "vllm:prefix_cache_queries_total": 0.0,
+        "vllm:prefix_cache_hits_total": 0.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:prompt_tokens_total": 0.0,
+        "vllm:generation_tokens_total": 0.0,
+        "vllm:request_success_total": 0.0
+      },
+      "finished_reasons": {
+        "stop": 0.0,
+        "length": 0.0,
+        "abort": 0.0,
+        "error": 0.0,
+        "repetition": 0.0
+      }
+    },
+    "release": {
+      "totals": {
+        "vllm:prefix_cache_queries_total": 6194007.0,
+        "vllm:prefix_cache_hits_total": 2847488.0,
+        "vllm:num_preemptions_total": 0.0,
+        "vllm:prompt_tokens_total": 6194007.0,
+        "vllm:generation_tokens_total": 1636795.0,
+        "vllm:request_success_total": 1000.0
+      },
+      "finished_reasons": {
+        "stop": 1000.0,
+        "length": 0.0,
+        "abort": 0.0,
+        "error": 0.0,
+        "repetition": 0.0
+      }
+    },
+    "delta": {
+      "vllm:prefix_cache_queries_total": 6194007.0,
+      "vllm:prefix_cache_hits_total": 2847488.0,
+      "vllm:num_preemptions_total": 0.0,
+      "vllm:prompt_tokens_total": 6194007.0,
+      "vllm:generation_tokens_total": 1636795.0,
+      "vllm:request_success_total": 1000.0
+    },
+    "fit_file_suffix_counts": {
+      ".json": 1000,
+      ".lock": 1000,
+      ".jsonl": 1000
+    }
   }
 }
