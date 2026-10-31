@@ -1,0 +1,19 @@
+{
+  "artifact_id": "SAEA-SLURP-CURRENT-A0-FOLD-A-AGREEMENT-NPU-V1",
+  "artifact_sha256": "3c9ac291f98e3f481232ad4780ae8f04acb0f909dcc4732208cb4807ea8bcdbd",
+  "builder_sha256": "61808ae88f5db02c205480ea5375459dbe5810a761504249d989241b751e53f3",
+  "claims_system_lock": false,
+  "comparator_completion_sha256": "d51463a4e2ab0b9a3334e1dfa6ae5494a0d10286e5b9b3b7e4594dfc35138c8a",
+  "contact_class": "model-free",
+  "dataset_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df",
+  "model_contacts": 0,
+  "next_required": "Register the current Fold A evaluation and prepare its admitted phase supply.",
+  "output": "prepared/SAEA-SLURP-CURRENT-A0-FOLD-A-AGREEMENT-NPU-V1",
+  "receipt_sha256": "3cc394557e46039caa109016fa8876167ff895999b1d8adf004ab81418bf8082",
+  "registered_before_result": true,
+  "rows": 1080,
+  "schema": "saea-fold-a-agreement-preparation-intent-v1",
+  "source_commit": "8edd2c788c3aefd65b9e970776333fd717ec9a97",
+  "status": "complete",
+  "workers": 8
+}

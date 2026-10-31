@@ -1,0 +1,23 @@
+{
+  "agreement_complete_sha256": "3c84c031a6d0e74657d284873bcb0199ce9406f459668dc0cf02dcc4c12ee1ac",
+  "claims_full_a0_lock": false,
+  "comparator_complete_sha256": "d51463a4e2ab0b9a3334e1dfa6ae5494a0d10286e5b9b3b7e4594dfc35138c8a",
+  "fallback_inclusive_cap": 4320,
+  "model_contacts": 0,
+  "normal_generation_calls": 2160,
+  "output_hashes": {
+    "configs/baseline/slurp-a0-fold-a-current-c2-v1.json": "7bd44763e4ccf31e10119fc18912a6965e459ab86442c8757fe41e87a7e05356",
+    "configs/experiment/slurp-a0-fold-a-current-c2-v1.json": "ce5300e61197f59b02d1b29b313a25dd595ab4eab37e01df4e6fd4ab06928725"
+  },
+  "readiness": "held",
+  "remaining": [
+    "selected resident binding",
+    "own phase supply",
+    "registered plans and admission"
+  ],
+  "retrieval_complete_sha256": "ce38e1a33d9e6e90d5c22de8ae832b0040335179d8e1beab68ecfa42c8a51846",
+  "rows": 1080,
+  "schema": "saea-fold-a-c2-baseline-v1",
+  "source_commit": "5b3c02c8998771304dd428ad5ce7c041f63e550b",
+  "source_manifest_sha256": "49be4dff7f7076f610b9260acf24b3fc5b915c0b161dd6e808b249c59650aa18"
+}

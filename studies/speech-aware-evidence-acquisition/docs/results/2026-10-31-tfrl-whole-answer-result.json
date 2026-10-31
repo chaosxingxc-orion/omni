@@ -1,0 +1,49 @@
+{
+ "chosen_index_counts": {
+  "1": 537,
+  "2": 66,
+  "3": 18,
+  "4": 4
+ },
+ "control": {
+  "intent_accuracy": 0.7712,
+  "slu_f1": 0.672040298568757
+ },
+ "decision": "stop-whole-answer-candidate",
+ "generation_authorized": false,
+ "implementation_commit": "89e8c21e9c23dfe138eea424d1756be720284e4c",
+ "intent_gain_pp": 0.31999999999999806,
+ "metrics": {
+  "intent_accuracy": 0.7744,
+  "slu_f1": 0.6774738632643784
+ },
+ "new_model_calls": 0,
+ "new_tokenizer_calls": 0,
+ "official_scoring_jobs": 1,
+ "old_family_stays_stopped": true,
+ "original_vote": {
+  "intent_accuracy": 0.7744,
+  "slu_f1": 0.6679998774940256
+ },
+ "output_sha256": "8169283098d4e1dd574c115f355e842ddfcebd3a1db989faf53b1f14827fce7c",
+ "recipe_sha256": "e857f59cbd887325ae2cac8eb8862a6cc27b3c453c93e15113684ce21bb5fe80",
+ "rows": 625,
+ "schema": "saea-tfrl-whole-answer-screen-complete-v1",
+ "scope": "Construction mechanism screen; independent comparison required before system acceptance.",
+ "score_receipt_sha256": "60d26b0c0870b9a99c62a22695ee3da570c67704725f3871b8ad5bf8610b6032",
+ "score_sha256": "25f6a2c980d5d72173e24cb77e1a6eab80345f73342ba856daced87e83a055f1",
+ "screen_passed": false,
+ "slu_gain_pp": 0.5433564695621396,
+ "source_pins": {
+  "h1/s1": "23089762e1cf3c733f658f847f4d87fbb7dbc29d88b40871291c3305a4207f1b",
+  "h1/s2": "4c026842b5441cae579f320c8c462db0622aa9f4f5c9959045c4f5cc35d404c3",
+  "h1/s3": "b7b28795b38994de83d72b283b7dc19392244f2747f456e9c2856e7b2a812e69",
+  "h1/s4": "07a5471567cd713213f2603639fe0295ce2f38a950f99c4bf1361bd591aece70",
+  "h2/s1": "fad7056f9e5a1a3ba282f6ecb5bb211649473fee7ba15cff4751c41051a6642e",
+  "h2/s2": "fc2f8a4e43f146a0bfbb072c2f97c2076861c5a81b7c39891d7bbd3d5a85ebb7",
+  "h2/s3": "c8ab653337710cb25ce3e7fc45a89f2a10b81021c2c09ed0c7635c565afdcee3",
+  "h2/s4": "ab76c5bd6931d26060e49d632367c6baa0021bb4ed160b0573d0e9934e39e739"
+ },
+ "source_pool_sha256": "a19dc40ce8f7d5f2d0963d07e9789b270b5cf6574dcc9dfb80b77f82d6611cb2",
+ "system_accepted": false
+}

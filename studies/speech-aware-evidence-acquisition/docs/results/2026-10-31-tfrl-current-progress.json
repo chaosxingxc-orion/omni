@@ -400,10 +400,24 @@
     "comparator_complete": true,
     "utterance_overlap": 0,
     "model_calls": 0,
-    "agreement_state": "running",
-    "study_commit": "8edd2c788c3aefd65b9e970776333fd717ec9a97",
+    "agreement_state": "complete",
+    "study_commit": "6bbca374",
     "public_tests_passed": 52,
     "execution_tests_passed": 52,
-    "generation_started": false
+    "generation_started": false,
+    "agreement_rows": 1080,
+    "held_baseline_prepared": true,
+    "baseline_tests_passed": 57
+  },
+  "whole_answer_screen": {
+    "state": "stop-whole-answer-candidate",
+    "rows": 625,
+    "slu_gain_pp": 0.5433564695621396,
+    "intent_gain_pp": 0.32,
+    "new_model_calls": 0,
+    "official_scoring_jobs": 1,
+    "system_accepted": false,
+    "generation_authorized": false,
+    "result": "docs/results/2026-10-31-tfrl-whole-answer-result.json"
   }
 }
