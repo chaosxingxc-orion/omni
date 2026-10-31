@@ -1,6 +1,6 @@
 # 任务现状、决策与下一阶段计划
 
-更新时间：2026-10-31 03:07 UTC
+更新时间：2026-10-31 03:14 UTC
 
 ## 一、研究目标与已确定口径
 
@@ -26,9 +26,11 @@ NPU 不能因为等待实验准备、人工确认或下一个步骤启动而空�
 
 ## 四、当前状态
 
-新的 A0 已完成独立注册、mint、供给准备和 paired READ 预注册，供给输出与冻结前驱完全一致。正式 detached queue 已启动，包含完整 1,080-row A0 campaign 和依赖其成功的 paired read；campaign 内衔接官方评分、FIT、六列诊断与 repeat custody。03:07 UTC 已通过注册检查，正在 preflight，尚未观察到模型请求，不能报告 A0 收益或 NPU 已满载。
+新的 A0 已完成独立注册、mint、供给准备和 paired READ 预注册，供给输出与冻结前驱完全一致。正式 detached queue 已启动，包含完整 1,080-row A0 campaign、N1 输入准备、补充诊断和 paired read；campaign 内衔接官方评分、FIT、六列诊断与 repeat custody。03:09 UTC preflight 通过，03:14 UTC 已观察到 32 次真实模型调用、32 份 FIT；四个服务各有 8 个运行请求，8 张 NPU 瞬时 AI 利用率为 54%–57%。尚无完成行或完整指标，不能报告 A0 收益或持续满载。声明宽度为 96，实际并发还需继续核对。
 
 队列现在增加独立 guardian。它忽略 SSH 挂断信号；runner 异常死亡后执行 `--resume`，接管原任务并继续后续队列。真实 CPU 子进程故障注入已验证：SIGHUP 不终止任务；SIGKILL 杀死 runner 后原任务只启动一次，下一任务仍自动执行。guardian 不把明确失败任务改回 pending；坏状态文件保留并报告，不覆盖为新队列。
+
+1,080 行 gold 诊断输入已在独立 CPU 任务中准备完成，零模型和评分调用。N1 和补充诊断在 A0 成功后执行，补充分析使用独立工作树，不修改运行源码。
 
 这仍有明确边界：guardian 自身和节点重启尚未由系统服务托管；worker 崩溃的逐样本恢复尚未验证；Fold A 后继和 TFRL 尚未接入本次队列。当前实现解决 SSH 脱离和 runner 异常接管，尚未证明长期满载或全部故障下不断任务。
 
