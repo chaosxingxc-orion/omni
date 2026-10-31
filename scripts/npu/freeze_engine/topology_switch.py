@@ -13,12 +13,32 @@ import time
 import switch as common
 
 
-def commands(profile, smi=None):
+def commands(profile, smi=None, release_status=False):
     nic=next(x['ifname'] for x in json.loads(common.call(['ip','-j','-4','addr','show','scope','global'])) if x.get('addr_info'))
     env={**os.environ,'TREE':str(common.D/'publish/omni'),'CPUSET':'32-47','PORT_CONTAINER_USER':'0:0','PORT_IMAGE':common.IMAGE}
     args=['bash',str(common.D/'work/scripts/port_py.sh'),str(common.P/'prepare_commands.py'),'--nic',nic,'--profile',profile]
     if smi:args+=['--smi',str(smi)]
+    if release_status:args+=['--release-status']
     return json.loads(subprocess.check_output(args,env=env,text=True))
+
+
+def wait_card_release(profile, root, timeout=600, interval=10):
+    """Bounded host-side wait only for delayed HBM release after owned stop.
+
+    A process, bad health, or missing card refuses immediately. No model polling,
+    no retry of container creation or requests. Preserve every observed table.
+    """
+    end=time.monotonic()+timeout
+    index=0
+    while True:
+        smi=root/f'cards-release-{index:03d}.txt'
+        if smi.exists():raise ValueError('release observation already exists')
+        smi.write_text(common.call(['npu-smi','info']))
+        observed=commands(profile,smi,release_status=True)
+        if observed['ready']:return
+        if not observed['memory_release_only']:raise ValueError('cards not free: '+json.dumps(observed))
+        if time.monotonic()>=end:raise TimeoutError('owned stop memory release timed out')
+        time.sleep(interval);index+=1
 
 
 def validate(doc, candidate, expected_id=None):
@@ -101,8 +121,7 @@ def main():
         common.write(root/'apply.intent.json',{'time':time.time(),'pid':os.getpid()})
         common.parallel(lambda c:common.call(['docker','stop','--time','60',c['name']]),plan['before'])
         for c in plan['before']:common.call(['docker','rename',c['name'],plan['old_names'][c['name']]])
-        smi=root/'cards-after-stop.txt';smi.write_text(common.call(['npu-smi','info']))
-        commands(plan['target'],smi)
+        wait_card_release(plan['target'],root)
         ids=common.parallel(lambda c:common.call(c['argv']),plan['after'])
         common.write(root/'candidate-container-ids.json',dict(zip([c['name'] for c in plan['after']],ids)))
         common.wait_ready(plan['after'])
