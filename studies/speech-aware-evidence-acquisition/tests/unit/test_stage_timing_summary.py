@@ -14,3 +14,14 @@ def test_nested_not_double_counted_and_partial_tail(tmp_path):
     assert r['http_request_s']['mean_s']==6
     p.write_text(''.join(json.dumps(e)+'\n' for e in events+[events[0]]))
     with pytest.raises(ValueError,match='duplicate'):m.summarize(p)
+
+
+def test_complete_sample_filter_does_not_mix_partial_costs(tmp_path):
+    p=tmp_path/'events'
+    events=[{'schema':'saea-stage-timing-v1','pid':1,'thread':1,'request_id':sample,'sample_id':sample,'status':'ok','stage':'request_total','elapsed_seconds':seconds} for sample,seconds in [('done',10),('inflight',100)]]
+    p.write_text(''.join(json.dumps(e)+'\n' for e in events))
+    result=m.summarize(p,{'done','missing'})
+    assert result['events']==1 and result['total_journal_events']==2
+    assert result['stages']['request_total']['invocations']['mean_s']==10
+    assert result['completed_rows_without_timing']==['missing']
+    assert result['sample_scope']=='verified-complete-checkpoint-rows'
