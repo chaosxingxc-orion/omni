@@ -14,8 +14,13 @@
   "source_tree": "operational recovery tree; public tree is a separate reviewed source distribution",
   "model_contacts_during_registration": 0,
   "queue_started_at_utc": "2026-10-31T09:25:27Z",
-  "status": "detached-campaign-starting",
+  "status": "ABORTED-for-engine-baseline",
   "lease_reconciled": true,
   "cpu_analysis_queue": "independent guardian; waits for completed results",
-  "measurement_state": "no successor model requests observed at 09:26:20 UTC"
+  "measurement_state": "Observed95-96requests; not saturated; no new complete rows before controlled stop",
+  "successor_calls": 599,
+  "successor_audio_seconds": 1569.6566875,
+  "cumulative_calls": 8707,
+  "cumulative_audio_seconds": 23119.9571875,
+  "next": "engine concurrency and prefix optimization before scale"
 }
