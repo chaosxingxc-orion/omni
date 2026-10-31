@@ -234,7 +234,17 @@ def _manifest_document(
             raise BundleError("typed artifact content source is malformed")
         source_path = Path(data_root) / source["data_relpath"]
         artifact_content_source = _artifact_meta(source_path)
+    # Bank verification must be possible after the source checkout changes.
+    # Preserve full hashed composed values; never substitute a free-form flag.
+    from .tfrl_bank import seal as seal_bank_config
+    # A missing/corrupt bank must not prevent recording an aborted attempt.
+    # Aborted manifests cannot enter completed-result verification.
+    bank_config = (
+        seal_bank_config(composed, data_root, verified_split, run_dir)
+        if status == STATUS_COMPLETED else None
+    )
     return {
+        **({"tfrl_bank_config": bank_config} if bank_config is not None else {}),
         **delivery_metadata,
         "schema": RUN_MANIFEST_SCHEMA,
         "study": STUDY_SLUG,

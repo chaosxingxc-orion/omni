@@ -11,11 +11,12 @@ from test_decoding_variants_live import _decoding_harness,_requests,_run
 from test_tfrl_v2_runner_render import _bank,_block_json,PERCEPTION,BLOCK_TEXT,RULE_TEXT
 
 
-def actual(tmp_path):
+def actual(tmp_path,with_trace=False):
     _,_,g=group();h=_decoding_harness(tmp_path,g,rows=1);bank=_bank()
     h.config=replace(h.config,prompt_contact_limits='legacy-c17-lock-v1',consumption_module_json=_block_json(bank,bound=55))
     h.tfrl_v2_bank=bank;h._output=lambda key:PERCEPTION if key[1]=='perception' else '{"scenario":"alarm","action":"set","entities":[]}'
     summary,close=_run(h)
+    if with_trace:return summary.results[0],{rid:p for _,rid,p in h.trace.records},bank
     return summary.results[0],_requests(h),bank
 
 

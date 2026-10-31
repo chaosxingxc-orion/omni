@@ -934,6 +934,7 @@ def _verify_grouped_solver_trace_binding(
 
 def _verify_supply_variant_trace_binding(
     row: Mapping[str, object], trace_records: Mapping[str, Mapping[str, object]],
+    *, bank_context=None,
 ) -> None:
     """Bind every Solver arm visit to its trace and the final arm to the row.
 
@@ -952,8 +953,8 @@ def _verify_supply_variant_trace_binding(
     final visit, whichever visit that is.
 
     Earlier revision visits remain in ``native_episode_receipt.role_visits``.
-    The bundle has no raw composed configuration; declaration identity was
-    checked at flight seal.
+    Ordinary declaration identity was checked at flight seal. Banked bundles
+    additionally supply context verified from their hash-bound configuration.
     """
 
     label = _row_label(row)
@@ -1062,10 +1063,13 @@ def _verify_supply_variant_trace_binding(
 
     from ...rails.trajectory_seeds import verify_recorded_group
     try:
-        verify_recorded_group(row.get("sample_id"), arms, [
-            payload["payload"] for record_id, payload in trace_records.items()
-            if record_id.endswith("/request") and isinstance(payload.get("payload"), Mapping)
-        ])
+        requests = [payload["payload"] for record_id, payload in trace_records.items()
+                    if record_id.endswith("/request") and isinstance(payload.get("payload"), Mapping)]
+        if bank_context is None:
+            verify_recorded_group(row.get("sample_id"), arms, requests)
+        else:
+            from ...rails.tfrl_bank_request_audit import verify_group
+            verify_group(row.get("sample_id"), arms, requests, **bank_context)
     except (ValueError, KeyError, TypeError) as error:
         refuse(f"seed-only request binding failed: {error}")
 
@@ -1942,6 +1946,7 @@ def _verify_outputs_trace_binding(
     trace_records: Mapping[str, Mapping[str, object]],
     predecessor_records: Mapping[str, Mapping[str, Mapping[str, object]]] | None = None,
     kept_sample_ids: frozenset = frozenset(),
+    bank_context=None,
 ) -> None:
     # CRITICAL fix (T6 fix round): the ORIGINAL code also returned early when
     # trace_records was empty -- "there are no trace records to bind against"
@@ -2048,7 +2053,7 @@ def _verify_outputs_trace_binding(
                     f"{_row_label(row)}: supply variants cannot also carry a "
                     f"grouped Solver commit ({SUPPLY_VARIANT_INVARIANT})"
                 )
-            _verify_supply_variant_trace_binding(row, records)
+            _verify_supply_variant_trace_binding(row, records, bank_context=bank_context)
         episode_for_branches = row.get("native_episode_receipt")
         if (
             isinstance(episode_for_branches, Mapping)

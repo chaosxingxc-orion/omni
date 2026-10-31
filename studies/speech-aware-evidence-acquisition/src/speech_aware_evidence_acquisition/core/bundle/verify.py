@@ -210,11 +210,14 @@ def verify_bundle(manifest_path: Path) -> VerifiedBundle:
             else None
         ),
     )
+    from .tfrl_bank import load as load_bank_config
+    bank_context = load_bank_config(manifest, manifest_path, split_ids, recomputed_split_identity)
     _verify_outputs_trace_binding(
         outputs_rows,
         trace_records,
         predecessor_records=predecessor_records if kept_sample_ids else None,
         kept_sample_ids=kept_sample_ids,
+        bank_context=bank_context,
     )
     # Owner decision 309 (2026-10-14): an attempt that made its rows durable
     # pins its row checkpoint in the manifest. The file is re-hashed, its chain

@@ -1,7 +1,7 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T20:07:00Z",
-  "completed_rows": 22,
+  "observed_at_utc": "2026-10-31T20:17:03Z",
+  "completed_rows": 63,
   "total_rows": 625,
   "h1": {
     "state": "preflight_passed_waiting_h2",
@@ -50,9 +50,9 @@
   },
   "h2": {
     "state": "running",
-    "completed_rows": 22,
+    "completed_rows": 63,
     "total_rows": 312,
-    "remaining_rows": 290,
+    "remaining_rows": 249,
     "cards": 8,
     "instances": 2,
     "estimated_remaining_seconds": null,
@@ -61,18 +61,18 @@
     "attempt_state": "OPENED",
     "observed_fit_receipts": 396,
     "fit_observation_at_utc": "2026-10-31T19:46:16Z",
-    "checkpoint_sha256": "3f82931abf71caeb3c630b0b4f6b38e626a0c60773f0d0daea342ed479aa1c2e",
-    "elapsed_seconds": 1709.772997379303,
+    "checkpoint_sha256": "8579801eb4916584ce40b1371b5e02c1047d1981537f1d46a8273bc03bbd20d6",
+    "elapsed_seconds": 2311.9871022701263,
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 154,
-      "audio_seconds": 567.5495,
-      "latency_seconds": 25543.526171709982,
-      "prompt_tokens": 1164522,
-      "completion_tokens": 152357
+      "calls": 441,
+      "audio_seconds": 1718.6868125000005,
+      "latency_seconds": 99560.03974969001,
+      "prompt_tokens": 3427109,
+      "completion_tokens": 575156
     },
-    "admitted_to_finished_mean_seconds": 1227.4227041427273,
-    "wall_seconds_per_complete_row": 77.71695442633195,
-    "efficiency_note": "Partial completion rate only;20 new rows since preceding600-second snapshot. No stable full-run baseline or reliable ETA."
+    "admitted_to_finished_mean_seconds": 1649.0016659420635,
+    "wall_seconds_per_complete_row": 36.69820797254169,
+    "efficiency_note": "Partial completion rate only;41 new rows since preceding600-second snapshot. No stable full-run baseline or reliable ETA."
   },
   "resources": {
     "cards": 8,
@@ -96,7 +96,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "H2 22/312;3 historical H1reuse candidates separate. H1remaining310 queued. Reliable ETA unavailable.",
+  "eta_note": "H2 63/312;3 historical H1 reuse candidates separate. H1 remaining310 queued. Reliable ETA unavailable.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -105,7 +105,7 @@
     "scoring_jobs": 0
   },
   "state": "h2_running_h1_preflight_passed_waiting_generation_queue",
-  "remaining_rows": 603,
+  "remaining_rows": 562,
   "bank_read": {
     "registered": true,
     "state": "failed_upstream",
