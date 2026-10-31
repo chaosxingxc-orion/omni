@@ -1,0 +1,26 @@
+{
+  "allowed_execution_stages": [
+    "check"
+  ],
+  "claims_system_lock": false,
+  "implementation_commit": "bd48303d87af1e160eb508cdb933f4123d64c666",
+  "model_contacts": 0,
+  "output_hashes": {
+    "configs/baseline/slurp-agent-fold-a-current-comparator-naturalend-npu-v1.json": "72b5f5c111cc00e71252bfcbe3370bc730544472c00451aa6248772b10406bd5",
+    "configs/experiment/slurp-agent-fold-a-current-comparator-naturalend-npu-v1.json": "958618f289f4af7ea0073060f7bc1f6e6010fedcf8e25a4a53acf8d1a3e6a9e1"
+  },
+  "pool_membership": {
+    "pool_facets": 9354,
+    "pool_source_recordings": 37407,
+    "pool_values": 9354,
+    "query_rows": 1080,
+    "query_utterances": 1080,
+    "utterance_overlap": 0
+  },
+  "pool_snapshot_sha256": "4c498dc0282055b9fe036ed7e950af519bd48b5f26e76876d0250727196a72e9",
+  "retrieval_complete_sha256": "ce38e1a33d9e6e90d5c22de8ae832b0040335179d8e1beab68ecfa42c8a51846",
+  "rows": 1080,
+  "schema": "saea-fold-a-c2-comparator-v1",
+  "source_commit": "5b3c02c8998771304dd428ad5ce7c041f63e550b",
+  "source_manifest_sha256": "49be4dff7f7076f610b9260acf24b3fc5b915c0b161dd6e808b249c59650aa18"
+}

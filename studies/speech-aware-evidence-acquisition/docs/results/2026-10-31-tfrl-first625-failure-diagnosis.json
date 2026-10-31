@@ -1,0 +1,170 @@
+{
+  "rows": 625,
+  "counts": {
+    "intent_lock1_vote1": 477,
+    "candidate_correct_intents_4": 468,
+    "vote_row_f1_better_lock": 62,
+    "vote_row_f1_worse_lock": 76,
+    "vote_row_f1_equal_lock": 487,
+    "oracle_candidate_better_lock": 138,
+    "oracle_candidate_better_vote": 134,
+    "oracle_improvement_missed_by_vote": 77,
+    "correct_candidate_intent_lost_by_vote": 20,
+    "all_candidates_wrong_intent": 121,
+    "vote_loses_exact_slot_tp_vs_lock": 14,
+    "vote_adds_exact_slot_fp_vs_lock": 59,
+    "vote_adds_exact_slot_fn_vs_lock": 14,
+    "candidate_correct_intents_3": 11,
+    "intent_lock0_vote0": 136,
+    "candidate_correct_intents_0": 121,
+    "intent_lock0_vote1": 7,
+    "candidate_correct_intents_2": 8,
+    "candidate_correct_intents_1": 17,
+    "intent_lock1_vote0": 5
+  },
+  "vote_minus_lock_slu_counts": {
+    "word": {
+      "tp": -2.0,
+      "fp": 16.652380952380955,
+      "fn": -10.347619047619046
+    },
+    "char": {
+      "tp": -2.0,
+      "fp": 19.339907992641734,
+      "fn": -7.6600920073582595
+    }
+  },
+  "intent_strata": {
+    "intent_lock1_vote1": {
+      "rows": 477,
+      "lock_slu_f1": 0.70947062607099,
+      "vote_slu_f1": 0.7075226543446889,
+      "exact_slot_counts": {
+        "lock": {
+          "tp": 384.0,
+          "fp": 307.0,
+          "fn": 242.0
+        },
+        "vote": {
+          "tp": 406.0,
+          "fp": 309.0,
+          "fn": 220.0
+        }
+      }
+    },
+    "intent_lock0_vote0": {
+      "rows": 136,
+      "lock_slu_f1": 0.45000881972656637,
+      "vote_slu_f1": 0.42473972349155087,
+      "exact_slot_counts": {
+        "lock": {
+          "tp": 39.0,
+          "fp": 78.0,
+          "fn": 64.0
+        },
+        "vote": {
+          "tp": 36.0,
+          "fp": 84.0,
+          "fn": 67.0
+        }
+      }
+    },
+    "intent_lock0_vote1": {
+      "rows": 7,
+      "lock_slu_f1": 0.45511840887034705,
+      "vote_slu_f1": 0.6407098059615065,
+      "exact_slot_counts": {
+        "lock": {
+          "tp": 1.0,
+          "fp": 5.0,
+          "fn": 9.0
+        },
+        "vote": {
+          "tp": 4.0,
+          "fp": 5.0,
+          "fn": 6.0
+        }
+      }
+    },
+    "intent_lock1_vote0": {
+      "rows": 5,
+      "lock_slu_f1": 0.613953488372093,
+      "vote_slu_f1": 0.4444444444444444,
+      "exact_slot_counts": {
+        "lock": {
+          "tp": 3.0,
+          "fp": 4.0,
+          "fn": 2.0
+        },
+        "vote": {
+          "tp": 2.0,
+          "fp": 2.0,
+          "fn": 3.0
+        }
+      }
+    }
+  },
+  "metrics": {
+    "s1": {
+      "slu_f1": 0.6663526437294026,
+      "intent": 0.7792
+    },
+    "s2": {
+      "slu_f1": 0.6651352151474033,
+      "intent": 0.7728
+    },
+    "s3": {
+      "slu_f1": 0.6645980968308017,
+      "intent": 0.7712
+    },
+    "s4": {
+      "slu_f1": 0.6734213266806031,
+      "intent": 0.7776
+    },
+    "aa": {
+      "slu_f1": 0.670475288550046,
+      "intent": 0.7712
+    },
+    "lock": {
+      "slu_f1": 0.672040298568757,
+      "intent": 0.7712
+    },
+    "vote": {
+      "slu_f1": 0.6679998774940256,
+      "intent": 0.7744
+    }
+  },
+  "schema": "saea-tfrl-first625-failure-diagnosis-v1",
+  "implementation_commit": "5eb43041cc755a33bfc212a3bba71543272ac9fd",
+  "source_commit": "454d062e283374edb3094a2e5d52b1a43ce47b6b",
+  "pool_sha256": "a19dc40ce8f7d5f2d0963d07e9789b270b5cf6574dcc9dfb80b77f82d6611cb2",
+  "sources": {
+    "h1": {
+      "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1/complete.json",
+      "complete_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+      "kind": "verified-source-union",
+      "provenance_sha256": "92e5e7f4912da32e70c5713e85848cad8f7bee0887c6b1e86c7d23f9e15cd305",
+      "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1",
+      "recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+    },
+    "h2": {
+      "attempt_id": "generation-v1",
+      "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1-READ/complete.json",
+      "complete_sha256": "1857ee6dcb9a2a03a356727895f2179e0163e06c0b991e33ef53d1a459aeca5a",
+      "manifest_sha256": "a15827d8278bc959fe5c43d3a1c022d731c5f071904051798d5dd9aa07df6940",
+      "recipe_sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923",
+      "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1"
+    }
+  },
+  "new_model_calls": 0,
+  "new_tokenizer_calls": 0,
+  "new_scoring_jobs": 0,
+  "generation_authorized": false,
+  "system_accepted": false,
+  "limitations": [
+    "Post-hoc construction diagnostics; no independent gain claim.",
+    "Oracle uses gold and is not a deployable answer selector.",
+    "Shared perception and evidence errors cannot be distinguished causally from solver errors by final scores alone.",
+    "Stratum F1 values are not additive contributions to the full micro F1."
+  ]
+}

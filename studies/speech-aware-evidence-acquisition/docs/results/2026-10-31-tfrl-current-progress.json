@@ -384,5 +384,26 @@
     "remaining_rows": 0,
     "generation_active": false,
     "cost_audit": "docs/results/2026-10-31-tfrl-recovered-cost-audit.json"
+  },
+  "failure_diagnosis": {
+    "state": "complete",
+    "rows": 625,
+    "new_model_calls": 0,
+    "new_scoring_jobs": 0,
+    "tests_passed": 58,
+    "summary": "docs/results/2026-10-31-tfrl-first625-failure-diagnosis.json",
+    "next_method_plan": "docs/results/2026-10-31-tfrl-next-method-plan-zh.md",
+    "next_method_generation_started": false
+  },
+  "fold_a_c2_preparation": {
+    "rows": 1080,
+    "comparator_complete": true,
+    "utterance_overlap": 0,
+    "model_calls": 0,
+    "agreement_state": "running",
+    "study_commit": "8edd2c788c3aefd65b9e970776333fd717ec9a97",
+    "public_tests_passed": 52,
+    "execution_tests_passed": 52,
+    "generation_started": false
   }
 }

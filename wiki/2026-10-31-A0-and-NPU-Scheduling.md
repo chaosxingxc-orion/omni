@@ -1,6 +1,6 @@
 # A0、真实数据工程基线与后续优化
 
-更新：2026-10-31 21:51 UTC。真实500工程基准与完整1080条A0收益已锁定；首轮construction625/625官方评分完成。K4 vote相对lock下降0.4040pp，按预定门槛停止当前家族。
+更新：2026-10-31 22:03 UTC。真实500工程基准与完整1080条A0收益已锁定；首轮construction625/625官方评分完成。K4 vote相对lock下降0.4040pp，按预定门槛停止当前家族。
 
 ## 当前结论
 
@@ -114,9 +114,11 @@ H1完整313条由修复后310条和3条历史上下文完整记录合并并完�
 
 ## 下一阶段与未完成项
 
-1. 基于完整轨迹区分感知、意图与槽位错误，设计不同检索证据/约束的候选机制；较短推理预算作为独立效率实验。新方法先固定对照、名单、预算、接受条件与停止规则，不以gold决定在线路由。
-2. Fold A1080编码及检索派生已完整准备，0重复编码；仍需当前两调用A0对应的agreement、供给和登记预检。它有历史使用记录，不称为未接触数据。
+1. 完整625条诊断完成：20条有正确Intent候选却被投票丢失，77条候选优于lock但投票未兑现，59条增加错误槽位。先离线筛查保持完整答案的聚合，再设计不同证据候选；新方法尚未运行。诊断使用gold的候选最优值只能描述潜力，不是在线路由。
+2. Fold A1080编码、检索派生及当前两调用A0配置已实际准备，0重复编码；原示例池语句级重叠0，9354个facet/value及向量覆盖通过。agreement已登记并在8个CPU worker后台运行，尚未确认完成；随后需供给和正式评估登记预检。Fold A有历史使用记录，不称为未接触数据。
 3. 方法冻结后完整评测13078条test；尚无TFRL系统收益或RSI完成结论。
 4. 已有逐行持久断点、脱离SSH运行与600秒观察；contact/branch级接续、主机重启自动恢复仍未完成。生成释放后异步交接已实现测试，尚未在后续真实推理部署验证。
 
 [完整七列结果、成本与下一阶段方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-first625-result-and-next-plan-zh.md)。工程实现详情保留在仓库历史报告，本页只原位维护结果及当前状态。
+
+[失败诊断与具体实验草案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-next-method-plan-zh.md)；[Fold A真实配置准备结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-fold-a-confirmation-inputs-zh.md)。
