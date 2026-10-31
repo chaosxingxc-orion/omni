@@ -3367,6 +3367,11 @@ class FlightRuntime:
             completion_ceiling=self._completion_token_ceiling(),
             token_counter=self._token_counter,
             special_token_reserve=REGISTERED_SPECIAL_TOKEN_RESERVE,
+            measured_by_request_gate=(
+                self._token_counter is _default_token_counter
+                and self._composed.values.get("preflight_budget_mode")
+                == "defer-to-native-contact-fit"
+            ),
         )
 
     def _knowledge_index_binding(self, native_config, supply_for_phase):

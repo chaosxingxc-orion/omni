@@ -30,6 +30,13 @@ def sealed_answers(bundle,plan,*,resolver=None):
     if len(rows)!=len(bundle.outputs_rows) or set(rows)!=set(expected):raise ValueError('whole-half answers required')
     answers={};texts={};provenance=[]
     for sid in expected:
+        from tfrl_seed_request_audit import no_solver_abstention
+        if (not any(v.get('stage')=='solver' for v in rows[sid]['native_episode_receipt']['role_visits'])
+                and no_solver_abstention(rows[sid])):
+            provenance.append({'row_id':sid,'availability':'no_solver_visit',
+                'candidate_answers':0,'scoring_fallback':'canonical_empty',
+                'distillation':'no_candidate_evidence'})
+            continue
         episode=rows[sid]['native_episode_receipt']
         visits=[v for v in episode['role_visits'] if v.get('stage')=='solver']
         if len(visits)!=1:raise ValueError('current seven-contact program requires one Solver visit')
@@ -57,7 +64,7 @@ def sealed_answers(bundle,plan,*,resolver=None):
             answers[sid,arm]={'answer':answer,'supply_items':supply_items(evidence,used=used,bases=bases)}
             provenance.append({'row_id':sid,'arm':arm,'request_id':rid,'request_sha256':contact['request_sha256'],
                 'response_text_sha256':contact['response_text_sha256'],'normalized_answer_sha256':hashlib.sha256(rendered.encode()).hexdigest()})
-    if not texts:raise ValueError('actual supplied evidence required for resolved experience')
+    if not texts and resolver is None:raise ValueError('verified knowledge resolver required without supplied evidence')
     if resolver is None:
         resolver=text.ItemTextResolver(texts,source={'kind':'verified-sealed-model-requests','run_id':plan['run_id'],
             'attempt_id':plan['attempt_id'],'raw_trace_sha256':bundle.manifest['raw_trace']['sha256']})
@@ -82,6 +89,9 @@ def build(loaded,measure,*,resolver=None):
     tables={a:{r['sample_id']:r for r in result['per_sample']} for a,result in loaded['results'].items()}
     credit=sampler.credit_rows(ids,iteration,4,sampler.scores_from_counts(tables),twin_arm='aa')
     if credit!=loaded['credit']:raise ValueError('distillation credit differs from verified official read')
+    abstentions={p['row_id'] for p in provenance if p.get('availability')=='no_solver_visit'}
+    if any(r['positive'] for r in credit if r['row_id'] in abstentions):
+        raise ValueError('no-Solver abstention cannot supply positive trajectory credit')
     exemplar,fate=distiller.build_exemplar_bank(credit,answers,iteration=iteration,source_half=half,resolver=resolver,measure=measure)
     pairs=distiller.build_contrast_pairs(credit,answers,iteration)
     rules,refused=distiller.build_rule_bank(pairs,iteration=iteration,source_half=half,measure=measure)
@@ -101,7 +111,7 @@ def build(loaded,measure,*,resolver=None):
             'rendered_tokens':rules['rendered_tokens'],'token_cap':common.RULE_BANK_TOKEN_CAP,
             'vote_min':common.VOTE_MIN_ROWS,'measure':measure.name},
         'credit_summary':sampler.credit_summary(credit),
-        'counts':{'rows_in_half':len(ids),'rows_used':len(ids),'rows_skipped':0,'contrast_pairs':len(pairs),'rules_refused':len(refused)},
+        'counts':{'rows_in_half':len(ids),'rows_used':len(ids)-len(abstentions),'rows_skipped':len(abstentions),'no_solver_abstentions':len(abstentions),'scored_rows':len(ids),'contrast_pairs':len(pairs),'rules_refused':len(refused)},
         'method':'Existing deterministic answer-contrast rules and resolved evidence exemplars; verified current seed-only trajectories.',
         'model_calls':0,'tokenizer_calls':measure.calls-calls_before,'next_iteration_authorized':False}
     # Actual timestamps are not available here; do not fabricate rollout contact/TFRL lines.

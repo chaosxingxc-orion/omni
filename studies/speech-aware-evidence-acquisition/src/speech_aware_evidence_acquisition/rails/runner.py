@@ -5765,7 +5765,9 @@ async def _invoke_native_role_episode(
         are not enough, which the episode graph turns into a retained row.
         """
 
-        if context_fit_budget is None:
+        if context_fit_budget is None or context_fit_budget.measured_by_request_gate:
+            # The registered FIT gate measures the rendered multimodal request.
+            # Never estimate tokens from serialized audio bytes before that gate.
             return prepared, None
         source_binding = prepared.binding
         if not isinstance(source_binding, NativeRoleSpeechBinding):
@@ -5863,7 +5865,22 @@ async def _invoke_native_role_episode(
                             None if compaction is None else compaction.record()
                         ),
                     })
-                binding.request_gate(prepared.request)
+                fit_kwargs = (
+                    {"prompt_limit_tokens": context_fit_budget.prompt_limit_tokens}
+                    if context_fit_budget is not None and context_fit_budget.measured_by_request_gate
+                    else {}
+                )
+                fit_count = binding.request_gate(prepared.request, **fit_kwargs)
+                if context_fit_budget is not None and context_fit_budget.measured_by_request_gate:
+                    if isinstance(fit_count, bool) or not isinstance(fit_count, int) or fit_count < 0:
+                        raise RailsRunnerError("registered FIT gate returned no exact prompt count")
+                    if fit_count > context_fit_budget.prompt_limit_tokens:
+                        raise FrozenCoreRoleContextFitError(
+                            source="dispatch-budget", compaction_pass=0,
+                            dropped_identifiers=(), tokens_before=fit_count,
+                            tokens_after=fit_count,
+                            limit_tokens=context_fit_budget.prompt_limit_tokens,
+                        )
                 try:
                     completion = adapter_request.dispatch(prepared)
                 except FrozenCoreContextSizeError as error:
@@ -6642,7 +6659,8 @@ async def _invoke_native_role_episode(
             None if delivery.kind in ("abstention", "context-abstention")
             else result["delivery"].get("supply_variants")
         )
-        if supply_variant_group is not None and supply_variants is None:
+        if (supply_variant_group is not None and supply_variants is None
+                and delivery.kind not in ("abstention", "context-abstention")):
             raise RailsRunnerError(
                 "a declared supply-variant arm group delivered no arm custody"
             )

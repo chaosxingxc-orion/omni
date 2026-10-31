@@ -88,8 +88,15 @@
     "error": "a declared supply-variant arm group delivered no arm custody",
     "completed_checkpoint_rows": 25,
     "failed_sample_timing_rows": 288,
-    "cause_status": "suspected abstention/custody inconsistency; source disposition still requires validation",
+    "cause_status": "confirmed 288 perception dispatch-budget refusals before registered FIT: default byte heuristic then inconsistent abstention custody guard",
     "automatic_replay": false,
     "uncheckpointed_cost": "unknown; reconcile durable contact journals"
+  },
+  "repair": {
+    "implemented": true,
+    "recovery_runtime_tests_passed": 84,
+    "production_resumed": false,
+    "h2_preflight": "in_progress",
+    "h1_checkpoint_preserved": true
   }
 }

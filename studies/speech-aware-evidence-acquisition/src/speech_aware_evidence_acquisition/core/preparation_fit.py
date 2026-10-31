@@ -1208,7 +1208,13 @@ def build_native_contact_fit_gate(
     fit_lock = threading.Lock()
 
     @measure("native_fit", lambda prepared_request, **kwargs: {"sample_id": prepared_request.as_payload()["sample_id"], "request_id": prepared_request.as_payload()["request_id"]})
-    def fit_contact(prepared_request):
+    def fit_contact(prepared_request, *, prompt_limit_tokens=None):
+        if prompt_limit_tokens is not None and (
+            feature_packets or values.get("transport") != "vllm"
+            or isinstance(prompt_limit_tokens, bool)
+            or not isinstance(prompt_limit_tokens, int) or prompt_limit_tokens < 1
+        ):
+            raise PreparationError("measured dispatch budget requires raw vLLM tokens")
         if not isinstance(prepared_request, PreparedCoreRequest):
             raise PreparationError(
                 "native contact fit requires an immutable PreparedCoreRequest"
@@ -1415,7 +1421,23 @@ def build_native_contact_fit_gate(
                 contact_class="tokenizer",
             )
             document = json.loads(path.read_text(encoding="utf-8"))
-            if document["output"].get("every_request_fits") is not True:
+            output = document["output"]
+            fit_row = output["rows"][0]
+            measured = fit_row.get("measured_prompt_tokens")
+            if feature_packets:
+                measured = fit_row["text_tokens"] + fit_row["speech_tokens"]
+            # A real deferred context check consumes this same registered FIT;
+            # it must not perform an unjournaled second tokenizer request.
+            measured_context = (
+                prompt_limit_tokens is not None or (
+                    values.get("preflight_budget_mode") == "defer-to-native-contact-fit"
+                    and isinstance(values.get("native_episode"), Mapping)
+                    and values["native_episode"].get("context_fit_policy") == "compact-or-abstain"
+                )
+            )
+            if measured_context and (isinstance(measured, bool) or not isinstance(measured, int) or measured < 0):
+                raise PreparationError("native context fitting requires an exact prompt count")
+            if output.get("every_request_fits") is not True and not measured_context:
                 raise PreparationError(
                     "native contact request exceeds the registered capacity"
                 )
@@ -1428,6 +1450,17 @@ def build_native_contact_fit_gate(
                     **receipt,
                 }
             )
+            if (output.get("every_request_fits") is not True
+                    or (prompt_limit_tokens is not None and measured > prompt_limit_tokens)):
+                from ..reproduction.ojw.native_roles import FrozenCoreRoleContextFitError
+                raise FrozenCoreRoleContextFitError(
+                    source="dispatch-budget", compaction_pass=0,
+                    dropped_identifiers=(), tokens_before=measured, tokens_after=measured,
+                    limit_tokens=prompt_limit_tokens or max(1, int(runtime._adapter.serving_geometry()["slot_tokens"])
+                                     - int(output["rows"][0]["maximum_completion_tokens"])
+                                     - int(output["rows"][0]["special_tokens"])),
+                )
+            return measured
 
     fit_contact.receipts = completed
     fit_contact.execution_plan = fit_plan

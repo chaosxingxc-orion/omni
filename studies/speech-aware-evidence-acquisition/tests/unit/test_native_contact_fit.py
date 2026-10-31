@@ -770,3 +770,47 @@ def test_native_raw_fit_budgets_and_observations_are_isolated_by_window(tmp_path
     assert len(tokenizer.calls) == 4
     assert [json.loads(Path(receipt["path"]).read_text())["inputs"]["native_contact"]["execution_unit_id"]
             for receipt in gate.receipts] == ["s1#w0001", "s1#w0001", "s1#w0002", "s1#w0002"]
+
+
+@pytest.mark.parametrize("count", [7, 130])
+def test_deferred_raw_context_consumes_one_journaled_fit_and_preserves_overflow(tmp_path, count):
+    from speech_aware_evidence_acquisition.reproduction.ojw.native_roles import FrozenCoreRoleContextFitError
+    runtime = _raw_runtime(tmp_path)
+    runtime._composed.values.update(
+        preflight_budget_mode="defer-to-native-contact-fit",
+        native_episode={"context_fit_policy": "compact-or-abstain"})
+    tokenizer = _RawTokenizer()
+    def measure(method, path, payload):
+        tokenizer.calls.append((method, path, payload))
+        return {"input_tokens": count}
+    tokenizer.request_json = measure
+    gate = build_native_contact_fit_gate(runtime, _program(), _plan(),
+                                         client_factory=lambda **_: tokenizer)
+    request = _raw_prepared("s1", "measured-context", runtime._transport.raw)
+    if count == 7:
+        assert gate(request) == 7
+    else:
+        with pytest.raises(FrozenCoreRoleContextFitError):
+            gate(request)
+    assert len(tokenizer.calls) == 1
+    assert len(gate.receipts) == 1
+    artifact = json.loads(open(gate.receipts[0]["path"]).read())
+    assert artifact["output"]["rows"][0]["measured_prompt_tokens"] == count
+    assert artifact["output"]["contacts"] == 1
+    with pytest.raises(PreparationError, match="repeated agent_contact_id"):
+        gate(request)
+    assert len(tokenizer.calls) == 1
+
+
+def test_runtime_deferred_budget_selects_registered_fit_not_default_estimate():
+    from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntime, _default_token_counter
+    runtime = SimpleNamespace(
+        _context_fit_policy=lambda: "compact-or-abstain",
+        _adapter=SimpleNamespace(serving_geometry=lambda: {"slot_tokens": 24576}),
+        _completion_token_ceiling=lambda: 4096,
+        _token_counter=_default_token_counter,
+        _composed=SimpleNamespace(values={"preflight_budget_mode": "defer-to-native-contact-fit"}))
+    budget = FlightRuntime._context_fit_budget(runtime)
+    assert budget.measured_by_request_gate is True
+    runtime._token_counter = lambda _: 3
+    assert FlightRuntime._context_fit_budget(runtime).measured_by_request_gate is False

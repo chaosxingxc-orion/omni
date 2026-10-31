@@ -81,3 +81,69 @@ def test_real_runner_receipts_bind_back_to_plan(tmp_path,fault):
     else:
         audit=verify(plan,[row],trace)
         assert audit['rows']==1 and audit['solver_requests_verified']==6
+
+
+@pytest.mark.parametrize("measured", [10, 101, None])
+def test_registered_fit_count_controls_seed_group_without_byte_heuristic(tmp_path, measured):
+    from dataclasses import replace
+    from test_e20_context_fit_policy import _budget
+    from speech_aware_evidence_acquisition.rails.runner import RailsRunnerError
+    _, _, g = group()
+    h = _decoding_harness(tmp_path, g, rows=1)
+    h.config = replace(h.config, prompt_contact_limits="legacy-c17-lock-v1",
+                       context_fit_policy="compact-or-abstain")
+    def forbidden_counter(_body):
+        raise AssertionError("audio bytes must never enter a heuristic counter")
+    h.context_fit_budget = replace(_budget(forbidden_counter, prompt_limit_tokens=100),
+                                   measured_by_request_gate=True)
+    original = h.request_gate
+    gates = []
+    def measured_gate(request, *, prompt_limit_tokens):
+        assert prompt_limit_tokens == 100
+        original(request)
+        gates.append(request)
+        return measured
+    h.request_gate = measured_gate
+    if measured is None:
+        with pytest.raises(Exception, match="exact prompt count"):
+            _run(h)
+        assert len(gates) == 1
+        return
+    summary, close = _run(h)
+    row = summary.results[0]
+    if measured == 10:
+        assert close["request_count"] == 7
+        assert len(gates) == 7
+        assert len(row.supply_variants["arms"]) == 6
+    else:
+        assert close["request_count"] == 0
+        assert len(gates) == 1
+        assert row.final_response_text == ""
+        assert row.supply_variants is None
+        disposition = row.native_episode_receipt["terminal_disposition"]
+        assert disposition["reason"] == "context_compaction"
+        assert disposition["tokens_before"] == measured
+        assert disposition["limit_tokens"] == 100
+        import tfrl_v2_sampler as sampler
+        from tfrl_seed_request_audit import verify
+        plan = sampler.build_plan({"roster_id": sampler.cm.HALF_ROSTER_ID["R01C-H1"],
+            "split_identity_hash": "a" * 64,
+            "items": [{"sample_id": row.sample_id, "audio_seconds": 2.}]}, "R01C-H1", 1)
+        output = {"sample_id": row.sample_id, "supply_variants": None,
+                  "native_episode_receipt": row.native_episode_receipt}
+        trace = {rid: p for _, rid, p in h.trace.records}
+        checked = verify(plan, [output], trace)
+        assert checked["no_solver_abstention_rows"] == 1
+        assert checked["solver_requests_verified"] == 0
+        from types import SimpleNamespace
+        from tfrl_current_distill import sealed_answers
+        from tfrl_v2_text import ItemTextResolver
+        resolver = ItemTextResolver({"unused": "verified text"}, source={"kind": "test"})
+        answers, _, provenance = sealed_answers(SimpleNamespace(outputs_rows=[output],
+            trace_records=trace), plan, resolver=resolver)
+        assert answers == {}
+        assert provenance[0]["availability"] == "no_solver_visit"
+        assert provenance[0]["candidate_answers"] == 0
+        output["native_episode_receipt"] = {"role_visits": []}
+        with pytest.raises(ValueError):
+            verify(plan, [output], trace)

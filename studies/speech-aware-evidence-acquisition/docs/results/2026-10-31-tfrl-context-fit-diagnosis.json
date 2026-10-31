@@ -1,0 +1,32 @@
+{
+  "schema": "saea-tfrl-context-fit-failure-diagnosis-v1",
+  "source_log_sha256": "884ceac22040776ad386cfbd440ea6f983012ad327b9b5b3af8a8e4aedd0b397",
+  "failed_nodes": {
+    "perception_role": 288
+  },
+  "dispatch_budget_refusals": 288,
+  "estimated_required_min": 17434,
+  "estimated_required_max": 108760,
+  "available_prompt_limits": [
+    17406
+  ],
+  "cause": "Deferred preflight still wired default byte-length heuristic into runtime context check before registered multimodal FIT. Context abstention then hit unconditional supply-variant custody guard.",
+  "repair": "Use one existing journaled per-contact multimodal FIT count for deferred context enforcement; preserve validated no-Solver abstentions in scoring denominator; never invent candidate evidence.",
+  "tests": {
+    "passed": 116,
+    "seconds": 27.83,
+    "environment": "fixed saea-base image on npu2; CPU only",
+    "recovery_tree_passed": 84,
+    "recovery_tree_seconds": 27.69
+  },
+  "production_revalidated": false,
+  "new_model_calls": 0,
+  "recovery_queue": {
+    "state": "fresh_commit_preflight",
+    "rows": 312,
+    "source_commit": "c3d347231efbae61627b7955f9ed7d6e92f1e2d0",
+    "generation_started": false,
+    "detached": true,
+    "automatic_replay": false
+  }
+}
