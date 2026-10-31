@@ -129,4 +129,4 @@ H1完整313条由修复后310条和3条历史上下文完整记录合并并完�
 
 [失败诊断与具体实验草案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-next-method-plan-zh.md)；[Fold A真实配置准备结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-fold-a-confirmation-inputs-zh.md)。
 
-Fold A独立供给准备已完成1080/1080条，0新增推理调用；实际绑定共享运行时身份校验中。准备完成不等于NPU任务启动。
+Fold A独立供给准备已完成1080/1080条，0新增推理调用；实际绑定完成，共享运行时身份与种子校验均通过，仍为held/check-only。准备完成不等于NPU任务启动。
