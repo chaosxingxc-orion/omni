@@ -1,0 +1,71 @@
+{
+  "a0_complete_sha256": "0b5c24723633b120c3338bf15b0aa8cc0ca18e67501fbad52c3a18ee4d2fd4eb",
+  "bootstrap_replicates": 10000,
+  "comparison_sha256": "1af1dd213de44eae8ab279a7c8e2c848054ee29808d6aacd48c7cae7b193c01a",
+  "comparisons": {
+    "a0_minus_direct_aa": {
+      "intent_delta_pp": 7.685185185185183,
+      "paired_percentile_95_interval_pp": [
+        25.211891359429604,
+        29.9625719799502
+      ],
+      "slu_f1_delta_pp": 27.559159135035998
+    },
+    "a0_minus_direct_ab": {
+      "intent_delta_pp": 7.12962962962963,
+      "paired_percentile_95_interval_pp": [
+        25.576123846998065,
+        30.35544104820561
+      ],
+      "slu_f1_delta_pp": 27.928500546428094
+    },
+    "a0_minus_direct_lock": {
+      "intent_delta_pp": 7.314814814814829,
+      "paired_percentile_95_interval_pp": [
+        25.731504319959605,
+        30.52769200235186
+      ],
+      "slu_f1_delta_pp": 28.104647891833697
+    }
+  },
+  "engineering_profile": "qwen3-omni-real500-2xtp4-s128-b2048-v1",
+  "limitations": [
+    "Full train Fold B only; no test conclusion.",
+    "A0 sources use recorded deployment transitions; no repeated full A0 variance estimate.",
+    "Intervals measure paired sample uncertainty, not run-to-run uncertainty; no multiplicity correction.",
+    "Direct lock is the primary reference; aa and ab are retained as sensitivity references."
+  ],
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "next": "Complete real K4 generation registration, current resident binding and preflight; this lock does not itself admit a model contact.",
+  "quality": {
+    "a0": {
+      "intent_accuracy": 0.8537037037037037,
+      "slu_f1": 0.7322248308746399,
+      "span_f1": 0.6476978789446456
+    },
+    "direct_aa": {
+      "intent_accuracy": 0.7768518518518519,
+      "slu_f1": 0.45663323952427987,
+      "span_f1": 0.21795537104307214
+    },
+    "direct_ab": {
+      "intent_accuracy": 0.7824074074074074,
+      "slu_f1": 0.45293982541035893,
+      "span_f1": 0.21107087428867047
+    },
+    "direct_lock": {
+      "intent_accuracy": 0.7805555555555554,
+      "slu_f1": 0.4511783519563029,
+      "span_f1": 0.20976116303219106
+    }
+  },
+  "recipe_sha256": "20daf9aff885ea62b1c74b173c3270dc05d62223ef65ea9679f75a1caf138995",
+  "reviewed_at_utc": "2026-10-31T18:21:00Z",
+  "rows": 1080,
+  "schema": "saea-a0-first-system-baseline-lock-v1",
+  "scope": "Full train Fold B, source-bound A0 union with all costs retained. Not a test result or repeated full-A0 variance estimate.",
+  "source_scope": "427 historical lock +300 first real engineering candidate +353 continuation",
+  "status": "locked_full_train_fold_b",
+  "utterance_clusters": 1080
+}
