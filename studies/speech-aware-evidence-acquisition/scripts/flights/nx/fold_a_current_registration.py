@@ -31,6 +31,58 @@ READ=evaluation.RUN+'-DELIVERED-READ'
 AUTH='docs/decisions/2026-10-30-owner-full-test-and-first-system-gain.md'
 
 
+def verify_prepared_inputs(repo,source_repo,data,derivation):
+    """Rebuild the exact held derivation from current sealed input bytes."""
+    c=evaluation.comparator;a=evaluation.agreement
+    spec_path,complete_path,retrieval_path=c.bound_parents(source_repo,data,derivation['parent_binding'])
+    complete=read(complete_path);spec=read(spec_path)
+    if (complete['rows']!=1080 or complete['score_surface']!='sealed-final-delivery'
+            or complete['commit']!=derivation['source_commit']
+            or complete['run_id']!=derivation['source_run'] or spec['run_id']!=complete['run_id']):
+        raise ValueError('complete actual A0 identity differs')
+    comp_path=c.inputs.confined(data,derivation['comparator_complete'])
+    agree_path=c.inputs.confined(data,derivation['agreement_complete'])
+    if (sha(comp_path)!=derivation['comparator_completion_sha256']
+            or sha(agree_path)!=derivation['agreement_completion_sha256']):
+        raise ValueError('preparation completion changed')
+    comp,agree,retrieval=read(comp_path),read(agree_path),read(retrieval_path)
+    if (comp['source_commit']!=complete['commit'] or comp['source_run']!=complete['run_id']
+            or comp['agent_completion_sha256']!=sha(complete_path)
+            or comp['retrieval_completion_sha256']!=sha(retrieval_path)
+            or agree['status']!='complete' or agree['rows']!=1080
+            or agree['comparator_completion_sha256']!=sha(comp_path)
+            or retrieval['rows']!=1080 or retrieval['values_unchanged'] is not True):
+        raise ValueError('preparation ancestry differs')
+    for name,digest in retrieval['pins'].items():
+        if sha(c.inputs.confined(data,name))!=digest:raise ValueError('retrieval input changed before registration')
+    receipt_path=data/a.OUTPUT/'receipt.json';receipt=read(receipt_path)
+    ids=[r['sample_id'] for r in read(repo/c.inputs.ROSTER)['items']]
+    a.verify_artifact(data,receipt,ids)
+    if sha(receipt_path)!=agree['receipt_sha256'] or receipt['artifact']['sha256']!=agree['artifact_sha256']:
+        raise ValueError('agreement changed before registration')
+    source_base=read(source_repo/f"configs/baseline/{spec['baseline']}.json")
+    source_exp=read(source_repo/f"configs/experiment/{spec['cell']}.json")
+    model='configs/model/'+source_exp['cells'][0]['model_fragment']+'.json'
+    required={f"configs/baseline/{spec['baseline']}.json",f"configs/experiment/{spec['cell']}.json",model}
+    if set(derivation['source_files'])!=required or sha(repo/model)!=sha(source_repo/model):
+        raise ValueError('complete actual source configuration pins required')
+    rebuilt=evaluation.derive(repo,source_base,source_exp,retrieval['pins'],receipt['artifact']['sha256'],sha(receipt_path))
+    required_outputs={f'configs/{kind}/{evaluation.CELL}.json' for kind in ('baseline','experiment')}
+    if set(derivation['outputs'])!=required_outputs:raise ValueError('exact held derived pair required')
+    for kind,value in zip(('baseline','experiment'),rebuilt):
+        if read(repo/f'configs/{kind}/{evaluation.CELL}.json')!=value:
+            raise ValueError('held evaluation differs from actual A0 derivation')
+    # Recheck all registered baseline receipt bytes, including the shared stores
+    # and centroid inputs; this is read-only and makes no runtime/encoder call.
+    for pin in rebuilt[0]['preparation_source_receipts']:
+        if pin['root'] not in ('data','repository'):raise ValueError('unknown preparation receipt root')
+        root=data if pin['root']=='data' else repo
+        if sha(c.inputs.confined(root,pin['relpath']))!=pin['sha256']:
+            raise ValueError('baseline preparation receipt changed')
+    return {'retrieval_completion_sha256':sha(retrieval_path),'agreement_receipt_sha256':sha(receipt_path),
+            'held_derivation_reproduced':True}
+
+
 def register(repo,source_repo,data,binding_path,archive,dry_run=False):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     assert_execution_environment()
@@ -47,9 +99,7 @@ def register(repo,source_repo,data,binding_path,archive,dry_run=False):
         if sha(evaluation.comparator.inputs.confined(source_repo,name))!=digest:raise ValueError('source configuration changed')
     for name,digest in derivation['outputs'].items():
         if sha(evaluation.comparator.inputs.confined(repo,name))!=digest:raise ValueError('derived Fold A configuration changed')
-    _,complete_path,_=evaluation.comparator.bound_parents(source_repo,data,derivation['parent_binding'])
-    complete=read(complete_path)
-    if complete['rows']!=1080 or complete['score_surface']!='sealed-final-delivery':raise ValueError('complete A0 required')
+    prepared_inputs=verify_prepared_inputs(repo,source_repo,data,derivation)
     ledger_path=repo/'docs/exposure-ledger.md';ledger=ledger_path.read_bytes()
     for run in (evaluation.RUN,evaluation.FIT,READ):
         if f'| {run} |' in ledger.decode() or any((data/d/run).exists() for d in ('runs','attempts','prepared','analysis')):
@@ -105,7 +155,7 @@ def register(repo,source_repo,data,binding_path,archive,dry_run=False):
         rel=PKG+'/'+name;outputs[rel]=raw(value)
         return {'path':rel,'sha256':hashlib.sha256(outputs[rel]).hexdigest()}
     protocol_pin=document('protocol-registered-v1.json',{'schema':'saea-registered-protocol-v1','cells':{'arm':identity},
-        'registered_at_utc':now,'accelerator_bound':bound,'proof':proof})
+        'registered_at_utc':now,'accelerator_bound':bound,'proof':proof,'prepared_inputs':prepared_inputs})
     facts_pin=document('registered-facts-v1.json',{'schema':'saea-registered-facts-v1','identity':{'arm':identity},
         'stage3_measurement':{evaluation.RUN:measurement},'study_commit_at_registration':head,'registered_at_utc':now})
     plans={}

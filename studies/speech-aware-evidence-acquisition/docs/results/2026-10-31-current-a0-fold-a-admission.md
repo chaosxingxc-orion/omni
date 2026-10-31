@@ -10,4 +10,12 @@ Research validation: registration 10 tests passed in 24.02 seconds after fixing 
 
 No actual Fold A evaluation registration, decision or supply was created by these tests. The live A0 source remains frozen. The queued comparator must finish and its configuration be reviewed/committed before integrating the later agreement, evaluation and admission tools. Full-system repeated evidence, paired errors/cost, D0/A0 lock, TFRL and complete 13,078-test comparison remain outstanding.
 
-Public dependency-closed verification: 32 tests passed in 54.83 seconds, including deployment-binding checks and atomic mint durability. The public changes include the required proof/manifest helpers and the narrow shared mint/stale-family fixes.
+## Revalidation at admission
+
+Registration now reconstructs the held evaluation from the actual A0 source and rechecks the live retrieval pins, agreement table/receipt, preparation completion ancestry, source model bytes and every baseline preparation receipt. It requires the exact source file set and exact output pair, so replacing a configuration and its recorded hash together cannot bypass the declared transform. Derivation records now include confined paths to the comparator and agreement completions, allowing registration to reopen and verify them. No actual evaluation has yet used the older derivation record shape.
+
+The first expanded regression failed because the fixture serialized the source model JSON differently; copying its exact bytes fixed the fixture without weakening the production model identity check.
+
+Expanded research regression: 52 tests passed in 127.42 seconds across evaluation derivation, registration, mint/supply and campaign coordination. The new negative cases alter real private retrieval bytes, agreement artifacts, completion records, shared receipt bytes, the held method together with its hash, or the source pin set. All are refused before registration writes.
+
+Published-source regression: the same 52 tests passed in 124.22 seconds in the accepted container. These validate engineering checks; actual Fold A preparation, preflight and inference remain pending.

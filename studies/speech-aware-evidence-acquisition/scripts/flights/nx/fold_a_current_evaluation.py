@@ -137,6 +137,8 @@ def write(repo, source_repo, data, binding, comparator_complete, agreement_compl
     record = {'source_commit':source_head, 'source_run':complete['run_id'], 'parent_binding':binding,
         'source_files':{n:sha(source_repo/n) for n in (base_rel,exp_rel,model_rel)},
         'comparator_completion_sha256':sha(comparator_complete),'agreement_completion_sha256':sha(agreement_complete),
+        'comparator_complete':str(comparator_complete.relative_to(data)),
+        'agreement_complete':str(agreement_complete.relative_to(data)),
         'model_contacts':0,'launchable':False,'allowed_execution_stages':['check'],
         'outputs':{n:hashlib.sha256(b).hexdigest() for n,b in outputs.items()},
         'remaining':['independent registration and mint','own phase supply','clean-source preflight','guarded dispatch']}
