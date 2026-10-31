@@ -1027,8 +1027,9 @@ class ContextFitBudget:
     are what a prompt may NOT use.
 
     ``token_counter`` maps exact request bytes to exact tokens. A real
-    flight binds the resident server's own tokenizer; a test binds a
-    deterministic counter. This rail never tokenizes anything itself.
+    flight either binds an exact counter or sets ``measured_by_request_gate``
+    to consume its registered multimodal FIT. A test may bind a deterministic
+    counter. This rail never tokenizes anything itself.
     """
 
     slot_tokens: int
@@ -1036,6 +1037,9 @@ class ContextFitBudget:
     completion_ceiling: int
     token_counter: Callable
     special_token_reserve: int = 2
+    # One registered FIT measurement per contact. Real overflows abstain;
+    # compaction variants would require additional registered measurements.
+    measured_by_request_gate: bool = False
 
     def __post_init__(self) -> None:
         for name in (
