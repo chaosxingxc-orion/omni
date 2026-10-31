@@ -47,13 +47,14 @@ def confined(root, name):
     return path
 
 
-def verify_rows(rows, sources, dimension):
+def verify_rows(rows, sources, dimension, expected_count=1080):
     identity = lambda row: {key: row[key] for key in
         ('id', 'audio_sha256', 'source_frames', 'source_sample_rate_hz')}
     expected = {row['id']: identity(row) for row in sources}
     actual = {row['id']: identity(row) for row in rows}
-    if len(rows) != 1080 or len(actual) != len(rows) or actual != expected:
-        raise ValueError('exact complete Fold A source identities required')
+    if (len(rows) != expected_count or len(sources) != expected_count
+            or len(actual) != len(rows) or len(expected) != len(sources) or actual != expected):
+        raise ValueError('exact complete source identities required')
     for row in rows:
         segments = row['segments']
         if len(segments) != 1:
