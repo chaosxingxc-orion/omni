@@ -4,7 +4,7 @@
   "completed_rows": 0,
   "total_rows": 625,
   "h1": {
-    "state": "admitted_preflight_queued",
+    "state": "preflight_blocked_missing_analysis_recipe",
     "completed_rows": 0,
     "total_rows": 313,
     "remaining_rows": 313,
@@ -43,8 +43,9 @@
     "remaining_inference_rows": 310,
     "wall_seconds_per_complete_row_note": "Historical failed-run diagnostic only; 22 of 25 rows had erroneous context compaction.",
     "recovery_source_commit": "a56669d48d06170c8feed429c4a9bf111ab82c76",
-    "generation_dependency": "H2 generation successful terminal; poll 600 seconds",
-    "official_union": "pending"
+    "generation_dependency": "Register source-bound analysis recipe and pass full preflight before queuing behind H2",
+    "official_union": "pending",
+    "recovery_model_calls": 0
   },
   "h2": {
     "state": "dispatch_started_generation_unconfirmed",
