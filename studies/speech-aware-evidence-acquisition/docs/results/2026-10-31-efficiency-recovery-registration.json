@@ -1,0 +1,21 @@
+{
+  "schema": "saea-operational-recovery-status-v1",
+  "study_commit": "a0e915bd61b867cd420c5979d584145778792f46",
+  "predecessor_commit": "8fae28a2786abdf815e35ea6951a03a68f878f1c",
+  "checkpoint_sha256": "8fc5edc100096930c9cd78a0eed582d463249343111da766bf04c34220eea091",
+  "rows_total": 1080,
+  "rows_kept": 427,
+  "rows_remaining": 653,
+  "prior_calls_including_incomplete_rows": 8108,
+  "prior_audio_seconds": 21550.3005,
+  "prepared_supply_output_equal": true,
+  "actual_preflight_passed": true,
+  "post_fix_throughput_measured": false,
+  "source_tree": "operational recovery tree; public tree is a separate reviewed source distribution",
+  "model_contacts_during_registration": 0,
+  "queue_started_at_utc": "2026-10-31T09:25:27Z",
+  "status": "detached-campaign-starting",
+  "lease_reconciled": true,
+  "cpu_analysis_queue": "independent guardian; waits for completed results",
+  "measurement_state": "no successor model requests observed at 09:26:20 UTC"
+}
