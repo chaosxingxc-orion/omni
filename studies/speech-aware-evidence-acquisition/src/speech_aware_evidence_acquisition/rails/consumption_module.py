@@ -1278,8 +1278,10 @@ def _parse_supply_column(entry: Mapping, *, field: str) -> ColumnDecl:
     if isinstance(bound, bool) or not isinstance(bound, int) or bound < 1:
         raise ConsumptionModuleConfigError(f"{field}.max_supplied_items must be a positive integer")
     overrides = entry.get("overrides", {})
+    from .supply_variants import is_odd40_override
     if not isinstance(overrides, Mapping) or not all(
-        isinstance(k, str) and isinstance(v, int) and not isinstance(v, bool) for k, v in overrides.items()
+        isinstance(k, str) and ((isinstance(v, int) and not isinstance(v, bool))
+                                or is_odd40_override(k, v)) for k, v in overrides.items()
     ):
         raise ConsumptionModuleConfigError(f"{field}.overrides must be an object of knob path -> integer")
     swap = entry.get("release_swap")

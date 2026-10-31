@@ -337,6 +337,15 @@ def _nonempty_str(value: object, *, field: str) -> str:
     return value
 
 
+ODD40_OVERRIDE_PATH = "knowledge_stores.train-exemplars.phase_supply.solver.fuse_policy"
+ODD40_OVERRIDE_VALUE = "saea-fuse-supplyfilter-odd40-v1"
+
+
+def is_odd40_override(path, value):
+    """The only admitted non-integer supply override; no arbitrary policies."""
+    return path == ODD40_OVERRIDE_PATH and value == ODD40_OVERRIDE_VALUE
+
+
 @dataclass(frozen=True)
 class SupplyVariantKnob:
     """One parsed, admitted knob path and the value an arm sets it to."""
@@ -346,7 +355,7 @@ class SupplyVariantKnob:
     route: str
     phase: str
     tail: tuple[str, ...]
-    value: int
+    value: int | str
 
     def as_json(self) -> dict[str, object]:
         return {
@@ -678,7 +687,8 @@ def parse_supply_variant_knob(
             f"supply-variant override {text!r} names route {route!r}; an arm "
             f"may re-cap only {sorted(SUPPLY_VARIANT_KNOB_TAILS)}"
         )
-    if tail not in SUPPLY_VARIANT_KNOB_TAILS[route]:
+    odd40 = is_odd40_override(text, value)
+    if tail not in SUPPLY_VARIANT_KNOB_TAILS[route] and not odd40:
         admitted = sorted(
             ".".join(item) for item in SUPPLY_VARIANT_KNOB_TAILS[route]
         )
@@ -711,7 +721,7 @@ def parse_supply_variant_knob(
         route=route,
         phase=phase,
         tail=tail,
-        value=_positive_int(value, field=f"supply-variant override {text!r}"),
+        value=value if odd40 else _positive_int(value, field=f"supply-variant override {text!r}"),
     )
 
 
@@ -1619,7 +1629,7 @@ def supply_variant_arm_record(
     arm_index: int,
     contact_id: str,
     supplied_value_ids: Sequence[str],
-    resolved_knobs: Mapping[str, int] | None = None,
+    resolved_knobs: Mapping[str, int | str] | None = None,
     template_group: bool = False,
     release_swaps_group: bool = False,
     decoding_group: bool = False,
@@ -1680,7 +1690,7 @@ def supply_variant_arm_record(
         # this row exists to state. A list of objects survives any such
         # transport unchanged.
         "resolved_knobs": [
-            {"path": path, "value": int(value)}
+            {"path": path, "value": value if is_odd40_override(path, value) else int(value)}
             for path, value in sorted(resolved.items())
         ],
         "supplied_value_ids": list(ids),

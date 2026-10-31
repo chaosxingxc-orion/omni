@@ -1559,13 +1559,14 @@ def validate_supply_variant_receipt(
             row["resolved_knobs"], "supply variant arm resolved_knobs",
             error_type=error_type,
         )
+        from .supply_variants import is_odd40_override
         if any(
             not isinstance(entry, Mapping)
             or set(entry) != {"path", "value"}
             or not isinstance(entry["path"], str)
             or not entry["path"]
-            or isinstance(entry["value"], bool)
-            or not isinstance(entry["value"], int)
+            or (not is_odd40_override(entry["path"], entry["value"])
+                and (isinstance(entry["value"], bool) or not isinstance(entry["value"], int)))
             for entry in knobs
         ):
             _raise(error_type, "supply variant arm has malformed resolved knobs")

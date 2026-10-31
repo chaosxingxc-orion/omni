@@ -633,6 +633,13 @@ class PhaseSupplySpec:
                     self.fuse_coverage[key],
                     field=f"phase_supply[{self.phase!r}].fuse_coverage.{key}",
                 )
+        if self.fuse_policy == "saea-fuse-supplyfilter-odd40-v1":
+            if (self.k != 40 or self.tau != 0 or self.dimensions != ("content",)
+                    or self.rank_policy != "saea-rank-wcos-prior-agree-v1"
+                    or self.rank_weights != {"w_cos": 1., "w_prior": 0., "w_agree": 0.}
+                    or self.fuse_coverage != {"m": 40, "c": 40, "top_l": 40}
+                    or self.agreement_source is not None):
+                raise PhaseSupplyError("odd40 requires exact content-only top40 cosine retrieval")
         if self.alpha is not None:
             _require_unit_float(self.alpha, field=f"phase_supply[{self.phase!r}].alpha")
         if not isinstance(self.expose_facets, bool):
