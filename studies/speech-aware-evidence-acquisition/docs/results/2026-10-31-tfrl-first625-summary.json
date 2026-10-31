@@ -1,0 +1,153 @@
+{
+  "schema": "saea-tfrl-first625-public-summary-v1",
+  "rows": 625,
+  "iteration": 1,
+  "official_reaggregated": {
+    "aa": {
+      "intent_accuracy": 0.7712,
+      "slu_f1": 0.670475288550046
+    },
+    "lock": {
+      "intent_accuracy": 0.7712,
+      "slu_f1": 0.672040298568757
+    },
+    "s1": {
+      "intent_accuracy": 0.7792,
+      "slu_f1": 0.6663526437294026
+    },
+    "s2": {
+      "intent_accuracy": 0.7728,
+      "slu_f1": 0.665135215147403
+    },
+    "s3": {
+      "intent_accuracy": 0.7712,
+      "slu_f1": 0.6645980968308017
+    },
+    "s4": {
+      "intent_accuracy": 0.7776,
+      "slu_f1": 0.6734213266806028
+    },
+    "vote": {
+      "intent_accuracy": 0.7744,
+      "slu_f1": 0.6679998774940256
+    }
+  },
+  "vote_minus_lock_pp": -0.40404210747314595,
+  "construction_gate_passed": false,
+  "threshold_pp": 1.0,
+  "sources": {
+    "h1": {
+      "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1/complete.json",
+      "complete_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+      "kind": "verified-source-union",
+      "provenance_sha256": "92e5e7f4912da32e70c5713e85848cad8f7bee0887c6b1e86c7d23f9e15cd305",
+      "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1",
+      "recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+    },
+    "h2": {
+      "attempt_id": "generation-v1",
+      "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1-READ/complete.json",
+      "complete_sha256": "1857ee6dcb9a2a03a356727895f2179e0163e06c0b991e33ef53d1a459aeca5a",
+      "manifest_sha256": "a15827d8278bc959fe5c43d3a1c022d731c5f071904051798d5dd9aa07df6940",
+      "recipe_sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923",
+      "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1"
+    }
+  },
+  "pool_sha256": "a19dc40ce8f7d5f2d0963d07e9789b270b5cf6574dcc9dfb80b77f82d6611cb2",
+  "decision": {
+    "construction_gain_pp": -0.40404210747314595,
+    "decision": "stop-family",
+    "generation_authorized": false,
+    "implementation_commit": "6eebf88a1eb40dcd40a350b2228b04ad96ee1d53",
+    "independent_confirmation_required": true,
+    "new_model_calls": 0,
+    "new_scoring_jobs": 0,
+    "new_tokenizer_calls": 0,
+    "pool_sha256": "a19dc40ce8f7d5f2d0963d07e9789b270b5cf6574dcc9dfb80b77f82d6611cb2",
+    "preparation_gate_passed": false,
+    "rows": 625,
+    "schema": "saea-tfrl-first-construction-decision-v1",
+    "sources": {
+      "h1": {
+        "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1/complete.json",
+        "complete_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+        "kind": "verified-source-union",
+        "provenance_sha256": "92e5e7f4912da32e70c5713e85848cad8f7bee0887c6b1e86c7d23f9e15cd305",
+        "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1",
+        "recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+      },
+      "h2": {
+        "attempt_id": "generation-v1",
+        "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1-READ/complete.json",
+        "complete_sha256": "1857ee6dcb9a2a03a356727895f2179e0163e06c0b991e33ef53d1a459aeca5a",
+        "manifest_sha256": "a15827d8278bc959fe5c43d3a1c022d731c5f071904051798d5dd9aa07df6940",
+        "recipe_sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923",
+        "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1"
+      }
+    },
+    "system_accepted": false
+  },
+  "decision_sha256": "c17d33d38b12a42f97b09f7851b52a9aedb9a71a4d3d5994e7756d3fe1a87a9b",
+  "bank_sha256": "5af98fefd3df14b5faa6356948ce80c6f38a2a04c6c6d803ae48ca95c6ed527f",
+  "banks": {
+    "h1": {
+      "exemplars": 35,
+      "receipt_sha256": "a035042f22737cc4c318c491fe2ca1728c0a4c4c42f80cc3a28cac4afc3f7f72",
+      "rules": 0
+    },
+    "h2": {
+      "exemplars": 32,
+      "receipt_sha256": "df610052b79bb44ea68918380ad937984f819be43ad83cf39f01d90e225616ec",
+      "rules": 1
+    },
+    "union": {
+      "exemplars": 64,
+      "receipt_sha256": "7d2083ee7ce3206cfeccc55d1102fab02e34e3aa9c93d52284b2297f69f5b237",
+      "rules": 1
+    }
+  },
+  "bank_accounting": {
+    "cap": 20000,
+    "completed_tokenizer_requests": 176,
+    "generation_calls": 0,
+    "tokenizer_attempts": 176,
+    "unresolved_tokenizer_requests": 0
+  },
+  "halves": {
+    "R01C-H1": {
+      "rows": 313,
+      "credit": {
+        "positive_share": 0.115016,
+        "positives": 36,
+        "reasons": {
+          "baseline-unstable": 47,
+          "no-gain-over-baseline": 168,
+          "no-intent-correct-trajectory": 62,
+          "positive": 36
+        },
+        "rows": 313
+      },
+      "vote_minus_lock_pp": -1.2455132781176048
+    },
+    "R01C-H2": {
+      "rows": 312,
+      "credit": {
+        "positive_share": 0.102564,
+        "positives": 32,
+        "reasons": {
+          "baseline-unstable": 52,
+          "no-gain-over-baseline": 169,
+          "no-intent-correct-trajectory": 59,
+          "positive": 32
+        },
+        "rows": 312
+      },
+      "vote_minus_lock_pp": 0.4074372969742557
+    }
+  },
+  "observed_at_utc": "2026-10-31T21:51:00Z",
+  "state": "stopped-family",
+  "remaining_rows": 0,
+  "generation_active": false,
+  "cost_audit": "docs/results/2026-10-31-tfrl-recovered-cost-audit.json"
+}

@@ -1,0 +1,1523 @@
+{
+  "rows": 625,
+  "contacts": 4375,
+  "groups": {
+    "perception": {
+      "calls": 625,
+      "prompt_tokens": 2401845,
+      "completion_tokens": 1146586,
+      "audio_seconds": 2726.8471874999977,
+      "latency_seconds": 184127.5298468499,
+      "contacts": 625,
+      "finish:stop": 625,
+      "forced_close": 97,
+      "reasoning_tokens": 1109988,
+      "reasoning_count_observed": 625
+    },
+    "s1": {
+      "calls": 625,
+      "prompt_tokens": 5421355,
+      "completion_tokens": 1350741,
+      "audio_seconds": 2726.8471874999977,
+      "latency_seconds": 230342.88308693998,
+      "contacts": 625,
+      "finish:stop": 625,
+      "forced_close": 192,
+      "reasoning_tokens": 1329528,
+      "reasoning_count_observed": 625
+    },
+    "s2": {
+      "calls": 625,
+      "prompt_tokens": 5421355,
+      "completion_tokens": 1306320,
+      "audio_seconds": 2726.8471874999977,
+      "latency_seconds": 213038.93970951007,
+      "contacts": 625,
+      "finish:stop": 625,
+      "forced_close": 174,
+      "reasoning_tokens": 1285605,
+      "reasoning_count_observed": 625
+    },
+    "s3": {
+      "calls": 625,
+      "prompt_tokens": 5421355,
+      "completion_tokens": 1294326,
+      "audio_seconds": 2726.8471874999977,
+      "latency_seconds": 215235.18062617,
+      "contacts": 625,
+      "finish:stop": 625,
+      "forced_close": 170,
+      "reasoning_tokens": 1273455,
+      "reasoning_count_observed": 625
+    },
+    "s4": {
+      "calls": 625,
+      "prompt_tokens": 5421355,
+      "completion_tokens": 1321039,
+      "audio_seconds": 2726.8471874999977,
+      "latency_seconds": 204807.78244584985,
+      "contacts": 625,
+      "finish:stop": 625,
+      "forced_close": 167,
+      "reasoning_tokens": 1300166,
+      "reasoning_count_observed": 625
+    },
+    "aa": {
+      "calls": 625,
+      "prompt_tokens": 5421355,
+      "completion_tokens": 1373828,
+      "audio_seconds": 2726.8471874999977,
+      "latency_seconds": 178937.50216285023,
+      "contacts": 625,
+      "finish:stop": 625,
+      "forced_close": 208,
+      "reasoning_tokens": 1352928,
+      "reasoning_count_observed": 625
+    },
+    "lock": {
+      "calls": 625,
+      "prompt_tokens": 5421355,
+      "completion_tokens": 1371930,
+      "audio_seconds": 2726.8471874999977,
+      "latency_seconds": 137507.66523441003,
+      "contacts": 625,
+      "finish:stop": 625,
+      "forced_close": 202,
+      "reasoning_tokens": 1350977,
+      "reasoning_count_observed": 625
+    }
+  },
+  "cost_by_credit_disposition": {
+    "no-intent-correct-trajectory": {
+      "calls": 847,
+      "prompt_tokens": 6873583,
+      "completion_tokens": 1880403,
+      "audio_seconds": 3867.1342499999996,
+      "latency_seconds": 275422.43868505,
+      "rows": 121
+    },
+    "no-gain-over-baseline": {
+      "calls": 2359,
+      "prompt_tokens": 18427319,
+      "completion_tokens": 4502139,
+      "audio_seconds": 9805.834499999999,
+      "latency_seconds": 685200.2654717903,
+      "rows": 337
+    },
+    "positive": {
+      "calls": 476,
+      "prompt_tokens": 4007119,
+      "completion_tokens": 1083480,
+      "audio_seconds": 2141.824125,
+      "latency_seconds": 161805.06891262002,
+      "rows": 68
+    },
+    "baseline-unstable": {
+      "calls": 693,
+      "prompt_tokens": 5621954,
+      "completion_tokens": 1698748,
+      "audio_seconds": 3273.1374375,
+      "latency_seconds": 241569.71004312002,
+      "rows": 99
+    }
+  },
+  "answer_diversity": {
+    "raw:k4_all_equal": 197,
+    "raw:k4_unique_sum": 1356,
+    "raw:any_candidate_differs_lock": 449,
+    "raw:aa_equals_lock": 381,
+    "normalized:k4_all_equal": 291,
+    "normalized:k4_unique_sum": 1135,
+    "normalized:any_candidate_differs_lock": 354,
+    "normalized:aa_equals_lock": 448,
+    "candidate_parse_failures": 0
+  },
+  "contacts_per_row_distribution": {
+    "7": 625
+  },
+  "missing_request_timing": 21,
+  "segments": {
+    "original-checkpoint": {
+      "rows": 3,
+      "contacts": 21,
+      "contacts_per_row_distribution": {
+        "7": 3
+      },
+      "no_solver_abstention_rows": 0,
+      "groups": {
+        "perception": {
+          "calls": 3,
+          "prompt_tokens": 11578,
+          "completion_tokens": 4300,
+          "audio_seconds": 4.0956875,
+          "latency_seconds": 163.26275444000203,
+          "contacts": 3,
+          "finish:stop": 3,
+          "forced_close": 0,
+          "reasoning_tokens": 4134,
+          "reasoning_count_observed": 3
+        },
+        "s1": {
+          "calls": 3,
+          "prompt_tokens": 15278,
+          "completion_tokens": 3026,
+          "audio_seconds": 4.0956875,
+          "latency_seconds": 126.17932451999513,
+          "contacts": 3,
+          "finish:stop": 3,
+          "forced_close": 0,
+          "reasoning_tokens": 2965,
+          "reasoning_count_observed": 3
+        },
+        "s2": {
+          "calls": 3,
+          "prompt_tokens": 15278,
+          "completion_tokens": 4724,
+          "audio_seconds": 4.0956875,
+          "latency_seconds": 166.24071667000317,
+          "contacts": 3,
+          "finish:stop": 3,
+          "forced_close": 0,
+          "reasoning_tokens": 4663,
+          "reasoning_count_observed": 3
+        },
+        "s3": {
+          "calls": 3,
+          "prompt_tokens": 15278,
+          "completion_tokens": 4709,
+          "audio_seconds": 4.0956875,
+          "latency_seconds": 147.13871532999838,
+          "contacts": 3,
+          "finish:stop": 3,
+          "forced_close": 0,
+          "reasoning_tokens": 4638,
+          "reasoning_count_observed": 3
+        },
+        "s4": {
+          "calls": 3,
+          "prompt_tokens": 15278,
+          "completion_tokens": 4576,
+          "audio_seconds": 4.0956875,
+          "latency_seconds": 139.8378251699978,
+          "contacts": 3,
+          "finish:stop": 3,
+          "forced_close": 0,
+          "reasoning_tokens": 4515,
+          "reasoning_count_observed": 3
+        },
+        "aa": {
+          "calls": 3,
+          "prompt_tokens": 15278,
+          "completion_tokens": 2843,
+          "audio_seconds": 4.0956875,
+          "latency_seconds": 82.42274403000192,
+          "contacts": 3,
+          "finish:stop": 3,
+          "forced_close": 0,
+          "reasoning_tokens": 2782,
+          "reasoning_count_observed": 3
+        },
+        "lock": {
+          "calls": 3,
+          "prompt_tokens": 15278,
+          "completion_tokens": 2637,
+          "audio_seconds": 4.0956875,
+          "latency_seconds": 75.14481905999855,
+          "contacts": 3,
+          "finish:stop": 3,
+          "forced_close": 0,
+          "reasoning_tokens": 2576,
+          "reasoning_count_observed": 3
+        }
+      },
+      "per_contact_distributions": {
+        "perception": {
+          "calls": {
+            "n": 3,
+            "mean": 1,
+            "p50": 1,
+            "p95": 1,
+            "sum": 3
+          },
+          "prompt_tokens": {
+            "n": 3,
+            "mean": 3859.3333333333335,
+            "p50": 3867,
+            "p95": 3867,
+            "sum": 11578
+          },
+          "completion_tokens": {
+            "n": 3,
+            "mean": 1433.3333333333333,
+            "p50": 1208,
+            "p95": 1208,
+            "sum": 4300
+          },
+          "audio_seconds": {
+            "n": 3,
+            "mean": 1.3652291666666667,
+            "p50": 1.344,
+            "p95": 1.344,
+            "sum": 4.0956875
+          },
+          "latency_seconds": {
+            "n": 3,
+            "mean": 54.42091814666734,
+            "p50": 48.677425190002396,
+            "p95": 48.677425190002396,
+            "sum": 163.26275444000203
+          }
+        },
+        "s1": {
+          "calls": {
+            "n": 3,
+            "mean": 1,
+            "p50": 1,
+            "p95": 1,
+            "sum": 3
+          },
+          "prompt_tokens": {
+            "n": 3,
+            "mean": 5092.666666666667,
+            "p50": 5260,
+            "p95": 5260,
+            "sum": 15278
+          },
+          "completion_tokens": {
+            "n": 3,
+            "mean": 1008.6666666666666,
+            "p50": 855,
+            "p95": 855,
+            "sum": 3026
+          },
+          "audio_seconds": {
+            "n": 3,
+            "mean": 1.3652291666666667,
+            "p50": 1.344,
+            "p95": 1.344,
+            "sum": 4.0956875
+          },
+          "latency_seconds": {
+            "n": 3,
+            "mean": 42.059774839998376,
+            "p50": 35.30157351999878,
+            "p95": 35.30157351999878,
+            "sum": 126.17932451999513
+          }
+        },
+        "s2": {
+          "calls": {
+            "n": 3,
+            "mean": 1,
+            "p50": 1,
+            "p95": 1,
+            "sum": 3
+          },
+          "prompt_tokens": {
+            "n": 3,
+            "mean": 5092.666666666667,
+            "p50": 5260,
+            "p95": 5260,
+            "sum": 15278
+          },
+          "completion_tokens": {
+            "n": 3,
+            "mean": 1574.6666666666667,
+            "p50": 1164,
+            "p95": 1164,
+            "sum": 4724
+          },
+          "audio_seconds": {
+            "n": 3,
+            "mean": 1.3652291666666667,
+            "p50": 1.344,
+            "p95": 1.344,
+            "sum": 4.0956875
+          },
+          "latency_seconds": {
+            "n": 3,
+            "mean": 55.41357222333439,
+            "p50": 49.12467064000157,
+            "p95": 49.12467064000157,
+            "sum": 166.24071667000317
+          }
+        },
+        "s3": {
+          "calls": {
+            "n": 3,
+            "mean": 1,
+            "p50": 1,
+            "p95": 1,
+            "sum": 3
+          },
+          "prompt_tokens": {
+            "n": 3,
+            "mean": 5092.666666666667,
+            "p50": 5260,
+            "p95": 5260,
+            "sum": 15278
+          },
+          "completion_tokens": {
+            "n": 3,
+            "mean": 1569.6666666666667,
+            "p50": 896,
+            "p95": 896,
+            "sum": 4709
+          },
+          "audio_seconds": {
+            "n": 3,
+            "mean": 1.3652291666666667,
+            "p50": 1.344,
+            "p95": 1.344,
+            "sum": 4.0956875
+          },
+          "latency_seconds": {
+            "n": 3,
+            "mean": 49.04623844333279,
+            "p50": 30.241525339999498,
+            "p95": 30.241525339999498,
+            "sum": 147.13871532999838
+          }
+        },
+        "s4": {
+          "calls": {
+            "n": 3,
+            "mean": 1,
+            "p50": 1,
+            "p95": 1,
+            "sum": 3
+          },
+          "prompt_tokens": {
+            "n": 3,
+            "mean": 5092.666666666667,
+            "p50": 5260,
+            "p95": 5260,
+            "sum": 15278
+          },
+          "completion_tokens": {
+            "n": 3,
+            "mean": 1525.3333333333333,
+            "p50": 1755,
+            "p95": 1755,
+            "sum": 4576
+          },
+          "audio_seconds": {
+            "n": 3,
+            "mean": 1.3652291666666667,
+            "p50": 1.344,
+            "p95": 1.344,
+            "sum": 4.0956875
+          },
+          "latency_seconds": {
+            "n": 3,
+            "mean": 46.612608389999274,
+            "p50": 52.69932663999862,
+            "p95": 52.69932663999862,
+            "sum": 139.8378251699978
+          }
+        },
+        "aa": {
+          "calls": {
+            "n": 3,
+            "mean": 1,
+            "p50": 1,
+            "p95": 1,
+            "sum": 3
+          },
+          "prompt_tokens": {
+            "n": 3,
+            "mean": 5092.666666666667,
+            "p50": 5260,
+            "p95": 5260,
+            "sum": 15278
+          },
+          "completion_tokens": {
+            "n": 3,
+            "mean": 947.6666666666666,
+            "p50": 797,
+            "p95": 797,
+            "sum": 2843
+          },
+          "audio_seconds": {
+            "n": 3,
+            "mean": 1.3652291666666667,
+            "p50": 1.344,
+            "p95": 1.344,
+            "sum": 4.0956875
+          },
+          "latency_seconds": {
+            "n": 3,
+            "mean": 27.47424801000064,
+            "p50": 24.16707124000095,
+            "p95": 24.16707124000095,
+            "sum": 82.42274403000192
+          }
+        },
+        "lock": {
+          "calls": {
+            "n": 3,
+            "mean": 1,
+            "p50": 1,
+            "p95": 1,
+            "sum": 3
+          },
+          "prompt_tokens": {
+            "n": 3,
+            "mean": 5092.666666666667,
+            "p50": 5260,
+            "p95": 5260,
+            "sum": 15278
+          },
+          "completion_tokens": {
+            "n": 3,
+            "mean": 879,
+            "p50": 718,
+            "p95": 718,
+            "sum": 2637
+          },
+          "audio_seconds": {
+            "n": 3,
+            "mean": 1.3652291666666667,
+            "p50": 1.344,
+            "p95": 1.344,
+            "sum": 4.0956875
+          },
+          "latency_seconds": {
+            "n": 3,
+            "mean": 25.048273019999517,
+            "p50": 22.112214310000127,
+            "p95": 22.112214310000127,
+            "sum": 75.14481905999855
+          }
+        }
+      },
+      "answer_diversity": {
+        "raw:k4_all_equal": 1,
+        "raw:k4_unique_sum": 6,
+        "raw:any_candidate_differs_lock": 2,
+        "raw:aa_equals_lock": 3,
+        "normalized:k4_all_equal": 2,
+        "normalized:k4_unique_sum": 5,
+        "normalized:any_candidate_differs_lock": 1,
+        "normalized:aa_equals_lock": 3,
+        "candidate_parse_failures": 0
+      },
+      "cost_by_credit_disposition": {
+        "no-intent-correct-trajectory": {
+          "calls": 7,
+          "prompt_tokens": 31911,
+          "completion_tokens": 6414,
+          "audio_seconds": 9.408,
+          "latency_seconds": 222.7709778699973,
+          "rows": 1
+        },
+        "no-gain-over-baseline": {
+          "calls": 14,
+          "prompt_tokens": 71335,
+          "completion_tokens": 20401,
+          "audio_seconds": 19.261812500000005,
+          "latency_seconds": 677.4559213499997,
+          "rows": 2
+        }
+      },
+      "missing_request_timing": 21,
+      "new_model_calls": 0,
+      "new_tokenizer_calls": 0,
+      "new_scoring_jobs": 0,
+      "limitations": [
+        "Seven-contact first-visit K4 only; unavailable arm custody refuses attribution.",
+        "Normalized equality preserves list order; it is not semantic equivalence.",
+        "Credit disposition partitions spend, not counterfactual value; controls remain necessary evidence.",
+        "Contact times overlap across samples and include queue/service/network; they are not wall time.",
+        "Costs cover the verified sealed attempt only; FIT and previous failed attempts remain separate."
+      ]
+    },
+    "repaired310": {
+      "rows": 310,
+      "contacts": 2170,
+      "contacts_per_row_distribution": {
+        "7": 310
+      },
+      "no_solver_abstention_rows": 0,
+      "groups": {
+        "perception": {
+          "calls": 310,
+          "prompt_tokens": 1190434,
+          "completion_tokens": 574967,
+          "audio_seconds": 1315.4482499999988,
+          "latency_seconds": 92629.46952034993,
+          "contacts": 310,
+          "finish:stop": 310,
+          "forced_close": 51,
+          "reasoning_tokens": 556880,
+          "reasoning_count_observed": 310
+        },
+        "s1": {
+          "calls": 310,
+          "prompt_tokens": 2686717,
+          "completion_tokens": 661179,
+          "audio_seconds": 1315.4482499999988,
+          "latency_seconds": 113214.56552670996,
+          "contacts": 310,
+          "finish:stop": 310,
+          "forced_close": 87,
+          "reasoning_tokens": 650802,
+          "reasoning_count_observed": 310
+        },
+        "s2": {
+          "calls": 310,
+          "prompt_tokens": 2686717,
+          "completion_tokens": 636146,
+          "audio_seconds": 1315.4482499999988,
+          "latency_seconds": 103631.66781700001,
+          "contacts": 310,
+          "finish:stop": 310,
+          "forced_close": 75,
+          "reasoning_tokens": 625930,
+          "reasoning_count_observed": 310
+        },
+        "s3": {
+          "calls": 310,
+          "prompt_tokens": 2686717,
+          "completion_tokens": 638112,
+          "audio_seconds": 1315.4482499999988,
+          "latency_seconds": 105972.11792902,
+          "contacts": 310,
+          "finish:stop": 310,
+          "forced_close": 84,
+          "reasoning_tokens": 627855,
+          "reasoning_count_observed": 310
+        },
+        "s4": {
+          "calls": 310,
+          "prompt_tokens": 2686717,
+          "completion_tokens": 649286,
+          "audio_seconds": 1315.4482499999988,
+          "latency_seconds": 100410.71347782985,
+          "contacts": 310,
+          "finish:stop": 310,
+          "forced_close": 81,
+          "reasoning_tokens": 638866,
+          "reasoning_count_observed": 310
+        },
+        "aa": {
+          "calls": 310,
+          "prompt_tokens": 2686717,
+          "completion_tokens": 674785,
+          "audio_seconds": 1315.4482499999988,
+          "latency_seconds": 86988.72115276012,
+          "contacts": 310,
+          "finish:stop": 310,
+          "forced_close": 106,
+          "reasoning_tokens": 664562,
+          "reasoning_count_observed": 310
+        },
+        "lock": {
+          "calls": 310,
+          "prompt_tokens": 2686717,
+          "completion_tokens": 662362,
+          "audio_seconds": 1315.4482499999988,
+          "latency_seconds": 65181.02544548004,
+          "contacts": 310,
+          "finish:stop": 310,
+          "forced_close": 92,
+          "reasoning_tokens": 652049,
+          "reasoning_count_observed": 310
+        }
+      },
+      "per_contact_distributions": {
+        "perception": {
+          "calls": {
+            "n": 310,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 310
+          },
+          "prompt_tokens": {
+            "n": 310,
+            "mean": 3840.1096774193547,
+            "p50": 3833.5,
+            "p95": 3919,
+            "sum": 1190434
+          },
+          "completion_tokens": {
+            "n": 310,
+            "mean": 1854.7322580645161,
+            "p50": 1698.0,
+            "p95": 3153,
+            "sum": 574967
+          },
+          "audio_seconds": {
+            "n": 310,
+            "mean": 4.243381451612903,
+            "p50": 3.9675,
+            "p95": 7.5509375,
+            "sum": 1315.44825
+          },
+          "latency_seconds": {
+            "n": 310,
+            "mean": 298.80474038822575,
+            "p50": 266.7005961099985,
+            "p95": 549.6874237199991,
+            "sum": 92629.46952034997
+          },
+          "request_total_seconds": {
+            "n": 310,
+            "mean": 299.02229616683866,
+            "p50": 266.8540055350004,
+            "p95": 549.8743585000011,
+            "sum": 92696.91181172
+          }
+        },
+        "s1": {
+          "calls": {
+            "n": 310,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 310
+          },
+          "prompt_tokens": {
+            "n": 310,
+            "mean": 8666.829032258065,
+            "p50": 8590.0,
+            "p95": 11267,
+            "sum": 2686717
+          },
+          "completion_tokens": {
+            "n": 310,
+            "mean": 2132.835483870968,
+            "p50": 2213.5,
+            "p95": 3140,
+            "sum": 661179
+          },
+          "audio_seconds": {
+            "n": 310,
+            "mean": 4.243381451612903,
+            "p50": 3.9675,
+            "p95": 7.5509375,
+            "sum": 1315.44825
+          },
+          "latency_seconds": {
+            "n": 310,
+            "mean": 365.2082758926128,
+            "p50": 370.871332374998,
+            "p95": 554.710383499998,
+            "sum": 113214.56552670996
+          },
+          "request_total_seconds": {
+            "n": 310,
+            "mean": 365.4687280604194,
+            "p50": 371.1766796949996,
+            "p95": 554.8980188199967,
+            "sum": 113295.30569873001
+          }
+        },
+        "s2": {
+          "calls": {
+            "n": 310,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 310
+          },
+          "prompt_tokens": {
+            "n": 310,
+            "mean": 8666.829032258065,
+            "p50": 8590.0,
+            "p95": 11267,
+            "sum": 2686717
+          },
+          "completion_tokens": {
+            "n": 310,
+            "mean": 2052.083870967742,
+            "p50": 2050.0,
+            "p95": 3137,
+            "sum": 636146
+          },
+          "audio_seconds": {
+            "n": 310,
+            "mean": 4.243381451612903,
+            "p50": 3.9675,
+            "p95": 7.5509375,
+            "sum": 1315.44825
+          },
+          "latency_seconds": {
+            "n": 310,
+            "mean": 334.29570263548385,
+            "p50": 309.94975235999846,
+            "p95": 587.4144869299998,
+            "sum": 103631.667817
+          },
+          "request_total_seconds": {
+            "n": 310,
+            "mean": 334.4598775139999,
+            "p50": 310.2881873649985,
+            "p95": 587.5351327899989,
+            "sum": 103682.56202933998
+          }
+        },
+        "s3": {
+          "calls": {
+            "n": 310,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 310
+          },
+          "prompt_tokens": {
+            "n": 310,
+            "mean": 8666.829032258065,
+            "p50": 8590.0,
+            "p95": 11267,
+            "sum": 2686717
+          },
+          "completion_tokens": {
+            "n": 310,
+            "mean": 2058.425806451613,
+            "p50": 2090.0,
+            "p95": 3138,
+            "sum": 638112
+          },
+          "audio_seconds": {
+            "n": 310,
+            "mean": 4.243381451612903,
+            "p50": 3.9675,
+            "p95": 7.5509375,
+            "sum": 1315.44825
+          },
+          "latency_seconds": {
+            "n": 310,
+            "mean": 341.84554170651614,
+            "p50": 306.4411128850006,
+            "p95": 586.4820380599995,
+            "sum": 105972.11792902
+          },
+          "request_total_seconds": {
+            "n": 310,
+            "mean": 341.99706944783867,
+            "p50": 306.61415893499907,
+            "p95": 586.6835612699979,
+            "sum": 106019.09152882999
+          }
+        },
+        "s4": {
+          "calls": {
+            "n": 310,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 310
+          },
+          "prompt_tokens": {
+            "n": 310,
+            "mean": 8666.829032258065,
+            "p50": 8590.0,
+            "p95": 11267,
+            "sum": 2686717
+          },
+          "completion_tokens": {
+            "n": 310,
+            "mean": 2094.4709677419355,
+            "p50": 2092.5,
+            "p95": 3138,
+            "sum": 649286
+          },
+          "audio_seconds": {
+            "n": 310,
+            "mean": 4.243381451612903,
+            "p50": 3.9675,
+            "p95": 7.5509375,
+            "sum": 1315.44825
+          },
+          "latency_seconds": {
+            "n": 310,
+            "mean": 323.90552734783853,
+            "p50": 321.03017348999674,
+            "p95": 575.82030209,
+            "sum": 100410.71347782995
+          },
+          "request_total_seconds": {
+            "n": 310,
+            "mean": 324.0580171508706,
+            "p50": 321.194569760004,
+            "p95": 575.9495618999972,
+            "sum": 100457.98531676989
+          }
+        },
+        "aa": {
+          "calls": {
+            "n": 310,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 310
+          },
+          "prompt_tokens": {
+            "n": 310,
+            "mean": 8666.829032258065,
+            "p50": 8590.0,
+            "p95": 11267,
+            "sum": 2686717
+          },
+          "completion_tokens": {
+            "n": 310,
+            "mean": 2176.7258064516127,
+            "p50": 2213.0,
+            "p95": 3143,
+            "sum": 674785
+          },
+          "audio_seconds": {
+            "n": 310,
+            "mean": 4.243381451612903,
+            "p50": 3.9675,
+            "p95": 7.5509375,
+            "sum": 1315.44825
+          },
+          "latency_seconds": {
+            "n": 310,
+            "mean": 280.608777912129,
+            "p50": 262.7441440049988,
+            "p95": 569.9156853099994,
+            "sum": 86988.72115276
+          },
+          "request_total_seconds": {
+            "n": 310,
+            "mean": 280.7588758420645,
+            "p50": 262.8648795199988,
+            "p95": 570.043402139996,
+            "sum": 87035.25151104
+          }
+        },
+        "lock": {
+          "calls": {
+            "n": 310,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 310
+          },
+          "prompt_tokens": {
+            "n": 310,
+            "mean": 8666.829032258065,
+            "p50": 8590.0,
+            "p95": 11267,
+            "sum": 2686717
+          },
+          "completion_tokens": {
+            "n": 310,
+            "mean": 2136.6516129032257,
+            "p50": 2177.5,
+            "p95": 3139,
+            "sum": 662362
+          },
+          "audio_seconds": {
+            "n": 310,
+            "mean": 4.243381451612903,
+            "p50": 3.9675,
+            "p95": 7.5509375,
+            "sum": 1315.44825
+          },
+          "latency_seconds": {
+            "n": 310,
+            "mean": 210.2613724047744,
+            "p50": 194.5817230499997,
+            "p95": 401.9635090599986,
+            "sum": 65181.02544548006
+          },
+          "request_total_seconds": {
+            "n": 310,
+            "mean": 210.4052778988064,
+            "p50": 194.70339084499938,
+            "p95": 402.1540409599984,
+            "sum": 65225.63614862998
+          }
+        }
+      },
+      "answer_diversity": {
+        "raw:k4_all_equal": 105,
+        "raw:k4_unique_sum": 664,
+        "raw:any_candidate_differs_lock": 215,
+        "raw:aa_equals_lock": 196,
+        "normalized:k4_all_equal": 147,
+        "normalized:k4_unique_sum": 553,
+        "normalized:any_candidate_differs_lock": 174,
+        "normalized:aa_equals_lock": 224,
+        "candidate_parse_failures": 0
+      },
+      "cost_by_credit_disposition": {
+        "no-gain-over-baseline": {
+          "calls": 1162,
+          "prompt_tokens": 9102728,
+          "completion_tokens": 2182441,
+          "audio_seconds": 4657.980687500001,
+          "latency_seconds": 335044.65865556005,
+          "rows": 166
+        },
+        "no-intent-correct-trajectory": {
+          "calls": 427,
+          "prompt_tokens": 3377348,
+          "completion_tokens": 925725,
+          "audio_seconds": 1886.5122499999998,
+          "latency_seconds": 136805.25049307005,
+          "rows": 61
+        },
+        "positive": {
+          "calls": 252,
+          "prompt_tokens": 2183548,
+          "completion_tokens": 550657,
+          "audio_seconds": 1140.2256250000003,
+          "latency_seconds": 81288.05753236999,
+          "rows": 36
+        },
+        "baseline-unstable": {
+          "calls": 329,
+          "prompt_tokens": 2647112,
+          "completion_tokens": 838014,
+          "audio_seconds": 1523.4191874999997,
+          "latency_seconds": 114890.31418814996,
+          "rows": 47
+        }
+      },
+      "missing_request_timing": 0,
+      "new_model_calls": 0,
+      "new_tokenizer_calls": 0,
+      "new_scoring_jobs": 0,
+      "limitations": [
+        "Seven-contact first-visit K4 only; unavailable arm custody refuses attribution.",
+        "Normalized equality preserves list order; it is not semantic equivalence.",
+        "Credit disposition partitions spend, not counterfactual value; controls remain necessary evidence.",
+        "Contact times overlap across samples and include queue/service/network; they are not wall time.",
+        "Costs cover the verified sealed attempt only; FIT and previous failed attempts remain separate."
+      ]
+    },
+    "h2": {
+      "rows": 312,
+      "contacts": 2184,
+      "contacts_per_row_distribution": {
+        "7": 312
+      },
+      "no_solver_abstention_rows": 0,
+      "groups": {
+        "perception": {
+          "calls": 312,
+          "prompt_tokens": 1199833,
+          "completion_tokens": 567319,
+          "audio_seconds": 1407.3032499999993,
+          "latency_seconds": 91334.79757206,
+          "contacts": 312,
+          "finish:stop": 312,
+          "forced_close": 46,
+          "reasoning_tokens": 548974,
+          "reasoning_count_observed": 312
+        },
+        "s1": {
+          "calls": 312,
+          "prompt_tokens": 2719360,
+          "completion_tokens": 686536,
+          "audio_seconds": 1407.3032499999993,
+          "latency_seconds": 117002.13823571004,
+          "contacts": 312,
+          "finish:stop": 312,
+          "forced_close": 105,
+          "reasoning_tokens": 675761,
+          "reasoning_count_observed": 312
+        },
+        "s2": {
+          "calls": 312,
+          "prompt_tokens": 2719360,
+          "completion_tokens": 665450,
+          "audio_seconds": 1407.3032499999993,
+          "latency_seconds": 109241.03117584008,
+          "contacts": 312,
+          "finish:stop": 312,
+          "forced_close": 99,
+          "reasoning_tokens": 655012,
+          "reasoning_count_observed": 312
+        },
+        "s3": {
+          "calls": 312,
+          "prompt_tokens": 2719360,
+          "completion_tokens": 651505,
+          "audio_seconds": 1407.3032499999993,
+          "latency_seconds": 109115.92398182001,
+          "contacts": 312,
+          "finish:stop": 312,
+          "forced_close": 86,
+          "reasoning_tokens": 640962,
+          "reasoning_count_observed": 312
+        },
+        "s4": {
+          "calls": 312,
+          "prompt_tokens": 2719360,
+          "completion_tokens": 667177,
+          "audio_seconds": 1407.3032499999993,
+          "latency_seconds": 104257.23114285001,
+          "contacts": 312,
+          "finish:stop": 312,
+          "forced_close": 86,
+          "reasoning_tokens": 656785,
+          "reasoning_count_observed": 312
+        },
+        "aa": {
+          "calls": 312,
+          "prompt_tokens": 2719360,
+          "completion_tokens": 696200,
+          "audio_seconds": 1407.3032499999993,
+          "latency_seconds": 91866.35826606011,
+          "contacts": 312,
+          "finish:stop": 312,
+          "forced_close": 102,
+          "reasoning_tokens": 685584,
+          "reasoning_count_observed": 312
+        },
+        "lock": {
+          "calls": 312,
+          "prompt_tokens": 2719360,
+          "completion_tokens": 706931,
+          "audio_seconds": 1407.3032499999993,
+          "latency_seconds": 72251.49496987,
+          "contacts": 312,
+          "finish:stop": 312,
+          "forced_close": 110,
+          "reasoning_tokens": 696352,
+          "reasoning_count_observed": 312
+        }
+      },
+      "per_contact_distributions": {
+        "perception": {
+          "calls": {
+            "n": 312,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 312
+          },
+          "prompt_tokens": {
+            "n": 312,
+            "mean": 3845.61858974359,
+            "p50": 3844.0,
+            "p95": 3934,
+            "sum": 1199833
+          },
+          "completion_tokens": {
+            "n": 312,
+            "mean": 1818.3301282051282,
+            "p50": 1624.5,
+            "p95": 3160,
+            "sum": 567319
+          },
+          "audio_seconds": {
+            "n": 312,
+            "mean": 4.51058733974359,
+            "p50": 4.19171875,
+            "p95": 7.6789375,
+            "sum": 1407.30325
+          },
+          "latency_seconds": {
+            "n": 312,
+            "mean": 292.7397358078847,
+            "p50": 259.4672768249984,
+            "p95": 550.7045828900009,
+            "sum": 91334.79757206002
+          },
+          "request_total_seconds": {
+            "n": 312,
+            "mean": 292.9557605234936,
+            "p50": 259.65331508000054,
+            "p95": 550.8930626799993,
+            "sum": 91402.19728333001
+          }
+        },
+        "s1": {
+          "calls": {
+            "n": 312,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 312
+          },
+          "prompt_tokens": {
+            "n": 312,
+            "mean": 8715.897435897436,
+            "p50": 8624.5,
+            "p95": 11646,
+            "sum": 2719360
+          },
+          "completion_tokens": {
+            "n": 312,
+            "mean": 2200.4358974358975,
+            "p50": 2234.0,
+            "p95": 3141,
+            "sum": 686536
+          },
+          "audio_seconds": {
+            "n": 312,
+            "mean": 4.51058733974359,
+            "p50": 4.19171875,
+            "p95": 7.6789375,
+            "sum": 1407.30325
+          },
+          "latency_seconds": {
+            "n": 312,
+            "mean": 375.0068533195833,
+            "p50": 379.75451861000147,
+            "p95": 554.2630435699975,
+            "sum": 117002.13823571
+          },
+          "request_total_seconds": {
+            "n": 312,
+            "mean": 375.2541922206409,
+            "p50": 380.0271546900003,
+            "p95": 555.0410244000013,
+            "sum": 117079.30797283998
+          }
+        },
+        "s2": {
+          "calls": {
+            "n": 312,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 312
+          },
+          "prompt_tokens": {
+            "n": 312,
+            "mean": 8715.897435897436,
+            "p50": 8624.5,
+            "p95": 11646,
+            "sum": 2719360
+          },
+          "completion_tokens": {
+            "n": 312,
+            "mean": 2132.852564102564,
+            "p50": 2221.0,
+            "p95": 3140,
+            "sum": 665450
+          },
+          "audio_seconds": {
+            "n": 312,
+            "mean": 4.51058733974359,
+            "p50": 4.19171875,
+            "p95": 7.6789375,
+            "sum": 1407.30325
+          },
+          "latency_seconds": {
+            "n": 312,
+            "mean": 350.13151017897445,
+            "p50": 323.0686850300008,
+            "p95": 599.0198815900003,
+            "sum": 109241.03117584003
+          },
+          "request_total_seconds": {
+            "n": 312,
+            "mean": 350.286085382596,
+            "p50": 323.19076074999975,
+            "p95": 599.1861424800009,
+            "sum": 109289.25863936996
+          }
+        },
+        "s3": {
+          "calls": {
+            "n": 312,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 312
+          },
+          "prompt_tokens": {
+            "n": 312,
+            "mean": 8715.897435897436,
+            "p50": 8624.5,
+            "p95": 11646,
+            "sum": 2719360
+          },
+          "completion_tokens": {
+            "n": 312,
+            "mean": 2088.1570512820513,
+            "p50": 2076.5,
+            "p95": 3141,
+            "sum": 651505
+          },
+          "audio_seconds": {
+            "n": 312,
+            "mean": 4.51058733974359,
+            "p50": 4.19171875,
+            "p95": 7.6789375,
+            "sum": 1407.30325
+          },
+          "latency_seconds": {
+            "n": 312,
+            "mean": 349.73052558275634,
+            "p50": 324.4898623150002,
+            "p95": 596.1505920799973,
+            "sum": 109115.92398181999
+          },
+          "request_total_seconds": {
+            "n": 312,
+            "mean": 349.87820172125,
+            "p50": 324.66432471999906,
+            "p95": 596.3856102999998,
+            "sum": 109161.99893703
+          }
+        },
+        "s4": {
+          "calls": {
+            "n": 312,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 312
+          },
+          "prompt_tokens": {
+            "n": 312,
+            "mean": 8715.897435897436,
+            "p50": 8624.5,
+            "p95": 11646,
+            "sum": 2719360
+          },
+          "completion_tokens": {
+            "n": 312,
+            "mean": 2138.3878205128203,
+            "p50": 2159.5,
+            "p95": 3141,
+            "sum": 667177
+          },
+          "audio_seconds": {
+            "n": 312,
+            "mean": 4.51058733974359,
+            "p50": 4.19171875,
+            "p95": 7.6789375,
+            "sum": 1407.30325
+          },
+          "latency_seconds": {
+            "n": 312,
+            "mean": 334.15779212451923,
+            "p50": 334.02650874499886,
+            "p95": 584.1229512600003,
+            "sum": 104257.23114285001
+          },
+          "request_total_seconds": {
+            "n": 312,
+            "mean": 334.3030811270193,
+            "p50": 334.1548807549989,
+            "p95": 584.2454094899986,
+            "sum": 104302.56131163002
+          }
+        },
+        "aa": {
+          "calls": {
+            "n": 312,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 312
+          },
+          "prompt_tokens": {
+            "n": 312,
+            "mean": 8715.897435897436,
+            "p50": 8624.5,
+            "p95": 11646,
+            "sum": 2719360
+          },
+          "completion_tokens": {
+            "n": 312,
+            "mean": 2231.4102564102564,
+            "p50": 2329.5,
+            "p95": 3141,
+            "sum": 696200
+          },
+          "audio_seconds": {
+            "n": 312,
+            "mean": 4.51058733974359,
+            "p50": 4.19171875,
+            "p95": 7.6789375,
+            "sum": 1407.30325
+          },
+          "latency_seconds": {
+            "n": 312,
+            "mean": 294.4434559809615,
+            "p50": 274.34756003500115,
+            "p95": 562.9951554500003,
+            "sum": 91866.35826606001
+          },
+          "request_total_seconds": {
+            "n": 312,
+            "mean": 294.58971417980774,
+            "p50": 274.5048282500011,
+            "p95": 563.1198794000011,
+            "sum": 91911.99082410001
+          }
+        },
+        "lock": {
+          "calls": {
+            "n": 312,
+            "mean": 1,
+            "p50": 1.0,
+            "p95": 1,
+            "sum": 312
+          },
+          "prompt_tokens": {
+            "n": 312,
+            "mean": 8715.897435897436,
+            "p50": 8624.5,
+            "p95": 11646,
+            "sum": 2719360
+          },
+          "completion_tokens": {
+            "n": 312,
+            "mean": 2265.8044871794873,
+            "p50": 2436.0,
+            "p95": 3142,
+            "sum": 706931
+          },
+          "audio_seconds": {
+            "n": 312,
+            "mean": 4.51058733974359,
+            "p50": 4.19171875,
+            "p95": 7.6789375,
+            "sum": 1407.30325
+          },
+          "latency_seconds": {
+            "n": 312,
+            "mean": 231.57530439060906,
+            "p50": 207.65022021499863,
+            "p95": 479.3971322799989,
+            "sum": 72251.49496987002
+          },
+          "request_total_seconds": {
+            "n": 312,
+            "mean": 231.7166493333333,
+            "p50": 207.80578536999928,
+            "p95": 479.52687678000075,
+            "sum": 72295.59459199998
+          }
+        }
+      },
+      "answer_diversity": {
+        "raw:k4_all_equal": 91,
+        "raw:k4_unique_sum": 686,
+        "raw:any_candidate_differs_lock": 232,
+        "raw:aa_equals_lock": 182,
+        "normalized:k4_all_equal": 142,
+        "normalized:k4_unique_sum": 577,
+        "normalized:any_candidate_differs_lock": 179,
+        "normalized:aa_equals_lock": 221,
+        "candidate_parse_failures": 0
+      },
+      "cost_by_credit_disposition": {
+        "baseline-unstable": {
+          "calls": 364,
+          "prompt_tokens": 2974842,
+          "completion_tokens": 860734,
+          "audio_seconds": 1749.7182500000004,
+          "latency_seconds": 126679.39585497006,
+          "rows": 52
+        },
+        "no-gain-over-baseline": {
+          "calls": 1183,
+          "prompt_tokens": 9253256,
+          "completion_tokens": 2299297,
+          "audio_seconds": 5128.591999999998,
+          "latency_seconds": 349478.1508948803,
+          "rows": 169
+        },
+        "positive": {
+          "calls": 224,
+          "prompt_tokens": 1823571,
+          "completion_tokens": 532823,
+          "audio_seconds": 1001.5985000000001,
+          "latency_seconds": 80517.01138025004,
+          "rows": 32
+        },
+        "no-intent-correct-trajectory": {
+          "calls": 413,
+          "prompt_tokens": 3464324,
+          "completion_tokens": 948264,
+          "audio_seconds": 1971.214,
+          "latency_seconds": 138394.4172141099,
+          "rows": 59
+        }
+      },
+      "missing_request_timing": 0,
+      "new_model_calls": 0,
+      "new_tokenizer_calls": 0,
+      "new_scoring_jobs": 0,
+      "limitations": [
+        "Seven-contact first-visit K4 only; unavailable arm custody refuses attribution.",
+        "Normalized equality preserves list order; it is not semantic equivalence.",
+        "Credit disposition partitions spend, not counterfactual value; controls remain necessary evidence.",
+        "Contact times overlap across samples and include queue/service/network; they are not wall time.",
+        "Costs cover the verified sealed attempt only; FIT and previous failed attempts remain separate."
+      ]
+    }
+  },
+  "new_model_calls": 0,
+  "new_tokenizer_calls": 0,
+  "new_scoring_jobs": 0,
+  "scope": "Accepted625 source rows only; all failed-attempt and FIT costs remain separate.",
+  "limitations": [
+    "Segment percentiles are not pooled percentiles.",
+    "Normalized answer equality is not semantic equivalence.",
+    "Summed contact latency is not wall time; concurrent service time includes waiting."
+  ],
+  "schema": "saea-tfrl-recovered-cost-audit-v1",
+  "implementation_commit": "b7ba3e6040cb88e1f82a5545cf61c84114d41cef",
+  "source_commit": "454d062e283374edb3094a2e5d52b1a43ce47b6b",
+  "sources": {
+    "h1": {
+      "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1/complete.json",
+      "complete_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+      "kind": "verified-source-union",
+      "provenance_sha256": "92e5e7f4912da32e70c5713e85848cad8f7bee0887c6b1e86c7d23f9e15cd305",
+      "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1",
+      "recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+    },
+    "h2": {
+      "attempt_id": "generation-v1",
+      "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1-READ/complete.json",
+      "complete_sha256": "1857ee6dcb9a2a03a356727895f2179e0163e06c0b991e33ef53d1a459aeca5a",
+      "manifest_sha256": "a15827d8278bc959fe5c43d3a1c022d731c5f071904051798d5dd9aa07df6940",
+      "recipe_sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923",
+      "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1"
+    }
+  },
+  "pool_sha256": "a19dc40ce8f7d5f2d0963d07e9789b270b5cf6574dcc9dfb80b77f82d6611cb2",
+  "timing_sha256": {
+    "h1": "8956041ec4061864c2009a9a725e4a54f7c1d58b19dba6b0a716c928c85b1704",
+    "h2": "c9abd87e4158df6384b951cfd27466c9eae426d1086c762ff5a620afd8c26afd"
+  },
+  "official_reaggregated": {
+    "s1": {
+      "slu_f1": 0.6663526437294026,
+      "intent_accuracy": 0.7792
+    },
+    "s2": {
+      "slu_f1": 0.665135215147403,
+      "intent_accuracy": 0.7728
+    },
+    "s3": {
+      "slu_f1": 0.6645980968308017,
+      "intent_accuracy": 0.7712
+    },
+    "s4": {
+      "slu_f1": 0.6734213266806028,
+      "intent_accuracy": 0.7776
+    },
+    "aa": {
+      "slu_f1": 0.670475288550046,
+      "intent_accuracy": 0.7712
+    },
+    "lock": {
+      "slu_f1": 0.672040298568757,
+      "intent_accuracy": 0.7712
+    },
+    "vote": {
+      "slu_f1": 0.6679998774940256,
+      "intent_accuracy": 0.7744
+    }
+  },
+  "vote_minus_lock_pp": -0.40404210747314595,
+  "construction_gate_passed": false
+}

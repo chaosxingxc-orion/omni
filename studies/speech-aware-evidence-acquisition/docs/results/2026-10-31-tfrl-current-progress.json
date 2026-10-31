@@ -1,25 +1,25 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T21:39:23.838183+00:00",
-  "completed_rows": 622,
+  "observed_at_utc": "2026-10-31T21:51:00Z",
+  "completed_rows": 625,
   "total_rows": 625,
   "h1": {
-    "state": "generation_complete_union_read_running",
-    "completed_rows": 0,
+    "state": "official_union_complete",
+    "completed_rows": 313,
     "total_rows": 313,
-    "remaining_rows": 313,
+    "remaining_rows": 0,
     "checkpoint_sha256": "0bf839fd485cea2f6587531c913ae0614ec93c8706c1c4a197ca51bd0197aa22",
     "torn_tail_bytes": 0,
     "unusable_checkpoint_rows": 0,
-    "estimated_remaining_seconds": null,
+    "estimated_remaining_seconds": 0,
     "original_checkpoint_rows": 25,
     "reuse_candidate_rows": 3,
     "context_affected_rows": 22,
     "remaining_inference_rows": 0,
     "recovery_source_commit": "3391fab7ee0c030c6ef6f0bbc958e84fbb6c7f2b",
-    "generation_dependency": "H2 successful driver terminal satisfied; detached generation running",
-    "official_union": "registered; three preserved rows validated against real traces; score full313 after complete310",
-    "recovery_model_calls": null,
+    "generation_dependency": "Terminal: repaired310 generation and313 union scoring complete",
+    "official_union": "Complete313 official seven-column results;3 preserved plus310 repaired",
+    "recovery_model_calls": 2170,
     "union_recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7",
     "recovery_started_at_utc": "2026-10-31T20:41:30.205884Z",
     "recovery_completed_rows": 310,
@@ -109,7 +109,7 @@
     "tensor_parallel": 4,
     "max_num_seqs_per_instance": 128,
     "generation_active": false,
-    "note": "H1generation exited0;union/scoring inCPU. Resident allocation8cards/2TP4 doesnotmeanactiveinference/fullutil."
+    "note": "Last deployment8cards/2TP4; inference complete. No active admitted successor; no sustained-utilization claim."
   },
   "hardware_snapshot": {
     "observed_at_utc": "2026-10-31T18:54:25Z",
@@ -125,21 +125,23 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "New generation remaining0;union/scoring ETAunknown.",
+  "eta_note": "Complete625 official results; current family stopped, ETA0. New method not queued.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
     "state": "failed_upstream",
     "model_calls": 0,
-    "scoring_jobs": 0
+    "scoring_jobs": 0,
+    "scope": "Historical failed consumer, superseded by recovered_consumers"
   },
-  "state": "h1_generation_complete_union_scoring_pending",
-  "remaining_rows": 3,
+  "state": "stopped-family",
+  "remaining_rows": 0,
   "bank_read": {
     "registered": true,
     "state": "failed_upstream",
     "tokenizer_calls": 0,
-    "model_generation_calls": 0
+    "model_generation_calls": 0,
+    "scope": "Historical failed consumer, superseded by recovered_consumers"
   },
   "failure": {
     "error": "a declared supply-variant arm group delivered no arm custody",
@@ -161,26 +163,23 @@
     "h1_wire_replay_new_model_calls": 0
   },
   "reuse_candidate_rows": 3,
-  "completion_note": "622/625new generation complete;3preserved valid rows pending union. H1 driverexit0;H1 full313 official read running;312H2official.",
+  "completion_note": "Full313 source union plus full312 official scores verified; gate failed; no successor generation.",
   "recovered_consumers": {
-    "state": "waiting_two_complete_official_halves",
+    "state": "complete",
     "rows": 625,
     "poll_seconds": 600,
     "source_commit": "454d062e283374edb3094a2e5d52b1a43ce47b6b",
     "new_generation_calls": 0,
     "tokenizer_contact_cap": 20000,
-    "actual_bank_produced": false
+    "actual_bank_produced": true,
+    "tokenizer_attempts": 176
   },
   "next_iteration_preparation": {
     "tests_passed": 69,
     "actual_bank_used": false,
     "generation_started": false,
     "remaining": [
-      "actual625result and bank",
-      "full real rendered request and FIT",
-      "generation registration/admission",
-      "actual next iteration execution",
-      "independent confirmation"
+      "Current family stopped; new method requires separate registered plan"
     ],
     "later_consumer_implementation": true,
     "later_consumer_deployed": false,
@@ -200,10 +199,12 @@
       "generation_started": false,
       "install_entry_tests_passed": 99,
       "actual_configs_installed": false
-    }
+    },
+    "state": "stopped-family",
+    "actual_bank_available": true
   },
   "successor_preparation_queue": {
-    "state": "waiting_verified_full625",
+    "state": "stopped-family",
     "implementation_commit": "65eb5931b6ef66f5a9222eb2e7793f882264f9a7",
     "poll_seconds": 600,
     "new_generation_calls": 0,
@@ -211,7 +212,8 @@
     "new_scoring_jobs": 0,
     "generation_authorized": false,
     "deployed": true,
-    "tests_passed": 76
+    "tests_passed": 76,
+    "construction_gain_pp": -0.40404210747314595
   },
   "generation_release_handoff": {
     "implemented": true,
@@ -222,11 +224,165 @@
   },
   "successor_install_queue": {
     "deployed": true,
-    "state": "waiting_verified_full625",
+    "state": "stopped-family",
     "study_commit": "6eebf88a1eb40dcd40a350b2228b04ad96ee1d53",
     "poll_seconds": 600,
     "generation_authorized": false,
     "tests_passed": 41,
-    "actual_configs_installed": false
+    "actual_configs_installed": false,
+    "construction_gain_pp": -0.40404210747314595
+  },
+  "construction_result": {
+    "schema": "saea-tfrl-first625-public-summary-v1",
+    "rows": 625,
+    "iteration": 1,
+    "official_reaggregated": {
+      "aa": {
+        "intent_accuracy": 0.7712,
+        "slu_f1": 0.670475288550046
+      },
+      "lock": {
+        "intent_accuracy": 0.7712,
+        "slu_f1": 0.672040298568757
+      },
+      "s1": {
+        "intent_accuracy": 0.7792,
+        "slu_f1": 0.6663526437294026
+      },
+      "s2": {
+        "intent_accuracy": 0.7728,
+        "slu_f1": 0.665135215147403
+      },
+      "s3": {
+        "intent_accuracy": 0.7712,
+        "slu_f1": 0.6645980968308017
+      },
+      "s4": {
+        "intent_accuracy": 0.7776,
+        "slu_f1": 0.6734213266806028
+      },
+      "vote": {
+        "intent_accuracy": 0.7744,
+        "slu_f1": 0.6679998774940256
+      }
+    },
+    "vote_minus_lock_pp": -0.40404210747314595,
+    "construction_gate_passed": false,
+    "threshold_pp": 1.0,
+    "sources": {
+      "h1": {
+        "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1/complete.json",
+        "complete_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+        "kind": "verified-source-union",
+        "provenance_sha256": "92e5e7f4912da32e70c5713e85848cad8f7bee0887c6b1e86c7d23f9e15cd305",
+        "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1",
+        "recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+      },
+      "h2": {
+        "attempt_id": "generation-v1",
+        "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1-READ/complete.json",
+        "complete_sha256": "1857ee6dcb9a2a03a356727895f2179e0163e06c0b991e33ef53d1a459aeca5a",
+        "manifest_sha256": "a15827d8278bc959fe5c43d3a1c022d731c5f071904051798d5dd9aa07df6940",
+        "recipe_sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923",
+        "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1"
+      }
+    },
+    "pool_sha256": "a19dc40ce8f7d5f2d0963d07e9789b270b5cf6574dcc9dfb80b77f82d6611cb2",
+    "decision": {
+      "construction_gain_pp": -0.40404210747314595,
+      "decision": "stop-family",
+      "generation_authorized": false,
+      "implementation_commit": "6eebf88a1eb40dcd40a350b2228b04ad96ee1d53",
+      "independent_confirmation_required": true,
+      "new_model_calls": 0,
+      "new_scoring_jobs": 0,
+      "new_tokenizer_calls": 0,
+      "pool_sha256": "a19dc40ce8f7d5f2d0963d07e9789b270b5cf6574dcc9dfb80b77f82d6611cb2",
+      "preparation_gate_passed": false,
+      "rows": 625,
+      "schema": "saea-tfrl-first-construction-decision-v1",
+      "sources": {
+        "h1": {
+          "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1/complete.json",
+          "complete_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+          "kind": "verified-source-union",
+          "provenance_sha256": "92e5e7f4912da32e70c5713e85848cad8f7bee0887c6b1e86c7d23f9e15cd305",
+          "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1",
+          "recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+        },
+        "h2": {
+          "attempt_id": "generation-v1",
+          "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1-READ/complete.json",
+          "complete_sha256": "1857ee6dcb9a2a03a356727895f2179e0163e06c0b991e33ef53d1a459aeca5a",
+          "manifest_sha256": "a15827d8278bc959fe5c43d3a1c022d731c5f071904051798d5dd9aa07df6940",
+          "recipe_sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923",
+          "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1"
+        }
+      },
+      "system_accepted": false
+    },
+    "decision_sha256": "c17d33d38b12a42f97b09f7851b52a9aedb9a71a4d3d5994e7756d3fe1a87a9b",
+    "bank_sha256": "5af98fefd3df14b5faa6356948ce80c6f38a2a04c6c6d803ae48ca95c6ed527f",
+    "banks": {
+      "h1": {
+        "exemplars": 35,
+        "receipt_sha256": "a035042f22737cc4c318c491fe2ca1728c0a4c4c42f80cc3a28cac4afc3f7f72",
+        "rules": 0
+      },
+      "h2": {
+        "exemplars": 32,
+        "receipt_sha256": "df610052b79bb44ea68918380ad937984f819be43ad83cf39f01d90e225616ec",
+        "rules": 1
+      },
+      "union": {
+        "exemplars": 64,
+        "receipt_sha256": "7d2083ee7ce3206cfeccc55d1102fab02e34e3aa9c93d52284b2297f69f5b237",
+        "rules": 1
+      }
+    },
+    "bank_accounting": {
+      "cap": 20000,
+      "completed_tokenizer_requests": 176,
+      "generation_calls": 0,
+      "tokenizer_attempts": 176,
+      "unresolved_tokenizer_requests": 0
+    },
+    "halves": {
+      "R01C-H1": {
+        "rows": 313,
+        "credit": {
+          "positive_share": 0.115016,
+          "positives": 36,
+          "reasons": {
+            "baseline-unstable": 47,
+            "no-gain-over-baseline": 168,
+            "no-intent-correct-trajectory": 62,
+            "positive": 36
+          },
+          "rows": 313
+        },
+        "vote_minus_lock_pp": -1.2455132781176048
+      },
+      "R01C-H2": {
+        "rows": 312,
+        "credit": {
+          "positive_share": 0.102564,
+          "positives": 32,
+          "reasons": {
+            "baseline-unstable": 52,
+            "no-gain-over-baseline": 169,
+            "no-intent-correct-trajectory": 59,
+            "positive": 32
+          },
+          "rows": 312
+        },
+        "vote_minus_lock_pp": 0.4074372969742557
+      }
+    },
+    "observed_at_utc": "2026-10-31T21:51:00Z",
+    "state": "stopped-family",
+    "remaining_rows": 0,
+    "generation_active": false,
+    "cost_audit": "docs/results/2026-10-31-tfrl-recovered-cost-audit.json"
   }
 }
