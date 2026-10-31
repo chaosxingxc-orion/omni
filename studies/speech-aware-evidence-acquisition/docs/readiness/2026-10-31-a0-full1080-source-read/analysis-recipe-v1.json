@@ -1,0 +1,35 @@
+{
+  "claims_full_roster_benefit_before_completion": false,
+  "continuation_run_id": "SAEA-SLURP-A0-REMAINING353-C2-V1",
+  "cost_policy": "Retain all historical and candidate costs; never average subset F1",
+  "custody_summary": {
+    "relpath": "work/codex/a0-source-custody-v1/complete.json",
+    "sha256": "737ba46c43c28c748cdfc5aeadd1c232c34faf3daf7e874a22ae208a7bd993d0"
+  },
+  "full_parent_supply": {
+    "relpath": "work/codex/lock-supply-equivalence-v3/c2-phase-supply.json",
+    "sha256": "c7d12a50c28a6bc33b392242e64a917de5b7483432e8caea4bdb94dcfbd012a9"
+  },
+  "input_compatibility": {
+    "relpath": "work/codex/real500-a0-input-compatibility-v2.json",
+    "sha256": "c9a4562460b6f811b60bb5333035686f800de223eb7964c8caaaac1a0fc26819"
+  },
+  "new_model_calls": 0,
+  "new_official_scoring_jobs": 1,
+  "owner_decision": "docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md",
+  "parent_dataset": {
+    "relpath": "configs/dataset/slurp-speech-native-evo-fold-b-1080.json",
+    "sha256": "1d30c501612686004936b5dd295885d9452175e6449b4a66187c08227a322cea"
+  },
+  "read_run_id": "SAEA-SLURP-A0-FULL1080-SOURCE-READ-V1",
+  "reference_repo_relpath": "work/dev/real500-runtime/studies/speech-aware-evidence-acquisition",
+  "request_replay": {
+    "relpath": "work/codex/lock-actual-replay-full-v1/complete.json",
+    "sha256": "7d7384cdccc0cf490352eb6d9ee76083376b53e186cd370a99055aab060852e7"
+  },
+  "rows": 1080,
+  "schema": "saea-a0-full1080-read-v1",
+  "scope": "Full train1080 baseline, no test tuning; analysis derivative preserves every source run identity",
+  "scorer": "slurp-slu-official-train",
+  "selection": "Historical427 first, first real500 candidate missing300, exact remaining353; no outcome selection"
+}

@@ -905,5 +905,83 @@
       "Admission waves are descriptive ordered groups, not proof of avoidable scheduling overhead."
     ],
     "new_model_calls": 0
+  },
+  "successor_progress": {
+    "schema": "saea-real-engine-progress-v1",
+    "state": "running",
+    "completed_rows": 173,
+    "total_rows": 500,
+    "checkpoint_rows": 173,
+    "unusable_checkpoint_rows": 0,
+    "remaining_rows": 327,
+    "checkpoint_sha256": "b5cd1d8a3063545ccadf9330b9e7c3353654f12ada527a1acc38e86fb01ed891",
+    "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
+    "torn_tail_bytes": 0,
+    "cards": 8,
+    "instances": 2,
+    "elapsed_seconds": 756.9189610481262,
+    "wall_seconds_per_complete_row": 4.375254110104776,
+    "rows_per_second": 0.2285581533859876,
+    "estimated_remaining_seconds": 1430.7080940042617,
+    "eta_basis": "Linear observed whole-task completion rate; startup and tail may change it.",
+    "full_roster_comparison_eligible": false,
+    "checkpoint_recorded_cost_lower_bound": {
+      "calls": 346.0,
+      "audio_seconds": 922.4474999999999,
+      "latency_seconds": 58067.358582969995,
+      "prompt_tokens": 2056635.0,
+      "completion_tokens": 404035.0,
+      "tool_calls": 0.0
+    },
+    "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
+    "complete_sample_timings": {
+      "admission_wait": {
+        "n": 173,
+        "mean_s": 2.4710811754335262,
+        "p50_s": 2.47235503,
+        "p95_s": 3.74802166
+      },
+      "admitted_to_finished": {
+        "n": 173,
+        "mean_s": 421.2438487245665,
+        "p50_s": 418.50315685,
+        "p95_s": 584.47841211
+      }
+    },
+    "new_model_calls": 0,
+    "limitations": [
+      "Duration and state must come from an authoritative run boundary/process observation.",
+      "Allocated cards are not measured utilization.",
+      "Partial or failed candidates cannot establish a full-roster throughput winner.",
+      "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
+    ],
+    "observed_at": 1793461432.808399,
+    "generation_sealed": false,
+    "duration_scope": "Runner start to generation seal when sealed; excludes scoring",
+    "official_scoring_state": "pending_or_running"
+  },
+  "a0_full1080_source_read_preflight": {
+    "schema": "saea-a0-full1080-preflight-v1",
+    "verified_preserved_rows": 727,
+    "required_remaining_rows": 353,
+    "new_model_calls": 0,
+    "new_scoring_calls": 0,
+    "full_baseline_complete": false,
+    "recipe_sha256": "efb43a80731ccc01dfb0fa038664687b188f416d56063e23628ae29937e0db38"
+  },
+  "roster_reverification": {
+    "checked_at_utc": "2026-10-31T15:43:29Z",
+    "candidate_trees": [
+      "TP4-96",
+      "TP4-128",
+      "TP8-256"
+    ],
+    "rows_each": 500,
+    "unique_sample_ids_each": 500,
+    "unique_audio_sha256_each": 500,
+    "all_real_audio": true,
+    "identical_dataset_sha256": "3bd1570048b13ae456e822d986be163a83228b5772f98e50118e8531d92fef77",
+    "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
+    "new_model_calls": 0
   }
 }
