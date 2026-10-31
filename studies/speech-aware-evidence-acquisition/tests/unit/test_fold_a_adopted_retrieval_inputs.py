@@ -17,7 +17,7 @@ def source(tmp_path,monkeypatch):
     roster={'items':[{'sample_id':r['id']} for r in rows],'split_identity_hash':'split'}
     roster_sha=put(repo,m.ROSTER,roster);dataset_sha=put(repo,m.DATASET,{})
     inv={'rows':[{k:v for k,v in r.items() if k!='segments'} for r in rows],
-         'roster_sha256':roster_sha,'split_identity_hash':'split','dataset_config':{'relpath':m.DATASET,'sha256':dataset_sha}}
+         'roster_sha256':roster_sha,'split_identity_hash':'split','dataset_config':{'relpath':m.DATASET,'sha256':dataset_sha,'canonical_runtime_view_sha256':'a'*64}}
     invsha=put(data,'sources.json',inv);encsha=put(data,'encoder.json',{})
     q=data/'prepared/queries.jsonl';q.parent.mkdir(parents=True);q.write_text(''.join(json.dumps(r)+'\n' for r in rows))
     ish=put(data,'prepared/index.json',{'output':{'rows':rows}})

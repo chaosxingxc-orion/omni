@@ -39,7 +39,8 @@ def source_config(encoder_repo,data):
     inventory=read(confined(data,protocol['sources']['path'].removeprefix('${SAEA_DATA_ROOT}/')))
     if (inventory['roster_sha256']!=sha(encoder_repo/ROSTER)
             or inventory['split_identity_hash']!=roster['split_identity_hash']
-            or inventory['dataset_config']!={'relpath':DATASET,'sha256':sha(encoder_repo/DATASET)}):
+            or inventory['dataset_config'].get('relpath')!=DATASET
+            or inventory['dataset_config'].get('sha256')!=sha(encoder_repo/DATASET)):
         raise ValueError('real Fold A inventory binding differs')
     query=confined(data,protocol['query_rows_relpath']);index=confined(data,protocol['output_relpath'])
     if (Path(receipt['query_rows_path']).resolve()!=query or sha(query)!=receipt['query_rows_sha256']
