@@ -23,10 +23,10 @@ def diagnose(plan,results):
     counts=Counter();strata={};deltas={k:Counter() for k in ('word','char')}
     for sid in ids:
         rows={a:t[sid] for a,t in tables.items()};lock=rows['lock'];vote=rows['vote']
-        li=lock['scenario_action_exact'];vi=vote['scenario_action_exact']
+        li=int(lock['scenario_action_exact']);vi=int(vote['scenario_action_exact'])
         candidates=[rows[a] for a in ARMS[:4]]
         counts[f'intent_lock{li}_vote{vi}']+=1
-        correct=sum(r['scenario_action_exact'] for r in candidates)
+        correct=sum(int(r['scenario_action_exact']) for r in candidates)
         counts[f'candidate_correct_intents_{correct}']+=1
         lf=ci.row_f1(lock);vf=ci.row_f1(vote);best=max(ci.row_f1(r) for r in candidates)
         counts['vote_row_f1_better_lock']+=vf>lf+1e-12

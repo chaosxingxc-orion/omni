@@ -6,7 +6,7 @@ import tfrl_failure_diagnosis as m
 
 
 def result(intent,tp,fp,fn):
-    row={'sample_id':'r','scenario_action_exact':intent}
+    row={'sample_id':'r','scenario_action_exact':float(intent)}
     for kind in ('word','char'):
         for k,v in [('tp',tp),('fp',fp),('fn',fn)]:row[f'slu_f1_{kind}_{k}']=v
     for k,v in [('tp',tp),('fp',fp),('fn',fn)]:row['slot_f1_exact_'+k]=v
