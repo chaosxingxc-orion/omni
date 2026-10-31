@@ -38,3 +38,28 @@ def test_registered_stage_never_repeats_repin_or_resident_registration(tmp_path,
         with pytest.raises(ReachedAdmission):m._resume(tree,failed,out,True)
         assert calls==['scripts/analysis/admit_real_engine_candidate.py']
         assert (out/'empty-commit-failure.json').exists()
+
+
+@pytest.mark.parametrize('fault',[None,'wrong_failure','attempt','not_ready','missing_admission','dirty'])
+def test_admitted_recovery_checks_without_reminting(tmp_path,monkeypatch,fault):
+    monkeypatch.setattr(m,'D',tmp_path)
+    tree=tmp_path/'tree';study=tree/'studies/speech-aware-evidence-acquisition'
+    failed=tmp_path/'work/codex/previous';out=tmp_path/'work/codex/new'
+    put(failed/'status.json',{'state':'failed','error':'flight_registration_check.py'})
+    put(failed/'registration-check.log',{'passed':False,'blocking_cells':[m.NAME],
+        'cells':[{'findings':[{'kind':'registered-carrier-binding'}]*2}]})
+    put(failed/'admit.log',{'admission_minted':True,'new_model_calls':0})
+    put(study/'docs/readiness'/m.NAME/'candidate.json',{'decision_relpath':'decision.json','run_id':'run'})
+    put(study/'configs/experiment'/f'{m.NAME}.json',{'cells':[{'readiness':{'state':'ready'}}]})
+    put(tmp_path/'decision.json',{})
+    if fault=='wrong_failure':put(failed/'status.json',{'state':'failed','error':'other'})
+    elif fault=='attempt':(tmp_path/'attempts/run').mkdir(parents=True)
+    elif fault=='missing_admission':(tmp_path/'decision.json').unlink()
+    elif fault=='not_ready':put(study/'configs/experiment'/f'{m.NAME}.json',{'cells':[{'readiness':{'state':'held'}}]})
+    monkeypatch.setattr(m,'git',lambda *_:'dirty' if fault=='dirty' else '')
+    calls=[]
+    class ReachedCheck(Exception):pass
+    def formal(tree,args,log,*extra):calls.append(args[0]);raise ReachedCheck()
+    monkeypatch.setattr(m,'formal',formal)
+    with pytest.raises(ValueError if fault else ReachedCheck):m.resume_admitted(tree,failed,out)
+    assert calls==([] if fault else ['scripts/checks/flight_registration_check.py'])

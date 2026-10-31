@@ -23,11 +23,23 @@ from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 read,sha,raw=baseline.read,baseline.sha,baseline.raw
 
 
+def discard_synthetic_cost_forecasts(plan):
+    """Retain exact call/audio counts; real K4 timing has not been measured."""
+    allowed = {'rows', 'k', 'contacts_per_row', 'includes_twin_and_lock',
+               'calls', 'calls_with_fallback_ceiling', 'audio_seconds'}
+    for key, budget in plan['budget'].items():
+        plan['budget'][key] = {k: v for k, v in budget.items() if k in allowed}
+        plan['budget'][key].update(cost_forecast_available=False,
+            reason='Synthetic throughput is inapplicable; measure this real K4 context and request flow.')
+    return plan
+
+
 def derive(repo, original, experiment, roster, half):
     suffix=half.split('-')[1].lower();name=f'slurp-tfrl-current-seed-i1-{suffix}-v1'
     run=f'SAEA-SLURP-TFRL-CURRENT-SEED-I1-{suffix.upper()}-V1'
     plan=sampler.build_plan(roster,half,1,roster_file_sha256=sha(repo/sampler.cm.HALF_ROSTER_RELPATH[half]),
         execution_run_id=run,execution_attempt_id='generation-v1')
+    discard_synthetic_cost_forecasts(plan)
     base,exp=copy.deepcopy(original),copy.deepcopy(experiment)
     block=base['native_episode']['consumption_module']
     if block['columns'] or 'tfrl_v2_bank' in block or base['policy']!='phase-native-module-v1-c2':

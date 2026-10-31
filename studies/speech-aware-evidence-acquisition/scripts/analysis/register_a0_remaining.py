@@ -123,7 +123,7 @@ def prepare(repo, data, engineering_candidate):
             "status": "REGISTERED BEFORE CONTACT; held for measured profile selection and admission"}
         path = pkg / f"{kind}-plan-registered-v1.json"; write(path, plan)
         rows.append(["2026-10-31", rid, "bounded-discovery-probe", "Exact missing A0 " + kind,
-            candidate["model_fragment"], "SLURP TRAIN Fold B remaining353", "discovery", view["split_identity_hash"],
+            candidate["model_fragment"], "slurp TRAIN Fold B remaining353", "discovery", view["split_identity_hash"],
             "no", str(calls), str(budget["planned_speech_audio_seconds"]), "16.0", "All original source costs retained",
             str(path.relative_to(repo)), f"Plan SHA256 {sha(path)}; root countersigned under {AUTHORITY}, coordinator Codex; held; no test tuning"])
     analysis = {"schema": "saea-a0-remaining-read-v1", "read_run_id": RUN + "-READ", "rows": 353,
@@ -131,7 +131,7 @@ def prepare(repo, data, engineering_candidate):
         "new_model_calls": 0, "claims_benefit": False, "full1080_read_recipe": spec["source_read_recipe"]}
     path = pkg / "analysis-recipe-v1.json"; write(path, analysis)
     rows.append(["2026-10-31", RUN + "-READ", "model-free-check", "Complete continuation descriptive read", "no model",
-        "SLURP TRAIN Fold B remaining353", "discovery", view["split_identity_hash"], "no", "0", "0", "0",
+        "slurp TRAIN Fold B remaining353", "discovery", view["split_identity_hash"], "no", "0", "0", "0",
         "Generation/FIT costs retained", str(path.relative_to(repo)), f"Recipe SHA256 {sha(path)}; root countersigned under {AUTHORITY}, coordinator Codex; full1080 claim deferred"])
     with ledger.open("a") as f:
         f.write("\n## A0 exact remaining353\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| " + " | ".join(["---"] * 15) + " |\n")
