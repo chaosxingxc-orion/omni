@@ -1195,5 +1195,18 @@
       ".lock": 1000,
       ".jsonl": 1000
     }
+  },
+  "tp8_progress_observation": {
+    "observed_at_utc": "2026-10-31 16:25:05 UTC",
+    "started_at_utc": "2026-10-31 16:17:06 UTC",
+    "state": "running",
+    "completed_rows": 1,
+    "total_rows": 500,
+    "cards": 8,
+    "instances": 1,
+    "generation_sealed": false,
+    "eta_seconds": null,
+    "eta_limitation": "A single completed row with many requests still in flight does not support a reliable completion estimate.",
+    "live_generation_process_verified_at_utc": "2026-10-31 16:24 UTC"
   }
 }
