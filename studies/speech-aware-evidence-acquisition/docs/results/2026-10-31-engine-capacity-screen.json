@@ -1,6 +1,6 @@
 {
   "schema": "saea-engine-capacity-screen-summary-v1",
-  "status": "screen-complete-wide-local-recovery-fitting",
+  "status": "wide-aborted-host-kernel-failure-reboot-approval-pending",
   "dataset_rows": 0,
   "cards": 8,
   "instances": 4,
@@ -47,5 +47,16 @@
     "shared_archive_complete": false,
     "periodic_snapshot_verified": true,
     "archive_status": "periodic snapshots running; final complete archive pending"
+  },
+  "wide_local_trial": {
+    "fitted_trajectories": 1152,
+    "total_trajectories": 1152,
+    "successful_generation_requests": 26,
+    "generation_intents": 117,
+    "unknown_generation_results": 91,
+    "total_generation_requests": 3456,
+    "performance_eligible": false,
+    "cause": "host RCU/expand_files stalls affect API and client",
+    "reboot_performed": false
   }
 }
