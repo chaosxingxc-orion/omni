@@ -1,0 +1,149 @@
+{
+  "actual_npu_hours": 0,
+  "authority": {
+    "relpath": "docs/decisions/2026-10-30-owner-full-test-and-first-system-gain.md",
+    "sha256": "ca1701626e9f5d5d48d39bb9fe5523f6b7c1480feb2cb16a8091957a9f83382f"
+  },
+  "cpu_isolation": {
+    "cpu_ids": [
+      192,
+      193,
+      194,
+      195,
+      196,
+      197,
+      198,
+      199,
+      200,
+      201,
+      202,
+      203,
+      204,
+      205,
+      206,
+      207,
+      208,
+      209,
+      210,
+      211,
+      212,
+      213,
+      214,
+      215,
+      216,
+      217,
+      218,
+      219,
+      220,
+      221,
+      222,
+      223,
+      224,
+      225,
+      226,
+      227,
+      228,
+      229,
+      230,
+      231,
+      232,
+      233,
+      234,
+      235,
+      236,
+      237,
+      238,
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255
+    ],
+    "generation_overlap": true,
+    "schema": "saea-cpu-preparation-isolation-v1"
+  },
+  "downstream_adopted": false,
+  "plans": [
+    {
+      "actual_source_audio_seconds": 2726.847187499999,
+      "dataset_config": {
+        "relpath": "configs/dataset/slurp-speech-native-stage3-construction-r01c.json",
+        "sha256": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba"
+      },
+      "execution_plan": {
+        "attempt_id": "encode-v1",
+        "carrier_lock_key": "slurp",
+        "execution_profile": "bounded-discovery-probe",
+        "planned_gpu_hours": 2.0,
+        "planned_model_calls": 625,
+        "planned_speech_audio_seconds": 2727,
+        "protocol_hash": "0e9b6341097f0c0e7e08fc0f61b1fa23808d732faf466f360de65409261ae0a0",
+        "run_id": "SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1",
+        "schema": "saea-execution-plan-v1",
+        "split_identity_hash": "f56bc386776421aec2d8001d8697611b01c9b0562885a462759b15531e2f4515",
+        "split_role": "discovery",
+        "study": "speech-aware-evidence-acquisition"
+      },
+      "ledger_row_cells": [
+        "2026-10-31",
+        "SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1",
+        "bounded-discovery-probe",
+        "Isolated CPU R01C encoding",
+        "Frozen local Omni-Embed-Nemotron-3B CPU fp32 causal encoder",
+        "slurp TRAIN R01C construction",
+        "discovery",
+        "f56bc386776421aec2d8001d8697611b01c9b0562885a462759b15531e2f4515",
+        "no",
+        "625",
+        "2727",
+        "2.0",
+        "Historical construction exposure retained; regenerate current-port query vectors.",
+        "docs/readiness/2026-10-31-r01c-cpu-overlap-v1/registration-v1.json",
+        "Root countersigned under docs/decisions/2026-10-30-owner-full-test-and-first-system-gain.md, coordinator Codex. Protocol SHA256 0e9b6341097f0c0e7e08fc0f61b1fa23808d732faf466f360de65409261ae0a0; CPU192-255 separate custody; actual NPU hours0; 2h is wall cap, no retry or implicit downstream adoption."
+      ],
+      "output_relpath": "prepared/SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1/index.json",
+      "protocol": {
+        "relpath": "configs/preparation/slurp-r01c-speech-query-cpu-isolated-v1.json",
+        "sha256": "0e9b6341097f0c0e7e08fc0f61b1fa23808d732faf466f360de65409261ae0a0"
+      },
+      "query_rows_relpath": "prepared/SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1/queries.jsonl",
+      "roster_receipt": {
+        "relpath": "docs/receipts/rosters/slurp-stage3-construction-r01c.json",
+        "sha256": "e8abc65ba4626cccb4aae9d2eb1bd73f077a6e9a407b3dba9c18bbe4c03eeddd"
+      },
+      "session_id": "local-nemotron-cpu-isolated-r01c-v1",
+      "source_inventory": {
+        "path": "${SAEA_DATA_ROOT}/coordination/slurp-tfrl-r01c-speech-query-source-inventory-npu-port-v1.json",
+        "sha256": "891ebcc302560eadd99901fae2ca2fe553903a09f6201b830aee94e8a9ab0007"
+      },
+      "window_audio_seconds": 2726.8471875
+    }
+  ],
+  "registration_base_commit": "034dc0d484975b35830a71b44a22e2ab9f36b4f8",
+  "schema": "saea-prospective-tool-registration-v1",
+  "source_encoder": {
+    "path": "/mnt/cephfs/xingchao/omni/coordination/omni-embed-nemotron-3b-cpu-encoder-inventory-npu-port-v1.json",
+    "sha256": "4c92dd1fc4c7c509416882cbc5a39fcf645b6910241a062343f964e57980e25b"
+  },
+  "source_inventory": {
+    "path": "${SAEA_DATA_ROOT}/coordination/slurp-tfrl-r01c-speech-query-source-inventory-npu-port-v1.json",
+    "sha256": "891ebcc302560eadd99901fae2ca2fe553903a09f6201b830aee94e8a9ab0007"
+  },
+  "status": "REGISTERED-BEFORE-CONTACT",
+  "umbrella_lock": {
+    "path": "/mnt/cephfs/xingchao/omni/work/dev/r01c-cpu-overlap-v1/docs/datasets.lock.json",
+    "sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  }
+}

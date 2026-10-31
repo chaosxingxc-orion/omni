@@ -1,0 +1,31 @@
+{
+  "agreement_completion_sha256": "ea6d99cb5fec15fb951874d5d0c6708f50865a2878750eb3cc86cbb4819af15c",
+  "agreement_rows": 625,
+  "derivative_registration_scope": "Retrospective ledger synchronization; original preparation evidence remains immutable.",
+  "derivatives_values_unchanged": true,
+  "encoder_source_commit": "477bc06f998ed0396ad93f01659e03cf1ba3f6a6",
+  "generation_admitted": false,
+  "ledger_rows": [
+    "SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1",
+    "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-ALIAS-NPU-PORT-V1",
+    "SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-INPUTS-PREPARE-NPU-PORT-V1",
+    "SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-R01C-NPU-PORT-V1"
+  ],
+  "new_model_contacts": 0,
+  "pins": {
+    "preparation-runs/SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1/encode-v1/receipt.json": "5f241a1c6a5da573c43ba324d3125982bdd1bb578780ce53064ddfcb2b5ae746",
+    "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-R01C-NPU-PORT-V1/agreement.jsonl": "c493e47f9e6c6572b5d809909af650319bfa6136f26db94d118930b2dd8668e7",
+    "prepared/SAEA-SLURP-INTENT-EXEMPLAR-AGREEMENT-R01C-NPU-PORT-V1/receipt.json": "a4286ec47ab66e69764d867c752a344ad1c1698e3fbfeb62a89cc48b526766bf",
+    "prepared/SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1/queries.jsonl": "99443d6c745f8003df048dd1dc6f4f4cb1b585931e9a0fca28471bb57b5849d3",
+    "prepared/SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-ALIAS-NPU-PORT-V1/query-dimension-alias.json": "38cc25d72863034612daad2c6019a549736f34f4e8e9355940bf275b529a436b",
+    "vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-content-v1.jsonl": "be1a0f201598e8330576d99038edc50dcac7547b97811c703c10499e48714845",
+    "vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-content-v1.provenance.json": "cf5e117a68af966268102e1d216b0f3ffdc70f01398e2e70464b4d34a6085aff",
+    "vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-segments.jsonl": "4250a2330cecc41f05d776f3421ce27a460d03ccf8752bf9e1b847f6a79c9ace"
+  },
+  "protocol_sha256": "0e9b6341097f0c0e7e08fc0f61b1fa23808d732faf466f360de65409261ae0a0",
+  "registration_sha256": "2d6dbdd6b67c5af53c9efced3512cb05e9f6ca5a0e15e6a6da67bcf43ef1609d",
+  "retrieval_completion_sha256": "492c08d83a00ddb1643be0a9aa9cea8da8a530d863e0f10f281c826eb98b3a15",
+  "rows": 625,
+  "runtime_config_sha256": "f665688b11f9ff74667b6ed546445e79fa963fa4008e8fb94f6474f5e1ef6c2a",
+  "schema": "saea-r01c-preparation-closure-v1"
+}
