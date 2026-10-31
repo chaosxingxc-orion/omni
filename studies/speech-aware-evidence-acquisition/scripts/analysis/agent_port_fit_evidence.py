@@ -21,6 +21,7 @@ from speech_aware_evidence_acquisition.core.preparation import digest
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 import port_serving_evidence as serving
 import direct_port_score_evidence as scored
+import historical_fit_serving as historical
 
 
 def require_read(repo, read_id):
@@ -249,9 +250,8 @@ def _predecessor_source(repo, data, cell, doc, bundle, declaration, bridge, proo
     old_cell, = old_doc['cells']
     if ((old_cell['run_id'], old_cell['attempt_id']) != (cell['run_id'], declaration.attempt_id)
             or old_doc['populations'] != doc['populations']
-            or old_doc['service_session'] != doc['service_session']
             or old_cell['model_fragment'] != cell['model_fragment']):
-        raise ValueError('pinned predecessor roster, serving identity or attempt differs')
+        raise ValueError('pinned predecessor roster, model or attempt differs')
     path = checkpoint_path(data / 'runs' / cell['run_id'] / declaration.attempt_id, cell['run_id'])
     checkpoint = read_checkpoint(path, expected_sha256=declaration.checkpoint_sha256)
     header = checkpoint.header
@@ -314,8 +314,10 @@ def predecessor_source(repo, data, cell, doc, bundle):
     return sources[0] if sources else None
 
 
-def build(repo, data, experiment, read_id):
+def build(repo, data, experiment, read_id, *, historical_map=None, historical_map_sha256=None):
     require_read(repo, read_id)
+    if (historical_map is None) != (historical_map_sha256 is None):
+        raise ValueError('historical serving map requires an independent hash pin')
     if Path(experiment).name != experiment:
         raise ValueError('invalid experiment')
     experiment_path = repo / 'configs/experiment' / (experiment + '.json')
@@ -342,20 +344,24 @@ def build(repo, data, experiment, read_id):
     if serving.sha(trace) != bundle.manifest['raw_trace']['sha256']:
         raise ValueError('sealed trace hash differs')
     predecessors = predecessor_sources(repo, data, cell, doc, bundle)
+    historical_bindings, historical_pins = {}, {}
+    if historical_map is not None:
+        historical_bindings, historical_pins = historical.bindings(
+            historical_map, historical_map_sha256, read_id=read_id,
+            run_id=cell['run_id'], attempt_id=cell['attempt_id'], predecessors=predecessors)
     current_expected = set(expected) - {sample for p in predecessors for sample in p['expected']}
     reports = []
     if any((p['fit']['run_id'], p['fit']['attempt_id']) == (fit['run_id'], fit['attempt_id']) for p in predecessors):
         raise ValueError('current FIT identity reuses ancestor cost source')
     for predecessor in predecessors:
         old_doc, old_cell = predecessor['doc'], predecessor['cell']
-        # An interrupted predecessor may have no flight-receipts.json. Its
-        # per-contact FIT artifacts and journals bind the same pinned resident
-        # deployment; verify those directly against the successor attachment.
-        old_sessions = sessions
+        old_sessions = historical.resolve(data, predecessor, doc, sessions,
+                                          historical_bindings.get(old_cell['attempt_id']))
         report = audit_source(data, predecessor['fit'], cell['run_id'], set(predecessor['expected']),
                               expected, predecessor['trace'], old_sessions, predecessor=True)
         report.update(attempt_id=old_cell['attempt_id'], rows=len(predecessor['expected']),
                       predecessor_commit=predecessor['predecessor_commit'], prior_actual=predecessor['actual'])
+        report['serving_custody'] = old_sessions.get('custody', 'successor attachment; same service identity')
         report['inputs'].update(predecessor['pins'])
         if predecessor['actual']['calls'] and not report['fit_contacts']:
             raise ValueError('paid predecessor lacks FIT evidence')
@@ -372,6 +378,7 @@ def build(repo, data, experiment, read_id):
     if accounted_generation > doc['family_budget']['generation_calls_cap']:
         raise ValueError('generation exceeds registered cap')
     pins = {str(p): serving.sha(p) for p in (experiment_path, base_path, manifest_path)}
+    pins.update(historical_pins)
     for report in reports:
         pins.update(report.pop('inputs'))
     return {'schema': 'saea-agent-complete-native-fit-evidence-v1', 'status': 'PASS',
@@ -386,8 +393,11 @@ def main():
     parser.add_argument('--repo-root', type=Path, default=REPO)
     for key in ('data-root', 'out'): parser.add_argument('--' + key, type=Path, required=True)
     for key in ('experiment', 'read-id'): parser.add_argument('--' + key, required=True)
+    parser.add_argument('--historical-map', type=Path)
+    parser.add_argument('--historical-map-sha256', help='Hash from the independently reviewed READ record')
     args = parser.parse_args()
-    result = build(args.repo_root, args.data_root, args.experiment, args.read_id)
+    result = build(args.repo_root, args.data_root, args.experiment, args.read_id,
+                   historical_map=args.historical_map, historical_map_sha256=args.historical_map_sha256)
     publish_new(args.out, (json.dumps(result, indent=2, sort_keys=True) + '\n').encode())
     print(json.dumps({k: v for k, v in result.items() if k != 'inputs'}))
 

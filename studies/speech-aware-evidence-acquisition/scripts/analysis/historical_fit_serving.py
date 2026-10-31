@@ -12,6 +12,7 @@ import re
 SCHEMA = 'saea-historical-fit-serving-v1'
 IDENTITY_KEYS = ('model_fragment', 'model_fragment_sha256', 'runtime_receipt_sha256',
                  'binary_sha256', 'model_files')
+MAP_SCHEMA = 'saea-historical-fit-serving-map-v1'
 
 
 def digest(path):
@@ -99,3 +100,66 @@ def verify(snapshot_path, snapshot_sha256, *, coordinator, model_fragment,
     return {'primary_fit_session': fit_session, 'members': identities, 'inputs': pins,
             'custody': 'hash-pinned historical FIT serving; not generation attachment',
             'new_model_calls': 0}
+
+
+def bindings(path, expected_sha256, *, read_id, run_id, attempt_id, predecessors):
+    """Load an independently pinned, exact-scope analysis mapping.
+
+    The caller supplies the reviewed hash; computing it from the input file at
+    invocation would only check self-consistency, not establish reviewed custody.
+    Snapshot paths are relative to this map and confined to its directory.
+    """
+    path = Path(path)
+    if digest(path) != expected_sha256:
+        raise ValueError('historical serving map hash differs')
+    doc = json.loads(path.read_bytes())
+    if (set(doc) != {'schema', 'read_id', 'run_id', 'attempt_id', 'predecessors'}
+            or doc['schema'] != MAP_SCHEMA
+            or (doc['read_id'], doc['run_id'], doc['attempt_id']) != (read_id, run_id, attempt_id)
+            or not isinstance(doc['predecessors'], dict)
+            or set(doc['predecessors']) != {p['cell']['attempt_id'] for p in predecessors}):
+        raise ValueError('historical serving map scope differs')
+    result = {}
+    for source in predecessors:
+        attempt = source['cell']['attempt_id']
+        entry = doc['predecessors'][attempt]
+        if (not isinstance(entry, dict)
+                or set(entry) != {'predecessor_commit', 'fit_run_id', 'fit_attempt_id', 'snapshot'}
+                or entry['predecessor_commit'] != source['predecessor_commit']
+                or (entry['fit_run_id'], entry['fit_attempt_id']) !=
+                (source['fit']['run_id'], source['fit']['attempt_id'])):
+            raise ValueError('historical serving map ancestor differs')
+        _, snapshot = load_pin(path.parent, entry['snapshot'])
+        result[attempt] = (snapshot, entry['snapshot']['sha256'])
+    return result, {str(path): expected_sha256}
+
+
+def resolve(data, source, current_doc, current_sessions, binding=None):
+    """Select historical identities; the caller must still audit every FIT file.
+
+    The first envelope selects a historical member only. Its complete artifact
+    and journal, and all other envelopes, remain subject to audit_source checks.
+    This function neither proves historical generation attachment nor changes
+    the execution-time checkpoint compatibility gate.
+    """
+    if binding is None:
+        if source['doc']['service_session'] != current_doc['service_session']:
+            raise ValueError('changed service requires a pinned historical FIT snapshot')
+        return current_sessions
+    fit = source['fit']
+    for value in (fit['run_id'], fit['attempt_id']):
+        name(value)
+    paths = sorted((Path(data) / 'prepared' / fit['run_id'] / fit['attempt_id']).glob('*.request-fit.json'))
+    if not paths:
+        raise ValueError('historical FIT snapshot requires an actual FIT artifact')
+    envelope = json.loads(paths[0].read_bytes())
+    selected = verify(*binding, coordinator=source['doc']['service_session'],
+                      model_fragment=source['cell']['model_fragment'],
+                      fit_session=envelope['output']['session_id'],
+                      required_identity=envelope['inputs']['sources']['required_identity'])
+    old = selected['members'][selected['primary_fit_session']]
+    current = current_sessions['members'][current_sessions['primary_fit_session']]
+    for key in IDENTITY_KEYS:
+        if key != 'runtime_receipt_sha256' and old[key] != current[key]:
+            raise ValueError('historical and successor model identities differ')
+    return selected

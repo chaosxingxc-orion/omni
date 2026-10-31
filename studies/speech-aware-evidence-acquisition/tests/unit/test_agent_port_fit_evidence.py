@@ -159,7 +159,8 @@ def test_unregistered_predecessor_is_rejected(tmp_path):
 
 
 @pytest.mark.parametrize('cost_only', [False, True])
-def test_build_combines_attempts_and_preserves_noncheckpoint_generation_cost(tmp_path, monkeypatch, cost_only):
+@pytest.mark.parametrize('changed_serving', [False, True])
+def test_build_combines_attempts_and_preserves_noncheckpoint_generation_cost(tmp_path, monkeypatch, cost_only, changed_serving):
     from types import SimpleNamespace
     repo, data = tmp_path / 'repo', tmp_path / 'data'
     cell = {'run_id': 'generation', 'attempt_id': 'new', 'model_fragment': 'model', 'baseline_fragment': 'base'}
@@ -188,8 +189,31 @@ def test_build_combines_attempts_and_preserves_noncheckpoint_generation_cost(tmp
         sources.append({**sources[0], 'cell': {**cell, 'attempt_id': 'middle'},
                         'expected': [], 'actual': {'calls': 4}, 'trace': None})
     monkeypatch.setattr(audit, 'predecessor_sources', lambda *a: sources)
+    historical_map = None
+    historical_sha = None
+    if changed_serving:
+        from test_historical_fit_serving import fixture
+        snapshot, _, identity = fixture(tmp_path)
+        sessions['members'] = {'i0': {**identity, 'runtime_receipt_sha256': 'new-runtime'}}
+        for item in sources:
+            item['doc'] = {**doc, 'service_session': 'old-parent'}
+            item['fit'] = {'run_id': 'fit-' + item['cell']['attempt_id'], 'attempt_id': item['cell']['attempt_id']}
+            fit_directory = data / 'prepared' / item['fit']['run_id'] / item['fit']['attempt_id']
+            fit_directory.mkdir(parents=True)
+            (fit_directory / 'one.request-fit.json').write_text(json.dumps({
+                'output': {'session_id': 'old-i0'},
+                'inputs': {'sources': {'required_identity': identity}}}))
+        historical_map = tmp_path / 'historical-map.json'
+        historical_map.write_text(json.dumps({
+            'schema': audit.historical.MAP_SCHEMA, 'read_id': 'read', 'run_id': 'generation',
+            'attempt_id': 'new', 'predecessors': {item['cell']['attempt_id']: {
+                'predecessor_commit': item['predecessor_commit'], 'fit_run_id': item['fit']['run_id'],
+                'fit_attempt_id': item['fit']['attempt_id'],
+                'snapshot': {'relpath': snapshot.name, 'sha256': audit.serving.sha(snapshot)}} for item in sources}}))
+        historical_sha = audit.serving.sha(historical_map)
     seen = []
     def source(data, fit, run, expected, full, trace, sessions, predecessor=False):
+        assert sessions['primary_fit_session'] == ('old-i0' if predecessor and changed_serving else 'i0')
         seen.append((expected, predecessor))
         if not expected:
             return {'generation_contacts': 0, 'logical_contacts': 0, 'fit_contacts': 4,
@@ -200,11 +224,16 @@ def test_build_combines_attempts_and_preserves_noncheckpoint_generation_cost(tmp
                 'non_kept_fit_contacts': 4 if predecessor else 0, 'fallback_contacts': 0,
                 'primary_fit_session': 'i0', 'inputs': {}}
     monkeypatch.setattr(audit, 'audit_source', source)
-    result = audit.build(repo, data, 'experiment', 'read')
+    result = audit.build(repo, data, 'experiment', 'read',
+                         historical_map=historical_map, historical_map_sha256=historical_sha)
     assert seen == [({'old-row'}, True)] + ([(set(), True)] if cost_only else []) + [({'new-row'}, False)]
     assert result['generation_contacts'] == 5
     assert result['accounted_generation_contacts'] == 9 + 4 * cost_only
     assert result['non_kept_fit_contacts'] == 4 + 4 * cost_only and result['rows'] == 2
+    if changed_serving:
+        assert result['inputs'][str(historical_map)] == historical_sha
+        with pytest.raises(ValueError, match='changed service requires'):
+            audit.build(repo, data, 'experiment', 'read')
 
 
 def test_cost_only_ancestor_retains_fit_contacts_without_complete_rows(tmp_path, monkeypatch):
