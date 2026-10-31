@@ -1,0 +1,21 @@
+{
+  "adoption_sha256": "38a7b6b032ae4c6403d37677f8d1c9e27929da2b5629c6708d57d19a784bf7e4",
+  "claims_tfrl_admitted": false,
+  "encoder_run_id": "SAEA-SLURP-FOLD-A-SPEECH-QUERY-CPU-ISOLATED-V1",
+  "new_encoder_contacts": 0,
+  "new_model_contacts": 0,
+  "next_required": "Bind real Fold A inputs into a frozen paired confirmation protocol; build agreement and own supplies before admission.",
+  "pins": {
+    "preparation-runs/SAEA-SLURP-FOLD-A-SPEECH-QUERY-CPU-ISOLATED-V1/encode-v1/receipt.json": "3b1f2b2c7904353ab4c2641c817988cc1ae9b834e0bdff80cd7a6b471b2c5008",
+    "prepared/SAEA-SLURP-FOLD-A-SPEECH-QUERY-CPU-ISOLATED-V1/queries.jsonl": "7919829d9fce05a0e55a97ecf6a9dba6994bc0309f14a94edd8aedf282b6c29e",
+    "prepared/SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-A-ALIAS-NPU-PORT-V1/query-dimension-alias.json": "b3275de18146ae5ada15e1abff0091995280ca4537ae5fc59c108eab7cab7790",
+    "vectors/slurp-intent-boundaries-train-fold-a-1080-npu-port-v1/query-vectors-speech-segments.jsonl": "e90fc17d4b76e3d70964bb54aa6ea26f06737bafecdf20408a05482c85ecff9a",
+    "vectors/slurp-stage3-filler-fold-a-npu-port-v1/query-vectors-speech-content-v1.jsonl": "b9fd1a368259a0f458b63b8e1f806d407ccace4f5a42cfff5bc12ecfde555cd0",
+    "vectors/slurp-stage3-filler-fold-a-npu-port-v1/query-vectors-speech-content-v1.provenance.json": "f22dc4aef1b3306ec71a58d73b9f88f34f809af641ec9fdb499ec70c18c32647",
+    "work/codex/fold-a-cpu-adopt-v1/complete.json": "38a7b6b032ae4c6403d37677f8d1c9e27929da2b5629c6708d57d19a784bf7e4"
+  },
+  "rows": 1080,
+  "schema": "saea-fold-a-adopted-retrieval-inputs-v1",
+  "tool_head": "eefddc1bfb22d14d36da74ec72cc496bf9150922",
+  "values_unchanged": true
+}
