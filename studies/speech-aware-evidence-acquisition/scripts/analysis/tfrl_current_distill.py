@@ -1,0 +1,103 @@
+"""Prepare source-bound real K4 experience banks from verified sealed requests.
+
+Uses the existing deterministic contrast distiller. No optional observer trace
+or historical pin file supplies evidence. The caller supplies an exact token
+measure and must register its tokenizer budget before executing it.
+"""
+import hashlib
+import json
+from pathlib import Path
+import sys
+ROOT=Path(__file__).resolve().parents[2]
+sys.path[:0]=[str(ROOT/'src'),str(ROOT/'scripts/analysis'),str(ROOT/'scripts/flights/nx')]
+import stage3_rollout_score as s3
+import tfrl_v2_distiller as distiller
+import tfrl_v2_text as text
+import tfrl_v2_sampler as sampler
+import tfrl_v2_common as common
+from speech_aware_evidence_acquisition.core.rollout_trace import usage_judgements,supply_items
+
+
+def sealed_answers(bundle,plan):
+    """First-visit answers and exact evidence, keyed by real row and arm.
+
+    Requires verify_bundle and the plan/request audit before invocation. The
+    request/response hashes are checked again at this adapter boundary. No
+    invented contact timestamp, optional trace or regenerated prompt is used.
+    """
+    expected=[r['row_id'] for r in plan['row_plan']]
+    rows={r['sample_id']:r for r in bundle.outputs_rows}
+    if len(rows)!=len(bundle.outputs_rows) or set(rows)!=set(expected):raise ValueError('whole-half answers required')
+    answers={};texts={};provenance=[]
+    for sid in expected:
+        episode=rows[sid]['native_episode_receipt']
+        visits=[v for v in episode['role_visits'] if v.get('stage')=='solver']
+        if len(visits)!=1:raise ValueError('current seven-contact program requires one Solver visit')
+        contacts=visits[0]['execution_receipt']['contacts']
+        if len(contacts)!=6:raise ValueError('complete K4 plus twin and lock required')
+        normaliser=(episode.get('deliver_normaliser') or {}).get('normaliser_id')
+        for arm,contact in zip(('s1','s2','s3','s4','aa','lock'),contacts):
+            rid=contact['request_id'];request=bundle.trace_records[rid+'/request'];response=bundle.trace_records[rid+'/response']
+            raw=response['text'];payload=request['payload']
+            if (payload['sample_id']!=sid or request['payload_sha256']!=contact['request_sha256']
+                    or hashlib.sha256(raw.encode()).hexdigest()!=contact['response_text_sha256']
+                    or response['response_text_sha256']!=contact['response_text_sha256']):
+                raise ValueError('sealed contact provenance differs')
+            rendered,ok=s3.normalise_arm_answer(raw,normaliser)
+            answer=json.loads(rendered);answer['parsed']=ok
+            evidence={}
+            for item in payload.get('supplied_evidence',[]):
+                key,content=item['evidence_id'],item['content']
+                if not isinstance(content,str) or not content:raise ValueError('empty evidence content')
+                if key in evidence:raise ValueError('duplicate supplied evidence identity')
+                if key in texts and texts[key]!=content:raise ValueError('one evidence identity has different actual text')
+                evidence[key]=content;texts[key]=content
+            judged=usage_judgements(evidence,answer)
+            used={k:v[0] for k,v in judged.items()};bases={k:v[1] for k,v in judged.items()}
+            answers[sid,arm]={'answer':answer,'supply_items':supply_items(evidence,used=used,bases=bases)}
+            provenance.append({'row_id':sid,'arm':arm,'request_id':rid,'request_sha256':contact['request_sha256'],
+                'response_text_sha256':contact['response_text_sha256'],'normalized_answer_sha256':hashlib.sha256(rendered.encode()).hexdigest()})
+    if not texts:raise ValueError('actual supplied evidence required for resolved experience')
+    resolver=text.ItemTextResolver(texts,source={'kind':'verified-sealed-model-requests','run_id':plan['run_id'],
+        'attempt_id':plan['attempt_id'],'raw_trace_sha256':bundle.manifest['raw_trace']['sha256']})
+    return answers,resolver,provenance
+
+
+def build(loaded,measure):
+    """Build banks from load_half's verified results; no filesystem mutation.
+
+    The injected vLLM measure may contact the registered tokenizer; this is
+    accounted separately from generation. Estimates are refused before contact.
+    """
+    if measure.name!=common.MEASURE_VLLM:raise ValueError('exact registered tokenizer measure required')
+    plan=loaded['plan'];half=plan['half'];iteration=plan['iteration']
+    answers,resolver,provenance=sealed_answers(loaded['bundle'],plan)
+    ids=[r['row_id'] for r in plan['row_plan']]
+    tables={a:{r['sample_id']:r for r in result['per_sample']} for a,result in loaded['results'].items()}
+    credit=sampler.credit_rows(ids,iteration,4,sampler.scores_from_counts(tables),twin_arm='aa')
+    if credit!=loaded['credit']:raise ValueError('distillation credit differs from verified official read')
+    exemplar,fate=distiller.build_exemplar_bank(credit,answers,iteration=iteration,source_half=half,resolver=resolver,measure=measure)
+    pairs=distiller.build_contrast_pairs(credit,answers,iteration)
+    rules,refused=distiller.build_rule_bank(pairs,iteration=iteration,source_half=half,measure=measure)
+    source_rows=sorted({e['source_row_id'] for s in exemplar['by_scenario'].values() for e in s['entries']}
+        | {r for rule in rules['rules'] for r in rule['support_rows']})
+    receipt={'schema':distiller.RECEIPT_SCHEMA,'loop_id':plan['loop_id'],'iteration':iteration,'source_half':half,
+        'kind':'half','measure':measure.name,'measure_detail':dict(measure.detail()),'exemplar_text':exemplar['exemplar_text'],
+        'exemplar_text_source':resolver.identity(),'source_halves':[half],'consuming_half':common.other_half(half),
+        'source_split_identities':{half:loaded['roster']['split_identity_hash']},
+        'source_roster_file_sha256':plan['roster']['file_sha256'],'source_half_rows':len(ids),'source_row_ids':source_rows,
+        'verified_source':loaded['source'],
+        'exemplar_bank':{'content_sha256':common.content_sha256(exemplar),'scenarios':len(exemplar['by_scenario']),
+            'entries':sum(len(s['entries']) for s in exemplar['by_scenario'].values()),
+            'max_block_tokens':max((s['block_tokens'] for s in exemplar['by_scenario'].values()),default=0),
+            'block_token_cap':common.EXEMPLAR_BLOCK_TOKEN_CAP,'measure':measure.name},
+        'rule_bank':{'content_sha256':common.content_sha256(rules),'rules':len(rules['rules']),
+            'rendered_tokens':rules['rendered_tokens'],'token_cap':common.RULE_BANK_TOKEN_CAP,
+            'vote_min':common.VOTE_MIN_ROWS,'measure':measure.name},
+        'credit_summary':sampler.credit_summary(credit),
+        'counts':{'rows_in_half':len(ids),'rows_used':len(ids),'rows_skipped':0,'contrast_pairs':len(pairs),'rules_refused':len(refused)},
+        'method':'Existing deterministic answer-contrast rules and resolved evidence exemplars; verified current seed-only trajectories.',
+        'model_calls':0,'tokenizer_calls':measure.calls,'next_iteration_authorized':False}
+    # Actual timestamps are not available here; do not fabricate rollout contact/TFRL lines.
+    return {'credit':credit,'pairs':pairs,'exemplar_bank':exemplar,'rule_bank':rules,'refused':refused,
+        'provenance':provenance,'fate':fate,'receipt_core':receipt}
