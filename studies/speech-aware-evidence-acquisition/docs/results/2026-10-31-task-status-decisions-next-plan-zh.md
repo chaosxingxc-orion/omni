@@ -86,3 +86,11 @@ SSH 只负责控制和观察，断线不会自动取消后台任务。runner 异
 公开代码已合入并推送 `main`，当前提交为 `5386e975`；同一状态已写入独立远程 Wiki，提交为 `3f78ca1`。A0 仍由原 detached runner 和 worker 执行，未重复启动、未重放调用。
 
 最新 `npu2` 实机采样显示四个 TP=2 端点运行请求为 13/4/8/7，等待均为 0；8 张卡 AI 利用率为 50%、49%、47%、45%、46%、60%、64%、63%，随后采样为 65%、62%、49%、50%、52%、52%、61%、59%。结论是 8 卡都在承担有效任务，但尚未达到持续满载标准。后续实验必须以 8 卡整体的有效任务供给、逐卡利用率窗口、低分位、空闲比例、吞吐和切换间隙作为验收，不以单实例繁忙、显存占用或端点存在替代。
+
+## 06:46 UTC：调度原则已落实为双队列
+
+按新的工程约束，后续系统使用两个独立 detached queue family：NPU queue 只放需要 NPU 的授权实验，并由卡门禁和 guardian 管理；CPU queue 只放 checkpoint 分析、官方评分、诊断、准备和基线锁定。CPU 分析消费已经落盘的 durable evidence，不得阻塞下一项 NPU identity；NPU queue 不等待 CPU 分析结果才继续派发已授权实验。
+
+公开仓已加入 `scripts/npu/dual_queue.py` 和配置样例。配置校验强制 NPU job 声明卡门禁、强制 CPU job 不得声明卡门禁，两个 queue directory、runner lock、state 和 guardian 相互隔离。终态队列保留原始证据，不自动 retry 或 replay。提交已推送到 `main`：`be72e57b`；离线双队列测试 4 项通过，原卡队列回归 37 项通过。
+
+当前 A0 是在旧的混合队列中启动的既有 identity，不能迁移、编辑或重放；它仍保持原 runner/guardian/worker。下一项新 NPU identity 将使用纯 NPU queue，当前 A0 的 checkpoint、评分和基线锁定则由独立 CPU queue 按顺序消费。
