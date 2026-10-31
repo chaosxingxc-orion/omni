@@ -16,5 +16,36 @@
   "monitor_interval_seconds": 600,
   "new_model_calls_during_registration": 0,
   "downstream_adopted": false,
-  "tests_passed": 86
+  "tests_passed": 86,
+  "verified_completion": {
+    "rows": 625,
+    "attempt_state": "FINALIZED",
+    "receipt_status": "SEALED",
+    "exit": 0,
+    "closed_at": "2026-10-31T16:30:02.977693+00:00",
+    "elapsed_seconds": 833.2954174200004,
+    "seconds_per_row": 1.3332726678720006,
+    "encoder_contacts": 625,
+    "audio_seconds": 2726.8471875,
+    "cards": 0,
+    "workers": 4,
+    "cpu_cores": 64,
+    "receipt_sha256": "5f241a1c6a5da573c43ba324d3125982bdd1bb578780ce53064ddfcb2b5ae746"
+  },
+  "retrieval_derivative": {
+    "complete": true,
+    "rows": 625,
+    "values_unchanged": true,
+    "new_model_contacts": 0,
+    "new_encoder_contacts": 0,
+    "completion_sha256": "492c08d83a00ddb1643be0a9aa9cea8da8a530d863e0f10f281c826eb98b3a15"
+  },
+  "pool_audit": {
+    "query_rows": 625,
+    "pool_utterances": 8554,
+    "source_recordings": 34474,
+    "covered_facets": 8554,
+    "utterance_overlap": 0,
+    "audit_sha256": "06de69f628fcd92842a1c0a2caab843a1a1e560d6af2ea33c503bc9ffb210ae7"
+  }
 }

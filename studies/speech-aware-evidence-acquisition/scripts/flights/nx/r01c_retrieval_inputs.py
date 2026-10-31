@@ -27,9 +27,9 @@ def source_config(encoder_repo, data, runtime_config, runtime_sha, exit_path):
     if sha(runtime_config) != runtime_sha:
         raise ValueError('encoder runtime config pin differs')
     config = read(runtime_config)
-    if (subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=encoder_repo, text=True).strip()
+    if (subprocess.check_output(['git', '-c', 'safe.directory=' + str(encoder_repo), 'rev-parse', 'HEAD'], cwd=encoder_repo, text=True).strip()
             != config['study_head'] or subprocess.check_output(
-                ['git', 'status', '--porcelain'], cwd=encoder_repo).strip()):
+                ['git', '-c', 'safe.directory=' + str(encoder_repo), 'status', '--porcelain'], cwd=encoder_repo).strip()):
         raise ValueError('encoder source is not the pinned clean commit')
     if exit_path.read_text().strip() != '0':
         raise ValueError('encoder invocation not successfully complete')
