@@ -54,7 +54,7 @@ def prepare(repo,data,roster,source,profile_id):
     exp=copy.deepcopy(read(source/'configs/experiment/slurp-real-engine-500-c2-v1.json'))
     exp['stage3_algorithm']={'id':'none','note':'Engineering topology measurement of the fixed two-contact baseline; no training-free RL operator or benefit claim.','operators_used':[]}
     exp['stage3_measurement']={'measurement_design':'material-source','rows':500,'expected_effect_pp':0,'claims_benefit':False,'primary_metric_key':'slu','tuning_roster':'none','read_roster':'SLURP-REAL-ENGINE-500-V1','note':'Fixed-system engineering data collection. Quality is descriptive, no algorithm superiority claim; topology is the operational variable.'}
-    exp['execution_plan'].update(planned_gpu_hours=16.0,planned_model_calls=2000,planned_speech_audio_seconds=4*view['audio_seconds_total'])
+    exp['execution_plan'].update(planned_gpu_hours=16.0,planned_model_calls=2000,planned_speech_audio_seconds=math.ceil(4*view['audio_seconds_total']))
     exp.update(experiment_id=run,service_session=session,purpose='Owner-authorized fixed real500 topology measurement; actual perception feeds solver; no synthetic replay')
     cell,=exp['cells'];cell.update(cell_id=name,run_id=run,attempt_id=attempt,model_fragment=model_name,baseline_fragment=name)
     cell['allowed_execution_stages']=['check','prepare-supply','worker','campaign']
@@ -79,6 +79,8 @@ def prepare(repo,data,roster,source,profile_id):
     cell['readiness']['requirements']=[{'kind':'preparation',**pin}]
     (repo/'configs/experiment'/f'{name}.json').write_text(json.dumps(exp,indent=2,sort_keys=True)+'\n')
     cfg=compose(repo,model_name,dataset,name,name)
+    from speech_aware_evidence_acquisition.contracts import ExecutionPlan
+    ExecutionPlan(run_id=run,attempt_id=attempt,carrier_lock_key='slurp',split_identity_hash=view['split_identity_hash'],protocol_hash=protocol_hash(cfg.config_hash,cfg.values['arm'],view['split_identity_hash']),**exp['execution_plan']).validate(source_root=repo)
     identity={'cell':name,'experiment':name,'run_id':run,'attempt_id':attempt,'fit_run_id':run+'-FIT','fit_attempt_id':attempt+'-fit','rows':500,'composed_config_hash':cfg.config_hash,'protocol_hash':protocol_hash(cfg.config_hash,cfg.values['arm'],view['split_identity_hash']),'split_identity_hash':view['split_identity_hash']}
     spec={**identity,'model_fragment':model_name,'baseline':name,'service_session':session,'profile':profile_id,'runtime_receipt':model['runtime_receipt'],'decision_id':name+'-owner-admission','decision_relpath':f'coordination/{name}/root-admission-v1.json','authority':'docs/decisions/2026-10-31-owner-real500-topology-measurement.md','sample_source_sha256':sha(roster/'roster.json'),'scientific_readiness':'held','new_model_calls':0}
     write(pkg/'candidate.json',spec)

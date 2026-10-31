@@ -1,6 +1,6 @@
 # A0 精度与推理工程基线
 
-更新时间：2026-10-31 14:35 UTC。181 已恢复，TP4-96两实例部署接续已成功，正在校验与登记服务、共8卡；用户已批准拆分两调用基线与五分支诊断。当前没有等待用户决策的事项。
+更新时间：2026-10-31 14:44 UTC。181 已恢复，TP4-96两实例部署接续已成功，receipt与服务登记已成功，最终预检修复中、共8卡；用户已批准拆分两调用基线与五分支诊断。当前没有等待用户决策的事项。
 
 ## 已有研究结果
 
@@ -30,14 +30,14 @@
 
 | 候选 | 全机资源 | 完成/总样本 | 秒/条与ETA |
 | --- | --- | --- | --- |
-| TP4，每实例96并发 | 8卡、2实例 | 0/500，服务校验/登记中 | 尚未实测 |
+| TP4，每实例96并发 | 8卡、2实例 | 0/500，整数预算修正/预检中 | 尚未实测 |
 | TP4，每实例128并发 | 8卡、2实例 | 0/500，500条CPU准备完成 | 尚未实测 |
 | TP8，256并发 | 8卡、1实例 | 0/500，500条CPU准备完成 | 尚未实测 |
 | TP8，384并发 | 8卡、1实例 | 0/500，条件候选 | 256有收益再上探 |
 
-每种整机配置共500条，两TP4实例共同处理500条。各候选用同一抽样名单，每条各执行一次真实P→S；本次P输出进入本次S。真实500条推理尚未启动，首候选登记与完整样本恢复测试已完成，服务绑定及最终预检待完成。旧合成队列不再重启。[抽样身份、真实链路与完整测量口径](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-engine-baseline-zh.md)。
+每种整机配置共500条，两TP4实例共同处理500条。各候选用同一抽样名单，每条各执行一次真实P→S；本次P输出进入本次S。真实500条推理尚未启动，首候选登记与完整样本恢复测试已完成，服务绑定已完成、最终预检待通过。旧合成队列不再重启。[抽样身份、真实链路与完整测量口径](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-engine-baseline-zh.md)。
 
-首次TP4启动后，正式身份登记发现公开启动器遗漏 `PYTHONNOUSERSITE=1`，已修复。重建因停服后显存延迟释放退出；确认8卡无运行进程、显存已回落后，显式部署接续已成功。receipt采集随后发现网络隔离配置不符，已改为host网络重新采集；服务未重启，尚未产生数据集调用。完整样本恢复/FIT87项、计时相关54项、公开部署/FIT79项测试通过，真实链路新增分段计时。[验证范围与当前状态](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-runtime-readiness-zh.md)。
+首次TP4启动后，正式身份登记发现公开启动器遗漏 `PYTHONNOUSERSITE=1`，已修复。重建因停服后显存延迟释放退出；确认8卡无运行进程、显存已回落后，显式部署接续已成功。receipt采集随后发现网络隔离配置不符，已改为host网络重新采集；服务未重启，修正网络后的receipt与服务登记均已成功。最终预检发现音频额度须为整数，已向上取整为5895秒并保留旧登记、创建v2修正记录；正在刷新准备与登记哈希，尚未产生数据集调用。完整样本恢复/FIT87项、计时相关54项、公开部署/FIT79项测试通过，真实链路新增分段计时。[验证范围与当前状态](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-runtime-readiness-zh.md)。
 
 ## 单样本耗时
 
