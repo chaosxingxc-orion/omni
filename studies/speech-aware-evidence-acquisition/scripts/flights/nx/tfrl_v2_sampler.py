@@ -55,7 +55,12 @@ PROGRAM_ID = "phase-native-module-v1-c7"
 SAMPLER_ARM_PREFIX = "s"
 BASELINE_ARM = "lock"
 TWIN_ARM = "aa"
-VARIATIONS = ("seed-only", "rule-variants")
+VARIATIONS = ("seed-only", "rule-variants", "top-p-ladder")
+# The registered c7 construction cell varies only Solver top-p.  The request
+# seed is the locked model seed for every arm; the cell's decoding group does
+# not admit a per-arm seed override.
+TOP_P_LADDER = (0.80, 0.90, 0.95, 1.00)
+TOP_P_DECODING = tuple({"temperature": 0.7, "top_p": p, "top_k": 20} for p in TOP_P_LADDER)
 #: ``rule-variants`` gives trajectory k the k-th variant of the seed rule bank, so it needs exactly K = 4 variants (plan section 11 addendum, ruling 5:
 #: k=0 no rule bank, k=1 the full bank, k=2 the rules of the row's scenario only, k=3 the top half of the bank by support).
 RULE_VARIANT_COUNT = 4
@@ -197,10 +202,65 @@ def _half_rows(half_roster: Mapping[str, Any], half: str) -> list[Mapping[str, A
     return items
 
 
+def load_construction_binding(half: str, repo_root: Path = REPO_ROOT) -> dict[str, Any]:
+    """Compose the committed iteration-1 c7 cell, without admission or contacts.
+
+    This is a plan binding, not a wire-request digest or evidence of execution.
+    Rebuild the plan after a model fragment, supply pin or cell changes.
+    """
+    from speech_aware_evidence_acquisition.core.config import compose
+
+    suffix = half_suffix(half).lower()
+    cell_id = f"slurp-native-stage3-tfrl-v2-construction-r01c-i1-{suffix}-npu-port-v1"
+    path = Path(repo_root) / "configs" / "experiment" / f"{cell_id}.json"
+    try:
+        raw = path.read_bytes()
+        experiment = json.loads(raw)
+        if len(experiment["cells"]) != 1:
+            raise SamplerError("construction binding needs exactly one cell")
+        cell = experiment["cells"][0]
+        composed = compose(Path(repo_root), cell["model_fragment"], cell["dataset_fragment"], cell["baseline_fragment"], cell_id)
+        return {"cell_id": cell_id, "run_id": cell["run_id"], "attempt_id": cell["attempt_id"], "model_fragment": cell["model_fragment"],
+                "experiment_file_sha256": cm.sha256_bytes(raw), "composed_config_hash": composed.config_hash,
+                "population": experiment["population"], "row_ids": experiment["populations"][0]["ids"],
+                "values": composed.values}
+    except (OSError, ValueError, KeyError, IndexError) as error:
+        raise SamplerError(f"cannot bind construction cell {cell_id}: {error}") from error
+
+
+def _ladder_decoding(binding: Mapping[str, Any] | None, roster: Mapping[str, Any], half: str) -> dict[str, Any]:
+    """Check the cell's actual lock seed, arm overrides and exact population."""
+    if binding is None:
+        raise SamplerError("top-p-ladder requires a composed construction binding")
+    try:
+        values = binding["values"]
+        roles = values["native_episode"]["roles"]
+        expected = [{"arm_id": arm, "decoding": dict(d)} for arm, d in zip(sampler_arms(4), TOP_P_DECODING)]
+        expected += [{"arm_id": TWIN_ARM, "replicate_of": BASELINE_ARM}, {"arm_id": BASELINE_ARM, "deliver": True}]
+        if values["policy"] != PROGRAM_ID or roles["solver"]["decoding_variants"]["arms"] != expected:
+            raise SamplerError("construction cell does not match the c7 top-p ladder")
+        if "sampling_variants" in roles["perception"]:
+            raise SamplerError("top-p ladder requires one shared Perception")
+        if (binding["run_id"], binding["attempt_id"]) != (run_id_for(half, 1), attempt_id_for(half, 1)):
+            raise SamplerError("construction binding run/attempt differs from the plan")
+        pop = binding["population"]
+        if (pop["split_identity_hash"] != roster["split_identity_hash"] or pop["count"] != len(roster["items"])
+                or binding["row_ids"] != [i["sample_id"] for i in roster["items"]]):
+            raise SamplerError("construction binding population differs from the roster")
+        lock = dict(values["decoding_params"])
+        seed = lock.get("seed")
+        if not isinstance(seed, int) or isinstance(seed, bool) or seed < 0:
+            raise SamplerError("construction model needs an explicit non-negative integer seed")
+        return lock
+    except (KeyError, TypeError) as error:
+        raise SamplerError(f"malformed construction binding: {error}") from error
+
+
 def build_plan(
     half_roster: Mapping[str, Any], half: str, iteration: int, *, k: int = cm.DEFAULT_K, base_seed: int = cm.DEFAULT_BASE_SEED,
     temperature: float = cm.DEFAULT_TEMPERATURE, top_p: float = cm.DEFAULT_TOP_P, top_k: int = cm.DEFAULT_TOP_K,
     variation: str = "seed-only", bank_receipt: Mapping[str, Any] | None = None, seed_rule_bank: Mapping[str, Any] | None = None,
+    construction_binding: Mapping[str, Any] | None = None,
     include_twin_and_lock: bool = True, roster_file_sha256: str | None = None,
     execution_run_id: str | None = None, execution_attempt_id: str | None = None,
 ) -> dict[str, Any]:
@@ -234,6 +294,19 @@ def build_plan(
             raise SamplerError(str(error)) from error
 
     variants: list[Mapping[str, Any]] = []
+    lock_decoding = None
+    if variation == "top-p-ladder":
+        if execution_run_id is not None or execution_attempt_id is not None:
+            raise SamplerError("historical ladder binding owns its execution identity")
+        if iteration != 1:
+            raise SamplerError("top-p-ladder currently binds iteration 1 only; register later bank/variant semantics separately")
+        if k != len(TOP_P_LADDER):
+            raise SamplerError(f"variation 'top-p-ladder' needs K = {len(TOP_P_LADDER)}; K is {k}")
+        if (temperature, top_p, top_k) != (0.7, 0.95, 20) or seed_rule_bank is not None or not include_twin_and_lock:
+            raise SamplerError("top-p-ladder requires frozen decoding defaults, no seed rule bank, and aa/lock")
+        lock_decoding = _ladder_decoding(construction_binding, half_roster, half)
+    elif construction_binding is not None:
+        raise SamplerError("construction binding is supported only for top-p-ladder")
     if variation == "rule-variants":
         if k != RULE_VARIANT_COUNT:
             raise SamplerError(f"variation 'rule-variants' needs K = {RULE_VARIANT_COUNT} (one variant per trajectory); K is {k}")
@@ -258,6 +331,7 @@ def build_plan(
         "seed_rule_bank_sha256": cm.content_sha256(dict(seed_rule_bank)) if seed_rule_bank else None,
     }
     decoding = {"temperature": float(temperature), "top_p": float(top_p), "top_k": int(top_k)}
+    binding_sha = cm.content_sha256(construction_binding) if lock_decoding is not None else None
 
     rows_doc: list[dict[str, Any]] = []
     for item in items:
@@ -265,14 +339,23 @@ def build_plan(
         contacts: list[dict[str, Any]] = [{
             "contact_id": f"{run_id}/{row_id}/perception", "node": "perception", "arm": None, "shared_by": list(arms),
         }]
+        if lock_decoding is not None:
+            contacts[0]["decoding"] = dict(lock_decoding)
+            contacts[0]["shared_by"] += [TWIN_ARM, BASELINE_ARM]
         seeds: list[int] = []
         for index, arm in enumerate(arms):
-            seed = cm.derive_seed(it_seed, row_id, index)
+            if variation == "top-p-ladder":
+                seed = lock_decoding["seed"]
+                contact_decoding = {**lock_decoding, **TOP_P_DECODING[index]}
+            else:
+                seed = cm.derive_seed(it_seed, row_id, index)
+                contact_decoding = decoding
             seeds.append(seed)
             variant = variants[index] if variants else None
             resolved = resolve_rule_variant(variant, item.get("stratum")) if variant else None
             identity = cm.content_sha256({
-                "node": "solver", "row_id": row_id, "run_id": run_id, "decoding": decoding, "banks": {kk: banks[kk] for kk in ("rule_bank_sha256", "exemplar_bank_sha256")},
+                "node": "solver", "row_id": row_id, "run_id": run_id, "decoding": contact_decoding,
+                "banks": {kk: banks[kk] for kk in ("rule_bank_sha256", "exemplar_bank_sha256")},
                 "variant": resolved, "perception": f"{run_id}/{row_id}/perception",
             })
             contact = {
@@ -280,17 +363,29 @@ def build_plan(
                 "trajectory_id": trajectory_id(iteration, row_id, index), "variant_id": variant["variant_id"] if variant else None,
                 "request_identity_sha256": identity,
             }
+            if variation == "top-p-ladder":
+                contact["decoding"] = contact_decoding
+                del contact["request_identity_sha256"]
             if resolved is not None:
                 contact["rule_variant"] = resolved
             contacts.append(contact)
-        if len(set(seeds)) != len(seeds):
+        if lock_decoding is not None:
+            for arm in (TWIN_ARM, BASELINE_ARM):
+                contacts.append({"contact_id": f"{run_id}/{row_id}/solver/{arm}", "node": "solver", "arm": arm,
+                                 "seed": lock_decoding["seed"], "decoding": dict(lock_decoding)})
+            for contact in contacts:
+                contact["planned_contact_sha256"] = cm.content_sha256({
+                    "contact": contact, "construction_binding_sha256": binding_sha,
+                    "row_id": row_id, "banks": banks,
+                })
+        if variation != "top-p-ladder" and len(set(seeds)) != len(seeds):
             raise SamplerError(f"row {row_id}: the K seeds are not distinct (change the base seed)")
         rows_doc.append({"row_id": row_id, "audio_seconds": float(item["audio_seconds"]), "contacts": contacts})
 
     audio = [r["audio_seconds"] for r in rows_doc]
     sampler_budget = budget(audio, k)
     program_budget = budget(audio, k, include_twin_and_lock=True)
-    return {
+    result = {
         "schema": RUN_LIST_SCHEMA, "loop_id": cm.LOOP_ID, "run_id": run_id, "attempt_id": attempt_id, "half": half,
         "iteration": iteration, "k": k, "variation": variation,
         "roster": {"roster_id": half_roster["roster_id"], "split_identity_hash": half_roster["split_identity_hash"], "rows": len(rows_doc),
@@ -301,11 +396,18 @@ def build_plan(
             "baseline_arm": BASELINE_ARM, "twin_arm": TWIN_ARM if include_twin_and_lock else None,
             "note": "The runner consumes the registered cell (task T4 writer); this run-list is its pre-registration table, not a runner input.",
         },
-        "decoding": {**decoding, "seed_rule": "derive_seed(iteration_seed, row_id, k)"},
+        "decoding": ({"seed_rule": "composed-model-lock", "lock": lock_decoding, "solver_overrides": list(TOP_P_DECODING)}
+                     if variation == "top-p-ladder" else {**decoding, "seed_rule": "derive_seed(iteration_seed, row_id, k)"}),
         "base_seed": int(base_seed), "iteration_seed": it_seed, "banks": banks, "row_plan": rows_doc,
         "budget": {"sampler_contacts": sampler_budget, "program_c7": program_budget},
         "model_calls_made_by_this_file": 0,
     }
+    if lock_decoding is not None:
+        result.update(base_seed=None, iteration_seed=None,
+                      construction_binding={k: v for k, v in construction_binding.items() if k not in ("values", "row_ids")},
+                      construction_binding_sha256=binding_sha,
+                      identity_scope="Plan/config only; runtime prompts, audio, evidence, role overrides and wire request hashes require sealed flight evidence.")
+    return result
 
 
 def execution_columns(plan):
@@ -506,6 +608,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             seed_bank = json.loads(Path(args.seed_rule_bank).read_text(encoding="utf-8")) if args.seed_rule_bank else None
             doc = build_plan(document, args.half, args.iteration, k=args.k, base_seed=args.base_seed, temperature=args.temperature,
                              variation=args.variation, bank_receipt=receipt, seed_rule_bank=seed_bank,
+                             construction_binding=load_construction_binding(args.half) if args.variation == "top-p-ladder" else None,
                              include_twin_and_lock=not args.no_twin_lock, roster_file_sha256=file_sha)
             data = cm.file_bytes(doc)
             if args.out:

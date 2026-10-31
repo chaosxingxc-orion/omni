@@ -19,9 +19,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import math
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
+
+from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 
 LOOP_ID = "SAEA-SLURP-TFRL-V2-NPU-PORT-V1"
 DEFAULT_K = 4
@@ -129,8 +132,12 @@ def write_once(path: Path, data: bytes) -> str:
         if target.read_bytes() == data:
             return "unchanged"
         raise CommonError(f"refusing to overwrite {target}: it exists with different bytes")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(data)
+    try:
+        publish_new(target, data)
+    except FileExistsError:
+        if target.read_bytes() == data:
+            return "unchanged"
+        raise CommonError(f"refusing to overwrite {target}: it exists with different bytes")
     return "written"
 
 
@@ -148,7 +155,6 @@ def estimate_tokens(text: str, chars_per_token: float = CHARS_PER_TOKEN) -> int:
 # ---- seeds -----------------------------------------------------------------------------------------------------------------------------------
 
 
-# Runtime and planning use exactly the same seed implementation.
 from speech_aware_evidence_acquisition.rails.trajectory_seeds import iteration_seed, derive_seed
 
 
