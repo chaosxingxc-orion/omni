@@ -401,13 +401,21 @@
     "utterance_overlap": 0,
     "model_calls": 0,
     "agreement_state": "complete",
-    "study_commit": "6bbca374",
+    "study_commit": "e3f001bd1106263589a2f82329becf24202659d7",
     "public_tests_passed": 52,
     "execution_tests_passed": 52,
     "generation_started": false,
     "agreement_rows": 1080,
     "held_baseline_prepared": true,
-    "baseline_tests_passed": 57
+    "baseline_tests_passed": 57,
+    "supply_complete": true,
+    "supply_binding_complete": true,
+    "preparation_closure_complete": true,
+    "resident_configuration_bound": true,
+    "live_resident_verified": false,
+    "closure_and_binding_tests_passed": 89,
+    "registered": false,
+    "readiness": "held"
   },
   "whole_answer_screen": {
     "state": "stop-whole-answer-candidate",
