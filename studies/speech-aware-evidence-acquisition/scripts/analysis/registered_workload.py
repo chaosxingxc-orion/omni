@@ -13,6 +13,12 @@ def validate_workload(repo, data, name, spec):
     if spec.get("workload_kind") == "tfrl-real-seed-half":
         from tfrl_current_generation import validate_half
         return validate_half(repo, name, spec, exp, view)
+    if spec.get("workload_kind") == "tfrl-real-banked-half":
+        from tfrl_current_generation import validate_half
+        iteration=spec.get("iteration")
+        if type(iteration) is not int or iteration not in (2,3):
+            raise ValueError("banked workload requires iteration2/3")
+        return validate_half(repo,name,spec,exp,view,data=data,iteration=iteration)
     if spec.get("workload_kind") == "tfrl-context-repair-complement":
         from tfrl_h1_remaining import validate
         return validate(repo,data,name,spec,exp,view)

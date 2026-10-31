@@ -72,3 +72,85 @@ def test_real_half_guards(tmp_path,monkeypatch,half,n,fault):
     if fault:
         with pytest.raises((ValueError,sampler.SamplerError)):validate_workload(tmp_path,tmp_path,name,spec)
     else:assert validate_workload(tmp_path,tmp_path,name,spec)==n
+
+
+@pytest.mark.parametrize('iteration',[2,3])
+@pytest.mark.parametrize('fault',[None,'bank_file','self_bank','allocation','decision','source_result','wrong_label'])
+def test_banked_workload_full_roster_bank_and_first_gate(tmp_path,monkeypatch,iteration,fault):
+    from test_tfrl_v2_consumption import make_bank,SCOPE,H1,H2,rail
+    from speech_aware_evidence_acquisition.rails.tfrl_supply_allocation import declaration,KEY
+    from tfrl_current_next_plan import first_construction_decision
+    from tfrl_recovered_consumers import POOL
+    rel='configs/baseline/slurp-native-default-plan-lock-baseline-v1.json'
+    put(tmp_path,rel,json.loads((ROOT/rel).read_bytes()))
+    n=313;name=f'slurp-tfrl-current-bank-i{iteration}-h1-v1';run=f'SAEA-SLURP-TFRL-CURRENT-BANK-I{iteration}-H1-V1'
+    rows=[{'sample_id':f'slurp:train:fixture{i}','audio_seconds':2.,'audio_sha256':str(i),'media_relpath':f'a/slurp_real/{i}.wav'} for i in range(625)]
+    roster={'roster_id':sampler.cm.HALF_ROSTER_ID[H1],'split_identity_hash':SCOPE[H1],'items':rows[:n]}
+    rp=put(tmp_path,'roster.json',roster)
+    path,receipt=make_bank(tmp_path,kind='half',sources=(H2,),source_rows=('slurp:train:fixture624',),iteration=iteration-1)
+    plan=sampler.build_plan(roster,H1,iteration,bank_receipt=receipt,roster_file_sha256=rp['sha256'],execution_run_id=run,execution_attempt_id='generation-v1')
+    block=_decoding_block();block['columns']=sampler.execution_columns(plan)
+    allocation=declaration(block['decoding_frame']['max_supplied_items'])
+    block[KEY]=allocation
+    block['tfrl_v2_bank']=rail.declaration_block(iteration=iteration-1,consumer=H1,bank_kind='half',
+        receipt_relpath=str(path.relative_to(tmp_path)),receipt_sha=rail.receipt_sha256(receipt),source_scope=SCOPE)
+    plan['banks'].update(supply_allocation=allocation,supply_bound_items=allocation['candidate_max_items'])
+    base=cm.compile_module(block,carrier_module_hooks()).values();base['native_episode']['consumption_module']=block
+    base['native_contact_fit']={'run_id':run+'-FIT','attempt_id':'fit-v1','contact_cap':7*n}
+    lock=put(tmp_path,m.LOCK,{'status':'locked_full_train_fold_b'});monkeypatch.setattr(m,'LOCK_SHA',lock['sha256'])
+    sources={}
+    for h in ('h1','h2'):
+        pin=put(tmp_path,f'analysis/{h}/complete.json',{'source':h})
+        sources[h]={'complete_relpath':pin['relpath'],'complete_sha256':pin['sha256']}
+    pooled={'rows':625,'iteration':1,'vote_minus_lock_pp':1.1,'threshold_pp':1.,'construction_gate_passed':True,'sources':sources}
+    pp=put(tmp_path,f'analysis/{POOL}/complete.json',pooled)
+    decision={'schema':'saea-tfrl-first-construction-decision-v1','rows':625,'generation_authorized':False,
+        **first_construction_decision(pooled),'pool_sha256':pp['sha256'],'sources':sources}
+    exp={'cells':[{'run_id':run,'attempt_id':'generation-v1','dataset_fragment':'view','baseline_fragment':name}],
+        'population':{'count':n,'dataset_fragment':'view','roster_receipt':'roster.json','split_identity_hash':SCOPE[H1]},
+        'populations':[{'dataset_fragment':'view','ids':[r['sample_id'] for r in rows[:n]]}],
+        'execution_plan':{'planned_model_calls':14*n,'planned_speech_audio_seconds':28*n},
+        'stage3_algorithm':{'id':'tfrl-v2','operators_used':['rollout','scoring','context_application']}}
+    spec={'cell':name,'experiment':name,'workload_kind':'tfrl-real-banked-half','iteration':iteration,
+        'run_id':run,'attempt_id':'generation-v1','rows':n,'split_identity_hash':SCOPE[H1],
+        'gain_lock':lock,'roster':rp,'fit_run_id':run+'-FIT','fit_attempt_id':'fit-v1'}
+    if fault=='bank_file':(path.parent/'rule-bank.json').write_text('{}')
+    elif fault=='self_bank':block['tfrl_v2_bank']['consumer']=H2
+    elif fault=='allocation':plan['banks']['supply_bound_items']+=1
+    elif fault=='decision':decision['preparation_gate_passed']=False
+    elif fault=='source_result':(tmp_path/'analysis/h1/complete.json').write_text('{}')
+    elif fault=='wrong_label':exp['stage3_algorithm']['id']='shared-rollout'
+    spec['first_construction_decision']=put(tmp_path,'work/codex/decision.json',decision)
+    spec['sampling_plan']=put(tmp_path,'plan.json',plan)
+    put(tmp_path,f'configs/baseline/{name}.json',base)
+    put(tmp_path,f'configs/experiment/{name}.json',exp)
+    spec['dataset']=put(tmp_path,'configs/dataset/view.json',{'count':625,'items':rows})
+    if fault:
+        with pytest.raises((ValueError,rail.TfrlV2BankRefusal)):validate_workload(tmp_path,tmp_path,name,spec)
+    else:
+        assert validate_workload(tmp_path,tmp_path,name,spec)==n
+        # Exercise the real registration writer after the same bank/roster guard.
+        import speech_aware_evidence_acquisition.contracts as contracts
+        import speech_aware_evidence_acquisition.core.config as config
+        import speech_aware_evidence_acquisition.core.bundle.git_commit as git
+        from types import SimpleNamespace
+        monkeypatch.setattr(contracts,'assert_execution_environment',lambda:None)
+        monkeypatch.setattr(git,'require_clean_study_repo',lambda p:'a'*40)
+        monkeypatch.setattr(config,'compose',lambda *a:SimpleNamespace(config_hash='a'*64,values={'arm':'arm'}))
+        class ExecutionPlan:
+            def __init__(self,**kw):self.values=kw
+            def validate(self,**kw):assert self.values['planned_model_calls'] in (7*n,14*n)
+        monkeypatch.setattr(contracts,'ExecutionPlan',ExecutionPlan)
+        c=exp['cells'][0];c.update(model_fragment=m.MODEL,readiness={'state':'held'})
+        exp['service_session']=m.SESSION;exp['execution_plan']['planned_gpu_hours']=16
+        put(tmp_path,f'configs/experiment/{name}.json',exp)
+        base['prepared_phase_supply']={'relpath':'prepared/own.json','sha256':'f'*64}
+        put(tmp_path,f'configs/baseline/{name}.json',base)
+        put(tmp_path,f'docs/readiness/{name}/sampling-plan.json',plan)
+        (tmp_path/'docs/exposure-ledger.md').write_text('')
+        registered=m.register(tmp_path,tmp_path,'h1',iteration,tmp_path/'work/codex/decision.json')
+        assert registered['readiness']=='held'
+        written=m.read(tmp_path/f'docs/readiness/{name}/candidate.json')
+        assert written['workload_kind']=='tfrl-real-banked-half' and written['iteration']==iteration
+        assert validate_workload(tmp_path,tmp_path,name,written)==n
+        with pytest.raises(ValueError,match='existing registration'):m.register(tmp_path,tmp_path,'h1',iteration,tmp_path/'work/codex/decision.json')

@@ -60,6 +60,8 @@ def derive(repo,original,experiment,roster,plan,receipt,receipt_pin,source_scope
         populations=[{'dataset_fragment':cell['dataset_fragment'],'ids':ids}])
     exp['execution_plan'].update(planned_model_calls=14*n,
         planned_speech_audio_seconds=math.ceil(sum(r['audio_seconds'] for r in roster['items'])*14))
+    exp['stage3_algorithm']={'id':'tfrl-v2','operators_used':['rollout','scoring','context_application'],
+        'note':'Cross-fit measured rule/exemplar context on real K4 construction; unchanged aa/lock.'}
     exp['stage3_measurement'].update(rows=n,read_roster=roster['roster_id'],claims_benefit=False,
         note='Cross-fit banked construction only; independent system acceptance required.')
     return name,base,exp
