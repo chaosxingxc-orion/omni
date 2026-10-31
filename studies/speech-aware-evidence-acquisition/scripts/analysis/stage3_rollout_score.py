@@ -945,6 +945,39 @@ def render_supply_variant_first_visit(
     canonical-empty fallback in every column. A partial arm group is invalid.
     Revision visits are counted separately and never enter these copies.
     """
+    if (bundle.manifest.get("status") != "COMPLETED"
+            or bundle.attempt_state != "FINALIZED"
+            or bundle.manifest.get("run_id") != run_id
+            or bundle.manifest_path.parent.name != attempt_id):
+        raise Stage3ScoreError("source bundle is not the requested finalized complete attempt")
+    ids = sorted(roster)
+    if set(ids) != set(bundle.split_ids) or len(ids) != len(bundle.outputs_rows):
+        raise Stage3ScoreError("roster differs from complete bundle split")
+    rows = {row.get("sample_id"): row for row in bundle.outputs_rows}
+    if set(rows) != set(ids):
+        raise Stage3ScoreError("bundle outputs have missing, extra, or duplicate roster rows")
+    if bundle.manifest.get("config", {}).get("config_hash") != config_hash:
+        raise Stage3ScoreError("composed config hash differs from sealed manifest")
+    source = {
+        "run_id": run_id, "attempt_id": attempt_id,
+        "manifest_path": str(bundle.manifest_path),
+        "manifest_sha256": sha256_file(bundle.manifest_path),
+        "outputs_sha256": bundle.manifest["outputs"]["sha256"],
+        "raw_trace_sha256": bundle.manifest["raw_trace"]["sha256"],
+        "sealed_scores_sha256": bundle.manifest["scores"]["sha256"],
+        "config_hash": config_hash, "roster_sha256": roster_sha256,
+    }
+    return render_supply_source_rows(bundle.outputs_rows, bundle.trace_records, group, roster,
+                                     out_dir, source=source)
+
+
+def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_dir, *, source):
+    """Render audited source rows without claiming a generation bundle.
+
+    Callers must verify source custody first. This renderer checks the exact
+    supplied population, episode/arm declarations and contact hashes. Checkpoint
+    derivatives retain explicit checkpoint provenance, never FINALIZED metadata.
+    """
     from speech_aware_evidence_acquisition.rails.native_episode_receipt import (
         SUPPLY_VARIANT_RECEIPT_SCHEMA_V4, SUPPLY_VARIANT_RECEIPT_SCHEMA_V6, supply_variant_arm_release_swaps,
         validate_native_episode_delivery_receipt,
@@ -959,19 +992,10 @@ def render_supply_variant_first_visit(
         CITED_ANSWER_RESPONSE_FORMAT_ID, SolverCitationError, parse_cited_answer,
     )
 
-    if (bundle.manifest.get("status") != "COMPLETED"
-            or bundle.attempt_state != "FINALIZED"
-            or bundle.manifest.get("run_id") != run_id
-            or bundle.manifest_path.parent.name != attempt_id):
-        raise Stage3ScoreError("source bundle is not the requested finalized complete attempt")
     ids = sorted(roster)
-    if set(ids) != set(bundle.split_ids) or len(ids) != len(bundle.outputs_rows):
-        raise Stage3ScoreError("roster differs from complete bundle split")
-    rows = {row.get("sample_id"): row for row in bundle.outputs_rows}
-    if set(rows) != set(ids):
-        raise Stage3ScoreError("bundle outputs have missing, extra, or duplicate roster rows")
-    if bundle.manifest.get("config", {}).get("config_hash") != config_hash:
-        raise Stage3ScoreError("composed config hash differs from sealed manifest")
+    rows = {row.get("sample_id"): row for row in outputs_rows}
+    if len(rows) != len(outputs_rows) or set(rows) != set(ids):
+        raise Stage3ScoreError("source rows differ from exact declared population")
     is_template = bool(getattr(group, "is_template", False))
     is_decoding = bool(getattr(group, "is_decoding", False))        # NX-T R4: the node-decoding kind (receipt v6)
     unvaried = is_template or is_decoding
@@ -1066,8 +1090,8 @@ def render_supply_variant_first_visit(
             if not isinstance(contact, Mapping):
                 raise Stage3ScoreError(f"{sid}: first Solver arm contact is malformed")
             request_id = contact.get("request_id")
-            response = bundle.trace_records.get(f"{request_id}/response")
-            request = bundle.trace_records.get(f"{request_id}/request")
+            response = trace_records.get(f"{request_id}/response")
+            request = trace_records.get(f"{request_id}/request")
             if not isinstance(response, Mapping) or not isinstance(request, Mapping):
                 raise Stage3ScoreError(f"{sid}: first Solver arm trace pair is absent")
             raw = response.get("text")
@@ -1126,15 +1150,6 @@ def render_supply_variant_first_visit(
                         )
         row_meta.append({"sample_id": sid, "availability": "first_solver_visit",
                          "later_solver_visits": len(solver) - 1, "arms": arm_meta})
-    source = {
-        "run_id": run_id, "attempt_id": attempt_id,
-        "manifest_path": str(bundle.manifest_path),
-        "manifest_sha256": sha256_file(bundle.manifest_path),
-        "outputs_sha256": bundle.manifest["outputs"]["sha256"],
-        "raw_trace_sha256": bundle.manifest["raw_trace"]["sha256"],
-        "sealed_scores_sha256": bundle.manifest["scores"]["sha256"],
-        "config_hash": config_hash, "roster_sha256": roster_sha256,
-    }
     manifest = {
         "schema": SUPPLY_RENDER_SCHEMA, "stage": "render", "source": source,
         "rows": len(ids), "arm_order": list(names),

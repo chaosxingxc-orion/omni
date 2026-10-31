@@ -70,6 +70,16 @@ def run(repo,source,data):
     from speech_aware_evidence_acquisition.core.driver.speech_native import _LoopbackPromptAuditClient
     assert_execution_environment();recipe=validate_recipe(repo)
     halves={h:load_half(source,data,h,recipe['source_recipes'][h]) for h in ('h1','h2')}
+    return produce(repo,source,data,recipe,halves,out=data/'analysis'/RUN,recipe_path=repo/REL)
+
+
+def produce(repo,source,data,recipe,halves,*,out,recipe_path):
+    """Produce banks from already verified, explicitly sourced halves."""
+    from speech_aware_evidence_acquisition.core.session.serving import find_resident_session
+    from speech_aware_evidence_acquisition.core.session.receipt import SessionReceipt
+    from speech_aware_evidence_acquisition.core.session.vllm_identity import verify_vllm_session
+    from speech_aware_evidence_acquisition.core.driver.speech_native import _LoopbackPromptAuditClient
+    if not out.resolve().is_relative_to(data.resolve()/'analysis'):raise ValueError('owned bank output required')
     resolver=common_resolver(halves,data)
     model=read(pinned(source,recipe['source_model']));runtime_path=pinned(source,recipe['runtime_receipt']);runtime=read(runtime_path)
     resident=find_resident_session(data)
@@ -86,8 +96,7 @@ def run(repo,source,data):
     def guard():
         if sha(session_path)!=session_sha or sha(runtime_path)!=recipe['runtime_receipt']['sha256']:
             raise ValueError('resident identity changed during token measurement')
-    out=data/'analysis'/RUN
-    identity={'recipe_sha256':sha(repo/REL),'runtime_receipt_sha256':sha(runtime_path),'session_sha256':session_sha,
+    identity={'recipe_sha256':sha(recipe_path),'runtime_receipt_sha256':sha(runtime_path),'session_sha256':session_sha,
         'sources':{h:r['source'] for h,r in halves.items()},'knowledge_resolver':resolver.identity()}
     journal=JournalTokenizer(_LoopbackPromptAuditClient(host='127.0.0.1',port=port,timeout_seconds=600.),
         out/'tokenizer',identity=identity,cap=CAP,guard=guard)
@@ -105,7 +114,7 @@ def run(repo,source,data):
             consuming_split_identity=halves[other]['roster']['split_identity_hash'])
     union=distiller.union_banks(loaded['h1'],loaded['h2'],measure=measure)
     distiller.write_union_outputs(union,out/'union')
-    summary={'schema':'saea-tfrl-current-banks-complete-v1','rows':625,'recipe_sha256':sha(repo/REL),
+    summary={'schema':'saea-tfrl-current-banks-complete-v1','rows':625,'recipe_sha256':sha(recipe_path),
         'sources':identity['sources'],'knowledge_resolver':resolver.identity(),'accounting':journal.accounting(),
         'banks':{h:{'receipt_sha256':sha(out/h/'bank-receipt.json'),
             'exemplars':read(out/h/'bank-receipt.json')['exemplar_bank']['entries'],

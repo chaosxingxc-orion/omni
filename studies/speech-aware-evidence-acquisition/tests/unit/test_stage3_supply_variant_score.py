@@ -277,3 +277,18 @@ def test_a_row_with_no_normaliser_derives_citations_as_not_ok_and_keeps_the_old_
     citation_rows = list(mod.iter_jsonl(Path(manifest["citation_rows"]["path"])))
     assert citation_rows and all(not row["cited_value_ids_ok"] for row in citation_rows)
     assert all(row["cited_value_ids"] == [] for row in citation_rows)
+
+
+def test_checkpoint_derivative_uses_same_renderer_without_fabricated_bundle(tmp_path):
+    bundle,group=_fixture(tmp_path,terminal=True)
+    standard=_render(bundle,group,tmp_path)
+    source={'kind':'verified-checkpoint-subset','checkpoint_sha256':'a'*64}
+    derived=mod.render_supply_source_rows(bundle.outputs_rows,bundle.trace_records,group,
+        dict.fromkeys(IDS,''),tmp_path/'checkpoint',source=source)
+    assert derived['source']==source
+    assert 'manifest_path' not in derived['source']
+    for arm in standard['copies']:
+        assert Path(standard['copies'][arm]['path']).read_bytes()==Path(derived['copies'][arm]['path']).read_bytes()
+    with pytest.raises(mod.Stage3ScoreError,match='population'):
+        mod.render_supply_source_rows([*bundle.outputs_rows,bundle.outputs_rows[0]],bundle.trace_records,
+            group,dict.fromkeys(IDS,''),tmp_path/'invalid',source=source)

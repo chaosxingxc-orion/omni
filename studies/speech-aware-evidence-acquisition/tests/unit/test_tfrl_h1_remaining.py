@@ -6,12 +6,12 @@ import tfrl_h1_remaining as m
 import tfrl_v2_sampler as sampler
 
 def test_repair_derivation_keeps_seed_method_and_exact_complement():
-    root=Path(__file__).resolve().parents[2]
-    base=json.loads((root/f'configs/baseline/{m.PARENT}.json').read_bytes())
-    exp=json.loads((root/f'configs/experiment/{m.PARENT}.json').read_bytes())
-    roster=json.loads((root/'docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json').read_bytes())
-    roster['items']=roster['items'][3:];roster['split_identity_hash']='a'*64
+    roster={'half':'R01C-H1','roster_id':sampler.cm.HALF_ROSTER_ID['R01C-H1'],'split_identity_hash':'a'*64,
+            'items':[{'sample_id':f'fixture-{i}','audio_seconds':1.0} for i in range(310)]}
     plan=sampler.build_plan(roster,'R01C-H1',1,execution_run_id=m.RUN,execution_attempt_id=m.ATTEMPT)
+    base={'native_episode':{'consumption_module':{'columns':sampler.execution_columns(plan)}},
+          'policy':'unchanged-policy','native_contact_fit':{},'prepared_phase_supply':{'sha256':'b'*64}}
+    exp={'cells':[{}],'population':{},'populations':[{}],'execution_plan':{},'stage3_measurement':{}}
     original=copy.deepcopy(base);before=copy.deepcopy(exp)
     b,e=m.derive_documents(base,exp,roster,plan)
     assert base==original and exp==before

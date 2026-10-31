@@ -1,10 +1,10 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T19:41:00Z",
+  "observed_at_utc": "2026-10-31T19:51:26Z",
   "completed_rows": 0,
   "total_rows": 625,
   "h1": {
-    "state": "preflight_blocked_missing_analysis_recipe",
+    "state": "preflight_passed_waiting_h2",
     "completed_rows": 0,
     "total_rows": 313,
     "remaining_rows": 313,
@@ -42,13 +42,14 @@
     "context_affected_rows": 22,
     "remaining_inference_rows": 310,
     "wall_seconds_per_complete_row_note": "Historical failed-run diagnostic only; 22 of 25 rows had erroneous context compaction.",
-    "recovery_source_commit": "a56669d48d06170c8feed429c4a9bf111ab82c76",
-    "generation_dependency": "Register source-bound analysis recipe and pass full preflight before queuing behind H2",
-    "official_union": "pending",
-    "recovery_model_calls": 0
+    "recovery_source_commit": "3391fab7ee0c030c6ef6f0bbc958e84fbb6c7f2b",
+    "generation_dependency": "H2 generation successful terminal; detached queue every600s",
+    "official_union": "registered; three preserved rows validated against real traces; score full313 after complete310",
+    "recovery_model_calls": 0,
+    "union_recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
   },
   "h2": {
-    "state": "dispatch_started_generation_unconfirmed",
+    "state": "running",
     "completed_rows": 0,
     "total_rows": 312,
     "remaining_rows": 312,
@@ -56,15 +57,18 @@
     "instances": 2,
     "estimated_remaining_seconds": null,
     "started_at_utc": "2026-10-31T19:38:31.113885Z",
-    "previous_dispatch": "Failed before lease acquisition; no model calls. Stale metadata reconciled after liveness and guard checks."
+    "previous_dispatch": "Failed before lease acquisition; no model calls. Stale metadata reconciled after liveness and guard checks.",
+    "attempt_state": "OPENED",
+    "observed_fit_receipts": 396,
+    "fit_observation_at_utc": "2026-10-31T19:46:16Z"
   },
   "resources": {
     "cards": 8,
     "instances": 2,
     "tensor_parallel": 4,
     "max_num_seqs_per_instance": 128,
-    "generation_active": null,
-    "note": "Selected resident service: 8 cards, 2 TP4 instances. New dispatch started; actual requests not yet confirmed."
+    "generation_active": true,
+    "note": "Live runtime, OPENED attempt and actual FIT receipts verified.8 allocated cards; sustained utilization not established."
   },
   "hardware_snapshot": {
     "observed_at_utc": "2026-10-31T18:54:25Z",
@@ -80,7 +84,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "ETA unknown. H2 dispatch passed fresh preflight; generation not yet confirmed. H1 requires 310 corrected inferences and source-bound reuse of 3 verified candidates.",
+  "eta_note": "No newly complete K4 rows in19:46snapshot; ETA unknown. H1 waiting H2 successful generation terminal.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -88,7 +92,7 @@
     "model_calls": 0,
     "scoring_jobs": 0
   },
-  "state": "h2_dispatch_started_generation_unconfirmed_h1_recovery_prepared",
+  "state": "h2_running_h1_preflight_passed_waiting_generation_queue",
   "remaining_rows": 625,
   "bank_read": {
     "registered": true,
@@ -107,7 +111,7 @@
   "repair": {
     "implemented": true,
     "recovery_runtime_tests_passed": 84,
-    "production_resumed": false,
+    "production_resumed": true,
     "h2_preflight": "passed_exit0",
     "h1_checkpoint_preserved": true,
     "source_commit": "d0b9d593444732ff4e1f2ae6959ed1830bc1f511",

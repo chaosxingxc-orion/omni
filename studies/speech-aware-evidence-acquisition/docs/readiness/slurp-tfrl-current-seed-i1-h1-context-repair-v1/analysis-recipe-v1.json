@@ -1,0 +1,47 @@
+{
+ "arms": [
+  "s1",
+  "s2",
+  "s3",
+  "s4",
+  "aa",
+  "lock"
+ ],
+ "attempt_id": "generation-v1",
+ "authority": "docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md",
+ "claims_benefit": false,
+ "continuation_plan": {
+  "relpath": "docs/readiness/slurp-tfrl-current-seed-i1-h1-context-repair-v1/sampling-plan.json",
+  "sha256": "e0ade1417f3cee9eba4d6068d67f07c474f25c6406082d1759e783a26dd24941"
+ },
+ "continuation_rows": 310,
+ "custody": {
+  "relpath": "work/codex/tfrl-h1-context-custody-v1/custody.json",
+  "sha256": "3558805799b23bd3ad4d39313c94c5d29cddbc08c739d0cf26edc0cd5e3fedec"
+ },
+ "decision_scope": "Construction diagnostics only;625 pool and independent confirmation required",
+ "entrypoint": "scripts/analysis/tfrl_h1_union.py",
+ "new_model_calls": 0,
+ "official_scoring_jobs": 7,
+ "parent_plan": {
+  "relpath": "docs/readiness/slurp-tfrl-current-seed-i1-h1-v1/sampling-plan.json",
+  "sha256": "3938322e70bcdc007ae044d9e6270c9a04f56fca6658a0a78e2202c451b5ff19"
+ },
+ "parent_roster": {
+  "relpath": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
+  "sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0"
+ },
+ "preserved_rows": 3,
+ "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1",
+ "request_replay": {
+  "relpath": "work/codex/tfrl-h1-unmodified-replay-v3/complete.json",
+  "sha256": "b5322fc3cec6b85faef003ebcf3a11952df55cab8be69ba59746cb97b9cd2dc4"
+ },
+ "rows": 313,
+ "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-V1",
+ "schema": "saea-tfrl-h1-source-union-recipe-v1",
+ "scorer": "slurp-slu-official-train",
+ "selection": "No score-based selection; retain exactly three context-intact original rows and regenerate all310 others",
+ "source_commit": "463946acb7b9c27ee9b6026ca26a954fe42b8f8b",
+ "split_identity_hash": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14"
+}

@@ -75,6 +75,23 @@ def sealed_answers(bundle,plan,*,resolver=None):
     return answers,resolver,provenance
 
 
+def answers_for_loaded(loaded,*,resolver=None):
+    """Keep trace namespaces separate when a half is an explicit source union."""
+    if 'segments' not in loaded:
+        return sealed_answers(loaded['bundle'],loaded['plan'],resolver=resolver)
+    if resolver is None:raise ValueError('source union requires verified common knowledge resolver')
+    ids=[r['row_id'] for r in loaded['plan']['row_plan']];seen=set();answers={};provenance=[]
+    for segment in loaded['segments']:
+        own=[r['row_id'] for r in segment['plan']['row_plan']]
+        if len(own)!=len(set(own)) or seen.intersection(own):raise ValueError('source union repeats rows')
+        seen.update(own)
+        local,_,traces=sealed_answers(segment['rows'],segment['plan'],resolver=resolver)
+        answers.update(local)
+        provenance.extend({**r,'source_namespace':segment['namespace']} for r in traces)
+    if len(ids)!=len(set(ids)) or seen!=set(ids):raise ValueError('source union omits full-half rows')
+    return answers,resolver,provenance
+
+
 def build(loaded,measure,*,resolver=None):
     """Build banks from load_half's verified results; no filesystem mutation.
 
@@ -83,7 +100,7 @@ def build(loaded,measure,*,resolver=None):
     """
     if measure.name!=common.MEASURE_VLLM:raise ValueError('exact registered tokenizer measure required')
     plan=loaded['plan'];half=plan['half'];iteration=plan['iteration']
-    answers,resolver,provenance=sealed_answers(loaded['bundle'],plan,resolver=resolver)
+    answers,resolver,provenance=answers_for_loaded(loaded,resolver=resolver)
     calls_before=measure.calls
     ids=[r['row_id'] for r in plan['row_plan']]
     tables={a:{r['sample_id']:r for r in result['per_sample']} for a,result in loaded['results'].items()}
@@ -128,7 +145,7 @@ def common_resolver(halves,data):
     if binding is None:raise ValueError('resolved knowledge binding required')
     resolver=text.ItemTextResolver.from_binding(binding)
     # Check BOTH halves before any token contact, including evidence of non-positive rows.
-    for loaded in halves.values():sealed_answers(loaded['bundle'],loaded['plan'],resolver=resolver)
+    for loaded in halves.values():answers_for_loaded(loaded,resolver=resolver)
     return resolver
 
 
