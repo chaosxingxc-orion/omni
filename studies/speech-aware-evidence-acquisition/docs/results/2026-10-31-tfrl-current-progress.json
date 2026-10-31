@@ -180,5 +180,16 @@
     ],
     "later_consumer_implementation": true,
     "later_consumer_deployed": false
+  },
+  "successor_preparation_queue": {
+    "state": "waiting_verified_full625",
+    "implementation_commit": "65eb5931b6ef66f5a9222eb2e7793f882264f9a7",
+    "poll_seconds": 600,
+    "new_generation_calls": 0,
+    "new_tokenizer_calls": 0,
+    "new_scoring_jobs": 0,
+    "generation_authorized": false,
+    "deployed": true,
+    "tests_passed": 76
   }
 }
