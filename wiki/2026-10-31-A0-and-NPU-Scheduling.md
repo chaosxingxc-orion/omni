@@ -1,6 +1,6 @@
 # A0、真实数据工程基线与后续优化
 
-更新：2026-10-31 23:35 UTC。真实500工程基准、Fold B完整1080条首轮收益和 Fold A 完整1080条 A0 结果已锁定；首轮 construction625/625 官方评分完成。K4 vote 相对 lock 下降0.4040pp，按预定门槛停止当前家族。
+更新：2026-11-01 00:10 UTC。真实500工程基准、Fold B完整1080条首轮收益和 Fold A 完整1080条 A0 结果已锁定；首轮 construction625/625 官方评分完成。K4 vote 相对 lock 下降0.4040pp，按预定门槛停止当前家族。
 
 ## 当前结论
 
@@ -122,21 +122,19 @@ H1完整313条由修复后310条和3条历史上下文完整记录合并并完�
 
 新增模型/tokenizer调用0，复用已有候选；这不表示部署成本为0，方法仍依赖四次候选求解。无独立系统增益或新效率结论。67项相关测试通过。[完整结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-whole-answer-result.json)。
 
-## 下一阶段与未完成项
+## 当前状态与下一阶段
 
-1. 完整625条诊断完成：20条有正确Intent候选却被投票丢失，77条候选优于lock但投票未兑现，59条增加错误槽位。完整答案聚合筛查已完成625条，仍未过门槛；不同证据候选仍在设计。诊断使用gold的候选最优值只能描述潜力，不是在线路由。
-2. Fold A1080编码、检索派生及当前两调用A0配置已实际准备，0重复编码；原示例池语句级重叠0，9354个facet/value及向量覆盖通过。agreement已完成1080/1080条，当前两调用A0评估基线已实际派生并保持held；仍需选定服务绑定、独立供给及正式评估登记预检。Fold A有历史使用记录，不称为未接触数据。
-3. 方法冻结后完整评测13078条test；尚无TFRL系统收益或RSI完成结论。
-4. 已有逐行持久断点、脱离SSH运行与600秒观察；contact/branch级接续、主机重启自动恢复仍未完成。生成释放后异步交接已实现测试，尚未在后续真实推理部署验证。
+Fold A A0 已终态完成 1080/1080：2,160 次真实调用，生成封存 2,773.597 秒（2.568 秒/条），SLU-F1 73.3139%，Intent 85.7407%；完整成本和 checkpoint 凭证已封存。当前没有运行中的模型任务，8 卡处于空闲，不能把历史分配写成持续满载。
 
-[完整七列结果、成本与下一阶段方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-first625-result-and-next-plan-zh.md)。工程实现详情保留在仓库历史报告，本页只原位维护结果及当前状态。
+odd40 仍处于真实运行时准入阶段。625 条真实 construction 的供给审计已完成（625/625 变化、0 回退），但尚未产生 B 候选答案、FIT、生成、评分或系统收益。下一步先完成 4 行真实 dry-run、预算编译、registration/admission/preflight，再将 625 条真实任务放入 detached queue。CPU 评分和成本审计与 NPU 推理异步执行，观察周期约 600 秒。
 
-[失败诊断与具体实验草案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-next-method-plan-zh.md)；[Fold A真实配置准备结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-fold-a-confirmation-inputs-zh.md)。
-
-Fold A完整1080条任务已经终态封存：**1080/1080，剩余0，ETA 0**。生成阶段为 8 卡、2×TP4、每实例 `max_num_seqs=128`，2160 次调用，生成耗时 2773.60 秒（2.568 秒/条）。checkpoint 与官方评分 identity check 均通过。末次硬件采样为请求清空后的终态，故这里仅报告资源配置和已观测利用率，不把 8 卡分配解释为持续满载。
+首轮 odd40 必须相对同轨迹 A 达到官方 SLU-F1 +1pp 且 Intent 不下降；否则停止，不搜索阈值。方法冻结并完成独立 Fold A 配对确认后，才运行完整 13,078 条 test。
 
 ## 不同证据方案的CPU准备结果
 
 真实construction625供给审计完成：625/625条供给变化、0条回退、每条平均重合10/20条，查询语句与知识池重叠0。采用共享检索器排名，未把ID排序误当检索排名；新增模型/tokenizer/评分调用均0。5项审计规则测试与11项整答案交付测试通过。这不是新精度结果。
 
 新方案固定为原始证据答案 A 与替代证据答案 B，答案相同时交付 A，不同时最多一次受约束 A/B 裁决；非法选择回退 A，不拼接实体。odd40 供给策略已完成 625 条 CPU 审计，0 回退，真实运行时仍需完成候选配置登记、FIT、准入和断点验证。A 兼作 lock，保留 A/A，正常预算为每条 4–5 次调用；旧 K4 与完整答案 medoid 方案保持停止。[设计与完整审计结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-next-method-plan-zh.md)。
+
+
+[当前任务状态、决策与下一阶段计划](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-task-status-decisions-next-plan-zh.md)
