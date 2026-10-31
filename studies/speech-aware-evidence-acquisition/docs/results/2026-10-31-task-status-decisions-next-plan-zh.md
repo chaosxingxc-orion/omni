@@ -80,3 +80,9 @@ SSH 只负责控制和观察，断线不会自动取消后台任务。runner 异
 - [实验总账](https://github.com/chaosxingxc-orion/omni/wiki/Experiment-Tracking)
 - [当日运行与工程记录](https://github.com/chaosxingxc-orion/omni/wiki/2026-10-31-A0-and-NPU-Scheduling)
 - [main 分支](https://github.com/chaosxingxc-orion/omni/tree/main)
+
+## 06:20 UTC：提交与八卡任务满载复核
+
+公开代码已合入并推送 `main`，当前提交为 `5386e975`；同一状态已写入独立远程 Wiki，提交为 `3f78ca1`。A0 仍由原 detached runner 和 worker 执行，未重复启动、未重放调用。
+
+最新 `npu2` 实机采样显示四个 TP=2 端点运行请求为 13/4/8/7，等待均为 0；8 张卡 AI 利用率为 50%、49%、47%、45%、46%、60%、64%、63%，随后采样为 65%、62%、49%、50%、52%、52%、61%、59%。结论是 8 卡都在承担有效任务，但尚未达到持续满载标准。后续实验必须以 8 卡整体的有效任务供给、逐卡利用率窗口、低分位、空闲比例、吞吐和切换间隙作为验收，不以单实例繁忙、显存占用或端点存在替代。
