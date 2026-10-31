@@ -183,7 +183,10 @@
     "later_consumer_implementation": true,
     "later_consumer_deployed": false,
     "banked_generation_registration_implemented": true,
-    "banked_generation_registration_deployed": false
+    "banked_generation_registration_deployed": false,
+    "own_supply_entry_implemented": true,
+    "own_supply_entry_tests_passed": 90,
+    "actual_banked_supply_prepared": false
   },
   "successor_preparation_queue": {
     "state": "waiting_verified_full625",

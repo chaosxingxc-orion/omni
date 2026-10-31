@@ -144,6 +144,33 @@ def test_banked_workload_full_roster_bank_and_first_gate(tmp_path,monkeypatch,it
         c=exp['cells'][0];c.update(model_fragment=m.MODEL,readiness={'state':'held'})
         exp['service_session']=m.SESSION;exp['execution_plan']['planned_gpu_hours']=16
         put(tmp_path,f'configs/experiment/{name}.json',exp)
+        # Prepare this banked half through the real guarded entry before registration.
+        import tfrl_banked_supply as supply
+        import speech_aware_evidence_acquisition.core.flight.factory as factory
+        c.update(cell_id=name,allowed_execution_stages=['check'])
+        c['readiness']['requirements']=[]
+        exp['population']['roster_receipt']='roster.json'
+        put(tmp_path,f'configs/experiment/{name}.json',exp)
+        put(tmp_path,f'docs/readiness/{name}/sampling-plan.json',plan)
+        monkeypatch.setattr(supply,'LOCK_SHA',lock['sha256'])
+        prepares=[]
+        class Runtime:
+            def prepare_phase_supply(self,path,*,max_workers):
+                prepares.append(path)
+                put(tmp_path,str(path.relative_to(tmp_path)),{'output':{
+                    'values':{'first':{r['sample_id']:[] for r in rows[:n]}}}})
+        monkeypatch.setattr(factory,'build_flight_runtime',lambda *a,**kw:Runtime())
+        out=tmp_path/'work/codex/prepare'
+        result=supply.prepare(tmp_path,tmp_path,name,iteration,tmp_path/'work/codex/decision.json',out)
+        assert result['rows']==313 and result['iteration']==iteration and len(prepares)==1
+        assert result['model_calls']==result['tokenizer_calls']==result['scoring_jobs']==0
+        from tfrl_current_supply_binding import bound_documents
+        bound,held=bound_documents(base,exp,result,iteration=iteration)
+        assert bound['prepared_phase_supply']==result['supply']
+        assert held['cells'][0]['readiness']['state']=='held'
+        with pytest.raises(ValueError,match='fresh owned'):
+            supply.prepare(tmp_path,tmp_path,name,iteration,tmp_path/'work/codex/decision.json',out)
+        assert len(prepares)==1
         base['prepared_phase_supply']={'relpath':'prepared/own.json','sha256':'f'*64}
         put(tmp_path,f'configs/baseline/{name}.json',base)
         put(tmp_path,f'docs/readiness/{name}/sampling-plan.json',plan)
