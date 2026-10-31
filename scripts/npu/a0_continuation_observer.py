@@ -11,13 +11,16 @@ RUN = 'SAEA-SLURP-A0-REMAINING353-C2-V1'
 ATTEMPT = 'attempt-a0-remaining353-c2-v1'
 
 
-def observe(out):
+def observe(out, handoff=None):
     if out.exists() or not out.resolve().is_relative_to(D / 'work/codex'):
         raise ValueError('fresh owned observer required')
     out.mkdir(parents=True)
     write(out / 'intent.json', {'pid': os.getpid(), 'interval_seconds': 600,
-        'new_model_calls': 0, 'can_restart_jobs': False})
-    item = D / 'work/codex/a0-after-real500-queue-v1/handoff'
+        'new_model_calls': 0, 'can_restart_jobs': False,
+        'handoff':str(handoff or D/'work/codex/a0-after-real500-queue-v1/handoff')})
+    recovered = handoff is not None
+    item = handoff or D / 'work/codex/a0-after-real500-queue-v1/handoff'
+    if not item.resolve().is_relative_to(D/'work/codex'): raise ValueError('owned handoff required')
     directory = D / 'runs' / RUN / ATTEMPT
     checkpoint = directory / (RUN + '.rows.ckpt.jsonl')
     seal = directory / (RUN + '.generation-manifest.json')
@@ -27,7 +30,7 @@ def observe(out):
         now = time.time()
         try:
             handoff = read(item / 'status.json') or {}
-            parent = read(item.parent / 'status.json') or {}
+            parent = {} if recovered else read(item.parent / 'status.json') or {}
             start = read(item / 'run/started.json')
             terminal = read(item / 'run.exit.json')
             failed = handoff.get('state') == 'failed' or parent.get('state') == 'failed'
@@ -78,4 +81,5 @@ def observe(out):
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--out', type=Path, required=True)
+    p.add_argument('--handoff',type=Path)
     observe(**vars(p.parse_args()))

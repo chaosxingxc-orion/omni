@@ -30,7 +30,7 @@ def check_terminal(handoff,terminal,manifest,attempt):
     return True
 
 
-def run(tree,out):
+def run(tree,out,handoff=None):
     if not out.resolve().is_relative_to(D/'work/codex') or out.exists():
         raise ValueError('fresh owned result queue required')
     study=tree/'studies/speech-aware-evidence-acquisition'
@@ -42,8 +42,11 @@ def run(tree,out):
     if target.exists():raise ValueError('analysis already attempted; inspect without replay')
     out.mkdir(parents=True)
     write(out/'intent.json',{'pid':os.getpid(),'tree':str(tree),'pins':pins,
-        'interval_seconds':600,'new_model_calls':0,'official_scoring_jobs':1,'output':str(target)})
-    handoff=D/'work/codex/a0-after-real500-queue-v1/handoff'
+        'interval_seconds':600,'new_model_calls':0,'official_scoring_jobs':1,'output':str(target),
+        'handoff':str(handoff or D/'work/codex/a0-after-real500-queue-v1/handoff')})
+    recovered = handoff is not None
+    handoff = handoff or D/'work/codex/a0-after-real500-queue-v1/handoff'
+    if not handoff.resolve().is_relative_to(D/'work/codex'): raise ValueError('owned handoff required')
     terminal=handoff/'run.exit.json'
     manifest=D/'runs'/RUN/ATTEMPT/(RUN+'.run-manifest.json')
     attempt=D/'attempts'/RUN/(ATTEMPT+'.json')
@@ -51,7 +54,7 @@ def run(tree,out):
     status(out,'waiting_finalized353')
     try:
         while not check_terminal(read(handoff/'status.json') or {},read(terminal),read(manifest),read(attempt)):
-            parent=read(handoff.parent/'status.json') or {}
+            parent={} if recovered else read(handoff.parent/'status.json') or {}
             if parent.get('state')=='failed':raise ValueError('upstream A0 queue failed')
             time.sleep(600)
         if any(sha(Path(p))!=digest for p,digest in pins.items()):raise ValueError('scoring source/recipe changed')
@@ -83,4 +86,5 @@ def run(tree,out):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--tree',type=Path,required=True);p.add_argument('--out',type=Path,required=True)
+    p.add_argument('--handoff',type=Path)
     run(**vars(p.parse_args()))

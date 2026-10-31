@@ -17,7 +17,7 @@ def ready(parent, complete):
     return True
 
 
-def run(out):
+def run(out, source_queue=None):
     if out.exists() or not out.resolve().is_relative_to(D / 'work/codex'):
         raise ValueError('fresh owned queue required')
     study = U / 'studies/speech-aware-evidence-acquisition'
@@ -30,11 +30,14 @@ def run(out):
     pins = {str(p): sha(p) for p in paths}
     out.mkdir(parents=True)
     write(out / 'intent.json', {'pid': os.getpid(), 'pins': pins, 'interval_seconds': 600,
-        'new_model_calls': 0, 'new_scoring_jobs': 0, 'automatic_retry': False})
+        'new_model_calls': 0, 'new_scoring_jobs': 0, 'automatic_retry': False,
+        'source_queue': str(source_queue or D/'work/codex/a0-full1080-result-queue-v1')})
+    source_queue = source_queue or D / 'work/codex/a0-full1080-result-queue-v1'
+    if not source_queue.resolve().is_relative_to(D/'work/codex'): raise ValueError('owned source queue required')
     read = lambda p: json.loads(p.read_bytes()) if p.exists() else None
     status(out, 'waiting_full1080_official_score')
     try:
-        while not ready(read(D / 'work/codex/a0-full1080-result-queue-v1/status.json') or {}, read(source / 'complete.json')):
+        while not ready(read(source_queue / 'status.json') or {}, read(source / 'complete.json')):
             time.sleep(600)
         if any(sha(Path(p)) != digest for p, digest in pins.items()): raise ValueError('comparison source changed')
         status(out, 'verifying_and_comparing_full1080')
@@ -60,4 +63,5 @@ def run(out):
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--out', type=Path, required=True)
+    p.add_argument('--source-queue',type=Path)
     run(**vars(p.parse_args()))
