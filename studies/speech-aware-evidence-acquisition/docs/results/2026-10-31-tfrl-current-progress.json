@@ -120,5 +120,14 @@
     "h1_wire_replay_new_model_calls": 0
   },
   "reuse_candidate_rows": 3,
-  "completion_note": "No current repaired complete-row observation. Three historical rows passed wire replay; official source-bound union still pending."
+  "completion_note": "No current repaired complete-row observation. Three historical rows passed wire replay; official source-bound union still pending.",
+  "recovered_consumers": {
+    "state": "waiting_two_complete_official_halves",
+    "rows": 625,
+    "poll_seconds": 600,
+    "source_commit": "454d062e283374edb3094a2e5d52b1a43ce47b6b",
+    "new_generation_calls": 0,
+    "tokenizer_contact_cap": 20000,
+    "actual_bank_produced": false
+  }
 }

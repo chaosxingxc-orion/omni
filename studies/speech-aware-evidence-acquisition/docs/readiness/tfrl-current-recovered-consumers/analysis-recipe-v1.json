@@ -1,0 +1,53 @@
+{
+ "authority": "docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md",
+ "bank_method": "Existing measured contrast-rule and evidence-exemplar distiller; cross-fit checked",
+ "bank_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-RECOVERED-BANK-V1",
+ "claims_benefit": false,
+ "entrypoint": "scripts/analysis/tfrl_recovered_consumers.py",
+ "exemplar_token_cap": 2000,
+ "new_model_calls": 0,
+ "next_iteration_authorized": false,
+ "official_scoring_jobs": 0,
+ "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-RECOVERED-POOL-READ-V1",
+ "rows": 625,
+ "rule_support_rows": 3,
+ "rule_token_cap": 400,
+ "schema": "saea-tfrl-recovered-consumers-v1",
+ "service_session": "serving-a0-remaining353-selected-resident-v1",
+ "sources": {
+  "h1": {
+   "commit": "3391fab7ee0c030c6ef6f0bbc958e84fbb6c7f2b",
+   "model": {
+    "relpath": "configs/model/bf16-thinking-real500-tp4-s128-v1.json",
+    "sha256": "d1d69aea19c548a89e2adce958dab761f820d2e1b9ea76fdb00ef470fa75399b"
+   },
+   "recipe": {
+    "relpath": "docs/readiness/slurp-tfrl-current-seed-i1-h1-context-repair-v1/analysis-recipe-v1.json",
+    "sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+   },
+   "repo_relpath": "work/dev/tfrl-h1-context-repair-runtime-v1/studies/speech-aware-evidence-acquisition",
+   "runtime": {
+    "relpath": "docs/receipts/runtime-a0-remaining353-selected-resident-v1.json",
+    "sha256": "062ad01cfbca9c48439f31d563a2c3840b3d5b3153f3a507b84ee5f5c8befc48"
+   }
+  },
+  "h2": {
+   "commit": "d0b9d593444732ff4e1f2ae6959ed1830bc1f511",
+   "model": {
+    "relpath": "configs/model/bf16-thinking-real500-tp4-s128-v1.json",
+    "sha256": "d1d69aea19c548a89e2adce958dab761f820d2e1b9ea76fdb00ef470fa75399b"
+   },
+   "recipe": {
+    "relpath": "docs/readiness/slurp-tfrl-current-seed-i1-h2-v1/analysis-recipe-v1.json",
+    "sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923"
+   },
+   "repo_relpath": "work/dev/tfrl-current-fit-recovery-runtime-v1/studies/speech-aware-evidence-acquisition",
+   "runtime": {
+    "relpath": "docs/receipts/runtime-a0-remaining353-selected-resident-v1.json",
+    "sha256": "062ad01cfbca9c48439f31d563a2c3840b3d5b3153f3a507b84ee5f5c8befc48"
+   }
+  }
+ },
+ "threshold_pp": 1.0,
+ "tokenizer_contact_cap": 20000
+}
