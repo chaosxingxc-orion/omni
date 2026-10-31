@@ -563,6 +563,13 @@ def execute_speech_agent_workflows(
 
     async def _run_all():
         batch_started_ns = _monotonic_ns() if sample_timing_sink is not None else None
+        # asyncio.to_thread otherwise caps blocking model calls at Python's
+        # default pool width (32 on Python 3.12), below admitted deployments.
+        # asyncio.run owns this fresh loop and drains its executor on exit.
+        asyncio.get_running_loop().set_default_executor(ThreadPoolExecutor(
+            max_workers=max(1, min(slot_count, queue_depth, len(ordered_states))),
+            thread_name_prefix="saea-model-contact",
+        ))
         local_executor = (
             ThreadPoolExecutor(max_workers=local_tool_workers, thread_name_prefix="saea-local-tool")
             if local_tool_workers else None
