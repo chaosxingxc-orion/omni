@@ -1,0 +1,37 @@
+{
+  "authority": "docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md",
+  "claims_benefit": false,
+  "entrypoint": "scripts/analysis/tfrl_current_bank_run.py",
+  "exemplar_token_cap": 2000,
+  "generation_calls": 0,
+  "method": "Existing deterministic contrast distiller; exact source evidence and official per-row credit; common verified knowledge binding.",
+  "next_iteration_authorized": false,
+  "official_scoring_jobs": 0,
+  "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-BANK-V1",
+  "rows": 625,
+  "rule_support_rows": 3,
+  "rule_token_cap": 400,
+  "runtime_receipt": {
+    "relpath": "docs/receipts/runtime-a0-remaining353-selected-resident-v1.json",
+    "sha256": "062ad01cfbca9c48439f31d563a2c3840b3d5b3153f3a507b84ee5f5c8befc48"
+  },
+  "schema": "saea-tfrl-current-bank-recipe-v1",
+  "service_session": "serving-a0-remaining353-selected-resident-v1",
+  "source_model": {
+    "relpath": "configs/model/bf16-thinking-real500-tp4-s128-v1.json",
+    "sha256": "d1d69aea19c548a89e2adce958dab761f820d2e1b9ea76fdb00ef470fa75399b"
+  },
+  "source_recipes": {
+    "h1": {
+      "relpath": "docs/readiness/slurp-tfrl-current-seed-i1-h1-v1/analysis-recipe-v1.json",
+      "sha256": "9aa57b3c243f4194e6b6793e2249de195fe973a3292d59d9d97f585baaa715bb"
+    },
+    "h2": {
+      "relpath": "docs/readiness/slurp-tfrl-current-seed-i1-h2-v1/analysis-recipe-v1.json",
+      "sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923"
+    }
+  },
+  "token_measure": "vllm-tokenize",
+  "tokenizer_contact_cap": 20000,
+  "tokenizer_route": "POST /tokenize"
+}
