@@ -172,3 +172,11 @@ A0 仍由原 detached runner（PID 2357443）和 campaign worker（PID 2357554�
 后续新 NPU identity 使用独立 NPU queue，队列只放已授权且声明卡门禁的有效实验，并在当前实验结束前准备好下一项；CPU queue 独立消费已落盘 checkpoint、评分、诊断和基线锁定证据。CPU 分析可以按依赖有序执行，但不会阻塞 NPU queue 的任务供给。两条 queue 都由 detached guardian 管理，SSH 中断只影响观察，不取消任务，也不触发身份重放。
 
 这次回归只验证调度约束，没有声称当前八卡已满载。满载仍以实机窗口中的逐卡利用率、有效完成吞吐、端点运行/等待请求和无间隙任务接续共同验收。
+
+## 07:15 UTC：CPU 并行准备的真实结果
+
+独立 Fold A CPU 编码在 A0 继续推理期间完成了 1,080 个 encoder contacts，使用 CPU 32–63，NPU hours 为 0，并生成 `SEALED` receipt。它证明 CPU/NPU 可以在资源隔离后并行推进。
+
+该队列身份随后因 wrapper 的路径拼写错误以 exit 127 结束；封存 receipt、输出和失败日志均保留，不能把它记为完整队列成功，也不能用同一身份重放编码。后续只允许基于 receipt 做只读 adoption，再进入 retrieval 输入准备。
+
+同时，队列 runner 暴露出热追加任务未立即写入 `state.json` 的持久化缺口。已在 `main` 的 `59fde5f2` 修复并增加 35 项队列回归；当前 A0 runner 不热更新，修复只用于新队列身份。
