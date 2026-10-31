@@ -1,0 +1,35 @@
+{
+  "attempt_id": "attempt-slurp-l338-fold-b-generation-naturalend-npu-v1",
+  "audio_seconds_cap": 107264,
+  "baseline": "slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-naturalend-npu-v1",
+  "card_hours": "UNRESOLVED: derive from accepted measured binding and actual proof cost; draft retains previous numeric bound but is held",
+  "cell": "slurp-native-stage3-l338-lever-column-fold-b-naturalend-npu-v1",
+  "decision_id": "slurp-agent-fold-b-naturalend-npu-admission-v1",
+  "decision_relpath": "coordination/slurp-agent-fold-b-naturalend-npu-v1/root-admission-v1.json",
+  "fit_attempt_id": "attempt-slurp-l338-fold-b-fit-naturalend-npu-v1",
+  "fit_cap": 18360,
+  "fit_run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-FIT-NATURALEND-NPU-V1",
+  "generation_cap": 36720,
+  "package": "docs/readiness/2026-10-30-slurp-agent-fold-b-naturalend-npu-v1",
+  "predecessor_commit": "4381a5ea8608d0627afe815487ec65427b555a6a",
+  "proof_package": "docs/readiness/2026-10-30-slurp-delivery-assets-proof-v1",
+  "read_run_id": "SAEA-SLURP-L338-FOLD-B-NATURALEND-READ-NPU-V1",
+  "rows": 1080,
+  "run_id": "SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NATURALEND-NPU-V1",
+  "schema": "saea-agent-full-successor-draft-v1",
+  "source_files": {
+    "configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json": "e532a72e90ea91078587da776bba76f9c93df620c53fcdd8e59dc683d14a36e6",
+    "configs/experiment/slurp-native-stage3-l338-lever-column-fold-b-npu-port-v1.json": "82a0aaf879e7b6e1085f2d34b5e31eb45190d09c195b35e4f60cba67f4f0a411"
+  },
+  "status": "HELD-NOT-REGISTERED",
+  "supply_reference": "prepared/SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-NPU-PORT-V1/phase-supply-v2.json",
+  "unresolved": [
+    "successful delivery proof and exact deployment equality",
+    "recompute measured full-run card-hour bound",
+    "complete shared full-Agent registration and READ recipes under new identities",
+    "complete saved final-delivery score for A0; separate source-bound first-visit branch scoring for mechanism diagnostics",
+    "fresh supply with full-roster output equality",
+    "commit/mint/ready/actual preflight",
+    "detached dispatch after Direct queue and campaign release code/lease"
+  ]
+}

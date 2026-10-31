@@ -1,0 +1,38 @@
+{
+  "model_lock_key": "qwen3-omni-30b-a3b-thinking-bf16",
+  "transport": "vllm",
+  "base_url": "http://127.0.0.1:8200",
+  "served_model_name": "qwen3-omni-30b-a3b-thinking",
+  "timeout_seconds": 420,
+  "runtime_receipt": "receipts/runtime-vllm-bf16-thinking-npu.json",
+  "server_args": [
+    "--max-model-len",
+    "24576",
+    "--dtype",
+    "bfloat16",
+    "--reasoning-parser",
+    "qwen3",
+    "--reasoning-config",
+    "{\"reasoning_end_str\": \"Considering the limited time by the user, I have to give the solution based on the thinking directly now.\\n</think>\"}",
+    "--enable-auto-tool-choice",
+    "--tool-call-parser",
+    "hermes",
+    "--limit-mm-per-prompt",
+    "{\"audio\": 1, \"image\": 0, \"video\": 0}",
+    "--seed",
+    "0"
+  ],
+  "decoding_params": {
+    "temperature": 0,
+    "seed": 20260913,
+    "max_tokens": 4096
+  },
+  "reasoning_budget_tokens": 3072,
+  "answer_reserve_tokens": 1024,
+  "enable_thinking": true,
+  "reasoning_context_policy": "drop-reasoning-v1",
+  "forced_close_message_sha256": "aab2abbe2767036ab7019b3bc28d76e9ce288359f56c92774fe029069e166adf",
+  "prompt_order": "native-raw-speech-query-prefix-v1",
+  "reasoning_content_guard": "refuse-think-marker-in-content",
+  "geometry_basis": "Successor of bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-port-v1: remove only forced whitespace AFTER </think> to avoid the xgrammar token271 rejection. The transition message and 3072/4096 budgets stay fixed. This is a protocol change; new startup evidence and registered validation required. NPU / vLLM-Ascend port (docs/superpowers/specs/2026-10-28-npu-vllm-port-design.md) of q4km-thinking-mmproj-free-slurp-module-fold-b-np4-ctx24k-budget3072-max4096-v1: the same 24576-token per-sequence window (--max-model-len 24576), the same 3072 + 1024 = 4096 reasoning budget, answer reserve and forced-close message (now vLLM's --reasoning-config reasoning_end_str), the same drop-reasoning context policy and reasoning-content guard. The number of concurrent sequences per instance (--max-num-seqs), the instance count, the tensor-parallel size, the memory utilisation and the card assignment are deployment facts: they live in the selected deployment profile (configs/deployment/*.json, core/deployment.py), are recorded in the run manifest and the vLLM runtime receipt's deployment.instances, and are NOT part of this fragment or of the protocol hash (owner decision 2026-10-28). Declared differences (design doc section 8): BF16 safetensors weights and BF16 KV instead of GGUF Q4_K_M and q8_0 KV; the server's audio tower over the original audio under native-raw-speech-query-prefix-v1 (the speech-query-prefix-v2 layout) instead of mmproj packets; automatic prefix caching instead of per-sample id_slot. DRAFT: the model lock entry and the vLLM runtime receipt are open owner decisions (design doc section 9)."
+}
