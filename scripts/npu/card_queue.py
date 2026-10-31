@@ -401,7 +401,12 @@ class Runner:
         except QueueError as e:
             log("WARN queue file not reloaded, keeping the previous one: %s" % e)
             return
+        # Queue files may be extended while a detached runner is busy.  Persist
+        # newly discovered jobs immediately; otherwise a runner can finish its
+        # current job with a queue file that has more entries than state.json,
+        # making the next pick fail or lose durable status across SSH loss.
         self.sync_jobs()
+        self.save()
 
     def next_job(self):
         # A running job remains ours even if its row was removed from the editable queue.

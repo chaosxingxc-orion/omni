@@ -183,6 +183,23 @@ class OrderAndVerdictTests(Base):
         self.assertEqual(st["jobs"]["appended"]["status"], "done")
         self.assertNotIn("off", self.spans())
 
+    def test_hot_appended_jobs_are_persisted_before_the_current_job_finishes(self):
+        self.write_queue(self.job("a", sleep_s=0.6))
+        r = self.runner()
+        t = threading.Thread(target=r.run)
+        t.start()
+        time.sleep(0.2)
+        self.write_queue(self.job("a", sleep_s=0.6), self.job("appended"))
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            state = self.state() or {}
+            if "appended" in state.get("jobs", {}):
+                break
+            time.sleep(0.05)
+        self.assertIn("appended", (self.state() or {}).get("jobs", {}))
+        t.join(30)
+        self.assertEqual(self.state()["jobs"]["appended"]["status"], "done")
+
     def test_queue_dir_placeholder_and_validation(self):
         self.write_queue(self.job("x", log="{queue_dir}/x.log"))
         self.assertEqual(self.runner().run(), 0)
