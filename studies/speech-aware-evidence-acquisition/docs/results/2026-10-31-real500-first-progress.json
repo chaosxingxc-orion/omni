@@ -2,43 +2,43 @@
   "progress": {
     "schema": "saea-real-engine-progress-v1",
     "state": "running",
-    "completed_rows": 131,
+    "completed_rows": 384,
     "total_rows": 500,
-    "checkpoint_rows": 131,
+    "checkpoint_rows": 384,
     "unusable_checkpoint_rows": 0,
-    "remaining_rows": 369,
-    "checkpoint_sha256": "0968ee52dae71bbca44584f7940ec4d78c90d43a5af52208b6c78aa209d22c24",
+    "remaining_rows": 116,
+    "checkpoint_sha256": "f685168223bbb241adaa7847dd85869d6193fffed3ea8012de9545f776615e87",
     "split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
     "torn_tail_bytes": 0,
     "cards": 8,
     "instances": 2,
-    "elapsed_seconds": 619.583578824997,
-    "wall_seconds_per_complete_row": 4.729645639885473,
-    "rows_per_second": 0.21143233048305385,
-    "estimated_remaining_seconds": 1745.2392411177395,
+    "elapsed_seconds": 1222.4449157714844,
+    "wall_seconds_per_complete_row": 3.1834503014882407,
+    "rows_per_second": 0.31412458348493993,
+    "estimated_remaining_seconds": 369.2802349726359,
     "eta_basis": "Linear observed whole-task completion rate; startup and tail may change it.",
     "full_roster_comparison_eligible": false,
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 262.0,
-      "audio_seconds": 679.3397499999999,
-      "latency_seconds": 34161.174318929996,
-      "prompt_tokens": 1509263.0,
-      "completion_tokens": 299205.0,
+      "calls": 768.0,
+      "audio_seconds": 2168.8783749999984,
+      "latency_seconds": 142272.59822763994,
+      "prompt_tokens": 4668834.0,
+      "completion_tokens": 1141370.0,
       "tool_calls": 0.0
     },
     "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
     "complete_sample_timings": {
       "admission_wait": {
-        "n": 131,
-        "mean_s": 2.1585418255725193,
-        "p50_s": 2.21251473,
-        "p95_s": 2.99694861
+        "n": 384,
+        "mean_s": 3.239319581640625,
+        "p50_s": 3.06100881,
+        "p95_s": 5.57659891
       },
       "admitted_to_finished": {
-        "n": 131,
-        "mean_s": 335.4584202103817,
-        "p50_s": 333.63509013,
-        "p95_s": 450.08591778
+        "n": 384,
+        "mean_s": 626.2971759799219,
+        "p50_s": 612.742647175,
+        "p95_s": 1034.41974279
       }
     },
     "new_model_calls": 0,
@@ -48,7 +48,7 @@
       "Partial or failed candidates cannot establish a full-roster throughput winner.",
       "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
     ],
-    "observed_at": 1793458575.251206,
+    "observed_at": 1793459178.1125429,
     "duration_scope": "Whole candidate since runner start; includes campaign setup/preprocessing; not steady-state inference."
   },
   "complete_sample_stage_timing": {
@@ -259,5 +259,112 @@
     "fit_result_files": 543,
     "timestamp": 1793458567.7276516
   },
-  "quality_result": null
+  "quality_result": null,
+  "complete_sample_phase_timing": {
+    "schema": "saea-real-phase-timing-v1",
+    "checkpoint_sha256": "d2c2053fcd388a03c9bd2c2d43d726a417bfa9a04d267ab6ab993990f9f54d49",
+    "timing_partial_tail": false,
+    "rows": 339,
+    "metrics": {
+      "perception/scientific_request": {
+        "n": 339,
+        "mean_s": 162.8681282987905,
+        "p50_s": 138.91363859000012,
+        "p95_s": 364.79820545999974
+      },
+      "perception/request_total": {
+        "n": 339,
+        "mean_s": 163.20827850589967,
+        "p50_s": 139.23329616000046,
+        "p95_s": 365.26170334999915
+      },
+      "perception/http_request": {
+        "n": 339,
+        "mean_s": 162.68505684719767,
+        "p50_s": 138.6923350699999,
+        "p95_s": 364.69236982999973
+      },
+      "solver/scientific_request": {
+        "n": 339,
+        "mean_s": 200.92091706542772,
+        "p50_s": 165.872378080001,
+        "p95_s": 414.5837935700001
+      },
+      "solver/request_total": {
+        "n": 339,
+        "mean_s": 201.38996763194697,
+        "p50_s": 167.10937077000017,
+        "p95_s": 415.10297939999873
+      },
+      "solver/http_request": {
+        "n": 339,
+        "mean_s": 200.69671110256633,
+        "p50_s": 165.79633448999994,
+        "p95_s": 414.47799203999966
+      },
+      "perception_end_to_solver_request_start": {
+        "n": 339,
+        "mean_s": 4.135971776253637,
+        "p50_s": 1.8006447799998568,
+        "p95_s": 14.301883799998905
+      },
+      "perception_start_to_solver_end": {
+        "n": 339,
+        "mean_s": 368.73421791410027,
+        "p50_s": 336.77645135999956,
+        "p95_s": 621.1686399999999
+      }
+    },
+    "missing_timing_entries": 0,
+    "missing_sample_count": 0,
+    "limitations": [
+      "Completed subset is descriptive and may be biased toward faster samples.",
+      "P→S gap contains preparation/FIT/scheduling; not pure CPU time.",
+      "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+      "Nested intervals overlap; do not sum as whole-task wall time."
+    ],
+    "new_model_calls": 0
+  },
+  "a0_coverage_audit": {
+    "schema": "saea-a0-roster-coverage-audit-v1",
+    "parent_count": 1080,
+    "parent_split_identity_hash": "4407794c4a5d2e8883d93fdf242deb33c0987405d62e05a7d8416f5251a3484a",
+    "historical_checkpoint_sha256": "8fc5edc100096930c9cd78a0eed582d463249343111da766bf04c34220eea091",
+    "engineering_split_identity_hash": "b5c849e0a93cd5c6ff7c83002e7a447cd1b29e505854d05f5f73c94ede31c7e0",
+    "groups": {
+      "historical": {
+        "count": 427,
+        "ids_sha256": "851a81319aed1efe6a67fcc36041c6e8252687b643c9d5231a6d15314df9e9cd"
+      },
+      "engineering_overlaps_historical": {
+        "count": 200,
+        "ids_sha256": "e90b49d08b1c54f4fa53adae8e380b7ef6a0afe9c1469d552b8059e15d50d327"
+      },
+      "engineering_additional_if_compatible": {
+        "count": 300,
+        "ids_sha256": "5b950a00fefab9f24fa50c27f974621a4a117687328eba3f00d8b745627aa26e"
+      },
+      "remaining_if_all_engineering_complete_and_compatible": {
+        "count": 353,
+        "ids_sha256": "c219288791919ab8e287fbbf138f7c9a24b99a4c45d1383ea060f401132304ab"
+      },
+      "remaining_without_engineering_reuse": {
+        "count": 653,
+        "ids_sha256": "532bd07f04fb11ac4581bd12cbfbcd6a557fa0e8f215663876bfe0af43fa5675"
+      }
+    },
+    "max_potential_covered_after_one_engineering_candidate": 727,
+    "new_model_calls": 0,
+    "new_scoring_calls": 0,
+    "scientific_reuse_authorized_by_this_audit": false,
+    "selection_rule": "Historical complete rows first; first engineering candidate only for missing IDs after exact method/input/custody verification. Never select by answer quality or fastest completion.",
+    "required_before_reuse": [
+      "Engineering candidate fully sealed and scored",
+      "Exact model/prompt/evidence method compatibility including preparation and decoding",
+      "Explicit source/projection registration and trace custody",
+      "All historical and engineering costs retained",
+      "One official full1080 manifest score; never average subset F1"
+    ]
+  },
+  "snapshot_note": "Progress384, role timing339 and earlier stage timing133 are independent snapshots; do not subtract or sum across cohorts."
 }
