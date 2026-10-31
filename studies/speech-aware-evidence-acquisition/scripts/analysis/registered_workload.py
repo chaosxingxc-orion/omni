@@ -10,6 +10,9 @@ def validate_workload(repo, data, name, spec):
     if cell["run_id"] != spec["run_id"] or cell["attempt_id"] != spec["attempt_id"]:
         raise ValueError("registered attempt differs")
     view = json.loads((repo / "configs/dataset" / (cell["dataset_fragment"] + ".json")).read_bytes())
+    if spec.get("workload_kind") == "a0-fold-a-c2":
+        from fold_a_c2_registration import validate
+        return validate(repo,data,name,spec,exp,view)
     if spec.get("workload_kind") == "tfrl-real-seed-half":
         from tfrl_current_generation import validate_half
         return validate_half(repo, name, spec, exp, view)
