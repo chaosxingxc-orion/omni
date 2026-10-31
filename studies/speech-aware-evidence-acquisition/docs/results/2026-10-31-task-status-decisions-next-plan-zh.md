@@ -26,7 +26,7 @@ NPU 不能因为等待实验准备、人工确认或下一个步骤启动而空�
 
 ## 四、当前状态
 
-新的 A0 已完成独立注册、mint、供给准备和 paired READ 预注册，供给输出与冻结前驱完全一致。正式 detached queue 已启动，包含完整 1,080-row A0 campaign、N1 输入准备、补充诊断和 paired read；campaign 内衔接官方评分、FIT、六列诊断与 repeat custody。03:09 UTC preflight 通过，03:14 UTC 已观察到 32 次真实模型调用、32 份 FIT；四个服务各有 8 个运行请求，8 张 NPU 瞬时 AI 利用率为 54%–57%。尚无完成行或完整指标，不能报告 A0 收益或持续满载。声明宽度为 96，实际并发还需继续核对。
+新的 A0 已完成独立注册、mint、供给准备和 paired READ 预注册，供给输出与冻结前驱完全一致。正式 detached queue 已启动，包含完整 1,080-row A0 campaign、N1 输入准备、补充诊断和 paired read；campaign 内衔接官方评分、FIT、六列诊断与 repeat custody。03:09 UTC preflight 通过，03:14 UTC 已观察到 32 次真实模型调用、32 份 FIT；四个服务各有 8 个运行请求，8 张 NPU 瞬时 AI 利用率为 54%–57%。尚无完成行或完整指标，不能报告 A0 收益或持续满载。声明宽度为 96，但发现第二个瓶颈：OpenJiuwen 的 `asyncio.to_thread` 使用 Python 3.12 默认线程池，最多 32 个 worker；现场进程有 33 个线程（主线程加 32 worker），请求总并发也约为 32。独立准备分支已修复线程池容量，提交 `acdf364c`；110 项容器测试通过，包括 40/96 个真实阻塞回调并发、取消与路由回归。当前 A0 仍使用原提交，后续实验需绑定修复后的提交；此测试不构成 NPU 吞吐收益证据。
 
 队列现在增加独立 guardian。它忽略 SSH 挂断信号；runner 异常死亡后执行 `--resume`，接管原任务并继续后续队列。真实 CPU 子进程故障注入已验证：SIGHUP 不终止任务；SIGKILL 杀死 runner 后原任务只启动一次，下一任务仍自动执行。guardian 不把明确失败任务改回 pending；坏状态文件保留并报告，不覆盖为新队列。
 
