@@ -1,51 +1,58 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T18:53:59.556855+00:00",
-  "completed_rows": 7,
+  "observed_at_utc": "2026-10-31T19:04:01.629839+00:00",
+  "completed_rows": 25,
   "total_rows": 625,
   "h1": {
-    "completed_rows": 7,
+    "state": "failed",
+    "completed_rows": 25,
     "total_rows": 313,
-    "remaining_rows": 306,
-    "elapsed_seconds": 609.8746495246887,
-    "wall_seconds_per_complete_row": 87.12494993209839,
-    "estimated_remaining_seconds": null,
-    "checkpoint_sha256": "26dd5855192c30939be13addc35f95ccee01dd9d9cb8d1c4ccf8b3e8a55be241",
+    "remaining_rows": 288,
+    "checkpoint_sha256": "5ac8ce266b26288e05854adde933101959ca43e145971872b910e5dd3352f87d",
     "torn_tail_bytes": 0,
     "unusable_checkpoint_rows": 0,
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 49.0,
-      "audio_seconds": 81.97481250000001,
-      "latency_seconds": 1521.3732738799954,
-      "prompt_tokens": 225692.0,
-      "completion_tokens": 42758.0,
+      "calls": 175.0,
+      "audio_seconds": 302.8200000000001,
+      "latency_seconds": 9057.597115030003,
+      "prompt_tokens": 808881.0,
+      "completion_tokens": 287623.0,
       "tool_calls": 0.0
     },
     "complete_sample_timings": {
       "admission_wait": {
-        "n": 7,
-        "mean_s": 1.7184819,
-        "p50_s": 1.39834717,
-        "p95_s": 2.21319201
+        "n": 25,
+        "mean_s": 2.343254048,
+        "p50_s": 2.32270565,
+        "p95_s": 3.4696062
       },
       "admitted_to_finished": {
-        "n": 7,
-        "mean_s": 380.00597485857145,
-        "p50_s": 378.94875088,
-        "p95_s": 394.63076099
+        "n": 25,
+        "mean_s": 527.895885996,
+        "p50_s": 556.2629344,
+        "p95_s": 641.22553292
       }
-    }
+    },
+    "elapsed_seconds": 923.612692117691,
+    "wall_seconds_per_complete_row": 36.944507684707645,
+    "estimated_remaining_seconds": null,
+    "timing_basis": "driver started receipt to generation exit; excludes post-exit observation delay"
   },
   "h2": {
+    "state": "not_started",
     "completed_rows": 0,
     "total_rows": 312,
-    "state": "queued"
+    "remaining_rows": 312,
+    "cards": 0,
+    "instances": 0,
+    "estimated_remaining_seconds": null
   },
   "resources": {
     "cards": 8,
     "instances": 2,
     "tensor_parallel": 4,
-    "max_num_seqs_per_instance": 128
+    "max_num_seqs_per_instance": 128,
+    "generation_active": false
   },
   "hardware_snapshot": {
     "observed_at_utc": "2026-10-31T18:54:25Z",
@@ -61,12 +68,28 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "Initial completion wave; partial rate is not a stable engineering baseline or forecast.",
+  "eta_note": "Generation failed; ETA unknown pending repair and supported continuation. Partial failed-run throughput is not a baseline.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
-    "state": "waiting_two_complete_halves",
+    "state": "failed_upstream",
     "model_calls": 0,
     "scoring_jobs": 0
+  },
+  "state": "failed",
+  "remaining_rows": 600,
+  "bank_read": {
+    "registered": true,
+    "state": "failed_upstream",
+    "tokenizer_calls": 0,
+    "model_generation_calls": 0
+  },
+  "failure": {
+    "error": "a declared supply-variant arm group delivered no arm custody",
+    "completed_checkpoint_rows": 25,
+    "failed_sample_timing_rows": 288,
+    "cause_status": "suspected abstention/custody inconsistency; source disposition still requires validation",
+    "automatic_replay": false,
+    "uncheckpointed_cost": "unknown; reconcile durable contact journals"
   }
 }
