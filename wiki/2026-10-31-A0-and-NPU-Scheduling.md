@@ -34,6 +34,8 @@
 
 从SLURP train Fold B的1080条按固定种子无放回抽取500条，500个ID和500个音频哈希均不同。17:59再次复核三个执行目录，dataset文件哈希完全相同，媒体路径均登记为真实录音；[逐配置核验记录](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real500-dataset-identity-audit.json)保存计数和哈希，不公开原始数据。跨配置共用名单用于配对比较；配置内不重复样本制造并发。 “相同500条”指各配置共用500条不同真实录音，绝非重复同一条合成样本。抽样不读取答案、正确率或历史完成状态。
 
+TFRL construction 使用另一份真实无放回 roster：H1 为313条、H2为312条，合计625条唯一的 `slurp:train` 录音，两个半组无重叠。每条候选共享真实音频和上下文是配对归因设计；这不增加独立样本数，也不能把候选调用成本当作自然分布成本。正式精度、token 和成本只从真实请求收据汇报；合成负载只保留为容量压测记录。完整规则见[真实采样数据与成本估计口径](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real-sampled-data-policy-zh.md)。
+
 真实音频→检索/上下文→本次P感知→本次S求解→解析/断点。允许自然公共前缀缓存，不重放历史P答案。此前合成轨迹只保留为压力诊断，撤回据此锁定48并发及外推真实成本的结论。后续真实K4采样计划也已移除合成吞吐、token及卡时预测，保留精确调用数和音频量；耗时须由对应真实流程测量。原计划保留归档，修正有独立哈希记录。
 
 500条是每组整机总数，96/128/256指每实例最大并发序列，`max_num_batched_tokens=2048`。当前抽样不代表完整test长尾；训练分布工程测量不代替最终13078条测试集评估。
