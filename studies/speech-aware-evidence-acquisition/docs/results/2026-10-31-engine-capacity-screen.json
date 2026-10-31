@@ -1,0 +1,23 @@
+{
+  "schema": "saea-engine-capacity-screen-summary-v1",
+  "status": "L24-complete-L28-running",
+  "dataset_rows": 0,
+  "cards": 8,
+  "instances": 4,
+  "tp": 2,
+  "L24": {
+    "ok": 384,
+    "requests": 384,
+    "wall_s": 658.9249580700416,
+    "output_tok_s": 1153.2314730127825,
+    "errors": 0,
+    "timeouts": 0,
+    "preemptions_delta": 0.0
+  },
+  "limitation": "synthetic and static-worker tail; not saturated task efficiency or optimal baseline",
+  "next": [
+    "L28",
+    "L32",
+    "dynamic matched-workload repeat"
+  ]
+}
