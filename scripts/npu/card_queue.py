@@ -87,11 +87,18 @@ def write_atomic(path, text, mode=0o666):
     tmp = "%s.tmp%d" % (path, os.getpid())
     with open(tmp, "w") as f:
         f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
     try:
         os.chmod(tmp, mode)
     except OSError:
         pass
     os.replace(tmp, path)
+    directory = os.open(os.path.dirname(os.path.abspath(path)), os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
 
 
 def read_json(path):
@@ -217,7 +224,13 @@ def classify_cards(smi_text, docker_ps, pid_container, idle_hbm=IDLE_HBM_MIB, ou
         owners = sorted({by_id.get(pid_container(pid), "host") for pid, _, _ in plist})
         busy = bool(plist) or c["hbm"] > idle_hbm
         cls = "free" if not busy else ("ours" if owners and all(ours_re.match(x) for x in owners) else "other")
-        out[n] = {"cls": cls, "owners": owners, "procs": plist, "hbm": c["hbm"], "ai": c["ai"]}
+        # vLLM-Ascend also reports a python3 parent on the same card/container.
+        # Only the explicitly named resident containers with a co-located VLLM worker qualify.
+        worker_owners = {by_id.get(pid_container(pid), 'host') for pid, name, _ in plist if VLLM_PROC.search(name)}
+        resident_python = [pid for pid, name, _ in plist if name in ('python', 'python3')
+                           and by_id.get(pid_container(pid), 'host') in worker_owners
+                           and re.fullmatch(r'saea-omni-i[0-3]', by_id.get(pid_container(pid), 'host'))]
+        out[n] = {"resident_python_pids": resident_python, "cls": cls, "owners": owners, "procs": plist, "hbm": c["hbm"], "ai": c["ai"]}
     return out
 
 
@@ -235,7 +248,7 @@ def card_blockers(cards, policy):
                 reasons.append("card %d held (%s): %s" % (n, kind, holders))
         else:  # no_other: only a foreign (or ours-but-not-vllm) holder blocks
             foreign = c["cls"] == "other"
-            ours_non_vllm = c["cls"] == "ours" and any(not VLLM_PROC.search(x) for x in names)
+            ours_non_vllm = c["cls"] == "ours" and any(not VLLM_PROC.search(name) and pid not in c.get("resident_python_pids", []) for pid, name, _ in c["procs"])
             if foreign or ours_non_vllm:
                 reasons.append("card %d held by another job (%s): %s" % (n, c["cls"], holders))
     return reasons
@@ -391,10 +404,18 @@ class Runner:
         self.sync_jobs()
 
     def next_job(self):
+        # A running job remains ours even if its row was removed from the editable queue.
+        # Finish supervising it before admitting another card consumer.
+        for record in self.state["jobs"].values():
+            if record["status"] == "running" and record.get("job_spec"):
+                return record["job_spec"]
         for j in self.queue["jobs"]:
-            st = self.state["jobs"][j["id"]]["status"]
+            record = self.state["jobs"][j["id"]]
+            st = record["status"]
             if st in ("pending", "waiting", "running"):
-                return j
+                # A resumed process must be judged against the command and markers it actually
+                # started with, even when the operator has edited the queue in the meantime.
+                return record.get("job_spec", j) if st == "running" else j
         return None
 
     # --- cards / peers
@@ -451,7 +472,8 @@ class Runner:
         os.makedirs(os.path.dirname(job["log"]) or ".", exist_ok=True)
         token = uuid.uuid4().hex
         rec.update(status="running", token=token, started=iso(), started_ts=now_s(), exit=None, reason=None, pid=None,
-                   finished=None, log_offset=os.path.getsize(job["log"]) if os.path.exists(job["log"]) else 0)
+                   finished=None, job_spec=json.loads(json.dumps(job)),
+                   log_offset=os.path.getsize(job["log"]) if os.path.exists(job["log"]) else 0)
         self.state["current"], self.state["waiting"] = job["id"], None
         self.save()  # checkpoint BEFORE the spawn: a resume can find the process by its token
         env = dict(os.environ, CARD_QUEUE_TOKEN=token, PYTHONUNBUFFERED="1")
@@ -607,9 +629,18 @@ class Runner:
             rec = self.state["jobs"][job["id"]]
             if rec["status"] == "running":  # adopted after a runner restart
                 self.adopt_or_find(job, rec)
-                if rec.get("pid") is None:  # the runner died between the checkpoint and the spawn: nothing runs
-                    rec.update(status="pending", token=None)
+                if rec.get("pid") is None:
+                    # Absence cannot distinguish death before spawn from a short job that ran
+                    # and exited before its PID was saved. Never replay possible model calls.
+                    cur = self.scan_log(job, rec, final=True)
+                    success = cur["done"] and not cur["fail"]
+                    rec.update(status="done" if success else "failed", finished=iso(),
+                               reason=None if success else "launch outcome unknown; reconcile durable job evidence before retry")
+                    self.state["current"] = None
                     self.save()
+                    if not success and job.get("on_fail", "continue") == "stop":
+                        stopped_by = job["id"]
+                        break
                     continue
                 self.state["current"] = job["id"]
                 log("job %s adopted pid %s" % (job["id"], rec.get("pid")))

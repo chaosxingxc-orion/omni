@@ -262,6 +262,11 @@ class CardGateTests(Base):
         self.assertIn("unattributed HBM", cq.card_blockers(unattributed, "no_other")[0])
         ours_py = self.cards("ours", [(111, "python3", 5000)], ["saea-encoder-0"])
         self.assertTrue(cq.card_blockers(ours_py, "no_other"))  # an encoder job of ours is not a resident service
+        resident_parent = self.cards("ours", [(111, "VLLMWorker_TP", 50000), (112, "python3", 1000)], ["saea-omni-i0"])
+        for card in resident_parent.values(): card['resident_python_pids'] = [112]
+        self.assertEqual(cq.card_blockers(resident_parent, "no_other"), [])
+        for card in resident_parent.values(): card['procs'].append((113, 'python3', 1000))
+        self.assertTrue(cq.card_blockers(resident_parent, "no_other"))
         self.assertEqual(cq.card_blockers({}, "no_other")[0][:8], "npu-smi ")  # unreadable: never launch blind
 
     def test_no_other_job_starts_with_vllm_resident_and_waits_for_foreign(self):
@@ -472,5 +477,57 @@ class CliTests(Base):
         self.assertEqual(out.returncode, 5)
 
 
+class RecoveryEvidenceTests(Base):
+    def checkpoint_without_pid(self, *, finished=False):
+        self.write_queue(self.job('one', on_fail='stop'))
+        runner = self.runner()
+        runner.load()
+        job = runner.queue['jobs'][0]
+        rec = runner.state['jobs']['one']
+        rec.update(status='running', token='absent-token-for-crash-test', pid=None,
+                   started_ts=time.time(), log_offset=0, job_spec=job)
+        if finished:
+            Path(job['log']).write_text('DONE-MARK\n')
+        runner.save()
+        return runner, job
+
+    def test_uncertain_launch_is_not_replayed(self):
+        self.checkpoint_without_pid()
+        self.assertEqual(self.runner(resume=True).run(), 2)
+        self.assertFalse(Path(self.trace).exists())
+        self.assertIn('outcome unknown', self.state()['jobs']['one']['reason'])
+
+    def test_finished_before_pid_save_is_recovered_without_replay(self):
+        self.checkpoint_without_pid(finished=True)
+        self.assertEqual(self.runner(resume=True).run(), 0)
+        self.assertFalse(Path(self.trace).exists())
+        self.assertEqual(self.state()['jobs']['one']['status'], 'done')
+
+    def test_running_job_keeps_original_spec_after_queue_edit(self):
+        runner, original = self.checkpoint_without_pid()
+        self.write_queue(self.job('one', done_marker='OTHER', cmd=['false']))
+        runner.reload_queue()
+        self.assertEqual(runner.next_job(), original)
+
+    def test_removed_running_job_is_supervised_before_next_job(self):
+        runner, original = self.checkpoint_without_pid()
+        self.write_queue(self.job('next'))
+        runner.reload_queue()
+        self.assertEqual(runner.next_job(), original)
+
+
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_resident_python_classification_requires_same_known_container(monkeypatch):
+    cards={0:{'hbm':55000,'ai':0}}
+    procs={0:[(10,'VLLMWorker_TP',50000),(11,'python3',1000),(12,'python3',1000)]}
+    monkeypatch.setattr(cq,'parse_smi',lambda _: (cards,procs))
+    containers=[{'id':'resident','name':'saea-omni-i0'},{'id':'encoder','name':'saea-encoder'}]
+    result=cq.classify_cards('smi',containers,lambda pid:'resident' if pid in (10,11) else 'encoder')
+    assert result[0]['resident_python_pids']==[11]
+    assert cq.card_blockers(result,'no_other')
+    procs[0].pop()
+    result=cq.classify_cards('smi',containers,lambda pid:'resident')
+    assert cq.card_blockers(result,'no_other')==[]
