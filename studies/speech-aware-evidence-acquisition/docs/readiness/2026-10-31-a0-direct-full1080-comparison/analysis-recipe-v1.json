@@ -1,0 +1,20 @@
+{
+  "schema": "saea-a0-direct-full1080-comparison-read-v1",
+  "read_run_id": "SAEA-SLURP-A0-DIRECT-FULL1080-COMPARISON-READ-V1",
+  "rows": 1080,
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "primary_reference": "direct_lock",
+  "sensitivity_references": [
+    "direct_aa",
+    "direct_ab"
+  ],
+  "paired_bootstrap": {
+    "unit": "utterance",
+    "replicates": 10000,
+    "seed": 20261031
+  },
+  "scope": "Same complete TRAIN Fold B roster; retain all Direct repeats; no test tuning or test conclusion",
+  "source_a0_recipe_sha256": "efb43a80731ccc01dfb0fa038664687b188f416d56063e23628ae29937e0db38",
+  "claims_gain_before_a0_complete": false
+}
