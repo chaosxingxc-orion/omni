@@ -320,7 +320,7 @@ def start_monitor(path, state, interval):
             while not stopped.is_set():
                 sample = {
                     "timestamp": _now(),
-                    "gpu": read_gpu(),
+                    "gpu": None if state.get("cpu_only") else read_gpu(),
                     "host_memory": read_host_memory(),
                     "elapsed_seconds": time.monotonic() - state["started_monotonic"],
                     state.get("contact_counter_field", "logical_encoder_contacts"): state["calls"],
@@ -420,7 +420,7 @@ def run_preparation(
     if (
         type(protocol["cpu_workers"]) is not int
         or not 1 <= protocol["cpu_workers"] <= 8
-        or protocol["monitor_interval_seconds"] != 10
+        or protocol["monitor_interval_seconds"] not in (10, 600)
     ):
         raise SpeechPreparationError("CPU or monitor configuration is invalid")
     from .vllm_embedding import VllmSpeechEncoder
@@ -447,6 +447,7 @@ def run_preparation(
         )
 
     return _execute_preparation(
+        source_root=source_root,
         config=config,
         plan=plan,
         protocol=protocol,
@@ -511,6 +512,7 @@ def _execute_preparation(
     backend_factory,
     prepare,
     row_path,
+    source_root=None,
     row_label,
     contact_kind,
     seconds_for_source,
@@ -522,6 +524,11 @@ def _execute_preparation(
 ):
     """Share custody, pre-contact accounting, sealing and aborts across modalities."""
     lease_root = preparation_lease_root(protocol, encoder, plan, data_root, backend_factory, contact_kind)
+    if "cpu_execution" in protocol:
+        if "cpu_isolation" not in protocol:
+            raise SpeechPreparationError("CPU partition requires registered isolated custody")
+        from .cpu_preparation_lease import validate_cpu_partition
+        validate_cpu_partition(encoder, protocol, source_root)
     attempt_dir = data_root / "preparation-runs" / plan.run_id / str(plan.attempt_id)
     attempt_dir.mkdir(parents=True, exist_ok=False)
     started = time.monotonic()
@@ -530,6 +537,7 @@ def _execute_preparation(
         "calls": 0,
         "audio_seconds": 0.0,
         "phase": "admitted",
+        "cpu_only": "cpu_isolation" in protocol,
         "contact_counter_field": contact_counter_field,
         "forward_phase": forward_phase,
     }
@@ -571,7 +579,7 @@ def _execute_preparation(
             reserved_audio_seconds=plan.planned_speech_audio_seconds,
             **({"contact_kind": contact_kind} if contact_kind != "speech" else {}),
         )
-        stop_monitor = start_monitor(attempt_dir / "monitor.jsonl", state, 10)
+        stop_monitor = start_monitor(attempt_dir / "monitor.jsonl", state, protocol["monitor_interval_seconds"])
         backend = None
         attempt_finalized = False
         try:
@@ -803,6 +811,7 @@ def run_text_facet_preparation(
         )
 
     return _execute_preparation(
+        source_root=source_root,
         config=config,
         plan=plan,
         protocol=protocol,

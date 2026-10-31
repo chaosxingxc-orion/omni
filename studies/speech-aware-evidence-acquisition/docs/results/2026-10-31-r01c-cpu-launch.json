@@ -1,0 +1,20 @@
+{
+  "schema": "saea-r01c-cpu-launch-summary-v1",
+  "rows": 625,
+  "initial_completed_rows": 0,
+  "cards": 0,
+  "cpu_workers": 4,
+  "threads_per_worker": 16,
+  "cpuset": "192-255",
+  "network": "none",
+  "state": "running-confirmed",
+  "registered": true,
+  "preflight_passed": true,
+  "execution_commit": "477bc06f",
+  "runtime_config_sha256": "f665688b11f9ff74667b6ed546445e79fa963fa4008e8fb94f6474f5e1ef6c2a",
+  "ETA_seconds": null,
+  "monitor_interval_seconds": 600,
+  "new_model_calls_during_registration": 0,
+  "downstream_adopted": false,
+  "tests_passed": 86
+}
