@@ -1,6 +1,6 @@
 # A0、真实数据工程基线与后续优化
 
-更新：2026-10-31 21:25 UTC（H1快照21:19）。真实500工程基准与完整1080条A0收益已锁定；H2的312条及七列官方评分完成，H1的310条接续已启动。完整625条收益尚未形成。
+更新：2026-10-31 21:28 UTC（H1快照21:19）。真实500工程基准与完整1080条A0收益已锁定；H2的312条及七列官方评分完成，H1的310条接续已启动。完整625条收益尚未形成。
 
 ## 当前结论
 
@@ -128,4 +128,4 @@ Banked第2/3轮共享任务校验和generation/FIT登记接口已实现，检查
 
 后续队列已接入生成租约释放通知：核验来源与封存输入后启动下一组推理，上一组默认评分及七列读取异步完成；文件事件唤醒、600秒兜底检查，失败不自动重放。85项正式容器测试通过，当前冻结任务未部署，尚无实测提速结论。[真实数据、交接实现与部署边界](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-real-data-generation-handoff-zh.md)。
 
-第2/3轮独立供给准备与绑定入口已实现，准备前后核验真实名单、经验库和首轮判定，绑定保留held并验证来源版本；公开与研究目录各90项回归通过。当前无真实下一轮供给或模型调用。[准备链与剩余执行条件](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-banked-supply-readiness-zh.md)。
+第2/3轮独立供给、评分登记与部署绑定入口已接通，保留TFRL上下文应用标签，核验真实名单、经验库、首轮判定与供给来源，保持held；公开与研究目录最新各118项回归通过。顺序为供给绑定→评分登记→部署绑定→生成/FIT登记及准入预检；当前无真实下一轮供给或模型调用。[准备链与剩余执行条件](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-tfrl-banked-supply-readiness-zh.md)。

@@ -186,7 +186,11 @@
     "banked_generation_registration_deployed": false,
     "own_supply_entry_implemented": true,
     "own_supply_entry_tests_passed": 90,
-    "actual_banked_supply_prepared": false
+    "actual_banked_supply_prepared": false,
+    "banked_resident_staging_implemented": true,
+    "banked_read_registration_implemented": true,
+    "banked_stage_read_tests_passed": 118,
+    "banked_stage_read_deployed": false
   },
   "successor_preparation_queue": {
     "state": "waiting_verified_full625",

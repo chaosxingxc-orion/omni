@@ -10,7 +10,9 @@ from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 AUTHORITY='docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md'
 
 
-def register(repo,data,binding,out):
+def register(repo,data,binding,out,iteration=1,first_decision=None):
+    if type(iteration) is not int or iteration not in (1,2,3):raise ValueError("iteration1..3 required")
+    prefix="seed" if iteration==1 else "bank"
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     assert_execution_environment();head=require_clean_study_repo(repo)
@@ -24,10 +26,20 @@ def register(repo,data,binding,out):
         if sha(repo/rel)!=digest:raise ValueError('bound configuration changed')
     ledger=repo/'docs/exposure-ledger.md';text=ledger.read_text();pending=[];rows=[]
     for half in ('h1','h2'):
-        name=f'slurp-tfrl-current-seed-i1-{half}-v1';exp=read(repo/f'configs/experiment/{name}.json');cell,=exp['cells']
+        name=f'slurp-tfrl-current-{prefix}-i{iteration}-{half}-v1';exp=read(repo/f'configs/experiment/{name}.json');cell,=exp['cells']
         run=cell['run_id'];read_id=run+'-READ';pkg=repo/'docs/readiness'/name
         if (cell['readiness']['state']!='held' or cell['allowed_execution_stages']!=['check']
                 or any((data/k/run).exists() for k in ('runs','attempts'))):raise ValueError('unspent held half required')
+        if iteration>1:
+            if first_decision is None:raise ValueError('banked read requires first decision')
+            sys.path.insert(0,str(repo/'scripts/analysis'))
+            from tfrl_banked_supply import validate_preparation_inputs
+            validate_preparation_inputs(repo,data,name,iteration,first_decision,allow_bound=True)
+            from tfrl_current_sources import pinned
+            base=read(repo/f"configs/baseline/{cell['baseline_fragment']}.json")
+            pinned(data,base['prepared_phase_supply'])
+            needed={f'configs/experiment/{name}.json',f"configs/baseline/{cell['baseline_fragment']}.json"}
+            if not needed<=set(completed['output_hashes']):raise ValueError('binding omits source configs')
         pp=pkg/'sampling-plan.json';plan=read(pp);rp=repo/exp['population']['roster_receipt'];n=exp['population']['count']
         if plan['run_id']!=run or plan['roster']['rows']!=n or sha(rp)!=plan['roster']['file_sha256']:
             raise ValueError('exact bound sampling plan and roster required')
@@ -44,6 +56,11 @@ def register(repo,data,binding,out):
             'vote':'plurality intent, lowest-k tie, entity support >=2/4',
             'decision_scope':'Descriptive half only. Pool both halves and evaluate independent confirmation before improvement claim.',
             'prerequisite':'Full A0 gain lock before construction admission; this READ does not admit generation.'}
+        if iteration>1:
+            recipe.update(iteration=iteration,
+                first_construction_decision={'relpath':str(first_decision.resolve().relative_to(data.resolve())),
+                    'sha256':sha(first_decision)},
+                request_gate='verified complete banked bundle; exact recorded bank augmentation/allocation; unchanged aa/lock; cross-fit source and per-row seeds')
         path=pkg/'analysis-recipe-v1.json'
         if path.exists() or '| '+read_id+' |' in text:raise ValueError('read already registered')
         pending.append((path,recipe))
@@ -67,4 +84,6 @@ def register(repo,data,binding,out):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for key in ('repo','data','binding','out'):p.add_argument('--'+key,type=Path,required=True)
+    p.add_argument('--iteration',type=int,default=1)
+    p.add_argument('--first-decision',type=Path)
     print(json.dumps(register(**vars(p.parse_args()))))

@@ -181,3 +181,68 @@ def test_banked_workload_full_roster_bank_and_first_gate(tmp_path,monkeypatch,it
         assert written['workload_kind']=='tfrl-real-banked-half' and written['iteration']==iteration
         assert validate_workload(tmp_path,tmp_path,name,written)==n
         with pytest.raises(ValueError,match='existing registration'):m.register(tmp_path,tmp_path,'h1',iteration,tmp_path/'work/codex/decision.json')
+
+
+@pytest.mark.parametrize('iteration',[2,3])
+@pytest.mark.parametrize('fault',[None,'label','operators','decoding'])
+def test_banked_stage_preserves_scientific_algorithm(iteration,fault):
+    exp={'cells':[{'model_fragment':'old','readiness':{'state':'held'},'allowed_execution_stages':['check']}],
+        'stage3_algorithm':{'id':'tfrl-v2','operators_used':['rollout','scoring','context_application']}}
+    old={'runtime_receipt':'old','temperature':.7};new={'runtime_receipt':m.RECEIPT,'temperature':.7}
+    if fault=='label':exp['stage3_algorithm']['id']='shared-rollout'
+    if fault=='operators':exp['stage3_algorithm']['operators_used']=['rollout','scoring']
+    if fault=='decoding':new['temperature']=.8
+    if fault:
+        with pytest.raises(ValueError):m.stage_documents(exp,old,new,iteration=iteration)
+    else:
+        before=copy.deepcopy(exp);doc=m.stage_documents(exp,old,new,iteration=iteration)
+        assert exp==before and doc['stage3_algorithm']==exp['stage3_algorithm']
+        assert doc['cells'][0]['allowed_execution_stages']==['check','prepare-supply','worker','campaign']
+        assert doc['cells'][0]['readiness']['state']=='held'
+
+
+@pytest.mark.parametrize('iteration',[2,3])
+@pytest.mark.parametrize('fault',[None,'gate','supply','binding'])
+def test_banked_stage_writer_requires_verified_inputs_before_mutation(tmp_path,monkeypatch,iteration,fault):
+    import speech_aware_evidence_acquisition.contracts as contracts
+    import speech_aware_evidence_acquisition.core.bundle.git_commit as git
+    import tfrl_banked_supply as supply
+    monkeypatch.setattr(contracts,'assert_execution_environment',lambda:None)
+    monkeypatch.setattr(git,'require_clean_study_repo',lambda p:'a'*40)
+    repo=tmp_path/'repo';data=tmp_path/'data';source=tmp_path/'source'
+    lock=put(repo,m.LOCK,{'status':'locked_full_train_fold_b'});monkeypatch.setattr(m,'LOCK_SHA',lock['sha256'])
+    put(repo,'configs/model/old.json',{'runtime_receipt':'old','temperature':.7})
+    put(source,f'configs/model/{m.MODEL}.json',{'runtime_receipt':m.RECEIPT,'temperature':.7})
+    put(source,'docs/'+m.RECEIPT,{'receipt':'fixture'})
+    pins={};originals={}
+    for h in ('h1','h2'):
+        name=f'slurp-tfrl-current-bank-i{iteration}-{h}-v1'
+        run=f'SAEA-SLURP-TFRL-CURRENT-BANK-I{iteration}-{h.upper()}-V1'
+        ep=f'configs/experiment/{name}.json';bp=f'configs/baseline/{name}.json'
+        exp={'cells':[dict(run_id=run,baseline_fragment=name,model_fragment='old',
+            readiness={'state':'held'},allowed_execution_stages=['check'])],
+            'stage3_algorithm':{'id':'tfrl-v2','operators_used':['rollout','scoring','context_application']}}
+        sp=put(data,f'prepared/{run}/phase-supply-v1.json',{'output':'fixture'})
+        for rel,doc in ((ep,exp),(bp,{'prepared_phase_supply':sp})):
+            pins[rel]=put(repo,rel,doc)['sha256'];originals[rel]=(repo/rel).read_bytes()
+        if fault=='supply':(data/sp['relpath']).write_text('{}')
+    if fault=='binding':pins={}
+    binding=data/'work/codex/binding.json';put(data,str(binding.relative_to(data)),{
+        'schema':'saea-tfrl-current-supply-binding-v1','rows':625,'readiness':'held','new_model_calls':0,'output_hashes':pins})
+    def guard(*a,**kw):
+        assert kw['allow_bound']
+        if fault=='gate':raise ValueError('failed decision')
+    monkeypatch.setattr(supply,'validate_preparation_inputs',guard)
+    out=data/'work/codex/stage'
+    call=lambda:m.stage(repo,data,source,binding,out,iteration,data/'decision')
+    if fault:
+        with pytest.raises(ValueError):call()
+        assert not out.exists()
+        assert all((repo/rel).read_bytes()==raw for rel,raw in originals.items())
+    else:
+        result=call();assert result['new_model_calls']==0 and result['ready'] is False
+        for rel in result['output_hashes']:
+            doc=m.read(repo/rel)
+            assert doc['stage3_algorithm']['id']=='tfrl-v2'
+            assert doc['cells'][0]['allowed_execution_stages'][-1]=='campaign'
+        with pytest.raises(ValueError,match='fresh owned'):call()

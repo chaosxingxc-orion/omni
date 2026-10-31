@@ -20,7 +20,8 @@ PROFILE='qwen3-omni-real500-2xtp4-s128-b2048-v1'
 RECEIPT='receipts/runtime-a0-remaining353-selected-resident-v1.json'
 
 
-def stage_documents(exp,old_model,new_model):
+def stage_documents(exp,old_model,new_model,*,iteration=1):
+    if type(iteration) is not int or iteration not in (1,2,3):raise ValueError("iteration1..3 required")
     old=copy.deepcopy(old_model);new=copy.deepcopy(new_model)
     old.pop('runtime_receipt');new.pop('runtime_receipt')
     if old!=new:raise ValueError('resident binding changes scientific decoding')
@@ -30,8 +31,12 @@ def stage_documents(exp,old_model,new_model):
     cell['model_fragment']=MODEL
     cell['allowed_execution_stages']=['check','prepare-supply','worker','campaign']
     doc['service_session']=SESSION
-    doc['stage3_algorithm']={'id':'shared-rollout','operators_used':['rollout','scoring'],
-        'note':'Real per-row seed-only K4 construction; downstream registered TFRL credit consumes these complete trajectories.'}
+    if iteration==1:
+        doc['stage3_algorithm']={'id':'shared-rollout','operators_used':['rollout','scoring'],
+            'note':'Real per-row seed-only K4 construction; downstream registered TFRL credit consumes these complete trajectories.'}
+    elif (doc['stage3_algorithm']['id']!='tfrl-v2'
+            or doc['stage3_algorithm']['operators_used']!=['rollout','scoring','context_application']):
+        raise ValueError('banked staging must preserve TFRL context-application label')
     return doc
 
 
@@ -143,22 +148,36 @@ def validate_half(repo, name, spec, exp, view, *, data=None, iteration=1):
     return n
 
 
-def stage(repo,data,source,binding,out):
+def stage(repo,data,source,binding,out,iteration=1,first_decision=None):
+    if type(iteration) is not int or iteration not in (1,2,3):raise ValueError("iteration1..3 required")
+    prefix="seed" if iteration==1 else "bank"
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     assert_execution_environment();head=require_clean_study_repo(repo)
     if out.exists() or not out.resolve().is_relative_to(data.resolve()/'work/codex'):raise ValueError('fresh owned stage record required')
     if sha(repo/LOCK)!=LOCK_SHA or read(repo/LOCK)['status']!='locked_full_train_fold_b':raise ValueError('verified full A0 gain lock required')
     completed=read(binding)
+    if (completed.get('schema')!='saea-tfrl-current-supply-binding-v1' or completed.get('rows')!=625
+            or completed.get('readiness')!='held' or completed.get('new_model_calls')!=0):
+        raise ValueError('complete held real supply binding required')
     for rel,digest in completed['output_hashes'].items():
         if sha(repo/rel)!=digest:raise ValueError('bound preparation changed')
     model=read(source/f'configs/model/{MODEL}.json')
     if model['runtime_receipt']!=RECEIPT:raise ValueError('expected selected resident required')
     pending=[]
     for half in ('h1','h2'):
-        name=f'slurp-tfrl-current-seed-i1-{half}-v1';path=repo/f'configs/experiment/{name}.json';exp=read(path);c,=exp['cells']
+        name=f'slurp-tfrl-current-{prefix}-i{iteration}-{half}-v1';path=repo/f'configs/experiment/{name}.json';exp=read(path);c,=exp['cells']
         if any((data/k/c['run_id']).exists() for k in ('runs','attempts')):raise ValueError('successor already spent')
-        pending.append((path,stage_documents(exp,read(repo/f"configs/model/{c['model_fragment']}.json"),model)))
+        if iteration>1:
+            if first_decision is None:raise ValueError('banked staging requires verified first decision')
+            from tfrl_banked_supply import validate_preparation_inputs
+            validate_preparation_inputs(repo,data,name,iteration,first_decision,allow_bound=True)
+            base=read(repo/f"configs/baseline/{c['baseline_fragment']}.json")
+            from tfrl_current_sources import pinned
+            pinned(data,base['prepared_phase_supply'])
+            needed={str(path.relative_to(repo)),f"configs/baseline/{c['baseline_fragment']}.json"}
+            if not needed<=set(completed['output_hashes']):raise ValueError('binding omits banked config sources')
+        pending.append((path,stage_documents(exp,read(repo/f"configs/model/{c['model_fragment']}.json"),model,iteration=iteration)))
     out.mkdir(parents=True)
     for rel in (f'configs/model/{MODEL}.json','docs/'+RECEIPT):
         p=repo/rel
@@ -251,7 +270,7 @@ if __name__=='__main__':
     p.add_argument('--iteration',type=int,default=1);p.add_argument('--first-decision',type=Path)
     p.add_argument('--half',choices=['h1','h2']);a=vars(p.parse_args());mode=a.pop('mode')
     if mode=='stage':
-        a.pop('half');a.pop('iteration');a.pop('first_decision');result=stage(**a)
+        a.pop('half');result=stage(**a)
     else:
         for key in ('source','binding','out'):a.pop(key)
         result=register(**a)

@@ -13,14 +13,14 @@ from tfrl_current_generation import read,sha,validate_half,LOCK,LOCK_SHA
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 
 
-def validate_preparation_inputs(repo,data,name,iteration,first_decision):
+def validate_preparation_inputs(repo,data,name,iteration,first_decision,*,allow_bound=False):
     if type(iteration) is not int or iteration not in (2,3):
         raise ValueError('banked iteration2/3 required')
     ep=repo/f'configs/experiment/{name}.json';exp=read(ep);c,=exp['cells']
     bp=repo/f"configs/baseline/{c['baseline_fragment']}.json";base=read(bp)
     if (c['cell_id']!=name or c['baseline_fragment']!=name
             or c['readiness']['state']!='held' or c['allowed_execution_stages']!=['check']
-            or 'prepared_phase_supply' in base):
+            or (not allow_bound and 'prepared_phase_supply' in base)):
         raise ValueError('unbound held banked half required')
     run=c['run_id'];fit=base['native_contact_fit']
     for rid in (run,fit['run_id']):
