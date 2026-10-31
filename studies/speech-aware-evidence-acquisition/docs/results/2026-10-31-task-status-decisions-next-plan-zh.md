@@ -17,7 +17,7 @@
 | A0 进度 | **427 / 1,080 条**完整结果可复用，**653 条**未完成；旧 attempt 已 **ABORTED** |
 | 旧效率 | **38–39 秒/条，93–95 条/小时** |
 | 资源与利用率 | **8 张 NPU、4 个 TP2 vLLM 实例**；旧窗口平均 AI 利用率约 52%–57%，未达到持续八卡满载 |
-| 恢复执行状态 | 登记、admission、供给一致性和真实环境预检通过；后台队列运行中、attempt OPENED；截至 09:28:38 UTC 尚无模型请求 |
+| 恢复执行状态 | 登记、admission、供给一致性和真实环境预检通过；恢复推理已开始；09:31:20 UTC 四实例共有 95 个运行请求 |
 | 新效率与 ETA | 待恢复后持续窗口实测；尚无 10 倍提速证据 |
 | A0 精度与系统收益 | 待完整 1,080 条完成并评分，当前不锁定收益 |
 
@@ -29,7 +29,7 @@
 
 断点兼容代码已合入公开 `main` 的 `6b683f6d`，保留全部完整行并只派发缺失 roster。针对性验证为研究树 **56 项通过**、公开树 **101 项通过**；较宽 native-episode 测试中断，只完成 2 项，未记作整组通过。
 
-真实 successor 已登记，新供给与原供给输出一致，研究树 `a0e915bd` 的 preflight 确认 **kept 427 / flown 653、prepared artifacts 合格、readiness ready**。新 attempt 为 `attempt-slurp-l338-fold-b-generation-phase-width-v5-npu-v1-efficiency-rec1`，保留原 run、模型、数据、方法和 roster。旧租约已核销；NPU 与 CPU 后台队列于 09:25:27 UTC 启动。09:28:38 UTC 新 attempt 为 OPENED、调用数仍为 0，尚处于启动准备，不能报告为满载。FIT 跨 attempt 分析衔接在独立工作树完成。
+真实 successor 已登记，新供给与原供给输出一致，研究树 `a0e915bd` 的 preflight 确认 **kept 427 / flown 653、prepared artifacts 合格、readiness ready**。新 attempt 为 `attempt-slurp-l338-fold-b-generation-phase-width-v5-npu-v1-efficiency-rec1`，保留原 run、模型、数据、方法和 roster。旧租约已核销；NPU 与 CPU 后台队列于 09:25:27 UTC 启动。09:31:20 UTC 四实例运行请求分别为 24、24、23、24，合计 95；8 卡瞬时 AI 利用率为 52%–63%，尚未满载。新完整样本尚不足以估计稳定吞吐与 ETA。FIT 跨 attempt 分析衔接在独立工作树完成。
 
 ## 下一阶段计划与验收
 
