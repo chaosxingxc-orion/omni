@@ -52,7 +52,7 @@ def derive(rosters,receipts,*,iteration,control_bounds=None):
 
 
 
-def require_first_construction_gate(record):
+def first_construction_decision(record):
     """Existing i1 kill rule; a pass allows preparation, not system acceptance."""
     import math
     gain=record.get('vote_minus_lock_pp')
@@ -61,10 +61,37 @@ def require_first_construction_gate(record):
             or record.get('threshold_pp')!=1.0
             or record.get('construction_gate_passed') is not (round(gain,6)>=1.0)):
         raise ValueError('complete consistent first construction gate required')
-    if not record['construction_gate_passed']:
-        raise ValueError('iteration1 construction gain below1pp: stop family under registered rule')
-    return {'construction_gain_pp':gain,'preparation_gate_passed':True,
+    return {'construction_gain_pp':gain,'preparation_gate_passed':record['construction_gate_passed'],
+            'decision':'prepare-held-successor' if record['construction_gate_passed'] else 'stop-family',
             'system_accepted':False,'independent_confirmation_required':True}
+
+def require_first_construction_gate(record):
+    decision=first_construction_decision(record)
+    if not decision['preparation_gate_passed']:
+        raise ValueError('iteration1 construction gain below1pp: stop family under registered rule')
+    return decision
+
+
+def decide(repo,data,out):
+    """Seal a verified first-family decision without waiting for tokenizer work."""
+    from speech_aware_evidence_acquisition.contracts import assert_execution_environment
+    from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
+    from tfrl_recovered_consumers import load as load_recovered
+    assert_execution_environment();head=require_clean_study_repo(repo)
+    _,_,halves=load_recovered(repo,data)
+    verified=pool({v['plan']['half']:(v['plan'],v['results']) for v in halves.values()})
+    path=data/'analysis'/POOL/'complete.json';recorded=read(path)
+    sources={h:v['source'] for h,v in halves.items()}
+    if any(recorded.get(k)!=v for k,v in verified.items()) or recorded['sources']!=sources:
+        raise ValueError('first construction pool differs from verified sources')
+    result={'schema':'saea-tfrl-first-construction-decision-v1','implementation_commit':head,
+        'pool_sha256':sha(path),'sources':sources,'rows':625,**first_construction_decision(verified),
+        'new_model_calls':0,'new_tokenizer_calls':0,'new_scoring_jobs':0,
+        'generation_authorized':False}
+    if out.exists() or not out.resolve().is_relative_to(data.resolve()/'work/codex'):
+        raise ValueError('fresh owned decision output required')
+    s3._immutable_json(out,result);return result
+
 
 def stage_cells(repo,data,sources,rosters,plans,receipts,pins):
     """Build reviewable real-bank successor configs, without touching the repo."""
@@ -177,4 +204,10 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('repo','data','out'):p.add_argument('--'+k,type=Path,required=True)
     p.add_argument('--iteration',type=int,default=2)
-    print(json.dumps(run(**vars(p.parse_args()))))
+    p.add_argument('--decision-only',action='store_true')
+    args=vars(p.parse_args());decision_only=args.pop('decision_only')
+    if decision_only:
+        if args.pop('iteration')!=2:raise ValueError('first decision applies to successor2')
+        result=decide(**args)
+    else:result=run(**args)
+    print(json.dumps(result))

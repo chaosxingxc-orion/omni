@@ -57,3 +57,29 @@ def test_construction_pass_is_not_system_acceptance():
     result=m.require_first_construction_gate({'rows':625,'iteration':1,'vote_minus_lock_pp':1.,
         'construction_gate_passed':True,'threshold_pp':1.0})
     assert result['preparation_gate_passed'] and not result['system_accepted']
+
+
+def test_first_stop_is_reportable_without_preparing_successor():
+    result=m.first_construction_decision({'rows':625,'iteration':1,'vote_minus_lock_pp':.9,
+        'threshold_pp':1.0,'construction_gate_passed':False})
+    assert result['decision']=='stop-family' and not result['preparation_gate_passed']
+
+
+def test_decision_reloads_real_sources_before_accepting_pool(tmp_path,monkeypatch):
+    import speech_aware_evidence_acquisition.contracts as contracts
+    import speech_aware_evidence_acquisition.core.bundle.git_commit as git
+    import tfrl_recovered_consumers as consumers
+    monkeypatch.setattr(contracts,'assert_execution_environment',lambda:None)
+    monkeypatch.setattr(git,'require_clean_study_repo',lambda p:'a'*40)
+    halves={h:{'plan':{'half':h},'results':{},'source':h} for h in ('h1','h2')}
+    monkeypatch.setattr(consumers,'load',lambda *a:({}, {}, halves))
+    verified={'rows':625,'iteration':1,'vote_minus_lock_pp':.5,'threshold_pp':1.0,'construction_gate_passed':False}
+    monkeypatch.setattr(m,'pool',lambda h:verified)
+    record={**verified,'sources':{h:h for h in halves}}
+    monkeypatch.setattr(m,'read',lambda p:record)
+    monkeypatch.setattr(m,'sha',lambda p:'b'*64)
+    out=tmp_path/'work/codex/decision.json'
+    result=m.decide(tmp_path,tmp_path,out)
+    assert result['decision']=='stop-family' and out.exists()
+    record['sources']={'h1':'wrong'}
+    with pytest.raises(ValueError,match='verified sources'):m.decide(tmp_path,tmp_path,out.with_name('bad.json'))
