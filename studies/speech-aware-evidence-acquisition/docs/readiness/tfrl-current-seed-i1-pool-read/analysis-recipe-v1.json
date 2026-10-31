@@ -1,0 +1,23 @@
+{
+  "aggregation": "sum official TP/FP/FN across disjoint313+312",
+  "authority": "docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md",
+  "claims_benefit": false,
+  "entrypoint": "scripts/analysis/tfrl_current_pool_read.py",
+  "new_model_calls": 0,
+  "next_iteration_authorized": false,
+  "official_scoring_jobs": 0,
+  "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-POOL-READ-V1",
+  "rows": 625,
+  "schema": "saea-tfrl-current-pool-read-recipe-v1",
+  "source_recipes": {
+    "h1": {
+      "relpath": "docs/readiness/slurp-tfrl-current-seed-i1-h1-v1/analysis-recipe-v1.json",
+      "sha256": "9aa57b3c243f4194e6b6793e2249de195fe973a3292d59d9d97f585baaa715bb"
+    },
+    "h2": {
+      "relpath": "docs/readiness/slurp-tfrl-current-seed-i1-h2-v1/analysis-recipe-v1.json",
+      "sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923"
+    }
+  },
+  "threshold_pp": 1.0
+}
