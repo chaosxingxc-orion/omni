@@ -1,30 +1,30 @@
 {
   "schema": "saea-tfrl-current-progress-summary-v1",
-  "observed_at_utc": "2026-10-31T21:19:16.908921+00:00",
-  "completed_rows": 383,
+  "observed_at_utc": "2026-10-31T21:29:19.732627+00:00",
+  "completed_rows": 487,
   "total_rows": 625,
   "h1": {
     "state": "recovery_generation_running",
     "completed_rows": 0,
     "total_rows": 313,
     "remaining_rows": 313,
-    "checkpoint_sha256": "8806f1971676f9e32137766bda57f884150a18bf555fe35744fcdd53602ec745",
+    "checkpoint_sha256": "0f0630ac3e244aa9060257dcc3306fa2bb32cb59876c01da72ad586eca7917b3",
     "torn_tail_bytes": 0,
     "unusable_checkpoint_rows": 0,
     "estimated_remaining_seconds": null,
     "original_checkpoint_rows": 25,
     "reuse_candidate_rows": 3,
     "context_affected_rows": 22,
-    "remaining_inference_rows": 239,
+    "remaining_inference_rows": 135,
     "recovery_source_commit": "3391fab7ee0c030c6ef6f0bbc958e84fbb6c7f2b",
     "generation_dependency": "H2 successful driver terminal satisfied; detached generation running",
     "official_union": "registered; three preserved rows validated against real traces; score full313 after complete310",
     "recovery_model_calls": null,
     "union_recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7",
     "recovery_started_at_utc": "2026-10-31T20:41:30.205884Z",
-    "recovery_completed_rows": 71,
+    "recovery_completed_rows": 175,
     "recovery_total_rows": 310,
-    "recovery_elapsed_seconds": 2266.70303606987,
+    "recovery_elapsed_seconds": 2869.5267429351807,
     "original_failed_attempt_diagnostic": {
       "elapsed_seconds": 923.612692117691,
       "wall_seconds_per_complete_row": 36.944507684707645,
@@ -53,22 +53,23 @@
       },
       "wall_seconds_per_complete_row_note": "Historical failed-run diagnostic only; 22 of 25 rows had erroneous context compaction."
     },
-    "elapsed_seconds": 2266.70303606987,
+    "elapsed_seconds": 2869.5267429351807,
     "wall_seconds_per_complete_row": null,
-    "timing_basis": "Recovery driver start to21:19 observer snapshot;71/310partial,notthroughputbaseline",
+    "timing_basis": "Recovery driver start to21:29 observer snapshot;175/310partial,notthroughputbaseline",
     "checkpoint_recorded_cost_lower_bound": {
-      "calls": 497,
-      "audio_seconds": 1765.834,
-      "latency_seconds": 104717.88571849998,
-      "prompt_tokens": 3877800,
-      "completion_tokens": 615946
+      "calls": 1225,
+      "audio_seconds": 4705.505437499996,
+      "latency_seconds": 350680.1020667599,
+      "prompt_tokens": 9502105,
+      "completion_tokens": 2086806
     },
     "complete_sample_timings": {
-      "admission_wait_mean_s": 2.199869203802817,
-      "admitted_to_finished_mean_s": 1542.604689307183,
-      "admitted_to_finished_p50_s": 1598.18867979,
-      "admitted_to_finished_p95_s": 2074.48484993
-    }
+      "admission_wait_mean_s": 2.3730722704,
+      "admitted_to_finished_mean_s": 2101.3488641144,
+      "admitted_to_finished_p50_s": 2314.27589858,
+      "admitted_to_finished_p95_s": 2675.67382825
+    },
+    "linear_remaining_seconds": 2213.634915978568
   },
   "h2": {
     "state": "official_complete",
@@ -123,7 +124,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "H1new71/310complete;239new plus3preservedpendingunion. Partialrate notfinalbaseline;ETAunknown.",
+  "eta_note": "H1new175/310complete;135new plus3preservedpendingunion. Linear estimate2213.63s is not reliable final ETA; tail may differ.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -132,7 +133,7 @@
     "scoring_jobs": 0
   },
   "state": "h2_official_complete_h1_recovery_running",
-  "remaining_rows": 242,
+  "remaining_rows": 138,
   "bank_read": {
     "registered": true,
     "state": "failed_upstream",
@@ -159,7 +160,7 @@
     "h1_wire_replay_new_model_calls": 0
   },
   "reuse_candidate_rows": 3,
-  "completion_note": "383/625generationcomplete,312officialcomplete;3historicalpreservedseparate. No complete625gateyet.",
+  "completion_note": "487/625generationcomplete,312officialcomplete;3historicalpreservedseparate. No complete625gateyet.",
   "recovered_consumers": {
     "state": "waiting_two_complete_official_halves",
     "rows": 625,
@@ -190,7 +191,13 @@
     "banked_resident_staging_implemented": true,
     "banked_read_registration_implemented": true,
     "banked_stage_read_tests_passed": 118,
-    "banked_stage_read_deployed": false
+    "banked_stage_read_deployed": false,
+    "execution_tree": {
+      "study_commit": "e024408d7ec5db87353e514216043f4443574780",
+      "runtime_source_preserved": true,
+      "tests_passed": 205,
+      "generation_started": false
+    }
   },
   "successor_preparation_queue": {
     "state": "waiting_verified_full625",

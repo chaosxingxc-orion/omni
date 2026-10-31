@@ -1,0 +1,26 @@
+{
+  "schema": "saea-banked-execution-source-stage-v1",
+  "research_commit": "a954cd6ed3891fa0cf9f42eedf14d31bacb431a6",
+  "study_commit": "e024408d7ec5db87353e514216043f4443574780",
+  "resident_source_commit": "3391fab7ee0c030c6ef6f0bbc958e84fbb6c7f2b",
+  "runtime_source_preserved": true,
+  "imported_config_sha256": {
+    "configs/model/bf16-thinking-real500-tp4-s128-v1.json": "d1d69aea19c548a89e2adce958dab761f820d2e1b9ea76fdb00ef470fa75399b",
+    "docs/receipts/runtime-a0-remaining353-selected-resident-v1.json": "062ad01cfbca9c48439f31d563a2c3840b3d5b3153f3a507b84ee5f5c8befc48"
+  },
+  "dataset_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df",
+  "host_queue_sha256": {
+    "generation_release_handoff.py": "a9da5440a7200ad40521cbfb765b4ace5d9e1f62dda9db00cc4049e699cd97a8",
+    "real500_successor_queue.py": "3bab5fd4a29a6ca67de4b0a5194ea1d527b5149e633ac16c3d316a5a48db24aa",
+    "tfrl_current_queue.py": "7787a7ea3290723f49db7b7dec0c5dfb6dd8f37654758e0afe98daecf10c75e7"
+  },
+  "generation_started": false,
+  "readiness": "unregistered; no banked configs yet",
+  "scope": "Staged local source and pinned historical resident inputs only; current service verification, real banked configs, own supplies, FIT/admission/preflight and generation pending.",
+  "formal_tests": {
+    "passed": 205,
+    "seconds": 43.86,
+    "exit": 0,
+    "actual_banked_generation": false
+  }
+}
