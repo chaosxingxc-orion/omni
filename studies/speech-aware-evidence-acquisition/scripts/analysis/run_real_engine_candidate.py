@@ -14,6 +14,15 @@ ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'src'))
 
 
+def assert_campaign_success(result, run_id):
+    if result.get('pending') or result.get('completed') != [run_id]:
+        raise RuntimeError('shared campaign did not complete the candidate')
+    states = result.get('states', {})
+    state = states.get(run_id, {})
+    if state.get('state') != 'scored':
+        raise RuntimeError('candidate generation completed but finalization failed: ' + str(state))
+
+
 def run(repo,data,name,out):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.atomic_file import publish_new
@@ -39,7 +48,7 @@ def run(repo,data,name,out):
         started=time.monotonic()
         result=run_campaign([runtime],cells=cells,repo_root=repo,data_root=data,owner='Codex-real500',expected_session_id=spec['service_session'])
         save('campaign.json',result)
-        if result['pending'] or result['completed']!=[cell.run_id]:raise RuntimeError('shared campaign did not complete the candidate; inspect campaign state')
+        assert_campaign_success(result, cell.run_id)
         save('complete.json',{'candidate':name,'rows':500,'campaign_wall_seconds':time.monotonic()-started,'includes_preflight_preprocess_scoring':True,'profile':spec['profile'],'result':result})
         return {'candidate':name,'rows':500,'completed':True}
     except BaseException as error:

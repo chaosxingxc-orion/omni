@@ -30,3 +30,12 @@ def test_duplicate_boundary_refused():
 def test_c2_roles_without_diagnostic_branches():
     output={'native_episode_receipt':{'role_visits':[{'role_id':role,'execution_receipt':{'contacts':[{'request_id':rid}]}} for role,rid in [('perception','p'),('solver','s')]]}}
     assert m.roles(output)=={'perception':'p','solver':'s'}
+
+
+def test_sample_residual_wait_is_joined_per_row():
+    rows, events = inputs()
+    rows[0].trace_lines.append(json.dumps({'record_id': 'sample-timing', 'payload': {'use_sample_execution_timing': {'admitted_ns': 90_000_000_000, 'finished_ns': 137_000_000_000}}}))
+    result = m.join(rows, events)['metrics']
+    assert result['admission_to_perception_request_start']['mean_s'] == 10
+    assert result['solver_request_end_to_sample_finished']['mean_s'] == 2
+    assert result['admission_to_sample_finished']['mean_s'] == 47

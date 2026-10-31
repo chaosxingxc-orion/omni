@@ -60,6 +60,22 @@ def join(rows,events):
             if gap<-.001:raise ValueError('solver began before perception completed')
             metrics['perception_end_to_solver_request_start'].append(max(gap,0))
             metrics['perception_start_to_solver_end'].append(s['started_monotonic']+s['elapsed_seconds']-p['started_monotonic'])
+            timings = [payload['use_sample_execution_timing'] for payload in trace.values()
+                       if 'use_sample_execution_timing' in payload]
+            if len(timings) > 1:
+                raise ValueError('ambiguous sample execution timing')
+            if timings:
+                timing = timings[0]
+                admitted = timing['admitted_ns'] / 1e9
+                finished = timing['finished_ns'] / 1e9
+                p_start = p['started_monotonic']
+                s_end = s['started_monotonic'] + s['elapsed_seconds']
+                if not admitted <= p_start <= s_end <= finished + .001:
+                    raise ValueError('sample/role time boundaries do not nest')
+                metrics['admission_to_perception_request_start'].append(p_start - admitted)
+                metrics['solver_request_end_to_sample_finished'].append(max(0, finished - s_end))
+                metrics['admission_to_sample_finished'].append(finished - admitted)
+
     return {'rows':len(seen),'metrics':{k:stats(v) for k,v in metrics.items()},'missing_timing_entries':len(missing),'missing_sample_count':len({r['sample_id'] for r in missing}),
             'limitations':['Completed subset is descriptive and may be biased toward faster samples.','P→S gap contains preparation/FIT/scheduling; not pure CPU time.','FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.','Nested intervals overlap; do not sum as whole-task wall time.'],'new_model_calls':0}
 
