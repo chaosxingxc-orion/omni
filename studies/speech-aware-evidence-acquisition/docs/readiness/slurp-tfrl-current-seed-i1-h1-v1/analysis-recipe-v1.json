@@ -1,0 +1,36 @@
+{
+  "arms": [
+    "s1",
+    "s2",
+    "s3",
+    "s4",
+    "aa",
+    "lock"
+  ],
+  "attempt_id": "generation-v1",
+  "authority": "docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md",
+  "claims_benefit": false,
+  "credit": "row F1 minus lock; best intent-correct; positive only with stable aa/lock",
+  "decision_scope": "Descriptive half only. Pool both halves and evaluate independent confirmation before improvement claim.",
+  "entrypoint": "scripts/analysis/tfrl_current_half_result.py",
+  "new_model_calls": 0,
+  "official_scoring_jobs": 7,
+  "prerequisite": "Full A0 gain lock before construction admission; this READ does not admit generation.",
+  "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-V1-READ",
+  "request_gate": "verified complete bundle; exact plan/receipt/actual request seeds and common context",
+  "roster": {
+    "relpath": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
+    "sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0"
+  },
+  "rows": 313,
+  "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-V1",
+  "sampling_plan": {
+    "relpath": "docs/readiness/slurp-tfrl-current-seed-i1-h1-v1/sampling-plan.json",
+    "sha256": "3938322e70bcdc007ae044d9e6270c9a04f56fca6658a0a78e2202c451b5ff19"
+  },
+  "schema": "saea-tfrl-current-half-result-recipe-v1",
+  "scorer": "slurp-slu-official-train",
+  "source_binding_sha256": "10a2088e5a529062015311a89309c2a9d1a84de051506a159c6d8f841ee1af55",
+  "split_identity_hash": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14",
+  "vote": "plurality intent, lowest-k tie, entity support >=2/4"
+}
