@@ -39,20 +39,21 @@
     "timing_basis": "driver started receipt to generation exit; excludes post-exit observation delay"
   },
   "h2": {
-    "state": "not_started",
+    "state": "running",
     "completed_rows": 0,
     "total_rows": 312,
     "remaining_rows": 312,
-    "cards": 0,
-    "instances": 0,
-    "estimated_remaining_seconds": null
+    "cards": 8,
+    "instances": 2,
+    "estimated_remaining_seconds": null,
+    "started_at_utc": "2026-10-31T19:24:36.106294+00:00"
   },
   "resources": {
     "cards": 8,
     "instances": 2,
     "tensor_parallel": 4,
     "max_num_seqs_per_instance": 128,
-    "generation_active": false
+    "generation_active": true
   },
   "hardware_snapshot": {
     "observed_at_utc": "2026-10-31T18:54:25Z",
@@ -68,7 +69,7 @@
     ],
     "scope": "one npu-smi snapshot; all 8 active, not sustained full utilization"
   },
-  "eta_note": "Generation failed; ETA unknown pending repair and supported continuation. Partial failed-run throughput is not a baseline.",
+  "eta_note": "H2 restarted on repaired code; no new completion snapshot yet. H1 retains 25 rows and needs source-bound recovery. ETA unknown.",
   "pool_read": {
     "registered": true,
     "recipe_sha256": "50f65dda45c7fcc52a3ede2562c430af4b78eefa6adf8db88da9b0f8fa9b66f6",
@@ -76,7 +77,7 @@
     "model_calls": 0,
     "scoring_jobs": 0
   },
-  "state": "failed",
+  "state": "h2_running_h1_checkpoint_preserved",
   "remaining_rows": 600,
   "bank_read": {
     "registered": true,
@@ -95,8 +96,9 @@
   "repair": {
     "implemented": true,
     "recovery_runtime_tests_passed": 84,
-    "production_resumed": false,
-    "h2_preflight": "in_progress",
-    "h1_checkpoint_preserved": true
+    "production_resumed": true,
+    "h2_preflight": "passed_exit0",
+    "h1_checkpoint_preserved": true,
+    "source_commit": "c3d347231efbae61627b7955f9ed7d6e92f1e2d0"
   }
 }
