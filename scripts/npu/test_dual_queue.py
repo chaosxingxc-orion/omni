@@ -70,6 +70,27 @@ class DualQueueTests(unittest.TestCase):
             (root / "guardian.py").write_text("# fixture")
             with self.assertRaises(dual_queue.DualQueueError): dual_queue.validate_config(config)
 
+    def test_npu_queue_cannot_wait_on_cpu_queue_artifact(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            npu_dir = root / "npu-state"
+            cpu_dir = root / "cpu-state"
+            npu = self.queue(root, "npu", [self.job(
+                "experiment", requires_cards_free=True,
+                wait_for_final=str(cpu_dir / "state.json"),
+            )])
+            cpu = self.queue(root, "cpu", [self.job("analysis")])
+            config = root / "dual.json"
+            config.write_text(json.dumps({
+                "schema": "saea-dual-queue-v1",
+                "npu_queue": str(npu), "cpu_queue": str(cpu),
+                "npu_queue_dir": str(npu_dir), "cpu_queue_dir": str(cpu_dir),
+                "guardian": str(root / "guardian.py"),
+            }))
+            (root / "guardian.py").write_text("# fixture")
+            with self.assertRaises(dual_queue.DualQueueError):
+                dual_queue.validate_config(config)
+
 
 if __name__ == "__main__":
     unittest.main()
