@@ -1,0 +1,24 @@
+{
+  "rows": 128,
+  "new_model_calls": 0,
+  "new_tokenizer_endpoint_calls": 0,
+  "metrics": {
+    "direct_original": {
+      "min": 16078,
+      "mean": 21283.53125,
+      "max": 25124
+    },
+    "direct_nested_dedup": {
+      "min": 12981,
+      "mean": 18186.53125,
+      "max": 22027
+    },
+    "serialized_original": {
+      "min": 18106,
+      "mean": 23573.046875,
+      "max": 27585
+    }
+  },
+  "nested_replacements": 128,
+  "limitation": "Direct content token sums exclude chat-template overhead; not current prepared-state wire. Exact rendered FIT still required."
+}
