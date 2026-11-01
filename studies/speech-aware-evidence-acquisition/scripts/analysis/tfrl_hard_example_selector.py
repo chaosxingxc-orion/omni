@@ -7,7 +7,6 @@ product and it has no model, tokenizer, scorer, or test-label access.
 """
 from __future__ import annotations
 
-from collections import Counter
 from typing import Iterable, Mapping
 
 
@@ -71,11 +70,11 @@ def select_hard_examples(
     covered: set[tuple[str, str]] = set()
     remaining = list(eligible)
     while remaining and len(selected) < limit:
-        candidate = max(
+        candidate = sorted(
             remaining,
-            key=lambda r: (len(set(r["relations"]) - covered), float(r["error_rate"]),
-                           -ord(str(r["sample_id"])[0]) if r["sample_id"] else 0),
-        )
+            key=lambda r: (-len(set(r["relations"]) - covered),
+                           -float(r["error_rate"]), str(r["sample_id"])),
+        )[0]
         remaining.remove(candidate)
         selected.append(candidate)
         covered.update(candidate["relations"])
