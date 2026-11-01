@@ -110,3 +110,7 @@ def test_fresh_attempt_directory_created_only_locally(state):
             base=base, fs_type=lambda _: 'ext4')
     assert (base/'fresh/state/runs/new').is_dir()
     assert not (data/'runs/new').exists()
+
+
+def test_attempt_root_keeps_attempt_mutation_locks_local():
+    assert m.members(['attempts']) == [Path('attempts')]

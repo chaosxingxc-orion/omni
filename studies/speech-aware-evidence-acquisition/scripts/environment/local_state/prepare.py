@@ -46,8 +46,9 @@ def members(values):
         raise ValueError('nonempty, unique writable directory list required')
     for path in paths:
         if (path.is_absolute() or '..' in path.parts or not path.parts
-                or path.parts[0] not in ALLOWED_ROOTS or len(path.parts) < 2):
-            raise ValueError('use narrow relative mutable directories; never models, datasets or locks')
+                or path.parts[0] not in ALLOWED_ROOTS
+                or (len(path.parts) < 2 and str(path) != 'attempts')):
+            raise ValueError('use narrow mutable directories (attempts includes its root locks)')
         if any(path != other and path.is_relative_to(other) for other in paths):
             raise ValueError('nested writable mounts are ambiguous')
     return paths
