@@ -16,6 +16,23 @@ class DualQueueTests(unittest.TestCase):
             self.assertEqual(json.loads(path.read_text()), {"schema": dual_queue.STATE_SCHEMA, "queues": {}})
             self.assertFalse(list(Path(tmp).glob("state.json.tmp.*")))
 
+    def test_uncertain_launch_is_refused_without_replay(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            npu = self.queue(root, "npu", [self.job("experiment", requires_cards_free=True, cards_policy="no_other")])
+            cpu = self.queue(root, "cpu", [self.job("analysis")])
+            guardian = root / "guardian.py"; guardian.write_text("# fixture")
+            config = root / "dual.json"
+            config.write_text(json.dumps({"schema": dual_queue.SCHEMA, "npu_queue": str(npu), "cpu_queue": str(cpu),
+                                          "guardian": str(guardian)}))
+            state_dir = root / "dual-state"; state_dir.mkdir()
+            (state_dir / "state.json").write_text(json.dumps({
+                "schema": dual_queue.STATE_SCHEMA,
+                "config": str(config),
+                "queues": {"npu": {"state": "launching", "pid": None, "cmd": ["unknown"]}},
+            }))
+            with self.assertRaises(dual_queue.DualQueueError): dual_queue.start(config, state_dir)
+
     def queue(self, root, name, jobs):
         path = root / (name + ".json")
         path.write_text(json.dumps({"schema": "saea-card-queue-v1", "id": name, "jobs": jobs}))

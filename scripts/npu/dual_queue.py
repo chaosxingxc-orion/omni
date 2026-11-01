@@ -23,6 +23,7 @@ from typing import Any
 SCHEMA = "saea-dual-queue-v1"
 STATE_SCHEMA = "saea-dual-queue-state-v1"
 TERMINAL = {"done", "failed", "stopped"}
+UNCERTAIN_LAUNCH = "launching"
 
 
 class DualQueueError(ValueError):
@@ -190,12 +191,27 @@ def start(config_path: Path, state_dir: Path) -> dict[str, Any]:
             # above is only a fast path for the fully live pair; recover each
             # missing side independently.
             prior = old.get("queues", {}).get(kind, {}) if isinstance(old, dict) else {}
+            if prior.get("state") == UNCERTAIN_LAUNCH and not _alive(prior.get("pid")):
+                raise DualQueueError(
+                    "%s queue has an uncertain launch; reconcile its command and process before resuming" % kind
+                )
             if _alive(prior.get("pid")):
                 queues[kind] = dict(prior)
                 queues[kind]["state"] = "existing"
                 continue
             cmd = _guardian_cmd(cfg, kind)
             log_path = state_dir / (kind + ".guardian.log")
+            # Publish intent before Popen.  If the coordinator dies after the
+            # child is created but before its PID is durably recorded, a later
+            # start must stop for reconciliation instead of replaying an
+            # unknown launch.
+            queues[kind] = {"state": UNCERTAIN_LAUNCH, "pid": None, "cmd": cmd, "log": str(log_path)}
+            write_json(state_path, {
+                "schema": STATE_SCHEMA,
+                "config": str(config_path.resolve()),
+                "started": time.time(),
+                "queues": queues,
+            })
             with log_path.open("ab") as log:
                 proc = subprocess.Popen(
                     cmd,
@@ -206,6 +222,12 @@ def start(config_path: Path, state_dir: Path) -> dict[str, Any]:
                     close_fds=True,
                 )
             queues[kind] = {"state": "started", "pid": proc.pid, "cmd": cmd, "log": str(log_path)}
+            write_json(state_path, {
+                "schema": STATE_SCHEMA,
+                "config": str(config_path.resolve()),
+                "started": time.time(),
+                "queues": queues,
+            })
         result = {"schema": STATE_SCHEMA, "config": str(config_path.resolve()), "started": time.time(), "queues": queues}
         write_json(state_path, result)
         return result
