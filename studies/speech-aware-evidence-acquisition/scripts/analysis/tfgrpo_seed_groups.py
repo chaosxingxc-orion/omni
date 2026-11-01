@@ -13,7 +13,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT/'src'), str(ROOT/'scripts/analysis'), str(ROOT/'scripts/flights/nx')]
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
-from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical, sha, empty_experience
+from speech_aware_evidence_acquisition.rails.tfgrpo_learning import (canonical, sha, empty_experience,
+    BINARY_REWARD, DENSE_REWARD, validate_reward_mode, intent_slot_reward, group_has_contrast)
 from tfrl_recovered_consumers import load
 from tfrl_current_half_result import score_table, ARMS
 from tfrl_uncertain_credit import checked
@@ -35,7 +36,9 @@ def text_projection(payload):
     return result
 
 
-def group_from_row(row, trace, scores, gold, *, model_id, policy_sha256, experience_sha256, namespace):
+def group_from_row(row, trace, scores, gold, *, model_id, policy_sha256, experience_sha256, namespace,
+                   reward_mode=BINARY_REWARD, scored_answers=None):
+    validate_reward_mode(reward_mode)
     sid = row['sample_id']
     visits = [v for v in row['native_episode_receipt']['role_visits'] if v.get('stage') == 'solver']
     if len(visits) != 1 or len(visits[0]['execution_receipt']['contacts']) != 6:
@@ -55,28 +58,41 @@ def group_from_row(row, trace, scores, gold, *, model_id, policy_sha256, experie
                 or response['response_text_sha256'] != contact['response_text_sha256']):
             raise ValueError('exact sealed request/response custody required')
         score = scores[arm][sid]
-        reward = int(not checked(score)['task_error'])
+        strict_reward = int(not checked(score)['task_error'])
+        reward = strict_reward if reward_mode == BINARY_REWARD else intent_slot_reward(score)
         critique = {k:score[k] for k in ('scenario_action_exact', 'slot_f1_exact_tp',
                                         'slot_f1_exact_fp', 'slot_f1_exact_fn')}
         critique.update(reward=reward, reward_rule='Intent exact AND exact-slot FP=FN=0',
                         limitation='Shared P; text reflection cannot verify audio or infer unobserved reasoning.')
+        if reward_mode == DENSE_REWARD:
+            critique.update(reward_rule='0.5 * IntentExact + 0.5 * ExactSlotF1; empty slots => 1',
+                strict_task_success=strict_reward, reward_mode=reward_mode,
+                reward_scope='Official scoring of the source arm after its fixed delivery normalization; raw response alone is not scored.',
+                partial_credit_is_not_success=True)
         projected = text_projection(payload)
         if query is None:
             query = json.dumps({'task_instruction': payload['task_instruction'],
                 'history': payload['history'][:-1], 'supplied_evidence': payload['supplied_evidence'],
                 'sample_id': sid, 'audio_available_to_reflector': False}, ensure_ascii=False, sort_keys=True)
+        trajectory = {'request':projected, 'response_text':answer}
+        if reward_mode == DENSE_REWARD:
+            if scored_answers is None or not isinstance(scored_answers[arm][sid],str):
+                raise ValueError('dense reflection requires exact normalized scored answer')
+            trajectory['scored_answer_after_fixed_normalization'] = scored_answers[arm][sid]
+            critique['scored_answer_sha256'] = hashlib.sha256(scored_answers[arm][sid].encode()).hexdigest()
         trajectory_id = sha({'namespace':namespace, 'request_id':rid,
                              'request_sha256':request['payload_sha256']})
         rollouts.append({'trajectory_id':trajectory_id,
-            'trajectory':json.dumps({'request':projected, 'response_text':answer}, ensure_ascii=False, sort_keys=True),
+            'trajectory':json.dumps(trajectory, ensure_ascii=False, sort_keys=True),
             'critique':json.dumps(critique,sort_keys=True), 'reward':reward, 'model_id':model_id,
             'policy_sha256':policy_sha256, 'experience_sha256':experience_sha256})
         custody.append({'trajectory_id':trajectory_id,'arm':arm,'namespace':namespace,
                         'request_id':rid,'request_sha256':request['payload_sha256'],
                         'response_text_sha256':contact['response_text_sha256'],
-                        'official_score_sha256':sha(score)})
-    if {r['reward'] for r in rollouts} != {0,1}:
-        raise ValueError('export only binary mixed groups')
+                        'official_score_sha256':sha(score),
+                        **({'scored_answer_sha256':critique['scored_answer_sha256']} if reward_mode==DENSE_REWARD else {})})
+    if not group_has_contrast(rollouts, reward_mode):
+        raise ValueError('export only binary mixed groups' if reward_mode == BINARY_REWARD else 'export only reward-contrast groups')
     return {'query_id':sid, 'query':query, 'answer':json.dumps(gold,ensure_ascii=False,sort_keys=True),
             'rollouts':rollouts}, custody
 

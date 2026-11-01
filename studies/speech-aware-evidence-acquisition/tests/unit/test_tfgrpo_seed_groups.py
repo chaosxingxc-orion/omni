@@ -61,3 +61,22 @@ def test_tied_group_not_exported_and_namespace_disambiguates():
     assert g['rollouts'][0]['trajectory_id']!=other['rollouts'][0]['trajectory_id']
     for s in scores.values():s[row['sample_id']]=score()
     with pytest.raises(ValueError,match='mixed'):build(row,trace,scores)
+
+
+def test_dense_export_preserves_actual_scored_answer_and_partial_reward():
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import DENSE_REWARD
+    import hashlib,json
+    row,trace,scores=fixture();sid=row['sample_id']
+    for i,table in enumerate(scores.values()):
+        table[sid]={**table[sid],'scenario_action_exact':i%2,'slot_f1_exact_tp':0,'slot_f1_exact_fp':1,'slot_f1_exact_fn':1}
+    answers={arm:{sid:'{"scenario":"normalized"}'} for arm in scores}
+    kwargs=dict(model_id='model',policy_sha256='a'*64,experience_sha256='b'*64,namespace='source',reward_mode=DENSE_REWARD)
+    with pytest.raises(ValueError,match='exact normalized scored answer'):
+        group_from_row(row,trace,scores,{},**kwargs)
+    g,pins=group_from_row(row,trace,scores,{},scored_answers=answers,**kwargs)
+    assert {r['reward'] for r in g['rollouts']}=={0,.5}
+    for r,pin in zip(g['rollouts'],pins):
+        trajectory=json.loads(r['trajectory']);crit=json.loads(r['critique'])
+        assert trajectory['scored_answer_after_fixed_normalization']=='{"scenario":"normalized"}'
+        assert crit['strict_task_success']==0 and crit['partial_credit_is_not_success']
+        assert crit['scored_answer_sha256']==pin['scored_answer_sha256']==hashlib.sha256(b'{"scenario":"normalized"}').hexdigest()

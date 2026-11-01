@@ -156,6 +156,9 @@ def verify_job(repo,data,job):
     """Verify derivation, not only internally self-consistent hashes, before writes."""
     from speech_aware_evidence_acquisition.rails.tfgrpo_source import read_pin,load_dynamic_source
     complete=read(job/'complete.json')
+    if complete.get('schema') == 'saea-tfgrpo-dense-job-v1':
+        from tfgrpo_dense_job import verify_job as verify_dense
+        return verify_dense(repo,data,job)
     if re.fullmatch(r'[a-z0-9][a-z0-9-]*',complete.get('job',NAME)) is None:raise ValueError('safe learning job name required')
     required={'construction-roster.json','source.json','registration.json','runtime-identity.json'}
     if set(complete['artifacts'])!=required:raise ValueError('exact prepared artifact set required')
@@ -201,11 +204,16 @@ def register(repo,data,job):
     names=[run_id,run_id+'-FIT'];ledger=repo/'docs/exposure-ledger.md'
     if any('| '+rid+' |' in ledger.read_text() or (data/'attempts'/rid).exists() for rid in names):raise ValueError('existing learning registration or spend')
     model_id=reg['model_id'];model=read(repo/f'configs/model/{model_id}.json')
+    if complete.get('schema')=='saea-tfgrpo-dense-job-v1':
+        from tfgrpo_dense_job import require_generation_budget
+        require_generation_budget(reg,model)
     if reg['batch_sha256']!=complete['batch_sha256'] or len(reg['contacts'])!=complete['generation_calls']:
         raise ValueError('job registration and source budget differ')
     roster_rel=f'docs/receipts/rosters/{name}.json'
     baseline=read(repo/'configs/baseline/system-group-update-text-v1.json');baseline.pop('whole_roster_wave_barrier',None)
-    baseline['what_this_is']='Model-driven TF-GRPO fixed-P Solver experience learning; H1 A0-error mixed groups only.'
+    dense=complete.get('schema')=='saea-tfgrpo-dense-job-v1'
+    baseline['what_this_is']=('Model-driven TF-GRPO partial-credit H1 allwrong experience learning; candidate only.' if dense
+        else 'Model-driven TF-GRPO fixed-P Solver experience learning; H1 A0-error mixed groups only.')
     baseline.pop('phase_material',None)
     from speech_aware_evidence_acquisition.rails.prepared_text import PREPARED_TEXT_INSTRUCTION
     baseline['task_instruction']=PREPARED_TEXT_INSTRUCTION
@@ -219,6 +227,9 @@ def register(repo,data,job):
         artifact_result={'schema':'saea-artifact-result-binding-v1','role':'training-feedback-proposal','construction_roster':{'repo_relpath':roster_rel,'sha256':file_sha(job/'construction-roster.json')}},
         tfgrpo_contact_fit={'run_id':run_id+'-FIT','attempt_id':'learning-fit-v1','contact_cap':complete['fit_calls']},
         stage3_algorithm={'id':'tfgrpo-system-memory-disjoint-v1','operators_used':['credit_assignment'],'note':'Official four-stage model-driven update, shared-P adaptation; candidate only.'})
+    if dense:
+        exp['stage3_algorithm']['id']='tfgrpo-partial-credit-allwrong-v1'
+        exp['stage3_algorithm']['note']='Four-stage semantic update with explicit partial reward and scored normalized answers; not upstream reward equivalence.'
     cell,=exp['cells'];cell.update(cell_id=name,run_id=run_id,attempt_id='learning-v1',baseline_fragment=name,
         allowed_execution_stages=['check','worker','campaign'],readiness={'state':'held','requirements':[],'reason':'Registered exact learning source; await shared live runtime preflight and lease.'})
     exp['populations'][0]['ids']=[x['sample_id'] for x in roster['items']]
@@ -235,7 +246,7 @@ def register(repo,data,job):
         doc={'schema':'saea-tfgrpo-registered-plan-v1','execution_plan':asdict(plan),'job_manifest':pin(job/'complete.json',data,'data'),
              'config_sha256':cfg.config_hash,'authority':AUTH,'actual_audio_seconds_expected':0,'readiness':'held'}
         path=package/(kind+'-plan.json');publish_new(path,raw(doc))
-        rows.append(['2026-11-01',run,'bounded-discovery-probe','TF-GRPO H1 fixed-P Solver learning '+kind,model_id,'slurp TRAIN H1 error mixed groups','discovery',roster['split_identity_hash'],'no',str(plan.planned_model_calls),'1','8.0','All source rollout costs retained',str(path.relative_to(repo)),f'Plan SHA256 {file_sha(path)}; root countersigned under {AUTH}; no H2 feedback in learning; held; text only, actual audio zero'])
+        rows.append(['2026-11-01',run,'bounded-discovery-probe','TF-GRPO H1 fixed-P Solver learning '+kind,model_id,('slurp TRAIN H1 allwrong partial contrasts' if dense else 'slurp TRAIN H1 error mixed groups'),'discovery',roster['split_identity_hash'],'no',str(plan.planned_model_calls),'1','8.0','All source rollout costs retained',str(path.relative_to(repo)),f'Plan SHA256 {file_sha(path)}; root countersigned under {AUTH}; no H2 feedback in learning; held; text only, actual audio zero'])
     ledger.write_text(ledger.read_text()+'\n## Fixed-P TF-GRPO learning\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| '+' | '.join(['---']*15)+' |\n'+'\n'.join('| '+' | '.join(r)+' |' for r in rows)+'\n')
     return {'job':name,'rows':complete['groups'],'calls':complete['generation_calls'],'fit_calls':complete['fit_calls'],'readiness':'held','new_model_calls':0}
 
@@ -273,7 +284,7 @@ def admit(repo,data,job):
     if any((data/'attempts'/rid).exists() for rid in runs):raise ValueError('existing learning spend')
     draft={'schema':'saea-campaign-decision-v1','status':'DRAFT-NOT-MINTED','decision_id':decision_id,
         'eligible_run_ids':runs,'eligible_attempt_ids':['learning-v1','learning-fit-v1'],'authorization_basis':AUTH,
-        'owner':'root','decision':'Execute the registered 32 H1 mixed-error groups through shared TF-GRPO runtime; candidate only, no H2 feedback.',
+        'owner':'root','decision':f"Execute the registered {complete['groups']} H1 learning groups through shared TF-GRPO runtime; candidate only, no H2 feedback.",
         'antecedents':{'owner':{'path':AUTH,'sha256':file_sha(repo/AUTH)},
             'runtime':{'path':str(receipt.relative_to(repo)),'sha256':file_sha(receipt)}},
         'source_manifest':pin(job/'complete.json',data,'data'),'service':{'expected_session_id':service_session},

@@ -1,0 +1,37 @@
+{
+  "H2_labels_read": false,
+  "artifact_sha256": "cb22a28bd2ff2ccf9378defbbc791213ec8747ac54376930e748fa10f7f877d8",
+  "excluded_any_correct_groups": 139,
+  "limits": [
+    "Historical trajectories use empty experience; no new-policy rollout claim.",
+    "Partial reward is for normalized arm answer, not raw Solver text alone.",
+    "51 groups do not cover the full hard distribution; 123 tied allwrong retained."
+  ],
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "normal_learning_calls": 307,
+  "population_rows": 313,
+  "remaining_allwrong_tied": 123,
+  "reward_mode": "intent-exact-slot-f1-v1",
+  "schema": "saea-tfgrpo-dense-export-v1",
+  "selected_coverage": {
+    "intents": 24,
+    "observed_intent_slot_relations": 54,
+    "slot_types": 22
+  },
+  "selected_groups": 51,
+  "selection_ids_sha256": "529a3cc6d9ef1dc0606817575a94b2a9f007f6bc5ecaa56a0d9299e84fa3b286",
+  "source": {
+    "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1/complete.json",
+    "complete_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+    "kind": "verified-source-union",
+    "provenance_sha256": "92e5e7f4912da32e70c5713e85848cad8f7bee0887c6b1e86c7d23f9e15cd305",
+    "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1",
+    "recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+  },
+  "source_commit": "3391fab7ee0c030c6ef6f0bbc958e84fbb6c7f2b",
+  "source_costs_retained": true,
+  "test_labels_read": false,
+  "tied_ids_sha256": "493117b698468dc5773d82a474b419c937756baf1a62ffe8690859e6c7cb851f",
+  "trajectories": 204
+}

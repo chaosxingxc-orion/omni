@@ -1,0 +1,12 @@
+{
+  "schema": "saea-tfgrpo-dense-preparation-archive-v1",
+  "archive_sha256": "84b049a24d2f19433fd7c0f6378b2b89357ab99de2d594cd25d8734afa1f68b5",
+  "all_export_and_prepared_hashes_verified": true,
+  "groups": 51,
+  "trajectories": 204,
+  "generation_calls_budget": 307,
+  "generation_started": false,
+  "readiness": "prepared-not-admitted",
+  "reason": "Final-stage output budget correction pending; current prepared 4096 completion is not admitted.",
+  "verified_utc": "2026-11-01T12:34:23.152624+00:00"
+}

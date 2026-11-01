@@ -148,6 +148,19 @@ def score_column(path,result_path,*,binding,ids,lock,data,verify_only=False):
     import fcntl
     expected={**binding,'outputs_sha256':sha(path),'rows':len(ids),'scorer':SCORER}
     receipt=result_path.with_suffix('.receipt.json');intent=result_path.with_suffix('.intent.json')
+    if verify_only:
+        # Frozen source verification is read-only; do not open a writable lock.
+        if not receipt.is_file() or not result_path.is_file():
+            raise ValueError('required official score receipt missing')
+        doc=read(receipt)
+        if doc!={**expected,'scores_sha256':sha(result_path)}:
+            raise ValueError('score receipt differs')
+        result=read(result_path)
+        if sha(result_path)!=doc['scores_sha256']:
+            raise ValueError('score changed during verification')
+        from tfrl_current_half_result import score_table
+        score_table(result,ids)
+        return result
     with result_path.with_suffix('.lock').open('a') as guard:
         fcntl.flock(guard,fcntl.LOCK_EX|fcntl.LOCK_NB)
         if receipt.exists():

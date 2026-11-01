@@ -76,3 +76,21 @@ def test_distillation_source_namespaces_and_exact_full_population(monkeypatch):
     assert [r['source_namespace'] for r in trace]==['old','new']
     loaded['segments'][1]['plan']['row_plan'][0]['row_id']='a'
     with pytest.raises(ValueError,match='repeats'):d.answers_for_loaded(loaded,resolver=object())
+
+
+def test_verify_cached_column_never_opens_writable_lock(tmp_path,monkeypatch):
+    import json
+    from pathlib import Path
+    import tfrl_h1_union as m
+    import tfrl_current_half_result
+    p=tmp_path/'outputs.jsonl';p.write_text('{}\n');out=tmp_path/'scores.json';out.write_text('{"verified":true}')
+    binding={'source':'sealed'}
+    receipt={**binding,'outputs_sha256':m.sha(p),'rows':1,'scorer':m.SCORER,'scores_sha256':m.sha(out)}
+    out.with_suffix('.receipt.json').write_text(json.dumps(receipt))
+    monkeypatch.setattr(tfrl_current_half_result,'score_table',lambda result,ids:None)
+    original=Path.open
+    def readonly(self,mode='r',*args,**kwargs):
+        if any(x in mode for x in 'wax+'):raise AssertionError('verification tried write')
+        return original(self,mode,*args,**kwargs)
+    monkeypatch.setattr(Path,'open',readonly)
+    assert m.score_column(p,out,binding=binding,ids=['one'],lock={},data=tmp_path,verify_only=True)=={'verified':True}
