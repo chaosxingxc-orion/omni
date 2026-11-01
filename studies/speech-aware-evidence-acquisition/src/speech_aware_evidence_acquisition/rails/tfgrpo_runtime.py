@@ -355,6 +355,12 @@ def run_registered_learning(runtime, *, receipt_root, learner_root, retain_clien
         roster_sha256=registration['construction_roster_sha256'],
         replay=getattr(runtime, '_native_contact_replay', None))
     batch=source['batch']
+    historical={}
+    if 'summary_import' in batch:
+        from .tfgrpo_summary_import import load_import
+        summaries,custody=load_import(batch['summary_import'],data_root=runtime._data_root,
+            groups=batch['groups'],common=batch['common'],model_id=batch['model_id'])
+        historical={'summary_import':batch['summary_import'],'imported_summaries':summaries,'import_custody':custody}
     sample_ids = {s.sample_id for s in runtime._samples}
     if {row['sample_id'] for row in registration['contacts']} != sample_ids:
         raise LearningError('every artifact roster row requires a registered learning contact')
@@ -383,7 +389,7 @@ def run_registered_learning(runtime, *, receipt_root, learner_root, retain_clien
             learning_config_sha256=batch['learning_config_sha256'],preflight=caller.preflight,
             reconcile=caller.reconcile,**batch['bounds'])
         return learner.learn(batch['groups'],batch['parent'],policy_sha256=batch['policy_sha256'],
-            rollout_kind=batch['rollout_kind'],**batch['common'])
+            rollout_kind=batch['rollout_kind'],**batch['common'],**historical)
     finally:
         if not retain_client:
             caller.client.close()

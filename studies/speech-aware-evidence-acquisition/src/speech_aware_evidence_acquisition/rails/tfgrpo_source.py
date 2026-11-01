@@ -43,6 +43,10 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
     if not isinstance(source['provenance'],list) or not source['provenance']:
         raise LearningError('exported source requires immutable provenance pins')
     for pin in source['provenance']:read_pin(pin,repo_root=repo_root,data_root=data_root)
+    imported={}
+    if 'summary_import' in batch:
+        from .tfgrpo_summary_import import load_import
+        imported,_=load_import(batch['summary_import'],data_root=data_root,groups=batch['groups'],common=batch['common'],model_id=model_id)
     expected=[];seen=set();trajectory_ids=set()
     for group in batch['groups']:
         qid=group['query_id']
@@ -58,7 +62,7 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
                 raise LearningError('rollout provenance differs')
             trajectory_ids.add(rid)
         if {r['reward'] for r in rolls}=={0,1}:
-            expected.extend({'stage':'summary','identity':r['trajectory_id'],'sample_id':qid} for r in rolls)
+            expected.extend({'stage':'summary','identity':r['trajectory_id'],'sample_id':qid} for r in rolls if r['trajectory_id'] not in imported)
             expected.extend({'stage':s,'identity':qid,'sample_id':qid} for s in ('advantage','group_update'))
     if expected:expected.append({'stage':'batch_update','identity':'batch','sample_id':batch['groups'][0]['query_id']})
     if reg['contacts']!=expected or batch['bounds']['max_calls']!=len(expected):

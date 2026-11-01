@@ -8,6 +8,7 @@ import copy
 from dataclasses import asdict
 import hashlib
 import json
+import re
 from pathlib import Path
 import sys
 ROOT=Path(__file__).resolve().parents[2]
@@ -32,7 +33,7 @@ def pin(path,root,kind):return {'root':kind,'relpath':str(Path(path).resolve().r
 def raw(doc):return (json.dumps(doc,sort_keys=True,indent=2,ensure_ascii=False)+'\n').encode()
 
 
-def select(half,roster):
+def select(half,roster,*,run_id=RUN):
     if (half.get('schema')!='saea-tfgrpo-seed-half-v1' or half.get('source_half')!='h1'
             or half.get('evaluation_half')!='h2' or half.get('rollout_kind')!='shared-perception-adaptation'):
         raise ValueError('first job is fixed-P H1 learning with H2 held out')
@@ -55,7 +56,7 @@ def select(half,roster):
             if (r['model_id'],r['policy_sha256'],r['experience_sha256'])!=(half['model_id'],half['policy_sha256'],half['parent']['sha256']):
                 raise ValueError('rollout model/policy/experience differs')
     items=[copy.deepcopy(allowed[sid]) for sid in ids]
-    construction={'schema':'saea-roster-receipt-v1','roster_id':RUN,'roster_role':'construction',
+    construction={'schema':'saea-roster-receipt-v1','roster_id':run_id,'roster_role':'construction',
         'carrier_lock_key':'slurp','split_role':'discovery','split_identity_hash':split_identity_hash(prefixed('slurp',ids)),
         'count':len(ids),'items':items,'selection':'Exact H1 mixed candidate groups intersected with fixed A0-error439; no draw.',
         'evaluation_half':'h2','source_queries_must_not_be_reported_as_held_out':True}
@@ -70,18 +71,24 @@ def learning_decoding(model_values):
             **fragment_wire_params(model_values),'temperature':0,'seed':20261101}
 
 
-def documents(half,roster,*,runtime_identity,roster_sha256,provenance,concurrency=128,model_values=None):
+def documents(half,roster,*,runtime_identity,roster_sha256,provenance,concurrency=128,model_values=None,run_id=RUN,summary_import=None,data_root=None):
     from speech_aware_evidence_acquisition.rails.tfgrpo_runtime import learning_configuration,validate_registration
-    groups,construction=select(half,roster)
+    groups,construction=select(half,roster,run_id=run_id)
+    common={'agent_objective':AGENT_OBJECTIVE,'learning_objective':LEARNING_OBJECTIVE,'num_experiences':2}
+    imported={}
+    if summary_import is not None:
+        from speech_aware_evidence_acquisition.rails.tfgrpo_summary_import import load_import
+        if data_root is None:raise ValueError('historical import requires data root')
+        imported,_=load_import(summary_import,data_root=data_root,groups=groups,common=common,model_id=half['model_id'])
     contacts=[]
     for g in groups:
-        contacts.extend({'stage':'summary','identity':r['trajectory_id'],'sample_id':g['query_id']} for r in g['rollouts'])
+        contacts.extend({'stage':'summary','identity':r['trajectory_id'],'sample_id':g['query_id']} for r in g['rollouts'] if r['trajectory_id'] not in imported)
         contacts.extend({'stage':s,'identity':g['query_id'],'sample_id':g['query_id']} for s in ('advantage','group_update'))
     contacts.append({'stage':'batch_update','identity':'batch','sample_id':groups[0]['query_id']})
     count=len(contacts)
     # Positive speech cap is retained only for legacy ExecutionPlan schema; text
     # contacts carry no audio and actual audio usage must remain zero.
-    plan=ExecutionPlan(run_id=RUN,attempt_id='learning-v1',execution_profile='bounded-discovery-probe',
+    plan=ExecutionPlan(run_id=run_id,attempt_id='learning-v1',execution_profile='bounded-discovery-probe',
         carrier_lock_key='slurp',split_role='discovery',split_identity_hash=construction['split_identity_hash'],
         planned_model_calls=count,planned_gpu_hours=8.0,planned_speech_audio_seconds=1,protocol_hash='0'*64)
     reg={'schema':'saea-tfgrpo-runtime-binding-v1','plan':{k:v for k,v in asdict(plan).items() if k!='protocol_hash'},
@@ -95,15 +102,18 @@ def documents(half,roster,*,runtime_identity,roster_sha256,provenance,concurrenc
     batch={'schema':'saea-tfgrpo-batch-v1','groups':groups,'parent':half['parent'],'common':common,
         'model_id':half['model_id'],'policy_sha256':half['policy_sha256'],'rollout_kind':half['rollout_kind'],
         'learning_config_sha256':reg['learning_config_sha256'],'prompt_sha256':SOURCE_SHA256,'upstream_commit':UPSTREAM_COMMIT,'bounds':bounds}
+    if summary_import is not None:batch['summary_import']=copy.deepcopy(summary_import)
     reg['batch_sha256']=sha(batch)
     validate_registration(reg,plan=plan,model_id=half['model_id'])
     source={'schema':'saea-tfgrpo-learning-source-v1','batch':batch,'provenance':provenance}
     return construction,source,reg,plan
 
 
-def prepare(repo,data,exports,hardset,out,runtime_identity):
+def prepare(repo,data,exports,hardset,out,runtime_identity,*,job_name=NAME,run_id=RUN,service_session=None,summary_import=None):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     assert_execution_environment()
+    if re.fullmatch(r'[a-z0-9][a-z0-9-]*',job_name) is None:raise ValueError('safe learning job name required')
+    if service_session is not None and re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_-]*',service_session) is None:raise ValueError('safe service session required')
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned job directory required')
     manifest=read(exports/'complete.json')
     if manifest['schema']!='saea-tfgrpo-seed-groups-v1' or any(manifest[k]!=0 for k in ('new_model_calls','new_tokenizer_calls','new_scoring_jobs')):
@@ -114,20 +124,21 @@ def prepare(repo,data,exports,hardset,out,runtime_identity):
     if len(roster['items'])!=439 or len(half['groups'])!=52 or len(h2['groups'])!=48:
         raise ValueError('fixed audited625 export and439 error roster required')
     if set(g['query_id'] for g in half['groups']) & set(g['query_id'] for g in h2['groups']):raise ValueError('learning/development overlap')
-    groups,construction=select(half,roster)
+    groups,construction=select(half,roster,run_id=run_id)
     roster_bytes=raw(construction);roster_sha=hashlib.sha256(roster_bytes).hexdigest()
     provenance=[pin(exports/'complete.json',data,'data'),pin(exports/'h1.json',data,'data'),pin(hardset,repo,'repository')]
     identity=read(runtime_identity)
     construction,source,reg,plan=documents(half,roster,runtime_identity=identity,roster_sha256=roster_sha,provenance=provenance,
-        model_values=read(repo/f"configs/model/{half['model_id']}.json"))
+        model_values=read(repo/f"configs/model/{half['model_id']}.json"),run_id=run_id,summary_import=summary_import,data_root=data)
     out.mkdir(parents=True)
     for name,doc in [('construction-roster.json',construction),('source.json',source),('registration.json',reg),('runtime-identity.json',identity)]:publish_new(out/name,raw(doc))
-    result={'schema':'saea-tfgrpo-learning-job-v1','job':NAME,'run_id':RUN,'source_half':'h1','evaluation_half':'h2',
+    result={'schema':'saea-tfgrpo-learning-job-v1','job':job_name,'run_id':run_id,'source_half':'h1','evaluation_half':'h2',
         'groups':len(groups),'trajectories':4*len(groups),'generation_calls':plan.planned_model_calls,'fit_calls':plan.planned_model_calls,
         'excluded_mixed_but_not_a0_error':len(half['groups'])-len(groups),'rollout_kind':'shared-perception-adaptation',
         'new_model_calls':0,'new_tokenizer_calls':0,'batch_sha256':sha(source['batch']),
         'runtime_identity_sha256':sha(identity),'artifacts':{n:file_sha(out/n) for n in ('construction-roster.json','source.json','registration.json','runtime-identity.json')},
         'inputs':provenance,'development_queries_used_for_learning':False,'readiness':'prepared-not-admitted'}
+    if service_session is not None:result['service_session']=service_session
     publish_new(out/'complete.json',raw(result));return result
 
 
@@ -145,6 +156,7 @@ def verify_job(repo,data,job):
     """Verify derivation, not only internally self-consistent hashes, before writes."""
     from speech_aware_evidence_acquisition.rails.tfgrpo_source import read_pin,load_dynamic_source
     complete=read(job/'complete.json')
+    if re.fullmatch(r'[a-z0-9][a-z0-9-]*',complete.get('job',NAME)) is None:raise ValueError('safe learning job name required')
     required={'construction-roster.json','source.json','registration.json','runtime-identity.json'}
     if set(complete['artifacts'])!=required:raise ValueError('exact prepared artifact set required')
     for name,digest in complete['artifacts'].items():
@@ -163,7 +175,8 @@ def verify_job(repo,data,job):
     expected_roster,expected_source,expected_reg,plan=documents(half,hardset,runtime_identity=identity,
         roster_sha256=file_sha(job/'construction-roster.json'),provenance=source['provenance'],
         concurrency=source['batch']['bounds']['concurrency'],
-        model_values=read(repo/f"configs/model/{reg['model_id']}.json"))
+        model_values=read(repo/f"configs/model/{reg['model_id']}.json"),run_id=complete.get('run_id',RUN),
+        summary_import=source['batch'].get('summary_import'),data_root=data)
     if (roster,source,reg)!=(expected_roster,expected_source,expected_reg):
         raise ValueError('prepared job differs from exact source derivation')
     if (complete['batch_sha256']!=reg['batch_sha256'] or complete['groups']!=len(roster['items'])
@@ -182,12 +195,15 @@ def register(repo,data,job):
     from speech_aware_evidence_acquisition.core.config import compose,protocol_hash
     assert_execution_environment();require_clean_study_repo(repo)
     complete,reg,roster=verify_job(repo,data,job)
-    names=[RUN,RUN+'-FIT'];ledger=repo/'docs/exposure-ledger.md'
+    name=complete.get('job',NAME);run_id=complete.get('run_id',RUN)
+    from tfrl_current_generation import SESSION
+    service_session=complete.get('service_session',SESSION)
+    names=[run_id,run_id+'-FIT'];ledger=repo/'docs/exposure-ledger.md'
     if any('| '+rid+' |' in ledger.read_text() or (data/'attempts'/rid).exists() for rid in names):raise ValueError('existing learning registration or spend')
     model_id=reg['model_id'];model=read(repo/f'configs/model/{model_id}.json')
     if reg['batch_sha256']!=complete['batch_sha256'] or len(reg['contacts'])!=complete['generation_calls']:
         raise ValueError('job registration and source budget differ')
-    roster_rel=f'docs/receipts/rosters/{NAME}.json'
+    roster_rel=f'docs/receipts/rosters/{name}.json'
     baseline=read(repo/'configs/baseline/system-group-update-text-v1.json');baseline.pop('whole_roster_wave_barrier',None)
     baseline['what_this_is']='Model-driven TF-GRPO fixed-P Solver experience learning; H1 A0-error mixed groups only.'
     baseline.pop('phase_material',None)
@@ -198,31 +214,30 @@ def register(repo,data,job):
     exp=read(repo/'configs/experiment/slurp-tfrl-hardset-a0-observation-r1-v1.json')
     for k in ('population','stage3_measurement','prepared_phase_supply','native_episode','knowledge_stores','live_phase_fit','native_contact_fit'):
         exp.pop(k,None)
-    exp.update(experiment_id=RUN,purpose=baseline['what_this_is'],execution_plan={k:reg['plan'][k] for k in ('execution_profile','split_role','planned_model_calls','planned_gpu_hours','planned_speech_audio_seconds')},
+    exp.update(experiment_id=run_id,purpose=baseline['what_this_is'],execution_plan={k:reg['plan'][k] for k in ('execution_profile','split_role','planned_model_calls','planned_gpu_hours','planned_speech_audio_seconds')},
         tfgrpo_learning_registration=reg,prepared_training_feedback={'schema':'saea-prepared-tfgrpo-dynamic-v1','source':pin(job/'source.json',data,'data')},
         artifact_result={'schema':'saea-artifact-result-binding-v1','role':'training-feedback-proposal','construction_roster':{'repo_relpath':roster_rel,'sha256':file_sha(job/'construction-roster.json')}},
-        tfgrpo_contact_fit={'run_id':RUN+'-FIT','attempt_id':'learning-fit-v1','contact_cap':complete['fit_calls']},
+        tfgrpo_contact_fit={'run_id':run_id+'-FIT','attempt_id':'learning-fit-v1','contact_cap':complete['fit_calls']},
         stage3_algorithm={'id':'tfgrpo-system-memory-disjoint-v1','operators_used':['credit_assignment'],'note':'Official four-stage model-driven update, shared-P adaptation; candidate only.'})
-    cell,=exp['cells'];cell.update(cell_id=NAME,run_id=RUN,attempt_id='learning-v1',baseline_fragment=NAME,
+    cell,=exp['cells'];cell.update(cell_id=name,run_id=run_id,attempt_id='learning-v1',baseline_fragment=name,
         allowed_execution_stages=['check','worker','campaign'],readiness={'state':'held','requirements':[],'reason':'Registered exact learning source; await shared live runtime preflight and lease.'})
     exp['populations'][0]['ids']=[x['sample_id'] for x in roster['items']]
-    from tfrl_current_generation import SESSION
-    exp['service_session']=SESSION
-    for rel,doc in [(roster_rel,roster),(f'configs/baseline/{NAME}.json',baseline),(f'configs/experiment/{NAME}.json',exp)]:
+    exp['service_session']=service_session
+    for rel,doc in [(roster_rel,roster),(f'configs/baseline/{name}.json',baseline),(f'configs/experiment/{name}.json',exp)]:
         path=repo/rel
         if path.exists():raise ValueError('learning configuration already exists')
         path.parent.mkdir(parents=True,exist_ok=True);publish_new(path,raw(doc))
-    cfg=compose(repo,model_id,cell['dataset_fragment'],NAME,NAME);ph=protocol_hash(cfg.config_hash,cfg.values['arm'],roster['split_identity_hash'])
-    package=repo/'docs/readiness'/NAME;package.mkdir(parents=True)
+    cfg=compose(repo,model_id,cell['dataset_fragment'],name,name);ph=protocol_hash(cfg.config_hash,cfg.values['arm'],roster['split_identity_hash'])
+    package=repo/'docs/readiness'/name;package.mkdir(parents=True)
     rows=[]
-    for kind,run,attempt in [('generation',RUN,'learning-v1'),('fit',RUN+'-FIT','learning-fit-v1')]:
+    for kind,run,attempt in [('generation',run_id,'learning-v1'),('fit',run_id+'-FIT','learning-fit-v1')]:
         plan=ExecutionPlan(**{**reg['plan'],'run_id':run,'attempt_id':attempt,'protocol_hash':ph}).validate(source_root=repo)
         doc={'schema':'saea-tfgrpo-registered-plan-v1','execution_plan':asdict(plan),'job_manifest':pin(job/'complete.json',data,'data'),
              'config_sha256':cfg.config_hash,'authority':AUTH,'actual_audio_seconds_expected':0,'readiness':'held'}
         path=package/(kind+'-plan.json');publish_new(path,raw(doc))
         rows.append(['2026-11-01',run,'bounded-discovery-probe','TF-GRPO H1 fixed-P Solver learning '+kind,model_id,'slurp TRAIN H1 error mixed groups','discovery',roster['split_identity_hash'],'no',str(plan.planned_model_calls),'1','8.0','All source rollout costs retained',str(path.relative_to(repo)),f'Plan SHA256 {file_sha(path)}; root countersigned under {AUTH}; no H2 feedback in learning; held; text only, actual audio zero'])
     ledger.write_text(ledger.read_text()+'\n## Fixed-P TF-GRPO learning\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| '+' | '.join(['---']*15)+' |\n'+'\n'.join('| '+' | '.join(r)+' |' for r in rows)+'\n')
-    return {'job':NAME,'rows':complete['groups'],'calls':complete['generation_calls'],'fit_calls':complete['fit_calls'],'readiness':'held','new_model_calls':0}
+    return {'job':name,'rows':complete['groups'],'calls':complete['generation_calls'],'fit_calls':complete['fit_calls'],'readiness':'held','new_model_calls':0}
 
 
 def admit(repo,data,job):
@@ -237,36 +252,38 @@ def admit(repo,data,job):
     from speech_aware_evidence_acquisition.core.flight.repin import apply_decision_and_readiness
     sys.path.insert(0,str(repo/'scripts/flights/direct'))
     from thinking_system_mint_receipt import mint
-    from tfrl_current_generation import SESSION
     assert_execution_environment();require_clean_study_repo(repo)
     complete,reg,roster=verify_job(repo,data,job)
-    pkg=repo/'docs/readiness'/NAME
-    exp=read(repo/f'configs/experiment/{NAME}.json');cell,=exp['cells']
+    name=complete.get('job',NAME);run_id=complete.get('run_id',RUN)
+    from tfrl_current_generation import SESSION
+    service_session=complete.get('service_session',SESSION)
+    pkg=repo/'docs/readiness'/name
+    exp=read(repo/f'configs/experiment/{name}.json');cell,=exp['cells']
     if cell['readiness']['state']!='held' or exp['tfgrpo_learning_registration']!=reg:
         raise ValueError('exact held registration required')
     resident=find_resident_session(data)
-    if resident is None or resident[1]['session_id']!=SESSION:raise ValueError('expected resident absent')
+    if resident is None or resident[1]['session_id']!=service_session:raise ValueError('expected resident absent')
     assert_identity_matches(resident[1],read(job/'runtime-identity.json'))
     receipt=resolve_runtime_receipt_path(repo,read_fragment(repo,'model',reg['model_id']))
     receipt_doc=read(receipt)
     for instance in receipt_doc['deployment']['instances']:
         session=SessionReceipt.from_json(read(data/'serving'/instance['instance_id']/'session-receipt.json'))
         verify_vllm_session(session,receipt_doc)
-    runs=[RUN,RUN+'-FIT'];decision_id=RUN+'-ADMISSION';decision_rel='coordination/decisions/'+decision_id+'.json'
+    runs=[run_id,run_id+'-FIT'];decision_id=run_id+'-ADMISSION';decision_rel='coordination/decisions/'+decision_id+'.json'
     if any((data/'attempts'/rid).exists() for rid in runs):raise ValueError('existing learning spend')
     draft={'schema':'saea-campaign-decision-v1','status':'DRAFT-NOT-MINTED','decision_id':decision_id,
         'eligible_run_ids':runs,'eligible_attempt_ids':['learning-v1','learning-fit-v1'],'authorization_basis':AUTH,
         'owner':'root','decision':'Execute the registered 32 H1 mixed-error groups through shared TF-GRPO runtime; candidate only, no H2 feedback.',
         'antecedents':{'owner':{'path':AUTH,'sha256':file_sha(repo/AUTH)},
             'runtime':{'path':str(receipt.relative_to(repo)),'sha256':file_sha(receipt)}},
-        'source_manifest':pin(job/'complete.json',data,'data'),'service':{'expected_session_id':SESSION},
+        'source_manifest':pin(job/'complete.json',data,'data'),'service':{'expected_session_id':service_session},
         'budget':{k:read(pkg/(k+'-plan.json'))['execution_plan'] for k in ('generation','fit')}}
     publish_new(pkg/'root-admission-draft-v1.json',raw(draft))
     family=SimpleNamespace(PACKAGE=str(pkg.relative_to(repo)),DECISION_ID=decision_id,DECISION_RELPATH=decision_rel,eligible_run_ids=lambda:runs)
     result=mint(str(repo),str(data),'Codex',False,family=family,tool='scripts/analysis/tfgrpo_learning_job.py')
-    apply_decision_and_readiness(repo_root=repo,data_root=data,experiment=NAME,cell_id=NAME,
+    apply_decision_and_readiness(repo_root=repo,data_root=data,experiment=name,cell_id=name,
         decision=(decision_rel,decision_id),set_ready=True)
-    cfg=compose(repo,reg['model_id'],cell['dataset_fragment'],NAME,NAME)
+    cfg=compose(repo,reg['model_id'],cell['dataset_fragment'],name,name)
     ph=protocol_hash(cfg.config_hash,cfg.values['arm'],roster['split_identity_hash'])
     ledger=repo/'docs/exposure-ledger.md';text=ledger.read_text()
     for kind in ('generation','fit'):
@@ -300,23 +317,25 @@ def run(repo,data,job,out,after):
     from speech_aware_evidence_acquisition.core.flight.campaign import load_campaign_cells,declared_readiness,run_campaign
     from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
     from run_real_engine_candidate import assert_campaign_success
-    from tfrl_current_generation import SESSION
     assert_execution_environment();commit=require_clean_study_repo(repo)
     complete,reg,roster=verify_job(repo,data,job)
+    name=complete.get('job',NAME);run_id=complete.get('run_id',RUN)
+    from tfrl_current_generation import SESSION
+    service_session=complete.get('service_session',SESSION)
     verify_release(after,data)
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned output required; no blind retry')
-    cells=load_campaign_cells(repo,NAME);cell,=cells
+    cells=load_campaign_cells(repo,name);cell,=cells
     if declared_readiness(cell,data).state!='ready':raise ValueError('learning job remains held')
-    for rid,aid in ((RUN,'learning-v1'),(RUN+'-FIT','learning-fit-v1')):
+    for rid,aid in ((run_id,'learning-v1'),(run_id+'-FIT','learning-fit-v1')):
         if (data/'attempts'/rid/(aid+'.json')).exists():raise ValueError('existing attempt; reconcile before resume')
-    out.mkdir(parents=True);publish_new(out/'started.json',raw({'study_commit':commit,'job':NAME,'predecessor_release_sha256':file_sha(after)}))
+    out.mkdir(parents=True);publish_new(out/'started.json',raw({'study_commit':commit,'job':name,'predecessor_release_sha256':file_sha(after)}))
     try:
         runtime=build_flight_runtime(repo,data,model=reg['model_id'],dataset=cell.document['dataset_fragment'],
-            baseline=NAME,experiment=NAME,run_id=RUN,attempt_id='learning-v1',runtime_root=data/'work/scratch/runtime-root',
+            baseline=name,experiment=name,run_id=run_id,attempt_id='learning-v1',runtime_root=data/'work/scratch/runtime-root',
             lock_path=repo.parents[1]/'docs/datasets.lock.json')
-        result=run_campaign([runtime],cells=cells,repo_root=repo,data_root=data,owner='Codex-TFGRPO',expected_session_id=SESSION)
-        publish_new(out/'campaign.json',raw(result));assert_campaign_success(result,RUN)
-        publish_new(out/'complete.json',raw({'job':NAME,'groups':complete['groups'],'result':result,'candidate_accepted':False}))
+        result=run_campaign([runtime],cells=cells,repo_root=repo,data_root=data,owner='Codex-TFGRPO',expected_session_id=service_session)
+        publish_new(out/'campaign.json',raw(result));assert_campaign_success(result,run_id)
+        publish_new(out/'complete.json',raw({'job':name,'groups':complete['groups'],'result':result,'candidate_accepted':False}))
         return {'completed':True,'candidate_accepted':False}
     except BaseException as error:
         publish_new(out/'failed.json',raw({'type':type(error).__name__,'error':str(error),'automatic_retry':False,
@@ -327,8 +346,12 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['prepare','register','verify','admit','run'])
     for k in ('repo','data'):p.add_argument('--'+k,type=Path,required=True)
     for k in ('exports','hardset','out','runtime-identity','job','after'):p.add_argument('--'+k,type=Path)
+    p.add_argument('--job-name',default=NAME);p.add_argument('--run-id',default=RUN);p.add_argument('--service-session')
+    p.add_argument('--summary-import',type=Path)
     a=vars(p.parse_args());mode=a.pop('mode')
-    if mode=='prepare':result=prepare(**{k:a[k] for k in ('repo','data','exports','hardset','out','runtime_identity')})
+    if a['summary_import'] is not None:
+        a['summary_import']={k:v for k,v in pin(a['summary_import'],a['data'],'data').items() if k!='root'}
+    if mode=='prepare':result=prepare(**{k:a[k] for k in ('repo','data','exports','hardset','out','runtime_identity','job_name','run_id','service_session','summary_import')})
     elif mode=='verify':
         result=verify_job(a['repo'],a['data'],a['job'])[0]
     elif mode=='run':result=run(**{k:a[k] for k in ('repo','data','job','out','after')})

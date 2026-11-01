@@ -307,7 +307,8 @@ class ExperienceLearner:
                 {'role':'user','content':render(prefix+'_UP', **values)}]
 
     def learn(self, groups, parent, *, agent_objective, learning_objective,
-              rollout_kind='full-same-policy', policy_sha256, num_experiences=2):
+              rollout_kind='full-same-policy', policy_sha256, num_experiences=2,
+              summary_import=None, imported_summaries=None, import_custody=None):
         """Produce a candidate version; no gold enters a task inference request."""
         groups, parent = copy.deepcopy(groups), copy.deepcopy(parent)
         validate_experience(parent, self.model_id)
@@ -341,6 +342,15 @@ class ExperienceLearner:
                         or rollout['experience_sha256'] != parent['sha256']):
                     raise LearningError('all rollouts must share model, policy and experience')
         common={'agent_objective':agent_objective,'learning_objective':learning_objective,'num_experiences':num_experiences}
+        imported_summaries=copy.deepcopy(imported_summaries or {})
+        if summary_import is None:
+            if imported_summaries or import_custody is not None:raise LearningError('historical summaries require pinned custody')
+        elif (not imported_summaries or not isinstance(import_custody,dict)
+                or import_custody.get('source')!=summary_import
+                or import_custody.get('imported_summaries')!=len(imported_summaries)):
+            raise LearningError('verified historical summary custody required')
+        if not set(imported_summaries)<=seen_trajectories:raise LearningError('foreign imported trajectory')
+        for text in imported_summaries.values():require_text(text,'historical summary')
         binding={'schema':'saea-tfgrpo-batch-v1','groups':groups,'parent':parent,'common':common,
                  'model_id':self.model_id,'policy_sha256':policy_sha256,'rollout_kind':rollout_kind,
                  'learning_config_sha256':self.learning_config_sha256,
@@ -348,6 +358,7 @@ class ExperienceLearner:
                  'bounds':{'max_calls':self.max_calls,'concurrency':self.concurrency,
                            'max_operations':self.max_operations,'max_items':self.max_items,
                            'max_characters':self.max_characters}}
+        if summary_import is not None:binding['summary_import']=copy.deepcopy(summary_import)
         with self._exclusive_batch():
             self.last_invocation = {'new_calls': 0, 'reused_calls': 0}
             binding_path=self.root/'batch.json'
@@ -356,12 +367,15 @@ class ExperienceLearner:
             else:publish_new(binding_path,canonical(binding))
             self._batch=sha(binding)
             mixed=[g for g in groups if {r['reward'] for r in g['rollouts']}=={0,1}]
-            planned=sum(len(g['rollouts'])+2 for g in mixed)+(1 if mixed else 0)
+            mixed_ids={r['trajectory_id'] for g in mixed for r in g['rollouts']}
+            if not set(imported_summaries)<=mixed_ids:raise LearningError('imported summaries outside learning groups')
+            planned=sum(len(g['rollouts'])+2 for g in mixed)+(1 if mixed else 0)-len(imported_summaries)
             if planned>self.max_calls:raise LearningError('complete update exceeds contact budget before first call')
             result_path=self.root/'candidate.json'
             if result_path.exists():
                 candidate=json.loads(result_path.read_bytes());validate_experience(candidate,self.model_id)
                 if candidate.get('batch_sha256')!=self._batch:raise LearningError('candidate belongs to another batch')
+                if candidate.get('historical_summary_custody')!=import_custody:raise LearningError('candidate historical custody changed')
                 actual={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((self.root/'contacts').glob('*.response.json'))}
                 if candidate.get('contact_response_sha256')!=actual:raise LearningError('candidate contact evidence changed')
                 if candidate.get('accounting')!=self.accounting():raise LearningError('candidate accounting changed')
@@ -373,7 +387,7 @@ class ExperienceLearner:
                 return self._call('summary',rollout['trajectory_id'],self._messages(
                     'SINGLE_ROLLOUT_SUMMARY_TEMPLATE',common,question=group['query'],answer=group['answer'],
                     critique=rollout['critique'],trajectory=summary_trajectory(group['query'],rollout['trajectory'])))
-            summary_by_id={}
+            summary_by_id=dict(imported_summaries)
             def advantage(group):
                 formatted='\n\n'.join(f"Attempt {i+1} (Reward {r['reward']}):\n{summary_by_id[r['trajectory_id']]}" for i,r in enumerate(group['rollouts']))
                 result=self._call('advantage',group['query_id'],self._messages(
@@ -387,8 +401,9 @@ class ExperienceLearner:
                 return parse_operations(proposed,parent['items'],max_operations=self.max_operations)
             # Only the coordinator submits work; workers never wait on another
             # future. Ready downstream contacts take priority over unsent summaries.
-            pending=deque(('summary',i,r) for i,g in enumerate(mixed) for r in g['rollouts'])
-            ready=deque(); active={}; counts=[0]*len(mixed)
+            pending=deque(('summary',i,r) for i,g in enumerate(mixed) for r in g['rollouts'] if r['trajectory_id'] not in summary_by_id)
+            counts=[sum(r['trajectory_id'] in summary_by_id for r in g['rollouts']) for g in mixed]
+            ready=deque(('advantage',i,None) for i,g in enumerate(mixed) if counts[i]==len(g['rollouts'])); active={}
             grouped_operations=[None]*len(mixed)
             with ThreadPoolExecutor(max_workers=self.concurrency) as pool:
                 try:
@@ -433,6 +448,7 @@ class ExperienceLearner:
                   'rollout_kind':rollout_kind,'learning_query_reuse':sorted(seen_queries & set(parent['learned_query_ids'])),'mixed_groups':len(mixed),'skipped_tied_groups':len(groups)-len(mixed),
                   'planned_learning_calls':planned,'operations':final_ops,'learning_usage':usage,'accounting':accounting,
                   'contact_response_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((self.root/'contacts').glob('*.response.json'))}}
+            if summary_import is not None:body['historical_summary_custody']=copy.deepcopy(import_custody)
             candidate={**body,'sha256':sha(body)}
             publish_new(result_path,canonical(candidate))
             return candidate

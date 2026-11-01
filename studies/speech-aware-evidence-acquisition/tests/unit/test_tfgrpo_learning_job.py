@@ -196,3 +196,25 @@ def test_admission_binds_decision_and_refreshes_final_protocol(tmp_path,monkeypa
     plan=m.read(pkg/'generation-plan.json')
     assert plan['config_sha256']=='b'*64 and plan['execution_plan']['protocol_hash']!='old'
     assert m.file_sha(pkg/'generation-plan.json') in ledger.read_text()
+
+
+def test_successor_run_identity_rederived_without_changing_source_policy():
+    h,r=source();before=copy.deepcopy(h)
+    run='SAEA-TFGRPO-CORRECTED-V1'
+    roster,src,reg,plan=m.documents(h,r,runtime_identity={'model_fragment':'model'},roster_sha256='a'*64,provenance=[{'source':'test'}],run_id=run)
+    assert plan.run_id==run and reg['plan']['run_id']==run and roster['roster_id']==run
+    assert h==before and src['batch']['policy_sha256']==h['policy_sha256']
+
+
+def test_job_import_uses_verified_ids_and_rederives_all_budgets(monkeypatch):
+    from speech_aware_evidence_acquisition.rails import tfgrpo_summary_import as module
+    h,r=source();tid=h['groups'][0]['rollouts'][0]['trajectory_id'];pin={'relpath':'import.json','sha256':'b'*64}
+    def verified(spec,**kwargs):
+        assert spec==pin and kwargs['data_root']==Path('/data')
+        assert kwargs['groups']==[h['groups'][0],h['groups'][2]]
+        return {tid:'Observed summary'},{}
+    monkeypatch.setattr(module,'load_import',verified)
+    _,src,reg,plan=m.documents(h,r,runtime_identity={'model_fragment':'model'},roster_sha256='a'*64,provenance=[{'source':'test'}],summary_import=pin,data_root=Path('/data'))
+    assert plan.planned_model_calls==12 and len(reg['contacts'])==12 and src['batch']['bounds']['max_calls']==12
+    assert src['batch']['summary_import']==pin and reg['batch_sha256']==m.sha(src['batch'])
+    assert not any(x['stage']=='summary' and x['identity']==tid for x in reg['contacts'])
