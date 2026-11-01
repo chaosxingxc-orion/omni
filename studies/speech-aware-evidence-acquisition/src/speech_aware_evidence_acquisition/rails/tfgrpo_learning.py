@@ -6,7 +6,8 @@ Published versions are candidates, not accepted deployment policies.
 """
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+from collections import deque
 from contextlib import contextmanager
 import copy
 import fcntl
@@ -372,23 +373,47 @@ class ExperienceLearner:
                 return self._call('summary',rollout['trajectory_id'],self._messages(
                     'SINGLE_ROLLOUT_SUMMARY_TEMPLATE',common,question=group['query'],answer=group['answer'],
                     critique=rollout['critique'],trajectory=summary_trajectory(group['query'],rollout['trajectory'])))
-            pairs=[(g,r) for g in mixed for r in g['rollouts']]
-            with ThreadPoolExecutor(max_workers=self.concurrency) as pool:
-                summaries=list(pool.map(summarize,pairs))
-            summary_by_id={r['trajectory_id']:s for (_,r),s in zip(pairs,summaries)}
-            def update_group(group):
+            summary_by_id={}
+            def advantage(group):
                 formatted='\n\n'.join(f"Attempt {i+1} (Reward {r['reward']}):\n{summary_by_id[r['trajectory_id']]}" for i,r in enumerate(group['rollouts']))
-                advantage=self._call('advantage',group['query_id'],self._messages(
+                result=self._call('advantage',group['query_id'],self._messages(
                     'SINGLE_QUERY_GROUP_ADVANTAGE',common,question=group['query'],answer=group['answer'],trajectories=formatted))
-                matches=re.findall(r'<Experiences>\s*(.*?)\s*</Experiences>',advantage,re.S|re.I)
+                matches=re.findall(r'<Experiences>\s*(.*?)\s*</Experiences>',result,re.S|re.I)
                 if len(matches)!=1 or not matches[0].strip():raise LearningError('one nonempty semantic advantage block required')
+                return matches[0].strip()
+            def update_group(group,experience):
                 proposed=self._call('group_update',group['query_id'],self._messages(
-                    'GROUP_EXPERIENCE_UPDATE_TEMPLATE',common,existing_experiences=current,new_experiences=matches[0].strip()))
+                    'GROUP_EXPERIENCE_UPDATE_TEMPLATE',common,existing_experiences=current,new_experiences=experience))
                 return parse_operations(proposed,parent['items'],max_operations=self.max_operations)
-            # Each chain reads the same parent. Preserve input order for the
-            # merge prompt even when independent chains finish out of order.
+            # Only the coordinator submits work; workers never wait on another
+            # future. Ready downstream contacts take priority over unsent summaries.
+            pending=deque(('summary',i,r) for i,g in enumerate(mixed) for r in g['rollouts'])
+            ready=deque(); active={}; counts=[0]*len(mixed)
+            grouped_operations=[None]*len(mixed)
             with ThreadPoolExecutor(max_workers=self.concurrency) as pool:
-                grouped_operations=list(pool.map(update_group,mixed))
+                try:
+                    while pending or ready or active:
+                        while len(active)<self.concurrency and (ready or pending):
+                            stage,index,value=(ready if ready else pending).popleft()
+                            group=mixed[index]
+                            if stage=='summary':future=pool.submit(summarize,(group,value))
+                            elif stage=='advantage':future=pool.submit(advantage,group)
+                            else:future=pool.submit(update_group,group,value)
+                            active[future]=(stage,index,value)
+                        completed,_=wait(active,return_when=FIRST_COMPLETED)
+                        for future in completed:
+                            stage,index,value=active.pop(future)
+                            result=future.result()
+                            if stage=='summary':
+                                summary_by_id[value['trajectory_id']]=result
+                                counts[index]+=1
+                                if counts[index]==len(mixed[index]['rollouts']):
+                                    ready.append(('advantage',index,None))
+                            elif stage=='advantage':ready.append(('group_update',index,result))
+                            else:grouped_operations[index]=result
+                except BaseException:
+                    for future in active:future.cancel()
+                    raise
             operations=[operation for group_ops in grouped_operations for operation in group_ops]
             final_ops=[]
             if mixed:
