@@ -63,7 +63,7 @@ def build_tfgrpo_fit_gate(runtime, *, registration, client_factory=None):
             raise PreparationError('FIT contact outside registered stage roster')
         runtime.assert_generation_lease()
         body=runtime._transport.render_request(canonical_bytes(payload))
-        # Routing is chosen after FIT and is not model-facing conditioning.
+        # The same operational slot routes FIT rendering and generation.
         inputs={'schema':'saea-tfgrpo-contact-fit-input-v1','payload_sha256':digest(payload),
                 'registration_sha256':registration_sha,'fit_plan':asdict(fit_plan),
                 'rendered_body_sha256':digest(body),

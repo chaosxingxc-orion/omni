@@ -44,6 +44,23 @@ def test_exact_vllm_render_count_and_durable_reuse(tmp_path):
     client.close()
 
 
+def test_fit_uses_real_multi_instance_router_with_generation_slot(tmp_path):
+    from speech_aware_evidence_acquisition.core.model.vllm_router_transport import VllmRouterTransport
+    caller,client,runtime,_,calls=fixture(tmp_path)
+    original=runtime._transport
+    runtime._transport=VllmRouterTransport([original,original])
+    class Tokenizer:
+        def __init__(self,**kwargs):pass
+        def request_json(self,method,route,payload):
+            calls.append(payload);return {'count':10,'tokens':list(range(10))}
+    gate=build_tfgrpo_fit_gate(runtime,registration=caller.registration,client_factory=Tokenizer)
+    _,prepared=caller.prepare(request())
+    assert prepared.as_payload()['decoding_params']['id_slot']==caller._slots[next(iter(caller.contacts))]
+    assert gate(prepared)['every_request_fits']
+    assert len(calls)==1
+    client.close()
+
+
 def test_unknown_tokenizer_outcome_never_resends(tmp_path):
     caller,client,runtime,gate,calls=fixture(tmp_path)
     _,prepared=caller.prepare(request())

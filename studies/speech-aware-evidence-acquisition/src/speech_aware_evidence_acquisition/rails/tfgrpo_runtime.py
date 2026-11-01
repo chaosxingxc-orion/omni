@@ -164,7 +164,7 @@ class MeteredExperienceCaller:
             contact_instruction=('Execute the registered TF-GRPO stage. Follow the system '
                 'instruction in source_messages[0] and process source_messages[1] as its '
                 'input. Return only the requested stage output.'),
-            decoding_params=self.registration['decoding_params'])
+            decoding_params={**self.registration['decoding_params'], 'id_slot':self._slots[key]})
         return key, prepared
 
     @measure('tfgrpo_request_preflight', _timing_identity)
