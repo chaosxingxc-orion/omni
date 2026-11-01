@@ -1,0 +1,28 @@
+{
+  "schema": "saea-shared-input-reuse-audit-v1",
+  "scope": "Existing dataset metadata and roster bytes only; no new sampling, audio copying or rehashing.",
+  "halves": [
+    {
+      "half": "h1",
+      "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
+      "dataset_sha256": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba",
+      "roster_receipt": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
+      "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+      "rows": 313,
+      "unchanged_from_k4": true
+    },
+    {
+      "half": "h2",
+      "dataset_fragment": "slurp-speech-native-stage3-construction-r01c",
+      "dataset_sha256": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba",
+      "roster_receipt": "docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json",
+      "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+      "rows": 312,
+      "unchanged_from_k4": true
+    }
+  ],
+  "shared_dataset": true,
+  "dataset_files_modified": 0,
+  "audio_files_modified": 0,
+  "new_model_calls": 0
+}

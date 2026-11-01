@@ -1,0 +1,34 @@
+{
+  "schema": "saea-odd40-fit-recovery-validation-v1",
+  "implementation_commit": "9fba4047",
+  "public_code_commit": "09811e4e",
+  "implementation_tests": {
+    "passed": 308,
+    "seconds": 51.78,
+    "exit_code": 0
+  },
+  "public_tests": {
+    "passed": 295,
+    "seconds": 51.93,
+    "exit_code": 0
+  },
+  "real_generation_rows": 0,
+  "planned_rows": 625,
+  "new_model_calls": 0,
+  "new_tokenizer_calls": 0,
+  "implemented": [
+    "durable successful raw FIT custody",
+    "exact prior FIT reuse without tokenizer contact",
+    "operational recovery receipt checked before gate touch",
+    "worker and lease CLI recovery target selection without protocol change"
+  ],
+  "limitations": [
+    "real production full sealed recovery not yet exercised",
+    "repeated interruption chains not implemented",
+    "unknown response reconciliation and other-row continuation not implemented",
+    "recovery receipt generation and queue integration pending",
+    "FIT custody captures successful gate return; crash before custody publication still requires reconciliation",
+    "wrapper serializes FIT contacts as original gate did; no new throughput claim"
+  ],
+  "stable_inputs": "Existing construction-r01c dataset and H1/H2 roster preserved; no new sampling or audio copies"
+}
