@@ -1,0 +1,109 @@
+{
+  "generation_authorized": false,
+  "halves": {
+    "h1": {
+      "proof": {
+        "a_arm": "lock",
+        "adjudicator_compiled": true,
+        "candidate_arm_order": [
+          "b",
+          "aa",
+          "lock"
+        ],
+        "candidate_program_ceiling": 4,
+        "candidate_program_id": "phase-native-module-v1-c4",
+        "candidate_runtime_config_loaded": true,
+        "fallback_inclusive_cap_per_row": 10,
+        "fit_cap_per_row": 5,
+        "full_method_budget_compiled": true,
+        "generation_authorized": false,
+        "method_program_ceiling": 5,
+        "method_program_id": "phase-native-module-v1-c5",
+        "normal_generation_max_per_row": 5,
+        "normal_generation_min_per_row": 4,
+        "real_request_fit_completed": false
+      },
+      "rows": 313,
+      "split_identity_hash": "1a88c40bfec99edd9f6f38ce93a346dd0fb046cba493d6f2558f2f1620310b14"
+    },
+    "h2": {
+      "proof": {
+        "a_arm": "lock",
+        "adjudicator_compiled": true,
+        "candidate_arm_order": [
+          "b",
+          "aa",
+          "lock"
+        ],
+        "candidate_program_ceiling": 4,
+        "candidate_program_id": "phase-native-module-v1-c4",
+        "candidate_runtime_config_loaded": true,
+        "fallback_inclusive_cap_per_row": 10,
+        "fit_cap_per_row": 5,
+        "full_method_budget_compiled": true,
+        "generation_authorized": false,
+        "method_program_ceiling": 5,
+        "method_program_id": "phase-native-module-v1-c5",
+        "normal_generation_max_per_row": 5,
+        "normal_generation_min_per_row": 4,
+        "real_request_fit_completed": false
+      },
+      "rows": 312,
+      "split_identity_hash": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72"
+    }
+  },
+  "implementation_commit": "b544eb834d227309301c4576ae924af20687e9fd",
+  "limitations": [
+    "No real model or tokenizer requests made",
+    "Partial-contact resume not validated",
+    "Real context FIT and registration/admission outstanding",
+    "No accuracy or NPU utilization claim"
+  ],
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "new_tokenizer_calls": 0,
+  "output_hashes": {
+    "h1": "cf610f8cc0093c221a22bc22ccda5510dcd94f4bcefae423dcdae099859821b2",
+    "h2": "ab5c14059fcad21f68f19ecf909d666a726af6594f926bfebb907085322f1ce4"
+  },
+  "public_validation": {
+    "model_calls": 0,
+    "scope": "same suite on public code preserving pre-existing runtime differences",
+    "seconds": 31.52,
+    "tests_passed": 254
+  },
+  "remaining": [
+    "real request FIT",
+    "own supply",
+    "registration",
+    "admission and preflight",
+    "partial-contact recovery validation"
+  ],
+  "rows": 625,
+  "schema": "saea-odd40-candidate-compilation-v1",
+  "source_commit": "d0b9d593444732ff4e1f2ae6959ed1830bc1f511",
+  "source_hashes": {
+    "configs/baseline/slurp-tfrl-current-seed-i1-h1-v1.json": "27577f77fe612ee0e3241d518035a80bc9ad3328afa6f226cde9fb647488a2f5",
+    "configs/baseline/slurp-tfrl-current-seed-i1-h2-v1.json": "37a23e465f2dd666ca081b08e41b2d3438d16a718db1ede03bd8020566d7edf1",
+    "configs/dataset/slurp-speech-native-stage3-construction-r01c.json": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba",
+    "configs/experiment/slurp-tfrl-current-seed-i1-h1-v1.json": "2aa9d2ea337f783730588d43a712bbc58e177a4f4aaa04a6c1c2e3d5610cc9b7",
+    "configs/experiment/slurp-tfrl-current-seed-i1-h2-v1.json": "7f661c993dece21e94997a710f8a01f631377dce84088e930531695fb226a9af"
+  },
+  "validation": {
+    "coverage": [
+      "real execution graph with fake transport",
+      "feature and raw audio request paths",
+      "conditional 4 or 5 contacts",
+      "whole answer selection and invalid response fallback",
+      "output source and trace verification",
+      "complete row checkpoint roundtrip",
+      "unknown transport outcome propagates without retry"
+    ],
+    "cpuset": "208-223",
+    "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "model_calls": 0,
+    "network": "none",
+    "seconds": 31.38,
+    "tests_passed": 254
+  }
+}

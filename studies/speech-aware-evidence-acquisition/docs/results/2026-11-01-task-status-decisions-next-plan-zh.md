@@ -14,15 +14,17 @@
 
 odd40 使用同一份 625 条真实 construction roster，仅改变真实检索证据：原 top-20 与 top-40 奇数排名 20 条。CPU 审计结果为 625/625 条供给发生变化、0 条回退、平均重合 10/20、查询与知识池重叠 0；无模型、tokenizer 或评分调用。该结果只证明输入干预有效，尚未证明 FIT、运行时预算、推理质量或系统收益。
 
-交付规则已固定：共享一次 Perception，求解 A、B 和 A/A；A/B 不一致时最多一次受约束裁决，只能选择完整 A 或完整 B，非法结果回退 A，不拼接实体。正常预算为每条 4–5 次调用，回退上限和 FIT 上限必须由真实 runtime 编译后才可登记。
+交付规则已固定：共享一次 Perception，求解 A、B 和 A/A；A/B 不一致时最多一次受约束裁决，只能选择完整 A 或完整 B，非法结果回退 A，不拼接实体。正常预算为每条 4–5 次调用，回退和 FIT 计划上限已随真实配置编译，实际接触仍须登记和准入。
 
-## 已完成的候选运行时验证
+## 已完成的运行时验证
 
-候选部分已实际完成两半组配置编译与原生运行时加载：H1 313 条、H2 312 条，共 625 条互不重叠真实录音。共享 Perception 加 B、A/A、A 的上限为 4 次，原知识池、角色提示和 A 的提示预算保持不变。已修复编译器接受但运行时加载器拒绝 odd40 的不一致；159 项相关测试通过。新增生成、tokenizer 和评分调用均为 0。该结果不包含条件裁决，完整方法预算、独立供给准备、FIT 与准入仍未完成。[编译与加载凭证](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-odd40-candidate-compilation.json)。
+条件裁决已接入共享运行时、调度、请求门控和成本追踪，并新增整答案选择凭证。真实 H1 313 条、H2 312 条配置实际编译及加载通过：候选部分 4 次，A/B 不同再增加最多 1 次；同轨迹 A 和 A/A 保留原提示。正常生成 2,500–3,125 次，含现有单次补答回退的预算上限 6,250 次；FIT 计划上限 3,125 次，尚未登记或消耗。254 项测试通过，覆盖原始音频传输、四/五调用分支、选 B、非法选择回退、原始响应来源和裁决输入复验、完整样本断点保存恢复，以及未知网络结局不重试。测试使用模拟传输，新增真实模型、tokenizer 和评分调用均为 0。[完整编译凭证](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-odd40-method-compilation.json)。
+
+尚未进行真实 FIT、独立供给与执行登记/准入，也未验证半条样本的逐调用恢复。odd40 尚未开始真实推理，没有系统精度或满载结论。
 
 ## 下一阶段计划
 
-1. 在独立 runtime worktree 完成 odd40 的 A/B/A-A/裁决接线和真实预算编译，保留逐请求 journal、原子 checkpoint 和未决请求拒绝重放。
+1. 补齐真实输入的 FIT 与独立供给；确认逐请求日志和中断后的接续策略，避免重放已有结果或结局未知的请求。
 2. 先完成独立供给、预算与请求登记，再验证 resident service identity、真实 FIT、请求字节及完整答案交付；通过准入和 preflight 后执行完整 625 条 construction。必要的 4 行链路验证单独登记，不用于收益判断。
 3. 将已准入的真实任务放入 detached queue，按 600 秒观察；CPU scoring、成本审计、阶段耗时和 Wiki 更新异步进行。
 4. 首轮 odd40 只有在相对同轨迹 A 的官方 SLU-F1 至少提升 1pp 且 Intent 不下降时才接受；否则停止，不调阈值。
