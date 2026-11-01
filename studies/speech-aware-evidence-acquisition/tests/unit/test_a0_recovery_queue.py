@@ -122,3 +122,99 @@ def test_unresolved_fit_never_releases_lease(tmp_path):
     with pytest.raises(ValueError,match='unresolved FIT'):
         q.reconcile(data,old.plan,'recovery',old.client.arm,data/'work/queue',started,fit)
     assert lock.exists()
+
+
+def adoption_fixture(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.core.bundle import git_commit
+    old=source(tmp_path/'original');data=old.world.data_root
+    repo=data/'repo';run=data/'work/codex/legacy/run';out=data/'work/codex/adopted'
+    name='fixed439';worker=q.process_identity(os.getpid());wrapper={**worker,'pid':worker['pid']+1000}
+    spec={'run_id':old.plan.run_id,'attempt_id':old.plan.attempt_id,'profile':'tp4',
+          'workload_kind':'tfrl-hardset-a0-observation','baseline':name}
+    q.save(repo/'docs/readiness'/name/'candidate.json',spec)
+    q.save(repo/'docs/readiness'/name/'generation-plan-registered-v1.json',{'execution_plan':q.asdict(old.plan)})
+    q.save(repo/'configs/baseline'/f'{name}.json',{'native_contact_fit':{'run_id':'fit','attempt_id':'fit-v1'}})
+    q.save(run/'started.json',{'pid':worker['pid'],'time':q.time.time(),'study_commit':'a'*40,'candidate':name,'rows':439,'profile':'tp4'})
+    monkeypatch.setattr(git_commit,'require_clean_study_repo',lambda _: 'a'*40)
+    monkeypatch.setattr(q,'process_identity',lambda pid: dict(worker if pid==worker['pid'] else wrapper))
+    commands={worker['pid']:[b'python',b'scripts/analysis/run_real_engine_candidate.py',b'--repo',str(repo).encode(),b'--data',str(data).encode(),b'--candidate',name.encode(),b'--out',str(run).encode()],
+              wrapper['pid']:[b'bash',str(repo/'scripts/flights/nx/hardset_a0_launch.sh').encode(),b'dispatch']}
+    monkeypatch.setattr(q,'process_command',lambda pid:commands[pid])
+    monkeypatch.setattr(q,'container_identity',lambda pid,cid:cid)
+    return repo,data,name,out,run,worker,wrapper,commands
+
+
+def test_adopt_live_legacy_never_spawns_or_mutates_source(tmp_path,monkeypatch):
+    repo,data,name,out,run,worker,wrapper,commands=adoption_fixture(tmp_path,monkeypatch)
+    before={p:p.read_bytes() for p in repo.rglob('*') if p.is_file()}
+    monkeypatch.setattr(q.subprocess,'Popen',lambda *a,**k:pytest.fail('adoption must not launch'))
+    q.adopt(repo,data,name,out,run=run,wrapper_pid=wrapper['pid'],container_id='c'*64,container_pid=worker['pid'])
+    assert q.read(out/'attempt-0/launch-intent.json')['adopted']
+    assert all(p.read_bytes()==v for p,v in before.items())
+    def waiting(n):assert n==600;raise InterruptedError('same worker observed')
+    monkeypatch.setattr(q.time,'sleep',waiting)
+    with pytest.raises(InterruptedError,match='same worker'):
+        q.supervise(repo,data,name,out)
+
+
+@pytest.mark.parametrize('fault',['commit','command','docker_pid','cgroup'])
+def test_adopt_rejects_wrong_live_identity(tmp_path,monkeypatch,fault):
+    repo,data,name,out,run,worker,wrapper,commands=adoption_fixture(tmp_path,monkeypatch)
+    if fault=='commit':
+        doc=q.read(run/'started.json');doc['study_commit']='b'*40;(run/'started.json').write_bytes(q.canonical(doc))
+    if fault=='command':commands[worker['pid']][-1]=b'/another/run'
+    if fault=='cgroup':monkeypatch.setattr(q,'container_identity',lambda *a:(_ for _ in ()).throw(ValueError('wrong cgroup')))
+    with pytest.raises(ValueError):q.adopt(repo,data,name,out,run=run,wrapper_pid=wrapper['pid'],container_id='c'*64,container_pid=worker['pid']+(fault=='docker_pid'))
+    assert not (out/'registration.json').exists()
+
+
+def test_adopt_race_or_existing_custody_never_launches(tmp_path,monkeypatch):
+    repo,data,name,out,run,worker,wrapper,commands=adoption_fixture(tmp_path,monkeypatch)
+    q.save(out/'partial.json',{'partial':True})
+    with pytest.raises(ValueError,match='already has custody'):
+        q.adopt(repo,data,name,out,run=run,wrapper_pid=wrapper['pid'],container_id='c'*64,container_pid=worker['pid'])
+
+
+def test_adopted_completion_requires_wrapper_terminal(tmp_path,monkeypatch):
+    repo,data,name,out,run,worker,wrapper,commands=adoption_fixture(tmp_path,monkeypatch)
+    q.adopt(repo,data,name,out,run=run,wrapper_pid=wrapper['pid'],container_id='c'*64,container_pid=worker['pid'])
+    plan=q.ExecutionPlan(**q.read(out/'attempt-0/plan.json'))
+    monkeypatch.setattr(q,'process_identity',lambda pid:wrapper if pid==wrapper['pid'] else None)
+    with pytest.raises(ValueError,match='still live'):q.adopted_completion(out/'attempt-0',data,plan)
+
+
+def test_partial_adoption_never_dispatches_recovery(tmp_path,monkeypatch):
+    own=tmp_path/'work/codex/queue/attempt-0'
+    q.save(own/'launch-intent.json',{'index':0,'recovery':None,'adopted':True})
+    q.save(own/'started.json',dead_process())
+    monkeypatch.setattr(q.subprocess,'Popen',lambda *a,**k:pytest.fail('partial adoption must not launch'))
+    with pytest.raises(ValueError,match='partial adoption'):
+        q.supervise(tmp_path,tmp_path,'candidate',own.parent)
+
+
+def test_adoption_identity_race_refuses_publication(tmp_path,monkeypatch):
+    repo,data,name,out,run,worker,wrapper,commands=adoption_fixture(tmp_path,monkeypatch)
+    count=0
+    def identity(pid):
+        nonlocal count
+        count+=1
+        answer=dict(worker if pid==worker['pid'] else wrapper)
+        if count>2:answer['start_ticks']+=1
+        return answer
+    monkeypatch.setattr(q,'process_identity',identity)
+    with pytest.raises(ValueError,match='changed while adopting'):
+        q.adopt(repo,data,name,out,run=run,wrapper_pid=wrapper['pid'],container_id='c'*64,container_pid=worker['pid'])
+    assert not (out/'registration.json').exists()
+
+
+def test_adopted_complete_requires_finalized_source(tmp_path,monkeypatch):
+    repo,data,name,out,run,worker,wrapper,commands=adoption_fixture(tmp_path,monkeypatch)
+    q.adopt(repo,data,name,out,run=run,wrapper_pid=wrapper['pid'],container_id='c'*64,container_pid=worker['pid'])
+    plan=q.ExecutionPlan(**q.read(out/'attempt-0/plan.json'))
+    result={'completed':[plan.run_id],'states':{plan.run_id:{'state':'scored'}}}
+    q.save(run/'complete.json',{'result':result})
+    monkeypatch.setattr(q,'process_identity',lambda pid:None)
+    with pytest.raises(ValueError,match='finalized'):q.adopted_completion(out/'attempt-0',data,plan)
+    path=data/'attempts'/plan.run_id/(plan.attempt_id+'.json')
+    doc=q.read(path);doc['state']='FINALIZED';path.write_bytes(q.canonical(doc))
+    assert q.adopted_completion(out/'attempt-0',data,plan)['adopted']

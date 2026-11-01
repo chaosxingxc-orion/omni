@@ -16,7 +16,10 @@ import subprocess
 import sys
 import time
 ROOT=Path(__file__).resolve().parents[2]
-sys.path[:0]=[str(ROOT/'src'),str(ROOT/'scripts/analysis')]
+# A separately deployed coordinator must execute the frozen target runtime.
+# Never import its own evolving worktree's runtime into an existing flight.
+TARGET_ROOT=Path(sys.argv[sys.argv.index('--repo')+1]).resolve() if __name__=='__main__' and '--repo' in sys.argv else ROOT
+sys.path[:0]=[str(TARGET_ROOT/'src'),str(TARGET_ROOT/'scripts/analysis')]
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal, NativeContactReplay, canonical, digest
 from speech_aware_evidence_acquisition.contracts import ExecutionPlan
@@ -148,6 +151,109 @@ def worker(repo,data,name,out,recovery=None):
     save(out/'complete.json',{'rows':rows,'attempt_id':cell.attempt_id,'commit':commit,'result':result})
 
 
+
+def process_command(pid):
+    return Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')[:-1]
+
+
+def container_identity(pid, container_id):
+    if not isinstance(container_id,str) or len(container_id)!=64 or any(c not in '0123456789abcdef' for c in container_id):
+        raise ValueError('exact Docker container ID required')
+    if container_id not in Path(f'/proc/{pid}/cgroup').read_text():
+        raise ValueError('worker cgroup does not match observed container')
+    return container_id
+
+
+def adopt(repo,data,name,out,*,run,wrapper_pid,container_id,container_pid):
+    """Attach to a live exact legacy dispatch; never launch a worker here.
+
+    Docker identity comes from host inspect, but its ID must occur in the live
+    worker cgroup. Both worker and detached wrapper must remain the same live
+    processes through publication. No historical PID alone permits adoption.
+    """
+    from speech_aware_evidence_acquisition.contracts import assert_execution_environment
+    from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
+    assert_execution_environment()
+    repo,data,out,run=(p.resolve() for p in (repo,data,out,run))
+    if not out.is_relative_to(data/'work/codex') or not run.is_relative_to(data/'work/codex'):
+        raise ValueError('owned adoption directories required')
+    commit=require_clean_study_repo(repo)
+    original=read(run/'started.json')
+    original_hash=digest((run/'started.json').read_bytes())
+    spec=read(repo/'docs/readiness'/name/'candidate.json')
+    if (original.get('study_commit')!=commit or original.get('candidate')!=name
+            or original.get('rows')!=439 or original.get('profile')!=spec['profile']
+            or spec.get('workload_kind')!='tfrl-hardset-a0-observation'):
+        raise ValueError('legacy worker registration or frozen commit differs')
+    pid=original['pid']
+    if type(original.get('time')) not in (int,float) or not 0<original['time']<=time.time():
+        raise ValueError('original run start timestamp required')
+    if pid!=container_pid:raise ValueError('Docker init PID differs from registered worker')
+    started=process_identity(pid);wrapper=process_identity(wrapper_pid)
+    if not started or not wrapper or started['state']=='Z' or wrapper['state']=='Z':
+        raise ValueError('adoption requires live worker and wrapper')
+    boot_epoch=time.time()-float(Path('/proc/uptime').read_text().split()[0])
+    if boot_epoch+started['start_ticks']/os.sysconf('SC_CLK_TCK')>original['time']+1:
+        raise ValueError('worker PID was born after original start receipt')
+    expected=[b'scripts/analysis/run_real_engine_candidate.py',b'--repo',str(repo).encode(),b'--data',str(data).encode(),b'--candidate',name.encode(),b'--out',str(run).encode()]
+    if process_command(pid)[1:]!=expected:raise ValueError('worker command differs from exact legacy dispatch')
+    wrapper_command=process_command(wrapper_pid)
+    if wrapper_command[1:]!=[str(repo/'scripts/flights/nx/hardset_a0_launch.sh').encode(),b'dispatch']:
+        raise ValueError('wrapper command differs from detached dispatch')
+    container_identity(pid,container_id)
+    registered=read(repo/'docs/readiness'/name/'generation-plan-registered-v1.json')
+    plan=ExecutionPlan(**registered['execution_plan'])
+    if (plan.run_id,plan.attempt_id)!=(spec['run_id'],spec['attempt_id']):
+        raise ValueError('adopted plan differs from candidate')
+    fit=read(repo/'configs/baseline'/(spec['baseline']+'.json'))['native_contact_fit']
+    registration={'repo':str(repo),'candidate':name,'data':str(data),'max_automatic_recoveries':1}
+    evidence={'schema':'saea-a0-live-adoption-v1','legacy_run':str(run),'legacy_started_sha256':original_hash,
+        'source_commit':commit,'worker':started,'wrapper':wrapper,'container_id':container_id,
+        'container_pid':container_pid,'observed_at':time.time(),
+        'coordinator_sha256':digest(Path(__file__).read_bytes())}
+    with exclusive(out/'queue.lock'):
+        if any(out.iterdir()):
+            # The lock file itself is the sole allowed pre-existing entry.
+            if {p.name for p in out.iterdir()}!={'queue.lock'}:raise ValueError('queue already has custody; supervise it instead')
+        if process_identity(pid)!=started or process_identity(wrapper_pid)!=wrapper:
+            # Process state can change between R/S naturally; compare identity
+            # separately below instead of requiring equal scheduling states.
+            for identity in (started,wrapper):
+                now=process_identity(identity['pid'])
+                if not now or now['state']=='Z' or any(now[k]!=identity[k] for k in ('pid','start_ticks','boot_id')):
+                    raise ValueError('worker changed while adopting')
+        if digest((run/'started.json').read_bytes())!=original_hash:
+            raise ValueError('original started receipt changed while adopting')
+        own=out/'attempt-0'
+        # Publication is deliberately fail-closed: partial adoption cannot
+        # create a new worker; recovery requires all custody records below.
+        save(out/'registration.json',registration)
+        save(own/'launch-intent.json',{'index':0,'recovery':None,'adopted':True})
+        save(own/'started.json',started);save(own/'plan.json',asdict(plan));save(own/'fit-spec.json',fit)
+        save(own/'adopted.json',evidence)
+    return evidence
+
+
+def adopted_completion(own,data,plan):
+    """Only trust complete legacy campaign after exact worker/wrapper terminal."""
+    evidence=read(own/'adopted.json')
+    if evidence['coordinator_sha256']!=digest(Path(__file__).read_bytes()):raise ValueError('adopted coordinator changed')
+    require_terminal(evidence['worker']);require_terminal(evidence['wrapper'])
+    from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
+    registration=read(own.parent/'registration.json')
+    if require_clean_study_repo(Path(registration['repo']))!=evidence['source_commit']:
+        raise ValueError('frozen adopted runtime changed')
+    run=Path(evidence['legacy_run'])
+    if digest((run/'started.json').read_bytes())!=evidence['legacy_started_sha256']:
+        raise ValueError('adopted worker receipt changed')
+    if not (run/'complete.json').exists():return None
+    from run_real_engine_candidate import assert_campaign_success
+    complete=read(run/'complete.json');assert_campaign_success(complete['result'],plan.run_id)
+    attempt=read(data/'attempts'/plan.run_id/(plan.attempt_id+'.json'))
+    if attempt['state']!='FINALIZED':raise ValueError('legacy completion lacks finalized attempt')
+    return {'adopted':True,'rows':439,'source_commit':evidence['source_commit'],'legacy_complete_sha256':digest((run/'complete.json').read_bytes()),'result':complete['result']}
+
+
 def supervise(repo,data,name,out):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     assert_execution_environment()
@@ -185,6 +291,16 @@ def supervise(repo,data,name,out):
                     # ten-minute polls never manufacture a terminal event.
                     time.sleep(600)
 
+            if (own/'adopted.json').exists():
+                evidence=read(own/'adopted.json')
+                while True:
+                    try:require_terminal(evidence['wrapper']);break
+                    except ValueError:time.sleep(600)
+                completed=adopted_completion(own,data,ExecutionPlan(**read(own/'plan.json')))
+                if completed is not None:
+                    save(own/'complete.json',completed);return completed
+            elif read(own/'launch-intent.json').get('adopted'):
+                raise ValueError('partial adoption custody; never dispatch recovery')
             if (own/'complete.json').exists():return read(own/'complete.json')
             if index:
                 save(out/'chain-held.json',{'reason':'second interruption needs multi-predecessor reconciliation','attempts':[str(out/'attempt-0'),str(own)],'automatic_retry':False})
@@ -198,10 +314,14 @@ def supervise(repo,data,name,out):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['supervise','worker'])
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['supervise','worker','adopt'])
     for k in ('repo','data','out'):p.add_argument('--'+k,type=Path,required=True)
     p.add_argument('--candidate',required=True);p.add_argument('--recovery',type=Path)
+    p.add_argument('--legacy-run',type=Path);p.add_argument('--wrapper-pid',type=int);p.add_argument('--container-id');p.add_argument('--container-pid',type=int)
     a=p.parse_args()
+    if a.mode=='adopt':
+        print(json.dumps(adopt(a.repo,a.data,a.candidate,a.out,run=a.legacy_run,wrapper_pid=a.wrapper_pid,container_id=a.container_id,container_pid=a.container_pid)))
+        return
     if a.mode=='worker':
         declaration=({'path':str(a.recovery.resolve()),'sha256':digest(a.recovery.read_bytes())} if a.recovery else None)
         worker(a.repo,a.data,a.candidate,a.out,declaration)
