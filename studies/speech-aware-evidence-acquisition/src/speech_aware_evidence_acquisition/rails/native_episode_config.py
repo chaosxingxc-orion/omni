@@ -2883,7 +2883,7 @@ def _load_knowledge_index(
 
 
 def validate_prompt_contact_limits(config):
-    """Preserve the same prompt budget on c2 and its seed-only Solver group."""
+    """Preserve lock prompt budgets on explicitly bounded candidate groups."""
     if config.prompt_contact_limits is None:
         return
     group = config.supply_variant_group
@@ -2893,12 +2893,31 @@ def validate_prompt_contact_limits(config):
         overrides = [a.decoding for a in group.arms if a.decoding is not None]
         seed_group = (len(overrides) == 4 and all(RECIPE_KEYS <= set(d) and recipe_error(d) is None for d in overrides)
                       and group_error(overrides) is None)
-    if (config.prompt_contact_limits != "legacy-c17-lock-v1" or config.max_contacts != (7 if seed_group else 2)
+    odd40_group = False
+    if group is not None and group.kind == "supply" and group.arm_ids == ("b", "aa", "lock"):
+        from .supply_variants import ODD40_OVERRIDE_PATH, ODD40_OVERRIDE_VALUE
+        prefix = "knowledge_stores.train-exemplars.phase_supply.solver."
+        expected = {ODD40_OVERRIDE_PATH: ODD40_OVERRIDE_VALUE, prefix + "k": 40,
+                    **{prefix + "fuse_coverage." + k: 40 for k in ("m", "c", "top_l")}}
+        b, aa, lock = group.arms
+        odd40_group = (
+            group.arm_visits == "first" and not b.deliver and b.replicate_of is None
+            and aa.replicate_of == "lock" and not aa.deliver
+            and lock.deliver and lock.replicate_of is None
+            and {knob.path: knob.value for knob in b.knobs} == expected
+            and not aa.knobs and not lock.knobs
+            and len({arm.max_supplied_items for arm in group.arms}) == 1
+            and all(not arm.all_release_swaps and arm.instruction_template is None
+                    and arm.decoding is None for arm in group.arms)
+        )
+    expected_contacts = 7 if seed_group else 4 if odd40_group else 2
+    if (config.prompt_contact_limits != "legacy-c17-lock-v1" or config.max_contacts != expected_contacts
+            or (group is not None and not seed_group and not odd40_group)
             or config.max_revisions != 0 or config.review_loop_enabled
             or config.acquisition_role is not None or config.relisten_json is not None
             or any(r.max_iterations != (1 if r.role_kind in {"perception", "solver"} else 0)
                    or r.tool_names or r.perception_branches is not None for r in config.roles)):
-        raise ValueError("legacy prompt limits require a tool-free, two-contact lock")
+        raise ValueError("legacy prompt limits require a tool-free lock or its exact seed/odd40 candidate group")
 
 
 def prompt_remaining_contacts(config, role_kind, actual_remaining):

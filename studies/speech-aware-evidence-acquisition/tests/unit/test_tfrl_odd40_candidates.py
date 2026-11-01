@@ -47,3 +47,41 @@ def test_legacy_prompt_extension_rejects_other_interventions(tmp_path,fault):
     else: block['columns'][0]['max_supplied_items']+=1
     with pytest.raises(m.cm.ConsumptionModuleConfigError):
         m.cm.compile_module(block,m.carrier_module_hooks(repo_root=ROOT),repo_root=ROOT)
+
+
+def parsed_candidate(tmp_path):
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
+    base, proof = m.derive(ROOT, documents(tmp_path)[0])
+    assert proof['candidate_runtime_config_loaded'] is True
+    return load_native_episode_config(base, default_phase_program(base['policy']))
+
+
+def test_actual_loader_preserves_prompt_budget_without_extra_contacts(tmp_path):
+    from speech_aware_evidence_acquisition.rails.native_episode_config import prompt_remaining_contacts
+    parsed = parsed_candidate(tmp_path)
+    assert parsed.max_contacts == 4
+    assert prompt_remaining_contacts(parsed, 'perception', 4) == 17
+    assert prompt_remaining_contacts(parsed, 'solver', 3) == 9
+
+
+@pytest.mark.parametrize('fault', ['ceiling', 'iterations', 'revisions', 'count', 'twin', 'bound', 'knob', 'visits'])
+def test_runtime_refuses_drift_even_without_module_declaration(tmp_path, fault):
+    from dataclasses import replace
+    from speech_aware_evidence_acquisition.rails.native_episode_config import validate_prompt_contact_limits
+    parsed = parsed_candidate(tmp_path)
+    group = parsed.supply_variant_group
+    arms = list(group.arms)
+    with pytest.raises(ValueError):
+        if fault == 'ceiling': parsed = replace(parsed, max_contacts=5)
+        elif fault == 'revisions': parsed = replace(parsed, max_revisions=1)
+        else:
+            if fault == 'count': arms.pop(0)
+            elif fault == 'twin': arms[1] = replace(arms[1], replicate_of=None)
+            elif fault == 'bound': arms[0] = replace(arms[0], max_supplied_items=arms[0].max_supplied_items+1)
+            elif fault == 'knob': arms[0] = replace(arms[0], knobs=arms[0].knobs[:-1])
+            group = replace(group, arms=tuple(arms), arm_visits='every' if fault == 'visits' else group.arm_visits)
+            parsed = replace(parsed, roles=tuple(
+                replace(role, supply_variants=group, max_iterations=2 if fault == 'iterations' else role.max_iterations)
+                if role.role_kind == 'solver' else role for role in parsed.roles))
+        validate_prompt_contact_limits(parsed)

@@ -55,7 +55,14 @@ def derive(repo, original):
     base.pop('native_contact_fit', None)
     base['what_this_is'] = 'Unregistered odd40 candidate portion; conditional adjudicator integration outstanding.'
     cm.verify_declared_module(block, base, repo_root=repo)
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
+    parsed = load_native_episode_config(
+        {**base, 'carrier_lock_key': 'slurp'}, default_phase_program(base['policy']))
+    if parsed.max_contacts != compiled.program_ceiling:
+        raise ValueError('candidate compiler and runtime contact ceilings differ')
     return base, {'candidate_program_ceiling': compiled.program_ceiling,
+        'candidate_runtime_config_loaded': True,
         'candidate_program_id': compiled.program_id,
         'candidate_arm_order': ['b', 'aa', 'lock'], 'a_arm': 'lock',
         'adjudicator_compiled': False, 'full_method_budget_compiled': False,
