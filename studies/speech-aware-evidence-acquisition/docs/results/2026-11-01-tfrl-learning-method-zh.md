@@ -100,3 +100,5 @@ RSI 的最小证据应包含：至少一次“反馈→状态更新→新状态�
 - [旧消费瓶颈诊断](2026-10-11-slurp-tfrl-coverage-preread-fold-b-offline.md)：仅作历史假设来源。
 - [ACE 适配设计](../superpowers/specs/2026-10-11-slurp-autonomous-typed-loop-with-ace-comparator-design.md)：含论文差异及旧 Fold B 反馈流程。
 - `scripts/flights/nx/tfrl_v2_sampler.py:credit_rows`、`scripts/flights/nx/tfrl_v2_distiller.py`、`src/speech_aware_evidence_acquisition/rails/tfrl_ace_material.py`、`scripts/flights/tfrl/tfrl_loop_driver.py`。
+
+原始来源、官方实现和迁移边界详见[方法审计](2026-11-01-tfrl-primary-methods-review-zh.md)。其中核查的官方main集成版本为`c2caa539f4c95ae1c39ed24dc8a99cb3651e1d5d`，与论文链接分支的`7612f860a2314c015573adc742f82157b0d66a6f`分别记录，不能当成相同版本。

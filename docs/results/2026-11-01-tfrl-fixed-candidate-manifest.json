@@ -1,0 +1,99 @@
+{
+  "schema": "saea-stable-hardset-candidate-manifest-v1",
+  "implementation_sha256": "3337eb4c56db3639dcb422fc9a38147c82991426b2875b2ab8287391b9798d8c",
+  "train_utterances": 11514,
+  "knowledge_source_utterances": 8729,
+  "evaluation_source_utterances": 2160,
+  "knowledge_evaluation_overlap": 0,
+  "role_eligible_before_text_dedup": 625,
+  "role_eligible_equals_existing_roster": true,
+  "excluded_by_primary_reason": {
+    "evaluation_source": 2160,
+    "knowledge_source": 8729
+  },
+  "missing_candidate_intents": [
+    "audio_volume_other",
+    "cooking_query",
+    "email_addcontact",
+    "general_greet",
+    "iot_hue_lightdim",
+    "iot_hue_lighton",
+    "music_dislikeness",
+    "qa_definition",
+    "qa_maths",
+    "qa_stock"
+  ],
+  "missing_candidate_slot_types": [
+    "alarm_type",
+    "audiobook_author",
+    "definition_word",
+    "drink_type",
+    "email_address",
+    "email_folder",
+    "game_type",
+    "joke_type",
+    "movie_name",
+    "music_album",
+    "podcast_descriptor",
+    "podcast_name",
+    "sport_type",
+    "transport_descriptor",
+    "transport_name"
+  ],
+  "source_partition_expansion_requires_new_knowledge_version": true,
+  "candidate_actions": {
+    "cross_fold_validate_contrast": 94,
+    "diagnose_or_repeat": 345
+  },
+  "pending_observation_rows": 439,
+  "confirmed_hard_examples": 0,
+  "new_model_calls": 0,
+  "new_tokenizer_calls": 0,
+  "new_scoring_jobs": 0,
+  "test_labels_read": false,
+  "artifacts": {
+    "candidate-pool.jsonl": "1220ec7f76f2d403abfd7e57fe938695605286c83665118ab9b80ada08795fe6",
+    "difficulty-observation-queue.jsonl": "d0e489c832220bb7b0c6f4c7c0cab3b8ec42f644ed0a24a78cb6ac91a2a67155"
+  },
+  "limitations": [
+    "Existing shared-P controls are not independent full-system repeats.",
+    "This freezes source-eligible candidates, not a statistically confirmed learning roster.",
+    "The queue describes missing observations; no generation admission or call budget is implied.",
+    "Observed intent-slot relations are coverage diagnostics, not a Cartesian product.",
+    "Recorded train metadata contains no speaker identity; speaker disjointness is not verified.",
+    "Duplicate-text isolation uses normalized train text; cross-split semantic equivalence is not proven."
+  ],
+  "train_coverage": {
+    "utterances": 11514,
+    "intents": 60,
+    "slot_types": 55,
+    "observed_intent_slot_relations": 432
+  },
+  "eligible_pool_coverage": {
+    "utterances": 625,
+    "intents": 52,
+    "slot_types": 43,
+    "observed_intent_slot_relations": 144
+  },
+  "observed_error_coverage": {
+    "utterances": 439,
+    "intents": 50,
+    "slot_types": 40,
+    "observed_intent_slot_relations": 133
+  },
+  "source_sha256": [
+    "04d011976b831d2310d93bbd3133e12e966a9830eb15bf4bf725137913190b9c",
+    "08976279d0cb1f033809285cf0c1a4fac31cd982dc9236328d4422448e27129d",
+    "1fe7908c31396774d7535fdf37bd791762215c324999d66ed7beb9e7b2f9033d",
+    "37a23e465f2dd666ca081b08e41b2d3438d16a718db1ede03bd8020566d7edf1",
+    "46330f24f22228bdafa1714beaceb4d65e8c4ead588906b8c99378bae12ea740",
+    "47b89b9e33b1aed553ad94a1819acba6ac8837130ca546c33219d91a1ab944a8",
+    "4a05a3de6c7f028aff298c4a90196e6a3fecd1938d96fb1c125d6fd10d5e301e",
+    "557080ad9cb4562e9e57174be083957b412903ddda0403038033f68f804bf0fc",
+    "9208f3c4b33d2ad4d6ec95081f676ed5cc5a52873dd167e556896d3790c1bfa3",
+    "e8abc65ba4626cccb4aae9d2eb1bd73f077a6e9a407b3dba9c18bbe4c03eeddd",
+    "f549466f22bb0cae00a99849a1a811889eb82af9b632305c815fa123ad5795ca",
+    "f78dd8ad2894b1fd02bfe6050e39e3fb2c5d178a649e5d20e85ea4ecf4b8dc58",
+    "f7e9d2f279b0a29e6edb2d57fa136a5b1dab4fce2e83ab51b1c081bab3fae144"
+  ]
+}
