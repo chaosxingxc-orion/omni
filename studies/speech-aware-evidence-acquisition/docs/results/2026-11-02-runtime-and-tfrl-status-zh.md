@@ -24,7 +24,7 @@ current-seed 家族在固定 625 条开发集合上的官方合并结果为：`v
 
 ## 下一候选的准入边界
 
-已登记的 TFRL-v2 证据条件化消费 rail 仍是 CPU 设计状态。其 bank receipt、exemplar bank 和 rule bank 都是零 hash pending；rail 会在 flight start 拒绝 pending bank、估算 token 数、来源折叠或消费样本重叠。因此不能直接启动 Fold B smoke 或 1,080 条任务。
+已登记的 TFRL-v2 证据条件化消费 rail 仍处于 CPU 设计和 smoke 准备阶段。外部 data-root 中 H1、H2、union 三份 bank receipt 已通过 schema、canonical hash、bank 文件 hash 和 `vllm-tokenize` token 计量核验（readiness=`ready=true`）。这只证明 artifact 可消费，不等于实验已获准入；在完成 4 行 detached smoke、来源/owner/checkpoint 注册前，不能启动 Fold B 的 1,080 条任务。
 
 下一候选只改槽位证据条件化消费，保持 P、知识构建、奖励、模型和解码固定；TRAIN 困难集按原始真实意图—槽位关系冻结，不构造笛卡尔积，不读取 test 标签调优。必须先完成 bank 的真实 vLLM tokenize、来源隔离、4 行 smoke 和 detached checkpoint 注册，之后才可安排 NPU。
 
@@ -39,7 +39,7 @@ current-seed 家族在固定 625 条开发集合上的官方合并结果为：`v
 仍未实施、且应按优先级推进的项目：
 
 1. 将 manifest 接入实际 queue 输入阶段，并在一个真实 500 样本任务上比较 cold preparation 与 warm preparation；实测前不报告加速倍数。
-2. 在固定镜像内完成 TFRL-v2 bank 的真实 tokenizer 计量、receipt hash 和 4 行 smoke；当前 bank 仍 pending，不能启动 1,080 行 NPU 任务。
+2. 在固定镜像内复核已绑定的 TFRL-v2 bank receipt，并完成 4 行 detached smoke；当前仍未完成 smoke 准入，不能启动 1,080 行 NPU 任务。
 3. 将 CPU 评分、bank distillation、成本归因作为 ready queue 的独立后继 job，保持 NPU 生成和 CPU 分析并发，避免 NPU 空档。
 4. 只有方法冻结、准入凭证齐全后，才启动完整 13,078 条 test；此前 test 子样本只作历史汇报，不能用于调优。
 
@@ -47,4 +47,4 @@ current-seed 家族在固定 625 条开发集合上的官方合并结果为：`v
 
 队列监控也已完成一项工程修复（`016388cf`）：`scripts/npu/card_queue.py` 将进程存活/日志终态检查与昂贵的 `npu-smi`/Docker 卡探测分离。等待 gated job 时，卡探测默认 600 秒缓存；每个任务首次进入卡门禁时强制探测，避免前一任务释放卡后盲启动或产生无谓空档。断点 checkpoint、SSH 断链恢复、未知启动拒绝和终态判断保持原语义。公开 CPU 回归现为 **50 项通过**；本地无 pytest，因此未将该结果扩大为完整 study 测试通过。
 
-TFRL-v2 bank 的 CPU 准入诊断已实现（`0b0d0247`，`scripts/checks/tfrl_v2_bank_readiness.py`）。对当前 `bank-release-v1.json` 的真实审计结果为 `ready=false`，H1、H2 和 union 三份 release 各有 7 个阻塞项：receipt zero hash、token measure 未达到 `vllm-tokenize`、exemplar/rule content hash 缺失、两类 token count 未测量，以及 receipt artifact 不存在。工具以非零退出码 fail-closed，不创建或修复 bank；机器可读结果见 [`2026-11-02-tfrl-v2-bank-readiness.json`](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-02-tfrl-v2-bank-readiness.json)。因此下一步必须在固定镜像内完成真实 bank distillation 和 vLLM tokenizer 计量，之前不安排 smoke 或大规模 NPU。
+TFRL-v2 bank 的 CPU 准入诊断由 `scripts/checks/tfrl_v2_bank_readiness.py` 实现。当前命令使用显式 `--data-root /mnt/cephfs/xingchao/omni` 审计返回 `ready=true`：三份 receipt 的 schema、canonical hash、bank 文件 hash 和 `vllm-tokenize` token counts 均通过。该工具仍 fail-closed，未创建或修复 bank；下一步是完成外部 artifact 身份、owner、checkpoint 绑定及 4 行 detached smoke，之前不安排大规模 NPU。

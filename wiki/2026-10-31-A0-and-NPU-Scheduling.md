@@ -174,8 +174,8 @@ odd40 仍处于真实运行时准入阶段。625 条真实 construction 的供�
 
 181 当前只有两个 TP4 服务驻留，覆盖 8 卡；没有活跃实验，因此不能把驻留服务计作八卡有效利用率。已落地的 CPU 准备优化是 [runtime manifest cache](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/data/runtime_manifest_cache.py)：它把已验证真实 roster 的媒体身份、SHA-256、时长和采样率固化为可共享、原子发布、篡改即拒绝的 manifest，内容不含标注或提示词。该优化已推送 `main` 的 `195d5940`，尚未用真实 500 样本做 cold/warm preparation 端到端测速，因此暂不报告加速倍数。
 
-下一阶段先在固定镜像内完成 TFRL-v2 bank 的真实 tokenizer 计量、receipt hash 和 4 行 smoke，再把 CPU bank distillation、评分和成本归因接入独立 ready-queue 后继 job，避免 NPU 等待 CPU；smoke 通过后才安排 1,080 行 Fold B。方法冻结且 D/A/best-T 的 runtime、预算、owner allowance、exposure 和 detached identity 齐全后，才运行完整 13,078 条 test。监控维持 600 秒轮巡或明确终态事件，后续每个 NPU 任务继续报告完成量/总量、秒/条、卡数、实例数、逐卡利用率、成本和 ETA。
+下一阶段先复核已绑定的 TFRL-v2 bank artifact 并完成 4 行 detached smoke，再把 CPU bank distillation、评分和成本归因接入独立 ready-queue 后继 job，避免 NPU 等待 CPU；smoke 通过后才安排 1,080 行 Fold B。当前 bank readiness 已通过显式 data-root 的 receipt、文件 hash 和 `vllm-tokenize` token 计量核验，但 smoke 尚未准入。方法冻结且 D/A/best-T 的 runtime、预算、owner allowance、exposure 和 detached identity 齐全后，才运行完整 13,078 条 test。监控维持 600 秒轮巡或明确终态事件，后续每个 NPU 任务继续报告完成量/总量、秒/条、卡数、实例数、逐卡利用率、成本和 ETA。
 
 队列监控修复已推送 `main` 的 `016388cf`：进程存活、日志终态和 checkpoint 仍按原轮询频率检查；等待 gated job 时昂贵的 `npu-smi`/Docker 卡探测默认缓存 600 秒，每个任务首次进入门禁强制探测。这样降低监控开销，同时保留断点恢复、未知启动拒绝和防止盲启动的卡安全门禁。CPU 回归 50 项通过；完整 study 测试仍需固定镜像复核。
 
-TFRL-v2 bank 的 CPU 准入诊断已推送 `main` 的 `0b0d0247`。当前 `bank-release-v1.json` 的 H1、H2 和 union 三份 release 均为 `ready=false`，每份有 7 个阻塞项：receipt zero hash、未完成 `vllm-tokenize` 计量、exemplar/rule hash 缺失、token count 未测量及 receipt artifact 不存在。诊断工具 fail-closed，不创建伪造 bank；真实审计结果见 [bank readiness JSON](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-02-tfrl-v2-bank-readiness.json)。完成固定镜像内真实 distillation 和 tokenizer 计量前，不安排 TFRL-v2 smoke 或大规模 NPU。
+TFRL-v2 bank 的 CPU 准入诊断已由 `main` 的 `5c30ceb6` 扩展为显式外部 data-root 校验。当前 H1、H2 和 union 三份 receipt 的 schema、canonical hash、bank 文件 hash 和 `vllm-tokenize` token counts 均通过，机器可读结果为 `ready=true`。诊断工具仍 fail-closed，不创建伪造 bank；4 行 detached smoke、owner/source/checkpoint 绑定仍未完成，因此尚不安排大规模 NPU。
