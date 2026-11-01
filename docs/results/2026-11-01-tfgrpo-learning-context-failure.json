@@ -1,0 +1,53 @@
+{
+  "schema": "saea-tfgrpo-context-failure-audit-v1",
+  "observed_at": 1793505885.660635,
+  "run_id": "SAEA-SLURP-TFGRPO-FIXED-P-H1-LEARNING-V1",
+  "attempt_id": "learning-recovery-v1",
+  "attempt_state": "ABORTED",
+  "attempt": {
+    "relpath": "attempts/SAEA-SLURP-TFGRPO-FIXED-P-H1-LEARNING-V1/learning-recovery-v1.json",
+    "sha256": "5163003ffccea953f3ad9f7dd446c9ae1d350d00efae17eae3c605cda7269233"
+  },
+  "groups_completed": 0,
+  "total_groups": 32,
+  "summary_responses": 6,
+  "total_summaries": 128,
+  "total_learning_contacts": 193,
+  "generation_intents": 12,
+  "generation_responses": 12,
+  "unknown_generation_contacts": 0,
+  "bridge_responses": 6,
+  "known_usage": {
+    "calls": 12,
+    "prompt_tokens": 231883,
+    "completion_tokens": 33954
+  },
+  "bridge_usage": {
+    "calls": 6,
+    "prompt_tokens": 118268,
+    "completion_tokens": 9378
+  },
+  "generation_length_without_text": 6,
+  "length_without_text_completion_tokens": 24576,
+  "actual_attempt_usage": {
+    "audio_seconds": 0.0,
+    "calls": 12
+  },
+  "fits_completed": 128,
+  "fits_passed": 12,
+  "required_tokens": {
+    "min": 22442,
+    "mean": 27906.3984375,
+    "max": 31915,
+    "within_32768": 128
+  },
+  "serving_context_tokens": 24576,
+  "reserved_output_tokens": 4096,
+  "cards": 8,
+  "instances": 2,
+  "eta_seconds": null,
+  "seconds_per_completed_group": null,
+  "new_model_calls": 0,
+  "new_tokenizer_calls": 0,
+  "limitation": "Summary FIT only; later advantage and merge inputs are not yet realized. No candidate or quality gain."
+}
