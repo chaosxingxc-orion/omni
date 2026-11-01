@@ -1,0 +1,43 @@
+{
+  "schema": "saea-a0-hardset-integration-validation-v1",
+  "public_code_commit": "9a168ad4",
+  "implementation_commits": [
+    "847fc199",
+    "4a01e971"
+  ],
+  "validation": {
+    "implementation": {
+      "passed": 241,
+      "seconds": 43.42,
+      "exit_code": 0
+    },
+    "public": {
+      "passed": 231,
+      "seconds": 46.05,
+      "exit_code": 0
+    },
+    "environment": "npu2 pinned saea-base container",
+    "transport": "mocked for graph recovery tests",
+    "checks": [
+      "real child process exit after durable P",
+      "reuse P response and FIT; only S newly dispatched",
+      "unknown contact and changed request refusal",
+      "fixed439 workload construction",
+      "TF-GRPO adapter unit tests"
+    ]
+  },
+  "workload": {
+    "unique_samples": 439,
+    "first_p_contexts_prepared": 439,
+    "real_completed_samples": 0,
+    "normal_generation_calls": 878,
+    "fallback_inclusive_generation_cap": 1756,
+    "fit_contact_cap": 878,
+    "readiness": "held",
+    "reuses_existing_dataset": true
+  },
+  "new_real_model_calls": 0,
+  "new_real_tokenizer_calls": 0,
+  "production_automatic_recovery_verified": false,
+  "tfrl_gain_verified": false
+}
