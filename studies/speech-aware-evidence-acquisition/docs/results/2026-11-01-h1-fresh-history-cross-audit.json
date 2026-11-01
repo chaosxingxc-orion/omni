@@ -1,0 +1,33 @@
+{
+  "schema": "saea-h1-fresh-history-cross-audit-v1",
+  "rows": 313,
+  "table": {
+    "all_wrong": {
+      "rows": 174,
+      "fresh_correct": 3,
+      "fresh_error": 171
+    },
+    "all_correct": {
+      "rows": 87,
+      "fresh_correct": 79,
+      "fresh_error": 8
+    },
+    "mixed": {
+      "rows": 52,
+      "fresh_correct": 23,
+      "fresh_error": 29
+    }
+  },
+  "fresh_correct": 105,
+  "sources": {
+    "fresh_scores_sha256": "055a5f22503116982984f8e351e22fad0c106b9f284f43c71d7ceed1170cf6f2",
+    "previous_audit_sha256": "0378fa03a6bcb071a3575aed93f11cddf02c4178756d71f0ba637e2954b30df8"
+  },
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "hardness_confirmed": false,
+  "limitations": [
+    "Historical K4 shares P; fresh uses a different full P/S execution.",
+    "Cross table is descriptive, not a policy gain or independent error probability estimate."
+  ]
+}
