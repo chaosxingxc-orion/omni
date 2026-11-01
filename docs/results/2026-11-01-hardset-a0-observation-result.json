@@ -1,0 +1,119 @@
+{
+  "allocated_card_hours": 3.605359541575114,
+  "attempt_actual": {
+    "audio_seconds": 3997.4653750000043,
+    "calls": 878
+  },
+  "attempt_state": "FINALIZED",
+  "campaign_wall_seconds": 1702.3304971700054,
+  "cards": 8,
+  "checkpoint_attempt_journal_cost_reconciled": true,
+  "checkpoint_cost_lower_bound": {
+    "audio_seconds": 3997.465374999991,
+    "calls": 878.0,
+    "completion_tokens": 1895044.0,
+    "latency_seconds": 281052.3568899001,
+    "prompt_tokens": 5562508.0,
+    "tool_calls": 0.0
+  },
+  "checkpoint_sha256": "6d118d8c94cf52fc258064db22f7a69ccb4b1e1448ebbae79d2e2fb883c9283c",
+  "completed_rows": 439,
+  "cost": {
+    "audio_seconds_used": 3997.4653750000043,
+    "calls_used": 878,
+    "completion_tokens_total": 1895044,
+    "latency_seconds_total": 281052.35688990005,
+    "prompt_tokens_total": 5562508,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "finalized": true,
+  "fit_contacts": 878,
+  "fit_custody_verified": true,
+  "fit_receipts": 878,
+  "generation_seconds_per_row": 3.6956988467170873,
+  "generation_start_to_seal_seconds": 1622.4117937088013,
+  "instances": 2,
+  "limitations": [
+    "Request latency includes service queue, network and inference; it is not pure device compute.",
+    "Episode minus P/S request latency aggregates preparation/FIT/scheduling/accounting; no component attribution is possible without operational timing journal.",
+    "Partial completed samples have completion-order bias.",
+    "Allocated cards do not prove sustained utilization.",
+    "Selected observed-error train subset is diagnostic, not held-out precision confirmation."
+  ],
+  "manifest_sha256": "0c7477e5be0db415b8a7bf03e4529b8b08f15d17d58068e3d10d43ef49c81761",
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "observed_at": 1793502983.5846403,
+  "per_sample_timings": {
+    "P_and_S_request_sum": {
+      "mean_s": 640.2103801592252,
+      "n": 439,
+      "p50_s": 634.0815608199991,
+      "p95_s": 1006.1363728699944,
+      "total_s": 281052.3568898999
+    },
+    "admission_queue": {
+      "mean_s": 3.2787699281321183,
+      "n": 439,
+      "p50_s": 3.16844999,
+      "p95_s": 5.35010225,
+      "total_s": 1439.37999845
+    },
+    "admitted_to_finished": {
+      "mean_s": 983.0317984411389,
+      "n": 439,
+      "p50_s": 973.35639511,
+      "p95_s": 1390.0578871,
+      "total_s": 431550.95951566
+    },
+    "episode_minus_P_and_S_requests_unattributed": {
+      "mean_s": 342.8214182819138,
+      "n": 439,
+      "p50_s": 111.5762462799944,
+      "p95_s": 859.3547432900018,
+      "total_s": 150498.60262576013
+    },
+    "perception/request_latency": {
+      "mean_s": 290.70733126783574,
+      "n": 439,
+      "p50_s": 260.60502837999957,
+      "p95_s": 507.46365522999986,
+      "total_s": 127620.51842657989
+    },
+    "solver/request_latency": {
+      "mean_s": 349.5030488913894,
+      "n": 439,
+      "p50_s": 335.62793298999895,
+      "p95_s": 551.6526990799975,
+      "total_s": 153431.83846331996
+    }
+  },
+  "quality": {
+    "intent_accuracy": 0.6947608200455581,
+    "scenario_accuracy": 0.7403189066059226,
+    "slu_f1": 0.5922817212382419,
+    "span_f1": 0.4253544620517098
+  },
+  "remaining_rows": 0,
+  "run_id": "SAEA-SLURP-TFRL-HARDSET-A0-OBSERVATION-R1-V1",
+  "schema": "saea-hardset-a0-completion-analysis-v1",
+  "scores_sha256": "38c3994be2979c742d61a1ea3d8a6ef906676a45bfe087c845b58720435003a5",
+  "timing_missing": [
+    "admission_to_P_request",
+    "FIT_by_role",
+    "retrieval",
+    "audio_loading",
+    "server_queue",
+    "prefill",
+    "decode"
+  ],
+  "tokens_by_role": {
+    "perception/completion_tokens": 837872,
+    "perception/prompt_tokens": 1687748,
+    "solver/completion_tokens": 1057172,
+    "solver/prompt_tokens": 3874760
+  },
+  "torn_tail_bytes": 0,
+  "total_rows": 439
+}
