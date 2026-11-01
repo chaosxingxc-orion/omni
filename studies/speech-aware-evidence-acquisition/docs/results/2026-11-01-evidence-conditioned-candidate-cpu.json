@@ -121,7 +121,7 @@
         "schema": "saea-structured-experience-rule-v1",
         "scope": {
           "components": [
-            "all contract-defined slots"
+            "place_name"
           ],
           "phases": [
             "knowledge-consumption"
@@ -140,7 +140,7 @@
       },
       {
         "action": [
-          "apply only to event_query with slots: place_name",
+          "apply only to recommendation_events with slots: place_name",
           "Location Reference Handling: Treat location references in event queries as place_name rather than event_name per slot contract definitions."
         ],
         "conflict": {
@@ -160,7 +160,7 @@
             "knowledge-consumption"
           ],
           "task_ids": [
-            "event_query"
+            "recommendation_events"
           ]
         },
         "source": {
@@ -187,7 +187,7 @@
         "schema": "saea-structured-experience-rule-v1",
         "scope": {
           "components": [
-            "intent boundary"
+            "calendar_query"
           ],
           "phases": [
             "knowledge-consumption"
@@ -239,7 +239,7 @@
       },
       {
         "action": [
-          "apply only to cooking_query with slots: cooking_type, food_type",
+          "apply only to cooking_recipe with slots: cooking_type, food_type",
           "Cooking Verb Pattern: Extract the verb as cooking_type and the food item as food_type when a cooking verb is followed by a food item, ignoring singular/plural forms per slot contract."
         ],
         "conflict": {
@@ -260,7 +260,7 @@
             "knowledge-consumption"
           ],
           "task_ids": [
-            "cooking_query"
+            "cooking_recipe"
           ]
         },
         "source": {
@@ -273,7 +273,7 @@
       },
       {
         "action": [
-          "apply only to iot with slots: device_type",
+          "apply only to iot_cleaning with slots: device_type",
           "Intent boundary comparison: Systematically compare request against activation boundaries to avoid defaulting to general categories when specific IoT action verbs are present."
         ],
         "conflict": {
@@ -287,13 +287,13 @@
         "schema": "saea-structured-experience-rule-v1",
         "scope": {
           "components": [
-            "specific IoT action intent"
+            "iot_cleaning"
           ],
           "phases": [
             "knowledge-consumption"
           ],
           "task_ids": [
-            "iot"
+            "iot_cleaning"
           ]
         },
         "source": {

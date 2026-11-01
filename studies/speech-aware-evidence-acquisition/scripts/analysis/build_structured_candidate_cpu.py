@@ -4,22 +4,26 @@ from speech_aware_evidence_acquisition.rails.structured_experience_rules import 
 parser=argparse.ArgumentParser()
 parser.add_argument('--operations',type=Path,required=True)
 parser.add_argument('--audit',type=Path,required=True)
+parser.add_argument('--labels',type=Path,required=True)
 parser.add_argument('--output',type=Path,required=True)
 args=parser.parse_args()
 ops=json.loads(args.operations.read_text())
 audit=json.loads(args.audit.read_text())
+labels=json.loads(args.labels.read_text())
+observed_intents={row['intent'] for row in labels['rows'].values()}
+observed_slots={slot for row in labels['rows'].values() for slot in row['slots']}
 # One source-bound operation per rule.  These are deliberately scoped to the
 # operation's observed intent/slot contract; no Cartesian expansion is used.
 selected=[
  ('a9ce4320','calendar_set',('person',),('person','calendar_set'),('preserve possessive surface form',),()),
  ('a50c4dfc','email_querycontact',('person',),('person',),('only when contact-name cue is explicit',),()),
  ('810ab363','weather_query',('place_name',),('place_name',),('reject metaphorical/non-physical references',),()),
- ('a89fe17f','weather_query',('place_name',),('all contract-defined slots',),('do not invent an absent slot',),()),
- ('a60e87ea','event_query',('place_name',),('place_name',),('only explicit event location',),()),
- ('e184bfda','calendar_query',('date','event_name'),('intent boundary',),('require personal scheduling activation',),()),
+ ('a89fe17f','weather_query',('place_name',),('place_name',),('do not invent an absent slot',),()),
+ ('a60e87ea','recommendation_events',('place_name',),('place_name',),('only explicit event location',),()),
+ ('e184bfda','calendar_query',('date','event_name'),('calendar_query',),('require personal scheduling activation',),()),
  ('e32554c1','lists_createoradd',('list_name',),('list_name',),('do not add event_name',),()),
- ('0e7a84b2','cooking_query',('cooking_type','food_type'),('cooking_type','food_type'),('verb must be followed by food cue',),()),
- ('54d12d26','iot',('device_type',),('specific IoT action intent',),('general conversation is an exception',),()),
+ ('0e7a84b2','cooking_recipe',('cooking_type','food_type'),('cooking_type','food_type'),('verb must be followed by food cue',),()),
+ ('54d12d26','iot_cleaning',('device_type',),('iot_cleaning',),('general conversation is an exception',),()),
  ('14b9e1db','calendar_set',('person','relation'),('person','relation'),('keep possessive on person; relation is role only',),()),
 ]
 by_prefix={x['operation_sha256'][:8]:x for x in ops}
@@ -30,6 +34,8 @@ excluded_hashes={ref['operation_sha256'] for finding in audit['findings']
 rules=[];payloads={};source_index=[]
 for i,(prefix,intent,slots,components,trigger,exceptions) in enumerate(selected,1):
  op=by_prefix[prefix]
+ assert intent in observed_intents, (intent, 'intent absent from fixed H1 roster')
+ assert set(slots) <= observed_slots and set(components) <= (observed_slots | observed_intents), (prefix, 'slot/component absent from fixed H1 roster')
  assert op['operation_sha256'] not in excluded_hashes, (prefix, 'audited high-risk source')
  raw=json.dumps({'operation':op['operation'],'id':op['id'],'content':op['content']},ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
  assert hashlib.sha256(raw).hexdigest()==op['operation_sha256'],(prefix,hashlib.sha256(raw).hexdigest(),op['operation_sha256'])
