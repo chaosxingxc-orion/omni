@@ -1,5 +1,12 @@
 # 任务现状、决策与下一阶段计划
 
+## 2026-11-01：主机故障定位与 LoRA 环境
+
+npu2已于08:17 UTC重启。两次内核日志确认同一`unsafe_request_wait+0x1d0/0x564 [ceph]`空指针异常，经`ceph_fsync`进入，第二次随后Ceph工作线程soft lockup；当前8卡Health OK。原恢复attempt新增原生调用0，旧响应保留；已启动原双TP4服务容器，仍需新boot运行凭证。学习/H2未重提，先处理高频Ceph持久化路径或主机内核问题。详见[故障诊断与恢复边界](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-npu2-ceph-crash-diagnosis-zh.md)。
+
+基于nga离线源码与依赖已构建独立`omni-verl-lora-env:20261101-v3`，ID `3fc654a33d39…`；最终镜像内部7项CPU/meta探针通过，Thinker+Processor+文本注意力LoRA范围确认：192模块、384张量、13,369,344参数。正式环境工具/分析测试20项通过（公开仓4.98秒）。未加载真实权重、未前向/反向，尚未证明音频训练或在线RL可用。详见[环境结果与适配缺口](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-verl-omni-environment-zh.md)。H2原始标签分项分析另已通过47项正式测试，尚未改动执行H树。
+
+
 更新：2026-11-01。本页与Wiki原位维护；439条A0已完成，TF-GRPO修正任务已获得146/187条响应后因输出格式解析失败退出，正在验证无重复调用接续；完整H2配对评价等待新候选。
 
 ## 结论
