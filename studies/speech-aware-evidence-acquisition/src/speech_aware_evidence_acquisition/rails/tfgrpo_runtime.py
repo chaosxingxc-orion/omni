@@ -46,7 +46,7 @@ def learning_source_plan(plan, *, replay=None, data_root=None):
     if not isinstance(replay, NativeContactReplay) or data_root is None:
         raise LearningError('verified native replay required for learning recovery')
     replay.assert_target(data_root, plan, PREPARED_TEXT_ARM)
-    return replay.source_plan
+    return replay.scientific_source_plan
 
 
 def contact_key(stage, identity):

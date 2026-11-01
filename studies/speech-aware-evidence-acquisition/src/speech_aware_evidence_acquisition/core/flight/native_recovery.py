@@ -47,8 +47,12 @@ def select_recovery_cell(cell, declaration, *, data_root):
         raise ValueError('unsupported native recovery receipt')
     source = ExecutionPlan(**document['source']['plan']).validate()
     target = ExecutionPlan(**document['target_plan']).validate()
+    selected_source = source
+    if source.attempt_id != cell.attempt_id:
+        replay = load_native_recovery(declaration,data_root=data_root,plan=target,arm=document['source']['arm'])
+        selected_source = replay.scientific_source_plan
     if (source.run_id != cell.run_id or target.run_id != cell.run_id
-            or source.attempt_id != cell.attempt_id or source.attempt_id == target.attempt_id
+            or selected_source.attempt_id != cell.attempt_id or source.attempt_id == target.attempt_id
             or cell.document.get('resume_from') is not None
             or cell.document.get('checkpoint_compatibility') is not None):
         raise ValueError('native recovery must resume the selected registered cell')
