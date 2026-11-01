@@ -34,8 +34,10 @@ def checked_pin(root, pin):
 
 
 def validate_params(params):
-    if not isinstance(params,dict) or set(params) != FIELDS or params['purpose'] != 'development-evaluation':
+    if not isinstance(params,dict) or set(params) not in (FIELDS, FIELDS | {'target_arm'}) or params['purpose'] != 'development-evaluation':
         raise ValueError('development-only Solver experience binding required')
+    if 'target_arm' in params and params['target_arm'] != 'learned':
+        raise ValueError('only the learned paired Solver arm is supported')
     ids = params['consumer_ids']
     if (not isinstance(ids,list) or not ids or len(ids)!=len(set(ids))
             or any(not isinstance(x,str) or not x.startswith('slurp:train:') for x in ids)):
@@ -118,7 +120,19 @@ def verify_for_flight(values, *, repo, data, model_id, consumer_ids):
     if not matches:return None
     if len(matches)!=1:raise ValueError('one learned Solver component required')
     params=matches[0]['params']
-    if values['phase_material']['solver']['instruction_template'] != params['template']['relpath']:
+    if params.get('target_arm'):
+        if values['phase_material']['solver']['instruction_template'] != params['base_template']['relpath']:
+            raise ValueError('paired evaluation changed the base Solver template')
+        group=values['native_episode']['roles']['solver'].get('template_variants',{})
+        arms=group.get('arms',[])
+        expected={'relpath':'configs/'+params['template']['relpath'],'sha256':params['template']['sha256']}
+        if (group.get('node')!='solver' or len(arms)!=2
+                or arms[0].get('arm_id')!='learned' or arms[0].get('instruction_template')!=expected
+                or arms[0].get('deliver') or arms[0].get('replicate_of')
+                or arms[1].get('arm_id')!='lock' or arms[1].get('deliver') is not True
+                or arms[1].get('instruction_template') or arms[1].get('replicate_of')):
+            raise ValueError('exact learned/lock Solver pair required')
+    elif values['phase_material']['solver']['instruction_template'] != params['template']['relpath']:
         raise ValueError('declared experience template not actually selected')
     return verify(params,repo=repo,data=data,model_id=model_id,consumer_ids=consumer_ids)
 

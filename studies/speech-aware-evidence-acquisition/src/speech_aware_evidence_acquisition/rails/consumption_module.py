@@ -238,7 +238,7 @@ _COLUMN_OPTIONAL = frozenset({"prepared_seed"})
 
 COMPONENT_CATALOGUE: tuple[ComponentSpec, ...] = (
     ComponentSpec("tfgrpo-solver-experience", "USE, learned Solver experience for development",
-        frozenset({STATE_ON}), frozenset({"candidate", "source_manifest", "model_id", "base_template", "template", "consumer_ids", "purpose"})),
+        frozenset({STATE_ON}), frozenset({"candidate", "source_manifest", "model_id", "base_template", "template", "consumer_ids", "purpose"}), optional_params=frozenset({"target_arm"})),
     ComponentSpec(NODE_CONTEXT_PRESENTATION, "USE, explicit node context presentation",
         frozenset({STATE_ON}), frozenset(),
         optional_params=frozenset({"tool_schema_rendering", "reviewer_history_scope"})),
@@ -1741,8 +1741,17 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
             validate_params(dict(params))
             if layer["phase_material"]["solver"]["instruction_template"] != params["base_template"]["relpath"]:
                 raise ConsumptionModuleConfigError("learned experience requires the unchanged Solver base")
-            writer.set(("phase_material", "solver", "instruction_template"), params["template"]["relpath"],
-                       component_id=cid, replace_only=True)
+            if params.get("target_arm"):
+                expected={"relpath":"configs/"+params["template"]["relpath"],"sha256":params["template"]["sha256"]}
+                if (len(block.columns)!=1 or len(block.template_columns)!=1
+                        or block.template_columns[0].node!="solver"
+                        or block.template_columns[0].column_id!="learned"
+                        or block.template_columns[0].template!=expected
+                        or block.template_frame["twin"]):
+                    raise ConsumptionModuleConfigError("learned experience requires its exact paired template column")
+            else:
+                writer.set(("phase_material", "solver", "instruction_template"), params["template"]["relpath"],
+                           component_id=cid, replace_only=True)
         elif cid == NODE_CONTEXT_PRESENTATION:
             if block.solver_tool_access and params.get("tool_schema_rendering", "per-role") != "per-role":
                 raise ConsumptionModuleConfigError("Solver tool profile requires per-role schema rendering")
@@ -1919,7 +1928,12 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
             and block.supply_frame["twin"] is True
             and not block.supply_frame.get("alternates")
         )
-        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns)
+        paired_columns=(len(block.columns)==len(block.template_columns)==1
+            and block.template_columns[0].column_id=="learned"
+            and block.template_columns[0].node=="solver" and not block.template_frame["twin"]
+            and any(d.component_id=="tfgrpo-solver-experience" and d.params.get("target_arm")=="learned"
+                    for d in block.armed()))
+        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns)
                 or ceiling != 2 or block.solver_tool_access):
             raise ConsumptionModuleConfigError(
                 "legacy prompt limits require a two-contact lock, seed-only K4, or exact odd40 B/AA/A group")
