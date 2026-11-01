@@ -9,7 +9,7 @@ from test_stage3_supply_variant_interleaving import _arm_resolver, _live_config,
 from test_whole_answer_selection import text
 
 
-def harness_for(tmp_path, *, equal=False, judge='{"choice":"B"}', raw_audio=False, contact_journal=False):
+def harness_for(tmp_path, *, equal=False, judge='{"choice":"B"}', raw_audio=False, contact_journal=False, contact_replay=None, execution_plan=None, data_root=None):
     from test_tfrl_odd40_candidates import m as candidates, documents, ROOT
     from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
     from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
@@ -20,7 +20,7 @@ def harness_for(tmp_path, *, equal=False, judge='{"choice":"B"}', raw_audio=Fals
     parsed=load_native_episode_config(values,default_phase_program(values['policy']))
     group=parsed.supply_variant_group
     h=_ActualEpisodeHarness(tmp_path/'harness',sample_count=1,max_revisions=0,max_contacts=5,planner_actions=(),
-        contact_journal=contact_journal,
+        contact_journal=contact_journal, contact_replay=contact_replay, execution_plan=execution_plan, data_root=data_root,
         query_source='speech_audio' if raw_audio else 'speech_features',
         arm='raw-speech-agent-native-tools' if raw_audio else 'speech-feature-query-native-tools')
     h.config=replace(_live_config(group=group,max_contacts=5),prompt_contact_limits='legacy-c17-lock-v1',answer_selection=m.POLICY_ID)

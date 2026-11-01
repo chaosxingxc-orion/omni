@@ -1460,6 +1460,7 @@ class FrozenCoreClient:
         tool_schemas: Sequence[Mapping[str, object]] | None = None,
         construction_targets: Sequence[Mapping[str, object]] | None = None,
         contact_journal: bool = False,
+        contact_replay=None,
     ) -> None:
         plan.validate()
         assert_execution_scope(plan.execution_profile)
@@ -1528,6 +1529,7 @@ class FrozenCoreClient:
             binding=binding,
             slice_registry=slice_registry,
             contact_journal=contact_journal,
+            contact_replay=contact_replay,
         )
         self._reverse_media_index: dict[str, str] = {
             relpath: sample_id for sample_id, relpath in binding.media_relpaths.items()
@@ -1539,7 +1541,13 @@ class FrozenCoreClient:
         # register_slice, consulted by complete() before falling back to
         # self._binding.sample_facts.
         self._slice_facts: dict[str, tuple[float, int]] = {}
+        self._contact_replay = contact_replay
         self._request_counter = 0
+        if contact_replay is not None:
+            prefix = request_id_prefix + '-'
+            counters = [int(rid[len(prefix):]) for rid in contact_replay.request_ids
+                        if rid.startswith(prefix) and rid[len(prefix):].isdigit()]
+            self._request_counter = max(counters, default=0)
         self._prepared_requests: dict[object, bytes] = {}
         self._last_attempted_request_id: str | None = None
         self._timings: list[RequestTiming] = []
@@ -1971,6 +1979,10 @@ class FrozenCoreClient:
                 evidence["evidence_id"] = f"{request_id}-supply-{index}"
         if id_slot is not None:
             payload["decoding_params"]["id_slot"] = id_slot
+        if self._contact_replay is not None:
+            original = self._contact_replay.match(payload)
+            if original is not None:
+                return original
         return payload
 
     def _complete_payload(self, payload: Mapping[str, object]) -> str:

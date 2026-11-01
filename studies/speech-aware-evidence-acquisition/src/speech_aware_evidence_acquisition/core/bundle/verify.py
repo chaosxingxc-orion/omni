@@ -338,11 +338,14 @@ def verify_bundle(manifest_path: Path) -> VerifiedBundle:
     # from bundle artifacts the way this check needs -- see that function's
     # docstring.
     cost = manifest.get("cost")
+    from .native_replay import verify_native_replay
+    replayed_ids = verify_native_replay(manifest, trace_records, reconstructed_plan)
     if outputs_rows and isinstance(cost, Mapping):
         calls_used = cost.get("calls_used")
         minimum_model_calls = _minimum_model_calls_from_trace(
             trace_records,
             output_request_ids=frozenset(str(row["request_id"]) for row in outputs_rows),
+            verified_replayed_request_ids=replayed_ids,
         )
         if (
             isinstance(calls_used, (int, float))

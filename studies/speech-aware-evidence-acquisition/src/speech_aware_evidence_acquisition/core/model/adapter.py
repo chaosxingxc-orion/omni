@@ -102,6 +102,7 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         binding: PayloadBindingContext,
         slice_registry: SliceRegistry | None = None,
         contact_journal: bool = False,
+        contact_replay=None,
     ) -> None:
         if arm not in ARM_VISIBLE_FIELDS:
             raise FrozenCoreError(
@@ -140,6 +141,13 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
             )
         if type(contact_journal) is not bool:
             raise FrozenCoreError('contact_journal must be boolean')
+        if contact_replay is not None:
+            from ..contact_journal import NativeContactReplay
+            if not contact_journal or not isinstance(contact_replay, NativeContactReplay):
+                raise FrozenCoreError('native contact replay requires durable capture and a validated predecessor')
+            contact_replay.assert_target(binding.data_root, plan, arm)
+        self._contact_replay = contact_replay
+        self._replay_totals = dict(calls=0, audio_seconds=0., latency_seconds=0., prompt_tokens=0, completion_tokens=0)
         self._contact_journal = None
         if contact_journal:
             from ..contact_journal import ContactJournal
@@ -322,6 +330,20 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         ):
             raise FrozenCoreError("payload audio_seconds must be a finite positive number")
         self._enforce_payload_binding(payload, audio_seconds)
+        if self._contact_replay is not None:
+            original = self._contact_replay.match(payload)
+            if original is not None and _canonical(payload) != _canonical(original):
+                raise FrozenCoreError('replayed native request must retain original request identity')
+            observed = self._contact_replay.consume(payload)
+            if observed is not None:
+                request_id = payload['request_id']
+                request_sha256 = observed['intent']['request_sha256']
+                self._sink.emit('MODEL_REQUEST', request_id + '/request',
+                    {'arm': self._arm, 'payload': dict(payload), 'payload_sha256': request_sha256})
+                self._sink.emit('TOOL', request_id + '/contact-replay',
+                    self._contact_replay.receipt(request_id))
+                return self._consume_response(payload, observed['response_bytes'],
+                    observed['response']['latency_seconds'], request_sha256, replayed=True)
         # Row-level budget check (R0 repair T4/I6, race-hardened R0 repair r0-repair/I3):
         # the ceiling is the SAME plan.planned_* value regardless of which attempt is
         # spending it, so actual usage already persisted by OTHER (e.g. crashed, or a
@@ -421,6 +443,12 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
             # Keep even malformed responses before parsing or trace emission can
             # fail. An interrupted parse never requires another model request.
             self._contact_journal.response(request_id, request_sha256, response_bytes, latency)
+        return self._consume_response(payload, response_bytes, latency, request_sha256)
+
+    def _consume_response(self, payload, response_bytes, latency, request_sha256, *, replayed=False):
+        """Use the same response parsing/trace path for live and observed bytes."""
+        request_id = payload['request_id']
+        audio_seconds = payload['audio_seconds']
         response_sha256 = hashlib.sha256(response_bytes).hexdigest()
         wire_provenance: dict[str, object] | None = None
         wire_response_bytes: bytes | None = None
@@ -513,9 +541,16 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         # under worker-thread concurrency exactly like the budget section;
         # same lock, held only for the increments.
         with self._metering_lock:
-            self._latency_total += latency
-            self._prompt_tokens += usage.get("prompt_tokens", 0)
-            self._completion_tokens += usage.get("completion_tokens", 0)
+            if replayed:
+                self._replay_totals['calls'] += 1
+                self._replay_totals['audio_seconds'] += float(audio_seconds)
+                self._replay_totals['latency_seconds'] += latency
+                self._replay_totals['prompt_tokens'] += usage.get('prompt_tokens', 0)
+                self._replay_totals['completion_tokens'] += usage.get('completion_tokens', 0)
+            else:
+                self._latency_total += latency
+                self._prompt_tokens += usage.get("prompt_tokens", 0)
+                self._completion_tokens += usage.get("completion_tokens", 0)
         cost_payload: dict[str, object] = {
             "calls": 1,
             "audio_seconds": float(audio_seconds),
@@ -565,6 +600,8 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
 
     def cost_summary(self) -> dict[str, object]:
         return {
+            **({"replayed_predecessor_cost": dict(self._replay_totals),
+                "native_replay_source": self._contact_replay.source_binding()} if self._contact_replay is not None else {}),
             "calls_used": self._calls_used,
             "audio_seconds_used": self._audio_seconds_used,
             "latency_seconds_total": self._latency_total,

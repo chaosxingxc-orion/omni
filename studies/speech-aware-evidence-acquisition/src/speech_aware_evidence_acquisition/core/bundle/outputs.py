@@ -63,6 +63,7 @@ def _minimum_model_calls_from_trace(
     trace_records: Mapping[str, Mapping[str, object]],
     *,
     output_request_ids: frozenset[str] | None = None,
+    verified_replayed_request_ids: frozenset[str] = frozenset(),
 ) -> int:
     """Derive the model-call cost floor while admitting traced tool composites.
 
@@ -93,7 +94,8 @@ def _minimum_model_calls_from_trace(
             and isinstance(payload.get("payload"), Mapping)
             and _is_sha256(payload.get("payload_sha256"))
         ):
-            model_requests += 1
+            if request_id not in verified_replayed_request_ids:
+                model_requests += 1
             continue
         # Legacy OBS roots are output identities too, but their request record is
         # a stitch/observation envelope rather than a model or deterministic-tool

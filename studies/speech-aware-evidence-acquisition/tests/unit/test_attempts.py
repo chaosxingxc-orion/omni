@@ -748,3 +748,18 @@ def test_finalize_with_receipt_refuses_aborted_and_legacy_finalized(tmp_path):
     legacy.mark_finalized()
     with pytest.raises(AttemptError, match="not OPENED"):
         legacy.finalize_with_receipt("receipt", "a" * 64, "kind")
+
+
+def test_attempt_usage_fsyncs_file_and_directory_before_return(tmp_path,monkeypatch):
+    import os
+    from speech_aware_evidence_acquisition.core.attempts import AttemptStore
+    store=AttemptStore(tmp_path/'attempts')
+    handle=store.open_attempt('SAEA-DURABLE-TEST','generation-v1',carrier_lock_key='slurp',
+        reserved_calls=2,reserved_audio_seconds=10)
+    calls=[];original=os.fsync
+    def sync(fd):
+        calls.append(fd);original(fd)
+    monkeypatch.setattr(os,'fsync',sync)
+    handle.record_usage(calls=1,audio_seconds=2)
+    assert len(calls)==2
+    assert handle.actual_totals()==(1,2)

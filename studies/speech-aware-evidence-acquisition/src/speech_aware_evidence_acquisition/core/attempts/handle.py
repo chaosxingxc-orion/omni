@@ -71,8 +71,16 @@ class AttemptHandle:
         tmp = self.path.with_name(f"{self.path.name}.tmp-{os.getpid()}-{time.monotonic_ns()}")
         raw = json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2)
         try:
-            tmp.write_text(raw, encoding="utf-8", newline="\n")
+            with tmp.open('w', encoding='utf-8', newline='\n') as stream:
+                stream.write(raw)
+                stream.flush()
+                os.fsync(stream.fileno())
             os.replace(tmp, self.path)
+            directory = os.open(self.path.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
         except OSError as error:
             try:
                 tmp.unlink()

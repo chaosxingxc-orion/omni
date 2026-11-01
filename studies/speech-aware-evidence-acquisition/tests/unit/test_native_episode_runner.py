@@ -235,6 +235,7 @@ class _ActualEpisodeHarness:
         query_source: str = "speech_features",
         execution_units_factory=None,
         contact_journal=False,
+        contact_replay=None,
     ):
         self.world = _World(tmp_path, data_root=data_root)
         self.world.samples = self.world.samples[:sample_count]
@@ -289,6 +290,7 @@ class _ActualEpisodeHarness:
         self.markers = {}
         self.prepared = {}
         self.dispatched = {}
+        self.replayed_fixture_keys = set()
         self.events = []
         self.tool_contacts = []
         self.lock = threading.Lock()
@@ -302,7 +304,7 @@ class _ActualEpisodeHarness:
                 matches = [
                     key
                     for key, prepared in self.prepared.items()
-                    if prepared["rendered"] == body and key not in self.dispatched
+                    if prepared["rendered"] == body and key not in self.dispatched and key not in self.replayed_fixture_keys
                 ]
                 assert len(matches) == 1
                 key = matches[0]
@@ -442,7 +444,7 @@ class _ActualEpisodeHarness:
             )
         self.client, _, _ = _client(
             self.world, tmp_path, plan=self.plan, transport=self.transport,
-            arm=arm, contact_journal=contact_journal, **client_kwargs,
+            arm=arm, contact_journal=contact_journal, contact_replay=contact_replay, **client_kwargs,
         )
         self.trace = TraceBuffer(self.plan.run_id)
 
