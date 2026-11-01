@@ -1889,8 +1889,25 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
             overrides = [c.decoding for c in block.decoding_columns]
             seed_columns = (all(RECIPE_KEYS <= set(d) and recipe_error(d) is None for d in overrides)
                             and group_error(overrides) is None)
-        if block.review_loop != "off" or (block.columns and not seed_columns) or ceiling != 2 or block.solver_tool_access:
-            raise ConsumptionModuleConfigError("legacy prompt limits require a two-contact lock or its seed-only K4 Solver group")
+        # The audited odd40 intervention preserves the same A/A and lock
+        # prompt limits. Admit exactly this supply column, not arbitrary fanout.
+        from .supply_variants import ODD40_OVERRIDE_PATH, ODD40_OVERRIDE_VALUE
+        prefix = "knowledge_stores.train-exemplars.phase_supply.solver."
+        odd40_overrides = {ODD40_OVERRIDE_PATH: ODD40_OVERRIDE_VALUE, prefix + "k": 40,
+                           **{prefix + "fuse_coverage." + k: 40 for k in ("m", "c", "top_l")}}
+        odd40_columns = (
+            len(block.columns) == len(block.supply_columns) == 1
+            and block.supply_columns[0].column_id == "b"
+            and block.supply_columns[0].supply == {
+                "max_supplied_items": block.supply_frame["delivering_max_supplied_items"],
+                "overrides": odd40_overrides}
+            and block.supply_frame["twin"] is True
+            and not block.supply_frame.get("alternates")
+        )
+        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns)
+                or ceiling != 2 or block.solver_tool_access):
+            raise ConsumptionModuleConfigError(
+                "legacy prompt limits require a two-contact lock, seed-only K4, or exact odd40 B/AA/A group")
         writer.set(("native_episode", "prompt_contact_limits"), block.prompt_contact_limits,
                    component_id="legacy-lock-prompt", replace_only=False)
     if block.template_columns:
