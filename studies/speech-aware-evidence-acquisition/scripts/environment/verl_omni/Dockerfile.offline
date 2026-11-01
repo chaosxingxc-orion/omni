@@ -1,0 +1,13 @@
+# Fallback: rebuild NGA's source snapshot on an explicitly selected local base.
+# This produces a NEW image and does not reproduce NGA's recorded image ID.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+LABEL omni.purpose="verl-omni-lora-environment-probe" omni.training_verified="false"
+COPY wheelhouse /tmp/omni-wheelhouse
+RUN python3 -m pip install --no-index --no-deps /tmp/omni-wheelhouse/*.whl && rm -rf /tmp/omni-wheelhouse
+COPY verl_src /opt/verl
+RUN python3 -m pip install --no-index --no-deps --no-build-isolation -e /opt/verl
+COPY raw_sft_dataset.py /opt/nga/raw_sft_dataset.py
+COPY omni-tools /opt/omni-verl
+ENV PYTHONPATH="/opt/verl:${PYTHONPATH}" HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 WANDB_MODE=offline
+WORKDIR /opt/omni-verl
