@@ -661,7 +661,7 @@ class Runner:
                     # and exited before its PID was saved. Never replay possible model calls.
                     cur = self.scan_log(job, rec, final=True)
                     success = cur["done"] and not cur["fail"]
-                    rec.update(status="done" if success else "failed", finished=iso(),
+                    rec.update(status="done" if success else "failed", finished=iso(), finished_ts=now_s(),
                                reason=None if success else "launch outcome unknown; reconcile durable job evidence before retry")
                     self.state["current"] = None
                     self.save()
@@ -684,7 +684,7 @@ class Runner:
             if verdict is None:
                 continue  # interrupted
             status, reason = verdict
-            rec.update(status=status, reason=reason, finished=iso())
+            rec.update(status=status, reason=reason, finished=iso(), finished_ts=now_s())
             self.state["current"] = None
             self.save()
             log("job %s %s%s" % (job["id"], status.upper(), (": " + reason) if reason else ""))
@@ -745,6 +745,120 @@ def format_status(s):
         lines.append("  %-8s %-34s pid=%s started=%s finished=%s %s" % (r["status"], jid, r.get("pid"), r.get("started"),
                                                                       r.get("finished"), extra))
     return "\n".join(lines)
+
+
+def _epoch_from_iso(value):
+    """Parse our UTC status timestamps without making status reporting fail."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.timestamp()
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
+def progress_summary(state, now=None):
+    """Return a cheap, read-only progress/ETA summary for detached queues.
+
+    The summary is intentionally derived only from ``state.json``.  It never
+    probes NPU cards or processes, so a status page can be refreshed by a CPU
+    worker without adding load to the host.  ETA is absent until at least one
+    terminal job has a usable duration and is never guessed for a terminal
+    queue with unfinished jobs.
+    """
+    if not isinstance(state, dict):
+        raise ValueError("queue state must be an object")
+    jobs = state.get("jobs")
+    if not isinstance(jobs, dict):
+        raise ValueError("queue state jobs must be an object")
+    now = now_s() if now is None else float(now)
+    total = len(jobs)
+    terminal_names = {"done", "failed", "skipped"}
+    terminal = [r for r in jobs.values() if isinstance(r, dict) and r.get("status") in terminal_names]
+    successful = sum(1 for r in terminal if r.get("status") == "done")
+    durations = []
+    for record in terminal:
+        started = record.get("started_ts")
+        if not isinstance(started, (int, float)) or isinstance(started, bool):
+            started = _epoch_from_iso(record.get("started"))
+        finished = _epoch_from_iso(record.get("finished"))
+        if isinstance(started, (int, float)) and finished is not None and finished >= started:
+            durations.append(finished - started)
+    started_at = _epoch_from_iso(state.get("started"))
+    if started_at is None:
+        starts = [r.get("started_ts") for r in jobs.values()
+                  if isinstance(r, dict) and isinstance(r.get("started_ts"), (int, float))]
+        started_at = min(starts) if starts else None
+    elapsed = max(0.0, now - started_at) if started_at is not None else None
+    mean_duration = sum(durations) / len(durations) if durations else None
+    throughput = (len(terminal) / elapsed) if elapsed and elapsed > 0 else None
+    remaining = max(0, total - len(terminal))
+    queue_state = state.get("state")
+    eta = None
+    if remaining and queue_state not in {"done", "failed", "stopped", "interrupted"} and throughput and throughput > 0:
+        eta = remaining / throughput
+    waiting = state.get("waiting")
+    waiting_since = _epoch_from_iso(waiting.get("since")) if isinstance(waiting, dict) else None
+    return {
+        "schema": "saea-card-queue-progress-v1",
+        "queue_id": state.get("queue_id"),
+        "state": queue_state,
+        "terminal_jobs": len(terminal),
+        "successful_jobs": successful,
+        "total_jobs": total,
+        "remaining_jobs": remaining,
+        "elapsed_seconds": elapsed,
+        "mean_terminal_job_seconds": mean_duration,
+        "throughput_jobs_per_second": throughput,
+        "estimated_remaining_seconds": eta,
+        "waiting_seconds": max(0.0, now - waiting_since) if waiting_since is not None else None,
+        "current": state.get("current"),
+    }
+
+
+def progress_summary(state, now=None):
+    """Return an offline progress/ETA summary from durable queue state.
+
+    This helper never probes cards, processes, or model endpoints.  It is safe
+    for a CPU reporting process to call while the detached runner is active.
+    ETA is deliberately ``None`` until at least one completed job has usable
+    timestamps; incomplete or malformed records are excluded rather than
+    treated as zero-duration work.
+    """
+    now = now_s() if now is None else float(now)
+    jobs = state.get("jobs", {}) if isinstance(state, dict) else {}
+    terminal = {"done", "failed", "skipped"}
+    completed_durations = []
+    running_elapsed = []
+    for rec in jobs.values():
+        if not isinstance(rec, dict):
+            continue
+        start = rec.get("started_ts")
+        finish = rec.get("finished_ts")
+        if isinstance(start, (int, float)) and isinstance(finish, (int, float)) and finish >= start:
+            completed_durations.append(float(finish - start))
+        elif rec.get("status") == "running" and isinstance(start, (int, float)):
+            running_elapsed.append(max(0.0, now - float(start)))
+    counts = state.get("counts", {}) if isinstance(state, dict) else {}
+    total = len(jobs)
+    finished = sum(1 for rec in jobs.values() if isinstance(rec, dict) and rec.get("status") in terminal)
+    remaining = max(0, total - finished)
+    avg = (sum(completed_durations) / len(completed_durations)) if completed_durations else None
+    return {
+        "total_jobs": total,
+        "finished_jobs": finished,
+        "remaining_jobs": remaining,
+        "running_jobs": sum(1 for rec in jobs.values() if isinstance(rec, dict) and rec.get("status") == "running"),
+        "counts": dict(counts) if isinstance(counts, dict) else {},
+        "completed_duration_samples": len(completed_durations),
+        "mean_completed_seconds": avg,
+        "running_elapsed_seconds": running_elapsed,
+        "eta_seconds": (remaining * avg) if avg is not None and remaining else (0.0 if remaining == 0 else None),
+        "eta_basis": "mean completed job duration; excludes running/incomplete records" if avg is not None else None,
+    }
 
 
 def main(argv=None):
