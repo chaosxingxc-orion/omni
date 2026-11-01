@@ -10,7 +10,7 @@ RSI 的目标是让系统从有奖励的真实执行中更新可版本化组件�
 | --- | --- |
 | A0 对完整 TRAIN Fold B 1080 条 | 官方 SLU-F1 73.2225%，Intent 85.3704%；相对 Direct lock 的 SLU +28.1046pp。属于首轮系统收益，不是 TFRL/LoRA 收益，也不是 test 结果 |
 | 历史 K4 的完整 construction625 | lock 67.2040%，vote 66.8000%；未达到 +1pp 门槛，家族停止。四候选共享感知、改变采样，不是四轮纠错 |
-| 当前 TF-GRPO | 32组已完成，最终单步修正生成63条经验并完成正式封存；累计200次真实学习调用，恢复封存新增0次。H2队列已接续，learned/lock 尚无完整结果 |
+| 当前 TF-GRPO | 32组已完成，最终单步修正生成63条经验并完成正式封存；累计200次真实学习调用，恢复封存新增0次。H2已实际推理，但供应上限配置不一致触发拒绝；learned/lock 尚无完整结果 |
 | 主模型 LoRA | 独立 verl 环境、meta 冻结范围及 tiny 随机模型音频特征边界通过；尚无生产权重反向、adapter 回灌或精度收益 |
 
 结果来源：[A0 完整结果](../results/2026-10-31-a0-full1080-baseline-lock.json)、[K4 完整结果](../results/2026-10-31-tfrl-first625-result-and-next-plan-zh.md)、[LoRA 特征方案](../results/2026-11-01-main-model-lora-feature-plan-zh.md)。不同名单的绝对指标不能直接相减。
