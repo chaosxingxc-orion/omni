@@ -23,7 +23,7 @@
 1. **离线构建不能直接把镜像ID当FROM名称。** 首轮BuildKit尝试远端解析后失败，没有构建成功。修复为先核验本地不可变ID，打本地专用tag，用legacy builder、`--pull=false --network=none`构建。保留首轮失败记录。
 2. **LoRA误覆盖音频塔。** 初版meta探针检测到576个可训练张量，包含音频q/k/v，立即失败。显式192个完整模块路径加audio/visual排除后变为384个，且完整参数范围检查通过。未把错误配置用于真实训练；尚未将该行为归因为某个依赖的确定缺陷。
 3. **默认模型入口不适配。** 原配置为`qwen3_omni_moe`，该版verl实际选择`AutoModel`；Omni外层封装与文本训练forward约定不等价。需要Thinker专用加载绑定，并核对原checkpoint的`thinker.`前缀，不能靠改architecture名称宣称解决。
-4. **默认数据集没有音频路径。** nga的raw-completion和该版verl的图像/视频数据分支不能代替原生音频处理；音频展开、feature mask、Omni位置编码和回复loss mask还需适配。
+4. **默认数据集没有音频入口，但训练框架可复用。** 按用户最新要求，只训练主模型LoRA，音频塔冻结。verl的多模态字典传递、FSDP和损失框架可沿用图像路径；增加音频processor、feature mask、token展开与Omni位置适配即可，无需另建音频训练引擎。新增冻结特征边界已通过tiny模型原生输入/特征输入等价检查，真实权重训练仍待验证。详见[主模型LoRA与特征复用](2026-11-01-main-model-lora-feature-plan-zh.md)。
 
 nga目录与镜像未修改，没有访问其他NPU服务器。现有CANN9.1备用Dockerfile只作为证据保留，不因文件存在自动切换基础栈。Qwen3.5的GDN内核补丁与吞吐结论也不移植到Omni。
 
