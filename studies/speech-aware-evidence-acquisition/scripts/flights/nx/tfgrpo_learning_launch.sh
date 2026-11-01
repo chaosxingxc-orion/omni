@@ -35,7 +35,7 @@ case ${1:-} in
       printf '%s waiting-for-A0-generation-release\n' "$(date -u +%FT%TZ)" > "$P/status.txt"
       sleep 600
     done
-    export PORT_DOCKER_FLAGS='--pid host --network host --name saea-tfgrpo-learning-generation-v1'
+    export PORT_DOCKER_FLAGS="--pid host --network host --name saea-tfgrpo-learning-generation-v1 -e SAEA_STAGE_TIMING_PATH=$P/stage-timing.jsonl"
     bash "$D/work/scripts/port_py.sh" scripts/analysis/tfgrpo_learning_job.py run --repo "$S" --data "$D" --job "$JOB" --after "$AFTER" --out "$P/run"
     ;;
   *) printf 'Usage: %s verify|register|admit|launch\n' "$0" >&2; exit 2;;

@@ -2,13 +2,13 @@
 
 This bridge supplies no exposure authority. Its runtime factory requires a
 preflighted/served TRAIN artifact runtime and a registered batch binding. The
-request-fit callable must be that runtime's registered tokenizer gate. Dynamic
-stage orchestration and accepting a candidate remain the caller's duties.
+request-fit callable must be that runtime's registered tokenizer gate. Shared flight dispatch runs the stages; accepting a candidate remains separate.
 """
 from __future__ import annotations
 
 import copy
-from dataclasses import asdict
+import hashlib
+from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
 import re
@@ -289,11 +289,12 @@ def bind_runtime(runtime, *, receipt_root, request_fit=None):
         assert_lease=runtime.assert_generation_lease)
 
 
-def run_registered_learning(runtime, *, receipt_root, learner_root):
+def run_registered_learning(runtime, *, receipt_root, learner_root, retain_client=False):
     """Execute the pinned batch after ordinary runtime preflight/serve/lease.
 
-    The coordinator retains runtime finalization and candidate acceptance. This
-    entry uses no alternate transport or fabricated token fit.
+    The shared dispatcher retains the original client for ordinary sealing.
+    Standalone callers close it here. This entry uses no alternate transport
+    or fabricated token fit; a process restart never silently resets costs.
     """
     from .tfgrpo_source import load_dynamic_source
     from .tfgrpo_learning import ExperienceLearner
@@ -303,7 +304,29 @@ def run_registered_learning(runtime, *, receipt_root, learner_root):
         data_root=runtime._data_root,sample_ids=tuple(s.sample_id for s in runtime._samples),
         roster_sha256=registration['construction_roster_sha256'])
     batch=source['batch']
-    caller=bind_runtime(runtime,receipt_root=receipt_root)
+    sample_ids = {s.sample_id for s in runtime._samples}
+    if {row['sample_id'] for row in registration['contacts']} != sample_ids:
+        raise LearningError('every artifact roster row requires a registered learning contact')
+    learner_root = Path(learner_root).resolve()
+    if not learner_root.is_relative_to(Path(runtime._data_root).resolve()):
+        raise LearningError('learner artifacts must remain under the runtime data root')
+    # A fresh client cannot inherit a prior attempt's adapter cost or trace.
+    # Such a restart requires the registered recovery coordinator, never a
+    # silent replay into a newly opened shared trace sink.
+    caller = getattr(runtime, '_tfgrpo_caller', None) if retain_client else None
+    if caller is not None:
+        if (caller.root.resolve() != Path(receipt_root).resolve()
+                or caller.registration != registration or caller.plan != runtime.plan
+                or caller.client is not getattr(runtime, '_client', None)
+                or caller.client._closed):
+            raise LearningError('live learning recovery client or registration changed')
+    else:
+        if any(Path(receipt_root).glob('*.intent.json')):
+            raise LearningError('prior learning contacts require registered recovery; refusing a fresh client')
+        caller=bind_runtime(runtime,receipt_root=receipt_root)
+    if retain_client:
+        runtime._client = caller.client
+        runtime._tfgrpo_caller = caller
     try:
         learner=ExperienceLearner(learner_root,model_id=batch['model_id'],metered_call=caller,
             learning_config_sha256=batch['learning_config_sha256'],preflight=caller.preflight,
@@ -311,4 +334,106 @@ def run_registered_learning(runtime, *, receipt_root, learner_root):
         return learner.learn(batch['groups'],batch['parent'],policy_sha256=batch['policy_sha256'],
             rollout_kind=batch['rollout_kind'],**batch['common'])
     finally:
-        caller.client.close()
+        if not retain_client:
+            caller.client.close()
+
+
+@dataclass(frozen=True)
+class LearningStageSummary:
+    """Actual learning contacts; these are not task predictions or scores."""
+    document: dict
+    results: tuple = ()
+
+    def as_json(self):
+        return copy.deepcopy(self.document)
+
+
+def dispatch_registered_learning(runtime):
+    """Shared run_phases branch; ordinary FlightRuntime.seal owns finalization.
+
+    Each output is the anchor's LAST actual model response. The deterministic
+    candidate is separately pinned into the trace and phase summaries, never
+    misrepresented as an independently generated response for every anchor.
+    """
+    from .tfgrpo_learning import validate_experience
+
+    run_dir = runtime._run_dir()
+    root = run_dir / 'tfgrpo'
+    started = getattr(runtime, '_tfgrpo_started', None)
+    if started is None:
+        started = runtime._clock()
+        runtime._tfgrpo_started = started
+    candidate = run_registered_learning(runtime, receipt_root=root/'contacts',
+        learner_root=root/'learner', retain_client=True)
+    ended = runtime._clock()
+    runtime._contact_window = (started, ended)
+    caller = runtime._tfgrpo_caller
+    validate_experience(candidate, caller.model_id)
+    candidate_path = root/'learner/candidate.json'
+    if json.loads(candidate_path.read_bytes()) != candidate:
+        raise LearningError('candidate file differs from learned proposal')
+    candidate_pin = {'root':'data',
+        'relpath':str(candidate_path.resolve().relative_to(Path(runtime._data_root).resolve())),
+        'sha256':hashlib.sha256(candidate_path.read_bytes()).hexdigest(),
+        'experience_sha256':candidate['sha256'], 'deployment_accepted':False}
+    observed = {}
+    stage_contacts = {stage:[] for stage in ('summary','advantage','group_update','batch_update')}
+    for row in caller.registration['contacts']:
+        key = contact_key(row['stage'], row['identity'])
+        request = json.loads((caller.root/(key+'.intent.json')).read_bytes())['request']
+        response = caller.observed(request)
+        rid = response['receipt_id'].removeprefix(f'{caller.plan.run_id}/{caller.plan.attempt_id}/')
+        if rid in observed:
+            raise LearningError('duplicate metered learning request identity')
+        observed[rid] = (row, response)
+        stage_contacts[row['stage']].append({'sample_id':row['sample_id'],
+            'identity':row['identity'], 'request_id':rid, **response})
+    timings = caller.client.timings
+    if {t.request_id for t in timings} != set(observed):
+        raise LearningError('learning outputs require all original adapter timing custody')
+    last = {}
+    for timing in timings:
+        row, response = observed[timing.request_id]
+        if timing.sample_id != row['sample_id'] or timing.response_sha256 != response['response_sha256']:
+            raise LearningError('learning contact timing differs from response receipt')
+        last[timing.sample_id] = {'sample_id':timing.sample_id, 'response_text':response['text']}
+    if set(last) != {sample.sample_id for sample in runtime._samples}:
+        raise LearningError('learning artifact does not cover the exact TRAIN roster')
+    usage = {key:sum(response['usage'][key] for _,response in observed.values())
+             for key in ('calls','prompt_tokens','completion_tokens')}
+    if candidate['learning_usage'] != usage:
+        raise LearningError('candidate usage differs from actual adapter contact receipts')
+    runtime._output_rows = [last[s.sample_id] for s in runtime._samples]
+    runtime._phase_summaries = tuple(LearningStageSummary({
+        'schema':'saea-tfgrpo-stage-summary-v1', 'phase':stage, 'result_kind':'artifact',
+        'contacts':len(contacts), 'rows':len({r['sample_id'] for r in contacts}),
+        'contact_receipts':contacts,
+        **({'candidate':candidate_pin} if stage == 'batch_update' else {}),
+    }) for stage,contacts in stage_contacts.items())
+    binding = {'schema':'saea-tfgrpo-flight-proposal-v1', 'candidate':candidate_pin,
+        'batch_sha256':caller.registration['batch_sha256'],
+        'learning_config_sha256':caller.registration['learning_config_sha256'],
+        'contact_response_sha256':candidate['contact_response_sha256'],
+        'usage':usage, 'result_kind':'artifact'}
+    buffer = TraceBuffer(caller.plan.run_id)
+    buffer.emit('ORG', caller.plan.run_id+'/tfgrpo-candidate', {'org_learning_proposal':binding})
+    caller.client.flush_trace_buffer(buffer)
+    wall = max(ended-started, 1e-9)
+    payload = {
+        'dispatch':'registered-tfgrpo-learning', 'policy':runtime._composed.values['policy'],
+        'result_kind':'artifact', 'artifact_result':dict(runtime._artifact_result_binding),
+        'contact_count':len(observed), 'outputs_row_count':len(last),
+        'wall_seconds':wall, 'contacts_per_second':len(observed)/wall,
+        'tokens_per_second':usage['completion_tokens']/wall,
+        'tokens_per_second_basis':'actual_metered_completion_tokens',
+        'average_latency_seconds':sum(t.latency_seconds for t in timings)/len(timings),
+        'average_seconds_per_dataset_row':wall/len(last),
+        'processed_dataset_rows':len(last), 'total_dataset_rows':len(runtime._samples),
+        'remaining_dataset_rows':0, 'estimated_remaining_seconds':0,
+        'input_mode':'text-only-with-conservative-anchor-audio-debit',
+        'contact_window':{'from':started,'to':ended}, 'learning':binding,
+        'phases':[{'phase':stage,'contacts':len(rows)} for stage,rows in stage_contacts.items()],
+    }
+    from ..core.flight.receipts import require_mandatory_throughput_fields
+    require_mandatory_throughput_fields('run_phases', payload, ('contacts_per_second','tokens_per_second'))
+    return runtime.receipts.record('run_phases', payload)

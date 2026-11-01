@@ -10259,6 +10259,14 @@ class FlightRuntime:
         if policy in self._obs_policy_names():
             return self._run_obs_phases(policy)
 
+        feedback = baseline_values.get("prepared_training_feedback")
+        if (isinstance(feedback, Mapping)
+                and feedback.get("schema") == "saea-prepared-tfgrpo-dynamic-v1"):
+            from ...rails.tfgrpo_runtime import dispatch_registered_learning
+            return dispatch_registered_learning(self)
+        if baseline_values.get("tfgrpo_learning_registration") is not None:
+            raise FlightRuntimeError("TF-GRPO registration requires its dynamic source dispatcher")
+
         self._prepare_native_phase_runtime(policy)
         client_kwargs = self.frozen_core_client_kwargs()
         client_initialization_started = self._clock()
