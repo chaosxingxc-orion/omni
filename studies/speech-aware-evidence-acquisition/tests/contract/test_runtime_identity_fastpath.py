@@ -186,8 +186,15 @@ def test_bytes_replaced_same_size_and_mtime_restored_is_the_documented_residual_
     assert target.stat().st_mtime_ns == original_stat.st_mtime_ns
 
     diagnostics: dict[str, object] = {}
-    gate.assert_model_touch_allowed(plan, diagnostics=diagnostics)  # ACCEPTS -- the weakness
-    assert diagnostics["gguf_fast_path_used"] is True
+    # The current process's byte-verified cache now detects changed ctime.
+    with pytest.raises(GateClosed, match='SHA-256 drift'):
+        gate.assert_model_touch_allowed(plan, diagnostics=diagnostics)
+    # Explicit fast mode in a fresh process still has the documented disk
+    # cache limitation; in-memory verification is never forged from disk.
+    from speech_aware_evidence_acquisition.contracts import gate_runtime_gguf
+    gate_runtime_gguf._MEMORY_IDENTITIES.clear()
+    gate.assert_model_touch_allowed(plan, full_hash=False, diagnostics=diagnostics)
+    assert diagnostics['gguf_fast_path_used'] is True
 
 
 @pytest.mark.requires_saea_container

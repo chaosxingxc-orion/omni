@@ -9,6 +9,7 @@ stage 1, pure move, no behaviour change).
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 from typing import Mapping
 
@@ -40,6 +41,39 @@ class FinalizeResult:
     attempt_state: str
 
 
+def _artifact_native_replay(bundle, *, data_root, plan, values):
+    """Revalidate the operational recovery used by a TF-GRPO artifact flight.
+
+    The scientific registration keeps its original attempt. Recovering it must
+    pass the same pinned native ancestry check as preflight, never rewrite the
+    registered plan or revive an aborted attempt.
+    """
+    if not isinstance(values.get('tfgrpo_learning_registration'), Mapping):
+        return None
+    root = Path(data_root).resolve()
+    run_dir = Path(bundle.manifest_path).resolve().parent
+    expected = root/'runs'/plan.run_id/plan.attempt_id
+    path = run_dir/'resume-declaration.json'
+    if not path.exists():
+        return None
+    if run_dir != expected or path.is_symlink():
+        raise ValueError('artifact native recovery must use its exact attempt directory')
+    document = json.loads(path.read_bytes())
+    if (not isinstance(document, dict)
+            or set(document) != {'schema', 'run_id', 'attempt_id', 'predecessors', 'native_recovery_receipt'}
+            or document['schema'] != 'saea-resume-declaration-v1'
+            or document['run_id'] != plan.run_id or document['attempt_id'] != plan.attempt_id):
+        raise ValueError('artifact native recovery declaration differs')
+    from ..flight.native_recovery import load_native_recovery
+    replay = load_native_recovery(document['native_recovery_receipt'], data_root=root,
+                                  plan=plan, arm=values['arm'])
+    expected_predecessors = [{'attempt_id': replay.source_plan.attempt_id,
+        'mode': 'native-contact-journal', 'pin_sha256': replay.source_binding()['attempt_sha256']}]
+    if document['predecessors'] != expected_predecessors:
+        raise ValueError('artifact native recovery predecessor custody differs')
+    return replay
+
+
 def _validate_artifact_finalization_binding(
     bundle, repo_root: Path, data_root: Path
 ) -> None:
@@ -64,12 +98,14 @@ def _validate_artifact_finalization_binding(
     try:
         composed = compose(Path(repo_root), **dict(fragments))
         plan = ExecutionPlan(**manifest["plan"]).validate()
+        replay = _artifact_native_replay(bundle, data_root=data_root, plan=plan, values=composed.values)
         binding = validate_artifact_result_binding(
             composed.values,
             plan=plan,
             repo_root=Path(repo_root),
             sample_ids=tuple(sorted(bundle.split_ids)),
             data_root=Path(data_root),
+            native_contact_replay=replay,
         )
     except (KeyError, TypeError, ValueError, RuntimeError, OSError) as error:
         raise BundleError(

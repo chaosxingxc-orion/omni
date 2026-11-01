@@ -24,6 +24,8 @@ monkeypatch target) and the path-safety helpers stay bare imports.
 from __future__ import annotations
 
 import hashlib
+import os
+import threading
 from pathlib import Path
 from typing import Mapping
 
@@ -33,6 +35,37 @@ from .errors import GateClosed
 from .identifiers import _SHA256
 from .identity_cache import RUNTIME_IDENTITY_CACHE_FILENAME
 from .receipts import _resolve_under, _safe_relative_path
+
+
+# Successful full-byte verification, scoped to one process, root and receipt.
+# Prefer verified process evidence when the optional disk cache is unavailable
+# or stale. Changing that disk file invalidates reuse; an unchanged stale file does not.
+_MEMORY_IDENTITIES = {}
+_MEMORY_CACHE_FILES = {}
+_MEMORY_LOCK = threading.Lock()
+
+
+def _after_fork():
+    global _MEMORY_LOCK
+    _MEMORY_LOCK = threading.Lock()
+    _MEMORY_IDENTITIES.clear()
+    _MEMORY_CACHE_FILES.clear()
+
+
+if hasattr(os, 'register_at_fork'):
+    os.register_at_fork(after_in_child=_after_fork)
+
+
+def _cache_stat(path):
+    try:
+        return _memory_stat(path)
+    except OSError:
+        return None
+
+
+def _memory_stat(path):
+    info = path.stat()
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
 
 
 class _GgufIdentityMixin:
@@ -71,17 +104,25 @@ class _GgufIdentityMixin:
                 f"runtime receipt: cannot read bytes for identity cache: {error}"
             ) from error
         resolved_full_hash = _contracts_pkg._resolve_full_hash_override(full_hash)
+        materialization_root = Path(self.model_root or self.data_root)
+        memory_key = (os.getpid(), str(materialization_root.resolve()), receipt_sha256)
+        with _MEMORY_LOCK:
+            memory_entries = dict(_MEMORY_IDENTITIES.get(memory_key, {}))
         do_full = (
             resolved_full_hash
             if resolved_full_hash is not None
-            else receipt_sha256 not in _contracts_pkg._SESSION_FULL_HASH_DONE
+            else (receipt_sha256 not in _contracts_pkg._SESSION_FULL_HASH_DONE or not memory_entries)
         )
-        materialization_root = Path(self.model_root or self.data_root)
         cache_path = materialization_root / RUNTIME_IDENTITY_CACHE_FILENAME
         cached_entries = (
             None if do_full else _contracts_pkg._load_identity_cache(cache_path, receipt_sha256)
         )
 
+        with _MEMORY_LOCK:
+            cache_unchanged = memory_key in _MEMORY_CACHE_FILES and _MEMORY_CACHE_FILES[memory_key] == _cache_stat(cache_path)
+        use_memory = not do_full and cache_unchanged
+        verified_memory = {}
+        memory_hits = 0
         seen: set[str] = set()
         total_bytes = 0
         new_cache_entries: dict[str, dict[str, int]] = {}
@@ -110,8 +151,20 @@ class _GgufIdentityMixin:
                 raise GateClosed(f"{label} lacks valid bytes/sha256")
             resolved = _resolve_under(materialization_root, relative, f"{label}.path")
 
+            before = _memory_stat(resolved)
             cheap = _contracts_pkg._cheap_file_identity(resolved, f"{label}.path")
             cached_entry = cached_entries.get(relative) if cached_entries is not None else None
+            memory_entry = memory_entries.get(relative) if use_memory else None
+            # A valid disk cache may describe the pre-reboot device number.
+            # Prefer this process's actual byte verification over stale stats.
+            if memory_entry is not None and memory_entry != (before, recorded_bytes, recorded_sha):
+                cached_entry = None
+            if memory_entry == (before, recorded_bytes, recorded_sha):
+                if _memory_stat(resolved) != before:
+                    raise GateClosed(f"{label} changed during cached identity verification")
+                cached_entry = cheap
+                verified_memory[relative] = memory_entry
+                memory_hits += 1
             if cached_entry is not None and _contracts_pkg._cheap_identity_matches(
                 cheap, cached_entry
             ):
@@ -140,6 +193,9 @@ class _GgufIdentityMixin:
                 actual_bytes = cheap["size"]
             else:
                 actual_bytes, actual_sha = _contracts_pkg._measure_file(resolved, f"{label}.path")
+                after = _memory_stat(resolved)
+                if before != after:
+                    raise GateClosed(f"{label} changed during full identity verification")
                 if actual_bytes != recorded_bytes:
                     raise GateClosed(
                         f"{label} size drift: receipt {recorded_bytes}, actual {actual_bytes}; "
@@ -151,6 +207,10 @@ class _GgufIdentityMixin:
                         f"actual {actual_sha[:12]}...; model touch refused"
                     )
                 full_hashed_count += 1
+                verified_memory[relative] = (after, recorded_bytes, recorded_sha)
+            # Disk-cache hits do not become new byte-verification authority.
+            if relative not in verified_memory and memory_entries.get(relative) == (before, recorded_bytes, recorded_sha):
+                verified_memory[relative] = memory_entries[relative]
             new_cache_entries[relative] = cheap
             total_bytes += actual_bytes
         if require_lock_totals and total_bytes != lock_entry["size_bytes"]:
@@ -164,6 +224,11 @@ class _GgufIdentityMixin:
         # (best-effort convenience, module docstring); it never fails an already-
         # successful gate check.
         _contracts_pkg._write_identity_cache(cache_path, receipt_sha256, new_cache_entries)
+        if len(verified_memory) == len(files):
+            with _MEMORY_LOCK:
+                # Replace only after every file and the aggregate validated.
+                _MEMORY_IDENTITIES[memory_key] = verified_memory
+                _MEMORY_CACHE_FILES[memory_key] = _cache_stat(cache_path)
         if full_hashed_count == len(files):
             # Every file was just genuinely, fully re-hashed from bytes this
             # call -- this satisfies the process/session floor (see
@@ -171,6 +236,7 @@ class _GgufIdentityMixin:
             # whether that full pass was explicitly forced or auto-decided.
             _contracts_pkg._SESSION_FULL_HASH_DONE.add(receipt_sha256)
         if diagnostics is not None:
+            diagnostics["gguf_files_memory_cache_hits"] = memory_hits
             diagnostics["gguf_files_total"] = len(files)
             diagnostics["gguf_files_full_hashed"] = full_hashed_count
             diagnostics["gguf_fast_path_used"] = full_hashed_count == 0
