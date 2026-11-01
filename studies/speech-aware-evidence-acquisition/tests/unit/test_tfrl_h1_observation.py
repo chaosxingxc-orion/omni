@@ -9,6 +9,8 @@ import tfrl_h1_observation as m
 
 BINDING={'model_fragment':m.MODEL,'service_session':'serving-a0-remaining353-selected-resident-v1',
          'profile':'qwen3-omni-real500-2xtp4-s128-b2048-v1','runtime_receipt':'receipts/runtime-a0-remaining353-selected-resident-v1.json'}
+if (ROOT/'configs/evaluation/tfgrpo-h2-runtime-v1.json').exists():
+    BINDING=m.read(ROOT/'configs/evaluation/tfgrpo-h2-runtime-v1.json')
 
 
 def test_single_round_reuses_exact_h1_dataset_without_learning_or_h2_scores(monkeypatch):
