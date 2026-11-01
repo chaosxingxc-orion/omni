@@ -1,0 +1,33 @@
+{
+  "schema": "saea-native-contact-replay-validation-v1",
+  "implementation_commit": "4fc38e23",
+  "public_code_commit": "83b235ed",
+  "implementation_tests": {
+    "passed": 826,
+    "skipped": 1,
+    "seconds": 81.62,
+    "exit_code": 0
+  },
+  "public_tests": {
+    "passed": 816,
+    "skipped": 1,
+    "seconds": 76.62,
+    "exit_code": 0
+  },
+  "real_generation_rows": 0,
+  "planned_real_rows": 625,
+  "new_model_calls": 0,
+  "implemented": [
+    "durable observed response reuse",
+    "fresh attempt metering separated from historic spend",
+    "bundle replay source and cost verification"
+  ],
+  "remaining": [
+    "production recovery registration and FlightRuntime integration",
+    "FIT receipt reuse or fresh registration",
+    "repeated recovery chains",
+    "unknown contacts reconciliation and other-row continuation",
+    "production complete bundle end-to-end verification"
+  ],
+  "automatic_production_resume_complete": false
+}
