@@ -1,0 +1,15 @@
+{
+  "schema": "saea-h2-terminal-archive-verification-v2",
+  "archive_sha256": "974832246beacdf61fdeb2964f157838d19a329c8291345f0683ad671ad1dba5",
+  "full_archive_sha256_verified": true,
+  "rows": 312,
+  "journal_files_verified": 1872,
+  "journal_manifest_sha256": "eb5eae73588ce819d4f6e0b4903e77812b53fad9103b17b7ae0560f0ae7d2bc6",
+  "output_sha256": "b0ae93bf02c32405f38735652bf08347c4aeb47a0b733984de1e47d1c04bbe86",
+  "paired_result_sha256": "4267b09c2ad953c84f3fac5a97021120d113499ab812d810becf2a02584341b5",
+  "checkpoint_chain_verified": true,
+  "candidate_file_sha256": "862bb4966e63a6aeb42037d5b366c68e567f812f8ccd42e09b2a9be235d095fd",
+  "analysis_complete": true,
+  "whole_archive_authoritative": false,
+  "scope": "Exact outputs, complete checkpoint hash chain, 1872 journal byte hashes against live terminal audit, paired result and sealed candidate; no automatic restore authority"
+}
