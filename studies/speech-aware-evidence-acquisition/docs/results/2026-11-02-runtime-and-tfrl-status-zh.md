@@ -46,3 +46,5 @@ current-seed 家族在固定 625 条开发集合上的官方合并结果为：`v
 容量探测、batch-size 扩展和旧 current-seed 家族均已终态或未晋升，不列入下一轮重复实验。监控保持 600 秒轮巡或明确终态事件触发；下一次 NPU 任务必须报告逐卡利用率、完成量/总量、秒/条、资源和 ETA。
 
 队列监控也已完成一项工程修复（`016388cf`）：`scripts/npu/card_queue.py` 将进程存活/日志终态检查与昂贵的 `npu-smi`/Docker 卡探测分离。等待 gated job 时，卡探测默认 600 秒缓存；每个任务首次进入卡门禁时强制探测，避免前一任务释放卡后盲启动或产生无谓空档。断点 checkpoint、SSH 断链恢复、未知启动拒绝和终态判断保持原语义。公开 CPU 回归现为 **50 项通过**；本地无 pytest，因此未将该结果扩大为完整 study 测试通过。
+
+TFRL-v2 bank 的 CPU 准入诊断已实现（`0b0d0247`，`scripts/checks/tfrl_v2_bank_readiness.py`）。对当前 `bank-release-v1.json` 的真实审计结果为 `ready=false`，H1、H2 和 union 三份 release 各有 7 个阻塞项：receipt zero hash、token measure 未达到 `vllm-tokenize`、exemplar/rule content hash 缺失、两类 token count 未测量，以及 receipt artifact 不存在。工具以非零退出码 fail-closed，不创建或修复 bank；机器可读结果见 [`2026-11-02-tfrl-v2-bank-readiness.json`](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-02-tfrl-v2-bank-readiness.json)。因此下一步必须在固定镜像内完成真实 bank distillation 和 vLLM tokenizer 计量，之前不安排 smoke 或大规模 NPU。

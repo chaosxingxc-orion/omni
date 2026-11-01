@@ -177,3 +177,5 @@ odd40 仍处于真实运行时准入阶段。625 条真实 construction 的供�
 下一阶段先在固定镜像内完成 TFRL-v2 bank 的真实 tokenizer 计量、receipt hash 和 4 行 smoke，再把 CPU bank distillation、评分和成本归因接入独立 ready-queue 后继 job，避免 NPU 等待 CPU；smoke 通过后才安排 1,080 行 Fold B。方法冻结且 D/A/best-T 的 runtime、预算、owner allowance、exposure 和 detached identity 齐全后，才运行完整 13,078 条 test。监控维持 600 秒轮巡或明确终态事件，后续每个 NPU 任务继续报告完成量/总量、秒/条、卡数、实例数、逐卡利用率、成本和 ETA。
 
 队列监控修复已推送 `main` 的 `016388cf`：进程存活、日志终态和 checkpoint 仍按原轮询频率检查；等待 gated job 时昂贵的 `npu-smi`/Docker 卡探测默认缓存 600 秒，每个任务首次进入门禁强制探测。这样降低监控开销，同时保留断点恢复、未知启动拒绝和防止盲启动的卡安全门禁。CPU 回归 50 项通过；完整 study 测试仍需固定镜像复核。
+
+TFRL-v2 bank 的 CPU 准入诊断已推送 `main` 的 `0b0d0247`。当前 `bank-release-v1.json` 的 H1、H2 和 union 三份 release 均为 `ready=false`，每份有 7 个阻塞项：receipt zero hash、未完成 `vllm-tokenize` 计量、exemplar/rule hash 缺失、token count 未测量及 receipt artifact 不存在。诊断工具 fail-closed，不创建伪造 bank；真实审计结果见 [bank readiness JSON](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-02-tfrl-v2-bank-readiness.json)。完成固定镜像内真实 distillation 和 tokenizer 计量前，不安排 TFRL-v2 smoke 或大规模 NPU。

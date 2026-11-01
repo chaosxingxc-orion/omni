@@ -1,0 +1,65 @@
+{
+  "ready": false,
+  "release_file": "studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/bank-release-v1.json",
+  "reports": [
+    {
+      "consumer": "R01C-H2",
+      "measure": null,
+      "ready": false,
+      "reasons": [
+        "receipt hash is zero, malformed, or pending",
+        "token measure is None, expected 'vllm-tokenize'",
+        "exemplar_bank_content_sha256 is zero or malformed",
+        "rule_bank_content_sha256 is zero or malformed",
+        "exemplar token count is not measured",
+        "rule token count is not measured",
+        "receipt artifact missing: studies/speech-aware-evidence-acquisition/docs/analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/R01C-H1/bank-receipt.json"
+      ],
+      "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "release": "half-R01C-H1",
+      "source_halves": [
+        "R01C-H1"
+      ]
+    },
+    {
+      "consumer": "R01C-H1",
+      "measure": null,
+      "ready": false,
+      "reasons": [
+        "receipt hash is zero, malformed, or pending",
+        "token measure is None, expected 'vllm-tokenize'",
+        "exemplar_bank_content_sha256 is zero or malformed",
+        "rule_bank_content_sha256 is zero or malformed",
+        "exemplar token count is not measured",
+        "rule token count is not measured",
+        "receipt artifact missing: studies/speech-aware-evidence-acquisition/docs/analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/R01C-H2/bank-receipt.json"
+      ],
+      "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "release": "half-R01C-H2",
+      "source_halves": [
+        "R01C-H2"
+      ]
+    },
+    {
+      "consumer": "FOLD-B",
+      "measure": null,
+      "ready": false,
+      "reasons": [
+        "receipt hash is zero, malformed, or pending",
+        "token measure is None, expected 'vllm-tokenize'",
+        "exemplar_bank_content_sha256 is zero or malformed",
+        "rule_bank_content_sha256 is zero or malformed",
+        "exemplar token count is not measured",
+        "rule token count is not measured",
+        "receipt artifact missing: studies/speech-aware-evidence-acquisition/docs/analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/union/bank-receipt.json"
+      ],
+      "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "release": "union",
+      "source_halves": [
+        "R01C-H1",
+        "R01C-H2"
+      ]
+    }
+  ],
+  "schema": "saea-tfrl-v2-bank-readiness-v1"
+}
