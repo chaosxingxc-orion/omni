@@ -2922,12 +2922,12 @@ def validate_prompt_contact_limits(config):
             and all(not arm.all_release_swaps and arm.instruction_template is None
                     and arm.decoding is None for arm in group.arms)
         )
-    paired_group=(group is not None and group.is_template and group.arm_ids==("learned","lock")
-        and group.arm_visits=="first" and group.arms[0].instruction_template is not None
-        and not group.arms[0].deliver and group.arms[0].replicate_of is None
-        and group.arms[1].deliver and group.arms[1].instruction_template is None
-        and group.arms[1].replicate_of is None)
-    expected_contacts = 7 if seed_group else 4 if odd40_group else 3 if paired_group else 2
+    paired_group=(group is not None and group.is_template and group.arm_ids in (("learned","lock"),("learned","compact","lock"))
+        and group.arm_visits=="first"
+        and all(arm.instruction_template is not None and not arm.deliver and arm.replicate_of is None for arm in group.arms[:-1])
+        and group.arms[-1].deliver and group.arms[-1].instruction_template is None
+        and group.arms[-1].replicate_of is None)
+    expected_contacts = 7 if seed_group else 4 if odd40_group else len(group.arms)+1 if paired_group else 2
     if config.answer_selection is not None:
         from .whole_answer_selection import validate_policy
         validate_policy(config.answer_selection)

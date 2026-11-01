@@ -1,0 +1,35 @@
+{
+  "schema": "saea-tfgrpo-render-cost-audit-v1",
+  "candidate_content_sha256": "49c5e138bf15a47f43c4da9c32c39bcfeb279abc8fefcfa0aab65e1cf90e41e1",
+  "items": 63,
+  "original_template_sha256": "15a18109538af87dbed4b3ece2684ebb04db2f6a966434e125eb14f0d7bf6cb3",
+  "short_id_template_sha256": "9a7a8cc250afb6e4611f28cfe2749403a0274b4045d84c26758be765ede5eef2",
+  "value_bytes_sha256": "b5f26e541ee238c53129932f1f123f56ee04aff80ceb48aa87bceeea93b67f36",
+  "original_template_tokens": 5850,
+  "base_template_tokens": 208,
+  "original_added_tokens": 5642,
+  "short_id_added_tokens": 2177,
+  "saved_tokens": 3465,
+  "added_token_reduction_fraction": 0.6141439205955335,
+  "key_characters": 4095,
+  "value_characters": 11479,
+  "id_references_inside_values": 0,
+  "values_and_order_unchanged": true,
+  "new_model_calls": 0,
+  "new_tokenizer_endpoint_calls": 0,
+  "candidate_or_policy_written": false,
+  "limits": [
+    "Token counts are local tokenizer counts, not complete multimodal request FIT.",
+    "Changing rendered identifiers can change model outputs; semantic or accuracy equivalence is not established.",
+    "No evidence that context shortening fixes the failed candidate or covers all-wrong groups."
+  ],
+  "candidate_file_sha256": "862bb4966e63a6aeb42037d5b366c68e567f812f8ccd42e09b2a9be235d095fd",
+  "base_template_sha256": "18bff5c557cac7ac14be6b08aa0a1a6ad54c1b9820199c3b6749b2271d756fbd",
+  "runtime_receipt_sha256": "062ad01cfbca9c48439f31d563a2c3840b3d5b3153f3a507b84ee5f5c8befc48",
+  "tokenizer_files": {
+    "config.json": "e6f8c637528461398ef4e11d48b6112ce73db2458a563dfea548127c2cce253f",
+    "tokenizer_config.json": "dc3c31c3bdaedd5016382bb3cbe07323026775ad51f5a4fb564505992ae4a670",
+    "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+    "merges.txt": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3"
+  }
+}

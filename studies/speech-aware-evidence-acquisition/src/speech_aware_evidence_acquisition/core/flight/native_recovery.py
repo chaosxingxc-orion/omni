@@ -80,29 +80,23 @@ def native_contact_custody_enabled(values):
     if native.get('answer_selection') == 'odd40-whole-answer-v1':
         return True  # Preserve the already reviewed method's existing path.
     paired = False
-    if values.get('policy') == 'phase-native-module-v1-c3':
+    paired_ceiling = 3
+    if values.get('policy') in ('phase-native-module-v1-c3','phase-native-module-v1-c4'):
         components=native.get('consumption_module',{}).get('components',[])
         learned=[c for c in components if c.get('component_id')=='tfgrpo-solver-experience'
                  and c.get('state')=='on' and c.get('params',{}).get('target_arm')=='learned']
         if len(learned)!=1:return False
         params=learned[0]['params']
         try:
-            from ...rails.tfgrpo_consumption import validate_params
+            from ...rails.tfgrpo_consumption import validate_params,paired_layout_matches
             validate_params(params)
-            group=native['roles']['solver']['template_variants']
-            arms=group['arms']
-            pin={'relpath':'configs/'+params['template']['relpath'],'sha256':params['template']['sha256']}
-            paired=(len(arms)==2 and group['node']=='solver'
-                and arms[0].get('arm_id')=='learned' and arms[0].get('instruction_template')==pin
-                and not arms[0].get('deliver') and not arms[0].get('replicate_of')
-                and arms[1].get('arm_id')=='lock' and arms[1].get('deliver') is True
-                and not arms[1].get('instruction_template') and not arms[1].get('replicate_of')
-                and values['phase_material']['solver']['instruction_template']==params['base_template']['relpath'])
+            paired_ceiling=4 if 'compact_params' in params else 3
+            paired=paired_layout_matches(values,params) and values.get('policy')==f'phase-native-module-v1-c{paired_ceiling}'
         except (KeyError,TypeError,ValueError):return False
         if not paired:return False
     if (values.get('transport') != 'vllm'
             or values.get('arm') != 'raw-speech-agent-native-tools'
-            or values.get('policy') != ('phase-native-module-v1-c3' if paired else 'phase-native-module-v1-c2')
+            or values.get('policy') != (f'phase-native-module-v1-c{paired_ceiling}' if paired else 'phase-native-module-v1-c2')
             or values.get('carrier_lock_key') != 'slurp'
             or native.get('review_loop') != 'off'
             or native.get('max_revisions') != 0
@@ -129,6 +123,6 @@ def native_contact_custody_enabled(values):
         config = load_native_episode_config(values, default_phase_program(values['policy']))
     except (ValueError, TypeError, KeyError):
         return False
-    return (config.max_contacts == (3 if paired else 2) and config.max_revisions == 0
+    return (config.max_contacts == (paired_ceiling if paired else 2) and config.max_revisions == 0
             and config.acquisition_role is None and config.relisten_json is None
             and all(not role.tool_names and role.samples == 1 for role in config.roles))

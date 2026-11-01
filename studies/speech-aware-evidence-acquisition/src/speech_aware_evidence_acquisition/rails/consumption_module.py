@@ -238,7 +238,7 @@ _COLUMN_OPTIONAL = frozenset({"prepared_seed"})
 
 COMPONENT_CATALOGUE: tuple[ComponentSpec, ...] = (
     ComponentSpec("tfgrpo-solver-experience", "USE, learned Solver experience for development",
-        frozenset({STATE_ON}), frozenset({"candidate", "source_manifest", "model_id", "base_template", "template", "consumer_ids", "purpose"}), optional_params=frozenset({"target_arm"})),
+        frozenset({STATE_ON}), frozenset({"candidate", "source_manifest", "model_id", "base_template", "template", "consumer_ids", "purpose"}), optional_params=frozenset({"target_arm", "rendering", "render_manifest", "compact_params"})),
     ComponentSpec(NODE_CONTEXT_PRESENTATION, "USE, explicit node context presentation",
         frozenset({STATE_ON}), frozenset(),
         optional_params=frozenset({"tool_schema_rendering", "reviewer_history_scope"})),
@@ -1742,13 +1742,14 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
             if layer["phase_material"]["solver"]["instruction_template"] != params["base_template"]["relpath"]:
                 raise ConsumptionModuleConfigError("learned experience requires the unchanged Solver base")
             if params.get("target_arm"):
-                expected={"relpath":"configs/"+params["template"]["relpath"],"sha256":params["template"]["sha256"]}
-                if (len(block.columns)!=1 or len(block.template_columns)!=1
-                        or block.template_columns[0].node!="solver"
-                        or block.template_columns[0].column_id!="learned"
-                        or block.template_columns[0].template!=expected
-                        or block.template_frame["twin"]):
-                    raise ConsumptionModuleConfigError("learned experience requires its exact paired template column")
+                declared=[("learned",params)]
+                if "compact_params" in params:declared.append(("compact",params["compact_params"]))
+                if len(block.columns)!=len(declared) or len(block.template_columns)!=len(declared) or block.template_frame["twin"]:
+                    raise ConsumptionModuleConfigError("exact experience template columns required")
+                for column,(name,p) in zip(block.template_columns,declared):
+                    expected={"relpath":"configs/"+p["template"]["relpath"],"sha256":p["template"]["sha256"]}
+                    if column.node!="solver" or column.column_id!=name or column.template!=expected:
+                        raise ConsumptionModuleConfigError("experience column differs from source rendering")
             else:
                 writer.set(("phase_material", "solver", "instruction_template"), params["template"]["relpath"],
                            component_id=cid, replace_only=True)
@@ -1928,11 +1929,11 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
             and block.supply_frame["twin"] is True
             and not block.supply_frame.get("alternates")
         )
-        paired_columns=(len(block.columns)==len(block.template_columns)==1
-            and block.template_columns[0].column_id=="learned"
-            and block.template_columns[0].node=="solver" and not block.template_frame["twin"]
-            and any(d.component_id=="tfgrpo-solver-experience" and d.params.get("target_arm")=="learned"
-                    for d in block.armed()))
+        paired_decls=[d for d in block.armed() if d.component_id=="tfgrpo-solver-experience" and d.params.get("target_arm")=="learned"]
+        expected_columns=(["learned","compact"] if len(paired_decls)==1 and "compact_params" in paired_decls[0].params else ["learned"])
+        paired_columns=(len(paired_decls)==1 and len(block.columns)==len(block.template_columns)==len(expected_columns)
+            and [c.column_id for c in block.template_columns]==expected_columns
+            and all(c.node=="solver" for c in block.template_columns) and not block.template_frame["twin"])
         if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns)
                 or ceiling != 2 or block.solver_tool_access):
             raise ConsumptionModuleConfigError(
