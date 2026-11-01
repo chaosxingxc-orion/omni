@@ -1,0 +1,23 @@
+{
+  "schema": "saea-tfgrpo-export-validation-v1",
+  "public_code_commit": "646dd328",
+  "formal_tests": {
+    "implementation": {"passed": 17, "seconds": 11.89, "exit_code": 0},
+    "public": {"passed": 17, "seconds": 11.70, "exit_code": 0},
+    "scope": "sealed trajectory exporter and first known-response recovery coordinator"
+  },
+  "export": {
+    "exit_code": 0,
+    "h1": {"mixed_groups": 52, "trajectories": 208, "a0_error_intersection": 32, "intersection_learning_calls": 193, "file_sha256": "29bbc32ef6446f5174255bfabc82fbdde5a2b12f896ec988a3786504a6920e3a"},
+    "h2": {"mixed_groups": 48, "trajectories": 192, "a0_error_intersection": 29, "intersection_learning_calls": 175, "file_sha256": "842ed6888d9ef9258b5812febe6e9521ceffb45a685efc7720f6a1294639a180"},
+    "source_projection": "same-policy seed-only Solver trajectories with shared Perception; exact text and response custody, audio hash only",
+    "gold_scope": "TRAIN intent and slots for learning supervision only; no reference transcripts"
+  },
+  "new_model_calls": 0,
+  "new_tokenizer_calls": 0,
+  "new_scoring_jobs": 0,
+  "learning_executed": false,
+  "candidate_gain_verified": false,
+  "production_recovery_verified": false,
+  "recovery_limits": ["one predecessor only", "unknown contacts held", "adopting already running old launcher still under implementation"]
+}
