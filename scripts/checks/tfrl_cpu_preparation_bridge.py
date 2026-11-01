@@ -63,8 +63,19 @@ def validate(bridge: Mapping[str, Any], *, data_root: Path) -> dict[str, Any]:
     protocol_hash = source.get("protocol_sha256")
     if receipt.get("protocol_sha256") != protocol_hash:
         raise ValueError("source protocol hash differs from receipt")
-    if receipt.get("generation_admitted") is not False:
-        raise ValueError("CPU preparation receipt must keep generation_admitted=false")
+    closure_pin = source.get("closure")
+    if not isinstance(closure_pin, Mapping):
+        raise ValueError("source.closure pin is required")
+    closure = json.loads(_pin(data_root, closure_pin, "source.closure"))
+    if closure.get("schema") != "saea-r01c-preparation-closure-v1":
+        raise ValueError("source closure schema is not R01C preparation closure")
+    if closure.get("generation_admitted") is not False or closure.get("rows") != 625:
+        raise ValueError("source closure does not prove CPU-only 625-row preparation")
+    if closure.get("protocol_sha256") != protocol_hash:
+        raise ValueError("source closure protocol hash differs from receipt")
+    receipt_hash = hashlib.sha256(raw_receipt).hexdigest()
+    if closure.get("pins", {}).get("preparation-runs/SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1/encode-v1/receipt.json") != receipt_hash:
+        raise ValueError("source closure does not pin the exact receipt")
     for index, pin in enumerate(source.get("content", [])):
         if not isinstance(pin, Mapping):
             raise ValueError(f"source.content[{index}] is not a pin")
@@ -81,6 +92,7 @@ def validate(bridge: Mapping[str, Any], *, data_root: Path) -> dict[str, Any]:
         "receipt_sha256": source["receipt"]["sha256"],
         "generation_admitted": False,
         "content_pin_count": len(source.get("content", [])),
+        "closure_sha256": source["closure"]["sha256"],
     }
 
 

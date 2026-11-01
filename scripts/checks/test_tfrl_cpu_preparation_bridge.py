@@ -21,6 +21,12 @@ class BridgeTests(unittest.TestCase):
             "generation_admitted": False,
         }, sort_keys=True) + "\n")
         self.content_path.write_text("{\"rows\":625}\n")
+        self.closure_path = self.root / "closure.json"
+        self.closure_path.write_text(json.dumps({
+            "schema": "saea-r01c-preparation-closure-v1", "generation_admitted": False, "rows": 625,
+            "protocol_sha256": "a" * 64,
+            "pins": {"preparation-runs/SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1/encode-v1/receipt.json": hashlib.sha256(self.receipt_path.read_bytes()).hexdigest()},
+        }, sort_keys=True) + "\n")
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -32,7 +38,7 @@ class BridgeTests(unittest.TestCase):
         source_run = "SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1"
         return {
             "schema": "saea-tfrl-cpu-preparation-bridge-v1",
-            "source": {"run_id": source_run, "protocol_sha256": "a" * 64, "receipt": self.pin(self.receipt_path), "content": [self.pin(self.content_path)]},
+            "source": {"run_id": source_run, "protocol_sha256": "a" * 64, "receipt": self.pin(self.receipt_path), "closure": self.pin(self.closure_path), "content": [self.pin(self.content_path)]},
             "target": {"run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1", "source_run_id": source_run, "source_protocol_sha256": "a" * 64},
             "generation_admitted": False,
         }
