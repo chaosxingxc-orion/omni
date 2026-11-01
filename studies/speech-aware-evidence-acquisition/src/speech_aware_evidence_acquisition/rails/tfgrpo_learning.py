@@ -139,6 +139,30 @@ def apply_operations(items, operations, *, max_items, max_characters):
     return result
 
 
+def semantic_advantage(text):
+    """Extract the final experience section without inventing model content.
+
+    The official prompt requests tagged sections. Some normal-stop responses
+    use opening tags as headings and omit all closing tags. Accept only one
+    final Experiences heading with a nonempty numbered list and no further
+    markup; ambiguous/multiple/empty sections still fail.
+    """
+    openings=list(re.finditer(r'<Experiences>',text,re.I))
+    closings=list(re.finditer(r'</Experiences>',text,re.I))
+    if len(openings)!=1 or len(closings)>1:
+        raise LearningError('one nonempty semantic advantage block required')
+    start=openings[0].end()
+    if closings:
+        if closings[0].start()<start:raise LearningError('misordered semantic advantage tags')
+        value=text[start:closings[0].start()].strip()
+    else:
+        value=text[start:].strip()
+        if not re.match(r'1[.)]\s+\S',value) or re.search(r'</?[A-Za-z][^>]*>',value):
+            raise LearningError('unclosed advantage must be a final numbered section')
+    if not value:raise LearningError('one nonempty semantic advantage block required')
+    return value
+
+
 class ExperienceLearner:
     """One immutable learning batch with bounded, durable model-driven stages.
 
@@ -392,9 +416,7 @@ class ExperienceLearner:
                 formatted='\n\n'.join(f"Attempt {i+1} (Reward {r['reward']}):\n{summary_by_id[r['trajectory_id']]}" for i,r in enumerate(group['rollouts']))
                 result=self._call('advantage',group['query_id'],self._messages(
                     'SINGLE_QUERY_GROUP_ADVANTAGE',common,question=group['query'],answer=group['answer'],trajectories=formatted))
-                matches=re.findall(r'<Experiences>\s*(.*?)\s*</Experiences>',result,re.S|re.I)
-                if len(matches)!=1 or not matches[0].strip():raise LearningError('one nonempty semantic advantage block required')
-                return matches[0].strip()
+                return semantic_advantage(result)
             def update_group(group,experience):
                 proposed=self._call('group_update',group['query_id'],self._messages(
                     'GROUP_EXPERIENCE_UPDATE_TEMPLATE',common,existing_experiences=current,new_experiences=experience))

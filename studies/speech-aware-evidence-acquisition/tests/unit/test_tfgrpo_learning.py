@@ -268,3 +268,17 @@ def test_reconciliation_without_receipt_preserves_unknown(tmp_path):
     with pytest.raises(TimeoutError):learn(tmp_path,timeout,concurrency=1)
     with pytest.raises(UnknownLearningContact):
         learn(tmp_path,lambda _:pytest.fail('must never send'),concurrency=1,reconcile=lambda _:None)
+
+
+@pytest.mark.parametrize('text',[
+    '<Experiences>1. Use actual evidence.\n2. Check intent boundaries.</Experiences>',
+    '<Learning Objective Focus>Analysis\n<Experiences>\n1. Use actual evidence.\n2. Check intent boundaries.',
+])
+def test_advantage_accepts_unambiguous_final_heading_without_changing_content(text):
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import semantic_advantage
+    assert semantic_advantage(text)=='1. Use actual evidence.\n2. Check intent boundaries.'
+
+@pytest.mark.parametrize('text',['<Experiences>','<Experiences>unstructured unfinished','<Experiences>1. x<Other>y','<Experiences>1. x<Experiences>2. y','</Experiences><Experiences>1. x'])
+def test_advantage_refuses_ambiguous_or_empty_heading(text):
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import semantic_advantage
+    with pytest.raises(LearningError):semantic_advantage(text)
