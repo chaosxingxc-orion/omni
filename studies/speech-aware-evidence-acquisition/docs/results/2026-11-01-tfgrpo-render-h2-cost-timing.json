@@ -1,0 +1,356 @@
+{
+  "sample_phases": {
+    "admission_to_P_request": {
+      "n": 312,
+      "mean_seconds": 218.23483615294873,
+      "p50_seconds": 46.56677495999975,
+      "p95_seconds": 1178.4578958500006
+    },
+    "P_end_to_learned_request": {
+      "n": 312,
+      "mean_seconds": 2.12226385134611,
+      "p50_seconds": 1.2387120449993745,
+      "p95_seconds": 5.929423940000561
+    },
+    "learned_end_to_compact_request": {
+      "n": 312,
+      "mean_seconds": 0.5822003221474938,
+      "p50_seconds": 0.38131000500015944,
+      "p95_seconds": 1.1607404599999427
+    },
+    "compact_end_to_lock_request": {
+      "n": 312,
+      "mean_seconds": 0.32475692910255904,
+      "p50_seconds": 0.2645747799988385,
+      "p95_seconds": 0.6343357999994623
+    },
+    "lock_end_to_sample_finished": {
+      "n": 312,
+      "mean_seconds": 0.04998392682696016,
+      "p50_seconds": 0.032506380000995705,
+      "p95_seconds": 0.08613100000002305
+    },
+    "admission_to_sample_finished": {
+      "n": 312,
+      "mean_seconds": 1612.7253295234295,
+      "p50_seconds": 1728.587684045,
+      "p95_seconds": 2011.2254315900009
+    }
+  },
+  "missing_sample_timing": 0,
+  "role_stats": {
+    "perception": {
+      "calls": 312,
+      "mean_request_latency_seconds": 296.7798421490385,
+      "prompt_tokens": 1199833,
+      "completion_tokens": 562178,
+      "mean_prompt_tokens": 3845.61858974359,
+      "mean_completion_tokens": 1801.8525641025642
+    },
+    "solver/compact": {
+      "calls": 312,
+      "mean_request_latency_seconds": 373.4562559964744,
+      "prompt_tokens": 3395494,
+      "completion_tokens": 727002,
+      "mean_prompt_tokens": 10882.99358974359,
+      "mean_completion_tokens": 2330.1346153846152
+    },
+    "solver/learned": {
+      "calls": 312,
+      "mean_request_latency_seconds": 433.1861749982372,
+      "prompt_tokens": 4476574,
+      "completion_tokens": 742177,
+      "mean_prompt_tokens": 14347.99358974359,
+      "mean_completion_tokens": 2378.772435897436
+    },
+    "solver/lock": {
+      "calls": 312,
+      "mean_request_latency_seconds": 260.5557882810577,
+      "prompt_tokens": 2716270,
+      "completion_tokens": 705509,
+      "mean_prompt_tokens": 8705.99358974359,
+      "mean_completion_tokens": 2261.246794871795
+    }
+  },
+  "stage_timing": {
+    "schema": "saea-stage-timing-summary-v1",
+    "events": 15288,
+    "total_journal_events": 17785,
+    "sample_scope": "verified-complete-checkpoint-rows",
+    "completed_rows_without_timing": [],
+    "observed_sample_count": 312,
+    "incomplete_tail": false,
+    "stages": {
+      "audio_read_encode": {
+        "invocations": {
+          "count": 2496,
+          "mean_s": 0.005974951193903822,
+          "p50_s": 0.000873775000400201,
+          "p95_s": 0.0252956099993753,
+          "total_s": 14.91347817998394
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.047799609551230575,
+          "p50_s": 0.027927754998927412,
+          "p95_s": 0.1576731099994504,
+          "total_s": 14.91347817998394
+        },
+        "errors": 0
+      },
+      "checkpoint_append_fsync": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 0.008433022564129434,
+          "p50_s": 0.008154684999681194,
+          "p95_s": 0.009795440000743838,
+          "total_s": 2.6311030400083837
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.008433022564129434,
+          "p50_s": 0.008154684999681194,
+          "p95_s": 0.009795440000743838,
+          "total_s": 2.6311030400083837
+        },
+        "errors": 0
+      },
+      "checkpoint_total": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 0.01802508035251986,
+          "p50_s": 0.017605474999982107,
+          "p95_s": 0.020203620000756928,
+          "total_s": 5.6238250699861965
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.01802508035251986,
+          "p50_s": 0.017605474999982107,
+          "p95_s": 0.020203620000756928,
+          "total_s": 5.6238250699861965
+        },
+        "errors": 0
+      },
+      "context_build": {
+        "invocations": {
+          "count": 624,
+          "mean_s": 0.25561610892625364,
+          "p50_s": 0.18669989000045462,
+          "p95_s": 0.8205841199996939,
+          "total_s": 159.50445196998226
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.5112322178525073,
+          "p50_s": 0.4017151250009192,
+          "p95_s": 0.8461999600003764,
+          "total_s": 159.50445196998226
+        },
+        "errors": 0
+      },
+      "http_request": {
+        "invocations": {
+          "count": 1248,
+          "mean_s": 340.8552508088942,
+          "p50_s": 317.2010258949995,
+          "p95_s": 602.1183149799999,
+          "total_s": 425387.35300949996
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 1363.4210032355768,
+          "p50_s": 1483.0081818100007,
+          "p95_s": 1797.569625189999,
+          "total_s": 425387.3530094999
+        },
+        "errors": 0
+      },
+      "native_fit": {
+        "invocations": {
+          "count": 1248,
+          "mean_s": 3.235778740576966,
+          "p50_s": 0.2032288749996951,
+          "p95_s": 22.166399039999305,
+          "total_s": 4038.251868240053
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 12.943114962307863,
+          "p50_s": 12.68142860000171,
+          "p95_s": 28.36237008000171,
+          "total_s": 4038.251868240053
+        },
+        "errors": 0
+      },
+      "native_fit_capacity_wait": {
+        "invocations": {
+          "count": 1248,
+          "mean_s": 2.7996958220913326,
+          "p50_s": 7.744999493297655e-06,
+          "p95_s": 21.322990560000108,
+          "total_s": 3494.020385969983
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 11.19878328836533,
+          "p50_s": 10.172172210001918,
+          "p95_s": 26.249494089999644,
+          "total_s": 3494.020385969983
+        },
+        "errors": 0
+      },
+      "native_fit_lock_wait": {
+        "invocations": {
+          "count": 1248,
+          "mean_s": 0.00028736644229172435,
+          "p50_s": 1.6899994079722092e-06,
+          "p95_s": 2.510001650080085e-06,
+          "total_s": 0.358633319980072
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.0011494657691668974,
+          "p50_s": 6.9200023062876426e-06,
+          "p95_s": 0.008908009998776834,
+          "total_s": 0.358633319980072
+        },
+        "errors": 0
+      },
+      "native_fit_recovery_lock_wait": {
+        "invocations": {
+          "count": 1248,
+          "mean_s": 0.41004422717948075,
+          "p50_s": 2.130000211764127e-06,
+          "p95_s": 1.6774029299995163,
+          "total_s": 511.735195519992
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 1.640176908717923,
+          "p50_s": 1.583878669999649,
+          "p95_s": 3.699580270000297,
+          "total_s": 511.735195519992
+        },
+        "errors": 0
+      },
+      "output_normalize": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 0.00025922038465955085,
+          "p50_s": 0.00025629999981902074,
+          "p95_s": 0.0002853700007108273,
+          "total_s": 0.08087676001377986
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.00025922038465955085,
+          "p50_s": 0.00025629999981902074,
+          "p95_s": 0.0002853700007108273,
+          "total_s": 0.08087676001377986
+        },
+        "errors": 0
+      },
+      "request_render": {
+        "invocations": {
+          "count": 2496,
+          "mean_s": 0.19017527398234754,
+          "p50_s": 0.10277941499953158,
+          "p95_s": 0.6274234499996965,
+          "total_s": 474.67748385993946
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 1.5214021918587803,
+          "p50_s": 1.3106109999989712,
+          "p95_s": 3.160785459998806,
+          "total_s": 474.67748385993946
+        },
+        "errors": 0
+      },
+      "request_total": {
+        "invocations": {
+          "count": 1248,
+          "mean_s": 347.8528220852644,
+          "p50_s": 324.1402815199999,
+          "p95_s": 604.2418153599992,
+          "total_s": 434120.3219624098
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 1391.4112883410576,
+          "p50_s": 1521.82809267,
+          "p95_s": 1827.3518628799993,
+          "total_s": 434120.3219624098
+        },
+        "errors": 0
+      },
+      "transport_total": {
+        "invocations": {
+          "count": 1248,
+          "mean_s": 340.99096832464744,
+          "p50_s": 317.29229765999935,
+          "p95_s": 602.2804819100002,
+          "total_s": 425556.7284691601
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 1363.9638732985898,
+          "p50_s": 1483.3430981200008,
+          "p95_s": 1798.0369549099996,
+          "total_s": 425556.72846915975
+        },
+        "errors": 0
+      }
+    },
+    "request_validation_accounting_and_response_handling_s": {
+      "count": 1248,
+      "mean_s": 6.861853760616986,
+      "p50_s": 0.18044896500032337,
+      "p95_s": 36.261862650000694,
+      "total_s": 8563.593493249999
+    },
+    "http_request_s": {
+      "count": 1248,
+      "mean_s": 340.8552508088942,
+      "p50_s": 317.2010258949995,
+      "p95_s": 602.1183149799999,
+      "total_s": 425387.35300949996
+    },
+    "limitations": [
+      "Inclusive intervals overlap; do not sum stages as wall time.",
+      "HTTP time includes queue, server audio/prefill/decode and network; TTFT unavailable on non-streaming path.",
+      "Timing journal uses kernel writes, not per-event fsync; scientific checkpoints remain independently durable."
+    ]
+  },
+  "schema": "saea-render-h2-terminal-cost-audit-v1",
+  "complete_rows": 312,
+  "total_rows": 312,
+  "native_calls": 1248,
+  "native_responses": 1248,
+  "unknown_contacts": 0,
+  "journal_files": 2496,
+  "journal_manifest_sha256": "2b8bac3055c92f4eb64039636dffc2bae8e4dd0c26dc09c00078e99b6c8cec3a",
+  "usage": {
+    "prompt_tokens": 11788171,
+    "completion_tokens": 2736866,
+    "total_tokens": 14525037
+  },
+  "allocated_cards": 8,
+  "instances": 2,
+  "generation_seconds": 2236.2687928199994,
+  "seconds_per_row": 7.167528182115382,
+  "campaign_seconds": 2277.192073709999,
+  "checkpoint": {
+    "status": "VERIFIED",
+    "flown": 312,
+    "checkpoint_rows": 312,
+    "complete_rows": 312,
+    "unrendered_rows": 0,
+    "problems": [],
+    "sha256": "332f4425c3cac3c13b888e4d91ad4f0452ce1202444b41b17b49a6f985898117"
+  },
+  "output_sha256": "d78960b7919f8f843cd9d3e8258cd0aaef87661448cfa2948cb441f25661e549",
+  "paired_result_sha256": "dbbd700e7d4fc362966b97ed5c8295a011242aefa77ddb679ad9ea81fd2e2614",
+  "archive_is_authoritative": false
+}

@@ -1,17 +1,52 @@
 {
-  "schema": "saea-independent-review-dispatch-status-v1",
-  "updated_utc": "2026-11-01T12:10:31.692644+00:00",
+  "status": "dispatch-attempts-produced-no-review",
   "requested_model": "gpt-6-astra",
   "independent_context": true,
-  "engineering_gate_passed": true,
-  "review_source_commit": "07f0886ca79e72c254328b7c49e79aa637142e96",
-  "evidence_file_count": 46,
-  "status": "dispatch-returned-acknowledgment-without-review",
+  "attempts": [
+    {
+      "agent": "/root/astra_rsi_adversarial_review",
+      "outcome": "rule acknowledgment only; no report, follow-up same"
+    },
+    {
+      "tool": "codex_tui.create_thread",
+      "outcome": "transport HTTP connection failure; no successful thread id"
+    },
+    {
+      "agent": "/root/astra_review_retry",
+      "outcome": "rule acknowledgment only; no report"
+    },
+    {
+      "agent": "/root/astra_actual_review",
+      "outcome": "initial and followup only acknowledged rules; no report"
+    },
+    {
+      "agent": "/root/astra_rsi_code_audit_v2",
+      "requested_model": "gpt-6-astra",
+      "fork_turns": "none",
+      "outcome": "acknowledged rules only; no report"
+    },
+    {
+      "tool": "codex_tui.create_thread",
+      "outcome": "transport HTTP connection failure; no thread id; retried 2026-11-01"
+    },
+    {
+      "agent": "/root/astra_dual_route_evidence_review",
+      "requested_model": "gpt-6-astra",
+      "fork_turns": "none",
+      "source_head": "07f0886ca79e72c254328b7c49e79aa637142e96",
+      "outcome": "completed with rule acknowledgment only; no review report or issues file"
+    },
+    {
+      "agent": "/root/astra_dual_route_evidence_review",
+      "action": "followup_task",
+      "source_head": "e5503ebd",
+      "outcome": "completed with rule acknowledgment only; no review report or issues file"
+    }
+  ],
   "review_completed": false,
-  "report_exists": false,
-  "issues_file_exists": false,
-  "confirmed_root_cause": null,
-  "next_action": "Use a functioning independent Astra task channel; verify actual report and evidence before accepting review. No automatic repeated dispatch.",
-  "experiment_interrupted": false,
-  "lora_training_started": false
+  "engineering_gate_passed": true,
+  "report_files_exist": false,
+  "next_action": "Resume independent Astra when task delegation delivers executable work; do not substitute parent report as Astra",
+  "updated_utc": "2026-11-01T12:53:16.007800+00:00",
+  "fallback_cli_auth_status": "Not logged in; no CLI model execution or paid API attempted"
 }

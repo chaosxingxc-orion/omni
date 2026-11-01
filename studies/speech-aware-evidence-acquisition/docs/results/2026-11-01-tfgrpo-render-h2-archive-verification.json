@@ -1,0 +1,12 @@
+{
+  "schema": "saea-render-terminal-archive-verification-v1",
+  "archive_sha256": "877ce6ff60b98f57ca423766b34a40e3baa8b272757be112ee1fb8e5374bf7d4",
+  "rows": 312,
+  "native_calls": 1248,
+  "journal_files": 2496,
+  "journal_hashes_match_terminal_audit": true,
+  "output_and_score_match_manifest": true,
+  "official_result_sha256": "dbbd700e7d4fc362966b97ed5c8295a011242aefa77ddb679ad9ea81fd2e2614",
+  "scope": "render-h2-v1 tree, contacts, outputs, scoring and control; excludes .git and shared runtime state",
+  "archive_is_automatic_restore_authority": false
+}
