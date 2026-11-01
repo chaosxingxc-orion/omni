@@ -17,7 +17,7 @@ import tfgrpo_learning_job as base
 from speech_aware_evidence_acquisition.contracts import ExecutionPlan
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 from speech_aware_evidence_acquisition.data.splits import prefixed, split_identity_hash
-from speech_aware_evidence_acquisition.rails.tfgrpo_learning import sha, validate_experience
+from speech_aware_evidence_acquisition.rails.tfgrpo_learning import sha, validate_experience, BINARY_REWARD, group_has_contrast
 from speech_aware_evidence_acquisition.rails.tfgrpo_prompts import SOURCE_SHA256, UPSTREAM_COMMIT
 
 NAME = 'slurp-tfgrpo-fixed-p-h1-final-only-v1'
@@ -61,10 +61,11 @@ def documents(old_source, old_roster, *, final_import, runtime_identity,
             or model_values.get('answer_reserve_tokens') != 13312):
         raise ValueError('explicit final fragment requires 16384 completion and 3072 reasoning')
     groups = old['groups']
+    mode=old['common'].get('reward_mode',BINARY_REWARD)
     ids = [g['query_id'] for g in groups]
     if (not ids or len(set(ids)) != len(ids)
             or any(not q.startswith('slurp:train:') for q in ids)
-            or any({r['reward'] for r in g['rollouts']} != {0, 1} for g in groups)):
+            or any(not group_has_contrast(g['rollouts'],mode) for g in groups)):
         raise ValueError('unique original mixed TRAIN groups required')
     items = {x['sample_id']: x for x in old_roster['items']}
     if len(items) != len(old_roster['items']) or set(items) != set(ids):
@@ -98,6 +99,8 @@ def documents(old_source, old_roster, *, final_import, runtime_identity,
     batch['final_import'] = copy.deepcopy(final_import)
     batch['learning_config_sha256'] = registration['learning_config_sha256']
     batch['bounds'] = {**batch['bounds'], 'max_calls': 1, 'concurrency': 1}
+    if custody.get('excluded_final_response',{}).get('failure_kind')=='experience-library-bound-exceeded':
+        batch['common']['final_merge_limits']={k:batch['bounds'][k] for k in ('max_items','max_characters')}
     registration['batch_sha256'] = sha(batch)
     validate_registration(registration, plan=plan, model_id=old['model_id'])
     source = {'schema': 'saea-tfgrpo-learning-source-v1', 'batch': batch,
@@ -319,7 +322,9 @@ def run(repo,data,job,out,after):
     from tfrl_current_generation import SESSION
     service_session=complete.get('service_session',SESSION)
     base.require_learning_deployment(repo,reg['model_id'])
-    base.verify_release(after,data)
+    source=read(job/'source.json')
+    predecessor=('SAEA-SLURP-TFGRPO-RENDER-H2-THREE-ARM-V1' if source['batch']['common'].get('reward_mode',BINARY_REWARD)!=BINARY_REWARD else 'SAEA-SLURP-TFRL-HARDSET-A0-OBSERVATION-R1-V1')
+    base.verify_release(after,data,expected_run=predecessor)
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned output required; no blind retry')
     cells=load_campaign_cells(repo,name);cell,=cells
     if declared_readiness(cell,data).state!='ready':raise ValueError('learning job remains held')

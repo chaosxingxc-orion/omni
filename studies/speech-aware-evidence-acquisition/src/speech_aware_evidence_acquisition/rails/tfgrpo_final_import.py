@@ -11,7 +11,8 @@ from pathlib import Path
 from ..contracts import ExecutionPlan
 from ..core.contact_journal import ContactJournal, NativeContactReplay, comparable_request
 from .tfgrpo_learning import (LearningError, canonical, parse_operations, render,
-                              semantic_advantage, sha, validate_experience)
+                              semantic_advantage, sha, validate_experience, apply_operations,
+                              BINARY_REWARD, validate_reward_mode, group_has_contrast)
 from .tfgrpo_projection import summary_trajectory
 from .tfgrpo_prompts import SOURCE_SHA256, UPSTREAM_COMMIT
 
@@ -19,6 +20,9 @@ from .tfgrpo_prompts import SOURCE_SHA256, UPSTREAM_COMMIT
 def load_import(spec, *, data_root, groups, common, model_id, parent,
                 policy_sha256, rollout_kind):
     root = Path(data_root).resolve()
+    source_common={k:v for k,v in common.items() if k!='final_merge_limits'}
+    reward_mode=source_common.get('reward_mode',BINARY_REWARD)
+    validate_reward_mode(reward_mode)
 
     def pinned(pin):
         if not isinstance(pin, dict) or set(pin) != {'relpath', 'sha256'}:
@@ -43,7 +47,7 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
             or batch.get('schema') != 'saea-tfgrpo-batch-v1'
             or batch.get('prompt_sha256') != SOURCE_SHA256
             or batch.get('upstream_commit') != UPSTREAM_COMMIT
-            or any(batch.get(k) != v for k, v in {'groups': groups, 'common': common,
+            or any(batch.get(k) != v for k, v in {'groups': groups, 'common': source_common,
                 'model_id': model_id, 'parent': parent, 'policy_sha256': policy_sha256,
                 'rollout_kind': rollout_kind}.items())):
         raise LearningError('historical final-stage learning inputs differ')
@@ -184,10 +188,10 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
         return receipt['text'], body.get('finish_reason')
 
     def messages(prefix, **values):
-        return [{'role': 'system', 'content': render(prefix+'_SP', **common)},
+        return [{'role': 'system', 'content': render(prefix+'_SP', **source_common)},
                 {'role': 'user', 'content': render(prefix+'_UP', **values)}]
 
-    mixed = [g for g in groups if {r['reward'] for r in g['rollouts']} == {0, 1}]
+    mixed = [g for g in groups if group_has_contrast(g['rollouts'],reward_mode)]
     if not mixed: raise LearningError('final import needs completed mixed groups')
     current = '\n'.join(f'[{k}]. {v}' for k, v in sorted(parent['items'].items())) or 'None'
     operations = []
@@ -210,15 +214,24 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
                           ensure_ascii=False, sort_keys=True)
     final_messages = messages('BATCH_EXPERIENCE_UPDATE_TEMPLATE', experiences_and_operations=material)
     final_text, finish = read_stage('batch_update', 'batch', groups[0]['query_id'], final_messages, finished=False)
-    if finish != 'length': raise LearningError('final-only correction requires an observed output-limit failure')
-    try: parse_operations(final_text, parent['items'], max_operations=batch['bounds']['max_operations'])
-    except LearningError: pass
-    else: raise LearningError('already parseable final response must not be regenerated')
+    failure_kind=None
+    if finish=='length':
+        try:parse_operations(final_text,parent['items'],max_operations=batch['bounds']['max_operations'])
+        except LearningError:failure_kind='output-limit-invalid-json'
+        else:raise LearningError('already parseable final response must not be regenerated')
+    elif finish=='stop':
+        parsed=parse_operations(final_text,parent['items'],max_operations=batch['bounds']['max_operations'])
+        try:apply_operations(parent['items'],parsed,max_items=batch['bounds']['max_items'],max_characters=batch['bounds']['max_characters'])
+        except LearningError as error:
+            if str(error)!='experience size exceeds declared limit; no silent truncation':raise
+            failure_kind='experience-library-bound-exceeded'
+        else:raise LearningError('valid bounded final response must not be regenerated')
+    else:raise LearningError('known final output-limit or library-bound failure required')
     actual_paths = {p for directory in (base/'contacts', base/'learner/contacts')
                     for pattern in ('*.intent.json', '*.response.json') for p in directory.glob(pattern)}
     if rows or expected_paths != actual_paths or used != set(observed):
         raise LearningError('unaccounted historical stages or native contacts')
-    return operations, {'schema': 'saea-tfgrpo-final-import-custody-v1', 'source': spec,
+    custody={'schema': 'saea-tfgrpo-final-import-custody-v1', 'source': spec,
         'source_run_id': plan.run_id, 'source_attempt_id': plan.attempt_id,
         'source_batch_sha256': sha(batch), 'source_learning_config_sha256': batch['learning_config_sha256'],
         'learned_query_ids': sorted(g['query_id'] for g in mixed), 'mixed_groups': len(mixed),
@@ -230,6 +243,10 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
         'historical_truncated_summaries': truncated_summaries,
         'excluded_final_response': {'finish_reason': finish, 'retained_in_historical_cost': True},
         'classification': 'Verified historical inputs; excluded from fresh generation counters.'}
+    if reward_mode!=BINARY_REWARD:
+        custody['reward_mode']=reward_mode;custody['contrast_groups']=custody.pop('mixed_groups')
+    if failure_kind=='experience-library-bound-exceeded':custody['excluded_final_response']['failure_kind']=failure_kind
+    return operations,custody
 
 
 def build_import(*, data_root, source_plan, native_source_plans, output_relpath):

@@ -46,7 +46,7 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
     for pin in source['provenance']:read_pin(pin,repo_root=repo_root,data_root=data_root)
     reward_mode = batch['common'].get('reward_mode', BINARY_REWARD)
     validate_reward_mode(reward_mode)
-    if reward_mode != BINARY_REWARD and ('summary_import' in batch or 'final_import' in batch):
+    if reward_mode != BINARY_REWARD and 'summary_import' in batch:
         raise LearningError('dense reward cannot import binary summaries or stages')
     final_only='final_import' in batch
     if final_only:

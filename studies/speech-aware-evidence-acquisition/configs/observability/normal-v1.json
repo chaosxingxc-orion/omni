@@ -1,0 +1,5 @@
+{
+  "mode": "normal",
+  "client_detail": false,
+  "server_metrics_interval_seconds": 600
+}

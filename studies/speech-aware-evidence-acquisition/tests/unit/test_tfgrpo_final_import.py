@@ -11,7 +11,7 @@ from speech_aware_evidence_acquisition.rails.tfgrpo_learning import (
 from speech_aware_evidence_acquisition.rails.tfgrpo_final_import import build_import, load_import
 
 
-def fixture(root, *, summary_finish="stop", group_finish="stop", final_text=None):
+def fixture(root, *, summary_finish="stop", group_finish="stop", final_text=None, dense=False, library_limit=False):
     plan = _plan()
     base = root/'runs'/plan.run_id/plan.attempt_id/'tfgrpo'
     journal = ContactJournal(root, plan, 'prepared-context-text')
@@ -22,9 +22,9 @@ def fixture(root, *, summary_finish="stop", group_finish="stop", final_text=None
         rid = 'native-'+key
         text = {'summary': 'Useful observed behavior', 'advantage': '<Experiences>1. Use evidence</Experiences>',
             'group_update': '[{"operation":"ADD","id":null,"content":"Use evidence"}]',
-            'batch_update': final_text or '[{"operation":"ADD","id":null,"content":"Unfinished'}[stage]
+            'batch_update': final_text or ('[{"operation":"ADD","id":null,"content":"'+'X'*20+'"}]' if library_limit else '[{"operation":"ADD","id":null,"content":"Unfinished')}[stage]
         body = {'text': text, 'usage': {'prompt_tokens': 10, 'completion_tokens': 4},
-                'finish_reason': {'batch_update':'length','summary':summary_finish,'group_update':group_finish}.get(stage,'stop')}
+                'finish_reason': {'batch_update':'stop' if library_limit else 'length','summary':summary_finish,'group_update':group_finish}.get(stage,'stop')}
         payload = {'prepared_text': 'saea-prepared-text-v1', 'request_id': rid,
             'sample_id': 'q1', 'history': [{'role': 'agent_state', 'content': json.dumps(
                 {'stage': stage, 'source_messages': request['messages']})},
@@ -36,10 +36,12 @@ def fixture(root, *, summary_finish="stop", group_finish="stop", final_text=None
         write(base/'contacts'/(key+'.response.json'), {'request_sha256': sha(request), 'response': receipt})
         return receipt
     learner = ExperienceLearner(base/'learner', model_id=MODEL, metered_call=caller,
-        learning_config_sha256='a'*64, max_calls=5, concurrency=1)
-    with pytest.raises(LearningError, match='must be JSON'):
-        learner.learn([group()], empty_experience(MODEL), agent_objective='Intent',
-            learning_objective='Evidence', policy_sha256=group()['rollouts'][0]['policy_sha256'])
+        learning_config_sha256='a'*64, max_calls=5, concurrency=1,max_characters=10 if library_limit else 16000)
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import DENSE_REWARD,BINARY_REWARD
+    g=group(rewards=(.25,.75)) if dense else group()
+    with pytest.raises(LearningError, match='size exceeds' if library_limit else 'must be JSON'):
+        learner.learn([g], empty_experience(MODEL), agent_objective='Intent',
+            learning_objective='Evidence', policy_sha256=g['rollouts'][0]['policy_sha256'],reward_mode=DENSE_REWARD if dense else BINARY_REWARD)
     write(root/'attempts'/plan.run_id/(plan.attempt_id+'.json'), {
         'state': 'ABORTED', 'contact_kind': 'prepared-text', 'run_id': plan.run_id,
         'attempt_id': plan.attempt_id, 'carrier_lock_key': plan.carrier_lock_key,
@@ -130,3 +132,25 @@ def test_verified_import_drives_exactly_one_fresh_final_call(tmp_path):
     assert candidate['learned_query_ids'] == ['q1']
     assert candidate['learning_usage']['calls'] == 1
     assert candidate['historical_stage_custody']['original_total_usage']['calls'] == 5
+
+
+def test_dense_size_failure_imports_only_completed_stages_and_keeps_all_cost(tmp_path):
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import DENSE_REWARD
+    pin,args,_,_,operations,custody=fixture(tmp_path,dense=True,library_limit=True)
+    assert custody['reward_mode']==DENSE_REWARD and custody['contrast_groups']==1
+    assert custody['original_total_usage']['calls']==5
+    assert custody['excluded_final_response']['failure_kind']=='experience-library-bound-exceeded'
+    common={**args['common'],'final_merge_limits':{'max_items':128,'max_characters':10}}
+    assert load_import(pin,**{**args,'common':common})==(operations,custody)
+    requests=[]
+    def caller(request):
+        requests.append(request)
+        assert request['stage']=='batch_update'
+        assert 'at most 10 total Unicode characters' in request['messages'][-1]['content']
+        return {'text':'[{"operation":"ADD","id":null,"content":"Use cues"}]','model_id':MODEL,
+            'receipt_id':'fresh','usage':{'calls':1,'prompt_tokens':10,'completion_tokens':4}}
+    learner=ExperienceLearner(tmp_path/'repair',model_id=MODEL,metered_call=caller,learning_config_sha256='b'*64,max_calls=1,concurrency=1,max_characters=10)
+    result=learner.learn(args['groups'],args['parent'],**common,policy_sha256=args['policy_sha256'],rollout_kind=args['rollout_kind'],final_import=pin,imported_operations=operations,stage_custody=custody)
+    assert len(requests)==1 and result['planned_learning_calls']==1
+    assert result['historical_stage_custody']['original_total_usage']['calls']==5
+    assert result['contrast_groups']==1

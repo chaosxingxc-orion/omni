@@ -64,7 +64,7 @@ The historical
 
 from __future__ import annotations
 
-from ..stage_timing import measure
+from ..stage_timing import measure, span, debug_enabled
 
 import base64
 import hashlib
@@ -460,8 +460,29 @@ def _default_post(timeout_seconds: float) -> Callable[[str, bytes], bytes]:
         request = urllib.request.Request(
             url, data=body, headers={"Content-Type": "application/json"}, method="POST"
         )
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-            return response.read()
+        if not debug_enabled():
+            with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+                return response.read()
+        # Non-streaming semantics stay unchanged. Headers may arrive only after
+        # generation, so this interval must never be labelled TTFT/server wait.
+        import hashlib
+        response=None
+        try:
+            with span('client_http_open_to_headers', {'request_bytes':len(body),
+                    'timeout_seconds':timeout_seconds,
+                    'endpoint_sha256':hashlib.sha256(url.encode()).hexdigest()}):
+                response=urllib.request.urlopen(request, timeout=timeout_seconds)
+        except BaseException:
+            if response is not None:response.close()
+            raise
+        with response:
+            with span('client_http_read_body') as observation:
+                raw=response.read()
+                observation['response_bytes']=len(raw)
+                observation['http_status']=response.status
+                server_id=response.headers.get('x-request-id')
+                if server_id:observation['server_request_id_sha256']=hashlib.sha256(server_id.encode()).hexdigest()
+            return raw
 
     return post
 
@@ -482,7 +503,12 @@ def _load_audio_part(
     media = _resolve_confined(data_root, relative, data_root, field, strict=False)
     if not media.is_file():
         raise FileNotFoundError(f"media missing for transport: {media}")
-    data_b64 = base64.b64encode(media.read_bytes()).decode("ascii")
+    with span('audio_file_read') as observation:
+        audio_bytes=media.read_bytes()
+        observation['audio_bytes']=len(audio_bytes)
+    with span('audio_base64_encode') as observation:
+        data_b64=base64.b64encode(audio_bytes).decode("ascii")
+        observation['encoded_bytes']=len(data_b64)
     return relative, {
         "type": "input_audio",
         "input_audio": {"data": data_b64, "format": media.suffix.lstrip(".").lower()},
@@ -1518,7 +1544,10 @@ class LlamaServerTransport:
                     {"org_native_role_query_layout": projection_receipt},
                 )
         try:
-            raw = self._post(self._url, json.dumps(body).encode("utf-8"))
+            with span('request_json_encode') as observation:
+                encoded_body=json.dumps(body).encode("utf-8")
+                observation['request_bytes']=len(encoded_body)
+            raw = self._post(self._url, encoded_body)
         except urllib.error.HTTPError as error:
             # 2026-08-08: surface the server's diagnostic body — a bare
             # `HTTPError: 400` cost a metered call while discarding the one
@@ -1549,7 +1578,8 @@ class LlamaServerTransport:
         stored_raw = raw
         reasoning_summary_stored: dict[str, object] | None = None
         try:
-            parsed = json.loads(raw.decode("utf-8"))
+            with span('response_json_decode', {'response_bytes':len(raw)}):
+                parsed = json.loads(raw.decode("utf-8"))
             choice = parsed["choices"][0]
             message = choice["message"]
             # Owner decision 286: the reasoning bytes never reach the envelope or the preserved wire response. A response that

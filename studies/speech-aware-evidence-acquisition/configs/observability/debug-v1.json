@@ -1,0 +1,5 @@
+{
+  "mode": "debug",
+  "client_detail": true,
+  "server_metrics_interval_seconds": 600
+}

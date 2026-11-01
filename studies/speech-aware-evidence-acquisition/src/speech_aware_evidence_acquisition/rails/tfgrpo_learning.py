@@ -375,11 +375,17 @@ class ExperienceLearner:
               rollout_kind='full-same-policy', policy_sha256, num_experiences=2,
               summary_import=None, imported_summaries=None, import_custody=None,
               final_import=None, imported_operations=None, stage_custody=None,
-              reward_mode=BINARY_REWARD):
+              reward_mode=BINARY_REWARD, final_merge_limits=None):
         """Produce a candidate version; no gold enters a task inference request."""
         validate_reward_mode(reward_mode)
-        if reward_mode != BINARY_REWARD and (summary_import is not None or final_import is not None):
-            raise LearningError('dense reward cannot import binary summaries or stages')
+        if reward_mode != BINARY_REWARD and summary_import is not None:
+            raise LearningError('dense reward cannot import binary summaries')
+        if final_import is not None and reward_mode != BINARY_REWARD and (not isinstance(stage_custody,dict) or stage_custody.get('reward_mode')!=reward_mode):
+            raise LearningError('dense final import requires matching reward-mode custody')
+        if final_merge_limits is not None:
+            expected_limits={'max_items':self.max_items,'max_characters':self.max_characters}
+            if final_import is None or final_merge_limits!=expected_limits:
+                raise LearningError('final merge limits require exact registered bounds and verified import')
         groups, parent = copy.deepcopy(groups), copy.deepcopy(parent)
         validate_experience(parent, self.model_id)
         if rollout_kind not in ('full-same-policy','shared-perception-adaptation'):
@@ -413,6 +419,7 @@ class ExperienceLearner:
         common={'agent_objective':agent_objective,'learning_objective':learning_objective,'num_experiences':num_experiences}
         if reward_mode != BINARY_REWARD:
             common['reward_mode'] = reward_mode
+        if final_merge_limits is not None:common['final_merge_limits']=copy.deepcopy(final_merge_limits)
         imported_summaries=copy.deepcopy(imported_summaries or {})
         if summary_import is None:
             if imported_summaries or import_custody is not None:raise LearningError('historical summaries require pinned custody')
@@ -521,8 +528,14 @@ class ExperienceLearner:
             final_ops=[]
             if mixed:
                 material=json.dumps({'existing_experiences':parent['items'],'proposed_operations':operations},ensure_ascii=False,sort_keys=True)
-                merged=self._call('batch_update','batch',self._messages(
-                    'BATCH_EXPERIENCE_UPDATE_TEMPLATE',common,experiences_and_operations=material))
+                final_messages=self._messages('BATCH_EXPERIENCE_UPDATE_TEMPLATE',common,experiences_and_operations=material)
+                if final_merge_limits is not None:
+                    final_messages[-1]['content'] += ('\n\nMandatory resulting experience-library limits: at most '
+                        + str(self.max_items) + ' items and at most ' + str(self.max_characters)
+                        + ' total Unicode characters across retained content strings. Consolidate redundant rules, '
+                        'preserve conditions and evidence boundaries, and leave a margin below the character ceiling. '
+                        'Return only the operation array; no program will truncate your content.')
+                merged=self._call('batch_update','batch',final_messages)
                 final_ops=parse_operations(merged,parent['items'],max_operations=self.max_operations)
             items=apply_operations(parent['items'],final_ops,max_items=self.max_items,max_characters=self.max_characters)
             receipts=[json.loads(p.read_bytes())['response'] for p in sorted((self.root/'contacts').glob('*.response.json'))]
