@@ -102,7 +102,7 @@ def derive(repo, round_index, binding):
     from speech_aware_evidence_acquisition.rails.adapters.slurp_module_hooks import carrier_module_hooks
     name, run = identity(round_index)
     roster, view = population(repo)
-    runtime_binding(repo, binding)
+    model = runtime_binding(repo, binding)
     base, exp = read(repo/SOURCE_BASE), read(repo/SOURCE_EXP)
     block = base['native_episode']['consumption_module']
     cm.verify_declared_module(block,base,repo_root=repo)
@@ -110,6 +110,13 @@ def derive(repo, round_index, binding):
     if (compiled.program_ceiling != 2 or block['columns'] or block.get('review_loop') != 'off'
             or any(c.get('state') == 'on' and c['component_id'] == 'tfgrpo-solver-experience' for c in block['components'])):
         raise ValueError('unchanged experience-free two-contact lock required')
+    # Baseline fragments override model geometry during composition. Bind the
+    # legacy lock to the explicitly selected resident context before preparation.
+    from speech_aware_evidence_acquisition.rails.adapters.runtime_view import configured_geometry
+    argv = model['server_args']
+    if argv.count('--max-model-len') != 1:raise ValueError('explicit resident context required')
+    base['serving_slot_tokens'] = int(argv[argv.index('--max-model-len')+1])
+    configured_geometry({**model, **base}, defaults=(8,8192,64))
     base.pop('prepared_phase_supply',None)
     base['native_contact_fit'].update(run_id=run+'-FIT',attempt_id='fit-v1',contact_cap=626)
     base['what_this_is']='Fixed H1 fresh P/S difficulty observation; no candidate or benefit claim.'

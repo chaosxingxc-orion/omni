@@ -170,3 +170,17 @@ def test_registration_keeps_old_costs_and_held_bounded_plans(registered,monkeypa
     assert (repo/'docs/exposure-ledger.md').read_text().startswith('historical costs retained\n')
     assert m.read(ep)['cells'][0]['readiness']['state']=='held'
     with pytest.raises(ValueError,match='existing'):m.register(repo,data,stage,prep)
+
+
+def test_current_context_survives_legacy_baseline_override(monkeypatch):
+    from speech_aware_evidence_acquisition.rails.adapters.runtime_view import configured_geometry
+    model=copy.deepcopy(m.read(ROOT/f'configs/model/{m.MODEL}.json'))
+    model['serving_slot_tokens']=49152
+    idx=model['server_args'].index('--max-model-len')+1
+    model['server_args'][idx]='49152'
+    monkeypatch.setattr(m,'runtime_binding',lambda *args:model)
+    base,_,_,_=m.derive(ROOT,1,BINDING)
+    assert configured_geometry({**model,**base},defaults=(8,8192,64))['slot_tokens']==49152
+    original=m.read(ROOT/m.SOURCE_BASE)
+    assert base['native_episode']==original['native_episode']
+    assert base['scorers']==original['scorers']
