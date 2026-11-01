@@ -2,7 +2,13 @@
 
 ## 2026-11-01：主机故障定位与 LoRA 环境
 
-npu2于08:17 UTC重启，两次故障均为Ceph客户端`unsafe_request_wait`在fsync路径的空指针异常，第二次随后soft lockup。08:43 UTC双TP4服务健康检查均200；新运行凭证重采集后与旧配置逐字节一致，进程会话另行刷新。已完成本地ext4热状态迁移、共享唯一guard与旧启动入口隔离，正式容器及公开仓均36项测试通过。新恢复已进入真实推理，08:56原生请求40次、响应21次已落盘；复用原146次响应，预计只补41次。学习总规模32组/128条轨迹，完成组数与每组耗时待封存核验，ETA暂不外推。H2未启动，8卡服务驻留不等于满载。开发机每600秒拉取本地归档并记录哈希；未做重启故障注入，不称内核问题已修复。详见[故障诊断与恢复边界](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-npu2-ceph-crash-diagnosis-zh.md)。
+用户已撤销旧Claude专属角色、英文与审批限制；当前AGENTS已更新，CLAUDE入口移除。三个当前模型子智能体已实际完成故障归因、主模型LoRA特征验证和H2本地队列准备。
+
+**故障归因进一步收敛：** 当前`ceph.ko`反汇编中的空`req->r_session+8`访问与上游[7acae6183cf3](https://github.com/torvalds/linux/commit/7acae6183cf37c48b8da48bbbdb78820fb3913f3)修复高度匹配，当前模块缺少该检查；需同时核查后续会话竞态修复。第二次故障期间恢复任务原生生成0次，服务日志仅有models查询，CPU200在学习客户端范围。现有证据更支持并发回放/目录fsync触发旧Ceph内核缺陷，尚无特定音频触发vLLM生成bug的直接证据。详见[因果分析](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-engine-ceph-trigger-analysis-zh.md)。
+
+**实验最新终态：** 本地ext4恢复已完成新增41/41次调用并保存全部响应，40stop、1length；新增输入249452、输出96042 tokens。32/32组优势与组内更新完成，最终batch汇总4096输出token截断，attempt ABORTED，完整candidate尚未产出；原146次与更早12次成本全部保留。正式CPU审计确认64条候选操作约3012token，原思考预算后仅留1024输出token；下一步只纠正最终汇总，复用全部前序学习输入。当前没有运行中的生成任务，H2 0/312，本地队列挂载探针与5项测试通过，尚未启动；不声称8卡满载或算法收益。
+
+**LoRA方向已落实：** 只更新主Thinker的192个注意力模块，音频/视觉塔与投影冻结。复用verl多模态输入/FSDP机制，增加音频mask和Omni RoPE薄适配；固定verl镜像内tiny模型原生音频与冻结特征输入两次forward最大logit差0.0，10项测试通过。未加载生产权重训练，未证明多模态能力无回退。详见[主模型LoRA特征复用](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-main-model-lora-feature-plan-zh.md)。
 
 基于nga离线源码与依赖已构建独立`omni-verl-lora-env:20261101-v3`，ID `3fc654a33d39…`；最终镜像内部7项CPU/meta探针通过，Thinker+Processor+文本注意力LoRA范围确认：192模块、384张量、13,369,344参数。正式环境工具/分析测试20项通过（公开仓4.98秒）。未加载真实权重、未前向/反向，尚未证明音频训练或在线RL可用。详见[环境结果与适配缺口](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-verl-omni-environment-zh.md)。H2原始标签分项分析另已通过47项正式测试，尚未改动执行H树。
 
