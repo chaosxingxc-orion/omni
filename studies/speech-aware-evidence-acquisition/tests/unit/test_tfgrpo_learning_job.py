@@ -227,3 +227,15 @@ def test_missing_multi_instance_profile_rejected_before_dispatch(tmp_path,monkey
     monkeypatch.setattr(config,'resolve_runtime_receipt_path',lambda *a:receipt)
     monkeypatch.delenv('SAEA_DEPLOYMENT_PROFILE',raising=False)
     with pytest.raises(ValueError,match='SAEA_DEPLOYMENT_PROFILE'):m.require_learning_deployment(tmp_path,'model')
+
+
+def test_dense_predecessor_release_is_exact_and_default_still_rejects(tmp_path):
+    artifact=tmp_path/'manifest.json';artifact.write_text('{}')
+    release=tmp_path/'release.json';run='SAEA-SLURP-TFGRPO-RENDER-H2-THREE-ARM-V1'
+    doc={'schema':'saea-generation-released-v1','generation_sealed':True,'generation_lease_released':True,
+        'run_id':run,'artifacts':{'manifest':{'path':str(artifact),'sha256':m.file_sha(artifact)}}}
+    release.write_bytes(m.raw(doc))
+    with pytest.raises(ValueError):m.verify_release(release,tmp_path)
+    assert m.verify_release(release,tmp_path,expected_run=run)==doc
+    doc['generation_lease_released']=False;release.write_bytes(m.raw(doc))
+    with pytest.raises(ValueError):m.verify_release(release,tmp_path,expected_run=run)

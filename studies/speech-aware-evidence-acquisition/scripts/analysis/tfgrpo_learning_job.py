@@ -305,12 +305,12 @@ def admit(repo,data,job):
     return {**result,'new_model_calls':0,'remaining':['commit admission','shared preflight','generation lease after predecessor release']}
 
 
-def verify_release(path,data):
+def verify_release(path,data,*,expected_run='SAEA-SLURP-TFRL-HARDSET-A0-OBSERVATION-R1-V1'):
     """A release event proves sealed generation, never merely an exited process."""
     doc=read(path)
     if (doc.get('schema')!='saea-generation-released-v1' or doc.get('generation_sealed') is not True
             or doc.get('generation_lease_released') is not True
-            or doc.get('run_id')!='SAEA-SLURP-TFRL-HARDSET-A0-OBSERVATION-R1-V1'):
+            or doc.get('run_id')!=expected_run):
         raise ValueError('exact A0 generation release event required')
     for pin_doc in doc['artifacts'].values():
         p=Path(pin_doc['path']).resolve()
@@ -350,7 +350,9 @@ def run(repo,data,job,out,after):
     from tfrl_current_generation import SESSION
     service_session=complete.get('service_session',SESSION)
     require_learning_deployment(repo,reg['model_id'])
-    verify_release(after,data)
+    expected_predecessor=('SAEA-SLURP-TFGRPO-RENDER-H2-THREE-ARM-V1' if complete.get('schema')=='saea-tfgrpo-dense-job-v1'
+        else 'SAEA-SLURP-TFRL-HARDSET-A0-OBSERVATION-R1-V1')
+    verify_release(after,data,expected_run=expected_predecessor)
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned output required; no blind retry')
     cells=load_campaign_cells(repo,name);cell,=cells
     if declared_readiness(cell,data).state!='ready':raise ValueError('learning job remains held')

@@ -1,0 +1,156 @@
+{
+  "schema": "saea-tfgrpo-render-h2-public-result-v1",
+  "rows": 312,
+  "total_rows": 312,
+  "arms": {
+    "compact": {
+      "slu_f1": 0.6640917521684296,
+      "intent_accuracy": 0.7884615384615384,
+      "span_f1": 0.51994851994852,
+      "scenario_accuracy": 0.8237179487179487
+    },
+    "learned": {
+      "slu_f1": 0.6646889777967242,
+      "intent_accuracy": 0.7756410256410257,
+      "span_f1": 0.52858958068615,
+      "scenario_accuracy": 0.8141025641025641
+    },
+    "lock": {
+      "slu_f1": 0.6573612473982617,
+      "intent_accuracy": 0.7724358974358975,
+      "span_f1": 0.5139240506329114,
+      "scenario_accuracy": 0.8044871794871795
+    }
+  },
+  "contrasts": {
+    "compact_vs_lock": {
+      "metrics": {
+        "intent": {
+          "ci95_half_width_pp": 1.762820512820512,
+          "ci95_hi_pp": 3.525641025641024,
+          "ci95_lo_pp": 0.0,
+          "draws": 10000,
+          "point_pp": 1.6025641025640969
+        },
+        "per_row_slu_f1": {
+          "ci95_half_width_pp": 3.1733451311602803,
+          "ci95_hi_pp": 4.487125392370917,
+          "ci95_lo_pp": -1.8595648699496437,
+          "draws": 10000,
+          "point_pp": 1.265860889476289
+        },
+        "slu_f1": {
+          "ci95_half_width_pp": 1.9130239705131982,
+          "ci95_hi_pp": 2.6296422086145586,
+          "ci95_lo_pp": -1.1964057324118378,
+          "draws": 10000,
+          "point_pp": 0.67305047701679
+        }
+      },
+      "numeric_gate_passed": false,
+      "gate": {
+        "intent_gain_min_pp": 0.0,
+        "slu_gain_min_pp": 1.0
+      },
+      "limitations": [
+        "Development comparison, not untouched test.",
+        "Bootstrap quantifies roster sampling uncertainty conditional on observed decodes; no independent decoding variance estimate.",
+        "Numeric gate alone does not establish stable cross-task improvement."
+      ]
+    },
+    "compact_vs_learned": {
+      "metrics": {
+        "intent": {
+          "ci95_half_width_pp": 1.4423076923076927,
+          "ci95_hi_pp": 2.8846153846153855,
+          "ci95_lo_pp": 0.0,
+          "draws": 10000,
+          "point_pp": 1.2820512820512775
+        },
+        "per_row_slu_f1": {
+          "ci95_half_width_pp": 2.6211841922521426,
+          "ci95_hi_pp": 5.568912318505418,
+          "ci95_lo_pp": 0.3265439340011328,
+          "draws": 10000,
+          "point_pp": 2.909333528835767
+        },
+        "slu_f1": {
+          "ci95_half_width_pp": 1.932720356693663,
+          "ci95_hi_pp": 1.8901983752757645,
+          "ci95_lo_pp": -1.9752423381115616,
+          "draws": 10000,
+          "point_pp": -0.059722562829456205
+        }
+      },
+      "numeric_gate_passed": false,
+      "gate": {
+        "intent_gain_min_pp": 0.0,
+        "slu_gain_min_pp": 1.0
+      },
+      "limitations": [
+        "Development comparison, not untouched test.",
+        "Bootstrap quantifies roster sampling uncertainty conditional on observed decodes; no independent decoding variance estimate.",
+        "Numeric gate alone does not establish stable cross-task improvement."
+      ]
+    },
+    "learned_vs_lock": {
+      "metrics": {
+        "intent": {
+          "ci95_half_width_pp": 1.9230769230769218,
+          "ci95_hi_pp": 2.2435897435897467,
+          "ci95_lo_pp": -1.6025641025640969,
+          "draws": 10000,
+          "point_pp": 0.3205128205128194
+        },
+        "per_row_slu_f1": {
+          "ci95_half_width_pp": 3.300911146160694,
+          "ci95_hi_pp": 1.6850207862654096,
+          "ci95_lo_pp": -4.916801506055978,
+          "draws": 10000,
+          "point_pp": -1.6434726393594778
+        },
+        "slu_f1": {
+          "ci95_half_width_pp": 2.1949605739977556,
+          "ci95_hi_pp": 2.956800763414459,
+          "ci95_lo_pp": -1.433120384581052,
+          "draws": 10000,
+          "point_pp": 0.7327730398462462
+        }
+      },
+      "numeric_gate_passed": false,
+      "gate": {
+        "intent_gain_min_pp": 0.0,
+        "slu_gain_min_pp": 1.0
+      },
+      "limitations": [
+        "Development comparison, not untouched test.",
+        "Bootstrap quantifies roster sampling uncertainty conditional on observed decodes; no independent decoding variance estimate.",
+        "Numeric gate alone does not establish stable cross-task improvement."
+      ]
+    }
+  },
+  "candidate_accepted": false,
+  "stable_gain_proven": false,
+  "allocated_cards": 8,
+  "instances": 2,
+  "native_calls": 1248,
+  "generation_seconds": 2236.2687928199994,
+  "seconds_per_row": 7.167528182115382,
+  "input_tokens": 11788171,
+  "output_tokens": 2736866,
+  "source_sha256": {
+    "manifest_sha256": "93bf2a25b3ced8dfa809cd755c87acd01ebaef403da879eb667e1212391d8ae1",
+    "outputs_sha256": "d78960b7919f8f843cd9d3e8258cd0aaef87661448cfa2948cb441f25661e549",
+    "raw_trace_sha256": "8c679926f4938f1d5fd28f1bf4583ee614e7a5cac50dcbe0937f26e42bd5557c",
+    "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+    "sealed_scores_sha256": "b08202fe4782efdd15c41053c626ac7dc5f8869e164398aef7272fe87a67fead"
+  },
+  "fixed_arm_order": [
+    "learned",
+    "compact",
+    "lock"
+  ],
+  "latency_causal_claim": false,
+  "terminal_cost_journal_audit_pending": true,
+  "terminal_archive_verification_pending": true
+}
