@@ -1,21 +1,13 @@
 {
-  "ready": false,
+  "ready": true,
   "release_file": "studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1/bank-release-v1.json",
   "reports": [
     {
       "consumer": "R01C-H2",
-      "measure": null,
-      "ready": false,
-      "reasons": [
-        "receipt hash is zero, malformed, or pending",
-        "token measure is None, expected 'vllm-tokenize'",
-        "exemplar_bank_content_sha256 is zero or malformed",
-        "rule_bank_content_sha256 is zero or malformed",
-        "exemplar token count is not measured",
-        "rule token count is not measured",
-        "receipt artifact missing: studies/speech-aware-evidence-acquisition/docs/analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/R01C-H1/bank-receipt.json"
-      ],
-      "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "measure": "vllm-tokenize",
+      "ready": true,
+      "reasons": [],
+      "receipt_sha256": "98959ae998cecbaf328ef07e8d1b4416bf090298fd0107ab1908bab3bed0cc57",
       "release": "half-R01C-H1",
       "source_halves": [
         "R01C-H1"
@@ -23,18 +15,10 @@
     },
     {
       "consumer": "R01C-H1",
-      "measure": null,
-      "ready": false,
-      "reasons": [
-        "receipt hash is zero, malformed, or pending",
-        "token measure is None, expected 'vllm-tokenize'",
-        "exemplar_bank_content_sha256 is zero or malformed",
-        "rule_bank_content_sha256 is zero or malformed",
-        "exemplar token count is not measured",
-        "rule token count is not measured",
-        "receipt artifact missing: studies/speech-aware-evidence-acquisition/docs/analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/R01C-H2/bank-receipt.json"
-      ],
-      "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "measure": "vllm-tokenize",
+      "ready": true,
+      "reasons": [],
+      "receipt_sha256": "d6eecb62a2e76b31fd49f8737c53cca99ce7fb99fbe16841beff03f3b011ccef",
       "release": "half-R01C-H2",
       "source_halves": [
         "R01C-H2"
@@ -42,18 +26,10 @@
     },
     {
       "consumer": "FOLD-B",
-      "measure": null,
-      "ready": false,
-      "reasons": [
-        "receipt hash is zero, malformed, or pending",
-        "token measure is None, expected 'vllm-tokenize'",
-        "exemplar_bank_content_sha256 is zero or malformed",
-        "rule_bank_content_sha256 is zero or malformed",
-        "exemplar token count is not measured",
-        "rule token count is not measured",
-        "receipt artifact missing: studies/speech-aware-evidence-acquisition/docs/analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/union/bank-receipt.json"
-      ],
-      "receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "measure": "vllm-tokenize",
+      "ready": true,
+      "reasons": [],
+      "receipt_sha256": "c62a0b442189647c98ce4addd59a4e48983f7d9a04431c76f480826de533f9c3",
       "release": "union",
       "source_halves": [
         "R01C-H1",

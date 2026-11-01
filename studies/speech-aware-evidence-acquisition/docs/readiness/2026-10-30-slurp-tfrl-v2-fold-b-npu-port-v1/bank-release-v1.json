@@ -1,4 +1,11 @@
 {
+  "artifact_policy": {
+    "artifact_root": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1",
+    "data_root_mount": "/mnt/cephfs/xingchao/omni",
+    "data_root_relative": true,
+    "raw_trajectory_policy": "raw trajectory, credit and source-row artifacts remain outside Git and are not copied into the public repository",
+    "verification": "scripts/checks/tfrl_v2_bank_readiness.py --data-root <data-root>"
+  },
   "caps": {
     "exemplar_block_tokens": 2000,
     "exemplars_replace_supplied_items": 8,
@@ -11,14 +18,14 @@
         "consume_no_bank": true,
         "note": "iteration-1 construction flights are seed-only and consume no bank; from iteration 2 a half consumes the bank distilled from the OTHER half"
       },
-      "frame_note": "the frame the consuming cell's native_episode.consumption_module carries at the flip, with bank_receipt.sha256 replaced by the minted union hash; rails.tfrl_v2_consumption refuses the zero sentinel, a different hash, a source that includes the consuming roster, and an estimate measure",
+      "frame_note": "frames now pin the released union receipt; execution cells remain held until coordinator countersign, external artifact root binding, and four-row detached smoke admission are independently verified.",
       "iteration": 1,
       "releases": {
         "half-R01C-H1": {
           "bank_receipt": {
             "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/R01C-H1/bank-receipt.json",
-            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-            "state": "PENDING (zero sentinel): minted when the bank is released"
+            "sha256": "98959ae998cecbaf328ef07e8d1b4416bf090298fd0107ab1908bab3bed0cc57",
+            "state": "RELEASED: canonical receipt hash verified against external data-root artifact"
           },
           "consuming": {
             "consumer": "R01C-H2",
@@ -27,17 +34,17 @@
             "registered": "after the iteration is read; not a cell yet"
           },
           "consuming_roster": "R01C-H2",
-          "exemplar_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "exemplar_bank_content_sha256": "d664599f04f445df041e1b00012227eb2437aee73a2b58223d82d29fa3436bbc",
           "kind": "half",
           "measure": {
             "exemplar_text_required": "resolved",
-            "observed": null,
+            "observed": "vllm-tokenize",
             "refused": [
               "estimate"
             ],
             "required": "vllm-tokenize"
           },
-          "rule_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "rule_bank_content_sha256": "217c8c6ad738f7d64fb3d07254999d429e85ac5e2f430bbde31944a7315a7c29",
           "source_halves": [
             "R01C-H1"
           ],
@@ -46,16 +53,16 @@
           },
           "token_counts": {
             "exemplar_block_token_cap": 2000,
-            "exemplar_max_block_tokens": null,
-            "rule_bank_rendered_tokens": null,
+            "exemplar_max_block_tokens": 1726,
+            "rule_bank_rendered_tokens": 0,
             "rule_bank_token_cap": 400
           }
         },
         "half-R01C-H2": {
           "bank_receipt": {
             "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/R01C-H2/bank-receipt.json",
-            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-            "state": "PENDING (zero sentinel): minted when the bank is released"
+            "sha256": "d6eecb62a2e76b31fd49f8737c53cca99ce7fb99fbe16841beff03f3b011ccef",
+            "state": "RELEASED: canonical receipt hash verified against external data-root artifact"
           },
           "consuming": {
             "consumer": "R01C-H1",
@@ -64,17 +71,17 @@
             "registered": "after the iteration is read; not a cell yet"
           },
           "consuming_roster": "R01C-H1",
-          "exemplar_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "exemplar_bank_content_sha256": "b0cd5fc5b1e8472873d8b6f32b38443fd7579f2a8f7d4004367722882c605af5",
           "kind": "half",
           "measure": {
             "exemplar_text_required": "resolved",
-            "observed": null,
+            "observed": "vllm-tokenize",
             "refused": [
               "estimate"
             ],
             "required": "vllm-tokenize"
           },
-          "rule_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "rule_bank_content_sha256": "35b7ad20d1bd2d9bd8944c660b6b04d65f2f28f6c9681c407a4ef785c1e467dd",
           "source_halves": [
             "R01C-H2"
           ],
@@ -83,16 +90,16 @@
           },
           "token_counts": {
             "exemplar_block_token_cap": 2000,
-            "exemplar_max_block_tokens": null,
-            "rule_bank_rendered_tokens": null,
+            "exemplar_max_block_tokens": 1132,
+            "rule_bank_rendered_tokens": 28,
             "rule_bank_token_cap": 400
           }
         },
         "union": {
           "bank_receipt": {
             "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/union/bank-receipt.json",
-            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-            "state": "PENDING (zero sentinel): minted when the bank is released"
+            "sha256": "c62a0b442189647c98ce4addd59a4e48983f7d9a04431c76f480826de533f9c3",
+            "state": "RELEASED: canonical receipt hash verified against external data-root artifact"
           },
           "consuming": {
             "also_consumed_by": "the Fold A confirmation flight of the accepted state (FOLD-A); a separate package",
@@ -107,7 +114,7 @@
             ]
           },
           "consuming_roster": "FOLD-B",
-          "exemplar_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "exemplar_bank_content_sha256": "f7acd8ac6cb63c16de14752a111e359cbe1703a03b10b808666ed8f993eca4b1",
           "kind": "union",
           "knowledge_release_dirs": {
             "exemplar_bank": "knowledge/slurp/tfrl-v2/exemplar-bank-i1-npu-port-v1",
@@ -115,13 +122,13 @@
           },
           "measure": {
             "exemplar_text_required": "resolved",
-            "observed": null,
+            "observed": "vllm-tokenize",
             "refused": [
               "estimate"
             ],
             "required": "vllm-tokenize"
           },
-          "rule_bank_content_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "rule_bank_content_sha256": "5398023ba74eeb60e215578e5ddcbbda3ead70ddc99ed04de494d01728eaf4fc",
           "source_halves": [
             "R01C-H1",
             "R01C-H2"
@@ -132,24 +139,24 @@
           },
           "token_counts": {
             "exemplar_block_token_cap": 2000,
-            "exemplar_max_block_tokens": null,
-            "rule_bank_rendered_tokens": null,
+            "exemplar_max_block_tokens": 1875,
+            "rule_bank_rendered_tokens": 28,
             "rule_bank_token_cap": 400
           },
           "union_hash": {
-            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-            "state": "PENDING (zero sentinel): the content hash of the union bank receipt"
+            "sha256": "c62a0b442189647c98ce4addd59a4e48983f7d9a04431c76f480826de533f9c3",
+            "state": "RELEASED: canonical content hash of bank-receipt.json"
           }
         }
       },
-      "status": "REGISTERED, PENDING RELEASE (every receipt hash is the zero sentinel)",
+      "status": "REGISTERED, RELEASED (receipt and bank artifacts are external to Git under the pinned data root)",
       "tfrl_v2_bank_frames": {
         "slurp-native-stage3-tfrl-v2-fold-b-i1-npu-port-v1": {
           "algorithm_id": "tfrl-v2",
           "bank_kind": "union",
           "bank_receipt": {
             "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/union/bank-receipt.json",
-            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            "sha256": "c62a0b442189647c98ce4addd59a4e48983f7d9a04431c76f480826de533f9c3"
           },
           "consumer": "FOLD-B",
           "exemplar_block": {
@@ -175,7 +182,7 @@
           "bank_kind": "union",
           "bank_receipt": {
             "relpath": "analysis/SAEA-SLURP-TFRL-V2-FOLD-B-READ-NPU-PORT-V1/v2/banks/i1/union/bank-receipt.json",
-            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+            "sha256": "c62a0b442189647c98ce4addd59a4e48983f7d9a04431c76f480826de533f9c3"
           },
           "consumer": "FOLD-B",
           "exemplar_block": {
@@ -239,7 +246,7 @@
       "split_identity_hash": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72"
     }
   },
-  "status": "DRAFT-HELD",
+  "status": "RELEASED-EXTERNAL-ARTIFACTS",
   "t0_never_a_bank_source": {
     "allowed_source_halves": [
       "R01C-H1",
