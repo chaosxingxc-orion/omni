@@ -1,0 +1,341 @@
+{
+  "role_stats": {
+    "perception": {
+      "calls": 312,
+      "mean_request_latency_seconds": 280.88523855419874,
+      "prompt_tokens": 1199833,
+      "completion_tokens": 547621,
+      "mean_prompt_tokens": 3845.61858974359,
+      "mean_completion_tokens": 1755.195512820513
+    },
+    "solver/learned": {
+      "calls": 312,
+      "mean_request_latency_seconds": 399.4386816600961,
+      "prompt_tokens": 4471589,
+      "completion_tokens": 709463,
+      "mean_prompt_tokens": 14332.016025641025,
+      "mean_completion_tokens": 2273.9198717948716
+    },
+    "solver/lock": {
+      "calls": 312,
+      "mean_request_latency_seconds": 288.41009658346155,
+      "prompt_tokens": 2711285,
+      "completion_tokens": 699271,
+      "mean_prompt_tokens": 8690.016025641025,
+      "mean_completion_tokens": 2241.253205128205
+    }
+  },
+  "sample_phases": {
+    "admission_to_P_request": {
+      "n": 312,
+      "mean_seconds": 156.97226986086534,
+      "p50_seconds": 46.21624182000005,
+      "p95_seconds": 777.7654243900006
+    },
+    "P_end_to_learned_request": {
+      "n": 312,
+      "mean_seconds": 1.9100501540384642,
+      "p50_seconds": 1.4196957199997087,
+      "p95_seconds": 4.988809520000359
+    },
+    "learned_end_to_lock_request": {
+      "n": 312,
+      "mean_seconds": 0.4255296154807557,
+      "p50_seconds": 0.26883250499940914,
+      "p95_seconds": 1.0566256500005693
+    },
+    "lock_end_to_sample_finished": {
+      "n": 312,
+      "mean_seconds": 0.05484088810894077,
+      "p50_seconds": 0.029528254999604542,
+      "p95_seconds": 0.22949070999857213
+    },
+    "admission_to_sample_finished": {
+      "n": 312,
+      "mean_seconds": 1156.4381895378526,
+      "p50_seconds": 1259.0824929299997,
+      "p95_seconds": 1456.8908347200004
+    }
+  },
+  "missing_sample_timing": 0,
+  "stage_timing": {
+    "schema": "saea-stage-timing-summary-v1",
+    "events": 11856,
+    "total_journal_events": 13729,
+    "sample_scope": "verified-complete-checkpoint-rows",
+    "completed_rows_without_timing": [],
+    "observed_sample_count": 312,
+    "incomplete_tail": false,
+    "stages": {
+      "audio_read_encode": {
+        "invocations": {
+          "count": 1872,
+          "mean_s": 0.005891133477560203,
+          "p50_s": 0.00129071999936059,
+          "p95_s": 0.02910358000008273,
+          "total_s": 11.0282018699927
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.03534680086536122,
+          "p50_s": 0.023761264998938714,
+          "p95_s": 0.09286408000207302,
+          "total_s": 11.0282018699927
+        },
+        "errors": 0
+      },
+      "checkpoint_append_fsync": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 0.006252657596108362,
+          "p50_s": 0.005977909999273834,
+          "p95_s": 0.007770719999825815,
+          "total_s": 1.9508291699858091
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.006252657596108362,
+          "p50_s": 0.005977909999273834,
+          "p95_s": 0.007770719999825815,
+          "total_s": 1.9508291699858091
+        },
+        "errors": 0
+      },
+      "checkpoint_total": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 0.013769990640989467,
+          "p50_s": 0.01342032999946241,
+          "p95_s": 0.01585218999935023,
+          "total_s": 4.296237079988714
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.013769990640989467,
+          "p50_s": 0.01342032999946241,
+          "p95_s": 0.01585218999935023,
+          "total_s": 4.296237079988714
+        },
+        "errors": 0
+      },
+      "context_build": {
+        "invocations": {
+          "count": 624,
+          "mean_s": 0.2540182808013047,
+          "p50_s": 0.17977327000016885,
+          "p95_s": 0.8101678299990454,
+          "total_s": 158.5074072200141
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.5080365616026093,
+          "p50_s": 0.4033937849999347,
+          "p95_s": 0.8335415600004126,
+          "total_s": 158.5074072200141
+        },
+        "errors": 0
+      },
+      "http_request": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 322.76945026080125,
+          "p50_s": 279.1691921100005,
+          "p95_s": 594.7434763400006,
+          "total_s": 302112.20544411003
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 968.3083507824039,
+          "p50_s": 1013.928498934999,
+          "p95_s": 1314.60592035,
+          "total_s": 302112.2054441101
+        },
+        "errors": 0
+      },
+      "native_fit": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 4.186084266314111,
+          "p50_s": 0.2656698399996458,
+          "p95_s": 23.546973089999483,
+          "total_s": 3918.174873270008
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 12.558252798942334,
+          "p50_s": 12.13447450500098,
+          "p95_s": 28.005475580000166,
+          "total_s": 3918.174873270008
+        },
+        "errors": 0
+      },
+      "native_fit_capacity_wait": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 3.694458331335473,
+          "p50_s": 7.625000762345735e-06,
+          "p95_s": 22.63240252000014,
+          "total_s": 3458.0129981300024
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 11.083374994006418,
+          "p50_s": 10.08265381999945,
+          "p95_s": 26.009236809999493,
+          "total_s": 3458.0129981300024
+        },
+        "errors": 0
+      },
+      "native_fit_lock_wait": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 0.0001407027457175861,
+          "p50_s": 1.6800004232209176e-06,
+          "p95_s": 2.3000002329354174e-06,
+          "total_s": 0.1316977699916606
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.00042210823715275835,
+          "p50_s": 5.145000159245683e-06,
+          "p95_s": 0.0030120699984763633,
+          "total_s": 0.1316977699916606
+        },
+        "errors": 0
+      },
+      "native_fit_recovery_lock_wait": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 0.6280418003739078,
+          "p50_s": 2.134999704139773e-06,
+          "p95_s": 1.7769577299995944,
+          "total_s": 587.8471251499777
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 1.8841254011217234,
+          "p50_s": 1.6117798999989645,
+          "p95_s": 6.559225130000414,
+          "total_s": 587.8471251499777
+        },
+        "errors": 0
+      },
+      "output_normalize": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 0.00022855362172508766,
+          "p50_s": 0.00022236999939195812,
+          "p95_s": 0.00023596000028192066,
+          "total_s": 0.07130872997822735
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.00022855362172508766,
+          "p50_s": 0.00022236999939195812,
+          "p95_s": 0.00023596000028192066,
+          "total_s": 0.07130872997822735
+        },
+        "errors": 0
+      },
+      "request_render": {
+        "invocations": {
+          "count": 1872,
+          "mean_s": 0.2104994641185806,
+          "p50_s": 0.1059166400000322,
+          "p95_s": 0.639655799999673,
+          "total_s": 394.0549968299829
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 1.2629967847114836,
+          "p50_s": 1.1160026049997214,
+          "p95_s": 2.4752207700003055,
+          "total_s": 394.0549968299829
+        },
+        "errors": 0
+      },
+      "request_total": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 332.3584996731197,
+          "p50_s": 286.4306100550002,
+          "p95_s": 600.5095612100013,
+          "total_s": 311087.55569404026
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 997.0754990193591,
+          "p50_s": 1050.6748838849994,
+          "p95_s": 1355.3937326700006,
+          "total_s": 311087.55569403997
+        },
+        "errors": 0
+      },
+      "transport_total": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 322.90727156404915,
+          "p50_s": 279.28199370500033,
+          "p95_s": 594.8050499500005,
+          "total_s": 302241.20618394995
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 968.7218146921475,
+          "p50_s": 1014.8521458149994,
+          "p95_s": 1314.9215228700004,
+          "total_s": 302241.20618395
+        },
+        "errors": 0
+      }
+    },
+    "request_validation_accounting_and_response_handling_s": {
+      "count": 936,
+      "mean_s": 9.451228109070517,
+      "p50_s": 0.2818061699995269,
+      "p95_s": 41.99938698000096,
+      "total_s": 8846.349510090009
+    },
+    "http_request_s": {
+      "count": 936,
+      "mean_s": 322.76945026080125,
+      "p50_s": 279.1691921100005,
+      "p95_s": 594.7434763400006,
+      "total_s": 302112.20544411003
+    },
+    "limitations": [
+      "Inclusive intervals overlap; do not sum stages as wall time.",
+      "Observed samples include incomplete rows; join final checkpoints before estimating complete-task throughput.",
+      "HTTP time includes queue, server audio/prefill/decode and network; TTFT unavailable on non-streaming path.",
+      "Timing journal uses kernel writes, not per-event fsync; scientific checkpoints remain independently durable."
+    ]
+  },
+  "complete_rows": 312,
+  "total_rows": 312,
+  "native_calls": 936,
+  "native_responses": 936,
+  "unknown_contacts": 0,
+  "journal_files": 1872,
+  "journal_manifest_sha256": "eb5eae73588ce819d4f6e0b4903e77812b53fad9103b17b7ae0560f0ae7d2bc6",
+  "usage": {
+    "prompt_tokens": 8382707,
+    "completion_tokens": 1956355,
+    "total_tokens": 10339062
+  },
+  "allocated_cards": 8,
+  "instances": 2,
+  "generation_seconds": 1646.5461966799994,
+  "seconds_per_row": 5.277391656025639,
+  "campaign_seconds": 1761.2632600199995,
+  "output_sha256": "b0ae93bf02c32405f38735652bf08347c4aeb47a0b733984de1e47d1c04bbe86",
+  "paired_result_sha256": "4267b09c2ad953c84f3fac5a97021120d113499ab812d810becf2a02584341b5",
+  "schema": "saea-h2-complete-cost-timing-v1",
+  "new_model_calls_by_analysis": 0,
+  "source_analysis_sha256": "ac053592c48b22b1eb1faa5081663d11e611587de11b7206f52386959afea6e5",
+  "limitations": [
+    "Inclusive stages and concurrent sample intervals must not be added as wall time.",
+    "HTTP includes queue, network and engine execution; no TTFT/decode decomposition available.",
+    "Admission-to-P includes scheduling and preparation; it is not measured pure data loading time.",
+    "Learned always precedes lock within the current paired program; latency difference is descriptive and order/load confounded."
+  ]
+}
