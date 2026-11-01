@@ -19,7 +19,8 @@ class QueueProgressTests(unittest.TestCase):
                 "c": {"status": "pending"},
             },
         }
-        summary = card_queue.progress_summary(state, now=60)
+        now = card_queue._epoch_from_iso("2026-01-01T00:00:00Z") + 60
+        summary = card_queue.progress_summary(state, now=now)
         self.assertEqual(summary["terminal_jobs"], 1)
         self.assertEqual(summary["remaining_jobs"], 2)
         self.assertAlmostEqual(summary["throughput_jobs_per_second"], 1 / 60)

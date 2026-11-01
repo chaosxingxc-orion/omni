@@ -819,48 +819,6 @@ def progress_summary(state, now=None):
     }
 
 
-def progress_summary(state, now=None):
-    """Return an offline progress/ETA summary from durable queue state.
-
-    This helper never probes cards, processes, or model endpoints.  It is safe
-    for a CPU reporting process to call while the detached runner is active.
-    ETA is deliberately ``None`` until at least one completed job has usable
-    timestamps; incomplete or malformed records are excluded rather than
-    treated as zero-duration work.
-    """
-    now = now_s() if now is None else float(now)
-    jobs = state.get("jobs", {}) if isinstance(state, dict) else {}
-    terminal = {"done", "failed", "skipped"}
-    completed_durations = []
-    running_elapsed = []
-    for rec in jobs.values():
-        if not isinstance(rec, dict):
-            continue
-        start = rec.get("started_ts")
-        finish = rec.get("finished_ts")
-        if isinstance(start, (int, float)) and isinstance(finish, (int, float)) and finish >= start:
-            completed_durations.append(float(finish - start))
-        elif rec.get("status") == "running" and isinstance(start, (int, float)):
-            running_elapsed.append(max(0.0, now - float(start)))
-    counts = state.get("counts", {}) if isinstance(state, dict) else {}
-    total = len(jobs)
-    finished = sum(1 for rec in jobs.values() if isinstance(rec, dict) and rec.get("status") in terminal)
-    remaining = max(0, total - finished)
-    avg = (sum(completed_durations) / len(completed_durations)) if completed_durations else None
-    return {
-        "total_jobs": total,
-        "finished_jobs": finished,
-        "remaining_jobs": remaining,
-        "running_jobs": sum(1 for rec in jobs.values() if isinstance(rec, dict) and rec.get("status") == "running"),
-        "counts": dict(counts) if isinstance(counts, dict) else {},
-        "completed_duration_samples": len(completed_durations),
-        "mean_completed_seconds": avg,
-        "running_elapsed_seconds": running_elapsed,
-        "eta_seconds": (remaining * avg) if avg is not None and remaining else (0.0 if remaining == 0 else None),
-        "eta_basis": "mean completed job duration; excludes running/incomplete records" if avg is not None else None,
-    }
-
-
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
