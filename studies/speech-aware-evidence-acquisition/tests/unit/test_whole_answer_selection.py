@@ -101,3 +101,21 @@ def test_selection_runtime_refuses_unbound_config(tmp_path,fault):
     elif fault=='ceiling':config=replace(config,max_contacts=4)
     else:config=replace(config,roles=tuple(replace(role,supply_variants=None) if role.role_kind=='solver' else role for role in config.roles))
     with pytest.raises(ValueError):validate_prompt_contact_limits(config)
+
+
+@pytest.mark.parametrize('a,b', [(text(), 'invalid'), ('invalid', text()), ('', ''), ('{}', 'not-json'),
+                                  ('{"scenario":"","action":"set","entities":[]}', text())])
+def test_observed_invalid_candidates_preserve_a_without_judge(a,b):
+    values=dict(a_text=a,b_text=b,a_contact=contact('a',a),b_contact=contact('b',b))
+    assert not m.texts_need_adjudication(a,b)
+    out,r=m.select_observed(**values)
+    assert out==a and r['reason']=='invalid-candidate-fallback'
+    assert r['selected']=='A' and r['additional_contacts']==0
+    assert m.verify_receipt(r,a_text=a,b_text=b)==a
+    with pytest.raises(ValueError):
+        m.select_observed(**values,judge_text='{"choice":"B"}',judge_contact=contact('judge','{"choice":"B"}'))
+
+
+@pytest.mark.parametrize('a,b', [(None,text()), (text(),None), ([],text())])
+def test_missing_candidate_is_not_a_parse_fallback(a,b):
+    with pytest.raises(ValueError):m.texts_need_adjudication(a,b)

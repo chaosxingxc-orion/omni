@@ -6611,6 +6611,10 @@ class FlightRuntime:
             "arm": arm,
             "request_id_prefix": self._request_id_prefix,
         }
+        if baseline_values.get('native_episode', {}).get('answer_selection') == 'odd40-whole-answer-v1':
+            # Operational custody, outside model inputs. This is capture only;
+            # journal replay still requires explicit recovery validation.
+            kwargs['contact_journal'] = True
         if baseline_values.get("prepared_execution_units") is not None:
             self.execution_unit_roster()
             kwargs["slice_registry"] = self._execution_unit_registry

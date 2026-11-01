@@ -4989,3 +4989,11 @@ def test_preflight_refuses_context_budget_limit_that_differs_from_geometry(tmp_p
 
     with pytest.raises(ContextBudgetRefusal, match="serving geometry"):
         runtime.preflight()
+
+
+def test_odd40_runtime_enables_durable_contact_capture(tmp_path):
+    runtime = _make_runtime(tmp_path, happy_path=True,
+        config_kwargs={'arm':'bare-core','policy':'fixed'})
+    runtime.preflight();runtime.preprocess();runtime.serve()
+    runtime._composed.values['native_episode']={'answer_selection':'odd40-whole-answer-v1'}
+    assert runtime.frozen_core_client_kwargs()['contact_journal'] is True

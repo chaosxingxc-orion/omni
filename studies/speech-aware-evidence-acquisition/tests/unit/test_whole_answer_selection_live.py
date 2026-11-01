@@ -9,7 +9,7 @@ from test_stage3_supply_variant_interleaving import _arm_resolver, _live_config,
 from test_whole_answer_selection import text
 
 
-def harness_for(tmp_path, *, equal=False, judge='{"choice":"B"}', raw_audio=False):
+def harness_for(tmp_path, *, equal=False, judge='{"choice":"B"}', raw_audio=False, contact_journal=False):
     from test_tfrl_odd40_candidates import m as candidates, documents, ROOT
     from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
     from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
@@ -20,6 +20,7 @@ def harness_for(tmp_path, *, equal=False, judge='{"choice":"B"}', raw_audio=Fals
     parsed=load_native_episode_config(values,default_phase_program(values['policy']))
     group=parsed.supply_variant_group
     h=_ActualEpisodeHarness(tmp_path/'harness',sample_count=1,max_revisions=0,max_contacts=5,planner_actions=(),
+        contact_journal=contact_journal,
         query_source='speech_audio' if raw_audio else 'speech_features',
         arm='raw-speech-agent-native-tools' if raw_audio else 'speech-feature-query-native-tools')
     h.config=replace(_live_config(group=group,max_contacts=5),prompt_contact_limits='legacy-c17-lock-v1',answer_selection=m.POLICY_ID)
@@ -159,3 +160,81 @@ def test_receipt_rejects_judge_request_drift(tmp_path,fault):
         document=json.loads(state['content']);document['candidates'][0]['answer']['action']='changed'
         state['content']=json.dumps(document);state['content_sha256']=m.text_sha(state['content'])
     with pytest.raises(ValueError):m.verify_trace(receipt,result.native_episode_receipt,result.supply_variants,records,result.sample_id)
+
+
+@pytest.mark.parametrize('invalid_arm', ['b', 'lock', 'both'])
+def test_invalid_candidate_settles_real_graph_without_judge_or_row_loss(tmp_path,invalid_arm):
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    h,values=harness_for(tmp_path,raw_audio=True)
+    original=h._output
+    def malformed(key):
+        if key[1]=='solver' and ((invalid_arm in ('b','both') and key[3]==1)
+                                or (invalid_arm in ('lock','both') and key[3]==3)):
+            return 'unparseable observed answer'
+        return original(key)
+    h._output=malformed
+    try:
+        summary=h.run()
+        raw=_raw_native(h,solver_role=values['native_episode']['roles']['solver']);raw['answer_selection']=m.POLICY_ID
+        outputs=_runtime(h,summary,raw)._canonical_output_rows(h.client)
+    finally:h.close()
+    assert len(summary.results)==len(outputs)==1
+    requests=[p for ch,rid,p in h.trace.records if ch=='MODEL_REQUEST']
+    assert len(requests)==4
+    receipt=summary.results[0].native_episode_receipt.get('answer_selection')
+    # The native finite-completion policy may already abstain on invalid A.
+    if receipt is not None:
+        assert receipt['selected']=='A' and receipt['reason']=='invalid-candidate-fallback'
+        assert receipt['adjudicator'] is None
+    _verify_outputs_trace_binding(tuple(outputs),{rid:p for ch,rid,p in h.trace.records})
+
+
+@pytest.mark.parametrize('failure', [None,'unknown','response-trace'])
+def test_actual_graph_journals_known_contacts_before_trace_or_transport_failure(tmp_path,failure):
+    from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal
+    h,_=harness_for(tmp_path,raw_audio=True,contact_journal=True)
+    original=h._output
+    def fail(key):
+        if failure=='unknown' and key[1]=='selection':raise TimeoutError('unknown remote outcome')
+        return original(key)
+    h._output=fail
+    if failure=='response-trace':
+        sink=h.client._adapter._sink
+        emit=sink.emit
+        def fail_emit(channel,rid,payload):
+            if channel=='MODEL_RESPONSE':raise RuntimeError('crash before response trace')
+            return emit(channel,rid,payload)
+        sink.emit=fail_emit
+    try:
+        if failure:
+            with pytest.raises(Exception):h.run()
+        else:h.run()
+    finally:h.close()
+    journal=ContactJournal(h.world.data_root,h.plan,h.client.arm)
+    intents=[json.loads(p.read_bytes()) for p in journal.root.glob('*.intent.json')]
+    states=[journal.inspect(i['request_id']) for i in intents]
+    assert len(states)==(1 if failure=='response-trace' else 5)
+    assert sum(s['state']=='unknown' for s in states)==(1 if failure=='unknown' else 0)
+    for s in states:
+        if s['state']=='observed':assert isinstance(json.loads(s['response_bytes'])['text'],str)
+    # Journal capture never adds transport calls or changes durable attempt spend.
+    assert h.client._adapter.cost_summary()['calls_used']==len(states)
+
+
+def test_malformed_transport_response_is_durable_before_parser_refuses(tmp_path):
+    from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal
+    h,_=harness_for(tmp_path,raw_audio=True,contact_journal=True)
+    calls=[]
+    def malformed(blob):
+        calls.append(blob)
+        return b'not-json-but-observed'
+    h.client._adapter._transport=malformed
+    try:
+        with pytest.raises(Exception):h.run()
+    finally:h.close()
+    j=ContactJournal(h.world.data_root,h.plan,h.client.arm)
+    intents=[json.loads(p.read_bytes()) for p in j.root.glob('*.intent.json')]
+    assert len(intents)==len(calls)==1
+    assert j.inspect(intents[0]['request_id'])['response_bytes']==b'not-json-but-observed'
+    assert h.client._adapter.cost_summary()['calls_used']==1

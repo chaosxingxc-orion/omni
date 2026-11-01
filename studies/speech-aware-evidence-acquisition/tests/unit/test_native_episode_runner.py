@@ -234,6 +234,7 @@ class _ActualEpisodeHarness:
         data_root=None,
         query_source: str = "speech_features",
         execution_units_factory=None,
+        contact_journal=False,
     ):
         self.world = _World(tmp_path, data_root=data_root)
         self.world.samples = self.world.samples[:sample_count]
@@ -441,7 +442,7 @@ class _ActualEpisodeHarness:
             )
         self.client, _, _ = _client(
             self.world, tmp_path, plan=self.plan, transport=self.transport,
-            arm=arm, **client_kwargs,
+            arm=arm, contact_journal=contact_journal, **client_kwargs,
         )
         self.trace = TraceBuffer(self.plan.run_id)
 

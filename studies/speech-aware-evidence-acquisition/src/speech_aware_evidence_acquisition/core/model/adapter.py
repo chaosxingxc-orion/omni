@@ -101,6 +101,7 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         sink: TraceSink,
         binding: PayloadBindingContext,
         slice_registry: SliceRegistry | None = None,
+        contact_journal: bool = False,
     ) -> None:
         if arm not in ARM_VISIBLE_FIELDS:
             raise FrozenCoreError(
@@ -137,6 +138,12 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
                 "FrozenCoreAdapter slice_registry must be a core.model.SliceRegistry "
                 f"or None; got {type(slice_registry).__name__}"
             )
+        if type(contact_journal) is not bool:
+            raise FrozenCoreError('contact_journal must be boolean')
+        self._contact_journal = None
+        if contact_journal:
+            from ..contact_journal import ContactJournal
+            self._contact_journal = ContactJournal(binding.data_root, plan, arm)
         self._slice_registry = slice_registry
         # R0 repair refactor stage 2 (part C): the gate check, D1 media-
         # identity re-verification, transport session-liveness check, and the
@@ -377,6 +384,10 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
             request_id = str(payload["request_id"])
             request_bytes = _canonical(payload)
             request_sha256 = hashlib.sha256(request_bytes).hexdigest()
+            if self._contact_journal is not None:
+                # Persist intent BEFORE accounting/transport. If interrupted here,
+                # uncertainty is conservative; a later worker must reconcile it.
+                self._contact_journal.intent(payload)
             self._sink.emit(
                 "MODEL_REQUEST",
                 f"{request_id}/request",
@@ -406,6 +417,10 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         started = time.monotonic()
         response_bytes = self._transport(request_bytes)
         latency = time.monotonic() - started
+        if self._contact_journal is not None:
+            # Keep even malformed responses before parsing or trace emission can
+            # fail. An interrupted parse never requires another model request.
+            self._contact_journal.response(request_id, request_sha256, response_bytes, latency)
         response_sha256 = hashlib.sha256(response_bytes).hexdigest()
         wire_provenance: dict[str, object] | None = None
         wire_response_bytes: bytes | None = None

@@ -1459,6 +1459,7 @@ class FrozenCoreClient:
         execution_units: ExecutionUnitRoster | None = None,
         tool_schemas: Sequence[Mapping[str, object]] | None = None,
         construction_targets: Sequence[Mapping[str, object]] | None = None,
+        contact_journal: bool = False,
     ) -> None:
         plan.validate()
         assert_execution_scope(plan.execution_profile)
@@ -1526,6 +1527,7 @@ class FrozenCoreClient:
             sink=self._dispatching_sink,
             binding=binding,
             slice_registry=slice_registry,
+            contact_journal=contact_journal,
         )
         self._reverse_media_index: dict[str, str] = {
             relpath: sample_id for sample_id, relpath in binding.media_relpaths.items()

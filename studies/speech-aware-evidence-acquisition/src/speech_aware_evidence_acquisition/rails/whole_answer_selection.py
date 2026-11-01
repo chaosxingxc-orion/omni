@@ -101,6 +101,26 @@ def parse_answer(text):
     return answer
 
 
+def observed_candidates(a_text, b_text):
+    """Classify observed text only; malformed candidates preserve original A.
+
+    Do not ask a judge to repair invalid answers or drop the sample. A non-text
+    value means missing/invalid transport custody, not an observed parse failure.
+    """
+    if not isinstance(a_text, str) or not isinstance(b_text, str):
+        raise ValueError('both candidate response texts must be observed')
+    try:
+        a, b = parse_answer(a_text), parse_answer(b_text)
+    except ValueError:
+        return None
+    return a, b
+
+
+def texts_need_adjudication(a_text, b_text):
+    pair = observed_candidates(a_text, b_text)
+    return pair is not None and needs_adjudication(*pair)
+
+
 def contact_identity(contact, text):
     keys = ('agent_contact_id', 'request_id', 'request_sha256', 'response_sha256', 'response_text_sha256')
     if not isinstance(contact, dict) or any(not isinstance(contact.get(k), str) or not contact[k] for k in keys):
@@ -117,11 +137,11 @@ def select_observed(*, a_text, b_text, a_contact, b_contact, judge_text=None,
     A missing/uncertain judge outcome raises. Only an observed malformed or
     non-stop completion can fall back. This function never retries a request.
     """
-    a, b = parse_answer(a_text), parse_answer(b_text)
+    pair = observed_candidates(a_text, b_text)
     a_id, b_id = contact_identity(a_contact, a_text), contact_identity(b_contact, b_text)
     if a_id['agent_contact_id'] == b_id['agent_contact_id'] or a_id['request_id'] == b_id['request_id']:
         raise ValueError('A and B must have distinct contacts')
-    different = needs_adjudication(a, b)
+    different = pair is not None and needs_adjudication(*pair)
     judge_id = None
     if different:
         if judge_text is None or judge_contact is None:
@@ -130,13 +150,16 @@ def select_observed(*, a_text, b_text, a_contact, b_contact, judge_text=None,
         if (judge_id['agent_contact_id'] in (a_id['agent_contact_id'], b_id['agent_contact_id'])
                 or judge_id['request_id'] in (a_id['request_id'], b_id['request_id'])):
             raise ValueError('adjudicator must have its own contact')
-        _, decision = deliver(a, b, judge_text if judge_finish_reason == 'stop' else '')
+        _, decision = deliver(*pair, judge_text if judge_finish_reason == 'stop' else '')
         if judge_finish_reason != 'stop':
             decision['reason'] = 'non-stop-selection-fallback'
     else:
         if judge_text is not None or judge_contact is not None or judge_finish_reason is not None:
-            raise ValueError('equal candidates cannot spend an adjudicator contact')
-        _, decision = deliver(a, b)
+            raise ValueError('equal or invalid candidates cannot spend an adjudicator contact')
+        if pair is None:
+            decision = {'selected': 'A', 'reason': 'invalid-candidate-fallback', 'adjudication_required': False}
+        else:
+            _, decision = deliver(*pair)
     selected = decision['selected']
     text = a_text if selected == 'A' else b_text
     receipt = {'schema': RECEIPT_SCHEMA, 'policy': POLICY_ID, **decision,

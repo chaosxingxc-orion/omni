@@ -5346,7 +5346,7 @@ async def _invoke_native_role_episode(
         a, b = selection_candidates['lock'], selection_candidates['b']
         args = dict(a_text=a['text'], b_text=b['text'],
                     a_contact=a['contact'], b_contact=b['contact'])
-        if not ws.needs_adjudication(ws.parse_answer(a['text']), ws.parse_answer(b['text'])):
+        if not ws.texts_need_adjudication(a['text'], b['text']):
             return ws.select_observed(**args)
         left, right = selection_inputs['lock'], selection_inputs['b']
         if len(left['perception']) != 1 or left['perception'] != right['perception']:
