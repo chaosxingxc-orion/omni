@@ -122,6 +122,14 @@ def label_diagnostics(results, items, labels):
     return output
 
 
+def registered_scorer(values, manifest):
+    """Use the frozen flight's official TRAIN metric, never a module default."""
+    declared = values.get('scorers')
+    if declared != ['slurp-slu-official-train', 'cost'] or manifest.get('scorers') != declared:
+        raise ValueError('exact registered H2 official TRAIN scorer required')
+    return declared[0]
+
+
 def read(repo,data,out):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
@@ -143,24 +151,25 @@ def read(repo,data,out):
     cfg=compose(repo,*(fragments[k] for k in ('model','dataset','baseline','experiment')))
     roles=cfg.values['native_episode']['roles'];group=score.parse_solver_arm_group(cfg.values,roles['solver'],roles['perception'],cfg.values['knowledge_stores'])
     if cfg.config_hash!=bundle.manifest['config']['config_hash']:raise ValueError('sealed H2 configuration changed')
+    scorer_id=registered_scorer(cfg.values,bundle.manifest)
     out.mkdir(parents=True,exist_ok=True)
     rendered=score.render_supply_variant_first_visit(bundle,group,{r['sample_id']:r['stratum'] for r in roster['items']},out,
         run_id=job.RUN,attempt_id='generation-v1',roster_sha256=spec['roster']['sha256'],config_hash=cfg.config_hash)
     if rendered['arm_order']!=['learned','lock']:raise ValueError('only exact paired arms required')
-    summary=score.score_supply_variant_copies(score.DEFAULT_SCORER_ID,rendered,out,load_lock(umbrella_lock_path(repo)),data,
-        score.sealed_per_sample(directory,job.RUN,score.DEFAULT_SCORER_ID))
+    summary=score.score_supply_variant_copies(scorer_id,rendered,out,load_lock(umbrella_lock_path(repo)),data,
+        score.sealed_per_sample(directory,job.RUN,scorer_id))
     results={}
     for arm in ('learned','lock'):
-        path=out/f'arm-{arm}-{score.DEFAULT_SCORER_ID}-scores.json';doc=job.read(path)
-        if set(doc)!={score.DEFAULT_SCORER_ID}:raise ValueError('registered official scorer required')
-        results[arm]=doc[score.DEFAULT_SCORER_ID]
+        path=out/f'arm-{arm}-{scorer_id}-scores.json';doc=job.read(path)
+        if set(doc)!={scorer_id}:raise ValueError('registered official scorer required')
+        results[arm]=doc[scorer_id]
     result=statistics(results,roster['items'])
     from speech_aware_evidence_acquisition.data.slurp import load_slurp_split
     labels=label_membership(roster['items'],load_slurp_split(load_lock(umbrella_lock_path(repo)),data,'train'))
     result['label_diagnostics']=label_diagnostics(results,roster['items'],labels)
-    result.update(new_model_calls=0,new_tokenizer_endpoint_calls=0,official_arm_scoring_jobs=2,source=rendered['source'],
+    result.update(scorer_id=scorer_id,new_model_calls=0,new_tokenizer_endpoint_calls=0,official_arm_scoring_jobs=2,source=rendered['source'],
         inputs={str(pkg/'analysis-recipe-v1.json'):job.sha(pkg/'analysis-recipe-v1.json'),str(out/'score-summary.json'):job.sha(out/'score-summary.json')},
-        score_receipts={a:job.pin(data,str((out/f'arm-{a}-{score.DEFAULT_SCORER_ID}-scores.json.receipt.json').relative_to(data))) for a in results})
+        score_receipts={a:job.pin(data,str((out/f'arm-{a}-{scorer_id}-scores.json.receipt.json').relative_to(data))) for a in results})
     path=out/'paired-result.json';raw=job.raw(result)
     if path.exists():
         if path.read_bytes()!=raw:raise ValueError('previous paired result differs')

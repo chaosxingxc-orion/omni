@@ -94,3 +94,53 @@ def test_original_numeric_utterance_matches_real_namespaced_roster():
     record.utterance_id='50'
     with pytest.raises(ValueError,match='identity'):m.label_membership([item],[record])
     assert not m.same_train_utterance('slurp:test:000049','49')
+
+
+def test_reader_uses_exact_frozen_official_scorer_not_projected_default():
+    registered={'scorers':['slurp-slu-official-train','cost']}
+    assert m.registered_scorer(registered,registered)=='slurp-slu-official-train'
+    for names in (['slurp-slu-official-projected-v3-train','cost'],
+                  ['slurp-slu-official-train','slurp-slu-official-projected-v3-train','cost'],
+                  ['slurp-slu-official-test','cost'],[],['cost']):
+        with pytest.raises(ValueError,match='registered'):
+            m.registered_scorer({'scorers':names},{'scorers':names})
+    with pytest.raises(ValueError,match='registered'):
+        m.registered_scorer(registered,{'scorers':['slurp-slu-official-projected-v3-train','cost']})
+
+
+def test_read_passes_registered_scorer_to_both_arms(tmp_path,monkeypatch):
+    from types import SimpleNamespace as NS
+    import speech_aware_evidence_acquisition.contracts as contracts
+    import speech_aware_evidence_acquisition.core.bundle as bundle_module
+    import speech_aware_evidence_acquisition.core.config as config_module
+    import registered_workload
+    import speech_aware_evidence_acquisition.data.lock as lock_module
+    data=tmp_path;out=data/'work/codex/read';repo=data/'repo'
+    spec={'roster':{'relpath':'roster','sha256':'x'}}
+    recipe={'schema':'saea-tfgrpo-h2-paired-read-v1','rows':312,'generation_run_id':m.job.RUN,
+            'attempt_id':'generation-v1','arms':['learned','lock'],'delivered_arm':'lock','roster':spec['roster']}
+    ids=[f'row{i}' for i in range(312)]
+    manifest={'config':{'fragments':{k:k for k in ('model','dataset','baseline','experiment')},'config_hash':'fixed'},
+              'scorers':['slurp-slu-official-train','cost']}
+    values={'scorers':manifest['scorers'],'native_episode':{'roles':{'solver':{},'perception':{}}},'knowledge_stores':{}}
+    monkeypatch.setattr(contracts,'assert_execution_environment',lambda:None)
+    monkeypatch.setattr(bundle_module,'verify_bundle',lambda p:NS(attempt_state='FINALIZED',split_ids=ids,manifest=manifest))
+    monkeypatch.setattr(config_module,'compose',lambda *a:NS(config_hash='fixed',values=values))
+    monkeypatch.setattr(registered_workload,'validate_workload',lambda *a:None)
+    monkeypatch.setattr(m.job,'read',lambda p:recipe if p.name=='analysis-recipe-v1.json' else spec)
+    monkeypatch.setattr(m.job,'pinned',lambda *a:{'items':[{'sample_id':sid,'stratum':'alarm'} for sid in ids]})
+    monkeypatch.setattr(m.score,'parse_solver_arm_group',lambda *a:None)
+    monkeypatch.setattr(m.score,'render_supply_variant_first_visit',lambda *a,**k:{'arm_order':['learned','lock']})
+    monkeypatch.setattr(lock_module,'load_lock',lambda *a:{})
+    monkeypatch.setattr(lock_module,'umbrella_lock_path',lambda *a:data/'lock')
+    seen=[]
+    def sealed(directory,run,scorer):
+        seen.append(scorer);return {'sealed':True}
+    class StopAfterScorerBinding(Exception):pass
+    def score_arms(scorer,rendered,out,lock,data,delivered):
+        assert scorer=='slurp-slu-official-train' and delivered=={'sealed':True}
+        seen.append(scorer);raise StopAfterScorerBinding
+    monkeypatch.setattr(m.score,'sealed_per_sample',sealed)
+    monkeypatch.setattr(m.score,'score_supply_variant_copies',score_arms)
+    with pytest.raises(StopAfterScorerBinding):m.read(repo,data,out)
+    assert seen==['slurp-slu-official-train']*2
