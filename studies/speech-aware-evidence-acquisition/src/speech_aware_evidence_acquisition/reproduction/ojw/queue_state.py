@@ -8,7 +8,10 @@ draining, and restart-safe checkpoints.
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable, Mapping
 
 
@@ -168,6 +171,52 @@ class QueueStateMachine:
             "inflight": sorted(self.inflight),
         }
         return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+    def checkpoint_to(self, path: str | Path) -> Path:
+        """Durably replace a queue checkpoint file.
+
+        The live adapter may be interrupted between callbacks, so publication
+        is write-temp, fsync-file, atomic-replace, fsync-directory.  Readers
+        therefore see either the previous complete checkpoint or the new
+        complete checkpoint; they never observe a partially-written JSON
+        document.  The operation intentionally replaces an existing path,
+        because a queue advances the same run checkpoint over time.
+        """
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(
+            prefix=f".{target.name}.", suffix=".tmp", dir=target.parent
+        )
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                handle.write(self.checkpoint().encode("utf-8"))
+                handle.write(b"\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, target)
+            directory_fd = os.open(target.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        finally:
+            # os.replace consumes the temporary name on success.  On failure,
+            # remove only our own temporary file and preserve the old state.
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+        return target
+
+    @classmethod
+    def restore_file(cls, path: str | Path) -> "QueueStateMachine":
+        """Restore one complete checkpoint file, failing closed on read errors."""
+        checkpoint = Path(path)
+        try:
+            payload = checkpoint.read_bytes()
+        except OSError as exc:
+            raise QueueStateError(f"checkpoint file is unreadable: {checkpoint}") from exc
+        return cls.restore(payload)
 
     @classmethod
     def restore(cls, payload: str | bytes | Mapping[str, object]) -> "QueueStateMachine":

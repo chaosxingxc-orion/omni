@@ -110,3 +110,32 @@ def test_fake_callback_checkpoint_restore_keeps_inflight_callback_set():
     assert restored.jobs["p"].state == "failed"
     with pytest.raises(QueueStateError, match="only an admitted generation"):
         restored.settle("p", observed=True, result_digest="duplicate")
+
+
+def test_checkpoint_file_replacement_is_complete_and_restorable(tmp_path):
+    q = QueueStateMachine(slots=1)
+    q.submit("p", sample_id="s", stage=0, prefix_family="shared", instance_id="i")
+    path = tmp_path / "run" / "queue.json"
+    assert q.checkpoint_to(path) == path
+    assert QueueStateMachine.restore_file(path).prepare_queue == ["p"]
+
+    q.complete_prepare("p")
+    q.admit_generation(stage=0)
+    q.settle("p", observed=True, result_digest="digest:p")
+    q.checkpoint_to(path)
+    restored = QueueStateMachine.restore_file(path)
+    assert restored.jobs["p"].state == "observed"
+    assert restored.jobs["p"].result_digest == "digest:p"
+    assert not list(path.parent.glob(".queue.json.*.tmp"))
+
+
+def test_checkpoint_file_keeps_previous_state_when_serialization_fails(tmp_path, monkeypatch):
+    q = QueueStateMachine(slots=1)
+    q.submit("p", sample_id="s", stage=0, prefix_family="shared", instance_id="i")
+    path = tmp_path / "queue.json"
+    q.checkpoint_to(path)
+    original = path.read_bytes()
+    monkeypatch.setattr(q, "checkpoint", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    with pytest.raises(RuntimeError, match="boom"):
+        q.checkpoint_to(path)
+    assert path.read_bytes() == original
