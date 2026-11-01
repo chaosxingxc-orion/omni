@@ -42,7 +42,12 @@ class QueuePipelineBridge:
     def prepare_submitted(self, member: int, key: tuple[int, int], family: str) -> None:
         if member in self._active:
             raise QueueStateError(f"member {member} submitted a second prepare before settle")
-        round_index, stage = key
+        round_index, node_index = key
+        # QueueStateMachine validates dependencies by a single monotonically
+        # increasing stage integer.  Encode the coordinator's two-dimensional
+        # (round, node) key so the first node of a later round still follows
+        # the final node of the previous round.
+        stage = round_index * 1_000_000 + node_index
         job_id = f"member-{member}:round-{round_index}:stage-{stage}"
         # Every stage after the first observed operation depends on that
         # member's immediately preceding operation.  This covers both P->S

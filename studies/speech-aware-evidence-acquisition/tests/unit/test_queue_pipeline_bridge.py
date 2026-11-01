@@ -51,3 +51,13 @@ def test_second_stage_requires_observed_first_stage(tmp_path: Path):
     bridge.prepare_submitted(0, (0, 1), "solver")
     bridge.prepare_completed(0, ok=True)
     assert bridge.adapter.machine.jobs["member-0:round-0:stage-1"].depends_on == "member-0:round-0:stage-0"
+
+
+def test_later_round_has_monotonic_queue_stage(tmp_path: Path):
+    bridge = QueuePipelineBridge.create(tmp_path / "queue.json", slots=1)
+    bridge.prepare_submitted(0, (0, 3), "reviewer")
+    bridge.prepare_completed(0, ok=True)
+    bridge.generation_admitted(0)
+    bridge.generation_completed(0, observed=True, result={"round": 0})
+    bridge.prepare_submitted(0, (1, 0), "perception")
+    assert bridge.adapter.machine.jobs["member-0:round-1:stage-0"].stage == 1_000_000
