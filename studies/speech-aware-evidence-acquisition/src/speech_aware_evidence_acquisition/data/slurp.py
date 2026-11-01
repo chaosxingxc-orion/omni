@@ -69,7 +69,7 @@ import hashlib
 import json
 import math
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from types import MappingProxyType
 from typing import Callable, Mapping, Sequence
@@ -146,7 +146,9 @@ class SlurpOntology:
     scenarios: tuple[str, ...]
     actions: tuple[str, ...]
     entity_types: Mapping[str, tuple[str, ...]]
-    actions_by_scenario: Mapping[str, tuple[str, ...]] = MappingProxyType({})
+    actions_by_scenario: Mapping[str, tuple[str, ...]] = field(
+        default_factory=lambda: MappingProxyType({})
+    )
 
     @property
     def intents(self) -> tuple[str, ...]:
@@ -1322,7 +1324,9 @@ class SlurpIntentSlots:
     n: int
     mentions: int
     types: tuple[tuple[str, int, float], ...]
-    fillers: Mapping[str, tuple[str, ...]] = MappingProxyType({})
+    fillers: Mapping[str, tuple[str, ...]] = field(
+        default_factory=lambda: MappingProxyType({})
+    )
 
     @property
     def entity_types(self) -> tuple[str, ...]:
@@ -1906,7 +1910,9 @@ class SlurpIntentRowProfile:
     intent: str
     rows: int
     rows_with_entity: int
-    type_rows: Mapping[str, int] = MappingProxyType({})
+    type_rows: Mapping[str, int] = field(
+        default_factory=lambda: MappingProxyType({})
+    )
 
     def as_json(self) -> dict[str, object]:
         return {
