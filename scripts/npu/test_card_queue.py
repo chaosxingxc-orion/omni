@@ -77,6 +77,9 @@ class Base(unittest.TestCase):
 
     def runner(self, probe=None, **kw):
         kw.setdefault("poll_s", 0.05)
+        # Unit tests intentionally exercise immediate fake-card transitions;
+        # production CLI uses the 600s probe interval.
+        kw.setdefault("card_probe_interval_s", 0.0)
         kw.setdefault("done_grace_s", 0.5)
         kw.setdefault("fail_grace_s", 0.5)
         kw.setdefault("kill_wait_s", 2.0)
@@ -244,6 +247,23 @@ class CardGateTests(Base):
     def cards(self, cls, procs=(), owners=(), hbm=60000):
         return {0: {"cls": cls, "owners": list(owners), "procs": list(procs), "hbm": hbm, "ai": 0},
                 1: {"cls": "free", "owners": [], "procs": [], "hbm": 100, "ai": 0}}
+
+    def test_expensive_card_probe_is_cached_between_liveness_ticks(self):
+        calls = []
+        free = self.cards("free", hbm=100)
+        self.write_queue(self.job("g", requires_cards_free=True))
+        runner = self.runner(probe=lambda: calls.append(1) or free,
+                             card_probe_interval_s=600.0)
+        runner.load()
+        job = runner.queue["jobs"][0]
+        # The first gated check is forced; subsequent process/liveness checks
+        # reuse the snapshot until the 600-second observation interval expires.
+        self.assertEqual(runner.blockers(job, force_card_probe=True), [])
+        self.assertEqual(runner.blockers(job), [])
+        self.assertEqual(len(calls), 1)
+        runner._card_probe_at -= 601
+        self.assertEqual(runner.blockers(job), [])
+        self.assertEqual(len(calls), 2)
 
     def test_waits_while_vllm_holds_a_card_then_launches(self):
         vllm = self.cards("ours", [(111, "VLLMWorker_TP", 57000)], ["saea-arm-a-0"])

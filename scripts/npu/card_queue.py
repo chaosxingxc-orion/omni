@@ -21,7 +21,10 @@ Behaviour (one job at a time, in file order):
     SIGKILL 30 s later. timeout_s expiry is a failure handled the same way;
   * wait_for_final: the job is not launched until that chain-status.json is FINAL: state done/failed/interrupted AND its
     "pid" no longer alive (the rule e3_chain's gate step uses); an unreadable or missing file is not final, so it waits;
-  * requires_cards_free waits (never launches blind) until the cards policy holds AND no other queue job runs:
+  * requires_cards_free waits (never launches blind) until the cards policy holds AND no other queue job runs. Process
+    liveness is checked at poll_s; the expensive host card probe is cached for card_probe_interval_s (600 by default)
+    while waiting. A fresh probe is forced when each gated job first enters the wait, so a completed predecessor does not
+    leave an avoidable queue gap.
       all_free  (default) every card is free (no process, HBM below the idle threshold: no vllm/VLLMWorker, nothing);
       no_other  no card is held by a process that is not one of ours-and-vllm, i.e. never a card another user holds;
                 the resident vLLM service may stay up (use this for a job that brings that service down itself);
@@ -337,10 +340,18 @@ def killpg(pid, sig):
 
 # ---------------------------------------------------------------- the runner
 class Runner:
-    def __init__(self, queue_path, qdir, probe, poll_s=15.0, resume=False, retry_failed=False, peers=(),
+    def __init__(self, queue_path, qdir, probe, poll_s=15.0, card_probe_interval_s=None, resume=False, retry_failed=False, peers=(),
                  done_grace_s=DONE_GRACE_S, fail_grace_s=FAIL_GRACE_S, kill_wait_s=KILL_WAIT_S, sleep=time.sleep,
                  pid_alive=proc_alive):
         self.queue_path, self.qdir, self.probe, self.poll_s = queue_path, qdir, probe, poll_s
+        # Direct library users retain the historical cadence when they omit the
+        # new setting; the operational CLI passes 600s explicitly. This keeps
+        # old embedders deterministic while making production monitoring cheap.
+        self.card_probe_interval_s = poll_s if card_probe_interval_s is None else float(card_probe_interval_s)
+        if self.card_probe_interval_s < 0:
+            raise ValueError("card_probe_interval_s must be non-negative")
+        self._card_probe_cache = None
+        self._card_probe_at = None
         self.resume, self.retry_failed, self.peers = resume, retry_failed, list(peers)
         self.pid_alive = pid_alive
         self.done_grace_s, self.fail_grace_s, self.kill_wait_s, self.sleep = done_grace_s, fail_grace_s, kill_wait_s, sleep
@@ -431,7 +442,16 @@ class Runner:
                 return "other queue %s runs job %s" % (s.get("queue_id"), s["current"])
         return None
 
-    def blockers(self, job):
+    def card_snapshot(self, *, force=False):
+        now = now_s()
+        if (not force and self._card_probe_cache is not None and self._card_probe_at is not None
+                and now - self._card_probe_at < self.card_probe_interval_s):
+            return self._card_probe_cache
+        self._card_probe_cache = self.probe()
+        self._card_probe_at = now
+        return self._card_probe_cache
+
+    def blockers(self, job, *, force_card_probe=False):
         reasons = []
         if job.get("wait_for_final"):
             final, why = final_gate(read_json(job["wait_for_final"]), self.pid_alive)
@@ -443,7 +463,7 @@ class Runner:
         peer = self.peer_running()
         if peer:
             reasons.append(peer)
-        reasons.extend(card_blockers(self.probe(), job.get("cards_policy", "all_free")))
+        reasons.extend(card_blockers(self.card_snapshot(force=force_card_probe), job.get("cards_policy", "all_free")))
         return reasons
 
     # --- log scanning
@@ -580,8 +600,10 @@ class Runner:
     def wait_for_cards(self, job, rec):
         since = None
         last = None
+        first_probe = True
         while not self.interrupted:
-            reasons = self.blockers(job)
+            reasons = self.blockers(job, force_card_probe=first_probe)
+            first_probe = False
             if not reasons:
                 self.state["waiting"] = None
                 return True
@@ -735,6 +757,8 @@ def main(argv=None):
     r.add_argument("--retry-failed", action="store_true", help="with --resume: failed jobs become pending again")
     r.add_argument("--dry-run", action="store_true", help="print every command, run nothing, write nothing")
     r.add_argument("--poll-s", type=float, default=15.0)
+    r.add_argument("--card-probe-interval-s", type=float, default=600.0,
+                   help="minimum interval for expensive npu-smi/docker probes while waiting (default: 600; process checks remain poll-s)")
     r.add_argument("--peer-queue-dir", action="append", default=[],
                    help="another queue's directory; a cards-free job also waits while that queue runs a job")
     s = sub.add_parser("status", help="print the queue state")
@@ -756,7 +780,10 @@ def main(argv=None):
             print("refused: %s" % e, file=sys.stderr)
             return 5
     os.makedirs(qdir, exist_ok=True)
-    runner = Runner(a.queue, qdir, RealCardProbe(), poll_s=a.poll_s, resume=a.resume, retry_failed=a.retry_failed,
+    if a.card_probe_interval_s < 0:
+        p.error('card-probe-interval-s must be non-negative')
+    runner = Runner(a.queue, qdir, RealCardProbe(), poll_s=a.poll_s,
+                    card_probe_interval_s=a.card_probe_interval_s, resume=a.resume, retry_failed=a.retry_failed,
                     peers=a.peer_queue_dir)
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
