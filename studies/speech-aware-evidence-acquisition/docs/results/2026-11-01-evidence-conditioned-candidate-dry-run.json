@@ -1,0 +1,14 @@
+{
+  "h2_read": false,
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "projection_sha256": "5da881f14b9a2bcfaa83086dd8b84199346481dc39c026e5a02a1aa07b6d41d8",
+  "rendered_characters": 2047,
+  "rules": 5,
+  "runtime_configuration_mutated": false,
+  "schema": "saea-conditioned-candidate-consumer-dry-run-v1",
+  "solver_prompt_changed": false,
+  "source_payloads_verified": 5,
+  "status": "rendered-compatible-not-admitted",
+  "test_read": false
+}
