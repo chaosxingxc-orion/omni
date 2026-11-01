@@ -309,6 +309,22 @@ def verify_release(path,data):
     return doc
 
 
+def require_learning_deployment(repo,model_id):
+    """Fail before dispatch when a multi-instance receipt would use one endpoint."""
+    import os
+    from speech_aware_evidence_acquisition.core.deployment import load_deployment_profile
+    from speech_aware_evidence_acquisition.core.config import read_fragment,resolve_runtime_receipt_path
+    fragment=read_fragment(repo,'model',model_id)
+    receipt=read(resolve_runtime_receipt_path(repo,fragment))
+    instances=receipt['deployment']['instances']
+    if len(instances)<=1:return
+    profile_id=os.environ.get('SAEA_DEPLOYMENT_PROFILE')
+    if not profile_id:raise ValueError('multi-instance learning requires SAEA_DEPLOYMENT_PROFILE before dispatch')
+    profile=load_deployment_profile(profile_id,repo,data_root=Path(fragment['model_materialization_root']))
+    if [x.name for x in profile.instances]!=[x['instance_id'] for x in instances]:
+        raise ValueError('learning deployment profile members differ from verified receipt')
+
+
 def run(repo,data,job,out,after):
     """One detached dispatch; campaign alone acquires and releases the lease."""
     import time
@@ -322,6 +338,7 @@ def run(repo,data,job,out,after):
     name=complete.get('job',NAME);run_id=complete.get('run_id',RUN)
     from tfrl_current_generation import SESSION
     service_session=complete.get('service_session',SESSION)
+    require_learning_deployment(repo,reg['model_id'])
     verify_release(after,data)
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned output required; no blind retry')
     cells=load_campaign_cells(repo,name);cell,=cells

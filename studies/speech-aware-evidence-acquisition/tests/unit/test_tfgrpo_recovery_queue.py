@@ -123,3 +123,12 @@ def test_nonzero_immediate_source_retains_every_contact_after_empty_ancestor(tmp
     # Changing an empty ancestor after indexing must invalidate response reuse.
     ap=source_path.parent/(ancestor.attempt_id+'.json');ap.write_bytes(ap.read_bytes()+b' ')
     with pytest.raises(ValueError,match='ancestor changed'):replay.receipt(next(iter(replay.request_ids)))
+
+
+def test_current_adoption_requires_exact_actual_cli_and_release(tmp_path):
+    args=dict(source_repo=tmp_path/'repo',data=tmp_path/'data',prepared_job=tmp_path/'job',legacy=tmp_path/'run',after=tmp_path/'release.json')
+    command=[b'python',b'scripts/analysis/tfgrpo_learning_job.py',b'run',b'--repo',str(args['source_repo']).encode(),b'--data',str(args['data']).encode(),b'--job',str(args['prepared_job']).encode(),b'--out',str(args['legacy']).encode(),b'--after',str(args['after']).encode()]
+    queue.current_command_matches(command,**args)
+    for index in (1,2,4,6,8,10,12):
+        changed=list(command);changed[index]=b'other'
+        with pytest.raises(ValueError,match='command differs'):queue.current_command_matches(changed,**args)

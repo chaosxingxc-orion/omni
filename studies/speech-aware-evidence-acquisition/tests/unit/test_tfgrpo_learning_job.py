@@ -218,3 +218,12 @@ def test_job_import_uses_verified_ids_and_rederives_all_budgets(monkeypatch):
     assert plan.planned_model_calls==12 and len(reg['contacts'])==12 and src['batch']['bounds']['max_calls']==12
     assert src['batch']['summary_import']==pin and reg['batch_sha256']==m.sha(src['batch'])
     assert not any(x['stage']=='summary' and x['identity']==tid for x in reg['contacts'])
+
+
+def test_missing_multi_instance_profile_rejected_before_dispatch(tmp_path,monkeypatch):
+    from speech_aware_evidence_acquisition.core import config
+    monkeypatch.setattr(config,'read_fragment',lambda *a:{'model_materialization_root':str(tmp_path)})
+    receipt=tmp_path/'receipt.json';receipt.write_bytes(m.raw({'deployment':{'instances':[{'instance_id':'one'},{'instance_id':'two'}]}}))
+    monkeypatch.setattr(config,'resolve_runtime_receipt_path',lambda *a:receipt)
+    monkeypatch.delenv('SAEA_DEPLOYMENT_PROFILE',raising=False)
+    with pytest.raises(ValueError,match='SAEA_DEPLOYMENT_PROFILE'):m.require_learning_deployment(tmp_path,'model')

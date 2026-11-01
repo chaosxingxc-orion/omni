@@ -112,10 +112,10 @@ def admit(data, cell, declaration, out):
     """Add exact fresh-attempt authority to the unchanged registered cell."""
     from speech_aware_evidence_acquisition.core.flight.campaign import CampaignCell,declared_readiness
     cell=select_recovery_cell(cell,declaration,data_root=data)
-    did=job.RUN+'-'+cell.attempt_id.upper()+'-ADMISSION'
+    did=cell.run_id+'-'+cell.attempt_id.upper()+'-ADMISSION'
     path=data/'coordination/decisions'/(did+'.json')
     doc={'schema':'saea-campaign-decision-v1','status':'decided','decision_id':did,
-        'eligible_run_ids':[job.RUN,job.RUN+'-FIT'],'eligible_attempt_ids':[cell.attempt_id,'learning-fit-v1'],
+        'eligible_run_ids':[cell.run_id,cell.run_id+'-FIT'],'eligible_attempt_ids':[cell.attempt_id,'learning-fit-v1'],
         'authorization_basis':job.AUTH,'owner':'root','coordinator':'Codex',
         'decision':'Continue identical registered H1 learning after verified terminal predecessor; preserve known responses and all costs.',
         'recovery':declaration,'prior_readiness':cell.document['readiness']}
@@ -133,21 +133,23 @@ def admit(data, cell, declaration, out):
 
 def worker(repo,data,out,prepared_job,recovery):
     assert_execution_environment();commit=require_clean_study_repo(repo)
-    _,reg,_=job.verify_job(repo,data,prepared_job)
+    complete,reg,_=job.verify_job(repo,data,prepared_job)
     from speech_aware_evidence_acquisition.core.flight.campaign import load_campaign_cells,run_campaign
     from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
     from tfrl_current_generation import SESSION
     from run_real_engine_candidate import assert_campaign_success
-    cell,=load_campaign_cells(repo,job.NAME)
+    name=complete.get('job',job.NAME);run_id=complete.get('run_id',job.RUN)
+    if not os.environ.get('SAEA_DEPLOYMENT_PROFILE'):raise ValueError('recovery worker requires declared deployment profile')
+    cell,=load_campaign_cells(repo,name)
     declaration={'path':str(recovery),'sha256':digest(recovery.read_bytes())}
     cell=admit(data,cell,declaration,out)
-    if (data/'attempts'/job.RUN/(cell.attempt_id+'.json')).exists():raise ValueError('existing successor attempt; never relaunch')
+    if (data/'attempts'/run_id/(cell.attempt_id+'.json')).exists():raise ValueError('existing successor attempt; never relaunch')
     save(out/'started.json',process_identity(os.getpid()))
     runtime=build_flight_runtime(repo,data,model=reg['model_id'],dataset=cell.document['dataset_fragment'],
-        baseline=job.NAME,experiment=job.NAME,run_id=job.RUN,attempt_id=cell.attempt_id,
+        baseline=name,experiment=name,run_id=run_id,attempt_id=cell.attempt_id,
         runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json',native_contact_recovery=declaration)
-    result=run_campaign([runtime],cells=[cell],repo_root=repo,data_root=data,owner='Codex-TFGRPO-supervisor',expected_session_id=SESSION)
-    assert_campaign_success(result,job.RUN)
+    result=run_campaign([runtime],cells=[cell],repo_root=repo,data_root=data,owner='Codex-TFGRPO-supervisor',expected_session_id=complete.get('service_session',SESSION))
+    assert_campaign_success(result,run_id)
     save(out/'complete.json',{'result':result,'study_commit':commit,'candidate_accepted':False})
 
 
@@ -192,6 +194,43 @@ def adopt(repo,data,out,prepared_job,legacy,source_repo,wrapper_pid,container_id
     return registration
 
 
+def current_command_matches(command, *, source_repo, data, prepared_job, legacy, after):
+    expected=[b'scripts/analysis/tfgrpo_learning_job.py',b'run',b'--repo',str(source_repo).encode(),
+        b'--data',str(data).encode(),b'--job',str(prepared_job).encode(),b'--out',str(legacy).encode(),b'--after',str(after).encode()]
+    if command[1:]!=expected:raise ValueError('current learning worker command differs')
+
+
+def adopt_current(repo,data,out,prepared_job,legacy,wrapper_pid,container_id,container_pid,wrapper_script,after):
+    """Adopt a current registered first attempt without inventing old recovery metadata."""
+    assert_execution_environment();head=require_clean_study_repo(repo)
+    complete,reg,_=job.verify_job(repo,data,prepared_job)
+    original=read(legacy/'started.json')
+    if original['study_commit']!=head or original['job']!=complete['job']:raise ValueError('current worker commit/job differs')
+    job.verify_release(after,data)
+    if original['predecessor_release_sha256']!=digest(after.read_bytes()):raise ValueError('release source changed')
+    identity=process_identity(container_pid);wrapper=process_identity(wrapper_pid)
+    if not identity or not wrapper:raise ValueError('adoption requires live processes')
+    assert_live(identity);assert_live(wrapper);container_identity(container_pid,container_id)
+    command=process_command(container_pid)
+    current_command_matches(command,source_repo=repo,data=data,prepared_job=prepared_job,legacy=legacy,after=after)
+    if process_command(wrapper_pid)[1:]!=[str(wrapper_script).encode()]:raise ValueError('current wrapper command differs')
+    plan=ExecutionPlan(**read(repo/'docs/readiness'/complete['job']/'generation-plan.json')['execution_plan']);plan.validate()
+    if plan.run_id!=complete['run_id'] or plan.attempt_id!='learning-v1':raise ValueError('current registered plan differs')
+    exp=read(repo/'configs/experiment'/(complete['job']+'.json'))
+    registration={'repo':str(repo),'source_repo':str(repo),'data':str(data),'job':str(prepared_job),'legacy':str(legacy),
+        'source_commit':head,'target_commit':head,'worker':identity,'wrapper':wrapper,'container_id':container_id,
+        'worker_command':[v.decode() for v in command],'wrapper_command':[v.decode() for v in process_command(wrapper_pid)],
+        'plan':asdict(plan),'fit':exp['tfgrpo_contact_fit'],
+        'source_script':{'path':str(repo/'scripts/analysis/tfgrpo_learning_job.py'),'sha256':digest((repo/'scripts/analysis/tfgrpo_learning_job.py').read_bytes())},
+        'wrapper_script':{'path':str(wrapper_script),'sha256':digest(wrapper_script.read_bytes())},
+        'legacy_started_sha256':digest((legacy/'started.json').read_bytes()),'coordinator_sha256':digest(Path(__file__).read_bytes()),
+        'max_automatic_recoveries':1,'interval_seconds':600}
+    with exclusive(out/'queue.lock'):
+        if {p.name for p in out.iterdir()}!={'queue.lock'}:raise ValueError('existing supervisor custody')
+        assert_live(identity);assert_live(wrapper);save(out/'registration.json',registration)
+    return registration
+
+
 def supervise(repo,data,out):
     assert_execution_environment()
     with exclusive(out/'queue.lock'):
@@ -208,8 +247,8 @@ def supervise(repo,data,out):
             except ValueError:time.sleep(600)
         if (legacy/'complete.json').exists():
             from run_real_engine_candidate import assert_campaign_success
-            complete=read(legacy/'complete.json');assert_campaign_success(complete['result'],job.RUN)
-            if read(data/'attempts'/job.RUN/(plan.attempt_id+'.json'))['state']!='FINALIZED':raise ValueError('completion lacks finalized attempt')
+            complete=read(legacy/'complete.json');assert_campaign_success(complete['result'],plan.run_id)
+            if read(data/'attempts'/plan.run_id/(plan.attempt_id+'.json'))['state']!='FINALIZED':raise ValueError('completion lacks finalized attempt')
             save(out/'complete.json',complete);return complete
         own=out/'successor';own.mkdir(exist_ok=True)
         if not (own/'recovery.json').exists():
@@ -234,14 +273,15 @@ def supervise(repo,data,out):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['adopt','supervise','worker'])
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['adopt','adopt-current','supervise','worker'])
     for key in ('repo','data','out'):p.add_argument('--'+key,type=Path,required=True)
-    for key in ('job','legacy','source-repo','recovery','source-script','wrapper-script'):p.add_argument('--'+key,type=Path)
+    for key in ('job','legacy','source-repo','recovery','source-script','wrapper-script','after'):p.add_argument('--'+key,type=Path)
     for key in ('wrapper-pid','container-pid'):p.add_argument('--'+key,type=int)
     p.add_argument('--container-id');a=p.parse_args()
     if not a.out.resolve().is_relative_to(a.data.resolve()/'work/codex'):raise ValueError('owned output required')
     try:
         if a.mode=='adopt':result=adopt(a.repo,a.data,a.out,a.job,a.legacy,a.source_repo,a.wrapper_pid,a.container_id,a.container_pid,a.source_script,a.wrapper_script)
+        elif a.mode=='adopt-current':result=adopt_current(a.repo,a.data,a.out,a.job,a.legacy,a.wrapper_pid,a.container_id,a.container_pid,a.wrapper_script,a.after)
         elif a.mode=='worker':result=worker(a.repo,a.data,a.out,a.job,a.recovery)
         else:result=supervise(a.repo,a.data,a.out)
     except BaseException as error:
