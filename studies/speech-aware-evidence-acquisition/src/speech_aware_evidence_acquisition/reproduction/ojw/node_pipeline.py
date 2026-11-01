@@ -31,7 +31,8 @@ class NodePipelineCoordinator:
     """Keep a full panel logically pending while bounding CPU and model workers."""
 
     def __init__(
-        self, members, order, *, slots, group_size, prepare_workers, event_sink=None
+        self, members, order, *, slots, group_size, prepare_workers, event_sink=None,
+        queue_bridge=None,
     ):
         members, order = tuple(members), tuple(order)
         if (
@@ -60,6 +61,9 @@ class NodePipelineCoordinator:
         )
         self.group_index = {m: i for i, group in enumerate(self.groups) for m in group}
         self.event_sink = event_sink
+        # Optional durable queue integration.  ``None`` preserves the exact
+        # historical coordinator path and its timing behavior.
+        self.queue_bridge = queue_bridge
         self.states = dict.fromkeys(members, "new")
         self.keys = dict.fromkeys(members)
         self.prepared = dict.fromkeys(members, False)
@@ -107,6 +111,8 @@ class NodePipelineCoordinator:
         round_index = 0 if previous is None else previous[0] + (index <= previous[1])
         self.keys[member] = (round_index, index)
         self.prepared[member] = False
+        if self.queue_bridge is not None:
+            self.queue_bridge.prepare_submitted(member, self.keys[member], family)
         return await self._enqueue(member, family, "prepare", callback)
 
     async def contact(self, member, family, callback, contact_kind="model"):
@@ -117,6 +123,8 @@ class NodePipelineCoordinator:
             raise ValueError("node pipeline contact requires its prepared role")
         if contact_kind not in {"model", "tool"}:
             raise ValueError("node pipeline contact kind must be model or tool")
+        if self.queue_bridge is not None and contact_kind == "model":
+            self.queue_bridge.generation_admitted(member)
         return await self._enqueue(member, family, contact_kind, callback)
 
     async def _enqueue(self, member, family, kind, callback):
@@ -201,6 +209,17 @@ class NodePipelineCoordinator:
                         "error_type": None if error is None else type(error).__name__,
                     },
                 )
+            except BaseException as caught:
+                error = error or caught
+                self.abort(caught)
+        if self.queue_bridge is not None:
+            try:
+                if work.kind == "prepare":
+                    self.queue_bridge.prepare_completed(work.member, ok=error is None)
+                elif work.kind == "model":
+                    self.queue_bridge.generation_completed(
+                        work.member, observed=error is None, result=value
+                    )
             except BaseException as caught:
                 error = error or caught
                 self.abort(caught)
