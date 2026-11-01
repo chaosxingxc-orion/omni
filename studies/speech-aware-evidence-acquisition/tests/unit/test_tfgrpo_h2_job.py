@@ -151,3 +151,24 @@ def test_template_measurement_uses_pinned_local_tokenizer(tmp_path,monkeypatch):
     (model/'vocab.json').write_text('{"changed":true}')
     with pytest.raises(ValueError,match='differs from resident'):m.measure_templates(repo,data,params)
     assert len(calls)==1
+
+
+def test_explicit_h2_runtime_binding_preserves_historical_default(tmp_path):
+    assert m.runtime_binding(tmp_path)['service_session']==m.SESSION
+    spec={'model_fragment':m.MODEL,'service_session':'serving-new','profile':'new-profile','runtime_receipt':'receipts/new.json'}
+    for rel,doc in [(m.RUNTIME_BINDING,spec),(f'configs/model/{m.MODEL}.json',{'runtime_receipt':spec['runtime_receipt']}),('configs/deployment/new-profile.json',{'model_fragment':m.MODEL})]:
+        p=tmp_path/rel;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(m.raw(doc))
+    assert m.runtime_binding(tmp_path)==spec
+    p=tmp_path/'configs/deployment/new-profile.json';p.write_bytes(m.raw({'model_fragment':'different'}))
+    with pytest.raises(ValueError,match='differs'):m.runtime_binding(tmp_path)
+
+
+def test_successor_paired_geometry_is_compiled_from_measured_window(release,monkeypatch):
+    repo,data,params=release
+    params['consumer_ids']=[r['sample_id'] for r in m.read(ROOT/m.ROSTER)['items']]
+    original=m.read(ROOT/'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json')
+    params['base_template']['relpath']=original['phase_material']['solver']['instruction_template']
+    monkeypatch.setattr(m.consumption,'verify',lambda *a,**kw:None)
+    derived=m.paired.derive(ROOT,data,params,fit_estimate={'slot_tokens':49152,'completion_ceiling':4096,'base_prompt_tokens':2000,'tokens_per_supplied_item':235},base_template_tokens=400,learned_template_tokens=500)
+    assert derived['baseline']['serving_slot_tokens']==49152
+    assert derived['evaluation']['rows']==312

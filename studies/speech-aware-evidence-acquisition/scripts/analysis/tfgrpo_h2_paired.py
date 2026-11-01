@@ -47,6 +47,7 @@ def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template
     base=compiled.apply_to(base)
     base['native_episode']['consumption_module']=block
     base.pop('prepared_phase_supply',None)
+    base['serving_slot_tokens']=fit_estimate['slot_tokens']
     base['native_contact_fit'].update(run_id=RUN+'-FIT',attempt_id='fit-v1',contact_cap=936)
     base['what_this_is']='Held full H2 development: one fresh P, learned Solver and unchanged lock Solver; candidate not accepted.'
     cm.verify_declared_module(block,base,repo_root=repo)

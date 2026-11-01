@@ -27,6 +27,36 @@ ESTIMATE_SOURCE = 'configs/baseline/slurp-tfrl-odd40-i1-h2-v1.json'
 KIND = 'tfgrpo-full-h2-paired'
 
 
+
+RUNTIME_BINDING = 'configs/evaluation/tfgrpo-h2-runtime-v1.json'
+
+
+def runtime_binding(repo):
+    """An explicit successor binding preserves historical default experiments."""
+    path=Path(repo)/RUNTIME_BINDING
+    if not path.exists():
+        return {'model_fragment':MODEL,'service_session':SESSION,'profile':PROFILE,'runtime_receipt':RECEIPT}
+    spec=read(path)
+    if set(spec)!={'model_fragment','service_session','profile','runtime_receipt'} or spec['model_fragment']!=MODEL:
+        raise ValueError('exact frozen-model H2 runtime binding required')
+    for key in ('model_fragment','service_session','profile'):
+        value=spec[key]
+        if not isinstance(value,str) or not value or Path(value).name!=value or value in ('.','..'):
+            raise ValueError('confined runtime identifier required')
+    model=read(confined(repo,f"configs/model/{spec['model_fragment']}.json"))
+    profile=read(confined(repo,f"configs/deployment/{spec['profile']}.json"))
+    if model['runtime_receipt']!=spec['runtime_receipt']:
+        raise ValueError('model/profile runtime binding differs')
+    if profile['model_fragment']!=spec['model_fragment']:
+        other=Path(repo)/f"configs/model/{profile['model_fragment']}.json"
+        if not other.is_file():raise ValueError('profile model differs')
+        deployed=read(other)
+        protocol=lambda doc:{k:v for k,v in doc.items() if k!='geometry_basis'}
+        if protocol(model)!=protocol(deployed):raise ValueError('profile model protocol differs')
+    confined(Path(repo)/'docs',spec['runtime_receipt'])
+    return spec
+
+
 def require_unspent(repo, data):
     ledger = (repo/'docs/exposure-ledger.md').read_text()
     for run in (RUN, RUN+'-FIT', RUN+'-READ'):
@@ -42,7 +72,9 @@ def fresh_output(data, out):
 def measure_templates(repo, data, params):
     """CPU tokenization of exact templates, not a full-context FIT claim."""
     from transformers import AutoTokenizer
-    receipt_path = repo/'docs'/RECEIPT
+    binding=runtime_binding(repo)
+    session=binding['service_session'];profile=binding['profile'];receipt_rel=binding['runtime_receipt']
+    receipt_path = repo/'docs'/receipt_rel
     receipt = read(receipt_path)
     model_dir = Path(receipt['model']['model_dir']).resolve()
     if not model_dir.is_relative_to(data.resolve()/'models'):
@@ -61,21 +93,25 @@ def measure_templates(repo, data, params):
     tokenizer = AutoTokenizer.from_pretrained(model_dir, local_files_only=True, trust_remote_code=False)
     counts = {k: len(tokenizer.encode(consumption.checked_pin(repo/'configs',params[k]).read_text(),add_special_tokens=False))
               for k in ('base_template','template')}
-    estimate = read(repo/ESTIMATE_SOURCE)['native_episode']['consumption_module']['supply_frame']['fit_estimate']
+    estimate = copy.deepcopy(read(repo/ESTIMATE_SOURCE)['native_episode']['consumption_module']['supply_frame']['fit_estimate'])
     model = read(repo/f'configs/model/{MODEL}.json')
+    if (repo/RUNTIME_BINDING).exists():
+        estimate['slot_tokens']=int(model['server_args'][model['server_args'].index('--max-model-len')+1])
     if (estimate['slot_tokens'] != int(model['server_args'][model['server_args'].index('--max-model-len')+1])
             or estimate['completion_ceiling'] != model['decoding_params']['max_tokens']):
         raise ValueError('inherited compile estimate differs from resident context geometry')
     return {'schema':'saea-tfgrpo-template-measurement-v1','method':'resident-local-tokenizer-add-special-tokens-false',
         'base_template':params['base_template'],'template':params['template'],'token_counts':counts,
-        'tokenizer_files':token_files,'runtime_receipt':pin(repo,'docs/'+RECEIPT),
+        'tokenizer_files':token_files,'runtime_receipt':pin(repo,'docs/'+receipt_rel),
         'fit_estimate':estimate,'fit_estimate_source':pin(repo,ESTIMATE_SOURCE),
-        'full_prompt_measured':False,'actual_request_fit':'native_contact_fit at every dispatch',
+        'runtime_binding':binding,'full_prompt_measured':False,'actual_request_fit':'native_contact_fit at every dispatch',
         'new_model_calls':0,'new_tokenizer_endpoint_calls':0}
 
 
 def stage(repo, data, candidate, manifest, out):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
+    binding=runtime_binding(repo)
+    session=binding['service_session'];profile=binding['profile'];receipt_rel=binding['runtime_receipt']
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     assert_execution_environment(); head = require_clean_study_repo(repo)
     require_unspent(repo,data); fresh_output(data,out)
@@ -92,7 +128,7 @@ def stage(repo, data, candidate, manifest, out):
         base_template_tokens=measurement['token_counts']['base_template'],learned_template_tokens=measurement['token_counts']['template'])
     exp = derived['experiment']; cell, = exp['cells']
     cell['allowed_execution_stages'] = ['check','prepare-supply','worker','campaign']
-    exp['service_session'] = SESSION
+    exp['service_session'] = session
     out.mkdir(parents=True)
     for path, doc in zip(targets,(derived['baseline'],exp)):
         path.parent.mkdir(parents=True,exist_ok=True); publish_new(path,raw(doc))
@@ -140,6 +176,8 @@ def verify_stage(repo, data, stage_record):
 
 def validate(repo,data,name,spec,exp,view):
     from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
+    binding=runtime_binding(repo)
+    session=binding['service_session'];profile=binding['profile'];receipt_rel=binding['runtime_receipt']
     from speech_aware_evidence_acquisition.data.splits import prefixed,split_identity_hash
     from tfrl_odd40_cells import verify_output
     cell, = exp['cells']; pop, = exp['populations']; summary=exp['population']
@@ -148,8 +186,8 @@ def validate(repo,data,name,spec,exp,view):
             or cell['run_id'] != RUN or cell['attempt_id'] != spec['attempt_id']
             or cell['model_fragment'] != MODEL or cell['baseline_fragment'] != NAME
             or spec['fit_run_id'] != RUN+'-FIT' or spec['fit_attempt_id'] != 'fit-v1'
-            or spec['profile'] != PROFILE or spec['runtime_receipt'] != RECEIPT
-            or spec['service_session'] != SESSION or exp['service_session'] != SESSION):
+            or spec['profile'] != profile or spec['runtime_receipt'] != receipt_rel
+            or spec['service_session'] != session or exp['service_session'] != session):
         raise ValueError('exact paired H2 runtime identity required')
     if (spec['roster']['relpath'] != ROSTER or roster != read(repo/ROSTER)
             or len(ids) != 312 or len(set(ids)) != 312 or spec['rows'] != 312 or summary['count'] != 312
@@ -185,6 +223,8 @@ def validate(repo,data,name,spec,exp,view):
 
 def register(repo,data,stage_record,prepared):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment,ExecutionPlan
+    binding=runtime_binding(repo)
+    session=binding['service_session'];profile=binding['profile'];receipt_rel=binding['runtime_receipt']
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     from speech_aware_evidence_acquisition.core.config import compose,protocol_hash
     assert_execution_environment(); head=require_clean_study_repo(repo); require_unspent(repo,data)
@@ -204,13 +244,13 @@ def register(repo,data,stage_record,prepared):
     ph=protocol_hash(cfg.config_hash,cfg.values['arm'],split)
     identity={'cell':NAME,'experiment':NAME,'run_id':RUN,'attempt_id':'generation-v1','fit_run_id':RUN+'-FIT',
         'fit_attempt_id':'fit-v1','rows':312,'composed_config_hash':cfg.config_hash,'protocol_hash':ph,'split_identity_hash':split}
-    spec={**identity,'workload_kind':KIND,'model_fragment':MODEL,'baseline':NAME,'service_session':SESSION,
-        'profile':PROFILE,'runtime_receipt':RECEIPT,'authority':AUTH,'decision_id':NAME+'-owner-admission',
+    spec={**identity,'workload_kind':KIND,'model_fragment':MODEL,'baseline':NAME,'service_session':session,
+        'profile':profile,'runtime_receipt':receipt_rel,'authority':AUTH,'decision_id':NAME+'-owner-admission',
         'decision_relpath':f'coordination/{NAME}/root-admission-v1.json','roster':pin(repo,ROSTER),
         'dataset':pin(repo,f"configs/dataset/{cell['dataset_fragment']}.json"),'gain_lock':pin(repo,LOCK),
         'scientific_baseline_sha256':scientific_hash(base),'stage_sha256':sha(stage_record)}
     validate(repo,data,NAME,spec,exp,read(repo/spec['dataset']['relpath']))
-    protocol={'schema':'saea-tfgrpo-h2-paired-generation-v1','cells':{'arm':identity},'profile':PROFILE,
+    protocol={'schema':'saea-tfgrpo-h2-paired-generation-v1','cells':{'arm':identity},'profile':profile,
         'roster':spec['roster'],'gain_lock':spec['gain_lock'],'prepared_phase_supply':base['prepared_phase_supply'],
         'evaluation':staged['evaluation'],'template_measurement':staged['measurement'],'claims_benefit':False}
     docs={'candidate.json':spec,'protocol-registered-v1.json':protocol}
@@ -221,7 +261,7 @@ def register(repo,data,stage_record,prepared):
         plan=ExecutionPlan(run_id=rid,attempt_id=aid,carrier_lock_key='slurp',split_identity_hash=split,protocol_hash=ph,**budget)
         plan.validate(source_root=repo)
         doc={'schema':f'saea-registered-{kind}-plan-v1','plan_kind':kind,'cell':NAME,'experiment':NAME,
-            'composed_config_hash':cfg.config_hash,'expected_session_id':SESSION,'execution_plan':asdict(plan),
+            'composed_config_hash':cfg.config_hash,'expected_session_id':session,'execution_plan':asdict(plan),
             'prepared_phase_supply':base['prepared_phase_supply'],'protocol_document':protocol_pin,'status':'held'}
         rel=f'{kind}-plan-registered-v1.json'; docs[rel]=doc
         rows.append(['2026-11-01',rid,'bounded-discovery-probe','Full H2 paired development '+kind,MODEL,'slurp TRAIN H2 fixed312',
