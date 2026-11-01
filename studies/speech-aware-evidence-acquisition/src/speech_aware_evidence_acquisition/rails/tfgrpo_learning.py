@@ -332,7 +332,8 @@ class ExperienceLearner:
 
     def learn(self, groups, parent, *, agent_objective, learning_objective,
               rollout_kind='full-same-policy', policy_sha256, num_experiences=2,
-              summary_import=None, imported_summaries=None, import_custody=None):
+              summary_import=None, imported_summaries=None, import_custody=None,
+              final_import=None, imported_operations=None, stage_custody=None):
         """Produce a candidate version; no gold enters a task inference request."""
         groups, parent = copy.deepcopy(groups), copy.deepcopy(parent)
         validate_experience(parent, self.model_id)
@@ -375,6 +376,19 @@ class ExperienceLearner:
             raise LearningError('verified historical summary custody required')
         if not set(imported_summaries)<=seen_trajectories:raise LearningError('foreign imported trajectory')
         for text in imported_summaries.values():require_text(text,'historical summary')
+        imported_operations=copy.deepcopy(imported_operations)
+        stage_custody=copy.deepcopy(stage_custody)
+        mixed_query_ids=sorted(g['query_id'] for g in groups if {r['reward'] for r in g['rollouts']}=={0,1})
+        if final_import is None:
+            if imported_operations is not None or stage_custody is not None:
+                raise LearningError('historical stages require pinned custody')
+        elif (summary_import is not None or not mixed_query_ids
+                or not isinstance(imported_operations,list) or not isinstance(stage_custody,dict)
+                or stage_custody.get('source')!=final_import
+                or stage_custody.get('learned_query_ids')!=mixed_query_ids
+                or stage_custody.get('imported_group_updates')!=len(mixed_query_ids)
+                or stage_custody.get('operations_sha256')!=sha(imported_operations)):
+            raise LearningError('verified historical stage custody required')
         binding={'schema':'saea-tfgrpo-batch-v1','groups':groups,'parent':parent,'common':common,
                  'model_id':self.model_id,'policy_sha256':policy_sha256,'rollout_kind':rollout_kind,
                  'learning_config_sha256':self.learning_config_sha256,
@@ -383,6 +397,7 @@ class ExperienceLearner:
                            'max_operations':self.max_operations,'max_items':self.max_items,
                            'max_characters':self.max_characters}}
         if summary_import is not None:binding['summary_import']=copy.deepcopy(summary_import)
+        if final_import is not None:binding['final_import']=copy.deepcopy(final_import)
         with self._exclusive_batch():
             self.last_invocation = {'new_calls': 0, 'reused_calls': 0}
             binding_path=self.root/'batch.json'
@@ -393,13 +408,15 @@ class ExperienceLearner:
             mixed=[g for g in groups if {r['reward'] for r in g['rollouts']}=={0,1}]
             mixed_ids={r['trajectory_id'] for g in mixed for r in g['rollouts']}
             if not set(imported_summaries)<=mixed_ids:raise LearningError('imported summaries outside learning groups')
-            planned=sum(len(g['rollouts'])+2 for g in mixed)+(1 if mixed else 0)-len(imported_summaries)
+            planned=(1 if final_import is not None else
+                     sum(len(g['rollouts'])+2 for g in mixed)+(1 if mixed else 0)-len(imported_summaries))
             if planned>self.max_calls:raise LearningError('complete update exceeds contact budget before first call')
             result_path=self.root/'candidate.json'
             if result_path.exists():
                 candidate=json.loads(result_path.read_bytes());validate_experience(candidate,self.model_id)
                 if candidate.get('batch_sha256')!=self._batch:raise LearningError('candidate belongs to another batch')
                 if candidate.get('historical_summary_custody')!=import_custody:raise LearningError('candidate historical custody changed')
+                if candidate.get('historical_stage_custody')!=stage_custody:raise LearningError('candidate historical stage custody changed')
                 actual={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((self.root/'contacts').glob('*.response.json'))}
                 if candidate.get('contact_response_sha256')!=actual:raise LearningError('candidate contact evidence changed')
                 if candidate.get('accounting')!=self.accounting():raise LearningError('candidate accounting changed')
@@ -421,37 +438,40 @@ class ExperienceLearner:
                 proposed=self._call('group_update',group['query_id'],self._messages(
                     'GROUP_EXPERIENCE_UPDATE_TEMPLATE',common,existing_experiences=current,new_experiences=experience))
                 return parse_operations(proposed,parent['items'],max_operations=self.max_operations)
-            # Only the coordinator submits work; workers never wait on another
-            # future. Ready downstream contacts take priority over unsent summaries.
-            pending=deque(('summary',i,r) for i,g in enumerate(mixed) for r in g['rollouts'] if r['trajectory_id'] not in summary_by_id)
-            counts=[sum(r['trajectory_id'] in summary_by_id for r in g['rollouts']) for g in mixed]
-            ready=deque(('advantage',i,None) for i,g in enumerate(mixed) if counts[i]==len(g['rollouts'])); active={}
-            grouped_operations=[None]*len(mixed)
-            with ThreadPoolExecutor(max_workers=self.concurrency) as pool:
-                try:
-                    while pending or ready or active:
-                        while len(active)<self.concurrency and (ready or pending):
-                            stage,index,value=(ready if ready else pending).popleft()
-                            group=mixed[index]
-                            if stage=='summary':future=pool.submit(summarize,(group,value))
-                            elif stage=='advantage':future=pool.submit(advantage,group)
-                            else:future=pool.submit(update_group,group,value)
-                            active[future]=(stage,index,value)
-                        completed,_=wait(active,return_when=FIRST_COMPLETED)
-                        for future in completed:
-                            stage,index,value=active.pop(future)
-                            result=future.result()
-                            if stage=='summary':
-                                summary_by_id[value['trajectory_id']]=result
-                                counts[index]+=1
-                                if counts[index]==len(mixed[index]['rollouts']):
-                                    ready.append(('advantage',index,None))
-                            elif stage=='advantage':ready.append(('group_update',index,result))
-                            else:grouped_operations[index]=result
-                except BaseException:
-                    for future in active:future.cancel()
-                    raise
-            operations=[operation for group_ops in grouped_operations for operation in group_ops]
+            if final_import is not None:
+                operations=imported_operations
+            else:
+                # Only the coordinator submits work; workers never wait on another
+                # future. Ready downstream contacts take priority over unsent summaries.
+                pending=deque(('summary',i,r) for i,g in enumerate(mixed) for r in g['rollouts'] if r['trajectory_id'] not in summary_by_id)
+                counts=[sum(r['trajectory_id'] in summary_by_id for r in g['rollouts']) for g in mixed]
+                ready=deque(('advantage',i,None) for i,g in enumerate(mixed) if counts[i]==len(g['rollouts'])); active={}
+                grouped_operations=[None]*len(mixed)
+                with ThreadPoolExecutor(max_workers=self.concurrency) as pool:
+                    try:
+                        while pending or ready or active:
+                            while len(active)<self.concurrency and (ready or pending):
+                                stage,index,value=(ready if ready else pending).popleft()
+                                group=mixed[index]
+                                if stage=='summary':future=pool.submit(summarize,(group,value))
+                                elif stage=='advantage':future=pool.submit(advantage,group)
+                                else:future=pool.submit(update_group,group,value)
+                                active[future]=(stage,index,value)
+                            completed,_=wait(active,return_when=FIRST_COMPLETED)
+                            for future in completed:
+                                stage,index,value=active.pop(future)
+                                result=future.result()
+                                if stage=='summary':
+                                    summary_by_id[value['trajectory_id']]=result
+                                    counts[index]+=1
+                                    if counts[index]==len(mixed[index]['rollouts']):
+                                        ready.append(('advantage',index,None))
+                                elif stage=='advantage':ready.append(('group_update',index,result))
+                                else:grouped_operations[index]=result
+                    except BaseException:
+                        for future in active:future.cancel()
+                        raise
+                operations=[operation for group_ops in grouped_operations for operation in group_ops]
             final_ops=[]
             if mixed:
                 material=json.dumps({'existing_experiences':parent['items'],'proposed_operations':operations},ensure_ascii=False,sort_keys=True)
@@ -471,6 +491,7 @@ class ExperienceLearner:
                   'planned_learning_calls':planned,'operations':final_ops,'learning_usage':usage,'accounting':accounting,
                   'contact_response_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((self.root/'contacts').glob('*.response.json'))}}
             if summary_import is not None:body['historical_summary_custody']=copy.deepcopy(import_custody)
+            if final_import is not None:body['historical_stage_custody']=copy.deepcopy(stage_custody)
             candidate={**body,'sha256':sha(body)}
             publish_new(result_path,canonical(candidate))
             return candidate

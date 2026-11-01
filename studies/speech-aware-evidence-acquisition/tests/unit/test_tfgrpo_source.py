@@ -97,3 +97,58 @@ def test_registered_entry_executes_pinned_batch_and_closes_client(tmp_path,monke
     candidate=tfgrpo_runtime.run_registered_learning(runtime,receipt_root=tmp_path/'runtime',learner_root=tmp_path/'learner')
     assert len(calls)==5 and closed==[True]
     assert candidate['learning_usage']['calls']==5 and candidate['deployment_accepted'] is False
+
+
+def final_setup(tmp_path,monkeypatch):
+    from speech_aware_evidence_acquisition.rails import tfgrpo_final_import
+    values,args,source=setup(tmp_path)
+    batch=source['batch'];other=copy.deepcopy(batch['groups'][0]);other['query_id']='slurp:train:002'
+    for row in other['rollouts']:row['trajectory_id']+='-other'
+    batch['groups'].append(other)
+    batch['bounds'].update(max_calls=1,concurrency=1)
+    batch['final_import']={'relpath':'historical-import.json','sha256':'e'*64}
+    reg=values['tfgrpo_learning_registration'];reg['contacts']=reg['contacts'][-1:];reg['batch_sha256']=sha(batch)
+    path=tmp_path/'source.json';path.write_text(json.dumps(source))
+    values['prepared_training_feedback']['source']['sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+    seen=[]
+    def verified(spec,**kwargs):
+        seen.append(kwargs)
+        return [],{'source':spec,'learned_query_ids':sorted(g['query_id'] for g in kwargs['groups']),
+                   'imported_group_updates':2,'operations_sha256':sha([])}
+    monkeypatch.setattr(tfgrpo_final_import,'load_import',verified)
+    return values,args,source,seen
+
+
+def test_final_source_one_runtime_anchor_preserves_full_learning_population(tmp_path,monkeypatch):
+    values,args,source,seen=final_setup(tmp_path,monkeypatch)
+    actual,receipt=load_dynamic_source(values,**args)
+    assert actual==source and receipt['contacts']==1 and receipt['rows']==1
+    assert len(seen)==1 and len(seen[0]['groups'])==2
+
+
+def test_final_source_import_refusal_precedes_generation(tmp_path,monkeypatch):
+    from speech_aware_evidence_acquisition.rails import tfgrpo_final_import
+    values,args,_,_=final_setup(tmp_path,monkeypatch)
+    def refuse(*a,**k):raise LearningError('historical custody invalid')
+    monkeypatch.setattr(tfgrpo_final_import,'load_import',refuse)
+    with pytest.raises(LearningError,match='historical custody'):load_dynamic_source(values,**args)
+
+
+def test_final_runtime_only_calls_merge_with_all_learning_ids(tmp_path,monkeypatch):
+    from speech_aware_evidence_acquisition.rails import tfgrpo_runtime
+    values,args,_,seen=final_setup(tmp_path,monkeypatch);calls=[]
+    class Caller:
+        client=SimpleNamespace(close=lambda:None)
+        def preflight(self,request):pass
+        def reconcile(self,request):raise AssertionError('no prior contact')
+        def __call__(self,request):
+            calls.append(request)
+            return {'text':'[]','model_id':'frozen-model','receipt_id':'actual-final-1',
+                    'usage':{'calls':1,'prompt_tokens':10,'completion_tokens':3}}
+    runtime=SimpleNamespace(_composed=SimpleNamespace(values=values),plan=args['plan'],_repo_root=tmp_path,
+        _data_root=tmp_path,_samples=[SimpleNamespace(sample_id=args['sample_ids'][0])])
+    monkeypatch.setattr(tfgrpo_runtime,'bind_runtime',lambda *a,**k:Caller())
+    candidate=tfgrpo_runtime.run_registered_learning(runtime,receipt_root=tmp_path/'runtime',learner_root=tmp_path/'learner')
+    assert [r['stage'] for r in calls]==['batch_update']
+    assert candidate['learned_query_ids']==['slurp:train:001','slurp:train:002']
+    assert candidate['learning_usage']['calls']==1 and len(seen)==2

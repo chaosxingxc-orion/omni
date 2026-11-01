@@ -43,6 +43,14 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
     if not isinstance(source['provenance'],list) or not source['provenance']:
         raise LearningError('exported source requires immutable provenance pins')
     for pin in source['provenance']:read_pin(pin,repo_root=repo_root,data_root=data_root)
+    final_only='final_import' in batch
+    if final_only:
+        if 'summary_import' in batch:
+            raise LearningError('final-only source cannot also import summaries')
+        from .tfgrpo_final_import import load_import
+        load_import(batch['final_import'],data_root=data_root,groups=batch['groups'],
+            common=batch['common'],model_id=model_id,parent=batch['parent'],
+            policy_sha256=batch['policy_sha256'],rollout_kind=batch['rollout_kind'])
     imported={}
     if 'summary_import' in batch:
         from .tfgrpo_summary_import import load_import
@@ -50,7 +58,7 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
     expected=[];seen=set();trajectory_ids=set()
     for group in batch['groups']:
         qid=group['query_id']
-        if qid not in sample_ids or qid in seen or not qid.startswith('slurp:train:'):
+        if (not final_only and qid not in sample_ids) or qid in seen or not qid.startswith('slurp:train:'):
             raise LearningError('learning query outside unique TRAIN roster')
         seen.add(qid)
         rolls=group['rollouts']
@@ -65,10 +73,14 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
             expected.extend({'stage':'summary','identity':r['trajectory_id'],'sample_id':qid} for r in rolls if r['trajectory_id'] not in imported)
             expected.extend({'stage':s,'identity':qid,'sample_id':qid} for s in ('advantage','group_update'))
     if expected:expected.append({'stage':'batch_update','identity':'batch','sample_id':batch['groups'][0]['query_id']})
+    if final_only:
+        if not expected:raise LearningError('final-only source requires completed mixed groups')
+        expected=[expected[-1]]
     if reg['contacts']!=expected or batch['bounds']['max_calls']!=len(expected):
         raise LearningError('finite learning contact roster differs from source batch')
-    if set(sample_ids)!=seen:
+    required_ids={batch['groups'][0]['query_id']} if final_only else seen
+    if set(sample_ids)!=required_ids:
         raise LearningError('dynamic source must cover the registered query roster')
     return source, {'schema':'saea-tfgrpo-dynamic-source-receipt-v1','source':spec['source'],
-                   'batch_sha256':sha(batch),'contacts':len(expected),'rows':len(seen),
+                   'batch_sha256':sha(batch),'contacts':len(expected),'rows':len(required_ids),
                    'construction_roster_sha256':roster_sha256,'dynamic_states':True}

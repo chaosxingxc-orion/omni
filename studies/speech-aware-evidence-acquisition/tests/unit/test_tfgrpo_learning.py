@@ -282,3 +282,55 @@ def test_advantage_accepts_unambiguous_final_heading_without_changing_content(te
 def test_advantage_refuses_ambiguous_or_empty_heading(text):
     from speech_aware_evidence_acquisition.rails.tfgrpo_learning import semantic_advantage
     with pytest.raises(LearningError):semantic_advantage(text)
+
+
+def final_only_inputs(groups, operations):
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import sha
+    spec={'relpath':'history/final-import.json','sha256':'d'*64}
+    custody={'source':spec,'learned_query_ids':sorted(g['query_id'] for g in groups),
+             'imported_group_updates':len(groups),'operations_sha256':sha(operations),
+             'original_total_usage':{'calls':199,'prompt_tokens':3785529,'completion_tokens':500406}}
+    return {'final_import':spec,'imported_operations':operations,'stage_custody':custody}
+
+
+def test_final_only_retains_every_learning_id_and_only_new_call_cost(tmp_path):
+    parent=empty_experience(MODEL);groups=[group(parent,'q1'),group(parent,'q2')]
+    operations=[{'operation':'ADD','id':None,'content':'Preserve evidence.'}]
+    imported=final_only_inputs(groups,operations);model=Model(operations)
+    learner=ExperienceLearner(tmp_path,model_id=MODEL,metered_call=model,
+        learning_config_sha256=LEARNING_CONFIG,max_calls=1)
+    args=dict(agent_objective='Task',learning_objective='Learn',policy_sha256=POLICY,**imported)
+    result=learner.learn(groups,parent,**args)
+    assert [r['stage'] for r in model.requests]==['batch_update']
+    assert result['learned_query_ids']==['q1','q2'] and result['mixed_groups']==2
+    assert result['learning_usage']['calls']==1
+    assert result['historical_stage_custody']['original_total_usage']['calls']==199
+    assert result['planned_learning_calls']==1
+    for qid in ('q1','q2'):
+        with pytest.raises(LearningError,match='held-out'):experience_context(result,qid)
+    assert learner.learn(groups,parent,**args)==result
+    assert len(model.requests)==1
+
+
+def test_final_only_changed_operations_refused_before_call(tmp_path):
+    parent=empty_experience(MODEL);groups=[group(parent)]
+    imported=final_only_inputs(groups,[])
+    imported['imported_operations']=[{'operation':'ADD','id':None,'content':'Tampered.'}]
+    learner=ExperienceLearner(tmp_path,model_id=MODEL,metered_call=lambda _:pytest.fail('no call'),
+        learning_config_sha256=LEARNING_CONFIG,max_calls=1)
+    with pytest.raises(LearningError,match='stage custody'):
+        learner.learn(groups,parent,agent_objective='Task',learning_objective='Learn',policy_sha256=POLICY,**imported)
+
+
+def test_final_only_truncated_response_keeps_cost_and_never_repairs_or_retries(tmp_path):
+    parent=empty_experience(MODEL);groups=[group(parent)];model=Model();calls=[]
+    def truncated(request):
+        calls.append(request);response=model(request);response['text']='[{"operation":"ADD","content":"truncated'
+        return response
+    learner=ExperienceLearner(tmp_path,model_id=MODEL,metered_call=truncated,
+        learning_config_sha256=LEARNING_CONFIG,max_calls=1)
+    args=dict(agent_objective='Task',learning_objective='Learn',policy_sha256=POLICY,**final_only_inputs(groups,[]))
+    for _ in range(2):
+        with pytest.raises(LearningError,match='must be JSON'):learner.learn(groups,parent,**args)
+    assert len(calls)==1 and learner.accounting()['known_usage']['calls']==1
+    assert not (tmp_path/'candidate.json').exists()

@@ -361,6 +361,12 @@ def run_registered_learning(runtime, *, receipt_root, learner_root, retain_clien
         summaries,custody=load_import(batch['summary_import'],data_root=runtime._data_root,
             groups=batch['groups'],common=batch['common'],model_id=batch['model_id'])
         historical={'summary_import':batch['summary_import'],'imported_summaries':summaries,'import_custody':custody}
+    if 'final_import' in batch:
+        from .tfgrpo_final_import import load_import
+        operations,custody=load_import(batch['final_import'],data_root=runtime._data_root,
+            groups=batch['groups'],common=batch['common'],model_id=batch['model_id'],
+            parent=batch['parent'],policy_sha256=batch['policy_sha256'],rollout_kind=batch['rollout_kind'])
+        historical={'final_import':batch['final_import'],'imported_operations':operations,'stage_custody':custody}
     sample_ids = {s.sample_id for s in runtime._samples}
     if {row['sample_id'] for row in registration['contacts']} != sample_ids:
         raise LearningError('every artifact roster row requires a registered learning contact')
