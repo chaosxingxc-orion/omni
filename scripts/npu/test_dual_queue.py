@@ -9,6 +9,13 @@ import dual_queue
 
 
 class DualQueueTests(unittest.TestCase):
+    def test_write_json_publishes_readable_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "state.json"
+            dual_queue.write_json(path, {"schema": dual_queue.STATE_SCHEMA, "queues": {}})
+            self.assertEqual(json.loads(path.read_text()), {"schema": dual_queue.STATE_SCHEMA, "queues": {}})
+            self.assertFalse(list(Path(tmp).glob("state.json.tmp.*")))
+
     def queue(self, root, name, jobs):
         path = root / (name + ".json")
         path.write_text(json.dumps({"schema": "saea-card-queue-v1", "id": name, "jobs": jobs}))

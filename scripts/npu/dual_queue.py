@@ -39,8 +39,20 @@ def read_json(path: Path) -> Any:
 def write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp.%d" % os.getpid())
-    tmp.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with tmp.open("w", encoding="utf-8") as stream:
+        stream.write(json.dumps(value, indent=2, sort_keys=True) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
     os.replace(tmp, path)
+    # The coordinator state is the hand-off record used after SSH loss or a
+    # host reboot.  Persist both the bytes and the directory entry before
+    # returning, so a recovered coordinator never mistakes a torn state file
+    # for authoritative ownership.
+    directory = os.open(str(path.parent), os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
 
 
 def _queue_file(path: object, label: str) -> tuple[Path, dict[str, Any]]:
