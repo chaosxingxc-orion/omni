@@ -84,3 +84,13 @@ def test_original_labels_bind_split_utterance_and_scenario():
     for field, value in [('utterance_id', 'wrong'), ('stratum', 'wrong'), ('sample_id', 'slurp:test:1')]:
         with pytest.raises(ValueError):m.label_membership([{**item, field:value}], [record])
     with pytest.raises(ValueError):m.label_membership([item], [record, record])
+
+
+def test_original_numeric_utterance_matches_real_namespaced_roster():
+    from types import SimpleNamespace as NS
+    item={'sample_id':'slurp:train:000049:audio-real','utterance_id':'slurp:train:000049','stratum':'alarm'}
+    record=NS(sample_id=item['sample_id'],utterance_id='49',split='train',scenario='alarm',intent='alarm_set',entities=[])
+    assert m.label_membership([item],[record])[item['sample_id']]['intent']=='alarm_set'
+    record.utterance_id='50'
+    with pytest.raises(ValueError,match='identity'):m.label_membership([item],[record])
+    assert not m.same_train_utterance('slurp:test:000049','49')

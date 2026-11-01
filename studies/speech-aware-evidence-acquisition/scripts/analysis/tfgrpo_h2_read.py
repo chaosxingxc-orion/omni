@@ -46,6 +46,17 @@ def statistics(results,items,*,draws=DRAWS):
         'limitations':['Development comparison, not untouched test.','Bootstrap quantifies roster sampling uncertainty conditional on observed decodes; no independent decoding variance estimate.','Numeric gate alone does not establish stable cross-task improvement.']}
 
 
+
+def same_train_utterance(roster_id, original_id):
+    """Match namespaced roster IDs to the loader's original numeric ID."""
+    import re
+    roster_id, original_id = str(roster_id), str(original_id)
+    match = re.fullmatch(r'slurp:train:([0-9]{6})', roster_id)
+    if match:
+        return original_id.isascii() and original_id.isdecimal() and int(match[1]) == int(original_id)
+    return roster_id == original_id
+
+
 def label_membership(items, records):
     """Use original TRAIN labels in memory; export only aggregate slices."""
     from speech_aware_evidence_acquisition.data.variant_ids import published_sample_key
@@ -61,7 +72,7 @@ def label_membership(items, records):
         if not key.startswith('slurp:train:') or key not in by_id or sid in labels:
             raise ValueError('unique TRAIN membership required')
         record = by_id[key]
-        if (record.split != 'train' or str(record.utterance_id) != str(item['utterance_id'])
+        if (record.split != 'train' or not same_train_utterance(item['utterance_id'], record.utterance_id)
                 or record.scenario != item['stratum']):
             raise ValueError('original labels and registered roster identity differ')
         slots = sorted({entity.type for entity in record.entities})
