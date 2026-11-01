@@ -249,6 +249,85 @@ def prepare(repo, data, derivation, lock, out, half):
         raise
 
 
+def bind(repo, data, derivation, lock, preparations, out):
+    """Bind both completed supplies and verify the shared runtime identity/seed."""
+    from speech_aware_evidence_acquisition.contracts import assert_execution_environment
+    from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
+    from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
+    assert_execution_environment()
+    head = require_clean_study_repo(repo)
+    if out.exists() or not out.resolve().is_relative_to(data.resolve() / 'work/codex'):
+        raise ValueError('fresh owned binding output required')
+    if len(preparations) != 2:
+        raise ValueError('both completed odd40 supplies required')
+    d = read(derivation)
+    if d.get('schema') != 'saea-odd40-held-cells-v1' or d.get('rows') != 625:
+        raise ValueError('exact odd40 derivation required')
+    pins = {**d['dependency_hashes'], **d['output_hashes']}
+    for rel, digest in pins.items():
+        if sha(confined(repo, rel)) != digest:
+            raise ValueError('derived inputs changed before binding')
+    pending, seen = [], set()
+    for path in preparations:
+        prep = read(path)
+        if prep['rows'] not in (313, 312) or prep['rows'] in seen:
+            raise ValueError('distinct complete construction halves required')
+        seen.add(prep['rows'])
+        half = 'h1' if prep['rows'] == 313 else 'h2'
+        name, run, count = identity(half)
+        require_unspent(data, run)
+        if (prep['schema'] != 'saea-odd40-supply-v1' or prep['cell'] != name or prep['run_id'] != run
+                or prep['derivation_sha256'] != sha(derivation) or prep['dataset_lock_sha256'] != sha(lock)
+                or prep['source_hashes'] != pins or prep['data_hashes'] != d['data_hashes']
+                or prep['model_calls'] != 0 or prep['tokenizer_calls'] != 0
+                or prep['readiness'] != 'held' or prep['registered'] is not False
+                or prep['supply']['relpath'] != f'prepared/{run}/phase-supply-v1.json'):
+            raise ValueError('completed owned model-free odd40 supply required')
+        for rel, digest in prep['data_hashes'].items():
+            if sha(confined(data, rel)) != digest:
+                raise ValueError('preparation data changed before binding')
+        target = confined(data, prep['supply']['relpath'])
+        if sha(target) != prep['supply']['sha256']:
+            raise ValueError('prepared supply bytes changed')
+        bp, ep = (repo / f'configs/{kind}/{name}.json' for kind in ('baseline', 'experiment'))
+        base, exp = read(bp), read(ep)
+        verify_output(read(target)['output'], exp['populations'][0]['ids'])
+        if ('prepared_phase_supply' in base or exp['cells'][0]['readiness']['state'] != 'held'
+                or exp['cells'][0]['readiness']['requirements']
+                or exp['cells'][0]['allowed_execution_stages'] != ['check']):
+            raise ValueError('unbound held half required')
+        base['prepared_phase_supply'] = prep['supply']
+        exp['cells'][0]['readiness']['requirements'] = [{'kind': 'preparation', **prep['supply']}]
+        pending.append((prep, bp, ep, base, exp))
+    out.mkdir(parents=True)
+    publish_new(out / 'intent.json', raw({'source_commit': head,
+        'preparation_hashes': [sha(p) for p in preparations], 'model_calls': 0}))
+    for prep, bp, ep, base, exp in pending:
+        for path, doc in ((bp, base), (ep, exp)):
+            publish_new(out / (path.stem + '.' + path.parent.name + '.before.json'), path.read_bytes())
+            path.write_bytes(raw(doc))
+    try:
+        checks, outputs = [], {}
+        for prep, bp, ep, base, exp in pending:
+            cell, = exp['cells']
+            runtime = build_flight_runtime(repo, data, model=cell['model_fragment'], dataset=cell['dataset_fragment'],
+                baseline=cell['baseline_fragment'], experiment=cell['cell_id'], run_id=cell['run_id'],
+                attempt_id=cell['attempt_id'], runtime_root=data / 'work/scratch/runtime-root', lock_path=lock)
+            verified = runtime.verify_prepared_artifacts()
+            if not verified or not all(v['identity_ok'] and v.get('seed_ok', False) for v in verified):
+                raise ValueError('shared runtime prepared identity/seed verification failed')
+            checks.append({'cell': cell['cell_id'], 'rows': prep['rows'], 'checks': verified, 'supply': prep['supply']})
+            outputs.update({str(p.relative_to(repo)): sha(p) for p in (bp, ep)})
+        result = {'schema': 'saea-odd40-supply-binding-v1', 'rows': 625, 'source_commit': head,
+            'halves': checks, 'output_hashes': outputs, 'model_calls': 0, 'tokenizer_calls': 0,
+            'readiness': 'held', 'registered': False, 'generation_authorized': False}
+        publish_new(out / 'complete.json', raw(result))
+        return result
+    except BaseException as error:
+        publish_new(out / 'failed.json', raw({'error': str(error), 'automatic_replay': False}))
+        raise
+
+
 def verify_output(output, ids):
     if set(output) != {'facets', 'values'} or set(output['values']) != {'perception'}:
         raise ValueError('exact first-phase supply shape required')
@@ -259,16 +338,20 @@ def verify_output(output, ids):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('action', choices=['stage', 'prepare'])
+    p.add_argument('action', choices=['stage', 'prepare', 'bind'])
     for key in ('repo', 'data', 'out'):
         p.add_argument('--' + key, type=Path, required=True)
     for key in ('source', 'derivation', 'lock'):
         p.add_argument('--' + key, type=Path)
     p.add_argument('--half', choices=['h1', 'h2'])
+    p.add_argument('--preparation', type=Path, action='append')
     a = p.parse_args()
     if a.action == 'stage':
         if not a.source: p.error('stage requires --source')
         result = stage(a.repo, a.source, a.data, a.out)
+    elif a.action == 'bind':
+        if not all((a.derivation, a.lock, a.preparation)): p.error('bind requires --derivation, --lock and --preparation')
+        result = bind(a.repo, a.data, a.derivation, a.lock, a.preparation, a.out)
     else:
         if not all((a.derivation, a.lock, a.half)): p.error('prepare requires --derivation, --lock and --half')
         result = prepare(a.repo, a.data, a.derivation, a.lock, a.out, a.half)
