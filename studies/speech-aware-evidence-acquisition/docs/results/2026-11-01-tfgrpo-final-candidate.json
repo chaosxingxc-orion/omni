@@ -1,0 +1,45 @@
+{
+  "schema": "saea-final-learning-result-v1",
+  "status": "candidate-finalized-not-accepted",
+  "candidate_sha256": "49c5e138bf15a47f43c4da9c32c39bcfeb279abc8fefcfa0aab65e1cf90e41e1",
+  "items": 63,
+  "learned_queries": 32,
+  "completed_group_updates": 32,
+  "total_groups": 32,
+  "historical_actual_usage": {
+    "calls": 199,
+    "completion_tokens": 500406,
+    "prompt_tokens": 3785529
+  },
+  "final_merge_actual_usage": {
+    "calls": 1,
+    "completion_tokens": 6113,
+    "prompt_tokens": 4464
+  },
+  "sealing_recovery_actual_usage": {
+    "audio_seconds": 0.0,
+    "calls": 0
+  },
+  "total_actual_usage": {
+    "calls": 200,
+    "prompt_tokens": 3789993,
+    "completion_tokens": 506519
+  },
+  "final_merge_stage_seconds": {
+    "tfgrpo_request_prepare": 0.006533350000609062,
+    "tfgrpo_request_preflight": 0.0886667499999021,
+    "http_request": 95.77424321999933,
+    "transport_total": 95.83145520000016,
+    "request_total": 95.94831885999974,
+    "tfgrpo_generation": 95.95467667000048,
+    "output_normalize": 0.008105009999781032
+  },
+  "timing_intervals_overlap": true,
+  "allocated_cards": 8,
+  "serving_instances": 2,
+  "final_merge_request_count": 1,
+  "h2_processed_rows": 0,
+  "h2_total_rows": 312,
+  "accuracy_gain_verified": false,
+  "new_model_calls_by_audit": 0
+}
