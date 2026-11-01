@@ -19,13 +19,14 @@ def read_pin(pin, *, repo_root, data_root):
     return json.loads(path.read_bytes())
 
 
-def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roster_sha256):
+def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roster_sha256, replay=None):
     spec=values.get('prepared_training_feedback')
     if not isinstance(spec,dict) or set(spec)!={'schema','source'} or spec['schema']!=SCHEMA:
         raise LearningError('dynamic TF-GRPO source contract required')
     reg=values.get('tfgrpo_learning_registration')
     model_id=reg.get('model_id') if isinstance(reg,dict) else None
-    validate_registration(reg,plan=plan,model_id=model_id)
+    from .tfgrpo_runtime import learning_source_plan
+    validate_registration(reg,plan=learning_source_plan(plan,replay=replay,data_root=data_root),model_id=model_id)
     if reg['construction_roster_sha256']!=roster_sha256:
         raise LearningError('dynamic source construction roster differs')
     source=read_pin(spec['source'],repo_root=repo_root,data_root=data_root)

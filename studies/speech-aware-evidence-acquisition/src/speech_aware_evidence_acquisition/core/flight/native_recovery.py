@@ -61,6 +61,15 @@ def native_contact_custody_enabled(values):
     Do not widen this to tool, revision, branch or acquisition graphs merely
     because their numeric ceiling happens to be two. No model inputs change.
     """
+    if (values.get('transport') == 'vllm'
+            and values.get('arm') == 'prepared-context-text'
+            and values.get('result_kind') == 'artifact'
+            and values.get('scorers') == []
+            and isinstance(values.get('tfgrpo_learning_registration'), dict)
+            and isinstance(values.get('tfgrpo_contact_fit'), dict)
+            and isinstance(values.get('prepared_training_feedback'), dict)
+            and values['prepared_training_feedback'].get('schema') == 'saea-prepared-tfgrpo-dynamic-v1'):
+        return True  # Exact registration/source/FIT are independently preflighted.
     native = values.get('native_episode')
     if not isinstance(native, dict):
         return False

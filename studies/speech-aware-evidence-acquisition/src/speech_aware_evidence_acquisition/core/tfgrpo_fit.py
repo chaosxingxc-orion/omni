@@ -30,10 +30,11 @@ def validate_tfgrpo_fit(values, plan, registration):
 
 def build_tfgrpo_fit_gate(runtime, *, registration, client_factory=None):
     from ..rails.core_client import PreparedCoreRequest
-    from ..rails.tfgrpo_runtime import validate_registration
+    from ..rails.tfgrpo_runtime import validate_registration, learning_source_plan
     from .driver.speech_native import _LoopbackPromptAuditClient
     from .preparation import measure_vllm_multimodal_request
-    plan = runtime.plan
+    plan = learning_source_plan(runtime.plan,
+        replay=getattr(runtime, '_native_contact_replay', None),data_root=runtime._data_root)
     model_id = runtime.session_required_identity()['model_fragment']
     contacts = validate_registration(registration,plan=plan,model_id=model_id)
     if registration['runtime_identity_sha256'] != digest(runtime.session_required_identity()):

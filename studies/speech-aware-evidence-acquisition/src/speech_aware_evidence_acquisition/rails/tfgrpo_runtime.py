@@ -38,6 +38,17 @@ def _timing_identity(caller, request):
     return {'learning_stage':request.get('stage'), 'learning_contact':request.get('identity')}
 
 
+def learning_source_plan(plan, *, replay=None, data_root=None):
+    """Keep scientific registration immutable across verified fresh attempts."""
+    if replay is None:
+        return plan
+    from ..core.contact_journal import NativeContactReplay
+    if not isinstance(replay, NativeContactReplay) or data_root is None:
+        raise LearningError('verified native replay required for learning recovery')
+    replay.assert_target(data_root, plan, PREPARED_TEXT_ARM)
+    return replay.source_plan
+
+
 def contact_key(stage, identity):
     return sha({'stage': stage, 'identity': identity})
 
@@ -99,7 +110,8 @@ class MeteredExperienceCaller:
         if not callable(request_fit) or not callable(assert_lease):
             raise LearningError('registered request FIT and generation lease checks required')
         self.registration = copy.deepcopy(registration)
-        self.contacts = validate_registration(self.registration, plan=plan, model_id=model_id)
+        source_plan = learning_source_plan(plan,replay=client._contact_replay,data_root=client._binding.data_root)
+        self.contacts = validate_registration(self.registration, plan=source_plan, model_id=model_id)
         if not {row['sample_id'] for row in self.contacts.values()} <= client._binding.allowed_sample_ids:
             raise LearningError('learning anchor outside runtime binding')
         self.client, self.plan, self.model_id = client, plan, model_id
@@ -304,7 +316,9 @@ def bind_runtime(runtime, *, receipt_root, request_fit=None):
         raise LearningError('TF-GRPO runtime must be a scoreless prepared-text TRAIN stage')
     model_id = runtime.session_required_identity()['model_fragment']
     registration = values.get('tfgrpo_learning_registration')
-    validate_registration(registration, plan=runtime.plan, model_id=model_id)
+    replay = getattr(runtime, '_native_contact_replay', None)
+    source_plan = learning_source_plan(runtime.plan,replay=replay,data_root=runtime._data_root)
+    validate_registration(registration, plan=source_plan, model_id=model_id)
     if registration['runtime_identity_sha256'] != sha(runtime.session_required_identity()):
         raise LearningError('registered generation runtime identity differs')
     runtime.assert_generation_lease()
@@ -313,6 +327,8 @@ def bind_runtime(runtime, *, receipt_root, request_fit=None):
         request_fit = build_tfgrpo_fit_gate(runtime, registration=registration)
     kwargs = runtime.frozen_core_client_kwargs()
     kwargs['contact_journal'] = True
+    if replay is not None:
+        kwargs['contact_replay'] = replay
     client = FrozenCoreClient(**kwargs)
     return MeteredExperienceCaller(client=client, plan=runtime.plan, registration=registration,
         model_id=model_id, receipt_root=receipt_root, request_fit=request_fit,
@@ -332,7 +348,8 @@ def run_registered_learning(runtime, *, receipt_root, learner_root, retain_clien
     registration=values['tfgrpo_learning_registration']
     source,_=load_dynamic_source(values,plan=runtime.plan,repo_root=runtime._repo_root,
         data_root=runtime._data_root,sample_ids=tuple(s.sample_id for s in runtime._samples),
-        roster_sha256=registration['construction_roster_sha256'])
+        roster_sha256=registration['construction_roster_sha256'],
+        replay=getattr(runtime, '_native_contact_replay', None))
     batch=source['batch']
     sample_ids = {s.sample_id for s in runtime._samples}
     if {row['sample_id'] for row in registration['contacts']} != sample_ids:

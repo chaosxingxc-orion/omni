@@ -542,6 +542,7 @@ def validate_artifact_result_binding(
     repo_root: Path,
     sample_ids: Sequence[str],
     data_root: Path | None = None,
+    native_contact_replay=None,
 ) -> Mapping[str, object] | None:
     """Validate one registered scoreless artifact-result binding."""
 
@@ -775,7 +776,7 @@ def validate_artifact_result_binding(
         from ..tfgrpo_fit import validate_tfgrpo_fit
         try:
             load_dynamic_source(values,plan=plan,repo_root=repo_root,data_root=data_root,
-                                sample_ids=sample_ids,roster_sha256=digest)
+                                sample_ids=sample_ids,roster_sha256=digest,replay=native_contact_replay)
             validate_tfgrpo_fit(values,plan,values['tfgrpo_learning_registration'])
         except ValueError as error:
             raise FlightRuntimeError(str(error)) from error
@@ -5163,6 +5164,7 @@ class FlightRuntime:
             repo_root=self._repo_root,
             sample_ids=tuple(sample.sample_id for sample in samples),
             data_root=self._data_root,
+            native_contact_replay=self._native_contact_replay,
         )
         if values.get("prepared_training_feedback") is not None and (
             self._artifact_result_binding is None
@@ -10982,11 +10984,13 @@ class FlightRuntime:
         if spec.get('schema') == 'saea-prepared-tfgrpo-dynamic-v1':
             authority = validate_artifact_result_binding(values,plan=self._plan,
                 repo_root=self._repo_root,data_root=self._data_root,
-                sample_ids=tuple(s.sample_id for s in self._samples))
+                sample_ids=tuple(s.sample_id for s in self._samples),
+                native_contact_replay=self._native_contact_replay)
             from ...rails.tfgrpo_source import load_dynamic_source
             _, receipt = load_dynamic_source(values,plan=self._plan,repo_root=self._repo_root,
                 data_root=self._data_root,sample_ids=tuple(s.sample_id for s in self._samples),
-                roster_sha256=authority['construction_roster']['sha256'])
+                roster_sha256=authority['construction_roster']['sha256'],
+                replay=self._native_contact_replay)
             return {}, receipt
         from ..preparation_fit import validate_live_phase_fit_config
         from ...rails.prepared_feedback import load_prepared_feedback, PreparedFeedbackError
