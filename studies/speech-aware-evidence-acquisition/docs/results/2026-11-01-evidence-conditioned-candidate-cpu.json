@@ -425,6 +425,7 @@
     "h2_read": false,
     "new_model_calls": 0,
     "new_scoring_jobs": 0,
+    "observed_relation_count": 113,
     "rules_validated": 10,
     "test_read": false
   }

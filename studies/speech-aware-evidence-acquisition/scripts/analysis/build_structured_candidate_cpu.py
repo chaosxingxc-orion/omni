@@ -12,6 +12,7 @@ audit=json.loads(args.audit.read_text())
 labels=json.loads(args.labels.read_text())
 observed_intents={row['intent'] for row in labels['rows'].values()}
 observed_slots={slot for row in labels['rows'].values() for slot in row['slots']}
+observed_relations={(row['intent'], slot) for row in labels['rows'].values() for slot in row['slots']}
 # One source-bound operation per rule.  These are deliberately scoped to the
 # operation's observed intent/slot contract; no Cartesian expansion is used.
 selected=[
@@ -36,6 +37,7 @@ for i,(prefix,intent,slots,components,trigger,exceptions) in enumerate(selected,
  op=by_prefix[prefix]
  assert intent in observed_intents, (intent, 'intent absent from fixed H1 roster')
  assert set(slots) <= observed_slots and set(components) <= (observed_slots | observed_intents), (prefix, 'slot/component absent from fixed H1 roster')
+ assert all((intent, slot) in observed_relations for slot in slots), (prefix, 'intent-slot relation absent from fixed H1 roster')
  assert op['operation_sha256'] not in excluded_hashes, (prefix, 'audited high-risk source')
  raw=json.dumps({'operation':op['operation'],'id':op['id'],'content':op['content']},ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
  assert hashlib.sha256(raw).hexdigest()==op['operation_sha256'],(prefix,hashlib.sha256(raw).hexdigest(),op['operation_sha256'])
@@ -50,7 +52,7 @@ for i,(prefix,intent,slots,components,trigger,exceptions) in enumerate(selected,
 doc={'schema':RULE_SET_SCHEMA,'rules':rules}
 validated=validate_rule_set(doc,source_payloads=payloads)
 out=args.output
-record={'schema':'saea-evidence-conditioned-candidate-cpu-v1','status':'cpu-validated-not-admitted','source_scope':{'source_operations':102,'source_groups':51,'source_file_sha256':hashlib.sha256(args.operations.read_bytes()).hexdigest(),'audit_file_sha256':hashlib.sha256(args.audit.read_bytes()).hexdigest()},'rules':doc,'source_index':source_index,'validation':{'rules_validated':len(validated),'new_model_calls':0,'new_scoring_jobs':0,'h2_read':False,'test_read':False,'cartesian_intent_slot_expansion':False,'excluded_findings':sorted(excluded_findings),'excluded_operation_count':len(excluded_hashes)},'admission':{'eligible':False,'reason':'CPU structure/source validation only; semantic TRAIN counterexample review and fixed-consumer dry-run remain required before any NPU budget.'}}
+record={'schema':'saea-evidence-conditioned-candidate-cpu-v1','status':'cpu-validated-not-admitted','source_scope':{'source_operations':102,'source_groups':51,'source_file_sha256':hashlib.sha256(args.operations.read_bytes()).hexdigest(),'audit_file_sha256':hashlib.sha256(args.audit.read_bytes()).hexdigest()},'rules':doc,'source_index':source_index,'validation':{'rules_validated':len(validated),'new_model_calls':0,'new_scoring_jobs':0,'h2_read':False,'test_read':False,'cartesian_intent_slot_expansion':False,'observed_relation_count':len(observed_relations),'excluded_findings':sorted(excluded_findings),'excluded_operation_count':len(excluded_hashes)},'admission':{'eligible':False,'reason':'CPU structure/source validation only; semantic TRAIN counterexample review and fixed-consumer dry-run remain required before any NPU budget.'}}
 out.write_text(json.dumps(record,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
 print(out)
 print('rules',len(validated),'sha',hashlib.sha256(out.read_bytes()).hexdigest())
