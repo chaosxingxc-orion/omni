@@ -49,7 +49,13 @@ K4 的 625 条有效结果消耗 4375 次生成；投票 SLU-F1 为 66.8000%，�
 
 ## 参考方法与需要公开的改动
 
-以 [ACE（arXiv:2510.04618）](https://arxiv.org/abs/2510.04618) 的 generator → reflector → curator → playbook 更新作为外部方法参照。这里采用的是**奖励驱动的外部上下文/策略学习**：模型权重冻结，更新对象是知识条目、消费规则及其选择策略；不进行梯度更新，也不称作 GRPO 复现。
+主算法基线改为明确的 [Training-Free Group Relative Policy Optimization（arXiv:2510.08191v1）](https://arxiv.org/html/2510.08191v1)，已阅读原文第2节。官方实现为 [TencentCloudADP/youtu-agent 的 training_free_GRPO 分支](https://github.com/TencentCloudADP/youtu-agent/tree/training_free_GRPO)，本次解析到提交 `7612f860a2314c015573adc742f82157b0d66a6f`；具体代码适配尚未完成。它不同于使用梯度更新权重的普通GRPO，也不等同于我们现有模板蒸馏。
+
+原方法的可核查步骤：同一查询在当前经验库E下生成G条轨迹→外部奖励评分→同一冻结LLM分别总结轨迹→对有明确优劣差异的组提取自然语言“相对语义优势”→由LLM提出Add/Delete/Modify/Keep操作更新E→下一批和下一轮实际使用新E。零差异组不强行提炼相对优势；全错难例仍保留诊断，不等于永久丢弃。
+
+[ACE（arXiv:2510.04618）](https://arxiv.org/abs/2510.04618) 的generator/reflector/curator作为上下文与经验库管理对照，不能仅因存在ACE代码就宣称已经实现TFRL。模型权重保持冻结，更新知识条目、经验与消费策略；候选内容应由实际模型调用从反馈中归纳，主控编写的模板、数据筛选和工程优化不能冒称模型自我学习。
+
+迁移到RSI时先保留原TF-GRPO的组内比较和模型驱动经验更新，再单独研究难例预算、不确定credit、typed知识/消费动作与内部交叉验证。共享P的多Solver组只评估条件消费策略，不声称完整OBS/ORG/SUPPLY/USE探索。若改变组大小、采样机制、经验摘要或更新规则，必须明确标为适配/消融，不能沿用原版复现名称。
 
 仓库已有 `rails/tfrl_ace_material.py` 与 `scripts/flights/tfrl/tfrl_loop_driver.py`。既有 ACE 适配采用脚本计算 helpful/harmful、确定性增量合并和文本去重，区别于论文中的部分模型判断/语义去重；这些改动必须随结果一起报告。历史实现和历史模型上的结果不直接证明当前 BF16 版本已跑通。
 
