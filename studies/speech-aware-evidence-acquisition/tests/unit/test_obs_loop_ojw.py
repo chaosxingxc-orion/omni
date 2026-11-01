@@ -1678,7 +1678,71 @@ class TestSpeechAgentWorkflowScheduling:
             )
 
         assert blocker_slot
-        assert later_contacts == [(blocker_slot[0], False)]
+        assert later_contacts == []  # queued, unsent work stops after the peer fails
+
+    def test_queued_unsent_contacts_stop_and_issued_response_is_retained(self):
+        from speech_aware_evidence_acquisition.reproduction.ojw import runner
+
+        calls, observed, timing = [], [], []
+        both_issued = threading.Barrier(2)
+        failure = threading.Event()
+
+        def contact(state, slot):
+            calls.append(state)
+            if state in (0, 1):
+                both_issued.wait(timeout=2)
+            if state == 1:
+                failure.set()
+                raise RuntimeError("original failure from input one")
+            assert failure.wait(timeout=2)
+            time.sleep(0.05)
+            return "observed-response"
+
+        async def episode(state, run_contact, _session):
+            observed.append((state, await run_contact(lambda slot: contact(state, slot))))
+
+        with pytest.raises(RuntimeError, match="original failure from input one"):
+            runner.execute_speech_agent_workflows(
+                list(range(20)), branch_count=1, slot_count=2, queue_depth=20,
+                workflow_timeout_seconds=10.0, episode_invoker=episode,
+                sample_timing_sink=lambda state, event: timing.append((state, event)),
+            )
+        assert sorted(calls) == [0, 1]
+        assert observed == [(0, "observed-response")]
+        assert {state for state, event in timing if event['status'] == 'completed'} == {0}
+        assert all(event['status'] == 'failed' for state, event in timing if state > 0)
+
+    @pytest.mark.parametrize("prefix_mode", [False, True])
+    def test_skipped_lower_index_does_not_mask_original_failure(self, prefix_mode):
+        from speech_aware_evidence_acquisition.reproduction.ojw import runner
+
+        issued = threading.Event()
+        queued = asyncio.Event()
+        calls = []
+
+        def fail(slot):
+            calls.append(1)
+            issued.set()
+            time.sleep(0.05)
+            raise ValueError("original higher-index failure")
+
+        async def episode(state, run_contact, _session):
+            options = {'prefix_family':'shared'} if prefix_mode else {}
+            if state == 0:
+                while not issued.is_set():
+                    await asyncio.sleep(0)
+                queued.set()
+                await run_contact(lambda slot: calls.append(0), **options)
+            else:
+                await run_contact(fail, **options)
+
+        with pytest.raises(ValueError, match="original higher-index failure"):
+            runner.execute_speech_agent_workflows(
+                [0, 1], branch_count=1, slot_count=1, queue_depth=2,
+                workflow_timeout_seconds=10, episode_invoker=episode,
+                prefix_slot_bindings={'shared':0} if prefix_mode else None,
+            )
+        assert queued.is_set() and calls == [1]
 
     def test_native_episode_raises_first_failure_in_input_order(self):
         from speech_aware_evidence_acquisition.reproduction.ojw import runner
@@ -1791,7 +1855,7 @@ class TestSpeechAgentWorkflowScheduling:
             )
 
         assert blocker_slot
-        assert later_contacts == [(blocker_slot[0], False)]
+        assert later_contacts == []  # queued, unsent work stops after the peer fails
 
     def test_timeout_does_not_recycle_a_running_worker_slot(self, monkeypatch):
         blocker_active = threading.Event()
@@ -1830,7 +1894,8 @@ class TestSpeechAgentWorkflowScheduling:
                 workflow_timeout_seconds=10.0,
             )
 
-        assert later_contact_observed_blocker == [False]
+        assert later_contact_observed_blocker == []
+        assert not blocker_active.is_set()
 
     def test_framework_timeout_waits_for_the_contact_worker_to_settle(self):
         from speech_aware_evidence_acquisition.reproduction.ojw import (
@@ -1841,7 +1906,7 @@ class TestSpeechAgentWorkflowScheduling:
         state = {"done": False}
 
         def invoke_contact(_state, _branch_index, slot_id):
-            time.sleep(0.10)
+            time.sleep(0.40)
             return _agent_contact_result(slot_id)
 
         started = time.monotonic()
@@ -1857,10 +1922,10 @@ class TestSpeechAgentWorkflowScheduling:
                 branch_count=1,
                 slot_count=1,
                 queue_depth=1,
-                workflow_timeout_seconds=0.02,
+                workflow_timeout_seconds=0.20,
             )
 
-        assert time.monotonic() - started >= 0.10
+        assert time.monotonic() - started >= 0.40
 
     def test_three_waves_keep_one_primary_slot_per_trajectory(self, monkeypatch):
         states = [object()]

@@ -580,11 +580,24 @@ def execute_speech_agent_workflows(
             slots.put_nowait(slot_id)
         prefix_locks = {key: asyncio.Lock() for key in (prefix_slot_bindings or {})}
 
+        class PeerFailedBeforeFirstContact(RuntimeError):
+            """An admitted but unsent sample stopped after a peer failed."""
+
+        stop_before_first_contact = False
+
         async def one(state: object, node_batch=None, member=None, node_pipeline=None):
+            nonlocal stop_before_first_contact
             primary_slot_id: int | None = None
             slot_assignment_lock = asyncio.Lock()
             contact_lock = asyncio.Lock()
             worker_tasks: set[asyncio.Future[object]] = set()
+            has_started_contact = False
+
+            def starting_contact():
+                nonlocal has_started_contact
+                if stop_before_first_contact and not has_started_contact:
+                    raise PeerFailedBeforeFirstContact("peer failed before first model dispatch")
+                has_started_contact = True
 
             async def primary_slot() -> int:
                 nonlocal primary_slot_id
@@ -607,6 +620,7 @@ def execute_speech_agent_workflows(
                         if not isinstance(prefix_family, str) or prefix_family not in prefix_locks:
                             raise ValueError("model contact lacks its declared prefix family")
                         async with prefix_locks[prefix_family]:
+                            starting_contact()
                             worker = asyncio.create_task(asyncio.to_thread(
                                 blocking_contact, prefix_slot_bindings[prefix_family],
                             ))
@@ -632,6 +646,7 @@ def execute_speech_agent_workflows(
                     if prefix_family is not None:
                         raise ValueError("prefix family supplied without prefix slot bindings")
                     slot_id = await primary_slot()
+                    starting_contact()
                     worker = asyncio.create_task(
                         asyncio.to_thread(blocking_contact, slot_id)
                     )
@@ -739,6 +754,12 @@ def execute_speech_agent_workflows(
                         ) from error
                     raise
                 return state
+            except BaseException as error:
+                if not isinstance(error, PeerFailedBeforeFirstContact):
+                    # Publish before releasing a slot to an already admitted
+                    # peer. Issued contacts and their workflows still drain.
+                    stop_before_first_contact = True
+                raise
             finally:
                 if worker_tasks:
                     await asyncio.gather(*tuple(worker_tasks), return_exceptions=True)
@@ -752,7 +773,7 @@ def execute_speech_agent_workflows(
         async def next_admission() -> tuple[int, object] | None:
             nonlocal next_index
             async with admission_lock:
-                if failures or next_index >= len(ordered_states):
+                if failures or stop_before_first_contact or next_index >= len(ordered_states):
                     return None
                 admitted = (next_index, ordered_states[next_index])
                 next_index += 1
@@ -788,8 +809,9 @@ def execute_speech_agent_workflows(
                         else:
                             failure.add_note(f"Sample timing sink also failed: {type(error).__name__}")
                 if failure is not None:
-                    async with admission_lock:
-                        failures[index] = failure
+                    if not isinstance(failure, PeerFailedBeforeFirstContact):
+                        async with admission_lock:
+                            failures[index] = failure
                     return
 
         if node_pipeline_order is not None:
