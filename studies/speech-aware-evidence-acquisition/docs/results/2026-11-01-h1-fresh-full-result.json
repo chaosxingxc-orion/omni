@@ -1,0 +1,59 @@
+{
+  "attempt_id": "generation-v1",
+  "claims_benefit": false,
+  "cost": {
+    "audio_seconds_used": 2639.0878750000024,
+    "calls_used": 626,
+    "completion_tokens_total": 1240036,
+    "latency_seconds_total": 173359.19940753002,
+    "prompt_tokens_total": 3930206,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "hardness_confirmed": false,
+  "historical_costs_excluded_from_this_run": true,
+  "independent_stochastic_draws_claimed": false,
+  "intent_accuracy": 0.7571884984025559,
+  "limitations": [
+    "One fresh lock observation does not establish long-run error probability.",
+    "Historical failed runs and learning costs remain in their original ledgers.",
+    "No comparison with a different roster or shared-P K4 as an accuracy gain."
+  ],
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "official": {
+    "slu_f1": 0.6650306974701877,
+    "intent_accuracy": 0.7571884984025559,
+    "scenario_accuracy": 0.7955271565495209,
+    "action_accuracy": 0.7827476038338658,
+    "span_f1": 0.5482625482625482
+  },
+  "role_contacts": {
+    "perception": {
+      "calls": 313
+    },
+    "solver": {
+      "calls": 313
+    }
+  },
+  "rows": 313,
+  "run_id": "SAEA-SLURP-TFRL-H1-FRESH-OBSERVATION-R1-V1",
+  "schema": "saea-h1-fresh-observation-result-v1",
+  "scorer_id": "slurp-slu-official-train",
+  "source": {
+    "config_hash": "d96e0b6b83fa7c0a251262ce2dd395f5e686d11dc01a1b61504fc4c0c1c30aa5",
+    "manifest_sha256": "821897c35b5b625142245a17309b57d72f5d587a77f51697ce914ab1535f52ff",
+    "recipe_sha256": "b00f2b597417fc46de80e439b7baf6544df578228695cda3569bcd82e4981ef7",
+    "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+    "scores_sha256": "055a5f22503116982984f8e351e22fad0c106b9f284f43c71d7ceed1170cf6f2"
+  },
+  "task_correct_rows": 105,
+  "task_error_rows": 208,
+  "task_success_rule": "Intent exact AND exact-slot FP=FN=0",
+  "allocated_cards": 8,
+  "instances": 2,
+  "generation_seconds": 1087.38426393,
+  "seconds_per_row": 3.4740711307667733,
+  "remaining_rows": 0,
+  "eta_seconds": 0
+}
