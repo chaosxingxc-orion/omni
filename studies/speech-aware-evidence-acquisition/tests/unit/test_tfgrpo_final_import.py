@@ -154,3 +154,70 @@ def test_dense_size_failure_imports_only_completed_stages_and_keeps_all_cost(tmp
     assert len(requests)==1 and result['planned_learning_calls']==1
     assert result['historical_stage_custody']['original_total_usage']['calls']==5
     assert result['contrast_groups']==1
+
+
+def failed_final_successor(root, pin, args, operations, custody, attempt='final-repair'):
+    """One real journal-backed failed merge importing an earlier failed batch."""
+    from dataclasses import replace
+    plan=replace(_plan(),attempt_id=attempt,planned_model_calls=1)
+    base=root/'runs'/plan.run_id/plan.attempt_id/'tfgrpo'
+    journal=ContactJournal(root,plan,'prepared-context-text')
+    def write(path,value):
+        path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(canonical(value))
+    def caller(request):
+        assert request['stage']=='batch_update'
+        key=sha({'stage':request['stage'],'identity':request['identity']});rid='native-'+attempt
+        text=json.dumps([{'operation':'ADD','id':None,'content':'X'*20}])
+        body={'text':text,'usage':{'prompt_tokens':13,'completion_tokens':7},'finish_reason':'stop'}
+        payload={'prepared_text':'saea-prepared-text-v1','request_id':rid,'sample_id':'q1',
+            'history':[{'role':'agent_state','content':json.dumps({'stage':'batch_update','source_messages':request['messages']})},{'role':'control','contact_id':key}]}
+        journal.intent(payload);journal.response(rid,sha(payload),canonical(body),1)
+        receipt={'text':text,'model_id':MODEL,'receipt_id':f'{plan.run_id}/{plan.attempt_id}/{rid}',
+            'usage':{'calls':1,**body['usage']},'request_sha256':sha(payload),'response_sha256':sha(body)}
+        write(base/'contacts'/(key+'.intent.json'),{'request':request,'payload':payload})
+        write(base/'contacts'/(key+'.response.json'),{'request_sha256':sha(request),'response':receipt})
+        return receipt
+    common={**args['common'],'final_merge_limits':{'max_items':128,'max_characters':10}}
+    learner=ExperienceLearner(base/'learner',model_id=MODEL,metered_call=caller,
+        learning_config_sha256='c'*64,max_calls=1,concurrency=1,max_characters=10)
+    with pytest.raises(LearningError,match='size exceeds'):
+        learner.learn(args['groups'],args['parent'],**common,policy_sha256=args['policy_sha256'],
+            rollout_kind=args['rollout_kind'],final_import=pin,imported_operations=operations,stage_custody=custody)
+    write(root/'attempts'/plan.run_id/(plan.attempt_id+'.json'),{'state':'ABORTED','contact_kind':'prepared-text',
+        'run_id':plan.run_id,'attempt_id':plan.attempt_id,'carrier_lock_key':plan.carrier_lock_key,
+        'reserved':{'calls':1,'audio_seconds':float(plan.planned_speech_audio_seconds)},'actual':{'calls':1,'audio_seconds':0.0}})
+    result=build_import(data_root=root,source_plan=plan,native_source_plans=[plan],output_relpath=f'imports/{attempt}.json')
+    return (*result,{**args,'common':common},journal,plan)
+
+
+def test_recursive_dense_import_retains_both_failed_merges_without_relearning(tmp_path):
+    pin,args,_,_,ops,custody=fixture(tmp_path,dense=True,library_limit=True)
+    pin,ops,custody,args,_,_=failed_final_successor(tmp_path,pin,args,ops,custody)
+    assert custody['original_total_usage']=={'calls':6,'prompt_tokens':63,'completion_tokens':27}
+    assert custody['imported_stage_contacts']==4 and custody['imported_group_updates']==1
+    assert custody['imported_summaries']==2 and custody['final_only_ancestry_depth']==1
+    assert len(custody['native_source_usage'])==2
+    assert custody['historical_final_custody']['original_total_usage']['calls']==5
+    pin,ops,custody,args,_,_=failed_final_successor(tmp_path,pin,args,ops,custody,attempt='second-repair')
+    assert custody['original_total_usage']=={'calls':7,'prompt_tokens':76,'completion_tokens':34}
+    assert custody['imported_stage_contacts']==4 and custody['final_only_ancestry_depth']==2
+    assert load_import(pin,**{**args,'common':{**args['common'],'final_merge_policy':'bounded-synthesis-v1'}})==(ops,custody)
+
+
+def test_recursive_import_refuses_unknown_current_contact(tmp_path):
+    pin,args,_,_,ops,custody=fixture(tmp_path,dense=True,library_limit=True)
+    pin,ops,custody,args,journal,_=failed_final_successor(tmp_path,pin,args,ops,custody)
+    next(journal.root.glob('*.response.json')).unlink()
+    with pytest.raises((LearningError,FileNotFoundError)):load_import(pin,**args)
+
+
+def test_recursive_import_refuses_duplicate_cost_identity_and_depth(tmp_path):
+    pin,args,_,_,ops,custody=fixture(tmp_path,dense=True,library_limit=True)
+    pin,ops,custody,args,_,plan=failed_final_successor(tmp_path,pin,args,ops,custody)
+    identity=(_plan().run_id,_plan().attempt_id)
+    with pytest.raises(LearningError,match='double-count'):
+        load_import(pin,**args,_source_identities=frozenset({identity}))
+    with pytest.raises(LearningError,match='eight levels'):
+        load_import(pin,**args,_ancestry=tuple(tmp_path/str(i) for i in range(8)))
+    with pytest.raises(LearningError,match='cyclic'):
+        load_import(pin,**args,_ancestry=((tmp_path/pin['relpath']).resolve(),))

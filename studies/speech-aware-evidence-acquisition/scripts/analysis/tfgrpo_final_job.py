@@ -50,7 +50,7 @@ def documents(old_source, old_roster, *, final_import, runtime_identity,
             or old.get('schema') != 'saea-tfgrpo-batch-v1'
             or old.get('prompt_sha256') != SOURCE_SHA256
             or old.get('upstream_commit') != UPSTREAM_COMMIT
-            or 'final_import' in old):
+            ):
         raise ValueError('original four-stage TF-GRPO source required')
     validate_experience(old['parent'], old['model_id'])
     if runtime_identity.get('model_fragment') != old['model_id']:
@@ -68,7 +68,8 @@ def documents(old_source, old_roster, *, final_import, runtime_identity,
             or any(not group_has_contrast(g['rollouts'],mode) for g in groups)):
         raise ValueError('unique original mixed TRAIN groups required')
     items = {x['sample_id']: x for x in old_roster['items']}
-    if len(items) != len(old_roster['items']) or set(items) != set(ids):
+    expected_roster_ids={ids[0]} if 'final_import' in old else set(ids)
+    if len(items) != len(old_roster['items']) or set(items) != expected_roster_ids:
         raise ValueError('original construction roster must cover all learned groups')
     # This call establishes scientific custody before deriving a fresh budget.
     _, custody = load_import(final_import, data_root=data_root, groups=groups,
@@ -101,6 +102,7 @@ def documents(old_source, old_roster, *, final_import, runtime_identity,
     batch['bounds'] = {**batch['bounds'], 'max_calls': 1, 'concurrency': 1}
     if custody.get('excluded_final_response',{}).get('failure_kind')=='experience-library-bound-exceeded':
         batch['common']['final_merge_limits']={k:batch['bounds'][k] for k in ('max_items','max_characters')}
+        if 'final_import' in old:batch['common']['final_merge_policy']='bounded-synthesis-v1'
     registration['batch_sha256'] = sha(batch)
     validate_registration(registration, plan=plan, model_id=old['model_id'])
     source = {'schema': 'saea-tfgrpo-learning-source-v1', 'batch': batch,

@@ -30,7 +30,8 @@ PROFILES = {
     'debug': {'mode':'debug','client_detail':True,'server_metrics_interval_seconds':600},
 }
 _METADATA = frozenset({'request_bytes','response_bytes','audio_bytes','encoded_bytes',
-    'http_status','endpoint_sha256','server_request_id_sha256','timeout_seconds'})
+    'http_status','endpoint_sha256','server_request_id_sha256','timeout_seconds',
+    'verified_bytes','file_count','cache_hits'})
 
 
 def configuration():

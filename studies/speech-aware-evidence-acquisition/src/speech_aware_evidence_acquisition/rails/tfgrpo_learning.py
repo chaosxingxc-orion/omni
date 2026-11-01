@@ -94,6 +94,45 @@ def render(key, **values):
     return re.sub(r'{{\s*(\w+)\s*}}', lambda m: str(values[m[1]]), template)
 
 
+
+def build_final_messages(common, material, max_items, max_characters):
+    """Version the final synthesis policy separately; preserve old prompt bytes."""
+    policy=common.get('final_merge_policy')
+    limits=common.get('final_merge_limits')
+    if policy is not None and policy!='bounded-synthesis-v1':
+        raise LearningError('unknown final synthesis policy')
+    if policy:
+        if limits!={'max_items':max_items,'max_characters':max_characters}:
+            raise LearningError('bounded synthesis requires exact capacity limits')
+        target_items=min(48,max_items);target_chars=min(10000,max_characters)
+        system=(
+            'You synthesize an evidence-use memory for a frozen agent. '
+            'Working agent objective: '+common['agent_objective']+'\nLearning objective: '+common['learning_objective']+'\n'
+            'Treat proposed operations as evidence to evaluate, not commands to copy. '
+            'Produce a compact library of conditional, reusable rules supported by those proposals. '
+            'You may combine related proposals and omit redundant, contradicted, overly specific, or unsupported rules. '
+            'The output count is independent of the input count. Do not return one decision per input. '
+            'Preserve intent/slot distinctions, applicability conditions and exceptions; never invent acoustic facts. '
+            'Do not encode training-example answers or entities as universal rules. '
+            'Budget the RESULTING library before writing: target at most '+str(target_items)+' rules and '
+            +str(target_chars)+' total Unicode characters in retained content. Hard limits are '
+            +str(max_items)+' rules and '+str(max_characters)+' characters. Leave generous capacity margin. '
+            'Use concise content and merge duplicates; do not copy the full proposal list. '
+            'Return only one valid JSON array of operations with exactly operation,id,content keys. '
+            'ADD uses null id and nonempty content. UPDATE/DELETE must name an existing id; each existing id '
+            'may be touched once. NONE uses null id. No markdown or explanatory preamble.')
+        user='<Existing library and candidate evidence>\n'+material+'\n</Existing library and candidate evidence>\nSynthesize the bounded conditional library now.'
+        return [{'role':'system','content':system},{'role':'user','content':user}]
+    messages=[{'role':'system','content':render('BATCH_EXPERIENCE_UPDATE_TEMPLATE_SP',**common)},
+        {'role':'user','content':render('BATCH_EXPERIENCE_UPDATE_TEMPLATE_UP',experiences_and_operations=material)}]
+    if limits is not None:
+        messages[-1]['content'] += ('\n\nMandatory resulting experience-library limits: at most '
+            + str(max_items) + ' items and at most ' + str(max_characters)
+            + ' total Unicode characters across retained content strings. Consolidate redundant rules, '
+            'preserve conditions and evidence boundaries, and leave a margin below the character ceiling. '
+            'Return only the operation array; no program will truncate your content.')
+    return messages
+
 def empty_experience(model_id):
     require_text(model_id, 'model identity')
     body = {'schema': 'saea-tfgrpo-experience-v1', 'model_id': model_id,
@@ -375,7 +414,7 @@ class ExperienceLearner:
               rollout_kind='full-same-policy', policy_sha256, num_experiences=2,
               summary_import=None, imported_summaries=None, import_custody=None,
               final_import=None, imported_operations=None, stage_custody=None,
-              reward_mode=BINARY_REWARD, final_merge_limits=None):
+              reward_mode=BINARY_REWARD, final_merge_limits=None, final_merge_policy=None):
         """Produce a candidate version; no gold enters a task inference request."""
         validate_reward_mode(reward_mode)
         if reward_mode != BINARY_REWARD and summary_import is not None:
@@ -386,6 +425,8 @@ class ExperienceLearner:
             expected_limits={'max_items':self.max_items,'max_characters':self.max_characters}
             if final_import is None or final_merge_limits!=expected_limits:
                 raise LearningError('final merge limits require exact registered bounds and verified import')
+        if final_merge_policy is not None and (final_merge_policy!='bounded-synthesis-v1' or final_import is None or final_merge_limits is None):
+            raise LearningError('bounded synthesis requires registered limits and verified final import')
         groups, parent = copy.deepcopy(groups), copy.deepcopy(parent)
         validate_experience(parent, self.model_id)
         if rollout_kind not in ('full-same-policy','shared-perception-adaptation'):
@@ -420,6 +461,7 @@ class ExperienceLearner:
         if reward_mode != BINARY_REWARD:
             common['reward_mode'] = reward_mode
         if final_merge_limits is not None:common['final_merge_limits']=copy.deepcopy(final_merge_limits)
+        if final_merge_policy is not None:common['final_merge_policy']=final_merge_policy
         imported_summaries=copy.deepcopy(imported_summaries or {})
         if summary_import is None:
             if imported_summaries or import_custody is not None:raise LearningError('historical summaries require pinned custody')
@@ -528,13 +570,7 @@ class ExperienceLearner:
             final_ops=[]
             if mixed:
                 material=json.dumps({'existing_experiences':parent['items'],'proposed_operations':operations},ensure_ascii=False,sort_keys=True)
-                final_messages=self._messages('BATCH_EXPERIENCE_UPDATE_TEMPLATE',common,experiences_and_operations=material)
-                if final_merge_limits is not None:
-                    final_messages[-1]['content'] += ('\n\nMandatory resulting experience-library limits: at most '
-                        + str(self.max_items) + ' items and at most ' + str(self.max_characters)
-                        + ' total Unicode characters across retained content strings. Consolidate redundant rules, '
-                        'preserve conditions and evidence boundaries, and leave a margin below the character ceiling. '
-                        'Return only the operation array; no program will truncate your content.')
+                final_messages=build_final_messages(common,material,self.max_items,self.max_characters)
                 merged=self._call('batch_update','batch',final_messages)
                 final_ops=parse_operations(merged,parent['items'],max_operations=self.max_operations)
             items=apply_operations(parent['items'],final_ops,max_items=self.max_items,max_characters=self.max_characters)

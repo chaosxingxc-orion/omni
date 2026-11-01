@@ -72,7 +72,21 @@ class _GgufIdentityMixin:
     """``_verify_gguf_files``: the per-file cheap/full GGUF identity loop
     ``_validate_runtime`` (``gate_runtime.py``) delegates to."""
 
-    def _verify_gguf_files(
+    def _verify_gguf_files(self, files, lock_entry, subdir, *, full_hash,
+                           diagnostics, require_lock_totals=True):
+        # Lazy import avoids the contracts/core package initialization cycle.
+        # The normal path retains validation and does not create debug events.
+        from ..core.stage_timing import span
+        observed = diagnostics if diagnostics is not None else {}
+        with span('runtime_identity_verify') as timing:
+            _GgufIdentityMixin._verify_gguf_files_impl(self, files, lock_entry, subdir,
+                full_hash=full_hash, diagnostics=observed,
+                require_lock_totals=require_lock_totals)
+            timing.update(verified_bytes=observed['gguf_bytes_verified'],
+                file_count=observed['gguf_files_total'],
+                cache_hits=observed['gguf_files_total']-observed['gguf_files_full_hashed'])
+
+    def _verify_gguf_files_impl(
         self,
         files: list,
         lock_entry: Mapping[str, object],
@@ -97,6 +111,7 @@ class _GgufIdentityMixin:
         # receipt's own bytes, independent of ``self._load``'s already-parsed
         # document, so this is a genuine re-hash of what is actually on disk,
         # not a re-derivation from the parsed JSON.
+        from ..core.stage_timing import span
         try:
             receipt_sha256 = hashlib.sha256(Path(self.runtime_receipt).read_bytes()).hexdigest()
         except OSError as error:
@@ -114,9 +129,10 @@ class _GgufIdentityMixin:
             else (receipt_sha256 not in _contracts_pkg._SESSION_FULL_HASH_DONE or not memory_entries)
         )
         cache_path = materialization_root / RUNTIME_IDENTITY_CACHE_FILENAME
-        cached_entries = (
-            None if do_full else _contracts_pkg._load_identity_cache(cache_path, receipt_sha256)
-        )
+        with span('runtime_identity_cache_load'):
+            cached_entries = (
+                None if do_full else _contracts_pkg._load_identity_cache(cache_path, receipt_sha256)
+            )
 
         with _MEMORY_LOCK:
             cache_unchanged = memory_key in _MEMORY_CACHE_FILES and _MEMORY_CACHE_FILES[memory_key] == _cache_stat(cache_path)
@@ -127,6 +143,7 @@ class _GgufIdentityMixin:
         total_bytes = 0
         new_cache_entries: dict[str, dict[str, int]] = {}
         full_hashed_count = 0
+        full_hashed_bytes = 0
         for index, entry in enumerate(files):
             label = f"runtime receipt gguf_files[{index}]"
             if not isinstance(entry, Mapping) or set(entry) != {"path", "bytes", "sha256"}:
@@ -191,8 +208,26 @@ class _GgufIdentityMixin:
                 # model set, NOT an adversary who edits bytes in place while
                 # preserving size, mtime and OS file identity.
                 actual_bytes = cheap["size"]
+                cache_source = 'memory' if relative in verified_memory else 'disk'
+                with span('runtime_identity_cache_hit_' + cache_source,
+                          {'verified_bytes':actual_bytes,'file_count':1,'cache_hits':1}):
+                    pass
             else:
-                actual_bytes, actual_sha = _contracts_pkg._measure_file(resolved, f"{label}.path")
+                if do_full:
+                    reason = 'forced' if resolved_full_hash is True else 'process_floor'
+                elif memory_entry is not None and memory_entry != (before, recorded_bytes, recorded_sha):
+                    reason = 'model_identity_changed'
+                elif memory_entries and not cache_unchanged:
+                    reason = 'cache_file_changed'
+                elif cached_entry is None:
+                    reason = 'cache_missing'
+                else:
+                    reason = 'disk_identity_mismatch'
+                # Exact measured read interval, separate from stat checks and
+                # receipt/aggregate validation. Never log model paths or bytes.
+                with span('runtime_identity_full_hash_' + reason) as timing:
+                    actual_bytes, actual_sha = _contracts_pkg._measure_file(resolved, f"{label}.path")
+                    timing.update(verified_bytes=actual_bytes,file_count=1)
                 after = _memory_stat(resolved)
                 if before != after:
                     raise GateClosed(f"{label} changed during full identity verification")
@@ -207,6 +242,7 @@ class _GgufIdentityMixin:
                         f"actual {actual_sha[:12]}...; model touch refused"
                     )
                 full_hashed_count += 1
+                full_hashed_bytes += actual_bytes
                 verified_memory[relative] = (after, recorded_bytes, recorded_sha)
             # Disk-cache hits do not become new byte-verification authority.
             if relative not in verified_memory and memory_entries.get(relative) == (before, recorded_bytes, recorded_sha):
@@ -223,7 +259,8 @@ class _GgufIdentityMixin:
         # never cache a partial/failed check. A write failure is swallowed
         # (best-effort convenience, module docstring); it never fails an already-
         # successful gate check.
-        _contracts_pkg._write_identity_cache(cache_path, receipt_sha256, new_cache_entries)
+        with span('runtime_identity_cache_persist'):
+            _contracts_pkg._write_identity_cache(cache_path, receipt_sha256, new_cache_entries)
         if len(verified_memory) == len(files):
             with _MEMORY_LOCK:
                 # Replace only after every file and the aggregate validated.
@@ -236,6 +273,8 @@ class _GgufIdentityMixin:
             # whether that full pass was explicitly forced or auto-decided.
             _contracts_pkg._SESSION_FULL_HASH_DONE.add(receipt_sha256)
         if diagnostics is not None:
+            diagnostics["gguf_bytes_verified"] = total_bytes
+            diagnostics["gguf_bytes_full_hashed"] = full_hashed_bytes
             diagnostics["gguf_files_memory_cache_hits"] = memory_hits
             diagnostics["gguf_files_total"] = len(files)
             diagnostics["gguf_files_full_hashed"] = full_hashed_count

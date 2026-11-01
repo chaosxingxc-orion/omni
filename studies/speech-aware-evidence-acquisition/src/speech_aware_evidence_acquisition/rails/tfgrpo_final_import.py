@@ -18,9 +18,12 @@ from .tfgrpo_prompts import SOURCE_SHA256, UPSTREAM_COMMIT
 
 
 def load_import(spec, *, data_root, groups, common, model_id, parent,
-                policy_sha256, rollout_kind):
+                policy_sha256, rollout_kind, _ancestry=(), _source_identities=frozenset()):
     root = Path(data_root).resolve()
-    source_common={k:v for k,v in common.items() if k!='final_merge_limits'}
+    if len(_ancestry)>=8:raise LearningError('final import ancestry exceeds eight levels')
+    def scientific_common(value):
+        return {k:v for k,v in value.items() if k not in {'final_merge_limits','final_merge_policy'}}
+    source_common=scientific_common(common)
     reward_mode=source_common.get('reward_mode',BINARY_REWARD)
     validate_reward_mode(reward_mode)
 
@@ -35,7 +38,9 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
             raise LearningError('final-stage input changed')
         return path, json.loads(blob)
 
-    _, doc = pinned(spec)
+    manifest_path, doc = pinned(spec)
+    if manifest_path in _ancestry:raise LearningError('cyclic final import ancestry')
+    ancestry=(*_ancestry,manifest_path)
     if (not isinstance(doc, dict) or set(doc) != {'schema', 'source_plan', 'source_batch',
             'native_sources', 'records', 'source_resume', 'source_recovery'}
             or doc['schema'] != 'saea-tfgrpo-final-import-v1'):
@@ -47,7 +52,8 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
             or batch.get('schema') != 'saea-tfgrpo-batch-v1'
             or batch.get('prompt_sha256') != SOURCE_SHA256
             or batch.get('upstream_commit') != UPSTREAM_COMMIT
-            or any(batch.get(k) != v for k, v in {'groups': groups, 'common': source_common,
+            or scientific_common(batch.get('common',{}))!=source_common
+            or any(batch.get(k) != v for k, v in {'groups': groups,
                 'model_id': model_id, 'parent': parent, 'policy_sha256': policy_sha256,
                 'rollout_kind': rollout_kind}.items())):
         raise LearningError('historical final-stage learning inputs differ')
@@ -62,7 +68,7 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
             raise LearningError('exact native source required')
         native = ExecutionPlan(**source['plan']); native.validate()
         identity = (native.run_id, native.attempt_id)
-        if identity in identities:
+        if identity in identities or identity in _source_identities:
             raise LearningError('duplicate native source would double-count cost')
         identities.add(identity); native_plans.append(native)
         ap, attempt = pinned(source['attempt'])
@@ -123,12 +129,20 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
     elif doc['source_resume'] is not None or doc['source_recovery'] is not None or len(native_plans) != 1:
         raise LearningError('unexplained native ancestry')
 
-    summaries = {}; summary_custody = None
+    summaries = {}; summary_custody = None; prior_custody=None; imported_operations=None
+    if 'final_import' in batch:
+        if 'summary_import' in batch:raise LearningError('final source cannot import summaries and stages together')
+        imported_operations,prior_custody=load_import(batch['final_import'],data_root=root,
+            groups=groups,common=batch['common'],model_id=model_id,parent=parent,
+            policy_sha256=policy_sha256,rollout_kind=rollout_kind,
+            _ancestry=ancestry,_source_identities=frozenset((*_source_identities,*identities)))
+        for field in totals:totals[field]+=prior_custody['original_total_usage'][field]
+        source_costs.extend(prior_custody['native_source_usage'])
     if 'summary_import' in batch:
         from .tfgrpo_summary_import import load_import as load_summaries
         summaries, summary_custody = load_summaries(batch['summary_import'], data_root=root,
-            groups=groups, common=common, model_id=model_id)
-        if (summary_custody['source_run_id'], summary_custody['source_attempt_id']) in identities:
+            groups=groups, common=batch['common'], model_id=model_id)
+        if (summary_custody['source_run_id'], summary_custody['source_attempt_id']) in identities | set(_source_identities):
             raise LearningError('summary source overlaps native cost ancestry')
         for field in totals: totals[field] += summary_custody['original_total_usage'][field]
     rows = {}
@@ -188,31 +202,37 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
         return receipt['text'], body.get('finish_reason')
 
     def messages(prefix, **values):
-        return [{'role': 'system', 'content': render(prefix+'_SP', **source_common)},
+        return [{'role': 'system', 'content': render(prefix+'_SP', **batch['common'])},
                 {'role': 'user', 'content': render(prefix+'_UP', **values)}]
 
     mixed = [g for g in groups if group_has_contrast(g['rollouts'],reward_mode)]
     if not mixed: raise LearningError('final import needs completed mixed groups')
     current = '\n'.join(f'[{k}]. {v}' for k, v in sorted(parent['items'].items())) or 'None'
-    operations = []
-    for group in mixed:
-        for roll in group['rollouts']:
-            tid = roll['trajectory_id']
-            if tid not in summaries:
-                summaries[tid], _ = read_stage('summary', tid, group['query_id'], messages(
-                    'SINGLE_ROLLOUT_SUMMARY_TEMPLATE', question=group['query'], answer=group['answer'],
-                    critique=roll['critique'], trajectory=summary_trajectory(group['query'], roll['trajectory'])))
-        formatted = '\n\n'.join(f"Attempt {i+1} (Reward {r['reward']}):\n{summaries[r['trajectory_id']]}"
-                                for i, r in enumerate(group['rollouts']))
-        advantage, _ = read_stage('advantage', group['query_id'], group['query_id'], messages(
-            'SINGLE_QUERY_GROUP_ADVANTAGE', question=group['query'], answer=group['answer'], trajectories=formatted))
-        proposed, _ = read_stage('group_update', group['query_id'], group['query_id'], messages(
-            'GROUP_EXPERIENCE_UPDATE_TEMPLATE', existing_experiences=current,
-            new_experiences=semantic_advantage(advantage)))
-        operations.extend(parse_operations(proposed, parent['items'], max_operations=batch['bounds']['max_operations']))
+    if prior_custody is not None:
+        operations=imported_operations
+        truncated_summaries=list(prior_custody['historical_truncated_summaries'])
+    else:
+        operations = []
+        for group in mixed:
+            for roll in group['rollouts']:
+                tid = roll['trajectory_id']
+                if tid not in summaries:
+                    summaries[tid], _ = read_stage('summary', tid, group['query_id'], messages(
+                        'SINGLE_ROLLOUT_SUMMARY_TEMPLATE', question=group['query'], answer=group['answer'],
+                        critique=roll['critique'], trajectory=summary_trajectory(group['query'], roll['trajectory'])))
+            formatted = '\n\n'.join(f"Attempt {i+1} (Reward {r['reward']}):\n{summaries[r['trajectory_id']]}"
+                                    for i, r in enumerate(group['rollouts']))
+            advantage, _ = read_stage('advantage', group['query_id'], group['query_id'], messages(
+                'SINGLE_QUERY_GROUP_ADVANTAGE', question=group['query'], answer=group['answer'], trajectories=formatted))
+            proposed, _ = read_stage('group_update', group['query_id'], group['query_id'], messages(
+                'GROUP_EXPERIENCE_UPDATE_TEMPLATE', existing_experiences=current,
+                new_experiences=semantic_advantage(advantage)))
+            operations.extend(parse_operations(proposed, parent['items'], max_operations=batch['bounds']['max_operations']))
     material = json.dumps({'existing_experiences': parent['items'], 'proposed_operations': operations},
                           ensure_ascii=False, sort_keys=True)
-    final_messages = messages('BATCH_EXPERIENCE_UPDATE_TEMPLATE', experiences_and_operations=material)
+    from .tfgrpo_learning import build_final_messages
+    final_messages = build_final_messages(batch['common'],material,
+        max_items=batch['bounds']['max_items'],max_characters=batch['bounds']['max_characters'])
     final_text, finish = read_stage('batch_update', 'batch', groups[0]['query_id'], final_messages, finished=False)
     failure_kind=None
     if finish=='length':
@@ -236,13 +256,17 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
         'source_batch_sha256': sha(batch), 'source_learning_config_sha256': batch['learning_config_sha256'],
         'learned_query_ids': sorted(g['query_id'] for g in mixed), 'mixed_groups': len(mixed),
         'imported_group_updates': len(mixed),
-        'imported_stage_contacts': len(used)-1, 'imported_summaries': len(summaries),
+        'imported_stage_contacts': prior_custody['imported_stage_contacts'] if prior_custody else len(used)-1,
+        'imported_summaries': prior_custody['imported_summaries'] if prior_custody else len(summaries),
         'operations_sha256': sha(operations), 'final_messages_sha256': sha(final_messages),
         'original_total_usage': totals, 'native_source_usage': source_costs,
         'historical_summary_custody': summary_custody, 'source_all_responses_observed': True,
         'historical_truncated_summaries': truncated_summaries,
         'excluded_final_response': {'finish_reason': finish, 'retained_in_historical_cost': True},
         'classification': 'Verified historical inputs; excluded from fresh generation counters.'}
+    if prior_custody is not None:
+        custody['historical_final_custody']=prior_custody
+        custody['final_only_ancestry_depth']=1+prior_custody.get('final_only_ancestry_depth',0)
     if reward_mode!=BINARY_REWARD:
         custody['reward_mode']=reward_mode;custody['contrast_groups']=custody.pop('mixed_groups')
     if failure_kind=='experience-library-bound-exceeded':custody['excluded_final_response']['failure_kind']=failure_kind
