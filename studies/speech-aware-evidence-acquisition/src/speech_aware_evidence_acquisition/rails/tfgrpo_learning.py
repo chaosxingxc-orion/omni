@@ -13,6 +13,7 @@ import copy
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -28,6 +29,46 @@ class LearningError(ValueError):
 
 class UnknownLearningContact(LearningError):
     """A durable intent has no observed response; reconcile, never auto resend."""
+
+
+BINARY_REWARD = 'binary-task-exact-v1'
+DENSE_REWARD = 'intent-exact-slot-f1-v1'
+
+
+def validate_reward_mode(mode):
+    if mode not in (BINARY_REWARD, DENSE_REWARD):
+        raise LearningError('unknown registered reward mode')
+
+
+def validate_reward(value, mode):
+    validate_reward_mode(mode)
+    if mode == BINARY_REWARD:
+        if type(value) is not int or value not in (0, 1):
+            raise LearningError('baseline requires binary reward, not continuous SLU-F1')
+    elif type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 1:
+        raise LearningError('dense reward must be finite in [0,1], never bool')
+
+
+def group_has_contrast(rollouts, mode):
+    validate_reward_mode(mode)
+    for r in rollouts:
+        validate_reward(r['reward'], mode)
+    values = [r['reward'] for r in rollouts]
+    return bool(values) and max(values) - min(values) > 1e-12
+
+
+def intent_slot_reward(score):
+    """Fixed TRAIN reward adaptation, not official pooled SLU-F1 or success."""
+    intent = score['scenario_action_exact']
+    if type(intent) not in (int, float) or intent not in (0, 1):
+        raise LearningError('exact intent indicator required')
+    counts = [score['slot_f1_exact_' + k] for k in ('tp', 'fp', 'fn')]
+    if any(type(x) not in (int, float) or not math.isfinite(x) or x < 0 or x != int(x) for x in counts):
+        raise LearningError('finite nonnegative integer slot counts required')
+    tp, fp, fn = counts
+    denom = 2 * tp + fp + fn
+    slot_f1 = 2 * tp / denom if denom else 1.0
+    return 0.5 * intent + 0.5 * slot_f1
 
 
 def canonical(value):
@@ -333,8 +374,12 @@ class ExperienceLearner:
     def learn(self, groups, parent, *, agent_objective, learning_objective,
               rollout_kind='full-same-policy', policy_sha256, num_experiences=2,
               summary_import=None, imported_summaries=None, import_custody=None,
-              final_import=None, imported_operations=None, stage_custody=None):
+              final_import=None, imported_operations=None, stage_custody=None,
+              reward_mode=BINARY_REWARD):
         """Produce a candidate version; no gold enters a task inference request."""
+        validate_reward_mode(reward_mode)
+        if reward_mode != BINARY_REWARD and (summary_import is not None or final_import is not None):
+            raise LearningError('dense reward cannot import binary summaries or stages')
         groups, parent = copy.deepcopy(groups), copy.deepcopy(parent)
         validate_experience(parent, self.model_id)
         if rollout_kind not in ('full-same-policy','shared-perception-adaptation'):
@@ -361,12 +406,13 @@ class ExperienceLearner:
                 if rid in seen_trajectories:raise LearningError('duplicate trajectory identity')
                 seen_trajectories.add(rid)
                 for field in ('trajectory','critique'):require_text(rollout[field],field)
-                if type(rollout['reward']) is not int or rollout['reward'] not in (0,1):
-                    raise LearningError('baseline requires binary reward, not continuous SLU-F1')
+                validate_reward(rollout['reward'], reward_mode)
                 if (rollout['model_id'] != self.model_id or rollout['policy_sha256'] != policy_sha256
                         or rollout['experience_sha256'] != parent['sha256']):
                     raise LearningError('all rollouts must share model, policy and experience')
         common={'agent_objective':agent_objective,'learning_objective':learning_objective,'num_experiences':num_experiences}
+        if reward_mode != BINARY_REWARD:
+            common['reward_mode'] = reward_mode
         imported_summaries=copy.deepcopy(imported_summaries or {})
         if summary_import is None:
             if imported_summaries or import_custody is not None:raise LearningError('historical summaries require pinned custody')
@@ -378,7 +424,7 @@ class ExperienceLearner:
         for text in imported_summaries.values():require_text(text,'historical summary')
         imported_operations=copy.deepcopy(imported_operations)
         stage_custody=copy.deepcopy(stage_custody)
-        mixed_query_ids=sorted(g['query_id'] for g in groups if {r['reward'] for r in g['rollouts']}=={0,1})
+        mixed_query_ids=sorted(g['query_id'] for g in groups if group_has_contrast(g['rollouts'], reward_mode))
         if final_import is None:
             if imported_operations is not None or stage_custody is not None:
                 raise LearningError('historical stages require pinned custody')
@@ -405,7 +451,7 @@ class ExperienceLearner:
                 if binding_path.read_bytes()!=canonical(binding):raise LearningError('batch binding changed')
             else:publish_new(binding_path,canonical(binding))
             self._batch=sha(binding)
-            mixed=[g for g in groups if {r['reward'] for r in g['rollouts']}=={0,1}]
+            mixed=[g for g in groups if group_has_contrast(g['rollouts'], reward_mode)]
             mixed_ids={r['trajectory_id'] for g in mixed for r in g['rollouts']}
             if not set(imported_summaries)<=mixed_ids:raise LearningError('imported summaries outside learning groups')
             planned=(1 if final_import is not None else
@@ -490,6 +536,10 @@ class ExperienceLearner:
                   'rollout_kind':rollout_kind,'learning_query_reuse':sorted(seen_queries & set(parent['learned_query_ids'])),'mixed_groups':len(mixed),'skipped_tied_groups':len(groups)-len(mixed),
                   'planned_learning_calls':planned,'operations':final_ops,'learning_usage':usage,'accounting':accounting,
                   'contact_response_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((self.root/'contacts').glob('*.response.json'))}}
+            if reward_mode != BINARY_REWARD:
+                body['reward_mode'] = reward_mode
+                body['contrast_groups'] = body.pop('mixed_groups')
+                body['all_below_full_success_contrast_groups'] = sum(max(r['reward'] for r in g['rollouts']) < 1 for g in mixed)
             if summary_import is not None:body['historical_summary_custody']=copy.deepcopy(import_custody)
             if final_import is not None:body['historical_stage_custody']=copy.deepcopy(stage_custody)
             candidate={**body,'sha256':sha(body)}

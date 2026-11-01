@@ -1,0 +1,46 @@
+{
+  "schema": "saea-h1-dense-credit-audit-v1",
+  "rows": 313,
+  "formula": "0.5 * IntentExact + 0.5 * ExactSlotF1; empty predicted and gold slots => ExactSlotF1=1",
+  "groups": {
+    "all_wrong": {
+      "rows": 174,
+      "dense_nonzero_spread": 51,
+      "dense_tied": 123,
+      "all_rewards_zero": 27,
+      "max_dense_positive": 147
+    },
+    "all_correct": {
+      "rows": 87,
+      "dense_nonzero_spread": 0,
+      "dense_tied": 87,
+      "all_rewards_zero": 0,
+      "max_dense_positive": 87
+    },
+    "mixed": {
+      "rows": 52,
+      "dense_nonzero_spread": 52,
+      "dense_tied": 0,
+      "all_rewards_zero": 0,
+      "max_dense_positive": 52
+    }
+  },
+  "sources": {
+    "union_completion_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+    "binary_group_audit_sha256": "0378fa03a6bcb071a3575aed93f11cddf02c4178756d71f0ba637e2954b30df8"
+  },
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "reward_tuned": false,
+  "H2_labels_read": false,
+  "test_labels_read": false,
+  "algorithm_gain_claimed": false,
+  "limitations": [
+    "Partial reward differences only; no correct rollout fabricated.",
+    "Changing binary reward defines a new TF-GRPO adaptation; not upstream equivalence.",
+    "Tied groups remain unlearnable with this group contrast and must stay in coverage/cost reports.",
+    "Per-row exact-slot F1 is not pooled official distance-based SLU-F1.",
+    "Historical K4 shares P; no independent system rollout claim."
+  ],
+  "audit_script_sha256": "0dddd7c207fc40fd851c82be028db98770d8a30e405c4204505ccfdf8daa931c"
+}

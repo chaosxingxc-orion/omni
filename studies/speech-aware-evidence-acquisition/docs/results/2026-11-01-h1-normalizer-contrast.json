@@ -1,0 +1,45 @@
+{
+  "schema": "saea-h1-normalizer-contrast-v1",
+  "rows": 313,
+  "metrics": {
+    "raw_solver": {
+      "slu_f1": 0.5694625766696638,
+      "intent": 0.7476038338658147,
+      "task_correct": 59
+    },
+    "delivered": {
+      "slu_f1": 0.6650306974701878,
+      "intent": 0.7571884984025559,
+      "task_correct": 105
+    }
+  },
+  "task_transition": {
+    "raw0_delivered0": 207,
+    "raw1_delivered1": 58,
+    "raw0_delivered1": 47,
+    "raw1_delivered0": 1
+  },
+  "delivered_minus_raw_exact_slot_counts": {
+    "tp": 83.0,
+    "fp": -153.0,
+    "fn": -83.0
+  },
+  "new_model_calls": 0,
+  "official_full_roster_scoring_jobs": 1,
+  "generation_authorized": false,
+  "source": {
+    "manifest_sha256": "821897c35b5b625142245a17309b57d72f5d587a77f51697ce914ab1535f52ff",
+    "raw_outputs_sha256": "17c54cd5b6357d2850750a306a495e0c5a8bccbf5cccb6e9c0cb690cf4d9d261",
+    "raw_scores_sha256": "fb36d5f400b9b1e9c9c067f2cad1de2179dc203171429901acef8b934c2babb5",
+    "sealed_scores_sha256": "055a5f22503116982984f8e351e22fad0c106b9f284f43c71d7ceed1170cf6f2",
+    "kind": "raw-solver-before-delivery-normalizer",
+    "request_pins_sha256": "b5d5396953c5da8b9fdb67832197c84aefdc43575291bbfdee3e49f58cf3b195",
+    "script_sha256": "f8ec126d97ee35a73c6162cae96a68eef5a8f4501d5eb0402c616e11779a0174"
+  },
+  "limits": [
+    "CPU counterfactual on the same fixed Solver responses; not new policy generalization.",
+    "Includes all delivery normalization stages together; individual stages not attributed.",
+    "No H2 or test label feedback used."
+  ],
+  "audit_script_sha256": "f8ec126d97ee35a73c6162cae96a68eef5a8f4501d5eb0402c616e11779a0174"
+}

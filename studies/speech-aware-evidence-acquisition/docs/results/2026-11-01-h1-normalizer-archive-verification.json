@@ -1,0 +1,8 @@
+{
+  "schema": "saea-h1-normalizer-evidence-archive-v1",
+  "archive_sha256": "77eebe51a7460306338b5b1d3448c375bdc03078526a2d508aa88fc98a4870c1",
+  "rows": 313,
+  "raw_output_score_and_receipt_hashes_verified": true,
+  "automatic_restore_authority": false,
+  "verified_utc": "2026-11-01T12:20:43.697360+00:00"
+}

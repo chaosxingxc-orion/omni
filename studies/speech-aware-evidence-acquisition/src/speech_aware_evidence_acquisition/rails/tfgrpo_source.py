@@ -2,7 +2,8 @@
 import hashlib
 import json
 from pathlib import Path
-from .tfgrpo_learning import LearningError, sha, validate_experience
+from .tfgrpo_learning import (LearningError, sha, validate_experience, BINARY_REWARD,
+    validate_reward_mode, group_has_contrast)
 from .tfgrpo_prompts import SOURCE_SHA256, UPSTREAM_COMMIT
 from .tfgrpo_runtime import validate_registration
 
@@ -43,6 +44,10 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
     if not isinstance(source['provenance'],list) or not source['provenance']:
         raise LearningError('exported source requires immutable provenance pins')
     for pin in source['provenance']:read_pin(pin,repo_root=repo_root,data_root=data_root)
+    reward_mode = batch['common'].get('reward_mode', BINARY_REWARD)
+    validate_reward_mode(reward_mode)
+    if reward_mode != BINARY_REWARD and ('summary_import' in batch or 'final_import' in batch):
+        raise LearningError('dense reward cannot import binary summaries or stages')
     final_only='final_import' in batch
     if final_only:
         if 'summary_import' in batch:
@@ -62,14 +67,15 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
             raise LearningError('learning query outside unique TRAIN roster')
         seen.add(qid)
         rolls=group['rollouts']
-        if len(rolls)<2 or any(type(r['reward']) is not int or r['reward'] not in (0,1) for r in rolls):
-            raise LearningError('binary same-policy rollouts required')
+        if len(rolls)<2:
+            raise LearningError('at least two same-policy rollouts required')
+        contrast = group_has_contrast(rolls, reward_mode)
         for r in rolls:
             rid=r['trajectory_id']
             if rid in trajectory_ids or (r['model_id'],r['policy_sha256'],r['experience_sha256'])!=(model_id,batch['policy_sha256'],batch['parent']['sha256']):
                 raise LearningError('rollout provenance differs')
             trajectory_ids.add(rid)
-        if {r['reward'] for r in rolls}=={0,1}:
+        if contrast:
             expected.extend({'stage':'summary','identity':r['trajectory_id'],'sample_id':qid} for r in rolls if r['trajectory_id'] not in imported)
             expected.extend({'stage':s,'identity':qid,'sample_id':qid} for s in ('advantage','group_update'))
     if expected:expected.append({'stage':'batch_update','identity':'batch','sample_id':batch['groups'][0]['query_id']})
