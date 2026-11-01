@@ -20,11 +20,13 @@ odd40 使用同一份 625 条真实 construction roster，仅改变真实检索�
 
 条件裁决已接入共享运行时、调度、请求门控和成本追踪，并新增整答案选择凭证。真实 H1 313 条、H2 312 条配置实际编译及加载通过：候选部分 4 次，A/B 不同再增加最多 1 次；同轨迹 A 和 A/A 保留原提示。正常生成 2,500–3,125 次，含现有单次补答回退的预算上限 6,250 次；FIT 计划上限 3,125 次，尚未登记或消耗。254 项测试通过，覆盖原始音频传输、四/五调用分支、选 B、非法选择回退、原始响应来源和裁决输入复验、完整样本断点保存恢复，以及未知网络结局不重试。测试使用模拟传输，新增真实模型、tokenizer 和评分调用均为 0。[完整编译凭证](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-odd40-method-compilation.json)。
 
-尚未进行真实 FIT、独立供给与执行登记/准入，也未验证半条样本的逐调用恢复。odd40 尚未开始真实推理，没有系统精度或满载结论。
+独立运行/FIT 身份已建立，旧任务的准入凭证、供给和服务会话未继承。H1 313 条、H2 312 条的独立首阶段 Perception 上下文已完成 **625/625**，并经共享运行时实物检查：两半 `identity_ok=true`、`seed_ok=true`。这只完成首阶段供给；Solver B 和裁决上下文仍需使用当次真实 Perception 输出构建。新增配置/绑定及相关运行时测试 **70 项通过**，公开仓版本同样通过。新增模型和 tokenizer 调用均为 **0**。[供给绑定凭证](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-odd40-supply-binding.json)。
+
+当前仍为 held/check-only，未登记准入、未执行真实 FIT、真实推理 **0/625**；没有新精度、吞吐或 ETA。已确认通用恢复路径会把部分分支轨迹整条重跑，不能用于本实验接续。下一步补齐逐调用持久化和恢复验证、候选非法输出的有限处理，再完成登记、真实 FIT 和准入。8 卡持续满载目标尚未达成。
 
 ## 下一阶段计划
 
-1. 补齐真实输入的 FIT 与独立供给；确认逐请求日志和中断后的接续策略，避免重放已有结果或结局未知的请求。
+1. 独立首阶段供给已完成625/625并通过身份/种子校验；接着补齐逐请求持久化、非法候选有限处理和中断后的接续验证，避免重放已有结果或结局未知的请求。
 2. 先完成独立供给、预算与请求登记，再验证 resident service identity、真实 FIT、请求字节及完整答案交付；通过准入和 preflight 后执行完整 625 条 construction。必要的 4 行链路验证单独登记，不用于收益判断。
 3. 将已准入的真实任务放入 detached queue，按 600 秒观察；CPU scoring、成本审计、阶段耗时和 Wiki 更新异步进行。
 4. 首轮 odd40 只有在相对同轨迹 A 的官方 SLU-F1 至少提升 1pp 且 Intent 不下降时才接受；否则停止，不调阈值。

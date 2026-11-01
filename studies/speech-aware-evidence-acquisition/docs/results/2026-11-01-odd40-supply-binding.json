@@ -1,0 +1,76 @@
+{
+  "generation_authorized": false,
+  "halves": [
+    {
+      "cell": "slurp-tfrl-odd40-i1-h1-v1",
+      "checks": [
+        {
+          "difference": null,
+          "identity_ok": true,
+          "key": "prepared_phase_supply",
+          "reason": null,
+          "relpath": "prepared/SAEA-SLURP-TFRL-ODD40-I1-H1-V1/phase-supply-v1.json",
+          "seed_ok": true,
+          "sha256": "4509d01c08fd4787bfe7b2eb8602db82a6ac5b929c18af22b536aa69b9be101c"
+        }
+      ],
+      "rows": 313,
+      "supply": {
+        "relpath": "prepared/SAEA-SLURP-TFRL-ODD40-I1-H1-V1/phase-supply-v1.json",
+        "sha256": "4509d01c08fd4787bfe7b2eb8602db82a6ac5b929c18af22b536aa69b9be101c"
+      }
+    },
+    {
+      "cell": "slurp-tfrl-odd40-i1-h2-v1",
+      "checks": [
+        {
+          "difference": null,
+          "identity_ok": true,
+          "key": "prepared_phase_supply",
+          "reason": null,
+          "relpath": "prepared/SAEA-SLURP-TFRL-ODD40-I1-H2-V1/phase-supply-v1.json",
+          "seed_ok": true,
+          "sha256": "8fe5553cc968eb9a5c28a76fd483ecf06cef5f8386d0ee622f76b24a64bc2a3b"
+        }
+      ],
+      "rows": 312,
+      "supply": {
+        "relpath": "prepared/SAEA-SLURP-TFRL-ODD40-I1-H2-V1/phase-supply-v1.json",
+        "sha256": "8fe5553cc968eb9a5c28a76fd483ecf06cef5f8386d0ee622f76b24a64bc2a3b"
+      }
+    }
+  ],
+  "model_calls": 0,
+  "output_hashes": {
+    "configs/baseline/slurp-tfrl-odd40-i1-h1-v1.json": "ff9e3b0dc6c8145fb8e9b303c3e0f2b5656e614cf83baae3e3351f7c7e24efca",
+    "configs/baseline/slurp-tfrl-odd40-i1-h2-v1.json": "f885c83be683cf33d6016f9b3062ab4c66effa9ac457fced15bd1a1f0653578d",
+    "configs/experiment/slurp-tfrl-odd40-i1-h1-v1.json": "cb541c6ec593f45242bc6902af8a69967ce24670e8ac206d93c5fcfa91d059bb",
+    "configs/experiment/slurp-tfrl-odd40-i1-h2-v1.json": "d3c59f5837af5a3ae5f5f2ddba02a29820ee5976f6c5281467a594cc67c00cce"
+  },
+  "readiness": "held",
+  "registered": false,
+  "rows": 625,
+  "schema": "saea-odd40-supply-binding-v1",
+  "source_commit": "d81660df1028428dd4be8cba4227d6ec8fb576c0",
+  "tokenizer_calls": 0,
+  "tests": {
+    "implementation": {
+      "passed": 70,
+      "seconds": 21.07,
+      "exit_code": 0
+    },
+    "public": {
+      "passed": 70,
+      "seconds": 21.91,
+      "exit_code": 0
+    }
+  },
+  "scope": "First-phase perception supply only. Solver B and the conditional judge still depend on actual shared Perception output; no generation or real FIT occurred.",
+  "remaining": [
+    "registered generation/FIT plans and admission",
+    "real composed-request FIT",
+    "finite malformed-candidate handling",
+    "partial-contact journal and restart verification",
+    "detached generation and asynchronous official scoring"
+  ]
+}
