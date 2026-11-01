@@ -53,3 +53,47 @@ def select_recovery_cell(cell, declaration, *, data_root):
             or cell.document.get('checkpoint_compatibility') is not None):
         raise ValueError('native recovery must resume the selected registered cell')
     return CampaignCell.from_document({**cell.document, 'attempt_id': target.attempt_id})
+
+
+def native_contact_custody_enabled(values):
+    """Operational capture for the reviewed odd40 method or raw-vLLM A0 P/S.
+
+    Do not widen this to tool, revision, branch or acquisition graphs merely
+    because their numeric ceiling happens to be two. No model inputs change.
+    """
+    native = values.get('native_episode')
+    if not isinstance(native, dict):
+        return False
+    if native.get('answer_selection') == 'odd40-whole-answer-v1':
+        return True  # Preserve the already reviewed method's existing path.
+    if (values.get('transport') != 'vllm'
+            or values.get('arm') != 'raw-speech-agent-native-tools'
+            or values.get('policy') != 'phase-native-module-v1-c2'
+            or values.get('carrier_lock_key') != 'slurp'
+            or native.get('review_loop') != 'off'
+            or native.get('max_revisions') != 0
+            or values.get('phase_tools')
+            or any(native.get(k) for k in ('answer_selection', 'acquisition', 'relisten'))):
+        return False
+    roles = native.get('roles')
+    if not isinstance(roles, dict) or set(roles) != {'perception', 'solver', 'reviewer', 'planner'}:
+        return False
+    for role, expected in (('perception', 1), ('solver', 1), ('reviewer', 0), ('planner', 0)):
+        block = roles[role]
+        if (not isinstance(block, dict) or block.get('phase_id') != role
+                or type(block.get('max_iterations')) is not int
+                or block['max_iterations'] != expected
+                or block.get('tool_names') or block.get('allowed_tools')
+                or block.get('samples', 1) != 1
+                or any(k in block for k in ('sampling_variants', 'supply_variants',
+                                            'template_variants', 'decoding_variants', 'branches'))):
+            return False
+    from ...rails.controllers import default_phase_program
+    from ...rails.native_episode_config import load_native_episode_config
+    try:
+        config = load_native_episode_config(values, default_phase_program(values['policy']))
+    except (ValueError, TypeError, KeyError):
+        return False
+    return (config.max_contacts == 2 and config.max_revisions == 0
+            and config.acquisition_role is None and config.relisten_json is None
+            and all(not role.tool_names and role.samples == 1 for role in config.roles))

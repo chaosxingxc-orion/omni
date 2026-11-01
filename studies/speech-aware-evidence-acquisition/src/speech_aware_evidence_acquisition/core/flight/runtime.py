@@ -5129,8 +5129,9 @@ class FlightRuntime:
         plan = self._build_execution_plan(values, carrier_lock_key, identity_hash)
         self._plan = plan
         if self._native_contact_recovery is not None:
-            if values.get('native_episode', {}).get('answer_selection') != 'odd40-whole-answer-v1':
-                raise FlightRuntimeError('native contact recovery requires the odd40 journaled method')
+            from .native_recovery import native_contact_custody_enabled
+            if not native_contact_custody_enabled(values):
+                raise FlightRuntimeError('native contact recovery requires a reviewed odd40 or raw-vLLM A0 journaled method')
             from .native_recovery import load_native_recovery
             try:
                 self._native_contact_replay = load_native_recovery(
@@ -6643,7 +6644,8 @@ class FlightRuntime:
             "arm": arm,
             "request_id_prefix": self._request_id_prefix,
         }
-        if baseline_values.get('native_episode', {}).get('answer_selection') == 'odd40-whole-answer-v1':
+        from .native_recovery import native_contact_custody_enabled
+        if native_contact_custody_enabled(baseline_values):
             # Operational custody, outside model inputs. This is capture only;
             # journal replay still requires explicit recovery validation.
             kwargs['contact_journal'] = True
@@ -8220,7 +8222,8 @@ class FlightRuntime:
                     })
                 native_fit_gate.receipts = []
             else:
-                if self._composed.values.get('native_episode', {}).get('answer_selection') == 'odd40-whole-answer-v1':
+                from .native_recovery import native_contact_custody_enabled
+                if native_contact_custody_enabled(self._composed.values):
                     from ..native_fit_recovery import RecoverableNativeFitGate
                     native_fit_gate = RecoverableNativeFitGate(
                         self, plan,

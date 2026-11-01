@@ -5030,3 +5030,13 @@ def test_native_recovery_is_rejected_for_unjournaled_method_before_gate(tmp_path
         native_contact_recovery={'path':'/unused','sha256':'a'*64})
     with pytest.raises(FlightRuntimeError, match='odd40'):runtime.preflight()
     assert gate.calls == 0
+
+
+def test_a0_runtime_enables_contact_capture_using_actual_eligible_baseline(tmp_path):
+    from test_a0_native_recovery import baseline
+    runtime = _make_runtime(tmp_path, happy_path=True,
+        config_kwargs={'arm':'bare-core','policy':'fixed'})
+    runtime.preflight();runtime.preprocess();runtime.serve()
+    values=baseline()
+    runtime._composed.values.update(values)
+    assert runtime.frozen_core_client_kwargs()['contact_journal'] is True
