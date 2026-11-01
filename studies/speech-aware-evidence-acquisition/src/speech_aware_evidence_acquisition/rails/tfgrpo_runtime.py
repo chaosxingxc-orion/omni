@@ -16,6 +16,7 @@ import threading
 
 from ..core.atomic_file import publish_new
 from ..core.tracing import TraceBuffer, get_current_trace_buffer, set_current_trace_buffer
+from ..core.stage_timing import measure
 from .core_client import FrozenCoreClient
 from .hashing import content_hash
 from .prepared_feedback import states_from_contexts
@@ -31,6 +32,10 @@ def learning_configuration(binding):
 
 
 STAGES = frozenset({'summary', 'advantage', 'group_update', 'batch_update'})
+
+
+def _timing_identity(caller, request):
+    return {'learning_stage':request.get('stage'), 'learning_contact':request.get('identity')}
 
 
 def contact_key(stage, identity):
@@ -111,6 +116,7 @@ class MeteredExperienceCaller:
         else:
             publish_new(pin, canonical(self.registration))
 
+    @measure('tfgrpo_request_prepare', _timing_identity)
     def prepare(self, request):
         request = copy.deepcopy(request)
         if (not isinstance(request, dict) or set(request) != {'schema', 'batch_sha256', 'model_id',
@@ -149,6 +155,7 @@ class MeteredExperienceCaller:
             decoding_params=self.registration['decoding_params'])
         return key, prepared
 
+    @measure('tfgrpo_request_preflight', _timing_identity)
     def preflight(self, request):
         """Validate and fit before the learner writes a generation intent."""
         key, prepared = self.prepare(request)
@@ -167,6 +174,7 @@ class MeteredExperienceCaller:
             self._prepared[key] = (copy.deepcopy(request), prepared, fit_receipt)
         return fit_receipt
 
+    @measure('tfgrpo_generation', _timing_identity)
     def __call__(self, request):
         key = contact_key(request['stage'], request['identity'])
         intent = self.root/(key+'.intent.json')

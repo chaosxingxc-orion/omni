@@ -71,6 +71,22 @@ def test_real_adapter_trace_metering_and_shared_prepared_text(tmp_path):
     client.close()
 
 
+def test_operational_learning_timings_preserve_contact_identity(tmp_path,monkeypatch):
+    from speech_aware_evidence_acquisition.core import stage_timing
+    events=[]
+    monkeypatch.setenv('SAEA_STAGE_TIMING_PATH',str(tmp_path/'timings.jsonl'))
+    monkeypatch.setattr(stage_timing,'_record',lambda path,event:events.append(event))
+    caller,client,_,transport,_,_=setup(tmp_path)
+    caller.preflight(request())
+    caller(request())
+    own=[e for e in events if e['stage'].startswith('tfgrpo_')]
+    assert {e['stage'] for e in own}=={'tfgrpo_request_prepare','tfgrpo_request_preflight','tfgrpo_generation'}
+    assert all(e['learning_stage']=='summary' and e['learning_contact']=='r1'
+               and e['status']=='ok' and e['elapsed_seconds']>=0 for e in own)
+    assert len(transport.calls)==1
+    client.close()
+
+
 @pytest.mark.parametrize('change',[
     lambda r:r.update(batch_sha256='e'*64),
     lambda r:r.update(model_id='different'),
