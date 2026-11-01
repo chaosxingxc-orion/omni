@@ -1,0 +1,25 @@
+{
+  "candidate_sha256": "703554b4dd7d5835ff90b8e80d82226eaa6e951163a574ed4096471570570e2a",
+  "items": 10,
+  "characters": 3442,
+  "schema": "saea-dense-synthesis-terminal-archive-v1",
+  "archive_sha256": "738f92f8e30b130c351da0464cbd8bdd56d414b82dc22e4ee2fd9e7ab4191eb7",
+  "runs": [
+    {
+      "run": "SAEA-SLURP-TFGRPO-DENSE-H1-SYNTHESIS-V1",
+      "usage": {
+        "calls": 1,
+        "prompt_tokens": 5398,
+        "completion_tokens": 3874
+      },
+      "journal_files": 2,
+      "journal_manifest_sha256": "1ce8f4d1ccf61f3323110eed8b0ed33ba3b6268afe7942f4efe84e7921392169"
+    }
+  ],
+  "fresh_calls": 1,
+  "historical_calls": 308,
+  "total_calls": 309,
+  "source_journal_hashes_verified": true,
+  "scope": "sealed synthesis tree/control/contacts; shared state excluded",
+  "automatic_restore_authority": false
+}
