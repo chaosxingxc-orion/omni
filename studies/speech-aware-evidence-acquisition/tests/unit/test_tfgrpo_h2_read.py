@@ -43,3 +43,44 @@ def test_refuse_partial_or_misbound_comparison(fault):
         for row in results['learned']['per_sample']:row['scenario_action_exact']=0
         assert not m.statistics(results,items,draws=20)['numeric_gate_passed'];return
     with pytest.raises(ValueError):m.statistics(results,items,draws=20)
+
+
+def test_label_slices_use_observed_relations_and_expose_regressions():
+    results, items = inputs()
+    labels = {row['sample_id']: {'intent': 'alarm_set' if i < 156 else 'calendar_set',
+              'slots': ['time', 'date'] if i < 156 else []} for i, row in enumerate(items)}
+    out = m.label_diagnostics(results, items, labels)
+    assert len(out['observed_intent_slot']) == 2
+    assert {row['intent'] for row in out['observed_intent_slot']} == {'alarm_set'}
+    assert sum(row['rows'] for row in out['intent']) == 312
+    assert [row['rows'] for row in out['slot_presence']] == [156, 156]
+    assert out['no_gold_slots']['rows'] == 156
+    calendar = next(row for row in out['intent'] if row['label'] == 'calendar_set')
+    assert calendar['intent_repaired_rows'] == 10
+    assert calendar['intent_regressed_rows'] == 0
+    assert calendar['delta_pp']['intent'] == pytest.approx(1000/156)
+    swapped = m.label_diagnostics({'learned':results['lock'], 'lock':results['learned']}, items, labels)
+    assert swapped['no_gold_slots']['intent_regressed_rows'] == 10
+    assert 'sample_id' not in str(out) and 'row0' not in str(out)
+
+
+@pytest.mark.parametrize('fault', ['missing', 'duplicate_slot', 'empty_intent', 'partial_scores'])
+def test_label_diagnostics_refuse_incomplete_or_ambiguous_membership(fault):
+    results, items = inputs()
+    labels = {row['sample_id']: {'intent': 'alarm_set', 'slots': ['time']} for row in items}
+    if fault == 'missing': labels.pop('row0')
+    elif fault == 'duplicate_slot': labels['row0']['slots'] = ['time', 'time']
+    elif fault == 'empty_intent': labels['row0']['intent'] = ''
+    else: results['learned']['per_sample'].pop()
+    with pytest.raises(ValueError): m.label_diagnostics(results, items, labels)
+
+
+def test_original_labels_bind_split_utterance_and_scenario():
+    from types import SimpleNamespace as NS
+    item = {'sample_id':'slurp:train:1', 'utterance_id':'u1', 'stratum':'alarm'}
+    record = NS(sample_id=item['sample_id'], utterance_id='u1', split='train', scenario='alarm',
+                intent='alarm_set', entities=[NS(type='time'), NS(type='time')])
+    assert m.label_membership([item], [record]) == {item['sample_id']:{'intent':'alarm_set','slots':['time']}}
+    for field, value in [('utterance_id', 'wrong'), ('stratum', 'wrong'), ('sample_id', 'slurp:test:1')]:
+        with pytest.raises(ValueError):m.label_membership([{**item, field:value}], [record])
+    with pytest.raises(ValueError):m.label_membership([item], [record, record])

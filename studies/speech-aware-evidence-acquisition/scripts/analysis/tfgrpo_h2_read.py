@@ -46,6 +46,71 @@ def statistics(results,items,*,draws=DRAWS):
         'limitations':['Development comparison, not untouched test.','Bootstrap quantifies roster sampling uncertainty conditional on observed decodes; no independent decoding variance estimate.','Numeric gate alone does not establish stable cross-task improvement.']}
 
 
+def label_membership(items, records):
+    """Use original TRAIN labels in memory; export only aggregate slices."""
+    from speech_aware_evidence_acquisition.data.variant_ids import published_sample_key
+    by_id = {}
+    for record in records:
+        if record.sample_id in by_id:
+            raise ValueError('duplicate original dataset record')
+        by_id[record.sample_id] = record
+    labels = {}
+    for item in items:
+        sid = item['sample_id']
+        key = published_sample_key(sid)
+        if not key.startswith('slurp:train:') or key not in by_id or sid in labels:
+            raise ValueError('unique TRAIN membership required')
+        record = by_id[key]
+        if (record.split != 'train' or str(record.utterance_id) != str(item['utterance_id'])
+                or record.scenario != item['stratum']):
+            raise ValueError('original labels and registered roster identity differ')
+        slots = sorted({entity.type for entity in record.entities})
+        if not record.intent or any(not slot for slot in slots):
+            raise ValueError('nonempty original labels required')
+        labels[sid] = {'intent': record.intent, 'slots': slots}
+    return labels
+
+
+def label_diagnostics(results, items, labels):
+    """Conditional whole-answer scores, never a fabricated slot-specific F1."""
+    ids = [row['sample_id'] for row in items]
+    if len(ids) != 312 or len(set(ids)) != 312 or set(labels) != set(ids) or set(results) != {'learned', 'lock'}:
+        raise ValueError('exact full H2 labels and result pair required')
+    tables = {arm: score_table(result, ids) for arm, result in results.items()}
+    members = {'intent': {}, 'slot_presence': {}, 'observed_intent_slot': {}}
+    no_slots = []
+    for sid in ids:
+        label = labels[sid]
+        intent, slots = label['intent'], label['slots']
+        if (not isinstance(intent, str) or not intent or not isinstance(slots, list)
+                or any(not isinstance(slot, str) or not slot for slot in slots)
+                or len(slots) != len(set(slots))):
+            raise ValueError('unique nonempty original label names required')
+        members['intent'].setdefault(intent, []).append(sid)
+        if not slots:
+            no_slots.append(sid)
+        for slot in slots:
+            members['slot_presence'].setdefault(slot, []).append(sid)
+            members['observed_intent_slot'].setdefault((intent, slot), []).append(sid)
+    metrics = {'slu_f1': pc.pooled_slu_f1, 'intent': pc.intent_mean,
+               'per_row_slu_f1': pc.per_row_f1_mean}
+    def summarize(selected):
+        scores = {arm: {name: 100 * metric(table, selected) for name, metric in metrics.items()}
+                  for arm, table in tables.items()}
+        repaired = sum(tables['learned'][sid]['scenario_action_exact'] > tables['lock'][sid]['scenario_action_exact'] for sid in selected)
+        regressed = sum(tables['learned'][sid]['scenario_action_exact'] < tables['lock'][sid]['scenario_action_exact'] for sid in selected)
+        return {'rows': len(selected), 'unique_utterances': len({str(row['utterance_id']) for row in items if row['sample_id'] in selected}),
+                'scores_percent': scores,
+                'delta_pp': {name: scores['learned'][name] - scores['lock'][name] for name in metrics},
+                'intent_repaired_rows': repaired, 'intent_regressed_rows': regressed}
+    output = {kind: [dict(({'intent': key[0], 'slot': key[1]} if kind == 'observed_intent_slot' else {'label': key}),
+                          **summarize(selected)) for key, selected in sorted(groups.items())]
+              for kind, groups in members.items()}
+    output['no_gold_slots'] = summarize(no_slots) if no_slots else None
+    output['scope'] = 'Descriptive full-answer metrics conditional on original gold labels; slot slices overlap, are not slot-specific F1, and must not be summed. Only observed intent-slot relations are included. No per-label significance or candidate promotion is claimed.'
+    return output
+
+
 def read(repo,data,out):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
@@ -79,6 +144,9 @@ def read(repo,data,out):
         if set(doc)!={score.DEFAULT_SCORER_ID}:raise ValueError('registered official scorer required')
         results[arm]=doc[score.DEFAULT_SCORER_ID]
     result=statistics(results,roster['items'])
+    from speech_aware_evidence_acquisition.data.slurp import load_slurp_split
+    labels=label_membership(roster['items'],load_slurp_split(load_lock(umbrella_lock_path(repo)),data,'train'))
+    result['label_diagnostics']=label_diagnostics(results,roster['items'],labels)
     result.update(new_model_calls=0,new_tokenizer_endpoint_calls=0,official_arm_scoring_jobs=2,source=rendered['source'],
         inputs={str(pkg/'analysis-recipe-v1.json'):job.sha(pkg/'analysis-recipe-v1.json'),str(out/'score-summary.json'):job.sha(out/'score-summary.json')},
         score_receipts={a:job.pin(data,str((out/f'arm-{a}-{score.DEFAULT_SCORER_ID}-scores.json.receipt.json').relative_to(data))) for a in results})
