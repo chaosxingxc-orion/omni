@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .stage_timing import measure
+from .stage_timing import measure, measured_lock
 
 import base64
 import binascii
@@ -1225,7 +1225,7 @@ def build_native_contact_fit_gate(
             raise PreparationError(f"invalid prepared native contact: {error}") from error
         if not isinstance(payload, dict):
             raise PreparationError("prepared native contact payload must be an object")
-        with fit_lock:
+        with measured_lock(fit_lock, "native_fit_lock_wait"):
             if feature_packets:
                 if "raw_speech_query" in payload:
                     raise PreparationError(

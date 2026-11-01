@@ -158,3 +158,24 @@ def test_unknown_generation_result_refuses_before_fit_reuse_or_tokenizer(tmp_pat
     gate=RecoverableNativeFitGate(runtime,plan,no_tokenizer,replay=replay)
     with pytest.raises(ContactJournalError,match='unknown'):gate(request)
     assert not gate.receipts
+
+
+def test_recovery_and_inner_fit_lock_waits_are_separately_identified(tmp_path, monkeypatch):
+    import os
+    from speech_aware_evidence_acquisition.core import stage_timing
+    path = tmp_path/'stages.jsonl'
+    monkeypatch.setenv('SAEA_STAGE_TIMING_PATH', str(path))
+    monkeypatch.setattr(stage_timing, '_fd', None)
+    monkeypatch.setattr(stage_timing, '_path', None)
+    try:
+        source(tmp_path)
+        events = [json.loads(line) for line in path.read_text().splitlines()]
+        locks = [e for e in events if e['stage'] in {
+            'native_fit_lock_wait', 'native_fit_recovery_lock_wait'}]
+        assert {e['stage'] for e in locks} == {
+            'native_fit_lock_wait', 'native_fit_recovery_lock_wait'}
+        assert len(locks) == 2
+        assert all(e['sample_id'] == 's1' and e['request_id'] for e in locks)
+    finally:
+        if stage_timing._fd is not None:
+            os.close(stage_timing._fd)

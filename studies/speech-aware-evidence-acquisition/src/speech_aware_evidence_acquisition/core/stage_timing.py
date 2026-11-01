@@ -4,6 +4,7 @@ Nested intervals overlap; do not sum inclusive durations. The output path must b
 fresh and owned by the launcher. No prompt, audio, answer, or exception text is
 recorded. A timing write failure propagates instead of silently losing evidence.
 """
+from contextlib import contextmanager
 from contextvars import ContextVar
 from functools import wraps
 import json
@@ -66,3 +67,30 @@ def measure(stage, identity=None):
                     'status': status, **context})
         return invoke
     return decorate
+
+
+@contextmanager
+def measured_lock(lock, stage, identity=None):
+    """Record lock acquisition wait only; always release even if timing I/O fails.
+
+    The protected body is deliberately excluded. Disabled timing does not inspect
+    identity or touch the timing sink. This keeps existing locking semantics.
+    """
+    if not os.environ.get('SAEA_STAGE_TIMING_PATH'):
+        with lock:
+            yield
+        return
+    acquired = False
+
+    @measure(stage, identity)
+    def acquire():
+        nonlocal acquired
+        lock.acquire()
+        acquired = True
+
+    try:
+        acquire()
+        yield
+    finally:
+        if acquired:
+            lock.release()

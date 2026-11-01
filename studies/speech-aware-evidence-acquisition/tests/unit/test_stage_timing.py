@@ -42,3 +42,49 @@ def test_disabled_keeps_no_io(monkeypatch,tmp_path):
     @m.measure('unused',lambda:(_ for _ in ()).throw(AssertionError('must not inspect')))
     def operation():return 42
     assert operation()==42
+
+
+def test_lock_wait_excludes_protected_body_and_keeps_identity(sink, monkeypatch):
+    import threading
+    clock = iter([10.0, 12.0])
+    monkeypatch.setattr(m.time, 'perf_counter', lambda: next(clock))
+    lock = threading.Lock()
+    with m.measured_lock(lock, 'fit_lock_wait', lambda: {'request_id': 'r1'}):
+        assert lock.locked()
+        # No timing clock read occurs for the protected operation.
+    assert not lock.locked()
+    event = json.loads(sink.read_text())
+    assert event['elapsed_seconds'] == 2.0
+    assert event['request_id'] == 'r1'
+    assert event['stage'] == 'fit_lock_wait'
+
+
+def test_lock_released_if_timing_write_fails(sink, monkeypatch):
+    import threading
+    lock = threading.Lock()
+    def fail(*args):
+        raise OSError('sink unavailable')
+    monkeypatch.setattr(m, '_record', fail)
+    with pytest.raises(OSError, match='sink unavailable'):
+        with m.measured_lock(lock, 'fit_lock_wait'):
+            pytest.fail('protected operation must not run after sink failure')
+    assert not lock.locked()
+
+
+def test_lock_released_on_body_failure(sink):
+    import threading
+    lock = threading.Lock()
+    with pytest.raises(ValueError, match='operation failed'):
+        with m.measured_lock(lock, 'fit_lock_wait'):
+            raise ValueError('operation failed')
+    assert not lock.locked()
+    assert json.loads(sink.read_text())['status'] == 'ok'
+
+
+def test_disabled_lock_timing_keeps_lock_without_identity_inspection(monkeypatch):
+    import threading
+    monkeypatch.delenv('SAEA_STAGE_TIMING_PATH', raising=False)
+    lock = threading.Lock()
+    with m.measured_lock(lock, 'unused', lambda: pytest.fail('must not inspect')):
+        assert lock.locked()
+    assert not lock.locked()

@@ -8,6 +8,7 @@ from pathlib import Path
 from .atomic_file import publish_new
 from .contact_journal import ContactJournal, canonical, comparable_request, digest, logical_contact
 from .preparation import PreparationError, load_artifact
+from .stage_timing import measured_lock
 
 
 class NativeFitJournal:
@@ -61,7 +62,8 @@ class RecoverableNativeFitGate:
         if not isinstance(request, PreparedCoreRequest):
             raise PreparationError('native FIT requires an immutable prepared request')
         payload = request.as_payload()
-        with self._lock:
+        with measured_lock(self._lock, "native_fit_recovery_lock_wait", lambda: {
+                "sample_id": payload["sample_id"], "request_id": payload["request_id"]}):
             logical = logical_contact(payload)
             key = (logical['sample_id'], logical['agent_contact_id'])
             if key in self._used:
