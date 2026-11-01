@@ -16,10 +16,14 @@ odd40 使用同一份 625 条真实 construction roster，仅改变真实检索�
 
 交付规则已固定：共享一次 Perception，求解 A、B 和 A/A；A/B 不一致时最多一次受约束裁决，只能选择完整 A 或完整 B，非法结果回退 A，不拼接实体。正常预算为每条 4–5 次调用，回退上限和 FIT 上限必须由真实 runtime 编译后才可登记。
 
+## 已完成的候选运行时验证
+
+候选部分已实际完成两半组配置编译与原生运行时加载：H1 313 条、H2 312 条，共 625 条互不重叠真实录音。共享 Perception 加 B、A/A、A 的上限为 4 次，原知识池、角色提示和 A 的提示预算保持不变。已修复编译器接受但运行时加载器拒绝 odd40 的不一致；159 项相关测试通过。新增生成、tokenizer 和评分调用均为 0。该结果不包含条件裁决，完整方法预算、独立供给准备、FIT 与准入仍未完成。[编译与加载凭证](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-odd40-candidate-compilation.json)。
+
 ## 下一阶段计划
 
 1. 在独立 runtime worktree 完成 odd40 的 A/B/A-A/裁决接线和真实预算编译，保留逐请求 journal、原子 checkpoint 和未决请求拒绝重放。
-2. 用 4 行真实 dry-run 验证 resident service identity、FIT、请求字节和完整答案交付，再完成 625 条真实 construction 的 registration、own supply、shared repin、admission 和 preflight。
+2. 先完成独立供给、预算与请求登记，再验证 resident service identity、真实 FIT、请求字节及完整答案交付；通过准入和 preflight 后执行完整 625 条 construction。必要的 4 行链路验证单独登记，不用于收益判断。
 3. 将已准入的真实任务放入 detached queue，按 600 秒观察；CPU scoring、成本审计、阶段耗时和 Wiki 更新异步进行。
 4. 首轮 odd40 只有在相对同轨迹 A 的官方 SLU-F1 至少提升 1pp 且 Intent 不下降时才接受；否则停止，不调阈值。
 5. 只有首轮方法通过并完成独立 Fold A 配对确认后，才冻结方法并运行完整 13,078 条官方 test。

@@ -79,3 +79,5 @@ CPU任务包括源验证、诊断、Fold A agreement、供给和正式评分；N
 ## odd40 运行时接入状态
 
 已将 `saea-fuse-supplyfilter-odd40-v1` 接入共享检索器和供给 receipt。它只接受 content 维度、cosine 权重、`k=m=c=top_l=40`、无 agreement 的完整配置；任意其他策略替换均拒绝。实际 625 条模型无关审计再次通过 `shared_odd40_verified=true`，与封存的奇数名次候选逐条一致。160 项共享供给、receipt、phase 和兼容性测试通过。仍未生成 B 答案，未做 FIT 或精度判断。
+
+候选部分已实际完成两半组配置编译与原生运行时加载：H1 313 条、H2 312 条，共 625 条互不重叠真实录音。共享 Perception 加 B、A/A、A 的上限为 4 次，原知识池、角色提示和 A 的提示预算保持不变。已修复编译器接受但运行时加载器拒绝 odd40 的不一致；159 项相关测试通过。新增生成、tokenizer 和评分调用均为 0。该结果不包含条件裁决，完整方法预算、独立供给准备、FIT 与准入仍未完成。[编译与加载凭证](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-odd40-candidate-compilation.json)。
