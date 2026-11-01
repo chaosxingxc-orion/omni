@@ -127,6 +127,7 @@ def collect_windows(endpoints, *, window_id, mode, config, out, stop_file, max_s
     if type(max_snapshots) is not int or max_snapshots<2:raise ValueError('at least two bounded snapshots required')
     out.mkdir(parents=True,exist_ok=False)
     write_new(out/'config.json',{'schema':'saea-server-observation-config-v1','effective':profile,
+        'configuration_sha256':hashlib.sha256(json.dumps(profile,sort_keys=True).encode()).hexdigest(),
         'window_id':window_id,'max_snapshots':max_snapshots,'scope':'instance aggregate; no request payloads'})
     previous=None
     for index in range(max_snapshots):

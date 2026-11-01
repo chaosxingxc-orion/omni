@@ -1,0 +1,108 @@
+"""Real async scheduling waits remain distinct from blocking worker execution."""
+import asyncio
+import json
+import os
+import time
+from types import SimpleNamespace
+import pytest
+from speech_aware_evidence_acquisition.core import stage_timing as timing
+from speech_aware_evidence_acquisition.reproduction.ojw import runner
+
+@pytest.fixture
+def sink(tmp_path, monkeypatch):
+    path=tmp_path/'dispatch.jsonl'
+    monkeypatch.setenv('SAEA_STAGE_TIMING_PATH',str(path))
+    monkeypatch.setenv('SAEA_OBSERVABILITY_MODE','debug')
+    monkeypatch.delenv('SAEA_OBSERVABILITY_CONFIG',raising=False)
+    monkeypatch.setattr(timing,'_fd',None);monkeypatch.setattr(timing,'_path',None)
+    monkeypatch.setattr(timing,'_configuration',None)
+    yield path
+    if timing._fd is not None:os.close(timing._fd)
+
+
+def rows(path):return [json.loads(line) for line in path.read_text().splitlines()]
+
+
+@pytest.mark.parametrize('mode',['normal','debug'])
+@pytest.mark.parametrize('prefix',[False,True])
+def test_real_scheduler_records_wait_and_preserves_results(sink,monkeypatch,mode,prefix):
+    monkeypatch.setenv('SAEA_OBSERVABILITY_MODE',mode)
+    states=[SimpleNamespace(sample_id='s1'),SimpleNamespace(sample_id='s2')]
+    seen=[]
+    async def episode(state, contact, session):
+        def blocking(slot):
+            seen.append((state.sample_id,slot));time.sleep(.01)
+            return 'result-'+state.sample_id
+        result=await contact(blocking,**({'prefix_family':'p'} if prefix else {}))
+        assert result=='result-'+state.sample_id
+    assert runner.execute_speech_agent_workflows(states,episode_invoker=episode,branch_count=1,
+        slot_count=1,queue_depth=2,workflow_timeout_seconds=10,
+        **({'prefix_slot_bindings':{'p':0}} if prefix else {}))==states
+    assert sorted(seen)==[('s1',0),('s2',0)]
+    assert timing._context.get()=={}
+    if mode=='normal':
+        assert not sink.exists();return
+    records=rows(sink)
+    for sample in ('s1','s2'):
+        group={e['stage']:e for e in records if e.get('sample_id')==sample}
+        assert {'dispatch_contact_lock_wait','dispatch_executor_wait','dispatch_blocking_execute'} <= set(group)
+        assert ('dispatch_prefix_slot_wait' if prefix else 'dispatch_trajectory_slot_wait') in group
+        wait=group['dispatch_executor_wait'];execute=group['dispatch_blocking_execute']
+        assert wait['started_monotonic'] + wait['elapsed_seconds'] <= execute['started_monotonic']
+        assert group['dispatch_blocking_execute']['status']=='ok'
+
+
+def test_worker_failure_is_error_and_original_exception_survives(sink):
+    def fail():raise ValueError('private failure')
+    with timing.context({'sample_id':'s'}):
+        fn,args=runner._observed_worker(fail)
+        with pytest.raises(ValueError,match='private failure'):fn(*args)
+    assert rows(sink)[-1]['status']=='error'
+    assert 'private failure' not in sink.read_text()
+
+
+def test_lock_released_when_observation_write_fails(sink,monkeypatch):
+    def fail(*args):raise OSError('sink failed')
+    monkeypatch.setattr(timing,'_record',fail)
+    async def run():
+        lock=asyncio.Lock()
+        with pytest.raises(OSError,match='sink failed'):
+            async with runner._observed_lock(lock,'wait'):pass
+        assert not lock.locked()
+    asyncio.run(run())
+
+
+def test_cancellation_waiting_for_slot_does_not_release_owner(sink):
+    async def run():
+        lock=asyncio.Lock();await lock.acquire()
+        async def wait():
+            async with runner._observed_lock(lock,'wait'):raise AssertionError('acquired')
+        task=asyncio.create_task(wait());await asyncio.sleep(0)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):await task
+        assert lock.locked();lock.release()
+    asyncio.run(run())
+    assert rows(sink)[0]['status']=='error'
+
+
+def test_slot_is_returned_if_acquisition_event_write_fails(sink,monkeypatch):
+    original=timing._record
+    queues=[]
+    queue_type=asyncio.Queue
+    class Queue(queue_type):
+        def __init__(self,*args,**kwargs):
+            super().__init__(*args,**kwargs);queues.append(self)
+    monkeypatch.setattr(runner.asyncio,'Queue',Queue)
+    def record(path,event):
+        if event['stage']=='dispatch_trajectory_slot_wait':raise OSError('slot event failed')
+        return original(path,event)
+    monkeypatch.setattr(timing,'_record',record)
+    calls=[]
+    async def episode(state,contact,session):
+        await contact(lambda slot:calls.append(slot))
+    with pytest.raises(OSError,match='slot event failed'):
+        runner.execute_speech_agent_workflows([SimpleNamespace(sample_id='s')],
+            episode_invoker=episode,branch_count=1,slot_count=1,queue_depth=1,
+            workflow_timeout_seconds=10)
+    assert calls==[]
+    assert len(queues)==1 and queues[0].qsize()==1

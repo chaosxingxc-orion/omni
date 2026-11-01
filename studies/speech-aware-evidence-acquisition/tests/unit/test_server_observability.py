@@ -47,3 +47,15 @@ def test_background_collector_uses_profile_and_terminal_event(tmp_path,monkeypat
     assert len(calls)==1
     assert json.loads((tmp_path/'out/complete.json').read_bytes())['terminal_observed'] is True
     assert json.loads((tmp_path/'out/config.json').read_bytes())['effective']['server_metrics_interval_seconds']==600
+
+
+def test_server_profile_hash_matches_effective_settings(tmp_path,monkeypatch):
+    import hashlib,json
+    import server_observability as m
+    effective={'mode':'normal','client_detail':False,'server_metrics_interval_seconds':600}
+    profile=tmp_path/'profile.json';profile.write_text(json.dumps(effective))
+    stop=tmp_path/'done';stop.touch()
+    monkeypatch.setattr(m,'snapshot',lambda *a,**kw:snap(1,2))
+    m.collect_windows({},window_id='run',mode='normal',config=profile,out=tmp_path/'out',stop_file=stop,max_snapshots=2)
+    cfg=json.loads((tmp_path/'out/config.json').read_bytes())
+    assert cfg['configuration_sha256']==hashlib.sha256(json.dumps(effective,sort_keys=True).encode()).hexdigest()

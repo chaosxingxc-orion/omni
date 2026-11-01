@@ -1,0 +1,30 @@
+{
+  "schema": "saea-dense-failures-terminal-archive-v1",
+  "archive_sha256": "796885ab1210772d6b0fe3823c589dbeca1900bb0197498e7ae44cf8db547698",
+  "runs": [
+    {
+      "run": "SAEA-SLURP-TFGRPO-DENSE-H1-ALLWRONG-V1",
+      "usage": {
+        "calls": 307,
+        "prompt_tokens": 6020672,
+        "completion_tokens": 750133
+      },
+      "journal_files": 614,
+      "journal_manifest_sha256": "b9aa1881adc2299bd703640f2a956ad4a2c38c27a8fe51ccae891b81720c98fb"
+    },
+    {
+      "run": "SAEA-SLURP-TFGRPO-DENSE-H1-FINAL-REPAIR-V1",
+      "usage": {
+        "calls": 1,
+        "prompt_tokens": 6169,
+        "completion_tokens": 7682
+      },
+      "journal_files": 2,
+      "journal_manifest_sha256": "dd0f013cd878a9fce51cd66548ff67e17e8327423dec2c5c757e96e322839430"
+    }
+  ],
+  "total_calls": 308,
+  "source_journal_hashes_verified": true,
+  "scope": "two failed local trees/control/contacts; shared state excluded",
+  "automatic_restore_authority": false
+}

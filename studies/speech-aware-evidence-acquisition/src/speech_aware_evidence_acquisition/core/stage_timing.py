@@ -109,6 +109,32 @@ def span(stage, metadata=None):
             **_context.get(),'detail':'debug','span_id':span_id,'parent_span_id':parent,'measurements':values})
 
 
+@contextmanager
+def context(identity):
+    """Bind operational identity across async tasks and copied worker contexts."""
+    if not debug_enabled():
+        yield
+        return
+    token = _context.set({**_context.get(), **identity})
+    try:
+        yield
+    finally:
+        _context.reset(token)
+
+
+def completed_interval(stage, started_monotonic, started_unix_ns):
+    """Record a debug wait whose start precedes entry into a worker thread."""
+    if not debug_enabled():
+        return
+    _record(os.environ['SAEA_STAGE_TIMING_PATH'], {
+        'schema': 'saea-stage-timing-v1', 'stage': stage,
+        'started_monotonic': started_monotonic, 'started_unix_ns': started_unix_ns,
+        'elapsed_seconds': time.perf_counter() - started_monotonic,
+        'pid': os.getpid(), 'thread': threading.get_ident(), 'status': 'ok',
+        **_context.get(), 'detail': 'debug', 'span_id': uuid.uuid4().hex,
+        'parent_span_id': _active_span.get(), 'measurements': {}})
+
+
 def _record(path, event):
     global _fd, _path, _configuration
     effective=configuration()

@@ -62,3 +62,14 @@ export SAEA_STAGE_TIMING_PATH=/owned/local/ATTEMPT_ID-timing.jsonl
 debug span包含阶段、父子span、单调时钟/墙钟、run/attempt及当前上下文中的sample/request身份、状态和允许的测量字段。请求层身份具备关联时才作逐请求分析；启动校验没有sample身份，应独立报告为启动成本。无原始prompt、音频内容、答案或错误文本。服务端快照仍是实例窗口，客户端事件不能补造逐请求服务端阶段。
 
 集成验证：学习恢复、容量策略、预检观测、模式、传输和服务指标共119项通过（10.51秒）；不是normal/debug生产开销结论。待完成真实高并发窗口的开销对照与逐请求服务端/音频encoder跟踪。
+
+## RSI结构化汇总与调度边界
+
+`scripts/analysis/summarize_stage_timing.py` 保留原统计接口，并输出 `observability`（有效配置、校验后的SHA、mode/run/attempt）及各阶段 `measurements`（观测数、缺失数、均值/极值/总量）。旧日志缺少配置时标未知；配置被改写或身份混合时拒绝归因。使用完整样本过滤后，未绑定sample的启动成本仍保留在独立 `process_scope`，不能与未过滤汇总重复累加。缓存覆盖字节不算磁盘I/O；只有 `runtime_identity_full_hash_*` 记录实际哈希字节，失败读取的未知字节不补零。
+
+```bash
+python scripts/analysis/summarize_stage_timing.py /owned/local/ATTEMPT_ID-timing.jsonl \
+  --output /owned/local/ATTEMPT_ID-summary.json
+```
+
+普通及prefix调度路径新增debug阶段：`dispatch_contact_lock_wait`（联系锁获取）、`dispatch_trajectory_slot_wait`/`dispatch_prefix_slot_wait`（容量）、`dispatch_executor_wait`（提交至worker启动，含事件循环调度）、`dispatch_blocking_execute`（worker执行）。sample身份随异步上下文进入worker；worker内部已有request计时接续，不能将整个worker区间称为纯推理。node-batch/node-pipeline内部队列、local-tool队列和准备线程池尚未获得这套完整分段，分析必须声明执行路径。该改造不改变科学trace或调度容量。

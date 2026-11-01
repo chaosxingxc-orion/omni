@@ -38,6 +38,8 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
+from contextlib import asynccontextmanager
+import time
 from time import perf_counter_ns as _monotonic_ns
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
@@ -61,6 +63,7 @@ from openjiuwen.core.workflow.components.flow.loop.loop_comp import (
     AdvancedLoopComponent,
 )
 
+from ...core import stage_timing as operational_timing
 from ...core.tracing import set_current_trace_buffer
 from ..obs_loop import ObsLoopError
 from . import OJW_WORKFLOW_TIMEOUT_KEY, OpenJiuwenExecutorError
@@ -75,6 +78,42 @@ from .components import (
     PrepareAgentWave,
 )
 from .state import ObsSampleState
+
+@asynccontextmanager
+async def _observed_lock(lock, stage):
+    """Measure acquisition only; release even if the observation sink fails."""
+    acquired = False
+    try:
+        with operational_timing.span(stage):
+            await lock.acquire()
+            acquired = True
+        yield
+    finally:
+        if acquired:
+            lock.release()
+
+
+def _observed_worker(callback, *args):
+    # Normal mode retains the exact original callable and adds no queue events.
+    if not operational_timing.debug_enabled():
+        return callback, args
+    queued = time.perf_counter()
+    wall = time.time_ns()
+    def invoke():
+        operational_timing.completed_interval('dispatch_executor_wait', queued, wall)
+        with operational_timing.span('dispatch_blocking_execute'):
+            return callback(*args)
+    return invoke, ()
+
+
+def _dispatch_identity(state):
+    sample = getattr(getattr(state, 'prepared', None), 'sample', None)
+    sample_id = getattr(sample, 'sample_id', None)
+    # Operational sample identity only; never serialize state or use its repr.
+    if sample_id is None:
+        sample_id = getattr(state, 'sample_id', None)
+    return {'sample_id': sample_id} if isinstance(sample_id, str) else {}
+
 
 LOOP_NODE_ID = "obsloop"
 END_NODE_ID = "end"
@@ -604,64 +643,64 @@ def execute_speech_agent_workflows(
                 if primary_slot_id is None:
                     async with slot_assignment_lock:
                         if primary_slot_id is None:
-                            primary_slot_id = await slots.get()
+                            with operational_timing.span("dispatch_trajectory_slot_wait"):
+                                primary_slot_id = await slots.get()
                 return primary_slot_id
 
             async def run_contact(
                 blocking_contact: Callable[[int], ContactResult],
                 *, prefix_family: str | None = None, contact_kind: str = "model",
             ) -> ContactResult:
-                async with contact_lock:
-                    if node_pipeline is not None:
-                        return await node_pipeline.contact(member, prefix_family, blocking_contact, contact_kind)
-                    if node_batch is not None:
-                        return await node_batch.contact(member, prefix_family, blocking_contact, contact_kind)
-                    if prefix_slot_bindings is not None:
-                        if not isinstance(prefix_family, str) or prefix_family not in prefix_locks:
-                            raise ValueError("model contact lacks its declared prefix family")
-                        async with prefix_locks[prefix_family]:
-                            starting_contact()
-                            worker = asyncio.create_task(asyncio.to_thread(
-                                blocking_contact, prefix_slot_bindings[prefix_family],
-                            ))
-                            worker_tasks.add(worker)
-                            try:
-                                return await asyncio.shield(worker)
-                            except asyncio.CancelledError:
-                                # Repeated cancellation cannot free a slot while
-                                # its synchronous model call still runs.
-                                while not worker.done():
-                                    try:
-                                        await asyncio.shield(worker)
-                                    except asyncio.CancelledError:
-                                        continue
-                                    except BaseException:
-                                        break
-                                if not worker.cancelled():
-                                    worker.exception()
-                                raise
-                            finally:
-                                if worker.done():
-                                    worker_tasks.discard(worker)
-                    if prefix_family is not None:
-                        raise ValueError("prefix family supplied without prefix slot bindings")
-                    slot_id = await primary_slot()
-                    starting_contact()
-                    worker = asyncio.create_task(
-                        asyncio.to_thread(blocking_contact, slot_id)
-                    )
-                    worker_tasks.add(worker)
-                    try:
-                        return await asyncio.shield(worker)
-                    except asyncio.CancelledError:
-                        # Cancelling the await does not stop the synchronous
-                        # worker. Keep the trajectory lock and primary slot
-                        # until that worker has genuinely settled.
-                        await asyncio.gather(worker, return_exceptions=True)
-                        raise
-                    finally:
-                        if worker.done():
-                            worker_tasks.discard(worker)
+                with operational_timing.context(_dispatch_identity(state)):
+                    async with _observed_lock(contact_lock, "dispatch_contact_lock_wait"):
+                        if node_pipeline is not None:
+                            return await node_pipeline.contact(member, prefix_family, blocking_contact, contact_kind)
+                        if node_batch is not None:
+                            return await node_batch.contact(member, prefix_family, blocking_contact, contact_kind)
+                        if prefix_slot_bindings is not None:
+                            if not isinstance(prefix_family, str) or prefix_family not in prefix_locks:
+                                raise ValueError("model contact lacks its declared prefix family")
+                            async with _observed_lock(prefix_locks[prefix_family], "dispatch_prefix_slot_wait"):
+                                starting_contact()
+                                callback, arguments = _observed_worker(blocking_contact, prefix_slot_bindings[prefix_family])
+                                worker = asyncio.create_task(asyncio.to_thread(callback, *arguments))
+                                worker_tasks.add(worker)
+                                try:
+                                    return await asyncio.shield(worker)
+                                except asyncio.CancelledError:
+                                    # Repeated cancellation cannot free a slot while
+                                    # its synchronous model call still runs.
+                                    while not worker.done():
+                                        try:
+                                            await asyncio.shield(worker)
+                                        except asyncio.CancelledError:
+                                            continue
+                                        except BaseException:
+                                            break
+                                    if not worker.cancelled():
+                                        worker.exception()
+                                    raise
+                                finally:
+                                    if worker.done():
+                                        worker_tasks.discard(worker)
+                        if prefix_family is not None:
+                            raise ValueError("prefix family supplied without prefix slot bindings")
+                        slot_id = await primary_slot()
+                        starting_contact()
+                        callback, arguments = _observed_worker(blocking_contact, slot_id)
+                        worker = asyncio.create_task(asyncio.to_thread(callback, *arguments))
+                        worker_tasks.add(worker)
+                        try:
+                            return await asyncio.shield(worker)
+                        except asyncio.CancelledError:
+                            # Cancelling the await does not stop the synchronous
+                            # worker. Keep the trajectory lock and primary slot
+                            # until that worker has genuinely settled.
+                            await asyncio.gather(worker, return_exceptions=True)
+                            raise
+                        finally:
+                            if worker.done():
+                                worker_tasks.discard(worker)
 
             async def run_prepare(blocking_prepare, *, prefix_family):
                 async with contact_lock:
