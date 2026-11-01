@@ -1,0 +1,56 @@
+{
+  "rows": 625,
+  "old_credit_reasons": {
+    "no-gain-over-baseline": 337,
+    "no-intent-correct-trajectory": 121,
+    "positive": 68,
+    "baseline-unstable": 99
+  },
+  "learning_candidates": 439,
+  "with_contrast_candidates": 94,
+  "old_unstable_retained_for_learning": 99,
+  "old_unstable_with_contrast": 18,
+  "intent_only_contrast_rows": 9,
+  "next_actions": {
+    "diagnose_or_repeat": 345,
+    "keep_for_regression": 186,
+    "cross_fold_validate_contrast": 94
+  },
+  "confirmed_hard_examples": 0,
+  "publishable_rules": 0,
+  "schema": "saea-tfrl-uncertain-credit-read-v1",
+  "implementation_commit": "f3c04006a06ac8e7b9c5f7ac9701a5e38c816137",
+  "source_commit": "454d062e283374edb3094a2e5d52b1a43ce47b6b",
+  "pool_sha256": "a19dc40ce8f7d5f2d0963d07e9789b270b5cf6574dcc9dfb80b77f82d6611cb2",
+  "rows_sha256": "f7e9d2f279b0a29e6edb2d57fa136a5b1dab4fce2e83ab51b1c081bab3fae144",
+  "sources": {
+    "h1": {
+      "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1/complete.json",
+      "complete_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+      "kind": "verified-source-union",
+      "provenance_sha256": "92e5e7f4912da32e70c5713e85848cad8f7bee0887c6b1e86c7d23f9e15cd305",
+      "read_run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H1-CONTEXT-REPAIR-UNION-READ-V1",
+      "recipe_sha256": "085772b005d47920b7f1a3a261667156c553fdfdde1d9114ec6d600062258fe7"
+    },
+    "h2": {
+      "attempt_id": "generation-v1",
+      "complete_relpath": "analysis/SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1-READ/complete.json",
+      "complete_sha256": "1857ee6dcb9a2a03a356727895f2179e0163e06c0b991e33ef53d1a459aeca5a",
+      "manifest_sha256": "a15827d8278bc959fe5c43d3a1c022d731c5f071904051798d5dd9aa07df6940",
+      "recipe_sha256": "debb8e3a315036ff822b4c2044cffb2b46b276731488a52313fb00cfbf100923",
+      "run_id": "SAEA-SLURP-TFRL-CURRENT-SEED-I1-H2-V1"
+    }
+  },
+  "new_model_calls": 0,
+  "new_tokenizer_calls": 0,
+  "new_scoring_jobs": 0,
+  "generation_authorized": false,
+  "system_accepted": false,
+  "limitations": [
+    "Shared-P controls do not estimate independent full-system error probability.",
+    "Control envelope is descriptive, not a confidence interval.",
+    "Post-hoc best-of-K contrast candidates require independent cross-row validation.",
+    "Existing v2 credit, family stop decision and experience banks remain unchanged.",
+    "Exact-slot errors are screening signals; annotation/alias ambiguity needs review."
+  ]
+}
