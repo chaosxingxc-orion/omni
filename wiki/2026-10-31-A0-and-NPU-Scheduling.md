@@ -10,6 +10,14 @@
 
 **Fold A A0 完整结果也已封存。** 1080/1080 条真实录音、2160 次模型调用、SLU-F1 **73.3139%**、Intent **85.7407%**、Scenario **89.5370%**、Span-F1 **64.4628%**；8 卡、2 个 TP4 实例，生成耗时 2773.60 秒，整机吞吐 **2.568 秒/条**。输入/输出 tokens 为 13,239,312/3,507,701，处理音频 6169.057 秒。详见[Fold A 完整结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-fold-a-c2-verified-result-zh.md)。
 
+## 系统轨迹与 LoRA 参数学习的可行性
+
+**评估结论：8×64GB Ascend值得验证注意力LoRA，但尚未训练、没有新增精度收益。** 本地Qwen3-Omni约31.72B参数，BF16权重59.08GiB；文本注意力rank16约1337万可训练参数，仍需分片、反向激活及训练/推理权重同步。verl已有Ascend、MoE和LoRA相关支持，但本次核查未找到Ascend+Qwen3-Omni音频+LoRA+在线RL的完整已验证组合。
+
+正确轨迹SFT需要可靠监督；GRPO不要求预先全是正确轨迹，但同一输入下需要奖励可区分的当前策略采样。旧K4不同提示、共享P的候选不能直接当标准GRPO训练组；全错/全对二值奖励组没有组内任务优势。优先验证S求解阶段adapter，保留P和知识配置，然后比较SFT与GRPO；冻结模型TFRL单独保留。训练资源效率和收益需实测，不能用A0推理2.766秒/条外推。
+
+详见[资源、轨迹要求、兼容性和分阶段方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-verl-lora-feasibility-zh.md)。本文为可行性评估，没有变更部署或启动权重训练。
+
 ## 精度、效率与资源
 
 | 配置 | 样本完成量 | 资源 | 生成封存耗时 | 墙钟秒/条 | SLU-F1 | Intent |
