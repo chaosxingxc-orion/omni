@@ -19,13 +19,8 @@ selected=[
  ('a9ce4320','calendar_set',('person',),('person','calendar_set'),('preserve possessive surface form',),()),
  ('a50c4dfc','email_querycontact',('person',),('person',),('only when contact-name cue is explicit',),()),
  ('810ab363','weather_query',('place_name',),('place_name',),('reject metaphorical/non-physical references',),()),
- ('a89fe17f','weather_query',('place_name',),('place_name',),('do not invent an absent slot',),()),
- ('a60e87ea','recommendation_events',('place_name',),('place_name',),('only explicit event location',),()),
- ('e184bfda','calendar_query',('date','event_name'),('calendar_query',),('require personal scheduling activation',),()),
  ('e32554c1','lists_createoradd',('list_name',),('list_name',),('do not add event_name',),()),
  ('0e7a84b2','cooking_recipe',('cooking_type','food_type'),('cooking_type','food_type'),('verb must be followed by food cue',),()),
- ('54d12d26','iot_cleaning',('device_type',),('iot_cleaning',),('general conversation is an exception',),()),
- ('14b9e1db','calendar_set',('person','relation'),('person','relation'),('keep possessive on person; relation is role only',),()),
 ]
 by_prefix={x['operation_sha256'][:8]:x for x in ops}
 excluded_findings={'F1','F2','F3','F4','F5','F8'}
@@ -52,7 +47,7 @@ for i,(prefix,intent,slots,components,trigger,exceptions) in enumerate(selected,
 doc={'schema':RULE_SET_SCHEMA,'rules':rules}
 validated=validate_rule_set(doc,source_payloads=payloads)
 out=args.output
-record={'schema':'saea-evidence-conditioned-candidate-cpu-v1','status':'cpu-validated-not-admitted','source_scope':{'source_operations':102,'source_groups':51,'source_file_sha256':hashlib.sha256(args.operations.read_bytes()).hexdigest(),'audit_file_sha256':hashlib.sha256(args.audit.read_bytes()).hexdigest()},'rules':doc,'source_index':source_index,'validation':{'rules_validated':len(validated),'new_model_calls':0,'new_scoring_jobs':0,'h2_read':False,'test_read':False,'cartesian_intent_slot_expansion':False,'observed_relation_count':len(observed_relations),'excluded_findings':sorted(excluded_findings),'excluded_operation_count':len(excluded_hashes)},'admission':{'eligible':False,'reason':'CPU structure/source validation only; semantic TRAIN counterexample review and fixed-consumer dry-run remain required before any NPU budget.'}}
+record={'schema':'saea-evidence-conditioned-candidate-cpu-v1','status':'cpu-validated-not-admitted','source_scope':{'source_operations':102,'source_groups':51,'source_file_sha256':hashlib.sha256(args.operations.read_bytes()).hexdigest(),'audit_file_sha256':hashlib.sha256(args.audit.read_bytes()).hexdigest()},'rules':doc,'source_index':source_index,'validation':{'rules_validated':len(validated),'new_model_calls':0,'new_scoring_jobs':0,'h2_read':False,'test_read':False,'cartesian_intent_slot_expansion':False,'observed_relation_count':len(observed_relations),'excluded_findings':sorted(excluded_findings),'excluded_operation_count':len(excluded_hashes),'scope_review':'manual semantic scope set restricted to direct operation alignment'},'admission':{'eligible':False,'reason':'CPU structure/source validation only; semantic TRAIN counterexample review and fixed-consumer dry-run remain required before any NPU budget.'}}
 out.write_text(json.dumps(record,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
 print(out)
 print('rules',len(validated),'sha',hashlib.sha256(out.read_bytes()).hexdigest())

@@ -107,105 +107,6 @@
       },
       {
         "action": [
-          "apply only to weather_query with slots: place_name",
-          "Systematic Slot Verification: For weather queries, systematically check all slot types defined in slot contracts including place_name, even when not immediately apparent, while avoiding extraction of metaphorical language."
-        ],
-        "conflict": {
-          "resolution": null,
-          "state": "none",
-          "with_rule_ids": []
-        },
-        "exceptions": [],
-        "kind": "conditional-rule",
-        "rule_id": "conditioned-04",
-        "schema": "saea-structured-experience-rule-v1",
-        "scope": {
-          "components": [
-            "place_name"
-          ],
-          "phases": [
-            "knowledge-consumption"
-          ],
-          "task_ids": [
-            "weather_query"
-          ]
-        },
-        "source": {
-          "ref_id": "h1-operation:a89fe17f78a9aed5bda93594beec65bed7e9809154bcfee908145594f145e697",
-          "sha256": "a89fe17f78a9aed5bda93594beec65bed7e9809154bcfee908145594f145e697"
-        },
-        "trigger": [
-          "do not invent an absent slot"
-        ]
-      },
-      {
-        "action": [
-          "apply only to recommendation_events with slots: place_name",
-          "Location Reference Handling: Treat location references in event queries as place_name rather than event_name per slot contract definitions."
-        ],
-        "conflict": {
-          "resolution": null,
-          "state": "none",
-          "with_rule_ids": []
-        },
-        "exceptions": [],
-        "kind": "conditional-rule",
-        "rule_id": "conditioned-05",
-        "schema": "saea-structured-experience-rule-v1",
-        "scope": {
-          "components": [
-            "place_name"
-          ],
-          "phases": [
-            "knowledge-consumption"
-          ],
-          "task_ids": [
-            "recommendation_events"
-          ]
-        },
-        "source": {
-          "ref_id": "h1-operation:a60e87eaf3449d1ba163c1b56064598ab5aa7d8ff44faea338068c91162af1c5",
-          "sha256": "a60e87eaf3449d1ba163c1b56064598ab5aa7d8ff44faea338068c91162af1c5"
-        },
-        "trigger": [
-          "only explicit event location"
-        ]
-      },
-      {
-        "action": [
-          "apply only to calendar_query with slots: date, event_name",
-          "Calendar Term Ambiguity: Prioritize factoid intent over calendar intent when calendar-like terms appear without specific slots to prevent misclassification."
-        ],
-        "conflict": {
-          "resolution": null,
-          "state": "none",
-          "with_rule_ids": []
-        },
-        "exceptions": [],
-        "kind": "conditional-rule",
-        "rule_id": "conditioned-06",
-        "schema": "saea-structured-experience-rule-v1",
-        "scope": {
-          "components": [
-            "calendar_query"
-          ],
-          "phases": [
-            "knowledge-consumption"
-          ],
-          "task_ids": [
-            "calendar_query"
-          ]
-        },
-        "source": {
-          "ref_id": "h1-operation:e184bfda7bcd886af864a7f949b9f4670f1a82eb606cd0cc2ac86df32cac807c",
-          "sha256": "e184bfda7bcd886af864a7f949b9f4670f1a82eb606cd0cc2ac86df32cac807c"
-        },
-        "trigger": [
-          "require personal scheduling activation"
-        ]
-      },
-      {
-        "action": [
           "apply only to lists_createoradd with slots: list_name",
           "Activity as List Name: For lists_createoradd intent, activity phrases like 'grocery shopping' are extracted as list_name slots without adding event_name slots, per training examples."
         ],
@@ -216,7 +117,7 @@
         },
         "exceptions": [],
         "kind": "conditional-rule",
-        "rule_id": "conditioned-07",
+        "rule_id": "conditioned-04",
         "schema": "saea-structured-experience-rule-v1",
         "scope": {
           "components": [
@@ -249,7 +150,7 @@
         },
         "exceptions": [],
         "kind": "conditional-rule",
-        "rule_id": "conditioned-08",
+        "rule_id": "conditioned-05",
         "schema": "saea-structured-experience-rule-v1",
         "scope": {
           "components": [
@@ -269,73 +170,6 @@
         },
         "trigger": [
           "verb must be followed by food cue"
-        ]
-      },
-      {
-        "action": [
-          "apply only to iot_cleaning with slots: device_type",
-          "Intent boundary comparison: Systematically compare request against activation boundaries to avoid defaulting to general categories when specific IoT action verbs are present."
-        ],
-        "conflict": {
-          "resolution": null,
-          "state": "none",
-          "with_rule_ids": []
-        },
-        "exceptions": [],
-        "kind": "conditional-rule",
-        "rule_id": "conditioned-09",
-        "schema": "saea-structured-experience-rule-v1",
-        "scope": {
-          "components": [
-            "iot_cleaning"
-          ],
-          "phases": [
-            "knowledge-consumption"
-          ],
-          "task_ids": [
-            "iot_cleaning"
-          ]
-        },
-        "source": {
-          "ref_id": "h1-operation:54d12d260378a8867235af70e2ae669a8a94e486dda4ff067a1f37443676547b",
-          "sha256": "54d12d260378a8867235af70e2ae669a8a94e486dda4ff067a1f37443676547b"
-        },
-        "trigger": [
-          "general conversation is an exception"
-        ]
-      },
-      {
-        "action": [
-          "apply only to calendar_set with slots: person, relation",
-          "Intent Boundaries: Prioritize activation boundaries between calendar (personal scheduling) and recommendation events (public happenings) over surface entity matching, using intent definitions as the primary classifier."
-        ],
-        "conflict": {
-          "resolution": null,
-          "state": "none",
-          "with_rule_ids": []
-        },
-        "exceptions": [],
-        "kind": "conditional-rule",
-        "rule_id": "conditioned-10",
-        "schema": "saea-structured-experience-rule-v1",
-        "scope": {
-          "components": [
-            "person",
-            "relation"
-          ],
-          "phases": [
-            "knowledge-consumption"
-          ],
-          "task_ids": [
-            "calendar_set"
-          ]
-        },
-        "source": {
-          "ref_id": "h1-operation:14b9e1db323f6e50941b508b2053702fd8503f3d884b1975b2f40fad44b41582",
-          "sha256": "14b9e1db323f6e50941b508b2053702fd8503f3d884b1975b2f40fad44b41582"
-        },
-        "trigger": [
-          "keep possessive on person; relation is role only"
         ]
       }
     ],
@@ -362,24 +196,6 @@
       "ref_id": "h1-operation:810ab363fb5baab5790891662b65aa6d802effeb1e25efd4dde5a7b3844ca38b"
     },
     {
-      "group_contact": "750bc6ca50e57115961f04e54bbed87c8dac93e84e2a020701fe180ecdcafed4",
-      "operation_index": 1,
-      "operation_sha256": "a89fe17f78a9aed5bda93594beec65bed7e9809154bcfee908145594f145e697",
-      "ref_id": "h1-operation:a89fe17f78a9aed5bda93594beec65bed7e9809154bcfee908145594f145e697"
-    },
-    {
-      "group_contact": "1d0603689769932fee6e4c2d40108b6bc6f02758fb7e8bfe5e0b2c2138a23317",
-      "operation_index": 0,
-      "operation_sha256": "a60e87eaf3449d1ba163c1b56064598ab5aa7d8ff44faea338068c91162af1c5",
-      "ref_id": "h1-operation:a60e87eaf3449d1ba163c1b56064598ab5aa7d8ff44faea338068c91162af1c5"
-    },
-    {
-      "group_contact": "7f269d13afd746fd8495e936a61671faad6c3de4756056b510cc3480b411c94e",
-      "operation_index": 0,
-      "operation_sha256": "e184bfda7bcd886af864a7f949b9f4670f1a82eb606cd0cc2ac86df32cac807c",
-      "ref_id": "h1-operation:e184bfda7bcd886af864a7f949b9f4670f1a82eb606cd0cc2ac86df32cac807c"
-    },
-    {
       "group_contact": "7743aa5a27c84ee8ac98c4ab6ef404868ac0ce0c0885b920ddef3d0d9c6e559a",
       "operation_index": 0,
       "operation_sha256": "e32554c18a296f224ba9192dd390f8326746eeb5897701641c70b991840dc706",
@@ -390,18 +206,6 @@
       "operation_index": 0,
       "operation_sha256": "0e7a84b27d3d0df70692a3608fcc9e5121b522857f4c2cdc86a34696d96d4414",
       "ref_id": "h1-operation:0e7a84b27d3d0df70692a3608fcc9e5121b522857f4c2cdc86a34696d96d4414"
-    },
-    {
-      "group_contact": "221bd3a8ebb884d216ed59c9406da2b3ff02bc123339a39354b1d2ab92991188",
-      "operation_index": 0,
-      "operation_sha256": "54d12d260378a8867235af70e2ae669a8a94e486dda4ff067a1f37443676547b",
-      "ref_id": "h1-operation:54d12d260378a8867235af70e2ae669a8a94e486dda4ff067a1f37443676547b"
-    },
-    {
-      "group_contact": "72e60756ccc3e9967986c116b9cf5843e498c9943f5df4071d4cb86b177b6554",
-      "operation_index": 0,
-      "operation_sha256": "14b9e1db323f6e50941b508b2053702fd8503f3d884b1975b2f40fad44b41582",
-      "ref_id": "h1-operation:14b9e1db323f6e50941b508b2053702fd8503f3d884b1975b2f40fad44b41582"
     }
   ],
   "source_scope": {
@@ -426,7 +230,8 @@
     "new_model_calls": 0,
     "new_scoring_jobs": 0,
     "observed_relation_count": 113,
-    "rules_validated": 10,
+    "rules_validated": 5,
+    "scope_review": "manual semantic scope set restricted to direct operation alignment",
     "test_read": false
   }
 }
