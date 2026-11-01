@@ -20,6 +20,38 @@ ROSTER='docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json'
 AUTH='docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md'
 
 
+
+def cumulative_supply_bound(base):
+    """Bound retained P knowledge plus both Solver sources, without changing them.
+
+    This fixed P/S program has no refresh, acquisition or revision. Associated
+    values cap delivery at min(k, top_l); other fusers cap at k. Candidate supply
+    has its own max_total_values. Include retained prefix even when compacted:
+    the arm receipt counts accumulated IDs, not just rendered Solver examples.
+    """
+    native = base['native_episode']
+    if native.get('max_revisions', 0) or native.get('review_loop') != 'off':
+        raise ValueError('supply bound requires fixed non-revising P/S program')
+    total = 0
+    def positive(value):
+        if type(value) is not int or value <= 0:
+            raise ValueError('finite positive supply bound required')
+        return value
+    for store in base['knowledge_stores'].values():
+        for phase, spec in store.get('phase_supply', {}).items():
+            if phase not in {'perception', 'solver'}:
+                raise ValueError('unexpected phase in fixed H2 supply')
+            count = positive(spec['k'])
+            if spec['fuse_policy'] == 'saea-fuse-associated-values-v1':
+                count = min(count, positive(spec.get('fuse_coverage', {}).get('top_l', 3)))
+            total += count
+        for phase, spec in store.get('candidate_supply', {}).items():
+            if phase != 'solver':
+                raise ValueError('unexpected candidate phase in fixed H2 supply')
+            total += positive(spec['max_total_values'])
+    return positive(total)
+
+
 def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template_tokens):
     repo=Path(repo);data=Path(data)
     roster=json.loads((repo/ROSTER).read_bytes());ids=[r['sample_id'] for r in roster['items']]
@@ -38,7 +70,7 @@ def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template
     block['columns']=[{'column_id':'learned','kind':'template','node':'solver',
         'template':{'relpath':'configs/'+params['template']['relpath'],'sha256':params['template']['sha256']},
         'template_tokens':learned_template_tokens}]
-    supply=base['knowledge_stores']['train-exemplars']['phase_supply']['solver']['k']
+    supply=cumulative_supply_bound(base)
     block['template_frame']={'max_supplied_items':supply,'delivering_template_tokens':base_template_tokens,
         'twin':False,'fit_estimate':copy.deepcopy(fit_estimate)}
     compiled=cm.compile_module(block,carrier_module_hooks(repo_root=repo),repo_root=repo)

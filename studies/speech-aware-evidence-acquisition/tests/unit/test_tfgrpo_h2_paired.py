@@ -71,6 +71,8 @@ def test_full_h2_derivation_is_held_and_disjoint(release,monkeypatch):
     assert len(result['experiment']['populations'][0]['ids'])==312
     assert result['baseline']['native_contact_fit']['contact_cap']==936
     assert result['baseline']['phase_material']==base['phase_material']
+    assert result['baseline']['knowledge_stores']==base['knowledge_stores']
+    assert result['baseline']['native_episode']['consumption_module']['template_frame']['max_supplied_items']==56
 
 
 @pytest.mark.parametrize('boundary',[1,2])
@@ -148,3 +150,34 @@ def test_runtime_checks_paired_template_before_consumption(release,monkeypatch,f
     if fault:
         with pytest.raises(ValueError):m.consumption.verify_for_flight(values,repo=repo,data=data,model_id='model',consumer_ids=[TARGET])
     else:assert m.consumption.verify_for_flight(values,repo=repo,data=data,model_id='model',consumer_ids=[TARGET])==candidate()['sha256']
+
+
+def test_real_supply_bound_covers_retained_prefix_and_candidate_cards():
+    from speech_aware_evidence_acquisition.rails.supply_variants import (
+        parse_template_variants, supply_variant_arm_record, SupplyVariantError)
+    from test_template_variants_live import _block, LOCKED
+    base=json.loads((ROOT/'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json').read_bytes())
+    before=copy.deepcopy(base)
+    bound=m.cumulative_supply_bound(base)
+    assert bound == 8 + 28 + 20
+    assert base == before
+    declaration=_block(twin=False,candidates=1)
+    declaration['max_supplied_items']=bound
+    group=parse_template_variants(declaration,role_kind='solver',phase_id='solver',locked_template=LOCKED)
+    for count in (32,39,56):
+        row=supply_variant_arm_record(arm=group.arms[0],arm_index=0,contact_id='solver:0',
+            supplied_value_ids=[f'v:{i}' for i in range(count)],template_group=True)
+        assert row['supplied_item_count']==count
+    with pytest.raises(SupplyVariantError,match='above'):
+        supply_variant_arm_record(arm=group.arms[0],arm_index=0,contact_id='solver:0',
+            supplied_value_ids=[f'v:{i}' for i in range(57)],template_group=True)
+
+
+def test_supply_bound_tracks_candidate_and_retained_prefix_limits():
+    base=json.loads((ROOT/'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json').read_bytes())
+    base['knowledge_stores']['slot-contracts']['candidate_supply']['solver']['max_total_values']=40
+    assert m.cumulative_supply_bound(base)==68
+    base['knowledge_stores']['intent-boundaries']['phase_supply']['perception']['k']=3
+    assert m.cumulative_supply_bound(base)==63
+    base['knowledge_stores']['slot-contracts']['candidate_supply']['solver']['max_total_values']=True
+    with pytest.raises(ValueError,match='positive'):m.cumulative_supply_bound(base)

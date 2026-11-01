@@ -1,0 +1,86 @@
+{
+  "schema": "saea-h2-bound-failure-audit-v1",
+  "status": "aborted-known-contacts-preserved",
+  "run_id": "SAEA-SLURP-TFGRPO-FIXED-P-H2-PAIRED-V1",
+  "attempt_id": "generation-v1",
+  "processed_complete_rows": 0,
+  "total_rows": 312,
+  "perception_rows": 312,
+  "native_intents": 312,
+  "native_responses": 312,
+  "unknown_contacts": 0,
+  "actual_usage": {
+    "audio_seconds": 1407.3032499999995,
+    "calls": 312,
+    "prompt_tokens": 1199833,
+    "completion_tokens": 569754,
+    "total_tokens": 1769587
+  },
+  "allocated_cards": 8,
+  "instances": 2,
+  "wall_seconds": 595.248131,
+  "seconds_per_perception_row_including_preflight": 1.9078465737179486,
+  "seconds_per_complete_row": null,
+  "eta_seconds": null,
+  "failure": "Solver received accumulated supplied knowledge IDs above incorrectly declared20; rejection before Solver request.",
+  "journal_manifest_sha256": "ad20c3c0347598500b3254123acdab85f3e33fff382323f5372fff3464c3bf16",
+  "latency_mean_seconds": 199.01846890679485,
+  "stage_seconds": {
+    "audio_read_encode": {
+      "count": 936,
+      "mean": 0.1459232478739377,
+      "sum": 136.5841600100057
+    },
+    "context_build": {
+      "count": 624,
+      "mean": 0.25032408895831626,
+      "sum": 156.20223150998936
+    },
+    "http_request": {
+      "count": 312,
+      "mean": 198.81330002240384,
+      "sum": 62029.74960699001
+    },
+    "native_fit": {
+      "count": 312,
+      "mean": 12.019861928269224,
+      "sum": 3750.1969216199977
+    },
+    "native_fit_capacity_wait": {
+      "count": 312,
+      "mean": 11.164538941730756,
+      "sum": 3483.3361498199956
+    },
+    "native_fit_lock_wait": {
+      "count": 312,
+      "mean": 0.0013438023717887914,
+      "sum": 0.4192663399981029
+    },
+    "native_fit_recovery_lock_wait": {
+      "count": 312,
+      "mean": 1.8477296710256683,
+      "sum": 576.4916573600085
+    },
+    "request_render": {
+      "count": 936,
+      "mean": 4.07635466919872,
+      "sum": 3815.467970370002
+    },
+    "request_total": {
+      "count": 312,
+      "mean": 224.88078157830128,
+      "sum": 70162.80385243
+    },
+    "transport_total": {
+      "count": 312,
+      "mean": 199.0051357691987,
+      "sum": 62089.60235998999
+    }
+  },
+  "stage_intervals_overlap": true,
+  "candidate_accepted": false,
+  "contacts_by_phase": {
+    "perception": 312
+  },
+  "source_audit_sha256": "dfb14e08dc156b47b09408cb672d1c11676546c13ec470d1c365eda14935fb4c"
+}
