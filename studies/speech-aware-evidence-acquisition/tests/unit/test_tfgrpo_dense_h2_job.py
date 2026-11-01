@@ -182,7 +182,7 @@ def test_successor_paired_geometry_is_compiled_from_measured_window(release,monk
     assert derived['evaluation']['rows']==312
 
 
-@pytest.mark.parametrize('fault',[None,'mode','count','calls','parent','run','attempt','history'])
+@pytest.mark.parametrize('fault',[None,'mode','count','calls','parent','run','attempt','history','ancestor','ancestor_cost','depth','group_updates','policy','limits','batch_hash'])
 def test_exact_dense_source_binding(tmp_path,fault):
     from speech_aware_evidence_acquisition.rails.tfgrpo_learning import empty_experience,sha,DENSE_REWARD
     root=tmp_path/'runs'/m.SOURCE_RUN/m.SOURCE_ATTEMPT
@@ -192,6 +192,23 @@ def test_exact_dense_source_binding(tmp_path,fault):
     doc=empty_experience(m.MODEL)
     doc.update(reward_mode=DENSE_REWARD,contrast_groups=51,all_below_full_success_contrast_groups=51,
         planned_learning_calls=1,parent_sha256=empty_experience(m.MODEL)['sha256'],historical_stage_custody={'source_run_id':'SAEA-SLURP-TFGRPO-DENSE-H1-ALLWRONG-V1','source_attempt_id':'learning-v1','original_total_usage':{'calls':307},'imported_stage_contacts':306,'reward_mode':DENSE_REWARD,'excluded_final_response':{'failure_kind':'experience-library-bound-exceeded'}})
+    original=doc['historical_stage_custody']
+    original['imported_group_updates']=51
+    doc['historical_stage_custody']={**copy.deepcopy(original),
+        'source_run_id':'SAEA-SLURP-TFGRPO-DENSE-H1-FINAL-REPAIR-V1',
+        'original_total_usage':{'calls':308},'final_only_ancestry_depth':1,
+        'historical_final_custody':original}
+    limits={'max_items':128,'max_characters':16000}
+    batch={'common':{'final_merge_policy':'bounded-synthesis-v1','final_merge_limits':limits},'bounds':limits}
+    if fault=='policy':batch['common']['final_merge_policy']='another'
+    if fault=='limits':batch['common']['final_merge_limits']={'max_items':128,'max_characters':20000}
+    (candidate.parent/'batch.json').write_bytes(m.raw(batch))
+    doc['batch_sha256']=sha(batch)
+    if fault=='batch_hash':doc['batch_sha256']='0'*64
+    if fault=='ancestor':original['source_run_id']='another'
+    if fault=='ancestor_cost':original['original_total_usage']['calls']=306
+    if fault=='depth':doc['historical_stage_custody']['final_only_ancestry_depth']=2
+    if fault=='group_updates':doc['historical_stage_custody']['imported_group_updates']=50
     if fault=='mode':doc['reward_mode']='binary'
     if fault=='count':doc['contrast_groups']=50
     if fault=='calls':doc['planned_learning_calls']=307

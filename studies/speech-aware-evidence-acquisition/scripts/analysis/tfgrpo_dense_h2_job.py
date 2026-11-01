@@ -109,13 +109,13 @@ def measure_templates(repo, data, params):
 
 
 
-SOURCE_RUN = 'SAEA-SLURP-TFGRPO-DENSE-H1-FINAL-REPAIR-V1'
+SOURCE_RUN = 'SAEA-SLURP-TFGRPO-DENSE-H1-SYNTHESIS-V1'
 SOURCE_ATTEMPT = 'learning-v1'
 
 
 def require_dense_source(candidate, manifest, data):
     """Bind this evaluation to the exact dense learner, never another candidate."""
-    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import DENSE_REWARD, empty_experience, validate_experience
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import DENSE_REWARD, empty_experience, validate_experience, sha as semantic_sha
     source = Path(data)/'runs'/SOURCE_RUN/SOURCE_ATTEMPT
     if (Path(candidate).resolve() != (source/'tfgrpo/learner/candidate.json').resolve()
             or Path(manifest).resolve() != (source/(SOURCE_RUN+'.run-manifest.json')).resolve()):
@@ -128,13 +128,28 @@ def require_dense_source(candidate, manifest, data):
             or doc.get('parent_sha256') != empty_experience(MODEL)['sha256']):
         raise ValueError('complete dense51 candidate required')
     history=doc.get('historical_stage_custody',{})
-    if (history.get('source_run_id')!='SAEA-SLURP-TFGRPO-DENSE-H1-ALLWRONG-V1'
-            or history.get('source_attempt_id')!='learning-v1'
-            or history.get('original_total_usage',{}).get('calls')!=307
-            or history.get('imported_stage_contacts')!=306
-            or history.get('reward_mode')!=DENSE_REWARD
-            or history.get('excluded_final_response',{}).get('failure_kind')!='experience-library-bound-exceeded'):
-        raise ValueError('all 307 historical calls and dense final repair custody required')
+    previous=history.get('historical_final_custody',{})
+    def complete_history(custody, run, calls):
+        return (custody.get('source_run_id')==run
+            and custody.get('source_attempt_id')=='learning-v1'
+            and custody.get('original_total_usage',{}).get('calls')==calls
+            and custody.get('imported_stage_contacts')==306
+            and custody.get('imported_group_updates')==51
+            and custody.get('reward_mode')==DENSE_REWARD
+            and custody.get('excluded_final_response',{}).get('failure_kind')=='experience-library-bound-exceeded')
+    if (not complete_history(history,'SAEA-SLURP-TFGRPO-DENSE-H1-FINAL-REPAIR-V1',308)
+            or not complete_history(previous,'SAEA-SLURP-TFGRPO-DENSE-H1-ALLWRONG-V1',307)
+            or history.get('final_only_ancestry_depth')!=1):
+        raise ValueError('all 308 historical calls and recursive dense final custody required')
+    # The synthesis policy lives in the immutable learner batch, not as an
+    # invented candidate field. Candidate hash and shared seal bind these bytes.
+    batch=read(Path(candidate).parent/'batch.json')
+    limits={'max_items':128,'max_characters':16000}
+    if (doc.get('batch_sha256')!=semantic_sha(batch)
+            or batch.get('common',{}).get('final_merge_policy')!='bounded-synthesis-v1'
+            or batch.get('common',{}).get('final_merge_limits')!=limits
+            or any(batch.get('bounds',{}).get(k)!=v for k,v in limits.items())):
+        raise ValueError('exact bounded synthesis batch policy required')
     # Shared FINALIZED bundle verification binds this 1-call candidate and
     # revalidates every imported source journal; counts alone are not proof.
     return doc

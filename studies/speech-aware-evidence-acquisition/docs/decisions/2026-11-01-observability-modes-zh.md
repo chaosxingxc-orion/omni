@@ -73,3 +73,5 @@ python scripts/analysis/summarize_stage_timing.py /owned/local/ATTEMPT_ID-timing
 ```
 
 普通及prefix调度路径新增debug阶段：`dispatch_contact_lock_wait`（联系锁获取）、`dispatch_trajectory_slot_wait`/`dispatch_prefix_slot_wait`（容量）、`dispatch_executor_wait`（提交至worker启动，含事件循环调度）、`dispatch_blocking_execute`（worker执行）。sample身份随异步上下文进入worker；worker内部已有request计时接续，不能将整个worker区间称为纯推理。node-batch/node-pipeline内部队列、local-tool队列和准备线程池尚未获得这套完整分段，分析必须声明执行路径。该改造不改变科学trace或调度容量。
+
+真实新debug启动已记录26文件、63,447,489,451字节完整哈希84.552秒，整体验证84.571秒；同进程后续缓存验证0.011–0.013秒。该证据对应一次有界综合启动，不代替高并发与模式开销评估。
