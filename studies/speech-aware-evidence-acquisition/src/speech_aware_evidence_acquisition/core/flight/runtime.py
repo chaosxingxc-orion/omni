@@ -556,6 +556,8 @@ def validate_artifact_result_binding(
                                                "saea-prepared-system-batch-update-v1"}
             and not prepared_text):
         raise FlightRuntimeError("semantic update stages require the prepared text arm")
+    dynamic_tfgrpo = (isinstance(prepared_spec, Mapping)
+                      and prepared_spec.get('schema') == 'saea-prepared-tfgrpo-dynamic-v1')
     if prepared_text:
         if (
             result_kind != "artifact" or values.get("policy") not in PREPARED_TEXT_POLICIES
@@ -563,8 +565,9 @@ def validate_artifact_result_binding(
             or values.get("task_instruction") != PREPARED_TEXT_INSTRUCTION
             or values.get("task_instruction_template_active", False)
             or values.get("evidence_source") != "none"
-            or not values.get("whole_roster_wave_barrier")
-            or not values.get("live_phase_fit")
+            or (not dynamic_tfgrpo and (not values.get("whole_roster_wave_barrier")
+                                       or not values.get("live_phase_fit")))
+            or (dynamic_tfgrpo and not values.get('tfgrpo_contact_fit'))
         ):
             raise FlightRuntimeError("prepared text requires a fitted TRAIN artifact stage")
         for field in (
@@ -767,6 +770,15 @@ def validate_artifact_result_binding(
             "construction_roster": {"repo_relpath": relpath, "sha256": digest},
             "content_contract": dict(contract),
         }
+    if dynamic_tfgrpo:
+        from ...rails.tfgrpo_source import load_dynamic_source
+        from ..tfgrpo_fit import validate_tfgrpo_fit
+        try:
+            load_dynamic_source(values,plan=plan,repo_root=repo_root,data_root=data_root,
+                                sample_ids=sample_ids,roster_sha256=digest)
+            validate_tfgrpo_fit(values,plan,values['tfgrpo_learning_registration'])
+        except ValueError as error:
+            raise FlightRuntimeError(str(error)) from error
     return {
         "schema": ARTIFACT_RESULT_BINDING_SCHEMA,
         "role": ARTIFACT_RESULT_ROLE,
@@ -10953,6 +10965,15 @@ class FlightRuntime:
         spec = values.get("prepared_training_feedback")
         if spec is None:
             return None, None
+        if spec.get('schema') == 'saea-prepared-tfgrpo-dynamic-v1':
+            authority = validate_artifact_result_binding(values,plan=self._plan,
+                repo_root=self._repo_root,data_root=self._data_root,
+                sample_ids=tuple(s.sample_id for s in self._samples))
+            from ...rails.tfgrpo_source import load_dynamic_source
+            _, receipt = load_dynamic_source(values,plan=self._plan,repo_root=self._repo_root,
+                data_root=self._data_root,sample_ids=tuple(s.sample_id for s in self._samples),
+                roster_sha256=authority['construction_roster']['sha256'])
+            return {}, receipt
         from ..preparation_fit import validate_live_phase_fit_config
         from ...rails.prepared_feedback import load_prepared_feedback, PreparedFeedbackError
 
