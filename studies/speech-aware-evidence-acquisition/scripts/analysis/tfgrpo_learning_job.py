@@ -62,7 +62,15 @@ def select(half,roster):
     return groups,construction
 
 
-def documents(half,roster,*,runtime_identity,roster_sha256,provenance,concurrency=128):
+def learning_decoding(model_values):
+    """Retain fragment reasoning controls when fixing the learner sampling seed."""
+    from speech_aware_evidence_acquisition.core.reasoning_knobs import fragment_wire_params,validate_fragment_knobs
+    validate_fragment_knobs(model_values)
+    return {**model_values.get('decoding_params',{}),
+            **fragment_wire_params(model_values),'temperature':0,'seed':20261101}
+
+
+def documents(half,roster,*,runtime_identity,roster_sha256,provenance,concurrency=128,model_values=None):
     from speech_aware_evidence_acquisition.rails.tfgrpo_runtime import learning_configuration,validate_registration
     groups,construction=select(half,roster)
     contacts=[]
@@ -78,7 +86,7 @@ def documents(half,roster,*,runtime_identity,roster_sha256,provenance,concurrenc
         planned_model_calls=count,planned_gpu_hours=8.0,planned_speech_audio_seconds=1,protocol_hash='0'*64)
     reg={'schema':'saea-tfgrpo-runtime-binding-v1','plan':{k:v for k,v in asdict(plan).items() if k!='protocol_hash'},
         'model_id':half['model_id'],'construction_roster_sha256':roster_sha256,'contacts':contacts,
-        'decoding_params':{'temperature':0,'seed':20261101,'max_tokens':4096},'max_context_bytes':2000000,
+        'decoding_params':learning_decoding(model_values) if model_values is not None else {'temperature':0,'seed':20261101,'max_tokens':4096},'max_context_bytes':2000000,
         'runtime_identity_sha256':sha(runtime_identity)}
     if runtime_identity.get('model_fragment')!=half['model_id']:raise ValueError('same frozen resident model required')
     reg['learning_config_sha256']=sha(learning_configuration(reg))
@@ -110,7 +118,8 @@ def prepare(repo,data,exports,hardset,out,runtime_identity):
     roster_bytes=raw(construction);roster_sha=hashlib.sha256(roster_bytes).hexdigest()
     provenance=[pin(exports/'complete.json',data,'data'),pin(exports/'h1.json',data,'data'),pin(hardset,repo,'repository')]
     identity=read(runtime_identity)
-    construction,source,reg,plan=documents(half,roster,runtime_identity=identity,roster_sha256=roster_sha,provenance=provenance)
+    construction,source,reg,plan=documents(half,roster,runtime_identity=identity,roster_sha256=roster_sha,provenance=provenance,
+        model_values=read(repo/f"configs/model/{half['model_id']}.json"))
     out.mkdir(parents=True)
     for name,doc in [('construction-roster.json',construction),('source.json',source),('registration.json',reg),('runtime-identity.json',identity)]:publish_new(out/name,raw(doc))
     result={'schema':'saea-tfgrpo-learning-job-v1','job':NAME,'run_id':RUN,'source_half':'h1','evaluation_half':'h2',
@@ -153,7 +162,8 @@ def verify_job(repo,data,job):
         raise ValueError('export manifest differs')
     expected_roster,expected_source,expected_reg,plan=documents(half,hardset,runtime_identity=identity,
         roster_sha256=file_sha(job/'construction-roster.json'),provenance=source['provenance'],
-        concurrency=source['batch']['bounds']['concurrency'])
+        concurrency=source['batch']['bounds']['concurrency'],
+        model_values=read(repo/f"configs/model/{reg['model_id']}.json"))
     if (roster,source,reg)!=(expected_roster,expected_source,expected_reg):
         raise ValueError('prepared job differs from exact source derivation')
     if (complete['batch_sha256']!=reg['batch_sha256'] or complete['groups']!=len(roster['items'])

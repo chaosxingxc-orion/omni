@@ -96,6 +96,8 @@ def test_register_exact_protocol_budgets_and_source(tmp_path,monkeypatch):
 def prepared_fixture(tmp_path,monkeypatch):
     repo=tmp_path/'repo';data=tmp_path/'data';job=data/'work/codex/job'
     repo.mkdir();job.mkdir(parents=True)
+    model_path=repo/'configs/model/model.json';model_path.parent.mkdir(parents=True)
+    model_path.write_bytes(m.raw({'decoding_params':{'max_tokens':4096,'temperature':0}}))
     h,r=source();identity={'model_fragment':'model','host':'127.0.0.1','port':8200}
     exports=data/'exports';exports.mkdir()
     (exports/'h1.json').write_bytes(m.raw(h));(repo/'roster.json').write_bytes(m.raw(r))
@@ -115,6 +117,19 @@ def prepared_fixture(tmp_path,monkeypatch):
 def test_verify_exact_derivation(tmp_path,monkeypatch):
     repo,data,job=prepared_fixture(tmp_path,monkeypatch)
     assert m.verify_job(repo,data,job)[0]['groups']==2
+
+
+def test_learning_retains_real_fragment_thinking_budget_and_answer_reserve():
+    model=m.read(m.ROOT/'configs/model/bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-closemarker-port-v2.json')
+    decoding=m.learning_decoding(model)
+    assert decoding['thinking_budget_tokens']==3072
+    assert decoding['chat_template_kwargs']=={'enable_thinking':True}
+    assert decoding['max_tokens']-decoding['thinking_budget_tokens']==1024
+    h,r=source()
+    _,src,reg,plan=m.documents(h,r,runtime_identity={'model_fragment':'model'},roster_sha256='a'*64,
+        provenance=[{'source':'test'}],model_values=model)
+    assert reg['decoding_params']==decoding
+    assert src['batch']['learning_config_sha256']==reg['learning_config_sha256']
 
 
 @pytest.mark.parametrize('fault',['source','deployment','budget','missing_artifact','provenance'])

@@ -226,6 +226,10 @@ def test_runtime_factory_uses_preflighted_client_and_model(tmp_path):
     assert caller(request())['usage']['calls']==1
     assert len(transport.calls)==1
     caller.client.close()
+    runtime._composed.values['reasoning_budget_tokens']=64
+    with pytest.raises(LearningError,match='reasoning controls'):
+        bind_runtime(runtime,receipt_root=tmp_path/'missing-budget',request_fit=lambda p:pytest.fail('must refuse before FIT'))
+    assert len(transport.calls)==1
 
 
 def test_learning_pipeline_uses_real_metered_bridge(tmp_path):

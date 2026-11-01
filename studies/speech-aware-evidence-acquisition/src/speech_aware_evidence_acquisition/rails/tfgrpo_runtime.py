@@ -319,6 +319,10 @@ def bind_runtime(runtime, *, receipt_root, request_fit=None):
     replay = getattr(runtime, '_native_contact_replay', None)
     source_plan = learning_source_plan(runtime.plan,replay=replay,data_root=runtime._data_root)
     validate_registration(registration, plan=source_plan, model_id=model_id)
+    from ..core.reasoning_knobs import fragment_wire_params
+    for key, value in fragment_wire_params(values).items():
+        if registration['decoding_params'].get(key) != value:
+            raise LearningError('registered learning decoding omits or changes fragment reasoning controls')
     if registration['runtime_identity_sha256'] != sha(runtime.session_required_identity()):
         raise LearningError('registered generation runtime identity differs')
     runtime.assert_generation_lease()
