@@ -62,7 +62,8 @@ def verify_native_replay(manifest, records, plan):
                     'response_sha256': response['response_sha256'],
                     'response_text_sha256': digest(text.encode())}:
                 raise ValueError('replayed response differs from durable transport bytes')
-            contact_cost = dict(calls=1, audio_seconds=float(payload['audio_seconds']),
+            audio_seconds = 0.0 if manifest["arm"] == "prepared-context-text" else float(payload["audio_seconds"])
+            contact_cost = dict(calls=1, audio_seconds=audio_seconds,
                 latency_seconds=response['latency_seconds'],
                 prompt_tokens=usage.get('prompt_tokens', 0),
                 completion_tokens=usage.get('completion_tokens', 0))

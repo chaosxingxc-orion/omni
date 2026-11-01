@@ -106,7 +106,7 @@ def test_shared_dispatch_and_scoreless_seal_preserve_all_cost_and_trace(tmp_path
     assert result['cost']['calls_used']==5
     assert result['cost']['prompt_tokens_total']==15
     assert result['cost']['completion_tokens_total']==10
-    assert result['cost']['audio_seconds_used']==5.0  # conservative anchor debit, no audio sent
+    assert result['cost']['audio_seconds_used']==0.0  # only text is transmitted
     assert result['finalize']['result_kind']=='artifact'
     assert result['finalize']['scores_path'] is None
     assert len(captured['verified_rows'])==1

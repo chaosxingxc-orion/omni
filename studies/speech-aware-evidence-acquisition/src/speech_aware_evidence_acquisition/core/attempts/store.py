@@ -19,6 +19,7 @@ from .constants import (
     CONTACT_KINDS,
     CONTACT_KIND_SPEECH,
     CONTACT_KIND_TEXT_ENCODER,
+    CONTACT_KIND_PREPARED_TEXT,
     STATE_RESERVED,
 )
 from .errors import (
@@ -96,8 +97,8 @@ class AttemptStore:
             },
             "actual": {"calls": 0, "audio_seconds": 0.0},
         }
-        if contact_kind == CONTACT_KIND_TEXT_ENCODER:
-            document["contact_kind"] = CONTACT_KIND_TEXT_ENCODER
+        if contact_kind != CONTACT_KIND_SPEECH:
+            document["contact_kind"] = contact_kind
         raw = json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2).encode("utf-8")
         # Carried T4-review minor (R0 repair T6): create+write must be atomic.
         # The old code did `os.open(O_CREAT|O_EXCL)` (making an EMPTY file

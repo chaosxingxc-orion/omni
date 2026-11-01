@@ -191,6 +191,10 @@ class NativeContactReplay:
                 or attempt.get('attempt_id') != source_plan.attempt_id
                 or attempt.get('carrier_lock_key') != source_plan.carrier_lock_key):
             raise ContactJournalError('source attempt must be explicitly aborted, never merely unobserved')
+        from .attempts.constants import CONTACT_KIND_PREPARED_TEXT
+        prepared_text = arm == "prepared-context-text"
+        if prepared_text != (attempt.get("contact_kind") == CONTACT_KIND_PREPARED_TEXT):
+            raise ContactJournalError("source contact kind differs; legacy text audio spend requires explicit reconciliation")
         self._attempt_sha256 = digest(attempt_blob)
         self.source_actual_usage = dict(attempt["actual"])
         self._by_contact, self._records, self._pins, self._used = {}, {}, {}, set()
@@ -219,7 +223,10 @@ class NativeContactReplay:
             for kind in ('intent', 'response'):
                 p = self.source._path(rid, kind)
                 self._pins[p] = digest(p.read_bytes()) if p.exists() else None
-            audio.append(payload['audio_seconds'])
+            if prepared_text:
+                from ..rails.prepared_text import validate_prepared_text_payload
+                validate_prepared_text_payload(payload)
+            audio.append(0.0 if prepared_text else payload["audio_seconds"])
         # An unmatched response cannot silently disappear from recovery costs.
         expected = {self.source._path(rid, 'response') for rid, obs in self._records.items() if obs['state'] == 'observed'}
         if set(self.source.root.glob('*.response.json')) != expected:

@@ -178,6 +178,7 @@ class _AttemptLifecycleMixin:
                 "without a valid attempt_id can never authorize a model touch "
                 "(R0 repair T4, invariant I6)"
             )
+        from ..attempts.constants import CONTACT_KIND_PREPARED_TEXT, CONTACT_KIND_SPEECH
         attempts_root = Path(binding.data_root) / "attempts"
         store = AttemptStore(attempts_root)
         try:
@@ -187,6 +188,7 @@ class _AttemptLifecycleMixin:
                 carrier_lock_key=plan.carrier_lock_key,
                 reserved_calls=plan.planned_model_calls,
                 reserved_audio_seconds=plan.planned_speech_audio_seconds,
+                contact_kind=(CONTACT_KIND_PREPARED_TEXT if arm == "prepared-context-text" else CONTACT_KIND_SPEECH),
             )
         except AttemptError as error:
             raise FrozenCoreError(f"attempt accounting refused: {error}") from error

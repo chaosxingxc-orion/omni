@@ -19,6 +19,7 @@ from .constants import (
     CONTACT_KINDS,
     CONTACT_KIND_SPEECH,
     CONTACT_KIND_TEXT_ENCODER,
+    CONTACT_KIND_PREPARED_TEXT,
     STATE_ABORTED,
     STATE_FINALIZED,
     STATE_OPENED,
@@ -209,6 +210,10 @@ class AttemptHandle:
                 audio_seconds = _zero_finite(
                     audio_seconds, "record_usage audio_seconds"
                 )
+            elif contact_kind == CONTACT_KIND_PREPARED_TEXT:
+                _positive_finite(document["reserved"]["audio_seconds"], "prepared-text reserved.audio_seconds")
+                _zero_finite(document["actual"]["audio_seconds"], "prepared-text actual.audio_seconds")
+                audio_seconds = _zero_finite(audio_seconds, "record_usage audio_seconds")
             else:
                 audio_seconds = _positive_finite(
                     audio_seconds, "record_usage audio_seconds"

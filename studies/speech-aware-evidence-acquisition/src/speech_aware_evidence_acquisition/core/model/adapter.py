@@ -330,6 +330,9 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         ):
             raise FrozenCoreError("payload audio_seconds must be a finite positive number")
         self._enforce_payload_binding(payload, audio_seconds)
+        # Preserve original audio identity in the request, but charge only
+        # modalities actually supplied by this strictly validated arm.
+        audio_seconds = self._contact_audio_seconds(payload)
         if self._contact_replay is not None:
             original = self._contact_replay.match(payload)
             if original is not None and _canonical(payload) != _canonical(original):
@@ -445,10 +448,20 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
             self._contact_journal.response(request_id, request_sha256, response_bytes, latency)
         return self._consume_response(payload, response_bytes, latency, request_sha256)
 
+    def _contact_audio_seconds(self, payload):
+        if self._arm == "prepared-context-text":
+            from ...rails.prepared_text import validate_prepared_text_payload
+            try:
+                validate_prepared_text_payload(payload)
+            except ValueError as error:
+                raise FrozenCoreError(str(error)) from error
+            return 0.0
+        return float(payload["audio_seconds"])
+
     def _consume_response(self, payload, response_bytes, latency, request_sha256, *, replayed=False):
         """Use the same response parsing/trace path for live and observed bytes."""
         request_id = payload['request_id']
-        audio_seconds = payload['audio_seconds']
+        audio_seconds = self._contact_audio_seconds(payload)
         response_sha256 = hashlib.sha256(response_bytes).hexdigest()
         wire_provenance: dict[str, object] | None = None
         wire_response_bytes: bytes | None = None
