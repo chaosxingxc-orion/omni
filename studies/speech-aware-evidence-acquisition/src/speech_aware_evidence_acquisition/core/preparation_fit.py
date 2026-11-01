@@ -1107,6 +1107,7 @@ def build_native_contact_fit_gate(
     base_plan,
     *,
     client_factory=None,
+    max_concurrency=None,
 ):
     """Fit only realized native-role requests under the bound execution lease.
 
@@ -1116,7 +1117,10 @@ def build_native_contact_fit_gate(
     reserves the complete endpoint protocol for each possible request: feature
     contacts use tokenizer endpoints, and raw-speech contacts use exactly one
     resident multimodal measurement endpoint. A realized feature contact spends
-    only its actual packet count plus three endpoints.
+    only its actual packet count plus three endpoints. At most max_concurrency
+    contacts execute at once; each owns its tokenizer client and journal. Full
+    per-contact reservations survive failures. Cumulative counts identify the
+    last globally admitted endpoint in this contact, not completion order.
     """
     import os
     import threading
@@ -1197,18 +1201,28 @@ def build_native_contact_fit_gate(
         if len(decoder_hashes) != 1:
             raise PreparationError("native contact fit requires one decoder identity")
         decoder_sha256 = next(iter(decoder_hashes))
-    guarded = GuardedTokenizer(
-        None,
-        guard=runtime.assert_generation_lease,
-        contact_cap=spec["contact_cap"],
-    )
+    if max_concurrency is None:
+        # Legacy feature receipts assume contiguous multi-endpoint journals.
+        # Raw vLLM contacts use one endpoint and can overlap without changing
+        # that custody contract. Feature concurrency requires verifier support.
+        max_concurrency = 8 if not feature_packets and values.get("transport") == "vllm" else 1
+    if type(max_concurrency) is not int or max_concurrency < 1:
+        raise PreparationError("native FIT concurrency must be a positive integer")
+    if feature_packets and max_concurrency != 1:
+        raise PreparationError("feature FIT concurrency requires multi-endpoint receipt verifier support")
+    slots = threading.BoundedSemaphore(max_concurrency)
+    endpoint_counts = Counter()
+    reserved_endpoints = 0
+    per_contact_cap = native_contact_endpoints_per_contact(
+        feature_packets=feature_packets, max_speech_packets=spec["max_speech_packets"])
+    receipt_by_contact = {}
     completed: list[dict[str, object]] = []
     used_contact_ids: set[str] = set()
     sample_contacts: Counter[str] = Counter()
     fit_lock = threading.Lock()
 
-    @measure("native_fit", lambda prepared_request, **kwargs: {"sample_id": prepared_request.as_payload()["sample_id"], "request_id": prepared_request.as_payload()["request_id"]})
-    def fit_contact(prepared_request, *, prompt_limit_tokens=None):
+    def execute_contact(prepared_request, *, prompt_limit_tokens=None):
+        nonlocal reserved_endpoints
         if prompt_limit_tokens is not None and (
             feature_packets or values.get("transport") != "vllm"
             or isinstance(prompt_limit_tokens, bool)
@@ -1271,34 +1285,144 @@ def build_native_contact_fit_gate(
                     "native contact speech feature descriptor count exceeds its "
                     "registered maximum"
                 )
-            runtime.assert_generation_lease()
-            body = runtime._transport.render_request(prepared_request.payload_bytes)
-            if not isinstance(body, Mapping):
-                raise PreparationError("native contact transport returned no request body")
-            if feature_packets:
-                rendered_descriptors = rendered_speech_feature_descriptors(body)
-                if rendered_descriptors != descriptors:
-                    raise PreparationError(
-                        "native contact rendered descriptor binding differs from its "
-                        "prepared request"
-                    )
-            elif rendered_raw_speech_sha256(body) != raw_speech_query["sha256"]:
+            if reserved_endpoints + per_contact_cap > spec["contact_cap"]:
+                raise PreparationError("native FIT endpoint reservation exhausted")
+            reserved_endpoints += per_contact_cap
+            used_contact_ids.add(contact_id)
+            sample_contacts[budget_key] += 1
+        # Reservations survive exceptions and unknown HTTP outcomes. Never refund
+        # an identity and silently retry a possibly observed tokenizer request.
+        runtime.assert_generation_lease()
+        body = runtime._transport.render_request(prepared_request.payload_bytes)
+        if not isinstance(body, Mapping):
+            raise PreparationError("native contact transport returned no request body")
+        if feature_packets:
+            rendered_descriptors = rendered_speech_feature_descriptors(body)
+            if rendered_descriptors != descriptors:
                 raise PreparationError(
-                    "native raw contact rendered audio differs from its prepared request"
+                    "native contact rendered descriptor binding differs from its "
+                    "prepared request"
                 )
-            contact_identity_sha256 = digest(
-                {"sample_id": sample_id, "agent_contact_id": contact_id}
+        elif rendered_raw_speech_sha256(body) != raw_speech_query["sha256"]:
+            raise PreparationError(
+                "native raw contact rendered audio differs from its prepared request"
             )
-            path = fit_root / f"{contact_identity_sha256}.request-fit.json"
-            journal = path.with_name(path.name + ".contacts.jsonl")
-            if path.exists() or journal.exists():
-                raise PreparationError(
-                    "native contact fit identity already has contact or result evidence"
+        contact_identity_sha256 = digest(
+            {"sample_id": sample_id, "agent_contact_id": contact_id}
+        )
+        path = fit_root / f"{contact_identity_sha256}.request-fit.json"
+        journal = path.with_name(path.name + ".contacts.jsonl")
+        if path.exists() or journal.exists():
+            raise PreparationError(
+                "native contact fit identity already has contact or result evidence"
+            )
+        inputs = runtime.request_fit_inputs((payload,))
+        inputs = {
+            **inputs,
+            "native_contact": {
+                "sample_id": sample_id,
+                "agent_contact_id": contact_id,
+                "contact_identity_sha256": contact_identity_sha256,
+                **(
+                    {"speech_packet_count": len(descriptors)}
+                    if feature_packets
+                    else {"raw_speech_query": raw_speech_query}
+                ),
+                "capacity_scope": "actual-variable-trajectory-contact",
+                **unit_fields,
+            },
+            "fit_plan": asdict(fit_plan),
+        }
+
+        def produce():
+            guarded = GuardedTokenizer(
+                (client_factory or _LoopbackPromptAuditClient)(
+                    host=session.host, port=session.port, timeout_seconds=600.0),
+                guard=runtime.assert_generation_lease, contact_cap=per_contact_cap)
+            before = guarded.counts.copy()
+            endpoint_sequences = []
+            with journal.open("x", encoding="utf-8") as stream:
+
+                def record_contact(method, route):
+                    with fit_lock:
+                        if endpoint_counts.total() >= spec["contact_cap"]:
+                            raise PreparationError("tokenizer contact cap exhausted")
+                        endpoint_counts[f"{method} {route}"] += 1
+                        sequence = endpoint_counts.total()
+                    endpoint_sequences.append(sequence)
+                    stream.write(
+                        canonical_bytes(
+                            {
+                                "contact": sequence,
+                                "method": method,
+                                "route": route,
+                                "run_id": fit_plan.run_id,
+                                "attempt_id": fit_plan.attempt_id,
+                                "generation_run_id": base_plan.run_id,
+                                "session_id": session.session_id,
+                                "sample_id": sample_id,
+                                "agent_contact_id": contact_id,
+                                "contact_identity_sha256": contact_identity_sha256,
+                                **unit_fields,
+                            }
+                        ).decode()
+                        + "\n"
+                    )
+                    stream.flush()
+                    os.fsync(stream.fileno())
+
+                guarded.contact_sink = record_contact
+                marker = None
+                if feature_packets:
+                    props = guarded.request_json("GET", "/props", None)
+                    marker = (
+                        props.get("media_marker")
+                        if isinstance(props, Mapping)
+                        else None
+                    )
+                    if not isinstance(marker, str) or not marker:
+                        raise PreparationError(
+                            "resident tokenizer has no media marker"
+                        )
+                from .preparation import (
+                    measure_multimodal_request,
+                    measure_vllm_multimodal_request,
                 )
-            inputs = runtime.request_fit_inputs((payload,))
-            inputs = {
-                **inputs,
-                "native_contact": {
+                speech_counts = (
+                    (
+                        lambda actual: packet_token_counts(
+                            actual,
+                            feature_root=Path(str(values["speech_feature_root"])),
+                            decoder_sha256=decoder_sha256,
+                        )
+                    )
+                    if feature_packets
+                    else (lambda _actual: ())
+                )
+                result = fit_requests(
+                    (payload,),
+                    expected_sample_ids=(sample_id,),
+                    transport=runtime._transport,
+                    client=guarded,
+                    speech_counts=speech_counts,
+                    media_marker=marker,
+                    slot_tokens=int(
+                        runtime._adapter.serving_geometry()["slot_tokens"]
+                    ),
+                    fit_multiple=float(values.get("prompt_fit_multiple", 1.0)),
+                    rendered_bodies=(body,),
+                    request_measure=(
+                        None
+                        if feature_packets
+                        else measure_vllm_multimodal_request
+                        if values.get("transport") == "vllm"
+                        else measure_multimodal_request
+                    ),
+                )
+                contact_counts = guarded.counts - before
+                cumulative_contacts = endpoint_sequences[-1]
+                return {
+                    **result,
                     "sample_id": sample_id,
                     "agent_contact_id": contact_id,
                     "contact_identity_sha256": contact_identity_sha256,
@@ -1309,159 +1433,75 @@ def build_native_contact_fit_gate(
                     ),
                     "capacity_scope": "actual-variable-trajectory-contact",
                     **unit_fields,
-                },
-                "fit_plan": asdict(fit_plan),
-            }
-            used_contact_ids.add(contact_id)
-            sample_contacts[budget_key] += 1
-
-            def produce():
-                guarded.client = (client_factory or _LoopbackPromptAuditClient)(
-                    host=session.host, port=session.port, timeout_seconds=600.0
-                )
-                before = guarded.counts.copy()
-                with journal.open("x", encoding="utf-8") as stream:
-
-                    def record_contact(method, route):
-                        stream.write(
-                            canonical_bytes(
-                                {
-                                    "contact": guarded.counts.total(),
-                                    "method": method,
-                                    "route": route,
-                                    "run_id": fit_plan.run_id,
-                                    "attempt_id": fit_plan.attempt_id,
-                                    "generation_run_id": base_plan.run_id,
-                                    "session_id": session.session_id,
-                                    "sample_id": sample_id,
-                                    "agent_contact_id": contact_id,
-                                    "contact_identity_sha256": contact_identity_sha256,
-                                    **unit_fields,
-                                }
-                            ).decode()
-                            + "\n"
-                        )
-                        stream.flush()
-                        os.fsync(stream.fileno())
-
-                    guarded.contact_sink = record_contact
-                    marker = None
-                    if feature_packets:
-                        props = guarded.request_json("GET", "/props", None)
-                        marker = (
-                            props.get("media_marker")
-                            if isinstance(props, Mapping)
-                            else None
-                        )
-                        if not isinstance(marker, str) or not marker:
-                            raise PreparationError(
-                                "resident tokenizer has no media marker"
-                            )
-                    from .preparation import (
-                        measure_multimodal_request,
-                        measure_vllm_multimodal_request,
-                    )
-                    speech_counts = (
-                        (
-                            lambda actual: packet_token_counts(
-                                actual,
-                                feature_root=Path(str(values["speech_feature_root"])),
-                                decoder_sha256=decoder_sha256,
-                            )
-                        )
-                        if feature_packets
-                        else (lambda _actual: ())
-                    )
-                    result = fit_requests(
-                        (payload,),
-                        expected_sample_ids=(sample_id,),
-                        transport=runtime._transport,
-                        client=guarded,
-                        speech_counts=speech_counts,
-                        media_marker=marker,
-                        slot_tokens=int(
-                            runtime._adapter.serving_geometry()["slot_tokens"]
-                        ),
-                        fit_multiple=float(values.get("prompt_fit_multiple", 1.0)),
-                        rendered_bodies=(body,),
-                        request_measure=(
-                            None
-                            if feature_packets
-                            else measure_vllm_multimodal_request
-                            if values.get("transport") == "vllm"
-                            else measure_multimodal_request
-                        ),
-                    )
-                    contact_counts = guarded.counts - before
-                    return {
-                        **result,
-                        "sample_id": sample_id,
-                        "agent_contact_id": contact_id,
-                        "contact_identity_sha256": contact_identity_sha256,
-                        **(
-                            {"speech_packet_count": len(descriptors)}
-                            if feature_packets
-                            else {"raw_speech_query": raw_speech_query}
-                        ),
-                        "capacity_scope": "actual-variable-trajectory-contact",
-                        **unit_fields,
-                        "session_id": session.session_id,
-                        "session_identity_sha256": digest(identity),
-                        "contact_counts": dict(contact_counts),
-                        "contacts": contact_counts.total(),
-                        "cumulative_contacts": guarded.counts.total(),
-                        "generation_contacts": 0,
-                    }
-
-            receipt = prepare_artifact(
-                path,
-                kind="request-fit",
-                inputs=inputs,
-                producer=produce,
-                contact_class="tokenizer",
-            )
-            document = json.loads(path.read_text(encoding="utf-8"))
-            output = document["output"]
-            fit_row = output["rows"][0]
-            measured = fit_row.get("measured_prompt_tokens")
-            if feature_packets:
-                measured = fit_row["text_tokens"] + fit_row["speech_tokens"]
-            # A real deferred context check consumes this same registered FIT;
-            # it must not perform an unjournaled second tokenizer request.
-            measured_context = (
-                prompt_limit_tokens is not None or (
-                    values.get("preflight_budget_mode") == "defer-to-native-contact-fit"
-                    and isinstance(values.get("native_episode"), Mapping)
-                    and values["native_episode"].get("context_fit_policy") == "compact-or-abstain"
-                )
-            )
-            if measured_context and (isinstance(measured, bool) or not isinstance(measured, int) or measured < 0):
-                raise PreparationError("native context fitting requires an exact prompt count")
-            if output.get("every_request_fits") is not True and not measured_context:
-                raise PreparationError(
-                    "native contact request exceeds the registered capacity"
-                )
-            runtime.assert_generation_lease()
-            completed.append(
-                {
-                    "sample_id": sample_id,
-                    "agent_contact_id": contact_id,
-                    "contact_identity_sha256": contact_identity_sha256,
-                    **receipt,
+                    "session_id": session.session_id,
+                    "session_identity_sha256": digest(identity),
+                    "contact_counts": dict(contact_counts),
+                    "contacts": contact_counts.total(),
+                    "cumulative_contacts": cumulative_contacts,
+                    "generation_contacts": 0,
                 }
-            )
-            if (output.get("every_request_fits") is not True
-                    or (prompt_limit_tokens is not None and measured > prompt_limit_tokens)):
-                from ..reproduction.ojw.native_roles import FrozenCoreRoleContextFitError
-                raise FrozenCoreRoleContextFitError(
-                    source="dispatch-budget", compaction_pass=0,
-                    dropped_identifiers=(), tokens_before=measured, tokens_after=measured,
-                    limit_tokens=prompt_limit_tokens or max(1, int(runtime._adapter.serving_geometry()["slot_tokens"])
-                                     - int(output["rows"][0]["maximum_completion_tokens"])
-                                     - int(output["rows"][0]["special_tokens"])),
-                )
-            return measured
 
+        receipt = prepare_artifact(
+            path,
+            kind="request-fit",
+            inputs=inputs,
+            producer=produce,
+            contact_class="tokenizer",
+        )
+        document = json.loads(path.read_text(encoding="utf-8"))
+        output = document["output"]
+        fit_row = output["rows"][0]
+        measured = fit_row.get("measured_prompt_tokens")
+        if feature_packets:
+            measured = fit_row["text_tokens"] + fit_row["speech_tokens"]
+        # A real deferred context check consumes this same registered FIT;
+        # it must not perform an unjournaled second tokenizer request.
+        measured_context = (
+            prompt_limit_tokens is not None or (
+                values.get("preflight_budget_mode") == "defer-to-native-contact-fit"
+                and isinstance(values.get("native_episode"), Mapping)
+                and values["native_episode"].get("context_fit_policy") == "compact-or-abstain"
+            )
+        )
+        if measured_context and (isinstance(measured, bool) or not isinstance(measured, int) or measured < 0):
+            raise PreparationError("native context fitting requires an exact prompt count")
+        if output.get("every_request_fits") is not True and not measured_context:
+            raise PreparationError(
+                "native contact request exceeds the registered capacity"
+            )
+        runtime.assert_generation_lease()
+        bound_receipt = {
+            "sample_id": sample_id, "agent_contact_id": contact_id,
+            "contact_identity_sha256": contact_identity_sha256, **receipt}
+        with fit_lock:
+            completed.append(bound_receipt)
+            receipt_by_contact[(sample_id, contact_id)] = bound_receipt
+        if (output.get("every_request_fits") is not True
+                or (prompt_limit_tokens is not None and measured > prompt_limit_tokens)):
+            from ..reproduction.ojw.native_roles import FrozenCoreRoleContextFitError
+            raise FrozenCoreRoleContextFitError(
+                source="dispatch-budget", compaction_pass=0,
+                dropped_identifiers=(), tokens_before=measured, tokens_after=measured,
+                limit_tokens=prompt_limit_tokens or max(1, int(runtime._adapter.serving_geometry()["slot_tokens"])
+                                 - int(output["rows"][0]["maximum_completion_tokens"])
+                                 - int(output["rows"][0]["special_tokens"])),
+            )
+        return measured
+
+    @measure("native_fit", lambda prepared_request, **kwargs: {"sample_id": prepared_request.as_payload()["sample_id"], "request_id": prepared_request.as_payload()["request_id"]})
+    def fit_contact(prepared_request, *, prompt_limit_tokens=None):
+        with measured_lock(slots, "native_fit_capacity_wait"):
+            return execute_contact(prepared_request, prompt_limit_tokens=prompt_limit_tokens)
+
+    def receipt_for(prepared_request):
+        key = _native_contact_control_identity(prepared_request.as_payload())
+        with fit_lock:
+            if key not in receipt_by_contact:
+                raise PreparationError("native FIT has no completed receipt for contact")
+            return dict(receipt_by_contact[key])
+
+    fit_contact.receipt_for = receipt_for
+    fit_contact.max_concurrency = max_concurrency
     fit_contact.receipts = completed
     fit_contact.execution_plan = fit_plan
     return fit_contact

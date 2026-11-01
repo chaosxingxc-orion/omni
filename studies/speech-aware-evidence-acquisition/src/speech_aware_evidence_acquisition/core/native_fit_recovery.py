@@ -68,29 +68,32 @@ class RecoverableNativeFitGate:
             key = (logical['sample_id'], logical['agent_contact_id'])
             if key in self._used:
                 raise PreparationError('native FIT repeated agent_contact_id')
-            if self.replay is not None:
-                # Includes unknown-response rejection BEFORE any tokenizer work.
-                observed_payload = self.replay.match(payload)
-                source_path = self._source.path(payload)
-                if source_path in self._pins:
-                    result = self._reuse(source_path, payload, prompt_limit_tokens)
-                    self._used.add(key)
-                    return result
-                if source_path.exists() or observed_payload is not None:
-                    raise PreparationError('predecessor FIT missing or changed; no automatic tokenizer repeat')
+            # Claim before any I/O; failures and unknown outcomes retain this
+            # identity. Other contacts may proceed without replaying this one.
+            self._used.add(key)
+        if self.replay is not None:
+            observed_payload = self.replay.match(payload)
+            source_path = self._source.path(payload)
+            if source_path in self._pins:
+                return self._reuse(source_path, payload, prompt_limit_tokens)
+            if source_path.exists() or observed_payload is not None:
+                raise PreparationError('predecessor FIT missing or changed; no automatic tokenizer repeat')
+        with self._lock:
             if self._gate is None:
                 self._gate = self.factory()
-            before = len(self._gate.receipts)
-            measured = self._gate(request, **(
-                {'prompt_limit_tokens': prompt_limit_tokens} if prompt_limit_tokens is not None else {}))
-            receipts = self._gate.receipts[before:]
-            if len(receipts) != 1:
-                raise PreparationError('native FIT must produce exactly one bound receipt')
-            self.journal.record(payload, self.runtime.request_fit_inputs((payload,)), receipts[0],
-                measured, self.runtime.session_required_identity())
-            self.receipts.append(dict(receipts[0]))
-            self._used.add(key)
-            return measured
+            gate = self._gate
+        if not callable(getattr(gate, 'receipt_for', None)):
+            raise PreparationError('concurrent native FIT requires contact-bound receipt access')
+        measured = gate(request, **(
+            {'prompt_limit_tokens': prompt_limit_tokens} if prompt_limit_tokens is not None else {}))
+        receipt = gate.receipt_for(request)
+        if (receipt.get('sample_id'), receipt.get('agent_contact_id')) != key:
+            raise PreparationError('native FIT receipt contact differs')
+        self.journal.record(payload, self.runtime.request_fit_inputs((payload,)), receipt,
+            measured, self.runtime.session_required_identity())
+        with self._lock:
+            self.receipts.append(dict(receipt))
+        return measured
 
     def _reuse(self, path, payload, prompt_limit_tokens):
         try:
@@ -134,9 +137,11 @@ class RecoverableNativeFitGate:
             if prompt_limit_tokens is not None:
                 if type(prompt_limit_tokens) is not int or prompt_limit_tokens < 1 or measured > prompt_limit_tokens:
                     raise PreparationError('predecessor FIT exceeds current prompt limit')
-            self.receipts.append({**receipt, 'native_fit_reuse': {
+            reused_receipt = {**receipt, 'native_fit_reuse': {
                 'schema': 'saea-native-fit-reuse-v1', 'source_path': str(path),
-                'source_sha256': self._pins[path], 'new_tokenizer_contacts': 0}})
+                'source_sha256': self._pins[path], 'new_tokenizer_contacts': 0}}
+            with self._lock:
+                self.receipts.append(reused_receipt)
             return measured
         except (KeyError, TypeError, ValueError, OSError) as error:
             raise PreparationError(f'cannot reuse predecessor native FIT: {error}') from error

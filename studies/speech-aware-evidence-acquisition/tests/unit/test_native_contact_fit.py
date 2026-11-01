@@ -664,7 +664,8 @@ def test_native_contact_fit_preserves_failed_contact_journal_and_refuses_retry(
     assert gate.receipts == []
 
 
-def test_native_contact_fit_serializes_tokenizer_endpoints(tmp_path, monkeypatch):
+@pytest.mark.parametrize("limit", [1, 2])
+def test_native_contact_fit_bounds_concurrent_tokenizer_endpoints(tmp_path, monkeypatch, limit):
     import speech_aware_evidence_acquisition.core.preparation_fit as fitting
 
     monkeypatch.setattr(fitting, "packet_token_counts", lambda *_a, **_k: (1,))
@@ -672,7 +673,7 @@ def test_native_contact_fit_serializes_tokenizer_endpoints(tmp_path, monkeypatch
     active = 0
     maximum_active = 0
 
-    class ObservedTokenizer(_Tokenizer):
+    class ObservedTokenizer(_RawTokenizer):
         def request_json(self, method, path, payload):
             nonlocal active, maximum_active
             with state_lock:
@@ -685,23 +686,36 @@ def test_native_contact_fit_serializes_tokenizer_endpoints(tmp_path, monkeypatch
                 with state_lock:
                     active -= 1
 
+    runtime = _raw_runtime(tmp_path)
     gate = build_native_contact_fit_gate(
-        _Runtime(tmp_path),
+        runtime,
         _program(),
         _plan(),
         client_factory=lambda **kwargs: ObservedTokenizer(**kwargs),
+        max_concurrency=limit,
     )
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         futures = [
-            pool.submit(gate, _prepared("s1", "s1-contact")),
-            pool.submit(gate, _prepared("s2", "s2-contact")),
+            pool.submit(gate, _raw_prepared("s1", "s1-contact", runtime._transport.raw)),
+            pool.submit(gate, _raw_prepared("s2", "s2-contact", runtime._transport.raw)),
         ]
         for future in futures:
             future.result()
 
-    assert maximum_active == 1
+    assert maximum_active == limit
     assert len(gate.receipts) == 2
+    journals = []
+    for receipt in gate.receipts:
+        from pathlib import Path
+        path = Path(receipt['path'])
+        journal = [json.loads(line) for line in path.with_name(path.name+'.contacts.jsonl').read_text().splitlines()]
+        assert {r['sample_id'] for r in journal} == {receipt['sample_id']}
+        assert {r['agent_contact_id'] for r in journal} == {receipt['agent_contact_id']}
+        assert len(journal) == 1
+        assert json.loads(path.read_text())["output"]["cumulative_contacts"] == journal[-1]["contact"]
+        journals.extend(journal)
+    assert sorted(r['contact'] for r in journals) == list(range(1, 3))
 
 
 def test_native_raw_fit_budgets_and_observations_are_isolated_by_window(tmp_path):
@@ -814,3 +828,62 @@ def test_runtime_deferred_budget_selects_registered_fit_not_default_estimate():
     assert budget.measured_by_request_gate is True
     runtime._token_counter = lambda _: 3
     assert FlightRuntime._context_fit_budget(runtime).measured_by_request_gate is False
+
+
+def test_parallel_duplicate_and_sample_cap_reject_before_endpoint(tmp_path):
+    calls = []
+    entered = threading.Event()
+    release = threading.Event()
+    class Blocking(_RawTokenizer):
+        def request_json(self, method, path, payload):
+            calls.append(path)
+            entered.set()
+            assert release.wait(5)
+            return super().request_json(method, path, payload)
+    runtime = _raw_runtime(tmp_path)
+    runtime._composed.values['native_contact_fit']['contact_cap'] = 2
+    gate = build_native_contact_fit_gate(runtime, _program(max_contacts=1), _plan(), client_factory=Blocking, max_concurrency=2)
+    req = _raw_prepared('s1', 'one', runtime._transport.raw)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        future = pool.submit(gate, req)
+        assert entered.wait(5)
+        try:
+            with pytest.raises(PreparationError, match='repeated'):
+                gate(req)
+            with pytest.raises(PreparationError, match='per-sample'):
+                gate(_raw_prepared('s1', 'two', runtime._transport.raw))
+            assert len(calls) == 1
+        finally:
+            release.set()
+        assert future.result() == 7
+    assert gate.receipt_for(req)['agent_contact_id'] == 'one'
+
+
+def test_unknown_fit_failure_keeps_reservation_but_other_sample_progresses(tmp_path):
+    calls = []
+    class FailingOnce(_RawTokenizer):
+        def request_json(self, method, path, payload):
+            calls.append(path)
+            if len(calls) == 1:
+                raise TimeoutError('unknown response')
+            return super().request_json(method, path, payload)
+    runtime = _raw_runtime(tmp_path)
+    runtime._composed.values['native_contact_fit']['contact_cap'] = 2
+    gate = build_native_contact_fit_gate(runtime, _program(max_contacts=1), _plan(), client_factory=FailingOnce)
+    req = _raw_prepared('s1', 'one', runtime._transport.raw)
+    with pytest.raises(PreparationError, match="capability unavailable"): gate(req)
+    with pytest.raises(PreparationError, match='repeated'): gate(req)
+    with pytest.raises(PreparationError, match='per-sample'):
+        gate(_raw_prepared('s1', 'retry-new-id', runtime._transport.raw))
+    assert gate(_raw_prepared('s2', 'other', runtime._transport.raw)) == 7
+    assert len(calls) == 2
+
+
+def test_only_raw_vllm_concurrency_defaults_to_eight(tmp_path):
+    raw = _raw_runtime(tmp_path/'raw')
+    raw._composed.values['transport'] = 'vllm'
+    assert build_native_contact_fit_gate(raw, _program(), _plan()).max_concurrency == 8
+    feature = _Runtime(tmp_path/'feature')
+    assert build_native_contact_fit_gate(feature, _program(), _plan()).max_concurrency == 1
+    with pytest.raises(PreparationError, match='verifier support'):
+        build_native_contact_fit_gate(feature, _program(), _plan(), max_concurrency=2)

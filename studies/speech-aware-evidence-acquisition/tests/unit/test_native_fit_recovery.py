@@ -179,3 +179,26 @@ def test_recovery_and_inner_fit_lock_waits_are_separately_identified(tmp_path, m
     finally:
         if stage_timing._fd is not None:
             os.close(stage_timing._fd)
+
+
+def test_wrapper_allows_parallel_contacts_and_binds_each_custody(tmp_path):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    barrier = threading.Barrier(2)
+    class Parallel(_RawTokenizer):
+        def request_json(self, method, path, payload):
+            barrier.wait(timeout=5)
+            return super().request_json(method, path, payload)
+    runtime = _raw_runtime(tmp_path)
+    plan = _plan(run_id='SAEA-PARALLEL-FIT-V1')
+    gate = RecoverableNativeFitGate(runtime, plan, lambda: build_native_contact_fit_gate(
+        runtime, _program(), plan, client_factory=Parallel, max_concurrency=2))
+    requests = [_raw_prepared(s, s+'-contact', runtime._transport.raw) for s in ('s1', 's2')]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert list(pool.map(gate, requests)) == [7, 7]
+    for req in requests:
+        payload = req.as_payload()
+        document = json.loads(gate.journal.path(payload).read_text())
+        assert document['payload'] == payload
+        assert document['receipt']['sample_id'] == payload['sample_id']
+    assert len(gate.receipts) == 2
