@@ -1,0 +1,38 @@
+{
+  "schema": "omni-fulltest-admission-audit-v1",
+  "audited_at": "2026-11-02",
+  "roster": {
+    "id": "SLURP-TEST-FULL-13078-V1",
+    "role": "final-report",
+    "status": "FROZEN",
+    "recordings": 13078,
+    "distinct_utterances": 2974,
+    "audio_seconds_total": 36911.9388125,
+    "contacts": 0,
+    "selection": "complete split, id-sorted, no sampling"
+  },
+  "evidence": {
+    "roster_sha256": "f6b759d2b5b8cc49203426b7ea8115a79b29159664841f59319ec317e2a897f5",
+    "split_identity_hash": "7247647b8c8b37becd564b7031691565d4e6b09d8e124823054906d36372c95d",
+    "official_policy": "owner-full-test-and-first-system-gain",
+    "test_tuning": "owner decision says prior sampled reports were not tuning; full test remains usable",
+    "scoring": "official scorer required; no runtime labels or tuning"
+  },
+  "checks": {
+    "fixed_complete_roster": "pass",
+    "label_free_zero_contact_roster": "pass",
+    "disjointness_receipt_clean": "pass",
+    "method_identities_frozen_for_final_comparison": "missing",
+    "detached_run_identity_and_budget_registered": "missing",
+    "owner_allowance_and_exposure_rows_for_execution": "missing",
+    "full_test_contacts": "0/13078"
+  },
+  "decision": "NOT_ADMITTED",
+  "reason": "Do not launch model contacts until D/A/best-T method identities, runtime/session receipts, budgets, owner allowance and detached queue run are registered and mutually consistent.",
+  "next_cpu_actions": [
+    "freeze exact D, A and best development-selected T configs",
+    "register runtime/session/roster/budget identities and detached queue state",
+    "verify test labels remain outside runtime and candidate selection",
+    "prepare one-shot per-method checkpointed jobs with unknown-request reconciliation"
+  ]
+}
