@@ -26,6 +26,7 @@ class Job:
     stage: int
     prefix_family: str
     instance_id: str
+    depends_on: str | None = None
     state: str = "prepare"
     result_digest: str | None = None
 
@@ -36,6 +37,7 @@ class Job:
             "stage": self.stage,
             "prefix_family": self.prefix_family,
             "instance_id": self.instance_id,
+            "depends_on": self.depends_on,
             "state": self.state,
             "result_digest": self.result_digest,
         }
@@ -65,20 +67,35 @@ class QueueStateMachine:
                 raise QueueStateError("member identifiers must be nonempty strings")
 
     def submit(self, job_id: str, *, sample_id: str, stage: int,
-               prefix_family: str, instance_id: str) -> None:
+               prefix_family: str, instance_id: str,
+               depends_on: str | None = None) -> None:
         if not all(isinstance(x, str) and x for x in (job_id, sample_id, prefix_family, instance_id)):
             raise QueueStateError("job identity fields must be nonempty strings")
         if type(stage) is not int or stage < 0:
             raise QueueStateError("stage must be a nonnegative integer")
+        if depends_on is not None:
+            if not isinstance(depends_on, str) or not depends_on:
+                raise QueueStateError("depends_on must be a nonempty job id")
+            if depends_on not in self.jobs:
+                raise QueueStateError("dependency must be submitted first")
+            predecessor = self.jobs[depends_on]
+            if predecessor.stage >= stage:
+                raise QueueStateError("dependency must belong to an earlier stage")
         if job_id in self.jobs:
             raise QueueStateError("duplicate job submission")
-        self.jobs[job_id] = Job(job_id, sample_id, stage, prefix_family, instance_id)
+        self.jobs[job_id] = Job(
+            job_id, sample_id, stage, prefix_family, instance_id, depends_on=depends_on
+        )
         self.prepare_queue.append(job_id)
 
     def complete_prepare(self, job_id: str, *, ok: bool = True) -> None:
         job = self._job(job_id)
         if job.state != "prepare":
             raise QueueStateError("only prepared jobs can complete preparation")
+        if job.depends_on is not None:
+            predecessor = self._job(job.depends_on)
+            if predecessor.state != "observed":
+                raise QueueStateError("job dependency has not reached observed state")
         self._remove(self.prepare_queue, job_id)
         if ok:
             job.state = "ready"
@@ -164,7 +181,16 @@ class QueueStateMachine:
         for job_id, row in jobs.items():
             if not isinstance(row, Mapping) or row.get("job_id") != job_id:
                 raise QueueStateError("checkpoint job identity mismatch")
-            job = Job(job_id, row["sample_id"], row["stage"], row["prefix_family"], row["instance_id"], row["state"], row.get("result_digest"))
+            job = Job(
+                job_id,
+                row["sample_id"],
+                row["stage"],
+                row["prefix_family"],
+                row["instance_id"],
+                row.get("depends_on"),
+                row["state"],
+                row.get("result_digest"),
+            )
             if job.state not in STATES:
                 raise QueueStateError("checkpoint contains unknown job state")
             machine.jobs[job_id] = job
@@ -184,6 +210,12 @@ class QueueStateMachine:
         queued = set(self.prepare_queue) | set(self.ready_queue) | set(self.generation_queue)
         if not queued <= self.jobs.keys() or not self.inflight <= self.jobs.keys():
             raise QueueStateError("checkpoint references unknown job")
+        for job in self.jobs.values():
+            if job.depends_on is not None:
+                if job.depends_on not in self.jobs:
+                    raise QueueStateError("checkpoint references unknown dependency")
+                if self.jobs[job.depends_on].stage >= job.stage:
+                    raise QueueStateError("checkpoint dependency stage mismatch")
         for job_id in self.prepare_queue:
             if self.jobs[job_id].state != "prepare": raise QueueStateError("prepare queue state mismatch")
         for job_id in self.ready_queue:
