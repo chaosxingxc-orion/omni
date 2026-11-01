@@ -152,3 +152,21 @@ def test_final_runtime_only_calls_merge_with_all_learning_ids(tmp_path,monkeypat
     assert [r['stage'] for r in calls]==['batch_update']
     assert candidate['learned_query_ids']==['slurp:train:001','slurp:train:002']
     assert candidate['learning_usage']['calls']==1 and len(seen)==2
+
+
+def test_read_pin_parses_the_exact_verified_bytes(tmp_path,monkeypatch):
+    import hashlib
+    from pathlib import Path
+    from speech_aware_evidence_acquisition.rails.tfgrpo_source import read_pin
+    path=tmp_path/'source.json';blob=b'{"version":1}'
+    path.write_bytes(blob);original=Path.read_bytes;calls=[]
+    def changing(self):
+        if self==path:
+            calls.append(self)
+            data=original(self)
+            self.write_bytes(b'{"version":2}')
+            return data
+        return original(self)
+    monkeypatch.setattr(Path,'read_bytes',changing)
+    result=read_pin({'root':'data','relpath':'source.json','sha256':hashlib.sha256(blob).hexdigest()},repo_root=tmp_path,data_root=tmp_path)
+    assert result=={'version':1} and len(calls)==1

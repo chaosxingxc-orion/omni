@@ -1,0 +1,28 @@
+{
+  "schema": "saea-import-equivalence-v1",
+  "identical_operations_and_custody": true,
+  "historical_calls": 308,
+  "new_model_calls": 0,
+  "measurements": [
+    {
+      "version": "old",
+      "wall_seconds": 35.04171845000019,
+      "cpu_seconds": 35.0381603,
+      "batch_hash_calls": 310,
+      "result_sha256": "00778e879f55fbd515e7d79e468ef592e07e94aa8222dd19d1ea1500f4f35755",
+      "max_rss_kib": 165268
+    },
+    {
+      "version": "new",
+      "wall_seconds": 2.8535029199993005,
+      "cpu_seconds": 2.8527424100000047,
+      "batch_hash_calls": 2,
+      "result_sha256": "00778e879f55fbd515e7d79e468ef592e07e94aa8222dd19d1ea1500f4f35755",
+      "max_rss_kib": 165268
+    }
+  ],
+  "limitations": [
+    "Single sequential old/new CPU run; warm cache and ordering affect wall time.",
+    "RSS is cumulative process maximum."
+  ]
+}

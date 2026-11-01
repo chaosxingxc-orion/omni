@@ -152,6 +152,8 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
         key = (row['stage'], row['identity'])
         if key in rows: raise LearningError('duplicate historical learning stage')
         rows[key] = row
+    # Parsed local batch is immutable throughout this verification invocation.
+    batch_digest = sha(batch)
     expected_paths = set(); used = set(); truncated_summaries = []
 
     def read_stage(stage, identity, sample_id, messages, *, finished=True):
@@ -165,13 +167,14 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
                 base/'contacts'/(key+'.response.json')]:
             raise LearningError('historical stage filename differs')
         expected_paths.update((ip, rp, bp, brp))
-        expected = {'schema': 'saea-tfgrpo-learning-request-v1', 'batch_sha256': sha(batch),
+        expected = {'schema': 'saea-tfgrpo-learning-request-v1', 'batch_sha256': batch_digest,
             'model_id': model_id, 'learning_config_sha256': batch['learning_config_sha256'],
             'stage': stage, 'identity': identity, 'messages': messages}
         receipt = envelope.get('response')
+        request_digest = sha(request)
         if (request != expected or bridge.get('request') != request
-                or envelope != {'request_sha256': sha(request), 'response': receipt, 'response_sha256': sha(receipt)}
-                or bridge_response != {'request_sha256': sha(request), 'response': receipt}):
+                or envelope != {'request_sha256': request_digest, 'response': receipt, 'response_sha256': sha(receipt)}
+                or bridge_response != {'request_sha256': request_digest, 'response': receipt}):
             raise LearningError('historical stage prompt or bridge custody differs')
         prefix = f'{plan.run_id}/{plan.attempt_id}/'
         if not receipt['receipt_id'].startswith(prefix):
@@ -253,7 +256,7 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
         raise LearningError('unaccounted historical stages or native contacts')
     custody={'schema': 'saea-tfgrpo-final-import-custody-v1', 'source': spec,
         'source_run_id': plan.run_id, 'source_attempt_id': plan.attempt_id,
-        'source_batch_sha256': sha(batch), 'source_learning_config_sha256': batch['learning_config_sha256'],
+        'source_batch_sha256': batch_digest, 'source_learning_config_sha256': batch['learning_config_sha256'],
         'learned_query_ids': sorted(g['query_id'] for g in mixed), 'mixed_groups': len(mixed),
         'imported_group_updates': len(mixed),
         'imported_stage_contacts': prior_custody['imported_stage_contacts'] if prior_custody else len(used)-1,

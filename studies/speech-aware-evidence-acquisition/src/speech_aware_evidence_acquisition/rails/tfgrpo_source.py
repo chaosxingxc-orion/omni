@@ -15,9 +15,12 @@ def read_pin(pin, *, repo_root, data_root):
         raise LearningError('exact source pin required')
     root=Path(repo_root if pin['root']=='repository' else data_root).resolve()
     path=(root/pin['relpath']).resolve()
-    if not path.is_relative_to(root) or hashlib.sha256(path.read_bytes()).hexdigest()!=pin['sha256']:
+    if not path.is_relative_to(root):
         raise LearningError('learning source pin changed or escaped root')
-    return json.loads(path.read_bytes())
+    blob = path.read_bytes()
+    if hashlib.sha256(blob).hexdigest()!=pin['sha256']:
+        raise LearningError('learning source pin changed or escaped root')
+    return json.loads(blob)
 
 
 def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roster_sha256, replay=None):
