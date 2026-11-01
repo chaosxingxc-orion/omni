@@ -1,0 +1,30 @@
+{
+  "schema": "saea-h2-resource-snapshot-v1",
+  "time_unix": 1793529381.9315283,
+  "allocated_cards": 8,
+  "instances": 2,
+  "running_requests_by_instance": [
+    128.0,
+    128.0
+  ],
+  "waiting_requests_by_instance": [
+    0.0,
+    0.0
+  ],
+  "server_lifetime_preemptions_by_instance": [
+    0.0,
+    0.0
+  ],
+  "aicore_percent_by_card": [
+    95,
+    36,
+    28,
+    100,
+    0,
+    100,
+    23,
+    24
+  ],
+  "continuous_full_utilization_proven": false,
+  "interpretation": "Both services at configured128 active sequence cap in this snapshot; instantaneous per-card usage differs; not evidence of sustained utilization."
+}
