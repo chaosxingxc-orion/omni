@@ -166,16 +166,14 @@ odd40 仍处于真实运行时准入阶段。625 条真实 construction 的供�
 
 ## 有界综合策略 H2 终态
 
-312/312真实开发样本完成，936/936请求收到响应；8卡、2个TP4实例，生成5.238秒/条。learned相对lock的SLU差值为+0.6729个百分点，但Intent下降1.6026个百分点，bootstrap区间跨零，按预定门槛不晋升。成本、1872份journal和终态归档已核验。
+Dense synthesis H2 已完成 **312/312** 条真实开发样本，936/936 次请求收到响应；8 卡、2 个 TP4 实例。generation **1634.302 秒（5.238 秒/条）**，campaign **1750.358 秒（5.610 秒/条）**，总 tokens 8,887,887。
+
+| 分支 | Intent | SLU-F1 | 结论 |
+| --- | ---: | ---: | --- |
+| learned | 76.9231% | 66.7400% | 候选 |
+| lock | 78.5256% | 66.0671% | 固定对照 |
+| learned−lock | −1.6026pp | +0.6729pp | 未通过门槛，不晋升 |
+
+配对 bootstrap 95% 区间：SLU-F1 **[-1.3783,+2.7697]pp**，Intent **[-3.5256,+0.3205]pp**；候选接受标志为 false。该结果属于开发集比较，未用于最终 13,078 条 test。终态明确 `continuous_full_utilization_verified=false`：8 卡是分配资源证据，不能报告为持续满载。
 
 [完整结果](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-full-result-zh.md) · [成本](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-terminal-cost-timing.json) · [归档核验](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-terminal-archive-verification.json)
-
-## 当前工程效率状态（2026-11-02）
-
-181 当前只有两个 TP4 服务驻留，覆盖 8 卡；没有活跃实验，因此不能把驻留服务计作八卡有效利用率。已落地的 CPU 准备优化是 [runtime manifest cache](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/data/runtime_manifest_cache.py)：它把已验证真实 roster 的媒体身份、SHA-256、时长和采样率固化为可共享、原子发布、篡改即拒绝的 manifest，内容不含标注或提示词。该优化已推送 `main` 的 `195d5940`，尚未用真实 500 样本做 cold/warm preparation 端到端测速，因此暂不报告加速倍数。
-
-下一阶段先复核已绑定的 TFRL-v2 bank artifact 并完成 4 行 detached smoke，再把 CPU bank distillation、评分和成本归因接入独立 ready-queue 后继 job，避免 NPU 等待 CPU；smoke 通过后才安排 1,080 行 Fold B。当前 bank readiness 已通过显式 data-root 的 receipt、文件 hash 和 `vllm-tokenize` token 计量核验，但 smoke 尚未准入。方法冻结且 D/A/best-T 的 runtime、预算、owner allowance、exposure 和 detached identity 齐全后，才运行完整 13,078 条 test。监控维持 600 秒轮巡或明确终态事件，后续每个 NPU 任务继续报告完成量/总量、秒/条、卡数、实例数、逐卡利用率、成本和 ETA。
-
-队列监控修复已推送 `main` 的 `016388cf`：进程存活、日志终态和 checkpoint 仍按原轮询频率检查；等待 gated job 时昂贵的 `npu-smi`/Docker 卡探测默认缓存 600 秒，每个任务首次进入门禁强制探测。这样降低监控开销，同时保留断点恢复、未知启动拒绝和防止盲启动的卡安全门禁。CPU 回归 50 项通过；完整 study 测试仍需固定镜像复核。
-
-TFRL-v2 bank 的 CPU 准入诊断已由 `main` 的 `5c30ceb6` 扩展为显式外部 data-root 校验。当前 H1、H2 和 union 三份 receipt 的 schema、canonical hash、bank 文件 hash 和 `vllm-tokenize` token counts 均通过，机器可读结果为 `ready=true`。诊断工具仍 fail-closed，不创建伪造 bank；4 行 detached smoke、owner/source/checkpoint 绑定仍未完成，因此尚不安排大规模 NPU。

@@ -21,3 +21,11 @@
 
 
 [有界综合策略 H2 完整结果](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-full-result-zh.md) · [终态成本](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-terminal-cost-timing.json) · [终态归档核验](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-terminal-archive-verification.json)
+
+## 有界综合策略 H2 终态
+
+Dense synthesis H2：312/312 条，936/936 次请求，8 卡/2 个 TP4 实例；generation 1634.302 秒（5.238 秒/条），campaign 1750.358 秒（5.610 秒/条）。learned SLU-F1 66.7400%、Intent 76.9231%；lock SLU-F1 66.0671%、Intent 78.5256%。SLU +0.6729pp 但 Intent −1.6026pp，bootstrap 区间跨 0，未通过 +1pp 且 Intent 不下降门槛，候选不晋升。
+
+终态证据明确 `continuous_full_utilization_verified=false`；资源分配不等于持续 8 卡满载。最终 13,078 条 test 仍未启动。
+
+[完整结果](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-full-result-zh.md) · [成本](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-terminal-cost-timing.json)
