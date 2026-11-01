@@ -10,6 +10,9 @@ def validate_workload(repo, data, name, spec):
     if cell["run_id"] != spec["run_id"] or cell["attempt_id"] != spec["attempt_id"]:
         raise ValueError("registered attempt differs")
     view = json.loads((repo / "configs/dataset" / (cell["dataset_fragment"] + ".json")).read_bytes())
+    if spec.get("workload_kind") == "tfgrpo-full-h2-paired":
+        from tfgrpo_h2_job import validate
+        return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "tfrl-hardset-a0-observation":
         from tfrl_hardset_a0_registration import validate
         return validate(repo, data, name, spec, exp, view)

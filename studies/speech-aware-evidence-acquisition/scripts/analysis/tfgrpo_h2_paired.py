@@ -61,7 +61,7 @@ def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template
     # Existing raw-vLLM fallback admits at most one additional completion/contact.
     exp['execution_plan'].update(planned_model_calls=1872,
         planned_speech_audio_seconds=math.ceil(6*sum(r['audio_seconds'] for r in roster['items'])))
-    exp['stage3_algorithm']={'id':'tfgrpo-shared-p-paired-development-v1',
+    exp['stage3_algorithm']={'id':'tfgrpo-semantic-advantage-v1',
         'operators_used':['context_application','rollout','scoring'],
         'note':'Same fresh P and evidence, only learned Solver instruction differs; no H2 feedback used in learning.'}
     exp['stage3_measurement'].update(rows=312,read_roster=roster['roster_id'],claims_benefit=False,
