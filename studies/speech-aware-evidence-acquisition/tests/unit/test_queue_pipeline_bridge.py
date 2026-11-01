@@ -60,4 +60,4 @@ def test_later_round_has_monotonic_queue_stage(tmp_path: Path):
     bridge.generation_admitted(0)
     bridge.generation_completed(0, observed=True, result={"round": 0})
     bridge.prepare_submitted(0, (1, 0), "perception")
-    assert bridge.adapter.machine.jobs["member-0:round-1:stage-0"].stage == 1_000_000
+    assert bridge.adapter.machine.jobs["member-0:round-1:stage-1000000"].stage == 1_000_000
