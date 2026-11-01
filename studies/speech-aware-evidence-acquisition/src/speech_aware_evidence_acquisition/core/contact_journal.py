@@ -200,7 +200,7 @@ class NativeContactReplay:
         self._by_contact, self._records, self._pins, self._used = {}, {}, {}, set()
         self._lock = threading.Lock()
         intents = list(self.source.root.glob('*.intent.json'))
-        if not intents:
+        if not intents and not (prepared_text and self.source_actual_usage == {'calls':0,'audio_seconds':0.0}):
             raise ContactJournalError('source has no durable native contacts')
         audio = []
         for path in intents:
