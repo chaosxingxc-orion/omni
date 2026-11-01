@@ -237,6 +237,8 @@ _TEMPLATE_FRAME_KEYS = frozenset({
 _COLUMN_OPTIONAL = frozenset({"prepared_seed"})
 
 COMPONENT_CATALOGUE: tuple[ComponentSpec, ...] = (
+    ComponentSpec("tfgrpo-solver-experience", "USE, learned Solver experience for development",
+        frozenset({STATE_ON}), frozenset({"candidate", "source_manifest", "model_id", "base_template", "template", "consumer_ids", "purpose"})),
     ComponentSpec(NODE_CONTEXT_PRESENTATION, "USE, explicit node context presentation",
         frozenset({STATE_ON}), frozenset(),
         optional_params=frozenset({"tool_schema_rendering", "reviewer_history_scope"})),
@@ -1734,7 +1736,14 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
     )
     for decl in block.armed():
         cid, params = decl.component_id, decl.params
-        if cid == NODE_CONTEXT_PRESENTATION:
+        if cid == "tfgrpo-solver-experience":
+            from .tfgrpo_consumption import validate_params
+            validate_params(dict(params))
+            if layer["phase_material"]["solver"]["instruction_template"] != params["base_template"]["relpath"]:
+                raise ConsumptionModuleConfigError("learned experience requires the unchanged Solver base")
+            writer.set(("phase_material", "solver", "instruction_template"), params["template"]["relpath"],
+                       component_id=cid, replace_only=True)
+        elif cid == NODE_CONTEXT_PRESENTATION:
             if block.solver_tool_access and params.get("tool_schema_rendering", "per-role") != "per-role":
                 raise ConsumptionModuleConfigError("Solver tool profile requires per-role schema rendering")
             _compile_node_presentation(params, writer)

@@ -7925,6 +7925,12 @@ class FlightRuntime:
             self._composed.values, self._data_root, split_identity_hash=self._plan.split_identity_hash,
             consuming_row_ids=tuple(str(sample.sample_id) for sample in getattr(self, "_samples", ())),
         )
+        from ...rails.tfgrpo_consumption import verify_for_flight as verify_learned_experience
+        verify_learned_experience(
+            self._composed.values, repo=self._repo_root, data=self._data_root,
+            model_id=self._model,
+            consumer_ids=tuple(str(sample.sample_id) for sample in getattr(self, "_samples", ())),
+        )
         specs = self._phase_tool_specs(policy)
         if not specs:
             return
