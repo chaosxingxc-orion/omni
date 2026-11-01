@@ -72,7 +72,7 @@ def test_register_exact_protocol_budgets_and_source(tmp_path,monkeypatch):
     for name,doc in docs.items():(job/name).write_bytes(m.raw(doc))
     (job/'complete.json').write_bytes(m.raw({'artifacts':{n:m.file_sha(job/n) for n in docs},'batch_sha256':m.sha(src['batch']),
         'groups':2,'generation_calls':13,'fit_calls':13}))
-    rels=['configs/baseline/system-group-update-text-v1.json','configs/experiment/slurp-tfrl-hardset-a0-observation-r1-v1.json',
+    rels=['configs/baseline/system-group-update-text-v1.json','configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json','configs/experiment/slurp-tfrl-hardset-a0-observation-r1-v1.json',
         'configs/dataset/slurp-speech-native-stage3-construction-r01c.json']
     for rel in rels:
         p=repo/rel;p.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(m.ROOT/rel,p)
@@ -85,6 +85,10 @@ def test_register_exact_protocol_budgets_and_source(tmp_path,monkeypatch):
     exp=m.read(repo/f'configs/experiment/{m.NAME}.json')
     assert exp['tfgrpo_learning_registration']['batch_sha256']==m.sha(src['batch'])
     assert exp['tfgrpo_contact_fit']['contact_cap']==13
+    from speech_aware_evidence_acquisition.core.config import compose
+    from speech_aware_evidence_acquisition.rails.adapters.runtime_view import configured_geometry
+    config=compose(repo,h['model_id'],'slurp-speech-native-stage3-construction-r01c',m.NAME,m.NAME)
+    assert configured_geometry(config.values,defaults=(8,8192,64))['slot_tokens']==24576
     assert m.RUN+'-FIT' in (repo/'docs/exposure-ledger.md').read_text()
     with pytest.raises(ValueError,match='existing'):m.register(repo,data,job)
 

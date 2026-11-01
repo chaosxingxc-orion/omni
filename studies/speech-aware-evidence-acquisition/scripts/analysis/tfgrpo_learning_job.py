@@ -183,6 +183,8 @@ def register(repo,data,job):
     baseline.pop('phase_material',None)
     from speech_aware_evidence_acquisition.rails.prepared_text import PREPARED_TEXT_INSTRUCTION
     baseline['task_instruction']=PREPARED_TEXT_INSTRUCTION
+    baseline['serving_slot_tokens']=int(model['server_args'][model['server_args'].index('--max-model-len')+1])
+    baseline['serving_slots']=read(repo/'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json')['serving_slots']
     exp=read(repo/'configs/experiment/slurp-tfrl-hardset-a0-observation-r1-v1.json')
     for k in ('population','stage3_measurement','prepared_phase_supply','native_episode','knowledge_stores','live_phase_fit','native_contact_fit'):
         exp.pop(k,None)
