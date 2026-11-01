@@ -89,7 +89,7 @@ _BLOCK_OPTIONAL = frozenset({
     "columns", "lock", "review_loop", "solver_tool_access", "template_frame", "supply_frame", "construction_roster",
     "thinking_frame", "decoding_frame", "sampling_frame", "prompt_contact_limits",
     #: TFRL-v2 (2026-10-30): the bank-consumption declaration (``rails.tfrl_v2_consumption``); parsed fail-closed, compiles to nothing.
-    "tfrl_v2_bank", "tfrl_supply_allocation",
+    "tfrl_v2_bank", "tfrl_supply_allocation", "answer_selection",
 })
 #: A lock-version name a block may declare (migration step 6, owner decision
 #: 204): ``v<major>.<minor>`` with an optional lowercase ``-suffix`` (``v2.2-npu-port``), resolved through the carrier's ``lock_versions``.
@@ -635,6 +635,7 @@ class ConsumptionModuleBlock:
     #: Decision 338: the sampling columns' shared frame (canonical JSON), or ``None`` when the block declares no sampling column.
     sampling_frame_json: str | None = None
     prompt_contact_limits: str | None = None
+    answer_selection: str | None = None
 
     @property
     def sampling_columns(self) -> tuple[ColumnDecl, ...]:
@@ -761,6 +762,10 @@ def parse_consumption_module_block(
     prompt_contact_limits = raw.get("prompt_contact_limits")
     if prompt_contact_limits not in (None, "legacy-c17-lock-v1"):
         raise ConsumptionModuleConfigError("invalid prompt_contact_limits")
+    answer_selection = raw.get("answer_selection")
+    if "answer_selection" in raw:
+        from .whole_answer_selection import validate_policy
+        validate_policy(answer_selection)
     review_loop = raw.get("review_loop")
     if "review_loop" in raw and review_loop != "off":
         raise ConsumptionModuleConfigError("the prospective review_loop profile must be off or absent")
@@ -910,6 +915,7 @@ def parse_consumption_module_block(
         decoding_frame_json=decoding_frame_json,
         sampling_frame_json=sampling_frame_json,
         prompt_contact_limits=prompt_contact_limits,
+        answer_selection=answer_selection,
     )
 
 
@@ -1920,6 +1926,12 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
         ceiling += _compile_decoding_columns(block, hooks, writer, layer)
     if block.sampling_columns:
         ceiling += _compile_sampling_columns(block, hooks, writer, layer)
+    if block.answer_selection is not None:
+        if block.prompt_contact_limits != "legacy-c17-lock-v1" or not odd40_columns or ceiling != 4:
+            raise ConsumptionModuleConfigError("whole-answer selection requires the exact odd40 candidate program")
+        writer.set(("native_episode", "answer_selection"), block.answer_selection,
+                   component_id="whole-answer-selection", replace_only=False)
+        ceiling += 1
     level = _compile_perception_branches(block, hooks, writer)
     if level is not None:
         from .supply_variants import perception_branch_ceiling  # noqa: PLC0415

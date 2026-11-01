@@ -12101,6 +12101,21 @@ class FlightRuntime:
                     contact = {}
                 else:
                     contact = delivery.final_contact
+                    selection = episode_receipt.get('answer_selection')
+                    if selection is not None:
+                        from ...rails.whole_answer_selection import validate_policy
+                        validate_policy(raw_native.get('answer_selection'))
+                        candidate_contacts = [v for v in visits if v.get('stage') == 'solver']
+                        if len(candidate_contacts) != 1:
+                            raise FlightRuntimeError('answer selection requires one Solver visit')
+                        candidates = candidate_contacts[0]['execution_receipt']['contacts']
+                        if (len(candidates) != 3 or selection.get('candidates') != {'A': candidates[2], 'B': candidates[0]}
+                                or selection.get('selected') not in ('A', 'B')
+                                or selection.get('selected_contact') != selection['candidates'][selection['selected']]):
+                            raise FlightRuntimeError('answer selection lost its candidate source')
+                        contact = selection['selected_contact']
+                    elif raw_native.get('answer_selection') is not None and delivery.kind not in ('abstention', 'context-abstention'):
+                        raise FlightRuntimeError('declared answer selection has no receipt')
                     timing = timing_by_request.get(contact.get("request_id"))
                     if (
                         timing is None or timing.sample_id != sample_id

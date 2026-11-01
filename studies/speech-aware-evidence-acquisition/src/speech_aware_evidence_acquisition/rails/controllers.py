@@ -2641,6 +2641,10 @@ def register_response_formats_v1() -> None:
         )
 
 
+    from .whole_answer_selection import RESPONSE_FORMAT_ID, response_format
+    if RESPONSE_FORMAT_ID not in RESPONSE_FORMATS.names():
+        RESPONSE_FORMATS.register(RESPONSE_FORMAT_ID, response_format)
+
 register_response_formats_v1()
 
 

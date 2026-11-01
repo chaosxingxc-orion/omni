@@ -1056,6 +1056,14 @@ def _verify_supply_variant_trace_binding(
                     or response.get("response_sha256") != contact.get("response_sha256")):
                 refuse(f"Solver visit {visit_index} contact {position} differs from its trace")
             last = contact
+    selection = episode.get('answer_selection')
+    if selection is not None:
+        from ...rails.whole_answer_selection import verify_trace
+        try:
+            verify_trace(selection, episode, dict(variants), trace_records, row.get('sample_id'))
+        except (ValueError, KeyError, TypeError) as error:
+            refuse(f'whole-answer selection is not trace-bound: {error}')
+        last = selection['selected_contact']
     if (last is None or row.get("request_id") != last.get("request_id")
             or row.get("request_sha256") != last.get("request_sha256")
             or row.get("response_sha256") != last.get("response_sha256")):
@@ -2039,6 +2047,8 @@ def _verify_outputs_trace_binding(
                 f"record {request_record_id!r}"
             )
         episode = row.get("native_episode_receipt")
+        if isinstance(episode, Mapping) and 'answer_selection' in episode and 'supply_variants' not in row:
+            raise BundleError('whole-answer selection requires its source supply-variant receipt')
         if isinstance(episode, Mapping) and "candidate_proposal" in episode:
             from ...rails.slurp_candidate_proposal import validate_candidate_proposal_consumption
             validate_candidate_proposal_consumption(

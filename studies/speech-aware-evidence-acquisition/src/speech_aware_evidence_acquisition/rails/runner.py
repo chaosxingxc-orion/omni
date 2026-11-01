@@ -2727,6 +2727,12 @@ async def _invoke_native_role_episode(
     # arm's request actually carried, because it is the place that composed
     # them.
     supply_variant_records: dict[str, dict[str, object]] = {}
+    selection_inputs = {}
+    selection_candidates = {}
+    if config.answer_selection is not None:
+        from .native_episode_config import validate_prompt_contact_limits
+        validate_prompt_contact_limits(config)
+
     # The CUMULATIVE value ids this node's own supply steps have acquired on
     # this row, in acquisition order. A non-delivering arm renders the row's
     # accumulated state with exactly these removed and its own resolved
@@ -4540,6 +4546,12 @@ async def _invoke_native_role_episode(
             messages = compose_tfrl_bank_messages(messages, render_ctx, plan.contact_id)
             if messages[0]["content"] == framework_system:
                 framework_system = None
+        if config.answer_selection is not None and request.context.variant_arm_id in ('b', 'lock'):
+            import copy
+            selection_inputs[request.context.variant_arm_id] = {
+                'messages': copy.deepcopy(messages),
+                'perception': tuple(a for a in exposed_states if a.state_kind == 'phase:' + config.role('perception').phase_id),
+            }
         return NativeRoleSpeechBinding(
             role_id=request.role_id, sample_id=ctx.sample_id,
             role_query=contact_query, base_messages=messages,
@@ -4786,6 +4798,10 @@ async def _invoke_native_role_episode(
             raise RailsRunnerError(
                 "a supply-variant arm sealed no recorded contact of its own"
             )
+        if config.answer_selection is not None and record['arm_id'] in ('b', 'lock'):
+            selection_candidates[record['arm_id']] = {
+                'text': result['actor_output'], 'contact': dict(final),
+            }
         return record
 
     def read_perception_branch_record(branch_index, result, sample_index=None):
@@ -5313,6 +5329,96 @@ async def _invoke_native_role_episode(
         render_request=binding.render_request,
         completion_sink=capture_cleaning_completion,
     )
+
+    def _selection_binding_provider(_request):
+        raise RailsRunnerError('answer selection requires its explicit source-bound binding')
+
+    selection_request = MeteredNativeSpeechRequest(
+        client=core_client, binding_provider=_selection_binding_provider,
+        render_request=binding.render_request,
+        completion_sink=lambda request, completion: None,
+    )
+
+    async def run_answer_selection():
+        from . import whole_answer_selection as ws
+        from ..core.tracing import get_current_trace_buffer
+        from ..reproduction.ojw.native_roles import _contact_receipt
+        a, b = selection_candidates['lock'], selection_candidates['b']
+        args = dict(a_text=a['text'], b_text=b['text'],
+                    a_contact=a['contact'], b_contact=b['contact'])
+        if not ws.needs_adjudication(ws.parse_answer(a['text']), ws.parse_answer(b['text'])):
+            return ws.select_observed(**args)
+        left, right = selection_inputs['lock'], selection_inputs['b']
+        if len(left['perception']) != 1 or left['perception'] != right['perception']:
+            raise RailsRunnerError('answer selection candidates must share one sealed Perception')
+        messages, comparison = ws.compose_messages(left['messages'], right['messages'],
+            a_text=a['text'], b_text=b['text'], perception_text=left['perception'][0].content)
+
+        def dispatch(slot_id):
+            if state.scheduled_contacts >= config.max_contacts:
+                raise RailsRunnerError('answer selection exceeds its compiled contact ceiling')
+            ctx = context()
+            contact_id = scoped_execution_contact_id(
+                f'{program.program_id}:{ws.ROLE_ID}:{ctx.sample_id}', state.prepared.execution_unit_id)
+            if contact_id in state.seen_contact_ids:
+                raise RailsRunnerError('answer selection cannot repeat a contact identity')
+            decoding = dict(base_decoding_params or {})
+            decoding.update(response_format=ws.response_format(), tool_choice='none', parallel_tool_calls=False)
+            plan = AgentContactPlan(
+                contact_id=contact_id, query_state_sha256=ctx.query_state.content_hash(),
+                purpose=ws.ROLE_ID, instruction=ws.ADJUDICATOR_INSTRUCTION,
+                key_representation_id=f'{program.program_id}:{ws.ROLE_ID}',
+                matcher_policy_id=program.program_id, decoding_params=decoding).validate()
+            _assert_agent_control_excludes_knowledge_payloads(plan, protected_material)
+            comparison_state = seal_phase_response_state(
+                phase_name=ws.ROLE_ID, sample_id=ctx.sample_id,
+                state_content=json.dumps(comparison, ensure_ascii=False, sort_keys=True),
+                raw_response_text=a['text'], source_query_state_sha256=ctx.query_state.content_hash(),
+                producer_policy_id=program.program_id, state_namespace=contact_id)
+            speech = NativeRoleSpeechBinding(
+                role_id=ws.ROLE_ID, sample_id=ctx.sample_id, role_query=ws.ADJUDICATOR_INSTRUCTION,
+                base_messages=messages, tool_names=(), query_source=ctx.query_state.query_source,
+                core_kwargs={'decoding_params': {**decoding, 'id_slot': slot_id},
+                    **({'key_representation_id': plan.key_representation_id,
+                        'matcher_policy_id': plan.matcher_policy_id}
+                       if ctx.query_state.query_source == 'speech_features' else {}),
+                    'agent_state': [a.as_json() for a in left['perception']] + [comparison_state.as_json()]})
+            request = NativeRoleModelRequest(
+                role_id=ws.ROLE_ID,
+                context=NativeRoleContactContext(sample_id=ctx.sample_id, agent_contact_id=contact_id,
+                    evidence_pins={'knowledge_snapshot': snapshot_sha256}, budget_id=run_id),
+                messages=(messages[0], {'role': 'user', 'content': ws.ADJUDICATOR_INSTRUCTION}),
+                tool_schemas=(), visible_tool_names=(), decoding_controls={})
+            trace = TraceBuffer(run_id, spool=state.trace_spool)
+            index = state.scheduled_contacts
+            state.trace_buffers[(index, 0)] = trace
+            state.scheduled_contacts += 1
+            state.seen_contact_ids.add(contact_id)
+            prior_trace = get_current_trace_buffer()
+            set_current_trace_buffer(trace)
+            prepared = None
+            try:
+                prepared = selection_request.prepare(request, binding_override=speech)
+                binding.request_gate(prepared.request)
+                completion = selection_request.dispatch(prepared)
+                if completion.agent_contact_id != contact_id or completion.tool_calls:
+                    raise RailsRunnerError('answer selection completion has incorrect identity or tool authority')
+                trace.emit('USE', f'{completion.request_id}/native-role-contact', {
+                    'use_role_id': ws.ROLE_ID, 'use_request_sha256': completion.request_sha256,
+                    'use_response_sha256': completion.response_sha256,
+                    'use_response_text_sha256': completion.response_text_sha256,
+                    'use_agent_contact_id': contact_id})
+                trace_native_contact(request, prepared, completion, trace, slot_id, index, node=ws.ROLE_ID)
+                return completion
+            except Exception as error:
+                trace_native_contact(request, prepared, None, trace, slot_id, index, error=error, node=ws.ROLE_ID)
+                raise
+            finally:
+                set_current_trace_buffer(prior_trace)
+        options = {'prefix_family': ws.ROLE_ID} if binding.prefix_slots is not None or binding.node_batch is not None or binding.node_pipeline is not None else {}
+        observed = await run_contact(dispatch, **options)
+        return ws.select_observed(**args, judge_text=observed.text,
+            judge_contact=_contact_receipt(observed), judge_finish_reason=observed.finish_reason)
 
     def _relisten_binding_provider(_request):
         raise RailsRunnerError(
@@ -6738,6 +6844,9 @@ async def _invoke_native_role_episode(
             else result["delivery"]["actor_output"] if solver_group is not None
             else completion.text
         )
+        answer_selection_receipt = None
+        if config.answer_selection is not None and delivery.kind not in ('abstention', 'context-abstention'):
+            final_text, answer_selection_receipt = await run_answer_selection()
         # E11 (2026-09-18, owner directive 26): the DELIVERY-TIME normaliser
         # node. It runs exactly ONCE per row, HERE -- after the Planner has
         # already ACCEPTed (or after the terminal delivery of the last
@@ -6857,6 +6966,8 @@ async def _invoke_native_role_episode(
                 "reviewer_phase_id": config.role("reviewer").phase_id,
                 "planner_phase_id": config.role("planner").phase_id,
             }
+        if answer_selection_receipt is not None:
+            compact_receipt['answer_selection'] = answer_selection_receipt
         if deliver_normaliser_receipt is not None:
             # E11: one block per row, naming the rule, its version, its
             # input/output digests and the counts of changed labels and

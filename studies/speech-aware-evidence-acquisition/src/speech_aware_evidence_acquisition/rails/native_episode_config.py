@@ -728,6 +728,7 @@ class NativeEpisodeConfig:
     solver_tool_access: str | None = None
     # Rendering-only legacy c17 limits; never changes the executable c2 cap.
     prompt_contact_limits: str | None = None
+    answer_selection: str | None = None
 
     @property
     def knowledge_value_rendering(self) -> dict[str, object] | None:
@@ -1287,6 +1288,7 @@ def load_native_episode_config(
         "review_handoff",
         "solver_tool_access",
         "prompt_contact_limits",
+        "answer_selection",
     }
     if (
         not isinstance(raw, Mapping)
@@ -2536,6 +2538,13 @@ def load_native_episode_config(
         from .relisten import relisten_extra_ceiling  # noqa: PLC0415
 
         ceiling += relisten_extra_ceiling(json.loads(relisten_json)["max_slots_per_row"])
+    answer_selection = raw.get("answer_selection")
+    if "answer_selection" in raw:
+        from .whole_answer_selection import validate_policy
+        validate_policy(answer_selection)
+        if raw.get("prompt_contact_limits") != "legacy-c17-lock-v1" or ceiling != 4:
+            raise ValueError("whole-answer selection requires the four-contact odd40 candidate program")
+        ceiling += 1
     if allow_subceiling:
         if ceiling > program.max_contacts:
             raise ValueError("selected native graph exceeds the shared program contact ceiling")
@@ -2647,6 +2656,7 @@ def load_native_episode_config(
         review_handoff=review_handoff,
         solver_tool_access=solver_access,
         prompt_contact_limits=prompt_contact_limits,
+        answer_selection=answer_selection,
     )
     validate_prompt_contact_limits(result)
     if solver_access:
@@ -2885,6 +2895,8 @@ def _load_knowledge_index(
 def validate_prompt_contact_limits(config):
     """Preserve lock prompt budgets on explicitly bounded candidate groups."""
     if config.prompt_contact_limits is None:
+        if config.answer_selection is not None:
+            raise ValueError('whole-answer selection requires the preserved lock prompt budget')
         return
     group = config.supply_variant_group
     seed_group = False
@@ -2911,6 +2923,12 @@ def validate_prompt_contact_limits(config):
                     and arm.decoding is None for arm in group.arms)
         )
     expected_contacts = 7 if seed_group else 4 if odd40_group else 2
+    if config.answer_selection is not None:
+        from .whole_answer_selection import validate_policy
+        validate_policy(config.answer_selection)
+        if not odd40_group:
+            raise ValueError('whole-answer selection requires exact odd40 candidates')
+        expected_contacts += 1
     if (config.prompt_contact_limits != "legacy-c17-lock-v1" or config.max_contacts != expected_contacts
             or (group is not None and not seed_group and not odd40_group)
             or config.max_revisions != 0 or config.review_loop_enabled

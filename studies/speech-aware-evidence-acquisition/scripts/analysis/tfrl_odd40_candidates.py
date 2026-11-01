@@ -69,7 +69,34 @@ def derive(repo, original):
         'real_request_fit_completed': False, 'generation_authorized': False}
 
 
-def prepare(repo, source, data, out):
+def derive_method(repo, original):
+    """Compile the candidate and conditional-choice program; never admit it."""
+    from speech_aware_evidence_acquisition.rails.whole_answer_selection import POLICY_ID
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
+    base, proof = derive(repo, original)
+    block = copy.deepcopy(base['native_episode']['consumption_module'])
+    block['answer_selection'] = POLICY_ID
+    compiled = cm.compile_module(block, carrier_module_hooks(repo_root=repo), repo_root=repo)
+    result = compiled.apply_to(base)
+    result['native_episode']['consumption_module'] = block
+    result['what_this_is'] = 'Unregistered odd40 whole-answer selection; real FIT and admission outstanding.'
+    expected = cm.policy_owned_values(base)
+    expected['policy'] = compiled.program_id
+    expected['native_episode']['answer_selection'] = POLICY_ID
+    if cm.policy_owned_values(result) != expected:
+        raise ValueError('whole-answer compilation changed candidate requests')
+    parsed = load_native_episode_config({**result, 'carrier_lock_key': 'slurp'}, default_phase_program(result['policy']))
+    if compiled.program_ceiling != 5 or parsed.max_contacts != 5:
+        raise ValueError('conditional adjudicator must add exactly one contact')
+    return result, {**proof, 'adjudicator_compiled': True,
+        'method_program_ceiling': 5, 'method_program_id': compiled.program_id,
+        'full_method_budget_compiled': True, 'normal_generation_min_per_row': 4,
+        'normal_generation_max_per_row': 5, 'fallback_inclusive_cap_per_row': 10,
+        'fit_cap_per_row': 5}
+
+
+def prepare(repo, source, data, out, with_selection=False):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.atomic_file import publish_new
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
@@ -101,7 +128,7 @@ def prepare(repo, source, data, out):
                 raise ValueError('real training media binding required')
         seen.update(ids)
         for rel in (bp, ep, dp): pins[rel] = sha(source/rel)
-        baseline, proof = derive(repo, original)
+        baseline, proof = (derive_method if with_selection else derive)(repo, original)
         outputs[half] = {'baseline': baseline, 'proof': proof, 'rows': count,
             'split_identity_hash': experiment['population']['split_identity_hash']}
     if len(seen) != 625: raise ValueError('complete625 required')
@@ -117,8 +144,11 @@ def prepare(repo, source, data, out):
         'halves':{h:{k:v for k,v in d.items() if k!='baseline'} for h,d in outputs.items()},
         'output_hashes':{h:sha(out/(h+'-candidate-baseline.json')) for h in outputs},
         'new_model_calls':0, 'new_tokenizer_calls':0, 'new_scoring_jobs':0,
-        'generation_authorized':False, 'remaining':['conditional adjudicator runtime',
-            'full method budget compilation', 'own supply', 'registration and real FIT', 'admission and preflight']}
+        'generation_authorized':False, 'remaining':(
+            ['real request FIT', 'own supply', 'registration', 'admission and preflight',
+             'partial-contact recovery validation'] if with_selection else
+            ['conditional adjudicator runtime', 'full method budget compilation', 'own supply',
+             'registration and real FIT', 'admission and preflight'])}
     write(out/'complete.json', result)
     return result
 
@@ -127,4 +157,5 @@ if __name__ == '__main__':
     import argparse
     p = argparse.ArgumentParser(description=__doc__)
     for key in ('repo','source','data','out'): p.add_argument('--'+key, type=Path, required=True)
+    p.add_argument('--with-selection', action='store_true')
     print(json.dumps(prepare(**vars(p.parse_args()))))
