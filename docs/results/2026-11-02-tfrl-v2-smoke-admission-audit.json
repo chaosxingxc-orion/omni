@@ -1,0 +1,11 @@
+{
+  "failures": [
+    "root admission status is 'DRAFT-NOT-MINTED', expected 'DECIDED'",
+    "deployment profile is pending",
+    "unresolved rails_pending: bank-store-roles, construction-variant-port-names, exemplar-block, rule-variants, solver-decoding-seed-override, stage3-algorithm-label, top-rule-per-vote, vote-commit-policy"
+  ],
+  "model_calls": 0,
+  "package": "studies/speech-aware-evidence-acquisition/docs/readiness/2026-10-30-slurp-tfrl-v2-fold-b-npu-port-v1",
+  "ready": false,
+  "schema": "saea-tfrl-v2-smoke-admission-audit-v1"
+}
