@@ -141,7 +141,7 @@ def empty_experience(model_id):
     return {**body, 'sha256': sha(body)}
 
 
-def validate_experience(version, model_id):
+def validate_experience(version, model_id, *, structured_source_payloads=None):
     if not isinstance(version, dict) or version.get('schema') != 'saea-tfgrpo-experience-v1':
         raise LearningError('experience schema differs')
     body = {k:v for k,v in version.items() if k != 'sha256'}
@@ -149,6 +149,15 @@ def validate_experience(version, model_id):
         raise LearningError('experience bytes or frozen model differ')
     if not isinstance(version.get('items'), dict):
         raise LearningError('experience items must be an object')
+    # Structured rules are opt-in and require exact source bytes.
+    if 'structured_rules' in version:
+        if not isinstance(structured_source_payloads, dict):
+            raise LearningError('structured rule source bytes are required')
+        from .structured_experience_rules import StructuredRuleError, validate_rule_set
+        try:
+            validate_rule_set(version['structured_rules'], source_payloads=structured_source_payloads)
+        except StructuredRuleError as error:
+            raise LearningError(f'structured rule validation failed: {error}') from error
     for key, value in version['items'].items():
         require_text(key, 'experience id'); require_text(value, 'experience content')
     ids = version.get('learned_query_ids')

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from speech_aware_evidence_acquisition.rails.tfgrpo_learning import (
     ExperienceLearner, LearningError, UnknownLearningContact, empty_experience,
-    experience_context, parse_operations, apply_operations, render,
+    experience_context, parse_operations, apply_operations, render, sha, validate_experience,
 )
 
 MODEL='frozen-core-digest'; POLICY='1'*64; LEARNING_CONFIG='a'*64
@@ -334,3 +334,23 @@ def test_final_only_truncated_response_keeps_cost_and_never_repairs_or_retries(t
         with pytest.raises(LearningError,match='must be JSON'):learner.learn(groups,parent,**args)
     assert len(calls)==1 and learner.accounting()['known_usage']['calls']==1
     assert not (tmp_path/'candidate.json').exists()
+
+
+
+def test_structured_rule_candidate_requires_source_bytes(tmp_path):
+    from speech_aware_evidence_acquisition.rails.structured_experience_rules import RULE_SCHEMA, RULE_SET_SCHEMA
+    import hashlib
+    source = b"fixed-source"
+    rule = {
+        "schema": RULE_SCHEMA, "rule_id": "r1", "kind": "conditional-rule",
+        "scope": {"task_ids": ["slurp"], "phases": ["use"], "components": ["knowledge"]},
+        "trigger": ["ambiguous"], "action": ["inspect"], "exceptions": [],
+        "source": {"ref_id": "source-1", "sha256": hashlib.sha256(source).hexdigest()},
+        "conflict": {"state": "none", "with_rule_ids": [], "resolution": None},
+    }
+    candidate = empty_experience("frozen-model")
+    candidate["structured_rules"] = {"schema": RULE_SET_SCHEMA, "rules": [rule]}
+    candidate["sha256"] = sha({k: v for k, v in candidate.items() if k != "sha256"})
+    with pytest.raises(LearningError, match="source bytes"):
+        validate_experience(candidate, "frozen-model")
+    assert validate_experience(candidate, "frozen-model", structured_source_payloads={"source-1": source}) is candidate
