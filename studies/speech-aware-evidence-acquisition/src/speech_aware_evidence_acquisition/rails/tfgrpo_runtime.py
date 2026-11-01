@@ -348,24 +348,30 @@ def run_registered_learning(runtime, *, receipt_root, learner_root, retain_clien
     """
     from .tfgrpo_source import load_dynamic_source
     from .tfgrpo_learning import ExperienceLearner
+    from .tfgrpo_verified import VerifiedImportContext
     values=runtime._composed.values
     registration=values['tfgrpo_learning_registration']
+    verified_context = VerifiedImportContext(repo_root=runtime._repo_root,
+        data_root=runtime._data_root)
     source,_=load_dynamic_source(values,plan=runtime.plan,repo_root=runtime._repo_root,
         data_root=runtime._data_root,sample_ids=tuple(s.sample_id for s in runtime._samples),
         roster_sha256=registration['construction_roster_sha256'],
-        replay=getattr(runtime, '_native_contact_replay', None))
+        replay=getattr(runtime, '_native_contact_replay', None),
+        verified_context=verified_context)
     batch=source['batch']
     historical={}
     if 'summary_import' in batch:
         from .tfgrpo_summary_import import load_import
         summaries,custody=load_import(batch['summary_import'],data_root=runtime._data_root,
-            groups=batch['groups'],common=batch['common'],model_id=batch['model_id'])
+            groups=batch['groups'],common=batch['common'],model_id=batch['model_id'],
+            verified_context=verified_context)
         historical={'summary_import':batch['summary_import'],'imported_summaries':summaries,'import_custody':custody}
     if 'final_import' in batch:
         from .tfgrpo_final_import import load_import
         operations,custody=load_import(batch['final_import'],data_root=runtime._data_root,
             groups=batch['groups'],common=batch['common'],model_id=batch['model_id'],
-            parent=batch['parent'],policy_sha256=batch['policy_sha256'],rollout_kind=batch['rollout_kind'])
+            parent=batch['parent'],policy_sha256=batch['policy_sha256'],rollout_kind=batch['rollout_kind'],
+            verified_context=verified_context)
         historical={'final_import':batch['final_import'],'imported_operations':operations,'stage_custody':custody}
     sample_ids = {s.sample_id for s in runtime._samples}
     if {row['sample_id'] for row in registration['contacts']} != sample_ids:
