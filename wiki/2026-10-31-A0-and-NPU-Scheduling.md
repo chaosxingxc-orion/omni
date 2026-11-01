@@ -169,3 +169,9 @@ odd40 仍处于真实运行时准入阶段。625 条真实 construction 的供�
 312/312真实开发样本完成，936/936请求收到响应；8卡、2个TP4实例，生成5.238秒/条。learned相对lock的SLU差值为+0.6729个百分点，但Intent下降1.6026个百分点，bootstrap区间跨零，按预定门槛不晋升。成本、1872份journal和终态归档已核验。
 
 [完整结果](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-full-result-zh.md) · [成本](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-terminal-cost-timing.json) · [归档核验](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-terminal-archive-verification.json)
+
+## 当前工程效率状态（2026-11-02）
+
+181 当前只有两个 TP4 服务驻留，覆盖 8 卡；没有活跃实验，因此不能把驻留服务计作八卡有效利用率。已落地的 CPU 准备优化是 [runtime manifest cache](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/data/runtime_manifest_cache.py)：它把已验证真实 roster 的媒体身份、SHA-256、时长和采样率固化为可共享、原子发布、篡改即拒绝的 manifest，内容不含标注或提示词。该优化已推送 `main` 的 `195d5940`，尚未用真实 500 样本做 cold/warm preparation 端到端测速，因此暂不报告加速倍数。
+
+下一阶段先在固定镜像内完成 TFRL-v2 bank 的真实 tokenizer 计量、receipt hash 和 4 行 smoke，再把 CPU bank distillation、评分和成本归因接入独立 ready-queue 后继 job，避免 NPU 等待 CPU；smoke 通过后才安排 1,080 行 Fold B。方法冻结且 D/A/best-T 的 runtime、预算、owner allowance、exposure 和 detached identity 齐全后，才运行完整 13,078 条 test。监控维持 600 秒轮巡或明确终态事件，后续每个 NPU 任务继续报告完成量/总量、秒/条、卡数、实例数、逐卡利用率、成本和 ETA。
