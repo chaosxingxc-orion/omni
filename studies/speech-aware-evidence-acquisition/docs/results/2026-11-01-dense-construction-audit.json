@@ -1,0 +1,456 @@
+{
+  "schema": "saea-dense-construction-audit-v1",
+  "scope": "H1-only read-only audit; no H2 outputs/labels or test data read",
+  "candidate_sha256": "703554b4dd7d5835ff90b8e80d82226eaa6e951163a574ed4096471570570e2a",
+  "candidate_file_sha256": "577d6ef9d31b590c014a93c7d33bb6ed8e63e03e2ee55b257c378efbc13de454",
+  "batch_file_sha256": "46020fa689f7f0f42602910b2a24678a87aeaeeb66c9e75929589f8848793eb8",
+  "source_archive_sha256": "796885ab1210772d6b0fe3823c589dbeca1900bb0197498e7ae44cf8db547698",
+  "candidate_archive_sha256": "738f92f8e30b130c351da0464cbd8bdd56d414b82dc22e4ee2fd9e7ab4191eb7",
+  "source_group_updates": 51,
+  "source_operations": 102,
+  "candidate_rules": 10,
+  "candidate_characters": 3442,
+  "rules": [
+    {
+      "rule_number": 1,
+      "content_sha256": "e962a1f9bf8f4f918da43639dc2fdcfee1bdfae9a20042c2b3157dd603b5b48b",
+      "operation_sha256": "a35252291ac389189420e356fabb5245353bf4eab0f4d8b8e795a857cdb16463",
+      "characters": 491
+    },
+    {
+      "rule_number": 2,
+      "content_sha256": "d529a2648c81b44edffc764973533bf04575fd63476add5a8fa3a0dcbbfe4ea2",
+      "operation_sha256": "87c1c73016da21d97f548ed6b5301366db6ee95df3edfef7ab3a4410ba1f589d",
+      "characters": 340
+    },
+    {
+      "rule_number": 3,
+      "content_sha256": "910f72390ddd4c7ab029ae9368474d1b8a0e7c376ad33a1562027c80ffa4d8c4",
+      "operation_sha256": "06f2a28f118ddd34413fd7169bd53585065cdbd882c9c2d8d7390fe97941c2ef",
+      "characters": 299
+    },
+    {
+      "rule_number": 4,
+      "content_sha256": "27058de668a76dc5563d78b5e84ff5d7cee1183ba47f56fe363974b7c5a1e136",
+      "operation_sha256": "7b94d5f4ec3aee11338a3ed8d4df30a0dcbc83fac1776094bfcff8b384b44ba0",
+      "characters": 297
+    },
+    {
+      "rule_number": 5,
+      "content_sha256": "b8e5e6f2193fc3e8cf95c000252f32e1c7cd517e2030be27b9cbdfe44056b67d",
+      "operation_sha256": "e8cf082bea682ffdfa981ebeedfe5b27f923d327aacc5eb4143b6c874bbe4b88",
+      "characters": 312
+    },
+    {
+      "rule_number": 6,
+      "content_sha256": "1d91d2cb75db82680a155bd4072c5930c37c0a12d78dde602e1545453e939929",
+      "operation_sha256": "e6d555341fd7ca843d7df6323c316fcc2da9c593cb0877fb9486d2db48c32eb3",
+      "characters": 340
+    },
+    {
+      "rule_number": 7,
+      "content_sha256": "cb0eb284ab0274d522011eab3b7dcb4a2ba50c22a0e711e3e7ac53fc6dcceee4",
+      "operation_sha256": "bbad4d44401d39c50a9a82cf3fbd804aae4d9bb94f68e6bd186237ede615cf83",
+      "characters": 404
+    },
+    {
+      "rule_number": 8,
+      "content_sha256": "5c8bf7d1414e2034d8433e368b427fcfe61bd0039e7a156ce4ed882dcaf25ba5",
+      "operation_sha256": "aa5bccfe57c4b7ca3c1890a327800974c7391f93831ac5fca501d97fc614a077",
+      "characters": 395
+    },
+    {
+      "rule_number": 9,
+      "content_sha256": "ac852d490ac7b6d5645f1040ba64a871c8710d7c51aea081b375ab14ca16f41f",
+      "operation_sha256": "a7d8f8205e5f1ba6fec4b0f88554a06154470e928da7d630acf44b5d8adc6586",
+      "characters": 314
+    },
+    {
+      "rule_number": 10,
+      "content_sha256": "2811c2ad27ff13e7bb42d095fac05a709c915fb2d94ae5a0ea9c262f957e04c3",
+      "operation_sha256": "ae2c569b946338abddd4238d8c1425e83a8e63e9d82a7b893a8007b92cbc6ecf",
+      "characters": 250
+    }
+  ],
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "candidate_modified": false,
+  "limitations": [
+    "Text provenance audit does not establish H2 performance causality.",
+    "No phonetic or raw-audio evidence is available to the reflector.",
+    "No exhaustive named-entity memorization proof; direct inspection found no copied person/business/place answers in the 10 final rules.",
+    "Selective omission is allowed by policy and is not automatically a regression."
+  ],
+  "review_note": "Primary reviewer checked candidate operation order; F2 points to rule10, not rule9.",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "high",
+      "classification": "verified-construction-error",
+      "rules": [
+        5
+      ],
+      "title": "将场景动作列表错用为实体值域",
+      "source_operations": [
+        {
+          "group_contact": "39703652b7c2ec8da2d140fb71e1f41b01be69358b1f1b32e3589e278fdb5bfb",
+          "response_file_sha256": "494655b9904751e3157b11255c121adb03d3843f0b560982d4c4c94c709c6c63",
+          "operation_index": 1,
+          "operation_sha256": "16785bc72427d16777db3f6254f56c599d842ac1bf067ae900fdaa7bbf093fe0"
+        },
+        {
+          "group_contact": "f7498db293d9a348e6e34d9c711bb35d5e886e1439034de47ab3f82e124e712f",
+          "response_file_sha256": "cc9698e30124a2c2b3d000238af82e71a0bfa571c44427965c2ad4d8ee05f570",
+          "operation_index": 0,
+          "operation_sha256": "3129c120bce46ae73b7fe53937a7a0e031ab03511a813c0d4113efd66994f48c"
+        },
+        {
+          "group_contact": "cca601190bd294e8155f7c5d8d67635161785cd1b6cbadff08b79c016c07327c",
+          "response_file_sha256": "14d2315405406e766b0069d5d9f79b7ef63795c0d1446399b73abce8e5ba5bea",
+          "operation_index": 0,
+          "operation_sha256": "36825bcba39bd0af9e39a484f8374e28edc7a1a32df68b4d4213bd229fa1faef"
+        },
+        {
+          "group_contact": "cca601190bd294e8155f7c5d8d67635161785cd1b6cbadff08b79c016c07327c",
+          "response_file_sha256": "14d2315405406e766b0069d5d9f79b7ef63795c0d1446399b73abce8e5ba5bea",
+          "operation_index": 1,
+          "operation_sha256": "1ec8b69d3b294e66b918e4dd5b9430e5170235532f288b82100b3645a4d5e80d"
+        }
+      ],
+      "source_contracts": {
+        "slot-contracts::slot-contract:media_type": {
+          "content_sha256": "4f2777b39f5444c7c2617dcc7d0a3ef25a61271749627205dcc24ff926c61370"
+        }
+      }
+    },
+    {
+      "id": "F2",
+      "severity": "high",
+      "classification": "verified-scope-loss",
+      "rules": [
+        10
+      ],
+      "title": "事实查询被泛化为quirky且禁止槽位",
+      "source_operations": [
+        {
+          "group_contact": "2724b1970c3761077fe2cac6ffc0f55f45485e9bb93b3e0500577c4851b188e5",
+          "response_file_sha256": "ed4769d21cd19c5464e15e1d0705f884bdf358bccbcbc62183a07139b1b2cacc",
+          "operation_index": 0,
+          "operation_sha256": "b99679f9f1d96f92b64737550bbc8b51d1071a413d9dfd9bce0ef8ef5442a431"
+        },
+        {
+          "group_contact": "2724b1970c3761077fe2cac6ffc0f55f45485e9bb93b3e0500577c4851b188e5",
+          "response_file_sha256": "ed4769d21cd19c5464e15e1d0705f884bdf358bccbcbc62183a07139b1b2cacc",
+          "operation_index": 1,
+          "operation_sha256": "adeee1af15c8eed725e7453c6bd800e9e18ee842d5baa13b4d0dc5980c994f54"
+        },
+        {
+          "group_contact": "fcf32e2b82e017e18d249bc2a225b2db9159ef0ba032a5c744b776f0bff334ce",
+          "response_file_sha256": "813f454196f77e67d265be83bde19954f43f16702f7c7e2cbea577d22160cd3a",
+          "operation_index": 0,
+          "operation_sha256": "62909a18e748c4d2661dacc0a354a52d1f0ca00255698ddf4135ae9814d2812d"
+        },
+        {
+          "group_contact": "63ba1501a5cefb80e39f3118e3c4fb1a8624a057ba8f70b4feedb3f0052dd524",
+          "response_file_sha256": "b442215a139ed076fd56b0291c51e26d69531ae5f177d71a2ef3fc083ebc51e0",
+          "operation_index": 0,
+          "operation_sha256": "8b111cfcfab1d8b26bea9e18a855039fda0f89c564670b601780b6d982c13e57"
+        }
+      ],
+      "source_contracts": {
+        "intent-boundaries::intent-boundary:general_quirky": {
+          "content_sha256": "ba13d2479cc8e0a8a313a417c343e1148a7b42bd6530a57ae4105050a5a4b84f"
+        },
+        "slot-contracts::slot-contract:date": {
+          "content_sha256": "716e15e00f6c37b2e3c17c0fbe5c7f6f0df60be36198b410c851ffd483067739"
+        }
+      }
+    },
+    {
+      "id": "F3",
+      "severity": "high",
+      "classification": "verified-internal-conflict",
+      "rules": [
+        1,
+        8
+      ],
+      "title": "日期合并条件互相冲突",
+      "source_operations": [
+        {
+          "group_contact": "b5d1abc5d7ff8d26adeeaa658708d0929c797cb44adfe56a2d4cd5bd473c5037",
+          "response_file_sha256": "7736c464959dce929a79d3ef3e27080d22c87a04209daf05ece3cbd1f39e631b",
+          "operation_index": 0,
+          "operation_sha256": "6119058281fd653cfb03f4e769a75f8875dc27e4247e0fe80841243d26ed4c52"
+        },
+        {
+          "group_contact": "d7f621a0b3dbec83d687d2b962aad00b4aec5dbfa1f97a42e7ae3d673ab55b61",
+          "response_file_sha256": "fb3463ce3ab91de7ccfb7e8880037642a8a0fe9a7a8d08df2ba83c68ed303bee",
+          "operation_index": 0,
+          "operation_sha256": "4ec0e0d5f2e00af0b9064334ef134328f67ddcdd75d4c4a460423eb011584f98"
+        },
+        {
+          "group_contact": "d7f621a0b3dbec83d687d2b962aad00b4aec5dbfa1f97a42e7ae3d673ab55b61",
+          "response_file_sha256": "fb3463ce3ab91de7ccfb7e8880037642a8a0fe9a7a8d08df2ba83c68ed303bee",
+          "operation_index": 1,
+          "operation_sha256": "1375782fd3f558c9d13b7752371bd65a54072b5540ab9dba5178e3c0c03cfb4b"
+        },
+        {
+          "group_contact": "24092c10befb3103108f965396af23f5fed171e94c924a545dc1ab9db91198ed",
+          "response_file_sha256": "355897ad8a8be6250df9cd6b38e9fb17100147c13d16b61615425cac3d5af86a",
+          "operation_index": 1,
+          "operation_sha256": "1a2b69a0e17fb255ea1153a777b87e2e57941415737cbda1062231fd477ffe14"
+        },
+        {
+          "group_contact": "0914088ece0f6970723a17039f7674da0b0bccae2e5ec969b003166fd1578c5d",
+          "response_file_sha256": "582e0f210ec1aec227bcdc343b2ee4d0eaf882eef091af69a5e9ab954c07a993",
+          "operation_index": 1,
+          "operation_sha256": "2172dd5d97dd6d6dcd62336f724a04f960aad0d760deb8e3c60aeb7cdddc9161"
+        }
+      ],
+      "source_contracts": {
+        "slot-contracts::slot-contract:date": {
+          "content_sha256": "716e15e00f6c37b2e3c17c0fbe5c7f6f0df60be36198b410c851ffd483067739"
+        }
+      }
+    },
+    {
+      "id": "F4",
+      "severity": "medium",
+      "classification": "verified-scope-loss",
+      "rules": [
+        4
+      ],
+      "title": "delivery词触发无条件意图",
+      "source_operations": [
+        {
+          "group_contact": "9b8f7f902a35412d05afa671d9c96e38b5066f7b1782fc9302aa4b1e02685432",
+          "response_file_sha256": "7ccb9c4d212c80697d35ac40614056079cc768642ad48d4c63bf877e4e9e6133",
+          "operation_index": 0,
+          "operation_sha256": "66a471e61496c8ce8479a6629627eced631d0e933bc8688e7d6f26a11e586297"
+        },
+        {
+          "group_contact": "9b8f7f902a35412d05afa671d9c96e38b5066f7b1782fc9302aa4b1e02685432",
+          "response_file_sha256": "7ccb9c4d212c80697d35ac40614056079cc768642ad48d4c63bf877e4e9e6133",
+          "operation_index": 1,
+          "operation_sha256": "dab34a0eb57cf6c4ac0e2b4d256b8e99e08fd5a7606f8e62057c8009b0890206"
+        },
+        {
+          "group_contact": "0b2b22c682790bbd590381055da2f67e9991552f523bd2447868d29f0f315161",
+          "response_file_sha256": "5695028ede3aea02fc8534ef99a27cdd6449cdb8618c43242476a1f6f233412b",
+          "operation_index": 0,
+          "operation_sha256": "b73d1927b726c8a868fcb75f65d13e3373a0148dd79302d7d6495d7448233675"
+        },
+        {
+          "group_contact": "0b2b22c682790bbd590381055da2f67e9991552f523bd2447868d29f0f315161",
+          "response_file_sha256": "5695028ede3aea02fc8534ef99a27cdd6449cdb8618c43242476a1f6f233412b",
+          "operation_index": 1,
+          "operation_sha256": "fbec1a878d4ff15eb2af2cf12ab52114916439525f2b93e879a6ebf6357bf754"
+        },
+        {
+          "group_contact": "52e9fb153cc0d99f26f9599db49360dde3afabfee9866a4c5c3c4baa7ab9e943",
+          "response_file_sha256": "a481e4a3481c5f7cfa93a09a8db246b1ac06df011b25e20fc63d1677c47ab189",
+          "operation_index": 0,
+          "operation_sha256": "23ced3a3b413fbe0a3f71f3097ddc553cd921fba980c5a9591fa9bfe4dbd9322"
+        }
+      ],
+      "source_contracts": {
+        "intent-boundaries::intent-boundary:takeaway_order": {
+          "content_sha256": "ca8ab2d535556612701c65474d7aac09e43871f07f2b64d1497cfbfee9efcee8"
+        },
+        "intent-boundaries::intent-boundary:takeaway_query": {
+          "content_sha256": "e3fafc586dde4e229dc1cec600fdf246b81fb8cd5b75d7e8aa6163cf22f12a09"
+        }
+      }
+    },
+    {
+      "id": "F5",
+      "severity": "medium",
+      "classification": "verified-conflict-resolution-gap",
+      "rules": [
+        8
+      ],
+      "title": "business_name互斥范围被折中但未消歧",
+      "source_operations": [
+        {
+          "group_contact": "f6fc162588e1d0bff11d335bb147befda6c1edc8601ee4c0e9258398ba340987",
+          "response_file_sha256": "6e3542ef3bfda06ee2ce0ffb863159c03724a107e089dddb20452c4b395628c1",
+          "operation_index": 0,
+          "operation_sha256": "2d05c361d7725963192f8eb7262ebf13f2047b6a842178ef526bf3ef4f719685"
+        },
+        {
+          "group_contact": "f6fc162588e1d0bff11d335bb147befda6c1edc8601ee4c0e9258398ba340987",
+          "response_file_sha256": "6e3542ef3bfda06ee2ce0ffb863159c03724a107e089dddb20452c4b395628c1",
+          "operation_index": 1,
+          "operation_sha256": "17114f9dab88919065c79ccdd5659e2c9c25e0dfe6a4b879792d2fd4d5b38f30"
+        },
+        {
+          "group_contact": "bb1ac685d4c8fc4631775c9be5ab72fcd72cc94287846bbaf3b252f94b61e424",
+          "response_file_sha256": "38c43256dcde2292aab784fc7c8ca8629dcca8a62f60afe89224bf49db90cf61",
+          "operation_index": 1,
+          "operation_sha256": "8ad3e30e382d351deee017837d8e520782122d6affbb93654a429ec95d246e16"
+        },
+        {
+          "group_contact": "52e9fb153cc0d99f26f9599db49360dde3afabfee9866a4c5c3c4baa7ab9e943",
+          "response_file_sha256": "a481e4a3481c5f7cfa93a09a8db246b1ac06df011b25e20fc63d1677c47ab189",
+          "operation_index": 1,
+          "operation_sha256": "5d02145b085088e79807105186b488f293892dc9308f240bd93d743343f03cb8"
+        }
+      ],
+      "source_contracts": {
+        "slot-contracts::slot-contract:business_name": {
+          "content_sha256": "fdfed9a70bd106824f58f01104fe27c89f950ffff3d5f4effc2459096ad42b69"
+        }
+      }
+    },
+    {
+      "id": "F6",
+      "severity": "medium",
+      "classification": "hypothesis-needs-train-confirmation",
+      "rules": [
+        1,
+        2
+      ],
+      "title": "时间与日期局部模式提升为通用规则",
+      "source_operations": [
+        {
+          "group_contact": "98d31246eaa39336e4fa8884e70a7f15b132a53e547ad94041e8d522d28d42bd",
+          "response_file_sha256": "b9eeee070c755d85c054a49bfcacf543a724ce968867e9a61b509b9800677299",
+          "operation_index": 0,
+          "operation_sha256": "ba0bc58caa5440653f24516d9eee3a9fdece41f5a09b04799a8c9b05a4d01c2f"
+        },
+        {
+          "group_contact": "98d31246eaa39336e4fa8884e70a7f15b132a53e547ad94041e8d522d28d42bd",
+          "response_file_sha256": "b9eeee070c755d85c054a49bfcacf543a724ce968867e9a61b509b9800677299",
+          "operation_index": 1,
+          "operation_sha256": "aaacfee25f0af31dd56afdee19ef34737d7950c2c856d87f4b221a137341de51"
+        },
+        {
+          "group_contact": "82242c9f03ebc30856027c4ea53868975457c7e004806fc4f6116f6cc47480a7",
+          "response_file_sha256": "d5eeaceb0c5d3caca1aea2626a627f83c668aceb59a558ceaf8fb61b83a96a02",
+          "operation_index": 0,
+          "operation_sha256": "a019f176012e405f81c134db564093d0ac9a04ef5ae34231b8769fd98c685b76"
+        }
+      ],
+      "source_contracts": {
+        "slot-contracts::slot-contract:date": {
+          "content_sha256": "716e15e00f6c37b2e3c17c0fbe5c7f6f0df60be36198b410c851ffd483067739"
+        },
+        "slot-contracts::slot-contract:time": {
+          "content_sha256": "7a68f81a50bfd56374ed0464bf8016db52ba0f8b14ced8133dd6e365b75fc51f"
+        }
+      }
+    },
+    {
+      "id": "F7",
+      "severity": "medium",
+      "classification": "verified-content-omission-not-accuracy-loss",
+      "rules": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "title": "有选择地压缩但缺少可审计的逐规则来源映射",
+      "source_operations": [
+        {
+          "group_contact": "f09d4599bea4bc96c26c363b35015440dd1633eac7e101f1effe30e7a1a29476",
+          "response_file_sha256": "ee5d80577ff76f26a6c9d1facb1b0a5b0937d8c3fcf2643b6b061cc9c60b137e",
+          "operation_index": 0,
+          "operation_sha256": "a9ce43207a7ab2dfa0d2373ceb6510c84acf4f84b21f7ebcaf5c4cf5cb251587"
+        },
+        {
+          "group_contact": "f09d4599bea4bc96c26c363b35015440dd1633eac7e101f1effe30e7a1a29476",
+          "response_file_sha256": "ee5d80577ff76f26a6c9d1facb1b0a5b0937d8c3fcf2643b6b061cc9c60b137e",
+          "operation_index": 1,
+          "operation_sha256": "a50c4dfcee70c74d58be7f86060dedad810597f13915c46b61720c55f2dc0793"
+        },
+        {
+          "group_contact": "7743aa5a27c84ee8ac98c4ab6ef404868ac0ce0c0885b920ddef3d0d9c6e559a",
+          "response_file_sha256": "0c3913e10e87ca0924a6c69bb7772847c76a4eb22946324bcf7d61315ffb1b61",
+          "operation_index": 0,
+          "operation_sha256": "e32554c18a296f224ba9192dd390f8326746eeb5897701641c70b991840dc706"
+        },
+        {
+          "group_contact": "c9dd427869ba586078c23e86cd9a30c087c5fb198c0324261bff4b567c8c2f1b",
+          "response_file_sha256": "537aa34278f3b79635da613ecb0a242eea14848f8a1cc5b548dacf877fa16579",
+          "operation_index": 0,
+          "operation_sha256": "0e7a84b27d3d0df70692a3608fcc9e5121b522857f4c2cdc86a34696d96d4414"
+        },
+        {
+          "group_contact": "c9dd427869ba586078c23e86cd9a30c087c5fb198c0324261bff4b567c8c2f1b",
+          "response_file_sha256": "537aa34278f3b79635da613ecb0a242eea14848f8a1cc5b548dacf877fa16579",
+          "operation_index": 1,
+          "operation_sha256": "836dc29d9030e5681a909ce1f57abbf97e829b4d23fa838b678ded5bd10fb17d"
+        },
+        {
+          "group_contact": "a7b0d7740ad338324f4f2c700a80b26d3b872c21e48188316976add400c0b437",
+          "response_file_sha256": "0f9f776e75accf60f6821bf13d0ffa005682953a253fe1f78c4296d3f9d250d9",
+          "operation_index": 1,
+          "operation_sha256": "d3599f384d8f7032ee0598831aa2a171f4b4fa7a22cce243b31cc5e794d02500"
+        },
+        {
+          "group_contact": "a42473d12786c655dedba8cd929765a7c1b4402c0763da5ffdd511b180195340",
+          "response_file_sha256": "b438dcb5619eccba1cf5a1d7e28a03807cc29e7cd2eba8f2af1d8c0fd81f0ffd",
+          "operation_index": 0,
+          "operation_sha256": "a2120ee81d27265bba45132910c3f188286dc7ab4a48356b60acd7acd0686993"
+        },
+        {
+          "group_contact": "be5a3761fd4b7bc3e80fd67502e765c1f64a7df6a2caa7ef776c0231b0cf0379",
+          "response_file_sha256": "2df62d17f7a1ce6d218ca1726ab406fa36c554a524eee020d90ff24fa27ef5d5",
+          "operation_index": 0,
+          "operation_sha256": "661d1c449cbd5d80b65814c29730a7d6da9f7776d8d70e5dbfbded568c509541"
+        },
+        {
+          "group_contact": "be5a3761fd4b7bc3e80fd67502e765c1f64a7df6a2caa7ef776c0231b0cf0379",
+          "response_file_sha256": "2df62d17f7a1ce6d218ca1726ab406fa36c554a524eee020d90ff24fa27ef5d5",
+          "operation_index": 1,
+          "operation_sha256": "922047fbe1119519bdec69618d826668a031737f50fc43ea75021b9e2baa052a"
+        },
+        {
+          "group_contact": "14fb4672b184694326bd13669cbf24b68a59378b308a7185864812fb2d0c8abb",
+          "response_file_sha256": "6b86347a2ba435300c7acdfd5414ab3241c095b445d6c03832ae92e3e1856938",
+          "operation_index": 0,
+          "operation_sha256": "6e6ccc37a4817974e9640e6c80c5782ab886b7b5cc4dbfa151d242dbfe7ed803"
+        }
+      ],
+      "source_contracts": {}
+    },
+    {
+      "id": "F8",
+      "severity": "low",
+      "classification": "verified-duplication",
+      "rules": [
+        7,
+        10
+      ],
+      "title": "quirky规则重复占用消费上下文",
+      "source_operations": [
+        {
+          "group_contact": "fcf32e2b82e017e18d249bc2a225b2db9159ef0ba032a5c744b776f0bff334ce",
+          "response_file_sha256": "813f454196f77e67d265be83bde19954f43f16702f7c7e2cbea577d22160cd3a",
+          "operation_index": 0,
+          "operation_sha256": "62909a18e748c4d2661dacc0a354a52d1f0ca00255698ddf4135ae9814d2812d"
+        },
+        {
+          "group_contact": "fcf32e2b82e017e18d249bc2a225b2db9159ef0ba032a5c744b776f0bff334ce",
+          "response_file_sha256": "813f454196f77e67d265be83bde19954f43f16702f7c7e2cbea577d22160cd3a",
+          "operation_index": 1,
+          "operation_sha256": "86f3aa4e2b9981a1b00f1a90c6e3431d44b2c773d06eb3cc5239ab807661ca9b"
+        },
+        {
+          "group_contact": "63ba1501a5cefb80e39f3118e3c4fb1a8624a057ba8f70b4feedb3f0052dd524",
+          "response_file_sha256": "b442215a139ed076fd56b0291c51e26d69531ae5f177d71a2ef3fc083ebc51e0",
+          "operation_index": 0,
+          "operation_sha256": "8b111cfcfab1d8b26bea9e18a855039fda0f89c564670b601780b6d982c13e57"
+        }
+      ],
+      "source_contracts": {}
+    }
+  ]
+}
