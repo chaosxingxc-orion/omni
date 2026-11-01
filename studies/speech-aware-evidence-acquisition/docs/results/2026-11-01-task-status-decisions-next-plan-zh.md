@@ -2,7 +2,7 @@
 
 ## 2026-11-01：主机故障定位与 LoRA 环境
 
-npu2于08:17 UTC重启，两次故障均为Ceph客户端`unsafe_request_wait`在fsync路径的空指针异常，第二次随后soft lockup。08:43 UTC双TP4服务健康检查均200；新运行凭证重采集后与旧配置逐字节一致，进程会话另行刷新。已完成本地ext4热状态迁移、共享唯一guard与旧启动入口隔离，正式容器及公开仓均36项测试通过。新恢复容器已启动，08:51仍在预检；复用原146次响应，预计只补41次调用，尚无新增推理结果。H2未启动，8卡服务驻留不等于满载。开发机每600秒拉取本地归档并记录哈希；未做重启故障注入，不称内核问题已修复。详见[故障诊断与恢复边界](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-npu2-ceph-crash-diagnosis-zh.md)。
+npu2于08:17 UTC重启，两次故障均为Ceph客户端`unsafe_request_wait`在fsync路径的空指针异常，第二次随后soft lockup。08:43 UTC双TP4服务健康检查均200；新运行凭证重采集后与旧配置逐字节一致，进程会话另行刷新。已完成本地ext4热状态迁移、共享唯一guard与旧启动入口隔离，正式容器及公开仓均36项测试通过。新恢复已进入真实推理，08:56原生请求40次、响应21次已落盘；复用原146次响应，预计只补41次。学习总规模32组/128条轨迹，完成组数与每组耗时待封存核验，ETA暂不外推。H2未启动，8卡服务驻留不等于满载。开发机每600秒拉取本地归档并记录哈希；未做重启故障注入，不称内核问题已修复。详见[故障诊断与恢复边界](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-npu2-ceph-crash-diagnosis-zh.md)。
 
 基于nga离线源码与依赖已构建独立`omni-verl-lora-env:20261101-v3`，ID `3fc654a33d39…`；最终镜像内部7项CPU/meta探针通过，Thinker+Processor+文本注意力LoRA范围确认：192模块、384张量、13,369,344参数。正式环境工具/分析测试20项通过（公开仓4.98秒）。未加载真实权重、未前向/反向，尚未证明音频训练或在线RL可用。详见[环境结果与适配缺口](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-verl-omni-environment-zh.md)。H2原始标签分项分析另已通过47项正式测试，尚未改动执行H树。
 
