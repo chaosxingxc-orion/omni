@@ -1,0 +1,10 @@
+{
+  "schema": "saea-h1-terminal-archive-verification-v1",
+  "archive_sha256": "a624fb1295b946464e9c7ea18903486ae76e629359c50580f8bb3c668e78139c",
+  "rows": 313,
+  "journal_files": 1252,
+  "journal_hashes_match_terminal_audit": true,
+  "output_and_score_match_manifest": true,
+  "official_result_sha256": "bc4a568b1ee258bbcdcf8bd01a1adbf23254cabe1155928c273dbea8ecb4a738",
+  "archive_is_automatic_restore_authority": false
+}
