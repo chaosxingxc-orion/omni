@@ -66,5 +66,8 @@ odd40 改变证据而非仅重复采样：A保留原top20，B取top40的奇数�
 - [实验Wiki](https://github.com/chaosxingxc-orion/omni/wiki/2026-10-31-A0-and-NPU-Scheduling)：原位维护汇总。
 - [REAL500结果](2026-10-31-real500-first-progress-zh.md)、[Fold B锁定](2026-10-31-a0-full1080-baseline-lock-zh.md)、[Fold A结果](2026-10-31-fold-a-c2-verified-result-zh.md)。
 - [TFRL成本审计](2026-10-31-tfrl-recovered-cost-audit.json)、[整答案筛查](2026-10-31-tfrl-whole-answer-result.json)。
+- [难例数据与覆盖契约](2026-11-01-tfrl-hardset-contract-zh.md)：实际标签关系、难度证据、固定学习/开发/test角色。
+- [学习方法与RSI闭环](2026-11-01-tfrl-learning-method-zh.md)：优化对象、ACE参照、奖励与更新、接纳/回滚及实现缺口。
+- [输入缓存与等待归因](2026-11-01-input-cache-and-wait-analysis-zh.md)：真实500条证据、FIT锁与槽位、缓存可行性和工程优先级。
 
 输入稳定性核验：K4与odd40共享同一625条数据集和原H1/H2名单；本次元数据逐字节一致，未重新制作数据集。原口径中“新工程基准先生成新抽样凭证”已撤销，后续默认直接引用已有稳定版本。

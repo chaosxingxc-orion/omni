@@ -1,0 +1,116 @@
+{
+  "schema": "saea-input-cache-feasibility-v1",
+  "dataset_unchanged": true,
+  "new_model_calls": 0,
+  "new_tokenizer_calls": 0,
+  "evidence": {
+    "timing_run": "SAEA-SLURP-REAL500-TP4-S128-V1",
+    "timing_rows": 500,
+    "timing_missing_rows": 0,
+    "timing_analysis_exit_code": 0,
+    "mean_admission_to_p_seconds": 281.81528863896,
+    "per_row_inclusive_seconds": {
+      "audio_read_encode": 0.01803912312000466,
+      "context_build": 0.5635109317799106,
+      "native_fit": 18.49249858351994,
+      "request_render": 0.6940224750401103,
+      "http_request": 470.18208394021985
+    },
+    "timing_note": "Stages may overlap. Aggregates cover P and S; not a mutually exclusive decomposition of admission-to-P.",
+    "host_memory_available_bytes_snapshot": 2012295843840,
+    "compressed_audio_bytes": {
+      "construction625": 55060871,
+      "train50627": 2740935640,
+      "devel8690": 470379583,
+      "test13078": 700033078
+    },
+    "metadata_scan": "File sizes and recording names only; no labels/answers used and no audio hash recomputation."
+  },
+  "resident_engine": {
+    "instances": 2,
+    "tp": 4,
+    "max_num_seqs": 128,
+    "mm_processor_cache_type": "shm",
+    "mm_processor_cache_gb": "source default 4; no CLI override observed",
+    "custom_encoder_cache_config": "no CLI override observed",
+    "candidate_supported_in_image": "vllm_ascend.ec_manager.score_ec_manager.ScoreEncoderCacheManager",
+    "candidate_deployed": false,
+    "candidate_performance_verified": false,
+    "read_only_metrics_snapshot": {
+      "observed_utc": "2026-11-01T01:23:56.534803+00:00",
+      "instances": [
+        {
+          "port": 8200,
+          "running": 0,
+          "waiting": 0,
+          "mm_queries": 3690,
+          "mm_hits": 2662
+        },
+        {
+          "port": 8201,
+          "running": 0,
+          "waiting": 0,
+          "mm_queries": 3705,
+          "mm_hits": 2666
+        }
+      ],
+      "combined_mm_hit_fraction": 0.7204868154158215,
+      "scope": "Service lifetime aggregate across previous experiments, not REAL500-only or encoder-cache hit rate."
+    }
+  },
+  "recommended_priority": [
+    "instrument slot wait and executor wait separately",
+    "move reusable P preparation and FIT before occupying generation slot",
+    "bounded concurrent FIT with durable per-contact accounting",
+    "reuse existing host/MM caches; size by measured misses and bytes",
+    "controlled native encoder CPU/NPU cache comparison on existing real roster"
+  ],
+  "limitations": [
+    "No current NPU utilization measurement",
+    "No measured decode/encoder/H2D breakdown",
+    "Do not infer that 281.8 seconds is dataset I/O",
+    "Model-specific audio embedding injection not verified; generic enable_mm_embeds flag insufficient",
+    "Warm-cache comparison must report cold preparation and warm execution separately"
+  ],
+  "engineering_followup": {
+    "fit_state_isolation_required": [
+      "per-contact client",
+      "per-contact counters and endpoint journal sink",
+      "receipt keyed by contact rather than shared-list slicing"
+    ],
+    "new_timing_events": [
+      "native_fit_lock_wait",
+      "native_fit_recovery_lock_wait"
+    ],
+    "timing_status": "implemented in isolated worktree; 49 formal CPU tests passed in 11.33 seconds; not deployed",
+    "concurrent_fit_implemented": false,
+    "preparation_queue_implemented": false,
+    "cache_deployment_changed": false,
+    "performance_gain_measured": false,
+    "validation": {
+      "passed": 49,
+      "seconds": 11.33,
+      "exit_code": 0,
+      "environment": "pinned saea-base on npu2, network none, CPU-only",
+      "scope": "stage timing, native contact FIT, FIT recovery; fake endpoint only"
+    }
+  },
+  "lock_timing_validation": {
+    "implementation_commit": "6a5380d4",
+    "public_code_commit": "ecad7b70",
+    "implementation_tests": {
+      "passed": 49,
+      "seconds": 11.33,
+      "exit_code": 0
+    },
+    "public_tests": {
+      "passed": 46,
+      "seconds": 9.1,
+      "exit_code": 0
+    },
+    "real_model_calls": 0,
+    "real_tokenizer_calls": 0,
+    "concurrent_fit_implemented": false,
+    "speedup_verified": false
+  }
+}
