@@ -1,0 +1,43 @@
+{
+  "schema": "saea-real-concurrency-sweep-plan-v1",
+  "status": "PLAN-ONLY-NOT-ADMITTED",
+  "purpose": "engineering-throughput-measurement",
+  "dataset": {
+    "kind": "fixed-real-sampled-development",
+    "rows_per_level": 100,
+    "same_manifest_for_all_levels": true,
+    "test_labels_read": false,
+    "synthetic_requests": false
+  },
+  "resources": {
+    "cards": 8,
+    "instances": 2,
+    "tensor_parallel_per_instance": 4,
+    "ports": [8200, 8201],
+    "cards_by_instance": [[0,1,2,3],[4,5,6,7]],
+    "context_tokens": 49152,
+    "max_num_batched_tokens": 2048,
+    "mm_processor_cache_type": "shm"
+  },
+  "levels": [
+    {"id":"C32","client_concurrency_per_instance":32,"max_num_seqs":128},
+    {"id":"C48","client_concurrency_per_instance":48,"max_num_seqs":128},
+    {"id":"C64","client_concurrency_per_instance":64,"max_num_seqs":128},
+    {"id":"C96","client_concurrency_per_instance":96,"max_num_seqs":128}
+  ],
+  "admission_requirements": [
+    "new deployment profile identity per sweep family",
+    "owner and countersignature over profile and budget",
+    "runtime receipt bound to live PID, ports, digest, TP and card mapping",
+    "detached worker with atomic checkpoint and resume proof",
+    "600-second observer or terminal-event watcher",
+    "no unknown request replay"
+  ],
+  "promotion": {
+    "requires_all_levels_terminal": true,
+    "requires_zero_errors_timeouts_preemptions": true,
+    "requires_per_card_task_utilization": true,
+    "requires_profile_identity_match": true,
+    "does_not_authorize_launch": true
+  }
+}
