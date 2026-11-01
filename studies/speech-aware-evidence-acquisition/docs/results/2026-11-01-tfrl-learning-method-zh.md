@@ -8,7 +8,7 @@
 
 K4 的 625 条有效结果消耗 4375 次生成；投票 SLU-F1 为 66.8000%，同轨迹 lock 为 67.2040%，未通过预登记门槛。已有 64 个示例、1 条规则产物，但后续应用轮未启动，所以这些产物没有证明系统改善。odd40 通过改变供给探索答案，当前也只是探索算子；必须把所得反馈变成下一版本可执行知识或消费策略，并验证迁移，才构成学习闭环。
 
-当前 `tfrl_v2_distiller.py` 明确采用**确定性模板**提取最好/最差答案差异，未运行 LLM reflector。`credit_rows` 对 99 条 A/A 分数不同的样本拒绝正向 credit；这能防止把偶然改善直接写入规则，却不应变成把不稳定难例从学习集中删除。K4 的不同提示/供给候选也不能充当同一冻结 A0 的独立重复测量。
+当前 `tfrl_v2_distiller.py` 明确采用**确定性模板**提取最好/最差答案差异，未运行 LLM reflector。`credit_rows` 对 99 条 A/A 分数不同的样本拒绝正向 credit；这能防止把偶然改善直接写入规则，却不应变成把不稳定难例从学习集中删除。当前seed-only K4的s1–s4保持相同提示、证据与采样参数，仅改变种子，并共享P；不能充当完整A0的独立重复测量，但可以核验后用于共享P的S阶段经验学习。
 
 ## 不稳定样本与对比反馈：当前625条实物审计
 
@@ -102,3 +102,5 @@ RSI 的最小证据应包含：至少一次“反馈→状态更新→新状态�
 - `scripts/flights/nx/tfrl_v2_sampler.py:credit_rows`、`scripts/flights/nx/tfrl_v2_distiller.py`、`src/speech_aware_evidence_acquisition/rails/tfrl_ace_material.py`、`scripts/flights/tfrl/tfrl_loop_driver.py`。
 
 原始来源、官方实现和迁移边界详见[方法审计](2026-11-01-tfrl-primary-methods-review-zh.md)。其中核查的官方main集成版本为`c2caa539f4c95ae1c39ed24dc8a99cb3651e1d5d`，与论文链接分支的`7612f860a2314c015573adc742f82157b0d66a6f`分别记录，不能当成相同版本。
+
+当前封存625条已完成请求与官方评分来源审计：3750次Solver请求通过核验；s1–s4二值奖励混合组100条（H1为52、H2为48），全错363、全对162。没有新增模型/tokenizer/评分调用。下一步可从单半组混合轨迹开展模型驱动经验学习，另一半组用于开发评价；同半组不能报告为留出收益。奖励为Intent正确且exact槽位无FP/FN，连续SLU-F1仅作诊断。此结果证明有可用对比材料，尚未证明经验更新收益。

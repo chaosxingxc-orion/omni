@@ -14,7 +14,7 @@
 
 **评估结论：8×64GB Ascend值得验证注意力LoRA，但尚未训练、没有新增精度收益。** 本地Qwen3-Omni约31.72B参数，BF16权重59.08GiB；文本注意力rank16约1337万可训练参数，仍需分片、反向激活及训练/推理权重同步。verl已有Ascend、MoE和LoRA相关支持，但本次核查未找到Ascend+Qwen3-Omni音频+LoRA+在线RL的完整已验证组合。
 
-正确轨迹SFT需要可靠监督；GRPO不要求预先全是正确轨迹，但同一输入下需要奖励可区分的当前策略采样。旧K4不同提示、共享P的候选不能直接当标准GRPO训练组；全错/全对二值奖励组没有组内任务优势。优先验证S求解阶段adapter，保留P和知识配置，然后比较SFT与GRPO；冻结模型TFRL单独保留。训练资源效率和收益需实测，不能用A0推理2.766秒/条外推。
+正确轨迹SFT需要可靠监督；GRPO不要求预先全是正确轨迹，但同一输入下需要奖励可区分的当前策略采样。当前seed-only K4实际使用相同提示/证据、仅改变种子并共享P；可作为固定P条件下的S学习资料，不能冒充独立全流程P/S组，也不能跳过策略概率及版本核验直接送入在线GRPO；全错/全对二值奖励组没有组内任务优势。优先验证S求解阶段adapter，保留P和知识配置，然后比较SFT与GRPO；冻结模型TFRL单独保留。训练资源效率和收益需实测，不能用A0推理2.766秒/条外推。
 
 详见[资源、轨迹要求、兼容性和分阶段方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-verl-lora-feasibility-zh.md)。本文为可行性评估，没有变更部署或启动权重训练。
 
@@ -149,6 +149,8 @@ odd40 仍处于真实运行时准入阶段。625 条真实 construction 的供�
 本次改变了运行时源码，上一轮供给的身份/种子通过记录只代表当时版本；启动前须重新绑定并证明供给输出不变。真实推理仍为0/625、模型/tokenizer新增0，暂无新效率或ETA。下一步接通已知响应复用和原轨迹成本归属，验证部分分支中断恢复后，再完成真实FIT、登记和准入。
 
 实现分支604项测试通过、1项跳过；公开仓594项通过、1项跳过（两树原有测试集合不同；跳过项为Linux上的Windows junction检查）。覆盖真实执行图与模拟传输、进程直接退出、响应trace失败、未知裁决结局、异常响应和并发重复写入；新增真实模型调用0。[验证凭证](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-odd40-contact-custody-validation.json)。
+
+封存seed-only K4请求与官方评分审计现已完成：625条、3750次Solver请求来源与相同输入/种子策略通过核验；s1–s4二值奖励混合组100条（H1 52、H2 48），全错363、全对162。可优先使用已有混合组进行共享P的S阶段TF-GRPO适配，按半组隔离学习/开发；尚未执行经验更新或证明收益。新增模型、tokenizer、评分调用均0。
 
 8 卡持续满载目标尚未达成。
 
