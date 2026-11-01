@@ -71,6 +71,30 @@ def test_real_adapter_trace_metering_and_shared_prepared_text(tmp_path):
     client.close()
 
 
+def test_original_timing_durable_and_checked_after_bridge_reconstruction(tmp_path):
+    from speech_aware_evidence_acquisition.rails.tfgrpo_runtime import contact_key
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical,sha
+    caller,client,_,transport,_,_=setup(tmp_path)
+    result=caller(request())
+    key=contact_key('summary','r1')
+    path=caller.root/(key+'.timing.json')
+    timing=json.loads(path.read_bytes())
+    assert timing['started_at']==client.timings[0].started_at
+    assert timing['latency_seconds']==client.timings[0].latency_seconds
+    clone=MeteredExperienceCaller(client=client,plan=caller.plan,registration=caller.registration,
+        model_id=caller.model_id,receipt_root=caller.root,request_fit=caller.request_fit,
+        assert_lease=caller.assert_lease)
+    assert clone.observed(request())==result and len(transport.calls)==1
+    timing['latency_seconds']+=1
+    path.write_bytes(canonical(timing))
+    with pytest.raises(LearningError,match='timing custody'):clone.observed(request())
+    receipt_path=caller.root/(key+'.response.json')
+    receipt=json.loads(receipt_path.read_bytes());receipt['response']['timing_sha256']=sha(timing)
+    receipt_path.write_bytes(canonical(receipt))
+    with pytest.raises(LearningError,match='timing differs'):clone.observed(request())
+    client.close()
+
+
 def test_operational_learning_timings_preserve_contact_identity(tmp_path,monkeypatch):
     from speech_aware_evidence_acquisition.core import stage_timing
     events=[]

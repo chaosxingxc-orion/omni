@@ -368,9 +368,10 @@ class ExperienceLearner:
             current='\n'.join(f'[{k}]. {v}' for k,v in sorted(parent['items'].items())) or 'None'
             def summarize(pair):
                 group,rollout=pair
+                from .tfgrpo_projection import summary_trajectory
                 return self._call('summary',rollout['trajectory_id'],self._messages(
                     'SINGLE_ROLLOUT_SUMMARY_TEMPLATE',common,question=group['query'],answer=group['answer'],
-                    critique=rollout['critique'],trajectory=rollout['trajectory']))
+                    critique=rollout['critique'],trajectory=summary_trajectory(group['query'],rollout['trajectory'])))
             pairs=[(g,r) for g in mixed for r in g['rollouts']]
             with ThreadPoolExecutor(max_workers=self.concurrency) as pool:
                 summaries=list(pool.map(summarize,pairs))

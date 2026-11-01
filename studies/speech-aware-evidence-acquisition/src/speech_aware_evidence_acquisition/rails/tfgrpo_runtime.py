@@ -23,7 +23,7 @@ from .prepared_feedback import states_from_contexts
 from .prepared_text import PREPARED_TEXT_ARM, PREPARED_TEXT_INSTRUCTION
 from .tfgrpo_learning import LearningError, canonical, sha
 
-RENDERING_VERSION = 'saea-tfgrpo-prepared-text-v1'
+RENDERING_VERSION = 'saea-tfgrpo-prepared-text-summary-dedup-v2'
 
 def learning_configuration(binding):
     return {'schema':'saea-tfgrpo-generation-config-v1', 'model_id':binding['model_id'],
@@ -208,6 +208,17 @@ class MeteredExperienceCaller:
             if len(responses) != 1 or len(costs) != 1:
                 raise LearningError('exact adapter response and cost required')
             response, cost = responses[0], costs[0]
+            timings = [asdict(t) for t in self.client.timings
+                       if t.request_id == completion.request_id]
+            if len(timings) != 1:
+                raise LearningError('exact original adapter timing required')
+            timing = timings[0]
+            if (timing['sample_id'] != completion.sample_id
+                    or timing['response_sha256'] != completion.response_sha256
+                    or timing['request_sha256'] != completion.request_sha256
+                    or timing['latency_seconds'] != cost['latency_seconds']):
+                raise LearningError('original timing differs from adapter response')
+            publish_new(self.root/(key+'.timing.json'), canonical(timing))
             if (response['text'] != completion.text or response['response_sha256'] != completion.response_sha256
                     or response['response_text_sha256'] != completion.response_text_sha256
                     or type(cost.get('calls')) is not int or cost['calls'] != 1):
@@ -222,7 +233,8 @@ class MeteredExperienceCaller:
                        'receipt_id': f'{self.plan.run_id}/{self.plan.attempt_id}/{completion.request_id}',
                        'usage': usage, 'request_sha256': completion.request_sha256,
                        'response_sha256': completion.response_sha256,
-                       'trace_sha256': sha(records), 'fit_receipt_sha256': sha(fit_receipt)}
+                       'trace_sha256': sha(records), 'fit_receipt_sha256': sha(fit_receipt),
+                       'timing_sha256': sha(timing)}
             publish_new(self.root/(key+'.response.json'), canonical({'request_sha256': sha(request), 'response': receipt}))
             return receipt
         finally:
@@ -248,12 +260,22 @@ class MeteredExperienceCaller:
         if record['response']['trace_sha256'] != sha(trace) or record['response']['fit_receipt_sha256'] != sha(fit):
             raise LearningError('observed learning receipt custody differs')
         response = record['response']
+        timing = json.loads((self.root/(key+'.timing.json')).read_bytes())
+        if response.get('timing_sha256') != sha(timing):
+            raise LearningError('observed timing custody differs')
         matching = [(rid, p) for channel, rid, p in trace if channel == 'MODEL_RESPONSE']
         costs = [(rid, p) for channel, rid, p in trace if channel == 'COST']
         if len(matching) != 1 or len(costs) != 1:
             raise LearningError('observed receipt needs one adapter response and cost')
         rid, payload = matching[0]
         request_id = rid.removesuffix('/response')
+        if (timing.get('request_id') != request_id
+                or timing.get('sample_id') != self.contacts[key]['sample_id']
+                or timing.get('request_sha256') != response['request_sha256']
+                or timing.get('response_sha256') != response['response_sha256']
+                or timing.get('response_text_sha256') != payload['response_text_sha256']
+                or timing.get('latency_seconds') != costs[0][1]['latency_seconds']):
+            raise LearningError('observed timing differs from actual adapter trace')
         expected_usage = {'calls': costs[0][1].get('calls'),
                           **{k: payload['usage'].get(k) for k in ('prompt_tokens', 'completion_tokens')}}
         if (response['model_id'] != self.model_id
@@ -438,7 +460,7 @@ def dispatch_registered_learning(runtime):
         'average_seconds_per_dataset_row':wall/len(last),
         'processed_dataset_rows':len(last), 'total_dataset_rows':len(runtime._samples),
         'remaining_dataset_rows':0, 'estimated_remaining_seconds':0,
-        'input_mode':'text-only-with-conservative-anchor-audio-debit',
+        'input_mode':'text-only-zero-audio',
         'contact_window':{'from':started,'to':ended}, 'learning':binding,
         'phases':[{'phase':stage,'contacts':len(rows)} for stage,rows in stage_contacts.items()],
     }
