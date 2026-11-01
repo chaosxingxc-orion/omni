@@ -9,12 +9,14 @@ from .tfgrpo_learning import LearningError,sha,render
 from .tfgrpo_projection import summary_trajectory
 
 
-def load_import(spec, *, data_root, groups, common, model_id):
+def load_import(spec, *, data_root, groups, common, model_id, verified_context=None):
     root=Path(data_root).resolve()
     def pinned(pin):
         if set(pin)!={'relpath','sha256'}:raise LearningError('exact historical input pin required')
         path=(root/pin['relpath']).resolve()
         if not path.is_relative_to(root):raise LearningError('historical input escaped data root')
+        if verified_context is not None:
+            return verified_context.read(pin, kind='data')
         blob=path.read_bytes()
         if hashlib.sha256(blob).hexdigest()!=pin['sha256']:raise LearningError('historical input changed')
         return path,json.loads(blob)

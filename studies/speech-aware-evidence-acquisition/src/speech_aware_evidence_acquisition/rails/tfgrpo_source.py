@@ -10,20 +10,24 @@ from .tfgrpo_runtime import validate_registration
 SCHEMA='saea-prepared-tfgrpo-dynamic-v1'
 
 
-def read_pin(pin, *, repo_root, data_root):
+def read_pin(pin, *, repo_root, data_root, verified_context=None):
     if not isinstance(pin,dict) or set(pin)!={'root','relpath','sha256'} or pin['root'] not in ('repository','data'):
         raise LearningError('exact source pin required')
     root=Path(repo_root if pin['root']=='repository' else data_root).resolve()
     path=(root/pin['relpath']).resolve()
     if not path.is_relative_to(root):
         raise LearningError('learning source pin changed or escaped root')
+    if verified_context is not None:
+        _, document = verified_context.read(pin, kind=pin['root'])
+        return document
     blob = path.read_bytes()
     if hashlib.sha256(blob).hexdigest()!=pin['sha256']:
         raise LearningError('learning source pin changed or escaped root')
     return json.loads(blob)
 
 
-def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roster_sha256, replay=None):
+def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roster_sha256,
+                        replay=None, verified_context=None):
     spec=values.get('prepared_training_feedback')
     if not isinstance(spec,dict) or set(spec)!={'schema','source'} or spec['schema']!=SCHEMA:
         raise LearningError('dynamic TF-GRPO source contract required')
@@ -33,7 +37,8 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
     validate_registration(reg,plan=learning_source_plan(plan,replay=replay,data_root=data_root),model_id=model_id)
     if reg['construction_roster_sha256']!=roster_sha256:
         raise LearningError('dynamic source construction roster differs')
-    source=read_pin(spec['source'],repo_root=repo_root,data_root=data_root)
+    source=read_pin(spec['source'],repo_root=repo_root,data_root=data_root,
+                    verified_context=verified_context)
     if (not isinstance(source,dict) or set(source)!={'schema','batch','provenance'}
             or source['schema']!='saea-tfgrpo-learning-source-v1'):
         raise LearningError('exact exported learning source required')
@@ -46,7 +51,8 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
     validate_experience(batch['parent'],model_id)
     if not isinstance(source['provenance'],list) or not source['provenance']:
         raise LearningError('exported source requires immutable provenance pins')
-    for pin in source['provenance']:read_pin(pin,repo_root=repo_root,data_root=data_root)
+    for pin in source['provenance']:
+        read_pin(pin,repo_root=repo_root,data_root=data_root,verified_context=verified_context)
     reward_mode = batch['common'].get('reward_mode', BINARY_REWARD)
     validate_reward_mode(reward_mode)
     if reward_mode != BINARY_REWARD and 'summary_import' in batch:
@@ -58,11 +64,13 @@ def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roste
         from .tfgrpo_final_import import load_import
         load_import(batch['final_import'],data_root=data_root,groups=batch['groups'],
             common=batch['common'],model_id=model_id,parent=batch['parent'],
-            policy_sha256=batch['policy_sha256'],rollout_kind=batch['rollout_kind'])
+            policy_sha256=batch['policy_sha256'],rollout_kind=batch['rollout_kind'],
+            verified_context=verified_context)
     imported={}
     if 'summary_import' in batch:
         from .tfgrpo_summary_import import load_import
-        imported,_=load_import(batch['summary_import'],data_root=data_root,groups=batch['groups'],common=batch['common'],model_id=model_id)
+        imported,_=load_import(batch['summary_import'],data_root=data_root,groups=batch['groups'],common=batch['common'],model_id=model_id,
+                               verified_context=verified_context)
     expected=[];seen=set();trajectory_ids=set()
     for group in batch['groups']:
         qid=group['query_id']

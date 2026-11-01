@@ -18,7 +18,8 @@ from .tfgrpo_prompts import SOURCE_SHA256, UPSTREAM_COMMIT
 
 
 def load_import(spec, *, data_root, groups, common, model_id, parent,
-                policy_sha256, rollout_kind, _ancestry=(), _source_identities=frozenset()):
+                policy_sha256, rollout_kind, _ancestry=(), _source_identities=frozenset(),
+                verified_context=None):
     root = Path(data_root).resolve()
     if len(_ancestry)>=8:raise LearningError('final import ancestry exceeds eight levels')
     def scientific_common(value):
@@ -33,6 +34,8 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
         path = (root / pin['relpath']).resolve()
         if not path.is_relative_to(root):
             raise LearningError('final-stage input escaped data root')
+        if verified_context is not None:
+            return verified_context.read(pin, kind='data')
         blob = path.read_bytes()
         if hashlib.sha256(blob).hexdigest() != pin['sha256']:
             raise LearningError('final-stage input changed')
@@ -135,7 +138,8 @@ def load_import(spec, *, data_root, groups, common, model_id, parent,
         imported_operations,prior_custody=load_import(batch['final_import'],data_root=root,
             groups=groups,common=batch['common'],model_id=model_id,parent=parent,
             policy_sha256=policy_sha256,rollout_kind=rollout_kind,
-            _ancestry=ancestry,_source_identities=frozenset((*_source_identities,*identities)))
+            _ancestry=ancestry,_source_identities=frozenset((*_source_identities,*identities)),
+            verified_context=verified_context)
         for field in totals:totals[field]+=prior_custody['original_total_usage'][field]
         source_costs.extend(prior_custody['native_source_usage'])
     if 'summary_import' in batch:
