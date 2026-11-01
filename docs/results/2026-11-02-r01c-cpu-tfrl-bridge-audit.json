@@ -1,0 +1,15 @@
+{
+  "schema": "saea-tfrl-cpu-preparation-bridge-audit-v1",
+  "ready": true,
+  "source_run_id": "SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1",
+  "target_run_id": "SAEA-SLURP-TFRL-V2-CONSTRUCTION-R01C-SMOKE-4-NPU-PORT-V1",
+  "source_rows": 625,
+  "source_protocol_sha256": "0e9b6341097f0c0e7e08fc0f61b1fa23808d732faf466f360de65409261ae0a0",
+  "source_receipt_sha256": "5f241a1c6a5da573c43ba324d3125982bdd1bb578780ce53064ddfcb2b5ae746",
+  "source_closure_sha256": "1595eb525b521fc5784b210e710f26f6bf2719f9cf5a9900f427e847b688eaa9",
+  "generation_admitted": false,
+  "content_pin_count": 1,
+  "scope": "provenance binding only; it does not mint root admission, flip a cell, or authorize NPU generation",
+  "verified_on": "181 fixed saea-base image",
+  "next_gate": "owner admission, measured deployment profile, cell repin/flip, detached smoke checkpoint"
+}
