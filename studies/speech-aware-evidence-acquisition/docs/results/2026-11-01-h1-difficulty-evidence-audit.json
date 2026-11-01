@@ -1,0 +1,31 @@
+{
+  "schema": "saea-h1-observation-evidence-audit-v1",
+  "h1_rows": 313,
+  "h2_overlap": 0,
+  "group_counts": {
+    "all_wrong": 174,
+    "all_correct": 87,
+    "mixed": 52
+  },
+  "existing_independent_rows": 213,
+  "existing_independent_correct": 14,
+  "missing_independent_rows": 100,
+  "selected_error_subset": true,
+  "historical_observation_not_unbiased_full_H1_rate": true,
+  "hardness_confirmed": false,
+  "sources": {
+    "h1_roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+    "union_completion_sha256": "82a4055c612f0c90a7e27e81c00a2de62eaaf5e5a530cf8c66ab86bb88998627",
+    "a0_manifest_sha256": "0c7477e5be0db415b8a7bf03e4529b8b08f15d17d58068e3d10d43ef49c81761",
+    "a0_scores_sha256": "38c3994be2979c742d61a1ea3d8a6ef906676a45bfe087c845b58720435003a5"
+  },
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "test_labels_read": false,
+  "H2_labels_read": false,
+  "limits": [
+    "K4 arms share P, not four independent complete-system repeats.",
+    "Historical A0 observation only covers preselected error candidates.",
+    "Hashes verified against source receipts; this read does not rerun full bundle verification."
+  ]
+}
