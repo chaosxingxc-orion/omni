@@ -1,0 +1,14 @@
+{
+  "schema": "saea-fixed-real-subset-manifest-v1",
+  "status": "PINNED_CPU_ONLY_NOT_ADMITTED",
+  "source_roster": "real-engine-500-v1",
+  "source_roster_sha256": "add92320532ec8ca551c41ffb72e72738de3d5c196fbb5ca7b5d002a47616946",
+  "selection": "first-100-of-pinned-real-engine-500-v1; no labels/outcomes",
+  "count": 100,
+  "unique_sample_ids": 100,
+  "unique_audio_hashes": 100,
+  "test_labels_read": false,
+  "model_calls": 0,
+  "runtime_path": "181:/mnt/cephfs/xingchao/omni/work/codex/concurrency-sweep-2026-11-02/manifest-v1.json",
+  "manifest_sha256": "b360be0ec72bce507841c2f89b809f0038438ea1bb41ebe6e7f9dabcebdd3bb6"
+}
