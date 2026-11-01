@@ -1,0 +1,887 @@
+{
+  "sample_phases": {
+    "admission_to_P_request": {
+      "n": 312,
+      "mean_seconds": 166.27302928205114,
+      "p50_seconds": 46.86313838000024,
+      "p95_seconds": 810.5794353399979
+    },
+    "P_end_to_learned_request": {
+      "n": 312,
+      "mean_seconds": 1.637428177596109,
+      "p50_seconds": 1.2025725499988766,
+      "p95_seconds": 3.9930428199986636
+    },
+    "learned_end_to_lock_request": {
+      "n": 312,
+      "mean_seconds": 0.46652738400648674,
+      "p50_seconds": 0.2733063300001959,
+      "p95_seconds": 1.4619149999998626
+    },
+    "lock_end_to_sample_finished": {
+      "n": 312,
+      "mean_seconds": 0.042575636602519715,
+      "p50_seconds": 0.029682764998142375,
+      "p95_seconds": 0.06595712000125786
+    },
+    "admission_to_sample_finished": {
+      "n": 312,
+      "mean_seconds": 1137.3712518617629,
+      "p50_seconds": 1203.0706643949998,
+      "p95_seconds": 1434.1936345699978
+    }
+  },
+  "missing_sample_timing": 0,
+  "role_stats": {
+    "perception": {
+      "calls": 312,
+      "mean_request_latency_seconds": 268.4405740976923,
+      "prompt_tokens": 1199833,
+      "completion_tokens": 559537,
+      "mean_prompt_tokens": 3845.61858974359,
+      "mean_completion_tokens": 1793.3878205128206
+    },
+    "solver/learned": {
+      "calls": 312,
+      "mean_request_latency_seconds": 384.9926601982694,
+      "prompt_tokens": 2935445,
+      "completion_tokens": 745118,
+      "mean_prompt_tokens": 9408.477564102564,
+      "mean_completion_tokens": 2388.198717948718
+    },
+    "solver/lock": {
+      "calls": 312,
+      "mean_request_latency_seconds": 288.6179231578525,
+      "prompt_tokens": 2735453,
+      "completion_tokens": 712501,
+      "mean_prompt_tokens": 8767.477564102564,
+      "mean_completion_tokens": 2283.6570512820513
+    }
+  },
+  "stage_timing": {
+    "schema": "saea-stage-timing-summary-v1",
+    "events": 26237,
+    "total_journal_events": 26325,
+    "sample_scope": "verified-complete-checkpoint-rows",
+    "completed_rows_without_timing": [],
+    "observed_sample_count": 312,
+    "incomplete_tail": false,
+    "stages": {
+      "audio_base64_encode": {
+        "invocations": {
+          "count": 2808,
+          "mean_s": 0.00024686648860492344,
+          "p50_s": 0.00022427500152844004,
+          "p95_s": 0.0004460400014068,
+          "total_s": 0.693201100002625
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.002221798397444311,
+          "p50_s": 0.002037529999142862,
+          "p95_s": 0.003851399993436644,
+          "total_s": 0.693201100002625
+        },
+        "errors": 0,
+        "measurements": {
+          "encoded_bytes": {
+            "observed_count": 2808,
+            "missing_count": 0,
+            "sum": 339469272,
+            "mean": 120893.61538461539,
+            "min": 35164,
+            "max": 362436
+          }
+        }
+      },
+      "audio_file_read": {
+        "invocations": {
+          "count": 2808,
+          "mean_s": 0.013642347692294112,
+          "p50_s": 0.00018182000167143997,
+          "p95_s": 0.10488654000073439,
+          "total_s": 38.307712319961865
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.122781129230647,
+          "p50_s": 0.11007208500268462,
+          "p95_s": 0.320496379998076,
+          "total_s": 38.307712319961865
+        },
+        "errors": 0,
+        "measurements": {
+          "audio_bytes": {
+            "observed_count": 2808,
+            "missing_count": 0,
+            "sum": 254599191,
+            "mean": 90669.22756410256,
+            "min": 26373,
+            "max": 271825
+          }
+        }
+      },
+      "audio_read_encode": {
+        "invocations": {
+          "count": 2808,
+          "mean_s": 0.4401813125712001,
+          "p50_s": 0.001690299999609124,
+          "p95_s": 3.901728559998446,
+          "total_s": 1236.0291256999299
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 3.961631813140801,
+          "p50_s": 3.4806953900006192,
+          "p95_s": 8.958036550000543,
+          "total_s": 1236.0291256999299
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "checkpoint_append_fsync": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 0.005565740640926938,
+          "p50_s": 0.0054387250002037035,
+          "p95_s": 0.006403649997082539,
+          "total_s": 1.7365110799692047
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.005565740640926938,
+          "p50_s": 0.0054387250002037035,
+          "p95_s": 0.006403649997082539,
+          "total_s": 1.7365110799692047
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "checkpoint_total": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 0.012849370673008637,
+          "p50_s": 0.012666484997680527,
+          "p95_s": 0.01451064000139013,
+          "total_s": 4.009003649978695
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.012849370673008637,
+          "p50_s": 0.012666484997680527,
+          "p95_s": 0.01451064000139013,
+          "total_s": 4.009003649978695
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "client_http_open_to_headers": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 313.8663710746474,
+          "p50_s": 300.0221390650004,
+          "p95_s": 534.5857801499988,
+          "total_s": 293778.92332587
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 941.5991132239423,
+          "p50_s": 966.7362805399971,
+          "p95_s": 1282.4708180100024,
+          "total_s": 293778.92332586984
+        },
+        "errors": 0,
+        "measurements": {
+          "request_bytes": {
+            "observed_count": 936,
+            "missing_count": 0,
+            "sum": 145076115,
+            "mean": 154995.84935897434,
+            "min": 54590,
+            "max": 419420
+          },
+          "timeout_seconds": {
+            "observed_count": 936,
+            "missing_count": 0,
+            "sum": 1684800.0,
+            "mean": 1800.0,
+            "min": 1800.0,
+            "max": 1800.0
+          }
+        }
+      },
+      "client_http_read_body": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 0.003855087777693316,
+          "p50_s": 0.0001557100003992673,
+          "p95_s": 0.011425700002291705,
+          "total_s": 3.6083621599209437
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.011565263333079948,
+          "p50_s": 0.0006483349970949348,
+          "p95_s": 0.02698890000101528,
+          "total_s": 3.6083621599209437
+        },
+        "errors": 0,
+        "measurements": {
+          "http_status": {
+            "observed_count": 936,
+            "missing_count": 0,
+            "sum": 187200,
+            "mean": 200,
+            "min": 200,
+            "max": 200
+          },
+          "response_bytes": {
+            "observed_count": 936,
+            "missing_count": 0,
+            "sum": 9674194,
+            "mean": 10335.67735042735,
+            "min": 2541,
+            "max": 16999
+          }
+        }
+      },
+      "context_build": {
+        "invocations": {
+          "count": 624,
+          "mean_s": 0.25160330649040563,
+          "p50_s": 0.1789958849985851,
+          "p95_s": 0.8013791899975331,
+          "total_s": 157.00046325001313
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.5032066129808113,
+          "p50_s": 0.3970968350004114,
+          "p95_s": 0.8249205000029178,
+          "total_s": 157.00046325001313
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "dispatch_blocking_execute": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 332.0654813861752,
+          "p50_s": 317.39198144999864,
+          "p95_s": 549.7050906600016,
+          "total_s": 310813.2905774601
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 996.1964441585255,
+          "p50_s": 1032.084876384999,
+          "p95_s": 1356.0537532099988,
+          "total_s": 310813.29057745996
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "dispatch_contact_lock_wait": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 2.8353311658703074e-06,
+          "p50_s": 2.8100002964492887e-06,
+          "p95_s": 3.2799980544950813e-06,
+          "total_s": 0.0026538699712546077
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 8.505993497610922e-06,
+          "p50_s": 8.479999451083131e-06,
+          "p95_s": 9.169994882540777e-06,
+          "total_s": 0.0026538699712546077
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "dispatch_executor_wait": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 1.4398052825427474,
+          "p50_s": 0.0001950349997059675,
+          "p95_s": 8.830113489999349,
+          "total_s": 1347.6577444600116
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 4.3194158476282425,
+          "p50_s": 3.648004144999504,
+          "p95_s": 10.503377680000995,
+          "total_s": 1347.6577444600116
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "dispatch_trajectory_slot_wait": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 129.2063335144871,
+          "p50_s": 4.089997673872858e-06,
+          "p95_s": 804.3972621399989,
+          "total_s": 40312.37605651998
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 129.2063335144871,
+          "p50_s": 4.089997673872858e-06,
+          "p95_s": 804.3972621399989,
+          "total_s": 40312.37605651998
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "http_request": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 313.87344671789526,
+          "p50_s": 300.0228491300004,
+          "p95_s": 534.5863279699988,
+          "total_s": 293785.5461279504
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 941.6203401536859,
+          "p50_s": 966.7763777199962,
+          "p95_s": 1282.4725410500032,
+          "total_s": 293785.54612795013
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "native_fit": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 4.240874113247857,
+          "p50_s": 0.24900727000022016,
+          "p95_s": 23.799576559998968,
+          "total_s": 3969.4581699999944
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 12.722622339743571,
+          "p50_s": 11.967187570000533,
+          "p95_s": 28.229261829997995,
+          "total_s": 3969.4581699999944
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "native_fit_capacity_wait": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 3.762187292809848,
+          "p50_s": 7.63000025472138e-06,
+          "p95_s": 22.94317329000114,
+          "total_s": 3521.4073060700175
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 11.286561878429543,
+          "p50_s": 10.699008385003253,
+          "p95_s": 26.462043479994463,
+          "total_s": 3521.4073060700175
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "native_fit_lock_wait": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 0.00015142216880821463,
+          "p50_s": 1.6999983927235007e-06,
+          "p95_s": 2.4999972083605826e-06,
+          "total_s": 0.14173115000448888
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.00045426650642464386,
+          "p50_s": 5.2299983508419245e-06,
+          "p95_s": 0.0018989700001839083,
+          "total_s": 0.14173115000448888
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "native_fit_recovery_lock_wait": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 0.47930566070519304,
+          "p50_s": 2.1999985619913787e-06,
+          "p95_s": 1.7775062199980312,
+          "total_s": 448.6300984200607
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 1.437916982115579,
+          "p50_s": 1.6348211299955437,
+          "p95_s": 1.8429413800040493,
+          "total_s": 448.6300984200607
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "output_normalize": {
+        "invocations": {
+          "count": 312,
+          "mean_s": 0.00022309000018466552,
+          "p50_s": 0.0002219300004071556,
+          "p95_s": 0.00023344000146607868,
+          "total_s": 0.06960408005761565
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.00022309000018466552,
+          "p50_s": 0.0002219300004071556,
+          "p95_s": 0.00023344000146607868,
+          "total_s": 0.06960408005761565
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "request_json_encode": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 0.0005982371473738824,
+          "p50_s": 0.0005631650001305388,
+          "p95_s": 0.0009259899998141918,
+          "total_s": 0.5599499699419539
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.001794711442121647,
+          "p50_s": 0.001681005001955782,
+          "p95_s": 0.0027005299998563714,
+          "total_s": 0.5599499699419539
+        },
+        "errors": 0,
+        "measurements": {
+          "request_bytes": {
+            "observed_count": 936,
+            "missing_count": 0,
+            "sum": 145054188,
+            "mean": 154972.42307692306,
+            "min": 54566,
+            "max": 419397
+          }
+        }
+      },
+      "request_render": {
+        "invocations": {
+          "count": 2808,
+          "mean_s": 1.4185815833903415,
+          "p50_s": 0.10735740999916743,
+          "p95_s": 14.661991950000811,
+          "total_s": 3983.3770861600788
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 12.767234250513074,
+          "p50_s": 15.455479875001402,
+          "p95_s": 20.70888814999853,
+          "total_s": 3983.3770861600788
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "request_total": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 322.9838971271688,
+          "p50_s": 307.0948302149991,
+          "p95_s": 541.9809988400011,
+          "total_s": 302312.9277110298
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 968.9516913815065,
+          "p50_s": 999.3031853949997,
+          "p95_s": 1323.5071975199971,
+          "total_s": 302312.92771102994
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "response_json_decode": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 6.16766452973631e-05,
+          "p50_s": 6.119499812484719e-05,
+          "p95_s": 8.802999946055934e-05,
+          "total_s": 0.05772933999833185
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 0.00018502993589208927,
+          "p50_s": 0.0001840699987951666,
+          "p95_s": 0.00023484999837819487,
+          "total_s": 0.05772933999833185
+        },
+        "errors": 0,
+        "measurements": {
+          "response_bytes": {
+            "observed_count": 936,
+            "missing_count": 0,
+            "sum": 9654538,
+            "mean": 10314.67735042735,
+            "min": 2520,
+            "max": 16978
+          }
+        }
+      },
+      "runtime_identity_cache_hit_memory": {
+        "invocations": {
+          "count": 26,
+          "mean_s": 1.490384210438396e-06,
+          "p50_s": 1.424999936716631e-06,
+          "p95_s": 1.8099999579135329e-06,
+          "total_s": 3.8749989471398294e-05
+        },
+        "per_observed_sample": {
+          "count": 1,
+          "mean_s": 3.8749989471398294e-05,
+          "p50_s": 3.8749989471398294e-05,
+          "p95_s": 3.8749989471398294e-05,
+          "total_s": 3.8749989471398294e-05
+        },
+        "errors": 0,
+        "measurements": {
+          "cache_hits": {
+            "observed_count": 26,
+            "missing_count": 0,
+            "sum": 26,
+            "mean": 1,
+            "min": 1,
+            "max": 1
+          },
+          "file_count": {
+            "observed_count": 26,
+            "missing_count": 0,
+            "sum": 26,
+            "mean": 1,
+            "min": 1,
+            "max": 1
+          },
+          "verified_bytes": {
+            "observed_count": 26,
+            "missing_count": 0,
+            "sum": 63447489451,
+            "mean": 2440288055.8076925,
+            "min": 113,
+            "max": 4000129664
+          }
+        }
+      },
+      "runtime_identity_cache_load": {
+        "invocations": {
+          "count": 1,
+          "mean_s": 0.001780739999958314,
+          "p50_s": 0.001780739999958314,
+          "p95_s": 0.001780739999958314,
+          "total_s": 0.001780739999958314
+        },
+        "per_observed_sample": {
+          "count": 1,
+          "mean_s": 0.001780739999958314,
+          "p50_s": 0.001780739999958314,
+          "p95_s": 0.001780739999958314,
+          "total_s": 0.001780739999958314
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "runtime_identity_cache_persist": {
+        "invocations": {
+          "count": 1,
+          "mean_s": 0.0001778799996827729,
+          "p50_s": 0.0001778799996827729,
+          "p95_s": 0.0001778799996827729,
+          "total_s": 0.0001778799996827729
+        },
+        "per_observed_sample": {
+          "count": 1,
+          "mean_s": 0.0001778799996827729,
+          "p50_s": 0.0001778799996827729,
+          "p95_s": 0.0001778799996827729,
+          "total_s": 0.0001778799996827729
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "runtime_identity_verify": {
+        "invocations": {
+          "count": 1,
+          "mean_s": 0.48441511999772047,
+          "p50_s": 0.48441511999772047,
+          "p95_s": 0.48441511999772047,
+          "total_s": 0.48441511999772047
+        },
+        "per_observed_sample": {
+          "count": 1,
+          "mean_s": 0.48441511999772047,
+          "p50_s": 0.48441511999772047,
+          "p95_s": 0.48441511999772047,
+          "total_s": 0.48441511999772047
+        },
+        "errors": 0,
+        "measurements": {
+          "cache_hits": {
+            "observed_count": 1,
+            "missing_count": 0,
+            "sum": 26,
+            "mean": 26,
+            "min": 26,
+            "max": 26
+          },
+          "file_count": {
+            "observed_count": 1,
+            "missing_count": 0,
+            "sum": 26,
+            "mean": 26,
+            "min": 26,
+            "max": 26
+          },
+          "verified_bytes": {
+            "observed_count": 1,
+            "missing_count": 0,
+            "sum": 63447489451,
+            "mean": 63447489451,
+            "min": 63447489451,
+            "max": 63447489451
+          }
+        }
+      },
+      "transport_total": {
+        "invocations": {
+          "count": 936,
+          "mean_s": 314.01356284072654,
+          "p50_s": 300.1320107350002,
+          "p95_s": 534.695524429997,
+          "total_s": 293916.6948189202
+        },
+        "per_observed_sample": {
+          "count": 312,
+          "mean_s": 942.0406885221796,
+          "p50_s": 967.1330194900002,
+          "p95_s": 1282.7586161,
+          "total_s": 293916.69481891993
+        },
+        "errors": 0,
+        "measurements": {}
+      }
+    },
+    "observability": {
+      "effective": {
+        "attempt_id": "generation-v1",
+        "client_detail": true,
+        "mode": "debug",
+        "run_id": "SAEA-SLURP-TFGRPO-DENSE-H2-PAIRED-V1",
+        "server_metrics_interval_seconds": 600
+      },
+      "configuration_sha256": "e833f87ad22bee83fdd6deedbd862d033d19ed055dbaf93b9b177fc6276d0366",
+      "configuration_verified": true,
+      "observability_mode": "debug",
+      "run_id": "SAEA-SLURP-TFGRPO-DENSE-H2-PAIRED-V1",
+      "attempt_id": "generation-v1",
+      "events_without_mode": 0
+    },
+    "process_scope": {
+      "events": 88,
+      "scope": "all-journal-events-without-sample-id",
+      "stages": {
+        "output_normalize": {
+          "invocations": {
+            "count": 1,
+            "mean_s": 0.05652804999772343,
+            "p50_s": 0.05652804999772343,
+            "p95_s": 0.05652804999772343,
+            "total_s": 0.05652804999772343
+          },
+          "errors": 0,
+          "measurements": {}
+        },
+        "runtime_identity_cache_hit_memory": {
+          "invocations": {
+            "count": 52,
+            "mean_s": 1.3548078641179018e-06,
+            "p50_s": 1.3499993656296283e-06,
+            "p95_s": 1.4300021575763822e-06,
+            "total_s": 7.045000893413089e-05
+          },
+          "errors": 0,
+          "measurements": {
+            "cache_hits": {
+              "observed_count": 52,
+              "missing_count": 0,
+              "sum": 52,
+              "mean": 1,
+              "min": 1,
+              "max": 1
+            },
+            "file_count": {
+              "observed_count": 52,
+              "missing_count": 0,
+              "sum": 52,
+              "mean": 1,
+              "min": 1,
+              "max": 1
+            },
+            "verified_bytes": {
+              "observed_count": 52,
+              "missing_count": 0,
+              "sum": 126894978902,
+              "mean": 2440288055.8076925,
+              "min": 113,
+              "max": 4000129664
+            }
+          }
+        },
+        "runtime_identity_cache_load": {
+          "invocations": {
+            "count": 3,
+            "mean_s": 0.000126069999775306,
+            "p50_s": 0.00018748000002233312,
+            "p95_s": 0.00018748000002233312,
+            "total_s": 0.00037820999932591803
+          },
+          "errors": 0,
+          "measurements": {}
+        },
+        "runtime_identity_cache_persist": {
+          "invocations": {
+            "count": 3,
+            "mean_s": 0.0002864633340019888,
+            "p50_s": 0.00017474999913247302,
+            "p95_s": 0.00017474999913247302,
+            "total_s": 0.0008593900020059664
+          },
+          "errors": 0,
+          "measurements": {}
+        },
+        "runtime_identity_full_hash_process_floor": {
+          "invocations": {
+            "count": 26,
+            "mean_s": 2.1431288103845314,
+            "p50_s": 3.5060929450010008,
+            "p95_s": 3.5183598200019333,
+            "total_s": 55.721349069997814
+          },
+          "errors": 0,
+          "measurements": {
+            "file_count": {
+              "observed_count": 26,
+              "missing_count": 0,
+              "sum": 26,
+              "mean": 1,
+              "min": 1,
+              "max": 1
+            },
+            "verified_bytes": {
+              "observed_count": 26,
+              "missing_count": 0,
+              "sum": 63447489451,
+              "mean": 2440288055.8076925,
+              "min": 113,
+              "max": 4000129664
+            }
+          }
+        },
+        "runtime_identity_verify": {
+          "invocations": {
+            "count": 3,
+            "mean_s": 18.586865366665734,
+            "p50_s": 0.012603109997144202,
+            "p95_s": 0.012603109997144202,
+            "total_s": 55.7605960999972
+          },
+          "errors": 0,
+          "measurements": {
+            "cache_hits": {
+              "observed_count": 3,
+              "missing_count": 0,
+              "sum": 52,
+              "mean": 17.333333333333332,
+              "min": 0,
+              "max": 26
+            },
+            "file_count": {
+              "observed_count": 3,
+              "missing_count": 0,
+              "sum": 78,
+              "mean": 26,
+              "min": 26,
+              "max": 26
+            },
+            "verified_bytes": {
+              "observed_count": 3,
+              "missing_count": 0,
+              "sum": 190342468353,
+              "mean": 63447489451,
+              "min": 63447489451,
+              "max": 63447489451
+            }
+          }
+        }
+      },
+      "is_disjoint_from_unfiltered_stages": false
+    },
+    "request_validation_accounting_and_response_handling_s": {
+      "count": 936,
+      "mean_s": 8.970334286442286,
+      "p50_s": 0.24683639499744459,
+      "p95_s": 37.078250059999846,
+      "total_s": 8396.23289210998
+    },
+    "http_request_s": {
+      "count": 936,
+      "mean_s": 313.87344671789526,
+      "p50_s": 300.0228491300004,
+      "p95_s": 534.5863279699988,
+      "total_s": 293785.5461279504
+    },
+    "limitations": [
+      "Inclusive intervals overlap; do not sum stages as wall time.",
+      "Process scope repeats unscoped events from the unfiltered journal; do not add it to unfiltered stage totals.",
+      "verified_bytes is identity coverage; only runtime_identity_full_hash_* stages measure actual hashed bytes. Cache-hit bytes are not I/O.",
+      "Missing measurements are unknown; a failed hash can have elapsed time without a verified byte count.",
+      "Observed samples include incomplete rows; join final checkpoints before estimating complete-task throughput.",
+      "HTTP time includes queue, server audio/prefill/decode and network; TTFT unavailable on non-streaming path.",
+      "Timing journal uses kernel writes, not per-event fsync; scientific checkpoints remain independently durable."
+    ]
+  },
+  "schema": "saea-dense-h2-terminal-cost-audit-v1",
+  "complete_rows": 312,
+  "total_rows": 312,
+  "native_calls": 936,
+  "native_responses": 936,
+  "unknown_contacts": 0,
+  "journal_files": 1872,
+  "journal_manifest_sha256": "c8f18368c79e43d3a14d41064f14bef8b82ccb4c0bbc1ca9eb79de0ade1ac8d9",
+  "usage": {
+    "prompt_tokens": 6870731,
+    "completion_tokens": 2017156,
+    "total_tokens": 8887887
+  },
+  "allocated_cards": 8,
+  "instances": 2,
+  "generation_seconds": 1634.3019210300008,
+  "seconds_per_row": 5.238147182788464,
+  "campaign_seconds": 1750.3582038400018,
+  "checkpoint": {
+    "status": "VERIFIED",
+    "flown": 312,
+    "checkpoint_rows": 312,
+    "complete_rows": 312,
+    "unrendered_rows": 0,
+    "problems": [],
+    "sha256": "a53d4c331946a536822c7f37f4ac7305bf824a708439f760cf628c4a59b1b658",
+    "path": "/mnt/cephfs/xingchao/omni/runs/SAEA-SLURP-TFGRPO-DENSE-H2-PAIRED-V1/generation-v1/SAEA-SLURP-TFGRPO-DENSE-H2-PAIRED-V1.rows.ckpt.jsonl"
+  },
+  "output_sha256": "7fe10740638578514ae61abfdc972ab472ffc858c5057c9813d949e45262798c",
+  "paired_result_sha256": "d1d7e6379544b04482dd10fb738b3116a0e8585e75b6e5771293c6b0b1969a5f",
+  "archive_is_authoritative": false
+}

@@ -1,0 +1,12 @@
+{
+  "schema": "saea-dense-h2-terminal-archive-verification-v1",
+  "archive_sha256": "851cc9d1b9433b2c3a8bbdb29c3c65da88c5203bf0351a707cf7b6fb16df9e1f",
+  "rows": 312,
+  "native_calls": 936,
+  "journal_files": 1872,
+  "journal_hashes_match_terminal_audit": true,
+  "output_and_score_match_manifest": true,
+  "official_result_sha256": "d1d7e6379544b04482dd10fb738b3116a0e8585e75b6e5771293c6b0b1969a5f",
+  "scope": "dense-h2-v1 tree, contacts, outputs, scoring and control; excludes .git and shared runtime state",
+  "archive_is_automatic_restore_authority": false
+}

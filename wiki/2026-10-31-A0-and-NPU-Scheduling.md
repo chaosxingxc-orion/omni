@@ -162,3 +162,10 @@ odd40 仍处于真实运行时准入阶段。625 条真实 construction 的供�
 
 
 [当前任务状态、决策与下一阶段计划](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-task-status-decisions-next-plan-zh.md)
+
+
+## 有界综合策略 H2 终态
+
+312/312真实开发样本完成，936/936请求收到响应；8卡、2个TP4实例，生成5.238秒/条。learned相对lock的SLU差值为+0.6729个百分点，但Intent下降1.6026个百分点，bootstrap区间跨零，按预定门槛不晋升。成本、1872份journal和终态归档已核验。
+
+[完整结果](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-full-result-zh.md) · [成本](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-terminal-cost-timing.json) · [归档核验](https://github.com/chaosxingxc-orion/omni/blob/main/docs/results/2026-11-01-dense-h2-terminal-archive-verification.json)
