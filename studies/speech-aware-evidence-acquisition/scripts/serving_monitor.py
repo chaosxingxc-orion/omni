@@ -51,7 +51,7 @@ from speech_aware_evidence_acquisition.core.session.serving import (  # noqa: E4
 )
 
 from speech_aware_evidence_acquisition.core.session.telemetry import (  # noqa: E402,F401
-    GPU_FIELDS, NVIDIA_SMI_QUERY, _number, read_gpu,
+    GPU_FIELDS, NVIDIA_SMI_QUERY, _number, read_gpu, read_gpu_devices,
 )
 
 #: The monitor's own operator log, beside ``monitor.jsonl`` in the same
@@ -135,12 +135,21 @@ def build_sample(
     metrics: Mapping[str, float] | None,
     requests_total: int,
     host_memory: Mapping[str, object] | None = None,
+    accelerator_devices: Sequence[Mapping[str, object]] | None = None,
 ) -> dict[str, object]:
     return {
         "schema": SERVING_MONITOR_SAMPLE_SCHEMA,
         "sampled_at": now,
         "sampled_at_iso": datetime.fromtimestamp(now, tz=timezone.utc).isoformat(),
         "gpu": dict(gpu) if gpu is not None else None,
+        # Per-card evidence is required to distinguish allocated cards from
+        # cards that were actually busy.  Keep the aggregate ``gpu`` field
+        # for backward-compatible receipts.
+        "accelerator_devices": (
+            [dict(device) for device in accelerator_devices]
+            if accelerator_devices is not None
+            else None
+        ),
         "slots": dict(slots) if slots is not None else None,
         "metrics": dict(metrics) if metrics is not None else None,
         "host_memory": dict(host_memory) if host_memory is not None else None,
@@ -190,6 +199,41 @@ def warn_host_memory_if_low(
     return now_monotonic
 
 
+def aggregate_accelerator_devices(
+    devices: Sequence[Mapping[str, object]],
+) -> dict[str, object] | None:
+    """Derive the legacy aggregate ``gpu`` field from one device poll.
+
+    Ascend keeps the most memory-constrained card, matching ``read_gpu``;
+    NVIDIA keeps the first visible row for backward compatibility.  Keeping
+    this derivation local lets the monitor issue one accelerator command per
+    sample while still writing per-card evidence.
+    """
+
+    if not devices:
+        return None
+    rows = [dict(device) for device in devices]
+    if any("npu_id" in row for row in rows):
+        row = min(
+            rows,
+            key=lambda item: (
+                float(item.get("memory_free_mib"))
+                if isinstance(item.get("memory_free_mib"), (int, float))
+                else float("inf"),
+                int(item.get("npu_id", 0)),
+            ),
+        )
+        return {
+            "utilization_percent": row.get("utilization_percent"),
+            "memory_used_mib": row.get("memory_used_mib"),
+            "power_watts": row.get("power_watts"),
+            "pstate": row.get("health"),
+            "clocks_sm_mhz": None,
+        }
+    row = rows[0]
+    return {key: row.get(key) for key in GPU_FIELDS}
+
+
 def sample_loop(args) -> int:
     session_dir = serving_session_dir(args.data_root, args.session_id)
     if not session_dir.is_dir():
@@ -206,9 +250,11 @@ def sample_loop(args) -> int:
         requests_total += count_new_requests(previous_tasks, tasks)
         previous_tasks = tasks
         host_memory = read_host_memory()
+        accelerator_devices = read_gpu_devices()
         sample = build_sample(
             now=time.time(),
-            gpu=read_gpu(),
+            gpu=aggregate_accelerator_devices(accelerator_devices),
+            accelerator_devices=accelerator_devices,
             slots=slots,
             metrics=read_metrics(base_url),
             requests_total=requests_total,

@@ -87,3 +87,25 @@ def test_an_unreadable_npu_table_is_no_reading_not_a_wrong_one():
         raise subprocess.TimeoutExpired(argv, 15)
 
     assert telemetry.read_gpu(hung) is None
+
+
+def test_read_gpu_devices_preserves_every_nvidia_card():
+    run, seen = _run(stdout="11, 100, 30, P0, 1200\n88, 200, 40, P0, 1300\n", nvidia=True)
+    devices = telemetry.read_gpu_devices(run, include_capacity=False)
+    assert [row["device_id"] for row in devices] == [0, 1]
+    assert [row["utilization_percent"] for row in devices] == [11.0, 88.0]
+    assert [argv[0] for argv in seen] == ["nvidia-smi"]
+
+
+def test_read_gpu_devices_preserves_every_ascend_card():
+    run, seen = _run(nvidia=False)
+    devices = telemetry.read_gpu_devices(run, include_capacity=True)
+    assert [row["npu_id"] for row in devices] == [0, 1]
+    assert [row["memory_free_mib"] for row in devices] == [7131.0, 5536.0]
+    assert [argv[0] for argv in seen] == ["nvidia-smi", "npu-smi"]
+
+
+def test_read_gpu_devices_fails_open_without_losing_monitor_loop():
+    def neither(argv, **kwargs):
+        raise FileNotFoundError(argv[0])
+    assert telemetry.read_gpu_devices(neither) == []

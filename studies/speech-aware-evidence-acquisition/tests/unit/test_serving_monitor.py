@@ -183,7 +183,7 @@ def test_count_new_requests_counts_each_slot_that_took_a_new_task():
 def test_sample_loop_appends_one_line_and_stops_at_its_duration(tmp_path, monkeypatch):
     session_dir = serving_session_dir(tmp_path, "serving-x")
     session_dir.mkdir(parents=True)
-    monkeypatch.setattr(monitor, "read_gpu", lambda: {"utilization_percent": 0.0, "power_watts": 30.0})
+    monkeypatch.setattr(monitor, "read_gpu_devices", lambda: [{"device_id": 0, "utilization_percent": 0.0, "power_watts": 30.0, "memory_used_mib": 1.0, "pstate": "P0", "clocks_sm_mhz": None}])
     monkeypatch.setattr(
         monitor,
         "read_slots",
@@ -228,7 +228,7 @@ def test_sample_loop_appends_one_line_and_stops_at_its_duration(tmp_path, monkey
 def test_sample_loop_writes_one_warn_line_when_the_host_free_gb_is_low(tmp_path, monkeypatch):
     session_dir = serving_session_dir(tmp_path, "serving-low")
     session_dir.mkdir(parents=True)
-    monkeypatch.setattr(monitor, "read_gpu", lambda: None)
+    monkeypatch.setattr(monitor, "read_gpu_devices", lambda: [])
     monkeypatch.setattr(monitor, "read_slots", lambda base_url: (None, {}))
     monkeypatch.setattr(monitor, "read_metrics", lambda base_url: None)
     monkeypatch.setattr(
@@ -273,6 +273,24 @@ def test_build_sample_carries_the_host_memory_reading():
         host_memory={"host_free_gb": 12.0, "host_memory_source": "windows+vm"},
     )
     assert sample["host_memory"] == {"host_free_gb": 12.0, "host_memory_source": "windows+vm"}
+
+
+def test_build_sample_carries_per_accelerator_evidence():
+    sample = build_sample(
+        now=0.0,
+        gpu={"utilization_percent": 50.0},
+        slots=None,
+        metrics=None,
+        requests_total=0,
+        accelerator_devices=[
+            {"device_id": 0, "utilization_percent": 99.0},
+            {"device_id": 1, "utilization_percent": 2.0},
+        ],
+    )
+    assert sample["accelerator_devices"] == [
+        {"device_id": 0, "utilization_percent": 99.0},
+        {"device_id": 1, "utilization_percent": 2.0},
+    ]
 
 
 def test_build_sample_host_memory_defaults_to_none():

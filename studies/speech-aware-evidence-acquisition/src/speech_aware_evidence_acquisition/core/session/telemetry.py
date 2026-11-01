@@ -59,6 +59,48 @@ def read_gpu(run=subprocess.run, *, include_capacity=False) -> dict[str, object]
     }
 
 
+
+def read_gpu_devices(run=subprocess.run, *, include_capacity=False) -> list[dict[str, object]]:
+    """Read every visible accelerator row without collapsing to one device.
+
+    NVIDIA hosts are parsed from every ``nvidia-smi`` CSV row.  Ascend hosts
+    fall back to :func:`read_npu_devices`.  An unreadable command returns an
+    empty list, allowing low-frequency monitors to keep running while making
+    missing per-card evidence explicit.
+    """
+
+    fields = GPU_FIELDS + (("memory_total_mib", "memory_free_mib") if include_capacity else ())
+    query = NVIDIA_SMI_QUERY + (",memory.total,memory.free" if include_capacity else "")
+    try:
+        completed = run(
+            [
+                "nvidia-smi",
+                f"--query-gpu={query}",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except OSError:
+        return read_npu_devices(run, include_capacity=include_capacity)
+    except subprocess.SubprocessError:
+        return []
+    if getattr(completed, "returncode", 1) != 0:
+        return []
+    devices: list[dict[str, object]] = []
+    for device_id, line in enumerate((completed.stdout or "").strip().splitlines()):
+        parts = [part.strip() for part in line.split(",")]
+        if len(parts) != len(fields):
+            continue
+        raw = dict(zip(fields, parts))
+        devices.append({
+            "device_id": device_id,
+            **{name: (raw[name] if name == "pstate" else _number(raw[name])) for name in fields},
+        })
+    return devices
+
+
 _NPU_HEAD = re.compile(r"^\|\s*(\d+)\s+\S+\s*\|\s*(\S+)\s*\|\s*([\d.]+)\s+[\d.]+\s+")
 _NPU_CHIP = re.compile(
     r"^\|\s*\d+\s*\|\s*[0-9A-Fa-f:.]+\s*\|\s*([\d.]+)\s+\d+\s*/\s*\d+\s+(\d+)\s*/\s*(\d+)\s*\|"
@@ -95,6 +137,25 @@ def parse_npu_smi_table(text: str) -> list[dict[str, object]]:
             })
         head = None
     return devices
+
+
+
+def read_npu_devices(run=subprocess.run, *, include_capacity=False) -> list[dict[str, object]]:
+    """Return telemetry for every parsed Ascend device, preserving device id."""
+
+    try:
+        completed = run(["npu-smi", "info"], capture_output=True, text=True, timeout=15)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if getattr(completed, "returncode", 1) != 0:
+        return []
+    devices = parse_npu_smi_table(completed.stdout or "")
+    if include_capacity:
+        return [dict(device) for device in devices]
+    return [
+        {key: value for key, value in device.items() if key not in {"memory_total_mib", "memory_free_mib"}}
+        for device in devices
+    ]
 
 
 def read_npu(run=subprocess.run, *, include_capacity=False) -> dict[str, object] | None:
