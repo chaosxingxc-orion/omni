@@ -1,6 +1,6 @@
 # A0、真实数据工程基线与后续优化
 
-更新：2026-11-01 00:36 UTC。真实500工程基准、Fold B完整1080条首轮收益和 Fold A 完整1080条 A0 结果已锁定；首轮 construction625/625 官方评分完成。K4 vote 相对 lock 下降0.4040pp，按预定门槛停止当前家族。
+更新：2026-11-01 00:46 UTC。真实500工程基准、Fold B完整1080条首轮收益和 Fold A 完整1080条 A0 结果已锁定；首轮 construction625/625 官方评分完成。K4 vote 相对 lock 下降0.4040pp，按预定门槛停止当前家族。
 
 ## 当前结论
 
@@ -136,7 +136,13 @@ odd40 仍处于真实运行时准入阶段。625 条真实 construction 的供�
 
 独立运行/FIT 身份已建立，旧任务的准入凭证、供给和服务会话未继承。H1 313 条、H2 312 条的独立首阶段 Perception 上下文已完成 **625/625**，并经共享运行时实物检查：两半 `identity_ok=true`、`seed_ok=true`。这只完成首阶段供给；Solver B 和裁决上下文仍需使用当次真实 Perception 输出构建。新增配置/绑定及相关运行时测试 **70 项通过**，公开仓版本同样通过。新增模型和 tokenizer 调用均为 **0**。[供给绑定凭证](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-odd40-supply-binding.json)。
 
-当前仍为 held/check-only，未登记准入、未执行真实 FIT、真实推理 **0/625**；没有新精度、吞吐或 ETA。已确认通用恢复路径会把部分分支轨迹整条重跑，不能用于本实验接续。下一步补齐逐调用持久化和恢复验证、候选非法输出的有限处理，再完成登记、真实 FIT 和准入。8 卡持续满载目标尚未达成。
+逐调用持久化已接入 odd40 的共享模型请求边界：发送前独占发布并 fsync 请求意图，收到响应后先保存原始响应字节，再解析及写 trace；新目录项也同步落盘。已收到的异常响应保留；只有意图没有响应时标记 UNKNOWN，日志读取器不重发。候选A/B无法解析时跳过裁决，保留原A并保留样本记录；缺失响应仍报错。该功能目前完成**记录与读取**，尚未接通跨进程接续、成本合并或未知请求对账，因此不能宣称自动续跑已完成。
+
+本次改变了运行时源码，上一轮供给的身份/种子通过记录只代表当时版本；启动前须重新绑定并证明供给输出不变。真实推理仍为0/625、模型/tokenizer新增0，暂无新效率或ETA。下一步接通已知响应复用和原轨迹成本归属，验证部分分支中断恢复后，再完成真实FIT、登记和准入。
+
+实现分支604项测试通过、1项跳过；公开仓594项通过、1项跳过（两树原有测试集合不同；跳过项为Linux上的Windows junction检查）。覆盖真实执行图与模拟传输、进程直接退出、响应trace失败、未知裁决结局、异常响应和并发重复写入；新增真实模型调用0。[验证凭证](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-11-01-odd40-contact-custody-validation.json)。
+
+8 卡持续满载目标尚未达成。
 
 ## 不同证据方案的CPU准备结果
 

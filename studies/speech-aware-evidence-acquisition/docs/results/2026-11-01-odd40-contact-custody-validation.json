@@ -1,0 +1,53 @@
+{
+  "schema": "saea-odd40-contact-custody-validation-v1",
+  "verified_at_utc": "2026-11-01T00:46:07Z",
+  "implementation_commit": "ce94a743",
+  "public_code_commit": "7959669c16f4cbe707a214cee2bcdc5162ada275",
+  "implemented": [
+    "observed malformed A/B retains original A without judge or row loss",
+    "native request intent fsync before accounting/transport",
+    "raw response fsync before parse/trace",
+    "new directory fsync",
+    "strict read-only observed/unknown classification"
+  ],
+  "validation": {
+    "implementation": {
+      "passed": 604,
+      "skipped": 1,
+      "seconds": 58.63,
+      "exit_code": 0
+    },
+    "public": {
+      "passed": 594,
+      "skipped": 1,
+      "seconds": 57.85,
+      "exit_code": 0
+    },
+    "skip_reason": "Windows junction test on Linux",
+    "scope": "Fake transport through actual graph/client/adapter; process-exit custody tests. No live model contact."
+  },
+  "failure_cases": [
+    "abrupt process exit after intent",
+    "abrupt process exit after response",
+    "unknown judge transport outcome",
+    "response trace failure after observed response",
+    "malformed transport response",
+    "concurrent duplicate intent",
+    "tampered request/response/identity/latency"
+  ],
+  "new_model_calls": 0,
+  "new_tokenizer_calls": 0,
+  "generation_rows_completed": 0,
+  "generation_rows_planned": 625,
+  "automatic_partial_contact_resume_verified": false,
+  "replay_implemented": false,
+  "current_supply_identity_requires_revalidation": true,
+  "remaining": [
+    "reuse known responses with original trace/cost custody",
+    "reconcile unknown contacts without automatic resend",
+    "validate partial branch restart",
+    "repin supply without output change",
+    "registration/real FIT/admission",
+    "detached real generation queue and async official scoring"
+  ]
+}
