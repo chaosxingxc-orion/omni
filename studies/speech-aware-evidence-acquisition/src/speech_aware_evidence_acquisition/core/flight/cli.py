@@ -170,6 +170,8 @@ def main(argv=None) -> int:
     parser.add_argument("--expected-session-id")
     parser.add_argument("--lease-token-file", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--native-recovery-receipt", type=Path)
+    parser.add_argument("--native-recovery-sha256")
     parser.add_argument("--contact-cap", type=int)
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--phase")
@@ -179,6 +181,10 @@ def main(argv=None) -> int:
              "the check takes no lock and writes no attempt record in any case",
     )
     args = parser.parse_args(argv)
+    if bool(args.native_recovery_receipt) != bool(args.native_recovery_sha256):
+        parser.error('native recovery requires both receipt and sha256')
+    if args.native_recovery_receipt and (args.mode not in {'check', 'worker'} or args.campaign_plan):
+        parser.error('native recovery currently requires one registered check or worker cell')
     if args.read_only and args.mode != "check":
         parser.error("--read-only applies to check mode only")
     if bool(args.experiment) == bool(args.campaign_plan):
@@ -231,6 +237,18 @@ def main(argv=None) -> int:
             selected = tuple(pair for pair in selected if pair[1].document["cell_id"] == args.cell)
             if not selected:
                 parser.error("cell is not declared by the experiment")
+    native_recovery = None
+    if args.native_recovery_receipt:
+        from .native_recovery import select_recovery_cell
+        if len(selected) != 1:
+            parser.error('native recovery must select exactly one cell')
+        native_recovery = {'path': str(args.native_recovery_receipt.resolve()),
+                           'sha256': args.native_recovery_sha256}
+        try:
+            selected = tuple((experiment, select_recovery_cell(cell, native_recovery, data_root=root))
+                             for experiment, cell in selected)
+        except (ValueError, KeyError, TypeError, OSError) as error:
+            parser.error(str(error))
     cells = tuple(cell for _experiment, cell in selected)
     if args.mode != "campaign":
         for cell in cells:
@@ -247,6 +265,7 @@ def main(argv=None) -> int:
             experiment=experiment, run_id=cell.run_id, attempt_id=cell.attempt_id,
             runtime_root=Path(args.runtime_root), lock_path=Path(args.lock_path),
             execution_policy=policy,
+            **({"native_contact_recovery": native_recovery} if native_recovery else {}),
             # E10 (owner decision 22): a recovery cell declares the aborted
             # attempt it resumes in the COMMITTED experiment fragment, pinned
             # by that attempt's trace sha256. There is deliberately no command

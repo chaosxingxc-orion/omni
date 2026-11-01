@@ -69,6 +69,7 @@ def handoff_worker_lease(
     expected_session_id: str,
     token_output: Path,
     stage: str = "worker",
+    native_contact_recovery: Mapping[str, object] | None = None,
     input_stream: TextIO = sys.stdin,
     output_stream: TextIO = sys.stdout,
     runtime_factory: Callable = build_flight_runtime,
@@ -88,6 +89,11 @@ def handoff_worker_lease(
         raise LeaseHandoffError(
             "lease handoff stage must be worker, prepare-window-features or prompt-fit"
         )
+    if native_contact_recovery is not None:
+        from .native_recovery import select_recovery_cell
+        if stage != 'worker':
+            raise LeaseHandoffError('native recovery lease requires worker stage')
+        cell = select_recovery_cell(cell, native_contact_recovery, data_root=data_root)
     token_path = _confined_token_path(data_root, Path(token_output))
     if not owner.strip() or not expected_session_id.strip():
         raise LeaseHandoffError("owner and expected session id must be nonempty")
@@ -112,7 +118,12 @@ def handoff_worker_lease(
         dataset=cell.document["dataset_fragment"], baseline=cell.document["baseline_fragment"],
         experiment=experiment, run_id=cell.run_id, attempt_id=cell.attempt_id,
         runtime_root=runtime_root, lock_path=lock_path,
+        **({"native_contact_recovery": native_contact_recovery} if native_contact_recovery else {}),
     )
+    if native_contact_recovery is not None:
+        # The recovery must pass the same registered-plan and predecessor
+        # checks before an execution capability can be issued.
+        runtime.preflight()
     required_identity = runtime.session_required_identity()
     resident = resident_finder(data_root)
     if resident is None:
@@ -179,7 +190,12 @@ def main(argv=None) -> int:
     )
     for name in ("repo-root", "data-root", "runtime-root", "lock-path", "experiment", "cell", "owner", "expected-session-id", "token-output"):
         parser.add_argument("--" + name, required=True)
+    parser.add_argument('--native-recovery-receipt', type=Path)
+    parser.add_argument('--native-recovery-sha256')
     args = parser.parse_args(argv)
+    if bool(args.native_recovery_receipt) != bool(args.native_recovery_sha256):
+        parser.error('native recovery requires both receipt and sha256')
+
     repo, data_root = Path(args.repo_root).resolve(), Path(args.data_root).resolve()
     cells = load_campaign_cells(repo, args.experiment)
     selected = tuple(cell for cell in cells if cell.document["cell_id"] == args.cell)
@@ -190,6 +206,8 @@ def main(argv=None) -> int:
         lock_path=Path(args.lock_path), experiment=args.experiment, cell=selected[0],
         owner=args.owner, expected_session_id=args.expected_session_id,
         token_output=Path(args.token_output), stage=args.stage,
+        native_contact_recovery=({'path': str(args.native_recovery_receipt.resolve()),
+            'sha256': args.native_recovery_sha256} if args.native_recovery_receipt else None),
     )
 
 

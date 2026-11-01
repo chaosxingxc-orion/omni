@@ -1555,6 +1555,7 @@ class FlightRuntime:
         execution_policy: WorkerExecutionPolicy | None = None,
         resume_from: Mapping[str, object] | None = None,
         checkpoint_compatibility: Mapping[str, object] | None = None,
+        native_contact_recovery: Mapping[str, object] | None = None,
         # Gap B (2026-10-30 plan, section 4; Decision 2): the OPTIONAL deployment profile/record this flight
         # serves against -- a ``core.deployment.DeploymentProfile``, a deployment-record mapping, a bare profile
         # id/path, or ``None``. ``None`` (every existing caller) and a one-instance profile are BYTE-IDENTICAL to
@@ -1648,6 +1649,10 @@ class FlightRuntime:
         self._resume_declarations: tuple[ResumeDeclaration, ...] = (
             () if resume_from is None else resume_declarations_from_document(resume_from)
         )
+        self._native_contact_recovery = native_contact_recovery
+        self._native_contact_replay = None
+        if native_contact_recovery is not None and (resume_from is not None or checkpoint_compatibility is not None):
+            raise FlightRuntimeError('native contact recovery cannot be mixed with whole-row recovery')
         self._checkpoint_compatibility = None
         if checkpoint_compatibility is not None:
             try:
@@ -1887,6 +1892,23 @@ class FlightRuntime:
         """
 
         declarations = getattr(self, "_resume_declarations", ())
+        replay = getattr(self, '_native_contact_replay', None)
+        if replay is not None:
+            from ..atomic_file import publish_new
+            from ..contact_journal import canonical
+            document = {'schema': 'saea-resume-declaration-v1',
+                'run_id': plan.run_id, 'attempt_id': plan.attempt_id,
+                'predecessors': [{'attempt_id': replay.source_plan.attempt_id,
+                    'mode': 'native-contact-journal',
+                    'pin_sha256': replay.source_binding()['attempt_sha256']}],
+                'native_recovery_receipt': dict(self._native_contact_recovery)}
+            path = self._run_dir() / 'resume-declaration.json'
+            if path.exists():
+                if path.read_bytes() != canonical(document):
+                    raise FlightRuntimeError('native recovery declaration already differs')
+            else:
+                publish_new(path, canonical(document))
+            return
         if not declarations:
             return
         run_dir = self._run_dir()
@@ -5106,6 +5128,16 @@ class FlightRuntime:
             ])
         plan = self._build_execution_plan(values, carrier_lock_key, identity_hash)
         self._plan = plan
+        if self._native_contact_recovery is not None:
+            if values.get('native_episode', {}).get('answer_selection') != 'odd40-whole-answer-v1':
+                raise FlightRuntimeError('native contact recovery requires the odd40 journaled method')
+            from .native_recovery import load_native_recovery
+            try:
+                self._native_contact_replay = load_native_recovery(
+                    self._native_contact_recovery, data_root=self._data_root,
+                    plan=plan, arm=values['arm'])
+            except (ValueError, TypeError, KeyError, OSError) as error:
+                raise FlightRuntimeError(f'native contact recovery: {error}') from error
         # Owner decision 309: BEFORE the first gate touch below, so a gate that
         # counts a run's attempts can tell a resume of an interrupted attempt
         # from a fresh second attempt.
@@ -6615,6 +6647,10 @@ class FlightRuntime:
             # Operational custody, outside model inputs. This is capture only;
             # journal replay still requires explicit recovery validation.
             kwargs['contact_journal'] = True
+            replay = getattr(self, '_native_contact_replay', None)
+            if replay is not None:
+                replay.assert_target(self._data_root, plan, arm)
+                kwargs['contact_replay'] = replay
         if baseline_values.get("prepared_execution_units") is not None:
             self.execution_unit_roster()
             kwargs["slice_registry"] = self._execution_unit_registry
@@ -8184,9 +8220,17 @@ class FlightRuntime:
                     })
                 native_fit_gate.receipts = []
             else:
-                native_fit_gate = build_native_contact_fit_gate(
-                    self, program, self._fit_base_plan(plan),
-                )
+                if self._composed.values.get('native_episode', {}).get('answer_selection') == 'odd40-whole-answer-v1':
+                    from ..native_fit_recovery import RecoverableNativeFitGate
+                    native_fit_gate = RecoverableNativeFitGate(
+                        self, plan,
+                        lambda: build_native_contact_fit_gate(self, program, self._fit_base_plan(plan)),
+                        replay=getattr(self, '_native_contact_replay', None),
+                    )
+                else:
+                    native_fit_gate = build_native_contact_fit_gate(
+                        self, program, self._fit_base_plan(plan),
+                    )
             # Same-flight instrument, PHASE 2 (merge set C): the Perception
             # branch group's own pre-flight, whole-roster seed. None --
             # and therefore byte-identical to the pre-phase-2 tree -- unless

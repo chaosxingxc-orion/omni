@@ -4997,3 +4997,36 @@ def test_odd40_runtime_enables_durable_contact_capture(tmp_path):
     runtime.preflight();runtime.preprocess();runtime.serve()
     runtime._composed.values['native_episode']={'answer_selection':'odd40-whole-answer-v1'}
     assert runtime.frozen_core_client_kwargs()['contact_journal'] is True
+
+
+def test_native_recovery_preflight_validates_before_gate_and_passes_replay_to_client(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.flight import native_recovery
+    runtime = _make_runtime(tmp_path, happy_path=True,
+        config_kwargs={'arm':'bare-core','policy':'fixed'},
+        native_contact_recovery={'path':str(tmp_path/'data'/'receipt.json'),'sha256':'a'*64})
+    original = runtime._prepare
+    def prepare():
+        result = original()
+        runtime._composed.values['native_episode']={'answer_selection':'odd40-whole-answer-v1'}
+        return result
+    runtime._prepare = prepare
+    checked=[]
+    replay=SimpleNamespace(source_plan=SimpleNamespace(attempt_id='source-attempt'),
+        source_binding=lambda:{'attempt_sha256':'b'*64},
+        assert_target=lambda *args:checked.append(args))
+    monkeypatch.setattr(native_recovery,'load_native_recovery',lambda *args,**kw:replay)
+    runtime.preflight(); runtime.preprocess(); runtime.serve()
+    assert runtime.frozen_core_client_kwargs()['contact_replay'] is replay
+    assert checked
+    declaration=json.loads((runtime._run_dir()/'resume-declaration.json').read_bytes())
+    assert declaration['predecessors'][0]['mode']=='native-contact-journal'
+    assert declaration['predecessors'][0]['attempt_id']=='source-attempt'
+
+
+def test_native_recovery_is_rejected_for_unjournaled_method_before_gate(tmp_path):
+    gate = _FakeGate()
+    runtime = _make_runtime(tmp_path, happy_path=True, gate=gate,
+        native_contact_recovery={'path':'/unused','sha256':'a'*64})
+    with pytest.raises(FlightRuntimeError, match='odd40'):runtime.preflight()
+    assert gate.calls == 0
