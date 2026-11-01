@@ -23,9 +23,14 @@ selected=[
  ('14b9e1db','calendar_set',('person','relation'),('person','relation'),('keep possessive on person; relation is role only',),()),
 ]
 by_prefix={x['operation_sha256'][:8]:x for x in ops}
+excluded_findings={'F1','F2','F3','F4','F5','F8'}
+excluded_hashes={ref['operation_sha256'] for finding in audit['findings']
+                 if finding['id'] in excluded_findings
+                 for ref in finding.get('source_operations', ())}
 rules=[];payloads={};source_index=[]
 for i,(prefix,intent,slots,components,trigger,exceptions) in enumerate(selected,1):
  op=by_prefix[prefix]
+ assert op['operation_sha256'] not in excluded_hashes, (prefix, 'audited high-risk source')
  raw=json.dumps({'operation':op['operation'],'id':op['id'],'content':op['content']},ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()
  assert hashlib.sha256(raw).hexdigest()==op['operation_sha256'],(prefix,hashlib.sha256(raw).hexdigest(),op['operation_sha256'])
  ref=f"h1-operation:{op['operation_sha256']}"
@@ -39,7 +44,7 @@ for i,(prefix,intent,slots,components,trigger,exceptions) in enumerate(selected,
 doc={'schema':RULE_SET_SCHEMA,'rules':rules}
 validated=validate_rule_set(doc,source_payloads=payloads)
 out=args.output
-record={'schema':'saea-evidence-conditioned-candidate-cpu-v1','status':'cpu-validated-not-admitted','source_scope':{'source_operations':102,'source_groups':51,'source_file_sha256':hashlib.sha256(args.operations.read_bytes()).hexdigest(),'audit_file_sha256':hashlib.sha256(args.audit.read_bytes()).hexdigest()},'rules':doc,'source_index':source_index,'validation':{'rules_validated':len(validated),'new_model_calls':0,'new_scoring_jobs':0,'h2_read':False,'test_read':False,'cartesian_intent_slot_expansion':False,'excluded_findings':['F1','F2','F3','F4','F5','F8']},'admission':{'eligible':False,'reason':'CPU structure/source validation only; semantic TRAIN counterexample review and fixed-consumer dry-run remain required before any NPU budget.'}}
+record={'schema':'saea-evidence-conditioned-candidate-cpu-v1','status':'cpu-validated-not-admitted','source_scope':{'source_operations':102,'source_groups':51,'source_file_sha256':hashlib.sha256(args.operations.read_bytes()).hexdigest(),'audit_file_sha256':hashlib.sha256(args.audit.read_bytes()).hexdigest()},'rules':doc,'source_index':source_index,'validation':{'rules_validated':len(validated),'new_model_calls':0,'new_scoring_jobs':0,'h2_read':False,'test_read':False,'cartesian_intent_slot_expansion':False,'excluded_findings':sorted(excluded_findings),'excluded_operation_count':len(excluded_hashes)},'admission':{'eligible':False,'reason':'CPU structure/source validation only; semantic TRAIN counterexample review and fixed-consumer dry-run remain required before any NPU budget.'}}
 out.write_text(json.dumps(record,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
 print(out)
 print('rules',len(validated),'sha',hashlib.sha256(out.read_bytes()).hexdigest())

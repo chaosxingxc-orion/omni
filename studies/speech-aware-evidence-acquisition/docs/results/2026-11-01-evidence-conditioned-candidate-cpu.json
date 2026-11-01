@@ -421,6 +421,7 @@
       "F5",
       "F8"
     ],
+    "excluded_operation_count": 23,
     "h2_read": false,
     "new_model_calls": 0,
     "new_scoring_jobs": 0,
