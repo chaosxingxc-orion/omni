@@ -1,0 +1,46 @@
+{
+  "schema": "saea-concurrency-real500-result-v1",
+  "run_id": "SAEA-SLURP-CONCURRENCY-C96-REAL500-V1",
+  "rows": 500,
+  "completed_rows": 500,
+  "status": "scored",
+  "cards": 8,
+  "instances": 2,
+  "client_concurrency_per_instance": 96,
+  "max_num_seqs_per_instance": 128,
+  "max_num_batched_tokens": 2048,
+  "context_tokens": 49152,
+  "completion_cap": 4096,
+  "reasoning_budget": 3072,
+  "campaign_wall_seconds": 1565.2855444699962,
+  "seconds_per_sample_campaign": 3.1305710889399925,
+  "includes_preflight_preprocess_scoring": true,
+  "campaign_seconds_to_release": 1454.19975806,
+  "official_metrics": {
+    "slu_f1": 0.7169074373932531,
+    "intent_accuracy": 0.852,
+    "scenario_accuracy": 0.892,
+    "span_f1": 0.6377440347071583
+  },
+  "cost": {
+    "calls": 1000,
+    "input_tokens": 6179793,
+    "output_tokens": 1648956,
+    "audio_seconds": 2947.168874999991
+  },
+  "checkpoint_sha256": "dc982b63b4c27a199f2f0f672d56b5cde12b209320f69ea632659d87071dc91a",
+  "full_contact_custody_verified": true,
+  "unknown_contacts": 0,
+  "continuous_full_utilization_verified": false,
+  "final_test_result": false,
+  "tfrl_gain_claimed": false,
+  "terminal_archive": {
+    "bytes": 394045440,
+    "sha256": "201dfa1e0281d908dc0323bb1e9c614926f164ab76d2c0f71b0530dd48b75945",
+    "generation_attempt_included": true,
+    "independent_fit_attempt_present": false,
+    "per_request_fit_verified": true,
+    "automatic_restore_authority": false
+  },
+  "completed_at": "2026-11-02T06:37:24.248008+00:00"
+}
