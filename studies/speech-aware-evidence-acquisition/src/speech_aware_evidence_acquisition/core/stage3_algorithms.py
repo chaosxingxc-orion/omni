@@ -291,6 +291,21 @@ GEPA_REFLECTIVE_PARETO_V1 = _register(
     )
 )
 
+REFLEXION_OFFLINE_TRANSFER_V1 = _register(
+    Stage3Algorithm(
+        id="reflexion-offline-transfer-v1",
+        family="reflexion",
+        display_name="Reflexion-inspired offline transfer with bounded FIFO memory",
+        citation="arXiv:2303.11366v4 section 3; local capacity-controlled offline transfer adaptation",
+        operators=("update", "context_application"),
+        status="planned",
+        what_it_changes=(
+            "One external-feedback reflection per historical TRAIN group; deterministic append/FIFO "
+            "memory without a curator or relative advantage. Not original same-task retries."
+        ),
+    )
+)
+
 ACE_GROW_REFINE_V1 = _register(
     Stage3Algorithm(
         id="ace-grow-refine-v1",

@@ -120,7 +120,7 @@ def expected_text(candidate, base, consumer_ids, *, rendering=None):
 def verify_release(params, *, repo, data, candidate, bundle):
     # A reviewed strategy cannot fall back to the legacy unchecked route, even
     # when a caller bypasses stage or removes the candidate's explicit flag.
-    required = candidate.get('semantic_review_required') is True or candidate.get('strategy') == 'ace_incremental_offline_v1'
+    required = candidate.get('semantic_review_required') is True or candidate.get('strategy') in ('ace_incremental_offline_v1', 'reflexion_offline_transfer_v1')
     if required and 'candidate_release' not in params:
         raise ValueError('candidate requires independent semantic release before consumption')
     if 'candidate_release' in params:

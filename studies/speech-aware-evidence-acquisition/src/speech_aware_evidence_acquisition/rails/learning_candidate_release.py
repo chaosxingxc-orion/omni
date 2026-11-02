@@ -14,6 +14,7 @@ from .tfgrpo_learning import sha, validate_experience
 SCHEMA = 'saea-learning-candidate-release-v1'
 REVIEW_SCHEMA = 'saea-learning-semantic-review-v1'
 STRATEGY = 'ace_incremental_offline_v1'
+REFLEXION_STRATEGY = 'reflexion_offline_transfer_v1'
 USAGE = ('calls', 'prompt_tokens', 'completion_tokens')
 
 
@@ -34,7 +35,15 @@ def _usage(value):
     return value
 
 
-def verify_ace_source(*, repo, data, candidate, candidate_pin, source_manifest, bundle):
+def verify_ace_source(**kwargs):
+    return _verify_source(strategy=STRATEGY, **kwargs)
+
+
+def verify_reflexion_source(**kwargs):
+    return _verify_source(strategy=REFLEXION_STRATEGY, **kwargs)
+
+
+def _verify_source(*, strategy, repo, data, candidate, candidate_pin, source_manifest, bundle):
     """Recheck real source, full native/FIT inventory and deterministic updates.
 
     Recovered multi-attempt candidates are deliberately held until a finalized
@@ -44,6 +53,9 @@ def verify_ace_source(*, repo, data, candidate, candidate_pin, source_manifest, 
     from ..core.config import compose
     from ..core.contact_journal import ContactJournal
     from . import ace_runtime as runtime, ace_incremental as ace
+    if strategy == REFLEXION_STRATEGY:
+        from . import reflexion_runtime as runtime, reflexion_offline as method
+    require(candidate.get('strategy') == strategy, 'candidate release method differs')
     from .tfgrpo_runtime import contact_key
     plan = ExecutionPlan(**bundle.manifest['plan']).validate()
     base = Path(data) / 'runs' / plan.run_id / plan.attempt_id
@@ -107,21 +119,39 @@ def verify_ace_source(*, repo, data, candidate, candidate_pin, source_manifest, 
     current = _usage(candidate['learning_usage']); history = _usage(source['original_total_usage'])
     require(candidate['cumulative_known_usage'] == {k: history[k] + current[k] for k in USAGE},
             'candidate cumulative learning cost differs')
-    items = copy.deepcopy(document['parent']['items']); operations = []; events = []
-    for index, group in enumerate(document['groups']):
-        identity = f'{document["input_sha256"]}:group-{index}'
-        def text(stage):
-            key = contact_key(stage, identity)
-            return json.loads((local / (key + '.response.json')).read_bytes())['response']['text']
-        reflection = ace.validate_reflection(text(ace.REFLECT), group, items, document['bounds']['max_findings'])
-        merged = ace.merge_delta(text(ace.CURATE), items, reflection, document['bounds'])
-        events.append({'group_index': index, 'query_id': group['query_id'], 'reflection': reflection,
-            'merge': merged, 'before_items_sha256': sha(items), 'after_items_sha256': sha(merged['items'])})
-        operations.extend(merged['operations']); items = merged['items']
-    require(candidate['items'] == items and candidate['operations'] == operations and candidate['updates'] == events,
-            'candidate differs from original observed ACE updates')
-    conflicts = [{'query_id': e['query_id'], **c} for e in events for c in e['merge']['unresolved_conflicts']]
-    require(candidate['unresolved_conflicts'] == conflicts, 'candidate conflict inventory changed')
+    if strategy == REFLEXION_STRATEGY:
+        texts = []
+        for index in range(len(document['groups'])):
+            key = contact_key(method.REFLECT, f'{document["input_sha256"]}:group-{index}')
+            texts.append(json.loads((local/(key+'.response.json')).read_bytes())['response']['text'])
+        expected = method.replay_candidate(document, texts)
+        require(all(candidate.get(key) == value for key, value in expected.items()),
+                'candidate differs from original observed Reflexion memory and evictions')
+        require(candidate.get('offline_transfer') is True
+            and candidate.get('historical_actor_memory_conditioned') is False
+            and candidate.get('memory_policy') == document['memory_policy']
+            and candidate.get('planned_learning_calls') == document['bounds']['max_calls']
+            and candidate.get('semantic_support_verified') is False,
+            'Reflexion method or validation claim differs')
+        for index, event in enumerate(expected['updates']):
+            require(json.loads((base/'tfgrpo/learner/updates'/f'{index:04d}.json').read_bytes()) == event,
+                    'Reflexion durable memory event differs')
+    else:
+        items = copy.deepcopy(document['parent']['items']); operations = []; events = []
+        for index, group in enumerate(document['groups']):
+            identity = f'{document["input_sha256"]}:group-{index}'
+            def text(stage):
+                key = contact_key(stage, identity)
+                return json.loads((local / (key + '.response.json')).read_bytes())['response']['text']
+            reflection = ace.validate_reflection(text(ace.REFLECT), group, items, document['bounds']['max_findings'])
+            merged = ace.merge_delta(text(ace.CURATE), items, reflection, document['bounds'])
+            events.append({'group_index': index, 'query_id': group['query_id'], 'reflection': reflection,
+                'merge': merged, 'before_items_sha256': sha(items), 'after_items_sha256': sha(merged['items'])})
+            operations.extend(merged['operations']); items = merged['items']
+        require(candidate['items'] == items and candidate['operations'] == operations and candidate['updates'] == events,
+                'candidate differs from original observed ACE updates')
+        conflicts = [{'query_id': e['query_id'], **c} for e in events for c in e['merge']['unresolved_conflicts']]
+        require(candidate['unresolved_conflicts'] == conflicts, 'candidate conflict inventory changed')
     return {'document': document, 'source': source, 'known_usage': current, 'historical_usage': history}
 
 
@@ -163,7 +193,8 @@ def verify(params, *, repo, data, candidate, bundle):
     _, release = read_pin(data, params['candidate_release'])
     fields = {'schema', 'strategy', 'candidate', 'source_manifest', 'consumer_roster', 'learning_dataset', 'review'}
     require(isinstance(release, dict) and set(release) == fields and release['schema'] == SCHEMA
-            and release['strategy'] == candidate.get('strategy') == STRATEGY, 'implemented candidate release strategy required')
+            and release['strategy'] == candidate.get('strategy')
+            and release['strategy'] in (STRATEGY, REFLEXION_STRATEGY), 'implemented candidate release strategy required')
     require(release['candidate'] == params['candidate'] and release['source_manifest'] == params['source_manifest'],
             'release candidate or finalized source differs')
     validate_experience(candidate, params['model_id'])
@@ -175,7 +206,8 @@ def verify(params, *, repo, data, candidate, bundle):
     ids = [r['sample_id'] for r in roster['items']]
     require(len(ids) == 312 and len(set(ids)) == 312 and ids == params['consumer_ids']
             and all(i.startswith('slurp:train:') for i in ids), 'complete ordered TRAIN H2 review roster required')
-    loaded = verify_ace_source(repo=repo, data=data, candidate=candidate, candidate_pin=params['candidate'],
+    verify_source = verify_reflexion_source if release['strategy'] == REFLEXION_STRATEGY else verify_ace_source
+    loaded = verify_source(repo=repo, data=data, candidate=candidate, candidate_pin=params['candidate'],
                                source_manifest=params['source_manifest'], bundle=bundle)
     index = {r['sample_id']: r for r in dataset['items']}
     require(dataset.get('count') == 625 and len(index) == 625, 'complete original TRAIN625 audio view required')

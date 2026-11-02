@@ -35,6 +35,7 @@ STAGES = frozenset({'summary', 'advantage', 'group_update', 'batch_update'})
 GROUNDED_RUNTIME_SCHEMA = 'saea-grounded-shards-runtime-binding-v1'
 FUSION_RUNTIME_SCHEMA = 'saea-grounded-fusion-runtime-binding-v1'
 ACE_RUNTIME_SCHEMA = 'saea-ace-runtime-binding-v1'
+REFLEXION_RUNTIME_SCHEMA = 'saea-reflexion-runtime-binding-v1'
 
 
 def _timing_identity(caller, request):
@@ -61,6 +62,9 @@ def validate_registration(binding, *, plan, model_id):
 
     Exclude protocol_hash from the embedded plan to avoid a self-referential
     config hash. The runtime protocol binds this registration externally."""
+    if isinstance(binding, dict) and binding.get('schema') == REFLEXION_RUNTIME_SCHEMA:
+        from .reflexion_runtime import validate_registration as validate_reflexion
+        return validate_reflexion(binding, plan=plan, model_id=model_id)
     if isinstance(binding, dict) and binding.get('schema') == ACE_RUNTIME_SCHEMA:
         from .ace_runtime import validate_registration as validate_ace
         return validate_ace(binding, plan=plan, model_id=model_id)
@@ -129,7 +133,7 @@ class MeteredExperienceCaller:
         if not callable(request_fit) or not callable(assert_lease):
             raise LearningError('registered request FIT and generation lease checks required')
         self.registration = copy.deepcopy(registration)
-        if registration.get('schema') == ACE_RUNTIME_SCHEMA and not callable(request_validator):
+        if registration.get('schema') in (ACE_RUNTIME_SCHEMA, REFLEXION_RUNTIME_SCHEMA) and not callable(request_validator):
             raise LearningError('ACE requires observed-predecessor request derivation')
         self.request_validator = request_validator
         source_plan = learning_source_plan(plan,replay=client._contact_replay,data_root=client._binding.data_root)
@@ -510,7 +514,7 @@ def seal_registered_candidate(runtime, candidate, *, started, ended):
         'schema':'saea-tfgrpo-stage-summary-v1', 'phase':stage, 'result_kind':'artifact',
         'contacts':len(contacts), 'rows':len({r['sample_id'] for r in contacts}),
         'contact_receipts':contacts,
-        **({'candidate':candidate_pin} if stage in ('batch_update', 'grounded_final_update', 'ace_curate') else {}),
+        **({'candidate':candidate_pin} if stage in ('batch_update', 'grounded_final_update', 'ace_curate', 'reflexion_reflect') else {}),
     }) for stage,contacts in stage_contacts.items())
     binding = {'schema':'saea-tfgrpo-flight-proposal-v1', 'candidate':candidate_pin,
         'batch_sha256':caller.registration['batch_sha256'],

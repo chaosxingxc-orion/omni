@@ -87,7 +87,7 @@ def native_contact_custody_enabled(values):
             and isinstance(values.get('tfgrpo_learning_registration'), dict)
             and isinstance(values.get('tfgrpo_contact_fit'), dict)
             and isinstance(values.get('prepared_training_feedback'), dict)
-            and values['prepared_training_feedback'].get('schema') in ('saea-prepared-tfgrpo-dynamic-v1', 'saea-prepared-grounded-shards-v1', 'saea-prepared-grounded-fusion-v1', 'saea-prepared-ace-dynamic-v1')):
+            and values['prepared_training_feedback'].get('schema') in ('saea-prepared-tfgrpo-dynamic-v1', 'saea-prepared-grounded-shards-v1', 'saea-prepared-grounded-fusion-v1', 'saea-prepared-ace-dynamic-v1', 'saea-prepared-reflexion-dynamic-v1')):
         return True  # Exact registration/source/FIT are independently preflighted.
     if direct_contact_custody_enabled(values):
         return True

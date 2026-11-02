@@ -234,8 +234,11 @@ def register(repo,data,job):
     fusion = complete.get('schema') == 'saea-grounded-fusion-job-v1'
     grounded = complete.get('schema') == 'saea-grounded-shards-job-v1'
     incremental = complete.get('schema') == 'saea-learning-strategy-job-v1'
+    reflexion = incremental and complete.get('strategy') == 'reflexion_offline_transfer_v1'
     if incremental:
         baseline['what_this_is']='Offline ACE local reflection and incremental curation over original TRAIN evidence; each realized prompt requires native FIT; no causal attribution or evaluated benefit claimed.'
+    if reflexion:
+        baseline['what_this_is']='Offline Reflexion transfer over historical TRAIN evidence; one reflection per group, deterministic bounded FIFO, no actor retries or curator; candidate requires independent review and evaluation.'
     if grounded:
         baseline['what_this_is']='Evidence-grounded H1 synthesis shards; intermediate artifacts only, complete historical costs retained.'
     if fusion:
@@ -265,6 +268,10 @@ def register(repo,data,job):
         exp['prepared_training_feedback']['schema']='saea-prepared-ace-dynamic-v1'
         exp['stage3_algorithm']={'id':'ace-grow-refine-v1','operators_used':['update'],
             'note':complete['strategy']+': offline local Reflector/Curator, finite observed-prefix dynamic prompts; later stages are not fitted or generated before their predecessors are observed.'}
+    if reflexion:
+        exp['prepared_training_feedback']['schema']='saea-prepared-reflexion-dynamic-v1'
+        exp['stage3_algorithm']={'id':'reflexion-offline-transfer-v1','operators_used':['update'],
+            'note':complete['strategy']+': capacity-controlled offline transfer, one observed-prefix reflection per TRAIN group; not original same-task retries or equal-budget ACE.'}
     exp['populations'][0]['ids']=[x['sample_id'] for x in roster['items']]
     exp['service_session']=service_session
     for rel,doc in [(roster_rel,roster),(f'configs/baseline/{name}.json',baseline),(f'configs/experiment/{name}.json',exp)]:
@@ -279,7 +286,7 @@ def register(repo,data,job):
         doc={'schema':'saea-tfgrpo-registered-plan-v1','execution_plan':asdict(plan),'job_manifest':pin(job/'complete.json',data,'data'),
              'config_sha256':cfg.config_hash,'authority':base.AUTH,'actual_audio_seconds_expected':0,'readiness':'held'}
         path=package/(kind+'-plan.json');publish_new(path,raw(doc))
-        rows.append(['2026-11-02',run,'bounded-discovery-probe',('Offline ACE incremental ' if incremental else 'Grounded H1 final fusion ' if fusion else 'Grounded H1 intermediate shards ' if grounded else 'TF-GRPO H1 final-only consolidation ')+kind,model_id,'slurp TRAIN original source groups','discovery',roster['split_identity_hash'],'no',str(plan.planned_model_calls),str(plan.planned_speech_audio_seconds),str(plan.planned_gpu_hours),'All source rollout costs retained',str(path.relative_to(repo)),f'Plan SHA256 {file_sha(path)}; owner-authorized under {base.AUTH}; no H2 feedback in learning; held; text only, actual audio zero'])
+        rows.append(['2026-11-02',run,'bounded-discovery-probe',('Offline Reflexion transfer ' if reflexion else 'Offline ACE incremental ' if incremental else 'Grounded H1 final fusion ' if fusion else 'Grounded H1 intermediate shards ' if grounded else 'TF-GRPO H1 final-only consolidation ')+kind,model_id,'slurp TRAIN original source groups','discovery',roster['split_identity_hash'],'no',str(plan.planned_model_calls),str(plan.planned_speech_audio_seconds),str(plan.planned_gpu_hours),'All source rollout costs retained',str(path.relative_to(repo)),f'Plan SHA256 {file_sha(path)}; owner-authorized under {base.AUTH}; no H2 feedback in learning; held; text only, actual audio zero'])
     ledger.write_text(ledger.read_text()+'\n## Fixed-P TF-GRPO learning\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| '+' | '.join(['---']*15)+' |\n'+'\n'.join('| '+' | '.join(r)+' |' for r in rows)+'\n')
     return {'job':name,'rows':len(roster['items']),'learned_groups':complete['groups'],'calls':complete['generation_calls'],'fit_calls':complete['fit_calls'],'readiness':'held','new_model_calls':0}
 
@@ -317,7 +324,7 @@ def admit(repo,data,job):
     if any((data/'attempts'/rid).exists() for rid in runs):raise ValueError('existing learning spend')
     draft={'schema':'saea-campaign-decision-v1','status':'DRAFT-NOT-MINTED','decision_id':decision_id,
         'eligible_run_ids':runs,'eligible_attempt_ids':['learning-v1','learning-fit-v1'],'authorization_basis':base.AUTH,
-        'owner':'root','decision':('Execute bounded offline ACE Reflector/Curator stages only after predecessor observation and actual native FIT; all TRAIN source costs retained; candidate requires evaluation.' if complete.get('schema')=='saea-learning-strategy-job-v1' else 'Execute registered grounded intermediate shards with native FIT and complete source costs; no final candidate.' if complete.get('schema')=='saea-grounded-shards-job-v1' else 'Execute one final consolidation of verified completed H1 stages through shared TF-GRPO runtime; all learned groups and historical costs retained; no H2 feedback.'),
+        'owner':'root','decision':('Execute bounded offline Reflexion single-stage reflection with deterministic FIFO only after predecessor observation and native FIT; all TRAIN costs retained; independent review required.' if complete.get('strategy')=='reflexion_offline_transfer_v1' else 'Execute bounded offline ACE Reflector/Curator stages only after predecessor observation and actual native FIT; all TRAIN source costs retained; candidate requires evaluation.' if complete.get('schema')=='saea-learning-strategy-job-v1' else 'Execute registered grounded intermediate shards with native FIT and complete source costs; no final candidate.' if complete.get('schema')=='saea-grounded-shards-job-v1' else 'Execute one final consolidation of verified completed H1 stages through shared TF-GRPO runtime; all learned groups and historical costs retained; no H2 feedback.'),
         'antecedents':{'owner':{'path':base.AUTH,'sha256':file_sha(repo/base.AUTH)},
             'runtime':{'path':str(receipt.relative_to(repo)),'sha256':file_sha(receipt)}},
         'source_manifest':pin(job/'complete.json',data,'data'),'service':{'expected_session_id':service_session},

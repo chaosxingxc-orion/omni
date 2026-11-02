@@ -24,43 +24,59 @@ SCHEMA = 'saea-learning-strategy-job-v1'
 read, raw, pin, file_sha = base.read, base.raw, base.pin, base.file_sha
 
 
+def strategy_modules(strategy):
+    """Only implemented strategies can reach shared registration or dispatch."""
+    if strategy == ace.STRATEGY:
+        return ace, runtime
+    from speech_aware_evidence_acquisition.rails import reflexion_offline, reflexion_runtime
+    ace.require(strategy == reflexion_offline.STRATEGY, 'implemented learning strategy required; no silent fallback')
+    return reflexion_offline, reflexion_runtime
+
+
+def initial_measurement(method, document, count):
+    if method.STRATEGY == ace.STRATEGY:
+        return method.reflect_messages(document, 0, document['parent']['items'], count)
+    return method.reflect_messages(document, 0, method.empty_memory(), count)
+
+
 def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpath,
             runtime_identity, bounds, out, job_name, run_id, service_session,
             planned_gpu_hours, max_context_bytes=2000000):
     assert_execution_environment()
     require = ace.require
-    require(strategy == ace.STRATEGY, 'implemented learning strategy required; no silent fallback')
+    method, selected_runtime = strategy_modules(strategy)
     require(re.fullmatch('[a-z0-9][a-z0-9-]*',job_name)
         and re.fullmatch('[A-Za-z0-9][A-Za-z0-9_-]*',service_session), 'safe strategy job/session required')
     require(not out.exists() and out.resolve().is_relative_to((data/'work/codex').resolve()), 'fresh owned strategy directory required')
     rel = Path(tokenizer_relpath)
     require(not rel.is_absolute() and '..' not in rel.parts and (data/rel).resolve().is_relative_to(data.resolve()), 'confined tokenizer required')
     identity, spec = read(runtime_identity), read(source_spec)
-    count, tokenizer = runtime.load_token_counter(data/rel)
-    source = runtime.load_finalized_shards(spec,data_root=data,count_tokens=count,tokenizer_identity=tokenizer)
+    count, tokenizer = selected_runtime.load_token_counter(data/rel)
+    source = selected_runtime.load_finalized_shards(spec,data_root=data,count_tokens=count,tokenizer_identity=tokenizer)
     model = source['model_id']
     require(base.deployment_identity(repo,model,identity) == identity, 'exact learning deployment identity required')
     config = {'model_id':model,'decoding_params':base.learning_decoding(read(repo/f'configs/model/{model}.json')),
         'max_context_bytes':max_context_bytes,'runtime_identity_sha256':sha(identity)}
-    document = ace.build_input(source,source['batch']['parent'],
+    document = method.build_input(source,source['batch']['parent'],
         learning_config_sha256=sha(learning_configuration(config)),**bounds)
-    initial = ace.reflect_messages(document,0,document['parent']['items'],count)
+    initial = initial_measurement(method, document, count)
     ids = [g['query_id'] for g in document['groups']]
     original = read(source_roster); index = {r['sample_id']:r for r in original['items']}
     require(len(index) == len(original['items']) and set(ids) <= set(index), 'complete unique original TRAIN roster required')
     roster = {'schema':'saea-roster-receipt-v1','roster_id':run_id,'roster_role':'construction',
         'carrier_lock_key':'slurp','split_role':'discovery','count':len(ids),'items':[index[i] for i in ids],
         'split_identity_hash':split_identity_hash(prefixed('slurp',ids)),
-        'selection':'All original TRAIN groups; sequential local reflection and curation.',
+        'selection':('All original TRAIN groups; sequential local reflection and curation.'
+            if strategy == ace.STRATEGY else 'All original TRAIN groups; single reflection and bounded FIFO memory.'),
         'source_queries_must_not_be_reported_as_held_out':True}
     plan = ExecutionPlan(run_id=run_id,attempt_id='learning-v1',
         execution_profile='bounded-discovery-probe',carrier_lock_key='slurp',split_role='discovery',
         split_identity_hash=roster['split_identity_hash'],planned_model_calls=document['bounds']['max_calls'],
         planned_gpu_hours=planned_gpu_hours,planned_speech_audio_seconds=1,protocol_hash='0'*64).validate()
-    reg = runtime.build_registration(plan,source=source,document=document,
+    reg = selected_runtime.build_registration(plan,source=source,document=document,
         decoding_params=config['decoding_params'],max_context_bytes=max_context_bytes,
         runtime_identity_sha256=sha(identity),roster_sha256=hashlib.sha256(raw(roster)).hexdigest())
-    source_doc = {'schema':runtime.RUNTIME_SOURCE_SCHEMA,'strategy':strategy,'source':spec,
+    source_doc = {'schema':selected_runtime.RUNTIME_SOURCE_SCHEMA,'strategy':strategy,'source':spec,
         'tokenizer_relpath':str(rel),'tokenizer_identity':tokenizer,'document':document,
         'initial_measurement':initial,'phase_contract':'unknown-prompts-await-observed-predecessor'}
     artifacts = {'construction-roster.json':roster,'source.json':source_doc,
@@ -84,8 +100,9 @@ def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpa
 
 def verify_job(repo,data,job):
     complete = read(job/'complete.json'); require = ace.require
-    require(complete.get('schema') == SCHEMA and complete.get('strategy') == ace.STRATEGY,
+    require(complete.get('schema') == SCHEMA and isinstance(complete.get('strategy'), str),
         'known learning strategy job required')
+    method, selected_runtime = strategy_modules(complete['strategy'])
     names = {'construction-roster.json','source.json','registration.json','runtime-identity.json'}
     require(set(complete['artifacts']) == names
         and all(file_sha(job/n) == complete['artifacts'][n] for n in names), 'learning strategy artifacts changed')
@@ -93,8 +110,8 @@ def verify_job(repo,data,job):
     require(base.deployment_identity(repo,reg['model_id'],identity) == identity
         and sha(identity) == reg['runtime_identity_sha256'] == complete['runtime_identity_sha256'], 'strategy deployment identity differs')
     plan = ExecutionPlan(**{**reg['plan'],'protocol_hash':'0'*64}).validate()
-    loaded,_ = runtime.load_runtime_source({'tfgrpo_learning_registration':reg,'prepared_training_feedback':{
-        'schema':runtime.SOURCE_SCHEMA,'source':pin(job/'source.json',data,'data')}},plan=plan,
+    loaded,_ = selected_runtime.load_runtime_source({'tfgrpo_learning_registration':reg,'prepared_training_feedback':{
+        'schema':selected_runtime.SOURCE_SCHEMA,'source':pin(job/'source.json',data,'data')}},plan=plan,
         repo_root=repo,data_root=data,sample_ids=tuple(r['sample_id'] for r in roster['items']),
         roster_sha256=file_sha(job/'construction-roster.json'))
     original = read_pin(complete['inputs']['source_roster'],repo_root=repo,data_root=data)
