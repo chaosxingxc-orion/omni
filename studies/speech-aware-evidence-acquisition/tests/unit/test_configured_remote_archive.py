@@ -64,6 +64,48 @@ class ArchiveTests(unittest.TestCase):
         self.stderr_bytes = stderr.encode()
         return patch.object(m.subprocess, 'Popen', side_effect=popen)
 
+    def test_restart_binds_original_container_and_rejects_replacement(self):
+        self.load()
+        with (patch.object(m, 'inspect', return_value=self.observed),
+              patch.object(m, 'snapshot', return_value={'status': 'complete'}) as snapshot,
+              patch('builtins.print')):
+            m.execute(self.config, 'once')
+            m.execute(self.config, 'once')
+        self.assertEqual(snapshot.call_count, 2)
+        with (patch.object(m, 'inspect', return_value={**self.observed, 'container_id': 'b' * 64}),
+              patch.object(m, 'snapshot') as snapshot):
+            with self.assertRaisesRegex(ValueError, 'replaced'):
+                m.execute(self.config, 'once')
+            snapshot.assert_not_called()
+
+    def test_expected_id_and_corrupt_or_drifted_persistent_identity(self):
+        self.doc['expected_container_id'] = 'b' * 64
+        self.load()
+        with self.assertRaisesRegex(ValueError, 'expected ID'):
+            m.bind_container(self.doc, self.observed)
+        self.doc['expected_container_id'] = 'a' * 64
+        m.bind_container(self.load(), self.observed)
+        path = self.output / (self.doc['container_name'] + '.identity.json')
+        blob = path.read_bytes()
+        self.doc['relative_paths'] = ['control']
+        with self.assertRaisesRegex(ValueError, 'identity/config'):
+            m.bind_container(self.doc, self.observed)
+        self.assertEqual(blob, path.read_bytes())
+        path.write_text('broken')
+        with self.assertRaises(ValueError):
+            m.bind_container(self.doc, self.observed)
+        self.assertEqual(path.read_text(), 'broken')
+
+    def test_expected_id_schema_and_identity_symlink(self):
+        for value in ('short', 'A' * 64, None, 42):
+            self.doc['expected_container_id'] = value
+            with self.assertRaises(ValueError): self.load()
+        self.doc.pop('expected_container_id')
+        path = self.output / (self.doc['container_name'] + '.identity.json')
+        path.symlink_to(self.root / 'absent')
+        with self.assertRaisesRegex(ValueError, 'symlink'):
+            m.bind_container(self.load(), self.observed)
+
     def test_complete_stream_hash_attempts_and_absence(self):
         raw, stderr = self.fixture()
         with self.stream(raw, stderr, 0):

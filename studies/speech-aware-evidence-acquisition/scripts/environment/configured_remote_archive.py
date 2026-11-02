@@ -60,8 +60,13 @@ def canonical(value, absolute=False):
 
 def load_config(path):
     doc = json.loads(Path(path).read_bytes())
-    require(isinstance(doc, dict) and set(doc) == {'schema', 'host', 'container_name', 'remote_root',
-        'relative_paths', 'shared_attempt_paths', 'local_output_root', 'interval_seconds'}, 'exact archive schema required')
+    fields = {'schema', 'host', 'container_name', 'remote_root', 'relative_paths',
+              'shared_attempt_paths', 'local_output_root', 'interval_seconds'}
+    require(isinstance(doc, dict) and fields <= set(doc)
+            and not set(doc) - fields - {'expected_container_id'}, 'exact archive schema required')
+    if 'expected_container_id' in doc:
+        require(isinstance(doc['expected_container_id'], str)
+                and re.fullmatch('[a-f0-9]{64}', doc['expected_container_id']), 'full container ID required')
     require(doc['schema'] == SCHEMA and doc['host'] == 'npu2', 'only npu2 archive host is permitted')
     require(isinstance(doc['container_name'], str) and re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}', doc['container_name']),
             'exact container name required')
@@ -221,6 +226,40 @@ def wait_event(doc):
     # Caller re-inspects and checks the original container ID before any snapshot.
 
 
+def bind_container(doc, observed):
+    """Called under the existing archive guard, before reading any remote bytes.
+
+    Legacy configurations bind on first observation. Operators should supply an
+    expected ID when adopting an existing watcher; a name is not its history.
+    """
+    identity = observed.get('container_id')
+    require(isinstance(identity, str) and re.fullmatch('[a-f0-9]{64}', identity),
+            'full observed container ID required')
+    require(doc.get('expected_container_id', identity) == identity,
+            'container replaced: expected ID differs')
+    record = {'schema': 'saea-archive-container-identity-v1', 'host': doc['host'],
+              'remote_root': doc['remote_root'], 'container_name': doc['container_name'],
+              'container_id': identity, 'config_sha256': digest(doc)}
+    path = Path(doc['local_output_root']) / (doc['container_name'] + '.identity.json')
+    require(not path.is_symlink(), 'archive identity cannot be a symlink')
+    if path.exists():
+        require(path.is_file() and json.loads(path.read_bytes()) == record,
+                'container replaced or persistent archive identity/config differs')
+        return
+    # File and directory durability: a crash before publication leaves a private
+    # partial file; it never replaces or repairs an existing identity.
+    temp = path.with_name('.' + path.name + '.' + uuid.uuid4().hex)
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, 'w') as handle:
+        json.dump(record, handle, sort_keys=True); handle.write('\n')
+        handle.flush(); os.fsync(handle.fileno())
+    os.link(temp, path)  # no replacement even if a non-cooperating writer races
+    temp.unlink()
+    fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try: os.fsync(fd)
+    finally: os.close(fd)
+
+
 def execute(config, mode):
     require(mode in ('once', 'watch'), 'archive mode must be once or watch')
     doc = load_config(config)
@@ -234,6 +273,7 @@ def execute(config, mode):
         identity = None
         while True:
             observed = inspect(doc)
+            bind_container(doc, observed)
             require(identity is None or identity == observed['container_id'], 'container replaced during archive watch')
             identity = observed['container_id']
             record = snapshot(doc, observed)
