@@ -69,3 +69,19 @@ def test_rejects_execution_attempt_drift(tmp_path, registered, field):
     path.write_text(json.dumps(exp))
     with pytest.raises(ValueError, match="registered attempt differs"):
         r.validate_workload(tmp_path, tmp_path, "x", spec)
+
+
+def test_execution_view_derives_exact_subset_and_rejects_parent_drift():
+    root = Path(__file__).parents[2]
+    w = _load(root / "scripts/analysis/concurrency_sweep_workload.py", "view_workload")
+    rows = [{"sample_id": f"slurp:train:{i}", "audio_seconds": 1.0} for i in range(500)]
+    parent = {"count": 500, "items": rows, "loader": "unchanged"}
+    parent["runtime_view_sha256"] = hashlib.sha256(json.dumps(parent, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    checked = {"status": "HELD_NOT_ADMITTED", "items": rows[:100], "rows": 100, "manifest_sha256": "a"*64}
+    view = w.build_execution_view(checked, parent)
+    assert view["items"] == rows[:100]
+    assert view["loader"] == "unchanged"
+    assert view["audio_seconds_total"] == 100.0
+    parent["items"][200]["audio_seconds"] = 2.0
+    with pytest.raises(ValueError, match="parent runtime view hash differs"):
+        w.build_execution_view(checked, parent)

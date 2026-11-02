@@ -126,3 +126,33 @@ def build_level_spec(
         "test_labels_read": False,
         "generation_authorized": False,
     }
+
+
+def build_execution_view(validated: dict[str, Any], parent_view: dict[str, Any]) -> dict[str, Any]:
+    """Derive the executable subset without resampling or reading labels."""
+    def digest(value: Any) -> str:
+        return hashlib.sha256(json.dumps(
+            value, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()).hexdigest()
+
+    _require(validated.get("status") == "HELD_NOT_ADMITTED", "workload must remain held")
+    unsigned = {key: value for key, value in parent_view.items() if key != "runtime_view_sha256"}
+    _require(digest(unsigned) == parent_view.get("runtime_view_sha256"), "parent runtime view hash differs")
+    parent_rows = parent_view.get("items", [])
+    _require(len(parent_rows) == parent_view.get("count") == 500, "parent must be fixed real500")
+    by_id = {row["sample_id"]: row for row in parent_rows}
+    _require(len(by_id) == 500, "parent has duplicate samples")
+    rows = validated["items"]
+    _require(len(rows) == validated["rows"] == 100, "subset must contain 100 rows")
+    for row in rows:
+        _require(row == by_id.get(row["sample_id"]), "subset differs from parent runtime row")
+        _require(row["sample_id"].startswith("slurp:train:"), "subset must use train samples")
+    identity = hashlib.sha256("\n".join(sorted(
+        "slurp/" + row["sample_id"] for row in rows
+    )).encode()).hexdigest()
+    result = {**unsigned, "split_name": "SLURP-REAL-ENGINE-100-V1", "count": 100,
+              "items": rows, "split_identity_hash": identity,
+              "source_binding_sha256": validated["manifest_sha256"],
+              "audio_seconds_total": round(sum(row["audio_seconds"] for row in rows), 9)}
+    result["runtime_view_sha256"] = digest(result)
+    return result
