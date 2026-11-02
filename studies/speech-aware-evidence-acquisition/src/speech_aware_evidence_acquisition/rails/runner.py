@@ -7664,6 +7664,7 @@ def _run_agent_openjiuwen(
         return tuple(state.final_outcome for state in states)
 
     states: list[_ContactAgentState] = []
+    states_by_task_index: dict[int, _ContactAgentState] = {}
 
     def contacts_for(contact: AgentContact) -> tuple[AgentContactPlan, ...]:
         if isinstance(contact, AgentContactPlan):
@@ -7760,13 +7761,17 @@ def _run_agent_openjiuwen(
         )
         schedule_wave(state, controller.initial_contact(initial_context))
         states.append(state)
+        # Preserve the former first-match lookup for a repeated task index.
+        # Key by task, not sample: execution units can share a parent sample.
+        states_by_task_index.setdefault(prepared.index, state)
 
     def request_arguments(node: _AgentContactNode, slot_id: int | None = None):
         decoding_params = dict(base_decoding_params or {})
         decoding_params.update(dict(node.contact.decoding_params))
+        state = states_by_task_index.get(node.task_index)
         _apply_node_thinking(
             decoding_params, thinking_policy,
-            next((s.controller for s in states if s.prepared.index == node.task_index), None),
+            state.controller if state is not None else None,
             node.contact.contact_id,
         )
         if slot_id is not None:
