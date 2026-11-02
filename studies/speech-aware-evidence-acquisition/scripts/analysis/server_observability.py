@@ -116,30 +116,94 @@ def write_new(path,doc):
 
 
 
-def collect_windows(endpoints, *, window_id, mode, config, out, stop_file, max_snapshots, identity_path=None):
-    """Background 600s collector. A terminal file bounds the final snapshot.
+def _validate_stop_source(stop_file, terminal_status, expected_container_id):
+    if terminal_status is None:
+        if stop_file is None or expected_container_id is not None:
+            raise ValueError('stop-file or paired terminal-status/expected-container-id required')
+    elif stop_file is not None or not isinstance(expected_container_id, str) or not re.fullmatch('[a-f0-9]{64}', expected_container_id):
+        raise ValueError('terminal-status requires a full 64-character container ID and excludes stop-file')
+
+
+def _read_terminal_status(path, expected_container_id):
+    """Read a configured launcher observation; missing never means complete."""
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return None
+    try:
+        observed = json.loads(raw)
+    except (ValueError, UnicodeError) as error:
+        raise ValueError('corrupt launcher terminal status') from error
+    if not isinstance(observed, dict):
+        raise ValueError('launcher status must be an object')
+    container_id = observed.get('container_id')
+    if not isinstance(container_id, str) or not re.fullmatch('[a-f0-9]{64}', container_id):
+        raise ValueError('launcher status requires a full container ID')
+    if container_id != expected_container_id:
+        raise ValueError('launcher container identity changed')
+    state = observed.get('state')
+    if state not in ('created', 'running', 'paused', 'restarting', 'exited', 'dead') or type(observed.get('running')) is not bool:
+        raise ValueError('invalid launcher state or running flag')
+    if 'exit_code' in observed and type(observed['exit_code']) is not int:
+        raise ValueError('invalid launcher exit code')
+    if state in ('exited', 'dead'):
+        if observed['running']:
+            raise ValueError('terminal launcher state cannot be running')
+        return {key: observed[key] for key in ('container_id', 'state', 'running', 'exit_code') if key in observed}
+    return None
+
+
+def collect_windows(endpoints, *, window_id, mode, config, out, max_snapshots, stop_file=None, identity_path=None, terminal_status=None, expected_container_id=None):
+    """Background collector with a validated event before the final snapshot.
 
     Polling the local terminal file once per second never contacts a service or
     model. Only scheduled or terminal events trigger metrics HTTP collection.
+    Reaching max_snapshots without a previously observed terminal event is a
+    bounded observation, not a claim that the producer or science completed.
     """
     from speech_aware_evidence_acquisition.core.stage_timing import _load_configuration
+    _validate_stop_source(stop_file, terminal_status, expected_container_id)
     profile=_load_configuration(mode,str(config),None,None)
     if type(max_snapshots) is not int or max_snapshots<2:raise ValueError('at least two bounded snapshots required')
+    def read_terminal():
+        if terminal_status is not None:
+            return _read_terminal_status(terminal_status, expected_container_id)
+        return {'source': 'stop-file'} if stop_file.exists() else None
+    terminal=read_terminal()
     out.mkdir(parents=True,exist_ok=False)
     write_new(out/'config.json',{'schema':'saea-server-observation-config-v1','effective':profile,
         'configuration_sha256':hashlib.sha256(json.dumps(profile,sort_keys=True).encode()).hexdigest(),
-        'window_id':window_id,'max_snapshots':max_snapshots,'scope':'instance aggregate; no request payloads'})
+        'window_id':window_id,'max_snapshots':max_snapshots,'scope':'instance aggregate; no request payloads',
+        'termination': {'source': 'terminal-status', 'expected_container_id': expected_container_id}
+            if terminal_status is not None else {'source': 'stop-file'}})
     previous=None
     for index in range(max_snapshots):
+        # Revalidate even an event latched during the local wait. An atomic
+        # replacement for another container must not authorize this snapshot.
+        terminal=read_terminal() or terminal
         identity=json.loads(identity_path.read_bytes()) if identity_path else None
         current=snapshot(endpoints,window_id=window_id,mode=mode,identity=identity)
         write_new(out/f'{index:04d}.snapshot.json',current)
         if previous is not None:write_new(out/f'{index:04d}.delta.json',difference(previous,current))
         previous=current
-        if stop_file.exists():break
+        read_terminal()  # Reject corruption or identity replacement during collection.
+        if terminal is not None:
+            break
+        if index+1==max_snapshots:break
         deadline=time.monotonic()+profile['server_metrics_interval_seconds']
-        while time.monotonic()<deadline and not stop_file.exists():time.sleep(min(1,deadline-time.monotonic()))
-    write_new(out/'complete.json',{'snapshots':index+1,'terminal_observed':stop_file.exists(),'new_model_calls':0})
+        while True:
+            terminal=read_terminal()
+            if terminal is not None:break
+            remaining=deadline-time.monotonic()
+            if remaining<=0:break
+            time.sleep(min(1,remaining))
+    completion={'snapshots':index+1,'terminal_observed':terminal is not None,'new_model_calls':0,
+        'termination_reason':'terminal-event' if terminal is not None else 'snapshot-limit',
+        'final_snapshot_after_terminal':terminal is not None}
+    if terminal_status is not None:
+        completion['terminal_status']=terminal
+        completion['scientific_success']='verify shared runtime artifacts separately'
+    write_new(out/'complete.json',completion)
 
 
 def main():
@@ -149,13 +213,17 @@ def main():
     d=sub.add_parser('diff');d.add_argument('--before',type=Path,required=True);d.add_argument('--after',type=Path,required=True)
     w=sub.add_parser('watch');w.add_argument('--endpoint',action='append',required=True);w.add_argument('--window-id',required=True)
     w.add_argument('--mode',choices=('normal','debug'),default='normal');w.add_argument('--config',type=Path,required=True)
-    w.add_argument('--stop-file',type=Path,required=True);w.add_argument('--max-snapshots',type=int,default=145);w.add_argument('--identity',type=Path)
+    stop=w.add_mutually_exclusive_group(required=True)
+    stop.add_argument('--stop-file',type=Path);stop.add_argument('--terminal-status',type=Path)
+    w.add_argument('--expected-container-id');w.add_argument('--max-snapshots',type=int,default=145);w.add_argument('--identity',type=Path)
     for x in (s,d,w):x.add_argument('--out',type=Path,required=True)
     a=p.parse_args()
     if a.action=='watch':
+        try:_validate_stop_source(a.stop_file,a.terminal_status,a.expected_container_id)
+        except ValueError as error:p.error(str(error))
         endpoints=dict(x.split('=',1) for x in a.endpoint)
         if len(endpoints)!=len(a.endpoint):raise ValueError('unique instance labels required')
-        collect_windows(endpoints,window_id=a.window_id,mode=a.mode,config=a.config,out=a.out,stop_file=a.stop_file,max_snapshots=a.max_snapshots,identity_path=a.identity)
+        collect_windows(endpoints,window_id=a.window_id,mode=a.mode,config=a.config,out=a.out,stop_file=a.stop_file,max_snapshots=a.max_snapshots,identity_path=a.identity,terminal_status=a.terminal_status,expected_container_id=a.expected_container_id)
         return
     if a.action=='snapshot':
         endpoints=dict(x.split('=',1) for x in a.endpoint)

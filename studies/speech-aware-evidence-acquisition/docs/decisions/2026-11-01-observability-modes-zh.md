@@ -42,6 +42,17 @@ python scripts/analysis/server_observability.py diff \
 
 后台连续采集可使用 `server_observability.py watch --config configs/observability/debug-v1.json --mode debug --window-id RUN-ATTEMPT --endpoint instance0=http://127.0.0.1:8200/metrics --stop-file /owned/terminal.json --out /owned/server-metrics`。默认最多145份快照，首次/定时/终态各保存完整快照，相邻窗口输出差分。单独运行collector，不占用主线程反复轮询；终态文件只在本地检查，不触发模型调用。
 
+已有 `configured_job_launch.py watch` 的任务可将其原子更新的 `status.json` 所在目录只读挂载给collector，用以下参数替换 `--stop-file`：
+
+```bash
+--terminal-status /owned/launch-receipts/status.json \
+--expected-container-id "$PRODUCER_CONTAINER_ID"
+```
+
+`PRODUCER_CONTAINER_ID` 必须是本次生产容器的完整64位小写十六进制ID，来自实际启动结果，不能使用容器名或短ID。这两个参数须同时提供，且与 `--stop-file` 互斥。绑定的是launcher状态发布目录，不能仅挂载一个会被原子替换的旧文件inode；collector无需Docker socket，也不会启动、停止或重发模型请求。只有身份匹配、`running=false` 且 `state` 为 `exited`/`dead` 的状态触发终态；`running`/`created`/`paused`/`restarting` 不触发终止，状态文件暂缺继续等待，格式损坏、未知状态、缺少身份或身份改变立即报错。
+
+normal配置保持600秒采集周期，debug沿用显式profile；每秒只检查本地状态，不请求服务。首次观察到终态后再采集一次最终快照；在采集中才出现的终态需要随后一份快照，不把已有快照误称为终态之后。达到 `--max-snapshots` 仍未观察到终态时，`complete.json` 写 `termination_reason=snapshot-limit`、`terminal_observed=false`，并立即结束，不额外等待一个周期。终态退出码可为非零，完成记录保留退出码及身份，但科学成功仍须独立核验runtime产物。配置记录停止源和预期ID；所有快照和差分仍沿用新文件发布与持久化机制。该功能用于新启动的collector，不回写正在运行的绑定执行树。
+
 
 首次debug服务端窗口已产出实测：一请求的queue约0.0000345秒、prefill 0.7069秒、decode142.0853秒、TTFT0.7347秒。第二实例完成数0，各延迟保持未知。55项模式/传输/汇总检查通过。该单请求实测验证采集通路，不作为并发吞吐基线或normal/debug开销结论。
 
@@ -75,3 +86,5 @@ python scripts/analysis/summarize_stage_timing.py /owned/local/ATTEMPT_ID-timing
 普通及prefix调度路径新增debug阶段：`dispatch_contact_lock_wait`（联系锁获取）、`dispatch_trajectory_slot_wait`/`dispatch_prefix_slot_wait`（容量）、`dispatch_executor_wait`（提交至worker启动，含事件循环调度）、`dispatch_blocking_execute`（worker执行）。sample身份随异步上下文进入worker；worker内部已有request计时接续，不能将整个worker区间称为纯推理。node-batch/node-pipeline内部队列、local-tool队列和准备线程池尚未获得这套完整分段，分析必须声明执行路径。该改造不改变科学trace或调度容量。
 
 真实新debug启动已记录26文件、63,447,489,451字节完整哈希84.552秒，整体验证84.571秒；同进程后续缓存验证0.011–0.013秒。该证据对应一次有界综合启动，不代替高并发与模式开销评估。
+
+正式固定镜像验证：39项相关测试通过（2.11秒）。该版本供后继collector使用，未修改活动Direct执行树或现有观测器。
