@@ -16,8 +16,8 @@ from speech_aware_evidence_acquisition.core.contact_journal import NativeContact
 from speech_aware_evidence_acquisition.core.flight.receipts import FlightReceipts
 
 
-def interrupted(tmp_path,monkeypatch,*,unknown=False,before_bridge=False):
-    runtime,old_transport,_,source,spec,_=setup(tmp_path,monkeypatch)
+def interrupted(tmp_path,monkeypatch,*,unknown=False,before_bridge=False,contract=None):
+    runtime,old_transport,_,source,spec,_=setup(tmp_path,monkeypatch,reflector_contract=contract)
     kwargs=runtime.frozen_core_client_kwargs()
     runtime._data_root=kwargs['binding'].data_root
     runtime._explicit_run_dir=runtime._data_root/'runs'/runtime.plan.run_id/runtime.plan.attempt_id
@@ -75,9 +75,10 @@ def interrupted(tmp_path,monkeypatch,*,unknown=False,before_bridge=False):
     return runtime,transport,replay,fits
 
 
+@pytest.mark.parametrize('contract', [None, m.method.COMPACT_CONTRACT])
 @pytest.mark.parametrize('before_bridge',[False,True])
-def test_fresh_process_reuses_exact_native_response_and_fit(tmp_path,monkeypatch,before_bridge):
-    runtime,transport,replay,fits=interrupted(tmp_path,monkeypatch,before_bridge=before_bridge)
+def test_fresh_process_reuses_exact_native_response_and_fit(tmp_path,monkeypatch,before_bridge,contract):
+    runtime,transport,replay,fits=interrupted(tmp_path,monkeypatch,before_bridge=before_bridge,contract=contract)
     fitroot=runtime._data_root/'prepared/Reflexion-FIT-RECOVERY/fit-v1'
     before={p.name:p.read_bytes() for p in fitroot.glob('*.request-fit.json')}
     assert len(before)==1

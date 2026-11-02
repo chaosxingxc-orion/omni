@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 from speech_aware_evidence_acquisition.rails import reflexion_runtime as m, reflexion_offline as method, tfgrpo_runtime
 from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical, sha, UnknownLearningContact
-from test_reflexion_offline import fixture, reflection
+from test_reflexion_offline import fixture, reflection, compact_reflection
 from test_tfgrpo_dispatch import make_runtime
 
 def setup(tmp_path,monkeypatch,**limits):
@@ -43,7 +43,7 @@ def setup(tmp_path,monkeypatch,**limits):
     def answer(payload):
         stage = json.loads(payload['history'][0]['content'])['stage']
         assert stage == method.REFLECT
-        return json.dumps(reflection())
+        return json.dumps(compact_reflection() if limits.get('reflector_contract') else reflection())
     transport._responder = answer
     fits = []
     def fit(prepared):
@@ -55,8 +55,9 @@ def setup(tmp_path,monkeypatch,**limits):
     return runtime,transport,captured,source,spec,fits
 
 
-def test_real_flight_dispatch_single_stage_seal_and_source_route(tmp_path,monkeypatch):
-    runtime,transport,captured,source,spec,fits=setup(tmp_path,monkeypatch)
+@pytest.mark.parametrize('contract', [None, method.COMPACT_CONTRACT])
+def test_real_flight_dispatch_single_stage_seal_and_source_route(tmp_path,monkeypatch,contract):
+    runtime,transport,captured,source,spec,fits=setup(tmp_path,monkeypatch,reflector_contract=contract)
     from speech_aware_evidence_acquisition.rails.tfgrpo_source import load_dynamic_source
     loaded,receipt=load_dynamic_source(runtime._composed.values,plan=runtime.plan,
         repo_root=tmp_path,data_root=tmp_path,sample_ids=(runtime._samples[0].sample_id,),roster_sha256='c'*64)

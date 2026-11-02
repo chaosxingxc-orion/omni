@@ -50,7 +50,8 @@ def validate_registration(reg, *, plan, model_id):
     bound_fields = {'resident_context', 'completion_cap',
         'reserve_tokens', 'max_groups', 'max_items', 'max_characters', 'max_entry_characters',
         'max_prompt_tokens_total', 'max_completion_tokens_total', 'max_calls'}
-    require(isinstance(bounds, dict) and set(bounds) == bound_fields
+    require(isinstance(bounds, dict) and set(bounds) in (bound_fields, bound_fields | {'reflector_contract'})
+        and ('reflector_contract' not in bounds or bounds['reflector_contract'] == method.COMPACT_CONTRACT)
         and all(type(bounds[k]) is int and bounds[k] > 0 for k in bound_fields if k != 'reserve_tokens')
         and type(bounds['reserve_tokens']) is int and bounds['reserve_tokens'] >= 0, 'exact finite Reflexion bounds required')
     decoding = reg['decoding_params']
@@ -161,7 +162,8 @@ def request_validator(document, count_tokens):
             if key not in responses:
                 raise UnknownLearningContact('Reflexion predecessor unobserved; no later prompt FIT or generation')
             observed = caller.observed(expected)
-            reflection = method.validate_reflection(observed['text'],group,document['bounds']['max_entry_characters'])
+            reflection = method.validate_reflection(observed['text'],group,document['bounds']['max_entry_characters'],
+                document['bounds'].get('reflector_contract'))
             memory, _ = method.advance_memory(memory,reflection,group,index,document['bounds'])
     return validate
 
@@ -275,7 +277,7 @@ def verify_recovery_prefix(replay, *, data_root, plan, registration, document, c
         validate(request,caller); result=observed(request)
         payload=json.loads(request['messages'][1]['content'])
         method.validate_reflection(result['text'],payload['original_group'],
-            document['bounds']['max_entry_characters'])
+            document['bounds']['max_entry_characters'], document['bounds'].get('reflector_contract'))
         for field in usage:usage[field]+=result['usage'][field]
     require(usage['prompt_tokens']<=document['bounds']['max_prompt_tokens_total']
         and usage['completion_tokens']<=document['bounds']['max_completion_tokens_total'],

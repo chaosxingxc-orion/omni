@@ -159,3 +159,58 @@ def test_foreign_or_nonprefix_history_refuses_before_new_call(tmp_path):
     (root/(sha(request)+'.intent.json')).write_bytes(canonical(request))
     with pytest.raises(ValueError,match='nonsequential'):run()
     assert not calls
+
+
+def compact_reflection(content='When a slot is uncertain, use only explicit evidence; do not add alternatives.'):
+    return {'schema': m.COMPACT_CONTRACT, 'reflection': {'content': content, 'refs': ['r0']}}
+
+
+def test_compact_contract_changes_identity_retains_evidence_and_replays(tmp_path):
+    source, legacy = fixture()
+    _, doc, run, calls, fits = runner(tmp_path, reflector_contract=m.COMPACT_CONTRACT,
+        answers=[compact_reflection() for _ in range(3)])
+    assert doc['input_sha256'] != legacy['input_sha256']
+    assert 'reflector_contract' not in legacy['bounds']
+    first = run()
+    assert first == run() and len(calls) == len(fits) == 3
+    payload = json.loads(calls[0]['messages'][1]['content'])
+    assert payload['original_group'] == legacy['groups'][0]
+    assert payload['trajectory_references'] == {f'r{i}': f'T0-{i}' for i in range(4)}
+    assert 'Never add speculative' in calls[0]['messages'][0]['content']
+    assert first['updates'][0]['reflection']['reflection']['trajectory_ids'] == ['T0-0']
+    assert not first['semantic_support_verified']
+
+
+@pytest.mark.parametrize('fault', ['long', 'foreign', 'duplicate', 'legacy', 'extra', 'duplicate_json'])
+def test_compact_invalid_known_output_is_retained_without_retry(tmp_path, fault):
+    answer = compact_reflection()
+    if fault == 'long': answer['reflection']['content'] = '字' * 201
+    elif fault == 'foreign': answer['reflection']['refs'] = ['r4']
+    elif fault == 'duplicate': answer['reflection']['refs'] = ['r0', 'r0']
+    elif fault == 'legacy': answer = reflection()
+    elif fault == 'extra': answer['reflection']['rationale'] = 'not allowed'
+    else:
+        _, doc = fixture(reflector_contract=m.COMPACT_CONTRACT)
+        text = '{"schema":"saea-reflexion-compact-v2","reflection":null,"reflection":null}'
+        with pytest.raises(ValueError, match='exact JSON'):
+            m.validate_reflection(text, doc['groups'][0], 200, m.COMPACT_CONTRACT)
+        return
+    _, _, run, calls, fits = runner(tmp_path, reflector_contract=m.COMPACT_CONTRACT,
+        answers=[answer] * 3)
+    for _ in range(2):
+        with pytest.raises(ValueError): run()
+    assert len(calls) == len(fits) == 1
+    assert len(list((tmp_path/'contacts').glob('*.response.json'))) == 1
+    assert not (tmp_path/'candidate.json').exists()
+
+
+def test_compact_null_and_unicode_boundary():
+    _, doc = fixture(reflector_contract=m.COMPACT_CONTRACT)
+    group = doc['groups'][0]
+    assert m.validate_reflection(json.dumps({'schema': m.COMPACT_CONTRACT, 'reflection': None}),
+        group, 200, m.COMPACT_CONTRACT)['reflection'] is None
+    result = m.validate_reflection(json.dumps(compact_reflection('字' * 200)),
+        group, 200, m.COMPACT_CONTRACT)
+    assert len(result['reflection']['content']) == 200
+    with pytest.raises(ValueError):
+        m.validate_reflection(json.dumps(compact_reflection()), group, 200)

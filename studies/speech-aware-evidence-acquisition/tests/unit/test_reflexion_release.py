@@ -6,8 +6,9 @@ from test_learning_candidate_release import reviewed, release  # noqa: F401
 from speech_aware_evidence_acquisition.rails import learning_candidate_release as m
 from speech_aware_evidence_acquisition.rails import tfgrpo_consumption as consumption
 from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical
+@pytest.mark.parametrize('contract', [None, 'saea-reflexion-compact-v2'])
 @pytest.mark.parametrize('fault', [None, 'cumulative', 'native', 'fit', 'parent', 'order', 'event', 'claim'])
-def test_actual_finalized_native_candidate_source(tmp_path, monkeypatch, fault):
+def test_actual_finalized_native_candidate_source(tmp_path, monkeypatch, fault, contract):
     """Real adapter/journals/FIT; only endpoint, source and compose are doubles."""
     import importlib
     import shutil
@@ -15,7 +16,7 @@ def test_actual_finalized_native_candidate_source(tmp_path, monkeypatch, fault):
     from test_reflexion_runtime import setup
     from speech_aware_evidence_acquisition.core import tfgrpo_fit, config
     from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal
-    runtime, endpoint, _, _, _, _ = setup(tmp_path, monkeypatch)
+    runtime, endpoint, _, _, _, _ = setup(tmp_path, monkeypatch, reflector_contract=contract)
     kwargs = runtime.frozen_core_client_kwargs()
     runtime._data_root = kwargs['binding'].data_root
     runtime._explicit_run_dir = runtime._data_root / 'runs' / runtime.plan.run_id / runtime.plan.attempt_id
