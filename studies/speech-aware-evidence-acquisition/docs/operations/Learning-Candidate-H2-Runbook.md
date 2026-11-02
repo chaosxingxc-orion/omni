@@ -8,6 +8,18 @@
 
 候选须有完整 FINALIZED manifest、原生请求/响应/FIT、来源及费用。生成恢复支持不等于发布恢复支持：当前跨 attempt 候选发布和恢复代 H2 评分仍不支持，遇到这种情况先修共享适配器，不能删除恢复声明或重发已知请求。空记忆当前也不能通过消费路径。
 
+## 复用证据导出器
+
+候选真实FINALIZED后，运行共享CPU导出入口（也放入配置化launcher的argv）：
+
+```bash
+python scripts/analysis/learning_candidate_review.py \
+  --repo "$study_root" --data "$data_root" --candidate "$candidate_path" \
+  --manifest "$manifest_path" --out "$review_dir"
+```
+
+导出器复用现有seal与native来源验证，输出完整TRAIN证据、父版本、逐组更新、冲突和成本，以及`review.pending.json`、`release.pending.json`。不调用模型、不裁剪规则、不自动判定supported。release的review pin为空，审查表decision=pending，不能直接准入。真实审查通过后另存不可变review/release并填实际哈希；不覆盖pending原件。TRAIN原文材料只保存私有目录，不进入GitHub。
+
 ## 独立语义审查
 
 审查只读取 TRAIN 证据，不能读取 H2/test 逐样本标签来修规则。逐项覆盖候选全部条目：
