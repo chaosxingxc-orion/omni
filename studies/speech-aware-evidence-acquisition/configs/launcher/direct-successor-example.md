@@ -8,7 +8,7 @@
 - direct-successor-job.example.json：已注册/准入 Direct 完整测试后继启动配置。
 - direct-environment-preflight.example.json：上述两者共用的三个解释器检查，将其复制为私有 config/direct-environment-preflight.json。
 
-final_report_workload.py 仅有 stage / prepare / register / validate，没有生成入口。Direct 完整13078的配置与注册先由它完成；prepare 验证 no-supplied-first-phase，不构造 A0 知识供应。实际生成复用 run_real_engine_candidate.py --candidate slurp-direct-fulltest-v1，沿用共享 campaign、FIT、锁、成本和封存。模板不绕过 registered_workload、readiness 或 admission。
+final_report_workload.py 仅有 allowance / stage / prepare / register / validate，没有生成入口。Direct 完整13078的配置与注册先由它完成；prepare 验证 no-supplied-first-phase，不构造 A0 知识供应。实际生成复用 run_real_engine_candidate.py --candidate slurp-direct-fulltest-v1，沿用共享 campaign、FIT、锁、成本和封存。模板不绕过 registered_workload、readiness 或 admission。
 
 ## 三个解释器
 
@@ -23,10 +23,10 @@ final_report_workload.py 仅有 stage / prepare / register / validate，没有�
 ## 必须维持的配对关系
 
 1. stage、prepare、register、admit/repin及各阶段所需提交完成后，选最终干净执行树。然后填两份相同 expected_commit / repo_path，运行 CPU 预检。预检之后再提交会触发绑定拒绝；不能修改旧 intent 迁就新提交。
-2. 两份配置的 image、environment、working_directory、repo_path、expected_commit 完全相同。即使是仅后继使用的 SAEA_DEPLOYMENT_PROFILE，也要提前放进源配置。GIT safe.directory 和 PYTHONPATH 都使用同一个容器内 study 路径。
+2. 两份配置的 image、environment、working_directory、repo_path、expected_commit 完全相同。即使是仅后继使用的 SAEA_DEPLOYMENT_PROFILE 和 SAEA_ADMITTED_LEVEL=96，也要提前放进源配置；完整Direct注册要求C96，2实例对应192总client宽度，不代表FIT并发或吞吐。GIT safe.directory 和 PYTHONPATH 都使用同一个容器内 study 路径。
 3. CPU 源 network=none、pid_host=false；后继 network=host、pid_host=true，以复用已登记 resident 服务及真实进程身份核验。这些差异可被绑定接受，但不意味着服务核验已通过。
 4. 除 /preflight 输出外，源挂载全只读，并在后继原样保留。业务源码布局为 /workspace/studies/speech-aware-evidence-acquisition，故 final_report_workload.py / run_real_engine_candidate.py 的 repo.parents[1]/docs/datasets.lock.json 对应 /workspace/docs/datasets.lock.json，不能误挂到 /study/docs。
-5. 数据只读挂载拆为 /data/datasets、repos、models、knowledge、prepared；后继另挂可写 /data/runs、contacts、coordination、work。不要源挂整个 /data 只读而后继再挂其可写子目录，现绑定会以遮蔽依赖拒绝。也不要源挂可写 /data，源依赖必须只读。
+5. 数据只读挂载拆为 /data/datasets、repos、models、knowledge、serving；后继另挂可写 /data/runs、contacts、coordination、work、prepared。Direct虽无supplied first phase，但FIT会写prepared/<FIT-run>/<attempt>/direct.request-fit.json、contacts journal和custody，所以prepared必须来自本地持久盘可写目录。serving必须指向现有resident会话凭据，否则找不到实例；不能拿空目录代替。不要源挂整个 /data 只读而后继再挂其可写子目录，现绑定会以遮蔽依赖拒绝。也不要源挂可写 /data，源依赖必须只读。
 6. 模板不设置 SPEECHRL_DATA_DIR=/data：当前绑定把所有绝对环境值作为受保护路径，此设置会令后继的 /data/runs 等状态挂载被判冲突。这里显式 --data /data，现 run_real_engine_candidate.py 将其传给 build_flight_runtime；任何所选额外模块若确实要求此环境变量，必须先解决具体兼容性，不能声称本模板已覆盖该部署。SAEA_STAGE_TIMING_PATH 等可写绝对环境路径也有此问题；模板未启用它们。
 7. /data/attempts 和 /data/locks 必须映射至原有唯一共享状态与 guard，不得新建空目录替代。模板中的 /srv/omni/shared-runtime 是逻辑示例，实际映射应保留原运行的唯一守护身份。项目工作区、runs、contacts、checkpoint和热日志来源必须在本地持久盘；readonly 数据来源可以是共享存储。create_directories 故意只列本次 launcher 控制目录，不自动创建共享锁或重置状态。
 8. 服务身份凭据可能要求额外绝对路径、模型/解释器/动态库/proc可见性。按已登记 receipt 补充只读依赖挂载时，同时加入源与后继。模板不会重新映射 receipt 中的路径，也不代表模型可用性、全部文件可见性或设备利用率验收。

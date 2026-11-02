@@ -28,7 +28,8 @@
     "TOKENIZERS_PARALLELISM": "false",
     "GIT_CONFIG_COUNT": "1",
     "GIT_CONFIG_KEY_0": "safe.directory",
-    "GIT_CONFIG_VALUE_0": "/workspace/studies/speech-aware-evidence-acquisition"
+    "GIT_CONFIG_VALUE_0": "/workspace/studies/speech-aware-evidence-acquisition",
+    "SAEA_ADMITTED_LEVEL": "96"
   },
   "mounts": [
     {
@@ -72,14 +73,14 @@
       "readonly": true
     },
     {
-      "source": "/srv/omni/data/prepared",
-      "target": "/data/prepared",
-      "readonly": true
-    },
-    {
       "source": "/srv/omni/jobs/direct-example/control/preflight",
       "target": "/preflight",
       "readonly": false
+    },
+    {
+      "source": "/srv/omni/data/serving",
+      "target": "/data/serving",
+      "readonly": true
     }
   ],
   "create_directories": [

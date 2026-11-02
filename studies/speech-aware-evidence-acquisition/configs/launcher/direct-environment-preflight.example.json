@@ -12,7 +12,8 @@
     "TOKENIZERS_PARALLELISM": "false",
     "GIT_CONFIG_COUNT": "1",
     "GIT_CONFIG_KEY_0": "safe.directory",
-    "GIT_CONFIG_VALUE_0": "/workspace/studies/speech-aware-evidence-acquisition"
+    "GIT_CONFIG_VALUE_0": "/workspace/studies/speech-aware-evidence-acquisition",
+    "SAEA_ADMITTED_LEVEL": "96"
   },
   "interpreters": [
     {

@@ -1,6 +1,6 @@
 {
   "schema": "saea-corrective-input-efficiency-v1",
-  "status": "prepared-and-admitted-generation-not-yet-verified",
+  "status": "ABORTED-candidate-rejected",
   "groups": 51,
   "input_tokens_before": 55506,
   "input_tokens_after": 26571,
@@ -23,9 +23,10 @@
     "Complete parsed failed JSON sent once; original text and native bytes remain sealed"
   ],
   "limitations": [
-    "Tokenizer measurement is not native wire FIT",
+    "Model-view token count26571 differs from native wire FIT31248",
     "Input reduction is not measured wall-clock throughput improvement",
-    "No demonstrated accuracy gain or adopted candidate"
+    "No demonstrated accuracy gain or adopted candidate",
+    "Single dependent contact does not fill8cards"
   ],
   "validation": {
     "shared_binding_and_corrective_tests": {
@@ -40,5 +41,35 @@
       "passed": 31,
       "seconds": 4.42
     }
-  }
+  },
+  "native_fit_completed": true,
+  "native_prompt_tokens": 31248,
+  "actual_new_usage": {
+    "calls": 1,
+    "prompt_tokens": 31248,
+    "completion_tokens": 8056
+  },
+  "cumulative_known_usage": {
+    "calls": 314,
+    "prompt_tokens": 6185800,
+    "completion_tokens": 790870
+  },
+  "model_latency_seconds": 172.43677448001108,
+  "container_started_at": "2026-11-02T10:48:18.34418708Z",
+  "container_finished_at": "2026-11-02T10:53:30.67453402Z",
+  "unknown_contacts": 0,
+  "candidate_accepted": false,
+  "h2_started": false,
+  "automatic_retry": false,
+  "raw_response_sha256": "0198269616bcdd4cbe64d4a66e63818289ea72be99a82102b7d77343d035cf76",
+  "native_fit_artifact_sha256": "82141aaa7fd0b7f4542afb524ca12628a3ab0b90014f5ae294c7efa625f3252f",
+  "lease_settled_after_verified_terminal": true,
+  "semantic_errors": [
+    "news_query evidence relabeled takeaway_order",
+    "calendar_set evidence relabeled calendar_query",
+    "reference entities omitted or replaced"
+  ],
+  "rules": 9,
+  "dispositions_returned": 9,
+  "dispositions_required": 72
 }
