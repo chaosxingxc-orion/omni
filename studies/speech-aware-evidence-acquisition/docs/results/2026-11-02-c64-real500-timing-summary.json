@@ -1,0 +1,796 @@
+{
+  "schema": "saea-stage-timing-summary-v1",
+  "events": 29029,
+  "total_journal_events": 29117,
+  "sample_scope": "verified-complete-checkpoint-rows",
+  "completed_rows_without_timing": [],
+  "observed_sample_count": 500,
+  "incomplete_tail": false,
+  "stages": {
+    "audio_base64_encode": {
+      "invocations": {
+        "count": 3000,
+        "mean_s": 0.00014822461322667852,
+        "p50_s": 0.00012965499627171084,
+        "p95_s": 0.00027862000570166856,
+        "total_s": 0.4446738396800356
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.0008893476793600712,
+        "p50_s": 0.0007962449963088147,
+        "p95_s": 0.001677109976299107,
+        "total_s": 0.4446738396800356
+      },
+      "errors": 0,
+      "measurements": {
+        "encoded_bytes": {
+          "observed_count": 3000,
+          "missing_count": 0,
+          "sum": 223528704,
+          "mean": 74509.568,
+          "min": 23160,
+          "max": 311284
+        }
+      }
+    },
+    "audio_file_read": {
+      "invocations": {
+        "count": 3000,
+        "mean_s": 0.006427716166474662,
+        "p50_s": 0.00012434500240487978,
+        "p95_s": 0.01713590999133885,
+        "total_s": 19.283148499423987
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.038566296998847976,
+        "p50_s": 0.002026919995842036,
+        "p95_s": 0.2454208999988623,
+        "total_s": 19.283148499423987
+      },
+      "errors": 0,
+      "measurements": {
+        "audio_bytes": {
+          "observed_count": 3000,
+          "missing_count": 0,
+          "sum": 167643582,
+          "mean": 55881.194,
+          "min": 17370,
+          "max": 233462
+        }
+      }
+    },
+    "audio_read_encode": {
+      "invocations": {
+        "count": 3000,
+        "mean_s": 0.07231687127019783,
+        "p50_s": 0.0014462550025200471,
+        "p95_s": 0.07315924999420531,
+        "total_s": 216.9506138105935
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.433901227621187,
+        "p50_s": 0.016792740010714624,
+        "p95_s": 2.937465599999996,
+        "total_s": 216.9506138105935
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "checkpoint_append_fsync": {
+      "invocations": {
+        "count": 500,
+        "mean_s": 0.004209182620397769,
+        "p50_s": 0.003725064998434391,
+        "p95_s": 0.0064084699988598,
+        "total_s": 2.1045913101988845
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.004209182620397769,
+        "p50_s": 0.003725064998434391,
+        "p95_s": 0.0064084699988598,
+        "total_s": 2.1045913101988845
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "checkpoint_total": {
+      "invocations": {
+        "count": 500,
+        "mean_s": 0.009844837140117307,
+        "p50_s": 0.009294165000028443,
+        "p95_s": 0.01243621000321582,
+        "total_s": 4.922418570058653
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.009844837140117307,
+        "p50_s": 0.009294165000028443,
+        "p95_s": 0.01243621000321582,
+        "total_s": 4.922418570058653
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "client_http_open_to_headers": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 153.70122940490015,
+        "p50_s": 131.33534823999798,
+        "p95_s": 321.4115040700126,
+        "total_s": 153701.22940490016
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 307.4024588098003,
+        "p50_s": 282.9549625849977,
+        "p95_s": 559.0376540300058,
+        "total_s": 153701.22940490016
+      },
+      "errors": 0,
+      "measurements": {
+        "request_bytes": {
+          "observed_count": 1000,
+          "missing_count": 0,
+          "sum": 103565684,
+          "mean": 103565.684,
+          "min": 42261,
+          "max": 371156
+        },
+        "timeout_seconds": {
+          "observed_count": 1000,
+          "missing_count": 0,
+          "sum": 1800000.0,
+          "mean": 1800.0,
+          "min": 1800.0,
+          "max": 1800.0
+        }
+      }
+    },
+    "client_http_read_body": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 0.004138805619702908,
+        "p50_s": 0.00015635999443475157,
+        "p95_s": 0.015367660002084449,
+        "total_s": 4.138805619702907
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.008277611239405815,
+        "p50_s": 0.0005673100022249855,
+        "p95_s": 0.02069828000094276,
+        "total_s": 4.138805619702907
+      },
+      "errors": 0,
+      "measurements": {
+        "http_status": {
+          "observed_count": 1000,
+          "missing_count": 0,
+          "sum": 200000,
+          "mean": 200,
+          "min": 200,
+          "max": 200
+        },
+        "response_bytes": {
+          "observed_count": 1000,
+          "missing_count": 0,
+          "sum": 7946312,
+          "mean": 7946.312,
+          "min": 2353,
+          "max": 16432
+        }
+      }
+    },
+    "context_build": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 0.27739499038040233,
+        "p50_s": 0.19512730999849737,
+        "p95_s": 0.8717147200077306,
+        "total_s": 277.3949903804023
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.5547899807608047,
+        "p50_s": 0.44104650500958087,
+        "p95_s": 0.9045110000006389,
+        "total_s": 277.3949903804023
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "dispatch_blocking_execute": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 159.2092465750199,
+        "p50_s": 136.38816188499914,
+        "p95_s": 322.68469947000267,
+        "total_s": 159209.2465750199
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 318.4184931500398,
+        "p50_s": 293.56683815499855,
+        "p95_s": 569.3420359599841,
+        "total_s": 159209.2465750199
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "dispatch_contact_lock_wait": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 2.867580347810872e-06,
+        "p50_s": 2.810003934428096e-06,
+        "p95_s": 3.2999960239976645e-06,
+        "total_s": 0.002867580347810872
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 5.735160695621744e-06,
+        "p50_s": 5.67000824958086e-06,
+        "p95_s": 6.220012437552214e-06,
+        "total_s": 0.002867580347810872
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "dispatch_executor_wait": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 0.539760086510214,
+        "p50_s": 0.0001850400003604591,
+        "p95_s": 4.377134690003004,
+        "total_s": 539.760086510214
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 1.079520173020428,
+        "p50_s": 0.0033481449936516583,
+        "p95_s": 4.984882980017574,
+        "total_s": 539.760086510214
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "dispatch_trajectory_slot_wait": {
+      "invocations": {
+        "count": 500,
+        "mean_s": 445.95895317597996,
+        "p50_s": 422.40114899000037,
+        "p95_s": 1031.9049271999975,
+        "total_s": 222979.47658798998
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 445.95895317597996,
+        "p50_s": 422.40114899000037,
+        "p95_s": 1031.9049271999975,
+        "total_s": 222979.47658798998
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "http_request": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 153.7112098852004,
+        "p50_s": 131.346166910007,
+        "p95_s": 321.41206971000065,
+        "total_s": 153711.20988520037
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 307.4224197704008,
+        "p50_s": 282.967671410006,
+        "p95_s": 559.0642115399969,
+        "total_s": 153711.20988520037
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "native_fit": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 1.1775461063598631,
+        "p50_s": 0.22275506999721983,
+        "p95_s": 8.431085589996655,
+        "total_s": 1177.5461063598632
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 2.3550922127197262,
+        "p50_s": 0.534402625002258,
+        "p95_s": 12.01295422000112,
+        "total_s": 1177.5461063598632
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "native_fit_capacity_wait": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 0.795754999029843,
+        "p50_s": 7.465008820872754e-06,
+        "p95_s": 7.510995650009136,
+        "total_s": 795.754999029843
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 1.591509998059686,
+        "p50_s": 1.5154997527133673e-05,
+        "p95_s": 10.447909590002382,
+        "total_s": 795.754999029843
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "native_fit_lock_wait": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 0.00013883103989064692,
+        "p50_s": 1.7400016076862812e-06,
+        "p95_s": 2.4799956008791924e-06,
+        "total_s": 0.13883103989064693
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.00027766207978129385,
+        "p50_s": 3.569992259144783e-06,
+        "p95_s": 0.0003421299916226417,
+        "total_s": 0.13883103989064693
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "native_fit_recovery_lock_wait": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 0.2020065932003199,
+        "p50_s": 2.1650048438459635e-06,
+        "p95_s": 1.503592410008423,
+        "total_s": 202.0065932003199
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.4040131864006398,
+        "p50_s": 4.524998075794429e-06,
+        "p95_s": 1.5610618399950908,
+        "total_s": 202.0065932003199
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "output_normalize": {
+      "invocations": {
+        "count": 500,
+        "mean_s": 0.0001187072002212517,
+        "p50_s": 0.00011777500185417011,
+        "p95_s": 0.00012478999269660562,
+        "total_s": 0.05935360011062585
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.0001187072002212517,
+        "p50_s": 0.00011777500185417011,
+        "p95_s": 0.00012478999269660562,
+        "total_s": 0.05935360011062585
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "request_json_encode": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 0.00042096435006533286,
+        "p50_s": 0.0003993099962826818,
+        "p95_s": 0.0006550200050696731,
+        "total_s": 0.42096435006533284
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.0008419287001306657,
+        "p50_s": 0.0007849050089134835,
+        "p95_s": 0.0013028099929215387,
+        "total_s": 0.42096435006533284
+      },
+      "errors": 0,
+      "measurements": {
+        "request_bytes": {
+          "observed_count": 1000,
+          "missing_count": 0,
+          "sum": 103541816,
+          "mean": 103541.816,
+          "min": 42237,
+          "max": 371132
+        }
+      }
+    },
+    "request_render": {
+      "invocations": {
+        "count": 3000,
+        "mean_s": 0.5217185497901907,
+        "p50_s": 0.10558499000035226,
+        "p95_s": 1.0698426899907645,
+        "total_s": 1565.155649370572
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 3.130311298741144,
+        "p50_s": 1.0154303450035513,
+        "p95_s": 10.711074340011692,
+        "total_s": 1565.155649370572
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "request_total": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 156.41907053925985,
+        "p50_s": 133.8828567399978,
+        "p95_s": 321.6092400300113,
+        "total_s": 156419.07053925985
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 312.8381410785197,
+        "p50_s": 286.9018903299948,
+        "p95_s": 559.9525864099996,
+        "total_s": 156419.07053925985
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "response_json_decode": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 5.3593289674608966e-05,
+        "p50_s": 5.017000512452796e-05,
+        "p95_s": 8.172000525519252e-05,
+        "total_s": 0.05359328967460897
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 0.00010718657934921793,
+        "p50_s": 0.00010309498611604795,
+        "p95_s": 0.0001482799998484552,
+        "total_s": 0.05359328967460897
+      },
+      "errors": 0,
+      "measurements": {
+        "response_bytes": {
+          "observed_count": 1000,
+          "missing_count": 0,
+          "sum": 7925312,
+          "mean": 7925.312,
+          "min": 2332,
+          "max": 16411
+        }
+      }
+    },
+    "runtime_identity_cache_hit_memory": {
+      "invocations": {
+        "count": 26,
+        "mean_s": 1.4803842462312716e-06,
+        "p50_s": 1.4650067896582186e-06,
+        "p95_s": 1.5799887478351593e-06,
+        "total_s": 3.8489990402013063e-05
+      },
+      "per_observed_sample": {
+        "count": 1,
+        "mean_s": 3.8489990402013063e-05,
+        "p50_s": 3.8489990402013063e-05,
+        "p95_s": 3.8489990402013063e-05,
+        "total_s": 3.8489990402013063e-05
+      },
+      "errors": 0,
+      "measurements": {
+        "cache_hits": {
+          "observed_count": 26,
+          "missing_count": 0,
+          "sum": 26,
+          "mean": 1,
+          "min": 1,
+          "max": 1
+        },
+        "file_count": {
+          "observed_count": 26,
+          "missing_count": 0,
+          "sum": 26,
+          "mean": 1,
+          "min": 1,
+          "max": 1
+        },
+        "verified_bytes": {
+          "observed_count": 26,
+          "missing_count": 0,
+          "sum": 63447489451,
+          "mean": 2440288055.8076925,
+          "min": 113,
+          "max": 4000129664
+        }
+      }
+    },
+    "runtime_identity_cache_load": {
+      "invocations": {
+        "count": 1,
+        "mean_s": 0.002330549992620945,
+        "p50_s": 0.002330549992620945,
+        "p95_s": 0.002330549992620945,
+        "total_s": 0.002330549992620945
+      },
+      "per_observed_sample": {
+        "count": 1,
+        "mean_s": 0.002330549992620945,
+        "p50_s": 0.002330549992620945,
+        "p95_s": 0.002330549992620945,
+        "total_s": 0.002330549992620945
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "runtime_identity_cache_persist": {
+      "invocations": {
+        "count": 1,
+        "mean_s": 0.00017797999316826463,
+        "p50_s": 0.00017797999316826463,
+        "p95_s": 0.00017797999316826463,
+        "total_s": 0.00017797999316826463
+      },
+      "per_observed_sample": {
+        "count": 1,
+        "mean_s": 0.00017797999316826463,
+        "p50_s": 0.00017797999316826463,
+        "p95_s": 0.00017797999316826463,
+        "total_s": 0.00017797999316826463
+      },
+      "errors": 0,
+      "measurements": {}
+    },
+    "runtime_identity_verify": {
+      "invocations": {
+        "count": 1,
+        "mean_s": 0.08193940999626648,
+        "p50_s": 0.08193940999626648,
+        "p95_s": 0.08193940999626648,
+        "total_s": 0.08193940999626648
+      },
+      "per_observed_sample": {
+        "count": 1,
+        "mean_s": 0.08193940999626648,
+        "p50_s": 0.08193940999626648,
+        "p95_s": 0.08193940999626648,
+        "total_s": 0.08193940999626648
+      },
+      "errors": 0,
+      "measurements": {
+        "cache_hits": {
+          "observed_count": 1,
+          "missing_count": 0,
+          "sum": 26,
+          "mean": 26,
+          "min": 26,
+          "max": 26
+        },
+        "file_count": {
+          "observed_count": 1,
+          "missing_count": 0,
+          "sum": 26,
+          "mean": 26,
+          "min": 26,
+          "max": 26
+        },
+        "verified_bytes": {
+          "observed_count": 1,
+          "missing_count": 0,
+          "sum": 63447489451,
+          "mean": 63447489451,
+          "min": 63447489451,
+          "max": 63447489451
+        }
+      }
+    },
+    "transport_total": {
+      "invocations": {
+        "count": 1000,
+        "mean_s": 153.8675168644097,
+        "p50_s": 131.4637633099992,
+        "p95_s": 321.47439062000194,
+        "total_s": 153867.5168644097
+      },
+      "per_observed_sample": {
+        "count": 500,
+        "mean_s": 307.7350337288194,
+        "p50_s": 283.43782706500497,
+        "p95_s": 559.2177459600061,
+        "total_s": 153867.5168644097
+      },
+      "errors": 0,
+      "measurements": {}
+    }
+  },
+  "observability": {
+    "effective": {
+      "attempt_id": "generation-v1",
+      "client_detail": true,
+      "mode": "debug",
+      "run_id": "SAEA-SLURP-CONCURRENCY-C64-REAL500-V1",
+      "server_metrics_interval_seconds": 600
+    },
+    "configuration_sha256": "54657966744361457e603c736ae11ef0e44b258dba0a0f83be2b0171dde7e8a3",
+    "configuration_verified": true,
+    "observability_mode": "debug",
+    "run_id": "SAEA-SLURP-CONCURRENCY-C64-REAL500-V1",
+    "attempt_id": "generation-v1",
+    "events_without_mode": 0
+  },
+  "process_scope": {
+    "events": 88,
+    "scope": "all-journal-events-without-sample-id",
+    "stages": {
+      "output_normalize": {
+        "invocations": {
+          "count": 1,
+          "mean_s": 0.052223679987946525,
+          "p50_s": 0.052223679987946525,
+          "p95_s": 0.052223679987946525,
+          "total_s": 0.052223679987946525
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "runtime_identity_cache_hit_memory": {
+        "invocations": {
+          "count": 52,
+          "mean_s": 1.4376925649300504e-06,
+          "p50_s": 1.4300021575763822e-06,
+          "p95_s": 1.5700061339884996e-06,
+          "total_s": 7.476001337636262e-05
+        },
+        "errors": 0,
+        "measurements": {
+          "cache_hits": {
+            "observed_count": 52,
+            "missing_count": 0,
+            "sum": 52,
+            "mean": 1,
+            "min": 1,
+            "max": 1
+          },
+          "file_count": {
+            "observed_count": 52,
+            "missing_count": 0,
+            "sum": 52,
+            "mean": 1,
+            "min": 1,
+            "max": 1
+          },
+          "verified_bytes": {
+            "observed_count": 52,
+            "missing_count": 0,
+            "sum": 126894978902,
+            "mean": 2440288055.8076925,
+            "min": 113,
+            "max": 4000129664
+          }
+        }
+      },
+      "runtime_identity_cache_load": {
+        "invocations": {
+          "count": 3,
+          "mean_s": 0.0006738166654637704,
+          "p50_s": 0.00019609999435488135,
+          "p95_s": 0.00019609999435488135,
+          "total_s": 0.0020214499963913113
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "runtime_identity_cache_persist": {
+        "invocations": {
+          "count": 3,
+          "mean_s": 0.00031882666614061844,
+          "p50_s": 0.0001835899893194437,
+          "p95_s": 0.0001835899893194437,
+          "total_s": 0.0009564799984218553
+        },
+        "errors": 0,
+        "measurements": {}
+      },
+      "runtime_identity_full_hash_process_floor": {
+        "invocations": {
+          "count": 26,
+          "mean_s": 3.3415713003834333,
+          "p50_s": 5.426714184999582,
+          "p95_s": 5.549967340004514,
+          "total_s": 86.88085380996927
+        },
+        "errors": 0,
+        "measurements": {
+          "file_count": {
+            "observed_count": 26,
+            "missing_count": 0,
+            "sum": 26,
+            "mean": 1,
+            "min": 1,
+            "max": 1
+          },
+          "verified_bytes": {
+            "observed_count": 26,
+            "missing_count": 0,
+            "sum": 63447489451,
+            "mean": 2440288055.8076925,
+            "min": 113,
+            "max": 4000129664
+          }
+        }
+      },
+      "runtime_identity_verify": {
+        "invocations": {
+          "count": 3,
+          "mean_s": 28.97527549333851,
+          "p50_s": 0.013418180009466596,
+          "p95_s": 0.013418180009466596,
+          "total_s": 86.92582648001553
+        },
+        "errors": 0,
+        "measurements": {
+          "cache_hits": {
+            "observed_count": 3,
+            "missing_count": 0,
+            "sum": 52,
+            "mean": 17.333333333333332,
+            "min": 0,
+            "max": 26
+          },
+          "file_count": {
+            "observed_count": 3,
+            "missing_count": 0,
+            "sum": 78,
+            "mean": 26,
+            "min": 26,
+            "max": 26
+          },
+          "verified_bytes": {
+            "observed_count": 3,
+            "missing_count": 0,
+            "sum": 190342468353,
+            "mean": 63447489451,
+            "min": 63447489451,
+            "max": 63447489451
+          }
+        }
+      }
+    },
+    "is_disjoint_from_unfiltered_stages": false
+  },
+  "request_validation_accounting_and_response_handling_s": {
+    "count": 1000,
+    "mean_s": 2.551553674850147,
+    "p50_s": 0.2641893999898457,
+    "p95_s": 17.39495357000851,
+    "total_s": 2551.553674850147
+  },
+  "http_request_s": {
+    "count": 1000,
+    "mean_s": 153.7112098852004,
+    "p50_s": 131.346166910007,
+    "p95_s": 321.41206971000065,
+    "total_s": 153711.20988520037
+  },
+  "limitations": [
+    "Inclusive intervals overlap; do not sum stages as wall time.",
+    "Process scope repeats unscoped events from the unfiltered journal; do not add it to unfiltered stage totals.",
+    "verified_bytes is identity coverage; only runtime_identity_full_hash_* stages measure actual hashed bytes. Cache-hit bytes are not I/O.",
+    "Missing measurements are unknown; a failed hash can have elapsed time without a verified byte count.",
+    "Observed samples include incomplete rows; join final checkpoints before estimating complete-task throughput.",
+    "HTTP time includes queue, server audio/prefill/decode and network; TTFT unavailable on non-streaming path.",
+    "Timing journal uses kernel writes, not per-event fsync; scientific checkpoints remain independently durable."
+  ],
+  "checkpoint_sha256": "78031a366c6449f4de526a112133612b7fe5ed17cefd279c65534fee8550c77a"
+}
