@@ -1,0 +1,22 @@
+{
+  "schema": "saea-configured-remote-archive-v1",
+  "host": "npu2",
+  "container_name": "saea-direct-example-generation-v1",
+  "remote_root": "/var/lib/omni-local-state/direct-example",
+  "relative_paths": [
+    "config",
+    "preflight",
+    "telemetry",
+    "control",
+    "runs",
+    "contacts",
+    "prepared",
+    "coordination"
+  ],
+  "shared_attempt_paths": [
+    "/var/lib/omni-local-state/shared-example/state/attempts/REPLACE_RUN/generation-v1.json",
+    "/var/lib/omni-local-state/shared-example/state/attempts/REPLACE_RUN-FIT/fit-v1.json"
+  ],
+  "local_output_root": "/srv/omni/private-archives/direct-example",
+  "interval_seconds": 600
+}
