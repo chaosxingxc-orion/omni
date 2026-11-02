@@ -1685,9 +1685,16 @@ def build_direct_only_raw_fit_gate(
         attempt_id=spec["attempt_id"],
         planned_model_calls=spec["contact_cap"],
     ).validate()
+    from .flight.native_recovery import direct_contact_custody_enabled
+    custody = direct_contact_custody_enabled(values)
+    replay = getattr(runtime, '_native_contact_replay', None) if custody else None
     runtime.assert_generation_lease()
-    runtime._gate_touch(runtime._gate, fit_plan)
-    runtime._require_exposure_row_unconsumed(fit_plan.run_id)
+    if replay is None:
+        runtime._gate_touch(runtime._gate, fit_plan)
+        runtime._require_exposure_row_unconsumed(fit_plan.run_id)
+    else:
+        replay.assert_target(runtime._data_root, plan, runtime._arm())
+        replay.assert_all_contacts_observed()
     fit_root = runtime._data_root / "prepared" / fit_plan.run_id / fit_plan.attempt_id
     fit_root.mkdir(parents=True, exist_ok=True)
     identity = runtime.session_required_identity()
@@ -1756,6 +1763,13 @@ def build_direct_only_raw_fit_gate(
         }
         path = fit_root / (phase + ".request-fit.json")
         journal = path.with_name(path.name + ".contacts.jsonl")
+        custody_path = path.with_name(path.name + '.custody.json')
+        if replay is not None:
+            from .direct_fit_recovery import reuse_direct_fit
+            receipt = reuse_direct_fit(runtime, replay, path, journal, custody_path,
+                payloads, inputs, fit_plan)
+            completed.append({'phase': phase, **receipt})
+            return
         if path.exists() or journal.exists():
             raise PreparationError(
                 "live fit identity already has contact or result evidence"
@@ -1824,6 +1838,16 @@ def build_direct_only_raw_fit_gate(
         document = json.loads(path.read_text(encoding="utf-8"))
         if document["output"].get("every_request_fits") is not True:
             raise PreparationError("live phase requests exceed the registered capacity")
+        if custody:
+            from .atomic_file import publish_new
+            from .contact_journal import digest as blob_digest
+            publish_new(custody_path, canonical_bytes({
+                'schema': 'saea-direct-fit-custody-v1',
+                'generation_run_id': plan.run_id, 'generation_attempt_id': plan.attempt_id,
+                'payloads': payloads, 'inputs': inputs, 'receipt': receipt,
+                'session_identity': identity,
+                'endpoint_journal_sha256': blob_digest(journal.read_bytes()),
+            }))
         runtime.assert_generation_lease()
         completed.append({"phase": phase, **receipt})
 

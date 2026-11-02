@@ -108,16 +108,28 @@ def reconcile(data, source, target, out, worker_identity, wrapper_identity, fit_
     return result['declaration']
 
 
-def admit(data, cell, declaration, out):
+def admit(data, cell, declaration, out, *, registered=None):
     """Add exact fresh-attempt authority to the unchanged registered cell."""
     from speech_aware_evidence_acquisition.core.flight.campaign import CampaignCell,declared_readiness
     cell=select_recovery_cell(cell,declaration,data_root=data)
+    fit_run,fit_attempt=cell.run_id+'-FIT','learning-fit-v1'
+    authority=job.AUTH
+    decision='Continue identical registered H1 learning after verified terminal predecessor; preserve known responses and all costs.'
+    if registered is not None:
+        if (set(registered) != {'authorization_basis','fit'}
+                or not isinstance(registered['authorization_basis'],str)
+                or not registered['authorization_basis']
+                or not isinstance(registered['fit'],dict)):
+            raise ValueError('registered recovery requires exact authority and FIT identity')
+        fit_run=registered['fit']['run_id'];fit_attempt=registered['fit']['attempt_id']
+        authority=registered['authorization_basis']
+        decision='Continue unchanged registered workload after verified terminal predecessor; preserve known responses and all costs.'
     did=cell.run_id+'-'+cell.attempt_id.upper()+'-ADMISSION'
     path=data/'coordination/decisions'/(did+'.json')
     doc={'schema':'saea-campaign-decision-v1','status':'decided','decision_id':did,
-        'eligible_run_ids':[cell.run_id,cell.run_id+'-FIT'],'eligible_attempt_ids':[cell.attempt_id,'learning-fit-v1'],
-        'authorization_basis':job.AUTH,'owner':'root','coordinator':'Codex',
-        'decision':'Continue identical registered H1 learning after verified terminal predecessor; preserve known responses and all costs.',
+        'eligible_run_ids':[cell.run_id,fit_run],'eligible_attempt_ids':[cell.attempt_id,fit_attempt],
+        'authorization_basis':authority,'owner':'root','coordinator':'Codex',
+        'decision':decision,
         'recovery':declaration,'prior_readiness':cell.document['readiness']}
     if path.exists():
         if read(path)!=doc:raise ValueError('existing recovery authority differs')

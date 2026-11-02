@@ -179,6 +179,7 @@ class NativeContactReplay:
         if source_plan.attempt_id in _ancestry_seen or recovery_plan.attempt_id in _ancestry_seen:
             raise ContactJournalError('cyclic native recovery ancestry')
         if (source_plan.attempt_id == recovery_plan.attempt_id
+                or source_plan.owner_allowance != recovery_plan.owner_allowance
                 or any(getattr(source_plan, key) != getattr(recovery_plan, key) for key in (
                     'run_id', 'protocol_hash', 'split_identity_hash', 'carrier_lock_key',
                     'planned_model_calls', 'planned_speech_audio_seconds', 'planned_gpu_hours', 'execution_profile', 'split_role'))):
@@ -284,8 +285,11 @@ class NativeContactReplay:
     def source_binding(self):
         """Pin complete predecessor spend, including contacts not reused."""
         from dataclasses import asdict
+        plan = asdict(self.source_plan)
+        if self.source_plan.owner_allowance is not None:
+            plan['owner_allowance'] = asdict(self.source_plan.owner_allowance)
         return {'schema': 'saea-native-replay-source-v1',
-            'plan': asdict(self.source_plan), 'arm': self.source.identity['arm'],
+            'plan': plan, 'arm': self.source.identity['arm'],
             'attempt_path': str(self._attempt_path.resolve()),
             'attempt_sha256': self._attempt_sha256,
             'actual_usage': dict(self.source_actual_usage),

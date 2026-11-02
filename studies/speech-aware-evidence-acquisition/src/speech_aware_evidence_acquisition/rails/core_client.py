@@ -2515,6 +2515,14 @@ class FrozenCoreClient:
                 f"arm {self._arm!r} is not a construction-proposer arm; "
                 "construction_target_ids must be omitted"
             )
+        # Ordinary completions bypass _consume_prepared_payload. Bind their
+        # already complete request to the same original journal bytes before
+        # metadata/timing and the adapter observe it. Prepared templates retain
+        # their placeholder identity until the one-use dispatch step above.
+        if not prepare_only and self._contact_replay is not None:
+            original = self._contact_replay.match(payload)
+            if original is not None:
+                return original
         return payload
 
     def _select_tool_schemas(

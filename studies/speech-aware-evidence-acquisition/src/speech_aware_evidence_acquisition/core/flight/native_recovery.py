@@ -20,7 +20,8 @@ def load_native_recovery(declaration, *, data_root, plan, arm):
     document = json.loads(blob)
     if (set(document) != {'schema', 'source', 'target_plan'}
             or document['schema'] != 'saea-native-recovery-v1'
-            or ExecutionPlan(**document['target_plan']) != plan):
+            or ExecutionPlan(**document['target_plan']) != plan
+            or ExecutionPlan(**document['target_plan']).owner_allowance != plan.owner_allowance):
         raise ValueError('native recovery receipt names another target plan')
     source = document['source']
     replay = NativeContactReplay(data_root, ExecutionPlan(**source['plan']), plan, arm)
@@ -59,6 +60,20 @@ def select_recovery_cell(cell, declaration, *, data_root):
     return CampaignCell.from_document({**cell.document, 'attempt_id': target.attempt_id})
 
 
+def direct_contact_custody_enabled(values):
+    """Exact frozen, raw, single-phase Direct graph; no numeric-cap inference."""
+    return (values.get('transport') == 'vllm'
+        and values.get('arm') == 'raw-speech-agent-native-tools'
+        and values.get('carrier_lock_key') == 'slurp'
+        and values.get('policy') == 'phase-direct-only-v1'
+        and values.get('native_episode') is None
+        and values.get('whole_roster_wave_barrier') is True
+        and values.get('evidence_source') == 'none'
+        and not any(values.get(k) for k in ('phase_tools', 'knowledge_stores',
+            'phase_supply', 'phase_review', 'phase_planner', 'prepared_phase_supply',
+            'acquisition', 'relisten', 'review_loop', 'max_revisions')))
+
+
 def native_contact_custody_enabled(values):
     """Operational capture for the reviewed odd40 method or raw-vLLM A0 P/S.
 
@@ -74,6 +89,8 @@ def native_contact_custody_enabled(values):
             and isinstance(values.get('prepared_training_feedback'), dict)
             and values['prepared_training_feedback'].get('schema') in ('saea-prepared-tfgrpo-dynamic-v1', 'saea-prepared-grounded-shards-v1', 'saea-prepared-grounded-fusion-v1')):
         return True  # Exact registration/source/FIT are independently preflighted.
+    if direct_contact_custody_enabled(values):
+        return True
     native = values.get('native_episode')
     if not isinstance(native, dict):
         return False

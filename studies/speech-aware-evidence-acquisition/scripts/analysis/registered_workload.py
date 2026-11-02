@@ -4,6 +4,21 @@ import json
 from pathlib import Path
 
 
+def assert_execution_binding(spec, environ=None):
+    """Bind an explicit full-test client width to the shared factory environment."""
+    if spec.get('workload_kind') != 'final-report-method':
+        return
+    import os
+    environ = os.environ if environ is None else environ
+    expected = {'admitted_level': 96, 'instances': 2, 'total_client_concurrency': 192,
+        'environment': {'SAEA_ADMITTED_LEVEL': '96'}}
+    if (spec.get('execution') != expected
+            or spec.get('job_config', {}).get('execution') != {'admitted_level': 96}
+            or environ.get('SAEA_ADMITTED_LEVEL') != '96'
+            or environ.get('SAEA_DEPLOYMENT_PROFILE') != spec.get('profile')):
+        raise ValueError('full-test execution requires registered C96 per instance environment')
+
+
 def validate_workload(repo, data, name, spec):
     if name != spec["cell"] or name != spec["experiment"]:
         raise ValueError("registered workload identity mismatch")
@@ -66,6 +81,9 @@ def validate_workload(repo, data, name, spec):
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "tfgrpo-full-h2-paired":
         from tfgrpo_h2_job import validate
+        return validate(repo, data, name, spec, exp, view)
+    if spec.get("workload_kind") == "final-report-method":
+        from final_report_workload import validate
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "tfrl-h1-fresh-observation":
         from tfrl_h1_observation import validate

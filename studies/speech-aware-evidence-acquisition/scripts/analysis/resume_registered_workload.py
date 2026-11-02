@@ -15,7 +15,7 @@ def main(repo,data,candidate,out,target_attempt):
     from speech_aware_evidence_acquisition.core.flight.campaign import load_campaign_cells,run_campaign
     from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
     from native_recovery_receipt import prepare
-    from registered_workload import validate_workload
+    from registered_workload import validate_workload, assert_execution_binding
     from tfgrpo_recovery_queue import admit
     from run_real_engine_candidate import assert_campaign_success
     assert_execution_environment();head=require_clean_study_repo(repo)
@@ -24,13 +24,20 @@ def main(repo,data,candidate,out,target_attempt):
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned recovery output required')
     package=repo/'docs/readiness'/candidate;spec=read(package/'candidate.json')
     rows=validate_workload(repo,data,candidate,spec)
+    assert_execution_binding(spec)
     if os.environ.get('SAEA_DEPLOYMENT_PROFILE')!=spec['profile']:raise ValueError('declared deployment differs')
-    original=read(package/'generation-plan-registered-v1.json')['execution_plan']
-    allowed={f.name for f in fields(ExecutionPlan)};source=ExecutionPlan(**{k:v for k,v in original.items() if k in allowed})
+    registered=read(package/'generation-plan-registered-v1.json');original=registered['execution_plan']
+    allowed={f.name for f in fields(ExecutionPlan)}
+    source=ExecutionPlan(**{k:v for k,v in original.items() if k in allowed},
+        owner_allowance=registered.get('owner_allowance'))
+    source.validate(source_root=repo)
     base=read(repo/f'configs/baseline/{candidate}.json');arm=base['arm']
     out.mkdir(parents=True)
     recovery=prepare(data,source,target_attempt,arm,out/'recovery.json')['declaration']
-    cell,=load_campaign_cells(repo,candidate);cell=admit(data,cell,recovery,out)
+    cell,=load_campaign_cells(repo,candidate)
+    fit=base.get('live_phase_fit',base.get('native_contact_fit'))
+    authority={'authorization_basis':spec['authority'],'fit':fit}
+    cell=admit(data,cell,recovery,out,registered=authority)
     runtime=build_flight_runtime(repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],
         baseline=candidate,experiment=candidate,run_id=cell.run_id,attempt_id=cell.attempt_id,
         runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json',native_contact_recovery=recovery)

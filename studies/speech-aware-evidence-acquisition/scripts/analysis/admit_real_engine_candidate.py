@@ -15,6 +15,16 @@ sys.path[:0]=[str(ROOT/'src'),str(ROOT/'scripts/flights/direct'),str(ROOT/'scrip
 from register_real_engine_candidate import read,sha,write
 
 
+def test_contact_authorized(repo, data, name, spec, exp):
+    """Only an independently validated full-test registration gains this flag."""
+    if spec.get('workload_kind') != 'final-report-method':
+        return False
+    from final_report_workload import validate, DATASET
+    view = read(repo / f'configs/dataset/{DATASET}.json')
+    validate(repo, data, name, spec, exp, view)
+    return True
+
+
 def admit(repo,data,name):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.session.serving import find_resident_session,assert_identity_matches
@@ -26,8 +36,9 @@ def admit(repo,data,name):
     pkg=repo/'docs/readiness'/name;spec=read(pkg/'candidate.json')
     exp=read(repo/'configs/experiment'/f'{name}.json');cell,=exp['cells']
     if cell['readiness']['state']!='held':raise ValueError('candidate not held')
-    from registered_workload import validate_workload
+    from registered_workload import validate_workload, assert_execution_binding
     rows=validate_workload(repo,data,name,spec)
+    assert_execution_binding(spec)
     receipt=repo/'docs'/spec['runtime_receipt']
     if not receipt.is_file():raise ValueError('observed runtime receipt missing')
     lock=repo.parents[1]/'docs/datasets.lock.json'
@@ -42,7 +53,7 @@ def admit(repo,data,name):
         s=SessionReceipt.from_json(read(data/'serving'/instance['instance_id']/'session-receipt.json'))
         verify_vllm_session(s,doc)
     runs=[spec['run_id'],spec['fit_run_id']]
-    draft={'schema':'saea-campaign-decision-v1','status':'DRAFT-NOT-MINTED','decision_id':spec['decision_id'],'eligible_run_ids':runs,'eligible_attempt_ids':[spec['attempt_id'],spec['fit_attempt_id']],'authorization_basis':spec['authority'],'owner':'root','decision':'Execute the exact registered real population through the registered shared runtime under recorded owner authority; no synthetic replay or test tuning.','antecedents':{'owner':{'path':spec['authority'],'sha256':sha(repo/spec['authority'])},'protocol':{'path':str((pkg/'protocol-registered-v1.json').relative_to(repo)),'sha256':sha(pkg/'protocol-registered-v1.json')},'runtime':{'path':str(receipt.relative_to(repo)),'sha256':sha(receipt)}},'service':{'expected_session_id':spec['service_session'],'profile':spec['profile'],'session_sha256':sha(resident[0]/'session.json')},'population':{'count':rows,'split_identity_hash':spec['split_identity_hash'],'test_contact_authorized':False},'budget':{kind:read(pkg/f'{kind}-plan-registered-v1.json')['execution_plan'] for kind in ('generation','fit')}}
+    draft={'schema':'saea-campaign-decision-v1','status':'DRAFT-NOT-MINTED','decision_id':spec['decision_id'],'eligible_run_ids':runs,'eligible_attempt_ids':[spec['attempt_id'],spec['fit_attempt_id']],'authorization_basis':spec['authority'],'owner':'root','decision':'Execute the exact registered real population through the registered shared runtime under recorded owner authority; no synthetic replay or test tuning.','antecedents':{'owner':{'path':spec['authority'],'sha256':sha(repo/spec['authority'])},'protocol':{'path':str((pkg/'protocol-registered-v1.json').relative_to(repo)),'sha256':sha(pkg/'protocol-registered-v1.json')},'runtime':{'path':str(receipt.relative_to(repo)),'sha256':sha(receipt)}},'service':{'expected_session_id':spec['service_session'],'profile':spec['profile'],'session_sha256':sha(resident[0]/'session.json')},'population':{'count':rows,'split_identity_hash':spec['split_identity_hash'],'test_contact_authorized':test_contact_authorized(repo,data,name,spec,exp)},'budget':{kind:read(pkg/f'{kind}-plan-registered-v1.json')['execution_plan'] for kind in ('generation','fit')}}
     write(pkg/'root-admission-draft-v1.json',draft)
     family=SimpleNamespace(PACKAGE=str(pkg.relative_to(repo)),DECISION_ID=spec['decision_id'],DECISION_RELPATH=spec['decision_relpath'],eligible_run_ids=lambda:runs)
     result=mint(str(repo),str(data),'Codex',False,family=family,tool='scripts/analysis/admit_real_engine_candidate.py')

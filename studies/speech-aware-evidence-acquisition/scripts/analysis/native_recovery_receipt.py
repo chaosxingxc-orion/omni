@@ -37,8 +37,11 @@ def prepare(data_root, source_plan, target_attempt, arm, out):
     for rid in sorted(replay.request_ids):
         state = replay.source.inspect(rid)['state']
         counts[state] += 1
+    target_document = asdict(target)
+    if target.owner_allowance is not None:
+        target_document['owner_allowance'] = asdict(target.owner_allowance)
     document = {'schema': 'saea-native-recovery-v1',
-                'source': replay.source_binding(), 'target_plan': asdict(target)}
+                'source': replay.source_binding(), 'target_plan': target_document}
     blob = canonical(document)
     out.parent.mkdir(parents=True, exist_ok=True)
     publish_new(out, blob)

@@ -69,8 +69,9 @@ def run(repo,data,name,out):
     commit=require_clean_study_repo(repo)
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned output required; inspect existing attempts before resume')
     spec=json.loads((repo/'docs/readiness'/name/'candidate.json').read_bytes())
-    from registered_workload import validate_workload
+    from registered_workload import validate_workload, assert_execution_binding
     rows=validate_workload(repo,data,name,spec)
+    assert_execution_binding(spec)
     if os.environ.get('SAEA_DEPLOYMENT_PROFILE')!=spec['profile']:raise ValueError('candidate topology differs')
     cells=load_campaign_cells(repo,name);cell,=cells
     if declared_readiness(cell,data).state!='ready':raise ValueError('candidate not ready')
