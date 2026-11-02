@@ -79,7 +79,9 @@ def validate_workload(repo, data, name, spec):
     if spec.get("workload_kind") == "tfgrpo-render-h2-three-arm":
         from tfgrpo_render_h2_job import validate
         return validate(repo, data, name, spec, exp, view)
-    if spec.get("workload_kind") == "tfgrpo-full-h2-paired":
+    if spec.get("workload_kind") in ("tfgrpo-full-h2-paired", "learning-full-h2-paired"):
+        if spec["workload_kind"] == "learning-full-h2-paired" and "evaluation_config" not in spec:
+            raise ValueError("strategy-neutral H2 requires explicit evaluation configuration")
         from tfgrpo_h2_job import validate
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "final-report-method":

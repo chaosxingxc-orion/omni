@@ -7,6 +7,7 @@ execution and official arm scoring are deliberately separate operations.
 import copy
 import json
 import math
+import re
 from pathlib import Path
 import sys
 ROOT=Path(__file__).resolve().parents[2]
@@ -19,6 +20,26 @@ RUN='SAEA-SLURP-TFGRPO-FIXED-P-H2-PAIRED-V1'
 ROSTER='docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json'
 AUTH='docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md'
 
+
+
+EVALUATION_SCHEMA = 'saea-learning-h2-evaluation-v1'
+
+
+def evaluation_identity(config=None):
+    if config is None:
+        return {'name':NAME,'run_id':RUN,'template':'probes/tfgrpo-fixed-p-h1-experience-v1.txt'}
+    if (not isinstance(config,dict) or set(config) != {'schema','name','run_id','template','producer_strategy','runtime','candidate_release'}
+            or config['schema'] != EVALUATION_SCHEMA or config['producer_strategy'] != 'ace_incremental_offline_v1'
+            or not re.fullmatch('[a-z0-9][a-z0-9-]*',str(config['name']))
+            or not re.fullmatch('SAEA-[A-Z0-9][A-Z0-9_-]*',str(config['run_id']))
+            or config['name']==NAME or config['run_id']==RUN
+            or config['template'] != 'probes/'+config['name']+'-experience.txt'):
+        raise ValueError('exact independent implemented learning evaluation identity required')
+    # Full pin syntax is checked by the shared consumption contract.
+    pin=config['candidate_release']
+    if not isinstance(pin,dict) or set(pin)!={'relpath','sha256'}:
+        raise ValueError('explicit independent candidate release required')
+    return config
 
 
 def cumulative_supply_bound(base):
@@ -52,7 +73,11 @@ def cumulative_supply_bound(base):
     return positive(total)
 
 
-def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template_tokens):
+def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template_tokens,evaluation=None):
+    identity=evaluation_identity(evaluation); name,run=identity['name'],identity['run_id']
+    if evaluation is not None and (params.get('candidate_release')!=identity['candidate_release']
+            or params['template']['relpath']!=identity['template']):
+        raise ValueError('paired candidate release or template differs from evaluation')
     repo=Path(repo);data=Path(data)
     roster=json.loads((repo/ROSTER).read_bytes());ids=[r['sample_id'] for r in roster['items']]
     if len(ids)!=312 or len(set(ids))!=312 or set(params['consumer_ids'])!=set(ids):
@@ -80,14 +105,14 @@ def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template
     base['native_episode']['consumption_module']=block
     base.pop('prepared_phase_supply',None)
     base['serving_slot_tokens']=fit_estimate['slot_tokens']
-    base['native_contact_fit'].update(run_id=RUN+'-FIT',attempt_id='fit-v1',contact_cap=936)
+    base['native_contact_fit'].update(run_id=run+'-FIT',attempt_id='fit-v1',contact_cap=936)
     base['what_this_is']='Held full H2 development: one fresh P, learned Solver and unchanged lock Solver; candidate not accepted.'
     cm.verify_declared_module(block,base,repo_root=repo)
-    cell,=exp['cells'];cell.update(cell_id=NAME,run_id=RUN,attempt_id='generation-v1',baseline_fragment=NAME,
+    cell,=exp['cells'];cell.update(cell_id=name,run_id=run,attempt_id='generation-v1',baseline_fragment=name,
         allowed_execution_stages=['check'],readiness={'state':'held','requirements':[],
         'reason':'Requires measured template FIT, exact candidate seal, registration, first-phase supply, recovery and admission.'})
     exp.pop('prepared_phase_supply',None)
-    exp.update(experiment_id=RUN,purpose=base['what_this_is'],
+    exp.update(experiment_id=run,purpose=base['what_this_is'],
         population={'count':312,'dataset_fragment':cell['dataset_fragment'],'roster_receipt':ROSTER,
                     'split_identity_hash':roster['split_identity_hash']},
         populations=[{'dataset_fragment':cell['dataset_fragment'],'ids':ids}])
@@ -99,7 +124,10 @@ def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template
         'note':'Same fresh P and evidence, only learned Solver instruction differs; no H2 feedback used in learning.'}
     exp['stage3_measurement'].update(rows=312,read_roster=roster['roster_id'],claims_benefit=False,
         note='Development paired comparison, not untouched confirmation. Score both learned and lock arms officially.')
-    return {'name':NAME,'baseline':base,'experiment':exp,'roster':roster,
+    if evaluation is not None:
+        exp['stage3_algorithm']={'id':'ace-grow-refine-v1','operators_used':['context_application'],
+            'note':'Frozen ACE offline candidate consumption; feedback is not learned on H2.'}
+    return {'name':name,'baseline':base,'experiment':exp,'roster':roster,
         'evaluation':{'rows':312,'normal_generation_calls':936,'fallback_generation_cap':1872,'fit_calls':936,
             'primary_comparison':'learned minus lock, official SLURP aggregate F1',
             'acceptance':'at least +1 percentage point SLU-F1 with no Intent decrease; report paired uncertainty and per-label regressions',

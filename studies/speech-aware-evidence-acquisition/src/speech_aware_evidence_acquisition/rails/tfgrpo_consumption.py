@@ -34,7 +34,7 @@ def checked_pin(root, pin):
 
 
 def validate_params(params):
-    optional={'target_arm','rendering','render_manifest','compact_params'}
+    optional={'target_arm','rendering','render_manifest','compact_params','candidate_release'}
     if not isinstance(params,dict) or not FIELDS <= set(params) or set(params)-FIELDS-optional or params['purpose'] != 'development-evaluation':
         raise ValueError('development-only Solver experience binding required')
     if 'target_arm' in params and params['target_arm'] != 'learned':
@@ -46,7 +46,7 @@ def validate_params(params):
         if params.get('target_arm')!='learned' or 'rendering' in params or not isinstance(compact,dict) or 'compact_params' in compact or 'target_arm' in compact:
             raise ValueError('exact three-arm rendering declaration required')
         validate_params(compact)
-        if compact.get('rendering')!='short-display-id-v1' or any(compact[k]!=params[k] for k in ('candidate','source_manifest','model_id','base_template','consumer_ids','purpose')):
+        if compact.get('candidate_release') != params.get('candidate_release') or compact.get('rendering')!='short-display-id-v1' or any(compact[k]!=params[k] for k in ('candidate','source_manifest','model_id','base_template','consumer_ids','purpose')):
             raise ValueError('same candidate required for display-only contrast')
     ids = params['consumer_ids']
     if (not isinstance(ids,list) or not ids or len(ids)!=len(set(ids))
@@ -54,7 +54,7 @@ def validate_params(params):
         raise ValueError('unique TRAIN development consumer identities required')
     if not isinstance(params['model_id'],str) or not params['model_id']:
         raise ValueError('source frozen model required')
-    for key in ('candidate','source_manifest','base_template','template',*(['render_manifest'] if 'render_manifest' in params else [])):
+    for key in ('candidate','source_manifest','base_template','template',*(['render_manifest'] if 'render_manifest' in params else []), *(['candidate_release'] if 'candidate_release' in params else [])):
         pin=params[key]
         if (not isinstance(pin,dict) or set(pin)!={'relpath','sha256'}
                 or not isinstance(pin['relpath'],str) or not pin['relpath']
@@ -117,13 +117,26 @@ def expected_text(candidate, base, consumer_ids, *, rendering=None):
     return base+SEPARATOR+texts[0]+'\n'
 
 
+def verify_release(params, *, repo, data, candidate, bundle):
+    # A reviewed strategy cannot fall back to the legacy unchecked route, even
+    # when a caller bypasses stage or removes the candidate's explicit flag.
+    required = candidate.get('semantic_review_required') is True or candidate.get('strategy') == 'ace_incremental_offline_v1'
+    if required and 'candidate_release' not in params:
+        raise ValueError('candidate requires independent semantic release before consumption')
+    if 'candidate_release' in params:
+        from .learning_candidate_release import verify as verify_candidate_release
+        return verify_candidate_release(params,repo=repo,data=data,candidate=candidate,bundle=bundle)
+    return None
+
+
 def verify(params, *, repo, data, model_id, consumer_ids):
     validate_params(params)
     if model_id != params['model_id'] or set(consumer_ids) != set(params['consumer_ids']):
         raise ValueError('consumer model or exact development roster differs')
     candidate=json.loads(checked_pin(data,params['candidate']).read_bytes())
     validate_experience(candidate,model_id)
-    verify_learning_seal(params,data=data,candidate=candidate)
+    bundle=verify_learning_seal(params,data=data,candidate=candidate)
+    verify_release(params,repo=repo,data=data,candidate=candidate,bundle=bundle)
     base=checked_pin(Path(repo)/'configs',params['base_template']).read_text()
     template=checked_pin(Path(repo)/'configs',params['template']).read_text()
     if 'rendering' in params:
@@ -153,7 +166,7 @@ def verify_for_flight(values, *, repo, data, model_id, consumer_ids):
     return verify(params,repo=repo,data=data,model_id=model_id,consumer_ids=consumer_ids)
 
 
-def prepare(*, candidate_path, source_manifest, repo, data, base_template, template, consumer_ids, model_id, rendering=None):
+def prepare(*, candidate_path, source_manifest, repo, data, base_template, template, consumer_ids, model_id, rendering=None, candidate_release=None):
     """Write a deterministic candidate template; no admission or model contact."""
     path=Path(candidate_path).resolve(); data=Path(data).resolve(); repo=Path(repo).resolve()
     if not path.is_relative_to(data):raise ValueError('owned candidate required')
@@ -167,6 +180,8 @@ def prepare(*, candidate_path, source_manifest, repo, data, base_template, templ
         'model_id':model_id,'base_template':{'relpath':base_template,'sha256':digest(base)},
         'template':{'relpath':template,'sha256':hashlib.sha256(text.encode()).hexdigest()},
         'consumer_ids':list(consumer_ids),'purpose':'development-evaluation'}
+    if candidate_release is not None:
+        params['candidate_release']=candidate_release
     if rendering is not None:
         from .tfgrpo_rendering import render
         _,manifest_doc=render(candidate,consumer_ids[0])
@@ -174,7 +189,8 @@ def prepare(*, candidate_path, source_manifest, repo, data, base_template, templ
         manifest_bytes=(json.dumps(manifest_doc,sort_keys=True,indent=2)+'\n').encode()
         params.update(rendering=rendering,render_manifest={'relpath':manifest_rel,'sha256':hashlib.sha256(manifest_bytes).hexdigest()})
     validate_params(params)
-    verify_learning_seal(params,data=data,candidate=candidate)
+    bundle=verify_learning_seal(params,data=data,candidate=candidate)
+    verify_release(params,repo=repo,data=data,candidate=candidate,bundle=bundle)
     target=(repo/'configs'/template).resolve()
     if not target.is_relative_to(repo/'configs'):raise ValueError('template escaped repository')
     target.parent.mkdir(parents=True,exist_ok=True)

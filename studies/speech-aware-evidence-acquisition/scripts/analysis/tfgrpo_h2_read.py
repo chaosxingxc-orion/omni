@@ -130,7 +130,10 @@ def registered_scorer(values, manifest):
     return declared[0]
 
 
-def read(repo,data,out):
+def read(repo,data,out,*,name=None):
+    name=job.NAME if name is None else name
+    if not isinstance(name,str) or Path(name).name!=name or name in ('.','..'):
+        raise ValueError('confined registered H2 name required')
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
     from speech_aware_evidence_acquisition.core.config import compose
@@ -138,12 +141,15 @@ def read(repo,data,out):
     from registered_workload import validate_workload
     assert_execution_environment()
     if not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('owned analysis directory required')
-    pkg=repo/'docs/readiness'/job.NAME;spec=job.read(pkg/'candidate.json');validate_workload(repo,data,job.NAME,spec)
+    pkg=repo/'docs/readiness'/name;spec=job.read(pkg/'candidate.json');validate_workload(repo,data,name,spec)
+    kind=spec.get('workload_kind',job.KIND if name==job.NAME else None)
+    if kind not in (job.KIND,'learning-full-h2-paired'):raise ValueError('paired H2 workload required')
+    run=spec.get('run_id',job.RUN) if name==job.NAME else spec['run_id']
     recipe=job.read(pkg/'analysis-recipe-v1.json')
-    if (recipe['schema']!='saea-tfgrpo-h2-paired-read-v1' or recipe['rows']!=312 or recipe['generation_run_id']!=job.RUN
+    if (recipe['schema']!='saea-tfgrpo-h2-paired-read-v1' or recipe['rows']!=312 or recipe['generation_run_id']!=run
             or recipe['attempt_id']!='generation-v1' or recipe['arms']!=['learned','lock'] or recipe['delivered_arm']!='lock'
             or recipe['roster']!=spec['roster']):raise ValueError('exact preregistered H2 comparison required')
-    directory=data/'runs'/job.RUN/'generation-v1';manifest=directory/(job.RUN+'.run-manifest.json')
+    directory=data/'runs'/run/'generation-v1';manifest=directory/(run+'.run-manifest.json')
     bundle=verify_bundle(manifest)
     roster=job.pinned(repo,spec['roster']);ids=[r['sample_id'] for r in roster['items']]
     if bundle.attempt_state!='FINALIZED' or len(bundle.split_ids)!=312 or set(bundle.split_ids)!=set(ids):raise ValueError('complete finalized full H2 required')
@@ -154,10 +160,10 @@ def read(repo,data,out):
     scorer_id=registered_scorer(cfg.values,bundle.manifest)
     out.mkdir(parents=True,exist_ok=True)
     rendered=score.render_supply_variant_first_visit(bundle,group,{r['sample_id']:r['stratum'] for r in roster['items']},out,
-        run_id=job.RUN,attempt_id='generation-v1',roster_sha256=spec['roster']['sha256'],config_hash=cfg.config_hash)
+        run_id=run,attempt_id='generation-v1',roster_sha256=spec['roster']['sha256'],config_hash=cfg.config_hash)
     if rendered['arm_order']!=['learned','lock']:raise ValueError('only exact paired arms required')
     summary=score.score_supply_variant_copies(scorer_id,rendered,out,load_lock(umbrella_lock_path(repo)),data,
-        score.sealed_per_sample(directory,job.RUN,scorer_id))
+        score.sealed_per_sample(directory,run,scorer_id))
     results={}
     for arm in ('learned','lock'):
         path=out/f'arm-{arm}-{scorer_id}-scores.json';doc=job.read(path)
@@ -180,4 +186,5 @@ def read(repo,data,out):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for key in ('repo','data','out'):p.add_argument('--'+key,type=Path,required=True)
-    a=p.parse_args();print(json.dumps(read(a.repo,a.data,a.out),sort_keys=True))
+    p.add_argument('--name',default=job.NAME)
+    a=p.parse_args();print(json.dumps(read(a.repo,a.data,a.out,name=a.name),sort_keys=True))
