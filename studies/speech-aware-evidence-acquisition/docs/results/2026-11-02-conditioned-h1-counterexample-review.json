@@ -1,0 +1,126 @@
+{
+  "candidate_sha256": "a8d10e9bd79f7cde4565405a72daa0387c6f63473f44e3646950f49607ea9f23",
+  "eligible_for_h2": false,
+  "findings": [
+    {
+      "boundary": [
+        {
+          "gold_slot_types": [
+            "date",
+            "event_name",
+            "relation"
+          ],
+          "intent": "calendar_set",
+          "material_row_sha256": "bf48125001e7ec7dcef651ff809ba2150b1db6978f89ba685da9b591d59a56bb",
+          "sample_id_sha256": "f4f145b8708b6434bb00b4244e797e7eb56998017aea96754b87128887093664"
+        }
+      ],
+      "decision": "revise-trigger-before-probe",
+      "reason": "Preserve possessive surface only after person evidence; a possessive token alone does not imply person.",
+      "rule_id": "conditioned-01",
+      "rule_sha256": "af439ebfc837c941856f3d32acff64959c322d5cabaa9f7fefc049862c6152e3",
+      "scope_rows": 7,
+      "source_operation_sha256": "a9ce43207a7ab2dfa0d2373ceb6510c84acf4f84b21f7ebcaf5c4cf5cb251587",
+      "support": [
+        {
+          "gold_slot_types": [
+            "date",
+            "event_name",
+            "person"
+          ],
+          "intent": "calendar_set",
+          "material_row_sha256": "0e4810915689ace33dae4c15850b575fe0a55c6078ae57497f50814e85e9ad29",
+          "sample_id_sha256": "a27936fe487da9a746881b2a534ff784bb52c190d4e1a4a81bbb4d459c7e5ced"
+        }
+      ]
+    },
+    {
+      "decision": "limited-support-not-validated",
+      "reason": "TRAIN supports business contact typed person in this context; two scoped H1 rows do not prove universal generalization.",
+      "rule_id": "conditioned-02",
+      "rule_sha256": "51c5f05663f535b56167a060f9ef33878540a352afe9452ed723692ab80a06aa",
+      "scope_rows": 2,
+      "source_operation_sha256": "a50c4dfcee70c74d58be7f86060dedad810597f13915c46b61720c55f2dc0793",
+      "support": [
+        {
+          "gold_slot_types": [
+            "person",
+            "personal_info"
+          ],
+          "intent": "email_querycontact",
+          "material_row_sha256": "ebe7e4013a86969ae3e02788b178d20a43c4ffa3448a20b55924ff8c0d0fa43d",
+          "sample_id_sha256": "3d385b1afe0ebde160ef8049ebee3cbd75e47af07ee012654c6f9f000cd75d43"
+        }
+      ]
+    },
+    {
+      "decision": "defer-insufficient-contrast",
+      "reason": "No reviewed positive/negative metaphor pair; physical-reference wording alone is not validated guidance.",
+      "rule_id": "conditioned-03",
+      "rule_sha256": "472de480bf2663e3c4424f64daa333a163c5158a363842f8409fefa0f3fd5592",
+      "scope_rows": 23,
+      "source_operation_sha256": "810ab363fb5baab5790891662b65aa6d802effeb1e25efd4dde5a7b3844ca38b"
+    },
+    {
+      "counterexamples": [
+        {
+          "gold_slot_types": [
+            "list_name"
+          ],
+          "intent": "lists_createoradd",
+          "material_row_sha256": "a3909aee2b1b5cfea6a36f0cc120cb955e5d8bac33e522a51cd156ec30ffa59e",
+          "sample_id_sha256": "4ceb1c6efc15eedc005e19dd21d980faa029ec9146e1fb7d0a57dd7d3f66d691"
+        }
+      ],
+      "decision": "reject-current-rule",
+      "reason": "Conflates the item added with the list name; H1 gold contradicts the proposal example.",
+      "rule_id": "conditioned-04",
+      "rule_sha256": "adb5866ae6de06065436c56cb3c1685c7ce34e60f148daaec77c48e1a2342bd1",
+      "scope_rows": 8,
+      "source_operation_sha256": "e32554c18a296f224ba9192dd390f8326746eeb5897701641c70b991840dc706"
+    },
+    {
+      "counterexamples": [
+        {
+          "gold_slot_types": [
+            "cooking_type",
+            "ingredient"
+          ],
+          "intent": "cooking_recipe",
+          "material_row_sha256": "925bc5deedb5e717800240b40a3ed732543622fa7d9c3121c0bb657fb6d7625c",
+          "sample_id_sha256": "4012e3f069926b57c1a2027eeeda84e969e861e74fbae2361f77e48d8cfc2e86"
+        },
+        {
+          "gold_slot_types": [
+            "food_type"
+          ],
+          "intent": "cooking_recipe",
+          "material_row_sha256": "9f4d9a3baedfe94455bd51d7bc868ed0abe51bd94486a5a5a1cba5dfe3083997",
+          "sample_id_sha256": "2a5e6cf94611cf4d3a05fd10f8740359955ae2023e25e5211d5dc477b54aa820"
+        }
+      ],
+      "decision": "reject-current-rule",
+      "reason": "Verb-food pattern does not establish cooking_type or distinguish food_type from ingredient.",
+      "rule_id": "conditioned-05",
+      "rule_sha256": "7b950f4783cd3686d907e3b589a94b34ba73ef5adf395aebf66a87e633d74ef3",
+      "scope_rows": 16,
+      "source_operation_sha256": "0e7a84b27d3d0df70692a3608fcc9e5121b522857f4c2cdc86a34696d96d4414"
+    }
+  ],
+  "h1_roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+  "h1_rows": 313,
+  "h2_error_evidence_used": false,
+  "limitations": [
+    "Manual semantic judgments with mechanically checked TRAIN witnesses.",
+    "This audit is not a model performance evaluation or statistical coverage proof.",
+    "Source-operation custody remains a separate prerequisite.",
+    "No corrected candidate is created or admitted by this report."
+  ],
+  "new_model_calls": 0,
+  "new_scoring_calls": 0,
+  "private_material_sha256": "31d96d695408f04d7e8f82c245df8bbe788c0e9dcbbaf872ca198c2238bfdf1a",
+  "rules": 5,
+  "schema": "saea-conditioned-h1-counterexample-review-v1",
+  "status": "candidate-rejected-before-npu-evaluation",
+  "test_read": false
+}
