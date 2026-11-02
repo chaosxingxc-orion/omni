@@ -109,10 +109,12 @@ def verify_job(repo,data,job):
 
 
 def run(repo,data,job,out,after,predecessor_run):
+    import os
+    import time
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     from speech_aware_evidence_acquisition.core.flight.campaign import load_campaign_cells,declared_readiness,run_campaign
     from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
-    from run_real_engine_candidate import assert_campaign_success
+    from run_real_engine_candidate import assert_campaign_success, generation_release_document
     assert_execution_environment();head=require_clean_study_repo(repo)
     complete,reg,_=verify_job(repo,data,job)
     base.require_learning_deployment(repo,reg['model_id'])
@@ -128,8 +130,17 @@ def run(repo,data,job,out,after,predecessor_run):
         runtime=build_flight_runtime(repo,data,model=reg['model_id'],dataset=cell.document['dataset_fragment'],
             baseline=complete['job'],experiment=complete['job'],run_id=complete['run_id'],attempt_id='learning-v1',
             runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json')
+        started=time.monotonic()
+        def released(flight):
+            event=generation_release_document(flight,candidate=complete['job'],
+                spec={'run_id':complete['run_id'],'attempt_id':'learning-v1',
+                      'profile':os.environ['SAEA_DEPLOYMENT_PROFILE'],
+                      'service_session':complete['service_session']},
+                commit=head,rows=complete['runtime_rows'],elapsed=time.monotonic()-started)
+            publish_new(out/'generation-released.json',raw(event))
         result=run_campaign([runtime],cells=cells,repo_root=repo,data_root=data,
-            owner='Codex-grounded-shards',expected_session_id=complete['service_session'])
+            owner='Codex-grounded-shards',expected_session_id=complete['service_session'],
+            on_generation_released=released)
         publish_new(out/'campaign.json',raw(result));assert_campaign_success(result,complete['run_id'])
         publish_new(out/'complete.json',raw({'result':result,'candidate_publishable':False}))
         return {'completed':True,'candidate_publishable':False}

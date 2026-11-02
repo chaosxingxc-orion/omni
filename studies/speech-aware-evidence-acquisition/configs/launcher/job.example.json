@@ -1,0 +1,22 @@
+{
+  "schema": "saea-configured-job-launch-v1",
+  "container_name": "saea-example-verify-v1",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "repo_path": "/srv/omni/jobs/example/study",
+  "expected_commit": "0000000000000000000000000000000000000000",
+  "receipt_dir": "/srv/omni/jobs/example/control/launch-verify",
+  "argv": ["/usr/local/python3.12.13/bin/python3", "/study/scripts/analysis/grounded_fusion_job.py", "verify", "--repo", "/study", "--data", "/data", "--job", "/data/work/codex/example/job"],
+  "working_directory": "/tmp",
+  "network": "none",
+  "pid_host": false,
+  "cpuset_cpus": "0-3",
+  "environment": {"PYTHONDONTWRITEBYTECODE": "1", "TORCH_DEVICE_BACKEND_AUTOLOAD": "0", "SPEECHRL_DATA_DIR": "/data", "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "safe.directory", "GIT_CONFIG_VALUE_0": "/study"},
+  "mounts": [
+    {"source": "/srv/omni/jobs/example/study", "target": "/study", "readonly": true},
+    {"source": "/srv/omni/data", "target": "/data", "readonly": true}
+  ],
+  "create_directories": ["/srv/omni/jobs/example/control/launch-verify"],
+  "allowed_create_roots": ["/srv/omni/jobs/example"],
+  "required_inputs": [{"path": "/srv/omni/data/work/codex/example/job/complete.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000"}],
+  "monitor_interval_seconds": 600
+}
