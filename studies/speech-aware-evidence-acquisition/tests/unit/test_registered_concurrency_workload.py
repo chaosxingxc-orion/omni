@@ -1,6 +1,9 @@
 import importlib.util
 import json
+import hashlib
 from pathlib import Path
+
+import pytest
 
 
 def _load(path, name):
@@ -10,7 +13,8 @@ def _load(path, name):
     return mod
 
 
-def test_registered_workload_dispatches_fixed_manifest(tmp_path):
+@pytest.fixture
+def registered(tmp_path):
     root = Path(__file__).parents[2]
     w = _load(root / "scripts/analysis/concurrency_sweep_workload.py", "workload")
     r = _load(root / "scripts/analysis/registered_workload.py", "registered")
@@ -19,4 +23,49 @@ def test_registered_workload_dispatches_fixed_manifest(tmp_path):
     import hashlib
     manifest = tmp_path / "manifest.json"; manifest.write_text(json.dumps({"schema": w.MANIFEST_SCHEMA, "status": "PINNED_CPU_ONLY_NOT_ADMITTED", "source_roster": "real-engine-500-v1", "source_roster_sha256": hashlib.sha256(roster.read_bytes()).hexdigest(), "count": 100, "items": rows, "unique_sample_ids": 100, "unique_audio_hashes": 100, "test_labels_read": False, "model_calls": 0}, sort_keys=True))
     spec = {"cell": "x", "experiment": "x", "workload_kind": "concurrency-sweep-real100", "manifest_path": str(manifest), "source_roster_path": str(roster), "profile": "p", "profile_sha256": "a" * 64, "manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(), "rows": 100, "new_model_calls": 0}
+    identity = hashlib.sha256("\n".join(sorted("slurp/" + row["sample_id"] for row in rows)).encode()).hexdigest()
+    spec.update(run_id="real100", attempt_id="generation-v1", split_identity_hash=identity)
+    exp = {"cells": [{"run_id": spec["run_id"], "attempt_id": spec["attempt_id"], "dataset_fragment": "real100"}]}
+    view = {"count": 100, "items": rows, "split_identity_hash": identity}
+    view["runtime_view_sha256"] = hashlib.sha256(json.dumps(view, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    exp_path = tmp_path / "configs/experiment/x.json"
+    view_path = tmp_path / "configs/dataset/real100.json"
+    for path, doc in ((exp_path, exp), (view_path, view)):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(doc))
+    return r, spec, exp_path, view_path
+
+
+def test_registered_workload_dispatches_fixed_manifest(tmp_path, registered):
+    r, spec, _, _ = registered
     assert r.validate_workload(tmp_path, tmp_path, "x", spec) == 100
+
+
+@pytest.mark.parametrize("mutation", ["500_rows", "different_audio", "reordered", "stale_hash", "wrong_split"])
+def test_rejects_execution_view_drift(tmp_path, registered, mutation):
+    r, spec, _, path = registered
+    view = json.loads(path.read_bytes())
+    if mutation == "500_rows":
+        view["items"] *= 5
+        view["count"] = 500
+    elif mutation == "different_audio":
+        view["items"][0]["audio_sha256"] = "f" * 64
+    elif mutation == "reordered":
+        view["items"].reverse()
+    elif mutation == "stale_hash":
+        view["runtime_view_sha256"] = "f" * 64
+    else:
+        view["split_identity_hash"] = "f" * 64
+    path.write_text(json.dumps(view))
+    with pytest.raises(ValueError, match="concurrency"):
+        r.validate_workload(tmp_path, tmp_path, "x", spec)
+
+
+@pytest.mark.parametrize("field", ["run_id", "attempt_id"])
+def test_rejects_execution_attempt_drift(tmp_path, registered, field):
+    r, spec, path, _ = registered
+    exp = json.loads(path.read_bytes())
+    exp["cells"][0][field] = "wrong"
+    path.write_text(json.dumps(exp))
+    with pytest.raises(ValueError, match="registered attempt differs"):
+        r.validate_workload(tmp_path, tmp_path, "x", spec)

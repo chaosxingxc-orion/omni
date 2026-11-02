@@ -47,8 +47,11 @@ def validate_manifest(
     expected_count: int = 100,
 ) -> dict[str, Any]:
     """Validate an immutable real subset without opening labels or model code."""
-    manifest = _read(manifest_path)
-    roster = _read(source_roster_path)
+    # Hash exactly the bytes that were validated, even if a path is replaced.
+    manifest_bytes = manifest_path.read_bytes()
+    roster_bytes = source_roster_path.read_bytes()
+    manifest = json.loads(manifest_bytes)
+    roster = json.loads(roster_bytes)
     _require(manifest.get("schema") == MANIFEST_SCHEMA, "fixed real manifest schema mismatch")
     status_ok = manifest.get("status") == "PINNED_CPU_ONLY_NOT_ADMITTED"
     legacy_selection_ok = manifest.get("selection") == "first-100-of-pinned-real-engine-500-v1; no labels/outcomes"
@@ -61,7 +64,7 @@ def validate_manifest(
     _require(manifest.get("count") == expected_count, "manifest count field mismatch")
     source_name = str(manifest.get("source_roster", ""))
     _require(source_name == "real-engine-500-v1" or source_name.endswith("/real-engine-500-v1/roster.json"), "unexpected source roster")
-    _require(manifest.get("source_roster_sha256") == _sha(source_roster_path), "source roster hash mismatch")
+    _require(manifest.get("source_roster_sha256") == hashlib.sha256(roster_bytes).hexdigest(), "source roster hash mismatch")
     _require(manifest.get("test_labels_read", False) is False, "manifest admits test labels")
     _require(manifest.get("model_calls", 0) == 0, "manifest records model calls")
     by_id = {row.get("sample_id"): row for row in source_items}
@@ -87,13 +90,14 @@ def validate_manifest(
         "schema": SCHEMA,
         "status": "HELD_NOT_ADMITTED",
         "manifest_path": str(manifest_path),
-        "manifest_sha256": _sha(manifest_path),
+        "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "source_roster_path": str(source_roster_path),
-        "source_roster_sha256": _sha(source_roster_path),
+        "source_roster_sha256": hashlib.sha256(roster_bytes).hexdigest(),
         "profile_id": expected_profile_id,
         "profile_sha256": expected_profile_sha256,
         "rows": expected_count,
         "sample_ids": sorted(seen_ids),
+        "items": items,
         "model_calls": 0,
         "test_labels_read": False,
         "generation_authorized": False,

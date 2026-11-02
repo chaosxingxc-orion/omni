@@ -1,4 +1,5 @@
 """Validate supported real workloads before admission or first dispatch."""
+import hashlib
 import json
 from pathlib import Path
 
@@ -6,6 +7,11 @@ from pathlib import Path
 def validate_workload(repo, data, name, spec):
     if name != spec["cell"] or name != spec["experiment"]:
         raise ValueError("registered workload identity mismatch")
+    exp = json.loads((repo / "configs/experiment" / (name + ".json")).read_bytes())
+    cell, = exp["cells"]
+    if cell["run_id"] != spec["run_id"] or cell["attempt_id"] != spec["attempt_id"]:
+        raise ValueError("registered attempt differs")
+    view = json.loads((repo / "configs/dataset" / (cell["dataset_fragment"] + ".json")).read_bytes())
     if spec.get("workload_kind") == "concurrency-sweep-real100":
         import importlib.util
         module_path = Path(__file__).with_name("concurrency_sweep_workload.py")
@@ -28,12 +34,22 @@ def validate_workload(repo, data, name, spec):
             raise ValueError("concurrency manifest hash differs")
         if spec.get("rows") != 100 or spec.get("new_model_calls") != 0:
             raise ValueError("concurrency workload registration is not the fixed 100-row held plan")
+        # The runner consumes the experiment's dataset view, not the manifest.
+        # Bind the exact ordered rows before either admission or dispatch.
+        if view.get("count") != 100 or view.get("items") != checked["items"]:
+            raise ValueError("concurrency execution view differs from fixed manifest")
+        identity = hashlib.sha256("\n".join(
+            sorted("slurp/" + sid for sid in checked["sample_ids"])
+        ).encode()).hexdigest()
+        if view.get("split_identity_hash") != identity or spec.get("split_identity_hash") != identity:
+            raise ValueError("concurrency split identity differs")
+        unsigned = {key: value for key, value in view.items() if key != "runtime_view_sha256"}
+        view_digest = hashlib.sha256(json.dumps(
+            unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()).hexdigest()
+        if view.get("runtime_view_sha256") != view_digest:
+            raise ValueError("concurrency runtime view hash differs")
         return 100
-    exp = json.loads((repo / "configs/experiment" / (name + ".json")).read_bytes())
-    cell, = exp["cells"]
-    if cell["run_id"] != spec["run_id"] or cell["attempt_id"] != spec["attempt_id"]:
-        raise ValueError("registered attempt differs")
-    view = json.loads((repo / "configs/dataset" / (cell["dataset_fragment"] + ".json")).read_bytes())
     if spec.get("workload_kind") == "tfgrpo-dense-h2-paired":
         from tfgrpo_dense_h2_job import validate
         return validate(repo, data, name, spec, exp, view)
