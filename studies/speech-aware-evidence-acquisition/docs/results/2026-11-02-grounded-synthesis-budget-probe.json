@@ -1,0 +1,21 @@
+{
+  "schema": "saea-grounded-synthesis-prompt-probe-v1",
+  "groups": 51,
+  "operations": 102,
+  "source_batch_sha256": "46020fa689f7f0f42602910b2a24678a87aeaeeb66c9e75929589f8848793eb8",
+  "policy": "evidence-grounded-synthesis-v1",
+  "messages_sha256": "4ac94803ca40475655509944c0905e5d12a8d4ba87bb47ef0417ad5150d6197c",
+  "rendered_characters": 159697,
+  "tokenizer_input_tokens": 72133,
+  "completion_cap": 16384,
+  "resident_context": 49152,
+  "fits_text_token_budget": false,
+  "new_model_calls": 0,
+  "h2_read": false,
+  "test_read": false,
+  "limitations": [
+    "Text tokenizer estimate, not native FIT/admission.",
+    "Perception/feedback projection omits retrieved context; it is not lossless.",
+    "Original source batch contains all51groups; historical custody must be verified before dispatch."
+  ]
+}
