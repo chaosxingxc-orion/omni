@@ -17,7 +17,27 @@
 
 配置中的路径及全零摘要是占位符；独立评分环境挂载需按已有封存环境替换。没有请求网络和设备，不运行推理或评分任务。CPU 容器复用[固定启动器](configured-job-launch-zh.md)的 `layout/plan/launch/status` 流程，不增加启动器 schema 或恢复分支。业务阶段仍执行自己的注册、准入和互斥。
 
-部署顺序：固定执行提交和环境；填充预检 JSON；在与后继相同的固定镜像、依赖挂载、解释器和必要环境下运行预检；核对成功结果；把 `ready.json` 路径及 SHA256 加入后继的 `required_inputs`。预检结果是特定环境的观察证据，不能自动证明后续环境未漂移；环境、镜像、依赖挂载或选择变量变化必须重新预检。模板未自动生成后继配置，也未实现跨配置环境等价验证。
+部署顺序：固定执行提交和环境；填充预检 JSON；在与后继相同的固定镜像、依赖挂载、解释器和必要环境下运行预检；核对成功结果；把 `ready.json` 路径及 SHA256 加入后继的 `required_inputs`。再用下述绑定工具验证两份启动配置并启动后继。环境、镜像、依赖挂载或选择变量变化必须重新预检；模板不自动生成后继配置。
+
+## 已交付：预检凭据与后继环境绑定
+
+新增独立 `scripts/environment/configured_preflight_binding.py`，原 `configured_job_launch.py` 的文件、schema、runner 摘要及既有恢复行为均未改变。它提供 `bind/plan/launch`：先验证来源和环境，随后直接委托原启动器，继续使用原有 guard、启动意图、幂等状态及未知启动不重发机制。
+
+`bind` 要求源是直接执行固定预检脚本的 CPU 容器（network none、无 host PID），且其 Docker 身份与启动 intent 一致、已经 exit 0；ready 必须来自该配置输出挂载，绑定真实检查配置、脚本和结果摘要。后继必须固定 ready 摘要。兼容性严格要求镜像、全部显式环境变量、工作目录、执行仓及提交相同，业务入口解释器已经探测；源输出挂载外的挂载全部只读，后继保留它们的 source/target/readonly。新增挂载不得覆盖依赖、解释器、系统 Python 路径、工作目录或绝对环境路径；业务网络和不重叠的结果挂载可不同。
+
+绑定文件固定两份完整配置、ready/result/检查配置/脚本/intent 摘要、源容器 ID 及 helper/启动器/检查模块版本。之后 `plan/launch` 每次重新校验上述文件、兼容性和精确后继配置；任一漂移在委托启动前失败。绑定文件只创建一次并 fsync，不覆盖旧证据。示例从 study 根目录运行，所有部署路径均为私有配置：
+
+```bash
+python3 scripts/environment/configured_preflight_binding.py bind --source cpu-launch.json --ready /owned/preflight/attempt-v1/ready.json --successor successor.json --binding binding.json
+python3 scripts/environment/configured_preflight_binding.py plan --successor successor.json --binding binding.json
+python3 scripts/environment/configured_preflight_binding.py launch --successor successor.json --binding binding.json
+```
+
+目录创建、status/watch 仍走原启动器。采用预检绑定的后继必须通过此工具 `plan/launch`；直接调用原启动器只执行原有检查，不会强制读取绑定文件。严格相同环境和执行提交是本版刻意保守的兼容范围，存在差异时准备匹配预检，不降低判断条件。
+
+此工具比较挂载配置，不冻结外部宿主机目录内容；容器 readonly 不阻止宿主机原位修改。依赖来源必须保持冻结，发生内容变化需重新预检；绑定不抵抗人为伪造凭据，也不替代原生科学准入。当前完成代码及本机故障测试，固定镜像和真实后继绑定尚待验收。
+
+本机绑定测试23项通过（1.928秒），原预检13项回归通过（0.704秒）；Docker终态使用替身，子解释器导入真实执行。覆盖正确绑定、缺失/失败/异源凭据、镜像/环境/解释器/依赖挂载漂移、嵌套遮蔽、绑定后改配置、实现身份改变和原未知启动结果保留。正式固定镜像测试与真实容器绑定待主线程执行。
 
 ## 验证与限制
 

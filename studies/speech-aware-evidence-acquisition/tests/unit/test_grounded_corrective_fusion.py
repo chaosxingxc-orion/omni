@@ -154,7 +154,7 @@ def test_one_prompt_contains_complete_failure_and_no_truncation():
     c, _ = fixture()
     measured = m.corrective_messages(c, count_tokens=lambda messages: 300)
     payload = json.loads(measured['messages'][1]['content'])
-    assert payload['failed_response_text'] == c['failure']['response']['response']['text']
+    assert payload['failed_output'] == {'format': 'verbatim-text', 'value': c['failure']['response']['response']['text']}
     assert payload['original_evidence'] == fusion.compact_model_view(c['document'])
     assert measured['max_new_calls'] == 1 and not measured['native_fit_completed']
     with pytest.raises(ValueError, match='no truncation'):
@@ -238,3 +238,47 @@ def test_runtime_source_rejection_happens_before_spend(tmp_path, monkeypatch, fa
         measured['measurement_sha256'] = m.sha({k: v for k, v in measured.items() if k != 'measurement_sha256'})
     with pytest.raises(ValueError): execute()
     assert not calls and not fits
+
+
+def compact_output(corrective):
+    result = output(corrective)
+    result['schema'] = m.COMPACT_OUTPUT_SCHEMA
+    for rule in result['rules']:
+        rule['support_claims'] = [{k: c[k] for k in ('group_ref', 'intent', 'entities')}
+                                  for c in rule['support_claims']]
+        rule['prediction_counterexamples'] = [{k: c[k] for k in (
+            'group_ref', 'prediction_ref', 'prediction_intent', 'prediction_entities')}
+            for c in rule['prediction_counterexamples']]
+    return result
+
+
+def test_compact_claims_resolve_to_same_verified_rules():
+    c, _ = fixture()
+    compact = compact_output(c)
+    checked = m.validate_corrective_output(json.dumps(compact), c)
+    full = m.validate_corrective_output(json.dumps(output(c)), c)
+    assert checked['structured_claims'] == full['structured_claims']
+    assert checked['corrective_output_sha256'] == m.sha(compact)
+    assert checked['semantic_support_verified'] is False
+    assert not checked['candidate_publishable']
+
+
+@pytest.mark.parametrize('fault', ['intent', 'entity', 'prediction', 'unknown', 'extra'])
+def test_compact_claims_do_not_weaken_grounding(fault):
+    c, _ = fixture(); result = compact_output(c); rule = result['rules'][0]
+    if fault == 'intent': rule['support_claims'][0]['intent'] = 'takeaway_order'
+    elif fault == 'entity': rule['support_claims'][0]['entities'] = []
+    elif fault == 'prediction': rule['prediction_counterexamples'][0]['prediction_intent'] = 'wrong'
+    elif fault == 'unknown': rule['prediction_counterexamples'][0]['prediction_ref'] = 'G99P0'
+    else: rule['support_claims'][0]['query_id'] = 'untrusted'
+    with pytest.raises(ValueError): m.validate_corrective_output(json.dumps(result), c)
+
+
+def test_model_view_keeps_every_group_without_duplicate_catalog():
+    c, _ = fixture(); before = copy.deepcopy(c)
+    measured = m.corrective_messages(c, count_tokens=lambda messages: 300)
+    payload = json.loads(measured['messages'][1]['content'])
+    assert payload['original_evidence'] == fusion.compact_model_view(c['document'])
+    assert 'reference_and_counterexample_catalog' not in payload
+    assert c == before
+    assert m.COMPACT_OUTPUT_SCHEMA in measured['messages'][0]['content']
