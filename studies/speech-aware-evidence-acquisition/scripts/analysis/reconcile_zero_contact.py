@@ -65,7 +65,8 @@ def replay_source(repo, data, registered, target, arm):
 
 def resumed_source(repo, data, registered, started, arm):
     """Resolve an existing recovery receipt, preserving scientific authority."""
-    require(set(started) == {'attempt_id', 'recovery', 'rows', 'study_commit'}
+    required = {'attempt_id', 'recovery', 'rows', 'study_commit'}
+    require(set(started) in (required, required | {'source_attempt_id'})
             and type(started['rows']) is int and started['rows'] > 0,
             'exact resumed started evidence required')
     sys.path[:0] = [str(repo / 'src'), str(repo / 'scripts/analysis')]
@@ -87,6 +88,9 @@ def resumed_source(repo, data, registered, started, arm):
             and current.owner_allowance == original.owner_allowance
             and current.attempt_id != original.attempt_id, 'resumed scientific plan or owner allowance differs')
     recovery = load_native_recovery(declaration, data_root=data, plan=current, arm=arm)
+    require('source_attempt_id' not in started
+            or started['source_attempt_id'] == recovery.source_plan.attempt_id,
+            'resumed source attempt differs from recovery receipt')
     require(recovery.scientific_source_plan == original
             and recovery.scientific_source_plan.owner_allowance == original.owner_allowance,
             'recovery does not descend from registered scientific source')

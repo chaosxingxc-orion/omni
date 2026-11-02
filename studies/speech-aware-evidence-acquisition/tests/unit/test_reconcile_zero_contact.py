@@ -281,6 +281,32 @@ def datetime_timestamp(value):
     return datetime.fromisoformat(value).timestamp()
 
 
+def test_resumed_started_optional_source_attempt_matches_loaded_recovery(tmp_path, monkeypatch):
+    config, lock, pin, started, _, _ = resumed_fixture(tmp_path, monkeypatch)
+    started['source_attempt_id'] = 'generation-v1'
+    config['started'] = pin('started', started)
+    evidence = Path(config['started']['path'])
+    before = evidence.read_bytes()
+    result = m.reconcile(config, observe=lambda ports:{}, pid_exists=lambda pid:False)
+    assert result['started']['source_attempt_id'] == 'generation-v1'
+    assert evidence.read_bytes() == before and not lock.exists()
+
+
+def test_resumed_started_wrong_source_or_extra_field_preserves_lock(tmp_path, monkeypatch):
+    import pytest
+    for index, patch in enumerate(({'source_attempt_id':'generation-v2'},
+            {'source_attempt_id':None}, {'source_attempt_id':'generation-v1','unknown':True})):
+        root = tmp_path / str(index)
+        root.mkdir()
+        config, lock, pin, started, _, _ = resumed_fixture(root, monkeypatch)
+        started.update(patch)
+        config['started'] = pin('started', started)
+        before = lock.read_bytes()
+        with pytest.raises(ValueError, match='source attempt differs|exact resumed started'):
+            m.reconcile(config, observe=lambda ports:{}, pid_exists=lambda pid:False)
+        assert lock.read_bytes() == before and not Path(config['out']).exists()
+
+
 def test_resumed_final_report_keeps_registered_allowance(tmp_path, monkeypatch):
     config, _, _, _, _, allowance = resumed_fixture(tmp_path, monkeypatch, final_report=True)
     result = m.reconcile(config, observe=lambda ports:{}, pid_exists=lambda pid:False)
