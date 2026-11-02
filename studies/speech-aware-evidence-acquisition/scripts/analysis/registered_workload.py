@@ -1,10 +1,34 @@
 """Validate supported real workloads before admission or first dispatch."""
 import json
+from pathlib import Path
 
 
 def validate_workload(repo, data, name, spec):
     if name != spec["cell"] or name != spec["experiment"]:
         raise ValueError("registered workload identity mismatch")
+    if spec.get("workload_kind") == "concurrency-sweep-real100":
+        import importlib.util
+        module_path = Path(__file__).with_name("concurrency_sweep_workload.py")
+        module_spec = importlib.util.spec_from_file_location("saea_concurrency_sweep_workload", module_path)
+        if module_spec is None or module_spec.loader is None:
+            raise ValueError("cannot load concurrency workload validator")
+        module = importlib.util.module_from_spec(module_spec)
+        module_spec.loader.exec_module(module)
+        validate_manifest = module.validate_manifest
+        manifest_path = Path(spec["manifest_path"])
+        roster_path = Path(spec["source_roster_path"])
+        checked = validate_manifest(
+            manifest_path,
+            source_roster_path=roster_path,
+            expected_profile_id=spec["profile"],
+            expected_profile_sha256=spec["profile_sha256"],
+            expected_count=100,
+        )
+        if checked["manifest_sha256"] != spec["manifest_sha256"]:
+            raise ValueError("concurrency manifest hash differs")
+        if spec.get("rows") != 100 or spec.get("new_model_calls") != 0:
+            raise ValueError("concurrency workload registration is not the fixed 100-row held plan")
+        return 100
     exp = json.loads((repo / "configs/experiment" / (name + ".json")).read_bytes())
     cell, = exp["cells"]
     if cell["run_id"] != spec["run_id"] or cell["attempt_id"] != spec["attempt_id"]:

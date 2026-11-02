@@ -57,6 +57,7 @@ def validate_manifest(
     _require(isinstance(items, list) and len(items) == expected_count, "manifest row count mismatch")
     _require(isinstance(source_items, list), "source roster items missing")
     _require(manifest.get("count") == expected_count, "manifest count field mismatch")
+    _require(manifest.get("source_roster") == "real-engine-500-v1", "unexpected source roster")
     _require(manifest.get("source_roster_sha256") == _sha(source_roster_path), "source roster hash mismatch")
     _require(manifest.get("test_labels_read") is False, "manifest admits test labels")
     _require(manifest.get("model_calls") == 0, "manifest records model calls")
