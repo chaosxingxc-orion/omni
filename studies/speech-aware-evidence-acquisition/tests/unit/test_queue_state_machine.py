@@ -139,3 +139,42 @@ def test_checkpoint_file_keeps_previous_state_when_serialization_fails(tmp_path,
     with pytest.raises(RuntimeError, match="boom"):
         q.checkpoint_to(path)
     assert path.read_bytes() == original
+
+
+def test_repeated_admission_and_draining_share_one_capacity():
+    q = QueueStateMachine(slots=1)
+    for job in ('a', 'b'):
+        q.submit(job, sample_id=job, stage=0, prefix_family='p', instance_id='i')
+        q.complete_prepare(job)
+    assert q.admit_generation(stage=0, available_slots=1) == ('a',)
+    assert q.admit_generation(stage=0, available_slots=1) == ()
+    q.cancel('a')
+    assert q.admit_generation(stage=0) == ()
+    restored = QueueStateMachine.restore(q.checkpoint())
+    restored.settle('a', observed=False)
+    assert restored.admit_generation(stage=0) == ('b',)
+
+
+def test_invalid_settlement_does_not_release_slot_or_corrupt_checkpoint():
+    q = QueueStateMachine(slots=1)
+    q.submit('a', sample_id='a', stage=0, prefix_family='p', instance_id='i')
+    q.complete_prepare('a')
+    q.admit_generation(stage=0)
+    before = q.checkpoint()
+    with pytest.raises(QueueStateError, match='result digest'):
+        q.settle('a', observed=True)
+    assert q.checkpoint() == before
+    assert QueueStateMachine.restore(before).inflight == {'a'}
+
+
+def test_restore_rejects_oversubscribed_checkpoint():
+    import json
+    q = QueueStateMachine(slots=2)
+    for job in ('a', 'b'):
+        q.submit(job, sample_id=job, stage=0, prefix_family='p', instance_id='i')
+        q.complete_prepare(job)
+    q.admit_generation(stage=0)
+    bad = json.loads(q.checkpoint())
+    bad['slots'] = 1
+    with pytest.raises(QueueStateError, match='capacity'):
+        QueueStateMachine.restore(bad)

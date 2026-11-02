@@ -114,6 +114,9 @@ class QueueStateMachine:
         capacity = self.slots if available_slots is None else available_slots
         if type(capacity) is not int or not 0 <= capacity <= self.slots:
             raise QueueStateError("available_slots exceeds declared capacity")
+        # Caller capacity is an additional bound, not permission to forget
+        # requests admitted by an earlier call (including draining requests).
+        capacity = min(capacity, self.slots - len(self.inflight))
         selected: list[str] = []
         for job_id in tuple(self.ready_queue):
             if len(selected) >= capacity:
@@ -137,11 +140,12 @@ class QueueStateMachine:
         job = self._job(job_id)
         if job.state not in {"generation", "draining"} or job_id not in self.inflight:
             raise QueueStateError("only an admitted generation may settle")
-        self._remove(self.generation_queue, job_id)
-        self.inflight.remove(job_id)
         if observed:
             if not isinstance(result_digest, str) or not result_digest:
                 raise QueueStateError("observed generation requires a result digest")
+        self._remove(self.generation_queue, job_id)
+        self.inflight.remove(job_id)
+        if observed:
             job.state = "observed"
             job.result_digest = result_digest
         else:
@@ -256,6 +260,8 @@ class QueueStateMachine:
         return machine
 
     def _validate_checkpoint(self) -> None:
+        if len(self.inflight) > self.slots:
+            raise QueueStateError("checkpoint exceeds generation capacity")
         queued = set(self.prepare_queue) | set(self.ready_queue) | set(self.generation_queue)
         if not queued <= self.jobs.keys() or not self.inflight <= self.jobs.keys():
             raise QueueStateError("checkpoint references unknown job")

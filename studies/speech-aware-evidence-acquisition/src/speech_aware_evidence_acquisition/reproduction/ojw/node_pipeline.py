@@ -123,8 +123,6 @@ class NodePipelineCoordinator:
             raise ValueError("node pipeline contact requires its prepared role")
         if contact_kind not in {"model", "tool"}:
             raise ValueError("node pipeline contact kind must be model or tool")
-        if self.queue_bridge is not None and contact_kind == "model":
-            self.queue_bridge.generation_admitted(member)
         return await self._enqueue(member, family, contact_kind, callback)
 
     async def _enqueue(self, member, family, kind, callback):
@@ -287,6 +285,10 @@ class NodePipelineCoordinator:
                             s for s in range(self.slots) if s not in self.model_tasks
                         ]
                         for work, slot in zip(ready, free):
+                            # Durable admission describes actual slot ownership,
+                            # not an unbounded set of contact-ready coroutines.
+                            if self.queue_bridge is not None and work.kind == "model":
+                                self.queue_bridge.generation_admitted(work.member)
                             self.states[work.member] = "working"
                             self.model_tasks[slot] = asyncio.create_task(
                                 self._perform(work, slot)
