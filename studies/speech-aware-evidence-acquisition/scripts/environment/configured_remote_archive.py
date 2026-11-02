@@ -11,6 +11,7 @@ import re
 import shlex
 import subprocess
 import tarfile
+import time
 import uuid
 
 SCHEMA = 'saea-configured-remote-archive-v1'
@@ -197,10 +198,27 @@ def snapshot(doc, observed):
 
 
 def wait_event(doc):
-    # Remote timeout also ends the read-only waiter if the local SSH client disconnects.
-    result = subprocess.run(ssh(doc, ['sudo', '-n', 'timeout', '--signal=TERM', '600',
-                            'docker', 'wait', doc['container_name']]), capture_output=True, text=True, timeout=630)
-    require(result.returncode in (0, 124), 'container wait failed: ' + result.stderr[-1000:])
+    # Only a read-only wait is retried. A timeout never proves generation ended.
+    started = time.monotonic()
+    outcome = 'terminal-event'
+    try:
+        result = subprocess.run(ssh(doc, ['sudo', '-n', 'timeout', '--signal=TERM',
+                                '--kill-after=5s', '600', 'docker', 'wait', doc['container_name']]),
+                                capture_output=True, text=True, timeout=630)
+        require(result.returncode in (0, 124, 137, 255),
+                'container wait failed: ' + result.stderr[-1000:])
+        if result.returncode != 0:
+            outcome = 'transport-unavailable' if result.returncode == 255 else 'interval-elapsed'
+    except subprocess.TimeoutExpired:
+        outcome = 'local-wait-timeout'
+    if outcome != 'terminal-event':
+        print(json.dumps({'event': 'archive-wait-observation', 'outcome': outcome,
+                          'terminal_verified': False}), flush=True)
+        # An early transport failure must not turn the 600-second watch into a spin.
+        remaining = doc['interval_seconds'] - (time.monotonic() - started)
+        if remaining > 0:
+            time.sleep(remaining)
+    # Caller re-inspects and checks the original container ID before any snapshot.
 
 
 def execute(config, mode):

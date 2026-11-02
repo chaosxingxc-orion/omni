@@ -167,10 +167,42 @@ class ArchiveTests(unittest.TestCase):
     def test_wait_is_remote_bounded_and_handles_terminal_or_timeout(self):
         from types import SimpleNamespace
         for status in (0, 124):
-            with patch.object(m.subprocess, 'run', return_value=SimpleNamespace(returncode=status, stderr='')) as run:
+            with (patch.object(m.subprocess, 'run', return_value=SimpleNamespace(returncode=status, stderr='')) as run,
+                  patch.object(m.time, 'sleep'), patch.object(m.time, 'monotonic', return_value=0)):
                 m.wait_event(self.doc)
             args = shlex.split(run.call_args.args[0][-1])
-            self.assertEqual(args, ['sudo', '-n', 'timeout', '--signal=TERM', '600', 'docker', 'wait', self.doc['container_name']])
+            self.assertEqual(args, ['sudo', '-n', 'timeout', '--signal=TERM', '--kill-after=5s', '600', 'docker', 'wait', self.doc['container_name']])
+
+    def test_wait_transport_failure_obeys_cadence_without_claiming_terminal(self):
+        from types import SimpleNamespace
+        for status in (137, 255):
+            with (self.subTest(status=status),
+                  patch.object(m.subprocess, 'run', return_value=SimpleNamespace(returncode=status, stderr='lost')),
+                  patch.object(m.time, 'monotonic', side_effect=[10, 20]),
+                  patch.object(m.time, 'sleep') as sleep, patch('builtins.print') as output):
+                m.wait_event(self.doc)
+                sleep.assert_called_once_with(590)
+                self.assertFalse(json.loads(output.call_args.args[0])['terminal_verified'])
+
+    def test_local_wait_timeout_is_observation_failure_and_rechecks_identity(self):
+        self.load()
+        with (patch.object(m, 'inspect', side_effect=[self.observed, {**self.observed, 'container_id': 'b' * 64}]),
+              patch.object(m, 'snapshot', return_value={'status': 'complete'}) as snapshot,
+              patch.object(m.subprocess, 'run', side_effect=subprocess.TimeoutExpired('ssh', 630)),
+              patch.object(m.time, 'monotonic', side_effect=[0, 630]),
+              patch.object(m.time, 'sleep') as sleep, patch('builtins.print')):
+            with self.assertRaisesRegex(ValueError, 'replaced'):
+                m.execute(self.config, 'watch')
+        self.assertEqual(snapshot.call_count, 1)
+        sleep.assert_not_called()
+
+    def test_unexpected_wait_failure_remains_fatal(self):
+        from types import SimpleNamespace
+        with (patch.object(m.subprocess, 'run', return_value=SimpleNamespace(returncode=125, stderr='invalid command')),
+              patch.object(m.time, 'sleep') as sleep):
+            with self.assertRaisesRegex(ValueError, 'wait failed'):
+                m.wait_event(self.doc)
+        sleep.assert_not_called()
 
     def test_inventory_cannot_add_unconfigured_or_false_absence(self):
         raw, stderr = self.fixture()
