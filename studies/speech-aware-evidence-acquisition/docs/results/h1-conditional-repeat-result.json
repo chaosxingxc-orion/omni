@@ -1,0 +1,65 @@
+{
+  "schema": "saea-h1-conditional-repeat-result-v1",
+  "rows": 313,
+  "remaining": 0,
+  "eta_seconds": 0,
+  "resources": {
+    "npu_cards": 8,
+    "instances": 2,
+    "tensor_parallel": 4,
+    "sustained_saturation_proven": false
+  },
+  "scores": [
+    {
+      "round": 1,
+      "slu_f1": 0.6650306974701877,
+      "intent_accuracy": 0.7571884984025559,
+      "strict_correct": 105
+    },
+    {
+      "round": 2,
+      "slu_f1": 0.6880127073598036,
+      "intent_accuracy": 0.7603833865814695,
+      "strict_correct": 112
+    }
+  ],
+  "transitions": {
+    "both_correct": 93,
+    "wrong_to_correct": 19,
+    "correct_to_wrong": 12,
+    "both_wrong": 189
+  },
+  "cost": {
+    "calls_used": 626,
+    "prompt_tokens_total": 3914334,
+    "completion_tokens_total": 1243635,
+    "audio_seconds_used": 2639.0878750000015,
+    "latency_seconds_total": 176555.00964642013
+  },
+  "timing": {
+    "run_phases_seconds": 1021.3440473079681,
+    "generation_container_seconds": 1236.536296,
+    "original_failed_scoring_seconds": 103.65075206756592,
+    "recovery_scoring_seconds": 27.986213650001446,
+    "run_phases_seconds_per_row": 3.263080023348141
+  },
+  "score_recovery": {
+    "new_model_calls": 0,
+    "original_failure_preserved": true,
+    "original_reason": "Missing official scorer environment selection; progress unavailable in business Python.",
+    "final_state": "FINALIZED"
+  },
+  "source_sha256": {
+    "h1-fresh-v2/SAEA-SLURP-TFRL-H1-FRESH-OBSERVATION-R1-V1.run-manifest.json": "821897c35b5b625142245a17309b57d72f5d587a77f51697ce914ab1535f52ff",
+    "h1-fresh-v2/SAEA-SLURP-TFRL-H1-FRESH-OBSERVATION-R1-V1.scores.json": "055a5f22503116982984f8e351e22fad0c106b9f284f43c71d7ceed1170cf6f2",
+    "h1-repeat-v1/SAEA-SLURP-TFRL-H1-FRESH-OBSERVATION-R2-V1.run-manifest.json": "6dd083c338a66e83f5c3848a1b223088b461d39dc10725eaf0c36ad464cc0f3a",
+    "h1-repeat-v1/SAEA-SLURP-TFRL-H1-FRESH-OBSERVATION-R2-V1.scores.json": "cba203bed3e8e2d05dad41d461f99ad089b7efc1fbe926f12d96047aac210440"
+  },
+  "claims_algorithm_gain": false,
+  "statistical_hardness_confirmed": false,
+  "limitations": [
+    "Same fixed policy conditional observations, not independent error probability estimates.",
+    "No test or H2 data used; no third observation authorized by this analysis.",
+    "Stage wall time differs from total wall time including startup and scoring recovery."
+  ]
+}
