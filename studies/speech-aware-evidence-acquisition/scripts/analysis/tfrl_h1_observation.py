@@ -23,14 +23,35 @@ H2 = 'docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json'
 DATASET = 'slurp-speech-native-stage3-construction-r01c'
 SOURCE_BASE = 'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json'
 SOURCE_EXP = 'configs/experiment/slurp-tfrl-hardset-a0-observation-r1-v1.json'
-ROUNDS = (1,)
+ROUNDS = (1, 2)
 
 
 def identity(round_index):
     if type(round_index) is not int or round_index not in ROUNDS:
-        raise ValueError('only the preregistered first observation is permitted')
+        raise ValueError('only two bounded fixed-H1 observations are permitted')
     return (f'slurp-tfrl-h1-fresh-observation-r{round_index}-v1',
             f'SAEA-SLURP-TFRL-H1-FRESH-OBSERVATION-R{round_index}-V1')
+
+
+def predecessor(repo, data, round_index):
+    """The second full pass measures conditional repeatability, never iid hardness."""
+    identity(round_index)
+    if round_index == 1:
+        return None
+    from speech_aware_evidence_acquisition.core.bundle.verify import verify_bundle
+    run = identity(1)[1]
+    manifest = data/'runs'/run/'generation-v1'/(run+'.run-manifest.json')
+    checked = verify_bundle(manifest)
+    plan = checked.manifest['plan']
+    roster, _ = population(repo)
+    if (checked.attempt_state != 'FINALIZED' or plan['run_id'] != run
+            or plan['attempt_id'] != 'generation-v1'
+            or plan['split_identity_hash'] != roster['split_identity_hash']):
+        raise ValueError('verified full H1 first observation required before second pass')
+    return {'manifest': pin(data,str(manifest.relative_to(data))),
+            'purpose': 'One full H1 conditional repeatability pass, including correct controls; not iid hardness.',
+            'independent_stochastic_draws_claimed': False,
+            'maximum_additional_passes': 1}
 
 
 def population(repo):
@@ -140,6 +161,7 @@ def stage(repo, data, round_index, binding, out):
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     assert_execution_environment();head=require_clean_study_repo(repo)
     name,run=identity(round_index);require_unspent(repo,data,run)
+    previous=predecessor(repo,data,round_index)
     paths=[repo/f'configs/{k}/{name}.json' for k in ('baseline','experiment')]
     if out.exists() or any(p.exists() for p in paths) or not out.resolve().is_relative_to(data.resolve()/'work/codex'):
         raise ValueError('fresh owned stage and configuration required')
@@ -152,6 +174,7 @@ def stage(repo, data, round_index, binding, out):
         'output_hashes':{str(p.relative_to(repo)):sha(p) for p in paths},'normal_generation_calls':626,
         'fallback_inclusive_cap':1252,'fit_calls':626,'new_model_calls':0,'test_labels_read':False,
         'h2_scores_read':False,'prior_costs_reused_or_reset':False,'generation_authorized':False}
+    if previous is not None:result['predecessor']=previous
     publish_new(out/'complete.json',raw(result));return result
 
 
@@ -162,6 +185,7 @@ def prepare(repo,data,stage_record,out):
     from tfrl_odd40_cells import verify_output
     assert_execution_environment();require_clean_study_repo(repo)
     staged=read(stage_record);name,run=identity(staged['round']);require_unspent(repo,data,run)
+    if staged.get('predecessor')!=predecessor(repo,data,staged['round']):raise ValueError('observation predecessor changed')
     for rel,digest in staged['output_hashes'].items():
         if sha(confined(repo,rel))!=digest:raise ValueError('stage changed')
     if out.exists() or not out.resolve().is_relative_to(data.resolve()/'work/codex'):raise ValueError('fresh owned preparation required')
@@ -178,6 +202,8 @@ def validate(repo,data,name,spec,exp,view):
     from tfrl_odd40_cells import verify_output
     from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
     expected_name,run=identity(spec['round']);binding=spec['runtime_binding']
+    if name!=expected_name or spec['run_id']!=run:raise ValueError('observation round identity differs')
+    if spec.get('predecessor')!=predecessor(repo,data,spec['round']):raise ValueError('observation predecessor changed')
     expected_base,expected_exp,roster,expected_view=derive(repo,spec['round'],binding)
     cell,=exp['cells'];ids=[r['sample_id'] for r in roster['items']]
     if (name!=expected_name or spec['run_id']!=run or spec['attempt_id']!='generation-v1'
@@ -208,6 +234,8 @@ def register(repo,data,stage_record,prepared):
     from speech_aware_evidence_acquisition.core.config import compose,protocol_hash
     assert_execution_environment();head=require_clean_study_repo(repo)
     staged,prep=read(stage_record),read(prepared);name,run=identity(staged['round']);require_unspent(repo,data,run)
+    previous=predecessor(repo,data,staged['round'])
+    if staged.get('predecessor')!=previous:raise ValueError('observation predecessor changed')
     if (staged['schema']!='saea-h1-observation-stage-v1' or prep['schema']!='saea-h1-observation-prepared-v1'
         or prep['stage_sha256']!=sha(stage_record) or prep['rows']!=313 or prep['run_id']!=run):raise ValueError('exact prepared stage required')
     for key in ('dataset','h1','h2_metadata','source_baseline'):pinned(repo,staged[key])
@@ -227,6 +255,7 @@ def register(repo,data,stage_record,prepared):
           'authority':AUTH,'decision_id':name+'-owner-admission','decision_relpath':f'coordination/{name}/root-admission-v1.json',
           'roster':pin(repo,H1),'dataset':staged['dataset'],'gain_lock':pin(repo,LOCK),'scientific_baseline_sha256':scientific_hash(base),
           'stage_sha256':sha(stage_record),'generation_program':'Fresh P then S; exact fixed H1, no learned experience.'}
+    if previous is not None:spec['predecessor']=previous
     validate(repo,data,name,spec,exp,read(repo/f'configs/dataset/{DATASET}.json'))
     protocol={'schema':'saea-h1-observation-generation-v1','cells':{'arm':ident},'profile':binding['profile'],
               'roster':spec['roster'],'normal_generation_calls':626,'fallback_inclusive_cap':1252,'round':staged['round'],

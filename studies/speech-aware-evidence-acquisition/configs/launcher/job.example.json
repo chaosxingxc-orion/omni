@@ -5,7 +5,7 @@
   "repo_path": "/srv/omni/jobs/example/study",
   "expected_commit": "0000000000000000000000000000000000000000",
   "receipt_dir": "/srv/omni/jobs/example/control/launch-verify",
-  "argv": ["/usr/local/python3.12.13/bin/python3", "/study/scripts/analysis/grounded_fusion_job.py", "verify", "--repo", "/study", "--data", "/data", "--job", "/data/work/codex/example/job"],
+  "argv": ["/opt/saea-venv/bin/python", "/study/scripts/analysis/grounded_fusion_job.py", "verify", "--repo", "/study", "--data", "/data", "--job", "/data/work/codex/example/job"],
   "working_directory": "/tmp",
   "network": "none",
   "pid_host": false,

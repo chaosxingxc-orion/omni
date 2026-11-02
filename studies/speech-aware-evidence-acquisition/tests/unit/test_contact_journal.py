@@ -91,3 +91,25 @@ def test_concurrent_intent_writers_publish_once(tmp_path):
     with ThreadPoolExecutor(max_workers=8) as executor:
         results=list(executor.map(write,range(8)))
     assert sum(results)==1 and j.inspect('req-1')['state']=='unknown'
+
+
+def test_aborted_zero_spend_native_startup_can_resume_without_inventing_contacts(tmp_path):
+    from dataclasses import replace
+    from speech_aware_evidence_acquisition.core.contact_journal import NativeContactReplay
+    source=_plan();target=replace(source,attempt_id='native-startup-recovery')
+    ap=tmp_path/'attempts'/source.run_id/(source.attempt_id+'.json');ap.parent.mkdir(parents=True)
+    doc={'schema':'saea-attempt-v1','run_id':source.run_id,'attempt_id':source.attempt_id,
+         'carrier_lock_key':source.carrier_lock_key,'state':'ABORTED','actual':{'calls':0,'audio_seconds':0.0}}
+    ap.write_bytes(canonical(doc))
+    replay=NativeContactReplay(tmp_path,source,target,'raw-speech-agent-native-tools')
+    assert not replay.request_ids and replay.source_actual_usage=={'calls':0,'audio_seconds':0.0}
+    for fault in ('state','spend','orphan'):
+        changed=copy.deepcopy(doc)
+        if fault=='state':changed['state']='OPENED'
+        elif fault=='spend':changed['actual']['calls']=1
+        else:
+            journal=ContactJournal(tmp_path,source,'raw-speech-agent-native-tools')
+            journal.root.mkdir(parents=True,exist_ok=True)
+            journal._path('orphan','response').write_bytes(b'{}')
+        ap.write_bytes(canonical(changed))
+        with pytest.raises(ContactJournalError):NativeContactReplay(tmp_path,source,target,'raw-speech-agent-native-tools')

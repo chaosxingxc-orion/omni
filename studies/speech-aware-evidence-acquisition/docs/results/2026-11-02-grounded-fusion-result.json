@@ -1,0 +1,30 @@
+{
+  "schema": "saea-grounded-fusion-result-v1",
+  "run_id": "SAEA-SLURP-GROUNDED-FINAL-FUSION-H1-V1",
+  "state": "ABORTED_AFTER_OBSERVED_RESPONSE",
+  "candidate_accepted": false,
+  "generation_calls": 1,
+  "usage": {
+    "prompt_tokens": 26339,
+    "completion_tokens": 8577
+  },
+  "cumulative_learning_usage": {
+    "calls": 313,
+    "prompt_tokens": 6154552,
+    "completion_tokens": 782814
+  },
+  "response_observed": true,
+  "unknown_generation_contacts": 0,
+  "rules_generated": 9,
+  "proposal_dispositions": 72,
+  "generation_call_seconds": 182.71592745999806,
+  "structural_failure": "support outside cited source shards",
+  "independent_semantic_findings": [
+    "news-query evidence cited as takeaway-order support",
+    "calendar-set evidence described as calendar-query support",
+    "snow/rain references described as temperature mentions"
+  ],
+  "next_action": "Reject deployment; preserve response and costs, explicit corrective learning required. Independent fixed-H1 repeatability workload takes NPU priority.",
+  "full8card_utilization_claimed": false,
+  "historical_source_calls": 312
+}

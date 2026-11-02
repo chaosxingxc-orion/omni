@@ -28,7 +28,7 @@ def test_single_round_reuses_exact_h1_dataset_without_learning_or_h2_scores(monk
         assert view==m.read(ROOT/f'configs/dataset/{m.DATASET}.json')
         assert exp['cells'][0]['readiness']['state']=='held'
     assert m.sha(ROOT/f'configs/dataset/{m.DATASET}.json')==before
-    for r in (0,2,3,True):
+    for r in (0,3,True):
         with pytest.raises(ValueError):m.identity(r)
 
 
@@ -186,3 +186,34 @@ def test_current_context_survives_legacy_baseline_override(monkeypatch):
     original=m.read(ROOT/m.SOURCE_BASE)
     assert base['native_episode']==original['native_episode']
     assert base['scorers']==original['scorers']
+
+
+def test_second_pass_requires_verified_first_full_observation(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.bundle import verify
+    data=tmp_path/'data';run=m.identity(1)[1]
+    manifest=data/'runs'/run/'generation-v1'/(run+'.run-manifest.json')
+    manifest.parent.mkdir(parents=True);manifest.write_text('{}')
+    roster,_=m.population(ROOT)
+    checked=SimpleNamespace(attempt_state='FINALIZED',manifest={'plan':{'run_id':run,
+        'attempt_id':'generation-v1','split_identity_hash':roster['split_identity_hash']}})
+    monkeypatch.setattr(verify,'verify_bundle',lambda p:checked)
+    record=m.predecessor(ROOT,data,2)
+    assert record['maximum_additional_passes']==1
+    assert record['independent_stochastic_draws_claimed'] is False
+    assert record['manifest']['sha256']==m.sha(manifest)
+    checked.attempt_state='ABORTED'
+    with pytest.raises(ValueError):m.predecessor(ROOT,data,2)
+    checked.attempt_state='FINALIZED';checked.manifest['plan']['split_identity_hash']='wrong'
+    with pytest.raises(ValueError):m.predecessor(ROOT,data,2)
+
+
+def test_second_pass_keeps_full_fixed_population_and_lock(monkeypatch):
+    monkeypatch.setattr(m,'runtime_binding',lambda *a:m.read(ROOT/f'configs/model/{m.MODEL}.json'))
+    base,exp,roster,view=m.derive(ROOT,2,BINDING)
+    assert exp['populations'][0]['ids']==[r['sample_id'] for r in m.population(ROOT)[0]['items']]
+    assert len(roster['items'])==313 and view['count']==625
+    assert base['native_contact_fit']['contact_cap']==626
+    assert base['native_episode']['consumption_module']['columns']==[]
+    assert exp['cells'][0]['run_id']==m.identity(2)[1]
+    with pytest.raises(ValueError):m.identity(3)
