@@ -34,6 +34,7 @@ def learning_configuration(binding):
 STAGES = frozenset({'summary', 'advantage', 'group_update', 'batch_update'})
 GROUNDED_RUNTIME_SCHEMA = 'saea-grounded-shards-runtime-binding-v1'
 FUSION_RUNTIME_SCHEMA = 'saea-grounded-fusion-runtime-binding-v1'
+ACE_RUNTIME_SCHEMA = 'saea-ace-runtime-binding-v1'
 
 
 def _timing_identity(caller, request):
@@ -60,6 +61,9 @@ def validate_registration(binding, *, plan, model_id):
 
     Exclude protocol_hash from the embedded plan to avoid a self-referential
     config hash. The runtime protocol binds this registration externally."""
+    if isinstance(binding, dict) and binding.get('schema') == ACE_RUNTIME_SCHEMA:
+        from .ace_runtime import validate_registration as validate_ace
+        return validate_ace(binding, plan=plan, model_id=model_id)
     required = {'schema', 'plan', 'model_id', 'batch_sha256', 'construction_roster_sha256',
                 'contacts', 'decoding_params', 'max_context_bytes', 'learning_config_sha256', 'runtime_identity_sha256'}
     grounded = isinstance(binding, dict) and binding.get('schema') in (GROUNDED_RUNTIME_SCHEMA, FUSION_RUNTIME_SCHEMA)
@@ -118,13 +122,16 @@ class MeteredExperienceCaller:
     under parallel summaries without slicing global counters or inferring cost.
     """
     def __init__(self, *, client, plan, registration, model_id, receipt_root,
-                 request_fit, assert_lease):
+                 request_fit, assert_lease, request_validator=None):
         if (not isinstance(client, FrozenCoreClient) or client.arm != PREPARED_TEXT_ARM
                 or client._plan != plan):
             raise LearningError('shared prepared-text FrozenCoreClient and exact plan required')
         if not callable(request_fit) or not callable(assert_lease):
             raise LearningError('registered request FIT and generation lease checks required')
         self.registration = copy.deepcopy(registration)
+        if registration.get('schema') == ACE_RUNTIME_SCHEMA and not callable(request_validator):
+            raise LearningError('ACE requires observed-predecessor request derivation')
+        self.request_validator = request_validator
         source_plan = learning_source_plan(plan,replay=client._contact_replay,data_root=client._binding.data_root)
         self.contacts = validate_registration(self.registration, plan=source_plan, model_id=model_id)
         if not {row['sample_id'] for row in self.contacts.values()} <= client._binding.allowed_sample_ids:
@@ -157,6 +164,8 @@ class MeteredExperienceCaller:
         row = self.contacts.get(key)
         if row is None:
             raise LearningError('learning contact is not in the registered finite roster')
+        if self.request_validator is not None:
+            self.request_validator(request, self)
         if self.registration['schema'] in (GROUNDED_RUNTIME_SCHEMA, FUSION_RUNTIME_SCHEMA) and sha(request['messages']) != row['messages_sha256']:
             raise LearningError('grounded messages differ from registered shard')
         messages = request['messages']
@@ -318,7 +327,7 @@ class MeteredExperienceCaller:
         return copy.deepcopy(response)
 
 
-def bind_runtime(runtime, *, receipt_root, request_fit=None):
+def bind_runtime(runtime, *, receipt_root, request_fit=None, request_validator=None):
     """Attach only after runtime preflight/serve; do not mint gates or authority.
 
     The registration must already be part of composed configuration, hence its
@@ -353,7 +362,7 @@ def bind_runtime(runtime, *, receipt_root, request_fit=None):
     client = FrozenCoreClient(**kwargs)
     return MeteredExperienceCaller(client=client, plan=runtime.plan, registration=registration,
         model_id=model_id, receipt_root=receipt_root, request_fit=request_fit,
-        assert_lease=runtime.assert_generation_lease)
+        assert_lease=runtime.assert_generation_lease, request_validator=request_validator)
 
 
 def run_registered_learning(runtime, *, receipt_root, learner_root, retain_client=False):
@@ -501,7 +510,7 @@ def seal_registered_candidate(runtime, candidate, *, started, ended):
         'schema':'saea-tfgrpo-stage-summary-v1', 'phase':stage, 'result_kind':'artifact',
         'contacts':len(contacts), 'rows':len({r['sample_id'] for r in contacts}),
         'contact_receipts':contacts,
-        **({'candidate':candidate_pin} if stage in ('batch_update', 'grounded_final_update') else {}),
+        **({'candidate':candidate_pin} if stage in ('batch_update', 'grounded_final_update', 'ace_curate') else {}),
     }) for stage,contacts in stage_contacts.items())
     binding = {'schema':'saea-tfgrpo-flight-proposal-v1', 'candidate':candidate_pin,
         'batch_sha256':caller.registration['batch_sha256'],

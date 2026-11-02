@@ -558,7 +558,7 @@ def validate_artifact_result_binding(
             and not prepared_text):
         raise FlightRuntimeError("semantic update stages require the prepared text arm")
     dynamic_tfgrpo = (isinstance(prepared_spec, Mapping)
-                      and prepared_spec.get('schema') in ('saea-prepared-tfgrpo-dynamic-v1', 'saea-prepared-grounded-shards-v1', 'saea-prepared-grounded-fusion-v1'))
+                      and prepared_spec.get('schema') in ('saea-prepared-tfgrpo-dynamic-v1', 'saea-prepared-grounded-shards-v1', 'saea-prepared-grounded-fusion-v1', 'saea-prepared-ace-dynamic-v1'))
     if prepared_text:
         if (
             result_kind != "artifact" or values.get("policy") not in PREPARED_TEXT_POLICIES
@@ -10325,6 +10325,9 @@ class FlightRuntime:
             return self._run_obs_phases(policy)
 
         feedback = baseline_values.get("prepared_training_feedback")
+        if isinstance(feedback, Mapping) and feedback.get("schema") == "saea-prepared-ace-dynamic-v1":
+            from ...rails.ace_runtime import dispatch_registered_ace
+            return dispatch_registered_ace(self)
         if isinstance(feedback, Mapping) and feedback.get("schema") == "saea-prepared-grounded-fusion-v1":
             from ...rails.grounded_fusion_runtime import dispatch_registered_fusion
             return dispatch_registered_fusion(self)
@@ -11050,7 +11053,7 @@ class FlightRuntime:
         spec = values.get("prepared_training_feedback")
         if spec is None:
             return None, None
-        if spec.get('schema') in ('saea-prepared-tfgrpo-dynamic-v1', 'saea-prepared-grounded-shards-v1', 'saea-prepared-grounded-fusion-v1'):
+        if spec.get('schema') in ('saea-prepared-tfgrpo-dynamic-v1', 'saea-prepared-grounded-shards-v1', 'saea-prepared-grounded-fusion-v1', 'saea-prepared-ace-dynamic-v1'):
             authority = validate_artifact_result_binding(values,plan=self._plan,
                 repo_root=self._repo_root,data_root=self._data_root,
                 sample_ids=tuple(s.sample_id for s in self._samples),

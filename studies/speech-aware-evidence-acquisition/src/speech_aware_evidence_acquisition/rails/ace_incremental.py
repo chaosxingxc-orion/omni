@@ -347,6 +347,8 @@ def execute(learner, document, *, count_tokens, verify_source):
                     e['before_items_sha256'] != sha(document['parent']['items']) for e in events),
                 'planned_learning_calls': bounds['max_calls'], 'operations': cumulative_operations,
                 'learning_usage': accounting['known_usage'], 'accounting': accounting,
+                'contact_response_sha256': {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                    for p in sorted(contacts.glob('*.response.json'))},
                 'historical_source_custody': source,
                 'cumulative_known_usage': {k: document['historical_usage'][k]+accounting['known_usage'][k] for k in USAGE},
                 'item_associations': metadata, 'item_provenance': provenance, 'updates': events,
