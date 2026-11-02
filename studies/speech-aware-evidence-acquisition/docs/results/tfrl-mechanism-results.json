@@ -1,0 +1,58 @@
+{
+  "schema": "saea-learning-mechanism-results-v1",
+  "updated_at": "2026-11-02T16:16:00Z",
+  "source": {
+    "train_groups": 51,
+    "historical_trajectories": 204,
+    "strict_success_trajectories": 0,
+    "equal_budget_comparison": false
+  },
+  "ace_contract_v2": {
+    "status": "ABORTED",
+    "completed_groups": 4,
+    "total_groups": 51,
+    "observed_calls": 9,
+    "planned_max_calls": 102,
+    "input_tokens": 37652,
+    "output_tokens": 32897,
+    "container_seconds": 762.05815875,
+    "seconds_per_completed_group_including_failed_contact": 190.5145396875,
+    "observed_contact_latency_sum_seconds": 579.18516981,
+    "failure": "Reflector fifth group JSON truncated at max completion 4096",
+    "wire_finish_reason": "length",
+    "unknown_contacts_after_settlement": 0,
+    "candidate_produced": false,
+    "h2_evaluated": false,
+    "archive_sha256": "8888cb9279d41ed39a36b03fdb013eae0b31d4aad8637622650534b4883a1817"
+  },
+  "reflexion_v1": {
+    "status": "ABORTED",
+    "completed_groups": 0,
+    "total_groups": 51,
+    "observed_calls": 1,
+    "planned_max_calls": 51,
+    "input_tokens": 2940,
+    "output_tokens": 3308,
+    "container_seconds": 215.50967077,
+    "seconds_per_completed_group": null,
+    "failure": "Content 299 Unicode characters exceeds registered 200-character bound",
+    "wire_finish_reason": "stop",
+    "unknown_contacts_after_settlement": 0,
+    "candidate_produced": false,
+    "h2_evaluated": false,
+    "archive_sha256": "4342abef8bffe64f9056132bfe1d90b23ccb6999400853fb09dd283b26f347ed"
+  },
+  "resources": {
+    "resident_cards": 8,
+    "instances": 2,
+    "tensor_parallel": 4,
+    "dependent_learning_chain_is_serial": true,
+    "sustained_full_utilization": false
+  },
+  "limitations": [
+    "Historical TF-GRPO budgets differ; mechanism comparison only.",
+    "Finished early with known protocol failures; no completion ETA or precision gain.",
+    "Earlier ACE v1 and shared historical costs retained separately, not included in new-call totals.",
+    "Changing prompts or caps changes request identity and requires an explicit successor protocol, not blind replay."
+  ]
+}
