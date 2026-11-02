@@ -1541,9 +1541,14 @@ def require_direct_only_program(program) -> None:
 
 
 def rendered_wav_seconds(body: Mapping[str, object]) -> float:
-    """Return the duration of the one rendered input_audio WAV, from its header only (frames / sample rate)."""
+    """Measure the actual WAV/FLAC wire header; retain the historical API name.
+
+    Raw transport preserves original source bytes, including SLURP FLAC. Use
+    the dataset loader's header reader, never a payload duration or transcoded
+    substitute, and require the declared wire format to match the real header.
+    """
     import io
-    import wave
+    import math
 
     messages = body.get("messages")
     if not isinstance(messages, Sequence) or isinstance(messages, (str, bytes)):
@@ -1566,16 +1571,31 @@ def rendered_wav_seconds(body: Mapping[str, object]) -> float:
         raw = base64.b64decode(encoded, validate=True)
     except (binascii.Error, ValueError) as error:
         raise PreparationError("direct-only fit rendered input_audio is not base64") from error
+    declared_format = audio_parts[0].get("format")
+    if not isinstance(declared_format, str) or declared_format not in {"wav", "flac"}:
+        raise PreparationError("direct-only fit requires explicit WAV or FLAC input_audio format")
+    signature = (
+        "flac" if raw.startswith(b"fLaC") else
+        "wav" if raw[:4] in {b"RIFF", b"RIFX", b"RF64"} and raw[8:12] == b"WAVE" else None
+    )
+    if signature != declared_format:
+        raise PreparationError("direct-only fit audio format differs from its actual header")
     try:
-        with wave.open(io.BytesIO(raw), "rb") as handle:
-            frames, rate = handle.getnframes(), handle.getframerate()
-    except (wave.Error, EOFError) as error:
+        import soundfile  # same deferred header reader as data.slurp
+        info = soundfile.info(io.BytesIO(raw))
+    except (ImportError, RuntimeError, ValueError, OSError) as error:
         raise PreparationError(
-            "direct-only fit requires a WAV input_audio with a readable header"
+            "direct-only fit requires a WAV/FLAC input_audio with a readable header"
         ) from error
-    if rate < 1:
-        raise PreparationError("direct-only fit input_audio has no sample rate")
-    return frames / rate
+    allowed_formats = {"FLAC"} if declared_format == "flac" else {"WAV", "WAVEX", "RF64"}
+    if info.format not in allowed_formats:
+        raise PreparationError("direct-only fit decoded audio format differs from its declaration")
+    if any(type(value) is not int or value <= 0 for value in (info.frames, info.samplerate, info.channels)):
+        raise PreparationError("direct-only fit input_audio has invalid frame, sample rate or channel count")
+    duration = info.frames / info.samplerate
+    if not math.isfinite(duration) or duration <= 0:
+        raise PreparationError("direct-only fit input_audio has invalid header duration")
+    return duration
 
 
 def _direct_only_raw_identity(payload: Mapping[str, object]) -> tuple[str, dict[str, str]]:
