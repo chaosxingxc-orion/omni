@@ -1,6 +1,6 @@
 {
   "schema": "saea-learning-mechanism-results-v1",
-  "updated_at": "2026-11-02T17:16:00Z",
+  "updated_at": "2026-11-02T17:22:00Z",
   "source": {
     "train_groups": 51,
     "historical_trajectories": 204,
@@ -83,17 +83,20 @@
     "failure": "17th response omitted required schema; semantic contradictions in earlier memories"
   },
   "reflexion_errors_v3": {
-    "status": "CONTAINER_STARTED_FIRST_RESPONSE_UNCONFIRMED",
+    "status": "RUNNING",
     "total_groups": 51,
     "planned_max_calls": 51,
-    "observed_calls": null,
+    "observed_calls": 5,
     "candidate_produced": false,
     "h2_evaluated": false,
     "contract": "saea-reflexion-errors-v3",
     "formal_tests_passed": 116,
     "started_at": "2026-11-02T17:15:25.13295096Z",
-    "input_tokens": null,
-    "output_tokens": null,
-    "eta_seconds": null
+    "input_tokens": 22867,
+    "output_tokens": 15662,
+    "eta_seconds": null,
+    "completed_groups": 5,
+    "observed_at": "2026-11-02T17:22:00Z",
+    "seconds_per_completed_group_including_startup_approx": 79
   }
 }
