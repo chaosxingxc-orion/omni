@@ -1,15 +1,23 @@
 """Resume a registered real workload using explicit native recovery custody."""
 import argparse
-from dataclasses import fields
+from dataclasses import fields, replace
 import json
 import os
 from pathlib import Path
 import sys
+import time
 
 
-def main(repo,data,candidate,out,target_attempt):
+def main(repo,data,candidate,out,target_attempt,source_attempt=None):
     sys.path[:0]=[str(repo/'src'),str(repo/'scripts/analysis')]
-    from speech_aware_evidence_acquisition.contracts import ExecutionPlan,assert_execution_environment
+    from speech_aware_evidence_acquisition.contracts import ExecutionPlan,RUN_ID_PATTERN,assert_execution_environment
+    for name, value in (('candidate',candidate),('target_attempt',target_attempt),('source_attempt',source_attempt)):
+        if name == 'source_attempt' and value is None:
+            continue
+        if not isinstance(value,str) or RUN_ID_PATTERN.fullmatch(value) is None:
+            raise ValueError(name+' must be a safe nonempty identifier')
+    if source_attempt == target_attempt:
+        raise ValueError('source and target attempts must differ')
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     from speech_aware_evidence_acquisition.core.atomic_file import publish_new
     from speech_aware_evidence_acquisition.core.flight.campaign import load_campaign_cells,run_campaign
@@ -17,7 +25,7 @@ def main(repo,data,candidate,out,target_attempt):
     from native_recovery_receipt import prepare
     from registered_workload import validate_workload, assert_execution_binding
     from tfgrpo_recovery_queue import admit
-    from run_real_engine_candidate import assert_campaign_success
+    from run_real_engine_candidate import assert_campaign_success,generation_release_document
     assert_execution_environment();head=require_clean_study_repo(repo)
     read=lambda p:json.loads(p.read_bytes())
     save=lambda p,d:publish_new(p,(json.dumps(d,sort_keys=True,indent=2)+'\n').encode())
@@ -30,7 +38,11 @@ def main(repo,data,candidate,out,target_attempt):
     allowed={f.name for f in fields(ExecutionPlan)}
     source=ExecutionPlan(**{k:v for k,v in original.items() if k in allowed},
         owner_allowance=registered.get('owner_allowance'))
+    if source_attempt is not None:
+        source=replace(source,attempt_id=source_attempt)
     source.validate(source_root=repo)
+    if source.attempt_id == target_attempt:
+        raise ValueError('source and target attempts must differ')
     base=read(repo/f'configs/baseline/{candidate}.json');arm=base['arm']
     out.mkdir(parents=True)
     recovery=prepare(data,source,target_attempt,arm,out/'recovery.json')['declaration']
@@ -41,8 +53,15 @@ def main(repo,data,candidate,out,target_attempt):
     runtime=build_flight_runtime(repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],
         baseline=candidate,experiment=candidate,run_id=cell.run_id,attempt_id=cell.attempt_id,
         runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json',native_contact_recovery=recovery)
-    save(out/'started.json',{'study_commit':head,'rows':rows,'attempt_id':target_attempt,'recovery':recovery})
-    result=run_campaign([runtime],cells=[cell],repo_root=repo,data_root=data,owner='Codex-registered-recovery',expected_session_id=spec['service_session'])
+    save(out/'started.json',{'study_commit':head,'rows':rows,'attempt_id':target_attempt,
+        'source_attempt_id':source.attempt_id,'recovery':recovery})
+    release_spec={**spec,'run_id':cell.run_id,'attempt_id':target_attempt}
+    started=time.monotonic()
+    def released(flight):
+        save(out/'generation-released.json',generation_release_document(
+            flight,candidate=candidate,spec=release_spec,commit=head,rows=rows,
+            elapsed=time.monotonic()-started))
+    result=run_campaign([runtime],cells=[cell],repo_root=repo,data_root=data,owner='Codex-registered-recovery',expected_session_id=spec['service_session'],on_generation_released=released)
     save(out/'campaign.json',result);assert_campaign_success(result,cell.run_id)
     save(out/'complete.json',{'rows':rows,'result':result,'prior_costs_preserved':True})
     return {'completed':True,'rows':rows}
@@ -52,4 +71,5 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('repo','data','out'):p.add_argument('--'+k,type=Path,required=True)
     for k in ('candidate','target-attempt'):p.add_argument('--'+k,required=True)
+    p.add_argument('--source-attempt',help='Exact immediate predecessor attempt; defaults to original registration')
     print(json.dumps(main(**vars(p.parse_args()))))

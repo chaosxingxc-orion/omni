@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.metadata
 import json
 import os
 from pathlib import Path
@@ -212,26 +211,17 @@ def public_summary(plan):
 
 def load_token_counter(tokenizer_path):
     """Use the same local tokenizer identity for planning and runtime validation."""
-    from transformers import AutoTokenizer
-    tokenizer_path = Path(tokenizer_path)
-    tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_path), trust_remote_code=True, local_files_only=True)
-    template_path = tokenizer_path / 'chat_template.json'
-    tokenizer.chat_template = json.loads(template_path.read_bytes())['chat_template']
-    names = ('tokenizer.json', 'vocab.json', 'merges.txt', 'tokenizer.model',
-             'tokenizer_config.json', 'special_tokens_map.json', 'chat_template.json', 'config.json')
-    identity = {name: hashlib.sha256((tokenizer_path / name).read_bytes()).hexdigest()
-                for name in names if (tokenizer_path / name).is_file()}
-    _require('tokenizer.json' in identity or {'vocab.json', 'merges.txt'} <= identity.keys()
-             or 'tokenizer.model' in identity, 'tokenizer vocabulary identity missing')
-    identity['runtime_versions'] = {name: importlib.metadata.version(name)
-                                    for name in ('transformers', 'tokenizers', 'jinja2')}
-    identity['tokenizer_class'] = type(tokenizer).__name__
-    identity['rendering'] = {'add_generation_prompt': True, 'add_special_tokens': False,
-                             'truncation': False}
-    def count(messages):
-        rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        return len(tokenizer.encode(rendered, add_special_tokens=False, truncation=False))
-    return count, identity
+    from .tokenizer_runtime import (
+        TOKENIZER_PYTHON_ENV, SubprocessTokenCounter, TokenizerRuntimeError, load_local_token_counter,
+    )
+    python = os.environ.get(TOKENIZER_PYTHON_ENV)
+    try:
+        if python is None:
+            return load_local_token_counter(tokenizer_path)
+        count = SubprocessTokenCounter(tokenizer_path, python)
+        return count, count.identity
+    except TokenizerRuntimeError as error:
+        raise LearningError(str(error)) from error
 
 
 def main():
