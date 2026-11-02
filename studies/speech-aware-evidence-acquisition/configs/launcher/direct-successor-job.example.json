@@ -1,0 +1,135 @@
+{
+  "schema": "saea-configured-job-launch-v1",
+  "container_name": "saea-direct-example-generation-v1",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "repo_path": "/srv/omni/jobs/direct-example/tree/studies/speech-aware-evidence-acquisition",
+  "expected_commit": "0000000000000000000000000000000000000000",
+  "receipt_dir": "/srv/omni/jobs/direct-example/control/launch-generation",
+  "argv": [
+    "/opt/saea-venv/bin/python",
+    "/workspace/studies/speech-aware-evidence-acquisition/scripts/analysis/run_real_engine_candidate.py",
+    "--repo",
+    "/workspace/studies/speech-aware-evidence-acquisition",
+    "--data",
+    "/data",
+    "--candidate",
+    "slurp-direct-fulltest-v1",
+    "--out",
+    "/data/work/codex/direct-example/generation-v1"
+  ],
+  "working_directory": "/tmp",
+  "network": "host",
+  "pid_host": true,
+  "cpuset_cpus": "0-3",
+  "environment": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "TORCH_DEVICE_BACKEND_AUTOLOAD": "0",
+    "PYTHONPATH": "/workspace/studies/speech-aware-evidence-acquisition/src",
+    "SAEA_SLURP_OFFICIAL_PYTHON": "/opt/slurp-official/bin/python",
+    "SAEA_DEPLOYMENT_PROFILE": "REPLACE_WITH_REGISTERED_PROFILE",
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "TOKENIZERS_PARALLELISM": "false",
+    "GIT_CONFIG_COUNT": "1",
+    "GIT_CONFIG_KEY_0": "safe.directory",
+    "GIT_CONFIG_VALUE_0": "/workspace/studies/speech-aware-evidence-acquisition"
+  },
+  "mounts": [
+    {
+      "source": "/srv/omni/jobs/direct-example/tree/studies/speech-aware-evidence-acquisition",
+      "target": "/workspace/studies/speech-aware-evidence-acquisition",
+      "readonly": true
+    },
+    {
+      "source": "/srv/omni/jobs/direct-example/tree/docs/datasets.lock.json",
+      "target": "/workspace/docs/datasets.lock.json",
+      "readonly": true
+    },
+    {
+      "source": "/srv/omni/jobs/direct-example/config",
+      "target": "/config",
+      "readonly": true
+    },
+    {
+      "source": "/srv/omni/environments/slurp-official",
+      "target": "/opt/slurp-official",
+      "readonly": true
+    },
+    {
+      "source": "/srv/omni/data/datasets",
+      "target": "/data/datasets",
+      "readonly": true
+    },
+    {
+      "source": "/srv/omni/data/repos",
+      "target": "/data/repos",
+      "readonly": true
+    },
+    {
+      "source": "/srv/omni/data/models",
+      "target": "/data/models",
+      "readonly": true
+    },
+    {
+      "source": "/srv/omni/data/knowledge",
+      "target": "/data/knowledge",
+      "readonly": true
+    },
+    {
+      "source": "/srv/omni/data/prepared",
+      "target": "/data/prepared",
+      "readonly": true
+    },
+    {
+      "source": "/srv/omni/jobs/direct-example/state/runs",
+      "target": "/data/runs",
+      "readonly": false
+    },
+    {
+      "source": "/srv/omni/jobs/direct-example/state/contacts",
+      "target": "/data/contacts",
+      "readonly": false
+    },
+    {
+      "source": "/srv/omni/jobs/direct-example/state/coordination",
+      "target": "/data/coordination",
+      "readonly": false
+    },
+    {
+      "source": "/srv/omni/jobs/direct-example/state/work",
+      "target": "/data/work",
+      "readonly": false
+    },
+    {
+      "source": "/srv/omni/shared-runtime/attempts",
+      "target": "/data/attempts",
+      "readonly": false
+    },
+    {
+      "source": "/srv/omni/shared-runtime/locks",
+      "target": "/data/locks",
+      "readonly": false
+    }
+  ],
+  "create_directories": [
+    "/srv/omni/jobs/direct-example/control/launch-generation"
+  ],
+  "allowed_create_roots": [
+    "/srv/omni/jobs/direct-example"
+  ],
+  "required_inputs": [
+    {
+      "path": "/srv/omni/jobs/direct-example/control/preflight/attempt-v1/ready.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "path": "/srv/omni/jobs/direct-example/tree/studies/speech-aware-evidence-acquisition/docs/readiness/slurp-direct-fulltest-v1/candidate.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "path": "/srv/omni/jobs/direct-example/state/coordination/slurp-direct-fulltest-v1/root-admission-v1.json",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ],
+  "monitor_interval_seconds": 600
+}

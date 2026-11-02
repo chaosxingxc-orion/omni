@@ -1,0 +1,57 @@
+{
+  "schema": "saea-environment-preflight-v1",
+  "timeout_seconds": 60,
+  "required_environment": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "TORCH_DEVICE_BACKEND_AUTOLOAD": "0",
+    "PYTHONPATH": "/workspace/studies/speech-aware-evidence-acquisition/src",
+    "SAEA_SLURP_OFFICIAL_PYTHON": "/opt/slurp-official/bin/python",
+    "SAEA_DEPLOYMENT_PROFILE": "REPLACE_WITH_REGISTERED_PROFILE",
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "TOKENIZERS_PARALLELISM": "false",
+    "GIT_CONFIG_COUNT": "1",
+    "GIT_CONFIG_KEY_0": "safe.directory",
+    "GIT_CONFIG_VALUE_0": "/workspace/studies/speech-aware-evidence-acquisition"
+  },
+  "interpreters": [
+    {
+      "name": "business",
+      "python": "/opt/saea-venv/bin/python",
+      "environment_key": null,
+      "imports": [
+        "openjiuwen",
+        "speech_aware_evidence_acquisition"
+      ],
+      "distributions": {}
+    },
+    {
+      "name": "tokenizer",
+      "python": "/usr/local/python3.12.13/bin/python3",
+      "environment_key": null,
+      "imports": [
+        "transformers",
+        "tokenizers",
+        "jinja2"
+      ],
+      "distributions": {}
+    },
+    {
+      "name": "official-scorer",
+      "python": "/opt/slurp-official/bin/python",
+      "environment_key": "SAEA_SLURP_OFFICIAL_PYTHON",
+      "imports": [
+        "progress.bar",
+        "jiwer",
+        "tabulate",
+        "textdistance"
+      ],
+      "distributions": {
+        "progress": "1.5",
+        "jiwer": "2.0.0",
+        "tabulate": "0.8.7",
+        "textdistance": "4.1.5"
+      }
+    }
+  ]
+}
