@@ -1,7 +1,7 @@
 """CPU-only validation for a fixed real-data concurrency-sweep manifest.
 
 This module never loads labels, contacts a model, or authorizes a flight. It
-binds a small shared manifest to the pinned real roster and a deployment
+binds a shared manifest to the pinned real roster and a deployment
 profile so a later queue can use one identity for every concurrency level.
 """
 from __future__ import annotations
@@ -52,6 +52,17 @@ def validate_manifest(
     roster_bytes = source_roster_path.read_bytes()
     manifest = json.loads(manifest_bytes)
     roster = json.loads(roster_bytes)
+    # Full confirmation reuses the original roster bytes, not a newly sampled manifest.
+    full_roster = expected_count == 500 and manifest_bytes == roster_bytes
+    if full_roster:
+        _require(roster.get("new_model_calls", 0) == 0, "full roster records model calls")
+        _require(roster.get("count") == 500 and len(roster.get("items", [])) == 500,
+                 "full roster must contain exactly 500 rows")
+        manifest = {**roster, "schema": MANIFEST_SCHEMA, "status": "PINNED_CPU_ONLY_NOT_ADMITTED",
+                    "source_roster": "real-engine-500-v1",
+                    "source_roster_sha256": hashlib.sha256(roster_bytes).hexdigest()}
+    elif expected_count == 500:
+        raise WorkloadError("full500 must use the original roster bytes")
     _require(manifest.get("schema") == MANIFEST_SCHEMA, "fixed real manifest schema mismatch")
     status_ok = manifest.get("status") == "PINNED_CPU_ONLY_NOT_ADMITTED"
     legacy_selection_ok = manifest.get("selection") == "first-100-of-pinned-real-engine-500-v1; no labels/outcomes"
@@ -67,6 +78,7 @@ def validate_manifest(
     _require(manifest.get("source_roster_sha256") == hashlib.sha256(roster_bytes).hexdigest(), "source roster hash mismatch")
     _require(manifest.get("test_labels_read", False) is False, "manifest admits test labels")
     _require(manifest.get("model_calls", 0) == 0, "manifest records model calls")
+    _require(all(isinstance(row, dict) for row in source_items), "source roster item is not an object")
     by_id = {row.get("sample_id"): row for row in source_items}
     _require(len(by_id) == len(source_items), "source roster has duplicate sample IDs")
     seen_ids: set[str] = set()
@@ -77,6 +89,8 @@ def validate_manifest(
         audio = row.get("audio_sha256")
         _require(isinstance(sid, str) and sid not in seen_ids, "manifest sample IDs are duplicate or invalid")
         _require(isinstance(audio, str) and len(audio) == 64 and audio not in seen_audio, "manifest audio hashes are duplicate or invalid")
+        if full_roster:
+            _require(sid.startswith("slurp:train:"), "full500 must use train samples")
         source = by_id.get(sid)
         _require(source is not None, f"manifest sample is absent from source roster: {sid}")
         for key in ("packet_id", "media_relpath", "audio_sha256", "audio_seconds", "sample_rate_hz"):
@@ -86,6 +100,9 @@ def validate_manifest(
         seen_audio.add(audio)
     _require(manifest.get("unique_sample_ids", expected_count) == expected_count, "unique sample count field mismatch")
     _require(manifest.get("unique_audio_hashes", expected_count) == expected_count, "unique audio count field mismatch")
+    identity = hashlib.sha256("\n".join(sorted("slurp/" + sid for sid in seen_ids)).encode()).hexdigest()
+    if full_roster:
+        _require(roster.get("split_identity_hash") == identity, "source roster split identity differs")
     return {
         "schema": SCHEMA,
         "status": "HELD_NOT_ADMITTED",
@@ -93,6 +110,10 @@ def validate_manifest(
         "manifest_sha256": hashlib.sha256(manifest_bytes).hexdigest(),
         "source_roster_path": str(source_roster_path),
         "source_roster_sha256": hashlib.sha256(roster_bytes).hexdigest(),
+        "source_roster_content_sha256": hashlib.sha256(json.dumps(
+            roster, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()).hexdigest(),
+        "split_identity_hash": identity,
         "profile_id": expected_profile_id,
         "profile_sha256": expected_profile_sha256,
         "rows": expected_count,
@@ -143,10 +164,17 @@ def build_execution_view(validated: dict[str, Any], parent_view: dict[str, Any])
     by_id = {row["sample_id"]: row for row in parent_rows}
     _require(len(by_id) == 500, "parent has duplicate samples")
     rows = validated["items"]
-    _require(len(rows) == validated["rows"] == 100, "subset must contain 100 rows")
+    _require(len(rows) == validated["rows"] and len(rows) in (100, 500), "fixed100 or full500 required")
     for row in rows:
         _require(row == by_id.get(row["sample_id"]), "subset differs from parent runtime row")
         _require(row["sample_id"].startswith("slurp:train:"), "subset must use train samples")
+    if len(rows) == 500:
+        _require(rows == parent_rows, "full500 order differs from original parent")
+        _require(parent_view.get("split_identity_hash") == validated["split_identity_hash"],
+                 "full500 parent split identity differs")
+        _require(parent_view.get("source_binding_sha256") == validated["source_roster_content_sha256"],
+                 "full500 parent source binding differs")
+        return json.loads(json.dumps(parent_view))
     identity = hashlib.sha256("\n".join(sorted(
         "slurp/" + row["sample_id"] for row in rows
     )).encode()).hexdigest()

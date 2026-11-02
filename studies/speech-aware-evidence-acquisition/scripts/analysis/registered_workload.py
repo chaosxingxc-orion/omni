@@ -12,7 +12,8 @@ def validate_workload(repo, data, name, spec):
     if cell["run_id"] != spec["run_id"] or cell["attempt_id"] != spec["attempt_id"]:
         raise ValueError("registered attempt differs")
     view = json.loads((repo / "configs/dataset" / (cell["dataset_fragment"] + ".json")).read_bytes())
-    if spec.get("workload_kind") == "concurrency-sweep-real100":
+    if spec.get("workload_kind") in ("concurrency-sweep-real100", "concurrency-sweep-real500"):
+        count = 500 if spec["workload_kind"].endswith("real500") else 100
         import importlib.util
         module_path = Path(__file__).with_name("concurrency_sweep_workload.py")
         module_spec = importlib.util.spec_from_file_location("saea_concurrency_sweep_workload", module_path)
@@ -28,15 +29,15 @@ def validate_workload(repo, data, name, spec):
             source_roster_path=roster_path,
             expected_profile_id=spec["profile"],
             expected_profile_sha256=spec["profile_sha256"],
-            expected_count=100,
+            expected_count=count,
         )
         if checked["manifest_sha256"] != spec["manifest_sha256"]:
             raise ValueError("concurrency manifest hash differs")
-        if spec.get("rows") != 100 or spec.get("new_model_calls") != 0:
-            raise ValueError("concurrency workload registration is not the fixed 100-row held plan")
+        if spec.get("rows") != count or spec.get("new_model_calls") != 0:
+            raise ValueError(f"concurrency workload registration is not the fixed {count}-row held plan")
         # The runner consumes the experiment's dataset view, not the manifest.
         # Bind the exact ordered rows before either admission or dispatch.
-        if view.get("count") != 100 or view.get("items") != checked["items"]:
+        if view.get("count") != count or view.get("items") != checked["items"]:
             raise ValueError("concurrency execution view differs from fixed manifest")
         identity = hashlib.sha256("\n".join(
             sorted("slurp/" + sid for sid in checked["sample_ids"])
@@ -49,7 +50,14 @@ def validate_workload(repo, data, name, spec):
         ).encode()).hexdigest()
         if view.get("runtime_view_sha256") != view_digest:
             raise ValueError("concurrency runtime view hash differs")
-        return 100
+        if count == 500:
+            if view.get("source_binding_sha256") != checked["source_roster_content_sha256"]:
+                raise ValueError("concurrency full500 source binding differs")
+            if spec.get("runtime_view_sha256") != view_digest:
+                raise ValueError("concurrency full500 registered runtime view differs")
+            if spec.get("source_roster_sha256") != checked["source_roster_sha256"]:
+                raise ValueError("concurrency full500 registered roster differs")
+        return count
     if spec.get("workload_kind") == "tfgrpo-dense-h2-paired":
         from tfgrpo_dense_h2_job import validate
         return validate(repo, data, name, spec, exp, view)

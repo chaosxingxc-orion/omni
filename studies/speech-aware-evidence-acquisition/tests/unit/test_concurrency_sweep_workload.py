@@ -31,6 +31,7 @@ def _fixture(tmp_path):
     manifest = {
         "schema": "saea-fixed-real-subset-manifest-v1",
         "status": "PINNED_CPU_ONLY_NOT_ADMITTED",
+        "source_roster": "real-engine-500-v1",
         "source_roster_sha256": source_sha,
         "count": 2,
         "items": source_items,
@@ -74,3 +75,76 @@ def test_rejects_test_or_model_touch(tmp_path):
         assert "test labels" in str(exc)
     else:
         raise AssertionError("test label access was accepted")
+
+
+def _full_fixture(tmp_path):
+    rows = [{"sample_id": f"slurp:train:{i}", "packet_id": f"p{i}",
+             "media_relpath": f"datasets/slurp/slurp_real/{i}.flac", "audio_sha256": f"{i+1:064x}",
+             "audio_seconds": 1.0, "sample_rate_hz": 16000} for i in range(500)]
+    identity = hashlib.sha256("\n".join(sorted("slurp/" + r["sample_id"] for r in rows)).encode()).hexdigest()
+    roster = {"schema": "saea-real-engine-roster-v1", "count": 500, "items": rows,
+              "split_identity_hash": identity}
+    path = _write(tmp_path, "roster500.json", roster)
+    parent = {"count": 500, "items": rows, "split_identity_hash": identity,
+              "source_binding_sha256": _digest(roster), "audio_seconds_total": 500.0,
+              "split_name": "SLURP-REAL-ENGINE-500-V1", "loader": "preserved"}
+    parent["runtime_view_sha256"] = _digest(parent)
+    return path, parent
+
+
+def _digest(value):
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _validate_full(manifest, roster):
+    return validate_manifest(manifest, source_roster_path=roster, expected_profile_id="p",
+                             expected_profile_sha256="a"*64, expected_count=500)
+
+
+def test_full500_reuses_original_bytes_and_complete_parent(tmp_path):
+    from concurrency_sweep_workload import build_execution_view
+    roster, parent = _full_fixture(tmp_path)
+    original = roster.read_bytes()
+    copy = tmp_path / "exact-copy.json"
+    copy.write_bytes(original)
+    checked = _validate_full(copy, roster)
+    view = build_execution_view(checked, parent)
+    assert view == parent and view is not parent and view["items"] is not parent["items"]
+    assert roster.read_bytes() == original
+    assert checked["manifest_sha256"] == hashlib.sha256(original).hexdigest()
+    assert checked["rows"] == build_level_spec(checked, level_id="C64", concurrency_per_instance=64)["rows"] == 500
+
+
+def test_full500_rejects_reserialized_or_reordered_roster(tmp_path):
+    import pytest
+    roster, _ = _full_fixture(tmp_path)
+    replacement = tmp_path / "replacement.json"
+    replacement.write_bytes(roster.read_bytes() + b"\n")
+    with pytest.raises(WorkloadError, match="original roster bytes"):
+        _validate_full(replacement, roster)
+    doc = json.loads(roster.read_bytes())
+    doc["items"].reverse()
+    replacement.write_text(json.dumps(doc))
+    with pytest.raises(WorkloadError, match="original roster bytes"):
+        _validate_full(replacement, roster)
+
+
+def test_full500_rejects_parent_tampering_even_with_new_hash(tmp_path):
+    import copy
+    import pytest
+    from concurrency_sweep_workload import build_execution_view
+    roster, parent = _full_fixture(tmp_path)
+    checked = _validate_full(roster, roster)
+    for field in ("order", "row", "identity", "source"):
+        changed = copy.deepcopy(parent)
+        if field == "order":
+            changed["items"].reverse()
+        elif field == "row":
+            changed["items"][0]["audio_seconds"] = 99.0
+        elif field == "identity":
+            changed["split_identity_hash"] = "f"*64
+        else:
+            changed["source_binding_sha256"] = "f"*64
+        changed["runtime_view_sha256"] = _digest({k: v for k, v in changed.items() if k != "runtime_view_sha256"})
+        with pytest.raises(WorkloadError):
+            build_execution_view(checked, changed)
