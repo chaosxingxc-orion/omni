@@ -161,6 +161,9 @@ def prepare(repo, data, source_job, final_import, out, runtime_identity, *,
 def verify_job(repo, data, job):
     from speech_aware_evidence_acquisition.rails.tfgrpo_source import read_pin, load_dynamic_source
     complete = read(job / 'complete.json')
+    if complete.get('schema') == 'saea-grounded-fusion-job-v1':
+        from grounded_fusion_job import verify_job as verify_fusion
+        return verify_fusion(repo,data,job)
     if complete.get('schema') == 'saea-grounded-shards-job-v1':
         from grounded_synthesis_job import verify_job as verify_grounded
         return verify_grounded(repo, data, job)
@@ -225,9 +228,12 @@ def register(repo,data,job):
     roster_rel=f'docs/receipts/rosters/{name}.json'
     baseline=read(repo/'configs/baseline/system-group-update-text-v1.json');baseline.pop('whole_roster_wave_barrier',None)
     baseline['what_this_is']='Final-only TF-GRPO consolidation of verified H1 group operations; one actual contact, all historical costs retained.'
+    fusion = complete.get('schema') == 'saea-grounded-fusion-job-v1'
     grounded = complete.get('schema') == 'saea-grounded-shards-job-v1'
     if grounded:
         baseline['what_this_is']='Evidence-grounded H1 synthesis shards; intermediate artifacts only, complete historical costs retained.'
+    if fusion:
+        baseline['what_this_is']='Evidence-grounded final fusion with explicit rule support and proposal dispositions; candidate requires semantic review and development evaluation.'
     baseline.pop('phase_material',None)
     from speech_aware_evidence_acquisition.rails.prepared_text import PREPARED_TEXT_INSTRUCTION
     baseline['task_instruction']=PREPARED_TEXT_INSTRUCTION
@@ -246,6 +252,9 @@ def register(repo,data,job):
     if grounded:
         exp['prepared_training_feedback']['schema']='saea-prepared-grounded-shards-v1'
         exp['stage3_algorithm']['note']='Grounded intermediate shards over verified H1 evidence; no final candidate or held-out gain claimed.'
+    if fusion:
+        exp['prepared_training_feedback']['schema']='saea-prepared-grounded-fusion-v1'
+        exp['stage3_algorithm']['note']='Final H1 fusion over finalized shards and original scored predictions; candidate not accepted for deployment.'
     exp['populations'][0]['ids']=[x['sample_id'] for x in roster['items']]
     exp['service_session']=service_session
     for rel,doc in [(roster_rel,roster),(f'configs/baseline/{name}.json',baseline),(f'configs/experiment/{name}.json',exp)]:
@@ -260,7 +269,7 @@ def register(repo,data,job):
         doc={'schema':'saea-tfgrpo-registered-plan-v1','execution_plan':asdict(plan),'job_manifest':pin(job/'complete.json',data,'data'),
              'config_sha256':cfg.config_hash,'authority':base.AUTH,'actual_audio_seconds_expected':0,'readiness':'held'}
         path=package/(kind+'-plan.json');publish_new(path,raw(doc))
-        rows.append(['2026-11-01',run,'bounded-discovery-probe','TF-GRPO H1 final-only consolidation '+kind,model_id,'slurp TRAIN H1 error mixed groups','discovery',roster['split_identity_hash'],'no',str(plan.planned_model_calls),'1','8.0','All source rollout costs retained',str(path.relative_to(repo)),f'Plan SHA256 {file_sha(path)}; owner-authorized under {base.AUTH}; no H2 feedback in learning; held; text only, actual audio zero'])
+        rows.append(['2026-11-01',run,'bounded-discovery-probe',('Grounded H1 final fusion ' if fusion else 'Grounded H1 intermediate shards ' if grounded else 'TF-GRPO H1 final-only consolidation ')+kind,model_id,'slurp TRAIN H1 error mixed groups','discovery',roster['split_identity_hash'],'no',str(plan.planned_model_calls),'1','8.0','All source rollout costs retained',str(path.relative_to(repo)),f'Plan SHA256 {file_sha(path)}; owner-authorized under {base.AUTH}; no H2 feedback in learning; held; text only, actual audio zero'])
     ledger.write_text(ledger.read_text()+'\n## Fixed-P TF-GRPO learning\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| '+' | '.join(['---']*15)+' |\n'+'\n'.join('| '+' | '.join(r)+' |' for r in rows)+'\n')
     return {'job':name,'rows':len(roster['items']),'learned_groups':complete['groups'],'calls':complete['generation_calls'],'fit_calls':complete['fit_calls'],'readiness':'held','new_model_calls':0}
 

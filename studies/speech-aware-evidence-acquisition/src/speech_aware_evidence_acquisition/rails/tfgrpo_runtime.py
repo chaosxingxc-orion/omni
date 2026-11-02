@@ -33,6 +33,7 @@ def learning_configuration(binding):
 
 STAGES = frozenset({'summary', 'advantage', 'group_update', 'batch_update'})
 GROUNDED_RUNTIME_SCHEMA = 'saea-grounded-shards-runtime-binding-v1'
+FUSION_RUNTIME_SCHEMA = 'saea-grounded-fusion-runtime-binding-v1'
 
 
 def _timing_identity(caller, request):
@@ -61,12 +62,12 @@ def validate_registration(binding, *, plan, model_id):
     config hash. The runtime protocol binds this registration externally."""
     required = {'schema', 'plan', 'model_id', 'batch_sha256', 'construction_roster_sha256',
                 'contacts', 'decoding_params', 'max_context_bytes', 'learning_config_sha256', 'runtime_identity_sha256'}
-    grounded = isinstance(binding, dict) and binding.get('schema') == GROUNDED_RUNTIME_SCHEMA
+    grounded = isinstance(binding, dict) and binding.get('schema') in (GROUNDED_RUNTIME_SCHEMA, FUSION_RUNTIME_SCHEMA)
     if grounded:
         required |= {'execution_sha256', 'completion_cap'}
     if not isinstance(binding, dict) or set(binding) != required:
         raise LearningError('exact TF-GRPO runtime registration required')
-    if (binding['schema'] not in ('saea-tfgrpo-runtime-binding-v1', GROUNDED_RUNTIME_SCHEMA)
+    if (binding['schema'] not in ('saea-tfgrpo-runtime-binding-v1', GROUNDED_RUNTIME_SCHEMA, FUSION_RUNTIME_SCHEMA)
             or binding['plan'] != {k: v for k, v in asdict(plan).items() if k != 'protocol_hash'} or binding['model_id'] != model_id
             or plan.split_role != 'discovery'
             or plan.execution_profile != 'bounded-discovery-probe'):
@@ -80,7 +81,8 @@ def validate_registration(binding, *, plan, model_id):
     indexed = {}
     for row in contacts:
         if (not isinstance(row, dict) or set(row) != ({'stage', 'identity', 'sample_id', 'messages_sha256'} if grounded else {'stage', 'identity', 'sample_id'})
-                or row['stage'] not in ({'grounded_shard_update'} if grounded else STAGES)
+                or row['stage'] not in ({'grounded_final_update'} if binding['schema'] == FUSION_RUNTIME_SCHEMA
+                    else {'grounded_shard_update'} if grounded else STAGES)
                 or any(not isinstance(row[k], str) or not row[k] for k in row)):
             raise LearningError('invalid learning stage anchor')
         key = contact_key(row['stage'], row['identity'])
@@ -90,6 +92,8 @@ def validate_registration(binding, *, plan, model_id):
         if grounded and (not row['sample_id'].startswith('slurp:train:')
                 or re.fullmatch('[a-f0-9]{64}', row['messages_sha256']) is None):
             raise LearningError('grounded contact requires TRAIN anchor and exact messages')
+    if binding['schema'] == FUSION_RUNTIME_SCHEMA and len(contacts) != 1:
+        raise LearningError('fusion requires exactly one final contact')
     decoding = binding['decoding_params']
     if (not isinstance(decoding, dict) or 'id_slot' in decoding
             or type(decoding.get('max_tokens')) is not int or decoding['max_tokens'] < 1):
@@ -153,7 +157,7 @@ class MeteredExperienceCaller:
         row = self.contacts.get(key)
         if row is None:
             raise LearningError('learning contact is not in the registered finite roster')
-        if self.registration['schema'] == GROUNDED_RUNTIME_SCHEMA and sha(request['messages']) != row['messages_sha256']:
+        if self.registration['schema'] in (GROUNDED_RUNTIME_SCHEMA, FUSION_RUNTIME_SCHEMA) and sha(request['messages']) != row['messages_sha256']:
             raise LearningError('grounded messages differ from registered shard')
         messages = request['messages']
         if (not isinstance(messages, list) or len(messages) != 2
@@ -448,6 +452,13 @@ def dispatch_registered_learning(runtime):
     candidate = run_registered_learning(runtime, receipt_root=root/'contacts',
         learner_root=root/'learner', retain_client=True)
     ended = runtime._clock()
+    return seal_registered_candidate(runtime, candidate, started=started, ended=ended)
+
+
+def seal_registered_candidate(runtime, candidate, *, started, ended):
+    """Record a checked candidate and exact native contacts for ordinary seal."""
+    from .tfgrpo_learning import validate_experience
+    root = runtime._run_dir()/'tfgrpo'
     runtime._contact_window = (started, ended)
     caller = runtime._tfgrpo_caller
     validate_experience(candidate, caller.model_id)
@@ -459,7 +470,7 @@ def dispatch_registered_learning(runtime):
         'sha256':hashlib.sha256(candidate_path.read_bytes()).hexdigest(),
         'experience_sha256':candidate['sha256'], 'deployment_accepted':False}
     observed = {}
-    stage_contacts = {stage:[] for stage in ('summary','advantage','group_update','batch_update')}
+    stage_contacts = {row['stage']:[] for row in caller.registration['contacts']}
     for row in caller.registration['contacts']:
         key = contact_key(row['stage'], row['identity'])
         request = json.loads((caller.root/(key+'.intent.json')).read_bytes())['request']
@@ -490,7 +501,7 @@ def dispatch_registered_learning(runtime):
         'schema':'saea-tfgrpo-stage-summary-v1', 'phase':stage, 'result_kind':'artifact',
         'contacts':len(contacts), 'rows':len({r['sample_id'] for r in contacts}),
         'contact_receipts':contacts,
-        **({'candidate':candidate_pin} if stage == 'batch_update' else {}),
+        **({'candidate':candidate_pin} if stage in ('batch_update', 'grounded_final_update') else {}),
     }) for stage,contacts in stage_contacts.items())
     binding = {'schema':'saea-tfgrpo-flight-proposal-v1', 'candidate':candidate_pin,
         'batch_sha256':caller.registration['batch_sha256'],

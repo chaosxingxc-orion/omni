@@ -1,0 +1,22 @@
+{
+  "schema": "saea-grounded-semantic-audit-summary-v1",
+  "groups": 51,
+  "rollouts": 204,
+  "distinct_scored_predictions": 138,
+  "shard_operations": [
+    20,
+    33,
+    19
+  ],
+  "total_operations": 72,
+  "operation_kind": "ADD",
+  "rules_with_machine_readable_support": 0,
+  "risks_identified": 8,
+  "direct_reference_counterexamples_at_least": 5,
+  "strict_success_rollouts": 0,
+  "h2_errors_read": false,
+  "test_errors_read": false,
+  "new_model_calls": 0,
+  "candidate_accepted": false,
+  "final_fusion_generated": false
+}

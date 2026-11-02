@@ -76,6 +76,9 @@ def prepare(repo,data,*,shard_plan,source_spec,source_roster,tokenizer_relpath,
 def verify_job(repo,data,job):
     from speech_aware_evidence_acquisition.rails.tfgrpo_source import read_pin
     complete=read(job/'complete.json')
+    if complete.get('schema')=='saea-grounded-fusion-job-v1':
+        from grounded_fusion_job import verify_job as verify_fusion
+        return verify_fusion(repo,data,job)
     if complete.get('schema')!='saea-grounded-shards-job-v1':raise ValueError('grounded job required')
     names={'construction-roster.json','source.json','registration.json','runtime-identity.json'}
     if set(complete['artifacts'])!=names:raise ValueError('exact grounded artifacts required')
