@@ -22,8 +22,8 @@ def test_opt_in_bridge_persists_prepare_generation_and_resume(tmp_path: Path):
         await driver
 
     asyncio.run(run())
-    assert bridge.adapter.machine.jobs["member-0:round-0:stage-0"].state == "observed"
-    assert bridge.adapter.restore(tmp_path / "queue.json").machine.jobs["member-0:round-0:stage-0"].state == "observed"
+    assert bridge.adapter.machine.jobs["member-0:round-0:node-0:operation-0:prepared"].state == "observed"
+    assert bridge.adapter.restore(tmp_path / "queue.json").machine.jobs["member-0:round-0:node-0:operation-0:prepared"].state == "observed"
 
 
 def test_default_coordinator_has_no_queue_side_effect(tmp_path: Path):
@@ -50,7 +50,7 @@ def test_second_stage_requires_observed_first_stage(tmp_path: Path):
     bridge.generation_completed(0, observed=True, result={"ok": 1})
     bridge.prepare_submitted(0, (0, 1), "solver")
     bridge.prepare_completed(0, ok=True)
-    assert bridge.adapter.machine.jobs["member-0:round-0:stage-1"].depends_on == "member-0:round-0:stage-0"
+    assert bridge.adapter.machine.jobs["member-0:round-0:node-1:operation-1:prepared"].depends_on == "member-0:round-0:node-0:operation-0:prepared"
 
 
 def test_later_round_has_monotonic_queue_stage(tmp_path: Path):
@@ -60,7 +60,7 @@ def test_later_round_has_monotonic_queue_stage(tmp_path: Path):
     bridge.generation_admitted(0)
     bridge.generation_completed(0, observed=True, result={"round": 0})
     bridge.prepare_submitted(0, (1, 0), "perception")
-    assert bridge.adapter.machine.jobs["member-0:round-1:stage-1000000"].stage == 1_000_000
+    assert bridge.adapter.machine.jobs["member-0:round-1:node-0:operation-1:prepared"].stage == 1
 
 
 def test_ready_panel_larger_than_capacity_is_admitted_only_on_dispatch(tmp_path):

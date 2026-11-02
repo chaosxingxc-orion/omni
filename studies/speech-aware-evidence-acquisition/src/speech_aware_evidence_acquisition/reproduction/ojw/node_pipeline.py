@@ -64,6 +64,8 @@ class NodePipelineCoordinator:
         # Optional durable queue integration.  ``None`` preserves the exact
         # historical coordinator path and its timing behavior.
         self.queue_bridge = queue_bridge
+        if queue_bridge is not None:
+            queue_bridge.bind(slots=slots)
         self.states = dict.fromkeys(members, "new")
         self.keys = dict.fromkeys(members)
         self.prepared = dict.fromkeys(members, False)
@@ -77,6 +79,11 @@ class NodePipelineCoordinator:
     def abort(self, error):
         if self.failure is None:
             self.failure = error
+        if self.queue_bridge is not None:
+            try:
+                self.queue_bridge.abort()
+            except BaseException as caught:
+                self.failure = self.failure or caught
         for member, work in list(self.pending.items()):
             if self.states[member] in {"prepare-ready", "contact-ready"}:
                 self.pending.pop(member)
@@ -88,6 +95,11 @@ class NodePipelineCoordinator:
     def finish(self, member, error=None):
         if error is not None:
             self.abort(error)
+        if self.queue_bridge is not None:
+            try:
+                self.queue_bridge.finish(member)
+            except BaseException as caught:
+                self.abort(caught)
         self.states[member] = "finished"
         self.changed.set()
 
@@ -123,6 +135,8 @@ class NodePipelineCoordinator:
             raise ValueError("node pipeline contact requires its prepared role")
         if contact_kind not in {"model", "tool"}:
             raise ValueError("node pipeline contact kind must be model or tool")
+        if self.queue_bridge is not None:
+            self.queue_bridge.contact_submitted(member, contact_kind)
         return await self._enqueue(member, family, contact_kind, callback)
 
     async def _enqueue(self, member, family, kind, callback):
@@ -187,6 +201,13 @@ class NodePipelineCoordinator:
                     break
             if not worker.cancelled():
                 worker.exception()
+        # Logging failure or cancellation cannot erase an observed response.
+        observed = error is None
+        if isinstance(error, asyncio.CancelledError) and not worker.cancelled():
+            observed = worker.exception() is None
+            if observed:
+                value = worker.result()
+                observed = not inspect.isawaitable(value)
         finished = monotonic_ns()
         if self.event_sink is not None:
             try:
@@ -214,9 +235,9 @@ class NodePipelineCoordinator:
             try:
                 if work.kind == "prepare":
                     self.queue_bridge.prepare_completed(work.member, ok=error is None)
-                elif work.kind == "model":
+                else:
                     self.queue_bridge.generation_completed(
-                        work.member, observed=error is None, result=value
+                        work.member, observed=observed, result=value
                     )
             except BaseException as caught:
                 error = error or caught
@@ -287,7 +308,7 @@ class NodePipelineCoordinator:
                         for work, slot in zip(ready, free):
                             # Durable admission describes actual slot ownership,
                             # not an unbounded set of contact-ready coroutines.
-                            if self.queue_bridge is not None and work.kind == "model":
+                            if self.queue_bridge is not None:
                                 self.queue_bridge.generation_admitted(work.member)
                             self.states[work.member] = "working"
                             self.model_tasks[slot] = asyncio.create_task(

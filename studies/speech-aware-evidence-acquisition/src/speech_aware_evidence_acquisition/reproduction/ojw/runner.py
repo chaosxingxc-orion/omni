@@ -468,6 +468,7 @@ def execute_speech_agent_workflows(
     node_pipeline_prepare_workers: int | None = None,
     node_pipeline_max_jobs: int | None = None,
     node_pipeline_timing_sink: Callable[[object, Mapping[str, object]], None] | None = None,
+    node_pipeline_queue_bridge: object | None = None,
 ) -> list[object]:
     """Run speech Agent workflows on one openJiuwen event loop.
 
@@ -520,6 +521,8 @@ def execute_speech_agent_workflows(
     active node and refill independently. Input preparation never calls a model
     or FIT endpoint. The caller owns separate experimental identities/budgets.
     Original sample timers include all stage barriers from panel admission.
+    node_pipeline_queue_bridge optionally journals these unchanged callbacks
+    using the owner checkpoint hook; it grants no flight admission.
 
     Optional sample_timing_sink receives monotonic execution boundaries after an
     admitted workflow and its synchronous workers settle. The interval includes
@@ -543,7 +546,8 @@ def execute_speech_agent_workflows(
             raise ValueError("node pipeline requires native nodes, bounded panel and exclusive scheduling")
         node_pipeline_order = tuple(node_pipeline_order)
     elif any(value is not None for value in (node_pipeline_group_size, node_pipeline_prepare_workers,
-                                             node_pipeline_max_jobs, node_pipeline_timing_sink)):
+                                             node_pipeline_max_jobs, node_pipeline_timing_sink,
+                                             node_pipeline_queue_bridge)):
         raise ValueError("node pipeline settings require a declared node order")
 
     if node_batch_order is not None:
@@ -863,7 +867,7 @@ def execute_speech_agent_workflows(
             coordinator = NodePipelineCoordinator(
                 tuple(range(len(ordered_states))), node_pipeline_order, slots=slot_count,
                 group_size=node_pipeline_group_size, prepare_workers=node_pipeline_prepare_workers,
-                event_sink=pipeline_event,
+                event_sink=pipeline_event, queue_bridge=node_pipeline_queue_bridge,
             )
 
             async def panel_member(index):
