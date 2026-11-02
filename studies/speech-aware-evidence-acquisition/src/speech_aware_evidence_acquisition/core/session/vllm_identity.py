@@ -23,7 +23,9 @@ actually has (``contracts.gate_runtime_vllm`` re-verified every one of them from
                          (``assert_argv_matches_instance``) and exactly what the session receipt recorded.
 ``/proc/<pid>/cwd``      the working directory is the pinned one (the entrypoint is ``-m``: cwd is import path).
 ``/proc/<pid>/environ``  every behaviour-relevant variable equals the receipt's pinned environment, the device
-                         variable equals this instance's own device group, and the per-instance deployment variables
+                         variable equals this instance's own device group (legacy binding); container-device-nodes
+                         binding instead rechecks physical character devices through /proc/<pid>/root/dev and refuses
+                         an added logical visibility filter. The per-instance deployment variables
                          (``DEPLOYMENT_ENV_KEYS``, e.g. the HCCL base port) equal this instance's own recorded
                          ``env`` -- exactly, so a missing, extra or different one is refused.
 ``/proc/<pid>/maps``     every pinned runtime library is mapped, no OTHER libpython is mapped (a second interpreter
@@ -62,6 +64,7 @@ import os
 import re
 import signal
 import socket
+import stat
 import subprocess
 import time
 from pathlib import Path
@@ -98,6 +101,28 @@ from .sockets import _SOCKET_FD_PATTERN, _loopback_family_and_address, _proc_net
 
 DEFAULT_PROC_ROOT = Path("/proc")
 _LIBPYTHON = re.compile(r"libpython[0-9.]*\.so")
+
+
+def container_device_ids(proc_root: Path, pid: int) -> list[int]:
+    """Read physical Ascend character devices exposed in the server's namespace.
+
+    Docker maps physical davinciN nodes; CANN renumbers them to local ordinals.
+    ASCEND_RT_VISIBLE_DEVICES must not be confused with physical card IDs.
+    """
+    directory = Path(proc_root) / str(pid) / "root" / "dev"
+    try:
+        cards = []
+        for entry in directory.iterdir():
+            match = re.fullmatch(r"davinci([0-9]+)", entry.name)
+            if match:
+                if not stat.S_ISCHR(entry.lstat().st_mode):
+                    raise _refuse(f"device namespace entry {entry} is not a character device")
+                cards.append(int(match.group(1)))
+    except OSError as error:
+        raise _refuse(f"cannot inspect pid {pid} device namespace: {error}") from error
+    if not cards:
+        raise _refuse(f"pid {pid} has no physical Ascend device nodes")
+    return sorted(cards)
 
 
 def _proc_root(proc_root: "Path | None") -> Path:
@@ -576,7 +601,13 @@ def verify_vllm_process_identity(
             f"{instance['instance_id']!r}'s recorded {recorded_deployment} at {drift}"
         )
     devices = device_env_value(instance["device_ids"])
-    if environ.get(DEVICE_ENV_KEY) != devices:
+    if instance.get("device_binding") == "container-device-nodes":
+        actual = container_device_ids(proc_root, pid)
+        if actual != list(instance["device_ids"]):
+            raise _refuse(f"pid {pid} physical device nodes {actual} differ from receipt {instance['device_ids']}")
+        if DEVICE_ENV_KEY in environ:
+            raise _refuse(f"pid {pid} unexpectedly sets {DEVICE_ENV_KEY} for container-device-nodes binding")
+    elif environ.get(DEVICE_ENV_KEY) != devices:
         raise _refuse(
             f"pid {pid} has {DEVICE_ENV_KEY}={environ.get(DEVICE_ENV_KEY)!r}, not instance "
             f"{instance['instance_id']!r}'s own device group {devices!r}"
@@ -758,6 +789,8 @@ def start_vllm_session(
         )
     protocol = runtime_receipt["protocol"]
     env = {str(key): str(value) for key, value in protocol["env"].items()}
+    if instance.get("device_binding") == "container-device-nodes":
+        raise _refuse("container-device-nodes instances must be attached to their deployed container, not spawned in the harness")
     env[DEVICE_ENV_KEY] = device_env_value(instance["device_ids"])
     env.update(instance_deployment_env(instance))
     if extra_env:

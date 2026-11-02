@@ -20,7 +20,8 @@ a request, and the gate re-measures each one from bytes on every model touch:
   vllm`` resolves and can run code at start-up.
 * ``source_trees``: the ``vllm`` and ``vllm_ascend`` package directories, as an exact-set manifest (relative path,
   size, sha256 of every regular file; ``__pycache__`` directories excluded). The gate walks and re-hashes both trees.
-  A symlink or an unreadable entry inside a tree is refused, not skipped.
+  An internal symlink is listed under ``symlinks`` with its target path and kind, plus size and hash for a file target.
+  A symlink escaping the tree, a socket, fifo, device, unresolvable symlink or unreadable entry is refused.
 * ``packages``: name, version and the sha256 of ``METADATA`` and ``RECORD`` for vllm, vllm-ascend and the libraries
   they run on (torch, torch_npu, transformers). For torch and the other non-tree packages this binds the installer's
   manifest, not each installed file.
@@ -219,7 +220,9 @@ _INSTANCE_KEYS = frozenset(
 #: none of ``DEPLOYMENT_ENV_KEYS``). The producer always writes it.
 #: ``mm_processor_cache_type`` is optional too: absent means the engine default (no flag), a recorded value is one of
 #: ``MM_PROCESSOR_CACHE_TYPES`` and the live argv must carry exactly it.
-_INSTANCE_OPTIONAL_KEYS = frozenset({"env", "mm_processor_cache_type"})
+# device_binding=container-device-nodes records physical cards observed through the
+# server's /proc/<pid>/root/dev. Absent retains the legacy environment-bound policy.
+_INSTANCE_OPTIONAL_KEYS = frozenset({"env", "mm_processor_cache_type", "device_binding"})
 
 #: How the harness and the server processes relate (owner item 9.2 and its open successor, plan Decision 3,
 #: 2026-10-30). ``same-container`` (default, today's behaviour) requires one mount and one network namespace;
@@ -279,29 +282,86 @@ def file_entry(path: Path) -> dict[str, object]:
     return {"path": str(path), "bytes": size, "sha256": sha}
 
 
+def _symlink_record(root: Path, real_root: Path, entry: Path) -> tuple[dict[str, object], str]:
+    """Classify one symlink inside a source tree: ``(record, manifest_line)``.
+
+    A target that resolves inside the tree is recorded with its tree-relative path and, for a regular file, its size and
+    sha256. A target outside the tree is refused. A link that cannot be resolved (dangling, loop) or that lands on a
+    non-file, non-directory is refused.
+    """
+
+    rel = entry.relative_to(root).as_posix()
+    try:
+        target = os.readlink(entry)
+    except OSError as error:
+        raise _fail(f"source tree {root} symlink {entry} cannot be read: {error}") from error
+    record: dict[str, object] = {"kind": "symlink", "path": rel, "target": target}
+    try:
+        resolved: Path | None = entry.resolve(strict=True)
+    except (OSError, RuntimeError):
+        resolved = None
+    if resolved is None:
+        lexical = Path(os.path.normpath(os.path.join(entry.parent.resolve(), target)))
+        if lexical == real_root or real_root in lexical.parents:
+            raise _fail(f"source tree {root} contains an unresolvable symlink {entry} -> {target}")
+        inside = False
+    else:
+        inside = resolved == real_root or real_root in resolved.parents
+    if not inside:
+        raise _fail(f"source tree {root} symlink {entry} escapes its pinned tree")
+    assert resolved is not None
+    record["resolves_outside"] = False
+    target_rel = resolved.relative_to(real_root).as_posix()
+    record["target_path"] = target_rel
+    if resolved.is_dir():
+        record["target_kind"] = "directory"
+        return record, f"{rel}\0symlink\0{target}\0inside\0{target_rel}\0directory\n"
+    if not resolved.is_file():
+        raise _fail(f"source tree {root} symlink {entry} -> {target} lands on a non-regular entry {resolved}")
+    size, sha = _contracts_pkg._measure_file(resolved, f"source tree symlink target {resolved}")
+    record["target_kind"] = "file"
+    record["target_bytes"] = size
+    record["target_sha256"] = sha
+    return record, f"{rel}\0symlink\0{target}\0inside\0{target_rel}\0{size}\0{sha}\n"
+
+
 def source_tree_manifest(root: Path) -> dict[str, object]:
-    """Exact-set manifest of one package directory: ``{files, bytes, manifest_sha256}``.
+    """Exact-set manifest of one package directory: ``{files, bytes, manifest_sha256[, symlinks]}``.
 
     Every regular file below ``root`` counts, except files under a ``__pycache__`` directory. The manifest hash covers
-    ``relpath NUL size NUL sha256 LF`` lines in sorted relpath order. A symlink, an unreadable directory or any entry
-    that is neither a file nor a directory is refused. A tree the checker cannot fully read cannot be proven.
+    ``relpath NUL size NUL sha256 LF`` lines for regular files and ``relpath NUL symlink NUL target ...`` lines for
+    symlinks, all in sorted order, so the digest is independent of walk order. A symlink is classified, not skipped (a
+    vllm-ascend wheel ships one for its custom-op library): an internal file target also carries its size and hash;
+    an internal directory target carries its tree-relative path and kind. External targets are refused. ``symlinks``
+    lists the records (the key is absent for a tree without symlinks, so such a digest equals the earlier format).
+    An unreadable directory, an unresolvable symlink, a socket, fifo, device or any other entry is refused. A tree the
+    checker cannot fully read cannot be proven.
     """
 
     root = Path(root)
     if root.is_symlink() or not root.is_dir():
         raise _fail(f"source tree {root} is not a real directory")
+    real_root = root.resolve()
     lines: list[str] = []
+    symlinks: list[dict[str, object]] = []
     total = 0
 
     def refuse(error: OSError) -> None:
         raise _fail(f"source tree {root} cannot be fully read: {error}")
+
+    def note_symlink(entry: Path) -> None:
+        record, line = _symlink_record(root, real_root, entry)
+        symlinks.append(record)
+        lines.append(line)
 
     for directory, subdirs, files in os.walk(root, onerror=refuse, followlinks=False):
         base = Path(directory)
         for name in list(subdirs):
             entry = base / name
             if entry.is_symlink():
-                raise _fail(f"source tree {root} contains a symlink {entry}")
+                subdirs.remove(name)
+                note_symlink(entry)
+                continue
             if name == "__pycache__":
                 subdirs.remove(name)
                 continue
@@ -310,19 +370,27 @@ def source_tree_manifest(root: Path) -> dict[str, object]:
         subdirs.sort()
         for name in sorted(files):
             entry = base / name
-            if entry.is_symlink() or not entry.is_file():
+            if entry.is_symlink():
+                note_symlink(entry)
+                continue
+            if not entry.is_file():
                 raise _fail(f"source tree {root} contains a non-regular entry {entry}")
             size, sha = _contracts_pkg._measure_file(entry, f"source tree file {entry}")
             lines.append(f"{entry.relative_to(root).as_posix()}\0{size}\0{sha}\n")
             total += size
-    if not lines:
+    regular = len(lines) - len(symlinks)
+    if regular <= 0:
         raise _fail(f"source tree {root} holds no files")
     lines.sort()
-    return {
-        "files": len(lines),
+    symlinks.sort(key=lambda record: str(record["path"]))
+    manifest: dict[str, object] = {
+        "files": regular,
         "bytes": total,
         "manifest_sha256": hashlib.sha256("".join(lines).encode("utf-8")).hexdigest(),
     }
+    if symlinks:
+        manifest["symlinks"] = symlinks
+    return manifest
 
 
 def import_path_file_names(site_packages: Path) -> list[Path]:
@@ -658,6 +726,44 @@ def _file_record(entry: object, label: str, *, absolute: bool = True) -> Mapping
     return entry
 
 
+def _symlink_records(value: object, label: str) -> None:
+    """Shape of a source tree's ``symlinks`` list (the gate re-measures it against the tree; this checks the form)."""
+
+    if not isinstance(value, list) or not value:
+        raise _fail(f"{label} must be a non-empty list when present")
+    paths = []
+    for index, record in enumerate(value):
+        where = f"{label}[{index}]"
+        if not isinstance(record, Mapping) or record.get("kind") != "symlink":
+            raise _fail(f"{where} must be a symlink record")
+        for key in ("path", "target"):
+            if not isinstance(record.get(key), str) or not record[key]:
+                raise _fail(f"{where}.{key} must be a non-empty string")
+        if record.get('resolves_outside') is not False:
+            raise _fail(f"{where} must resolve inside its pinned source tree")
+        kind = record.get('target_kind')
+        expected = {'kind', 'path', 'target', 'resolves_outside', 'target_path', 'target_kind'}
+        if kind == 'file':
+            expected |= {'target_bytes', 'target_sha256'}
+        elif kind != 'directory':
+            raise _fail(f"{where}.target_kind must be file or directory")
+        if set(record) != expected:
+            raise _fail(f"{where} must contain exact symlink fields")
+        for key in ('path', 'target_path'):
+            rel = record[key]
+            if (not isinstance(rel, str) or not rel or Path(rel).is_absolute()
+                    or '..' in Path(rel).parts or '\x00' in rel or '\n' in rel
+                    or Path(rel).as_posix() != rel):
+                raise _fail(f"{where}.{key} must be a canonical tree-relative path")
+        paths.append(record['path'])
+        if kind == 'file' and (type(record['target_bytes']) is not int or record['target_bytes'] < 0):
+            raise _fail(f"{where}.target_bytes must be nonnegative integer")
+        if kind == 'file' and (not isinstance(record["target_sha256"], str) or _SHA256.fullmatch(record["target_sha256"]) is None):
+            raise _fail(f"{where}.target_sha256 must be a 64-hex sha256")
+    if paths != sorted(set(paths)):
+        raise _fail(f"{label} paths must be unique and sorted")
+
+
 def _positive_int(value: object, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise _fail(f"{label} must be a positive integer, got {value!r}")
@@ -710,8 +816,12 @@ def validate_vllm_receipt_document(receipt: object) -> Mapping[str, object]:
     names = set()
     roots = set()
     for index, tree in enumerate(trees):
-        if not isinstance(tree, Mapping) or set(tree) != {"package", "root", "files", "bytes", "manifest_sha256"}:
-            raise _fail(f"source_trees[{index}] must have exact package/root/files/bytes/manifest_sha256")
+        if not isinstance(tree, Mapping) or set(tree) - {"symlinks"} != {
+            "package", "root", "files", "bytes", "manifest_sha256",
+        }:
+            raise _fail(f"source_trees[{index}] must have exact package/root/files/bytes/manifest_sha256[/symlinks]")
+        if "symlinks" in tree:
+            _symlink_records(tree["symlinks"], f"source_trees[{index}].symlinks")
         if not isinstance(tree["package"], str) or not tree["package"]:
             raise _fail(f"source_trees[{index}].package must be a non-empty string")
         _absolute(tree["root"], f"source_trees[{index}].root")
@@ -816,6 +926,8 @@ def validate_vllm_receipt_document(receipt: object) -> Mapping[str, object]:
             or set(instance) - _INSTANCE_KEYS - _INSTANCE_OPTIONAL_KEYS
         ):
             raise _fail(f"{label} must have exact keys {sorted(_INSTANCE_KEYS)} plus optional {sorted(_INSTANCE_OPTIONAL_KEYS)}")
+        if "device_binding" in instance and instance["device_binding"] != "container-device-nodes":
+            raise _fail(f"{label}.device_binding must be container-device-nodes when present")
         instance_env = instance.get("env", {})
         if not isinstance(instance_env, Mapping) or not all(
             isinstance(k, str) and isinstance(v, str) and v for k, v in instance_env.items()
@@ -913,7 +1025,7 @@ def verify_vllm_runtime_files(receipt: Mapping[str, object]) -> None:
         _verify_real_file(entry, f"import_path_files[{index}]")
     for tree in receipt["source_trees"]:
         measured = source_tree_manifest(Path(str(tree["root"])))
-        recorded = {key: tree[key] for key in ("files", "bytes", "manifest_sha256")}
+        recorded = {key: tree[key] for key in ("files", "bytes", "manifest_sha256", "symlinks") if key in tree}
         if measured != recorded:
             raise _fail(
                 f"source tree {tree['package']} at {tree['root']} drifted from the receipt "

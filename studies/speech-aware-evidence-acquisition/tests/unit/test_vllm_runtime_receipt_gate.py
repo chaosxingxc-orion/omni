@@ -156,11 +156,11 @@ def test_bytecode_is_not_part_of_source_tree_identity(world):
     _validate(world)
 
 
-def test_a_source_tree_symlink_is_refused(world):
+def test_an_unrecorded_source_tree_symlink_is_refused(world):
     (world.trees["vllm"] / "link.py").symlink_to(world.trees["vllm"] / "__init__.py")
     with pytest.raises(GateClosed) as error:
         _validate(world)
-    assert "symlink" in str(error.value)
+    assert "source tree vllm" in str(error.value)
 
 
 def test_a_package_downgrade_is_refused(world):
