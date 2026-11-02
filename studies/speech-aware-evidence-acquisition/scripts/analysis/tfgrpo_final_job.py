@@ -161,6 +161,9 @@ def prepare(repo, data, source_job, final_import, out, runtime_identity, *,
 def verify_job(repo, data, job):
     from speech_aware_evidence_acquisition.rails.tfgrpo_source import read_pin, load_dynamic_source
     complete = read(job / 'complete.json')
+    if complete.get('schema') == 'saea-grounded-shards-job-v1':
+        from grounded_synthesis_job import verify_job as verify_grounded
+        return verify_grounded(repo, data, job)
     if (complete.get('schema') != 'saea-tfgrpo-final-job-v1'
             or re.fullmatch(r'[a-z0-9][a-z0-9-]*', complete.get('job', '')) is None):
         raise ValueError('exact final job manifest required')
@@ -222,6 +225,9 @@ def register(repo,data,job):
     roster_rel=f'docs/receipts/rosters/{name}.json'
     baseline=read(repo/'configs/baseline/system-group-update-text-v1.json');baseline.pop('whole_roster_wave_barrier',None)
     baseline['what_this_is']='Final-only TF-GRPO consolidation of verified H1 group operations; one actual contact, all historical costs retained.'
+    grounded = complete.get('schema') == 'saea-grounded-shards-job-v1'
+    if grounded:
+        baseline['what_this_is']='Evidence-grounded H1 synthesis shards; intermediate artifacts only, complete historical costs retained.'
     baseline.pop('phase_material',None)
     from speech_aware_evidence_acquisition.rails.prepared_text import PREPARED_TEXT_INSTRUCTION
     baseline['task_instruction']=PREPARED_TEXT_INSTRUCTION
@@ -237,6 +243,9 @@ def register(repo,data,job):
         stage3_algorithm={'id':'tfgrpo-system-memory-disjoint-v1','operators_used':['credit_assignment'],'note':'One final consolidation of verified completed four-stage inputs; shared-P adaptation; candidate only.'})
     cell,=exp['cells'];cell.update(cell_id=name,run_id=run_id,attempt_id='learning-v1',baseline_fragment=name,
         allowed_execution_stages=['check','worker','campaign'],readiness={'state':'held','requirements':[],'reason':'Registered exact learning source; await shared live runtime preflight and lease.'})
+    if grounded:
+        exp['prepared_training_feedback']['schema']='saea-prepared-grounded-shards-v1'
+        exp['stage3_algorithm']['note']='Grounded intermediate shards over verified H1 evidence; no final candidate or held-out gain claimed.'
     exp['populations'][0]['ids']=[x['sample_id'] for x in roster['items']]
     exp['service_session']=service_session
     for rel,doc in [(roster_rel,roster),(f'configs/baseline/{name}.json',baseline),(f'configs/experiment/{name}.json',exp)]:
@@ -289,7 +298,7 @@ def admit(repo,data,job):
     if any((data/'attempts'/rid).exists() for rid in runs):raise ValueError('existing learning spend')
     draft={'schema':'saea-campaign-decision-v1','status':'DRAFT-NOT-MINTED','decision_id':decision_id,
         'eligible_run_ids':runs,'eligible_attempt_ids':['learning-v1','learning-fit-v1'],'authorization_basis':base.AUTH,
-        'owner':'root','decision':'Execute one final consolidation of verified completed H1 stages through shared TF-GRPO runtime; all learned groups and historical costs retained; no H2 feedback.',
+        'owner':'root','decision':('Execute registered grounded intermediate shards with native FIT and complete source costs; no final candidate.' if complete.get('schema')=='saea-grounded-shards-job-v1' else 'Execute one final consolidation of verified completed H1 stages through shared TF-GRPO runtime; all learned groups and historical costs retained; no H2 feedback.'),
         'antecedents':{'owner':{'path':base.AUTH,'sha256':file_sha(repo/base.AUTH)},
             'runtime':{'path':str(receipt.relative_to(repo)),'sha256':file_sha(receipt)}},
         'source_manifest':pin(job/'complete.json',data,'data'),'service':{'expected_session_id':service_session},

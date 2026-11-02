@@ -29,6 +29,10 @@ def read_pin(pin, *, repo_root, data_root, verified_context=None):
 def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roster_sha256,
                         replay=None, verified_context=None):
     spec=values.get('prepared_training_feedback')
+    if isinstance(spec,dict) and spec.get('schema')=='saea-prepared-grounded-shards-v1':
+        from .grounded_synthesis_runtime import load_runtime_source
+        return load_runtime_source(values,plan=plan,repo_root=repo_root,data_root=data_root,
+            sample_ids=sample_ids,roster_sha256=roster_sha256,replay=replay)
     if not isinstance(spec,dict) or set(spec)!={'schema','source'} or spec['schema']!=SCHEMA:
         raise LearningError('dynamic TF-GRPO source contract required')
     reg=values.get('tfgrpo_learning_registration')

@@ -32,6 +32,7 @@ def learning_configuration(binding):
 
 
 STAGES = frozenset({'summary', 'advantage', 'group_update', 'batch_update'})
+GROUNDED_RUNTIME_SCHEMA = 'saea-grounded-shards-runtime-binding-v1'
 
 
 def _timing_identity(caller, request):
@@ -60,14 +61,17 @@ def validate_registration(binding, *, plan, model_id):
     config hash. The runtime protocol binds this registration externally."""
     required = {'schema', 'plan', 'model_id', 'batch_sha256', 'construction_roster_sha256',
                 'contacts', 'decoding_params', 'max_context_bytes', 'learning_config_sha256', 'runtime_identity_sha256'}
+    grounded = isinstance(binding, dict) and binding.get('schema') == GROUNDED_RUNTIME_SCHEMA
+    if grounded:
+        required |= {'execution_sha256', 'completion_cap'}
     if not isinstance(binding, dict) or set(binding) != required:
         raise LearningError('exact TF-GRPO runtime registration required')
-    if (binding['schema'] != 'saea-tfgrpo-runtime-binding-v1'
+    if (binding['schema'] not in ('saea-tfgrpo-runtime-binding-v1', GROUNDED_RUNTIME_SCHEMA)
             or binding['plan'] != {k: v for k, v in asdict(plan).items() if k != 'protocol_hash'} or binding['model_id'] != model_id
             or plan.split_role != 'discovery'
             or plan.execution_profile != 'bounded-discovery-probe'):
         raise LearningError('learning registration requires its exact TRAIN discovery plan and model')
-    for name in ('batch_sha256', 'construction_roster_sha256', 'runtime_identity_sha256'):
+    for name in ('batch_sha256', 'construction_roster_sha256', 'runtime_identity_sha256') + (('execution_sha256',) if grounded else ()):
         if not isinstance(binding[name], str) or re.fullmatch('[a-f0-9]{64}', binding[name]) is None:
             raise LearningError('learning registration needs pinned batch and roster')
     contacts = binding['contacts']
@@ -75,20 +79,27 @@ def validate_registration(binding, *, plan, model_id):
         raise LearningError('finite contact roster exceeds plan budget')
     indexed = {}
     for row in contacts:
-        if (not isinstance(row, dict) or set(row) != {'stage', 'identity', 'sample_id'}
-                or row['stage'] not in STAGES
+        if (not isinstance(row, dict) or set(row) != ({'stage', 'identity', 'sample_id', 'messages_sha256'} if grounded else {'stage', 'identity', 'sample_id'})
+                or row['stage'] not in ({'grounded_shard_update'} if grounded else STAGES)
                 or any(not isinstance(row[k], str) or not row[k] for k in row)):
             raise LearningError('invalid learning stage anchor')
         key = contact_key(row['stage'], row['identity'])
         if key in indexed:
             raise LearningError('duplicate learning stage identity')
         indexed[key] = row
+        if grounded and (not row['sample_id'].startswith('slurp:train:')
+                or re.fullmatch('[a-f0-9]{64}', row['messages_sha256']) is None):
+            raise LearningError('grounded contact requires TRAIN anchor and exact messages')
     decoding = binding['decoding_params']
     if (not isinstance(decoding, dict) or 'id_slot' in decoding
             or type(decoding.get('max_tokens')) is not int or decoding['max_tokens'] < 1):
         raise LearningError('registered output bound required; routing slot is operational')
     if type(binding['max_context_bytes']) is not int or binding['max_context_bytes'] < 1:
         raise LearningError('positive prepared context bound required')
+    if grounded and (type(binding['completion_cap']) is not int
+            or binding['completion_cap'] != decoding['max_tokens']
+            or len(contacts) != plan.planned_model_calls):
+        raise LearningError('grounded contact budget or completion cap differs')
     if binding['learning_config_sha256'] != sha(learning_configuration(binding)):
         raise LearningError('learning generation configuration digest differs')
     canonical(binding)
@@ -142,6 +153,8 @@ class MeteredExperienceCaller:
         row = self.contacts.get(key)
         if row is None:
             raise LearningError('learning contact is not in the registered finite roster')
+        if self.registration['schema'] == GROUNDED_RUNTIME_SCHEMA and sha(request['messages']) != row['messages_sha256']:
+            raise LearningError('grounded messages differ from registered shard')
         messages = request['messages']
         if (not isinstance(messages, list) or len(messages) != 2
                 or any(not isinstance(m, dict) or set(m) != {'role', 'content'}

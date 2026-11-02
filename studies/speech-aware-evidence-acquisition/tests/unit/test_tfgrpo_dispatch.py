@@ -132,7 +132,7 @@ def test_fresh_client_restart_refused_without_duplicate_contact(tmp_path,monkeyp
 def test_source_drift_refused_before_shared_client_open(tmp_path,monkeypatch):
     runtime,transport,_=make_runtime(tmp_path,monkeypatch)
     (tmp_path/'source.json').write_text('{}')
-    with pytest.raises(LearningError,match='source pin changed'): runtime.run_phases()
+    with pytest.raises(LearningError,match='source (pin )?changed'): runtime.run_phases()
     assert not transport.calls
 
 
