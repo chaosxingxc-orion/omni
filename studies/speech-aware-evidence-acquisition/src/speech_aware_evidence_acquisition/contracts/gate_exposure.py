@@ -42,9 +42,10 @@ ALLOWED_CARRIER_PROFILES = frozenset(
 )
 
 #: Where committed roster receipts live, relative to ``source_root``. The
-#: ``contracts`` package must not import ``core`` (module docstring of
-#: ``gate.py``: the circular-import note), so the construction-role check
-#: below parses these receipts dependency-free and recomputes their identity
+#: ``contracts`` package must not import ``core`` at module initialization (the
+#: native recovery gate below uses a deferred import after initialization).
+#: The construction-role check below parses these receipts dependency-free
+#: and recomputes their identity
 #: hash with the SAME four-line convention every other identity check in this
 #: package uses: sha256 over the LF-joined, sorted, carrier-prefixed
 #: ``f"{lock_key}/{sample_id}"`` ids, no trailing newline.
@@ -858,6 +859,49 @@ class _ExposureAndCarrierMixin:
                     "consumed and cannot be resumed; model touch refused"
                 )
             names.append(name)
+        if "native_recovery_receipt" in document or any(
+            isinstance(entry, Mapping) and entry.get("mode") == "native-contact-journal"
+            for entry in entries
+        ):
+            # Runtime records the immediate predecessor, while native replay
+            # also proves its zero-contact ancestors. These operational starts
+            # consume no additional scientific evaluation slot. Reuse that
+            # verifier rather than trusting recursive declaration names or
+            # inventing a second custody implementation in the exposure gate.
+            try:
+                from ..core.flight.native_recovery import load_native_recovery
+
+                declaration = document["native_recovery_receipt"]
+                if not isinstance(declaration, dict) or set(declaration) != {"path", "sha256"}:
+                    raise ValueError("pinned native recovery receipt required")
+                receipt_path = Path(declaration["path"])
+                if (not receipt_path.is_absolute()
+                        or not receipt_path.resolve().is_relative_to(Path(self.data_root).resolve())):
+                    raise ValueError("native recovery receipt escaped data root")
+                blob = receipt_path.read_bytes()
+                if hashlib.sha256(blob).hexdigest() != declaration["sha256"]:
+                    raise ValueError("native recovery receipt bytes changed")
+                receipt = json.loads(blob)
+                replay = load_native_recovery(
+                    declaration, data_root=self.data_root, plan=plan,
+                    arm=receipt["source"]["arm"],
+                )
+                replay.assert_all_contacts_observed()
+                binding = replay.source_binding()
+                expected = [{"attempt_id": replay.source_plan.attempt_id,
+                    "mode": "native-contact-journal",
+                    "pin_sha256": binding["attempt_sha256"]}]
+                if entries != expected:
+                    raise ValueError("native recovery declaration provenance differs")
+                while binding is not None:
+                    name = binding["plan"]["attempt_id"]
+                    if states.get(name) != "ABORTED":
+                        raise ValueError("native recovery predecessor is not ABORTED")
+                    names.append(name)
+                    ancestry = binding.get("empty_ancestry")
+                    binding = ancestry["source"] if ancestry is not None else None
+            except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+                raise GateClosed(f"native resume declaration {path} is invalid: {error}") from error
         return frozenset(names)
 
     def _require_final_report_attempt_budget(
@@ -880,6 +924,9 @@ class _ExposureAndCarrierMixin:
         interrupted attempt's slot (:meth:`_declared_resume_predecessors`). It is
         still one attempt, flies no row twice and selects nothing; a fresh
         attempt that declares no predecessor is counted exactly as before.
+        Native-contact recovery also exempts its independently verified,
+        aborted zero-contact ancestors; unknown contacts, spent earlier
+        ancestors and changed scientific plans remain refused by replay.
         """
 
         read_ids = {

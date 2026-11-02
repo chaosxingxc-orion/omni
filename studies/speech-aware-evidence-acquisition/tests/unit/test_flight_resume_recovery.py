@@ -89,6 +89,10 @@ def _skeleton(harness, monkeypatch) -> FlightRuntime:
     runtime._data_root = harness.world.data_root
     runtime._split_id = "all"
     runtime._transport = harness.transport
+    # Match __init__: dispatch inspects the counter identity even when this
+    # fixture has no context-fit policy. The default is local and model-free;
+    # retaining it does not replace or bypass the scripted request fit gate.
+    runtime._token_counter = flight_module._default_token_counter
     runtime._arm = lambda: harness.client.arm
     runtime._plan = harness.plan
     runtime._phase_program_material = {
