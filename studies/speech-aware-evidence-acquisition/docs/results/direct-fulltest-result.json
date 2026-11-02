@@ -1,0 +1,53 @@
+{
+  "schema": "saea-public-final-test-result-v1",
+  "method": "Direct",
+  "run_id": "SAEA-SLURP-DIRECT-FULLTEST-V1",
+  "attempt_id": "generation-v4",
+  "status": "COMPLETED",
+  "attempt_state": "FINALIZED",
+  "samples": 13078,
+  "split": "test",
+  "test_used_for_tuning": false,
+  "official_metrics": {
+    "slu_f1": 0.4655581305413932,
+    "intent_accuracy": 0.7787888056277719,
+    "scenario_accuracy": 0.8544884538920324,
+    "action_accuracy": 0.7985165927511853,
+    "span_f1": 0.21861321333606054
+  },
+  "scorer_version": "slurp-official-8eb16545",
+  "evaluator_commit": "8eb16545762be97ace75334109d73824217311f1",
+  "scorer_identity_check": {
+    "passed": true,
+    "slu_f1_abs_diff": 5.551115123125783e-17,
+    "span_f1_abs_diff": 0.0,
+    "tolerance": 1e-06
+  },
+  "usage": {
+    "calls_used": 13078,
+    "prompt_tokens_total": 29711362,
+    "completion_tokens_total": 7724258,
+    "audio_seconds_used": 36911.9388124996,
+    "latency_seconds_total": 736471.2757922155
+  },
+  "resources": {
+    "npu_cards": 8,
+    "instances": 2,
+    "tensor_parallel_per_instance": 4,
+    "configured_client_concurrency_per_instance": 96,
+    "sustained_full_utilization_proven": false
+  },
+  "timing": {
+    "container_started_at": "2026-11-02T13:44:47.22624836Z",
+    "container_finished_at": "2026-11-02T15:31:43.0037631Z",
+    "container_seconds": 6415.77751474,
+    "container_seconds_per_sample": 0.4905778800076464,
+    "campaign_seconds_to_generation_release": 6334.838067780001,
+    "allocated_card_hours_container": 14.257283366088888,
+    "timing_scope": "Current successful container includes preparation, generation and scoring; earlier failed zero-contact attempts excluded from this wall-time metric, retained in research history."
+  },
+  "generation_manifest_sha256": "71db4498ce972ced268507f4333d0966ef4c649e1fc06ad70a5020705bdde5f5",
+  "remaining_samples": 0,
+  "eta_seconds": 0,
+  "interpretation": "Full-test frozen Direct baseline. No full-test A0 comparison or TFRL gain established."
+}
