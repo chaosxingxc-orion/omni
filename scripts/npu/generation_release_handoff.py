@@ -8,7 +8,12 @@ import select
 import math
 
 
-def verify_release(path, *, data, expected):
+def verify_release(path, *, data, expected, resolve_artifact=None):
+    """Verify original release bytes, optionally resolving container paths to host files.
+
+    The resolver only selects where to read; logical pins and seal paths remain
+    unchanged and must still name the exact run/attempt files below data/runs.
+    """
     document = json.loads(path.read_bytes())
     required = {"schema": "saea-generation-released-v1", "generation_sealed": True,
                 "generation_lease_released": True, "scoring_complete": False,
@@ -18,8 +23,13 @@ def verify_release(path, *, data, expected):
     if any(type(document.get(key)) not in (int, float) or not math.isfinite(document[key])
            or document[key] < 0 for key in ('released_at_unix', 'campaign_seconds_to_release')):
         raise ValueError("generation release timing differs")
-    root = (data / "runs" / expected["run_id"] / expected["attempt_id"]).resolve()
-    if not root.is_relative_to(data.resolve() / "runs"):
+    data = Path(data)
+    root = data / "runs" / expected["run_id"] / expected["attempt_id"]
+    if resolve_artifact is None:
+        root = root.resolve()
+    elif not callable(resolve_artifact) or not data.is_absolute() or '..' in root.parts:
+        raise ValueError("generation release resolver or logical root differs")
+    if not root.is_relative_to((data.resolve() if resolve_artifact is None else data) / "runs"):
         raise ValueError("generation release escapes owned runs")
     filenames = {"generation_manifest": expected["run_id"] + ".generation-manifest.json",
                  "score_ledger_cells": "score-ledger-cells.json", "score_jobs": "score-jobs.jsonl"}
@@ -29,11 +39,17 @@ def verify_release(path, *, data, expected):
     for key, filename in filenames.items():
         pin = document["artifacts"][key]
         target = Path(pin["path"])
-        if target.is_symlink() or target.resolve() != root / filename:
+        if ((resolve_artifact is None and (target.is_symlink() or target.resolve() != root / filename))
+                or (resolve_artifact is not None and str(target) != pin['path'])
+                or (resolve_artifact is not None and target != root / filename)):
             raise ValueError("generation release input path differs")
         if seal.get(key + "_path") != str(target) or seal.get(key + "_sha256") != pin["sha256"]:
             raise ValueError("generation release seal differs")
-        with target.open("rb") as handle:
+        physical = target if resolve_artifact is None else Path(resolve_artifact(target))
+        if resolve_artifact is not None and (not physical.is_absolute() or physical.is_symlink()
+                or physical.resolve() != physical or not physical.is_file()):
+            raise ValueError("generation release mapped input path differs")
+        with physical.open("rb") as handle:
             digest = hashlib.file_digest(handle, "sha256").hexdigest()
         if digest != pin["sha256"]:
             raise ValueError("generation release sealed input changed")

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Finite, durable queue over the existing pinned configured job launcher."""
 import argparse
-import copy
 import fcntl
 import hashlib
 import importlib.util
@@ -106,6 +105,54 @@ def release_helper(doc):
     return module
 
 
+def producer_output(producer, logical, expected):
+    """Resolve one supported command without evaluating or rewriting its inputs."""
+    args = producer['argv']
+    if '--config' not in args:
+        require(args.count('--out') == 1 and args.index('--out') + 1 < len(args),
+                'producer must declare exact release output directory')
+        if '--data' in args:
+            require(args.count('--data') == 1 and args.index('--data') + 1 < len(args)
+                and args[args.index('--data') + 1] == str(logical), 'producer data argument differs')
+        return launcher.absolute(args[args.index('--out') + 1]), None
+    require(len(args) == 4 and args[2] == '--config'
+        and Path(args[1]).name == 'learning_strategy_job.py', 'exact supported producer config entry required')
+    config_path, mount = binding.host_path(producer, args[3])
+    require(mount['readonly'] and config_path.absolute() == config_path.resolve()
+        and not config_path.is_symlink(), 'producer command requires immutable read-only mapping')
+    pins = [p for p in producer['required_inputs'] if p['path'] == str(config_path)]
+    require(len(pins) == 1 and pin_path(pins[0]) == config_path, 'producer command must be pinned exactly once')
+    config = json.loads(config_path.read_bytes())
+    require(isinstance(config, dict) and set(config) == {'schema','mode','repo','data','arguments'}
+        and config['schema'] == 'saea-learning-strategy-command-v1' and config['mode'] == 'run',
+        'exact learning producer run command required')
+    values = config['arguments']
+    require(isinstance(values, dict) and set(values) == {'job','out','after','predecessor_run'},
+        'exact learning producer arguments required')
+    for value in [config['repo'],config['data'],values['job'],values['out'],values['after']]:
+        require(str(launcher.absolute(value)) == value, 'canonical learning producer path required')
+    require(config['data'] == str(logical)
+        and args[1] == str(Path(config['repo'])/'scripts/analysis/learning_strategy_job.py'),
+        'learning producer repository or data differs')
+    repo, repo_mount = binding.host_path(producer, config['repo'])
+    require(repo_mount['readonly'] and repo == Path(producer['repo_path']), 'learning producer repository mapping differs')
+    require(isinstance(values['predecessor_run'],str)
+        and re.fullmatch('[A-Za-z0-9][A-Za-z0-9_.-]*',values['predecessor_run']),
+        'learning predecessor run required')
+    job_path, job_mount = binding.host_path(producer, str(Path(values['job'])/'complete.json'))
+    require(job_mount['readonly'] and job_path.is_file() and not job_path.is_symlink()
+        and job_path.absolute() == job_path.resolve(), 'learning producer requires read-only job manifest')
+    job_blob = job_path.read_bytes(); job = json.loads(job_blob)
+    require(isinstance(job,dict) and job.get('schema') == 'saea-learning-strategy-job-v1'
+        and job.get('job') == expected['candidate'] and job.get('run_id') == expected['run_id']
+        and job.get('service_session') == expected['service_session']
+        and type(job.get('runtime_rows')) is int and job['runtime_rows'] == expected['rows']
+        and expected['attempt_id'] == 'learning-v1', 'learning producer job identity differs')
+    require(pin_path(pins[0]) == config_path, 'learning command changed during verification')
+    return launcher.absolute(values['out']), {'job_manifest_path':str(job_path),
+        'job_manifest_sha256':hashlib.sha256(job_blob).hexdigest(), 'command':pins[0]}
+
+
 def release_identity(producer, release):
     require(isinstance(release, dict) and set(release) == {'path', 'logical_data', 'expected'}, 'exact generation release mapping required')
     expected = release['expected']
@@ -120,21 +167,18 @@ def release_identity(producer, release):
             and env.get('SAEA_OBSERVABILITY_ATTEMPT_ID') == expected['attempt_id']
             and env.get('SAEA_DEPLOYMENT_PROFILE') == expected['profile'], 'producer launch run, attempt or deployment differs')
     logical = launcher.absolute(release['logical_data'])
-    args = producer['argv']
-    require(args.count('--out') == 1 and args.index('--out') + 1 < len(args), 'producer must declare exact release output directory')
-    output = launcher.absolute(args[args.index('--out') + 1])
+    output, _ = producer_output(producer, logical, expected)
     actual, mount = binding.host_path(producer, str(output / 'generation-released.json'))
     require(not mount['readonly'] and actual.absolute() == launcher.absolute(release['path'])
             and actual.resolve() == actual.absolute(), 'producer release path or writable mapping differs')
     require(env.get('SPEECHRL_DATA_DIR', str(logical)) == str(logical), 'producer logical data mapping differs')
-    if '--data' in args:
-        require(args.count('--data') == 1 and args[args.index('--data') + 1] == str(logical), 'producer data argument differs')
     return actual, logical, expected
 
 
 def verify_generation_release(doc, producer, release):
     """Reuse the shared seal verifier through explicit host mount translation."""
     path, logical, expected = release_identity(producer, release)
+    _, command_receipt = producer_output(producer, logical, expected)
     require(path.is_file() and not path.is_symlink(), 'immutable generation release file required')
     blob = path.read_bytes(); value = json.loads(blob)
     require(set(value) == set(expected) | {'schema', 'generation_sealed', 'generation_lease_released',
@@ -144,10 +188,12 @@ def verify_generation_release(doc, producer, release):
     require(started_path.is_file() and not started_path.is_symlink(), 'producer started receipt required')
     started_blob = started_path.read_bytes(); started = json.loads(started_blob)
     require(started.get('study_commit') == expected['study_commit'], 'producer startup commit differs')
+    if command_receipt is not None:
+        require(started.get('job') == expected['candidate'], 'learning producer started job differs')
     for key in ('candidate', 'job', 'attempt_id', 'rows'):
         if key in started:
             require(started[key] == expected['candidate' if key == 'job' else key], 'producer startup identity differs')
-    mapped = copy.deepcopy(value); root = None
+    mappings = {}
     files = {'generation_manifest':expected['run_id']+'.generation-manifest.json',
         'score_ledger_cells':'score-ledger-cells.json', 'score_jobs':'score-jobs.jsonl'}
     require(isinstance(value.get('artifacts'), dict) and set(value['artifacts']) == set(files), 'all generation sealed inputs required')
@@ -158,19 +204,17 @@ def verify_generation_release(doc, producer, release):
                 and value['seal_receipt'].get(key+'_path') == str(logical_path), 'generation seal logical path differs')
         physical, mount = binding.host_path(producer, str(logical_path))
         require(not mount['readonly'] and physical.absolute() == physical.resolve(), 'generation artifact host mapping redirected')
-        candidate_root = physical.parents[3]
-        if root is None:root = candidate_root
-        require(root == candidate_root and physical == root / 'runs' / expected['run_id'] / expected['attempt_id'] / name,
-                'generation artifact mapping must preserve runs layout')
-        mapped['artifacts'][key]['path'] = str(physical)
-        mapped['seal_receipt'][key+'_path'] = str(physical)
-    class MappedDocument:
-        def read_bytes(self):return json.dumps(mapped).encode()
-    release_helper(doc).verify_release(MappedDocument(), data=root, expected=expected)
+        require(physical not in mappings.values(), 'generation artifact mappings alias')
+        mappings[logical_path] = physical
+    release_helper(doc).verify_release(path, data=logical, expected=expected,
+        resolve_artifact=lambda target:mappings[target])
     require(path.read_bytes() == blob and started_path.read_bytes() == started_blob, 'generation release changed during verification')
+    require(producer_output(producer, logical, expected)[1] == command_receipt,
+        'learning producer command or job changed during verification')
     return {'path':str(path), 'sha256':hashlib.sha256(blob).hexdigest(),
         'started_sha256':hashlib.sha256(started_blob).hexdigest(), 'cpu_scoring_may_continue':True,
-        'scoring_complete':False, 'consumer_requires_own_lease_and_readiness':True}
+        'scoring_complete':False, 'consumer_requires_own_lease_and_readiness':True,
+        **({'producer_command':command_receipt} if command_receipt is not None else {})}
 
 
 def wait_generation_event(doc, path):

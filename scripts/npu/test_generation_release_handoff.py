@@ -47,6 +47,28 @@ def test_verified_release_requires_exact_source_and_sealed_bytes(tmp_path,fault)
 from pathlib import Path
 
 
+@pytest.mark.parametrize('fault',[None,'logical_path','seal_path','bytes','symlink'])
+def test_readonly_resolver_preserves_logical_seal_and_original_document(tmp_path,fault):
+    path,expected,doc=fixture(tmp_path);mapping={}
+    logical=Path('/logical');physical=tmp_path/'single-run';physical.mkdir()
+    for key,pin in doc['artifacts'].items():
+        original=Path(pin['path']);target=physical/original.name;target.write_bytes(original.read_bytes())
+        pin['path']=str(logical/'runs/run/attempt'/original.name);doc['seal_receipt'][key+'_path']=pin['path']
+        mapping[Path(pin['path'])]=target
+    target=mapping[Path(doc['artifacts']['score_jobs']['path'])]
+    if fault=='logical_path':doc['artifacts']['score_jobs']['path']='/elsewhere/score-jobs.jsonl'
+    elif fault=='seal_path':doc['seal_receipt']['score_jobs_path']='/elsewhere'
+    elif fault=='bytes':target.write_text('changed')
+    elif fault=='symlink':
+        target.unlink();target.symlink_to(tmp_path/'runs/run/attempt/score-jobs.jsonl')
+    path.write_text(json.dumps(doc,indent=3));before=path.read_bytes()
+    if fault:
+        with pytest.raises(ValueError):verify_release(path,data=logical,expected=expected,resolve_artifact=mapping.__getitem__)
+    else:
+        assert verify_release(path,data=logical,expected=expected,resolve_artifact=mapping.__getitem__)==doc
+    assert path.read_bytes()==before
+
+
 def test_same_live_child_waits_600_seconds_without_replay(tmp_path):
     path,expected,doc=fixture(tmp_path);path.unlink();events=[]
     class Child:

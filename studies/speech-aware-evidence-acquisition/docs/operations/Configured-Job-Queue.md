@@ -44,4 +44,10 @@ python3 scripts/environment/configured_job_queue.py watch --config /srv/project/
 }
 ```
 
-生产者启动配置须有明确 `--out`、run/attempt observability env 和 deployment profile。队列按其实际mount将逻辑数据路径映射到本地持久盘，核验输出目录、`started.json` commit及存在的job/attempt/rows字段，再调用共享 verifier核验完整sealed manifest、score ledger、score jobs摘要与seal receipt。释放事件需精确声明generation sealed/lease released为true、scoring complete为false。接受后记录原文件SHA；后续任何变化都会停止调度。没有写回或改造生产者证据。
+生产者启动配置须保留 run/attempt observability env 和 deployment profile，支持两种入口：显式 `--out`（兼容既有 Direct），或现有 `learning_strategy_job.py --config`。后者必须精确使用 `saea-learning-strategy-command-v1`、`mode=run` 及原有字段；命令 JSON 位于只读挂载且由 launcher 的 `required_inputs` 唯一固定 SHA。队列核对命令的 repo/data/out、实际只读代码挂载，以及只读 job manifest 的 job/run/rows/session 和 `learning-v1` attempt。学习任务的 `started.json` 必须明确绑定同一个 job。
+
+队列按生产者实际 mount 将逻辑数据路径映射到本地持久盘，支持完整 data 根和单 run 叶挂载，例如本地 `state/runs` 映射到逻辑 `data/runs/SAEA-PRODUCER`。共享 verifier 的可选只读路径 resolver 只决定从哪里读取文件；原 release 字节、逻辑 artifact pin 和 seal 路径全部保持原样。完整 generation manifest、score ledger、score jobs 的摘要必须与 seal receipt 相符，拒绝路径漂移、符号链接或文件映射混同，不复制文件或构造替代凭据。
+
+释放事件需精确声明 generation sealed/lease released 为 true、scoring complete 为 false。接受后记录原 release、started、学习命令和 job manifest 摘要；后续变化停止调度。学习任务 JSON 身份校验不代替业务准入或共享租约，后继继续使用原检查。
+
+升级此功能时，把队列及共享 verifier 和依赖放入新的隔离 helper 目录，重新 pin 其 SHA 并创建对应新队列配置。正在运行队列固定旧实现摘要，不能覆盖其 helper 文件；新功能的正式镜像测试不代表已有运行容器自动升级。

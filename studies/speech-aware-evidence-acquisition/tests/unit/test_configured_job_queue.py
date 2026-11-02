@@ -139,7 +139,7 @@ def test_plan_does_not_create_queue_or_launch(queue):
     assert not Path(config['state_dir']).exists() and not docker.launches
 
 
-def generation_fixture(queue, tmp_path):
+def generation_fixture(queue, tmp_path, *, learning=False):
     import os
     path, config, docker = queue
     root=tmp_path/'producer';root.mkdir();producer,doc=configured(root)
@@ -151,6 +151,26 @@ def generation_fixture(queue, tmp_path):
         SAEA_OBSERVABILITY_ATTEMPT_ID=expected['attempt_id'],SAEA_DEPLOYMENT_PROFILE='profile',SPEECHRL_DATA_DIR='/logical')
     doc['mounts'] += [{'source':str(output),'target':'/output','readonly':False},
         {'source':str(data),'target':'/logical','readonly':False}]
+    if learning:
+        expected.update(attempt_id='learning-v1',rows=51)
+        Path(doc['repo_path']).mkdir()
+        doc['environment']['SAEA_OBSERVABILITY_ATTEMPT_ID']='learning-v1'
+        commands=root/'config';commands.mkdir();job=root/'job';job.mkdir()
+        run=data/'runs';run.mkdir()
+        command={'schema':'saea-learning-strategy-command-v1','mode':'run','repo':'/study',
+            'data':'/logical','arguments':{'job':'/control/job-v1','out':'/output',
+                'after':'/previous/generation-released.json','predecessor_run':'PREVIOUS'}}
+        command_path=commands/'generation.json';command_path.write_text(json.dumps(command))
+        (job/'complete.json').write_text(json.dumps({'schema':'saea-learning-strategy-job-v1',
+            'job':expected['candidate'],'run_id':expected['run_id'],
+            'service_session':expected['service_session'],'runtime_rows':51}))
+        doc['argv']=['/bin/python3','/study/scripts/analysis/learning_strategy_job.py','--config','/config/generation.json']
+        doc['required_inputs'].append(pin(command_path))
+        doc['mounts']=[r for r in doc['mounts'] if r['target']!='/logical']+[
+            {'source':doc['repo_path'],'target':'/study','readonly':True},
+            {'source':str(commands),'target':'/config','readonly':True},
+            {'source':str(job),'target':'/control/job-v1','readonly':True},
+            {'source':str(run),'target':'/logical/runs/SAEA-PRODUCER','readonly':False}]
     producer.write_text(json.dumps(doc));m.launcher.execute(producer,'layout')
     observed=m.launcher.execute(producer,'launch')
     helper=Path(os.environ.get('SAEA_TEST_HANDOFF_HELPER') or str(Path(__file__).resolve().parents[4]/'scripts/npu/generation_release_handoff.py'))
@@ -162,16 +182,70 @@ def generation_fixture(queue, tmp_path):
     seal={};artifacts={}
     for key,name in [('generation_manifest','SAEA-PRODUCER.generation-manifest.json'),
             ('score_ledger_cells','score-ledger-cells.json'),('score_jobs','score-jobs.jsonl')]:
-        p=data/'runs/SAEA-PRODUCER/generation-v1'/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text('{}')
-        logical=str(Path('/logical/runs/SAEA-PRODUCER/generation-v1')/name)
+        p=(data/'runs/learning-v1' if learning else data/'runs/SAEA-PRODUCER/generation-v1')/name
+        p.parent.mkdir(parents=True,exist_ok=True);p.write_text('{}')
+        logical=str(Path('/logical/runs/SAEA-PRODUCER')/expected['attempt_id']/name)
         artifacts[key]={'path':logical,'sha256':m.launcher.digest(p)}
         seal[key+'_path']=logical;seal[key+'_sha256']=m.launcher.digest(p)
     release={'schema':'saea-generation-released-v1',**expected,'generation_sealed':True,
         'generation_lease_released':True,'scoring_complete':False,'consumer_requires_own_lease_and_readiness':True,
         'released_at_unix':123.,'campaign_seconds_to_release':12.,'artifacts':artifacts,'seal_receipt':seal}
     (output/'started.json').write_text(json.dumps({'study_commit':expected['study_commit'],'candidate':'candidate','rows':312}))
+    if learning:
+        (output/'started.json').write_text(json.dumps({'study_commit':expected['study_commit'],'job':'candidate'}))
     path.write_text(json.dumps(config))
     return output/'generation-released.json',release,data
+
+
+def test_learning_config_single_run_mount_releases_original_bytes_while_scoring(queue,tmp_path,monkeypatch):
+    release,value,data=generation_fixture(queue,tmp_path,learning=True);path,config,docker=queue
+    blob=json.dumps(value,indent=3).encode();release.write_bytes(blob)
+    real=m.release_helper;seen=[]
+    def helper(doc):
+        module=real(doc);original=module.verify_release
+        def verify(receipt,**kwargs):
+            assert receipt==release and receipt.read_bytes()==blob
+            assert kwargs['data']==Path('/logical')
+            seen.append(kwargs['resolve_artifact'](Path(value['artifacts']['score_jobs']['path'])))
+            return original(receipt,**kwargs)
+        module.verify_release=verify;return module
+    monkeypatch.setattr(m,'release_helper',helper)
+    result=m.execute(path,'once')
+    assert result['status']=='running' and docker.launches==['producer','job0']
+    assert docker.containers['producer']['State']['Running'] and release.read_bytes()==blob
+    assert seen==[data/'runs/learning-v1/score-jobs.jsonl']
+    assert result['jobs'][0]['generation_release']['producer_command']['job_manifest_sha256']
+
+
+@pytest.mark.parametrize('fault',['missing_pin','config_changed','writable_config','wrong_mode','extra_field',
+    'repo','data','out','writable_job','job_run','job_rows','job_session','started_job','artifact','symlink'])
+def test_learning_producer_drift_blocks_dispatch(queue,tmp_path,fault):
+    release,value,data=generation_fixture(queue,tmp_path,learning=True);path,config,docker=queue
+    producer_path=Path(config['jobs'][0]['after']['launch']['path']);producer=json.loads(producer_path.read_bytes())
+    command_path=tmp_path/'producer/config/generation.json';command=json.loads(command_path.read_bytes())
+    job_path=tmp_path/'producer/job/complete.json';job=json.loads(job_path.read_bytes())
+    if fault=='missing_pin':producer['required_inputs']=[]
+    elif fault=='config_changed':command_path.write_text('{}')
+    elif fault=='writable_config':next(r for r in producer['mounts'] if r['target']=='/config')['readonly']=False
+    elif fault in ('wrong_mode','extra_field','repo','data','out'):
+        if fault=='wrong_mode':command['mode']='prepare'
+        elif fault=='extra_field':command['arguments']['extra']=True
+        elif fault=='out':command['arguments']['out']='/output/foreign'
+        else:command[fault]='/foreign'
+        command_path.write_text(json.dumps(command));producer['required_inputs']=[pin(command_path)]
+    elif fault=='writable_job':next(r for r in producer['mounts'] if r['target']=='/control/job-v1')['readonly']=False
+    elif fault.startswith('job_'):
+        job[{'job_run':'run_id','job_rows':'runtime_rows','job_session':'service_session'}[fault]]='foreign'
+        job_path.write_text(json.dumps(job))
+    elif fault=='started_job':release.with_name('started.json').write_text(json.dumps({'study_commit':'b'*40}))
+    elif fault=='artifact':(data/'runs/learning-v1/score-jobs.jsonl').write_text('changed')
+    else:
+        target=data/'runs/learning-v1/score-jobs.jsonl';target.unlink();outside=tmp_path/'outside';outside.write_text('{}');target.symlink_to(outside)
+    producer_path.write_text(json.dumps(producer));config['jobs'][0]['after']['launch']=pin(producer_path)
+    docker.containers['producer']['Config']['Labels']['saea.launch.config']=m.canonical_hash(producer)
+    path.write_text(json.dumps(config));release.write_text(json.dumps(value))
+    with pytest.raises(ValueError):m.execute(path,'once')
+    assert docker.launches==['producer']
 
 
 def test_verified_generation_release_launches_while_producer_scores(queue,tmp_path):
