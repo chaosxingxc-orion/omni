@@ -36,3 +36,11 @@ python3 studies/speech-aware-evidence-acquisition/scripts/environment/configured
 此版本锁定单任务启动和观察，尚不是全部任务类型的统一流水线：自动建工作树、配置生成、register/admit间提交编排、多任务优先级和故障恢复调度仍待迁移验收。后续在这个入口增量完善，不能另造逐实验启动脚本。改执行器需要版本、缺陷说明、相关回归及真实任务验收；无新证据时冻结执行器，把精力用于算法实验。
 
 原生语音任务在发送前失败、attempt明确ABORTED且调用/音频均为0时，允许通过显式原生恢复声明接续，保留零成本前驱。32项相关恢复回归通过（4.53秒）；存在未知或未核验成本时仍不能重发。
+
+## 恢复与归档的通用入口
+
+原始Direct音频可能为FLAC；准入使用真实wire头部读取时长，不转码或相信外带duration。完整输入格式校验与环境依赖预检分别验收。预检的业务输出目录由预检脚本独占创建，launcher layout只准备父目录；required_environment仅声明必须存在的非空变量。
+
+零调用故障使用`reconcile_zero_contact.py --config ...`核验并保全准确旧租约；通过后由`resume_registered_workload.py`创建明确的新attempt。原attempt、历史成本与执行树不改，generation.guard不删除或替换。带请求的恢复必须使用对应原生来源契约，不能套用零调用工具。
+
+归档统一使用`configured_remote_archive.py watch --config ...`，实例、路径与attempt清单只改配置。监测、归档及CPU分析脱离SSH，默认600秒或终态事件。固定启动器不自动编排多个业务阶段；后继是否就绪必须以来源、预算、预检和恢复证据判断。
