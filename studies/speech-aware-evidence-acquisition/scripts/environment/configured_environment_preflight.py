@@ -10,6 +10,7 @@ import subprocess
 import time
 
 SCHEMA = 'saea-environment-preflight-v1'
+RUNTIME_PATH_KINDS = {'SPEECHRL_DATA_DIR': 'data-root', 'SAEA_STAGE_TIMING_PATH': 'timing-file'}
 PROBE = '''import importlib, importlib.metadata, json, sys
 spec = json.loads(sys.argv[1])
 checks = []
@@ -39,14 +40,43 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
+def canonical_runtime_path(value):
+    require(isinstance(value, str) and value.startswith('/') and not value.startswith('//') and value != '/'
+            and str(Path(value)) == value and '..' not in Path(value).parts
+            and not any(c in value for c in ('\x00', '\n', '\r', ':', ',')),
+            'runtime path must be canonical, absolute and non-root')
+    return Path(value)
+
+
+def runtime_paths(doc):
+    declarations = doc.get('runtime_paths', {})
+    require(isinstance(declarations, dict) and set(declarations) <= set(RUNTIME_PATH_KINDS),
+            'only known runtime environment paths may be declared')
+    for key, item in declarations.items():
+        fields = {'kind', 'path', 'mount'} if key == 'SAEA_STAGE_TIMING_PATH' else {'kind', 'path'}
+        require(isinstance(item, dict) and set(item) == fields
+                and item.get('kind') == RUNTIME_PATH_KINDS[key], 'exact runtime path semantics required: ' + key)
+        value = canonical_runtime_path(item['path'])
+        require(doc['required_environment'].get(key) == str(value),
+                'runtime path must match required environment: ' + key)
+        if key == 'SAEA_STAGE_TIMING_PATH':
+            parent = canonical_runtime_path(item['mount'])
+            require(value != parent and value.is_relative_to(parent),
+                    'timing file must be strictly below its declared mount')
+    require(not (set(doc['required_environment']) & set(RUNTIME_PATH_KINDS)) - set(declarations),
+            'runtime environment paths must be explicitly declared')
+    return declarations
+
+
 def load_config(path):
     doc = json.loads(Path(path).read_bytes())
-    require(isinstance(doc, dict) and set(doc) == {'schema', 'required_environment', 'interpreters', 'timeout_seconds'}, 'exact preflight schema required')
+    require(isinstance(doc, dict) and set(doc) - {'runtime_paths'} == {'schema', 'required_environment', 'interpreters', 'timeout_seconds'}, 'exact preflight schema required')
     require(doc['schema'] == SCHEMA, 'unsupported preflight schema')
     require(type(doc['timeout_seconds']) is int and 1 <= doc['timeout_seconds'] <= 300, 'bounded timeout required')
     require(isinstance(doc['required_environment'], dict) and all(
         isinstance(k, str) and re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*', k) and isinstance(v, str) and v
         for k, v in doc['required_environment'].items()), 'explicit environment values required')
+    runtime_paths(doc)
     require(isinstance(doc['interpreters'], list) and doc['interpreters'], 'interpreter checks required')
     names = set()
     for item in doc['interpreters']:

@@ -200,6 +200,42 @@ class BindingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'implementation identity differs'):
             m.verify(self.binding, self.successor_path)
 
+    def runtime_configuration(self):
+        config = json.loads(self.config.read_text())
+        env = {'SPEECHRL_DATA_DIR': '/data', 'SAEA_STAGE_TIMING_PATH': '/state/timing.jsonl'}
+        config['required_environment'] = env
+        config['runtime_paths'] = {'SPEECHRL_DATA_DIR': {'kind': 'data-root', 'path': '/data'},
+            'SAEA_STAGE_TIMING_PATH': {'kind': 'timing-file', 'path': '/state/timing.jsonl', 'mount': '/state'}}
+        self.config.write_text(json.dumps(config))
+        import os
+        with patch.dict(os.environ, env):
+            m.probe.execute(self.config, self.out / 'runtime-attempt')
+        self.ready = self.out / 'runtime-attempt/ready.json'
+        self.source['argv'][-1] = '/preflight/runtime-attempt'
+        self.source['environment'] = dict(env)
+        self.successor['environment'] = dict(env)
+        leaf = {'source': str(self.root / 'dataset'), 'target': '/data/datasets', 'readonly': True}
+        self.source['mounts'].append(leaf)
+        self.successor['mounts'].append(copy.deepcopy(leaf))
+        self.successor['mounts'].append({'source': str(self.root / 'state'), 'target': '/state', 'readonly': False})
+        self.source['required_inputs'] = [m.pin(self.config)]
+        self.successor['required_inputs'] = [m.pin(self.ready)]
+
+    def test_runtime_paths_bind_and_verify_without_launch(self):
+        self.runtime_configuration()
+        binding = self.bind()
+        self.assertEqual(binding['compatibility']['runtime_paths'], json.loads(self.config.read_text())['runtime_paths'])
+        self.assertEqual(m.verify(self.binding, self.successor_path), self.successor)
+
+    def test_runtime_declaration_drift_invalidates_existing_binding(self):
+        self.runtime_configuration()
+        self.bind()
+        config = json.loads(self.config.read_text())
+        config['runtime_paths']['SAEA_STAGE_TIMING_PATH']['mount'] = '/other'
+        self.config.write_text(json.dumps(config))
+        with self.assertRaisesRegex(ValueError, 'absent or changed'):
+            m.verify(self.binding, self.successor_path)
+
 
 if __name__ == '__main__':
     unittest.main()

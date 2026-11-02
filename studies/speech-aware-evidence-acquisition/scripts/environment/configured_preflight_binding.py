@@ -81,10 +81,14 @@ def compatibility(source, successor, config, output_mount):
     require(successor['argv'][0] in interpreters, 'successor interpreter was not probed')
     dependencies = [m for m in source['mounts'] if m != output_mount]
     require(all(m['readonly'] for m in dependencies), 'preflight dependencies must be read-only mounts')
+    declarations = probe.runtime_paths(config)
+    require(not (set(source['environment']) & set(probe.RUNTIME_PATH_KINDS)) - set(declarations),
+            'runtime environment paths must be explicitly declared')
     protected = ['/usr', '/lib', '/lib64', '/bin', '/sbin', '/opt',
                  source['working_directory'], *interpreters, *(m['target'] for m in dependencies)]
-    for value in source['environment'].values():
-        protected.extend(part for part in value.split(':') if part.startswith('/'))
+    for key, value in source['environment'].items():
+        if key not in declarations:
+            protected.extend(part for part in value.split(':') if part.startswith('/'))
     require(not any(overlap(output_mount['target'], path) for path in protected),
             'preflight output overlaps dependency paths')
     for mount in dependencies:
@@ -93,9 +97,35 @@ def compatibility(source, successor, config, output_mount):
         if mount not in dependencies:
             require(not any(overlap(mount['target'], path) for path in protected),
                     'successor mount shadows dependency: ' + mount['target'])
-    return {'image': source['image'], 'environment': source['environment'],
+    data = declarations.get('SPEECHRL_DATA_DIR')
+    if data:
+        root = Path(data['path'])
+        require(not any(root.is_relative_to(path) for path in protected),
+                'data root cannot be a dependency path')
+        require(any(Path(m['target']).is_relative_to(root) for m in dependencies),
+                'data root requires read-only dependency leaves')
+    timing = declarations.get('SAEA_STAGE_TIMING_PATH')
+    if timing:
+        sink, mount = host_path(successor, timing['path'])
+        require(mount['target'] == timing['mount'] and not mount['readonly'],
+                'timing file requires its declared writable parent mount')
+        require(not Path(mount['source']).exists() or Path(mount['source']).is_dir(),
+                'timing mount source must be a directory')
+        require(not sink.exists() or sink.is_file(), 'timing output must be a file')
+        require(not any(overlap(timing['path'], p) for p in protected)
+                and not overlap(timing['path'], output_mount['target']),
+                'timing output overlaps dependency or preflight evidence')
+        require(sink.resolve().is_relative_to(Path(mount['source']).resolve()),
+                'timing output escapes its declared host mount')
+        require(not any(overlap(Path(mount['source']).resolve(), Path(m['source']).resolve())
+                        for m in [*dependencies, output_mount]),
+                'timing output aliases dependency or preflight evidence')
+    footprint = {'image': source['image'], 'environment': source['environment'],
             'working_directory': source['working_directory'], 'interpreters': interpreters,
             'dependency_mounts': dependencies, 'expected_commit': source['expected_commit']}
+    if declarations:
+        footprint['runtime_paths'] = declarations
+    return footprint
 
 
 def validate_ready(source, ready):
