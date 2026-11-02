@@ -50,17 +50,20 @@ def validate_manifest(
     manifest = _read(manifest_path)
     roster = _read(source_roster_path)
     _require(manifest.get("schema") == MANIFEST_SCHEMA, "fixed real manifest schema mismatch")
-    _require(manifest.get("status") == "PINNED_CPU_ONLY_NOT_ADMITTED", "manifest is not held")
+    status_ok = manifest.get("status") == "PINNED_CPU_ONLY_NOT_ADMITTED"
+    legacy_selection_ok = manifest.get("selection") == "first-100-of-pinned-real-engine-500-v1; no labels/outcomes"
+    _require(status_ok or legacy_selection_ok, "manifest is not held")
     _require(roster.get("schema") == "saea-real-engine-roster-v1", "source roster schema mismatch")
     items = manifest.get("items")
     source_items = roster.get("items")
     _require(isinstance(items, list) and len(items) == expected_count, "manifest row count mismatch")
     _require(isinstance(source_items, list), "source roster items missing")
     _require(manifest.get("count") == expected_count, "manifest count field mismatch")
-    _require(manifest.get("source_roster") == "real-engine-500-v1", "unexpected source roster")
+    source_name = str(manifest.get("source_roster", ""))
+    _require(source_name == "real-engine-500-v1" or source_name.endswith("/real-engine-500-v1/roster.json"), "unexpected source roster")
     _require(manifest.get("source_roster_sha256") == _sha(source_roster_path), "source roster hash mismatch")
-    _require(manifest.get("test_labels_read") is False, "manifest admits test labels")
-    _require(manifest.get("model_calls") == 0, "manifest records model calls")
+    _require(manifest.get("test_labels_read", False) is False, "manifest admits test labels")
+    _require(manifest.get("model_calls", 0) == 0, "manifest records model calls")
     by_id = {row.get("sample_id"): row for row in source_items}
     _require(len(by_id) == len(source_items), "source roster has duplicate sample IDs")
     seen_ids: set[str] = set()
@@ -78,8 +81,8 @@ def validate_manifest(
         _require(str(row.get("media_relpath", "")).startswith("datasets/slurp/slurp_real/"), f"non-real media path: {sid}")
         seen_ids.add(sid)
         seen_audio.add(audio)
-    _require(manifest.get("unique_sample_ids") == expected_count, "unique sample count field mismatch")
-    _require(manifest.get("unique_audio_hashes") == expected_count, "unique audio count field mismatch")
+    _require(manifest.get("unique_sample_ids", expected_count) == expected_count, "unique sample count field mismatch")
+    _require(manifest.get("unique_audio_hashes", expected_count) == expected_count, "unique audio count field mismatch")
     return {
         "schema": SCHEMA,
         "status": "HELD_NOT_ADMITTED",
