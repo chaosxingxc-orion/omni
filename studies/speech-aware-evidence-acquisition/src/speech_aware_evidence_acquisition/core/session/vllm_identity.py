@@ -296,6 +296,15 @@ def _mapped_paths(proc_root: Path, pid: int) -> tuple[list[str], list[str]]:
     """``(mapped file paths, deleted mapped file paths)`` from ``/proc/<pid>/maps``."""
 
     raw = _read(Path(proc_root) / str(pid) / "maps", "maps", pid)
+    cache = getattr(_probe_local, "cache", None)
+    if cache is not None and cache.pid != os.getpid():
+        _close_http_probe_connections()
+        cache = None
+    key = (str(proc_root), pid)
+    previous = cache.maps.pop(key, None) if cache is not None else None
+    if previous is not None and previous[0] == raw:
+        cache.maps[key] = previous
+        return list(previous[1]), list(previous[2])
     try:
         text = raw.decode("utf-8", errors="strict")
     except UnicodeError as error:
@@ -313,6 +322,16 @@ def _mapped_paths(proc_root: Path, pid: int) -> tuple[list[str], list[str]]:
             deleted.append(name[: -len(" (deleted)")])
         else:
             mapped.append(name)
+    if cache is not None and len(raw) <= _MAPS_CACHE_MAX_BYTES:
+        # Cache parsing only: every call above re-reads the full live maps bytes.
+        # Receipt-dependent library/deletion validation still runs below.
+        while cache.maps and (
+            len(cache.maps) >= _PROBE_MAX_CONNECTIONS
+            or sum(len(value[0]) for value in cache.maps.values()) + len(raw)
+                > _MAPS_CACHE_MAX_BYTES
+        ):
+            cache.maps.popitem(last=False)
+        cache.maps[key] = (raw, tuple(mapped), tuple(deleted))
     return mapped, deleted
 
 
@@ -320,17 +339,20 @@ def _mapped_paths(proc_root: Path, pid: int) -> tuple[list[str], list[str]]:
 NAMESPACE_PROBE_TIMEOUT_SECONDS = 5.0
 _PROBE_MAX_CONNECTIONS = 8
 _PROBE_MAX_RESPONSE_BYTES = 1024 * 1024
+_MAPS_CACHE_MAX_BYTES = 8 * 1024 * 1024
 _probe_local = threading.local()
 
 
 class _ProbeConnections:
-    """Bounded sockets owned by one thread/process; never identity results."""
+    """Owned bounded sockets and byte-exact maps parsing; never identity results."""
 
     def __init__(self):
         self.pid = os.getpid()
         self.connections = OrderedDict()
+        self.maps = OrderedDict()
 
     def close(self):
+        self.maps.clear()
         while self.connections:
             _, connection = self.connections.popitem(last=False)
             connection.close()
@@ -566,13 +588,14 @@ def _verify_maps(proc_root: Path, pid: int, runtime_receipt: Mapping[str, object
         raise _refuse("vllm runtime receipt lacks a non-empty runtime_libraries list")
     pinned_libraries = {str(entry["path"]) for entry in libraries if isinstance(entry, Mapping)}
     mapped, deleted = _mapped_paths(proc_root, pid)
-    missing = sorted(pinned_libraries - set(mapped))
+    unique_mapped = set(mapped)
+    missing = sorted(pinned_libraries - unique_mapped)
     if missing:
         raise _refuse(f"pid {pid} has not mapped the pinned runtime libraries {missing}")
     foreign = sorted(
         {
             name
-            for name in mapped
+            for name in unique_mapped
             if name not in pinned_libraries and _LIBPYTHON.search(Path(name).name) is not None
         }
     )
@@ -595,7 +618,7 @@ def _verify_maps(proc_root: Path, pid: int, runtime_receipt: Mapping[str, object
     stale = sorted(
         {
             name
-            for name in deleted
+            for name in set(deleted)
             if any(name == root or name.startswith(root.rstrip("/") + "/") for root in roots)
         }
     )
