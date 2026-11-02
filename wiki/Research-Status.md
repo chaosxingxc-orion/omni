@@ -1,8 +1,8 @@
 # A0、工程效率与TFRL结果追踪
 
-更新：2026-11-02 09:56 UTC。本页原位维护当前结果；历史过程见Git历史和证据。
+更新：2026-11-02 10:46 UTC。本页原位维护当前结果；历史过程见Git历史和证据。
 
-**首轮A0收益已锁定；TFRL尚无通过门槛的稳定收益；完整test尚未执行。** C96完成500/500，8卡/2实例，3.131秒/条；后继3片已完成，最终融合1次真实调用已返回，引用验证失败且存在语义反例，候选拒绝；固定H1复测已完成313/313，独立CPU恢复评分后FINALIZED；当前无已验证推理后继接续。持续队列目标尚未达到，服务驻留和分配8卡不证明持续满载。
+**首轮A0收益已锁定；TFRL尚无通过门槛的稳定收益；完整test尚未执行。** C96完成500/500，8卡/2实例，3.131秒/条；后继3片已完成，最终融合1次真实调用已返回，引用验证失败且存在语义反例，候选拒绝；固定H1复测已完成313/313，独立CPU恢复评分后FINALIZED；纠错prepare/register/admit已通过，生成容器启动但模型调用尚待核验。持续队列目标尚未达到，服务驻留和分配8卡不证明持续满载。
 
 [完整中文说明：现状、决策与下一阶段计划](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Research-Status-and-Plan.md)
 
@@ -140,6 +140,14 @@ SLU **68.8013%**、Intent **76.0383%**；第一轮为66.5031%/75.7188%。同策�
 
 ## 通用工程改进与多算法对照
 
-固定非功能负责人已交付独立配置化环境预检；与原启动器共24项固定镜像测试通过，真实业务/评分依赖预检0.746秒、0模型调用。固定脚本不自动安装或重启；后继绑定与跨配置等价校验仍待完成。[持续改进台账](https://github.com/chaosxingxc-orion/omni/blob/main/docs/engineering/Nonfunctional-Improvement-Program.md)。
+固定非功能负责人已交付独立配置化环境预检；与原启动器共24项固定镜像测试通过，真实业务/评分依赖预检0.746秒、0模型调用。固定脚本不自动安装或重启；后继环境绑定已实现并通过固定镜像测试，真实后继绑定尚待验收。[持续改进台账](https://github.com/chaosxingxc-orion/omni/blob/main/docs/engineering/Nonfunctional-Improvement-Program.md)。
 
 已核对TF-GRPO、Reflexion、ACE、GEPA原文。下一组优先知识构建对照：TF-GRPO及证据纠错、ACE增量更新、Reflexion离线迁移；随后冻结知识，用GEPA优化消费模块提示。所有方法共用固定真实数据、来源/成本/评分/恢复和配置化启动；新方法尚未有真实对照结果。方法类别、数据隔离和预算公平性见[算法比较与实施方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/decisions/TFRL-Algorithm-Comparison-and-Implementation.md)。
+
+## 本轮脚本化与算法接线结果
+
+纠错共享入口的真实来源、失败库存与FIT核验已通过，继承313调用及全部tokens；注册/准入完成，生成容器已启动，尚未核验新模型请求。51组完整证据的纠错输入由55,506降为26,571 tokens（减少52.13%），加16,384输出与2,048余量可容纳于49,152上下文。CPU确定性补全查询标识/哈希/差异，模型意图和实体断言仍严格校验；原始失败响应完整封存。这是输入效率改进，没有精度或墙钟收益结论。
+
+共享绑定/纠错114项、运行时101项、预算切换及旧job31项固定镜像测试通过（分批有重叠）。通用配置预算切换已在真实驻留服务完成4096→16384，无引擎重启；首次登记锁只读失败已回滚验证。Direct完整测试适配正在验收及补恢复；ACE增量算法实现已分派，尚无实际比较结果。持续8卡满载仍未达到。
+
+[纠错输入证据](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/corrective-input-efficiency.json)

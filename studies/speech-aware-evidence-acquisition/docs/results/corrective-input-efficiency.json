@@ -1,0 +1,44 @@
+{
+  "schema": "saea-corrective-input-efficiency-v1",
+  "status": "prepared-and-admitted-generation-not-yet-verified",
+  "groups": 51,
+  "input_tokens_before": 55506,
+  "input_tokens_after": 26571,
+  "resident_context": 49152,
+  "completion_cap": 16384,
+  "reserve_tokens": 2048,
+  "input_reduction_percent": 52.1294995135661,
+  "new_model_calls_during_measurement": 0,
+  "source_custody_verified": true,
+  "failed_attempt_terminal_inventory_fit_verified": true,
+  "historical_usage": {
+    "calls": 313,
+    "prompt_tokens": 6154552,
+    "completion_tokens": 782814
+  },
+  "omitted_original_groups": 0,
+  "representation_changes": [
+    "Single original compact model view instead of duplicate reference/counterexample catalog",
+    "CPU resolves query identities, hashes and exact contrasts; model intent/entities remain validated",
+    "Complete parsed failed JSON sent once; original text and native bytes remain sealed"
+  ],
+  "limitations": [
+    "Tokenizer measurement is not native wire FIT",
+    "Input reduction is not measured wall-clock throughput improvement",
+    "No demonstrated accuracy gain or adopted candidate"
+  ],
+  "validation": {
+    "shared_binding_and_corrective_tests": {
+      "passed": 114,
+      "seconds": 9.07
+    },
+    "corrective_runtime_tests": {
+      "passed": 101,
+      "seconds": 7.74
+    },
+    "budget_transition_and_fusion_job_tests": {
+      "passed": 31,
+      "seconds": 4.42
+    }
+  }
+}
