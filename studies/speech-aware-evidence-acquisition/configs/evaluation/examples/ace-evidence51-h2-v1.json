@@ -1,0 +1,17 @@
+{
+  "schema": "saea-learning-h2-evaluation-v1",
+  "name": "slurp-ace-evidence51-h2-v1",
+  "run_id": "SAEA-SLURP-ACE-EVIDENCE51-H2-V1",
+  "template": "probes/slurp-ace-evidence51-h2-v1-experience.txt",
+  "producer_strategy": "ace_incremental_offline_v1",
+  "runtime": {
+    "model_fragment": "bf16-thinking-real500-tp4-s128-v1",
+    "service_session": "serving-tfgrpo-ctx48k-resident-v1",
+    "profile": "qwen3-omni-concurrency-c96-2xtp4-s128-b2048-v1",
+    "runtime_receipt": "receipts/runtime-tfgrpo-ctx48k-resident-v1.json"
+  },
+  "candidate_release": {
+    "relpath": "work/codex/ace-evidence51-h2-v1/candidate-release.json",
+    "sha256": null
+  }
+}

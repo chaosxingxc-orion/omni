@@ -1,0 +1,17 @@
+{
+  "schema": "saea-learning-h2-evaluation-v1",
+  "name": "slurp-reflexion-evidence51-h2-v1",
+  "run_id": "SAEA-SLURP-REFLEXION-EVIDENCE51-H2-V1",
+  "template": "probes/slurp-reflexion-evidence51-h2-v1-experience.txt",
+  "producer_strategy": "reflexion_offline_transfer_v1",
+  "runtime": {
+    "model_fragment": "bf16-thinking-real500-tp4-s128-v1",
+    "service_session": "serving-tfgrpo-ctx48k-resident-v1",
+    "profile": "qwen3-omni-concurrency-c96-2xtp4-s128-b2048-v1",
+    "runtime_receipt": "receipts/runtime-tfgrpo-ctx48k-resident-v1.json"
+  },
+  "candidate_release": {
+    "relpath": "work/codex/reflexion-evidence51-h2-v1/candidate-release.json",
+    "sha256": null
+  }
+}

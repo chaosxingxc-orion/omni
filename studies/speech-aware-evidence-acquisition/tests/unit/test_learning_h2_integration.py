@@ -24,21 +24,35 @@ def evaluation(suffix='one'):
         'candidate_release': {'relpath': 'release.json', 'sha256': 'e' * 64}}
 
 
+def bind_producer(data, params, config):
+    # Only method binding is under test; native custody has independent tests.
+    candidate_path = data / params['candidate']['relpath']
+    candidate = job.read(candidate_path)
+    candidate['strategy'] = config['producer_strategy']
+    candidate_path.write_bytes(job.raw(candidate))
+    params['candidate'] = job.pin(data, params['candidate']['relpath'])
+    release_path = data / 'release.json'
+    release_path.write_bytes(job.raw({'strategy': config['producer_strategy'], 'candidate': params['candidate']}))
+    config['candidate_release'] = job.pin(data, 'release.json')
+
+
 @pytest.fixture
-def shared_workload(workload):
+def shared_workload(workload, request):
     repo, data, spec, exp, view, derived = workload
-    config = evaluation(); name, run = config['name'], config['run_id']
+    config = evaluation(); config['producer_strategy'] = getattr(request, 'param', 'ace_incremental_offline_v1')
+    name, run = config['name'], config['run_id']
     base = job.read(repo / f'configs/baseline/{job.NAME}.json')
     component = next(c for c in base['native_episode']['consumption_module']['components']
         if c['component_id'] == job.consumption.COMPONENT)
-    params = component['params']; params['candidate_release'] = config['candidate_release']
+    params = component['params']; bind_producer(data, params, config)
+    params['candidate_release'] = config['candidate_release']
     params['template']['relpath'] = config['template']
     block = base['native_episode']['consumption_module']
     block['columns'][0]['template']['relpath'] = 'configs/' + config['template']
     base['native_episode']['roles']['solver']['template_variants']['arms'][0]['instruction_template']['relpath'] = 'configs/' + config['template']
     base['native_contact_fit']['run_id'] = run + '-FIT'
     exp['cells'][0].update(cell_id=name, run_id=run, baseline_fragment=name)
-    exp['stage3_algorithm'].update(id='ace-grow-refine-v1', operators_used=['context_application'])
+    exp['stage3_algorithm'].update(id=paired.evaluation_algorithm(config)[0], operators_used=['context_application'])
     spec.update(cell=name, experiment=name, run_id=run, fit_run_id=run + '-FIT',
         workload_kind='learning-full-h2-paired', evaluation_config=config,
         scientific_baseline_sha256=job.scientific_hash(base))
@@ -49,6 +63,7 @@ def shared_workload(workload):
     return repo, data, spec, exp, view, base
 
 
+@pytest.mark.parametrize('shared_workload', list(paired.EVALUATION_METHODS), indirect=True)
 def test_shared_registered_full_h2_dispatch(shared_workload):
     repo, data, spec, exp, view, base = shared_workload
     assert registered_workload.validate_workload(repo, data, spec['cell'], spec) == 312
@@ -78,13 +93,15 @@ def test_two_configurations_derive_without_mutating_globals(release, monkeypatch
     monkeypatch.setattr(paired.consumption, 'verify', lambda *a, **kw: None)
     original = (paired.NAME, paired.RUN, job.NAME, job.RUN)
     results = []
-    for suffix in ('one', 'two'):
-        config = evaluation(suffix); p = copy.deepcopy(params)
+    for suffix, strategy in zip(('one', 'two'), paired.EVALUATION_METHODS):
+        config = evaluation(suffix); config['producer_strategy'] = strategy; p = copy.deepcopy(params)
+        bind_producer(data, p, config)
         p['candidate_release'] = config['candidate_release']; p['template']['relpath'] = config['template']
         result = paired.derive(ROOT, data, p, fit_estimate={'slot_tokens':24576,
             'completion_ceiling':4096, 'base_prompt_tokens':2000, 'tokens_per_supplied_item':235},
             base_template_tokens=400, learned_template_tokens=500, evaluation=config)
         results.append(result['experiment']['cells'][0]['run_id'])
+        assert result['experiment']['stage3_algorithm']['id'] == paired.EVALUATION_METHODS[strategy][0]
         assert result['evaluation']['rows'] == 312
         assert result['evaluation']['normal_generation_calls'] == 936
     assert results == ['SAEA-ACE-SHARED-H2-ONE', 'SAEA-ACE-SHARED-H2-TWO']
@@ -124,3 +141,35 @@ def test_shared_compiler_accepts_only_exact_release_contract(release, fault):
         output = compiled.apply_to(base); output['native_episode']['consumption_module'] = block
         cm.verify_declared_module(block, output, repo_root=ROOT)
         assert native_contact_custody_enabled({**output, 'transport':'vllm', 'carrier_lock_key':'slurp'})
+
+
+@pytest.mark.parametrize('shared_workload', list(paired.EVALUATION_METHODS), indirect=True)
+@pytest.mark.parametrize('fault', ['declared_method', 'candidate_method', 'release_method', 'algorithm_label'])
+def test_h2_rejects_producer_mislabel_even_with_updated_pins(shared_workload, fault):
+    repo, data, spec, exp, view, base = shared_workload
+    config = spec['evaluation_config']
+    other = next(s for s in paired.EVALUATION_METHODS if s != config['producer_strategy'])
+    params = next(c['params'] for c in base['native_episode']['consumption_module']['components']
+                  if c['component_id'] == job.consumption.COMPONENT)
+    if fault == 'declared_method':
+        config['producer_strategy'] = other
+        exp['stage3_algorithm']['id'] = paired.EVALUATION_METHODS[other][0]
+    elif fault == 'algorithm_label':
+        exp['stage3_algorithm']['id'] = paired.EVALUATION_METHODS[other][0]
+    else:
+        rel = job.read(data / params['candidate_release']['relpath'])
+        if fault == 'candidate_method':
+            path = data / params['candidate']['relpath']; candidate = job.read(path)
+            candidate['strategy'] = other; path.write_bytes(job.raw(candidate))
+            params['candidate'] = job.pin(data, params['candidate']['relpath'])
+            rel['candidate'] = params['candidate']
+        else:
+            rel['strategy'] = other
+        (data / params['candidate_release']['relpath']).write_bytes(job.raw(rel))
+        params['candidate_release'] = job.pin(data, params['candidate_release']['relpath'])
+        config['candidate_release'] = params['candidate_release']
+        spec['scientific_baseline_sha256'] = job.scientific_hash(base)
+    (repo / f'configs/baseline/{spec["cell"]}.json').write_bytes(job.raw(base))
+    (repo / f'configs/experiment/{spec["cell"]}.json').write_bytes(job.raw(exp))
+    with pytest.raises(ValueError, match='producer|program'):
+        registered_workload.validate_workload(repo, data, spec['cell'], spec)

@@ -23,13 +23,37 @@ AUTH='docs/decisions/2026-10-31-owner-lock-baseline-and-cost-repair.md'
 
 
 EVALUATION_SCHEMA = 'saea-learning-h2-evaluation-v1'
+EVALUATION_METHODS = {
+    'ace_incremental_offline_v1': ('ace-grow-refine-v1', 'ACE offline'),
+    'reflexion_offline_transfer_v1': ('reflexion-offline-transfer-v1', 'Reflexion offline transfer'),
+}
+
+
+def evaluation_algorithm(config):
+    identity = evaluation_identity(config)
+    return EVALUATION_METHODS[identity['producer_strategy']]
+
+
+def verify_producer(params, *, data, evaluation):
+    if evaluation is None:
+        return
+    identity = evaluation_identity(evaluation)
+    if params.get('candidate_release') != identity['candidate_release']:
+        raise ValueError('evaluation release differs from consumption release')
+    from speech_aware_evidence_acquisition.rails.learning_candidate_release import read_pin
+    _, release = read_pin(data, params['candidate_release'])
+    _, candidate = read_pin(data, params['candidate'])
+    if (release.get('strategy') != identity['producer_strategy']
+            or candidate.get('strategy') != identity['producer_strategy']
+            or release.get('candidate') != params['candidate']):
+        raise ValueError('evaluation producer differs from pinned candidate and release')
 
 
 def evaluation_identity(config=None):
     if config is None:
         return {'name':NAME,'run_id':RUN,'template':'probes/tfgrpo-fixed-p-h1-experience-v1.txt'}
     if (not isinstance(config,dict) or set(config) != {'schema','name','run_id','template','producer_strategy','runtime','candidate_release'}
-            or config['schema'] != EVALUATION_SCHEMA or config['producer_strategy'] != 'ace_incremental_offline_v1'
+            or config['schema'] != EVALUATION_SCHEMA or config['producer_strategy'] not in EVALUATION_METHODS
             or not re.fullmatch('[a-z0-9][a-z0-9-]*',str(config['name']))
             or not re.fullmatch('SAEA-[A-Z0-9][A-Z0-9_-]*',str(config['run_id']))
             or config['name']==NAME or config['run_id']==RUN
@@ -83,6 +107,7 @@ def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template
     if len(ids)!=312 or len(set(ids))!=312 or set(params['consumer_ids'])!=set(ids):
         raise ValueError('the exact complete H2 312 roster is required')
     consumption.verify(params,repo=repo,data=data,model_id=params['model_id'],consumer_ids=ids)
+    verify_producer(params,data=data,evaluation=evaluation)
     base=json.loads((repo/'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json').read_bytes())
     exp=json.loads((repo/'configs/experiment/slurp-tfrl-hardset-a0-observation-r1-v1.json').read_bytes())
     block=copy.deepcopy(base['native_episode']['consumption_module'])
@@ -125,8 +150,9 @@ def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template
     exp['stage3_measurement'].update(rows=312,read_roster=roster['roster_id'],claims_benefit=False,
         note='Development paired comparison, not untouched confirmation. Score both learned and lock arms officially.')
     if evaluation is not None:
-        exp['stage3_algorithm']={'id':'ace-grow-refine-v1','operators_used':['context_application'],
-            'note':'Frozen ACE offline candidate consumption; feedback is not learned on H2.'}
+        algorithm,label=evaluation_algorithm(evaluation)
+        exp['stage3_algorithm']={'id':algorithm,'operators_used':['context_application'],
+            'note':f'Frozen {label} candidate consumption; feedback is not learned on H2.'}
     return {'name':name,'baseline':base,'experiment':exp,'roster':roster,
         'evaluation':{'rows':312,'normal_generation_calls':936,'fallback_generation_cap':1872,'fit_calls':936,
             'primary_comparison':'learned minus lock, official SLURP aggregate F1',

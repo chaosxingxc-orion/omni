@@ -128,6 +128,7 @@ def stage(repo, data, candidate, manifest, out, evaluation=None):
     params = consumption.prepare(candidate_path=candidate,source_manifest=manifest,repo=repo,data=data,
         base_template=base['phase_material']['solver']['instruction_template'],template=TEMPLATE,
         consumer_ids=ids,model_id=MODEL,**({'candidate_release':evaluation['candidate_release']} if evaluation is not None else {}))
+    paired.verify_producer(params,data=data,evaluation=evaluation)
     measurement = measure_templates(repo,data,params,evaluation)
     derived = paired.derive(repo,data,params,fit_estimate=measurement['fit_estimate'],
         base_template_tokens=measurement['token_counts']['base_template'],learned_template_tokens=measurement['token_counts']['template'],evaluation=evaluation)
@@ -185,6 +186,7 @@ def verify_stage(repo, data, stage_record):
             or params['template']['relpath'] != identity['template']):
         raise ValueError('staged evaluation release or template differs')
     consumption.verify(params,repo=repo,data=data,model_id=MODEL,consumer_ids=[r['sample_id'] for r in read(repo/ROSTER)['items']])
+    paired.verify_producer(params,data=data,evaluation=evaluation)
     measured = pinned(data,staged['measurement'])
     if measured != measure_templates(repo,data,params,evaluation): raise ValueError('template measurement changed')
     return staged
@@ -229,7 +231,7 @@ def validate(repo,data,name,spec,exp,view):
             or fit != {'run_id':RUN+'-FIT','attempt_id':'fit-v1','contact_cap':936,'max_speech_packets':1}
             or exp['execution_plan']['planned_model_calls'] != 1872
             or exp['execution_plan']['planned_speech_audio_seconds'] < math.ceil(6*sum(r['audio_seconds'] for r in roster['items']))
-            or exp['stage3_algorithm']['id'] != ('ace-grow-refine-v1' if evaluation is not None else 'tfgrpo-semantic-advantage-v1')
+            or exp['stage3_algorithm']['id'] != (paired.evaluation_algorithm(evaluation)[0] if evaluation is not None else 'tfgrpo-semantic-advantage-v1')
             or exp['stage3_algorithm']['operators_used'] != (['context_application'] if evaluation is not None else ['context_application','rollout','scoring'])
             or exp['stage3_measurement']['claims_benefit'] is not False):
         raise ValueError('registered paired program or budget changed')
@@ -238,6 +240,7 @@ def validate(repo,data,name,spec,exp,view):
         matches=[c['params'] for c in components if c['component_id']==consumption.COMPONENT and c['state']=='on']
         if len(matches)!=1 or matches[0].get('candidate_release')!=evaluation['candidate_release'] or matches[0]['template']['relpath']!=identity['template']:
             raise ValueError('registered candidate release differs')
+        paired.verify_producer(matches[0],data=data,evaluation=evaluation)
     consumption.verify_for_flight(base,repo=repo,data=data,model_id=MODEL,consumer_ids=ids)
     verify_output(pinned(data,base['prepared_phase_supply'])['output'],ids)
     if spec['gain_lock'] != {'relpath':LOCK,'sha256':LOCK_SHA} or pinned(repo,spec['gain_lock'])['status'] != 'locked_full_train_fold_b':
@@ -306,7 +309,7 @@ def register(repo,data,stage_record,prepared):
     pkg.mkdir(parents=True)
     for rel,doc in docs.items(): publish_new(pkg/rel,raw(doc))
     ledger=repo/'docs/exposure-ledger.md'
-    label='TF-GRPO' if evaluation is None else 'ACE frozen candidate'
+    label='TF-GRPO' if evaluation is None else paired.evaluation_algorithm(evaluation)[1]+' frozen candidate'
     ledger.write_text(ledger.read_text()+'\n## Full H2 '+label+' paired development\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| '+' | '.join(['---']*15)+' |\n'+'\n'.join('| '+' | '.join(r)+' |' for r in rows)+'\n')
     publish_new(repo/'docs/readiness'/f'{NAME}-preregistration.md',b'# Full H2 paired development\n\nFixed312 H2; one P and two Solver arms, learned and lock. Shared campaign delivers lock; officially score both complete arms separately. No H2 feedback used in H1 learning. Candidate is not accepted by generation. Gate: +1 percentage point SLU-F1 with no Intent decrease; report paired uncertainty and per-label regressions. 936 normal generation contacts,1872 fallback cap,936 FIT. Commit registration, use shared output-preserving admission/repin, commit, then detached shared dispatch and native recovery.\n')
     return {'cell':NAME,'rows':312,'source_commit':head,'new_model_calls':0,'readiness':'held'}
