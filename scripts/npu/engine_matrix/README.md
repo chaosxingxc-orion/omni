@@ -1,6 +1,6 @@
 # Resumable engine matrix
 
-This runner is deployed for synthetic engineering measurements on `npu2`. It never changes a deployment or submits scientific dataset rows. Operational plans and results remain outside Git; the included plan is a control example. See the [current result dashboard](https://github.com/chaosxingxc-orion/omni/wiki/2026-10-31-A0-and-NPU-Scheduling).
+This runner is deployed for synthetic engineering measurements on `npu2`. It never changes a deployment or submits scientific dataset rows. Operational plans and results remain outside Git; the included plan is a control example. See the [current result dashboard](https://github.com/chaosxingxc-orion/omni/wiki/Research-Status).
 
 ## Workload and comparison
 

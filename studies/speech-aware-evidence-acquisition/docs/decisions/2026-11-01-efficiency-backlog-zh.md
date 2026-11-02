@@ -70,4 +70,4 @@
 
 当前H2仍在推理，已完成的启动CPU成本无法通过中途重启追回。对后续生成有确定大收益的改动，应比较剩余可节省墙钟与暂停/排空/接续成本；净收益明确为正就受控停止并从断点接续，而非一律等完。尚未实现或验证的设想不能据此中断真实实验。
 
-[当前任务状态](../results/2026-11-01-task-status-decisions-next-plan-zh.md) · [来源验证实测](../results/2026-11-01-custody-verification-efficiency-zh.md) · [下一构建实验](2026-11-01-evidence-conditioned-memory-next-protocol-zh.md)
+[当前任务状态](../results/Research-Status-and-Plan.md) · [来源验证实测](../results/2026-11-01-custody-verification-efficiency-zh.md) · [下一构建实验](2026-11-01-evidence-conditioned-memory-next-protocol-zh.md)

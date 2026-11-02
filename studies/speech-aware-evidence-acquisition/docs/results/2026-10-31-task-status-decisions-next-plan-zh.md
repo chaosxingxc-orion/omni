@@ -44,6 +44,6 @@ L1 sample0 是从已有六调用轨迹中取出的首答案，其两调用表示
 
 当前没有需要用户重复批准的事项。真实500条拓扑测量已获授权；旧合成重复队列保持取消。后台脚本每10分钟观察状态，模型只读取完成、失败或需要决策的摘要；CPU分析与NPU任务异步。
 
-完整Direct1080条官方SLU-F1：lock45.1178%、aa45.6633%、ab45.2940%。A0的427条不能直接与其相减宣称系统收益。结果原位更新到[Wiki](https://github.com/chaosxingxc-orion/omni/wiki/2026-10-31-A0-and-NPU-Scheduling)。
+完整Direct1080条官方SLU-F1：lock45.1178%、aa45.6633%、ab45.2940%。A0的427条不能直接与其相减宣称系统收益。结果原位更新到[Wiki](https://github.com/chaosxingxc-orion/omni/wiki/Research-Status)。
 
 最新[运行登记、计时和验证结果](2026-10-31-real500-runtime-readiness-zh.md)。

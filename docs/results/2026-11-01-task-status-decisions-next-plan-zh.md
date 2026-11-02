@@ -82,4 +82,4 @@ normal/debug已独立配置并固定有效配置SHA：normal保留关键耗时/�
 
 独立Astra审查仍无有效报告，先前任务只返回规则确认；这是明确未完成项，不以主线程分析代签。Ceph旧内核风险已通过本地热状态与异步归档隔离，但内核问题本身未修复。
 
-[可观测配置与使用](../decisions/2026-11-01-observability-modes-zh.md) · [失败与有界综合](2026-11-01-dense-learning-bound-repair-zh.md) · [短ID完整结果](2026-11-01-tfgrpo-render-h2-full-result-zh.md) · [实验Wiki](https://github.com/chaosxingxc-orion/omni/wiki/2026-10-31-A0-and-NPU-Scheduling)
+[可观测配置与使用](../decisions/2026-11-01-observability-modes-zh.md) · [失败与有界综合](2026-11-01-dense-learning-bound-repair-zh.md) · [短ID完整结果](2026-11-01-tfgrpo-render-h2-full-result-zh.md) · [实验Wiki](https://github.com/chaosxingxc-orion/omni/wiki/Research-Status)
