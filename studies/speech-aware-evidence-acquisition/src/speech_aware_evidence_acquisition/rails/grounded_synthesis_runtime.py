@@ -25,6 +25,19 @@ def build_registration(plan, *, shard_plan, custody, model_id, decoding_params,
                        max_context_bytes, runtime_identity, roster_sha256,
                        source_batch, max_operations=128):
     """CPU preparation only; resulting config still needs ordinary admission."""
+    require(isinstance(source_batch, dict) and source_batch.get('model_id') == model_id,
+            'grounded registration source model differs')
+    groups = source_batch.get('groups')
+    require(isinstance(groups, list) and groups, 'grounded source groups required')
+    for shard in shard_plan['shards']:
+        indices = shard.get('group_indices')
+        require(isinstance(indices, list) and indices
+                and all(type(i) is int and 0 <= i < len(groups) for i in indices),
+                'grounded shard group index outside source batch')
+        require(all(isinstance(groups[i], dict)
+                    and isinstance(groups[i].get('query_id'), str)
+                    and groups[i]['query_id'].startswith('slurp:train:') for i in indices),
+                'grounded shard groups require TRAIN anchors')
     config = {'model_id': model_id, 'decoding_params': decoding_params,
               'max_context_bytes': max_context_bytes,
               'runtime_identity_sha256': sha(runtime_identity)}
@@ -113,6 +126,12 @@ def run_registered_shards(runtime):
         sample_ids=tuple(s.sample_id for s in runtime._samples),
         roster_sha256=registration['construction_roster_sha256'],
         replay=getattr(runtime,'_native_contact_replay',None))
+    replay = getattr(runtime, '_native_contact_replay', None)
+    if replay is not None:
+        # New attempts have no local learner intents: inspect the entire native
+        # predecessor before constructing a caller or dispatching parallel FITs.
+        replay.assert_target(runtime._data_root, runtime.plan, 'prepared-context-text')
+        replay.assert_all_contacts_observed()
     root = runtime._run_dir()/'tfgrpo'
     require(root.resolve().is_relative_to(Path(runtime._data_root).resolve()),
             'grounded artifacts must remain under runtime data root')

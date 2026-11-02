@@ -1,0 +1,60 @@
+{
+  "schema": "saea-grounded-terminal-audit-v1",
+  "run_id": "SAEA-SLURP-GROUNDED-SHARDS-H1-V1",
+  "completed_shards": 3,
+  "total_shards": 3,
+  "source_groups": 51,
+  "source_operations": 102,
+  "candidate_publishable": false,
+  "final_consolidation": "NOT_IMPLEMENTED",
+  "current_usage": {
+    "calls": 3,
+    "prompt_tokens": 95974,
+    "completion_tokens": 12548
+  },
+  "historical_usage": {
+    "calls": 309,
+    "completion_tokens": 761689,
+    "prompt_tokens": 6032239
+  },
+  "cumulative_usage": {
+    "calls": 312,
+    "completion_tokens": 774237,
+    "prompt_tokens": 6128213
+  },
+  "unknown_generation_contacts": 0,
+  "native_requests_and_responses_verified": 3,
+  "fits": [
+    {
+      "measured_prompt_tokens": 31932,
+      "maximum_completion_tokens": 16384,
+      "margin_tokens": 834,
+      "slot_tokens": 49152,
+      "measurement": "vllm-chat-tokenize"
+    },
+    {
+      "measured_prompt_tokens": 31781,
+      "maximum_completion_tokens": 16384,
+      "margin_tokens": 985,
+      "slot_tokens": 49152,
+      "measurement": "vllm-chat-tokenize"
+    },
+    {
+      "measured_prompt_tokens": 32261,
+      "maximum_completion_tokens": 16384,
+      "margin_tokens": 505,
+      "slot_tokens": 49152,
+      "measurement": "vllm-chat-tokenize"
+    }
+  ],
+  "independent_fit_attempt_present": false,
+  "generation_wall_seconds": 192.47543239593506,
+  "seconds_per_shard": 64.15847746531169,
+  "mean_http_seconds": 92.39298808999592,
+  "cards_allocated": 8,
+  "instances": 2,
+  "continuous_full_utilization_verified": false,
+  "eta_seconds": 0,
+  "manifest_sha256": "9f0cefb51ff21beb0cdc76f6fe34587a69cf425184abba7d5852aa59c75e9227",
+  "shards_sha256": "e330e2968df247a693ef1bd958c6495a08515f4747de3ac0456a22fb1ba9b009"
+}

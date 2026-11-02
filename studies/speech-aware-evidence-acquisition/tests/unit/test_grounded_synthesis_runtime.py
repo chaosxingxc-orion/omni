@@ -70,6 +70,25 @@ def test_shared_dispatch_seal_keeps_intermediate_artifact_and_real_cost(tmp_path
     assert not (runtime._run_dir()/'tfgrpo/learner/candidate.json').exists()
 
 
+@pytest.mark.parametrize('fault', ['model', 'negative', 'boolean', 'test_anchor'])
+def test_registration_rejects_invalid_source_anchors(tmp_path, monkeypatch, fault):
+    runtime, transport, _, doc = setup(tmp_path, monkeypatch)
+    batch = json.loads((tmp_path/'batch.json').read_bytes())
+    custody = m.load_source(None)
+    if fault == 'model':
+        batch['model_id'] = 'another-model'
+    elif fault == 'test_anchor':
+        batch['groups'][0]['query_id'] = 'slurp:test:one'
+    else:
+        doc['plan']['shards'][0]['group_indices'] = [-1 if fault == 'negative' else False]
+    with pytest.raises(ValueError, match='source model|group index|TRAIN anchors'):
+        m.build_registration(runtime.plan, shard_plan=doc['plan'], custody=custody,
+            model_id='frozen-model', decoding_params={'max_tokens':100, 'temperature':0},
+            max_context_bytes=10000, runtime_identity=runtime.session_required_identity(),
+            roster_sha256='c'*64, source_batch=batch)
+    assert not transport.calls
+
+
 @pytest.mark.parametrize('fault',['messages','cap','cost','source','roster','old_schema'])
 def test_drift_rejected_before_native_contact(tmp_path,monkeypatch,fault):
     runtime,transport,_,_ = setup(tmp_path,monkeypatch)
@@ -167,13 +186,14 @@ def test_process_exit_native_replay_preserves_known_and_holds_unknown(tmp_path,m
     runtime.frozen_core_client_kwargs=lambda:{**kwargs,'plan':target,'run_dir':runtime._run_dir()}
     if unknown:
         with pytest.raises(ValueError,match='outcome unknown'):runtime.run_phases()
+        assert getattr(runtime, '_tfgrpo_caller', None) is None
     else:
         result=runtime.run_phases()
         assert result['contact_count']==1
         assert runtime._client._adapter.cost_summary()['replayed_predecessor_cost']['calls']==1
+        assert runtime._client._adapter.cost_summary()['calls_used']==0
+        runtime._client.close()
     assert not transport.calls
-    assert runtime._client._adapter.cost_summary()['calls_used']==0
-    runtime._client.close()
 
 
 @pytest.mark.parametrize('oversize',[False,True])
@@ -213,3 +233,90 @@ def test_grounded_uses_real_durable_fit_on_wrapped_payload(tmp_path,monkeypatch,
         assert json.loads(receipt.read_bytes())['output']['rows'][0]['measured_prompt_tokens']==210
     assert len(fits)==1 and 'source_messages' in fits[0]['messages'][0]['content']
     runtime._client.close()
+
+
+def test_three_shards_global_predecessor_barrier_then_resolved_resume(tmp_path, monkeypatch):
+    """Real replay inventory + shard executor; transport/FIT are counted doubles."""
+    from types import SimpleNamespace
+    from test_grounded_synthesis_execution import fixture
+    from test_frozen_core_adapter import _plan
+    from test_contact_journal import payload
+    from speech_aware_evidence_acquisition.core.attempts import AttemptStore
+    from speech_aware_evidence_acquisition.core.contact_journal import (
+        ContactJournal, NativeContactReplay, digest,
+    )
+    f = fixture(tmp_path/'fixture', groups=6, concurrency=2)
+    _, plan, bb, ob, args, custody, *_ = f
+    assert len(plan['shards']) == 3
+    source = _plan(planned_model_calls=3, planned_speech_audio_seconds=300)
+    target = replace(source, attempt_id='recovery-v1')
+    handle = AttemptStore(tmp_path/'attempts').open_attempt(source.run_id, source.attempt_id,
+        carrier_lock_key=source.carrier_lock_key, reserved_calls=3, reserved_audio_seconds=300)
+    journal = ContactJournal(tmp_path, source, 'bare-core')
+    payloads = {}
+    for shard in plan['shards']:
+        identity = m.contact_identity(plan, shard)
+        p = payload('req-'+str(shard['shard_index']))
+        p['history'] = [{'role':'control', 'contact_id':identity}]
+        payloads[identity] = p
+    # Source order: observed, never-sent, unknown LAST. Concurrent recovery must
+    # not dispatch the middle shard before discovering the last unknown.
+    first, middle, last = list(payloads)
+    for identity in (first, last):
+        journal.intent(payloads[identity]); handle.record_usage(calls=1, audio_seconds=100)
+    journal.response(payloads[first]['request_id'], digest(canonical(payloads[first])), b'known', 1)
+    handle.mark_aborted('source process terminal verified')
+    replay = NativeContactReplay(tmp_path, source, target, 'bare-core')
+    # Runtime asserts its arm separately; retain real global custody audit while
+    # isolating this test from the prepared-text fixture's unrelated validation.
+    monkeypatch.setattr(replay, 'assert_target', lambda *a: None)
+    binding = {'registration':args['registration'], 'plan':plan}
+    loaded = {'binding':binding, 'batch_bytes':bb, 'operation_bytes':ob,
+        'source':{'source':{}, 'max_operations':128, 'concurrency':2},
+        'count_tokens':args['count_tokens'], 'tokenizer_identity':args['tokenizer_identity']}
+    monkeypatch.setattr(m, 'load_runtime_source', lambda *a, **k: (loaded, {}))
+    monkeypatch.setattr(m, 'load_source', lambda *a, **k: copy.deepcopy(custody))
+    registration = {'construction_roster_sha256':'c'*64, 'learning_config_sha256':'a'*64,
+                    'contacts':[{}, {}, {}]}
+    runtime = SimpleNamespace(_composed=SimpleNamespace(values={'tfgrpo_learning_registration':registration}),
+        plan=target, _repo_root=tmp_path, _data_root=tmp_path, _samples=(),
+        _native_contact_replay=replay, _run_dir=lambda:tmp_path/'target')
+    fits, sends, reused, binds = [], [], [], []
+    class Caller:
+        model_id = 'model'
+        def preflight(self, request):
+            fits.append(request['identity'])
+        def reconcile(self, request):
+            return None
+        def __call__(self, request):
+            identity = request['identity']
+            if runtime._native_contact_replay.match(payloads[identity]) is None:
+                sends.append(identity)
+            else:
+                reused.append(identity)
+            return {'model_id':'model', 'receipt_id':identity,
+                'text':'[{"operation":"ADD","id":null,"content":"conditional rule"}]',
+                'usage':{'calls':1,'prompt_tokens':30,'completion_tokens':20}}
+    def bind(*a, **k):
+        binds.append(True)
+        caller = Caller(); caller.client = object()
+        return caller
+    monkeypatch.setattr(m, 'bind_runtime', bind)
+    with pytest.raises(ValueError, match='outcome unknown'):
+        m.run_registered_shards(runtime)
+    assert not fits and not sends and not reused and not binds
+    assert not (tmp_path/'target').exists()
+    # Authoritative response reconciliation requires a newly verified replay;
+    # the old pinned instance must reject the changed custody.
+    journal.response(payloads[last]['request_id'], digest(canonical(payloads[last])), b'resolved', 1)
+    with pytest.raises(ValueError, match='custody changed'):
+        replay.assert_all_contacts_observed()
+    replay = NativeContactReplay(tmp_path, source, target, 'bare-core')
+    monkeypatch.setattr(replay, 'assert_target', lambda *a: None)
+    runtime._native_contact_replay = replay
+    result = m.run_registered_shards(runtime)
+    assert sends == [middle] and sorted(reused) == sorted([first, last])
+    assert len(fits) == 3 and len(binds) == 1
+    assert result['historical_usage']['calls'] == 309
+    assert result['current_accounting']['known_usage']['calls'] == 3
+    assert handle.actual_totals()[0] == 2

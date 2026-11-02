@@ -305,6 +305,27 @@ class NativeContactReplay:
     def request_ids(self):
         return frozenset(self._records)
 
+    def assert_all_contacts_observed(self):
+        """Audit pinned predecessor custody before dispatching any fresh work.
+
+        This does not consume responses or reconcile unknown outcomes. Changed
+        custody requires a newly verified replay, never a cached assertion.
+        """
+        if digest(self._attempt_path.read_bytes()) != self._attempt_sha256:
+            raise ContactJournalError('source attempt changed after recovery inspection')
+        for path, expected in self._pins.items():
+            current = digest(path.read_bytes()) if path.exists() else None
+            if current != expected:
+                raise ContactJournalError('source custody changed after recovery inspection')
+        intents = {self.source._path(rid, 'intent') for rid in self._records}
+        responses = {self.source._path(rid, 'response') for rid, record in self._records.items()
+                     if record['state'] == 'observed'}
+        if (set(self.source.root.glob('*.intent.json')) != intents
+                or set(self.source.root.glob('*.response.json')) != responses):
+            raise ContactJournalError('source contact inventory changed after recovery inspection')
+        if any(record['state'] != 'observed' for record in self._records.values()):
+            raise ContactJournalError('contact outcome unknown; reconcile before dispatching any work')
+
     def assert_target(self, data_root, plan, arm):
         expected = ContactJournal(data_root, plan, arm)
         if expected.identity != self.target_identity or expected.root.parent != self.source.root.parent:

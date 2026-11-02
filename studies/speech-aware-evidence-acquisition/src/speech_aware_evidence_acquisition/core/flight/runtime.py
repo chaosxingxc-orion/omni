@@ -1579,6 +1579,7 @@ class FlightRuntime:
         # imported read-only, never edited here) reads the same attribute to widen a flight's in-flight row count
         # by ``admitted_level`` when the profile declares one.
         deployment_profile: object | None = None,
+        admitted_level: int | None = None,
     ) -> None:
         if not isinstance(run_id, str) or not run_id:
             raise FlightRuntimeError("run_id must be a non-empty string")
@@ -1588,6 +1589,7 @@ class FlightRuntime:
             raise FlightRuntimeError("adapter_factory must be callable")
         self._execution_policy = execution_policy
         self._deployment_profile = deployment_profile
+        self._admitted_level = admitted_level
         self._serve_fingerprint: str | None = None
         self._repo_root = Path(repo_root)
         self._data_root = Path(data_root)
@@ -3377,15 +3379,16 @@ class FlightRuntime:
 
         return parse_context_fit_policy(raw.get("context_fit_policy"))
 
-    def _context_fit_budget(self):
+    def _context_fit_budget(self, *, measured_by_request_gate=False):
         """E20: the live serving budget a dispatch-time fit check measures against.
 
         ``None`` on the unarmed arm, which is every cell written before
         E20. Armed, it binds the LIVE per-slot limit (the same number E17
         bound the preflight budget to), the live-slot operational reserve
         and this cell's completion ceiling to the flight's own token
-        counter -- the resident server's exact tokenizer in a real flight,
-        the injected counter in a test.
+        counter. Raw vLLM flights with registered FIT deferral use the
+        request gate's measured count instead of the default byte heuristic;
+        injected exact counters retain the compaction path.
         """
 
         if self._context_fit_policy() != "compact-or-abstain":
@@ -3402,11 +3405,7 @@ class FlightRuntime:
             completion_ceiling=self._completion_token_ceiling(),
             token_counter=self._token_counter,
             special_token_reserve=REGISTERED_SPECIAL_TOKEN_RESERVE,
-            measured_by_request_gate=(
-                self._token_counter is _default_token_counter
-                and self._composed.values.get("preflight_budget_mode")
-                == "defer-to-native-contact-fit"
-            ),
+            measured_by_request_gate=measured_by_request_gate,
         )
 
     def _knowledge_index_binding(self, native_config, supply_for_phase):
@@ -5118,6 +5117,9 @@ class FlightRuntime:
 
         self._require_prior_stages("preflight")
         values, carrier_lock_key, split_id, identity_hash = self._prepare()
+        from ...rails.delivery_normalisers import require_delivery_normaliser_assets
+
+        require_delivery_normaliser_assets(values, data_root=self._data_root)
         if "whole_roster_wave_barrier" in values or "live_phase_fit" in values:
             from ..preparation_fit import validate_live_phase_fit_config
 
@@ -5905,6 +5907,11 @@ class FlightRuntime:
             # bearing guarantee of a seal-only completion.
             return self.receipts.record("serve", {"seal_only": True})
         self.assert_generation_lease()
+        if getattr(self, "_admitted_level", None) is not None:
+            profile = self._deployment_profile_object()
+            if profile is None:
+                raise FlightRuntimeError("flight admitted level requires a deployment profile")
+            self._declared_admitted_level(profile)
         geometry = dict(self._adapter.serving_geometry())
 
         # Workers reattach through pinned session verification even for in-process reuse.
@@ -6198,6 +6205,14 @@ class FlightRuntime:
 
         fragment = read_fragment(self._repo_root, "model", self._model)
         receipt_path = resolve_runtime_receipt_path(self._repo_root, values)
+        if values.get("transport") == "vllm":
+            from ..session.vllm_resident import required_identity
+
+            return required_identity(
+                fragment=fragment, model_fragment=self._model,
+                runtime_receipt=runtime_receipt, receipt_path=receipt_path,
+                host=self._host, port=self._port,
+            )
         command = build_server_command(
             runtime_root=self._runtime_root,
             data_root=self._data_root,
@@ -6265,6 +6280,12 @@ class FlightRuntime:
         ``flight_width``'s own private document resolution.
         """
 
+        override = getattr(self, "_admitted_level", None)
+        if override is not None:
+            if (isinstance(override, bool) or not isinstance(override, int)
+                    or override < 1 or override > (profile.admitted_level or profile.max_num_seqs)):
+                raise FlightRuntimeError("flight admitted level must be positive and cannot raise the profile admission")
+            return override
         source = self._deployment_profile
         if isinstance(source, Mapping):
             document: object = source
@@ -6300,6 +6321,20 @@ class FlightRuntime:
         instances = profile.instances
         declared_base_url = values.get("base_url")
         endpoints = [profile.base_url(instance) for instance in instances]
+        coordinator = None
+        if self._execution_policy is not None:
+            from .lease import GenerationLeaseError
+
+            self.assert_generation_lease()
+            coordinator = self._serving_session_finder(self._data_root)
+            if coordinator is None:
+                raise GenerationLeaseError("required resident coordinator is absent")
+            document = coordinator[1]
+            if document.get("session_id") != self._execution_policy.expected_session_id:
+                raise GenerationLeaseError("resident coordinator differs from the worker capability")
+            if document.get("deployment_instance_ids") != [i.name for i in instances]:
+                raise GenerationLeaseError("resident coordinator deployment members differ from the profile")
+            assert_identity_matches(document, self.session_required_identity())
 
         resolved = [
             self._deployment_instance_session_finder(self._data_root, instance.name) for instance in instances
@@ -6316,6 +6351,8 @@ class FlightRuntime:
 
         sessions = []
         for instance, (session_dir, _document) in zip(instances, resolved):
+            if coordinator is not None and _document.get("deployment_parent_session_id") != coordinator[1]["session_id"]:
+                raise FlightRuntimeError("resident member belongs to a different coordinator")
             session = self._session_attacher(
                 session_dir / SESSION_RECEIPT_NAME,
                 runtime_receipt=runtime_receipt,
@@ -6354,6 +6391,11 @@ class FlightRuntime:
         self._sessions = tuple(sessions)
         self._owns_session = False
         self._transport = router
+        if self._execution_policy is not None:
+            from ..session.worker import LeaseCheckedTransport
+
+            self.assert_generation_lease()
+            self._transport = LeaseCheckedTransport(router, self.assert_generation_lease)
         self._session_receipt_path = resolved[0][0] / SESSION_RECEIPT_NAME
         self._serving_session_dir = resolved[0][0]
         self._serving_monitor_path = None
@@ -7962,6 +8004,11 @@ class FlightRuntime:
 
         from .width import flight_width
 
+        if getattr(self, "_admitted_level", None) is not None:
+            profile = self._deployment_profile_object()
+            if profile is None:
+                raise FlightRuntimeError("flight admitted level requires a deployment profile")
+            return len(profile.instances) * self._declared_admitted_level(profile)
         # getattr: a stub FlightRuntime built without __init__ (several binding tests do) has no attribute -> no profile.
         return flight_width(
             getattr(self, "_deployment_profile", None), int(self._adapter.serving_geometry()["slots"])
@@ -8343,7 +8390,16 @@ class FlightRuntime:
                 # check measures each realised request against. None -- and
                 # therefore no check at all -- unless
                 # ``native_episode.context_fit_policy`` is armed.
-                context_fit_budget=self._context_fit_budget(),
+                context_fit_budget=self._context_fit_budget(
+                    measured_by_request_gate=(
+                        not model_free_check
+                        and self._token_counter is _default_token_counter
+                        and self._composed.values.get("transport") == "vllm"
+                        and self._composed.values.get("preflight_budget_mode")
+                        == "defer-to-native-contact-fit"
+                        and not self.uses_speech_feature_packets()
+                    ),
+                ),
                 # Item E21 (the knowledge INDEX, not the Earnings-21
                 # carrier), owner decisions 48 and 50: the loaded,
                 # hash-verified released view, its resolved plan and the
@@ -8453,6 +8509,9 @@ class FlightRuntime:
             if whole_roster
             else {}
         )
+        # Deployment admission controls row concurrency on every phase path.
+        # The adapter geometry remains the protocol identity, not the client width.
+        live_options["slot_count"] = self._flight_width()
         live_options.update(measured_options)
         if flown_sample_ids is not None:
             live_options["flown_sample_ids"] = flown_sample_ids
@@ -8508,6 +8567,7 @@ class FlightRuntime:
                 summaries = self._phase_runner(
                     program=program,
                     adapter=self._adapter,
+                    slot_count=self._flight_width(),
                     plan=plan,
                     data_root=self._data_root,
                     core_client=client,
@@ -10216,6 +10276,9 @@ class FlightRuntime:
         """
 
         self._require_prior_stages("run_phases")
+        from ...rails.delivery_normalisers import require_delivery_normaliser_assets
+
+        require_delivery_normaliser_assets(self._composed.values, data_root=self._data_root)
         if self._seal_only:
             # E10d (2026-09-29): nothing left to fly -- no client is built, no
             # request is composed. seal() renders every row from the merged

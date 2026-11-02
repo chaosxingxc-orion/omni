@@ -638,7 +638,12 @@ def find_resident_session(data_root: Path) -> tuple[Path, dict[str, object]] | N
             continue
         if (candidate / SESSION_STOP_NAME).is_file():
             continue
-        live.append((candidate, read_session_document(document_path)))
+        document = read_session_document(document_path)
+        # Deployment members are attached individually by FlightRuntime; only their
+        # coordinator record participates in the single generation-lease identity.
+        if document.get("deployment_parent_session_id"):
+            continue
+        live.append((candidate, document))
     if not live:
         return None
     if len(live) > 1:

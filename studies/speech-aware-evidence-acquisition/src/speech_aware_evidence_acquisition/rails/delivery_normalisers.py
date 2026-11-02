@@ -44,7 +44,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ..core.base import DELIVERY_NORMALISERS, DeliveryNormalisation, DeliveryNormaliserError
@@ -1067,6 +1069,38 @@ class SlurpV4Statistics:
 
 
 _DEFAULT_V4_STATISTICS: list[SlurpV4Statistics] = []
+
+
+def require_delivery_normaliser_assets(values, *, data_root: Path) -> None:
+    """Re-read pinned delivery assets before contact, independent of runtime caches."""
+    native = values.get("native_episode")
+    if not isinstance(native, Mapping):
+        return
+    block = native.get("deliver_normaliser")
+    if not isinstance(block, Mapping):
+        return  # The native configuration validator owns malformed blocks.
+    normaliser = block.get("normaliser")
+    needs_statistics = normaliser in (DELIVER_NORMALISE_V4, DELIVER_NORMALISE_V4G)
+    needs_scope = needs_statistics or normaliser in (
+        DELIVER_SCOPE_RULE_V1, DELIVER_NORMALISE_V3_SCOPE_RULE_V1,
+        DELIVER_CITED_ANSWER_NORMALISE_V3_SCOPE_RULE_V1,
+    )
+    try:
+        if needs_statistics:
+            blobs = {name: (data_root / V4_TABLE_RELPATHS[name]).read_bytes()
+                     for name in V4_TABLES}
+            stats = SlurpV4Statistics.from_table_bytes(blobs, expected_sha256=V4_TABLE_SHA256)
+            if stats.sha256 != V4_STATS_SHA256:
+                raise _v4_refuse("preflight statistics differ from the pinned combined hash")
+        if needs_scope:
+            ScopeRuleTable.from_bytes(
+                (data_root / SCOPE_RULE_TABLE_RELPATH).read_bytes(),
+                expected_sha256=SCOPE_RULE_TABLE_SHA256,
+            )
+    except (OSError, ValueError) as error:
+        raise DeliveryNormaliserError(
+            f"delivery normaliser {normaliser!r} assets unavailable or invalid: {error}"
+        ) from error
 
 
 def default_v4_statistics() -> SlurpV4Statistics:

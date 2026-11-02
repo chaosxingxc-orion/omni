@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import inspect
+import os
 from functools import partial
 from pathlib import Path
 from typing import Mapping
@@ -55,6 +56,21 @@ def build_flight_runtime(
     if url.scheme != "http" or url.hostname not in {"127.0.0.1", "localhost", "::1"}:
         raise CoreError("flight workers require the loopback resident service")
     options = {"host": url.hostname, "port": url.port or 8080}
+    # Deployment is operational metadata, outside the composed protocol. Both the
+    # lease CLI and campaign factory must see the same explicit host selection.
+    deployment = os.environ.get("SAEA_DEPLOYMENT_PROFILE")
+    if deployment:
+        if values.get("transport") != "vllm":
+            raise CoreError("SAEA_DEPLOYMENT_PROFILE requires a vllm model fragment")
+        options["deployment_profile"] = deployment
+    admitted = os.environ.get("SAEA_ADMITTED_LEVEL")
+    if admitted is not None:
+        if not deployment:
+            raise CoreError("SAEA_ADMITTED_LEVEL requires SAEA_DEPLOYMENT_PROFILE")
+        try:
+            options["admitted_level"] = int(admitted)
+        except ValueError as error:
+            raise CoreError("SAEA_ADMITTED_LEVEL must be an integer") from error
     roots = declared_derived_media_roots(values, data_root)
     if len(roots) > 1:
         raise CoreError("runtime carrier view must select one derived media root")
