@@ -1,0 +1,36 @@
+{
+  "schema": "saea-configured-job-queue-v1",
+  "queue_id": "research-generation",
+  "state_dir": "/srv/project/state/queues/research-generation",
+  "monitor_interval_seconds": 600,
+  "jobs": [
+    {
+      "id": "candidate-evaluation",
+      "launch": {
+        "path": "/srv/project/control/evaluation-launch.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "preflight": null,
+      "after": {
+        "condition": "container-exit-zero",
+        "launch": {
+          "path": "/srv/project/control/producer-launch.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "container_id": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    {
+      "id": "next-generation",
+      "launch": {
+        "path": "/srv/project/control/next-launch.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "preflight": {
+        "path": "/srv/project/control/next-preflight-binding.json",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "after": null
+    }
+  ]
+}
