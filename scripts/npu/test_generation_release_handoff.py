@@ -171,3 +171,19 @@ def test_real_queue_wires_verified_release_and_detached_children(tmp_path,monkey
     assert json.loads((out/'status.json').read_bytes())['state']=='complete'
     with pytest.raises(ValueError,match='fresh owned'):m.run(tree,out,iteration)
     assert len(launches)==4
+
+
+def test_release_hashing_without_python311_file_digest(tmp_path, monkeypatch):
+    """Queue hosts may use Python 3.9 while the model image uses 3.12."""
+    monkeypatch.delattr(hashlib, 'file_digest', raising=False)
+    path, expected, doc = fixture(tmp_path)
+    target = Path(doc['artifacts']['generation_manifest']['path'])
+    target.write_bytes(b'a' * (1024 * 1024 + 17))
+    digest = hashlib.sha256(target.read_bytes()).hexdigest()
+    doc['artifacts']['generation_manifest']['sha256'] = digest
+    doc['seal_receipt']['generation_manifest_sha256'] = digest
+    path.write_text(json.dumps(doc))
+    assert verify_release(path, data=tmp_path, expected=expected)['rows'] == 313
+    target.write_bytes(b'changed')
+    with pytest.raises(ValueError, match='sealed input changed'):
+        verify_release(path, data=tmp_path, expected=expected)
