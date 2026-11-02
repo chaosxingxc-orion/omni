@@ -1,0 +1,24 @@
+{
+  "schema": "saea-configured-job-launch-v1",
+  "container_name": "saea-example-cpu-preflight-v1",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "repo_path": "/srv/omni/jobs/example/study",
+  "expected_commit": "0000000000000000000000000000000000000000",
+  "receipt_dir": "/srv/omni/jobs/example/control/launch-cpu-preflight",
+  "argv": ["/usr/bin/python3", "/study/scripts/environment/configured_environment_preflight.py", "--config", "/config/environment-preflight.json", "--output", "/preflight/attempt-v1"],
+  "working_directory": "/tmp",
+  "network": "none",
+  "pid_host": false,
+  "cpuset_cpus": "0-3",
+  "environment": {"PYTHONDONTWRITEBYTECODE": "1", "TORCH_DEVICE_BACKEND_AUTOLOAD": "0", "SAEA_SLURP_OFFICIAL_PYTHON": "/opt/slurp-official/bin/python"},
+  "mounts": [
+    {"source": "/srv/omni/jobs/example/study", "target": "/study", "readonly": true},
+    {"source": "/srv/omni/jobs/example/config", "target": "/config", "readonly": true},
+    {"source": "/srv/omni/environments/slurp-official", "target": "/opt/slurp-official", "readonly": true},
+    {"source": "/srv/omni/jobs/example/control/cpu-preflight", "target": "/preflight", "readonly": false}
+  ],
+  "create_directories": ["/srv/omni/jobs/example/control/launch-cpu-preflight", "/srv/omni/jobs/example/control/cpu-preflight"],
+  "allowed_create_roots": ["/srv/omni/jobs/example"],
+  "required_inputs": [{"path": "/srv/omni/jobs/example/config/environment-preflight.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000"}],
+  "monitor_interval_seconds": 600
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "saea-environment-preflight-v1",
+  "timeout_seconds": 60,
+  "required_environment": {
+    "SAEA_SLURP_OFFICIAL_PYTHON": "/opt/slurp-official/bin/python",
+    "TORCH_DEVICE_BACKEND_AUTOLOAD": "0"
+  },
+  "interpreters": [
+    {
+      "name": "business",
+      "python": "/opt/saea-venv/bin/python",
+      "environment_key": null,
+      "imports": ["openjiuwen"],
+      "distributions": {}
+    },
+    {
+      "name": "official-scorer",
+      "python": "/opt/slurp-official/bin/python",
+      "environment_key": "SAEA_SLURP_OFFICIAL_PYTHON",
+      "imports": ["progress.bar", "jiwer", "tabulate", "textdistance"],
+      "distributions": {"progress": "1.5", "jiwer": "2.0.0", "tabulate": "0.8.7", "textdistance": "4.1.5"}
+    }
+  ]
+}
