@@ -73,6 +73,56 @@ def test_dynamic_dispatch_real_adapter_seal_and_truthful_phase_boundaries(tmp_pa
     assert sealed['cost']['calls_used'] == 2 and captured['finalized']
 
 
+def test_v2_contract_survives_registration_reconstruction_and_real_dispatch(tmp_path,monkeypatch):
+    runtime,transport,captured,source,spec,fits = setup(tmp_path,monkeypatch,
+        reflector_contract=ace.REFLECTOR_CONTRACT_V2)
+    reg = runtime._composed.values['tfgrpo_learning_registration']
+    assert reg['bounds']['reflector_contract'] == ace.REFLECTOR_CONTRACT_V2
+    loaded,_ = m.load_runtime_source(runtime._composed.values,plan=runtime.plan,
+        repo_root=tmp_path,data_root=tmp_path,sample_ids=(runtime._samples[0].sample_id,),roster_sha256='c'*64)
+    assert loaded['document'] == spec['document']
+    result = runtime.run_phases()
+    assert result['contact_count'] == len(transport.calls) == len(fits) == 2
+    assert runtime.seal()['cost']['calls_used'] == 2
+
+
+def test_v2_registration_hash_differs_while_model_parameters_and_source_stay_fixed(tmp_path,monkeypatch):
+    runtime,_,_,source,spec,_ = setup(tmp_path,monkeypatch,reflector_contract=ace.REFLECTOR_CONTRACT_V2)
+    versioned = runtime._composed.values['tfgrpo_learning_registration']
+    document = spec['document']
+    legacy_document = ace.build_input(source,source['batch']['parent'],
+        learning_config_sha256=document['learning_config_sha256'],
+        **{k:v for k,v in document['bounds'].items() if k not in ('max_calls','reflector_contract')})
+    legacy = m.build_registration(runtime.plan,source=source,document=legacy_document,
+        decoding_params=versioned['decoding_params'],max_context_bytes=versioned['max_context_bytes'],
+        runtime_identity_sha256=versioned['runtime_identity_sha256'],roster_sha256='c'*64)
+    assert sha(versioned) != sha(legacy)
+    for field in ('batch_sha256','execution_sha256','input_sha256','contacts'):
+        assert versioned[field] != legacy[field]
+    for field in ('learning_config_sha256','decoding_params','completion_cap','plan'):
+        assert versioned[field] == legacy[field]
+
+
+@pytest.mark.parametrize('fault',['missing','unknown','extra','v1-measurement'])
+def test_v2_contract_drift_refused_before_native_fit(tmp_path,monkeypatch,fault):
+    runtime,transport,_,_,spec,fits = setup(tmp_path,monkeypatch,
+        reflector_contract=ace.REFLECTOR_CONTRACT_V2)
+    reg = runtime._composed.values['tfgrpo_learning_registration']
+    if fault == 'missing': del reg['bounds']['reflector_contract']
+    elif fault == 'unknown': reg['bounds']['reflector_contract'] = 'other-contract'
+    elif fault == 'extra': reg['bounds']['unregistered_option'] = 1
+    else:
+        document = copy.deepcopy(spec['document'])
+        del document['bounds']['reflector_contract']
+        document['input_sha256'] = sha({k:v for k,v in document.items() if k != 'input_sha256'})
+        spec['initial_measurement'] = ace.reflect_messages(document,0,document['parent']['items'],lambda _:10)
+        (tmp_path/'ace.json').write_bytes(canonical(spec))
+        runtime._composed.values['prepared_training_feedback']['source']['sha256'] = sha(spec)
+    with pytest.raises(ValueError):
+        runtime.run_phases()
+    assert not transport.calls and not fits
+
+
 @pytest.mark.parametrize('fault',['order','dependency','test','budget','cap','tokenizer','source','replay'])
 def test_registration_source_drift_before_contact(tmp_path,monkeypatch,fault):
     runtime,transport,_,_,spec,fits = setup(tmp_path,monkeypatch)

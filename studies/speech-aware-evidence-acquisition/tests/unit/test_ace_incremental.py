@@ -10,9 +10,9 @@ from speech_aware_evidence_acquisition.rails.tfgrpo_learning import (
 )
 
 
-def fixture(groups=2, parent=None, **limits):
-    parent = copy.deepcopy(parent or empty_experience('model'))
-    if not parent['items']:
+def fixture(groups=2, parent=None, empty_parent=False, **limits):
+    parent = copy.deepcopy(parent) if parent is not None else empty_experience('model')
+    if not parent['items'] and not empty_parent:
         parent['items'] = {'old': 'Preserve intent boundaries.', 'untouched': 'Use observed evidence only.'}
         parent['sha256'] = sha({k: v for k, v in parent.items() if k != 'sha256'})
     rows = []
@@ -252,3 +252,110 @@ def test_foreign_contact_refused_before_new_spend(tmp_path):
     (tmp_path/'contacts').mkdir(); (tmp_path/'contacts/foreign.intent.json').write_text('{}')
     with pytest.raises(ValueError, match='foreign'): run()
     assert not calls
+
+
+def test_absent_contract_keeps_legacy_document_and_prompt_bytes():
+    _, document = fixture()
+    explicit_none = fixture(reflector_contract=None)[1]
+    assert document == explicit_none
+    assert 'reflector_contract' not in document['bounds']
+    assert sha(document) == '513ae8e8428b7ae99a40c1df6f240e43eee67b35762472ea48e105de946852a0'
+    measured = m.reflect_messages(document, 0, document['parent']['items'], lambda _: 10)
+    assert measured['messages_sha256'] == 'bb30cb2359f5cd894f11a2fca13a158af55b301568d128c1e578792b42af1054'
+
+
+@pytest.mark.parametrize('bad', ['', 'ace-reflector-contract-v1', 'ace-reflector-contract-v3', 2])
+def test_unsupported_explicit_contract_refused(bad):
+    with pytest.raises(ValueError, match='unsupported ACE reflector contract'):
+        fixture(reflector_contract=bad)
+
+
+@pytest.mark.parametrize('empty', [False, True])
+def test_v2_prompt_binds_id_namespaces_and_evidence_semantics(empty):
+    _, document = fixture(reflector_contract=m.REFLECTOR_CONTRACT_V2, empty_parent=empty)
+    items = {} if empty else {'Z-item': 'Lesson Z.', 'A-item': 'Lesson A.'}
+    measured = m.reflect_messages(document, 0, items, lambda _: 10)
+    payload = json.loads(measured['messages'][1]['content'])
+    assert payload['reflector_contract'] == m.REFLECTOR_CONTRACT_V2
+    assert payload['allowed_item_ids'] == sorted(items)
+    system = measured['messages'][0]['content']
+    for condition in ('signals MUST be []', 'at most one signal per item_id',
+            'distinct namespaces', 'facts directly shown', 'hypotheses, or must be omitted',
+            'scorer matching rules', 'TP/FP/FN', 'strict_task_success must explicitly equal 1',
+            'Extra false-positive slots remain errors', 'retrospective hypotheses'):
+        assert condition in system
+
+
+def test_v2_version_changes_input_and_prompt_hashes_but_not_evidence_or_budget():
+    source, legacy = fixture()
+    _, versioned = fixture(reflector_contract=m.REFLECTOR_CONTRACT_V2)
+    assert versioned['input_sha256'] != legacy['input_sha256']
+    assert versioned['groups'] == legacy['groups'] and versioned['source_sha256'] == legacy['source_sha256']
+    assert {k:v for k,v in versioned['bounds'].items() if k != 'reflector_contract'} == legacy['bounds']
+    assert m.reflect_messages(versioned,0,{},lambda _:10)['messages_sha256'] != m.reflect_messages(legacy,0,{},lambda _:10)['messages_sha256']
+    rebuilt = m.build_input(source,versioned['parent'],learning_config_sha256=versioned['learning_config_sha256'],
+        **{k:v for k,v in versioned['bounds'].items() if k != 'max_calls'})
+    assert rebuilt == versioned
+
+
+@pytest.mark.parametrize('fault', ['intent-as-item', 'duplicate-item', 'foreign-trajectory'])
+def test_v2_keeps_strict_validator_without_dropping_invalid_signals(fault):
+    _, document = fixture(reflector_contract=m.REFLECTOR_CONTRACT_V2)
+    answer = reflection()
+    if fault == 'intent-as-item':
+        answer['signals'][0]['item_id'] = 'calendar_query'
+    elif fault == 'duplicate-item':
+        answer['signals'].append(copy.deepcopy(answer['signals'][0]))
+    else:
+        answer['findings'][0]['trajectory_ids'] = ['foreign']
+    before = copy.deepcopy(answer)
+    with pytest.raises(ValueError):
+        m.validate_reflection(json.dumps(answer),document['groups'][0],document['parent']['items'],4)
+    assert answer == before
+
+
+def test_v2_empty_parent_add_then_next_reflection_uses_generated_item_id(tmp_path):
+    content = 'A conditional lesson derived from observed task errors.'
+    item_id = 'E'+m.hashlib.sha256(content.encode()).hexdigest()
+    first = reflection(); first['signals'] = []
+    second = reflection(1); second['signals'][0]['item_id'] = item_id
+    unchanged = delta(); unchanged['deltas'] = []
+    answers = {(0,m.REFLECT):first,(0,m.CURATE):delta('ADD',None,content),
+        (1,m.REFLECT):second,(1,m.CURATE):unchanged}
+    _, document, run, calls, fits = runner(tmp_path,empty_parent=True,
+        reflector_contract=m.REFLECTOR_CONTRACT_V2,answers=answers)
+    assert document['parent']['items'] == {}
+    result = run()
+    assert len(calls) == len(fits) == 4 and result['items'] == {item_id:content}
+    assert json.loads(calls[0]['messages'][1]['content'])['allowed_item_ids'] == []
+    assert json.loads(calls[2]['messages'][1]['content'])['allowed_item_ids'] == [item_id]
+    assert result['cumulative_known_usage']['calls'] == 316
+    assert run() == result and len(calls) == 4
+
+
+def test_v2_invalid_empty_parent_signal_stays_failed_with_original_cost(tmp_path):
+    answers = {(0,m.REFLECT):reflection()}
+    _, _, run, calls, _ = runner(tmp_path,empty_parent=True,
+        reflector_contract=m.REFLECTOR_CONTRACT_V2,answers=answers)
+    for _ in range(2):
+        with pytest.raises(ValueError,match='unknown or duplicate item'):
+            run()
+    assert len(calls) == 1 and not (tmp_path/'candidate.json').exists()
+    failure = json.loads(next((tmp_path/'failures').glob('*.json')).read_bytes())
+    assert failure['cumulative_known_usage']['calls'] == 313
+
+
+def test_v2_cannot_reuse_legacy_contact_tree(tmp_path):
+    _, _, legacy, calls, _ = runner(tmp_path)
+    legacy()
+    _, _, versioned, new_calls, _ = runner(tmp_path,reflector_contract=m.REFLECTOR_CONTRACT_V2)
+    with pytest.raises(ValueError,match='durable result changed'):
+        versioned()
+    assert len(calls) == 4 and not new_calls
+
+
+def test_v2_unknown_contact_still_blocks_retry_and_curator(tmp_path):
+    _, _, run, calls, _ = runner(tmp_path,fail='unknown',reflector_contract=m.REFLECTOR_CONTRACT_V2)
+    with pytest.raises(OSError):run()
+    with pytest.raises(UnknownLearningContact):run()
+    assert len(calls) == 1 and not (tmp_path/'candidate.json').exists()

@@ -48,10 +48,12 @@ def validate_registration(reg, *, plan, model_id):
     require(reg['execution_sha256'] == reg['batch_sha256']
         and reg['prompt_derivation'] == 'observed-prefix-only-v1', 'ACE deterministic derivation required')
     bounds = reg['bounds']
-    require(isinstance(bounds, dict) and set(bounds) == {'resident_context', 'completion_cap',
+    bound_fields = {'resident_context', 'completion_cap',
         'reserve_tokens', 'max_groups', 'max_delta', 'max_findings', 'max_items', 'max_characters',
         'max_prompt_tokens_total', 'max_completion_tokens_total', 'max_calls'}
-        and all(type(v) is int and v > 0 for k,v in bounds.items() if k != 'reserve_tokens')
+    require(isinstance(bounds, dict) and set(bounds) in (bound_fields, bound_fields | {'reflector_contract'})
+        and ('reflector_contract' not in bounds or bounds['reflector_contract'] == ace.REFLECTOR_CONTRACT_V2)
+        and all(type(bounds[k]) is int and bounds[k] > 0 for k in bound_fields if k != 'reserve_tokens')
         and type(bounds['reserve_tokens']) is int and bounds['reserve_tokens'] >= 0, 'exact finite ACE bounds required')
     decoding = reg['decoding_params']
     require(isinstance(decoding, dict) and 'id_slot' not in decoding
