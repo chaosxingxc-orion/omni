@@ -227,6 +227,6 @@ def test_error_feedback_variant_binds_new_evidence_without_changing_compact():
     assert payload['original_group'] == old['groups'][0]
     assert 'missing reference entity remains an error' in revised['messages'][0]['content']
     assert old['input_sha256'] != new['input_sha256']
-    answer=compact_reflection();answer['schema']=m.ERROR_FEEDBACK_CONTRACT
+    answer=compact_reflection();answer.pop('schema')
     assert m.validate_reflection(json.dumps(answer),new['groups'][0],200,m.ERROR_FEEDBACK_CONTRACT)['reflection']['trajectory_ids']==['T0-0']
     with pytest.raises(ValueError):m.validate_reflection(json.dumps(answer),old['groups'][0],200,m.COMPACT_CONTRACT)

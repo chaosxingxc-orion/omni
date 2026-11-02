@@ -156,7 +156,10 @@ def reflect_messages(document, index, memory, count_tokens):
         payload['reflector_contract'] = COMPACT_CONTRACT
         if contract == ERROR_FEEDBACK_CONTRACT:
             from .slot_error_feedback import group_error_feedback
-            system = system.replace(COMPACT_CONTRACT, ERROR_FEEDBACK_CONTRACT)
+            # Version identity is already CPU-bound in the immutable document
+            # and native request. Do not ask the model to copy that metadata.
+            system = system.replace('{"schema":"'+COMPACT_CONTRACT+'","reflection":null}',
+                                    '{"reflection":null}')
             system += (' The CPU literal_slot_errors table supplements the original official feedback; '
                 'it is not a recomputed official score. A missing reference entity remains an error even '
                 'if omitting it increased total reward. Fix wrong type/value/boundary rather than learn '
@@ -198,8 +201,12 @@ def validate_reflection(text, group, max_entry_characters, reflector_contract=No
             'unsupported Reflexion reflector contract')
     compact = reflector_contract in (COMPACT_CONTRACT, ERROR_FEEDBACK_CONTRACT)
     schema = reflector_contract if compact else 'saea-reflexion-memory-v1'
-    require(isinstance(result, dict) and set(result) == {'schema', 'reflection'}
-            and result['schema'] == schema, 'exact Reflexion response schema required')
+    if reflector_contract == ERROR_FEEDBACK_CONTRACT:
+        require(isinstance(result, dict) and set(result) == {'reflection'},
+                'exact Reflexion v3 response schema required')
+    else:
+        require(isinstance(result, dict) and set(result) == {'schema', 'reflection'}
+                and result['schema'] == schema, 'exact Reflexion response schema required')
     row = result['reflection']
     if row is None:
         return {'schema': 'saea-reflexion-memory-v1', 'reflection': None}

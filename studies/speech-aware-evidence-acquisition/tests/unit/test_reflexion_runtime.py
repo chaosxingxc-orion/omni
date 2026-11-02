@@ -45,6 +45,7 @@ def setup(tmp_path,monkeypatch,**limits):
         assert stage == method.REFLECT
         answer = compact_reflection() if limits.get('reflector_contract') else reflection()
         if limits.get('reflector_contract'): answer['schema'] = limits['reflector_contract']
+        if limits.get('reflector_contract') == method.ERROR_FEEDBACK_CONTRACT: answer.pop('schema')
         return json.dumps(answer)
     transport._responder = answer
     fits = []
