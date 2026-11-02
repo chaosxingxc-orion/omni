@@ -1,0 +1,25 @@
+{
+  "schema": "saea-concurrency-c64-real100-result-v1",
+  "rows": 100,
+  "cards": 8,
+  "instances": 2,
+  "client_concurrency_per_instance": 64,
+  "campaign_wall_seconds": 436.0281121599983,
+  "generation_release_seconds": 414.89860323000175,
+  "observer_elapsed_seconds": 476.51248502731323,
+  "seconds_per_row_campaign": 4.360281121599983,
+  "metrics": {
+    "slu_f1": 0.750039839665756,
+    "intent_accuracy": 0.89,
+    "scenario_accuracy": 0.9
+  },
+  "cost": {
+    "calls": 200,
+    "prompt_tokens": 1164852,
+    "completion_tokens": 286116,
+    "audio_seconds": 553.509375
+  },
+  "continuous_full_utilization_verified": false,
+  "test_tuning": false,
+  "status": "scored"
+}
