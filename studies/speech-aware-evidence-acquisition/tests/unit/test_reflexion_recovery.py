@@ -75,7 +75,7 @@ def interrupted(tmp_path,monkeypatch,*,unknown=False,before_bridge=False,contrac
     return runtime,transport,replay,fits
 
 
-@pytest.mark.parametrize('contract', [None, m.method.COMPACT_CONTRACT])
+@pytest.mark.parametrize('contract', [None, m.method.COMPACT_CONTRACT, m.method.ERROR_FEEDBACK_CONTRACT])
 @pytest.mark.parametrize('before_bridge',[False,True])
 def test_fresh_process_reuses_exact_native_response_and_fit(tmp_path,monkeypatch,before_bridge,contract):
     runtime,transport,replay,fits=interrupted(tmp_path,monkeypatch,before_bridge=before_bridge,contract=contract)

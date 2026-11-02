@@ -6,7 +6,7 @@ from test_learning_candidate_release import reviewed, release  # noqa: F401
 from speech_aware_evidence_acquisition.rails import learning_candidate_release as m
 from speech_aware_evidence_acquisition.rails import tfgrpo_consumption as consumption
 from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical
-@pytest.mark.parametrize('contract', [None, 'saea-reflexion-compact-v2'])
+@pytest.mark.parametrize('contract', [None, 'saea-reflexion-compact-v2', 'saea-reflexion-errors-v3'])
 @pytest.mark.parametrize('fault', [None, 'cumulative', 'native', 'fit', 'parent', 'order', 'event', 'claim'])
 def test_actual_finalized_native_candidate_source(tmp_path, monkeypatch, fault, contract):
     """Real adapter/journals/FIT; only endpoint, source and compose are doubles."""

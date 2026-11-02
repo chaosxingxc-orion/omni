@@ -43,7 +43,9 @@ def setup(tmp_path,monkeypatch,**limits):
     def answer(payload):
         stage = json.loads(payload['history'][0]['content'])['stage']
         assert stage == method.REFLECT
-        return json.dumps(compact_reflection() if limits.get('reflector_contract') else reflection())
+        answer = compact_reflection() if limits.get('reflector_contract') else reflection()
+        if limits.get('reflector_contract'): answer['schema'] = limits['reflector_contract']
+        return json.dumps(answer)
     transport._responder = answer
     fits = []
     def fit(prepared):
@@ -55,7 +57,7 @@ def setup(tmp_path,monkeypatch,**limits):
     return runtime,transport,captured,source,spec,fits
 
 
-@pytest.mark.parametrize('contract', [None, method.COMPACT_CONTRACT])
+@pytest.mark.parametrize('contract', [None, method.COMPACT_CONTRACT, method.ERROR_FEEDBACK_CONTRACT])
 def test_real_flight_dispatch_single_stage_seal_and_source_route(tmp_path,monkeypatch,contract):
     runtime,transport,captured,source,spec,fits=setup(tmp_path,monkeypatch,reflector_contract=contract)
     from speech_aware_evidence_acquisition.rails.tfgrpo_source import load_dynamic_source

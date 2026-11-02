@@ -51,7 +51,8 @@ def validate_registration(reg, *, plan, model_id):
         'reserve_tokens', 'max_groups', 'max_items', 'max_characters', 'max_entry_characters',
         'max_prompt_tokens_total', 'max_completion_tokens_total', 'max_calls'}
     require(isinstance(bounds, dict) and set(bounds) in (bound_fields, bound_fields | {'reflector_contract'})
-        and ('reflector_contract' not in bounds or bounds['reflector_contract'] == method.COMPACT_CONTRACT)
+        and ('reflector_contract' not in bounds or bounds['reflector_contract'] in
+             (method.COMPACT_CONTRACT, method.ERROR_FEEDBACK_CONTRACT))
         and all(type(bounds[k]) is int and bounds[k] > 0 for k in bound_fields if k != 'reserve_tokens')
         and type(bounds['reserve_tokens']) is int and bounds['reserve_tokens'] >= 0, 'exact finite Reflexion bounds required')
     decoding = reg['decoding_params']
