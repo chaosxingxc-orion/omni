@@ -50,7 +50,10 @@ def verify_release(path, *, data, expected, resolve_artifact=None):
                 or physical.resolve() != physical or not physical.is_file()):
             raise ValueError("generation release mapped input path differs")
         with physical.open("rb") as handle:
-            digest = hashlib.file_digest(handle, "sha256").hexdigest()
+            digestor = hashlib.sha256()
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digestor.update(chunk)
+            digest = digestor.hexdigest()
         if digest != pin["sha256"]:
             raise ValueError("generation release sealed input changed")
     return document
