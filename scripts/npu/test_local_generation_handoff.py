@@ -16,7 +16,8 @@ def test_local_release_rejects_unknown_contacts_and_binding_changes(tmp_path,fau
         declared=str(logical/'runs/run/a'/filename)
         artifacts[key]={'path':declared,'sha256':digest};seal[key+'_path']=declared;seal[key+'_sha256']=digest
     journal=local/'contacts/run/a';journal.mkdir(parents=True)
-    for kind in ('intent','response','fit'):(journal/f'c.{kind}.json').write_text('{}')
+    for kind in ('intent','response'):(journal/f'c.{kind}.json').write_text('{}')
+    (journal/'semantic-request-digest.fit.json').write_text('{}')
     doc={'schema':'saea-generation-released-v1','generation_sealed':True,'generation_lease_released':True,
          'scoring_complete':False,'consumer_requires_own_lease_and_readiness':True,**expected,
          'released_at_unix':10,'campaign_seconds_to_release':5,'artifacts':artifacts,'seal_receipt':seal}
