@@ -200,3 +200,131 @@ def test_actual_native_replay_final_report_preserves_allowance(tmp_path, monkeyp
     bound = m.replay_source(tmp_path, tmp_path, {'execution_plan': asdict(plan), 'owner_allowance': pin},
                             'generation-v2', 'raw-speech-agent-native-tools')
     assert bound['plan']['owner_allowance'] == pin
+
+
+def resumed_fixture(tmp_path, monkeypatch, *, final_report=False):
+    """Real two-attempt native recovery, with the actual resumed-start schema."""
+    from dataclasses import asdict, replace
+    from speech_aware_evidence_acquisition.contracts import ExecutionPlan
+    from speech_aware_evidence_acquisition.contracts import plan as plan_module
+    from speech_aware_evidence_acquisition.core.contact_journal import NativeContactReplay
+    monkeypatch.setattr(plan_module, '_STUDY_REPO_ROOT', tmp_path)
+    repo = tmp_path; data = tmp_path / 'data'; data.mkdir()
+    allowance = None
+    if final_report:
+        document = {'schema':'saea-owner-split-allowance-v1', 'study':'speech-aware-evidence-acquisition',
+            'status':'authorised', 'dated_owner_decision':'Fixture owner decision', 'venue':'Fixture study',
+            'split':{'carrier_lock_key':'slurp', 'split_identity_hash':'a' * 64},
+            'permitted_run_ids':['SAEA-ZERO-RESUMED'], 'read_run_ids':['SAEA-ZERO-RESUMED'], 'preparation_run_ids':[]}
+        p = repo / 'docs/receipts/owner/test.json'; p.parent.mkdir(parents=True); p.write_text(json.dumps(document))
+        allowance = {'path':str(p.relative_to(repo)), 'sha256':m.digest(p.read_bytes())}
+    original = ExecutionPlan(run_id='SAEA-ZERO-RESUMED', attempt_id='generation-v1',
+        execution_profile='bounded-discovery-probe', carrier_lock_key='slurp',
+        split_role='final-report' if final_report else 'dev', split_identity_hash='a' * 64,
+        protocol_hash='b' * 64, planned_model_calls=2, planned_gpu_hours=1.0,
+        planned_speech_audio_seconds=10, owner_allowance=allowance)
+    current = replace(original, attempt_id='generation-v2'); arm='raw-speech-agent-native-tools'
+    def pin(name, document):
+        p = data / (name + '.json'); p.write_text(json.dumps(document))
+        return {'path':str(p), 'sha256':m.digest(p.read_bytes())}
+    for plan in (original, current):
+        p = data / 'attempts' / plan.run_id / (plan.attempt_id + '.json'); p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({'state':'ABORTED', 'run_id':plan.run_id, 'attempt_id':plan.attempt_id,
+            'carrier_lock_key':'slurp', 'actual':{'calls':0, 'audio_seconds':0.0}}))
+    replay = NativeContactReplay(data, original, current, arm)
+    target = asdict(current)
+    if allowance is not None: target['owner_allowance'] = allowance
+    recovery = pin('recovery', {'schema':'saea-native-recovery-v1', 'source':replay.source_binding(), 'target_plan':target})
+    resume = data / 'runs' / current.run_id / current.attempt_id / 'resume-declaration.json'; resume.parent.mkdir(parents=True)
+    resume.write_text(json.dumps({'schema':'saea-resume-declaration-v1', 'run_id':current.run_id,
+        'attempt_id':current.attempt_id, 'native_recovery_receipt':recovery,
+        'predecessors':[{'attempt_id':original.attempt_id, 'mode':'native-contact-journal',
+            'pin_sha256':replay.source_binding()['attempt_sha256']}]}))
+    lease = {'schema':'saea-generation-lease-v1', 'run_id':current.run_id, 'attempt_id':current.attempt_id,
+        'pid':123, 'study_head':'a' * 40, 'started_at':'2026-11-02T00:00:01.221861+00:00'}
+    lock = data / 'locks/flight.lock'; lock.parent.mkdir(); lock.write_text(json.dumps(lease))
+    lock.with_name('generation.guard').touch()
+    started = {'attempt_id':current.attempt_id, 'recovery':recovery, 'rows':13078, 'study_commit':'a' * 40}
+    container = [{'Id':'b' * 64, 'Name':'/owned', 'State':{'Status':'exited', 'Running':False, 'Pid':0,
+        'StartedAt':'2026-11-02T00:00:00Z', 'FinishedAt':'2026-11-02T00:00:10Z'},
+        'Config':{'Env':['SAEA_OBSERVABILITY_RUN_ID=' + current.run_id,
+            'SAEA_OBSERVABILITY_ATTEMPT_ID=' + current.attempt_id]}}]
+    registered = {'execution_plan':asdict(original)}
+    if allowance is not None: registered['owner_allowance'] = allowance
+    config = {'schema':m.SCHEMA, 'repo':str(repo), 'data':str(data), 'out':str(data / 'work/codex/zero-v2'),
+        'source_plan':pin('registered', registered), 'baseline':pin('baseline', {'arm':arm,
+            'live_phase_fit':{'run_id':current.run_id + '-FIT', 'attempt_id':'fit-v1'}}),
+        'started':pin('started', started), 'container_inspect':pin('container', container),
+        'container_id':'b' * 64, 'container_name':'owned', 'lease_sha256':m.digest(lock.read_bytes()),
+        'target_attempt':'generation-v3', 'arm':arm, 'fit':{'run_id':current.run_id + '-FIT', 'attempt_id':'fit-v1'},
+        'ports':[8200,8201]}
+    return config, lock, pin, started, recovery, allowance
+
+
+def test_resumed_reconciliation_uses_actual_lease_without_rewriting_started(tmp_path, monkeypatch):
+    config, lock, _, started, _, _ = resumed_fixture(tmp_path, monkeypatch)
+    evidence = Path(config['started']['path']); before = evidence.read_bytes(); original = lock.read_bytes()
+    pids = []
+    result = m.reconcile(config, observe=lambda ports:{'queues':'empty'},
+        pid_exists=lambda pid:pids.append(pid) or False)
+    assert result['source']['plan']['attempt_id'] == 'generation-v2'
+    assert result['source']['empty_ancestry']['source']['plan']['attempt_id'] == 'generation-v1'
+    assert result['worker_identity']['identity_source'] == 'generation-lease' and pids == [123,123]
+    assert result['worker_identity']['time'] == datetime_timestamp('2026-11-02T00:00:01.221861+00:00')
+    assert evidence.read_bytes() == before and 'pid' not in started and 'time' not in started
+    assert Path(result['preserved_lease_path']).read_bytes() == original
+    assert not (Path(config['data']) / 'attempts/SAEA-ZERO-RESUMED/generation-v3.json').exists()
+
+
+def datetime_timestamp(value):
+    from datetime import datetime
+    return datetime.fromisoformat(value).timestamp()
+
+
+def test_resumed_final_report_keeps_registered_allowance(tmp_path, monkeypatch):
+    config, _, _, _, _, allowance = resumed_fixture(tmp_path, monkeypatch, final_report=True)
+    result = m.reconcile(config, observe=lambda ports:{}, pid_exists=lambda pid:False)
+    assert result['source']['plan']['owner_allowance'] == allowance
+    assert result['source']['empty_ancestry']['source']['plan']['owner_allowance'] == allowance
+
+
+def test_resumed_tampering_and_unknown_custody_preserve_lock(tmp_path, monkeypatch):
+    import pytest
+    faults = ('pin', 'target', 'protocol', 'ancestry', 'time', 'pid', 'head', 'native', 'fit', 'ancestor-prepared')
+    for fault in faults:
+        root = tmp_path / fault; root.mkdir()
+        config, lock, pin, started, recovery, _ = resumed_fixture(root, monkeypatch)
+        if fault in ('pin','target','protocol'):
+            doc = json.loads(Path(recovery['path']).read_bytes())
+            if fault == 'target':doc['target_plan']['attempt_id'] = 'generation-foreign'
+            else:doc['target_plan']['protocol_hash'] = 'c' * 64
+            new = pin('recovery', doc)
+            if fault != 'pin':
+                started['recovery'] = new; config['started'] = pin('started', started)
+        elif fault == 'ancestry':
+            p = Path(config['data']) / 'runs/SAEA-ZERO-RESUMED/generation-v2/resume-declaration.json'; p.write_text('{}')
+        elif fault in ('time','pid','head'):
+            lease = json.loads(lock.read_bytes())
+            lease.update({'time':{'started_at':'2026-11-02T00:00:20+00:00'},
+                'pid':{'pid':0}, 'head':{'study_head':'c' * 40}}[fault])
+            lock.write_text(json.dumps(lease)); config['lease_sha256'] = m.digest(lock.read_bytes())
+        else:
+            rel = {'native':'contact-journals/SAEA-ZERO-RESUMED/generation-v2/unknown.intent.json',
+                'fit':'prepared/SAEA-ZERO-RESUMED-FIT/fit-v1/unknown.endpoint.json',
+                'ancestor-prepared':'prepared/SAEA-ZERO-RESUMED/generation-v1/unknown.endpoint.json'}[fault]
+            p = Path(config['data']) / rel; p.parent.mkdir(parents=True, exist_ok=True); p.write_text('{}')
+        before = lock.read_bytes()
+        with pytest.raises(ValueError):
+            m.reconcile(config, observe=lambda ports:{}, pid_exists=lambda pid:False)
+        assert lock.read_bytes() == before and not Path(config['out']).exists()
+
+
+def test_resumed_evidence_rechecked_after_quiescence(tmp_path, monkeypatch):
+    import pytest
+    config, lock, _, _, recovery, _ = resumed_fixture(tmp_path, monkeypatch)
+    before = lock.read_bytes()
+    def observe(ports):
+        Path(recovery['path']).write_text('{}'); return {}
+    with pytest.raises(ValueError, match='changed'):
+        m.reconcile(config, observe=observe, pid_exists=lambda pid:False)
+    assert lock.read_bytes() == before and not Path(config['out']).exists()

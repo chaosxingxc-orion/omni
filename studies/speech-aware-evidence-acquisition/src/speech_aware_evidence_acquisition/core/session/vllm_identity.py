@@ -60,15 +60,22 @@ disagrees with the runtime receipt is worthless paper here exactly as it is on t
 from __future__ import annotations
 
 import hashlib
+import http.client
+import json
+import math
 import os
 import re
 import signal
 import socket
 import stat
 import subprocess
+import threading
 import time
+from collections import OrderedDict
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
+from urllib.parse import urlsplit
 
 from ...contracts import STUDY_SLUG, assert_execution_environment
 from ...contracts.errors import GateClosed
@@ -89,6 +96,7 @@ from ...contracts.gate_runtime_vllm import (
     pinned_environment,
     validate_vllm_receipt_document,
 )
+from ..stage_timing import span
 from . import SessionError, _bracketed, require_loopback
 from .process import _linux_process_state_char, _pid_alive, _pid_is_defunct
 from .receipt import (
@@ -310,16 +318,112 @@ def _mapped_paths(proc_root: Path, pid: int) -> tuple[list[str], list[str]]:
 
 #: Seconds the ``shared-pid-host`` policy waits for the endpoint to answer ``/v1/models``.
 NAMESPACE_PROBE_TIMEOUT_SECONDS = 5.0
+_PROBE_MAX_CONNECTIONS = 8
+_PROBE_MAX_RESPONSE_BYTES = 1024 * 1024
+_probe_local = threading.local()
+
+
+class _ProbeConnections:
+    """Bounded sockets owned by one thread/process; never identity results."""
+
+    def __init__(self):
+        self.pid = os.getpid()
+        self.connections = OrderedDict()
+
+    def close(self):
+        while self.connections:
+            _, connection = self.connections.popitem(last=False)
+            connection.close()
+
+    def __del__(self):
+        self.close()
+
+
+def _close_http_probe_connections() -> None:
+    """Release this thread's idle probe sockets; used at owned lifecycle ends."""
+    cache = getattr(_probe_local, "cache", None)
+    if cache is not None:
+        cache.close()
+        del _probe_local.cache
+
+
+@contextmanager
+def http_probe_connection_scope():
+    """Reuse only this thread's probe sockets until the owned phase ends.
+
+    Nested scopes share the outer owner. Outside a scope every probe closes
+    its connection, so identity checks cannot leave sockets for quiescence.
+    """
+    cache = getattr(_probe_local, "cache", None)
+    if cache is not None and cache.pid != os.getpid():
+        _close_http_probe_connections()
+        cache = None
+    owner = cache is None
+    if owner:
+        cache = _probe_local.cache = _ProbeConnections()
+    try:
+        yield
+    finally:
+        if owner:
+            cache.close()
+            if getattr(_probe_local, "cache", None) is cache:
+                del _probe_local.cache
 
 
 def _http_get_json(url: str, timeout_seconds: float) -> object:
-    """The decoded JSON body of a loopback GET. A module seam: tests replace :data:`http_get_json`."""
+    """Issue every probe; reuse sockets only inside an explicit owned scope.
 
-    import json
-    import urllib.request
-
-    with urllib.request.urlopen(url, timeout=timeout_seconds) as response:  # loopback only (require_loopback)
-        return json.loads(response.read().decode("utf-8"))
+    No retries, redirects or identity caching. Any failed/partial response
+    discards its socket; a later independent call may open a fresh connection.
+    """
+    parsed = urlsplit(url)
+    if (parsed.scheme != "http" or parsed.path != "/v1/models"
+            or parsed.query or parsed.fragment or parsed.username is not None
+            or parsed.password is not None):
+        raise ValueError("exact loopback HTTP model probe required")
+    host, port = require_loopback(url)
+    if (type(timeout_seconds) not in (int, float) or not math.isfinite(timeout_seconds)
+            or timeout_seconds <= 0):
+        raise ValueError("finite positive probe timeout required")
+    key = (host, port, float(timeout_seconds))
+    cache = getattr(_probe_local, "cache", None)
+    if cache is not None and cache.pid != os.getpid():
+        _close_http_probe_connections()
+        cache = None
+    connection = cache.connections.pop(key, None) if cache is not None else None
+    reused = connection is not None and connection.sock is not None
+    if connection is None:
+        if cache is not None and len(cache.connections) >= _PROBE_MAX_CONNECTIONS:
+            _, evicted = cache.connections.popitem(last=False)
+            evicted.close()
+        connection = http.client.HTTPConnection(host, port, timeout=float(timeout_seconds))
+    try:
+        with span("session_namespace_probe", {"cache_hits": int(reused),
+                "timeout_seconds": timeout_seconds}) as observation:
+            connection.request("GET", "/v1/models", headers={"Accept": "application/json"})
+            with connection.getresponse() as response:
+                observation["http_status"] = response.status
+                if response.status != 200:
+                    raise ValueError(f"model probe returned HTTP {response.status}")
+                declared_length = response.length
+                if declared_length is not None and declared_length > _PROBE_MAX_RESPONSE_BYTES:
+                    raise ValueError("model probe response exceeds byte limit")
+                raw = response.read(_PROBE_MAX_RESPONSE_BYTES + 1)
+                observation["response_bytes"] = len(raw)
+                if len(raw) > _PROBE_MAX_RESPONSE_BYTES:
+                    raise ValueError("model probe response exceeds byte limit")
+                if declared_length is not None and len(raw) != declared_length:
+                    raise ValueError("model probe response was truncated")
+                result = json.loads(raw.decode("utf-8"))
+                will_close = response.will_close
+        if cache is None or will_close or connection.sock is None:
+            connection.close()
+        else:
+            cache.connections[key] = connection
+        return result
+    except BaseException:
+        connection.close()
+        raise
 
 
 http_get_json: Callable[[str, float], object] = _http_get_json
@@ -564,9 +668,11 @@ def verify_vllm_process_identity(
         raise _refuse(f"pid {pid} is not a live process ({proc_root}/{pid}/stat cannot be read)")
     if state == "Z":
         raise _refuse(f"pid {pid} has exited and is awaiting reaping (state Z); it serves nothing")
-    _verify_namespaces(proc_root, pid, runtime_receipt, instance, host, port)
+    with span("session_namespace"):
+        _verify_namespaces(proc_root, pid, runtime_receipt, instance, host, port)
     interpreter, sha, size = interpreter_identity(runtime_receipt)
-    _verify_executable_image(proc_root, pid, interpreter, sha, size)
+    with span("session_image_hash", {"verified_bytes": size}):
+        _verify_executable_image(proc_root, pid, interpreter, sha, size)
     live_argv = _live_argv(proc_root, pid)
     if argv is not None and tuple(str(token) for token in argv) != live_argv:
         raise _refuse(
@@ -612,8 +718,10 @@ def verify_vllm_process_identity(
             f"pid {pid} has {DEVICE_ENV_KEY}={environ.get(DEVICE_ENV_KEY)!r}, not instance "
             f"{instance['instance_id']!r}'s own device group {devices!r}"
         )
-    _verify_maps(proc_root, pid, runtime_receipt, interpreter)
-    _verify_owns_listening_socket(proc_root, pid, host, port)
+    with span("session_maps"):
+        _verify_maps(proc_root, pid, runtime_receipt, interpreter)
+    with span("session_socket_owner"):
+        _verify_owns_listening_socket(proc_root, pid, host, port)
     return live_argv
 
 
@@ -627,8 +735,8 @@ def assert_vllm_session_alive(
     """The full vLLM I5 re-check for ONE endpoint: declared agreement, then every live check above.
 
     Called from the same three independent sites the llama check is (transport construction AND every send, the
-    adapter's pre-request call, and attach/stop), through ``core.session.runtime_identity``. Nothing is cached:
-    every call re-reads ``/proc`` and re-hashes the interpreter.
+    adapter's pre-request call, and attach/stop), through ``core.session.runtime_identity``. No identity result is cached:
+    every call re-reads ``/proc``, re-hashes the interpreter, and performs any required endpoint probe.
 
     ``runtime_root`` is accepted for one seam signature with the llama check and is deliberately unused: a vLLM
     receipt pins absolute paths (the interpreter, the libraries, the source trees and the model directory all live
@@ -636,17 +744,19 @@ def assert_vllm_session_alive(
     resolve against -- and resolving one would be a second, weaker spelling of paths the gate already re-verified.
     """
 
-    verify_vllm_session(session, runtime_receipt)
-    instance = session_instance(session, runtime_receipt)
-    verify_vllm_process_identity(
-        session.pid,
-        runtime_receipt,
-        instance,
-        host=session.host,
-        port=session.port,
-        argv=session.argv,
-        proc_root=_proc_root(proc_root),
-    )
+    with span("session_total"):
+        with span("session_declared"):
+            verify_vllm_session(session, runtime_receipt)
+            instance = session_instance(session, runtime_receipt)
+        verify_vllm_process_identity(
+            session.pid,
+            runtime_receipt,
+            instance,
+            host=session.host,
+            port=session.port,
+            argv=session.argv,
+            proc_root=_proc_root(proc_root),
+        )
 
 
 def assert_vllm_sessions_alive(

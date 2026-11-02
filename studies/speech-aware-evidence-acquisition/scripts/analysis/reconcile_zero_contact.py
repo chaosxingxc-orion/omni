@@ -1,10 +1,11 @@
 """Preserve an exact stale lease after terminal, zero-contact reconciliation."""
 import argparse
-from dataclasses import fields, replace
+from dataclasses import asdict, fields, replace
 from datetime import datetime
 import fcntl
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -62,6 +63,72 @@ def replay_source(repo, data, registered, target, arm):
     return replay.source_binding()
 
 
+def resumed_source(repo, data, registered, started, arm):
+    """Resolve an existing recovery receipt, preserving scientific authority."""
+    require(set(started) == {'attempt_id', 'recovery', 'rows', 'study_commit'}
+            and type(started['rows']) is int and started['rows'] > 0,
+            'exact resumed started evidence required')
+    sys.path[:0] = [str(repo / 'src'), str(repo / 'scripts/analysis')]
+    from speech_aware_evidence_acquisition.contracts import ExecutionPlan
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import load_native_recovery
+    allowed = {f.name for f in fields(ExecutionPlan)}
+    original_doc = registered['execution_plan']
+    allowance = registered.get('owner_allowance', original_doc.get('owner_allowance'))
+    require('owner_allowance' not in original_doc or original_doc['owner_allowance'] == allowance,
+            'registered owner allowance differs')
+    original = ExecutionPlan(**{k:v for k,v in original_doc.items() if k in allowed},
+        owner_allowance=allowance).validate(source_root=repo)
+    declaration = started['recovery']; document = pinned(declaration)
+    require(Path(declaration['path']).resolve().is_relative_to(data), 'recovery receipt escaped data root')
+    require(set(document) == {'schema', 'source', 'target_plan'}
+            and document['schema'] == 'saea-native-recovery-v1', 'exact native recovery receipt required')
+    current = ExecutionPlan(**document['target_plan']).validate(source_root=repo)
+    require(current == replace(original, attempt_id=started['attempt_id'])
+            and current.owner_allowance == original.owner_allowance
+            and current.attempt_id != original.attempt_id, 'resumed scientific plan or owner allowance differs')
+    recovery = load_native_recovery(declaration, data_root=data, plan=current, arm=arm)
+    require(recovery.scientific_source_plan == original
+            and recovery.scientific_source_plan.owner_allowance == original.owner_allowance,
+            'recovery does not descend from registered scientific source')
+    require(not recovery.request_ids and recovery.source_actual_usage == {'calls':0, 'audio_seconds':0.0},
+            'resumed ancestor is not zero-contact')
+    recovery.assert_all_contacts_observed()
+    resume_path = data / 'runs' / current.run_id / current.attempt_id / 'resume-declaration.json'
+    require(resume_path.is_file() and not resume_path.is_symlink(), 'persisted resumed declaration required')
+    resume = json.loads(resume_path.read_bytes())
+    require(resume.get('schema') == 'saea-resume-declaration-v1'
+            and resume.get('run_id') == current.run_id and resume.get('attempt_id') == current.attempt_id
+            and resume.get('native_recovery_receipt') == declaration
+            and resume.get('predecessors') == [{'attempt_id':recovery.source_plan.attempt_id,
+                'mode':'native-contact-journal', 'pin_sha256':recovery.source_binding()['attempt_sha256']}],
+            'persisted recovery differs from started evidence')
+    ancestor = recovery.source_binding()
+    while ancestor:
+        plan = ancestor['plan']
+        empty_tree(data / 'prepared' / plan['run_id'] / plan['attempt_id'])
+        empty_tree(data / 'contact-journals' / plan['run_id'] / plan['attempt_id'])
+        ancestor = ancestor.get('empty_ancestry', {}).get('source')
+    effective = {**registered, 'execution_plan':asdict(current)}
+    if allowance is not None: effective['owner_allowance'] = allowance
+    return effective
+
+
+def lease_worker(started, lease):
+    """Use the actual lease identity for resumed workers; never invent a PID."""
+    require(isinstance(started.get('study_commit'), str)
+            and re.fullmatch('[0-9a-f]{40}', started['study_commit']), 'exact started commit required')
+    if 'recovery' in started:
+        require(isinstance(lease.get('started_at'), str), 'resumed lease timestamp required')
+        stamp = datetime.fromisoformat(lease['started_at'].replace('Z', '+00:00'))
+        require(stamp.utcoffset() is not None, 'timezone-aware resumed lease timestamp required')
+        pid, when, origin = lease.get('pid'), stamp.timestamp(), 'generation-lease'
+    else:
+        pid, when, origin = started.get('pid'), started.get('time'), 'started-receipt'
+    require(type(pid) is int and pid > 0, 'exact source PID required')
+    require(type(when) in (int, float) and math.isfinite(when), 'exact source start time required')
+    return {'pid':pid, 'time':when, 'study_commit':started['study_commit'], 'identity_source':origin}
+
+
 def quiet(ports):
     from tfgrpo_recovery_queue import quiescence
     return quiescence(ports)
@@ -90,11 +157,12 @@ def reconcile(config, *, observe=quiet, replay=replay_source, pid_exists=None):
     fit = baseline.get('live_phase_fit', baseline.get('native_contact_fit'))
     require(isinstance(fit, dict) and all(fit.get(k) == v for k, v in config['fit'].items())
             and baseline.get('arm') == config['arm'], 'registered baseline FIT or arm differs')
-    plan = registered['execution_plan']; run = plan['run_id']; attempt = plan['attempt_id']
+    resumed = 'recovery' in started
+    effective = resumed_source(repo, data, registered, started, config['arm']) if resumed else registered
+    plan = effective['execution_plan']; run = plan['run_id']; attempt = plan['attempt_id']
     for value in (run, attempt, config['target_attempt'], *config['fit'].values()):
         require(isinstance(value, str) and re.fullmatch('[A-Za-z0-9][A-Za-z0-9_.-]*', value), 'confined identity required')
     require(attempt != config['target_attempt'], 'fresh target attempt required')
-    require(type(started['pid']) is int and started['pid'] > 0, 'exact started PID required')
     pid_exists = pid_exists or (lambda pid: Path('/proc', str(pid)).exists())
     guard = data / 'locks/generation.guard'; metadata = data / 'locks/flight.lock'
     require(guard.is_file() and not guard.is_symlink(), 'existing stable generation guard required')
@@ -104,8 +172,9 @@ def reconcile(config, *, observe=quiet, replay=replay_source, pid_exists=None):
         original = metadata.read_bytes()
         require(digest(original) == config['lease_sha256'], 'lease bytes changed')
         lease = json.loads(original)
+        worker = lease_worker(started, lease)
         require(lease.get('schema') == 'saea-generation-lease-v1' and all(lease.get(k) == v for k, v in {
-            'run_id': run, 'attempt_id': attempt, 'pid': started['pid'], 'study_head': started['study_commit']}.items()),
+            'run_id': run, 'attempt_id': attempt, 'pid': worker['pid'], 'study_head': worker['study_commit']}.items()),
             'lease does not belong to exact source worker')
         guard_identity = os.fstat(handle.fileno())
 
@@ -118,12 +187,12 @@ def reconcile(config, *, observe=quiet, replay=replay_source, pid_exists=None):
                     'exact container is not terminal')
             begin = datetime.fromisoformat(state['StartedAt'].replace('Z', '+00:00')).timestamp()
             end = datetime.fromisoformat(state['FinishedAt'].replace('Z', '+00:00')).timestamp()
-            require(begin <= started['time'] <= end, 'started evidence is outside exact container lifetime')
+            require(begin <= worker['time'] <= end, 'source worker evidence is outside exact container lifetime')
             env = dict(row.split('=', 1) for row in container['Config']['Env'])
             require(env.get('SAEA_OBSERVABILITY_RUN_ID') == run
                     and env.get('SAEA_OBSERVABILITY_ATTEMPT_ID') == attempt,
                     'container does not bind exact source run and attempt')
-            require(not pid_exists(started['pid']), 'source PID exists; reuse requires explicit identity audit')
+            require(not pid_exists(worker['pid']), 'source PID exists; reuse requires explicit identity audit')
             source = json.loads((data / 'attempts' / run / (attempt + '.json')).read_bytes())
             require(source.get('state') == 'ABORTED' and source.get('run_id') == run
                     and source.get('attempt_id') == attempt and source.get('actual') == {'calls': 0, 'audio_seconds': 0.0},
@@ -141,7 +210,10 @@ def reconcile(config, *, observe=quiet, replay=replay_source, pid_exists=None):
             require(pinned(config['source_plan']) == registered and pinned(config['started']) == started
                     and pinned(config['baseline']) == baseline,
                     'source evidence changed')
-            return container, replay(repo, data, registered, target, config['arm'])
+            if resumed:
+                require(resumed_source(repo, data, registered, started, config['arm']) == effective,
+                        'resumed source evidence changed')
+            return container, replay(repo, data, effective, target, config['arm'])
 
         container, binding = audit()
         quiescence = observe(config['ports'])
@@ -153,7 +225,7 @@ def reconcile(config, *, observe=quiet, replay=replay_source, pid_exists=None):
         out.mkdir(parents=True, exist_ok=False)
         destination = metadata.with_name('preserved-flight-' + uuid.uuid4().hex + '.json')
         evidence = {'schema': SCHEMA, 'source': binding, 'container': container,
-            'started': started, 'quiescence': quiescence, 'config': config,
+            'started': started, 'worker_identity':worker, 'quiescence': quiescence, 'config': config,
             'preserved_lease_path': str(destination),
             'lease_sha256': digest(original), 'new_model_calls': 0, 'source_state_changed': False,
             'target_attempt_created': False, 'guard_preserved': True, 'observed_at': time.time()}

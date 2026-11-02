@@ -173,8 +173,12 @@ class NativeContactReplay:
     contacts and requires the source's recorded spend to cover every response.
     """
 
+    MAX_EMPTY_RECOVERY_ANCESTORS = 32
+
     def __init__(self, data_root, source_plan, recovery_plan, arm, *, _ancestry_seen=()):
         import threading
+        if len(_ancestry_seen) > self.MAX_EMPTY_RECOVERY_ANCESTORS:
+            raise ContactJournalError('native recovery ancestry exceeds supported depth')
         source_plan.validate(); recovery_plan.validate()
         if source_plan.attempt_id in _ancestry_seen or recovery_plan.attempt_id in _ancestry_seen:
             raise ContactJournalError('cyclic native recovery ancestry')
@@ -241,12 +245,14 @@ class NativeContactReplay:
             raise ContactJournalError('source attempt usage and contact journal differ; reconcile before recovery')
         self.scientific_source_plan = source_plan
         self._empty_ancestry = None
+        self._empty_ancestor = None
+        self._ancestry_pins = {}
         resume_path = Path(data_root)/'runs'/source_plan.run_id/source_plan.attempt_id/'resume-declaration.json'
         if resume_path.exists():
             # The immediate source owns every nonzero contact. Skipping a prior
             # zero-contact startup is safe; merging spent ancestor journals is
             # a different accounting contract and remains explicitly refused.
-            if not prepared_text:
+            if not (prepared_text or arm == 'raw-speech-agent-native-tools'):
                 raise ContactJournalError('nonempty or unsupported recovery ancestry')
             resume_blob = resume_path.read_bytes(); resume = json.loads(resume_blob)
             if (resume.get('schema') != 'saea-resume-declaration-v1'
@@ -254,16 +260,20 @@ class NativeContactReplay:
                     or resume.get('attempt_id') != source_plan.attempt_id):
                 raise ContactJournalError('source recovery declaration differs')
             declaration = resume['native_recovery_receipt']
-            if set(declaration) != {'path','sha256'}:
+            if not isinstance(declaration, dict) or set(declaration) != {'path','sha256'}:
                 raise ContactJournalError('pinned ancestor recovery required')
             receipt_path = Path(declaration['path'])
             if not receipt_path.is_absolute() or not receipt_path.resolve().is_relative_to(Path(data_root).resolve()):
                 raise ContactJournalError('ancestor receipt escaped data root')
             receipt_blob = receipt_path.read_bytes(); receipt = json.loads(receipt_blob)
-            if digest(receipt_blob) != declaration['sha256'] or receipt.get('schema') != 'saea-native-recovery-v1':
+            if (digest(receipt_blob) != declaration['sha256']
+                    or set(receipt) != {'schema', 'source', 'target_plan'}
+                    or receipt.get('schema') != 'saea-native-recovery-v1'):
                 raise ContactJournalError('ancestor receipt changed')
             from ..contracts import ExecutionPlan
-            if ExecutionPlan(**receipt['target_plan']) != source_plan:
+            ancestor_target = ExecutionPlan(**receipt['target_plan'])
+            if (ancestor_target != source_plan
+                    or ancestor_target.owner_allowance != source_plan.owner_allowance):
                 raise ContactJournalError('ancestor target differs from immediate source')
             ancestor = NativeContactReplay(data_root,ExecutionPlan(**receipt['source']['plan']),source_plan,arm,
                 _ancestry_seen=(*_ancestry_seen,recovery_plan.attempt_id))
@@ -276,11 +286,12 @@ class NativeContactReplay:
                 raise ContactJournalError('ancestor declaration provenance differs')
             self._empty_ancestry = {'resume':{'path':str(resume_path.resolve()),'sha256':digest(resume_blob)},
                 'receipt':dict(declaration),'source':ancestor.source_binding()}
+            self._empty_ancestor = ancestor
             self.scientific_source_plan = ancestor.scientific_source_plan
-            self._pins[resume_path] = digest(resume_blob)
-            self._pins[receipt_path] = digest(receipt_blob)
-            self._pins[ancestor._attempt_path] = ancestor._attempt_sha256
-            self._pins.update(ancestor._pins)
+            self._ancestry_pins = {resume_path: digest(resume_blob),
+                receipt_path: digest(receipt_blob),
+                ancestor._attempt_path: ancestor._attempt_sha256, **ancestor._pins}
+            self._pins.update(self._ancestry_pins)
 
     def source_binding(self):
         """Pin complete predecessor spend, including contacts not reused."""
@@ -322,14 +333,21 @@ class NativeContactReplay:
             current = digest(path.read_bytes()) if path.exists() else None
             if current != expected:
                 raise ContactJournalError('source custody changed after recovery inspection')
+        self._assert_contact_inventory()
+        if any(record['state'] != 'observed' for record in self._records.values()):
+            raise ContactJournalError('contact outcome unknown; reconcile before dispatching any work')
+
+    def _assert_contact_inventory(self):
+        # Hash pins alone cannot detect files added to a formerly empty journal.
+        # Audit every zero-contact ancestor before dispatch or response reuse.
         intents = {self.source._path(rid, 'intent') for rid in self._records}
         responses = {self.source._path(rid, 'response') for rid, record in self._records.items()
                      if record['state'] == 'observed'}
         if (set(self.source.root.glob('*.intent.json')) != intents
                 or set(self.source.root.glob('*.response.json')) != responses):
             raise ContactJournalError('source contact inventory changed after recovery inspection')
-        if any(record['state'] != 'observed' for record in self._records.values()):
-            raise ContactJournalError('contact outcome unknown; reconcile before dispatching any work')
+        if self._empty_ancestor is not None:
+            self._empty_ancestor._assert_contact_inventory()
 
     def assert_target(self, data_root, plan, arm):
         expected = ContactJournal(data_root, plan, arm)
@@ -339,15 +357,21 @@ class NativeContactReplay:
     def _unchanged(self, rid):
         if digest(self._attempt_path.read_bytes()) != self._attempt_sha256:
             raise ContactJournalError('source attempt changed after recovery inspection')
-        if self._empty_ancestry:
-            for path, expected in self._pins.items():
-                if path.parent != self.source.root and digest(path.read_bytes()) != expected:
-                    raise ContactJournalError('empty ancestor changed after recovery inspection')
+        self._assert_empty_ancestry()
         for kind in ('intent', 'response'):
             p = self.source._path(rid, kind)
             current = digest(p.read_bytes()) if p.exists() else None
             if current != self._pins[p]:
                 raise ContactJournalError('source contact changed after recovery inspection')
+
+    def _assert_empty_ancestry(self):
+        # Keep hot-path work proportional to ancestry, not predecessor contacts.
+        for path, expected in self._ancestry_pins.items():
+            current = digest(path.read_bytes()) if path.exists() else None
+            if current != expected:
+                raise ContactJournalError('empty ancestor changed after recovery inspection')
+        if self._empty_ancestor is not None:
+            self._empty_ancestor._assert_contact_inventory()
 
     def match(self, payload):
         """Bind a prepared request to exact original bytes, without consuming it."""
@@ -356,6 +380,7 @@ class NativeContactReplay:
         key = (logical['sample_id'], logical['agent_contact_id'])
         variants = self._by_contact.get(key)
         if variants is None:
+            self._assert_empty_ancestry()
             return None
         rid = variants.get(canonical(comparable_request(payload)))
         if rid is None:
@@ -393,6 +418,7 @@ class NativeContactReplay:
         rid = payload['request_id']
         record = self._records.get(rid)
         if record is None:
+            self._assert_empty_ancestry()
             return None
         self._unchanged(rid)
         if record['state'] != 'observed' or canonical(payload) != canonical(record['intent']['payload']):

@@ -1756,16 +1756,18 @@ def build_direct_only_raw_fit_gate(
         # member without choosing the later generation worker's slot.
         render_for_fit = getattr(runtime._transport, 'render_request_for_fit',
             runtime._transport.render_request)
-        for payload in payloads:
-            body = render_for_fit(canonical_bytes(payload))
-            if not isinstance(body, Mapping):
-                raise PreparationError("rendered fit body must be a mapping")
-            if rendered_raw_speech_sha256(body) != payload["raw_speech_query"]["sha256"]:
-                raise PreparationError(
-                    "direct-only raw contact rendered audio differs from its prepared request"
-                )
-            audio_seconds += rendered_wav_seconds(body)
-            bodies.append(body)
+        from .session.vllm_identity import http_probe_connection_scope
+        with http_probe_connection_scope():
+            for payload in payloads:
+                body = render_for_fit(canonical_bytes(payload))
+                if not isinstance(body, Mapping):
+                    raise PreparationError("rendered fit body must be a mapping")
+                if rendered_raw_speech_sha256(body) != payload["raw_speech_query"]["sha256"]:
+                    raise PreparationError(
+                        "direct-only raw contact rendered audio differs from its prepared request"
+                    )
+                audio_seconds += rendered_wav_seconds(body)
+                bodies.append(body)
         # Integer-second ceiling as the registered speech cap (1e-9 guards float noise).
         audio_seconds_ceiled = math.ceil(audio_seconds - 1e-9)
         if audio_seconds_ceiled > fit_plan.planned_speech_audio_seconds:
@@ -1790,12 +1792,13 @@ def build_direct_only_raw_fit_gate(
         journal = path.with_name(path.name + ".contacts.jsonl")
         custody_path = path.with_name(path.name + '.custody.json')
         if replay is not None:
-            from .direct_fit_recovery import reuse_direct_fit
-            receipt = reuse_direct_fit(runtime, replay, path, journal, custody_path,
-                payloads, inputs, fit_plan)
-            completed.append({'phase': phase, **receipt})
-            return
-        if path.exists() or journal.exists():
+            from .direct_fit_recovery import allow_first_direct_fit, reuse_direct_fit
+            if not allow_first_direct_fit(runtime, replay, path, journal, custody_path, fit_plan):
+                receipt = reuse_direct_fit(runtime, replay, path, journal, custody_path,
+                    payloads, inputs, fit_plan)
+                completed.append({'phase': phase, **receipt})
+                return
+        if path.exists() or journal.exists() or custody_path.exists():
             raise PreparationError(
                 "live fit identity already has contact or result evidence"
             )
