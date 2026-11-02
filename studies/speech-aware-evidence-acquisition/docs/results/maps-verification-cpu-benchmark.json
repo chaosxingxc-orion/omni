@@ -1,0 +1,45 @@
+{
+  "schema": "saea-local-real-maps-cpu-benchmark-v1",
+  "input_bytes": 615894,
+  "input_lines": 4143,
+  "input_sha256": "b7c46f53d04b3163134c124ccbbf269571e6353c53fa3ab440048afa2f499d47",
+  "source_old_commit": "b25b50c2^",
+  "source_new_sha256": "bc9b71061380c464a5ef2eb233091a88cab6ffd6d9e81dca021d9a5cca108b93",
+  "same_original_runtime_receipt": true,
+  "all_validation_calls_passed": true,
+  "timings": {
+    "old": {
+      "median_seconds": 0.025295322481542825,
+      "min_seconds": 0.02521540499292314,
+      "max_seconds": 0.025440742494538426,
+      "blocks": 15,
+      "calls_per_block": 20
+    },
+    "new_unscoped": {
+      "median_seconds": 0.008140961010940372,
+      "min_seconds": 0.008112653996795416,
+      "max_seconds": 0.008259185496717692,
+      "blocks": 15,
+      "calls_per_block": 20
+    },
+    "new_scoped": {
+      "median_seconds": 0.0036129675107076766,
+      "min_seconds": 0.003572580497711897,
+      "max_seconds": 0.003636908996850252,
+      "blocks": 15,
+      "calls_per_block": 20
+    }
+  },
+  "scope": "Fresh byte-copy plus exact maps parse/receipt-validation CPU only; excludes real /proc read, NPU host, network, tokenization, generation. No trajectory or synthetic workload used.",
+  "speedup_local_scoped": 7.001259326737815,
+  "speedup_local_unscoped": 3.107166641327635,
+  "conditional_projection": {
+    "baseline_render_seconds": 0.054287,
+    "baseline_maps_seconds": 0.043796,
+    "optimistic_render_floor_seconds": 0.010491,
+    "optimistic_render_max_speedup": 5.174625869793156,
+    "if_live_maps_same_ratio_render_seconds": 0.016746446049933195,
+    "if_live_maps_same_ratio_full26156_render_seconds": 438.0200428820526,
+    "warning": "Conditional component projection, not measured NPU/server speedup; live proc read may dominate after fix."
+  }
+}
