@@ -1,6 +1,6 @@
 # 研究结果与当前状态
 
-更新时间：2026-11-02 12:15 UTC。持续原位维护，完整结果与限制分开报告。
+更新时间：2026-11-02 12:21 UTC。持续原位维护，完整结果与限制分开报告。
 
 ## 主要结果
 
@@ -61,3 +61,5 @@ H1/H2固定313/312，覆盖52/60意图、43/55槽位及144/432种TRAIN实际关�
 - [算法比较与实施方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/decisions/TFRL-Algorithm-Comparison-and-Implementation.md)
 - [配置化启动规范](https://github.com/chaosxingxc-orion/omni/blob/main/docs/engineering/configured-job-launch-zh.md)
 - [非功能改进台账](https://github.com/chaosxingxc-orion/omni/blob/main/docs/engineering/Nonfunctional-Improvement-Program.md)
+
+最新现场核验：恢复容器仍运行，完成0/13,078，原生生成contact与FIT产物尚未出现；debug持续记录全量请求渲染。最近一条request_render为0.0577秒，audio_read_encode为0.000789秒，仅单次观测，不能当平均值或全程吞吐。正在审计全量准备开销，尚不能报告8卡推理满载或ETA。
