@@ -38,7 +38,7 @@ import json
 from typing import Callable, Mapping, Sequence
 
 from ..session import SessionError
-from .vllm_transport import VllmServerTransport
+from .vllm_transport import VllmServerTransport, vllm_request_body
 
 #: The one decoding-params field the router reads for dispatch, before the chosen instance's own transport strips
 #: it (``vllm_transport.vllm_request_body``, Gap A). Kept as a named constant so both halves of the seam -- this
@@ -134,6 +134,37 @@ class VllmRouterTransport:
             raise VllmRouterTransportError(
                 f"{_instance_label(index, self._instance_ids)} cannot render: {error}"
             ) from error
+
+    def render_request_for_fit(self, request_bytes: bytes) -> dict[str, object]:
+        """Certify a pre-slot whole-wave request on every possible instance.
+
+        The existing scheduler assigns a slot only after whole-wave FIT. Never
+        guess its eventual assignment: require all session-checked renderers
+        to produce identical wire bytes. Temporary slots select renderers only;
+        neither the immutable prepared payload nor the model body is changed.
+        Generation still uses strict render_request/__call__ slot routing.
+        """
+        try:
+            payload = json.loads(request_bytes)
+        except (UnicodeError, ValueError) as error:
+            raise VllmRouterTransportError('FIT requires a JSON request body') from error
+        decoding = payload.get('decoding_params') if isinstance(payload, Mapping) else None
+        if not isinstance(decoding, Mapping):
+            raise VllmRouterTransportError('FIT requires decoding_params')
+        if ROUTING_DECODING_KEY in decoding:
+            return self.render_request(request_bytes)
+        first = None
+        first_bytes = None
+        for index in range(self.instance_count):
+            routed = {**payload, 'decoding_params': {**decoding, ROUTING_DECODING_KEY: index}}
+            body = self.render_request(json.dumps(routed, sort_keys=True, separators=(',', ':')).encode())
+            body = vllm_request_body(body, self._transports[index].served_model_name)
+            raw = json.dumps(body, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
+            if first_bytes is not None and raw != first_bytes:
+                raise VllmRouterTransportError(
+                    'unassigned FIT request renders differently across deployment instances')
+            first, first_bytes = body, raw
+        return first
 
     def __call__(self, request_bytes: bytes) -> bytes:
         index = self._route(request_bytes)

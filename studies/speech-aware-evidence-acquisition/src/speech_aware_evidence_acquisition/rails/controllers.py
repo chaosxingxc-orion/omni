@@ -842,6 +842,11 @@ class EvidenceAgentController:
                 tool_choice="none" if phase == self._program.phases[-1] else "auto",
                 parallel_tool_calls=False,
             )
+        elif (self._program.program_id == "phase-direct-only-v1"
+                and context.query_state.query_source == "speech_audio"):
+            # Direct's empty tool inventory is authoritative even without a
+            # native dispatcher, before whole-wave FIT freezes its requests.
+            decoding_params["tool_choice"] = "none"
         self._pending_contact_id = material.contact_id
         # Decision 283 A: remember which program phase (node) authored each contact, so the runner can resolve a per-node
         # ``thinking_policy`` override without changing the contact plan's shape.

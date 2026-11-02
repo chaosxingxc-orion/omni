@@ -621,6 +621,15 @@ def test_direct_only_controller_runs_one_contact_then_stops():
     assert controller.sealed_states["direct"].source_query_state_sha256 == qs0.content_hash()
 
 
+def test_raw_direct_controller_binds_empty_tool_authority_before_preparation():
+    controller = rc.EvidenceAgentController(
+        program=rc.default_phase_program('phase-direct-only-v1'),
+        material_for_phase=lambda name, ctx: _material(name, ctx.sample_id))
+    state = replace(_query_state(), query_source='speech_audio')
+    contact = controller.initial_contact(_context(state))
+    assert contact.decoding_params == {'tool_choice': 'none'}
+
+
 def test_evidence_agent_controller_rejects_reentrant_initial_contact():
     program = rc.default_phase_program("phase-direct-only-v1")
     controller = rc.EvidenceAgentController(

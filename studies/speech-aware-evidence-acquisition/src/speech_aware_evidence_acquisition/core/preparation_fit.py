@@ -1731,8 +1731,13 @@ def build_direct_only_raw_fit_gate(
         runtime.assert_generation_lease()
         bodies = []
         audio_seconds = 0.0
+        # A complete-wave FIT precedes dynamic worker-slot allocation. The
+        # shared router can certify identical rendering on every attested
+        # member without choosing the later generation worker's slot.
+        render_for_fit = getattr(runtime._transport, 'render_request_for_fit',
+            runtime._transport.render_request)
         for payload in payloads:
-            body = runtime._transport.render_request(canonical_bytes(payload))
+            body = render_for_fit(canonical_bytes(payload))
             if not isinstance(body, Mapping):
                 raise PreparationError("rendered fit body must be a mapping")
             if rendered_raw_speech_sha256(body) != payload["raw_speech_query"]["sha256"]:

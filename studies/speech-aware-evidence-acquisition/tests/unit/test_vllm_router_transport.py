@@ -156,6 +156,36 @@ def test_renderer_requires_runner_slot(world):
     assert all(not recorder.calls for recorder in recorders)
 
 
+def test_whole_wave_fit_certifies_all_real_renderers_before_slot_allocation(world):
+    from speech_aware_evidence_acquisition.core.model.vllm_transport import vllm_request_body
+    from speech_aware_evidence_acquisition.core.session.worker import LeaseCheckedTransport
+    _, recorders, transports, _ = _four_instance_setup(world)
+    router = VllmRouterTransport(transports)
+    payload = json.loads(_payload(0)); payload['decoding_params'].pop('id_slot')
+    raw = json.dumps(payload).encode()
+    fitted = LeaseCheckedTransport(router, lambda: None).render_request_for_fit(raw)
+    assert 'id_slot' not in fitted and 'id_slot' not in payload['decoding_params']
+    for slot in range(4):
+        rendered = router.render_request(_payload(slot))
+        assert vllm_request_body(rendered, SERVED) == fitted
+    assert not any(recorder.calls for recorder in recorders)
+    _kill_listener(world, transports[3]._session.port)
+    with pytest.raises(VllmRouterTransportError, match='instance 3.*cannot render'):
+        router.render_request_for_fit(raw)
+
+
+def test_whole_wave_fit_refuses_different_member_wire_body(world, monkeypatch):
+    _, recorders, transports, _ = _four_instance_setup(world)
+    router = VllmRouterTransport(transports)
+    original = transports[1].render_request
+    monkeypatch.setattr(transports[1], 'render_request',
+        lambda raw: {**original(raw), 'temperature': 0.7})
+    payload = json.loads(_payload(0)); payload['decoding_params'].pop('id_slot')
+    with pytest.raises(VllmRouterTransportError, match='renders differently'):
+        router.render_request_for_fit(json.dumps(payload).encode())
+    assert not any(recorder.calls for recorder in recorders)
+
+
 def test_routes_each_contact_to_id_slot_mod_instance_count(world):
     _, recorders, transports, _ = _four_instance_setup(world)
     router = VllmRouterTransport(transports, instance_ids=[f"tp2-{i}" for i in range(4)])
