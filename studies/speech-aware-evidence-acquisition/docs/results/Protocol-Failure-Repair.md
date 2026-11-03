@@ -41,9 +41,9 @@ v4 保留原四条轨迹、官方反馈、literal_slot_errors、200字符上限�
 - `tests/unit/test_reflexion_offline.py`：新旧身份分离、证据不变、完整例子、null/引用映射/回放、错误输出不重发、旧错误继续拒绝。
 - `tests/unit/test_reflexion_runtime.py`：新版本纳入真实共享Flight流程的测试替身集成测试。
 
-主线程已在固定镜像执行 Reflexion offline/runtime 回归，全部通过；与全量注册组合运行时发现的5项失败均为新全量测试 fixture 遗漏依赖文档，另行修复。真实模型 v4 探针尚未执行。
+主线程已在固定镜像执行 Reflexion offline/runtime 的64项回归，全部通过；新全量注册fixture补齐真实依赖文档后，另54项回归全部通过。真实模型 v4 探针尚未执行。
 
 下一步先跑固定小规模TRAIN协议探针，分别统计完成组数、协议拒绝数、null率、截断率、prompt/completion/reasoning tokens及秒/组。不要在全量测试中学习协议或规则。历史失败不能靠补外壳转为成功；新协议必须新身份运行，历史失败成本仍保留。小规模探针通过后再构建完整候选，随后用冻结的独立开发集决定是否保留规则。
 
-ACE下一步应单独开发版本：使用CPU映射的短轨迹别名、限定反思条数与每字段长度、完整输出示例；将thinking预算与最终JSON所需预算分开验证。不能简单借用 perception thinking-off 的收益推断反思阶段也应关闭thinking。
+ACE紧凑协议v3现已实现：使用CPU映射的短轨迹别名、限定反思条数与每字段长度、完整输出示例；将thinking预算与最终JSON所需预算分开验证。新增短引用由CPU映射回原轨迹，历史原始响应不改写；完整示例、最多2条及字段字符限制已覆盖回归。ACE与槽位准入合计60项固定镜像测试通过。字符限额不能保证token适配，真实探针仍待验证。不能简单借用 perception thinking-off 的收益推断反思阶段也应关闭thinking。
 
