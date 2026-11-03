@@ -134,3 +134,10 @@
 ### 纯文本tokenizer接入
 
 共享tokenizer worker新增显式text模式，按实际tokenizer编码指令文本，保留不截断、无special tokens以及独立计数语义身份；原chat模式不变。错误类型、旧worker模式不匹配均拒绝，不静默fallback。97项固定镜像测试通过（3.46秒）；首次测试快照缺真实H1名单，修正快照后通过。此修复未部署活动树，仍需真实GEPA阶段接入。当前用户优先级为小规模Agent方案锁定，全量测试暂缓。
+
+
+### 原生消费接口核查结果
+
+代码审查确认已有 `roles.solver.template_variants` → Flight material builder → runner →原生语音请求链，可以保留同次P状态和知识供给，仅替换受验Solver模板。原生history中的control是完整框架消息JSON envelope，不能直接替换成候选指令。候选应经 `executable_template` 与现有模板渲染链接入，保留原生FIT和完整成本。
+
+跨动态GEPA阶段复用封存P仍缺受验导入入口；`NativeContactReplay`是同请求恢复机制，不能通过放宽请求匹配把新候选伪装成旧调用。下一功能切片是候选模板发布/绑定和封存P导入，再接动态阶段；静态template arm本身不等于GEPA搜索完成。
