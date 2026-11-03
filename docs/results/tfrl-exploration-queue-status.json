@@ -1,9 +1,9 @@
 {
   "schema": "tfrl-exploration-queue-snapshot-v1",
-  "observed_at": "2026-11-03T11:46:40.860522+00:00",
+  "observed_at": "2026-11-03T11:57:04.107730+00:00",
   "execution_observed_at": "2026-11-03T11:46:40.860522+00:00",
-  "running_explorations": 0,
-  "verified_queued_successors": 0,
+  "running_explorations": 1,
+  "verified_queued_successors": 2,
   "all_cards_busy_claim": false,
   "construction": {
     "container": "a2027a567ef9673935ffcaeb8b6fdedb6b417926d09c8e481f0eaa7ecf0ed121",
@@ -14,11 +14,11 @@
     "cards": 2,
     "instances": 1,
     "independent_successor_hypotheses": 3,
-    "state": "baseline-failed-settled-engine64k-ready-successors-in-preparation",
+    "state": "first-native64k-branch-running-two-successors-queued",
     "prepared_successors": 3,
     "registered_and_initial_preflight_successors": 3,
-    "ready_successors": 0,
-    "queued_successors": 0,
+    "ready_successors": 2,
+    "queued_successors": 2,
     "capacity_oversized_groups": [
       25,
       26,
@@ -48,7 +48,20 @@
       1208,
       779
     ],
-    "native_prepared_successors": 3
+    "native_prepared_successors": 3,
+    "running_generation_container": "78ccaeeb5a6be51decfa68dcefc69a2c2d8ef4ccbf46a954526692e74814b21f",
+    "new_generation_started_at": "2026-11-03T11:53:42.70848626Z",
+    "new_generation_completed_groups": null,
+    "new_generation_seconds_per_group": null,
+    "new_generation_eta_seconds": null,
+    "runtime_queue": {
+      "sha256": "df5076e7b3ab1af912377d1acb6e06cab3428529199c06bcf4ed8e6a1a01f454",
+      "container": "c924aac12185a650c74f62ff832a2e52c1ce7b4147d0a33566ac243614ceb6d9",
+      "pid": 4014522,
+      "monitor_interval_seconds": 600,
+      "event_triggered": true,
+      "state": "running"
+    }
   },
   "consumption": {
     "current_lane_workload": "none verified; B64k handoff in preparation",
@@ -59,7 +72,7 @@
     "cards": 2,
     "instances": 1,
     "defined_independent_mutation_branches": 4,
-    "state": "reflexion-generation-finalized-callback-failed-settled-successors-in-preparation",
+    "state": "engine64k-ready-source-runtime-separation-fixed-four-gepa-branches-in-preparation",
     "completed_groups": 51,
     "known_responses": 51,
     "generation_tokens": {
@@ -70,12 +83,14 @@
     "seconds_per_group": 58.76,
     "ready_successors": 0,
     "queued_successors": 0,
-    "scientific_gain_verified": false
+    "scientific_gain_verified": false,
+    "context": 65536
   },
   "queue_validation": {
     "tests": 115,
-    "production_multi_successor_queue_verified": false,
-    "real_eight_node_readonly_plan": true
+    "production_multi_successor_queue_verified": true,
+    "real_eight_node_readonly_plan": true,
+    "historical_eight_node_plan_never_dispatched": true
   },
   "fulltest": {
     "observer": {
@@ -145,8 +160,8 @@
     }
   },
   "local_input_digests": {
-    "repro/tfrl-construction-queue.json": "edee482c515b2feb7fb23b2e1f66248dd8b1bc6b3cc8dc33f63e5fe4dc867364",
-    "repro/tfrl-consumption-queue.json": "e5b989194f8817fb45d46fb3bc7d36ff107c2a229d29b000ad70fbc2521a8bb4"
+    "repro/tfrl-construction-queue.json": "6f3d057b972000b85198fc5317a5ed784b655953f07c9313493435004afa899d",
+    "repro/tfrl-consumption-queue.json": "f162e6efa24f359620e205c08ecae9e214f657e9e505f9d386581a98cd972cde"
   },
   "knowledge_context_preparation": "implemented opt-in; 16 real CPU replay requests unchanged, zero strict duplicates; no gain claim",
   "artifact_release_fix": {

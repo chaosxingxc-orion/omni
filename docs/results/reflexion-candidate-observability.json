@@ -1,0 +1,20 @@
+{
+  "schema": "omni-reflexion-runtime-observability-audit-v1",
+  "source_candidate_sha256": "1f1a217ad4e870051308b42dfdc67ba28dd91487ced1f6d71bb6e04a1fc2c24d",
+  "rule_count": 47,
+  "reference_mention_rules": 37,
+  "reference_mention_fraction": 0.7872340425531915,
+  "rules_without_reference_mention": 10,
+  "exact_duplicate_groups": [],
+  "source_semantic_support_verified": false,
+  "source_requires_real_evaluation": true,
+  "generation_calls": 51,
+  "new_model_calls": 0,
+  "method": "Case-insensitive whole-word reference match; identifies text requiring review, not automated semantic rejection. Exact duplicate grouping uses unchanged content strings.",
+  "limits": [
+    "Reference word counts do not prove gold dependence for arbitrary text; the actual marked rules here require manual interpretation.",
+    "No precision or consumption benefit measured.",
+    "Unmarked rules are not automatically valid or transferable.",
+    "No candidate content or historical result modified."
+  ]
+}
