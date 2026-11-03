@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import re
 from pathlib import Path
 from . import solver_prompt_candidate as prompt
 from .gepa_mutation_execution import require
@@ -20,6 +21,24 @@ def historical_pin(pin,repo,data):
         and pin['root'] in ('repo','data'),'exact historical seed pin required')
     return read_pin({**pin,'root':'repository' if pin['root']=='repo' else 'data'},
         repo_root=repo,data_root=data)
+
+
+def source_repository(spec, *, repo, data):
+    """Resolve an explicit immutable historical tree separately from live serving."""
+    pin=spec.get('historical_repository')
+    if pin is None:return Path(repo)
+    require(isinstance(pin,dict) and set(pin)=={'root','relpath','commit'}
+        and pin['root']=='data' and isinstance(pin['relpath'],str)
+        and isinstance(pin['commit'],str) and re.fullmatch('[a-f0-9]{40}',pin['commit']),
+        'exact pinned historical repository required')
+    relative=Path(pin['relpath']);root=Path(data).resolve()
+    require(not relative.is_absolute() and '..' not in relative.parts,
+        'historical repository must remain within data root')
+    target=root/relative
+    require(target.is_dir() and target.resolve()==target, 'canonical historical repository required')
+    from ..core.bundle.git_commit import require_clean_study_repo
+    require(require_clean_study_repo(target)==pin['commit'],'historical repository commit changed')
+    return target
 
 
 def seed_contract(spec,*,repo,data):
@@ -79,8 +98,9 @@ def load_source(spec,*,repo,data):
     from .hashing import content_hash
     from .tfrl_bank_request_audit import checked_control
     fields={'schema','seed_material','source_manifest','feedback_query_ids','focus'}
-    require(isinstance(spec,dict) and set(spec)==fields and spec['schema']==SCHEMA
+    require(isinstance(spec,dict) and fields<=set(spec)<=fields|{'historical_repository'} and spec['schema']==SCHEMA
         and spec['focus'] in FOCUSES,'exact configured mutation source required')
+    repo=source_repository(spec,repo=repo,data=data)
     seed=seed_contract(spec['seed_material'],repo=repo,data=data)
     ids=spec['feedback_query_ids'];require(isinstance(ids,list) and 0<len(ids)<=16
         and ids==sorted(set(ids)) and set(ids)<=set(seed['contract']['feedback_query_ids']),
@@ -142,7 +162,8 @@ def load_source(spec,*,repo,data):
         'gold_train_sha256':gold_sha,'source_manifest':spec['source_manifest'],
         'historical_usage':historical,'tokenizer_identity':seed['tokenizer_identity'],
         'tokenizer_path':seed['runtime_receipt']['model']['model_dir'],
-        'audio_available_to_reflector':False,'gold_runtime_use_forbidden':True}
+        'audio_available_to_reflector':False,'gold_runtime_use_forbidden':True,
+        **({'historical_repository':copy.deepcopy(spec['historical_repository'])} if 'historical_repository' in spec else {})}
 
 
 def messages(source):

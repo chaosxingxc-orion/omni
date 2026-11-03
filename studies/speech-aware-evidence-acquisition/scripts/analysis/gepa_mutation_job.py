@@ -41,7 +41,8 @@ def documents(repo,data,cfg):
     identity=read_pin(cfg['runtime_identity'],repo_root=repo,data_root=data)
     model_id=cfg['model_fragment'];model=read(repo/f'configs/model/{model_id}.json')
     if base.deployment_identity(repo,model_id,identity)!=identity:raise ValueError('current mutation deployment differs')
-    seed=evidence.seed_contract(cfg['source']['seed_material'],repo=repo,data=data)
+    historical=evidence.source_repository(cfg['source'],repo=repo,data=data)
+    seed=evidence.seed_contract(cfg['source']['seed_material'],repo=historical,data=data)
     if model.get('model_lock_key')!=seed['model'].get('model_lock_key'):
         raise ValueError('mutation cannot change frozen model weights')
     decoding=base.learning_decoding(model)

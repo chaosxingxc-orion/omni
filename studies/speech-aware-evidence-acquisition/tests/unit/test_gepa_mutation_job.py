@@ -69,6 +69,7 @@ def test_shared_registration_binds_gepa_label_and_exact_single_contact(tmp_path,
     result=final.register(repo,data,out)
     assert result['calls']==result['fit_calls']==result['rows']==1
     exp=m.read(repo/'configs/experiment/gepa-test.json')
+    assert exp['cells'][0]['model_fragment']=='frozen-model'
     assert exp['prepared_training_feedback']['schema']==m.runtime.SOURCE_SCHEMA
     assert exp['stage3_algorithm']['id']=='gepa-reflective-pareto-v1'
     algorithm=resolve_stage3_algorithm(exp['stage3_algorithm']['id'])

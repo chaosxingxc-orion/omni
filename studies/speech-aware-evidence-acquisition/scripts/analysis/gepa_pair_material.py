@@ -14,11 +14,12 @@ from tfrl_odd40_cells import read,raw,sha,confined
 SCHEMA='saea-gepa-pair-material-v1'
 
 
-def derive(repo,data,*,seed_material,mutation_manifest):
+def derive(repo,data,*,seed_material,mutation_manifest,historical_repository=None):
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
     from speech_aware_evidence_acquisition.rails.gepa_mutation_runtime import verify_mutation_bundle
-    from speech_aware_evidence_acquisition.rails.gepa_mutation_source import seed_contract
-    checked=seed_contract({**seed_material,'root':'repository' if seed_material['root']=='repo' else 'data'},repo=repo,data=data)
+    from speech_aware_evidence_acquisition.rails.gepa_mutation_source import seed_contract,source_repository
+    historical=source_repository({} if historical_repository is None else {'historical_repository':historical_repository},repo=repo,data=data)
+    checked=seed_contract({**seed_material,'root':'repository' if seed_material['root']=='repo' else 'data'},repo=historical,data=data)
     seed_doc=checked['document']
     path,_=seed.read_pin(repo,data,mutation_manifest)
     native=verify_mutation_bundle(verify_bundle(path),repo=repo,data=data)
@@ -44,14 +45,15 @@ def derive(repo,data,*,seed_material,mutation_manifest):
 
 
 def build(repo,data,spec,out):
-    if set(spec)!={'schema','seed_material','mutation_manifest'} or spec['schema']!='saea-gepa-pair-build-v1':
+    if not {'schema','seed_material','mutation_manifest'}<=set(spec)<={'schema','seed_material','mutation_manifest','historical_repository'} or spec['schema']!='saea-gepa-pair-build-v1':
         raise ValueError('exact paired build specification required')
     if out.exists() or not out.resolve().is_relative_to((repo/'configs').resolve()):raise ValueError('fresh config output required')
-    result=derive(repo,data,seed_material=spec['seed_material'],mutation_manifest=spec['mutation_manifest']);out.mkdir(parents=True)
+    result=derive(repo,data,seed_material=spec['seed_material'],mutation_manifest=spec['mutation_manifest'],historical_repository=spec.get('historical_repository'));out.mkdir(parents=True)
     docs={k:result[k] for k in ('contract','parent','child')}
     docs.update(compiled_baseline=result['compiled']['baseline'],declaration=result['compiled']['declaration'])
     for name,doc in docs.items():publish_new(out/(name+'.json'),raw(doc))
     manifest={'schema':SCHEMA,'seed_material':spec['seed_material'],'mutation_manifest':spec['mutation_manifest'],
+        **({'historical_repository':spec['historical_repository']} if 'historical_repository' in spec else {}),
         'documents':{k:seed.pin(repo,out/(k+'.json')) for k in docs},
         'parent_sha256':result['parent']['candidate_sha256'],'child_sha256':result['child']['candidate_sha256'],
         'mutation_native_response_sha256':result['mutation']['response_sha256'],
@@ -61,7 +63,7 @@ def build(repo,data,spec,out):
 
 def verify(repo,data,material):
     if material.get('schema')!=SCHEMA:raise ValueError('paired material required')
-    expected=derive(repo,data,seed_material=material['seed_material'],mutation_manifest=material['mutation_manifest'])
+    expected=derive(repo,data,seed_material=material['seed_material'],mutation_manifest=material['mutation_manifest'],historical_repository=material.get('historical_repository'))
     docs={k:seed.read_pin(repo,data,v)[1] for k,v in material['documents'].items()}
     want={k:expected[k] for k in ('contract','parent','child')}
     want.update(compiled_baseline=expected['compiled']['baseline'],declaration=expected['compiled']['declaration'])

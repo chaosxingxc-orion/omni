@@ -262,7 +262,7 @@ def register(repo,data,job):
         artifact_result={'schema':'saea-artifact-result-binding-v1','role':'training-feedback-proposal','construction_roster':{'repo_relpath':roster_rel,'sha256':file_sha(job/'construction-roster.json')}},
         tfgrpo_contact_fit={'run_id':run_id+'-FIT','attempt_id':'learning-fit-v1','contact_cap':complete['fit_calls']},
         stage3_algorithm={'id':'tfgrpo-system-memory-disjoint-v1','operators_used':['credit_assignment'],'note':'One final consolidation of verified completed four-stage inputs; shared-P adaptation; candidate only.'})
-    cell,=exp['cells'];cell.update(cell_id=name,run_id=run_id,attempt_id='learning-v1',baseline_fragment=name,
+    cell,=exp['cells'];cell.update(cell_id=name,run_id=run_id,attempt_id='learning-v1',baseline_fragment=name,model_fragment=model_id,
         allowed_execution_stages=['check','worker','campaign'],readiness={'state':'held','requirements':[],'reason':'Registered exact learning source; await shared live runtime preflight and lease.'})
     if grounded:
         exp['prepared_training_feedback']['schema']='saea-prepared-grounded-shards-v1'
