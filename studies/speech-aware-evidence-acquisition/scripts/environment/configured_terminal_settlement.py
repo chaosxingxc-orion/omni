@@ -57,6 +57,41 @@ def stamp(value):
     return result.timestamp()
 
 
+def producer_job(producer, logical, expected):
+    """Resolve only established learning CLI or exact GEPA run arguments."""
+    args = producer['argv']
+    if len(args) == 4 and Path(args[1]).name == 'learning_strategy_job.py':
+        require(args[2] == '--config', 'exact learning command required')
+        command = read(mapped(producer, args[3], writable=False))
+        return Path(command['arguments']['job'])
+    require(len(args) == 15 and Path(args[1]).name == 'gepa_mutation_job.py'
+        and args[2] == 'run', 'only configured learning or exact GEPA run producers are supported')
+    flags = args[3::2]
+    require(len(set(flags)) == 6 and set(flags) == {
+        '--repo', '--data', '--job', '--out', '--after', '--predecessor-run'},
+        'exact unique GEPA run arguments required')
+    values = dict(zip(flags, args[4::2], strict=True))
+    for key in ('--repo', '--data', '--job', '--out', '--after'):
+        require(str(launcher.absolute(values[key])) == values[key], 'canonical GEPA path required')
+    require(values['--data'] == str(logical)
+        and args[1] == str(Path(values['--repo'])/'scripts/analysis/gepa_mutation_job.py')
+        and mapped(producer, values['--repo'], writable=False) == Path(producer['repo_path']),
+        'GEPA logical repository or data differs')
+    require(re.fullmatch('[A-Za-z0-9][A-Za-z0-9_.-]*', values['--predecessor-run']),
+        'GEPA predecessor identity required')
+    job = Path(values['--job'])
+    require(job.is_relative_to(logical/'work/codex'), 'owned GEPA job directory required')
+    document = read(mapped(producer, job/'complete.json', writable=False))
+    require(document.get('schema') == 'saea-gepa-mutation-job-v1'
+        and all(document.get(k) == expected[v] for k,v in (
+            ('job','candidate'),('run_id','run_id'),('service_session','service_session'),
+            ('runtime_rows','rows')))
+        and type(document.get('runtime_rows')) is int and document['runtime_rows'] == 1
+        and document.get('generation_calls') == 1 and document.get('fit_calls') == 1
+        and expected['attempt_id'] == 'learning-v1', 'GEPA job identity or one-contact budget differs')
+    return job
+
+
 def load(path):
     doc = read(Path(path))
     require(set(doc) == {'schema', 'producer_launch', 'producer_launcher', 'handoff_verifier',
@@ -70,8 +105,7 @@ def load(path):
     release, logical, expected = queue.release_identity(producer, doc['generation_release'])
     require(producer['pid_host'] is True, 'producer must expose host PID identity')
     require(doc['arm'] == 'prepared-context-text', 'only prepared learning contacts are supported')
-    require(len(producer['argv']) == 4 and Path(producer['argv'][1]).name == 'learning_strategy_job.py',
-            'only configured learning strategy producers are supported')
+    producer_job(producer, logical, expected)
     source = pin(doc['source_plan']); pin(doc['runtime_receipt'])
     require(source == Path(producer['repo_path']) / 'docs/readiness' / expected['candidate'] / 'generation-plan.json',
             'source must be the registered producer generation plan')
@@ -133,11 +167,10 @@ def source_custody(doc, producer, logical, expected, release):
         values['owner_allowance'] = registered['owner_allowance']
     plan = ExecutionPlan(**values).validate(source_root=Path(producer['repo_path']))
     require((plan.run_id, plan.attempt_id) == (expected['run_id'], expected['attempt_id']), 'source plan identity differs')
-    command_path = mapped(producer, producer['argv'][3], writable=False)
-    command = read(command_path)
-    job_path = mapped(producer, Path(command['arguments']['job']) / 'complete.json', writable=False)
+    logical_job = producer_job(producer, logical, expected)
+    job_path = mapped(producer, logical_job / 'complete.json', writable=False)
     job_pin = registered.get('job_manifest', {})
-    require(job_pin == {'root': 'data', 'relpath': str(Path(command['arguments']['job']).relative_to(logical) / 'complete.json'),
+    require(job_pin == {'root': 'data', 'relpath': str(logical_job.relative_to(logical) / 'complete.json'),
                        'sha256': launcher.digest(job_path)}, 'registered plan job manifest differs')
     attempt_path = mapped(producer, logical / 'attempts' / plan.run_id / (plan.attempt_id + '.json'), writable=True)
     attempt = read(attempt_path)

@@ -262,3 +262,58 @@ def test_narrow_per_run_mounts_do_not_require_parent_data_mount(configured):
     intent = json.loads(f.intent.read_bytes()); intent['config_sha256'] = sha; write(f.intent, intent)
     f.container['Config']['Labels']['saea.launch.config'] = sha
     assert m.execute(f.path)['settled']
+
+
+def as_gepa(f):
+    import copy
+    job = f.data / 'work/codex/gepa-job'
+    job.mkdir(parents=True)
+    document = {'schema':'saea-gepa-mutation-job-v1','job':f.candidate,'run_id':f.run,
+        'service_session':f.session,'runtime_rows':1,'generation_calls':1,'fit_calls':1}
+    complete = write(job/'complete.json',document)
+    plan=json.loads(f.source_plan.read_bytes())
+    plan['job_manifest']={'root':'data','relpath':'work/codex/gepa-job/complete.json','sha256':m.launcher.digest(complete)}
+    write(f.source_plan,plan)
+    launch=copy.deepcopy(f.launch_doc)
+    launch['argv']=['/bin/python','/logical-repo/scripts/analysis/gepa_mutation_job.py','run',
+        '--repo','/logical-repo','--data',str(f.logical),'--job',str(f.logical/'work/codex/gepa-job'),
+        '--out',str(f.logical/'work/output'),'--after',str(f.logical/'prior-release.json'),
+        '--predecessor-run','SAEA-PRIOR']
+    launch['mounts'].append({'source':str(job),'target':str(f.logical/'work/codex/gepa-job'),'readonly':True})
+    launch['required_inputs']=[pin(complete)]
+    write(f.launch,launch)
+    config_sha=m.queue.canonical_hash(launch)
+    intent=json.loads(f.intent.read_bytes());intent['config_sha256']=config_sha;write(f.intent,intent)
+    f.container['Config']['Labels']['saea.launch.config']=config_sha
+    config={**f.config,'producer_launch':pin(f.launch),'source_plan':pin(f.source_plan)}
+    write(f.path,config)
+    return job,launch,config
+
+
+def test_gepa_failed_known_contact_uses_same_strict_settlement(configured):
+    f=configured;as_gepa(f)
+    result=m.execute(f.path)
+    assert result['settled'] and result['observed_contacts']==1 and result['new_model_calls']==0
+    assert not f.lease.exists()
+
+
+@pytest.mark.parametrize('fault',['unknown','job-schema','calls','data','entry','flag','writable','manifest'])
+def test_gepa_custody_or_cli_drift_never_releases(configured,fault):
+    f=configured;job,launch,config=as_gepa(f)
+    if fault=='unknown':f.journal._path('req-1','response').unlink()
+    elif fault in ('job-schema','calls'):
+        doc=json.loads((job/'complete.json').read_bytes())
+        doc['schema' if fault=='job-schema' else 'generation_calls']='other' if fault=='job-schema' else 2
+        write(job/'complete.json',doc)
+    elif fault=='manifest':
+        plan=json.loads(f.source_plan.read_bytes());plan['job_manifest']['sha256']='0'*64
+        write(f.source_plan,plan);config['source_plan']=pin(f.source_plan)
+    else:
+        if fault=='data':launch['argv'][6]='/wrong-data'
+        elif fault=='entry':launch['argv'][1]='/other/gepa_mutation_job.py'
+        elif fault=='flag':launch['argv'][3]='--extra'
+        else:launch['mounts'][-1]['readonly']=False
+        write(f.launch,launch);config['producer_launch']=pin(f.launch)
+    write(f.path,config)
+    with pytest.raises((ValueError,FileNotFoundError)):m.execute(f.path)
+    assert f.lease.exists()
