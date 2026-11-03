@@ -28,7 +28,7 @@ Direct的0.4906秒/条是并发总吞吐口径，不是单请求延迟；不能�
 
 已有固定镜像、配置化启动/预检、共享Flight与逐请求FIT、原生响应与成本留存、本地热状态、归档、normal/debug观测，以及部分恢复和队列交接能力。Reflexion v3已核验8个响应均已知，原guard内结清租约，新增调用0；终态归档已验证。
 
-这些组件尚未组成完整可靠的实验流水线。历史上A0编码完成到下游核验仍未启动，存在约8小时23分接续空档；没有完整逐卡数据，不能断言全区间利用率。之后A0实际启动，现已按用户要求停止。当前NPU任务改为H1三档小规模对照，三档已完成，H2 off执行容器已启动、baseline排队；常驻服务和已排队均不等于实际有效满载。
+这些组件尚未组成完整可靠的实验流水线。历史上A0编码完成到下游核验仍未启动，存在约8小时23分接续空档；没有完整逐卡数据，不能断言全区间利用率。之后A0实际启动，现已按用户要求停止。当前NPU任务改为H1三档小规模对照，三档已完成，H2 off已完成、baseline正在运行；常驻服务和已排队均不等于实际有效满载。
 
 未闭合项包括：CPU封存产物到后继配置的自动绑定；失败任务结清后独立任务的资源交接；编码消费过调用后的通用恢复；恢复代候选发布/H2评分；GEPA真实执行适配；归档inspect/流读取等故障恢复。当前“所有实验都可断点续推”尚未全面满足。
 
@@ -61,7 +61,7 @@ P-off 已完成并独立核验 **313/313、FINALIZED**：官方 **SLU-F1 67.2797
 
 完整 313 条平均耗时拆解：准入→P 请求 138.68 秒；P 全请求 44.21 秒（其中 HTTP 12.09 秒）；P→S 25.06 秒；S 全请求 264.58 秒（其中 HTTP 240.44 秒）；收尾 0.06 秒；单样本总延迟 472.60 秒。并发请求存在重叠，不能把单样本延迟当整批吞吐。详见主仓 `docs/results/h1-thinking-off-result.json`。
 
-三档现已各313/313完成并完成配对：baseline SLU67.2773%/Intent74.7604%，off 67.2797%/76.0383%，short 68.6526%/74.4409%。off与short相对baseline的SLU区间均跨0；off严格任务修复21/破坏25，short修复17/破坏11。保留3072参照，冻结off为待H2筛查的效率候选，尚不最终晋升。三档NPU任务已结束。H2两臂各312条的固定数据准备、登记、准入与预检均已完成。05:21:19 UTC，off执行容器已启动；baseline进入持久队列，等待off生成释放后接续，与CPU评分异步。05:31 UTC快照校验off完成113/312条；启动以来595.95秒，5.27秒/完整条，8卡2×TP4，按整批完成率粗估剩余约17.5分钟（启动与尾部会改变估计）。这是部分进度，精度未封存、逐卡满载未证明；baseline仍排队。两臂各自执行P/S，正常预算合计1248次调用，fallback及失败另记。详见[完整三档结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Perception-Thinking-Comparison.md)。
+三档现已各313/313完成并完成配对：baseline SLU67.2773%/Intent74.7604%，off 67.2797%/76.0383%，short 68.6526%/74.4409%。off与short相对baseline的SLU区间均跨0；off严格任务修复21/破坏25，short修复17/破坏11。保留3072参照，冻结off为待H2筛查的效率候选，尚不最终晋升。三档NPU任务已结束。H2两臂各312条的固定数据准备、登记、准入与预检均已完成。05:21:19 UTC，off执行容器已启动；baseline进入持久队列，等待off生成释放后接续，与CPU评分异步。H2 off已312/312 FINALIZED：SLU66.5971%、Intent79.1667%、严格全正确112条；624调用，输入4330110、输出722270 tokens。成功容器839.45秒，2.69秒/条，8卡2×TP4、1.865分配卡时，off剩余0。baseline于05:34:50 UTC自动启动，与off评分重叠约28秒；baseline完成量与ETA待核验，不能用off单臂结果宣称收益。CPU完整配对分析已按baseline终态排队。两臂各自执行P/S，正常预算合计1248次调用，fallback及失败另记。详见[完整三档结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Perception-Thinking-Comparison.md)。
 
 三档官方配对分析工具已实现：同名单、同知识/模板/非 thinking 配置校验，SLU pooled counts 与 Intent 的语句聚类 bootstrap、任务修复/破坏、P/S 及未归属额外调用成本。17 项固定镜像测试通过；在真实 108 条快照和完整 313 条 P-off 成本上执行成功。三档完整配对已执行成功，0新增模型调用。
 

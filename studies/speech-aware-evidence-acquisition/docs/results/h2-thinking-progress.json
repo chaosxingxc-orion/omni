@@ -1,53 +1,53 @@
 {
-  "schema": "saea-real-engine-progress-v1",
-  "state": "running",
-  "completed_rows": 113,
-  "total_rows": 312,
-  "checkpoint_rows": 113,
-  "unusable_checkpoint_rows": 0,
-  "remaining_rows": 199,
-  "checkpoint_sha256": "2048d325aad0ac1235cacef128f215c10296621f229033b4b16c741dd1d8b024",
-  "split_identity_hash": "c7b16e132f43cf32bf7aa492b7724e535669fe33b2254a76e214386c5299cd72",
-  "torn_tail_bytes": 0,
-  "cards": 8,
-  "instances": 2,
-  "elapsed_seconds": 595.9496858119965,
-  "wall_seconds_per_complete_row": 5.273891024884924,
-  "rows_per_second": 0.1896133225509376,
-  "estimated_remaining_seconds": 1049.5043139521,
-  "eta_basis": "Linear observed whole-task completion rate; startup and tail may change it.",
-  "full_roster_comparison_eligible": false,
-  "checkpoint_recorded_cost_lower_bound": {
-    "calls": 226.0,
-    "audio_seconds": 901.675625,
-    "latency_seconds": 17742.514817319752,
-    "prompt_tokens": 1521362.0,
-    "completion_tokens": 177402.0,
-    "tool_calls": 0.0
+  "rows": 312,
+  "run_id": "SAEA-SLURP-H2-PERCEPTION-THINKING-OFF-V1",
+  "comparison": {
+    "admitted_level": 96,
+    "arm": "off",
+    "schema": "saea-h2-perception-thinking-v1"
   },
-  "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
-  "complete_sample_timings": {
-    "admission_wait": {
-      "n": 113,
-      "mean_s": 1.8837623373451327,
-      "p50_s": 1.70105236,
-      "p95_s": 2.77169865
+  "intent_accuracy": 0.7916666666666666,
+  "task_correct_rows": 112,
+  "task_error_rows": 200,
+  "role_contacts": {
+    "perception": {
+      "calls": 312
     },
-    "admitted_to_finished": {
-      "n": 113,
-      "mean_s": 308.55445306522125,
-      "p50_s": 319.87630995,
-      "p95_s": 427.92517523
+    "solver": {
+      "calls": 312
     }
   },
-  "new_model_calls": 0,
+  "source": {
+    "config_hash": "6db9f309c61911e80f0c3200c2ec499e0b71102600b4b8fe4c7e25474e16a194",
+    "manifest_sha256": "31f3d66bfd817759c39de662e3a59b9814fea320d9bf36f78222ea815bdb7ea9",
+    "recipe_sha256": "5cc98a6d02a748b9d99b638a02ee0ff3f0210bfdfec77bf122b49046793efbe8",
+    "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+    "scores_sha256": "e131972a59536559aff6bd42335c86f452721365b61bfd9edd3ce835a439db4f"
+  },
   "limitations": [
-    "Duration and state must come from an authoritative run boundary/process observation.",
-    "Allocated cards are not measured utilization.",
-    "Partial or failed candidates cannot establish a full-roster throughput winner.",
-    "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
+    "One fresh lock observation does not establish long-run error probability.",
+    "Historical failed runs and learning costs remain in their original ledgers.",
+    "No comparison with a different roster or shared-P K4 as an accuracy gain."
   ],
-  "observation": "H2 off snapshot at about 05:31 UTC; partial, not final quality",
-  "baseline_state": "queued after off generation release",
+  "schema": "saea-public-h2-thinking-arm-v1",
+  "state": "FINALIZED",
+  "arm": "off",
+  "slu_f1": 0.6659712975460642,
+  "cost": {
+    "audio_seconds_used": 2814.606500000001,
+    "calls_used": 624,
+    "completion_tokens_total": 722270,
+    "latency_seconds_total": 78648.88625139018,
+    "prompt_tokens_total": 4330110,
+    "tool_calls": 0
+  },
+  "wall_seconds": 839.44524836,
+  "wall_seconds_per_row": 2.6905296421794875,
+  "cards": 8,
+  "instances": 2,
+  "allocated_card_hours": 1.8654338852444445,
+  "remaining_rows": 0,
+  "baseline_state": "running",
+  "paired_comparison_pending": true,
   "full_test_held": true
 }
