@@ -513,3 +513,22 @@ def test_internal_success_without_release_cannot_skip_cleanup(queue,tmp_path):
     docker.containers['producer']['State'].update(Status='exited',Running=False,ExitCode=0)
     with pytest.raises(ValueError,match='without generation release'):m.execute(path,'once')
     assert docker.launches==['producer']
+
+
+def test_failed_independent_branch_retains_results_and_nonzero_cli(queue,tmp_path,capsys):
+    internal_generation_fixture(queue,tmp_path);path,config,docker=queue
+    m.execute(path,'once')
+    docker.containers['producer']['State'].update(Status='exited',Running=False,ExitCode=1)
+    assert m.main(['watch','--config',str(path)])==1
+    result=json.loads(capsys.readouterr().out)
+    assert result['status']=='failed' and docker.launches==['producer','job0','job1']
+    assert [j['status'] for j in result['jobs']]==['failed','complete','complete']
+
+
+def test_successful_queue_cli_and_live_once_keep_zero_exit(queue,capsys):
+    path,_,docker=queue
+    assert m.main(['once','--config',str(path)])==0
+    assert json.loads(capsys.readouterr().out)['status']=='running'
+    assert m.main(['watch','--config',str(path)])==0
+    assert json.loads(capsys.readouterr().out)['status']=='complete'
+    assert docker.launches==['job0','job1']

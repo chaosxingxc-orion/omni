@@ -518,9 +518,21 @@ def execute(path, mode):
                 save(); raise
 
 
-if __name__ == '__main__':
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=('plan', 'once', 'watch'))
     parser.add_argument('--config', type=Path, required=True)
-    args = parser.parse_args()
-    print(json.dumps(execute(args.config, args.mode), sort_keys=True))
+    args = parser.parse_args(argv)
+    result = execute(args.config, args.mode)
+    print(json.dumps(result, sort_keys=True))
+    # A completed polling command is not necessarily a successful queue.
+    # Preserve the full terminal result even when an independent branch failed.
+    if result.get('status') in ('failed', 'unknown'):
+        return 1
+    if args.mode == 'watch' and result.get('status') != 'complete':
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
