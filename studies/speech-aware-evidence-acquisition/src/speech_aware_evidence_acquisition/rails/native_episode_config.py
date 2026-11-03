@@ -729,6 +729,8 @@ class NativeEpisodeConfig:
     # Rendering-only legacy c17 limits; never changes the executable c2 cap.
     prompt_contact_limits: str | None = None
     answer_selection: str | None = None
+    # Opt-in deterministic knowledge context node; absent preserves bytes.
+    knowledge_context_json: str | None = None
 
     @property
     def knowledge_value_rendering(self) -> dict[str, object] | None:
@@ -1289,6 +1291,7 @@ def load_native_episode_config(
         "solver_tool_access",
         "prompt_contact_limits",
         "answer_selection",
+        "knowledge_context",
     }
     if (
         not isinstance(raw, Mapping)
@@ -2621,6 +2624,8 @@ def load_native_episode_config(
     prompt_contact_limits = raw.get("prompt_contact_limits")
     if prompt_contact_limits not in (None, "legacy-c17-lock-v1"):
         raise ValueError("native_episode.prompt_contact_limits is invalid")
+    from .knowledge_context import validate_config as validate_knowledge_context
+    knowledge_context_json = validate_knowledge_context(raw.get("knowledge_context"))
     result = NativeEpisodeConfig(
         raw["episode_id"],
         revisions,
@@ -2657,6 +2662,7 @@ def load_native_episode_config(
         solver_tool_access=solver_access,
         prompt_contact_limits=prompt_contact_limits,
         answer_selection=answer_selection,
+        knowledge_context_json=knowledge_context_json,
     )
     validate_prompt_contact_limits(result)
     if solver_access:

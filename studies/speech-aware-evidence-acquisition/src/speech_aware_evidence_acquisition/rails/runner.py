@@ -2916,6 +2916,11 @@ async def _invoke_native_role_episode(
         role_configs[acquisition_role_config.phase_id] = acquisition_role_config
     context_binding = None
     context_compilations = {}
+    knowledge_context_compilations = {}
+    knowledge_context_lookup = None
+    if config.knowledge_context_json is not None:
+        from .knowledge_context import build_lookup
+        knowledge_context_lookup = build_lookup(snapshot)
     proposal_documents, proposal_contacts = {}, {}
     # E8a (2026-09-17, Node Context Policy): the same two-object shape the
     # typed role context uses -- one binding resolved at the Perception visit
@@ -4369,6 +4374,17 @@ async def _invoke_native_role_episode(
                     "an armed knowledge index composed no assembly for this contact"
                 )
             record["system_message"] = messages[0]["content"]
+        if config.knowledge_context_json is not None:
+            from .knowledge_context import prepare_messages
+
+            messages, knowledge_receipt = prepare_messages(
+                messages, snapshot=snapshot, snapshot_sha256=snapshot_sha256,
+                config_json=config.knowledge_context_json, lookup=knowledge_context_lookup,
+            )
+            knowledge_context_compilations[plan.contact_id] = {
+                "contact_id": plan.contact_id, "role_id": request.role_id,
+                "compilation": knowledge_receipt,
+            }
         # LEVEL 2: everything below that reads the row's states reads the
         # branch's own view for a non-A, non-twin Solver branch contact (the
         # exposed history and the compilers); ``ctx`` itself stays the row's
@@ -4582,6 +4598,11 @@ async def _invoke_native_role_episode(
         if plan is not None and plan.contact_id in proposal_contacts:
             proposal_contacts[plan.contact_id].update(
                 request_id=completion.request_id,
+                request_sha256=completion.request_sha256,
+                response_sha256=completion.response_sha256,
+            )
+        if plan is not None and plan.contact_id in knowledge_context_compilations:
+            knowledge_context_compilations[plan.contact_id].update(
                 request_sha256=completion.request_sha256,
                 response_sha256=completion.response_sha256,
             )
@@ -7227,6 +7248,10 @@ async def _invoke_native_role_episode(
             raise RailsRunnerError(
                 "perception-branch Solver records were composed but never sealed"
             )
+        if knowledge_context_compilations:
+            compact_receipt["knowledge_context_compilations"] = list(
+                knowledge_context_compilations.values()
+            )
         if config.role_context_json is not None:
             compact_receipt["role_context_compilations"] = list(context_compilations.values())
         if node_context_declared:
@@ -7293,6 +7318,10 @@ async def _invoke_native_role_episode(
         for compilation in proposal_contacts.values():
             trace.emit("ORG", compilation["contact_id"] + "/candidate-proposal", {
                 "org_candidate_proposal": compilation,
+            })
+        for compilation in knowledge_context_compilations.values():
+            trace.emit("ORG", compilation["contact_id"] + "/knowledge-context", {
+                "org_knowledge_context": compilation,
             })
         for compilation in context_compilations.values():
             trace.emit("ORG", compilation["contact_id"] + "/role-context", {
