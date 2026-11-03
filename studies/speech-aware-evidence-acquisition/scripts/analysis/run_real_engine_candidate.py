@@ -15,6 +15,18 @@ ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'src'))
 
 
+def measured_stage(stage, spec, operation, *args, **kwargs):
+    """Passive coarse timing in normal/debug mode; native inputs stay unchanged.
+
+    Intervals include their nested work and must not be summed with child spans.
+    The existing timing sink controls opt-in, identity and error durability.
+    """
+    from speech_aware_evidence_acquisition.core.stage_timing import measure
+    measured = measure('candidate_' + stage, lambda *a, **kw: {
+        'run_id': spec['run_id'], 'attempt_id': spec['attempt_id']})(operation)
+    return measured(*args, **kwargs)
+
+
 def assert_campaign_success(result, run_id):
     if result.get('pending') or result.get('completed') != [run_id]:
         raise RuntimeError('shared campaign did not complete the candidate')
@@ -81,14 +93,14 @@ def run(repo,data,name,out):
     def save(name,doc):publish_new(out/name,(json.dumps(doc,indent=2)+'\n').encode())
     save('started.json',{'pid':os.getpid(),'time':time.time(),'study_commit':commit,'candidate':name,'profile':spec['profile'],'rows':rows})
     try:
-        runtime=build_flight_runtime(repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],baseline=cell.document['baseline_fragment'],experiment=name,run_id=cell.run_id,attempt_id=cell.attempt_id,runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json')
-        assert_prepared_artifacts_current([runtime])
+        runtime=measured_stage('runtime_build',spec,build_flight_runtime,repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],baseline=cell.document['baseline_fragment'],experiment=name,run_id=cell.run_id,attempt_id=cell.attempt_id,runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json')
+        measured_stage('prepared_artifact_verification',spec,assert_prepared_artifacts_current,[runtime])
         started=time.monotonic()
         def released(flight):
             save('generation-released.json', generation_release_document(
                 flight, candidate=name, spec=spec, commit=commit, rows=rows,
                 elapsed=time.monotonic()-started))
-        result=run_campaign([runtime],cells=cells,repo_root=repo,data_root=data,owner='Codex-real500',expected_session_id=spec['service_session'],on_generation_released=released)
+        result=measured_stage('campaign',spec,run_campaign,[runtime],cells=cells,repo_root=repo,data_root=data,owner='Codex-real500',expected_session_id=spec['service_session'],on_generation_released=released)
         save('campaign.json',result)
         assert_campaign_success(result, cell.run_id)
         save('complete.json',{'candidate':name,'rows':rows,'campaign_wall_seconds':time.monotonic()-started,'includes_preflight_preprocess_scoring':True,'profile':spec['profile'],'result':result})
