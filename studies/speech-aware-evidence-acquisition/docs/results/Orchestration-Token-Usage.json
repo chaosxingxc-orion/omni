@@ -1,0 +1,121 @@
+{
+  "schema": "omni-local-orchestration-token-audit-v1",
+  "started_at_utc": "2026-11-03T09:36:08.570824+00:00",
+  "finished_at_utc": "2026-11-03T09:36:17.156877+00:00",
+  "usage_start_utc": "2026-10-30T12:40:33.801Z",
+  "usage_end_utc": "2026-11-03T09:36:02.578Z",
+  "scope": "Local logged Omni cwd threads and descendants of specified root; not billing or complete historical spend",
+  "selected_session_files": 229,
+  "catalog_session_files": 940,
+  "inherited_usage_records_excluded": 0,
+  "conflicting_duplicate_responses": 0,
+  "invalid_or_partial_records": 0,
+  "totals": {
+    "input_tokens": 2808195151,
+    "cached_input_tokens": 2698388334,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 9028698,
+    "reasoning_output_tokens": 1567688,
+    "total_tokens": 2817223849,
+    "responses": 21442,
+    "uncached_input_tokens": 109806817,
+    "cache_hit_ratio": 0.9608977257293184
+  },
+  "thread_kinds": {
+    "root": {
+      "input_tokens": 2198481469,
+      "cached_input_tokens": 2125725907,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 6924739,
+      "reasoning_output_tokens": 1166849,
+      "total_tokens": 2205406208,
+      "responses": 15575,
+      "uncached_input_tokens": 72755562,
+      "cache_hit_ratio": 0.966906447461168
+    },
+    "other_omni_threads": {
+      "input_tokens": 609713682,
+      "cached_input_tokens": 572662427,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2103959,
+      "reasoning_output_tokens": 400839,
+      "total_tokens": 611817641,
+      "responses": 5867,
+      "uncached_input_tokens": 37051255,
+      "cache_hit_ratio": 0.9392317146657043
+    }
+  },
+  "days_utc": {
+    "2026-10-30": {
+      "input_tokens": 279470082,
+      "cached_input_tokens": 269235840,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 1112385,
+      "reasoning_output_tokens": 181532,
+      "total_tokens": 280582467,
+      "responses": 1910,
+      "uncached_input_tokens": 10234242,
+      "cache_hit_ratio": 0.9633798296878161
+    },
+    "2026-10-31": {
+      "input_tokens": 771063901,
+      "cached_input_tokens": 749295561,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2623514,
+      "reasoning_output_tokens": 500799,
+      "total_tokens": 773687415,
+      "responses": 5348,
+      "uncached_input_tokens": 21768340,
+      "cache_hit_ratio": 0.9717684358303269
+    },
+    "2026-11-01": {
+      "input_tokens": 942206305,
+      "cached_input_tokens": 908734976,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2515874,
+      "reasoning_output_tokens": 465243,
+      "total_tokens": 944722179,
+      "responses": 7836,
+      "uncached_input_tokens": 33471329,
+      "cache_hit_ratio": 0.9644755837204889
+    },
+    "2026-11-02": {
+      "input_tokens": 537998804,
+      "cached_input_tokens": 502119717,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 2008111,
+      "reasoning_output_tokens": 345062,
+      "total_tokens": 540006915,
+      "responses": 4405,
+      "uncached_input_tokens": 35879087,
+      "cache_hit_ratio": 0.933310098957023
+    },
+    "2026-11-03": {
+      "input_tokens": 277456059,
+      "cached_input_tokens": 269002240,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 768814,
+      "reasoning_output_tokens": 75052,
+      "total_tokens": 278224873,
+      "responses": 1943,
+      "uncached_input_tokens": 8453819,
+      "cache_hit_ratio": 0.9695309627388602
+    }
+  },
+  "input_per_response": {
+    "mean": 130967.03437179368,
+    "median": 133548,
+    "p95": 234215
+  },
+  "limitations": [
+    "usage is provider-reported; billing rates and provider accounting not verified",
+    "reasoning tokens are a subset of output, cached tokens a subset of input",
+    "input includes repeatedly presented context; not unique text",
+    "model name from local turn_context, not a verified invoice model",
+    "no exact causal attribution of tokens to business outcomes",
+    "files snapshotted individually; live turn may continue after read",
+    "tool events are not assigned cost; inherited history makes naive event counts misleading"
+  ],
+  "private_evidence_sha256": "7996304cf98730f6ff385e919d1bf24f05f662a0a2cac21eca9ee101038110f5",
+  "audit_script_sha256": "f7156fc728ce386d582013573e19707c65390b7138a05b541f5f8bc61e5a556a"
+}

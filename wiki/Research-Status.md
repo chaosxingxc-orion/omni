@@ -98,3 +98,7 @@ ACE bounded两臂已终止：4096臂1/51组、3调用、输入10733/输出8637 t
 开发态围绕难例补充证据、反思、提出并实际验证新路径，允许按任务调整输入和thinking预算；完整诊断与压缩后的可消费知识分开。运行态执行冻结策略，按精度、吞吐、成本与可靠性验收。现有ACE的51组×2调用只是离线更新机制，不代表完整开发闭环；短thinking不作为开发态默认优化目标。normal/debug与开发/运行是独立维度。详见[开发态与运行态](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/decisions/Development-and-Runtime.md)。
 
 节点诊断：固定镜像重放真实TRAIN输出精确复现交付删槽，ti1删除1、scope/ee10删除0；历史资产身份仍待核实。仅修复删槽不能解决上游意图错误，需分节点实验，不宣称精度收益。
+
+## 研发成本与交付
+
+已补齐[Token消耗与优化审计](Token-Consumption-and-Optimization)。知识构建和知识消费各由一个子智能体负责固定小规模真实数据集对照；每项必须交完整可追溯报告，主线程核验后整合端到端实验。原token审计子智能体未完成交付，本次由主线程补齐。
