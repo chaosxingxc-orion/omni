@@ -6,7 +6,6 @@
   "h1_total": 313,
   "h2_excluded_rows": 312,
   "test_excluded_rows": 13078,
-  "duplicate_components": 313,
   "intent_coverage": {
     "feedback": 47,
     "population": 47,
@@ -28,5 +27,7 @@
     "TRAIN internal selection is not unseen validation.",
     "Audio identity uses pinned dataset hashes, not a new full media read.",
     "Partition preparation does not implement Solver search or candidate publication."
-  ]
+  ],
+  "component_count": 313,
+  "multirow_component_count": 0
 }
