@@ -1,0 +1,32 @@
+{
+  "schema": "saea-gepa-partition-summary-v1",
+  "status": "prepared",
+  "feedback_rows": 233,
+  "selection_rows": 80,
+  "h1_total": 313,
+  "h2_excluded_rows": 312,
+  "test_excluded_rows": 13078,
+  "duplicate_components": 313,
+  "intent_coverage": {
+    "feedback": 47,
+    "population": 47,
+    "selection": 37
+  },
+  "partition_sha256": "a0f0f4d389ed70bae45a303cce8f66a0dd1a81cbf60ece54b52d9d18c4c42f0c",
+  "artifact_sha256": "1ba330308386aa5a2c5d06ce4b6fca53538c006c74b19664ba5d9f34de62649d",
+  "input_files_sha256": {
+    "configs/dataset/slurp-speech-native-stage3-construction-r01c.json": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba",
+    "configs/dataset/slurp-speech-native-test-full.json": "127556a475996603862302ef68196d80ec075818cd88a407e37d42387b664e34",
+    "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+    "docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7"
+  },
+  "new_model_calls": 0,
+  "test_labels_read": false,
+  "gepa_runtime_completed": false,
+  "gain_claimed": false,
+  "limitations": [
+    "TRAIN internal selection is not unseen validation.",
+    "Audio identity uses pinned dataset hashes, not a new full media read.",
+    "Partition preparation does not implement Solver search or candidate publication."
+  ]
+}
