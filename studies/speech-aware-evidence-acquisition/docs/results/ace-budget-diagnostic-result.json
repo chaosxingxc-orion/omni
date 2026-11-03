@@ -1,0 +1,165 @@
+{
+  "schema": "saea-ace-budget-diagnostic-result-v1",
+  "status": "both-terminal-not-complete",
+  "groups_per_arm": 51,
+  "scientific_gain_claimed": false,
+  "arms": {
+    "a": {
+      "completion_cap": 4096,
+      "reasoning_budget": 3072,
+      "completed_groups": 1,
+      "total_groups": 51,
+      "cards": 2,
+      "instances": 1,
+      "wall_seconds": 288.307387,
+      "seconds_per_completed_group": 288.307387,
+      "eta_seconds": null,
+      "usage": {
+        "calls": 3,
+        "prompt_tokens": 10373,
+        "completion_tokens": 11162
+      },
+      "failure": "reflection_truncated_length",
+      "response_evidence": [
+        {
+          "receipt_id": "SAEA-SLURP-ACE-BUDGET-A-V1/learning-v1/flight-0003",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 4096,
+            "prompt_tokens": 3649
+          },
+          "response_sha256": "428eff237eb979b53c52a2ca7bd50a7a084de80de705f6f4d262b3d7bc71c438",
+          "json_valid": false
+        },
+        {
+          "receipt_id": "SAEA-SLURP-ACE-BUDGET-A-V1/learning-v1/flight-0002",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 3297,
+            "prompt_tokens": 3573
+          },
+          "response_sha256": "458f21427458171a909cde4e95c9454caa148c33ead108eb4817182e3135401b",
+          "json_valid": true,
+          "keys": [
+            "schema",
+            "deltas",
+            "unresolved_conflicts"
+          ],
+          "delta_fields": [
+            [
+              "operation",
+              "id",
+              "content",
+              "finding_ids",
+              "reason"
+            ],
+            [
+              "operation",
+              "id",
+              "content",
+              "finding_ids",
+              "reason"
+            ],
+            [
+              "operation",
+              "id",
+              "content",
+              "finding_ids",
+              "reason"
+            ]
+          ]
+        },
+        {
+          "receipt_id": "SAEA-SLURP-ACE-BUDGET-A-V1/learning-v1/flight-0001",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 3769,
+            "prompt_tokens": 3151
+          },
+          "response_sha256": "037bd0c0d4f3278dac5cd5eb42c77bff87798462d17acde4e1ec267183ccc933",
+          "json_valid": true,
+          "keys": [
+            "schema",
+            "findings",
+            "signals"
+          ],
+          "delta_fields": []
+        }
+      ]
+    },
+    "b": {
+      "completion_cap": 16384,
+      "reasoning_budget": 3072,
+      "completed_groups": 0,
+      "total_groups": 51,
+      "cards": 2,
+      "instances": 1,
+      "wall_seconds": 209.210894,
+      "seconds_per_completed_group": null,
+      "eta_seconds": null,
+      "usage": {
+        "calls": 2,
+        "prompt_tokens": 6642,
+        "completion_tokens": 5834
+      },
+      "failure": "curator_missing_reason_stop",
+      "response_evidence": [
+        {
+          "receipt_id": "SAEA-SLURP-ACE-BUDGET-B-V1/learning-v1/flight-0001",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 3668,
+            "prompt_tokens": 3151
+          },
+          "response_sha256": "aabc9b5143939fbeefde14bdd6dbe77dfb9b3305d2e7803b04083d37084432a4",
+          "json_valid": true,
+          "keys": [
+            "schema",
+            "findings",
+            "signals"
+          ],
+          "delta_fields": []
+        },
+        {
+          "receipt_id": "SAEA-SLURP-ACE-BUDGET-B-V1/learning-v1/flight-0002",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 2166,
+            "prompt_tokens": 3491
+          },
+          "response_sha256": "fe2c617861b4327fd16d0873af04d36a702df288ace3fba4af4527714b01b8e6",
+          "json_valid": true,
+          "keys": [
+            "schema",
+            "deltas",
+            "unresolved_conflicts"
+          ],
+          "delta_fields": [
+            [
+              "operation",
+              "id",
+              "content",
+              "finding_ids"
+            ],
+            [
+              "operation",
+              "id",
+              "content",
+              "finding_ids"
+            ]
+          ]
+        }
+      ]
+    }
+  },
+  "historical_source_usage_counted_once": {
+    "calls": 312,
+    "prompt_tokens": 6128213,
+    "completion_tokens": 774237
+  },
+  "limitations": [
+    "Dynamic ACE memories diverge after output changes; later prompts are not paired-identical.",
+    "Neither arm completed all groups; wall time is not a full-run efficiency baseline.",
+    "The first group is insufficient to establish a stable causal effect of budget."
+  ]
+}

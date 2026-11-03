@@ -1,0 +1,50 @@
+{
+  "schema": "saea-real-engine-progress-v1",
+  "state": "running",
+  "completed_rows": 24,
+  "total_rows": 13078,
+  "checkpoint_rows": 24,
+  "unusable_checkpoint_rows": 0,
+  "remaining_rows": 13054,
+  "checkpoint_sha256": "23ceed898c01e536240214a4ee26b8ff069f1a882d5f06e6c91d5d6730d9858f",
+  "split_identity_hash": "7247647b8c8b37becd564b7031691565d4e6b09d8e124823054906d36372c95d",
+  "torn_tail_bytes": 0,
+  "cards": 4,
+  "instances": 1,
+  "elapsed_seconds": 778.976779,
+  "wall_seconds_per_complete_row": 32.45736579166667,
+  "rows_per_second": 0.030809647536361288,
+  "estimated_remaining_seconds": 423698.4530444166,
+  "eta_basis": "Linear observed whole-task completion rate; startup and tail may change it.",
+  "full_roster_comparison_eligible": false,
+  "checkpoint_recorded_cost_lower_bound": {
+    "calls": 48.0,
+    "audio_seconds": 97.712375,
+    "latency_seconds": 2141.6195205300755,
+    "prompt_tokens": 282718.0,
+    "completion_tokens": 28749.0,
+    "tool_calls": 0.0
+  },
+  "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
+  "complete_sample_timings": {
+    "admission_wait": {
+      "n": 24,
+      "mean_s": 1.3513070233333333,
+      "p50_s": 1.46425527,
+      "p95_s": 1.57547812
+    },
+    "admitted_to_finished": {
+      "n": 24,
+      "mean_s": 209.82669821125,
+      "p50_s": 206.614832785,
+      "p95_s": 251.09648881
+    }
+  },
+  "new_model_calls": 0,
+  "limitations": [
+    "Duration and state must come from an authoritative run boundary/process observation.",
+    "Allocated cards are not measured utilization.",
+    "Partial or failed candidates cannot establish a full-roster throughput winner.",
+    "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
+  ]
+}
