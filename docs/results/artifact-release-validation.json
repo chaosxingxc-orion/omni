@@ -1,0 +1,33 @@
+{
+  "schema": "omni-artifact-release-validation-v1",
+  "implementation_commit": "236de823",
+  "binding_fix_commit": "a8bc68f6",
+  "main_merged_commit": "2d365f19",
+  "formal_image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "tests_passed": 131,
+  "test_seconds": 9.05,
+  "initial_validation": {
+    "passed": 119,
+    "failed": 2,
+    "cause": "test fixtures omitted receipt stage metadata and new helper API; repaired and retested"
+  },
+  "real_source_validation": {
+    "rows": 51,
+    "unique_sample_ids": 51,
+    "source_files_unchanged": true,
+    "historical_release_written": false,
+    "actual_scoring_files_created": false,
+    "source_attempt_state": "FINALIZED",
+    "artifact_release_schema": "saea-artifact-generation-released-v1",
+    "new_model_calls": 0,
+    "artifact_sha256": {
+      "manifest": "79fcfa063766dc35bd2b52ead0fcdf1f3a208890d93ece670061efc9cc66df11",
+      "outputs": "8a4424897166b611b51cc2c52948c4eb8b3d33f848874274e380c1d0ef6d7403",
+      "attempt": "7fe25710680d8ea536040abdc160b884c35620c8a22a78fb43b9d31bec754b4e",
+      "phases": "e9ebf1c9606faf11ea631b355d5d0f9ad63896f58513c47256b960cce867efbc"
+    }
+  },
+  "new_model_calls": 0,
+  "scientific_gain_claim": false,
+  "private_evidence_sha256": "1aab025e81b2fc56ba1479802518b383bbaabbbdaca41ba3144fa2495aa88030"
+}

@@ -1,8 +1,8 @@
 {
   "schema": "tfrl-exploration-queue-snapshot-v1",
-  "observed_at": "2026-11-03T11:06:50.890899+00:00",
-  "execution_observed_at": "2026-11-03T10:39:15Z",
-  "running_explorations": 2,
+  "observed_at": "2026-11-03T11:46:40.860522+00:00",
+  "execution_observed_at": "2026-11-03T11:46:40.860522+00:00",
+  "running_explorations": 0,
   "verified_queued_successors": 0,
   "all_cards_busy_claim": false,
   "construction": {
@@ -14,7 +14,7 @@
     "cards": 2,
     "instances": 1,
     "independent_successor_hypotheses": 3,
-    "state": "running-baseline-successors-capacity-blocked",
+    "state": "baseline-failed-settled-engine64k-ready-successors-in-preparation",
     "prepared_successors": 3,
     "registered_and_initial_preflight_successors": 3,
     "ready_successors": 0,
@@ -29,20 +29,48 @@
       41530,
       41957
     ],
-    "baseline_completed_groups_at_105548": 9,
-    "baseline_known_responses_at_105548": 19
+    "baseline_completed_groups": 18,
+    "baseline_known_responses": 37,
+    "baseline_generation_tokens": {
+      "prompt": 259648,
+      "completion": 113258
+    },
+    "context": 65536,
+    "native_wrapper_prompt_max": [
+      44139,
+      44360,
+      44789
+    ],
+    "static_extra_reserve_tokens": 3072,
+    "dynamic_capacity_proven": false,
+    "native_wrapper_headroom_after_extra_reserve": [
+      1429,
+      1208,
+      779
+    ],
+    "native_prepared_successors": 3
   },
   "consumption": {
-    "current_lane_workload": "Reflexion51; consumption mutation branches still in CPU integration",
+    "current_lane_workload": "none verified; B64k handoff in preparation",
     "container": "590440ae08861caac52d028d11298b23b1d748ed9fc7880009f22045584ab221",
     "groups": 51,
     "normal_generation_budget": 51,
     "fit_budget": 51,
     "cards": 2,
     "instances": 1,
-    "defined_independent_mutation_branches": 2,
-    "additional_hypothesis": "knowledge presentation; not configured",
-    "state": "blocked-by-native-integration-and-lane-handoff"
+    "defined_independent_mutation_branches": 4,
+    "state": "reflexion-generation-finalized-callback-failed-settled-successors-in-preparation",
+    "completed_groups": 51,
+    "known_responses": 51,
+    "generation_tokens": {
+      "prompt": 339661,
+      "completion": 159763
+    },
+    "generation_window_seconds": 2996.79,
+    "seconds_per_group": 58.76,
+    "ready_successors": 0,
+    "queued_successors": 0,
+    "scientific_gain_verified": false
   },
   "queue_validation": {
     "tests": 115,
@@ -109,11 +137,22 @@
         "Partial or failed candidates cannot establish a full-roster throughput winner.",
         "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
       ]
+    },
+    "runtime_confirmation": {
+      "state": "running",
+      "observed_at": "2026-11-03T11:46:40.860522+00:00",
+      "sample_progress_from_older_snapshot": true
     }
   },
   "local_input_digests": {
     "repro/tfrl-construction-queue.json": "edee482c515b2feb7fb23b2e1f66248dd8b1bc6b3cc8dc33f63e5fe4dc867364",
     "repro/tfrl-consumption-queue.json": "e5b989194f8817fb45d46fb3bc7d36ff107c2a229d29b000ad70fbc2521a8bb4"
   },
-  "knowledge_context_preparation": "implementation in progress; zero model calls by design, no deployed gain claim"
+  "knowledge_context_preparation": "implemented opt-in; 16 real CPU replay requests unchanged, zero strict duplicates; no gain claim",
+  "artifact_release_fix": {
+    "commit": "236de823",
+    "state": "validated-131-tests-and-real-51-row-readonly-source",
+    "binding_fix_commit": "a8bc68f6",
+    "new_model_calls": 0
+  }
 }
