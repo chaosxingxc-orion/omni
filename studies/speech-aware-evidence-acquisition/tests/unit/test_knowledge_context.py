@@ -186,3 +186,12 @@ def test_no_source_mutation_and_incomplete_nonknowledge_parts_retained():
     assert json.dumps(parts, sort_keys=True) == original
     assert vars(knowledge) == state_before
     assert audit["unresolved_count"] == 1
+
+
+def test_alternate_release_never_uses_base_snapshot_metadata():
+    items = [value(), value("store::b")]
+    parts = [part(item, source_uri=f"knowledge-snapshot://{'3' * 64}/{item.value_id}") for item in items]
+    output, audit = run(items, parts)
+    assert output == parts and audit["removed_count"] == 0
+    assert audit["unresolved_count"] == 2
+    assert all(row["category"]["metadata_status"] == "unresolved" for row in audit["mapping"])
