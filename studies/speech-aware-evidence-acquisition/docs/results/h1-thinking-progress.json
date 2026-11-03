@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-11-03T04:34:00Z",
-  "state": "off-finalized-short-running",
+  "observed_at": "2026-11-03T04:49:00Z",
+  "state": "off-and-short-finalized-baseline-running",
   "checkpoint_rows": 313,
   "complete_rows": 313,
   "total_rows": 313,
@@ -13,19 +13,38 @@
     "admitted_per_instance": 96
   },
   "P_mean_request_seconds": 12.280334853834232,
-  "eta": "off complete; short/baseline stable window estimate pending",
-  "accuracy": "off official SLU 0.6727968309134533, Intent 0.7603833865814696; comparison pending",
+  "eta": "baseline ETA pending verified completion window; no linear extrapolation from other arms",
+  "accuracy": "off SLU 0.6727968309134533 / Intent 0.7603833865814696; short SLU 0.6865257742139248 / Intent 0.744408945686901; paired comparison pending",
   "schema": "saea-h1-thinking-progress-v1",
   "checkpoint_verified_complete": 313,
   "queue": {
     "off": "FINALIZED",
-    "short": "running",
-    "baseline": "preflight-bound-waiting-short-generation-release"
+    "short": "FINALIZED",
+    "baseline": "running",
+    "comparison_cpu": "waiting-exact-baseline-exit-zero"
   },
   "limitations": [
     "Fixed hard H1 development set, not natural-distribution test accuracy.",
-    "Other two thinking arms still pending; no configuration selected.",
+    "Baseline still running; no configuration selected.",
     "Mean per-sample latency differs from concurrent batch throughput.",
     "Earlier zero-call startup failures excluded from successful container wall; preserved in operations history."
-  ]
+  ],
+  "reported_arm": "off",
+  "arm_progress": {
+    "off": {
+      "completed_rows": 313,
+      "total_rows": 313,
+      "wall_seconds_per_row": 3.0407420671
+    },
+    "short": {
+      "completed_rows": 313,
+      "total_rows": 313,
+      "wall_seconds_per_row": 2.8798641784
+    },
+    "baseline": {
+      "completed_rows": null,
+      "total_rows": 313,
+      "wall_seconds_per_row": null
+    }
+  }
 }
