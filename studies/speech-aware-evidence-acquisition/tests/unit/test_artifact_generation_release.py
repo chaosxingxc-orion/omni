@@ -39,7 +39,8 @@ def artifact_fixture(data, expected, *, logical=None):
         {'state':'FINALIZED','run_id':run,'attempt_id':aid})
     write('manifest', root/(run+'.run-manifest.json'), target/(run+'.run-manifest.json'),
         {'schema':'saea-run-manifest-v1','result_kind':'artifact','status':'COMPLETED','run_id':run,
-         'plan':{'run_id':run,'attempt_id':aid}, 'attempt':{'state_path':str(attempt)},
+         'study_commit':expected['study_commit'],'plan':{'run_id':run,'attempt_id':aid},
+         'attempt':{'state_path':str(attempt),'run_id':run,'attempt_id':aid},
          'scorers':[], 'scores':None,'outputs':artifacts['outputs']})
     write('phases', root/(run+'.phases.json'), target/(run+'.phases.json'), {'phases':[]})
     seal = {'manifest_path':artifacts['manifest']['path'],'manifest_sha256':artifacts['manifest']['sha256'],
@@ -100,7 +101,8 @@ def test_native_artifact_producer_uses_verified_scoreless_bundle(tmp_path,monkey
         commit=exp['study_commit'],rows=exp['rows'],elapsed=12.)
     assert checked==[Path(doc['seal_receipt']['manifest_path'])]
     assert result['schema']==helper.ARTIFACT_RELEASE_SCHEMA
-    assert result['seal_receipt']==doc['seal_receipt']
+    assert result['seal_receipt']==receipts.require('seal')
+    assert all(result['seal_receipt'][key]==value for key,value in doc['seal_receipt'].items())
     assert result['artifacts']==doc['artifacts']
     assert helper.verify_release_document(result,data=tmp_path,expected=exp)==result
 
@@ -110,3 +112,36 @@ def test_finalized_artifact_maps_disjoint_host_mounts_without_rewriting(tmp_path
     before=copy.deepcopy(doc)
     assert helper.verify_release_document(doc,data=Path('/logical'),expected=exp,resolve_artifact=mapping.__getitem__)==before
     assert doc==before
+
+
+@pytest.mark.parametrize('fault',['commit','plan_run','plan_attempt','manifest_attempt_run',
+    'manifest_attempt_id','attempt_run','attempt_id','duplicate_sample','empty_sample','missing_sample'])
+def test_artifact_rejects_rehashed_cross_run_or_duplicate_rows(tmp_path,fault):
+    exp=expected();doc,mapping=artifact_fixture(tmp_path,exp)
+    key='outputs' if fault in ('duplicate_sample','empty_sample','missing_sample') else (
+        'attempt' if fault in ('attempt_run','attempt_id') else 'manifest')
+    path=mapping[Path(doc['artifacts'][key]['path'])]
+    if key=='outputs':
+        rows=[json.loads(line) for line in path.read_text().splitlines()]
+        if fault=='duplicate_sample':rows[1]['sample_id']=rows[0]['sample_id']
+        elif fault=='empty_sample':rows[0]['sample_id']=''
+        else:rows[0].pop('sample_id')
+        path.write_text(''.join(json.dumps(row)+'\n' for row in rows))
+    else:
+        value=json.loads(path.read_text())
+        if fault=='commit':value['study_commit']='b'*40
+        elif fault=='plan_run':value['plan']['run_id']='OTHER'
+        elif fault=='plan_attempt':value['plan']['attempt_id']='other'
+        elif fault=='manifest_attempt_run':value['attempt']['run_id']='OTHER'
+        elif fault=='manifest_attempt_id':value['attempt']['attempt_id']='other'
+        elif fault=='attempt_run':value['run_id']='OTHER'
+        else:value['attempt_id']='other'
+        path.write_text(json.dumps(value))
+    digest=hashlib.sha256(path.read_bytes()).hexdigest();doc['artifacts'][key]['sha256']=digest
+    if key=='manifest':doc['seal_receipt']['manifest_sha256']=digest
+    elif key=='outputs':
+        manifest_path=mapping[Path(doc['artifacts']['manifest']['path'])]
+        manifest=json.loads(manifest_path.read_text());manifest['outputs']=doc['artifacts']['outputs']
+        manifest_path.write_text(json.dumps(manifest));digest=hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        doc['artifacts']['manifest']['sha256']=digest;doc['seal_receipt']['manifest_sha256']=digest
+    with pytest.raises(ValueError):helper.verify_release_document(doc,data=tmp_path,expected=exp)

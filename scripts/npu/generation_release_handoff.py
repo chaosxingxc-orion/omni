@@ -104,6 +104,10 @@ def verify_release_document(document, *, data, expected, resolve_artifact=None):
         attempt = json.loads(physical_paths['attempt'].read_bytes())
         if (manifest.get('result_kind') != 'artifact' or manifest.get('status') != 'COMPLETED'
                 or manifest.get('run_id') != expected['run_id']
+                or manifest.get('study_commit') != expected['study_commit']
+                or manifest.get('plan', {}).get('run_id') != expected['run_id']
+                or manifest.get('attempt', {}).get('run_id') != expected['run_id']
+                or manifest.get('attempt', {}).get('attempt_id') != expected['attempt_id']
                 or manifest.get('scorers') != [] or manifest.get('scores') is not None
                 or manifest.get('plan', {}).get('attempt_id') != expected['attempt_id']
                 or manifest.get('attempt', {}).get('state_path') != str(logical_paths['attempt'])
@@ -113,7 +117,10 @@ def verify_release_document(document, *, data, expected, resolve_artifact=None):
             raise ValueError('artifact release finalized source binding differs')
         with physical_paths['outputs'].open() as handle:
             rows = [json.loads(line) for line in handle]
-        if (len(rows) != expected['rows'] or any(row.get('result_kind') != 'artifact' for row in rows)):
+        if (len(rows) != expected['rows']
+                or any(not isinstance(row, dict) or row.get('result_kind') != 'artifact'
+                       or not isinstance(row.get('sample_id'), str) or not row['sample_id'] for row in rows)
+                or len({row['sample_id'] for row in rows}) != len(rows)):
             raise ValueError('artifact release row coverage differs')
     return document
 

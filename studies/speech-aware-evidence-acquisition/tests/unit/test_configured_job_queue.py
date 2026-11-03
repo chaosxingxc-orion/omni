@@ -411,7 +411,7 @@ def test_release_wait_uses_file_event_not_scoring_container_wait(queue,tmp_path,
         def wait(self,seconds):
             waits.append(seconds);release.write_text(json.dumps(value))
         def close(self):pass
-    monkeypatch.setattr(m,'release_helper',lambda doc:SimpleNamespace(verify_release=real(doc).verify_release,DirectoryEvents=Events))
+    monkeypatch.setattr(m,'release_helper',lambda doc:SimpleNamespace(verify_release=real(doc).verify_release,release_paths=real(doc).release_paths,DirectoryEvents=Events))
     result=m.execute(path,'watch')
     assert result['status']=='complete' and waits==[600]
     assert all(cid!=docker.containers['producer']['Id'] for cid,_ in docker.waits)
