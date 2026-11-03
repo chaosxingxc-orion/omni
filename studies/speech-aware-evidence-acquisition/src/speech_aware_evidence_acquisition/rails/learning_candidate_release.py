@@ -144,7 +144,7 @@ def _verify_source(*, strategy, repo, data, candidate, candidate_pin, source_man
                 key = contact_key(stage, identity)
                 return json.loads((local / (key + '.response.json')).read_bytes())['response']['text']
             reflection = ace.validate_reflection(text(ace.REFLECT), group, items, document['bounds']['max_findings'],
-                document['bounds'].get('reflector_contract'))
+                document['bounds'].get('reflector_contract'), bounds=document['bounds'])
             merged = ace.merge_delta(text(ace.CURATE), items, reflection, document['bounds'])
             events.append({'group_index': index, 'query_id': group['query_id'], 'reflection': reflection,
                 'merge': merged, 'before_items_sha256': sha(items), 'after_items_sha256': sha(merged['items'])})

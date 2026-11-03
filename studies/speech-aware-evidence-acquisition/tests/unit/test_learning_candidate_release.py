@@ -124,7 +124,7 @@ def test_compact_arm_cannot_drop_release(reviewed):
     with pytest.raises(ValueError,match='same candidate'):consumption.validate_params(params)
 
 
-@pytest.mark.parametrize('fault', [None, 'compact-v3', 'cumulative', 'native', 'fit', 'parent'])
+@pytest.mark.parametrize('fault', [None, 'compact-v3', 'configured-compact', 'cumulative', 'native', 'fit', 'parent'])
 def test_actual_finalized_native_candidate_source(tmp_path, monkeypatch, fault):
     """Real adapter/journals/FIT; only endpoint, source and compose are doubles."""
     import importlib
@@ -134,13 +134,18 @@ def test_actual_finalized_native_candidate_source(tmp_path, monkeypatch, fault):
     from speech_aware_evidence_acquisition.core import tfgrpo_fit, config
     from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal
     from speech_aware_evidence_acquisition.rails import ace_incremental as ace
-    limits = {'reflector_contract': ace.COMPACT_CONTRACT_V3} if fault == 'compact-v3' else {}
+    limits = {'reflector_contract': ace.COMPACT_CONTRACT_V3} if fault in ('compact-v3', 'configured-compact') else {}
+    if fault == 'configured-compact':
+        limits.update(compact_text_chars=512, compact_reason_chars=256)
     runtime, endpoint, _, _, _, _ = setup(tmp_path, monkeypatch, **limits)
-    if fault == 'compact-v3':
+    if fault in ('compact-v3', 'configured-compact'):
         from test_ace_compact_protocol import compact_reflection, compact_delta
         def answer(payload):
             stage = json.loads(payload['history'][0]['content'])['stage']
-            return json.dumps(compact_reflection() if stage == ace.REFLECT else compact_delta())
+            result = compact_reflection() if stage == ace.REFLECT else compact_delta()
+            if fault == 'configured-compact' and stage == ace.REFLECT:
+                result['findings'][0]['lesson'] = 'Conditional evidence. ' * 15
+            return json.dumps(result)
         endpoint._responder = answer
     kwargs = runtime.frozen_core_client_kwargs()
     runtime._data_root = kwargs['binding'].data_root
@@ -187,7 +192,7 @@ def test_actual_finalized_native_candidate_source(tmp_path, monkeypatch, fault):
         candidate_pin={'relpath':str(candidate_path.relative_to(data)), 'sha256':consumption.digest(candidate_path)},
         source_manifest={'relpath':str((base / (runtime.plan.run_id + '.run-manifest.json')).relative_to(data)), 'sha256':'b' * 64},
         bundle=bundle)
-    if fault not in (None, 'compact-v3'):
+    if fault not in (None, 'compact-v3', 'configured-compact'):
         with pytest.raises(ValueError): m.verify_ace_source(**args)
     else:
         result = m.verify_ace_source(**args)
