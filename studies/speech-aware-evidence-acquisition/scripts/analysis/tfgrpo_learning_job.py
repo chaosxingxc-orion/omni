@@ -156,6 +156,9 @@ def verify_job(repo,data,job):
     """Verify derivation, not only internally self-consistent hashes, before writes."""
     from speech_aware_evidence_acquisition.rails.tfgrpo_source import read_pin,load_dynamic_source
     complete=read(job/'complete.json')
+    if complete.get('schema') == 'saea-gepa-mutation-job-v1':
+        from gepa_mutation_job import verify_job as verify_mutation
+        return verify_mutation(repo,data,job)
     if complete.get('schema') == 'saea-learning-strategy-job-v1':
         from learning_strategy_job import verify_job as verify_strategy
         return verify_strategy(repo,data,job)

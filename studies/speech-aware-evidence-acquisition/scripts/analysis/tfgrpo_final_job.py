@@ -161,6 +161,9 @@ def prepare(repo, data, source_job, final_import, out, runtime_identity, *,
 def verify_job(repo, data, job):
     from speech_aware_evidence_acquisition.rails.tfgrpo_source import read_pin, load_dynamic_source
     complete = read(job / 'complete.json')
+    if complete.get('schema') == 'saea-gepa-mutation-job-v1':
+        from gepa_mutation_job import verify_job as verify_mutation
+        return verify_mutation(repo,data,job)
     if complete.get('schema') == 'saea-learning-strategy-job-v1':
         from learning_strategy_job import verify_job as verify_strategy
         return verify_strategy(repo,data,job)
@@ -231,6 +234,7 @@ def register(repo,data,job):
     roster_rel=f'docs/receipts/rosters/{name}.json'
     baseline=read(repo/'configs/baseline/system-group-update-text-v1.json');baseline.pop('whole_roster_wave_barrier',None)
     baseline['what_this_is']='Final-only TF-GRPO consolidation of verified H1 group operations; one actual contact, all historical costs retained.'
+    mutation = complete.get('schema') == 'saea-gepa-mutation-job-v1'
     fusion = complete.get('schema') == 'saea-grounded-fusion-job-v1'
     grounded = complete.get('schema') == 'saea-grounded-shards-job-v1'
     incremental = complete.get('schema') == 'saea-learning-strategy-job-v1'
@@ -243,6 +247,8 @@ def register(repo,data,job):
         baseline['what_this_is']='Evidence-grounded H1 synthesis shards; intermediate artifacts only, complete historical costs retained.'
     if fusion:
         baseline['what_this_is']='Evidence-grounded final fusion with explicit rule support and proposal dispositions; candidate requires semantic review and development evaluation.'
+    if mutation:
+        baseline['what_this_is']='One model-driven GEPA Solver-instruction mutation over sealed TRAIN trajectories; native FIT, complete historical costs, no adoption or measured gain.'
     baseline.pop('phase_material',None)
     from speech_aware_evidence_acquisition.rails.prepared_text import PREPARED_TEXT_INSTRUCTION
     baseline['task_instruction']=PREPARED_TEXT_INSTRUCTION
@@ -272,6 +278,10 @@ def register(repo,data,job):
         exp['prepared_training_feedback']['schema']='saea-prepared-reflexion-dynamic-v1'
         exp['stage3_algorithm']={'id':'reflexion-offline-transfer-v1','operators_used':['update'],
             'note':complete['strategy']+': capacity-controlled offline transfer, one observed-prefix reflection per TRAIN group; not original same-task retries or equal-budget ACE.'}
+    if mutation:
+        exp['prepared_training_feedback']['schema']='saea-prepared-gepa-mutation-v1'
+        exp['stage3_algorithm']={'id':'gepa-reflective-pareto-v1','operators_used':['credit_assignment','update'],
+            'note':'GEPA-inspired single-mutation adaptation; no Pareto survivor search yet. Solver-instruction reflection proposal only; paired evaluation and independent review follow.'}
     exp['populations'][0]['ids']=[x['sample_id'] for x in roster['items']]
     exp['service_session']=service_session
     for rel,doc in [(roster_rel,roster),(f'configs/baseline/{name}.json',baseline),(f'configs/experiment/{name}.json',exp)]:

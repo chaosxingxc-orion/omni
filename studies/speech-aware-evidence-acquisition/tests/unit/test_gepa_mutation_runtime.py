@@ -103,3 +103,26 @@ def test_request_validator_rejects_unregistered_prompt():
     expected=copy.deepcopy(execution.request(binding));m.request_validator(binding)(expected,None)
     expected['messages'][0]['content']='changed'
     with pytest.raises(ValueError):m.request_validator(binding)(expected,None)
+
+
+def test_reflection_context_deduplicates_losslessly_without_dropping_evidence(tmp_path,monkeypatch):
+    _,_,_,_,source,_=setup(tmp_path,monkeypatch)
+    payload={'task_instruction':'same task','history':[
+        {'role':'agent_state','content':'same P'},
+        {'role':'control','content':json.dumps({'messages':[{'role':'system','content':'same task'},
+            {'role':'user','content':'role instruction'}]},ensure_ascii=False,sort_keys=True,separators=(',',':'))}],
+        'supplied_evidence':[{'evidence_id':'k','content':'knowledge'}],'extra':{'unchanged':1}}
+    import hashlib
+    payload['history'][-1]['content_sha256']=hashlib.sha256(payload['history'][-1]['content'].encode()).hexdigest()
+    source['observations']=[{'query_id':'q1','request':payload},{'query_id':'q2','request':copy.deepcopy(payload)}]
+    rendered=json.loads(m.evidence.messages(source)[1]['content']);shared=rendered['shared_content_by_sha256']
+    def expand(value):
+        if isinstance(value,list):return [expand(v) for v in value]
+        if not isinstance(value,dict):return value
+        if set(value)=={'content_sha256'}:return copy.deepcopy(shared[value['content_sha256']])
+        result={k:expand(v) for k,v in value.items()}
+        if 'content_canonical_json' in result:
+            result['content']=json.dumps(result.pop('content_canonical_json'),ensure_ascii=False,sort_keys=True,separators=(',',':'))
+        return result
+    assert all(expand(r['request'])==payload for r in rendered['observations'])
+    assert len(shared)==4

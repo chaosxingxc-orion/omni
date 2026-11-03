@@ -77,6 +77,7 @@ def load_source(spec,*,repo,data):
     from ..data.lock import load_lock, umbrella_lock_path
     from ..data.slurp import load_slurp_train_material, _governed_roots
     from .hashing import content_hash
+    from .tfrl_bank_request_audit import checked_control
     fields={'schema','seed_material','source_manifest','feedback_query_ids','focus'}
     require(isinstance(spec,dict) and set(spec)==fields and spec['schema']==SCHEMA
         and spec['focus'] in FOCUSES,'exact configured mutation source required')
@@ -89,6 +90,14 @@ def load_source(spec,*,repo,data):
     bundle=verify_bundle(root/spec['source_manifest']['relpath'])
     require(bundle.attempt_state=='FINALIZED' and set(ids)<=set(bundle.split_ids)
         and bundle.manifest['plan']['split_role']=='discovery','finalized TRAIN source required')
+    from ..core.config import compose
+    fragments=manifest['config']['fragments']
+    composed=compose(Path(repo),*(fragments[k] for k in ('model','dataset','baseline','experiment')))
+    require(composed.config_hash==manifest['config']['config_hash'],'historical source config changed')
+    for key in ('knowledge_stores','phase_material','thinking_policy','phase_tools','preparation_source_receipts'):
+        require(composed.values.get(key)==seed['source_baseline'].get(key),'source changed frozen '+key)
+    actual_model=Path(repo)/'configs/model'/(fragments['model']+'.json')
+    require(json.loads(actual_model.read_bytes())==seed['model'],'source model differs from archived seed')
     score_meta=manifest['scores'];score_path=Path(score_meta['path'])
     require(hashlib.sha256(score_path.read_bytes()).hexdigest()==score_meta['sha256'],'sealed scores changed')
     scores=json.loads(score_path.read_bytes());require('slurp-slu-official-train' in scores,'official TRAIN source scores required')
@@ -116,7 +125,7 @@ def load_source(spec,*,repo,data):
         require(payload['sample_id']==sid and content_hash(payload)==request['payload_sha256']==contact['request_sha256']
             and prompt.text_sha(response['text'])==contact['response_text_sha256']
             and response['response_sha256']==contact['response_sha256']
-            and payload['task_instruction'].startswith(original+'\n\nNative episode limits: ')
+            and checked_control(payload)['messages'][1]['content'].startswith(original+'\n\nNative episode limits: ')
             and len(state)==1 and state[0]['source_response_sha256']==perception[0]['execution_receipt']['final_contact']['response_text_sha256'],
             'exact seed Solver instruction, source P and response custody required')
         projected=copy.deepcopy(payload)
@@ -146,7 +155,42 @@ def messages(source):
         'No markdown. diagnosis may be detailed. evidence_query_ids must cite only supplied feedback. '
         'schema='+prompt.MUTATION_SCHEMA+'; parent_sha256='+parent['candidate_sha256']+'; module='+prompt.MODULE+'. '
         'Instruction limit '+str(contract['max_instruction_tokens'])+' tokenizer tokens. '+FOCUSES[source['focus']])
+    shared={};observations=[]
+    def reference(value):
+        digest=sha(value)
+        previous=shared.setdefault(digest,value)
+        require(previous==value,'reflection dedup collision')
+        return {'content_sha256':digest}
+    for original in source['observations']:
+        row=copy.deepcopy(original);request=row.pop('request',None)
+        if request is not None:
+            # Lossless references avoid repeating the global ontology, framework
+            # messages and identical knowledge for each feedback item. Full
+            # projected requests remain bound in source custody.
+            projected={}
+            for key,value in request.items():
+                if key in ('task_instruction','supplied_evidence','history'):
+                    if key=='history':
+                        history=[]
+                        for item in value:
+                            item=copy.deepcopy(item)
+                            if item.get('role')=='control':
+                                control=json.loads(item.pop('content'))
+                                canonical=json.dumps(control,ensure_ascii=False,sort_keys=True,separators=(',',':'))
+                                require(hashlib.sha256(canonical.encode()).hexdigest()==item['content_sha256'],
+                                    'source control is not canonical for lossless dedup')
+                                control['messages']=[{**msg,'content':reference(msg['content'])} for msg in control['messages']]
+                                item['content_canonical_json']=control
+                            elif 'content' in item:item['content']=reference(item['content'])
+                            history.append(item)
+                        projected[key]=history
+                    elif isinstance(value,list):projected[key]=[reference(v) for v in value]
+                    else:projected[key]=reference(value)
+                else:projected[key]=value
+            row['request']=projected
+        observations.append(row)
     user={'current_instruction':parent['solver_instruction'],'fixed_surrounding_template':contract['base_template'],
-        'observations':source['observations'],'audio_available_to_reflector':False,
+        'shared_content_by_sha256':shared,'observations':observations,'audio_available_to_reflector':False,
+        'content_reference_rule':'Replace each sole content_sha256 reference with the exact shared object. For content_canonical_json, serialize the expanded object as UTF-8 JSON with sorted keys, no whitespace, unescaped Unicode to recover original content. No evidence is omitted.',
         'goal':'Increase official intent and exact-slot performance while avoiding regressions. Return one changed instruction.'}
     return [{'role':'system','content':system},{'role':'user','content':json.dumps(user,ensure_ascii=False,sort_keys=True)}]
