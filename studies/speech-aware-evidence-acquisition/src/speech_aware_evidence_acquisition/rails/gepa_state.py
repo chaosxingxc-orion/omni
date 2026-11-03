@@ -259,12 +259,27 @@ class GepaSearchState:
             else: state = applied
             return self._publish(doc, 'observe', config, state)
 
-    def finish(self):
+    def finish(self, *, reason=None):
         with self._lock():
             doc = self._load(); state = copy.deepcopy(doc['state']); config = doc['config']
-            if state['phase'] == 'complete': return doc
+            if state['phase'] == 'complete':
+                require(reason is None or state.get('termination', {}).get('reason') == reason,
+                        'completed search termination reason changed')
+                return doc
             require(state['pending'] is None and state['failure'] is None and state['pool'],
                     'unknown, failed or uninitialized search cannot finish')
+            exhausted = (len(state['rounds']) >= config['max_rounds']
+                         or state['feedback_cursor'] >= len(state['feedback_order']))
+            if reason is None:
+                require(state['active'] is None and exhausted,
+                        'early termination requires an explicit reason')
+                reason = 'rounds-or-feedback-exhausted'
+            require(isinstance(reason, str) and reason.strip() == reason and 0 < len(reason) <= 500,
+                    'explicit bounded termination reason required')
+            state['termination'] = {'reason': reason, 'phase': state['phase'],
+                                    'interrupted_round': copy.deepcopy(state['active'])}
+            if state['active'] is not None:
+                self._finish_round(state, 'stopped-before-next-stage')
             pool = [scored(x['candidate'], config['selection_ids'], x['scores']) for x in state['pool']]
             best = best_candidate(pool, config['selection_ids'])
             state.update(phase='complete', winner_id=best.candidate_id,

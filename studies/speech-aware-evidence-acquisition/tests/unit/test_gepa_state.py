@@ -54,7 +54,7 @@ def test_two_round_search_rejects_tie_and_accepts_only_after_full_selection(tmp_
     evaluate(store,cand(2),[.6,.8])
     assert len(store.read()['state']['pool'])==1
     evaluate(store,cand(2),[.7,.7])
-    final=store.finish()
+    final=store.finish(reason="configured evaluation stop")
     assert final['state']['winner_id']=='c2'
     assert final['state']['cumulative_usage']['calls']==326
     assert final==store.finish()
@@ -154,3 +154,17 @@ def test_tampered_or_missing_snapshot_refuses(tmp_path):
     store=make(tmp_path);seed(store)
     (tmp_path/'000001.json').unlink()
     with pytest.raises(ValueError,match='gap'):store.read()
+
+
+def test_active_round_cannot_disappear_without_reason(tmp_path):
+    store=make(tmp_path);seed(store);active=store.next_round();before=store.read()
+    with pytest.raises(ValueError,match='explicit reason'):store.finish()
+    assert store.read()==before
+    final=store.finish(reason='insufficient remaining wall-time for next stage')
+    assert final['state']['termination']['interrupted_round']==active
+    assert final['state']['rounds'][-1]['outcome']=='stopped-before-next-stage'
+    assert final['state']['active'] is None
+    assert final['state']['winner_id']=='c0'
+    assert final['state']['known_usage']==before['state']['known_usage']
+    assert m.GepaSearchState(tmp_path).finish()==final
+    with pytest.raises(ValueError,match='reason changed'):store.finish(reason='different reason')
