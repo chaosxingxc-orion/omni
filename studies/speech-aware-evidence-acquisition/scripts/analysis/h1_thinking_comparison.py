@@ -135,6 +135,27 @@ def native_costs(outputs, trace):
     return result
 
 
+
+def phase_timing(directory, run_id, timing_path, expected_ids):
+    """Join the exact sealed arm checkpoint; expose incomplete timing explicitly."""
+    from speech_aware_evidence_acquisition.core.row_checkpoint import read_checkpoint
+    from real_engine_phase_timing import analyze
+    checkpoint = directory / (run_id + '.rows.ckpt.jsonl')
+    rows = read_checkpoint(checkpoint).rows
+    actual = [row.sample_id for row in rows if row.keep_defect() is None]
+    if len(actual) != len(expected_ids) or set(actual) != set(expected_ids):
+        raise ValueError('phase timing checkpoint differs from finalized arm roster')
+    before = sha(timing_path)
+    result = analyze(checkpoint, timing_path)
+    if sha(timing_path) != before:
+        raise ValueError('timing input changed during finalized analysis')
+    result['timing_sha256'] = before
+    result['complete_request_timing'] = (
+        result['rows'] == len(expected_ids) and result['missing_timing_entries'] == 0
+        and not result['timing_partial_tail'])
+    return result
+
+
 def run(spec_path, out):
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
     spec=read(spec_path)
@@ -146,7 +167,7 @@ def run(spec_path, out):
         raise ValueError('owned CPU output required')
     for arm in ARMS:
         entry=spec['arms'][arm]
-        if set(entry) != {'repo','attempt_id'}:
+        if set(entry) not in ({'repo','attempt_id'}, {'repo','attempt_id','timing'}):
             raise ValueError('explicit repository and attempt per arm required')
         repo=Path(entry['repo']);name,rid=identity(1,config(arm));attempt=entry['attempt_id']
         result[arm]=observation.run(repo,data,out/arm,comparison=config(arm),attempt_id=attempt)
@@ -157,6 +178,9 @@ def run(spec_path, out):
         directory=data/'runs'/rid/attempt;bundle=verify_bundle(directory/(rid+'.run-manifest.json'))
         scores[arm]=read(directory/(rid+'.scores.json'))['slurp-slu-official-train']
         result[arm]['native_role_costs']=native_costs(bundle.outputs_rows,bundle.trace_records)
+        if 'timing' in entry:
+            result[arm]['phase_timing'] = phase_timing(directory, rid, Path(entry['timing']),
+                [item['sample_id'] for item in roster['items']])
     if any(x != bindings[0] for x in bindings) or any(x != invariants[0] for x in invariants):
         raise ValueError('comparison changed fixed data, runtime, knowledge or non-thinking policy')
     summary={'schema':'saea-h1-thinking-comparison-result-v1', 'arms':result,

@@ -67,3 +67,41 @@ def test_pooled_slu_and_binary_task_repairs_are_distinct():
     assert out['task_repairs']==1 and out['task_breaks']==0
     assert out['contrasts']['slu_f1_pp']['point_estimate']==pytest.approx(100*(value-200/313))
     assert out['contrasts']['intent_pp']['point_estimate']==pytest.approx(100/313)
+
+
+def test_timing_refuses_checkpoint_from_another_arm_roster(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core import row_checkpoint
+    monkeypatch.setattr(row_checkpoint, 'read_checkpoint', lambda _: SimpleNamespace(
+        rows=[SimpleNamespace(sample_id='other', keep_defect=lambda: None)]))
+    with pytest.raises(ValueError, match='checkpoint differs'):
+        m.phase_timing(tmp_path, 'run', tmp_path/'timing', ['expected'])
+
+
+def test_timing_keeps_incomplete_coverage_visible(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core import row_checkpoint
+    import real_engine_phase_timing
+    monkeypatch.setattr(row_checkpoint, 'read_checkpoint', lambda _: SimpleNamespace(
+        rows=[SimpleNamespace(sample_id='expected', keep_defect=lambda: None)]))
+    timing = tmp_path/'timing'; timing.write_text('{}\n')
+    monkeypatch.setattr(real_engine_phase_timing, 'analyze', lambda *_: {
+        'rows': 1, 'missing_timing_entries': 1, 'timing_partial_tail': False})
+    result = m.phase_timing(tmp_path, 'run', timing, ['expected'])
+    assert not result['complete_request_timing']
+    assert result['timing_sha256'] == m.sha(timing)
+
+
+def test_timing_refuses_a_changing_source(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core import row_checkpoint
+    import real_engine_phase_timing
+    monkeypatch.setattr(row_checkpoint, 'read_checkpoint', lambda _: SimpleNamespace(
+        rows=[SimpleNamespace(sample_id='expected', keep_defect=lambda: None)]))
+    timing = tmp_path/'timing'; timing.write_text('{}\n')
+    def analyze(*_):
+        timing.write_text('{}\n{}\n')
+        return {'rows': 1, 'missing_timing_entries': 0, 'timing_partial_tail': False}
+    monkeypatch.setattr(real_engine_phase_timing, 'analyze', analyze)
+    with pytest.raises(ValueError, match='changed'):
+        m.phase_timing(tmp_path, 'run', timing, ['expected'])

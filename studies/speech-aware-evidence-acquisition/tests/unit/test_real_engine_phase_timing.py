@@ -39,3 +39,60 @@ def test_sample_residual_wait_is_joined_per_row():
     assert result['admission_to_perception_request_start']['mean_s'] == 10
     assert result['solver_request_end_to_sample_finished']['mean_s'] == 2
     assert result['admission_to_sample_finished']['mean_s'] == 47
+
+
+def add_sample_boundary(row, record_id='sample-timing'):
+    row.trace_lines.append(json.dumps({'record_id': record_id, 'payload': {
+        'use_sample_execution_timing': {
+            'admitted_ns': 90_000_000_000, 'finished_ns': 137_000_000_000}}}))
+
+
+def complete_events(events):
+    return events + [{**event, 'stage': 'http_request'} for event in events]
+
+
+def test_missing_sample_boundary_is_visible_despite_complete_request_events():
+    rows, events = inputs()
+    result = m.join(rows, complete_events(events))
+    assert result['missing_timing_entries'] == result['missing_sample_count'] == 0
+    assert result['sample_timing_coverage'] == {
+        'expected_rows': 1, 'boundary_present_rows': 0, 'boundary_missing_rows': 1,
+        'joined_phase_rows': 0, 'unjoined_phase_rows': 1}
+    assert not result['all_timing_complete']
+
+
+def test_complete_sample_boundary_and_request_events_report_complete():
+    rows, events = inputs()
+    add_sample_boundary(rows[0])
+    result = m.join(rows, complete_events(events))
+    assert result['sample_timing_coverage'] == {
+        'expected_rows': 1, 'boundary_present_rows': 1, 'boundary_missing_rows': 0,
+        'joined_phase_rows': 1, 'unjoined_phase_rows': 0}
+    assert result['all_timing_complete']
+
+
+def test_present_boundary_without_role_event_is_not_a_completed_join():
+    rows, events = inputs()
+    add_sample_boundary(rows[0])
+    result = m.join(rows, events[:1])
+    coverage = result['sample_timing_coverage']
+    assert coverage['boundary_present_rows'] == 1
+    assert coverage['boundary_missing_rows'] == 0
+    assert coverage['joined_phase_rows'] == 0
+    assert coverage['unjoined_phase_rows'] == 1
+    assert not result['all_timing_complete']
+
+
+@pytest.mark.parametrize('same_id', [True, False])
+def test_duplicate_sample_boundaries_refused_even_without_role_events(same_id):
+    rows, events = inputs()
+    add_sample_boundary(rows[0])
+    add_sample_boundary(rows[0], 'sample-timing' if same_id else 'other-timing')
+    with pytest.raises(ValueError, match='ambiguous sample execution timing'):
+        m.join(rows, [])
+
+
+def test_empty_rows_do_not_claim_complete_timing():
+    result = m.join([], [])
+    assert result['sample_timing_coverage']['expected_rows'] == 0
+    assert not result['all_timing_complete']

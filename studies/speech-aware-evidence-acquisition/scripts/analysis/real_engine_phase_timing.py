@@ -34,6 +34,8 @@ def roles(output):
 
 def join(rows,events):
     by_request={};metrics=defaultdict(list);missing=[];seen=set()
+    boundary_present = 0
+    joined_phase_rows = 0
     for e in events:
         if e['stage'] not in ('request_total','http_request'):continue
         if not e.get('request_id') or not e.get('sample_id'):continue
@@ -45,7 +47,13 @@ def join(rows,events):
         output,=row.output_rows
         if row.sample_id in seen:raise ValueError('duplicate sample')
         seen.add(row.sample_id);pairs=roles(output);boundaries={}
-        trace={json.loads(line)['record_id']:json.loads(line)['payload'] for line in row.trace_lines}
+        records = [json.loads(line) for line in row.trace_lines]
+        timings = [record['payload']['use_sample_execution_timing'] for record in records
+                   if 'use_sample_execution_timing' in record['payload']]
+        if len(timings) > 1:
+            raise ValueError('ambiguous sample execution timing')
+        boundary_present += bool(timings)
+        trace = {record['record_id']: record['payload'] for record in records}
         for role,rid in pairs.items():
             cost=trace[rid+'/cost'];metrics[role+'/scientific_request'].append(cost['latency_seconds'])
             for stage in ('request_total','http_request'):
@@ -60,10 +68,6 @@ def join(rows,events):
             if gap<-.001:raise ValueError('solver began before perception completed')
             metrics['perception_end_to_solver_request_start'].append(max(gap,0))
             metrics['perception_start_to_solver_end'].append(s['started_monotonic']+s['elapsed_seconds']-p['started_monotonic'])
-            timings = [payload['use_sample_execution_timing'] for payload in trace.values()
-                       if 'use_sample_execution_timing' in payload]
-            if len(timings) > 1:
-                raise ValueError('ambiguous sample execution timing')
             if timings:
                 timing = timings[0]
                 admitted = timing['admitted_ns'] / 1e9
@@ -75,8 +79,19 @@ def join(rows,events):
                 metrics['admission_to_perception_request_start'].append(p_start - admitted)
                 metrics['solver_request_end_to_sample_finished'].append(max(0, finished - s_end))
                 metrics['admission_to_sample_finished'].append(finished - admitted)
+                joined_phase_rows += 1
 
     return {'rows':len(seen),'metrics':{k:stats(v) for k,v in metrics.items()},'missing_timing_entries':len(missing),'missing_sample_count':len({r['sample_id'] for r in missing}),
+            # Legacy missing counters describe request/http events only.
+            # Boundary presence and successful P/S joins are separate coverage.
+            'sample_timing_coverage': {
+                'expected_rows': len(seen),
+                'boundary_present_rows': boundary_present,
+                'boundary_missing_rows': len(seen) - boundary_present,
+                'joined_phase_rows': joined_phase_rows,
+                'unjoined_phase_rows': len(seen) - joined_phase_rows,
+            },
+            'all_timing_complete': bool(seen) and not missing and joined_phase_rows == len(seen),
             'limitations':['Completed subset is descriptive and may be biased toward faster samples.','P→S gap contains preparation/FIT/scheduling; not pure CPU time.','FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.','Nested intervals overlap; do not sum as whole-task wall time.'],'new_model_calls':0}
 
 
