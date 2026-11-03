@@ -52,9 +52,8 @@ def test_native_perception_text_hash_is_bound_not_response_envelope(tmp_path,mon
         path=tmp_path/'configs'/(arm+'.txt');path.parent.mkdir(exist_ok=True);path.write_text(text)
         paths[arm]={'relpath':arm+'.txt','sha256':hashlib.sha256(text.encode()).hexdigest()}
         instruction=text+'\n\nNative episode limits: '+json.dumps({'calls':4},sort_keys=True)
-        requests[arm]['task_instruction']=instruction
         requests[arm]['history'][0]['source_response_sha256']='a'*64
-        control=json.loads(requests[arm]['history'][-1]['content']);control['messages'][0]['content']=instruction
+        control=json.loads(requests[arm]['history'][-1]['content']);control['messages'][1]['content']=instruction
         content=json.dumps(control);requests[arm]['history'][-1].update(content=content,content_sha256=hashlib.sha256(content.encode()).hexdigest())
     values={'native_episode':{'consumption_module':{}},'phase_material':{'solver':{'instruction_template':'lock.txt'}}}
     declaration={'frozen_sha256':material.pair_frozen_identity(values),'parent_template':paths['parent'],'child_template':paths['child']}

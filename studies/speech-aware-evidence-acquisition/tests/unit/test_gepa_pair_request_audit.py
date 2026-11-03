@@ -10,12 +10,12 @@ def fixture():
     for arm in ARMS:
         rid = 'request-' + arm; cid = 'contact-' + arm; instruction = 'instruction ' + arm
         control = {'contact_id': cid, 'sample_id': 'slurp:train:1',
-            'messages': [{'role': 'system', 'content': instruction}, {'role': 'user', 'content': 'audio question'}]}
+            'messages': [{'role': 'system', 'content': 'frozen global instruction'}, {'role': 'user', 'content': instruction}]}
         text = json.dumps(control, ensure_ascii=False, sort_keys=True, separators=(',', ':'))
         history = [{'role': 'agent_state', 'state_id': 'phase:perception', 'content': 'same perception'},
             {'role': 'control', 'contact_id': cid, 'content': text,
              'content_sha256': hashlib.sha256(text.encode()).hexdigest()}]
-        requests[arm] = {'request_id': rid, 'sample_id': 'slurp:train:1', 'task_instruction': instruction,
+        requests[arm] = {'request_id': rid, 'sample_id': 'slurp:train:1', 'task_instruction': 'frozen global instruction',
             'history': history, 'supplied_evidence': [{'content': 'frozen knowledge'}],
             'evidence_provenance': [{'lock_key': 'rails-supply', 'relpath': f'rails-message/{rid}/0', 'sha256': 'a'*64}],
             'decoding_params': {'temperature': 0.3, 'seed': 3}, 'speech_packet_sha256': 'b'*64}
@@ -43,7 +43,7 @@ def test_different_or_forged_context_cannot_be_accepted(fault):
     elif fault == 'provenance': row['evidence_provenance'][0]['relpath'] = 'rails-message/wrong/0'
     elif fault == 'instruction': row['task_instruction'] = 'different'
     elif fault == 'control_instruction':
-        ctl = json.loads(row['history'][-1]['content']); ctl['messages'][0]['content'] = 'different'
+        ctl = json.loads(row['history'][-1]['content']); ctl['messages'][1]['content'] = 'different'
         row['history'][-1]['content'] = json.dumps(ctl)
         row['history'][-1]['content_sha256'] = hashlib.sha256(row['history'][-1]['content'].encode()).hexdigest()
     elif fault == 'control_hash': row['history'][-1]['content_sha256'] = '0'*64
@@ -54,3 +54,12 @@ def test_different_or_forged_context_cannot_be_accepted(fault):
     else: row['history'].pop(0)
     with pytest.raises(ValueError):
         verify_inputs('slurp:train:1', contacts, requests, rendered_instructions=instructions)
+
+
+def test_global_task_instruction_must_not_be_normalized_as_role_template():
+    contacts,requests,instructions=fixture()
+    row=requests['child'];row['task_instruction']='changed global task'
+    control=json.loads(row['history'][-1]['content']);control['messages'][0]['content']=row['task_instruction']
+    content=json.dumps(control);row['history'][-1].update(content=content,content_sha256=hashlib.sha256(content.encode()).hexdigest())
+    with pytest.raises(ValueError,match='outside verified instruction'):
+        verify_inputs('slurp:train:1',contacts,requests,rendered_instructions=instructions)

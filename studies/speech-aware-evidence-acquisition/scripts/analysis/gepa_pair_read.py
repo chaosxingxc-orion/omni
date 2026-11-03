@@ -49,6 +49,7 @@ def summarize(results,items):
 
 def audit_inputs(repo,values,bundle,ids):
     from speech_aware_evidence_acquisition.rails.gepa_prompt_material import validate_pair_declaration,pair_frozen_identity
+    from speech_aware_evidence_acquisition.rails.tfrl_bank_request_audit import checked_control
     declaration=validate_pair_declaration(values['native_episode']['consumption_module'])
     if declaration['frozen_sha256']!=pair_frozen_identity(values):raise ValueError('paired frozen graph changed')
     phase=values['phase_material']['solver']
@@ -71,7 +72,7 @@ def audit_inputs(repo,values,bundle,ids):
         contacts=solver[0]['execution_receipt']['contacts']
         if len(contacts)!=3:raise ValueError('three first Solver contacts required')
         requests={a:bundle.trace_records[c['request_id']+'/request']['payload'] for a,c in zip(ARMS,contacts)}
-        lock=requests['lock']['task_instruction'];prefix=original+'\n\nNative episode limits: '
+        lock=checked_control(requests['lock'])['messages'][1]['content'];prefix=original+'\n\nNative episode limits: '
         if not lock.startswith(prefix):raise ValueError('lock instruction differs from source template')
         suffix=lock[len(original):];limits=json.loads(lock[len(prefix):])
         if json.dumps(limits,sort_keys=True)!=lock[len(prefix):]:raise ValueError('noncanonical native limit suffix')

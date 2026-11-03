@@ -13,10 +13,12 @@ ARMS = ('parent', 'child', 'lock')
 
 
 def _project(request, instruction):
-    if request.get('task_instruction') != instruction:
-        raise ValueError('actual instruction differs from verified rendered template')
     value = copy.deepcopy(request)
     control = checked_control(value)
+    messages = control.get('messages')
+    if (not isinstance(messages, list) or len(messages) != 2
+            or messages[1] != {'role': 'user', 'content': instruction}):
+        raise ValueError('actual role user query differs from verified rendered template')
     history = value['history']
     if len([h for h in history if h.get('role') == 'control']) != 1:
         raise ValueError('first Solver request requires exactly one framework control')
@@ -35,9 +37,10 @@ def _project(request, instruction):
     # Only routing identities and independently verified instruction bytes are
     # normalized. Every other request/control/history field must stay equal.
     value.pop('request_id')
-    value['task_instruction'] = '<verified-template>'
     control.pop('contact_id')
-    control['messages'][0]['content'] = '<verified-template>'
+    # The role template is the user query. The global task/system instruction
+    # remains in both payload and control and must match byte-for-byte.
+    control['messages'][1]['content'] = '<verified-template>'
     envelope = copy.deepcopy(history[-1])
     for key in ('content', 'content_sha256', 'contact_id'):
         envelope.pop(key)
