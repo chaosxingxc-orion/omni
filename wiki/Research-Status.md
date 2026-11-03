@@ -1,6 +1,6 @@
 # 研究结果与当前状态
 
-更新时间：2026-11-02 17:31 UTC。持续原位维护，完整结果与限制分开报告。
+更新时间：2026-11-03 02:14 UTC。持续原位维护，完整结果与限制分开报告。
 
 ## 主要结果
 
@@ -26,7 +26,9 @@
 
 真实CPU预检已验证业务、tokenizer、独立评分环境（4.374秒），并绑定实际启动配置。预检通过不等于真实数据路径全量通过；此次音频FIT缺陷按功能问题修复。后台监测终态或600秒，不高频人工轮询。
 
-**接续结果：** ACE v2完成4/51组、9/102调用后ABORTED；第五组Reflector响应达到4096输出上限，JSON截断（wire finish_reason=length）。输入37,652/输出32,897 tokens，容器762.058秒，约190.515秒/完成组（含失败调用及准备，非未来ETA）。Reflexion独立执行1/51调用、0/51组后ABORTED；299字符反思超过200字符上限，输入2,940/输出3,308 tokens，容器215.510秒。两者均无候选、无H2、无收益结论；全部已知请求与费用保留，租约结清后unknown=0。A0 CPU编码继续：17:31完成11,864/13,078，4 workers×16线程、64 CPU核、0 NPU，累计约0.957秒/条，按当前速率剩余约19分钟，音频长度变化会影响ETA。
+**接续结果：** ACE v2完成4/51组、9/102调用后ABORTED；第五组Reflector响应达到4096输出上限，JSON截断（wire finish_reason=length）。输入37,652/输出32,897 tokens，容器762.058秒，约190.515秒/完成组（含失败调用及准备，非未来ETA）。Reflexion独立执行1/51调用、0/51组后ABORTED；299字符反思超过200字符上限，输入2,940/输出3,308 tokens，容器215.510秒。两者均无候选、无H2、无收益结论；全部已知请求与费用保留，租约结清后unknown=0。A0 CPU编码已SEALED：13,078/13,078，11月2日17:51 UTC成功退出，4 workers×16线程、64 CPU核、0 NPU，receipt内12,529.962秒、0.9581秒/条，编码剩余0。原语音查询SHA与receipt已复核；alias/content/agreement尚未完成，A0全测试推理未启动，推理ETA未知。
+
+**当前调度缺口：** 02:14 UTC核验仅两个TP4服务驻留，无生成任务或generation lease。编码17:51完成后下游仍未启动，约8小时23分接续空档；未有完整逐卡采样，不能精确断言全区间利用率。共享组件尚未构成端到端自动流水线，持续八卡有效负载未达标。
 
 ## TFRL判断与下一组对照
 
@@ -55,11 +57,11 @@ H1/H2固定313/312，覆盖52/60意图、43/55槽位及144/432种TRAIN实际关�
 
 ## 下一步与文档
 
-1. Direct完整测试已FINALIZED；A0完整query/content/agreement所需CPU编码并行，完成后用原脚本接续。
+1. Direct完整测试已FINALIZED；A0查询编码亦SEALED。最高优先级为用共享脚本完成alias/content/agreement并实际启动全量A0，禁止重编码。
 2. Reflexion v3亦因输出结构失败停止；7条局部记忆不是可发布候选。先把格式可靠性与单例过度泛化分开治理，再决定新算法变体；不再无分析地改提示后重跑51组。ACE后继需要紧凑输出与离线效用归因。
 3. 候选通过TRAIN语义门槛后完整H2；GEPA接入真实Solver评估、预算和可恢复状态，不能把102项组件测试当作算法复现完成。
 
-当前无新增用户决策阻塞。最多3个子智能体并行，当前分别处理GEPA终止状态、算法对照审查、通用数据派生产物可靠性；按文件和正式测试验收，委派不计完成。
+当前无新增用户决策阻塞。子智能体本轮再次只回复规则确认，未交付指定代码/报告，主线程接回阻塞项；后续按文件和正式测试验收，委派不计完成。
 
 - [详细现状与计划](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Research-Status-and-Plan.md)
 - [算法比较与实施方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/decisions/TFRL-Algorithm-Comparison-and-Implementation.md)
