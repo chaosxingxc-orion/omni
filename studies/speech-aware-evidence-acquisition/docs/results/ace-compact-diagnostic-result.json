@@ -1,0 +1,246 @@
+{
+  "schema": "saea-ace-compact-terminal-audit-v1",
+  "shared_historical_usage_count_once": {
+    "calls": 312,
+    "prompt_tokens": 6128213,
+    "completion_tokens": 774237
+  },
+  "arms": {
+    "a": {
+      "archive_sha256": "ca651c0dc24875798196a96f6d2687c4386b591e6a7c7bf3d4adc24f5d7db771",
+      "archive_hash_verified": true,
+      "total_groups": 51,
+      "completed_groups": 0,
+      "accounting": {
+        "attempted_contacts": 1,
+        "known_usage": {
+          "calls": 1,
+          "completion_tokens": 3232,
+          "prompt_tokens": 3589
+        },
+        "observed_contacts": 1,
+        "unknown_contacts": 0,
+        "unknown_spend_excluded_from_known_usage": false
+      },
+      "attempt_state": "ABORTED",
+      "failure_reason": "generation failed during run_phases or seal: LearningError: bounded compact ACE lesson required",
+      "cards": 2,
+      "instances": 1,
+      "responses": [
+        {
+          "request_id": "flight-0001",
+          "schema": "saea-ace-reflection-v3",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 3232,
+            "prompt_tokens": 3589
+          },
+          "finish_reason": "stop",
+          "reasoning_tokens": 3093,
+          "latency_seconds": 45.588983580004424,
+          "max_tokens": 4096,
+          "response_sha256": "f7e0609b1c26bc369be3a3d6233c41621d07d9c2efbf34a87e5515ff3220cc5a",
+          "prompt_explicit_200_120": true,
+          "text_lengths": [
+            {
+              "array": "findings",
+              "index": 0,
+              "field": "lesson",
+              "characters": 211
+            },
+            {
+              "array": "findings",
+              "index": 1,
+              "field": "lesson",
+              "characters": 171
+            }
+          ]
+        }
+      ],
+      "new_request_latency_seconds_sum": 45.588983580004424,
+      "terminal_eta": null,
+      "candidate_publishable": false,
+      "container_wall_seconds": 171.04511
+    },
+    "b": {
+      "archive_sha256": "1ae0cfbd7dc3368d955d65552505bd651d94d27f26f9630c2263f0afd5b54997",
+      "archive_hash_verified": true,
+      "total_groups": 51,
+      "completed_groups": 1,
+      "accounting": {
+        "attempted_contacts": 4,
+        "known_usage": {
+          "calls": 4,
+          "completion_tokens": 13154,
+          "prompt_tokens": 16128
+        },
+        "observed_contacts": 4,
+        "unknown_contacts": 0,
+        "unknown_spend_excluded_from_known_usage": false
+      },
+      "attempt_state": "ABORTED",
+      "failure_reason": "generation failed during run_phases or seal: LearningError: bounded compact ACE reason required",
+      "cards": 2,
+      "instances": 1,
+      "responses": [
+        {
+          "request_id": "flight-0001",
+          "schema": "saea-ace-reflection-v3",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 3186,
+            "prompt_tokens": 3594
+          },
+          "finish_reason": "stop",
+          "reasoning_tokens": 3093,
+          "latency_seconds": 43.56513454002561,
+          "max_tokens": 16384,
+          "response_sha256": "996de9ccaf55cdb00d7ec01040bddff86dbdeac47159025aab426c5b55db12cf",
+          "prompt_explicit_200_120": true,
+          "text_lengths": [
+            {
+              "array": "findings",
+              "index": 0,
+              "field": "lesson",
+              "characters": 105
+            },
+            {
+              "array": "findings",
+              "index": 1,
+              "field": "lesson",
+              "characters": 79
+            }
+          ]
+        },
+        {
+          "request_id": "flight-0002",
+          "schema": "saea-ace-delta-v3",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 3229,
+            "prompt_tokens": 3401
+          },
+          "finish_reason": "stop",
+          "reasoning_tokens": 3093,
+          "latency_seconds": 43.95344790999661,
+          "max_tokens": 16384,
+          "response_sha256": "bc2e7ecec1fdf01c88152d77945310b06468c49f6970cf1790a0b5217f039cd6",
+          "prompt_explicit_200_120": true,
+          "text_lengths": [
+            {
+              "array": "deltas",
+              "index": 0,
+              "field": "content",
+              "characters": 105
+            },
+            {
+              "array": "deltas",
+              "index": 0,
+              "field": "reason",
+              "characters": 109
+            },
+            {
+              "array": "deltas",
+              "index": 1,
+              "field": "content",
+              "characters": 79
+            },
+            {
+              "array": "deltas",
+              "index": 1,
+              "field": "reason",
+              "characters": 101
+            }
+          ]
+        },
+        {
+          "request_id": "flight-0003",
+          "schema": "saea-ace-reflection-v3",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 3400,
+            "prompt_tokens": 3920
+          },
+          "finish_reason": "stop",
+          "reasoning_tokens": 3093,
+          "latency_seconds": 45.829568569984986,
+          "max_tokens": 16384,
+          "response_sha256": "a8c07f4ba2fe74c01f774a52c83a57ae95930eb8df35c07ff9a918cf10f33183",
+          "prompt_explicit_200_120": true,
+          "text_lengths": [
+            {
+              "array": "findings",
+              "index": 0,
+              "field": "lesson",
+              "characters": 138
+            },
+            {
+              "array": "findings",
+              "index": 1,
+              "field": "lesson",
+              "characters": 111
+            },
+            {
+              "array": "signals",
+              "index": 0,
+              "field": "reason",
+              "characters": 90
+            },
+            {
+              "array": "signals",
+              "index": 1,
+              "field": "reason",
+              "characters": 106
+            }
+          ]
+        },
+        {
+          "request_id": "flight-0004",
+          "schema": "saea-ace-delta-v3",
+          "usage": {
+            "calls": 1,
+            "completion_tokens": 3339,
+            "prompt_tokens": 5213
+          },
+          "finish_reason": "stop",
+          "reasoning_tokens": 3093,
+          "latency_seconds": 46.92650693998439,
+          "max_tokens": 16384,
+          "response_sha256": "18436a662a63f6dd7f6bd657c9d210fe4bcec690feb9d4db8b538ead213f319b",
+          "prompt_explicit_200_120": true,
+          "text_lengths": [
+            {
+              "array": "deltas",
+              "index": 0,
+              "field": "content",
+              "characters": 101
+            },
+            {
+              "array": "deltas",
+              "index": 0,
+              "field": "reason",
+              "characters": 123
+            },
+            {
+              "array": "deltas",
+              "index": 1,
+              "field": "content",
+              "characters": 108
+            },
+            {
+              "array": "deltas",
+              "index": 1,
+              "field": "reason",
+              "characters": 89
+            }
+          ]
+        }
+      ],
+      "new_request_latency_seconds_sum": 180.2746579599916,
+      "terminal_eta": null,
+      "candidate_publishable": false,
+      "container_wall_seconds": 306.19882
+    }
+  },
+  "new_model_calls_for_audit": 0
+}
