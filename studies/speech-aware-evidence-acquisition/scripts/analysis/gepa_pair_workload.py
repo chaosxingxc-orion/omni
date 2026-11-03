@@ -116,9 +116,27 @@ class PairWorkload:
         source = checked['source_baseline']
         live_model=read(repo/f"configs/model/{binding['model_fragment']}.json")
         archived_model=checked['model']
-        operational={'base_url','runtime_receipt','timeout_seconds','geometry_basis'}
+        from speech_aware_evidence_acquisition.core.reasoning_knobs import (
+            fold_into_decoding, resolve_node_decoding, validate_fragment_knobs, validate_thinking_policy)
+        policy=source.get('thinking_policy')
+        locked={role:observation.THINKING_ARMS['baseline'] for role in ('perception','solver')}
+        if policy!=locked:
+            raise ValueError('paired requests require explicit original P/S node budgets')
+        def request_decoding(model):
+            validate_fragment_knobs(model);validate_thinking_policy(policy,model)
+            values=fold_into_decoding(model) or model
+            decoding=values['decoding_params']
+            return {role:resolve_node_decoding(decoding,policy,role,cap=decoding['max_tokens'])
+                for role in ('perception','solver')}
+        if request_decoding(live_model)!=request_decoding(archived_model):
+            raise ValueError('paired native request decoding differs from historical P/S')
+        operational={'base_url','runtime_receipt','timeout_seconds','geometry_basis','answer_reserve_tokens'}
         def science(model):
             document={k:copy.deepcopy(v) for k,v in model.items() if k not in operational}
+            # A resident completion ceiling is not the evaluated P/S budget.
+            # Native node resolution above proves every wire field identical;
+            # the registered fragment/session identity itself is never aliased.
+            document['decoding_params'].pop('max_tokens',None)
             args=document.get('server_args',[])
             if args.count('--max-model-len')!=1:
                 raise ValueError('paired model requires explicit native context geometry')

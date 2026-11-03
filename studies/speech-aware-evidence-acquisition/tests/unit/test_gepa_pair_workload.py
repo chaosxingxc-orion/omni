@@ -49,7 +49,9 @@ def derived(repo,monkeypatch):
     source=m.read(path/m.observation.SOURCE_BASE)
     source['thinking_policy']={role:copy.deepcopy(m.observation.THINKING_ARMS['baseline']) for role in ('perception','solver')}
     compiled=copy.deepcopy(source);compiled['policy']='phase-native-module-v1-c4'
-    model={'server_args':['--max-model-len','49152'],'decoding_params':{'max_tokens':4096},'model_lock_key':'frozen'}
+    model={'server_args':['--max-model-len','49152'],'decoding_params':{'max_tokens':4096,'temperature':0,'seed':7},
+        'model_lock_key':'frozen','reasoning_content_guard':'refuse-think-marker-in-content',
+        'reasoning_budget_tokens':3072,'answer_reserve_tokens':1024,'enable_thinking':True}
     model_path=path/'configs/model/model.json';model_path.parent.mkdir(parents=True,exist_ok=True);model_path.write_bytes(m.raw(model))
     checked={'source_pins':{'partition':partition},'partition':m.pinned(path,partition),
              'source_baseline':source,'compiled_baseline':compiled,'model':model}
@@ -67,7 +69,7 @@ def test_real_fixed_population_derivation_and_four_contact_budget(repo,monkeypat
     assert base['knowledge_stores']==checked['source_baseline']['knowledge_stores']
 
 
-@pytest.mark.parametrize('fault',['decoding','knowledge','shrunk','rope','too_large'])
+@pytest.mark.parametrize('fault',['decoding','knowledge','shrunk','rope','too_large','seed','temperature','weights','reasoning','node_cap'])
 def test_pair_frozen_science_and_native_context_boundary(repo,monkeypatch,fault):
     job,checked=derived(repo,monkeypatch);path,data,_=repo
     model=m.read(path/'configs/model/model.json')
@@ -75,6 +77,13 @@ def test_pair_frozen_science_and_native_context_boundary(repo,monkeypatch,fault)
     elif fault=='knowledge':checked['compiled_baseline']['knowledge_stores']={}
     elif fault=='shrunk':model['server_args'][1]='24576'
     elif fault=='rope':model['server_args']+=['--rope-scaling','{}']
+    elif fault=='seed':model['decoding_params']['seed']=8
+    elif fault=='temperature':model['decoding_params']['temperature']=0.5
+    elif fault=='weights':model['model_lock_key']='different'
+    elif fault=='reasoning':
+        model['reasoning_budget_tokens']=2048;model['answer_reserve_tokens']=2048
+    elif fault=='node_cap':
+        model['decoding_params']['max_tokens']=3584;model['answer_reserve_tokens']=512
     else:model['server_args'][1]='81920'
     (path/'configs/model/model.json').write_bytes(m.raw(model))
     with pytest.raises(ValueError):job.derive(path,data,job.config['material'])
@@ -121,3 +130,21 @@ def test_pair_registered_width_uses_config_not_historical96():
     cfg=config();spec={'workload_kind':m.KIND,'job_config':cfg,'execution':cfg['execution'],'profile':'profile'}
     assert_execution_binding(spec,{'SAEA_ADMITTED_LEVEL':'16','SAEA_DEPLOYMENT_PROFILE':'profile'})
     with pytest.raises(ValueError):assert_execution_binding(spec,{'SAEA_ADMITTED_LEVEL':'96','SAEA_DEPLOYMENT_PROFILE':'profile'})
+
+
+def test_pair_uses_same_resident_identity_with_historical_node_wire_budgets(repo,monkeypatch):
+    from speech_aware_evidence_acquisition.core.reasoning_knobs import fold_into_decoding,resolve_node_decoding
+    job,checked=derived(repo,monkeypatch);path,data,_=repo
+    model=m.read(path/'configs/model/model.json')
+    model['server_args'][1]='65536'
+    model['decoding_params']['max_tokens']=16384;model['answer_reserve_tokens']=13312
+    (path/'configs/model/model.json').write_bytes(m.raw(model))
+    before=copy.deepcopy(model)
+    base,exp,_,_,binding=job.derive(path,data,job.config['material'])
+    assert binding['model_fragment']==exp['cells'][0]['model_fragment']=='model'
+    assert m.read(path/'configs/model/model.json')==before
+    for role in ('perception','solver'):
+        actual=resolve_node_decoding(fold_into_decoding(model)['decoding_params'],base['thinking_policy'],role)
+        historical=resolve_node_decoding(fold_into_decoding(checked['model'])['decoding_params'],base['thinking_policy'],role)
+        assert actual==historical
+        assert actual['max_tokens']==4096 and actual['thinking_budget_tokens']==3072
