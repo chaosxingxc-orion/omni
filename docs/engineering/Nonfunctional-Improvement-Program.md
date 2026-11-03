@@ -114,3 +114,12 @@ python3 scripts/environment/configured_preflight_binding.py launch --successor s
 ACE与Reflexion真实协议失败证明：退出码必须结合任务产物、原生响应、完整组数和成本判断。ACE完成4/51组、9/102调用后输出截断；Reflexion完成0/51组、1/51调用后超出字符限制。两者均未产生候选，不发布H2或精度收益。已知请求由既有`settle_terminal_lease.py`在原guard内核验并结清，原失败与费用保留。
 
 Reflexion学习不依赖ACE输出，但原资源顺序将其绑定ACE成功释放，导致失败传播。此次在ACE已结清后，使用同一固定学习脚本、版本化独立启动配置和新预检绑定运行Reflexion；未修改其学习数据/算法，也未把ACE失败伪装成成功release。后续共享队列需区分“科学结果依赖”和“资源互斥依赖”，终态失败只有在原生请求已核验、租约已结清后才允许独立后继继续，不能通用地忽略前驱退出码。
+
+
+## 全量输入派生的持久化与恢复
+
+通用`build_slurp_query_content_derivative.py`原来直接写向量，随后写provenance，进程中断可能留下半文件或只有向量。现复用`core.atomic_file.publish_new`，分别完整写入、fsync后独占发布；默认仍拒绝已有产物。显式`--resume`重新从固定来源推导期望字节，先检查两份产物，只有已存在字节完全相同才复用并补齐缺失文件。冲突来源、ledger或provenance不覆盖；两文件不宣称跨文件事务原子性，消费者必须校验完整凭据。
+
+24项固定镜像相关测试通过（3.14秒），包括向量发布后故障、缺失provenance恢复、既有provenance冲突先拒绝、旧默认拒绝覆盖行为。已用于真实13078条全测试content派生，0新模型/编码器调用。参考提交`f9a24a54`。
+
+GEPA持久化状态提前结束须记录明确原因；未执行完的轮次保留父候选、样本和停止前phase，不进入候选池；未知在途仍禁止结束，已知费用保留。相关122项固定镜像测试通过（4.43秒，`b26a3db5`）。这是CPU控制器语义，真实Flight预算/时间与来源仍须runtime接入验证。
