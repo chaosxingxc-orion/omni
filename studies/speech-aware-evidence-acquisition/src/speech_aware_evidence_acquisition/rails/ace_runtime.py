@@ -51,11 +51,19 @@ def validate_registration(reg, *, plan, model_id):
     bound_fields = {'resident_context', 'completion_cap',
         'reserve_tokens', 'max_groups', 'max_delta', 'max_findings', 'max_items', 'max_characters',
         'max_prompt_tokens_total', 'max_completion_tokens_total', 'max_calls'}
-    require(isinstance(bounds, dict) and bound_fields <= set(bounds) <= bound_fields | {'reflector_contract', 'compact_text_chars', 'compact_reason_chars'}
+    require(isinstance(bounds, dict) and bound_fields <= set(bounds) <= bound_fields | {'reflector_contract', 'compact_text_chars', 'compact_reason_chars', 'evidence_view', 'development_instruction', 'invalid_delta_policy'}
         and ('reflector_contract' not in bounds or bounds['reflector_contract'] in (ace.REFLECTOR_CONTRACT_V2, ace.COMPACT_CONTRACT_V3))
         and all(type(bounds[k]) is int and bounds[k] > 0 for k in bound_fields if k != 'reserve_tokens')
         and type(bounds['reserve_tokens']) is int and bounds['reserve_tokens'] >= 0, 'exact finite ACE bounds required')
     ace.compact_limits(bounds)
+    require(bounds.get('invalid_delta_policy', 'stop-preserve-v1') in
+            ('stop-preserve-v1', 'reject-collision-keep-parent-v1'), 'unsupported ACE invalid delta policy')
+    require(bounds.get('evidence_view', 'compact-v1') in ('compact-v1', 'full-query-v1'),
+            'unsupported ACE evidence view')
+    if 'development_instruction' in bounds:
+        instruction = bounds['development_instruction']
+        require(isinstance(instruction, str) and instruction.strip() and len(instruction) <= 4096,
+                'bounded development instruction required')
     decoding = reg['decoding_params']
     require(isinstance(decoding, dict) and 'id_slot' not in decoding
         and type(decoding.get('max_tokens')) is int and decoding['max_tokens'] > 0
@@ -92,6 +100,7 @@ def build_registration(plan, *, source, document, decoding_params, max_context_b
         'max_context_bytes': max_context_bytes, 'runtime_identity_sha256': runtime_identity_sha256}
     require(document == ace.build_input(source, source['batch']['parent'],
         learning_config_sha256=sha(learning_configuration(config)),
+        development_material=document.get('development_material'),
         **{k:v for k,v in document['bounds'].items() if k != 'max_calls'}), 'ACE source/document/config derivation differs')
     reg = {'schema': ACE_RUNTIME_SCHEMA, 'plan': {k:v for k,v in asdict(plan).items() if k != 'protocol_hash'},
         **config, 'batch_sha256': sha(document), 'execution_sha256': sha(document),
@@ -120,6 +129,11 @@ def load_runtime_source(values, *, plan, repo_root, data_root, sample_ids, roste
     require(identity == doc['tokenizer_identity'], 'ACE tokenizer identity changed')
     source = load_finalized_shards(doc['source'], data_root=root, count_tokens=count, tokenizer_identity=identity)
     document = doc['document']; reg = values['tfgrpo_learning_registration']
+    if 'development_material' in document:
+        from .construction_development import load_material
+        material = document['development_material']
+        require(material == load_material(material['spec'], source, repo_root=repo_root, data_root=root),
+                'development material changed since preparation')
     expected = build_registration(scientific, source=source, document=document, decoding_params=reg['decoding_params'],
         max_context_bytes=reg['max_context_bytes'], runtime_identity_sha256=reg['runtime_identity_sha256'],
         roster_sha256=roster_sha256)

@@ -1,0 +1,22 @@
+{
+  "schema": "saea-construction-development-validation-v1",
+  "container_id": "461bca765d674935237efa071b7e0b4ff5bc5c123a89326779618a394eb54d23",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "tests_passed": 186,
+  "exit_code": 0,
+  "seconds": 11.23,
+  "source_sha256": {
+    "src/speech_aware_evidence_acquisition/rails/ace_incremental.py": "a312ce71db6036adcc02db69203958fb2f123e8934788505600aa441d34d72bf",
+    "src/speech_aware_evidence_acquisition/rails/ace_runtime.py": "9e3d6ca4d44a297458ae360c4922ffce36369ea38cc2d07f65154a4d4ecfcfec",
+    "src/speech_aware_evidence_acquisition/rails/grounded_synthesis_fusion.py": "07c76a09d41a201072e782ad97c5a6e3ba5d1d96dd600f2d32bbf84d96e3970e",
+    "src/speech_aware_evidence_acquisition/rails/construction_development.py": "220e97f377101e315cf7d4852de69fd6849dab374ca81003ef5b728559a2aab3",
+    "scripts/analysis/learning_strategy_job.py": "84ed03e3864560918af2b704816a608fa754f4e0b04f4e34c592dcfc735b364a",
+    "tests/unit/test_construction_development.py": "1dfc7d43c931c7d46a6cb50c3aa91d84487ec05024e077b35e7e504ff70f01af",
+    "configs/construction/node-evidence-task-v1.txt": "8b54798ec2304b6d2ce5999ea920ded759348c880ad712e95a3bf73c51e7f3e0"
+  },
+  "limitations": [
+    "Unit endpoints are explicit doubles.",
+    "First real full-context prepare exceeded context capacity and sent no generation requests.",
+    "No candidate improvement measured."
+  ]
+}

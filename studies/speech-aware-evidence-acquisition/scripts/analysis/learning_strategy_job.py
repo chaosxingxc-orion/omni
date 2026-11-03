@@ -41,7 +41,7 @@ def initial_measurement(method, document, count):
 
 def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpath,
             runtime_identity, bounds, out, job_name, run_id, service_session,
-            planned_gpu_hours, max_context_bytes=2000000, response_format=None):
+            planned_gpu_hours, max_context_bytes=2000000, response_format=None, development_spec=None):
     assert_execution_environment()
     require = ace.require
     method, selected_runtime = strategy_modules(strategy)
@@ -62,8 +62,14 @@ def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpa
         decoding['response_format'] = dict(response_format)
     config = {'model_id':model,'decoding_params':decoding,
         'max_context_bytes':max_context_bytes,'runtime_identity_sha256':sha(identity)}
+    development = {}
+    if development_spec is not None:
+        require(strategy == ace.STRATEGY, 'development evidence currently requires ACE')
+        from speech_aware_evidence_acquisition.rails.construction_development import load_material
+        development['development_material'] = load_material(read(development_spec), source,
+            repo_root=repo, data_root=data)
     document = method.build_input(source,source['batch']['parent'],
-        learning_config_sha256=sha(learning_configuration(config)),**bounds)
+        learning_config_sha256=sha(learning_configuration(config)),**bounds,**development)
     initial = initial_measurement(method, document, count)
     ids = [g['query_id'] for g in document['groups']]
     original = read(source_roster); index = {r['sample_id']:r for r in original['items']}
@@ -178,12 +184,12 @@ def execute_config(path):
     }
     # ``response_format`` was added as an optional configuration input; old
     # command files remain valid and therefore use the exact legacy field set.
-    allowed_prepare = fields['prepare'] | {'response_format'}
+    allowed_prepare = fields['prepare'] | {'response_format', 'development_spec'}
     require(mode in fields and isinstance(args,dict)
         and (set(args) == fields[mode] or (mode == 'prepare' and set(args) <= allowed_prepare
                                            and fields['prepare'] <= set(args))),
             'exact implemented learning strategy mode arguments required')
-    paths={'repo','data','source_spec','source_roster','runtime_identity','job','out','after'}
+    paths={'repo','data','source_spec','source_roster','runtime_identity','job','out','after','development_spec'}
     def path_value(value):
         require(isinstance(value,str) and value.startswith('/') and '..' not in Path(value).parts
             and not any(c in value for c in ('\x00','\n')), 'absolute canonical command path required')

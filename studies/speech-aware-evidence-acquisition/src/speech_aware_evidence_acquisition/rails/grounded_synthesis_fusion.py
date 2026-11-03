@@ -219,8 +219,17 @@ def load_finalized_shards(spec, *, data_root, count_tokens, tokenizer_identity):
         'candidate_publishable': False}
 
 
-def project_group_evidence(group):
-    """Deterministic visible evidence, preserving scored vs raw answer identity."""
+def project_group_evidence(group, *, evidence_view='compact-v1'):
+    """Deterministic evidence projection for learning.
+
+    ``compact-v1`` is the historical prompt projection.  ``full-query-v1`` is
+    an opt-in development view: it exposes the complete verified query and
+    trajectory records so a reflector can separate perception, solver and
+    delivery failures.  Both views are derived from the sealed source bytes;
+    this function never accepts hand-authored evidence.
+    """
+    require(evidence_view in ('compact-v1', 'full-query-v1'),
+            'unsupported evidence projection')
     def decode(value):
         if isinstance(value, str):
             try:
@@ -231,7 +240,7 @@ def project_group_evidence(group):
     query = decode(group['query'])
     visible_query = query
     omitted = []
-    if isinstance(query, dict):
+    if isinstance(query, dict) and evidence_view == 'compact-v1':
         visible_query = {k: query[k] for k in ('sample_id', 'history', 'audio_available_to_reflector')
                          if k in query}
         omitted = sorted(set(query)-set(visible_query))
@@ -246,13 +255,19 @@ def project_group_evidence(group):
             require(isinstance(scored, str)
                     and hashlib.sha256(scored.encode()).hexdigest() == critique['scored_answer_sha256'],
                     'scored prediction differs from source feedback hash')
-        rolls.append({'trajectory_id': row.get('trajectory_id'),
+        projected = {'trajectory_id': row.get('trajectory_id'),
             'trajectory_sha256': sha(row.get('trajectory')), 'reward': row['reward'],
             'feedback': critique, 'raw_prediction': decode(raw), 'scored_prediction': decode(scored),
             'prediction_observed': observed and scored is not None,
             'omitted_trajectory_fields': sorted(set(trajectory)-{'response_text',
                 'scored_answer_after_fixed_normalization'}) if observed else [],
-            'missing_trajectory_not_evidence_of_absence': not observed})
+            'missing_trajectory_not_evidence_of_absence': not observed}
+        if evidence_view == 'full-query-v1':
+            # Preserve the source records in a namespaced field.  This is
+            # diagnostic material only and remains tied to the trajectory hash.
+            projected['source_trajectory'] = trajectory
+            projected['source_critique'] = critique
+        rolls.append(projected)
     return {'query': visible_query, 'full_query_sha256': sha(group['query']),
         'omitted_query_fields': omitted, 'reference': decode(group['answer']),
         'rollouts': rolls, 'audio_inspected': False,

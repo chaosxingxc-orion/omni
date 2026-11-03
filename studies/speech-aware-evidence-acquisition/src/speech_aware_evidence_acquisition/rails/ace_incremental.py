@@ -57,7 +57,9 @@ def _exact_json(text, fields, schema):
 def build_input(source, parent, *, learning_config_sha256, resident_context, completion_cap,
                 reserve_tokens, max_groups, max_delta, max_findings, max_items, max_characters,
                 max_prompt_tokens_total, max_completion_tokens_total, reflector_contract=None,
-                compact_text_chars=None, compact_reason_chars=None):
+                compact_text_chars=None, compact_reason_chars=None,
+                evidence_view='compact-v1', development_instruction=None, development_material=None,
+                invalid_delta_policy='stop-preserve-v1'):
     """Accept native-verified original batch; bind all groups once, no filtering.
 
     Source is the existing load_finalized_shards-compatible custody, including
@@ -81,6 +83,23 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
     require(all(type(v) is int and v > 0 for k, v in bounds.items() if k != 'reserve_tokens')
             and type(reserve_tokens) is int and reserve_tokens >= 0, 'finite positive ACE bounds required')
     require(reflector_contract in CONTRACTS, 'unsupported ACE reflector contract')
+    require(evidence_view in ('compact-v1', 'full-query-v1'), 'unsupported ACE evidence view')
+    require(invalid_delta_policy in ('stop-preserve-v1', 'reject-collision-keep-parent-v1'),
+            'unsupported ACE invalid delta policy')
+    if invalid_delta_policy != 'stop-preserve-v1':
+        bounds['invalid_delta_policy'] = invalid_delta_policy
+    if development_material is not None:
+        from .construction_development import validate_material
+        validate_material(development_material, source)
+        require(evidence_view == 'full-query-v1', 'development material requires full-query evidence')
+    if development_instruction is not None:
+        require(isinstance(development_instruction, str) and development_instruction.strip()
+                and len(development_instruction) <= 4096,
+                'bounded development instruction required')
+    if evidence_view != 'compact-v1':
+        bounds['evidence_view'] = evidence_view
+    if development_instruction is not None:
+        bounds['development_instruction'] = development_instruction
     if reflector_contract is not None:
         bounds['reflector_contract'] = reflector_contract
     for key, value in (('compact_text_chars', compact_text_chars), ('compact_reason_chars', compact_reason_chars)):
@@ -113,7 +132,7 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
                     'original trajectory model/policy/parent provenance differs')
             tids.add(tid); validate_reward(row['reward'], mode)
         evidence.append({'query_id': qid, 'group_sha256': sha(group),
-                         'evidence': project_group_evidence(group)})
+                         'evidence': project_group_evidence(group, evidence_view=evidence_view)})
     ledger, identities, totals = source['native_source_usage'], set(), dict.fromkeys(USAGE, 0)
     require(isinstance(ledger, list) and ledger, 'complete source cost ledger required')
     for entry in ledger:
@@ -138,6 +157,8 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
         'rollout_kind': batch['rollout_kind'], 'reward_mode': mode,
         'offline_stale_policy': parent['sha256'] != batch['parent']['sha256'],
         'observed_associations_not_causal': True, 'candidate_publishable': False}
+    if development_material is not None:
+        body['development_material'] = copy.deepcopy(development_material)
     return {**body, 'input_sha256': sha(body)}
 
 
@@ -166,6 +187,14 @@ def reflect_messages(document, index, items, count_tokens):
         'Original trajectories may predate this library; do not invent item exposure or success. '
         'Every reference must name supplied trajectories; you may emit empty findings/signals. '
         'At most '+str(document['bounds']['max_findings'])+' findings and signals respectively.')
+    if document['bounds'].get('development_instruction'):
+        system += (' Development task contract: ' + document['bounds']['development_instruction'] +
+            ' Produce conditional, runtime-observable hypotheses with an action and exception; '
+            'separate data ambiguity, program defects and native model/system errors. Do not use gold '
+            'reference values as runtime triggers.')
+    if 'development_material' in document:
+        system += (' Development-only task: ' + document['development_material']['task_template']
+            + ' ' + document['development_material']['boundary'])
     if contract in (REFLECTOR_CONTRACT_V2, COMPACT_CONTRACT_V3):
         system += (
             ' Reflector contract: '+contract+'. '
@@ -185,6 +214,11 @@ def reflect_messages(document, index, items, count_tokens):
         'offline_stale_policy': document['offline_stale_policy'] or items != document['parent']['items'],
         'generator_item_exposure_verified': False,
         'original_group': document['groups'][index]}
+    if 'development_material' in document:
+        material = document['development_material']
+        payload['diagnostic_train_only'] = material['groups'][index]['diagnostic_train_only']
+        payload['development_material_sha256'] = material['sha256']
+        payload['diagnostic_source_pins'] = material['spec']
     if contract is not None:
         payload.update(reflector_contract=contract, allowed_item_ids=sorted(items))
     if contract == COMPACT_CONTRACT_V3:
@@ -292,6 +326,9 @@ def curate_messages(document, index, items, reflection, metadata, count_tokens):
         'are positive examples. No automatic promotion. Empty delta is valid. At most '
         +str(document['bounds']['max_delta'])+' delta operations; resulting library at most '
         +str(document['bounds']['max_items'])+' items and '+str(document['bounds']['max_characters'])+' characters.')
+    if document['bounds'].get('development_instruction'):
+        system += (' Development task contract: ' + document['bounds']['development_instruction'] +
+            ' Keep complete evidence provenance and return an empty delta when no executable rule is supported.')
     if document['bounds'].get('reflector_contract') == COMPACT_CONTRACT_V3:
         system = system.replace('schema=saea-ace-delta-v1.', 'schema=saea-ace-delta-v3.')
         system += (' Complete example: {"schema":"saea-ace-delta-v3","deltas":[],"unresolved_conflicts":[]}. '
@@ -311,6 +348,9 @@ def curate_messages(document, index, items, reflection, metadata, count_tokens):
 def merge_delta(text, items, reflection, bounds):
     """Grow/refine deterministic merge: untouched bytes survive; aliases coalesce."""
     compact = bounds.get('reflector_contract') == COMPACT_CONTRACT_V3
+    policy = bounds.get('invalid_delta_policy', 'stop-preserve-v1')
+    require(policy in ('stop-preserve-v1', 'reject-collision-keep-parent-v1'),
+            'unsupported ACE invalid delta policy')
     limits = compact_limits(bounds)
     result = _exact_json(text, {'schema', 'deltas', 'unresolved_conflicts'},
         'saea-ace-delta-v3' if compact else 'saea-ace-delta-v1')
@@ -355,7 +395,19 @@ def merge_delta(text, items, reflection, bounds):
         if action == 'ADD' and matches:
             duplicates.append({'delta_index': index, 'existing_id': matches[0], 'reason': 'normalized duplicate'})
             continue
-        require(action != 'UPDATE' or not (set(matches)-{target}), 'MODIFY collides with another item; explicit refinement required')
+        if action == 'UPDATE' and set(matches)-{target}:
+            if policy == 'reject-collision-keep-parent-v1':
+                # Reject the entire delta, including preceding operations.
+                # The exact invalid response stays in native/learner custody;
+                # no retry, hidden repair, budget expansion or partial merge.
+                return {'items': copy.deepcopy(items), 'operations': [], 'delta': result,
+                    'duplicates': [], 'unresolved_conflicts': result['unresolved_conflicts'],
+                    'semantic_support_verified': False, 'rejected_delta': {
+                        'policy': policy, 'delta_index': index, 'target_id': target,
+                        'colliding_item_ids': sorted(set(matches)-{target}),
+                        'response_text_sha256': hashlib.sha256(text.encode()).hexdigest(),
+                        'reason': 'normalized MODIFY collision; complete parent retained'}}
+            require(False, 'MODIFY collides with another item; explicit refinement required')
         if action == 'UPDATE' and candidate[target] == content:
             duplicates.append({'delta_index': index, 'existing_id': target, 'reason': 'unchanged content'})
             continue
@@ -385,6 +437,7 @@ def execute(learner, document, *, count_tokens, verify_source):
     source = verify_source()
     require(sha(source) == document['source_sha256'], 'ACE native source changed')
     rebuilt = build_input(source, document['parent'], learning_config_sha256=document['learning_config_sha256'],
+        development_material=document.get('development_material'),
         **{k: v for k, v in bounds.items() if k != 'max_calls'})
     require(rebuilt == document, 'ACE evidence derivation differs')
     def persist(path, value):
