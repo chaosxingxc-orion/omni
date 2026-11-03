@@ -1,0 +1,108 @@
+{
+  "schema": "saea-real-phase-timing-v1",
+  "checkpoint_sha256": "b630836375728720b6693976a155a960e875ba883fb38c3b4ad5ed7b4a8600da",
+  "timing_partial_tail": false,
+  "rows": 313,
+  "metrics": {
+    "perception/scientific_request": {
+      "n": 313,
+      "mean_s": 12.280334853834232,
+      "p50_s": 11.767811699974118,
+      "p95_s": 22.861346670018975
+    },
+    "perception/request_total": {
+      "n": 313,
+      "mean_s": 44.21166286290727,
+      "p50_s": 45.93847481999546,
+      "p95_s": 75.51420047000283
+    },
+    "perception/http_request": {
+      "n": 313,
+      "mean_s": 12.087338165783795,
+      "p50_s": 11.506063549983082,
+      "p95_s": 22.806242949998705
+    },
+    "solver/scientific_request": {
+      "n": 313,
+      "mean_s": 240.72888510843515,
+      "p50_s": 237.46732490000431,
+      "p95_s": 391.9337614100077
+    },
+    "solver/request_total": {
+      "n": 313,
+      "mean_s": 264.581816237414,
+      "p50_s": 252.49184653998236,
+      "p95_s": 427.14557882997906
+    },
+    "solver/http_request": {
+      "n": 313,
+      "mean_s": 240.44107529396308,
+      "p50_s": 237.43232077997527,
+      "p95_s": 391.86014418001287
+    },
+    "perception_end_to_solver_request_start": {
+      "n": 313,
+      "mean_s": 25.064974215174555,
+      "p50_s": 8.53398519998882,
+      "p95_s": 69.1225489799981
+    },
+    "perception_start_to_solver_end": {
+      "n": 313,
+      "mean_s": 333.8584533154958,
+      "p50_s": 306.01169139001286,
+      "p95_s": 548.0505362899858
+    },
+    "admission_to_perception_request_start": {
+      "n": 313,
+      "mean_s": 138.68477356166224,
+      "p50_s": 31.23661121999612,
+      "p95_s": 422.2468566199823
+    },
+    "pre_perception_observed_slot_wait": {
+      "n": 313,
+      "mean_s": 119.59655842335272,
+      "p50_s": 4.030007403343916e-06,
+      "p95_s": 415.78402253999957
+    },
+    "pre_perception_other_elapsed": {
+      "n": 313,
+      "mean_s": 19.088215138309522,
+      "p50_s": 22.705973359989002,
+      "p95_s": 32.572646690008696
+    },
+    "solver_request_end_to_sample_finished": {
+      "n": 313,
+      "mean_s": 0.06115358364245759,
+      "p50_s": 0.028329090011538938,
+      "p95_s": 0.12481916998513043
+    },
+    "admission_to_sample_finished": {
+      "n": 313,
+      "mean_s": 472.60438046080054,
+      "p50_s": 528.0027192799898,
+      "p95_s": 628.0064977299771
+    }
+  },
+  "missing_timing_entries": 0,
+  "missing_sample_count": 0,
+  "sample_timing_coverage": {
+    "expected_rows": 313,
+    "boundary_present_rows": 313,
+    "boundary_missing_rows": 0,
+    "joined_phase_rows": 313,
+    "unjoined_phase_rows": 0
+  },
+  "pre_perception_slot_coverage": {
+    "joined_rows": 313,
+    "rows_without_observed_wait": 0
+  },
+  "all_timing_complete": true,
+  "limitations": [
+    "Completed subset is descriptive and may be biased toward faster samples.",
+    "P\u2192S gap contains preparation/FIT/scheduling; not pure CPU time.",
+    "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+    "Nested intervals overlap; do not sum as whole-task wall time.",
+    "Pre-P slot wait and other elapsed partition only matched sample intervals; other elapsed is not pure CPU time. Missing slot events are unknown."
+  ],
+  "new_model_calls": 0
+}

@@ -6,6 +6,7 @@ ordering. Gaps include CPU/scheduling/FIT and are not labelled as pure compute.
 import argparse
 from collections import defaultdict
 import json
+import math
 from pathlib import Path
 import statistics
 import sys
@@ -32,10 +33,49 @@ def roles(output):
     return {'perception':contacts[branch['contact_id']]['request_id'],'solver':contacts[branch['solver_contact_id']]['request_id']}
 
 
+
+def slot_wait_partition(events, *, sample_id, pid, admitted, request_started):
+    """Partition pre-P latency using observed slot waits, never inferred CPU time.
+
+    Intersect and union same-process intervals to avoid charging later waits or
+    overlapping spans twice. Absence is unknown, not a zero-wait observation.
+    """
+    spans = []
+    for event in events:
+        if event.get('stage') != 'dispatch_trajectory_slot_wait' or event.get('sample_id') != sample_id:
+            continue
+        if event.get('pid') != pid:
+            raise ValueError('slot wait belongs to another monotonic clock')
+        start, elapsed = event['started_monotonic'], event['elapsed_seconds']
+        if any(type(x) not in (int, float) or not math.isfinite(x) for x in (start, elapsed)) or elapsed < 0:
+            raise ValueError('invalid slot wait interval')
+        end = start + elapsed
+        if start > request_started or end < admitted:
+            continue
+        if event.get('status') != 'ok':
+            raise ValueError('pre-perception slot wait did not complete successfully')
+        spans.append((max(admitted, start), min(request_started, end)))
+    if not spans:
+        return None
+    merged = []
+    for start, end in sorted(spans):
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    wait = sum(end-start for start, end in merged)
+    return wait, max(0, request_started-admitted-wait)
+
+
 def join(rows,events):
     by_request={};metrics=defaultdict(list);missing=[];seen=set()
     boundary_present = 0
     joined_phase_rows = 0
+    slot_wait_rows = 0
+    slot_events = defaultdict(list)
+    for event in events:
+        if event.get("stage") == "dispatch_trajectory_slot_wait":
+            slot_events[event.get("sample_id")].append(event)
     for e in events:
         if e['stage'] not in ('request_total','http_request'):continue
         if not e.get('request_id') or not e.get('sample_id'):continue
@@ -77,6 +117,12 @@ def join(rows,events):
                 if not admitted <= p_start <= s_end <= finished + .001:
                     raise ValueError('sample/role time boundaries do not nest')
                 metrics['admission_to_perception_request_start'].append(p_start - admitted)
+                partition = slot_wait_partition(slot_events[row.sample_id], sample_id=row.sample_id,
+                    pid=p['pid'], admitted=admitted, request_started=p_start)
+                if partition is not None:
+                    slot_wait_rows += 1
+                    metrics['pre_perception_observed_slot_wait'].append(partition[0])
+                    metrics['pre_perception_other_elapsed'].append(partition[1])
                 metrics['solver_request_end_to_sample_finished'].append(max(0, finished - s_end))
                 metrics['admission_to_sample_finished'].append(finished - admitted)
                 joined_phase_rows += 1
@@ -91,8 +137,11 @@ def join(rows,events):
                 'joined_phase_rows': joined_phase_rows,
                 'unjoined_phase_rows': len(seen) - joined_phase_rows,
             },
+            'pre_perception_slot_coverage': {'joined_rows': slot_wait_rows,
+                'rows_without_observed_wait': joined_phase_rows-slot_wait_rows},
             'all_timing_complete': bool(seen) and not missing and joined_phase_rows == len(seen),
-            'limitations':['Completed subset is descriptive and may be biased toward faster samples.','P→S gap contains preparation/FIT/scheduling; not pure CPU time.','FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.','Nested intervals overlap; do not sum as whole-task wall time.'],'new_model_calls':0}
+            'limitations':['Completed subset is descriptive and may be biased toward faster samples.','P→S gap contains preparation/FIT/scheduling; not pure CPU time.','FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.','Nested intervals overlap; do not sum as whole-task wall time.',
+                'Pre-P slot wait and other elapsed partition only matched sample intervals; other elapsed is not pure CPU time. Missing slot events are unknown.'],'new_model_calls':0}
 
 
 def analyze(checkpoint,timing):

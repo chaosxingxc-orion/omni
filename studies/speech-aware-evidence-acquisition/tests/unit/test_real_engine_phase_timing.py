@@ -96,3 +96,36 @@ def test_empty_rows_do_not_claim_complete_timing():
     result = m.join([], [])
     assert result['sample_timing_coverage']['expected_rows'] == 0
     assert not result['all_timing_complete']
+
+
+def test_slot_partition_clips_and_unions_only_pre_p_waits():
+    def event(start, seconds, sample='s'):
+        return {'stage': 'dispatch_trajectory_slot_wait', 'sample_id': sample,
+            'pid': 1, 'status': 'ok', 'started_monotonic': start, 'elapsed_seconds': seconds}
+    events = [event(85, 10), event(94, 4), event(110, 10), event(90, 10, 'other')]
+    assert m.slot_wait_partition(events, sample_id='s', pid=1,
+        admitted=90, request_started=100) == (8, 2)
+    assert m.slot_wait_partition([], sample_id='s', pid=1,
+        admitted=90, request_started=100) is None
+
+
+def test_slot_wait_join_retains_unknown_and_exposes_residual():
+    rows, events = inputs(); add_sample_boundary(rows[0])
+    events.append({'stage': 'dispatch_trajectory_slot_wait', 'sample_id': 's',
+        'pid': 1, 'status': 'ok', 'started_monotonic': 92, 'elapsed_seconds': 6})
+    result = m.join(rows, complete_events(events[:2]) + events[2:])
+    assert result['metrics']['pre_perception_observed_slot_wait']['mean_s'] == 6
+    assert result['metrics']['pre_perception_other_elapsed']['mean_s'] == 4
+    assert result['pre_perception_slot_coverage'] == {'joined_rows': 1, 'rows_without_observed_wait': 0}
+    missing = m.join(rows, events[:2])
+    assert missing['pre_perception_slot_coverage']['rows_without_observed_wait'] == 1
+    assert 'pre_perception_observed_slot_wait' not in missing['metrics']
+
+
+@pytest.mark.parametrize('change', [{'pid': 2}, {'elapsed_seconds': -1},
+    {'elapsed_seconds': float('nan')}, {'status': 'error'}])
+def test_invalid_slot_intervals_cannot_be_attributed(change):
+    event = {'stage': 'dispatch_trajectory_slot_wait', 'sample_id': 's',
+        'pid': 1, 'status': 'ok', 'started_monotonic': 92, 'elapsed_seconds': 6, **change}
+    with pytest.raises(ValueError):
+        m.slot_wait_partition([event], sample_id='s', pid=1, admitted=90, request_started=100)
