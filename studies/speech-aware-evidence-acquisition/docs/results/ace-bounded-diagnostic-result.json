@@ -1,0 +1,94 @@
+{
+  "schema": "saea-ace-bounded-diagnostic-v1",
+  "arms": {
+    "a": {
+      "total_groups": 51,
+      "completed_groups": 1,
+      "usage": {
+        "calls": 3,
+        "prompt_tokens": 10733,
+        "completion_tokens": 8637
+      },
+      "responses": [
+        {
+          "request_id": "flight-0001",
+          "response_sha256": "be3dcfc46f833db98eec4a5e3b0b478a515176915c355841d784187f82b0bf45",
+          "finish_reason": "stop",
+          "json_error": null,
+          "latency_seconds": 44.59416014997987
+        },
+        {
+          "request_id": "flight-0002",
+          "response_sha256": "0bcd3ac962eb33960b1ebfb413d376d9ec1093e2ff8fde9afc2964a7eac14493",
+          "finish_reason": "stop",
+          "json_error": null,
+          "latency_seconds": 29.8719362700067
+        },
+        {
+          "request_id": "flight-0003",
+          "response_sha256": "a254b48631a58f0411f2eca2ae35302d43bdfb6c2ecd311be8b17279d1773caf",
+          "finish_reason": "stop",
+          "json_error": "Expecting ',' delimiter: line 3 column 896 (char 897)",
+          "latency_seconds": 46.50762613999541
+        }
+      ],
+      "archive_sha256": "82a523ce0344498150f7be50c1027812c673d6d327217cf27430763ba322d1f5",
+      "state": "ABORTED",
+      "cards": 2,
+      "instances": 1,
+      "eta_seconds": null
+    },
+    "b": {
+      "total_groups": 51,
+      "completed_groups": 2,
+      "usage": {
+        "calls": 5,
+        "prompt_tokens": 19324,
+        "completion_tokens": 16185
+      },
+      "responses": [
+        {
+          "request_id": "flight-0005",
+          "response_sha256": "50af108d96e7d5c32e84cbc80abdfd35d9054f6f2f057648679cf1cfc46c1fac",
+          "finish_reason": "stop",
+          "json_error": "Expecting ',' delimiter: line 3 column 1090 (char 1091)",
+          "latency_seconds": 46.50071399001172
+        },
+        {
+          "request_id": "flight-0001",
+          "response_sha256": "75167364c441eb4beb75e7ae6ea1cd34f0427b086e69154d884f2ad185217662",
+          "finish_reason": "stop",
+          "json_error": null,
+          "latency_seconds": 43.44825488998322
+        },
+        {
+          "request_id": "flight-0002",
+          "response_sha256": "ecd8cbd4684baf6c4269c36abf027d22d52a00b790d8ae04db87367956fc552c",
+          "finish_reason": "stop",
+          "json_error": null,
+          "latency_seconds": 40.08085059002042
+        },
+        {
+          "request_id": "flight-0004",
+          "response_sha256": "554cc8840c514a1794b852c44aebba83a6cf57ab090d5dcd91d96a72dbecd2f6",
+          "finish_reason": "stop",
+          "json_error": null,
+          "latency_seconds": 44.37548171001254
+        },
+        {
+          "request_id": "flight-0003",
+          "response_sha256": "498f98c913f3fe5c70aab55b4aa6b1826fa0c5cb6a4b1c7cf648bcc6049288a4",
+          "finish_reason": "stop",
+          "json_error": null,
+          "latency_seconds": 43.728173649986275
+        }
+      ],
+      "archive_sha256": "3e918be08743b06c163b7721f2edd1a42e21043d35a223d117fb410194b621c0",
+      "state": "ABORTED",
+      "cards": 2,
+      "instances": 1,
+      "eta_seconds": null
+    }
+  },
+  "algorithm_gain_claimed": false
+}
