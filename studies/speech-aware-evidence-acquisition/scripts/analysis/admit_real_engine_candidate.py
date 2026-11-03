@@ -38,7 +38,7 @@ def admit(repo,data,name):
     if cell['readiness']['state']!='held':raise ValueError('candidate not held')
     from registered_workload import validate_workload, assert_execution_binding
     rows=validate_workload(repo,data,name,spec)
-    assert_execution_binding(spec)
+    assert_execution_binding(spec, repo=repo)
     receipt=repo/'docs'/spec['runtime_receipt']
     if not receipt.is_file():raise ValueError('observed runtime receipt missing')
     lock=repo.parents[1]/'docs/datasets.lock.json'

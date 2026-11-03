@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 
-def assert_execution_binding(spec, environ=None):
+def assert_execution_binding(spec, environ=None, *, repo=None):
     """Bind an explicit full-test client width to the shared factory environment."""
     if spec.get('workload_kind') == 'gepa-solver-template-probe':
         import os
@@ -27,8 +27,12 @@ def assert_execution_binding(spec, environ=None):
         return
     import os
     environ = os.environ if environ is None else environ
-    expected = {'admitted_level': 96, 'instances': 2, 'total_client_concurrency': 192,
-        'environment': {'SAEA_ADMITTED_LEVEL': '96'}}
+    if repo is None:
+        raise ValueError('full-test execution requires registered deployment configuration')
+    from final_report_workload import execution_binding
+    expected = execution_binding(repo, spec['job_config'])
+    if spec.get('profile') != spec['job_config']['runtime']['profile']:
+        raise ValueError('full-test profile differs from registered configuration')
     if (spec.get('execution') != expected
             or spec.get('job_config', {}).get('execution') != {'admitted_level': 96}
             or environ.get('SAEA_ADMITTED_LEVEL') != '96'

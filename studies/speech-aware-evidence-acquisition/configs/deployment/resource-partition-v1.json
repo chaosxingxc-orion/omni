@@ -1,0 +1,21 @@
+{
+  "schema": "saea-resource-partition-v1",
+  "card_count": 8,
+  "lanes": [
+    {
+      "name": "fulltest",
+      "profile": "qwen3-omni-fulltest-1xtp4-s128-ctx48k-v1",
+      "state_root": "/var/lib/omni-local-state/resource-partition-v1/lanes/fulltest"
+    },
+    {
+      "name": "explore-a",
+      "profile": "qwen3-omni-explore-a-1xtp2-s48-ctx48k-v1",
+      "state_root": "/var/lib/omni-local-state/resource-partition-v1/lanes/explore-a"
+    },
+    {
+      "name": "explore-b",
+      "profile": "qwen3-omni-explore-b-1xtp2-s48-ctx48k-v1",
+      "state_root": "/var/lib/omni-local-state/resource-partition-v1/lanes/explore-b"
+    }
+  ]
+}

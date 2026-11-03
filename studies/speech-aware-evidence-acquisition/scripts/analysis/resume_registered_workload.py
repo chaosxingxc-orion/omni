@@ -32,7 +32,7 @@ def main(repo,data,candidate,out,target_attempt,source_attempt=None):
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned recovery output required')
     package=repo/'docs/readiness'/candidate;spec=read(package/'candidate.json')
     rows=validate_workload(repo,data,candidate,spec)
-    assert_execution_binding(spec)
+    assert_execution_binding(spec, repo=repo)
     if os.environ.get('SAEA_DEPLOYMENT_PROFILE')!=spec['profile']:raise ValueError('declared deployment differs')
     registered=read(package/'generation-plan-registered-v1.json');original=registered['execution_plan']
     allowed={f.name for f in fields(ExecutionPlan)}

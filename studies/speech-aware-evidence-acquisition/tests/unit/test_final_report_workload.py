@@ -353,14 +353,14 @@ def test_admission_run_resume_require_same_c96_environment(configured):
     spec = {'workload_kind': m.KIND, 'job_config': config, 'profile': PROFILE,
         'execution': m.execution_binding(repo, config)}
     env = {'SAEA_DEPLOYMENT_PROFILE': PROFILE, 'SAEA_ADMITTED_LEVEL': '96'}
-    assert_execution_binding(spec, env)
+    assert_execution_binding(spec, env, repo=repo)
     for value in (None, '4', '128', '096'):
         changed = dict(env)
         if value is None: changed.pop('SAEA_ADMITTED_LEVEL')
         else: changed['SAEA_ADMITTED_LEVEL'] = value
-        with pytest.raises(ValueError, match='C96'): assert_execution_binding(spec, changed)
+        with pytest.raises(ValueError, match='C96'): assert_execution_binding(spec, changed, repo=repo)
     with pytest.raises(ValueError):
-        assert_execution_binding(spec, {**env, 'SAEA_DEPLOYMENT_PROFILE': 'another'})
+        assert_execution_binding(spec, {**env, 'SAEA_DEPLOYMENT_PROFILE': 'another'}, repo=repo)
     assert_execution_binding({'workload_kind': 'tfrl-h1-fresh-observation'}, {})
 
 
@@ -517,6 +517,24 @@ def test_lane_keeps_full_population_and_scientific_policy(lane_configured):
     assert m.execution_binding(repo, config)['total_client_concurrency'] == 96
     assert m.execution_binding(repo, config)['instances'] == 1
     assert m.identity(config['method'])[1] == 'SAEA-SLURP-A0-POFF-LANE-FULLTEST-V1'
+
+
+def test_lane_admission_and_dispatch_accept_exact_single_instance(lane_configured):
+    from registered_workload import assert_execution_binding
+    repo, _, config = lane_configured
+    spec = {'workload_kind': m.KIND, 'job_config': config, 'profile': m.LANE_PROFILE,
+            'execution': m.execution_binding(repo, config)}
+    env = {'SAEA_DEPLOYMENT_PROFILE': m.LANE_PROFILE, 'SAEA_ADMITTED_LEVEL': '96'}
+    assert_execution_binding(spec, env, repo=repo)
+    for field, value in [('instances', 2), ('total_client_concurrency', 192), ('admitted_level', 48)]:
+        changed = copy.deepcopy(spec)
+        changed['execution'][field] = value
+        with pytest.raises(ValueError): assert_execution_binding(changed, env, repo=repo)
+    changed = copy.deepcopy(spec)
+    changed['job_config']['method'] = 'a0-poff'
+    with pytest.raises(ValueError): assert_execution_binding(changed, env, repo=repo)
+    with pytest.raises(ValueError):
+        assert_execution_binding({**spec, 'profile': PROFILE}, {**env, 'SAEA_DEPLOYMENT_PROFILE': PROFILE}, repo=repo)
 
 
 @pytest.mark.parametrize('fault', ['cards', 'port', 'tp', 'instances'])
