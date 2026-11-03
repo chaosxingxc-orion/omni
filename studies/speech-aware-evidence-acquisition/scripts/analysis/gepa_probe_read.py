@@ -45,6 +45,16 @@ def summarize(results, items):
         'purpose': 'Fixed16 native mechanism check, not an algorithm quality verdict.'}
 
 
+def verify_delivered_scores(lock_result, delivered):
+    from stage3_rollout_score import correctness_fields
+    rows = lock_result['per_sample']
+    if len(rows) != len(delivered) or {r['sample_id'] for r in rows} != set(delivered):
+        raise ValueError('lock scores differ from sealed delivering population')
+    for row in rows:
+        if correctness_fields(row) != correctness_fields(delivered[row['sample_id']]):
+            raise ValueError('lock scores differ from sealed delivering scores')
+
+
 def validate_recipe(recipe, spec):
     expected = {'schema': 'saea-gepa-probe-read-v1', 'rows': 16,
         'generation_run_id': spec['run_id'], 'attempt_id': spec['attempt_id'],
@@ -100,6 +110,7 @@ def run(repo, data, out, name):
         if set(doc) != {scorer_id}:
             raise ValueError('unexpected arm scorer')
         results[arm] = doc[scorer_id]
+    verify_delivered_scores(results['lock'], scorer.sealed_per_sample(directory, rid, scorer_id))
     result = summarize(results, roster['items'])
     result.update(schema='saea-gepa-probe-result-v1', new_model_calls=0,
         official_arm_scoring_jobs=2, source=rendered['source'],

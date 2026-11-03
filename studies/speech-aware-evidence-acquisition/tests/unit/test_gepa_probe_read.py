@@ -41,3 +41,14 @@ def test_recipe_binds_attempt_roster_and_delivering_arm():
     m.validate_recipe(recipe, spec)
     for field, value in [('attempt_id', 'other'), ('roster', {}), ('delivered_arm', 'gepa'), ('rows', 15)]:
         with pytest.raises(ValueError): m.validate_recipe({**recipe, field: value}, spec)
+
+
+def test_lock_must_reproduce_sealed_delivering_scores():
+    results, _ = fixture()
+    for row in results['lock']['per_sample']:
+        row['slu_f1_f1'] = 1.0
+    delivered = {r['sample_id']: copy.deepcopy(r) for r in results['lock']['per_sample']}
+    m.verify_delivered_scores(results['lock'], delivered)
+    delivered[next(iter(delivered))]['scenario_action_exact'] = 0
+    with pytest.raises(ValueError, match='sealed delivering scores'):
+        m.verify_delivered_scores(results['lock'], delivered)
