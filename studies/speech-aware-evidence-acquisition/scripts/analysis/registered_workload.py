@@ -6,6 +6,14 @@ from pathlib import Path
 
 def assert_execution_binding(spec, environ=None):
     """Bind an explicit full-test client width to the shared factory environment."""
+    if spec.get('workload_kind') == 'gepa-solver-template-probe':
+        import os
+        environ = os.environ if environ is None else environ
+        if (spec.get('execution') != {'admitted_level': 96}
+                or environ.get('SAEA_ADMITTED_LEVEL') != '96'
+                or environ.get('SAEA_DEPLOYMENT_PROFILE') != spec.get('profile')):
+            raise ValueError('GEPA probe requires registered C96 environment')
+        return
     if spec.get('workload_kind') == 'tfrl-h1-fresh-observation' and spec.get('comparison') is not None:
         import os
         from tfrl_h1_observation import comparison_config
@@ -95,6 +103,9 @@ def validate_workload(repo, data, name, spec):
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "final-report-method":
         from final_report_workload import validate
+        return validate(repo, data, name, spec, exp, view)
+    if spec.get("workload_kind") == "gepa-solver-template-probe":
+        from gepa_probe_workload import validate
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "tfrl-h1-fresh-observation":
         from tfrl_h1_observation import validate
