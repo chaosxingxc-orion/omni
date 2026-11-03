@@ -1,0 +1,50 @@
+{
+  "schema": "saea-tfrl-knowledge-consumption-v1",
+  "mode": "development",
+  "observability": "debug",
+  "candidate_kind": "solver_prompt",
+  "algorithm": {
+    "name": "gepa",
+    "reference_paper": "arXiv:2507.19457v2",
+    "reference_commit": "8c7b697a71977980afc7537dac0881e784eef99f",
+    "selector": "gepa-8c7b697-cover-prune-ordered-v1",
+    "merge_enabled": false
+  },
+  "dataset": {
+    "partition_sha256": "REQUIRED_CONTENT_PIN",
+    "feedback_ids_source": "stable_train_partition.feedback",
+    "selection_ids_source": "stable_train_partition.selection",
+    "excluded_ids_source": "h2_and_test",
+    "gold_visible_to": ["diagnostic_reflector", "cpu_scorer"],
+    "gold_forbidden_to": ["solver"]
+  },
+  "frozen": {
+    "knowledge_sha256": "REQUIRED_CONTENT_PIN",
+    "perception_sha256": "REQUIRED_CONTENT_PIN",
+    "supply_sha256": "REQUIRED_CONTENT_PIN",
+    "output_protocol_sha256": "REQUIRED_CONTENT_PIN",
+    "model_and_deployment_sha256": "REQUIRED_CONTENT_PIN"
+  },
+  "search": {
+    "seed": 20261103,
+    "batch_size": 4,
+    "max_rounds": 12,
+    "candidate_instruction_token_limit": 2048,
+    "reflection_completion_token_limit": 4096,
+    "proxy_reward": "0.5*intent_exact+0.5*exact_slot_f1",
+    "acceptance": "strict_minibatch_then_complete_selection"
+  },
+  "budget": {
+    "calls": 1461,
+    "prompt_tokens": 24000000,
+    "completion_tokens": 6000000,
+    "allocated_card_hours": 32
+  },
+  "runtime": {
+    "max_retrieval_items": 8,
+    "max_rerank_items": 8,
+    "max_retries": 0,
+    "normal_debug_are_orthogonal": true
+  },
+  "status": "DRAFT_REQUIRES_REAL_PARTITION_AND_SOURCE_PINS"
+}
