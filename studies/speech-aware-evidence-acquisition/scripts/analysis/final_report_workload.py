@@ -25,11 +25,17 @@ DATASET_SHA = '127556a475996603862302ef68196d80ec075818cd88a407e37d42387b664e34'
 ROSTER_SHA = 'b925e90ab99727e7d0ff9fc4ec6b7c91a0d86bff0a5b0a4746b9cc98237b19c3'
 AUTH = 'docs/decisions/2026-10-30-owner-full-test-and-first-system-gain.md'
 AUTH_SHA = 'ca1701626e9f5d5d48d39bb9fe5523f6b7c1480feb2cb16a8091957a9f83382f'
+POFF_AUTH = 'docs/decisions/Agent-Full-Test-Development-Lock.md'
+POFF_AUTH_SHA = 'f8be5615dd0befe90a97f091ee0a1553f6ea6f4926a1d8b99eb5706d4be8ebea'
+DEVELOPMENT_LOCK = 'configs/evaluation/agent-development-lock-v1.json'
+DEVELOPMENT_LOCK_SHA = '318f984210e53009f2f2aa72bab1ea8f105492da7d81ffaccc0567499c21ebd0'
 SOURCES = {
     'direct': ('configs/baseline/slurp-direct-only-fold-b-baseline-raw-port-v1.json',
                '8470b6fd2ce5b9f0fe907c43efbe5a093aaf6f46a31f3c6510f807305f0adbcf'),
     'a0': ('configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json',
            'a3dcf828852595f68844ed6d778d5b2c6088271c8d4f83a2feb4b12b8edc15dc'),
+    'a0-poff': ('configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json',
+                'a3dcf828852595f68844ed6d778d5b2c6088271c8d4f83a2feb4b12b8edc15dc'),
 }
 MODEL_SOURCE = 'configs/model/bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-closemarker-port-v2.json'
 MODEL_SOURCE_SHA = '8d9b3a1d12601bb0f4abbbc3f2709e48afd561a7ccf2c6dbbffd93c9e153309d'
@@ -76,8 +82,36 @@ def pinned_path(root, binding):
 
 def identity(method):
     if method not in SOURCES:
-        raise ValueError('only frozen direct or a0 methods are supported')
+        raise ValueError('only frozen direct, a0 or a0-poff methods are supported')
     return f'slurp-{method}-fulltest-v1', f'SAEA-SLURP-{method.upper()}-FULLTEST-V1'
+
+
+def authority(method):
+    identity(method)
+    return {'relpath': POFF_AUTH, 'sha256': POFF_AUTH_SHA} if method == 'a0-poff' else {
+        'relpath': AUTH, 'sha256': AUTH_SHA}
+
+
+def development_policy(repo, config, context):
+    """Only the separately registered method may adopt the pinned P-off choice."""
+    if config['method'] != 'a0-poff':
+        if 'development_lock' in config:
+            raise ValueError('historical methods cannot adopt the development lock')
+        return None
+    binding = {'relpath': DEVELOPMENT_LOCK, 'sha256': DEVELOPMENT_LOCK_SHA}
+    if config.get('development_lock') != binding:
+        raise ValueError('a0-poff requires the exact frozen development lock')
+    lock = read(pinned_path(repo, binding))
+    expected = {'perception': {'enable_thinking': False, 'answer_reserve_tokens': 1024},
+                'solver': {'enable_thinking': True, 'reasoning_budget_tokens': 3072,
+                           'answer_reserve_tokens': 1024}}
+    if (lock['thinking_policy'] != expected or lock['test_used_for_tuning'] is not False
+            or config['runtime']['model_fragment'] != lock['model_fragment']
+            or config['runtime']['profile'] != lock['deployment_profile']
+            or config['execution']['admitted_level'] != lock['per_instance_concurrency']
+            or lock['cards'] != 8 or lock['instances'] != 2 or context != 49152):
+        raise ValueError('frozen P-off/S3072 development policy or runtime changed')
+    return copy.deepcopy(expected)
 
 
 def population(repo):
@@ -144,7 +178,7 @@ def runtime_binding(repo, binding):
 def allowance(repo, config, roster):
     from speech_aware_evidence_acquisition.contracts import require_owner_split_allowance
     _, run = identity(config['method'])
-    auth = {'relpath': AUTH, 'sha256': AUTH_SHA}
+    auth = authority(config['method'])
     pinned_path(repo, auth)
     binding = config['allowance']
     if not isinstance(binding, dict) or set(binding) != {'path', 'sha256'}:
@@ -173,7 +207,7 @@ def create_allowance(repo, data, method):
     environment(repo)
     require_unspent(repo, data, method)
     roster, _ = population(repo)
-    auth = {'relpath': AUTH, 'sha256': AUTH_SHA}
+    auth = authority(method)
     pinned_path(repo, auth)
     name, run = identity(method)
     rel = f'docs/receipts/owner/{name}-allowance-v1.json'
@@ -213,7 +247,7 @@ def execution_binding(repo, config):
 def check_config(repo, config, roster):
     required = {'schema', 'method', 'source_baseline', 'runtime', 'execution', 'budget', 'allowance'}
     if (not isinstance(config, dict) or not required <= set(config)
-            or set(config) - required - {'a0_inputs'}
+            or set(config) - required - {'a0_inputs', 'development_lock'}
             or config['schema'] != 'saea-final-report-job-config-v1'):
         raise ValueError('explicit final-report job configuration required')
     identity(config['method'])
@@ -232,6 +266,7 @@ def check_config(repo, config, roster):
     allowance(repo, config, roster)
     model, context = runtime_binding(repo, config['runtime'])
     execution_binding(repo, config)
+    development_policy(repo, config, context)
     if config['method'] == 'direct' and 'a0_inputs' in config:
         raise ValueError('Direct must not consume A0 retrieval inputs')
     return base, model, context, contacts
@@ -300,6 +335,9 @@ def derive(repo, data, config):
     roster, view = population(repo)
     source, model, context, contacts = check_config(repo, config, roster)
     base = copy.deepcopy(source)
+    policy = development_policy(repo, config, context)
+    if policy is not None:
+        base['thinking_policy'] = policy
     name, run = identity(config['method'])
     base.pop('prepared_phase_supply', None)
     base['serving_slot_tokens'] = context
@@ -483,7 +521,7 @@ def validate(repo, data, name, spec, exp, view):
             or spec['fit_run_id'] != run + '-FIT' or spec['fit_attempt_id'] != 'fit-v1'
             or spec['rows'] != ROWS or view != expected_view
             or spec['split_identity_hash'] != roster['split_identity_hash']
-            or spec['authority'] != AUTH or spec['evaluation_policy'] != POLICY
+            or spec['authority'] != authority(config['method'])['relpath'] or spec['evaluation_policy'] != POLICY
             or spec.get('execution') != execution_binding(repo, config)
             or any(spec[k] != runtime[k] for k in ('model_fragment', 'service_session', 'profile', 'runtime_receipt'))):
         raise ValueError('complete frozen final-report identity changed')
@@ -508,7 +546,7 @@ def validate(repo, data, name, spec, exp, view):
             or prep['run_id'] != run or prep['method'] != config['method']
             or prep['stage_sha256'] != spec['stage_sha256'] or prep['new_model_calls'] != 0):
         raise ValueError('verified own complete preparation required')
-    if config['method'] == 'a0':
+    if config['method'] != 'direct':
         from tfrl_odd40_cells import verify_output
         current_supply = read(pinned_path(data, base['prepared_phase_supply']))
         original_supply = read(pinned_path(data, prep['supply']))
@@ -538,7 +576,7 @@ def register(repo, data, stage_record, prepared):
     if not prepared.resolve().is_relative_to((data / 'work/codex').resolve()):
         raise ValueError('preparation evidence must remain in owned data root')
     base, exp, roster, view = derive(repo, data, config)
-    if config['method'] == 'a0':
+    if config['method'] != 'direct':
         from tfrl_odd40_cells import verify_output
         verify_output(read(pinned_path(data, prep['supply']))['output'], [r['sample_id'] for r in roster['items']])
         base['prepared_phase_supply'] = prep['supply']
@@ -558,7 +596,7 @@ def register(repo, data, stage_record, prepared):
              'composed_config_hash': cfg.config_hash, 'protocol_hash': ph, 'split_identity_hash': split}
     spec = {**ident, **config['runtime'], 'workload_kind': KIND, 'job_config': config,
         'execution': execution_binding(repo, config),
-        'baseline': name, 'authority': AUTH, 'decision_id': name + '-owner-admission',
+        'baseline': name, 'authority': authority(config['method'])['relpath'], 'decision_id': name + '-owner-admission',
         'decision_relpath': f'coordination/{name}/root-admission-v1.json',
         'evaluation_policy': POLICY, 'scientific_baseline_sha256': scientific_hash(base),
         'preparation': pin(data, str(prepared.relative_to(data))), 'stage_sha256': sha(stage_record),
@@ -599,7 +637,7 @@ def register(repo, data, stage_record, prepared):
             config['runtime']['model_fragment'], 'slurp TEST complete13078', 'final-report', split, 'no',
             str(cap), str(budget['planned_speech_audio_seconds']), str(budget['planned_gpu_hours']),
             'All prior evaluated samples and costs retained; no learning from test', str((pkg / rel).relative_to(repo)),
-            'Plan SHA256 ' + hashlib.sha256(raw(doc)).hexdigest() + '; root countersigned under recorded owner amendment, coordinator Codex; ' + AUTH])
+            'Plan SHA256 ' + hashlib.sha256(raw(doc)).hexdigest() + '; root countersigned under recorded owner amendment, coordinator Codex; ' + spec['authority']])
     recipe = {'schema': 'saea-final-report-analysis-v1', 'read_run_id': run + '-READ',
         'generation_run_id': run, 'attempt_id': 'generation-v1', 'rows': ROWS, 'roster': spec['roster'],
         'scorer': 'slurp-slu-official-test', 'complete_manifest_only': True,
@@ -609,7 +647,7 @@ def register(repo, data, stage_record, prepared):
     ledger_rows.append([date, run + '-READ', 'model-free-check', 'Complete frozen official report',
         'no model', 'slurp TEST complete13078', 'final-report', split, 'no', '0', '0', '0',
         'All prior costs retained', str((pkg / 'analysis-recipe-v1.json').relative_to(repo)),
-        'Read sealed complete official score; never score/select a partial subset; ' + AUTH])
+        'Read sealed complete official score; never score/select a partial subset; ' + spec['authority']])
     pkg.mkdir(parents=True)
     for rel, doc in docs.items():
         publish_new(pkg / rel, raw(doc))
@@ -618,8 +656,10 @@ def register(repo, data, stage_record, prepared):
         stream.write('\n## Frozen full-test ' + config['method'] + '\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| ' + ' | '.join(['---'] * 15) + ' |\n' + '\n'.join('| ' + ' | '.join(row) + ' |' for row in ledger_rows) + '\n')
         stream.flush()
         __import__('os').fsync(stream.fileno())
+    decoding = ('P-off/1024 answer; S3072/1024 answer' if config['method'] == 'a0-poff'
+                else 'ordinary4096/3072 task decoding')
     publish_new(repo / 'docs/readiness' / (name + '-preregistration.md'),
-        b'# Frozen full-test workload\n\nComplete13078 original TEST rows, official test scorer, no test tuning. Frozen source method and ordinary4096/3072 task decoding. Shared FlightRuntime only. Held until committed registration, shared admission/repin, clean preflight and original runtime lease. Preserve unresolved contacts, known responses and historical costs; no blind replay.\n')
+        ('# Frozen full-test workload\n\nComplete13078 original TEST rows, official test scorer, no test tuning. Frozen source method and ' + decoding + '. Shared FlightRuntime only. Held until committed registration, shared admission/repin, clean preflight and original runtime lease. Preserve unresolved contacts, known responses and historical costs; no blind replay.\n').encode())
     return {'candidate': name, 'rows': ROWS, 'readiness': 'held', 'new_model_calls': 0, 'source_commit': head}
 
 
@@ -631,7 +671,7 @@ def main():
     for key in ('config', 'stage-record', 'prepared', 'out'):
         p.add_argument('--' + key, type=Path)
     p.add_argument('--candidate')
-    p.add_argument('--method', choices=['direct', 'a0'])
+    p.add_argument('--method', choices=list(SOURCES))
     a = p.parse_args()
     if a.mode == 'allowance':
         if not a.method: p.error('allowance requires --method')

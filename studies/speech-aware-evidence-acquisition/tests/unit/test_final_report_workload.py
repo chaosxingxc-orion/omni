@@ -26,7 +26,11 @@ def put(root, rel, doc):
 def configured(tmp_path, monkeypatch):
     repo, data = tmp_path / 'repo', tmp_path / 'data'
     repo.mkdir(); data.mkdir()
-    for rel in [m.ROSTER, f'configs/dataset/{m.DATASET}.json', m.AUTH, m.MODEL_SOURCE,
+    for rel in [m.ROSTER, f'configs/dataset/{m.DATASET}.json', m.AUTH, m.POFF_AUTH,
+                m.DEVELOPMENT_LOCK, m.MODEL_SOURCE,
+                'scripts/flights/nx/l338_port_pins.json',
+                'docs/receipts/knowledge/slurp-kb-size-pool-annotated-exemplars-minus-r01.json',
+                'configs/baseline/slurp-native-default-plan-lock-baseline-v1.json',
                 *[value[0] for value in m.SOURCES.values()],
                 f'configs/model/{MODEL}.json', f'configs/deployment/{PROFILE}.json']:
         target = repo / rel
@@ -35,8 +39,26 @@ def configured(tmp_path, monkeypatch):
     for directory in ('configs/probes', 'configs/modules', 'configs/consumption'):
         if (ROOT / directory).exists():
             shutil.copytree(ROOT / directory, repo / directory, dirs_exist_ok=True)
+    # Armed compiler components require their actual admission records.
+    def copy_records(value):
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key == 'record' and isinstance(item, str) and (ROOT / item).is_file():
+                    destination = repo / item
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(ROOT / item, destination)
+                else:
+                    copy_records(item)
+        elif isinstance(value, list):
+            for item in value:
+                copy_records(item)
+    for source, _ in m.SOURCES.values():
+        copy_records(m.read(ROOT / source))
     (repo / 'docs/exposure-ledger.md').write_text('Historical exposures and costs remain.\n')
     model = m.read(repo / f'configs/model/{MODEL}.json')
+    # The live alias is runtime-local; public source keeps its identical model
+    # contract under the deployment fragment. Do not fabricate a new contract.
+    put(repo, 'configs/model/bf16-thinking-real500-tp4-s128-v1.json', model)
     roster, view = m.population(repo)
     name, run = m.identity('direct')
     doc = {'schema': 'saea-owner-split-allowance-v1', 'study': 'speech-aware-evidence-acquisition',
@@ -340,3 +362,133 @@ def test_admission_run_resume_require_same_c96_environment(configured):
     with pytest.raises(ValueError):
         assert_execution_binding(spec, {**env, 'SAEA_DEPLOYMENT_PROFILE': 'another'})
     assert_execution_binding({'workload_kind': 'tfrl-h1-fresh-observation'}, {})
+
+
+@pytest.fixture
+def poff_configured(configured):
+    repo, data, config = configured
+    config['method'] = 'a0-poff'
+    config['source_baseline'] = dict(zip(('relpath', 'sha256'), m.SOURCES['a0-poff']))
+    config['development_lock'] = {'relpath': m.DEVELOPMENT_LOCK, 'sha256': m.DEVELOPMENT_LOCK_SHA}
+    config['runtime']['model_fragment'] = m.read(repo / m.DEVELOPMENT_LOCK)['model_fragment']
+    config['budget'].update(generation_calls=52312, fit_calls=26156)
+    config['allowance'] = m.create_allowance(repo, data, 'a0-poff')['allowance']
+    return repo, data, config
+
+
+@pytest.fixture
+def poff_derivable(poff_configured, monkeypatch):
+    """Isolate derivation; production vector custody remains checked by a0_inputs."""
+    repo, data, config = poff_configured
+    agreement_receipt = put(data, 'fixtures/agreement-receipt.json', {'artifact_id': 'SAEA-QUERY-UNIT'})
+    inputs = {key: {'relpath': 'fixtures/' + key + '.jsonl', 'sha256': 'a' * 64}
+              for key in ('segment_query', 'content_query', 'agreement', 'content_provenance')}
+    inputs.update(agreement_receipt=agreement_receipt, source_receipts=[], query_ledger_row='SAEA-QUERY-UNIT')
+    monkeypatch.setattr(m, 'a0_inputs', lambda *args: inputs)
+    return repo, data, config
+
+
+def test_poff_uses_separate_identity_authority_and_cannot_resume_old_a0(poff_configured):
+    repo, data, config = poff_configured
+    old_run = m.identity('a0')[1]
+    (data / 'attempts' / old_run).mkdir(parents=True)
+    assert m.identity('a0-poff') == ('slurp-a0-poff-fulltest-v1', 'SAEA-SLURP-A0-POFF-FULLTEST-V1')
+    m.require_unspent(repo, data, 'a0-poff')
+    with pytest.raises(ValueError, match='spend'): m.require_unspent(repo, data, 'a0')
+    allowance = m.allowance(repo, config, m.population(repo)[0])
+    assert allowance['authorization_basis'] == m.authority('a0-poff')
+    assert old_run not in allowance['permitted_run_ids']
+    assert m.authority('a0') == m.authority('direct') == {'relpath': m.AUTH, 'sha256': m.AUTH_SHA}
+    # Historical hold is retained; the successor authority enables this new method.
+    assert m.read(repo / m.DEVELOPMENT_LOCK)['full_test_held'] is True
+
+
+def test_poff_only_changes_thinking_from_shared_a0_derivation(poff_derivable):
+    repo, data, config = poff_derivable
+    new, exp, roster, view = m.derive(repo, data, config)
+    old_config = copy.deepcopy(config)
+    old_config['method'] = 'a0'
+    old_config.pop('development_lock')
+    old_config['allowance'] = m.create_allowance(repo, data, 'a0')['allowance']
+    old, _, _, _ = m.derive(repo, data, old_config)
+    assert new.pop('thinking_policy') == m.read(repo / m.DEVELOPMENT_LOCK)['thinking_policy']
+    for key in ('native_contact_fit', 'what_this_is'):
+        new.pop(key); old.pop(key)
+    assert new == old
+    assert len(roster['items']) == len(view['items']) == exp['population']['count'] == 13078
+    assert exp['execution_plan']['planned_model_calls'] == 52312
+
+
+@pytest.mark.parametrize('fault', ['missing_lock', 'lock_pin', 'lock_bytes', 'model_alias', 'model', 'source', 'authority'])
+def test_poff_rejects_development_source_and_runtime_drift(poff_configured, fault):
+    repo, data, config = poff_configured
+    if fault == 'missing_lock': config.pop('development_lock')
+    elif fault == 'lock_pin': config['development_lock']['sha256'] = '0' * 64
+    elif fault == 'lock_bytes':
+        lock = m.read(repo / m.DEVELOPMENT_LOCK)
+        lock['thinking_policy']['solver']['reasoning_budget_tokens'] = 1024
+        put(repo, m.DEVELOPMENT_LOCK, lock)
+    elif fault == 'model_alias': config['runtime']['model_fragment'] = MODEL
+    elif fault == 'model':
+        path = f"configs/model/{config['runtime']['model_fragment']}.json"
+        model = m.read(repo / path); model['decoding_params']['temperature'] = 0.9
+        put(repo, path, model)
+    elif fault == 'source':
+        path = m.SOURCES['a0-poff'][0]; source = m.read(repo / path)
+        source['knowledge_stores']['train-exemplars']['snapshot']['sha256'] = '0' * 64
+        put(repo, path, source)
+    else:
+        path = config['allowance']['path']; doc = m.read(repo / path)
+        doc['authorization_basis'] = m.authority('a0')
+        put(repo, path, doc); config['allowance']['sha256'] = m.sha(repo / path)
+    with pytest.raises(ValueError): m.check_config(repo, config, m.population(repo)[0])
+
+
+def test_old_method_cannot_silently_adopt_new_policy(configured):
+    repo, data, config = configured
+    config['development_lock'] = {'relpath': m.DEVELOPMENT_LOCK, 'sha256': m.DEVELOPMENT_LOCK_SHA}
+    with pytest.raises(ValueError, match='historical methods'): m.derive(repo, data, config)
+
+
+def test_poff_still_requires_all_real_full_test_inputs(poff_configured):
+    repo, data, config = poff_configured
+    with pytest.raises(ValueError, match='real full-test'): m.derive(repo, data, config)
+
+
+@pytest.mark.parametrize('fault', ['perception', 'solver', 'knowledge'])
+def test_poff_staged_scientific_drift_is_rejected(poff_derivable, fault):
+    repo, data, config = poff_derivable
+    out = data / 'work/codex/stage'
+    m.stage(repo, data, config, out)
+    path = f"configs/baseline/{m.identity('a0-poff')[0]}.json"
+    base = m.read(repo / path)
+    if fault == 'perception': base['thinking_policy']['perception']['enable_thinking'] = True
+    elif fault == 'solver': base['thinking_policy']['solver']['reasoning_budget_tokens'] = 1024
+    else: base['knowledge_stores']['train-exemplars']['snapshot']['sha256'] = '0' * 64
+    put(repo, path, base)
+    with pytest.raises(ValueError, match='staged configuration changed'):
+        m.staged_inputs(repo, data, out / 'complete.json')
+
+
+def test_poff_registers_and_validates_shared_a0_preparation(poff_derivable, monkeypatch):
+    import tfrl_odd40_cells
+    from speech_aware_evidence_acquisition.core.flight import factory
+    repo, data, config = poff_derivable
+    verified = []
+    monkeypatch.setattr(tfrl_odd40_cells, 'verify_output', lambda output, ids: verified.append((output, len(ids))))
+    class Runtime:
+        def prepare_phase_supply(self, target, max_workers):
+            put(data, str(target.relative_to(data)), {'output': {'unit_fixture': True}})
+    monkeypatch.setattr(factory, 'build_flight_runtime', lambda *args, **kw: Runtime())
+    out = data / 'work/codex/stage'
+    m.stage(repo, data, config, out)
+    prepared = data / 'work/codex/prepared'
+    m.prepare(repo, data, out / 'complete.json', prepared)
+    result = m.register(repo, data, out / 'complete.json', prepared / 'complete.json')
+    name = result['candidate']
+    spec = m.read(repo / f'docs/readiness/{name}/candidate.json')
+    exp = m.read(repo / f'configs/experiment/{name}.json')
+    assert spec['authority'] == m.POFF_AUTH
+    assert m.validate(repo, data, name, spec, exp, m.population(repo)[1]) == 13078
+    assert verified and all(count == 13078 for _, count in verified)
+    assert m.read(repo / f'configs/baseline/{name}.json')['prepared_phase_supply'] is not None
