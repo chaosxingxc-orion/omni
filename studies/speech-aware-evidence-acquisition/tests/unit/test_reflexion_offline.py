@@ -230,3 +230,68 @@ def test_error_feedback_variant_binds_new_evidence_without_changing_compact():
     answer=compact_reflection();answer.pop('schema')
     assert m.validate_reflection(json.dumps(answer),new['groups'][0],200,m.ERROR_FEEDBACK_CONTRACT)['reflection']['trajectory_ids']==['T0-0']
     with pytest.raises(ValueError):m.validate_reflection(json.dumps(answer),old['groups'][0],200,m.COMPACT_CONTRACT)
+
+
+def test_envelope_variant_changes_identity_and_complete_example_only():
+    _, old = fixture(reflector_contract=m.ERROR_FEEDBACK_CONTRACT)
+    _, new = fixture(reflector_contract=m.ENVELOPE_CONTRACT)
+    prior = m.reflect_messages(old, 0, m.empty_memory(), lambda _: 10)
+    revised = m.reflect_messages(new, 0, m.empty_memory(), lambda _: 10)
+    old_payload = json.loads(prior['messages'][1]['content'])
+    new_payload = json.loads(revised['messages'][1]['content'])
+    assert old['input_sha256'] != new['input_sha256']
+    assert prior['messages_sha256'] != revised['messages_sha256']
+    assert new_payload['reflector_contract'] == m.ENVELOPE_CONTRACT
+    assert {k: v for k, v in new_payload.items() if k != 'reflector_contract'} == {
+        k: v for k, v in old_payload.items() if k != 'reflector_contract'}
+    assert 'Otherwise reflection must be exactly' in prior['messages'][0]['content']
+    system = revised['messages'][0]['content']
+    assert 'Otherwise reflection must be exactly' not in system
+    assert '{"reflection":{"content":"one short conditional sentence","refs":["r0"]}}' in system
+    assert '{"reflection":null}' in system
+    assert 'hidden reference at inference time' in system
+    assert 'missing reference entity remains an error' in system
+
+
+def test_envelope_replay_preserves_aliases_null_and_cost(tmp_path):
+    answer = {'reflection': {'content': 'Use observable evidence.', 'refs': ['r0', 'r2']}}
+    _, doc, run, calls, fits = runner(tmp_path, reflector_contract=m.ENVELOPE_CONTRACT,
+        answers=[answer, {'reflection': None}, answer])
+    first = run()
+    assert first == run()
+    assert len(calls) == len(fits) == 3
+    assert first['updates'][0]['reflection']['reflection']['trajectory_ids'] == ['T0-0', 'T0-2']
+    assert first['updates'][1]['action'] == 'empty'
+    assert not first['semantic_support_verified'] and not first['deployment_accepted']
+    assert first['cumulative_known_usage']['calls'] == 315
+    assert m.replay_candidate(doc, [json.dumps(a) for a in [answer, {'reflection': None}, answer]])['items'] == first['items']
+
+
+@pytest.mark.parametrize('answer', [
+    {'content': 'Use observable evidence.', 'refs': ['r0']},
+    {'schema': m.ENVELOPE_CONTRACT, 'reflection': None},
+    {'reflection': {'content': 'Use observable evidence.', 'refs': ['r4']}},
+    {'reflection': {'content': 'Use observable evidence.', 'refs': ['r0', 'r0']}},
+    {'reflection': {'content': '字' * 201, 'refs': ['r0']}},
+    {'reflection': {'content': 'Use observable evidence.', 'refs': ['r0'], 'rationale': 'extra'}},
+])
+def test_envelope_known_invalid_response_is_retained_without_retry(tmp_path, answer):
+    _, _, run, calls, fits = runner(tmp_path, reflector_contract=m.ENVELOPE_CONTRACT,
+        answers=[answer] * 3)
+    for _ in range(2):
+        with pytest.raises(ValueError):
+            run()
+    assert len(calls) == len(fits) == 1
+    assert len(list((tmp_path/'contacts').glob('*.response.json'))) == 1
+    assert not (tmp_path/'candidate.json').exists()
+
+
+def test_envelope_does_not_relax_old_invalid_responses():
+    _, doc = fixture(reflector_contract=m.ENVELOPE_CONTRACT)
+    inner = {'content': 'Use observable evidence.', 'refs': ['r0']}
+    for contract in (m.ERROR_FEEDBACK_CONTRACT, m.ENVELOPE_CONTRACT):
+        for text in (json.dumps(inner), '{"reflection":null,"reflection":null}'):
+            with pytest.raises(ValueError):
+                m.validate_reflection(text, doc['groups'][0], 200, contract)
+    with pytest.raises(ValueError):
+        m.validate_reflection(json.dumps({'reflection': inner}), doc['groups'][0], 200, m.COMPACT_CONTRACT)
