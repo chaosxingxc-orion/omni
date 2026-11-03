@@ -100,6 +100,32 @@ def test_runtime_binding_rejects_model_or_receipt_drift(repo):
         with pytest.raises(ValueError):m.runtime_binding(repo,{**BINDING,key:value})
 
 
+@pytest.mark.parametrize('arm,budget,cap',[('off',None,1024),('short',512,1536),('baseline',3072,4096)])
+def test_thinking_comparison_changes_only_role_budget_and_identity(monkeypatch,arm,budget,cap):
+    from speech_aware_evidence_acquisition.core.reasoning_knobs import resolve_node_decoding
+    from registered_workload import assert_execution_binding
+    monkeypatch.setattr(m,'runtime_binding',lambda *a:m.read(ROOT/f'configs/model/{m.MODEL}.json'))
+    cfg={'schema':'saea-h1-perception-thinking-v1','arm':arm,'admitted_level':96}
+    base,exp,h1,view=m.derive(ROOT,1,BINDING,cfg)
+    old,_,_,old_view=m.derive(ROOT,1,BINDING)
+    assert base['native_episode']==old['native_episode']
+    assert base['phase_material']==old['phase_material']
+    assert base['knowledge_stores']==old['knowledge_stores']
+    assert view==old_view and len(exp['populations'][0]['ids'])==313
+    decoding={'temperature':0,'seed':20260913,'max_tokens':4096,'thinking_budget_tokens':3072,
+              'chat_template_kwargs':{'enable_thinking':True}}
+    p=resolve_node_decoding(decoding,base['thinking_policy'],'perception',cap=4096)
+    s=resolve_node_decoding(decoding,base['thinking_policy'],'solver',cap=4096)
+    assert p.get('thinking_budget_tokens')==budget and p['max_tokens']==cap
+    assert s==decoding
+    assert m.predecessor(ROOT,None,1,cfg) is None
+    spec={'workload_kind':m.KIND,'comparison':cfg,'profile':BINDING['profile']}
+    assert_execution_binding(spec,{'SAEA_ADMITTED_LEVEL':'96','SAEA_DEPLOYMENT_PROFILE':BINDING['profile']})
+    with pytest.raises(ValueError):assert_execution_binding(spec,{})
+    with pytest.raises(ValueError):m.identity(2,cfg)
+    with pytest.raises(ValueError):m.comparison_config({**cfg,'admitted_level':128})
+
+
 @pytest.fixture
 def registered(repo,monkeypatch):
     repo,data=repo

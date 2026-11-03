@@ -6,6 +6,15 @@ from pathlib import Path
 
 def assert_execution_binding(spec, environ=None):
     """Bind an explicit full-test client width to the shared factory environment."""
+    if spec.get('workload_kind') == 'tfrl-h1-fresh-observation' and spec.get('comparison') is not None:
+        import os
+        from tfrl_h1_observation import comparison_config
+        cfg = comparison_config(spec['comparison'])
+        environ = os.environ if environ is None else environ
+        if (environ.get('SAEA_ADMITTED_LEVEL') != str(cfg['admitted_level'])
+                or environ.get('SAEA_DEPLOYMENT_PROFILE') != spec.get('profile')):
+            raise ValueError('H1 thinking comparison requires registered C96 environment')
+        return
     if spec.get('workload_kind') != 'final-report-method':
         return
     import os

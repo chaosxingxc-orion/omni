@@ -24,18 +24,38 @@ DATASET = 'slurp-speech-native-stage3-construction-r01c'
 SOURCE_BASE = 'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json'
 SOURCE_EXP = 'configs/experiment/slurp-tfrl-hardset-a0-observation-r1-v1.json'
 ROUNDS = (1, 2)
+THINKING_ARMS = {'off': {'enable_thinking': False, 'answer_reserve_tokens': 1024},
+    'short': {'enable_thinking': True, 'reasoning_budget_tokens': 512, 'answer_reserve_tokens': 1024},
+    'baseline': {'enable_thinking': True, 'reasoning_budget_tokens': 3072, 'answer_reserve_tokens': 1024}}
 
 
-def identity(round_index):
+def comparison_config(value):
+    if (not isinstance(value, dict) or set(value) != {'schema', 'arm', 'admitted_level'}
+            or value['schema'] != 'saea-h1-perception-thinking-v1'
+            or value['arm'] not in THINKING_ARMS or type(value['admitted_level']) is not int
+            or value['admitted_level'] != 96):
+        raise ValueError('exact bounded H1 perception thinking comparison required')
+    return copy.deepcopy(value)
+
+
+def identity(round_index, comparison=None):
+    if comparison is not None:
+        cfg = comparison_config(comparison)
+        if round_index != 1 or type(round_index) is not int:
+            raise ValueError('thinking comparison has one fixed pass per arm')
+        arm = cfg['arm']
+        return (f'slurp-h1-perception-thinking-{arm}-v1', f'SAEA-SLURP-H1-PERCEPTION-THINKING-{arm.upper()}-V1')
     if type(round_index) is not int or round_index not in ROUNDS:
         raise ValueError('only two bounded fixed-H1 observations are permitted')
     return (f'slurp-tfrl-h1-fresh-observation-r{round_index}-v1',
             f'SAEA-SLURP-TFRL-H1-FRESH-OBSERVATION-R{round_index}-V1')
 
 
-def predecessor(repo, data, round_index):
+def predecessor(repo, data, round_index, comparison=None):
     """The second full pass measures conditional repeatability, never iid hardness."""
-    identity(round_index)
+    identity(round_index, comparison)
+    if comparison is not None:
+        return None
     if round_index == 1:
         return None
     from speech_aware_evidence_acquisition.core.bundle.verify import verify_bundle
@@ -118,10 +138,10 @@ def require_unspent(repo, data, run):
             raise ValueError('existing registration or spend; never blindly repeat')
 
 
-def derive(repo, round_index, binding):
+def derive(repo, round_index, binding, comparison=None):
     from speech_aware_evidence_acquisition.rails import consumption_module as cm
     from speech_aware_evidence_acquisition.rails.adapters.slurp_module_hooks import carrier_module_hooks
-    name, run = identity(round_index)
+    name, run = identity(round_index, comparison)
     roster, view = population(repo)
     model = runtime_binding(repo, binding)
     base, exp = read(repo/SOURCE_BASE), read(repo/SOURCE_EXP)
@@ -153,19 +173,28 @@ def derive(repo, round_index, binding):
                             'note':'Fresh P then S; original lock policy; no H2 score or candidate feedback.'}
     exp['stage3_measurement'].update(rows=313,read_roster=roster['roster_id'],claims_benefit=False,
         note='One fixed fresh-request observation; no independent stochastic errors or confirmed hardness claim.')
+    if comparison is not None:
+        cfg = comparison_config(comparison)
+        # Only P's policy changes; each independent chain feeds its own P to S.
+        base['thinking_policy'] = {'perception': copy.deepcopy(THINKING_ARMS[cfg['arm']]),
+                                   'solver': copy.deepcopy(THINKING_ARMS['baseline'])}
+        base['what_this_is'] = 'Fixed H1 Agent comparison: P thinking '+cfg['arm']+'; same S, knowledge, prompts and real audio.'
+        exp['purpose'] = base['what_this_is']
+        exp['stage3_measurement']['note'] = base['what_this_is']+' TRAIN development comparison, not test gain.'
+        exp['stage3_algorithm']['note'] = 'P-only thinking policy ablation; no learned experience or H2 feedback.'
     return base, exp, roster, view
 
 
-def stage(repo, data, round_index, binding, out):
+def stage(repo, data, round_index, binding, out, comparison=None):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     assert_execution_environment();head=require_clean_study_repo(repo)
-    name,run=identity(round_index);require_unspent(repo,data,run)
-    previous=predecessor(repo,data,round_index)
+    name,run=identity(round_index,comparison);require_unspent(repo,data,run)
+    previous=predecessor(repo,data,round_index,comparison)
     paths=[repo/f'configs/{k}/{name}.json' for k in ('baseline','experiment')]
     if out.exists() or any(p.exists() for p in paths) or not out.resolve().is_relative_to(data.resolve()/'work/codex'):
         raise ValueError('fresh owned stage and configuration required')
-    base,exp,roster,view=derive(repo,round_index,binding)
+    base,exp,roster,view=derive(repo,round_index,binding,comparison=comparison) if comparison is not None else derive(repo,round_index,binding)
     out.mkdir(parents=True)
     for path,doc in zip(paths,(base,exp)):publish_new(path,raw(doc))
     result={'schema':'saea-h1-observation-stage-v1','round':round_index,'cell':name,'run_id':run,'rows':313,
@@ -175,6 +204,7 @@ def stage(repo, data, round_index, binding, out):
         'fallback_inclusive_cap':1252,'fit_calls':626,'new_model_calls':0,'test_labels_read':False,
         'h2_scores_read':False,'prior_costs_reused_or_reset':False,'generation_authorized':False}
     if previous is not None:result['predecessor']=previous
+    if comparison is not None:result['comparison']=comparison_config(comparison)
     publish_new(out/'complete.json',raw(result));return result
 
 
@@ -184,8 +214,9 @@ def prepare(repo,data,stage_record,out):
     from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
     from tfrl_odd40_cells import verify_output
     assert_execution_environment();require_clean_study_repo(repo)
-    staged=read(stage_record);name,run=identity(staged['round']);require_unspent(repo,data,run)
-    if staged.get('predecessor')!=predecessor(repo,data,staged['round']):raise ValueError('observation predecessor changed')
+    staged=read(stage_record);comparison=staged.get('comparison')
+    name,run=identity(staged['round'],comparison);require_unspent(repo,data,run)
+    if staged.get('predecessor')!=predecessor(repo,data,staged['round'],comparison):raise ValueError('observation predecessor changed')
     for rel,digest in staged['output_hashes'].items():
         if sha(confined(repo,rel))!=digest:raise ValueError('stage changed')
     if out.exists() or not out.resolve().is_relative_to(data.resolve()/'work/codex'):raise ValueError('fresh owned preparation required')
@@ -201,10 +232,11 @@ def prepare(repo,data,stage_record,out):
 def validate(repo,data,name,spec,exp,view):
     from tfrl_odd40_cells import verify_output
     from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
-    expected_name,run=identity(spec['round']);binding=spec['runtime_binding']
+    comparison=spec.get('comparison')
+    expected_name,run=identity(spec['round'],comparison);binding=spec['runtime_binding']
     if name!=expected_name or spec['run_id']!=run:raise ValueError('observation round identity differs')
-    if spec.get('predecessor')!=predecessor(repo,data,spec['round']):raise ValueError('observation predecessor changed')
-    expected_base,expected_exp,roster,expected_view=derive(repo,spec['round'],binding)
+    if spec.get('predecessor')!=predecessor(repo,data,spec['round'],comparison):raise ValueError('observation predecessor changed')
+    expected_base,expected_exp,roster,expected_view=derive(repo,spec['round'],binding,comparison)
     cell,=exp['cells'];ids=[r['sample_id'] for r in roster['items']]
     if (name!=expected_name or spec['run_id']!=run or spec['attempt_id']!='generation-v1'
         or spec['fit_run_id']!=run+'-FIT' or spec['fit_attempt_id']!='fit-v1' or spec['rows']!=313
@@ -233,8 +265,9 @@ def register(repo,data,stage_record,prepared):
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
     from speech_aware_evidence_acquisition.core.config import compose,protocol_hash
     assert_execution_environment();head=require_clean_study_repo(repo)
-    staged,prep=read(stage_record),read(prepared);name,run=identity(staged['round']);require_unspent(repo,data,run)
-    previous=predecessor(repo,data,staged['round'])
+    staged,prep=read(stage_record),read(prepared);comparison=staged.get('comparison')
+    name,run=identity(staged['round'],comparison);require_unspent(repo,data,run)
+    previous=predecessor(repo,data,staged['round'],comparison)
     if staged.get('predecessor')!=previous:raise ValueError('observation predecessor changed')
     if (staged['schema']!='saea-h1-observation-stage-v1' or prep['schema']!='saea-h1-observation-prepared-v1'
         or prep['stage_sha256']!=sha(stage_record) or prep['rows']!=313 or prep['run_id']!=run):raise ValueError('exact prepared stage required')
@@ -252,14 +285,18 @@ def register(repo,data,stage_record,prepared):
            'rows':313,'composed_config_hash':cfg.config_hash,'protocol_hash':ph,'split_identity_hash':split}
     spec={**ident,'workload_kind':KIND,'round':staged['round'],'model_fragment':MODEL,'baseline':name,'runtime_binding':binding,
           'service_session':binding['service_session'],'profile':binding['profile'],'runtime_receipt':binding['runtime_receipt'],
-          'authority':AUTH,'decision_id':name+'-owner-admission','decision_relpath':f'coordination/{name}/root-admission-v1.json',
+          'authority':('docs/decisions/Agent-Small-Development-Lock.md' if comparison is not None else AUTH),'decision_id':name+'-owner-admission','decision_relpath':f'coordination/{name}/root-admission-v1.json',
           'roster':pin(repo,H1),'dataset':staged['dataset'],'gain_lock':pin(repo,LOCK),'scientific_baseline_sha256':scientific_hash(base),
           'stage_sha256':sha(stage_record),'generation_program':'Fresh P then S; exact fixed H1, no learned experience.'}
     if previous is not None:spec['predecessor']=previous
+    if comparison is not None:
+        spec['comparison']=comparison_config(comparison)
+        spec['generation_program']='P thinking '+comparison['arm']+' then unchanged thinking S; fixed H1, no learned experience.'
     validate(repo,data,name,spec,exp,read(repo/f'configs/dataset/{DATASET}.json'))
     protocol={'schema':'saea-h1-observation-generation-v1','cells':{'arm':ident},'profile':binding['profile'],
               'roster':spec['roster'],'normal_generation_calls':626,'fallback_inclusive_cap':1252,'round':staged['round'],
               'total_scheduled_rounds':1,'claims_benefit':False,'independent_stochastic_draws_claimed':False}
+    if comparison is not None:protocol['comparison']=comparison_config(comparison)
     docs={'candidate.json':spec,'protocol-registered-v1.json':protocol}
     pp={'relpath':str((pkg/'protocol-registered-v1.json').relative_to(repo)),'sha256':hashlib.sha256(raw(protocol)).hexdigest()}
     ledger_rows=[]
@@ -287,12 +324,16 @@ if __name__=='__main__':
     for k in ('repo','data'):p.add_argument('--'+k,type=Path,required=True)
     for k in ('binding','out','stage-record','prepared'):p.add_argument('--'+k,type=Path)
     p.add_argument('--round',dest='round_index',type=int,choices=ROUNDS)
+    p.add_argument('--comparison',type=Path,help='Fixed P thinking comparison JSON; stage only.')
     a=vars(p.parse_args());mode=a.pop('mode')
-    if mode=='stage':a.pop('stage_record');a.pop('prepared');a['binding']=read(a['binding']);result=stage(**a)
+    if mode=='stage':
+        a.pop('stage_record');a.pop('prepared');a['binding']=read(a['binding'])
+        a['comparison']=read(a['comparison']) if a['comparison'] is not None else None
+        result=stage(**a)
     elif mode=='prepare':
-        for k in ('binding','round_index','prepared'):a.pop(k)
+        for k in ('binding','round_index','prepared','comparison'):a.pop(k)
         result=prepare(**a)
     else:
-        for k in ('binding','round_index','out'):a.pop(k)
+        for k in ('binding','round_index','out','comparison'):a.pop(k)
         result=register(**a)
     print(__import__('json').dumps(result,sort_keys=True))

@@ -27,7 +27,9 @@ def settle(repo, data, out, container, expected_run, expected_attempt, expected_
         state=read(data/'attempts'/expected_run/(expected_attempt+'.json'))
         if state['state'] not in ('ABORTED','FINALIZED'):raise ValueError('terminal attempt required')
         if hashlib.sha256(plan.read_bytes()).hexdigest()!=plan_sha256:raise ValueError('registered plan changed')
-        execution=ExecutionPlan(**{k:v for k,v in read(plan)['execution_plan'].items() if k not in ('schema','study')})
+        registered=read(plan)
+        execution=ExecutionPlan(**{k:v for k,v in registered['execution_plan'].items() if k not in ('schema','study')},
+            **({'owner_allowance':registered['owner_allowance']} if 'owner_allowance' in registered else {}))
         if (execution.run_id,execution.attempt_id)!=(expected_run,expected_attempt):raise ValueError('plan identity differs')
         journal=ContactJournal(data,execution,arm)
         intents=list(journal.root.glob('*.intent.json'))

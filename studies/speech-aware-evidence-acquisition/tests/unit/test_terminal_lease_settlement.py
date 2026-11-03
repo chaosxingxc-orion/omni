@@ -38,6 +38,19 @@ def test_observed_terminal_lease_preserved_before_release(tmp_path,monkeypatch):
     with pytest.raises(ValueError):m.settle(**args)
 
 
+def test_final_report_allowance_preserved_for_plan_validation(tmp_path,monkeypatch):
+    args,blob=prepared(tmp_path,monkeypatch)
+    from speech_aware_evidence_acquisition import contracts
+    allowance={'path':'docs/receipts/owner/test.json','sha256':'a'*64}
+    doc=json.loads(args['plan'].read_bytes());doc['owner_allowance']=allowance
+    args['plan'].write_text(json.dumps(doc));args['plan_sha256']=m.hashlib.sha256(args['plan'].read_bytes()).hexdigest()
+    def plan(**kwargs):
+        assert kwargs['owner_allowance']==allowance
+        return SimpleNamespace(**kwargs)
+    monkeypatch.setattr(contracts,'ExecutionPlan',plan)
+    assert m.settle(**args)['observed_contacts']==1
+
+
 @pytest.mark.parametrize('fault',['foreign','unknown','active','pin','busy'])
 def test_never_releases_unproven_lease(tmp_path,monkeypatch,fault):
     args,blob=prepared(tmp_path,monkeypatch)
