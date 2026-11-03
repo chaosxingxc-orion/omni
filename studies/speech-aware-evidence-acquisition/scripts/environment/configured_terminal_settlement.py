@@ -216,6 +216,7 @@ def deployment(doc, producer, logical, expected):
 def finalized_artifact(doc, producer, logical, expected, source):
     """Reconcile a synchronous artifact seal, never invent a release event."""
     from speech_aware_evidence_acquisition.core.flight.receipts import read_flight_receipts
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import sha as learner_sha
     require(source['attempt_state'] == 'FINALIZED', 'artifact reconciliation needs FINALIZED attempt')
     root = logical / 'runs' / expected['run_id'] / expected['attempt_id']
     pins = {}
@@ -286,16 +287,40 @@ def finalized_artifact(doc, producer, logical, expected, source):
     by_id = {c['request_id']: c for c in contacts}
     require(all(all(row[k] == by_id[row['request_id']][k] for k in ('sample_id','request_sha256','response_sha256','text'))
         for row in rows), 'artifact row/phase contact differs')
-    response_pins = {hashlib.sha256(c['request_id'].encode()).hexdigest()+'.response.json':c['response_sha256']
-        for c in source['contacts']}
-    require(phase['learning']['contact_response_sha256'] == response_pins, 'artifact/native response custody differs')
+    # Learner envelopes use stage/identity keys; native journals use request IDs.
+    # Their file hashes are intentionally different and must be joined explicitly.
+    response_pins = phase['learning']['contact_response_sha256']
+    learner_root = root/'tfgrpo/learner/contacts'
+    actual_files = mapped(producer, learner_root, writable=True)
+    require(isinstance(response_pins, dict) and len(response_pins) == len(contacts)
+        and set(response_pins) == {p.name for p in actual_files.glob('*.response.json')},
+        'artifact learner response coverage differs')
+    observed_ids = set()
+    for name, sha in response_pins.items():
+        require(re.fullmatch(r'[a-f0-9]{64}\.response\.json', name), 'artifact learner filename differs')
+        envelope = read(artifact('learner_response:'+name, learner_root/name, sha))
+        receipt = envelope['response']; rid = receipt['receipt_id'].rsplit('/',1)[-1]
+        require(rid in by_id and rid not in observed_ids
+            and receipt['receipt_id'] == expected['run_id']+'/'+expected['attempt_id']+'/'+rid
+            and envelope['response_sha256'] == learner_sha(receipt)
+            and all(receipt[k] == by_id[rid][k] for k in ('request_sha256','response_sha256','text','usage')),
+            'artifact learner/phase binding differs')
+        native = logical/'contact-journals'/expected['run_id']/expected['attempt_id']
+        key = hashlib.sha256(rid.encode()).hexdigest()
+        native_intent = read(mapped(producer,native/(key+'.intent.json'),writable=True))
+        native_response = read(mapped(producer,native/(key+'.response.json'),writable=True))
+        require(receipt['request_sha256'] == native_intent['request_sha256']
+            and receipt['response_sha256'] == native_response['response_sha256'],
+            'artifact learner/native response custody differs')
+        observed_ids.add(rid)
     for key, cost_key in (('calls','calls_used'),('prompt_tokens','prompt_tokens_total'),('completion_tokens','completion_tokens_total')):
         require(sum(c['usage'][key] for c in contacts) == phase['learning']['usage'][key] == seal['cost'][cost_key],
                 'artifact token accounting differs')
     candidate = phase['learning']['candidate']
     target = logical / candidate['relpath']
     require(candidate['root'] == 'data' and target == root/'tfgrpo/learner/candidate.json', 'artifact candidate path differs')
-    artifact('candidate', target, candidate['sha256'])
+    candidate_doc = read(artifact('candidate', target, candidate['sha256']))
+    require(candidate_doc['contact_response_sha256'] == response_pins, 'artifact candidate contacts differ')
     for key in ('raw_trace','trace_manifest'):
         target = root / (expected['run_id'] + ('.trace.jsonl' if key == 'raw_trace' else '.trace-manifest.json'))
         require(manifest[key]['path'] == str(target), 'artifact trace path differs')

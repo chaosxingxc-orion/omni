@@ -24,14 +24,22 @@ def finalized(configured):
         path = write(root / name, doc)
         return {'path': str(logical / name), 'sha256': m.launcher.digest(path)}
     cost = {'calls_used':1,'audio_seconds_used':0.0,'prompt_tokens_total':5,'completion_tokens_total':3}
-    contact = {'request_id':'req-1','sample_id':'sample-1','request_sha256':'a'*64,
-               'response_sha256':'b'*64,'text':'reflection',
+    native_intent=json.loads(f.journal._path('req-1','intent').read_bytes())
+    native_response=json.loads(f.journal._path('req-1','response').read_bytes())
+    contact = {'request_id':'req-1','sample_id':'sample-1','request_sha256':native_intent['request_sha256'],
+               'response_sha256':native_response['response_sha256'],'text':'reflection',
                'usage':{'calls':1,'prompt_tokens':5,'completion_tokens':3}}
+    learner_receipt={k:v for k,v in contact.items() if k not in ('request_id','sample_id')}
+    learner_receipt['receipt_id']=f.run+'/'+f.attempt+'/req-1'
+    learner_name='d'*64+'.response.json'
+    learner=saved('tfgrpo/learner/contacts/'+learner_name,{'response':learner_receipt,
+        'request_sha256':'e'*64,'response_sha256':m.queue.canonical_hash(learner_receipt)})
+    learner_pins={learner_name:learner['sha256']}
     row = {k:v for k,v in contact.items() if k != 'usage'}
     row.update(result_kind='artifact',arm='prepared-context-text',admitted=True)
     output = root / (f.run+'.outputs.jsonl'); write(output, row)
     output_pin = {'path':str(logical/output.name),'sha256':m.launcher.digest(output)}
-    candidate = saved('tfgrpo/learner/candidate.json', {'candidate':'unaccepted'})
+    candidate = saved('tfgrpo/learner/candidate.json', {'candidate':'unaccepted','contact_response_sha256':learner_pins})
     candidate = {'root':'data','relpath':str(Path(candidate['path']).relative_to(f.logical)),'sha256':candidate['sha256']}
     phases = saved(f.run+'.phases.json', {'run_id':f.run,'attempt_id':f.attempt,'result_kind':'artifact',
         'phases':[{'contact_receipts':[contact]}]})
@@ -49,7 +57,7 @@ def finalized(configured):
     receipts.record('preprocess', {}); receipts.record('serve', {})
     receipts.record('run_phases', {'result_kind':'artifact','processed_dataset_rows':1,'total_dataset_rows':1,
         'outputs_row_count':1,'remaining_dataset_rows':0,'contact_count':1,'learning':{
-        'contact_response_sha256':{response.name:m.launcher.digest(response)},'candidate':candidate,
+        'contact_response_sha256':learner_pins,'candidate':candidate,
         'usage':contact['usage']}})
     receipts.record('seal', {'finalize':{'attempt_state':'FINALIZED','result_kind':'artifact',
         'status':'not-applicable','scores_path':None},'manifest_path':manifest['path'],

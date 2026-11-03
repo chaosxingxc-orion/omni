@@ -4,7 +4,7 @@
 
 `configured_terminal_settlement.py --config /config/settlement.json` 验证一个已终止的学习生产者，保留过期租约并输出可追溯的 `complete.json`。工具不启动模型、不重发请求、不改 attempt、不授权科学结果，也不替后继获得租约或 readiness。
 
-当前仅支持 `learning_strategy_job.py --config` 的 `run` 模式和 `prepared-context-text`，即已锁定的 ACE / Reflexion 路径。GEPA CLI、恢复 attempt、panel lease、缺失 launch-result 的不确定启动均须另行适配；不可用宽松默认值绕过。
+支持 `learning_strategy_job.py --config` 的 `run` 模式，以及已注册的严格 `gepa_mutation_job.py run` 参数契约；两者限定 `prepared-context-text`。恢复 attempt、panel lease、缺失 launch-result 的不确定启动均须另行适配；不可用宽松默认值绕过。
 
 ## 配置
 
@@ -31,8 +31,10 @@
 1. 前驱配置、launch intent/result、Docker ID/image/labels/environment、退出状态逐项一致。没有启动结果不推断成功。
 2. 固定 generation guard inode 下验证 registered plan、manifest、terminal attempt 和每个原始请求/响应；未知请求、孤立响应、次数不一致均阻断。
 3. 存在租约时核验真实 lease PID 已死、run/attempt/head/session 与容器存续时间匹配，再验证 resident 队列和 socket 均空。
-4. 没有租约时必须验证 `generation-released.json`、started receipt 和三项 seal 文件；不以“无锁”替代证明。
+4. 没有租约时验证真实 `generation-released.json`；若历史回调失败未发布release，仅允许严格同步artifact清算分支：真实FINALIZED attempt、stage/hash完整flight receipts、COMPLETED artifact manifest、完整数据行/成本、learner与native响应显式request-id桥接、候选和轨迹文件全部一致。异步task或缺失证据仍阻断，不以“无锁”替代证明。
 5. 先 fsync `audit.json`，原子 rename 过期租约为共享锁目录中的 `settled-flight-<config hash>.json`，fsync 目录，再写 `complete.json`。同配置重入恢复未完成步骤；已完成记录返回原结果，不触碰后继租约。
+
+同步artifact分支不追补历史release、不修改attempt、不再次调用模型。它只记录 `mode=finalized-artifact` 的audit/complete，保留producer原EXIT状态和 `scientific_success=false`；候选是否提高任务精度必须由后续独立评测证明。learner envelope文件hash与native journal文件hash不是同一概念，不得直接比较；通过receipt_id/request_sha256/response_sha256逐条关联。
 
 ## 与队列的关系
 
