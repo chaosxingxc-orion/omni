@@ -46,5 +46,11 @@
   "agreement_votes_per_row": 20,
   "agreement_finished_at": "2026-11-03T02:31:16.35283256Z",
   "agreement_sha256": "7a60b068a2e229be541fcc455d39c26bf51d30d69a5cc97d609754ef33f63b3f",
-  "agreement_receipt_sha256": "d846ced63d8b47188759a04b1fbb8806f8b893b7f532edccbdb1f5cd8e8103ad"
+  "agreement_receipt_sha256": "d846ced63d8b47188759a04b1fbb8806f8b893b7f532edccbdb1f5cd8e8103ad",
+  "phase_supply_status": "COMPLETED",
+  "phase_supply_rows": 13078,
+  "phase_supply_sha256": "3f9049e4e52092b6ae10321cb627ea21949470dfd1fd54f660310a2891d9033c",
+  "phase_supply_finished_at": "2026-11-03T02:37:30.39416156Z",
+  "registration_status": "RUNNING",
+  "generation_status": "NOT_STARTED"
 }
