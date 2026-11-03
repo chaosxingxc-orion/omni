@@ -248,3 +248,17 @@ def test_sealed_release_change_during_quiescence_is_blocked(configured, monkeypa
     monkeypatch.setattr(m.transition, 'quiescence', changed)
     with pytest.raises(ValueError):m.execute(f.path)
     assert not (Path(f.config['state_dir'])/'complete.json').exists()
+
+
+def test_narrow_per_run_mounts_do_not_require_parent_data_mount(configured):
+    f = configured
+    d = f.launch_doc
+    d['mounts'] = [mt for mt in d['mounts'] if mt['target'] != str(f.logical)]
+    for relative in ['locks', 'attempts', 'serving', 'work/output',
+                     'contact-journals/'+f.run, 'runs/'+f.run, 'prepared/'+f.run]:
+        d['mounts'].append({'source': str(f.data/relative), 'target': str(f.logical/relative), 'readonly': False})
+    write(f.launch, d); f.config['producer_launch'] = pin(f.launch); write(f.path, f.config)
+    sha = m.queue.canonical_hash(d)
+    intent = json.loads(f.intent.read_bytes()); intent['config_sha256'] = sha; write(f.intent, intent)
+    f.container['Config']['Labels']['saea.launch.config'] = sha
+    assert m.execute(f.path)['settled']

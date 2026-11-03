@@ -81,8 +81,11 @@ def load(path):
         target = Path(item['source']).resolve()
         require(not target.is_relative_to(state), 'settlement state must not contain producer inputs')
     for name in ('locks', 'attempts', 'contact-journals', 'runs', 'serving', 'prepared'):
-        protected = mapped(producer, logical / name)
-        require(not state.is_relative_to(protected), 'settlement state overlaps runtime custody')
+        base = logical / name
+        protected = ([mapped(producer, base)] if any(base.is_relative_to(m['target'])
+            for m in producer['mounts']) else [Path(m['source']).resolve() for m in producer['mounts']
+            if Path(m['target']).is_relative_to(base)])
+        require(all(not state.is_relative_to(p) for p in protected), 'settlement state overlaps runtime custody')
     return doc, producer, release, logical, expected, state
 
 
