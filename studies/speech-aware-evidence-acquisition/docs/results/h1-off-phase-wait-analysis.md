@@ -1,6 +1,6 @@
 # H1 关闭 thinking 档等待拆解
 
-核验对象：H1 关闭 thinking，313/313 完成，8 卡、2×TP4、每实例 C96；读取已封存 debug timing，不产生模型调用。计时文件和 rows checkpoint 均通过 SHA 校验，样本边界计时覆盖 313/313。
+核验对象：H1 关闭 thinking，313/313 完成，8 卡、2×TP4、每实例 C96；读取已封存 debug timing，不产生模型调用。rows checkpoint 已核验；计时文件无不完整尾行，样本边界计时覆盖 313/313。
 
 ## 观测结果
 
@@ -20,7 +20,7 @@
 
 `reproduction/ojw/runner.py` 在 `primary_slot()` 中等待 trajectory slot；`run_contact()` 随后把同步调用送入 executor。`core/model/adapter.py` 的 `request_total` 只包住模型请求，不能解释请求前的 slot 等待。`node_pipeline.py` 同时记录 prepare/model 的 queued、started、finished，但当前 H1 配置未启用 node pipeline 诊断，因此不能把等待继续拆成准备、媒体、FIT 或 prefix 锁的因果占比。
 
-下一步应先在不改变科学配置的独立后继树启用 debug 级 `node_pipeline_timing` 和 queue bridge，记录每个样本的 prepare queued/started、model queued/started、slot id、FIT capacity 和实际请求开始；保持 normal 模式 600 秒监测。确认 slot 是否串行占住 P→S 全链路后，才考虑缩短 slot 生命周期、拆分 P/S 槽位或提高受验在途数。不能仅凭这次累计等待直接改 C96 或宣称十倍加速。
+下一步先复用已有 debug 事件，按 sample_id 关联 slot 等待、executor、FIT 与 P 请求边界；不足时在独立后继树为现有调度器补充 slot 获得/释放事件，保持 normal 模式 600 秒监测。启用 node pipeline 会改变调度策略，必须另立工程对照，不能当作纯观测开关。确认 slot 是否串行占住 P→S 全链路后，才考虑缩短 slot 生命周期、拆分 P/S 槽位或提高受验在途数。不能仅凭这次累计等待直接改 C96 或宣称十倍加速。
 
 工程优先级：
 
