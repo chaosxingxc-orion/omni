@@ -47,7 +47,27 @@ def role_costs(outputs):
     return {k: dict(v) for k,v in roles.items()}
 
 
-def run(repo, data, out):
+def select_identity(round_index=1, comparison=None, attempt_id='generation-v1'):
+    from speech_aware_evidence_acquisition.contracts import RUN_ID_PATTERN
+    if not isinstance(attempt_id, str) or RUN_ID_PATTERN.fullmatch(attempt_id) is None:
+        raise ValueError('safe explicit attempt identity required')
+    name, rid = identity(round_index, comparison)
+    return name, rid, attempt_id
+
+
+def assert_registered_bundle(manifest, registered, name, rid, attempt_id):
+    """Recovery may change attempt identity, never the registered experiment."""
+    if (manifest['run_id'] != rid or manifest['attempt']['attempt_id'] != attempt_id
+            or manifest['plan']['run_id'] != rid or manifest['plan']['attempt_id'] != attempt_id
+            or manifest['config']['fragments']['baseline'] != name
+            or manifest['config']['fragments']['experiment'] != name):
+        raise ValueError('sealed bundle names another comparison or attempt')
+    for key, value in registered['execution_plan'].items():
+        if key != 'attempt_id' and manifest['plan'].get(key) != value:
+            raise ValueError('sealed plan differs from registration: ' + key)
+
+
+def run(repo, data, out, round_index=1, comparison=None, attempt_id='generation-v1'):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
     from speech_aware_evidence_acquisition.core.config import compose
@@ -55,26 +75,28 @@ def run(repo, data, out):
     assert_execution_environment()
     if not out.resolve().is_relative_to((data/'work/codex').resolve()):
         raise ValueError('owned CPU result directory required')
-    name, rid = identity(1)
+    name, rid, attempt_id = select_identity(round_index, comparison, attempt_id)
     pkg = repo/'docs/readiness'/name
     spec = read(pkg/'candidate.json')
     validate_workload(repo,data,name,spec)
     recipe = read(pkg/'analysis-recipe-v1.json')
     if (recipe['schema'] != 'saea-h1-observation-read-v1' or recipe['rows'] != 313
             or recipe['generation_run_id'] != rid or recipe['attempt_id'] != 'generation-v1'
-            or recipe['round'] != 1 or recipe['roster'] != spec['roster']
+            or recipe['round'] != round_index or recipe['roster'] != spec['roster']
             or recipe['new_model_calls'] != 0 or recipe['claims_benefit'] is not False):
         raise ValueError('exact preregistered full H1 analysis required')
-    directory = data/'runs'/rid/'generation-v1'
+    directory = data/'runs'/rid/attempt_id
     mp = directory/(rid+'.run-manifest.json')
     bundle = verify_bundle(mp)
     roster = pinned(repo,spec['roster'])
     ids = [r['sample_id'] for r in roster['items']]
     if (bundle.attempt_state != 'FINALIZED' or bundle.manifest['status'] != 'COMPLETED'
             or bundle.manifest['run_id'] != rid
-            or bundle.manifest['attempt']['attempt_id'] != 'generation-v1'
+            or bundle.manifest['attempt']['attempt_id'] != attempt_id
             or len(bundle.split_ids) != 313 or set(bundle.split_ids) != set(ids)):
         raise ValueError('finalized complete313 required')
+    assert_registered_bundle(bundle.manifest, read(pkg/'generation-plan-registered-v1.json'),
+                             name, rid, attempt_id)
     f = bundle.manifest['config']['fragments']
     cfg = compose(repo, *(f[k] for k in ('model','dataset','baseline','experiment')))
     if cfg.config_hash != bundle.manifest['config']['config_hash']:
@@ -87,7 +109,7 @@ def run(repo, data, out):
     if set(scores) != {scorer,'cost'}:
         raise ValueError('unexpected sealed scorers')
     result = summarize_scores(scores[scorer],roster['items'])
-    result.update(schema='saea-h1-fresh-observation-result-v1',run_id=rid,attempt_id='generation-v1',
+    result.update(schema='saea-h1-fresh-observation-result-v1',run_id=rid,attempt_id=attempt_id,
         scorer_id=scorer,role_contacts=role_costs(bundle.outputs_rows),cost=bundle.manifest['cost'],
         new_model_calls=0,new_scoring_jobs=0,claims_benefit=False,
         historical_costs_excluded_from_this_run=True,
@@ -97,6 +119,8 @@ def run(repo, data, out):
         limitations=['One fresh lock observation does not establish long-run error probability.',
                      'Historical failed runs and learning costs remain in their original ledgers.',
                      'No comparison with a different roster or shared-P K4 as an accuracy gain.'])
+    if comparison is not None:
+        result['comparison'] = comparison
     out.mkdir(parents=True,exist_ok=True)
     path=out/'complete.json'
     if path.exists():
@@ -108,4 +132,9 @@ def run(repo, data, out):
 if __name__ == '__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for key in ('repo','data','out'):p.add_argument('--'+key,type=Path,required=True)
-    print(json.dumps(run(**vars(p.parse_args())),sort_keys=True))
+    p.add_argument('--round', dest='round_index', type=int, choices=(1,2), default=1)
+    p.add_argument('--comparison', type=Path)
+    p.add_argument('--attempt-id', default='generation-v1')
+    args = vars(p.parse_args())
+    args['comparison'] = read(args['comparison']) if args['comparison'] is not None else None
+    print(json.dumps(run(**args),sort_keys=True))

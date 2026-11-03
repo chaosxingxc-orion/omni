@@ -40,3 +40,23 @@ def test_roles_use_receipts_and_reject_double_counting():
         {'role_id':'solver','execution_receipt':{'contacts':[{'request_id':'s1'},{'request_id':'s2'}]}}]}}]
     assert m.role_costs(rows)=={'perception':{'calls':1},'solver':{'calls':2}}
     with pytest.raises(ValueError):m.role_costs(rows+copy.deepcopy(rows))
+
+
+def test_explicit_comparison_recovery_identity():
+    cfg={'schema':'saea-h1-perception-thinking-v1','arm':'off','admitted_level':96}
+    name,rid,attempt=m.select_identity(1,cfg,'generation-v3')
+    assert name=='slurp-h1-perception-thinking-off-v1' and attempt=='generation-v3'
+    with pytest.raises(ValueError):m.select_identity(1,cfg,'../escape')
+    with pytest.raises(ValueError):m.select_identity(2,cfg)
+    plan={'run_id':rid,'attempt_id':'generation-v1','protocol_hash':'unchanged'}
+    manifest={'run_id':rid,'attempt':{'attempt_id':attempt},
+        'plan':{**plan,'attempt_id':attempt},
+        'config':{'fragments':{'baseline':name,'experiment':name}}}
+    m.assert_registered_bundle(manifest,{'execution_plan':plan},name,rid,attempt)
+    manifest['plan']['protocol_hash']='changed'
+    with pytest.raises(ValueError,match='registration'):
+        m.assert_registered_bundle(manifest,{'execution_plan':plan},name,rid,attempt)
+    manifest['plan']['protocol_hash']='unchanged'
+    manifest['config']['fragments']['baseline']='different-arm'
+    with pytest.raises(ValueError,match='another comparison'):
+        m.assert_registered_bundle(manifest,{'execution_plan':plan},name,rid,attempt)
