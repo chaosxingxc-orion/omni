@@ -1,0 +1,546 @@
+{
+  "schema": "saea-public-h1-thinking-comparison-v1",
+  "rows_per_arm": 313,
+  "cards": 8,
+  "instances": 2,
+  "tensor_parallel": 4,
+  "admitted_concurrency_per_instance": 96,
+  "arms": {
+    "baseline": {
+      "rows": 313,
+      "intent_accuracy": 0.7476038338658147,
+      "task_correct_rows": 107,
+      "task_error_rows": 206,
+      "source": {
+        "config_hash": "31c06589ce9ab48e42269035c3d4eff7a53e05684cf2872b4e330cdb5e9cbba3",
+        "manifest_sha256": "dfdc478ae3fa09e9ecf9dadb77fa2a1236172d15d020c26c6255f4dc8217ac1c",
+        "recipe_sha256": "79d4254b2d3479c1cc20d20206dd297823d4bb286e43ef45f05872917c79653a",
+        "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+        "scores_sha256": "57329703aba16359d3bcae484dd1252139dfcacf2aa966b0f463a2cd8cd32a9b"
+      },
+      "native_role_costs": {
+        "perception": {
+          "calls": 313,
+          "completion_tokens": 579773,
+          "contacts_with_reasoning": 313,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 313
+          },
+          "prompt_tokens": 1202012,
+          "request_seconds": {
+            "mean": 209.78035790952032,
+            "n": 313,
+            "p50": 190.18660697998712,
+            "p95": 375.7094440200017
+          },
+          "think_markers": 0,
+          "wire_records": 313
+        },
+        "solver": {
+          "calls": 313,
+          "completion_tokens": 673535,
+          "contacts_with_reasoning": 313,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 313
+          },
+          "prompt_tokens": 2731364,
+          "request_seconds": {
+            "mean": 239.28031137527182,
+            "n": 313,
+            "p50": 224.19933160001528,
+            "p95": 412.902959989995
+          },
+          "think_markers": 0,
+          "wire_records": 313
+        }
+      },
+      "phase_timing": {
+        "all_timing_complete": true,
+        "checkpoint_sha256": "027aa49f5bef6de41b1dae767a92b652131078418228037e0b5be1c0a5fc3dd7",
+        "complete_request_timing": true,
+        "limitations": [
+          "Completed subset is descriptive and may be biased toward faster samples.",
+          "P\u2192S gap contains preparation/FIT/scheduling; not pure CPU time.",
+          "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+          "Nested intervals overlap; do not sum as whole-task wall time."
+        ],
+        "metrics": {
+          "admission_to_perception_request_start": {
+            "mean_s": 170.75633001929714,
+            "n": 313,
+            "p50_s": 30.982897070003673,
+            "p95_s": 545.7185904599901
+          },
+          "admission_to_sample_finished": {
+            "mean_s": 629.865212365591,
+            "n": 313,
+            "p50_s": 641.8849907399854,
+            "p95_s": 927.5460463799827
+          },
+          "perception/http_request": {
+            "mean_s": 209.69048260255562,
+            "n": 313,
+            "p50_s": 190.10785832998226,
+            "p95_s": 375.676586090005
+          },
+          "perception/request_total": {
+            "mean_s": 218.0543129594244,
+            "n": 313,
+            "p50_s": 199.02624057000503,
+            "p95_s": 389.21373822999885
+          },
+          "perception/scientific_request": {
+            "mean_s": 209.78035790952032,
+            "n": 313,
+            "p50_s": 190.18660697998712,
+            "p95_s": 375.7094440200017
+          },
+          "perception_end_to_solver_request_start": {
+            "mean_s": 1.32171050367409,
+            "n": 313,
+            "p50_s": 0.9770382699789479,
+            "p95_s": 3.6513456600077916
+          },
+          "perception_start_to_solver_end": {
+            "mean_s": 459.0006867758778,
+            "n": 313,
+            "p50_s": 446.23933959999704,
+            "p95_s": 755.5689809799951
+          },
+          "solver/http_request": {
+            "mean_s": 239.16946275031975,
+            "n": 313,
+            "p50_s": 224.1173878099944,
+            "p95_s": 412.76928882999346
+          },
+          "solver/request_total": {
+            "mean_s": 239.62466331277932,
+            "n": 313,
+            "p50_s": 225.24915037999745,
+            "p95_s": 413.2557738700125
+          },
+          "solver/scientific_request": {
+            "mean_s": 239.28031137527182,
+            "n": 313,
+            "p50_s": 224.19933160001528,
+            "p95_s": 412.902959989995
+          },
+          "solver_request_end_to_sample_finished": {
+            "mean_s": 0.10819557041609318,
+            "n": 313,
+            "p50_s": 0.027540570008568466,
+            "p95_s": 0.5914168699819129
+          }
+        },
+        "missing_sample_count": 0,
+        "missing_timing_entries": 0,
+        "new_model_calls": 0,
+        "rows": 313,
+        "sample_timing_coverage": {
+          "boundary_missing_rows": 0,
+          "boundary_present_rows": 313,
+          "expected_rows": 313,
+          "joined_phase_rows": 313,
+          "unjoined_phase_rows": 0
+        },
+        "schema": "saea-real-phase-timing-v1",
+        "timing_partial_tail": false,
+        "timing_sha256": "691f2b6430688521b28693335719fcd2379b0e2f57b76c81fa55a88f0dbff252"
+      },
+      "slu_f1": 0.6727726958189238,
+      "cost": {
+        "calls_used": 626,
+        "prompt_tokens_total": 3933376,
+        "completion_tokens_total": 1253308,
+        "audio_seconds_used": 2639.0878750000006,
+        "latency_seconds_total": 140555.98948613994
+      },
+      "successful_container_wall_seconds": 1150.58138699,
+      "seconds_per_row": 3.675978872172524,
+      "allocated_card_hours": 2.5568475266444444
+    },
+    "off": {
+      "rows": 313,
+      "intent_accuracy": 0.7603833865814696,
+      "task_correct_rows": 103,
+      "task_error_rows": 210,
+      "source": {
+        "config_hash": "5264a7164f0a3c8356ca71515fadc03ca73be86159965e022c1db9136cd73f51",
+        "manifest_sha256": "75bf3581cf3c5ec78487d0000d0867a1e32aba020f3f8d55e587a1873fd5a3e6",
+        "recipe_sha256": "efd8af5e4109c35923862efbc5fe48be5588f4964f357a67288aeeb0552a7fde",
+        "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+        "scores_sha256": "57f2ff277071ccc4c559b49ebe425f17af9d8c24665dd2844a69da4959430f83"
+      },
+      "native_role_costs": {
+        "perception": {
+          "calls": 313,
+          "completion_tokens": 22896,
+          "contacts_with_reasoning": 0,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 313
+          },
+          "prompt_tokens": 1203264,
+          "request_seconds": {
+            "mean": 12.280334853834232,
+            "n": 313,
+            "p50": 11.767811699974118,
+            "p95": 22.861346670018975
+          },
+          "think_markers": 0,
+          "wire_records": 313
+        },
+        "solver": {
+          "calls": 313,
+          "completion_tokens": 698950,
+          "contacts_with_reasoning": 313,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 313
+          },
+          "prompt_tokens": 3154788,
+          "request_seconds": {
+            "mean": 240.72888510843515,
+            "n": 313,
+            "p50": 237.46732490000431,
+            "p95": 391.9337614100077
+          },
+          "think_markers": 0,
+          "wire_records": 313
+        }
+      },
+      "phase_timing": {
+        "all_timing_complete": true,
+        "checkpoint_sha256": "b630836375728720b6693976a155a960e875ba883fb38c3b4ad5ed7b4a8600da",
+        "complete_request_timing": true,
+        "limitations": [
+          "Completed subset is descriptive and may be biased toward faster samples.",
+          "P\u2192S gap contains preparation/FIT/scheduling; not pure CPU time.",
+          "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+          "Nested intervals overlap; do not sum as whole-task wall time."
+        ],
+        "metrics": {
+          "admission_to_perception_request_start": {
+            "mean_s": 138.68477356166224,
+            "n": 313,
+            "p50_s": 31.23661121999612,
+            "p95_s": 422.2468566199823
+          },
+          "admission_to_sample_finished": {
+            "mean_s": 472.60438046080054,
+            "n": 313,
+            "p50_s": 528.0027192799898,
+            "p95_s": 628.0064977299771
+          },
+          "perception/http_request": {
+            "mean_s": 12.087338165783795,
+            "n": 313,
+            "p50_s": 11.506063549983082,
+            "p95_s": 22.806242949998705
+          },
+          "perception/request_total": {
+            "mean_s": 44.21166286290727,
+            "n": 313,
+            "p50_s": 45.93847481999546,
+            "p95_s": 75.51420047000283
+          },
+          "perception/scientific_request": {
+            "mean_s": 12.280334853834232,
+            "n": 313,
+            "p50_s": 11.767811699974118,
+            "p95_s": 22.861346670018975
+          },
+          "perception_end_to_solver_request_start": {
+            "mean_s": 25.064974215174555,
+            "n": 313,
+            "p50_s": 8.53398519998882,
+            "p95_s": 69.1225489799981
+          },
+          "perception_start_to_solver_end": {
+            "mean_s": 333.8584533154958,
+            "n": 313,
+            "p50_s": 306.01169139001286,
+            "p95_s": 548.0505362899858
+          },
+          "solver/http_request": {
+            "mean_s": 240.44107529396308,
+            "n": 313,
+            "p50_s": 237.43232077997527,
+            "p95_s": 391.86014418001287
+          },
+          "solver/request_total": {
+            "mean_s": 264.581816237414,
+            "n": 313,
+            "p50_s": 252.49184653998236,
+            "p95_s": 427.14557882997906
+          },
+          "solver/scientific_request": {
+            "mean_s": 240.72888510843515,
+            "n": 313,
+            "p50_s": 237.46732490000431,
+            "p95_s": 391.9337614100077
+          },
+          "solver_request_end_to_sample_finished": {
+            "mean_s": 0.06115358364245759,
+            "n": 313,
+            "p50_s": 0.028329090011538938,
+            "p95_s": 0.12481916998513043
+          }
+        },
+        "missing_sample_count": 0,
+        "missing_timing_entries": 0,
+        "new_model_calls": 0,
+        "rows": 313,
+        "sample_timing_coverage": {
+          "boundary_missing_rows": 0,
+          "boundary_present_rows": 313,
+          "expected_rows": 313,
+          "joined_phase_rows": 313,
+          "unjoined_phase_rows": 0
+        },
+        "schema": "saea-real-phase-timing-v1",
+        "timing_partial_tail": false,
+        "timing_sha256": "5760e44b14ae435f2e2253e57dc7b62b876b9ae39eaa103263d0e5fba9ca6e9c"
+      },
+      "slu_f1": 0.6727968309134533,
+      "cost": {
+        "calls_used": 626,
+        "prompt_tokens_total": 4358052,
+        "completion_tokens_total": 721846,
+        "audio_seconds_used": 2639.087875,
+        "latency_seconds_total": 79191.88584819032
+      },
+      "successful_container_wall_seconds": 951.752267,
+      "seconds_per_row": 3.0407420670926517,
+      "allocated_card_hours": 2.115005037777778
+    },
+    "short": {
+      "rows": 313,
+      "intent_accuracy": 0.744408945686901,
+      "task_correct_rows": 113,
+      "task_error_rows": 200,
+      "source": {
+        "config_hash": "3762aa735d40b8e6414e2a488c770405e318ff58aa27eda90d52d62d03ab070a",
+        "manifest_sha256": "589340fcf00f75f732d07244eef3e3059259248cfa080c9fd2c7135a0a5d43be",
+        "recipe_sha256": "5a415e0f22dbaff8898dd23c98c3d6f598684f9dda97d5fbd20edbf91311b7c1",
+        "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+        "scores_sha256": "e26a0dea34ae3f227348d555eb83c2f90631cbe7a4f213eb144aa013feeca620"
+      },
+      "native_role_costs": {
+        "perception": {
+          "calls": 313,
+          "completion_tokens": 184232,
+          "contacts_with_reasoning": 313,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 313
+          },
+          "prompt_tokens": 1202012,
+          "request_seconds": {
+            "mean": 61.57387372303457,
+            "n": 313,
+            "p50": 56.77772988998913,
+            "p95": 81.98867644998245
+          },
+          "think_markers": 0,
+          "wire_records": 313
+        },
+        "solver": {
+          "calls": 313,
+          "completion_tokens": 667938,
+          "contacts_with_reasoning": 313,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 313
+          },
+          "prompt_tokens": 2861563,
+          "request_seconds": {
+            "mean": 200.5179639794246,
+            "n": 313,
+            "p50": 178.97534145001555,
+            "p95": 368.93865341998753
+          },
+          "think_markers": 0,
+          "wire_records": 313
+        }
+      },
+      "phase_timing": {
+        "all_timing_complete": true,
+        "checkpoint_sha256": "18436c70c3c63550e1669f03150254b7bf7d382e339275f6ee5735e48b030bea",
+        "complete_request_timing": true,
+        "limitations": [
+          "Completed subset is descriptive and may be biased toward faster samples.",
+          "P\u2192S gap contains preparation/FIT/scheduling; not pure CPU time.",
+          "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+          "Nested intervals overlap; do not sum as whole-task wall time."
+        ],
+        "metrics": {
+          "admission_to_perception_request_start": {
+            "mean_s": 134.34185576750752,
+            "n": 313,
+            "p50_s": 30.641634839994367,
+            "p95_s": 415.9663134700095
+          },
+          "admission_to_sample_finished": {
+            "mean_s": 467.1601646191377,
+            "n": 313,
+            "p50_s": 514.0894855200022,
+            "p95_s": 646.3920944200072
+          },
+          "perception/http_request": {
+            "mean_s": 61.364093935240234,
+            "n": 313,
+            "p50_s": 56.37430639998638,
+            "p95_s": 81.95473928999854
+          },
+          "perception/request_total": {
+            "mean_s": 76.58517741693274,
+            "n": 313,
+            "p50_s": 78.9062899799901,
+            "p95_s": 87.65374733999488
+          },
+          "perception/scientific_request": {
+            "mean_s": 61.57387372303457,
+            "n": 313,
+            "p50_s": 56.77772988998913,
+            "p95_s": 81.98867644998245
+          },
+          "perception_end_to_solver_request_start": {
+            "mean_s": 36.40895894811505,
+            "n": 313,
+            "p50_s": 22.971514959994238,
+            "p95_s": 85.68451556999935
+          },
+          "perception_start_to_solver_end": {
+            "mean_s": 330.35711668370624,
+            "n": 313,
+            "p50_s": 313.8907860199979,
+            "p95_s": 545.5025126500113
+          },
+          "solver/http_request": {
+            "mean_s": 200.19055969006345,
+            "n": 313,
+            "p50_s": 178.91741497002658,
+            "p95_s": 368.85894458999974
+          },
+          "solver/request_total": {
+            "mean_s": 217.36298031865843,
+            "n": 313,
+            "p50_s": 191.6345804599987,
+            "p95_s": 383.59691670999746
+          },
+          "solver/scientific_request": {
+            "mean_s": 200.5179639794246,
+            "n": 313,
+            "p50_s": 178.97534145001555,
+            "p95_s": 368.93865341998753
+          },
+          "solver_request_end_to_sample_finished": {
+            "mean_s": 2.4611921679239144,
+            "n": 313,
+            "p50_s": 0.027482490026159212,
+            "p95_s": 19.02767400999437
+          }
+        },
+        "missing_sample_count": 0,
+        "missing_timing_entries": 0,
+        "new_model_calls": 0,
+        "rows": 313,
+        "sample_timing_coverage": {
+          "boundary_missing_rows": 0,
+          "boundary_present_rows": 313,
+          "expected_rows": 313,
+          "joined_phase_rows": 313,
+          "unjoined_phase_rows": 0
+        },
+        "schema": "saea-real-phase-timing-v1",
+        "timing_partial_tail": false,
+        "timing_sha256": "6692fb74225a941999efcda2cf2d3b6e0bb9b3c2ee654d38fe134e764d823ca6"
+      },
+      "slu_f1": 0.6865257742139248,
+      "cost": {
+        "calls_used": 626,
+        "prompt_tokens_total": 4063575,
+        "completion_tokens_total": 852170,
+        "audio_seconds_used": 2639.0878750000006,
+        "latency_seconds_total": 82034.74520086971
+      },
+      "successful_container_wall_seconds": 901.39748784,
+      "seconds_per_row": 2.8798641784025563,
+      "allocated_card_hours": 2.0031055285333332
+    }
+  },
+  "paired": {
+    "automatic_adoption": false,
+    "bootstrap_unit": "utterance cluster",
+    "comparisons": {
+      "off": {
+        "contrasts": {
+          "intent_pp": {
+            "ci_high": 4.472843450479234,
+            "ci_level": 0.95,
+            "ci_low": -1.9169329073482428,
+            "n_replicates": 10000,
+            "point_estimate": 1.2779552715654952,
+            "seed": 20261103,
+            "sigma_hat": 1.6951523915317395
+          },
+          "slu_f1_pp": {
+            "ci_high": 2.2184974536426614,
+            "ci_level": 0.95,
+            "ci_low": -2.2528759625743637,
+            "n_replicates": 10000,
+            "point_estimate": 0.002413509452936502,
+            "seed": 20261103,
+            "sigma_hat": 1.1286416303072908
+          }
+        },
+        "minus": "baseline",
+        "task_breaks": 25,
+        "task_repairs": 21,
+        "task_success_rule": "Intent exact AND exact-slot FP=FN=0",
+        "task_ties": 267
+      },
+      "short": {
+        "contrasts": {
+          "intent_pp": {
+            "ci_high": 2.236421725239617,
+            "ci_level": 0.95,
+            "ci_low": -2.8753993610223643,
+            "n_replicates": 10000,
+            "point_estimate": -0.3194888178913738,
+            "seed": 20261103,
+            "sigma_hat": 1.318418304572817
+          },
+          "slu_f1_pp": {
+            "ci_high": 3.504968621873679,
+            "ci_level": 0.95,
+            "ci_low": -0.7350118706696487,
+            "n_replicates": 10000,
+            "point_estimate": 1.375307839500084,
+            "seed": 20261103,
+            "sigma_hat": 1.086414967734818
+          }
+        },
+        "minus": "baseline",
+        "task_breaks": 11,
+        "task_repairs": 17,
+        "task_success_rule": "Intent exact AND exact-slot FP=FN=0",
+        "task_ties": 285
+      }
+    },
+    "decoding_noise_estimated": false,
+    "limitations": [
+      "Fixed hard development set, not natural-distribution test performance.",
+      "Paired intervals describe roster uncertainty, not independent decoding noise.",
+      "Intervals are marginal exploratory 95% intervals; no multiple-comparison correction.",
+      "An interval crossing zero does not establish equivalence."
+    ],
+    "rows": 313,
+    "seed": 20261103
+  },
+  "new_analysis_model_calls": 0,
+  "automatic_adoption": false
+}

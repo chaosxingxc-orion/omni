@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-11-03T04:49:00Z",
-  "state": "off-and-short-finalized-baseline-running",
+  "observed_at": "2026-11-03T05:07:00Z",
+  "state": "three-arms-finalized-off-frozen-for-H2",
   "checkpoint_rows": 313,
   "complete_rows": 313,
   "total_rows": 313,
@@ -13,19 +13,20 @@
     "admitted_per_instance": 96
   },
   "P_mean_request_seconds": 12.280334853834232,
-  "eta": "baseline ETA pending verified completion window; no linear extrapolation from other arms",
-  "accuracy": "off SLU 0.6727968309134533 / Intent 0.7603833865814696; short SLU 0.6865257742139248 / Intent 0.744408945686901; paired comparison pending",
+  "eta": "Three-arm comparison complete; H2 not yet launched, ETA unavailable",
+  "accuracy": "See h1-thinking-comparison-result.json; no stable gain or equivalence established",
   "schema": "saea-h1-thinking-progress-v1",
   "checkpoint_verified_complete": 313,
   "queue": {
     "off": "FINALIZED",
     "short": "FINALIZED",
-    "baseline": "running",
-    "comparison_cpu": "waiting-exact-baseline-exit-zero"
+    "baseline": "FINALIZED",
+    "comparison_cpu": "completed",
+    "next_H2": "not-registered"
   },
   "limitations": [
     "Fixed hard H1 development set, not natural-distribution test accuracy.",
-    "Baseline still running; no configuration selected.",
+    "Off frozen as H2 screening candidate, not adopted; current NPU queue lacks ready successor.",
     "Mean per-sample latency differs from concurrent batch throughput.",
     "Earlier zero-call startup failures excluded from successful container wall; preserved in operations history."
   ],
@@ -42,9 +43,9 @@
       "wall_seconds_per_row": 2.8798641784
     },
     "baseline": {
-      "completed_rows": null,
+      "completed_rows": 313,
       "total_rows": 313,
-      "wall_seconds_per_row": null
+      "wall_seconds_per_row": 3.675978872172524
     }
   }
 }

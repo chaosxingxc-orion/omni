@@ -1,0 +1,44 @@
+{
+  "schema": "saea-agent-thinking-candidate-freeze-v1",
+  "status": "frozen-for-H2-screening-not-adopted",
+  "reference": "baseline",
+  "candidate": "off",
+  "selection_basis": "H1 fixed313: near-zero SLU point difference, positive Intent point difference, lower observed wall/output costs. Intervals do not establish equivalence; strict-task success lower, requiring screening.",
+  "candidate_thinking_policy": {
+    "perception": {
+      "enable_thinking": false,
+      "answer_reserve_tokens": 1024
+    },
+    "solver": {
+      "enable_thinking": true,
+      "reasoning_budget_tokens": 3072,
+      "answer_reserve_tokens": 1024
+    }
+  },
+  "model_fragment": "bf16-thinking-real500-tp4-s128-v1",
+  "deployment_profile": "qwen3-omni-tfgrpo-2xtp4-s128-b2048-ctx48k-v1",
+  "per_instance_concurrency": 96,
+  "candidate_source": {
+    "config_hash": "5264a7164f0a3c8356ca71515fadc03ca73be86159965e022c1db9136cd73f51",
+    "manifest_sha256": "75bf3581cf3c5ec78487d0000d0867a1e32aba020f3f8d55e587a1873fd5a3e6",
+    "recipe_sha256": "efd8af5e4109c35923862efbc5fe48be5588f4964f357a67288aeeb0552a7fde",
+    "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+    "scores_sha256": "57f2ff277071ccc4c559b49ebe425f17af9d8c24665dd2844a69da4959430f83"
+  },
+  "reference_source": {
+    "config_hash": "31c06589ce9ab48e42269035c3d4eff7a53e05684cf2872b4e330cdb5e9cbba3",
+    "manifest_sha256": "dfdc478ae3fa09e9ecf9dadb77fa2a1236172d15d020c26c6255f4dc8217ac1c",
+    "recipe_sha256": "79d4254b2d3479c1cc20d20206dd297823d4bb286e43ef45f05872917c79653a",
+    "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+    "scores_sha256": "57329703aba16359d3bcae484dd1252139dfcacf2aa966b0f463a2cd8cd32a9b"
+  },
+  "H2_rows": 312,
+  "H2_used_to_choose_this_candidate": false,
+  "full_test_held": true,
+  "automatic_adoption": false,
+  "remaining": [
+    "Fresh complete H2 paired off/baseline with frozen knowledge and prompts.",
+    "Report uncertainty, strict-task repairs/breaks and every cost.",
+    "Do not interpret H2 as independently untouched: it has prior development-selection exposure."
+  ]
+}
