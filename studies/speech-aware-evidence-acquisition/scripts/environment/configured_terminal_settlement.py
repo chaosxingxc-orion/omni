@@ -213,6 +213,98 @@ def deployment(doc, producer, logical, expected):
     return instances
 
 
+def finalized_artifact(doc, producer, logical, expected, source):
+    """Reconcile a synchronous artifact seal, never invent a release event."""
+    from speech_aware_evidence_acquisition.core.flight.receipts import read_flight_receipts
+    require(source['attempt_state'] == 'FINALIZED', 'artifact reconciliation needs FINALIZED attempt')
+    root = logical / 'runs' / expected['run_id'] / expected['attempt_id']
+    pins = {}
+    def artifact(key, path, sha=None):
+        target = Path(path)
+        require(target.is_relative_to(root) and '..' not in target.parts, 'artifact escapes exact run')
+        physical = mapped(producer, target, writable=True)
+        require(physical.is_file(), 'sealed artifact missing')
+        actual = launcher.digest(physical)
+        require(sha is None or actual == sha, 'sealed artifact hash changed')
+        pins[key] = {'path': str(target), 'sha256': actual}
+        return physical
+    receipt_path = artifact('flight_receipts', root / 'flight-receipts.json')
+    receipts = read_flight_receipts(receipt_path)
+    require(receipts['run_id'] == expected['run_id'] and receipts['attempt_id'] == expected['attempt_id'],
+            'artifact flight receipt identity differs')
+    stages = receipts['stages']; seal = stages['seal']; phase = stages['run_phases']
+    finalize = seal.get('finalize', {})
+    require(finalize.get('attempt_state') == 'FINALIZED' and finalize.get('result_kind') == 'artifact'
+        and finalize.get('status') == 'not-applicable' and finalize.get('scores_path') is None
+        and phase.get('result_kind') == 'artifact', 'not a synchronous artifact seal')
+    require(stages['preflight']['study_commit'] == expected['study_commit'], 'artifact source head differs')
+    manifest_target = root / (expected['run_id'] + '.run-manifest.json')
+    require(seal['manifest_path'] == str(manifest_target), 'artifact manifest path differs')
+    manifest = read(artifact('manifest', manifest_target, seal['manifest_sha256']))
+    registered = read(pin(doc['source_plan']))['execution_plan']
+    require(manifest.get('schema') == 'saea-run-manifest-v1' and manifest.get('result_kind') == 'artifact'
+        and manifest.get('status') == 'COMPLETED' and manifest.get('failure_reason') is None
+        and manifest.get('study_commit') == expected['study_commit']
+        and manifest.get('run_id') == expected['run_id']
+        and manifest.get('attempt', {}).get('attempt_id') == expected['attempt_id']
+        and manifest['attempt'].get('run_id') == expected['run_id']
+        and manifest.get('arm') == doc['arm'] and manifest.get('scores') is None
+        and manifest.get('scorers') == []
+        and all(registered.get(k) == v for k, v in manifest['plan'].items())
+        and manifest['plan']['run_id'] == expected['run_id']
+        and manifest['plan']['attempt_id'] == expected['attempt_id'], 'artifact manifest source differs')
+    count = expected['rows']; split_ids = manifest['split']['ids']
+    require(type(count) is int and count > 0 and len(split_ids) == len(set(split_ids)) == count
+        and manifest['split']['count'] == count
+        and manifest['split']['identity_hash'] == registered['split_identity_hash']
+        and manifest['config']['config_hash'] == stages['preflight']['config_hash']
+        and manifest['protocol_hash'] == registered['protocol_hash'], 'artifact split/protocol differs')
+    for key in ('processed_dataset_rows', 'total_dataset_rows', 'outputs_row_count'):
+        require(type(phase[key]) is int and phase[key] == count, 'artifact generation incomplete')
+    require(phase['remaining_dataset_rows'] == 0 and seal['outputs_row_count'] == count
+        and phase['contact_count'] == source['actual']['calls'] == len(source['contacts'])
+        and seal['cost']['calls_used'] == source['actual']['calls']
+        and seal['cost']['audio_seconds_used'] == source['actual']['audio_seconds']
+        and manifest['cost'] == seal['cost'], 'artifact cost/terminal count differs')
+    outputs_target = root / (expected['run_id'] + '.outputs.jsonl')
+    require(seal['outputs_path'] == manifest['outputs']['path'] == str(outputs_target), 'artifact outputs path differs')
+    outputs_path = artifact('outputs', outputs_target, manifest['outputs']['sha256'])
+    rows = [json.loads(line) for line in outputs_path.read_text().splitlines()]
+    require(len(rows) == count and [r['sample_id'] for r in rows] == split_ids
+        and len({r['request_id'] for r in rows}) == count
+        and all(r.get('result_kind') == 'artifact' and r.get('arm') == doc['arm'] and r.get('admitted') is True for r in rows),
+        'artifact rows incomplete or foreign')
+    phases_target = root / (expected['run_id'] + '.phases.json')
+    require(seal['phases_path'] == str(phases_target), 'artifact phases path differs')
+    phases = read(artifact('phases', phases_target, seal['phases_sha256']))
+    require(phases['run_id'] == expected['run_id'] and phases['attempt_id'] == expected['attempt_id']
+        and phases['result_kind'] == 'artifact', 'artifact phase identity differs')
+    contacts = [c for p in phases['phases'] for c in p['contact_receipts']]
+    require(len(contacts) == len(source['contacts']) and len({c['request_id'] for c in contacts}) == len(contacts)
+        and {c['request_id'] for c in contacts} == {c['request_id'] for c in source['contacts']},
+        'artifact phase/native contact coverage differs')
+    by_id = {c['request_id']: c for c in contacts}
+    require(all(all(row[k] == by_id[row['request_id']][k] for k in ('sample_id','request_sha256','response_sha256','text'))
+        for row in rows), 'artifact row/phase contact differs')
+    response_pins = {hashlib.sha256(c['request_id'].encode()).hexdigest()+'.response.json':c['response_sha256']
+        for c in source['contacts']}
+    require(phase['learning']['contact_response_sha256'] == response_pins, 'artifact/native response custody differs')
+    for key, cost_key in (('calls','calls_used'),('prompt_tokens','prompt_tokens_total'),('completion_tokens','completion_tokens_total')):
+        require(sum(c['usage'][key] for c in contacts) == phase['learning']['usage'][key] == seal['cost'][cost_key],
+                'artifact token accounting differs')
+    candidate = phase['learning']['candidate']
+    target = logical / candidate['relpath']
+    require(candidate['root'] == 'data' and target == root/'tfgrpo/learner/candidate.json', 'artifact candidate path differs')
+    artifact('candidate', target, candidate['sha256'])
+    for key in ('raw_trace','trace_manifest'):
+        target = root / (expected['run_id'] + ('.trace.jsonl' if key == 'raw_trace' else '.trace-manifest.json'))
+        require(manifest[key]['path'] == str(target), 'artifact trace path differs')
+        artifact(key, target, manifest[key]['sha256'])
+    return {'kind':'synchronous-artifact-finalized','artifacts':pins,'rows':count,
+        'observed_contacts':len(contacts),'cost':seal['cost'],'generation_complete':True,
+        'scientific_success':False,'historical_release_created':False}
+
+
 def lease_custody(lease, source, terminal, expected, pid_exists):
     require(lease.get('schema') == 'saea-generation-lease-v1' and all(lease.get(k) == v for k, v in {
         'run_id': expected['run_id'], 'attempt_id': expected['attempt_id'],
@@ -291,8 +383,12 @@ def execute(path, *, pid_exists=None):
                 mode = 'stale-lease'; release_proof = None
             else:
                 require(not saved.exists(), 'unattributed preserved lease')
-                release_proof = queue.verify_generation_release(doc, producer, doc['generation_release'])
-                mode = 'sealed-release'
+                if release.exists():
+                    release_proof = queue.verify_generation_release(doc, producer, doc['generation_release'])
+                    mode = 'sealed-release'
+                else:
+                    release_proof = finalized_artifact(doc, producer, logical, expected, source)
+                    mode = 'finalized-artifact'
             quiet = transition.quiescence(instances)
             require(producer_terminal(doc, producer) == terminal
                 and source_custody(doc, producer, logical, expected, release) == source, 'producer evidence changed during settlement')
@@ -300,10 +396,13 @@ def execute(path, *, pid_exists=None):
             if mode == 'sealed-release':
                 require(queue.verify_generation_release(doc, producer, doc['generation_release']) == release_proof,
                         'release evidence changed during settlement')
+            elif mode == 'finalized-artifact':
+                require(finalized_artifact(doc, producer, logical, expected, source) == release_proof,
+                        'artifact evidence changed during settlement')
             if pending:
                 require(pending['mode'] == mode and (mode != 'stale-lease' or pending['lease_sha256'] == hashlib.sha256(lease_blob).hexdigest()),
                         'pending settlement mode or lease differs')
-                if mode == 'sealed-release':require(pending['release'] == release_proof, 'release proof changed')
+                if mode != 'stale-lease':require(pending['release'] == release_proof, 'release proof changed')
             else:
                 audit = {'schema': SCHEMA, 'identity': identity, 'mode': mode, 'terminal': terminal, 'source': source,
                     'guard': guard_identity, 'quiescence': quiet, 'release': release_proof, 'observed_at_unix': time.time(),
