@@ -1,0 +1,47 @@
+{
+  "schema": "saea-h1-fresh-observation-result-v1",
+  "run_id": "SAEA-SLURP-H1-PERCEPTION-THINKING-SHORT-V1",
+  "attempt_id": "generation-v1",
+  "rows": 313,
+  "intent_accuracy": 0.744408945686901,
+  "task_correct_rows": 113,
+  "task_error_rows": 200,
+  "role_contacts": {
+    "perception": {
+      "calls": 313
+    },
+    "solver": {
+      "calls": 313
+    }
+  },
+  "source": {
+    "config_hash": "3762aa735d40b8e6414e2a488c770405e318ff58aa27eda90d52d62d03ab070a",
+    "manifest_sha256": "589340fcf00f75f732d07244eef3e3059259248cfa080c9fd2c7135a0a5d43be",
+    "recipe_sha256": "5a415e0f22dbaff8898dd23c98c3d6f598684f9dda97d5fbd20edbf91311b7c1",
+    "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+    "scores_sha256": "e26a0dea34ae3f227348d555eb83c2f90631cbe7a4f213eb144aa013feeca620"
+  },
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "slu_f1": 0.6865257742139248,
+  "cost": {
+    "calls_used": 626,
+    "prompt_tokens_total": 4063575,
+    "completion_tokens_total": 852170,
+    "audio_seconds_used": 2639.0878750000006,
+    "latency_seconds_total": 82034.74520086971
+  },
+  "successful_container_wall_seconds": 901.39748784,
+  "wall_seconds_per_row": 2.8798641784025563,
+  "allocated_card_hours": 2.0031055285333332,
+  "cards": 8,
+  "instances": 2,
+  "tensor_parallel": 4,
+  "admitted_concurrency_per_instance": 96,
+  "claims_benefit": false,
+  "limitations": [
+    "Fixed H1 development set; no natural-distribution test claim.",
+    "Three-arm paired comparison pending.",
+    "Container wall includes startup and CPU scoring; allocated cards are not measured utilization."
+  ]
+}
