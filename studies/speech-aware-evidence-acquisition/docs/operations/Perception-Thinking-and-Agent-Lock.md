@@ -39,4 +39,4 @@ P 关闭 thinking 很可能显著降低生成成本，但不能据此判断综�
 
 现有`tfrl_h1_observation.py`增加`--comparison`，复用stage/prepare/register/validate；三份`configs/evaluation/h1-perception-thinking-*-v1.json`固定off/short/baseline与每实例C96。P-only策略进入科学配置hash，S和原知识/模板不变；旧两轮观测接口保留。共享执行入口核验C96环境。26项固定镜像H1回归通过（7.04秒）；租约允许凭据保留修复7项通过（1.24秒）。
 
-真实P-off stage已退出0，固定313条H1、626正常逻辑调用/1252含fallback硬上限；新增模型调用0。独立本地持久树上的CPU supply准备和登记已退出0，准入与环境预检已完成；P-off生成容器03:59:43 UTC启动，尚无新P-off模型输出、精度或效率结论。P-off已实际启动，short/baseline尚待stage；不能称三档连续队列已就绪。终态或600秒监测，异步归档。
+全量 A0 保持暂缓，338 条完整结果及 972 次已知响应保存。当前固定 H1 313 条，对照 P off/512/3072，S 保持 3072。P-off 首次启动因框架默认日志落入只读代码目录失败，账本确认 0 调用；旧租约已核验封存。恢复树已同步主仓现有零调用恢复及 FIT 配套修复，74 项固定镜像测试通过（5.94 秒）；预检实际导入 Agent 运行模块。04:15:30 UTC 通过共享恢复入口再次启动，独立耗时日志、终态/600 秒监测及异步归档已配置。尚无本轮模型输出、精度或效率结论。short 已完成 stage，baseline 尚未 stage，连续三档队列尚未就绪。
