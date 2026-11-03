@@ -1,5 +1,5 @@
 {
-  "schema": "saea-tfrl-knowledge-consumption-v1",
+  "schema": "saea-tfrl-knowledge-consumption-design-draft-v1",
   "mode": "development",
   "observability": "debug",
   "candidate_kind": "solver_prompt",
@@ -15,8 +15,13 @@
     "feedback_ids_source": "stable_train_partition.feedback",
     "selection_ids_source": "stable_train_partition.selection",
     "excluded_ids_source": "h2_and_test",
-    "gold_visible_to": ["diagnostic_reflector", "cpu_scorer"],
-    "gold_forbidden_to": ["solver"]
+    "gold_visible_to": [
+      "diagnostic_reflector",
+      "cpu_scorer"
+    ],
+    "gold_forbidden_to": [
+      "solver"
+    ]
   },
   "frozen": {
     "knowledge_sha256": "REQUIRED_CONTENT_PIN",
@@ -35,16 +40,28 @@
     "acceptance": "strict_minibatch_then_complete_selection"
   },
   "budget": {
-    "calls": 1461,
+    "logical_calls_upper_bound": 3468,
+    "raw_generation_upper_bound": 6936,
+    "formula": "3*V+R*(7*b+1+3*V)",
+    "selection_rows": 80,
+    "batch_size": 4,
+    "max_rounds": 12,
     "prompt_tokens": 24000000,
     "completion_tokens": 6000000,
-    "allocated_card_hours": 32
+    "allocated_card_hours": null,
+    "note": "Proposed stopping budgets, not measured cost. Bind lane capacity before any launch."
   },
   "runtime": {
-    "max_retrieval_items": 8,
-    "max_rerank_items": 8,
-    "max_retries": 0,
+    "source": "frozen_runtime_config",
+    "changes_allowed_in_this_first_arm": [
+      "solver_instruction"
+    ],
     "normal_debug_are_orthogonal": true
   },
-  "status": "DRAFT_REQUIRES_REAL_PARTITION_AND_SOURCE_PINS"
+  "status": "DESIGN_ONLY_NOT_SUPPORTED_BY_LAUNCHER",
+  "missing_runtime_components": [
+    "paired_workload_registration",
+    "paired_official_reader_with_native_custody",
+    "reflection_driver_and_search_adapter"
+  ]
 }
