@@ -1,0 +1,238 @@
+{
+  "analysis_recipe_sha256": "6ed5410e19e0a042f7e5b22ae4b6aff1deb748f12d62289b5cb16a3dac548d2b",
+  "candidate_accepted": false,
+  "claims_stable_gain": false,
+  "native_role_costs": {
+    "perception": {
+      "calls": 16,
+      "completion_tokens": 27549,
+      "contacts_with_reasoning": 16,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 16
+      },
+      "prompt_tokens": 61063,
+      "request_seconds": {
+        "mean": 51.16111614874899,
+        "n": 16,
+        "p50": 51.08705400000326,
+        "p95": 92.54363045000355
+      },
+      "think_markers": 0,
+      "wire_records": 16
+    },
+    "solver": {
+      "calls": 32,
+      "completion_tokens": 63117,
+      "contacts_with_reasoning": 32,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 32
+      },
+      "prompt_tokens": 267116,
+      "request_seconds": {
+        "mean": 50.090290949062364,
+        "n": 32,
+        "p50": 47.32869748500525,
+        "p95": 84.03273564000847
+      },
+      "think_markers": 0,
+      "wire_records": 32
+    }
+  },
+  "new_model_calls": 0,
+  "official": {
+    "gepa": {
+      "action_accuracy": 0.8125,
+      "intent_accuracy": 0.6875,
+      "raw": {
+        "action": {
+          "f_measure": 0.8125,
+          "fn": 3.0,
+          "fp": 3.0,
+          "official_label": "Action",
+          "precision": 0.8125,
+          "recall": 0.8125,
+          "tp": 13.0
+        },
+        "entities": {
+          "f_measure": 0.6521739130434783,
+          "fn": 9.0,
+          "fp": 7.0,
+          "official_label": "Entities",
+          "precision": 0.6818181818181818,
+          "recall": 0.625,
+          "tp": 15.0
+        },
+        "entities_distance_char": {
+          "f_measure": 0.777295669883999,
+          "fn": 6.443722943722943,
+          "fp": 4.4437229437229435,
+          "official_label": "Entities (distance char)",
+          "precision": 0.8104514818576309,
+          "recall": 0.7467460655040409,
+          "tp": 19.0
+        },
+        "entities_distance_word": {
+          "f_measure": 0.6440677966101694,
+          "fn": 11.5,
+          "fp": 9.5,
+          "official_label": "Entities (distance word)",
+          "precision": 0.6666666666666666,
+          "recall": 0.6229508196721312,
+          "tp": 19.0
+        },
+        "intent": {
+          "f_measure": 0.6875,
+          "fn": 5.0,
+          "fp": 5.0,
+          "official_label": "Intent (scen_act)",
+          "precision": 0.6875,
+          "recall": 0.6875,
+          "tp": 11.0
+        },
+        "scenario": {
+          "f_measure": 0.6875,
+          "fn": 5.0,
+          "fp": 5.0,
+          "official_label": "Scenario",
+          "precision": 0.6875,
+          "recall": 0.6875,
+          "tp": 11.0
+        },
+        "slu_f1": {
+          "f_measure": 0.7044378460797689,
+          "fn": 17.943722943722943,
+          "fp": 13.943722943722943,
+          "official_label": "Slu f1",
+          "precision": 0.7315609634136178,
+          "recall": 0.6792540431788284,
+          "tp": 38.0
+        }
+      },
+      "scenario_accuracy": 0.6875,
+      "slu_f1": 0.7044378460797689,
+      "span_f1": 0.6521739130434783
+    },
+    "lock": {
+      "action_accuracy": 0.8125,
+      "intent_accuracy": 0.6875,
+      "raw": {
+        "action": {
+          "f_measure": 0.8125,
+          "fn": 3.0,
+          "fp": 3.0,
+          "official_label": "Action",
+          "precision": 0.8125,
+          "recall": 0.8125,
+          "tp": 13.0
+        },
+        "entities": {
+          "f_measure": 0.6222222222222222,
+          "fn": 10.0,
+          "fp": 7.0,
+          "official_label": "Entities",
+          "precision": 0.6666666666666666,
+          "recall": 0.5833333333333334,
+          "tp": 14.0
+        },
+        "entities_distance_char": {
+          "f_measure": 0.7896474721925304,
+          "fn": 6.561370002546472,
+          "fp": 3.561370002546473,
+          "official_label": "Entities (distance char)",
+          "precision": 0.8421474404194202,
+          "recall": 0.743309141806843,
+          "tp": 19.0
+        },
+        "entities_distance_word": {
+          "f_measure": 0.6495726495726496,
+          "fn": 11.75,
+          "fp": 8.75,
+          "official_label": "Entities (distance word)",
+          "precision": 0.6846846846846847,
+          "recall": 0.6178861788617886,
+          "tp": 19.0
+        },
+        "intent": {
+          "f_measure": 0.6875,
+          "fn": 5.0,
+          "fp": 5.0,
+          "official_label": "Intent (scen_act)",
+          "precision": 0.6875,
+          "recall": 0.6875,
+          "tp": 11.0
+        },
+        "scenario": {
+          "f_measure": 0.6875,
+          "fn": 5.0,
+          "fp": 5.0,
+          "official_label": "Scenario",
+          "precision": 0.6875,
+          "recall": 0.6875,
+          "tp": 11.0
+        },
+        "slu_f1": {
+          "f_measure": 0.7127935372545272,
+          "fn": 18.311370002546475,
+          "fp": 12.311370002546472,
+          "official_label": "Slu f1",
+          "precision": 0.7552964667445283,
+          "recall": 0.6748193126589105,
+          "tp": 38.0
+        }
+      },
+      "scenario_accuracy": 0.6875,
+      "slu_f1": 0.7127935372545272,
+      "span_f1": 0.6222222222222222
+    }
+  },
+  "official_arm_scoring_jobs": 2,
+  "purpose": "Fixed16 native mechanism check, not an algorithm quality verdict.",
+  "rows": 16,
+  "schema": "saea-gepa-probe-result-v1",
+  "score_receipts": {
+    "gepa": {
+      "relpath": "work/codex/gepa-mechanism-v1/probe-read-v2/arm-gepa-slurp-slu-official-train-scores.json.receipt.json",
+      "sha256": "ee6720bf5794c32fb47f5c48a7a11d849be1306c270ec3c9eb364f955caceda2"
+    },
+    "lock": {
+      "relpath": "work/codex/gepa-mechanism-v1/probe-read-v2/arm-lock-slurp-slu-official-train-scores.json.receipt.json",
+      "sha256": "b6cd5fa053095b6eca3462eb875d573ce4d2058111db5ee73c678799692925f8"
+    }
+  },
+  "source": {
+    "attempt_id": "generation-v1",
+    "config_hash": "a344d9c52412dc9def61a26600b30383fa0261ab53165653c51beff983d89ac9",
+    "manifest_path": "runs/SAEA-SLURP-GEPA-SEED-MECHANISM16-V1/generation-v1/SAEA-SLURP-GEPA-SEED-MECHANISM16-V1.run-manifest.json",
+    "manifest_sha256": "c62e5a5d2fa8bbafb0718323893dcd6a2a25a050c7e07e38804225bbb430b042",
+    "outputs_sha256": "b48e4002d683148d00697379cdbb92972de6a010bbf7b073ab631be4401712b7",
+    "raw_trace_sha256": "a5e7f480004c292d1cf04692227081f1c5226b2aa894a8aea05eead7800be6a7",
+    "roster_sha256": "e04a8a7935cd3ff15e02686313b35ab52630480a7b0b90047e818af7b71ba00d",
+    "run_id": "SAEA-SLURP-GEPA-SEED-MECHANISM16-V1",
+    "sealed_scores_sha256": "3241708bfe1f844388230cd935bcb09f89cc2d630f81a21f72f92da377d707c6"
+  },
+  "strict_success": {
+    "gepa": 7,
+    "lock": 6
+  },
+  "task_breaks": 0,
+  "task_repairs": 1,
+  "total_cost": {
+    "audio_seconds_used": 188.412,
+    "calls_used": 48,
+    "completion_tokens_total": 90666,
+    "latency_seconds_total": 2421.4671687499795,
+    "prompt_tokens_total": 328179,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "state": "FINALIZED",
+  "wall_seconds": 420.00247776,
+  "wall_seconds_per_row": 26.25015486,
+  "cards": 8,
+  "instances": 2,
+  "remaining_rows": 0,
+  "seed_is_original_template": true,
+  "full_search_completed": false
+}
