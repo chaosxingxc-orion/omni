@@ -1,53 +1,72 @@
 {
-  "rows": 312,
-  "run_id": "SAEA-SLURP-H2-PERCEPTION-THINKING-OFF-V1",
-  "comparison": {
-    "admitted_level": 96,
-    "arm": "off",
-    "schema": "saea-h2-perception-thinking-v1"
-  },
-  "intent_accuracy": 0.7916666666666666,
-  "task_correct_rows": 112,
-  "task_error_rows": 200,
-  "role_contacts": {
-    "perception": {
-      "calls": 312
+  "schema": "saea-public-h2-thinking-progress-v2",
+  "state": "FINALIZED",
+  "rows_per_arm": 312,
+  "arms": {
+    "baseline": {
+      "rows": 312,
+      "slu_f1": 0.6569867888610987,
+      "intent_accuracy": 0.7660256410256411,
+      "task_correct_rows": 100,
+      "cost": {
+        "audio_seconds_used": 2814.6064999999994,
+        "calls_used": 624,
+        "completion_tokens_total": 1249863,
+        "latency_seconds_total": 141860.5457817202,
+        "prompt_tokens_total": 3924626,
+        "tool_calls": 0,
+        "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+      },
+      "source": {
+        "config_hash": "86efdd2787faccd868e5dea76a0fd7de18ef4c26387aa52b8c4d1db2ff160164",
+        "manifest_sha256": "5d5e882cc92bbd5fa26b7306ac04eb2395b2ea0769a5126b198c40d07dac3225",
+        "recipe_sha256": "42795a8ed8d3f60c4ae828746674bb6952e556289238afc45e85c0305c802f36",
+        "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+        "scores_sha256": "7180730d406315fa7f936a77540dd53d95f4d6d2ed9eef6c52c920d479697ccd"
+      },
+      "state": "FINALIZED",
+      "cards": 8,
+      "instances": 2,
+      "tensor_parallel": 4,
+      "concurrency_per_instance": 96,
+      "wall_seconds": 1246.2099371,
+      "wall_seconds_per_row": 3.9942626189102564,
+      "allocated_card_hours": 2.7693554157777776,
+      "remaining_rows": 0
     },
-    "solver": {
-      "calls": 312
+    "off": {
+      "rows": 312,
+      "slu_f1": 0.6659712975460642,
+      "intent_accuracy": 0.7916666666666666,
+      "task_correct_rows": 112,
+      "cost": {
+        "audio_seconds_used": 2814.606500000001,
+        "calls_used": 624,
+        "completion_tokens_total": 722270,
+        "latency_seconds_total": 78648.88625139018,
+        "prompt_tokens_total": 4330110,
+        "tool_calls": 0,
+        "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+      },
+      "source": {
+        "config_hash": "6db9f309c61911e80f0c3200c2ec499e0b71102600b4b8fe4c7e25474e16a194",
+        "manifest_sha256": "31f3d66bfd817759c39de662e3a59b9814fea320d9bf36f78222ea815bdb7ea9",
+        "recipe_sha256": "5cc98a6d02a748b9d99b638a02ee0ff3f0210bfdfec77bf122b49046793efbe8",
+        "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+        "scores_sha256": "e131972a59536559aff6bd42335c86f452721365b61bfd9edd3ce835a439db4f"
+      },
+      "state": "FINALIZED",
+      "cards": 8,
+      "instances": 2,
+      "tensor_parallel": 4,
+      "concurrency_per_instance": 96,
+      "wall_seconds": 839.44524836,
+      "wall_seconds_per_row": 2.6905296421794875,
+      "allocated_card_hours": 1.8654338852444445,
+      "remaining_rows": 0
     }
   },
-  "source": {
-    "config_hash": "6db9f309c61911e80f0c3200c2ec499e0b71102600b4b8fe4c7e25474e16a194",
-    "manifest_sha256": "31f3d66bfd817759c39de662e3a59b9814fea320d9bf36f78222ea815bdb7ea9",
-    "recipe_sha256": "5cc98a6d02a748b9d99b638a02ee0ff3f0210bfdfec77bf122b49046793efbe8",
-    "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
-    "scores_sha256": "e131972a59536559aff6bd42335c86f452721365b61bfd9edd3ce835a439db4f"
-  },
-  "limitations": [
-    "One fresh lock observation does not establish long-run error probability.",
-    "Historical failed runs and learning costs remain in their original ledgers.",
-    "No comparison with a different roster or shared-P K4 as an accuracy gain."
-  ],
-  "schema": "saea-public-h2-thinking-arm-v1",
-  "state": "FINALIZED",
-  "arm": "off",
-  "slu_f1": 0.6659712975460642,
-  "cost": {
-    "audio_seconds_used": 2814.606500000001,
-    "calls_used": 624,
-    "completion_tokens_total": 722270,
-    "latency_seconds_total": 78648.88625139018,
-    "prompt_tokens_total": 4330110,
-    "tool_calls": 0
-  },
-  "wall_seconds": 839.44524836,
-  "wall_seconds_per_row": 2.6905296421794875,
-  "cards": 8,
-  "instances": 2,
-  "allocated_card_hours": 1.8654338852444445,
-  "remaining_rows": 0,
-  "baseline_state": "running",
-  "paired_comparison_pending": true,
-  "full_test_held": true
+  "paired_comparison_pending": false,
+  "full_test_held": true,
+  "evidence": "h2-thinking-comparison-result.json"
 }

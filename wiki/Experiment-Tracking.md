@@ -1,21 +1,39 @@
 # 实验总账
 
-更新时间：2026-11-03 02:30 UTC。当前状态原位维护，历史过程与成本保留在Git及原实验凭据中。
+核验时间：2026-11-03。当前优先级：小规模锁定 Agent 方案；全量测试已于03:39:58 UTC停止；最终校验338条完整checkpoint，972次原生响应全部observed，unknown=0。
 
 | 实验 | 完成量 | 结果 | 资源、效率与剩余 |
 | --- | --- | --- | --- |
 | A0 / Direct，Fold B | 各1080/1080 | SLU 73.2225% / 45.1178%，A0 +28.1046pp | 开发集收益，剩余0 |
 | Direct完整test | 13078/13078 | SLU 46.5558%，Intent 77.8789%，FINALIZED | 8卡2×TP4，每实例C96；6415.778秒，0.4906秒/条，剩余0 |
 | A0全测试查询编码 | 13078/13078 | SEALED；原始语音查询封存，非A0精度结果 | 4worker/64CPU核/0NPU；12529.962秒，0.9581秒/条，剩余0 |
-| A0完整test推理 | 未启动 | alias/content各13078完成，agreement亦13078完成；无完整A0指标 | ETA未知 |
+| A0完整测试推理（暂缓） | 停止后校验338/13078完整条；972次原生响应均observed、unknown=0；其中676次属于完整样本 | 8卡2×TP4；启动至停止1924.86秒，5.6948秒/完整条包含中断开销；无运行ETA，保留全部成本与断点 |
 | Dense TFRL H2 | 312/312，936响应 | learned/lock SLU66.7400%/66.0671%，区间跨0，Intent−1.6026pp，不晋升 | 8卡2实例；生成1891.170秒，6.061秒/条；剩余0 |
 | ACE v2 | 4/51组、9调用 | 输出截断，ABORTED，无候选 | 762.058秒；输入37652/输出32897 tokens，无完成ETA |
 | Reflexion compact v2 | 16/51组、17调用 | 缺schema；存在错误槽位规则，无候选 | 1118.258秒；输入66306/输出53062 tokens，无完成ETA |
 | Reflexion errors v3 | 7/51组、8调用 | 缺reflection外层，ABORTED，无候选 | 572.872秒；输入37207/输出25057 tokens；已结清归档，无完成ETA |
-| GEPA | CPU组件已实现 | 真实Solver搜索及H2未接入 | 无模型实验结果 |
+| H1 P thinking对照 | 三档各313/313 | off/512/3072：SLU67.2797%/68.6526%/67.2773% | 各626调用；8卡2×TP4；3.0407/2.8799/3.6760秒/条，剩余0 |
+| H2 P thinking对照 | 两臂各312/312 | off/reference：SLU66.5971%/65.6987%，差异区间跨0 | 各624调用；8卡2×TP4；2.6905/3.9943秒/条，剩余0 |
+| GEPA | seed构建完成，16条probe准备中 | 真实搜索未完成，无算法收益 | 正常预算48调用；未核验生成启动，ETA未知 |
 
-当前仅两推理服务驻留，无生成任务。八卡持续有效满载、稳定TFRL收益、跨轮RSI均未实现。完整测试未用于调优。
+按用户最新要求，全量A0暂缓，先锁定小规模Agent方案。已SIGINT退出，972次原生响应校验observed、unknown=0；不自动重启，不用全量测试错误做配置选择。
 
 上述秒/条各有统计边界，不混用CPU编码、并发总吞吐、生成阶段和单请求延迟。ACE/Reflexion串行反思链不等于八卡满载；历史共享轨迹成本不重复累加。
 
 [当前研究状态](Research-Status) · [完整计划与决策事项](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Research-Status-and-Plan.md) · [真实终态费用](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/tfrl-mechanism-results.json)
+
+## 当前小规模锁定方案
+
+当前小规模thinking对照已结束，开发默认见[完整H1/H2结果与决策](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Perception-Thinking-Comparison.md)。完整Agent方案仍需小集TFRL搜索与回归验收；全量保持暂停。
+
+03:30完成187条的平均时延拆解：准入→P140.87秒、P全请求241.53秒、P→S4.43秒、S全请求199.72秒、收尾2.57秒，总589.11秒。单样本并行延迟不是7.1167秒/条的墙钟吞吐；无缺失计时，服务端同期解码占主导，客户端包装与准备也需优化。
+
+## 小规模Agent对照执行
+
+P-off 已完成并独立核验 **313/313、FINALIZED**：官方 **SLU-F1 67.2797%、Intent 76.0383%**；严格意图与槽位全正确 103 条。626 次调用（P/S 各 313），输入 4358052、输出 721846 tokens，无额外 fallback；P 的 313 个原始响应均无 reasoning，全部正常 stop。成功容器 951.75 秒（15.86 分钟，含启动和评分），并发吞吐 **3.04 秒/条**，8 卡、2×TP4、C96，分配 2.115 卡时。此前零调用失败的启动开销另保留，不混入成功容器耗时。
+
+完整 313 条平均耗时拆解：准入→P 请求 138.68 秒；P 全请求 44.21 秒（其中 HTTP 12.09 秒）；P→S 25.06 秒；S 全请求 264.58 秒（其中 HTTP 240.44 秒）；收尾 0.06 秒；单样本总延迟 472.60 秒。并发请求存在重叠，不能把单样本延迟当整批吞吐。详见主仓 `docs/results/h1-thinking-off-result.json`。
+
+H1三档各313/313、H2两臂各312/312均已完成。开发默认锁定 **P关闭thinking、S保留3072**，保留3072/3072回归参照。H2 off/reference：SLU66.5971%/65.6987%，Intent79.1667%/76.6026%，严格正确112/100；修复26、破坏14。SLU差+0.8985pp，95%区间[−1.4988,+3.3194]，未证明稳定增益或等效。各624调用；off输入/输出4,330,110/722,270，reference 3,924,626/1,249,863。8卡2×TP4、每实例C96；成功容器839.45/1246.21秒，即2.6905/3.9943秒/条，剩余0。本次墙钟−32.64%、输出−42.21%，顺序观测不作独立性能因果结论。H2已用于开发选择，标签与错误不进入反思学习；全量测试未用于调优并继续暂缓。
+
+三档官方配对分析工具已实现：同名单、同知识/模板/非 thinking 配置校验，SLU pooled counts 与 Intent 的语句聚类 bootstrap、任务修复/破坏、P/S 及未归属额外调用成本。17 项固定镜像测试通过；在真实 108 条快照和完整 313 条 P-off 成本上执行成功。三档完整配对已执行成功，0新增模型调用。

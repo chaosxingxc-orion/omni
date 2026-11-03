@@ -1,0 +1,65 @@
+{
+  "schema": "saea-agent-development-lock-v1",
+  "status": "development-default-not-final-system-release",
+  "purpose": "Freeze the next small-development Agent reference; no automatic full-test restart or TFRL gain claim.",
+  "default": "perception-off-solver-3072",
+  "thinking_policy": {
+    "perception": {
+      "enable_thinking": false,
+      "answer_reserve_tokens": 1024
+    },
+    "solver": {
+      "enable_thinking": true,
+      "reasoning_budget_tokens": 3072,
+      "answer_reserve_tokens": 1024
+    }
+  },
+  "model_fragment": "bf16-thinking-real500-tp4-s128-v1",
+  "deployment_profile": "qwen3-omni-tfgrpo-2xtp4-s128-b2048-ctx48k-v1",
+  "per_instance_concurrency": 96,
+  "cards": 8,
+  "instances": 2,
+  "frozen_non_thinking_components": "Knowledge, prompts, retrieval, supply, output schema and decoding otherwise retain the source configurations identified below.",
+  "H1_source": {
+    "config_hash": "5264a7164f0a3c8356ca71515fadc03ca73be86159965e022c1db9136cd73f51",
+    "manifest_sha256": "75bf3581cf3c5ec78487d0000d0867a1e32aba020f3f8d55e587a1873fd5a3e6",
+    "recipe_sha256": "efd8af5e4109c35923862efbc5fe48be5588f4964f357a67288aeeb0552a7fde",
+    "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+    "scores_sha256": "57f2ff277071ccc4c559b49ebe425f17af9d8c24665dd2844a69da4959430f83"
+  },
+  "H2_source": {
+    "config_hash": "6db9f309c61911e80f0c3200c2ec499e0b71102600b4b8fe4c7e25474e16a194",
+    "manifest_sha256": "31f3d66bfd817759c39de662e3a59b9814fea320d9bf36f78222ea815bdb7ea9",
+    "recipe_sha256": "5cc98a6d02a748b9d99b638a02ee0ff3f0210bfdfec77bf122b49046793efbe8",
+    "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+    "scores_sha256": "e131972a59536559aff6bd42335c86f452721365b61bfd9edd3ce835a439db4f"
+  },
+  "regression_reference": {
+    "policy": "perception-3072-solver-3072",
+    "H2_source": {
+      "config_hash": "86efdd2787faccd868e5dea76a0fd7de18ef4c26387aa52b8c4d1db2ff160164",
+      "manifest_sha256": "5d5e882cc92bbd5fa26b7306ac04eb2395b2ea0769a5126b198c40d07dac3225",
+      "recipe_sha256": "42795a8ed8d3f60c4ae828746674bb6952e556289238afc45e85c0305c802f36",
+      "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+      "scores_sha256": "7180730d406315fa7f936a77540dd53d95f4d6d2ed9eef6c52c920d479697ccd"
+    }
+  },
+  "evidence": {
+    "relpath": "docs/results/h2-thinking-comparison-result.json",
+    "sha256": "124ed9a17212e0c120473f71eaeec6fcd60a0c36be5af86be97240939f24ac36"
+  },
+  "decision_basis": "H1/H2 SLU point estimates do not decrease; repeated observed output and wall cost reductions. Development efficiency choice, not equivalence or statistically stable accuracy gain.",
+  "limitations": [
+    "Fixed hard development set, not natural-distribution test performance.",
+    "Paired intervals describe roster uncertainty, not independent decoding noise.",
+    "Intervals are marginal exploratory 95% intervals; no multiple-comparison correction.",
+    "An interval crossing zero does not establish equivalence.",
+    "H2 has prior development-selection exposure; it is not an untouched test set."
+  ],
+  "H2_used_for_development_selection": true,
+  "test_used_for_tuning": false,
+  "full_test_held": true,
+  "automatic_full_test_resume": false,
+  "historical_candidate_freeze_unchanged": true,
+  "existing_gepa_seed_probe_policy": "P3072/S3072 preserved for the previously frozen mechanism-only probe; future search must explicitly register its P policy."
+}

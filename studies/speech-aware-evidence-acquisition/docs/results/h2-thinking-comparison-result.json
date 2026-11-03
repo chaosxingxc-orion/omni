@@ -1,0 +1,770 @@
+{
+  "arms": {
+    "baseline": {
+      "attempt_id": "generation-v1",
+      "claims_benefit": false,
+      "comparison": {
+        "admitted_level": 96,
+        "arm": "baseline",
+        "schema": "saea-h2-perception-thinking-v1"
+      },
+      "cost": {
+        "audio_seconds_used": 2814.6064999999994,
+        "calls_used": 624,
+        "completion_tokens_total": 1249863,
+        "latency_seconds_total": 141860.5457817202,
+        "prompt_tokens_total": 3924626,
+        "tool_calls": 0,
+        "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+      },
+      "hardness_confirmed": false,
+      "historical_costs_excluded_from_this_run": true,
+      "independent_stochastic_draws_claimed": false,
+      "intent_accuracy": 0.7660256410256411,
+      "limitations": [
+        "One fresh lock observation does not establish long-run error probability.",
+        "Historical failed runs and learning costs remain in their original ledgers.",
+        "No comparison with a different roster or shared-P K4 as an accuracy gain."
+      ],
+      "native_role_costs": {
+        "perception": {
+          "calls": 312,
+          "completion_tokens": 561092,
+          "contacts_with_reasoning": 312,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 312
+          },
+          "prompt_tokens": 1199833,
+          "request_seconds": {
+            "mean": 205.69574456451943,
+            "n": 312,
+            "p50": 184.95818552000856,
+            "p95": 375.76917653001146
+          },
+          "think_markers": 0,
+          "wire_records": 312
+        },
+        "solver": {
+          "calls": 312,
+          "completion_tokens": 688771,
+          "contacts_with_reasoning": 312,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 312
+          },
+          "prompt_tokens": 2724793,
+          "request_seconds": {
+            "mean": 248.98549191535298,
+            "n": 312,
+            "p50": 230.10274501499953,
+            "p95": 414.9686285899952
+          },
+          "think_markers": 0,
+          "wire_records": 312
+        }
+      },
+      "new_model_calls": 0,
+      "new_scoring_jobs": 0,
+      "official": {
+        "action_accuracy": 0.782051282051282,
+        "intent_accuracy": 0.7660256410256411,
+        "raw": {
+          "action": {
+            "f_measure": 0.782051282051282,
+            "fn": 68.0,
+            "fp": 68.0,
+            "official_label": "Action",
+            "precision": 0.782051282051282,
+            "recall": 0.782051282051282,
+            "tp": 244.0
+          },
+          "entities": {
+            "f_measure": 0.5171102661596959,
+            "fn": 169.0,
+            "fp": 212.0,
+            "official_label": "Entities",
+            "precision": 0.49038461538461536,
+            "recall": 0.546916890080429,
+            "tp": 204.0
+          },
+          "entities_distance_char": {
+            "f_measure": 0.6844365835166925,
+            "fn": 116.81672243259538,
+            "fp": 159.81672243259544,
+            "official_label": "Entities (distance char)",
+            "precision": 0.6524338619371918,
+            "recall": 0.7197407969842521,
+            "tp": 300.0
+          },
+          "entities_distance_word": {
+            "f_measure": 0.6316538804102074,
+            "fn": 153.44365079365076,
+            "fp": 196.4436507936508,
+            "official_label": "Entities (distance word)",
+            "precision": 0.6042981907823742,
+            "recall": 0.6616037063809753,
+            "tp": 300.0
+          },
+          "intent": {
+            "f_measure": 0.7660256410256411,
+            "fn": 73.0,
+            "fp": 73.0,
+            "official_label": "Intent (scen_act)",
+            "precision": 0.7660256410256411,
+            "recall": 0.7660256410256411,
+            "tp": 239.0
+          },
+          "scenario": {
+            "f_measure": 0.8044871794871795,
+            "fn": 61.0,
+            "fp": 61.0,
+            "official_label": "Scenario",
+            "precision": 0.8044871794871795,
+            "recall": 0.8044871794871795,
+            "tp": 251.0
+          },
+          "slu_f1": {
+            "f_measure": 0.6569867888610987,
+            "fn": 270.2603732262462,
+            "fp": 356.2603732262462,
+            "official_label": "Slu f1",
+            "precision": 0.6274441739917661,
+            "recall": 0.6894488344628037,
+            "tp": 600.0
+          }
+        },
+        "scenario_accuracy": 0.8044871794871795,
+        "slu_f1": 0.6569867888610987,
+        "span_f1": 0.5171102661596959
+      },
+      "phase_timing": {
+        "all_timing_complete": true,
+        "checkpoint_sha256": "f23d392977cc60b66344c6213605955d309996d0f4d5a429eb4325fd321c4c5d",
+        "complete_request_timing": true,
+        "limitations": [
+          "Completed subset is descriptive and may be biased toward faster samples.",
+          "P→S gap contains preparation/FIT/scheduling; not pure CPU time.",
+          "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+          "Nested intervals overlap; do not sum as whole-task wall time.",
+          "Pre-P slot wait and other elapsed partition only matched sample intervals; other elapsed is not pure CPU time. Missing slot events are unknown."
+        ],
+        "metrics": {
+          "admission_to_perception_request_start": {
+            "mean_s": 172.78978376881338,
+            "n": 312,
+            "p50_s": 30.64408096500847,
+            "p95_s": 545.0922948200023
+          },
+          "admission_to_sample_finished": {
+            "mean_s": 637.1018035379798,
+            "n": 312,
+            "p50_s": 662.2749901000061,
+            "p95_s": 943.853306539997
+          },
+          "perception/http_request": {
+            "mean_s": 205.6117528054482,
+            "n": 312,
+            "p50_s": 184.9036012350116,
+            "p95_s": 375.7121352200047
+          },
+          "perception/request_total": {
+            "mean_s": 213.78620146746863,
+            "n": 312,
+            "p50_s": 194.49371578500723,
+            "p95_s": 387.07668053000816
+          },
+          "perception/scientific_request": {
+            "mean_s": 205.69574456451943,
+            "n": 312,
+            "p50_s": 184.95818552000856,
+            "p95_s": 375.76917653001146
+          },
+          "perception_end_to_solver_request_start": {
+            "mean_s": 1.2345546803839962,
+            "n": 312,
+            "p50_s": 0.9620087999937823,
+            "p95_s": 3.0946109700016677
+          },
+          "perception_start_to_solver_end": {
+            "mean_s": 464.2158722925004,
+            "n": 312,
+            "p50_s": 455.9404965300055,
+            "p95_s": 739.6284887399815
+          },
+          "pre_perception_observed_slot_wait": {
+            "mean_s": 153.90894029298113,
+            "n": 312,
+            "p50_s": 3.88499756809324e-06,
+            "p95_s": 538.9247397400031
+          },
+          "pre_perception_other_elapsed": {
+            "mean_s": 18.88084347583227,
+            "n": 312,
+            "p50_s": 22.57037099999434,
+            "p95_s": 31.95342554996023
+          },
+          "solver/http_request": {
+            "mean_s": 248.8960993370194,
+            "n": 312,
+            "p50_s": 230.06838488500216,
+            "p95_s": 414.92193019998376
+          },
+          "solver/request_total": {
+            "mean_s": 249.19511614464778,
+            "n": 312,
+            "p50_s": 230.17013679500087,
+            "p95_s": 415.2776277200028
+          },
+          "solver/scientific_request": {
+            "mean_s": 248.98549191535298,
+            "n": 312,
+            "p50_s": 230.10274501499953,
+            "p95_s": 414.9686285899952
+          },
+          "solver_request_end_to_sample_finished": {
+            "mean_s": 0.096147476666001,
+            "n": 312,
+            "p50_s": 0.02756062000116799,
+            "p95_s": 0.521685849991627
+          }
+        },
+        "missing_sample_count": 0,
+        "missing_timing_entries": 0,
+        "new_model_calls": 0,
+        "pre_perception_slot_coverage": {
+          "joined_rows": 312,
+          "rows_without_observed_wait": 0
+        },
+        "rows": 312,
+        "sample_timing_coverage": {
+          "boundary_missing_rows": 0,
+          "boundary_present_rows": 312,
+          "expected_rows": 312,
+          "joined_phase_rows": 312,
+          "unjoined_phase_rows": 0
+        },
+        "schema": "saea-real-phase-timing-v1",
+        "timing_partial_tail": false,
+        "timing_sha256": "dcb7a27a15e7c1c9cca99989df60432c02641e38ea2ac85ea382166b41026efc"
+      },
+      "role_contacts": {
+        "perception": {
+          "calls": 312
+        },
+        "solver": {
+          "calls": 312
+        }
+      },
+      "rows": 312,
+      "run_id": "SAEA-SLURP-H2-PERCEPTION-THINKING-BASELINE-V1",
+      "schema": "saea-h1-fresh-observation-result-v1",
+      "scorer_id": "slurp-slu-official-train",
+      "source": {
+        "config_hash": "86efdd2787faccd868e5dea76a0fd7de18ef4c26387aa52b8c4d1db2ff160164",
+        "manifest_sha256": "5d5e882cc92bbd5fa26b7306ac04eb2395b2ea0769a5126b198c40d07dac3225",
+        "recipe_sha256": "42795a8ed8d3f60c4ae828746674bb6952e556289238afc45e85c0305c802f36",
+        "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+        "scores_sha256": "7180730d406315fa7f936a77540dd53d95f4d6d2ed9eef6c52c920d479697ccd"
+      },
+      "task_correct_rows": 100,
+      "task_error_rows": 212,
+      "task_success_rule": "Intent exact AND exact-slot FP=FN=0",
+      "execution_summary": {
+        "state": "FINALIZED",
+        "cards": 8,
+        "instances": 2,
+        "tensor_parallel": 4,
+        "concurrency_per_instance": 96,
+        "wall_seconds": 1246.2099371,
+        "wall_seconds_per_row": 3.9942626189102564,
+        "allocated_card_hours": 2.7693554157777776,
+        "remaining_rows": 0
+      }
+    },
+    "off": {
+      "attempt_id": "generation-v1",
+      "claims_benefit": false,
+      "comparison": {
+        "admitted_level": 96,
+        "arm": "off",
+        "schema": "saea-h2-perception-thinking-v1"
+      },
+      "cost": {
+        "audio_seconds_used": 2814.606500000001,
+        "calls_used": 624,
+        "completion_tokens_total": 722270,
+        "latency_seconds_total": 78648.88625139018,
+        "prompt_tokens_total": 4330110,
+        "tool_calls": 0,
+        "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+      },
+      "hardness_confirmed": false,
+      "historical_costs_excluded_from_this_run": true,
+      "independent_stochastic_draws_claimed": false,
+      "intent_accuracy": 0.7916666666666666,
+      "limitations": [
+        "One fresh lock observation does not establish long-run error probability.",
+        "Historical failed runs and learning costs remain in their original ledgers.",
+        "No comparison with a different roster or shared-P K4 as an accuracy gain."
+      ],
+      "native_role_costs": {
+        "perception": {
+          "calls": 312,
+          "completion_tokens": 23482,
+          "contacts_with_reasoning": 0,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 312
+          },
+          "prompt_tokens": 1201081,
+          "request_seconds": {
+            "mean": 13.30474232134638,
+            "n": 312,
+            "p50": 13.629420180004672,
+            "p95": 24.05046585999662
+          },
+          "think_markers": 0,
+          "wire_records": 312
+        },
+        "solver": {
+          "calls": 312,
+          "completion_tokens": 698788,
+          "contacts_with_reasoning": 312,
+          "empty_content": 0,
+          "finish_reasons": {
+            "stop": 312
+          },
+          "prompt_tokens": 3129029,
+          "request_seconds": {
+            "mean": 238.77502130490421,
+            "n": 312,
+            "p50": 245.86405257497972,
+            "p95": 385.10831366002094
+          },
+          "think_markers": 0,
+          "wire_records": 312
+        }
+      },
+      "new_model_calls": 0,
+      "new_scoring_jobs": 0,
+      "official": {
+        "action_accuracy": 0.8076923076923077,
+        "intent_accuracy": 0.7916666666666666,
+        "raw": {
+          "action": {
+            "f_measure": 0.8076923076923077,
+            "fn": 60.0,
+            "fp": 60.0,
+            "official_label": "Action",
+            "precision": 0.8076923076923077,
+            "recall": 0.8076923076923077,
+            "tp": 252.0
+          },
+          "entities": {
+            "f_measure": 0.5311308767471411,
+            "fn": 164.0,
+            "fp": 205.0,
+            "official_label": "Entities",
+            "precision": 0.5048309178743962,
+            "recall": 0.5603217158176944,
+            "tp": 209.0
+          },
+          "entities_distance_char": {
+            "f_measure": 0.7025975733494361,
+            "fn": 108.60340651476828,
+            "fp": 149.60340651476832,
+            "official_label": "Entities (distance char)",
+            "precision": 0.6709144622084826,
+            "recall": 0.7374213925607732,
+            "tp": 305.0
+          },
+          "entities_distance_word": {
+            "f_measure": 0.6329744611358128,
+            "fn": 156.35198412698412,
+            "fp": 197.35198412698412,
+            "official_label": "Entities (distance word)",
+            "precision": 0.6071440138333412,
+            "recall": 0.6611004406476135,
+            "tp": 305.0
+          },
+          "intent": {
+            "f_measure": 0.7916666666666666,
+            "fn": 65.0,
+            "fp": 65.0,
+            "official_label": "Intent (scen_act)",
+            "precision": 0.7916666666666666,
+            "recall": 0.7916666666666666,
+            "tp": 247.0
+          },
+          "scenario": {
+            "f_measure": 0.8365384615384616,
+            "fn": 51.0,
+            "fp": 51.0,
+            "official_label": "Scenario",
+            "precision": 0.8365384615384616,
+            "recall": 0.8365384615384616,
+            "tp": 261.0
+          },
+          "slu_f1": {
+            "f_measure": 0.6659712975460642,
+            "fn": 264.95539064175244,
+            "fp": 346.95539064175233,
+            "official_label": "Slu f1",
+            "precision": 0.6374382818314264,
+            "recall": 0.6971784007783346,
+            "tp": 610.0
+          }
+        },
+        "scenario_accuracy": 0.8365384615384616,
+        "slu_f1": 0.6659712975460642,
+        "span_f1": 0.5311308767471411
+      },
+      "phase_timing": {
+        "all_timing_complete": true,
+        "checkpoint_sha256": "046d41621a8f792c95ac2b4f3357961621b03197847689195ef5df15da3a42e1",
+        "complete_request_timing": true,
+        "limitations": [
+          "Completed subset is descriptive and may be biased toward faster samples.",
+          "P→S gap contains preparation/FIT/scheduling; not pure CPU time.",
+          "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+          "Nested intervals overlap; do not sum as whole-task wall time.",
+          "Pre-P slot wait and other elapsed partition only matched sample intervals; other elapsed is not pure CPU time. Missing slot events are unknown."
+        ],
+        "metrics": {
+          "admission_to_perception_request_start": {
+            "mean_s": 137.96428951420015,
+            "n": 312,
+            "p50_s": 30.981823050009552,
+            "p95_s": 418.2735982600134
+          },
+          "admission_to_sample_finished": {
+            "mean_s": 470.20883228378284,
+            "n": 312,
+            "p50_s": 533.9788778249931,
+            "p95_s": 624.0831829200033
+          },
+          "perception/http_request": {
+            "mean_s": 13.142802892307932,
+            "n": 312,
+            "p50_s": 13.521411719993921,
+            "p95_s": 23.939920270000584
+          },
+          "perception/request_total": {
+            "mean_s": 43.726077683973784,
+            "n": 312,
+            "p50_s": 48.73611550500209,
+            "p95_s": 72.6262079399894
+          },
+          "perception/scientific_request": {
+            "mean_s": 13.30474232134638,
+            "n": 312,
+            "p50_s": 13.629420180004672,
+            "p95_s": 24.05046585999662
+          },
+          "perception_end_to_solver_request_start": {
+            "mean_s": 25.269091283685366,
+            "n": 312,
+            "p50_s": 6.595942755011492,
+            "p95_s": 73.61809642001754
+          },
+          "perception_start_to_solver_end": {
+            "mean_s": 332.1234072447747,
+            "n": 312,
+            "p50_s": 311.7820225350006,
+            "p95_s": 539.0606021499843
+          },
+          "pre_perception_observed_slot_wait": {
+            "mean_s": 119.04459948673134,
+            "n": 312,
+            "p50_s": 3.910012310370803e-06,
+            "p95_s": 411.98126170999603
+          },
+          "pre_perception_other_elapsed": {
+            "mean_s": 18.919690027468814,
+            "n": 312,
+            "p50_s": 22.50914444499358,
+            "p95_s": 32.183557620010106
+          },
+          "solver/http_request": {
+            "mean_s": 238.47290957733966,
+            "n": 312,
+            "p50_s": 245.82026400000905,
+            "p95_s": 385.05256659002043
+          },
+          "solver/request_total": {
+            "mean_s": 263.1282382771155,
+            "n": 312,
+            "p50_s": 258.21306479000486,
+            "p95_s": 427.37371467999765
+          },
+          "solver/scientific_request": {
+            "mean_s": 238.77502130490421,
+            "n": 312,
+            "p50_s": 245.86405257497972,
+            "p95_s": 385.10831366002094
+          },
+          "solver_request_end_to_sample_finished": {
+            "mean_s": 0.12113552480803218,
+            "n": 312,
+            "p50_s": 0.028482699999585748,
+            "p95_s": 0.21144051000010222
+          }
+        },
+        "missing_sample_count": 0,
+        "missing_timing_entries": 0,
+        "new_model_calls": 0,
+        "pre_perception_slot_coverage": {
+          "joined_rows": 312,
+          "rows_without_observed_wait": 0
+        },
+        "rows": 312,
+        "sample_timing_coverage": {
+          "boundary_missing_rows": 0,
+          "boundary_present_rows": 312,
+          "expected_rows": 312,
+          "joined_phase_rows": 312,
+          "unjoined_phase_rows": 0
+        },
+        "schema": "saea-real-phase-timing-v1",
+        "timing_partial_tail": false,
+        "timing_sha256": "bff04b2a43f8d130ff18a72d325f73f84d98d2f4ab0e13ff57d92d3989ab8397"
+      },
+      "role_contacts": {
+        "perception": {
+          "calls": 312
+        },
+        "solver": {
+          "calls": 312
+        }
+      },
+      "rows": 312,
+      "run_id": "SAEA-SLURP-H2-PERCEPTION-THINKING-OFF-V1",
+      "schema": "saea-h1-fresh-observation-result-v1",
+      "scorer_id": "slurp-slu-official-train",
+      "source": {
+        "config_hash": "6db9f309c61911e80f0c3200c2ec499e0b71102600b4b8fe4c7e25474e16a194",
+        "manifest_sha256": "31f3d66bfd817759c39de662e3a59b9814fea320d9bf36f78222ea815bdb7ea9",
+        "recipe_sha256": "5cc98a6d02a748b9d99b638a02ee0ff3f0210bfdfec77bf122b49046793efbe8",
+        "roster_sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+        "scores_sha256": "e131972a59536559aff6bd42335c86f452721365b61bfd9edd3ce835a439db4f"
+      },
+      "task_correct_rows": 112,
+      "task_error_rows": 200,
+      "task_success_rule": "Intent exact AND exact-slot FP=FN=0",
+      "execution_summary": {
+        "state": "FINALIZED",
+        "cards": 8,
+        "instances": 2,
+        "tensor_parallel": 4,
+        "concurrency_per_instance": 96,
+        "wall_seconds": 839.44524836,
+        "wall_seconds_per_row": 2.6905296421794875,
+        "allocated_card_hours": 1.8654338852444445,
+        "remaining_rows": 0
+      }
+    }
+  },
+  "candidate_freeze": {
+    "relpath": "configs/evaluation/agent-thinking-candidate-freeze-v1.json",
+    "sha256": "f1ffdd9dc5268a5ea9fb74b8e0f1c81d0d7956a897f422e3942fbe9c2ef56f87"
+  },
+  "new_model_calls": 0,
+  "new_scoring_jobs": 0,
+  "paired": {
+    "automatic_adoption": false,
+    "bootstrap_unit": "utterance cluster",
+    "comparisons": {
+      "off": {
+        "contrasts": {
+          "intent_pp": {
+            "ci_high": 5.448717948717949,
+            "ci_level": 0.95,
+            "ci_low": -0.32051282051282054,
+            "n_replicates": 10000,
+            "point_estimate": 2.5641025641025643,
+            "seed": 20261103,
+            "sigma_hat": 1.506314931176503
+          },
+          "slu_f1_pp": {
+            "ci_high": 3.3194218270936338,
+            "ci_level": 0.95,
+            "ci_low": -1.498826989463249,
+            "n_replicates": 10000,
+            "point_estimate": 0.8984508684965808,
+            "seed": 20261103,
+            "sigma_hat": 1.2340326631339538
+          }
+        },
+        "minus": "baseline",
+        "task_breaks": 14,
+        "task_repairs": 26,
+        "task_success_rule": "Intent exact AND exact-slot FP=FN=0",
+        "task_ties": 272
+      }
+    },
+    "decoding_noise_estimated": false,
+    "limitations": [
+      "Fixed hard development set, not natural-distribution test performance.",
+      "Paired intervals describe roster uncertainty, not independent decoding noise.",
+      "Intervals are marginal exploratory 95% intervals; no multiple-comparison correction.",
+      "An interval crossing zero does not establish equivalence.",
+      "H2 has prior development-selection exposure; it is not an untouched test set."
+    ],
+    "official": {
+      "baseline": {
+        "action_accuracy": 0.782051282051282,
+        "intent_accuracy": 0.7660256410256411,
+        "raw": {
+          "action": {
+            "f_measure": 0.782051282051282,
+            "fn": 68.0,
+            "fp": 68.0,
+            "official_label": "Action",
+            "precision": 0.782051282051282,
+            "recall": 0.782051282051282,
+            "tp": 244.0
+          },
+          "entities": {
+            "f_measure": 0.5171102661596959,
+            "fn": 169.0,
+            "fp": 212.0,
+            "official_label": "Entities",
+            "precision": 0.49038461538461536,
+            "recall": 0.546916890080429,
+            "tp": 204.0
+          },
+          "entities_distance_char": {
+            "f_measure": 0.6844365835166925,
+            "fn": 116.81672243259538,
+            "fp": 159.81672243259544,
+            "official_label": "Entities (distance char)",
+            "precision": 0.6524338619371918,
+            "recall": 0.7197407969842521,
+            "tp": 300.0
+          },
+          "entities_distance_word": {
+            "f_measure": 0.6316538804102074,
+            "fn": 153.44365079365076,
+            "fp": 196.4436507936508,
+            "official_label": "Entities (distance word)",
+            "precision": 0.6042981907823742,
+            "recall": 0.6616037063809753,
+            "tp": 300.0
+          },
+          "intent": {
+            "f_measure": 0.7660256410256411,
+            "fn": 73.0,
+            "fp": 73.0,
+            "official_label": "Intent (scen_act)",
+            "precision": 0.7660256410256411,
+            "recall": 0.7660256410256411,
+            "tp": 239.0
+          },
+          "scenario": {
+            "f_measure": 0.8044871794871795,
+            "fn": 61.0,
+            "fp": 61.0,
+            "official_label": "Scenario",
+            "precision": 0.8044871794871795,
+            "recall": 0.8044871794871795,
+            "tp": 251.0
+          },
+          "slu_f1": {
+            "f_measure": 0.6569867888610987,
+            "fn": 270.2603732262462,
+            "fp": 356.2603732262462,
+            "official_label": "Slu f1",
+            "precision": 0.6274441739917661,
+            "recall": 0.6894488344628037,
+            "tp": 600.0
+          }
+        },
+        "scenario_accuracy": 0.8044871794871795,
+        "slu_f1": 0.6569867888610987,
+        "span_f1": 0.5171102661596959
+      },
+      "off": {
+        "action_accuracy": 0.8076923076923077,
+        "intent_accuracy": 0.7916666666666666,
+        "raw": {
+          "action": {
+            "f_measure": 0.8076923076923077,
+            "fn": 60.0,
+            "fp": 60.0,
+            "official_label": "Action",
+            "precision": 0.8076923076923077,
+            "recall": 0.8076923076923077,
+            "tp": 252.0
+          },
+          "entities": {
+            "f_measure": 0.5311308767471411,
+            "fn": 164.0,
+            "fp": 205.0,
+            "official_label": "Entities",
+            "precision": 0.5048309178743962,
+            "recall": 0.5603217158176944,
+            "tp": 209.0
+          },
+          "entities_distance_char": {
+            "f_measure": 0.7025975733494361,
+            "fn": 108.60340651476828,
+            "fp": 149.60340651476832,
+            "official_label": "Entities (distance char)",
+            "precision": 0.6709144622084826,
+            "recall": 0.7374213925607732,
+            "tp": 305.0
+          },
+          "entities_distance_word": {
+            "f_measure": 0.6329744611358128,
+            "fn": 156.35198412698412,
+            "fp": 197.35198412698412,
+            "official_label": "Entities (distance word)",
+            "precision": 0.6071440138333412,
+            "recall": 0.6611004406476135,
+            "tp": 305.0
+          },
+          "intent": {
+            "f_measure": 0.7916666666666666,
+            "fn": 65.0,
+            "fp": 65.0,
+            "official_label": "Intent (scen_act)",
+            "precision": 0.7916666666666666,
+            "recall": 0.7916666666666666,
+            "tp": 247.0
+          },
+          "scenario": {
+            "f_measure": 0.8365384615384616,
+            "fn": 51.0,
+            "fp": 51.0,
+            "official_label": "Scenario",
+            "precision": 0.8365384615384616,
+            "recall": 0.8365384615384616,
+            "tp": 261.0
+          },
+          "slu_f1": {
+            "f_measure": 0.6659712975460642,
+            "fn": 264.95539064175244,
+            "fp": 346.95539064175233,
+            "official_label": "Slu f1",
+            "precision": 0.6374382818314264,
+            "recall": 0.6971784007783346,
+            "tp": 610.0
+          }
+        },
+        "scenario_accuracy": 0.8365384615384616,
+        "slu_f1": 0.6659712975460642,
+        "span_f1": 0.5311308767471411
+      }
+    },
+    "rows": 312,
+    "seed": 20261103
+  },
+  "request_latency_is_not_wall_throughput": true,
+  "schema": "saea-h2-thinking-comparison-result-v1",
+  "source_config_sha256": "e36d7d96175819fcab0ad2201740ee8dfb773e1bc0a06c299a8f8b87e4d4fd1e",
+  "test_used_for_tuning": false,
+  "source_receipt_sha256": "bad1328c41ded3cf33e82c37fa362b25f7e130a2273a76a9b48c92ef4a563937",
+  "full_test_held": true,
+  "publication_note": "Aggregate evidence only; private scorer command and stdout omitted. Wall time includes startup and scoring; sequential observations do not isolate causal speedup."
+}
