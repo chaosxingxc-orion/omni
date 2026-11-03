@@ -72,7 +72,7 @@
     "cards": 2,
     "instances": 1,
     "defined_independent_mutation_branches": 4,
-    "state": "engine64k-ready-source-runtime-separation-fixed-four-gepa-branches-in-preparation",
+    "state": "four-production-gepa-branches-prepared-registering-and-admitting",
     "completed_groups": 51,
     "known_responses": 51,
     "generation_tokens": {
@@ -84,7 +84,8 @@
     "ready_successors": 0,
     "queued_successors": 0,
     "scientific_gain_verified": false,
-    "context": 65536
+    "context": 65536,
+    "prepared_mutation_branches": 4
   },
   "queue_validation": {
     "tests": 115,
@@ -93,56 +94,52 @@
     "historical_eight_node_plan_never_dispatched": true
   },
   "fulltest": {
-    "observer": {
-      "id": "b12d4c6fc0926710b64b70012336ce7a97adb633f6065c0dc8b729b145fa526b",
-      "state": "exited",
-      "exit_code": 0
-    },
     "snapshot": {
-      "observed_at": "2026-11-03T10:40:25.867655+00:00",
+      "observed_at": "2026-11-03T11:59:31.931952+00:00",
       "container_id": "58cc80745529e813abd650ab2f9929b1fb5eaeb4abe6564d3da3552f56aae730",
-      "elapsed_seconds": 9752.465467
+      "elapsed_seconds": 14498.529764,
+      "source_prefix_bytes": 832234840
     },
     "progress": {
       "schema": "saea-real-engine-progress-v1",
       "state": "running",
-      "completed_rows": 3343,
+      "completed_rows": 5072,
       "total_rows": 13078,
-      "checkpoint_rows": 3343,
+      "checkpoint_rows": 5072,
       "unusable_checkpoint_rows": 0,
-      "remaining_rows": 9735,
-      "checkpoint_sha256": "47599901077f45b966c3faee35693eb66b5a6e1e4953fe9ac2f1fcdcdfffdf98",
+      "remaining_rows": 8006,
+      "checkpoint_sha256": "00e0171b61874aa36048b0ea141e2240310da98727a7457f7e100c772bb81382",
       "split_identity_hash": "7247647b8c8b37becd564b7031691565d4e6b09d8e124823054906d36372c95d",
       "torn_tail_bytes": 0,
       "cards": 4,
       "instances": 1,
-      "elapsed_seconds": 9752.465467,
-      "wall_seconds_per_complete_row": 2.917279529464553,
-      "rows_per_second": 0.34278511534461814,
-      "estimated_remaining_seconds": 28399.71621933742,
+      "elapsed_seconds": 14498.529764,
+      "wall_seconds_per_complete_row": 2.858542934542587,
+      "rows_per_second": 0.3498285745216614,
+      "estimated_remaining_seconds": 22885.49473394795,
       "eta_basis": "Linear observed whole-task completion rate; startup and tail may change it.",
       "full_roster_comparison_eligible": false,
       "checkpoint_recorded_cost_lower_bound": {
-        "calls": 6686.0,
-        "audio_seconds": 16834.355625000084,
-        "latency_seconds": 740653.8406716515,
-        "prompt_tokens": 43214788.0,
-        "completion_tokens": 5678756.0,
+        "calls": 10144.0,
+        "audio_seconds": 25777.40037499997,
+        "latency_seconds": 1136241.2735016507,
+        "prompt_tokens": 65631507.0,
+        "completion_tokens": 8699954.0,
         "tool_calls": 0.0
       },
       "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
       "complete_sample_timings": {
         "admission_wait": {
-          "n": 3343,
-          "mean_s": 3582.7282018574037,
-          "p50_s": 3382.65581245,
-          "p95_s": 7671.51812328
+          "n": 5072,
+          "mean_s": 5946.494815677054,
+          "p50_s": 5761.008013645,
+          "p95_s": 12157.77047539
         },
         "admitted_to_finished": {
-          "n": 3343,
-          "mean_s": 993.5630564092611,
-          "p50_s": 989.81871969,
-          "p95_s": 1299.24471221
+          "n": 5072,
+          "mean_s": 1018.5993666851755,
+          "p50_s": 1011.9232929899999,
+          "p95_s": 1305.1802487
         }
       },
       "new_model_calls": 0,
@@ -152,11 +149,6 @@
         "Partial or failed candidates cannot establish a full-roster throughput winner.",
         "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
       ]
-    },
-    "runtime_confirmation": {
-      "state": "running",
-      "observed_at": "2026-11-03T11:46:40.860522+00:00",
-      "sample_progress_from_older_snapshot": true
     }
   },
   "local_input_digests": {
