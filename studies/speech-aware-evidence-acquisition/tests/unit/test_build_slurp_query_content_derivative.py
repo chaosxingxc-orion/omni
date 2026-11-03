@@ -169,3 +169,36 @@ def test_refuses_the_wrong_dimension(tmp_path: Path) -> None:
             ledger_row="SAEA-SYNTHETIC-TEST-V6",
             check=False,
         )
+
+
+def test_resume_after_output_publication_preserves_bytes(tmp_path, monkeypatch):
+    digest = _write_source(tmp_path, 'source.jsonl', [('a', [0.1, 0.2])])
+    args = dict(root=tmp_path, source_relpath='source.jsonl', source_sha256=digest,
+                out_dir_relpath='out', out_name='vectors.jsonl', ledger_row='ROW', check=False)
+    original = _module.publish_new
+    def crash(path, payload):
+        if path.name.endswith('provenance.json'):
+            raise OSError('simulated interruption')
+        return original(path, payload)
+    monkeypatch.setattr(_module, 'publish_new', crash)
+    with pytest.raises(OSError):
+        build_query_content_derivative(**args)
+    out = tmp_path/'out/vectors.jsonl'; before = out.stat().st_mtime_ns
+    monkeypatch.setattr(_module, 'publish_new', original)
+    build_query_content_derivative(**args, resume=True)
+    assert out.stat().st_mtime_ns == before
+    assert (tmp_path/'out/vectors.provenance.json').exists()
+    build_query_content_derivative(**args, resume=True)
+    with pytest.raises(SystemExit):
+        build_query_content_derivative(**{**args, 'ledger_row':'OTHER'}, resume=True)
+    assert out.stat().st_mtime_ns == before
+
+
+def test_existing_provenance_conflict_prevents_output_publication(tmp_path):
+    digest = _write_source(tmp_path, 'source.jsonl', [('a', [0.1])])
+    (tmp_path/'out').mkdir()
+    (tmp_path/'out/vectors.provenance.json').write_text('{}')
+    with pytest.raises(SystemExit):
+        build_query_content_derivative(tmp_path, source_relpath='source.jsonl', source_sha256=digest,
+            out_dir_relpath='out', out_name='vectors.jsonl', ledger_row='ROW', check=False, resume=True)
+    assert not (tmp_path/'out/vectors.jsonl').exists()

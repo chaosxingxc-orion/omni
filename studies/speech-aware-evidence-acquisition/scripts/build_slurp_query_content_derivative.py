@@ -15,7 +15,8 @@ later one) never needs a hand-copied, hard-wired script; it never touches
 ``build_slurp_exemplar_pool_assets.py`` or its Fold A output bytes. It never
 overwrites an existing output file: a re-run against the same
 ``--out-dir``/``--out-name`` refuses rather than risk silently changing
-sealed bytes.
+sealed bytes. Explicit ``--resume`` verifies identical existing bytes and
+publishes missing artifacts with durable exclusive publication.
 
 Every float in the output is byte-identical to the parent's single segment
 vector; nothing is recomputed, re-encoded or renormalised anywhere in this
@@ -45,7 +46,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from speech_aware_evidence_acquisition.data.lock import data_root  # noqa: E402
-from speech_aware_evidence_acquisition.e0.artifacts import write_json_artifact  # noqa: E402
+from speech_aware_evidence_acquisition.core.atomic_file import publish_new  # noqa: E402
 
 QUERY_SOURCE_DIMENSION = "intent-boundary"
 QUERY_TARGET_DIMENSION = "content"
@@ -67,6 +68,7 @@ def build_query_content_derivative(
     out_name: str,
     ledger_row: str,
     check: bool,
+    resume: bool = False,
 ) -> dict[str, object]:
     """Flatten one sealed Fold-A-shaped speech-SEGMENT file into a flat
     ``sealed-vectors`` file: one ``content`` vector per sample id,
@@ -121,22 +123,6 @@ def build_query_content_derivative(
     out_bytes = ("\n".join(out_lines) + "\n").encode("utf-8")
     out_sha256 = _sha256_bytes(out_bytes)
 
-    if out_path.exists():
-        raise SystemExit(
-            f"refusing to overwrite an existing derivative at {out_path}; "
-            "delete it deliberately first if a fresh derivation is truly intended"
-        )
-
-    if not check:
-        out_dir.mkdir(parents=True, exist_ok=True)
-        out_path.write_bytes(out_bytes)
-        print(f"wrote {out_path}  sha256={out_sha256[:16]}...  rows={len(rows)}")
-    else:
-        print(
-            f"(check) query derivative would be {out_path}  sha256={out_sha256[:16]}...  "
-            f"rows={len(rows)}"
-        )
-
     provenance = {
         "schema": PROVENANCE_SCHEMA,
         "generator": GENERATOR,
@@ -158,9 +144,26 @@ def build_query_content_derivative(
         "execution_profile": EXECUTION_PROFILE,
     }
     provenance_path = out_dir / (Path(out_name).stem + ".provenance.json")
+    provenance_bytes = (json.dumps(provenance, ensure_ascii=False, sort_keys=True,
+                                   indent=2) + "\n").encode("utf-8")
+    outputs = ((out_path, out_bytes), (provenance_path, provenance_bytes))
+    # Verify both sides before publishing either. Resume is explicit and only
+    # accepts bytes derived again from the pinned source and original ledger.
+    for path, payload in outputs:
+        if path.is_symlink():
+            raise SystemExit(f"refusing symlink output: {path}")
+        if path.exists():
+            if not resume or not path.is_file() or path.read_bytes() != payload:
+                raise SystemExit(f"refusing to overwrite existing or conflicting output: {path}")
     if not check:
-        write_json_artifact(provenance_path, provenance)
-        print(f"wrote {provenance_path}")
+        for path, payload in outputs:
+            if not path.exists():
+                try:
+                    publish_new(path, payload)
+                except FileExistsError:
+                    if not resume or path.is_symlink() or path.read_bytes() != payload:
+                        raise
+            print(f"verified {path}")
     return {"sha256": out_sha256, "row_count": len(rows), "out_path": str(out_path)}
 
 
@@ -172,6 +175,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out-name", required=True)
     parser.add_argument("--ledger-row", required=True)
     parser.add_argument("--check", action="store_true", help="verify only; write nothing")
+    parser.add_argument("--resume", action="store_true", help="verify identical existing bytes and publish missing artifacts")
     args = parser.parse_args(argv)
 
     root = data_root()
@@ -183,6 +187,7 @@ def main(argv: list[str] | None = None) -> int:
         out_name=args.out_name,
         ledger_row=args.ledger_row,
         check=args.check,
+        resume=args.resume,
     )
     print("---")
     print(f"sha256={result['sha256']} rows={result['row_count']}")
