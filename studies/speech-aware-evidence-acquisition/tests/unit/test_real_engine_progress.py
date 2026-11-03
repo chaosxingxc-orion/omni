@@ -34,3 +34,17 @@ def test_foreign_roster_and_torn_tail_are_not_completed(tmp_path):
     assert d['completed_rows']==1 and d['torn_tail_bytes']>0 and d['estimated_remaining_seconds'] is None
     doc=json.loads(r.read_bytes());doc['split_identity_hash']='c'*64;r.write_text(json.dumps(doc))
     with pytest.raises(ValueError,match='roster identity'):m.report(ck,r,state='running',elapsed_seconds=20,cards=8,instances=2)
+
+
+def test_receipt_roster_without_top_level_count(tmp_path):
+    ck, r = fixture(tmp_path)
+    doc = json.loads(r.read_bytes())
+    doc.pop('count')
+    doc['schema'] = 'saea-roster-receipt-v1'
+    r.write_text(json.dumps(doc))
+    assert m.report(ck,r,state='running',elapsed_seconds=20,cards=8,instances=2)['total_rows'] == 2
+    for bad in ({**doc, 'schema': 'unknown'}, {**doc, 'count': 3},
+                {**doc, 'items': [doc['items'][0]] * 2}):
+        r.write_text(json.dumps(bad))
+        with pytest.raises(ValueError, match='distinct roster'):
+            m.report(ck,r,state='running',elapsed_seconds=20,cards=8,instances=2)

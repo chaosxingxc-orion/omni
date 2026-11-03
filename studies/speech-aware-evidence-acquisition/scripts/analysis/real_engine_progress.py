@@ -25,7 +25,11 @@ def report(checkpoint, roster, *, state, elapsed_seconds, cards, instances):
     if elapsed_seconds<=0 or cards<1 or instances<1 or instances>cards:raise ValueError('invalid observed duration/resources')
     roster_doc=json.loads(roster.read_bytes())
     ids=[x['sample_id'] for x in roster_doc['items']]
-    if len(ids)!=len(set(ids)) or roster_doc['count']!=len(ids):raise ValueError('invalid distinct roster')
+    declared_count = roster_doc.get('count')
+    if declared_count is None and roster_doc.get('schema') == 'saea-roster-receipt-v1':
+        declared_count = len(ids)
+    if type(declared_count) is not int or declared_count != len(ids) or len(ids)!=len(set(ids)):
+        raise ValueError('invalid distinct roster')
     doc=read_checkpoint(checkpoint)
     if doc.header.get('split_identity_hash')!=roster_doc['split_identity_hash']:raise ValueError('checkpoint roster identity differs')
     valid=set(ids);complete=[];costs=defaultdict(float);timings=defaultdict(list)
