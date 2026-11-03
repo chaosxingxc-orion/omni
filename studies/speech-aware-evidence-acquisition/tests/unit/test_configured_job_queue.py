@@ -61,6 +61,89 @@ def test_serial_watch_uses_terminal_event_and_never_repeats(queue):
     assert m.execute(path,'watch')['status']=='complete' and len(docker.launches)==2
 
 
+def test_graph_plan_preserves_dependencies_and_failure_policy(queue):
+    path, config, docker = queue
+    # Independent branches remain explicitly independent in the plan.
+    jobs = config['jobs']
+    jobs[0]['id'] = 'a'; jobs[0]['depends_on'] = []; jobs[0]['on_fail'] = 'continue'
+    jobs[1]['id'] = 'b'; jobs[1]['depends_on'] = []; jobs[1]['on_fail'] = 'continue'
+    config['jobs'] = [jobs[0], jobs[1]]
+    path.write_text(json.dumps(config))
+    for job in jobs:m.launcher.execute(job['launch']['path'], 'layout')
+    planned = m.execute(path, 'plan')
+    assert planned['dependency_policy'] == 'dependency-ready-container-exit-zero'
+    assert all('depends_on' in j for j in planned['jobs'])
+
+
+def test_graph_cycle_and_partial_dependency_declarations_rejected(queue):
+    path, config, docker = queue
+    config['jobs'][0].update(id='a', depends_on=['b'], on_fail='continue')
+    config['jobs'][1].update(id='b', depends_on=['a'], on_fail='continue')
+    path.write_text(json.dumps(config))
+    with pytest.raises(ValueError, match='cycle'):
+        m.execute(path, 'plan')
+    config['jobs'][0].update(depends_on=[])
+    config['jobs'][1].pop('depends_on')
+    path.write_text(json.dumps(config))
+    with pytest.raises(ValueError, match='graph jobs'):
+        m.execute(path, 'plan')
+
+
+def test_graph_runs_dependency_before_earlier_child_and_resumes_once(queue):
+    path, config, docker = queue
+    config['jobs'][0]['depends_on'] = ['job1']
+    config['jobs'][1]['depends_on'] = []
+    path.write_text(json.dumps(config))
+    assert m.execute(path, 'once')['status'] == 'running'
+    assert docker.launches == ['job1']
+    assert m.execute(path, 'watch')['status'] == 'complete'
+    assert docker.launches == ['job1', 'job0']
+    assert m.execute(path, 'watch')['status'] == 'complete'
+    assert docker.launches == ['job1', 'job0']
+
+
+def test_graph_failure_blocks_descendant_but_runs_independent(queue, tmp_path):
+    path, config, docker = queue
+    root = tmp_path / 'independent'; root.mkdir()
+    launch, doc = configured(root); doc['container_name'] = 'independent'
+    launch.write_text(json.dumps(doc))
+    config['jobs'][0].update(depends_on=[], on_fail='continue')
+    config['jobs'][1].update(depends_on=['job0'], on_fail='continue')
+    config['jobs'].append({'id':'independent', 'launch':pin(launch), 'preflight':None,
+                          'after':None, 'depends_on':[], 'on_fail':'continue'})
+    path.write_text(json.dumps(config)); m.execute(path, 'once')
+    docker.containers['job0']['State'].update(Status='exited', Running=False, ExitCode=1)
+    result = m.execute(path, 'watch')
+    assert result['status'] == 'failed' and result['blocked_jobs'] == ['job1']
+    assert docker.launches == ['job0', 'independent']
+    assert result['jobs'][0]['status'] == 'failed' and result['jobs'][1]['status'] == 'pending'
+
+
+def test_graph_unknown_launch_stops_even_independent_branch(queue):
+    path, config, docker = queue
+    for job in config['jobs']:job.update(depends_on=[], on_fail='continue')
+    path.write_text(json.dumps(config)); docker.fail = 'unknown'
+    with pytest.raises(OSError):m.execute(path, 'once')
+    docker.fail = None
+    assert m.execute(path, 'watch')['status'] == 'unknown'
+    assert docker.launches == ['job0']
+
+
+def test_graph_waiting_external_producer_does_not_block_independent_job(queue, tmp_path):
+    path, config, docker = queue
+    root = tmp_path / 'producer'; root.mkdir(); producer, doc = configured(root)
+    doc['container_name'] = 'producer'; producer.write_text(json.dumps(doc))
+    m.launcher.execute(producer, 'layout'); observed = m.launcher.execute(producer, 'launch')
+    for job in config['jobs']:job.update(depends_on=[], on_fail='continue')
+    config['jobs'][0]['after'] = {'condition':'container-exit-zero', 'launch':pin(producer),
+                                 'container_id':observed['container_id']}
+    path.write_text(json.dumps(config))
+    assert m.execute(path, 'once')['status'] == 'running'
+    assert docker.launches == ['producer', 'job1']
+    assert m.execute(path, 'watch')['status'] == 'complete'
+    assert docker.launches == ['producer', 'job1', 'job0']
+
+
 def test_nonzero_blocks_successor_without_retry(queue):
     path,config,docker=queue;m.execute(path,'once')
     docker.containers['job0']['State'].update(Status='exited',Running=False,ExitCode=2)

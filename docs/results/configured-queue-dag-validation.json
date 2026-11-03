@@ -1,0 +1,22 @@
+{
+  "schema": "saea-configured-queue-dag-validation-v1",
+  "container_id": "99f660e2a96e1c8a62dfb5eafe14b22dce8b6fd6b490b6d35ad1183b21a3b0d8",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "exit_code": 0,
+  "tests_passed": 88,
+  "seconds": 7.37,
+  "tests": [
+    "test_configured_job_queue.py",
+    "test_configured_job_launch.py",
+    "test_configured_preflight_binding.py"
+  ],
+  "source_sha256": {
+    "scripts/environment/configured_job_queue.py": "16f34a6477a40cf336beef6a5c435877c903b54ab999e08c3d87d56c0aaa7b3a",
+    "tests/unit/test_configured_job_queue.py": "99797d6a4db615aacf90c0785e1c128be534b306e555106b3da3f6d9ba1982b2"
+  },
+  "limitations": [
+    "Docker interactions are explicit doubles; no NPU saturation claim.",
+    "No running immutable queue was replaced.",
+    "Unknown launches remain held; failure continuation does not release generation leases."
+  ]
+}

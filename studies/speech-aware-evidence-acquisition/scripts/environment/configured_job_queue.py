@@ -52,7 +52,9 @@ def load(path):
     require(isinstance(doc['jobs'], list) and 0 < len(doc['jobs']) <= 1000, 'finite nonempty queue required')
     names, containers, receipts = set(), set(), set()
     for job in doc['jobs']:
-        require(isinstance(job, dict) and set(job) == {'id', 'launch', 'preflight', 'after'}, 'exact queue job required')
+        fields = {'id', 'launch', 'preflight', 'after'}
+        require(isinstance(job, dict) and fields <= set(job) <= fields | {'depends_on', 'on_fail'}, 'exact queue job required')
+        require(job.get('on_fail', 'stop') in ('stop', 'continue'), 'explicit queue failure policy required')
         require(isinstance(job['id'], str) and re.fullmatch('[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}', job['id'])
                 and job['id'] not in names, 'unique confined job ID required')
         names.add(job['id']); launch = launcher.load_config(pin_path(job['launch']))
@@ -74,6 +76,23 @@ def load(path):
             if release:
                 require('handoff_verifier' in doc, 'pinned shared generation handoff verifier required')
                 release_identity(producer, dep['release'])
+    if any('depends_on' in job for job in doc['jobs']):
+        require(all('depends_on' in job for job in doc['jobs']), 'graph jobs must all declare dependencies')
+        graph = {}
+        for job in doc['jobs']:
+            deps = job['depends_on']
+            require(isinstance(deps, list) and all(isinstance(dep, str) for dep in deps)
+                and len(set(deps)) == len(deps) and set(deps) <= names, 'unique known dependencies required')
+            graph[job['id']] = set(deps)
+        done = set()
+        while graph:
+            ready = {key for key, deps in graph.items() if deps <= done}
+            require(ready, 'queue dependency cycle')
+            done.update(ready)
+            graph = {key: deps for key, deps in graph.items() if key not in ready}
+    else:
+        require(all(job.get('on_fail', 'stop') == 'stop' for job in doc['jobs']),
+                'continue requires an explicit dependency graph')
     return doc
 
 
@@ -247,39 +266,76 @@ def outcome(observed):
     return 'unknown'
 
 
+def dependency_status(doc, job, record):
+    if job['after'] is None:return 'complete', None, None
+    dep = job['after']; producer, observed = observe(dep['launch'])
+    require(observed.get('container_id') == dep['container_id'], 'predecessor container identity differs')
+    record['dependency'] = observed
+    result = outcome(observed); release_path = None
+    if dep['condition'] == 'generation-released':
+        release_path, _, _ = release_identity(producer, dep['release'])
+        if release_path.exists():
+            require(observed['state'] in ('running', 'exited'), 'producer is not a known running or terminal container')
+            event = verify_generation_release(doc, producer, dep['release'])
+            require(record.get('generation_release', event) == event, 'previous generation release bytes changed')
+            record['generation_release'] = event; result = 'complete'
+        elif result == 'complete':result = 'unknown'
+    return (result, dep['container_id'] if result == 'running' else None,
+            str(release_path) if release_path and result == 'running' else None)
+
+
 def step(config_path, doc, state, save):
     require(identities(config_path) == state['identity'], 'queue configuration or implementation changed')
     load(config_path)  # Recheck every immutable input before any dispatch.
     if state['status'] in ('failed', 'complete'):return state
-    index = len([j for j in state['jobs'] if j.get('status') == 'complete'])
-    if index == len(doc['jobs']):
-        state['status'] = 'complete'; save(); return state
+    graph = all('depends_on' in job for job in doc['jobs'])
+    if graph:
+        records = {record['id']:record for record in state['jobs']}
+        active = [i for i, record in enumerate(state['jobs'])
+                  if record['status'] in ('running', 'launch-intent', 'unknown')]
+        require(len(active) <= 1, 'multiple active containers in a serial resource lane')
+        ready = [i for i, job in enumerate(doc['jobs']) if records[job['id']]['status'] == 'pending'
+                 and all(records[dep]['status'] == 'complete' for dep in job['depends_on'])]
+        eligible, waiting = [], []
+        if not active:
+            for i in ready:
+                job = doc['jobs'][i]; record = records[job['id']]
+                result, wait_id, release_path = dependency_status(doc, job, record)
+                if result == 'complete':
+                    eligible.append(i); break
+                if result == 'running':
+                    waiting.append((wait_id, release_path)); continue
+                if result == 'failed' and job.get('on_fail', 'stop') == 'continue':
+                    record.update(status='blocked', reason='external dependency failed'); continue
+                state.update(status=result, wait_container_id=None, wait_release_path=None)
+                save(); return state
+        if not active and not eligible:
+            state['blocked_jobs'] = [r['id'] for r in state['jobs'] if r['status'] in ('pending', 'blocked')]
+            if waiting:
+                state.update(status='waiting', wait_container_id=waiting[0][0], wait_release_path=waiting[0][1])
+            else:
+                state['status'] = 'complete' if all(r['status'] == 'complete' for r in state['jobs']) else 'failed'
+            save(); return state
+        index = (active or eligible)[0]
+    else:
+        index = len([j for j in state['jobs'] if j.get('status') == 'complete'])
+        if index == len(doc['jobs']):
+            state['status'] = 'complete'; save(); return state
     job, record = doc['jobs'][index], state['jobs'][index]
     if state['status'] == 'unknown' and not record.get('launch_requested'):return state
-    if index:
-        prior = doc['jobs'][index - 1]; receipt = state['jobs'][index - 1]
+    predecessors = ([i for i, j in enumerate(doc['jobs']) if j['id'] in job['depends_on']]
+                    if graph else ([index - 1] if index else []))
+    for prior_index in predecessors:
+        prior = doc['jobs'][prior_index]; receipt = state['jobs'][prior_index]
         _, observed = observe(prior['launch'])
         require(observed.get('container_id') == receipt.get('container_id') and outcome(observed) == 'complete',
                 'prior queued container no longer matches successful terminal receipt')
-    if job['after'] is not None:
-        dep = job['after']; producer, observed = observe(dep['launch'])
-        require(observed.get('container_id') == dep['container_id'], 'predecessor container identity differs')
-        record['dependency'] = observed
-        result = outcome(observed)
-        if dep['condition'] == 'generation-released':
-            release_path, _, _ = release_identity(producer, dep['release'])
-            if release_path.exists():
-                require(observed['state'] in ('running', 'exited'), 'producer is not a known running or terminal container')
-                event = verify_generation_release(doc, producer, dep['release'])
-                require(record.get('generation_release', event) == event, 'previous generation release bytes changed')
-                record['generation_release'] = event; result = 'complete'
-            elif result == 'complete':result = 'unknown'
-            state['wait_release_path'] = str(release_path) if result == 'running' else None
-        else:state['wait_release_path'] = None
-        if result != 'complete':
-            state['status'] = 'waiting' if result == 'running' else result
-            state['wait_container_id'] = dep['container_id'] if result == 'running' else None
-            save(); return state
+    result, wait_id, release_path = dependency_status(doc, job, record)
+    if result != 'complete':
+        state.update(status='waiting' if result == 'running' else result,
+                     wait_container_id=wait_id, wait_release_path=release_path)
+        save(); return state
+    state['wait_release_path'] = None
     if record['status'] == 'failed':
         state['status'] = 'failed'; save(); return state
     launch_path = pin_path(job['launch']); launch_doc, observed = observe(job['launch'])
@@ -306,11 +362,12 @@ def step(config_path, doc, state, save):
         require(re.fullmatch('[a-f0-9]{64}', observed['container_id']), 'full immutable launched container ID required')
     record.update(status=result, observed=observed)
     state['wait_container_id'] = record.get('container_id') if result == 'running' else None
-    state['status'] = 'ready' if result == 'complete' else result
+    state['status'] = 'ready' if result == 'complete' or (
+        result == 'failed' and graph and job.get('on_fail', 'stop') == 'continue') else result
     if result == 'complete':
         record['result'] = {'container_exit_success':True, 'scientific_success':False,
             'verification':'verify shared runtime artifacts separately', 'completed_at':time.time()}
-        if index + 1 == len(doc['jobs']):state['status'] = 'complete'
+        if all(r['status'] == 'complete' for r in state['jobs']):state['status'] = 'complete'
     save(); return state
 
 
@@ -325,9 +382,12 @@ def execute(path, mode):
             if job['after'] is not None:
                 _, producer = observe(job['after']['launch'])
                 require(producer.get('container_id') == job['after']['container_id'], 'planned predecessor identity differs')
-            plans.append({'id':job['id'], 'launch':launcher.execute(launch, 'plan'), 'after':job['after']})
+            plans.append({'id':job['id'], 'launch':launcher.execute(launch, 'plan'), 'after':job['after'],
+                **({'depends_on':job['depends_on'], 'on_fail':job.get('on_fail', 'stop')}
+                   if 'depends_on' in job else {})})
         return {'schema':SCHEMA, 'identity':identity, 'jobs':plans, 'new_model_calls':0,
-            'dependency_policy':'serial-container-exit-zero-or-verified-generation-release', 'generation_release_supported':True}
+            'dependency_policy':('dependency-ready-container-exit-zero' if all('depends_on' in j for j in doc['jobs'])
+                else 'serial-container-exit-zero-or-verified-generation-release'), 'generation_release_supported':True}
     root = Path(doc['state_dir']); root.mkdir(parents=True, exist_ok=True)
     with (root / 'queue.guard').open('a+b') as guard:
         fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
