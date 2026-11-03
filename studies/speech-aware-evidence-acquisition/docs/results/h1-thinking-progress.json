@@ -1,42 +1,31 @@
 {
-  "observed_at": "2026-11-03T04:25:11.312088+00:00",
-  "state": "running",
-  "checkpoint_rows": 108,
-  "complete_rows": 108,
+  "observed_at": "2026-11-03T04:34:00Z",
+  "state": "off-finalized-short-running",
+  "checkpoint_rows": 313,
+  "complete_rows": 313,
   "total_rows": 313,
-  "elapsed_seconds": 580.339868,
-  "cumulative_seconds_per_complete_row": 5.3735172962962965,
+  "elapsed_seconds": 951.752267,
+  "cumulative_seconds_per_complete_row": 3.0407420670926517,
   "resources": {
     "cards": 8,
     "instances": 2,
     "tensor_parallel": 4,
     "admitted_per_instance": 96
   },
-  "request_counts": {
-    "P_requests": 300,
-    "P_responses": 293,
-    "wire_responses": 293,
-    "nonempty_reasoning": 0,
-    "think_marker": 0,
-    "finish_stop": 293
-  },
-  "P_mean_request_seconds": 12.397073535870843,
-  "P_completion_tokens": 21578,
-  "wire_missing": 0,
-  "eta": "unknown: startup-heavy partial snapshot, no stable window",
-  "accuracy": "pending official complete scoring",
+  "P_mean_request_seconds": 12.280334853834232,
+  "eta": "off complete; short/baseline stable window estimate pending",
+  "accuracy": "off official SLU 0.6727968309134533, Intent 0.7603833865814696; comparison pending",
   "schema": "saea-h1-thinking-progress-v1",
-  "checkpoint_verified_complete": 108,
-  "checkpoint_sha256": "37149ea9fdb7b638eb2fcb732132907ae5bdb0e775afc95f2444d440f8f304a6",
+  "checkpoint_verified_complete": 313,
   "queue": {
-    "off": "running",
-    "short": "prepared-admitted-preflight-bound-waiting-generation-release",
-    "baseline": "prepared-admitted-preflight-bound-waiting-short-exit-zero"
+    "off": "FINALIZED",
+    "short": "running",
+    "baseline": "preflight-bound-waiting-short-generation-release"
   },
   "limitations": [
-    "Running subset is descriptive, not an accuracy or speedup claim.",
-    "Allocated eight cards does not prove sustained full utilization.",
-    "Baseline currently waits for the short container to finish, including CPU scoring.",
-    "Checkpoint is a verified fixed snapshot; request counts were read shortly afterward."
+    "Fixed hard H1 development set, not natural-distribution test accuracy.",
+    "Other two thinking arms still pending; no configuration selected.",
+    "Mean per-sample latency differs from concurrent batch throughput.",
+    "Earlier zero-call startup failures excluded from successful container wall; preserved in operations history."
   ]
 }

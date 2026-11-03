@@ -1,0 +1,173 @@
+{
+  "schema": "saea-h1-thinking-arm-result-v1",
+  "arm": "off",
+  "status": "FINALIZED",
+  "rows": 313,
+  "total_rows": 313,
+  "attempt_id": "generation-v3",
+  "metrics": {
+    "slu_f1": 0.6727968309134533,
+    "intent_accuracy": 0.7603833865814695,
+    "scenario_accuracy": 0.7859424920127795,
+    "action_accuracy": 0.7891373801916932,
+    "span_f1": 0.5649432534678436
+  },
+  "task_correct_rows": 103,
+  "task_error_rows": 210,
+  "task_success_rule": "Intent exact AND exact-slot FP=FN=0",
+  "cost": {
+    "calls_used": 626,
+    "prompt_tokens_total": 4358052,
+    "completion_tokens_total": 721846,
+    "audio_seconds_used": 2639.087875,
+    "latency_seconds_total": 79191.88584819032,
+    "tool_calls": 0
+  },
+  "role_costs": {
+    "perception": {
+      "calls": 313,
+      "prompt_tokens": 1203264,
+      "completion_tokens": 22896,
+      "request_seconds": {
+        "n": 313,
+        "mean": 12.280334853834232,
+        "p50": 11.767811699974118,
+        "p95": 22.861346670018975
+      },
+      "wire_records": 313,
+      "contacts_with_reasoning": 0,
+      "think_markers": 0,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 313
+      }
+    },
+    "solver": {
+      "calls": 313,
+      "prompt_tokens": 3154788,
+      "completion_tokens": 698950,
+      "request_seconds": {
+        "n": 313,
+        "mean": 240.72888510843515,
+        "p50": 237.46732490000431,
+        "p95": 391.9337614100077
+      },
+      "wire_records": 313,
+      "contacts_with_reasoning": 313,
+      "think_markers": 0,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 313
+      }
+    }
+  },
+  "timing": {
+    "schema": "saea-real-phase-timing-v1",
+    "checkpoint_sha256": "b630836375728720b6693976a155a960e875ba883fb38c3b4ad5ed7b4a8600da",
+    "timing_partial_tail": false,
+    "rows": 313,
+    "metrics": {
+      "perception/scientific_request": {
+        "n": 313,
+        "mean_s": 12.280334853834232,
+        "p50_s": 11.767811699974118,
+        "p95_s": 22.861346670018975
+      },
+      "perception/request_total": {
+        "n": 313,
+        "mean_s": 44.21166286290727,
+        "p50_s": 45.93847481999546,
+        "p95_s": 75.51420047000283
+      },
+      "perception/http_request": {
+        "n": 313,
+        "mean_s": 12.087338165783795,
+        "p50_s": 11.506063549983082,
+        "p95_s": 22.806242949998705
+      },
+      "solver/scientific_request": {
+        "n": 313,
+        "mean_s": 240.72888510843515,
+        "p50_s": 237.46732490000431,
+        "p95_s": 391.9337614100077
+      },
+      "solver/request_total": {
+        "n": 313,
+        "mean_s": 264.581816237414,
+        "p50_s": 252.49184653998236,
+        "p95_s": 427.14557882997906
+      },
+      "solver/http_request": {
+        "n": 313,
+        "mean_s": 240.44107529396308,
+        "p50_s": 237.43232077997527,
+        "p95_s": 391.86014418001287
+      },
+      "perception_end_to_solver_request_start": {
+        "n": 313,
+        "mean_s": 25.064974215174555,
+        "p50_s": 8.53398519998882,
+        "p95_s": 69.1225489799981
+      },
+      "perception_start_to_solver_end": {
+        "n": 313,
+        "mean_s": 333.8584533154958,
+        "p50_s": 306.01169139001286,
+        "p95_s": 548.0505362899858
+      },
+      "admission_to_perception_request_start": {
+        "n": 313,
+        "mean_s": 138.68477356166224,
+        "p50_s": 31.23661121999612,
+        "p95_s": 422.2468566199823
+      },
+      "solver_request_end_to_sample_finished": {
+        "n": 313,
+        "mean_s": 0.06115358364245759,
+        "p50_s": 0.028329090011538938,
+        "p95_s": 0.12481916998513043
+      },
+      "admission_to_sample_finished": {
+        "n": 313,
+        "mean_s": 472.60438046080054,
+        "p50_s": 528.0027192799898,
+        "p95_s": 628.0064977299771
+      }
+    },
+    "missing_timing_entries": 0,
+    "missing_sample_count": 0,
+    "limitations": [
+      "Completed subset is descriptive and may be biased toward faster samples.",
+      "P→S gap contains preparation/FIT/scheduling; not pure CPU time.",
+      "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+      "Nested intervals overlap; do not sum as whole-task wall time."
+    ],
+    "new_model_calls": 0
+  },
+  "resources": {
+    "cards": 8,
+    "instances": 2,
+    "tensor_parallel": 4,
+    "admitted_per_instance": 96,
+    "allocated_card_hours": 2.115005037777778
+  },
+  "container_wall_seconds": 951.752267,
+  "wall_seconds_per_row": 3.0407420670926517,
+  "wall_includes_startup_and_scoring": true,
+  "remaining_rows": 0,
+  "source": {
+    "config_hash": "5264a7164f0a3c8356ca71515fadc03ca73be86159965e022c1db9136cd73f51",
+    "manifest_sha256": "75bf3581cf3c5ec78487d0000d0867a1e32aba020f3f8d55e587a1873fd5a3e6",
+    "recipe_sha256": "efd8af5e4109c35923862efbc5fe48be5588f4964f357a67288aeeb0552a7fde",
+    "roster_sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+    "scores_sha256": "57f2ff277071ccc4c559b49ebe425f17af9d8c24665dd2844a69da4959430f83"
+  },
+  "claims_speedup": false,
+  "claims_accuracy_gain": false,
+  "limitations": [
+    "Fixed hard H1 development set, not natural-distribution test accuracy.",
+    "Other two thinking arms still pending; no configuration selected.",
+    "Mean per-sample latency differs from concurrent batch throughput.",
+    "Earlier zero-call startup failures excluded from successful container wall; preserved in operations history."
+  ]
+}
