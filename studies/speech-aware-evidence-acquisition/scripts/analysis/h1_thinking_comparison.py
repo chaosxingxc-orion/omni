@@ -136,12 +136,12 @@ def native_costs(outputs, trace):
 
 
 
-def phase_timing(directory, run_id, timing_path, expected_ids):
+def phase_timing(directory, run_id, timing_path, expected_ids, checkpoint_sha256):
     """Join the exact sealed arm checkpoint; expose incomplete timing explicitly."""
     from speech_aware_evidence_acquisition.core.row_checkpoint import read_checkpoint
     from real_engine_phase_timing import analyze
     checkpoint = directory / (run_id + '.rows.ckpt.jsonl')
-    rows = read_checkpoint(checkpoint).rows
+    rows = read_checkpoint(checkpoint, expected_sha256=checkpoint_sha256).rows
     actual = [row.sample_id for row in rows if row.keep_defect() is None]
     if len(actual) != len(expected_ids) or set(actual) != set(expected_ids):
         raise ValueError('phase timing checkpoint differs from finalized arm roster')
@@ -180,7 +180,7 @@ def run(spec_path, out):
         result[arm]['native_role_costs']=native_costs(bundle.outputs_rows,bundle.trace_records)
         if 'timing' in entry:
             result[arm]['phase_timing'] = phase_timing(directory, rid, Path(entry['timing']),
-                [item['sample_id'] for item in roster['items']])
+                [item['sample_id'] for item in roster['items']], bundle.manifest['row_checkpoint']['sha256'])
     if any(x != bindings[0] for x in bindings) or any(x != invariants[0] for x in invariants):
         raise ValueError('comparison changed fixed data, runtime, knowledge or non-thinking policy')
     summary={'schema':'saea-h1-thinking-comparison-result-v1', 'arms':result,
