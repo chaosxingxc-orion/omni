@@ -1,0 +1,18 @@
+{
+  "schema": "construction-capacity-test-result-v1",
+  "passed": 167,
+  "seconds": 10.26,
+  "container": "c259f601c85ad0d10708d5065c512797737d636d4703f269f0ff3f65de1d36ad",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "patch_sha256": "0b72a2ff1b55af935f420d259ab5a7538d60172ae854bc1831ba42ce1ebafafe",
+  "diff_base_commit": "20b5d84fa06849919e25eab3e7899cd0274963be",
+  "new_model_calls": 0,
+  "root_integration": {
+    "container": "211dceb6f2b8d0f9b44a5171c0a6a708d5b2679bc06fbde6ee51f494cd6ded56",
+    "passed": 131,
+    "seconds": 9.44,
+    "cpus": "240-247",
+    "scope": "all-group capacity, corrected GEPA role prompt audit and reader, native mutation, ACE and Reflexion runtime"
+  },
+  "limits": "Static initial-state capacity for all fixed groups; evolving library and native FIT remain per-call checks."
+}

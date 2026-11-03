@@ -173,3 +173,52 @@ def test_json_command_passes_optional_response_format(tmp_path, monkeypatch):
     result = job.execute_config(path)
     assert result['response_format'] == {'type': 'json_object'}
     assert job.verify_job(repo, data, out)[1]['decoding_params']['response_format'] == {'type': 'json_object'}
+
+
+def test_static_capacity_audit_measures_all_groups_and_preserves_phase_truth():
+    from types import SimpleNamespace
+    calls = []
+    def measure(document, index, state, count):
+        calls.append((index, state))
+        return {'messages_sha256': str(index) * 64, 'input_tokens': count(index)}
+    method = SimpleNamespace(STRATEGY=job.ace.STRATEGY, reflect_messages=measure)
+    doc = {'parent': {'items': {'k': 'original'}}, 'groups': [{'query_id': 'q0'}, {'query_id': 'q1'}],
+           'bounds': {'completion_cap': 100, 'reserve_tokens': 10, 'resident_context': 1000}}
+    audit = job.static_capacity_audit(method, doc, lambda i: 100 + i * 200, extra_reserve_tokens=200)
+    assert calls == [(0, {'k': 'original'}), (1, {'k': 'original'})]
+    assert audit['groups'] == 2 and audit['max_input_tokens'] == 300
+    assert audit['minimum_headroom_tokens'] == 390
+    assert audit['dynamic_library_or_memory_growth_verified'] is False
+    assert audit['native_fit_completed'] is False
+    with pytest.raises(ValueError, match='group 1'):
+        job.static_capacity_audit(method, doc, lambda i: 100 + i * 600, extra_reserve_tokens=200)
+
+
+def test_later_group_capacity_failure_prevents_prepared_artifacts(tmp_path, monkeypatch):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    def overflow(*a, **kw):
+        raise ValueError('complete ACE stage exceeds context; no truncation')
+    monkeypatch.setattr(job, 'static_capacity_audit', overflow)
+    with pytest.raises(ValueError, match='exceeds context'):
+        job.prepare(repo, data, **args)
+    assert not out.exists()
+
+
+def test_static_capacity_is_recorded_and_reverified(tmp_path, monkeypatch):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    complete = job.prepare(repo, data, **args, capacity_reserve_tokens=200)
+    assert complete['static_capacity_audit']['extra_reserve_tokens'] == 200
+    assert complete['static_capacity_audit']['groups'] == 1
+    assert job.verify_job(repo, data, out)[0] == complete
+    complete['static_capacity_audit']['rows'][0]['input_tokens'] += 1
+    (out/'complete.json').write_bytes(job.raw(complete))
+    with pytest.raises(ValueError, match='static capacity audit changed'):
+        job.verify_job(repo, data, out)
+
+
+@pytest.mark.parametrize('reserve', [-1, True, 1.5, '1'])
+def test_invalid_capacity_reserve_refused_before_artifacts(tmp_path, monkeypatch, reserve):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match='capacity reserve'):
+        job.prepare(repo, data, **args, capacity_reserve_tokens=reserve)
+    assert not out.exists()
