@@ -314,7 +314,7 @@ def admit(repo,data,job):
 def verify_release(path,data,*,expected_run='SAEA-SLURP-TFRL-HARDSET-A0-OBSERVATION-R1-V1'):
     """A release event proves sealed generation, never merely an exited process."""
     doc=read(path)
-    if (doc.get('schema')!='saea-generation-released-v1' or doc.get('generation_sealed') is not True
+    if (doc.get('schema') not in ('saea-generation-released-v1','saea-artifact-generation-released-v1') or doc.get('generation_sealed') is not True
             or doc.get('generation_lease_released') is not True
             or doc.get('run_id')!=expected_run):
         raise ValueError('exact A0 generation release event required')
@@ -323,6 +323,13 @@ def verify_release(path,data,*,expected_run='SAEA-SLURP-TFRL-HARDSET-A0-OBSERVAT
         if not p.is_relative_to(data.resolve()) or file_sha(p)!=pin_doc['sha256']:
             raise ValueError('predecessor sealed artifact differs')
     if not doc['artifacts']:raise ValueError('empty predecessor release')
+    if doc['schema'] == 'saea-artifact-generation-released-v1':
+        import importlib.util
+        helper_path = Path(__file__).resolve().parents[4]/'scripts/npu/generation_release_handoff.py'
+        spec = importlib.util.spec_from_file_location('artifact_release_predecessor', helper_path)
+        helper = importlib.util.module_from_spec(spec); spec.loader.exec_module(helper)
+        expected = {key:doc[key] for key in ('candidate','run_id','attempt_id','study_commit','profile','service_session','rows')}
+        helper.verify_release(path, data=data, expected=expected)
     return doc
 
 

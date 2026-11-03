@@ -244,19 +244,18 @@ def verify_generation_release(doc, producer, release):
         if key in started:
             require(started[key] == expected['candidate' if key == 'job' else key], 'producer startup identity differs')
     mappings = {}
-    files = {'generation_manifest':expected['run_id']+'.generation-manifest.json',
-        'score_ledger_cells':'score-ledger-cells.json', 'score_jobs':'score-jobs.jsonl'}
+    helper = release_helper(doc)
+    files = helper.release_paths(value, data=logical, expected=expected)
     require(isinstance(value.get('artifacts'), dict) and set(value['artifacts']) == set(files), 'all generation sealed inputs required')
-    for key, name in files.items():
-        logical_path = logical / 'runs' / expected['run_id'] / expected['attempt_id'] / name
+    for key, logical_path in files.items():
         pin = value['artifacts'][key]
-        require(isinstance(pin, dict) and set(pin) == {'path', 'sha256'} and pin['path'] == str(logical_path)
-                and value['seal_receipt'].get(key+'_path') == str(logical_path), 'generation seal logical path differs')
+        require(isinstance(pin, dict) and set(pin) == {'path', 'sha256'} and pin['path'] == str(logical_path),
+                'generation seal logical path differs')
         physical, mount = binding.host_path(producer, str(logical_path))
         require(not mount['readonly'] and physical.absolute() == physical.resolve(), 'generation artifact host mapping redirected')
         require(physical not in mappings.values(), 'generation artifact mappings alias')
         mappings[logical_path] = physical
-    release_helper(doc).verify_release(path, data=logical, expected=expected,
+    helper.verify_release(path, data=logical, expected=expected,
         resolve_artifact=lambda target:mappings[target])
     require(path.read_bytes() == blob and started_path.read_bytes() == started_blob, 'generation release changed during verification')
     require(producer_output(producer, logical, expected)[1] == command_receipt,

@@ -417,8 +417,8 @@ def test_release_wait_uses_file_event_not_scoring_container_wait(queue,tmp_path,
     assert all(cid!=docker.containers['producer']['Id'] for cid,_ in docker.waits)
 
 
-def internal_generation_fixture(queue, tmp_path):
-    release, value, data = generation_fixture(queue, tmp_path, learning=True)
+def internal_generation_fixture(queue, tmp_path, *, learning=True):
+    release, value, data = generation_fixture(queue, tmp_path, learning=learning)
     path, config, docker = queue
     dependency = config['jobs'][0]['after']
     producer = {'id':'producer', 'launch':dependency['launch'], 'preflight':None, 'after':None,
@@ -442,6 +442,25 @@ def test_internal_release_dispatches_successor_while_cpu_scoring(queue,tmp_path)
     assert not docker.waits
     assert m.execute(path,'watch')['status']=='complete'
     assert docker.launches==['producer','job1']
+
+
+@pytest.mark.parametrize('corrupt',[False,True])
+def test_finalized_artifact_releases_lane_without_task_scoring_files(queue,tmp_path,corrupt):
+    from test_artifact_generation_release import artifact_fixture
+    release, value, data = internal_generation_fixture(queue,tmp_path,learning=False)
+    path,config,docker=queue
+    expected = config['jobs'][0]['generation_release']['expected']
+    document,mapping=artifact_fixture(data,expected,logical=Path('/logical'))
+    assert m.execute(path,'once')['status']=='running'
+    release.write_text(json.dumps(document))
+    if corrupt:
+        mapping[Path(document['artifacts']['attempt']['path'])].write_text('{}')
+        with pytest.raises(ValueError,match='sealed input changed'):m.execute(path,'once')
+        assert docker.launches==['producer']
+    else:
+        result=m.execute(path,'once')
+        assert [j['status'] for j in result['jobs']]==['scoring','skipped','running']
+        assert docker.launches==['producer','job1']
 
 
 def test_internal_failed_generation_uses_cleanup_before_independent_successor(queue,tmp_path):
