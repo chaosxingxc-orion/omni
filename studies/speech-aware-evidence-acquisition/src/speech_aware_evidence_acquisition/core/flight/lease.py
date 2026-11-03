@@ -129,6 +129,10 @@ class GenerationLease:
                 fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError as error:
                 raise GenerationLeaseError("generation lease is already held") from error
+            if os.path.lexists(guard.parent / 'engine-transition.pending.json'):
+                raise GenerationLeaseError(
+                    'unfinished engine transition blocks generation; reconcile its durable state first'
+                )
             if metadata.exists():
                 _read(metadata)
                 # Owner death does not establish worker/server contact quiescence.

@@ -88,6 +88,11 @@ def load(path):
         and old_model['model_materialization_root'] == new_model['model_materialization_root'] == str(logical),
         'model weights identity must not change')
     old_args, new_args = old_model['server_args'], new_model['server_args']
+    old_protocol, new_protocol = copy.deepcopy(old_model), copy.deepcopy(new_model)
+    for value in (old_protocol, new_protocol):
+        value['server_args'] = without_context(value['server_args'])
+        value.pop('runtime_receipt', None); value.pop('geometry_basis', None)
+    require(old_protocol == new_protocol, 'decoding and all non-context model fields must remain frozen')
     require(without_context(old_args) == without_context(new_args) and context(new_args) > context(old_args)
         and old_model['served_model_name'] == new_model['served_model_name'], 'context-only engine argv required')
     native = read(paths['native_model_config']); text = native.get('thinker_config', {}).get('text_config', {})
@@ -268,7 +273,7 @@ def execute(path, mode='run'):
         verify_container(inspect(d['old_container_id']), c['old'], c['old_model'], exact_id=d['old_container_id'])
         require(inspect(c['new'].instances[0].name) is None, 'new engine already exists')
         return {'schema':SCHEMA,'identity':identity,'argv':c['argv'],'new_model_calls':0,'mutates_services':False}
-    require(mode == 'run', 'plan or run required')
+    require(mode in ('run','recover-stop'), 'plan, run or recover-stop required')
     out.mkdir(parents=True, exist_ok=True); settlement.sync(out.parent)
     lease = c['locks']/'flight.lock'; pending = c['locks']/'engine-transition.pending.json'
     with settlement.guard(c['locks']/'generation.guard') as (check_guard, guard_identity):
@@ -305,10 +310,22 @@ def execute(path, mode='run'):
         if not stopped.exists():
             stop_intent = out/'stop-intent.json'
             if old['State']['Running']:
-                require(not stop_intent.exists(), 'previous stop outcome unresolved; no blind signal repeat')
-                publish(stop_intent,{'container_id':d['old_container_id'],'new_model_calls':0})
+                if stop_intent.exists():
+                    require(mode == 'recover-stop', 'previous stop outcome unresolved; use explicit recover-stop')
+                    require(read(stop_intent)['container_id'] == d['old_container_id'], 'original stop identity differs')
+                    verify_live_old(c,old,intent['old_sessions'])
+                    settlement.transition.quiescence(c['receipt']['deployment']['instances'])
+                    recovery_intent=out/'stop-recovery-intent.json'
+                    require(not recovery_intent.exists(), 'explicit stop recovery already attempted; preserve unknown outcome')
+                    publish(recovery_intent,{'container_id':d['old_container_id'],'verified_running':True,
+                        'original_intent_sha256':launch.digest(stop_intent),'new_model_calls':0})
+                    result_path=out/'stop-recovery-result.json'
+                else:
+                    require(mode == 'run', 'recover-stop requires an existing uncertain stop')
+                    publish(stop_intent,{'container_id':d['old_container_id'],'new_model_calls':0})
+                    result_path=out/'stop-result.json'
                 result = launch.run(['docker','stop','--time','60',d['old_container_id']])
-                publish(out/'stop-result.json',{'returncode':result.returncode,'stdout':result.stdout,'stderr':result.stderr})
+                publish(result_path,{'returncode':result.returncode,'stdout':result.stdout,'stderr':result.stderr})
                 require(result.returncode == 0, 'old engine stop failed; preserve transition')
                 old = inspect(d['old_container_id'])
             require(old['State']['Status']=='exited' and old['State']['Running'] is False and old['State']['Pid']==0, 'old engine not conclusively stopped')
@@ -354,6 +371,6 @@ def execute(path, mode='run'):
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('mode',choices=('plan','run'))
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('mode',choices=('plan','run','recover-stop'))
     parser.add_argument('--config',type=Path,required=True);args=parser.parse_args()
     print(json.dumps(execute(args.config,args.mode),sort_keys=True))

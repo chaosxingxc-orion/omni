@@ -164,3 +164,31 @@ def test_source_native_contact_barrier_is_real_and_refuses_unknown(configured,mo
     assert len(m.source_barrier(c)['contacts'])==1
     f.journal._path('req-1','response').unlink()
     with pytest.raises(ValueError,match='unknown'):m.source_barrier(c)
+
+
+def test_pending_transition_blocks_generation_even_after_process_exit(tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.lease import GenerationLease, GenerationLeaseError
+    locks=tmp_path/'locks';locks.mkdir();write(locks/'engine-transition.pending.json',{'phase':'stopped'})
+    with pytest.raises(GenerationLeaseError,match='unfinished engine transition'):
+        GenerationLease.acquire(tmp_path,owner='test',run_id='r',attempt_id='a',session_id='resident',study_head='b'*40)
+    assert not (locks/'flight.lock').exists()
+
+
+def test_client_decoding_change_is_not_hidden_in_context_transition(engine):
+    e=engine;doc=copy.deepcopy(e.new_model);doc['decoding_params']['max_tokens']=4096
+    write(e.new_m,doc);e.conf['new_model']=pin(e.new_m);write(e.path,e.conf)
+    with pytest.raises(ValueError,match='must remain frozen'):m.execute(e.path)
+    assert not any(c[:2]==['docker','stop'] for c in e.calls)
+
+
+def test_explicit_stop_recovery_rechecks_identity_before_one_more_signal(engine,monkeypatch):
+    e=engine;real=m.launch.run;blocked={'once':True}
+    def uncertain(argv,**kwargs):
+        if argv[:2]==['docker','stop'] and blocked['once']:
+            blocked['once']=False;raise OSError('lost before stop')
+        return real(argv,**kwargs)
+    monkeypatch.setattr(m.launch,'run',uncertain)
+    with pytest.raises(OSError):m.execute(e.path)
+    with pytest.raises(ValueError,match='recover-stop'):m.execute(e.path)
+    assert m.execute(e.path,'recover-stop')['new_context']==65536
+    assert (Path(e.conf['state_dir'])/'stop-recovery-intent.json').exists()
