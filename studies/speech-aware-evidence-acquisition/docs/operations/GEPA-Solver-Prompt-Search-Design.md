@@ -147,3 +147,9 @@
 `rails/gepa_prompt_material.py::publish_template`复用候选重放校验，绑定外部contract、父版本、原始变异响应及text tokenizer身份，发布按内容摘要命名的模板。原子发布拒绝冲突，精确重入复用已有字节，拒绝符号链接重定向；输出直接匹配原生`instruction_template`的`relpath/sha256`字段，另报模板token数。
 
 81项固定镜像回归通过（2.43秒），涵盖真实Solver种子逐字还原、派生区块与来源、原生template-variant解析器、旧Flight模板读取。初次测试快照缺只读挂载点与依赖，修正隔离测试快照后通过，没有模型调用。该接口未部署活动推理树；不代替Flight注册、完整请求FIT、封存P导入或真实GEPA搜索。
+
+### 实际A0编译接入
+
+实际A0配置验证发现旧`legacy-c17-lock-v1`预算只接受已登记的经验/seed/odd40臂，通用模板解析器通过并不足以运行GEPA。现增加单个`gepa`模板候选与最后一个`lock`臂的有界兼容；仍是一次P、两个S，保留原P/S模型可见预算17/9，拒绝任意候选名、额外候选、twin和review扩张。
+
+`compile_template_probe`调用原模块编译器与原生配置加载器，保持知识、delivering phase material和thinking不变。82项固定镜像回归通过（3.57秒），含真实A0声明及拒绝路径。测试快照补齐实际知识receipt、port pins和组件记录后通过；未运行新的NPU探针。这是同P模板消费机制入口，跨动态阶段的P导入与搜索仍待完成。

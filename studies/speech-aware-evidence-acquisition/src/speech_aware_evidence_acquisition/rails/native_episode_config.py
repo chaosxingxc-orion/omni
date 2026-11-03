@@ -2922,7 +2922,7 @@ def validate_prompt_contact_limits(config):
             and all(not arm.all_release_swaps and arm.instruction_template is None
                     and arm.decoding is None for arm in group.arms)
         )
-    paired_group=(group is not None and group.is_template and group.arm_ids in (("learned","lock"),("learned","compact","lock"))
+    paired_group=(group is not None and group.is_template and group.arm_ids in (("learned","lock"),("learned","compact","lock"),("gepa","lock"))
         and group.arm_visits=="first"
         and all(arm.instruction_template is not None and not arm.deliver and arm.replicate_of is None for arm in group.arms[:-1])
         and group.arms[-1].deliver and group.arms[-1].instruction_template is None

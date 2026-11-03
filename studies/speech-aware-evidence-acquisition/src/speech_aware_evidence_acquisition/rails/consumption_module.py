@@ -1934,7 +1934,12 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
         paired_columns=(len(paired_decls)==1 and len(block.columns)==len(block.template_columns)==len(expected_columns)
             and [c.column_id for c in block.template_columns]==expected_columns
             and all(c.node=="solver" for c in block.template_columns) and not block.template_frame["twin"])
-        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns)
+        # A bounded GEPA consumption probe changes one Solver template, keeps
+        # the delivering lock last and preserves its model-visible limits.
+        gepa_columns = (not paired_decls and len(block.columns) == len(block.template_columns) == 1
+            and block.template_columns[0].column_id == "gepa"
+            and block.template_columns[0].node == "solver" and not block.template_frame["twin"])
+        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns and not gepa_columns)
                 or ceiling != 2 or block.solver_tool_access):
             raise ConsumptionModuleConfigError(
                 "legacy prompt limits require a two-contact lock, seed-only K4, or exact odd40 B/AA/A group")

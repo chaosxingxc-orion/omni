@@ -81,3 +81,52 @@ def test_derived_template_requires_exact_parent_and_observed_mutation(tmp_path):
     assert text == 'Compare supplied candidates against the speech.\n\n' + original.split('\n\n', 1)[1]
     args['mutation_text'] = mutation.replace('applicability', 'unobserved')
     with pytest.raises(ValueError): m.publish_template(tmp_path, **args)
+
+
+def test_real_agent_probe_compiles_without_changing_knowledge_or_delivering_material(tmp_path):
+    import shutil
+    source = Path(__file__).parents[2]
+    shutil.copytree(source/'configs', tmp_path/'configs')
+    for relative in ['scripts/flights/nx/l338_port_pins.json',
+        'docs/receipts/knowledge/slurp-kb-size-pool-annotated-exemplars-minus-r01.json']:
+        (tmp_path/relative).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source/relative, tmp_path/relative)
+    # Use the actual A0 component declaration and compiler, not a mocked policy.
+    base = json.loads((source/'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json').read_text())
+    for component in base['native_episode']['consumption_module']['components']:
+        if component['state'] == 'on':
+            path = Path(component['record'])
+            (tmp_path/path).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source/path, tmp_path/path)
+    original = json.loads(json.dumps(base))
+    _, args = inputs()
+    result = m.compile_template_probe(tmp_path, base, fit_estimate={
+        'slot_tokens': 49152, 'completion_ceiling': 4096,
+        'base_prompt_tokens': 9600, 'tokens_per_supplied_item': 120},
+        max_supplied_items=48, delivering_template_tokens=args['count_tokens'](
+            (source/'configs/probes/slurp_native_role_solver_v2.txt').read_text()), **args)
+    assert result['program_ceiling'] == 3
+    assert base == original
+    built = result['baseline']
+    for key in ('knowledge_stores', 'phase_material', 'thinking_policy'):
+        assert built.get(key) == base.get(key)
+    group = built['native_episode']['roles']['solver']['template_variants']
+    assert [r['arm_id'] for r in group['arms']] == ['gepa', 'lock']
+    assert group['arms'][-1]['deliver'] is True
+
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config, prompt_remaining_contacts
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    built['carrier_lock_key'] = 'slurp'
+    native = load_native_episode_config(built, default_phase_program(built['policy']))
+    assert native.max_contacts == 3
+    assert prompt_remaining_contacts(native, 'solver', 1) == 9
+    from speech_aware_evidence_acquisition.rails import consumption_module as cm
+    from speech_aware_evidence_acquisition.rails.adapters.slurp_module_hooks import carrier_module_hooks
+    for fault in ('other_name', 'two_candidates', 'twin', 'review'):
+        block = json.loads(json.dumps(built['native_episode']['consumption_module']))
+        if fault == 'other_name': block['columns'][0]['column_id'] = 'arbitrary'
+        elif fault == 'two_candidates': block['columns'].append({**block['columns'][0], 'column_id': 'another'})
+        elif fault == 'twin': block['template_frame']['twin'] = True
+        else: block['review_loop'] = 'on'
+        with pytest.raises(cm.ConsumptionModuleConfigError):
+            cm.compile_module(block, carrier_module_hooks(repo_root=tmp_path), repo_root=tmp_path)
