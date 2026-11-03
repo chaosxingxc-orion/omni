@@ -39,26 +39,49 @@ def initial_measurement(method, document, count):
     return method.reflect_messages(document, 0, method.empty_memory(), count)
 
 
-def static_capacity_audit(method, document, count, *, extra_reserve_tokens=0):
+def static_capacity_audit(method, document, count, *, extra_reserve_tokens=0, registration=None):
     """Fit every fixed input with initial state; dynamic phases remain unproven."""
     ace.require(type(extra_reserve_tokens) is int and extra_reserve_tokens >= 0,
                 'nonnegative static capacity reserve required')
     limits = document['bounds']; rows = []
+    if registration is not None:
+        from speech_aware_evidence_acquisition.rails.tfgrpo_runtime import native_learning_messages
+        contacts = [row for row in registration['contacts'] if row['stage'] == method.REFLECT]
+        ace.require(len(contacts) == len(document['groups']), 'complete static reflection contact roster required')
     for index, group in enumerate(document['groups']):
         state = document['parent']['items'] if method.STRATEGY == ace.STRATEGY else method.empty_memory()
         measured = method.reflect_messages(document, index, state, count)
-        required = measured['input_tokens'] + limits['completion_cap'] + limits['reserve_tokens'] + extra_reserve_tokens
+        tokens = measured['input_tokens']; native = None
+        if registration is not None:
+            row = contacts[index]
+            request = {'schema': 'saea-tfgrpo-learning-request-v1', 'batch_sha256': sha(document),
+                'model_id': document['model_id'], 'learning_config_sha256': document['learning_config_sha256'],
+                'stage': row['stage'], 'identity': row['identity'], 'messages': measured['messages']}
+            native = native_learning_messages(request, registration, row)
+            tokens = count(native)
+            ace.require(type(tokens) is int and tokens > 0, 'positive native wrapped token count required')
+        required = tokens + limits['completion_cap'] + limits['reserve_tokens'] + extra_reserve_tokens
         ace.require(required <= limits['resident_context'],
                     'static capacity reserve exceeded at group ' + str(index))
-        rows.append({'index': index, 'query_id': group['query_id'],
-                     'messages_sha256': measured['messages_sha256'],
-                     'input_tokens': measured['input_tokens'], 'required_tokens': required})
-    return {'schema': 'saea-learning-static-capacity-v1', 'groups': len(rows), 'rows': rows,
+        result = {'index': index, 'query_id': group['query_id'],
+                  'messages_sha256': measured['messages_sha256'],
+                  'input_tokens': measured['input_tokens'], 'required_tokens': required}
+        if native is not None:
+            result.update(native_messages_sha256=sha(native), native_wrapped_tokens=tokens,
+                          wrapper_delta_tokens=tokens - measured['input_tokens'])
+        rows.append(result)
+    audit = {'schema': ('saea-learning-static-capacity-v2' if registration is not None
+                         else 'saea-learning-static-capacity-v1'), 'groups': len(rows), 'rows': rows,
         'extra_reserve_tokens': extra_reserve_tokens,
         'max_input_tokens': max(row['input_tokens'] for row in rows),
         'minimum_headroom_tokens': min(limits['resident_context'] - row['required_tokens'] for row in rows),
         'scope': 'all-fixed-reflection-inputs-with-initial-state',
         'dynamic_library_or_memory_growth_verified': False, 'native_fit_completed': False}
+    if registration is not None:
+        audit.update(scope='all-fixed-reflection-native-wrappers-with-initial-state',
+            registration_sha256=sha(registration),
+            max_native_wrapped_tokens=max(row['native_wrapped_tokens'] for row in rows))
+    return audit
 
 
 def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpath,
@@ -98,7 +121,6 @@ def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpa
     document = method.build_input(source,source['batch']['parent'],
         learning_config_sha256=sha(learning_configuration(config)),**bounds,**development)
     initial = initial_measurement(method, document, count)
-    capacity = static_capacity_audit(method, document, count, extra_reserve_tokens=capacity_reserve_tokens)
     ids = [g['query_id'] for g in document['groups']]
     original = read(source_roster); index = {r['sample_id']:r for r in original['items']}
     require(len(index) == len(original['items']) and set(ids) <= set(index), 'complete unique original TRAIN roster required')
@@ -115,6 +137,8 @@ def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpa
     reg = selected_runtime.build_registration(plan,source=source,document=document,
         decoding_params=config['decoding_params'],max_context_bytes=max_context_bytes,
         runtime_identity_sha256=sha(identity),roster_sha256=hashlib.sha256(raw(roster)).hexdigest())
+    capacity = static_capacity_audit(method, document, count,
+        extra_reserve_tokens=capacity_reserve_tokens, registration=reg)
     source_doc = {'schema':selected_runtime.RUNTIME_SOURCE_SCHEMA,'strategy':strategy,'source':spec,
         'tokenizer_relpath':str(rel),'tokenizer_identity':tokenizer,'document':document,
         'initial_measurement':initial,'phase_contract':'unknown-prompts-await-observed-predecessor'}
@@ -165,7 +189,9 @@ def verify_job(repo,data,job):
     if 'static_capacity_audit' in complete:
         recorded = complete['static_capacity_audit']
         require(recorded == static_capacity_audit(method, loaded['document'], loaded['count_tokens'],
-            extra_reserve_tokens=recorded['extra_reserve_tokens']), 'static capacity audit changed')
+            extra_reserve_tokens=recorded['extra_reserve_tokens'],
+            registration=reg if recorded.get('schema') == 'saea-learning-static-capacity-v2' else None),
+            'static capacity audit changed')
     original = read_pin(complete['inputs']['source_roster'],repo_root=repo,data_root=data)
     index = {r['sample_id']:r for r in original['items']}
     ids = [g['query_id'] for g in loaded['document']['groups']]

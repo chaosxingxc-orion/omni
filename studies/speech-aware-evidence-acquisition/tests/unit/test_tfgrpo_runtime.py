@@ -269,3 +269,20 @@ def test_learning_pipeline_uses_real_metered_bridge(tmp_path):
         learning_objective=common['learning_objective'],policy_sha256='f'*64)
     assert repeated==result and len(transport.calls)==5
     client.close()
+
+
+def test_cpu_native_messages_equal_actual_prepared_adapter_render(tmp_path):
+    from speech_aware_evidence_acquisition.rails.tfgrpo_runtime import native_learning_messages
+    from speech_aware_evidence_acquisition.core.model.transport import prepared_text_user_parts
+    caller, client, _, transport, _, _ = setup(tmp_path)
+    req = request(); req['messages'][1]['content'] = 'Nested {"key": "quoted\\ntext"}, Unicode café, control data.'
+    row = caller.registration['contacts'][0]
+    measured = native_learning_messages(req, caller.registration, row)
+    assert not transport.calls
+    _, prepared = caller.prepare(req)
+    payload = prepared.as_payload()
+    actual = [{'role': 'system', 'content': payload['task_instruction']},
+              {'role': 'user', 'content': prepared_text_user_parts(payload['history'])}]
+    assert actual == measured and len(actual[1]['content']) == 2
+    assert not transport.calls
+    client.close()

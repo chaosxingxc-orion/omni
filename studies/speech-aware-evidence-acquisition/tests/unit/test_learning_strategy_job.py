@@ -240,3 +240,27 @@ def test_new_compact_prepare_uses_one_consistent_reflection_limit(tmp_path, monk
     assert 'At most 2 findings and signals respectively.' in prompt
     assert 'At most 2 findings and signals each.' in prompt
     assert 'At most 4 findings' not in prompt
+
+
+def test_new_prepare_audits_actual_native_wrapper_and_rejects_its_overflow(tmp_path, monkeypatch):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    from speech_aware_evidence_acquisition.rails import ace_runtime
+    def wrapped_count(messages):
+        return args['bounds']['resident_context'] if isinstance(messages[1]['content'], list) else 10
+    monkeypatch.setattr(ace_runtime, 'load_token_counter', lambda _: (wrapped_count, {'fixture': True}))
+    with pytest.raises(ValueError, match='static capacity reserve exceeded'):
+        job.prepare(repo, data, **args)
+    assert not out.exists()
+
+
+def test_native_capacity_receipt_records_wrapper_not_only_source_messages(tmp_path, monkeypatch):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    complete = job.prepare(repo, data, **args)
+    audit = complete['static_capacity_audit']
+    assert audit['schema'] == 'saea-learning-static-capacity-v2'
+    assert audit['scope'] == 'all-fixed-reflection-native-wrappers-with-initial-state'
+    assert audit['rows'][0]['native_messages_sha256'] != audit['rows'][0]['messages_sha256']
+    assert audit['rows'][0]['native_wrapped_tokens'] == 10
+    assert audit['rows'][0]['wrapper_delta_tokens'] == 0
+    assert audit['native_fit_completed'] is False
+    assert job.verify_job(repo, data, out)[0] == complete

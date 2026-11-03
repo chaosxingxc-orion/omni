@@ -412,6 +412,11 @@ def _speech_history_texts(history: object) -> list[str]:
     return rendered
 
 
+def prepared_text_user_parts(history):
+    """The exact text-only transport rendering, shared by CPU capacity audit."""
+    return [{"type": "text", "text": text} for text in _speech_history_texts(history)]
+
+
 REASONING_CONTENT_GUARD_THINK_MARKER = "refuse-think-marker-in-content"
 _REASONING_MARKERS = ("<think>", "</think>", "<thinking>", "</thinking>")
 
@@ -1086,10 +1091,8 @@ class LlamaServerTransport:
             if evidence_projection is not None or self._user_turn_text is not None:
                 raise FrozenCoreError("prepared text cannot add a projection or user-turn text")
             self._assert_system_message_suppression_is_lossless(payload, evidence_texts=[])
-            state_texts = _speech_history_texts(payload["history"])
-            messages = self._messages(str(payload["task_instruction"]), [
-                {"type": "text", "text": text} for text in state_texts
-            ])
+            messages = self._messages(str(payload["task_instruction"]),
+                                      prepared_text_user_parts(payload["history"]))
             construction_receipt = {
                 "text_only_prepared": True, "prompt_order": self._prompt_order,
                 "observed_audio_seconds": 0, "audio_parts": 0, "speech_packets": 0,

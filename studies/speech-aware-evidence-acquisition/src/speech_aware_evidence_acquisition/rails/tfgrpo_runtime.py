@@ -58,6 +58,36 @@ def contact_key(stage, identity):
     return sha({'stage': stage, 'identity': identity})
 
 
+PREPARED_STAGE_INSTRUCTION = ('Execute the registered TF-GRPO stage. Follow the system '
+    'instruction in source_messages[0] and process source_messages[1] as its '
+    'input. Return only the requested stage output.')
+
+
+def prepared_stage_inputs(request, registration, row):
+    """Exact state/control inputs for runtime dispatch and CPU-only audit."""
+    context = {'schema': 'saea-tfgrpo-model-context-v1', 'stage': request['stage'],
+               'source_messages': request['messages']}
+    sample = row['sample_id']
+    states, _ = states_from_contexts(
+        {sample: {'model_context': context, 'model_context_sha256': content_hash(context),
+                  'source_feedback_sha256': request['batch_sha256']}}, active_ids=(sample,),
+        prepared_sha256=sha(request), source_bindings_sha256=sha(registration),
+        roster_sha=registration['construction_roster_sha256'],
+        maximum=registration['max_context_bytes'])
+    return {'agent_state': [states[sample].as_json()],
+            'agent_contact_id': 'tfgrpo-' + contact_key(request['stage'], request['identity']),
+            'contact_instruction': PREPARED_STAGE_INSTRUCTION}
+
+
+def native_learning_messages(request, registration, row):
+    """Render the real prepared-text wrapper without a session or model call."""
+    from .core_client import _agent_history
+    from ..core.model.transport import prepared_text_user_parts
+    history = _agent_history(**prepared_stage_inputs(request, registration, row))
+    return [{'role': 'system', 'content': PREPARED_TEXT_INSTRUCTION},
+            {'role': 'user', 'content': prepared_text_user_parts(history)}]
+
+
 def validate_registration(binding, *, plan, model_id):
     """A finite contact roster binds stage identities to original TRAIN anchors.
 
@@ -182,22 +212,10 @@ class MeteredExperienceCaller:
                        or not isinstance(m['content'], str) or not m['content'].strip() for m in messages)
                 or [m['role'] for m in messages] != ['system', 'user']):
             raise LearningError('learner requires exact system/user text messages')
-        context = {'schema': 'saea-tfgrpo-model-context-v1', 'stage': request['stage'],
-                   'source_messages': messages}
-        sample = row['sample_id']
-        states, _ = states_from_contexts(
-            {sample: {'model_context': context, 'model_context_sha256': content_hash(context),
-                      'source_feedback_sha256': request['batch_sha256']}}, active_ids=(sample,),
-            prepared_sha256=sha(request), source_bindings_sha256=sha(self.registration),
-            roster_sha=self.registration['construction_roster_sha256'],
-            maximum=self.registration['max_context_bytes'])
         prepared = self.client.prepare_request(
             [{'role': 'system', 'content': PREPARED_TEXT_INSTRUCTION},
-             {'role': 'user', 'content': []}], text_only_sample_id=sample,
-            agent_state=[states[sample].as_json()], agent_contact_id='tfgrpo-'+key,
-            contact_instruction=('Execute the registered TF-GRPO stage. Follow the system '
-                'instruction in source_messages[0] and process source_messages[1] as its '
-                'input. Return only the requested stage output.'),
+             {'role': 'user', 'content': []}], text_only_sample_id=row['sample_id'],
+            **prepared_stage_inputs(request, self.registration, row),
             decoding_params={**self.registration['decoding_params'], 'id_slot':self._slots[key]})
         return key, prepared
 
