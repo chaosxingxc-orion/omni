@@ -109,6 +109,28 @@ def gepa_probe_layout_matches(values):
         return False
 
 
+
+def gepa_pair_layout_matches(values):
+    """Capture only the declared current-parent/child/lock four-contact graph."""
+    try:
+        from ...rails.gepa_prompt_material import validate_pair_declaration, pair_frozen_identity
+        native = values['native_episode']; module = native['consumption_module']
+        declaration = validate_pair_declaration(module)
+        if (values.get('policy') != 'phase-native-module-v1-c4'
+                or declaration['frozen_sha256'] != pair_frozen_identity(values)):
+            return False
+        frame = module['template_frame']
+        expected = {'node': 'solver', 'max_supplied_items': frame['max_supplied_items'],
+            'fit_estimate': frame['fit_estimate'], 'arms': [
+                *[{'arm_id': col['column_id'], 'instruction_template': col['template'],
+                   'template_tokens': col['template_tokens']} for col in module['columns']],
+                {'arm_id': 'lock', 'deliver': True,
+                 'template_tokens': frame['delivering_template_tokens']}]}
+        return native['roles']['solver']['template_variants'] == expected
+    except (KeyError, TypeError, AttributeError, ValueError):
+        return False
+
+
 def native_contact_custody_enabled(values):
     """Operational capture for the reviewed odd40 method or raw-vLLM A0 P/S.
 
@@ -131,8 +153,9 @@ def native_contact_custody_enabled(values):
         return False
     if native.get('answer_selection') == 'odd40-whole-answer-v1':
         return True  # Preserve the already reviewed method's existing path.
-    paired = gepa_probe_layout_matches(values)
-    paired_ceiling = 3
+    pair = gepa_pair_layout_matches(values)
+    paired = pair or gepa_probe_layout_matches(values)
+    paired_ceiling = 4 if pair else 3
     if not paired and values.get('policy') in ('phase-native-module-v1-c3','phase-native-module-v1-c4'):
         components=native.get('consumption_module',{}).get('components',[])
         learned=[c for c in components if c.get('component_id')=='tfgrpo-solver-experience'

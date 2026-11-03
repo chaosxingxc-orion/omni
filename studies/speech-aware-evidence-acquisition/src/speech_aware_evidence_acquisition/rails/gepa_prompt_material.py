@@ -94,3 +94,113 @@ def compile_template_probe(repo, baseline, *, fit_estimate, max_supplied_items,
     return {'baseline': result, 'material': published,
         'program_ceiling': compiled.program_ceiling, 'new_model_calls': 0,
         'purpose': 'same-P native template consumption probe; not GEPA search'}
+
+
+PAIR_SCHEMA = 'saea-gepa-template-pair-v1'
+FROZEN_PAIR_FIELDS = ('knowledge_stores', 'thinking_policy', 'phase_material',
+                      'phase_tools', 'preparation_source_receipts')
+
+
+def pair_frozen_identity(values):
+    return sha({key: values.get(key) for key in FROZEN_PAIR_FIELDS})
+
+
+def validate_pair_declaration(block):
+    """Validate the exact graph declaration; external lineage remains caller-owned."""
+    declaration = block.get('gepa_pair')
+    fields = {'schema', 'contract_sha256', 'tokenizer_sha256',
+              'parent_candidate_sha256', 'child_candidate_sha256',
+              'child_parent_sha256', 'child_mutation_sha256', 'frozen_sha256',
+              'parent_template', 'child_template'}
+    if not isinstance(declaration, dict) or set(declaration) != fields:
+        raise ValueError('exact GEPA pair declaration required')
+    if declaration['schema'] != PAIR_SCHEMA:
+        raise ValueError('unsupported GEPA pair schema')
+    for key in fields - {'schema', 'parent_template', 'child_template'}:
+        if not isinstance(declaration[key], str) or re.fullmatch('[a-f0-9]{64}', declaration[key]) is None:
+            raise ValueError('GEPA pair digest required')
+    if (declaration['child_parent_sha256'] != declaration['parent_candidate_sha256']
+            or declaration['child_candidate_sha256'] == declaration['parent_candidate_sha256']):
+        raise ValueError('GEPA current parent/child lineage differs')
+    columns = block.get('columns')
+    if (not isinstance(columns, list) or len(columns) != 2
+            or block.get('review_loop') != 'off'
+            or block.get('prompt_contact_limits') != 'legacy-c17-lock-v1'
+            or block.get('solver_tool_access') or block.get('answer_selection')
+            or block.get('template_frame', {}).get('twin') is not False
+            or any(c.get('component_id') == 'tfgrpo-solver-experience'
+                   and c.get('state') != 'off' for c in block.get('components', []))):
+        raise ValueError('GEPA pair requires exact review-off two-column graph')
+    for name, column in zip(('parent', 'child'), columns):
+        if (set(column) != {'column_id', 'kind', 'node', 'template', 'template_tokens'}
+                or column['column_id'] != name or column['kind'] != 'template'
+                or column['node'] != 'solver'
+                or column['template'] != declaration[name + '_template']):
+            raise ValueError('GEPA pair column identity differs')
+        pin = column['template']
+        if (not isinstance(pin, dict) or set(pin) != {'relpath', 'sha256'}
+                or not isinstance(pin['sha256'], str)
+                or re.fullmatch('[a-f0-9]{64}', pin['sha256']) is None
+                or pin['relpath'] != 'probes/gepa/' + pin['sha256'] + '.txt'):
+            raise ValueError('GEPA pair requires content-addressed template pins')
+    return declaration
+
+
+def compile_template_pair(repo, baseline, *, parent_arguments, child_arguments,
+                          fit_estimate, max_supplied_items, delivering_template_tokens):
+    """Compile fresh shared P then current parent/child/original-lock Solver arms.
+
+    Each argument dictionary has publish_template's externally anchored inputs.
+    A non-seed parent includes its own observed mutation and predecessor. This
+    validates local lineage replay, not authenticity of the external journals.
+    No evaluation/acceptance or cross-candidate recovery is performed here.
+    """
+    import copy
+    from . import consumption_module as cm
+    from .adapters.slurp_module_hooks import carrier_module_hooks
+    repo = Path(repo)
+    block = baseline['native_episode']['consumption_module']
+    cm.verify_declared_module(block, baseline, repo_root=repo)
+    if block.get('columns') or block.get('review_loop') != 'off' or block.get('gepa_pair'):
+        raise ValueError('template pair requires the unvaried review-off Agent')
+    if (parent_arguments['contract'] != child_arguments['contract']
+            or parent_arguments['expected_contract_sha256'] != child_arguments['expected_contract_sha256']
+            or parent_arguments['tokenizer_identity'] != child_arguments['tokenizer_identity']
+            or child_arguments.get('parent') != parent_arguments['candidate']
+            or child_arguments.get('expected_parent_sha256') != parent_arguments['candidate']['candidate_sha256']):
+        raise ValueError('pair must bind child to the actual verified current parent')
+    # Verify both before publishing; rejected lineage cannot publish either arm.
+    for args in (parent_arguments, child_arguments):
+        executable_template(args['candidate'], contract=args['contract'],
+            expected_contract_sha256=args['expected_contract_sha256'], count_tokens=args['count_tokens'],
+            parent=args.get('parent'), expected_parent_sha256=args.get('expected_parent_sha256'),
+            mutation_text=args.get('mutation_text'))
+    materials = {name: publish_template(repo, **args) for name, args in
+                 (('parent', parent_arguments), ('child', child_arguments))}
+    block = copy.deepcopy(block)
+    block['columns'] = [{'column_id': name, 'kind': 'template', 'node': 'solver',
+        'template': value['instruction_template'], 'template_tokens': value['template_tokens']}
+        for name, value in materials.items()]
+    block['template_frame'] = {'max_supplied_items': max_supplied_items,
+        'delivering_template_tokens': delivering_template_tokens, 'twin': False,
+        'fit_estimate': copy.deepcopy(fit_estimate)}
+    child = child_arguments['candidate']
+    block['gepa_pair'] = {'schema': PAIR_SCHEMA,
+        'contract_sha256': parent_arguments['expected_contract_sha256'],
+        'tokenizer_sha256': parent_arguments['expected_tokenizer_sha256'],
+        'parent_candidate_sha256': parent_arguments['candidate']['candidate_sha256'],
+        'child_candidate_sha256': child['candidate_sha256'],
+        'child_parent_sha256': child['parent_sha256'],
+        'child_mutation_sha256': child['mutation_sha256'],
+        'frozen_sha256': pair_frozen_identity(baseline),
+        **{name + '_template': value['instruction_template'] for name, value in materials.items()}}
+    validate_pair_declaration(block)
+    compiled = cm.compile_module(block, carrier_module_hooks(repo_root=repo), repo_root=repo)
+    result = compiled.apply_to(baseline)
+    result['native_episode']['consumption_module'] = block
+    cm.verify_declared_module(block, result, repo_root=repo)
+    if compiled.program_ceiling != 4 or pair_frozen_identity(result) != pair_frozen_identity(baseline):
+        raise ValueError('pair changed frozen system or contact graph')
+    return {'baseline': result, 'materials': materials, 'declaration': block['gepa_pair'],
+        'program_ceiling': 4, 'new_model_calls': 0,
+        'purpose': 'same-P current-parent/child/lock evaluation; external scoring required'}

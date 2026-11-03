@@ -158,3 +158,80 @@ def test_real_agent_probe_compiles_without_changing_knowledge_or_delivering_mate
         else: block['review_loop'] = 'on'
         with pytest.raises(cm.ConsumptionModuleConfigError):
             cm.compile_module(block, carrier_module_hooks(repo_root=tmp_path), repo_root=tmp_path)
+
+
+def pair_inputs(tmp_path):
+    import shutil
+    source = Path(__file__).parents[2]
+    shutil.copytree(source/'configs', tmp_path/'configs')
+    base = json.loads((source/'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json').read_text())
+    paths = ['scripts/flights/nx/l338_port_pins.json',
+             'docs/receipts/knowledge/slurp-kb-size-pool-annotated-exemplars-minus-r01.json']
+    paths += [x['record'] for x in base['native_episode']['consumption_module']['components'] if x['state'] == 'on']
+    for rel in paths:
+        dest = tmp_path/rel; dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source/rel, dest)
+    original, seed = inputs()
+    def child(parent_args, instruction):
+        parent = parent_args['candidate']
+        mutation = json.dumps({'schema': c.MUTATION_SCHEMA, 'module': c.MODULE,
+            'parent_sha256': parent['candidate_sha256'], 'evidence_query_ids': ['slurp:train:1'],
+            'diagnosis': 'Check applicability using supplied evidence.', 'solver_instruction': instruction})
+        candidate = c.derive_candidate(mutation, parent=parent,
+            expected_parent_sha256=parent['candidate_sha256'], contract=seed['contract'],
+            expected_contract_sha256=seed['expected_contract_sha256'], count_tokens=seed['count_tokens'])
+        return {**seed, 'candidate': candidate, 'parent': parent,
+            'expected_parent_sha256': parent['candidate_sha256'], 'mutation_text': mutation}
+    parent = child(seed, 'Compare candidates against speech and supplied evidence.')
+    offspring = child(parent, 'Check applicability before selecting the complete supported answer.')
+    kwargs = dict(parent_arguments=parent, child_arguments=offspring,
+        fit_estimate={'slot_tokens':49152, 'completion_ceiling':4096,
+            'base_prompt_tokens':9600, 'tokens_per_supplied_item':120},
+        max_supplied_items=48, delivering_template_tokens=seed['count_tokens'](original))
+    return base, kwargs
+
+
+def test_current_nonseed_parent_child_native_four_contact_graph(tmp_path):
+    import copy
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    base, args = pair_inputs(tmp_path); before = copy.deepcopy(base)
+    result = m.compile_template_pair(tmp_path, base, **args)
+    assert base == before and result['program_ceiling'] == 4
+    built = result['baseline']; built.update(transport='vllm', carrier_lock_key='slurp')
+    arms = built['native_episode']['roles']['solver']['template_variants']['arms']
+    assert [a['arm_id'] for a in arms] == ['parent', 'child', 'lock']
+    assert [a.get('deliver', False) for a in arms] == [False, False, True]
+    assert result['declaration']['parent_candidate_sha256'] == args['child_arguments']['expected_parent_sha256']
+    assert args['parent_arguments']['candidate']['parent_sha256'] is not None
+    assert load_native_episode_config(built, default_phase_program(built['policy'])).max_contacts == 4
+    assert native_contact_custody_enabled(built)
+    for fault in ('order','extra','deliver','lineage','pin','knowledge','thinking','perception','tools','revision','declaration'):
+        bad = copy.deepcopy(built); mod = bad['native_episode']['consumption_module']
+        group = bad['native_episode']['roles']['solver']['template_variants']
+        if fault == 'order': group['arms'][:2] = reversed(group['arms'][:2])
+        elif fault == 'extra': group['arms'].append(copy.deepcopy(group['arms'][0]))
+        elif fault == 'deliver': group['arms'][0]['deliver'] = True
+        elif fault == 'lineage': mod['gepa_pair']['child_parent_sha256'] = '0'*64
+        elif fault == 'pin': mod['columns'][0]['template']['sha256'] = '0'*64
+        elif fault == 'knowledge': bad['knowledge_stores'] = {}
+        elif fault == 'thinking': bad['thinking_policy'] = {'perception': {'enable_thinking': False}}
+        elif fault == 'perception': bad['native_episode']['roles']['perception']['max_iterations'] = 2
+        elif fault == 'tools': bad['phase_tools'] = {'solver': {'allowed_tools':['lookup']}}
+        elif fault == 'revision': bad['native_episode']['max_revisions'] = 1
+        else: mod.pop('gepa_pair')
+        assert not native_contact_custody_enabled(bad), fault
+
+
+@pytest.mark.parametrize('fault', ['wrong_parent', 'parent_mutation', 'child_mutation', 'contract', 'tokenizer'])
+def test_pair_refuses_unverified_lineage(tmp_path, fault):
+    import copy
+    base, args = pair_inputs(tmp_path)
+    if fault == 'wrong_parent': args['child_arguments']['parent'] = args['parent_arguments']['parent']
+    elif fault == 'parent_mutation': args['parent_arguments']['mutation_text'] += ' altered'
+    elif fault == 'child_mutation': args['child_arguments']['mutation_text'] += ' altered'
+    elif fault == 'contract': args['child_arguments']['contract'] = copy.deepcopy(args['child_arguments']['contract']); args['child_arguments']['contract']['max_instruction_tokens'] = 1
+    else: args['child_arguments']['tokenizer_identity'] = {}
+    with pytest.raises(ValueError): m.compile_template_pair(tmp_path, base, **args)
+    assert not (tmp_path/'configs/probes/gepa').exists()

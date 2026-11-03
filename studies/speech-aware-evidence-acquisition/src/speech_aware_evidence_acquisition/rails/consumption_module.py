@@ -89,7 +89,7 @@ _BLOCK_OPTIONAL = frozenset({
     "columns", "lock", "review_loop", "solver_tool_access", "template_frame", "supply_frame", "construction_roster",
     "thinking_frame", "decoding_frame", "sampling_frame", "prompt_contact_limits",
     #: TFRL-v2 (2026-10-30): the bank-consumption declaration (``rails.tfrl_v2_consumption``); parsed fail-closed, compiles to nothing.
-    "tfrl_v2_bank", "tfrl_supply_allocation", "answer_selection",
+    "tfrl_v2_bank", "tfrl_supply_allocation", "answer_selection", "gepa_pair",
 })
 #: A lock-version name a block may declare (migration step 6, owner decision
 #: 204): ``v<major>.<minor>`` with an optional lowercase ``-suffix`` (``v2.2-npu-port``), resolved through the carrier's ``lock_versions``.
@@ -894,6 +894,12 @@ def parse_consumption_module_block(
         raw.get("sampling_frame"),
         has_sampling_columns=any(c.kind == COLUMN_KIND_SAMPLING for c in column_decls),
     )
+    if "gepa_pair" in raw:
+        from .gepa_prompt_material import validate_pair_declaration
+        try:
+            validate_pair_declaration(raw)
+        except (ValueError, TypeError, KeyError, AttributeError) as error:
+            raise ConsumptionModuleConfigError(str(error)) from error
     block_json = _canonical(dict(raw))
     identity = dict(raw)
     if "columns" in identity:
@@ -1939,7 +1945,8 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
         gepa_columns = (not paired_decls and len(block.columns) == len(block.template_columns) == 1
             and block.template_columns[0].column_id == "gepa"
             and block.template_columns[0].node == "solver" and not block.template_frame["twin"])
-        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns and not gepa_columns)
+        gepa_pair_columns = "gepa_pair" in json.loads(block.block_json)
+        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns and not gepa_columns and not gepa_pair_columns)
                 or ceiling != 2 or block.solver_tool_access):
             raise ConsumptionModuleConfigError(
                 "legacy prompt limits require a two-contact lock, seed-only K4, or exact odd40 B/AA/A group")
@@ -2481,6 +2488,10 @@ def verify_declared_module(
     block's canonical text."""
 
     parsed = parse_consumption_module_block(raw_block, repo_root=repo_root)
+    if "gepa_pair" in raw_block:
+        from .gepa_prompt_material import pair_frozen_identity
+        if pair_frozen_identity(values) != raw_block["gepa_pair"]["frozen_sha256"]:
+            raise ConsumptionModuleConfigError("GEPA pair frozen system differs")
     hooks = resolve_carrier_hooks(parsed.profile, repo_root=repo_root)
     composed = compile_module(parsed, hooks, repo_root=repo_root)
     if hooks.construction is not None:
