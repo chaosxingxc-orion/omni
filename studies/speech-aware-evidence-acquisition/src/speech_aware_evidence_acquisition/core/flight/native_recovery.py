@@ -74,6 +74,41 @@ def direct_contact_custody_enabled(values):
             'acquisition', 'relisten', 'review_loop', 'max_revisions')))
 
 
+def gepa_probe_layout_matches(values):
+    """Recognize only the compiler's single Solver-template GEPA probe.
+
+    This enables operational response capture, not cross-candidate replay.
+    The native loader below still verifies the declared module and full graph.
+    """
+    try:
+        native = values['native_episode']
+        module = native['consumption_module']
+        columns = module['columns']
+        frame = module['template_frame']
+        group = native['roles']['solver']['template_variants']
+        if (values.get('policy') != 'phase-native-module-v1-c3'
+                or module.get('review_loop') != 'off'
+                or frame.get('twin') is not False
+                or len(columns) != 1
+                or any(c.get('component_id') == 'tfgrpo-solver-experience'
+                       and c.get('state') == 'on' for c in module['components'])):
+            return False
+        column, = columns
+        if (set(column) != {'column_id', 'kind', 'node', 'template', 'template_tokens'}
+                or column['column_id'] != 'gepa' or column['kind'] != 'template'
+                or column['node'] != 'solver'):
+            return False
+        expected = {'node': 'solver', 'max_supplied_items': frame['max_supplied_items'],
+            'fit_estimate': frame['fit_estimate'], 'arms': [
+                {'arm_id': 'gepa', 'instruction_template': column['template'],
+                 'template_tokens': column['template_tokens']},
+                {'arm_id': 'lock', 'deliver': True,
+                 'template_tokens': frame['delivering_template_tokens']}]}
+        return group == expected
+    except (KeyError, TypeError, AttributeError, ValueError):
+        return False
+
+
 def native_contact_custody_enabled(values):
     """Operational capture for the reviewed odd40 method or raw-vLLM A0 P/S.
 
@@ -96,9 +131,9 @@ def native_contact_custody_enabled(values):
         return False
     if native.get('answer_selection') == 'odd40-whole-answer-v1':
         return True  # Preserve the already reviewed method's existing path.
-    paired = False
+    paired = gepa_probe_layout_matches(values)
     paired_ceiling = 3
-    if values.get('policy') in ('phase-native-module-v1-c3','phase-native-module-v1-c4'):
+    if not paired and values.get('policy') in ('phase-native-module-v1-c3','phase-native-module-v1-c4'):
         components=native.get('consumption_module',{}).get('components',[])
         learned=[c for c in components if c.get('component_id')=='tfgrpo-solver-experience'
                  and c.get('state')=='on' and c.get('params',{}).get('target_arm')=='learned']

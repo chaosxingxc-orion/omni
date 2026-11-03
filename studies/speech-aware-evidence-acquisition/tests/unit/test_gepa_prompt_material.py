@@ -120,6 +120,34 @@ def test_real_agent_probe_compiles_without_changing_knowledge_or_delivering_mate
     native = load_native_episode_config(built, default_phase_program(built['policy']))
     assert native.max_contacts == 3
     assert prompt_remaining_contacts(native, 'solver', 1) == 9
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
+    built['transport'] = 'vllm'
+    before = json.loads(json.dumps(built))
+    assert native_contact_custody_enabled(built)
+    assert built == before
+    for fault in ('column', 'extra_column', 'deliver', 'pin', 'extra_arm', 'twin',
+                  'review', 'tool', 'perception', 'revision', 'branch', 'sampling',
+                  'wrong_policy', 'extra_group_key', 'learned_component'):
+        other = json.loads(json.dumps(built))
+        episode = other['native_episode']
+        module = episode['consumption_module']
+        arms = episode['roles']['solver']['template_variants']['arms']
+        if fault == 'column': module['columns'][0]['column_id'] = 'other'
+        elif fault == 'extra_column': module['columns'].append(dict(module['columns'][0]))
+        elif fault == 'deliver': arms[0]['deliver'] = True; arms[1]['deliver'] = False
+        elif fault == 'pin': arms[0]['instruction_template']['sha256'] = '0' * 64
+        elif fault == 'extra_arm': arms.append(dict(arms[0]))
+        elif fault == 'twin': module['template_frame']['twin'] = True
+        elif fault == 'review': episode['review_loop'] = 'on'
+        elif fault == 'tool': other['phase_tools'] = {'solver': {'allowed_tools': ['lookup']}}
+        elif fault == 'perception': episode['roles']['perception']['template_variants'] = {}
+        elif fault == 'revision': episode['max_revisions'] = 1
+        elif fault == 'branch': episode['roles']['solver']['branches'] = []
+        elif fault == 'sampling': episode['roles']['solver']['samples'] = 2
+        elif fault == 'wrong_policy': other['policy'] = 'phase-native-module-v1-c4'
+        elif fault == 'extra_group_key': episode['roles']['solver']['template_variants']['arm_visits'] = 'all'
+        else: module['components'].append({'component_id': 'tfgrpo-solver-experience', 'state': 'on'})
+        assert not native_contact_custody_enabled(other), fault
     from speech_aware_evidence_acquisition.rails import consumption_module as cm
     from speech_aware_evidence_acquisition.rails.adapters.slurp_module_hooks import carrier_module_hooks
     for fault in ('other_name', 'two_candidates', 'twin', 'review'):
