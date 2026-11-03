@@ -229,3 +229,19 @@ def test_next_group_prompt_uses_observed_delta_and_preserves_signal_content_iden
     validate(m._request(document,rows[2],next_message),caller)
     assert len(measured_calls)==3  # Exact historical prompts counted once, then reused.
     assert json.loads(next_message['messages'][1]['content'])['offline_stale_policy']
+
+
+def test_compact_v3_dispatch_and_registration_reconstruction(tmp_path,monkeypatch):
+    from test_ace_compact_protocol import compact_reflection, compact_delta
+    runtime,transport,_,_,spec,fits = setup(tmp_path,monkeypatch,
+        reflector_contract=ace.COMPACT_CONTRACT_V3)
+    def answer(payload):
+        stage = json.loads(payload['history'][0]['content'])['stage']
+        return json.dumps(compact_reflection() if stage == ace.REFLECT else compact_delta())
+    transport._responder = answer
+    loaded,_ = m.load_runtime_source(runtime._composed.values,plan=runtime.plan,
+        repo_root=tmp_path,data_root=tmp_path,sample_ids=(runtime._samples[0].sample_id,),roster_sha256='c'*64)
+    assert loaded['document'] == spec['document']
+    result = runtime.run_phases()
+    assert result['contact_count'] == len(transport.calls) == len(fits) == 2
+    assert runtime.seal()['cost']['calls_used'] == 2
