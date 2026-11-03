@@ -21,6 +21,9 @@ CANDIDATE_SCHEMA = 'saea-solver-prompt-candidate-v1'
 MUTATION_SCHEMA = 'saea-solver-prompt-mutation-v1'
 BLOCK_START = '<SAEA_SOLVER_CONSUMPTION>'
 BLOCK_END = '</SAEA_SOLVER_CONSUMPTION>'
+# SLURP runtime identities include both the utterance and recording, e.g.
+# slurp:train:000049:audio-1434542455. Keep short legacy fixture IDs valid.
+QUERY_ID = r'slurp:(?:train|dev|test):[A-Za-z0-9_.-]+(?::[A-Za-z0-9_.-]+)*'
 FROZEN_FIELDS = frozenset(name + '_sha256' for name in (
     'knowledge', 'perception', 'supply', 'model', 'decoding', 'roles', 'tools',
     'output_schema', 'tokenizer'))
@@ -71,7 +74,7 @@ def _ids(value, name, *, train=False):
              name + ' must be an ID list')
     _require(value == sorted(set(value)), name + ' must be sorted and unique')
     if train:
-        _require(all(re.fullmatch(r'slurp:train:[A-Za-z0-9_.-]+', x) for x in value),
+        _require(all(x.startswith('slurp:train:') and re.fullmatch(QUERY_ID, x) for x in value),
                  'feedback IDs must identify TRAIN queries')
     return value
 
@@ -170,7 +173,7 @@ def validate_mutation(text, *, contract, expected_contract_sha256, expected_pare
     diagnosis = _text(mutation['diagnosis'], 'diagnosis')
     _require(not any(q in diagnosis for q in contract['excluded_query_ids']), 'diagnosis leaks excluded query IDs')
     mentioned = {value.rstrip('.') for value in
-                 re.findall(r'slurp:(?:train|dev|test):[A-Za-z0-9_.-]+', diagnosis, re.I)}
+                 re.findall(QUERY_ID, diagnosis, re.I)}
     _require(mentioned <= set(ids), 'diagnosis references unlisted or non-feedback query IDs')
     _instruction(mutation['solver_instruction'], contract)
     return mutation
@@ -245,3 +248,19 @@ def verify_candidate(candidate, *, contract, expected_contract_sha256, count_tok
             contract=contract, expected_contract_sha256=expected_contract_sha256, count_tokens=count_tokens)
     _require(candidate == expected, 'candidate differs from pinned template and observed mutation replay')
     return copy.deepcopy(expected)
+
+
+def executable_template(candidate, *, contract, expected_contract_sha256, count_tokens,
+                        parent=None, expected_parent_sha256=None, mutation_text=None):
+    """Compile verified editing metadata to the ordinary Solver template.
+
+    The two delimiters are edit boundaries, not extra model instructions. The
+    seed compiles to the original template bytes when the contract was formed
+    by inserting delimiters around an existing instruction. Native FIT must
+    still measure the complete runtime request, and release is caller-owned.
+    """
+    verified = verify_candidate(candidate, contract=contract,
+        expected_contract_sha256=expected_contract_sha256, count_tokens=count_tokens,
+        parent=parent, expected_parent_sha256=expected_parent_sha256, mutation_text=mutation_text)
+    before, instruction, after = _split(verified['full_template'])
+    return before.removesuffix(BLOCK_START) + instruction + after.removeprefix(BLOCK_END)

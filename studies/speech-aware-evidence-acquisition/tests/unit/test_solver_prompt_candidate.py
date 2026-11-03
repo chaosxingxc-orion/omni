@@ -49,6 +49,60 @@ def test_exact_derived_template_and_original_are_preserved():
                               count_tokens=count) == seed
 
 
+def test_actual_recording_identity_round_trip_and_sibling_rejection():
+    contract, _, mutation, count = fixture()
+    real_id = 'slurp:train:000049:audio-1434542455'
+    contract = m.build_contract(base_template=contract['base_template'], frozen=contract['frozen'],
+        feedback_query_ids=[real_id], excluded_query_ids=['slurp:train:000050:audio-2'])
+    parent = m.seed_candidate(contract=contract, expected_contract_sha256=contract['contract_sha256'], count_tokens=count)
+    mutation.update(parent_sha256=parent['candidate_sha256'], evidence_query_ids=[real_id],
+                    diagnosis='Compare evidence in ' + real_id + '.')
+    assert derive(contract, parent, mutation, count)['mutation']['evidence_query_ids'] == [real_id]
+    mutation['diagnosis'] = 'Compare evidence in ' + real_id + '-headset.'
+    with pytest.raises(ValueError, match='unlisted'):
+        derive(contract, parent, mutation, count)
+
+
+def test_real_partition_recording_ids_are_accepted():
+    from pathlib import Path
+    repo = Path(__file__).parents[2]
+    roster = json.loads((repo/'docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json').read_bytes())
+    contract, _, _, _ = fixture()
+    ids = sorted(r['sample_id'] for r in roster['items'])
+    actual = m.build_contract(base_template=contract['base_template'], frozen=contract['frozen'],
+        feedback_query_ids=ids, excluded_query_ids=[])
+    assert actual['feedback_query_ids'] == ids
+
+
+def test_real_solver_seed_compiles_byte_identically_and_mutation_changes_only_block():
+    from pathlib import Path
+    repo = Path(__file__).parents[2]
+    original = (repo/'configs/probes/slurp_native_role_solver_v2.txt').read_text()
+    first, rest = original.split('\n\n', 1)
+    marked = m.BLOCK_START + first + m.BLOCK_END + '\n\n' + rest
+    base, _, _, count = fixture()
+    contract = m.build_contract(base_template=marked, frozen=base['frozen'],
+        feedback_query_ids=['slurp:train:000049:audio-1434542455'], excluded_query_ids=[])
+    pin = contract['contract_sha256']
+    parent = m.seed_candidate(contract=contract, expected_contract_sha256=pin, count_tokens=count)
+    assert m.executable_template(parent, contract=contract, expected_contract_sha256=pin,
+                                 count_tokens=count) == original
+    mutation = {'schema':m.MUTATION_SCHEMA, 'module':m.MODULE,
+        'parent_sha256':parent['candidate_sha256'], 'evidence_query_ids':contract['feedback_query_ids'],
+        'diagnosis':'Resolve competing candidates using supplied evidence.',
+        'solver_instruction':'Compare the supplied candidates and slot explanations against the speech.'}
+    raw = json.dumps(mutation)
+    child = derive(contract, parent, mutation, count)
+    text = m.executable_template(child, contract=contract, expected_contract_sha256=pin, count_tokens=count,
+        parent=parent, expected_parent_sha256=parent['candidate_sha256'], mutation_text=raw)
+    assert text == mutation['solver_instruction'] + '\n\n' + rest
+    assert m.BLOCK_START not in text and m.BLOCK_END not in text
+    child['full_template'] = child['full_template'].replace('Only you have final-answer authority.', 'Leak reference.')
+    with pytest.raises(ValueError):
+        m.executable_template(child, contract=contract, expected_contract_sha256=pin, count_tokens=count,
+            parent=parent, expected_parent_sha256=parent['candidate_sha256'], mutation_text=raw)
+
+
 @pytest.mark.parametrize('template', [
     'No block', m.BLOCK_START + 'missing end', 'missing start' + m.BLOCK_END,
     m.BLOCK_START + 'one' + m.BLOCK_END + m.BLOCK_START + 'two' + m.BLOCK_END,
