@@ -66,8 +66,7 @@ def configured(tmp_path, monkeypatch):
         'version': m.launcher.VERSION, 'config_sha256': config_sha, 'runner_sha256': m.launcher.digest(helper),
         'expected_commit': 'b' * 40, 'automatic_retry': False})
     result = write(tmp_path / 'launch/launch-result.json', {'returncode': 0,
-        'stdout': 'c' * 64 + '
-', 'stderr': '', 'automatic_retry': False})
+        'stdout': 'c' * 64, 'stderr': '', 'automatic_retry': False})
     container = {'Id': 'c' * 64, 'Name': '/configured-producer', 'Image': launch_doc['image'],
         'Config': {'Labels': {'saea.launch.config': config_sha, 'saea.launch.runner': m.launcher.digest(helper)},
                    'Env': [k+'='+v for k,v in launch_doc['environment'].items()]},
