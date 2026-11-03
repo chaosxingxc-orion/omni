@@ -58,6 +58,6 @@ H2继续使用共享stage/prepare/register/validate与配置化启动，不另�
 
 ## GEPA后继机制检查
 
-先固定H1现有233/80分区的前16个feedback样本，运行原Solver字节一致的seed与lock同P双S图，验证原生捕获、恢复、两臂官方评分与成本。正常48次调用，fallback上限96，FIT48；seed不是学习结果。当前两臂分析入口及sealed delivering score一致性检查8项固定镜像测试通过，尚未启动GEPA模型探测。原生custody支持、配置化登记和真实tokenizer材料构建正在联调；动态GEPA还需解决当前parent/child同P对照与反思调用，不能将child对原始lock比较冒充后续父子搜索。
+先固定H1现有233/80分区的前16个feedback样本，运行原Solver字节一致的seed与lock同P双S图，验证原生捕获、恢复、两臂官方评分与成本。正常48次调用，fallback上限96，FIT48；seed不是学习结果。当前两臂分析入口及sealed delivering score一致性检查8项固定镜像测试通过，尚未启动GEPA模型探测。严格GEPA布局的原生custody支持已完成，51项固定镜像回归通过（20.37秒），包括A0恢复、TF-GRPO消费、原生重放；真实GEPA三调用恢复仍待端到端验证。配置化登记和真实tokenizer材料构建正在联调；动态GEPA还需解决当前parent/child同P对照与反思调用，不能将child对原始lock比较冒充后续父子搜索。
 
 共享runner新增runtime构建、prepared产物校验及campaign的被动阶段计时，复用normal/debug观测，5项正式测试通过；后继部署，不修改运行中的H2树。阶段异常会记录error，但SIGKILL中断的未结束区间仍无法得到完整耗时。
