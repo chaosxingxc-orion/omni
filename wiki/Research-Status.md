@@ -1,6 +1,6 @@
 # 任务现状、实验设置与下一阶段计划
 
-核验时间：2026-11-03 07:26 UTC。按最新用户指令启动冻结工程基线的完整测试，CPU并行修复输出协议和槽位规则；本文原位维护。
+核验时间：2026-11-03 07:36 UTC。按最新用户指令启动冻结工程基线的完整测试，CPU并行修复输出协议和槽位规则；本文原位维护。
 
 ## 当前判断
 
@@ -26,7 +26,7 @@ H2上P关闭相对参照：SLU+0.8985pp，95%区间[−1.4988,+3.3194]；Intent+
 
 按最新用户指令，资源改为全量测试卡0–3一个TP4实例，TFRL探索卡4–5及6–7各一个TP2实例。旧双TP4全量容器已在0模型调用时退出，0请求记录，费用与启动状态保留并完成租约结算。不能继续将其报告为运行。
 
-07:24 UTC：两个新TP2实例健康检查均200，原TP4保留；单TP4全量新身份已完成stage，正在准备知识供应，推理0/13078。全量P-off/S3072、原A0知识与完整名单不变；单实例C96。探索初始每实例C48、context49152，实际容量与效率待真实任务核验。服务健康不等于NPU实验满载，当前吞吐和ETA未知。
+07:36 UTC：两个新TP2实例此前健康检查均200，原TP4保留；单TP4全量新身份已准备并注册13078条，准入检查进行中，推理0/13078。全量P-off/S3072、原A0知识与完整名单不变；单实例C96。探索初始每实例C48、context49152，实际容量与效率待真实任务核验。服务健康不等于NPU实验满载，当前吞吐和ETA未知。
 
 调度需要按不相交卡组隔离serving/locks/coordination，保留每区唯一guard与共享历史账本。旧全局单coordinator会阻止三路并行，必须显式配置资源归属，不能仅增加容器数量。
 
@@ -38,7 +38,7 @@ GEPA父/子/lock四调用编译与严格恢复图已实现，固定镜像50项�
 
 协议故障分为字符超限、遗漏JSON外壳和token截断。ACE一次截断响应的4096 completion中3093用于thinking，输出预算与体积有冲突。Reflexion v4给出一致的完整外壳示例，保留严格解析与旧失败成本；固定镜像相关测试通过，真实模型成功率未验证。新全量注册54项回归通过。
 
-已有三条删槽建议直接违背各自TRAIN参考。部分奖励提高来自减少FP，必要实体仍为FN，不是正确轨迹。旧提示已提醒这一点，因此继续增加提示不够：已实现结构化规则的CPU证据准入，区分支持冲突、反例和无法验证的条件。无反例也不自动晋升；协议合法不等于规则有效。ACE短引用有界协议也已实现，两项合计60项固定镜像测试通过。准入组件尚未接入候选发布链路；两项均未验证真实模型收益。
+已有三条删槽建议直接违背各自TRAIN参考。部分奖励提高来自减少FP，必要实体仍为FN，不是正确轨迹。旧提示已提醒这一点，因此继续增加提示不够：已实现结构化规则的CPU证据准入，区分支持冲突、反例和无法验证的条件。无反例也不自动晋升；协议合法不等于规则有效。ACE短引用有界协议也已实现，两项合计60项固定镜像测试通过。准入组件已接入来源验证后的审查导出，保持pending，未自动发布；两项均未验证真实模型收益。
 
 ## 学习数据与算法方向
 
@@ -66,3 +66,7 @@ GEPA父/子/lock四调用编译与严格恢复图已实现，固定镜像50项�
 [thinking结果与耗时](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Perception-Thinking-Comparison.md) · [协议复盘](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Protocol-Failure-Repair.md) · [槽位规则诊断](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Slot-Rule-Diagnosis.md) · [GEPA机制结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/gepa-mechanism16-result.json)
 
 根因方法更新：[程序错误、数据缺陷与轨迹节点干预](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/TFRL-Root-Cause-and-Intervention.md)。
+
+## 根因分类与验收口径
+
+程序bug先修共享工程基座并锁定回归；系统原生错误先审计数据的逻辑/语义与原始标签定义，再按知识构建和知识消费分别定位最早出错节点。每例保存证据、单节点干预、repair/break与全部成本；缺乏证据则保留未定位。金标替换只能作为诊断上界，工程修复收益与学习收益分开报告。详情见[根因与干预方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/TFRL-Root-Cause-and-Intervention.md)。
