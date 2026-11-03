@@ -1,6 +1,6 @@
 {
   "schema": "tfrl-exploration-queue-snapshot-v1",
-  "observed_at": "2026-11-03T10:41:50.344238+00:00",
+  "observed_at": "2026-11-03T11:06:50.890899+00:00",
   "execution_observed_at": "2026-11-03T10:39:15Z",
   "running_explorations": 2,
   "verified_queued_successors": 0,
@@ -14,7 +14,23 @@
     "cards": 2,
     "instances": 1,
     "independent_successor_hypotheses": 3,
-    "state": "running-baseline-preparing-successors"
+    "state": "running-baseline-successors-capacity-blocked",
+    "prepared_successors": 3,
+    "registered_and_initial_preflight_successors": 3,
+    "ready_successors": 0,
+    "queued_successors": 0,
+    "capacity_oversized_groups": [
+      25,
+      26,
+      26
+    ],
+    "capacity_prompt_max": [
+      41309,
+      41530,
+      41957
+    ],
+    "baseline_completed_groups_at_105548": 9,
+    "baseline_known_responses_at_105548": 19
   },
   "consumption": {
     "current_lane_workload": "Reflexion51; consumption mutation branches still in CPU integration",
@@ -29,8 +45,9 @@
     "state": "blocked-by-native-integration-and-lane-handoff"
   },
   "queue_validation": {
-    "tests": 91,
-    "production_multi_successor_queue_verified": false
+    "tests": 115,
+    "production_multi_successor_queue_verified": false,
+    "real_eight_node_readonly_plan": true
   },
   "fulltest": {
     "observer": {
@@ -97,5 +114,6 @@
   "local_input_digests": {
     "repro/tfrl-construction-queue.json": "edee482c515b2feb7fb23b2e1f66248dd8b1bc6b3cc8dc33f63e5fe4dc867364",
     "repro/tfrl-consumption-queue.json": "e5b989194f8817fb45d46fb3bc7d36ff107c2a229d29b000ad70fbc2521a8bb4"
-  }
+  },
+  "knowledge_context_preparation": "implementation in progress; zero model calls by design, no deployed gain claim"
 }
