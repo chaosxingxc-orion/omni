@@ -206,3 +206,46 @@ def test_worker_timeout_closes_without_restart(tmp_path, local_tokenizer, phase)
 def test_invalid_timeout_refused(local_tokenizer, configured_python, timeout):
     with pytest.raises(m.TokenizerRuntimeError, match='timeout'):
         m.SubprocessTokenCounter(local_tokenizer, configured_python, timeout_seconds=timeout)
+
+
+def test_text_contract_counts_no_chat_wrapper_and_reuses_worker(local_tokenizer, configured_python, monkeypatch):
+    monkeypatch.setenv(m.TOKENIZER_PYTHON_ENV, configured_python)
+    count, identity = m.load_text_token_counter(local_tokenizer)
+    with count:
+        assert identity['rendering'] == {'mode': 'text', 'add_generation_prompt': False,
+                                       'add_special_tokens': False, 'truncation': False}
+        for text in ('', '你好', 'literal {placeholder}\nsecond line'):
+            assert count(text) == len(text.encode())
+        assert (local_tokenizer/'loads').read_text() == 'load\n'
+        assert count('prompt') != expected_count([{'role': 'user', 'content': 'prompt'}])
+
+
+@pytest.mark.parametrize('mode,value', [('text', []), ('chat', 'not messages')])
+def test_modes_reject_wrong_input_without_retry(local_tokenizer, configured_python, mode, value):
+    with m.SubprocessTokenCounter(local_tokenizer, configured_python, mode=mode) as count:
+        process = count._process
+        with pytest.raises(m.TokenizerRuntimeError):
+            count(value)
+        assert count._closed and process.poll() is not None
+        assert (local_tokenizer/'loads').read_text() == 'load\n'
+
+
+def test_text_loader_uses_explicit_inprocess_mode(monkeypatch):
+    monkeypatch.delenv(m.TOKENIZER_PYTHON_ENV, raising=False)
+    marker = (lambda text: 7, {'rendering': 'text'})
+    calls = []
+    monkeypatch.setattr(m, 'load_local_token_counter',
+                        lambda path, **kw: calls.append((path, kw)) or marker)
+    assert m.load_text_token_counter('local') is marker
+    assert calls == [('local', {'mode': 'text'})]
+
+
+def test_text_mode_rejects_worker_with_chat_identity(tmp_path, local_tokenizer):
+    python = interpreter(tmp_path, '''
+        import json, sys
+        request = json.loads(sys.stdin.buffer.readline())
+        print(json.dumps({'id': request['id'], 'ok': True,
+                          'identity': {'rendering': {'add_generation_prompt': True}}}), flush=True)
+    ''')
+    with pytest.raises(m.TokenizerRuntimeError, match='text mode identity'):
+        m.SubprocessTokenCounter(local_tokenizer, python, mode='text')

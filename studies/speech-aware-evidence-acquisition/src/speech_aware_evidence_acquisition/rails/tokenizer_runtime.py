@@ -31,8 +31,10 @@ class TokenizerRuntimeError(ValueError):
     """A configured local tokenizer failed; never fall back or retry."""
 
 
-def load_local_token_counter(tokenizer_path):
+def load_local_token_counter(tokenizer_path, *, mode='chat'):
     """The original local tokenizer/template, hashes, versions and count rule."""
+    if mode not in ('chat', 'text'):
+        raise TokenizerRuntimeError('unsupported tokenizer count mode')
     from transformers import AutoTokenizer
     tokenizer_path = Path(tokenizer_path)
     tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_path), trust_remote_code=True, local_files_only=True)
@@ -50,10 +52,33 @@ def load_local_token_counter(tokenizer_path):
     identity['tokenizer_class'] = type(tokenizer).__name__
     identity['rendering'] = {'add_generation_prompt': True, 'add_special_tokens': False,
                              'truncation': False}
+    if mode == 'text':
+        identity['rendering'] = {'mode': 'text', 'add_generation_prompt': False,
+                                 'add_special_tokens': False, 'truncation': False}
     def count(messages):
-        rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        if mode == 'text':
+            if not isinstance(messages, str):
+                raise TokenizerRuntimeError('text count requires a string')
+            rendered = messages
+        else:
+            if not isinstance(messages, list):
+                raise TokenizerRuntimeError('chat count requires a message list')
+            rendered = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         return len(tokenizer.encode(rendered, add_special_tokens=False, truncation=False))
     return count, identity
+
+
+def load_text_token_counter(tokenizer_path):
+    """Count prompt-block text, without adding a chat wrapper or truncating.
+
+    The returned subprocess callable owns its worker and supports close/context
+    management. This count is for the instruction contract, never native FIT.
+    """
+    python = os.environ.get(TOKENIZER_PYTHON_ENV)
+    if python is None:
+        return load_local_token_counter(tokenizer_path, mode='text')
+    count = SubprocessTokenCounter(tokenizer_path, python, mode='text')
+    return count, count.identity
 
 
 def _json_line(value, limit):
@@ -83,12 +108,15 @@ class SubprocessTokenCounter:
     and interpreter shutdown all release it. A failed counter stays closed.
     """
 
-    def __init__(self, tokenizer_path, python, *, timeout_seconds=DEFAULT_TIMEOUT_SECONDS):
+    def __init__(self, tokenizer_path, python, *, timeout_seconds=DEFAULT_TIMEOUT_SECONDS, mode='chat'):
         self._process = None
         self._owner_pid = os.getpid()
         self._lock = threading.Lock()
         self._sequence = 0
         self._closed = False
+        if mode not in ('chat', 'text'):
+            raise TokenizerRuntimeError('unsupported tokenizer count mode')
+        self._mode = mode
         if (not isinstance(python, str) or not Path(python).is_absolute()
                 or not Path(python).is_file() or not os.access(python, os.X_OK)):
             raise TokenizerRuntimeError('SAEA_TOKENIZER_PYTHON must name an executable absolute interpreter path')
@@ -103,8 +131,11 @@ class SubprocessTokenCounter:
         environment.pop(TOKENIZER_PYTHON_ENV, None)
         environment.update(HF_HUB_OFFLINE='1', TRANSFORMERS_OFFLINE='1', TOKENIZERS_PARALLELISM='false')
         try:
+            argv = [python, '-I', '-u', str(Path(__file__).resolve()), '--worker', str(path)]
+            if mode == 'text':
+                argv.append('text')
             self._process = subprocess.Popen(
-                [python, '-I', '-u', str(Path(__file__).resolve()), '--worker', str(path)],
+                argv,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                 env=environment, bufsize=0, close_fds=True)
             os.set_blocking(self._process.stdin.fileno(), False)
@@ -114,6 +145,10 @@ class SubprocessTokenCounter:
             if set(reply) != {'id', 'ok', 'identity'} or not isinstance(reply['identity'], dict) or not reply['identity']:
                 raise TokenizerRuntimeError('tokenizer worker identity response differs')
             self.identity = reply['identity']
+            if mode == 'text' and self.identity.get('rendering') != {
+                    'mode': 'text', 'add_generation_prompt': False,
+                    'add_special_tokens': False, 'truncation': False}:
+                raise TokenizerRuntimeError('tokenizer worker text mode identity differs')
         except BaseException:
             self._shutdown()
             raise
@@ -176,7 +211,10 @@ class SubprocessTokenCounter:
                 raise TokenizerRuntimeError('tokenizer worker protocol failed') from error
 
     def __call__(self, messages):
-        reply = self._exchange('count', messages=messages)
+        if self._mode == 'text':
+            reply = self._exchange('count_text', text=messages)
+        else:
+            reply = self._exchange('count', messages=messages)
         if set(reply) != {'id', 'ok', 'count'} or type(reply['count']) is not int or reply['count'] < 0:
             self.close()
             raise TokenizerRuntimeError('tokenizer worker count response differs')
@@ -228,13 +266,13 @@ def _close_live_counters():
 atexit.register(_close_live_counters)
 
 
-def worker_main(tokenizer_path):
+def worker_main(tokenizer_path, *, mode='chat'):
     """Load once, then serve exact identity/count frames until stdin closes."""
     incoming, outgoing = sys.stdin.buffer, sys.stdout.buffer
     sys.stdout = sys.stderr  # tokenizer diagnostics cannot contaminate the pipe
     os.environ.pop(TOKENIZER_PYTHON_ENV, None)
     try:
-        count, identity = load_local_token_counter(tokenizer_path)
+        count, identity = load_local_token_counter(tokenizer_path, mode=mode)
         previous = 0
         while True:
             raw = incoming.readline(MAX_REQUEST_BYTES + 1)
@@ -249,8 +287,10 @@ def worker_main(tokenizer_path):
             previous = request['id']
             if set(request) == {'id', 'op'} and request['op'] == 'identity':
                 reply = {'id': previous, 'ok': True, 'identity': identity}
-            elif set(request) == {'id', 'op', 'messages'} and request['op'] == 'count':
+            elif mode == 'chat' and set(request) == {'id', 'op', 'messages'} and request['op'] == 'count':
                 reply = {'id': previous, 'ok': True, 'count': count(request['messages'])}
+            elif mode == 'text' and set(request) == {'id', 'op', 'text'} and request['op'] == 'count_text':
+                reply = {'id': previous, 'ok': True, 'count': count(request['text'])}
             else:
                 raise TokenizerRuntimeError('invalid tokenizer operation')
             outgoing.write(_json_line(reply, MAX_RESPONSE_BYTES))
@@ -264,6 +304,7 @@ def worker_main(tokenizer_path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3 or sys.argv[1] != '--worker':
+    if (len(sys.argv) not in (3, 4) or sys.argv[1] != '--worker'
+            or (len(sys.argv) == 4 and sys.argv[3] != 'text')):
         raise SystemExit('exact tokenizer worker arguments required')
-    raise SystemExit(worker_main(sys.argv[2]))
+    raise SystemExit(worker_main(sys.argv[2], mode='text' if len(sys.argv) == 4 else 'chat'))

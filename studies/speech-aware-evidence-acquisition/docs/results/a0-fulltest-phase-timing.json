@@ -1,0 +1,83 @@
+{
+  "schema": "saea-real-phase-timing-v1",
+  "checkpoint_sha256": "fa5145c31d577ad874719c43590f436b0b02f2b64d794fc4868dbe674cf1d69f",
+  "timing_partial_tail": false,
+  "rows": 187,
+  "metrics": {
+    "perception/scientific_request": {
+      "n": 187,
+      "mean_s": 168.34166171133626,
+      "p50_s": 155.90677737997612,
+      "p95_s": 362.75474937001127
+    },
+    "perception/request_total": {
+      "n": 187,
+      "mean_s": 241.5331980906952,
+      "p50_s": 219.5698425800074,
+      "p95_s": 464.7959766499989
+    },
+    "perception/http_request": {
+      "n": 187,
+      "mean_s": 167.78603332545447,
+      "p50_s": 155.7978606800025,
+      "p95_s": 362.64031192997936
+    },
+    "solver/scientific_request": {
+      "n": 187,
+      "mean_s": 167.20532879871513,
+      "p50_s": 132.67400189000182,
+      "p95_s": 359.44349411001895
+    },
+    "solver/request_total": {
+      "n": 187,
+      "mean_s": 199.7168214268983,
+      "p50_s": 167.6676169600105,
+      "p95_s": 415.78073413998936
+    },
+    "solver/http_request": {
+      "n": 187,
+      "mean_s": 166.54293081187222,
+      "p50_s": 132.09253563999664,
+      "p95_s": 359.3121306000103
+    },
+    "perception_end_to_solver_request_start": {
+      "n": 187,
+      "mean_s": 4.4273039667914125,
+      "p50_s": 4.037316750007449,
+      "p95_s": 9.97882931001368
+    },
+    "perception_start_to_solver_end": {
+      "n": 187,
+      "mean_s": 445.67732348438494,
+      "p50_s": 429.37905148998834,
+      "p95_s": 664.4357445900096
+    },
+    "admission_to_perception_request_start": {
+      "n": 187,
+      "mean_s": 140.86766157673785,
+      "p50_s": 102.27326220998657,
+      "p95_s": 421.5521263300034
+    },
+    "solver_request_end_to_sample_finished": {
+      "n": 187,
+      "mean_s": 2.5659978814452034,
+      "p50_s": 1.0154572899919003,
+      "p95_s": 14.117179619992385
+    },
+    "admission_to_sample_finished": {
+      "n": 187,
+      "mean_s": 589.110982942568,
+      "p50_s": 585.5176148900064,
+      "p95_s": 779.8657226199866
+    }
+  },
+  "missing_timing_entries": 0,
+  "missing_sample_count": 0,
+  "limitations": [
+    "Completed subset is descriptive and may be biased toward faster samples.",
+    "P\u2192S gap contains preparation/FIT/scheduling; not pure CPU time.",
+    "FIT uses prepared request IDs that can be reused before actual generation IDs are assigned; no per-role FIT attribution is inferred. HTTP includes service queue/audio/prefill/decode/network.",
+    "Nested intervals overlap; do not sum as whole-task wall time."
+  ],
+  "new_model_calls": 0
+}

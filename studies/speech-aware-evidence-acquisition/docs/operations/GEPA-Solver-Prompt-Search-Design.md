@@ -130,3 +130,7 @@
 `solver_prompt_candidate.executable_template`校验候选来源与完整模板后移除编辑边界标记，使种子编译结果与现有`slurp_native_role_solver_v2.txt`逐字一致。首个可变区块为原Solver首段消费指令，JSON格式、实体提取要求及其余规则保持原字节。变体只能替换该区块；不把编辑标记发送给模型造成额外基线变化。
 
 真实模板、完整录音ID及分区相关75项固定镜像测试通过（1.38秒）。这证明候选编译边界兼容；尚未接入真实动态Flight评估、反思请求来源、候选发布和同知识H2，不冒称已完成GEPA搜索。
+
+### 纯文本tokenizer接入
+
+共享tokenizer worker新增显式text模式，按实际tokenizer编码指令文本，保留不截断、无special tokens以及独立计数语义身份；原chat模式不变。错误类型、旧worker模式不匹配均拒绝，不静默fallback。97项固定镜像测试通过（3.46秒）；首次测试快照缺真实H1名单，修正快照后通过。此修复未部署活动树，仍需真实GEPA阶段接入。当前用户优先级为小规模Agent方案锁定，全量测试暂缓。
