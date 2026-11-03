@@ -267,11 +267,63 @@ def project_group_evidence(group, *, evidence_view='compact-v1'):
             # diagnostic material only and remains tied to the trajectory hash.
             projected['source_trajectory'] = trajectory
             projected['source_critique'] = critique
+            projected['omitted_trajectory_fields'] = []
         rolls.append(projected)
-    return {'query': visible_query, 'full_query_sha256': sha(group['query']),
+    result = {'query': visible_query, 'full_query_sha256': sha(group['query']),
         'omitted_query_fields': omitted, 'reference': decode(group['answer']),
         'rollouts': rolls, 'audio_inspected': False,
         'omitted_fields_not_evidence_of_absence': True}
+    if evidence_view == 'full-query-v1':
+        return factor_development_evidence(result)
+    return result
+
+
+def factor_development_evidence(value):
+    """Losslessly intern repeated large subtrees; no content is truncated.
+
+    Identical request evidence repeated across rollouts is displayed once.
+    References use canonical content hashes and can be fully reconstructed.
+    """
+    def open_canonical_json(node):
+        if isinstance(node, str) and len(node) >= 256:
+            try:
+                decoded = json.loads(node)
+            except (ValueError, TypeError):
+                return node
+            if isinstance(decoded, (dict, list)) and canonical(decoded).decode() == node:
+                return {'development_canonical_json_string': open_canonical_json(decoded)}
+        if isinstance(node, dict): return {k: open_canonical_json(v) for k, v in node.items()}
+        if isinstance(node, list): return [open_canonical_json(v) for v in node]
+        return node
+    # Native control history encodes structured messages as canonical JSON
+    # strings. Expose that reversible structure before interning; otherwise a
+    # different contact_id keeps the whole repeated task opaque and duplicated.
+    value = open_canonical_json(value)
+    counts = {}
+    def scan(node):
+        if isinstance(node, (dict, list, str)) and len(canonical(node)) >= 256:
+            key = sha(node); counts[key] = counts.get(key, 0) + 1
+        if isinstance(node, dict):
+            for child in node.values(): scan(child)
+        elif isinstance(node, list):
+            for child in node: scan(child)
+    scan(value); table = {}; aliases = {}
+    def render(node, *, root=False):
+        key = sha(node) if isinstance(node, (dict, list, str)) and len(canonical(node)) >= 256 else None
+        if not root and key and counts.get(key, 0) > 1:
+            if key not in aliases:
+                alias = 'e' + str(len(aliases)); aliases[key] = alias
+                table[alias] = render(node, root=True)
+            return {'development_evidence_ref': aliases[key]}
+        if isinstance(node, dict): return {k: render(v) for k, v in node.items()}
+        if isinstance(node, list): return [render(v) for v in node]
+        return copy.deepcopy(node)
+    result = render(value, root=True)
+    if table:
+        result['development_evidence_dictionary'] = table
+        result['development_evidence_dictionary_sha256'] = sha(table)
+        result['development_evidence_encoding'] = 'lossless-content-addressed-v1'
+    return result
 
 
 def build_fusion_input(source, *, evidence=None):

@@ -92,6 +92,8 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
         from .construction_development import validate_material
         validate_material(development_material, source)
         require(evidence_view == 'full-query-v1', 'development material requires full-query evidence')
+        require(development_instruction is None or development_instruction == development_material['task_template'],
+                'development instruction and pinned task template differ')
     if development_instruction is not None:
         require(isinstance(development_instruction, str) and development_instruction.strip()
                 and len(development_instruction) <= 4096,
@@ -187,14 +189,15 @@ def reflect_messages(document, index, items, count_tokens):
         'Original trajectories may predate this library; do not invent item exposure or success. '
         'Every reference must name supplied trajectories; you may emit empty findings/signals. '
         'At most '+str(document['bounds']['max_findings'])+' findings and signals respectively.')
-    if document['bounds'].get('development_instruction'):
-        system += (' Development task contract: ' + document['bounds']['development_instruction'] +
+    instruction = document['bounds'].get('development_instruction') or document.get('development_material', {}).get('task_template')
+    if instruction:
+        system += (' Development task contract: ' + instruction +
             ' Produce conditional, runtime-observable hypotheses with an action and exception; '
             'separate data ambiguity, program defects and native model/system errors. Do not use gold '
             'reference values as runtime triggers.')
-    if 'development_material' in document:
-        system += (' Development-only task: ' + document['development_material']['task_template']
-            + ' ' + document['development_material']['boundary'])
+    if document['bounds'].get('evidence_view') == 'full-query-v1':
+        from .construction_development import BOUNDARY
+        system += ' ' + BOUNDARY
     if contract in (REFLECTOR_CONTRACT_V2, COMPACT_CONTRACT_V3):
         system += (
             ' Reflector contract: '+contract+'. '

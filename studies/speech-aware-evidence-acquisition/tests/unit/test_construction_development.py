@@ -7,7 +7,7 @@ import pytest
 
 from speech_aware_evidence_acquisition.rails import construction_development as dev
 from speech_aware_evidence_acquisition.rails import ace_incremental as ace
-from speech_aware_evidence_acquisition.rails.grounded_synthesis_fusion import project_group_evidence
+from speech_aware_evidence_acquisition.rails.grounded_synthesis_fusion import project_group_evidence, factor_development_evidence
 from speech_aware_evidence_acquisition.rails.tfgrpo_learning import sha
 from test_ace_incremental import fixture, reflection, delta, runner
 from test_ace_runtime import setup
@@ -52,6 +52,49 @@ def test_full_projection_preserves_all_records_and_legacy_default(tmp_path):
     assert full['audio_inspected'] is False
 
 
+def test_lossless_factoring_reconstructs_every_repeated_field():
+    repeated = {'cards': ['Detailed evidence ' * 80], 'task': 'Original instruction ' * 20}
+    value = {'query': copy.deepcopy(repeated), 'rollouts': [
+        {'request': copy.deepcopy(repeated), 'prediction': {'intent': 'set'}},
+        {'request': copy.deepcopy(repeated), 'prediction': {'intent': 'query'}}]}
+    packed = factor_development_evidence(value)
+    table = packed['development_evidence_dictionary']
+    assert sha(table) == packed['development_evidence_dictionary_sha256']
+    def expand(node):
+        if isinstance(node, dict) and set(node) == {'development_evidence_ref'}:
+            expanded = expand(table[node['development_evidence_ref']])
+            return expanded
+        if isinstance(node, dict): return {k: expand(v) for k, v in node.items()}
+        if isinstance(node, list): return [expand(v) for v in node]
+        return node
+    unpacked = expand({k: v for k, v in packed.items() if k not in
+        ('development_evidence_dictionary', 'development_evidence_encoding', 'development_evidence_dictionary_sha256')})
+    assert unpacked == value
+    assert len(json.dumps(packed)) < len(json.dumps(value))
+
+
+def test_canonical_control_json_is_opened_reversibly_before_factoring():
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical
+    common = [{'content': 'Detailed original task ' * 200, 'role': 'system'}]
+    original = {'history': [canonical({'contact_id': str(i), 'messages': common}).decode() for i in range(4)]}
+    packed = factor_development_evidence(original); table = packed['development_evidence_dictionary']
+    def refs(node):
+        if isinstance(node, dict) and set(node) == {'development_evidence_ref'}:
+            expanded = refs(table[node['development_evidence_ref']])
+            return expanded
+        if isinstance(node, dict): return {k: refs(v) for k, v in node.items()}
+        if isinstance(node, list): return [refs(v) for v in node]
+        return node
+    def strings(node):
+        if isinstance(node, dict) and set(node) == {'development_canonical_json_string'}:
+            return canonical(strings(node['development_canonical_json_string'])).decode()
+        if isinstance(node, dict): return {k: strings(v) for k, v in node.items()}
+        if isinstance(node, list): return [strings(v) for v in node]
+        return node
+    recovered = strings(refs({'history': packed['history']}))
+    assert recovered == original and len(canonical(packed)) < len(canonical(original))
+
+
 def test_material_binds_real_source_and_keeps_gold_diagnostic_only(tmp_path):
     source, old, spec, _ = material_fixture(tmp_path)
     material = dev.load_material(spec, source, repo_root=tmp_path, data_root=tmp_path)
@@ -65,6 +108,13 @@ def test_material_binds_real_source_and_keeps_gold_diagnostic_only(tmp_path):
     assert 'never evaluation Solver input' in prompt['messages'][0]['content']
     assert material['solver_input_permitted'] is False and prompt['native_fit_completed'] is False
     assert doc['historical_usage'] == old['historical_usage']
+    common = {k: v for k, v in old['bounds'].items() if k != 'max_calls'}
+    plain = ace.build_input(source, old['parent'], learning_config_sha256='a' * 64, **common,
+        evidence_view='full-query-v1', development_instruction=material['task_template'])
+    both = ace.build_input(source, old['parent'], learning_config_sha256='a' * 64, **common,
+        evidence_view='full-query-v1', development_instruction=material['task_template'], development_material=material)
+    assert ace.reflect_messages(plain, 0, plain['parent']['items'], lambda _: 100)['messages'][0] == \
+           ace.reflect_messages(both, 0, both['parent']['items'], lambda _: 100)['messages'][0]
 
 
 @pytest.mark.parametrize('fault', ['bytes', 'roster', 'group', 'evidence', 'transcript', 'annotation', 'train_pin', 'escape'])

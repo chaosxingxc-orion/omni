@@ -1,0 +1,31 @@
+{
+  "schema": "construction-development-v2-tests",
+  "base": "571785aa",
+  "patch_sha256": "3a0be7743a624340a1f20ea18cec639c4486574f5dc437552617f4bc102dbe97",
+  "container": "592fc439390ccb9f74dae10ab503c0fe61db72816ba260e8e98c9b2f18540b92",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "passed": 160,
+  "failed": 0,
+  "seconds": 10.26,
+  "new_model_calls": 0,
+  "real_first_group_evidence_tokens": 27866,
+  "previous_first_group_evidence_tokens": 48046,
+  "tokens_exclude_reflection_system_and_current_knowledge": true,
+  "deduplication": "Reversible canonical-JSON opening plus short subtree aliases; full dictionary SHA and original group/trajectory SHA retained",
+  "legacy_compact_bytes_unchanged": true,
+  "task_only_vs_diagnostic_system_message_equal_test": true,
+  "root_integration_validation": {
+    "container": "04b3b276ddc561bf4bfb6e3eb53925392e9517d74a76918b35d075abbcb965ae",
+    "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "passed": 160,
+    "seconds": 9.8,
+    "exit_code": 0,
+    "cpuset_cpus": "240-247",
+    "new_model_calls": 0
+  },
+  "implementation_sha256": {
+    "src/speech_aware_evidence_acquisition/rails/ace_incremental.py": "74ee7b63305504b4e4a6af2f2ac78c745a66f0ecfb92207d1cf91f35b64bfe40",
+    "src/speech_aware_evidence_acquisition/rails/grounded_synthesis_fusion.py": "72aa7e400f26da9fae543cbc83c468c5f3e035371ec59fdef1c33ae8e6070357",
+    "tests/unit/test_construction_development.py": "b0586e4b7f1526f3d792bbde63a75e626197f0360d8f4ea9c847871e3711356c"
+  }
+}
