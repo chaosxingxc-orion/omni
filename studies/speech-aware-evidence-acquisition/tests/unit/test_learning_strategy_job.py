@@ -222,3 +222,21 @@ def test_invalid_capacity_reserve_refused_before_artifacts(tmp_path, monkeypatch
     with pytest.raises(ValueError, match='capacity reserve'):
         job.prepare(repo, data, **args, capacity_reserve_tokens=reserve)
     assert not out.exists()
+
+
+def test_new_compact_prepare_rejects_conflicting_row_limits_before_output(tmp_path, monkeypatch):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    args['bounds'].update(reflector_contract=job.ace.COMPACT_CONTRACT_V3, max_findings=4, max_delta=4)
+    with pytest.raises(ValueError, match='must agree with the wire row limit'):
+        job.prepare(repo, data, **args)
+    assert not out.exists()
+
+
+def test_new_compact_prepare_uses_one_consistent_reflection_limit(tmp_path, monkeypatch):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    args['bounds'].update(reflector_contract=job.ace.COMPACT_CONTRACT_V3, max_findings=2, max_delta=2)
+    job.prepare(repo, data, **args)
+    prompt = job.read(out/'source.json')['initial_measurement']['messages'][0]['content']
+    assert 'At most 2 findings and signals respectively.' in prompt
+    assert 'At most 2 findings and signals each.' in prompt
+    assert 'At most 4 findings' not in prompt

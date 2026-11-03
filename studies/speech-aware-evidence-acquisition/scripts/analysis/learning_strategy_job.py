@@ -71,6 +71,10 @@ def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpa
     require(re.fullmatch('[a-z0-9][a-z0-9-]*',job_name)
         and re.fullmatch('[A-Za-z0-9][A-Za-z0-9_-]*',service_session), 'safe strategy job/session required')
     require(not out.exists() and out.resolve().is_relative_to((data/'work/codex').resolve()), 'fresh owned strategy directory required')
+    if strategy == ace.STRATEGY and bounds.get('reflector_contract') == ace.COMPACT_CONTRACT_V3:
+        require(all(type(bounds.get(key)) is int and 0 < bounds[key] <= ace.COMPACT_ROWS
+                    for key in ('max_findings', 'max_delta')),
+                'compact findings and delta limits must agree with the wire row limit')
     rel = Path(tokenizer_relpath)
     require(not rel.is_absolute() and '..' not in rel.parts and (data/rel).resolve().is_relative_to(data.resolve()), 'confined tokenizer required')
     identity, spec = read(runtime_identity), read(source_spec)

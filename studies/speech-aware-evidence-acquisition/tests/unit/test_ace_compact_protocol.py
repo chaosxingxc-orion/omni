@@ -160,3 +160,20 @@ def test_character_limits_cannot_silently_change_legacy_contract():
         fixture(compact_text_chars=512)
     with pytest.raises(ValueError, match='compact contract'):
         fixture(reflector_contract=m.REFLECTOR_CONTRACT_V2, compact_reason_chars=300)
+
+
+def test_real_failure_shape_two_findings_three_signals_preserves_known_response(tmp_path):
+    answer = compact_reflection()
+    answer['findings'] = [answer['findings'][0], {**answer['findings'][0], 'finding_id': 'f1'}]
+    answer['signals'] = [copy.deepcopy(answer['signals'][0]) for _ in range(3)]
+    encoded = json.dumps(answer)
+    _, _, run, calls, _ = runner(tmp_path, reflector_contract=m.COMPACT_CONTRACT_V3,
+        answers={(0, m.REFLECT): answer})
+    for _ in range(2):
+        with pytest.raises(ValueError, match='bounded compact ACE reflection'):
+            run()
+    assert len(calls) == 1
+    assert json.dumps(answer) == encoded
+    responses = list(tmp_path.rglob('*.response.json'))
+    assert responses
+    assert any('signals' in path.read_text() for path in responses)
