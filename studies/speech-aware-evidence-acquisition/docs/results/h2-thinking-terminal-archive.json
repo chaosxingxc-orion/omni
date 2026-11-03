@@ -1,0 +1,28 @@
+{
+  "schema": "saea-configured-remote-archive-v1",
+  "bytes": 536965120,
+  "members": 7683,
+  "sha256": "b12af5492f99a00448bf516b7a0ff0a344b3490be223cc9b5816bb44a3c61d5c",
+  "inventory_verified": true,
+  "absent": [],
+  "consistent_snapshot": false,
+  "new_model_calls": 0,
+  "generation_attempt_states": {
+    "off": "FINALIZED",
+    "baseline": "FINALIZED"
+  },
+  "comparison_sha256": "bad1328c41ded3cf33e82c37fa362b25f7e130a2273a76a9b48c92ef4a563937",
+  "fit_request_files": {
+    "OFF": 624,
+    "BASELINE": 624
+  },
+  "fit_contact_journals": {
+    "OFF": 624,
+    "BASELINE": 624
+  },
+  "restore_test_performed": false,
+  "limitations": [
+    "Non-transactional tar snapshot; critical terminal files individually matched.",
+    "Weights, audio, source tree, external dependencies and complete shared lease state are not included."
+  ]
+}
