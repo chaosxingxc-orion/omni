@@ -29,6 +29,10 @@ def read_pin(pin, *, repo_root, data_root, verified_context=None):
 def load_dynamic_source(values, *, plan, repo_root, data_root, sample_ids, roster_sha256,
                         replay=None, verified_context=None):
     spec=values.get('prepared_training_feedback')
+    if isinstance(spec,dict) and spec.get('schema')=='saea-prepared-gepa-mutation-v1':
+        from .gepa_mutation_runtime import load_runtime_source
+        return load_runtime_source(values,plan=plan,repo_root=repo_root,data_root=data_root,
+            sample_ids=sample_ids,roster_sha256=roster_sha256,replay=replay)
     if isinstance(spec,dict) and spec.get('schema')=='saea-prepared-reflexion-dynamic-v1':
         from .reflexion_runtime import load_runtime_source
         return load_runtime_source(values,plan=plan,repo_root=repo_root,data_root=data_root,
