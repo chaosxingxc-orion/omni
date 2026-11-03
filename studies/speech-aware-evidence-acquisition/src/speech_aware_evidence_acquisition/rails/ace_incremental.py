@@ -56,7 +56,8 @@ def _exact_json(text, fields, schema):
 
 def build_input(source, parent, *, learning_config_sha256, resident_context, completion_cap,
                 reserve_tokens, max_groups, max_delta, max_findings, max_items, max_characters,
-                max_prompt_tokens_total, max_completion_tokens_total, reflector_contract=None):
+                max_prompt_tokens_total, max_completion_tokens_total, reflector_contract=None,
+                compact_text_chars=None, compact_reason_chars=None):
     """Accept native-verified original batch; bind all groups once, no filtering.
 
     Source is the existing load_finalized_shards-compatible custody, including
@@ -82,6 +83,10 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
     require(reflector_contract in CONTRACTS, 'unsupported ACE reflector contract')
     if reflector_contract is not None:
         bounds['reflector_contract'] = reflector_contract
+    for key, value in (('compact_text_chars', compact_text_chars), ('compact_reason_chars', compact_reason_chars)):
+        if value is not None:
+            bounds[key] = value
+    compact_limits(bounds)
     require(len(parent['items']) <= max_items and sum(map(len, parent['items'].values())) <= max_characters,
             'parent library already exceeds bounds')
     groups = batch['groups']
@@ -193,7 +198,8 @@ def reflect_messages(document, index, items, count_tokens):
             'Do not copy this illustrative lesson. No code fences, extra fields or inner objects alone. '
             'refs contains at most four unique short keys from trajectory_references, never long trajectory IDs. '
             'At most '+str(min(COMPACT_ROWS, document['bounds']['max_findings']))+' findings and signals each. '
-            'finding_id must be f0 or f1; lesson at most 200 Unicode characters; reason at most 120. '
+            'finding_id must be f0 or f1; lesson at most '+str(compact_limits(document['bounds'])[0])
+            +' Unicode characters; reason at most '+str(compact_limits(document['bounds'])[1])+'. '
             'Omit unsupported lessons; never infer a required slot should be deleted merely because '
             'a partial reward improved. Signals require an existing item_id; with no items use [].')
         payload['trajectory_references'] = trajectory_references(document['groups'][index])
@@ -204,14 +210,27 @@ def trajectory_references(group):
     return {'r'+str(i): row['trajectory_id'] for i, row in enumerate(group['evidence']['rollouts'])}
 
 
+def compact_limits(bounds):
+    keys = {'compact_text_chars', 'compact_reason_chars'}
+    require(not (keys & set(bounds)) or bounds.get('reflector_contract') == COMPACT_CONTRACT_V3,
+            'compact character bounds require compact contract')
+    values = (bounds.get('compact_text_chars', COMPACT_TEXT), bounds.get('compact_reason_chars', COMPACT_REASON))
+    require(all(type(value) is int and 0 < value <= 4096 for value in values),
+            'compact character bounds must be integers in 1..4096')
+    return values
+
+
 def _compact_text(value, limit, field, *, empty=False):
     require(isinstance(value, str) and (empty or bool(value.strip())) and len(value) <= limit,
             'bounded compact ACE '+field+' required')
 
 
-def validate_reflection(text, group, items, max_findings, reflector_contract=None):
+def validate_reflection(text, group, items, max_findings, reflector_contract=None, *, bounds=None):
     require(reflector_contract in CONTRACTS, 'unsupported ACE reflector contract')
     compact = reflector_contract == COMPACT_CONTRACT_V3
+    require(bounds is None or bounds.get('reflector_contract') == reflector_contract,
+            'reflection contract and bounds differ')
+    limits = compact_limits(bounds or {})
     result = _exact_json(text, {'schema', 'findings', 'signals'},
         'saea-ace-reflection-v3' if compact else 'saea-ace-reflection-v1')
     if compact:
@@ -228,9 +247,9 @@ def validate_reflection(text, group, items, max_findings, reflector_contract=Non
                         'compact ACE references foreign aliases')
                 if kind == 'findings':
                     require(row['finding_id'] in ('f0', 'f1'), 'compact ACE finding id required')
-                    _compact_text(row['lesson'], COMPACT_TEXT, 'lesson')
+                    _compact_text(row['lesson'], limits[0], 'lesson')
                 else:
-                    _compact_text(row['reason'], COMPACT_REASON, 'reason')
+                    _compact_text(row['reason'], limits[1], 'reason')
                 row['trajectory_ids'] = [aliases[r] for r in row.pop('refs')]
         # Explicit v3 wire decoding into the established internal representation.
         # Native/learner journals retain the original response unchanged.
@@ -281,7 +300,8 @@ def curate_messages(document, index, items, reflection, metadata, count_tokens):
             '"finding_ids":["f0"],"reason":"Evidence supports the scoped hypothesis."}],"unresolved_conflicts":[]}. '
             'Examples show structure only; do not copy example content. No extra fields or code fences. '
             'At most '+str(min(COMPACT_ROWS, document['bounds']['max_delta']))+' deltas and conflicts each. '
-            'Each content at most 200 Unicode characters; every reason at most 120. '
+            'Each content at most '+str(compact_limits(document['bounds'])[0])
+            +' Unicode characters; every reason at most '+str(compact_limits(document['bounds'])[1])+'. '
             'An unresolved conflict may reference at most two item_ids; finding_ids use f0/f1 from reflection. '
             'Return empty deltas when the evidence does not support a reusable conditional change.')
     return _measure(system, {'current_items': items, 'item_associations': metadata,
@@ -291,6 +311,7 @@ def curate_messages(document, index, items, reflection, metadata, count_tokens):
 def merge_delta(text, items, reflection, bounds):
     """Grow/refine deterministic merge: untouched bytes survive; aliases coalesce."""
     compact = bounds.get('reflector_contract') == COMPACT_CONTRACT_V3
+    limits = compact_limits(bounds)
     result = _exact_json(text, {'schema', 'deltas', 'unresolved_conflicts'},
         'saea-ace-delta-v3' if compact else 'saea-ace-delta-v1')
     if compact:
@@ -298,12 +319,12 @@ def merge_delta(text, items, reflection, bounds):
                     for k in ('deltas', 'unresolved_conflicts')), 'bounded compact ACE delta required')
         for row in result['deltas']:
             require(isinstance(row, dict), 'compact ACE delta object required')
-            _compact_text(row.get('content'), COMPACT_TEXT, 'content', empty=row.get('operation') == 'DELETE')
-            _compact_text(row.get('reason'), COMPACT_REASON, 'reason')
+            _compact_text(row.get('content'), limits[0], 'content', empty=row.get('operation') == 'DELETE')
+            _compact_text(row.get('reason'), limits[1], 'reason')
         for row in result['unresolved_conflicts']:
             require(isinstance(row, dict) and isinstance(row.get('item_ids'), list)
                     and 0 < len(row['item_ids']) <= COMPACT_ROWS, 'bounded compact ACE conflict required')
-            _compact_text(row.get('reason'), COMPACT_REASON, 'reason')
+            _compact_text(row.get('reason'), limits[1], 'reason')
     require(isinstance(result['deltas'], list) and len(result['deltas']) <= bounds['max_delta']
             and isinstance(result['unresolved_conflicts'], list)
             and len(result['unresolved_conflicts']) <= bounds['max_delta'], 'bounded delta/conflicts required')
@@ -414,7 +435,7 @@ def execute(learner, document, *, count_tokens, verify_source):
         try:
             for index, group in enumerate(document['groups']):
                 reflected = call(REFLECT, index, reflect_messages(document, index, items, count_tokens))
-                reflection = validate_reflection(reflected, group, items, bounds['max_findings'], bounds.get('reflector_contract'))
+                reflection = validate_reflection(reflected, group, items, bounds['max_findings'], bounds.get('reflector_contract'), bounds=bounds)
                 for signal in reflection['signals']:
                     meta = metadata[signal['item_id']]
                     meta[signal['label']] += 1

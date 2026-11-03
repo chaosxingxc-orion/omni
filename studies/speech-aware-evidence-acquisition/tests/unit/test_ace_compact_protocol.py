@@ -114,3 +114,49 @@ def test_compact_empty_result_and_empty_library_signals():
     assert merged['items'] == {} and not merged['semantic_support_verified']
     with pytest.raises(ValueError):
         m.validate_reflection(json.dumps(compact_reflection()), doc['groups'][0], {}, 4, m.COMPACT_CONTRACT_V3)
+
+
+def test_configured_character_limits_bind_identity_prompt_and_parser():
+    _, default = fixture(reflector_contract=m.COMPACT_CONTRACT_V3)
+    _, doc = fixture(reflector_contract=m.COMPACT_CONTRACT_V3,
+        compact_text_chars=512, compact_reason_chars=300)
+    assert doc['input_sha256'] != default['input_sha256']
+    assert 'compact_text_chars' not in default['bounds']
+    response = compact_reflection()
+    response['findings'][0]['lesson'] = '字' * 512
+    response['signals'][0]['reason'] = '理' * 300
+    encoded = json.dumps(response)
+    checked = m.validate_reflection(encoded, doc['groups'][0], doc['parent']['items'], 4,
+        m.COMPACT_CONTRACT_V3, bounds=doc['bounds'])
+    assert checked['findings'][0]['lesson'] == '字' * 512
+    with pytest.raises(ValueError, match='lesson'):
+        m.validate_reflection(encoded, doc['groups'][0], doc['parent']['items'], 4, m.COMPACT_CONTRACT_V3)
+    reflect_prompt = m.reflect_messages(doc, 0, doc['parent']['items'], lambda messages: 10)['messages'][0]['content']
+    curate_prompt = m.curate_messages(doc, 0, doc['parent']['items'], checked, {}, lambda messages: 10)['messages'][0]['content']
+    assert 'lesson at most 512 Unicode characters; reason at most 300' in reflect_prompt
+    assert 'content at most 512 Unicode characters; every reason at most 300' in curate_prompt
+    value = compact_delta()
+    value['deltas'][0].update(content='字' * 512, reason='理' * 300)
+    merged = m.merge_delta(json.dumps(value), doc['parent']['items'], checked, doc['bounds'])
+    assert '字' * 512 in merged['items'].values()
+    value['deltas'][0]['reason'] += '超'
+    with pytest.raises(ValueError, match='reason'):
+        m.merge_delta(json.dumps(value), doc['parent']['items'], checked, doc['bounds'])
+    response['findings'][0]['lesson'] += '超'
+    with pytest.raises(ValueError, match='lesson'):
+        m.validate_reflection(json.dumps(response), doc['groups'][0], doc['parent']['items'], 4,
+            m.COMPACT_CONTRACT_V3, bounds=doc['bounds'])
+
+
+@pytest.mark.parametrize('key', ['compact_text_chars', 'compact_reason_chars'])
+@pytest.mark.parametrize('value', [0, -1, 4097, True, 1.5, '512'])
+def test_invalid_configured_character_limits_rejected_before_contact(key, value):
+    with pytest.raises(ValueError, match='character bounds'):
+        fixture(reflector_contract=m.COMPACT_CONTRACT_V3, **{key: value})
+
+
+def test_character_limits_cannot_silently_change_legacy_contract():
+    with pytest.raises(ValueError, match='compact contract'):
+        fixture(compact_text_chars=512)
+    with pytest.raises(ValueError, match='compact contract'):
+        fixture(reflector_contract=m.REFLECTOR_CONTRACT_V2, compact_reason_chars=300)

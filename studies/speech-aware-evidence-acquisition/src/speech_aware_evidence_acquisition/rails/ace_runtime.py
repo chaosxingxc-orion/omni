@@ -51,10 +51,11 @@ def validate_registration(reg, *, plan, model_id):
     bound_fields = {'resident_context', 'completion_cap',
         'reserve_tokens', 'max_groups', 'max_delta', 'max_findings', 'max_items', 'max_characters',
         'max_prompt_tokens_total', 'max_completion_tokens_total', 'max_calls'}
-    require(isinstance(bounds, dict) and set(bounds) in (bound_fields, bound_fields | {'reflector_contract'})
+    require(isinstance(bounds, dict) and bound_fields <= set(bounds) <= bound_fields | {'reflector_contract', 'compact_text_chars', 'compact_reason_chars'}
         and ('reflector_contract' not in bounds or bounds['reflector_contract'] in (ace.REFLECTOR_CONTRACT_V2, ace.COMPACT_CONTRACT_V3))
         and all(type(bounds[k]) is int and bounds[k] > 0 for k in bound_fields if k != 'reserve_tokens')
         and type(bounds['reserve_tokens']) is int and bounds['reserve_tokens'] >= 0, 'exact finite ACE bounds required')
+    ace.compact_limits(bounds)
     decoding = reg['decoding_params']
     require(isinstance(decoding, dict) and 'id_slot' not in decoding
         and type(decoding.get('max_tokens')) is int and decoding['max_tokens'] > 0
@@ -170,7 +171,7 @@ def request_validator(document, count_tokens):
                 raise UnknownLearningContact('ACE predecessor unobserved; no later prompt FIT or generation')
             observed = caller.observed(expected)
             if row['stage'] == ace.REFLECT:
-                reflection = ace.validate_reflection(observed['text'],group,items,document['bounds']['max_findings'],document['bounds'].get('reflector_contract'))
+                reflection = ace.validate_reflection(observed['text'],group,items,document['bounds']['max_findings'],document['bounds'].get('reflector_contract'), bounds=document['bounds'])
                 for signal in reflection['signals']:
                     meta = metadata[signal['item_id']]; meta[signal['label']] += 1
                     meta['events'].append({'query_id':group['query_id'],
@@ -294,7 +295,7 @@ def verify_recovery_prefix(replay, *, data_root, plan, registration, document, c
         validate(request,caller); result=observed(request)
         payload=json.loads(request['messages'][1]['content'])
         if request['stage']==ace.REFLECT:
-            ace.validate_reflection(result['text'],payload['original_group'],payload['current_items'],document['bounds']['max_findings'],document['bounds'].get('reflector_contract'))
+            ace.validate_reflection(result['text'],payload['original_group'],payload['current_items'],document['bounds']['max_findings'],document['bounds'].get('reflector_contract'), bounds=document['bounds'])
         else:
             ace.merge_delta(result['text'],payload['current_items'],payload['reflection'],document['bounds'])
         for field in usage:usage[field]+=result['usage'][field]
