@@ -8,14 +8,14 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT/'src'), str(ROOT/'scripts/analysis')]
-from tfrl_h1_observation import identity, read, raw, sha, pinned
+from tfrl_h1_observation import identity, read, raw, sha, pinned, population_scope
 from tfrl_current_half_result import score_table
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 
 
-def summarize_scores(result, items):
+def summarize_scores(result, items, expected_rows=313):
     ids = [r['sample_id'] for r in items]
-    if len(ids) != 313 or len(set(ids)) != 313:
+    if len(ids) != expected_rows or len(set(ids)) != expected_rows:
         raise ValueError('exact full H1 required')
     table = score_table(result, ids)
     correct = []
@@ -25,9 +25,9 @@ def summarize_scores(result, items):
         if any(type(x) not in (int, float) or not math.isfinite(x) or x < 0 or x != int(x) for x in counts):
             raise ValueError('finite nonnegative exact slot counts required')
         correct.append(int(r['scenario_action_exact'] == 1 and counts == [0, 0]))
-    return {'rows': 313, 'official': result['aggregate']['official'],
-            'intent_accuracy': sum(table[s]['scenario_action_exact'] for s in ids)/313,
-            'task_correct_rows': sum(correct), 'task_error_rows': 313-sum(correct),
+    return {'rows': expected_rows, 'official': result['aggregate']['official'],
+            'intent_accuracy': sum(table[s]['scenario_action_exact'] for s in ids)/expected_rows,
+            'task_correct_rows': sum(correct), 'task_error_rows': expected_rows-sum(correct),
             'task_success_rule': 'Intent exact AND exact-slot FP=FN=0',
             'hardness_confirmed': False, 'independent_stochastic_draws_claimed': False}
 
@@ -75,12 +75,13 @@ def run(repo, data, out, round_index=1, comparison=None, attempt_id='generation-
     assert_execution_environment()
     if not out.resolve().is_relative_to((data/'work/codex').resolve()):
         raise ValueError('owned CPU result directory required')
+    half, roster_path, rows = population_scope(comparison)
     name, rid, attempt_id = select_identity(round_index, comparison, attempt_id)
     pkg = repo/'docs/readiness'/name
     spec = read(pkg/'candidate.json')
     validate_workload(repo,data,name,spec)
     recipe = read(pkg/'analysis-recipe-v1.json')
-    if (recipe['schema'] != 'saea-h1-observation-read-v1' or recipe['rows'] != 313
+    if (recipe['schema'] != 'saea-h1-observation-read-v1' or recipe['rows'] != rows
             or recipe['generation_run_id'] != rid or recipe['attempt_id'] != 'generation-v1'
             or recipe['round'] != round_index or recipe['roster'] != spec['roster']
             or recipe['new_model_calls'] != 0 or recipe['claims_benefit'] is not False):
@@ -93,7 +94,7 @@ def run(repo, data, out, round_index=1, comparison=None, attempt_id='generation-
     if (bundle.attempt_state != 'FINALIZED' or bundle.manifest['status'] != 'COMPLETED'
             or bundle.manifest['run_id'] != rid
             or bundle.manifest['attempt']['attempt_id'] != attempt_id
-            or len(bundle.split_ids) != 313 or set(bundle.split_ids) != set(ids)):
+            or len(bundle.split_ids) != rows or set(bundle.split_ids) != set(ids)):
         raise ValueError('finalized complete313 required')
     assert_registered_bundle(bundle.manifest, read(pkg/'generation-plan-registered-v1.json'),
                              name, rid, attempt_id)
@@ -108,7 +109,7 @@ def run(repo, data, out, round_index=1, comparison=None, attempt_id='generation-
     scores = read(scores_path)
     if set(scores) != {scorer,'cost'}:
         raise ValueError('unexpected sealed scorers')
-    result = summarize_scores(scores[scorer],roster['items'])
+    result = summarize_scores(scores[scorer],roster['items'],expected_rows=rows)
     result.update(schema='saea-h1-fresh-observation-result-v1',run_id=rid,attempt_id=attempt_id,
         scorer_id=scorer,role_contacts=role_costs(bundle.outputs_rows),cost=bundle.manifest['cost'],
         new_model_calls=0,new_scoring_jobs=0,claims_benefit=False,

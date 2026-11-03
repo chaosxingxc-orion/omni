@@ -243,3 +243,30 @@ def test_second_pass_keeps_full_fixed_population_and_lock(monkeypatch):
     assert base['native_episode']['consumption_module']['columns']==[]
     assert exp['cells'][0]['run_id']==m.identity(2)[1]
     with pytest.raises(ValueError):m.identity(3)
+
+
+@pytest.mark.parametrize('arm', ['off', 'baseline'])
+def test_h2_reuses_exact_frozen_roster_and_separate_requests(monkeypatch, arm):
+    monkeypatch.setattr(m, 'runtime_binding', lambda *args: m.read(ROOT/f'configs/model/{m.MODEL}.json'))
+    cfg = {'schema': 'saea-h2-perception-thinking-v1', 'arm': arm, 'admitted_level': 96}
+    base, exp, roster, view = m.derive(ROOT, 1, BINDING, cfg)
+    assert roster == m.read(ROOT/m.H2)
+    assert exp['population']['count'] == 312
+    assert exp['population']['roster_receipt'] == m.H2
+    assert exp['execution_plan']['planned_model_calls'] == 1248
+    assert base['native_contact_fit']['contact_cap'] == 624
+    assert 'H2' in m.identity(1, cfg)[1]
+    assert base['thinking_policy']['solver'] == m.THINKING_ARMS['baseline']
+    assert m.frozen_candidate(ROOT, cfg)['sha256'] == m.sha(ROOT/'configs/evaluation/agent-thinking-candidate-freeze-v1.json')
+    assert not set(r['sample_id'] for r in roster['items']) & set(r['sample_id'] for r in m.read(ROOT/m.H1)['items'])
+
+
+def test_h2_refuses_unselected_arm_and_changed_freeze(tmp_path):
+    cfg = {'schema': 'saea-h2-perception-thinking-v1', 'arm': 'short', 'admitted_level': 96}
+    with pytest.raises(ValueError): m.comparison_config(cfg)
+    cfg['arm'] = 'off'
+    p = tmp_path/'configs/evaluation/agent-thinking-candidate-freeze-v1.json'
+    p.parent.mkdir(parents=True)
+    value = m.read(ROOT/'configs/evaluation/agent-thinking-candidate-freeze-v1.json')
+    value['candidate'] = 'short'; p.write_bytes(m.raw(value))
+    with pytest.raises(ValueError, match='freeze'): m.frozen_candidate(tmp_path, cfg)
