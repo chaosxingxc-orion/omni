@@ -43,7 +43,7 @@ P-off 已完成并独立核验 **313/313、FINALIZED**：官方 **SLU-F1 67.2797
 
 完整 313 条平均耗时拆解：准入→P 请求 138.68 秒；P 全请求 44.21 秒（其中 HTTP 12.09 秒）；P→S 25.06 秒；S 全请求 264.58 秒（其中 HTTP 240.44 秒）；收尾 0.06 秒；单样本总延迟 472.60 秒。并发请求存在重叠，不能把单样本延迟当整批吞吐。详见主仓 `docs/results/h1-thinking-off-result.json`。
 
-三档现已各313/313完成并完成配对：baseline SLU67.2773%/Intent74.7604%，off 67.2797%/76.0383%，short 68.6526%/74.4409%。off与short相对baseline的SLU区间均跨0；off严格任务修复21/破坏25，short修复17/破坏11。保留3072参照，冻结off为待H2筛查的效率候选，尚不最终晋升。三档NPU任务已结束，H2后继尚未登记启动，目前存在供给空档，不声称持续满载。详见[完整三档结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Perception-Thinking-Comparison.md)。
+三档现已各313/313完成并完成配对：baseline SLU67.2773%/Intent74.7604%，off 67.2797%/76.0383%，short 68.6526%/74.4409%。off与short相对baseline的SLU区间均跨0；off严格任务修复21/破坏25，short修复17/破坏11。保留3072参照，冻结off为待H2筛查的效率候选，尚不最终晋升。三档NPU任务已结束。H2两臂各312条的固定数据准备、登记、准入与预检均已完成。05:21:19 UTC，off执行容器已启动；baseline进入持久队列，等待off生成释放后接续，与CPU评分异步。尚未核验完成样本数、模型调用量或窗口吞吐；不声称持续满载，完成ETA待首个有效窗口。两臂各自执行P/S，正常预算合计1248次调用，fallback及失败另记。详见[完整三档结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Perception-Thinking-Comparison.md)。
 
 三档官方配对分析工具已实现：同名单、同知识/模板/非 thinking 配置校验，SLU pooled counts 与 Intent 的语句聚类 bootstrap、任务修复/破坏、P/S 及未归属额外调用成本。17 项固定镜像测试通过；在真实 108 条快照和完整 313 条 P-off 成本上执行成功。三档完整配对已执行成功，0新增模型调用。
 
@@ -53,3 +53,5 @@ P-off 已完成并独立核验 **313/313、FINALIZED**：官方 **SLU-F1 67.2797
 三档分析配置可分别声明 `timing` 文件，分析器核验完整封存 checkpoint 与该臂313条名单一致，再将P/S原生调用成本与准入、请求、阶段间等待、收尾计时关联；读取过程中变化的计时文件拒绝。样本边界存在但无法与P/S关联、边界缺失、重复边界分别可见，不再把请求计时齐全误当端到端计时齐全。
 
 30项固定镜像测试通过（2.55秒）。独立CPU分析树已部署；真实P-off重读313条，边界存在313、关联313、缺失0、无不完整尾行，新增模型调用0。三档完整配对已完成，候选尚待H2筛查。
+
+H2继续使用共享stage/prepare/register/validate与配置化启动，不另建模型调用路径；每臂固定312条，正常624调用、fallback额度1248，所有失败和已知响应保留。共享配对分析器已支持H2双臂与冻结清单校验，拒绝名单/臂替换及冻结漂移；H1/H2与耗时回归共73项固定镜像测试通过（9.88秒）。H2此前已有开发选择接触，不称独立未见测试集；结果不自动晋升，完整测试仍暂停。

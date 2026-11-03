@@ -28,7 +28,7 @@ Direct的0.4906秒/条是并发总吞吐口径，不是单请求延迟；不能�
 
 已有固定镜像、配置化启动/预检、共享Flight与逐请求FIT、原生响应与成本留存、本地热状态、归档、normal/debug观测，以及部分恢复和队列交接能力。Reflexion v3已核验8个响应均已知，原guard内结清租约，新增调用0；终态归档已验证。
 
-这些组件尚未组成完整可靠的实验流水线。历史上A0编码完成到下游核验仍未启动，存在约8小时23分接续空档；没有完整逐卡数据，不能断言全区间利用率。之后A0实际启动，现已按用户要求停止。当前NPU任务改为H1三档小规模对照，三档已完成，后继H2待登记；常驻服务和已排队均不等于实际有效满载。
+这些组件尚未组成完整可靠的实验流水线。历史上A0编码完成到下游核验仍未启动，存在约8小时23分接续空档；没有完整逐卡数据，不能断言全区间利用率。之后A0实际启动，现已按用户要求停止。当前NPU任务改为H1三档小规模对照，三档已完成，H2 off执行容器已启动、baseline排队；常驻服务和已排队均不等于实际有效满载。
 
 未闭合项包括：CPU封存产物到后继配置的自动绑定；失败任务结清后独立任务的资源交接；编码消费过调用后的通用恢复；恢复代候选发布/H2评分；GEPA真实执行适配；归档inspect/流读取等故障恢复。当前“所有实验都可断点续推”尚未全面满足。
 
@@ -61,7 +61,7 @@ P-off 已完成并独立核验 **313/313、FINALIZED**：官方 **SLU-F1 67.2797
 
 完整 313 条平均耗时拆解：准入→P 请求 138.68 秒；P 全请求 44.21 秒（其中 HTTP 12.09 秒）；P→S 25.06 秒；S 全请求 264.58 秒（其中 HTTP 240.44 秒）；收尾 0.06 秒；单样本总延迟 472.60 秒。并发请求存在重叠，不能把单样本延迟当整批吞吐。详见主仓 `docs/results/h1-thinking-off-result.json`。
 
-三档现已各313/313完成并完成配对：baseline SLU67.2773%/Intent74.7604%，off 67.2797%/76.0383%，short 68.6526%/74.4409%。off与short相对baseline的SLU区间均跨0；off严格任务修复21/破坏25，short修复17/破坏11。保留3072参照，冻结off为待H2筛查的效率候选，尚不最终晋升。三档NPU任务已结束，H2后继尚未登记启动，目前存在供给空档，不声称持续满载。详见[完整三档结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Perception-Thinking-Comparison.md)。
+三档现已各313/313完成并完成配对：baseline SLU67.2773%/Intent74.7604%，off 67.2797%/76.0383%，short 68.6526%/74.4409%。off与short相对baseline的SLU区间均跨0；off严格任务修复21/破坏25，short修复17/破坏11。保留3072参照，冻结off为待H2筛查的效率候选，尚不最终晋升。三档NPU任务已结束。H2两臂各312条的固定数据准备、登记、准入与预检均已完成。05:21:19 UTC，off执行容器已启动；baseline进入持久队列，等待off生成释放后接续，与CPU评分异步。尚未核验完成样本数、模型调用量或窗口吞吐；不声称持续满载，完成ETA待首个有效窗口。两臂各自执行P/S，正常预算合计1248次调用，fallback及失败另记。详见[完整三档结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/Perception-Thinking-Comparison.md)。
 
 三档官方配对分析工具已实现：同名单、同知识/模板/非 thinking 配置校验，SLU pooled counts 与 Intent 的语句聚类 bootstrap、任务修复/破坏、P/S 及未归属额外调用成本。17 项固定镜像测试通过；在真实 108 条快照和完整 313 条 P-off 成本上执行成功。三档完整配对已执行成功，0新增模型调用。
 
@@ -73,7 +73,7 @@ P-off 已完成并独立核验 **313/313、FINALIZED**：官方 **SLU-F1 67.2797
 
 ### P2：完整H2筛查与真实RSI
 
-候选冻结后在完整312条H2做同轮配对，正常936调用；报告官方SLU、Intent、修复/破坏、区间及全部成本。沿用SLU至少+1个百分点且Intent不降的筛查门槛，区间跨0不称稳定收益。H2已有开发选择接触，不能声称独立未见确认；H2标签与错误不回流学习。
+同P策略的知识/消费候选冻结后，在完整312条H2做同轮配对，共享P时正常936调用；thinking候选的P策略不同，必须各自P/S，正常1248调用；报告官方SLU、Intent、修复/破坏、区间及全部成本。沿用SLU至少+1个百分点且Intent不降的筛查门槛，区间跨0不称稳定收益。H2已有开发选择接触，不能声称独立未见确认；H2标签与错误不回流学习。
 
 通过者实际成为下一轮父版本再采集轨迹，才构成跨轮RSI。最终冻结方法在完整13078测试上报告。当前先完成小规模 Agent 锁定，再安排正式全量评估。
 
@@ -125,6 +125,6 @@ GEPA内部搜索分区已真实准备：233条反馈、80条选择；固定H1 31
 
 ## 当前小规模锁定方案
 
-[Perception thinking与Agent锁定方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/operations/Perception-Thinking-and-Agent-Lock.md)：H1复用313条，比较P关闭/512/3072预算，S保持3072；冻结后H2完整312条筛查。旧Q4_K_M复测P关闭节省43.1%请求延迟合计但SLU−1.49pp，不能直接当当前BF16/NPU收益。当前P-off的313个原生响应已验证无reasoning；三档精度与效率配对尚待完成。
+[Perception thinking与Agent锁定方案](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/operations/Perception-Thinking-and-Agent-Lock.md)：H1复用313条，比较P关闭/512/3072预算，S保持3072；冻结后H2完整312条筛查。旧Q4_K_M复测P关闭节省43.1%请求延迟合计但SLU−1.49pp，不能直接当当前BF16/NPU收益。当前P-off的313个原生响应已验证无reasoning；三档精度与效率配对已完成，off候选待H2筛查。
 
 03:30完成187条的平均时延拆解：准入→P140.87秒、P全请求241.53秒、P→S4.43秒、S全请求199.72秒、收尾2.57秒，总589.11秒。单样本并行延迟不是7.1167秒/条的墙钟吞吐；无缺失计时，服务端同期解码占主导，客户端包装与准备也需优化。

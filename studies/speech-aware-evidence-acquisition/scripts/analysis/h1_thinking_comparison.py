@@ -1,4 +1,4 @@
-"""Read three finalized fixed-H1 arms, official paired scores and native costs.
+"""Read finalized fixed development arms, official paired scores and native costs.
 
 No model or scorer calls. Output contains aggregates and provenance, no raw text.
 """
@@ -15,7 +15,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(ROOT/'src'), str(ROOT/'scripts/analysis')]
 import tfrl_h1_observation_read as observation
-from tfrl_h1_observation import identity, read, raw, sha, pinned
+from tfrl_h1_observation import (identity, read, raw, sha, pinned,
+    comparison_config, population_scope, frozen_candidate)
 from tfrl_current_half_result import score_table
 from speech_aware_evidence_acquisition.analysis.paired import resampled_statistic
 from paired_ci import pooled_slu_f1
@@ -26,8 +27,35 @@ SEED = 20261103
 DRAWS = 10000
 
 
-def config(arm):
-    return {'schema':'saea-h1-perception-thinking-v1', 'arm':arm, 'admitted_level':96}
+def config(arm, half='h1'):
+    return comparison_config({'schema':f'saea-{half}-perception-thinking-v1',
+        'arm':arm, 'admitted_level':96})
+
+
+def comparison_scope(half):
+    _, _, rows = population_scope(config('off', half))
+    return (ARMS if half == 'h1' else ('off', 'baseline')), rows
+
+
+def read_scope(spec):
+    half = {'saea-h1-thinking-comparison-read-v1':'h1',
+        'saea-h2-thinking-comparison-read-v1':'h2'}.get(spec.get('schema'))
+    if half is None:
+        raise ValueError('explicit H1 or H2 comparison schema required')
+    arms, rows = comparison_scope(half)
+    keys = {'schema', 'data', 'arms'}
+    if half == 'h2':
+        keys.add('candidate_freeze')
+    if set(spec) != keys or not isinstance(spec['arms'], dict) or set(spec['arms']) != set(arms):
+        raise ValueError('exact arms and freeze for declared comparison required')
+    return half, arms, rows
+
+
+def assert_candidate_freeze(repo, comparison, candidate, expected):
+    actual = frozen_candidate(repo, comparison)
+    if actual != expected or candidate.get('candidate_freeze') != actual:
+        raise ValueError('H2 comparison differs from preregistered candidate freeze')
+    return actual
 
 
 def invariant(base):
@@ -39,12 +67,13 @@ def invariant(base):
     return value
 
 
-def paired_scores(results, items, *, draws=DRAWS):
-    if set(results) != set(ARMS):
-        raise ValueError('all three complete thinking arms required')
+def paired_scores(results, items, *, draws=DRAWS, half='h1'):
+    arms, rows = comparison_scope(half)
+    if set(results) != set(arms):
+        raise ValueError('all declared complete thinking arms required')
     ids = [row['sample_id'] for row in items]
-    if len(ids) != 313 or len(set(ids)) != 313:
-        raise ValueError('exact full H1 313 required')
+    if len(ids) != rows or len(set(ids)) != rows:
+        raise ValueError(f'exact full {half.upper()} {rows} required')
     tables = {arm:score_table(value, ids) for arm,value in results.items()}
     keys = ('evaluator_commit','scorer_version','split_id','projection','filler_normalization')
     official = lambda value: {k:value['aggregate'][k] for k in keys}
@@ -59,7 +88,9 @@ def paired_scores(results, items, *, draws=DRAWS):
                 raise ValueError('finite nonnegative exact slot counts required')
         success[arm] = {sid:int(table[sid]['scenario_action_exact'] == 1 and counts(table[sid]) == (0,0)) for sid in ids}
     out = {}
-    for arm in ('off','short'):
+    for arm in arms:
+        if arm == 'baseline':
+            continue
         left,right = tables['baseline'],tables[arm]
         stat = {
             'slu_f1_pp':lambda sample:100*(pooled_slu_f1(right,sample)-pooled_slu_f1(left,sample)),
@@ -70,9 +101,9 @@ def paired_scores(results, items, *, draws=DRAWS):
         saves = sum(success[arm][s] > success['baseline'][s] for s in ids)
         harms = sum(success[arm][s] < success['baseline'][s] for s in ids)
         out[arm] = {'minus':'baseline', 'contrasts':contrasts,
-            'task_repairs':saves,'task_breaks':harms,'task_ties':313-saves-harms,
+            'task_repairs':saves,'task_breaks':harms,'task_ties':rows-saves-harms,
             'task_success_rule':'Intent exact AND exact-slot FP=FN=0'}
-    return {'rows':313,'official':{a:v['aggregate']['official'] for a,v in results.items()},
+    return {'rows':rows,'official':{a:v['aggregate']['official'] for a,v in results.items()},
         'comparisons':out,'bootstrap_unit':'utterance cluster', 'seed':SEED,
         'decoding_noise_estimated':False,'automatic_adoption':False,
         'limitations':['Fixed hard development set, not natural-distribution test performance.',
@@ -159,19 +190,20 @@ def phase_timing(directory, run_id, timing_path, expected_ids, checkpoint_sha256
 def run(spec_path, out):
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
     spec=read(spec_path)
-    if (set(spec) != {'schema','data','arms'} or spec['schema'] != 'saea-h1-thinking-comparison-read-v1'
-            or set(spec['arms']) != set(ARMS)):
-        raise ValueError('exact three-arm read configuration required')
+    half, arms, rows = read_scope(spec)
     data=Path(spec['data']);result={};scores={};invariants=[];bindings=[];roster=None
     if not out.resolve().is_relative_to((data/'work/codex').resolve()):
         raise ValueError('owned CPU output required')
-    for arm in ARMS:
+    for arm in arms:
         entry=spec['arms'][arm]
         if set(entry) not in ({'repo','attempt_id'}, {'repo','attempt_id','timing'}):
             raise ValueError('explicit repository and attempt per arm required')
-        repo=Path(entry['repo']);name,rid=identity(1,config(arm));attempt=entry['attempt_id']
-        result[arm]=observation.run(repo,data,out/arm,comparison=config(arm),attempt_id=attempt)
+        repo=Path(entry['repo']);comparison=config(arm, half)
+        name,rid=identity(1,comparison);attempt=entry['attempt_id']
         pkg=repo/'docs/readiness'/name;candidate=read(pkg/'candidate.json')
+        if half == 'h2':
+            assert_candidate_freeze(repo, comparison, candidate, spec['candidate_freeze'])
+        result[arm]=observation.run(repo,data,out/arm,comparison=comparison,attempt_id=attempt)
         bindings.append({k:candidate[k] for k in ('roster','dataset','runtime_binding','gain_lock')})
         invariants.append(invariant(read(repo/f'configs/baseline/{name}.json')))
         roster=pinned(repo,candidate['roster'])
@@ -183,10 +215,14 @@ def run(spec_path, out):
                 [item['sample_id'] for item in roster['items']], bundle.manifest['row_checkpoint']['sha256'])
     if any(x != bindings[0] for x in bindings) or any(x != invariants[0] for x in invariants):
         raise ValueError('comparison changed fixed data, runtime, knowledge or non-thinking policy')
-    summary={'schema':'saea-h1-thinking-comparison-result-v1', 'arms':result,
-        'paired':paired_scores(scores,roster['items']), 'source_config_sha256':sha(spec_path),
+    summary={'schema':f'saea-{half}-thinking-comparison-result-v1', 'arms':result,
+        'paired':paired_scores(scores,roster['items'],half=half), 'source_config_sha256':sha(spec_path),
         'new_model_calls':0,'new_scoring_jobs':0,'test_used_for_tuning':False,
         'request_latency_is_not_wall_throughput':True}
+    if half == 'h2':
+        summary['candidate_freeze'] = spec['candidate_freeze']
+        summary['paired']['limitations'].append(
+            'H2 has prior development-selection exposure; it is not an untouched test set.')
     path=out/'complete.json'
     if path.exists():
         if path.read_bytes()!=raw(summary):raise ValueError('existing comparison differs')
