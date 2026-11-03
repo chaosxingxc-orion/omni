@@ -1,0 +1,101 @@
+{
+  "schema": "tfrl-exploration-queue-snapshot-v1",
+  "observed_at": "2026-11-03T10:41:50.344238+00:00",
+  "execution_observed_at": "2026-11-03T10:39:15Z",
+  "running_explorations": 2,
+  "verified_queued_successors": 0,
+  "all_cards_busy_claim": false,
+  "construction": {
+    "container": "a2027a567ef9673935ffcaeb8b6fdedb6b417926d09c8e481f0eaa7ecf0ed121",
+    "run_id": "SAEA-SLURP-CONSTRUCTION-ACE-BASELINE-V2",
+    "groups": 51,
+    "normal_generation_budget": 102,
+    "fit_budget": 102,
+    "cards": 2,
+    "instances": 1,
+    "independent_successor_hypotheses": 3,
+    "state": "running-baseline-preparing-successors"
+  },
+  "consumption": {
+    "current_lane_workload": "Reflexion51; consumption mutation branches still in CPU integration",
+    "container": "590440ae08861caac52d028d11298b23b1d748ed9fc7880009f22045584ab221",
+    "groups": 51,
+    "normal_generation_budget": 51,
+    "fit_budget": 51,
+    "cards": 2,
+    "instances": 1,
+    "defined_independent_mutation_branches": 2,
+    "additional_hypothesis": "knowledge presentation; not configured",
+    "state": "blocked-by-native-integration-and-lane-handoff"
+  },
+  "queue_validation": {
+    "tests": 91,
+    "production_multi_successor_queue_verified": false
+  },
+  "fulltest": {
+    "observer": {
+      "id": "b12d4c6fc0926710b64b70012336ce7a97adb633f6065c0dc8b729b145fa526b",
+      "state": "exited",
+      "exit_code": 0
+    },
+    "snapshot": {
+      "observed_at": "2026-11-03T10:40:25.867655+00:00",
+      "container_id": "58cc80745529e813abd650ab2f9929b1fb5eaeb4abe6564d3da3552f56aae730",
+      "elapsed_seconds": 9752.465467
+    },
+    "progress": {
+      "schema": "saea-real-engine-progress-v1",
+      "state": "running",
+      "completed_rows": 3343,
+      "total_rows": 13078,
+      "checkpoint_rows": 3343,
+      "unusable_checkpoint_rows": 0,
+      "remaining_rows": 9735,
+      "checkpoint_sha256": "47599901077f45b966c3faee35693eb66b5a6e1e4953fe9ac2f1fcdcdfffdf98",
+      "split_identity_hash": "7247647b8c8b37becd564b7031691565d4e6b09d8e124823054906d36372c95d",
+      "torn_tail_bytes": 0,
+      "cards": 4,
+      "instances": 1,
+      "elapsed_seconds": 9752.465467,
+      "wall_seconds_per_complete_row": 2.917279529464553,
+      "rows_per_second": 0.34278511534461814,
+      "estimated_remaining_seconds": 28399.71621933742,
+      "eta_basis": "Linear observed whole-task completion rate; startup and tail may change it.",
+      "full_roster_comparison_eligible": false,
+      "checkpoint_recorded_cost_lower_bound": {
+        "calls": 6686.0,
+        "audio_seconds": 16834.355625000084,
+        "latency_seconds": 740653.8406716515,
+        "prompt_tokens": 43214788.0,
+        "completion_tokens": 5678756.0,
+        "tool_calls": 0.0
+      },
+      "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
+      "complete_sample_timings": {
+        "admission_wait": {
+          "n": 3343,
+          "mean_s": 3582.7282018574037,
+          "p50_s": 3382.65581245,
+          "p95_s": 7671.51812328
+        },
+        "admitted_to_finished": {
+          "n": 3343,
+          "mean_s": 993.5630564092611,
+          "p50_s": 989.81871969,
+          "p95_s": 1299.24471221
+        }
+      },
+      "new_model_calls": 0,
+      "limitations": [
+        "Duration and state must come from an authoritative run boundary/process observation.",
+        "Allocated cards are not measured utilization.",
+        "Partial or failed candidates cannot establish a full-roster throughput winner.",
+        "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
+      ]
+    }
+  },
+  "local_input_digests": {
+    "repro/tfrl-construction-queue.json": "edee482c515b2feb7fb23b2e1f66248dd8b1bc6b3cc8dc33f63e5fe4dc867364",
+    "repro/tfrl-consumption-queue.json": "e5b989194f8817fb45d46fb3bc7d36ff107c2a229d29b000ad70fbc2521a8bb4"
+  }
+}
