@@ -46,6 +46,7 @@ def test_real_runtime_learning_updates_are_replayed_not_call_divided(tmp_path,mo
     runtime.run_phases();plan=runtime.plan;root=runtime._run_dir()/'tfgrpo/learner'
     job=tmp_path/'observer-job.json';job.write_text(json.dumps({'run_id':plan.run_id,'runtime_rows':1,'batch_sha256':m.sha(json.loads((root/'batch.json').read_bytes()))}))
     producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True},
+        {'source':str(tmp_path/'data/contact-journals'),'target':str(tmp_path/'contact-journals'),'readonly':True},
         {'source':str(root),'target':str(tmp_path/'runs'/plan.run_id/plan.attempt_id/'tfgrpo/learner'),'readonly':True}]}
     contact,native=m.native_contacts(producer,tmp_path,plan,'prepared-context-text')
     j={'learner_job':pin(job),'total_rows':1}

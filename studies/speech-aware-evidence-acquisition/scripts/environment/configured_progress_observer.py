@@ -138,7 +138,9 @@ def learning_progress(j,producer,logical,plan,native):
             envelope=settlement.read(root/'contacts'/(key+'.response.json'));r=envelope['response']
             require(intent['stage']==stage and intent['identity']==identity and intent['batch_sha256']==sha(batch)
                 and envelope['request_sha256']==sha(intent) and envelope['response_sha256']==sha(r),'learning envelope differs')
-            rid=r['receipt_id'].rsplit('/',1)[-1];require(rid in native,'update contact not durably observed')
+            prefix=f'{plan.run_id}/{plan.attempt_id}/'
+            require(r['receipt_id'].startswith(prefix),'learning receipt run/attempt differs')
+            rid=r['receipt_id'][len(prefix):];require(rid in native,'update contact not durably observed')
             n=native[rid];normalized=json.loads(n['response_bytes'])
             require(r['request_sha256']==n['intent']['request_sha256'] and r['response_sha256']==n['response']['response_sha256']
                 and r['text']==normalized['text'],'learning/native bridge differs')
