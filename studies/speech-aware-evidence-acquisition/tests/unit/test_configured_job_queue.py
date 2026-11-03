@@ -129,6 +129,41 @@ def test_graph_unknown_launch_stops_even_independent_branch(queue):
     assert docker.launches == ['job0']
 
 
+def test_graph_terminal_cleanup_runs_after_failure_before_successor(queue, tmp_path):
+    path, config, docker = queue
+    config['jobs'][0].update(depends_on=[], on_fail='continue')
+    config['jobs'][1].update(depends_on=[], after_terminal=['job0'])
+    root = tmp_path / 'successor'; root.mkdir(); launch, doc = configured(root)
+    doc['container_name'] = 'successor'; launch.write_text(json.dumps(doc))
+    config['jobs'].append({'id':'successor', 'launch':pin(launch), 'preflight':None,
+                          'after':None, 'depends_on':['job1']})
+    path.write_text(json.dumps(config)); m.execute(path, 'once')
+    docker.containers['job0']['State'].update(Status='exited', Running=False, ExitCode=1)
+    result = m.execute(path, 'watch')
+    assert result['status'] == 'failed'  # Preserve original failure despite successful cleanup.
+    assert docker.launches == ['job0', 'job1', 'successor']
+    assert [j['status'] for j in result['jobs']] == ['failed', 'complete', 'complete']
+
+
+def test_graph_unknown_launch_never_triggers_terminal_cleanup(queue):
+    path, config, docker = queue
+    config['jobs'][0].update(depends_on=[], on_fail='continue')
+    config['jobs'][1].update(depends_on=[], after_terminal=['job0'])
+    path.write_text(json.dumps(config)); docker.fail = 'unknown'
+    with pytest.raises(OSError):m.execute(path, 'once')
+    docker.fail = None
+    assert m.execute(path, 'watch')['status'] == 'unknown'
+    assert docker.launches == ['job0']
+
+
+def test_terminal_dependencies_cannot_create_hidden_cycle(queue):
+    path, config, docker = queue
+    config['jobs'][0].update(depends_on=['job1'])
+    config['jobs'][1].update(depends_on=[], after_terminal=['job0'])
+    path.write_text(json.dumps(config))
+    with pytest.raises(ValueError, match='cycle'):m.execute(path, 'plan')
+
+
 def test_graph_waiting_external_producer_does_not_block_independent_job(queue, tmp_path):
     path, config, docker = queue
     root = tmp_path / 'producer'; root.mkdir(); producer, doc = configured(root)

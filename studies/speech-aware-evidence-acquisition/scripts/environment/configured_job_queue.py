@@ -53,7 +53,7 @@ def load(path):
     names, containers, receipts = set(), set(), set()
     for job in doc['jobs']:
         fields = {'id', 'launch', 'preflight', 'after'}
-        require(isinstance(job, dict) and fields <= set(job) <= fields | {'depends_on', 'on_fail'}, 'exact queue job required')
+        require(isinstance(job, dict) and fields <= set(job) <= fields | {'depends_on', 'after_terminal', 'on_fail'}, 'exact queue job required')
         require(job.get('on_fail', 'stop') in ('stop', 'continue'), 'explicit queue failure policy required')
         require(isinstance(job['id'], str) and re.fullmatch('[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}', job['id'])
                 and job['id'] not in names, 'unique confined job ID required')
@@ -80,10 +80,12 @@ def load(path):
         require(all('depends_on' in job for job in doc['jobs']), 'graph jobs must all declare dependencies')
         graph = {}
         for job in doc['jobs']:
-            deps = job['depends_on']
-            require(isinstance(deps, list) and all(isinstance(dep, str) for dep in deps)
-                and len(set(deps)) == len(deps) and set(deps) <= names, 'unique known dependencies required')
-            graph[job['id']] = set(deps)
+            deps, terminal = job['depends_on'], job.get('after_terminal', [])
+            for edges in (deps, terminal):
+                require(isinstance(edges, list) and all(isinstance(dep, str) for dep in edges)
+                    and len(set(edges)) == len(edges) and set(edges) <= names, 'unique known dependencies required')
+            require(not set(deps) & set(terminal), 'dependency conditions must not overlap')
+            graph[job['id']] = set(deps) | set(terminal)
         done = set()
         while graph:
             ready = {key for key, deps in graph.items() if deps <= done}
@@ -93,6 +95,7 @@ def load(path):
     else:
         require(all(job.get('on_fail', 'stop') == 'stop' for job in doc['jobs']),
                 'continue requires an explicit dependency graph')
+        require(not any('after_terminal' in job for job in doc['jobs']), 'terminal dependencies require graph mode')
     return doc
 
 
@@ -295,7 +298,9 @@ def step(config_path, doc, state, save):
                   if record['status'] in ('running', 'launch-intent', 'unknown')]
         require(len(active) <= 1, 'multiple active containers in a serial resource lane')
         ready = [i for i, job in enumerate(doc['jobs']) if records[job['id']]['status'] == 'pending'
-                 and all(records[dep]['status'] == 'complete' for dep in job['depends_on'])]
+                 and all(records[dep]['status'] == 'complete' for dep in job['depends_on'])
+                 and all(records[dep]['status'] in ('complete', 'failed')
+                         for dep in job.get('after_terminal', []))]
         eligible, waiting = [], []
         if not active:
             for i in ready:
@@ -323,13 +328,16 @@ def step(config_path, doc, state, save):
             state['status'] = 'complete'; save(); return state
     job, record = doc['jobs'][index], state['jobs'][index]
     if state['status'] == 'unknown' and not record.get('launch_requested'):return state
-    predecessors = ([i for i, j in enumerate(doc['jobs']) if j['id'] in job['depends_on']]
+    predecessors = ([i for i, j in enumerate(doc['jobs'])
+                     if j['id'] in job['depends_on'] + job.get('after_terminal', [])]
                     if graph else ([index - 1] if index else []))
     for prior_index in predecessors:
         prior = doc['jobs'][prior_index]; receipt = state['jobs'][prior_index]
         _, observed = observe(prior['launch'])
-        require(observed.get('container_id') == receipt.get('container_id') and outcome(observed) == 'complete',
-                'prior queued container no longer matches successful terminal receipt')
+        expected = receipt['status'] if graph and prior['id'] in job.get('after_terminal', []) else 'complete'
+        require(observed.get('container_id') == receipt.get('container_id')
+                and outcome(observed) == expected and expected in ('complete', 'failed'),
+                'prior queued container no longer matches required terminal receipt')
     result, wait_id, release_path = dependency_status(doc, job, record)
     if result != 'complete':
         state.update(status='waiting' if result == 'running' else result,
@@ -383,7 +391,8 @@ def execute(path, mode):
                 _, producer = observe(job['after']['launch'])
                 require(producer.get('container_id') == job['after']['container_id'], 'planned predecessor identity differs')
             plans.append({'id':job['id'], 'launch':launcher.execute(launch, 'plan'), 'after':job['after'],
-                **({'depends_on':job['depends_on'], 'on_fail':job.get('on_fail', 'stop')}
+                **({'depends_on':job['depends_on'], 'after_terminal':job.get('after_terminal', []),
+                    'on_fail':job.get('on_fail', 'stop')}
                    if 'depends_on' in job else {})})
         return {'schema':SCHEMA, 'identity':identity, 'jobs':plans, 'new_model_calls':0,
             'dependency_policy':('dependency-ready-container-exit-zero' if all('depends_on' in j for j in doc['jobs'])
