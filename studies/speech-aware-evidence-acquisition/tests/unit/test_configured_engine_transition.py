@@ -87,6 +87,7 @@ def engine(configured,monkeypatch):
     monkeypatch.setattr(m,'verify_live_old',lambda *args:None)
     monkeypatch.setattr(m.settlement.transition,'quiescence',lambda *args:{'quiet':True})
     monkeypatch.setattr(m,'wait_ready',lambda c,cid:m.inspect(cid))
+    monkeypatch.setattr(m,'npu_inventory',lambda c:IDLE)
     def register(c,current):
         if fault['mode']=='registration':raise ValueError('new runtime not ready')
         path=write(c['out']/'runtime-receipt.json',{'observed_pid':current['State']['Pid']})
@@ -192,3 +193,17 @@ def test_explicit_stop_recovery_rechecks_identity_before_one_more_signal(engine,
     with pytest.raises(ValueError,match='recover-stop'):m.execute(e.path)
     assert m.execute(e.path,'recover-stop')['new_context']==65536
     assert (Path(e.conf['state_dir'])/'stop-recovery-intent.json').exists()
+
+
+def test_pending_is_durable_before_intent_and_recovers(engine,monkeypatch):
+    e=engine;real=m.publish;first={'yes':True}
+    def crash(path,doc):
+        if path.name=='intent.json' and first['yes']:
+            first['yes']=False
+            assert (e.f.locks/'engine-transition.pending.json').exists()
+            raise OSError('intent publication interrupted')
+        return real(path,doc)
+    monkeypatch.setattr(m,'publish',crash)
+    with pytest.raises(OSError):m.execute(e.path)
+    assert not any(c[:2]==['docker','stop'] for c in e.calls)
+    assert m.execute(e.path)['new_context']==65536

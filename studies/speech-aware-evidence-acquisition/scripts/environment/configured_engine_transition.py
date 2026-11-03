@@ -234,6 +234,19 @@ def wait_ready(c, container_id, *, sleep=time.sleep, now=time.monotonic, opener=
             sleep(c['doc']['ready_interval_seconds'])
 
 
+def npu_inventory(c):
+    # The coordinator has no device permissions; use one pinned device-read probe.
+    argv=['docker','run','--rm','--network','none']
+    for device in (*deployment.ASCEND_CONTROL_DEVICES, *(f'/dev/davinci{v}' for v in c['new'].cards)):
+        argv += ['--device',device]
+    for mount in deployment.ASCEND_READONLY_MOUNTS:
+        argv += ['-v',f'{mount}:{mount}:ro']
+    argv += ['--entrypoint','/usr/local/sbin/npu-smi',c['new'].image,'info']
+    result=launch.run(argv)
+    require(result.returncode==0,'NPU inventory unreadable')
+    return result.stdout
+
+
 def finish_registration(c, current):
     """Reverify immutable runtime/weights and observed live argv before publication."""
     from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import (
@@ -293,7 +306,7 @@ def execute(path, mode='run'):
         old = inspect(d['old_container_id']);verify_container(old,c['old'],c['old_model'],exact_id=d['old_container_id'],require_running=not intent_path.exists())
         proof = source_barrier(c)
         if not intent_path.exists():
-            require(not pending.exists() and inspect(c['new'].instances[0].name) is None, 'unowned pending or new engine')
+            require(inspect(c['new'].instances[0].name) is None, 'unowned new engine')
             sessions = old_sessions(c);verify_live_old(c,old,sessions)
             quiet = settlement.transition.quiescence(c['receipt']['deployment']['instances'])
             logs = launch.run(['docker','logs',d['old_container_id']]);require(logs.returncode == 0,'old engine logs unreadable')
@@ -301,11 +314,13 @@ def execute(path, mode='run'):
             intent = {'schema':SCHEMA,'identity':identity,'guard':guard_identity,'source_proof':proof,
                 'old_container':old,'old_sessions':sessions,'old_logs':{'stdout':logs.stdout,'stderr':logs.stderr},
                 'quiescence':quiet,'new_argv':c['argv'],'new_model_calls':0}
+            # Commit the global barrier before any crash can expose a partial transition.
+            publish(pending,{'schema':SCHEMA,'state_dir':str(out),'identity':identity})
             publish(intent_path,intent)
         else:
             intent = read(intent_path);require(intent['identity']==identity and intent['guard']==guard_identity
                 and intent['new_argv']==c['argv'] and intent['source_proof']==proof, 'transition evidence changed')
-        publish(pending,{'schema':SCHEMA,'state_dir':str(out),'identity':identity,'intent_sha256':launch.digest(intent_path)})
+        publish(pending,{'schema':SCHEMA,'state_dir':str(out),'identity':identity})
         stopped = out/'old-stopped.json'
         if not stopped.exists():
             stop_intent = out/'stop-intent.json'
@@ -342,9 +357,9 @@ def execute(path, mode='run'):
         new_name = c['new'].instances[0].name; new = inspect(new_name);launch_intent = out/'launch-intent.json'
         if not launch_intent.exists():
             require(new is None, 'unattributed new engine exists')
-            table = launch.run(['npu-smi','info']);require(table.returncode == 0,'NPU inventory unreadable')
-            allocation = deployment.allocate_from_npu_smi(c['new'],table.stdout)
-            publish(out/'allocation.json',{'allocation':allocation,'npu_smi':table.stdout})
+            table = npu_inventory(c)
+            allocation = deployment.allocate_from_npu_smi(c['new'],table)
+            publish(out/'allocation.json',{'allocation':allocation,'npu_smi':table})
             check_guard();require(not lease.exists(),'lease appeared before engine start')
             publish(launch_intent,{'identity':identity,'argv':c['argv'],'automatic_retry':False})
             result = launch.run(c['argv'])
