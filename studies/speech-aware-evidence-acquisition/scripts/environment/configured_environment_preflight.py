@@ -70,13 +70,23 @@ def runtime_paths(doc):
 
 def load_config(path):
     doc = json.loads(Path(path).read_bytes())
-    require(isinstance(doc, dict) and set(doc) - {'runtime_paths'} == {'schema', 'required_environment', 'interpreters', 'timeout_seconds'}, 'exact preflight schema required')
+    require(isinstance(doc, dict) and set(doc) - {'runtime_paths', 'required_files'} == {'schema', 'required_environment', 'interpreters', 'timeout_seconds'}, 'exact preflight schema required')
     require(doc['schema'] == SCHEMA, 'unsupported preflight schema')
     require(type(doc['timeout_seconds']) is int and 1 <= doc['timeout_seconds'] <= 300, 'bounded timeout required')
     require(isinstance(doc['required_environment'], dict) and all(
         isinstance(k, str) and re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*', k) and isinstance(v, str) and v
         for k, v in doc['required_environment'].items()), 'explicit environment values required')
     runtime_paths(doc)
+    files = doc.get('required_files', [])
+    require(isinstance(files, list), 'required_files must be a list')
+    seen = set()
+    for item in files:
+        require(isinstance(item, dict) and set(item) == {'path', 'sha256'}, 'exact required file pin expected')
+        canonical_runtime_path(item['path'])
+        require(isinstance(item['sha256'], str) and re.fullmatch('[a-f0-9]{64}', item['sha256']),
+                'required file SHA256 must be lowercase hex')
+        require(item['path'] not in seen, 'duplicate required file')
+        seen.add(item['path'])
     require(isinstance(doc['interpreters'], list) and doc['interpreters'], 'interpreter checks required')
     names = set()
     for item in doc['interpreters']:
@@ -112,6 +122,19 @@ def execute(config, output):
     output.mkdir(exist_ok=False)
     checks = [{'environment': key, 'ok': os.environ.get(key) == value}
               for key, value in sorted(doc['required_environment'].items())]
+    for item in doc.get('required_files', []):
+        check = {'required_file': item['path'], 'expected_sha256': item['sha256'], 'ok': False}
+        try:
+            require(Path(item['path']).is_file(), 'required dependency is not a regular file')
+            checksum = hashlib.sha256()
+            with Path(item['path']).open('rb') as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b''):
+                    checksum.update(chunk)
+            check['actual_sha256'] = checksum.hexdigest()
+            check['ok'] = check['actual_sha256'] == item['sha256']
+        except (OSError, ValueError) as exc:
+            check['error_type'] = type(exc).__name__
+        checks.append(check)
     if all(check['ok'] for check in checks):
         for spec in doc['interpreters']:
             try:

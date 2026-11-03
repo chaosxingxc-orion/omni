@@ -149,7 +149,17 @@ def validate_ready(source, ready):
     actual = [(c['interpreter'], c.get('configured_python')) for c in checks if 'interpreter' in c]
     expected = [(i['name'], i['python']) for i in config['interpreters']]
     require(actual == expected, 'preflight interpreter evidence differs')
-    return config, output_mount, [pin(ready), pin(result_path), pin(config_path), pin(script)]
+    file_inputs = []
+    for required in config.get('required_files', []):
+        host, mount = host_path(source, required['path'])
+        require(mount != output_mount and mount['readonly'],
+                'required file must belong to a read-only dependency mount')
+        require(host.resolve().is_relative_to(Path(mount['source']).resolve()),
+                'required file escapes dependency mount')
+        require(host.is_file() and sha(host) == required['sha256'],
+                'required dependency file absent or changed: ' + required['path'])
+        file_inputs.append(pin(host))
+    return config, output_mount, [pin(ready), pin(result_path), pin(config_path), pin(script), *file_inputs]
 
 
 def completed_source(source):

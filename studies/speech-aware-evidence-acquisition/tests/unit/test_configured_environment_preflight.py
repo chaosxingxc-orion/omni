@@ -59,6 +59,37 @@ class EnvironmentPreflightTests(unittest.TestCase):
         self.doc['interpreters'][0]['python'] = str(self.root / 'missing-python')
         self.assert_failed()
 
+    def test_required_file_checks_actual_bytes(self):
+        source = self.root / 'source.json'
+        source.write_bytes(b'frozen knowledge')
+        self.doc['required_files'] = [{'path': str(source), 'sha256': m.hashlib.sha256(source.read_bytes()).hexdigest()}]
+        result = self.execute()
+        self.assertTrue(result['ok'])
+        self.assertEqual(result['checks'][0]['actual_sha256'], self.doc['required_files'][0]['sha256'])
+
+    def test_missing_required_file_blocks_imports_and_ready(self):
+        self.doc['required_files'] = [{'path': str(self.root / 'absent'), 'sha256': 'a' * 64}]
+        with patch.object(m.subprocess, 'run') as run:
+            self.assert_failed()
+            run.assert_not_called()
+
+    def test_changed_required_file_blocks_ready(self):
+        source = self.root / 'changed'
+        source.write_bytes(b'changed')
+        self.doc['required_files'] = [{'path': str(source), 'sha256': 'a' * 64}]
+        self.assert_failed()
+
+    def test_invalid_required_file_declarations(self):
+        valid = {'path': str(self.root / 'source'), 'sha256': 'a' * 64}
+        for files in ([valid, valid], [{'path': 'relative', 'sha256': 'a' * 64}],
+                      [{'path': '/tmp/../source', 'sha256': 'a' * 64}],
+                      [{'path': '/source', 'sha256': 'A' * 64}], {'path': '/source'}):
+            with self.subTest(files=files):
+                self.doc['required_files'] = files
+                with self.assertRaises(ValueError):
+                    self.execute()
+                self.assertFalse(self.output.exists())
+
     def test_missing_module(self):
         self.doc['interpreters'][0]['imports'] = ['saea_nonexistent_dependency_for_test']
         self.assert_failed()

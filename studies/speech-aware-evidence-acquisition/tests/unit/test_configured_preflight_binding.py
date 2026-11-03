@@ -72,6 +72,50 @@ class BindingTests(unittest.TestCase):
             self.assertEqual(result['state'], 'unresolved-launch-intent')
             execute.assert_called_once_with(self.successor_path, 'launch')
 
+    def prepare_required_file(self, *, readonly=True, mounted=True):
+        dependency = self.root / 'knowledge'
+        dependency.mkdir()
+        source_file = dependency / 'source.json'
+        source_file.write_text('{"knowledge": "frozen"}')
+        if mounted:
+            mount = {'source': str(dependency), 'target': str(dependency), 'readonly': readonly}
+            self.source['mounts'].append(mount)
+            self.successor['mounts'].append(copy.deepcopy(mount))
+        config = json.loads(self.config.read_text())
+        config['required_files'] = [m.pin(source_file)]
+        self.config.write_text(json.dumps(config))
+        m.probe.execute(self.config, self.out / 'with-files')
+        self.ready = self.out / 'with-files/ready.json'
+        self.source['argv'][-1] = '/preflight/with-files'
+        self.source['required_inputs'] = [m.pin(self.config)]
+        self.successor['required_inputs'] = [m.pin(self.ready)]
+        return source_file
+
+    def test_required_file_bound_and_change_after_binding_rejected(self):
+        source_file = self.prepare_required_file()
+        binding = self.bind()
+        self.assertIn(m.pin(source_file), binding['inputs'])
+        m.verify(self.binding, self.successor_path)
+        source_file.write_text('changed after successful preflight')
+        with self.assertRaisesRegex(ValueError, 'absent or changed'):
+            m.verify(self.binding, self.successor_path)
+
+    def test_required_file_change_between_probe_and_binding_rejected(self):
+        source_file = self.prepare_required_file()
+        source_file.write_text('changed before binding')
+        with self.assertRaisesRegex(ValueError, 'dependency file absent or changed'):
+            self.bind()
+
+    def test_required_file_must_be_mounted_readonly(self):
+        self.prepare_required_file(readonly=False)
+        with self.assertRaisesRegex(ValueError, 'read-only dependency'):
+            self.bind()
+
+    def test_required_file_must_be_explicitly_mounted(self):
+        self.prepare_required_file(mounted=False)
+        with self.assertRaisesRegex(ValueError, 'explicitly mounted'):
+            self.bind()
+
     def test_environment_mismatch(self):
         self.successor['environment']['PYTHONPATH'] = '/other'
         with self.assertRaisesRegex(ValueError, 'environment drift'):
