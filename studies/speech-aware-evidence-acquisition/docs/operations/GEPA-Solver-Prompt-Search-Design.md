@@ -141,3 +141,9 @@
 代码审查确认已有 `roles.solver.template_variants` → Flight material builder → runner →原生语音请求链，可以保留同次P状态和知识供给，仅替换受验Solver模板。原生history中的control是完整框架消息JSON envelope，不能直接替换成候选指令。候选应经 `executable_template` 与现有模板渲染链接入，保留原生FIT和完整成本。
 
 跨动态GEPA阶段复用封存P仍缺受验导入入口；`NativeContactReplay`是同请求恢复机制，不能通过放宽请求匹配把新候选伪装成旧调用。下一功能切片是候选模板发布/绑定和封存P导入，再接动态阶段；静态template arm本身不等于GEPA搜索完成。
+
+### 候选模板发布接口已实现
+
+`rails/gepa_prompt_material.py::publish_template`复用候选重放校验，绑定外部contract、父版本、原始变异响应及text tokenizer身份，发布按内容摘要命名的模板。原子发布拒绝冲突，精确重入复用已有字节，拒绝符号链接重定向；输出直接匹配原生`instruction_template`的`relpath/sha256`字段，另报模板token数。
+
+81项固定镜像回归通过（2.43秒），涵盖真实Solver种子逐字还原、派生区块与来源、原生template-variant解析器、旧Flight模板读取。初次测试快照缺只读挂载点与依赖，修正隔离测试快照后通过，没有模型调用。该接口未部署活动推理树；不代替Flight注册、完整请求FIT、封存P导入或真实GEPA搜索。
