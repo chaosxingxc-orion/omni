@@ -9,10 +9,13 @@ Queue file:
      {"id": ..., "kind": ..., "cmd": [argv...], "cwd": ..., "log": ..., "done_marker": "<regex>", "fail_marker": "<regex>",
       "timeout_s": N, "requires_cards_free": true|false, "on_fail": "continue"|"stop",
       optional: "cards_policy": "all_free"|"no_other", "wait_for_final": "<chain-status.json>", "enabled": false,
-                "env": {"K": "V"}}]}
+                "env": {"K": "V"}, "depends_on": ["successful-job-id"]}]}
   "{queue_dir}" in cmd, cwd, log and env values is replaced by the queue directory.
 
-Behaviour (one job at a time, in file order):
+Behaviour (one job at a time, in dependency-ready file order):
+  * depends_on names jobs in this queue that must finish successfully. Cycles and unknown IDs are rejected before
+    execution. A blocked branch does not prevent independent ready jobs; failed/disabled predecessors block descendants.
+    This is a scheduling dependency, not proof of scientific validity: commands must still verify pinned artifacts.
   * each job is its own detached process (setsid, stdin /dev/null, stdout+stderr appended to its log), so the runner dying
     never kills a job; the runner polls the log for the done/fail marker and the job's liveness;
   * verdict: fail marker -> failed (wins); else done marker -> done; else process gone: exit 0 with no done_marker
@@ -170,6 +173,21 @@ def load_queue(path, qdir):
         jobs.append(j)
     if not jobs:
         raise QueueError("queue has no jobs")
+    dependencies = {}
+    for job in jobs:
+        deps = job.get("depends_on", [])
+        if (not isinstance(deps, list) or not all(isinstance(dep, str) for dep in deps)
+                or len(set(deps)) != len(deps) or not set(deps) <= seen):
+            raise QueueError("%s: depends_on must contain unique known job IDs" % job["id"])
+        dependencies[job["id"]] = set(deps)
+    remaining = dict(dependencies)
+    resolved = set()
+    while remaining:
+        ready = {jid for jid, deps in remaining.items() if deps <= resolved}
+        if not ready:
+            raise QueueError("dependency cycle in queue: %s" % sorted(remaining))
+        resolved.update(ready)
+        remaining = {jid: deps for jid, deps in remaining.items() if jid not in ready}
     return {"id": str(doc.get("id") or "queue"), "note": doc.get("note", ""), "jobs": jobs}
 
 
@@ -429,6 +447,9 @@ class Runner:
             record = self.state["jobs"][j["id"]]
             st = record["status"]
             if st in ("pending", "waiting", "running"):
+                deps = j.get("depends_on", [])
+                if any(self.state["jobs"][dep]["status"] != "done" for dep in deps):
+                    continue
                 # A resumed process must be judged against the command and markers it actually
                 # started with, even when the operator has edited the queue in the meantime.
                 return record.get("job_spec", j) if st == "running" else j
@@ -692,11 +713,13 @@ class Runner:
                 stopped_by = job["id"]
                 break
         failed = [i for i, r in self.state["jobs"].items() if r["status"] == "failed"]
+        blocked = [j["id"] for j in self.queue["jobs"]
+                   if self.state["jobs"][j["id"]]["status"] in ("pending", "waiting")]
         if stopped_by:
             self.state.update(state="stopped", reason="job %s failed with on_fail=stop; later jobs stay pending" % stopped_by)
             code = 2
-        elif failed:
-            self.state.update(state="failed", reason="finished with failed jobs: %s" % failed)
+        elif failed or blocked:
+            self.state.update(state="failed", reason="failed jobs: %s; dependency-blocked jobs: %s" % (failed, blocked))
             code = 4
         else:
             self.state.update(state="done", reason=None)
@@ -717,6 +740,8 @@ def dry_run(queue_path, qdir):
                 if j.get("requires_cards_free") else "no card gate")
         if j.get("wait_for_final"):
             gate = "WAIT for final %s, then %s" % (j["wait_for_final"], gate)
+        if j.get("depends_on"):
+            gate = "WAIT for successful dependencies %s, then %s" % (j["depends_on"], gate)
         print("[%d/%d] %s  kind=%s  %s  on_fail=%s  timeout_s=%s%s" % (
             i, len(q["jobs"]), j["id"], j.get("kind"), gate, j.get("on_fail", "continue"), j["timeout_s"],
             "  DISABLED" if j.get("enabled", True) is False else ""))

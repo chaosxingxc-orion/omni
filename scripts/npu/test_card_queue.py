@@ -97,6 +97,39 @@ class Base(unittest.TestCase):
 
 
 class OrderAndVerdictTests(Base):
+    def test_dependencies_run_parent_before_child_without_file_order_constraint(self):
+        self.write_queue(self.job("child", depends_on=["parent"]),
+                         self.job("independent"), self.job("parent"))
+        self.assertEqual(self.runner().run(), 0)
+        spans = self.spans()
+        self.assertLessEqual(spans["independent"]["end"], spans["parent"]["start"])
+        self.assertLessEqual(spans["parent"]["end"], spans["child"]["start"])
+
+    def test_failed_dependency_blocks_descendants_but_not_independent_branch(self):
+        self.write_queue(self.job("grandchild", depends_on=["child"]),
+                         self.job("child", depends_on=["bad"]),
+                         self.job("bad", code=1, lines=("BOOM",)), self.job("independent"))
+        self.assertEqual(self.runner().run(), 4)
+        self.assertEqual(set(self.spans()), {"bad", "independent"})
+        self.assertEqual(self.state()["jobs"]["child"]["status"], "pending")
+        self.assertIn("dependency-blocked", self.state()["reason"])
+
+    def test_dependency_validation_rejects_cycles_unknown_and_duplicate_edges(self):
+        for jobs in ((self.job("a", depends_on=["a"]),),
+                     (self.job("a", depends_on=["b"]), self.job("b", depends_on=["a"])),
+                     (self.job("a", depends_on=["missing"]),),
+                     (self.job("a", depends_on=["b", "b"]), self.job("b"))):
+            with self.subTest(jobs=jobs):
+                self.write_queue(*jobs)
+                with self.assertRaises(cq.QueueError):
+                    cq.load_queue(self.queue_file, self.qdir)
+
+    def test_disabled_predecessor_is_not_success(self):
+        self.write_queue(self.job("disabled", enabled=False),
+                         self.job("child", depends_on=["disabled"]), self.job("independent"))
+        self.assertEqual(self.runner().run(), 4)
+        self.assertEqual(set(self.spans()), {"independent"})
+
     def test_back_to_back_in_file_order(self):
         self.write_queue(self.job("j1"), self.job("j2"), self.job("j3"))
         self.assertEqual(self.runner().run(), 0)
