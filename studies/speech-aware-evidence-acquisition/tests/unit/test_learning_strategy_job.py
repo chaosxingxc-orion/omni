@@ -133,3 +133,43 @@ def test_json_command_refuses_ambiguous_config(tmp_path,fault):
     else:config['schema']='unknown'
     path=tmp_path/'command.json';path.write_bytes(job.raw(config))
     with pytest.raises(ValueError):job.execute_config(path)
+
+
+def test_json_object_request_format_is_bound_without_changing_resident(tmp_path, monkeypatch):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    model_path = repo/'configs/model/frozen-model.json'
+    original_model = model_path.read_bytes()
+    original_identity = (tmp_path/'identity.json').read_bytes()
+    args['response_format'] = {'type': 'json_object'}
+    complete = job.prepare(repo, data, **args)
+    verified, reg, _ = job.verify_job(repo, data, out)
+    assert complete == verified
+    assert complete['response_format'] == reg['decoding_params']['response_format'] == {'type': 'json_object'}
+    assert model_path.read_bytes() == original_model
+    assert (tmp_path/'identity.json').read_bytes() == original_identity
+    # Dropping the declaration cannot silently retain a structured-output job.
+    del complete['response_format']
+    (out/'complete.json').write_bytes(job.raw(complete))
+    with pytest.raises(ValueError, match='request decoding'):
+        job.verify_job(repo, data, out)
+
+
+@pytest.mark.parametrize('value', [False, [], {}, {'type': 'text'},
+    {'type': 'json_schema', 'json_schema': {'schema': {}}},
+    {'type': 'json_object', 'extra': True}])
+def test_bad_response_format_rejected_before_artifacts(tmp_path, monkeypatch, value):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    with pytest.raises(ValueError, match='exact json_object'):
+        job.prepare(repo, data, **args, response_format=value)
+    assert not out.exists()
+
+
+def test_json_command_passes_optional_response_format(tmp_path, monkeypatch):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    args.update(max_context_bytes=2000000, response_format={'type': 'json_object'})
+    config = {'schema': job.CONFIG_SCHEMA, 'mode': 'prepare', 'repo': str(repo), 'data': str(data),
+        'arguments': {k: str(v) if isinstance(v, Path) else v for k, v in args.items()}}
+    path = tmp_path/'command.json'; path.write_bytes(job.raw(config))
+    result = job.execute_config(path)
+    assert result['response_format'] == {'type': 'json_object'}
+    assert job.verify_job(repo, data, out)[1]['decoding_params']['response_format'] == {'type': 'json_object'}

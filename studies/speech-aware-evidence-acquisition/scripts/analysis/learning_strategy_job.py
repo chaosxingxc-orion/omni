@@ -41,7 +41,7 @@ def initial_measurement(method, document, count):
 
 def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpath,
             runtime_identity, bounds, out, job_name, run_id, service_session,
-            planned_gpu_hours, max_context_bytes=2000000):
+            planned_gpu_hours, max_context_bytes=2000000, response_format=None):
     assert_execution_environment()
     require = ace.require
     method, selected_runtime = strategy_modules(strategy)
@@ -55,7 +55,12 @@ def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpa
     source = selected_runtime.load_finalized_shards(spec,data_root=data,count_tokens=count,tokenizer_identity=tokenizer)
     model = source['model_id']
     require(base.deployment_identity(repo,model,identity) == identity, 'exact learning deployment identity required')
-    config = {'model_id':model,'decoding_params':base.learning_decoding(read(repo/f'configs/model/{model}.json')),
+    decoding = base.learning_decoding(read(repo/f'configs/model/{model}.json'))
+    if response_format is not None:
+        require(response_format == {'type': 'json_object'},
+                'only exact json_object response_format is supported')
+        decoding['response_format'] = dict(response_format)
+    config = {'model_id':model,'decoding_params':decoding,
         'max_context_bytes':max_context_bytes,'runtime_identity_sha256':sha(identity)}
     document = method.build_input(source,source['batch']['parent'],
         learning_config_sha256=sha(learning_configuration(config)),**bounds)
@@ -93,6 +98,8 @@ def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpa
         'candidate_deployment_accepted':False,'readiness':'prepared-not-admitted',
         'phase_readiness':{'first':'AWAITING_NATIVE_FIT','later':'AWAITING_OBSERVED_PREDECESSOR'},
         'new_model_calls':0,'new_tokenizer_calls':0}
+    if response_format is not None:
+        complete['response_format'] = dict(response_format)
     publish_new(out/'complete.json',raw(complete))
     verify_job(repo,data,out)
     return complete
@@ -109,6 +116,13 @@ def verify_job(repo,data,job):
     reg, roster, identity = [read(job/n) for n in ('registration.json','construction-roster.json','runtime-identity.json')]
     require(base.deployment_identity(repo,reg['model_id'],identity) == identity
         and sha(identity) == reg['runtime_identity_sha256'] == complete['runtime_identity_sha256'], 'strategy deployment identity differs')
+    expected_decoding = base.learning_decoding(read(repo/f"configs/model/{reg['model_id']}.json"))
+    if 'response_format' in complete:
+        require(complete['response_format'] == {'type': 'json_object'},
+                'only exact json_object response_format is supported')
+        expected_decoding['response_format'] = dict(complete['response_format'])
+    require(reg['decoding_params'] == expected_decoding,
+            'strategy request decoding differs from configured response format')
     plan = ExecutionPlan(**{**reg['plan'],'protocol_hash':'0'*64}).validate()
     loaded,_ = selected_runtime.load_runtime_source({'tfgrpo_learning_registration':reg,'prepared_training_feedback':{
         'schema':selected_runtime.SOURCE_SCHEMA,'source':pin(job/'source.json',data,'data')}},plan=plan,
@@ -162,7 +176,12 @@ def execute_config(path):
         'verify':{'job'}, 'register':{'job'}, 'admit':{'job'},
         'run':{'job','out','after','predecessor_run'},
     }
-    require(mode in fields and isinstance(args,dict) and set(args)==fields[mode],
+    # ``response_format`` was added as an optional configuration input; old
+    # command files remain valid and therefore use the exact legacy field set.
+    allowed_prepare = fields['prepare'] | {'response_format'}
+    require(mode in fields and isinstance(args,dict)
+        and (set(args) == fields[mode] or (mode == 'prepare' and set(args) <= allowed_prepare
+                                           and fields['prepare'] <= set(args))),
             'exact implemented learning strategy mode arguments required')
     paths={'repo','data','source_spec','source_roster','runtime_identity','job','out','after'}
     def path_value(value):
