@@ -1,0 +1,36 @@
+{
+  "admitted_level": 48,
+  "basis": "Independent user-authorized TFRL exploration lane; TP2 capacity is to be verified, no synthetic efficiency claim.",
+  "bind_host": "127.0.0.1",
+  "busy_threshold_mib": 4096,
+  "data_mount": "/mnt/cephfs/xingchao/omni",
+  "gpu_memory_utilization": 0.92,
+  "host": "A800I-03",
+  "host_card_count": 8,
+  "host_cpu_count": 256,
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "instances": [
+    {
+      "cards": [
+        4,
+        5
+      ],
+      "cpuset": "0-31",
+      "env": {
+        "HCCL_IF_BASE_PORT": "61400"
+      },
+      "name": "saea-explore-tp2-a",
+      "port": 8202
+    }
+  ],
+  "max_num_batched_tokens": 2048,
+  "max_num_seqs": 48,
+  "mm_processor_cache_type": "shm",
+  "model_fragment": "bf16-thinking-explore-a-tp2-lane-v1",
+  "model_relpath": "models/qwen3-omni-30b-a3b-thinking",
+  "namespace_policy": "shared-pid-host",
+  "profile_id": "qwen3-omni-explore-a-1xtp2-s48-ctx48k-v1",
+  "schema": "saea-deployment-profile-v1",
+  "shm_size": "16g",
+  "tensor_parallel_size": 2
+}

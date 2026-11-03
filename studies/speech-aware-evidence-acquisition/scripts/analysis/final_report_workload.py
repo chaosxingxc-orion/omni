@@ -27,6 +27,10 @@ AUTH = 'docs/decisions/2026-10-30-owner-full-test-and-first-system-gain.md'
 AUTH_SHA = 'ca1701626e9f5d5d48d39bb9fe5523f6b7c1480feb2cb16a8091957a9f83382f'
 POFF_AUTH = 'docs/decisions/Agent-Full-Test-Development-Lock.md'
 POFF_AUTH_SHA = 'f8be5615dd0befe90a97f091ee0a1553f6ea6f4926a1d8b99eb5706d4be8ebea'
+LANE_AUTH = 'docs/decisions/Resource-Partition-Full-Test.md'
+LANE_AUTH_SHA = 'ec1eaba35c633337526668a60bc928e9651ccd72519999b0b0b03b17d1ba6c34'
+LANE_PROFILE = 'qwen3-omni-fulltest-1xtp4-s128-ctx48k-v1'
+LANE_MODEL = 'bf16-thinking-fulltest-tp4-lane-v1'
 DEVELOPMENT_LOCK = 'configs/evaluation/agent-development-lock-v1.json'
 DEVELOPMENT_LOCK_SHA = '318f984210e53009f2f2aa72bab1ea8f105492da7d81ffaccc0567499c21ebd0'
 SOURCES = {
@@ -37,6 +41,7 @@ SOURCES = {
     'a0-poff': ('configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json',
                 'a3dcf828852595f68844ed6d778d5b2c6088271c8d4f83a2feb4b12b8edc15dc'),
 }
+SOURCES['a0-poff-lane'] = SOURCES['a0-poff']
 MODEL_SOURCE = 'configs/model/bf16-thinking-vllm-slurp-module-fold-b-seq4-len24k-budget3072-max4096-closemarker-port-v2.json'
 MODEL_SOURCE_SHA = '8d9b3a1d12601bb0f4abbbc3f2709e48afd561a7ccf2c6dbbffd93c9e153309d'
 ROWS = 13078
@@ -88,13 +93,15 @@ def identity(method):
 
 def authority(method):
     identity(method)
+    if method == 'a0-poff-lane':
+        return {'relpath': LANE_AUTH, 'sha256': LANE_AUTH_SHA}
     return {'relpath': POFF_AUTH, 'sha256': POFF_AUTH_SHA} if method == 'a0-poff' else {
         'relpath': AUTH, 'sha256': AUTH_SHA}
 
 
 def development_policy(repo, config, context):
     """Only the separately registered method may adopt the pinned P-off choice."""
-    if config['method'] != 'a0-poff':
+    if config['method'] not in ('a0-poff', 'a0-poff-lane'):
         if 'development_lock' in config:
             raise ValueError('historical methods cannot adopt the development lock')
         return None
@@ -106,8 +113,8 @@ def development_policy(repo, config, context):
                 'solver': {'enable_thinking': True, 'reasoning_budget_tokens': 3072,
                            'answer_reserve_tokens': 1024}}
     if (lock['thinking_policy'] != expected or lock['test_used_for_tuning'] is not False
-            or config['runtime']['model_fragment'] != lock['model_fragment']
-            or config['runtime']['profile'] != lock['deployment_profile']
+            or config['runtime']['model_fragment'] != (LANE_MODEL if config['method'] == 'a0-poff-lane' else lock['model_fragment'])
+            or config['runtime']['profile'] != (LANE_PROFILE if config['method'] == 'a0-poff-lane' else lock['deployment_profile'])
             or config['execution']['admitted_level'] != lock['per_instance_concurrency']
             or lock['cards'] != 8 or lock['instances'] != 2 or context != 49152):
         raise ValueError('frozen P-off/S3072 development policy or runtime changed')
@@ -135,7 +142,7 @@ def population(repo):
     return roster, view
 
 
-def runtime_binding(repo, binding):
+def runtime_binding(repo, binding, *, single_lane=False):
     if set(binding) != {'model_fragment', 'profile', 'service_session', 'runtime_receipt'}:
         raise ValueError('explicit runtime/model/profile/session binding required')
     for key in ('model_fragment', 'profile', 'service_session'):
@@ -166,8 +173,9 @@ def runtime_binding(repo, binding):
         raise ValueError('frozen server prompt/decoding arguments changed')
     profile = read(confined(repo, f"configs/deployment/{binding['profile']}.json"))
     if (profile['tensor_parallel_size'] != 4 or profile['max_num_seqs'] != 128
-            or profile['max_num_batched_tokens'] != 2048 or len(profile['instances']) != 2
-            or sorted(c for i in profile['instances'] for c in i['cards']) != list(range(8))):
+            or profile['max_num_batched_tokens'] != 2048 or len(profile['instances']) != (1 if single_lane else 2)
+            or sorted(c for i in profile['instances'] for c in i['cards']) != list(range(4 if single_lane else 8))
+            or (single_lane and (binding['profile'] != LANE_PROFILE or profile['instances'][0]['port'] != 8200))):
         raise ValueError('fixed eight-card two-TP4 runtime required')
     deployed = read(confined(repo, f"configs/model/{profile['model_fragment']}.json"))
     if any(deployed.get(k) != model.get(k) for k in keys) or deployed['server_args'] != model['server_args']:
@@ -238,9 +246,10 @@ def execution_binding(repo, config):
         raise ValueError('C96 cannot raise the existing deployment admission')
     from speech_aware_evidence_acquisition.core.flight.width import flight_width
     width = flight_width({**profile, 'admitted_level': 96}, 4)
-    if width != 192:
-        raise ValueError('C96 requires the declared two-instance deployment')
-    return {'admitted_level': 96, 'instances': 2, 'total_client_concurrency': width,
+    instances = 1 if config.get('method') == 'a0-poff-lane' else 2
+    if width != 96 * instances:
+        raise ValueError('C96 requires the declared instance count')
+    return {'admitted_level': 96, 'instances': instances, 'total_client_concurrency': width,
         'environment': {'SAEA_ADMITTED_LEVEL': '96'}}
 
 
@@ -264,7 +273,7 @@ def check_config(repo, config, roster):
             or not math.isfinite(budget['gpu_hours']) or budget['gpu_hours'] <= 0):
         raise ValueError('exact fallback call budget and explicit positive card-hour cap required')
     allowance(repo, config, roster)
-    model, context = runtime_binding(repo, config['runtime'])
+    model, context = runtime_binding(repo, config['runtime'], single_lane=config['method'] == 'a0-poff-lane')
     execution_binding(repo, config)
     development_policy(repo, config, context)
     if config['method'] == 'direct' and 'a0_inputs' in config:
@@ -656,7 +665,7 @@ def register(repo, data, stage_record, prepared):
         stream.write('\n## Frozen full-test ' + config['method'] + '\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| ' + ' | '.join(['---'] * 15) + ' |\n' + '\n'.join('| ' + ' | '.join(row) + ' |' for row in ledger_rows) + '\n')
         stream.flush()
         __import__('os').fsync(stream.fileno())
-    decoding = ('P-off/1024 answer; S3072/1024 answer' if config['method'] == 'a0-poff'
+    decoding = ('P-off/1024 answer; S3072/1024 answer' if config['method'] in ('a0-poff', 'a0-poff-lane')
                 else 'ordinary4096/3072 task decoding')
     publish_new(repo / 'docs/readiness' / (name + '-preregistration.md'),
         ('# Frozen full-test workload\n\nComplete13078 original TEST rows, official test scorer, no test tuning. Frozen source method and ' + decoding + '. Shared FlightRuntime only. Held until committed registration, shared admission/repin, clean preflight and original runtime lease. Preserve unresolved contacts, known responses and historical costs; no blind replay.\n').encode())

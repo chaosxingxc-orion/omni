@@ -492,3 +492,40 @@ def test_poff_registers_and_validates_shared_a0_preparation(poff_derivable, monk
     assert m.validate(repo, data, name, spec, exp, m.population(repo)[1]) == 13078
     assert verified and all(count == 13078 for _, count in verified)
     assert m.read(repo / f'configs/baseline/{name}.json')['prepared_phase_supply'] is not None
+
+
+@pytest.fixture
+def lane_configured(poff_derivable):
+    repo, data, config = poff_derivable
+    for rel in [m.LANE_AUTH, f'configs/deployment/{m.LANE_PROFILE}.json', f'configs/model/{m.LANE_MODEL}.json']:
+        target = repo / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / rel, target)
+    config['method'] = 'a0-poff-lane'
+    config['runtime'].update(model_fragment=m.LANE_MODEL, profile=m.LANE_PROFILE,
+        runtime_receipt=m.read(repo / f'configs/model/{m.LANE_MODEL}.json')['runtime_receipt'],
+        service_session='serving-fulltest-tp4-lane-v1')
+    config['allowance'] = m.create_allowance(repo, data, config['method'])['allowance']
+    return repo, data, config
+
+
+def test_lane_keeps_full_population_and_scientific_policy(lane_configured):
+    repo, data, config = lane_configured
+    base, exp, roster, view = m.derive(repo, data, config)
+    assert len(roster['items']) == len(view['items']) == 13078
+    assert base['thinking_policy'] == m.read(repo / m.DEVELOPMENT_LOCK)['thinking_policy']
+    assert m.execution_binding(repo, config)['total_client_concurrency'] == 96
+    assert m.execution_binding(repo, config)['instances'] == 1
+    assert m.identity(config['method'])[1] == 'SAEA-SLURP-A0-POFF-LANE-FULLTEST-V1'
+
+
+@pytest.mark.parametrize('fault', ['cards', 'port', 'tp', 'instances'])
+def test_lane_rejects_resource_escape(lane_configured, fault):
+    repo, data, config = lane_configured
+    rel = f'configs/deployment/{m.LANE_PROFILE}.json'; profile = m.read(repo / rel)
+    if fault == 'cards': profile['instances'][0]['cards'] = [4, 5, 6, 7]
+    elif fault == 'port': profile['instances'][0]['port'] = 8202
+    elif fault == 'tp': profile['tensor_parallel_size'] = 2
+    else: profile['instances'].append(copy.deepcopy(profile['instances'][0]))
+    put(repo, rel, profile)
+    with pytest.raises(ValueError): m.derive(repo, data, config)
