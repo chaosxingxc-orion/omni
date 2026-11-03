@@ -224,3 +224,18 @@ def test_each_instance_needs_its_own_id(world, tmp_path):
     argv[argv.index("tp2-b=" + str(PID_B))] = f"tp2-a={PID_B}"
     with pytest.raises(module.ProducerError):
         module.main(argv)
+
+
+def test_producer_records_verified_physical_devices_without_ordinal_override(monkeypatch):
+    m = _module()
+    seen = []
+    monkeypatch.setattr(m, 'container_device_ids', lambda root, pid: seen.append((root, pid)) or [4, 5])
+    obs = {'pid': 17, 'proc_root': '/proc-fixture', 'environ': {}}
+    deployment = {'--host': '127.0.0.1', '--port': '8202', '--tensor-parallel-size': '2',
+        '--max-num-seqs': '48', '--gpu-memory-utilization': '0.92'}
+    result = m.deployment_of(obs, 'explore-a', deployment)
+    assert result['device_ids'] == [4, 5]
+    assert result['device_binding'] == 'container-device-nodes'
+    assert seen == [(Path('/proc-fixture'), 17)]
+    deployment['--tensor-parallel-size'] = '4'
+    with pytest.raises(m.ProducerError, match='count differs'): m.deployment_of(obs, 'explore-a', deployment)

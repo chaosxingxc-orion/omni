@@ -82,6 +82,7 @@ from speech_aware_evidence_acquisition.contracts.gate_runtime_vllm import (  # n
 from speech_aware_evidence_acquisition.core.session import SessionError  # noqa: E402
 from speech_aware_evidence_acquisition.core.session.vllm_identity import (  # noqa: E402
     current_hostname,
+    container_device_ids,
     verify_vllm_process_identity,
 )
 
@@ -147,6 +148,7 @@ def observe_process(proc_root: Path, pid: int) -> dict[str, object]:
         "cwd": _readlink(process / "cwd"),
         "exe": _readlink(process / "exe"),
         "libpython": libraries,
+        "proc_root": str(proc_root),
     }
 
 
@@ -174,20 +176,22 @@ def deployment_of(observation: dict[str, object], instance_id: str, deployment: 
     """One instance's recorded deployment facts: endpoint, device group, width and memory budget."""
 
     devices_text = observation["environ"].get(DEVICE_ENV_KEY)
+    binding = {}
     if not devices_text:
-        raise ProducerError(
-            f"pid {observation['pid']} does not set {DEVICE_ENV_KEY}; an instance's device group must be explicit, "
-            "never inherited from whatever the driver happens to expose"
-        )
-    try:
-        devices = [int(part) for part in devices_text.split(",") if part != ""]
-    except ValueError as error:
-        raise ProducerError(f"pid {observation['pid']} has an unparseable {DEVICE_ENV_KEY}={devices_text!r}") from error
-    if device_env_value(devices) != devices_text:
-        raise ProducerError(
-            f"pid {observation['pid']} spells {DEVICE_ENV_KEY}={devices_text!r} in a form this study does not pin "
-            f"(expected {device_env_value(devices)!r})"
-        )
+        try:
+            devices = container_device_ids(Path(observation['proc_root']), observation['pid'])
+        except (SessionError, KeyError) as error:
+            raise ProducerError(f"pid {observation['pid']} has neither {DEVICE_ENV_KEY} nor verified physical device nodes: {error}") from error
+        if len(devices) != int(deployment['--tensor-parallel-size']):
+            raise ProducerError('physical device count differs from tensor parallel size')
+        binding = {'device_binding': 'container-device-nodes'}
+    else:
+        try:
+            devices = [int(part) for part in devices_text.split(',') if part != '']
+        except ValueError as error:
+            raise ProducerError(f"pid {observation['pid']} has an unparseable {DEVICE_ENV_KEY}={devices_text!r}") from error
+        if device_env_value(devices) != devices_text:
+            raise ProducerError(f"pid {observation['pid']} has noncanonical {DEVICE_ENV_KEY}={devices_text!r}")
     batched = deployment.get("--max-num-batched-tokens")
     mm_cache = deployment.get("--mm-processor-cache-type")
     extra = {} if mm_cache is None else {"mm_processor_cache_type": mm_cache}  # optional: absent = engine default
@@ -196,6 +200,7 @@ def deployment_of(observation: dict[str, object], instance_id: str, deployment: 
         "host": deployment["--host"],
         "port": int(deployment["--port"]),
         "device_ids": devices,
+        **binding,
         "tensor_parallel_size": int(deployment["--tensor-parallel-size"]),
         "max_num_seqs": int(deployment["--max-num-seqs"]),
         "gpu_memory_utilization": float(deployment["--gpu-memory-utilization"]),
