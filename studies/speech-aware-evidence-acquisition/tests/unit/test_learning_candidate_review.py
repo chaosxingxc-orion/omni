@@ -79,3 +79,80 @@ def test_export_rejects_before_publishing_on_custody_failure(packet, monkeypatch
         m.export_review(repo, data, candidate_path=data/'candidate.json',
                         manifest_path=data/'manifest.json', out=out)
     assert not out.exists()
+
+
+def annotated_packet(packet, operation='always_drop'):
+    from speech_aware_evidence_acquisition.rails.slot_rule_review import SCHEMA
+    from speech_aware_evidence_acquisition.rails.slot_rule_admission import CANDIDATE_SCHEMA
+    repo, data, candidate, document, calls = packet
+    group = document['groups'][0]
+    group['evidence'] = {'reference': {'scenario': 'news', 'action': 'query',
+        'entities': [{'type': 'news_topic', 'filler': 'topic'}]}}
+    key = next(iter(candidate['items']))
+    annotations = {'schema': SCHEMA, 'candidate': m.pin(data, data/'candidate.json'),
+        'document_sha256': m.sha(document), 'items': {key: {
+            'content_sha256': m.sha(candidate['items'][key]), 'rule': {
+                'schema': CANDIDATE_SCHEMA, 'intent_scope': [{'scenario': 'news', 'action': 'query'}],
+                'condition': None, 'operation': operation, 'slot': 'news_topic',
+                'support_refs': [group['query_id']]}}}}
+    put(data, 'rules.json', annotations)
+    return annotations, key
+
+
+@pytest.mark.parametrize('operation,status', [('always_drop', 'rejected'),
+                                              ('always_require', 'static_consistency_only')])
+def test_optional_static_annotations_never_change_release_or_candidate(packet, operation, status):
+    repo, data, candidate, document, calls = packet
+    annotations, key = annotated_packet(packet, operation)
+    original = (data/'candidate.json').read_bytes()
+    out = data/'work/codex/static-review'
+    receipt = m.export_review(repo, data, candidate_path=data/'candidate.json',
+        manifest_path=data/'manifest.json', out=out, rules_path=data/'rules.json')
+    assert len(calls) == 1
+    static = json.loads((out/'slot-rules.static.json').read_bytes())
+    assert static['items'][key]['static_result']['status'] == status
+    assert static['candidate'] == annotations['candidate']
+    assert static['document_sha256'] == m.sha(document)
+    assert static['evidence_pool']['rows'][0]['source_sha256'] == m.sha(document['groups'][0])
+    assert not static['items'][key]['semantic_translation_verified']
+    assert not static['semantic_support_verified'] and not static['candidate_deployment_accepted']
+    assert (data/'candidate.json').read_bytes() == original
+    assert 'slot-rules.static.json' in receipt['artifacts']
+    review = json.loads((out/'review.pending.json').read_bytes())
+    manifest = json.loads((out/'release.pending.json').read_bytes())
+    assert review['decision'] == 'pending' and manifest['review'] is None
+    with pytest.raises(ValueError, match='independent development review'):
+        m.release.verify_review(review, release=manifest, candidate=candidate, document=document)
+
+
+@pytest.mark.parametrize('fault', ['candidate', 'document', 'content', 'item', 'test', 'foreign_ref', 'prose'])
+def test_static_annotations_cannot_substitute_items_or_train_evidence(packet, fault):
+    repo, data, candidate, document, calls = packet
+    annotations, key = annotated_packet(packet)
+    if fault == 'candidate': annotations['candidate']['sha256'] = '0'*64
+    elif fault == 'document': annotations['document_sha256'] = '0'*64
+    elif fault == 'content': annotations['items'][key]['content_sha256'] = '0'*64
+    elif fault == 'item': annotations['items']['foreign'] = annotations['items'].pop(key)
+    elif fault == 'test':
+        document['groups'][0]['query_id'] = 'slurp:test:0'
+        annotations['document_sha256'] = m.sha(document)
+    elif fault == 'foreign_ref': annotations['items'][key]['rule']['support_refs'] = ['slurp:train:foreign']
+    else: annotations['items'][key]['rule'] = 'Always drop news_topic'
+    put(data, 'rules.json', annotations)
+    out = data/'work/codex/refused'
+    with pytest.raises(ValueError):
+        m.export_review(repo, data, candidate_path=data/'candidate.json',
+            manifest_path=data/'manifest.json', out=out, rules_path=data/'rules.json')
+    assert not out.exists()
+
+
+def test_static_annotations_do_not_bypass_native_verifier(packet, monkeypatch):
+    repo, data, candidate, document, calls = packet
+    annotated_packet(packet)
+    def refuse(**kwargs): raise ValueError('native source mismatch')
+    monkeypatch.setattr(m.release, 'verify_ace_source', refuse)
+    out = data/'work/codex/refused'
+    with pytest.raises(ValueError, match='native source'):
+        m.export_review(repo, data, candidate_path=data/'candidate.json',
+            manifest_path=data/'manifest.json', out=out, rules_path=data/'rules.json')
+    assert not out.exists()

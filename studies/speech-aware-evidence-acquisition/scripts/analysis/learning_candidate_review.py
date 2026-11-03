@@ -23,7 +23,7 @@ def pin(root, path):
     return {'relpath': str(path.relative_to(root)), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
-def export_review(repo, data, *, candidate_path, manifest_path, out):
+def export_review(repo, data, *, candidate_path, manifest_path, out, rules_path=None):
     """Create an explicitly pending review; original source verifier remains mandatory."""
     repo, data, out = Path(repo).resolve(), Path(data).resolve(), Path(out)
     release.require(not out.exists() and out.resolve().is_relative_to(data / 'work/codex'),
@@ -65,13 +65,26 @@ def export_review(repo, data, *, candidate_path, manifest_path, out):
                 'cumulative_known_usage': candidate['cumulative_known_usage'],
                 'native_source_verified': True, 'semantic_support_verified': False,
                 'h2_labels_included': False, 'new_model_calls': 0}
+    static_rules = None
+    rules_pin = None
+    if rules_path is not None:
+        from speech_aware_evidence_acquisition.rails.slot_rule_review import review_annotations
+        rules_pin = pin(data, rules_path)
+        _, annotations = release.read_pin(data, rules_pin)
+        static_rules = review_annotations(annotations, candidate=candidate,
+            candidate_pin=cp, document=document, source_manifest=mp)
+        static_rules['annotations'] = rules_pin
     # Recheck the original bytes before publishing any files.
+    if rules_pin is not None:
+        release.read_pin(data, rules_pin)
     for root, record in [(data, cp), (data, mp), (repo, roster_pin), (repo, dataset_pin)]:
         release.read_pin(root, record)
     out.mkdir(parents=True)
     for name, doc in [('evidence.json', evidence), ('review.pending.json', review),
                       ('release.pending.json', manifest)]:
         publish_new(out / name, canonical(doc))
+    if static_rules is not None:
+        publish_new(out / 'slot-rules.static.json', canonical(static_rules))
     receipt = {'schema': SCHEMA, 'status': 'pending-independent-semantic-review',
                'strategy': strategy, 'items': len(candidate['items']), 'groups': len(document['groups']),
                'candidate': cp, 'source_manifest': mp,
@@ -82,6 +95,8 @@ def export_review(repo, data, *, candidate_path, manifest_path, out):
                'limitations': ['Export does not grant evaluation or deployment authority.',
                                'Evaluation isolation is rechecked by the complete release verifier before use.',
                                'TRAIN text is private; do not publish this packet.']}
+    if static_rules is not None:
+        receipt['artifacts']['slot-rules.static.json'] = pin(data, out / 'slot-rules.static.json')
     publish_new(out / 'complete.json', canonical(receipt))
     return receipt
 
@@ -90,6 +105,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('repo', 'data', 'candidate', 'manifest', 'out'):
         parser.add_argument('--' + name, type=Path, required=True)
+    parser.add_argument('--rules', type=Path, help='Optional explicit, pinned item annotations; no prose inference')
     args = parser.parse_args()
     print(json.dumps(export_review(args.repo, args.data, candidate_path=args.candidate,
-                                  manifest_path=args.manifest, out=args.out), sort_keys=True))
+                                  manifest_path=args.manifest, out=args.out, rules_path=args.rules), sort_keys=True))
