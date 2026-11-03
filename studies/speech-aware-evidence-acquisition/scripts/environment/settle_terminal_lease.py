@@ -8,7 +8,7 @@ import subprocess
 import sys
 
 
-def settle(repo, data, out, container, expected_run, expected_attempt, expected_pid, plan, plan_sha256, arm='prepared-context-text'):
+def settle(repo, data, out, container, expected_run, expected_attempt, expected_pid, plan, plan_sha256, arm='prepared-context-text', runtime_receipt=None, runtime_receipt_sha256=None):
     sys.path[:0]=[str(repo/'src'),str(repo/'scripts/analysis')]
     from tfgrpo_recovery_queue import exclusive,quiescence
     from speech_aware_evidence_acquisition.contracts import ExecutionPlan
@@ -39,7 +39,26 @@ def settle(repo, data, out, container, expected_run, expected_attempt, expected_
             request=read(p)['request_id'];contact=journal.inspect(request)
             if contact['state']!='observed':raise ValueError('unknown request; no lease settlement')
             observed.append(request)
-        quiet=quiescence([8200,8201])
+        if runtime_receipt is None:
+            if runtime_receipt_sha256 is not None:raise ValueError('receipt path required with digest')
+            quiet=quiescence([8200,8201])
+        else:
+            receipt_blob=Path(runtime_receipt).read_bytes()
+            if hashlib.sha256(receipt_blob).hexdigest()!=runtime_receipt_sha256:
+                raise ValueError('runtime receipt changed')
+            session_id=record.get('session_id')
+            if not isinstance(session_id,str) or Path(session_id).name!=session_id or session_id in ('.','..'):
+                raise ValueError('lease must identify a confined resident session')
+            session=read(data/'serving'/session_id/'session.json')
+            if (session.get('session_id')!=session_id
+                    or session.get('identity',{}).get('runtime_receipt_sha256')!=runtime_receipt_sha256):
+                raise ValueError('lease resident differs from pinned deployment')
+            receipt=json.loads(receipt_blob)
+            instances=receipt['deployment']['instances']
+            if session.get('deployment_instance_ids')!=[item['instance_id'] for item in instances]:
+                raise ValueError('resident deployment membership differs')
+            from transition_serving_budget import quiescence as deployment_quiescence
+            quiet=deployment_quiescence(instances)
         if lease.read_bytes()!=blob:raise ValueError('lease changed')
         out.mkdir(parents=True)
         publish_new(out/'reconciliation.json',raw({'container':doc['Id'],'state':doc['State'],
@@ -61,4 +80,6 @@ if __name__=='__main__':
     p.add_argument('--expected-pid',type=int,required=True)
     p.add_argument('--plan-sha256',required=True)
     p.add_argument('--arm',default='prepared-context-text')
+    p.add_argument('--runtime-receipt',type=Path)
+    p.add_argument('--runtime-receipt-sha256')
     print(json.dumps(settle(**vars(p.parse_args()))))

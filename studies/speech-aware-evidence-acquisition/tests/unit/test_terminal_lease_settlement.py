@@ -67,3 +67,45 @@ def test_never_releases_unproven_lease(tmp_path,monkeypatch,fault):
         monkeypatch.setattr(recovery,'quiescence',busy)
     with pytest.raises(ValueError):m.settle(**args)
     assert (tmp_path/'locks/flight.lock').read_bytes()==blob
+
+
+def configured_deployment(tmp_path, monkeypatch):
+    args, blob = prepared(tmp_path, monkeypatch)
+    record = json.loads(blob); record['session_id'] = 'resident'
+    blob = json.dumps(record).encode(); (tmp_path/'locks/flight.lock').write_bytes(blob)
+    receipt = tmp_path/'runtime.json'
+    receipt.write_text(json.dumps({'deployment': {'instances': [{'instance_id': 'tp2', 'host': '127.0.0.1', 'port': 8203}]}}))
+    digest = m.hashlib.sha256(receipt.read_bytes()).hexdigest()
+    session = tmp_path/'serving/resident/session.json'; session.parent.mkdir(parents=True)
+    session.write_text(json.dumps({'session_id': 'resident', 'identity': {'runtime_receipt_sha256': digest},
+                                   'deployment_instance_ids': ['tp2']}))
+    args.update(runtime_receipt=receipt, runtime_receipt_sha256=digest)
+    return args, blob, session
+
+
+def test_configured_settlement_uses_only_lease_bound_deployment(tmp_path, monkeypatch):
+    args, blob, session = configured_deployment(tmp_path, monkeypatch)
+    sys.path.insert(0, str(ROOT/'scripts/environment'))
+    import transition_serving_budget as transition
+    seen = []
+    monkeypatch.setattr(transition, 'quiescence', lambda instances: seen.extend(instances) or {'quiet': True})
+    assert m.settle(**args)['observed_contacts'] == 1
+    assert [i['port'] for i in seen] == [8203]
+    assert (args['out']/'preserved-flight.lock.json').read_bytes() == blob
+
+
+@pytest.mark.parametrize('fault', ['receipt', 'session', 'membership', 'busy'])
+def test_configured_settlement_preserves_unproven_partition(tmp_path, monkeypatch, fault):
+    args, blob, session = configured_deployment(tmp_path, monkeypatch)
+    sys.path.insert(0, str(ROOT/'scripts/environment'))
+    import transition_serving_budget as transition
+    def busy(instances):raise ValueError('busy deployment')
+    monkeypatch.setattr(transition, 'quiescence', busy)
+    if fault == 'receipt':args['runtime_receipt_sha256'] = '0'*64
+    elif fault in ('session', 'membership'):
+        doc = json.loads(session.read_bytes())
+        if fault == 'session':doc['identity']['runtime_receipt_sha256'] = '0'*64
+        else:doc['deployment_instance_ids'] = ['different']
+        session.write_text(json.dumps(doc))
+    with pytest.raises(ValueError):m.settle(**args)
+    assert (tmp_path/'locks/flight.lock').read_bytes() == blob
