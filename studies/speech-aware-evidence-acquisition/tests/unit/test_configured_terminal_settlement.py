@@ -215,3 +215,36 @@ def test_failed_settlement_does_not_delete_unknown_contacts(configured):
     intent = f.journal._path('req-1', 'intent').read_bytes()
     with pytest.raises(ValueError, match='unknown'):m.execute(f.path)
     assert f.journal._path('req-1', 'intent').read_bytes() == intent
+
+
+def test_docker_nanosecond_timestamps_are_supported(configured):
+    f = configured
+    f.container['State'].update(StartedAt='2026-11-03T10:00:00.531999650Z',
+                                FinishedAt='2026-11-03T10:10:00.264380710Z')
+    assert m.execute(f.path)['settled']
+
+
+@pytest.mark.parametrize('fault', ['missing-guard', 'pid-namespace', 'job-manifest', 'protected-state', 'changed-complete'])
+def test_additional_custody_boundaries(configured, fault):
+    f = configured
+    if fault == 'missing-guard':(f.locks/'generation.guard').unlink()
+    elif fault == 'pid-namespace':f.container['HostConfig']['PidMode'] = ''
+    elif fault == 'job-manifest':
+        doc = json.loads(f.complete.read_bytes());doc['extra'] = True;write(f.complete, doc)
+    elif fault == 'protected-state':
+        f.config['state_dir'] = str(f.data/'contact-journals/settlement');write(f.path, f.config)
+    else:
+        m.execute(f.path); path = Path(f.config['state_dir'])/'complete.json'
+        doc = json.loads(path.read_bytes());doc['identity']['config_sha256'] = '0'*64;write(path, doc)
+    with pytest.raises(ValueError):m.execute(f.path)
+    if fault != 'changed-complete':assert f.lease.exists()
+
+
+def test_sealed_release_change_during_quiescence_is_blocked(configured, monkeypatch):
+    f = configured; seal(f)
+    def changed(instances):
+        write(f.data/'runs'/f.run/f.attempt/'score-ledger-cells.json', {'changed': True})
+        return {}
+    monkeypatch.setattr(m.transition, 'quiescence', changed)
+    with pytest.raises(ValueError):m.execute(f.path)
+    assert not (Path(f.config['state_dir'])/'complete.json').exists()

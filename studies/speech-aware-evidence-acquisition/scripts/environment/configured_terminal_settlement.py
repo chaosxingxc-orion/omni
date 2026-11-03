@@ -80,6 +80,9 @@ def load(path):
     for item in producer['mounts']:
         target = Path(item['source']).resolve()
         require(not target.is_relative_to(state), 'settlement state must not contain producer inputs')
+    for name in ('locks', 'attempts', 'contact-journals', 'runs', 'serving', 'prepared'):
+        protected = mapped(producer, logical / name)
+        require(not state.is_relative_to(protected), 'settlement state overlaps runtime custody')
     return doc, producer, release, logical, expected, state
 
 
@@ -143,7 +146,7 @@ def source_custody(doc, producer, logical, expected, release):
     journal = ContactJournal(logical, plan, doc['arm'])
     journal.root = mapped(producer, logical / 'contact-journals' / plan.run_id / plan.attempt_id, writable=True)
     files = sorted(journal.root.glob('*')) if journal.root.exists() else []
-    require(all(p.is_file() and not p.is_symlink() and re.fullmatch('[a-f0-9]{64}\.(intent|response)\.json', p.name)
+    require(all(p.is_file() and not p.is_symlink() and re.fullmatch(r'[a-f0-9]{64}\.(intent|response)\.json', p.name)
         for p in files), 'unexpected journal custody')
     intents = [p for p in files if p.name.endswith('.intent.json')]
     require(len(intents) == calls and len(files) == 2 * calls, 'unknown or orphan contact; settlement blocked')
@@ -258,6 +261,9 @@ def execute(path, *, pid_exists=None):
             require(producer_terminal(doc, producer) == terminal
                 and source_custody(doc, producer, logical, expected, release) == source, 'producer evidence changed during settlement')
             check_guard()
+            if mode == 'sealed-release':
+                require(queue.verify_generation_release(doc, producer, doc['generation_release']) == release_proof,
+                        'release evidence changed during settlement')
             if pending:
                 require(pending['mode'] == mode and (mode != 'stale-lease' or pending['lease_sha256'] == hashlib.sha256(lease_blob).hexdigest()),
                         'pending settlement mode or lease differs')
