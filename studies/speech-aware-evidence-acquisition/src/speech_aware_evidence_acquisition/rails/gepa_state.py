@@ -22,6 +22,9 @@ from .gepa_search import (ScoredCandidate, best_candidate, compare_minibatch,
 from .tfgrpo_learning import canonical, sha
 
 SCHEMA = 'saea-gepa-search-state-v1'
+PAIRED_SCHEMA = 'saea-gepa-search-state-v2'
+PAIRED_MODE = 'same-perception-parent-child-v1'
+PAIR_EVIDENCE_SCHEMA = 'saea-gepa-paired-stage-evidence-v1'
 USAGE = ('calls', 'prompt_tokens', 'completion_tokens')
 
 
@@ -63,6 +66,43 @@ def candidate(value):
     return copy.deepcopy(value)
 
 
+def paired_mode(config):
+    return config.get('evaluation_mode') == PAIRED_MODE
+
+
+def minimum_stage_calls(config, phase, samples):
+    """Logical graph floor; the native adapter reserves fallback/token costs too."""
+    if phase == 'mutate':
+        return 1
+    if paired_mode(config):
+        return len(samples) * (4 if phase == 'paired_eval' else 3)
+    return len(samples)
+
+
+def validate_pair_evidence(evidence, *, config, pending, parent, child, response_sha256):
+    """Check identity bindings, not authenticity of native response/score custody.
+
+    The adapter must construct these pins from verified native artifacts and
+    prove that each Solver received the same P/supply. A self-declared digest
+    cannot establish that fact. The observed response pins this exact evidence.
+    """
+    bindings = {'schema': PAIR_EVIDENCE_SCHEMA, 'stage_id': pending['stage_id'],
+        'request_sha256': pending['request_sha256'],
+        'partition_sha256': config['partition_sha256'],
+        'frozen_system_sha256': config['frozen_system_sha256'],
+        'parent': parent, 'child': child, 'sample_ids': pending['sample_ids']}
+    pins = {'shared_perception_sha256', 'shared_supply_sha256',
+            'execution_sha256', 'score_receipt_sha256', 'scores_sha256'}
+    require(isinstance(evidence, dict) and set(evidence) == set(bindings) | pins,
+            'exact paired execution evidence required')
+    require(all(evidence[k] == value for k, value in bindings.items()),
+            'paired evidence identity, roster or stage differs')
+    for key in pins:
+        digest(evidence[key])
+    require(sha(evidence) == response_sha256, 'paired evidence response pin differs')
+    return copy.deepcopy(evidence)
+
+
 class GepaSearchState:
     """Serial stage coordinator; stage allocations may cover parallel Solver calls.
 
@@ -74,7 +114,10 @@ class GepaSearchState:
     @classmethod
     def create(cls, root, *, feedback_ids, selection_ids, excluded_ids,
                partition_sha256, frozen_system_sha256, initial_candidate,
-               seed, batch_size, max_rounds, budget, inherited_usage):
+               seed, batch_size, max_rounds, budget, inherited_usage, schema=SCHEMA):
+        # Existing callers/history retain v1 semantics; new native paired searches
+        # must explicitly request PAIRED_SCHEMA. No in-place migration is implied.
+        require(schema in (SCHEMA, PAIRED_SCHEMA), 'supported GEPA state schema required')
         feedback = ids(feedback_ids, 'feedback'); selection = ids(selection_ids, 'selection')
         require(isinstance(excluded_ids, (list, tuple)) and all(isinstance(x, str) for x in excluded_ids),
                 'explicit excluded evaluation identities required')
@@ -88,6 +131,8 @@ class GepaSearchState:
             'frozen_system_sha256': digest(frozen_system_sha256),
             'initial_candidate': candidate(initial_candidate), 'seed': seed, 'batch_size': batch_size,
             'max_rounds': max_rounds, 'budget': budget, 'inherited_usage': usage(inherited_usage)}
+        if schema == PAIRED_SCHEMA:
+            config['evaluation_mode'] = PAIRED_MODE
         store = cls(root)
         with store._lock():
             require(not list(store.root.glob('*.json')), 'fresh GEPA state directory required')
@@ -111,23 +156,29 @@ class GepaSearchState:
     def _load(self):
         paths = sorted(self.root.glob('*.json'))
         require(paths, 'GEPA state absent')
-        previous = None; config = None
+        previous = None; config = None; schema = None
         for index, path in enumerate(paths):
             require(path.name == f'{index:06d}.json', 'GEPA snapshot sequence has a gap or foreign file')
             doc = json.loads(path.read_bytes())
-            require(doc.get('schema') == SCHEMA and doc.get('sequence') == index
+            require(doc.get('schema') in (SCHEMA, PAIRED_SCHEMA) and doc.get('sequence') == index
                 and doc.get('previous_sha256') == previous
                 and doc.get('sha256') == sha({k:v for k,v in doc.items() if k != 'sha256'}),
                 'GEPA snapshot integrity differs')
-            if config is None: config = doc['config']
-            require(doc['config'] == config, 'GEPA immutable configuration changed')
+            if config is None:
+                config = doc['config']; schema = doc['schema']
+            require(doc['schema'] == schema and doc['config'] == config,
+                    'GEPA immutable configuration or schema changed')
+            require((schema == PAIRED_SCHEMA and config.get('evaluation_mode') == PAIRED_MODE)
+                    or (schema == SCHEMA and 'evaluation_mode' not in config),
+                    'GEPA schema and evaluation semantics differ')
             previous = doc['sha256']
         random_from_state(doc['state']['rng_state'])
         return doc
 
     def _publish(self, previous, action, config, state):
         index = previous['sequence']+1 if previous else 0
-        body = {'schema': SCHEMA, 'sequence': index, 'previous_sha256': previous['sha256'] if previous else None,
+        schema = previous['schema'] if previous else (PAIRED_SCHEMA if paired_mode(config) else SCHEMA)
+        body = {'schema': schema, 'sequence': index, 'previous_sha256': previous['sha256'] if previous else None,
                 'action': action, 'config': config, 'state': state}
         doc = {**body, 'sha256': sha(body)}
         publish_new(self.root/f'{index:06d}.json', canonical(doc))
@@ -170,18 +221,23 @@ class GepaSearchState:
             doc = self._load(); state = copy.deepcopy(doc['state']); config = doc['config']
             require(state['pending'] is None and state['failure'] is None, 'unknown or failed GEPA stage blocks continuation')
             phase = state['phase']
-            require(phase in ('seed_eval', 'parent_eval', 'mutate', 'child_eval', 'selection_eval'),
+            child_phase = 'paired_eval' if paired_mode(config) else 'child_eval'
+            require(phase in ('seed_eval', 'parent_eval', 'mutate', child_phase, 'selection_eval'),
                     'no executable GEPA stage')
             if phase in ('seed_eval', 'selection_eval'): samples = config['selection_ids']
             else: samples = state['active']['sample_ids']
-            # One logical solver response per sample, one reflector response.
-            require(allocation['calls'] >= (1 if phase == 'mutate' else len(samples)),
+            # v1's historical single-response floor is preserved. v2 reserves
+            # P + candidate/lock, or P + parent/child/lock, and one reflector.
+            require(allocation['calls'] >= minimum_stage_calls(config, phase, samples),
                     'stage allocation cannot cover complete sample roster')
             require(all(state['known_usage'][k]+allocation[k] <= config['budget'][k] for k in USAGE),
                     'GEPA budget cannot reserve whole next stage')
             body = {'phase': phase, 'round_index': len(state['rounds']), 'sample_ids': samples,
                     'request_sha256': request_sha256, 'allocation': allocation,
                     'frozen_system_sha256': config['frozen_system_sha256'], 'state_sha256': doc['sha256']}
+            if phase == 'paired_eval':
+                body['parent'] = copy.deepcopy(state['active']['parent'])
+                body['child'] = copy.deepcopy(state['active']['child'])
             intent = {**body, 'stage_id': sha(body)}; state['pending'] = intent
             self._publish(doc, 'begin_stage', config, state)
             return copy.deepcopy(intent)
@@ -190,7 +246,7 @@ class GepaSearchState:
         state['rounds'].append({**state['active'], 'outcome': outcome})
         state.update(active=None, phase='round_ready')
 
-    def _apply_result(self, state, config, pending, result):
+    def _apply_result(self, state, config, pending, result, response_sha256):
         phase = pending['phase']; active = state['active']
         if phase == 'mutate':
             require(set(result) == {'candidate'}, 'exact proposal result required')
@@ -199,7 +255,30 @@ class GepaSearchState:
                 self._finish_round(state, 'rejected-noop'); return
             require(child['candidate_id'] not in {x['candidate']['candidate_id'] for x in state['pool']},
                     'candidate ID collision')
-            active['child'] = child; state['phase'] = 'child_eval'; return
+            active['child'] = child
+            state['phase'] = 'paired_eval' if paired_mode(config) else 'child_eval'
+            return
+        if phase == 'paired_eval':
+            require(paired_mode(config) and set(result) == {
+                'parent', 'child', 'sample_ids', 'parent_scores', 'child_scores', 'evidence'},
+                'exact paired evaluation result required')
+            require(candidate(result['parent']) == pending['parent'] == active['parent']
+                    and candidate(result['child']) == pending['child'] == active['child']
+                    and result['sample_ids'] == pending['sample_ids'] == active['sample_ids'],
+                    'paired candidates or complete ordered roster differs')
+            evidence = validate_pair_evidence(result['evidence'], config=config, pending=pending,
+                parent=active['parent'], child=active['child'], response_sha256=response_sha256)
+            parent = scored(active['parent'], pending['sample_ids'], result['parent_scores'])
+            child = scored(active['child'], pending['sample_ids'], result['child_scores'])
+            require(evidence['scores_sha256'] == sha({'parent_scores': list(parent.scores),
+                    'child_scores': list(child.scores), 'sample_ids': pending['sample_ids']}),
+                    'paired score vectors differ from evidence')
+            active.update(paired_parent_scores=list(parent.scores), child_scores=list(child.scores),
+                          paired_evidence=evidence)
+            decision = compare_minibatch(parent, child, pending['sample_ids'])
+            if decision.accepted: state['phase'] = 'selection_eval'
+            else: self._finish_round(state, decision.reason)
+            return
         require(set(result) == {'candidate', 'sample_ids', 'scores'}, 'exact evaluation result required')
         expected = (config['initial_candidate'] if phase == 'seed_eval' else
                     active['parent'] if phase == 'parent_eval' else active['child'])
@@ -212,7 +291,8 @@ class GepaSearchState:
             if phase == 'seed_eval': state['phase'] = 'round_ready'
             else: self._finish_round(state, 'accepted')
         elif phase == 'parent_eval':
-            active['parent_scores'] = list(evaluated.scores)
+            key = 'diagnostic_parent_scores' if paired_mode(config) else 'parent_scores'
+            active[key] = list(evaluated.scores)
             if all(x == 1 for x in evaluated.scores): self._finish_round(state, 'skipped-perfect')
             else: state['phase'] = 'mutate'
         elif phase == 'child_eval':
@@ -251,9 +331,9 @@ class GepaSearchState:
             applied = copy.deepcopy(state)
             try:
                 require(all(actual_usage[k] <= pending['allocation'][k] for k in USAGE), 'observed stage exceeds reservation')
-                require(actual_usage['calls'] >= (1 if pending['phase'] == 'mutate' else len(pending['sample_ids'])),
+                require(actual_usage['calls'] >= minimum_stage_calls(config, pending['phase'], pending['sample_ids']),
                         'complete observed stage usage required')
-                self._apply_result(applied, config, pending, result)
+                self._apply_result(applied, config, pending, result, response_sha256)
             except (ValueError, KeyError, TypeError) as error:
                 state.update(failure={'stage_id': stage_id, 'reason': str(error)}, phase='failed')
             else: state = applied

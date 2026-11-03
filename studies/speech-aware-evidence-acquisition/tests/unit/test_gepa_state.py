@@ -168,3 +168,155 @@ def test_active_round_cannot_disappear_without_reason(tmp_path):
     assert final['state']['known_usage']==before['state']['known_usage']
     assert m.GepaSearchState(tmp_path).finish()==final
     with pytest.raises(ValueError,match='reason changed'):store.finish(reason='different reason')
+
+
+def execute_v2(store, result, *, calls=None):
+    """Explicit graph-cost test double, never native execution evidence."""
+    doc = store.read(); state = doc['state']; phase = state['phase']
+    samples = (doc['config']['selection_ids'] if phase in ('seed_eval', 'selection_eval')
+               else state['active']['sample_ids'])
+    normal = 1 if phase == 'mutate' else len(samples) * 3
+    intent = store.begin_stage(request_sha256=m.sha(result),
+        allocation={'calls':normal, 'prompt_tokens':100, 'completion_tokens':100})
+    return store.observe(intent['stage_id'], response_sha256=m.sha(result),
+        actual_usage={'calls':normal if calls is None else calls, 'prompt_tokens':10, 'completion_tokens':5},
+        result=result)
+
+
+def prepare_pair(root):
+    store = make(root, schema=m.PAIRED_SCHEMA)
+    execute_v2(store, {'candidate':cand(0), 'sample_ids':store.read()['config']['selection_ids'], 'scores':[.4,.4]})
+    active = store.next_round()
+    execute_v2(store, {'candidate':active['parent'], 'sample_ids':active['sample_ids'], 'scores':[0,.1]})
+    execute_v2(store, {'candidate':cand(1)})
+    assert store.read()['state']['phase'] == 'paired_eval'
+    return store
+
+
+def pair_intent_result(store, parent_scores, child_scores):
+    doc = store.read(); active = doc['state']['active']; config = doc['config']
+    intent = store.begin_stage(request_sha256='e'*64,
+        allocation={'calls':4*len(active['sample_ids']), 'prompt_tokens':100, 'completion_tokens':100})
+    parent_scores = [float(v) for v in parent_scores]
+    child_scores = [float(v) for v in child_scores]
+    evidence = {'schema':m.PAIR_EVIDENCE_SCHEMA, 'stage_id':intent['stage_id'],
+        'request_sha256':intent['request_sha256'], 'partition_sha256':config['partition_sha256'],
+        'frozen_system_sha256':config['frozen_system_sha256'],
+        'parent':active['parent'], 'child':active['child'], 'sample_ids':active['sample_ids'],
+        'shared_perception_sha256':'c'*64, 'shared_supply_sha256':'d'*64,
+        'execution_sha256':'f'*64, 'score_receipt_sha256':'a'*64,
+        'scores_sha256':m.sha({'parent_scores':parent_scores, 'child_scores':child_scores,
+                              'sample_ids':active['sample_ids']})}
+    result = {'parent':active['parent'], 'child':active['child'], 'sample_ids':active['sample_ids'],
+              'parent_scores':parent_scores, 'child_scores':child_scores, 'evidence':evidence}
+    return intent, result
+
+
+def observe_pair(store, intent, result, *, calls=8, response_sha256=None):
+    return store.observe(intent['stage_id'], response_sha256=response_sha256 or m.sha(result.get('evidence')),
+        actual_usage={'calls':calls, 'prompt_tokens':20, 'completion_tokens':10}, result=result)
+
+
+def test_v2_uses_current_paired_parent_not_old_diagnostic_scores(tmp_path):
+    store = prepare_pair(tmp_path)
+    active = store.read()['state']['active']
+    assert active['diagnostic_parent_scores'] == [0,.1] and 'parent_scores' not in active
+    intent, result = pair_intent_result(store, [.9,.8], [.6,.6])
+    final = observe_pair(store, intent, result)
+    assert final['state']['rounds'][-1]['outcome'] == 'rejected-no-strict-improvement'
+    assert final['state']['rounds'][-1]['paired_parent_scores'] == [.9,.8]
+    assert len(final['state']['pool']) == 1
+    assert final['state']['known_usage']['calls'] == 21  # 3*2 + 3*2 + 1 + 4*2
+    assert m.GepaSearchState(tmp_path).read() == final
+
+
+def test_v2_pair_tie_rejects_and_success_waits_for_complete_selection(tmp_path):
+    store = prepare_pair(tmp_path)
+    intent, result = pair_intent_result(store, [.2,.8], [.5,.5])
+    assert observe_pair(store, intent, result)['state']['rounds'][-1]['outcome'] == 'rejected-no-strict-improvement'
+    active = store.next_round()
+    execute_v2(store, {'candidate':active['parent'], 'sample_ids':active['sample_ids'], 'scores':[.1,.1]})
+    execute_v2(store, {'candidate':cand(2)})
+    intent, result = pair_intent_result(store, [.3,.3], [.6,.8])
+    paired = observe_pair(store, intent, result)
+    assert paired['state']['phase'] == 'selection_eval' and len(paired['state']['pool']) == 1
+    selected = execute_v2(store, {'candidate':cand(2), 'sample_ids':store.read()['config']['selection_ids'], 'scores':[.8,.8]})
+    assert selected['state']['rounds'][-1]['outcome'] == 'accepted'
+    assert len(selected['state']['pool']) == 2
+    final = store.finish(reason='registered small search bound')
+    assert final['state']['winner_id'] == 'c2'
+    assert final['state']['cumulative_usage']['calls'] == 354  # 42 new + 312 inherited
+
+
+@pytest.mark.parametrize('fault', ['parent', 'child', 'roster', 'missing_evidence', 'evidence_parent',
+    'evidence_roster', 'stage', 'request', 'partition', 'frozen', 'perception', 'supply',
+    'execution', 'score_receipt', 'score_pin', 'scores', 'response_pin', 'partial_calls'])
+def test_v2_pair_rejects_unbound_evidence_and_retains_all_known_spend(tmp_path, fault):
+    store = prepare_pair(tmp_path)
+    intent, result = pair_intent_result(store, [.2,.2], [.5,.5])
+    result = copy.deepcopy(result)
+    if fault in ('parent', 'child'): result[fault] = cand(3)
+    elif fault == 'roster': result['sample_ids'].reverse()
+    elif fault == 'missing_evidence': del result['evidence']
+    elif fault == 'evidence_parent': result['evidence']['parent'] = cand(3)
+    elif fault == 'evidence_roster': result['evidence']['sample_ids'] = ['slurp:train:h2']
+    elif fault == 'stage': result['evidence']['stage_id'] = '0'*64
+    elif fault == 'request': result['evidence']['request_sha256'] = '0'*64
+    elif fault == 'partition': result['evidence']['partition_sha256'] = '0'*64
+    elif fault == 'frozen': result['evidence']['frozen_system_sha256'] = '0'*64
+    elif fault == 'perception': result['evidence']['shared_perception_sha256'] = 'invalid'
+    elif fault == 'supply': result['evidence']['shared_supply_sha256'] = 'invalid'
+    elif fault == 'execution': result['evidence']['execution_sha256'] = 'invalid'
+    elif fault == 'score_receipt': result['evidence']['score_receipt_sha256'] = 'invalid'
+    elif fault == 'score_pin': result['evidence']['scores_sha256'] = '0'*64
+    elif fault == 'scores': result['child_scores'][0] = .9
+    calls = 7 if fault == 'partial_calls' else 8
+    final = observe_pair(store, intent, result, calls=calls,
+        response_sha256='0'*64 if fault == 'response_pin' else None)
+    assert final['state']['phase'] == 'failed'
+    assert final['state']['known_usage']['calls'] == 13 + calls
+    assert len(final['state']['observed_stages']) == 4
+    assert len(final['state']['pool']) == 1
+    with pytest.raises(ValueError, match='failed'): store.finish()
+
+
+def test_v2_pair_unknown_recovery_and_idempotent_observation(tmp_path):
+    store = prepare_pair(tmp_path); intent, result = pair_intent_result(store, [.2,.2], [.6,.6])
+    reopened = m.GepaSearchState(tmp_path)
+    assert reopened.read()['state']['pending'] == intent
+    with pytest.raises(ValueError, match='unknown'):
+        reopened.begin_stage(request_sha256='e'*64, allocation=intent['allocation'])
+    with pytest.raises(ValueError, match='unknown'): reopened.next_round()
+    first = observe_pair(reopened, intent, result)
+    assert observe_pair(m.GepaSearchState(tmp_path), intent, result) == first
+    with pytest.raises(ValueError, match='cost changed'):
+        observe_pair(reopened, intent, result, calls=7)
+
+
+def test_v2_reserves_full_graph_and_preserves_v1_schema(tmp_path):
+    old = make(tmp_path/'old')
+    assert old.read()['schema'] == m.SCHEMA and 'evaluation_mode' not in old.read()['config']
+    paired = make(tmp_path/'new', schema=m.PAIRED_SCHEMA)
+    assert paired.read()['schema'] == m.PAIRED_SCHEMA
+    before = paired.read()
+    with pytest.raises(ValueError, match='complete sample roster'):
+        paired.begin_stage(request_sha256='f'*64, allocation={'calls':5,'prompt_tokens':100,'completion_tokens':100})
+    assert paired.read() == before
+    limited = make(tmp_path/'limited', schema=m.PAIRED_SCHEMA,
+        budget={'calls':5,'prompt_tokens':1000,'completion_tokens':1000})
+    with pytest.raises(ValueError, match='budget'):
+        limited.begin_stage(request_sha256='f'*64, allocation={'calls':6,'prompt_tokens':100,'completion_tokens':100})
+    pair = prepare_pair(tmp_path/'pair'); before = pair.read()
+    with pytest.raises(ValueError, match='complete sample roster'):
+        pair.begin_stage(request_sha256='f'*64, allocation={'calls':7,'prompt_tokens':100,'completion_tokens':100})
+    assert pair.read() == before
+
+
+def test_v2_schema_cannot_silently_relabel_v1_history(tmp_path):
+    import json
+    store = make(tmp_path); seed(store)
+    path = tmp_path/'000002.json'
+    doc = json.loads(path.read_text()); doc['schema'] = m.PAIRED_SCHEMA
+    doc['sha256'] = m.sha({k:v for k,v in doc.items() if k != 'sha256'})
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match='schema changed'): store.read()
