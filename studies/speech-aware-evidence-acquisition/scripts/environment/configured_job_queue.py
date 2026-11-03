@@ -53,11 +53,16 @@ def load(path):
     names, containers, receipts = set(), set(), set()
     for job in doc['jobs']:
         fields = {'id', 'launch', 'preflight', 'after'}
-        require(isinstance(job, dict) and fields <= set(job) <= fields | {'depends_on', 'after_terminal', 'on_fail'}, 'exact queue job required')
+        require(isinstance(job, dict) and fields <= set(job) <= fields | {
+            'depends_on', 'after_terminal', 'on_fail', 'generation_release',
+            'after_handoff', 'unless_generation_released'}, 'exact queue job required')
         require(job.get('on_fail', 'stop') in ('stop', 'continue'), 'explicit queue failure policy required')
         require(isinstance(job['id'], str) and re.fullmatch('[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}', job['id'])
                 and job['id'] not in names, 'unique confined job ID required')
         names.add(job['id']); launch = launcher.load_config(pin_path(job['launch']))
+        if 'generation_release' in job:
+            require('handoff_verifier' in doc, 'pinned shared generation handoff verifier required')
+            release_identity(launch, job['generation_release'])
         receipt = Path(launch['receipt_dir']).resolve()
         require(launch['container_name'] not in containers and receipt not in receipts
                 and not root.is_relative_to(receipt) and not receipt.is_relative_to(root), 'distinct job and queue custody required')
@@ -78,14 +83,35 @@ def load(path):
                 release_identity(producer, dep['release'])
     if any('depends_on' in job for job in doc['jobs']):
         require(all('depends_on' in job for job in doc['jobs']), 'graph jobs must all declare dependencies')
-        graph = {}
+        graph = {}; by_id = {j['id']: j for j in doc['jobs']}
         for job in doc['jobs']:
             deps, terminal = job['depends_on'], job.get('after_terminal', [])
             for edges in (deps, terminal):
                 require(isinstance(edges, list) and all(isinstance(dep, str) for dep in edges)
                     and len(set(edges)) == len(edges) and set(edges) <= names, 'unique known dependencies required')
             require(not set(deps) & set(terminal), 'dependency conditions must not overlap')
-            graph[job['id']] = set(deps) | set(terminal)
+            extra = set()
+            if 'unless_generation_released' in job:
+                producer = job['unless_generation_released']
+                require(isinstance(producer, str) and producer in by_id
+                    and 'generation_release' in by_id[producer]
+                    and terminal == [producer] and deps == []
+                    and 'generation_release' not in job and 'after_handoff' not in job,
+                    'conditional cleanup requires its exact terminal producer')
+                extra.add(producer)
+            if 'after_handoff' in job:
+                handoff = job['after_handoff']
+                require(isinstance(handoff, dict) and set(handoff) == {'producer', 'settlement'}
+                    and all(isinstance(v, str) and v in by_id for v in handoff.values()),
+                    'exact known handoff producer and settlement required')
+                producer, cleanup = by_id[handoff['producer']], by_id[handoff['settlement']]
+                require('generation_release' in producer
+                    and cleanup.get('unless_generation_released') == producer['id']
+                    and cleanup.get('after_terminal') == [producer['id']]
+                    and not set(handoff.values()) & (set(deps) | set(terminal)),
+                    'handoff must select corresponding conditional settlement or release')
+                extra.update(handoff.values())
+            graph[job['id']] = set(deps) | set(terminal) | extra
         done = set()
         while graph:
             ready = {key for key, deps in graph.items() if deps <= done}
@@ -96,6 +122,8 @@ def load(path):
         require(all(job.get('on_fail', 'stop') == 'stop' for job in doc['jobs']),
                 'continue requires an explicit dependency graph')
         require(not any('after_terminal' in job for job in doc['jobs']), 'terminal dependencies require graph mode')
+        require(not any(set(job) & {'generation_release', 'after_handoff', 'unless_generation_released'}
+                        for job in doc['jobs']), 'generation handoff requires graph mode')
     return doc
 
 
@@ -287,6 +315,36 @@ def dependency_status(doc, job, record):
             str(release_path) if release_path and result == 'running' else None)
 
 
+def refresh_generation(doc, job, record):
+    """Release the lane only after verifying this launched producer's seal."""
+    producer, observed = observe(job['launch'])
+    require(record.get('container_id') == observed.get('container_id')
+            and record.get('container_id'), 'generation producer container identity changed')
+    result = outcome(observed)
+    require(result in ('running', 'complete', 'failed'), 'generation producer state unknown')
+    path, _, _ = release_identity(producer, job['generation_release'])
+    if path.exists():
+        proof = verify_generation_release(doc, producer, job['generation_release'])
+        require(record.get('own_generation_release', proof) == proof, 'producer release custody changed')
+        record['own_generation_release'] = proof
+    else:
+        require('own_generation_release' not in record, 'previous producer release disappeared')
+        if result == 'complete':
+            raise ValueError('successful producer exited without generation release')
+    record['observed'] = observed
+    record['status'] = 'scoring' if result == 'running' and 'own_generation_release' in record else result
+    if result in ('complete', 'failed'):
+        record['result'] = {'container_exit_success': result == 'complete',
+            'generation_released': 'own_generation_release' in record, 'scientific_success': False}
+    return path
+
+
+def handoff_ready(job, records):
+    handoff = job.get('after_handoff')
+    return handoff is None or ('own_generation_release' in records[handoff['producer']]
+        or records[handoff['settlement']]['status'] == 'complete')
+
+
 def step(config_path, doc, state, save):
     require(identities(config_path) == state['identity'], 'queue configuration or implementation changed')
     load(config_path)  # Recheck every immutable input before any dispatch.
@@ -294,13 +352,26 @@ def step(config_path, doc, state, save):
     graph = all('depends_on' in job for job in doc['jobs'])
     if graph:
         records = {record['id']:record for record in state['jobs']}
+        for job in doc['jobs']:
+            record = records[job['id']]
+            if 'generation_release' in job and record.get('container_id'):
+                refresh_generation(doc, job, record)
+                if (record['status'] == 'failed' and 'own_generation_release' not in record
+                        and job.get('on_fail', 'stop') == 'stop'):
+                    state['status'] = 'failed'; save(); return state
+        for job in doc['jobs']:
+            producer = job.get('unless_generation_released')
+            record = records[job['id']]
+            if producer and record['status'] == 'pending' and 'own_generation_release' in records[producer]:
+                record.update(status='skipped', reason='verified generation release', producer=producer)
         active = [i for i, record in enumerate(state['jobs'])
                   if record['status'] in ('running', 'launch-intent', 'unknown')]
         require(len(active) <= 1, 'multiple active containers in a serial resource lane')
         ready = [i for i, job in enumerate(doc['jobs']) if records[job['id']]['status'] == 'pending'
                  and all(records[dep]['status'] == 'complete' for dep in job['depends_on'])
                  and all(records[dep]['status'] in ('complete', 'failed')
-                         for dep in job.get('after_terminal', []))]
+                         for dep in job.get('after_terminal', []))
+                 and handoff_ready(job, records)]
         eligible, waiting = [], []
         if not active:
             for i in ready:
@@ -316,10 +387,13 @@ def step(config_path, doc, state, save):
                 save(); return state
         if not active and not eligible:
             state['blocked_jobs'] = [r['id'] for r in state['jobs'] if r['status'] in ('pending', 'blocked')]
+            scoring = [r for r in state['jobs'] if r['status'] == 'scoring']
             if waiting:
                 state.update(status='waiting', wait_container_id=waiting[0][0], wait_release_path=waiting[0][1])
+            elif scoring:
+                state.update(status='waiting', wait_container_id=scoring[0]['container_id'], wait_release_path=None)
             else:
-                state['status'] = 'complete' if all(r['status'] == 'complete' for r in state['jobs']) else 'failed'
+                state['status'] = 'complete' if all(r['status'] in ('complete', 'skipped') for r in state['jobs']) else 'failed'
             save(); return state
         index = (active or eligible)[0]
     else:
@@ -327,6 +401,16 @@ def step(config_path, doc, state, save):
         if index == len(doc['jobs']):
             state['status'] = 'complete'; save(); return state
     job, record = doc['jobs'][index], state['jobs'][index]
+    if graph and job.get('after_handoff'):
+        handoff = job['after_handoff']; producer = next(j for j in doc['jobs'] if j['id'] == handoff['producer'])
+        previous = records[producer['id']]
+        refresh_generation(doc, producer, previous)
+        if 'own_generation_release' not in previous:
+            cleanup = next(j for j in doc['jobs'] if j['id'] == handoff['settlement'])
+            _, observed = observe(cleanup['launch'])
+            require(records[cleanup['id']]['status'] == 'complete'
+                and observed.get('container_id') == records[cleanup['id']].get('container_id')
+                and outcome(observed) == 'complete', 'handoff settlement is not the exact successful container')
     if state['status'] == 'unknown' and not record.get('launch_requested'):return state
     predecessors = ([i for i, j in enumerate(doc['jobs'])
                      if j['id'] in job['depends_on'] + job.get('after_terminal', [])]
@@ -370,6 +454,9 @@ def step(config_path, doc, state, save):
         require(re.fullmatch('[a-f0-9]{64}', observed['container_id']), 'full immutable launched container ID required')
     record.update(status=result, observed=observed)
     state['wait_container_id'] = record.get('container_id') if result == 'running' else None
+    if result == 'running' and 'generation_release' in job:
+        producer_path, _, _ = release_identity(launch_doc, job['generation_release'])
+        state['wait_release_path'] = str(producer_path)
     state['status'] = 'ready' if result == 'complete' or (
         result == 'failed' and graph and job.get('on_fail', 'stop') == 'continue') else result
     if result == 'complete':
@@ -392,7 +479,8 @@ def execute(path, mode):
                 require(producer.get('container_id') == job['after']['container_id'], 'planned predecessor identity differs')
             plans.append({'id':job['id'], 'launch':launcher.execute(launch, 'plan'), 'after':job['after'],
                 **({'depends_on':job['depends_on'], 'after_terminal':job.get('after_terminal', []),
-                    'on_fail':job.get('on_fail', 'stop')}
+                    'on_fail':job.get('on_fail', 'stop'),
+                    **{k:job[k] for k in ('generation_release','after_handoff','unless_generation_released') if k in job}}
                    if 'depends_on' in job else {})})
         return {'schema':SCHEMA, 'identity':identity, 'jobs':plans, 'new_model_calls':0,
             'dependency_policy':('dependency-ready-container-exit-zero' if all('depends_on' in j for j in doc['jobs'])

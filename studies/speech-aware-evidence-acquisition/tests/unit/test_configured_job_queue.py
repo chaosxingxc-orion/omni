@@ -415,3 +415,82 @@ def test_release_wait_uses_file_event_not_scoring_container_wait(queue,tmp_path,
     result=m.execute(path,'watch')
     assert result['status']=='complete' and waits==[600]
     assert all(cid!=docker.containers['producer']['Id'] for cid,_ in docker.waits)
+
+
+def internal_generation_fixture(queue, tmp_path):
+    release, value, data = generation_fixture(queue, tmp_path, learning=True)
+    path, config, docker = queue
+    dependency = config['jobs'][0]['after']
+    producer = {'id':'producer', 'launch':dependency['launch'], 'preflight':None, 'after':None,
+        'depends_on':[], 'on_fail':'continue', 'generation_release':dependency['release']}
+    cleanup, successor = config['jobs']
+    cleanup.update(after=None, depends_on=[], after_terminal=['producer'],
+        unless_generation_released='producer')
+    successor.update(depends_on=[], after_handoff={'producer':'producer','settlement':cleanup['id']})
+    config['jobs'] = [producer, cleanup, successor]
+    path.write_text(json.dumps(config))
+    return release, value, data
+
+
+def test_internal_release_dispatches_successor_while_cpu_scoring(queue,tmp_path):
+    release,value,_=internal_generation_fixture(queue,tmp_path);path,config,docker=queue
+    assert m.execute(path,'once')['status']=='running'
+    release.write_text(json.dumps(value))
+    result=m.execute(path,'once')
+    assert [j['status'] for j in result['jobs']]==['scoring','skipped','running']
+    assert docker.launches==['producer','job1'] and docker.containers['producer']['State']['Running']
+    assert not docker.waits
+    assert m.execute(path,'watch')['status']=='complete'
+    assert docker.launches==['producer','job1']
+
+
+def test_internal_failed_generation_uses_cleanup_before_independent_successor(queue,tmp_path):
+    internal_generation_fixture(queue,tmp_path);path,config,docker=queue
+    m.execute(path,'once')
+    docker.containers['producer']['State'].update(Status='exited',Running=False,ExitCode=1)
+    result=m.execute(path,'watch')
+    assert result['status']=='failed'
+    assert docker.launches==['producer','job0','job1']
+    assert [j['status'] for j in result['jobs']]==['failed','complete','complete']
+
+
+def test_internal_cpu_failure_after_release_does_not_block_valid_generation(queue,tmp_path):
+    release,value,_=internal_generation_fixture(queue,tmp_path);path,config,docker=queue
+    m.execute(path,'once');release.write_text(json.dumps(value))
+    docker.containers['producer']['State'].update(Status='exited',Running=False,ExitCode=1)
+    result=m.execute(path,'watch')
+    assert result['status']=='failed' and docker.launches==['producer','job1']
+    assert result['jobs'][1]['status']=='skipped'
+
+
+@pytest.mark.parametrize('fault',['missing','changed','container','artifact'])
+def test_internal_release_custody_changes_hold_dispatch(queue,tmp_path,fault):
+    release,value,data=internal_generation_fixture(queue,tmp_path);path,config,docker=queue
+    m.execute(path,'once');release.write_text(json.dumps(value));m.execute(path,'once')
+    if fault=='missing':release.unlink()
+    elif fault=='changed':value['released_at_unix']+=1;release.write_text(json.dumps(value))
+    elif fault=='container':docker.containers['producer']['Id']='e'*64
+    else:(data/'runs/learning-v1/score-jobs.jsonl').write_text('changed')
+    with pytest.raises(ValueError):m.execute(path,'once')
+    assert docker.launches==['producer','job1']
+
+
+@pytest.mark.parametrize('fault',['cycle','foreign-cleanup','unknown','no-release','mixed-edge'])
+def test_internal_handoff_rejects_ambiguous_graph(queue,tmp_path,fault):
+    internal_generation_fixture(queue,tmp_path);path,config,_=queue
+    producer,cleanup,successor=config['jobs']
+    if fault=='cycle':producer['depends_on']=['job1']
+    elif fault=='foreign-cleanup':cleanup['unless_generation_released']='job1'
+    elif fault=='unknown':successor['after_handoff']['producer']='missing'
+    elif fault=='no-release':producer.pop('generation_release')
+    else:successor['depends_on']=['producer']
+    path.write_text(json.dumps(config))
+    with pytest.raises(ValueError):m.load(path)
+
+
+def test_internal_success_without_release_cannot_skip_cleanup(queue,tmp_path):
+    internal_generation_fixture(queue,tmp_path);path,config,docker=queue
+    m.execute(path,'once')
+    docker.containers['producer']['State'].update(Status='exited',Running=False,ExitCode=0)
+    with pytest.raises(ValueError,match='without generation release'):m.execute(path,'once')
+    assert docker.launches==['producer']

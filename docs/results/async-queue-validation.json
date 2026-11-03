@@ -1,0 +1,35 @@
+{
+  "schema": "saea-async-queue-validation-v1",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "container": "67aef8f3b8f52b0c630eee3cf1e45c096146e899b433e18c20dd49a6c3f4444a",
+  "passed": 115,
+  "seconds": 7.12,
+  "new_model_calls": 0,
+  "cpus": "240-247",
+  "scope": [
+    "configured queue",
+    "launcher",
+    "terminal settlement",
+    "release allows successor during producer CPU scoring",
+    "generation failure invokes exact conditional cleanup",
+    "missing or changed release holds",
+    "post-release CPU failure preserved without blocking valid generation"
+  ],
+  "production_queue_status": "capacity-blocked; no new rich generation dispatched",
+  "files_sha256": {
+    "scripts/environment/configured_job_queue.py": "5971988573379ffef24a78fe1caf4a707a64e6ffbfc59711ba9d23925a9a5d25",
+    "tests/unit/test_configured_job_queue.py": "49a4ef8b84cdb9ab20950b8a802f33d454a00019fba95fc2f45483ab9f963ca6"
+  },
+  "prior_combined_regression": {
+    "container": "eee471b52c2946e7550cde17111c2ba4e343b68dbb2e21591ae7d848a186f77d",
+    "passed": 211,
+    "seconds": 21.44,
+    "warning": "regex syntax warning subsequently fixed"
+  },
+  "initial_integration_failure": {
+    "container": "feef89980e52ec8e7e287e01698a1567bd10e4c8768d243f66bfaf3625660224",
+    "reason": "test package omitted import-time historical readiness fixtures",
+    "new_model_calls": 0,
+    "resolved": "included required tracked docs in subsequent test package"
+  }
+}
