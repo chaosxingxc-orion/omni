@@ -24,6 +24,10 @@
 
 完整原生mutation材料重建容器退出0，合同、parent、child、compiled baseline、declaration五份文件SHA均与历史材料相同。此前发生source config hash拒绝的A实例配置，现可通过固定原生来源重建。
 
-第一次stage发现运行配置receipt文件名缺少`.json`，校验正确拒绝；仅在独立后继树修正配置后，第二次stage退出0，固定80条名单、A实例TP2/C16绑定及科学配置校验通过，`generation_authorized=false`、`new_model_calls=0`。没有prepare、register、admit或NPU生成，不把stage通过称完整部署。
+stage后已完成prepare和register。配置说明字段geometry_basis变更造成驻留fragment哈希不一致，恢复原登记文件后通过身份检查；随后组合历史B receipt只读视图与权威A实例/coordinator挂载，保持历史凭据字节不变。
 
-下一步将该来源分离入口用于有明确收益假设的新候选；已知负收益child不为填负载而重复生成。A0在线任务及原服务未重启。
+最新准入已越过来源和服务身份校验，但在repin因注册包仍绑定旧配置哈希退出1。准入凭据已先写入，保留原件，不重复mint；该后继没有新模型调用。公共准入入口新增发送前配置/协议哈希核验，避免同类错误产生半完成凭据，固定镜像4项测试通过（1.30秒）。这不表示其余准入过程已具有事务性。
+
+零模型调用核验确认编译parent seed与lock Solver模板字节相同，SHA256均为 `18bff5c557cac7ac14be6b08aa0a1a6ad54c1b9820199c3b6749b2271d756fbd`。selection80 parent相对lock的+2.4572pp不能解释成parent学习收益；同模板重复推理和执行轨迹差异仍需归因。child相对parent为负1.5301pp，不晋升、不为填卡重复。
+
+优先调度已具备有效候选的新系统探索；当前80条A后继保留为工程验证，A0与驻留服务不重启。

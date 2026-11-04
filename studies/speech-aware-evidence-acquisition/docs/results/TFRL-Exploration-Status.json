@@ -1,0 +1,21 @@
+{
+  "schema": "saea-tfrl-exploration-status-v1",
+  "observed_at_utc": "2026-11-04T06:56:00Z",
+  "candidate": "slurp-gepa-node2-b-feedback80-v1",
+  "state": "generation-container-running",
+  "completed_rows": null,
+  "total_rows": 80,
+  "cards": 2,
+  "instances": 1,
+  "client_concurrency": 32,
+  "wall_seconds_per_completed_row": null,
+  "estimated_remaining_seconds": null,
+  "normal_generation_calls_planned": 320,
+  "fit_calls_accounted_separately": true,
+  "actual_usage": null,
+  "official_scoring_queue": "waiting-exact-generation-exit-zero",
+  "independent_cpu_archive_interval_seconds": 600,
+  "scientific_gain_claimed": false,
+  "eight_card_utilization_verified": false,
+  "run_commit": "0f0c04e30140c9041727dab5d5a0c44d0dbd3eb7"
+}
