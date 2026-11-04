@@ -562,3 +562,94 @@ def test_queued_generation_checks_lease_after_dependency_before_dispatch(queue):
     metadata.unlink()
     assert m.execute(path,'once')['status'] == 'running'
     assert docker.launches == ['job0','job1']
+
+
+def historical_predecessor(queue, tmp_path):
+    path, config, docker = queue
+    root = tmp_path / 'old'; root.mkdir()
+    launch, doc = configured(root); doc['container_name'] = 'previous-version'
+    launch.write_text(json.dumps(doc)); m.launcher.execute(launch, 'layout')
+    old = root / 'configured_job_launch.py'
+    # A historical version is an immutable identity artifact, never executed.
+    old.write_text(Path(m.launcher.__file__).read_text() + '\nraise RuntimeError("must not execute historical code")\n')
+    runner_sha = m.launcher.digest(old); config_sha = m.canonical_hash(doc)
+    m.launcher.persist(Path(doc['receipt_dir']) / 'launch-intent.json',
+        {'config_sha256': config_sha, 'runner_sha256': runner_sha})
+    docker(m.launcher.command(doc, config_sha, runner_sha))
+    container = docker.containers[doc['container_name']]
+    config['jobs'][0]['after'] = {'condition': 'container-exit-zero',
+        'launch': pin(launch), 'container_id': container['Id'], 'launcher_artifact': pin(old)}
+    path.write_text(json.dumps(config))
+    return launch, old, container
+
+
+def test_cross_version_requires_independent_artifact_pin(queue, tmp_path):
+    path, config, docker = queue
+    launch, old, container = historical_predecessor(queue, tmp_path)
+    with pytest.raises(ValueError, match='receipt identity changed'):
+        m.observe(pin(launch))
+    assert m.execute(path, 'once')['status'] == 'waiting'
+    assert docker.launches == ['previous-version']
+    container['State'].update(Status='exited', Running=False, ExitCode=0, FinishedAt='end')
+    assert m.execute(path, 'watch')['status'] == 'complete'
+    assert docker.launches == ['previous-version', 'job0', 'job1']
+    assert docker.containers['job0']['Config']['Labels']['saea.launch.runner'] == m.launcher.digest(m.launcher.__file__)
+    assert m.execute(path, 'watch')['status'] == 'complete'
+    assert len(docker.launches) == 3
+
+
+@pytest.mark.parametrize('fault', ['changed-artifact', 'wrong-version', 'receipt', 'container-label', 'container-id', 'symlink', 'foreign-field'])
+def test_cross_version_identity_faults_never_dispatch(queue, tmp_path, fault):
+    path, config, docker = queue
+    launch, old, container = historical_predecessor(queue, tmp_path)
+    dep = config['jobs'][0]['after']
+    if fault == 'changed-artifact':old.write_text('changed')
+    elif fault == 'wrong-version':dep['launcher_artifact'] = pin(Path(m.launcher.__file__))
+    elif fault == 'receipt':
+        receipt = Path(json.loads(launch.read_text())['receipt_dir']) / 'launch-intent.json'
+        value = json.loads(receipt.read_text()); value['runner_sha256'] = 'f'*64; receipt.write_text(json.dumps(value))
+    elif fault == 'container-label':container['Config']['Labels']['saea.launch.runner'] = 'f'*64
+    elif fault == 'container-id':dep['container_id'] = 'f'*64
+    elif fault == 'symlink':
+        link = tmp_path / 'link'; link.mkdir(); target = link / 'configured_job_launch.py'; target.symlink_to(old)
+        dep['launcher_artifact'] = pin(target)
+    else:dep['runner_sha256'] = m.launcher.digest(old)
+    path.write_text(json.dumps(config))
+    with pytest.raises(ValueError):m.execute(path, 'once')
+    assert docker.launches == ['previous-version']
+
+
+def test_cross_version_missing_container_retains_unknown_without_retry(queue, tmp_path):
+    path, config, docker = queue
+    launch, old, container = historical_predecessor(queue, tmp_path)
+    docker.containers.clear()
+    _, observed = m.observe(pin(launch), pin(old))
+    assert observed['state'] == 'unresolved-launch-intent' and observed['automatic_retry'] is False
+    with pytest.raises(ValueError, match='predecessor container identity differs'):
+        m.execute(path, 'once')
+    assert docker.launches == ['previous-version']
+
+
+def test_cross_version_generation_release_preserves_seal_checks(queue, tmp_path):
+    release, value, _ = generation_fixture(queue, tmp_path)
+    path, config, docker = queue
+    dep = config['jobs'][0]['after']
+    launch = m.launcher.load_config(dep['launch']['path'])
+    old = tmp_path/'configured_job_launch.py'; old.write_text('# immutable historical launcher version\n')
+    dep['launcher_artifact'] = pin(old); runner_sha = m.launcher.digest(old)
+    receipt = Path(launch['receipt_dir'])/'launch-intent.json'
+    intent = json.loads(receipt.read_text()); intent['runner_sha256'] = runner_sha; receipt.write_text(json.dumps(intent))
+    docker.containers['producer']['Config']['Labels']['saea.launch.runner'] = runner_sha
+    path.write_text(json.dumps(config)); release.write_text(json.dumps(value))
+    result = m.execute(path, 'once')
+    assert result['status'] == 'running' and docker.launches == ['producer','job0']
+    assert result['jobs'][0]['generation_release']['cpu_scoring_may_continue'] is True
+
+
+def test_cross_version_foreign_container_without_intent_rejected(queue, tmp_path):
+    path, config, docker = queue
+    launch, old, _ = historical_predecessor(queue, tmp_path)
+    (Path(json.loads(launch.read_text())['receipt_dir'])/'launch-intent.json').unlink()
+    with pytest.raises(ValueError, match='durable launch intent'):
+        m.execute(path, 'once')
+    assert docker.launches == ['previous-version']

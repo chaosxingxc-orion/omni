@@ -39,6 +39,18 @@ def pin_path(pin):
     return path
 
 
+def predecessor_runner(pin):
+    """Bind historical launch identity without importing or executing old code.
+
+    The reviewed queue config, not the receipt under observation, supplies this
+    immutable artifact pin. Current read-only Docker/custody checks remain in use.
+    """
+    path = pin_path(pin)
+    require(path.name == 'configured_job_launch.py' and not path.is_symlink()
+            and path.absolute() == path.resolve(), 'regular historical launcher artifact required')
+    return pin['sha256']
+
+
 def load(path):
     doc = json.loads(Path(path).read_bytes())
     required = {'schema', 'queue_id', 'state_dir', 'monitor_interval_seconds', 'jobs'}
@@ -71,11 +83,12 @@ def load(path):
         if job['after'] is not None:
             dep = job['after']
             release = isinstance(dep, dict) and dep.get('condition') == 'generation-released'
-            require(isinstance(dep, dict) and set(dep) == ({'condition', 'launch', 'container_id', 'release'} if release
+            require(isinstance(dep, dict) and set(dep) - {'launcher_artifact'} == ({'condition', 'launch', 'container_id', 'release'} if release
                     else {'condition', 'launch', 'container_id'})
                     and dep['condition'] in ('container-exit-zero', 'generation-released')
                     and isinstance(dep['container_id'], str) and re.fullmatch('[a-f0-9]{64}', dep['container_id']),
                     'exact known terminal-container dependency required')
+            if 'launcher_artifact' in dep:predecessor_runner(dep['launcher_artifact'])
             producer = launcher.load_config(pin_path(dep['launch']))
             require(producer['container_name'] != launch['container_name'], 'self dependency refused')
             if release:
@@ -277,9 +290,10 @@ def wait_generation_event(doc, path):
     finally:events.close()
 
 
-def observe(pin):
+def observe(pin, launcher_artifact=None):
     config = launcher.load_config(pin_path(pin))
-    observed = launcher.status(config, canonical_hash(config), launcher.digest(launcher.__file__))
+    runner_sha = predecessor_runner(launcher_artifact) if launcher_artifact is not None else launcher.digest(launcher.__file__)
+    observed = launcher.status(config, canonical_hash(config), runner_sha)
     # An inspect-only foreign/adopted container is not an attributable launch.
     intent = Path(config['receipt_dir']) / 'launch-intent.json'
     if observed['state'] != 'not-launched':
@@ -298,7 +312,7 @@ def outcome(observed):
 
 def dependency_status(doc, job, record):
     if job['after'] is None:return 'complete', None, None
-    dep = job['after']; producer, observed = observe(dep['launch'])
+    dep = job['after']; producer, observed = observe(dep['launch'], dep.get('launcher_artifact'))
     require(observed.get('container_id') == dep['container_id'], 'predecessor container identity differs')
     record['dependency'] = observed
     result = outcome(observed); release_path = None
