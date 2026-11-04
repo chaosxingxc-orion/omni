@@ -55,8 +55,6 @@
 
 这条路径只是经验库消费适配，未为ACE/Reflexion冒用TF-GRPO规则，也未自动批准任何真实候选。当前发布范围是固定TRAIN625及H2子集；跨数据集或祖先来源无法在该视图中核验的候选需独立扩展来源协议，不能忽略校验。
 
-## 多阶段参考链的模型身份
+## 部署片段与学习 actor 分离
 
-融合式单次提案之外，`ExperienceLearner.learn(..., actor_model_id=...)` 现在允许既有 summary→advantage→group_update→batch_update 链显式区分冻结 actor 与外部 learner。构造器的 model_id 仍是实际调用并核验响应的教师；actor_model_id 必须与 parent 及每条 rollout 的模型身份完全一致。candidate.model_id 保持 actor，另存 actor_model_id/learner_model_id；batch 绑定两者，断点恢复不允许更换身份。
-
-省略 actor_model_id 时保留历史原生行为及 batch 格式。此接口没有改变算法阶段、奖励、来源规则或原生发布要求，也不意味着外部参考链已真实运行。已有外部 receipt 保留 provider 身份，不将教师响应伪装成 actor 输出。后继配置入口仍需固定数据、完整证据、每阶段预算及来源适配；融合式当前请求不受此更改影响。
+跨已有实例评估时，可以配置runtime_model_id与deployment_binding：候选/model_id仍是原学习actor，不改写source或wire。deployment_binding以saea-external-actor-deployment-v1钉住repo中actor_model/runtime_model两个配置，review/release同时绑定两者。只允许端点、runtime receipt、容量说明、timeout和输出/原生上下文容量差异；权重、tokenizer、解析器、seed等科学字段必须一致。运行仍由真正runtime fragment匹配serving session，并执行实际native FIT；容量相同不代表可跳过FIT。禁止原生consumer使用此可选外部分支。

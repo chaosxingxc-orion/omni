@@ -133,3 +133,31 @@ def test_external_release_rejects_changed_or_leaking_material(material, fault):
         with pytest.raises(ValueError):consumption.verify(params,repo=repo,data=data,model_id=kwargs['model_id'],consumer_ids=kwargs['consumer_ids'])
     else:
         with pytest.raises((ValueError,TypeError)):release.prepare(**kwargs)
+
+@pytest.mark.parametrize('fault', [None, 'weights', 'seed', 'unbound', 'runtime'])
+def test_runtime_alias_preserves_source_actor_and_rejects_science_drift(material, fault):
+    kwargs,candidate,doc,review,_,_=material;repo=kwargs['repo'];data=kwargs['data']
+    actor={'model_lock_key':'same-weights','model_materialization_root':'models/frozen','server_args':['--max-model-len','65536','--dtype','bfloat16'],'decoding_params':{'temperature':0,'seed':42,'max_tokens':16384},'base_url':'http://local-a','runtime_receipt':'a.json'}
+    runtime=copy.deepcopy(actor);runtime.update(base_url='http://local-b',runtime_receipt='b.json');runtime['server_args'][1]='49152';runtime['decoding_params']['max_tokens']=4096
+    if fault=='weights':runtime['model_lock_key']='different'
+    if fault=='seed':runtime['decoding_params']['seed']=43
+    pins={}
+    for key,name,value in [('actor_model','frozen-actor',actor),('runtime_model','tp4-runtime',runtime)]:
+        rel='configs/model/'+name+'.json';write(repo/rel,value);pins[key]={'relpath':rel,'sha256':consumption.digest(repo/rel)}
+    binding=write(data/'deployment.json',{'schema':'saea-external-actor-deployment-v1',**pins})
+    doc.update(runtime_model_id='tp4-runtime',deployment_binding=binding)
+    review['bindings']={k:v for k,v in doc.items() if k not in ('schema','review')}
+    if fault=='unbound':review['bindings'].pop('runtime_model_id')
+    doc['review']=write(data/'review.json',review);write(data/'release.json',doc)
+    kwargs.update(runtime_model_id='tp4-runtime',deployment_binding=data/'deployment.json')
+    if fault in ('weights','seed','unbound'):
+        with pytest.raises(ValueError):release.prepare(**kwargs)
+        return
+    params=release.prepare(**kwargs)
+    assert params['model_id']==candidate['model_id']=='frozen-actor'
+    assert params['runtime_model_id']=='tp4-runtime'
+    if fault=='runtime':
+        with pytest.raises(ValueError,match='consumer model'):
+            consumption.verify(params,repo=repo,data=data,model_id='unbound-runtime',consumer_ids=kwargs['consumer_ids'])
+    else:
+        assert consumption.verify(params,repo=repo,data=data,model_id='tp4-runtime',consumer_ids=kwargs['consumer_ids'])==candidate['sha256']

@@ -39,6 +39,33 @@ def render(candidate, base, consumer_ids):
     return base + SEPARATOR + '\n'.join(f'[{k}]. {v}' for k, v in sorted(items.items())) + '\n'
 
 
+def verify_deployment_binding(params, *, repo, data):
+    """Keep the learned actor identity while checking a separately named deployment."""
+    import re
+    require(all(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*', params[k])
+                for k in ('model_id', 'runtime_model_id')), 'safe model fragment names required')
+    binding = read_pin(data, params['deployment_binding'])
+    require(set(binding) == {'schema', 'actor_model', 'runtime_model'}
+            and binding['schema'] == 'saea-external-actor-deployment-v1', 'explicit deployment equivalence required')
+    for key, name in [('actor_model', params['model_id']), ('runtime_model', params['runtime_model_id'])]:
+        require(binding[key]['relpath'] == 'configs/model/' + name + '.json', 'exact actor/runtime fragment pin required')
+    actor = read_pin(repo, binding['actor_model']); runtime = read_pin(repo, binding['runtime_model'])
+    operational = {'base_url', 'runtime_receipt', 'geometry_basis', 'timeout_seconds', 'answer_reserve_tokens'}
+    def science(value):
+        value = json.loads(json.dumps(value))
+        for key in operational: value.pop(key, None)
+        capacity = value['decoding_params'].pop('max_tokens')
+        require(type(capacity) is int and capacity >= 4096, 'complete frozen node output capacity required')
+        args = value['server_args']
+        require(args.count('--max-model-len') == 1 and not any('rope' in str(a).lower() for a in args), 'native context geometry required')
+        idx = args.index('--max-model-len') + 1
+        require(4096 <= int(args[idx]) <= 65536, 'native bounded context required')
+        args[idx] = '<native-context-capacity>'
+        return value
+    require(science(actor) == science(runtime), 'runtime changes frozen actor weights, tokenizer or decoding')
+    return binding
+
+
 def verify_source(params, *, repo, data, candidate):
     """Offline replay of original request/response; no ExternalTeacher dispatch."""
     spec = read_pin(data, params['source_manifest'])
@@ -47,6 +74,10 @@ def verify_source(params, *, repo, data, candidate):
     release = read_pin(data, params['candidate_release'])
     fields = {'schema', 'candidate', 'source_manifest', 'consumer_roster', 'learning_dataset',
               'consumer_ids', 'selection_ids', 'review'}
+    if 'runtime_model_id' in params:
+        verify_deployment_binding(params, repo=repo, data=data)
+        fields |= {'runtime_model_id', 'deployment_binding'}
+        require(all(release.get(k) == params[k] for k in ('runtime_model_id', 'deployment_binding')), 'release runtime binding differs')
     require(isinstance(release, dict) and set(release) == fields and release['schema'] == SCHEMA,
             'explicit external development release required')
     require(all(release[k] == params[k] for k in ('candidate', 'source_manifest', 'consumer_ids')),
@@ -103,7 +134,7 @@ def verify_source(params, *, repo, data, candidate):
 
 
 def prepare(*, candidate_path, source_manifest, candidate_release, repo, data, base_template,
-            template, consumer_ids, model_id):
+            template, consumer_ids, model_id, runtime_model_id=None, deployment_binding=None):
     from .tfgrpo_consumption import digest, validate_params, verify, checked_pin
     from ..core.atomic_file import publish_new
     import hashlib
@@ -120,10 +151,13 @@ def prepare(*, candidate_path, source_manifest, candidate_release, repo, data, b
               'candidate_release': pin(candidate_release), 'model_id': model_id, 'base_template': base_pin,
               'template': {'relpath': template, 'sha256': hashlib.sha256(text.encode()).hexdigest()},
               'consumer_ids': list(consumer_ids), 'purpose': 'development-evaluation'}
+    if runtime_model_id is not None or deployment_binding is not None:
+        require(runtime_model_id is not None and deployment_binding is not None, 'complete runtime alias required')
+        params.update(runtime_model_id=runtime_model_id, deployment_binding=pin(deployment_binding))
     validate_params(params); verify_source(params, repo=repo, data=data, candidate=candidate)
     target = (repo / 'configs' / template).resolve()
     require(target.is_relative_to(repo / 'configs'), 'template escaped repository')
     target.parent.mkdir(parents=True, exist_ok=True)
     publish_new(target, text.encode())
-    verify(params, repo=repo, data=data, model_id=model_id, consumer_ids=consumer_ids)
+    verify(params, repo=repo, data=data, model_id=runtime_model_id or model_id, consumer_ids=consumer_ids)
     return params

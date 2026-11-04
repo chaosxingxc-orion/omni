@@ -34,13 +34,17 @@ def checked_pin(root, pin):
 
 
 def validate_params(params):
-    optional={'target_arm','rendering','render_manifest','compact_params','candidate_release','source_kind'}
+    optional={'target_arm','rendering','render_manifest','compact_params','candidate_release','source_kind','runtime_model_id','deployment_binding'}
     if not isinstance(params,dict) or not FIELDS <= set(params) or set(params)-FIELDS-optional or params['purpose'] != 'development-evaluation':
         raise ValueError('development-only Solver experience binding required')
     if 'source_kind' in params:
         if (params['source_kind'] != 'external-tfgrpo-v1' or 'candidate_release' not in params
                 or any(k in params for k in ('rendering', 'render_manifest', 'compact_params'))):
             raise ValueError('explicit external review and standard rendering required')
+    if ('runtime_model_id' in params) != ('deployment_binding' in params):
+        raise ValueError('runtime alias requires pinned deployment binding')
+    if 'runtime_model_id' in params and (params.get('source_kind') != 'external-tfgrpo-v1' or not isinstance(params['runtime_model_id'], str) or not params['runtime_model_id']):
+        raise ValueError('external runtime model identity required')
     if 'target_arm' in params and params['target_arm'] != 'learned':
         raise ValueError('only the learned paired Solver arm is supported')
     if ('rendering' in params)!=('render_manifest' in params) or ('rendering' in params and params['rendering']!='short-display-id-v1'):
@@ -58,7 +62,7 @@ def validate_params(params):
         raise ValueError('unique TRAIN development consumer identities required')
     if not isinstance(params['model_id'],str) or not params['model_id']:
         raise ValueError('source frozen model required')
-    for key in ('candidate','source_manifest','base_template','template',*(['render_manifest'] if 'render_manifest' in params else []), *(['candidate_release'] if 'candidate_release' in params else [])):
+    for key in ('candidate','source_manifest','base_template','template',*(['render_manifest'] if 'render_manifest' in params else []), *(['candidate_release'] if 'candidate_release' in params else []), *(['deployment_binding'] if 'deployment_binding' in params else [])):
         pin=params[key]
         if (not isinstance(pin,dict) or set(pin)!={'relpath','sha256'}
                 or not isinstance(pin['relpath'],str) or not pin['relpath']
@@ -135,7 +139,7 @@ def verify_release(params, *, repo, data, candidate, bundle):
 
 def verify(params, *, repo, data, model_id, consumer_ids):
     validate_params(params)
-    if model_id != params['model_id'] or set(consumer_ids) != set(params['consumer_ids']):
+    if model_id != params.get('runtime_model_id', params['model_id']) or set(consumer_ids) != set(params['consumer_ids']):
         raise ValueError('consumer model or exact development roster differs')
     candidate=json.loads(checked_pin(data,params['candidate']).read_bytes())
     if params.get('source_kind') == 'external-tfgrpo-v1':
