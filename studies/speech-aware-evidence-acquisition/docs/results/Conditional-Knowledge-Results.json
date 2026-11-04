@@ -1,0 +1,225 @@
+{
+  "schema": "conditional-knowledge-results-public-v1",
+  "results": [
+    {
+      "experiment": "change",
+      "samples": 80,
+      "official": {
+        "learned": {
+          "slu_f1": 0.6961531489041435,
+          "intent_accuracy": 0.8375,
+          "span_f1": 0.5446428571428572
+        },
+        "lock": {
+          "slu_f1": 0.6873187141528527,
+          "intent_accuracy": 0.825,
+          "span_f1": 0.5545454545454546
+        }
+      },
+      "strict": {
+        "learned": 27,
+        "lock": 26
+      },
+      "repairs": 4,
+      "breaks": 3,
+      "strata": {
+        "unrelated": {
+          "n": 48,
+          "target_exposed": 1,
+          "strict": {
+            "learned": 15,
+            "lock": 13
+          },
+          "intent_correct": {
+            "learned": 41.0,
+            "lock": 40.0
+          },
+          "entity_counts": {
+            "learned": {
+              "tp": 43.0,
+              "fp": 34.0,
+              "fn": 41.0
+            },
+            "lock": {
+              "tp": 44.0,
+              "fp": 33.0,
+              "fn": 40.0
+            }
+          },
+          "slot_micro_f1": {
+            "learned": 0.5341614906832298,
+            "lock": 0.546583850931677
+          }
+        },
+        "boundary": {
+          "n": 29,
+          "target_exposed": 19,
+          "strict": {
+            "learned": 11,
+            "lock": 12
+          },
+          "intent_correct": {
+            "learned": 23.0,
+            "lock": 23.0
+          },
+          "entity_counts": {
+            "learned": {
+              "tp": 15.0,
+              "fp": 17.0,
+              "fn": 6.0
+            },
+            "lock": {
+              "tp": 14.0,
+              "fp": 15.0,
+              "fn": 7.0
+            }
+          },
+          "slot_micro_f1": {
+            "learned": 0.5660377358490566,
+            "lock": 0.56
+          }
+        },
+        "target-positive": {
+          "n": 3,
+          "target_exposed": 3,
+          "strict": {
+            "learned": 1,
+            "lock": 1
+          },
+          "intent_correct": {
+            "learned": 3.0,
+            "lock": 3.0
+          },
+          "entity_counts": {
+            "learned": {
+              "tp": 3.0,
+              "fp": 2.0,
+              "fn": 2.0
+            },
+            "lock": {
+              "tp": 3.0,
+              "fp": 1.0,
+              "fn": 2.0
+            }
+          },
+          "slot_micro_f1": {
+            "learned": 0.6,
+            "lock": 0.6666666666666666
+          }
+        }
+      },
+      "promotion": false
+    },
+    {
+      "experiment": "cooking",
+      "samples": 80,
+      "official": {
+        "learned": {
+          "slu_f1": 0.6898839027411108,
+          "intent_accuracy": 0.825,
+          "span_f1": 0.5560538116591929
+        },
+        "lock": {
+          "slu_f1": 0.6962591138866053,
+          "intent_accuracy": 0.8375,
+          "span_f1": 0.5585585585585586
+        }
+      },
+      "strict": {
+        "learned": 27,
+        "lock": 31
+      },
+      "repairs": 2,
+      "breaks": 6,
+      "strata": {
+        "unrelated": {
+          "n": 65,
+          "target_exposed": 0,
+          "strict": {
+            "learned": 22,
+            "lock": 25
+          },
+          "intent_correct": {
+            "learned": 55.0,
+            "lock": 56.0
+          },
+          "entity_counts": {
+            "learned": {
+              "tp": 54.0,
+              "fp": 39.0,
+              "fn": 47.0
+            },
+            "lock": {
+              "tp": 54.0,
+              "fp": 39.0,
+              "fn": 47.0
+            }
+          },
+          "slot_micro_f1": {
+            "learned": 0.5567010309278351,
+            "lock": 0.5567010309278351
+          }
+        },
+        "boundary": {
+          "n": 13,
+          "target_exposed": 9,
+          "strict": {
+            "learned": 4,
+            "lock": 5
+          },
+          "intent_correct": {
+            "learned": 10.0,
+            "lock": 10.0
+          },
+          "entity_counts": {
+            "learned": {
+              "tp": 6.0,
+              "fp": 7.0,
+              "fn": 4.0
+            },
+            "lock": {
+              "tp": 6.0,
+              "fp": 6.0,
+              "fn": 4.0
+            }
+          },
+          "slot_micro_f1": {
+            "learned": 0.5217391304347826,
+            "lock": 0.5454545454545454
+          }
+        },
+        "target-positive": {
+          "n": 2,
+          "target_exposed": 1,
+          "strict": {
+            "learned": 1,
+            "lock": 1
+          },
+          "intent_correct": {
+            "learned": 1.0,
+            "lock": 1.0
+          },
+          "entity_counts": {
+            "learned": {
+              "tp": 2.0,
+              "fp": 0.0,
+              "fn": 2.0
+            },
+            "lock": {
+              "tp": 2.0,
+              "fp": 0.0,
+              "fn": 2.0
+            }
+          },
+          "slot_micro_f1": {
+            "learned": 0.6666666666666666,
+            "lock": 0.6666666666666666
+          }
+        }
+      },
+      "promotion": false
+    }
+  ],
+  "new_scoring_model_calls": 0,
+  "scope": "previously exposed development80, no independent heldout claim"
+}
