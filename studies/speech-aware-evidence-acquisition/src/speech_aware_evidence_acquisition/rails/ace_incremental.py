@@ -60,7 +60,7 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
                 compact_text_chars=None, compact_reason_chars=None,
                 evidence_view='compact-v1', development_instruction=None, development_material=None,
                 invalid_delta_policy='stop-preserve-v1', invalid_signal_policy='stop-preserve-v1',
-                decision_context_policy=None):
+                decision_context_policy=None, learner_model_id=None):
     """Accept native-verified original batch; bind all groups once, no filtering.
 
     Source is the existing load_finalized_shards-compatible custody, including
@@ -70,6 +70,8 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
     require(source.get('source_native_custody_verified') is True
             and source.get('unknown_contacts') == 0, 'verified known native TRAIN source required')
     batch = source['batch']; model = source['model_id']
+    if learner_model_id is not None:
+        require_text(learner_model_id, 'external learner model identity')
     validate_experience(parent, model); validate_experience(batch['parent'], model)
     require(all(qid.startswith('slurp:train:') for version in (parent, batch['parent'])
                 for qid in version['learned_query_ids']), 'parent knowledge must contain only TRAIN learning')
@@ -168,6 +170,8 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
         'rollout_kind': batch['rollout_kind'], 'reward_mode': mode,
         'offline_stale_policy': parent['sha256'] != batch['parent']['sha256'],
         'observed_associations_not_causal': True, 'candidate_publishable': False}
+    if learner_model_id is not None:
+        body['learner_model_id'] = learner_model_id
     if development_material is not None:
         body['development_material'] = copy.deepcopy(development_material)
     return {**body, 'input_sha256': sha(body)}
@@ -506,13 +510,14 @@ def execute(learner, document, *, count_tokens, verify_source):
     require(isinstance(learner, ExperienceLearner) and callable(learner.preflight)
             and callable(count_tokens) and callable(verify_source), 'shared metering, native FIT and source verifier required')
     bounds = document['bounds']
-    require(learner.model_id == document['model_id']
+    require(learner.model_id == document.get('learner_model_id', document['model_id'])
             and learner.learning_config_sha256 == document['learning_config_sha256']
             and learner.max_calls == bounds['max_calls'], 'ACE registered model/config/budget differs')
     source = verify_source()
     require(sha(source) == document['source_sha256'], 'ACE native source changed')
     rebuilt = build_input(source, document['parent'], learning_config_sha256=document['learning_config_sha256'],
         development_material=document.get('development_material'),
+        learner_model_id=document.get('learner_model_id'),
         **{k: v for k, v in bounds.items() if k != 'max_calls'})
     require(rebuilt == document, 'ACE evidence derivation differs')
     def persist(path, value):
@@ -587,7 +592,7 @@ def execute(learner, document, *, count_tokens, verify_source):
             accounting = learner.accounting()
             require(accounting['unknown_contacts'] == 0 and accounting['observed_contacts'] == bounds['max_calls'],
                     'complete observed ACE update required')
-            body = {'schema': 'saea-tfgrpo-experience-v1', 'model_id': learner.model_id, 'items': items,
+            body = {'schema': 'saea-tfgrpo-experience-v1', 'model_id': document['model_id'], 'items': items,
                 'learned_query_ids': sorted(set(document['parent']['learned_query_ids']) |
                                             {g['query_id'] for g in document['groups']}),
                 'parent_sha256': document['parent']['sha256'], 'batch_sha256': sha(document),
@@ -605,8 +610,11 @@ def execute(learner, document, *, count_tokens, verify_source):
                 'unresolved_conflicts': [{'query_id': e['query_id'], **c} for e in events for c in e['merge']['unresolved_conflicts']],
                 'observed_associations_not_causal': True, 'semantic_review_required': True,
                 'semantic_support_verified': False, 'requires_real_evaluation': True}
+            if 'learner_model_id' in document:
+                body['learner_model_id'] = document['learner_model_id']
+                body['actor_model_id'] = document['model_id']
             result = {**body, 'sha256': sha(body)}
-            validate_experience(result, learner.model_id)
+            validate_experience(result, document['model_id'])
             persist(learner.root/'candidate.json', result)
             return result
         except BaseException as error:
