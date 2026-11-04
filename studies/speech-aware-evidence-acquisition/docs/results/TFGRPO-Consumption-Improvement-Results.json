@@ -1,0 +1,47 @@
+{
+  "scope": "completed fixed80 development, paired first Solver branches; no independent heldout claim",
+  "rows": 80,
+  "official": {
+    "learned": {
+      "slu_f1": 0.680388684621992,
+      "intent_accuracy": 0.825,
+      "span_f1": 0.5428571428571428
+    },
+    "lock": {
+      "slu_f1": 0.7068418763028034,
+      "intent_accuracy": 0.8000000000000002,
+      "span_f1": 0.5673076923076923
+    }
+  },
+  "strict": {
+    "learned": 29,
+    "lock": 28
+  },
+  "score_hashes_verified": {
+    "learned": "1b2def640b187e54105c6e87c7cac3297048731638c3c6b7f23f76af71d0418d",
+    "lock": "a9721a5152545d6b09388c0693bde49480fe0209f8cf0d49cf26106d74136a64"
+  },
+  "promoted": false,
+  "repairs": 5,
+  "breaks": 4,
+  "intent_repairs": 4,
+  "intent_breaks": 2,
+  "generation_seconds": 1662.01442482,
+  "seconds_per_row": 20.77518031025,
+  "cards": 2,
+  "instances": 1,
+  "client_concurrency": 32,
+  "completed_row_usage": {
+    "calls": 240,
+    "prompt_tokens": 1583590,
+    "completion_tokens": 510311
+  },
+  "cost_scope": "Current generation only; FIT and shared teacher excluded.",
+  "render_audit": {
+    "rows": 80,
+    "at1_reproduction_checked": 80,
+    "later_solver_visits": 0,
+    "citation_rows_sha256": "0c4c992a613ab8c53387d03b2865a4f3c4b2a880e1eeb439197205ddf0c9475f",
+    "manifest_sha256": "c150307288fc08397e81ea43a845e2835324d36ca3ad3c2d9dfa8f3588d08086"
+  }
+}
