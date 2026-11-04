@@ -1,0 +1,99 @@
+{
+  "rows": 80,
+  "strict_success": {
+    "child": 28,
+    "lock": 26,
+    "parent": 29
+  },
+  "comparisons": {
+    "child_vs_lock": {
+      "proxy_mean_delta": 0.0006696428571428825,
+      "strict_breaks": 2,
+      "strict_repairs": 4
+    },
+    "child_vs_parent": {
+      "proxy_mean_delta": -0.014955357142857117,
+      "strict_breaks": 2,
+      "strict_repairs": 1
+    },
+    "parent_vs_lock": {
+      "proxy_mean_delta": 0.015625,
+      "strict_breaks": 1,
+      "strict_repairs": 4
+    }
+  },
+  "native_role_costs": {
+    "perception": {
+      "calls": 80,
+      "completion_tokens": 134270,
+      "contacts_with_reasoning": 80,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 80
+      },
+      "prompt_tokens": 307413,
+      "request_seconds": {
+        "mean": 86.9886845260011,
+        "n": 80,
+        "p50": 76.77104874499491,
+        "p95": 162.54949910999858
+      },
+      "think_markers": 0,
+      "wire_records": 80
+    },
+    "solver": {
+      "calls": 240,
+      "completion_tokens": 518489,
+      "contacts_with_reasoning": 240,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 240
+      },
+      "prompt_tokens": 2079177,
+      "request_seconds": {
+        "mean": 109.0595116654987,
+        "n": 240,
+        "p50": 107.30661263498769,
+        "p95": 169.18692017000285
+      },
+      "think_markers": 0,
+      "wire_records": 240
+    }
+  },
+  "total_cost": {
+    "audio_seconds_used": 1358.06325,
+    "calls_used": 320,
+    "completion_tokens_total": 652759,
+    "latency_seconds_total": 33133.377561799774,
+    "prompt_tokens_total": 2386590,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "candidate_accepted": false,
+  "claims_stable_gain": false,
+  "schema": "saea-gepa-selection-summary-v1",
+  "source_result_sha256": "66915df6c3fbde06822e8d937aa56bdae06e6bf38987f9a06823438d3411a4aa",
+  "source_manifest_sha256": "0e934699b0eb81b80fd3d9d21af1f2f16f872b7d1eefe81bff2d869eb631419a",
+  "official": {
+    "child": {
+      "slu_f1": 0.6681948635339832,
+      "intent_accuracy": 0.75,
+      "span_f1": 0.5502645502645503
+    },
+    "lock": {
+      "slu_f1": 0.6589240105650768,
+      "intent_accuracy": 0.75,
+      "span_f1": 0.5303867403314917
+    },
+    "parent": {
+      "slu_f1": 0.683496155752043,
+      "intent_accuracy": 0.7625,
+      "span_f1": 0.5806451612903226
+    }
+  },
+  "cards": 2,
+  "instances": 1,
+  "concurrency": 16,
+  "campaign_seconds": 2382.1454974299995,
+  "campaign_seconds_per_row": 29.776818717874995
+}
