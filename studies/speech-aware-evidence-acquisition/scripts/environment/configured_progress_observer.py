@@ -78,7 +78,7 @@ def source(j):
 
 
 def native_contacts(producer,logical,plan,arm):
-    journal=ContactJournal(logical,plan,arm)
+    journal=ContactJournal(logical,plan,arm,source_root=producer.get('repo_path'))
     journal.root=settlement.mapped(producer,logical/'contact-journals'/plan.run_id/plan.attempt_id)
     files=sorted(journal.root.glob('*')) if journal.root.exists() else []
     require(all(p.is_file() and not p.is_symlink() and re.fullmatch(r'[a-f0-9]{64}\.(intent|response)\.json',p.name)

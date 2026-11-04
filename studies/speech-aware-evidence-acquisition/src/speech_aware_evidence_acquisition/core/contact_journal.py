@@ -48,8 +48,8 @@ def logical_contact(payload):
 class ContactJournal:
     """Create exclusive, fsynced records owned by one exact execution attempt."""
 
-    def __init__(self, data_root, plan, arm):
-        plan.validate()
+    def __init__(self, data_root, plan, arm, *, source_root=None):
+        plan.validate(source_root=source_root)
         if not RUN_ID_PATTERN.fullmatch(plan.run_id):
             raise ContactJournalError('registered run identity required')
         attempt = _identifier(plan.attempt_id)

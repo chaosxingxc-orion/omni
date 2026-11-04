@@ -14,6 +14,16 @@ m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
 def pin(p):return {'path':str(p),'sha256':m.queue.launcher.digest(p)}
 
+def test_pinned_plan_source_is_preserved_in_journal_validation(tmp_path):
+    calls=[]
+    class Plan:
+        run_id='SAEA-OBSERVER-V1';attempt_id='generation-v1';protocol_hash='a'*64;split_identity_hash='b'*64
+        def validate(self,*,source_root=None):
+            calls.append(source_root)
+            assert source_root==tmp_path/'original-source'
+    journal=ContactJournal(tmp_path,Plan(),'bare-core',source_root=tmp_path/'original-source')
+    assert calls==[tmp_path/'original-source'] and journal.identity['run_id']=='SAEA-OBSERVER-V1'
+
 def test_observed_and_unknown_costs_stay_distinct(tmp_path):
     plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
     journal=ContactJournal(tmp_path,plan,'bare-core')
