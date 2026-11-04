@@ -141,3 +141,71 @@ def test_missing_teacher_scope_requires_explicit_original_offline_context(tmp_pa
     profile = external.read(root / 'profile.json')
     with pytest.raises(ValueError, match='algorithm-specific candidate fields'):
         external.validate_proposals(json.dumps(doc), profile, context, ['slurp:train:one'])
+
+
+def projection_for(proposal):
+    fields = {key: {'source_sha256': sha(value), 'spans': [[0, len(value)]]}
+              for key, value in proposal['memory'].items()}
+    fields['action']['spans'] = [[0, len(proposal['memory']['action']) - 1]]
+    return {'schema': 'saea-reflexion-runtime-projection-v1', 'proposal_sha256': sha(proposal),
+            'author': 'research reviewer', 'rationale': 'isolate conditional check',
+            'decision': 'eligible-for-development-review', 'memory': fields}
+
+
+def test_projected_reflexion_replays_wire_and_keeps_original(tmp_path, monkeypatch):
+    spec, root = prepared(tmp_path, monkeypatch)
+    original = reflexion.compile_preview(spec)
+    projection = projection_for(original['proposal'])
+    spec['runtime_projection'] = write(tmp_path/'projection.json', projection)
+    candidate = reflexion.compile_preview(spec)
+    assert candidate['proposal'] == original['proposal']
+    assert candidate['runtime_projection'] == projection
+    assert candidate['runtime_proposal']['memory']['action'] == original['proposal']['memory']['action'][:-1]
+    assert candidate['learned_query_ids'] == original['learned_query_ids']
+    assert candidate['exposure'] == original['exposure']
+    assert candidate['wire_response_sha256'] == original['wire_response_sha256']
+    assert candidate['items'] != original['items']
+    assert candidate['semantic_validation'] == 'pending' and not candidate['deployment_accepted']
+    assert candidate['intervention_kind'] == 'researcher-reviewed-source-substrings'
+    # Changing a projection after it has been pinned must fail replay.
+    write(tmp_path/'projection.json', {**projection, 'author': 'changed'})
+    with pytest.raises(ValueError): reflexion.compile_preview(spec)
+
+
+@pytest.mark.parametrize('fault', ['proposal', 'field', 'missing', 'insert', 'overlap', 'reverse', 'bool', 'empty', 'unchanged', 'foreign_schema'])
+def test_projection_rejects_unbound_or_rewritten_memory(tmp_path, monkeypatch, fault):
+    spec, _ = prepared(tmp_path, monkeypatch)
+    proposal = reflexion.compile_preview(spec)['proposal']
+    doc = projection_for(proposal)
+    if fault == 'proposal': doc['proposal_sha256'] = '0' * 64
+    elif fault == 'field': doc['memory']['action']['source_sha256'] = '0' * 64
+    elif fault == 'missing': doc['memory'].pop('exception')
+    elif fault == 'insert': doc['memory']['action']['text'] = 'invented'
+    elif fault == 'overlap': doc['memory']['action']['spans'] = [[0, 8], [4, 10]]
+    elif fault == 'reverse': doc['memory']['action']['spans'] = [[4, 10], [0, 3]]
+    elif fault == 'bool': doc['memory']['action']['spans'] = [[False, 3]]
+    elif fault == 'empty': doc['memory']['exception']['spans'] = []
+    elif fault == 'unchanged': doc['memory']['action']['spans'] = [[0, len(proposal['memory']['action'])]]
+    elif fault == 'foreign_schema': doc['schema'] = 'saea-ace-runtime-projection-v1'
+    spec['runtime_projection'] = write(tmp_path/'projection.json', doc)
+    with pytest.raises(ValueError): reflexion.compile_preview(spec)
+
+
+def test_projection_cannot_bypass_source_replay_of_a_release(release_material):
+    k, original, doc, review, source, selected, dp = release_material
+    spec_path = k['source_manifest']
+    spec = external.read(spec_path)
+    projection = projection_for(original['proposal'])
+    spec['runtime_projection'] = write(k['data']/'projection.json', projection)
+    write(spec_path, spec)
+    candidate = reflexion.compile_preview(spec)
+    doc['candidate'] = dp('candidate.json', candidate)
+    doc['source_manifest'] = dp('spec.json', spec)
+    review['bindings'] = {key: value for key, value in doc.items() if key not in ('schema', 'review')}
+    review['items'] = {key: {'content_sha256': sha(value), 'decision': 'supported',
+                           'evidence': [{'query_id': source, 'group_sha256': 'a'*64}],
+                           'reason': 'isolated source substring'} for key, value in candidate['items'].items()}
+    doc['review'] = dp('review.json', review); dp('release.json', doc)
+    params = reflexion.prepare(**k)
+    assert consumption.verify(params, repo=k['repo'], data=k['data'], model_id='actor', consumer_ids=k['consumer_ids']) == candidate['sha256']
+    assert source not in (k['repo']/'configs/probes/reflexion.txt').read_text()

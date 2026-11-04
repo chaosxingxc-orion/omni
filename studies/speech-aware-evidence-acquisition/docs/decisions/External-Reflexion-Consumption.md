@@ -7,3 +7,5 @@
 当教师省略transfer_scope，只有原准备context明确固定cross_task_adaptation且没有重试历史才可接受；编译metadata标明derived-from-prepared-context，原proposal不补字段。教师显式声明不同范围则拒绝。
 
 真实输出、完整source和provider wire逐次回放核验，严格JSON代码块解包不改语义。结构通过不代表内容支持；涉及P候选协议扩展、过度遗漏、闭集槽位假设或跨规则依赖的记忆须独立review后才能发布。所有prepare与compile均零模型调用。
+
+Explicit `runtime_projection` optionally pins a researcher-reviewed source-substring selection for all three memory fields. Ordered, disjoint character spans can remove bundled checks without inserting new teacher text. The original proposal and provider wire remain intact; the preview records the projection, resulting runtime proposal and researcher-intervention label. Original non-projected previews remain byte-compatible. Projected candidates still require independent semantic review and a source-replayed release; compilation never authorizes deployment or claims learning gains.

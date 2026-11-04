@@ -38,6 +38,36 @@ def transfer_scope(proposal, context):
             'teacher_field_present': 'transfer_scope' in proposal}
 
 
+def project_runtime(proposal, pin):
+    """Retain reviewed source substrings without silently rewriting teacher memory."""
+    import copy
+    doc = external.read(external.checked(pin))
+    require(isinstance(doc, dict) and set(doc) == {'schema', 'proposal_sha256', 'author', 'rationale', 'decision', 'memory'}
+            and doc['schema'] == 'saea-reflexion-runtime-projection-v1'
+            and doc['proposal_sha256'] == sha(proposal)
+            and doc['decision'] == 'eligible-for-development-review'
+            and all(isinstance(doc[k], str) and doc[k].strip() for k in ('author', 'rationale')),
+            'explicit source-bound Reflexion projection required')
+    fields = doc['memory']
+    require(isinstance(fields, dict) and set(fields) == {'trigger', 'action', 'exception'},
+            'projection must account for every runtime memory field')
+    result = copy.deepcopy(proposal)
+    for field, selection in fields.items():
+        original = proposal['memory'][field]
+        require(isinstance(selection, dict) and set(selection) == {'source_sha256', 'spans'}
+                and selection['source_sha256'] == sha(original), 'projection field source differs')
+        spans = selection['spans']
+        require(isinstance(spans, list) and spans, 'nonempty retained spans required')
+        end = 0; pieces = []
+        for span in spans:
+            require(isinstance(span, list) and len(span) == 2 and all(type(n) is int for n in span)
+                    and end <= span[0] < span[1] <= len(original), 'ordered disjoint source spans required')
+            pieces.append(original[span[0]:span[1]]); end = span[1]
+        result['memory'][field] = ''.join(pieces)
+    require(result != proposal, 'projection must explicitly remove source material')
+    return result, doc
+
+
 def validated_items(proposal, context, evidence_ids):
     fields = {'id', 'evidence_query_ids', 'hypothesis', 'memory', 'retry_protocol', 'validation'}
     require(fields <= set(proposal) <= fields | {'transfer_scope'}, 'exact Reflexion proposal required')
@@ -59,7 +89,7 @@ def validated_items(proposal, context, evidence_ids):
 
 
 def compile_preview(spec):
-    require(isinstance(spec, dict) and set(spec) == {'schema', 'prepared', 'collected', 'candidate_index'}
+    require(isinstance(spec, dict) and {'schema', 'prepared', 'collected', 'candidate_index'} <= set(spec) <= {'schema', 'prepared', 'collected', 'candidate_index', 'runtime_projection'}
             and spec['schema'] == 'saea-reflexion-external-compile-v1', 'exact Reflexion compile specification required')
     pp, cp = external.checked(spec['prepared']), external.checked(spec['collected'])
     require(pp.name == 'prepared.json' and cp == pp.parent/'collected.json', 'original prepared/collected required')
@@ -96,7 +126,9 @@ def compile_preview(spec):
     require(proposals == record.get('proposals') and record.get('candidate_accepted') is False, 'Reflexion collected response differs')
     index = spec['candidate_index']
     require(type(index) is int and 0 <= index < len(proposals['candidates']), 'valid Reflexion candidate index required')
-    proposal = proposals['candidates'][index]; items, provenance = validated_items(proposal, context, evidence)
+    proposal = proposals['candidates'][index]
+    runtime_proposal, projection = project_runtime(proposal, spec['runtime_projection']) if 'runtime_projection' in spec else (proposal, None)
+    items, provenance = validated_items(runtime_proposal, context, evidence)
     body = {'schema': 'saea-reflexion-external-preview-v1', 'strategy': STRATEGY,
             'model_id': context['actor_model_id'], 'parent_version': memory['version'], 'parent_sha256': sha(memory),
             'items': items, 'item_source_fields': provenance, 'proposal': proposal, 'transfer_scope': transfer_scope(proposal, context),
@@ -108,6 +140,9 @@ def compile_preview(spec):
             'semantic_validation': 'pending', 'deployment_accepted': False, 'native_learning_seal': False,
             'candidate_publishable': False, 'programmatic_applicability_gate': False,
             'implementation': 'Reflexion-inspired offline cross-task language-memory proposal; not native online Reflexion retries', 'new_model_calls': 0}
+    if projection is not None:
+        body.update(runtime_projection=projection, runtime_proposal=runtime_proposal,
+                    intervention_kind='researcher-reviewed-source-substrings')
     return {**body, 'sha256': sha(body)}
 
 
