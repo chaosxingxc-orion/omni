@@ -1,0 +1,314 @@
+{
+  "cooking": {
+    "rows": 80,
+    "official": {
+      "learned": {
+        "intent_accuracy": 0.825,
+        "slu_f1": 0.7048629529571921,
+        "span_f1": 0.5676855895196505
+      },
+      "lock": {
+        "intent_accuracy": 0.8375,
+        "slu_f1": 0.6996416304627973,
+        "span_f1": 0.5495495495495495
+      }
+    },
+    "strict_success": {
+      "learned": 27,
+      "lock": 28
+    },
+    "comparisons": {
+      "learned_vs_lock": {
+        "proxy_mean_delta": -0.011860119047619033,
+        "strict_breaks": 2,
+        "strict_repairs": 1
+      }
+    },
+    "strata": {
+      "unrelated": {
+        "n": 65,
+        "strict": {
+          "learned": 23,
+          "lock": 23
+        },
+        "intent_correct": {
+          "learned": 55.0,
+          "lock": 56.0
+        },
+        "entity_counts": {
+          "learned": {
+            "tp": 57.0,
+            "fp": 42.0,
+            "fn": 44.0
+          },
+          "lock": {
+            "tp": 53.0,
+            "fp": 40.0,
+            "fn": 48.0
+          }
+        }
+      },
+      "target-positive": {
+        "n": 2,
+        "strict": {
+          "learned": 1,
+          "lock": 1
+        },
+        "intent_correct": {
+          "learned": 1.0,
+          "lock": 1.0
+        },
+        "entity_counts": {
+          "learned": {
+            "tp": 2.0,
+            "fp": 0.0,
+            "fn": 2.0
+          },
+          "lock": {
+            "tp": 2.0,
+            "fp": 0.0,
+            "fn": 2.0
+          }
+        }
+      },
+      "boundary": {
+        "n": 13,
+        "strict": {
+          "learned": 3,
+          "lock": 4
+        },
+        "intent_correct": {
+          "learned": 10.0,
+          "lock": 10.0
+        },
+        "entity_counts": {
+          "learned": {
+            "tp": 6.0,
+            "fp": 7.0,
+            "fn": 4.0
+          },
+          "lock": {
+            "tp": 6.0,
+            "fp": 6.0,
+            "fn": 4.0
+          }
+        }
+      }
+    },
+    "resources": {
+      "cards": 2,
+      "instances": 1,
+      "concurrency": 32
+    },
+    "generation_seconds": 1565.175802,
+    "seconds_per_pair": 19.564697525,
+    "remaining_rows": 0,
+    "eta_seconds": 0,
+    "cost": {
+      "audio_seconds_used": 987.0590625000007,
+      "calls_used": 240,
+      "completion_tokens_total": 478854,
+      "latency_seconds_total": 35632.3591279097,
+      "prompt_tokens_total": 1597084,
+      "tool_calls": 0
+    },
+    "cost_scope": "successful generation only; FIT and previous failed launches recorded separately",
+    "role_costs": {
+      "perception": {
+        "calls": 80,
+        "completion_tokens": 136842,
+        "contacts_with_reasoning": 80,
+        "empty_content": 0,
+        "finish_reasons": {
+          "stop": 80
+        },
+        "prompt_tokens": 309282,
+        "request_seconds": {
+          "mean": 127.02482236349897,
+          "n": 80,
+          "p50": 109.26081655503367,
+          "p95": 223.70375340001192
+        },
+        "think_markers": 0,
+        "wire_records": 80
+      },
+      "solver": {
+        "calls": 160,
+        "completion_tokens": 342012,
+        "contacts_with_reasoning": 160,
+        "empty_content": 0,
+        "finish_reasons": {
+          "stop": 160
+        },
+        "prompt_tokens": 1287802,
+        "request_seconds": {
+          "mean": 159.18983336768616,
+          "n": 160,
+          "p50": 148.2631106649642,
+          "p95": 255.65516293002293
+        },
+        "think_markers": 0,
+        "wire_records": 160
+      }
+    },
+    "input_audited_rows": 80,
+    "source_sha256": "af98e391ab53b22b16ad0b3f4bf2cd0e5a97bb1041e11ea489c5e5567330ce32",
+    "promoted": false
+  },
+  "change_amount": {
+    "rows": 80,
+    "official": {
+      "learned": {
+        "intent_accuracy": 0.85,
+        "slu_f1": 0.6954540733023373,
+        "span_f1": 0.5497630331753554
+      },
+      "lock": {
+        "intent_accuracy": 0.8375,
+        "slu_f1": 0.687229174083504,
+        "span_f1": 0.583732057416268
+      }
+    },
+    "strict_success": {
+      "learned": 29,
+      "lock": 29
+    },
+    "comparisons": {
+      "learned_vs_lock": {
+        "proxy_mean_delta": 0.014657738095238137,
+        "strict_breaks": 3,
+        "strict_repairs": 3
+      }
+    },
+    "strata": {
+      "unrelated": {
+        "n": 48,
+        "strict": {
+          "learned": 16,
+          "lock": 15
+        },
+        "intent_correct": {
+          "learned": 42.0,
+          "lock": 42.0
+        },
+        "entity_counts": {
+          "learned": {
+            "tp": 44.0,
+            "fp": 32.0,
+            "fn": 40.0
+          },
+          "lock": {
+            "tp": 43.0,
+            "fp": 28.0,
+            "fn": 41.0
+          }
+        }
+      },
+      "boundary": {
+        "n": 29,
+        "strict": {
+          "learned": 12,
+          "lock": 13
+        },
+        "intent_correct": {
+          "learned": 23.0,
+          "lock": 23.0
+        },
+        "entity_counts": {
+          "learned": {
+            "tp": 12.0,
+            "fp": 10.0,
+            "fn": 9.0
+          },
+          "lock": {
+            "tp": 15.0,
+            "fp": 9.0,
+            "fn": 6.0
+          }
+        }
+      },
+      "target-positive": {
+        "n": 3,
+        "strict": {
+          "learned": 1,
+          "lock": 1
+        },
+        "intent_correct": {
+          "learned": 3.0,
+          "lock": 2.0
+        },
+        "entity_counts": {
+          "learned": {
+            "tp": 2.0,
+            "fp": 1.0,
+            "fn": 3.0
+          },
+          "lock": {
+            "tp": 3.0,
+            "fp": 1.0,
+            "fn": 2.0
+          }
+        }
+      }
+    },
+    "resources": {
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 16
+    },
+    "generation_seconds": 1693.067104,
+    "seconds_per_pair": 21.1633388,
+    "remaining_rows": 0,
+    "eta_seconds": 0,
+    "cost": {
+      "audio_seconds_used": 1031.8258125000004,
+      "calls_used": 240,
+      "completion_tokens_total": 514510,
+      "latency_seconds_total": 21196.412848909677,
+      "prompt_tokens_total": 1581830,
+      "tool_calls": 0
+    },
+    "cost_scope": "successful generation only; FIT and previous failed launches recorded separately",
+    "role_costs": {
+      "perception": {
+        "calls": 80,
+        "completion_tokens": 144405,
+        "contacts_with_reasoning": 80,
+        "empty_content": 0,
+        "finish_reasons": {
+          "stop": 80
+        },
+        "prompt_tokens": 308996,
+        "request_seconds": {
+          "mean": 75.59230299437259,
+          "n": 80,
+          "p50": 65.7021983099985,
+          "p95": 136.84375609998824
+        },
+        "think_markers": 0,
+        "wire_records": 80
+      },
+      "solver": {
+        "calls": 160,
+        "completion_tokens": 370105,
+        "contacts_with_reasoning": 160,
+        "empty_content": 0,
+        "finish_reasons": {
+          "stop": 160
+        },
+        "prompt_tokens": 1272834,
+        "request_seconds": {
+          "mean": 94.68142880849919,
+          "n": 160,
+          "p50": 94.51850686999387,
+          "p95": 137.43886832997669
+        },
+        "think_markers": 0,
+        "wire_records": 160
+      }
+    },
+    "input_audited_rows": 80,
+    "source_sha256": "fcf70c57bafe0d79abb4ee60a73376d24261b83644ed6d149bd70d965fadd5f0",
+    "promoted": false
+  }
+}
