@@ -1,6 +1,6 @@
 {
   "schema": "saea-experiment-design-draft-v1",
-  "status": "design-only-not-launchable",
+  "status": "implemented-cpu-verified-awaiting-scheduled-engine-evaluation",
   "factor": "solver_response_format",
   "format_id": "slurp-solver-paired-label-json-v1",
   "roster": "reuse unchanged reflexion-paircheck-feedback80 roster",
@@ -24,13 +24,7 @@
     "no per-intent slot exclusion",
     "no entity count or uniqueness constraint"
   ],
-  "missing_integration": [
-    "explicit protocol-axis branch schema and receipt",
-    "phase-owned response format wiring per S arm",
-    "compiled contact budget and recovery custody",
-    "actual request equality except response_format",
-    "full official paired reader"
-  ],
+  "missing_integration": [],
   "do_not_use": [
     "response_format in decoding_variants, which intentionally protects the sampling axis",
     "global model response_format, which also changes P/fallback contacts",
@@ -61,5 +55,11 @@
     "xgrammar0.2.8 default fixes object key order",
     "grammar can restrict outer whitespace",
     "reasoning end gating must be verified with live forced-close and fallback"
+  ],
+  "implementation": "docs/results/Solver-Protocol-Implementation.md",
+  "workload_config": "configs/probes/solver-protocol/development80.json",
+  "remaining_validation": [
+    "Real NPU paired80 generation and official metrics",
+    "Actual grammar/reasoning/forced-close behavior and performance"
   ]
 }

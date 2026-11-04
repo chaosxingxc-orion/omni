@@ -87,7 +87,7 @@ COMPONENT_STATES: tuple[str, ...] = (STATE_ON, STATE_OFF, STATE_SHADOW, STATE_CO
 _BLOCK_REQUIRED = frozenset({"module_id", "profile", "components"})
 _BLOCK_OPTIONAL = frozenset({
     "columns", "lock", "review_loop", "solver_tool_access", "template_frame", "supply_frame", "construction_roster",
-    "thinking_frame", "decoding_frame", "sampling_frame", "prompt_contact_limits",
+    "thinking_frame", "decoding_frame", "protocol_frame", "sampling_frame", "prompt_contact_limits",
     #: TFRL-v2 (2026-10-30): the bank-consumption declaration (``rails.tfrl_v2_consumption``); parsed fail-closed, compiles to nothing.
     "tfrl_v2_bank", "tfrl_supply_allocation", "answer_selection", "gepa_pair",
 })
@@ -582,6 +582,7 @@ class ColumnDecl:
     #: Decision 338: a ``sampling`` column's canonical ``{perception_samples?, solver_samples?}`` axes (``None`` for every other
     #: kind). Declared LAST.
     sampling_json: str | None = None
+    response_format_id: str | None = None
 
     @property
     def sampling(self) -> dict[str, object] | None:
@@ -638,6 +639,15 @@ class ConsumptionModuleBlock:
     sampling_frame_json: str | None = None
     prompt_contact_limits: str | None = None
     answer_selection: str | None = None
+    protocol_frame_json: str | None = None
+
+    @property
+    def protocol_columns(self):
+        return tuple(c for c in self.columns if c.kind == "protocol")
+
+    @property
+    def protocol_frame(self):
+        return None if self.protocol_frame_json is None else json.loads(self.protocol_frame_json)
 
     @property
     def sampling_columns(self) -> tuple[ColumnDecl, ...]:
@@ -776,7 +786,7 @@ def parse_consumption_module_block(
         raise ConsumptionModuleConfigError("Solver tool access requires the explicit review-off profile")
     if review_loop == "off" and any(
         not (isinstance(c, Mapping) and c.get("kind") in (
-            COLUMN_KIND_TEMPLATE, COLUMN_KIND_SUPPLY, COLUMN_KIND_THINKING, COLUMN_KIND_DECODING, COLUMN_KIND_SAMPLING,
+            COLUMN_KIND_TEMPLATE, COLUMN_KIND_SUPPLY, COLUMN_KIND_THINKING, COLUMN_KIND_DECODING, COLUMN_KIND_SAMPLING, "protocol",
         ))
         for c in columns
     ):
@@ -921,6 +931,7 @@ def parse_consumption_module_block(
         thinking_frame_json=thinking_frame_json,
         construction_roster=construction_roster,
         decoding_frame_json=decoding_frame_json,
+        protocol_frame_json=_parse_protocol_frame(raw.get("protocol_frame"), any(c.kind == "protocol" for c in column_decls)),
         sampling_frame_json=sampling_frame_json,
         prompt_contact_limits=prompt_contact_limits,
         answer_selection=answer_selection,
@@ -1172,6 +1183,12 @@ def _parse_columns(columns: list, decls: list[ComponentDecl]) -> tuple[ColumnDec
         if entry.get("kind") == COLUMN_KIND_THINKING:
             out.append(_parse_thinking_column(entry, field=field))
             continue
+        if entry.get("kind") == "protocol":
+            from .slurp_solver_protocol import FORMAT_ID
+            if dict(entry) != {"kind": "protocol", "column_id": "constrained", "node": "solver", "response_format_id": FORMAT_ID}:
+                raise ConsumptionModuleConfigError("exact label-only Solver protocol column required")
+            out.append(ColumnDecl("constrained", "", STATE_ON, 0, None, kind="protocol", node="solver", response_format_id=FORMAT_ID))
+            continue
         if entry.get("kind") == COLUMN_KIND_DECODING:
             out.append(_parse_decoding_column(entry, field=field))
             continue
@@ -1249,6 +1266,8 @@ def _parse_columns(columns: list, decls: list[ComponentDecl]) -> tuple[ColumnDec
             "consumption_module sampling columns must all name one node (one sampling_variants block per flight)"
         )
     kinds = {c.kind for c in out}
+    if "protocol" in kinds and (len(kinds) != 1 or len(out) != 1):
+        raise ConsumptionModuleConfigError("protocol requires one exclusive paired column")
     if COLUMN_KIND_SAMPLING in kinds and len(kinds) > 1:
         raise ConsumptionModuleConfigError(
             "sampling columns cannot be declared beside template, supply, thinking, decoding or Perception-branch columns: one "
@@ -1961,7 +1980,7 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
                     block.supply_frame["alternates"]["slot-contracts"][0]["release"]["relpath"]}}
         )
         gepa_pair_columns = "gepa_pair" in json.loads(block.block_json)
-        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns and not gepa_columns and not gepa_pair_columns and not slot_pair_columns)
+        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns and not gepa_columns and not gepa_pair_columns and not slot_pair_columns and not block.protocol_columns)
                 or ceiling != 2 or block.solver_tool_access):
             raise ConsumptionModuleConfigError(
                 "legacy prompt limits require a two-contact lock, seed-only K4, or exact odd40 B/AA/A group")
@@ -1975,6 +1994,8 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
         ceiling += _compile_thinking_columns(block, hooks, writer, layer)
     if block.decoding_columns:
         ceiling += _compile_decoding_columns(block, hooks, writer, layer)
+    if block.protocol_columns:
+        ceiling += _compile_protocol_columns(block, hooks, writer, layer)
     if block.sampling_columns:
         ceiling += _compile_sampling_columns(block, hooks, writer, layer)
     if block.answer_selection is not None:
@@ -2232,6 +2253,30 @@ def _compile_sampling_columns(
         raise ConsumptionModuleConfigError(f"sampling columns are invalid: {error}") from error
     writer.set(path, sampling_block, component_id="sampling-columns", replace_only=False)
     return (len(rows) - 1) * 2 + sampling_extra_contacts(group)
+
+
+def _parse_protocol_frame(raw, present):
+    parsed = _parse_decoding_frame(raw, has_decoding_columns=present)
+    if parsed is not None and json.loads(parsed)["twin"]:
+        raise ConsumptionModuleConfigError("protocol pair has no twin")
+    return parsed
+
+
+def _compile_protocol_columns(block, hooks, writer, layer):
+    from .supply_variants import parse_protocol_variants
+    from .slurp_solver_protocol import FORMAT_ID
+    if block.review_loop != "off" or block.solver_tool_access:
+        raise ConsumptionModuleConfigError("protocol pair requires tool-free review-off profile")
+    frame = _require_hook(hooks, "decoding_variant_frame", "protocol-columns")
+    pf = block.protocol_frame
+    protocol = {"node": "solver", "arms": [
+        {"arm_id": "constrained", "response_format_id": FORMAT_ID},
+        {"arm_id": "lock", "deliver": True}],
+        **{k: pf[k] for k in ("max_supplied_items", "fit_estimate", "template_tokens")}}
+    parse_protocol_variants(protocol, role_kind="solver", phase_id="solver")
+    path = tuple(frame["block_path"][:-1]) + ("protocol_variants",)
+    writer.set(path, protocol, component_id="protocol-columns", replace_only=False)
+    return 1
 
 
 def _compile_decoding_columns(

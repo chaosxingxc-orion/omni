@@ -6,9 +6,11 @@ from pathlib import Path
 
 def assert_execution_binding(spec, environ=None, *, repo=None):
     """Bind an explicit full-test client width to the shared factory environment."""
-    if spec.get('workload_kind') in ('gepa-solver-template-pair', 'gepa-perception-template-pair', 'external-experience-pair', 'external-slot-knowledge-pair'):
+    if spec.get('workload_kind') in ('gepa-solver-template-pair', 'gepa-perception-template-pair', 'external-experience-pair', 'external-slot-knowledge-pair', 'solver-output-protocol-pair'):
         import os
-        if spec['workload_kind'] == 'external-slot-knowledge-pair':
+        if spec['workload_kind'] == 'solver-output-protocol-pair':
+            from solver_protocol_workload import ProtocolWorkload as PairWorkload
+        elif spec['workload_kind'] == 'external-slot-knowledge-pair':
             from external_slot_workload import ExternalSlotWorkload as PairWorkload
         elif spec['workload_kind'] == 'external-experience-pair':
             from external_experience_workload import ExternalExperienceWorkload as PairWorkload
@@ -125,6 +127,9 @@ def validate_workload(repo, data, name, spec):
     if spec.get("workload_kind") == "final-report-method":
         from final_report_workload import validate
         return validate(repo, data, name, spec, exp, view)
+    if spec.get("workload_kind") == "solver-output-protocol-pair":
+        from solver_protocol_workload import validate
+        return validate(repo,data,name,spec,exp,view)
     if spec.get("workload_kind") == "external-slot-knowledge-pair":
         from external_slot_workload import validate
         return validate(repo, data, name, spec, exp, view)

@@ -3210,8 +3210,9 @@ async def _invoke_native_role_episode(
                 arm_index=supply_variant_group.arm_ids.index(arm.arm_id),
                 contact_id=plan.contact_id,
                 supplied_value_ids=supplied,
-                template_group=not supply_variant_group.is_decoding,
+                template_group=supply_variant_group.is_template,
                 decoding_group=supply_variant_group.is_decoding,
+                protocol_group=supply_variant_group.is_protocol,
             )
         except SupplyVariantError as error:
             raise RailsRunnerError(str(error)) from error
@@ -4304,6 +4305,14 @@ async def _invoke_native_role_episode(
                     template_branch.branch_id, visit,
                     phase_id=perception_branch_phase_id,
                 )
+        if template_arm is not None and supply_variant_group.is_protocol:
+            if material.response_format is not None:
+                raise RailsRunnerError("protocol paired lock must have no response format")
+            if template_arm.response_format_id is not None:
+                formats = binding.protocol_response_formats or {}
+                if template_arm.response_format_id not in formats:
+                    raise RailsRunnerError("protocol schema requires flight-owned governed ontology")
+                decoding["response_format"] = formats[template_arm.response_format_id]
         plan = AgentContactPlan(
             contact_id=request.context.agent_contact_id,
             query_state_sha256=ctx.query_state.content_hash(),
@@ -6845,7 +6854,7 @@ async def _invoke_native_role_episode(
                 phase_id=solver_role_config.phase_id,
                 error_type=RailsRunnerError,
             )
-            if template_variant_mode and not supply_variant_group.is_decoding and [
+            if template_variant_mode and supply_variant_group.is_template and [
                 row.get("instruction_template") for row in supply_variants["arms"]
             ] != [
                 None if arm.instruction_template is None
@@ -6856,6 +6865,8 @@ async def _invoke_native_role_episode(
                     "the sealed template-variant receipt names templates other "
                     "than the ones roles.solver.template_variants declared"
                 )
+            if supply_variant_group.is_protocol and [row.get("response_format_id") for row in supply_variants["arms"]] != [arm.response_format_id for arm in supply_variant_group.arms]:
+                raise RailsRunnerError("sealed protocol receipt differs from declared formats")
             if supply_variant_group.is_decoding and [
                 row.get("decoding_override") for row in supply_variants["arms"]
             ] != [arm.decoding for arm in supply_variant_group.arms]:

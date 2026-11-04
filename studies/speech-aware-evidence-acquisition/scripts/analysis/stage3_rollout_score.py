@@ -1003,7 +1003,8 @@ def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_di
         raise Stage3ScoreError("source rows differ from exact declared population")
     is_template = bool(getattr(group, "is_template", False))
     is_decoding = bool(getattr(group, "is_decoding", False))        # NX-T R4: the node-decoding kind (receipt v6)
-    unvaried = is_template or is_decoding
+    is_protocol = bool(getattr(group, "is_protocol", False))
+    unvaried = is_template or is_decoding or is_protocol
     arms = tuple(group.arms)
     if not arms or not arms[-1].deliver:
         raise Stage3ScoreError("declared supply arms lack a final delivering arm")
@@ -1053,6 +1054,8 @@ def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_di
         final = row.get("supply_variants")
         if not isinstance(final, Mapping):
             raise Stage3ScoreError(f"{sid}: Solver visit has no final supply-variant custody")
+        if (final.get("schema") == "saea-supply-variant-protocol-v1") != is_protocol:
+            raise Stage3ScoreError("protocol receipt kind differs")
         if (final.get("schema") == SUPPLY_VARIANT_RECEIPT_SCHEMA_V4) != is_template or (
             final.get("schema") in (SUPPLY_VARIANT_RECEIPT_SCHEMA_V6, 'saea-supply-variant-arms-v7')
         ) != is_decoding:
@@ -1089,12 +1092,20 @@ def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_di
             declared_swaps = [swap.as_json() for swap in arm_swaps]
             if not unvaried and supply_variant_arm_release_swaps(sealed) != declared_swaps:
                 raise Stage3ScoreError(f"{sid}: arm release swap differs from declaration")
+            if is_protocol and sealed.get("response_format_id") != arm.response_format_id:
+                raise Stage3ScoreError("protocol format differs from declaration")
             if is_decoding and sealed.get("decoding_override") != arm.decoding:
                 raise Stage3ScoreError(f"{sid}: arm sampling override differs from declaration")
         first = solver[0].get("execution_receipt")
         contacts = first.get("contacts") if isinstance(first, Mapping) else None
         if not isinstance(contacts, list) or len(contacts) != len(arms):
             raise Stage3ScoreError(f"{sid}: first Solver visit lacks a complete arm group")
+        if is_protocol:
+            from speech_aware_evidence_acquisition.rails.solver_protocol_audit import verify_contact_pair
+            try:
+                verify_contact_pair(trace_records, contacts)
+            except (KeyError, TypeError, ValueError) as error:
+                raise Stage3ScoreError(f"{sid}: protocol wire equality audit failed: {error}") from error
         arm_meta = []
         for i, arm in enumerate(arms):
             contact = contacts[i]
@@ -1171,6 +1182,7 @@ def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_di
              **({"instruction_template": (None if arm.instruction_template is None
                                           else arm.instruction_template.as_json())}
                 if is_template else {}),
+             **({"response_format_id": arm.response_format_id} if is_protocol else {}),
              **({"decoding_override": arm.decoding} if is_decoding else {})}
             for arm in arms
         ],
@@ -2177,6 +2189,11 @@ def parse_solver_arm_group(values: Mapping[str, Any], solver: Mapping[str, Any],
         SupplyVariantError, parse_decoding_variants, parse_supply_variants, parse_template_variants,
     )
 
+    if "protocol_variants" in solver:
+        if any(k in solver for k in ("supply_variants", "template_variants", "decoding_variants")):
+            raise Stage3ScoreError("one protocol axis per episode")
+        from speech_aware_evidence_acquisition.rails.supply_variants import parse_protocol_variants
+        return parse_protocol_variants(solver["protocol_variants"], role_kind="solver", phase_id=solver.get("phase_id"))
     declares_supply = "supply_variants" in solver
     declares_template = "template_variants" in solver
     declares_decoding = "decoding_variants" in solver

@@ -3888,6 +3888,13 @@ class FlightRuntime:
 
         return resolve
 
+    def _protocol_response_formats(self, native_config):
+        group = None if native_config is None else native_config.supply_variant_group
+        if group is None or not group.is_protocol:
+            return None
+        from ...rails.slurp_solver_protocol import FORMAT_ID, registered_response_format
+        return {FORMAT_ID: registered_response_format(self._lock, self._data_root)}
+
     def _template_variant_materials(self, native_config, program, binding):
         """NX programme E1 (2026-10-09): the per-arm material builders of a
         node-template group, or ``None`` for every other cell.
@@ -8457,6 +8464,7 @@ class FlightRuntime:
                 # NX programme E1: one material builder per template arm. None
                 # -- byte-identical to the pre-programme tree -- unless
                 # ``roles.solver.template_variants`` is declared.
+                protocol_response_formats=self._protocol_response_formats(native_config),
                 template_variant_materials=self._template_variant_materials(
                     native_config, program, binding,
                 ),
@@ -12395,7 +12403,8 @@ class FlightRuntime:
                     declares_decoding = isinstance(
                         raw_solver_role, Mapping
                     ) and "decoding_variants" in raw_solver_role
-                    if sum((declares_supply, declares_template, declares_decoding)) > 1:
+                    declares_protocol = isinstance(raw_solver_role, Mapping) and "protocol_variants" in raw_solver_role
+                    if sum((declares_supply, declares_template, declares_decoding, declares_protocol)) > 1:
                         raise FlightRuntimeError(
                             "supply-variant delivery: a Solver role declares both (or more) of "
                             "supply_variants, template_variants and decoding_variants"
@@ -12411,7 +12420,8 @@ class FlightRuntime:
                         == SUPPLY_VARIANT_RECEIPT_SCHEMA_V6
                     )
                     if (
-                        receipt_is_template != declares_template
+                        (supply_variants.get("schema") == "saea-supply-variant-protocol-v1") != declares_protocol
+                        or receipt_is_template != declares_template
                         or receipt_is_decoding != declares_decoding
                     ):
                         raise FlightRuntimeError(
@@ -12426,6 +12436,7 @@ class FlightRuntime:
                         raw_solver_role.get(
                             "template_variants" if declares_template
                             else "decoding_variants" if declares_decoding
+                            else "protocol_variants" if declares_protocol
                             else "supply_variants"
                         )
                         if isinstance(raw_solver_role, Mapping) else None
@@ -12466,11 +12477,13 @@ class FlightRuntime:
                         # ``parse_template_variants`` fixes it.
                         arm_visits=(
                             SUPPLY_VARIANT_ARM_VISITS_INSTRUMENT
-                            if declares_template or declares_decoding
+                            if declares_template or declares_decoding or declares_protocol
                             else raw_variants.get("arm_visits", "every")
                         ),
                         error_type=FlightRuntimeError,
                     )
+                    if declares_protocol and [r.get("response_format_id") for r in supply_variants["arms"]] != [r.get("response_format_id") for r in raw_arms]:
+                        raise FlightRuntimeError("sealed protocol formats differ from declaration")
                     if declares_decoding and [
                         row.get("decoding_override") for row in supply_variants["arms"]
                     ] != [entry.get("decoding") for entry in raw_arms]:

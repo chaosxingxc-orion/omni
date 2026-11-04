@@ -1430,6 +1430,7 @@ def validate_supply_variant_receipt(
     is_v4 = False
     is_v5 = False
     is_v6 = False
+    is_protocol = False
     if schema == SUPPLY_VARIANT_RECEIPT_SCHEMA_V1:
         is_v2_or_later = False
         is_v3 = False
@@ -1457,6 +1458,12 @@ def validate_supply_variant_receipt(
         is_v5 = True
         expected_fields = _SUPPLY_VARIANT_FIELDS_V2
         arm_fields = _SUPPLY_VARIANT_ARM_FIELDS_V5
+    elif schema == "saea-supply-variant-protocol-v1":
+        is_v2_or_later = True
+        is_v3 = True
+        is_protocol = True
+        expected_fields = _SUPPLY_VARIANT_FIELDS_V2
+        arm_fields = _SUPPLY_VARIANT_ARM_FIELDS_V3 | {"response_format_id"}
     elif schema == SUPPLY_VARIANT_RECEIPT_SCHEMA_V6:
         is_v2_or_later = True
         is_v3 = True
@@ -1705,6 +1712,11 @@ def validate_supply_variant_receipt(
                         "{relpath, sha256} instruction_template",
                     )
                 template_pins.append((template["relpath"], template["sha256"]))
+        elif is_protocol:
+            from .slurp_solver_protocol import FORMAT_ID
+            expected_format = None if deliver else FORMAT_ID
+            if paths or release_swap is not None or replicate_of is not None or row["response_format_id"] != expected_format:
+                _raise(error_type, "protocol receipt may vary only registered output format")
         elif is_v6:
             if paths:
                 _raise(
@@ -1801,7 +1813,9 @@ def validate_supply_variant_receipt(
             error_type,
             "node-decoding supply variant arms must declare distinct sampling overrides",
         )
-    if is_v4 or is_v6:
+    if is_protocol and declared != ["constrained", "lock"]:
+        _raise(error_type, "protocol receipt requires exact paired arms")
+    if is_v4 or is_v6 or is_protocol:
         for arm_id, arm_ids_seen in arm_id_lists:
             if delivering_ids is None or arm_ids_seen != delivering_ids:
                 _raise(

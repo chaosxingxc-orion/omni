@@ -154,6 +154,26 @@ def slot_pair_layout_matches(values):
         return False
 
 
+def protocol_pair_layout_matches(values):
+    try:
+        from ...rails.supply_variants import parse_protocol_variants
+        from ...rails import consumption_module as cm
+        from ...rails.adapters.slurp_module_hooks import carrier_module_hooks
+        native = values["native_episode"]
+        block = native["consumption_module"]
+        if len(block.get("columns", [])) != 1 or block["columns"][0].get("kind") != "protocol":
+            return False
+        compiled = cm.compile_module(block, carrier_module_hooks())
+        if compiled.program_ceiling != 3:
+            return False
+        expected = compiled.values()["native_episode"]["roles"]["solver"]["protocol_variants"]
+        actual = native["roles"]["solver"]["protocol_variants"]
+        parse_protocol_variants(actual, role_kind="solver", phase_id="solver")
+        return actual == expected
+    except (KeyError, TypeError, AttributeError, ValueError):
+        return False
+
+
 def native_contact_custody_enabled(values):
     """Operational capture for the reviewed odd40 method or raw-vLLM A0 P/S.
 
@@ -178,7 +198,8 @@ def native_contact_custody_enabled(values):
         return True  # Preserve the already reviewed method's existing path.
     pair = gepa_pair_layout_matches(values)
     slot_pair = slot_pair_layout_matches(values)
-    paired = pair or gepa_probe_layout_matches(values) or slot_pair
+    protocol_pair = protocol_pair_layout_matches(values)
+    paired = pair or gepa_probe_layout_matches(values) or slot_pair or protocol_pair
     pair_perception = pair and 'template_variants' in native['roles']['perception']
     paired_ceiling = (8 if pair_perception else 4) if pair else 3
     if not paired and values.get('policy') in ('phase-native-module-v1-c3','phase-native-module-v1-c4'):
@@ -214,6 +235,7 @@ def native_contact_custody_enabled(values):
                 or block.get('tool_names') or block.get('allowed_tools')
                 or block.get('samples', 1) != 1
                 or any(k in block for k in ('sampling_variants', 'decoding_variants', 'branches'))
+                or ('protocol_variants' in block and not (protocol_pair and role=='solver'))
                 or ('supply_variants' in block and not (slot_pair and role=='solver'))
                 or ('template_variants' in block and not (paired and role == ('perception' if pair_perception else 'solver')))):
             return False

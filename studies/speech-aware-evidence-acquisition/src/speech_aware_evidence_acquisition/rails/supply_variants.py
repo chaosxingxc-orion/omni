@@ -451,6 +451,7 @@ class SupplyVariantArm:
     # parsed before this field existed composes byte-identically
     # (``as_json`` omits the key while it is ``None``).
     decoding_override: tuple[tuple[str, float | int], ...] | None = None
+    response_format_id: str | None = None
 
     @property
     def decoding(self) -> dict[str, float | int] | None:
@@ -501,6 +502,8 @@ class SupplyVariantArm:
             row["release_swaps"] = [swap.as_json() for swap in self.release_swaps]
         if self.instruction_template is not None:
             row["instruction_template"] = self.instruction_template.as_json()
+        if self.response_format_id is not None:
+            row["response_format_id"] = self.response_format_id
         if self.decoding_override is not None:
             row["decoding"] = dict(self.decoding_override)
         return row
@@ -580,6 +583,10 @@ class SupplyVariantGroup:
         return self.kind == SUPPLY_VARIANT_KIND_TEMPLATE
 
     @property
+    def is_protocol(self) -> bool:
+        return self.kind == "protocol"
+
+    @property
     def is_decoding(self) -> bool:
         return self.kind == SUPPLY_VARIANT_KIND_DECODING
 
@@ -589,7 +596,7 @@ class SupplyVariantGroup:
         evidence (template and decoding): the runner takes the arms' messages
         from the one ``base_messages`` and resolves no per-arm supply."""
 
-        return self.kind in (SUPPLY_VARIANT_KIND_TEMPLATE, SUPPLY_VARIANT_KIND_DECODING)
+        return self.kind in (SUPPLY_VARIANT_KIND_TEMPLATE, SUPPLY_VARIANT_KIND_DECODING, "protocol")
 
     @property
     def uses_release_swaps(self) -> bool:
@@ -602,6 +609,8 @@ class SupplyVariantGroup:
 
     @property
     def receipt_schema(self) -> str:
+        if self.is_protocol:
+            return "saea-supply-variant-protocol-v1"
         if self.is_decoding:
             return SUPPLY_VARIANT_RECEIPT_SCHEMA_V6
         if self.is_template:
@@ -643,7 +652,7 @@ class SupplyVariantGroup:
             "fit_estimate": self.fit_estimate.as_json(),
             "arm_visits": self.arm_visits,
         }
-        if self.is_template or self.is_decoding:
+        if self.is_template or self.is_decoding or self.is_protocol:
             document["kind"] = self.kind
         return document
 
@@ -1547,6 +1556,26 @@ def parse_decoding_variants(
     )
 
 
+def parse_protocol_variants(block, *, role_kind, phase_id):
+    """Independent output-protocol axis; baseline messages and sampling stay fixed."""
+    from .slurp_solver_protocol import FORMAT_ID
+    if role_kind != "solver" or not isinstance(block, Mapping) or set(block) != DECODING_VARIANT_BLOCK_KEYS:
+        raise SupplyVariantError("protocol_variants requires exact Solver protocol frame")
+    if block["node"] != "solver" or not isinstance(phase_id, str) or not phase_id:
+        raise SupplyVariantError("protocol_variants requires Solver phase")
+    if block["arms"] != [{"arm_id": "constrained", "response_format_id": FORMAT_ID}, {"arm_id": "lock", "deliver": True}]:
+        raise SupplyVariantError("protocol_variants requires constrained label schema then unchanged delivering lock")
+    count = _positive_int(block["max_supplied_items"], field="protocol.max_supplied_items")
+    tokens = _positive_int(block["template_tokens"], field="protocol.template_tokens")
+    fit = parse_supply_variant_fit_estimate(block["fit_estimate"])
+    arms = (SupplyVariantArm(arm_id="constrained", deliver=False, knobs=(), max_supplied_items=count,
+                            template_tokens=tokens, response_format_id=FORMAT_ID),
+            SupplyVariantArm(arm_id="lock", deliver=True, knobs=(), max_supplied_items=count, template_tokens=tokens))
+    if any(fit.estimated_prompt_tokens(a) > fit.prompt_limit_tokens for a in arms):
+        raise SupplyVariantError("protocol estimate exceeds serving slot")
+    return SupplyVariantGroup(arms, fit, arm_visits="first", kind="protocol")
+
+
 def accumulate_arm_selection(
     previous: Sequence[str], resolved: Sequence[str],
 ) -> tuple[str, ...]:
@@ -1633,6 +1662,7 @@ def supply_variant_arm_record(
     template_group: bool = False,
     release_swaps_group: bool = False,
     decoding_group: bool = False,
+    protocol_group: bool = False,
 ) -> dict[str, object]:
     """One arm's receipt row: labels, ids and counts, never supplied text.
 
@@ -1707,6 +1737,8 @@ def supply_variant_arm_record(
         row["release_swaps"] = [swap.as_json() for swap in arm.all_release_swaps]
     if decoding_group:
         row["decoding_override"] = arm.decoding
+    if protocol_group:
+        row["response_format_id"] = arm.response_format_id
     return row
 
 

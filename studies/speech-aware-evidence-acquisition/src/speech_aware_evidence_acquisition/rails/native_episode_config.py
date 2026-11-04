@@ -908,6 +908,7 @@ class NativeEpisodeRunBinding:
     # ``config.solver_hints_json`` is not None; every other binding leaves
     # it None, byte-identically to before.
     data_root: object = None
+    protocol_response_formats: object = None
     # E18: the flight-owned, model-free knowledge re-query one
     # ``knowledge-requery`` acquisition runs -- the same seam
     # ``supply_for_phase`` is, and for the same reason: the runner never
@@ -1522,6 +1523,10 @@ def load_native_episode_config(
                         f"roles.{kind}.{other}: one fan-out mechanism per node"
                     )
             solver_fields = solver_fields | {"decoding_variants"}
+        if isinstance(row, Mapping) and "protocol_variants" in row:
+            if kind != "solver" or any(k in row for k in ("supply_variants", "template_variants", "decoding_variants", "branches", "thinking_variants", "sampling_variants")):
+                raise ValueError("protocol_variants requires one exclusive Solver protocol axis")
+            solver_fields = solver_fields | {"protocol_variants"}
         if (
             not isinstance(row, Mapping)
             or not {"phase_id", "max_iterations"} <= set(row)
@@ -1718,6 +1723,12 @@ def load_native_episode_config(
                 "native_episode.knowledge_index: the index appends to the system "
                 "message every arm shares and has no per-arm custody form"
             )
+    if "protocol_variants" in raw_roles["solver"]:
+        from .supply_variants import parse_protocol_variants
+        supply_variant_group = parse_protocol_variants(raw_roles["solver"]["protocol_variants"],
+            role_kind="solver", phase_id=raw_roles["solver"]["phase_id"])
+        if knowledge_index_armed:
+            raise ValueError("protocol_variants does not admit knowledge_index")
     # Same-flight instrument, PHASE 2 (merge set C, design docs/superpowers/
     # specs/2026-09-28-same-flight-instrument-phase2-perception-variants-
     # design.md): the Perception's own PERCEPTION-BRANCH group, parsed HERE
@@ -2962,7 +2973,8 @@ def validate_prompt_contact_limits(config):
             and learned.max_supplied_items == lock.max_supplied_items
             and all(not arm.knobs and arm.instruction_template is None and arm.decoding is None
                     for arm in group.arms))
-    expected_contacts = 8 if perception_pair else 7 if seed_group else 4 if odd40_group else len(group.arms)+1 if paired_group or slot_pair_group else 2
+    protocol_pair = group is not None and group.is_protocol and group.arm_ids == ("constrained", "lock")
+    expected_contacts = 8 if perception_pair else 7 if seed_group else 4 if odd40_group else len(group.arms)+1 if paired_group or slot_pair_group or protocol_pair else 2
     if config.answer_selection is not None:
         from .whole_answer_selection import validate_policy
         validate_policy(config.answer_selection)
@@ -2970,7 +2982,7 @@ def validate_prompt_contact_limits(config):
             raise ValueError('whole-answer selection requires exact odd40 candidates')
         expected_contacts += 1
     if (config.prompt_contact_limits != "legacy-c17-lock-v1" or config.max_contacts != expected_contacts
-            or (group is not None and not seed_group and not odd40_group and not paired_group and not slot_pair_group)
+            or (group is not None and not seed_group and not odd40_group and not paired_group and not slot_pair_group and not protocol_pair)
             or config.max_revisions != 0 or config.review_loop_enabled
             or config.acquisition_role is not None or config.relisten_json is not None
             or any(r.max_iterations != (1 if r.role_kind in {"perception", "solver"} else 0)
