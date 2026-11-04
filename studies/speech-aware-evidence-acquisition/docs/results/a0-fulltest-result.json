@@ -1,0 +1,63 @@
+{
+  "schema": "saea-public-final-test-result-v1",
+  "method": "A0 P-off Agent",
+  "run_id": "SAEA-SLURP-A0-POFF-LANE-FULLTEST-V1",
+  "attempt_id": "generation-storage-recovery-v1",
+  "status": "COMPLETED",
+  "samples": 13078,
+  "remaining_samples": 0,
+  "eta_seconds": 0,
+  "split": "test",
+  "split_identity_hash": "7247647b8c8b37becd564b7031691565d4e6b09d8e124823054906d36372c95d",
+  "test_used_for_tuning": false,
+  "official_metrics": {
+    "slu_f1": 0.7423335102012676,
+    "intent_accuracy": 0.863893561706683,
+    "scenario_accuracy": 0.9016669215476372,
+    "action_accuracy": 0.8753632053830861,
+    "span_f1": 0.6542432843802708
+  },
+  "strict_success": 7525,
+  "strict_accuracy": 0.5753937910995565,
+  "scorer_version": "slurp-official-8eb16545",
+  "evaluator_commit": "8eb16545762be97ace75334109d73824217311f1",
+  "scorer_identity_check": {
+    "passed": true,
+    "slu_f1_abs_diff": 0.0,
+    "span_f1_abs_diff": 0.0,
+    "tolerance": 1e-06
+  },
+  "scores_sha256": "9ae45ce3be746b42ca9658f293e485e17d38ad150425e0784cf4aad375e29e2f",
+  "run_manifest_sha256": "c89bd8e51e39e7812a8d3769ef9513637558b65f1cdca57de9c5d2552b9c8406",
+  "outputs_sha256": "d4d7524dc925f9500f86b35b4f84541bb442332e1ce22155d4a156e0707ce97f",
+  "usage": {
+    "calls": 26156,
+    "prompt_tokens": 179035811,
+    "completion_tokens": 23584762,
+    "scope": "generation contacts across original and recovery attempts, preserving reused predecessor cost; FIT and other engineering contacts excluded"
+  },
+  "resources": {
+    "npu_cards": 4,
+    "instances": 1,
+    "tensor_parallel_per_instance": 4,
+    "configured_client_concurrency": 96,
+    "sustained_full_utilization_proven": false
+  },
+  "timing": {
+    "recovery_campaign_seconds_to_release": 29591.128569740016,
+    "wall_seconds_per_fresh_sample": null,
+    "reason": "recovery campaign includes historical replay and fresh inference; not a clean full-run throughput measurement",
+    "container_finished_at": "2026-11-04T09:42:12.14349771Z"
+  },
+  "comparison_with_frozen_direct": {
+    "absolute_percentage_point_delta": {
+      "slu_f1": 27.677537965987437,
+      "intent_accuracy": 8.51047560789111,
+      "scenario_accuracy": 4.717846765560473,
+      "action_accuracy": 7.684661263190085,
+      "span_f1": 43.563007104421025
+    },
+    "scope": "frozen full-test system comparison; different pipeline and resource settings, not a controlled throughput comparison; not TFRL gain"
+  },
+  "interpretation": "First complete Agent baseline; TFRL stable improvement remains unproven."
+}
