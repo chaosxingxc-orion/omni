@@ -40,9 +40,11 @@
     "lock": true,
     "manifest_sha256": true,
     "outputs_sha256": true,
-    "raw_trace_sha256": true
+    "raw_trace_sha256": true,
+    "full_input_audited_rows": 80,
+    "input_audit_abstention_rows": 0
   },
-  "scope": "official per-arm result and source hashes verified; full input equality audit pending",
+  "scope": "Official results, source hashes, full80 input audit and all320 generation ledger records verified; independent confirmation pending.",
   "source_hashes": {
     "manifest_sha256": "121fe95950926d0590c918f371e97c8d1bc3b45b845e1b148df5595fd5d9c325",
     "outputs_sha256": "5cb4233910fa875b37300e880efac3021ce2e34b9428faf42f653b18d7ccc7a9",
@@ -50,5 +52,46 @@
     "roster_sha256": "1ee90ccb5033739d3d4b12f87ebf579834a84db4ec7025907bf00d83d95f6dc3",
     "sealed_scores_sha256": "a32261a5408b5435fb6472be51119cffa62fe627d2dbacb330ba2a99bdbaa1d1"
   },
-  "candidate_accepted": false
+  "candidate_accepted": false,
+  "generation_ledger": {
+    "generation_intents": 320,
+    "responses": 320,
+    "fit_receipts": 320,
+    "unknown": 0,
+    "invalid": 0,
+    "prompt_tokens": 2217838,
+    "completion_tokens": 684541,
+    "roles": {
+      "solver": {
+        "calls": 240,
+        "prompt_tokens": 1908842,
+        "completion_tokens": 541671,
+        "mean_request_seconds": 163.86308856241715
+      },
+      "perception": {
+        "calls": 80,
+        "prompt_tokens": 308996,
+        "completion_tokens": 142870,
+        "mean_request_seconds": 137.2753966512493
+      }
+    },
+    "scope": "Generation ledger accounting; FIT count separate, teacher costs excluded."
+  },
+  "strict_paired_exact_test": {
+    "learned_vs_control": {
+      "discordant_rows": 8,
+      "two_sided_p": 0.7265625,
+      "scope": "Exploratory exact McNemar; not proof of stable benefit."
+    },
+    "control_vs_lock": {
+      "discordant_rows": 5,
+      "two_sided_p": 1,
+      "scope": "Exploratory exact McNemar; not proof of stable benefit."
+    },
+    "learned_vs_lock": {
+      "discordant_rows": 9,
+      "two_sided_p": 1,
+      "scope": "Exploratory exact McNemar; not proof of stable benefit."
+    }
+  }
 }
