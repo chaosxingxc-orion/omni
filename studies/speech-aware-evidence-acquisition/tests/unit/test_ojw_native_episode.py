@@ -2188,3 +2188,39 @@ def test_build_native_episode_refuses_a_grouped_node_at_a_non_solver_position():
             ),
             role_input_builder=lambda role, _state: f"Run {role}.",
         )
+
+
+@pytest.mark.parametrize("mode,k", [("batched", 3), ("per_candidate", 3), ("per_candidate", 1)])
+def test_candidate_slot_real_native_graph(mode, k):
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import canonical
+    rows = [{"intent_id": f"scenario_action{i}", "distinction": f"clue {i}",
+             "evidence_refs": [], "unresolved_fields": []} for i in range(k)]
+    answers = [{"candidate_id": r["intent_id"],
+                "entities": [{"type": "person", "filler": f"person-{i}"}],
+                "evidence_refs": [f"evidence-{i}"], "unresolved_fields": []}
+               for i, r in enumerate(rows)]
+    perception, ps = _node("perception", "perception", [canonical({"candidates": rows})])
+    values = [canonical({"candidates": answers})] if mode == "batched" else [canonical({"candidates": [r]}) for r in answers]
+    slot, ss = _node("slot", "slot", list(values))
+    solver, ds = _node("solver", "solver", ["draft selected"], valid=True)
+    seen = []
+    def builder(role, state):
+        seen.append((role, state))
+        return role + canonical(state.get("intent_slot_context", {}))
+    config = {"schema": "saea-intent-slot-pipeline-v1", "slot_mode": mode,
+              "max_candidates": 3, "candidate_outside_recovery": False}
+    workflow = build_native_episode(
+        spec=NativeEpisodeSpec("candidate-slot-test", 0, NativeEpisodeActions("ACCEPT", "REVISE", "ACQUIRE"),
+                               review_loop_enabled=False, intent_slot_pipeline_json=canonical(config)),
+        nodes=NativeEpisodeNodes(perception=perception, slot=slot, solver=solver),
+        role_input_builder=builder)
+    result = asyncio.run(workflow.invoke_direct("original audio task", ()))
+    receipt = result["state"]
+    assert [v["stage"] for v in receipt["role_visits"]] == ["perception"] + ["slot"] * len(values) + ["solver"]
+    assert len(ps.requests) + len(ss.requests) + len(ds.requests) == (3 if mode == "batched" else k + 2)
+    context = seen[-1][1]["intent_slot_context"]
+    assert context["slot_results"][rows[-1]["intent_id"]]["entities"][0]["filler"] == f"person-{k-1}"
+    assert context["perception_source"]["response_sha256"] == ps.completions[0].response_sha256
+    assert [v["source"]["response_sha256"] for v in context["slot_sources"]] == [c.response_sha256 for c in ss.completions]
+    assert result["delivery"]["actor_output"] == ds.completions[0].text
+    validate_native_episode_delivery_receipt(receipt, error_type=ValueError)

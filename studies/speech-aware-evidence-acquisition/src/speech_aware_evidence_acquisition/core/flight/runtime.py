@@ -12270,6 +12270,7 @@ class FlightRuntime:
                         episode_receipt, max_revisions=raw_native.get("max_revisions"),
                         accept_action=raw_actions.get("accept"), revise_action=raw_actions.get("revise"),
                         refresh_action=refresh.get("action"), max_refreshes=refresh.get("max_refreshes", 0),
+                        intent_slot_pipeline=raw_native.get("intent_slot_pipeline"),
                         error_type=FlightRuntimeError,
                     )
                     interrupted = episode_receipt["interrupted_role"].get(

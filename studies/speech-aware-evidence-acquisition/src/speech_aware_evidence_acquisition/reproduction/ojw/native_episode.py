@@ -249,6 +249,7 @@ class NativeEpisodeSpec:
     # Solver truncation still writes records which rule applied. Declared
     # LAST, for the same reason ``reviewer_verdict_vocabulary`` was.
     finite_completion_scope: str = "episode"
+    intent_slot_pipeline_json: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.episode_id, str) or not self.episode_id:
@@ -418,6 +419,7 @@ class NativeEpisodeNodes:
     # or the pre-E18 analytical ``NativeRoleNode``, or None (every episode
     # with no acquisition node, which is every episode before E18).
     acquisition: NativeRoleNode | AcquisitionNode | None = None
+    slot: NativeRoleNode | None = None
 
 
 class _InitialState(WorkflowComponent):
@@ -1704,6 +1706,17 @@ class NativeEpisodeWorkflow:
             predecessors=("episode_state",),
             kind="perception",
         )
+        if self.spec.intent_slot_pipeline_json is not None:
+            from .native_intent_slot import CandidateSlotStage
+            workflow.add_workflow_comp(
+                "candidate_slot", CandidateSlotStage(
+                    config_json=self.spec.intent_slot_pipeline_json,
+                    node=self.nodes.slot, builder=self._role_input_builder,
+                    checkpoint=checkpoint, actions=self.spec.actions),
+                inputs_schema={"state": "${" + perception + ".state}"},
+            )
+            workflow.add_connection(perception, "candidate_slot")
+            perception = "candidate_slot"
         if not self.spec.review_loop_enabled:
             # Configured off: Perception feeds the Solver directly and its
             # answer is delivered through the same explicit-accept seal a
@@ -2035,6 +2048,14 @@ def build_native_episode(
         "reviewer": "reviewer",
         "planner": "planner",
     }
+    if spec.intent_slot_pipeline_json is not None:
+        from ...rails.intent_slot_pipeline import parse_config
+        parse_config(json.loads(spec.intent_slot_pipeline_json))
+        if spec.review_loop_enabled or spec.max_revisions or nodes.acquisition is not None:
+            raise ValueError("intent-slot pipeline requires the no-review graph")
+        expected["slot"] = "slot"
+    elif nodes.slot is not None:
+        raise ValueError("slot node requires intent_slot_pipeline")
     for field, kind in expected.items():
         node = getattr(nodes, field)
         if field in {"reviewer", "planner"} and not spec.review_loop_enabled:

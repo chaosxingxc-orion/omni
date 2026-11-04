@@ -50,9 +50,9 @@ from ...rails.core_client import CoreCompletion, FrozenCoreClientError
 
 FROZEN_CORE_CALLBACK_MODEL = "frozen-core-metered-callback"
 
-RoleKind = Literal["perception", "reviewer", "planner", "solver"]
+RoleKind = Literal["perception", "reviewer", "planner", "solver", "slot"]
 _ANALYTICAL_ROLE_KINDS = frozenset({"reviewer", "planner"})
-_TOOL_FREE_ROLE_KINDS = frozenset({"perception", "solver"})
+_TOOL_FREE_ROLE_KINDS = frozenset({"perception", "solver", "slot"})
 
 #: Item E22 (the ReAct-exhaustion disposition, not the Earnings-22 carrier),
 #: 2026-09-19. The EXACT output the pinned framework returns when a ReAct

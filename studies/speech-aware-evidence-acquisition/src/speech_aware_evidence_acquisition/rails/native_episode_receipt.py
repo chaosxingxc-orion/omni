@@ -568,7 +568,7 @@ def _finite_delivery(receipt, visits, *, error_type):
         disposition.get("scope", "episode") not in _FINITE_DISPOSITION_SCOPES
         or disposition["reason"] != "finite_completion"
         or disposition["finish_reason"] not in ("length", "content_filter")
-        or disposition["stage"] not in ("perception", "solver", "review", "planner", "acquisition")
+        or disposition["stage"] not in ("perception", "slot", "solver", "review", "planner", "acquisition")
         or not isinstance(disposition["role_id"], str) or not disposition["role_id"]
         or isinstance(disposition["revision_count"], bool)
         or not isinstance(disposition["revision_count"], int)
@@ -659,7 +659,7 @@ def _seal_refusal_delivery(receipt, visits, *, error_type):
         _raise(error_type, "seal-refusal terminal disposition is malformed")
     if (
         disposition["reason"] != SEAL_REFUSAL_DISPOSITION
-        or disposition["stage"] not in ("perception", "solver", "review", "planner", "acquisition")
+        or disposition["stage"] not in ("perception", "slot", "solver", "review", "planner", "acquisition")
         or not isinstance(disposition["role_id"], str) or not disposition["role_id"]
         or isinstance(disposition["revision_count"], bool)
         or not isinstance(disposition["revision_count"], int)
@@ -760,7 +760,7 @@ def _context_fit_delivery(receipt, visits, *, error_type):
     if (
         disposition["reason"] != CONTEXT_COMPACTION_DISPOSITION
         or disposition["stage"] not in (
-            "perception", "solver", "review", "planner", "acquisition"
+            "perception", "slot", "solver", "review", "planner", "acquisition"
         )
         or not isinstance(disposition["role_id"], str) or not disposition["role_id"]
         or isinstance(disposition["revision_count"], bool)
@@ -920,7 +920,7 @@ _TRUNCATION_EVENT_FIELDS = frozenset({
 #: Item E39: the stages whose truncation may be tolerated. The answering
 #: stage (``solver``) is deliberately absent: its truncation is item E13's own
 #: case under every scope.
-_TRUNCATION_STAGES = frozenset({"perception", "review", "planner", "acquisition"})
+_TRUNCATION_STAGES = frozenset({"perception", "slot", "review", "planner", "acquisition"})
 
 
 def validate_native_episode_truncation_scope(
@@ -1016,6 +1016,7 @@ def validate_native_episode_finite_path(
     receipt, *, max_revisions, accept_action, revise_action,
     refresh_action=None, max_refreshes=0,
     acquire_action=None, max_acquisitions=0,
+    intent_slot_pipeline=None,
     error_type=ValueError,
 ):
     """Validate a completed graph prefix and its exact next interrupted role."""
@@ -1032,6 +1033,17 @@ def validate_native_episode_finite_path(
     visits = receipt["role_visits"]
     routes = _sequence(receipt["planner_routes"], "finite Planner routes", error_type=error_type)
     terminal = delivery.terminal_disposition
+    if intent_slot_pipeline is not None:
+        stages = [visit.get("stage") for visit in visits]
+        slot_bound = 1 if intent_slot_pipeline["slot_mode"] == "batched" else intent_slot_pipeline["max_candidates"]
+        interrupted = terminal["stage"]
+        valid = (not stages and interrupted == "perception") or (
+            stages and stages[0] == "perception" and all(v == "slot" for v in stages[1:])
+            and ((interrupted == "slot" and len(stages) - 1 < slot_bound)
+                 or (interrupted == "solver" and 1 <= len(stages) - 1 <= slot_bound)))
+        if not valid or routes or terminal["revision_count"] != 0:
+            _raise(error_type, "invalid intent-slot finite graph prefix")
+        return 0
     cursor = route_index = revision = refreshes = 0
     # E18: the acquisition visits already walked, so an ACQUIRE continuation
     # is checked against its own declared allowance exactly as a refresh is.

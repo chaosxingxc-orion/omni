@@ -1,0 +1,7 @@
+Identify the plausible intents from the original audio and supplied legal task
+inventory and knowledge. Return 1 to 3 distinct actual intent hypotheses, ordered
+by support. Do not pad the list or infer calibrated probability from rank.
+For each candidate explain the discriminating cue briefly, cite available evidence
+identifiers when applicable, and preserve unresolved acoustic or semantic details
+that the Slot and Decision nodes should examine. Do not assume a transcript.
+Use exactly the configured intent-hypotheses JSON. Never invent an intent label.

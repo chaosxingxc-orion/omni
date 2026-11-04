@@ -39,7 +39,7 @@ KINDS = (KIND_CONTACT, KIND_SCORE, KIND_TFRL)
 
 #: The graph node a contact belongs to. ``perception`` and ``solver`` are the two nodes the three-way comparison reads; the
 #: other native roles are kept apart so they never pollute those two rates.
-NODES = ("perception", "solver", "reviewer", "planner", "acquisition", "other")
+NODES = ("perception", "slot", "solver", "reviewer", "planner", "acquisition", "other")
 
 OUTCOMES = ("ok", "refused", "error")
 

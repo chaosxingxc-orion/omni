@@ -731,6 +731,7 @@ class NativeEpisodeConfig:
     answer_selection: str | None = None
     # Opt-in deterministic knowledge context node; absent preserves bytes.
     knowledge_context_json: str | None = None
+    intent_slot_pipeline_json: str | None = None
 
     @property
     def knowledge_value_rendering(self) -> dict[str, object] | None:
@@ -1268,6 +1269,7 @@ def load_native_episode_config(
         "schema", "episode_id", "max_revisions", "actions", "roles",
     }
     optional_fields = {
+        "intent_slot_pipeline",
         "exhaustion_policy",
         "candidate_refresh",
         "local_tool_execution",
@@ -1419,6 +1421,32 @@ def load_native_episode_config(
         raise ValueError("tool_iteration_policy must be reserve-final-report")
     raw_roles = raw["roles"]
     kinds = ("perception", "solver", "reviewer", "planner")
+    pipeline_json = None
+    if "intent_slot_pipeline" in raw:
+        from .intent_slot_pipeline import parse_config, canonical
+        pipeline = parse_config(raw["intent_slot_pipeline"])
+        pipeline_json = canonical(pipeline)
+        if raw.get("finite_completion_policy") != "deliver-latest-or-abstain":
+            raise ValueError("intent-slot pipeline requires retained invalid/finite rows")
+        kinds += ("slot",)
+        if raw.get("review_loop") != "off" or revisions != 0:
+            raise ValueError("intent-slot pipeline requires review_loop off and no revisions")
+        incompatible = {"candidate_refresh", "acquisition", "relisten", "role_context",
+                        "context_policy", "consumption_module", "answer_selection",
+                        "prompt_contact_limits", "solver_tool_access"}
+        if incompatible.intersection(raw):
+            raise ValueError("intent-slot pipeline cannot combine with legacy graph extensions")
+        if not isinstance(raw_roles, Mapping) or any(not isinstance(row, Mapping) for row in raw_roles.values()):
+            raise ValueError("intent-slot roles must be mappings")
+        if raw.get("finite_completion_scope", "episode") != "episode":
+            raise ValueError("intent-slot pipeline requires complete intermediate outputs")
+        for name, row in raw_roles.items():
+            if row.get("max_iterations") != (0 if name in {"reviewer", "planner"} else 1):
+                raise ValueError("intent-slot roles require exactly one contact per visit")
+            if set(row).intersection({"samples", "branches", "supply_variants", "template_variants",
+                                      "decoding_variants", "thinking_variants", "sampling_variants",
+                                      "protocol_variants"}):
+                raise ValueError("intent-slot pipeline cannot combine with grouped roles")
     # E18: the fifth role is OPTIONAL and is the ONLY key ``roles`` may carry
     # beyond the four. It is present exactly when ``native_episode.
     # acquisition`` is, checked below: a node with no policy and a policy
@@ -2166,7 +2194,7 @@ def load_native_episode_config(
     phase_ids = tuple(role.phase_id for role in roles) + (
         () if acquisition_role is None else (acquisition_role.phase_id,)
     )
-    expected_phase_count = 4 + (0 if acquisition_role is None else 1)
+    expected_phase_count = len(kinds) + (0 if acquisition_role is None else 1)
     if (
         len(set(phase_ids)) != expected_phase_count
         or set(phase_ids) != set(program.phase_names())
@@ -2510,6 +2538,8 @@ def load_native_episode_config(
     # without a declared cleaning boundary.
     per_revision += cleaning_contacts_per_revision
     ceiling = roles[0].max_iterations + (revisions + 1) * per_revision
+    if pipeline_json is not None and pipeline["slot_mode"] == "per_candidate":
+        ceiling += pipeline["max_candidates"] - 1
     ceiling += refreshes * roles[0].max_iterations
     if variant_fans_out_once:
         ceiling += variant_arm_count_for_ceiling - 1
@@ -2676,6 +2706,7 @@ def load_native_episode_config(
         prompt_contact_limits=prompt_contact_limits,
         answer_selection=answer_selection,
         knowledge_context_json=knowledge_context_json,
+        intent_slot_pipeline_json=pipeline_json,
     )
     validate_prompt_contact_limits(result)
     if solver_access:

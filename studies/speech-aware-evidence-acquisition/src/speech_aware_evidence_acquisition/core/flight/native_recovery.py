@@ -194,6 +194,23 @@ def native_contact_custody_enabled(values):
     native = values.get('native_episode')
     if not isinstance(native, dict):
         return False
+    if native.get('intent_slot_pipeline') is not None:
+        from ...rails.controllers import default_phase_program
+        from ...rails.native_episode_config import load_native_episode_config
+        if (values.get('transport') != 'vllm'
+                or values.get('arm') != 'raw-speech-agent-native-tools'
+                or values.get('carrier_lock_key') != 'slurp'
+                or values.get('phase_tools')
+                or values.get('policy') not in ('phase-native-intent-slot-batched-v1',
+                                                'phase-native-intent-slot-per-candidate-v1')):
+            return False
+        try:
+            config = load_native_episode_config(values, default_phase_program(values['policy']))
+        except (ValueError, TypeError, KeyError):
+            return False
+        return (config.intent_slot_pipeline_json is not None
+                and config.max_contacts in (3, 5)
+                and all(not role.tool_names and role.samples == 1 for role in config.roles))
     if native.get('answer_selection') == 'odd40-whole-answer-v1':
         return True  # Preserve the already reviewed method's existing path.
     pair = gepa_pair_layout_matches(values)

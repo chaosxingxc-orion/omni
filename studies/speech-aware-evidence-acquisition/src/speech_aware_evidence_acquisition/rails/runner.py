@@ -14,6 +14,8 @@ receipt-bound resident llama.cpp service; unit tests use in-process clients.
 
 from __future__ import annotations
 
+import copy
+
 from ..core.stage_timing import measure
 
 import hashlib
@@ -2636,6 +2638,14 @@ async def _invoke_native_role_episode(
     # Migration step 5: carrier facts (decision candidates, the candidate-list
     # ceiling, delivered units) come from the run's carrier hooks.
     carrier_hooks = _carrier_hooks(getattr(config, "carrier_profile", None))
+    pipeline_config = None
+    pipeline_validator = None
+    if config.intent_slot_pipeline_json is not None:
+        from .intent_slot_pipeline import parse_config
+        pipeline_config = parse_config(json.loads(config.intent_slot_pipeline_json))
+        pipeline_validator = getattr(carrier_hooks, "intent_slot_response_validator", None)
+        if pipeline_validator is None:
+            raise RailsRunnerError("carrier has no intent-slot protocol adapter")
     relisten_blind_template = relisten_confirm_template = None
     if relisten_config is not None:
         if binding.repo_root is None:
@@ -4146,6 +4156,10 @@ async def _invoke_native_role_episode(
             instruction=material.instruction + "\n\nNative episode limits: "
             + json.dumps(limits, sort_keys=True),
         ).validate()
+        if pipeline_config is not None:
+            from .intent_slot_pipeline import prompt_context
+            material = replace(material, instruction=material.instruction + prompt_context(
+                pipeline_config, episode_state, role_configs[phase_id].role_kind)).validate()
         phase = program.phase(phase_id)
         if (phase.response_format_id is not None) != (material.response_format is not None):
             raise RailsRunnerError("native role response format differs from its phase")
@@ -4162,6 +4176,8 @@ async def _invoke_native_role_episode(
             # node's pinned instruction template differs.
             "material_inputs": (ctx, {} if previous is None else {ctx.sample_id: previous}),
             "arm_instructions": {},
+            **({"intent_slot_context": copy.deepcopy(episode_state.get("intent_slot_context", {}))}
+               if pipeline_config is not None else {}),
         }
         return material.instruction
 
@@ -4409,6 +4425,11 @@ async def _invoke_native_role_episode(
             role=role, solver_phase_id=config.role("solver").phase_id,
             states=render_ctx.agent_states, local_tool_result_ids=tuple(visit["local_ids"]),
         )
+        if pipeline_config is not None and role.role_kind == "slot":
+            # Independent hypotheses: do not expose another candidate's Slot
+            # completion through the otherwise-full native conversation.
+            exposed_states = tuple(s for s in exposed_states
+                                   if s.state_kind == f"phase:{config.role('perception').phase_id}")
         if config.role_context_json is not None:
             if context_binding is None:
                 raise RailsRunnerError("role context lacks its bound Perception schema")
@@ -4644,6 +4665,18 @@ async def _invoke_native_role_episode(
             slot_id=slot_id, response_sha256=completion.response_text_sha256,
         ))
         state.response_sha256s.append(completion.response_text_sha256)
+        if pipeline_config is not None and completion.finish_reason == "stop":
+            visit = visits[request.role_id]
+            try:
+                pipeline_validator(kind=role_configs[request.role_id].role_kind,
+                                   text=completion.text,
+                                   response_format=visit["material"].response_format,
+                                   context=visit["intent_slot_context"], config=pipeline_config)
+            except (ValueError, KeyError, TypeError) as error:
+                refusal = RailsRunnerError("intent-slot output contract refused: " + str(error))
+                refusal.seal_refusal_completion = completion
+                refusal.seal_refusal_role_id = request.role_id
+                raise refusal from error
         state_content, cited_value_ids = completion.text, ()
         empty_solver_completion = (
             request.role_id == config.role("solver").phase_id
@@ -6656,6 +6689,7 @@ async def _invoke_native_role_episode(
                 reviewer_verdict_vocabulary=config.reviewer_verdict_vocabulary,
                 # E39: keyword for the same reason.
                 finite_completion_scope=config.finite_completion_scope,
+                intent_slot_pipeline_json=config.intent_slot_pipeline_json,
             ),
             nodes=NativeEpisodeNodes(**nodes),
             role_input_builder=(
@@ -6669,6 +6703,9 @@ async def _invoke_native_role_episode(
         )
         result = await workflow.invoke_direct(state.prepared.task_contract, (), session=session)
         receipt = result["state"]
+        if pipeline_config is not None:
+            from .intent_slot_pipeline import validate_receipt
+            validate_receipt(receipt)
         from .native_episode_receipt import (
             validate_native_episode_delivery_receipt, validate_native_episode_finite_path,
             validate_native_episode_terminal_policy,
@@ -6751,6 +6788,13 @@ async def _invoke_native_role_episode(
                 accept_action=config.actions[0], revise_action=config.actions[1],
                 error_type=RailsRunnerError,
             )
+        if pipeline_config is not None and delivery.kind == "accepted":
+            context_record = receipt["intent_slot_context"]
+            selected = pipeline_validator(kind="solver", text=result["delivery"]["actor_output"],
+                response_format=visits[config.role("solver").phase_id]["material"].response_format,
+                context=context_record, config=pipeline_config)
+            receipt["intent_slot_pipeline"]["selected_candidate_id"] = selected
+            receipt["intent_slot_pipeline"]["decision_source"] = dict(delivery.final_contact)
         final_solver_receipt = delivery.solver_receipt
         terminal_disposition = delivery.terminal_disposition
         validate_native_episode_terminal_policy(
@@ -6773,6 +6817,7 @@ async def _invoke_native_role_episode(
                     None if acquisition_policy is None else config.actions[2]
                 ),
                 max_acquisitions=config.max_acquisitions_per_row,
+                intent_slot_pipeline=pipeline_config,
                 error_type=RailsRunnerError,
             )
         accepted = delivery.final_contact
@@ -6969,6 +7014,7 @@ async def _invoke_native_role_episode(
             trace.extend_from(state.trace_buffers[key])
         compact_receipt = {key: receipt[key] for key in (
             "role_visits", "planner_routes", "accepted_solver_receipt", "interrupted_role",
+            "intent_slot_pipeline",
             "abstention_receipt",
             # E8c: present exactly when a Planner output named no
             # registered action -- the row is retained and sealed, and

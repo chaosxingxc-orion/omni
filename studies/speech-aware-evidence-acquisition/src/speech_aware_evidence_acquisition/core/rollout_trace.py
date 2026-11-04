@@ -481,6 +481,7 @@ def supplied_values_from_payload(payload: Mapping[str, object]) -> list[tuple[st
 
 
 _NODE_BY_KIND = {
+    "slot": "slot",
     "perception": "perception", "solver": "solver", "reviewer": "reviewer", "planner": "planner", "acquisition": "acquisition",
 }
 

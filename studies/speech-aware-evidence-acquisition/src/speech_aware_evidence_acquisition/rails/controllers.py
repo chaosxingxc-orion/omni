@@ -1427,6 +1427,8 @@ def default_controller_factory(program: PhaseProgram) -> Callable[[str], Evidenc
 
 
 _PROGRAM_CONFIG_FILENAMES: Mapping[str, str] = {
+    "phase-native-intent-slot-batched-v1": "phase-native-intent-slot-batched-v1.json",
+    "phase-native-intent-slot-per-candidate-v1": "phase-native-intent-slot-per-candidate-v1.json",
     "phase-native-slot-review-contract-v1": "phase-native-slot-review-contract-v1.json",
     "phase-audio2tool-native-candidate-recovery-tools-v1": (
         "phase-audio2tool-native-candidate-recovery-tools-v1.json"
@@ -2272,6 +2274,12 @@ def register_phase_programs_v1() -> None:
             "phase-native-slot-review-contract-v1",
             default_controller_factory(default_phase_program("phase-native-slot-review-contract-v1")),
         )
+    if "phase-native-intent-slot-batched-v1" not in registered:
+        AGENT_CONTROLLERS.register("phase-native-intent-slot-batched-v1",
+            default_controller_factory(default_phase_program("phase-native-intent-slot-batched-v1")))
+    if "phase-native-intent-slot-per-candidate-v1" not in registered:
+        AGENT_CONTROLLERS.register("phase-native-intent-slot-per-candidate-v1",
+            default_controller_factory(default_phase_program("phase-native-intent-slot-per-candidate-v1")))
     unregistered = set(_PROGRAM_CONFIG_FILENAMES) - set(AGENT_CONTROLLERS.names())
     if unregistered:
         raise RailsControllersError(
@@ -2491,6 +2499,9 @@ def register_response_formats_v1() -> None:
     from .slurp_solver_protocol import FORMAT_ID as SOLVER_PROTOCOL_ID, registered_response_format
     if SOLVER_PROTOCOL_ID not in registered:
         RESPONSE_FORMATS.register(SOLVER_PROTOCOL_ID, registered_response_format)
+    if "slurp-candidate-slots-v1" not in registered:
+        from .adapters.slurp_intent_slot import registered_slot_format
+        RESPONSE_FORMATS.register("slurp-candidate-slots-v1", registered_slot_format)
     if "slurp-intent-hypotheses-v1" not in registered:
         from .artifact_results import slurp_intent_hypotheses_response_format
 

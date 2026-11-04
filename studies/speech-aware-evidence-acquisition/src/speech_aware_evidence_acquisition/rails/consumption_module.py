@@ -447,6 +447,7 @@ class CarrierHooks:
     sampling_variant_frame: Mapping[str, object] | None = None
     #: Output formats explicitly admitted by this carrier for Solver protocol columns.
     solver_protocol_formats: frozenset[str] | None = None
+    intent_slot_response_validator: Callable[..., object] | None = None
 
 
 @dataclass(frozen=True)

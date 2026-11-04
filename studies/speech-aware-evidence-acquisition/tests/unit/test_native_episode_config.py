@@ -608,3 +608,26 @@ def test_slot_review_handoff_is_explicit_and_closed():
     values["native_episode"]["review_handoff"] = "infer-answer"
     with pytest.raises(ValueError, match="review_handoff"):
         load_native_episode_config(values, program())
+
+
+@pytest.mark.parametrize('mode,ceiling', [('batched', 3), ('per_candidate', 5)])
+def test_intent_slot_config_exact_bound_and_recovery_admission(mode, ceiling):
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
+    values = config()
+    native = values['native_episode']
+    native.update(review_loop='off', finite_completion_policy='deliver-latest-or-abstain',
+                  intent_slot_pipeline={'schema': 'saea-intent-slot-pipeline-v1', 'slot_mode': mode,
+                                        'max_candidates': 3, 'candidate_outside_recovery': False})
+    native['roles']['reviewer']['max_iterations'] = 0
+    native['roles']['planner']['max_iterations'] = 0
+    native['roles']['slot'] = {'phase_id': 'slot', 'max_iterations': 1}
+    values.update(policy='phase-native-intent-slot-' + mode.replace('_', '-') + '-v1',
+                  carrier_lock_key='slurp', transport='vllm', arm='raw-speech-agent-native-tools')
+    parsed = load_native_episode_config(values, default_phase_program(values['policy']))
+    assert parsed.max_contacts == ceiling
+    assert parsed.role('slot').tool_names == ()
+    assert native_contact_custody_enabled(values)
+    native['intent_slot_pipeline']['candidate_outside_recovery'] = True
+    with pytest.raises(ValueError, match='recovery'):
+        load_native_episode_config(values, default_phase_program(values['policy']))

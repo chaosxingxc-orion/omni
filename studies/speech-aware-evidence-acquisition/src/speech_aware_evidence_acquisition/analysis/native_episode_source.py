@@ -176,6 +176,7 @@ def verify_native_episode_source(
                     episode, max_revisions=config.max_revisions,
                     accept_action=config.actions[0], revise_action=config.actions[1],
                     refresh_action=config.refresh_action, max_refreshes=config.max_candidate_refreshes,
+                    intent_slot_pipeline=raw_native.get("intent_slot_pipeline"),
                     error_type=NativeEpisodeSourceError,
                 )
         elif episode.get("system_policy_decision") is not None:

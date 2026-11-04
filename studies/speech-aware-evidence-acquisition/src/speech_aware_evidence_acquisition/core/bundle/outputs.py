@@ -2049,6 +2049,12 @@ def _verify_outputs_trace_binding(
                 f"record {request_record_id!r}"
             )
         episode = row.get("native_episode_receipt")
+        if isinstance(episode, Mapping) and "intent_slot_pipeline" in episode:
+            from ...rails.intent_slot_pipeline import validate_receipt
+            try:
+                validate_receipt(episode, trace_records=records)
+            except (ValueError, KeyError, TypeError) as error:
+                raise BundleError("intent-slot provenance failed: " + str(error)) from error
         if isinstance(episode, Mapping) and 'answer_selection' in episode and 'supply_variants' not in row:
             raise BundleError('whole-answer selection requires its source supply-variant receipt')
         if isinstance(episode, Mapping) and "candidate_proposal" in episode:
