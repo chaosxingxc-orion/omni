@@ -264,3 +264,41 @@ def test_native_capacity_receipt_records_wrapper_not_only_source_messages(tmp_pa
     assert audit['rows'][0]['wrapper_delta_tokens'] == 0
     assert audit['native_fit_completed'] is False
     assert job.verify_job(repo, data, out)[0] == complete
+
+
+def test_configured_json_schema_is_bound_and_cannot_be_changed(tmp_path, monkeypatch):
+    repo, data, out, args = prepared(tmp_path, monkeypatch)
+    value = job.read(job.ROOT/'configs/probes/ace_compact_response_format_v1.json')
+    result = job.prepare(repo, data, **args, response_format=value)
+    _, reg, _ = job.verify_job(repo, data, out)
+    assert reg['decoding_params']['response_format'] == value == result['response_format']
+    result['response_format']['json_schema']['schema']['anyOf'][0]['properties']['signals']['maxItems'] = 3
+    (out/'complete.json').write_bytes(job.raw(result))
+    with pytest.raises(ValueError, match='request decoding'):
+        job.verify_job(repo, data, out)
+
+
+def test_schema_refuses_remote_refs_and_invalid_keywords():
+    value = {'type':'json_schema','json_schema':{'name':'test','strict':True,
+        'schema':{'type':'object','properties':{'x':{'$ref':'https://example.com/schema'}}}}}
+    with pytest.raises(ValueError, match='references must be local'):
+        job.checked_response_format(value)
+    value['json_schema']['schema'] = {'type':'not-a-type'}
+    with pytest.raises(ValueError, match='invalid response JSON schema'):
+        job.checked_response_format(value)
+
+
+def test_compact_schema_refuses_missing_refs_and_excess_signals():
+    from jsonschema import Draft202012Validator
+    value = job.read(job.ROOT/'configs/probes/ace_compact_response_format_v1.json')
+    validator = Draft202012Validator(value['json_schema']['schema'])
+    row = {'item_id':'known','label':'uncertain','refs':['r0'],'reason':'Hypothesis only.'}
+    body = {'schema':'saea-ace-reflection-v3','findings':[],'signals':[row]}
+    assert not list(validator.iter_errors(body))
+    del row['refs']
+    assert list(validator.iter_errors(body))
+    row['refs']=['r0']; body['signals']=[row,row,row]
+    assert list(validator.iter_errors(body))
+    # Shape constraints cannot prove that a library ID is semantically valid.
+    body['signals']=[row];row['item_id']='invented'
+    assert not list(validator.iter_errors(body))

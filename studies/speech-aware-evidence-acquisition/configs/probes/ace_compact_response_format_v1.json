@@ -1,0 +1,234 @@
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "ace_compact_two_stage_v1",
+    "strict": true,
+    "schema": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schema": {
+              "const": "saea-ace-reflection-v3"
+            },
+            "findings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "finding_id": {
+                    "type": "string",
+                    "enum": [
+                      "f0",
+                      "f1"
+                    ]
+                  },
+                  "lesson": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "refs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "r0",
+                        "r1",
+                        "r2",
+                        "r3"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 4
+                  },
+                  "confidence": {
+                    "type": "string",
+                    "enum": [
+                      "tentative",
+                      "observed"
+                    ]
+                  }
+                },
+                "required": [
+                  "finding_id",
+                  "lesson",
+                  "refs",
+                  "confidence"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0,
+              "maxItems": 2
+            },
+            "signals": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "label": {
+                    "type": "string",
+                    "enum": [
+                      "helpful",
+                      "harmful",
+                      "uncertain"
+                    ]
+                  },
+                  "refs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "r0",
+                        "r1",
+                        "r2",
+                        "r3"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 4
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  }
+                },
+                "required": [
+                  "item_id",
+                  "label",
+                  "refs",
+                  "reason"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "schema",
+            "findings",
+            "signals"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "schema": {
+              "const": "saea-ace-delta-v3"
+            },
+            "deltas": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "operation": {
+                    "type": "string",
+                    "enum": [
+                      "ADD",
+                      "MODIFY",
+                      "DELETE"
+                    ]
+                  },
+                  "id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "content": {
+                    "type": "string",
+                    "maxLength": 2048
+                  },
+                  "finding_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "f0",
+                        "f1"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 2
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  }
+                },
+                "required": [
+                  "operation",
+                  "id",
+                  "content",
+                  "finding_ids",
+                  "reason"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0,
+              "maxItems": 2
+            },
+            "unresolved_conflicts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "item_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "minItems": 1,
+                    "maxItems": 2
+                  },
+                  "finding_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "f0",
+                        "f1"
+                      ]
+                    },
+                    "minItems": 1,
+                    "maxItems": 2
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  }
+                },
+                "required": [
+                  "item_ids",
+                  "finding_ids",
+                  "reason"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "schema",
+            "deltas",
+            "unresolved_conflicts"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

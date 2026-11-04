@@ -24,6 +24,40 @@ SCHEMA = 'saea-learning-strategy-job-v1'
 read, raw, pin, file_sha = base.read, base.raw, base.pin, base.file_sha
 
 
+def checked_response_format(value):
+    """Bind a configured structured-output contract without weakening readers."""
+    import copy
+    from jsonschema import Draft202012Validator, SchemaError
+    if value == {'type': 'json_object'}:
+        return dict(value)
+    ace.require(isinstance(value, dict) and set(value) == {'type', 'json_schema'}
+                and value['type'] == 'json_schema',
+                'exact json_object or strict json_schema response_format required')
+    wrapper = value['json_schema']
+    ace.require(isinstance(wrapper, dict) and set(wrapper) == {'name', 'strict', 'schema'}
+                and isinstance(wrapper['name'], str)
+                and re.fullmatch('[A-Za-z0-9_-]{1,64}', wrapper['name'])
+                and wrapper['strict'] is True and isinstance(wrapper['schema'], dict)
+                and bool(wrapper['schema']), 'exact json_object or strict json_schema contract required')
+    try:
+        Draft202012Validator.check_schema(wrapper['schema'])
+    except SchemaError as error:
+        raise ValueError('invalid response JSON schema: '+error.message) from error
+    # Remote schema fetching is outside a frozen configuration's custody.
+    def local(node):
+        if isinstance(node, dict):
+            for key, item in node.items():
+                if key in ('$ref', '$dynamicRef'):
+                    ace.require(isinstance(item, str) and item.startswith('#'),
+                                'response schema references must be local')
+                local(item)
+        elif isinstance(node, list):
+            for item in node:
+                local(item)
+    local(wrapper['schema'])
+    return copy.deepcopy(value)
+
+
 def strategy_modules(strategy):
     """Only implemented strategies can reach shared registration or dispatch."""
     if strategy == ace.STRATEGY:
@@ -107,9 +141,7 @@ def prepare(repo, data, *, strategy, source_spec, source_roster, tokenizer_relpa
     require(base.deployment_identity(repo,model,identity) == identity, 'exact learning deployment identity required')
     decoding = base.learning_decoding(read(repo/f'configs/model/{model}.json'))
     if response_format is not None:
-        require(response_format == {'type': 'json_object'},
-                'only exact json_object response_format is supported')
-        decoding['response_format'] = dict(response_format)
+        decoding['response_format'] = checked_response_format(response_format)
     config = {'model_id':model,'decoding_params':decoding,
         'max_context_bytes':max_context_bytes,'runtime_identity_sha256':sha(identity)}
     development = {}
@@ -176,9 +208,7 @@ def verify_job(repo,data,job):
         and sha(identity) == reg['runtime_identity_sha256'] == complete['runtime_identity_sha256'], 'strategy deployment identity differs')
     expected_decoding = base.learning_decoding(read(repo/f"configs/model/{reg['model_id']}.json"))
     if 'response_format' in complete:
-        require(complete['response_format'] == {'type': 'json_object'},
-                'only exact json_object response_format is supported')
-        expected_decoding['response_format'] = dict(complete['response_format'])
+        expected_decoding['response_format'] = checked_response_format(complete['response_format'])
     require(reg['decoding_params'] == expected_decoding,
             'strategy request decoding differs from configured response format')
     plan = ExecutionPlan(**{**reg['plan'],'protocol_hash':'0'*64}).validate()
