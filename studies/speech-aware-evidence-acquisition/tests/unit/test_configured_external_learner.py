@@ -133,3 +133,53 @@ def test_invalid_total_deadline_rejected_before_dispatch(setup,value):
     config,cfg=setup;cfg['total_timeout_seconds']=value;config.write_text(json.dumps(cfg))
     with pytest.raises(ValueError,match='total wall'):m.execute(config)
     assert not Path(cfg['output_root']).exists()
+
+
+def research_config(config, cfg):
+    policy = config.parent/'research.md'
+    policy.write_text('Analyze mechanisms and counterexamples, not case-by-case repetition.')
+    cfg['research_prompt'] = {'path': policy.name,
+        'sha256': hashlib.sha256(policy.read_bytes()).hexdigest()}
+    cfg['max_tokens'] = 131072
+    config.write_text(json.dumps(cfg))
+    return policy
+
+
+def test_research_policy_in_actual_request_preserves_full_evidence(setup, monkeypatch):
+    config, cfg = setup
+    evidence = [{'role': 'system', 'content': 'Task-specific role'},
+        {'role': 'user', 'content': 'Full evidence ' * 20000}]
+    raw = json.dumps(evidence).encode()
+    Path(cfg['messages']['path']).write_bytes(raw)
+    cfg['messages']['sha256'] = hashlib.sha256(raw).hexdigest()
+    policy = research_config(config, cfg)
+    class Opener:
+        def open(self, request, **kw):
+            body = json.loads(request.data)
+            assert body['max_tokens'] == 131072
+            assert body['messages'][0] == {'role': 'system', 'content': policy.read_text()}
+            assert body['messages'][1:] == evidence
+            raise TimeoutError()
+    monkeypatch.setattr(m.urllib.request, 'build_opener', lambda *a: Opener())
+    assert m.execute(config)['state'] == 'unknown'
+    sent = json.loads((Path(cfg['output_root'])/'request.json').read_bytes())
+    assert sent['messages'][1:] == evidence
+    monkeypatch.setattr(m.urllib.request, 'build_opener', lambda *a: pytest.fail('duplicate spend'))
+    assert m.execute(config)['state'] == 'unknown'
+
+
+@pytest.mark.parametrize('change', ['tamper', 'budget', 'empty'])
+def test_research_policy_invalid_before_dispatch(setup, change):
+    config, cfg = setup
+    policy = research_config(config, cfg)
+    if change == 'tamper':
+        policy.write_text('changed')
+    elif change == 'budget':
+        cfg['max_tokens'] = 102400
+    else:
+        policy.write_text(' ')
+        cfg['research_prompt']['sha256'] = hashlib.sha256(policy.read_bytes()).hexdigest()
+    config.write_text(json.dumps(cfg))
+    with pytest.raises(ValueError, match='research'):
+        m.execute(config)
+    assert not Path(cfg['output_root']).exists()

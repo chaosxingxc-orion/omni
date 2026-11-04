@@ -10,5 +10,9 @@
   "max_tokens": 131072,
   "timeout_seconds": 600,
   "output_root": "/absolute/private/unique-request-directory",
-  "stream": true
+  "stream": true,
+  "research_prompt": {
+    "path": "../prompts/learner/rsi-system-research.md",
+    "sha256": "c340699293d6adbaae911ba7df406f37f61c7859d3998612b743feb4b605f5af"
+  }
 }

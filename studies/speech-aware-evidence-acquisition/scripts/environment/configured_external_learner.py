@@ -99,7 +99,7 @@ def execute(config_path):
     cfg = json.loads(Path(config_path).read_bytes())
     keys = {'schema', 'endpoint', 'model', 'api_key_env', 'messages', 'max_tokens',
             'timeout_seconds', 'output_root'}
-    if not keys <= set(cfg) <= keys | {'stream', 'total_timeout_seconds', 'thinking'} or cfg['schema'] != 'saea-external-learner-v1':
+    if not keys <= set(cfg) <= keys | {'stream', 'total_timeout_seconds', 'thinking', 'research_prompt'} or cfg['schema'] != 'saea-external-learner-v1':
         raise ValueError('exact external learner configuration required')
     if type(cfg.get('stream', False)) is not bool:
         raise ValueError('boolean stream setting required')
@@ -130,6 +130,24 @@ def execute(config_path):
             or m['role'] not in ('system', 'user', 'assistant')
             or not isinstance(m['content'], str) for m in messages):
         raise ValueError('explicit text-only teacher messages required')
+    if 'research_prompt' in cfg:
+        policy = cfg['research_prompt']
+        if (not isinstance(policy, dict) or set(policy) != {'path', 'sha256'}
+                or not isinstance(policy['path'], str) or not policy['path']):
+            raise ValueError('pinned research prompt required')
+        policy_path = Path(policy['path'])
+        if not policy_path.is_absolute():
+            policy_path = Path(config_path).resolve().parent / policy_path
+        policy_raw = policy_path.read_bytes()
+        if hashlib.sha256(policy_raw).hexdigest() != policy['sha256']:
+            raise ValueError('research prompt changed')
+        policy_text = policy_raw.decode('utf-8')
+        if not policy_text.strip():
+            raise ValueError('nonempty research prompt required')
+        if cfg['max_tokens'] < 131072:
+            raise ValueError('research output budget must be at least 131072')
+        # Keep all task evidence intact; persist the effective messages in request.json.
+        messages = [{'role': 'system', 'content': policy_text}, *messages]
     secret = os.environ.get(cfg['api_key_env'])
     if not secret:
         raise ValueError('credential environment variable is unset')
