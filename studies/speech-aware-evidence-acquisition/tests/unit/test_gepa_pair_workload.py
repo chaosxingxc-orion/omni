@@ -90,10 +90,17 @@ def test_pair_frozen_science_and_native_context_boundary(repo,monkeypatch,fault)
 
 
 def test_pair_native_64k_context_is_explicit_operational_change_only(repo,monkeypatch):
-    job,_=derived(repo,monkeypatch);path,data,_=repo
+    from speech_aware_evidence_acquisition.rails.adapters.runtime_view import configured_geometry
+    job,checked=derived(repo,monkeypatch);path,data,_=repo
+    checked['compiled_baseline']['serving_slot_tokens']=49152
     model=m.read(path/'configs/model/model.json');model['server_args'][1]='65536'
     (path/'configs/model/model.json').write_bytes(m.raw(model))
-    assert job.derive(path,data,job.config['material'])[1]['execution_plan']['planned_model_calls']==128
+    base,exp,*_=job.derive(path,data,job.config['material'])
+    assert exp['execution_plan']['planned_model_calls']==128
+    geometry=configured_geometry({**model,**base,'transport':'vllm'},defaults=(8,8192,64))
+    assert geometry['slot_tokens']==65536
+    assert checked['compiled_baseline']['serving_slot_tokens']==49152
+    assert base['thinking_policy']==checked['source_baseline']['thinking_policy']
 
 
 def test_pair_stage_and_register_use_shared_contract_and_complete_three_arm_recipe(repo,monkeypatch):

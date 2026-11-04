@@ -181,6 +181,29 @@ def row_progress(j,producer,logical,plan,elapsed,state,scratch,lane):
     require(result['total_rows']==j['total_rows'],'checkpoint total differs');return result
 
 
+def recovery_context(producer,logical,plan):
+    """Identify recovery without treating replayed rows as new inference work."""
+    path=settlement.mapped(producer,logical/'runs'/plan.run_id/plan.attempt_id/'resume-declaration.json')
+    if not path.exists():return None
+    declaration=settlement.read(path)
+    require(declaration.get('schema')=='saea-resume-declaration-v1'
+        and declaration.get('run_id')==plan.run_id and declaration.get('attempt_id')==plan.attempt_id,
+        'observer recovery declaration identity differs')
+    pin=declaration.get('native_recovery_receipt')
+    require(isinstance(pin,dict) and set(pin)=={'path','sha256'},'observer recovery receipt pin required')
+    receipt_path=settlement.mapped(producer,Path(pin['path']))
+    require(queue.launcher.digest(receipt_path)==pin['sha256'],'observer recovery receipt hash differs')
+    receipt=settlement.read(receipt_path);target=receipt.get('target_plan',{})
+    require(receipt.get('schema')=='saea-native-recovery-v1'
+        and all(target.get(k)==getattr(plan,k) for k in ('run_id','attempt_id','protocol_hash','split_identity_hash')),
+        'observer recovery target differs')
+    return {'source_attempt_id':receipt['source']['plan']['attempt_id'],
+        'receipt_sha256':pin['sha256'],
+        'checkpoint_basis':'reconstructed historical rows and newly completed rows; not additive across attempts',
+        'cost_basis':'current native journal counts new contacts; checkpoint costs may include historical replay',
+        'fresh_inference_rate_verified':False}
+
+
 def observe_job(j,lane,scratch,now):
     producer,observed,plan=source(j);logical=Path(j['logical_data'])
     result={'id':j['id'],'kind':j['kind'],'observed_at_utc':datetime.fromtimestamp(now,timezone.utc).isoformat(),
@@ -197,12 +220,19 @@ def observe_job(j,lane,scratch,now):
     progress=(row_progress(j,producer,logical,plan,elapsed,status,scratch,lane) if j['kind']=='row-checkpoint'
         else learning_progress(j,producer,logical,plan,records))
     n=progress['completed_rows'];total=j['total_rows'];sp=elapsed/n if n else None
-    return {**result,**progress,'state':status,'process_state':state,'elapsed_seconds':elapsed,'cards':lane['cards'],'instances':lane['instances'],
+    recovery=recovery_context(producer,logical,plan) if j['kind']=='row-checkpoint' else None
+    result={**result,**progress,'state':status,'process_state':state,'elapsed_seconds':elapsed,'cards':lane['cards'],'instances':lane['instances'],
         'remaining_rows':total-n,'wall_seconds_per_complete_row':sp,
         'estimated_remaining_seconds':(total-n)*sp if state=='running' and n else (0 if n==total else None),
         'eta_basis':'linear cumulative valid completion rate; startup, serial learning and tail can change it',
         'contacts':contact,'failed_attempt_known_usage':contact['known_usage'] if state=='failed' else None,
         'sample_count_is_not_contact_count':True,'scientific_gain_claimed':False}
+    if recovery is not None:
+        result.update(recovery=recovery,wall_seconds_per_complete_row=None,rows_per_second=None,
+            estimated_remaining_seconds=0 if n==total else None,
+            eta_basis='recovery mixes historical replay and new work; fresh inference ETA not established',
+            reconstruction_wall_seconds_per_row=sp)
+    return result
 
 
 def observe(path):

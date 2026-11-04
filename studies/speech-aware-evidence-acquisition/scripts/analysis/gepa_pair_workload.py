@@ -149,6 +149,10 @@ class PairWorkload:
         current,current_context=science(live_model);historical,historical_context=science(archived_model)
         if current!=historical or current_context<historical_context:
             raise ValueError('paired deployment changes frozen model, decoding or context semantics')
+        # The compiled historical baseline carries its old window. Bind the
+        # adapter to the already-validated live capacity while keeping node
+        # request budgets and scientific inputs unchanged.
+        base['serving_slot_tokens']=current_context
         # Material verifier owns exact recompilation; these are independent scientific invariants.
         for key in ('knowledge_stores', 'phase_material', 'thinking_policy', 'phase_tools'):
             if base.get(key) != source.get(key):

@@ -104,3 +104,30 @@ def test_source_exact_launch_result_is_required(tmp_path,monkeypatch):
     monkeypatch.setattr(m.queue.launcher,'status',lambda *a:{'state':'running','container_id':'c'*64})
     with pytest.raises(ValueError,match='exact launch result'):m.source({'launch':pin(launch),'launcher':pin(helper)})
 
+
+def test_recovery_rows_never_become_fresh_inference_throughput(tmp_path,monkeypatch):
+    plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
+    root=tmp_path/'runs'/plan.run_id/plan.attempt_id;root.mkdir(parents=True)
+    receipt=tmp_path/'recovery.json'
+    receipt.write_text(json.dumps({'schema':'saea-native-recovery-v1',
+        'target_plan':{k:getattr(plan,k) for k in ('run_id','attempt_id','protocol_hash','split_identity_hash')},
+        'source':{'plan':{'attempt_id':'previous-attempt'}}}))
+    declaration={'schema':'saea-resume-declaration-v1','run_id':plan.run_id,'attempt_id':plan.attempt_id,
+        'native_recovery_receipt':pin(receipt)}
+    (root/'resume-declaration.json').write_text(json.dumps(declaration))
+    observed={'state':'running','running':True,'exit_code':0,'started_at':'2026-11-03T10:00:00Z'}
+    monkeypatch.setattr(m,'source',lambda j:(producer,observed,plan))
+    monkeypatch.setattr(m,'native_contacts',lambda *a:({'known_usage':{'calls':0}},{}))
+    monkeypatch.setattr(m,'row_progress',lambda *a:{'completed_rows':100,'total_rows':200,'rows_per_second':10})
+    job={'id':'recovery','kind':'row-checkpoint','total_rows':200,'logical_data':str(tmp_path),'arm':'test'}
+    result=m.observe_job(job,{'cards':4,'instances':1},tmp_path,m.timestamp('2026-11-03T10:00:10Z'))
+    assert result['completed_rows']==100 and result['contacts']['known_usage']['calls']==0
+    assert result['wall_seconds_per_complete_row'] is None and result['rows_per_second'] is None
+    assert result['estimated_remaining_seconds'] is None
+    assert result['reconstruction_wall_seconds_per_row']==.1
+    assert result['recovery']['source_attempt_id']=='previous-attempt'
+    receipt.write_text('{}')
+    with pytest.raises(ValueError,match='receipt hash'):m.recovery_context(producer,tmp_path,plan)
+    declaration['attempt_id']='wrong';(root/'resume-declaration.json').write_text(json.dumps(declaration))
+    with pytest.raises(ValueError,match='declaration identity'):m.recovery_context(producer,tmp_path,plan)
+
