@@ -1,0 +1,70 @@
+{
+  "b": {
+    "child_vs_lock": {
+      "paired_rows": 80,
+      "strict_repairs": 4,
+      "strict_breaks": 5,
+      "net_strict_pp": -1.25,
+      "exact_mcnemar_two_sided_p": 1.0,
+      "interpretation": "exploratory fixed development set; unadjusted p-value, no selection or stability proof"
+    },
+    "child_vs_parent": {
+      "paired_rows": 80,
+      "strict_repairs": 2,
+      "strict_breaks": 4,
+      "net_strict_pp": -2.5,
+      "exact_mcnemar_two_sided_p": 0.6875,
+      "interpretation": "exploratory fixed development set; unadjusted p-value, no selection or stability proof"
+    },
+    "parent_vs_lock": {
+      "paired_rows": 80,
+      "strict_repairs": 4,
+      "strict_breaks": 3,
+      "net_strict_pp": 1.25,
+      "exact_mcnemar_two_sided_p": 1.0,
+      "interpretation": "exploratory fixed development set; unadjusted p-value, no selection or stability proof"
+    },
+    "aa_vs_lock": {
+      "paired_rows": 80,
+      "strict_repairs": 6,
+      "strict_breaks": 2,
+      "net_strict_pp": 5.0,
+      "exact_mcnemar_two_sided_p": 0.2890625,
+      "interpretation": "exploratory fixed development set; unadjusted p-value, no selection or stability proof"
+    }
+  },
+  "tp4": {
+    "child_vs_lock": {
+      "paired_rows": 80,
+      "strict_repairs": 6,
+      "strict_breaks": 3,
+      "net_strict_pp": 3.75,
+      "exact_mcnemar_two_sided_p": 0.5078125,
+      "interpretation": "exploratory fixed development set; unadjusted p-value, no selection or stability proof"
+    },
+    "child_vs_parent": {
+      "paired_rows": 80,
+      "strict_repairs": 12,
+      "strict_breaks": 3,
+      "net_strict_pp": 11.25,
+      "exact_mcnemar_two_sided_p": 0.03515625,
+      "interpretation": "exploratory fixed development set; unadjusted p-value, no selection or stability proof"
+    },
+    "parent_vs_lock": {
+      "paired_rows": 80,
+      "strict_repairs": 2,
+      "strict_breaks": 8,
+      "net_strict_pp": -7.5,
+      "exact_mcnemar_two_sided_p": 0.109375,
+      "interpretation": "exploratory fixed development set; unadjusted p-value, no selection or stability proof"
+    },
+    "aa_vs_lock": {
+      "paired_rows": 80,
+      "strict_repairs": 4,
+      "strict_breaks": 5,
+      "net_strict_pp": -1.25,
+      "exact_mcnemar_two_sided_p": 1.0,
+      "interpretation": "exploratory fixed development set; unadjusted p-value, no selection or stability proof"
+    }
+  }
+}
