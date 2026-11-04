@@ -88,3 +88,10 @@ def test_contract_control_explicit_program_budget_and_design():
     job=m.ExternalExperienceWorkload(cfg)
     assert job.CONTACTS==4 and job.ARMS==['learned','control','lock']
     with pytest.raises(ValueError):m.ExternalExperienceWorkload({**cfg,'evaluation_design':'other'})
+
+
+def test_external_selection_partition_is_explicit_and_rejects_unknown():
+    cfg={**config(),'schema':m.SCHEMA,'evaluation_partition':'selection'}
+    assert m.ExternalExperienceWorkload(cfg).config['evaluation_partition']=='selection'
+    with pytest.raises(ValueError, match='partition'):
+        m.ExternalExperienceWorkload({**cfg,'evaluation_partition':'test'})

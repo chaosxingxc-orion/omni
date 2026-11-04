@@ -29,7 +29,7 @@ class ExternalExperienceWorkload(PairWorkload):
 
     def __init__(self,config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material'}
-        if not fields <= set(config) <= fields | {'evaluation_design'} or config['schema']!=SCHEMA:
+        if not fields <= set(config) <= fields | {'evaluation_design', 'evaluation_partition'} or config['schema']!=SCHEMA:
             raise ValueError('exact configured external experience workload required')
         if config.get('evaluation_design', 'paired') not in ('paired', 'contract-control-v1'):
             raise ValueError('known external experience evaluation design required')
@@ -54,6 +54,9 @@ class ExternalExperienceWorkload(PairWorkload):
         if ('contract_control' in params) != (self.config.get('evaluation_design') == 'contract-control-v1'):
             raise ValueError('contract control material and evaluation design differ')
         consumption.verify(params,repo=repo,data=data,model_id=self.config['runtime_binding']['model_fragment'],consumer_ids=self.config['sample_ids'])
+        release=pinned(data,params['candidate_release'])
+        if self.config.get('evaluation_partition','feedback') != release.get('evaluation_partition','feedback'):
+            raise ValueError('workload and source release evaluation partitions differ')
         expected=measure(repo,data,params,self.runtime_binding(repo))
         if expected!=measurement:raise ValueError('source-bound actual tokenizer measurement changed')
         return material,{'params':params,'measurement':measurement}
@@ -64,11 +67,16 @@ class ExternalExperienceWorkload(PairWorkload):
         from speech_aware_evidence_acquisition.core.reasoning_knobs import validate_thinking_policy
         material,checked=self.material_checked(repo,data,material_pin);params=checked['params'];measurement=checked['measurement']
         binding=self.runtime_binding(repo)
-        h2,view=observation.population(repo,{'schema':'saea-h2-perception-thinking-v1','arm':'baseline','admitted_level':96})
-        by_id={r['sample_id']:r for r in h2['items']};ids=self.config['sample_ids']
-        if not set(ids)<=set(by_id):raise ValueError('fixed original H2 consumers required')
-        items=[copy.deepcopy(by_id[s]) for s in ids]
-        roster={'schema':'saea-roster-receipt-v1','carrier_lock_key':'slurp','roster_id':self.RUN,'roster_role':'construction','split_role':'discovery','count':self.ROWS,'items':items,'split_identity_hash':split_identity_hash(prefixed('slurp',ids)),'strata_counts':dict(sorted(Counter(r['stratum'] for r in items).items())),'parent':pin(repo,observation.H2),'selection_rule':'Exact configured H2 subset; learning/selection query, utterance and audio excluded by external release.','claims_benefit':False}
+        if self.config.get('evaluation_partition') == 'selection':
+            release=pinned(data,params['candidate_release'])
+            roster,view=self.population(repo,release['partition'])
+            items=roster['items'];ids=self.config['sample_ids']
+        else:
+            h2,view=observation.population(repo,{'schema':'saea-h2-perception-thinking-v1','arm':'baseline','admitted_level':96})
+            by_id={r['sample_id']:r for r in h2['items']};ids=self.config['sample_ids']
+            if not set(ids)<=set(by_id):raise ValueError('fixed original H2 consumers required')
+            items=[copy.deepcopy(by_id[s]) for s in ids]
+            roster={'schema':'saea-roster-receipt-v1','carrier_lock_key':'slurp','roster_id':self.RUN,'roster_role':'construction','split_role':'discovery','count':self.ROWS,'items':items,'split_identity_hash':split_identity_hash(prefixed('slurp',ids)),'strata_counts':dict(sorted(Counter(r['stratum'] for r in items).items())),'parent':pin(repo,observation.H2),'selection_rule':'Exact configured H2 subset; learning/selection query, utterance and audio excluded by external release.','claims_benefit':False}
         base=read(repo/observation.SOURCE_BASE);exp=read(repo/observation.SOURCE_EXP)
         base['thinking_policy']={r:copy.deepcopy(observation.THINKING_ARMS['baseline']) for r in ('perception','solver')}
         validate_thinking_policy(base['thinking_policy'],read(repo/f"configs/model/{binding['model_fragment']}.json"))
@@ -85,7 +93,7 @@ class ExternalExperienceWorkload(PairWorkload):
         base=compiled.apply_to(base);base['native_episode']['consumption_module']=block
         base.pop('prepared_phase_supply',None);base['serving_slot_tokens']=measurement['fit_estimate']['slot_tokens']
         base['native_contact_fit'].update(run_id=self.RUN+'-FIT',attempt_id='fit-v1',contact_cap=self.CONTACTS*self.ROWS)
-        base['what_this_is']=self.PROGRAM+' Fixed H2 development; no adoption claim.'
+        base['what_this_is']=self.PROGRAM+(' Fixed TRAIN selection confirmation; historical knowledge may have seen samples; no adoption claim.' if self.config.get('evaluation_partition')=='selection' else ' Fixed H2 development; no adoption claim.')
         cm.verify_declared_module(block,base,repo_root=repo)
         cell,=exp['cells'];cell.update(cell_id=self.NAME,baseline_fragment=self.NAME,model_fragment=binding['model_fragment'],run_id=self.RUN,attempt_id='generation-v1',allowed_execution_stages=['check','prepare-supply','worker','campaign'],readiness={'state':'held','requirements':[],'reason':'Prepare/register/admit exact external experience pair before dispatch.'})
         exp.update(experiment_id=self.RUN,purpose=base['what_this_is'],service_session=binding['service_session'])

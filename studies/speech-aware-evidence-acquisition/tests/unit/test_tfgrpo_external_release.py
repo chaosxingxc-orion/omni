@@ -220,3 +220,45 @@ def test_contract_control_preserves_lock_and_exact_candidate_rendering(material)
     with pytest.raises(ValueError, match='source-bound Solver arms'): consumption.verify_for_flight(bad,repo=kwargs['repo'],data=kwargs['data'],model_id=kwargs['model_id'],consumer_ids=kwargs['consumer_ids'])
     control.write_text('Changed after preparation')
     with pytest.raises(ValueError, match='artifact changed'): consumption.verify(params,repo=kwargs['repo'],data=kwargs['data'],model_id=kwargs['model_id'],consumer_ids=kwargs['consumer_ids'])
+
+
+@pytest.mark.parametrize('fault', [None, 'candidate', 'selection_ids', 'partition_pin', 'prior_review', 'partial'])
+def test_selection_confirmation_reuses_unchanged_candidate_and_original_partition(material, fault):
+    kwargs, candidate, original, review, source, _ = material
+    repo, data = kwargs['repo'], kwargs['data']
+    h1_path = 'docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json'
+    test_path = 'configs/dataset/slurp-speech-native-test-full.json'
+    for rel in (h1_path, test_path):
+        dest = repo / rel; dest.parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(ROOT / rel, dest)
+    h1 = sorted(r['sample_id'] for r in json.loads((repo/h1_path).read_text())['items'])
+    selection = [sid for sid in h1 if sid != source][:80]
+    partition = {'schema':'saea-gepa-partition-v1', 'feedback_ids':sorted(set(h1)-set(selection)),
+                 'selection_ids':selection}
+    from speech_aware_evidence_acquisition.rails.gepa_partition import digest
+    partition['partition_sha256'] = digest(partition)
+    partition['input_files_sha256'] = {rel:consumption.digest(repo/rel)
+        for rel in (h1_path, release.ROSTER, release.DATASET, test_path)}
+    partition_pin = write(repo/'partition.json', partition)
+    original['selection_ids'] = selection; review['bindings']['selection_ids'] = selection
+    original['review'] = write(data/'prior-review.json', review)
+    prior_pin = write(data/'prior-release.json', original)
+    confirm = {**copy.deepcopy(original), 'consumer_ids':selection, 'evaluation_partition':'selection',
+               'partition':partition_pin, 'prior_release':prior_pin}
+    confirm_review = copy.deepcopy(review)
+    confirm_review['bindings'] = {k:v for k,v in confirm.items() if k not in ('schema','review')}
+    confirm['review'] = write(data/'confirm-review.json', confirm_review)
+    if fault == 'candidate': confirm['candidate'] = {**confirm['candidate'], 'sha256':'b'*64}
+    if fault == 'selection_ids': confirm['selection_ids'] = selection[:-1]
+    if fault == 'partition_pin': confirm['partition']['sha256'] = 'c'*64
+    if fault == 'prior_review': (data/'prior-review.json').write_text('{}')
+    if fault == 'partial': confirm['consumer_ids'] = selection[:-1]
+    write(data/'confirmation.json', confirm)
+    kwargs.update(candidate_release=data/'confirmation.json', consumer_ids=confirm['consumer_ids'])
+    if fault:
+        with pytest.raises(ValueError): release.prepare(**kwargs)
+        assert not (repo/'configs/probes/external.txt').exists()
+    else:
+        params = release.prepare(**kwargs)
+        assert consumption.verify(params, repo=repo, data=data, model_id=kwargs['model_id'],
+                                  consumer_ids=selection) == candidate['sha256']
+        assert params['consumer_ids'] == selection

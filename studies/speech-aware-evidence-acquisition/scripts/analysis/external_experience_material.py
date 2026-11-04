@@ -19,7 +19,7 @@ ADAPTERS = {'external-tfgrpo-v1': 'tfgrpo_external_release',
 def build(config):
     fields = {'schema', 'source_kind', 'name', 'run_id', 'release', 'runtime_binding',
               'execution', 'params_path', 'measurement_path', 'material_relpath', 'workload_path'}
-    if not isinstance(config, dict) or not fields <= set(config) <= fields | {'evaluation_design'} or config['schema'] != 'saea-external-experience-material-job-v1':
+    if not isinstance(config, dict) or not fields <= set(config) <= fields | {'evaluation_design', 'evaluation_partition'} or config['schema'] != 'saea-external-experience-material-job-v1':
         raise ValueError('exact material job configuration required')
     if config['source_kind'] not in ADAPTERS:
         raise ValueError('known external algorithm adapter required')
@@ -38,8 +38,9 @@ def build(config):
                 'run_id': config['run_id'], 'sample_ids': release['consumer_ids'],
                 'runtime_binding': config['runtime_binding'], 'execution': config['execution'],
                 'material': None}
-    if 'evaluation_design' in config:
-        workload['evaluation_design'] = config['evaluation_design']
+    for key in ('evaluation_design', 'evaluation_partition'):
+        if key in config:
+            workload[key] = config[key]
     if (release.get('contract_control') is not None) != (config.get('evaluation_design') == 'contract-control-v1'):
         raise ValueError('contract control release and workload design differ')
     if release.get('contract_control') is not None and config['source_kind'] != 'external-tfgrpo-v1':

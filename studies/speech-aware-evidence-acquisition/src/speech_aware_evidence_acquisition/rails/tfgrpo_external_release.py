@@ -76,11 +76,38 @@ def verify_source(params, *, repo, data, candidate):
         evidence={g['query_id']: g['group_sha256'] for g in candidate['relative_evidence']['groups']})
 
 
+def verify_selection_partition(repo, partition_pin, ids):
+    """Check existing TRAIN H1 partition without importing experiment scripts."""
+    from .gepa_partition import digest
+    from .tfgrpo_consumption import digest as file_digest
+    partition = read_pin(repo, partition_pin)
+    h1_path = 'docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json'
+    inputs = (h1_path, ROSTER, DATASET, 'configs/dataset/slurp-speech-native-test-full.json')
+    pins = partition.get('input_files_sha256', {})
+    require(partition.get('schema') == 'saea-gepa-partition-v1'
+            and partition.get('partition_sha256') == digest({k:v for k,v in partition.items()
+                if k not in ('partition_sha256','input_files_sha256')})
+            and set(pins) == set(inputs)
+            and all(file_digest(Path(repo)/p) == pins[p] for p in inputs),
+            'fixed selection partition input pins differ')
+    h1 = json.loads((Path(repo)/h1_path).read_bytes())
+    feedback, selection = partition['feedback_ids'], partition['selection_ids']
+    require(len(feedback) == 233 and len(selection) == 80
+            and len(set(feedback+selection)) == 313
+            and set(feedback+selection) == {r['sample_id'] for r in h1['items']}
+            and feedback == sorted(feedback) and selection == sorted(selection)
+            and ids == selection, 'exact fixed TRAIN selection80 required')
+    return partition
+
+
 def verify_reviewed_development(params, *, repo, data, candidate, release_schema, review_schema, evidence):
     """Shared split/audio/review custody; algorithm replay stays with its adapter."""
     release = read_pin(data, params['candidate_release'])
     fields = {'schema', 'candidate', 'source_manifest', 'consumer_roster', 'learning_dataset',
               'consumer_ids', 'selection_ids', 'review'}
+    selection_confirmation = release.get('evaluation_partition') == 'selection'
+    if selection_confirmation:
+        fields |= {'evaluation_partition', 'partition', 'prior_release'}
     if 'contract_control' in params:
         fields |= {'base_template', 'contract_control'}
         require(all(release.get(k) == params[k] for k in ('base_template', 'contract_control')),
@@ -98,8 +125,19 @@ def verify_reviewed_development(params, *, repo, data, candidate, release_schema
     roster = read_pin(repo, release['consumer_roster']); dataset = read_pin(repo, release['learning_dataset'])
     roster_ids = [r['sample_id'] for r in roster['items']]
     ids = params['consumer_ids']; selection = release['selection_ids']
-    require(len(roster_ids) == len(set(roster_ids)) == 312 and set(ids) <= set(roster_ids),
-            'consumers must be a fixed H2 subset')
+    require(len(roster_ids) == len(set(roster_ids)) == 312, 'fixed H2 roster required')
+    if selection_confirmation:
+        prior = read_pin(data, release['prior_release'])
+        require('evaluation_partition' not in prior, 'confirmation must reference original development release')
+        require(all(prior[k] == release[k] for k in ('candidate', 'source_manifest', 'consumer_roster',
+                'learning_dataset', 'selection_ids')), 'confirmation changed original candidate or partitions')
+        require(ids == sorted(prior['selection_ids']), 'complete original selection confirmation required')
+        prior_params = {**params, 'candidate_release': release['prior_release'], 'consumer_ids': prior['consumer_ids']}
+        verify_reviewed_development(prior_params, repo=repo, data=data, candidate=candidate,
+            release_schema=release_schema, review_schema=review_schema, evidence=evidence)
+        verify_selection_partition(repo, release['partition'], ids)
+    else:
+        require(set(ids) <= set(roster_ids), 'consumers must be a fixed H2 subset')
     require(isinstance(selection, list) and all(isinstance(s, str) for s in selection)
             and selection and len(selection) == len(set(selection)), 'explicit unique selection identities required')
     index = {r['sample_id']: r for r in dataset['items']}
@@ -119,8 +157,12 @@ def verify_reviewed_development(params, *, repo, data, candidate, release_schema
     learn_u, learn_a = identities(learned); use_u, use_a = identities(consumer); select_u, select_a = identities(selected)
     require(not learned & consumer and not learn_u & use_u and not learn_a & use_a,
             'learning overlaps development query, utterance or audio')
-    require(not selected & (learned | consumer) and not select_u & (learn_u | use_u)
-            and not select_a & (learn_a | use_a), 'selection overlaps learning or evaluation')
+    if selection_confirmation:
+        require(consumer == selected and not selected & learned and not select_u & learn_u
+                and not select_a & learn_a, 'confirmation overlaps learning')
+    else:
+        require(not selected & (learned | consumer) and not select_u & (learn_u | use_u)
+                and not select_a & (learn_a | use_a), 'selection overlaps learning or evaluation')
     review = read_pin(data, release['review'])
     bindings = {k: v for k, v in release.items() if k not in ('schema', 'review')}
     diagnostic = isinstance(review, dict) and review.get('decision') == 'eligible-for-hypothesis-diagnostic'
