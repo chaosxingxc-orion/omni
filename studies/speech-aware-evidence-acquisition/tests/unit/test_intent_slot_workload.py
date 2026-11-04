@@ -27,3 +27,13 @@ def test_no_alternate_data_or_graph(fault):
     if fault=='test':c['sample_ids'][0]='slurp:test:000000:audio-a'
     if fault=='order':c['sample_ids'].reverse()
     with pytest.raises(ValueError):NodeWorkload(c)
+
+def test_comparison_rejects_different_roster_or_scorer():
+    from intent_slot_read import compare
+    def result(arm):return {'node_arm':arm,'rows':80,'scorer_identity':{'scorer':'same'},
+      'candidate_coverage':{'rows':[{'sample_id':sid} for sid in config()['sample_ids']]},
+      'official':{'slu_f1':.7},'intent_accuracy':.8,'task_correct_rows':30}
+    rs={a:result(a) for a in ARMS}
+    assert compare(rs)['contrasts'][ARMS[2]]['strict_delta_rows']==0
+    rs[ARMS[1]]['candidate_coverage']['rows'].reverse()
+    with pytest.raises(ValueError):compare(rs)

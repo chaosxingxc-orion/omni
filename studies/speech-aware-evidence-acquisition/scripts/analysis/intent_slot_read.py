@@ -59,6 +59,22 @@ def run(repo,data,out,name):
     else:publish_new(path,raw(result))
     return result
 
+def compare(results):
+    if set(results)!=set(ARMS):raise ValueError('three complete native node arms required')
+    reference=results[ARMS[0]]
+    ids=[r['sample_id'] for r in reference['candidate_coverage']['rows']]
+    for arm,result in results.items():
+        if (result['node_arm']!=arm or result['rows']!=80 or result['scorer_identity']!=reference['scorer_identity']
+                or [r['sample_id'] for r in result['candidate_coverage']['rows']]!=ids):
+            raise ValueError('node arms differ in identity, scorer or population')
+    return {'schema':'saea-intent-slot-comparison-v1','rows':80,'arms':results,
+            'contrasts':{arm:{'slu_f1_delta_pp':100*(r['official']['slu_f1']-reference['official']['slu_f1']),
+                             'intent_delta_pp':100*(r['intent_accuracy']-reference['intent_accuracy']),
+                             'strict_delta_rows':r['task_correct_rows']-reference['task_correct_rows']}
+                         for arm,r in results.items() if arm!=ARMS[0]},
+            'candidate_accepted':False,'limitations':['Fixed development comparison; no automatic promotion.',
+              'Separate runs do not share Perception contacts.','Candidate outside recovery disabled in split graph.']}
+
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for k in ('repo','data','out'):p.add_argument('--'+k,type=Path,required=True)
