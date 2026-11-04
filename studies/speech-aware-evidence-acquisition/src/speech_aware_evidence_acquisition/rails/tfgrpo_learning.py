@@ -280,6 +280,18 @@ def parse_operations(text, items, *, max_operations):
     return operations
 
 
+def batch_operation_limit(proposed_count, per_group_limit, final_merge_policy=None):
+    """The upstream batch prompt allows one decision per supplied proposal.
+
+    A per-group extraction cap is not a whole-batch decision cap. Alternative
+    synthesis policies retain their separately registered operation bound.
+    Neither case changes the resulting library's item/character limits.
+    """
+    if type(proposed_count) is not int or proposed_count < 0:
+        raise LearningError('nonnegative proposal count required')
+    return per_group_limit if final_merge_policy else proposed_count
+
+
 def apply_operations(items, operations, *, max_items, max_characters):
     result = copy.deepcopy(items)
     for operation in operations:
@@ -662,7 +674,8 @@ class ExperienceLearner:
                 material=json.dumps({'existing_experiences':parent['items'],'proposed_operations':operations},ensure_ascii=False,sort_keys=True)
                 final_messages=build_final_messages(common,material,self.max_items,self.max_characters,groups=groups)
                 merged=self._call('batch_update','batch',final_messages)
-                final_ops=parse_operations(merged,parent['items'],max_operations=self.max_operations)
+                final_ops=parse_operations(merged,parent['items'],max_operations=batch_operation_limit(
+                    len(operations), self.max_operations, final_merge_policy))
             items=apply_operations(parent['items'],final_ops,max_items=self.max_items,max_characters=self.max_characters)
             receipts=[json.loads(p.read_bytes())['response'] for p in sorted((self.root/'contacts').glob('*.response.json'))]
             if len({r['receipt_id'] for r in receipts})!=len(receipts):raise LearningError('duplicate metering receipt identity')

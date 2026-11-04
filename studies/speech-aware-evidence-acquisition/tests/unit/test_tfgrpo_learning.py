@@ -69,6 +69,46 @@ def test_finished_resume_uses_no_model_and_detects_evidence_tampering(tmp_path):
     with pytest.raises(LearningError,match='evidence changed'):learn(tmp_path,model)
 
 
+def test_batch_replays_all_observed_groups_without_per_group_cap_or_new_calls(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.rails import tfgrpo_learning as module
+    class BatchModel(Model):
+        def __call__(self, request):
+            response = super().__call__(request)
+            if request['stage'] in ('group_update', 'batch_update'):
+                count = 4 if request['stage'] == 'batch_update' else 2
+                response['text'] = json.dumps([
+                    {'operation': 'ADD', 'id': None, 'content': f'Conditional evidence rule {i}'}
+                    for i in range(count)])
+            return response
+    groups = [group(qid='q1'), group(qid='q2')]
+    model = BatchModel()
+    original = module.batch_operation_limit
+    monkeypatch.setattr(module, 'batch_operation_limit', lambda count, limit, policy: limit)
+    with pytest.raises(LearningError, match='bounded operation array'):
+        learn(tmp_path, model, groups, max_operations=2, max_items=4)
+    assert len(model.requests) == 9
+    before = {p.name: p.read_bytes() for p in (tmp_path/'contacts').iterdir()}
+    monkeypatch.setattr(module, 'batch_operation_limit', original)
+    learner, result = learn(tmp_path, lambda _: pytest.fail('no new contact'), groups,
+                            max_operations=2, max_items=4)
+    assert len(result['items']) == 4
+    assert learner.last_invocation == {'new_calls': 0, 'reused_calls': 9}
+    assert result['learning_usage']['calls'] == 9
+    assert before == {p.name: p.read_bytes() for p in (tmp_path/'contacts').iterdir()}
+
+
+def test_batch_capacity_does_not_relax_library_or_synthesis_bounds(tmp_path):
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import batch_operation_limit
+    assert batch_operation_limit(30, 2) == 30
+    assert batch_operation_limit(30, 2, 'bounded-synthesis-v1') == 2
+    operations = [{'operation': 'ADD', 'id': None, 'content': str(i)} for i in range(4)]
+    parsed = parse_operations(json.dumps(operations), {}, max_operations=batch_operation_limit(4, 2))
+    with pytest.raises(LearningError):
+        apply_operations({}, parsed, max_items=3, max_characters=100)
+    with pytest.raises(LearningError):
+        parse_operations(json.dumps(operations), {}, max_operations=batch_operation_limit(3, 2))
+
+
 def test_real_process_exit_after_observed_summary_reuses_response(tmp_path):
     # The next contact's intent is never created: process stops after the first
     # observed response publication, before the next network operation.

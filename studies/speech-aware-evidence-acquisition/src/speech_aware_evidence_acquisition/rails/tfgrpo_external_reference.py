@@ -13,7 +13,7 @@ from .external_teacher import ExternalTeacher
 from .grounded_synthesis_fusion import project_group_evidence
 from .tfgrpo_learning import (DENSE_REWARD, ExperienceLearner, LearningError,
     canonical, group_has_contrast, intent_slot_reward, sha, validate_experience,
-    semantic_advantage, parse_operations)
+    semantic_advantage, parse_operations, batch_operation_limit)
 from .tfgrpo_prompts import SOURCE_SHA256, UPSTREAM_COMMIT
 
 SCHEMA = 'saea-tfgrpo-external-reference-job-v1'
@@ -232,6 +232,23 @@ def audit(root):
     for response_path in contacts.glob('*.response.json'):
         require(response_path.with_name(response_path.name.replace('.response.json', '.intent.json')).is_file(),
                 'orphan reference response')
+    # Audit the exact same batch capacity as execution. Only validated, observed
+    # group outputs can contribute capacity; an invalid/missing group cannot.
+    proposal_count = 0
+    valid_group_ids = set()
+    for path in intents:
+        request = read(path)
+        if request['stage'] != 'group_update':
+            continue
+        observed = caller.reconcile(request)
+        if observed is not None and observed['response']['finish_reason'] == 'stop':
+            try:
+                proposals = parse_operations(observed['response']['text'], parent['items'],
+                                            max_operations=config['bounds']['max_operations'])
+            except LearningError:
+                continue
+            proposal_count += len(proposals)
+            valid_group_ids.add(request['identity'])
     receipts = []; counts = {stage: 0 for stage in STAGES}
     usage = dict(calls=0, prompt_tokens=0, completion_tokens=0)
     for path in intents:
@@ -259,8 +276,14 @@ def audit(root):
                 if request['stage'] == 'advantage':
                     semantic_advantage(response['text'])
                 elif request['stage'] in ('group_update', 'batch_update'):
+                    limit = config['bounds']['max_operations']
+                    if request['stage'] == 'batch_update':
+                        require(valid_group_ids == {g['query_id'] for g in groups
+                                if group_has_contrast(g['rollouts'], DENSE_REWARD)},
+                                'batch requires complete valid group proposals')
+                        limit = batch_operation_limit(proposal_count, limit)
                     parse_operations(response['text'], parent['items'],
-                                     max_operations=config['bounds']['max_operations'])
+                                     max_operations=limit)
                 item['parse_status'] = 'valid'
             except (LearningError, ValueError) as error:
                 item.update(parse_status='invalid', parse_error=str(error))
