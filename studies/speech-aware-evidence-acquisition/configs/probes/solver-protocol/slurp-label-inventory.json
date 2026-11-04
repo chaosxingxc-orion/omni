@@ -1,0 +1,158 @@
+{
+  "schema": "saea-slurp-public-label-inventory-v1",
+  "actions_by_scenario": {
+    "alarm": [
+      "query",
+      "remove",
+      "set"
+    ],
+    "audio": [
+      "volume_down",
+      "volume_mute",
+      "volume_other",
+      "volume_up"
+    ],
+    "calendar": [
+      "query",
+      "remove",
+      "set"
+    ],
+    "cooking": [
+      "query",
+      "recipe"
+    ],
+    "datetime": [
+      "convert",
+      "query"
+    ],
+    "email": [
+      "addcontact",
+      "query",
+      "querycontact",
+      "sendemail"
+    ],
+    "general": [
+      "greet",
+      "joke",
+      "quirky"
+    ],
+    "iot": [
+      "cleaning",
+      "coffee",
+      "hue_lightchange",
+      "hue_lightdim",
+      "hue_lightoff",
+      "hue_lighton",
+      "hue_lightup",
+      "wemo_off",
+      "wemo_on"
+    ],
+    "lists": [
+      "createoradd",
+      "query",
+      "remove"
+    ],
+    "music": [
+      "dislikeness",
+      "likeness",
+      "query",
+      "settings"
+    ],
+    "news": [
+      "query"
+    ],
+    "play": [
+      "audiobook",
+      "game",
+      "music",
+      "podcasts",
+      "radio"
+    ],
+    "qa": [
+      "currency",
+      "definition",
+      "factoid",
+      "maths",
+      "stock"
+    ],
+    "recommendation": [
+      "events",
+      "locations",
+      "movies"
+    ],
+    "social": [
+      "post",
+      "query"
+    ],
+    "takeaway": [
+      "order",
+      "query"
+    ],
+    "transport": [
+      "query",
+      "taxi",
+      "ticket",
+      "traffic"
+    ],
+    "weather": [
+      "query"
+    ]
+  },
+  "entity_types": [
+    "alarm_type",
+    "app_name",
+    "artist_name",
+    "audiobook_author",
+    "audiobook_name",
+    "business_name",
+    "business_type",
+    "change_amount",
+    "coffee_type",
+    "color_type",
+    "cooking_type",
+    "currency_name",
+    "date",
+    "definition_word",
+    "device_type",
+    "drink_type",
+    "email_address",
+    "email_folder",
+    "event_name",
+    "food_type",
+    "game_name",
+    "game_type",
+    "general_frequency",
+    "house_place",
+    "ingredient",
+    "joke_type",
+    "list_name",
+    "meal_type",
+    "media_type",
+    "movie_name",
+    "movie_type",
+    "music_album",
+    "music_descriptor",
+    "music_genre",
+    "news_topic",
+    "order_type",
+    "person",
+    "personal_info",
+    "place_name",
+    "player_setting",
+    "playlist_name",
+    "podcast_descriptor",
+    "podcast_name",
+    "radio_name",
+    "relation",
+    "song_name",
+    "sport_type",
+    "time",
+    "time_zone",
+    "timeofday",
+    "transport_agency",
+    "transport_descriptor",
+    "transport_name",
+    "transport_type",
+    "weather_descriptor"
+  ]
+}

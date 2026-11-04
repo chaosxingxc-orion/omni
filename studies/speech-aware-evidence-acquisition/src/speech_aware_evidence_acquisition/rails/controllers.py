@@ -2488,6 +2488,9 @@ def register_response_formats_v1() -> None:
             "saea-native-planner-action-v1",
             native_planner_action_response_format_v1,
         )
+    from .slurp_solver_protocol import FORMAT_ID as SOLVER_PROTOCOL_ID, registered_response_format
+    if SOLVER_PROTOCOL_ID not in registered:
+        RESPONSE_FORMATS.register(SOLVER_PROTOCOL_ID, registered_response_format)
     if "slurp-intent-hypotheses-v1" not in registered:
         from .artifact_results import slurp_intent_hypotheses_response_format
 
