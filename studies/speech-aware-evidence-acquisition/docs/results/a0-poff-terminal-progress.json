@@ -1,0 +1,54 @@
+{
+  "schema": "saea-real-engine-progress-v1",
+  "state": "failed",
+  "completed_rows": 6921,
+  "total_rows": 13078,
+  "checkpoint_rows": 6921,
+  "unusable_checkpoint_rows": 0,
+  "remaining_rows": 6157,
+  "checkpoint_sha256": "5770839da8fbaeb06ee7a177bc6851163b91699a53fcc9523130aacd9df55263",
+  "split_identity_hash": "7247647b8c8b37becd564b7031691565d4e6b09d8e124823054906d36372c95d",
+  "torn_tail_bytes": 0,
+  "cards": 4,
+  "instances": 1,
+  "elapsed_seconds": 20685.589914,
+  "wall_seconds_per_complete_row": 2.98881518768964,
+  "rows_per_second": 0.3345807409299877,
+  "estimated_remaining_seconds": null,
+  "eta_basis": null,
+  "full_roster_comparison_eligible": false,
+  "checkpoint_recorded_cost_lower_bound": {
+    "calls": 13842.0,
+    "audio_seconds": 36940.66824999987,
+    "latency_seconds": 1664884.8021550062,
+    "prompt_tokens": 92730240.0,
+    "completion_tokens": 12222815.0,
+    "tool_calls": 0.0
+  },
+  "uncheckpointed_and_inflight_cost": "unknown; reconcile request journals and final accounting separately",
+  "complete_sample_timings": {
+    "admission_wait": {
+      "n": 6921,
+      "mean_s": 8564.473849882726,
+      "p50_s": 8394.61889908,
+      "p95_s": 17545.83981037
+    },
+    "admitted_to_finished": {
+      "n": 6921,
+      "mean_s": 1067.8762430237712,
+      "p50_s": 1059.33691016,
+      "p95_s": 1391.79724221
+    }
+  },
+  "new_model_calls": 0,
+  "limitations": [
+    "Duration and state must come from an authoritative run boundary/process observation.",
+    "Allocated cards are not measured utilization.",
+    "Partial or failed candidates cannot establish a full-roster throughput winner.",
+    "Checkpoint costs are a lower bound, not total spend; FIT contacts are accounted separately."
+  ],
+  "observed_at": "2026-11-04T00:24:37Z",
+  "generation_finished_at": "2026-11-03T13:42:38.992102Z",
+  "failure": "Dataset path unreadable; subsequent host check returned EACCES at shared filesystem mount root.",
+  "source_evidence": "fixed-image read-only terminal checkpoint verification"
+}
