@@ -12,9 +12,9 @@
 
 以上均为DRAFT，未prepare/register/admit/preflight/dispatch，没有新模型调用。现有固定learning_strategy_job.py与GEPA配置入口可消费，未编写新一次性启动器。
 
-构建source-spec、原51组roster及封存source manifest映射到本地热盘且可读；原tokenizer.json仍映射到Ceph且EACCES。在两个已有本地工作根的限定深度扫描未找到其副本，此扫描不能证明整机不存在。不能用另一版本tokenizer或旧估算值替代原身份与新容量验证。消费还需要真实音频和知识/评分依赖。
+构建source-spec、原51组roster及封存source manifest映射到本地热盘。此前将缺少tokenizer.json判为缺失资产不准确：此模型使用vocab.json、merges.txt和tokenizer_config.json。应核验实际tokenizer身份及容量，不能要求不存在于原模型格式中的文件。消费还需要真实音频和知识/评分依赖。
 
-当前Ceph客户端blocklisted，恢复需存储侧确认授权。新客户端不用于绕过封禁。本地输入检查只是挂载根与pin可读性，不能冒充完整依赖快照或READY。
+Ceph读取已于11月4日恢复，原失败音频可读且A0新预检通过；历史blocklist不再列作当前阻塞。本地输入检查只是挂载根与pin可读性，不能冒充完整依赖快照或READY。
 
 ## 执行顺序
 
