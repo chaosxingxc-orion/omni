@@ -44,7 +44,7 @@ def test_shared_registration_uses_two_solver_budget_and_external_recipe(repo,mon
     assert m.read(pkg/'fit-plan-registered-v1.json')['execution_plan']['planned_model_calls']==48
     recipe=m.read(pkg/'analysis-recipe-v1.json')
     assert recipe['arms']==['learned','lock'] and recipe['schema']==job.RESULT_SCHEMA
-    assert 'TF-GRPO' in (path/'docs/exposure-ledger.md').read_text()
+    assert 'External reviewed experience' in (path/'docs/exposure-ledger.md').read_text()
 
 
 def test_external_source_kind_reaches_component_compiler():

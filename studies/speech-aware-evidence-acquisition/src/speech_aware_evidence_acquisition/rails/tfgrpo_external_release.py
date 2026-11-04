@@ -71,6 +71,13 @@ def verify_source(params, *, repo, data, candidate):
     spec = read_pin(data, params['source_manifest'])
     require(compile_preview(spec) == candidate, 'external candidate differs from original wire replay')
     require(candidate['model_id'] == params['model_id'], 'frozen actor model differs')
+    return verify_reviewed_development(params, repo=repo, data=data, candidate=candidate,
+        release_schema=SCHEMA, review_schema=REVIEW_SCHEMA,
+        evidence={g['query_id']: g['group_sha256'] for g in candidate['relative_evidence']['groups']})
+
+
+def verify_reviewed_development(params, *, repo, data, candidate, release_schema, review_schema, evidence):
+    """Shared split/audio/review custody; algorithm replay stays with its adapter."""
     release = read_pin(data, params['candidate_release'])
     fields = {'schema', 'candidate', 'source_manifest', 'consumer_roster', 'learning_dataset',
               'consumer_ids', 'selection_ids', 'review'}
@@ -78,7 +85,7 @@ def verify_source(params, *, repo, data, candidate):
         verify_deployment_binding(params, repo=repo, data=data)
         fields |= {'runtime_model_id', 'deployment_binding'}
         require(all(release.get(k) == params[k] for k in ('runtime_model_id', 'deployment_binding')), 'release runtime binding differs')
-    require(isinstance(release, dict) and set(release) == fields and release['schema'] == SCHEMA,
+    require(isinstance(release, dict) and set(release) == fields and release['schema'] == release_schema,
             'explicit external development release required')
     require(all(release[k] == params[k] for k in ('candidate', 'source_manifest', 'consumer_ids')),
             'release candidate, source or ordered consumers differ')
@@ -90,7 +97,7 @@ def verify_source(params, *, repo, data, candidate):
     require(len(roster_ids) == len(set(roster_ids)) == 312 and set(ids) <= set(roster_ids),
             'consumers must be a fixed H2 subset')
     require(isinstance(selection, list) and all(isinstance(s, str) for s in selection)
-            and len(selection) == len(set(selection)), 'explicit unique selection identities required')
+            and selection and len(selection) == len(set(selection)), 'explicit unique selection identities required')
     index = {r['sample_id']: r for r in dataset['items']}
     learned = set(candidate['learned_query_ids']); consumer = set(ids); selected = set(selection)
     require(dataset.get('count') == len(index) == len(dataset['items']) == 625
@@ -113,11 +120,10 @@ def verify_source(params, *, repo, data, candidate):
     review = read_pin(data, release['review'])
     bindings = {k: v for k, v in release.items() if k not in ('schema', 'review')}
     require(isinstance(review, dict) and set(review) == {'schema', 'decision', 'reviewer', 'procedure', 'bindings', 'items'}
-            and review['schema'] == REVIEW_SCHEMA and review['decision'] == 'eligible-for-development-evaluation'
+            and review['schema'] == review_schema and review['decision'] == 'eligible-for-development-evaluation'
             and review['bindings'] == bindings, 'independent review must bind candidate, splits and sources')
     require(all(isinstance(review[k], str) and review[k].strip() for k in ('reviewer', 'procedure')),
             'named reviewer and procedure required')
-    evidence = {g['query_id']: g['group_sha256'] for g in candidate['relative_evidence']['groups']}
     require(isinstance(review['items'], dict) and set(review['items']) == set(candidate['items']),
             'every retained experience requires independent semantic review')
     for key, content in candidate['items'].items():
