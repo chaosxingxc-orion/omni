@@ -1,0 +1,28 @@
+{
+  "schema": "saea-external-research-capacity-observation-v1",
+  "model": "glm-5.3-flash",
+  "requested_max_tokens": 131072,
+  "input_preserved": true,
+  "research_prompt_sha256": "c340699293d6adbaae911ba7df406f37f61c7859d3998612b743feb4b605f5af",
+  "usage": {
+    "completion_tokens": 36034,
+    "completion_tokens_details": {
+      "reasoning_tokens": 28697
+    },
+    "prompt_tokens": 221542,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 257576
+  },
+  "elapsed_seconds": 616.4216211698949,
+  "finish_reasons": [
+    "stop"
+  ],
+  "response_sha256": "b36f62534261b1f88c9bfeaa70a2357ed523e4220406f17ee85a2f52c131350b",
+  "source_result_sha256": "d25bcd9615d825ceb8208213953b2f1699c150b0cec21f3c40b2037636a3337b",
+  "provider_max_context_verified": false,
+  "full_128k_completion_verified": false,
+  "independent_reasoning_token_cap_verified": false,
+  "candidate_accepted": false
+}
