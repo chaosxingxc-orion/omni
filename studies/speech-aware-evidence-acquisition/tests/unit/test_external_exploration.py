@@ -87,7 +87,8 @@ def test_test_split_rejected_before_output(tmp_path):
     assert not root.exists()
 
 
-@pytest.mark.parametrize('fault', [None, 'source', 'exposure'])
+@pytest.mark.parametrize('fault', [None, 'source', 'exposure', 'empty', 'duplicate',
+                                 'blank', 'whitespace', 'not-string', 'unhashable', 'not-list'])
 def test_development_feedback_is_pinned_and_exposure_bound(tmp_path, fault):
     path, root = job(tmp_path)
     cfg = exploration.read(path)
@@ -97,6 +98,10 @@ def test_development_feedback_is_pinned_and_exposure_bound(tmp_path, fault):
                 'observations': [{'hypothesis': 'Non-exhaustive retrieval is not an authority.'}]}
     if fault == 'source': feedback['source_sha256'] = '0' * 64
     if fault == 'exposure': feedback['exposed_query_ids'] = ['slurp:train:unselected']
+    invalid_exposures = {'empty': [], 'duplicate': cfg['query_ids'] * 2,
+                         'blank': [''], 'whitespace': ['  '], 'not-string': [None],
+                         'unhashable': [{}], 'not-list': cfg['query_ids'][0]}
+    if fault in invalid_exposures: feedback['exposed_query_ids'] = invalid_exposures[fault]
     cfg['development_feedback'] = write(tmp_path/'feedback.json', feedback)
     write(path, cfg)
     if fault:

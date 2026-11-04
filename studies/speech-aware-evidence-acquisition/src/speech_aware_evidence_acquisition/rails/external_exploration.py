@@ -98,6 +98,10 @@ def prepare(config_path):
                 or feedback['schema'] != 'saea-exploration-development-feedback-v1'
                 or feedback['source_sha256'] != pin(source)['sha256']
                 or not isinstance(feedback['exposed_query_ids'], list)
+                or not feedback['exposed_query_ids']
+                or any(not isinstance(q, str) or not q.strip()
+                       for q in feedback['exposed_query_ids'])
+                or len(feedback['exposed_query_ids']) != len(set(feedback['exposed_query_ids']))
                 or not set(feedback['exposed_query_ids']) <= set(ids)
                 or not isinstance(feedback['observations'], list) or not feedback['observations']):
             raise ValueError('feedback must bind the source and only supplied TRAIN identities')
