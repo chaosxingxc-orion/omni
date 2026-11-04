@@ -1,0 +1,49 @@
+{
+  "schema": "saea-tfrl-learning-signal-audit-v1",
+  "source_sha256": "776b5b90ce59b097c4799c47d4484dd60e1573f75627cd98831d489ec10f7ffa",
+  "counts": {
+    "groups": 51,
+    "rollouts": 204,
+    "unique_scored_outputs_within_groups": 146,
+    "groups_with_nonzero_reward_range": 51,
+    "groups_with_zero_reward_range": 0,
+    "groups_with_one_unique_scored_output": 0,
+    "groups_with_changed_mean_after_unweighted_dedup": 37,
+    "strict_successes": 0,
+    "reference_intent_absent_from_perception_candidates": 15,
+    "history_parse_failures": 0
+  },
+  "reward_range_distribution": {
+    "0.333333": 8,
+    "0.083333": 6,
+    "0.416667": 1,
+    "0.75": 1,
+    "0.2": 4,
+    "0.5": 12,
+    "0.55": 1,
+    "0.05": 2,
+    "0.261905": 1,
+    "0.166667": 4,
+    "0.066667": 2,
+    "0.047619": 1,
+    "0.3": 1,
+    "0.233333": 1,
+    "0.25": 3,
+    "0.177778": 1,
+    "0.095238": 1,
+    "0.833333": 1
+  },
+  "new_model_calls": 0,
+  "root_cause_proven": false,
+  "scope": "Continuous development reward, duplicate multiplicity and perception candidate membership. Not an official final SLU score or proof of missing information.",
+  "dedup_policy": "Storage/prompt compression must preserve multiplicity; unweighted dedup changes the empirical reward distribution and is an algorithm ablation.",
+  "all_wrong_policy": "Binary strict advantages are zero for these groups. Nonzero continuous within-group reward differences can still support relative feedback; ties supply no relative ranking.",
+  "candidate_membership_policy": "Absence from perception shortlist does not prove absence from Solver input or that the correct intent is unreachable.",
+  "analysis_script_sha256": "9d7875cfbf1340e3ad807b96419a46ff8ea05a01ee1b888b1368483995fcee89",
+  "fixed_image_validation": {
+    "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "network": "none",
+    "exit_code": 0,
+    "summary_matches_local": true
+  }
+}
