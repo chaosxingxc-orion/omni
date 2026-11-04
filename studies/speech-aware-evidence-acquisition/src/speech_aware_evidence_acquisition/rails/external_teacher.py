@@ -42,7 +42,8 @@ class ExternalTeacher:
                 'adapter supplies request-specific messages and output root')
         required = {'schema', 'endpoint', 'model', 'api_key_env', 'max_tokens',
                     'timeout_seconds', 'stream', 'research_prompt'}
-        require(required <= self.config.keys() <= required | {'thinking', 'total_timeout_seconds'},
+        require(required <= self.config.keys() <= required | {'thinking', 'total_timeout_seconds',
+                    'journal_batch_bytes', 'journal_batch_seconds'},
                 'explicit external research configuration required')
         require(self.config['schema'] == 'saea-external-learner-v1'
                 and type(self.config['max_tokens']) is int and self.config['max_tokens'] >= 131072,

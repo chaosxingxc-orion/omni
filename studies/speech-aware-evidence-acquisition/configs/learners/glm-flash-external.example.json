@@ -14,5 +14,7 @@
   "research_prompt": {
     "path": "../prompts/learner/rsi-system-research.md",
     "sha256": "c340699293d6adbaae911ba7df406f37f61c7859d3998612b743feb4b605f5af"
-  }
+  },
+  "journal_batch_bytes": 65536,
+  "journal_batch_seconds": 1
 }

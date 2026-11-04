@@ -122,8 +122,45 @@ def deadline_handler(signum, frame):
     raise TotalDeadlineExceeded('external learner total wall deadline exceeded')
 
 
-def read_stream(response, root, diagnostics, *, persist_response=True):
-    """Journal every SSE line before interpreting it; incomplete streams stay unknown."""
+def durable_stream_lines(response, journal, diagnostics, batch_bytes, batch_seconds):
+    """Bound pending bytes; persist a batch before exposing its lines to parsing.
+
+    The time threshold is checked on received lines, not a background flush SLA.
+    On read error/EOF flush the pending tail; crashes leave the request unknown.
+    """
+    pending, size = [], 0
+    last = time.monotonic()
+    iterator = iter(response)
+    while True:
+        terminal = None
+        try:
+            line = diagnostics.read(lambda: next(iterator))
+        except Exception as error:
+            terminal = error
+        if terminal is None:
+            diagnostics.received(line)
+            diagnostics.data['sse_lines'] += 1
+            pending.append(line); size += len(line)
+        complete_marker = (len(pending) >= 2 and not pending[-1].strip()
+                           and pending[-2].strip() == b'data: [DONE]')
+        if pending and (terminal is not None or complete_marker or size >= batch_bytes
+                        or time.monotonic() - last >= batch_seconds):
+            if journal is not None:
+                diagnostics.write(journal, b''.join(pending))
+            for value in pending:
+                yield value
+            pending, size = [], 0
+            last = time.monotonic()
+        if terminal is not None:
+            if isinstance(terminal, StopIteration):
+                return
+            diagnostics.phase = 'body-read'
+            raise terminal
+
+
+def read_stream(response, root, diagnostics, *, persist_response=True,
+                journal_batch_bytes=65536, journal_batch_seconds=1):
+    """Persist bounded SSE batches before interpretation; incomplete stays unknown."""
     content, reasoning, usage, model, response_id = [], [], None, None, None
     finish = None
     pending = []
@@ -132,17 +169,9 @@ def read_stream(response, root, diagnostics, *, persist_response=True):
     with ((root/'response.sse').open('xb') if persist_response else nullcontext()) as journal:
         if persist_response:
             os.chmod(root/'response.sse', 0o600)
-        iterator = iter(response)
-        while True:
-            try:
-                line = diagnostics.read(lambda: next(iterator))
-            except StopIteration:
-                break
-            diagnostics.received(line)
-            diagnostics.data['sse_lines'] += 1
+        for line in durable_stream_lines(response, journal, diagnostics,
+                                         journal_batch_bytes, journal_batch_seconds):
             wire_hash.update(line)
-            if persist_response:
-                diagnostics.write(journal, line)
             diagnostics.phase = 'sse-parse'
             value = line.decode('utf-8').rstrip('\r\n')
             if value.startswith('data:'):
@@ -192,17 +221,22 @@ def read_stream(response, root, diagnostics, *, persist_response=True):
          'content': ''.join(content), 'reasoning_content': ''.join(reasoning)}}]}
     if persist_response:
         persist(root/'response.json', result)
-    return result, wire_hash.hexdigest()
+    return result, (hashlib.sha256((root/'response.sse').read_bytes()).hexdigest()
+                    if persist_response else wire_hash.hexdigest())
 
 
 def execute(config_path):
     cfg = json.loads(Path(config_path).read_bytes())
     keys = {'schema', 'endpoint', 'model', 'api_key_env', 'messages', 'max_tokens',
             'timeout_seconds', 'output_root'}
-    if not keys <= set(cfg) <= keys | {'stream', 'total_timeout_seconds', 'thinking', 'research_prompt'} or cfg['schema'] != 'saea-external-learner-v1':
+    if not keys <= set(cfg) <= keys | {'stream', 'total_timeout_seconds', 'thinking', 'research_prompt', 'journal_batch_bytes', 'journal_batch_seconds'} or cfg['schema'] != 'saea-external-learner-v1':
         raise ValueError('exact external learner configuration required')
     if type(cfg.get('stream', False)) is not bool:
         raise ValueError('boolean stream setting required')
+    for name, default, maximum in (('journal_batch_bytes', 65536, 1048576),
+                                    ('journal_batch_seconds', 1, 10)):
+        if type(cfg.get(name, default)) is not int or not 1 <= cfg.get(name, default) <= maximum:
+            raise ValueError('bounded journal batch configuration required')
     if 'total_timeout_seconds' in cfg and (type(cfg['total_timeout_seconds']) is not int
             or cfg['total_timeout_seconds'] <= 0):
         raise ValueError('positive total wall deadline required')
@@ -287,7 +321,9 @@ def execute(config_path):
                     'request_id': response.headers.get('x-request-id'),
                     'content_type': response.headers.get('content-type')})
                 if body['stream']:
-                    result, response_sha = read_stream(response, root, diagnostics)
+                    result, response_sha = read_stream(response, root, diagnostics,
+                        journal_batch_bytes=cfg.get('journal_batch_bytes', 65536),
+                        journal_batch_seconds=cfg.get('journal_batch_seconds', 1))
                 else:
                     wire = diagnostics.read(response.read)
                     diagnostics.received(wire)

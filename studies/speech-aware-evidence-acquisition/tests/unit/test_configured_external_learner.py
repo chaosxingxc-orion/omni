@@ -187,6 +187,46 @@ def test_research_policy_invalid_before_dispatch(setup, change):
     assert not Path(cfg['output_root']).exists()
 
 
+def test_batched_lines_durable_before_yield_and_flush_error_tail(tmp_path, monkeypatch):
+    import http.client
+    diagnostic = m.ResponseDiagnostics(m.time.monotonic())
+    synced = []
+    monkeypatch.setattr(m.os, 'fsync', lambda fd: synced.append(True))
+    def source():
+        yield b'first\n'
+        yield b'second\n'
+        raise http.client.IncompleteRead(b'partial', 30)
+    path = tmp_path/'journal'
+    with path.open('wb') as handle:
+        iterator = m.durable_stream_lines(source(), handle, diagnostic, 65536, 10)
+        assert next(iterator) == b'first\n'
+        assert path.read_bytes() == b'first\nsecond\n' and len(synced) == 1
+        assert next(iterator) == b'second\n'
+        with pytest.raises(http.client.IncompleteRead): next(iterator)
+    assert diagnostic.data['durable_body_bytes'] == 13
+
+
+def test_batched_stream_done_does_not_wait_for_disconnect(tmp_path, monkeypatch):
+    diagnostic = m.ResponseDiagnostics(m.time.monotonic())
+    def source():
+        for _ in range(100):
+            yield b'data: {"choices":[{"index":0,"delta":{"content":"x"},"finish_reason":"stop"}]}\n'
+            yield b'\n'
+        yield b'data: [DONE]\n'; yield b'\n'
+        pytest.fail('read after terminal event')
+    result, _ = m.read_stream(source(), tmp_path, diagnostic)
+    assert result['choices'][0]['message']['content'] == 'x'*100
+    assert diagnostic.data['body_fsync_calls'] == 1
+
+
+@pytest.mark.parametrize('key,value',[('journal_batch_bytes',0),('journal_batch_bytes',True),
+    ('journal_batch_bytes',1048577),('journal_batch_seconds',11)])
+def test_invalid_batch_rejected_before_dispatch(setup,key,value):
+    config,cfg=setup;cfg[key]=value;config.write_text(json.dumps(cfg))
+    with pytest.raises(ValueError,match='bounded journal'):m.execute(config)
+    assert not Path(cfg['output_root']).exists()
+
+
 @pytest.mark.parametrize('stream', [True, False])
 def test_incomplete_read_preserves_partial_and_diagnostics_without_retry(setup, monkeypatch, stream):
     import http.client
