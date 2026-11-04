@@ -15,6 +15,18 @@ sys.path[:0]=[str(ROOT/'src'),str(ROOT/'scripts/flights/direct'),str(ROOT/'scrip
 from register_real_engine_candidate import read,sha,write
 
 
+def verify_registration_identity(repo, name, spec, cell):
+    """Reject changed configuration before minting an irreversible receipt."""
+    from speech_aware_evidence_acquisition.core.config import compose, protocol_hash
+    cfg = compose(repo, cell['model_fragment'], cell['dataset_fragment'],
+                  cell['baseline_fragment'], name)
+    expected_protocol = protocol_hash(cfg.config_hash, cfg.values['arm'],
+                                      spec['split_identity_hash'])
+    if (spec.get('composed_config_hash') != cfg.config_hash
+            or spec.get('protocol_hash') != expected_protocol):
+        raise ValueError('registered configuration changed; rebuild registration before admission')
+
+
 def test_contact_authorized(repo, data, name, spec, exp):
     """Only an independently validated full-test registration gains this flag."""
     if spec.get('workload_kind') != 'final-report-method':
@@ -28,7 +40,6 @@ def test_contact_authorized(repo, data, name, spec, exp):
 def admit(repo,data,name):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.session.serving import find_resident_session,assert_identity_matches
-    from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
     from speech_aware_evidence_acquisition.core.flight.repin import repin_package,rewrite_dependent_hashes
     from refresh_registered_plan_pins import refresh_package
     from thinking_system_mint_receipt import mint
@@ -36,6 +47,8 @@ def admit(repo,data,name):
     pkg=repo/'docs/readiness'/name;spec=read(pkg/'candidate.json')
     exp=read(repo/'configs/experiment'/f'{name}.json');cell,=exp['cells']
     if cell['readiness']['state']!='held':raise ValueError('candidate not held')
+    verify_registration_identity(repo, name, spec, cell)
+    from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
     from registered_workload import validate_workload, assert_execution_binding
     rows=validate_workload(repo,data,name,spec)
     assert_execution_binding(spec, repo=repo)
