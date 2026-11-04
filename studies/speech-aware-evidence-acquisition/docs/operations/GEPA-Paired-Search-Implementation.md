@@ -53,3 +53,21 @@ CPU评分/反思材料准备与可独立执行的NPU任务异步；parent反馈�
 4. 反思：实际request/FIT/封存来源与六字段mutation往返；selection/H2标签、batch外证据、截断与错parent拒绝，费用仍完整记账。
 5. 评分和预算：全部三S臂完整导出、官方逐条奖励与pooled SLU分开；4N/FIT/fallback/反思全部计费，旧继承成本不重复；预算不足时整阶段不启动。
 6. 固定镜像通过后，先在固定feedback小batch实际走parent→reflector→pair；通过才跑80条selection。报告真实候选、两臂结果和成本，随后冻结候选做H2回归，不扩大到全量测试。
+
+## 显式部署上下文适配
+
+配对工作负载默认拒绝当前上下文容量小于历史材料绑定容量。若目标是同一部署内比较全部分支，可在工作负载配置中声明：
+
+```json
+"context_adaptation": {
+  "historical_context_tokens": 65536,
+  "runtime_context_tokens": 49152,
+  "arms": ["parent", "child", "aa", "lock"],
+  "fit_policy": "native-every-contact-no-truncation",
+  "comparison_scope": "within-runtime-only"
+}
+```
+
+上例适用于四分支 Perception 工作负载；Solver 工作负载的完整分支为 `parent/child/lock`。容量必须与实际历史和运行模型配置一致，且不超过原生65536。所有分支共用本次部署，逐请求经过 native FIT，不截断输入。权重、tokenizer、模型其他科学字段及实际 P/S 解码预算继续严格保持；配置不会绕过这些检查。
+
+适配声明保存在 stage 记录、注册候选的 `job_config` 和注册 protocol 中。后续验证重新派生并比对声明；原始材料和历史模型配置保持原样。实验结果只支持本次同部署内部比较，不能据此归因跨部署质量或吞吐差异。该配置须在新任务准备前确定，不应用于正在生成的冻结任务。
