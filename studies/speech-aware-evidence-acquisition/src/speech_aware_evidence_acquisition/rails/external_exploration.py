@@ -209,7 +209,11 @@ def validate_proposals(text, profile, context, evidence_ids=None, relative=None)
         else:
             fields = {'ace': {'id', 'reflection', 'operations', 'validation'},
                       'reflexion': {'id', 'evidence_query_ids', 'hypothesis', 'memory', 'retry_protocol', 'transfer_scope', 'validation'}}
-            if set(candidate) != fields[profile['algorithm']]:
+            allowed = fields[profile['algorithm']]
+            missing_scope = (profile['algorithm'] == 'reflexion' and set(candidate) == allowed - {'transfer_scope'}
+                             and context.get('required_transfer_scope') == 'cross_task_adaptation'
+                             and context.get('retry_history', {}).get('available') is False)
+            if set(candidate) != allowed and not missing_scope:
                 raise ValueError('algorithm-specific candidate fields required')
             if not isinstance(candidate['id'], str) or not candidate['id'].strip():
                 raise ValueError('nonempty candidate identity required')

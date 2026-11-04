@@ -1,0 +1,9 @@
+# 外部 Reflexion 离线记忆消费
+
+`reflexion_external.py collect/compile/prepare`复用外部响应账本与共享Flight，保留独立Reflexion身份，不使用ACE或TF-GRPO原生seal。范围是离线跨题语言记忆迁移，不是在线同题重试复现。
+
+候选保存原hypothesis、evidence、memory、retry_protocol和validation；运行态只渲染memory的trigger/action/exception。所有教师已曝光TRAIN组进入学习排除，发布使用query/utterance/audio三层隔离与显式语义review。条件仍由模型消费，未实现程序性applicability gate。
+
+当教师省略transfer_scope，只有原准备context明确固定cross_task_adaptation且没有重试历史才可接受；编译metadata标明derived-from-prepared-context，原proposal不补字段。教师显式声明不同范围则拒绝。
+
+真实输出、完整source和provider wire逐次回放核验，严格JSON代码块解包不改语义。结构通过不代表内容支持；涉及P候选协议扩展、过度遗漏、闭集槽位假设或跨规则依赖的记忆须独立review后才能发布。所有prepare与compile均零模型调用。

@@ -38,12 +38,12 @@ def validate_params(params):
     if not isinstance(params,dict) or not FIELDS <= set(params) or set(params)-FIELDS-optional or params['purpose'] != 'development-evaluation':
         raise ValueError('development-only Solver experience binding required')
     if 'source_kind' in params:
-        if (params['source_kind'] not in ('external-tfgrpo-v1', 'external-ace-v1') or 'candidate_release' not in params
+        if (params['source_kind'] not in ('external-tfgrpo-v1', 'external-ace-v1', 'external-reflexion-v1') or 'candidate_release' not in params
                 or any(k in params for k in ('rendering', 'render_manifest', 'compact_params'))):
             raise ValueError('explicit external review and standard rendering required')
     if ('runtime_model_id' in params) != ('deployment_binding' in params):
         raise ValueError('runtime alias requires pinned deployment binding')
-    if 'runtime_model_id' in params and (params.get('source_kind') not in ('external-tfgrpo-v1', 'external-ace-v1') or not isinstance(params['runtime_model_id'], str) or not params['runtime_model_id']):
+    if 'runtime_model_id' in params and (params.get('source_kind') not in ('external-tfgrpo-v1', 'external-ace-v1', 'external-reflexion-v1') or not isinstance(params['runtime_model_id'], str) or not params['runtime_model_id']):
         raise ValueError('external runtime model identity required')
     if 'target_arm' in params and params['target_arm'] != 'learned':
         raise ValueError('only the learned paired Solver arm is supported')
@@ -142,8 +142,10 @@ def verify(params, *, repo, data, model_id, consumer_ids):
     if model_id != params.get('runtime_model_id', params['model_id']) or set(consumer_ids) != set(params['consumer_ids']):
         raise ValueError('consumer model or exact development roster differs')
     candidate=json.loads(checked_pin(data,params['candidate']).read_bytes())
-    if params.get('source_kind') in ('external-tfgrpo-v1', 'external-ace-v1'):
-        if params['source_kind'] == 'external-ace-v1':
+    if params.get('source_kind') in ('external-tfgrpo-v1', 'external-ace-v1', 'external-reflexion-v1'):
+        if params['source_kind'] == 'external-reflexion-v1':
+            from .reflexion_external import verify_source, render
+        elif params['source_kind'] == 'external-ace-v1':
             from .ace_external import verify_source, render
         else:
             from .tfgrpo_external_release import verify_source, render

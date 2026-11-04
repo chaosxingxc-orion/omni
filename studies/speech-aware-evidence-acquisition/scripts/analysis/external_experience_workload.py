@@ -43,7 +43,7 @@ class ExternalExperienceWorkload(PairWorkload):
         if set(material)!={'schema','params','measurement'} or material['schema']!='saea-external-experience-material-v1':
             raise ValueError('explicit external experience material required')
         params=pinned(data,material['params']);measurement=pinned(data,material['measurement'])
-        if params.get('source_kind') not in ('external-tfgrpo-v1','external-ace-v1') or params.get('target_arm') is not None:
+        if params.get('source_kind') not in ('external-tfgrpo-v1','external-ace-v1','external-reflexion-v1') or params.get('target_arm') is not None:
             raise ValueError('external reviewed unpaired source params required')
         consumption.verify(params,repo=repo,data=data,model_id=self.config['runtime_binding']['model_fragment'],consumer_ids=self.config['sample_ids'])
         expected=measure(repo,data,params,self.runtime_binding(repo))
@@ -88,6 +88,9 @@ class ExternalExperienceWorkload(PairWorkload):
 
 
 def algorithm_metadata(source_kind):
+    if source_kind == 'external-reflexion-v1':
+        return {'id':'reflexion-external-memory-transfer-offline-v1','operators_used':['context_application'],
+            'native_learning_seal':False,'description':'Reflexion-inspired offline cross-task memory, not native online retries'}
     if source_kind == 'external-ace-v1':
         return {'id':'ace-external-additive-offline-v1','operators_used':['context_application'],
                 'note':'ACE-inspired offline Reflector/Curator additive proposal; not native online ACE.'}
