@@ -1,0 +1,38 @@
+{
+  "schema": "saea-input-inventory-summary-v1",
+  "lanes": [
+    {
+      "lane": "construction",
+      "configured_mounts": 98,
+      "readable_mount_roots": 72,
+      "blocked_mount_roots": 26,
+      "permission_denied": 26,
+      "required_pins": 1,
+      "failed_required_pins": 0,
+      "readiness_granted": false,
+      "new_model_calls": 0,
+      "launch_config_sha256": "e62536359cefa0640c8b6a99cf7f2bc7f0b4f58365e78827dbc98e7ab37184f7"
+    },
+    {
+      "lane": "consumption",
+      "configured_mounts": 122,
+      "readable_mount_roots": 86,
+      "blocked_mount_roots": 36,
+      "permission_denied": 36,
+      "required_pins": 1,
+      "failed_required_pins": 0,
+      "readiness_granted": false,
+      "new_model_calls": 0,
+      "launch_config_sha256": "9f4479d004b901ae271e416744e726596ec82ff2361002c0735e483becd6e341"
+    }
+  ],
+  "limitations": [
+    "Mount root accessibility is not complete asset inventory.",
+    "No copying or mutation of original runs.",
+    "Many inherited historical mounts require dependency analysis before removal."
+  ],
+  "tests": {
+    "fixed_image_passed": 3,
+    "seconds": 0.05
+  }
+}

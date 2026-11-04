@@ -25,3 +25,15 @@
 必须固定旧队列实现。旧 watcher EXIT0 可能对应 failed state，不能单凭退出码交接。所有 generation 容器、原始请求、release 或已完成 settlement、同 inode guard、无活动 lease 与服务 quiescence 都要核验。未知请求、pending/blocked job 或 guard 替换阻止放行。
 
 后继配置以 barrier 的确切 container ID 作为 `container-exit-zero` 前置条件，仍须自己的科学准入、readiness 和 lease。该证明不恢复失败实验，也不表示算法有收益。
+
+## 输入可读性盘点
+
+共享存储异常时，先用既有启动配置检查全部挂载根与required_inputs：
+
+```bash
+python scripts/environment/configured_input_inventory.py --config /config/launch.json --output /state/input-inventory.json
+```
+
+只读探测、逐项保留errno，文件pin流式计算完整SHA256；报告不包含环境变量值，不启动任务。输出必须是新文件；存在失败返回1，原报告不覆盖。目录检查仅验证目录可遍历，普通未pin文件只读首字节；不能据此声称整个数据集已缓存、完整或READY。原始资产路径可能含内部信息，公开只发布脱敏汇总。
+
+真实构建配置98个挂载根有26个EACCES；消费配对配置122个有36个EACCES。两者包含继承的历史run挂载，后续应按manifest依赖分析确认最小集合，不能仅因本次未直接使用就删挂载。固定镜像3项针对性回归通过，真实盘点零模型调用。
