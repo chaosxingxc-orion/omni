@@ -3,7 +3,7 @@
   "algorithm": "ace",
   "template": {
     "path": "../../prompts/learner/tfrl/ace.md",
-    "sha256": "221b58e7bcd1a46b89d480cb2cc1e5de0a7737d1a78d782a67512fe0ff4d7337"
+    "sha256": "4d93c924df56c1cf653aa5404f1a12da0a3299a88fe3023046d94717336d2ce0"
   },
   "min_candidates": 2,
   "max_candidates": 8,

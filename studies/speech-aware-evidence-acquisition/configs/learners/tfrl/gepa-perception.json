@@ -3,7 +3,7 @@
   "algorithm": "gepa",
   "template": {
     "path": "../../prompts/learner/tfrl/gepa-perception.md",
-    "sha256": "822d24808759134bfc9e7ac7d3c6d5d74e35f7259f30995063f9f426b1487654"
+    "sha256": "583661dd166e26c5d97215372db93505a76cb4544618a769531d76aae0ec6fbd"
   },
   "min_candidates": 2,
   "max_candidates": 6,
