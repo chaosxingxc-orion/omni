@@ -1,0 +1,137 @@
+{
+  "contract_selection": {
+    "rows": 80,
+    "metrics": {
+      "control": {
+        "slu_f1": 0.6857718376584729,
+        "intent_accuracy": 0.75,
+        "span_f1": 0.5806451612903226
+      },
+      "learned": {
+        "slu_f1": 0.6598134616707149,
+        "intent_accuracy": 0.7375,
+        "span_f1": 0.5531914893617021
+      },
+      "lock": {
+        "slu_f1": 0.6433361091131774,
+        "intent_accuracy": 0.7250000000000001,
+        "span_f1": 0.5217391304347826
+      }
+    },
+    "strict_success": {
+      "control": 31,
+      "learned": 27,
+      "lock": 27
+    },
+    "comparisons": {
+      "control_vs_lock": {
+        "proxy_mean_delta": 0.03708333333333336,
+        "strict_breaks": 2,
+        "strict_repairs": 6
+      },
+      "learned_vs_control": {
+        "proxy_mean_delta": -0.021250000000000036,
+        "strict_breaks": 5,
+        "strict_repairs": 1
+      },
+      "learned_vs_lock": {
+        "proxy_mean_delta": 0.01583333333333332,
+        "strict_breaks": 4,
+        "strict_repairs": 4
+      }
+    },
+    "total_cost": {
+      "audio_seconds_used": 1358.06325,
+      "calls_used": 320,
+      "completion_tokens_total": 682282,
+      "latency_seconds_total": 50421.2571377799,
+      "prompt_tokens_total": 2431007,
+      "tool_calls": 0,
+      "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+    },
+    "source_hashes": {
+      "manifest_sha256": "a1f16587295b039f4dceb1766674256a61f25fade8800bc30d508fd64b44dfb4",
+      "outputs_sha256": "6d6ca7efb923f7a89dee8a2f243dada7a1f6b47cd6d9c182cf87dc8c19807320",
+      "raw_trace_sha256": "339974d1797844bf142b0087e7d106be82a2ca978a5e9a9d12a88c0f5a19302b",
+      "roster_sha256": "236ec976f97810aa81953110b40c94f37fdc964f498ca4933daf7b5c97c0a4c6",
+      "sealed_scores_sha256": "1f9df5f06f055fa03279830d836f5b591db4d67af5fd80d9afb0ddaac40a7b4e"
+    },
+    "audited_rows": 80,
+    "candidate_accepted": false
+  },
+  "gepa_candidate0": {
+    "rows": 80,
+    "metrics": {
+      "child": {
+        "slu_f1": 0.6491358362735221,
+        "intent_accuracy": 0.825,
+        "span_f1": 0.558139534883721
+      },
+      "lock": {
+        "slu_f1": 0.6897162022255034,
+        "intent_accuracy": 0.8125,
+        "span_f1": 0.5917159763313609
+      },
+      "parent": {
+        "slu_f1": 0.6558940150288795,
+        "intent_accuracy": 0.7625,
+        "span_f1": 0.5714285714285715
+      }
+    },
+    "strict_success": {
+      "child": 32,
+      "lock": 32,
+      "parent": 31
+    },
+    "comparisons": {
+      "child_vs_lock": {
+        "proxy_mean_delta": -0.012708333333333321,
+        "strict_breaks": 4,
+        "strict_repairs": 4
+      },
+      "child_vs_parent": {
+        "proxy_mean_delta": 0.014374999999999982,
+        "strict_breaks": 4,
+        "strict_repairs": 5
+      },
+      "parent_vs_lock": {
+        "proxy_mean_delta": -0.027083333333333303,
+        "strict_breaks": 5,
+        "strict_repairs": 4
+      }
+    },
+    "total_cost": {
+      "audio_seconds_used": 2322.037499999992,
+      "calls_used": 640,
+      "completion_tokens_total": 1355226,
+      "latency_seconds_total": 56038.390243570146,
+      "prompt_tokens_total": 3835960,
+      "tool_calls": 0,
+      "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+    },
+    "source_hashes": {
+      "manifest_sha256": "084be2377b235761faca41ddc2158b80e1f0822fbefb7cab393d1e70bde47584",
+      "outputs_sha256": "6a16d99f6cb474fd1fa055067c04e6a50fbd07a22119f638857ee96c566199d0",
+      "raw_trace_sha256": "de65ff4a044229ddbbf950fb281cefd323742da1b275ef5382d0661ecabae8fb",
+      "roster_sha256": "5bc9790fcb30f3f1f2607046cfe08778fc06f6fdbf3ddc37debe1d3263c12f71",
+      "sealed_scores_sha256": "acb91edaac96ba180ad157c1375f6100ed4231a652f6ee77b01bb8305520c427"
+    },
+    "audited_rows": 80,
+    "candidate_accepted": false,
+    "repeat_control": {
+      "scope": "independent-perception",
+      "vs_lock": {
+        "proxy_mean_delta": -0.016666666666666607,
+        "strict_breaks": 5,
+        "strict_repairs": 1
+      },
+      "metrics": {
+        "slu_f1": 0.6566476004112699,
+        "intent_accuracy": 0.825,
+        "span_f1": 0.544378698224852
+      },
+      "strict_success": 28,
+      "strict_success_basis": "lock32 - breaks5 + repairs1"
+    }
+  }
+}
