@@ -68,3 +68,25 @@ python scripts/environment/configured_local_teacher_queue.py verify-handoff --ou
 ## 验证
 
 固定saea镜像、network none测试覆盖detached、已完成重启、worker中断/活child、unknown只collect、失败分支隔离、导入实现篡改、多次显式对账、原provider互斥、递归来源闭包及凭据拒绝。另外使用真实已完成TF-GRPO prepared副本通过队列collect核对91次历史响应，要求collected和所有历史文件哈希保持不变、0新增请求。测试证明编排与回放行为，不证明新的供应商请求可用性或研究收益。
+
+## 本机 Python 环境
+
+教师 CLI 会导入既有归一化组件，需要 `regex` 和 `more-itertools`；系统 Python
+能导入队列脚本不代表真实算法 CLI 可运行。Linux aarch64 / CPython 3.11 的精确
+版本与 wheel 哈希见 `configs/environment/local-teacher-python311-aarch64.lock`。
+
+`local_teacher_runtime.py` 接受独立 runtime JSON，字段为
+`schema=saea-local-teacher-runtime-v1`、`python`、`python_sha256`、`python_version`、
+`machine`、`venv`、`requirements`、`requirements_sha256`。路径均为本机绝对路径；
+解释器和依赖锁 SHA 应由配置生成时计算，不能复制其他机器的值。
+
+```bash
+python3 scripts/environment/local_teacher_runtime.py bootstrap --runtime runtime.json
+python3 scripts/environment/local_teacher_runtime.py check --runtime runtime.json
+python3 scripts/environment/local_teacher_runtime.py queue --runtime runtime.json -- start --config queue.json
+```
+
+bootstrap 只允许新 venv，不修改既有环境；可加 `--wheelhouse /path/to/wheels`
+使用已下载 wheel 完全离线安装。普通启动核验版本、架构、解释器、依赖及环境回执，
+不会自动安装。API key 由本机进程环境继承；队列仍使用原算法的 run/collect 和账本。
+该环境只用于本机教师 CPU 编排，NPU 服务及正式实验继续使用原固定镜像。

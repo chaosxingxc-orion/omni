@@ -1,0 +1,3 @@
+# Linux aarch64 CPython 3.11 teacher CLI dependencies; no model runtime.
+regex==2026.9.29 --hash=sha256:7020ed44df30b3aa492c00ee3b52d0548c1f30c2c6c5bb13ae897680900d3413
+more-itertools==11.2.1 --hash=sha256:35a7377edd1dd6608dcb2cdf534ded55ea32d49448875ad042cd3f879fb1ded0
