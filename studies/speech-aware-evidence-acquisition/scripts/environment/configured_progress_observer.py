@@ -91,7 +91,7 @@ def native_contacts(producer,logical,plan,arm):
     intents=[p for p in files if p.name.endswith('.intent.json')]
     response_names={p.name for p in files if p.name.endswith('.response.json')}
     require(response_names<={p.name.replace('.intent.','.response.') for p in intents},'orphan native response')
-    known=defaultdict(float,{'calls':0,'prompt_tokens':0,'completion_tokens':0,'latency_seconds':0,'audio_seconds':0})
+    known=defaultdict(float,{'calls':0,'prompt_tokens':0,'completion_tokens':0,'latency_seconds':0})
     unknown=[]; records={}
     for ip in intents:
         rid=settlement.read(ip)['request_id'];require(ip==journal._path(rid,'intent'),'native filename differs')
@@ -103,7 +103,8 @@ def native_contacts(producer,logical,plan,arm):
         for key in ('prompt_tokens','completion_tokens'):
             value=usage.get(key);require(type(value) is int and value>=0,'invalid native metered tokens');known[key]+=value
         known['calls']+=1;known['latency_seconds']+=record['response']['latency_seconds']
-        known['audio_seconds']+=record['intent']['payload'].get('audio_seconds',0)
+        # Payload audio_seconds describes the source sample even for text-only
+        # learning. It is not transmitted/billed audio and must not be charged.
         records[rid]=record
     return {'attempted_contacts':len(intents),'observed_contacts':len(records),
         'inflight_or_unknown_contacts':len(unknown),'known_usage':dict(known),
