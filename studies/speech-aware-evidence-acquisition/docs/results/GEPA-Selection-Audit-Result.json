@@ -1,0 +1,168 @@
+{
+  "schema": "saea-gepa-selection-audit-result-v1",
+  "results": {
+    "part-a": {
+      "rows": 16,
+      "comparisons": {
+        "child_vs_parent": {
+          "official_slu_delta_pp": 7.799233363276581,
+          "proxy_mean_delta": 0.09375,
+          "direction_agreement": true,
+          "strict_repairs": 3,
+          "strict_breaks": 0,
+          "screen_no_slu_regression": true,
+          "screen_zero_strict_breaks": true
+        },
+        "child_vs_lock": {
+          "official_slu_delta_pp": 7.799233363276581,
+          "proxy_mean_delta": 0.0625,
+          "direction_agreement": true,
+          "strict_repairs": 2,
+          "strict_breaks": 0,
+          "screen_no_slu_regression": true,
+          "screen_zero_strict_breaks": true
+        },
+        "parent_vs_lock": {
+          "official_slu_delta_pp": 0.0,
+          "proxy_mean_delta": -0.03125,
+          "direction_agreement": false,
+          "strict_repairs": 0,
+          "strict_breaks": 1,
+          "screen_no_slu_regression": true,
+          "screen_zero_strict_breaks": false
+        }
+      },
+      "source_manifest_sha256": "7ed798b1ffc8cc87bdf563c47beb1978f078dce8e36697e7bae285f205d48077",
+      "source_config_hash": "6e0a431a65c9953234a06025b25a7ea37c23a7ec52cfbae8e94ca40e930c760e",
+      "shared_perception_sha256": "0724a840eaae7a809fa264136c3f7413f60e673e41aade3ee60a770386b70f53",
+      "shared_supply_sha256": "be0c12a26318ba5a295e8a6927172f2e039417f7c829b7788cdfd8ceb9df14a4",
+      "lock_official_slu": 0.6792540431788284,
+      "identity_limit": "full config hash includes candidate/run identities; not a lock-only scientific identity",
+      "candidate_accepted": false,
+      "claims_stable_gain": false,
+      "reader_result_sha256": "df677a4821a5ff6847db5b199264e30b760682a76a434694724dcb3b8ae84a00"
+    },
+    "part-b": {
+      "rows": 16,
+      "comparisons": {
+        "child_vs_parent": {
+          "official_slu_delta_pp": -1.264964748705255,
+          "proxy_mean_delta": -0.03125,
+          "direction_agreement": true,
+          "strict_repairs": 0,
+          "strict_breaks": 1,
+          "screen_no_slu_regression": false,
+          "screen_zero_strict_breaks": false
+        },
+        "child_vs_lock": {
+          "official_slu_delta_pp": -1.1102230246251565e-14,
+          "proxy_mean_delta": 0.0,
+          "direction_agreement": true,
+          "strict_repairs": 0,
+          "strict_breaks": 0,
+          "screen_no_slu_regression": true,
+          "screen_zero_strict_breaks": true
+        },
+        "parent_vs_lock": {
+          "official_slu_delta_pp": 1.264964748705244,
+          "proxy_mean_delta": 0.03125,
+          "direction_agreement": true,
+          "strict_repairs": 1,
+          "strict_breaks": 0,
+          "screen_no_slu_regression": true,
+          "screen_zero_strict_breaks": true
+        }
+      },
+      "source_manifest_sha256": "d1cea523dc6bb2f40b6e2bd6df75a79cbc39239c1c47d6eac66f22ba21b0ed4e",
+      "source_config_hash": "d44a34ab1530818e979d12f6f3dde5ea527ec4a71d67db6c3dda2c311a224d84",
+      "shared_perception_sha256": "94f46bc4e5b308af0305caa100aeba2b1b7b77138810164eca00bfd69f4de0d7",
+      "shared_supply_sha256": "3dea1714acf21c2085f825b6edf4a55bd2de805402bd91a879ec5677c04c1744",
+      "lock_official_slu": 0.6870196850710899,
+      "identity_limit": "full config hash includes candidate/run identities; not a lock-only scientific identity",
+      "candidate_accepted": false,
+      "claims_stable_gain": false,
+      "reader_result_sha256": "8557e23087e6ca71d98be25ab18becbf4449878e65ce600c8868c9e82638e415"
+    },
+    "selection80": {
+      "rows": 80,
+      "comparisons": {
+        "child_vs_parent": {
+          "official_slu_delta_pp": -1.530129221805987,
+          "proxy_mean_delta": -0.014955357142857117,
+          "direction_agreement": true,
+          "strict_repairs": 1,
+          "strict_breaks": 2,
+          "screen_no_slu_regression": false,
+          "screen_zero_strict_breaks": false
+        },
+        "child_vs_lock": {
+          "official_slu_delta_pp": 0.9270852968906396,
+          "proxy_mean_delta": 0.0006696428571428825,
+          "direction_agreement": true,
+          "strict_repairs": 4,
+          "strict_breaks": 2,
+          "screen_no_slu_regression": true,
+          "screen_zero_strict_breaks": false
+        },
+        "parent_vs_lock": {
+          "official_slu_delta_pp": 2.4572145186966265,
+          "proxy_mean_delta": 0.015625,
+          "direction_agreement": true,
+          "strict_repairs": 4,
+          "strict_breaks": 1,
+          "screen_no_slu_regression": true,
+          "screen_zero_strict_breaks": false
+        }
+      },
+      "source_manifest_sha256": "0e934699b0eb81b80fd3d9d21af1f2f16f872b7d1eefe81bff2d869eb631419a",
+      "source_config_hash": "745a0637324cb0190b9262318d5177492bc7916319f7a67979ba632ec73461d5",
+      "shared_perception_sha256": "858ae7a8f92ea7767e13a942de2801a80a5fdad8793737940c6a206da76446f3",
+      "shared_supply_sha256": "b446657ef0a71740e1d49012839fae51b8cedc97075f003bbda012b1faf6e3e7",
+      "lock_official_slu": 0.6589240105650768,
+      "identity_limit": "full config hash includes candidate/run identities; not a lock-only scientific identity",
+      "candidate_accepted": false,
+      "claims_stable_gain": false,
+      "reader_result_sha256": "66915df6c3fbde06822e8d937aa56bdae06e6bf38987f9a06823438d3411a4aa"
+    }
+  },
+  "cross_run_comparisons": [
+    {
+      "first": "part-a",
+      "second": "part-b",
+      "shared_samples": 16,
+      "same_ordered_roster": true,
+      "same_recorded_perception": false,
+      "lock_slu_difference_pp": 0.7765641892261477,
+      "lock_drift_cause": "unresolved: compare lock-only config, templates, scorer, and actual input identities"
+    },
+    {
+      "first": "part-a",
+      "second": "selection80",
+      "shared_samples": 0,
+      "same_ordered_roster": false,
+      "same_recorded_perception": false,
+      "lock_slu_difference_pp": -2.033003261375166,
+      "lock_drift_cause": "unresolved: compare lock-only config, templates, scorer, and actual input identities"
+    },
+    {
+      "first": "part-b",
+      "second": "selection80",
+      "shared_samples": 0,
+      "same_ordered_roster": false,
+      "same_recorded_perception": false,
+      "lock_slu_difference_pp": -2.8095674506013135,
+      "lock_drift_cause": "unresolved: compare lock-only config, templates, scorer, and actual input identities"
+    }
+  ],
+  "unique_samples": 96,
+  "evaluated_sample_occurrences": 112,
+  "new_model_calls": 0,
+  "candidate_accepted": false,
+  "claims_stable_gain": false,
+  "scope": "retrospective screen of pinned reader results; not native bundle revalidation or preregistered promotion",
+  "missing_for_promotion": [
+    "pre-registered protocol",
+    "independent confirmation",
+    "lock-only scientific identity and scorer reconciliation"
+  ]
+}
