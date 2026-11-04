@@ -11,6 +11,34 @@ from .preparation import PreparationError, load_artifact
 from .stage_timing import measured_lock
 
 
+def runtime_only_fit_repair(current, original):
+    """Raw request, boundary, service and tokenizer implementations stay exact.
+
+    The caller independently verifies all original FIT output/journal bytes and
+    the immutable current request. A runtime file edit alone cannot change the
+    token length of those identical bytes on that same serving deployment.
+    """
+    from copy import deepcopy
+    comparable = deepcopy(current)
+    try:
+        before = original['sources']['implementation']['runtime']
+        after = current['sources']['implementation']['runtime']
+        if before == after or any(not isinstance(x,str) or len(x)!=64 or any(c not in '0123456789abcdef' for c in x) for x in (before,after)):
+            raise ValueError('distinct runtime hashes required')
+        if not current['sources']['boundary_sha256']:
+            raise ValueError('actual request boundary required')
+        comparable['sources']['implementation']['runtime'] = before
+    except (KeyError,TypeError,ValueError) as error:
+        raise PreparationError('predecessor FIT configuration or source changed') from error
+    if canonical(comparable) != canonical(original):
+        raise PreparationError('predecessor FIT non-runtime identity changed')
+    return {'schema':'saea-native-fit-runtime-repair-v1',
+        'previous_runtime_sha256':before,'current_runtime_sha256':after,
+        'previous_inputs_sha256':digest(canonical(original)),
+        'current_inputs_sha256':digest(canonical(current)),
+        'exact_request_boundary_sha256':current['sources']['boundary_sha256']}
+
+
 class NativeFitJournal:
     def __init__(self, data_root, plan, arm):
         self.contacts = ContactJournal(data_root, plan, arm)
@@ -111,8 +139,9 @@ class RecoverableNativeFitGate:
             if document['session_identity'] != self.runtime.session_required_identity():
                 raise PreparationError('predecessor FIT service identity changed')
             current = self.runtime.request_fit_inputs((original,))
+            runtime_repair = None
             if canonical(current) != canonical(document['inputs']):
-                raise PreparationError('predecessor FIT configuration or source changed')
+                runtime_repair = runtime_only_fit_repair(current, document['inputs'])
             receipt = document['receipt']
             artifact_path = Path(receipt['path'])
             artifact = json.loads(artifact_path.read_bytes())
@@ -120,7 +149,7 @@ class RecoverableNativeFitGate:
             expected_root = (self.runtime._data_root / 'prepared' / fit_plan['run_id'] / fit_plan['attempt_id']).resolve()
             if artifact_path.resolve().parent != expected_root or not expected_root.is_relative_to(self.runtime._data_root.resolve()):
                 raise PreparationError('predecessor FIT artifact escaped preparation root')
-            expected_inputs = {**current, 'native_contact': artifact['inputs']['native_contact'], 'fit_plan': fit_plan}
+            expected_inputs = {**document['inputs'], 'native_contact': artifact['inputs']['native_contact'], 'fit_plan': fit_plan}
             output = load_artifact(artifact_path, expected_sha256=receipt['sha256'], kind='request-fit', inputs=expected_inputs)
             from .preparation_fit import boundary_identity
             measured = document['measured_prompt_tokens']
@@ -139,7 +168,8 @@ class RecoverableNativeFitGate:
                     raise PreparationError('predecessor FIT exceeds current prompt limit')
             reused_receipt = {**receipt, 'native_fit_reuse': {
                 'schema': 'saea-native-fit-reuse-v1', 'source_path': str(path),
-                'source_sha256': self._pins[path], 'new_tokenizer_contacts': 0}}
+                'source_sha256': self._pins[path], 'new_tokenizer_contacts': 0,
+                **({'runtime_repair': runtime_repair} if runtime_repair is not None else {})}}
             with self._lock:
                 self.receipts.append(reused_receipt)
             return measured

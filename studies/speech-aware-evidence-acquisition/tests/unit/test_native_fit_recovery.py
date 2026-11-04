@@ -202,3 +202,39 @@ def test_wrapper_allows_parallel_contacts_and_binds_each_custody(tmp_path):
         assert document['payload'] == payload
         assert document['receipt']['sample_id'] == payload['sample_id']
     assert len(gate.receipts) == 2
+
+
+def test_runtime_only_fit_repair_keeps_exact_boundary_and_all_other_sources():
+    from speech_aware_evidence_acquisition.core.native_fit_recovery import runtime_only_fit_repair
+    old={'config_sha256':'c'*64,'sources':{'boundary_sha256':'d'*64,
+         'implementation':{'runtime':'a'*64,'transport':'e'*64},'required_identity':{'model':'same'}}}
+    current=copy.deepcopy(old);current['sources']['implementation']['runtime']='b'*64
+    proof=runtime_only_fit_repair(current,old)
+    assert proof['exact_request_boundary_sha256']=='d'*64
+    for field in ('config','boundary','transport','service'):
+        bad=copy.deepcopy(current)
+        if field=='config':bad['config_sha256']='f'*64
+        elif field=='boundary':bad['sources']['boundary_sha256']='f'*64
+        elif field=='transport':bad['sources']['implementation']['transport']='f'*64
+        else:bad['sources']['required_identity']['model']='other'
+        with pytest.raises(PreparationError):runtime_only_fit_repair(bad,old)
+
+
+def test_actual_fit_gate_reuses_runtime_repair_without_retokenization(tmp_path,monkeypatch):
+    from test_native_contact_fit import _Runtime
+    from speech_aware_evidence_acquisition.core.preparation_fit import boundary_identity
+    original=_Runtime.request_fit_inputs
+    runtime_hash={'value':'a'*64}
+    def inputs(self,payloads):
+        value=original(self,payloads)
+        value['sources']['implementation']={'runtime':runtime_hash['value'],'transport':'e'*64}
+        value['sources']['boundary_sha256']=boundary_identity(payloads)
+        return value
+    monkeypatch.setattr(_Runtime,'request_fit_inputs',inputs)
+    runtime,plan,replay,request,old=source(tmp_path)
+    runtime_hash['value']='b'*64
+    gate=RecoverableNativeFitGate(runtime,plan,no_tokenizer,replay=replay)
+    assert gate(request)==7
+    proof=gate.receipts[0]['native_fit_reuse']['runtime_repair']
+    assert proof['previous_runtime_sha256']=='a'*64 and proof['current_runtime_sha256']=='b'*64
+    assert gate.receipts[0]['native_fit_reuse']['new_tokenizer_contacts']==0
