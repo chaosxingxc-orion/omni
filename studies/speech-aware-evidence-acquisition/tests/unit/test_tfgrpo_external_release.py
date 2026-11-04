@@ -88,6 +88,41 @@ def test_external_release_reaches_shared_flight_without_native_seal(material, mo
         model_id=kwargs['model_id'], consumer_ids=kwargs['consumer_ids']) == candidate['sha256']
 
 
+@pytest.mark.parametrize('fault', [None, 'promotion', 'benefit', 'missing_rejection',
+                                 'empty_uncertainty', 'unsupported', 'supported_alias', 'foreign_evidence'])
+def test_diagnostic_hypothesis_is_explicit_nonpromoting_and_source_bound(material, fault):
+    kwargs, candidate, doc, review, source, selected = material
+    review['decision'] = 'eligible-for-hypothesis-diagnostic'
+    review['diagnostic'] = {'purpose': 'falsify-source-bound-hypothesis',
+        'candidate_text_unchanged': True, 'claims_benefit': False, 'automatic_promotion': False,
+        'comparison': 'shared-perception-paired-unchanged-lock',
+        'metrics': ['official SLU', 'slot recall'],
+        'rejection_conditions': ['Reject when entity recall regresses.']}
+    for item in review['items'].values():
+        item.update(decision='hypothesis-for-diagnostic', uncertainties=['Audio not inspected.'],
+                    competing_explanations=['Perception paraphrase may cause the false positive.'])
+    item = next(iter(review['items'].values()))
+    if fault == 'promotion': review['diagnostic']['automatic_promotion'] = True
+    if fault == 'benefit': review['diagnostic']['claims_benefit'] = True
+    if fault == 'missing_rejection': review['diagnostic']['rejection_conditions'] = []
+    if fault == 'empty_uncertainty': item['uncertainties'] = []
+    if fault == 'unsupported': item['decision'] = 'unsupported'
+    if fault == 'supported_alias': item['decision'] = 'supported'
+    if fault == 'foreign_evidence': item['evidence'][0]['query_id'] = selected
+    doc['review'] = write(kwargs['data'] / 'review.json', review)
+    write(kwargs['data'] / 'release.json', doc)
+    if fault:
+        with pytest.raises(ValueError): release.prepare(**kwargs)
+        assert not (kwargs['repo'] / 'configs/probes/external.txt').exists()
+    else:
+        params = release.prepare(**kwargs)
+        assert params['purpose'] == 'development-evaluation'
+        assert consumption.verify(params, repo=kwargs['repo'], data=kwargs['data'],
+            model_id=kwargs['model_id'], consumer_ids=kwargs['consumer_ids']) == candidate['sha256']
+        assert candidate['deployment_accepted'] is False
+        assert list(candidate['items'].values())[0] in (kwargs['repo'] / 'configs/probes/external.txt').read_text()
+
+
 @pytest.mark.parametrize('fault', ['candidate', 'wire', 'missing_review', 'review_binding', 'item', 'foreign_evidence',
     'model', 'test', 'learned', 'utterance', 'audio', 'selection', 'template', 'downgrade'])
 def test_external_release_rejects_changed_or_leaking_material(material, fault):

@@ -119,19 +119,46 @@ def verify_reviewed_development(params, *, repo, data, candidate, release_schema
             and not select_a & (learn_a | use_a), 'selection overlaps learning or evaluation')
     review = read_pin(data, release['review'])
     bindings = {k: v for k, v in release.items() if k not in ('schema', 'review')}
-    require(isinstance(review, dict) and set(review) == {'schema', 'decision', 'reviewer', 'procedure', 'bindings', 'items'}
-            and review['schema'] == review_schema and review['decision'] == 'eligible-for-development-evaluation'
+    diagnostic = isinstance(review, dict) and review.get('decision') == 'eligible-for-hypothesis-diagnostic'
+    review_fields = {'schema', 'decision', 'reviewer', 'procedure', 'bindings', 'items'}
+    if diagnostic:
+        review_fields.add('diagnostic')
+    require(isinstance(review, dict) and set(review) == review_fields
+            and review['schema'] == review_schema
+            and review['decision'] in ('eligible-for-development-evaluation', 'eligible-for-hypothesis-diagnostic')
             and review['bindings'] == bindings, 'independent review must bind candidate, splits and sources')
+    if diagnostic:
+        plan = review['diagnostic']
+        require(isinstance(plan, dict) and set(plan) == {'purpose', 'candidate_text_unchanged',
+                'claims_benefit', 'automatic_promotion', 'comparison', 'metrics', 'rejection_conditions'}
+                and plan['purpose'] == 'falsify-source-bound-hypothesis'
+                and plan['candidate_text_unchanged'] is True and plan['claims_benefit'] is False
+                and plan['automatic_promotion'] is False
+                and plan['comparison'] == 'shared-perception-paired-unchanged-lock',
+                'explicit nonpromoting paired diagnostic plan required')
+        for key in ('metrics', 'rejection_conditions'):
+            require(isinstance(plan[key], list) and plan[key]
+                    and all(isinstance(v, str) and v.strip() for v in plan[key]),
+                    'diagnostic metrics and rejection conditions required')
     require(all(isinstance(review[k], str) and review[k].strip() for k in ('reviewer', 'procedure')),
             'named reviewer and procedure required')
     require(isinstance(review['items'], dict) and set(review['items']) == set(candidate['items']),
             'every retained experience requires independent semantic review')
     for key, content in candidate['items'].items():
         item = review['items'][key]
-        require(isinstance(item, dict) and set(item) == {'content_sha256', 'decision', 'evidence', 'reason'}
-                and item['content_sha256'] == sha(content) and item['decision'] == 'supported'
+        item_fields = {'content_sha256', 'decision', 'evidence', 'reason'}
+        if diagnostic:
+            item_fields |= {'uncertainties', 'competing_explanations'}
+        require(isinstance(item, dict) and set(item) == item_fields
+                and item['content_sha256'] == sha(content)
+                and item['decision'] == ('hypothesis-for-diagnostic' if diagnostic else 'supported')
                 and isinstance(item['reason'], str) and item['reason'].strip()
-                and isinstance(item['evidence'], list) and item['evidence'], 'supported exact item required')
+                and isinstance(item['evidence'], list) and item['evidence'], 'explicit exact item assessment required')
+        if diagnostic:
+            for key in ('uncertainties', 'competing_explanations'):
+                require(isinstance(item[key], list) and item[key]
+                        and all(isinstance(v, str) and v.strip() for v in item[key]),
+                        'diagnostic uncertainty and competing explanations required')
         for ref in item['evidence']:
             require(isinstance(ref, dict) and set(ref) == {'query_id', 'group_sha256'}
                     and ref['query_id'] in evidence and evidence[ref['query_id']] == ref['group_sha256'],
