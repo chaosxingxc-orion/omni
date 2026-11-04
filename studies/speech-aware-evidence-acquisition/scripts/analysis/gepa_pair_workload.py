@@ -21,8 +21,10 @@ SCHEMA='saea-gepa-pair-workload-v1'
 class PairWorkload:
     def __init__(self, config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material'}
-        if set(config)!=fields or config['schema']!=SCHEMA:
+        if not fields <= set(config) <= fields | {'evaluation_partition'} or config['schema']!=SCHEMA:
             raise ValueError('exact parameterized paired workload config required')
+        if config.get('evaluation_partition', 'feedback') not in ('feedback', 'selection'):
+            raise ValueError('explicit feedback or selection partition required')
         if not re.fullmatch('[a-z0-9][a-z0-9-]*',config['name']) or not re.fullmatch('[A-Z0-9][A-Z0-9-]*',config['run_id']):
             raise ValueError('safe pair identities required')
         ids=config['sample_ids']
@@ -93,8 +95,10 @@ class PairWorkload:
                 or feedback != sorted(feedback) or selection != sorted(selection)):
             raise ValueError('exact fixed233/80 H1 partition required')
         ids = self.config["sample_ids"]
-        if not set(ids) <= set(feedback):
-            raise ValueError("paired feedback evaluation cannot use selection/H2/test")
+        role = self.config.get('evaluation_partition', 'feedback')
+        allowed = feedback if role == 'feedback' else selection
+        if not set(ids) <= set(allowed):
+            raise ValueError('paired evaluation IDs must belong to configured ' + role + ' partition; no H2/test')
         by_id = {r['sample_id']: r for r in h1['items']}
         items = [copy.deepcopy(by_id[s]) for s in ids]
         roster = {'schema':'saea-roster-receipt-v1', 'carrier_lock_key':'slurp',
@@ -105,6 +109,8 @@ class PairWorkload:
             'parent':pin(repo,observation.H1), 'partition':partition_pin,
             'selection_rule':'Exact configured IDs from the existing feedback partition; no redraw.',
             'claims_benefit':False}
+        if role == 'selection':
+            roster['selection_rule'] = 'Exact configured IDs from the existing selection partition; no redraw or feedback mixing.'
         return roster, view
 
 
@@ -162,6 +168,8 @@ class PairWorkload:
         base.pop('prepared_phase_supply', None)
         base['native_contact_fit'].update(run_id=self.RUN+'-FIT', attempt_id='fit-v1', contact_cap=4*self.ROWS)
         base['what_this_is'] = 'Configured fixed feedback paired GEPA evaluation: one P, current parent S, child S and original lock; no adoption claim.'
+        if self.config.get('evaluation_partition') == 'selection':
+            base['what_this_is'] = 'Configured fixed selection paired GEPA evaluation: one P, parent/child/lock S; no feedback mixing or adoption claim.'
         exp = read(repo/observation.SOURCE_EXP)
         cell, = exp['cells']
         cell.update(cell_id=self.NAME, baseline_fragment=self.NAME, model_fragment=binding['model_fragment'],
@@ -324,7 +332,7 @@ class PairWorkload:
                 'prepared_phase_supply':prep['supply'],'protocol_document':protocol_pin,'status':'held'}
             rel=f'{kind}-plan-registered-v1.json'; docs[rel]=doc
             rows.append(['2026-11-03',rid,'bounded-discovery-probe','GEPA configured parent child comparison '+kind,
-                model,'slurp TRAIN feedback fixed feedback','discovery',split,'no',str(cap),str(budget['planned_speech_audio_seconds']),
+                model,'slurp TRAIN fixed '+self.config.get('evaluation_partition','feedback'),'discovery',split,'no',str(cap),str(budget['planned_speech_audio_seconds']),
                 str(budget['planned_gpu_hours']),'All historical costs retained; not a search result',str((pkg/rel).relative_to(repo)),
                 'Plan SHA256 '+hashlib.sha256(raw(doc)).hexdigest()+'; held'])
         docs['analysis-recipe-v1.json'] = {'schema':'saea-gepa-pair-read-v1','rows':self.ROWS,'generation_run_id':self.RUN,

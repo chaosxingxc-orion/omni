@@ -155,3 +155,25 @@ def test_pair_uses_same_resident_identity_with_historical_node_wire_budgets(repo
         historical=resolve_node_decoding(fold_into_decoding(checked['model'])['decoding_params'],base['thinking_policy'],role)
         assert actual==historical
         assert actual['max_tokens']==4096 and actual['thinking_budget_tokens']==3072
+
+
+def test_selection_partition_requires_explicit_opt_in_and_forbids_mixing(repo,monkeypatch):
+    job,checked=derived(repo,monkeypatch);path,data,partition=repo
+    fixed=m.pinned(path,partition)
+    job.config['sample_ids']=fixed['selection_ids'][:16]
+    with pytest.raises(ValueError,match='configured feedback'):
+        job.derive(path,data,job.config['material'])
+    job.config['evaluation_partition']='selection'
+    base,exp,roster,*_=job.derive(path,data,job.config['material'])
+    assert [r['sample_id'] for r in roster['items']]==fixed['selection_ids'][:16]
+    assert 'selection partition' in roster['selection_rule'] and 'fixed selection' in base['what_this_is']
+    assert exp['execution_plan']['planned_model_calls']==128
+    job.config['sample_ids'][0]=fixed['feedback_ids'][0]
+    with pytest.raises(ValueError,match='configured selection'):
+        job.derive(path,data,job.config['material'])
+
+
+@pytest.mark.parametrize('role',['test','h2','all',None])
+def test_unknown_evaluation_partition_rejected(role):
+    cfg=config();cfg['evaluation_partition']=role
+    with pytest.raises(ValueError,match='partition'):m.PairWorkload(cfg)
