@@ -246,3 +246,22 @@ def test_perception_context_adaptation_requires_all_four_arms():
     assert PerceptionWorkload(cfg).context_adaptation()==cfg['context_adaptation']
     cfg['context_adaptation']['arms']=['parent','child','lock']
     with pytest.raises(ValueError,match='paired arms'):PerceptionWorkload(cfg)
+
+
+def test_context_adaptation_stage_custody_rejects_changed_declaration(repo,monkeypatch):
+    from speech_aware_evidence_acquisition import contracts
+    from speech_aware_evidence_acquisition.core.bundle import git_commit
+    job,checked=derived(repo,monkeypatch);path,data,_=repo
+    checked['model']['server_args'][1]='65536'
+    job.config['context_adaptation']=adaptation(job.ARMS)
+    monkeypatch.setattr(contracts,'assert_execution_environment',lambda:None)
+    monkeypatch.setattr(git_commit,'require_clean_study_repo',lambda *_:'a'*40)
+    (path/'docs/exposure-ledger.md').write_text('No prior expenditure.\n')
+    out=data/'work/codex/context-stage'
+    record=job.stage(path,data,job.config['material'],out)
+    assert record['context_adaptation']==job.config['context_adaptation']
+    assert job.verify_stage(path,data,out/'complete.json')==record
+    record['context_adaptation']['runtime_context_tokens']=32768
+    (out/'complete.json').write_bytes(m.raw(record))
+    with pytest.raises(ValueError,match='staged context adaptation changed'):
+        job.verify_stage(path,data,out/'complete.json')
