@@ -93,5 +93,54 @@
       "two_sided_p": 1,
       "scope": "Exploratory exact McNemar; not proof of stable benefit."
     }
+  },
+  "reward_alignment": {
+    "schema": "saea-reward-alignment-audit-v1",
+    "results": {
+      "learned": {
+        "rows": 80,
+        "intent_accuracy": 0.8,
+        "sample_mean_exact_slot_f1_empty_is_one": 0.5810714285714286,
+        "proxy_reward_mean": 0.6905357142857143,
+        "pooled_exact_slot_counts": {
+          "tp": 63.0,
+          "fp": 40.0,
+          "fn": 47.0
+        },
+        "pooled_exact_slot_f1": 0.5915492957746479,
+        "official_slu_f1": 0.7216202985369807,
+        "parsed_rows": 80
+      },
+      "control": {
+        "rows": 80,
+        "intent_accuracy": 0.825,
+        "sample_mean_exact_slot_f1_empty_is_one": 0.5280654761904762,
+        "proxy_reward_mean": 0.6765327380952381,
+        "pooled_exact_slot_counts": {
+          "tp": 56.0,
+          "fp": 47.0,
+          "fn": 54.0
+        },
+        "pooled_exact_slot_f1": 0.5258215962441315,
+        "official_slu_f1": 0.6697651051706389,
+        "parsed_rows": 80
+      },
+      "lock": {
+        "rows": 80,
+        "intent_accuracy": 0.825,
+        "sample_mean_exact_slot_f1_empty_is_one": 0.5726488095238095,
+        "proxy_reward_mean": 0.6988244047619048,
+        "pooled_exact_slot_counts": {
+          "tp": 59.0,
+          "fp": 43.0,
+          "fn": 51.0
+        },
+        "pooled_exact_slot_f1": 0.5566037735849056,
+        "official_slu_f1": 0.6761031523894353,
+        "parsed_rows": 80
+      }
+    },
+    "interpretation": "Proxy averages equal-weight per-row intent/exact-slot F1 with empty/empty=1. Official SLU pools word/character entity contributions. They have different weighting and tolerance; improvement need not have the same sign. Existing candidate and confirmation unchanged.",
+    "candidate_accepted": false
   }
 }
