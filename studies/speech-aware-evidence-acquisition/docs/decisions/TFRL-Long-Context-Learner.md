@@ -29,4 +29,10 @@ API学习队列与NPU任务队列异步，通过候选产物及来源hash连接�
 
 ## 当前状态
 
-已完成接口约束审计和方案，尚未收到API配置、未调用外部服务、未实现外部provider，也没有外部教师收益结果。后续由实际协议确定适配，先小规模验证再扩展。
+已收到用户指定的glm-5.3-flash Chat Completions配置，凭据通过CUSTOM_API_KEY环境变量读取。最小请求HTTP 200，3.41秒，返回模型名一致，输入17、输出43 tokens，其中reasoning40、cached0。尚未核验模型实际最大上下文、计费单价或长输入有效性；模型名由端点返回，不代表已独立核验其底层模型身份。
+
+新增配置驱动的外部学习请求脚本scripts/environment/configured_external_learner.py及configs/learners/glm-flash-external.example.json。脚本接收固定消息文件及SHA，持久化请求与响应，输出usage和请求ID，禁止自动重发已有/未知请求，拒绝HTTP重定向以保护认证头。HTTP错误/超时保留状态，缺失usage不填零；尚未支持服务商任务查询或自动对账。该脚本是开发态教师请求执行器，尚未接入原生候选来源核验与成对评测的完整流水线。
+
+固定镜像6项测试通过，覆盖成功响应复用、超时不重发、intent后崩溃保护、输入篡改、重定向拒绝和429不重发。第一条真实开发请求复用已封存node4的全部两条system/user消息，4条反馈、150794字符，max_tokens16384、timeout600秒，后台独立运行。它直接使用原始学习消息而非本地native包装，因此不能将本地66824 token计数当作API实际输入量，也不能声称严格隔离了教师更换变量。服务端实际usage与候选验证结果另行记录。
+
+使用方式：设置私有环境变量，填写示例中的消息路径、SHA及唯一输出目录，执行python scripts/environment/configured_external_learner.py --config /private/learner.json。生产调度应通过固定镜像及受控凭据注入配置；本轮开发机后台请求用于验证外部协议，未改运行中的NPU执行树。尚无外部教师系统精度收益。

@@ -1,0 +1,13 @@
+{
+  "schema": "saea-external-learner-v1",
+  "endpoint": "https://az.gptplus5.com/v1/chat/completions",
+  "model": "glm-5.3-flash",
+  "api_key_env": "CUSTOM_API_KEY",
+  "messages": {
+    "path": "/absolute/private/messages.json",
+    "sha256": "REPLACE_WITH_MESSAGES_SHA256"
+  },
+  "max_tokens": 16384,
+  "timeout_seconds": 600,
+  "output_root": "/absolute/private/unique-request-directory"
+}
