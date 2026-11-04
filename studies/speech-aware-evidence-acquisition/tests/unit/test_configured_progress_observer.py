@@ -33,6 +33,12 @@ def test_observed_and_unknown_costs_stay_distinct(tmp_path):
     assert result['observed_contacts']==1 and result['attempted_contacts']==2
     assert result['inflight_or_unknown_contacts']==1 and result['unknown_cost'] is None
     assert result['known_usage']['prompt_tokens']==8 and result['new_model_calls']==0
+    assert result['observer_model_calls']==0 and 'observer invocation only' in result['new_model_calls_scope']
+    calls=result['workload_model_calls']
+    assert (calls['attempted'],calls['observed'],calls['inflight_or_unknown'])==(2,1,1)
+    assert (calls['run_id'],calls['attempt_id'])==(plan.run_id,plan.attempt_id)
+    assert 'excludes FIT and prior attempts' in calls['scope']
+    assert 'not a polling-interval delta' in calls['scope']
     fit={'schema':'saea-native-fit-custody-v1','identity':journal.identity,'payload':payload()}
     fp=journal.root/(digest(canonical(m.comparable_request(payload())))+'.fit.json');fp.write_bytes(canonical(fit))
     result,_=m.native_contacts(producer,tmp_path,plan,'bare-core')
@@ -78,7 +84,7 @@ def test_process_success_never_claims_full_roster_or_unknown_cost_zero(tmp_path,
     observed={'state':'running' if state=='running' else 'exited','running':state=='running',
         'exit_code':1 if state=='failed' else 0,'started_at':'2026-11-03T10:00:00Z','finished_at':'2026-11-03T10:10:00Z'}
     monkeypatch.setattr(m,'source',lambda j:({},observed,None))
-    monkeypatch.setattr(m,'native_contacts',lambda *a:({'known_usage':{'calls':7},'unknown_cost':None},{}))
+    monkeypatch.setattr(m,'native_contacts',lambda *a:({'known_usage':{'calls':7},'unknown_cost':None,'workload_model_calls':{'attempted':8,'observed':7,'inflight_or_unknown':1}},{}))
     monkeypatch.setattr(m,'learning_progress',lambda *a:{'completed_rows':2,'total_rows':5})
     j={'id':'sample','kind':'learning-updates','total_rows':5,'logical_data':str(tmp_path),'arm':'test'}
     result=m.observe_job(j,{'cards':2,'instances':1},tmp_path,m.timestamp('2026-11-03T10:10:00Z'))
@@ -86,6 +92,7 @@ def test_process_success_never_claims_full_roster_or_unknown_cost_zero(tmp_path,
     assert result['state']==('stopped' if state=='complete' else state)
     assert result['estimated_remaining_seconds']==(900 if state=='running' else None)
     assert not result['scientific_gain_claimed'] and result['new_model_calls']==0
+    assert result['observer_model_calls']==0 and result['workload_model_calls']['observed']==7
 
 def test_not_launched_never_reads_native_or_reports_rate(tmp_path,monkeypatch):
     monkeypatch.setattr(m,'source',lambda j:({}, {'state':'not-launched'},None))
@@ -93,6 +100,7 @@ def test_not_launched_never_reads_native_or_reports_rate(tmp_path,monkeypatch):
     j={'id':'future','kind':'learning-updates','total_rows':51,'logical_data':str(tmp_path)}
     result=m.observe_job(j,{'cards':2,'instances':1},tmp_path,0)
     assert result['state']=='not-started' and result['wall_seconds_per_complete_row'] is None
+    assert result['observer_model_calls']==0 and result['workload_model_calls'] is None
 
 def test_source_exact_launch_result_is_required(tmp_path,monkeypatch):
     from test_configured_job_launch import configured
@@ -117,11 +125,13 @@ def test_recovery_rows_never_become_fresh_inference_throughput(tmp_path,monkeypa
     (root/'resume-declaration.json').write_text(json.dumps(declaration))
     observed={'state':'running','running':True,'exit_code':0,'started_at':'2026-11-03T10:00:00Z'}
     monkeypatch.setattr(m,'source',lambda j:(producer,observed,plan))
-    monkeypatch.setattr(m,'native_contacts',lambda *a:({'known_usage':{'calls':0}},{}))
+    monkeypatch.setattr(m,'native_contacts',lambda *a:({'known_usage':{'calls':245},'workload_model_calls':{'attempted':339,'observed':245,'inflight_or_unknown':94}},{}))
     monkeypatch.setattr(m,'row_progress',lambda *a:{'completed_rows':100,'total_rows':200,'rows_per_second':10})
     job={'id':'recovery','kind':'row-checkpoint','total_rows':200,'logical_data':str(tmp_path),'arm':'test'}
     result=m.observe_job(job,{'cards':4,'instances':1},tmp_path,m.timestamp('2026-11-03T10:00:10Z'))
-    assert result['completed_rows']==100 and result['contacts']['known_usage']['calls']==0
+    assert result['completed_rows']==100 and result['contacts']['known_usage']['calls']==245
+    assert result['observer_model_calls']==0 and result['new_model_calls']==0
+    assert result['workload_model_calls']['observed']==245
     assert result['wall_seconds_per_complete_row'] is None and result['rows_per_second'] is None
     assert result['estimated_remaining_seconds'] is None
     assert result['reconstruction_wall_seconds_per_row']==.1

@@ -22,6 +22,9 @@ from speech_aware_evidence_acquisition.rails.tfgrpo_learning import sha
 queue=settlement.queue
 require=queue.require
 SCHEMA='saea-configured-progress-observer-v1'
+# Legacy field describes monitoring side effects, never experiment throughput.
+OBSERVER_CALL_ACCOUNTING={'new_model_calls':0,'observer_model_calls':0,
+    'new_model_calls_scope':'observer invocation only; workload calls are reported separately'}
 
 
 def load(path):
@@ -111,7 +114,10 @@ def native_contacts(producer,logical,plan,arm):
         'unknown_cost':None,'unknown_cost_reason':'Unreturned requests have unknown spend, never assumed zero.',
         'fit_custody_records':len(fit_files),'fit_cost':'accounted separately; not included in native generation contacts',
         'snapshot_boundary':'native intents present at directory enumeration; responses may finish during this read',
-        'new_model_calls':0},records
+        **OBSERVER_CALL_ACCOUNTING,
+        'workload_model_calls':{'attempted':len(intents),'observed':len(records),
+            'inflight_or_unknown':len(unknown),'run_id':plan.run_id,'attempt_id':plan.attempt_id,
+            'scope':'cumulative current attempt native journal; excludes FIT and prior attempts; not a polling-interval delta'}},records
 
 
 def learning_progress(j,producer,logical,plan,native):
@@ -208,7 +214,8 @@ def observe_job(j,lane,scratch,now):
     producer,observed,plan=source(j);logical=Path(j['logical_data'])
     result={'id':j['id'],'kind':j['kind'],'observed_at_utc':datetime.fromtimestamp(now,timezone.utc).isoformat(),
         'container':observed,'allocated_cards':lane['cards'],'allocated_instances':lane['instances'],
-        'completed_rows':0,'total_rows':j['total_rows'],'new_model_calls':0,'measured_npu_utilization_percent':None}
+        'completed_rows':0,'total_rows':j['total_rows'],**OBSERVER_CALL_ACCOUNTING,
+        'workload_model_calls':None,'measured_npu_utilization_percent':None}
     if observed['state']=='not-launched':
         return {**result,'state':'not-started','wall_seconds_per_complete_row':None,'estimated_remaining_seconds':None}
     state=queue.outcome(observed);require(state in ('running','complete','failed'),'unknown producer state')
@@ -225,7 +232,7 @@ def observe_job(j,lane,scratch,now):
         'remaining_rows':total-n,'wall_seconds_per_complete_row':sp,
         'estimated_remaining_seconds':(total-n)*sp if state=='running' and n else (0 if n==total else None),
         'eta_basis':'linear cumulative valid completion rate; startup, serial learning and tail can change it',
-        'contacts':contact,'failed_attempt_known_usage':contact['known_usage'] if state=='failed' else None,
+        'contacts':contact,'workload_model_calls':contact['workload_model_calls'],'failed_attempt_known_usage':contact['known_usage'] if state=='failed' else None,
         'sample_count_is_not_contact_count':True,'scientific_gain_claimed':False}
     if recovery is not None:
         result.update(recovery=recovery,wall_seconds_per_complete_row=None,rows_per_second=None,
@@ -246,7 +253,7 @@ def observe(path):
         lanes.append({'id':lane['id'],'allocated_cards':lane['cards'],'allocated_instances':lane['instances'],
             'jobs':jobs,'resource_note':'Jobs share this lane; do not sum their cards or unique dataset rows.'})
     return {'schema':SCHEMA,'observed_at_utc':datetime.fromtimestamp(now,timezone.utc).isoformat(),
-        'configuration_sha256':queue.launcher.digest(path),'interval_seconds':600,'lanes':lanes,'new_model_calls':0}
+        'configuration_sha256':queue.launcher.digest(path),'interval_seconds':600,'lanes':lanes,**OBSERVER_CALL_ACCOUNTING}
 
 
 def execute(path,mode):
@@ -256,7 +263,7 @@ def execute(path,mode):
         while True:
             value=observe(path);queue.atomic(out/'status.json',value)
             queue.atomic(out/'last-observation.json',{'time':time.time(),'pid':os.getpid(),
-                'configuration_sha256':value['configuration_sha256'],'new_model_calls':0})
+                'configuration_sha256':value['configuration_sha256'],**OBSERVER_CALL_ACCOUNTING})
             if mode=='once':return value
             time.sleep(600)
 
