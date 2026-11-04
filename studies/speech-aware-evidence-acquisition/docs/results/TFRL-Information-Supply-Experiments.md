@@ -27,3 +27,8 @@
 
 
 更正：核验grounded_synthesis_job.run后确认candidate_publishable=false为通用任务硬编码的未晋升标记，不是候选拒绝结果。node2 a/b均已正常结束；须用原生mutation bundle验证候选结构与来源，再进行成对评测，不能依据该标记判定候选无效。外部教师接入方案见TFRL-Long-Context-Learner。
+
+
+## 调度变更：统一外部学习模型
+
+根据用户最新分工，schema-only与decision-context两个本地学习后继已在生成pending时停止其队列和前序barrier，配置及证据保留。它们不再等待本地推理；历史入队信息仅作追溯。迁移计划见TFRL-External-Learner-Unification；NPU后续承担任务轨迹采集及候选验证。
