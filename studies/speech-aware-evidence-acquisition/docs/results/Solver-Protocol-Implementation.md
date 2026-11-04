@@ -25,3 +25,5 @@ python scripts/analysis/solver_protocol_workload.py register --repo "$REPO" --da
 ```
 
 之后沿用配置化admit/launch/queue和 `stage3_rollout_score.py --mode supply-variants --stage all`。启动权限与资源由主线程安排，本交付0新API/0NPU。报告须同时列协议合法率、官方SLU/intent/slot、strict修复/破坏、tokens、P/S耗时和完整样本进度；没有真实80条结果前不晋升。
+
+实际评分器现在从governed TRAIN ontology构造预期schema，并将真实请求中的schema逐字与之核对；仅能从收到schema重建形状不足以证明标签完整性。缺少权威schema、删改合法配对或槽位类型均拒绝。固定镜像22项协议/reader测试通过。

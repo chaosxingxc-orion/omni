@@ -24,10 +24,12 @@ def canonical_request(payload):
     return value,fmt
 
 
-def verify_pair(constrained,lock):
+def verify_pair(constrained,lock, *, expected_format):
     a,fmt=canonical_request(constrained);b,plain=canonical_request(lock)
     if a!=b or plain is not None or not isinstance(fmt,Mapping):
         raise ValueError('protocol pair differs beyond response_format/contact identity: '+str([k for k in set(a)|set(b) if a.get(k)!=b.get(k)]))
+    if not isinstance(expected_format, Mapping) or fmt != expected_format:
+        raise ValueError('protocol schema differs from governed TRAIN ontology')
     try:
         branches=fmt['json_schema']['schema']['oneOf']
         actions={x['properties']['scenario']['const']:x['properties']['action']['enum'] for x in branches}
@@ -35,10 +37,11 @@ def verify_pair(constrained,lock):
         if fmt!=response_format(actions,types):raise ValueError('protocol schema is not label-only')
     except (KeyError,TypeError,IndexError) as error:
         raise ValueError('malformed protocol schema') from error
-    return {'same_input_except_protocol':True,'format_name':fmt['json_schema']['name']}
+    return {'same_input_except_protocol':True,'format_name':fmt['json_schema']['name'],
+            'expected_format_sha256':hashlib.sha256(json.dumps(expected_format,sort_keys=True,separators=(',',':')).encode()).hexdigest()}
 
 
-def verify_contact_pair(trace_records,contacts):
+def verify_contact_pair(trace_records,contacts, *, expected_format):
     """Compare original requests and verify any receipted answer-only re-ask.
 
     One arm may need fallback while the other does not; compare original
@@ -62,4 +65,4 @@ def verify_contact_pair(trace_records,contacts):
             raise ValueError('protocol fallback changed inputs or output format')
         originals.append(original)
     if len(originals)!=2:raise ValueError('exact paired contacts required')
-    return verify_pair(*originals)
+    return verify_pair(*originals, expected_format=expected_format)

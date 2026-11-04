@@ -64,7 +64,7 @@ def test_real_graph_requests_differ_only_by_protocol(tmp_path,monkeypatch):
     assert 'response_format' not in p['decoding_params']
     assert a['decoding_params']=={**b['decoding_params'],'response_format':fmt}
     from speech_aware_evidence_acquisition.rails.solver_protocol_audit import verify_pair
-    assert verify_pair(a,b)['same_input_except_protocol']
+    assert verify_pair(a,b,expected_format=fmt)['same_input_except_protocol']
     for key in ('task_instruction','supplied_evidence','speech_feature_parts','speech_packet_sha256','tool_schemas','evidence_provenance'):
         assert a[key]==b[key]
     assert json.loads(a['history'][-1]['content'])['messages']==json.loads(b['history'][-1]['content'])['messages']
@@ -91,10 +91,11 @@ def test_answer_only_reask_preserves_protocol_and_sampling():
 def test_pair_audit_rejects_hidden_prompt_or_sampling_change():
     from speech_aware_evidence_acquisition.rails.solver_protocol_audit import verify_pair
     b={'request_id':'b','history':[],'decoding_params':{'seed':7},'task_instruction':'same'}
-    a=copy.deepcopy(b);a['request_id']='a';a['decoding_params']['response_format']=response_format({'audio':['volume_up']},['person'])
-    assert verify_pair(a,b)
+    fmt=response_format({'audio':['volume_up']},['person'])
+    a=copy.deepcopy(b);a['request_id']='a';a['decoding_params']['response_format']=fmt
+    assert verify_pair(a,b,expected_format=fmt)
     a['task_instruction']='different'
-    with pytest.raises(ValueError):verify_pair(a,b)
+    with pytest.raises(ValueError):verify_pair(a,b,expected_format=fmt)
 
 
 def test_official_reader_dispatches_protocol_and_verifies_wire(tmp_path,monkeypatch):
@@ -122,7 +123,8 @@ def test_official_reader_dispatches_protocol_and_verifies_wire(tmp_path,monkeypa
         payload={'request_id':key,'history':[],'decoding_params':{'seed':7},'task_instruction':'same'}
         if arm.response_format_id:payload['decoding_params']['response_format']=fmt
         bundle.trace_records[key]['payload']=payload
-    manifest=old._render(bundle,g,tmp_path)
+    manifest=old.mod.render_supply_variant_first_visit(bundle,g,{old.IDS[0]:'alarm'},tmp_path/'analysis',
+        run_id='RUN',attempt_id='ATT',roster_sha256='1'*64,config_hash='c'*64,expected_protocol_format=fmt)
     assert set(manifest['copies'])=={'constrained','lock'}
 
 
@@ -149,7 +151,7 @@ def test_actual_adapter_fallback_keeps_label_protocol(tmp_path):
     original['request_id']='lock';original['decoding_params'].pop('response_format')
     records['lock/request']={'payload':original}
     contacts=[{'request_id':receipt['reask_request_id'],'agent_contact_id':'c-solver'}, {'request_id':'lock','agent_contact_id':'c-lock'}]
-    assert verify_contact_pair(records,contacts)['same_input_except_protocol']
+    assert verify_contact_pair(records,contacts,expected_format=fmt)['same_input_except_protocol']
 
 
 def test_real_flight_schema_uses_governed_train_loader(monkeypatch):
@@ -165,3 +167,18 @@ def test_real_flight_schema_uses_governed_train_loader(monkeypatch):
     monkeypatch.setattr(sp,'registered_response_format',lambda lock,root:seen.append((lock,root)) or {'verified':True})
     assert runtime._protocol_response_formats(cfg)=={FORMAT_ID:{'verified':True}}
     assert seen==[(runtime._lock,runtime._data_root)]
+
+
+@pytest.mark.parametrize('fault',['drop_pair','rename_action','drop_type','missing_authority'])
+def test_protocol_audit_rejects_valid_shape_with_wrong_inventory(fault):
+    from speech_aware_evidence_acquisition.rails.solver_protocol_audit import verify_pair
+    expected=response_format({'audio':['volume_up','volume_down'],'play':['music']},['person','song_name'])
+    actions={'audio':['volume_up','volume_down'],'play':['music']};types=['person','song_name']
+    if fault=='drop_pair':actions['audio'].pop()
+    elif fault=='rename_action':actions['audio'][0]='not_a_real_action'
+    elif fault=='drop_type':types.pop()
+    fmt=response_format(actions,types)
+    lock={'history':[],'decoding_params':{'seed':7},'task_instruction':'same'}
+    constrained={**lock,'decoding_params':{'seed':7,'response_format':fmt}}
+    with pytest.raises(ValueError,match='governed TRAIN'):
+        verify_pair(constrained,lock,expected_format=None if fault=='missing_authority' else expected)

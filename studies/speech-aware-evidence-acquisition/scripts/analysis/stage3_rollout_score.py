@@ -938,6 +938,7 @@ def _immutable_json(path: Path, payload: Mapping[str, Any]) -> str:
 def render_supply_variant_first_visit(
     bundle, group, roster: Mapping[str, str], out_dir: Path,
     *, run_id: str, attempt_id: str, roster_sha256: str, config_hash: str,
+    expected_protocol_format=None,
 ) -> dict[str, Any]:
     """Render all declared arms from FIRST Solver contacts, with no row filtering.
 
@@ -973,10 +974,11 @@ def render_supply_variant_first_visit(
         bank_context = load(bundle.manifest, bundle.manifest_path, bundle.split_ids,
                             bundle.manifest['split']['identity_hash'])
     return render_supply_source_rows(bundle.outputs_rows, bundle.trace_records, group, roster,
-                                     out_dir, source=source, bank_context=bank_context)
+                                     out_dir, source=source, bank_context=bank_context,
+                                     expected_protocol_format=expected_protocol_format)
 
 
-def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_dir, *, source, bank_context=None):
+def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_dir, *, source, bank_context=None, expected_protocol_format=None):
     """Render audited source rows without claiming a generation bundle.
 
     Callers must verify source custody first. This renderer checks the exact
@@ -1103,7 +1105,7 @@ def render_supply_source_rows(outputs_rows, trace_records, group, roster, out_di
         if is_protocol:
             from speech_aware_evidence_acquisition.rails.solver_protocol_audit import verify_contact_pair
             try:
-                verify_contact_pair(trace_records, contacts)
+                verify_contact_pair(trace_records, contacts, expected_format=expected_protocol_format)
             except (KeyError, TypeError, ValueError) as error:
                 raise Stage3ScoreError(f"{sid}: protocol wire equality audit failed: {error}") from error
         arm_meta = []
@@ -2265,11 +2267,16 @@ def supply_variant_main(args, repo_root: Path, root: Path, lock) -> int:
         raise Stage3ScoreError("composed config lacks declared knowledge stores")
     group = parse_solver_arm_group(composed.values, solver, perception, stores)
     roster, roster_sha256, _ = load_roster(repo_root, args.roster)
+    expected_protocol_format = None
+    if group.is_protocol:
+        from speech_aware_evidence_acquisition.rails.slurp_solver_protocol import registered_response_format
+        expected_protocol_format = registered_response_format(lock, root)
     out_dir = Path(args.analysis_root)
     if args.stage in ("render", "all"):
         manifest = render_supply_variant_first_visit(
             bundle, group, roster, out_dir, run_id=args.run, attempt_id=args.attempt,
             roster_sha256=roster_sha256, config_hash=composed.config_hash,
+            expected_protocol_format=expected_protocol_format,
         )
     else:
         path = out_dir / "render-manifest.json"
@@ -2283,6 +2290,7 @@ def supply_variant_main(args, repo_root: Path, root: Path, lock) -> int:
         checked = render_supply_variant_first_visit(
             bundle, group, roster, out_dir, run_id=args.run, attempt_id=args.attempt,
             roster_sha256=roster_sha256, config_hash=composed.config_hash,
+            expected_protocol_format=expected_protocol_format,
         )
         if manifest != checked:
             raise Stage3ScoreError("render manifest differs from verified source")
