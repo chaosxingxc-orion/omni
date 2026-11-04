@@ -311,7 +311,7 @@ def _execute(config_path):
     keys = {'schema', 'endpoint', 'model', 'api_key_env', 'messages', 'max_tokens',
             'timeout_seconds', 'output_root'}
     optional = {'stream', 'total_timeout_seconds', 'thinking', 'research_prompt',
-                'analysis_budget', 'journal_batch_bytes', 'journal_batch_seconds'}
+                'analysis_budget', 'journal_batch_bytes', 'journal_batch_seconds', 'proxy_mode'}
     if not keys <= set(cfg) <= keys | optional or cfg['schema'] != 'saea-external-learner-v1':
         raise ValueError('exact external learner configuration required')
     if type(cfg.get('stream', False)) is not bool:
@@ -325,6 +325,8 @@ def _execute(config_path):
         raise ValueError('positive total wall deadline required')
     if 'thinking' in cfg and cfg['thinking'] not in ({'type': 'enabled'}, {'type': 'disabled'}):
         raise ValueError('explicit provider thinking mode required')
+    if cfg.get('proxy_mode', 'inherit-environment') not in ('inherit-environment', 'direct'):
+        raise ValueError('explicit proxy mode required')
     budget_prompt = analysis_budget_prompt(cfg)
     url = urllib.parse.urlsplit(cfg['endpoint'])
     if (url.scheme != 'https' or not url.hostname or url.username or url.password
@@ -399,7 +401,8 @@ def _execute(config_path):
             previous_handler = signal.signal(signal.SIGALRM, deadline_handler)
             signal.setitimer(signal.ITIMER_REAL, cfg['total_timeout_seconds'])
         try:
-            with urllib.request.build_opener(NoRedirect()).open(req, timeout=cfg['timeout_seconds']) as response:
+            with urllib.request.build_opener(NoRedirect(), *([urllib.request.ProxyHandler({})]
+                    if cfg.get('proxy_mode', 'inherit-environment') == 'direct' else [])).open(req, timeout=cfg['timeout_seconds']) as response:
                 diagnostics.data['headers_elapsed_seconds'] = time.monotonic() - started
                 persist(root/'headers.json', {'http_status': response.status,
                     'request_id': response.headers.get('x-request-id'),

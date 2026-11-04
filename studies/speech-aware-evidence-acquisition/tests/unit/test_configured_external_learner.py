@@ -488,3 +488,28 @@ def test_urlerror_reason_is_structured_but_stays_unknown(setup, monkeypatch):
     assert diagnostic['reason_errno']==-3
     monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:pytest.fail('must not retry'))
     assert m.execute(config)==r
+
+
+@pytest.mark.parametrize('mode', [None, 'inherit-environment', 'direct'])
+def test_executor_proxy_mode_matches_probe(setup, monkeypatch, mode):
+    config,cfg=setup
+    if mode is not None: cfg['proxy_mode']=mode
+    config.write_text(json.dumps(cfg))
+    seen=[]
+    class Opener:
+        def open(self,*a,**kw): raise TimeoutError('private proxy details')
+    def build(*handlers):
+        seen.extend(handlers)
+        return Opener()
+    monkeypatch.setattr(m.urllib.request, 'build_opener', build)
+    result=m.execute(config)
+    explicit=[h for h in seen if isinstance(h,m.urllib.request.ProxyHandler)]
+    assert len(explicit)==(1 if mode=='direct' else 0)
+    if explicit: assert explicit[0].proxies=={}
+    assert result['state']=='unknown' and result['automatic_retry'] is False
+
+
+def test_executor_invalid_proxy_mode_before_intent(setup):
+    config,cfg=setup;cfg['proxy_mode']='guess';config.write_text(json.dumps(cfg))
+    with pytest.raises(ValueError,match='proxy mode'):m.execute(config)
+    assert not Path(cfg['output_root']).exists()

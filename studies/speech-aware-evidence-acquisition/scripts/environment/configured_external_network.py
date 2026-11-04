@@ -10,11 +10,13 @@ import subprocess
 import sys
 import time
 import urllib.parse
+import urllib.request
+import urllib.error
 
 
 def validate(cfg):
     fields = {'schema', 'endpoint', 'probe_path', 'timeout_seconds', 'total_timeout_seconds', 'accepted_statuses'}
-    if not isinstance(cfg, dict) or not fields <= set(cfg) <= fields | {'ca_file'} or cfg['schema'] != 'saea-external-network-v1':
+    if not isinstance(cfg, dict) or not fields <= set(cfg) <= fields | {'ca_file', 'proxy_mode'} or cfg['schema'] != 'saea-external-network-v1':
         raise ValueError('exact network probe configuration required')
     url = urllib.parse.urlsplit(cfg['endpoint'])
     if (url.scheme != 'https' or not url.hostname or url.username or url.password
@@ -31,6 +33,8 @@ def validate(cfg):
         raise ValueError('explicit accepted HTTP statuses required')
     if 'ca_file' in cfg and (not isinstance(cfg['ca_file'], str) or not Path(cfg['ca_file']).is_file()):
         raise ValueError('existing CA file required')
+    if cfg.get('proxy_mode', 'inherit-environment') not in ('inherit-environment', 'direct'):
+        raise ValueError('explicit proxy mode required')
     return url
 
 
@@ -41,33 +45,53 @@ def error_fields(error):
     return result
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 def probe(cfg):
-    url = validate(cfg); started = time.monotonic(); phase = 'dns'; conn = None
+    url = validate(cfg); started = time.monotonic()
+    mode = cfg.get('proxy_mode', 'inherit-environment')
     result = {'schema': 'saea-external-network-result-v1', 'state': 'pre-dispatch-rejected',
               'generation_dispatched': False, 'automatic_retry': False, 'method': 'HEAD',
-              'credential_supplied': False, 'proxy': 'disabled', 'redirects': 'disabled'}
+              'credential_supplied': False, 'credential_scope': 'origin/API credentials; proxy authentication may come from environment',
+              'proxy_mode': mode, 'redirects': 'disabled',
+              'transport': 'urllib-default-environment' if mode == 'inherit-environment' else 'urllib-direct',
+              'dns_policy': 'resolved by actual transport; target DNS may be delegated to proxy'}
+    # Match configured_external_learner: urllib's environment ProxyHandler,
+    # including no_proxy, unless direct is explicitly selected. Never pre-resolve
+    # the target: CONNECT proxies can resolve it where local DNS cannot.
+    handlers = [NoRedirect(), urllib.request.HTTPSHandler(
+        context=ssl.create_default_context(cafile=cfg.get('ca_file')))]
+    if mode == 'direct':
+        handlers.append(urllib.request.ProxyHandler({}))
+    request = urllib.request.Request(urllib.parse.urlunsplit(
+        ('https', url.netloc, cfg['probe_path'], '', '')), method='HEAD',
+        headers={'User-Agent': 'saea-network-preflight/1'})
+    response = None
     try:
-        addresses = socket.getaddrinfo(url.hostname, url.port or 443, type=socket.SOCK_STREAM)
-        result['resolved_address_count'] = len(addresses)
-        phase = 'tcp-tls'
-        context = ssl.create_default_context(cafile=cfg.get('ca_file'))
-        conn = http.client.HTTPSConnection(url.hostname, url.port or 443, timeout=cfg['timeout_seconds'], context=context)
-        conn.connect()  # certificate chain + hostname are verified before HTTP
+        try:
+            response = urllib.request.build_opener(*handlers).open(request, timeout=cfg['timeout_seconds'])
+        except urllib.error.HTTPError as error:
+            response = error  # HTTP reached the origin; status is checked below.
+        result['http_status'] = response.status
         result['tls_verified'] = True
-        phase = 'http-head'
-        conn.request('HEAD', cfg['probe_path'], headers={'User-Agent': 'saea-network-preflight/1'})
-        response = conn.getresponse(); result['http_status'] = response.status
-        response.close()
-        if result['http_status'] in cfg['accepted_statuses']:
+        if response.status in cfg['accepted_statuses'] and not 300 <= response.status < 400:
             result['state'] = 'ready'
         else:
-            result['failure_phase'] = phase
-            result['error_type'] = 'UnexpectedHTTPStatus'
+            result.update(failure_phase='http-head', error_type='UnexpectedHTTPStatus')
     except Exception as error:
-        result.update(error_fields(error), failure_phase=phase)
+        reason = error.reason if isinstance(error, urllib.error.URLError) else error
+        result.update(error_fields(reason), failure_phase='request-open')
+        result['outer_error_type'] = type(error).__name__
+        if isinstance(reason, socket.gaierror):
+            result['failure_phase'] = 'transport-dns'
+        elif isinstance(reason, ssl.SSLError):
+            result['failure_phase'] = 'transport-tls'
     finally:
-        if conn is not None:
-            conn.close()
+        if response is not None:
+            response.close()
     result['elapsed_seconds'] = time.monotonic() - started
     result['meaning'] = 'network observation only; does not establish provider model capacity or future request delivery'
     return result

@@ -4,5 +4,11 @@
   "probe_path": "/v1/models",
   "timeout_seconds": 15,
   "total_timeout_seconds": 30,
-  "accepted_statuses": [200, 401, 403, 405]
+  "accepted_statuses": [
+    200,
+    401,
+    403,
+    405
+  ],
+  "proxy_mode": "inherit-environment"
 }
