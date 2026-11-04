@@ -1,5 +1,5 @@
 """Official learned/lock scores with actual shared-P request custody."""
-import argparse,json,sys
+import argparse,json,sys,math
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2]
 sys.path[:0]=[str(ROOT/'src'),str(ROOT/'scripts/analysis')]
@@ -19,6 +19,13 @@ def summarize(results,items):
     tables={a:score_table(results[a],ids) for a in ARMS}
     keys=('evaluator_commit','scorer_version','split_id','projection','filler_normalization')
     if any(results['learned']['aggregate'][k]!=results['lock']['aggregate'][k] for k in keys):raise ValueError('scorer identity differs')
+    for arm in ARMS:
+        for sid in ids:
+            row=tables[arm][sid]
+            for key in ('slot_f1_exact_tp','slot_f1_exact_fp','slot_f1_exact_fn'):
+                value=row[key]
+                if type(value) not in (int,float) or not math.isfinite(value) or value<0 or int(value)!=value:raise ValueError('finite nonnegative exact counts required')
+            if type(row['scenario_action_exact']) not in (int,float) or row['scenario_action_exact'] not in (0,1):raise ValueError('binary intent score required')
     success={a:{s:int(tables[a][s]['scenario_action_exact']==1 and tables[a][s]['slot_f1_exact_fp']==tables[a][s]['slot_f1_exact_fn']==0) for s in ids} for a in ARMS}
     rewards={a:[intent_slot_reward(tables[a][s]) for s in ids] for a in ARMS}
     return {'rows':len(ids),'sample_ids':ids,'official':{a:results[a]['aggregate']['official'] for a in ARMS},'strict_success':{a:sum(success[a].values()) for a in ARMS},'proxy_scores':rewards,'comparisons':{'learned_vs_lock':{'strict_repairs':sum(success['learned'][s]>success['lock'][s] for s in ids),'strict_breaks':sum(success['learned'][s]<success['lock'][s] for s in ids),'proxy_mean_delta':(sum(rewards['learned'])-sum(rewards['lock']))/len(ids)}},'candidate_accepted':False,'claims_stable_gain':False}
