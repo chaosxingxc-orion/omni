@@ -9,3 +9,5 @@
 只返回严格JSON，不加Markdown围栏：{"algorithm":"gepa","candidates":[{"schema":"saea-solver-prompt-mutation-v1","parent_sha256":"context.parent.candidate_sha256","module":"solver_consumption_instruction","evidence_query_ids":["contract.feedback_query_ids中的真实TRAIN ID，排序去重"],"diagnosis":"机制、证据、反例和验证条件","solver_instruction":"完整可部署消费指令"}]}。
 
 parent_sha256必须使用实际输入值。solver_instruction不能包含花括号、尖括号、模板占位符或样本ID，遵守contract token上限。不要通过改变评分、加入参考答案、修改固定模块获得表面收益。输出空间是上限而非写满目标；根因证据不足时清楚标注假设，不虚构。
+
+输入编码：development_evidence_ref须按同包development_evidence_dictionary展开；development_canonical_json_string表示展开后按canonical JSON恢复的原字符串。字典是完整证据的无损共享表示，不代表缺失，不得将引用哈希当证据正文。

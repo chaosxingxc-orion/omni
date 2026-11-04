@@ -21,4 +21,6 @@ prepare按每组字典恢复引用和canonical JSON字符串，要求实际reque
 
 `prepared.json`记录来源及冻结文件；`collected.json`保留经ExternalTeacher核验的响应身份、wire哈希、usage和提案。GEPA逐候选核验父哈希、contract和允许修改模块；其余算法核验各自提案字段。结构检查不是语义批准，更不是知识更新或部署成功。语义审查、各算法编译及真实NPU配对仍是独立阶段，收集产物明确标pending。
 
-本实现先提供共享可调用入口；尚未接入外部GEPA候选到配对编译器，不声称四算法完整闭环已运行。正式测试使用固定镜像、无网络模拟服务；真实调用及收益分别记录。
+外部GEPA候选可通过 `saea-gepa-external-mutation-v1` 来源接入 `gepa_pair_material.py`。来源包含prepared与collected的path/sha256及candidate_index，必须与原始wire、可信seed的parent/contract一致。actor仍使用已有tokenizer/FIT与配对编译；同一教师请求的多个候选共享一次调用成本，按request哈希去重计费。保留原始绝对路径挂载，不静默改写已固定请求。
+
+发送前完整轨迹进行可逆字典打包；排除名单正文留本地，教师context只带其数量/哈希，不改变本地合同校验。不声称四算法完整闭环已运行。正式测试使用固定镜像、无网络模拟服务；真实调用及收益分别记录。

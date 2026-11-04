@@ -55,12 +55,24 @@ def test_expand_canonical_and_cycle():
         exploration.expand_evidence({'development_evidence_ref': 'missing'}, {})
 
 
+def test_gepa_context_keeps_exclusion_roster_local():
+    from test_solver_prompt_candidate import fixture
+    contract, parent, _, _ = fixture()
+    original = json.dumps(contract, sort_keys=True)
+    projected = exploration.request_context({'contract': contract, 'parent': parent}, 'gepa')
+    assert 'excluded_query_ids' not in projected['contract']
+    assert projected['contract']['excluded_query_ids_commitment']['sha256'] == exploration.sha(contract['excluded_query_ids'])
+    assert projected['contract']['feedback_query_ids'] == contract['feedback_query_ids']
+    assert projected['parent'] == parent
+    assert json.dumps(contract, sort_keys=True) == original
+
+
 def test_prepare_preserves_duplicate_rollouts_and_complete_input(tmp_path):
     config, root = job(tmp_path)
     result = exploration.prepare(config)
     assert result['new_model_calls'] == 0 and result['rollouts'] == 2
     request = exploration.read(root / 'request.json')
-    evidence = json.loads(request['messages'][0]['content'])['groups'][0]['evidence']
+    evidence = exploration.request_payload(request)['groups'][0]['evidence']
     assert evidence['query']['supplied_evidence'] == ['complete supplied content']
     assert len(evidence['rollouts']) == 2
     assert evidence['rollouts'][0]['source_trajectory']['request']['history'][0]['content'] == '{"v":["complete supplied content"]}'

@@ -3,7 +3,7 @@
   "algorithm": "gepa",
   "template": {
     "path": "../../prompts/learner/tfrl/gepa.md",
-    "sha256": "6f67c493e77a95d251f6f7ee81b5e77e3e856c1c79fb63c74259824ce55ba775"
+    "sha256": "12c9254bdd198e4071605d04adea483296ae5c6ae4103533c77c94bee4a17900"
   },
   "min_candidates": 2,
   "max_candidates": 8,

@@ -53,6 +53,18 @@ def expand_evidence(value, dictionary, stack=()):
     return value
 
 
+def request_context(context, algorithm):
+    """Keep exclusion identities local; the teacher needs the editable boundary."""
+    if algorithm != 'gepa':
+        return context
+    result = json.loads(json.dumps(context))
+    excluded = result['contract'].pop('excluded_query_ids')
+    result['contract']['excluded_query_ids_commitment'] = {
+        'count': len(excluded), 'sha256': sha(excluded),
+        'enforcement': 'full exclusion list retained and checked locally; use supplied TRAIN evidence only'}
+    return result
+
+
 def prepare(config_path):
     config_path = Path(config_path).resolve()
     cfg = read(config_path)
@@ -109,13 +121,20 @@ def prepare(config_path):
     executor = pin(out / 'executor.py')
     teacher_cfg.update(max_tokens=profile['max_tokens'], research_prompt=pin(out / 'template.md'))
     caller = ExternalTeacher(out / 'contacts', config=teacher_cfg, executor=executor)
-    payload = {'algorithm': profile['algorithm'], 'context': context, 'groups': selected,
+    payload = {'algorithm': profile['algorithm'], 'context': request_context(context, profile['algorithm']), 'groups': selected,
                'min_candidates': profile['min_candidates'], 'max_candidates': profile['max_candidates'],
                'source_sha256': pin(source)['sha256'], 'rollout_multiplicity_preserved': True}
+    # Re-factor repeated full evidence losslessly; no token-based truncation.
+    from speech_aware_evidence_acquisition.rails.grounded_synthesis_fusion import factor_development_evidence
+    packed = factor_development_evidence(payload)
+    table = packed.get('development_evidence_dictionary', {})
+    restored = expand_evidence({k: v for k, v in packed.items() if not k.startswith('development_evidence_')}, table)
+    if restored != payload:
+        raise ValueError('evidence packing must round-trip exactly')
     request = {'schema': 'saea-tfgrpo-learning-request-v1', 'model_id': caller.model_id,
                'learning_config_sha256': caller.learning_config_sha256,
                'stage': profile['algorithm'] + '-external-proposals-v1', 'identity': sha(payload),
-               'messages': [{'role': 'user', 'content': canonical(payload).decode()}]}
+               'messages': [{'role': 'user', 'content': canonical(packed).decode()}]}
     binding = caller.preflight(request)
     save(out / 'profile.json', profile)
     save(out / 'context.json', context)
@@ -187,6 +206,14 @@ def validate_proposals(text, profile, context, evidence_ids=None):
     return doc
 
 
+def request_payload(request):
+    packed = json.loads(request['messages'][0]['content'])
+    table = packed.get('development_evidence_dictionary', {})
+    if table and sha(table) != packed['development_evidence_dictionary_sha256']:
+        raise ValueError('packed request dictionary changed')
+    return expand_evidence({k: v for k, v in packed.items() if not k.startswith('development_evidence_')}, table)
+
+
 def collect(root):
     root, manifest, caller, request = load_prepared(root)
     observed = caller.reconcile(request)
@@ -195,7 +222,7 @@ def collect(root):
     response = observed['response']
     if response['finish_reason'] != 'stop':
         raise ValueError('incomplete proposal response')
-    payload = json.loads(request['messages'][0]['content'])
+    payload = request_payload(request)
     proposals = validate_proposals(response['text'], read(root / 'profile.json'), read(root / 'context.json'),
                                    evidence_ids=[g['query_id'] for g in payload['groups']])
     result = {'schema': 'saea-external-exploration-collected-v1', 'prepared_sha256': pin(root / 'prepared.json')['sha256'],

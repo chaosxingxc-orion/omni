@@ -9,3 +9,5 @@
 只返回JSON：{"algorithm":"tfgrpo","candidates":[{"id":"唯一ID","target":"knowledge_construction或knowledge_consumption","evidence_query_ids":["实际TRAIN ID"],"relative_feedback":"组内高低奖励依据及重复权重","hypothesis":"根因与竞争解释","intervention":"运行时可执行的通用经验策略","counterexample":"反例或未覆盖范围","validation":"配对指标与拒绝条件"}]}。
 
 reference仅开发诊断，部署策略不得包含样本答案或TEST反馈。原生官方指标与本地配对决定是否有效，你不批准候选。每项只改一个因素；思考按信息增量收束，留足最终策略输出空间。这里交付待编译策略，不冒充已更新经验库或已完成TFRL迭代。
+
+输入编码：development_evidence_ref须按同包development_evidence_dictionary展开；development_canonical_json_string表示展开后按canonical JSON恢复的原字符串。字典是完整证据的无损共享表示，不代表缺失，不得将引用哈希当证据正文。

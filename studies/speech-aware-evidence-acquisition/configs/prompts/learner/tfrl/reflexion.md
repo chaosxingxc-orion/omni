@@ -9,3 +9,5 @@
 只返回JSON：{"algorithm":"reflexion","candidates":[{"id":"唯一ID","evidence_query_ids":["实际TRAIN ID"],"hypothesis":"机制和竞争解释","memory":{"trigger":"可观察条件","action":"可执行提醒","exception":"反例与边界"},"retry_protocol":"固定哪些条件、下一次改变什么","transfer_scope":"same_task_retry或cross_task_adaptation","validation":"修复、破坏和后续反馈判据"}]}。
 
 记忆只含运行时可得信息，不包含reference答案或样本ID；TRAIN标签只用于诊断，TEST不参与选择。提案待编译和真实配对验证，不自我批准，不声称已完成重试。按机制聚合代表证据，不逐条复述输入，不耗尽预算。
+
+输入编码：development_evidence_ref须按同包development_evidence_dictionary展开；development_canonical_json_string表示展开后按canonical JSON恢复的原字符串。字典是完整证据的无损共享表示，不代表缺失，不得将引用哈希当证据正文。

@@ -18,4 +18,12 @@ prepare不调用模型，固化执行器与实际消息；run复用已有Externa
 
 固定NPU工程镜像，network none，执行`python -m pytest tests/unit/test_external_exploration.py tests/unit/test_external_teacher.py -q`。覆盖完整输入和重复次数保留、引用循环/缺键拒绝、TEST输入拒绝、模板篡改拒绝、真实执行器配合伪网络收集、wire篡改拒绝及算法/父候选/证据边界。最终21项通过，3.10秒；日志私有保存于`repro/external-entry-restart-v1/tests-final.log`。测试不调用真实API或NPU推理，不证明算法收益。
 
-外部GEPA凭据到现有NPU配对编译器的适配尚未完成，ACE/TF-GRPO/Reflexion提案也未编译成已部署知识。无新增NPU任务，无新付费请求。该交付解决模板与调用入口，不能称四法完整实验闭环已上线。A0原运行任务未重启。
+后续主线程补齐外部GEPA响应到既有配对编译器的来源分支，保留actor tokenization/FIT，不伪造本地教师身份。完整证据无损打包、保留rollout次数；庞大排除名单留本地校验，教师只接收名单承诺和允许边界。固定镜像相关35项测试通过，5.53秒。日志私有保存于 `repro/external-entry-restart-v1/gepa-packed-adapter-tests.log`。
+
+已准备并启动一次真实GEPA候选生成：16个固定TRAIN组、64条既有轨迹，按原始scenario轮转和实际意图/槽位签名覆盖选择，输出上限131072。尚无已验收提案或新增NPU配对任务，ACE/TF-GRPO/Reflexion提案也未部署。不能称四法闭环完成或科学收益成立。
+
+## 文件交付复核
+
+用户指出通信不应是唯一通道。已盘点公开仓13个注册工作树、当前三个子智能体会话的实际工具调用，以及共享交付目录。发现历史工作树和报告确实存在；其中监控工作树有两处遗留修改，保留待核验，不把它算作这三个新任务产物。三个当前子智能体的记录仅有只读检查等调用，未见写入实现；新设三个任务目录只有主线程写入的TASK.md，没有receipt.json、REPORT.md或result.json。
+
+这支持“本轮未发现可验收交付”，不支持“历史所有子智能体都没写文件”，也不足以断言失败根因是模型能力。任务消息接收/进入执行环节仍待核查。文件通道已建立并向三个原任务发出短路径通知；回执缺失时不继续发送相同长指令。私有核查证据位于 `repro/agent-mailbox/inventory.json` 和 `session-evidence.json`。

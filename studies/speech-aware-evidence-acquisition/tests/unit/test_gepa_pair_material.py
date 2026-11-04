@@ -68,3 +68,17 @@ def test_source_separation_preserves_rejections(setup,monkeypatch,fault):
         monkeypatch.setattr(runtime,'verify_mutation_bundle',reject)
     with pytest.raises(ValueError):m.derive(live,data,**args)
     assert not any(k=='compile' for k,_ in seen)
+
+
+def test_external_source_uses_existing_compiler_without_native_bundle(setup, monkeypatch):
+    import gepa_external_mutation
+    live,data,args,seen,checked=setup
+    args.pop('mutation_manifest');args['external_mutation']={'source':'external'}
+    def external(spec, *, contract, parent):
+        assert spec=={'source':'external'} and contract==checked['contract']
+        return {'contract_sha256':'contract','parent_sha256':'parent','mutation_text':'external text','response_sha256':'wire'}
+    monkeypatch.setattr(gepa_external_mutation,'verify_external_mutation',external)
+    result=m.derive(live,data,**args)
+    assert ('compile',live) in seen
+    assert not any(k in ('bundle','mutation') for k,_ in seen)
+    assert result['mutation']['response_sha256']=='wire'

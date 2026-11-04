@@ -9,3 +9,5 @@
 只返回JSON：{"algorithm":"ace","candidates":[{"id":"唯一ID","reflection":{"hypothesis":"机制与竞争解释","evidence_query_ids":["真实TRAIN ID"],"counterexample":"反例"},"operations":[{"operation":"ADD或MODIFY或DELETE","target_id":null,"condition":"运行时可判条件","content":"知识内容","exception":"适用边界"}],"validation":"目标修复、反例保护和拒绝条件"}]}。
 
 这是待语义审查与编译的增量提案，不能自称已执行Curator更新。后续用固定知识对照、真实小样本和官方评分验证。不引入TEST或样本答案，不自我批准收益。按机制收束，预算不要求写满。
+
+输入编码：development_evidence_ref须按同包development_evidence_dictionary展开；development_canonical_json_string表示展开后按canonical JSON恢复的原字符串。字典是完整证据的无损共享表示，不代表缺失，不得将引用哈希当证据正文。

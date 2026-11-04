@@ -3,7 +3,7 @@
   "algorithm": "reflexion",
   "template": {
     "path": "../../prompts/learner/tfrl/reflexion.md",
-    "sha256": "98429b847ef911881f363b35dc14b8f39902fd445aec260eafe318bc64829bb0"
+    "sha256": "3ade75b87495dc92a60f10c78dd6eb36815ef284b905253cdb21502415dd0119"
   },
   "min_candidates": 2,
   "max_candidates": 8,
