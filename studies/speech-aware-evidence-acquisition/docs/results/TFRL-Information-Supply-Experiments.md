@@ -24,3 +24,6 @@
 ## 自动接续修复
 
 交接脚本曾把前序队列的正常瞬态`dispatching`误判为未知状态。现将其与running一样视为等待，仍核验前序终态、请求清算与共享guard，不放宽科学验收。固定镜像相关82项测试通过（5.78秒）；独立脚本发布树已实际完成消费队列交接及a→b接续，没有重发旧请求。部署时保留前序queue_tool的准确绑定，并显式挂载现有共享guard的读写目录；旧失败启动记录保留。此修复不等于已修复其他活跃队列中的旧脚本。
+
+
+更正：核验grounded_synthesis_job.run后确认candidate_publishable=false为通用任务硬编码的未晋升标记，不是候选拒绝结果。node2 a/b均已正常结束；须用原生mutation bundle验证候选结构与来源，再进行成对评测，不能依据该标记判定候选无效。外部教师接入方案见TFRL-Long-Context-Learner。
