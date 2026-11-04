@@ -1,0 +1,100 @@
+{
+  "schema": "saea-gepa-node2-paired-summary-v1",
+  "samples": 16,
+  "source_result_sha256": "8557e23087e6ca71d98be25ab18becbf4449878e65ce600c8868c9e82638e415",
+  "source_manifest_sha256": "d1cea523dc6bb2f40b6e2bd6df75a79cbc39239c1c47d6eac66f22ba21b0ed4e",
+  "official": {
+    "child": {
+      "slu_f1": 0.6870196850710898,
+      "intent_accuracy": 0.625,
+      "span_f1": 0.5957446808510638
+    },
+    "lock": {
+      "slu_f1": 0.6870196850710899,
+      "intent_accuracy": 0.625,
+      "span_f1": 0.5957446808510638
+    },
+    "parent": {
+      "slu_f1": 0.6996693325581423,
+      "intent_accuracy": 0.625,
+      "span_f1": 0.6086956521739131
+    }
+  },
+  "strict_success": {
+    "child": 5,
+    "lock": 5,
+    "parent": 6
+  },
+  "comparisons": {
+    "child_vs_lock": {
+      "proxy_mean_delta": 0.0,
+      "strict_breaks": 0,
+      "strict_repairs": 0
+    },
+    "child_vs_parent": {
+      "proxy_mean_delta": -0.03125,
+      "strict_breaks": 1,
+      "strict_repairs": 0
+    },
+    "parent_vs_lock": {
+      "proxy_mean_delta": 0.03125,
+      "strict_breaks": 0,
+      "strict_repairs": 1
+    }
+  },
+  "cost": {
+    "audio_seconds_used": 251.21599999999998,
+    "calls_used": 64,
+    "completion_tokens_total": 128071,
+    "latency_seconds_total": 4795.394660780032,
+    "prompt_tokens_total": 473845,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "native_role_costs": {
+    "perception": {
+      "calls": 16,
+      "completion_tokens": 29770,
+      "contacts_with_reasoning": 16,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 16
+      },
+      "prompt_tokens": 61063,
+      "request_seconds": {
+        "mean": 83.89726643437825,
+        "n": 16,
+        "p50": 74.81329900499259,
+        "p95": 137.93350569001632
+      },
+      "think_markers": 0,
+      "wire_records": 16
+    },
+    "solver": {
+      "calls": 48,
+      "completion_tokens": 98301,
+      "contacts_with_reasoning": 48,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 48
+      },
+      "prompt_tokens": 412782,
+      "request_seconds": {
+        "mean": 71.93829995479125,
+        "n": 48,
+        "p50": 68.8934109450056,
+        "p95": 116.43487411999376
+      },
+      "think_markers": 0,
+      "wire_records": 48
+    }
+  },
+  "candidate_accepted": false,
+  "claims_stable_gain": false,
+  "campaign_seconds_to_release": 503.1435489199939,
+  "campaign_seconds_per_row": 31.44647180749962,
+  "generation_container_seconds": 599.055652,
+  "cards": 2,
+  "instances": 1,
+  "concurrency": 16
+}
