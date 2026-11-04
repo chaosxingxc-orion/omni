@@ -71,3 +71,9 @@
 外部响应执行器新增分项观测：body读取等待、写入/flush、fsync、首末body交付、字节/事件、DONE/finish/usage状态；IncompleteRead尾部与HTTP错误正文仅私有保存。固定镜像22项测试通过（1.22秒），不改变128K预算、不自动重试。它提供归因证据，不代表已经修复上游断流；运行中崩溃可能仍缺终态诊断。
 
 compact候选已通过完整原生来源核验：51组、15条知识规则，审查包私有归档。使用新诊断版本发起独立语义审查，完整任务输入607955字符（不是token数），max_tokens131072；包含完整group、更新、parent和冲突材料，按机制、代表证据和反例组织结论，最终提供15条规则紧凑审查表与小规模验证配置建议。该请求与此前三失败联合分析不同，未重发旧unknown；尚未取得报告或收益，不冒充审批/候选晋升。
+
+## 共享学习器功能接入
+
+ExternalTeacher已接入ExperienceLearner的metered_call与reconcile，ACE可独立指定learner_model_id，候选继续绑定原actor并保留完整来源校验。外部receipt保留provider ID、原始usage、wire哈希；未知调用不重发，不伪造native FIT。流式reconcile复用解析器只读核验，不重复写盘/fsync；ACE在发送前核对算法completion_cap与API max_tokens一致。
+
+合并后的固定镜像105项功能测试通过（7.11秒），包括完整ACE Reflector→Curator→候选链、来源隔离、真实执行器配合伪网络、未知不重发、只读reconcile及预算不一致拒绝。测试不是外部研究收益。生产配置入口、provider tokenizer/窗口核验及另外三算法身份迁移仍未完成；外部接口不能以native tokenizer或测试常数冒充真实容量计量。
