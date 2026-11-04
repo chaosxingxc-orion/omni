@@ -103,6 +103,11 @@ def prepare(config_path):
         # Never drop duplicate rollouts or alter their empirical weight.
         selected.append({'query_id': query_id, 'group_sha256': group['group_sha256'], 'evidence': full})
     context = read(context_path)
+    relative = None
+    if profile['algorithm'] == 'tfgrpo':
+        from speech_aware_evidence_acquisition.rails.tfgrpo_external_proposals import prepare_context, relative_evidence
+        context = prepare_context(context, read(source)['document'])
+        relative = relative_evidence(selected)
     if profile['algorithm'] == 'gepa':
         from speech_aware_evidence_acquisition.rails.solver_prompt_candidate import validate_contract
         contract = context['contract']
@@ -124,6 +129,8 @@ def prepare(config_path):
     payload = {'algorithm': profile['algorithm'], 'context': request_context(context, profile['algorithm']), 'groups': selected,
                'min_candidates': profile['min_candidates'], 'max_candidates': profile['max_candidates'],
                'source_sha256': pin(source)['sha256'], 'rollout_multiplicity_preserved': True}
+    if relative is not None:
+        payload['relative_evidence'] = relative
     # Re-factor repeated full evidence losslessly; no token-based truncation.
     from speech_aware_evidence_acquisition.rails.grounded_synthesis_fusion import factor_development_evidence
     packed = factor_development_evidence(payload)
@@ -161,7 +168,7 @@ def load_prepared(root):
     return root, m, caller, read(root / 'request.json')
 
 
-def validate_proposals(text, profile, context, evidence_ids=None):
+def validate_proposals(text, profile, context, evidence_ids=None, relative=None):
     def pairs(items):
         result = {}
         for key, value in items:
@@ -187,9 +194,13 @@ def validate_proposals(text, profile, context, evidence_ids=None):
             validate_mutation(canonical(candidate).decode(), contract=contract,
                               expected_contract_sha256=contract['contract_sha256'],
                               expected_parent_sha256=context['parent']['candidate_sha256'])
+        elif profile['algorithm'] == 'tfgrpo':
+            from speech_aware_evidence_acquisition.rails.tfgrpo_external_proposals import validate_proposal
+            if relative is None:
+                raise ValueError('computed relative evidence required')
+            validate_proposal(candidate, context, relative)
         else:
-            fields = {'tfgrpo': {'id', 'target', 'evidence_query_ids', 'relative_feedback', 'hypothesis', 'intervention', 'counterexample', 'validation'},
-                      'ace': {'id', 'reflection', 'operations', 'validation'},
+            fields = {'ace': {'id', 'reflection', 'operations', 'validation'},
                       'reflexion': {'id', 'evidence_query_ids', 'hypothesis', 'memory', 'retry_protocol', 'transfer_scope', 'validation'}}
             if set(candidate) != fields[profile['algorithm']]:
                 raise ValueError('algorithm-specific candidate fields required')
@@ -201,6 +212,8 @@ def validate_proposals(text, profile, context, evidence_ids=None):
             raise ValueError('actual TRAIN evidence references required')
         if evidence_ids is not None and not set(refs) <= set(evidence_ids):
             raise ValueError('proposal references evidence not supplied in this request')
+    if profile['algorithm'] == 'tfgrpo' and len({sha(c['operations']) for c in candidates}) != len(candidates):
+        raise ValueError('duplicate TF-GRPO intervention operations')
     if profile['algorithm'] != 'gepa' and len({c['id'] for c in candidates}) != len(candidates):
         raise ValueError('duplicate candidate identity')
     return doc
@@ -223,8 +236,14 @@ def collect(root):
     if response['finish_reason'] != 'stop':
         raise ValueError('incomplete proposal response')
     payload = request_payload(request)
+    relative = None
+    if payload['algorithm'] == 'tfgrpo':
+        from speech_aware_evidence_acquisition.rails.tfgrpo_external_proposals import relative_evidence
+        relative = relative_evidence(payload['groups'])
+        if relative != payload.get('relative_evidence'):
+            raise ValueError('relative evidence differs from supplied full groups')
     proposals = validate_proposals(response['text'], read(root / 'profile.json'), read(root / 'context.json'),
-                                   evidence_ids=[g['query_id'] for g in payload['groups']])
+                                   evidence_ids=[g['query_id'] for g in payload['groups']], relative=relative)
     result = {'schema': 'saea-external-exploration-collected-v1', 'prepared_sha256': pin(root / 'prepared.json')['sha256'],
               'request_sha256': sha(request), 'response': observed, 'proposals': proposals,
               'semantic_validation': 'pending', 'deployment_compilation': 'pending', 'candidate_accepted': False}

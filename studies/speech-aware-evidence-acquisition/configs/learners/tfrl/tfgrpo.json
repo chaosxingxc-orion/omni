@@ -3,7 +3,7 @@
   "algorithm": "tfgrpo",
   "template": {
     "path": "../../prompts/learner/tfrl/tfgrpo.md",
-    "sha256": "ff0eb173416d50a72b8da55b97ccdc0ed134d02c8d85d7f6d23b92248c6228bb"
+    "sha256": "8a4216a449ab7c4509f6a25536443207c81a2e40f4374247f5a5878f233f0a3b"
   },
   "min_candidates": 2,
   "max_candidates": 8,
