@@ -182,3 +182,18 @@ def test_protocol_audit_rejects_valid_shape_with_wrong_inventory(fault):
     constrained={**lock,'decoding_params':{'seed':7,'response_format':fmt}}
     with pytest.raises(ValueError,match='governed TRAIN'):
         verify_pair(constrained,lock,expected_format=None if fault=='missing_authority' else expected)
+
+
+def test_protocol_compiler_requires_carrier_admission():
+    from dataclasses import replace
+    hooks = carrier_module_hooks(repo_root=ROOT)
+    with pytest.raises(cm.ConsumptionModuleConfigError, match="solver_protocol_formats"):
+        cm.compile_module(block(), replace(hooks, solver_protocol_formats=None), repo_root=ROOT)
+    with pytest.raises(cm.ConsumptionModuleConfigError, match="not admitted"):
+        cm.compile_module(block(), replace(hooks, solver_protocol_formats=frozenset()), repo_root=ROOT)
+    alternative = block()
+    alternative["columns"][0]["response_format_id"] = "other-carrier-output-v1"
+    compiled = cm.compile_module(alternative, replace(hooks, solver_protocol_formats=frozenset({"other-carrier-output-v1"})), repo_root=ROOT)
+    protocol = compiled.values()["native_episode"]["roles"]["solver"]["protocol_variants"]
+    assert protocol["arms"][0]["response_format_id"] == "other-carrier-output-v1"
+    assert parse_protocol_variants(protocol, role_kind="solver", phase_id="solver").arms[0].response_format_id == "other-carrier-output-v1"

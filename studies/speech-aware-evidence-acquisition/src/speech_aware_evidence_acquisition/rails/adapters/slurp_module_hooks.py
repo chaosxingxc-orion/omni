@@ -180,6 +180,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[4]
 def carrier_module_hooks(*, repo_root: Path | None = None) -> CarrierHooks:
     """SLURP's :class:`CarrierHooks`; ``repo_root`` locates the lock fragment."""
 
+    from ..slurp_solver_protocol import FORMAT_ID
+
     root = _REPO_ROOT if repo_root is None else Path(repo_root)
 
     def lock_layer() -> Mapping[str, object]:
@@ -255,6 +257,7 @@ def carrier_module_hooks(*, repo_root: Path | None = None) -> CarrierHooks:
         perception_template_variant_frame=PERCEPTION_TEMPLATE_VARIANT_FRAME,
         thinking_variant_frame={**PERCEPTION_TEMPLATE_VARIANT_FRAME, "block_path": ("native_episode", "roles", "perception", "thinking_variants"), "delivering_arm_id": "both-on", "twin_arm_id": "both-on-twin"},  # NX-T R1
         supply_variant_frame={**TEMPLATE_VARIANT_FRAME, "block_path": ("native_episode", "roles", "solver", "supply_variants")},  # E-S1
+        solver_protocol_formats=frozenset({FORMAT_ID}),
         decoding_variant_frame={**TEMPLATE_VARIANT_FRAME, "block_path": ("native_episode", "roles", "solver", "decoding_variants")},  # NX-T R4
         sampling_variant_frame={**PERCEPTION_TEMPLATE_VARIANT_FRAME, "block_path": ("native_episode", "roles", "perception", "sampling_variants"), "delivering_arm_id": "lock", "twin_arm_id": "aa"},  # decision 338
         construction=slurp_module_construction.construction_hooks(ROSTER_PIN_PATHS),  # the r01c variant (2026-10-12)

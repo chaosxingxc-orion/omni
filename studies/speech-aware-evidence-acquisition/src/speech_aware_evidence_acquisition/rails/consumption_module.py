@@ -445,6 +445,8 @@ class CarrierHooks:
     #: ``sampling_variants`` block, "node": "perception", "delivering_arm_id", "twin_arm_id"}``. ``None``: no analogue on this
     #: carrier, so a sampling column refuses. Declared LAST.
     sampling_variant_frame: Mapping[str, object] | None = None
+    #: Output formats explicitly admitted by this carrier for Solver protocol columns.
+    solver_protocol_formats: frozenset[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -1184,10 +1186,11 @@ def _parse_columns(columns: list, decls: list[ComponentDecl]) -> tuple[ColumnDec
             out.append(_parse_thinking_column(entry, field=field))
             continue
         if entry.get("kind") == "protocol":
-            from .slurp_solver_protocol import FORMAT_ID
-            if dict(entry) != {"kind": "protocol", "column_id": "constrained", "node": "solver", "response_format_id": FORMAT_ID}:
-                raise ConsumptionModuleConfigError("exact label-only Solver protocol column required")
-            out.append(ColumnDecl("constrained", "", STATE_ON, 0, None, kind="protocol", node="solver", response_format_id=FORMAT_ID))
+            format_id = entry.get("response_format_id")
+            if (not isinstance(format_id, str) or not format_id.strip()
+                    or dict(entry) != {"kind": "protocol", "column_id": "constrained", "node": "solver", "response_format_id": format_id}):
+                raise ConsumptionModuleConfigError("exact Solver protocol column required")
+            out.append(ColumnDecl("constrained", "", STATE_ON, 0, None, kind="protocol", node="solver", response_format_id=format_id))
             continue
         if entry.get("kind") == COLUMN_KIND_DECODING:
             out.append(_parse_decoding_column(entry, field=field))
@@ -2264,13 +2267,16 @@ def _parse_protocol_frame(raw, present):
 
 def _compile_protocol_columns(block, hooks, writer, layer):
     from .supply_variants import parse_protocol_variants
-    from .slurp_solver_protocol import FORMAT_ID
     if block.review_loop != "off" or block.solver_tool_access:
         raise ConsumptionModuleConfigError("protocol pair requires tool-free review-off profile")
     frame = _require_hook(hooks, "decoding_variant_frame", "protocol-columns")
+    admitted_formats = _require_hook(hooks, "solver_protocol_formats", "protocol-columns")
+    format_id = block.protocol_columns[0].response_format_id
+    if format_id not in admitted_formats:
+        raise ConsumptionModuleConfigError("Solver protocol format is not admitted by carrier hooks")
     pf = block.protocol_frame
     protocol = {"node": "solver", "arms": [
-        {"arm_id": "constrained", "response_format_id": FORMAT_ID},
+        {"arm_id": "constrained", "response_format_id": format_id},
         {"arm_id": "lock", "deliver": True}],
         **{k: pf[k] for k in ("max_supplied_items", "fit_estimate", "template_tokens")}}
     parse_protocol_variants(protocol, role_kind="solver", phase_id="solver")

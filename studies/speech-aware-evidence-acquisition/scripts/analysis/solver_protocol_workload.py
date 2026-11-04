@@ -83,7 +83,9 @@ class ProtocolWorkload(PairWorkload):
         exp['population'].update(count=self.ROWS,roster_receipt=self.ROSTER,split_identity_hash=roster['split_identity_hash'])
         exp['populations']=[{'dataset_fragment':observation.DATASET,'ids':ids}]
         exp['execution_plan'].update(planned_model_calls=6*self.ROWS,planned_speech_audio_seconds=math.ceil(6*math.fsum(r['audio_seconds'] for r in items)))
-        exp['stage3_algorithm']={'id':'solver-protocol-paired-v1','operators_used':[],'native_learning_seal':False,'description':'Protocol axis engineering ablation, not a TFRL learning algorithm.'}
+        exp['stage3_algorithm']={'id':'none','operators_used':[],'note':'Protocol axis engineering ablation, not a TFRL learning algorithm.'}
+        from speech_aware_evidence_acquisition.core.stage3_algorithms import validate_stage3_algorithm_label
+        validate_stage3_algorithm_label(exp['stage3_algorithm'], cell=self.RUN)
         exp['stage3_measurement'].update(rows=self.ROWS,read_roster=roster['roster_id'],claims_benefit=False,expected_effect_pp=0,note=base['what_this_is'])
         return base,exp,roster,view,binding
 

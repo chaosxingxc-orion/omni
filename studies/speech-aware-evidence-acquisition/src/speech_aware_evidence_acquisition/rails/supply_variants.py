@@ -1558,18 +1558,20 @@ def parse_decoding_variants(
 
 def parse_protocol_variants(block, *, role_kind, phase_id):
     """Independent output-protocol axis; baseline messages and sampling stay fixed."""
-    from .slurp_solver_protocol import FORMAT_ID
     if role_kind != "solver" or not isinstance(block, Mapping) or set(block) != DECODING_VARIANT_BLOCK_KEYS:
         raise SupplyVariantError("protocol_variants requires exact Solver protocol frame")
     if block["node"] != "solver" or not isinstance(phase_id, str) or not phase_id:
         raise SupplyVariantError("protocol_variants requires Solver phase")
-    if block["arms"] != [{"arm_id": "constrained", "response_format_id": FORMAT_ID}, {"arm_id": "lock", "deliver": True}]:
+    rows = block["arms"]
+    format_id = rows[0].get("response_format_id") if isinstance(rows, list) and rows and isinstance(rows[0], Mapping) else None
+    if (not isinstance(format_id, str) or not format_id.strip()
+            or rows != [{"arm_id": "constrained", "response_format_id": format_id}, {"arm_id": "lock", "deliver": True}]):
         raise SupplyVariantError("protocol_variants requires constrained label schema then unchanged delivering lock")
     count = _positive_int(block["max_supplied_items"], field="protocol.max_supplied_items")
     tokens = _positive_int(block["template_tokens"], field="protocol.template_tokens")
     fit = parse_supply_variant_fit_estimate(block["fit_estimate"])
     arms = (SupplyVariantArm(arm_id="constrained", deliver=False, knobs=(), max_supplied_items=count,
-                            template_tokens=tokens, response_format_id=FORMAT_ID),
+                            template_tokens=tokens, response_format_id=format_id),
             SupplyVariantArm(arm_id="lock", deliver=True, knobs=(), max_supplied_items=count, template_tokens=tokens))
     if any(fit.estimated_prompt_tokens(a) > fit.prompt_limit_tokens for a in arms):
         raise SupplyVariantError("protocol estimate exceeds serving slot")
