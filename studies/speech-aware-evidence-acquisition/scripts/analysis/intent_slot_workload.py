@@ -50,6 +50,7 @@ class NodeWorkload(PairWorkload):
             expanded=split_graph(base)
             if arm=='enhanced-p-slot-decision':
                 base=expanded
+                base.pop('carrier_lock_key',None)  # Dataset owns the carrier in composed configuration.
                 base['thinking_policy']['slot']=copy.deepcopy(observation.THINKING_ARMS['baseline'])
             else:
                 base['phase_material']['perception']=expanded['phase_material']['perception']
