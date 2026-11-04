@@ -226,6 +226,9 @@ def validate(repo,data,name,spec,exp,view):
                 or len(actual['audio_sha256']) != 64 or actual['audio_seconds'] != row['audio_seconds']):
             raise ValueError('real audio custody changed')
     base=read(repo/f'configs/baseline/{NAME}.json'); fit=base['native_contact_fit']
+    policy = paired.evaluation_thinking_policy(repo, evaluation)
+    if policy is not None and base.get('thinking_policy') != policy:
+        raise ValueError('registered paired thinking policy changed')
     if (scientific_hash(base) != spec['scientific_baseline_sha256']
             or not native_contact_custody_enabled({**base,'transport':'vllm','carrier_lock_key':'slurp'})
             or fit != {'run_id':RUN+'-FIT','attempt_id':'fit-v1','contact_cap':936,'max_speech_packets':1}

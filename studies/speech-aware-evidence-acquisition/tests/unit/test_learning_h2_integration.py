@@ -86,7 +86,8 @@ def test_shared_dispatch_rejects_drift(shared_workload, fault):
     with pytest.raises(ValueError): registered_workload.validate_workload(repo, data, spec['cell'], spec)
 
 
-def test_two_configurations_derive_without_mutating_globals(release, monkeypatch):
+@pytest.mark.parametrize('explicit_policy', [False, True])
+def test_two_configurations_derive_without_mutating_globals(release, monkeypatch, explicit_policy):
     _, data, params = release
     params['consumer_ids'] = [r['sample_id'] for r in job.read(ROOT / job.ROSTER)['items']]
     params['base_template']['relpath'] = job.read(ROOT / 'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json')['phase_material']['solver']['instruction_template']
@@ -95,6 +96,7 @@ def test_two_configurations_derive_without_mutating_globals(release, monkeypatch
     results = []
     for suffix, strategy in zip(('one', 'two'), paired.EVALUATION_METHODS):
         config = evaluation(suffix); config['producer_strategy'] = strategy; p = copy.deepcopy(params)
+        if explicit_policy: config['thinking_policy'] = copy.deepcopy(NODE_POLICY)
         bind_producer(data, p, config)
         p['candidate_release'] = config['candidate_release']; p['template']['relpath'] = config['template']
         result = paired.derive(ROOT, data, p, fit_estimate={'slot_tokens':24576,
@@ -104,6 +106,9 @@ def test_two_configurations_derive_without_mutating_globals(release, monkeypatch
         assert result['experiment']['stage3_algorithm']['id'] == paired.EVALUATION_METHODS[strategy][0]
         assert result['evaluation']['rows'] == 312
         assert result['evaluation']['normal_generation_calls'] == 936
+        if explicit_policy:
+            assert result['baseline']['thinking_policy'] == NODE_POLICY
+            assert result['baseline']['native_episode']['roles']['solver']['max_iterations'] == 1
     assert results == ['SAEA-ACE-SHARED-H2-ONE', 'SAEA-ACE-SHARED-H2-TWO']
     assert (paired.NAME, paired.RUN, job.NAME, job.RUN) == original
 
@@ -173,3 +178,65 @@ def test_h2_rejects_producer_mislabel_even_with_updated_pins(shared_workload, fa
     (repo / f'configs/experiment/{spec["cell"]}.json').write_bytes(job.raw(exp))
     with pytest.raises(ValueError, match='producer|program'):
         registered_workload.validate_workload(repo, data, spec['cell'], spec)
+
+
+NODE_POLICY = {
+    'perception': {'enable_thinking': False, 'answer_reserve_tokens': 1024},
+    'solver': {'enable_thinking': True, 'reasoning_budget_tokens': 3072, 'answer_reserve_tokens': 1024},
+}
+
+
+def thinking_model():
+    from speech_aware_evidence_acquisition.core.reasoning_knobs import THINKING_FRAGMENT_GUARD
+    return {'reasoning_content_guard': THINKING_FRAGMENT_GUARD,
+            'decoding_params': {'temperature': 0, 'seed': 20260913, 'max_tokens': 16384},
+            'reasoning_budget_tokens': 3072, 'answer_reserve_tokens': 13312,
+            'enable_thinking': True}
+
+
+def test_explicit_h2_policy_resolves_runtime_wire_not_learning_ceiling(tmp_path):
+    from speech_aware_evidence_acquisition.core.reasoning_knobs import fold_into_decoding, resolve_node_decoding
+    config = evaluation(); config['thinking_policy'] = copy.deepcopy(NODE_POLICY)
+    model = thinking_model(); path = tmp_path / ('configs/model/' + config['runtime']['model_fragment'] + '.json')
+    path.parent.mkdir(parents=True); path.write_bytes(job.raw(model))
+    policy = paired.evaluation_thinking_policy(tmp_path, config)
+    base = fold_into_decoding(model)['decoding_params']
+    p = resolve_node_decoding(base, policy, 'perception', cap=16384)
+    solver = resolve_node_decoding(base, policy, 'solver', cap=16384)
+    assert p['max_tokens'] == 1024 and p['chat_template_kwargs']['enable_thinking'] is False
+    assert 'thinking_budget_tokens' not in p
+    assert solver['max_tokens'] == 4096 and solver['thinking_budget_tokens'] == 3072
+    assert solver['chat_template_kwargs']['enable_thinking'] is True
+    assert solver['temperature'] == p['temperature'] == 0
+    policy['solver']['answer_reserve_tokens'] = 1
+    assert config['thinking_policy'] == NODE_POLICY
+    assert paired.evaluation_thinking_policy(tmp_path, evaluation()) is None
+
+
+@pytest.mark.parametrize('fault', ['missing_solver', 'extra_node', 'oversized', 'contradictory'])
+def test_h2_optional_policy_rejects_incoherent_budget(tmp_path, fault):
+    config = evaluation(); config['thinking_policy'] = copy.deepcopy(NODE_POLICY)
+    if fault == 'missing_solver': config['thinking_policy'].pop('solver')
+    elif fault == 'extra_node': config['thinking_policy']['reviewer'] = {'enable_thinking': False, 'answer_reserve_tokens': 1}
+    elif fault == 'oversized': config['thinking_policy']['solver']['reasoning_budget_tokens'] = 16384
+    else: config['thinking_policy']['perception']['reasoning_budget_tokens'] = 1
+    path = tmp_path / ('configs/model/' + config['runtime']['model_fragment'] + '.json')
+    path.parent.mkdir(parents=True); path.write_bytes(job.raw(thinking_model()))
+    with pytest.raises(ValueError): paired.evaluation_thinking_policy(tmp_path, config)
+
+
+@pytest.mark.parametrize('drift', [False, True])
+def test_h2_registered_dispatch_preserves_explicit_paired_policy(shared_workload, drift):
+    repo, data, spec, exp, view, base = shared_workload
+    config = spec['evaluation_config']; config['thinking_policy'] = copy.deepcopy(NODE_POLICY)
+    model = {**thinking_model(), 'runtime_receipt': job.RECEIPT}
+    (repo / ('configs/model/' + job.MODEL + '.json')).write_bytes(job.raw(model))
+    base['thinking_policy'] = copy.deepcopy(NODE_POLICY)
+    if drift: base['thinking_policy']['solver']['answer_reserve_tokens'] = 2048
+    spec['scientific_baseline_sha256'] = job.scientific_hash(base)
+    (repo / ('configs/baseline/' + config['name'] + '.json')).write_bytes(job.raw(base))
+    if drift:
+        with pytest.raises(ValueError, match='paired thinking policy changed'):
+            registered_workload.validate_workload(repo, data, spec['cell'], spec)
+    else:
+        assert registered_workload.validate_workload(repo, data, spec['cell'], spec) == 312

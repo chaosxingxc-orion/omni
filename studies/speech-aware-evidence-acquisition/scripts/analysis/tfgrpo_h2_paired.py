@@ -52,18 +52,35 @@ def verify_producer(params, *, data, evaluation):
 def evaluation_identity(config=None):
     if config is None:
         return {'name':NAME,'run_id':RUN,'template':'probes/tfgrpo-fixed-p-h1-experience-v1.txt'}
-    if (not isinstance(config,dict) or set(config) != {'schema','name','run_id','template','producer_strategy','runtime','candidate_release'}
+    if (not isinstance(config,dict) or set(config) - {'thinking_policy'} != {'schema','name','run_id','template','producer_strategy','runtime','candidate_release'}
             or config['schema'] != EVALUATION_SCHEMA or config['producer_strategy'] not in EVALUATION_METHODS
             or not re.fullmatch('[a-z0-9][a-z0-9-]*',str(config['name']))
             or not re.fullmatch('SAEA-[A-Z0-9][A-Z0-9_-]*',str(config['run_id']))
             or config['name']==NAME or config['run_id']==RUN
             or config['template'] != 'probes/'+config['name']+'-experience.txt'):
         raise ValueError('exact independent implemented learning evaluation identity required')
+    if 'thinking_policy' in config:
+        policy = config['thinking_policy']
+        if not isinstance(policy, dict) or set(policy) != {'perception', 'solver'}:
+            raise ValueError('explicit paired perception and solver policy required')
     # Full pin syntax is checked by the shared consumption contract.
     pin=config['candidate_release']
     if not isinstance(pin,dict) or set(pin)!={'relpath','sha256'}:
         raise ValueError('explicit independent candidate release required')
     return config
+
+
+def evaluation_thinking_policy(repo, evaluation):
+    """Validate optional node budgets against the real resident fragment."""
+    if evaluation is None or 'thinking_policy' not in evaluation:
+        return None
+    identity = evaluation_identity(evaluation)
+    from speech_aware_evidence_acquisition.core.reasoning_knobs import (
+        validate_fragment_knobs, validate_thinking_policy)
+    model = json.loads((Path(repo) / ('configs/model/' + identity['runtime']['model_fragment'] + '.json')).read_bytes())
+    validate_fragment_knobs(model)
+    validate_thinking_policy(identity['thinking_policy'], model)
+    return copy.deepcopy(identity['thinking_policy'])
 
 
 def cumulative_supply_bound(base):
@@ -110,6 +127,9 @@ def derive(repo,data,params,*,fit_estimate,base_template_tokens,learned_template
     verify_producer(params,data=data,evaluation=evaluation)
     base=json.loads((repo/'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json').read_bytes())
     exp=json.loads((repo/'configs/experiment/slurp-tfrl-hardset-a0-observation-r1-v1.json').read_bytes())
+    policy = evaluation_thinking_policy(repo, evaluation)
+    if policy is not None:
+        base['thinking_policy'] = policy
     block=copy.deepcopy(base['native_episode']['consumption_module'])
     before=cm.compile_module(block,carrier_module_hooks(repo_root=repo),repo_root=repo)
     if before.values()['phase_material']['solver']['instruction_template']!=params['base_template']['relpath']:
