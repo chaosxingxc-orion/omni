@@ -54,7 +54,7 @@ def load_config(path):
     keys = {'schema', 'container_name', 'image', 'repo_path', 'expected_commit', 'receipt_dir',
             'argv', 'working_directory', 'network', 'pid_host', 'cpuset_cpus', 'environment',
             'mounts', 'create_directories', 'allowed_create_roots', 'required_inputs', 'monitor_interval_seconds'}
-    require(isinstance(doc, dict) and set(doc) - {'generation_lease'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
                          ('image', r'sha256:[a-f0-9]{64}'), ('expected_commit', r'[a-f0-9]{40}'),
                          ('cpuset_cpus', r'[0-9]+(?:[-,][0-9]+)*')]:
@@ -83,6 +83,14 @@ def load_config(path):
     for pin in doc['required_inputs']:
         require(set(pin) == {'path', 'sha256'} and isinstance(pin['sha256'], str) and re.fullmatch(r'[a-f0-9]{64}', pin['sha256']), 'exact input pin required')
         absolute(pin['path'])
+    if 'fresh_outputs' in doc:
+        outputs = doc['fresh_outputs']
+        require(isinstance(outputs, list) and outputs and all(isinstance(p, str) for p in outputs)
+                and len(outputs) == len(set(outputs)), 'distinct fresh output paths required')
+        for output in outputs:
+            mapped = output_path(doc, output)
+            require(any(mapped.resolve().is_relative_to(r) for r in roots),
+                    'fresh output escapes owned roots')
     if 'generation_lease' in doc:
         lease = doc['generation_lease']
         require(isinstance(lease, dict) and set(lease) == {'lock_directory'}, 'exact generation lease check required')
@@ -95,6 +103,30 @@ def load_config(path):
         mapped = Path(mount['source']) / logical.relative_to(mount['target'])
         require(locks == mapped, 'generation lease directory differs from runtime mount')
     return doc
+
+
+def output_path(doc, value):
+    """Map a container output through its most specific writable bind mount."""
+    target = absolute(value)
+    mounts = [m for m in doc['mounts'] if target.is_relative_to(Path(m['target']))]
+    require(mounts, 'fresh output requires a bind mount')
+    mount = max(mounts, key=lambda m: len(Path(m['target']).parts))
+    require(not mount['readonly'] and target != Path(mount['target']),
+            'fresh output must be below a writable bind mount')
+    source = Path(mount['source'])
+    mapped = source / target.relative_to(mount['target'])
+    require(mapped.resolve().is_relative_to(source.resolve()), 'fresh output escapes mount source')
+    return mapped
+
+
+def fresh_output_conflicts(doc):
+    """Read-only advisory checks; runtime O_EXCL/attempt guards remain authoritative."""
+    conflicts = []
+    for target in doc.get('fresh_outputs', []):
+        mapped = output_path(doc, target)
+        if os.path.lexists(mapped):
+            conflicts.append({'container_path': target, 'host_path': str(mapped)})
+    return conflicts
 
 
 def generation_readiness(doc):
@@ -154,6 +186,9 @@ def preflight(doc):
     for pin in doc['required_inputs']:
         require(Path(pin['path']).is_file() and digest(pin['path']) == pin['sha256'], 'required input absent or changed: ' + pin['path'])
     mount_checks(doc)
+    conflicts = fresh_output_conflicts(doc)
+    require(not conflicts, 'fresh output conflicts; inspect and preserve prior attempts: '
+            + json.dumps(conflicts, sort_keys=True))
 
 
 def command(doc, config_sha, runner_sha):

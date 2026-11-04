@@ -133,6 +133,60 @@ def lease_configured(tmp_path):
     return path, doc, locks
 
 
+def test_fresh_outputs_report_all_conflicts_before_dispatch(tmp_path, monkeypatch):
+    path, doc = configured(tmp_path)
+    doc['mounts'][0]['readonly'] = False
+    doc['fresh_outputs'] = ['/data/generation', '/data/timing.jsonl', '/data/runs/run/attempt']
+    path.write_text(json.dumps(doc))
+    (tmp_path/'data/generation').mkdir()
+    (tmp_path/'data/timing.jsonl').write_text('historical timing')
+    run_dir = tmp_path/'data/runs/run/attempt'; run_dir.mkdir(parents=True)
+    (run_dir/'flight-receipts.json').write_text('preflight only')
+    docker = Docker(doc); monkeypatch.setattr(m, 'run', docker)
+    m.execute(path, 'layout')
+    with pytest.raises(ValueError, match='fresh output conflicts') as error:
+        m.execute(path, 'launch')
+    assert all(p in str(error.value) for p in doc['fresh_outputs'])
+    assert docker.launches == 0
+    assert not (Path(doc['receipt_dir'])/'launch-intent.json').exists()
+    assert (tmp_path/'data/timing.jsonl').read_text() == 'historical timing'
+    assert (run_dir/'flight-receipts.json').read_text() == 'preflight only'
+
+
+def test_fresh_outputs_nested_mount_and_existing_launch_are_preserved(tmp_path, monkeypatch):
+    path, doc = configured(tmp_path)
+    nested = tmp_path/'telemetry'; nested.mkdir()
+    (tmp_path/'data/telemetry').mkdir()
+    doc['mounts'].append({'source': str(nested), 'target': '/data/telemetry', 'readonly': False})
+    doc['fresh_outputs'] = ['/data/telemetry/timing.jsonl']
+    path.write_text(json.dumps(doc))
+    docker = Docker(doc); monkeypatch.setattr(m, 'run', docker)
+    m.execute(path, 'layout')
+    assert m.execute(path, 'launch')['state'] == 'running'
+    (nested/'timing.jsonl').write_text('now produced by current run')
+    assert m.execute(path, 'launch')['reused_launch']
+    assert docker.launches == 1
+    assert m.fresh_output_conflicts(doc)[0]['host_path'] == str(nested/'timing.jsonl')
+
+
+@pytest.mark.parametrize('fault', ['readonly', 'unmapped', 'mount-root', 'escape', 'dangling'])
+def test_fresh_output_paths_reject_invalid_or_existing_targets(tmp_path, monkeypatch, fault):
+    path, doc = configured(tmp_path)
+    doc['mounts'][0]['readonly'] = False
+    doc['fresh_outputs'] = ['/data/output']
+    if fault == 'readonly': doc['mounts'][0]['readonly'] = True
+    elif fault == 'unmapped': doc['fresh_outputs'] = ['/unmapped/output']
+    elif fault == 'mount-root': doc['fresh_outputs'] = ['/data']
+    elif fault == 'escape': (tmp_path/'data/output').symlink_to('/outside-owned-root')
+    else: (tmp_path/'data/output').symlink_to(tmp_path/'data/missing')
+    path.write_text(json.dumps(doc))
+    docker = Docker(doc); monkeypatch.setattr(m, 'run', docker)
+    with pytest.raises(ValueError):
+        m.execute(path, 'layout')
+        m.execute(path, 'launch')
+    assert docker.launches == 0
+
+
 def test_stale_metadata_blocks_before_intent_without_mutating_guard(tmp_path, monkeypatch):
     path, doc, locks = lease_configured(tmp_path)
     docker = Docker(doc); monkeypatch.setattr(m, 'run', docker)

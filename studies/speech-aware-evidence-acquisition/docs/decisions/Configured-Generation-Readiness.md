@@ -24,3 +24,15 @@
 仅改变新 launch 配置的名称、receipt/output 和 attempt，不需要复制模型或整棵树。名单/科学契约改变需要新发布，不能利用恢复绕过来源审核。
 
 本次两个失败 v2 的实际共享 attempt 路径均不存在：错误发生在 attempt 建立前，不能直接走要求 ABORTED 的标准 resume，也不能编造 ABORTED。若核验原始身份下 attempt、run、journal 均未建立且所有请求已知未发，清算共享 lease 后可用原冻结树/注册身份执行尚未开始的首次 generation，新建 launch/receipt/out 身份保存失败启动历史；若不能证明该条件则停止并补证。单纯为了绕过旧 launch intent 不需要复制整棵树并重做 material/stage/prepare。当前活跃 v3 不回退、不重启。
+
+## 新启动的独占输出检查
+
+新配置可声明`fresh_outputs`，列出**容器内**必须尚不存在的输出路径，例如：
+
+```json
+{"fresh_outputs":["/data/work/codex/job/generation-new", "/telemetry/timing-generation.jsonl", "/telemetry/timing-generation.jsonl.config.json", "/data/attempts/RUN/generation-v1.json", "/data/runs/RUN/generation-v1"]}
+```
+
+名单根据实际启动入口填写：首次生成要求新的attempt/run；正式resume只列目标attempt/run，不列已存在的来源attempt。启动器按最长目标路径匹配到真实可写bind mount，验证所属目录，集中报告所有已存在路径（含悬空链接）。在写launch intent和调用Docker前拒绝，不创建、删除或归档这些路径。已有容器或未知launch intent继续原对账路径，不被fresh检查误触发重复运行。
+
+该检查为可选配置，旧冻结任务不变；旧配置未声明则没有此项覆盖。它是启动前诊断，不能消除检查后的并发竞争，运行时O_EXCL、attempt与lease仍为最终权威。不要因为path冲突自动删目录或重发请求。实际恢复中出现“仅preflight/preprocess receipt已写、attempt尚未建立”的状态时，需要同guard下证明终态、无请求/准备产物、服务静默，原目录完整归档后再接续；不伪造ABORTED，也不反复重prepare。
