@@ -59,7 +59,7 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
                 max_prompt_tokens_total, max_completion_tokens_total, reflector_contract=None,
                 compact_text_chars=None, compact_reason_chars=None,
                 evidence_view='compact-v1', development_instruction=None, development_material=None,
-                invalid_delta_policy='stop-preserve-v1'):
+                invalid_delta_policy='stop-preserve-v1', invalid_signal_policy='stop-preserve-v1'):
     """Accept native-verified original batch; bind all groups once, no filtering.
 
     Source is the existing load_finalized_shards-compatible custody, including
@@ -86,6 +86,10 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
     require(evidence_view in ('compact-v1', 'full-query-v1'), 'unsupported ACE evidence view')
     require(invalid_delta_policy in ('stop-preserve-v1', 'reject-collision-keep-parent-v1'),
             'unsupported ACE invalid delta policy')
+    require(invalid_signal_policy in ('stop-preserve-v1', INVALID_SIGNAL_QUARANTINE),
+            'unsupported ACE invalid signal policy')
+    if invalid_signal_policy != 'stop-preserve-v1':
+        bounds['invalid_signal_policy'] = invalid_signal_policy
     if invalid_delta_policy != 'stop-preserve-v1':
         bounds['invalid_delta_policy'] = invalid_delta_policy
     if development_material is not None:
@@ -262,6 +266,9 @@ def _compact_text(value, limit, field, *, empty=False):
             'bounded compact ACE '+field+' required')
 
 
+INVALID_SIGNAL_QUARANTINE = 'quarantine-invalid-associations-v1'
+
+
 def validate_reflection(text, group, items, max_findings, reflector_contract=None, *, bounds=None):
     require(reflector_contract in CONTRACTS, 'unsupported ACE reflector contract')
     compact = reflector_contract == COMPACT_CONTRACT_V3
@@ -306,12 +313,30 @@ def validate_reflection(text, group, items, max_findings, reflector_contract=Non
         require(fid not in seen and row['confidence'] in ('tentative', 'observed'), 'duplicate/invalid finding')
         seen.add(fid); require_text(row['lesson'], 'lesson'); refs(row)
     seen = set()
-    for row in result['signals']:
+    quarantined, valid = [], []
+    policy = (bounds or {}).get('invalid_signal_policy', 'stop-preserve-v1')
+    require(policy in ('stop-preserve-v1', INVALID_SIGNAL_QUARANTINE),
+            'unsupported invalid signal policy')
+    for index, row in enumerate(result['signals']):
         require(isinstance(row, dict) and set(row) == {'item_id', 'label', 'trajectory_ids', 'reason'},
                 'exact association schema required')
-        require(row['item_id'] in items and row['item_id'] not in seen
-                and row['label'] in ('helpful', 'harmful', 'uncertain'), 'unknown or duplicate item association')
-        seen.add(row['item_id']); require_text(row['reason'], 'association reason'); refs(row)
+        require(isinstance(row['item_id'], str) and bool(row['item_id'].strip())
+                and row['label'] in ('helpful', 'harmful', 'uncertain'), 'invalid signal identity or label')
+        require_text(row['reason'], 'association reason'); refs(row)
+        item_id = row['item_id']
+        if item_id not in items or item_id in seen:
+            if policy != INVALID_SIGNAL_QUARANTINE:
+                raise LearningError('unknown or duplicate item association')
+            quarantined.append({'index': index, 'signal': copy.deepcopy(row),
+                'reason': 'unknown-item-id' if item_id not in items else 'duplicate-item-id'})
+            continue
+        seen.add(item_id); valid.append(row)
+    if policy == INVALID_SIGNAL_QUARANTINE:
+        result['signals'] = valid
+        result['signal_quarantine'] = {'schema': 'saea-ace-signal-quarantine-v1',
+            'policy': policy, 'response_text_sha256': hashlib.sha256(text.encode()).hexdigest(),
+            'current_items_sha256': sha(items), 'rejected': quarantined,
+            'rejected_count': len(quarantined), 'accepted_count': len(valid)}
     return result
 
 

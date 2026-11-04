@@ -105,6 +105,19 @@ def test_compact_invalid_known_response_is_not_resampled(tmp_path):
     assert len(calls) == 1
 
 
+def test_compact_invalid_signal_can_be_quarantined_only_by_explicit_policy():
+    _, doc = fixture(reflector_contract=m.COMPACT_CONTRACT_V3, empty_parent=True)
+    response = compact_reflection(); response['signals'][0]['item_id'] = 'date'
+    checked = m.validate_reflection(json.dumps(response), doc['groups'][0], {}, 4,
+        m.COMPACT_CONTRACT_V3, bounds={**doc['bounds'],
+            'invalid_signal_policy': m.INVALID_SIGNAL_QUARANTINE})
+    assert checked['signals'] == []
+    assert checked['signal_quarantine']['rejected'][0]['signal']['item_id'] == 'date'
+    assert checked['signal_quarantine']['rejected'][0]['reason'] == 'unknown-item-id'
+    with pytest.raises(ValueError):
+        m.validate_reflection(json.dumps(response), doc['groups'][0], {}, 4,
+            m.COMPACT_CONTRACT_V3, bounds=doc['bounds'])
+
 def test_compact_empty_result_and_empty_library_signals():
     _, doc = fixture(reflector_contract=m.COMPACT_CONTRACT_V3, empty_parent=True)
     empty = {'schema': 'saea-ace-reflection-v3', 'findings': [], 'signals': []}
@@ -177,3 +190,48 @@ def test_real_failure_shape_two_findings_three_signals_preserves_known_response(
     responses = list(tmp_path.rglob('*.response.json'))
     assert responses
     assert any('signals' in path.read_text() for path in responses)
+
+
+@pytest.mark.parametrize('fault', ['label', 'foreign_ref', 'empty_reason', 'nonstr_id', 'oversize'])
+def test_quarantine_never_weakens_other_protocol_checks(fault):
+    _, doc = fixture(reflector_contract=m.COMPACT_CONTRACT_V3,
+        invalid_signal_policy=m.INVALID_SIGNAL_QUARANTINE)
+    value = compact_reflection(); signal = value['signals'][0]; signal['item_id'] = 'foreign'
+    if fault == 'label': signal['label'] = 'invented'
+    elif fault == 'foreign_ref': signal['refs'] = ['foreign']
+    elif fault == 'empty_reason': signal['reason'] = ''
+    elif fault == 'nonstr_id': signal['item_id'] = []
+    else: signal['reason'] = 'x' * 121
+    with pytest.raises(ValueError):
+        m.validate_reflection(json.dumps(value), doc['groups'][0], doc['parent']['items'], 4,
+            m.COMPACT_CONTRACT_V3, bounds=doc['bounds'])
+
+
+def test_explicit_quarantine_replay_keeps_cost_and_prevents_unknown_metadata(tmp_path):
+    answers = {(i, stage): compact_reflection(i) if stage == m.REFLECT else compact_delta()
+               for i in range(2) for stage in (m.REFLECT, m.CURATE)}
+    for i in range(2): answers[i, m.REFLECT]['signals'][0]['item_id'] = 'date'
+    _, doc, run, calls, _ = runner(tmp_path, reflector_contract=m.COMPACT_CONTRACT_V3,
+        invalid_signal_policy=m.INVALID_SIGNAL_QUARANTINE, answers=answers)
+    first = run()
+    assert run() == first and len(calls) == 4
+    assert first['cumulative_known_usage']['calls'] == 316
+    for update in first['updates']:
+        reflection = update['reflection']
+        assert reflection['signals'] == []
+        assert reflection['signal_quarantine']['rejected_count'] == 1
+        assert reflection['signal_quarantine']['rejected'][0]['signal']['item_id'] == 'date'
+    curator = json.loads(calls[1]['messages'][1]['content'])
+    assert curator['reflection']['signals'] == []
+    assert curator['reflection']['signal_quarantine']['rejected_count'] == 1
+
+
+def test_quarantine_duplicate_signal_keeps_only_first_and_records_second():
+    _, doc = fixture(reflector_contract=m.COMPACT_CONTRACT_V3,
+        invalid_signal_policy=m.INVALID_SIGNAL_QUARANTINE)
+    response = compact_reflection(); response['signals'] *= 2
+    checked = m.validate_reflection(json.dumps(response), doc['groups'][0], doc['parent']['items'], 4,
+        m.COMPACT_CONTRACT_V3, bounds=doc['bounds'])
+    assert len(checked['signals']) == 1
+    assert checked['signal_quarantine']['rejected'][0]['index'] == 1
+    assert checked['signal_quarantine']['rejected'][0]['reason'] == 'duplicate-item-id'

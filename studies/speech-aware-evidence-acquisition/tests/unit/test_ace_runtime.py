@@ -253,3 +253,24 @@ def test_compact_v3_dispatch_and_registration_reconstruction(tmp_path,monkeypatc
     result = runtime.run_phases()
     assert result['contact_count'] == len(transport.calls) == len(fits) == 2
     assert runtime.seal()['cost']['calls_used'] == 2
+
+
+def test_quarantine_registration_and_native_adapter_preserve_original_response(tmp_path, monkeypatch):
+    runtime, transport, captured, source, spec, fits = setup(tmp_path, monkeypatch,
+        invalid_signal_policy=ace.INVALID_SIGNAL_QUARANTINE)
+    def answer(payload):
+        stage = json.loads(payload['history'][0]['content'])['stage']
+        value = reflection() if stage == ace.REFLECT else delta()
+        if stage == ace.REFLECT:
+            value['signals'][0]['item_id'] = 'date'
+        return json.dumps(value)
+    transport._responder = answer
+    result = runtime.run_phases()
+    assert result['contact_count'] == len(transport.calls) == len(fits) == 2
+    candidate = json.loads((runtime._run_dir()/'tfgrpo/learner/candidate.json').read_bytes())
+    checked = candidate['updates'][0]['reflection']
+    assert checked['signals'] == [] and checked['signal_quarantine']['rejected_count'] == 1
+    original = [json.loads(p.read_bytes())['response']['text']
+        for p in (runtime._run_dir()/'tfgrpo/learner/contacts').glob('*.response.json')]
+    reflected = next(json.loads(text) for text in original if 'findings' in json.loads(text))
+    assert reflected['signals'][0]['item_id'] == 'date'
