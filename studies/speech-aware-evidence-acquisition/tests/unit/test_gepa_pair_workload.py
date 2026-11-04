@@ -132,6 +132,26 @@ def test_pair_stage_and_register_use_shared_contract_and_complete_three_arm_reci
     assert (path/'docs/exposure-ledger.md').read_text().startswith('old cost\n')
 
 
+def test_stage_refuses_bad_reader_label_before_publishing(repo, monkeypatch):
+    from speech_aware_evidence_acquisition import contracts
+    from speech_aware_evidence_acquisition.core.bundle import git_commit
+    from speech_aware_evidence_acquisition.core.stage3_algorithms import Stage3AlgorithmError
+    job, _ = derived(repo, monkeypatch)
+    path, data, _ = repo
+    values = job.derive(path, data, job.config['material'])
+    values[1]['stage3_algorithm'] = {'id': 'shared-rollout'}
+    monkeypatch.setattr(job, 'derive', lambda *a: values)
+    monkeypatch.setattr(contracts, 'assert_execution_environment', lambda: None)
+    monkeypatch.setattr(git_commit, 'require_clean_study_repo', lambda *_: 'a'*40)
+    out = data/'work/codex/stage-bad-label'
+    (path/'docs').mkdir(exist_ok=True)
+    (path/'docs/exposure-ledger.md').write_text('No prior expenditure.\n')
+    with pytest.raises(Stage3AlgorithmError, match='note'):
+        job.stage(path, data, job.config['material'], out)
+    assert not out.exists()
+    assert not (path/f'configs/experiment/{job.NAME}.json').exists()
+
+
 def test_pair_registered_width_uses_config_not_historical96():
     from registered_workload import assert_execution_binding
     cfg=config();spec={'workload_kind':m.KIND,'job_config':cfg,'execution':cfg['execution'],'profile':'profile'}

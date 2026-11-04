@@ -48,6 +48,11 @@ def admit(repo,data,name):
     exp=read(repo/'configs/experiment'/f'{name}.json');cell,=exp['cells']
     if cell['readiness']['state']!='held':raise ValueError('candidate not held')
     verify_registration_identity(repo, name, spec, cell)
+    # Labels are used by the official reader; reject invalid declared metadata
+    # before any draft/receipt or model work, including non-paired workloads.
+    if 'stage3_algorithm' in exp:
+        from speech_aware_evidence_acquisition.core.stage3_algorithms import validate_stage3_algorithm_label
+        validate_stage3_algorithm_label(exp['stage3_algorithm'], cell=name)
     from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
     from registered_workload import validate_workload, assert_execution_binding
     rows=validate_workload(repo,data,name,spec)

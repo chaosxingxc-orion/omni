@@ -6,6 +6,16 @@ import external_experience_workload as m
 from test_gepa_pair_workload import config,derived,repo
 
 
+@pytest.mark.parametrize('kind', ['external-tfgrpo-reference-v1', 'external-tfgrpo-v1',
+                                 'external-ace-v1', 'external-reflexion-v1'])
+def test_generated_algorithm_label_is_accepted_by_official_reader(kind):
+    from speech_aware_evidence_acquisition.core.stage3_algorithms import validate_stage3_algorithm_label
+    label = m.algorithm_metadata(kind)
+    record, used = validate_stage3_algorithm_label(label)
+    assert used == ('context_application',)
+    assert record.id == label['id']
+
+
 def test_explicit_external_identity_and_registered_width():
     from registered_workload import assert_execution_binding
     cfg={**config(),'schema':m.SCHEMA};job=m.ExternalExperienceWorkload(cfg)

@@ -32,6 +32,12 @@ from speech_aware_evidence_acquisition.core import (  # noqa: E402
 )
 
 EXPECTED_IDS = {
+    "tfgrpo-reference-multistage-external-dense-offline-v1",
+    "tfgrpo-external-relative-feedback-v1",
+    "ace-external-additive-offline-v1",
+    "ace-external-slot-construction-offline-v1",
+    "reflexion-external-memory-transfer-offline-v1",
+    "reflexion-offline-transfer-v1",
     "ace-grow-refine-v1",
     "finite-action-bandit-v1",
     "finite-system-policy-bandit-v1",

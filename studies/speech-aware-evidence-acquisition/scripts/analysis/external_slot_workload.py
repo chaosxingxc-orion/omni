@@ -110,7 +110,7 @@ class ExternalSlotWorkload(PairWorkload):
         exp['population'].update(count=self.ROWS,roster_receipt=self.ROSTER,split_identity_hash=roster['split_identity_hash'])
         exp['populations']=[{'dataset_fragment':observation.DATASET,'ids':ids}]
         exp['execution_plan'].update(planned_model_calls=6*self.ROWS,planned_speech_audio_seconds=math.ceil(6*math.fsum(r['audio_seconds'] for r in items)))
-        exp['stage3_algorithm']={'id':'ace-external-slot-construction-offline-v1','operators_used':['context_application'],'native_learning_seal':False,'description':'Single-slot actual knowledge replacement from disjoint TRAIN teacher evidence; no solver append prompt.'}
+        exp['stage3_algorithm']={'id':'ace-external-slot-construction-offline-v1','operators_used':['context_application'],'note':'Single-slot actual knowledge replacement from disjoint TRAIN teacher evidence; ACE-inspired, not full ACE; no solver append prompt.'}
         exp['stage3_measurement'].update(rows=self.ROWS,read_roster=roster['roster_id'],claims_benefit=False,expected_effect_pp=0,note=base['what_this_is'])
         return base,exp,roster,view,binding
 

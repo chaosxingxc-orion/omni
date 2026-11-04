@@ -44,3 +44,27 @@ def test_stale_registration_refused_before_draft(tmp_path, monkeypatch, changed)
         m.admit(tmp_path, tmp_path/'data', 'candidate')
     assert not (package/'root-admission-draft-v1.json').exists()
     assert not (tmp_path/'data').exists()
+
+
+@pytest.mark.parametrize('label', [
+    {'id': 'shared-rollout'},
+    {'id': 'unregistered', 'note': 'Declared algorithm'},
+    {'id': 'shared-rollout', 'note': 'x', 'native_learning_seal': False},
+])
+def test_invalid_reader_label_rejected_before_admission_side_effects(tmp_path, monkeypatch, label):
+    from speech_aware_evidence_acquisition import contracts
+    from speech_aware_evidence_acquisition.core.stage3_algorithms import Stage3AlgorithmError
+    monkeypatch.setattr(contracts, 'assert_execution_environment', lambda: None)
+    monkeypatch.setattr(m, 'verify_registration_identity', lambda *a: None)
+    monkeypatch.setattr(m, 'write', lambda *a: pytest.fail('wrote invalid admission'))
+    package = tmp_path/'docs/readiness/candidate'
+    package.mkdir(parents=True)
+    (package/'candidate.json').write_text('{}')
+    exp = tmp_path/'configs/experiment/candidate.json'
+    exp.parent.mkdir(parents=True)
+    exp.write_text(json.dumps({'cells': [{'readiness': {'state': 'held'}}],
+                              'stage3_algorithm': label}))
+    with pytest.raises(Stage3AlgorithmError):
+        m.admit(tmp_path, tmp_path/'data', 'candidate')
+    assert not (package/'root-admission-draft-v1.json').exists()
+    assert not (tmp_path/'data').exists()

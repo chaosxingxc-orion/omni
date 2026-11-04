@@ -209,6 +209,8 @@ class PairWorkload:
         if any(p.exists() for p in paths):
             raise ValueError('fresh probe configuration and roster required')
         base, exp, roster, _, binding = self.derive(repo, data, material)
+        from speech_aware_evidence_acquisition.core.stage3_algorithms import validate_stage3_algorithm_label
+        validate_stage3_algorithm_label(exp.get('stage3_algorithm'), cell=self.NAME)
         for path, doc in zip(paths, (base, exp, roster)):
             publish_new(path, raw(doc))
         out.mkdir(parents=True)

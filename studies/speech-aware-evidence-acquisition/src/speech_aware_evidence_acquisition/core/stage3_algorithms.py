@@ -482,6 +482,31 @@ NONE = _register(
 )
 
 
+# Distinct adapters retain their algorithmic scope in official readouts.
+# These entries do not certify a candidate or grant native-learning seals.
+EXTERNAL_CONTEXT_ALGORITHMS = (
+    ("tfgrpo-reference-multistage-external-dense-offline-v1", "training-free-grpo",
+     "TF-GRPO multistage external reference", "arXiv:2510.08191",
+     "Applies experiences from original summary/advantage/group-update/batch-update stages; continuous reward and offline rollout reuse are explicit adaptations."),
+    ("tfgrpo-external-relative-feedback-v1", "training-free-grpo-inspired",
+     "TF-GRPO inspired fused external feedback", "arXiv:2510.08191 (adapted)",
+     "Applies a fused external relative-feedback candidate; does not claim equivalence to the original multistage learner."),
+    ("ace-external-additive-offline-v1", "ace-inspired-offline",
+     "ACE inspired external additive memory", "Repository ACE design, offline adaptation",
+     "Applies an offline external Reflector/Curator additive proposal; not native online ACE."),
+    ("ace-external-slot-construction-offline-v1", "ace-inspired-offline-slot-construction",
+     "External teacher single-slot knowledge candidate application", "Repository conditional-slot teacher design, ACE-inspired adaptation",
+     "Applies one externally proposed slot-contract replacement with shared Perception and paired learned/lock Solvers; not a full ACE loop."),
+    ("reflexion-external-memory-transfer-offline-v1", "reflexion-inspired-offline",
+     "Reflexion inspired external memory transfer", "Repository Reflexion offline transfer design",
+     "Applies externally reflected cross-task memory; not online same-task retries."),
+)
+for _id, _family, _display, _citation, _scope in EXTERNAL_CONTEXT_ALGORITHMS:
+    _register(Stage3Algorithm(id=_id, family=_family, display_name=_display,
+        citation=_citation, operators=("context_application",), status="base-loop",
+        what_it_changes=_scope))
+
+
 def registered_ids() -> list[str]:
     """Every registered Stage-3 algorithm id, sorted."""
 

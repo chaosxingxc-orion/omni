@@ -90,11 +90,11 @@ class ExternalExperienceWorkload(PairWorkload):
 def algorithm_metadata(source_kind):
     if source_kind == 'external-tfgrpo-reference-v1':
         return {'id':'tfgrpo-reference-multistage-external-dense-offline-v1',
-                'operators_used':['context_application'], 'native_learning_seal':False,
+                'operators_used':['context_application'],
                 'note':'Original multistage reference with external teacher; continuous reward and offline rollout reuse adaptations.'}
     if source_kind == 'external-reflexion-v1':
         return {'id':'reflexion-external-memory-transfer-offline-v1','operators_used':['context_application'],
-            'native_learning_seal':False,'description':'Reflexion-inspired offline cross-task memory, not native online retries'}
+            'note':'Reflexion-inspired offline cross-task memory, not native online retries'}
     if source_kind == 'external-ace-v1':
         return {'id':'ace-external-additive-offline-v1','operators_used':['context_application'],
                 'note':'ACE-inspired offline Reflector/Curator additive proposal; not native online ACE.'}
