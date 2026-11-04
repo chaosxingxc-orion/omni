@@ -222,3 +222,37 @@ def test_independent_repeat_mode_is_explicit_and_unknown_scope_refused(tmp_path)
     legacy['native_episode']['consumption_module']['gepa_pair']['schema'] = material.PERCEPTION_PAIR_SCHEMA
     with pytest.raises(ValueError, match='explicit v2 repeat scope'):
         audit_inputs(tmp_path, legacy, None, [])
+
+
+@pytest.mark.parametrize('scope', ['shared-lock-perception', 'independent-perception'])
+def test_real_flight_router_owns_independent_repeat_supply(tmp_path, scope):
+    """Do not bypass the actual Flight router factory with a permissive binding."""
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntime, FlightRuntimeError
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    base, setup = pair_inputs(tmp_path)
+    original, _, parent, child = inputs()
+    setup.update(parent_arguments=parent, child_arguments=child,
+                 delivering_template_tokens=parent['count_tokens'](original))
+    built = material.compile_template_pair(tmp_path, base,
+        perception_repeat_scope=scope, **setup)['baseline']
+    built.update(transport='vllm', carrier_lock_key='slurp')
+    config = load_native_episode_config(built, default_phase_program(built['policy']))
+    runtime = object.__new__(FlightRuntime)
+    runtime._knowledge_store_binding = object()
+    calls = []
+    def router(program, branch, knobs):
+        calls.append((branch, knobs))
+        return SimpleNamespace(automatic_for_phase=lambda phase, context: (branch, phase, context))
+    runtime._supply_action_router = router
+    resolve = runtime._perception_branch_solver_supply_binding(config, object())
+    expected = ['parent', 'child'] + (['aa'] if scope == 'independent-perception' else [])
+    assert [branch for branch, _ in calls] == expected
+    assert all(knobs == () for _, knobs in calls)
+    note = object()
+    for branch in expected:
+        assert resolve(branch_id=branch, phase_id='solver', context=note) == (branch, 'solver', note)
+    for branch in ['lock', 'foreign'] + ([] if 'aa' in expected else ['aa']):
+        with pytest.raises(FlightRuntimeError, match='unknown level-2'):
+            resolve(branch_id=branch, phase_id='solver', context=note)

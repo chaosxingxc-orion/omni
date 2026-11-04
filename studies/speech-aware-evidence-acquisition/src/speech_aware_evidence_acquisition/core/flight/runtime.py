@@ -3844,11 +3844,12 @@ class FlightRuntime:
         ``None`` unless the cell declares a level-2 ``roles.perception.
         branches`` group (every cell written before level 2 and every level-1
         cell). Armed, this builds ONE independent knowledge-store router per
-        non-delivering, non-twin branch -- over the SAME released, hash-pinned
+        non-delivering branch requiring own supply -- over the SAME released, hash-pinned
         stores, with NO knob override -- so a branch's own first-visit Solver
         contact can re-resolve its candidate supply from ITS OWN Perception
         note. Branch A takes the flight's own ``supply_for_phase`` and the
-        twin repeats A's request, so neither needs a router here. Each branch
+        legacy twin repeats A's request, so neither needs a router here.
+        An explicitly independent GEPA repeat needs its own router. Each branch
         owns its router because the candidate router records one selection
         audit per (phase, row, query state): sharing the flight's router (or
         one router between branches) would make a second note's selection
@@ -3868,9 +3869,15 @@ class FlightRuntime:
             # No named-store router: the Solver has no candidate supply to
             # re-resolve from a note (a history-only level-2 cell).
             return None
+        independent_repeat = False
+        if group.is_template and native_config.consumption_module_json:
+            from ...rails.gepa_prompt_material import independent_perception_repeat
+            declaration = json.loads(native_config.consumption_module_json)
+            if declaration.get("gepa_pair"):
+                independent_repeat = independent_perception_repeat(declaration)
         routers = {}
         for branch in group.branches:
-            if branch.deliver or branch.is_twin:
+            if branch.deliver or (branch.is_twin and not independent_repeat):
                 continue
             routers[branch.branch_id] = self._supply_action_router(
                 program, branch.branch_id, (),
