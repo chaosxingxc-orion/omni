@@ -87,6 +87,28 @@ def test_test_split_rejected_before_output(tmp_path):
     assert not root.exists()
 
 
+@pytest.mark.parametrize('fault', [None, 'source', 'exposure'])
+def test_development_feedback_is_pinned_and_exposure_bound(tmp_path, fault):
+    path, root = job(tmp_path)
+    cfg = exploration.read(path)
+    feedback = {'schema': 'saea-exploration-development-feedback-v1',
+                'source_sha256': cfg['source']['sha256'],
+                'exposed_query_ids': cfg['query_ids'],
+                'observations': [{'hypothesis': 'Non-exhaustive retrieval is not an authority.'}]}
+    if fault == 'source': feedback['source_sha256'] = '0' * 64
+    if fault == 'exposure': feedback['exposed_query_ids'] = ['slurp:train:unselected']
+    cfg['development_feedback'] = write(tmp_path/'feedback.json', feedback)
+    write(path, cfg)
+    if fault:
+        with pytest.raises(ValueError, match='feedback must bind'):
+            exploration.prepare(path)
+        assert not root.exists()
+    else:
+        exploration.prepare(path)
+        payload = exploration.request_payload(exploration.read(root/'request.json'))
+        assert payload['development_feedback'] == feedback
+
+
 def test_pinned_template_tampering_rejected(tmp_path):
     path, root = job(tmp_path); exploration.prepare(path)
     (root / 'template.md').write_text('changed')

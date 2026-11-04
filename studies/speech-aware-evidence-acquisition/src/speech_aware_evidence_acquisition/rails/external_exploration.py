@@ -67,7 +67,8 @@ def request_context(context, algorithm):
 def prepare(config_path):
     config_path = Path(config_path).resolve()
     cfg = read(config_path)
-    if set(cfg) != {'schema', 'profile', 'source', 'query_ids', 'context', 'teacher', 'output_root'} or cfg['schema'] != 'saea-external-exploration-job-v1':
+    required = {'schema', 'profile', 'source', 'query_ids', 'context', 'teacher', 'output_root'}
+    if set(cfg) not in (required, required | {'development_feedback'}) or cfg['schema'] != 'saea-external-exploration-job-v1':
         raise ValueError('exact exploration job required')
     profile_path = checked(cfg['profile'], config_path.parent)
     profile = read(profile_path)
@@ -89,6 +90,17 @@ def prepare(config_path):
     by_id = {g['query_id']: g for g in groups}
     if len(by_id) != len(groups) or not set(ids) <= set(by_id):
         raise ValueError('missing or duplicate source groups')
+    feedback = None
+    if 'development_feedback' in cfg:
+        feedback = read(checked(cfg['development_feedback'], config_path.parent))
+        if (not isinstance(feedback, dict) or set(feedback) !=
+                {'schema', 'source_sha256', 'exposed_query_ids', 'observations'}
+                or feedback['schema'] != 'saea-exploration-development-feedback-v1'
+                or feedback['source_sha256'] != pin(source)['sha256']
+                or not isinstance(feedback['exposed_query_ids'], list)
+                or not set(feedback['exposed_query_ids']) <= set(ids)
+                or not isinstance(feedback['observations'], list) or not feedback['observations']):
+            raise ValueError('feedback must bind the source and only supplied TRAIN identities')
     selected = []
     for query_id in ids:
         group = by_id[query_id]
@@ -129,6 +141,8 @@ def prepare(config_path):
                'source_sha256': pin(source)['sha256'], 'rollout_multiplicity_preserved': True}
     if relative is not None:
         payload['relative_evidence'] = relative
+    if feedback is not None:
+        payload['development_feedback'] = feedback
     # Re-factor repeated full evidence losslessly; no token-based truncation.
     from speech_aware_evidence_acquisition.rails.grounded_synthesis_fusion import factor_development_evidence
     packed = factor_development_evidence(payload)
