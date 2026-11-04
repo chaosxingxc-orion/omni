@@ -1,0 +1,97 @@
+{
+  "schema": "omni-gepa-paired-public-summary-v1",
+  "rows": 16,
+  "source_sha256": "afe104876e1437cde14bbec44261735f52c76df90cb858f2f416781cad8e83d2",
+  "official": {
+    "child": {
+      "intent_accuracy": 0.8125,
+      "slu_f1": 0.7328388764416877,
+      "span_f1": 0.6530612244897959
+    },
+    "lock": {
+      "intent_accuracy": 0.8125,
+      "slu_f1": 0.7644185313583358,
+      "span_f1": 0.723404255319149
+    },
+    "parent": {
+      "intent_accuracy": 0.8125,
+      "slu_f1": 0.7628482972136224,
+      "span_f1": 0.6938775510204083
+    }
+  },
+  "strict_success": {
+    "child": 7,
+    "lock": 9,
+    "parent": 8
+  },
+  "comparisons": {
+    "child_vs_lock": {
+      "proxy_mean_delta": -0.02604166666666663,
+      "strict_breaks": 2,
+      "strict_repairs": 0
+    },
+    "child_vs_parent": {
+      "proxy_mean_delta": 0.00520833333333337,
+      "strict_breaks": 2,
+      "strict_repairs": 1
+    },
+    "parent_vs_lock": {
+      "proxy_mean_delta": -0.03125,
+      "strict_breaks": 1,
+      "strict_repairs": 0
+    }
+  },
+  "total_cost": {
+    "audio_seconds_used": 251.21599999999995,
+    "calls_used": 64,
+    "completion_tokens_total": 122372,
+    "latency_seconds_total": 4780.434793449735,
+    "prompt_tokens_total": 470334,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "role_costs": {
+    "perception": {
+      "calls": 16,
+      "completion_tokens": 28529,
+      "contacts_with_reasoning": 16,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 16
+      },
+      "prompt_tokens": 61063,
+      "request_seconds": {
+        "mean": 86.37257667437007,
+        "n": 16,
+        "p50": 66.30270905997895,
+        "p95": 156.13651240000036
+      },
+      "think_markers": 0,
+      "wire_records": 16
+    },
+    "solver": {
+      "calls": 48,
+      "completion_tokens": 93843,
+      "contacts_with_reasoning": 48,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 48
+      },
+      "prompt_tokens": 409271,
+      "request_seconds": {
+        "mean": 70.80153263874611,
+        "n": 48,
+        "p50": 57.25582583999494,
+        "p95": 125.60728778000339
+      },
+      "think_markers": 0,
+      "wire_records": 48
+    }
+  },
+  "input_audited_rows": 16,
+  "campaign_wall_seconds": 617.7521115299896,
+  "cards": 2,
+  "instances": 1,
+  "candidate_accepted": false,
+  "claims_stable_gain": false
+}
