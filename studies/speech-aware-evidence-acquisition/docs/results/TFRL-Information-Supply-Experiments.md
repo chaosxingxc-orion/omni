@@ -37,3 +37,8 @@
 ## 新GEPA候选来源核验
 
 node2-a/b均通过固定镜像、无网络、只读挂载的verify_mutation_bundle核验，退出0：a生成1调用，输入42102、输出3427；b生成1调用，输入36919、输出1736。两者均结构有效、绑定原parent及真实响应；candidate_accepted=false代表尚未通过系统评估晋升。以上为生成调用，FIT及历史成本另计。下一步可进入固定样本配对验证，不再将candidate_publishable=false误报为拒绝原因。
+
+
+## 最新官方结果
+
+node2-a已完成16/16同轮共享P评测：SLU parent67.9254%→child75.7246%，严格正确5→8，修复3/破坏0；对lock修复2/破坏0。候选未晋升，这是已暴露小开发集的正向信号，不是稳定泛化收益。2卡1TP2，64任务调用，campaign549.76秒；详见GEPA-Node-Feedback-Results。node2-b独立后继已进入prepare。
