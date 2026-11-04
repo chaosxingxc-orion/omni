@@ -33,6 +33,13 @@ def test_observed_and_unknown_costs_stay_distinct(tmp_path):
     assert result['observed_contacts']==1 and result['attempted_contacts']==2
     assert result['inflight_or_unknown_contacts']==1 and result['unknown_cost'] is None
     assert result['known_usage']['prompt_tokens']==8 and result['new_model_calls']==0
+    fit={'schema':'saea-native-fit-custody-v1','identity':journal.identity,'payload':payload()}
+    fp=journal.root/(digest(canonical(m.comparable_request(payload())))+'.fit.json');fp.write_bytes(canonical(fit))
+    result,_=m.native_contacts(producer,tmp_path,plan,'bare-core')
+    assert result['fit_custody_records']==1 and result['known_usage']['calls']==1
+    fit['identity']={};fp.write_bytes(canonical(fit))
+    with pytest.raises(ValueError,match='FIT custody'):m.native_contacts(producer,tmp_path,plan,'bare-core')
+    fp.unlink()
     journal._path('req-2','intent').unlink()
     journal._path('req-2','response').write_text('{}')
     with pytest.raises(ValueError,match='orphan'):m.native_contacts(producer,tmp_path,plan,'bare-core')

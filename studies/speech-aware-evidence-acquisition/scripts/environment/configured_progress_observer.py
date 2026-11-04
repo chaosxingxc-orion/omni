@@ -17,7 +17,7 @@ sys.path[:0]=[str(ROOT/'src'),str(ROOT/'scripts/analysis'),str(Path(__file__).pa
 import configured_terminal_settlement as settlement
 import real_engine_progress
 from speech_aware_evidence_acquisition.contracts import ExecutionPlan
-from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal
+from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal, canonical, comparable_request, digest
 from speech_aware_evidence_acquisition.rails.tfgrpo_learning import sha
 queue=settlement.queue
 require=queue.require
@@ -81,8 +81,13 @@ def native_contacts(producer,logical,plan,arm):
     journal=ContactJournal(logical,plan,arm,source_root=producer.get('repo_path'))
     journal.root=settlement.mapped(producer,logical/'contact-journals'/plan.run_id/plan.attempt_id)
     files=sorted(journal.root.glob('*')) if journal.root.exists() else []
-    require(all(p.is_file() and not p.is_symlink() and re.fullmatch(r'[a-f0-9]{64}\.(intent|response)\.json',p.name)
+    require(all(p.is_file() and not p.is_symlink() and re.fullmatch(r'[a-f0-9]{64}\.(intent|response|fit)\.json',p.name)
         for p in files),'unexpected contact journal file')
+    fit_files=[p for p in files if p.name.endswith('.fit.json')]
+    for path in fit_files:
+        fit=settlement.read(path)
+        require(fit.get('schema')=='saea-native-fit-custody-v1' and fit.get('identity')==journal.identity
+            and path.name==digest(canonical(comparable_request(fit['payload'])))+'.fit.json', 'native FIT custody differs')
     intents=[p for p in files if p.name.endswith('.intent.json')]
     response_names={p.name for p in files if p.name.endswith('.response.json')}
     require(response_names<={p.name.replace('.intent.','.response.') for p in intents},'orphan native response')
@@ -103,7 +108,7 @@ def native_contacts(producer,logical,plan,arm):
     return {'attempted_contacts':len(intents),'observed_contacts':len(records),
         'inflight_or_unknown_contacts':len(unknown),'known_usage':dict(known),
         'unknown_cost':None,'unknown_cost_reason':'Unreturned requests have unknown spend, never assumed zero.',
-        'fit_cost':'accounted separately; not included in native generation contacts',
+        'fit_custody_records':len(fit_files),'fit_cost':'accounted separately; not included in native generation contacts',
         'snapshot_boundary':'native intents present at directory enumeration; responses may finish during this read',
         'new_model_calls':0},records
 
