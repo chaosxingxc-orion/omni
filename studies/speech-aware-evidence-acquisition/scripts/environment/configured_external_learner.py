@@ -225,11 +225,50 @@ def read_stream(response, root, diagnostics, *, persist_response=True,
                     if persist_response else wire_hash.hexdigest())
 
 
+def analysis_budget_prompt(cfg):
+    """Render advisory limits; never claim provider enforcement or trim evidence."""
+    if 'analysis_budget' not in cfg:
+        return ''
+    budget = cfg['analysis_budget']
+    required = {'input_context_target_tokens', 'max_reasoning_tokens_target',
+                'max_mechanism_dimensions', 'max_hypotheses',
+                'representative_evidence_per_hypothesis',
+                'counterexamples_per_hypothesis', 'representative_case_target',
+                'stop_when_evidence_sufficient'}
+    if not isinstance(budget, dict) or set(budget) != required:
+        raise ValueError('complete analysis budget required')
+    if 'research_prompt' not in cfg:
+        raise ValueError('analysis budget requires pinned research prompt')
+    for name in required - {'stop_when_evidence_sufficient'}:
+        if type(budget[name]) is not int or budget[name] <= 0:
+            raise ValueError('positive integer analysis budget required')
+    if budget['stop_when_evidence_sufficient'] is not True:
+        raise ValueError('analysis budget requires evidence stopping policy')
+    if (type(cfg.get('max_tokens')) is not int or cfg['max_tokens'] < 131072
+            or budget['max_reasoning_tokens_target'] >= cfg['max_tokens']):
+        raise ValueError('analysis reasoning target exceeds output budget or leaves no answer space')
+    return ('\n\n## 本次配置的研究预算（提示目标，不是服务端硬限制）\n'
+        f"输入材料容量规划目标 {budget['input_context_target_tokens']} tokens；"
+        '这不是服务商窗口证明，也不是裁剪阈值。保留完整任务材料，不补无关材料凑数。\n'
+        f"思考目标不超过约 {budget['max_reasoning_tokens_target']} tokens，"
+        '为最终报告保留充足空间；不要求写满。\n'
+        f"主要机制维度至多 {budget['max_mechanism_dimensions']} 个，"
+        f"主要假设至多 {budget['max_hypotheses']} 个；"
+        f"每个假设优先选 {budget['representative_evidence_per_hypothesis']} 个代表证据和"
+        f" {budget['counterexamples_per_hypothesis']} 个最强反例。\n"
+        f"深入核查的代表案例目标为 {budget['representative_case_target']} 个，"
+        '不是证据访问上限；关键冲突可增查并说明原因，禁止逐case顺序复述。'
+        '按机制聚合其余证据，覆盖少数关键反例，不以哈希代替证据内容。\n'
+        '证据足以支持、拒绝或暂缓假设即收束；缺证据时列出补证办法，不反复猜测。')
+
+
 def execute(config_path):
     cfg = json.loads(Path(config_path).read_bytes())
     keys = {'schema', 'endpoint', 'model', 'api_key_env', 'messages', 'max_tokens',
             'timeout_seconds', 'output_root'}
-    if not keys <= set(cfg) <= keys | {'stream', 'total_timeout_seconds', 'thinking', 'research_prompt', 'journal_batch_bytes', 'journal_batch_seconds'} or cfg['schema'] != 'saea-external-learner-v1':
+    optional = {'stream', 'total_timeout_seconds', 'thinking', 'research_prompt',
+                'analysis_budget', 'journal_batch_bytes', 'journal_batch_seconds'}
+    if not keys <= set(cfg) <= keys | optional or cfg['schema'] != 'saea-external-learner-v1':
         raise ValueError('exact external learner configuration required')
     if type(cfg.get('stream', False)) is not bool:
         raise ValueError('boolean stream setting required')
@@ -242,6 +281,7 @@ def execute(config_path):
         raise ValueError('positive total wall deadline required')
     if 'thinking' in cfg and cfg['thinking'] not in ({'type': 'enabled'}, {'type': 'disabled'}):
         raise ValueError('explicit provider thinking mode required')
+    budget_prompt = analysis_budget_prompt(cfg)
     url = urllib.parse.urlsplit(cfg['endpoint'])
     if (url.scheme != 'https' or not url.hostname or url.username or url.password
             or url.query or url.fragment or not url.path.endswith('/chat/completions')):
@@ -281,7 +321,7 @@ def execute(config_path):
         if cfg['max_tokens'] < 131072:
             raise ValueError('research output budget must be at least 131072')
         # Keep all task evidence intact; persist the effective messages in request.json.
-        messages = [{'role': 'system', 'content': policy_text}, *messages]
+        messages = [{'role': 'system', 'content': policy_text + budget_prompt}, *messages]
     secret = os.environ.get(cfg['api_key_env'])
     if not secret:
         raise ValueError('credential environment variable is unset')

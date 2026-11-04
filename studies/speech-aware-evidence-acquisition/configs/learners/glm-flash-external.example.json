@@ -11,9 +11,19 @@
   "timeout_seconds": 600,
   "output_root": "/absolute/private/unique-request-directory",
   "stream": true,
+  "analysis_budget": {
+    "input_context_target_tokens": 262144,
+    "max_reasoning_tokens_target": 49152,
+    "max_mechanism_dimensions": 6,
+    "max_hypotheses": 6,
+    "representative_evidence_per_hypothesis": 3,
+    "counterexamples_per_hypothesis": 1,
+    "stop_when_evidence_sufficient": true,
+    "representative_case_target": 12
+  },
   "research_prompt": {
     "path": "../prompts/learner/rsi-system-research.md",
-    "sha256": "c340699293d6adbaae911ba7df406f37f61c7859d3998612b743feb4b605f5af"
+    "sha256": "6795ebac9824183e091e1206eef33d74bc4d6424be1607529e1747f26fba6966"
   },
   "journal_batch_bytes": 65536,
   "journal_batch_seconds": 1

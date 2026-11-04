@@ -130,6 +130,53 @@ def test_explicit_thinking_mode_forwarded(setup,monkeypatch):
     assert m.execute(config)['state']=='unknown'
 
 
+def test_analysis_budget_is_validated_and_injected_without_provider_fields(setup, monkeypatch):
+    config, cfg = setup
+    research_config(config, cfg)
+    cfg['max_tokens'] = 131072
+    cfg['analysis_budget'] = {
+        'input_context_target_tokens': 262144,
+        'max_reasoning_tokens_target': 49152,
+        'max_mechanism_dimensions': 6,
+        'max_hypotheses': 6,
+        'representative_evidence_per_hypothesis': 3,
+        'counterexamples_per_hypothesis': 1,
+        'representative_case_target': 12,
+        'stop_when_evidence_sufficient': True,
+    }
+    config.write_text(json.dumps(cfg))
+    class Opener:
+        def open(self, request, **kw):
+            body = json.loads(request.data)
+            assert 'analysis_budget' not in body
+            assert '49152' in body['messages'][0]['content']
+            assert '262144' in body['messages'][0]['content']
+            assert body['messages'][1:] == [{'role': 'user', 'content': 'test'}]
+            raise TimeoutError()
+    monkeypatch.setattr(m.urllib.request, 'build_opener', lambda *a: Opener())
+    assert m.execute(config)['state'] == 'unknown'
+    intent = json.loads((Path(cfg['output_root'])/'intent.json').read_bytes())
+    assert intent['config']['analysis_budget']['representative_case_target'] == 12
+
+
+def test_analysis_budget_cannot_exceed_output_budget(setup):
+    config, cfg = setup
+    research_config(config, cfg)
+    cfg['analysis_budget'] = {
+        'input_context_target_tokens': 262144,
+        'max_reasoning_tokens_target': 131073,
+        'max_mechanism_dimensions': 6,
+        'max_hypotheses': 6,
+        'representative_evidence_per_hypothesis': 3,
+        'counterexamples_per_hypothesis': 1,
+        'representative_case_target': 12,
+        'stop_when_evidence_sufficient': True,
+    }
+    config.write_text(json.dumps(cfg))
+    with pytest.raises(ValueError, match='exceeds output budget'):
+        m.execute(config)
+
+
 @pytest.mark.parametrize('value',[0,True,-2,'60'])
 def test_invalid_total_deadline_rejected_before_dispatch(setup,value):
     config,cfg=setup;cfg['total_timeout_seconds']=value;config.write_text(json.dumps(cfg))
@@ -311,3 +358,20 @@ def test_body_wait_and_disk_time_have_distinct_measurements(tmp_path, monkeypatc
     assert diagnostic.data['body_fsync_seconds'] == 4.0
     assert diagnostic.data['first_body_data_elapsed_seconds'] == 3.0
     assert diagnostic.data['durable_body_bytes'] == 3
+
+
+@pytest.mark.parametrize('fault', ['null', 'bool', 'missing', 'equal', 'no_policy', 'stop'])
+def test_analysis_budget_invalid_before_dispatch(setup, fault):
+    config, cfg = setup
+    research_config(config, cfg)
+    example = Path(__file__).parents[2]/'configs/learners/glm-flash-external.example.json'
+    cfg['analysis_budget'] = json.loads(example.read_bytes())['analysis_budget']
+    if fault == 'null': cfg['analysis_budget'] = None
+    elif fault == 'bool': cfg['analysis_budget']['max_hypotheses'] = True
+    elif fault == 'missing': cfg['analysis_budget'].pop('representative_case_target')
+    elif fault == 'equal': cfg['analysis_budget']['max_reasoning_tokens_target'] = cfg['max_tokens']
+    elif fault == 'no_policy': cfg.pop('research_prompt')
+    else: cfg['analysis_budget']['stop_when_evidence_sufficient'] = False
+    config.write_text(json.dumps(cfg))
+    with pytest.raises(ValueError): m.execute(config)
+    assert not Path(cfg['output_root']).exists()

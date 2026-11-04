@@ -12,7 +12,7 @@ from speech_aware_evidence_acquisition.rails import ace_incremental as ace
 from test_ace_incremental import fixture, reflection, delta
 
 
-def teacher(tmp_path, stream=False):
+def teacher(tmp_path, stream=False, analysis_budget=False):
     study = Path(__file__).parents[2]
     script = study/'scripts/environment/configured_external_learner.py'
     prompt = tmp_path/'policy.md'; prompt.write_text('Analyze mechanisms and counterexamples.')
@@ -20,6 +20,9 @@ def teacher(tmp_path, stream=False):
         'model': 'external-model', 'api_key_env': 'TEST_EXTERNAL_KEY', 'max_tokens': 131072,
         'timeout_seconds': 10, 'stream': stream,
         'research_prompt': {'path': str(prompt), 'sha256': hashlib.sha256(prompt.read_bytes()).hexdigest()}}
+    if analysis_budget:
+        example = json.loads((study/'configs/learners/glm-flash-external.example.json').read_bytes())
+        cfg['analysis_budget'] = example['analysis_budget']
     return ExternalTeacher(tmp_path/'api', config=cfg,
         executor={'path': str(script), 'sha256': hashlib.sha256(script.read_bytes()).hexdigest()})
 
@@ -172,3 +175,15 @@ def test_external_budget_mismatch_rejected_before_any_dispatch(tmp_path, monkeyp
     with pytest.raises(ValueError, match='completion cap must match'):
         ace.execute(learner, doc, count_tokens=lambda m: 20, verify_source=lambda: source)
     assert not list((tmp_path/'learner/contacts').glob('*.intent.json'))
+
+
+@pytest.mark.parametrize('stream', [False, True])
+def test_budget_policy_roundtrip_preserves_evidence(tmp_path, monkeypatch, stream):
+    c = teacher(tmp_path, stream, analysis_budget=True); req = request(c)
+    calls = network(c, monkeypatch, [answer('bounded report')])
+    observed = c(req)
+    assert c.reconcile(req)['response'] == observed
+    assert len(calls) == 1
+    assert calls[0]['messages'][1:] == req['messages']
+    assert '49152' in calls[0]['messages'][0]['content']
+    assert 'analysis_budget' not in calls[0]

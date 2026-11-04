@@ -43,7 +43,7 @@ class ExternalTeacher:
         required = {'schema', 'endpoint', 'model', 'api_key_env', 'max_tokens',
                     'timeout_seconds', 'stream', 'research_prompt'}
         require(required <= self.config.keys() <= required | {'thinking', 'total_timeout_seconds',
-                    'journal_batch_bytes', 'journal_batch_seconds'},
+                    'analysis_budget', 'journal_batch_bytes', 'journal_batch_seconds'},
                 'explicit external research configuration required')
         require(self.config['schema'] == 'saea-external-learner-v1'
                 and type(self.config['max_tokens']) is int and self.config['max_tokens'] >= 131072,
@@ -53,7 +53,8 @@ class ExternalTeacher:
                 and Path(policy['path']).is_absolute(), 'absolute pinned research prompt required')
         require(hashlib.sha256(Path(policy['path']).read_bytes()).hexdigest() == policy['sha256'],
                 'research prompt changed')
-        self.policy_text = Path(policy['path']).read_text()
+        self.policy_text = (Path(policy['path']).read_text()
+                            + self.executor.analysis_budget_prompt(self.config))
         self.model_id = self.config['model']
         self.completion_cap = self.config['max_tokens']
         require(isinstance(self.model_id, str) and self.model_id.strip(), 'teacher identity required')
