@@ -27,5 +27,37 @@
   },
   "distinct_parent_child_prompt_pairs": 1,
   "root_cause_proven": false,
-  "new_model_calls": 0
+  "new_model_calls": 0,
+  "wire_budget_audit": {
+    "roles": {
+      "parent": {
+        "n": 80,
+        "prompt_tokens": 650785,
+        "completion_tokens": 180499,
+        "reasoning_tokens": 178000,
+        "reasoning_ge3072": 34
+      },
+      "child": {
+        "n": 80,
+        "prompt_tokens": 652225,
+        "completion_tokens": 166240,
+        "reasoning_tokens": 163825,
+        "reasoning_ge3072": 22
+      },
+      "lock": {
+        "n": 80,
+        "prompt_tokens": 650785,
+        "completion_tokens": 181045,
+        "reasoning_tokens": 178611,
+        "reasoning_ge3072": 31
+      }
+    },
+    "repeated_control": {
+      "same_fingerprint": 80,
+      "same_prompt_tokens": 80,
+      "same_raw_content": 45
+    },
+    "limitation": "reasoning >=3072 is proximity to configured target, not proof of truncation; fingerprint equality is not identical batch execution",
+    "source_archive_sha256": "b1be9dfdcba099d3bcf3c5f80cf47e776715bc449249c57b2f4140dd7bbced41"
+  }
 }
