@@ -2,7 +2,6 @@
 import argparse
 import importlib
 import json
-import re
 from pathlib import Path
 import sys
 
@@ -20,27 +19,35 @@ ADAPTERS = {'external-tfgrpo-v1': 'tfgrpo_external_release',
 def build(config):
     fields = {'schema', 'source_kind', 'name', 'run_id', 'release', 'runtime_binding',
               'execution', 'params_path', 'measurement_path', 'material_relpath', 'workload_path'}
-    if set(config) != fields or config['schema'] != 'saea-external-experience-material-job-v1':
+    if not isinstance(config, dict) or set(config) != fields or config['schema'] != 'saea-external-experience-material-job-v1':
         raise ValueError('exact material job configuration required')
     if config['source_kind'] not in ADAPTERS:
         raise ValueError('known external algorithm adapter required')
-    if any(not isinstance(config[k], str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]*', config[k])
-           for k in ('name', 'run_id')):
-        raise ValueError('safe name and run identity required')
     release = config['release']; repo = Path(release['repo']).resolve(); data = Path(release['data']).resolve()
     paths = {k: Path(config[k]).resolve() for k in ('params_path', 'measurement_path', 'workload_path')}
     paths['material'] = (repo / config['material_relpath']).resolve()
     if not paths['material'].is_relative_to(repo / 'configs') or any(
-            not paths[k].is_relative_to(data) for k in ('params_path', 'measurement_path')):
+            not paths[k].is_relative_to(data) for k in ('params_path', 'measurement_path', 'workload_path')):
         raise ValueError('owned repository material and data outputs required')
     if len(set(paths.values())) != len(paths) or any(p.exists() for p in paths.values()):
         raise ValueError('distinct fresh material outputs required; reconcile prior attempt')
+    # Validate the exact downstream workload before the adapter publishes its
+    # template. The material pin is intentionally absent until bytes exist;
+    # constructor/runtime validation does not read material or dispatch work.
+    workload = {'schema': 'saea-external-experience-workload-v1', 'name': config['name'],
+                'run_id': config['run_id'], 'sample_ids': release['consumer_ids'],
+                'runtime_binding': config['runtime_binding'], 'execution': config['execution'],
+                'material': None}
+    job = ExternalExperienceWorkload(workload)
+    binding = job.runtime_binding(repo)
+    if (release.get('runtime_model_id') or release['model_id']) != binding['model_fragment']:
+        raise ValueError('release model differs from configured deployment')
     adapter = importlib.import_module('speech_aware_evidence_acquisition.rails.' + ADAPTERS[config['source_kind']])
     # The adapter replays original wire evidence and validates exact review/split pins.
     params = adapter.prepare(**release)
-    if params['source_kind'] != config['source_kind']:
-        raise ValueError('adapter source identity differs')
-    measurement = measure(repo, data, params, config['runtime_binding'])
+    if params['source_kind'] != config['source_kind'] or params['consumer_ids'] != workload['sample_ids']:
+        raise ValueError('adapter source or consumer identity differs')
+    measurement = measure(repo, data, params, binding)
     def write(path, value):
         publish_new(path, (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + '\n').encode())
     write(paths['params_path'], params); write(paths['measurement_path'], measurement)
@@ -48,10 +55,7 @@ def build(config):
                 'params': pin(data, str(paths['params_path'].relative_to(data))),
                 'measurement': pin(data, str(paths['measurement_path'].relative_to(data)))}
     write(paths['material'], material)
-    workload = {'schema': 'saea-external-experience-workload-v1', 'name': config['name'],
-                'run_id': config['run_id'], 'sample_ids': params['consumer_ids'],
-                'runtime_binding': config['runtime_binding'], 'execution': config['execution'],
-                'material': pin(repo, str(paths['material'].relative_to(repo)))}
+    workload['material'] = pin(repo, str(paths['material'].relative_to(repo)))
     ExternalExperienceWorkload(workload)
     write(paths['workload_path'], workload)
     return {'schema': 'saea-external-experience-material-result-v1', 'source_kind': config['source_kind'],
