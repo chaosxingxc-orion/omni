@@ -53,8 +53,8 @@ def inspect(path):
     require(state.get('identity')==original.identities(queue.pin_path(d['queue_config']))
         and state.get('queue_id')==source['queue_id']
         and [r['id'] for r in state['jobs']]==[j['id'] for j in source['jobs']], 'source queue custody changed')
-    require(state['status'] in ('ready','running','waiting','complete','failed'),'unknown queue blocks handoff')
-    if state['status'] in ('ready','running','waiting'):
+    require(state['status'] in ('ready','running','waiting','dispatching','complete','failed'),'unknown queue blocks handoff')
+    if state['status'] in ('ready','running','waiting','dispatching'):
         return {'ready':False,'reason':'queue-running','state':state['status']}
     # Old queue CLIs returned 0 even for failed state. Verify state and every source, not exit==0.
     terminal=settlement.producer_terminal({'producer_launcher':d['watch_launcher']},watch)

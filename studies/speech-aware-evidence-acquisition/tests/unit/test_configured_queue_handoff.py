@@ -30,7 +30,7 @@ def test_failed_queue_with_terminal_safe_cleanup_can_handoff(handoff):
     assert result['ready'] and result['queue_state']=='failed' and not result['scientific_success']
     assert result['new_model_calls']==0 and result['successor_requires_own_lease_and_readiness']
 
-@pytest.mark.parametrize('state',['ready','running','waiting'])
+@pytest.mark.parametrize('state',['ready','running','waiting','dispatching'])
 def test_running_queue_waits_without_custody_or_model_calls(handoff,monkeypatch,state):
     h=handoff;h.state['status']=state;write(h.state_path,h.state)
     monkeypatch.setattr(settlement,'producer_terminal',lambda *a:pytest.fail('must wait'))
