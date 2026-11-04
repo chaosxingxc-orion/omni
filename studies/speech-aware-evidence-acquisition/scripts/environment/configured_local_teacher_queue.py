@@ -79,7 +79,7 @@ def verify_implementation(job):
     return manifest
 
 
-def load(config):
+def load(config, *, export_runner=None):
     doc = read(config)
     require(set(doc) == {'schema', 'queue_id', 'state_dir', 'max_parallel', 'jobs'} and doc['schema'] == SCHEMA, 'exact local queue schema required')
     require(re.fullmatch('[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}', doc['queue_id']), 'queue identity required')
@@ -103,7 +103,10 @@ def load(config):
         for parent in edges[name]: visit(parent, stack | {name})
     for name in names: visit(name, set())
     root = private_dir(doc['state_dir'])
-    identity = {'config_sha256': sha(config), 'runner_sha256': sha(__file__), 'queue_id': doc['queue_id']}
+    runner = pinned(export_runner) if export_runner is not None else Path(__file__)
+    if export_runner is not None:
+        require((root/'identity.json').is_file(), 'existing export source identity required')
+    identity = {'config_sha256': sha(config), 'runner_sha256': sha(runner), 'queue_id': doc['queue_id']}
     if (root/'identity.json').exists(): require(read(root/'identity.json') == identity, 'queue config or implementation changed')
     else: persist(root/'identity.json', identity)
     return doc, root
@@ -239,11 +242,50 @@ def reconcile(config, job_id):
     return worker(config, job_id, action='collect')
 
 
+def source_references(document, source_path, profile_bindings):
+    """Resolve pins using their document semantics, without consulting the filesystem.
+
+    Preparation copies a profile verbatim, but separately pins the template it
+    actually used. Its old relative template spelling is not relative to the
+    copied profile. All other relative references are confined to their document.
+    """
+    source_path = Path(source_path)
+    def walk(value, keys=()):
+        if isinstance(value, dict):
+            if {'path', 'sha256'} <= value.keys():
+                raw = value['path']
+                require(isinstance(raw, str) and raw and isinstance(value['sha256'], str),
+                        'source reference path and digest required')
+                path = Path(raw)
+                if (isinstance(document, dict) and document.get('schema') == 'saea-external-exploration-profile-v1'
+                        and keys == ('template',) and str(source_path) in profile_bindings):
+                    binding = profile_bindings[str(source_path)]
+                    require(value['sha256'] == binding['sha256'], 'copied profile template binding differs')
+                    path = Path(binding['path'])
+                elif not path.is_absolute():
+                    require('..' not in path.parts, 'relative source reference escapes document directory')
+                    path = source_path.parent/path
+                require(path.is_absolute() and '..' not in path.parts, 'canonical source reference required')
+                yield {'path': str(path), 'sha256': value['sha256']}
+            for key, child in value.items(): yield from walk(child, keys+(key,))
+        elif isinstance(value, list):
+            for i, child in enumerate(value): yield from walk(child, keys+(i,))
+    yield from walk(document)
+
+
+def profile_binding(prepared):
+    if prepared.get('schema') != 'saea-external-exploration-prepared-v1': return {}
+    files = prepared.get('files', {})
+    if 'profile.json' not in files or 'template.md' not in files: return {}
+    return {files['profile.json']['path']: files['template.md']}
+
+
 def source_inventory(job, collected):
     """Resolve every explicit pin recursively; retain the original absolute path map."""
     todo = list(Path(job['prepared']['path']).parent.rglob('*'))
     todo += [collected, pinned(job['implementation'])]
     files = {}
+    bindings = profile_binding(read(job['prepared']['path']))
     forbidden = {'authorization', 'api_key', 'apikey', 'access_token', 'refresh_token',
                  'password', 'secret', 'proxy_authorization', 'environment', 'environ'}
     def inspect(value):
@@ -251,8 +293,6 @@ def source_inventory(job, collected):
             require(not forbidden.intersection(str(k).lower().replace('-', '_') for k in value),
                     'credential-bearing source cannot be exported')
             require(not value.get('headers'), 'header-bearing source cannot be exported')
-            if {'path', 'sha256'} <= value.keys():
-                todo.append(pinned({k: value[k] for k in ('path', 'sha256')}))
             for child in value.values(): inspect(child)
         elif isinstance(value, list):
             for child in value: inspect(child)
@@ -270,7 +310,11 @@ def source_inventory(job, collected):
                     'credential or arbitrary headers cannot be exported')
         require(not re.search(rb'(?i)(authorization\s*[:=]\s*["\x27]?bearer\s+|"(?:api_key|access_token|password)"\s*:)', raw),
                 'credential-bearing source cannot be exported')
-        if path.suffix == '.json': inspect(json.loads(raw))
+        if path.suffix == '.json':
+            document = json.loads(raw)
+            inspect(document)
+            for reference in source_references(document, path, bindings):
+                todo.append(pinned(reference))
         files[str(path)] = {'path': str(path), 'sha256': hashlib.sha256(raw).hexdigest()}
     return sorted(files.values(), key=lambda item: item['path'])
 
@@ -289,22 +333,25 @@ def verify_handoff(output):
     require({str(p.relative_to(output)) for p in output.rglob('*') if p.is_file()} == expected, 'handoff inventory differs')
     # Check every source pin resolves within this package, not back to sender files.
     index = {i['source_path']: i for i in manifest['files']}
-    def check(value):
-        if isinstance(value, dict):
-            if {'path', 'sha256'} <= value.keys():
-                require(value['path'] in index and index[value['path']]['sha256'] == value['sha256'],
-                        'handoff source closure incomplete')
-            for child in value.values(): check(child)
-        elif isinstance(value, list):
-            for child in value: check(child)
-    for entry in manifest['files']:
-        if entry['source_path'].endswith('.json'): check(read(output/entry['path']))
+    documents = {entry['source_path']: read(output/entry['path'])
+                 for entry in manifest['files'] if entry['source_path'].endswith('.json')}
+    bindings = {}
+    for document in documents.values():
+        if isinstance(document, dict):
+            for key, value in profile_binding(document).items():
+                require(key not in bindings or bindings[key] == value, 'conflicting profile bindings')
+                bindings[key] = value
+    for source, document in documents.items():
+        for reference in source_references(document, source, bindings):
+            require(reference['path'] in index
+                    and index[reference['path']]['sha256'] == reference['sha256'],
+                    'handoff source closure incomplete')
     return manifest
 
 
-def export(config, job_id, output):
+def export(config, job_id, output, *, source_runner=None):
     """Private replay inventory, no credentials and no automatic candidate promotion."""
-    doc, root = load(config); job = next(j for j in doc['jobs'] if j['id'] == job_id)
+    doc, root = load(config, export_runner=source_runner); job = next(j for j in doc['jobs'] if j['id'] == job_id)
     d = root/job_id
     with ExitStack() as stack:
         for guard_path in (d/'worker.guard', Path(job['prepared']['path']).parent/'local-queue.guard'):
@@ -325,6 +372,8 @@ def export(config, job_id, output):
             entries.append({'path': name, 'sha256': entry['sha256'], 'source_sha256': entry['sha256'], 'source_path': str(path)})
         manifest = {'schema': 'saea-local-teacher-handoff-v2', 'queue_id': doc['queue_id'],
                     'job_id': job_id, 'prepared_sha256': job['prepared']['sha256'], 'files': entries,
+                    'exporter': {'path': str(Path(__file__).resolve()), 'sha256': sha(__file__)},
+                    'source_runner': source_runner,
                     'candidate_accepted': False, 'deployment_ready': False,
                     'meaning': 'complete prepared tree and recursive pinned source inventory; original-path map retained for replay'}
         persist(output/'manifest.json', manifest)
@@ -335,7 +384,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=['start', 'run', 'worker', 'reconcile', 'status', 'export', 'pin-implementation', 'verify-handoff'])
     parser.add_argument('--config', type=Path); parser.add_argument('--cli', type=Path); parser.add_argument('--job'); parser.add_argument('--output', type=Path)
+    parser.add_argument('--source-runner-pin', type=Path, help='export-only original runner file pin; never changes execution identity')
     args = parser.parse_args()
+    require(args.source_runner_pin is None or args.action == 'export', 'source runner override is export-only')
     if args.action not in ('pin-implementation', 'verify-handoff'): require(args.config, 'queue config required')
     if args.action in ('worker', 'reconcile', 'export'): require(args.job, 'job ID required')
     if args.action == 'pin-implementation':
@@ -343,7 +394,7 @@ if __name__ == '__main__':
     elif args.action == 'verify-handoff':
         require(args.output, 'handoff directory required'); result = verify_handoff(args.output)
     elif args.action == 'export':
-        require(args.output, 'private output directory required'); result = export(args.config, args.job, args.output)
+        require(args.output, 'private output directory required'); result = export(args.config, args.job, args.output, source_runner=read(args.source_runner_pin) if args.source_runner_pin else None)
     elif args.action == 'status':
         doc, root = load(args.config); result = {j['id']: job_status(root, j) for j in doc['jobs']}
     else: result = {'start': start, 'run': run, 'worker': worker, 'reconcile': reconcile}[args.action](args.config, *([args.job] if args.job else []))

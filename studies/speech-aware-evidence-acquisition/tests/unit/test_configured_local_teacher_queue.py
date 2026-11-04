@@ -192,3 +192,60 @@ def test_export_rejects_credential_source_before_creating_target(tmp_path):
     (tmp_path/'0/leaked.json').write_text('{"headers":{"Authorization":"Bearer forbidden"}}')
     with pytest.raises(ValueError,match='credential|header'):q.export(config,'j0',tmp_path/'handoff')
     assert not (tmp_path/'handoff').exists()
+
+
+def copied_profile(tmp_path, jobs):
+    root = tmp_path/'0'
+    template = root/'template.md'; template.write_text('algorithm-specific instructions')
+    profile = root/'profile.json'
+    profile.write_text(json.dumps({'schema':'saea-external-exploration-profile-v1',
+        'template':{'path':'../../prompts/learner/tfrl/ace.md','sha256':q.sha(template)}}))
+    prepared = root/'prepared.json'; document=q.read(prepared)
+    document['files']={name:{'path':str(root/name),'sha256':q.sha(root/name)}
+                       for name in ('profile.json','template.md')}
+    prepared.write_text(json.dumps(document))
+    jobs[0]['prepared']['sha256']=q.sha(prepared)
+    return template,profile
+
+
+def test_copied_profile_uses_prepared_template_binding_and_offline_closure(tmp_path):
+    config,jobs=fixture(tmp_path);template,profile=copied_profile(tmp_path,jobs)
+    doc=q.read(config);doc['jobs']=jobs;config.write_text(json.dumps(doc));q.run(config)
+    result=q.export(config,'j0',tmp_path/'handoff')
+    assert str(template) in {i['source_path'] for i in result['files']}
+    template.unlink();profile.unlink()  # receiver must never consult sender paths
+    assert q.verify_handoff(tmp_path/'handoff') == result
+
+
+def test_copied_profile_rejects_different_template_digest(tmp_path):
+    config,jobs=fixture(tmp_path);template,profile=copied_profile(tmp_path,jobs)
+    document=q.read(profile);document['template']['sha256']='0'*64;profile.write_text(json.dumps(document))
+    prepared=tmp_path/'0/prepared.json'; manifest=q.read(prepared)
+    manifest['files']['profile.json']['sha256']=q.sha(profile);prepared.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError,match='template binding differs'):
+        q.source_inventory(jobs[0],tmp_path/'0/prepared.json')
+
+
+def test_relative_reference_confined_and_hash_verified(tmp_path):
+    config,jobs=fixture(tmp_path);q.run(config)
+    source=tmp_path/'0/evidence.txt';source.write_text('evidence')
+    extra=tmp_path/'0/material.json'
+    extra.write_text(json.dumps({'source':{'path':'evidence.txt','sha256':q.sha(source)}}))
+    q.export(config,'j0',tmp_path/'handoff')
+    source.write_text('changed')
+    with pytest.raises(ValueError,match='pinned file changed'):q.export(config,'j0',tmp_path/'bad-hash')
+    extra.write_text(json.dumps({'source':{'path':'../outside','sha256':'0'*64}}))
+    with pytest.raises(ValueError,match='escapes'):q.export(config,'j0',tmp_path/'escape')
+
+
+def test_export_overlay_keeps_original_runner_identity(tmp_path):
+    config,jobs=fixture(tmp_path);q.run(config)
+    original=tmp_path/'original-runner.py';original.write_text('original historical runner')
+    identity=tmp_path/'state/identity.json';document=q.read(identity)
+    document['runner_sha256']=q.sha(original);identity.write_text(json.dumps(document));before=identity.read_bytes()
+    with pytest.raises(ValueError,match='implementation changed'):q.export(config,'j0',tmp_path/'no-overlay')
+    manifest=q.export(config,'j0',tmp_path/'overlay',source_runner={'path':str(original),'sha256':q.sha(original)})
+    assert manifest['source_runner']['sha256']==q.sha(original)
+    assert identity.read_bytes()==before
+    assert (tmp_path/'0/calls').read_text()=='dispatch\n'
+    with pytest.raises(ValueError,match='implementation changed'):q.run(config)
