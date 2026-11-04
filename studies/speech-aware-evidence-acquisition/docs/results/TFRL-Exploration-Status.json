@@ -1,21 +1,60 @@
 {
   "schema": "saea-tfrl-exploration-status-v1",
-  "observed_at_utc": "2026-11-04T06:56:00Z",
+  "observed_at_utc": "2026-11-04T07:10:59Z",
   "candidate": "slurp-gepa-node2-b-feedback80-v1",
-  "state": "generation-container-running",
-  "completed_rows": null,
+  "state": "generation-running-with-verified-checkpoint",
+  "completed_rows": 18,
   "total_rows": 80,
   "cards": 2,
   "instances": 1,
   "client_concurrency": 32,
-  "wall_seconds_per_completed_row": null,
-  "estimated_remaining_seconds": null,
+  "wall_seconds_per_completed_row": 53.71890944444445,
+  "estimated_remaining_seconds": 3330.5723855555557,
   "normal_generation_calls_planned": 320,
   "fit_calls_accounted_separately": true,
-  "actual_usage": null,
+  "actual_usage": {
+    "scope": "complete checkpoint rows only; excludes FIT and in-flight or partial rows",
+    "calls": 72,
+    "prompt_tokens": 507863,
+    "completion_tokens": 121939
+  },
   "official_scoring_queue": "waiting-exact-generation-exit-zero",
   "independent_cpu_archive_interval_seconds": 600,
   "scientific_gain_claimed": false,
   "eight_card_utilization_verified": false,
-  "run_commit": "0f0c04e30140c9041727dab5d5a0c44d0dbd3eb7"
+  "run_commit": "0f0c04e30140c9041727dab5d5a0c44d0dbd3eb7",
+  "remaining_rows": 62,
+  "eta_basis": "Linear cumulative completion rate including startup; not a final throughput baseline.",
+  "complete_sample_mean_admitted_to_finished_seconds": 571.2761538794445,
+  "checkpoint_sha256": "5c0bafbec50300cfef9a592ce5dee483fd198abddefb8cab75ddd80d19cc5657",
+  "fulltest": {
+    "observed_at_utc": "2026-11-04T07:02:10Z",
+    "completed_rows": 10075,
+    "total_rows": 13078,
+    "remaining_rows": 3003,
+    "cards": 4,
+    "instances": 1,
+    "wall_seconds_per_completed_row": null,
+    "estimated_remaining_seconds": null,
+    "reason": "Recovery combines historical reconstruction and fresh inference."
+  },
+  "idle_exploration_lane": {
+    "cards": 2,
+    "instances": 1,
+    "reason": "No new executable candidate delivered."
+  },
+  "npu_spot_observation": {
+    "observed_at_utc": "2026-11-04T07:07:46Z",
+    "aicore_percent_by_card": [
+      66,
+      1,
+      67,
+      71,
+      0,
+      0,
+      61,
+      79
+    ],
+    "scope": "Single instantaneous observation, not sustained utilization."
+  }
 }

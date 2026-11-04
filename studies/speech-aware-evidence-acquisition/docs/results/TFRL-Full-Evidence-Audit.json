@@ -1,0 +1,20 @@
+{
+  "schema": "saea-full-evidence-comparison-v1",
+  "source_sha256": "776b5b90ce59b097c4799c47d4484dd60e1573f75627cd98831d489ec10f7ffa",
+  "source_bytes": 6215970,
+  "comparison_sha256": "de2255356d98f0c86a96527752cdb5043b2cd71e897c52983eb0b78ef0b78331",
+  "counts": {
+    "rollouts": 204,
+    "requests_present": 204,
+    "strict_successes": 0,
+    "groups": 51,
+    "groups_with_supplied_evidence": 51,
+    "groups_with_task_instruction": 51,
+    "same_scored_duplicates_within_groups": 58
+  },
+  "same_query_references_predictions_feedback_and_trajectory_hashes": true,
+  "expanded_reference_dictionaries_valid": true,
+  "new_model_calls": 0,
+  "scope": "archive pin and paired material comparison; not independent raw audio inspection or a new native source verification",
+  "root_cause_proven": false
+}
