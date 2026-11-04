@@ -14,15 +14,18 @@ from tfrl_odd40_cells import read,raw,sha,confined
 SCHEMA='saea-gepa-pair-material-v1'
 
 
-def derive(repo,data,*,seed_material,mutation_manifest,historical_repository=None):
+def derive(repo,data,*,seed_material,mutation_manifest,historical_repository=None,mutation_repository=None):
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
     from speech_aware_evidence_acquisition.rails.gepa_mutation_runtime import verify_mutation_bundle
     from speech_aware_evidence_acquisition.rails.gepa_mutation_source import seed_contract,source_repository
     historical=source_repository({} if historical_repository is None else {'historical_repository':historical_repository},repo=repo,data=data)
+    mutation_repo=source_repository({} if mutation_repository is None else {'historical_repository':mutation_repository},repo=repo,data=data)
     checked=seed_contract({**seed_material,'root':'repository' if seed_material['root']=='repo' else 'data'},repo=historical,data=data)
     seed_doc=checked['document']
-    path,_=seed.read_pin(repo,data,mutation_manifest)
-    native=verify_mutation_bundle(verify_bundle(path),repo=repo,data=data)
+    # The mutation's registered model/receipt and fragments belong to its sealed
+    # source tree. Never recompose them against a different live serving lane.
+    path,_=seed.read_pin(mutation_repo,data,mutation_manifest)
+    native=verify_mutation_bundle(verify_bundle(path),repo=mutation_repo,data=data)
     contract,parent=checked['contract'],checked['parent']
     if native['contract_sha256']!=contract['contract_sha256'] or native['parent_sha256']!=parent['candidate_sha256']:
         raise ValueError('mutation belongs to another frozen parent or contract')
@@ -34,7 +37,10 @@ def derive(repo,data,*,seed_material,mutation_manifest,historical_repository=Non
             expected_contract_sha256=contract['contract_sha256'],count_tokens=count)
         common=dict(contract=contract,expected_contract_sha256=contract['contract_sha256'],count_tokens=count,
             tokenizer_identity=tokenizer,expected_tokenizer_sha256=prompt.sha(tokenizer))
-        original=confined(repo/'configs',checked['source_baseline']['phase_material']['solver']['instruction_template']).read_text()
+        template=checked['source_baseline']['phase_material']['solver']['instruction_template']
+        original=confined(historical/'configs',template).read_text()
+        if confined(repo/'configs',template).read_bytes()!=confined(historical/'configs',template).read_bytes():
+            raise ValueError('live Solver template differs from historical source')
         compiled=compile_template_pair(repo,checked['source_baseline'],parent_arguments=dict(common,candidate=parent),
             child_arguments=dict(common,candidate=child,parent=parent,expected_parent_sha256=parent['candidate_sha256'],mutation_text=native['mutation_text']),
             fit_estimate=seed_doc['fit_estimate'],max_supplied_items=seed_doc['max_supplied_items'],delivering_template_tokens=count(original))
@@ -45,15 +51,16 @@ def derive(repo,data,*,seed_material,mutation_manifest,historical_repository=Non
 
 
 def build(repo,data,spec,out):
-    if not {'schema','seed_material','mutation_manifest'}<=set(spec)<={'schema','seed_material','mutation_manifest','historical_repository'} or spec['schema']!='saea-gepa-pair-build-v1':
+    if not {'schema','seed_material','mutation_manifest'}<=set(spec)<={'schema','seed_material','mutation_manifest','historical_repository','mutation_repository'} or spec['schema']!='saea-gepa-pair-build-v1':
         raise ValueError('exact paired build specification required')
     if out.exists() or not out.resolve().is_relative_to((repo/'configs').resolve()):raise ValueError('fresh config output required')
-    result=derive(repo,data,seed_material=spec['seed_material'],mutation_manifest=spec['mutation_manifest'],historical_repository=spec.get('historical_repository'));out.mkdir(parents=True)
+    result=derive(repo,data,seed_material=spec['seed_material'],mutation_manifest=spec['mutation_manifest'],historical_repository=spec.get('historical_repository'),mutation_repository=spec.get('mutation_repository'));out.mkdir(parents=True)
     docs={k:result[k] for k in ('contract','parent','child')}
     docs.update(compiled_baseline=result['compiled']['baseline'],declaration=result['compiled']['declaration'])
     for name,doc in docs.items():publish_new(out/(name+'.json'),raw(doc))
     manifest={'schema':SCHEMA,'seed_material':spec['seed_material'],'mutation_manifest':spec['mutation_manifest'],
         **({'historical_repository':spec['historical_repository']} if 'historical_repository' in spec else {}),
+        **({'mutation_repository':spec['mutation_repository']} if 'mutation_repository' in spec else {}),
         'documents':{k:seed.pin(repo,out/(k+'.json')) for k in docs},
         'parent_sha256':result['parent']['candidate_sha256'],'child_sha256':result['child']['candidate_sha256'],
         'mutation_native_response_sha256':result['mutation']['response_sha256'],
@@ -63,7 +70,7 @@ def build(repo,data,spec,out):
 
 def verify(repo,data,material):
     if material.get('schema')!=SCHEMA:raise ValueError('paired material required')
-    expected=derive(repo,data,seed_material=material['seed_material'],mutation_manifest=material['mutation_manifest'],historical_repository=material.get('historical_repository'))
+    expected=derive(repo,data,seed_material=material['seed_material'],mutation_manifest=material['mutation_manifest'],historical_repository=material.get('historical_repository'),mutation_repository=material.get('mutation_repository'))
     docs={k:seed.read_pin(repo,data,v)[1] for k,v in material['documents'].items()}
     want={k:expected[k] for k in ('contract','parent','child')}
     want.update(compiled_baseline=expected['compiled']['baseline'],declaration=expected['compiled']['declaration'])
