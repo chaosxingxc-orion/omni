@@ -90,3 +90,17 @@ bootstrap 只允许新 venv，不修改既有环境；可加 `--wheelhouse /path
 使用已下载 wheel 完全离线安装。普通启动核验版本、架构、解释器、依赖及环境回执，
 不会自动安装。API key 由本机进程环境继承；队列仍使用原算法的 run/collect 和账本。
 该环境只用于本机教师 CPU 编排，NPU 服务及正式实验继续使用原固定镜像。
+
+## 科研批次离线准备
+
+`prepare_local_teacher_research.py --config batch.json` 复用原算法 prepare，输出
+`input-audit.json` 和既有队列格式 `queue.json`，不会启动模型请求。批次配置使用
+`saea-local-teacher-research-batch-v1`，绑定 `output_root`、`queue_id`、`max_parallel`、
+完整 `datasets` 文件 pins、排除身份列表 `excluded_ids` pin，以及 `jobs`。
+每项 job 绑定唯一 `id`、既有探索配置文件 `job` pin、历史 `prior_prepared` pins。
+
+脚本核验学习身份全部属于 TRAIN、排除身份的 query/utterance/audio 无交叉、
+真实来源组齐全，保持全部 rollout。模板由每个算法 profile 注入，动态上下文仍由
+job 文件绑定；历史 prepared 只用于识别重复请求，不把旧候选自动变成新知识。
+输出队列经生产入口离线校验，可用上面的 runtime queue 命令启动。相同身份
+已付费或未知时保留原账本；修改实验条件应生成新批次，不改运行中的文件。
