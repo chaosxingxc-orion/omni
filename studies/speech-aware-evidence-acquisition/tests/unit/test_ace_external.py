@@ -14,7 +14,7 @@ from test_external_teacher import network
 ROOT=Path(__file__).parents[2]
 
 
-def prepared(tmp_path,monkeypatch,source_id='slurp:train:one'):
+def prepared(tmp_path,monkeypatch,source_id='slurp:train:one', fenced_provenance=False):
     path,root=job(tmp_path);cfg=external.read(path);source=external.read(cfg['source']['path'])
     source['document']['groups'][0]['query_id']=source_id;source['document']['model_id']='actor'
     cfg['source']=write(Path(cfg['source']['path']),source);cfg['query_ids']=[source_id]
@@ -26,7 +26,10 @@ def prepared(tmp_path,monkeypatch,source_id='slurp:train:one'):
     op={'operation':'ADD','target_id':None,'condition':'Conflicting intent evidence is present','content':'Compare the action boundary before choosing.','exception':'When evidence is absent retain uncertainty.'}
     candidate={'id':'one','reflection':{'hypothesis':'Knowledge is available but not consumed','evidence_query_ids':[source_id],'counterexample':'No available evidence'},'operations':[op,copy.deepcopy(op)],'validation':'Target repairs and unrelated controls'}
     second=copy.deepcopy(candidate);second['id']='two';second['operations'][0]['content']='Use the supplied slot boundary.'
+    if fenced_provenance:
+        for op in candidate['operations']: op['content'] += ' Provenance: private. Dev-diagnosis: sample answer'
     response={'id':'ace-response','model':'external-model','choices':[{'finish_reason':'stop','message':{'content':json.dumps({'algorithm':'ace','candidates':[candidate,second]})}}],'usage':{'prompt_tokens':100,'completion_tokens':90}}
+    if fenced_provenance: response['choices'][0]['message']['content']='```json\n'+response['choices'][0]['message']['content']+'\n```'
     _,_,caller,request=external.load_prepared(root);network(caller,monkeypatch,[response]);caller(request);external.collect(root)
     spec={'schema':'saea-ace-external-compile-v1','prepared':external.pin(root/'prepared.json'),'collected':external.pin(root/'collected.json'),'candidate_index':0}
     return spec,root
@@ -127,3 +130,53 @@ def test_workload_metadata_does_not_mislabel_ace():
     from external_experience_workload import algorithm_metadata
     assert algorithm_metadata('external-ace-v1')['id']=='ace-external-additive-offline-v1'
     with pytest.raises(ValueError):algorithm_metadata('unknown')
+
+
+def test_runtime_projection_keeps_original_and_binds_every_span(tmp_path):
+    p={'operations':[{'condition':'Trigger','content':'Keep distinct names. Provenance: private','exception':'One full name stays together.'}]}
+    doc={'schema':'saea-ace-runtime-projection-v1','proposal_sha256':sha(p),'author':'reviewer','rationale':'Remove development provenance only','decision':'eligible-for-development-review','operations':[{k:{'source_sha256':sha(v),'spans':[[0,len(v.split(' Provenance:')[0])]]} for k,v in p['operations'][0].items()}]}
+    pin=write(tmp_path/'projection.json',doc);out,record=ace.project_runtime(p,pin)
+    assert out['operations'][0]['content']=='Keep distinct names.' and 'Provenance:' in p['operations'][0]['content']
+    for fault in ['source','span','proposal']:
+        bad=copy.deepcopy(doc)
+        if fault=='source':bad['operations'][0]['content']['source_sha256']='f'*64
+        elif fault=='span':bad['operations'][0]['content']['spans']=[[0,999]]
+        else:bad['proposal_sha256']='f'*64
+        with pytest.raises(ValueError):ace.project_runtime(p,write(tmp_path/'bad.json',bad))
+
+
+def test_development_provenance_cannot_enter_runtime():
+    p={'id':'x','reflection':{'hypothesis':'x','counterexample':'x','evidence_query_ids':['slurp:train:x']},'validation':'x','operations':[{'operation':'ADD','target_id':None,'condition':'x','content':'Rule. Dev-diagnosis: answer','exception':'x'}]}
+    with pytest.raises(ValueError):ace.validated_items(p,{'bounds':{'max_operations_per_candidate':2}},['slurp:train:x'])
+
+
+@pytest.mark.parametrize('wrapper',['```json\n{}\n```','```json\r\n{}\r\n```'])
+def test_single_json_fence_is_format_only(wrapper):
+    p={'algorithm':'ace','candidates':[{'id':str(i),'reflection':{'evidence_query_ids':['slurp:train:x']},'operations':[],'validation':'x'} for i in range(2)]}
+    profile={'algorithm':'ace','min_candidates':2,'max_candidates':8}
+    assert external.validate_proposals(wrapper.replace('{}',json.dumps(p)),profile,{},['slurp:train:x'])==p
+
+
+@pytest.mark.parametrize('text',['text\n```json\n{}\n```','```json\n{}\n```\nextra','```python\n{}\n```','```json\n{}\n```\n```json\n{}\n```'])
+def test_ambiguous_fences_refused(text):
+    with pytest.raises(ValueError):external.validate_proposals(text,{'algorithm':'ace','min_candidates':2,'max_candidates':8},{})
+
+
+def test_fenced_real_wire_projection_replays_without_dispatch(tmp_path,monkeypatch):
+    spec,root=prepared(tmp_path,monkeypatch,fenced_provenance=True)
+    with pytest.raises(ValueError):ace.compile_preview(spec)
+    proposal=external.read(root/'collected.json')['proposals']['candidates'][0]
+    doc={'schema':'saea-ace-runtime-projection-v1','proposal_sha256':sha(proposal),'author':'reviewer',
+         'rationale':'Retain rule, keep private diagnosis only in source','decision':'eligible-for-development-review',
+         'operations':[{k:{'source_sha256':sha(op[k]),'spans':[[0,len(op[k].split(' Provenance:')[0])]]}
+                       for k in ('condition','content','exception')} for op in proposal['operations']]}
+    spec['runtime_projection']=write(tmp_path/'projection.json',doc)
+    candidate=ace.compile_preview(spec)
+    assert 'Dev-diagnosis:' in candidate['proposal']['operations'][0]['content']
+    assert all('Dev-diagnosis:' not in item for item in candidate['items'].values())
+    from speech_aware_evidence_acquisition.rails.external_teacher import ExternalTeacher
+    monkeypatch.setattr(ExternalTeacher,'__call__',lambda *a:pytest.fail('replayed request'))
+    assert ace.compile_preview(spec)==candidate
+    doc['operations'][0]['content']['spans']=[[0,1]]
+    spec['runtime_projection']=write(tmp_path/'projection.json',doc)
+    assert ace.compile_preview(spec)['sha256'] != candidate['sha256']

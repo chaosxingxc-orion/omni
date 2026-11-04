@@ -30,6 +30,37 @@ def validate_context(context, source_pin):
     return memory
 
 
+def project_runtime(proposal, pin):
+    """Explicit researcher-reviewed substring projection; original teacher text stays intact."""
+    import copy
+    doc = external.read(external.checked(pin))
+    require(set(doc) == {'schema', 'proposal_sha256', 'author', 'rationale', 'decision', 'operations'}
+            and doc['schema'] == 'saea-ace-runtime-projection-v1'
+            and doc['proposal_sha256'] == sha(proposal)
+            and doc['decision'] == 'eligible-for-development-review'
+            and all(isinstance(doc[k], str) and doc[k].strip() for k in ('author','rationale')),
+            'explicit source-bound runtime projection required')
+    require(isinstance(doc['operations'], list) and len(doc['operations']) == len(proposal['operations']),
+            'projection must account for every original operation')
+    result = copy.deepcopy(proposal)
+    for index, fields in enumerate(doc['operations']):
+        require(isinstance(fields, dict) and set(fields) == {'condition','content','exception'},
+                'exact runtime field projections required')
+        for field, selection in fields.items():
+            original = proposal['operations'][index][field]
+            require(set(selection) == {'source_sha256','spans'} and selection['source_sha256'] == sha(original),
+                    'projection field source differs')
+            spans = selection['spans']; require(isinstance(spans,list) and spans, 'nonempty retained spans required')
+            end = 0; pieces = []
+            for span in spans:
+                require(isinstance(span,list) and len(span)==2 and all(type(n) is int for n in span)
+                        and end <= span[0] < span[1] <= len(original), 'ordered disjoint source spans required')
+                pieces.append(original[span[0]:span[1]]); end=span[1]
+            result['operations'][index][field] = ''.join(pieces)
+    require(result != proposal, 'projection must explicitly remove development material')
+    return result, doc
+
+
 def validated_items(proposal, context, evidence_ids):
     require(set(proposal) == {'id', 'reflection', 'operations', 'validation'}, 'exact ACE proposal required')
     reflection = proposal['reflection']
@@ -49,7 +80,7 @@ def validated_items(proposal, context, evidence_ids):
                 and op['operation'] == 'ADD' and op['target_id'] is None, 'empty ACE layer permits ADD only')
         for name in ('condition', 'content', 'exception'):
             require(isinstance(op[name], str) and op[name].strip() and len(op[name]) <= 4000
-                    and 'slurp:' not in op[name], 'bounded generalizable condition/content/exception required')
+                    and not any(marker in op[name] for marker in ('slurp:', 'Dev-diagnosis:', 'Provenance:', 'value:')), 'bounded generalizable condition/content/exception required')
         text = 'Condition: ' + op['condition'] + '\nKnowledge: ' + op['content'] + '\nException: ' + op['exception']
         key = 'ace-' + sha({k: op[k] for k in ('condition', 'content', 'exception')})
         # Exact structural de-duplication only; retain every source operation index.
@@ -60,7 +91,7 @@ def validated_items(proposal, context, evidence_ids):
 
 
 def compile_preview(spec):
-    require(isinstance(spec, dict) and set(spec) == {'schema', 'prepared', 'collected', 'candidate_index'}
+    require(isinstance(spec, dict) and {'schema', 'prepared', 'collected', 'candidate_index'} <= set(spec) <= {'schema', 'prepared', 'collected', 'candidate_index', 'runtime_projection'}
             and spec['schema'] == 'saea-ace-external-compile-v1', 'exact ACE compile specification required')
     pp, cp = external.checked(spec['prepared']), external.checked(spec['collected'])
     require(pp.name == 'prepared.json' and cp == pp.parent/'collected.json', 'original prepared/collected required')
@@ -97,10 +128,13 @@ def compile_preview(spec):
     require(proposals == record.get('proposals') and record.get('candidate_accepted') is False, 'ACE collected response differs')
     index = spec['candidate_index']
     require(type(index) is int and 0 <= index < len(proposals['candidates']), 'valid ACE candidate index required')
-    proposal = proposals['candidates'][index]; items, provenance = validated_items(proposal, context, evidence)
+    proposal = proposals['candidates'][index]
+    runtime_proposal, projection = project_runtime(proposal, spec['runtime_projection']) if 'runtime_projection' in spec else (proposal, None)
+    items, provenance = validated_items(runtime_proposal, context, evidence)
     body = {'schema': 'saea-ace-external-preview-v1', 'strategy': STRATEGY,
             'model_id': context['actor_model_id'], 'parent_version': memory['version'], 'parent_sha256': sha(memory),
             'items': items, 'item_operation_indices': provenance, 'proposal': proposal,
+            'runtime_projection': projection, 'runtime_proposal': runtime_proposal,
             'evidence_groups': evidence, 'exposure': exposure, 'learned_query_ids': sorted(evidence),
             'source': manifest['source'], 'prepared': spec['prepared'], 'collected': spec['collected'],
             'request_sha256': sha(request), 'wire_response_sha256': observed['response']['wire_response_sha256'],

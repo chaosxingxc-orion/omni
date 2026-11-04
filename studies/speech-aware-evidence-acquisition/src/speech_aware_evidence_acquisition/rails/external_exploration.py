@@ -177,6 +177,14 @@ def validate_proposals(text, profile, context, evidence_ids=None, relative=None)
         return result
     def invalid(value):
         raise ValueError('nonfinite JSON constant')
+    # Format-only recovery: exactly one JSON code fence, no surrounding prose.
+    stripped = text.strip()
+    if stripped.startswith('```'):
+        import re
+        match = re.fullmatch(r'```json\r?\n(.*?)\r?\n```', stripped, flags=re.DOTALL)
+        if match is None or '```' in match.group(1):
+            raise ValueError('one complete JSON fence without surrounding text required')
+        text = match.group(1)
     doc = json.loads(text, object_pairs_hook=pairs, parse_constant=invalid)
     if not isinstance(doc, dict) or set(doc) != {'algorithm', 'candidates'} or doc['algorithm'] != profile['algorithm']:
         raise ValueError('algorithm-specific proposal envelope required')
