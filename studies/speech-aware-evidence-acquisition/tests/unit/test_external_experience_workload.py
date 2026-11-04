@@ -52,3 +52,22 @@ def test_external_source_kind_reaches_component_compiler():
     from speech_aware_evidence_acquisition.rails.tfgrpo_consumption import validate_params
     component=next(c for c in COMPONENT_CATALOGUE if c.component_id=='tfgrpo-solver-experience')
     assert 'source_kind' in component.optional_params
+
+
+def test_target_grouping_rejected_before_source_or_runtime_contact(tmp_path):
+    import hashlib
+    from speech_aware_evidence_acquisition.rails.adapters.runtime_view import load_runtime_view
+    ids=['slurp:train:000090:audio-b', 'slurp:train:000001:audio-a']
+    cfg={**config(),'schema':m.SCHEMA,'sample_ids':ids}
+    with pytest.raises(ValueError,match='runtime sample_id order'):
+        m.ExternalExperienceWorkload(cfg)
+    # Real label-free runtime loader defines the order, not a test-only mock.
+    items=[]
+    for n,sid in enumerate(ids):
+        p=tmp_path/f'{n}.flac';p.write_bytes(bytes([n]))
+        items.append({'sample_id':sid,'media_relpath':p.name,
+                      'audio_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'audio_seconds':1.0})
+    actual=load_runtime_view({'schema':'saea-speech-native-runtime-view-v1','count':2,'items':items},tmp_path,sample_ids=ids)
+    canonical=[row['sample_id'] for row in actual]
+    assert canonical==sorted(ids) and set(canonical)==set(ids)
+    assert m.ExternalExperienceWorkload({**cfg,'sample_ids':canonical}).config['sample_ids']==canonical

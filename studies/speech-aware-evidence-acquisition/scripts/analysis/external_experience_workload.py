@@ -32,6 +32,10 @@ class ExternalExperienceWorkload(PairWorkload):
             raise ValueError('exact configured external experience workload required')
         # Reuse identity/client-width bounds only; no GEPA scientific identity.
         super().__init__({**config,'schema':'saea-gepa-pair-workload-v1'})
+        # Runtime SLURP load_runtime_view sorts by sample_id, independent of
+        # the target/control grouping used to choose an unchanged subset.
+        if config['sample_ids'] != sorted(config['sample_ids']):
+            raise ValueError('external consumers must use runtime sample_id order before review and release')
         self.config=copy.deepcopy(config);self.KIND=KIND
 
     def material_checked(self,repo,data,material_pin):
