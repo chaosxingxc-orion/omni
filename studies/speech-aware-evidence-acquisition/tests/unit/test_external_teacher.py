@@ -187,3 +187,51 @@ def test_budget_policy_roundtrip_preserves_evidence(tmp_path, monkeypatch, strea
     assert calls[0]['messages'][1:] == req['messages']
     assert '49152' in calls[0]['messages'][0]['content']
     assert 'analysis_budget' not in calls[0]
+
+
+def test_reference_tfgrpo_external_chain_preserves_actor_and_resume(tmp_path, monkeypatch):
+    from test_tfgrpo_learning import group, MODEL, POLICY
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import empty_experience
+    c = teacher(tmp_path)
+    parent = empty_experience(MODEL)
+    operations = json.dumps([{'operation': 'ADD', 'id': None,
+                             'content': 'Check the action cue before choosing an intent.'}])
+    calls = network(c, monkeypatch, [answer('Lower trajectory summary', 's1'),
+        answer('Higher trajectory summary', 's2'),
+        answer('<Experiences>1. Use action evidence rather than a mentioned object.</Experiences>', 'a1'),
+        answer(operations, 'g1'), answer(operations, 'b1')])
+    def learner():
+        return ExperienceLearner(tmp_path/'reference', model_id=c.model_id, metered_call=c,
+            preflight=c.preflight, reconcile=c.reconcile,
+            learning_config_sha256=c.learning_config_sha256, max_calls=5, concurrency=1)
+    kwargs = dict(agent_objective='Intent and slots', learning_objective='Generalizable evidence use',
+                  policy_sha256=POLICY, actor_model_id=MODEL)
+    result = learner().learn([group(parent)], parent, **kwargs)
+    assert result['model_id'] == result['actor_model_id'] == MODEL
+    assert result['learner_model_id'] == c.model_id
+    assert result['learning_usage'] == {'calls': 5, 'prompt_tokens': 100, 'completion_tokens': 50}
+    assert not result['deployment_accepted']
+    assert learner().learn([group(parent)], parent, **kwargs) == result
+    assert len(calls) == 5
+    binding = json.loads((tmp_path/'reference/batch.json').read_bytes())
+    assert binding['actor_model_id'] == MODEL and binding['learner_model_id'] == c.model_id
+    contacts = [json.loads(p.read_bytes()) for p in (tmp_path/'reference/contacts').glob('*.response.json')]
+    assert all(r['response']['model_id'] == c.model_id
+               and r['response']['receipt_kind'] == 'external-chat-v1' for r in contacts)
+
+
+@pytest.mark.parametrize('fault', ['actor', 'rollout', 'teacher_response'])
+def test_reference_tfgrpo_external_identity_mismatch_fails_closed(tmp_path, monkeypatch, fault):
+    from test_tfgrpo_learning import group, MODEL, POLICY
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import empty_experience
+    c = teacher(tmp_path); parent = empty_experience(MODEL); groups = [group(parent)]
+    if fault == 'rollout':
+        groups[0]['rollouts'][0]['model_id'] = c.model_id
+    calls = network(c, monkeypatch, [answer('Summary', model='foreign' if fault == 'teacher_response' else c.model_id)])
+    learner = ExperienceLearner(tmp_path/'reference', model_id=c.model_id, metered_call=c,
+        preflight=c.preflight, reconcile=c.reconcile,
+        learning_config_sha256=c.learning_config_sha256, max_calls=5, concurrency=1)
+    with pytest.raises(ValueError):
+        learner.learn(groups, parent, agent_objective='Intent', learning_objective='Evidence',
+                      policy_sha256=POLICY, actor_model_id='wrong' if fault == 'actor' else MODEL)
+    assert len(calls) == (1 if fault == 'teacher_response' else 0)

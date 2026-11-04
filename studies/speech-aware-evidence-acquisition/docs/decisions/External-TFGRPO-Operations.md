@@ -54,3 +54,9 @@
 执行 `python scripts/analysis/tfgrpo_external_release.py --config CONFIG.json --out PARAMS.json`，将输出参数配置给既有 `tfgrpo-solver-experience` 组件。脚本不会提交NPU任务或调用教师；参数、候选、来源和模板在FlightRuntime消费时再次检查。query、原始utterance和audio_sha256三个层面都禁止learning/consumer/selection交叉，且保持固定actor模型和精确消费者顺序。
 
 这条路径只是经验库消费适配，未为ACE/Reflexion冒用TF-GRPO规则，也未自动批准任何真实候选。当前发布范围是固定TRAIN625及H2子集；跨数据集或祖先来源无法在该视图中核验的候选需独立扩展来源协议，不能忽略校验。
+
+## 多阶段参考链的模型身份
+
+融合式单次提案之外，`ExperienceLearner.learn(..., actor_model_id=...)` 现在允许既有 summary→advantage→group_update→batch_update 链显式区分冻结 actor 与外部 learner。构造器的 model_id 仍是实际调用并核验响应的教师；actor_model_id 必须与 parent 及每条 rollout 的模型身份完全一致。candidate.model_id 保持 actor，另存 actor_model_id/learner_model_id；batch 绑定两者，断点恢复不允许更换身份。
+
+省略 actor_model_id 时保留历史原生行为及 batch 格式。此接口没有改变算法阶段、奖励、来源规则或原生发布要求，也不意味着外部参考链已真实运行。已有外部 receipt 保留 provider 身份，不将教师响应伪装成 actor 输出。后继配置入口仍需固定数据、完整证据、每阶段预算及来源适配；融合式当前请求不受此更改影响。

@@ -493,7 +493,8 @@ class ExperienceLearner:
               rollout_kind='full-same-policy', policy_sha256, num_experiences=2,
               summary_import=None, imported_summaries=None, import_custody=None,
               final_import=None, imported_operations=None, stage_custody=None,
-              reward_mode=BINARY_REWARD, final_merge_limits=None, final_merge_policy=None):
+              reward_mode=BINARY_REWARD, final_merge_limits=None, final_merge_policy=None,
+              actor_model_id=None):
         """Produce a candidate version; no gold enters a task inference request."""
         validate_reward_mode(reward_mode)
         if reward_mode != BINARY_REWARD and summary_import is not None:
@@ -506,8 +507,11 @@ class ExperienceLearner:
                 raise LearningError('final merge limits require exact registered bounds and verified import')
         if final_merge_policy is not None and (final_merge_policy not in ('bounded-synthesis-v1', 'evidence-grounded-synthesis-v1') or final_import is None or final_merge_limits is None):
             raise LearningError('bounded synthesis requires registered limits and verified final import')
+        # Transport identity remains self.model_id; the frozen actor owns rollouts
+        # and learned experience. Omission preserves historical batch bytes.
+        actor = self.model_id if actor_model_id is None else require_text(actor_model_id, 'actor model identity')
         groups, parent = copy.deepcopy(groups), copy.deepcopy(parent)
-        validate_experience(parent, self.model_id)
+        validate_experience(parent, actor)
         if rollout_kind not in ('full-same-policy','shared-perception-adaptation'):
             raise LearningError('explicit rollout semantics required')
         if not isinstance(policy_sha256,str) or not re.fullmatch('[a-f0-9]{64}',policy_sha256):
@@ -533,7 +537,7 @@ class ExperienceLearner:
                 seen_trajectories.add(rid)
                 for field in ('trajectory','critique'):require_text(rollout[field],field)
                 validate_reward(rollout['reward'], reward_mode)
-                if (rollout['model_id'] != self.model_id or rollout['policy_sha256'] != policy_sha256
+                if (rollout['model_id'] != actor or rollout['policy_sha256'] != policy_sha256
                         or rollout['experience_sha256'] != parent['sha256']):
                     raise LearningError('all rollouts must share model, policy and experience')
         common={'agent_objective':agent_objective,'learning_objective':learning_objective,'num_experiences':num_experiences}
@@ -570,6 +574,8 @@ class ExperienceLearner:
                  'bounds':{'max_calls':self.max_calls,'concurrency':self.concurrency,
                            'max_operations':self.max_operations,'max_items':self.max_items,
                            'max_characters':self.max_characters}}
+        if actor_model_id is not None:
+            binding.update(actor_model_id=actor, learner_model_id=self.model_id)
         if summary_import is not None:binding['summary_import']=copy.deepcopy(summary_import)
         if final_import is not None:binding['final_import']=copy.deepcopy(final_import)
         with self._exclusive_batch():
@@ -587,7 +593,7 @@ class ExperienceLearner:
             if planned>self.max_calls:raise LearningError('complete update exceeds contact budget before first call')
             result_path=self.root/'candidate.json'
             if result_path.exists():
-                candidate=json.loads(result_path.read_bytes());validate_experience(candidate,self.model_id)
+                candidate=json.loads(result_path.read_bytes());validate_experience(candidate,actor)
                 if candidate.get('batch_sha256')!=self._batch:raise LearningError('candidate belongs to another batch')
                 if candidate.get('historical_summary_custody')!=import_custody:raise LearningError('candidate historical custody changed')
                 if candidate.get('historical_stage_custody')!=stage_custody:raise LearningError('candidate historical stage custody changed')
@@ -657,13 +663,15 @@ class ExperienceLearner:
             if len({r['receipt_id'] for r in receipts})!=len(receipts):raise LearningError('duplicate metering receipt identity')
             accounting=self.accounting()
             usage=accounting['known_usage']
-            body={'schema':'saea-tfgrpo-experience-v1','model_id':self.model_id,'items':items,
+            body={'schema':'saea-tfgrpo-experience-v1','model_id':actor,'items':items,
                   'learned_query_ids':sorted(set(parent['learned_query_ids'])|{g['query_id'] for g in mixed}),
                   'parent_sha256':parent['sha256'],'batch_sha256':self._batch,
                   'status':'candidate','deployment_accepted':False,
                   'rollout_kind':rollout_kind,'learning_query_reuse':sorted(seen_queries & set(parent['learned_query_ids'])),'mixed_groups':len(mixed),'skipped_tied_groups':len(groups)-len(mixed),
                   'planned_learning_calls':planned,'operations':final_ops,'learning_usage':usage,'accounting':accounting,
                   'contact_response_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((self.root/'contacts').glob('*.response.json'))}}
+            if actor_model_id is not None:
+                body.update(actor_model_id=actor, learner_model_id=self.model_id)
             if reward_mode != BINARY_REWARD:
                 body['reward_mode'] = reward_mode
                 body['contrast_groups'] = body.pop('mixed_groups')
