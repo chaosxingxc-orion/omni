@@ -148,3 +148,17 @@ def test_unknown_mutation_prompt_policy_is_rejected(tmp_path,monkeypatch):
     source['mutation_prompt_policy']='silently-cut-output'
     with pytest.raises(ValueError,match='unsupported mutation prompt policy'):
         m.evidence.messages(source)
+
+
+def test_node_grounding_keeps_original_feedback_and_explicit_ids(tmp_path,monkeypatch):
+    _,_,_,_,source,_=setup(tmp_path,monkeypatch)
+    source['mutation_prompt_policy']='explicit-feedback-query-ids-v1'
+    previous=m.evidence.messages(source)
+    source['mutation_prompt_policy']='node-grounded-feedback-v2'
+    updated=m.evidence.messages(source)
+    body=json.loads(updated[1]['content']); old=json.loads(previous[1]['content'])
+    for row in body['observations']:
+        assert row.pop('recorded_node_feedback')['audio_available'] is False
+    assert body == old
+    assert 'other samples, not the current utterance' in updated[0]['content']
+    assert updated[0]['content'].startswith(previous[0]['content'])

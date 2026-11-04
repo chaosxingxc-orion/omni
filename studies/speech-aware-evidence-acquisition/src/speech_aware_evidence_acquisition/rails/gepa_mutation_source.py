@@ -3,6 +3,7 @@ import copy
 import hashlib
 import json
 import re
+from collections import Counter
 from pathlib import Path
 from . import solver_prompt_candidate as prompt
 from .gepa_mutation_execution import require
@@ -11,6 +12,7 @@ from .tfgrpo_learning import sha, intent_slot_reward
 from .tokenizer_runtime import load_text_token_counter
 
 SCHEMA = 'saea-gepa-mutation-source-v1'
+PROMPT_POLICIES = ('explicit-feedback-query-ids-v1', 'node-grounded-feedback-v2')
 FOCUSES = {
     'intent-slot-reasoning': 'Improve intention and slot reasoning. Diagnose whether the predicted intent incorrectly constrains slots; preserve explicit semantic evidence and distinguish a missing slot from a later delivery filter. Do not change the ontology, P, or normalization.',
     'evidence-use': 'Improve knowledge consumption. Diagnose whether evidence was ignored, overgeneralized, contradicted by the utterance, or improperly filtered. State applicability conditions and evidence priority; do not invent new knowledge or change retrieval.'}
@@ -101,7 +103,7 @@ def load_source(spec,*,repo,data):
     require(isinstance(spec,dict) and fields<=set(spec)<=fields|{'historical_repository','mutation_prompt_policy'} and spec['schema']==SCHEMA
         and spec['focus'] in FOCUSES,'exact configured mutation source required')
     policy=spec.get('mutation_prompt_policy')
-    require(policy is None or policy=='explicit-feedback-query-ids-v1','unsupported mutation prompt policy')
+    require(policy is None or policy in PROMPT_POLICIES,'unsupported mutation prompt policy')
     repo=source_repository(spec,repo=repo,data=data)
     seed=seed_contract(spec['seed_material'],repo=repo,data=data)
     ids=spec['feedback_query_ids'];require(isinstance(ids,list) and 0<len(ids)<=16
@@ -168,6 +170,44 @@ def load_source(spec,*,repo,data):
         **({'historical_repository':copy.deepcopy(spec['historical_repository'])} if 'historical_repository' in spec else {})}
 
 
+def node_feedback(row):
+    """Describe exact recorded node differences without inventing spoken content."""
+    def parse(value):
+        try:
+            value = json.loads(value) if isinstance(value, str) else value
+            if not (isinstance(value, dict) and set(value) == {'scenario', 'action', 'entities'}
+                    and all(isinstance(value[k], str) for k in ('scenario', 'action'))
+                    and isinstance(value['entities'], list)
+                    and all(isinstance(e, dict) and set(e) == {'type', 'filler'}
+                            and all(isinstance(v, str) for v in e.values()) for e in value['entities'])):
+                return None
+            return value
+        except (ValueError, TypeError):
+            return None
+    raw, delivered, gold = [parse(row.get(k)) for k in ('raw_response', 'delivered_answer', 'gold_train')]
+    result = {'schema': 'saea-recorded-node-feedback-v1',
+              'parseable': {'raw': raw is not None, 'delivered': delivered is not None, 'gold': gold is not None},
+              'audio_available': False, 'exact_comparison_only': True,
+              'causal_attribution': 'unproven; node differences do not establish which rule caused them'}
+    def entities(answer):
+        return Counter((e['type'], e['filler']) for e in answer['entities'])
+    def rows(counter):
+        return [{'type': t, 'filler': f, 'count': n} for (t, f), n in sorted(counter.items())]
+    if raw is not None and delivered is not None:
+        result['delivery_delta'] = {'removed_entities': rows(entities(raw) - entities(delivered)),
+                                    'added_entities': rows(entities(delivered) - entities(raw)),
+                                    'intent_changed': (raw['scenario'], raw['action']) !=
+                                                      (delivered['scenario'], delivered['action'])}
+    if gold is not None:
+        for name, answer in (('raw', raw), ('delivered', delivered)):
+            if answer is not None:
+                result[name + '_vs_gold'] = {
+                    'intent_exact': (answer['scenario'], answer['action']) == (gold['scenario'], gold['action']),
+                    'missing_entities': rows(entities(gold) - entities(answer)),
+                    'extra_entities': rows(entities(answer) - entities(gold))}
+    return result
+
+
 def messages(source):
     parent=source['parent'];contract=source['contract']
     system=('You improve one frozen multimodal agent Solver consumption instruction using observed TRAIN feedback. '
@@ -179,12 +219,20 @@ def messages(source):
         'schema='+prompt.MUTATION_SCHEMA+'; parent_sha256='+parent['candidate_sha256']+'; module='+prompt.MODULE+'. '
         'Instruction limit '+str(contract['max_instruction_tokens'])+' tokenizer tokens. '+FOCUSES[source['focus']])
     policy=source.get('mutation_prompt_policy')
-    require(policy is None or policy=='explicit-feedback-query-ids-v1','unsupported mutation prompt policy')
+    require(policy is None or policy in PROMPT_POLICIES,'unsupported mutation prompt policy')
     if policy is not None:
         system += (' evidence_query_ids identifies feedback queries, not knowledge items. '
             'Choose a nonempty subset of allowed_feedback_query_ids, copying each selected ID exactly once. '
             'Never put evidence_id, knowledge keys, train-exemplars::value identifiers, or content hashes into that field. '
             'Use diagnosis for your analysis; do not enumerate or repeat retrieved knowledge IDs.')
+    if policy == 'node-grounded-feedback-v2':
+        system += (' Retrieved exemplars describe other samples, not the current utterance. '
+            'Gold TRAIN labels are evaluation references, not audio or a transcript. '
+            'Use recorded_node_feedback to distinguish raw intent errors, raw slot errors and delivery changes; '
+            'never claim the raw Solver omitted a slot already present in raw_response. '
+            'Do not call every surface-form change a defect: normalization may be correct. '
+            'Ground each diagnosis in the cited query and exact fields; mark unobserved speech and causal claims uncertain. '
+            'Your instruction must be compatible with fixed_surrounding_template; knowledge intent bindings are not exhaustive slot whitelists.')
     shared={};observations=[]
     def reference(value):
         digest=sha(value)
@@ -193,6 +241,8 @@ def messages(source):
         return {'content_sha256':digest}
     for original in source['observations']:
         row=copy.deepcopy(original);request=row.pop('request',None)
+        if policy == 'node-grounded-feedback-v2':
+            row['recorded_node_feedback'] = node_feedback(original)
         if request is not None:
             # Lossless references avoid repeating the global ontology, framework
             # messages and identical knowledge for each feedback item. Full
