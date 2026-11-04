@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Durable local orchestration of existing teacher CLIs; unknown work is held."""
 import argparse
+from contextlib import ExitStack
 import fcntl
 import hashlib
 import json
@@ -59,6 +60,25 @@ def pinned(value):
     return path
 
 
+def implementation_inventory(cli):
+    """Pin the entire first-party source tree, including dynamic import targets."""
+    cli = Path(cli).resolve(); study = cli.parents[2]
+    source = study/'src'
+    require(source.is_dir(), 'adapter source tree required')
+    paths = {cli, *source.rglob('*.py'), * (study/'scripts/environment').glob('*.py')}
+    require(all(p.is_file() and not p.is_symlink() and p.resolve() == p for p in paths),
+            'implementation files must be canonical regular files')
+    return {'schema': 'saea-local-teacher-implementation-v1', 'cli': str(cli),
+            'files': [{'path': str(p), 'sha256': sha(p)} for p in sorted(paths)]}
+
+
+def verify_implementation(job):
+    manifest = read(pinned(job['implementation']))
+    require(manifest == implementation_inventory(pinned(job['cli'])),
+            'adapter implementation inventory changed')
+    return manifest
+
+
 def load(config):
     doc = read(config)
     require(set(doc) == {'schema', 'queue_id', 'state_dir', 'max_parallel', 'jobs'} and doc['schema'] == SCHEMA, 'exact local queue schema required')
@@ -67,10 +87,11 @@ def load(config):
     require(isinstance(doc['jobs'], list) and 0 < len(doc['jobs']) <= 1000, 'finite job list required')
     names, roots = set(), set()
     for job in doc['jobs']:
-        require(set(job) == {'id', 'kind', 'cli', 'prepared', 'depends_on'}, 'exact job schema required')
+        require(set(job) == {'id', 'kind', 'cli', 'prepared', 'implementation', 'depends_on'}, 'exact job schema required')
         require(isinstance(job['id'], str) and re.fullmatch('[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}', job['id']) and job['id'] not in names, 'unique job ID required')
         require(job['kind'] in KINDS, 'supported teacher adapter required')
         cli, prepared = pinned(job['cli']), pinned(job['prepared'])
+        verify_implementation(job)
         require(cli.name == KINDS[job['kind']][0] and prepared.name == 'prepared.json', 'existing CLI and prepared manifest required')
         require(read(prepared)['schema'] == KINDS[job['kind']][1], 'prepared algorithm mismatch')
         require(prepared.parent not in roots, 'prepared request cannot be queued twice')
@@ -99,39 +120,69 @@ def process_identity(pid):
 def alive(identity): return bool(identity and process_identity(identity['pid']) == identity)
 
 
+def live_job(d):
+    return any((d/name).exists() and alive(read(d/name)) for name in ('worker.json', 'child.json'))
+
+
+def last_result(d):
+    for name in ('reconciled.json', 'result.json'):
+        if (d/name).exists(): return read(d/name)
+    return None
+
+
 def worker(config, job_id, action='run'):
     doc, root = load(config); job = next(j for j in doc['jobs'] if j['id'] == job_id)
     d = private_dir(root/job_id)
-    with (d/'worker.guard').open('a+b') as guard:
+    with ExitStack() as stack:
+        guard = stack.enter_context((d/'worker.guard').open('a+b'))
         fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        result_name = 'result.json' if action == 'run' else 'reconciled.json'
-        if (d/result_name).exists(): return read(d/result_name)
+        # Shared across queue identities, independent of a queue's state directory.
+        prepared = pinned(job['prepared'])
+        source_guard = stack.enter_context((prepared.parent/'local-queue.guard').open('a+b'))
+        fcntl.flock(source_guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if action == 'collect': require(not live_job(d), 'live worker or child cannot be reconciled')
+        previous = last_result(d)
+        if previous and previous['status'] == 'complete':
+            pinned(previous['collected']); return previous
         if action == 'run' and (d/'intent.json').exists(): raise ValueError('existing dispatch intent: reconcile only')
         if action == 'run': persist(d/'intent.json', {'job_id': job_id, 'prepared_sha256': job['prepared']['sha256'], 'created_at': time.time()})
+        attempt_id = uuid.uuid4().hex
+        if action == 'collect':
+            attempts = private_dir(d/'reconciliations')
+            persist(attempts/(attempt_id+'.intent.json'), {'job_id': job_id, 'created_at': time.time()})
+            # Do not collect while an original provider process still owns its guard.
+            # The reference CLI also acquires its existing learner/runner.lock.
+            for path in sorted(prepared.parent.rglob('request.guard')):
+                provider_guard = stack.enter_context(path.open('a+b'))
+                fcntl.flock(provider_guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        verify_implementation(job)
         persist(d/'worker.json', process_identity(os.getpid()), replace=True)
-        cli, prepared = pinned(job['cli']), pinned(job['prepared'])
-        # No environment values, provider output or exception text enter queue logs.
+        cli = pinned(job['cli'])
         proc = subprocess.Popen([sys.executable, str(cli), action, str(prepared.parent)], stdin=subprocess.DEVNULL,
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                 env={**os.environ, 'PYTHONDONTWRITEBYTECODE': '1'})
         persist(d/'child.json', process_identity(proc.pid), replace=True)
         code = proc.wait(); collected = prepared.parent/'collected.json'
-        result = {'job_id': job_id, 'action': action, 'exit_code': code, 'completed_at': time.time(),
+        result = {'job_id': job_id, 'action': action, 'attempt_id': attempt_id, 'exit_code': code, 'completed_at': time.time(),
                   'status': 'complete' if code == 0 and collected.is_file() else 'failed-held',
                   'collected': {'path': str(collected), 'sha256': sha(collected)} if code == 0 and collected.is_file() else None,
                   'automatic_retry': False}
-        persist(d/result_name, result); return result
+        if action == 'collect':
+            persist(attempts/(attempt_id+'.result.json'), result)
+            persist(d/'reconciled.json', result, replace=True)
+        else: persist(d/'result.json', result)
+        persist(d/'child.json', None, replace=True)
+        persist(d/'worker.json', None, replace=True)
+        return result
 
 
 def job_status(root, job):
     d = root/job['id']
-    for name in ('reconciled.json', 'result.json'):
-        if (d/name).exists():
-            result = read(d/name)
-            if result['status'] == 'complete': pinned(result['collected'])
-            return result['status']
-    for name in ('worker.json', 'child.json'):
-        if (d/name).exists() and alive(read(d/name)): return 'running'
+    if live_job(d): return 'running'
+    result = last_result(d)
+    if result:
+        if result['status'] == 'complete': pinned(result['collected'])
+        return result['status']
     if any((d/n).exists() for n in ('launch.json', 'intent.json')): return 'unknown-held'
     return 'pending'
 
@@ -188,44 +239,110 @@ def reconcile(config, job_id):
     return worker(config, job_id, action='collect')
 
 
-def export(config, job_id, output):
-    """Build a private, source-pinned handoff; never deploy or select a candidate."""
-    doc, root = load(config); job = next(j for j in doc['jobs'] if j['id'] == job_id)
-    require(job_status(root, job) == 'complete', 'only completed collected work can be exported')
-    d = root/job_id
-    result = read(d/('reconciled.json' if (d/'reconciled.json').exists() else 'result.json'))
-    collected = pinned(result['collected']); record = read(collected)
-    files = {'collected.json': collected}
-    if job['kind'] == 'tfgrpo-reference':
-        candidate = pinned(record['candidate'])
-        require(candidate.resolve().is_relative_to(collected.parent), 'candidate must belong to prepared task')
-        files['candidate.json'] = candidate
-    output = Path(output)
-    require(not output.exists(), 'fresh handoff directory required')
-    output = private_dir(output)
-    entries = []
-    for name, path in files.items():
+def source_inventory(job, collected):
+    """Resolve every explicit pin recursively; retain the original absolute path map."""
+    todo = list(Path(job['prepared']['path']).parent.rglob('*'))
+    todo += [collected, pinned(job['implementation'])]
+    files = {}
+    forbidden = {'authorization', 'api_key', 'apikey', 'access_token', 'refresh_token',
+                 'password', 'secret', 'proxy_authorization', 'environment', 'environ'}
+    def inspect(value):
+        if isinstance(value, dict):
+            require(not forbidden.intersection(str(k).lower().replace('-', '_') for k in value),
+                    'credential-bearing source cannot be exported')
+            require(not value.get('headers'), 'header-bearing source cannot be exported')
+            if {'path', 'sha256'} <= value.keys():
+                todo.append(pinned({k: value[k] for k in ('path', 'sha256')}))
+            for child in value.values(): inspect(child)
+        elif isinstance(value, list):
+            for child in value: inspect(child)
+    while todo:
+        path = Path(todo.pop())
+        require(not path.is_symlink(), 'symlink source cannot be exported')
+        if path.is_dir(): continue
+        require(path.is_file() and path.resolve() == path, 'canonical source file required')
+        if str(path) in files: continue
+        require(path.name not in ('.env', 'credentials'), 'credential file cannot be exported')
         raw = path.read_bytes()
-        # Immutable publication and fsync; source bytes are not reserialized.
-        fd = os.open(output/name, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-        with os.fdopen(fd, 'wb') as stream:
-            stream.write(raw); stream.flush(); os.fsync(stream.fileno())
-        entries.append({'path': name, 'sha256': sha(output/name), 'source_sha256': sha(path)})
-    manifest = {'schema': 'saea-local-teacher-handoff-v1', 'queue_id': doc['queue_id'],
-                'job_id': job_id, 'prepared_sha256': job['prepared']['sha256'], 'files': entries,
-                'candidate_accepted': False, 'deployment_ready': False,
-                'meaning': 'collected candidate only; full source custody and semantic release remain required'}
-    persist(output/'manifest.json', manifest)
+        if path.name == 'headers.json':
+            metadata = json.loads(raw)
+            require(isinstance(metadata, dict) and set(metadata) <= {'content_type', 'http_status', 'request_id'},
+                    'credential or arbitrary headers cannot be exported')
+        require(not re.search(rb'(?i)(authorization\s*[:=]\s*["\x27]?bearer\s+|"(?:api_key|access_token|password)"\s*:)', raw),
+                'credential-bearing source cannot be exported')
+        if path.suffix == '.json': inspect(json.loads(raw))
+        files[str(path)] = {'path': str(path), 'sha256': hashlib.sha256(raw).hexdigest()}
+    return sorted(files.values(), key=lambda item: item['path'])
+
+
+def verify_handoff(output):
+    output = Path(output); manifest = read(output/'manifest.json')
+    require(manifest['schema'] == 'saea-local-teacher-handoff-v2', 'handoff schema required')
+    expected = {'manifest.json'}
+    originals = set()
+    for item in manifest['files']:
+        path = output/item['path']
+        require(path.resolve().is_relative_to(output.resolve()) and not path.is_symlink(), 'handoff path escapes')
+        require(sha(path) == item['sha256'] == item['source_sha256'], 'handoff bytes changed')
+        require(item['source_path'] not in originals, 'duplicate source')
+        originals.add(item['source_path']); expected.add(item['path'])
+    require({str(p.relative_to(output)) for p in output.rglob('*') if p.is_file()} == expected, 'handoff inventory differs')
+    # Check every source pin resolves within this package, not back to sender files.
+    index = {i['source_path']: i for i in manifest['files']}
+    def check(value):
+        if isinstance(value, dict):
+            if {'path', 'sha256'} <= value.keys():
+                require(value['path'] in index and index[value['path']]['sha256'] == value['sha256'],
+                        'handoff source closure incomplete')
+            for child in value.values(): check(child)
+        elif isinstance(value, list):
+            for child in value: check(child)
+    for entry in manifest['files']:
+        if entry['source_path'].endswith('.json'): check(read(output/entry['path']))
     return manifest
+
+
+def export(config, job_id, output):
+    """Private replay inventory, no credentials and no automatic candidate promotion."""
+    doc, root = load(config); job = next(j for j in doc['jobs'] if j['id'] == job_id)
+    d = root/job_id
+    with ExitStack() as stack:
+        for guard_path in (d/'worker.guard', Path(job['prepared']['path']).parent/'local-queue.guard'):
+            guard = stack.enter_context(guard_path.open('a+b'))
+            fcntl.flock(guard, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        require(job_status(root, job) == 'complete', 'only completed collected work can be exported')
+        collected = pinned(last_result(d)['collected'])
+        sources = source_inventory(job, collected)
+        output = Path(output); require(not output.exists(), 'fresh handoff directory required')
+        output = private_dir(output); private_dir(output/'files')
+        entries = []
+        for i, entry in enumerate(sources):
+            path = pinned(entry); name = 'files/'+str(i)
+            fd = os.open(output/name, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            with os.fdopen(fd, 'wb') as stream:
+                stream.write(path.read_bytes()); stream.flush(); os.fsync(stream.fileno())
+            require(sha(output/name) == entry['sha256'] == sha(path), 'source changed during export')
+            entries.append({'path': name, 'sha256': entry['sha256'], 'source_sha256': entry['sha256'], 'source_path': str(path)})
+        manifest = {'schema': 'saea-local-teacher-handoff-v2', 'queue_id': doc['queue_id'],
+                    'job_id': job_id, 'prepared_sha256': job['prepared']['sha256'], 'files': entries,
+                    'candidate_accepted': False, 'deployment_ready': False,
+                    'meaning': 'complete prepared tree and recursive pinned source inventory; original-path map retained for replay'}
+        persist(output/'manifest.json', manifest)
+        return verify_handoff(output)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['start', 'run', 'worker', 'reconcile', 'status', 'export'])
-    parser.add_argument('--config', type=Path, required=True); parser.add_argument('--job'); parser.add_argument('--output', type=Path)
+    parser.add_argument('action', choices=['start', 'run', 'worker', 'reconcile', 'status', 'export', 'pin-implementation', 'verify-handoff'])
+    parser.add_argument('--config', type=Path); parser.add_argument('--cli', type=Path); parser.add_argument('--job'); parser.add_argument('--output', type=Path)
     args = parser.parse_args()
+    if args.action not in ('pin-implementation', 'verify-handoff'): require(args.config, 'queue config required')
     if args.action in ('worker', 'reconcile', 'export'): require(args.job, 'job ID required')
-    if args.action == 'export':
+    if args.action == 'pin-implementation':
+        require(args.cli and args.output, 'CLI and fresh output required'); result = implementation_inventory(args.cli); persist(args.output, result)
+    elif args.action == 'verify-handoff':
+        require(args.output, 'handoff directory required'); result = verify_handoff(args.output)
+    elif args.action == 'export':
         require(args.output, 'private output directory required'); result = export(args.config, args.job, args.output)
     elif args.action == 'status':
         doc, root = load(args.config); result = {j['id']: job_status(root, j) for j in doc['jobs']}
