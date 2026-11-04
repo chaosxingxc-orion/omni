@@ -1,0 +1,54 @@
+{
+  "rows": 80,
+  "metrics": {
+    "control": {
+      "slu_f1": 0.6697651051706389,
+      "intent_accuracy": 0.825,
+      "span_f1": 0.5258215962441315,
+      "strict": 27
+    },
+    "learned": {
+      "slu_f1": 0.7216202985369807,
+      "intent_accuracy": 0.8000000000000002,
+      "span_f1": 0.5915492957746479,
+      "strict": 29
+    },
+    "lock": {
+      "slu_f1": 0.6761031523894353,
+      "intent_accuracy": 0.825,
+      "span_f1": 0.5566037735849058,
+      "strict": 28
+    }
+  },
+  "comparisons": {
+    "learned_vs_control": {
+      "repairs": 5,
+      "breaks": 3
+    },
+    "control_vs_lock": {
+      "repairs": 2,
+      "breaks": 3
+    },
+    "learned_vs_lock": {
+      "repairs": 5,
+      "breaks": 4
+    }
+  },
+  "checks": {
+    "control": true,
+    "learned": true,
+    "lock": true,
+    "manifest_sha256": true,
+    "outputs_sha256": true,
+    "raw_trace_sha256": true
+  },
+  "scope": "official per-arm result and source hashes verified; full input equality audit pending",
+  "source_hashes": {
+    "manifest_sha256": "121fe95950926d0590c918f371e97c8d1bc3b45b845e1b148df5595fd5d9c325",
+    "outputs_sha256": "5cb4233910fa875b37300e880efac3021ce2e34b9428faf42f653b18d7ccc7a9",
+    "raw_trace_sha256": "af5c97a4bf2a89b5a82e30656851eef053e8be782401777621c68c1fc0764a05",
+    "roster_sha256": "1ee90ccb5033739d3d4b12f87ebf579834a84db4ec7025907bf00d83d95f6dc3",
+    "sealed_scores_sha256": "a32261a5408b5435fb6472be51119cffa62fe627d2dbacb330ba2a99bdbaa1d1"
+  },
+  "candidate_accepted": false
+}
