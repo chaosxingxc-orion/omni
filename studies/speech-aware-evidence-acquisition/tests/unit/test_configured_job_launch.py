@@ -122,3 +122,71 @@ def test_identity_drift_and_invalid_layout_refused(tmp_path, monkeypatch, fault)
         doc['argv'] = 'python /job.py'; path.write_text(json.dumps(doc))
     with pytest.raises(ValueError):
         m.execute(path, 'launch')
+
+
+def lease_configured(tmp_path):
+    path, doc = configured(tmp_path)
+    locks = tmp_path / 'data/locks'; locks.mkdir()
+    doc['environment']['SPEECHRL_DATA_DIR'] = '/data'
+    doc['generation_lease'] = {'lock_directory': str(locks)}
+    path.write_text(json.dumps(doc))
+    return path, doc, locks
+
+
+def test_stale_metadata_blocks_before_intent_without_mutating_guard(tmp_path, monkeypatch):
+    path, doc, locks = lease_configured(tmp_path)
+    docker = Docker(doc); monkeypatch.setattr(m, 'run', docker)
+    guard = locks/'generation.guard'; guard.touch(); inode = guard.stat().st_ino
+    metadata = locks/'flight.lock'
+    # The real failure shape: prior generation died and intentionally retained custody.
+    metadata.write_text(json.dumps({'schema': 'saea-generation-lease-v1', 'pid': 999999999,
+                                   'run_id': 'failed-v1', 'attempt_id': 'generation-v1'}))
+    before = metadata.read_bytes()
+    m.execute(path, 'layout')
+    assert m.execute(path, 'plan')['generation_readiness']['state'] == 'unreconciled-metadata'
+    with pytest.raises(ValueError, match='unreconciled-metadata'):
+        m.execute(path, 'launch')
+    assert docker.launches == 0
+    assert not (Path(doc['receipt_dir'])/'launch-intent.json').exists()
+    assert metadata.read_bytes() == before and guard.stat().st_ino == inode
+
+
+def test_plan_while_predecessor_holds_lease_then_launch_after_release(tmp_path, monkeypatch):
+    import fcntl
+    path, doc, locks = lease_configured(tmp_path)
+    docker = Docker(doc); monkeypatch.setattr(m, 'run', docker)
+    m.execute(path, 'layout')
+    with (locks/'generation.guard').open('w') as owner:
+        fcntl.flock(owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        assert m.execute(path, 'plan')['generation_readiness']['state'] == 'lease-held'
+        with pytest.raises(ValueError, match='lease-held'):m.execute(path, 'launch')
+    # Existing guard alone must not block the successor.
+    assert m.execute(path, 'launch')['state'] == 'running'
+    (locks/'flight.lock').write_text('now owned by the running successor')
+    assert m.execute(path, 'launch')['reused_launch']
+    assert docker.launches == 1
+
+
+@pytest.mark.parametrize('name', ['flight.lock', 'engine-transition.pending.json'])
+def test_pending_or_dangling_metadata_is_never_treated_as_absent(tmp_path, monkeypatch, name):
+    path, doc, locks = lease_configured(tmp_path)
+    docker = Docker(doc); monkeypatch.setattr(m, 'run', docker)
+    (locks/name).symlink_to(locks/'missing-target')
+    m.execute(path, 'layout')
+    with pytest.raises(ValueError, match='generation launch not ready'):m.execute(path, 'launch')
+    assert docker.launches == 0 and (locks/name).is_symlink()
+
+
+def test_lease_directory_must_match_actual_runtime_mapping(tmp_path):
+    path, doc, locks = lease_configured(tmp_path)
+    doc['generation_lease']['lock_directory'] = str(tmp_path/'unrelated')
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match='runtime mount'):m.load_config(path)
+
+
+def test_missing_guard_is_not_created_and_unreadable_root_blocks(tmp_path):
+    path, doc, locks = lease_configured(tmp_path)
+    assert m.generation_readiness(m.load_config(path))['state'] == 'clear'
+    assert not (locks/'generation.guard').exists()
+    locks.rmdir()
+    assert m.generation_readiness(m.load_config(path))['state'] == 'unreadable'

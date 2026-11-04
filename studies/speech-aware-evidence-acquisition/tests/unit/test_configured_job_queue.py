@@ -532,3 +532,33 @@ def test_successful_queue_cli_and_live_once_keep_zero_exit(queue,capsys):
     assert m.main(['watch','--config',str(path)])==0
     assert json.loads(capsys.readouterr().out)['status']=='complete'
     assert docker.launches==['job0','job1']
+
+
+def test_queued_generation_checks_lease_after_dependency_before_dispatch(queue):
+    path, config, docker = queue
+    first, second = config['jobs']
+    launch_path = Path(second['launch']['path']); doc = json.loads(launch_path.read_text())
+    locks = Path(doc['mounts'][0]['source'])/'locks'; locks.mkdir()
+    doc['environment']['SPEECHRL_DATA_DIR'] = '/data'
+    doc['generation_lease'] = {'lock_directory':str(locks)}
+    launch_path.write_text(json.dumps(doc)); second['launch'] = pin(launch_path)
+    path.write_text(json.dumps(config))
+    for job in config['jobs']:m.launcher.execute(job['launch']['path'], 'layout')
+    metadata = locks/'flight.lock'; metadata.write_text('{"run_id":"predecessor"}')
+    # Planning future jobs is allowed while the predecessor has metadata.
+    assert m.execute(path,'plan')['jobs'][1]['launch']['generation_readiness']['state'] == 'unreconciled-metadata'
+    assert m.execute(path,'once')['status'] == 'running'
+    assert docker.launches == ['job0']
+    docker.containers['job0']['State'].update(Status='exited',Running=False,ExitCode=0)
+    assert m.execute(path,'once')['status'] == 'ready'
+    held = m.execute(path,'once')
+    assert held['status'] == 'held'
+    assert held['generation_readiness']['state'] == 'unreconciled-metadata'
+    state = json.loads((Path(config['state_dir'])/'state.json').read_text())
+    assert not state['jobs'][1].get('launch_requested')
+    assert not (Path(doc['receipt_dir'])/'launch-intent.json').exists()
+    assert docker.launches == ['job0'] and metadata.exists()
+    # Model audited predecessor cleanup; queue itself never clears metadata.
+    metadata.unlink()
+    assert m.execute(path,'once')['status'] == 'running'
+    assert docker.launches == ['job0','job1']

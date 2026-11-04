@@ -54,7 +54,7 @@ def load_config(path):
     keys = {'schema', 'container_name', 'image', 'repo_path', 'expected_commit', 'receipt_dir',
             'argv', 'working_directory', 'network', 'pid_host', 'cpuset_cpus', 'environment',
             'mounts', 'create_directories', 'allowed_create_roots', 'required_inputs', 'monitor_interval_seconds'}
-    require(isinstance(doc, dict) and set(doc) == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    require(isinstance(doc, dict) and set(doc) - {'generation_lease'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
                          ('image', r'sha256:[a-f0-9]{64}'), ('expected_commit', r'[a-f0-9]{40}'),
                          ('cpuset_cpus', r'[0-9]+(?:[-,][0-9]+)*')]:
@@ -83,7 +83,54 @@ def load_config(path):
     for pin in doc['required_inputs']:
         require(set(pin) == {'path', 'sha256'} and isinstance(pin['sha256'], str) and re.fullmatch(r'[a-f0-9]{64}', pin['sha256']), 'exact input pin required')
         absolute(pin['path'])
+    if 'generation_lease' in doc:
+        lease = doc['generation_lease']
+        require(isinstance(lease, dict) and set(lease) == {'lock_directory'}, 'exact generation lease check required')
+        locks = absolute(lease['lock_directory'])
+        data = absolute(doc['environment'].get('SPEECHRL_DATA_DIR'))
+        logical = data / 'locks'
+        mounts = [m for m in doc['mounts'] if logical.is_relative_to(Path(m['target']))]
+        require(mounts, 'generation lease must map the runtime data locks')
+        mount = max(mounts, key=lambda m: len(Path(m['target']).parts))
+        mapped = Path(mount['source']) / logical.relative_to(mount['target'])
+        require(locks == mapped, 'generation lease directory differs from runtime mount')
     return doc
+
+
+def generation_readiness(doc):
+    """Read-only advisory check; runtime still owns the atomic generation lease.
+
+    Plans may be made while a predecessor holds the lane. Only an actual new
+    launch requires clear state, after queue dependencies have been satisfied.
+    No metadata is parsed, cleared, or treated as proof of request quiescence.
+    """
+    if 'generation_lease' not in doc:
+        return {'state': 'not-configured', 'automatic_retry': False}
+    locks = Path(doc['generation_lease']['lock_directory'])
+    result = {'lock_directory': str(locks), 'automatic_retry': False}
+    try:
+        require(locks.is_dir(), 'generation lock directory absent')
+        guard = locks / 'generation.guard'
+        if os.path.lexists(guard):
+            require(not guard.is_symlink() and guard.is_file(), 'regular generation guard required')
+            # O_RDONLY and no O_CREAT: never replace an existing guard inode.
+            fd = os.open(guard, os.O_RDONLY | os.O_NOFOLLOW)
+            try:
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    return {**result, 'state': 'lease-held'}
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            finally:
+                os.close(fd)
+        if os.path.lexists(locks / 'engine-transition.pending.json'):
+            return {**result, 'state': 'unfinished-engine-transition'}
+        if os.path.lexists(locks / 'flight.lock'):
+            return {**result, 'state': 'unreconciled-metadata',
+                    'required_action': 'record PID/socket/contact quiescence using audited reconciliation'}
+        return {**result, 'state': 'clear'}
+    except (OSError, ValueError) as exc:
+        return {**result, 'state': 'unreadable', 'error_type': type(exc).__name__}
 
 
 def mount_checks(doc):
@@ -148,7 +195,8 @@ def execute(path, mode):
     if mode == 'plan':
         preflight(doc)
         return {'version': VERSION, 'config_sha256': config_sha, 'runner_sha256': runner_sha,
-                'command': command(doc, config_sha, runner_sha), 'new_model_calls': 0}
+                'command': command(doc, config_sha, runner_sha), 'new_model_calls': 0,
+                'generation_readiness': generation_readiness(doc)}
     if mode == 'layout':
         for p in sorted(doc['create_directories'], key=lambda p: len(Path(p).parts)):
             Path(p).mkdir(parents=True, exist_ok=True)
@@ -178,6 +226,9 @@ def execute(path, mode):
         if observed['state'] != 'not-launched':
             return {**observed, 'reused_launch': True}
         preflight(doc)
+        readiness = generation_readiness(doc)
+        require(readiness['state'] in ('clear', 'not-configured'),
+                'generation launch not ready: ' + readiness['state'] + '; inspect lane custody, never auto-clear or retry')
         persist(root / 'launch-intent.json', {'schema': SCHEMA, 'version': VERSION, 'config_sha256': config_sha,
                 'runner_sha256': runner_sha, 'expected_commit': doc['expected_commit'], 'automatic_retry': False})
         result = run(command(doc, config_sha, runner_sha))

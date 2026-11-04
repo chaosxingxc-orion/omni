@@ -440,7 +440,12 @@ def step(config_path, doc, state, save):
         if job['preflight'] is not None:binding.verify(pin_path(job['preflight']), launch_path)
         launcher.execute(launch_path, 'layout')
         # Read-only preflight precedes our durable dispatch boundary.
-        launcher.execute(launch_path, 'plan')
+        planned = launcher.execute(launch_path, 'plan')
+        readiness = planned['generation_readiness']
+        if readiness['state'] not in ('clear', 'not-configured'):
+            state.update(status='held', generation_readiness=readiness)
+            save(); return state
+        state.pop('generation_readiness', None)
         record.update(status='launch-intent', launch_requested=True, requested_at=time.time())
         state['status'] = 'dispatching'; save()
         if job['preflight'] is None:observed = launcher.execute(launch_path, 'launch')
@@ -503,7 +508,7 @@ def execute(path, mode):
             except Exception as error:
                 state.update(status='unknown', error={'type':type(error).__name__, 'message':str(error)})
                 save(); raise
-            if mode == 'once' or state['status'] in ('failed', 'unknown', 'complete'):return state
+            if mode == 'once' or state['status'] in ('failed', 'unknown', 'complete', 'held'):return state
             if state['status'] == 'ready':continue
             cid = state.get('wait_container_id')
             require(cid, 'running queue requires exact container identity')
@@ -527,7 +532,7 @@ def main(argv=None):
     print(json.dumps(result, sort_keys=True))
     # A completed polling command is not necessarily a successful queue.
     # Preserve the full terminal result even when an independent branch failed.
-    if result.get('status') in ('failed', 'unknown'):
+    if result.get('status') in ('failed', 'unknown', 'held'):
         return 1
     if args.mode == 'watch' and result.get('status') != 'complete':
         return 1
