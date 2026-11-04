@@ -1,19 +1,19 @@
 # 研究与运行现态
 
-截至2026-11-04 16:09 UTC，三路均有真实推理证据，覆盖8卡；持续满载、稳定TFRL收益及外部教师完全脱离开发机仍未完成。
+截至2026-11-04 16:12 UTC，三路均有真实推理证据，覆盖8卡；持续满载、稳定TFRL收益及外部教师完全脱离开发机仍未完成。
 
 | 工作 | 已核实状态 |
 |---|---|
 | A 候选1 | 80/80及官方评分完成，SLU68.0389/70.6842%、intent82.5/80%、slot54.2857/56.7308%、strict29/28，修5破4；不晋升。2卡1实例C32，1662.01秒、20.78秒/条 |
 | A 候选2 | 原文跨度见证假设诊断，15:48:54真实启动。16:02:18进度reader核28/80、0坏行，2卡TP2 C32/64K，28.73秒/条，线性剩余24.9分钟。首配对共享音频/P/知识/解码核验通过，完整评分待完成 |
-| B GEPA | 原恢复v2因FIT的runtime SHA变化失败，0新调用；v3因带消耗祖先的恢复规则拒绝，无新attempt。严格FIT兼容已合main6ef9cd52，root27项通过。v4于15:56:44启动，直接复用原generation-v1及128已知P，零消耗中间失败保留。16:04主线程已核48新intent/16response，16:08有6条complete检查点记录；正式reader及own-P验收待负责人完成 |
-| TP4 GEPA候选1 | 4卡TP4 C16/48K、四分支各自P→S，15:45:52启动。16:08有19条complete检查点记录、194份响应；完整来源验收与正式进度reader仍待补齐。上下文适配默认保持严格检查，root49项及新增stage防篡改1项通过 |
+| B GEPA | 原恢复v2因FIT的runtime SHA变化失败，0新调用；v3因带消耗祖先的恢复规则拒绝，无新attempt。严格FIT兼容已合main6ef9cd52，root27项通过。v4于15:56:44启动，直接复用原generation-v1及128已知P，零消耗中间失败保留。16:04主线程已核48新intent/16response，16:11:57 reader核验11/80、约83.0秒/条；B已有6条完整审计。因恢复重放阶段及实际Solver接续交错，需以最终keepable/官方reader为准 |
+| TP4 GEPA候选1 | 4卡TP4 C16/48K、四分支各自P→S，15:45:52启动。16:11:58 reader核验21/80、约74.6秒/条；TP4已有19条完整own-P审计。完整来源验收与正式评分仍待完成。上下文适配默认保持严格检查，root49项及新增stage防篡改1项通过 |
 
 16:04左右现场AICore快照cards0–7分别44/44/35/52/85/2/100/100%，仅说明当时各卡有活动，不证明持续饱和。B完成样本已出现，不再将它报告为只有CPU准备；检查点记录不代替官方业务验收。正常观察600秒或明确事件。
 
 已完成的其他80条实验：条件知识change strict27/26、cooking27/31，目标strict均未改善；Solver协议strict31/31、SLU69.6103/70.9948%；ACE/Reflexion亦未获稳定收益。原TF-GRPO91次教师调用完整回放并编译，原经验仍有语义风险。详见[消费改进结果](TFGRPO-Consumption-Improvement-Results.md)与[机制优先级](TFRL-Mechanism-Priorities.md)。
 
-当前三名接续负责人：consumption_material_preflight_fix只修材料配置前置校验；gepa_live_pair_validation验收B/TP4的完整配对和恢复来源；consumption_contract_experiment负责A候选2结果及候选3“原合同/放宽合同/放宽合同+经验”对照。原负责人漏掉的补修未视为完成，持久任务与hash回执继续约束交付。主线程审查集成，CPU与NPU异步。
+当前三名接续负责人：consumption_material_preflight_fix已交付并合main1988ee3a；gepa_live_pair_validation验收B/TP4的完整配对和恢复来源；consumption_contract_experiment负责A候选2结果及候选3“原合同/放宽合同/放宽合同+经验”对照。原负责人漏掉的补修未视为完成，持久任务与hash回执继续约束交付。主线程审查集成，CPU与NPU异步。
 
 恢复工程已覆盖AA路由、恢复attempt评分、准备供给CPU重建等价及严格FIT复用；原请求/服务/分词器来源仍须一致。128已知P不重发，旧失败费用保留。未证明的部分不能用单元测试替代真实恢复结果。
 
