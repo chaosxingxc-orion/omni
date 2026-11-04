@@ -1,0 +1,108 @@
+{
+  "rows": 80,
+  "strict_success": {
+    "child": 30,
+    "lock": 31,
+    "parent": 31
+  },
+  "comparisons": {
+    "child_vs_lock": {
+      "proxy_mean_delta": -0.012291666666666678,
+      "strict_breaks": 4,
+      "strict_repairs": 3
+    },
+    "child_vs_parent": {
+      "proxy_mean_delta": 0.0002083333333333215,
+      "strict_breaks": 4,
+      "strict_repairs": 3
+    },
+    "parent_vs_lock": {
+      "proxy_mean_delta": -0.0125,
+      "strict_breaks": 3,
+      "strict_repairs": 3
+    }
+  },
+  "native_role_costs": {
+    "perception": {
+      "calls": 80,
+      "completion_tokens": 156664,
+      "contacts_with_reasoning": 80,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 80
+      },
+      "prompt_tokens": 307377,
+      "request_seconds": {
+        "mean": 148.86690038987618,
+        "n": 80,
+        "p50": 145.46334913000464,
+        "p95": 250.2674904500018
+      },
+      "think_markers": 0,
+      "wire_records": 80
+    },
+    "solver": {
+      "calls": 240,
+      "completion_tokens": 527784,
+      "contacts_with_reasoning": 240,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 240
+      },
+      "prompt_tokens": 1953795,
+      "request_seconds": {
+        "mean": 160.9105395179584,
+        "n": 240,
+        "p50": 145.28438035500585,
+        "p95": 253.16924561999622
+      },
+      "think_markers": 0,
+      "wire_records": 240
+    }
+  },
+  "total_cost": {
+    "audio_seconds_used": 1161.018749999999,
+    "calls_used": 320,
+    "completion_tokens_total": 684448,
+    "latency_seconds_total": 50527.88151550011,
+    "prompt_tokens_total": 2261172,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "candidate_accepted": false,
+  "claims_stable_gain": false,
+  "schema": "saea-gepa-feedback80-summary-v1",
+  "source_result_sha256": "f6acc58e959108fe30cf2c575a1d45f124abb6f2008900dd295b2cbf3a812919",
+  "source_manifest_sha256": "36e4283b2d9db423cdced948c323be6cf5e38f72e646830a5436a56365e6d79e",
+  "official": {
+    "child": {
+      "slu_f1": 0.6581966977125704,
+      "intent_accuracy": 0.775,
+      "span_f1": 0.5542168674698795
+    },
+    "lock": {
+      "slu_f1": 0.644754172423535,
+      "intent_accuracy": 0.7875,
+      "span_f1": 0.5662650602409638
+    },
+    "parent": {
+      "slu_f1": 0.6524710202595624,
+      "intent_accuracy": 0.7875,
+      "span_f1": 0.5333333333333334
+    }
+  },
+  "cards": 2,
+  "instances": 1,
+  "concurrency": 32,
+  "campaign_seconds": 2041.2197483700002,
+  "campaign_seconds_per_row": 25.515246854625,
+  "generation_container_seconds": 2117.95369068,
+  "official_scoring_container_seconds": 88.21369084,
+  "input_audited_rows": 80,
+  "strict_change_mechanism": {
+    "repairs": 3,
+    "breaks": 4,
+    "all_changes_are_slot_defects_with_intent_correct": true,
+    "semantic_root_cause_proven": false
+  }
+}

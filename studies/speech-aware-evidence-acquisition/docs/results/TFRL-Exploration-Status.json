@@ -1,37 +1,35 @@
 {
   "schema": "saea-tfrl-exploration-status-v1",
-  "observed_at_utc": "2026-11-04T07:26:14.352669+00:00",
+  "observed_at_utc": "2026-11-04T07:36:55Z",
   "candidate": "slurp-gepa-node2-b-feedback80-v1",
-  "state": "generation-running-with-verified-checkpoint",
-  "completed_rows": 68,
+  "state": "generation-and-official-scoring-complete",
+  "completed_rows": 80,
   "total_rows": 80,
   "cards": 2,
   "instances": 1,
   "client_concurrency": 32,
-  "wall_seconds_per_completed_row": 27.679523647058822,
-  "estimated_remaining_seconds": 332.1542837647059,
+  "wall_seconds_per_completed_row": 26.474421133499998,
+  "estimated_remaining_seconds": 0,
   "normal_generation_calls_planned": 320,
   "fit_calls_accounted_separately": true,
   "actual_usage": {
-    "scope": "complete checkpoint rows only; excludes FIT and in-flight or partial rows",
-    "calls": 272.0,
-    "prompt_tokens": 1889725.0,
-    "completion_tokens": 561120.0
+    "scope": "finalized generation campaign; FIT and historical learning separate",
+    "calls": 320,
+    "prompt_tokens": 2261172,
+    "completion_tokens": 684448
   },
-  "official_scoring_queue": "waiting-exact-generation-exit-zero",
+  "official_scoring_queue": "complete-exit-zero",
   "independent_cpu_archive_interval_seconds": 600,
   "scientific_gain_claimed": false,
   "eight_card_utilization_verified": false,
   "run_commit": "0f0c04e30140c9041727dab5d5a0c44d0dbd3eb7",
-  "remaining_rows": 12,
-  "eta_basis": "Linear cumulative completion rate including startup; not a final throughput baseline.",
-  "complete_sample_mean_admitted_to_finished_seconds": 1045.0105608313236,
-  "checkpoint_sha256": "2f9de759ff4516df3561abe11a271335b4c8d411fc6aa70fb852ecd9ffdff297",
+  "remaining_rows": 0,
+  "eta_basis": "Completed full 80-row campaign",
   "fulltest": {
-    "observed_at_utc": "2026-11-04T07:02:10Z",
-    "completed_rows": 10075,
+    "observed_at_utc": "2026-11-04T07:24:17Z",
+    "completed_rows": 10559,
     "total_rows": 13078,
-    "remaining_rows": 3003,
+    "remaining_rows": 2519,
     "cards": 4,
     "instances": 1,
     "wall_seconds_per_completed_row": null,
@@ -56,5 +54,8 @@
       79
     ],
     "scope": "Single instantaneous observation, not sustained utilization."
-  }
+  },
+  "result_file": "GEPA-Feedback80-Result.json",
+  "exploration_successors_ready": 0,
+  "exploration_cards_without_ready_work": 4
 }
