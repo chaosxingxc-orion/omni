@@ -6,9 +6,12 @@ from pathlib import Path
 
 def assert_execution_binding(spec, environ=None, *, repo=None):
     """Bind an explicit full-test client width to the shared factory environment."""
-    if spec.get('workload_kind') == 'gepa-solver-template-pair':
+    if spec.get('workload_kind') in ('gepa-solver-template-pair', 'external-experience-pair'):
         import os
-        from gepa_pair_workload import PairWorkload
+        if spec['workload_kind'] == 'external-experience-pair':
+            from external_experience_workload import ExternalExperienceWorkload as PairWorkload
+        else:
+            from gepa_pair_workload import PairWorkload
         config = PairWorkload(spec['job_config']).config
         environ = os.environ if environ is None else environ
         if (spec.get('execution') != config['execution']
@@ -117,6 +120,9 @@ def validate_workload(repo, data, name, spec):
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "final-report-method":
         from final_report_workload import validate
+        return validate(repo, data, name, spec, exp, view)
+    if spec.get("workload_kind") == "external-experience-pair":
+        from external_experience_workload import validate
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "gepa-solver-template-pair":
         from gepa_pair_workload import validate

@@ -19,6 +19,12 @@ SCHEMA='saea-gepa-pair-workload-v1'
 
 
 class PairWorkload:
+    CONTACTS = 4
+    ARMS = ['parent', 'child', 'lock']
+    RESULT_SCHEMA = 'saea-gepa-pair-read-v1'
+    LABEL = 'GEPA configured parent child comparison'
+    PROGRAM = 'One shared P then verified current parent, mutation-derived child and original lock Solver.'
+
     def __init__(self, config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material'}
         if not fields <= set(config) <= fields | {'evaluation_partition'} or config['schema']!=SCHEMA:
@@ -166,7 +172,7 @@ class PairWorkload:
         if source.get('thinking_policy') != {role:observation.THINKING_ARMS['baseline'] for role in ('perception','solver')}:
             raise ValueError('seed probe requires original3072 P/S reference')
         base.pop('prepared_phase_supply', None)
-        base['native_contact_fit'].update(run_id=self.RUN+'-FIT', attempt_id='fit-v1', contact_cap=4*self.ROWS)
+        base['native_contact_fit'].update(run_id=self.RUN+'-FIT', attempt_id='fit-v1', contact_cap=self.CONTACTS*self.ROWS)
         base['what_this_is'] = 'Configured fixed feedback paired GEPA evaluation: one P, current parent S, child S and original lock; no adoption claim.'
         if self.config.get('evaluation_partition') == 'selection':
             base['what_this_is'] = 'Configured fixed selection paired GEPA evaluation: one P, parent/child/lock S; no feedback mixing or adoption claim.'
@@ -178,7 +184,7 @@ class PairWorkload:
         exp.update(experiment_id=self.RUN, purpose=base['what_this_is'], service_session=binding['service_session'])
         exp['population'].update(count=self.ROWS, roster_receipt=self.ROSTER, split_identity_hash=roster['split_identity_hash'])
         exp['populations'] = [{'dataset_fragment':observation.DATASET, 'ids':[r['sample_id'] for r in roster['items']]}]
-        exp['execution_plan'].update(planned_model_calls=8*self.ROWS,
+        exp['execution_plan'].update(planned_model_calls=2*self.CONTACTS*self.ROWS,
             planned_speech_audio_seconds=math.ceil(8*math.fsum(r['audio_seconds'] for r in roster['items'])))
         exp['stage3_algorithm'] = {'id':'shared-rollout', 'operators_used':['rollout','scoring'],
             'note':'Mutation-derived current parent/child same-P comparison; no automatic acceptance.'}
@@ -209,7 +215,7 @@ class PairWorkload:
             'dataset':pin(repo,f'configs/dataset/{observation.DATASET}.json'),
             'source_experiment':pin(repo,observation.SOURCE_EXP),
             'output_hashes':{str(p.relative_to(repo)):sha(p) for p in paths},
-            'normal_generation_calls':4*self.ROWS, 'fallback_inclusive_cap':8*self.ROWS, 'fit_calls':4*self.ROWS,
+            'normal_generation_calls':self.CONTACTS*self.ROWS, 'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS, 'fit_calls':self.CONTACTS*self.ROWS,
             'new_model_calls':0, 'generation_authorized':False, 'claims_benefit':False}
         publish_new(out/'complete.json', raw(record)); return record
 
@@ -313,16 +319,16 @@ class PairWorkload:
             'roster':pin(repo,self.ROSTER),'dataset':staged['dataset'],'gain_lock':pin(repo,observation.LOCK),
             'job_config':self.config,'material':staged['material'],'source_experiment':staged['source_experiment'],'execution':self.config['execution'],
             'scientific_baseline_sha256':scientific_hash(base),'stage_sha256':sha(stage_record),
-            'generation_program':'One shared P then verified current parent, mutation-derived child and original lock Solver.'}
+            'generation_program':self.PROGRAM}
         self.validate(repo,data,self.NAME,spec,exp,read(repo/spec['dataset']['relpath']))
         protocol = {'schema':'saea-gepa-pair-generation-v1','cells':{'arm':identity},'profile':binding['profile'],
-            'roster':spec['roster'],'material':spec['material'],'normal_generation_calls':4*self.ROWS,
-            'fallback_inclusive_cap':8*self.ROWS,'fit_calls':4*self.ROWS,'claims_benefit':False}
+            'roster':spec['roster'],'material':spec['material'],'normal_generation_calls':self.CONTACTS*self.ROWS,
+            'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS,'fit_calls':self.CONTACTS*self.ROWS,'claims_benefit':False}
         protocol_pin = {'relpath':str((pkg/'protocol-registered-v1.json').relative_to(repo)),
             'sha256':hashlib.sha256(raw(protocol)).hexdigest()}
         docs = {'candidate.json':spec,'protocol-registered-v1.json':protocol}
         rows = []
-        for kind,rid,aid,cap in [('generation',self.RUN,'generation-v1',8*self.ROWS),('fit',self.RUN+'-FIT','fit-v1',4*self.ROWS)]:
+        for kind,rid,aid,cap in [('generation',self.RUN,'generation-v1',2*self.CONTACTS*self.ROWS),('fit',self.RUN+'-FIT','fit-v1',self.CONTACTS*self.ROWS)]:
             budget = {**exp['execution_plan'],'planned_model_calls':cap}
             ExecutionPlan(run_id=rid,attempt_id=aid,carrier_lock_key='slurp',split_identity_hash=split,protocol_hash=ph,**budget).validate(source_root=repo)
             doc = {'schema':f'saea-registered-{kind}-plan-v1','plan_kind':kind,'cell':self.NAME,'experiment':self.NAME,
@@ -331,18 +337,18 @@ class PairWorkload:
                     'run_id':rid,'attempt_id':aid,'carrier_lock_key':'slurp','split_identity_hash':split,'protocol_hash':ph},
                 'prepared_phase_supply':prep['supply'],'protocol_document':protocol_pin,'status':'held'}
             rel=f'{kind}-plan-registered-v1.json'; docs[rel]=doc
-            rows.append(['2026-11-03',rid,'bounded-discovery-probe','GEPA configured parent child comparison '+kind,
+            rows.append(['2026-11-03',rid,'bounded-discovery-probe',self.LABEL+' '+kind,
                 model,'slurp TRAIN fixed '+self.config.get('evaluation_partition','feedback'),'discovery',split,'no',str(cap),str(budget['planned_speech_audio_seconds']),
                 str(budget['planned_gpu_hours']),'All historical costs retained; not a search result',str((pkg/rel).relative_to(repo)),
                 'Plan SHA256 '+hashlib.sha256(raw(doc)).hexdigest()+'; held'])
-        docs['analysis-recipe-v1.json'] = {'schema':'saea-gepa-pair-read-v1','rows':self.ROWS,'generation_run_id':self.RUN,
-            'attempt_id':'generation-v1','roster':spec['roster'],'arms':['parent','child','lock'],'delivered_arm':'lock','pair_material':staged['material'],
+        docs['analysis-recipe-v1.json'] = {'schema':self.RESULT_SCHEMA,'rows':self.ROWS,'generation_run_id':self.RUN,
+            'attempt_id':'generation-v1','roster':spec['roster'],'arms':self.ARMS,'delivered_arm':'lock','pair_material':staged['material'],
             'new_model_calls':0,'claims_benefit':False,'candidate_accepted':False}
         pkg.mkdir(parents=True)
         for rel,doc in docs.items(): publish_new(pkg/rel,raw(doc))
         ledger=repo/'docs/exposure-ledger.md'
-        ledger.write_text(ledger.read_text()+'\n## GEPA configured parent child comparison\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| '+' | '.join(['---']*15)+' |\n'+'\n'.join('| '+' | '.join(row)+' |' for row in rows)+'\n')
-        publish_new(repo/'docs/readiness'/f'{self.NAME}-preregistration.md',b'# GEPA paired feedback evaluation\n\nExact configured feedback IDs; native mutation source and current parent pinned. 4N normal P/S/S/S calls,8N fallback cap,4N FIT. Shared P, complete parent/child/lock official scoring. Commit, admit and preflight before detached shared dispatch. Preserve all spend and unknown-call barriers; no quality claim.\n')
+        ledger.write_text(ledger.read_text()+'\n## '+self.LABEL+'\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| '+' | '.join(['---']*15)+' |\n'+'\n'.join('| '+' | '.join(row)+' |' for row in rows)+'\n')
+        publish_new(repo/'docs/readiness'/f'{self.NAME}-preregistration.md', ('# '+self.LABEL+'\n\n'+self.PROGRAM+' Exact configured population and verified source; '+str(self.CONTACTS)+'N normal calls, '+str(2*self.CONTACTS)+'N fallback cap; all costs retained. Commit, admit and preflight before detached dispatch; no quality claim.\n').encode())
         return {'cell':self.NAME,'rows':self.ROWS,'source_commit':head,'new_model_calls':0,'readiness':'held'}
 
 
