@@ -1,0 +1,31 @@
+{
+  "schema": "saea-gepa-repeated-control-audit-v1",
+  "archive_sha256": "b1be9dfdcba099d3bcf3c5f80cf47e776715bc449249c57b2f4140dd7bbced41",
+  "counts": {
+    "rows": 80,
+    "parent_lock_messages_equal": 80,
+    "parent_lock_supply_equal": 80,
+    "parent_lock_decoding_exact_equal": 80,
+    "parent_lock_decoding_except_slot_equal": 80,
+    "all_arms_decoding_except_slot_equal": 80,
+    "all_arms_audio_identity_equal": 80
+  },
+  "decoding_different_key_counts": {},
+  "prediction_agreement": {
+    "parent_vs_lock": {
+      "same_prediction": 57,
+      "different_prediction": 23
+    },
+    "child_vs_parent": {
+      "same_prediction": 57,
+      "different_prediction": 23
+    },
+    "child_vs_lock": {
+      "same_prediction": 56,
+      "different_prediction": 24
+    }
+  },
+  "distinct_parent_child_prompt_pairs": 1,
+  "root_cause_proven": false,
+  "new_model_calls": 0
+}
