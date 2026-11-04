@@ -1,5 +1,6 @@
 """One durable external teacher request; never promotes a candidate or retries spend."""
 import argparse
+from contextlib import nullcontext
 import fcntl
 import hashlib
 import http.client
@@ -121,14 +122,16 @@ def deadline_handler(signum, frame):
     raise TotalDeadlineExceeded('external learner total wall deadline exceeded')
 
 
-def read_stream(response, root, diagnostics):
+def read_stream(response, root, diagnostics, *, persist_response=True):
     """Journal every SSE line before interpreting it; incomplete streams stay unknown."""
     content, reasoning, usage, model, response_id = [], [], None, None, None
     finish = None
     pending = []
     done = False
-    with (root/'response.sse').open('xb') as journal:
-        os.chmod(root/'response.sse', 0o600)
+    wire_hash = hashlib.sha256()
+    with ((root/'response.sse').open('xb') if persist_response else nullcontext()) as journal:
+        if persist_response:
+            os.chmod(root/'response.sse', 0o600)
         iterator = iter(response)
         while True:
             try:
@@ -137,7 +140,9 @@ def read_stream(response, root, diagnostics):
                 break
             diagnostics.received(line)
             diagnostics.data['sse_lines'] += 1
-            diagnostics.write(journal, line)
+            wire_hash.update(line)
+            if persist_response:
+                diagnostics.write(journal, line)
             diagnostics.phase = 'sse-parse'
             value = line.decode('utf-8').rstrip('\r\n')
             if value.startswith('data:'):
@@ -185,8 +190,9 @@ def read_stream(response, root, diagnostics):
     result = {'id': response_id, 'model': model, 'usage': usage, 'choices': [
         {'index': 0, 'finish_reason': finish, 'message': {'role': 'assistant',
          'content': ''.join(content), 'reasoning_content': ''.join(reasoning)}}]}
-    persist(root/'response.json', result)
-    return result, hashlib.sha256((root/'response.sse').read_bytes()).hexdigest()
+    if persist_response:
+        persist(root/'response.json', result)
+    return result, wire_hash.hexdigest()
 
 
 def execute(config_path):

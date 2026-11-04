@@ -148,3 +148,27 @@ def test_crash_after_api_response_reconciles_without_network(tmp_path, monkeypat
     envelope = c2.reconcile(req)
     assert envelope['response']['text'] == 'observed-before-learner-crash'
     assert len(calls) == 1
+
+
+def test_stream_reconcile_has_no_write_or_fsync_side_effect(tmp_path, monkeypatch):
+    c = teacher(tmp_path, stream=True); req = request(c)
+    calls = network(c, monkeypatch, [answer('durable')])
+    c(req)
+    monkeypatch.setattr(c.executor, 'persist', lambda *a: pytest.fail('reconcile wrote files'))
+    monkeypatch.setattr(c.executor.os, 'fsync', lambda *a: pytest.fail('reconcile fsync'))
+    assert c.reconcile(req)['response']['text'] == 'durable'
+    assert len(calls) == 1
+
+
+def test_external_budget_mismatch_rejected_before_any_dispatch(tmp_path, monkeypatch):
+    c = teacher(tmp_path)
+    source, old = fixture(groups=1)
+    doc = ace.build_input(source, old['parent'], learning_config_sha256=c.learning_config_sha256,
+        learner_model_id=c.model_id, **{k:v for k,v in old['bounds'].items() if k != 'max_calls'})
+    learner = ExperienceLearner(tmp_path/'learner', model_id=c.model_id, metered_call=c,
+        preflight=c.preflight, reconcile=c.reconcile, learning_config_sha256=c.learning_config_sha256,
+        max_calls=2)
+    monkeypatch.setattr(c.executor, 'execute', lambda *a: pytest.fail('budget mismatch dispatched'))
+    with pytest.raises(ValueError, match='completion cap must match'):
+        ace.execute(learner, doc, count_tokens=lambda m: 20, verify_source=lambda: source)
+    assert not list((tmp_path/'learner/contacts').glob('*.intent.json'))

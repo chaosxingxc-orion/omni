@@ -54,6 +54,7 @@ class ExternalTeacher:
                 'research prompt changed')
         self.policy_text = Path(policy['path']).read_text()
         self.model_id = self.config['model']
+        self.completion_cap = self.config['max_tokens']
         require(isinstance(self.model_id, str) and self.model_id.strip(), 'teacher identity required')
         self.learning_config_sha256 = sha({'schema': 'saea-external-teacher-binding-v1',
             'config': self.config, 'executor_sha256': executor['sha256']})
@@ -131,12 +132,12 @@ class ExternalTeacher:
         wire = (root/('response.sse' if expected['stream'] else 'response.bin')).read_bytes()
         require(hashlib.sha256(wire).hexdigest() == result['response_sha256'], 'external wire changed')
         if expected['stream']:
-            # Replay with the executor's exact parser into a temporary private directory;
-            # its result is derived from hashed wire, never trusted from response.json alone.
+            # Parse verified wire without replaying disk writes or fsync operations.
             import io
-            import tempfile
-            with tempfile.TemporaryDirectory(dir=directory) as scratch:
-                response, _ = self.executor.read_stream(io.BytesIO(wire), Path(scratch))
+            import time
+            diagnostics = self.executor.ResponseDiagnostics(time.monotonic())
+            response, _ = self.executor.read_stream(io.BytesIO(wire), None, diagnostics,
+                                                   persist_response=False)
             require(response == read(root/'response.json'), 'external parsed response changed')
         else:
             response = json.loads(wire)

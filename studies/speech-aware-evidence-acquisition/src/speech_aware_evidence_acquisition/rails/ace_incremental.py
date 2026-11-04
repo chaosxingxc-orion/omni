@@ -510,6 +510,9 @@ def execute(learner, document, *, count_tokens, verify_source):
     require(isinstance(learner, ExperienceLearner) and callable(learner.preflight)
             and callable(count_tokens) and callable(verify_source), 'shared metering, native FIT and source verifier required')
     bounds = document['bounds']
+    if 'learner_model_id' in document:
+        require(getattr(learner.caller, 'completion_cap', None) == bounds['completion_cap'],
+                'external teacher completion cap must match ACE budget before dispatch')
     require(learner.model_id == document.get('learner_model_id', document['model_id'])
             and learner.learning_config_sha256 == document['learning_config_sha256']
             and learner.max_calls == bounds['max_calls'], 'ACE registered model/config/budget differs')
