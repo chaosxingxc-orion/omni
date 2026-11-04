@@ -98,8 +98,10 @@ def load_source(spec,*,repo,data):
     from .hashing import content_hash
     from .tfrl_bank_request_audit import checked_control
     fields={'schema','seed_material','source_manifest','feedback_query_ids','focus'}
-    require(isinstance(spec,dict) and fields<=set(spec)<=fields|{'historical_repository'} and spec['schema']==SCHEMA
+    require(isinstance(spec,dict) and fields<=set(spec)<=fields|{'historical_repository','mutation_prompt_policy'} and spec['schema']==SCHEMA
         and spec['focus'] in FOCUSES,'exact configured mutation source required')
+    policy=spec.get('mutation_prompt_policy')
+    require(policy is None or policy=='explicit-feedback-query-ids-v1','unsupported mutation prompt policy')
     repo=source_repository(spec,repo=repo,data=data)
     seed=seed_contract(spec['seed_material'],repo=repo,data=data)
     ids=spec['feedback_query_ids'];require(isinstance(ids,list) and 0<len(ids)<=16
@@ -157,7 +159,7 @@ def load_source(spec,*,repo,data):
     cost=manifest['cost'];historical={'calls':cost['calls_used'],'prompt_tokens':cost['prompt_tokens_total'],
         'completion_tokens':cost['completion_tokens_total']}
     require(all(type(v) is int and v>=0 for v in historical.values()),'actual historical costs required')
-    return {'schema':'saea-gepa-mutation-evidence-v1','contract':seed['contract'],'parent':seed['parent'],
+    return {**({'mutation_prompt_policy':policy} if policy is not None else {}),'schema':'saea-gepa-mutation-evidence-v1','contract':seed['contract'],'parent':seed['parent'],
         'feedback_query_ids':ids,'focus':spec['focus'],'observations':observations,
         'gold_train_sha256':gold_sha,'source_manifest':spec['source_manifest'],
         'historical_usage':historical,'tokenizer_identity':seed['tokenizer_identity'],
@@ -176,6 +178,13 @@ def messages(source):
         'No markdown. diagnosis may be detailed. evidence_query_ids must cite only supplied feedback. '
         'schema='+prompt.MUTATION_SCHEMA+'; parent_sha256='+parent['candidate_sha256']+'; module='+prompt.MODULE+'. '
         'Instruction limit '+str(contract['max_instruction_tokens'])+' tokenizer tokens. '+FOCUSES[source['focus']])
+    policy=source.get('mutation_prompt_policy')
+    require(policy is None or policy=='explicit-feedback-query-ids-v1','unsupported mutation prompt policy')
+    if policy is not None:
+        system += (' evidence_query_ids identifies feedback queries, not knowledge items. '
+            'Choose a nonempty subset of allowed_feedback_query_ids, copying each selected ID exactly once. '
+            'Never put evidence_id, knowledge keys, train-exemplars::value identifiers, or content hashes into that field. '
+            'Use diagnosis for your analysis; do not enumerate or repeat retrieved knowledge IDs.')
     shared={};observations=[]
     def reference(value):
         digest=sha(value)
@@ -214,4 +223,9 @@ def messages(source):
         'shared_content_by_sha256':shared,'observations':observations,'audio_available_to_reflector':False,
         'content_reference_rule':'Replace each sole content_sha256 reference with the exact shared object. For content_canonical_json, serialize the expanded object as UTF-8 JSON with sorted keys, no whitespace, unescaped Unicode to recover original content. No evidence is omitted.',
         'goal':'Increase official intent and exact-slot performance while avoiding regressions. Return one changed instruction.'}
+    if policy is not None:
+        ids=source['feedback_query_ids']
+        require(isinstance(ids,list) and ids and len(ids)==len(set(ids)),'unique allowed feedback IDs required')
+        user['allowed_feedback_query_ids']=copy.deepcopy(ids)
+        user['evidence_query_ids_contract']={'min_items':1,'max_items':len(ids),'unique_items':True,'source':'allowed_feedback_query_ids'}
     return [{'role':'system','content':system},{'role':'user','content':json.dumps(user,ensure_ascii=False,sort_keys=True)}]

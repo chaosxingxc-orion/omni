@@ -126,3 +126,25 @@ def test_reflection_context_deduplicates_losslessly_without_dropping_evidence(tm
         return result
     assert all(expand(r['request'])==payload for r in rendered['observations'])
     assert len(shared)==4
+
+
+def test_explicit_feedback_id_policy_disambiguates_without_changing_evidence(tmp_path,monkeypatch):
+    _,_,_,_,source,_=setup(tmp_path,monkeypatch)
+    old=m.evidence.messages(source)
+    source['mutation_prompt_policy']='explicit-feedback-query-ids-v1'
+    updated=m.evidence.messages(source)
+    body=json.loads(updated[1]['content']);previous=json.loads(old[1]['content'])
+    assert body.pop('allowed_feedback_query_ids')==source['feedback_query_ids']
+    assert body.pop('evidence_query_ids_contract')=={'min_items':1,'max_items':1,'unique_items':True,'source':'allowed_feedback_query_ids'}
+    assert body==previous
+    assert updated[0]['content'].startswith(old[0]['content'])
+    assert 'train-exemplars::value' in updated[0]['content']
+    source.pop('mutation_prompt_policy')
+    assert m.evidence.messages(source)==old
+
+
+def test_unknown_mutation_prompt_policy_is_rejected(tmp_path,monkeypatch):
+    _,_,_,_,source,_=setup(tmp_path,monkeypatch)
+    source['mutation_prompt_policy']='silently-cut-output'
+    with pytest.raises(ValueError,match='unsupported mutation prompt policy'):
+        m.evidence.messages(source)
