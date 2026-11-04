@@ -265,6 +265,25 @@ def analysis_budget_prompt(cfg):
         '证据足以支持、拒绝或暂缓假设即收束；缺证据时列出补证办法，不反复猜测。')
 
 
+def structured_error(error):
+    # Persist types and numeric codes only: exception strings may echo credentials.
+    detail = {'error_type': type(error).__name__}
+    for label, value in [('errno', getattr(error, 'errno', None))]:
+        if type(value) is int:
+            detail[label] = value
+    reason = getattr(error, 'reason', None)
+    if isinstance(reason, BaseException):
+        detail['reason_type'] = type(reason).__name__
+        if type(getattr(reason, 'errno', None)) is int:
+            detail['reason_errno'] = reason.errno
+    cause = error.__cause__
+    if isinstance(cause, BaseException):
+        detail['cause_type'] = type(cause).__name__
+        if type(getattr(cause, 'errno', None)) is int:
+            detail['cause_errno'] = cause.errno
+    return detail
+
+
 def execute(config_path):
     cfg = json.loads(Path(config_path).read_bytes())
     if 'total_timeout_seconds' in cfg and threading.current_thread() is not threading.main_thread():
@@ -422,7 +441,9 @@ def _execute(config_path):
         except Exception as error:
             diagnostics.data['failure_phase'] = diagnostics.phase
             diagnostics.partial(error, root)
-            summary = {'state': 'unknown', 'error_type': type(error).__name__, 'usage': None, 'automatic_retry': False}
+            detail = structured_error(error)
+            diagnostics.data.update(detail)
+            summary = {'state': 'unknown', **detail, 'failure_phase': diagnostics.phase, 'usage': None, 'automatic_retry': False}
         finally:
             if previous_handler is not None:
                 signal.setitimer(signal.ITIMER_REAL, 0)

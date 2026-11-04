@@ -470,3 +470,21 @@ def test_threaded_deadline_unknown_intent_never_redispatches(setup):
                 pool.submit(m.execute,config).result(timeout=10)
     assert (root/'intent.json').read_bytes()==before
     assert not (root/'request.json').exists() and not (root/'result.json').exists()
+
+
+def test_urlerror_reason_is_structured_but_stays_unknown(setup, monkeypatch):
+    import socket
+    config,cfg=setup
+    class Opener:
+        def open(self,*a,**kw):
+            raise urllib.error.URLError(socket.gaierror(-3,'private-test-key'))
+    monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:Opener())
+    r=m.execute(config)
+    assert r['state']=='unknown' and r['automatic_retry'] is False
+    assert r['reason_type']=='gaierror' and r['reason_errno']==-3
+    assert r['failure_phase']=='request-open'
+    assert 'private-test-key' not in json.dumps(r)
+    diagnostic=json.loads((Path(cfg['output_root'])/'diagnostics.json').read_text())
+    assert diagnostic['reason_errno']==-3
+    monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:pytest.fail('must not retry'))
+    assert m.execute(config)==r

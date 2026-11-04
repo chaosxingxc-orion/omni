@@ -1,0 +1,8 @@
+{
+  "schema": "saea-external-network-v1",
+  "endpoint": "https://provider.example/v1/chat/completions",
+  "probe_path": "/v1/models",
+  "timeout_seconds": 15,
+  "total_timeout_seconds": 30,
+  "accepted_statuses": [200, 401, 403, 405]
+}
