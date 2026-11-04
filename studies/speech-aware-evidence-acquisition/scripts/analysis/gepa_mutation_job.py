@@ -65,11 +65,43 @@ def documents(repo,data,cfg):
         'runtime-identity.json':identity,'job-config.json':cfg,'execution.json':binding},source,plan
 
 
+def static_capacity_audit(registration, binding, source):
+    """Measure the actual native wrapper on CPU before publishing a new job.
+
+    This rejects impossible fixed requests; serving FIT remains mandatory.
+    """
+    from speech_aware_evidence_acquisition.rails.grounded_synthesis_plan import load_token_counter
+    from speech_aware_evidence_acquisition.rails.tfgrpo_runtime import native_learning_messages
+    from speech_aware_evidence_acquisition.rails.gepa_mutation_execution import request
+    row, = registration['contacts']
+    messages = native_learning_messages(request(binding), registration, row)
+    count, identity = load_token_counter(Path(source['tokenizer_path']))
+    try:
+        tokens = count(messages)
+    finally:
+        if hasattr(count, 'close'):
+            count.close()
+    if type(tokens) is not int or tokens <= 0:
+        raise ValueError('positive native wrapped mutation count required')
+    required = tokens + registration['completion_cap'] + registration['reserve_tokens']
+    if required > registration['resident_context']:
+        raise ValueError('static mutation capacity exceeded: required ' + str(required)
+                         + ', available ' + str(registration['resident_context'])
+                         + '; preserve evidence and completion budget')
+    return {'schema': 'saea-gepa-static-capacity-v1',
+        'native_messages_sha256': sha(messages), 'tokenizer_identity': identity,
+        'native_wrapped_tokens': tokens, 'required_tokens': required,
+        'minimum_headroom_tokens': registration['resident_context'] - required,
+        'new_model_calls': 0, 'new_tokenizer_service_calls': 0,
+        'native_fit_still_required': True}
+
+
 def prepare(repo,data,cfg,out):
     assert_execution_environment()
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):
         raise ValueError('fresh owned mutation preparation directory required')
     artifacts,source,_=documents(repo,data,cfg);cfg=artifacts['job-config.json'];reg=artifacts['registration.json']
+    capacity = static_capacity_audit(reg, artifacts['execution.json'], source)
     out.mkdir(parents=True)
     for name,doc in artifacts.items():publish_new(out/name,raw(doc))
     complete={'schema':JOB_SCHEMA,'job':cfg['name'],'run_id':cfg['run_id'],'strategy':'gepa_solver_prompt_search_v1',
@@ -78,7 +110,7 @@ def prepare(repo,data,cfg,out):
         'runtime_identity_sha256':reg['runtime_identity_sha256'],'source_custody_sha256':sha(source),
         'historical_usage':source['historical_usage'],'service_session':cfg['service_session'],
         'artifacts':{n:file_sha(out/n) for n in artifacts},'readiness':'prepared-not-admitted',
-        'candidate_accepted':False,'focus':cfg['source']['focus']}
+        'candidate_accepted':False,'focus':cfg['source']['focus'],'static_capacity_audit':capacity}
     publish_new(out/'complete.json',raw(complete));return complete
 
 
@@ -101,6 +133,9 @@ def verify_job(repo,data,job):
         'source':pin(job/'source.json',data,'data')},'tfgrpo_learning_registration':reg},
         plan=plan,repo_root=repo,data_root=data,sample_ids=tuple(r['sample_id'] for r in roster['items']),
         roster_sha256=file_sha(job/'construction-roster.json'))
+    if 'static_capacity_audit' in complete:
+        if complete['static_capacity_audit'] != static_capacity_audit(reg, artifacts['execution.json'], source):
+            raise ValueError('mutation static capacity evidence changed')
     return complete,reg,roster
 
 

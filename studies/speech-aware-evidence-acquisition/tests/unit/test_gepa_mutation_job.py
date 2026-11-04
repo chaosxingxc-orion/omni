@@ -15,6 +15,8 @@ def prepared(tmp_path,monkeypatch):
     monkeypatch.setattr(m.evidence,'seed_contract',lambda *a,**k:{'model':{'model_lock_key':'frozen'}})
     monkeypatch.setattr(m.base,'deployment_identity',lambda *a:identity)
     monkeypatch.setattr(m,'assert_execution_environment',lambda:None)
+    monkeypatch.setattr('speech_aware_evidence_acquisition.rails.grounded_synthesis_plan.load_token_counter',
+                        lambda path:(lambda messages:128, {'fixture':'chat'}))
     cfg={'schema':m.CONFIG_SCHEMA,'name':'gepa-test','run_id':'GEPA-TEST','model_fragment':'frozen-model',
         'service_session':'resident','runtime_identity':{'root':'data','relpath':'identity.json','sha256':sha(identity)},
         'source':{'focus':'evidence-use','seed_material':{}},'bounds':{'resident_context':4096,'reserve_tokens':64,'max_context_bytes':2000000}}
@@ -76,3 +78,29 @@ def test_shared_registration_binds_gepa_label_and_exact_single_contact(tmp_path,
     assert set(exp['stage3_algorithm']['operators_used'])<=set(algorithm.operators)
     assert 'no Pareto survivor search' in exp['stage3_algorithm']['note']
     assert exp['tfgrpo_contact_fit']['contact_cap']==1
+
+
+def test_oversize_mutation_rejected_before_publication(tmp_path,monkeypatch):
+    repo,data,out,cfg=prepared(tmp_path,monkeypatch)
+    closed=[]
+    class Counter:
+        def __call__(self,messages):
+            assert messages[0]['role']=='system' and messages[1]['role']=='user'
+            return 5000
+        def close(self):closed.append(True)
+    monkeypatch.setattr('speech_aware_evidence_acquisition.rails.grounded_synthesis_plan.load_token_counter',
+                        lambda path:(Counter(),{'fixture':'chat'}))
+    with pytest.raises(ValueError,match='static mutation capacity exceeded'):
+        m.prepare(repo,data,cfg,out)
+    assert not out.exists() and closed==[True]
+
+
+def test_static_capacity_receipt_cannot_be_tampered(tmp_path,monkeypatch):
+    repo,data,out,cfg=prepared(tmp_path,monkeypatch)
+    result=m.prepare(repo,data,cfg,out)
+    audit=result['static_capacity_audit']
+    assert audit['required_tokens']==128+100+64 and audit['native_fit_still_required']
+    result['static_capacity_audit']['native_wrapped_tokens']=1
+    (out/'complete.json').write_bytes(m.raw(result))
+    with pytest.raises(ValueError,match='static capacity evidence changed'):
+        m.verify_job(repo,data,out)
