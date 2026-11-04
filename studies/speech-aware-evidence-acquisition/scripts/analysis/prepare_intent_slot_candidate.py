@@ -44,6 +44,16 @@ def derive(source, mode='batched'):
             supply=store.get(supply_key,{})
             if 'solver' in supply:
                 supply['slot']=copy.deepcopy(supply['solver'])
+    if 'slot-contracts' in out.get('knowledge_stores', {}):
+        if out.get('native_evidence_projection') not in (None, 'native-candidate-slot-view-v1'):
+            raise ValueError('source evidence projection requires explicit composition before node derivation')
+        out['native_evidence_projection'] = 'native-candidate-slot-view-v1'
+        out.setdefault('native_evidence_projection_params', {'store_id':'slot-contracts',
+                                                           'consumer_roles':['solver']})
+    if out.get('native_evidence_projection') == 'native-candidate-slot-view-v1':
+        consumers = out['native_evidence_projection_params']['consumer_roles']
+        if 'slot' not in consumers:
+            consumers.append('slot')
     load_native_episode_config(out,default_phase_program(out['policy']))
     return out
 

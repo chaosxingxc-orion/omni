@@ -192,7 +192,7 @@ def test_unknown_slot_is_not_reissued(tmp_path):
     old=harness(tmp_path/'source','per_candidate')
     original=old._output
     def unknown(key):
-        if key[1]=='slot': raise TimeoutError('unknown Slot response')
+        if key[1]=='slot' and key[2]==2: raise TimeoutError('unknown second Slot response')
         return original(key)
     old._output=unknown
     try:
@@ -213,3 +213,28 @@ def test_unknown_slot_is_not_reissued(tmp_path):
     finally: cost=new.close()['cost']
     assert cost['calls_used']==0
     assert not new.dispatched
+    assert not new.fit_calls
+
+
+@pytest.mark.parametrize('valid', [True, False])
+def test_slot_refs_bound_to_actual_current_audio_on_real_graph(tmp_path, valid):
+    h=harness(tmp_path)
+    original=h._output
+    def output(key):
+        value=json.loads(original(key))
+        if key[1]=='slot':
+            ref=h.speech_bindings[key[0]]['packet_id'] if valid else 'audio-of-another-row'
+            for row in value['candidates']: row['evidence_refs']=[ref]
+        return canonical(value)
+    h._output=output
+    try: summary=h.run()
+    finally: cost=h.close()['cost']
+    assert cost['calls_used']==(3 if valid else 2)
+    receipt=summary.results[0].native_episode_receipt
+    if valid:
+        assert receipt['intent_slot_pipeline']['selected_candidate_id']=='play_radio'
+        slot=next(v['rendered'] for k,v in h.prepared.items() if k[1]=='slot')
+        assert 'evidence_inventory' in json.dumps(slot)
+        assert h.speech_bindings[h.samples[0].sample_id]['packet_id'] in json.dumps(slot)
+    else:
+        assert receipt['terminal_disposition']['reason']=='seal_refusal'

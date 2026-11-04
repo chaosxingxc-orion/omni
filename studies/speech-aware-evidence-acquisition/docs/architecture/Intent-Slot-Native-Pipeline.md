@@ -35,3 +35,11 @@ python scripts/analysis/prepare_intent_slot_candidate.py \
 功能测试通过不等于精度收益。固定同一 80 条开发集比较旧 P+joint S、增强 P+joint S、增强 P+Slot+Decision，必要时补逐候选版本。统计 intent accuracy、官方槽位指标、完整任务正确率、协议失败率、分节点时延、tokens/FIT/实际调用成本及配对不确定性。
 
 在开发集选定图、模板、知识版本与推理配置后冻结，并重新完整评测 TEST13078。旧基座成绩不得转标为新基座结果；测试集不参与选择或调优。此实现阶段真实模型调用为 0，尚无新基座开发集或测试集精度结论。
+
+## 来源与恢复验收补充
+
+每个节点输入带当前样本的 evidence inventory：原始音频 packet ID/SHA，以及实际可见知识 ID/URI/内容 SHA。P 和 Slot 只能引用当前输入列出的来源；未知引用按协议失败封存并保留费用，空引用合法。音频来源只标识完整原音频，不伪造时间戳。
+
+候选准备脚本为已有 slot-contracts 供给启用原 native-candidate-slot-view-v1，增加 Slot consumer。视图从封存的 P 候选及当前分支绑定推导：保留全局指导，只去除与当前候选无关的 intent binding，原知识快照和音频不改。Slot 分支与 P response hash 不符时拒绝。
+
+恢复准入从配置图推导预算：batched=3，per_candidate=K+2（K=1/2/3），不依赖载体名称或3/5预算白名单。每个模式与策略ID一致，角色访问次数/工具/分组配置仍由原配置验证器核验。已有响应与 FIT 复用；第二 Slot 未知时不重发。

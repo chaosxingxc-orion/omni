@@ -438,3 +438,51 @@ def test_closed_params_duplicate_json_and_state_hash(tmp_path):
     payload["history"][0]["content_sha256"] = "0" * 64
     with pytest.raises(SlotBindingViewError, match="content hash"):
         scope_for_payload(payload, context)
+
+
+def test_slot_node_uses_real_released_candidate_view_and_source_pin(tmp_path):
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import candidates, canonical
+    from speech_aware_evidence_acquisition.core.model.native_slot_binding_view import project_native_slot_binding_view
+    config=_config(tmp_path)
+    config['native_episode']['intent_slot_pipeline']={'schema':'saea-intent-slot-pipeline-v1'}
+    config['native_episode']['roles']['slot']={'phase_id':'slot','max_iterations':1}
+    supplies=config['knowledge_stores']['slot-contracts']['candidate_supply']
+    supplies['slot']=copy.deepcopy(supplies['solver'])
+    config['native_evidence_projection_params']['consumer_roles']=['slot','solver']
+    context=bind_slot_view_context(config,tmp_path)
+    source=_perception('alpha_one','beta_two')
+    from test_candidate_semantic_supply import _context
+    from speech_aware_evidence_acquisition.rails.knowledge_stores import build_knowledge_store_supply
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    router=build_knowledge_store_supply(context.knowledge_binding,
+        program=default_phase_program('phase-native-intent-slot-batched-v1'),
+        data_root=tmp_path,legal_candidate_ids=LEGAL)
+    selected=router.automatic_for_phase('slot',_context(context.knowledge_binding,source,sample_id=SAMPLE))
+    assert 'slot-contracts::slot-contract:shared' in selected.fusion_decision.selected_value_ids
+    rows=candidates(source.content,3)
+    payload=_payload(config,(source,),role='slot')
+    branch={'schema':'saea-intent-slot-pipeline-v1','candidates':[rows[0]],
+            'perception_source':{'response_text_sha256':source.source_response_sha256}}
+    contract=json.loads(payload['history'][-1]['content'])
+    contract['messages'][1]['content']+='\n\nCandidate-conditioned pipeline context: '+canonical(branch)
+    payload['history'][-1]['content']=json.dumps(contract)
+    payload['history'][-1]['content_sha256']=hashlib.sha256(payload['history'][-1]['content'].encode()).hexdigest()
+    scope=scope_for_payload(payload,context)
+    assert scope['candidate_ids']==['alpha_one']
+    eid,uri,text=_target(context)
+    payload['supplied_evidence']=[{'evidence_id':eid,'source_uri':uri,'content':text}]
+    messages=[{'role':'system','content':'Solve.'},{'role':'user','content':[
+        {'type':'input_audio','input_audio':{'data':'audio-bytes','format':'wav'}},
+        {'type':'text','text':f'[evidence {eid}] {text}'}]}]
+    rendered,receipt=project_native_slot_binding_view(payload=payload,messages=messages,local_results={},projection_context=context)
+    assert rendered[1]['content'][0]==messages[1]['content'][0]
+    projected=rendered[1]['content'][1]['text']
+    assert 'Alpha role.' in projected and 'Beta role.' not in projected
+    assert receipt['scope']['candidate_ids']==['alpha_one']
+    assert receipt['placements'][0]['source_content_sha256']==hashlib.sha256(text.encode()).hexdigest()
+    branch['perception_source']['response_text_sha256']='f'*64
+    contract['messages'][1]['content']='Interpret speech.\n\nCandidate-conditioned pipeline context: '+canonical(branch)
+    payload['history'][-1]['content']=json.dumps(contract)
+    payload['history'][-1]['content_sha256']=hashlib.sha256(payload['history'][-1]['content'].encode()).hexdigest()
+    with pytest.raises(SlotBindingViewError,match='sealed Perception'):
+        scope_for_payload(payload,context)

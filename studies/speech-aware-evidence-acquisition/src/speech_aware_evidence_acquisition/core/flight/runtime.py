@@ -8662,7 +8662,7 @@ class FlightRuntime:
             "dispatch": "phase-program-continuous" if continuous else "phase-program",
             "program_id": program.program_id,
             "phase_names": list(program.phase_names()),
-            "contacts_per_sample": (program.max_contacts if native_binding is not None else len(program.phases)),
+            "contacts_per_sample": (native_binding.config.max_contacts if native_binding is not None else len(program.phases)),
             "barrier": (
                 "whole-roster waves with retained controller state"
                 if whole_roster

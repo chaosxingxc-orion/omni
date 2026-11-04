@@ -10,7 +10,6 @@ import json
 from collections.abc import Mapping
 
 SCHEMA = "saea-intent-slot-pipeline-v1"
-SLOT_FORMAT_ID = "slurp-candidate-slots-v1"
 
 
 def canonical(value):
@@ -117,6 +116,7 @@ def prompt_context(config, state, role_kind):
                "candidate_outside_recovery": False}
     if role_kind == "perception":
         payload["max_candidates"] = config["max_candidates"]
+        payload["evidence_inventory"] = state["intent_slot_context"]["evidence_inventory"]
     else:
         payload.update(state.get("intent_slot_context", {}))
     return "\n\nCandidate-conditioned pipeline context: " + canonical(payload)
@@ -168,3 +168,31 @@ def validate_receipt(receipt, *, trace_records=None):
             actual = slot_results(text, slot["candidate_ids"])
             if digest(actual) != slot["result_sha256"]:
                 raise ValueError("Slot parsed result differs from archived response")
+
+
+def evidence_inventory(*, sample_id, speech_packet_id, speech_sha256, messages, candidate_ids):
+    """Names sources actually supplied to this contact, scoped to its row/branch."""
+    sources = [{"source_id": speech_packet_id, "kind": "original-audio",
+                "source_sha256": speech_sha256}]
+    for message in messages:
+        content = message.get("content")
+        if not isinstance(content, list):
+            continue
+        for part in content:
+            if isinstance(part, Mapping) and isinstance(part.get("evidence_id"), str):
+                sources.append({"source_id": part["evidence_id"], "kind": "knowledge",
+                                "source_uri": part["source_uri"],
+                                "source_sha256": hashlib.sha256(part["text"].encode()).hexdigest()})
+    return {"sample_id": sample_id, "candidate_ids": list(candidate_ids), "sources": sources}
+
+
+def validate_evidence_refs(rows, inventory, expected_ids):
+    if not isinstance(inventory, Mapping) or not inventory.get("sample_id"):
+        raise ValueError("missing current-sample evidence inventory")
+    if inventory["candidate_ids"] and inventory["candidate_ids"] != list(expected_ids):
+        raise ValueError("evidence inventory belongs to another candidate branch")
+    available = {source["source_id"] for source in inventory["sources"]}
+    for row in rows:
+        refs = row.get("evidence_refs", [])
+        if not isinstance(refs, list) or any(not isinstance(ref, str) or ref not in available for ref in refs):
+            raise ValueError("evidence reference was not supplied to the current sample and candidate")

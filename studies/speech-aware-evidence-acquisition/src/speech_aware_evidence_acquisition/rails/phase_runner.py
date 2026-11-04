@@ -727,7 +727,7 @@ def run_continuous_program(
             controller_policy_id=program.program_id,
             bootstrap_facet_ids=bootstrap_facet_ids,
             bootstrap_value_ids=bootstrap_value_ids,
-            max_contacts=(program.max_contacts if native_episode_binding is not None else len(program.phases)),
+            max_contacts=(native_episode_binding.config.max_contacts if native_episode_binding is not None else len(program.phases)),
             slot_count=resolved_slot_count,
             queue_depth=resolved_queue_depth,
             trace_sink=trace_sink,

@@ -1426,6 +1426,9 @@ def load_native_episode_config(
         from .intent_slot_pipeline import parse_config, canonical
         pipeline = parse_config(raw["intent_slot_pipeline"])
         pipeline_json = canonical(pipeline)
+        expected_policy = "phase-native-intent-slot-" + pipeline["slot_mode"].replace("_", "-") + "-v1"
+        if program.program_id != expected_policy:
+            raise ValueError("intent-slot mode differs from its configured program")
         if raw.get("finite_completion_policy") != "deliver-latest-or-abstain":
             raise ValueError("intent-slot pipeline requires retained invalid/finite rows")
         kinds += ("slot",)
@@ -2591,7 +2594,7 @@ def load_native_episode_config(
         if raw.get("prompt_contact_limits") != "legacy-c17-lock-v1" or ceiling != 4:
             raise ValueError("whole-answer selection requires the four-contact odd40 candidate program")
         ceiling += 1
-    if allow_subceiling:
+    if allow_subceiling or pipeline_json is not None:
         if ceiling > program.max_contacts:
             raise ValueError("selected native graph exceeds the shared program contact ceiling")
     elif program.max_contacts != ceiling:

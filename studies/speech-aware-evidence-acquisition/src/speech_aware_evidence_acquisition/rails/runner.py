@@ -4157,9 +4157,16 @@ async def _invoke_native_role_episode(
             + json.dumps(limits, sort_keys=True),
         ).validate()
         if pipeline_config is not None:
-            from .intent_slot_pipeline import prompt_context
+            from .intent_slot_pipeline import prompt_context, evidence_inventory
+            pipeline_context = copy.deepcopy(episode_state.get("intent_slot_context", {}))
+            pipeline_context["evidence_inventory"] = evidence_inventory(
+                sample_id=ctx.sample_id, speech_packet_id=ctx.query_state.speech_packet_id,
+                speech_sha256=ctx.query_state.speech_packet_sha256,
+                messages=base_messages(ctx),
+                candidate_ids=[row["candidate_id"] for row in pipeline_context.get("candidates", [])])
+            prompt_state = dict(episode_state, intent_slot_context=pipeline_context)
             material = replace(material, instruction=material.instruction + prompt_context(
-                pipeline_config, episode_state, role_configs[phase_id].role_kind)).validate()
+                pipeline_config, prompt_state, role_configs[phase_id].role_kind)).validate()
         phase = program.phase(phase_id)
         if (phase.response_format_id is not None) != (material.response_format is not None):
             raise RailsRunnerError("native role response format differs from its phase")
@@ -4176,7 +4183,7 @@ async def _invoke_native_role_episode(
             # node's pinned instruction template differs.
             "material_inputs": (ctx, {} if previous is None else {ctx.sample_id: previous}),
             "arm_instructions": {},
-            **({"intent_slot_context": copy.deepcopy(episode_state.get("intent_slot_context", {}))}
+            **({"intent_slot_context": copy.deepcopy(pipeline_context)}
                if pipeline_config is not None else {}),
         }
         return material.instruction

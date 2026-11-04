@@ -188,10 +188,11 @@ def _freeze_row(raw: Mapping[str, object]) -> SlotBindingRow:
 def _roles(values: Mapping[str, object]) -> tuple[tuple[str, str], ...]:
     episode = values.get("native_episode")
     raw = episode.get("roles") if isinstance(episode, Mapping) else None
-    if not isinstance(raw, Mapping) or set(raw) != set(_ROLE_KINDS):
+    kinds = _ROLE_KINDS + (("slot",) if isinstance(episode, Mapping) and episode.get("intent_slot_pipeline") else ())
+    if not isinstance(raw, Mapping) or set(raw) != set(kinds):
         raise SlotBindingViewError("native episode must declare the four role kinds")
     result = []
-    for kind in _ROLE_KINDS:
+    for kind in kinds:
         row = raw[kind]
         phase = row.get("phase_id") if isinstance(row, Mapping) else None
         if not isinstance(phase, str) or not phase or ":" in phase or any(c.isspace() for c in phase):
@@ -219,7 +220,7 @@ def bind_slot_view_context(
         not isinstance(consumers, list) or not consumers
         or any(not isinstance(item, str) for item in consumers)
         or len(consumers) != len(set(consumers))
-        or not set(consumers) <= set(_ROLE_KINDS)
+        or not set(consumers) <= {kind for kind, _phase in _roles(values)}
     ):
         raise SlotBindingViewError("consumer_roles must be distinct native role kinds")
     role_phases = _roles(values)
@@ -261,6 +262,10 @@ def bind_slot_view_context(
         or not 1 <= maximum <= len(legal)
     ):
         raise SlotBindingViewError("slot candidate supply differs from bounded Perception")
+    for role in consumers:
+        consumer_spec = supplies.get(phases[role])
+        if role == "slot" and consumer_spec != spec:
+            raise SlotBindingViewError("Slot must use the same pinned candidate knowledge supply as Solver")
     validate_role_context_draft_schema(_SLU_DRAFT_SCHEMA)
     try:
         _released_candidate_index(store, data_root=Path(data_root), legal_candidate_ids=legal)
@@ -484,6 +489,26 @@ def scope_for_payload(
             perception=candidate_source, target_states=target_states,
         )
     candidates = [item.intent_id for item in candidate_state.candidates]
+    if role == "slot":
+        marker = "\n\nCandidate-conditioned pipeline context: "
+        query = contract["messages"][1]["content"]
+        if marker not in query:
+            raise SlotBindingViewError("Slot lacks its candidate-conditioned context")
+        try:
+            branch = json.loads(query.rsplit(marker, 1)[1])
+            from .intent_slot_pipeline import candidates as parse_candidates
+            original = parse_candidates(candidate_source.content, context.max_candidates)
+            selected = branch["candidates"]
+            if not selected or any(row not in original for row in selected):
+                raise ValueError("candidate mismatch")
+            branch_ids = [row["candidate_id"] for row in selected]
+            if len(set(branch_ids)) != len(branch_ids) or not set(branch_ids) <= set(candidates):
+                raise ValueError("candidate identity mismatch")
+            if branch["perception_source"]["response_text_sha256"] != candidate_source.source_response_sha256:
+                raise ValueError("Perception source mismatch")
+        except (KeyError, TypeError, ValueError) as error:
+            raise SlotBindingViewError("Slot branch differs from sealed Perception") from error
+        candidates = branch_ids
     solver_states = [
         item for item in artifacts
         if item.state_kind == f"phase:{phases['solver']}" and item.state_id not in source_ids

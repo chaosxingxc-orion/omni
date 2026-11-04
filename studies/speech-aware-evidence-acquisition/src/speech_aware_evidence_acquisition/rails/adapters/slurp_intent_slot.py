@@ -1,5 +1,5 @@
 """SLURP-specific ontology and final task projection for the generic graph."""
-from ..intent_slot_pipeline import candidates, decision, document, slot_results
+from ..intent_slot_pipeline import candidates, decision, document, slot_results, validate_evidence_refs
 
 
 def registered_slot_format(lock, root, **params):
@@ -35,10 +35,15 @@ def validate_response(*, kind, text, response_format, context, config):
         raise ValueError("pipeline response does not satisfy its node schema") from error
     if kind == "perception":
         legal = schema["properties"]["candidates"]["items"]["properties"]["intent_id"]["enum"]
-        return candidates(text, config["max_candidates"], legal)
+        rows = candidates(text, config["max_candidates"], legal)
+        validate_evidence_refs(rows, context["evidence_inventory"], [r["candidate_id"] for r in rows])
+        return rows
     if kind == "slot":
         legal = schema["properties"]["candidates"]["items"]["properties"]["entities"]["items"]["properties"]["type"]["enum"]
-        return slot_results(text, [r["candidate_id"] for r in context["candidates"]], legal)
+        ids = [r["candidate_id"] for r in context["candidates"]]
+        rows = slot_results(text, ids, legal)
+        validate_evidence_refs(rows.values(), context["evidence_inventory"], ids)
+        return rows
     if kind == "solver":
         return decision(text, context["candidates"], context["slot_results"],
                         lambda row: row["scenario"] + "_" + row["action"])

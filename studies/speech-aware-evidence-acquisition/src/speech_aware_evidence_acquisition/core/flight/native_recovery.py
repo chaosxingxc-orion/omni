@@ -199,17 +199,23 @@ def native_contact_custody_enabled(values):
         from ...rails.native_episode_config import load_native_episode_config
         if (values.get('transport') != 'vllm'
                 or values.get('arm') != 'raw-speech-agent-native-tools'
-                or values.get('carrier_lock_key') != 'slurp'
                 or values.get('phase_tools')
                 or values.get('policy') not in ('phase-native-intent-slot-batched-v1',
                                                 'phase-native-intent-slot-per-candidate-v1')):
             return False
         try:
-            config = load_native_episode_config(values, default_phase_program(values['policy']))
+            program = default_phase_program(values['policy'])
+            config = load_native_episode_config(values, program)
         except (ValueError, TypeError, KeyError):
             return False
-        return (config.intent_slot_pipeline_json is not None
-                and config.max_contacts in (3, 5)
+        from ...rails.intent_slot_pipeline import parse_config
+        import json
+        graph = parse_config(json.loads(config.intent_slot_pipeline_json))
+        expected = 2 + (1 if graph['slot_mode'] == 'batched' else graph['max_candidates'])
+        return (values['policy'] == 'phase-native-intent-slot-' + graph['slot_mode'].replace('_', '-') + '-v1'
+                and config.max_contacts == expected and program.max_contacts >= expected
+                and {r.role_kind: r.max_iterations for r in config.roles} == {
+                    'perception': 1, 'slot': 1, 'solver': 1, 'reviewer': 0, 'planner': 0}
                 and all(not role.tool_names and role.samples == 1 for role in config.roles))
     if native.get('answer_selection') == 'odd40-whole-answer-v1':
         return True  # Preserve the already reviewed method's existing path.
