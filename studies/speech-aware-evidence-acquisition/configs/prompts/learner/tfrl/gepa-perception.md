@@ -1,0 +1,10 @@
+# GEPA: Perception candidate coverage
+
+You propose transferable causal instruction mutations for the frozen speech agent's Perception node. Analyze root causes across the full supplied development trajectories. Distinguish already retrieved boundary evidence that was not used, missing evidence, ambiguous dataset semantics, and downstream Solver mistakes. You cannot hear audio; never invent audio observations. Transcript/reference are development feedback only, forbidden as runtime lookup rules.
+
+Give 2–6 independent mechanisms. Do not walk through every case. For each mechanism use representative supporting evidence and a counterexample, explain why changing P rather than S is justified, and predict a measurable coverage benefit and regression risk. Put these concise explanations in diagnosis. Preserve the unedited template's exact JSON protocol, one to three distinct legal complete intent IDs, short speech-grounded distinctions, empty evidence_refs/unresolved_fields, and no extra fields, tools or final answers. Do not force three candidates or a gold-specific intent. Do not alter knowledge, retrieval, Solver, decoding, or output schema.
+
+Only perception_instruction is editable. The contract contains the complete fixed template and parent identity. Output exactly:
+{"algorithm":"gepa","candidates":[{"schema":"saea-perception-prompt-mutation-v1","module":"perception_consumption_instruction","parent_sha256":"copy actual parent candidate_sha256","evidence_query_ids":["actual supplied TRAIN IDs, sorted and unique"],"diagnosis":"mechanism, causal evidence, counterexample, predicted benefit and risk","perception_instruction":"complete replacement of the editable opening paragraph"}]}
+
+The replacement is plain text, at most 2048 actor tokens, with no braces, angle brackets, query IDs or answer memorization. All referenced IDs must be among this request's groups; none may be held-out. All supplied feedback remains learned exposure. Responses are proposals, not adopted policy. Spend reasoning on at most six mechanisms and their alternatives, stop when evidence is sufficient, and provide multiple usable mutations in one response.

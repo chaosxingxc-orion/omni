@@ -8,7 +8,7 @@ import json
 
 import external_exploration as external
 from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical, sha
-from speech_aware_evidence_acquisition.rails.solver_prompt_candidate import validate_mutation
+from speech_aware_evidence_acquisition.rails.node_prompt_candidate import for_contract
 
 
 def verify_external_mutation(spec, *, contract, parent):
@@ -42,7 +42,7 @@ def verify_external_mutation(spec, *, contract, parent):
     if type(index) is not int or not 0 <= index < len(proposals['candidates']):
         raise ValueError('valid explicit candidate index required')
     mutation_text = canonical(proposals['candidates'][index]).decode()
-    validate_mutation(mutation_text, contract=contract,
+    for_contract(contract).validate_mutation(mutation_text, contract=contract,
                       expected_contract_sha256=contract['contract_sha256'],
                       expected_parent_sha256=parent['candidate_sha256'])
     response = observed['response']

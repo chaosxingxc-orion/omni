@@ -2941,7 +2941,16 @@ def validate_prompt_contact_limits(config):
         and all(arm.instruction_template is not None and not arm.deliver and arm.replicate_of is None for arm in group.arms[:-1])
         and group.arms[-1].deliver and group.arms[-1].instruction_template is None
         and group.arms[-1].replicate_of is None)
-    expected_contacts = 7 if seed_group else 4 if odd40_group else len(group.arms)+1 if paired_group else 2
+    perception_pair = False
+    pg = config.perception_branch_group
+    if pg is not None and pg.is_template and pg.level == 2 and pg.branch_ids == ('parent', 'child', 'aa', 'lock') and config.consumption_module_json:
+        from .gepa_prompt_material import validate_pair_declaration, pair_node
+        try:
+            declaration = validate_pair_declaration(json.loads(config.consumption_module_json))
+            perception_pair = pair_node(declaration) == 'perception' and group is None
+        except (ValueError, TypeError, KeyError, AttributeError):
+            pass
+    expected_contacts = 8 if perception_pair else 7 if seed_group else 4 if odd40_group else len(group.arms)+1 if paired_group else 2
     if config.answer_selection is not None:
         from .whole_answer_selection import validate_policy
         validate_policy(config.answer_selection)
@@ -2953,7 +2962,7 @@ def validate_prompt_contact_limits(config):
             or config.max_revisions != 0 or config.review_loop_enabled
             or config.acquisition_role is not None or config.relisten_json is not None
             or any(r.max_iterations != (1 if r.role_kind in {"perception", "solver"} else 0)
-                   or r.tool_names or r.perception_branches is not None for r in config.roles)):
+                   or r.tool_names or (r.perception_branches is not None and not (perception_pair and r.role_kind == 'perception')) for r in config.roles)):
         raise ValueError("legacy prompt limits require a tool-free lock or its exact seed/odd40 candidate group")
 
 

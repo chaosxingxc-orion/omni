@@ -111,22 +111,25 @@ def gepa_probe_layout_matches(values):
 
 
 def gepa_pair_layout_matches(values):
-    """Capture only the declared current-parent/child/lock four-contact graph."""
+    """Capture only declared Solver or independent Perception GEPA pair graphs."""
     try:
-        from ...rails.gepa_prompt_material import validate_pair_declaration, pair_frozen_identity
+        from ...rails.gepa_prompt_material import validate_pair_declaration, pair_frozen_identity, pair_node
         native = values['native_episode']; module = native['consumption_module']
         declaration = validate_pair_declaration(module)
-        if (values.get('policy') != 'phase-native-module-v1-c4'
+        node = pair_node(declaration)
+        ceiling = 8 if node == 'perception' else 4
+        if (values.get('policy') != f'phase-native-module-v1-c{ceiling}'
                 or declaration['frozen_sha256'] != pair_frozen_identity(values)):
             return False
         frame = module['template_frame']
-        expected = {'node': 'solver', 'max_supplied_items': frame['max_supplied_items'],
+        expected = {'node': node, 'max_supplied_items': frame['max_supplied_items'],
             'fit_estimate': frame['fit_estimate'], 'arms': [
                 *[{'arm_id': col['column_id'], 'instruction_template': col['template'],
                    'template_tokens': col['template_tokens']} for col in module['columns']],
+                *([{'arm_id': 'aa', 'replicate_of': 'lock'}] if node == 'perception' else []),
                 {'arm_id': 'lock', 'deliver': True,
                  'template_tokens': frame['delivering_template_tokens']}]}
-        return native['roles']['solver']['template_variants'] == expected
+        return native['roles'][node]['template_variants'] == expected
     except (KeyError, TypeError, AttributeError, ValueError):
         return False
 
@@ -155,7 +158,8 @@ def native_contact_custody_enabled(values):
         return True  # Preserve the already reviewed method's existing path.
     pair = gepa_pair_layout_matches(values)
     paired = pair or gepa_probe_layout_matches(values)
-    paired_ceiling = 4 if pair else 3
+    pair_perception = pair and 'template_variants' in native['roles']['perception']
+    paired_ceiling = (8 if pair_perception else 4) if pair else 3
     if not paired and values.get('policy') in ('phase-native-module-v1-c3','phase-native-module-v1-c4'):
         components=native.get('consumption_module',{}).get('components',[])
         learned=[c for c in components if c.get('component_id')=='tfgrpo-solver-experience'
@@ -190,7 +194,7 @@ def native_contact_custody_enabled(values):
                 or block.get('samples', 1) != 1
                 or any(k in block for k in ('sampling_variants', 'supply_variants',
                                             'decoding_variants', 'branches'))
-                or ('template_variants' in block and not (paired and role=='solver'))):
+                or ('template_variants' in block and not (paired and role == ('perception' if pair_perception else 'solver')))):
             return False
     from ...rails.controllers import default_phase_program
     from ...rails.native_episode_config import load_native_episode_config

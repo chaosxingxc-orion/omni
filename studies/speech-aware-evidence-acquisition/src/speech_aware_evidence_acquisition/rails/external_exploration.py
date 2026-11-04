@@ -8,7 +8,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 from speech_aware_evidence_acquisition.rails.external_teacher import ExternalTeacher
 from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical, sha
-from speech_aware_evidence_acquisition.rails.solver_prompt_candidate import validate_mutation
+from speech_aware_evidence_acquisition.rails.node_prompt_candidate import for_contract
 
 
 def read(path):
@@ -108,9 +108,8 @@ def prepare(config_path):
         context = prepare_context(context, read(source)['document'])
         relative = relative_evidence(selected)
     if profile['algorithm'] == 'gepa':
-        from speech_aware_evidence_acquisition.rails.solver_prompt_candidate import validate_contract
         contract = context['contract']
-        validate_contract(contract, expected_contract_sha256=contract['contract_sha256'])
+        for_contract(contract).validate_contract(contract, expected_contract_sha256=contract['contract_sha256'])
         if not set(ids) <= set(contract['feedback_query_ids']):
             raise ValueError('selected evidence outside GEPA feedback contract')
     teacher_cfg = dict(cfg['teacher'])
@@ -198,7 +197,7 @@ def validate_proposals(text, profile, context, evidence_ids=None, relative=None)
             raise ValueError('candidate object required')
         if profile['algorithm'] == 'gepa':
             contract = context['contract']
-            validate_mutation(canonical(candidate).decode(), contract=contract,
+            for_contract(contract).validate_mutation(canonical(candidate).decode(), contract=contract,
                               expected_contract_sha256=contract['contract_sha256'],
                               expected_parent_sha256=context['parent']['candidate_sha256'])
         elif profile['algorithm'] == 'tfgrpo':
