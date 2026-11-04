@@ -44,6 +44,8 @@ def test_success_reuses_receipt(setup,monkeypatch):
         def open(self,*a,**kw):return Response()
     monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:Opener())
     first=m.execute(config);assert first['usage']['total_tokens']==4
+    diagnostic=json.loads((Path(cfg['output_root'])/'diagnostics.json').read_bytes())
+    assert diagnostic['usage_received'] and diagnostic['finish_received']
     monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:pytest.fail('duplicate spend'))
     assert m.execute(config)==first
 
@@ -183,3 +185,89 @@ def test_research_policy_invalid_before_dispatch(setup, change):
     with pytest.raises(ValueError, match='research'):
         m.execute(config)
     assert not Path(cfg['output_root']).exists()
+
+
+@pytest.mark.parametrize('stream', [True, False])
+def test_incomplete_read_preserves_partial_and_diagnostics_without_retry(setup, monkeypatch, stream):
+    import http.client
+    config, cfg = setup
+    cfg['stream'] = stream
+    config.write_text(json.dumps(cfg))
+    prefix = b'data: {"id":"r","choices":[{"index":0,"delta":{"reasoning_content":"analysis"}}]}\n\n'
+    partial = b'data: {"choices": [ private-test-key'
+    class Response:
+        status = 200
+        headers = {}
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def __iter__(self):
+            for line in prefix.splitlines(keepends=True):
+                yield line
+            raise http.client.IncompleteRead(partial, 100)
+        def read(self): raise http.client.IncompleteRead(partial, 100)
+    class Opener:
+        def open(self, *a, **kw): return Response()
+    monkeypatch.setattr(m.urllib.request, 'build_opener', lambda *a: Opener())
+    result = m.execute(config)
+    root = Path(cfg['output_root'])
+    assert result['state'] == 'unknown' and result['error_type'] == 'IncompleteRead'
+    assert result['usage'] is None and (root/'response.partial.bin').read_bytes() == partial
+    assert (root/'response.partial.bin').stat().st_mode & 0o777 == 0o600
+    diagnostic = json.loads((root/'diagnostics.json').read_bytes())
+    expected = len(partial) + (len(prefix) if stream else 0)
+    assert diagnostic['received_body_bytes'] == diagnostic['durable_body_bytes'] == expected
+    assert diagnostic['partial_exception_bytes'] == len(partial)
+    assert diagnostic['failure_phase'] == 'body-read'
+    assert diagnostic['done_received'] is False and diagnostic['finish_received'] is False
+    assert diagnostic['first_body_data_elapsed_seconds'] is not None
+    assert diagnostic['last_body_data_elapsed_seconds'] >= diagnostic['first_body_data_elapsed_seconds']
+    assert diagnostic['body_fsync_calls'] >= 1
+    if stream:
+        assert (root/'response.sse').read_bytes() == prefix
+        assert diagnostic['sse_events'] == 1 and diagnostic['reasoning_characters'] == 8
+    assert 'private-test-key' not in json.dumps(result) + json.dumps(diagnostic)
+    monkeypatch.setattr(m.urllib.request, 'build_opener', lambda *a: pytest.fail('duplicate spend'))
+    assert m.execute(config) == result
+
+
+def test_http_error_body_is_private_and_not_in_summary(setup, monkeypatch):
+    import io
+    config, cfg = setup
+    body = b'{"error":"private-test-key sensitive task content"}'
+    class Opener:
+        def open(self, *a, **kw):
+            raise urllib.error.HTTPError('url', 400, 'bad', {}, io.BytesIO(body))
+    monkeypatch.setattr(m.urllib.request, 'build_opener', lambda *a: Opener())
+    result = m.execute(config)
+    root = Path(cfg['output_root'])
+    assert result['state'] == 'http_error' and result['http_status'] == 400
+    assert (root/'http-error-body.bin').read_bytes() == body
+    assert (root/'http-error-body.bin').stat().st_mode & 0o777 == 0o600
+    diagnostic = json.loads((root/'diagnostics.json').read_bytes())
+    assert diagnostic['received_body_bytes'] == diagnostic['durable_body_bytes'] == len(body)
+    assert 'sensitive task content' not in json.dumps(result) + json.dumps(diagnostic)
+    monkeypatch.setattr(m.urllib.request, 'build_opener', lambda *a: pytest.fail('duplicate spend'))
+    assert m.execute(config) == result
+
+
+def test_body_wait_and_disk_time_have_distinct_measurements(tmp_path, monkeypatch):
+    # A deterministic fake clock proves local fsync time is not counted as read wait.
+    clock = [10.0]
+    monkeypatch.setattr(m.time, 'monotonic', lambda: clock[0])
+    diagnostic = m.ResponseDiagnostics(clock[0])
+    def read():
+        clock[0] += 3.0
+        return b'abc'
+    class Handle:
+        def write(self, raw): clock[0] += 1.0
+        def flush(self): clock[0] += 2.0
+        def fileno(self): return 123
+    monkeypatch.setattr(m.os, 'fsync', lambda fd: clock.__setitem__(0, clock[0] + 4.0))
+    raw = diagnostic.read(read)
+    diagnostic.received(raw)
+    diagnostic.write(Handle(), raw)
+    assert diagnostic.data['body_read_wait_seconds'] == 3.0
+    assert diagnostic.data['body_write_flush_seconds'] == 3.0
+    assert diagnostic.data['body_fsync_seconds'] == 4.0
+    assert diagnostic.data['first_body_data_elapsed_seconds'] == 3.0
+    assert diagnostic.data['durable_body_bytes'] == 3

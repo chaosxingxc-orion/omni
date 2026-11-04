@@ -2,6 +2,7 @@
 import argparse
 import fcntl
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -27,6 +28,86 @@ def persist(path, data):
         os.close(fd)
 
 
+class ResponseDiagnostics:
+    """Local timings only: iterator wait includes buffering, not pure network time."""
+    def __init__(self, started):
+        self.started = started
+        self.data = {
+            'schema': 'saea-external-response-diagnostics-v1',
+            'headers_elapsed_seconds': None,
+            'first_body_data_elapsed_seconds': None,
+            'last_body_data_elapsed_seconds': None,
+            'body_read_wait_seconds': 0.0,
+            'body_write_flush_seconds': 0.0,
+            'body_fsync_seconds': 0.0,
+            'body_fsync_calls': 0,
+            'received_body_bytes': 0,
+            'durable_body_bytes': 0,
+            'sse_lines': 0,
+            'sse_events': 0,
+            'reasoning_characters': 0,
+            'content_characters': 0,
+            'done_received': False,
+            'finish_received': False,
+            'usage_received': False,
+            'partial_exception_bytes': 0,
+            'failure_phase': None,
+            'timing_scope': 'client-visible body reads; includes buffering and scheduling, not pure network or model time',
+        }
+        self.phase = 'request-open'
+
+    def read(self, operation):
+        self.phase = 'body-read'
+        before = time.monotonic()
+        try:
+            return operation()
+        finally:
+            self.data['body_read_wait_seconds'] += time.monotonic() - before
+
+    def received(self, raw):
+        if raw:
+            elapsed = time.monotonic() - self.started
+            if self.data['first_body_data_elapsed_seconds'] is None:
+                self.data['first_body_data_elapsed_seconds'] = elapsed
+            self.data['last_body_data_elapsed_seconds'] = elapsed
+            self.data['received_body_bytes'] += len(raw)
+
+    def write(self, handle, raw):
+        self.phase = 'body-write-flush'
+        before = time.monotonic()
+        try:
+            handle.write(raw)
+            handle.flush()
+        finally:
+            self.data['body_write_flush_seconds'] += time.monotonic() - before
+        self.phase = 'body-fsync'
+        before = time.monotonic()
+        try:
+            os.fsync(handle.fileno())
+        finally:
+            self.data['body_fsync_seconds'] += time.monotonic() - before
+            self.data['body_fsync_calls'] += 1
+        self.data['durable_body_bytes'] += len(raw)
+
+    def save_bytes(self, path, raw):
+        with path.open('xb') as handle:
+            os.chmod(path, 0o600)
+            self.write(handle, raw)
+        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
+    def partial(self, error, root):
+        if isinstance(error, http.client.IncompleteRead) and error.partial:
+            # Separate file: these bytes were not yielded by the failed read.
+            raw = error.partial
+            self.received(raw)
+            self.data['partial_exception_bytes'] += len(raw)
+            self.save_bytes(root/'response.partial.bin', raw)
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -40,7 +121,7 @@ def deadline_handler(signum, frame):
     raise TotalDeadlineExceeded('external learner total wall deadline exceeded')
 
 
-def read_stream(response, root):
+def read_stream(response, root, diagnostics):
     """Journal every SSE line before interpreting it; incomplete streams stay unknown."""
     content, reasoning, usage, model, response_id = [], [], None, None, None
     finish = None
@@ -48,10 +129,16 @@ def read_stream(response, root):
     done = False
     with (root/'response.sse').open('xb') as journal:
         os.chmod(root/'response.sse', 0o600)
-        for line in response:
-            journal.write(line)
-            journal.flush()
-            os.fsync(journal.fileno())
+        iterator = iter(response)
+        while True:
+            try:
+                line = diagnostics.read(lambda: next(iterator))
+            except StopIteration:
+                break
+            diagnostics.received(line)
+            diagnostics.data['sse_lines'] += 1
+            diagnostics.write(journal, line)
+            diagnostics.phase = 'sse-parse'
             value = line.decode('utf-8').rstrip('\r\n')
             if value.startswith('data:'):
                 pending.append(value[5:].lstrip(' '))
@@ -62,8 +149,10 @@ def read_stream(response, root):
             pending.clear()
             if payload == '[DONE]':
                 done = True
+                diagnostics.data['done_received'] = True
                 break
             event = json.loads(payload)
+            diagnostics.data['sse_events'] += 1
             if 'error' in event:
                 raise ValueError('stream provider error; see private journal')
             if event.get('id'):
@@ -76,16 +165,21 @@ def read_stream(response, root):
                 model = event['model']
             if event.get('usage') is not None:
                 usage = event['usage']
+                diagnostics.data['usage_received'] = True
             for choice in event.get('choices', []):
                 if choice.get('index') != 0:
                     raise ValueError('only one teacher completion supported')
                 delta = choice.get('delta', {})
                 if delta.get('content') is not None:
                     content.append(delta['content'])
+                    diagnostics.data['content_characters'] += len(delta['content'])
                 if delta.get('reasoning_content') is not None:
                     reasoning.append(delta['reasoning_content'])
+                    diagnostics.data['reasoning_characters'] += len(delta['reasoning_content'])
                 if choice.get('finish_reason') is not None:
                     finish = choice['finish_reason']
+                    diagnostics.data['finish_received'] = True
+    diagnostics.phase = 'stream-terminal-validation'
     if not done or finish is None:
         raise ValueError('incomplete stream; no retry')
     result = {'id': response_id, 'model': model, 'usage': usage, 'choices': [
@@ -175,24 +269,29 @@ def execute(config_path):
         req = urllib.request.Request(cfg['endpoint'], data=json.dumps(body).encode(),
             headers={'Authorization': 'Bearer ' + secret, 'Content-Type': 'application/json'}, method='POST')
         started = time.monotonic()
+        diagnostics = ResponseDiagnostics(started)
         previous_handler = None
         if 'total_timeout_seconds' in cfg:
             previous_handler = signal.signal(signal.SIGALRM, deadline_handler)
             signal.setitimer(signal.ITIMER_REAL, cfg['total_timeout_seconds'])
         try:
             with urllib.request.build_opener(NoRedirect()).open(req, timeout=cfg['timeout_seconds']) as response:
+                diagnostics.data['headers_elapsed_seconds'] = time.monotonic() - started
                 persist(root/'headers.json', {'http_status': response.status,
                     'request_id': response.headers.get('x-request-id'),
                     'content_type': response.headers.get('content-type')})
                 if body['stream']:
-                    result, response_sha = read_stream(response, root)
+                    result, response_sha = read_stream(response, root, diagnostics)
                 else:
-                    wire = response.read()
+                    wire = diagnostics.read(response.read)
+                    diagnostics.received(wire)
                     # Preserve complete wire bytes before interpretation, even for malformed replies.
-                    with (root/'response.bin').open('xb') as handle:
-                        os.chmod(root/'response.bin', 0o600)
-                        handle.write(wire); handle.flush(); os.fsync(handle.fileno())
+                    diagnostics.save_bytes(root/'response.bin', wire)
+                    diagnostics.phase = 'response-parse'
                     result = json.loads(wire)
+                    diagnostics.data['usage_received'] = result.get('usage') is not None
+                    diagnostics.data['finish_received'] = any(
+                        c.get('finish_reason') is not None for c in result.get('choices', []))
                     response_sha = hashlib.sha256(wire).hexdigest()
                 summary = {'state': 'response_received', 'http_status': response.status,
                     'request_id': response.headers.get('x-request-id'), 'model': result.get('model'),
@@ -200,14 +299,31 @@ def execute(config_path):
                     'finish_reasons': [c.get('finish_reason') for c in result.get('choices', [])],
                     'candidate_accepted': False, 'semantic_validation': 'pending'}
         except urllib.error.HTTPError as error:
+            diagnostics.data['failure_phase'] = diagnostics.phase
+            diagnostics.data['headers_elapsed_seconds'] = time.monotonic() - started
+            # Provider bodies may contain echoed task data; never copy to stdout/summary.
+            try:
+                wire = diagnostics.read(error.read)
+                diagnostics.received(wire)
+                diagnostics.save_bytes(root/'http-error-body.bin', wire)
+            except Exception as read_error:
+                diagnostics.data['http_error_body_read_error_type'] = type(read_error).__name__
+                diagnostics.partial(read_error, root)
+            finally:
+                error.close()
             summary = {'state': 'http_error', 'http_status': error.code, 'usage': None, 'automatic_retry': False}
         except Exception as error:
+            diagnostics.data['failure_phase'] = diagnostics.phase
+            diagnostics.partial(error, root)
             summary = {'state': 'unknown', 'error_type': type(error).__name__, 'usage': None, 'automatic_retry': False}
         finally:
             if previous_handler is not None:
                 signal.setitimer(signal.ITIMER_REAL, 0)
                 signal.signal(signal.SIGALRM, previous_handler)
         summary['elapsed_seconds'] = time.monotonic() - started
+        diagnostics.data['elapsed_seconds'] = summary['elapsed_seconds']
+        diagnostics.data['terminal_state'] = summary['state']
+        persist(root/'diagnostics.json', diagnostics.data)
         persist(root/'result.json', summary)
         return summary
 
