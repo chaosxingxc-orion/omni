@@ -86,7 +86,7 @@ class ExternalExperienceWorkload(PairWorkload):
 def measure(repo,data,params,binding):
     """Measure exact templates with the resident tokenizer; native FIT remains separate."""
     from transformers import AutoTokenizer
-    from tfgrpo_h2_job import ESTIMATE_SOURCE
+    # Reuse the pinned configured template capacity estimate already deployed on this lane.
     repo=Path(repo);data=Path(data)
     receipt=read(repo/'docs'/binding['runtime_receipt']);model_dir=Path(receipt['model']['model_dir']).resolve()
     if not model_dir.is_relative_to(data.resolve()/'models'):raise ValueError('owned tokenizer required')
@@ -100,11 +100,12 @@ def measure(repo,data,params,binding):
     if not {'tokenizer_config.json','vocab.json','merges.txt'}<={Path(p).name for p in files}:raise ValueError('complete resident tokenizer required')
     tokenizer=AutoTokenizer.from_pretrained(model_dir,local_files_only=True,trust_remote_code=False)
     counts={k:len(tokenizer.encode(consumption.checked_pin(repo/'configs',params[k]).read_text(),add_special_tokens=False)) for k in ('base_template','template')}
-    estimate=copy.deepcopy(read(repo/ESTIMATE_SOURCE)['native_episode']['consumption_module']['supply_frame']['fit_estimate'])
+    estimate_source='configs/evaluation/gepa-seed-material-v1/complete.json'
+    estimate=copy.deepcopy(read(repo/estimate_source)['fit_estimate'])
     model=read(repo/f"configs/model/{binding['model_fragment']}.json")
     estimate['slot_tokens']=int(model['server_args'][model['server_args'].index('--max-model-len')+1])
     estimate['completion_ceiling']=model['decoding_params']['max_tokens']
-    return {'schema':'saea-external-experience-template-measurement-v1','token_counts':counts,'fit_estimate':estimate,'runtime_binding':binding,'tokenizer_files':files,'base_template':params['base_template'],'template':params['template'],'native_fit_completed':False,'new_model_calls':0}
+    return {'schema':'saea-external-experience-template-measurement-v1','token_counts':counts,'fit_estimate':estimate,'runtime_binding':binding,'tokenizer_files':files,'base_template':params['base_template'],'template':params['template'],'estimate_source':pin(repo,estimate_source),'native_fit_completed':False,'new_model_calls':0}
 
 
 def validate(repo,data,name,spec,exp,view):
