@@ -1,0 +1,130 @@
+{
+  "schema": "saea-gepa-factor-results-v1",
+  "factor": "conditional-names",
+  "rows": 80,
+  "official": {
+    "child": {
+      "intent_accuracy": 0.8125,
+      "slu_f1": 0.6749747470123527,
+      "span_f1": 0.5647058823529412
+    },
+    "lock": {
+      "intent_accuracy": 0.7875,
+      "slu_f1": 0.6853350899154359,
+      "span_f1": 0.5818181818181819
+    },
+    "parent": {
+      "intent_accuracy": 0.8375,
+      "slu_f1": 0.6755722430173322,
+      "span_f1": 0.5818181818181819
+    }
+  },
+  "strict_success": {
+    "child": 32,
+    "lock": 34,
+    "parent": 34
+  },
+  "comparisons": {
+    "child_vs_lock": {
+      "proxy_mean_delta": 0.0,
+      "strict_breaks": 3,
+      "strict_repairs": 1
+    },
+    "child_vs_parent": {
+      "proxy_mean_delta": -0.022499999999999964,
+      "strict_breaks": 4,
+      "strict_repairs": 2
+    },
+    "parent_vs_lock": {
+      "proxy_mean_delta": 0.022499999999999964,
+      "strict_breaks": 3,
+      "strict_repairs": 3
+    }
+  },
+  "strata": {
+    "same_type_multiple": {
+      "n": 6,
+      "strict_correct": {
+        "parent": 3,
+        "child": 3,
+        "lock": 3
+      }
+    },
+    "person": {
+      "n": 1,
+      "strict_correct": {
+        "parent": 0,
+        "child": 0,
+        "lock": 0
+      }
+    },
+    "other": {
+      "n": 73,
+      "strict_correct": {
+        "parent": 31,
+        "child": 29,
+        "lock": 31
+      }
+    }
+  },
+  "duration": {
+    "started_at": "2026-11-04T11:26:57.912419+00:00",
+    "finished_at": "2026-11-04T12:00:55.340379+00:00",
+    "generation_seconds": 2037.42796,
+    "seconds_per_pair": 25.4678495,
+    "finished_rows": 80,
+    "eta_seconds": 0,
+    "time_successor_started_at": "2026-11-04T12:01:00.790307+00:00",
+    "handoff_gap_seconds": 5.449928
+  },
+  "cost": {
+    "audio_seconds_used": 1161.0187499999993,
+    "calls_used": 320,
+    "completion_tokens_total": 673046,
+    "latency_seconds_total": 48910.19104170927,
+    "prompt_tokens_total": 2238967,
+    "tool_calls": 0
+  },
+  "native_role_costs": {
+    "perception": {
+      "calls": 80,
+      "completion_tokens": 151928,
+      "contacts_with_reasoning": 80,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 80
+      },
+      "prompt_tokens": 307377,
+      "request_seconds": {
+        "mean": 145.04192579712327,
+        "n": 80,
+        "p50": 132.01625925500412,
+        "p95": 248.8284125700011
+      },
+      "think_markers": 0,
+      "wire_records": 80
+    },
+    "solver": {
+      "calls": 240,
+      "completion_tokens": 521118,
+      "contacts_with_reasoning": 240,
+      "empty_content": 0,
+      "finish_reasons": {
+        "stop": 240
+      },
+      "prompt_tokens": 1931590,
+      "request_seconds": {
+        "mean": 155.44515407474756,
+        "n": 240,
+        "p50": 140.5617690750223,
+        "p95": 253.57734298997093
+      },
+      "think_markers": 0,
+      "wire_records": 240
+    }
+  },
+  "input_audit_rows": 80,
+  "accepted": false,
+  "complete_source_sha256": "37923d089ef3eb5bf6005f0f382d154c92523d72aeda3522de4a34d22838abfa",
+  "interpretation": "Researcher-authored conditional intervention, not verbatim teacher ablation; sparse target support; no stable gain."
+}
