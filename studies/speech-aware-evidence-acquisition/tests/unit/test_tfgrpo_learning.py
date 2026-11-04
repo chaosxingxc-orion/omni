@@ -354,3 +354,22 @@ def test_structured_rule_candidate_requires_source_bytes(tmp_path):
     with pytest.raises(LearningError, match="source bytes"):
         validate_experience(candidate, "frozen-model")
     assert validate_experience(candidate, "frozen-model", structured_source_payloads={"source-1": source}) is candidate
+
+
+@pytest.mark.parametrize('body', ['1. 保留原始跨度。\n2. 核验当前证据。', 'Use the original evidence.'])
+def test_advantage_accepts_observed_translated_heading_verbatim(body):
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import semantic_advantage
+    text = '```output\n<学习目标聚焦>分析</学习目标聚焦>\n<经验>\n' + body + '\n</经验>\n```'
+    assert semantic_advantage(text) == body
+
+
+@pytest.mark.parametrize('text', [
+    '<经验>1. x</Experiences>', '<Experiences>1. x</经验>',
+    '<经验>1. x</经验><Experiences>2. y</Experiences>',
+    '<经验>1. x<经验>2. y</经验>', '<经验></经验>',
+    '<经验>1. x<其他>y', '## 经验\n1. x',
+    '<Experience>1. x</Experience>', '<经验总结>1. x</经验总结>',
+])
+def test_advantage_alias_does_not_accept_guessed_or_ambiguous_structure(text):
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import semantic_advantage
+    with pytest.raises(LearningError): semantic_advantage(text)

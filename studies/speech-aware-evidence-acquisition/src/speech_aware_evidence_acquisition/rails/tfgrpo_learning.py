@@ -306,17 +306,22 @@ def semantic_advantage(text):
     final Experiences heading with a nonempty numbered list and no further
     markup; ambiguous/multiple/empty sections still fail.
     """
-    openings=list(re.finditer(r'<Experiences>',text,re.I))
-    closings=list(re.finditer(r'</Experiences>',text,re.I))
+    # Observed multilingual teacher output translated structural headings too.
+    # Accept only the observed literal alias; never guess a heading or translate
+    # the experience body. Mixed aliases remain ambiguous and must fail.
+    openings=list(re.finditer(r'<(Experiences|经验)>',text,re.I))
+    closings=list(re.finditer(r'</(Experiences|经验)>',text,re.I))
     if len(openings)!=1 or len(closings)>1:
         raise LearningError('one nonempty semantic advantage block required')
     start=openings[0].end()
     if closings:
         if closings[0].start()<start:raise LearningError('misordered semantic advantage tags')
+        if openings[0].group(1).casefold()!=closings[0].group(1).casefold():
+            raise LearningError('mismatched semantic advantage tags')
         value=text[start:closings[0].start()].strip()
     else:
         value=text[start:].strip()
-        if not re.match(r'1[.)]\s+\S',value) or re.search(r'</?[A-Za-z][^>]*>',value):
+        if not re.match(r'1[.)]\s+\S',value) or re.search(r'</?[^>]+>',value):
             raise LearningError('unclosed advantage must be a final numbered section')
     if not value:raise LearningError('one nonempty semantic advantage block required')
     return value

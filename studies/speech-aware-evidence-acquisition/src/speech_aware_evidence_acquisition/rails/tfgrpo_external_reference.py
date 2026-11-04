@@ -12,7 +12,8 @@ from .external_exploration import checked, pin, read, save
 from .external_teacher import ExternalTeacher
 from .grounded_synthesis_fusion import project_group_evidence
 from .tfgrpo_learning import (DENSE_REWARD, ExperienceLearner, LearningError,
-    canonical, group_has_contrast, intent_slot_reward, sha, validate_experience)
+    canonical, group_has_contrast, intent_slot_reward, sha, validate_experience,
+    semantic_advantage, parse_operations)
 from .tfgrpo_prompts import SOURCE_SHA256, UPSTREAM_COMMIT
 
 SCHEMA = 'saea-tfgrpo-external-reference-job-v1'
@@ -211,3 +212,69 @@ def run(root):
 
 def collect(root):
     return execute(root, collect_only=True)
+
+
+def audit(root):
+    """Read-only custody and stage parsing of a failed or incomplete batch.
+
+    Does not collect, create a learner lock, reconcile into learner contacts,
+    issue requests, or claim that unobserved stages have completed.
+    """
+    root, manifest, config, groups, parent, batch, caller = load(root)
+    contacts = root/'learner/contacts'
+    intents = sorted(contacts.glob('*.intent.json'))
+    batch_path = root/'learner/batch.json'
+    require(not intents or batch_path.is_file(), 'contact batch binding missing')
+    batch_hash = sha(read(batch_path)) if batch_path.is_file() else None
+    expected_ids = {'summary': {r['trajectory_id'] for g in groups for r in g['rollouts']},
+                    'advantage': {g['query_id'] for g in groups},
+                    'group_update': {g['query_id'] for g in groups}, 'batch_update': {'batch'}}
+    for response_path in contacts.glob('*.response.json'):
+        require(response_path.with_name(response_path.name.replace('.response.json', '.intent.json')).is_file(),
+                'orphan reference response')
+    receipts = []; counts = {stage: 0 for stage in STAGES}
+    usage = dict(calls=0, prompt_tokens=0, completion_tokens=0)
+    for path in intents:
+        request = read(path)
+        require(request['stage'] in counts, 'unknown reference stage')
+        require(request['batch_sha256'] == batch_hash
+                and request['identity'] in expected_ids[request['stage']], 'reference batch or stage identity differs')
+        require(path.stem.removesuffix('.intent') == sha({'stage': request['stage'], 'identity': request['identity']}),
+                'reference contact filename differs')
+        response_path = path.with_name(path.name.replace('.intent.json', '.response.json'))
+        observed = caller.reconcile(request)
+        item = {'stage': request['stage'], 'identity': request['identity'],
+                'request_sha256': sha(request), 'learner_response_present': response_path.is_file()}
+        if observed is None:
+            item.update(state='unknown', parse_status='unavailable')
+        else:
+            if response_path.is_file():
+                require(read(response_path) == observed, 'learner response differs from original wire')
+            response = observed['response']
+            item.update(state='observed', finish_reason=response['finish_reason'],
+                wire_response_sha256=response['wire_response_sha256'])
+            for k in usage: usage[k] += response['usage'][k]
+            try:
+                require(response['finish_reason'] == 'stop', 'incomplete external reference response')
+                if request['stage'] == 'advantage':
+                    semantic_advantage(response['text'])
+                elif request['stage'] in ('group_update', 'batch_update'):
+                    parse_operations(response['text'], parent['items'],
+                                     max_operations=config['bounds']['max_operations'])
+                item['parse_status'] = 'valid'
+            except (LearningError, ValueError) as error:
+                item.update(parse_status='invalid', parse_error=str(error))
+        counts[request['stage']] += 1
+        receipts.append(item)
+    unknown = sum(r['state'] == 'unknown' for r in receipts)
+    invalid = sum(r['parse_status'] == 'invalid' for r in receipts)
+    return {'schema': 'saea-tfgrpo-reference-contact-audit-v1',
+        'prepared': pin(root/'prepared.json'), 'plan': manifest['plan'],
+        'contacts': receipts, 'stage_contacts': counts, 'known_usage': usage,
+        'unknown_contacts': unknown, 'invalid_stage_responses': invalid,
+        'unissued_stage_calls': {s: manifest['plan']['stage_calls'][s]-counts[s] for s in STAGES},
+        'candidate_present': (root/'learner/candidate.json').is_file(),
+        'known_contacts_replayable': unknown == 0 and invalid == 0,
+        'new_model_calls': 0, 'source_modified': False, 'automatic_retry': False,
+        'deployment_accepted': False,
+        'limitation': 'Requires terminal/quiescent process evidence before resume; stage audit is not a completed candidate.'}

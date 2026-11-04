@@ -158,3 +158,26 @@ def test_observed_truncation_retained_and_never_resampled(tmp_path,monkeypatch):
     assert len(calls)==1
     assert next((root/'teacher').glob('*/response/result.json')).exists()
     assert not (root/'learner/candidate.json').exists()
+
+
+def test_audit_replays_translated_advantage_without_writes_or_dispatch(tmp_path, monkeypatch):
+    path,cfg=material(tmp_path);ref.prepare(path);root=Path(cfg['output_root']);caller=ref.load(root)[-1]
+    rs=responses();rs[2]=answer('```output\n<经验>1. Resolve action using explicit evidence.</经验>\n```','a1')
+    calls=network(caller,monkeypatch,rs)
+    ref.run(root)
+    before={str(p.relative_to(root)):p.read_bytes() for p in root.rglob('*') if p.is_file()}
+    result=ref.audit(root)
+    after={str(p.relative_to(root)):p.read_bytes() for p in root.rglob('*') if p.is_file()}
+    assert before==after and len(calls)==5
+    assert result['known_contacts_replayable'] and result['known_usage']['calls']==5
+    assert not result['new_model_calls'] and not result['source_modified']
+
+
+def test_audit_distinguishes_unknown_from_unissued_without_retry(tmp_path,monkeypatch):
+    path,cfg=material(tmp_path);ref.prepare(path);root=Path(cfg['output_root']);caller=ref.load(root)[-1]
+    calls=network(caller,monkeypatch,[TimeoutError()])
+    with pytest.raises(Exception):ref.run(root)
+    result=ref.audit(root)
+    assert len(calls)==1 and result['unknown_contacts']==1
+    assert sum(result['unissued_stage_calls'].values())==4
+    assert not result['known_contacts_replayable']
