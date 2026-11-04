@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import time
 import urllib.error
 import urllib.parse
@@ -29,6 +30,14 @@ def persist(path, data):
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
+
+
+class TotalDeadlineExceeded(TimeoutError):
+    pass
+
+
+def deadline_handler(signum, frame):
+    raise TotalDeadlineExceeded('external learner total wall deadline exceeded')
 
 
 def read_stream(response, root):
@@ -90,10 +99,15 @@ def execute(config_path):
     cfg = json.loads(Path(config_path).read_bytes())
     keys = {'schema', 'endpoint', 'model', 'api_key_env', 'messages', 'max_tokens',
             'timeout_seconds', 'output_root'}
-    if not keys <= set(cfg) <= keys | {'stream'} or cfg['schema'] != 'saea-external-learner-v1':
+    if not keys <= set(cfg) <= keys | {'stream', 'total_timeout_seconds', 'thinking'} or cfg['schema'] != 'saea-external-learner-v1':
         raise ValueError('exact external learner configuration required')
     if type(cfg.get('stream', False)) is not bool:
         raise ValueError('boolean stream setting required')
+    if 'total_timeout_seconds' in cfg and (type(cfg['total_timeout_seconds']) is not int
+            or cfg['total_timeout_seconds'] <= 0):
+        raise ValueError('positive total wall deadline required')
+    if 'thinking' in cfg and cfg['thinking'] not in ({'type': 'enabled'}, {'type': 'disabled'}):
+        raise ValueError('explicit provider thinking mode required')
     url = urllib.parse.urlsplit(cfg['endpoint'])
     if (url.scheme != 'https' or not url.hostname or url.username or url.password
             or url.query or url.fragment or not url.path.endswith('/chat/completions')):
@@ -136,11 +150,17 @@ def execute(config_path):
                 'stream': cfg.get('stream', False)}
         if body['stream']:
             body['stream_options'] = {'include_usage': True}
+        if 'thinking' in cfg:
+            body['thinking'] = cfg['thinking']
         persist(root/'request.json', body)
         persist(root/'intent.json', intent)
         req = urllib.request.Request(cfg['endpoint'], data=json.dumps(body).encode(),
             headers={'Authorization': 'Bearer ' + secret, 'Content-Type': 'application/json'}, method='POST')
         started = time.monotonic()
+        previous_handler = None
+        if 'total_timeout_seconds' in cfg:
+            previous_handler = signal.signal(signal.SIGALRM, deadline_handler)
+            signal.setitimer(signal.ITIMER_REAL, cfg['total_timeout_seconds'])
         try:
             with urllib.request.build_opener(NoRedirect()).open(req, timeout=cfg['timeout_seconds']) as response:
                 persist(root/'headers.json', {'http_status': response.status,
@@ -165,6 +185,10 @@ def execute(config_path):
             summary = {'state': 'http_error', 'http_status': error.code, 'usage': None, 'automatic_retry': False}
         except Exception as error:
             summary = {'state': 'unknown', 'error_type': type(error).__name__, 'usage': None, 'automatic_retry': False}
+        finally:
+            if previous_handler is not None:
+                signal.setitimer(signal.ITIMER_REAL, 0)
+                signal.signal(signal.SIGALRM, previous_handler)
         summary['elapsed_seconds'] = time.monotonic() - started
         persist(root/'result.json', summary)
         return summary

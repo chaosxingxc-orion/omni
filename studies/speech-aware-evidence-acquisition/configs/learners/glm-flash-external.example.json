@@ -7,8 +7,9 @@
     "path": "/absolute/private/messages.json",
     "sha256": "REPLACE_WITH_MESSAGES_SHA256"
   },
-  "max_tokens": 16384,
+  "max_tokens": 4096,
   "timeout_seconds": 600,
   "output_root": "/absolute/private/unique-request-directory",
-  "stream": true
+  "stream": true,
+  "total_timeout_seconds": 180
 }

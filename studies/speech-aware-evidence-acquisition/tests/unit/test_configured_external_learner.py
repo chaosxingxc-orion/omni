@@ -103,3 +103,33 @@ def test_stream_journal_and_terminal_required(setup,monkeypatch,complete):
         assert result['state']=='unknown' and not (root/'response.json').exists()
     monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:pytest.fail('no redispatch'))
     assert m.execute(config)==result
+
+
+def test_total_deadline_interrupts_blocking_read_without_resend(setup,monkeypatch):
+    import time
+    config,cfg=setup;cfg['total_timeout_seconds']=1;config.write_text(json.dumps(cfg))
+    class Opener:
+        def open(self,*a,**kw):time.sleep(5);pytest.fail('deadline did not interrupt')
+    monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:Opener())
+    result=m.execute(config)
+    assert result['state']=='unknown' and result['error_type']=='TotalDeadlineExceeded'
+    assert result['elapsed_seconds']<4 and m.signal.getitimer(m.signal.ITIMER_REAL)==(0.0,0.0)
+    monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:pytest.fail('no deadline retry'))
+    assert m.execute(config)==result
+
+
+def test_explicit_thinking_mode_forwarded(setup,monkeypatch):
+    config,cfg=setup;cfg['thinking']={'type':'disabled'};config.write_text(json.dumps(cfg))
+    class Opener:
+        def open(self,request,**kw):
+            assert json.loads(request.data)['thinking']=={'type':'disabled'}
+            raise TimeoutError()
+    monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:Opener())
+    assert m.execute(config)['state']=='unknown'
+
+
+@pytest.mark.parametrize('value',[0,True,-2,'60'])
+def test_invalid_total_deadline_rejected_before_dispatch(setup,value):
+    config,cfg=setup;cfg['total_timeout_seconds']=value;config.write_text(json.dumps(cfg))
+    with pytest.raises(ValueError,match='total wall'):m.execute(config)
+    assert not Path(cfg['output_root']).exists()
