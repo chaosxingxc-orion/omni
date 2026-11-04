@@ -45,11 +45,17 @@ def publish_template(repo, *, candidate, contract, expected_contract_sha256,
     if target.resolve() != target:
         raise ValueError('template destination redirected')
     blob = text.encode('utf-8')
-    try:
-        publish_new(target, blob)
-    except FileExistsError:
+    if target.exists():
+        # Validation re-compiles material in an immutable execution tree.
+        # Existing content needs verification, not a temporary write attempt.
         if not target.is_file() or target.is_symlink() or target.read_bytes() != blob:
-            raise ValueError('existing template conflicts with verified candidate') from None
+            raise ValueError('existing template conflicts with verified candidate')
+    else:
+        try:
+            publish_new(target, blob)
+        except FileExistsError:
+            if not target.is_file() or target.is_symlink() or target.read_bytes() != blob:
+                raise ValueError('existing template conflicts with verified candidate') from None
     return {'instruction_template': SupplyVariantTemplate(relative, digest).as_json(),
         'template_tokens': count, 'candidate_sha256': candidate['candidate_sha256'],
         'contract_sha256': expected_contract_sha256,

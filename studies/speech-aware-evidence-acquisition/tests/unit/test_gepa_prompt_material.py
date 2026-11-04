@@ -23,11 +23,14 @@ def inputs():
         tokenizer_identity=tokenizer, expected_tokenizer_sha256=c.sha(tokenizer))
 
 
-def test_real_seed_bytes_reentry_and_native_parser(tmp_path):
+def test_real_seed_bytes_reentry_and_native_parser(tmp_path, monkeypatch):
     original, args = inputs()
     result = m.publish_template(tmp_path, **args)
     pin = result['instruction_template']
     assert (tmp_path/'configs'/pin['relpath']).read_bytes() == original.encode()
+    def readonly(*args, **kwargs):
+        raise OSError(30, 'Read-only file system')
+    monkeypatch.setattr(m, 'publish_new', readonly)
     assert m.publish_template(tmp_path, **args) == result
     group = parse_template_variants({'node': 'solver', 'max_supplied_items': 4,
         'fit_estimate': {'slot_tokens': 49152, 'completion_ceiling': 4096,
@@ -228,10 +231,12 @@ def test_current_nonseed_parent_child_native_four_contact_graph(tmp_path):
 def test_pair_refuses_unverified_lineage(tmp_path, fault):
     import copy
     base, args = pair_inputs(tmp_path)
+    folder = tmp_path/'configs/probes/gepa'
+    before = {p.name: p.read_bytes() for p in folder.glob('*.txt')}
     if fault == 'wrong_parent': args['child_arguments']['parent'] = args['parent_arguments']['parent']
     elif fault == 'parent_mutation': args['parent_arguments']['mutation_text'] += ' altered'
     elif fault == 'child_mutation': args['child_arguments']['mutation_text'] += ' altered'
     elif fault == 'contract': args['child_arguments']['contract'] = copy.deepcopy(args['child_arguments']['contract']); args['child_arguments']['contract']['max_instruction_tokens'] = 1
     else: args['child_arguments']['tokenizer_identity'] = {}
     with pytest.raises(ValueError): m.compile_template_pair(tmp_path, base, **args)
-    assert not (tmp_path/'configs/probes/gepa').exists()
+    assert {p.name: p.read_bytes() for p in folder.glob('*.txt')} == before
