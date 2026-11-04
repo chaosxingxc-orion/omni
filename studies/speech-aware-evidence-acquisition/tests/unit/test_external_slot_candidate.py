@@ -101,3 +101,13 @@ def test_inherited_overlap_reported_without_erasing_old_source():
 def test_other_recording_of_same_forbidden_utterance_rejected():
     args=list(fixture());args[-1]=["slurp:train:new:audio-2"]
     with pytest.raises(ValueError):compile_candidate(*args)
+
+
+def test_full_authored_release_rebuilds_exact_reviewed_card_content_and_routing():
+    from external_slot_candidate import authored_release
+    from speech_aware_evidence_acquisition.rails.knowledge import KnowledgeSnapshot
+    candidate=compile_candidate(*fixture());authored,snapshot=authored_release(candidate)
+    assert snapshot['values']==candidate['snapshot']['values']
+    assert snapshot['facets']==candidate['snapshot']['facets']
+    rebuilt=build_slot_contract_snapshot(AuthoredSemanticKnowledgeSpec('slurp',snapshot['source_split_identity_hash'],tuple(snapshot['source_sample_ids'])),rows=authored['rows'])
+    assert rebuilt.frozen_json()==snapshot

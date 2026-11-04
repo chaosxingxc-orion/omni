@@ -4,7 +4,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
-from external_slot_candidate import read
+from external_slot_candidate import read, authored_release
 from external_slot_workload import measure
 
 
@@ -16,9 +16,10 @@ def prepare(config):
         with p.open('x') as f:json.dump(d,f,ensure_ascii=False,indent=2);f.write('\n')
     def pin(p):return {'relpath':str(p.relative_to(data)),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
     index=cfg['candidate_index'];candidate=read(inputs/f'candidate-{index}/candidate.json')
-    write(root/'candidate.json',candidate);write(root/'snapshot.json',candidate['snapshot'])
+    authored,snapshot=authored_release(candidate)
+    write(root/'candidate.json',candidate);write(root/'snapshot.json',snapshot);write(root/'authored.json',authored)
     write(root/'compiler.json',read(inputs/f'compile-{index}.json'));write(root/'review.json',read(inputs/'ROOT-REVIEW.json'))
-    snapshot=candidate['snapshot'];write(root/'release.json',{'schema':'saea-knowledge-store-release-v1','store_id':'slot-contracts','store_role':'slot-contracts','snapshot_sha256':snapshot['snapshot_sha256'],'source_split_identity_hash':snapshot['source_split_identity_hash'],'builder_policy_id':snapshot['builder_policy_id'],'source':pin(root/'candidate.json')})
+    write(root/'release.json',{'schema':'saea-knowledge-store-release-v1','store_id':'slot-contracts','store_role':'slot-contracts','snapshot_sha256':snapshot['snapshot_sha256'],'source_split_identity_hash':snapshot['source_split_identity_hash'],'builder_policy_id':snapshot['builder_policy_id'],'source':pin(root/'authored.json')})
     snapshot_pin={'relpath':str((root/'snapshot.json').relative_to(data)),'sha256':snapshot['snapshot_sha256']}
     measured=measure(repo,data,candidate,cfg['runtime_binding'],snapshot_pin);write(root/'measurement.json',measured)
     material={'schema':'saea-external-slot-knowledge-material-v1',**{key:pin(root/(name+'.json')) for key,name in [('compiler','compiler'),('candidate','candidate'),('release','release'),('review','review'),('measurement','measurement')]}}

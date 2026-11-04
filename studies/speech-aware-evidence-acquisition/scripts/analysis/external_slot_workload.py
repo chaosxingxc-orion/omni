@@ -14,7 +14,7 @@ from gepa_pair_workload import PairWorkload
 import tfrl_h1_observation as observation
 from tfrl_hardset_a0_registration import pin,pinned
 from tfrl_hardset_a0_workload import read,sha
-from external_slot_candidate import compile_candidate, verify_response, checked
+from external_slot_candidate import compile_candidate, verify_response, checked, authored_release
 from speech_aware_evidence_acquisition.rails import consumption_module as cm
 from speech_aware_evidence_acquisition.rails.adapters.slurp_module_hooks import carrier_module_hooks
 
@@ -60,8 +60,9 @@ class ExternalSlotWorkload(PairWorkload):
                 or review['reviewed_candidate_sha256'].get(str(cfg['candidate_index']))!=material['candidate']['sha256']):
             raise ValueError('exact root development review required')
         release=pinned(data,material['release'])
-        if release['snapshot_sha256']!=candidate['snapshot']['snapshot_sha256'] or release['source']!=material['candidate']:
-            raise ValueError('release not bound to actual candidate')
+        authored, rebuilt=authored_release(candidate)
+        if release['snapshot_sha256']!=rebuilt['snapshot_sha256'] or pinned(data,release['source'])!=authored:
+            raise ValueError('release not bound to actual authored candidate')
         measurement=pinned(data,material['measurement'])
         if measurement!=measure(repo,data,candidate,self.runtime_binding(repo),measurement['snapshot']):
             raise ValueError('measurement runtime or tokenizer binding differs')
@@ -138,7 +139,7 @@ def measure(repo,data,candidate,binding,snapshot):
     estimate['completion_ceiling']=4096
     measured={'fit_estimate':estimate,'runtime_binding':binding,'tokenizer_files':files,
               'estimate_source':pin(repo,estimate_source),'native_fit_completed':False,'new_model_calls':0}
-    if KnowledgeSnapshot.from_frozen_json(read(data/snapshot['relpath'])).content_hash()!=snapshot['sha256'] or snapshot['sha256']!=candidate['snapshot']['snapshot_sha256']:
+    if KnowledgeSnapshot.from_frozen_json(read(data/snapshot['relpath'])).content_hash()!=snapshot['sha256'] or snapshot['sha256']!=authored_release(candidate)[1]['snapshot_sha256']:
         raise ValueError('measured snapshot differs')
     maximum=max(len(tokenizer.encode(v['content'],add_special_tokens=False)) for v in candidate['snapshot']['values'])
     source=read(repo/observation.SOURCE_BASE)['knowledge_stores']['slot-contracts']['snapshot']

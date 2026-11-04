@@ -155,3 +155,32 @@ def main():
 
 
 if __name__=='__main__':main()
+
+
+def authored_release(candidate):
+    """Round-trip every canonical slot card through the normal authored builder.
+
+    Candidate-index routing requires the full typed source, not a proposal
+    manifest. The rebuilt identity is distinct; reviewed card semantics stay
+    byte-identical, and the original reviewed candidate is never overwritten.
+    """
+    snapshot=KnowledgeSnapshot.from_frozen_json(candidate['snapshot'])
+    rows=[]
+    for value in snapshot.values:
+        text=value.content
+        slot=text.splitlines()[0][5:-1]
+        bindings=text.split('Intent bindings and semantic roles:\n- ',1)[1].split('\nExtraction cues:',1)[0].split('\n- ')
+        row={'slot_id':slot,
+             'intent_bindings':[{'intent_id':b.split(': ',1)[0],'semantic_role':b.split(': ',1)[1]} for b in bindings],
+             'extraction_cues':text.split('Extraction cues:\n- ',1)[1].split('\nAdmissible formats:',1)[0].split('\n- '),
+             'admissible_formats':text.split('Admissible formats:\n- ',1)[1].split('\nMissing behavior:',1)[0].split('\n- '),
+             'missing_behavior':text.split('Missing behavior: ',1)[1].split('\nAmbiguity behavior:',1)[0],
+             'ambiguity_behavior':text.split('Ambiguity behavior: ',1)[1].split('\nLimitations:',1)[0],
+             'limitations':text.split('Limitations:\n- ',1)[1].split('\n- '),
+             'source_support':{'source_sample_ids':list(value.source_sample_ids),'provenance_refs':list(value.provenance_refs)}}
+        if _slot(row)[2]!=text:raise ValueError('canonical authored reconstruction differs')
+        rows.append(row)
+    rebuilt=build_slot_contract_snapshot(AuthoredSemanticKnowledgeSpec('slurp',snapshot.source_split_identity_hash,snapshot.source_sample_ids),rows=rows)
+    if rebuilt.values!=snapshot.values or rebuilt.facets!=snapshot.facets:
+        raise ValueError('authored rebuild changes reviewed cards or routing')
+    return {'schema':'saea-authored-semantic-knowledge-source-v1','builder_policy_id':rebuilt.builder_policy_id,'source_split_identity_hash':rebuilt.source_split_identity_hash,'rows':rows},rebuilt.frozen_json()
