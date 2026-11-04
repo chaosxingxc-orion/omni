@@ -9675,6 +9675,15 @@ class FlightRuntime:
                             inputs=inputs,
                         )
                     )
+                    if (not report.get("identity_ok")
+                            and getattr(self, "_native_contact_replay", None) is not None):
+                        try:
+                            self._load_phase_supply_seed(supply_pin, binding, specs[first], identity)
+                        except Exception as error:
+                            report["reason"] = f"prepared supply recovery refused: {error}"
+                        else:
+                            report.update(identity_ok=True, reason=None, difference=None,
+                                          runtime_repair_recomputed=True)
                     if report.get("identity_ok"):
                         from types import SimpleNamespace
 
@@ -10075,10 +10084,39 @@ class FlightRuntime:
         relative = _normalized_relative_path(pin["relpath"], "prepared phase supply")
         path = _resolve_confined(self._data_root, relative, self._data_root,
                                  "prepared phase supply", strict=True)
-        output = load_artifact(
-            path, expected_sha256=pin["sha256"], kind="phase-supply",
-            inputs=self._phase_seed_inputs(identity_binding, spec, split_identity_hash),
-        )
+        inputs = self._phase_seed_inputs(identity_binding, spec, split_identity_hash)
+        try:
+            output = load_artifact(path, expected_sha256=pin["sha256"],
+                                   kind="phase-supply", inputs=inputs)
+        except PreparationError:
+            replay = getattr(self, "_native_contact_replay", None)
+            if replay is None:
+                raise
+            from types import SimpleNamespace
+            from ..prepared_supply_recovery import verified_runtime_repair
+            from ..preparation import canonical_bytes
+            from ..atomic_file import publish_new
+            # Every invocation verifies the source and recomputes current CPU
+            # selection; an old proof never bypasses current implementation.
+            def rebuild():
+                program = default_phase_program(self._composed.values["policy"])
+                facets, selected = self._phase_supply_seeds(
+                    program, identity_binding, {spec.phase: spec},
+                    SimpleNamespace(split_identity_hash=split_identity_hash),
+                    use_prepared=False)
+                return {"facets": facets, "values": selected}
+            output, proof = verified_runtime_repair(path,
+                expected_sha256=pin["sha256"], inputs=inputs, produce=rebuild)
+            proof["native_recovery_receipt"] = dict(self._native_contact_recovery)
+            proof["source_attempt_id"] = replay.source_plan.attempt_id
+            proof_path = self._run_dir() / "prepared-supply-runtime-recovery.json"
+            blob = canonical_bytes(proof)
+            if proof_path.exists():
+                if proof_path.read_bytes() != blob:
+                    raise PreparationError("prepared supply recovery proof changed")
+            else:
+                proof_path.parent.mkdir(parents=True, exist_ok=True)
+                publish_new(proof_path, blob)
         if not isinstance(output, dict) or set(output) != {"facets", "values"}:
             raise PreparationError("prepared phase selection shape mismatch")
         allowed_rows = set(identity_binding["speech_packet_bindings"])
@@ -10197,6 +10235,7 @@ class FlightRuntime:
         supply_specs: Mapping[str, object],
         plan: ExecutionPlan,
         max_workers: int = 1,
+        *, use_prepared: bool = True,
     ) -> tuple[dict[str, object], dict[str, object]]:
         """``({phase: facet seed}, {phase: value seed})`` for a supplied
         FIRST phase (E6).
@@ -10227,7 +10266,7 @@ class FlightRuntime:
             # the ``return {}, {}`` it replaces.
             return _merge_unconditional_first_phase({}, {}, binding, first_phase)
         prepared = self._composed.values.get("prepared_phase_supply")
-        if prepared is not None:
+        if prepared is not None and use_prepared:
             facets, values = self._load_phase_supply_seed(
                 prepared, binding, spec, plan.split_identity_hash
             )
