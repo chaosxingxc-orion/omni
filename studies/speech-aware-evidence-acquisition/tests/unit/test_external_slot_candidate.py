@@ -96,3 +96,8 @@ def test_inherited_overlap_reported_without_erasing_old_source():
     result=compile_candidate(*args)
     assert result["isolation"]["inherited_snapshot_forbidden_overlap"]==["slurp:train:base"]
     assert result["isolation"]["new_optimizer_forbidden_overlap"]==[]
+
+
+def test_other_recording_of_same_forbidden_utterance_rejected():
+    args=list(fixture());args[-1]=["slurp:train:new:audio-2"]
+    with pytest.raises(ValueError):compile_candidate(*args)

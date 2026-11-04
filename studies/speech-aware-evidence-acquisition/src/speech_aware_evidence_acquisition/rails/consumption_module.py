@@ -1945,8 +1945,23 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
         gepa_columns = (not paired_decls and len(block.columns) == len(block.template_columns) == 1
             and block.template_columns[0].column_id == "gepa"
             and block.template_columns[0].node == "solver" and not block.template_frame["twin"])
+        # Source-bound one-store knowledge comparison keeps the lock prompt,
+        # routing knobs and fanout fixed; actual release custody is checked by
+        # the registered workload and alternate-store loader.
+        slot_pair_columns = (
+            not paired_decls and len(block.columns) == len(block.supply_columns) == 1
+            and block.supply_columns[0].column_id == "learned"
+            and block.supply_columns[0].node == "solver"
+            and not block.supply_frame["twin"]
+            and set(block.supply_frame.get("alternates", {})) == {"slot-contracts"}
+            and len(block.supply_frame["alternates"]["slot-contracts"]) == 1
+            and block.supply_columns[0].supply == {
+                "max_supplied_items": block.supply_frame["delivering_max_supplied_items"],
+                "release_swap": {"store_id": "slot-contracts", "release":
+                    block.supply_frame["alternates"]["slot-contracts"][0]["release"]["relpath"]}}
+        )
         gepa_pair_columns = "gepa_pair" in json.loads(block.block_json)
-        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns and not gepa_columns and not gepa_pair_columns)
+        if (block.review_loop != "off" or (block.columns and not seed_columns and not odd40_columns and not paired_columns and not gepa_columns and not gepa_pair_columns and not slot_pair_columns)
                 or ceiling != 2 or block.solver_tool_access):
             raise ConsumptionModuleConfigError(
                 "legacy prompt limits require a two-contact lock, seed-only K4, or exact odd40 B/AA/A group")

@@ -2950,7 +2950,19 @@ def validate_prompt_contact_limits(config):
             perception_pair = pair_node(declaration) == 'perception' and group is None
         except (ValueError, TypeError, KeyError, AttributeError):
             pass
-    expected_contacts = 8 if perception_pair else 7 if seed_group else 4 if odd40_group else len(group.arms)+1 if paired_group else 2
+    slot_pair_group = False
+    if group is not None and group.kind == "supply" and group.arm_ids == ("learned", "lock"):
+        learned, lock = group.arms
+        slot_pair_group = (
+            group.arm_visits == "first" and not learned.deliver and learned.replicate_of is None
+            and lock.deliver and lock.replicate_of is None
+            and len(learned.all_release_swaps) == 1
+            and learned.all_release_swaps[0].store_id == "slot-contracts"
+            and not lock.all_release_swaps
+            and learned.max_supplied_items == lock.max_supplied_items
+            and all(not arm.knobs and arm.instruction_template is None and arm.decoding is None
+                    for arm in group.arms))
+    expected_contacts = 8 if perception_pair else 7 if seed_group else 4 if odd40_group else len(group.arms)+1 if paired_group or slot_pair_group else 2
     if config.answer_selection is not None:
         from .whole_answer_selection import validate_policy
         validate_policy(config.answer_selection)
@@ -2958,7 +2970,7 @@ def validate_prompt_contact_limits(config):
             raise ValueError('whole-answer selection requires exact odd40 candidates')
         expected_contacts += 1
     if (config.prompt_contact_limits != "legacy-c17-lock-v1" or config.max_contacts != expected_contacts
-            or (group is not None and not seed_group and not odd40_group and not paired_group)
+            or (group is not None and not seed_group and not odd40_group and not paired_group and not slot_pair_group)
             or config.max_revisions != 0 or config.review_loop_enabled
             or config.acquisition_role is not None or config.relisten_json is not None
             or any(r.max_iterations != (1 if r.role_kind in {"perception", "solver"} else 0)

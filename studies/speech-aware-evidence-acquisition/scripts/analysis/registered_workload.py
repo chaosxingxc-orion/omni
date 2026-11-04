@@ -6,9 +6,11 @@ from pathlib import Path
 
 def assert_execution_binding(spec, environ=None, *, repo=None):
     """Bind an explicit full-test client width to the shared factory environment."""
-    if spec.get('workload_kind') in ('gepa-solver-template-pair', 'gepa-perception-template-pair', 'external-experience-pair'):
+    if spec.get('workload_kind') in ('gepa-solver-template-pair', 'gepa-perception-template-pair', 'external-experience-pair', 'external-slot-knowledge-pair'):
         import os
-        if spec['workload_kind'] == 'external-experience-pair':
+        if spec['workload_kind'] == 'external-slot-knowledge-pair':
+            from external_slot_workload import ExternalSlotWorkload as PairWorkload
+        elif spec['workload_kind'] == 'external-experience-pair':
             from external_experience_workload import ExternalExperienceWorkload as PairWorkload
         elif spec['workload_kind'] == 'gepa-perception-template-pair':
             from gepa_perception_workload import PerceptionWorkload as PairWorkload
@@ -122,6 +124,9 @@ def validate_workload(repo, data, name, spec):
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "final-report-method":
         from final_report_workload import validate
+        return validate(repo, data, name, spec, exp, view)
+    if spec.get("workload_kind") == "external-slot-knowledge-pair":
+        from external_slot_workload import validate
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "external-experience-pair":
         from external_experience_workload import validate

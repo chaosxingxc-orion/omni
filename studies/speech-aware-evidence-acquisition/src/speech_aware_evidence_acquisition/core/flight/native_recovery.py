@@ -134,6 +134,26 @@ def gepa_pair_layout_matches(values):
         return False
 
 
+def slot_pair_layout_matches(values):
+    """Operational custody for one source-bound slot release swap and lock."""
+    try:
+        native=values['native_episode'];module=native['consumption_module']
+        frame=module['supply_frame'];column,=module['columns']
+        alternate,=frame['alternates']['slot-contracts']
+        if values.get('policy')!='phase-native-module-v1-c3' or frame['twin'] is not False:
+            return False
+        bound=frame['delivering_max_supplied_items']
+        swap={'store_id':'slot-contracts','release':alternate['release']['relpath']}
+        if column!={'column_id':'learned','kind':'supply','node':'solver','max_supplied_items':bound,'release_swap':swap}:
+            return False
+        expected={'arms':[{'arm_id':'learned','max_supplied_items':bound,'release_swap':swap},
+            {'arm_id':'lock','deliver':True,'max_supplied_items':bound}],
+            'fit_estimate':frame['fit_estimate'],'arm_visits':'first'}
+        return native['roles']['solver']['supply_variants']==expected
+    except (KeyError, TypeError, AttributeError, ValueError):
+        return False
+
+
 def native_contact_custody_enabled(values):
     """Operational capture for the reviewed odd40 method or raw-vLLM A0 P/S.
 
@@ -157,7 +177,8 @@ def native_contact_custody_enabled(values):
     if native.get('answer_selection') == 'odd40-whole-answer-v1':
         return True  # Preserve the already reviewed method's existing path.
     pair = gepa_pair_layout_matches(values)
-    paired = pair or gepa_probe_layout_matches(values)
+    slot_pair = slot_pair_layout_matches(values)
+    paired = pair or gepa_probe_layout_matches(values) or slot_pair
     pair_perception = pair and 'template_variants' in native['roles']['perception']
     paired_ceiling = (8 if pair_perception else 4) if pair else 3
     if not paired and values.get('policy') in ('phase-native-module-v1-c3','phase-native-module-v1-c4'):
@@ -192,8 +213,8 @@ def native_contact_custody_enabled(values):
                 or block['max_iterations'] != expected
                 or block.get('tool_names') or block.get('allowed_tools')
                 or block.get('samples', 1) != 1
-                or any(k in block for k in ('sampling_variants', 'supply_variants',
-                                            'decoding_variants', 'branches'))
+                or any(k in block for k in ('sampling_variants', 'decoding_variants', 'branches'))
+                or ('supply_variants' in block and not (slot_pair and role=='solver'))
                 or ('template_variants' in block and not (paired and role == ('perception' if pair_perception else 'solver')))):
             return False
     from ...rails.controllers import default_phase_program

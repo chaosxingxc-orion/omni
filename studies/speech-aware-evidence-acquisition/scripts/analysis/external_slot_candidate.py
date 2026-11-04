@@ -90,9 +90,12 @@ def compile_candidate(original, base, contract, dynamic, candidate, custody, for
         raise ValueError('contract evidence differs from construction records')
     source = KnowledgeSnapshot.from_frozen_json(original)
     optimizer_sources = {s for ids in groups.values() for s in ids}
-    if optimizer_sources & set(forbidden):
+    # SLURP recordings/headsets from one utterance are not independent examples.
+    identity = lambda s: ':'.join(s.split(':')[:3]) if s.startswith('slurp:') else s
+    forbidden_identities = {identity(s) for s in forbidden}
+    if {identity(s) for s in optimizer_sources} & forbidden_identities:
         raise ValueError('new optimizer evidence intersects forbidden samples')
-    inherited_overlap = sorted(set(source.source_sample_ids) & set(forbidden))
+    inherited_overlap = sorted(s for s in source.source_sample_ids if identity(s) in forbidden_identities)
     new_forbidden = frozenset(forbidden) - set(source.source_sample_ids)
     if source.source_partition_role != 'train':
         raise ValueError('TRAIN construction source required')
@@ -120,7 +123,7 @@ def compile_candidate(original, base, contract, dynamic, candidate, custody, for
         if (before.facet_id, before.representation, before.parent_facet_ids) != (after.facet_id, after.representation, after.parent_facet_ids):
             raise ValueError('routing changed')
     all_sources = tuple(sorted({s for v in merged_values for s in v.source_sample_ids}))
-    if set(all_sources) & new_forbidden:
+    if {identity(s) for s in all_sources} & (forbidden_identities - {identity(s) for s in source.source_sample_ids}):
         raise ValueError('full snapshot intersects forbidden samples')
     snapshot = replace(source, snapshot_id='external-slot-candidate:' + content_hash({'source':source.content_hash(), 'proposal':candidate['proposal'], 'custody':custody})[:16],
         source_split_identity_hash=split, source_sample_ids=all_sources,
