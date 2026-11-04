@@ -34,9 +34,13 @@ def checked_pin(root, pin):
 
 
 def validate_params(params):
-    optional={'target_arm','rendering','render_manifest','compact_params','candidate_release'}
+    optional={'target_arm','rendering','render_manifest','compact_params','candidate_release','source_kind'}
     if not isinstance(params,dict) or not FIELDS <= set(params) or set(params)-FIELDS-optional or params['purpose'] != 'development-evaluation':
         raise ValueError('development-only Solver experience binding required')
+    if 'source_kind' in params:
+        if (params['source_kind'] != 'external-tfgrpo-v1' or 'candidate_release' not in params
+                or any(k in params for k in ('rendering', 'render_manifest', 'compact_params'))):
+            raise ValueError('explicit external review and standard rendering required')
     if 'target_arm' in params and params['target_arm'] != 'learned':
         raise ValueError('only the learned paired Solver arm is supported')
     if ('rendering' in params)!=('render_manifest' in params) or ('rendering' in params and params['rendering']!='short-display-id-v1'):
@@ -134,6 +138,16 @@ def verify(params, *, repo, data, model_id, consumer_ids):
     if model_id != params['model_id'] or set(consumer_ids) != set(params['consumer_ids']):
         raise ValueError('consumer model or exact development roster differs')
     candidate=json.loads(checked_pin(data,params['candidate']).read_bytes())
+    if params.get('source_kind') == 'external-tfgrpo-v1':
+        from .tfgrpo_external_release import verify_source, render
+        if list(consumer_ids) != params['consumer_ids']:
+            raise ValueError('ordered external development consumers differ')
+        verify_source(params, repo=repo, data=data, candidate=candidate)
+        base=checked_pin(Path(repo)/'configs',params['base_template']).read_text()
+        template=checked_pin(Path(repo)/'configs',params['template']).read_text()
+        if template != render(candidate, base, params['consumer_ids']):
+            raise ValueError('external Solver template differs from reviewed experience')
+        return candidate['sha256']
     validate_experience(candidate,model_id)
     bundle=verify_learning_seal(params,data=data,candidate=candidate)
     verify_release(params,repo=repo,data=data,candidate=candidate,bundle=bundle)

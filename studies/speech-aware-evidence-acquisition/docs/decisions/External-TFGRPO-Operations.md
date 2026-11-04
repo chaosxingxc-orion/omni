@@ -17,4 +17,40 @@
 
 预览使用独立schema `saea-tfgrpo-external-preview-v1`，明确candidate_publishable=false、native_learning_seal=false；现有原生consumer会拒绝它。不得伪造原生call/FIT或移除发布门禁。所有教师看过的组都计入learned_query_ids，即使提案未引用；同一外部请求的多个候选按request_sha256共享一次成本。编译不调用模型。
 
-下一步仍需独立语义批准、真实源封存及外部来源到消费配置的专门适配，才能进入NPU配对。本变更不宣称已经完成部署、原生多阶段TF-GRPO复现或稳定收益。现有完整训练轨迹和未知请求不重发约束不变。
+外部适配器现在可将独立审查通过的预览绑定到共享Solver消费组件，进入固定真实TRAIN开发评估。它仍不代表部署接受、原生多阶段TF-GRPO复现或稳定收益。现有完整训练轨迹和未知请求不重发约束不变。
+
+
+## 外部来源审查与消费
+
+`rails/tfgrpo_external_release.py` 是显式外部来源适配器；原生seal校验不变。新增参数 `source_kind: external-tfgrpo-v1`，强制 `candidate_release`，只允许标准经验渲染。支持既有learned/lock配对；暂不支持短ID和三臂渲染。
+
+发布文件schema为 `saea-tfgrpo-external-release-v1`，字段如下：
+
+- `candidate`：预览文件pin；`source_manifest`：上述编译SPEC文件pin。
+- `consumer_roster`：固定 `docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json` 的仓库pin。
+- `learning_dataset`：固定 `configs/dataset/slurp-speech-native-stage3-construction-r01c.json` 的仓库pin。
+- `consumer_ids`：预先选择并排序的真实H2小规模评估子集，不能使用TEST；`selection_ids`：显式排除的selection集合，没有时写空数组并由审查者确认。
+- `review`：独立语义审查文件pin。
+
+所有pin为 `{"relpath":"相对路径","sha256":"文件SHA256"}`；candidate、spec、release和review相对data根，roster和dataset相对repo根。编译SPEC中的prepared/collected仍使用原始绝对path/sha256，运行容器必须挂载原始证据目录。适配器在实际消费边界重新读取原始请求、响应、来源和操作，并与候选逐项比较，零模型调用。
+
+审查schema为 `saea-tfgrpo-external-review-v1`，必须包含 `decision: eligible-for-development-evaluation`、非空`reviewer`和`procedure`。`bindings`复制发布文件除schema/review以外所有字段；`items`逐一覆盖候选保留经验，每项必须包含 `content_sha256`（`tfgrpo_learning.sha(content)`）、`decision: supported`、非空`reason`、非空`evidence`（query_id/group_sha256列表）。这些检查证明审查与证据绑定，不自动证明语义为真；审查者需实际检查支持度、条件、反例和隐含答案泄漏。
+
+启动配置直接对应prepare参数，例如：
+
+```json
+{
+  "candidate_path": "/data/external/preview.json",
+  "source_manifest": "/data/external/compile-spec.json",
+  "candidate_release": "/data/external/release.json",
+  "repo": "/repo", "data": "/data",
+  "base_template": "probes/solver-base.txt",
+  "template": "probes/tfgrpo-external-reviewed.txt",
+  "consumer_ids": ["<固定H2真实样本ID>"],
+  "model_id": "<冻结actor模型ID>"
+}
+```
+
+执行 `python scripts/analysis/tfgrpo_external_release.py --config CONFIG.json --out PARAMS.json`，将输出参数配置给既有 `tfgrpo-solver-experience` 组件。脚本不会提交NPU任务或调用教师；参数、候选、来源和模板在FlightRuntime消费时再次检查。query、原始utterance和audio_sha256三个层面都禁止learning/consumer/selection交叉，且保持固定actor模型和精确消费者顺序。
+
+这条路径只是经验库消费适配，未为ACE/Reflexion冒用TF-GRPO规则，也未自动批准任何真实候选。当前发布范围是固定TRAIN625及H2子集；跨数据集或祖先来源无法在该视图中核验的候选需独立扩展来源协议，不能忽略校验。
