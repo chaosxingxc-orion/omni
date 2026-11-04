@@ -27,7 +27,7 @@ class PairWorkload:
 
     def __init__(self, config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material'}
-        if not fields <= set(config) <= fields | {'evaluation_partition'} or config['schema']!=SCHEMA:
+        if not fields <= set(config) <= fields | {'evaluation_partition', 'context_adaptation'} or config['schema']!=SCHEMA:
             raise ValueError('exact parameterized paired workload config required')
         if config.get('evaluation_partition', 'feedback') not in ('feedback', 'selection'):
             raise ValueError('explicit feedback or selection partition required')
@@ -41,8 +41,30 @@ class PairWorkload:
         if set(execution)!={'admitted_level'} or type(execution['admitted_level']) is not int or not 1<=execution['admitted_level']<=96:
             raise ValueError('explicit bounded client width required')
         self.config=copy.deepcopy(config);self.NAME=config['name'];self.RUN=config['run_id']
+        self.context_adaptation()
         self.ROWS=len(ids);self.ROSTER='docs/receipts/rosters/'+self.NAME+'.json'
         self.AUTH='docs/decisions/Development-and-Runtime.md';self.KIND=KIND
+
+    def context_adaptation(self, historical=None, current=None):
+        """Explicit same-deployment comparison; never waive frozen model checks."""
+        policy = self.config.get('context_adaptation')
+        if policy is None:
+            if historical is not None and current < historical:
+                raise ValueError('paired deployment shrinks historical context without explicit adaptation')
+            return None
+        fields = {'historical_context_tokens', 'runtime_context_tokens', 'arms',
+                  'fit_policy', 'comparison_scope'}
+        if (not isinstance(policy, dict) or set(policy) != fields
+                or any(type(policy[k]) is not int or not 1 <= policy[k] <= 65536
+                       for k in ('historical_context_tokens', 'runtime_context_tokens'))
+                or policy['arms'] != self.ARMS
+                or policy['fit_policy'] != 'native-every-contact-no-truncation'
+                or policy['comparison_scope'] != 'within-runtime-only'):
+            raise ValueError('exact bounded context adaptation and all paired arms required')
+        if historical is not None and (historical != policy['historical_context_tokens']
+                                     or current != policy['runtime_context_tokens']):
+            raise ValueError('context adaptation capacities differ from actual model fragments')
+        return copy.deepcopy(policy)
 
     def runtime_binding(self,repo):
         binding=self.config['runtime_binding']
@@ -161,8 +183,11 @@ class PairWorkload:
             args[index]='<native-context-capacity>'
             return document,capacity
         current,current_context=science(live_model);historical,historical_context=science(archived_model)
-        if current!=historical or current_context<historical_context:
-            raise ValueError('paired deployment changes frozen model, decoding or context semantics')
+        if current!=historical:
+            raise ValueError('paired deployment changes frozen model or decoding semantics')
+        adaptation = self.context_adaptation(historical_context, current_context)
+        if adaptation is not None and not isinstance(base.get('native_contact_fit'), dict):
+            raise ValueError('context adaptation requires actual native contact FIT')
         # The compiled historical baseline carries its old window. Bind the
         # adapter to the already-validated live capacity while keeping node
         # request budgets and scientific inputs unchanged.
@@ -216,6 +241,7 @@ class PairWorkload:
         out.mkdir(parents=True)
         record = {'schema':'saea-gepa-pair-stage-v1', 'cell':self.NAME, 'run_id':self.RUN, 'rows':self.ROWS,
             'material':material, 'runtime_binding':binding, 'source_commit':head,
+            **({'context_adaptation':self.context_adaptation()} if self.context_adaptation() is not None else {}),
             'dataset':pin(repo,f'configs/dataset/{observation.DATASET}.json'),
             'source_experiment':pin(repo,observation.SOURCE_EXP),
             'output_hashes':{str(p.relative_to(repo)):sha(p) for p in paths},
@@ -237,6 +263,8 @@ class PairWorkload:
         expected = {f'configs/baseline/{self.NAME}.json':base, f'configs/experiment/{self.NAME}.json':exp, self.ROSTER:roster}
         if set(staged['output_hashes']) != set(expected) or any(read(repo/p) != doc for p,doc in expected.items()):
             raise ValueError('stage differs from verified material derivation')
+        if staged.get('context_adaptation') != self.context_adaptation():
+            raise ValueError('staged context adaptation changed')
         if staged['runtime_binding'] != binding:
             raise ValueError('stage runtime differs')
         return staged
@@ -327,7 +355,8 @@ class PairWorkload:
         self.validate(repo,data,self.NAME,spec,exp,read(repo/spec['dataset']['relpath']))
         protocol = {'schema':'saea-gepa-pair-generation-v1','cells':{'arm':identity},'profile':binding['profile'],
             'roster':spec['roster'],'material':spec['material'],'normal_generation_calls':self.CONTACTS*self.ROWS,
-            'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS,'fit_calls':self.CONTACTS*self.ROWS,'claims_benefit':False}
+            'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS,'fit_calls':self.CONTACTS*self.ROWS,'claims_benefit':False,
+            **({'context_adaptation':self.context_adaptation()} if self.context_adaptation() is not None else {})}
         protocol_pin = {'relpath':str((pkg/'protocol-registered-v1.json').relative_to(repo)),
             'sha256':hashlib.sha256(raw(protocol)).hexdigest()}
         docs = {'candidate.json':spec,'protocol-registered-v1.json':protocol}

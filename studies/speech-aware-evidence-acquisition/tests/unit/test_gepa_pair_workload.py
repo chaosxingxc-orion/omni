@@ -197,3 +197,52 @@ def test_selection_partition_requires_explicit_opt_in_and_forbids_mixing(repo,mo
 def test_unknown_evaluation_partition_rejected(role):
     cfg=config();cfg['evaluation_partition']=role
     with pytest.raises(ValueError,match='partition'):m.PairWorkload(cfg)
+
+
+def adaptation(arms):
+    return {'historical_context_tokens':65536, 'runtime_context_tokens':49152,
+            'arms':arms, 'fit_policy':'native-every-contact-no-truncation',
+            'comparison_scope':'within-runtime-only'}
+
+
+def test_explicit_context_adaptation_preserves_model_node_budgets_and_seed(repo,monkeypatch):
+    job,checked=derived(repo,monkeypatch);path,data,_=repo
+    checked['model']['server_args'][1]='65536'
+    historical=copy.deepcopy(checked)
+    with pytest.raises(ValueError,match='shrinks historical context'):
+        job.derive(path,data,job.config['material'])
+    job.config['context_adaptation']=adaptation(job.ARMS)
+    base,exp,*_=job.derive(path,data,job.config['material'])
+    assert base['serving_slot_tokens']==49152
+    assert base['native_contact_fit']['contact_cap']==64
+    assert base['thinking_policy']==historical['source_baseline']['thinking_policy']
+    assert checked==historical
+    model=m.read(path/'configs/model/model.json');model['model_lock_key']='wrong'
+    (path/'configs/model/model.json').write_bytes(m.raw(model))
+    with pytest.raises(ValueError,match='frozen model'):
+        job.derive(path,data,job.config['material'])
+
+
+@pytest.mark.parametrize('fault',['arms','historical','runtime','scope','fit','bound','bool','missing'])
+def test_context_adaptation_rejects_inexact_or_unsafe_contract(repo,monkeypatch,fault):
+    job,checked=derived(repo,monkeypatch);path,data,_=repo
+    checked['model']['server_args'][1]='65536'
+    policy=adaptation(job.ARMS)
+    if fault=='arms':policy['arms']=['parent','child']
+    elif fault=='historical':policy['historical_context_tokens']=49152
+    elif fault=='runtime':policy['runtime_context_tokens']=32768
+    elif fault=='scope':policy['comparison_scope']='cross-deployment'
+    elif fault=='fit':policy['fit_policy']='truncate'
+    elif fault=='bound':policy['runtime_context_tokens']=131072
+    elif fault=='bool':policy['runtime_context_tokens']=True
+    else:del policy['arms']
+    job.config['context_adaptation']=policy
+    with pytest.raises(ValueError):job.derive(path,data,job.config['material'])
+
+
+def test_perception_context_adaptation_requires_all_four_arms():
+    from gepa_perception_workload import PerceptionWorkload,SCHEMA
+    cfg=config();cfg['schema']=SCHEMA;cfg['context_adaptation']=adaptation(['parent','child','aa','lock'])
+    assert PerceptionWorkload(cfg).context_adaptation()==cfg['context_adaptation']
+    cfg['context_adaptation']['arms']=['parent','child','lock']
+    with pytest.raises(ValueError,match='paired arms'):PerceptionWorkload(cfg)
