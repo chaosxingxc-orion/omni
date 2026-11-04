@@ -7507,6 +7507,8 @@ def _run_agent_openjiuwen(
     native_episode_binding: NativeEpisodeRunBinding | None = None,
     thinking_policy: Mapping[str, object] | None = None,
     on_outcome: Callable[[_AgentRuntimeOutcome], object] | None = None,
+    admission_control: object = None,
+    admission_checkpoint_path: Path | None = None,
 ) -> tuple[_AgentRuntimeOutcome, ...]:
     """Run the speech AgentLoop on the pinned openJiuwen workflow engine.
 
@@ -7676,6 +7678,17 @@ def _run_agent_openjiuwen(
             if (not isinstance(panel_participation, NativePanelParticipation)
                     or native_episode_binding.node_pipeline is None):
                 raise RailsRunnerError("panel participation requires the explicit node pipeline")
+
+        if admission_control is not None:
+            if panel_participation is not None:
+                raise RailsRunnerError("shared cross-flight panels require a panel-owned drain controller")
+            from ..core.admission_control import AdmissionDrained
+            def drained(admitted_states):
+                admission_control.finish(admission_checkpoint_path,
+                    [state.prepared.sample.sample_id for state in admitted_states])
+                raise AdmissionDrained("stop admission completed; retain checkpoints and recover in a new attempt")
+            scheduling_options.update(admission_should_stop=admission_control.should_stop,
+                                      admission_drained=drained)
 
         try:
             pipeline = native_episode_binding.node_pipeline
@@ -8801,6 +8814,15 @@ def run_speech_native_agent_loop(
             )
         )
 
+    admission_control = (None if native_episode_binding is None
+                         else native_episode_binding.admission_control)
+    if admission_control is not None and (agent_executor_id != "openjiuwen-workflow-v1"
+            or native_episode_binding is None or execution_units is not None
+            or not callable(getattr(trace_sink, "row_checkpoint", None))):
+        raise RailsRunnerError("admission control requires native row-checkpointed OJW execution")
+    admission_checkpoint_path = getattr(getattr(trace_sink, "row_checkpoint", None), "checkpoint_path", None)
+    if admission_control is not None and admission_checkpoint_path is None:
+        raise RailsRunnerError("admission control requires the actual checkpoint writer path")
     flight_lock = read_flight_lock(Path(data_root))
     outcomes: list[_AgentRuntimeOutcome | None]
 
@@ -8860,6 +8882,8 @@ def run_speech_native_agent_loop(
                 native_episode_binding=native_episode_binding,
                 thinking_policy=thinking_policy,
                 on_outcome=settle_outcome,
+                admission_control=admission_control,
+                admission_checkpoint_path=admission_checkpoint_path,
             )
         )
     else:

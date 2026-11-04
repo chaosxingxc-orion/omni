@@ -909,6 +909,8 @@ class NativeEpisodeRunBinding:
     # it None, byte-identically to before.
     data_root: object = None
     protocol_response_formats: object = None
+    # Operational stop controller is injected by Flight only for real generation.
+    admission_control: object = None
     # E18: the flight-owned, model-free knowledge re-query one
     # ``knowledge-requery`` acquisition runs -- the same seam
     # ``supply_for_phase`` is, and for the same reason: the runner never

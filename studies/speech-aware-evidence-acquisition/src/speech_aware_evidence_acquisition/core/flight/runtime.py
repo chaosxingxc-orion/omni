@@ -8548,6 +8548,15 @@ class FlightRuntime:
             sink, client, plan, program, policy, model_free_check=model_free_check,
         )
         try:
+            if not model_free_check and getattr(self, "_plan", None) is plan:
+                from ..admission_control import from_environment
+                control = from_environment(run_id=plan.run_id, attempt_id=plan.attempt_id)
+                if control is not None:
+                    if not checkpoint_attached or native_binding is None:
+                        raise FlightRuntimeError("admission control requires continuous native checkpoints")
+                    from dataclasses import replace
+                    native_binding = replace(native_binding, admission_control=control)
+                    live_options["native_episode_binding"] = native_binding
             if continuous:
                 summaries = (
                     self._continuous_phase_runner(
@@ -11864,6 +11873,7 @@ class FlightRuntime:
                 program=program, policy=policy,
             )
 
+        hook.checkpoint_path = writer.path
         try:
             sink.row_checkpoint = hook
         except AttributeError:

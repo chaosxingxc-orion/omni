@@ -469,6 +469,8 @@ def execute_speech_agent_workflows(
     node_pipeline_max_jobs: int | None = None,
     node_pipeline_timing_sink: Callable[[object, Mapping[str, object]], None] | None = None,
     node_pipeline_queue_bridge: object | None = None,
+    admission_should_stop: Callable[[], bool] | None = None,
+    admission_drained: Callable[[list[object]], None] | None = None,
 ) -> list[object]:
     """Run speech Agent workflows on one openJiuwen event loop.
 
@@ -600,7 +602,19 @@ def execute_speech_agent_workflows(
             "invoke_contact, aggregate_wave, and should_continue"
         )
 
+    if (admission_should_stop is None) != (admission_drained is None):
+        raise ValueError("admission control requires stop and drained callbacks")
+    if admission_should_stop is not None and (not callable(admission_should_stop) or not callable(admission_drained)):
+        raise TypeError("admission control callbacks must be callable")
     ordered_states = list(states)
+    admitted_indices = []
+    stop_requested = False
+
+    def stopped():
+        nonlocal stop_requested
+        if not stop_requested and admission_should_stop is not None:
+            stop_requested = bool(admission_should_stop())
+        return stop_requested
     if node_pipeline_order is not None and len(ordered_states) > node_pipeline_max_jobs:
         raise ValueError("node pipeline exceeds its declared panel job bound")
 
@@ -818,7 +832,14 @@ def execute_speech_agent_workflows(
             async with admission_lock:
                 if failures or stop_before_first_contact or next_index >= len(ordered_states):
                     return None
+                try:
+                    if stopped():
+                        return None
+                except BaseException as error:
+                    failures[next_index] = error
+                    return None
                 admitted = (next_index, ordered_states[next_index])
+                admitted_indices.append(next_index)
                 next_index += 1
                 return admitted
 
@@ -858,6 +879,12 @@ def execute_speech_agent_workflows(
                     return
 
         if node_pipeline_order is not None:
+            # A full panel is admitted atomically; its internal stages must drain.
+            if stopped():
+                if local_executor is not None:
+                    local_executor.shutdown(wait=True, cancel_futures=True)
+                return failures
+            admitted_indices.extend(range(len(ordered_states)))
             from .node_pipeline import NodePipelineCoordinator
 
             def pipeline_event(member, event):
@@ -923,9 +950,10 @@ def execute_speech_agent_workflows(
 
             try:
                 for start in range(0, len(ordered_states), node_batch_size):
-                    if failures:
+                    if failures or stopped():
                         break
                     members = list(range(start, min(start + node_batch_size, len(ordered_states))))
+                    admitted_indices.extend(members)
                     def event_sink(member, event):
                         if node_batch_timing_sink is not None:
                             node_batch_timing_sink(ordered_states[member], event)
@@ -988,4 +1016,8 @@ def execute_speech_agent_workflows(
     failures = asyncio.run(_run_all())
     if failures:
         raise failures[min(failures)]
+    # Also observe a request published during the final admitted cohort.
+    if stopped():
+        admission_drained([ordered_states[i] for i in admitted_indices])
+        return [ordered_states[i] for i in admitted_indices]
     return ordered_states

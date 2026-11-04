@@ -1,0 +1,7 @@
+{
+  "schema": "saea-admission-control-v1",
+  "run_id": "REPLACE_WITH_RUN_ID",
+  "attempt_id": "REPLACE_WITH_ATTEMPT_ID",
+  "request_path": "/control/admission-stop.json",
+  "receipt_path": "/control/admission-drained.json"
+}
