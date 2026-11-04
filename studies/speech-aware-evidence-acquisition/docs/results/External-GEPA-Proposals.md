@@ -23,4 +23,4 @@
 
 候选 3：64 次生成调用，输入 525464、输出 155770，campaign 636.07 秒、39.75 秒/配对条。两路评分队列的外部证据目录挂载问题已通过新配置恢复；保留旧失败与归档，没有重发模型请求。候选 2 修复由子智能体交付，主线程核验六个产物哈希及终态归档。
 
-两路探索与 A0 均已结束，尚无已验证的新生成任务在跑；不能将常驻服务计作 NPU 满载。优先完成 TF-GRPO 发布适配与有效后继候选供给。完整数据见 external-gepa-proposal2-result.json、external-gepa-proposal3-result.json。
+首轮两路探索与 A0 均已结束；A路后继固定80条候选2配对生成容器已启动（TP2、并发32），实际样本进度待观测。TF-GRPO教师已返回6候选，B路审查部署中；不能将常驻服务或启动容器直接计作NPU满载。完整数据见 external-gepa-proposal2-result.json、external-gepa-proposal3-result.json。
