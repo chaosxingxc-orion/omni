@@ -59,7 +59,8 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
                 max_prompt_tokens_total, max_completion_tokens_total, reflector_contract=None,
                 compact_text_chars=None, compact_reason_chars=None,
                 evidence_view='compact-v1', development_instruction=None, development_material=None,
-                invalid_delta_policy='stop-preserve-v1', invalid_signal_policy='stop-preserve-v1'):
+                invalid_delta_policy='stop-preserve-v1', invalid_signal_policy='stop-preserve-v1',
+                decision_context_policy=None):
     """Accept native-verified original batch; bind all groups once, no filtering.
 
     Source is the existing load_finalized_shards-compatible custody, including
@@ -111,6 +112,10 @@ def build_input(source, parent, *, learning_config_sha256, resident_context, com
     for key, value in (('compact_text_chars', compact_text_chars), ('compact_reason_chars', compact_reason_chars)):
         if value is not None:
             bounds[key] = value
+    require(decision_context_policy in (None, 'explicit-editable-knowledge-v1'),
+            'unsupported ACE decision context policy')
+    if decision_context_policy is not None:
+        bounds['decision_context_policy'] = decision_context_policy
     compact_limits(bounds)
     require(len(parent['items']) <= max_items and sum(map(len, parent['items'].values())) <= max_characters,
             'parent library already exceeds bounds')
@@ -176,6 +181,39 @@ def _measure(system, payload, document, count_tokens):
             'complete ACE stage exceeds context; no truncation')
     return {'messages': messages, 'messages_sha256': sha(messages), 'input_tokens': tokens,
             'completion_cap': limits['completion_cap'], 'native_fit_completed': False}
+
+
+def decision_context(document, index, items):
+    """Expose operation scope without removing or rewriting source evidence."""
+    policy = document['bounds'].get('decision_context_policy')
+    require(policy in (None, 'explicit-editable-knowledge-v1'),
+            'unsupported ACE decision context policy')
+    if policy is None:
+        return None
+    evidence = document['groups'][index]['evidence']
+    aliases = sorted(evidence.get('development_evidence_dictionary', {}))
+    return {
+        'schema': 'saea-ace-decision-context-v1',
+        'editable_target': 'current_items: learned incremental experience library only',
+        'allowed_existing_item_ids': sorted(items),
+        'allowed_operations': ['ADD', 'MODIFY', 'DELETE'] if items else ['ADD'],
+        'empty_delta_allowed': True,
+        'add_id': None,
+        'readonly_evidence_aliases': aliases,
+        'alias_resolution': 'original_group.evidence.development_evidence_dictionary; recursively expand development_evidence_ref',
+        'namespace_rule': 'Evidence aliases, retrieved background knowledge, and task intent/slot labels are not editable item IDs. MODIFY/DELETE must target allowed_existing_item_ids only.',
+        'base_knowledge_scope': 'This run cannot edit retrieved background knowledge in place. A suspected background defect may motivate a scoped ADD hypothesis, supported by findings; it remains unverified until a paired intervention.',
+        'evidence_limit': 'Historical trajectories did not consume the current learned library. Do not infer causal helpfulness from retrospective matches.',
+        'audio_inspected': evidence.get('audio_inspected', False),
+        'insufficient_evidence_action': 'Return no change when support is insufficient; never fabricate missing audio, a target ID, or a successful trajectory.',
+    }
+
+
+def _decision_context_instruction():
+    return (' Decision scope is explicit in decision_context. Resolve read-only evidence references before reasoning. '
+            'Use only current_items keys for existing-item edits or signals; evidence dictionary aliases are not targets. '
+            'When the editable library is empty, MODIFY/DELETE and signals are unavailable; ADD or no change are valid. '
+            'Keep missing evidence distinct from a negative finding. Background-rule repair requires a separate intervention.')
 
 
 def reflect_messages(document, index, items, count_tokens):
@@ -244,6 +282,10 @@ def reflect_messages(document, index, items, count_tokens):
             'Omit unsupported lessons; never infer a required slot should be deleted merely because '
             'a partial reward improved. Signals require an existing item_id; with no items use [].')
         payload['trajectory_references'] = trajectory_references(document['groups'][index])
+    context = decision_context(document, index, items)
+    if context is not None:
+        payload['decision_context'] = context
+        system += _decision_context_instruction()
     return _measure(system, payload, document, count_tokens)
 
 
@@ -369,8 +411,13 @@ def curate_messages(document, index, items, reflection, metadata, count_tokens):
             +' Unicode characters; every reason at most '+str(compact_limits(document['bounds'])[1])+'. '
             'An unresolved conflict may reference at most two item_ids; finding_ids use f0/f1 from reflection. '
             'Return empty deltas when the evidence does not support a reusable conditional change.')
-    return _measure(system, {'current_items': items, 'item_associations': metadata,
-        'reflection': reflection, 'original_group': document['groups'][index]}, document, count_tokens)
+    payload = {'current_items': items, 'item_associations': metadata,
+        'reflection': reflection, 'original_group': document['groups'][index]}
+    context = decision_context(document, index, items)
+    if context is not None:
+        payload['decision_context'] = context
+        system += _decision_context_instruction()
+    return _measure(system, payload, document, count_tokens)
 
 
 def merge_delta(text, items, reflection, bounds):

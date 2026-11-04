@@ -359,3 +359,32 @@ def test_v2_unknown_contact_still_blocks_retry_and_curator(tmp_path):
     with pytest.raises(OSError):run()
     with pytest.raises(UnknownLearningContact):run()
     assert len(calls) == 1 and not (tmp_path/'candidate.json').exists()
+
+
+def test_explicit_decision_context_separates_evidence_alias_from_editable_library():
+    _, doc = fixture(empty_parent=True, decision_context_policy='explicit-editable-knowledge-v1')
+    doc['groups'][0]['evidence']['development_evidence_dictionary']={'e5':'Read-only background intent.'}
+    doc['input_sha256']=sha({k:v for k,v in doc.items() if k!='input_sha256'})
+    context=m.decision_context(doc,0,{})
+    assert context['allowed_existing_item_ids']==[]
+    assert context['readonly_evidence_aliases']==['e5']
+    assert context['allowed_operations']==['ADD'] and context['empty_delta_allowed']
+    measured=m.curate_messages(doc,0,{},reflection(),{},lambda messages:100)
+    body=json.loads(measured['messages'][1]['content'])
+    assert body['original_group']==doc['groups'][0]
+    assert body['decision_context']==context
+    assert 'not targets' in measured['messages'][0]['content']
+    reflected=m.reflect_messages(doc,0,{},lambda messages:100)
+    assert json.loads(reflected['messages'][1]['content'])['decision_context']==context
+    assert m.decision_context(doc,0,{'Eknown':'rule'})['allowed_existing_item_ids']==['Eknown']
+
+
+def test_decision_context_opt_in_preserves_legacy_prompt():
+    source, old = fixture()
+    limits={k:v for k,v in old['bounds'].items() if k!='max_calls'}
+    same=m.build_input(source,old['parent'],learning_config_sha256='a'*64,
+                       decision_context_policy=None,**limits)
+    assert same==old
+    assert m.curate_messages(same,0,old['parent']['items'],reflection(),{},lambda messages:100)==m.curate_messages(old,0,old['parent']['items'],reflection(),{},lambda messages:100)
+    with pytest.raises(ValueError,match='decision context policy'):
+        fixture(decision_context_policy='invented')

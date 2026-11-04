@@ -51,11 +51,13 @@ def validate_registration(reg, *, plan, model_id):
     bound_fields = {'resident_context', 'completion_cap',
         'reserve_tokens', 'max_groups', 'max_delta', 'max_findings', 'max_items', 'max_characters',
         'max_prompt_tokens_total', 'max_completion_tokens_total', 'max_calls'}
-    require(isinstance(bounds, dict) and bound_fields <= set(bounds) <= bound_fields | {'reflector_contract', 'compact_text_chars', 'compact_reason_chars', 'evidence_view', 'development_instruction', 'invalid_delta_policy', 'invalid_signal_policy'}
+    require(isinstance(bounds, dict) and bound_fields <= set(bounds) <= bound_fields | {'reflector_contract', 'compact_text_chars', 'compact_reason_chars', 'evidence_view', 'development_instruction', 'invalid_delta_policy', 'invalid_signal_policy', 'decision_context_policy'}
         and ('reflector_contract' not in bounds or bounds['reflector_contract'] in (ace.REFLECTOR_CONTRACT_V2, ace.COMPACT_CONTRACT_V3))
         and all(type(bounds[k]) is int and bounds[k] > 0 for k in bound_fields if k != 'reserve_tokens')
         and type(bounds['reserve_tokens']) is int and bounds['reserve_tokens'] >= 0, 'exact finite ACE bounds required')
     ace.compact_limits(bounds)
+    require(bounds.get('decision_context_policy') in (None, 'explicit-editable-knowledge-v1'),
+            'unsupported ACE decision context policy')
     require(bounds.get('invalid_signal_policy', 'stop-preserve-v1') in
             ('stop-preserve-v1', ace.INVALID_SIGNAL_QUARANTINE), 'unsupported ACE invalid signal policy')
     require(bounds.get('invalid_delta_policy', 'stop-preserve-v1') in
