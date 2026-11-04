@@ -23,6 +23,9 @@ def run(repo,data,out,name):
     if not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('owned result output required')
     pkg=repo/'docs/readiness'/name;spec=read(pkg/'candidate.json')
     if spec['workload_kind']!=KIND:raise ValueError('node registration required')
+    recipe=read(pkg/'analysis-recipe-v1.json')
+    if recipe['delivered_arm']!=spec['job_config']['node_arm'] or recipe['arms']!=[spec['job_config']['node_arm']]:
+        raise ValueError('registered delivered node arm differs')
     validate_workload(repo,data,name,spec)
     rid=spec['run_id'];aid=spec['attempt_id'];directory=data/'runs'/rid/aid;mp=directory/(rid+'.run-manifest.json')
     bundle=verify_bundle(mp);roster=pinned(repo,spec['roster']);ids=[r['sample_id'] for r in roster['items']]
@@ -77,5 +80,16 @@ def compare(results):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
-    for k in ('repo','data','out'):p.add_argument('--'+k,type=Path,required=True)
-    p.add_argument('--name',required=True);print(json.dumps(run(**vars(p.parse_args())),sort_keys=True))
+    for k in ('repo','data','out'):p.add_argument('--'+k,type=Path)
+    p.add_argument('--name');p.add_argument('--compare',nargs=3,type=Path)
+    a=p.parse_args()
+    if a.compare:
+        results=[read(path) for path in a.compare]
+        result=compare({r['node_arm']:r for r in results})
+        if a.out is None:p.error('--out required for comparison')
+        from speech_aware_evidence_acquisition.core.atomic_file import publish_new
+        a.out.mkdir(parents=True,exist_ok=True);publish_new(a.out/'complete.json',raw(result))
+    else:
+        if any(v is None for v in (a.repo,a.data,a.out,a.name)):p.error('--repo --data --out --name required')
+        result=run(a.repo,a.data,a.out,a.name)
+    print(json.dumps(result,sort_keys=True))

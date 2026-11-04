@@ -14,7 +14,7 @@ def config():
 
 @pytest.mark.parametrize('arm,contacts',[(ARMS[0],2),(ARMS[1],2),(ARMS[2],3)])
 def test_registered_graph_contacts_and_width(arm,contacts):
-    c=config();c['node_arm']=arm;j=NodeWorkload(c);assert j.CONTACTS==contacts
+    c=config();c['node_arm']=arm;j=NodeWorkload(c);assert j.CONTACTS==contacts;assert j.DELIVERED_ARM==arm
     spec={'workload_kind':j.KIND,'job_config':c,'execution':c['execution'],'profile':'b'}
     assert_execution_binding(spec,{'SAEA_ADMITTED_LEVEL':'32','SAEA_DEPLOYMENT_PROFILE':'b'})
     with pytest.raises(ValueError):assert_execution_binding(spec,{'SAEA_ADMITTED_LEVEL':'96','SAEA_DEPLOYMENT_PROFILE':'b'})

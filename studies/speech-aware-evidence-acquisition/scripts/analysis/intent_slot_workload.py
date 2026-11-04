@@ -22,7 +22,7 @@ class NodeWorkload(PairWorkload):
         super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k!='node_arm'})
         if len(config['sample_ids'])!=80 or config['sample_ids']!=sorted(config['sample_ids']):
             raise ValueError('complete stable sorted development80 required')
-        self.config=copy.deepcopy(config);self.KIND=KIND;self.ARMS=[arm]
+        self.config=copy.deepcopy(config);self.KIND=KIND;self.ARMS=[arm];self.DELIVERED_ARM=arm
         self.CONTACTS=3 if arm=='enhanced-p-slot-decision' else 2
         self.PROGRAM=arm+' independent original-audio graph; no shared responses across runs.'
 

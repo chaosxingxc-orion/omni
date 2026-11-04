@@ -375,7 +375,7 @@ class PairWorkload:
                 str(budget['planned_gpu_hours']),'All historical costs retained; not a search result',str((pkg/rel).relative_to(repo)),
                 'Plan SHA256 '+hashlib.sha256(raw(doc)).hexdigest()+'; held'])
         docs['analysis-recipe-v1.json'] = {'schema':self.RESULT_SCHEMA,'rows':self.ROWS,'generation_run_id':self.RUN,
-            'attempt_id':'generation-v1','roster':spec['roster'],'arms':self.ARMS,'delivered_arm':'lock','pair_material':staged['material'],
+            'attempt_id':'generation-v1','roster':spec['roster'],'arms':self.ARMS,'delivered_arm':getattr(self,'DELIVERED_ARM','lock'),'pair_material':staged['material'],
             'new_model_calls':0,'claims_benefit':False,'candidate_accepted':False}
         pkg.mkdir(parents=True)
         for rel,doc in docs.items(): publish_new(pkg/rel,raw(doc))
