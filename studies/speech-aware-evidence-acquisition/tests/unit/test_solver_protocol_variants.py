@@ -197,3 +197,20 @@ def test_protocol_compiler_requires_carrier_admission():
     protocol = compiled.values()["native_episode"]["roles"]["solver"]["protocol_variants"]
     assert protocol["arms"][0]["response_format_id"] == "other-carrier-output-v1"
     assert parse_protocol_variants(protocol, role_kind="solver", phase_id="solver").arms[0].response_format_id == "other-carrier-output-v1"
+
+
+@pytest.mark.parametrize("fault", [None, "owner", "hash", "content"])
+def test_protocol_audit_checks_supply_before_normalizing_request_identity(fault):
+    import hashlib
+    from speech_aware_evidence_acquisition.rails.solver_protocol_audit import verify_pair
+    fmt=response_format({'audio':['volume_up']},['person'])
+    a={'request_id':'a','history':[],'decoding_params':{'response_format':fmt},
+       'supplied_evidence':[{'content':'same','evidence_id':'value'}],
+       'evidence_provenance':[{'lock_key':'rails-supply','relpath':'rails-message/a/0','sha256':hashlib.sha256(b'same').hexdigest()}]}
+    b=copy.deepcopy(a);b['request_id']='b';b['decoding_params']={};b['evidence_provenance'][0]['relpath']='rails-message/b/0'
+    if fault=='owner':a['evidence_provenance'][0]['relpath']='rails-message/b/0'
+    if fault=='hash':a['evidence_provenance'][0]['sha256']='0'*64
+    if fault=='content':a['supplied_evidence'][0]['content']='different'
+    if fault:
+        with pytest.raises(ValueError,match='provenance'):verify_pair(a,b,expected_format=fmt)
+    else:assert verify_pair(a,b,expected_format=fmt)['same_input_except_protocol']

@@ -7,7 +7,20 @@ from .slurp_solver_protocol import response_format
 
 
 def canonical_request(payload):
-    value=copy.deepcopy(dict(payload));value.pop('request_id',None)
+    value=copy.deepcopy(dict(payload))
+    request_id=value.pop('request_id',None)
+    evidence=value.get('supplied_evidence',[])
+    provenance=value.get('evidence_provenance',[])
+    if not isinstance(evidence,list) or not isinstance(provenance,list) or len(evidence)!=len(provenance):
+        raise ValueError('complete evidence and provenance required')
+    for index,(part,source) in enumerate(zip(evidence,provenance)):
+        content=part.get('content') if isinstance(part,Mapping) else None
+        if not isinstance(content,str) or not isinstance(source,dict) or source.get('sha256')!=hashlib.sha256(content.encode()).hexdigest():
+            raise ValueError('supply provenance content hash mismatch')
+        if source.get('lock_key')=='rails-supply':
+            if source.get('relpath')!=f'rails-message/{request_id}/{index}':
+                raise ValueError('supply provenance request ownership differs')
+            source['relpath']=f'rails-message/<request>/{index}'
     decoding=value.get('decoding_params')
     if not isinstance(decoding,dict):raise ValueError('protocol audit requires decoding payload')
     fmt=decoding.pop('response_format',None)
