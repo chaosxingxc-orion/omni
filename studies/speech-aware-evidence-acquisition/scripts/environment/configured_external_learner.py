@@ -9,6 +9,9 @@ import os
 from pathlib import Path
 import re
 import signal
+import subprocess
+import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -263,6 +266,28 @@ def analysis_budget_prompt(cfg):
 
 
 def execute(config_path):
+    cfg = json.loads(Path(config_path).read_bytes())
+    if 'total_timeout_seconds' in cfg and threading.current_thread() is not threading.main_thread():
+        # SIGALRM belongs to a process main thread. Each concurrent request gets
+        # its own interpreter/timer, while the original durable guard remains
+        # the sole dispatch authority. Never disable the configured deadline.
+        completed = subprocess.run(
+            [sys.executable, str(Path(__file__).resolve()), '--config', str(Path(config_path).resolve())],
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        result_path = Path(cfg['output_root']) / 'result.json'
+        if result_path.is_file():
+            # Re-enter the ordinary identity/guard checks in the worker; do not
+            # trust a result merely because a same-named file exists.
+            return _execute(config_path)
+        if completed.returncode:
+            # Subprocess stderr can contain private request data. Preserve the
+            # original intent, and let reconciliation decide, never retry here.
+            raise RuntimeError('external executor subprocess ended without a terminal receipt')
+        raise RuntimeError('external executor subprocess omitted its terminal receipt')
+    return _execute(config_path)
+
+
+def _execute(config_path):
     cfg = json.loads(Path(config_path).read_bytes())
     keys = {'schema', 'endpoint', 'model', 'api_key_env', 'messages', 'max_tokens',
             'timeout_seconds', 'output_root'}

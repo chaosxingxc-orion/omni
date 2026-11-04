@@ -375,3 +375,98 @@ def test_analysis_budget_invalid_before_dispatch(setup, fault):
     config.write_text(json.dumps(cfg))
     with pytest.raises(ValueError): m.execute(config)
     assert not Path(cfg['output_root']).exists()
+
+
+def test_total_deadline_from_worker_thread_uses_process_main(tmp_path, monkeypatch):
+    messages = tmp_path/'messages.json'; messages.write_text('[{"role":"user","content":"thread deadline"}]')
+    cfg = {'schema':'saea-external-learner-v1','endpoint':'https://127.0.0.1:1/v1/chat/completions',
+        'model':'teacher','api_key_env':'TEST_TEACHER_KEY','messages':{'path':str(messages),
+        'sha256':hashlib.sha256(messages.read_bytes()).hexdigest()},'max_tokens':131072,
+        'timeout_seconds':1,'total_timeout_seconds':1,'output_root':str(tmp_path/'output')}
+    config = tmp_path/'config.json'; config.write_text(json.dumps(cfg)); monkeypatch.setenv('TEST_TEACHER_KEY','private-test-key')
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(m.execute, config)
+        result = future.result(timeout=10)
+        assert result['state'] == 'unknown'
+    result = json.loads((tmp_path/'output/result.json').read_bytes())
+    assert result['state'] == 'unknown' and result['automatic_retry'] is False
+    assert result['error_type'] in ('URLError', 'ConnectionRefusedError', 'TimeoutError')
+
+
+def test_four_threaded_production_deadlines_success_timeout_and_no_repeat(tmp_path, monkeypatch):
+    """Child interpreters retain real signal handling; only HTTP is controlled."""
+    import concurrent.futures
+    import os
+    import signal
+    import time
+    support = tmp_path/'support'; support.mkdir()
+    (support/'sitecustomize.py').write_text('''
+import json, os, time, urllib.request
+from pathlib import Path
+class Response:
+    status=200
+    headers={'content-type':'text/event-stream'}
+    def __init__(self, slow): self.slow=slow
+    def __enter__(self): return self
+    def __exit__(self,*a): pass
+    def __iter__(self):
+        if self.slow: time.sleep(4)
+        events=[{'id':'r1','model':'teacher','choices':[{'index':0,'delta':{'content':'complete'},'finish_reason':'stop'}]},
+                {'id':'r1','model':'teacher','choices':[],'usage':{'prompt_tokens':2,'completion_tokens':3,'total_tokens':5}}]
+        for event in events:
+            yield ('data: '+json.dumps(event)+'\\n').encode(); yield b'\\n'
+        yield b'data: [DONE]\\n'; yield b'\\n'
+class Opener:
+    def open(self, request, timeout):
+        assert timeout==600
+        body=json.loads(request.data)
+        label=body['messages'][0]['content']
+        with open(os.environ['TEST_OPEN_LOG'],'a') as f: f.write(label+'\\n')
+        return Response(label=='slow')
+urllib.request.build_opener=lambda *a:Opener()
+''')
+    monkeypatch.setenv('PYTHONPATH', str(support)+os.pathsep+os.environ.get('PYTHONPATH',''))
+    monkeypatch.setenv('TEST_TEACHER_KEY','private-test-key')
+    log=tmp_path/'opens.log';monkeypatch.setenv('TEST_OPEN_LOG',str(log))
+    configs=[]
+    for label in ['fast-a','slow','fast-b','fast-c']:
+        root=tmp_path/label;root.mkdir()
+        messages=root/'messages.json';messages.write_text(json.dumps([{'role':'user','content':label}]))
+        cfg={'schema':'saea-external-learner-v1','endpoint':'https://example.invalid/v1/chat/completions',
+             'model':'teacher','api_key_env':'TEST_TEACHER_KEY','messages':{'path':str(messages),'sha256':hashlib.sha256(messages.read_bytes()).hexdigest()},
+             'max_tokens':131072,'timeout_seconds':600,'total_timeout_seconds':1 if label=='slow' else 2400,
+             'stream':True,'output_root':str(root/'response')}
+        path=root/'config.json';path.write_text(json.dumps(cfg));configs.append(path)
+    before=signal.getitimer(signal.ITIMER_REAL);started=time.monotonic()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        results=list(pool.map(m.execute,configs))
+    assert time.monotonic()-started < 8
+    assert [r['state'] for r in results]==['response_received','unknown','response_received','response_received']
+    assert results[1]['error_type']=='TotalDeadlineExceeded'
+    assert results[1]['elapsed_seconds'] < 3
+    assert signal.getitimer(signal.ITIMER_REAL)==before
+    assert sorted(log.read_text().splitlines())==['fast-a','fast-b','fast-c','slow']
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+        assert list(pool.map(m.execute,configs))==results
+    assert len(log.read_text().splitlines())==4
+    for path,result in zip(configs,results):
+        root=path.parent/'response'
+        assert (root/'intent.json').exists()
+        assert json.loads((root/'result.json').read_bytes())==result
+        if result['state']=='response_received':
+            assert hashlib.sha256((root/'response.sse').read_bytes()).hexdigest()==result['response_sha256']
+
+
+def test_threaded_deadline_unknown_intent_never_redispatches(setup):
+    import concurrent.futures
+    config,cfg=setup;cfg['total_timeout_seconds']=2400;config.write_text(json.dumps(cfg))
+    root=Path(cfg['output_root']);root.mkdir(mode=0o700)
+    m.persist(root/'intent.json',{'config':cfg,'messages_sha256':cfg['messages']['sha256']})
+    before=(root/'intent.json').read_bytes()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        for _ in range(2):
+            with pytest.raises(RuntimeError,match='terminal receipt'):
+                pool.submit(m.execute,config).result(timeout=10)
+    assert (root/'intent.json').read_bytes()==before
+    assert not (root/'request.json').exists() and not (root/'result.json').exists()
