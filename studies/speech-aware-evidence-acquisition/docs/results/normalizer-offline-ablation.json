@@ -1,0 +1,494 @@
+{
+  "samples": 16,
+  "arms": 3,
+  "replayed_rows": 48,
+  "original_train_gold_verified": 16,
+  "official_evaluator_commit": "8eb16545762be97ace75334109d73824217311f1",
+  "new_model_calls": 0,
+  "npu_cards": 0,
+  "wall_seconds": 15.794154360017274,
+  "metrics": {
+    "parent": {
+      "all": {
+        "raw": {
+          "samples": 16,
+          "slu_f1": 0.50633811893076,
+          "intent_accuracy": 0.75,
+          "span_f1": 0.24242424242424246
+        },
+        "v3": {
+          "samples": 16,
+          "slu_f1": 0.5426968410530013,
+          "intent_accuracy": 0.75,
+          "span_f1": 0.393939393939394
+        },
+        "delivered": {
+          "samples": 16,
+          "slu_f1": 0.5447192577108265,
+          "intent_accuracy": 0.75,
+          "span_f1": 0.3870967741935484
+        }
+      },
+      "intent_correct": {
+        "raw": {
+          "samples": 12,
+          "slu_f1": 0.5358612080974003,
+          "intent_accuracy": 1.0,
+          "span_f1": 0.25
+        },
+        "v3": {
+          "samples": 12,
+          "slu_f1": 0.580305202850065,
+          "intent_accuracy": 1.0,
+          "span_f1": 0.4285714285714286
+        },
+        "delivered": {
+          "samples": 12,
+          "slu_f1": 0.5613309497814011,
+          "intent_accuracy": 1.0,
+          "span_f1": 0.4
+        }
+      },
+      "intent_wrong": {
+        "raw": {
+          "samples": 4,
+          "slu_f1": 0.31527093596059114,
+          "intent_accuracy": 0.0,
+          "span_f1": 0.2
+        },
+        "v3": {
+          "samples": 4,
+          "slu_f1": 0.3168316831683168,
+          "intent_accuracy": 0.0,
+          "span_f1": 0.2
+        },
+        "delivered": {
+          "samples": 4,
+          "slu_f1": 0.4155844155844156,
+          "intent_accuracy": 0.0,
+          "span_f1": 0.28571428571428575
+        }
+      }
+    },
+    "child": {
+      "all": {
+        "raw": {
+          "samples": 16,
+          "slu_f1": 0.4232581723868744,
+          "intent_accuracy": 0.625,
+          "span_f1": 0.19047619047619047
+        },
+        "v3": {
+          "samples": 16,
+          "slu_f1": 0.44533268026667244,
+          "intent_accuracy": 0.625,
+          "span_f1": 0.28571428571428575
+        },
+        "delivered": {
+          "samples": 16,
+          "slu_f1": 0.44313787325093595,
+          "intent_accuracy": 0.625,
+          "span_f1": 0.29508196721311475
+        }
+      },
+      "intent_correct": {
+        "raw": {
+          "samples": 10,
+          "slu_f1": 0.4516951052490217,
+          "intent_accuracy": 1.0,
+          "span_f1": 0.20833333333333331
+        },
+        "v3": {
+          "samples": 10,
+          "slu_f1": 0.4777616833439514,
+          "intent_accuracy": 1.0,
+          "span_f1": 0.3333333333333333
+        },
+        "delivered": {
+          "samples": 10,
+          "slu_f1": 0.484834016006027,
+          "intent_accuracy": 1.0,
+          "span_f1": 0.3333333333333333
+        }
+      },
+      "intent_wrong": {
+        "raw": {
+          "samples": 6,
+          "slu_f1": 0.3119645494830133,
+          "intent_accuracy": 0.0,
+          "span_f1": 0.13333333333333333
+        },
+        "v3": {
+          "samples": 6,
+          "slu_f1": 0.32162436548223344,
+          "intent_accuracy": 0.0,
+          "span_f1": 0.13333333333333333
+        },
+        "delivered": {
+          "samples": 6,
+          "slu_f1": 0.256,
+          "intent_accuracy": 0.0,
+          "span_f1": 0.15384615384615383
+        }
+      }
+    },
+    "lock": {
+      "all": {
+        "raw": {
+          "samples": 16,
+          "slu_f1": 0.5286217808812342,
+          "intent_accuracy": 0.8125,
+          "span_f1": 0.3174603174603175
+        },
+        "v3": {
+          "samples": 16,
+          "slu_f1": 0.5650314912820908,
+          "intent_accuracy": 0.8125,
+          "span_f1": 0.4444444444444444
+        },
+        "delivered": {
+          "samples": 16,
+          "slu_f1": 0.5615719575507407,
+          "intent_accuracy": 0.8125,
+          "span_f1": 0.4262295081967213
+        }
+      },
+      "intent_correct": {
+        "raw": {
+          "samples": 13,
+          "slu_f1": 0.5529816251723341,
+          "intent_accuracy": 1.0,
+          "span_f1": 0.3389830508474576
+        },
+        "v3": {
+          "samples": 13,
+          "slu_f1": 0.5929511646853944,
+          "intent_accuracy": 1.0,
+          "span_f1": 0.47457627118644063
+        },
+        "delivered": {
+          "samples": 13,
+          "slu_f1": 0.5829210069623019,
+          "intent_accuracy": 1.0,
+          "span_f1": 0.4482758620689655
+        }
+      },
+      "intent_wrong": {
+        "raw": {
+          "samples": 3,
+          "slu_f1": 0.0,
+          "intent_accuracy": 0.0,
+          "span_f1": 0.0
+        },
+        "v3": {
+          "samples": 3,
+          "slu_f1": 0.0,
+          "intent_accuracy": 0.0,
+          "span_f1": 0.0
+        },
+        "delivered": {
+          "samples": 3,
+          "slu_f1": 0.0,
+          "intent_accuracy": 0.0,
+          "span_f1": 0.0
+        }
+      }
+    }
+  },
+  "stage_counts": {
+    "parent": {
+      "all": {
+        "v3": {
+          "rows_changed": 10,
+          "removed_entities": 15,
+          "added_entities": 15
+        },
+        "fx-article": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "fx-oclock": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "scope": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ti1": {
+          "rows_changed": 1,
+          "removed_entities": 3,
+          "added_entities": 0
+        },
+        "ee10": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        }
+      },
+      "intent_correct": {
+        "v3": {
+          "rows_changed": 8,
+          "removed_entities": 12,
+          "added_entities": 12
+        },
+        "fx-article": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "fx-oclock": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "scope": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ti1": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "ee10": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        }
+      },
+      "intent_wrong": {
+        "v3": {
+          "rows_changed": 2,
+          "removed_entities": 3,
+          "added_entities": 3
+        },
+        "fx-article": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "fx-oclock": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "scope": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "ti1": {
+          "rows_changed": 1,
+          "removed_entities": 3,
+          "added_entities": 0
+        },
+        "ee10": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        }
+      }
+    },
+    "child": {
+      "all": {
+        "v3": {
+          "rows_changed": 8,
+          "removed_entities": 12,
+          "added_entities": 12
+        },
+        "fx-article": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 1
+        },
+        "fx-oclock": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "scope": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ti1": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ee10": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        }
+      },
+      "intent_correct": {
+        "v3": {
+          "rows_changed": 6,
+          "removed_entities": 10,
+          "added_entities": 10
+        },
+        "fx-article": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 1
+        },
+        "fx-oclock": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "scope": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "ti1": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "ee10": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        }
+      },
+      "intent_wrong": {
+        "v3": {
+          "rows_changed": 2,
+          "removed_entities": 2,
+          "added_entities": 2
+        },
+        "fx-article": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "fx-oclock": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "scope": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ti1": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ee10": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        }
+      }
+    },
+    "lock": {
+      "all": {
+        "v3": {
+          "rows_changed": 9,
+          "removed_entities": 12,
+          "added_entities": 12
+        },
+        "fx-article": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 1
+        },
+        "fx-oclock": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "scope": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ti1": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ee10": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        }
+      },
+      "intent_correct": {
+        "v3": {
+          "rows_changed": 9,
+          "removed_entities": 12,
+          "added_entities": 12
+        },
+        "fx-article": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 1
+        },
+        "fx-oclock": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "scope": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ti1": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "ee10": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        }
+      },
+      "intent_wrong": {
+        "v3": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "fx-article": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "fx-oclock": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "scope": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        },
+        "ti1": {
+          "rows_changed": 1,
+          "removed_entities": 1,
+          "added_entities": 0
+        },
+        "ee10": {
+          "rows_changed": 0,
+          "removed_entities": 0,
+          "added_entities": 0
+        }
+      }
+    }
+  }
+}
