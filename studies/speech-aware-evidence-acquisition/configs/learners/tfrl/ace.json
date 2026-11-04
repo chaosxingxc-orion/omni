@@ -1,0 +1,11 @@
+{
+  "schema": "saea-external-exploration-profile-v1",
+  "algorithm": "ace",
+  "template": {
+    "path": "../../prompts/learner/tfrl/ace.md",
+    "sha256": "c21d67856717969550417ab42e18d04056110dc2f9ac82efc166a7201b326055"
+  },
+  "min_candidates": 2,
+  "max_candidates": 8,
+  "max_tokens": 131072
+}

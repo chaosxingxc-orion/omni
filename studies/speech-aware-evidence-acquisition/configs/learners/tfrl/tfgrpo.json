@@ -1,0 +1,11 @@
+{
+  "schema": "saea-external-exploration-profile-v1",
+  "algorithm": "tfgrpo",
+  "template": {
+    "path": "../../prompts/learner/tfrl/tfgrpo.md",
+    "sha256": "8329b22f6eb9957e401d7caa765525b5a3199ad0c8cacc22eba818dd47819833"
+  },
+  "min_candidates": 2,
+  "max_candidates": 8,
+  "max_tokens": 131072
+}

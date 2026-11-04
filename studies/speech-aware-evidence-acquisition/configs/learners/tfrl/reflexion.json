@@ -1,0 +1,11 @@
+{
+  "schema": "saea-external-exploration-profile-v1",
+  "algorithm": "reflexion",
+  "template": {
+    "path": "../../prompts/learner/tfrl/reflexion.md",
+    "sha256": "98429b847ef911881f363b35dc14b8f39902fd445aec260eafe318bc64829bb0"
+  },
+  "min_candidates": 2,
+  "max_candidates": 8,
+  "max_tokens": 131072
+}
