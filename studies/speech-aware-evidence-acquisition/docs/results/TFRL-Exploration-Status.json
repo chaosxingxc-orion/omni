@@ -59,10 +59,23 @@
   "exploration_successors_ready": 0,
   "exploration_cards_without_ready_work": 4,
   "external_result_review": {
-    "state": "running-stream-received-no-final-result",
-    "observed_at_utc": "2026-11-04T07:45:47Z",
+    "state": "complete-reviewed-with-corrections",
+    "observed_at_utc": "2026-11-04T07:55:05Z",
     "cases": 7,
     "max_output_tokens": 131072,
-    "semantic_review_complete": false
+    "usage": {
+      "completion_tokens": 35988,
+      "completion_tokens_details": {
+        "reasoning_tokens": 30568
+      },
+      "prompt_tokens": 231321,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "total_tokens": 267309
+    },
+    "semantic_review_complete": true,
+    "candidate_accepted": false,
+    "report": "GEPA-Root-Cause-Review.md"
   }
 }

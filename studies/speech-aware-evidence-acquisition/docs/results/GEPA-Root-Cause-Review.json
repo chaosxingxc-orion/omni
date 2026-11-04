@@ -1,0 +1,51 @@
+{
+  "schema": "saea-gepa-root-cause-review-result-v1",
+  "state": "response_received",
+  "http_status": 200,
+  "finish_reasons": [
+    "stop"
+  ],
+  "elapsed_seconds": 634.3573626498692,
+  "usage": {
+    "completion_tokens": 35988,
+    "completion_tokens_details": {
+      "reasoning_tokens": 30568
+    },
+    "prompt_tokens": 231321,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "total_tokens": 267309
+  },
+  "response_sha256": "8293643a21e72ac68a458b32eea643df82cd4a13bd4ef70b06de8625fe211add",
+  "source_result_sha256": "f6acc58e959108fe30cf2c575a1d45f124abb6f2008900dd295b2cbf3a812919",
+  "all_differences": {
+    "child_vs_parent": {
+      "rows": 80,
+      "prediction_changed": 23,
+      "intent_label_changed": 4,
+      "intent_correctness_repair": 1,
+      "intent_correctness_break": 2,
+      "intent_changed_both_wrong": 1
+    },
+    "parent_vs_lock": {
+      "rows": 80,
+      "prediction_changed": 23,
+      "intent_label_changed": 3,
+      "intent_correctness_repair": 1,
+      "intent_correctness_break": 1,
+      "intent_changed_both_wrong": 1
+    },
+    "child_vs_lock": {
+      "rows": 80,
+      "prediction_changed": 24,
+      "intent_label_changed": 7,
+      "intent_correctness_repair": 2,
+      "intent_correctness_break": 3,
+      "intent_changed_both_wrong": 2
+    }
+  },
+  "candidate_accepted": false,
+  "semantic_review_status": "partially accepted; factual overclaims corrected in report",
+  "new_npu_calls": 0
+}
