@@ -92,6 +92,7 @@ from ..bundle.git_commit import require_clean_study_repo
 from ..bundle.manifest import build_manifest
 from ..bundle.verify import verify_bundle
 from ..config import (
+    CompositionCache,
     compose,
     d1_evidence_supplement_relpath,
     d1_evidence_supplement_sha256,
@@ -1711,6 +1712,7 @@ class FlightRuntime:
 
         self.receipts = FlightReceipts(run_id=run_id, attempt_id=attempt_id)
         self._composed = None
+        self._composition_cache = CompositionCache()
         self._adapter: TaskAdapter | None = None
         self._plan: ExecutionPlan | None = None
         self._split_id: str | None = None
@@ -4601,7 +4603,9 @@ class FlightRuntime:
         useful: on a working tree carrying the fix under test).
         """
 
-        composed = compose(
+        cache = getattr(self, "_composition_cache", None)
+        compose_inputs = cache.compose if cache is not None else compose
+        composed = compose_inputs(
             self._repo_root, self._model, self._dataset, self._baseline, self._experiment
         )
         self._composed = composed

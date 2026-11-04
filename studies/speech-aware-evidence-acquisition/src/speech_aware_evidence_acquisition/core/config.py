@@ -8,10 +8,12 @@ formal ledger row carries.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import math
 import re
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
@@ -312,6 +314,10 @@ def read_fragment(repo_root: Path, kind: str, name: str) -> dict[str, object]:
         text = path.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as error:
         raise ConfigError(f"cannot read config fragment {path}: {error}") from error
+    return _parse_fragment(text, path)
+
+
+def _parse_fragment(text: str, path: Path) -> dict[str, object]:
     try:
         # M-5 fix: object_pairs_hook rejects a duplicate top-level key
         # before json.loads ever builds the (last-value-wins) dict --
@@ -342,11 +348,15 @@ def compose(
     data_root: "str | Path | None" = None,
 ) -> ComposedConfig:
     names = dict(zip(_KINDS, (model, dataset, baseline, experiment)))
+    fragments = {kind: read_fragment(repo_root, kind, names[kind]) for kind in _KINDS}
+    return _compose_fragments(names, fragments, data_root)
+
+
+def _compose_fragments(names, fragments, data_root):
     merged: dict[str, object] = {}
     origins: dict[str, str] = {}
     for kind in _KINDS:
-        fragment = read_fragment(repo_root, kind, names[kind])
-        for key, value in fragment.items():
+        for key, value in fragments[kind].items():
             if key in merged:
                 raise ConfigError(
                     f"config key collision: {key!r} defined by {origins[key]} and {kind}"
@@ -369,6 +379,39 @@ def compose(
     return ComposedConfig(
         values=expand_data_root(composed, data_root), config_hash=_canonical_hash(composed), fragments=names
     )
+
+
+class CompositionCache:
+    """One runtime's last composition, keyed by exact input text and root.
+
+    Always reread all four files: no mtime trust or missing-file fallback.
+    Returned nested values are independent copies. Failures never publish a
+    cache entry. This caches pure composition only, not media, FIT or leases.
+    """
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._key = None
+        self._value = None
+
+    def compose(self, repo_root, model, dataset, baseline, experiment, data_root=None):
+        names = dict(zip(_KINDS, (model, dataset, baseline, experiment)))
+        paths = tuple(fragment_path(repo_root, k, names[k]) for k in _KINDS)
+        texts = []
+        for path in paths:
+            try:
+                texts.append(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError) as error:
+                raise ConfigError(f"cannot read config fragment {path}: {error}") from error
+        root = resolve_data_root_text(data_root)
+        key = (tuple(str(p) for p in paths), tuple(texts), root,
+               resolve_data_root_text())
+        with self._lock:
+            if key != self._key:
+                fragments = {k: _parse_fragment(t, p) for k, t, p in zip(_KINDS, texts, paths)}
+                value = _compose_fragments(names, fragments, root)
+                self._value, self._key = value, key
+            return copy.deepcopy(self._value)
 
 
 def runtime_receipt_relpath(values: Mapping[str, object]) -> str:
