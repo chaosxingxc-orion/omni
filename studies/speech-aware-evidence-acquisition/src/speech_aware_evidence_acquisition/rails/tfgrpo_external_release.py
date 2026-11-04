@@ -81,6 +81,10 @@ def verify_reviewed_development(params, *, repo, data, candidate, release_schema
     release = read_pin(data, params['candidate_release'])
     fields = {'schema', 'candidate', 'source_manifest', 'consumer_roster', 'learning_dataset',
               'consumer_ids', 'selection_ids', 'review'}
+    if 'contract_control' in params:
+        fields |= {'base_template', 'contract_control'}
+        require(all(release.get(k) == params[k] for k in ('base_template', 'contract_control')),
+                'release original and control template pins differ')
     if 'runtime_model_id' in params:
         verify_deployment_binding(params, repo=repo, data=data)
         fields |= {'runtime_model_id', 'deployment_binding'}
@@ -134,7 +138,7 @@ def verify_reviewed_development(params, *, repo, data, candidate, release_schema
                 and plan['purpose'] == 'falsify-source-bound-hypothesis'
                 and plan['candidate_text_unchanged'] is True and plan['claims_benefit'] is False
                 and plan['automatic_promotion'] is False
-                and plan['comparison'] == 'shared-perception-paired-unchanged-lock',
+                and plan['comparison'] == ('shared-perception-contract-control-unchanged-lock' if 'contract_control' in params else 'shared-perception-paired-unchanged-lock'),
                 'explicit nonpromoting paired diagnostic plan required')
         for key in ('metrics', 'rejection_conditions'):
             require(isinstance(plan[key], list) and plan[key]
@@ -167,16 +171,16 @@ def verify_reviewed_development(params, *, repo, data, candidate, release_schema
 
 
 def prepare(*, candidate_path, source_manifest, candidate_release, repo, data, base_template,
-            template, consumer_ids, model_id, runtime_model_id=None, deployment_binding=None):
+            template, consumer_ids, model_id, runtime_model_id=None, deployment_binding=None, contract_control=None):
     return prepare_reviewed(kind=KIND, renderer=render, source_verifier=verify_source,
         candidate_path=candidate_path, source_manifest=source_manifest, candidate_release=candidate_release,
         repo=repo, data=data, base_template=base_template, template=template, consumer_ids=consumer_ids,
-        model_id=model_id, runtime_model_id=runtime_model_id, deployment_binding=deployment_binding)
+        model_id=model_id, runtime_model_id=runtime_model_id, deployment_binding=deployment_binding, contract_control=contract_control)
 
 
 def prepare_reviewed(*, kind, renderer, source_verifier, candidate_path, source_manifest, candidate_release,
                      repo, data, base_template, template, consumer_ids, model_id,
-                     runtime_model_id=None, deployment_binding=None):
+                     runtime_model_id=None, deployment_binding=None, contract_control=None):
     from .tfgrpo_consumption import digest, validate_params, verify, checked_pin
     from ..core.atomic_file import publish_new
     import hashlib
@@ -188,11 +192,17 @@ def prepare_reviewed(*, kind, renderer, source_verifier, candidate_path, source_
     cp = pin(candidate_path); candidate = read_pin(data, cp)
     base_pin = {'relpath': base_template, 'sha256': digest(repo / 'configs' / base_template)}
     base = checked_pin(repo / 'configs', base_pin).read_text()
+    control_pin = None
+    if contract_control is not None:
+        control_pin = {'relpath': contract_control, 'sha256': digest(repo / 'configs' / contract_control)}
+        base = checked_pin(repo / 'configs', control_pin).read_text()
     text = renderer(candidate, base, consumer_ids)
     params = {'source_kind': kind, 'candidate': cp, 'source_manifest': pin(source_manifest),
               'candidate_release': pin(candidate_release), 'model_id': model_id, 'base_template': base_pin,
               'template': {'relpath': template, 'sha256': hashlib.sha256(text.encode()).hexdigest()},
               'consumer_ids': list(consumer_ids), 'purpose': 'development-evaluation'}
+    if control_pin is not None:
+        params['contract_control'] = control_pin
     if runtime_model_id is not None or deployment_binding is not None:
         require(runtime_model_id is not None and deployment_binding is not None, 'complete runtime alias required')
         params.update(runtime_model_id=runtime_model_id, deployment_binding=pin(deployment_binding))

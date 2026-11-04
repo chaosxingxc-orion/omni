@@ -28,10 +28,16 @@ class ExternalExperienceWorkload(PairWorkload):
     PROGRAM='One shared P, reviewed external experience Solver and unchanged lock Solver.'
 
     def __init__(self,config):
-        if set(config)!={'schema','name','run_id','sample_ids','runtime_binding','execution','material'} or config['schema']!=SCHEMA:
+        fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material'}
+        if not fields <= set(config) <= fields | {'evaluation_design'} or config['schema']!=SCHEMA:
             raise ValueError('exact configured external experience workload required')
+        if config.get('evaluation_design', 'paired') not in ('paired', 'contract-control-v1'):
+            raise ValueError('known external experience evaluation design required')
+        if config.get('evaluation_design') == 'contract-control-v1':
+            self.CONTACTS=4; self.ARMS=['learned','control','lock']
+            self.PROGRAM='One shared P, unchanged lock Solver, changed contract control and identical contract plus reviewed experience.'
         # Reuse identity/client-width bounds only; no GEPA scientific identity.
-        super().__init__({**config,'schema':'saea-gepa-pair-workload-v1'})
+        super().__init__({**{k:v for k,v in config.items() if k != 'evaluation_design'},'schema':'saea-gepa-pair-workload-v1'})
         # Runtime SLURP load_runtime_view sorts by sample_id, independent of
         # the target/control grouping used to choose an unchanged subset.
         if config['sample_ids'] != sorted(config['sample_ids']):
@@ -45,6 +51,8 @@ class ExternalExperienceWorkload(PairWorkload):
         params=pinned(data,material['params']);measurement=pinned(data,material['measurement'])
         if params.get('source_kind') not in ('external-tfgrpo-v1','external-ace-v1','external-reflexion-v1','external-tfgrpo-reference-v1') or params.get('target_arm') is not None:
             raise ValueError('external reviewed unpaired source params required')
+        if ('contract_control' in params) != (self.config.get('evaluation_design') == 'contract-control-v1'):
+            raise ValueError('contract control material and evaluation design differ')
         consumption.verify(params,repo=repo,data=data,model_id=self.config['runtime_binding']['model_fragment'],consumer_ids=self.config['sample_ids'])
         expected=measure(repo,data,params,self.runtime_binding(repo))
         if expected!=measurement:raise ValueError('source-bound actual tokenizer measurement changed')
@@ -69,19 +77,21 @@ class ExternalExperienceWorkload(PairWorkload):
             raise ValueError('external experience changed base Solver template')
         block['components'].append({'component_id':consumption.COMPONENT,'state':'on','admitted_by':'development-evaluation','record':self.AUTH,'params':{**copy.deepcopy(params),'target_arm':'learned'}})
         block['columns']=[{'column_id':'learned','kind':'template','node':'solver','template':{'relpath':'configs/'+params['template']['relpath'],'sha256':params['template']['sha256']},'template_tokens':measurement['token_counts']['template']}]
+        if 'contract_control' in params:
+            block['columns'].append({'column_id':'control','kind':'template','node':'solver','template':{'relpath':'configs/'+params['contract_control']['relpath'],'sha256':params['contract_control']['sha256']},'template_tokens':measurement['token_counts']['contract_control']})
         block['template_frame']={'max_supplied_items':cumulative_supply_bound(base),'delivering_template_tokens':measurement['token_counts']['base_template'],'twin':False,'fit_estimate':measurement['fit_estimate']}
         compiled=cm.compile_module(block,carrier_module_hooks(repo_root=repo),repo_root=repo)
-        if compiled.program_ceiling!=3:raise ValueError('exact one P two Solver program required')
+        if compiled.program_ceiling!=self.CONTACTS:raise ValueError('exact shared P and configured Solver arms required')
         base=compiled.apply_to(base);base['native_episode']['consumption_module']=block
         base.pop('prepared_phase_supply',None);base['serving_slot_tokens']=measurement['fit_estimate']['slot_tokens']
-        base['native_contact_fit'].update(run_id=self.RUN+'-FIT',attempt_id='fit-v1',contact_cap=3*self.ROWS)
+        base['native_contact_fit'].update(run_id=self.RUN+'-FIT',attempt_id='fit-v1',contact_cap=self.CONTACTS*self.ROWS)
         base['what_this_is']=self.PROGRAM+' Fixed H2 development; no adoption claim.'
         cm.verify_declared_module(block,base,repo_root=repo)
         cell,=exp['cells'];cell.update(cell_id=self.NAME,baseline_fragment=self.NAME,model_fragment=binding['model_fragment'],run_id=self.RUN,attempt_id='generation-v1',allowed_execution_stages=['check','prepare-supply','worker','campaign'],readiness={'state':'held','requirements':[],'reason':'Prepare/register/admit exact external experience pair before dispatch.'})
         exp.update(experiment_id=self.RUN,purpose=base['what_this_is'],service_session=binding['service_session'])
         exp['population'].update(count=self.ROWS,roster_receipt=self.ROSTER,split_identity_hash=roster['split_identity_hash'])
         exp['populations']=[{'dataset_fragment':observation.DATASET,'ids':ids}]
-        exp['execution_plan'].update(planned_model_calls=6*self.ROWS,planned_speech_audio_seconds=math.ceil(6*math.fsum(r['audio_seconds'] for r in items)))
+        exp['execution_plan'].update(planned_model_calls=2*self.CONTACTS*self.ROWS,planned_speech_audio_seconds=math.ceil(2*self.CONTACTS*math.fsum(r['audio_seconds'] for r in items)))
         exp['stage3_algorithm']=algorithm_metadata(params['source_kind'])
         exp['stage3_measurement'].update(rows=self.ROWS,read_roster=roster['roster_id'],claims_benefit=False,expected_effect_pp=0,note=base['what_this_is'])
         return base,exp,roster,view,binding
@@ -120,13 +130,13 @@ def measure(repo,data,params,binding):
             files[rel]=sha(p)
     if not {'tokenizer_config.json','vocab.json','merges.txt'}<={Path(p).name for p in files}:raise ValueError('complete resident tokenizer required')
     tokenizer=AutoTokenizer.from_pretrained(model_dir,local_files_only=True,trust_remote_code=False)
-    counts={k:len(tokenizer.encode(consumption.checked_pin(repo/'configs',params[k]).read_text(),add_special_tokens=False)) for k in ('base_template','template')}
+    counts={k:len(tokenizer.encode(consumption.checked_pin(repo/'configs',params[k]).read_text(),add_special_tokens=False)) for k in ('base_template','template',*(['contract_control'] if 'contract_control' in params else []))}
     estimate_source='configs/evaluation/gepa-seed-material-v1/complete.json'
     estimate=copy.deepcopy(read(repo/estimate_source)['fit_estimate'])
     model=read(repo/f"configs/model/{binding['model_fragment']}.json")
     estimate['slot_tokens']=int(model['server_args'][model['server_args'].index('--max-model-len')+1])
     estimate['completion_ceiling']=model['decoding_params']['max_tokens']
-    return {'schema':'saea-external-experience-template-measurement-v1','token_counts':counts,'fit_estimate':estimate,'runtime_binding':binding,'tokenizer_files':files,'base_template':params['base_template'],'template':params['template'],'estimate_source':pin(repo,estimate_source),'native_fit_completed':False,'new_model_calls':0}
+    return {'schema':'saea-external-experience-template-measurement-v1','token_counts':counts,'fit_estimate':estimate,'runtime_binding':binding,'tokenizer_files':files,'base_template':params['base_template'],'template':params['template'],**({'contract_control':params['contract_control']} if 'contract_control' in params else {}),'estimate_source':pin(repo,estimate_source),'native_fit_completed':False,'new_model_calls':0}
 
 
 def validate(repo,data,name,spec,exp,view):

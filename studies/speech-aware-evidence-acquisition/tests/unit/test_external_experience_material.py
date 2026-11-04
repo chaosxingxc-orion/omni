@@ -89,3 +89,12 @@ def test_invalid_configuration_has_no_prepare_or_publish_side_effects(release_ma
     with pytest.raises(ValueError): material.build(cfg)
     assert called == []
     assert snapshot(repo.parent) == before
+
+
+def test_material_contract_design_is_checked_before_publication(release_material, monkeypatch):
+    kwargs, *_ = release_material; cfg = job(kwargs)
+    cfg['evaluation_design']='contract-control-v1'
+    monkeypatch.setattr(material.importlib,'import_module',lambda *a:pytest.fail('adapter reached'))
+    before=snapshot(kwargs['repo'].parent)
+    with pytest.raises(ValueError,match='design differ'): material.build(cfg)
+    assert snapshot(kwargs['repo'].parent)==before

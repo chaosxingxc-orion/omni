@@ -81,3 +81,10 @@ def test_target_grouping_rejected_before_source_or_runtime_contact(tmp_path):
     canonical=[row['sample_id'] for row in actual]
     assert canonical==sorted(ids) and set(canonical)==set(ids)
     assert m.ExternalExperienceWorkload({**cfg,'sample_ids':canonical}).config['sample_ids']==canonical
+
+
+def test_contract_control_explicit_program_budget_and_design():
+    cfg={**config(),'schema':m.SCHEMA,'evaluation_design':'contract-control-v1'}
+    job=m.ExternalExperienceWorkload(cfg)
+    assert job.CONTACTS==4 and job.ARMS==['learned','control','lock']
+    with pytest.raises(ValueError):m.ExternalExperienceWorkload({**cfg,'evaluation_design':'other'})

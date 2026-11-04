@@ -34,7 +34,7 @@ def checked_pin(root, pin):
 
 
 def validate_params(params):
-    optional={'target_arm','rendering','render_manifest','compact_params','candidate_release','source_kind','runtime_model_id','deployment_binding'}
+    optional={'target_arm','rendering','render_manifest','compact_params','contract_control','candidate_release','source_kind','runtime_model_id','deployment_binding'}
     if not isinstance(params,dict) or not FIELDS <= set(params) or set(params)-FIELDS-optional or params['purpose'] != 'development-evaluation':
         raise ValueError('development-only Solver experience binding required')
     if 'source_kind' in params:
@@ -49,6 +49,12 @@ def validate_params(params):
         raise ValueError('only the learned paired Solver arm is supported')
     if ('rendering' in params)!=('render_manifest' in params) or ('rendering' in params and params['rendering']!='short-display-id-v1'):
         raise ValueError('explicit short rendering and manifest required')
+    if 'contract_control' in params:
+        if (params.get('source_kind') not in ('external-tfgrpo-v1', 'external-ace-v1', 'external-reflexion-v1', 'external-tfgrpo-reference-v1')
+                or any(k in params for k in ('rendering', 'render_manifest', 'compact_params'))):
+            raise ValueError('external standard rendering required for contract control')
+        if params['contract_control'] in (params['base_template'], params['template']):
+            raise ValueError('distinct contract control template required')
     if 'compact_params' in params:
         compact=params['compact_params']
         if params.get('target_arm')!='learned' or 'rendering' in params or not isinstance(compact,dict) or 'compact_params' in compact or 'target_arm' in compact:
@@ -62,14 +68,14 @@ def validate_params(params):
         raise ValueError('unique TRAIN development consumer identities required')
     if not isinstance(params['model_id'],str) or not params['model_id']:
         raise ValueError('source frozen model required')
-    for key in ('candidate','source_manifest','base_template','template',*(['render_manifest'] if 'render_manifest' in params else []), *(['candidate_release'] if 'candidate_release' in params else []), *(['deployment_binding'] if 'deployment_binding' in params else [])):
+    for key in ('candidate','source_manifest','base_template','template',*(['render_manifest'] if 'render_manifest' in params else []), *(['candidate_release'] if 'candidate_release' in params else []), *(['deployment_binding'] if 'deployment_binding' in params else []), *(['contract_control'] if 'contract_control' in params else [])):
         pin=params[key]
         if (not isinstance(pin,dict) or set(pin)!={'relpath','sha256'}
                 or not isinstance(pin['relpath'],str) or not pin['relpath']
                 or Path(pin['relpath']).is_absolute() or '..' in Path(pin['relpath']).parts
                 or '\\' in pin['relpath'] or not re.fullmatch('[a-f0-9]{64}',str(pin['sha256']))):
             raise ValueError('exact confined source and template pins required')
-    if any(not params[k]['relpath'].startswith('probes/') for k in ('base_template','template')):
+    if any(not params[k]['relpath'].startswith('probes/') for k in ('base_template','template',*(['contract_control'] if 'contract_control' in params else []))):
         raise ValueError('existing probe template path required')
     if 'render_manifest' in params and not params['render_manifest']['relpath'].startswith('probes/'):
         raise ValueError('render manifest must be a probe artifact')
@@ -155,6 +161,8 @@ def verify(params, *, repo, data, model_id, consumer_ids):
             raise ValueError('ordered external development consumers differ')
         verify_source(params, repo=repo, data=data, candidate=candidate)
         base=checked_pin(Path(repo)/'configs',params['base_template']).read_text()
+        if 'contract_control' in params:
+            base=checked_pin(Path(repo)/'configs',params['contract_control']).read_text()
         template=checked_pin(Path(repo)/'configs',params['template']).read_text()
         if template != render(candidate, base, params['consumer_ids']):
             raise ValueError('external Solver template differs from reviewed experience')
@@ -231,6 +239,7 @@ def paired_layout_matches(values,params):
     group=values['native_episode']['roles']['solver'].get('template_variants',{})
     arms=group.get('arms',[])
     specs=[('learned',params)]
+    if 'contract_control' in params:specs.append(('control',{'template':params['contract_control']}))
     if 'compact_params' in params:specs.append(('compact',params['compact_params']))
     if group.get('node')!='solver' or len(arms)!=len(specs)+1:return False
     for arm,(name,p) in zip(arms,specs):

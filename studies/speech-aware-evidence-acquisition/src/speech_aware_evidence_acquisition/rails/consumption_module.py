@@ -238,7 +238,7 @@ _COLUMN_OPTIONAL = frozenset({"prepared_seed"})
 
 COMPONENT_CATALOGUE: tuple[ComponentSpec, ...] = (
     ComponentSpec("tfgrpo-solver-experience", "USE, learned Solver experience for development",
-        frozenset({STATE_ON}), frozenset({"candidate", "source_manifest", "model_id", "base_template", "template", "consumer_ids", "purpose"}), optional_params=frozenset({"target_arm", "rendering", "render_manifest", "compact_params", "candidate_release", "source_kind", "runtime_model_id", "deployment_binding"})),
+        frozenset({STATE_ON}), frozenset({"candidate", "source_manifest", "model_id", "base_template", "template", "consumer_ids", "purpose"}), optional_params=frozenset({"target_arm", "rendering", "render_manifest", "compact_params", "contract_control", "candidate_release", "source_kind", "runtime_model_id", "deployment_binding"})),
     ComponentSpec(NODE_CONTEXT_PRESENTATION, "USE, explicit node context presentation",
         frozenset({STATE_ON}), frozenset(),
         optional_params=frozenset({"tool_schema_rendering", "reviewer_history_scope"})),
@@ -1771,6 +1771,7 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
                 raise ConsumptionModuleConfigError("learned experience requires the unchanged Solver base")
             if params.get("target_arm"):
                 declared=[("learned",params)]
+                if "contract_control" in params:declared.append(("control",{"template":params["contract_control"]}))
                 if "compact_params" in params:declared.append(("compact",params["compact_params"]))
                 if len(block.columns)!=len(declared) or len(block.template_columns)!=len(declared) or block.template_frame["twin"]:
                     raise ConsumptionModuleConfigError("exact experience template columns required")
@@ -1958,7 +1959,7 @@ def _compile(block: ConsumptionModuleBlock, hooks: CarrierHooks) -> ComposedPoli
             and not block.supply_frame.get("alternates")
         )
         paired_decls=[d for d in block.armed() if d.component_id=="tfgrpo-solver-experience" and d.params.get("target_arm")=="learned"]
-        expected_columns=(["learned","compact"] if len(paired_decls)==1 and "compact_params" in paired_decls[0].params else ["learned"])
+        expected_columns=(["learned","control"] if len(paired_decls)==1 and "contract_control" in paired_decls[0].params else (["learned","compact"] if len(paired_decls)==1 and "compact_params" in paired_decls[0].params else ["learned"]))
         paired_columns=(len(paired_decls)==1 and len(block.columns)==len(block.template_columns)==len(expected_columns)
             and [c.column_id for c in block.template_columns]==expected_columns
             and all(c.node=="solver" for c in block.template_columns) and not block.template_frame["twin"])

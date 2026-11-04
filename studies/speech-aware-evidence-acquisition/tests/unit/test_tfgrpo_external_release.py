@@ -196,3 +196,27 @@ def test_runtime_alias_preserves_source_actor_and_rejects_science_drift(material
             consumption.verify(params,repo=repo,data=data,model_id='unbound-runtime',consumer_ids=kwargs['consumer_ids'])
     else:
         assert consumption.verify(params,repo=repo,data=data,model_id='tp4-runtime',consumer_ids=kwargs['consumer_ids'])==candidate['sha256']
+
+
+def test_contract_control_preserves_lock_and_exact_candidate_rendering(material):
+    kwargs, candidate, doc, review, *_ = material
+    control = kwargs['repo']/'configs/probes/control.txt'
+    control.write_text('Solver with candidate hypotheses.')
+    doc.update(base_template={'relpath':'probes/base.txt','sha256':consumption.digest(kwargs['repo']/'configs/probes/base.txt')},
+               contract_control={'relpath':'probes/control.txt','sha256':consumption.digest(control)})
+    review['bindings']={k:v for k,v in doc.items() if k not in ('schema','review')}
+    doc['review']=write(kwargs['data']/'review.json',review);write(kwargs['data']/'release.json',doc)
+    params = release.prepare(**kwargs, contract_control='probes/control.txt')
+    assert params['base_template']['relpath'] == 'probes/base.txt'
+    assert (kwargs['repo']/'configs/probes/external.txt').read_text() == release.render(candidate, control.read_text(), kwargs['consumer_ids'])
+    params['target_arm'] = 'learned'
+    arms = [{'arm_id': name, 'instruction_template': {'relpath':'configs/'+params[key]['relpath'], 'sha256':params[key]['sha256']}, 'deliver':False}
+            for name,key in [('learned','template'),('control','contract_control')]] + [{'arm_id':'lock','deliver':True}]
+    values = {'phase_material':{'solver':{'instruction_template':'probes/base.txt'}},
+              'native_episode':{'consumption_module':{'components':[{'component_id':consumption.COMPONENT,'state':'on','params':params}]},
+                                'roles':{'solver':{'template_variants':{'node':'solver','arms':arms}}}}}
+    assert consumption.verify_for_flight(values, repo=kwargs['repo'], data=kwargs['data'],model_id=kwargs['model_id'],consumer_ids=kwargs['consumer_ids']) == candidate['sha256']
+    bad = copy.deepcopy(values); bad['native_episode']['roles']['solver']['template_variants']['arms'][1]['arm_id']='compact'
+    with pytest.raises(ValueError, match='source-bound Solver arms'): consumption.verify_for_flight(bad,repo=kwargs['repo'],data=kwargs['data'],model_id=kwargs['model_id'],consumer_ids=kwargs['consumer_ids'])
+    control.write_text('Changed after preparation')
+    with pytest.raises(ValueError, match='artifact changed'): consumption.verify(params,repo=kwargs['repo'],data=kwargs['data'],model_id=kwargs['model_id'],consumer_ids=kwargs['consumer_ids'])

@@ -20,3 +20,13 @@ def test_invalid_evidence_rejected(fault):
  elif fault=='intent':r['learned']['per_sample'][0]['scenario_action_exact']=2
  else:r['learned']['per_sample'][0]['slot_f1_exact_tp']={'nan':float('nan'),'negative':-1,'bool':True}[fault]
  with pytest.raises(ValueError):m.summarize(r,items)
+
+
+def test_three_arm_summary_separates_contract_and_learned_effects():
+ r,items=fixture();r={'learned':r['child'],'control':copy.deepcopy(r['child']),'lock':r['lock']}
+ r['control']['per_sample'][0]['scenario_action_exact']=0
+ v=m.summarize(r,items)
+ assert set(v['comparisons'])=={'learned_vs_control','control_vs_lock','learned_vs_lock'}
+ assert v['comparisons']['learned_vs_control']['strict_repairs']==1
+ assert v['comparisons']['control_vs_lock']['strict_breaks']==1
+ assert not v['candidate_accepted'] and not v['claims_stable_gain']
