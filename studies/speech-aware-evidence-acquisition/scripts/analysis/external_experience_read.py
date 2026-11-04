@@ -61,6 +61,17 @@ def audit(repo,values,bundle,ids):
     return {'audited_rows':len(audits),'abstention_rows':abstentions,'rows':audits}
 
 
+
+def shared_learning_cost(values,data):
+    """Reference acquisition is a shared batch cost, never an extra per-arm evaluation charge."""
+    components=values['native_episode']['consumption_module']['components']
+    params=next(c['params'] for c in components if c['component_id']=='tfgrpo-solver-experience' and c['state']=='on')
+    if params.get('source_kind')!='external-tfgrpo-reference-v1':return None
+    candidate=pinned(data,params['candidate'])
+    return {'usage_identity':candidate['usage_identity'], 'learning_usage':candidate['learning_usage'],
+            'accounting':candidate['accounting'], 'scope':candidate['usage_scope'],
+            'included_in_evaluation_total_cost':False}
+
 def run(repo,data,out,name):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
@@ -92,6 +103,8 @@ def run(repo,data,out,name):
     scorer.score_supply_variant_copies(scorer_id,rendered,out,load_lock(umbrella_lock_path(repo)),data,scorer.sealed_per_sample(directory,rid,scorer_id))
     results={a:read(out/f'arm-{a}-{scorer_id}-scores.json')[scorer_id] for a in ARMS};verify_delivered_scores(results['lock'],scorer.sealed_per_sample(directory,rid,scorer_id))
     result=summarize(results,items);result.update(schema='saea-external-experience-pair-result-v1',new_model_calls=0,source=rendered['source'],input_audit=inputs,analysis_recipe_sha256=sha(pkg/'analysis-recipe-v1.json'),score_receipts={a:pin(data,str((out/f'arm-{a}-{scorer_id}-scores.json.receipt.json').relative_to(data))) for a in ARMS},native_role_costs=native_costs(bundle.outputs_rows,bundle.trace_records),total_cost=bundle.manifest['cost'])
+    shared=shared_learning_cost(cfg.values,data)
+    if shared is not None:result['shared_learning_cost']=shared
     target=out/'complete.json'
     if target.exists():
         if target.read_bytes()!=raw(result):raise ValueError('analysis changed')

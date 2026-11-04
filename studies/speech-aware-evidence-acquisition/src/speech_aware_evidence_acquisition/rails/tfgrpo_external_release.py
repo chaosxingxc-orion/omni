@@ -141,6 +141,15 @@ def verify_reviewed_development(params, *, repo, data, candidate, release_schema
 
 def prepare(*, candidate_path, source_manifest, candidate_release, repo, data, base_template,
             template, consumer_ids, model_id, runtime_model_id=None, deployment_binding=None):
+    return prepare_reviewed(kind=KIND, renderer=render, source_verifier=verify_source,
+        candidate_path=candidate_path, source_manifest=source_manifest, candidate_release=candidate_release,
+        repo=repo, data=data, base_template=base_template, template=template, consumer_ids=consumer_ids,
+        model_id=model_id, runtime_model_id=runtime_model_id, deployment_binding=deployment_binding)
+
+
+def prepare_reviewed(*, kind, renderer, source_verifier, candidate_path, source_manifest, candidate_release,
+                     repo, data, base_template, template, consumer_ids, model_id,
+                     runtime_model_id=None, deployment_binding=None):
     from .tfgrpo_consumption import digest, validate_params, verify, checked_pin
     from ..core.atomic_file import publish_new
     import hashlib
@@ -152,15 +161,15 @@ def prepare(*, candidate_path, source_manifest, candidate_release, repo, data, b
     cp = pin(candidate_path); candidate = read_pin(data, cp)
     base_pin = {'relpath': base_template, 'sha256': digest(repo / 'configs' / base_template)}
     base = checked_pin(repo / 'configs', base_pin).read_text()
-    text = render(candidate, base, consumer_ids)
-    params = {'source_kind': KIND, 'candidate': cp, 'source_manifest': pin(source_manifest),
+    text = renderer(candidate, base, consumer_ids)
+    params = {'source_kind': kind, 'candidate': cp, 'source_manifest': pin(source_manifest),
               'candidate_release': pin(candidate_release), 'model_id': model_id, 'base_template': base_pin,
               'template': {'relpath': template, 'sha256': hashlib.sha256(text.encode()).hexdigest()},
               'consumer_ids': list(consumer_ids), 'purpose': 'development-evaluation'}
     if runtime_model_id is not None or deployment_binding is not None:
         require(runtime_model_id is not None and deployment_binding is not None, 'complete runtime alias required')
         params.update(runtime_model_id=runtime_model_id, deployment_binding=pin(deployment_binding))
-    validate_params(params); verify_source(params, repo=repo, data=data, candidate=candidate)
+    validate_params(params); source_verifier(params, repo=repo, data=data, candidate=candidate)
     target = (repo / 'configs' / template).resolve()
     require(target.is_relative_to(repo / 'configs'), 'template escaped repository')
     target.parent.mkdir(parents=True, exist_ok=True)
