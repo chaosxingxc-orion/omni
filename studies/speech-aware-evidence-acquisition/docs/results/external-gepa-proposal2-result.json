@@ -1,0 +1,66 @@
+{
+  "schema": "saea-external-gepa-proposal2-public-result-v1",
+  "rows": 16,
+  "total_rows": 16,
+  "cards": 2,
+  "instances": 1,
+  "tensor_parallel": 2,
+  "client_concurrency": 16,
+  "official": {
+    "child": {
+      "slu_f1": 0.5541578330269673,
+      "intent_accuracy": 0.8125,
+      "span_f1": 0.4126984126984127
+    },
+    "lock": {
+      "slu_f1": 0.5333157112926379,
+      "intent_accuracy": 0.8125,
+      "span_f1": 0.36666666666666664
+    },
+    "parent": {
+      "slu_f1": 0.5470368918303908,
+      "intent_accuracy": 0.75,
+      "span_f1": 0.36666666666666664
+    }
+  },
+  "strict_success": {
+    "child": 0,
+    "lock": 0,
+    "parent": 0
+  },
+  "cost": {
+    "audio_seconds_used": 263.64849999999996,
+    "calls_used": 64,
+    "completion_tokens_total": 157054,
+    "latency_seconds_total": 6630.102351880341,
+    "prompt_tokens_total": 526724,
+    "tool_calls": 0
+  },
+  "campaign_wall_seconds_including_preflight_preprocess_scoring": 651.8693114800262,
+  "wall_seconds_per_paired_row": 40.74183196750164,
+  "remaining_rows": 0,
+  "eta_seconds": 0,
+  "input_audited_rows": 16,
+  "comparisons": {
+    "child_vs_lock": {
+      "proxy_mean_delta": -0.007291666666666696,
+      "strict_breaks": 0,
+      "strict_repairs": 0
+    },
+    "child_vs_parent": {
+      "proxy_mean_delta": 0.05141369047619049,
+      "strict_breaks": 0,
+      "strict_repairs": 0
+    },
+    "parent_vs_lock": {
+      "proxy_mean_delta": -0.058705357142857184,
+      "strict_breaks": 0,
+      "strict_repairs": 0
+    }
+  },
+  "candidate_accepted": false,
+  "claims_stable_gain": false,
+  "archive_sha256": "77a2866255e9dc293f5f11476541daec80f8f46cff525bf3b1821808944a7e01",
+  "generation_finished_utc": "2026-11-04T09:56:14Z",
+  "score_finished_utc": "2026-11-04T09:57:22Z"
+}
