@@ -211,7 +211,7 @@ def native_contact_custody_enabled(values):
         try:
             from ...rails.tfgrpo_consumption import validate_params,paired_layout_matches
             validate_params(params)
-            paired_ceiling=4 if 'compact_params' in params else 3
+            paired_ceiling=4 if any(k in params for k in ('compact_params','contract_control')) else 3
             paired=paired_layout_matches(values,params) and values.get('policy')==f'phase-native-module-v1-c{paired_ceiling}'
         except (KeyError,TypeError,ValueError):return False
         if not paired:return False

@@ -2949,7 +2949,7 @@ def validate_prompt_contact_limits(config):
             gepa_pair_group = True
         except (ValueError, TypeError, KeyError, AttributeError):
             pass
-    paired_group=(group is not None and group.is_template and (group.arm_ids in (("learned","lock"),("learned","compact","lock"),("gepa","lock")) or gepa_pair_group)
+    paired_group=(group is not None and group.is_template and (group.arm_ids in (("learned","lock"),("learned","compact","lock"),("learned","control","lock"),("gepa","lock")) or gepa_pair_group)
         and group.arm_visits=="first"
         and all(arm.instruction_template is not None and not arm.deliver and arm.replicate_of is None for arm in group.arms[:-1])
         and group.arms[-1].deliver and group.arms[-1].instruction_template is None

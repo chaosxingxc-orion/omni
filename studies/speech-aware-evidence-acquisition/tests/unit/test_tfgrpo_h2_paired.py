@@ -181,3 +181,19 @@ def test_supply_bound_tracks_candidate_and_retained_prefix_limits():
     assert m.cumulative_supply_bound(base)==63
     base['knowledge_stores']['slot-contracts']['candidate_supply']['solver']['max_total_values']=True
     with pytest.raises(ValueError,match='positive'):m.cumulative_supply_bound(base)
+
+
+def test_contract_control_three_arm_retains_contact_custody(release):
+    _,_,params=release
+    params.update(source_kind='external-tfgrpo-v1',candidate_release={'relpath':'review.json','sha256':'a'*64},
+                  contract_control={'relpath':'probes/control.txt','sha256':'b'*64})
+    base,block=paired_block(params)
+    block['columns'].append({'column_id':'control','kind':'template','node':'solver',
+        'template':{'relpath':'configs/probes/control.txt','sha256':'b'*64},'template_tokens':450})
+    compiled=cm.compile_module(block,carrier_module_hooks(repo_root=ROOT),repo_root=ROOT)
+    values=compiled.apply_to(base);values['native_episode']['consumption_module']=block
+    values.update(transport='vllm',carrier_lock_key='slurp')
+    assert compiled.program_ceiling==4
+    assert native_contact_custody_enabled(values)
+    values['native_episode']['roles']['solver']['template_variants']['arms'][1]['instruction_template']['sha256']='c'*64
+    assert not native_contact_custody_enabled(values)
