@@ -75,6 +75,8 @@ class PairWorkload:
             raise ValueError('externally pinned repository seed material required')
         material = pinned(repo, material_pin)
         checked = gepa_pair_material.verify(repo, data, material)
+        if 'intervention' in material and self.config.get('evaluation_partition', 'feedback') != 'feedback':
+            raise ValueError('research intervention is approved for feedback only')
         if material.get('schema') != 'saea-gepa-pair-material-v1':
             raise ValueError('exact seed mechanism material required')
         return material, checked
