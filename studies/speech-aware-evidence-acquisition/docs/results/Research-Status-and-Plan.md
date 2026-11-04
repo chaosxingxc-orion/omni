@@ -8,13 +8,13 @@ A0资源4卡1实例，P-off/S-thinking3072，原轮及恢复共26156生成调用
 
 ## 当前探索与资源
 
-更新至2026-11-04 13:37 UTC。所有上一轮80条探索已完成且没有候选晋升；完整结果见[GEPA因素](GEPA-Factor-Results.md)、[TF-GRPO目标实验](TFGRPO-Targeted-Results.md)、[ACE与Reflexion](ACE-Reflexion-Results.md)。不把已结束任务列为当前负载。
+更新至2026-11-04 13:47 UTC。所有上一轮80条探索已完成且没有候选晋升；完整结果见[GEPA因素](GEPA-Factor-Results.md)、[TF-GRPO目标实验](TFGRPO-Targeted-Results.md)、[ACE与Reflexion](ACE-Reflexion-Results.md)。不把已结束任务列为当前负载。
 
 | 路线 | 当前真实状态 | 资源与下一步 |
 |---|---|---|
 | 条件知识change_amount / cooking_type | 完整authored source修复通过36项回归；V2生成13:27:17因旧租约未交接退出，没有已核验新完成样本 | 两个既有80名单；计划2卡与4卡并行，恢复负责人核quiescence并安全接续，尚无有效吞吐/ETA |
-| GEPA P候选2→1 | 第一生成13:32:16退出；旧身份逻辑仅允许P一次contact，与四臂P冲突，后续peer failed是连带错误 | 2卡实例、C32、固定80、四臂各自P→S；负责人修复真实启动路径，不能按container启动宣称成功 |
-| 原多阶段TF-GRPO | 13:35:24同一接续容器运行，52份provider回执，最终candidate尚无 | 外部教师，并发4，固定15组60轨迹，上限91调用；已知响应重用，旧unknown隔离，600秒归档 |
+| GEPA P候选2→1 | 第一生成13:32:16退出；四臂P身份接线修复已合main，主线程137项回归通过；原32份P回执及成本保留，尚无完整配对结果 | 2卡实例、C32、固定80、四臂各自P→S；负责人修复真实启动路径，不能按container启动宣称成功 |
+| 原多阶段TF-GRPO | 13:44:15同一接续容器运行，63份provider回执，输入1133574/输出782444 tokens，最终candidate尚无 | 外部教师，并发4，固定15组60轨迹，上限91调用；已知响应重用，旧unknown隔离，600秒归档 |
 | Solver输出协议 | label-only配对schema和CPU探针已集成；主线程31通过/2个既有数据skip | 新负责人实施真实协议轴和配置/预算/恢复/reader；当前CPU任务，0新推理 |
 
 目前不能证明新实验持续占满8卡。实际有效请求与检查点是恢复验收依据；首个稳定检查点后补完成样本/总量、秒/条、成本与剩余时间，不能由计划资源推断硬件利用率。详细启动后审计见[子智能体业务审计](Subagent-Business-Execution-Audit.md)。
