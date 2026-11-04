@@ -1,0 +1,136 @@
+{
+  "schema": "saea-ace-reflexion-results-v1",
+  "experiments": {
+    "ace-person": {
+      "name": "ace-person",
+      "state": "exited",
+      "exit": 0,
+      "start": "2026-11-04T12:18:51.43846142Z",
+      "end": "2026-11-04T12:44:42.66069596Z",
+      "elapsed": 1551.222234,
+      "per_row": 19.390277925,
+      "official": {
+        "learned": {
+          "slu_f1": 0.6617763856503392,
+          "intent_accuracy": 0.85,
+          "span_f1": 0.5317460317460317
+        },
+        "lock": {
+          "slu_f1": 0.6980354245876121,
+          "intent_accuracy": 0.8625,
+          "span_f1": 0.596078431372549
+        }
+      },
+      "strict": {
+        "learned": 26,
+        "lock": 28
+      },
+      "comparisons": {
+        "learned_vs_lock": {
+          "proxy_mean_delta": -0.03500000000000005,
+          "strict_breaks": 6,
+          "strict_repairs": 4
+        }
+      },
+      "cost": {
+        "audio_seconds_used": 1060.2408750000004,
+        "calls_used": 240,
+        "completion_tokens_total": 484236,
+        "latency_seconds_total": 19748.81682455982,
+        "prompt_tokens_total": 1669830,
+        "tool_calls": 0
+      },
+      "means": {
+        "perception": 74.1716645004999,
+        "solver": 86.34427290324894
+      },
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 16,
+      "completed_rows": 80,
+      "total_rows": 80,
+      "remaining_rows": 0,
+      "eta_seconds": 0,
+      "candidate_accepted": false,
+      "complete_sha256": "af27554c05985a84ae579e3d0af26b3388d33dbb93af4b0ff0a1f38d994560a8",
+      "cost_scope": "generation only; FIT and teacher costs separate",
+      "strata": {
+        "same-name-repeat": {
+          "n": 1,
+          "strict": {
+            "learned": 0,
+            "lock": 0
+          }
+        },
+        "single-person": {
+          "n": 16,
+          "strict": {
+            "learned": 3,
+            "lock": 5
+          }
+        },
+        "control": {
+          "n": 63,
+          "strict": {
+            "learned": 23,
+            "lock": 23
+          }
+        }
+      }
+    },
+    "reflexion-paircheck": {
+      "name": "reflexion-paircheck",
+      "state": "exited",
+      "exit": 0,
+      "start": "2026-11-04T12:21:28.58063682Z",
+      "end": "2026-11-04T12:46:36.21164611Z",
+      "elapsed": 1507.63101,
+      "per_row": 18.845387625,
+      "official": {
+        "learned": {
+          "slu_f1": 0.6748698048094981,
+          "intent_accuracy": 0.8125,
+          "span_f1": 0.5175438596491228
+        },
+        "lock": {
+          "slu_f1": 0.6917391926005303,
+          "intent_accuracy": 0.825,
+          "span_f1": 0.5511111111111111
+        }
+      },
+      "strict": {
+        "learned": 26,
+        "lock": 28
+      },
+      "comparisons": {
+        "learned_vs_lock": {
+          "proxy_mean_delta": -0.016964285714285765,
+          "strict_breaks": 3,
+          "strict_repairs": 1
+        }
+      },
+      "cost": {
+        "audio_seconds_used": 987.0590625000006,
+        "calls_used": 240,
+        "completion_tokens_total": 496363,
+        "latency_seconds_total": 37801.83553014975,
+        "prompt_tokens_total": 1591224,
+        "tool_calls": 0
+      },
+      "means": {
+        "perception": 134.8554222419989,
+        "solver": 168.8337609424365
+      },
+      "cards": 2,
+      "instances": 1,
+      "concurrency": 32,
+      "completed_rows": 80,
+      "total_rows": 80,
+      "remaining_rows": 0,
+      "eta_seconds": 0,
+      "candidate_accepted": false,
+      "complete_sha256": "ae82790c990f28da9348e7bc1efc9d49664ebf7de30489c8039b3d3b3c6afe57",
+      "cost_scope": "generation only; FIT and teacher costs separate"
+    }
+  }
+}
