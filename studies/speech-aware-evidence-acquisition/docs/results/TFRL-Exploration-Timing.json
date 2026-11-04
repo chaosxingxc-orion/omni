@@ -1,28 +1,34 @@
 {
   "schema": "saea-exploration-timing-audit-v1",
-  "archive_sha256": "1239f0425914744ea2b2f23b115131ebf85cf10dc9739fca65f435a03897460d",
+  "archive_sha256": "b1be9dfdcba099d3bcf3c5f80cf47e776715bc449249c57b2f4140dd7bbced41",
   "archive_consistent_snapshot": false,
-  "checkpoint_complete_rows_in_archive": 68,
+  "checkpoint_complete_rows_in_archive": 80,
   "total_rows": 80,
   "malformed_timing_lines": 0,
   "all_finished_events_by_stage": {
     "audio_base64_encode": {
-      "events": 951,
-      "sum_seconds": 0.17902672980562784,
-      "mean_seconds": 0.0001882510302898295,
+      "events": 960,
+      "sum_seconds": 0.18055518975597806,
+      "mean_seconds": 0.00018807832266247714,
       "p95_seconds": 0.00037300001713447273
     },
     "audio_file_read": {
-      "events": 951,
-      "sum_seconds": 1.5140441999828909,
-      "mean_seconds": 0.0015920548895719147,
+      "events": 960,
+      "sum_seconds": 1.5148111399903428,
+      "mean_seconds": 0.0015779282708232737,
       "p95_seconds": 0.0023310399847105145
     },
     "audio_read_encode": {
-      "events": 951,
-      "sum_seconds": 17.642550589866005,
-      "mean_seconds": 0.018551577907324927,
+      "events": 960,
+      "sum_seconds": 17.649809459864628,
+      "mean_seconds": 0.018385218187358988,
       "p95_seconds": 0.019968050008174032
+    },
+    "candidate_campaign": {
+      "events": 1,
+      "sum_seconds": 2041.2188105099776,
+      "mean_seconds": 2041.2188105099776,
+      "p95_seconds": 2041.2188105099776
     },
     "candidate_prepared_artifact_verification": {
       "events": 1,
@@ -37,27 +43,27 @@
       "p95_seconds": 0.7391075500054285
     },
     "checkpoint_append_fsync": {
-      "events": 68,
-      "sum_seconds": 0.44271072003175505,
-      "mean_seconds": 0.006510451765172868,
-      "p95_seconds": 0.007355959998676553
+      "events": 80,
+      "sum_seconds": 0.5322665400453843,
+      "mean_seconds": 0.006653331750567304,
+      "p95_seconds": 0.007553230010671541
     },
     "checkpoint_total": {
-      "events": 68,
-      "sum_seconds": 1.0060314500005916,
-      "mean_seconds": 0.014794580147067523,
-      "p95_seconds": 0.016353589977370575
+      "events": 80,
+      "sum_seconds": 1.1982593499706127,
+      "mean_seconds": 0.014978241874632658,
+      "p95_seconds": 0.016745150001952425
     },
     "client_http_open_to_headers": {
-      "events": 305,
-      "sum_seconds": 49131.0234207302,
-      "mean_seconds": 161.08532269091867,
+      "events": 320,
+      "sum_seconds": 50514.77875686018,
+      "mean_seconds": 157.85868361518806,
       "p95_seconds": 252.9521607499919
     },
     "client_http_read_body": {
-      "events": 305,
-      "sum_seconds": 0.08739972984767519,
-      "mean_seconds": 0.00028655649130385305,
+      "events": 320,
+      "sum_seconds": 0.08975934985210188,
+      "mean_seconds": 0.00028049796828781836,
       "p95_seconds": 0.0001716800034046173
     },
     "context_build": {
@@ -67,21 +73,21 @@
       "p95_seconds": 0.6305266799754463
     },
     "dispatch_blocking_execute": {
-      "events": 305,
-      "sum_seconds": 49428.310031829984,
-      "mean_seconds": 162.06003289124584,
+      "events": 320,
+      "sum_seconds": 50815.94103784999,
+      "mean_seconds": 158.79981574328121,
       "p95_seconds": 253.28549059998477
     },
     "dispatch_contact_lock_wait": {
-      "events": 317,
-      "sum_seconds": 0.0008466699509881437,
-      "mean_seconds": 2.6708831261455636e-06,
+      "events": 320,
+      "sum_seconds": 0.0008544099691789597,
+      "mean_seconds": 2.670031153684249e-06,
       "p95_seconds": 3.0600058380514383e-06
     },
     "dispatch_executor_wait": {
-      "events": 317,
-      "sum_seconds": 18.379000400047516,
-      "mean_seconds": 0.0579779192430521,
+      "events": 320,
+      "sum_seconds": 18.379446780047147,
+      "mean_seconds": 0.05743577118764733,
       "p95_seconds": 0.5344871699926443
     },
     "dispatch_trajectory_slot_wait": {
@@ -91,64 +97,64 @@
       "p95_seconds": 1207.9365880200057
     },
     "http_request": {
-      "events": 305,
-      "sum_seconds": 49131.29586371986,
-      "mean_seconds": 161.0862159466225,
+      "events": 320,
+      "sum_seconds": 50515.05990054988,
+      "mean_seconds": 157.85956218921837,
       "p95_seconds": 252.95263605000218
     },
     "native_fit": {
-      "events": 317,
-      "sum_seconds": 71.85399088959093,
-      "mean_seconds": 0.22666874097662754,
+      "events": 320,
+      "sum_seconds": 72.16684316957253,
+      "mean_seconds": 0.22552138490491416,
       "p95_seconds": 1.0474413099873345
     },
     "native_fit_capacity_wait": {
-      "events": 317,
-      "sum_seconds": 24.259607100277208,
-      "mean_seconds": 0.07652872902295649,
+      "events": 320,
+      "sum_seconds": 24.259632490284275,
+      "mean_seconds": 0.07581135153213836,
       "p95_seconds": 0.48439779999898747
     },
     "native_fit_lock_wait": {
-      "events": 317,
-      "sum_seconds": 0.05399474981823005,
-      "mean_seconds": 0.00017033044106697177,
+      "events": 320,
+      "sum_seconds": 0.053999489842681214,
+      "mean_seconds": 0.0001687484057583788,
       "p95_seconds": 2.1599989850074053e-06
     },
     "native_fit_recovery_lock_wait": {
-      "events": 317,
-      "sum_seconds": 45.89454884958104,
-      "mean_seconds": 0.14477775662328404,
+      "events": 320,
+      "sum_seconds": 45.894554429571144,
+      "mean_seconds": 0.14342048259240983,
       "p95_seconds": 1.3702195099904202
     },
     "output_normalize": {
-      "events": 68,
-      "sum_seconds": 0.01630751005723141,
-      "mean_seconds": 0.00023981632437105016,
-      "p95_seconds": 0.0002533899969421327
+      "events": 81,
+      "sum_seconds": 0.033648130076471716,
+      "mean_seconds": 0.0004154090132897743,
+      "p95_seconds": 0.00026013999013230205
     },
     "request_json_encode": {
-      "events": 317,
-      "sum_seconds": 0.16106159007176757,
-      "mean_seconds": 0.0005080807257784466,
+      "events": 320,
+      "sum_seconds": 0.16264513006899506,
+      "mean_seconds": 0.0005082660314656096,
       "p95_seconds": 0.0007915600144769996
     },
     "request_render": {
-      "events": 951,
-      "sum_seconds": 99.62677042011637,
-      "mean_seconds": 0.10476001095700986,
+      "events": 960,
+      "sum_seconds": 99.89731860015308,
+      "mean_seconds": 0.10405970687515946,
       "p95_seconds": 0.3750453800021205
     },
     "request_total": {
-      "events": 305,
-      "sum_seconds": 49199.63099279985,
-      "mean_seconds": 161.31026555016345,
+      "events": 320,
+      "sum_seconds": 50584.45260214986,
+      "mean_seconds": 158.0764143817183,
       "p95_seconds": 253.0475377300172
     },
     "response_json_decode": {
-      "events": 305,
-      "sum_seconds": 0.017714000103296712,
-      "mean_seconds": 5.807868886326791e-05,
-      "p95_seconds": 8.292999700643122e-05
+      "events": 320,
+      "sum_seconds": 0.018703570123761892,
+      "mean_seconds": 5.8448656636755915e-05,
+      "p95_seconds": 8.347001858055592e-05
     },
     "runtime_identity_cache_hit_memory": {
       "events": 78,
@@ -181,193 +187,193 @@
       "p95_seconds": 0.011532239994267002
     },
     "session_declared": {
-      "events": 1271,
-      "sum_seconds": 5.030696910398547,
-      "mean_seconds": 0.003958062085286032,
-      "p95_seconds": 0.006364500004565343
+      "events": 1283,
+      "sum_seconds": 5.048706730332924,
+      "mean_seconds": 0.003935079290984352,
+      "p95_seconds": 0.0056965700059663504
     },
     "session_image_hash": {
-      "events": 1271,
-      "sum_seconds": 0.607766319590155,
-      "mean_seconds": 0.0004781796377577931,
-      "p95_seconds": 0.0015914499817881733
+      "events": 1283,
+      "sum_seconds": 0.6097613496822305,
+      "mean_seconds": 0.00047526215875466133,
+      "p95_seconds": 0.0015699499926995486
     },
     "session_maps": {
-      "events": 1271,
-      "sum_seconds": 34.97175231980509,
-      "mean_seconds": 0.027515147379862385,
-      "p95_seconds": 0.10141196000040509
+      "events": 1283,
+      "sum_seconds": 35.158633499842836,
+      "mean_seconds": 0.027403455572753574,
+      "p95_seconds": 0.09335721001843922
     },
     "session_namespace": {
-      "events": 1271,
-      "sum_seconds": 5.863170279975748,
-      "mean_seconds": 0.0046130371990367805,
-      "p95_seconds": 0.018692870013182983
+      "events": 1283,
+      "sum_seconds": 5.887579229980474,
+      "mean_seconds": 0.004588916001543627,
+      "p95_seconds": 0.01825352999730967
     },
     "session_namespace_probe": {
-      "events": 1271,
-      "sum_seconds": 2.3407435789704323,
-      "mean_seconds": 0.0018416550581986091,
-      "p95_seconds": 0.0036776599881704897
+      "events": 1283,
+      "sum_seconds": 2.355908108933363,
+      "mean_seconds": 0.0018362495003377733,
+      "p95_seconds": 0.0036615399876609445
     },
     "session_socket_owner": {
-      "events": 1271,
-      "sum_seconds": 23.348210620169993,
-      "mean_seconds": 0.018369953281014945,
-      "p95_seconds": 0.06815711999661289
+      "events": 1283,
+      "sum_seconds": 23.426868010108592,
+      "mean_seconds": 0.018259445058541383,
+      "p95_seconds": 0.06751863000681624
     },
     "session_total": {
-      "events": 1271,
-      "sum_seconds": 84.3851154295553,
-      "mean_seconds": 0.06639269506652659,
-      "p95_seconds": 0.30373357998905703
+      "events": 1283,
+      "sum_seconds": 84.71389173954958,
+      "mean_seconds": 0.06602797485545564,
+      "p95_seconds": 0.30237476000911556
     },
     "transport_total": {
-      "events": 305,
-      "sum_seconds": 49143.38104664974,
-      "mean_seconds": 161.12583949721227,
+      "events": 320,
+      "sum_seconds": 50527.61721994972,
+      "mean_seconds": 157.8988038123429,
       "p95_seconds": 252.98472619999666
     }
   },
   "completed_sample_stage_totals": {
     "audio_base64_encode": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.002246838672042085
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.002256939871949726
     },
     "audio_file_read": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.022083298678540707
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.018935139249879284
     },
     "audio_read_encode": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.2577659666186425
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.22062261824830784
     },
     "checkpoint_append_fsync": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.006510451765172868
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.006653331750567304
     },
     "checkpoint_total": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.014794580147067523
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.014978241874632658
     },
     "client_http_open_to_headers": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 641.4686656126496
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 631.4347344607522
     },
     "client_http_read_body": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.0012100810272386298
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.0011219918731512734
     },
     "context_build": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.5346075520578512
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.5282190702491789
     },
     "dispatch_blocking_execute": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 645.7016090752928
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 635.1992629731249
     },
     "dispatch_contact_lock_wait": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 1.067455912775853e-05
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 1.0680124614736996e-05
     },
     "dispatch_executor_wait": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.2701844145584105
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.22974308475058933
     },
     "dispatch_trajectory_slot_wait": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 396.7056436680894
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 508.57098957600135
     },
     "http_request": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 641.4723999355873
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 631.4382487568735
     },
     "native_fit": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.9881328295523417
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.9020855396196567
     },
     "native_fit_capacity_wait": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.3567546942671042
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.30324540612855344
     },
     "native_fit_lock_wait": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.0007929283798576388
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.0006749936230335152
     },
     "native_fit_recovery_lock_wait": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.6749184688181712
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.5736819303696393
     },
     "output_normalize": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.00023981632437105016
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.0002408462511084508
     },
     "request_json_encode": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.002017537351896274
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.0020330641258624383
     },
     "request_render": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 1.4001092091177056
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 1.2487164825019135
     },
     "request_total": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 642.4430989772038
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 632.3056575268732
     },
     "response_json_decode": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.00023094794254147392
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.00023379462654702366
     },
     "runtime_identity_cache_hit_memory": {
       "samples_with_events": 1,
-      "mean_seconds_per_complete_sample": 5.472055122749332e-07
+      "mean_seconds_per_complete_sample": 4.6512468543369323e-07
     },
     "runtime_identity_cache_load": {
       "samples_with_events": 1,
-      "mean_seconds_per_complete_sample": 2.6826468563419494e-06
+      "mean_seconds_per_complete_sample": 2.280249827890657e-06
     },
     "runtime_identity_cache_persist": {
       "samples_with_events": 1,
-      "mean_seconds_per_complete_sample": 8.813087975688499e-06
+      "mean_seconds_per_complete_sample": 7.491124779335223e-06
     },
     "runtime_identity_verify": {
       "samples_with_events": 1,
-      "mean_seconds_per_complete_sample": 0.00016959176462157355
+      "mean_seconds_per_complete_sample": 0.00014415299992833752
     },
     "session_declared": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.06994499176696134
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.0630496142537595
     },
     "session_image_hash": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.008159581610765172
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.007615608870764845
     },
     "session_maps": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.47209604102638825
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.43889553924782376
     },
     "session_namespace": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.0805191951465745
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.07349210087450046
     },
     "session_namespace_probe": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.03081181366381797
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.029377469986866345
     },
     "session_socket_owner": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 0.3201571536834201
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 0.2925898682511615
     },
     "session_total": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 1.1608341188184568
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 1.0578616866190713
     },
     "transport_total": {
-      "samples_with_events": 68,
-      "mean_seconds_per_complete_sample": 641.6342148130852
+      "samples_with_events": 80,
+      "mean_seconds_per_complete_sample": 631.5952152493716
     }
   },
-  "scope": "Append-only archive is not atomic across members. Finished timing events omit in-flight spans. Nested stages and concurrent samples must not be summed into wall time.",
+  "scope": "Final archive after generation and scorer containers exited zero. Stage events may nest and concurrent samples must not be summed into wall time. Generic archive writer does not certify atomic snapshots.",
   "http_scope": "Open-to-headers includes client scheduling/network/server queue/prefill/decode; no attribution to individual server stages.",
   "new_model_calls": 0,
   "fixed_image_validation": {
@@ -376,5 +382,10 @@
     "summary_matches_local": true,
     "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026"
   },
-  "analysis_script_sha256": "a966576d0c6738b875c70161ce306c68417b859ec983601c7a87eecce13a1fc0"
+  "analysis_script_sha256": "a966576d0c6738b875c70161ce306c68417b859ec983601c7a87eecce13a1fc0",
+  "complete_sample_timings": {
+    "admission_wait_mean_s": 1.488589905125,
+    "admitted_to_finished_mean_s": 1146.2809335485001,
+    "admitted_to_finished_p95_s": 1726.23184538
+  }
 }

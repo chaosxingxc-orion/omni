@@ -26,10 +26,10 @@
   "remaining_rows": 0,
   "eta_basis": "Completed full 80-row campaign",
   "fulltest": {
-    "observed_at_utc": "2026-11-04T07:24:17Z",
-    "completed_rows": 10559,
+    "observed_at_utc": "2026-11-04T07:35:25Z",
+    "completed_rows": 10761,
     "total_rows": 13078,
-    "remaining_rows": 2519,
+    "remaining_rows": 2317,
     "cards": 4,
     "instances": 1,
     "wall_seconds_per_completed_row": null,
@@ -57,5 +57,12 @@
   },
   "result_file": "GEPA-Feedback80-Result.json",
   "exploration_successors_ready": 0,
-  "exploration_cards_without_ready_work": 4
+  "exploration_cards_without_ready_work": 4,
+  "external_result_review": {
+    "state": "running-stream-received-no-final-result",
+    "observed_at_utc": "2026-11-04T07:45:47Z",
+    "cases": 7,
+    "max_output_tokens": 131072,
+    "semantic_review_complete": false
+  }
 }
