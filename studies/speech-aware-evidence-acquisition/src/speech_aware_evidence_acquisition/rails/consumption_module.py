@@ -238,7 +238,7 @@ _COLUMN_OPTIONAL = frozenset({"prepared_seed"})
 
 COMPONENT_CATALOGUE: tuple[ComponentSpec, ...] = (
     ComponentSpec("tfgrpo-solver-experience", "USE, learned Solver experience for development",
-        frozenset({STATE_ON}), frozenset({"candidate", "source_manifest", "model_id", "base_template", "template", "consumer_ids", "purpose"}), optional_params=frozenset({"target_arm", "rendering", "render_manifest", "compact_params", "candidate_release"})),
+        frozenset({STATE_ON}), frozenset({"candidate", "source_manifest", "model_id", "base_template", "template", "consumer_ids", "purpose"}), optional_params=frozenset({"target_arm", "rendering", "render_manifest", "compact_params", "candidate_release", "source_kind"})),
     ComponentSpec(NODE_CONTEXT_PRESENTATION, "USE, explicit node context presentation",
         frozenset({STATE_ON}), frozenset(),
         optional_params=frozenset({"tool_schema_rendering", "reviewer_history_scope"})),

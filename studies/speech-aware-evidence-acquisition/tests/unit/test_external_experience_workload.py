@@ -45,3 +45,10 @@ def test_shared_registration_uses_two_solver_budget_and_external_recipe(repo,mon
     recipe=m.read(pkg/'analysis-recipe-v1.json')
     assert recipe['arms']==['learned','lock'] and recipe['schema']==job.RESULT_SCHEMA
     assert 'TF-GRPO' in (path/'docs/exposure-ledger.md').read_text()
+
+
+def test_external_source_kind_reaches_component_compiler():
+    from speech_aware_evidence_acquisition.rails.consumption_module import COMPONENT_CATALOGUE
+    from speech_aware_evidence_acquisition.rails.tfgrpo_consumption import validate_params
+    component=next(c for c in COMPONENT_CATALOGUE if c.component_id=='tfgrpo-solver-experience')
+    assert 'source_kind' in component.optional_params
