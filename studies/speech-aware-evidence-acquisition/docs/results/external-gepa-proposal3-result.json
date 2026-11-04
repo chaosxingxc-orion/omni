@@ -1,0 +1,64 @@
+{
+  "schema": "saea-public-gepa-pair-result-v1",
+  "candidate": "external-proposal-3-canonical-intent-fields",
+  "rows": 16,
+  "split": "fixed TRAIN difficult feedback",
+  "official": {
+    "child": {
+      "slu_f1": 0.44313787325093595,
+      "intent_accuracy": 0.625,
+      "span_f1": 0.29508196721311475
+    },
+    "lock": {
+      "slu_f1": 0.5615719575507407,
+      "intent_accuracy": 0.8125,
+      "span_f1": 0.4262295081967213
+    },
+    "parent": {
+      "slu_f1": 0.5447192577108265,
+      "intent_accuracy": 0.75,
+      "span_f1": 0.3870967741935484
+    }
+  },
+  "strict_success": {
+    "child": 0,
+    "lock": 0,
+    "parent": 0
+  },
+  "comparisons": {
+    "child_vs_lock": {
+      "proxy_mean_delta": -0.13824404761904763,
+      "strict_breaks": 0,
+      "strict_repairs": 0
+    },
+    "child_vs_parent": {
+      "proxy_mean_delta": -0.08129960317460316,
+      "strict_breaks": 0,
+      "strict_repairs": 0
+    },
+    "parent_vs_lock": {
+      "proxy_mean_delta": -0.056944444444444464,
+      "strict_breaks": 0,
+      "strict_repairs": 0
+    }
+  },
+  "total_generation_cost": {
+    "audio_seconds_used": 263.64849999999984,
+    "calls_used": 64,
+    "completion_tokens_total": 155770,
+    "latency_seconds_total": 6484.445179650094,
+    "prompt_tokens_total": 525464,
+    "tool_calls": 0
+  },
+  "all_same_input_rows_verified": 16,
+  "resources": {
+    "cards": 2,
+    "instances": 1,
+    "tp": 2,
+    "client_concurrency": 16
+  },
+  "generation_seconds": 636.0685352300061,
+  "generation_seconds_per_row": 39.75428345187538,
+  "candidate_accepted": false,
+  "next_action": "reject expansion; analyze field validity and intent regressions; no TEST tuning"
+}
