@@ -9,6 +9,7 @@ from speech_aware_evidence_acquisition.rails import solver_prompt_candidate as s
 from speech_aware_evidence_acquisition.rails import gepa_prompt_material as material
 from speech_aware_evidence_acquisition.rails.external_exploration import validate_proposals
 from test_gepa_prompt_material import pair_inputs
+from test_llama_server_transport import _spawn_live_matching_process
 
 
 def inputs():
@@ -147,3 +148,41 @@ def test_perception_release_rejects_material_type_and_claim_tampering(tmp_path,m
         with pytest.raises(ValueError):m.verify(tmp_path,tmp_path,{**material,**change})
     (tmp_path/'child.json').write_text('{}')
     with pytest.raises(ValueError):m.verify(tmp_path,tmp_path,material)
+
+
+def test_legacy_perception_pair_executes_all_eight_contacts(tmp_path, monkeypatch):
+    """The real compiled legacy config must execute, not merely load/custody-check."""
+    from types import MappingProxyType
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    from test_perception_template_variants import _build, _builder, _run, _requests_by_row, _control
+    base, setup = pair_inputs(tmp_path / 'materials')
+    original, _, parent, child = inputs()
+    setup.update(parent_arguments=parent, child_arguments=child,
+                 delivering_template_tokens=parent['count_tokens'](original))
+    built = material.compile_template_pair(tmp_path / 'materials', base, **setup)['baseline']
+    built.update(transport='vllm', carrier_lock_key='slurp')
+    config = load_native_episode_config(built, default_phase_program(built['policy']))
+    assert config.prompt_contact_limits == 'legacy-c17-lock-v1'
+    _, harness = _build(tmp_path / 'episode', monkeypatch)
+    # The fake transport has no live FIT service; keep all legacy graph constraints.
+    from dataclasses import replace
+    harness.config = replace(config, context_fit_policy="raise",
+                             deliver_normaliser_id=harness.config.deliver_normaliser_id)
+    harness.template_variant_materials = MappingProxyType({
+        'parent': _builder(harness, 'p1'), 'child': _builder(harness, 'p2')})
+    _run(harness)
+    rows = _requests_by_row(harness)
+    assert len(rows) == 4
+    for sample_id, requests in rows.items():
+        assert len(requests) == 8
+        controls = [_control(request) for request in requests]
+        ids = [control['contact_id'] for control in controls]
+        assert len(set(ids)) == 8
+        for role, offset in [('perception', 7), ('solver', 8)]:
+            role_ids = [control['contact_id'] for control in controls if control['role_id'] == role]
+            assert len(role_ids) == 4
+            for branch, contact in zip(('parent', 'child', 'aa', 'lock'), role_ids):
+                expected = 'phase-native-module-v1-c17'
+                if branch != 'lock': expected += ':perception-arm:' + branch
+                assert f'{expected}:{role}:{offset}:{sample_id}' in contact

@@ -6178,13 +6178,20 @@ async def _invoke_native_role_episode(
                     from .native_episode_config import validate_prompt_contact_limits
                     validate_prompt_contact_limits(config)
                     group = role.supply_variants if role.role_kind == "solver" else None
-                    # Validation above permits only the original lock or the
-                    # bounded seed-only group. Preserve the delivering lock's
-                    # contact identity while giving every candidate its own ID.
-                    if index < 0 or index >= (group.arm_count if group is not None else 1):
+                    # A validated perception pair has independent P and S
+                    # contacts for each branch. Preserve the delivering lock's
+                    # historical IDs; never alias a candidate to that lock.
+                    perception_group = config.perception_branch_group
+                    width = (perception_group.branch_count if perception_group is not None
+                             else group.arm_count if group is not None else 1)
+                    if index < 0 or index >= width:
                         raise RailsRunnerError("legacy lock cannot make another role contact")
                     contact_program = "phase-native-module-v1-c17"
-                    if group is not None and group.arm_ids[index] != group.delivered_arm.arm_id:
+                    if perception_group is not None:
+                        branch = perception_group.branch_ids[index]
+                        if branch != perception_group.delivering_branch.branch_id:
+                            contact_program += ":perception-arm:" + branch
+                    elif group is not None and group.arm_ids[index] != group.delivered_arm.arm_id:
                         contact_program += ":seed-arm:" + group.arm_ids[index]
                     contact_index = {"perception": 7, "solver": 8}[role.role_kind]
                 kwargs = dict(
