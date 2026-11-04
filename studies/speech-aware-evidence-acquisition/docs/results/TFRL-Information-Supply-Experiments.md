@@ -32,3 +32,8 @@
 ## 调度变更：统一外部学习模型
 
 根据用户最新分工，schema-only与decision-context两个本地学习后继已在生成pending时停止其队列和前序barrier，配置及证据保留。它们不再等待本地推理；历史入队信息仅作追溯。迁移计划见TFRL-External-Learner-Unification；NPU后续承担任务轨迹采集及候选验证。
+
+
+## 新GEPA候选来源核验
+
+node2-a/b均通过固定镜像、无网络、只读挂载的verify_mutation_bundle核验，退出0：a生成1调用，输入42102、输出3427；b生成1调用，输入36919、输出1736。两者均结构有效、绑定原parent及真实响应；candidate_accepted=false代表尚未通过系统评估晋升。以上为生成调用，FIT及历史成本另计。下一步可进入固定样本配对验证，不再将candidate_publishable=false误报为拒绝原因。

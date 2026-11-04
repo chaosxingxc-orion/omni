@@ -71,3 +71,35 @@ def test_http_error_never_retries(setup,monkeypatch):
     assert m.execute(config)['state']=='http_error'
     monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:pytest.fail('duplicate spend'))
     assert m.execute(config)['http_status']==429
+
+@pytest.mark.parametrize('complete',[True,False])
+def test_stream_journal_and_terminal_required(setup,monkeypatch,complete):
+    config,cfg=setup;cfg['stream']=True;config.write_text(json.dumps(cfg))
+    events=[{'id':'r1','model':'teacher','choices':[{'index':0,'delta':{'reasoning_content':'reason'},'finish_reason':None}]},
+        {'id':'r1','model':'teacher','choices':[{'index':0,'delta':{'content':'OK'},'finish_reason':'stop'}]},
+        {'id':'r1','model':'teacher','choices':[],'usage':{'prompt_tokens':10,'completion_tokens':5}}]
+    lines=[]
+    for event in events:lines.extend([('data: '+json.dumps(event)+'\n').encode(),b'\n'])
+    if complete:lines.extend([b'data: [DONE]\n',b'\n'])
+    class Response:
+        status=200;headers={'x-request-id':'rid','content-type':'text/event-stream'}
+        def __enter__(self):return self
+        def __exit__(self,*a):pass
+        def __iter__(self):return iter(lines)
+    class Opener:
+        def open(self,req,**kw):
+            body=json.loads(req.data);assert body['stream_options']=={'include_usage':True}
+            return Response()
+    monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:Opener())
+    result=m.execute(config);root=Path(cfg['output_root'])
+    assert (root/'response.sse').read_bytes()==b''.join(lines)
+    assert json.loads((root/'headers.json').read_text())['request_id']=='rid'
+    if complete:
+        assert result['state']=='response_received'
+        assert result['usage']['prompt_tokens']==10
+        response=json.loads((root/'response.json').read_text())
+        assert response['choices'][0]['message']=={'role':'assistant','content':'OK','reasoning_content':'reason'}
+    else:
+        assert result['state']=='unknown' and not (root/'response.json').exists()
+    monkeypatch.setattr(m.urllib.request,'build_opener',lambda *a:pytest.fail('no redispatch'))
+    assert m.execute(config)==result

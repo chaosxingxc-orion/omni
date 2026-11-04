@@ -31,12 +31,69 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+def read_stream(response, root):
+    """Journal every SSE line before interpreting it; incomplete streams stay unknown."""
+    content, reasoning, usage, model, response_id = [], [], None, None, None
+    finish = None
+    pending = []
+    done = False
+    with (root/'response.sse').open('xb') as journal:
+        os.chmod(root/'response.sse', 0o600)
+        for line in response:
+            journal.write(line)
+            journal.flush()
+            os.fsync(journal.fileno())
+            value = line.decode('utf-8').rstrip('\r\n')
+            if value.startswith('data:'):
+                pending.append(value[5:].lstrip(' '))
+                continue
+            if value or not pending:
+                continue
+            payload = '\n'.join(pending)
+            pending.clear()
+            if payload == '[DONE]':
+                done = True
+                break
+            event = json.loads(payload)
+            if 'error' in event:
+                raise ValueError('stream provider error; see private journal')
+            if event.get('id'):
+                if response_id is not None and response_id != event['id']:
+                    raise ValueError('stream response identity changed')
+                response_id = event['id']
+            if event.get('model'):
+                if model is not None and model != event['model']:
+                    raise ValueError('stream model changed')
+                model = event['model']
+            if event.get('usage') is not None:
+                usage = event['usage']
+            for choice in event.get('choices', []):
+                if choice.get('index') != 0:
+                    raise ValueError('only one teacher completion supported')
+                delta = choice.get('delta', {})
+                if delta.get('content') is not None:
+                    content.append(delta['content'])
+                if delta.get('reasoning_content') is not None:
+                    reasoning.append(delta['reasoning_content'])
+                if choice.get('finish_reason') is not None:
+                    finish = choice['finish_reason']
+    if not done or finish is None:
+        raise ValueError('incomplete stream; no retry')
+    result = {'id': response_id, 'model': model, 'usage': usage, 'choices': [
+        {'index': 0, 'finish_reason': finish, 'message': {'role': 'assistant',
+         'content': ''.join(content), 'reasoning_content': ''.join(reasoning)}}]}
+    persist(root/'response.json', result)
+    return result, hashlib.sha256((root/'response.sse').read_bytes()).hexdigest()
+
+
 def execute(config_path):
     cfg = json.loads(Path(config_path).read_bytes())
     keys = {'schema', 'endpoint', 'model', 'api_key_env', 'messages', 'max_tokens',
             'timeout_seconds', 'output_root'}
-    if set(cfg) != keys or cfg['schema'] != 'saea-external-learner-v1':
+    if not keys <= set(cfg) <= keys | {'stream'} or cfg['schema'] != 'saea-external-learner-v1':
         raise ValueError('exact external learner configuration required')
+    if type(cfg.get('stream', False)) is not bool:
+        raise ValueError('boolean stream setting required')
     url = urllib.parse.urlsplit(cfg['endpoint'])
     if (url.scheme != 'https' or not url.hostname or url.username or url.password
             or url.query or url.fragment or not url.path.endswith('/chat/completions')):
@@ -75,7 +132,10 @@ def execute(config_path):
             if (root/'result.json').exists():
                 return json.loads((root/'result.json').read_bytes())
             raise ValueError('previous dispatch may have spent; reconcile without retry')
-        body = {'model': cfg['model'], 'messages': messages, 'max_tokens': cfg['max_tokens'], 'stream': False}
+        body = {'model': cfg['model'], 'messages': messages, 'max_tokens': cfg['max_tokens'],
+                'stream': cfg.get('stream', False)}
+        if body['stream']:
+            body['stream_options'] = {'include_usage': True}
         persist(root/'request.json', body)
         persist(root/'intent.json', intent)
         req = urllib.request.Request(cfg['endpoint'], data=json.dumps(body).encode(),
@@ -83,15 +143,22 @@ def execute(config_path):
         started = time.monotonic()
         try:
             with urllib.request.build_opener(NoRedirect()).open(req, timeout=cfg['timeout_seconds']) as response:
-                wire = response.read()
-                # Persist complete response before JSON interpretation, including malformed replies.
-                with (root/'response.bin').open('xb') as handle:
-                    os.chmod(root/'response.bin', 0o600)
-                    handle.write(wire); handle.flush(); os.fsync(handle.fileno())
-                result = json.loads(wire)
+                persist(root/'headers.json', {'http_status': response.status,
+                    'request_id': response.headers.get('x-request-id'),
+                    'content_type': response.headers.get('content-type')})
+                if body['stream']:
+                    result, response_sha = read_stream(response, root)
+                else:
+                    wire = response.read()
+                    # Preserve complete wire bytes before interpretation, even for malformed replies.
+                    with (root/'response.bin').open('xb') as handle:
+                        os.chmod(root/'response.bin', 0o600)
+                        handle.write(wire); handle.flush(); os.fsync(handle.fileno())
+                    result = json.loads(wire)
+                    response_sha = hashlib.sha256(wire).hexdigest()
                 summary = {'state': 'response_received', 'http_status': response.status,
                     'request_id': response.headers.get('x-request-id'), 'model': result.get('model'),
-                    'usage': result.get('usage'), 'response_sha256': hashlib.sha256(wire).hexdigest(),
+                    'usage': result.get('usage'), 'response_sha256': response_sha,
                     'finish_reasons': [c.get('finish_reason') for c in result.get('choices', [])],
                     'candidate_accepted': False, 'semantic_validation': 'pending'}
         except urllib.error.HTTPError as error:

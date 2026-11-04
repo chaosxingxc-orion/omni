@@ -9,5 +9,6 @@
   },
   "max_tokens": 16384,
   "timeout_seconds": 600,
-  "output_root": "/absolute/private/unique-request-directory"
+  "output_root": "/absolute/private/unique-request-directory",
+  "stream": true
 }
