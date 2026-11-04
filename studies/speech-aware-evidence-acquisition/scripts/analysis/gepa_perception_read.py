@@ -12,10 +12,12 @@ from speech_aware_evidence_acquisition.rails.gepa_perception_request_audit impor
 
 
 def audit_inputs(repo,values,bundle,ids,predecessor_records=None):
-    from speech_aware_evidence_acquisition.rails.gepa_prompt_material import validate_pair_declaration,pair_node
+    from speech_aware_evidence_acquisition.rails.gepa_prompt_material import validate_pair_declaration,pair_node,independent_perception_repeat
     import stage3_rollout_score as scorer
     declaration=validate_pair_declaration(values['native_episode']['consumption_module'])
     if pair_node(declaration)!='perception':raise ValueError('P declaration required')
+    if not independent_perception_repeat(values['native_episode']['consumption_module']):
+        raise ValueError('four-independent-P reader requires explicit v2 repeat scope; legacy twin reuses lock P')
     original=confined(repo/'configs',values['phase_material']['perception']['instruction_template']).read_text()
     solver=confined(repo/'configs',values['phase_material']['solver']['instruction_template']).read_text()
     templates={'aa':original,'lock':original}
@@ -85,7 +87,7 @@ def run(repo,data,out,name):
     result=summarize({a:results[a] for a in ('parent','child','lock')},items)
     aa=summarize({'parent':results['lock'],'child':results['aa'],'lock':results['lock']},items)
     result.update(schema='saea-gepa-perception-pair-result-v1',source=rendered['source'],input_audit=inputs,
-        repeat_control={'official':results['aa']['aggregate']['official'],'vs_lock':aa['comparisons']['child_vs_parent']},
+        repeat_control={'scope':'independent-perception','official':results['aa']['aggregate']['official'],'vs_lock':aa['comparisons']['child_vs_parent']},
         native_role_costs=native_costs(bundle.outputs_rows,bundle.trace_records),total_cost=bundle.manifest['cost'],
         new_model_calls=0,quality_scope='independent P-to-S arms; development or held-out status follows registered partition')
     target=out/'complete.json'

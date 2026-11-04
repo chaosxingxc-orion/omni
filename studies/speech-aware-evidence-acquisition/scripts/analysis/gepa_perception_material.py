@@ -75,7 +75,8 @@ def build_seed(repo,spec,out):
 
 
 def derive(repo,data,spec):
-    if set(spec)!={'schema','seed','external_mutation'} or spec['schema']!='saea-gepa-perception-pair-build-v1':
+    if set(spec) not in ({'schema','seed','external_mutation'},
+                        {'schema','seed','external_mutation','repeat_scope'}) or spec['schema']!='saea-gepa-perception-pair-build-v1':
         raise ValueError('exact perception pair build configuration required')
     manifest=read(checked(spec['seed']))
     if manifest['schema']!=SEED_SCHEMA:raise ValueError('explicit perception seed required')
@@ -95,7 +96,8 @@ def derive(repo,data,spec):
         compiled=compile_template_pair(repo,result['source_baseline'],parent_arguments=dict(common,candidate=parent),
             child_arguments=dict(common,candidate=child,parent=parent,expected_parent_sha256=parent['candidate_sha256'],mutation_text=mutation['mutation_text']),
             fit_estimate=manifest['specification']['fit_estimate'],max_supplied_items=manifest['specification']['max_supplied_items'],
-            delivering_template_tokens=count(result['original']))
+            delivering_template_tokens=count(result['original']),
+            perception_repeat_scope=spec.get('repeat_scope','shared-lock-perception'))
     finally:
         if hasattr(count,'close'):count.close()
     return {**result,'child':child,'compiled_baseline':compiled['baseline'],'declaration':compiled['declaration'],

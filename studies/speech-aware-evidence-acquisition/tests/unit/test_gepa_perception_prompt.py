@@ -150,7 +150,8 @@ def test_perception_release_rejects_material_type_and_claim_tampering(tmp_path,m
     with pytest.raises(ValueError):m.verify(tmp_path,tmp_path,material)
 
 
-def test_legacy_perception_pair_executes_all_eight_contacts(tmp_path, monkeypatch):
+@pytest.mark.parametrize("repeat_scope", ["shared-lock-perception", "independent-perception"])
+def test_legacy_perception_pair_executes_all_eight_contacts(tmp_path, monkeypatch, repeat_scope):
     """The real compiled legacy config must execute, not merely load/custody-check."""
     from types import MappingProxyType
     from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
@@ -160,11 +161,15 @@ def test_legacy_perception_pair_executes_all_eight_contacts(tmp_path, monkeypatc
     original, _, parent, child = inputs()
     setup.update(parent_arguments=parent, child_arguments=child,
                  delivering_template_tokens=parent['count_tokens'](original))
-    built = material.compile_template_pair(tmp_path / 'materials', base, **setup)['baseline']
+    built = material.compile_template_pair(tmp_path / 'materials', base,
+        perception_repeat_scope=repeat_scope, **setup)['baseline']
     built.update(transport='vllm', carrier_lock_key='slurp')
     config = load_native_episode_config(built, default_phase_program(built['policy']))
     assert config.prompt_contact_limits == 'legacy-c17-lock-v1'
     _, harness = _build(tmp_path / 'episode', monkeypatch)
+    # Real runs can produce different greedy repeat outputs; equal fixture notes hid the bug.
+    import test_perception_template_variants as variants
+    monkeypatch.setitem(variants.NOTE, 3, 'repeat-own-note')
     # The fake transport has no live FIT service; keep all legacy graph constraints.
     from dataclasses import replace
     harness.config = replace(config, context_fit_policy="raise",
@@ -186,3 +191,34 @@ def test_legacy_perception_pair_executes_all_eight_contacts(tmp_path, monkeypatc
                 expected = 'phase-native-module-v1-c17'
                 if branch != 'lock': expected += ':perception-arm:' + branch
                 assert f'{expected}:{role}:{offset}:{sample_id}' in contact
+
+        solver_requests = [r for r in requests if _control(r)['role_id'] == 'solver']
+        aa_state, = [h for h in solver_requests[2]['history'] if h.get('role') == 'agent_state' and h.get('state_kind') == 'phase:perception']
+        lock_state, = [h for h in solver_requests[3]['history'] if h.get('role') == 'agent_state' and h.get('state_kind') == 'phase:perception']
+        assert lock_state['content'] == f'alpha-note:{sample_id}'
+        expected_note = f'repeat-own-note:{sample_id}' if repeat_scope == 'independent-perception' else lock_state['content']
+        assert aa_state['content'] == expected_note
+        assert aa_state['source_response_sha256'] == p.text_sha(expected_note)
+        if repeat_scope == 'independent-perception':
+            assert solver_requests[2]['supplied_evidence'] != solver_requests[3]['supplied_evidence']
+
+
+def test_independent_repeat_mode_is_explicit_and_unknown_scope_refused(tmp_path):
+    base, setup = pair_inputs(tmp_path)
+    original, _, parent, child = inputs()
+    setup.update(parent_arguments=parent, child_arguments=child,
+                 delivering_template_tokens=parent['count_tokens'](original))
+    with pytest.raises(ValueError, match='unknown perception repeat scope'):
+        material.compile_template_pair(tmp_path, base, perception_repeat_scope='guess', **setup)
+    built = material.compile_template_pair(tmp_path, base, perception_repeat_scope='independent-perception', **setup)['baseline']
+    assert material.independent_perception_repeat(built['native_episode']['consumption_module'])
+    assert built['native_episode']['consumption_module']['gepa_pair']['schema'] == material.INDEPENDENT_PERCEPTION_PAIR_SCHEMA
+
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
+    built.update(transport='vllm', carrier_lock_key='slurp')
+    assert native_contact_custody_enabled(built)
+    from gepa_perception_read import audit_inputs
+    legacy = copy.deepcopy(built)
+    legacy['native_episode']['consumption_module']['gepa_pair']['schema'] = material.PERCEPTION_PAIR_SCHEMA
+    with pytest.raises(ValueError, match='explicit v2 repeat scope'):
+        audit_inputs(tmp_path, legacy, None, [])

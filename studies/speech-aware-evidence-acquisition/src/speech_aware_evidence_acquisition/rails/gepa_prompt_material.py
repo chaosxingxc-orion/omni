@@ -104,13 +104,21 @@ def compile_template_probe(repo, baseline, *, fit_estimate, max_supplied_items,
 
 PAIR_SCHEMA = 'saea-gepa-template-pair-v1'
 PERCEPTION_PAIR_SCHEMA = 'saea-gepa-perception-template-pair-v1'
+INDEPENDENT_PERCEPTION_PAIR_SCHEMA = 'saea-gepa-perception-template-pair-v2'
 
 def pair_node(declaration):
-    schemas = {PAIR_SCHEMA: 'solver', PERCEPTION_PAIR_SCHEMA: 'perception'}
+    schemas = {PAIR_SCHEMA: 'solver', PERCEPTION_PAIR_SCHEMA: 'perception',
+               INDEPENDENT_PERCEPTION_PAIR_SCHEMA: 'perception'}
     try:
         return schemas[declaration['schema']]
     except (KeyError, TypeError) as exc:
         raise ValueError('unsupported GEPA pair schema') from exc
+
+def independent_perception_repeat(block):
+    """Only the explicit v2 declaration makes the repeat consume its own P."""
+    declaration = validate_pair_declaration(block)
+    return declaration['schema'] == INDEPENDENT_PERCEPTION_PAIR_SCHEMA
+
 
 FROZEN_PAIR_FIELDS = ('knowledge_stores', 'thinking_policy', 'phase_material',
                       'phase_tools', 'preparation_source_receipts')
@@ -161,10 +169,11 @@ def validate_pair_declaration(block):
 
 
 def compile_template_pair(repo, baseline, *, parent_arguments, child_arguments,
-                          fit_estimate, max_supplied_items, delivering_template_tokens):
+                          fit_estimate, max_supplied_items, delivering_template_tokens,
+                          perception_repeat_scope="shared-lock-perception"):
     """Compile explicit node interventions with frozen opposite-node templates.
 
-    Solver uses shared P and parent/child/lock S. Perception uses independent
+    Solver uses shared P and parent/child/lock S. Explicit Perception v2 uses independent
     parent/child/AA/lock P-to-S branches (eight primary contacts).
 
     Each argument dictionary has publish_template's externally anchored inputs.
@@ -187,6 +196,10 @@ def compile_template_pair(repo, baseline, *, parent_arguments, child_arguments,
             or child_arguments.get('expected_parent_sha256') != parent_arguments['candidate']['candidate_sha256']):
         raise ValueError('pair must bind child to the actual verified current parent')
     node = for_contract(parent_arguments['contract'])._contract.node
+    if perception_repeat_scope not in ('shared-lock-perception', 'independent-perception'):
+        raise ValueError('unknown perception repeat scope')
+    if node != 'perception' and perception_repeat_scope != 'shared-lock-perception':
+        raise ValueError('independent perception repeat requires Perception pair')
     # Verify both before publishing; rejected lineage cannot publish either arm.
     for args in (parent_arguments, child_arguments):
         for_contract(args['contract']).executable_template(args['candidate'], contract=args['contract'],
@@ -203,7 +216,9 @@ def compile_template_pair(repo, baseline, *, parent_arguments, child_arguments,
         'delivering_template_tokens': delivering_template_tokens, 'twin': node == 'perception',
         'fit_estimate': copy.deepcopy(fit_estimate)}
     child = child_arguments['candidate']
-    block['gepa_pair'] = {'schema': PERCEPTION_PAIR_SCHEMA if node == 'perception' else PAIR_SCHEMA,
+    perception_schema = (INDEPENDENT_PERCEPTION_PAIR_SCHEMA
+        if perception_repeat_scope == 'independent-perception' else PERCEPTION_PAIR_SCHEMA)
+    block['gepa_pair'] = {'schema': perception_schema if node == 'perception' else PAIR_SCHEMA,
         'contract_sha256': parent_arguments['expected_contract_sha256'],
         'tokenizer_sha256': parent_arguments['expected_tokenizer_sha256'],
         'parent_candidate_sha256': parent_arguments['candidate']['candidate_sha256'],
@@ -222,5 +237,7 @@ def compile_template_pair(repo, baseline, *, parent_arguments, child_arguments,
         raise ValueError('pair changed frozen system or contact graph')
     return {'baseline': result, 'materials': materials, 'declaration': block['gepa_pair'],
         'program_ceiling': ceiling, 'new_model_calls': 0,
-        'purpose': ('independent P-to-S parent/child/AA/lock evaluation; external scoring required'
+        'purpose': (('independent P-to-S parent/child/AA/lock evaluation; external scoring required'
+                     if perception_repeat_scope == 'independent-perception' else
+                     'independent parent/child/lock P-to-S with shared-lock-P Solver repeat; external scoring required')
                     if node == 'perception' else 'same-P current-parent/child/lock evaluation; external scoring required')}

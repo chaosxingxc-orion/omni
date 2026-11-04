@@ -2764,6 +2764,12 @@ async def _invoke_native_role_episode(
     perception_template_mode = bool(
         perception_branch_group is not None and perception_branch_group.is_template
     )
+    independent_perception_repeat = False
+    if perception_template_mode and config.consumption_module_json:
+        declared_module = json.loads(config.consumption_module_json)
+        if declared_module.get('gepa_pair'):
+            from .gepa_prompt_material import independent_perception_repeat as repeat_is_independent
+            independent_perception_repeat = repeat_is_independent(declared_module)
     # NX-T R1 (2026-10-13): True when the Perception branch group is the per-node THINKING-POLICY kind -- every branch renders
     # the delivering branch's own evidence and instruction and differs only in the thinking decoding of its own contacts
     # (applied at request composition, ``reproduction.ojw.native_request``). False for every config written before NX-T R1.
@@ -3414,7 +3420,7 @@ async def _invoke_native_role_episode(
             branch = perception_branch_group.branch(branch_id)
         except PerceptionBranchError as error:
             raise RailsRunnerError(str(error)) from error
-        if branch.deliver or branch.is_twin:
+        if branch.deliver or (branch.is_twin and not independent_perception_repeat):
             return ctx
         note_text = perception_branch_notes.get(branch_id)
         if not isinstance(note_text, str) or not note_text:
@@ -3850,7 +3856,7 @@ async def _invoke_native_role_episode(
                 () if supply is None else supply.fusion_decision.selected_value_ids
             )
             for branch in perception_branch_group.branches:
-                if branch.deliver or branch.is_twin:
+                if branch.deliver or (branch.is_twin and not independent_perception_repeat):
                     continue
                 note_text = perception_branch_notes.get(branch.branch_id)
                 if not isinstance(note_text, str) or not note_text:
@@ -7161,7 +7167,7 @@ async def _invoke_native_role_episode(
                         if perception_sampling_mode and _branch.perception_samples is not None
                         else _row["note_sha256"]
                     )
-                    if _branch.is_twin:
+                    if _branch.is_twin and not independent_perception_repeat:
                         if _render != _a_render:
                             raise RailsRunnerError(
                                 f"level-2 perception branch {_branch.branch_id!r} (the twin) "
