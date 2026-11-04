@@ -1,0 +1,15 @@
+# 评分元数据在实验前校验
+
+## 已修复
+
+外部知识工作流曾生成带description/native_learning_seal额外字段、缺note或未注册算法ID的stage3_algorithm，导致NPU完成后官方reader才退出。
+
+将外部TF-GRPO原多阶段、融合反馈、ACE加法、ACE单槽构建、Reflexion迁移分别注册，准确说明adaptation范围；不会把离线经验应用标为完整原算法或自动批准。reference/reflexion/slot标签统一使用合法id/operators_used/note。
+
+通用PairWorkload.stage在写新配置前校验标签，admit在生成准入draft/receipt前复核声明的标签；不修改旧运行树，不允许非法历史配置静默通过。未来新配置复用此入口，不需每次复制评分registry覆盖层。
+
+## 验证与限制
+
+固定镜像首次99项通过、3项失败来自新增测试误用ValueError而实际契约抛Stage3AlgorithmError；修正异常断言后准入7项通过。增加准备阶段副作用测试，首次漏fixture曝光账本，补完整fixture后1项通过，原27项已通过。合计103项唯一相关测试通过，失败日志保留。
+
+范围仅标签schema、算法注册及准备/准入拒绝路径；并未证明所有模型、数据、评分器挂载都正确。已有external_experience_read按封存manifest取scorer；其他独立评分配置仍须显式绑定封存scorer。原始算法label和结果不会追溯改写。

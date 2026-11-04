@@ -1,0 +1,68 @@
+{
+  "schema": "solver-protocol-complete80-audit-v1",
+  "new_model_calls": 0,
+  "checkpoint_sha256": "2de618edcafe89d7fc8d2102240ea610a188c89b67dcf4dd46403fc6f17b0d71",
+  "completed": 80,
+  "official": {
+    "constrained": {
+      "slu_f1": 0.6961027611131887,
+      "intent_accuracy": 0.825,
+      "span_f1": 0.5701357466063348
+    },
+    "lock": {
+      "slu_f1": 0.7099482106070253,
+      "intent_accuracy": 0.8375,
+      "span_f1": 0.5727272727272726
+    }
+  },
+  "strict": {
+    "constrained": 31,
+    "lock": 31
+  },
+  "protocol_validity": {
+    "constrained": {
+      "json": 80,
+      "schema": 80
+    },
+    "lock": {
+      "json": 80,
+      "schema": 79
+    }
+  },
+  "latency": {
+    "perception": {
+      "n": 80,
+      "mean_s": 69.77256169762549,
+      "p50_s": 62.164683579991106,
+      "p95_s": 129.39415165001992
+    },
+    "constrained": {
+      "n": 80,
+      "mean_s": 83.98975495375126,
+      "p50_s": 78.135366004979,
+      "p95_s": 132.0332348299562
+    },
+    "lock": {
+      "n": 80,
+      "mean_s": 87.25324287699986,
+      "p50_s": 85.39127292501507,
+      "p95_s": 130.76500418002252
+    }
+  },
+  "complete_row_usage": {
+    "prompt_tokens": 1563520,
+    "completion_tokens": 476178
+  },
+  "expected_format_hashes": [
+    "7e53397053a27aaca077d741ab966489a3bfbae1ed60cc9faecb930d0d4184c0"
+  ],
+  "generation_duration_seconds": 1519.795884,
+  "generation_wall_seconds_per_row": 18.997448549999998,
+  "gen_calls": 240,
+  "fit_contacts": 240,
+  "unknown_contacts": 0,
+  "historical_cost_scope": "current Solver run only; old experiments retained separately",
+  "repairs": 2,
+  "breaks": 2,
+  "promotion": false
+}
