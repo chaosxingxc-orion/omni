@@ -1,0 +1,380 @@
+{
+  "schema": "saea-exploration-timing-audit-v1",
+  "archive_sha256": "1239f0425914744ea2b2f23b115131ebf85cf10dc9739fca65f435a03897460d",
+  "archive_consistent_snapshot": false,
+  "checkpoint_complete_rows_in_archive": 68,
+  "total_rows": 80,
+  "malformed_timing_lines": 0,
+  "all_finished_events_by_stage": {
+    "audio_base64_encode": {
+      "events": 951,
+      "sum_seconds": 0.17902672980562784,
+      "mean_seconds": 0.0001882510302898295,
+      "p95_seconds": 0.00037300001713447273
+    },
+    "audio_file_read": {
+      "events": 951,
+      "sum_seconds": 1.5140441999828909,
+      "mean_seconds": 0.0015920548895719147,
+      "p95_seconds": 0.0023310399847105145
+    },
+    "audio_read_encode": {
+      "events": 951,
+      "sum_seconds": 17.642550589866005,
+      "mean_seconds": 0.018551577907324927,
+      "p95_seconds": 0.019968050008174032
+    },
+    "candidate_prepared_artifact_verification": {
+      "events": 1,
+      "sum_seconds": 34.86813506000908,
+      "mean_seconds": 34.86813506000908,
+      "p95_seconds": 34.86813506000908
+    },
+    "candidate_runtime_build": {
+      "events": 1,
+      "sum_seconds": 0.7391075500054285,
+      "mean_seconds": 0.7391075500054285,
+      "p95_seconds": 0.7391075500054285
+    },
+    "checkpoint_append_fsync": {
+      "events": 68,
+      "sum_seconds": 0.44271072003175505,
+      "mean_seconds": 0.006510451765172868,
+      "p95_seconds": 0.007355959998676553
+    },
+    "checkpoint_total": {
+      "events": 68,
+      "sum_seconds": 1.0060314500005916,
+      "mean_seconds": 0.014794580147067523,
+      "p95_seconds": 0.016353589977370575
+    },
+    "client_http_open_to_headers": {
+      "events": 305,
+      "sum_seconds": 49131.0234207302,
+      "mean_seconds": 161.08532269091867,
+      "p95_seconds": 252.9521607499919
+    },
+    "client_http_read_body": {
+      "events": 305,
+      "sum_seconds": 0.08739972984767519,
+      "mean_seconds": 0.00028655649130385305,
+      "p95_seconds": 0.0001716800034046173
+    },
+    "context_build": {
+      "events": 160,
+      "sum_seconds": 42.25752561993431,
+      "mean_seconds": 0.26410953512458946,
+      "p95_seconds": 0.6305266799754463
+    },
+    "dispatch_blocking_execute": {
+      "events": 305,
+      "sum_seconds": 49428.310031829984,
+      "mean_seconds": 162.06003289124584,
+      "p95_seconds": 253.28549059998477
+    },
+    "dispatch_contact_lock_wait": {
+      "events": 317,
+      "sum_seconds": 0.0008466699509881437,
+      "mean_seconds": 2.6708831261455636e-06,
+      "p95_seconds": 3.0600058380514383e-06
+    },
+    "dispatch_executor_wait": {
+      "events": 317,
+      "sum_seconds": 18.379000400047516,
+      "mean_seconds": 0.0579779192430521,
+      "p95_seconds": 0.5344871699926443
+    },
+    "dispatch_trajectory_slot_wait": {
+      "events": 80,
+      "sum_seconds": 40685.67916608011,
+      "mean_seconds": 508.57098957600135,
+      "p95_seconds": 1207.9365880200057
+    },
+    "http_request": {
+      "events": 305,
+      "sum_seconds": 49131.29586371986,
+      "mean_seconds": 161.0862159466225,
+      "p95_seconds": 252.95263605000218
+    },
+    "native_fit": {
+      "events": 317,
+      "sum_seconds": 71.85399088959093,
+      "mean_seconds": 0.22666874097662754,
+      "p95_seconds": 1.0474413099873345
+    },
+    "native_fit_capacity_wait": {
+      "events": 317,
+      "sum_seconds": 24.259607100277208,
+      "mean_seconds": 0.07652872902295649,
+      "p95_seconds": 0.48439779999898747
+    },
+    "native_fit_lock_wait": {
+      "events": 317,
+      "sum_seconds": 0.05399474981823005,
+      "mean_seconds": 0.00017033044106697177,
+      "p95_seconds": 2.1599989850074053e-06
+    },
+    "native_fit_recovery_lock_wait": {
+      "events": 317,
+      "sum_seconds": 45.89454884958104,
+      "mean_seconds": 0.14477775662328404,
+      "p95_seconds": 1.3702195099904202
+    },
+    "output_normalize": {
+      "events": 68,
+      "sum_seconds": 0.01630751005723141,
+      "mean_seconds": 0.00023981632437105016,
+      "p95_seconds": 0.0002533899969421327
+    },
+    "request_json_encode": {
+      "events": 317,
+      "sum_seconds": 0.16106159007176757,
+      "mean_seconds": 0.0005080807257784466,
+      "p95_seconds": 0.0007915600144769996
+    },
+    "request_render": {
+      "events": 951,
+      "sum_seconds": 99.62677042011637,
+      "mean_seconds": 0.10476001095700986,
+      "p95_seconds": 0.3750453800021205
+    },
+    "request_total": {
+      "events": 305,
+      "sum_seconds": 49199.63099279985,
+      "mean_seconds": 161.31026555016345,
+      "p95_seconds": 253.0475377300172
+    },
+    "response_json_decode": {
+      "events": 305,
+      "sum_seconds": 0.017714000103296712,
+      "mean_seconds": 5.807868886326791e-05,
+      "p95_seconds": 8.292999700643122e-05
+    },
+    "runtime_identity_cache_hit_memory": {
+      "events": 78,
+      "sum_seconds": 0.00010970979928970337,
+      "mean_seconds": 1.4065358883295303e-06,
+      "p95_seconds": 1.5700061339884996e-06
+    },
+    "runtime_identity_cache_load": {
+      "events": 4,
+      "sum_seconds": 0.0005490000185091048,
+      "mean_seconds": 0.0001372500046272762,
+      "p95_seconds": 0.00018241998623125255
+    },
+    "runtime_identity_cache_persist": {
+      "events": 4,
+      "sum_seconds": 0.002202819974627346,
+      "mean_seconds": 0.0005507049936568365,
+      "p95_seconds": 0.0005759900086559355
+    },
+    "runtime_identity_full_hash_process_floor": {
+      "events": 26,
+      "sum_seconds": 88.47924955000053,
+      "mean_seconds": 3.403048059615405,
+      "p95_seconds": 5.597633360011969
+    },
+    "runtime_identity_verify": {
+      "events": 4,
+      "sum_seconds": 88.52911634999327,
+      "mean_seconds": 22.13227908749832,
+      "p95_seconds": 0.011532239994267002
+    },
+    "session_declared": {
+      "events": 1271,
+      "sum_seconds": 5.030696910398547,
+      "mean_seconds": 0.003958062085286032,
+      "p95_seconds": 0.006364500004565343
+    },
+    "session_image_hash": {
+      "events": 1271,
+      "sum_seconds": 0.607766319590155,
+      "mean_seconds": 0.0004781796377577931,
+      "p95_seconds": 0.0015914499817881733
+    },
+    "session_maps": {
+      "events": 1271,
+      "sum_seconds": 34.97175231980509,
+      "mean_seconds": 0.027515147379862385,
+      "p95_seconds": 0.10141196000040509
+    },
+    "session_namespace": {
+      "events": 1271,
+      "sum_seconds": 5.863170279975748,
+      "mean_seconds": 0.0046130371990367805,
+      "p95_seconds": 0.018692870013182983
+    },
+    "session_namespace_probe": {
+      "events": 1271,
+      "sum_seconds": 2.3407435789704323,
+      "mean_seconds": 0.0018416550581986091,
+      "p95_seconds": 0.0036776599881704897
+    },
+    "session_socket_owner": {
+      "events": 1271,
+      "sum_seconds": 23.348210620169993,
+      "mean_seconds": 0.018369953281014945,
+      "p95_seconds": 0.06815711999661289
+    },
+    "session_total": {
+      "events": 1271,
+      "sum_seconds": 84.3851154295553,
+      "mean_seconds": 0.06639269506652659,
+      "p95_seconds": 0.30373357998905703
+    },
+    "transport_total": {
+      "events": 305,
+      "sum_seconds": 49143.38104664974,
+      "mean_seconds": 161.12583949721227,
+      "p95_seconds": 252.98472619999666
+    }
+  },
+  "completed_sample_stage_totals": {
+    "audio_base64_encode": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.002246838672042085
+    },
+    "audio_file_read": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.022083298678540707
+    },
+    "audio_read_encode": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.2577659666186425
+    },
+    "checkpoint_append_fsync": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.006510451765172868
+    },
+    "checkpoint_total": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.014794580147067523
+    },
+    "client_http_open_to_headers": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 641.4686656126496
+    },
+    "client_http_read_body": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.0012100810272386298
+    },
+    "context_build": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.5346075520578512
+    },
+    "dispatch_blocking_execute": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 645.7016090752928
+    },
+    "dispatch_contact_lock_wait": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 1.067455912775853e-05
+    },
+    "dispatch_executor_wait": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.2701844145584105
+    },
+    "dispatch_trajectory_slot_wait": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 396.7056436680894
+    },
+    "http_request": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 641.4723999355873
+    },
+    "native_fit": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.9881328295523417
+    },
+    "native_fit_capacity_wait": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.3567546942671042
+    },
+    "native_fit_lock_wait": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.0007929283798576388
+    },
+    "native_fit_recovery_lock_wait": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.6749184688181712
+    },
+    "output_normalize": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.00023981632437105016
+    },
+    "request_json_encode": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.002017537351896274
+    },
+    "request_render": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 1.4001092091177056
+    },
+    "request_total": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 642.4430989772038
+    },
+    "response_json_decode": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.00023094794254147392
+    },
+    "runtime_identity_cache_hit_memory": {
+      "samples_with_events": 1,
+      "mean_seconds_per_complete_sample": 5.472055122749332e-07
+    },
+    "runtime_identity_cache_load": {
+      "samples_with_events": 1,
+      "mean_seconds_per_complete_sample": 2.6826468563419494e-06
+    },
+    "runtime_identity_cache_persist": {
+      "samples_with_events": 1,
+      "mean_seconds_per_complete_sample": 8.813087975688499e-06
+    },
+    "runtime_identity_verify": {
+      "samples_with_events": 1,
+      "mean_seconds_per_complete_sample": 0.00016959176462157355
+    },
+    "session_declared": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.06994499176696134
+    },
+    "session_image_hash": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.008159581610765172
+    },
+    "session_maps": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.47209604102638825
+    },
+    "session_namespace": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.0805191951465745
+    },
+    "session_namespace_probe": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.03081181366381797
+    },
+    "session_socket_owner": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 0.3201571536834201
+    },
+    "session_total": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 1.1608341188184568
+    },
+    "transport_total": {
+      "samples_with_events": 68,
+      "mean_seconds_per_complete_sample": 641.6342148130852
+    }
+  },
+  "scope": "Append-only archive is not atomic across members. Finished timing events omit in-flight spans. Nested stages and concurrent samples must not be summed into wall time.",
+  "http_scope": "Open-to-headers includes client scheduling/network/server queue/prefill/decode; no attribution to individual server stages.",
+  "new_model_calls": 0,
+  "fixed_image_validation": {
+    "exit_code": 0,
+    "network": "none",
+    "summary_matches_local": true,
+    "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026"
+  },
+  "analysis_script_sha256": "a966576d0c6738b875c70161ce306c68417b859ec983601c7a87eecce13a1fc0"
+}
