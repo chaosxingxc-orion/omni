@@ -24,6 +24,8 @@ from speech_aware_evidence_acquisition.core.attempts import AttemptStore
 from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal, canonical, digest
 from speech_aware_evidence_acquisition.contracts import ExecutionPlan
 from transition_serving_budget import quiescence
+from speech_aware_evidence_acquisition.core.session.receipt import SessionReceipt
+from speech_aware_evidence_acquisition.core.session.vllm_identity import verify_vllm_session, verify_vllm_process_identity
 
 SCHEMA='saea-unknown-attempt-retirement-v1'
 
@@ -61,6 +63,18 @@ def inventory(journal):
     return {'files':records,'contacts':rows,'calls':len(rows),'audio_seconds':math.fsum(audio),
             'unknown_count':sum(r['state']=='unknown' for r in rows)}
 
+def verify_service(data, cfg, instances, runtime):
+    coordinator = read(data/'serving'/cfg['session_id']/'session.json')
+    for instance in instances:
+        name=instance['instance_id']
+        document=read(data/'serving'/name/'session.json')
+        receipt=SessionReceipt.from_json(read(data/'serving'/name/'session-receipt.json'))
+        verify_vllm_session(receipt, runtime)
+        require(receipt.pid == document['pid'] and receipt.started_at == document['started_at'], 'live service identity differs')
+        require(list(verify_vllm_process_identity(receipt.pid,runtime,instance,host=receipt.host,port=receipt.port))==list(receipt.argv), 'live service argv differs')
+    require(coordinator['deployment_instance_ids']==[i['instance_id'] for i in instances], 'coordinator membership differs')
+
+
 def execute(cfg):
     require(cfg.get('schema')==SCHEMA and cfg.get('mode')=='retire-unknown-no-retry', 'explicit retirement mode required')
     data=Path(cfg['data']);out=Path(cfg['out']);plan_path=Path(cfg['plan']);run=cfg['run_id'];attempt_id=cfg['attempt_id']
@@ -93,15 +107,20 @@ def execute(cfg):
             stat=guard.stat();require((stat.st_dev,stat.st_ino)==(gstat.st_dev,gstat.st_ino) and not guard.is_symlink(),'guard changed')
         guard_check()
         if (out/'complete.json').exists():
-            d=read(out/'complete.json');require(d['config_sha256']==cfg['config_sha256'] and not lease.exists() and
+            d=read(out/'complete.json')
+            require(d['config_sha256']==cfg['config_sha256'] and
                 sha(out/'manifest.json')==d['manifest_sha256'] and sha(out/'lease.json')==cfg['lease_sha256'], 'completed retirement changed')
+            # A new tenant may now hold the lane; never inspect or remove its lease.
             return d
-        require(not out.exists(),'fresh retirement directory required')
-        raw=lease.read_bytes();l=json.loads(raw)
-        require(digest(raw)==cfg['lease_sha256'] and all(l.get(k)==v for k,v in {'run_id':run,'attempt_id':attempt_id,
-            'pid':cfg['pid'],'session_id':cfg['session_id'],'study_head':cfg['study_commit'],'run_ids':[run]}.items()),'lease identity differs')
-        attempt_path=data/'attempts'/run/(attempt_id+'.json');before=attempt_path.read_bytes();state=json.loads(before)
-        require(digest(before)==cfg['attempt_sha256'] and state['state']=='OPENED' and state['actual']==cfg['actual'], 'attempt or cost changed')
+        lease_blob=None
+        if lease.exists():
+            lease_blob=lease.read_bytes();l=json.loads(lease_blob)
+            require(digest(lease_blob)==cfg['lease_sha256'] and all(l.get(k)==v for k,v in {'run_id':run,'attempt_id':attempt_id,
+                'pid':cfg['pid'],'session_id':cfg['session_id'],'study_head':cfg['study_commit'],'run_ids':[run]}.items()),'lease identity differs')
+        attempt_path=data/'attempts'/run/(attempt_id+'.json')
+        current=attempt_path.read_bytes();state=json.loads(current)
+        require(state['actual']==cfg['actual'] and state['state'] in ('OPENED','ABORTED'), 'attempt or cost changed')
+        if state['state']=='OPENED':require(digest(current)==cfg['attempt_sha256'],'attempt changed')
         require(sha(cfg['runtime_receipt'])==cfg['runtime_receipt_sha256'],'runtime receipt differs')
         session=read(data/'serving'/cfg['session_id']/'session.json');runtime=read(cfg['runtime_receipt'])
         instances=runtime['deployment']['instances']
@@ -111,43 +130,57 @@ def execute(cfg):
         require(snapshot['calls']==state['actual']['calls'] and math.isclose(snapshot['audio_seconds'],state['actual']['audio_seconds'],rel_tol=1e-12,abs_tol=1e-9), 'cost and journal differ')
         require(snapshot['unknown_count']==cfg['unknown_count'] and snapshot['unknown_count']>0, 'unknown inventory differs')
         require(digest(canonical(snapshot))==cfg['inventory_sha256'],'journal inventory changed')
-        fit_root=Path(cfg['fit_receipts_root'])
-        fit_files={}
+        fit_root=Path(cfg['fit_receipts_root']);fit_files={}
         for p in journal.root.glob('*.fit.json'):
             receipt=read(p)['receipt'];target=fit_root/Path(receipt['path']).name
             require(target.is_file() and not target.is_symlink() and sha(target)==receipt['sha256'], 'FIT receipt differs')
             fit_files[target.name]=sha(target)
         require(len(fit_files)==cfg['fit_count'], 'FIT inventory differs')
         checkpoint=Path(cfg['checkpoint']);require(sha(checkpoint)==cfg['checkpoint_sha256'], 'checkpoint differs')
-        quiet=quiescence(instances)
-        require(inventory(journal)==snapshot and lease.read_bytes()==raw and attempt_path.read_bytes()==before, 'custody changed after quiescence')
-        guard_check()
-        out.mkdir(parents=True);sync(out.parent)
-        for name in snapshot['files']:
-            publish_new(out/name,(journal.root/name).read_bytes())
-        publish_new(out/'lease.json',raw);publish_new(out/'attempt-before.json',before)
-        publish_new(out/'plan.json',plan_path.read_bytes())
-        publish_new(out/'checkpoint.jsonl',checkpoint.read_bytes())
-        for name,expected in fit_files.items():
-            content=(fit_root/name).read_bytes();require(digest(content)==expected,'FIT changed during archive')
-            publish_new(out/'fit'/name,content)
-        manifest={'schema':SCHEMA,'status':'retirement-intent','config_sha256':cfg['config_sha256'],
-                  'run_id':run,'attempt_id':attempt_id,'successor_run_id':cfg['new_baseline_run_id'],
-                  'unknown_responses_remain_unknown':True,'automatic_retry':False,'snapshot':snapshot,
-                  'cost':state['actual'],'fit_files':fit_files,'checkpoint_sha256':cfg['checkpoint_sha256'],
-                  'producer_container':cfg['container'],'boot_id':boot,
-                  'quiescence':quiet,'lease_sha256':digest(raw),'created_at':time.time()}
-        publish_new(out/'manifest.json',canonical(manifest))
-        marker={'schema':SCHEMA,'run_id':run,'attempt_id':attempt_id,'automatic_retry':False,
-                'unknown_count':snapshot['unknown_count'],'manifest_sha256':sha(out/'manifest.json')}
-        publish_new(journal.root/'retirement.json',canonical(marker))
-        require(inventory(journal)==snapshot and lease.read_bytes()==raw and attempt_path.read_bytes()==before,'custody changed during archive')
-        require(AttemptStore(data/'attempts').abort_if_opened(run,attempt_id,reason='user interrupted; unknown requests retired, no automatic retry'),'attempt abort failed')
+        verify_service(data,cfg,instances,runtime);quiet=quiescence(instances);guard_check()
+        require(inventory(journal)==snapshot and attempt_path.read_bytes()==current, 'custody changed after quiescence')
+        marker_path=journal.root/'retirement.json'
+        if out.exists():
+            require((out/'manifest.json').is_file(),'incomplete archive before manifest; preserve for inspection')
+            manifest=read(out/'manifest.json')
+            require(manifest['config_sha256']==cfg['config_sha256'] and manifest['snapshot']==snapshot and
+                    manifest['fit_files']==fit_files and manifest['cost']==state['actual'], 'archive manifest differs')
+            require(sha(out/'lease.json')==cfg['lease_sha256'] and sha(out/'attempt-before.json')==cfg['attempt_sha256'] and
+                    sha(out/'plan.json')==cfg['plan_sha256'] and sha(out/'checkpoint.jsonl')==cfg['checkpoint_sha256'], 'archive custody differs')
+            for name,expected in snapshot['files'].items():require(sha(out/name)==expected,'archive journal copy differs')
+            for name,expected in fit_files.items():require(sha(out/'fit'/name)==expected,'archive FIT copy differs')
+            require(marker_path.is_file() and read(marker_path)['manifest_sha256']==sha(out/'manifest.json'), 'retirement marker differs')
+        else:
+            require(lease_blob is not None and state['state']=='OPENED' and not marker_path.exists(), 'fresh source custody required')
+            out.mkdir(parents=True);sync(out.parent)
+            for name in snapshot['files']:publish_new(out/name,(journal.root/name).read_bytes())
+            publish_new(out/'lease.json',lease_blob);publish_new(out/'attempt-before.json',current)
+            publish_new(out/'plan.json',plan_path.read_bytes());publish_new(out/'checkpoint.jsonl',checkpoint.read_bytes())
+            for name,expected in fit_files.items():publish_new(out/'fit'/name,(fit_root/name).read_bytes())
+            for name,expected in snapshot['files'].items():require(sha(out/name)==expected,'archive journal copy differs')
+            for name,expected in fit_files.items():require(sha(out/'fit'/name)==expected,'archive FIT copy differs')
+            require(sha(out/'lease.json')==cfg['lease_sha256'] and sha(out/'attempt-before.json')==cfg['attempt_sha256'] and
+                    sha(out/'plan.json')==cfg['plan_sha256'] and sha(out/'checkpoint.jsonl')==cfg['checkpoint_sha256'], 'archive custody differs')
+            manifest={'schema':SCHEMA,'status':'retirement-intent','config_sha256':cfg['config_sha256'],
+                      'run_id':run,'attempt_id':attempt_id,'successor_run_id':cfg['new_baseline_run_id'],
+                      'unknown_responses_remain_unknown':True,'automatic_retry':False,'snapshot':snapshot,
+                      'cost':state['actual'],'fit_files':fit_files,'checkpoint_sha256':cfg['checkpoint_sha256'],
+                      'producer_container':cfg['container'],'boot_id':boot,'quiescence':quiet,
+                      'lease_sha256':cfg['lease_sha256'],'created_at':time.time()}
+            publish_new(out/'manifest.json',canonical(manifest))
+            marker={'schema':SCHEMA,'run_id':run,'attempt_id':attempt_id,'automatic_retry':False,
+                    'unknown_count':snapshot['unknown_count'],'manifest_sha256':sha(out/'manifest.json')}
+            publish_new(marker_path,canonical(marker))
+        if state['state']=='OPENED':
+            require(lease_blob is not None,'lease missing before abort')
+            require(AttemptStore(data/'attempts').abort_if_opened(run,attempt_id,reason='user interrupted; unknown requests retired, no automatic retry'),'attempt abort failed')
         after=read(attempt_path);require(after['state']=='ABORTED' and after['actual']==state['actual'],'abort changed cost')
-        publish_new(out/'attempt-aborted.json',attempt_path.read_bytes())
-        require(inventory(journal)==snapshot and lease.read_bytes()==raw,'custody changed before release')
-        quiescence(instances);guard_check();require(not Path('/proc',str(cfg['pid'])).exists(),'producer PID reappeared')
-        os.unlink(lease);sync(lease.parent)
+        if not (out/'attempt-aborted.json').exists():publish_new(out/'attempt-aborted.json',attempt_path.read_bytes())
+        require((out/'attempt-aborted.json').read_bytes()==attempt_path.read_bytes(),'aborted attempt copy differs')
+        require(inventory(journal)==snapshot,'custody changed before release')
+        verify_service(data,cfg,instances,runtime);quiescence(instances);guard_check();require(not Path('/proc',str(cfg['pid'])).exists(),'producer PID reappeared')
+        if lease_blob is not None:
+            require(lease.read_bytes()==lease_blob,'lease changed before release');os.unlink(lease);sync(lease.parent)
         done={'schema':SCHEMA,'status':'RETIRED_UNKNOWN_RESOURCE_RELEASED','config_sha256':cfg['config_sha256'],
               'manifest_sha256':sha(out/'manifest.json'),'unknown_count':snapshot['unknown_count'],
               'observed_count':snapshot['calls']-snapshot['unknown_count'],'actual':state['actual'],
