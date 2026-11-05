@@ -2,7 +2,7 @@
 
 ## 当前结论
 
-本轮核验：A0完整13078已封存，SLU F1为74.2334%、意图准确率86.3894%、strict7525/13078。ACE0与旧joint均完成80/80，见[两TP4诊断](ACE-Joint-TP4-Diagnostics.md)。ACE SLU提升但strict净损1条，尚无稳定TFRL收益。第一TP4正在Reflexion2 selection确认，02:49:48 UTC快照23/80。第二TP4旧joint已于02:34:36退出，GEPA1后继队列与生成容器已派发，真实请求及checkpoint待执行者交付；不能据此宣称持续八卡满载。
+本轮核验：A0完整13078已封存，SLU F1为74.2334%、意图准确率86.3894%、strict7525/13078。ACE0与旧joint均完成80/80，见[两TP4诊断](ACE-Joint-TP4-Diagnostics.md)。ACE SLU提升但strict净损1条，尚无稳定TFRL收益。第一TP4正在Reflexion2 selection确认，02:49:48 UTC快照23/80。第二TP4旧joint已于02:34:36退出，GEPA1后继队列与生成容器已派发，已核32次生成intent和32条FIT记录，首完整四臂checkpoint待核；不能据此宣称持续八卡满载。
 
 ## 实验结果与资源
 

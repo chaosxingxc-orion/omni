@@ -1,13 +1,13 @@
 # TFRL探索队列与异步接续
 
-最新已核验：ACE和旧joint均80/80完成；Reflexion2 selection80在第一TP4接续，第二TP4已派发GEPA1后继但真实业务请求尚待核验。不能宣称持续八卡满载。
+最新已核验：ACE和旧joint均80/80完成；Reflexion2 selection80在第一TP4接续，第二TP4 GEPA1已发出32次生成请求，FIT另有32条记录，首完整四臂checkpoint待核。不能宣称持续八卡满载。
 
 ## 当前队列
 
 |资源|任务|进度与后继|
 |---|---|---|
 |第一TP4，48K，C16|Reflexion2 selection80共享P配对|02:49:48 UTC为23/80，31.19秒/条，早期线性ETA29.6分钟；ACE0 selection和H2剩余232正在转换|
-|第二TP4，64K，C32|GEPA1 selection80四臂独立P→S|持久队列与生成容器已派发，计划640生成/FIT640；尚无核验完成行，ETA未知；GEPA2剩余153按80+73准备|
+|第二TP4，64K，C32|GEPA1 selection80四臂独立P→S|真实32生成intent/FIT记录32；计划640生成/FIT640；尚无核验完成行，ETA未知；GEPA2剩余153按80+73准备|
 |CPU/本机|官方结果审查、轨迹归因、算法评价、下一轮学习准备|与NPU异步，当前新增教师请求0；主线程已核两份80条终态归档和官方来源|
 
 ACE0 learned/lock SLU70.2074%/66.1634%，strict27/28，修4破5，不晋升。旧joint SLU66.8266%、intent77.5%、strict31/80。A0完整13078已封存，不再占生成队列。新设计7个执行单元共2800生成预算，FIT另列；可转换规格不等于已准入或已入队。
