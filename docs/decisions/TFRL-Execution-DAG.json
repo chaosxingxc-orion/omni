@@ -1,8 +1,8 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 4,
+  "source_revision": 5,
   "launcher_compatible": false,
-  "execution_status": "user reprioritization: new P-Slot-Decision baseline must be locked before TFRL; old queues held",
+  "execution_status": "two TP4 lanes: new graph DEV metrics and targeted tuning, candidate freeze, full TEST and stable benefit, then TFRL",
   "nodes": [
     {
       "id": "NEW-BASELINE-REPAIR",
@@ -26,30 +26,73 @@
       ]
     },
     {
+      "id": "NEW-BASELINE-DEV-TUNING",
+      "lane": "A+B",
+      "priority": 0,
+      "status": "awaiting-development-baseline",
+      "scientific_dependencies": [
+        "NEW-BASELINE-DEV80"
+      ],
+      "requirements": [
+        "same frozen development roster and comparable runtime",
+        "node-targeted changes with repair and break counts",
+        "no TEST-guided tuning"
+      ]
+    },
+    {
       "id": "NEW-BASELINE-LOCK",
       "lane": "CPU",
       "priority": 0,
       "status": "awaiting-real-evidence",
       "scientific_dependencies": [
-        "NEW-BASELINE-DEV80"
+        "NEW-BASELINE-DEV-TUNING"
       ],
       "requirements": [
         "fixed input and runtime pin closure",
         "complete node and failure denominator audit",
         "official metrics and cost",
-        "recovery and queue evidence"
+        "recovery and queue evidence",
+        "freeze tuned candidate before full TEST"
+      ]
+    },
+    {
+      "id": "NEW-BASELINE-FULL-TEST",
+      "lane": "A+B",
+      "priority": 1,
+      "status": "not-ready",
+      "rows": 13078,
+      "scientific_dependencies": [
+        "NEW-BASELINE-LOCK"
+      ],
+      "requirements": [
+        "candidate frozen before evaluation",
+        "full denominator including failures"
+      ]
+    },
+    {
+      "id": "NEW-BASELINE-STABLE-BENEFIT",
+      "lane": "CPU",
+      "priority": 1,
+      "status": "unproven",
+      "scientific_dependencies": [
+        "NEW-BASELINE-FULL-TEST"
+      ],
+      "requirements": [
+        "paired full-test comparison and uncertainty",
+        "intent and strict regression review",
+        "no test feedback to candidate tuning"
       ]
     },
     {
       "id": "B-GEPA1-selection80",
       "lane": "B",
       "priority": 0,
-      "status": "held-until-new-baseline-locked",
+      "status": "historical-held-not-auto-resumable-on-new-graph",
       "normal_generation_calls": 640,
       "fit_call_cap": 640,
       "generation_fallback_inclusive_cap": 1280,
       "scientific_dependencies": [
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "resource_dependencies": [
         "B现有旧joint exact generation终态且lease settled；同lane独占guard"
@@ -60,12 +103,12 @@
       "id": "B-GEPA2-feedback-extension80",
       "lane": "B",
       "priority": 2,
-      "status": "held-until-new-baseline-locked",
+      "status": "historical-held-not-auto-resumable-on-new-graph",
       "normal_generation_calls": 640,
       "fit_call_cap": 640,
       "generation_fallback_inclusive_cap": 1280,
       "scientific_dependencies": [
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "resource_dependencies": [
         "B现有旧joint exact generation终态且lease settled；同lane独占guard"
@@ -76,12 +119,12 @@
       "id": "B-GEPA2-feedback-extension73",
       "lane": "B",
       "priority": 3,
-      "status": "held-until-new-baseline-locked",
+      "status": "historical-held-not-auto-resumable-on-new-graph",
       "normal_generation_calls": 584,
       "fit_call_cap": 584,
       "generation_fallback_inclusive_cap": 1168,
       "scientific_dependencies": [
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "resource_dependencies": [
         "B现有旧joint exact generation终态且lease settled；同lane独占guard",
@@ -121,12 +164,12 @@
       "id": "A-ACE0-H2-remainder232",
       "lane": "A",
       "priority": 2,
-      "status": "held-until-new-baseline-locked",
+      "status": "historical-held-not-auto-resumable-on-new-graph",
       "normal_generation_calls": 696,
       "fit_call_cap": 696,
       "generation_fallback_inclusive_cap": 1392,
       "scientific_dependencies": [
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "resource_dependencies": [
         "A lane exact prior generation terminal + lease/guard handoff"
@@ -137,13 +180,13 @@
       "id": "A-TFGRPO-current-K4-pilot15",
       "lane": "A",
       "priority": 3,
-      "status": "held-until-new-baseline-locked",
+      "status": "historical-held-not-auto-resumable-on-new-graph",
       "normal_generation_calls": 105,
       "fit_call_cap": 105,
       "generation_fallback_inclusive_cap": 210,
       "scientific_dependencies": [
         "CPU-current-policy-freeze-and-custody-audit",
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "resource_dependencies": [
         "与A lane后继串行，若调B须一次性重新绑定不两lane重复派发"
@@ -152,53 +195,53 @@
     },
     {
       "id": "CPU-history-feedback-reuse",
-      "status": "held-until-new-baseline-locked",
+      "status": "held-until-full-test-stable-benefit",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
       "scientific_dependencies": [
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "previous_status": "inputs-ready"
     },
     {
       "id": "CPU-current-policy-freeze-and-custody-audit",
-      "status": "held-until-new-baseline-locked",
+      "status": "held-until-full-test-stable-benefit",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
       "scientific_dependencies": [
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "previous_status": "needs-owner-input"
     },
     {
       "id": "CPU-frozen-candidate-scores",
-      "status": "held-until-new-baseline-locked",
+      "status": "held-until-full-test-stable-benefit",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
       "scientific_dependencies": [
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "previous_status": "wait-own-generation"
     },
     {
       "id": "LOCAL-API-TFGRPO-reference-next",
-      "status": "held-until-new-baseline-locked",
+      "status": "held-until-full-test-stable-benefit",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
       "scientific_dependencies": [
         "CPU-history-feedback-reuse",
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "previous_status": "not-started-not-NPU-ready"
     },
     {
       "id": "LOCAL-API-TFGRPO-fused-next",
-      "status": "held-until-new-baseline-locked",
+      "status": "held-until-full-test-stable-benefit",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
       "scientific_dependencies": [
         "CPU-history-feedback-reuse",
-        "NEW-BASELINE-LOCK"
+        "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "previous_status": "not-started-not-NPU-ready"
     }
@@ -208,6 +251,7 @@
     "lock_status": "not-validated",
     "tfrl_generation_allowed": false,
     "baseline_validation_allowed": true,
-    "source": "New-Baseline-First.md"
+    "source": "New-Baseline-First.md",
+    "full_test_and_stable_benefit_required_before_tfrl": true
   }
 }
