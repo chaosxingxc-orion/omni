@@ -33,11 +33,11 @@ Fold A历史运行使用8卡/2个TP4，2160次生成；从启动到封存2773.60
 
 账本共62个generation intent、62个response和62份FIT custody。05:32:41固定镜像正式结算成功：逐请求ContactJournal核验62个observed响应、终态attempt与服务排空后释放租约；生成unknown=0。FIT端点与tokens成本另行对账，62份custody不直接替代端点统计。此前48/41是过程快照，已被终态替代。未新增外部教师调用。
 
-本轮用4卡/1个TP4、64K、客户端并发32，进程墙钟977.81秒。异常停止且包含初始化和排空，不能用15条推算稳定秒/条或全量ETA；节点级耗时及tokens等待完整账本汇总。A的4卡TP4服务已健康，Fold A1080增强P→联合Solver对照完成准备、重新注册和准入，最终配置hash已匹配；05:34:45环境预检通过，精确挂载检查及停止准入控制配置继续，尚无生成启动证据。当前不声称8卡有效满载。
+本轮用4卡/1个TP4、64K、客户端并发32，进程墙钟977.81秒。异常停止且包含初始化和排空，不能用15条推算稳定秒/条或全量ETA；节点级耗时及tokens等待完整账本汇总。A的4卡TP4服务已健康，Fold A1080增强P→联合Solver对照完成准备、重新注册和准入，最终配置hash已匹配；带停止准入配置的预检、真实resident和12份来源检查均通过。05:51:24持久队列启动，05:51:27创建固定镜像generation容器；主线程核验两者running且admission-control配置存在，首次账本仍为0请求/0 checkpoint，正在初始化，未声称已推理。当前不声称8卡有效满载。
 
 退出根因是程序在向Slot供给候选时改写短证据ID，后续projection却与封存P的原始候选做整行相等比较，产生`Slot branch differs from sealed Perception`。该问题属于工程协议衔接错误，不归为模型精度错误。独立CPU审查另复现：stage启用identical_v1去重，projection仍按strict重解析，存在第二个独立冲突；未证明本轮具体失败行触发第二分支。
 
-原工程进程负责两项修复、真实projection集成回归和固定镜像验证，再以明确新版本身份接续。保留旧响应、轨迹和费用；不热改活树，不盲重发未知请求。已有删除ID改写的补丁只获局部验证，新增helper测试未覆盖真实失败链，尚未验收为完整修复。观察器的`native FIT custody differs`已定位：配置arm=main，真实账本arm=raw-speech-agent-native-tools。62份FIT文件名、artifact及端点journal哈希检查均通过；修正观察器配置并保留严格身份校验，不修改原账本。
+原工程进程负责两项修复、真实projection集成回归和固定镜像验证，再以明确新版本身份接续。保留旧响应、轨迹和费用；不热改活树，不盲重发未知请求。两项修复已合main（53f1affe、0da74fc5、aa851eb8），固定镜像回归87通过、2跳过，关键源码SHA已核对。真实runner/projection测试覆盖完整音频ID及重复策略；短知识ID别名的旧改写失败另由CPU真实函数探针复现，不能混称完整别名端到端回归。实际修复版NPU接续仍待完成。观察器的`native FIT custody differs`已定位：配置arm=main，真实账本arm=raw-speech-agent-native-tools。62份FIT文件名、artifact及端点journal哈希检查均通过；修正观察器配置并保留严格身份校验，不修改原账本。
 
 既有后台归档与600秒/终态观察继续；首个归档内容哈希已验。新执行配置须启用现成的停止准入与排空控制，避免工程故障后依赖自然异常停止。匹配控制启动不等待B修复或全部CPU报告。
 
