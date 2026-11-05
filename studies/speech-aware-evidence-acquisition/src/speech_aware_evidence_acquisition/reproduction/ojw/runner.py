@@ -94,15 +94,21 @@ async def _observed_lock(lock, stage):
 
 
 def _observed_worker(callback, *args):
-    # Normal mode retains the exact original callable and adds no queue events.
+    # Normal mode adds the owned identity scope without queue timing events.
     if not operational_timing.debug_enabled():
-        return callback, args
+        def invoke_scoped():
+            from ...core.session.vllm_identity import http_probe_connection_scope
+            with http_probe_connection_scope():
+                return callback(*args)
+        return invoke_scoped, ()
     queued = time.perf_counter()
     wall = time.time_ns()
     def invoke():
         operational_timing.completed_interval('dispatch_executor_wait', queued, wall)
         with operational_timing.span('dispatch_blocking_execute'):
-            return callback(*args)
+            from ...core.session.vllm_identity import http_probe_connection_scope
+            with http_probe_connection_scope():
+                return callback(*args)
     return invoke, ()
 
 

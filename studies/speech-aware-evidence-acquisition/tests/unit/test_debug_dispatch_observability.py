@@ -106,3 +106,29 @@ def test_slot_is_returned_if_acquisition_event_write_fails(sink,monkeypatch):
             workflow_timeout_seconds=10)
     assert calls==[]
     assert len(queues)==1 and queues[0].qsize()==1
+
+@pytest.mark.parametrize('mode',['normal','debug'])
+@pytest.mark.parametrize('fails',[False,True])
+def test_ordinary_runner_scopes_live_maps_without_retaining_connections(sink,monkeypatch,mode,fails):
+    from pathlib import Path
+    from speech_aware_evidence_acquisition.core.session import vllm_identity as vi
+    monkeypatch.setenv('SAEA_OBSERVABILITY_MODE',mode)
+    counts={'read':0,'decode':0}; observed=[]
+    class Raw(bytes):
+        def decode(self,*a,**kw):counts['decode']+=1;return super().decode(*a,**kw)
+    def read(*args):counts['read']+=1;return Raw(b'1-2 r-xp 0 0:0 1 /a\n')
+    monkeypatch.setattr(vi,'_read',read)
+    async def episode(state,contact,session):
+        def work(slot):
+            vi._mapped_paths(Path('/proc'),1);vi._mapped_paths(Path('/proc'),1)
+            cache=vi._probe_local.cache; observed.append(cache)
+            if fails:raise ValueError('expected failure')
+            return 'done'
+        assert await contact(work)=='done'
+    def run():return runner.execute_speech_agent_workflows([SimpleNamespace(sample_id='s')],episode_invoker=episode,
+          branch_count=1,slot_count=1,queue_depth=1,workflow_timeout_seconds=10)
+    if fails:
+        with pytest.raises(Exception,match='expected failure'):run()
+    else:run()
+    assert counts=={'read':2,'decode':1}
+    assert len(observed)==1 and not observed[0].maps and not observed[0].connections

@@ -110,3 +110,26 @@ def test_cached_maps_does_not_hide_process_death(tmp_path):
         (world.proc_root / '4100001' / 'stat').unlink()
         with pytest.raises(SessionError):
             m.assert_vllm_session_alive(session, world.receipt(), proc_root=world.proc_root)
+
+
+def test_pipeline_worker_scope_reuses_parse_and_closes_on_success_and_error(monkeypatch):
+    import contextvars
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.reproduction.ojw.node_pipeline import _run_scoped_work
+    reads=[]; decodes=[]
+    class Raw(bytes):
+        def decode(self, *args, **kwargs):
+            decodes.append(1); return super().decode(*args, **kwargs)
+    monkeypatch.setattr(m, '_read', lambda *args: (reads.append(1) or Raw(b'1-2 r-xp 0 0:0 1 /a\n')))
+    def callback(fail):
+        m._mapped_paths(Path('/proc'), 1)
+        m._mapped_paths(Path('/proc'), 1)
+        if fail: raise RuntimeError('fail')
+        return 'ok'
+    for fail in (False,True):
+        work=SimpleNamespace(context=contextvars.copy_context(),callback=callback)
+        if fail:
+            with pytest.raises(RuntimeError): _run_scoped_work(work,(fail,))
+        else: assert _run_scoped_work(work,(fail,)) == 'ok'
+        assert not hasattr(m._probe_local,'cache')
+    assert len(reads)==4 and len(decodes)==2

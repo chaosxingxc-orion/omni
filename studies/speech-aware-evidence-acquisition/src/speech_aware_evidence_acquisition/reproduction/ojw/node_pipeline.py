@@ -27,6 +27,15 @@ class _Work:
     queued_ns: int
 
 
+def _run_scoped_work(work, args):
+    # Existing scope caches only byte-identical maps parsing and owns probe
+    # sockets. It rereads /proc and re-probes the endpoint on every check;
+    # closing on callback completion prevents idle server connections.
+    from ...core.session.vllm_identity import http_probe_connection_scope
+    with http_probe_connection_scope():
+        return work.context.run(work.callback, *args)
+
+
 class NodePipelineCoordinator:
     """Keep a full panel logically pending while bounding CPU and model workers."""
 
@@ -181,7 +190,7 @@ class NodePipelineCoordinator:
         error, value = None, None
         args = () if work.kind == "prepare" else (slot,)
         worker = asyncio.create_task(
-            asyncio.to_thread(work.context.run, work.callback, *args)
+            asyncio.to_thread(_run_scoped_work, work, args)
         )
         try:
             value = await asyncio.shield(worker)

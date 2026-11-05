@@ -24,6 +24,12 @@ class _Pending:
     queued_ns: int
 
 
+def _run_scoped_contact(pending, slot):
+    from ...core.session.vllm_identity import http_probe_connection_scope
+    with http_probe_connection_scope():
+        return pending.context.run(pending.callback, slot)
+
+
 class NodeBatchCoordinator:
     """Keep one ready node family across all slots until the cohort leaves it."""
 
@@ -101,8 +107,8 @@ class NodeBatchCoordinator:
         value = None
         worker = asyncio.create_task(
             asyncio.to_thread(
-                pending.context.run,
-                pending.callback,
+                _run_scoped_contact,
+                pending,
                 slot,
             )
         )
