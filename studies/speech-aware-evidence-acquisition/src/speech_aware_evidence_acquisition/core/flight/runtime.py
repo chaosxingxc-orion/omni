@@ -4677,6 +4677,17 @@ class FlightRuntime:
         self._lock = lock
 
         previous_adapter = self._adapter
+        cached_key = (composed.config_hash, values.get("split_id"), str(self._data_root.resolve()))
+        reuse_roster = (
+            self._prepared_roster_key == cached_key
+            and previous_adapter is not None
+            and bool(self._samples)
+        )
+        adapter = previous_adapter if reuse_roster else self._adapter_factory(lock, self._data_root)
+        if not isinstance(adapter, TaskAdapter):
+            raise FlightRuntimeError("adapter_factory must return a TaskAdapter instance")
+        # Scheduler validation reads serving_geometry(), before loading a split.
+        self._adapter = adapter
 
         # Validate an armed scheduler before preparation can contact a service.
         if "system_search_measurement" in values:
@@ -4717,24 +4728,7 @@ class FlightRuntime:
         # All callers in one flight must observe one roster.  Composition is
         # still reread above, so this short-circuit remains invalidated by any
         # config change while avoiding repeated adapter.load_split() work.
-        cached_key = (composed.config_hash, split_id, str(self._data_root.resolve()))
-        if (
-            self._prepared_roster_key == cached_key
-            and previous_adapter is not None
-            and self._samples
-        ):
-            # Keep the original adapter instance as well as its roster.  Some
-            # adapters memoize carrier views (contracts, media descriptors)
-            # alongside the samples; swapping in a newly constructed adapter
-            # would defeat that cache even though load_split was avoided.
-            adapter = previous_adapter
-            samples = self._samples
-        else:
-            adapter = self._adapter_factory(lock, self._data_root)
-            if not isinstance(adapter, TaskAdapter):
-                raise FlightRuntimeError("adapter_factory must return a TaskAdapter instance")
-            samples = tuple(adapter.load_split(split_id))
-        self._adapter = adapter
+        samples = self._samples if reuse_roster else tuple(adapter.load_split(split_id))
         if not samples:
             raise FlightRuntimeError(f"split {split_id!r} resolved to zero samples")
         if self._prepared_roster_key != cached_key:

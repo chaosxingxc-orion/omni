@@ -7655,13 +7655,16 @@ class _SlotFillScheduler:
         wait_stage = f"{timing_stage}_capacity_wait" if timing_stage else None
         executor_wait_stage = f"{timing_stage}_executor_wait" if timing_stage else None
         execute_stage = f"{timing_stage}_execute" if timing_stage else None
-        if wait_stage:
-            from ..core import stage_timing as operational_timing
-            with operational_timing.span(wait_stage):
-                await capacity.acquire()
-        else:
-            await capacity.acquire()
+        acquired = False
         try:
+            if wait_stage:
+                from ..core import stage_timing as operational_timing
+                with operational_timing.span(wait_stage):
+                    await capacity.acquire()
+                    acquired = True
+            else:
+                await capacity.acquire()
+                acquired = True
             context = contextvars.copy_context()
             queued = time.perf_counter() if executor_wait_stage else None
             wall = time.time_ns() if executor_wait_stage else None
@@ -7690,7 +7693,8 @@ class _SlotFillScheduler:
                     future.exception()
                 raise
         finally:
-            capacity.release()
+            if acquired:
+                capacity.release()
 
     @property
     def role_input_runner(self):

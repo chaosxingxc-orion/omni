@@ -89,6 +89,30 @@ def test_slot_fill_workers_expose_capacity_executor_and_body_intervals(sink):
     } <= stages
 
 
+def test_slot_fill_capacity_released_when_wait_observation_fails(sink, monkeypatch):
+    from speech_aware_evidence_acquisition.rails.dispatch_slot_fill import DispatchSlotFill
+    from speech_aware_evidence_acquisition.rails.runner import _SlotFillScheduler
+
+    scheduler = _SlotFillScheduler(DispatchSlotFill(validation_workers=1))
+    calls = []
+
+    def fail(*args):
+        raise OSError("sink failed")
+
+    monkeypatch.setattr(timing, "_record", fail)
+
+    async def run():
+        with pytest.raises(OSError, match="sink failed"):
+            await scheduler.validation_runner(lambda inputs: calls.append(inputs), "unexpected")
+        assert not scheduler._validation_capacity.locked()
+        assert calls == []
+
+    try:
+        asyncio.run(run())
+    finally:
+        scheduler.close()
+
+
 def test_lock_released_when_observation_write_fails(sink,monkeypatch):
     def fail(*args):raise OSError('sink failed')
     monkeypatch.setattr(timing,'_record',fail)
