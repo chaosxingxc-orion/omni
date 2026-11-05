@@ -1,0 +1,57 @@
+{
+  "schema": "ace-selection-public-result-v1",
+  "rows": 80,
+  "metrics": {
+    "learned": {
+      "slu_f1": 0.6563522654879768,
+      "intent_accuracy": 0.7250000000000001,
+      "span_f1": 0.5240641711229947
+    },
+    "lock": {
+      "slu_f1": 0.6519107269077432,
+      "intent_accuracy": 0.7625,
+      "span_f1": 0.5208333333333334
+    }
+  },
+  "strict_success": {
+    "learned": 24,
+    "lock": 26
+  },
+  "comparisons": {
+    "learned_vs_lock": {
+      "proxy_mean_delta": -0.01194940476190478,
+      "strict_breaks": 3,
+      "strict_repairs": 1
+    }
+  },
+  "cost": {
+    "audio_seconds_used": 1018.547437500001,
+    "calls_used": 240,
+    "completion_tokens_total": 488115,
+    "latency_seconds_total": 19846.89161868958,
+    "prompt_tokens_total": 1733055,
+    "tool_calls": 0
+  },
+  "candidate_accepted": false,
+  "claims_stable_gain": false,
+  "container_wall_seconds": 1735.97802636,
+  "wall_seconds_per_paired_sample": 21.6997253295,
+  "resources": {
+    "cards": 4,
+    "instances": 1,
+    "tp": 4,
+    "concurrency": 16,
+    "context_tokens": 49152
+  },
+  "source_hashes": {
+    "manifest_sha256": "79f687b134ac2bb19f04985668ab9d61d1cef0a4c3977b202047b811be52dc45",
+    "outputs_sha256": "dbdca899ea790338776e864a6525e41910d125e0f53c7cac1f427560bbdb0c3c",
+    "raw_trace_sha256": "3a7f4b67112cf258fe9769b8b44450c63050f789ca753e0226569732944f389f",
+    "roster_sha256": "9c20d3e52f42eb4fc072e9059e25ccf4d092710db2fe82f2fc5301717862d1fd",
+    "sealed_scores_sha256": "9baf9dfebd088a148d726dae9a0381130340bfff3934e5aa74305ddc96f1391c"
+  },
+  "archive_sha256": "fa95fb6937bb9b140d2c060dda8f75c8f7cf8398f9e898ad7ccb2eadbe6be94f",
+  "verification": "80 complete unique checkpoints, terminal archive bytes and source hashes checked; official scorer not rerun",
+  "fit_actual_calls": "not independently reconciled for this run",
+  "new_teacher_calls": 0
+}
