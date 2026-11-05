@@ -116,15 +116,20 @@ from .speech_features import load_speech_feature_packets
 # request.  Keep a small process-local cache to avoid repeated read+base64
 # work.  The stat tuple is only an index: the stored entry also carries the
 # content SHA, so a changed/replaced file can never reuse old bytes.
+_AUDIO_CACHE_ENABLED = os.environ.get("SAEA_AUDIO_CACHE_ENABLED", "0") == "1"
 _AUDIO_CACHE_MAX_ENTRIES = max(0, int(os.environ.get("SAEA_AUDIO_CACHE_MAX_ENTRIES", "256")))
+_AUDIO_CACHE_MAX_BYTES = max(0, int(os.environ.get("SAEA_AUDIO_CACHE_MAX_BYTES", str(256 * 1024 * 1024))))
 _AUDIO_CACHE: "OrderedDict[tuple[str, int, int, int], tuple[str, str, str]]" = OrderedDict()
 _AUDIO_CACHE_LOCK = threading.Lock()
+_AUDIO_CACHE_BYTES = 0
 
 
 def _clear_audio_cache() -> None:
     """Test/operator hook; production callers should rely on stat invalidation."""
+    global _AUDIO_CACHE_BYTES
     with _AUDIO_CACHE_LOCK:
         _AUDIO_CACHE.clear()
+        _AUDIO_CACHE_BYTES = 0
 
 
 _SPEECH_FEATURE_PROMPT_ORDERS = frozenset(
@@ -529,7 +534,7 @@ def _load_audio_part(
         raise FileNotFoundError(f"media missing for transport: {media}")
     stat = media.stat()
     stat_key = (str(media), int(stat.st_ino), int(stat.st_size), int(stat.st_mtime_ns))
-    if _AUDIO_CACHE_MAX_ENTRIES:
+    if _AUDIO_CACHE_ENABLED and _AUDIO_CACHE_MAX_ENTRIES and _AUDIO_CACHE_MAX_BYTES:
         with _AUDIO_CACHE_LOCK:
             cached = _AUDIO_CACHE.get(stat_key)
             if cached is not None:
@@ -547,12 +552,24 @@ def _load_audio_part(
         data_b64=base64.b64encode(audio_bytes).decode("ascii")
         observation['encoded_bytes']=len(data_b64)
     suffix = media.suffix.lstrip(".").lower()
-    if _AUDIO_CACHE_MAX_ENTRIES:
+    # Do not cache a file that changed while it was being read.  This keeps
+    # the optimization fail-closed even when a producer replaces media in
+    # place rather than atomically renaming it.
+    after = media.stat()
+    if (int(after.st_ino), int(after.st_size), int(after.st_mtime_ns)) != stat_key[1:]:
+        raise FrozenCoreError(f"media changed while reading transport input: {relative}")
+    if _AUDIO_CACHE_ENABLED and _AUDIO_CACHE_MAX_ENTRIES and _AUDIO_CACHE_MAX_BYTES:
+        global _AUDIO_CACHE_BYTES
         with _AUDIO_CACHE_LOCK:
+            encoded_size = len(data_b64)
+            if encoded_size > _AUDIO_CACHE_MAX_BYTES:
+                return relative, {"type": "input_audio", "input_audio": {"data": data_b64, "format": suffix}}
             _AUDIO_CACHE[stat_key] = (digest, data_b64, suffix)
+            _AUDIO_CACHE_BYTES += encoded_size
             _AUDIO_CACHE.move_to_end(stat_key)
-            while len(_AUDIO_CACHE) > _AUDIO_CACHE_MAX_ENTRIES:
-                _AUDIO_CACHE.popitem(last=False)
+            while len(_AUDIO_CACHE) > _AUDIO_CACHE_MAX_ENTRIES or _AUDIO_CACHE_BYTES > _AUDIO_CACHE_MAX_BYTES:
+                _, (_, old_b64, _) = _AUDIO_CACHE.popitem(last=False)
+                _AUDIO_CACHE_BYTES -= len(old_b64)
     return relative, {
         "type": "input_audio",
         "input_audio": {"data": data_b64, "format": suffix},

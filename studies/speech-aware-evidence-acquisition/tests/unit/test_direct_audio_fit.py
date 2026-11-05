@@ -32,7 +32,9 @@ def test_transport_audio_cache_reuses_bytes_and_invalidates_on_file_change(tmp_p
     import speech_aware_evidence_acquisition.core.model.transport as module
 
     _clear_audio_cache()
+    module._AUDIO_CACHE_ENABLED = True
     module._AUDIO_CACHE_MAX_ENTRIES = 4
+    module._AUDIO_CACHE_MAX_BYTES = 1024
     path = tmp_path / "query.wav"
     path.write_bytes(b"first-audio")
     reads = 0
