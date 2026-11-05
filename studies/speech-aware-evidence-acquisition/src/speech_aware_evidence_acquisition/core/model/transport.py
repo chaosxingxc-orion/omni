@@ -69,8 +69,11 @@ from ..stage_timing import measure, span, debug_enabled
 import base64
 import hashlib
 import json
+import os
+import threading
 import urllib.error
 import urllib.request
+from collections import OrderedDict
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
@@ -106,6 +109,22 @@ from .request_types import (
     native_tool_request_controls,
 )
 from .speech_features import load_speech_feature_packets
+
+
+# Raw media is immutable under the experiment identity, but the same audio
+# can be rendered several times while building an exemplar bank or retrying a
+# request.  Keep a small process-local cache to avoid repeated read+base64
+# work.  The stat tuple is only an index: the stored entry also carries the
+# content SHA, so a changed/replaced file can never reuse old bytes.
+_AUDIO_CACHE_MAX_ENTRIES = max(0, int(os.environ.get("SAEA_AUDIO_CACHE_MAX_ENTRIES", "256")))
+_AUDIO_CACHE: "OrderedDict[tuple[str, int, int, int], tuple[str, str, str]]" = OrderedDict()
+_AUDIO_CACHE_LOCK = threading.Lock()
+
+
+def _clear_audio_cache() -> None:
+    """Test/operator hook; production callers should rely on stat invalidation."""
+    with _AUDIO_CACHE_LOCK:
+        _AUDIO_CACHE.clear()
 
 
 _SPEECH_FEATURE_PROMPT_ORDERS = frozenset(
@@ -508,15 +527,35 @@ def _load_audio_part(
     media = _resolve_confined(data_root, relative, data_root, field, strict=False)
     if not media.is_file():
         raise FileNotFoundError(f"media missing for transport: {media}")
+    stat = media.stat()
+    stat_key = (str(media), int(stat.st_ino), int(stat.st_size), int(stat.st_mtime_ns))
+    if _AUDIO_CACHE_MAX_ENTRIES:
+        with _AUDIO_CACHE_LOCK:
+            cached = _AUDIO_CACHE.get(stat_key)
+            if cached is not None:
+                digest, data_b64, suffix = cached
+                _AUDIO_CACHE.move_to_end(stat_key)
+                return relative, {
+                    "type": "input_audio",
+                    "input_audio": {"data": data_b64, "format": suffix},
+                }
     with span('audio_file_read') as observation:
         audio_bytes=media.read_bytes()
         observation['audio_bytes']=len(audio_bytes)
+    digest = hashlib.sha256(audio_bytes).hexdigest()
     with span('audio_base64_encode') as observation:
         data_b64=base64.b64encode(audio_bytes).decode("ascii")
         observation['encoded_bytes']=len(data_b64)
+    suffix = media.suffix.lstrip(".").lower()
+    if _AUDIO_CACHE_MAX_ENTRIES:
+        with _AUDIO_CACHE_LOCK:
+            _AUDIO_CACHE[stat_key] = (digest, data_b64, suffix)
+            _AUDIO_CACHE.move_to_end(stat_key)
+            while len(_AUDIO_CACHE) > _AUDIO_CACHE_MAX_ENTRIES:
+                _AUDIO_CACHE.popitem(last=False)
     return relative, {
         "type": "input_audio",
-        "input_audio": {"data": data_b64, "format": media.suffix.lstrip(".").lower()},
+        "input_audio": {"data": data_b64, "format": suffix},
     }
 
 

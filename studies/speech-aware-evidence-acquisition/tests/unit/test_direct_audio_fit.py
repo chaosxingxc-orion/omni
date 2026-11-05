@@ -3,13 +3,14 @@ import base64
 import hashlib
 import io
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 import soundfile
 
-from speech_aware_evidence_acquisition.core.model.transport import _load_audio_part
+from speech_aware_evidence_acquisition.core.model.transport import _clear_audio_cache, _load_audio_part
 from speech_aware_evidence_acquisition.core.preparation import PreparationError
 from speech_aware_evidence_acquisition.core.preparation_fit import rendered_wav_seconds
 from test_direct_only_fit import _Runtime, _build, _plan, _request, ROWS
@@ -24,6 +25,35 @@ def _audio(format_name, subtype, *, frames=24000):
 def _body(raw, declared):
     return {"messages": [{"role": "user", "content": [{"type": "input_audio",
         "input_audio": {"data": base64.b64encode(raw).decode(), "format": declared}}]}]}
+
+
+def test_transport_audio_cache_reuses_bytes_and_invalidates_on_file_change(tmp_path, monkeypatch):
+    """Repeated bank/target rendering does not reread stable media."""
+    import speech_aware_evidence_acquisition.core.model.transport as module
+
+    _clear_audio_cache()
+    module._AUDIO_CACHE_MAX_ENTRIES = 4
+    path = tmp_path / "query.wav"
+    path.write_bytes(b"first-audio")
+    reads = 0
+    original = Path.read_bytes
+
+    def counted(self):
+        nonlocal reads
+        reads += 1
+        return original(self)
+
+    monkeypatch.setattr(Path, "read_bytes", counted)
+    _, first = _load_audio_part(tmp_path, "query.wav", "query")
+    _, second = _load_audio_part(tmp_path, "query.wav", "query")
+    assert first == second
+    assert reads == 1
+
+    path.write_bytes(b"second-audio")
+    _, changed = _load_audio_part(tmp_path, "query.wav", "query")
+    assert changed != first
+    assert reads == 2
+    _clear_audio_cache()
 
 
 @pytest.mark.parametrize("format_name,subtype,declared", [

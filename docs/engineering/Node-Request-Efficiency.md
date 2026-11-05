@@ -226,3 +226,7 @@ B本机归档因一次SSH inspect超时退出，已恢复并取得新快照。�
 ## 可追溯证据
 
 本地审计目录`repro/agent-mailbox/live-inference-efficiency/`保留两次metrics、初始化配置、10分钟引擎日志、应用计时及`initial-analysis.json`、`window-metrics.json`。原始数据仅本地保存，公开页只列聚合结果。工程实现交付在`inference-pipeline-efficiency`，统一镜像交付在`runtime-image-release`；实现中不等于已验收或上线。
+
+### 音频读取缓存增量
+
+本轮又在 transport 层加入了可关闭、有限容量的进程级音频 bytes/base64 缓存。缓存键绑定绝对路径、inode、文件大小和 mtime；文件 stat 变化自动失效，媒体身份门禁仍在缓存之外执行。它覆盖同一请求中的目标音频、exemplar 和候选重复读取，避免重复读盘和编码，不改变请求 wire 内容。固定镜像回归已验证一次命中和文件变化失效（21 passed）；尚未在新基座上做真实吞吐窗口，因此不报告业务加速倍数。
