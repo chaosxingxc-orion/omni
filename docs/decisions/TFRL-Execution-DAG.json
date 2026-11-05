@@ -1,8 +1,8 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 7,
+  "source_revision": 8,
   "launcher_compatible": false,
-  "execution_status": "Original Fold A1080 Slot thinking off/on paired runs active; CPU engineering and attribution asynchronous; Fold B then full TEST then TFRL",
+  "execution_status": "Engineering efficiency first; existing Fold A arms continue until validated release migration; no new large-scale scientific experiments",
   "nodes": [
     {
       "id": "NEW-BASELINE-REPAIR",
@@ -61,7 +61,7 @@
       "id": "CPU-UNIFIED-RUNTIME-IMAGE",
       "lane": "CPU",
       "priority": 0,
-      "status": "candidate-image-built-business-validation-in-progress",
+      "status": "final-candidate-two-business-preflights-pass-prepare-register-validation-open",
       "scientific_dependencies": [],
       "requirements": [
         "one versioned image and external configurations",
@@ -74,19 +74,21 @@
       "id": "CPU-REQUEST-EFFICIENCY",
       "lane": "CPU",
       "priority": 0,
-      "status": "render-cache-first-version-no-measured-benefit-returned-for-profiling",
+      "status": "three-stage-pipeline-implementation-in-progress",
       "scientific_dependencies": [],
       "requirements": [
-        "live session and metering wait-hold profile",
-        "independent request concurrency",
-        "measured benefit before deployment"
+        "precompute immutable inputs; dynamic nodes preserve dependencies",
+        "separately configured bounded preparation, model concurrency and validation workers",
+        "measure and shorten safe metering critical sections",
+        "no cross-sample global barrier for independent ready work",
+        "real workload throughput and correctness before migration"
       ]
     },
     {
       "id": "CPU-NODE-GOLD-ATTRIBUTION",
       "lane": "CPU",
       "priority": 0,
-      "status": "running-on-existing-fold-a-artifacts",
+      "status": "completed-evidence-reviewed",
       "scientific_dependencies": [],
       "requirements": [
         "original sample-to-gold binding",
@@ -119,6 +121,9 @@
         "node-targeted changes with repair and break counts",
         "no TEST-guided tuning",
         "candidate grouping depends on CPU-CANDIDATE-GROUPING implementation acceptance; scientific changes isolated"
+      ],
+      "resource_dependencies": [
+        "ENGINEERING-RELEASE-MIGRATION accepted; user prioritizes engineering efficiency"
       ]
     },
     {
@@ -343,6 +348,23 @@
         "NEW-BASELINE-STABLE-BENEFIT"
       ],
       "previous_status": "not-started-not-NPU-ready"
+    },
+    {
+      "id": "ENGINEERING-RELEASE-MIGRATION",
+      "lane": "CPU+A+B",
+      "priority": 0,
+      "status": "awaiting-functional-and-efficiency-acceptance-current-runs-continue",
+      "scientific_dependencies": [
+        "CPU-UNIFIED-RUNTIME-IMAGE",
+        "CPU-REQUEST-EFFICIENCY"
+      ],
+      "requirements": [
+        "stop admission after release accepted",
+        "drain and reconcile in-flight requests",
+        "seal checkpoint and retain costs",
+        "replace pinned image and configuration",
+        "resume unfinished samples only"
+      ]
     }
   ],
   "baseline_first_policy": {
@@ -358,5 +380,22 @@
     ],
     "new_development_rosters_allowed": false
   },
-  "observed_at_utc": "2026-11-05T08:03:00Z"
+  "observed_at_utc": "2026-11-05T09:25:24.938301+00:00",
+  "engineering_first_policy": {
+    "active_experiments_continue": true,
+    "new_large_scale_experiments_allowed": false,
+    "bounded_efficiency_validation_allowed": true,
+    "migration_order": [
+      "stop admission after release accepted",
+      "drain and reconcile in-flight requests",
+      "seal checkpoint and retain costs",
+      "replace pinned image and configuration",
+      "resume unfinished samples only"
+    ],
+    "acceptance": [
+      "functional regression",
+      "real data throughput and NPU idle evidence",
+      "payload and recovery equivalence"
+    ]
+  }
 }
