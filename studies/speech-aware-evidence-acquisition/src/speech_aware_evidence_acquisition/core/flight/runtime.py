@@ -4652,6 +4652,10 @@ class FlightRuntime:
         self._lock = lock
 
         previous_adapter = self._adapter
+        adapter = previous_adapter or self._adapter_factory(lock, self._data_root)
+        if not isinstance(adapter, TaskAdapter):
+            raise FlightRuntimeError("adapter_factory must return a TaskAdapter instance")
+        self._adapter = adapter
 
         # Validate an armed scheduler before preparation can contact a service.
         if "system_search_measurement" in values:
@@ -4705,9 +4709,6 @@ class FlightRuntime:
             adapter = previous_adapter
             samples = self._samples
         else:
-            adapter = self._adapter_factory(lock, self._data_root)
-            if not isinstance(adapter, TaskAdapter):
-                raise FlightRuntimeError("adapter_factory must return a TaskAdapter instance")
             samples = tuple(adapter.load_split(split_id))
         self._adapter = adapter
         if not samples:
@@ -5607,6 +5608,21 @@ class FlightRuntime:
         self._raw_phase_packet_bindings_cache = bindings
         return bindings
 
+    def _configured_worker_count(self, key: str, default: int) -> int:
+        """Resolve one bounded CPU-stage worker count from composed config.
+
+        Worker sizing is operational policy, so it belongs in the external
+        experiment fragment rather than in a launcher-specific code path.  A
+        missing key preserves the historical default.  The upper bound keeps
+        a malformed config from creating an unbounded executor; deployment
+        and NPU request limits remain separate concerns.
+        """
+
+        value = self._composed.values.get(key, default)
+        if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 256:
+            raise FlightRuntimeError(f"{key} must be an integer in [1, 256]")
+        return value
+
     def _promotion_receipt_path(self) -> Path:
         value = self._composed.values.get("speech_packet_promotion_receipt")
         if not isinstance(value, str) or not value:
@@ -5879,7 +5895,8 @@ class FlightRuntime:
         if not isinstance(plan_declaration, Mapping) or "workers" not in plan_declaration:
             raise FlightRuntimeError("adapter.preprocess_plan() must declare a 'workers' field")
         declared_workers = plan_declaration["workers"]
-        resolved_workers = declared_workers if workers is None else workers
+        configured_workers = self._configured_worker_count("preprocess_workers", declared_workers)
+        resolved_workers = configured_workers if workers is None else workers
         if isinstance(resolved_workers, bool) or not isinstance(resolved_workers, int) or resolved_workers <= 0:
             raise FlightRuntimeError("preprocess workers must be a positive integer")
         if self._campaign_active:
@@ -10419,6 +10436,9 @@ class FlightRuntime:
         self._phase_planner_specs(policy)
         self._phase_tool_specs(policy)
 
+        if workers is None:
+            workers = self._configured_worker_count("dispatch_workers", self._flight_width())
+
         # The Earnings carrier (owner Decision 12-F item #9, 2026-09-08). An
         # obs policy is dispatched through the obs driver and builds NO
         # FrozenCoreClient: that client is the rails ``messages`` shim over
@@ -13611,7 +13631,7 @@ class FlightRuntime:
     def score(
         self,
         *,
-        max_workers: int = 1,
+        max_workers: int | None = None,
         output_dir: Path | None = None,
         include_per_sample: bool = False,
     ) -> Mapping[str, object]:
@@ -13629,6 +13649,8 @@ class FlightRuntime:
         """
 
         self._require_prior_stages("score")
+        if max_workers is None:
+            max_workers = self._configured_worker_count("score_workers", 1)
         seal_payload = self.receipts.require("seal")
         delivery_preparation = None
         manifest_path = Path(seal_payload["manifest_path"])

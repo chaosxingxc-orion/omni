@@ -528,6 +528,32 @@ def test_prepare_reuses_identity_hashed_roster_for_raw_bindings(tmp_path):
     }
 
 
+def test_worker_counts_are_resolved_from_experiment_config(tmp_path):
+    runtime = _make_runtime(
+        tmp_path,
+        config_kwargs={
+            "experiment_extra": {
+                "preprocess_workers": 12,
+                "dispatch_workers": 24,
+                "score_workers": 3,
+            },
+        },
+    )
+    runtime._prepare()
+
+    assert runtime._configured_worker_count("preprocess_workers", 1) == 12
+    assert runtime._configured_worker_count("dispatch_workers", 1) == 24
+    assert runtime._configured_worker_count("score_workers", 1) == 3
+
+
+def test_worker_count_rejects_unbounded_or_boolean_config(tmp_path):
+    runtime = _make_runtime(tmp_path)
+    runtime._prepare()
+    runtime._composed = type("Composed", (), {"values": {"score_workers": True}})()
+    with pytest.raises(FlightRuntimeError, match="score_workers"):
+        runtime._configured_worker_count("score_workers", 1)
+
+
 def test_preflight_refuses_to_run_twice(tmp_path):
     runtime = _make_runtime(tmp_path)
     runtime.preflight()
