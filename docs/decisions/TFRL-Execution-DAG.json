@@ -1,6 +1,6 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 10,
+  "source_revision": 11,
   "launcher_compatible": false,
   "execution_status": "Engineering efficiency first; existing Fold A arms continue until validated release migration; no new large-scale scientific experiments",
   "nodes": [
@@ -81,7 +81,7 @@
         "separately configured bounded preparation, model concurrency and validation workers",
         "measure and shorten safe metering critical sections",
         "no cross-sample global barrier for independent ready work",
-        "real workload throughput and correctness before migration"
+        "offline correctness before first lane handover; measure real throughput during first resumed lane"
       ]
     },
     {
@@ -385,7 +385,7 @@
       "id": "CPU-CHECKPOINT-COMPATIBILITY",
       "lane": "CPU",
       "priority": 0,
-      "status": "source-integrated-1bc478d5-final-image-and-successor-validation-pending",
+      "status": "bridge-and-successor-entry-integrated-real-two-arm-runtime-construction-verified-final-image-pending",
       "scientific_dependencies": [],
       "requirements": [
         "native asset hash semantics and real input dependencies verified",
@@ -398,7 +398,7 @@
       "id": "CPU-FINAL-SOURCE-REVIEW",
       "lane": "CPU",
       "priority": 0,
-      "status": "26-source-and-10-entrypoint-files-reviewed-final-deltas-pending",
+      "status": "28-src-files-exact-old-arm-deltas-reviewed-at-cc5ce670-compiler-script-review-pending",
       "scientific_dependencies": [],
       "requirements": [
         "per-file source before and after pins with specific rationale and evidence",
@@ -416,7 +416,8 @@
         "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
         "CPU-CHECKPOINT-COMPATIBILITY",
         "CPU-FINAL-SOURCE-REVIEW",
-        "CPU-CONFIGURED-RELEASE-VALIDATION"
+        "CPU-CONFIGURED-RELEASE-VALIDATION",
+        "CPU-CONFIGURED-CHECKPOINT-SUCCESSOR"
       ],
       "requirements": [
         "one integrated committed source and immutable image manifest",
@@ -429,12 +430,28 @@
       "id": "CPU-CONFIGURED-RELEASE-VALIDATION",
       "lane": "CPU",
       "priority": 0,
-      "status": "implementation-in-progress",
+      "status": "integrated-583b4f71-11-tests-and-offline-role-render-verified-final-image-pending",
       "scientific_dependencies": [],
       "requirements": [
         "configuration driven offline render and bridge precheck",
         "no hardcoded experiment paths or hidden network requests",
         "explicit precheck versus activation boundary"
+      ]
+    },
+    {
+      "id": "CPU-CONFIGURED-CHECKPOINT-SUCCESSOR",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "implementation-in-progress",
+      "scientific_dependencies": [
+        "CPU-CHECKPOINT-COMPATIBILITY",
+        "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS"
+      ],
+      "requirements": [
+        "strict external JSON to held successor workspace; preserve original registered plan",
+        "prepare before drain; finalize only with actual terminal checkpoint and contact reconciliation",
+        "atomic publish, no scientific overrides, no launch or lease mutation",
+        "fixed-image tests and original two-arm zero-model validation"
       ]
     }
   ],
