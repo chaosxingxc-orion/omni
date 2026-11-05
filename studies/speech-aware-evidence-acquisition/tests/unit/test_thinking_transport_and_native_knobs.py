@@ -388,3 +388,27 @@ def test_native_empty_stop_is_not_re_asked(tmp_path):
     adapter, transport, _sunk = _native(tmp_path, [("", "stop", 5)])
     buffer = TraceBuffer("SAEA-E-TEST-native-tools-client")
     assert _dispatch(adapter, buffer).text == "" and len(transport.calls) == 1 and _receipts(buffer) == []
+
+
+def test_p_off_4096_native_wire_and_fallback_never_reenables(tmp_path):
+    policy = {"perception": {"enable_thinking": False, "answer_reserve_tokens": 4096},
+              "slot": {"enable_thinking": True, "reasoning_budget_tokens": 3072, "answer_reserve_tokens": 1024},
+              "solver": {"enable_thinking": True, "reasoning_budget_tokens": 3072, "answer_reserve_tokens": 1024}}
+    adapter, transport, _ = _native(tmp_path, [("", "length", 4096)], policy=policy)
+    p = adapter.prepare(_role_request("perception", "c-perception"))
+    wire = p.rendered_body()["decoding_params"]
+    assert wire["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "thinking_budget_tokens" not in wire and wire["max_tokens"] == 4096
+    for role in ("slot", "solver"):
+        wire = adapter.prepare(_role_request(role, "c-" + role)).rendered_body()["decoding_params"]
+        assert wire["chat_template_kwargs"] == {"enable_thinking": True}
+        assert wire["thinking_budget_tokens"] == 3072 and wire["max_tokens"] == 4096
+    buffer = TraceBuffer("SAEA-E-TEST-native-tools-client")
+    set_current_trace_buffer(buffer)
+    try:
+        adapter.dispatch(p)
+    finally:
+        set_current_trace_buffer(None)
+    assert len(transport.calls) == 1
+    assert transport.calls[0]["decoding_params"]["chat_template_kwargs"] == {"enable_thinking": False}
+    assert _receipts(buffer) == []

@@ -17,10 +17,10 @@ class NodeWorkload(PairWorkload):
     LABEL='Fixed development native intent Slot Decision ablation'
     def __init__(self,config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material','node_arm'}
-        if not fields <= set(config) <= fields | {'population'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
+        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
             raise ValueError('exact native node workload required')
         arm=config['node_arm']
-        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population')})
+        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy')})
         if not config.get('population') and (len(config['sample_ids'])!=80 or config['sample_ids']!=sorted(config['sample_ids'])):
             raise ValueError('historical stable development80 required')
         if config.get('population'):
@@ -106,6 +106,28 @@ class NodeWorkload(PairWorkload):
                 base['native_episode'].pop('consumption_module',None)
                 base['native_evidence_projection']=expanded['native_evidence_projection']
                 base['native_evidence_projection_params']={**expanded['native_evidence_projection_params'],'consumer_roles':['solver']}
+        for role in ('perception','slot'):
+            policy=self.config.get(role+'_policy')
+            if policy is None:
+                continue
+            if role=='slot' and arm!='enhanced-p-slot-decision':
+                raise ValueError('Slot policy requires the split graph')
+            if (not isinstance(policy,dict) or set(policy)!={'thinking','instruction_template'}
+                or not isinstance(policy['thinking'],dict)
+                or not isinstance(policy['instruction_template'],dict)
+                or set(policy['instruction_template'])!={'relpath','sha256'}):
+                raise ValueError('source-pinned node policy required')
+            template=policy['instruction_template']
+            from tfrl_hardset_a0_workload import confined
+            if (not isinstance(template['relpath'],str)
+                or not template['relpath'].startswith('configs/probes/')
+                or '..' in Path(template['relpath']).parts):
+                raise ValueError('Perception template must be under configs/probes')
+            path=confined(repo,template['relpath'])
+            if not path.is_file() or sha(path)!=template['sha256']:
+                raise ValueError('Perception instruction template pin differs')
+            base['phase_material'][role]['instruction_template']=template['relpath'][len('configs/'):]
+            base['thinking_policy'][role]=copy.deepcopy(policy['thinking'])
         model=read(repo/f"configs/model/{binding['model_fragment']}.json")
         validate_thinking_policy(base['thinking_policy'],model)
         slot=int(model['server_args'][model['server_args'].index('--max-model-len')+1])

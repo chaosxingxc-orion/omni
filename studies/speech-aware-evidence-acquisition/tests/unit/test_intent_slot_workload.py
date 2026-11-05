@@ -37,3 +37,22 @@ def test_comparison_rejects_different_roster_or_scorer():
     assert compare(rs)['contrasts'][ARMS[2]]['strict_delta_rows']==0
     rs[ARMS[1]]['candidate_coverage']['rows'].reverse()
     with pytest.raises(ValueError):compare(rs)
+
+
+def test_node_policy_old_config_is_unchanged_and_joint_rejects_slot(tmp_path, monkeypatch):
+    c=config(); job=NodeWorkload(c)
+    assert 'perception_policy' not in job.config and 'slot_policy' not in job.config
+    c['slot_policy']={'thinking':{'enable_thinking':False,'answer_reserve_tokens':4096},'instruction_template':{'relpath':'configs/probes/any.txt','sha256':'0'*64}}
+    job=NodeWorkload(c);job.material_checked=lambda *args: ({'source_roster':{}},{'roster':{'items':[],'split_identity_hash':'a'*64},'view':{}});job.runtime_binding=lambda *args: {'model_fragment':'unused'}
+    with pytest.raises(ValueError,match='Slot policy requires'):
+        job.derive(ROOT,tmp_path,{})
+
+@pytest.mark.parametrize('relpath,digest,error',[
+    ('configs/probes/slurp_native_candidate_perception_off_v1.txt','0'*64,'template pin differs'),
+    ('configs/probes/../../docs/exposure-ledger.md','0'*64,'under configs/probes'),
+    ('docs/exposure-ledger.md','0'*64,'under configs/probes'),
+])
+def test_perception_policy_rejects_bad_template_pin_and_escape(tmp_path,relpath,digest,error):
+    c=config();c['perception_policy']={'thinking':{'enable_thinking':False,'answer_reserve_tokens':2048},'instruction_template':{'relpath':relpath,'sha256':digest}}
+    job=NodeWorkload(c);job.material_checked=lambda *args: ({'source_roster':{}},{'roster':{'items':[],'split_identity_hash':'a'*64},'view':{}});job.runtime_binding=lambda *args: {'model_fragment':'unused'}
+    with pytest.raises(ValueError,match=error):job.derive(ROOT,tmp_path,{})

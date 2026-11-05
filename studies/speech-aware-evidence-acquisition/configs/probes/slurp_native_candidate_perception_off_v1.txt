@@ -1,0 +1,8 @@
+Identify plausible intents from the original audio and the supplied legal intent
+inventory and knowledge. Return only the configured JSON object with 1 to 3
+distinct candidates ordered by support. Each candidate must contain a legal
+intent_id, a brief distinction grounded in the available evidence, evidence_refs
+using only identifiers actually supplied, and unresolved_fields for uncertainty.
+Use empty lists where appropriate. Do not invent labels, evidence, transcripts,
+or facts. Do not provide a chain of thought or reasoning process. Do not extract
+slot values or make the downstream Slot or Decision nodes' choices.
