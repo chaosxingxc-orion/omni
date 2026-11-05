@@ -1,0 +1,45 @@
+{
+  "schema": "reflexion-selection80-result-v1",
+  "rows": 80,
+  "official": {
+    "learned": {
+      "slu_f1": 0.6903145478091489,
+      "intent_accuracy": 0.75,
+      "span_f1": 0.5913978494623655
+    },
+    "lock": {
+      "slu_f1": 0.6772521462996137,
+      "intent_accuracy": 0.7625,
+      "span_f1": 0.5591397849462365
+    }
+  },
+  "strict_success": {
+    "learned": 31,
+    "lock": 30
+  },
+  "comparisons": {
+    "learned_vs_lock": {
+      "proxy_mean_delta": 0.0009970238095237782,
+      "strict_breaks": 2,
+      "strict_repairs": 3
+    }
+  },
+  "cost": {
+    "audio_seconds_used": 1018.5474375000009,
+    "calls_used": 240,
+    "completion_tokens_total": 500647,
+    "latency_seconds_total": 20728.43324587011,
+    "prompt_tokens_total": 1710799,
+    "tool_calls": 0
+  },
+  "source_sha256": "bbe30a52252ecb73deeab306ebd92e9ae1d87aa09b49b2404ed9b48294924731",
+  "candidate_promoted": false,
+  "cards": 4,
+  "instances": 1,
+  "context_tokens": 49152,
+  "concurrency": 16,
+  "container_wall_seconds": 1788.01417892,
+  "container_seconds_per_row": 22.3501772365,
+  "eta_seconds": 0,
+  "new_teacher_calls": 0
+}

@@ -15,7 +15,7 @@
 |Top-K意图→Slot→Decision|旧归档含36条seal_refusal记录，完整P→Slot→Decision轨迹为0/80|旧2卡TP2任务已退出；历史响应及成本保留。恢复工作量不能按80−36计算，效率及ETA待修复核验|
 |ACE候选0诊断|80/80；learned/lock SLU70.2074%/66.1634%，strict27/28，修4破5；不晋升|4卡TP4、C16、48K；20.93秒/配对条；240生成，剩余0|
 |旧joint消费参考|80/80；SLU66.8266%、intent77.5%、strict31；P候选覆盖正确意图65/80|4卡TP4、C32、64K；12.47容器秒/条，160生成，剩余0；不是AA或A0 P-off|
-|Reflexion2 selection确认|80/80，生成exit0；独立双臂最终评分待主线程验收|4卡TP4、C16、48K；22.35容器秒/条，240正常生成预算；后继已自动接续|
+|Reflexion2 selection确认|80/80，SLU learned/lock69.0315%/67.7252%，strict31/30修3破2；intent75%/76.25%，不晋升|4卡TP4、C16、48K；22.35容器秒/条，240正常生成预算；后继已自动接续|
 
 详细基线与配对指标见[A0完整测试](A0-Full-Test-Baseline.md)、[确认实验](TFRL-Confirmation-Results.md)及[Reflexion双臂结果](Reflexion-Grounding-Paired-Results.md)。已有完整结果不重复生成。
 
