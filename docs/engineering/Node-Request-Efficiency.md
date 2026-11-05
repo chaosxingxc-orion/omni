@@ -168,7 +168,9 @@ normal不写细粒度日志，debug两组各实际写12事件；新debug原始�
 
 停前恢复链路已验收：完整P→Slot→Decision历史样本的3个已知请求、3个可恢复FIT记录在隔离测试中通过原生packager、terminal和compiler，返回HELD/1080；9份交付摘要全部一致。主线程另在最终镜像调用原生predecessor reader，确认保留该1条样本、剩余1079条。测试未新发模型/FIT，fixture终态不用于真实交接。外置配置打包脚本与测试已合main `ec4bf566`，固定业务镜像不变。
 
-2026-11-05 16:20 UTC，重新核对A/B容器、PID和boot身份后，只向A发布持久化停止准入请求，等待原worker自然排空。B继续，两个NPU推理服务均未停止。已启动针对同一A容器的终态事件等待；不会因SSH断开重启实验。真实ABORTED、unknown=0、checkpoint和guard归还仍须实际核验，尚未启动新版worker、尚无新版吞吐结论。
+2026-11-05 16:20 UTC，重新核对A/B容器、PID和boot身份后，只向A发布持久化停止准入请求，等待原worker自然排空。B继续，两个NPU推理服务均未停止。终态事件等待已移至服务器后台；两次SSH长等待断开后，均核对原worker仍运行，只重新连接观察，未重启实验。真实ABORTED、unknown=0、checkpoint和guard归还仍须实际核验，尚未启动新版worker、尚无新版吞吐结论。
+
+运行配置仍在收尾：旧、新attempt共用同一run目录，新本地目录需可写，旧attempt账本、checkpoint和journal按更具体路径只读挂载，并保留全部历史费用可见。上一配置交付只有设计草案，已退回原实现者，要求以固定镜像实际验证静态资产与分层挂载后交完整配置。当前工程功能测试通过，不代表这份生产挂载草案已可直接执行。
 
 ## 当前运行快照
 
