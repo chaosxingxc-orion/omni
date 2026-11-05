@@ -25,7 +25,7 @@ def execute(config):
             raise ValueError('asset absent, unsafe, duplicated or changed')
         names.add(pin['relative'])
     root.mkdir(parents=True, exist_ok=False)
-    root.chmod(0o755)
+    root.chmod(0o700)
     outputs = []
     for pin in doc['files']:
         target = root / pin['relative']
@@ -36,11 +36,11 @@ def execute(config):
             os.fsync(output.fileno())
         if hashlib.sha256(target.read_bytes()).hexdigest() != pin['sha256']:
             raise ValueError('asset changed during copy; incomplete directory retained')
-        target.chmod(0o644)
+        target.chmod(0o600)
         outputs.append({'relative': pin['relative'], 'sha256': pin['sha256']})
     for path in root.rglob('*'):
         if path.is_dir():
-            path.chmod(0o755)
+            path.chmod(0o700)
     result = {'schema': doc['schema'], 'files': outputs, 'new_model_calls': 0, 'fit_calls': 0}
     from speech_aware_evidence_acquisition.core.atomic_file import publish_new
     publish_new(root / 'asset-receipt.json', (json.dumps(result, sort_keys=True, indent=2)+'\n').encode())

@@ -236,7 +236,7 @@ def command(doc, config_sha, runner_sha):
     if doc.get('source_identity') is not None:
         args += ['--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges']
     if doc.get('process_access') == 'resident-identity-read-v1':
-        args += ['--cap-add', 'SYS_PTRACE', '--cap-add', 'DAC_OVERRIDE']
+        args += ['--cap-add', 'SYS_PTRACE']
     if doc['pid_host']:
         args += ['--pid', 'host']
     for m in sorted(doc['mounts'], key=lambda m: len(Path(m['target']).parts)):

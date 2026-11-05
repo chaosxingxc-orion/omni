@@ -14,7 +14,9 @@ def test_readable_copy_retains_exact_hash_and_refuses_repeat(tmp_path):
     cfg=tmp_path/'config';out=tmp_path/'state';cfg.write_text(json.dumps({'schema':'saea-asset-stage-v1','output_root':str(out),'files':[pin]}))
     result=m.execute(cfg)
     assert result['new_model_calls']==0 and (out/pin['relative']).read_bytes()==src.read_bytes()
-    assert (out/pin['relative']).stat().st_mode & 0o777 == 0o644
+    assert (out/pin['relative']).stat().st_mode & 0o777 == 0o600
+    assert out.stat().st_mode & 0o777 == 0o700
+    assert (out/'knowledge').stat().st_mode & 0o777 == 0o700
     with pytest.raises(FileExistsError):m.execute(cfg)
 
 

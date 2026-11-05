@@ -313,6 +313,6 @@ def test_release_resident_process_access_is_explicit(tmp_path):
     doc['argv']=['/opt/saea-venv/bin/python',doc['repo_path']+'/scripts/environment/configured_environment_preflight.py']
     doc.update(process_access='resident-identity-read-v1',network='host',pid_host=True)
     path.write_text(json.dumps(doc)); loaded=m.load_config(path); cmd=m.command(loaded,'a'*64,'b'*64)
-    assert cmd.count('--cap-add')==2 and 'SYS_PTRACE' in cmd and 'DAC_OVERRIDE' in cmd
+    assert cmd.count('--cap-add')==1 and 'SYS_PTRACE' in cmd and 'DAC_OVERRIDE' not in cmd
     doc['pid_host']=False;path.write_text(json.dumps(doc))
     with pytest.raises(ValueError,match='resident process'):m.load_config(path)
