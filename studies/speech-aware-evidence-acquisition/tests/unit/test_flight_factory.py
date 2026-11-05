@@ -58,6 +58,34 @@ def test_efficiency_runtime_config_binds_audio_cache_policy(tmp_path):
     assert loaded["audio_cache"]["preload_workers"] == 2
 
 
+@pytest.mark.parametrize("field", ["request_pipeline", "audio_cache"])
+@pytest.mark.parametrize("entry", ["factory", "runtime"])
+def test_external_operational_collision_refused_before_adapter(tmp_path, monkeypatch, field, entry):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.base import CoreError
+    from speech_aware_evidence_acquisition.core.flight import factory, runtime as module
+
+    composed = SimpleNamespace(values={field: {"scientific": True}})
+    overlay = {"request_pipeline": {"enabled": True},
+               "audio_cache": {"enabled": True}}
+    if entry == "factory":
+        monkeypatch.setattr(factory, "compose", lambda *a, **kw: composed)
+        monkeypatch.setattr(factory, "load_external_runtime_config", lambda *a: overlay)
+        with pytest.raises(CoreError, match=f"collides with scientific {field}"):
+            factory.build_flight_runtime(
+                tmp_path, tmp_path, model="m", dataset="d", baseline="b", experiment="e",
+                run_id="r", attempt_id="a", runtime_root=tmp_path,
+            )
+    else:
+        monkeypatch.setattr(module, "compose", lambda *a, **kw: composed)
+        runtime = object.__new__(module.FlightRuntime)
+        runtime._repo_root = tmp_path
+        runtime._model, runtime._dataset, runtime._baseline, runtime._experiment = "m", "d", "b", "e"
+        runtime._runtime_config_overlay = overlay
+        with pytest.raises(module.FlightRuntimeError, match=f"collides with scientific {field}"):
+            runtime._prepare()
+
+
 @pytest.mark.parametrize("mutation,match", [
     (lambda doc: doc["items"][0].update(scenario="gold"), "label"),
     (lambda doc: doc["items"].append(dict(doc["items"][0])), "count"),

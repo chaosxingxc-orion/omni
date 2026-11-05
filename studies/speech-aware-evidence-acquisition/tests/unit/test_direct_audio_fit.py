@@ -130,6 +130,53 @@ def test_audio_mutation_during_read_is_rejected(tmp_path, monkeypatch, audio_cac
     assert not audio_cache._AUDIO_CACHE and audio_cache._AUDIO_CACHE_BYTES == 0
 
 
+def test_cache_disable_clears_residency_and_reenable_restores_reuse(tmp_path, audio_cache):
+    (tmp_path / "q.wav").write_bytes(b"123456")
+    expected = _load_audio_part(tmp_path, "q.wav", "query")
+    configure_audio_cache(enabled=False, max_entries=4, max_bytes=1024)
+    assert not audio_cache._AUDIO_CACHE and audio_cache._AUDIO_CACHE_BYTES == 0
+    assert _load_audio_part(tmp_path, "q.wav", "query") == expected
+    assert not audio_cache._AUDIO_CACHE
+    configure_audio_cache(enabled=True, max_entries=4, max_bytes=1024)
+    assert preload_audio_cache(tmp_path, ("q.wav",), workers=1)["loaded"] == 1
+    assert _load_audio_part(tmp_path, "q.wav", "query") == expected
+    assert audio_cache._AUDIO_CACHE_BYTES == 8
+
+
+def test_preload_failures_are_counted_without_unbounded_error_details(tmp_path, audio_cache):
+    (tmp_path / "ok.wav").write_bytes(b"123456")
+    receipt = preload_audio_cache(
+        tmp_path, ["ok.wav", *(f"missing-{i}.wav" for i in range(20))], workers=2,
+    )
+    assert receipt["requested"] == 21
+    assert receipt["loaded"] == 1
+    assert receipt["failed"] == 20
+    assert len(receipt["failures"]) == 8
+    assert receipt["cache_entries"] == 1
+
+
+def test_preload_does_not_retain_media_in_futures(tmp_path, monkeypatch, audio_cache):
+    from concurrent.futures import ThreadPoolExecutor
+
+    retained = []
+
+    class ObservedPool(ThreadPoolExecutor):
+        def submit(self, *args, **kwargs):
+            future = super().submit(*args, **kwargs)
+            retained.append(future)
+            return future
+
+    monkeypatch.setattr(audio_cache, "ThreadPoolExecutor", ObservedPool)
+    paths = [f"{i}.wav" for i in range(40)]
+    for path in paths:
+        (tmp_path / path).write_bytes(b"123456")
+    configure_audio_cache(enabled=True, max_entries=1, max_bytes=8)
+    receipt = preload_audio_cache(tmp_path, paths, workers=2)
+    assert receipt["loaded"] == 40 and receipt["submission_window"] == 1
+    assert receipt["cache_entries"] == 1 and receipt["cache_bytes"] == 8
+    assert len(retained) == 40 and all(f.result() is None for f in retained)
+
+
 @pytest.mark.parametrize("format_name,subtype,declared", [
     ("WAV", "PCM_16", "wav"), ("WAV", "FLOAT", "wav"),
     ("WAVEX", "PCM_24", "wav"), ("FLAC", "PCM_16", "flac"),
