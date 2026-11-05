@@ -116,6 +116,8 @@ class NodeWorkload(PairWorkload):
         roster['selection_rule']='Reuse exact existing fold; no sampling or TEST tuning.' if self.config.get('population') else 'Reuse exact existing development80; no sampling or TEST tuning.'
         cell,=exp['cells'];cell.update(cell_id=self.NAME,baseline_fragment=self.NAME,model_fragment=binding['model_fragment'],dataset_fragment=self.DATASET,run_id=self.RUN,attempt_id='generation-v1',allowed_execution_stages=['check','prepare-supply','worker','campaign'],readiness={'state':'held','requirements':[],'reason':'Registered native graph requires fresh preparation/admission.'})
         exp.update(experiment_id=self.RUN,purpose=base['what_this_is'],service_session=binding['service_session'])
+        if self.config.get('population'):
+            exp['split_id']=checked['view']['split_name']
         exp['population'].update(count=self.ROWS,roster_receipt=self.ROSTER,split_identity_hash=roster['split_identity_hash'])
         exp['populations']=[{'dataset_fragment':self.DATASET,'ids':self.config['sample_ids']}]
         exp['population']['dataset_fragment']=self.DATASET
