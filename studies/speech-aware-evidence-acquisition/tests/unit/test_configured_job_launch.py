@@ -303,3 +303,16 @@ def test_release_closed_execution_environment(tmp_path,fault):
     else:doc['environment'][fault]='/data/inject'
     path.write_text(json.dumps(doc))
     with pytest.raises(ValueError):m.load_config(path)
+
+
+def test_release_resident_process_access_is_explicit(tmp_path):
+    path,doc=configured(tmp_path)
+    doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'; doc['working_directory']=doc['repo_path']
+    doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
+    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',SAEA_RELEASE_MANIFEST_SHA256='c'*64,PYTHONPATH=doc['repo_path']+'/src',PYTHONDONTWRITEBYTECODE='1')
+    doc['argv']=['/opt/saea-venv/bin/python',doc['repo_path']+'/scripts/environment/configured_environment_preflight.py']
+    doc.update(process_access='resident-identity-read-v1',network='host',pid_host=True)
+    path.write_text(json.dumps(doc)); loaded=m.load_config(path); cmd=m.command(loaded,'a'*64,'b'*64)
+    assert cmd.count('--cap-add')==2 and 'SYS_PTRACE' in cmd and 'DAC_OVERRIDE' in cmd
+    doc['pid_host']=False;path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError,match='resident process'):m.load_config(path)

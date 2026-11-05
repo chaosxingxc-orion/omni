@@ -75,3 +75,17 @@ def test_external_lock_receipt_reaches_real_lock_parser(tmp_path, monkeypatch):
     path.write_text("{}")
     with pytest.raises(ValueError, match="changed"):
         lock.r01c_pins(repo)
+
+
+def test_external_receipt_reaches_real_preparation_source_gate(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.core.preparation import verify_source_receipts
+    repo, assets, manifest, doc = setup(tmp_path, monkeypatch)
+    path = assets / 'receipt.json'; path.write_text('{"frozen":true}')
+    checksum = hashlib.sha256(path.read_bytes()).hexdigest()
+    rel = 'docs/receipts/knowledge/source.json'
+    doc['files'][rel] = {'path':str(path), 'sha256':checksum}
+    manifest.write_text(json.dumps(doc)); monkeypatch.setenv('SAEA_EXPERIMENT_MANIFEST_SHA256',hashlib.sha256(manifest.read_bytes()).hexdigest())
+    pins = [{'root':'repository','relpath':rel,'sha256':checksum}]
+    assert verify_source_receipts(pins,repo_root=repo,data_root=tmp_path)==pins
+    path.write_text('changed')
+    with pytest.raises(ValueError):verify_source_receipts(pins,repo_root=repo,data_root=tmp_path)

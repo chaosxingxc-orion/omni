@@ -863,9 +863,13 @@ def verify_source_receipts(pins, *, repo_root: Path, data_root: Path):
         root = roots[pin["root"]]
         try:
             relative = _normalized_relative_path(pin["relpath"], "source receipt")
-            path = _resolve_confined(
-                root, relative, root, "source receipt", strict=True
-            )
+            if pin["root"] == "repository":
+                from .experiment_assets import resolve_asset
+                path = resolve_asset(root, relative)
+            else:
+                path = _resolve_confined(
+                    root, relative, root, "source receipt", strict=True
+                )
             if hashlib.sha256(path.read_bytes()).hexdigest() != pin["sha256"]:
                 raise PreparationError("frozen source receipt file hash mismatch")
         except (OSError, ValueError, RuntimeError) as error:
