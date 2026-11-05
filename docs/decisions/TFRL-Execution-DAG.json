@@ -1,6 +1,6 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 9,
+  "source_revision": 10,
   "launcher_compatible": false,
   "execution_status": "Engineering efficiency first; existing Fold A arms continue until validated release migration; no new large-scale scientific experiments",
   "nodes": [
@@ -353,24 +353,25 @@
       "id": "ENGINEERING-RELEASE-MIGRATION",
       "lane": "CPU+A+B",
       "priority": 0,
-      "status": "awaiting-functional-and-efficiency-acceptance-current-runs-continue",
+      "status": "awaiting-offline-engineering-readiness-no-stop-issued",
       "scientific_dependencies": [
         "CPU-FINAL-EFFICIENCY-RELEASE",
         "CPU-CHECKPOINT-COMPATIBILITY"
       ],
       "requirements": [
-        "stop admission after release accepted",
-        "drain and reconcile in-flight requests",
-        "seal checkpoint and retain costs",
-        "replace pinned image and configuration",
-        "resume unfinished samples only"
+        "accept offline image, functionality, scientific and recovery evidence",
+        "drain and settle first lane only",
+        "seal checkpoint, retain all costs, transfer original lease",
+        "resume unfinished samples on final worker image at width 32",
+        "measure real throughput in resumed research traffic",
+        "accept first lane then transfer second lane; widen only with bottleneck evidence"
       ]
     },
     {
       "id": "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
       "lane": "CPU",
       "priority": 0,
-      "status": "implementation-in-progress",
+      "status": "base-entrypoints-integrated-c038b791-successor-recovery-pending",
       "scientific_dependencies": [
         "CPU-REQUEST-EFFICIENCY"
       ],
@@ -384,7 +385,7 @@
       "id": "CPU-CHECKPOINT-COMPATIBILITY",
       "lane": "CPU",
       "priority": 0,
-      "status": "two-arm-auxiliary-precheck-returned-final-validation-pending",
+      "status": "source-integrated-1bc478d5-final-image-and-successor-validation-pending",
       "scientific_dependencies": [],
       "requirements": [
         "native asset hash semantics and real input dependencies verified",
@@ -397,7 +398,7 @@
       "id": "CPU-FINAL-SOURCE-REVIEW",
       "lane": "CPU",
       "priority": 0,
-      "status": "26-file-snapshot-under-independent-review-final-deltas-pending",
+      "status": "26-source-and-10-entrypoint-files-reviewed-final-deltas-pending",
       "scientific_dependencies": [],
       "requirements": [
         "per-file source before and after pins with specific rationale and evidence",
@@ -414,13 +415,26 @@
         "CPU-REQUEST-EFFICIENCY",
         "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
         "CPU-CHECKPOINT-COMPATIBILITY",
-        "CPU-FINAL-SOURCE-REVIEW"
+        "CPU-FINAL-SOURCE-REVIEW",
+        "CPU-CONFIGURED-RELEASE-VALIDATION"
       ],
       "requirements": [
         "one integrated committed source and immutable image manifest",
-        "two real business configurations pass CPU preparation and compatibility tests",
-        "bounded real-workload efficiency acceptance; no synthetic throughput claim",
-        "retain current experiments until replacement accepted"
+        "actual current-arm preparation and recovery validation; existing TFRL compose preflight",
+        "offline request body, budget and exception equivalence",
+        "retain both existing experiments until offline engineering acceptance"
+      ]
+    },
+    {
+      "id": "CPU-CONFIGURED-RELEASE-VALIDATION",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "implementation-in-progress",
+      "scientific_dependencies": [],
+      "requirements": [
+        "configuration driven offline render and bridge precheck",
+        "no hardcoded experiment paths or hidden network requests",
+        "explicit precheck versus activation boundary"
       ]
     }
   ],
@@ -437,22 +451,24 @@
     ],
     "new_development_rosters_allowed": false
   },
-  "observed_at_utc": "2026-11-05T11:22:51.056440+00:00",
+  "observed_at_utc": "2026-11-05T12:04:48.503290+00:00",
   "engineering_first_policy": {
     "active_experiments_continue": true,
     "new_large_scale_experiments_allowed": false,
     "bounded_efficiency_validation_allowed": true,
     "migration_order": [
-      "stop admission after release accepted",
-      "drain and reconcile in-flight requests",
-      "seal checkpoint and retain costs",
-      "replace pinned image and configuration",
-      "resume unfinished samples only"
+      "accept offline image, functionality, scientific and recovery evidence",
+      "drain and settle first lane only",
+      "seal checkpoint, retain all costs, transfer original lease",
+      "resume unfinished samples on final worker image at width 32",
+      "measure real throughput in resumed research traffic",
+      "accept first lane then transfer second lane; widen only with bottleneck evidence"
     ],
     "acceptance": [
-      "functional regression",
-      "real data throughput and NPU idle evidence",
-      "payload and recovery equivalence"
+      "offline engineering acceptance before first lane drain",
+      "real throughput and NPU idle evidence after first lane lease transfer",
+      "no parallel probe under occupied old lease",
+      "no mandatory four-level repeated benchmark"
     ]
   }
 }
