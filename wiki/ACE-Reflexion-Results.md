@@ -35,3 +35,10 @@ Reflexion原6条提案未整体发布，研究者仅保留有源轨迹支持的�
 两项Solver请求均未配置response_format；这是当前固定运行配置的事实，不直接证明程序遗漏或引擎支持该约束。可将严格结构输出作为独立配置因素验证，必须保持思考、实体表达和计分规则可比，不能靠宽松解析掩盖输出失败。
 
 ACE单人名分层的1次修复、3次破坏均伴随其他槽位/输出结构变化，而非人名字符串改对；唯一多对象输出同时把餐食槽改成事件槽，不能断言仅修格式就会答对。Reflexion四条strict变化中，一次为意图选择，另外三次是额外实体的增删；那两条非法配对不在strict变化集合中，说明最终strict指标会遗漏具体机制问题。后续同时报告合法配对率、目标槽位机会、raw→delivered变化与总体得分。
+
+
+## 本机教师候选2最终结果更正
+
+原consumer80已存在独立双臂官方分析，learned/lock SLU为69.1159%/69.1922%，strict均27，修4破4，不晋升。早先仅检查delivered sealed score并误称没有learned评分，现已纠正；详细来源见[Reflexion双臂结果](Reflexion-Grounding-Paired-Results)。新selection80确认使用另一份冻结名单，不能与这次结果混写。
+
+ACE0原文来源规则的新80条结果见[两TP4开发诊断](ACE-Joint-TP4-Diagnostics)：SLU改善但strict净损，不自动晋升。历史人名投影实验与本轮原文规则实验是不同候选。

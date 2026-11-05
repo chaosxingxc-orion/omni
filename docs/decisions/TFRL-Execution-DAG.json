@@ -1,187 +1,141 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 2,
-  "execution_status": "two NPU jobs running; successors and CPU feedback preparation in progress",
+  "source_revision": 3,
   "launcher_compatible": false,
+  "execution_status": "Reflexion selection running; GEPA1 dispatched, business request evidence pending; successors converting",
   "nodes": [
     {
-      "id": "A-R2-audit",
-      "line": "knowledge-construction",
-      "title": "核验Reflexion2已有双臂分析",
-      "resource": "CPU",
-      "status": "completed",
-      "status_reason": "Root verified existing two-arm results, nine source hashes and paired 80 unique IDs; zero generation.",
-      "depends_on": [],
-      "planned_normal_generation_calls": 0
+      "id": "B-GEPA1-selection80",
+      "lane": "B",
+      "priority": 0,
+      "status": "spec-ready-for-conversion",
+      "normal_generation_calls": 640,
+      "fit_call_cap": 640,
+      "generation_fallback_inclusive_cap": 1280,
+      "scientific_dependencies": [],
+      "resource_dependencies": [
+        "B现有旧joint exact generation终态且lease settled；同lane独占guard"
+      ]
     },
     {
-      "id": "A-ACE0-prepare",
-      "line": "knowledge-construction",
-      "title": "ACE0原文固定80诊断适配48K",
-      "resource": "CPU",
-      "status": "completed",
-      "status_reason": "原文候选、稳定80、准入、固定镜像预检均完成",
-      "depends_on": [],
-      "planned_normal_generation_calls": 0
+      "id": "B-GEPA2-feedback-extension80",
+      "lane": "B",
+      "priority": 2,
+      "status": "spec-ready-for-conversion",
+      "normal_generation_calls": 640,
+      "fit_call_cap": 640,
+      "generation_fallback_inclusive_cap": 1280,
+      "scientific_dependencies": [],
+      "resource_dependencies": [
+        "B现有旧joint exact generation终态且lease settled；同lane独占guard"
+      ]
     },
     {
-      "id": "A-ACE0-rollout",
-      "line": "knowledge-construction",
-      "title": "ACE0共享P原文80 paired",
-      "resource": "NPU",
-      "status": "running",
-      "status_reason": "真实生成已启动；02:18快照13/80，02:21 vLLM running=16",
-      "depends_on": [
-        "A-ACE0-prepare"
+      "id": "B-GEPA2-feedback-extension73",
+      "lane": "B",
+      "priority": 3,
+      "status": "spec-ready-for-conversion",
+      "normal_generation_calls": 584,
+      "fit_call_cap": 584,
+      "generation_fallback_inclusive_cap": 1168,
+      "scientific_dependencies": [],
+      "resource_dependencies": [
+        "B现有旧joint exact generation终态且lease settled；同lane独占guard",
+        "同一B队列串行；前片若unknown则只按既有恢复规则处理，不自动跳过/重发"
+      ]
+    },
+    {
+      "id": "A-Reflexion2-selection80",
+      "lane": "A",
+      "priority": 0,
+      "status": "running-existing-owner",
+      "normal_generation_calls": 240,
+      "fit_call_cap": 240,
+      "generation_fallback_inclusive_cap": 480,
+      "scientific_dependencies": [],
+      "resource_dependencies": [
+        "A lane exact prior generation terminal + lease/guard handoff"
+      ]
+    },
+    {
+      "id": "A-ACE0-selection80",
+      "lane": "A",
+      "priority": 1,
+      "status": "spec-ready-for-conversion",
+      "normal_generation_calls": 240,
+      "fit_call_cap": 240,
+      "generation_fallback_inclusive_cap": 480,
+      "scientific_dependencies": [],
+      "resource_dependencies": [
+        "A lane exact prior generation terminal + lease/guard handoff"
+      ]
+    },
+    {
+      "id": "A-ACE0-H2-remainder232",
+      "lane": "A",
+      "priority": 2,
+      "status": "spec-ready-for-conversion",
+      "normal_generation_calls": 696,
+      "fit_call_cap": 696,
+      "generation_fallback_inclusive_cap": 1392,
+      "scientific_dependencies": [],
+      "resource_dependencies": [
+        "A lane exact prior generation terminal + lease/guard handoff"
+      ]
+    },
+    {
+      "id": "A-TFGRPO-current-K4-pilot15",
+      "lane": "A",
+      "priority": 3,
+      "status": "blocked-contract-and-subset-entry",
+      "normal_generation_calls": 105,
+      "fit_call_cap": 105,
+      "generation_fallback_inclusive_cap": 210,
+      "scientific_dependencies": [
+        "CPU-current-policy-freeze-and-custody-audit"
       ],
-      "planned_normal_generation_calls": 240
+      "resource_dependencies": [
+        "与A lane后继串行，若调B须一次性重新绑定不两lane重复派发"
+      ]
     },
     {
-      "id": "A-ACE0-score",
-      "line": "knowledge-construction",
-      "title": "ACE0官方配对归因与回退分析",
-      "resource": "CPU",
-      "status": "queued",
-      "status_reason": "已配置真实依赖队列，待该生成完成后官方CPU配对评分",
-      "depends_on": [
-        "A-ACE0-rollout"
-      ],
-      "planned_normal_generation_calls": 0
+      "id": "CPU-history-feedback-reuse",
+      "status": "inputs-ready",
+      "normal_generation_calls": 0,
+      "fit_call_cap": 0,
+      "scientific_dependencies": []
     },
     {
-      "id": "A-held-counterexamples",
-      "line": "knowledge-construction",
-      "title": "六个hold候选的原始定义与真实反例审查",
-      "resource": "CPU",
-      "status": "ready",
-      "status_reason": "八候选与16组原证据均在本机；可以先做CPU范围分析",
-      "depends_on": [],
-      "planned_normal_generation_calls": 0
+      "id": "CPU-current-policy-freeze-and-custody-audit",
+      "status": "needs-owner-input",
+      "normal_generation_calls": 0,
+      "fit_call_cap": 0,
+      "scientific_dependencies": []
     },
     {
-      "id": "A-R2-confirm-prepare",
-      "line": "knowledge-construction",
-      "title": "冻结Reflexion2的独立selection80诊断设计",
-      "resource": "CPU",
-      "status": "in-progress",
-      "status_reason": "原负责人独立配置化准备冻结候选的新selection80确认，尚未入NPU队列",
-      "depends_on": [],
-      "planned_normal_generation_calls": 0
+      "id": "CPU-frozen-candidate-scores",
+      "status": "wait-own-generation",
+      "normal_generation_calls": 0,
+      "fit_call_cap": 0,
+      "scientific_dependencies": []
     },
     {
-      "id": "A-R2-confirm",
-      "line": "knowledge-construction",
-      "title": "Reflexion2固定新名单的独立paired确认",
-      "resource": "NPU",
-      "status": "needs-preparation",
-      "status_reason": "需原文selection release、48K FIT与启动器转换；不是重跑已完成consumer80",
-      "depends_on": [
-        "A-R2-confirm-prepare"
-      ],
-      "planned_normal_generation_calls": 240
+      "id": "LOCAL-API-TFGRPO-reference-next",
+      "status": "not-started-not-NPU-ready",
+      "normal_generation_calls": 0,
+      "fit_call_cap": 0,
+      "scientific_dependencies": [
+        "CPU-history-feedback-reuse"
+      ]
     },
     {
-      "id": "A-TFGRPO-feedback",
-      "line": "knowledge-construction",
-      "title": "下一轮TF-GRPO反馈包准备",
-      "resource": "CPU",
-      "status": "in-progress",
-      "status_reason": "Sol正在核验完整历史轨迹、同策略组和曝光边界，交付教师可读反馈包",
-      "depends_on": [],
-      "planned_normal_generation_calls": 0
-    },
-    {
-      "id": "A-TFGRPO-next",
-      "line": "knowledge-construction",
-      "title": "下一轮知识候选教师提案（未来队列）",
-      "resource": "API",
-      "status": "blocked",
-      "status_reason": "本任务零新API；反馈包与新候选尚未生成，不能填造哈希",
-      "depends_on": [
-        "A-TFGRPO-feedback"
-      ],
-      "planned_normal_generation_calls": 0
-    },
-    {
-      "id": "B-native-audit",
-      "line": "knowledge-consumption",
-      "title": "核验native36记录与恢复边界",
-      "resource": "CPU",
-      "status": "completed",
-      "status_reason": "主线程核验36条拒绝终态，完整P-Slot-Decision轨迹0/80；历史响应保留",
-      "depends_on": [],
-      "planned_normal_generation_calls": 0
-    },
-    {
-      "id": "B-legacy-reference-prepare",
-      "line": "knowledge-consumption",
-      "title": "旧joint固定知识控制供给准备",
-      "resource": "CPU",
-      "status": "completed",
-      "status_reason": "新TP4 runtime/session绑定、固定80准备和预检完成；通用配置化代码仍待验收",
-      "depends_on": [],
-      "planned_normal_generation_calls": 0
-    },
-    {
-      "id": "B-legacy-reference",
-      "line": "knowledge-consumption",
-      "title": "旧P+joint S固定80结构参考（非AA）",
-      "resource": "NPU",
-      "status": "running",
-      "status_reason": "02:21真实32请求/vLLM running=32，尚无完整行；采用原old-P+joint-S单臂，不是AA",
-      "depends_on": [
-        "B-legacy-reference-prepare"
-      ],
-      "planned_normal_generation_calls": 160
-    },
-    {
-      "id": "B-matchedP-prepare",
-      "line": "knowledge-consumption",
-      "title": "匹配P的joint/split科学控制配置",
-      "resource": "CPU",
-      "status": "blocked",
-      "status_reason": "供给修复和matched-P实现由其他负责人交付；不重复开发",
-      "depends_on": [
-        "B-native-audit"
-      ],
-      "planned_normal_generation_calls": 0
-    },
-    {
-      "id": "B-matchedP-rollout",
-      "line": "knowledge-consumption",
-      "title": "固定知识matched-P joint对split80",
-      "resource": "NPU",
-      "status": "blocked",
-      "status_reason": "依赖实际供给修复和匹配配置；不依赖旧joint AA评分",
-      "depends_on": [
-        "B-matchedP-prepare"
-      ],
-      "planned_normal_generation_calls": 320
-    },
-    {
-      "id": "B-matchedP-score",
-      "line": "knowledge-consumption",
-      "title": "节点归因与正式奖励对齐",
-      "resource": "CPU",
-      "status": "blocked",
-      "status_reason": "待matched-P真实输出；旧AA评分可并行",
-      "depends_on": [
-        "B-matchedP-rollout"
-      ],
-      "planned_normal_generation_calls": 0
-    },
-    {
-      "id": "B-GEPA-next",
-      "line": "knowledge-consumption",
-      "title": "在锁定消费图上生成单节点GEPA后继",
-      "resource": "API",
-      "status": "blocked",
-      "status_reason": "必须先有真实节点反馈；本任务禁止新API，新候选尚不存在",
-      "depends_on": [
-        "B-matchedP-score"
-      ],
-      "planned_normal_generation_calls": 0
+      "id": "LOCAL-API-TFGRPO-fused-next",
+      "status": "not-started-not-NPU-ready",
+      "normal_generation_calls": 0,
+      "fit_call_cap": 0,
+      "scientific_dependencies": [
+        "CPU-history-feedback-reuse"
+      ]
     }
-  ],
-  "observed_at_utc": "2026-11-05T02:21:01.605872+00:00"
+  ]
 }

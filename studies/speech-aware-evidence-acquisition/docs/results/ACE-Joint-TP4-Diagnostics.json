@@ -1,0 +1,74 @@
+{
+  "schema": "omni-ace-joint-diagnostic-summary-v1",
+  "observed_at_utc": "2026-11-05T02:55:34.521053+00:00",
+  "new_analysis_model_calls": 0,
+  "candidate_promoted": false,
+  "ace": {
+    "rows": 80,
+    "official": {
+      "learned": {
+        "slu_f1": 0.7020737974483825,
+        "intent_accuracy": 0.8125,
+        "span_f1": 0.5688073394495413
+      },
+      "lock": {
+        "slu_f1": 0.6616341125115324,
+        "intent_accuracy": 0.8000000000000002,
+        "span_f1": 0.5365853658536586
+      }
+    },
+    "strict_success": {
+      "learned": 27,
+      "lock": 28
+    },
+    "comparisons": {
+      "learned_vs_lock": {
+        "proxy_mean_delta": 0.005282738095238137,
+        "strict_breaks": 5,
+        "strict_repairs": 4
+      }
+    },
+    "cost": {
+      "audio_seconds_used": 1031.8258125000007,
+      "calls_used": 240,
+      "completion_tokens_total": 515071,
+      "latency_seconds_total": 21232.088149970863,
+      "prompt_tokens_total": 1574258,
+      "tool_calls": 0
+    },
+    "wall_seconds_per_row": 20.92718745,
+    "cards": 4,
+    "instances": 1,
+    "source_official_sha256": "378d4a1ab5a18ba65a28120e608dde28976ca249d4b4d4777bdd16b45aa15527"
+  },
+  "old_joint": {
+    "rows": 80,
+    "official": {
+      "slu_f1": 0.668266055504674,
+      "intent_accuracy": 0.775,
+      "span_f1": 0.5647058823529412
+    },
+    "strict_success": 31,
+    "perception_candidate_gold_covered": 65,
+    "cost": {
+      "audio_seconds_used": 580.509375,
+      "calls_used": 160,
+      "completion_tokens_total": 332897,
+      "latency_seconds_total": 20540.820494489744,
+      "prompt_tokens_total": 969168,
+      "tool_calls": 0
+    },
+    "campaign_seconds_per_row": 11.972130538000055,
+    "campaign_includes_preprocess_scoring": true,
+    "container_seconds_per_row": 12.472005932,
+    "cards": 4,
+    "instances": 1,
+    "source_official_sha256": "8b1d697ec93b6b5e82ddca338159d3a777d3ead2931b20f2126eaf054b7335cb"
+  },
+  "limitations": [
+    "Fixed TRAIN development diagnostics, not unseen test evidence.",
+    "Different rosters and roles prohibit cross-run algorithm ranking.",
+    "FIT planned separately; actual FIT attempt absent from current archives and not treated as zero.",
+    "Assigned cards do not prove sustained NPU utilization."
+  ]
+}
