@@ -261,6 +261,11 @@ def retirement_fixture(configured, tmp_path, monkeypatch):
     source=write(tmp_path/'retirement.json',{'schema':'saea-engine-retirement-source-v1',
         'manifest':pin(manifest),'complete':pin(complete),'lease':pin(lease),'attempt_before':pin(bp),'attempt_aborted':pin(ap),
         'marker':pin(marker),'journal_root':str(journal.root),'config_sha256':'c'*64})
+    monkeypatch.setattr(m.settlement,'producer_terminal',lambda *a:{'container_id':'c'*64})
+    document=json.loads(manifest.read_bytes());document['producer_container']='c'*64;write(manifest,document)
+    marker_doc=json.loads(marker.read_bytes());marker_doc['manifest_sha256']=m.launch.digest(manifest);write(marker,marker_doc)
+    complete_doc=json.loads(complete.read_bytes());complete_doc['manifest_sha256']=m.launch.digest(manifest);write(complete,complete_doc)
+    source_doc=json.loads(source.read_bytes());source_doc.update(manifest=pin(manifest),marker=pin(marker),complete=pin(complete));write(source,source_doc)
     c={'source':f.config,'producer':f.launch_doc,'logical':f.logical,'expected':f.expected,'doc':{'source_retirement':pin(source)}}
     return SimpleNamespace(**locals())
 

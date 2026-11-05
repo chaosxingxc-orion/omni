@@ -69,7 +69,13 @@ def load(path):
         'new_profile', 'new_model', 'native_model_config', 'logical_model_fragment',
         'new_session', 'data_root', 'nic', 'scope', 'state_dir', 'ready_timeout_seconds', 'ready_interval_seconds'}
     require(set(doc) - {'source_retirement', 'original_profile', 'original_instance_index'} == keys and doc['schema'] == SCHEMA, 'exact engine transition configuration required')
-    source, producer, release, logical, expected, _ = settlement.load(pin(doc['source_settlement']))
+    if 'source_retirement' in doc:
+        source = read(pin(doc['source_settlement']))
+        producer = launch.load_config(pin(source['producer_launch']))
+        release, logical, expected = queue.release_identity(producer,source['generation_release'])
+        pin(source['source_plan']);pin(source['runtime_receipt'])
+    else:
+        source, producer, release, logical, expected, _ = settlement.load(pin(doc['source_settlement']))
     paths = {key: pin(doc[key]) for key in ('old_profile','old_model','new_profile','new_model','native_model_config')}
     old, new = (deployment.load_deployment_profile(paths[key], data_root=str(logical)) for key in ('old_profile','new_profile'))
     old_model, new_model = (read(paths[key]) for key in ('old_model','new_model'))
@@ -165,6 +171,7 @@ def retirement_barrier(c):
     retirement = read(pin(c['doc']['source_retirement']))
     require(set(retirement)=={'schema','manifest','complete','lease','attempt_before','attempt_aborted','marker','journal_root','config_sha256'}
         and retirement['schema']=='saea-engine-retirement-source-v1', 'exact retirement source required')
+    terminal=settlement.producer_terminal(c['source'],c['producer'])
     paths={k:pin(retirement[k]) for k in ('manifest','complete','lease','attempt_before','attempt_aborted','marker')}
     manifest,done,lease,before,after,marker=(read(paths[k]) for k in ('manifest','complete','lease','attempt_before','attempt_aborted','marker'))
     expected=c['expected'];registered=read(pin(c['source']['source_plan'])); values=dict(registered['execution_plan'])
@@ -176,7 +183,7 @@ def retirement_barrier(c):
         and done.get('automatic_retry') is False and done.get('scientific_success') is False and done.get('new_model_calls')==0,
         'retirement completion differs')
     require(manifest.get('config_sha256')==retirement['config_sha256'] and manifest.get('run_id')==plan.run_id
-        and manifest.get('attempt_id')==plan.attempt_id and manifest.get('unknown_responses_remain_unknown') is True
+        and manifest.get('attempt_id')==plan.attempt_id and manifest.get('producer_container')==terminal['container_id'] and manifest.get('unknown_responses_remain_unknown') is True
         and manifest.get('automatic_retry') is False and manifest.get('lease_sha256')==launch.digest(paths['lease']), 'retirement manifest differs')
     require(marker.get('run_id')==plan.run_id and marker.get('attempt_id')==plan.attempt_id
         and marker.get('manifest_sha256')==launch.digest(paths['manifest']) and marker.get('automatic_retry') is False, 'retirement marker differs')
@@ -200,7 +207,7 @@ def retirement_barrier(c):
         and launch.digest(archive/'checkpoint.jsonl')==manifest['checkpoint_sha256'], 'retirement archive plan/checkpoint differs')
     return {'mode':'explicit-unknown-retirement','complete_sha256':launch.digest(paths['complete']),
             'manifest_sha256':launch.digest(paths['manifest']),'unknown_count':snapshot['unknown_count'],
-            'observed_count':done['observed_count'],'cost':after['actual'],'automatic_retry':False}
+            'observed_count':done['observed_count'],'cost':after['actual'],'producer_terminal':terminal,'automatic_retry':False}
 
 
 def source_barrier(c):
