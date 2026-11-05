@@ -4652,7 +4652,7 @@ class FlightRuntime:
         self._lock = lock
 
         previous_adapter = self._adapter
-        adapter = previous_adapter or self._adapter_factory(lock, self._data_root)
+        adapter = self._adapter_factory(lock, self._data_root)
         if not isinstance(adapter, TaskAdapter):
             raise FlightRuntimeError("adapter_factory must return a TaskAdapter instance")
         self._adapter = adapter
