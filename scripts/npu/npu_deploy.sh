@@ -23,7 +23,25 @@ PROFILE=${2:?usage: npu_deploy.sh plan|up|wait|status|down <profile>}
 OMNI_ROOT=${OMNI_ROOT:-/mnt/cephfs/xingchao/omni}
 SAEA_SRC=${SAEA_SRC:-$OMNI_ROOT/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src}
 REPO=$(dirname "$SAEA_SRC")
+MODE=${SAEA_DEPLOY_MODE:-legacy}
 IMAGE=saea-base:20261027
+RELEASE_ROOT=/opt/saea-release
+RELEASE_STUDY=$RELEASE_ROOT/studies/speech-aware-evidence-acquisition
+if [[ "$MODE" == release ]]; then
+  IMAGE=${SAEA_RELEASE_IMAGE_ID:?release requires SAEA_RELEASE_IMAGE_ID}
+  SOURCE_SHA=${SAEA_RELEASE_SOURCE_MANIFEST_SHA256:?release requires SAEA_RELEASE_SOURCE_MANIFEST_SHA256}
+  MODEL_FILE=${SAEA_DEPLOY_MODEL_FRAGMENT:?release requires SAEA_DEPLOY_MODEL_FRAGMENT}
+  [[ "$IMAGE" =~ ^sha256:[0-9a-f]{64}$ && "$SOURCE_SHA" =~ ^[0-9a-f]{64}$ ]] || { echo "refused: malformed image ID or source manifest hash" >&2; exit 1; }
+  [[ "$PROFILE" = /* && "$MODEL_FILE" = /* && -f "$PROFILE" && -f "$MODEL_FILE" && ! -L "$PROFILE" && ! -L "$MODEL_FILE" ]] || { echo "refused: release profile and model fragment must be absolute regular files" >&2; exit 1; }
+  PROFILE=$(realpath -e -- "$PROFILE")
+  MODEL_FILE=$(realpath -e -- "$MODEL_FILE")
+  PROFILE_SHA=$(sha256sum -- "$PROFILE" | cut -d ' ' -f 1)
+  MODEL_SHA=$(sha256sum -- "$MODEL_FILE" | cut -d ' ' -f 1)
+  [[ "$PROFILE" != *:* && "$MODEL_FILE" != *:* && "$PROFILE" != *$'\n'* && "$MODEL_FILE" != *$'\n'* ]] || { echo "refused: unsafe mount path" >&2; exit 1; }
+
+elif [[ "$MODE" != legacy ]]; then
+  echo "refused: SAEA_DEPLOY_MODE must be legacy or release" >&2; exit 1
+fi
 WAIT_SECONDS=${DEPLOY_WAIT_SECONDS:-2400}
 LABEL=saea.deployment.profile
 
@@ -33,13 +51,30 @@ NIC=$(ip -o -4 addr show scope global | awk '{print $2; exit}')
 [[ -n "$NIC" ]] || { echo "refused: no global IPv4 NIC on $(hostname); cannot set HCCL_SOCKET_IFNAME" >&2; exit 1; }
 
 helper() {
-  # The study's deployment CLI in a device-free, network-free container; extra stdin is passed through.
-  # The profile's data_mount is overridden by OMNI_ROOT here, so the root lives in exactly one variable.
-  docker run --rm -i --network none --user "$(id -u):$(id -g)" -e HOME=/tmp \
-    -v "$REPO:$REPO:ro" -e PYTHONPATH="$SAEA_SRC" -e PYTHONDONTWRITEBYTECODE=1 \
-    --entrypoint /opt/saea-venv/bin/python "$IMAGE" \
-    -m speech_aware_evidence_acquisition.core.deployment "$@" --repo-root "$REPO" --data-root "$OMNI_ROOT" --nic "$NIC"
+  if [[ "$MODE" == release ]]; then
+    local args=(docker run --rm -i --network none --user "$(id -u):$(id -g)" -e HOME=/tmp
+      -v "$PROFILE:$PROFILE:ro" -v "$MODEL_FILE:$MODEL_FILE:ro"
+      --entrypoint /opt/saea-venv/bin/python "$IMAGE"
+      -m speech_aware_evidence_acquisition.core.deployment "$@" --repo-root "$RELEASE_STUDY"
+      --data-root "$OMNI_ROOT" --nic "$NIC" --release-image "$IMAGE" --model-fragment-file "$MODEL_FILE"
+      --profile-sha256 "$PROFILE_SHA" --model-fragment-sha256 "$MODEL_SHA")
+    "${args[@]}"
+  else
+    docker run --rm -i --network none --user "$(id -u):$(id -g)" -e HOME=/tmp \
+      -v "$REPO:$REPO:ro" -e PYTHONPATH="$SAEA_SRC" -e PYTHONDONTWRITEBYTECODE=1 \
+      --entrypoint /opt/saea-venv/bin/python "$IMAGE" \
+      -m speech_aware_evidence_acquisition.core.deployment "$@" --repo-root "$REPO" --data-root "$OMNI_ROOT" --nic "$NIC"
+  fi
 }
+
+if [[ "$MODE" == release ]]; then
+  # The ID and source hash are independent pins. Run only immutable image code.
+  [[ "$(docker image inspect --format '{{.Id}}' "$IMAGE")" == "$IMAGE" ]] || { echo "refused: release image ID differs" >&2; exit 1; }
+  docker run --rm --network none --user "$(id -u):$(id -g)" --entrypoint /opt/saea-venv/bin/python "$IMAGE" \
+    -c 'import hashlib,sys; p="/opt/saea-release/source-manifest.json"; sys.exit(0 if hashlib.sha256(open(p,"rb").read()).hexdigest()==sys.argv[1] else 1)' "$SOURCE_SHA" || { echo "refused: release source manifest hash differs" >&2; exit 1; }
+  docker run --rm --network none --user "$(id -u):$(id -g)" --entrypoint /opt/saea-venv/bin/python "$IMAGE" \
+    "$RELEASE_ROOT/verify-release.py" "$RELEASE_ROOT/source-manifest.json" "$RELEASE_ROOT" >/dev/null || { echo "refused: release source inventory verification failed" >&2; exit 1; }
+fi
 
 npu_table() { command -v npu-smi >/dev/null 2>&1 && npu-smi info; }
 

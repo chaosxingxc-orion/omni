@@ -484,10 +484,21 @@ def instances_for_cards(profile: DeploymentProfile, cards_wanted: int) -> tuple[
 # ---------------------------------------------------------------------------
 
 
-def model_fragment_values(profile: DeploymentProfile, repo_root: Path = REPO_ROOT) -> dict[str, object]:
+def model_fragment_values(profile: DeploymentProfile, repo_root: Path = REPO_ROOT, *, fragment_file: Path | None = None, fragment_sha256: str | None = None) -> dict[str, object]:
     """The profile's model fragment, read exactly as :func:`~.config.compose` reads it; it must be a vLLM fragment."""
 
-    values = read_fragment(Path(repo_root), "model", profile.model_fragment)
+    if fragment_file is None:
+        values = read_fragment(Path(repo_root), "model", profile.model_fragment)
+    else:
+        try:
+            raw = Path(fragment_file).read_bytes()
+            if fragment_sha256 is not None and hashlib.sha256(raw).hexdigest() != fragment_sha256:
+                raise DeploymentError("model fragment SHA256 differs")
+            values = json.loads(raw)
+        except (OSError, ValueError) as error:
+            raise DeploymentError(f"cannot read external model fragment: {error}") from error
+        if not isinstance(values, dict):
+            raise DeploymentError("external model fragment must be an object")
     if values.get("transport") != "vllm":
         raise DeploymentError(f"model fragment {profile.model_fragment!r} is not a vllm fragment")
     if not isinstance(values.get("served_model_name"), str) or not values["served_model_name"]:
@@ -583,7 +594,8 @@ def docker_run_argv(
 
 
 def deployment_record(
-    profile: DeploymentProfile, repo_root: Path = REPO_ROOT, *, nic: str | None = None
+    profile: DeploymentProfile, repo_root: Path = REPO_ROOT, *, nic: str | None = None,
+    fragment_file: Path | None = None, fragment_sha256: str | None = None,
 ) -> dict[str, object]:
     """The canonical recorded (NOT hashed) deployment facts for a run manifest or runtime receipt.
 
@@ -595,7 +607,7 @@ def deployment_record(
     a reader can see the deployment did not change it.
     """
 
-    fragment = model_fragment_values(profile, repo_root)
+    fragment = model_fragment_values(profile, repo_root, fragment_file=fragment_file, fragment_sha256=fragment_sha256)
     _, window = declared_server_geometry(
         fragment.get("server_args") or [], transport="vllm", model_fragment=profile.model_fragment
     )
@@ -656,21 +668,54 @@ def _main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--data-root", help="override the profile's data_mount (the data root moved)")
     parser.add_argument("--nic", help="host NIC holding the node's global IPv4 address (the launcher derives it); "
                         "plan and emit require it, record writes it into the record")
+    parser.add_argument("--model-fragment-file", type=Path, help="explicit external model fragment JSON")
+    parser.add_argument("--release-image", help="required immutable image ID in release mode")
+    parser.add_argument("--profile-sha256", help="raw profile bytes SHA256 for release")
+    parser.add_argument("--model-fragment-sha256", help="raw model fragment bytes SHA256 for release")
     args = parser.parse_args(argv)
     repo_root = Path(args.repo_root)
+    if args.release_image is not None:
+        if re.fullmatch(r"sha256:[0-9a-f]{64}", args.release_image) is None:
+            raise DeploymentError("release image must be a full sha256 image ID")
+        for label, path, expected in (("profile", Path(args.profile), args.profile_sha256),
+                                       ("model fragment", args.model_fragment_file, args.model_fragment_sha256)):
+            if path is None or expected is None or re.fullmatch(r"[0-9a-f]{64}", expected) is None:
+                raise DeploymentError(f"release mode requires {label} file and SHA256")
+            try:
+                actual = hashlib.sha256(path.read_bytes()).hexdigest()
+            except OSError as error:
+                raise DeploymentError(f"cannot read {label}: {error}") from error
+            if actual != expected:
+                raise DeploymentError(f"{label} SHA256 differs")
+    elif any(x is not None for x in (args.model_fragment_file, args.profile_sha256, args.model_fragment_sha256)):
+        raise DeploymentError("external model fragment or pins require release image")
     profile = load_deployment_profile(args.profile, repo_root, data_root=args.data_root)
+    # Pin the exact bytes parsed, not merely a file checked before a second read.
+    if args.release_image is not None:
+        raw_profile = Path(args.profile).read_bytes()
+        if hashlib.sha256(raw_profile).hexdigest() != args.profile_sha256:
+            raise DeploymentError("profile SHA256 differs")
+        profile = validate_deployment_profile(json.loads(raw_profile), source=args.profile, data_root=args.data_root)
+        if profile.profile_id != Path(args.profile).stem:
+            raise DeploymentError("profile file name differs from profile identity")
+    if args.release_image is not None and profile.image != args.release_image:
+        raise DeploymentError("profile image differs from release image ID")
     table = None
     if args.npu_smi_file:
         table = sys.stdin.read() if args.npu_smi_file == "-" else Path(args.npu_smi_file).read_text(encoding="utf-8")
     if args.command == "record":
-        print(json.dumps(deployment_record(profile, repo_root, nic=args.nic), indent=2, sort_keys=True))
+        record = deployment_record(profile, repo_root, nic=args.nic, fragment_file=args.model_fragment_file, fragment_sha256=args.model_fragment_sha256)
+        if args.release_image is not None:
+            record.update(profile_file_sha256=args.profile_sha256,
+                          model_fragment_file_sha256=args.model_fragment_sha256)
+        print(json.dumps(record, indent=2, sort_keys=True))
         return 0
     if args.command == "instances":
         for instance in profile.instances:
             print("\t".join([instance.name, str(instance.port), ",".join(map(str, instance.cards)),
                              profile.base_url(instance)]))
         return 0
-    fragment = model_fragment_values(profile, repo_root)
+    fragment = model_fragment_values(profile, repo_root, fragment_file=args.model_fragment_file, fragment_sha256=args.model_fragment_sha256)
     nic = validated_nic(args.nic)  # plan and emit refuse before any argv exists
     commands = [(instance, docker_run_argv(profile, instance, fragment, nic=nic)) for instance in profile.instances]
     if args.command == "emit":
