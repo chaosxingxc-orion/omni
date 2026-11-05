@@ -7534,8 +7534,16 @@ class FlightRuntime:
                                     prep_pool.submit(build, next_index, samples[next_index])
                                 )
                                 next_index += 1
+                    # A validator may finish while several model futures are
+                    # in the same completion batch.  Observe those outcomes
+                    # before admitting another preparation wave; otherwise a
+                    # malformed response can allow an avoidable tail of NPU
+                    # requests to start.
+                    collect_validation()
                     if pipeline_error is not None:
                         for pending in pending_prepare:
+                            pending.cancel()
+                        for pending in pending_model:
                             pending.cancel()
                         next_index = len(samples)
                 while validation_futures:
