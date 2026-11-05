@@ -4646,6 +4646,8 @@ class FlightRuntime:
                 raise FlightRuntimeError("external runtime config has no request_pipeline")
             values["request_pipeline"] = dict(pipeline)
             if "audio_cache" in self._runtime_config_overlay:
+                if "audio_cache" in values:
+                    raise FlightRuntimeError("external runtime config collides with scientific audio_cache")
                 cache = self._runtime_config_overlay["audio_cache"]
                 if not isinstance(cache, Mapping):
                     raise FlightRuntimeError("external runtime config audio_cache is invalid")
@@ -6002,7 +6004,10 @@ class FlightRuntime:
                     if getattr(sample, "media_relpath", None)
                 )
                 audio_cache_receipt = preload_audio_cache(
-                    self._data_root, paths, workers=audio_cache["preload_workers"]
+                    self._data_root, paths, workers=(
+                        min(audio_cache["preload_workers"], 8)
+                        if self._campaign_active else audio_cache["preload_workers"]
+                    )
                 )
             except (TypeError, ValueError, KeyError, FrozenCoreError) as error:
                 raise FlightRuntimeError(f"audio cache configuration is invalid: {error}") from error

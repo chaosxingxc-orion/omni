@@ -75,7 +75,7 @@ import time
 import urllib.error
 import urllib.request
 from collections import OrderedDict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
@@ -142,10 +142,10 @@ def configure_audio_cache(*, enabled: bool, max_entries: int, max_bytes: int) ->
     if type(max_bytes) is not int or not 0 <= max_bytes <= 64 * 1024 * 1024 * 1024:
         raise FrozenCoreError("audio cache max_bytes must be an integer in [0, 64GiB]")
     global _AUDIO_CACHE_ENABLED, _AUDIO_CACHE_MAX_ENTRIES, _AUDIO_CACHE_MAX_BYTES
-    _AUDIO_CACHE_ENABLED = enabled
-    _AUDIO_CACHE_MAX_ENTRIES = max_entries
-    _AUDIO_CACHE_MAX_BYTES = max_bytes
     with _AUDIO_CACHE_LOCK:
+        _AUDIO_CACHE_ENABLED = enabled
+        _AUDIO_CACHE_MAX_ENTRIES = max_entries if enabled else 0
+        _AUDIO_CACHE_MAX_BYTES = max_bytes if enabled else 0
         _evict_audio_cache_locked()
 
 
@@ -185,21 +185,41 @@ def preload_audio_cache(
         }
     loaded = 0
     failures: list[dict[str, str]] = []
+    failed = 0
+
+    def warm(relpath):
+        # Futures retain only None, never the encoded media.
+        _load_audio_part(Path(data_root), relpath, "preload media_relpath")
+
+    # Keep at most a small rolling window of reads.  Submitting the whole
+    # roster at once would retain every decoded result in Future objects and
+    # defeat the cache's memory bound before the LRU can evict anything.
+    window = min(max(workers * 2, workers), _AUDIO_CACHE_MAX_ENTRIES, 256)
     with ThreadPoolExecutor(max_workers=min(workers, max(1, len(paths)))) as pool:
-        futures = {
-            pool.submit(_load_audio_part, Path(data_root), relpath, "preload media_relpath"): relpath
-            for relpath in paths
-        }
-        for future in as_completed(futures):
-            relpath = futures[future]
-            try:
-                future.result()
-                loaded += 1
-            except Exception as error:  # noqa: BLE001 - report before model contact
-                failures.append({"media_relpath": str(relpath), "error": str(error)})
+        iterator = iter(paths)
+        futures = {}
+        for _ in range(window):
+            relpath = next(iterator, None)
+            if relpath is None:
+                break
+            futures[pool.submit(warm, relpath)] = relpath
+        while futures:
+            completed, _ = wait(tuple(futures), return_when=FIRST_COMPLETED)
+            for future in completed:
+                relpath = futures.pop(future)
+                try:
+                    future.result()
+                    loaded += 1
+                except Exception as error:  # noqa: BLE001 - report before model contact
+                    failed += 1
+                    if len(failures) < 8:
+                        failures.append({"media_relpath": str(relpath), "error": str(error)})
+                replacement = next(iterator, None)
+                if replacement is not None:
+                    futures[pool.submit(warm, replacement)] = replacement
     return {
         "enabled": True, "requested": len(paths), "loaded": loaded,
-        "failed": len(failures), "failures": failures[:8],
+        "failed": failed, "failures": failures, "submission_window": window,
         "cache_entries": len(_AUDIO_CACHE), "cache_bytes": _AUDIO_CACHE_BYTES,
         "duration_seconds": max(time.monotonic() - started, 0.0),
     }

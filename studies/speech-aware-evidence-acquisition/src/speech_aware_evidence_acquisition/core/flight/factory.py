@@ -94,8 +94,16 @@ def build_flight_runtime(
     overlay = load_external_runtime_config(overlay_path)
     if overlay:
         values = dict(composed.values)
+        if "request_pipeline" in values:
+            raise CoreError(
+                "external runtime config collides with scientific request_pipeline"
+            )
         values["request_pipeline"] = dict(overlay["request_pipeline"])
         if "audio_cache" in overlay:
+            if "audio_cache" in values:
+                raise CoreError(
+                    "external runtime config collides with scientific audio_cache"
+                )
             values["audio_cache"] = dict(overlay["audio_cache"])
         composed = type(composed)(
             values=values,
