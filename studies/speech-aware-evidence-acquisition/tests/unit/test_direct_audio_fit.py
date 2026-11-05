@@ -27,35 +27,90 @@ def _body(raw, declared):
         "input_audio": {"data": base64.b64encode(raw).decode(), "format": declared}}]}]}
 
 
-def test_transport_audio_cache_reuses_bytes_and_invalidates_on_file_change(tmp_path, monkeypatch):
-    """Repeated bank/target rendering does not reread stable media."""
+@pytest.fixture
+def audio_cache(monkeypatch):
     import speech_aware_evidence_acquisition.core.model.transport as module
-
     _clear_audio_cache()
-    module._AUDIO_CACHE_ENABLED = True
-    module._AUDIO_CACHE_MAX_ENTRIES = 4
-    module._AUDIO_CACHE_MAX_BYTES = 1024
+    monkeypatch.setattr(module, "_AUDIO_CACHE_ENABLED", True)
+    monkeypatch.setattr(module, "_AUDIO_CACHE_MAX_ENTRIES", 4)
+    monkeypatch.setattr(module, "_AUDIO_CACHE_MAX_BYTES", 1024)
+    yield module
+    _clear_audio_cache()
+
+
+def test_transport_audio_cache_reuses_bytes_and_invalidates_on_file_change(tmp_path, monkeypatch, audio_cache):
     path = tmp_path / "query.wav"
     path.write_bytes(b"first-audio")
-    reads = 0
+    reads = []
     original = Path.read_bytes
 
     def counted(self):
-        nonlocal reads
-        reads += 1
+        reads.append(self)
         return original(self)
 
     monkeypatch.setattr(Path, "read_bytes", counted)
     _, first = _load_audio_part(tmp_path, "query.wav", "query")
     _, second = _load_audio_part(tmp_path, "query.wav", "query")
-    assert first == second
-    assert reads == 1
-
+    assert first == second and len(reads) == 1
     path.write_bytes(b"second-audio")
     _, changed = _load_audio_part(tmp_path, "query.wav", "query")
-    assert changed != first
-    assert reads == 2
-    _clear_audio_cache()
+    assert changed != first and len(reads) == 2
+
+
+@pytest.mark.parametrize("limit", ["bytes", "entries", "oversized", "disabled"])
+def test_transport_audio_cache_bounds(tmp_path, monkeypatch, audio_cache, limit):
+    if limit == "bytes":
+        monkeypatch.setattr(audio_cache, "_AUDIO_CACHE_MAX_BYTES", 8)
+    elif limit == "entries":
+        monkeypatch.setattr(audio_cache, "_AUDIO_CACHE_MAX_ENTRIES", 1)
+    elif limit == "oversized":
+        monkeypatch.setattr(audio_cache, "_AUDIO_CACHE_MAX_BYTES", 4)
+    else:
+        monkeypatch.setattr(audio_cache, "_AUDIO_CACHE_ENABLED", False)
+    for name, raw in (("a.wav", b"123456"), ("b.wav", b"abcdef")):
+        (tmp_path / name).write_bytes(raw)
+        _, part = _load_audio_part(tmp_path, name, "query")
+        assert base64.b64decode(part["input_audio"]["data"]) == raw
+    expected = 0 if limit in ("oversized", "disabled") else 1
+    assert len(audio_cache._AUDIO_CACHE) == expected
+    assert audio_cache._AUDIO_CACHE_BYTES == expected * 8
+
+
+def test_concurrent_audio_cache_misses_charge_bytes_once(tmp_path, monkeypatch, audio_cache):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    (tmp_path / "q.wav").write_bytes(b"123456")
+    barrier = Barrier(4)
+    original = Path.read_bytes
+
+    def read(self):
+        raw = original(self)
+        barrier.wait(timeout=5)
+        return raw
+
+    monkeypatch.setattr(Path, "read_bytes", read)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda _: _load_audio_part(tmp_path, "q.wav", "query"), range(4)))
+    assert all(result == results[0] for result in results)
+    assert len(audio_cache._AUDIO_CACHE) == 1
+    assert audio_cache._AUDIO_CACHE_BYTES == 8
+
+
+def test_audio_mutation_during_read_is_rejected(tmp_path, monkeypatch, audio_cache):
+    from speech_aware_evidence_acquisition.core.model import FrozenCoreError
+    path = tmp_path / "q.wav"
+    path.write_bytes(b"123456")
+    original = Path.read_bytes
+
+    def read(self):
+        raw = original(self)
+        self.write_bytes(b"changed-size")
+        return raw
+
+    monkeypatch.setattr(Path, "read_bytes", read)
+    with pytest.raises(FrozenCoreError, match="media changed"):
+        _load_audio_part(tmp_path, "q.wav", "query")
+    assert not audio_cache._AUDIO_CACHE and audio_cache._AUDIO_CACHE_BYTES == 0
 
 
 @pytest.mark.parametrize("format_name,subtype,declared", [
