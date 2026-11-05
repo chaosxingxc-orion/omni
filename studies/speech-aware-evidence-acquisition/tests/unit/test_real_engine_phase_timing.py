@@ -129,3 +129,47 @@ def test_invalid_slot_intervals_cannot_be_attributed(change):
         'pid': 1, 'status': 'ok', 'started_monotonic': 92, 'elapsed_seconds': 6, **change}
     with pytest.raises(ValueError):
         m.slot_wait_partition([event], sample_id='s', pid=1, admitted=90, request_started=100)
+
+
+def test_three_nodes_and_refusal_are_distinct():
+    rows, events = inputs()
+    output = {'native_episode_receipt': {'accepted_solver_receipt': {}, 'role_visits': []}}
+    output['native_episode_receipt']['accepted_solver_receipt'] = {'ok': True}
+    for role, rid in [('perception', 'z'), ('slot', 'x'), ('solver', 'a')]:
+        output['native_episode_receipt']['role_visits'].append({'role_id': role, 'execution_receipt': {'contacts': [{'request_id': rid}]}})
+    rows[0].output_rows = [output]
+    rows[0].trace_lines.append(json.dumps({'record_id': 'x/cost', 'payload': {'latency_seconds': 3}}))
+    events[1]['started_monotonic'] = 120
+    events.append({**events[0], 'request_id':'x', 'started_monotonic':112, 'elapsed_seconds':3})
+    result = m.join(rows, events)
+    assert result['metrics']['perception_end_to_slot_request_start']['mean_s'] == 2
+    assert result['metrics']['slot_end_to_solver_request_start']['mean_s'] == 5
+    assert 'perception_end_to_solver_request_start' not in result['metrics']
+    output['native_episode_receipt']['terminal_disposition'] = {'reason': 'seal_refusal'}
+    result = m.join(rows, events)
+    assert result['row_classification']['refusal'] == 1
+    assert not result['metrics'] and result['terminal_metrics']
+
+
+def test_empty_refusal_finite_and_unsupported_counted():
+    rows, events = inputs()
+    rows[0].output_rows = [{'native_episode_receipt': {'role_visits': [], 'terminal_disposition': {'reason': 'seal_refusal'}}}]
+    result = m.join(rows, events)
+    assert result['row_classification']['refusal'] == result['row_classification']['empty_chain'] == 1
+    rows[0].output_rows[0]['native_episode_receipt']['terminal_disposition']['reason'] = 'finite_completion'
+    assert m.join(rows, events)['row_classification']['finite_or_other_terminal'] == 1
+    rows, events = inputs()
+    rows[0].output_rows = [{'native_episode_receipt': {'role_visits': [{'role_id':'x', 'execution_receipt': {'contacts':[{'request_id':'a'}, {'request_id':'b'}]}}]}}]
+    assert m.join(rows, events)['row_classification']['unsupported_chain'] == 1
+
+
+@pytest.mark.parametrize('change', [{'pid':2}, {'elapsed_seconds':-1}, {'started_monotonic':float('nan')}, {'started_monotonic':105}])
+def test_invalid_request_boundaries_rejected(change):
+    rows, events = inputs(); events[1].update(change)
+    with pytest.raises(ValueError): m.join(rows, events)
+
+
+def test_repeated_request_id_in_chain_is_unsupported():
+    rows, events = inputs()
+    rows[0].output_rows = [{'native_episode_receipt': {'role_visits': [{'role_id':r, 'execution_receipt': {'contacts':[{'request_id':'z'}]}} for r in ('perception','solver')]}}]
+    assert m.join(rows, events)['row_classification']['unsupported_chain'] == 1
