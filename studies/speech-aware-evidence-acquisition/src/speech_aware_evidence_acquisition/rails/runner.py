@@ -4205,16 +4205,6 @@ async def _invoke_native_role_episode(
                 speech_sha256=ctx.query_state.speech_packet_sha256,
                 messages=base_messages(ctx),
                 candidate_ids=[row["candidate_id"] for row in pipeline_context.get("candidates", [])])
-            # Canonical IDs in downstream context are derived solely from the
-            # previous contact's own validated inventory; raw responses remain
-            # unchanged in native custody.
-            for prior_kind, key in (("perception", "candidates"), ("slot", "slot_results")):
-                prior = next((v for v in visits.values() if v.get("pipeline_kind") == prior_kind and v.get("evidence_mappings") is not None), None)
-                if prior is not None and key in pipeline_context:
-                    mapping = {m["raw"]: m["source_id"] for m in prior["evidence_mappings"]}
-                    rows = pipeline_context[key].values() if isinstance(pipeline_context[key], dict) else pipeline_context[key]
-                    for row in rows:
-                        row["evidence_refs"] = [mapping.get(ref, ref) for ref in row.get("evidence_refs", [])]
             prompt_state = dict(episode_state, intent_slot_context=pipeline_context)
             material = replace(material, instruction=material.instruction + prompt_context(
                 prompt_pipeline_config, prompt_state, role_configs[phase_id].role_kind)).validate()

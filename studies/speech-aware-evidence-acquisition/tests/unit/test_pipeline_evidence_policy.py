@@ -30,3 +30,11 @@ def test_config_old_default_and_explicit_versions():
     assert parse_config(old)==old
     assert parse_config({**old,'evidence_policy':'unique_source_alias_v1'})['evidence_policy']=='unique_source_alias_v1'
     with pytest.raises(ValueError): parse_config({**old,'evidence_policy':'fuzzy'})
+
+
+def test_raw_candidates_survive_unique_alias_validation():
+    row={'intent_id':'foo','distinction':'x','evidence_refs':['intent:one'],'unresolved_fields':[]}
+    rows=candidates(json.dumps({'candidates':[row]}),3)
+    before=json.dumps(rows,sort_keys=True)
+    assert validate_evidence_refs(rows,inventory('store::intent:one'),[],policy='unique_source_alias_v1')==[{'raw':'intent:one','source_id':'store::intent:one'}]
+    assert json.dumps(rows,sort_keys=True)==before
