@@ -1,6 +1,6 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 8,
+  "source_revision": 9,
   "launcher_compatible": false,
   "execution_status": "Engineering efficiency first; existing Fold A arms continue until validated release migration; no new large-scale scientific experiments",
   "nodes": [
@@ -61,7 +61,7 @@
       "id": "CPU-UNIFIED-RUNTIME-IMAGE",
       "lane": "CPU",
       "priority": 0,
-      "status": "final-candidate-two-business-preflights-pass-prepare-register-validation-open",
+      "status": "v8-packaging-accepted-final-efficiency-image-awaiting-source-freeze",
       "scientific_dependencies": [],
       "requirements": [
         "one versioned image and external configurations",
@@ -74,7 +74,7 @@
       "id": "CPU-REQUEST-EFFICIENCY",
       "lane": "CPU",
       "priority": 0,
-      "status": "three-stage-pipeline-implementation-in-progress",
+      "status": "pipeline-and-projection-integrated-local-render-verified-online-throughput-pending",
       "scientific_dependencies": [],
       "requirements": [
         "precompute immutable inputs; dynamic nodes preserve dependencies",
@@ -355,8 +355,8 @@
       "priority": 0,
       "status": "awaiting-functional-and-efficiency-acceptance-current-runs-continue",
       "scientific_dependencies": [
-        "CPU-UNIFIED-RUNTIME-IMAGE",
-        "CPU-REQUEST-EFFICIENCY"
+        "CPU-FINAL-EFFICIENCY-RELEASE",
+        "CPU-CHECKPOINT-COMPATIBILITY"
       ],
       "requirements": [
         "stop admission after release accepted",
@@ -364,6 +364,63 @@
         "seal checkpoint and retain costs",
         "replace pinned image and configuration",
         "resume unfinished samples only"
+      ]
+    },
+    {
+      "id": "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "implementation-in-progress",
+      "scientific_dependencies": [
+        "CPU-REQUEST-EFFICIENCY"
+      ],
+      "requirements": [
+        "external configuration resolver used by actual generation and resume entrypoints",
+        "pinned missing or altered assets rejected without stale image fallback",
+        "existing configuration behavior retained"
+      ]
+    },
+    {
+      "id": "CPU-CHECKPOINT-COMPATIBILITY",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "two-arm-auxiliary-precheck-returned-final-validation-pending",
+      "scientific_dependencies": [],
+      "requirements": [
+        "native asset hash semantics and real input dependencies verified",
+        "only explicit operational scheduling changes allowed",
+        "preserve scientific parameters and checkpoint ancestry",
+        "OPENED predecessor cannot activate resume"
+      ]
+    },
+    {
+      "id": "CPU-FINAL-SOURCE-REVIEW",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "26-file-snapshot-under-independent-review-final-deltas-pending",
+      "scientific_dependencies": [],
+      "requirements": [
+        "per-file source before and after pins with specific rationale and evidence",
+        "include pending compatibility and external entrypoint changes before final approval"
+      ]
+    },
+    {
+      "id": "CPU-FINAL-EFFICIENCY-RELEASE",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "awaiting-integrated-source-no-build-started",
+      "scientific_dependencies": [
+        "CPU-UNIFIED-RUNTIME-IMAGE",
+        "CPU-REQUEST-EFFICIENCY",
+        "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
+        "CPU-CHECKPOINT-COMPATIBILITY",
+        "CPU-FINAL-SOURCE-REVIEW"
+      ],
+      "requirements": [
+        "one integrated committed source and immutable image manifest",
+        "two real business configurations pass CPU preparation and compatibility tests",
+        "bounded real-workload efficiency acceptance; no synthetic throughput claim",
+        "retain current experiments until replacement accepted"
       ]
     }
   ],
@@ -380,7 +437,7 @@
     ],
     "new_development_rosters_allowed": false
   },
-  "observed_at_utc": "2026-11-05T09:25:24.938301+00:00",
+  "observed_at_utc": "2026-11-05T11:22:51.056440+00:00",
   "engineering_first_policy": {
     "active_experiments_continue": true,
     "new_large_scale_experiments_allowed": false,
