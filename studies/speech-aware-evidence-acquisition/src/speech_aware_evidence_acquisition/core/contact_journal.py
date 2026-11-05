@@ -188,6 +188,10 @@ class NativeContactReplay:
                     'run_id', 'protocol_hash', 'split_identity_hash', 'carrier_lock_key',
                     'planned_model_calls', 'planned_speech_audio_seconds', 'planned_gpu_hours', 'execution_profile', 'split_role'))):
             raise ContactJournalError('recovery requires a fresh attempt of the unchanged plan')
+        retirement = (Path(data_root) / 'contact-journals' / source_plan.run_id /
+                      source_plan.attempt_id / 'retirement.json')
+        if os.path.lexists(retirement):
+            raise ContactJournalError('retired attempt prohibits native contact recovery')
         self.source_plan = source_plan
         self.source = ContactJournal(data_root, source_plan, arm)
         self.target_identity = ContactJournal(data_root, recovery_plan, arm).identity

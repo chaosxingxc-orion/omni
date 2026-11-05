@@ -1202,6 +1202,8 @@ def read_predecessor_attempt(
                     f"native_episode.relisten is invalid for a resume replay: {error}"
                 ) from error
     attempt_dir = Path(attempt_dir)
+    if (attempt_dir.parent.parent.parent / 'contact-journals' / run_id / attempt_id / 'retirement.json').exists():
+        raise ResumeRecoveryError('retired attempt prohibits row recovery')
     trace_path = predecessor_trace_path(attempt_dir, run_id)
     if not trace_path.is_file():
         raise ResumeRecoveryError(
@@ -1361,7 +1363,10 @@ def read_checkpoint_predecessor(
         sha256_file,
     )
 
-    path = checkpoint_path(Path(attempt_dir), run_id)
+    attempt_dir = Path(attempt_dir)
+    if (attempt_dir.parent.parent.parent / 'contact-journals' / run_id / attempt_id / 'retirement.json').exists():
+        raise ResumeRecoveryError('retired attempt prohibits row recovery')
+    path = checkpoint_path(attempt_dir, run_id)
     if not path.is_file():
         raise ResumeRecoveryError(
             f"predecessor attempt {attempt_id!r} has no row checkpoint at {path}"
