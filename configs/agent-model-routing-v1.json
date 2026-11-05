@@ -1,14 +1,19 @@
 {
   "schema": "omni.agent_model_routing.v1",
-  "updated_at": "2026-11-05T02:08:48.751083+00:00",
+  "updated_at": "2026-11-05T02:49:14.392754+00:00",
   "language": "zh-CN",
   "dispatch_policy": {
-    "max_active_subagents": 3,
     "require_file_delivery": true,
     "message_is_not_delivery": true,
     "unavailable_model_is_blocking": true,
     "inflight_model_change": "keep_existing_owner_until_terminal_or_explicit_handoff",
-    "probe_scheduling": "use_next_available_slot; never exceed max_active_subagents"
+    "probe_scheduling": "use_next_available_slot; never exceed max_active_processes",
+    "execution_backend": "codex_subprocess",
+    "collaboration_subagents_enabled": false,
+    "max_active_processes": 3,
+    "task_transport": "stdin_from_task_file",
+    "delivery_transport": "filesystem",
+    "nested_delegation_allowed": false
   },
   "roles": {
     "engineering_development": {
