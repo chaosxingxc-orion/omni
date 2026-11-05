@@ -7657,30 +7657,25 @@ class _SlotFillScheduler:
         execute_stage = f"{timing_stage}_execute" if timing_stage else None
         if wait_stage:
             from ..core import stage_timing as operational_timing
-            capacity_context = operational_timing.span(wait_stage)
+            with operational_timing.span(wait_stage):
+                await capacity.acquire()
         else:
-            capacity_context = contextvars.nullcontext() if hasattr(contextvars, "nullcontext") else None
-        # contextvars has no nullcontext; use the standard library contextlib
-        # lazily so normal imports remain unchanged.
-        if capacity_context is None:
-            from contextlib import nullcontext
-            capacity_context = nullcontext()
-        with capacity_context:
-            async with capacity:
-                context = contextvars.copy_context()
-                queued = time.perf_counter() if executor_wait_stage else None
-                wall = time.time_ns() if executor_wait_stage else None
+            await capacity.acquire()
+        try:
+            context = contextvars.copy_context()
+            queued = time.perf_counter() if executor_wait_stage else None
+            wall = time.time_ns() if executor_wait_stage else None
 
-                def invoke():
-                    from ..core import stage_timing as operational_timing
-                    if executor_wait_stage:
-                        operational_timing.completed_interval(executor_wait_stage, queued, wall)
-                    if execute_stage:
-                        with operational_timing.span(execute_stage):
-                            return fn(*args)
-                    return fn(*args)
+            def invoke():
+                from ..core import stage_timing as operational_timing
+                if executor_wait_stage:
+                    operational_timing.completed_interval(executor_wait_stage, queued, wall)
+                if execute_stage:
+                    with operational_timing.span(execute_stage):
+                        return fn(*args)
+                return fn(*args)
 
-                future = asyncio.get_running_loop().run_in_executor(executor, context.run, invoke)
+            future = asyncio.get_running_loop().run_in_executor(executor, context.run, invoke)
             try:
                 return await asyncio.shield(future)
             except asyncio.CancelledError:
@@ -7694,6 +7689,8 @@ class _SlotFillScheduler:
                 if not future.cancelled():
                     future.exception()
                 raise
+        finally:
+            capacity.release()
 
     @property
     def role_input_runner(self):
