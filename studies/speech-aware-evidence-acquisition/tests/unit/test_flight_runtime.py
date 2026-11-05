@@ -3047,6 +3047,10 @@ def test_prepared_request_pipeline_overlaps_and_records_bounded_stages(tmp_path)
     assert dispatch["validation_workers"] == 2
     assert dispatch["queue_depth"] == 4
     assert dispatch["max_in_flight"] <= 2
+    assert dispatch["max_validation_pending"] <= dispatch["queue_depth"]
+    assert dispatch["validation_backpressure_events"] >= 0
+    assert dispatch["validation_backpressure_seconds"] >= 0
+    assert dispatch["model_queue_wait_seconds"] >= 0
     assert set(dispatch["stage_wall_seconds"]) == {"prepare", "model", "validation"}
     assert all(value > 0 for value in dispatch["stage_wall_seconds"].values())
     assert [row["sample_id"] for row in runtime._output_rows] == [
