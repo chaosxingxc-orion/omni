@@ -1,16 +1,18 @@
 {
   "schema": "omni.agent_model_routing.v1",
-  "updated_at": "2026-11-04",
+  "updated_at": "2026-11-05T02:01:04.986625+00:00",
   "language": "zh-CN",
   "dispatch_policy": {
     "max_active_subagents": 3,
     "require_file_delivery": true,
     "message_is_not_delivery": true,
-    "unavailable_model_is_blocking": true
+    "unavailable_model_is_blocking": true,
+    "inflight_model_change": "keep_existing_owner_until_terminal_or_explicit_handoff",
+    "probe_scheduling": "use_next_available_slot; never exceed max_active_subagents"
   },
   "roles": {
     "engineering_development": {
-      "model": "gpt-6.1-sol",
+      "model": "gpt-6.1-terra",
       "scope": [
         "工程开发",
         "固定脚本与配置",
@@ -18,10 +20,9 @@
         "文档生成"
       ],
       "delivery": "REPORT.md + result.json + changed_files_sha256 + test evidence",
-      "routing_state": "temporary_fallback_from_terra",
+      "routing_state": "preferred_restored_for_new_dispatch",
       "original_model": "gpt-6.1-terra",
-      "switch_reason": "Terra had no verifiable executable delivery; Sol route is currently reachable",
-      "switch_back_condition": "Only after a Terra probe produces a matching task receipt and report"
+      "switch_reason": "Owner confirmed Terra configuration restored; validate tool execution on next available dispatch"
     },
     "sample_analysis": {
       "model": "gpt-6.1-sol",
@@ -44,7 +45,7 @@
   },
   "availability": {
     "gpt-6.1-terra": {
-      "status": "unverified_unavailable",
+      "status": "owner_confirmed_configured_execution_pending",
       "probe_required": true,
       "do_not_claim_execution_before_probe": true
     },
@@ -56,7 +57,7 @@
     }
   },
   "fallback_policy": {
-    "engineering_development": "gpt-6.1-sol_until_terra_probe_passes",
+    "engineering_development": "gpt-6.1-sol_if_terra_connection_fails_and_sol_execution_is_verified",
     "sample_analysis": "use_configured_sol_only",
     "planning_evaluation_replanning": "use_configured_astra_only",
     "never_silent_substitute": true
