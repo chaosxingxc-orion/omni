@@ -1,0 +1,39 @@
+{
+  "schema": "omni-reflexion-grounding80-result-v1",
+  "rows": 80,
+  "official": {
+    "learned": {
+      "slu_f1": 0.6911589681562821,
+      "intent_accuracy": 0.825,
+      "span_f1": 0.5446009389671362
+    },
+    "lock": {
+      "slu_f1": 0.6919224047206144,
+      "intent_accuracy": 0.8375,
+      "span_f1": 0.5412844036697247
+    }
+  },
+  "strict_success": {
+    "learned": 27,
+    "lock": 27
+  },
+  "comparisons": {
+    "learned_vs_lock": {
+      "proxy_mean_delta": 0.006666666666666643,
+      "strict_breaks": 4,
+      "strict_repairs": 4
+    }
+  },
+  "cost": {
+    "audio_seconds_used": 1031.8258125000004,
+    "calls_used": 240,
+    "completion_tokens_total": 491991,
+    "latency_seconds_total": 36461.28063290991,
+    "prompt_tokens_total": 1583946,
+    "tool_calls": 0
+  },
+  "source_sha256": "a5ad257bb62161a35a33a25c8502f3a5f25e233b87a072108e5505ae01bbfe63",
+  "verified_source_hashes": 9,
+  "candidate_accepted": false,
+  "new_model_calls_for_verification": 0
+}
