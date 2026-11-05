@@ -4,7 +4,8 @@ p=argparse.ArgumentParser();p.add_argument('--repo',type=pathlib.Path,required=T
 commit=subprocess.check_output(['git','-C',str(a.repo),'rev-parse',a.commit+'^{commit}'],text=True).strip()
 entries=subprocess.check_output(['git','-C',str(a.repo),'ls-tree','-r',commit],text=True).splitlines()
 prefixes=('studies/speech-aware-evidence-acquisition/src/','studies/speech-aware-evidence-acquisition/scripts/','studies/speech-aware-evidence-acquisition/configs/','studies/speech-aware-evidence-acquisition/docs/arms/','scripts/npu/','studies/speech-aware-evidence-acquisition/docs/receipts/rosters/')
-exact={'docs/datasets.lock.json','studies/speech-aware-evidence-acquisition/pyproject.toml','studies/speech-aware-evidence-acquisition/LICENSE', 'docker/saea-base/release/verify-release.py', 'docker/saea-base/release/install-source.py', 'docker/saea-base/release/Dockerfile', 'docker/saea-base/release/context.py', 'docker/saea-base/release/build-release.sh'}
+# The shipped lock-baseline compiler requires this admission record.
+exact={'studies/speech-aware-evidence-acquisition/docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md','docs/datasets.lock.json','studies/speech-aware-evidence-acquisition/pyproject.toml','studies/speech-aware-evidence-acquisition/LICENSE', 'docker/saea-base/release/verify-release.py', 'docker/saea-base/release/install-source.py', 'docker/saea-base/release/Dockerfile', 'docker/saea-base/release/context.py', 'docker/saea-base/release/build-release.sh'}
 selected=[]
 for row in entries:
  meta,name=row.split('\t',1);mode,kind,oid=meta.split()
