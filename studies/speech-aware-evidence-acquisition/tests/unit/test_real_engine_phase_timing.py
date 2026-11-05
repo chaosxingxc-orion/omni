@@ -24,7 +24,7 @@ def test_roles_from_receipt_not_request_sort():
 
 def test_duplicate_boundary_refused():
     rows,events=inputs()
-    with pytest.raises(ValueError,match='ambiguous'):m.join(rows,events+[events[0]])
+    assert m.join(rows,events+[events[0]])['row_classification']['unsupported_row'] == 1
 
 
 def test_c2_roles_without_diagnostic_branches():
@@ -88,8 +88,7 @@ def test_duplicate_sample_boundaries_refused_even_without_role_events(same_id):
     rows, events = inputs()
     add_sample_boundary(rows[0])
     add_sample_boundary(rows[0], 'sample-timing' if same_id else 'other-timing')
-    with pytest.raises(ValueError, match='ambiguous sample execution timing'):
-        m.join(rows, [])
+    assert m.join(rows, [])['row_classification']['unsupported_row'] == 1
 
 
 def test_empty_rows_do_not_claim_complete_timing():
@@ -166,10 +165,37 @@ def test_empty_refusal_finite_and_unsupported_counted():
 @pytest.mark.parametrize('change', [{'pid':2}, {'elapsed_seconds':-1}, {'started_monotonic':float('nan')}, {'started_monotonic':105}])
 def test_invalid_request_boundaries_rejected(change):
     rows, events = inputs(); events[1].update(change)
-    with pytest.raises(ValueError): m.join(rows, events)
+    assert m.join(rows, events)['row_classification']['unsupported_row'] == 1
 
 
 def test_repeated_request_id_in_chain_is_unsupported():
     rows, events = inputs()
     rows[0].output_rows = [{'native_episode_receipt': {'role_visits': [{'role_id':r, 'execution_receipt': {'contacts':[{'request_id':'z'}]}} for r in ('perception','solver')]}}]
     assert m.join(rows, events)['row_classification']['unsupported_chain'] == 1
+
+
+@pytest.mark.parametrize('change,reason', [({'pid': 2}, 'request_http_pid_mismatch'),
+    ({'started_monotonic': 99}, 'http_outside_request'), ({'status': 'error'}, 'request_status_not_ok')])
+def test_http_mismatch_isolated_per_row(change, reason):
+    rows, events = inputs(); events = complete_events(events)
+    events[2].update(change)
+    result = m.join(rows, events, include_rows=True)
+    assert result['sample_rows'][0]['unsupported_reason'] == reason
+    assert not result['all_timing_complete']
+
+
+def test_invalid_receipt_and_unsupported_do_not_claim_all_complete():
+    rows, events = inputs(); rows[0].output_rows = [{'native_episode_receipt': None}]
+    result = m.join(rows, events, include_rows=True)
+    assert result['row_classification']['invalid_receipt'] == 1
+    assert result['processed_rows'] == 1 and not result['all_timing_complete']
+
+
+def test_bad_row_does_not_discard_other_row():
+    rows, events = inputs(); bad, bad_events = inputs()
+    bad[0].sample_id = 'other'; bad_events = [{**e, 'sample_id':'other'} for e in bad_events]
+    bad_events[1]['elapsed_seconds'] = -1
+    result = m.join(rows + bad, events + bad_events, include_rows=True)
+    assert result['processed_rows'] == 2 and result['rows'] == 1
+    assert result['row_classification']['unsupported_row'] == 1
+    assert result['metrics']['perception/scientific_request']['n'] == 1
