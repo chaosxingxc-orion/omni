@@ -7398,10 +7398,9 @@ class FlightRuntime:
             mark_stage("prepare", started, time.monotonic())
             return index, sample, prepared, messages
 
-        def send(item):
+        def send(item, queue_started):
             nonlocal in_flight, max_in_flight
             index, sample, prepared, messages = item
-            queue_started = time.monotonic()
             slot = slots.get()
             queue_wait = max(time.monotonic() - queue_started, 0.0)
             with meter:
@@ -7490,12 +7489,15 @@ class FlightRuntime:
                         prep_pool.submit(build, next_index, samples[next_index])
                     )
                     next_index += 1
-                while pending_prepare or pending_model:
+                while pending_prepare or pending_model or validation_futures:
                     completed, _ = wait(
-                        tuple(pending_prepare | pending_model),
+                        tuple(pending_prepare | pending_model | validation_futures),
                         return_when=FIRST_COMPLETED,
                     )
+                    collect_validation()
                     for future in completed:
+                        if future not in pending_prepare and future not in pending_model:
+                            continue
                         if future in pending_prepare:
                             pending_prepare.remove(future)
                             try:
@@ -7503,7 +7505,8 @@ class FlightRuntime:
                             except BaseException as error:  # noqa: BLE001
                                 pipeline_error = pipeline_error or error
                                 continue
-                            pending_model.add(model_pool.submit(send, item))
+                            if pipeline_error is None:
+                                pending_model.add(model_pool.submit(send, item, time.monotonic()))
                         else:
                             pending_model.remove(future)
                             try:
@@ -7523,11 +7526,11 @@ class FlightRuntime:
                                     validation_backpressure[1] += max(
                                         time.monotonic() - blocked_started, 0.0
                                     )
-                                validation_backpressure[2] = max(
-                                    validation_backpressure[2], len(validation_futures)
-                                )
                                 validation_futures.add(
                                     validation_pool.submit(validate, item)
+                                )
+                                validation_backpressure[2] = max(
+                                    validation_backpressure[2], len(validation_futures)
                                 )
                             if next_index < len(samples) and pipeline_error is None:
                                 pending_prepare.add(
@@ -7541,10 +7544,13 @@ class FlightRuntime:
                     # requests to start.
                     collect_validation()
                     if pipeline_error is not None:
-                        for pending in pending_prepare:
-                            pending.cancel()
-                        for pending in pending_model:
-                            pending.cancel()
+                        # Remove successfully cancelled futures explicitly:
+                        # wait() need not observe a cancelled executor item
+                        # until a worker dequeues it. Running calls still drain.
+                        for group in (pending_prepare, pending_model):
+                            for pending in tuple(group):
+                                if pending.cancel():
+                                    group.remove(pending)
                         next_index = len(samples)
                 while validation_futures:
                     collect_validation(wait_for_one=True)
