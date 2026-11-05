@@ -2,6 +2,12 @@
 
 本轮固定使用原Fold A1080与Fold B1080，不新增开发集。两折各1080条、互不重叠，均来自原始TRAIN；旧node80与两折均无交集，不能替代两折评估。名单及音频身份沿用既有登记。 不重新抽样或重建名单；使用既有数据视图与roster的SHA校验。Fold A、Fold B各自与相应历史结果比较，不混成一个开发集。
 
+## 固定比较口径
+
+正式开发评估使用既有Fold A1080，确认评估使用既有Fold B1080；不再创建DEV80或另一个DEV1080名单。已重新核对两折dataset与roster的SHA，均与既有登记一致。两折各自按sample ID对齐历史预测，报告同折指标及百分点变化；无法取得逐条历史预测时，只报告汇总对照，不编造配对修复率。实体F1和官方SLU沿用原评分实现与聚合方式，不以成功响应子集替代完整评测。
+
+注意区分推理实例A/B与数据Fold A/B：当前两个实例都执行Fold A1080，分别运行联合Solver对照与拆节点新图；实例B不表示正在运行Fold B。Fold A定向调优后冻结配置，再在原Fold B1080确认。小批次只作进度或故障诊断，不另建正式开发集，不替代1080条结果。
+
 ## 已有横向参考
 
 |数据|系统|Intent|官方SLU F1|来源与比较边界|
@@ -33,11 +39,11 @@ Fold A历史运行使用8卡/2个TP4，2160次生成；从启动到封存2773.60
 
 账本共62个generation intent、62个response和62份FIT custody。05:32:41固定镜像正式结算成功：逐请求ContactJournal核验62个observed响应、终态attempt与服务排空后释放租约；生成unknown=0。FIT端点与tokens成本另行对账，62份custody不直接替代端点统计。此前48/41是过程快照，已被终态替代。未新增外部教师调用。
 
-本轮用4卡/1个TP4、64K、客户端并发32，进程墙钟977.81秒。异常停止且包含初始化和排空，不能用15条推算稳定秒/条或全量ETA；节点级耗时及tokens等待完整账本汇总。A的4卡TP4服务已健康，Fold A1080增强P→联合Solver对照完成准备、重新注册和准入，最终配置hash已匹配；带停止准入配置的预检、真实resident和12份来源检查均通过。05:51:24持久队列启动，05:51:27创建固定镜像generation容器；主线程核验两者running且admission-control配置存在。05:56:38已核到16个generation intent、尚无已落盘response、32份FIT custody；服务瞬时running=14、waiting=0。请求已真实开始，checkpoint仍只有header，完整0/1080，吞吐/ETA待完整样本；不同账本与metrics采样不强求瞬时计数相等。A已有真实请求，B修复接续尚未开始，不声称8卡有效满载。
+本轮用4卡/1个TP4、64K、客户端并发32，进程墙钟977.81秒。异常停止且包含初始化和排空，不能用15条推算稳定秒/条或全量ETA；节点级耗时及tokens等待完整账本汇总。A的4卡TP4服务已健康，Fold A1080增强P→联合Solver对照完成准备、重新注册和准入，最终配置hash已匹配；带停止准入配置的预检、真实resident和12份来源检查均通过。05:51:24持久队列启动，05:51:27创建固定镜像generation容器；主线程核验两者running且admission-control配置存在。05:56:38已核到16个generation intent、尚无已落盘response、32份FIT custody；服务瞬时running=14、waiting=0。请求已真实开始，checkpoint仍只有header，完整0/1080，吞吐/ETA待完整样本；不同账本与metrics采样不强求瞬时计数相等。A已有真实请求。后续独立inspect确认：B修复接续队列于05:58:22启动，generation于05:58:24启动，两路generation均running。B新请求、完整轨迹及恢复复用仍待核验，不能仅凭容器running声称8卡有效满载。
 
 退出根因是程序在向Slot供给候选时改写短证据ID，后续projection却与封存P的原始候选做整行相等比较，产生`Slot branch differs from sealed Perception`。该问题属于工程协议衔接错误，不归为模型精度错误。独立CPU审查另复现：stage启用identical_v1去重，projection仍按strict重解析，存在第二个独立冲突；未证明本轮具体失败行触发第二分支。
 
-原工程进程负责两项修复、真实projection集成回归和固定镜像验证，再以明确新版本身份接续。保留旧响应、轨迹和费用；不热改活树，不盲重发未知请求。两项修复已合main（53f1affe、0da74fc5、aa851eb8），固定镜像回归87通过、2跳过，关键源码SHA已核对。真实runner/projection测试覆盖完整音频ID及重复策略；短知识ID别名的旧改写失败另由CPU真实函数探针复现，不能混称完整别名端到端回归。实际修复版NPU接续仍待完成。观察器的`native FIT custody differs`已定位：配置arm=main，真实账本arm=raw-speech-agent-native-tools。62份FIT文件名、artifact及端点journal哈希检查均通过；修正观察器配置并保留严格身份校验，不修改原账本。
+原工程进程负责两项修复、真实projection集成回归和固定镜像验证，再以明确新版本身份接续。保留旧响应、轨迹和费用；不热改活树，不盲重发未知请求。两项修复已合main（53f1affe、0da74fc5、aa851eb8），固定镜像回归87通过、2跳过，关键源码SHA已核对。真实runner/projection测试覆盖完整音频ID及重复策略；短知识ID别名的旧改写失败另由CPU真实函数探针复现，不能混称完整别名端到端回归。修复版generation已启动；接续的轨迹与实际请求验收仍待完成。观察器的`native FIT custody differs`已定位：配置arm=main，真实账本arm=raw-speech-agent-native-tools。62份FIT文件名、artifact及端点journal哈希检查均通过；修正观察器配置并保留严格身份校验，不修改原账本。
 
 既有后台归档与600秒/终态观察继续；首个归档内容哈希已验。新执行配置须启用现成的停止准入与排空控制，避免工程故障后依赖自然异常停止。匹配控制启动不等待B修复或全部CPU报告。
 
