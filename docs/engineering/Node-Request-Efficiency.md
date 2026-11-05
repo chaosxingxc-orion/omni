@@ -236,3 +236,16 @@ B本机归档因一次SSH inspect超时退出，已恢复并取得新快照。�
 native Agent 路径的 CPU 调度也增加了 debug-only 的三段计时：`*_capacity_wait` 表示有界准入信号量等待，`*_executor_wait` 表示线程池排队，`*_execute` 表示 role-input、ready-request 或 validation 实际执行。normal 模式不产生这些细粒度事件，取消仍会等待已提交的同步 worker 完成。固定镜像定向回归 4 项通过；它只证明观测和取消语义，不代表线上吞吐提升。
 
 后续边界修复已完成：FlightRuntime 现在先构造并绑定 adapter，再校验依赖 serving geometry 的调度配置，避免无 adapter 的预检路径提前失败；已缓存的 roster 仍按配置、split 和数据根复用。容量观测写入失败时不会泄漏 semaphore 许可。固定镜像 runtime/factory/debug 组合回归为 219 passed；该结果覆盖工程行为，不代表真实 NPU 吞吐。
+### 2026-11-05 基座切换前终态快照
+
+固定镜像 `saea-base:20261027` 中的音频缓存回归为 **27 passed**；本次修复已提交为 `52729a9f`。缓存默认关闭，只有显式设置 `SAEA_AUDIO_CACHE_ENABLED=1` 才启用，且受条目数和编码字节总量双重限制。该结果只证明工程行为正确，尚未证明真实业务吞吐提升。
+
+切换前两条 Fold A 旧任务已自然终态，未重发未知请求：
+
+| 任务 | 终态 | 已处理/总样本 | 访问次数 | 资源 | 观测效率 | 说明 |
+|---|---|---:|---:|---|---:|---|
+| Slot off（A） | FAILED，exit 1 | 919/1080 | 2231 | 4 卡/1 实例 | 42.45 秒/完成样本 | 161 条未完成；失败尝试已封存，未知数为 0 |
+| Slot thinking on（B） | COMPLETE，exit 0 | 1080/1080 | 2526 | 4 卡/1 实例 | 41.60 秒/完成样本 | 已完成全 Fold A；科学指标仍需独立评分 |
+
+两条记录的 `measured_npu_utilization_percent` 均为空，不能据此声称 NPU 满载；当前仅 8200/8202 服务进程仍在监听，没有活动生成队列。下一步先完成新基座的真实 600 秒效率窗口，再按断点合同处理 A 的 161 条遗留数据；不把失败尝试的局部速率当作稳定吞吐基线。
+
