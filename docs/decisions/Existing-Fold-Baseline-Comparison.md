@@ -1,6 +1,6 @@
 # 既有Fold A/B基线与新图比较
 
-本轮固定使用原Fold A1080与Fold B1080，不新增开发集。两折各1080条、互不重叠，均来自原始TRAIN；旧node80与两折均无交集，不能替代两折评估。名单及音频身份沿用既有登记。
+本轮固定使用原Fold A1080与Fold B1080，不新增开发集。两折各1080条、互不重叠，均来自原始TRAIN；旧node80与两折均无交集，不能替代两折评估。名单及音频身份沿用既有登记。 不重新抽样或重建名单；使用既有数据视图与roster的SHA校验。Fold A、Fold B各自与相应历史结果比较，不混成一个开发集。
 
 ## 已有横向参考
 
@@ -8,7 +8,7 @@
 |---|---|---:|---:|---|
 |Fold A1080|A0 current C2|85.7407%|73.3139%|已提交1080条官方结果摘要；旧joint，每条2次生成|
 |Fold B1080|A0合并结果|85.3704%|73.2225%|427历史+300首轮+353接续，一次完整汇总；不能当成单次新图运行|
-|Fold A1080|新P→Slot→Decision|尚无|尚无|入口迁移及协议修复中，未启动完整新实验|
+|Fold A1080|新P→Slot→Decision|尚无|尚无|完整1080条数据准备已成功；尚无新图有效指标|
 |Fold B1080|新P→Slot→Decision|尚无|尚无|等待Fold A调优、候选冻结|
 
 来源：[Fold A已核验结果](../../studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-fold-a-c2-verified-result.json)、[Fold B A0汇总锁定](../../studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-a0-full1080-baseline-lock.json)。本轮重新核验了这些已提交来源文件的哈希与数字；未重复推理，也未重新读取所有历史原始flight。不能把来源摘要核验说成完整原轨迹再次验收。
