@@ -39,7 +39,7 @@ def confined(root,rel):
     if not original.is_relative_to(root.resolve()):raise ValueError('source path escapes root')
     logical_root=root.parent if root.name in ('docs','configs') else root
     logical_rel=(root.name+'/'+rel) if root!=logical_root else rel
-    p=resolve_asset(logical_root,logical_rel).resolve()
+    p=(resolve_asset(logical_root,logical_rel) if str(logical_rel).startswith(('docs/', 'configs/')) else root/rel).resolve()
     if p!=original:return p
     if not p.is_relative_to(root.resolve()):raise ValueError('source path escapes root')
     return p

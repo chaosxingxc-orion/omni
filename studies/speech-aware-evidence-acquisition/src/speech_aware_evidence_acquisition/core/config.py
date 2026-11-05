@@ -779,7 +779,8 @@ def resolve_runtime_receipt_path(repo_root: Path, values: Mapping[str, object]) 
     own default) should derive this path from, rather than each
     re-implementing the same join."""
 
-    return Path(repo_root) / "docs" / runtime_receipt_relpath(values)
+    from .experiment_assets import resolve_asset
+    return resolve_asset(repo_root, "docs/" + runtime_receipt_relpath(values))
 
 
 def protocol_hash(config_hash: str, arm: str, split_identity_hash: str) -> str:

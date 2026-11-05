@@ -180,7 +180,7 @@ def load_campaign_cells(repo_root: Path, experiment: str) -> tuple[CampaignCell,
     return cells
 
 
-def declared_readiness(cell: CampaignCell, data_root: Path) -> FlightReadiness:
+def declared_readiness(cell: CampaignCell, data_root: Path, *, decision_documents: Mapping[str, bytes] | None = None) -> FlightReadiness:
     readiness = cell.document["readiness"]
     if readiness["state"] != "ready":
         return FlightReadiness(readiness["state"], str(readiness.get("reason", "")))
@@ -201,9 +201,17 @@ def declared_readiness(cell: CampaignCell, data_root: Path) -> FlightReadiness:
             raise CampaignError("readiness requirement path must be confined beneath data root")
         state = "preparation-pending" if item["kind"] == "preparation" else "held"
         reason = str(item.get("reason", f"{item['kind']} receipt required"))
-        if not path.is_file():
+        if decision_documents and relative in decision_documents and item['kind'] != 'decision':
+            raise CampaignError('staged bytes may only satisfy a decision requirement')
+        if decision_documents and relative in decision_documents and not isinstance(decision_documents[relative], bytes):
+            raise CampaignError('staged decision must be immutable bytes')
+        staged = decision_documents.get(relative) if decision_documents and item['kind'] == 'decision' else None
+        if staged is not None:
+            raw = bytes(staged)
+        elif not path.is_file():
             return FlightReadiness(state, f"{reason}: missing {relative}")
-        raw = path.read_bytes()
+        else:
+            raw = path.read_bytes()
         actual = hashlib.sha256(raw).hexdigest()
         if actual != digest:
             return FlightReadiness(state, f"{reason}: hash mismatch for {relative}")

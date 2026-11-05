@@ -78,3 +78,21 @@ def test_unresolvable_cell_is_refused_by_name(tmp_path, capsys):
     assert plan.read_bytes() == before
     with pytest.raises(tool.RefreshError):
         tool.refresh_package(tmp_path, pkg)
+
+
+def test_selected_workspace_plan_preserves_ancestor(tmp_path):
+    pkg = tmp_path/'workspace/docs/readiness/pair';pkg.mkdir(parents=True)
+    ancestor = pkg/'generation-plan-registered-v1.json'
+    ancestor.write_text('{"preserve":true}\n')
+    successor = pkg/'generation-successor-plan-registered-v1.json'
+    successor.write_text(json.dumps({'cell':'pair','experiment':'pair',
+                                     'prepared_phase_supply':{'relpath':'old','sha256':'0'*64}}))
+    docs = {'configs/experiment/pair.json':{'cells':[{'cell_id':'pair','baseline_fragment':'pair'}]},
+            'configs/baseline/pair.json':{'prepared_phase_supply':{'relpath':'new','sha256':'a'*64}}}
+    for rel, doc in docs.items():
+        path = tmp_path/rel;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(doc))
+    old = ancestor.read_bytes()
+    out = tool.refresh_package(tmp_path,pkg,selected_paths=[successor],resolve_path=lambda rel:tmp_path/rel)
+    assert out[0]['status'] == 'refreshed'
+    assert json.loads(successor.read_text())['prepared_phase_supply'] == docs['configs/baseline/pair.json']['prepared_phase_supply']
+    assert ancestor.read_bytes() == old

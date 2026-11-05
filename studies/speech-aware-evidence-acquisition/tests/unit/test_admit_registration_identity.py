@@ -27,7 +27,7 @@ def test_stale_registration_refused_before_draft(tmp_path, monkeypatch, changed)
     elif changed == 'missing': candidate.pop('composed_config_hash')
     cell = {'model_fragment': 'model', 'dataset_fragment': 'dataset',
             'baseline_fragment': 'baseline', 'readiness': {'state': 'held'}}
-    monkeypatch.setattr(config, 'compose', lambda *args: SimpleNamespace(
+    monkeypatch.setattr(config, 'compose', lambda *args, **kwargs: SimpleNamespace(
         config_hash=current, values={'arm': 'test-arm'}))
     monkeypatch.setattr(contracts, 'assert_execution_environment', lambda: None)
     monkeypatch.setattr(m, 'write', lambda *args: pytest.fail('wrote stale admission'))

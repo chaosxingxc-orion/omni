@@ -51,30 +51,35 @@ def expected_eligible(family=None) -> list[str]:
     return (family or fam).eligible_run_ids()
 
 
-def rehash(node, root: str) -> int:
+def rehash(node, root: str, resolve_path=None) -> int:
     count = 0
     if isinstance(node, dict):
         path = node.get("path")
-        if isinstance(path, str) and os.path.isfile(os.path.join(root, path)):
-            node["sha256"] = hashlib.sha256(io.open(os.path.join(root, path), "rb").read()).hexdigest()
-            count += 1
+        if isinstance(path, str):
+            # Many receipts contain data-root paths and URLs as well as repo
+            # paths. Only repository scientific assets go through the resolver.
+            resolved = (resolve_path(path) if resolve_path is not None and path.startswith(('docs/', 'configs/'))
+                        else os.path.join(root, path))
+            if os.path.isfile(resolved):
+                node["sha256"] = hashlib.sha256(io.open(resolved, "rb").read()).hexdigest()
+                count += 1
         for value in node.values():
-            count += rehash(value, root)
+            count += rehash(value, root, resolve_path)
     elif isinstance(node, list):
         for value in node:
-            count += rehash(value, root)
+            count += rehash(value, root, resolve_path)
     return count
 
 
 def mint(root: str, data: str, coordinator: str = "Fable5.1", dry: bool = False, now: datetime | None = None, family=None,
-         tool: str = "scripts/flights/direct/thinking_system_mint_receipt.py") -> dict:
+         tool: str = "scripts/flights/direct/thinking_system_mint_receipt.py", *, draft_input=None, resolve_path=None) -> dict:
     """Build (and, unless dry, write) the receipt; returns a summary. Raises SystemExit on any mismatch.
 
     ``family`` selects the package family (default: the 268-B Fold B family); the DEV wrapper passes ``thinking_system_dev_family``."""
 
     fam = family or globals()["fam"]
     draft_path = f"{fam.PACKAGE}/root-admission-draft-v1.json"
-    draft = json.loads(io.open(os.path.join(root, draft_path), encoding="utf-8").read())
+    draft = json.loads(io.open(draft_input if draft_input is not None else os.path.join(root, draft_path), encoding="utf-8").read())
     if draft.get("decision_id") != fam.DECISION_ID:
         raise SystemExit(f"draft decision_id is {draft.get('decision_id')!r}, expected {fam.DECISION_ID!r}")
     if draft.get("eligible_run_ids") != expected_eligible(fam):
@@ -85,7 +90,7 @@ def mint(root: str, data: str, coordinator: str = "Fable5.1", dry: bool = False,
     receipt["coordinator"] = coordinator
     receipt["minted_from"] = {"template_receipt": draft_path, "tool": tool}
     receipt.pop("_draft_note", None)
-    rehashed = rehash(receipt, root)
+    rehashed = rehash(receipt, root, resolve_path)
     out = os.path.join(data, fam.DECISION_RELPATH)
     text = json.dumps(receipt, indent=2, ensure_ascii=False, sort_keys=False) + "\n"
     summary = {"out": out, "decision_id": fam.DECISION_ID, "eligible_run_ids": receipt["eligible_run_ids"], "rehashed_paths": rehashed,

@@ -38,3 +38,24 @@ def test_racing_mint_cannot_replace_first_decision(tmp_path, monkeypatch):
     with pytest.raises(SystemExit, match='refusing to overwrite'):
         mint.mint(repo,data,'Codex',family=family)
     assert (Path(data)/'receipt.json').read_bytes()==b'first decision'
+
+
+def test_mint_reads_external_draft_and_resolves_antecedents(tmp_path):
+    from types import SimpleNamespace
+    import hashlib
+    repo = tmp_path/'repo';repo.mkdir()
+    data = tmp_path/'data';data.mkdir()
+    workspace = tmp_path/'workspace';workspace.mkdir()
+    authority = workspace/'authority.md';authority.write_text('authorized')
+    draft = workspace/'draft.json'
+    draft.write_text(json.dumps({'decision_id':'decision', 'eligible_run_ids':['RUN'],
+        'eligible_attempt_ids':['next'], 'antecedents':{'owner':{'path':'docs/authority.md','sha256':'0'*64}}}))
+    family = SimpleNamespace(PACKAGE='docs/readiness/pair',DECISION_ID='decision',
+                             DECISION_RELPATH='coordination/new.json',eligible_run_ids=lambda:['RUN'])
+    result = mint.mint(str(repo),str(data),family=family,draft_input=draft,
+                       resolve_path=lambda path:authority)
+    receipt = json.loads((data/'coordination/new.json').read_text())
+    assert receipt['eligible_attempt_ids'] == ['next']
+    assert receipt['antecedents']['owner']['sha256'] == hashlib.sha256(authority.read_bytes()).hexdigest()
+    assert result['rehashed_paths'] == 1
+    assert not (repo/'docs').exists()

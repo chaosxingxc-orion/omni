@@ -209,13 +209,14 @@ class FrozenCoreGate(
                 "d1_evidence_supplement_relpath and d1_evidence_supplement_sha256 "
                 "must be configured together"
             )
+        from ..core.experiment_assets import resolve_asset
         return cls(
             e0_receipt=root / "docs" / "receipts" / "e0-closure.json",
             runtime_receipt=root / "docs" / runtime_receipt_relpath,
             data_root=Path(data_root),
             lock_path=root.parent.parent / "docs" / "datasets.lock.json",
             runtime_root=Path(runtime_root),
-            exposure_ledger=root / "docs" / "exposure-ledger.md",
+            exposure_ledger=resolve_asset(root, "docs/exposure-ledger.md"),
             source_root=root,
             model_root=Path(model_root) if model_root is not None else None,
             d1_media_supplement=(

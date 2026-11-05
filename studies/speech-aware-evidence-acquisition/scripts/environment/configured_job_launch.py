@@ -54,7 +54,7 @@ def load_config(path):
     keys = {'schema', 'container_name', 'image', 'repo_path', 'expected_commit', 'receipt_dir',
             'argv', 'working_directory', 'network', 'pid_host', 'cpuset_cpus', 'environment',
             'mounts', 'create_directories', 'allowed_create_roots', 'required_inputs', 'monitor_interval_seconds'}
-    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access', 'user'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access', 'user', 'external_admission'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
                          ('image', r'sha256:[a-f0-9]{64}'), ('expected_commit', r'[a-f0-9]{40}'),
                          ('cpuset_cpus', r'[0-9]+(?:[-,][0-9]+)*')]:
@@ -102,6 +102,19 @@ def load_config(path):
         mount = max(mounts, key=lambda m: len(Path(m['target']).parts))
         mapped = Path(mount['source']) / logical.relative_to(mount['target'])
         require(locks == mapped, 'generation lease directory differs from runtime mount')
+    admission = doc.get('external_admission')
+    if admission is not None:
+        require(isinstance(admission, dict) and set(admission) == {'marker', 'sha256', 'data_root', 'workspace_manifest'}, 'exact external admission input required')
+        for key in ('marker', 'data_root', 'workspace_manifest'):
+            absolute(admission[key])
+        require(re.fullmatch('[a-f0-9]{64}', admission['sha256']), 'external admission marker pin required')
+    if doc['environment'].get('SAEA_EXPERIMENT_WORKSPACE'):
+        require(admission is not None, 'workspace launch requires external admission marker')
+        matches = [m for m in doc['mounts'] if Path(doc['environment']['SAEA_EXPERIMENT_WORKSPACE_MANIFEST']).is_relative_to(Path(m['target']))]
+        require(matches, 'workspace manifest must be mounted')
+        mount = max(matches, key=lambda m: len(Path(m['target']).parts))
+        mapped = Path(mount['source']) / Path(doc['environment']['SAEA_EXPERIMENT_WORKSPACE_MANIFEST']).relative_to(mount['target'])
+        require(mount['readonly'] and mapped == Path(admission['workspace_manifest']), 'workspace manifest mapping differs')
     identity = doc.get('source_identity')
     if identity is not None:
         require(isinstance(identity, dict) and set(identity) == {'mode', 'manifest_sha256'}
@@ -211,7 +224,92 @@ def mount_checks(doc):
                 require(underneath.is_dir() == source.is_dir(), 'mountpoint type differs')
 
 
+def mapped_input(doc, logical, *, readonly=False):
+    logical = absolute(str(logical))
+    matches = [m for m in doc['mounts'] if logical.is_relative_to(Path(m['target']))]
+    require(matches, 'admission input is not mounted: ' + str(logical))
+    mount = max(matches, key=lambda m: len(Path(m['target']).parts))
+    require(not readonly or mount['readonly'], 'admission workspace input must be readonly')
+    source = Path(mount['source'])
+    path = source / logical.relative_to(mount['target'])
+    require(path.resolve().is_relative_to(source.resolve()), 'admission mount escapes source')
+    return path
+
+
+def validate_external_admission(pin, launch=None):
+    marker = Path(pin['marker'])
+    require(not marker.is_symlink() and marker.is_file() and digest(marker) == pin['sha256'], 'admission marker absent or changed')
+    completion = json.loads(marker.read_bytes())
+    require(isinstance(completion, dict) and set(completion) == {'schema', 'candidate', 'receipt', 'workspace_manifest', 'binding'}
+            and completion['schema'] == 'saea-external-admission-completion-v1', 'invalid admission completion marker')
+    receipt = completion['receipt']; rel = receipt.get('relpath')
+    require(isinstance(rel, str) and rel.startswith('coordination/') and '..' not in Path(rel).parts
+            and re.fullmatch('[a-f0-9]{64}', receipt.get('sha256', '')), 'invalid admission receipt pin')
+    path = (mapped_input(launch, Path(launch['environment']['SPEECHRL_DATA_DIR'])/rel)
+            if launch else Path(pin['data_root'])/rel)
+    require(not path.is_symlink() and path.is_file() and digest(path) == receipt['sha256'], 'admission receipt absent or changed')
+    receipt_doc = json.loads(path.read_bytes())
+    require(receipt_doc.get('schema') == 'saea-campaign-decision-v1' and receipt_doc.get('status') == 'decided', 'admission receipt is not decided')
+    manifest = completion['workspace_manifest']; manifest_path = Path(pin['workspace_manifest'])
+    require(isinstance(manifest, dict) and set(manifest) == {'path', 'sha256'}
+            and re.fullmatch('[a-f0-9]{64}', manifest['sha256']) and not manifest_path.is_symlink()
+            and manifest_path.is_file() and digest(manifest_path) == manifest['sha256'], 'admission workspace manifest absent or changed')
+    if launch is None:
+        return completion
+    env = launch['environment']; workspace = absolute(env['SAEA_EXPERIMENT_WORKSPACE'])
+    require(env.get('SAEA_EXPERIMENT_WORKSPACE_SHA256') == manifest['sha256'], 'workspace manifest pin differs from completion marker')
+    inventory = json.loads(manifest_path.read_bytes())
+    require(inventory.get('schema') == 'saea-experiment-workspace-v1' and isinstance(inventory.get('files'), dict), 'invalid workspace inventory')
+    files = inventory['files']
+    def asset(name):
+        require(isinstance(name, str) and name.startswith(('configs/', 'docs/')) and '..' not in Path(name).parts and name in files, 'invalid workspace asset path')
+        host = mapped_input(launch, workspace/name, readonly=True)
+        require(not host.is_symlink() and host.is_file() and digest(host) == files[name], 'workspace asset absent or changed: ' + name)
+        return host
+    for name in files:
+        require(isinstance(files[name], str) and re.fullmatch('[a-f0-9]{64}', files[name]), 'invalid workspace asset digest')
+        asset(name)
+    binding = completion['binding']
+    require(isinstance(binding, dict) and set(binding) == {'protocol','snapshot','generation','fit','candidate','baseline','supply_evidence'}, 'invalid admission binding')
+    protocol = json.loads(asset(binding['protocol']).read_bytes()); snapshot = json.loads(asset(binding['snapshot']).read_bytes())
+    candidate = json.loads(asset(binding['candidate']).read_bytes()); baseline = json.loads(asset(binding['baseline']).read_bytes())
+    evidence = json.loads(asset(binding['supply_evidence']).read_bytes()); relation = protocol.get('protocol_binding', {})
+    source = relation.get('source_identity', {}); final = relation.get('final_identity', {})
+    require(receipt_doc.get('protocol_binding') == {k:v for k,v in relation.items() if k != 'final_identity'}
+            and receipt_doc.get('antecedents', {}).get('protocol') == {'path':binding['snapshot'],'sha256':files[binding['snapshot']]}
+            and protocol.get('admission_snapshot') == {'relpath':binding['snapshot'],'sha256':files[binding['snapshot']]}, 'receipt protocol snapshot binding differs')
+    require(final == {'composed_config_hash':candidate.get('composed_config_hash'), 'protocol_hash':candidate.get('protocol_hash')}
+            and all(isinstance(source.get(k), str) and re.fullmatch('[a-f0-9]{64}', source[k]) for k in ('composed_config_hash', 'protocol_hash')),
+            'final protocol identity differs')
+    def rewrite(value):
+        if isinstance(value,dict): return {k:rewrite(v) for k,v in value.items()}
+        if isinstance(value,list): return [rewrite(v) for v in value]
+        return {source.get('composed_config_hash'):final.get('composed_config_hash'), source.get('protocol_hash'):final.get('protocol_hash')}.get(value,value) if isinstance(value,str) else value
+    expected = rewrite(snapshot); expected['prepared_phase_supply']=evidence['final']; expected['admission_snapshot']=protocol['admission_snapshot']; expected['protocol_binding']=relation
+    require(protocol == expected and baseline.get('prepared_phase_supply') == evidence.get('final') and snapshot.get('prepared_phase_supply') == evidence.get('source'), 'protocol or supply mapping differs')
+    require(evidence.get('schema') == 'saea-admission-supply-equivalence-v1', 'invalid supply evidence')
+    outputs=[]
+    for supply in (evidence['source'], evidence['final']):
+        sr = supply['relpath']; require(sr.startswith('prepared/') and '..' not in Path(sr).parts, 'invalid supply path')
+        sp = mapped_input(launch, Path(env['SPEECHRL_DATA_DIR'])/sr)
+        require(not sp.is_symlink() and sp.is_file() and digest(sp) == supply['sha256'], 'supply pin differs')
+        outputs.append(json.loads(sp.read_bytes())['output'])
+    output_sha = hashlib.sha256(json.dumps(outputs[0], sort_keys=True, separators=(',', ':'), ensure_ascii=True).encode()).hexdigest()
+    require(outputs[0] == outputs[1] and output_sha == evidence['output_sha256'], 'supply output differs')
+    for kind in ('generation','fit'):
+        plan = json.loads(asset(binding[kind]).read_bytes()); execution = plan['execution_plan']; budget = receipt_doc['budget'][kind]
+        require(plan.get('protocol_document') == {'relpath':binding['protocol'], 'sha256':files[binding['protocol']]}
+                and plan.get('prepared_phase_supply') == evidence['final'] and plan.get('composed_config_hash') == final['composed_config_hash']
+                and execution.get('protocol_hash') == final['protocol_hash'] and budget.get('protocol_hash') == source['protocol_hash']
+                and all(execution.get(k) == v for k,v in budget.items() if k != 'protocol_hash'), 'registered plan binding differs')
+    return completion
+
+
 def preflight(doc):
+    if doc.get('external_admission') is not None:
+        marker = validate_external_admission(doc['external_admission'], doc)
+        if doc['environment'].get('SAEA_EXPERIMENT_WORKSPACE'):
+            require(doc['environment'].get('SAEA_EXPERIMENT_WORKSPACE_SHA256') == marker['workspace_manifest']['sha256'], 'workspace manifest pin differs from completion marker')
     identity = doc.get('source_identity')
     if identity is None:
         head = run(['git', '-C', doc['repo_path'], 'rev-parse', 'HEAD'])

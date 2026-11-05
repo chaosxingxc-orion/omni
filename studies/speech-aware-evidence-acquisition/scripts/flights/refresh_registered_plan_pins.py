@@ -44,31 +44,38 @@ def _dump(obj) -> str:
     return json.dumps(obj, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
 
 
-def resolve_baseline(repo: Path, plan: dict, plan_name: str) -> tuple[str, dict]:
+def resolve_baseline(repo: Path, plan: dict, plan_name: str, resolve_path=None) -> tuple[str, dict]:
     cell_id = plan.get("cell")
     experiment = plan.get("experiment")
     if not (isinstance(cell_id, str) and isinstance(experiment, str)):
         raise RefreshError(f"{plan_name}: plan declares no string `cell` and `experiment`")
     fragment = repo / "configs" / "experiment" / f"{experiment}.json"
+    if resolve_path is not None:
+        fragment = resolve_path(f"configs/experiment/{experiment}.json")
     if not fragment.is_file():
         raise RefreshError(f"{plan_name}: experiment fragment {fragment.name} not found")
     cells = [c for c in _load(fragment).get("cells", []) if isinstance(c, dict) and c.get("cell_id") == cell_id]
     if len(cells) != 1:
         raise RefreshError(f"{plan_name}: cell {cell_id} matches {len(cells)} cells in {fragment.name}")
     base = repo / "configs" / "baseline" / f"{cells[0].get('baseline_fragment')}.json"
+    if resolve_path is not None:
+        base = resolve_path(f"configs/baseline/{cells[0].get('baseline_fragment')}.json")
     if not base.is_file():
         raise RefreshError(f"{plan_name}: baseline fragment for cell {cell_id} not found")
     return cell_id, _load(base)
 
 
-def refresh_package(repo: Path, package: Path, cells: list[str] | None = None, dry: bool = False) -> list[dict]:
+def refresh_package(repo: Path, package: Path, cells: list[str] | None = None, dry: bool = False,
+                    *, selected_paths: list[Path] | None = None, resolve_path=None) -> list[dict]:
     results = []
-    for path in sorted(package.glob(_PLAN_GLOB)):
+    for path in sorted(package.glob(_PLAN_GLOB) if selected_paths is None else selected_paths):
+        if selected_paths is not None and (path.parent != package or not path.name.endswith('.json')):
+            raise RefreshError('selected plan must be a JSON file directly in the package')
         plan = _load(path)
         if not isinstance(plan, dict) or "prepared_phase_supply" not in plan:
             results.append({"file": path.name, "status": "skipped", "detail": "no prepared_phase_supply"})
             continue
-        cell_id, baseline = resolve_baseline(repo, plan, path.name)
+        cell_id, baseline = resolve_baseline(repo, plan, path.name, resolve_path)
         if cells and cell_id not in cells:
             results.append({"file": path.name, "cell": cell_id, "status": "skipped", "detail": "cell not selected"})
             continue

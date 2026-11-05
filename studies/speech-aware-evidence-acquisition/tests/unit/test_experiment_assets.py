@@ -113,3 +113,17 @@ def test_uncovered_workspace_falls_back_only_after_identity_verification(tmp_pat
     assert resolve_asset(repo,'configs/model/external.json')==assets/'model.json'
     monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_SHA256','a'*64)
     with pytest.raises(ValueError,match='inventory digest'):resolve_asset(repo,'configs/model/external.json')
+
+
+def test_frozen_gate_uses_pinned_workspace_ledger_and_rejects_tampering(tmp_path,monkeypatch):
+    from speech_aware_evidence_acquisition.contracts import FrozenCoreGate
+    from speech_aware_evidence_acquisition.core.experiment_assets import output_asset,seal_workspace
+    repo,_,_,_=setup(tmp_path,monkeypatch)
+    monkeypatch.setattr('speech_aware_evidence_acquisition.core.bundle.git_commit.require_clean_study_repo',lambda root:'b'*40)
+    workspace=tmp_path/'workspace';monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE',str(workspace))
+    ledger=output_asset(repo,'docs/exposure-ledger.md');ledger.parent.mkdir(parents=True);ledger.write_text('fixture ledger')
+    pin=seal_workspace(repo);monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_MANIFEST',pin['path']);monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_SHA256',pin['sha256'])
+    assert FrozenCoreGate.for_study_repo(repo,tmp_path/'data',tmp_path/'runtime').exposure_ledger==ledger
+    ledger.write_text('tampered')
+    with pytest.raises(ValueError,match='changed'):
+        FrozenCoreGate.for_study_repo(repo,tmp_path/'data',tmp_path/'runtime')

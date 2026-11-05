@@ -2387,7 +2387,8 @@ class FlightRuntime:
         whatever ``gate_factory``'s own ``assert_model_touch_allowed`` does
         (which may be a fake in a test)."""
 
-        ledger_path = self._repo_root / "docs" / "exposure-ledger.md"
+        from ..experiment_assets import resolve_asset
+        ledger_path = resolve_asset(self._repo_root, "docs/exposure-ledger.md")
         try:
             text = ledger_path.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as error:
