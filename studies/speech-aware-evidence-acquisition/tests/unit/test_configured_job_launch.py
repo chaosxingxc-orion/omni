@@ -316,3 +316,11 @@ def test_release_resident_process_access_is_explicit(tmp_path):
     assert cmd.count('--cap-add')==1 and 'SYS_PTRACE' in cmd and 'DAC_OVERRIDE' not in cmd
     doc['pid_host']=False;path.write_text(json.dumps(doc))
     with pytest.raises(ValueError,match='resident process'):m.load_config(path)
+
+
+def test_explicit_numeric_asset_owner(tmp_path):
+    path,doc=configured(tmp_path);doc['user']='1008:1008';path.write_text(json.dumps(doc))
+    loaded=m.load_config(path);cmd=m.command(loaded,'a'*64,'b'*64)
+    assert cmd[cmd.index('--user')+1]=='1008:1008'
+    doc['user']='root';path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError,match='uid:gid'):m.load_config(path)

@@ -54,7 +54,7 @@ def load_config(path):
     keys = {'schema', 'container_name', 'image', 'repo_path', 'expected_commit', 'receipt_dir',
             'argv', 'working_directory', 'network', 'pid_host', 'cpuset_cpus', 'environment',
             'mounts', 'create_directories', 'allowed_create_roots', 'required_inputs', 'monitor_interval_seconds'}
-    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access', 'user'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
                          ('image', r'sha256:[a-f0-9]{64}'), ('expected_commit', r'[a-f0-9]{40}'),
                          ('cpuset_cpus', r'[0-9]+(?:[-,][0-9]+)*')]:
@@ -128,6 +128,8 @@ def load_config(path):
         for mount in doc['mounts']:
             target=Path(mount['target'])
             require(not any(target.is_relative_to(p) or Path(p).is_relative_to(target) for p in ('/opt', '/usr', '/bin', '/lib', '/lib64', '/etc', '/root')), 'release dependency mount override forbidden')
+    if 'user' in doc:
+        require(isinstance(doc['user'], str) and re.fullmatch(r'[0-9]+:[0-9]+', doc['user']), 'numeric uid:gid required')
     if 'process_access' in doc:
         require(doc['process_access'] == 'resident-identity-read-v1' and identity is not None
                 and doc['pid_host'] and doc['network'] == 'host',
@@ -235,6 +237,8 @@ def command(doc, config_sha, runner_sha):
             '--label', 'saea.launch.config=' + config_sha, '--label', 'saea.launch.runner=' + runner_sha]
     if doc.get('source_identity') is not None:
         args += ['--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges']
+    if 'user' in doc:
+        args += ['--user', doc['user']]
     if doc.get('process_access') == 'resident-identity-read-v1':
         args += ['--cap-add', 'SYS_PTRACE']
     if doc['pid_host']:
