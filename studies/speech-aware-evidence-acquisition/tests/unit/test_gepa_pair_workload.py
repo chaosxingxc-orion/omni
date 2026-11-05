@@ -265,3 +265,47 @@ def test_context_adaptation_stage_custody_rejects_changed_declaration(repo,monke
     (out/'complete.json').write_bytes(m.raw(record))
     with pytest.raises(ValueError,match='staged context adaptation changed'):
         job.verify_stage(path,data,out/'complete.json')
+
+
+def test_runtime_binding_refuses_local_symlink_escape(tmp_path):
+    outside = tmp_path / 'outside'; outside.mkdir()
+    repo = tmp_path / 'repo'; (repo / 'configs').mkdir(parents=True)
+    (repo / 'configs/model').symlink_to(outside, target_is_directory=True)
+    (outside / 'model.json').write_text('{}')
+    with pytest.raises(ValueError, match='escapes root'):
+        m.PairWorkload(config()).runtime_binding(repo)
+
+
+def test_pair_width_ceiling_does_not_expand_other_workloads():
+    value=config(); value['execution']['admitted_level']=96
+    assert m.PairWorkload(value).config['execution']['admitted_level']==96
+    value['execution']['admitted_level']=97
+    with pytest.raises(ValueError,match='bounded client width'):
+        m.PairWorkload(value)
+
+
+def test_checkpoint_successor_needs_actual_declarations_and_pinned_registration(tmp_path):
+    actual={'native_contact_fit':{'run_id':'fresh','attempt_id':'fresh'}}
+    original={'native_contact_fit':{'run_id':'old','attempt_id':'old'}}
+    doc={'cell_id':'c','model_fragment':'m','dataset_fragment':'d','baseline_fragment':'b',
+         'run_id':'run','attempt_id':'new','readiness':{'state':'held'},
+         'resume_from':{'attempt_id':'old','checkpoint_sha256':'a'*64},
+         'checkpoint_compatibility':{'schema':'unrecognised'}}
+    with pytest.raises(ValueError):
+        m.validate_checkpoint_successor(tmp_path,{},doc,actual,original)
+
+
+def test_original_registration_external_pin_resolves_and_local_escape_refused(tmp_path, monkeypatch):
+    import hashlib
+    repo=tmp_path/'repo';(repo/'docs').mkdir(parents=True)
+    external=tmp_path/'original.json'; external.write_text('{"origin":"external"}')
+    manifest=tmp_path/'assets.json';manifest.write_text(json.dumps({'schema':'saea-experiment-assets-v1','files':{'docs/original.json':{'path':str(external),'sha256':hashlib.sha256(external.read_bytes()).hexdigest()}}}))
+    monkeypatch.setenv('SAEA_EXPERIMENT_MANIFEST',str(manifest));monkeypatch.setenv('SAEA_EXPERIMENT_MANIFEST_SHA256',hashlib.sha256(manifest.read_bytes()).hexdigest())
+    assert m.pinned(repo,{'relpath':'docs/original.json','sha256':hashlib.sha256(external.read_bytes()).hexdigest()})=={'origin':'external'}
+    external.write_text('{}')
+    with pytest.raises(ValueError,match='absent or changed'):
+        m.pinned(repo,{'relpath':'docs/original.json','sha256':'a'*64})
+    monkeypatch.delenv('SAEA_EXPERIMENT_MANIFEST');monkeypatch.delenv('SAEA_EXPERIMENT_MANIFEST_SHA256')
+    (repo/'docs'/'escape.json').symlink_to(external)
+    with pytest.raises(ValueError,match='escapes root'):
+        m.pinned(repo,{'relpath':'docs/escape.json','sha256':hashlib.sha256(external.read_bytes()).hexdigest()})

@@ -23,6 +23,113 @@ def read_asset(repo,relative):
     return read(resolve_asset(repo,str(relative)))
 
 
+def validate_checkpoint_successor(repo, spec, cell_document, actual_base, expected_base):
+    """Authenticate a new row-checkpoint attempt against the original registration.
+
+    Evidence pins and checkpoint bytes remain subject to Flight's mandatory
+    compatibility preflight; this is the earlier registration identity gate.
+    """
+    from speech_aware_evidence_acquisition.core.flight.campaign import CampaignCell
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import (
+        CheckpointCompatibility, MultiCheckpointCompatibility, ImageReleaseCompatibility,
+        validate_bridge_declarations,
+    )
+    from speech_aware_evidence_acquisition.core.flight.resume import resume_declarations_from_document
+    from speech_aware_evidence_acquisition.contracts import ExecutionPlan
+    from dataclasses import fields
+    candidate = CampaignCell.from_document(cell_document)
+    if candidate.resume_from is None or candidate.checkpoint_compatibility is None:
+        raise ValueError('checkpoint successor requires both registered declarations')
+    declarations = resume_declarations_from_document(candidate.resume_from)
+    bridge = CheckpointCompatibility.from_document(candidate.checkpoint_compatibility,
+                                                     attempt_id=candidate.attempt_id)
+    validate_bridge_declarations(bridge, declarations)
+    source_pin = spec.get('predecessor_registration')
+    if (not isinstance(source_pin, dict) or set(source_pin) != {'relpath', 'sha256'}
+            or not isinstance(source_pin.get('relpath'), str)
+            or not source_pin['relpath'].startswith('docs/')
+            or '..' in Path(source_pin['relpath']).parts):
+        raise ValueError('checkpoint successor requires pinned original registration')
+    original = pinned(repo, source_pin)
+    if (original.get('workload_kind') != spec.get('workload_kind')
+            or original.get('run_id') != spec.get('run_id')
+            or original.get('attempt_id') != 'generation-v1'
+            or original.get('fit_run_id') != expected_base['native_contact_fit']['run_id']
+            or original.get('fit_attempt_id') != expected_base['native_contact_fit']['attempt_id']):
+        raise ValueError('original registration identity differs')
+    # Only operational width and these successor-specific identities can move.
+    before, after = copy.deepcopy(original), copy.deepcopy(spec)
+    after.pop('predecessor_registration')
+    for obj in (before, after):
+        if (obj.get('execution') != obj.get('job_config', {}).get('execution')
+                or set(obj.get('execution', {})) != {'admitted_level'}):
+            raise ValueError('registration width identity differs')
+        obj['execution'].pop('admitted_level')
+        obj['job_config']['execution'].pop('admitted_level')
+    for key in ('attempt_id', 'fit_run_id', 'fit_attempt_id', 'composed_config_hash', 'protocol_hash'):
+        after[key] = before.get(key)
+    if before != after:
+        raise ValueError('successor scientific registration differs')
+    registered = read_asset(repo, f"docs/readiness/{spec['cell']}/generation-plan-registered-v1.json")
+    allowed = {f.name for f in fields(ExecutionPlan)}
+    plan_fields = {k:v for k,v in registered['execution_plan'].items() if k in allowed}
+    if 'owner_allowance' in registered:
+        if 'owner_allowance' in plan_fields:
+            raise ValueError('duplicate registered owner allowance')
+        plan_fields['owner_allowance'] = registered['owner_allowance']
+    source = ExecutionPlan(**plan_fields).validate(source_root=repo)
+    source_exp_plan = None
+    expected_budget = expected_base['native_contact_fit']['contact_cap']
+    if (type(expected_budget) is not int or expected_budget <= 0
+            or type(actual_base['native_contact_fit'].get('contact_cap')) is not int
+            or actual_base['native_contact_fit']['contact_cap'] != expected_budget):
+        raise ValueError('successor FIT budget changed')
+    if (registered.get('cell') != original['cell'] or registered.get('experiment') != original['experiment']
+            or source.run_id != original['run_id'] or source.attempt_id != original['attempt_id']
+            or source.protocol_hash != original['protocol_hash']
+            or source.split_identity_hash != original['split_identity_hash']
+            or registered.get('composed_config_hash') != original['composed_config_hash']):
+        raise ValueError('original registered plan differs')
+    mapping = bridge.bridges if isinstance(bridge, MultiCheckpointCompatibility) else {declarations[0].attempt_id:bridge}
+    if (set(fit for fit in spec.get('job_config', {}).get('execution', {})) != {'admitted_level'}
+            or spec.get('execution') != spec['job_config']['execution']):
+        raise ValueError('successor width identity differs')
+    if source.attempt_id not in mapping:
+        raise ValueError('original attempt missing from checkpoint chain')
+    for prior, item in mapping.items():
+        if not isinstance(item, ImageReleaseCompatibility):
+            raise ValueError('image-release successor requires authenticated source bridge')
+        old = item.old_source()
+        from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import STUDY_PREFIX
+        old_exp = json.loads(old[STUDY_PREFIX + 'configs/experiment/' + item.predecessor_fragments['experiment'] + '.json'])
+        old_cell, = old_exp['cells']
+        if old_cell.get('run_id') != source.run_id or old_cell.get('attempt_id') != prior:
+            raise ValueError('checkpoint predecessor source identity differs')
+        old_base = json.loads(old[STUDY_PREFIX + 'configs/baseline/' + item.predecessor_fragments['baseline'] + '.json'])
+        old_fit = old_base.get('native_contact_fit', {})
+        new_fit = actual_base.get('native_contact_fit', {})
+        if any(new_fit.get(k) == old_fit.get(k) for k in ('run_id','attempt_id')):
+            raise ValueError('fresh FIT identity repeats a predecessor')
+        if prior == source.attempt_id:
+            source_exp_plan = old_exp.get('execution_plan', {})
+            for budget_key in ('execution_profile','split_role','planned_model_calls','planned_gpu_hours','planned_speech_audio_seconds'):
+                if source_exp_plan.get(budget_key) != getattr(source, budget_key):
+                    raise ValueError('original registered budget differs from authenticated source')
+            if item.predecessor_fragments != {'model':original['model_fragment'], 'dataset':original['dataset']['relpath'].split('/')[-1][:-5], 'baseline':original['baseline'], 'experiment':original['experiment']}:
+                raise ValueError('original registered fragments differ from checkpoint')
+            old_base.pop('dispatch', None)
+            if scientific_hash(old_base) != original['scientific_baseline_sha256']:
+                raise ValueError('original scientific baseline differs from authenticated source')
+    fit, old_fit = actual_base['native_contact_fit'], expected_base['native_contact_fit']
+    if (spec.get('attempt_id') != candidate.attempt_id
+            or spec.get('fit_run_id') != fit.get('run_id')
+            or spec.get('fit_attempt_id') != fit.get('attempt_id')
+            or not all(isinstance(fit.get(k), str) and fit[k] and fit[k] != old_fit.get(k)
+                       for k in ('run_id','attempt_id'))):
+        raise ValueError('fresh FIT identity differs')
+    return old_fit
+
+
 class PairWorkload:
     CONTACTS = 4
     ARMS = ['parent', 'child', 'lock']
@@ -80,9 +187,9 @@ class PairWorkload:
             raise ValueError('exact paired deployment binding required')
         for k in ('model_fragment','service_session','profile'):
             if not re.fullmatch('[A-Za-z0-9][A-Za-z0-9_-]*',binding[k]):raise ValueError('safe deployment identity required')
-        model=read(resolve_asset(repo,'configs/model/'+binding['model_fragment']+'.json'))
-        profile=read(resolve_asset(repo,'configs/deployment/'+binding['profile']+'.json'))
-        receipt=read(resolve_asset(repo,'docs/'+binding['runtime_receipt']))
+        model=read(confined(repo,'configs/model/'+binding['model_fragment']+'.json'))
+        profile=read(confined(repo,'configs/deployment/'+binding['profile']+'.json'))
+        receipt=read(confined(repo/'docs',binding['runtime_receipt']))
         if model['runtime_receipt']!=binding['runtime_receipt'] or not profile.get('instances'):
             raise ValueError('model/profile runtime differs')
         if [x['name'] for x in profile['instances']] != [x['instance_id'] for x in receipt['deployment']['instances']]:
@@ -92,7 +199,7 @@ class PairWorkload:
         if self.config['execution']['admitted_level']>profile['admitted_level']:
             raise ValueError('paired width exceeds configured lane admission')
         if profile['model_fragment']!=binding['model_fragment']:
-            deployed=read(resolve_asset(repo,'configs/model/'+profile['model_fragment']+'.json'))
+            deployed=read(confined(repo,'configs/model/'+profile['model_fragment']+'.json'))
             operational={'geometry_basis','decoding_params','reasoning_budget_tokens','answer_reserve_tokens','enable_thinking'}
             if {k:v for k,v in model.items() if k not in operational}!={k:v for k,v in deployed.items() if k not in operational}:
                 raise ValueError('deployed model differs from registered alias')
@@ -307,33 +414,52 @@ class PairWorkload:
         cell, = exp['cells']
         if spec.get('source_experiment') != pin(repo, observation.SOURCE_EXP):
             raise ValueError('source experiment changed after staging')
-        is_checkpoint = cell.get('resume_from') is not None and cell.get('checkpoint_compatibility') is not None
+        has_resume = cell.get('resume_from') is not None
+        has_bridge = cell.get('checkpoint_compatibility') is not None
+        if has_resume != has_bridge:
+            raise ValueError('checkpoint successor requires both registered declarations')
+        is_checkpoint = has_resume and has_bridge
+        actual = read_asset(repo,f'configs/baseline/{self.NAME}.json')
+        original_fit = validate_checkpoint_successor(repo, spec, cell, actual, base) if is_checkpoint else None
         selected_attempt = cell['attempt_id'] if is_checkpoint else 'generation-v1'
+        fit_identity = actual['native_contact_fit'] if is_checkpoint else base['native_contact_fit']
         fixed = {'cell':self.NAME,'experiment':self.NAME,'baseline':self.NAME,'run_id':self.RUN,'attempt_id':selected_attempt,
-            'fit_run_id':self.RUN+'-FIT','fit_attempt_id':'fit-v1','rows':self.ROWS,'workload_kind':self.KIND,
+            'fit_run_id':fit_identity['run_id'],'fit_attempt_id':fit_identity['attempt_id'],'rows':self.ROWS,'workload_kind':self.KIND,
             'model_fragment':binding['model_fragment'],'runtime_binding':binding,'profile':binding['profile'],
             'service_session':binding['service_session'],'runtime_receipt':binding['runtime_receipt'],
             'split_identity_hash':roster['split_identity_hash'],'execution':self.config['execution']}
         if name != self.NAME or any(spec.get(k) != v for k,v in fixed.items()):
             raise ValueError('exact GEPA probe runtime identity required')
+        if is_checkpoint:
+            from speech_aware_evidence_acquisition.core.config import compose, protocol_hash
+            current = compose(repo, binding['model_fragment'], self.DATASET, self.NAME, self.NAME, data_root=data)
+            if (spec.get('composed_config_hash') != current.config_hash
+                    or spec.get('protocol_hash') != protocol_hash(current.config_hash, current.values['arm'], roster['split_identity_hash'])):
+                raise ValueError('successor composed/protocol identity differs')
         if (view != expected_view or pinned(repo,spec['dataset']) != view or pinned(repo,spec['roster']) != roster
                 or spec['roster']['relpath'] != self.ROSTER):
             raise ValueError('fixed probe population changed')
         for key in ('population','populations','execution_plan','stage3_algorithm','stage3_measurement','service_session'):
             if exp.get(key) != expected.get(key):
                 raise ValueError('probe population, budget or declared algorithm changed')
+        original_cell = expected['cells'][0]
+        compared_cell = copy.deepcopy(cell)
+        if is_checkpoint:
+            compared_cell['attempt_id'] = original_cell['attempt_id']
+            compared_cell.pop('resume_from')
+            compared_cell.pop('checkpoint_compatibility')
         for key in ('cell_id','baseline_fragment','model_fragment','dataset_fragment','run_id','attempt_id'):
-            if key == 'attempt_id' and is_checkpoint:
-                continue  # CampaignCell validated the exact predecessor and successor.
-            if cell.get(key) != expected['cells'][0].get(key):
+            if compared_cell.get(key) != original_cell.get(key):
                 raise ValueError('registered probe cell changed')
-        actual = read_asset(repo,f'configs/baseline/{self.NAME}.json')
         # Validate an explicitly declared operational dispatcher without
         # letting it mask any scientific baseline field.
         actual_scientific = copy.deepcopy(actual)
         if 'dispatch' in actual_scientific:
             from speech_aware_evidence_acquisition.rails.dispatch_slot_fill import parse_dispatch_slot_fill
             parse_dispatch_slot_fill({'dispatch': actual_scientific.pop('dispatch')})
+        if original_fit is not None:
+            actual_scientific['native_contact_fit']['run_id'] = original_fit['run_id']
+            actual_scientific['native_contact_fit']['attempt_id'] = original_fit['attempt_id']
         if (scientific_hash(actual_scientific) != scientific_hash(base)
                 or scientific_hash(actual_scientific) != spec['scientific_baseline_sha256']
                 or not native_contact_custody_enabled({**actual,'transport':'vllm','carrier_lock_key':'slurp'})):

@@ -56,3 +56,11 @@ def test_perception_policy_rejects_bad_template_pin_and_escape(tmp_path,relpath,
     c=config();c['perception_policy']={'thinking':{'enable_thinking':False,'answer_reserve_tokens':2048},'instruction_template':{'relpath':relpath,'sha256':digest}}
     job=NodeWorkload(c);job.material_checked=lambda *args: ({'source_roster':{}},{'roster':{'items':[],'split_identity_hash':'a'*64},'view':{}});job.runtime_binding=lambda *args: {'model_fragment':'unused'}
     with pytest.raises(ValueError,match=error):job.derive(ROOT,tmp_path,{})
+
+
+def test_node_width_ceiling_is_128():
+    c=config();c['execution']['admitted_level']=128
+    assert NodeWorkload(c).config['execution']['admitted_level']==128
+    c['execution']['admitted_level']=129
+    with pytest.raises(ValueError,match='bounded client width'):
+        NodeWorkload(c)
