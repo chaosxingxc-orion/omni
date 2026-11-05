@@ -7324,7 +7324,7 @@ class FlightRuntime:
         multi-node trajectories have their own admission and checkpoint
         protocol and must not be silently moved to a different scheduler.
         """
-        from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
+        from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
         from queue import Queue
 
         prepare_workers = int(options["prepare_workers"])
@@ -7359,6 +7359,8 @@ class FlightRuntime:
             "model": [float("inf"), 0.0],
             "validation": [float("inf"), 0.0],
         }
+        model_queue_wait = [0.0, 0.0]
+        validation_backpressure = [0, 0.0, 0]
 
         def mark_stage(name: str, started: float, finished: float) -> None:
             with meter:
@@ -7399,7 +7401,12 @@ class FlightRuntime:
         def send(item):
             nonlocal in_flight, max_in_flight
             index, sample, prepared, messages = item
+            queue_started = time.monotonic()
             slot = slots.get()
+            queue_wait = max(time.monotonic() - queue_started, 0.0)
+            with meter:
+                model_queue_wait[0] += queue_wait
+                model_queue_wait[1] = max(model_queue_wait[1], queue_wait)
             buffer = None
             make_buffer = getattr(client, "new_trace_buffer", None)
             if callable(make_buffer):
@@ -7443,7 +7450,41 @@ class FlightRuntime:
                 next_index = 0
                 pending_prepare = set()
                 pending_model = set()
+                # Keep completed model responses bounded as well as prepared
+                # requests.  Without this window a fast NPU can finish many
+                # responses while the CPU validator is busy, retaining every
+                # response and trace in memory and hiding validator pressure
+                # from the scheduler.
                 validation_futures = set()
+
+                def collect_validation(*, wait_for_one: bool = False) -> None:
+                    """Drain validation futures, propagating the first error.
+
+                    ``wait_for_one`` supplies backpressure before admitting a
+                    new model response.  We still drain all remaining futures
+                    during shutdown so completed responses and traces are
+                    preserved when validation fails.
+                    """
+                    nonlocal pipeline_error
+                    if not validation_futures:
+                        return
+                    if wait_for_one:
+                        done, _ = wait(
+                            tuple(validation_futures),
+                            return_when=FIRST_COMPLETED,
+                        )
+                    else:
+                        done = {
+                            future for future in validation_futures
+                            if future.done()
+                        }
+                    for future in done:
+                        validation_futures.remove(future)
+                        try:
+                            model_results.append(future.result())
+                        except BaseException as error:  # noqa: BLE001
+                            pipeline_error = pipeline_error or error
+
                 while next_index < len(samples) and len(pending_prepare) < queue_depth:
                     pending_prepare.add(
                         prep_pool.submit(build, next_index, samples[next_index])
@@ -7470,6 +7511,21 @@ class FlightRuntime:
                             except BaseException as error:  # noqa: BLE001
                                 pipeline_error = pipeline_error or error
                             else:
+                                # A validation queue full of CPU work must
+                                # stop admitting more model responses.  This
+                                # is intentional backpressure, not NPU
+                                # serialization: the model pool continues to
+                                # run at ``workers`` while the queue has room.
+                                if len(validation_futures) >= queue_depth:
+                                    blocked_started = time.monotonic()
+                                    collect_validation(wait_for_one=True)
+                                    validation_backpressure[0] += 1
+                                    validation_backpressure[1] += max(
+                                        time.monotonic() - blocked_started, 0.0
+                                    )
+                                validation_backpressure[2] = max(
+                                    validation_backpressure[2], len(validation_futures)
+                                )
                                 validation_futures.add(
                                     validation_pool.submit(validate, item)
                                 )
@@ -7482,11 +7538,8 @@ class FlightRuntime:
                         for pending in pending_prepare:
                             pending.cancel()
                         next_index = len(samples)
-                for completed in as_completed(validation_futures):
-                    try:
-                        model_results.append(completed.result())
-                    except BaseException as error:  # noqa: BLE001
-                        pipeline_error = pipeline_error or error
+                while validation_futures:
+                    collect_validation(wait_for_one=True)
         finally:
             discard = getattr(client, "discard_prepared", None)
             if callable(discard):
@@ -7524,6 +7577,11 @@ class FlightRuntime:
                 )
                 for name, window in stage_windows.items()
             },
+            "model_queue_wait_seconds": model_queue_wait[0],
+            "model_queue_wait_max_seconds": model_queue_wait[1],
+            "validation_backpressure_events": validation_backpressure[0],
+            "validation_backpressure_seconds": validation_backpressure[1],
+            "max_validation_pending": validation_backpressure[2],
         }
 
     def _run_speech_feature_direct(self, client: object) -> list[Mapping[str, object]]:
