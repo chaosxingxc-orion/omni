@@ -100,3 +100,44 @@ bash scripts/npu/npu_deploy.sh plan "$DEPLOYMENT_PROFILE_FILE"
 示例本轮只做静态 JSON/字段检查，没有新业务、构建、模型、FIT或教师请求。已有release业务验收不能代替旧版本resume、新效率实现或新镜像真实吞吐验收。旧→release checkpoint兼容桥与后续效率最终版尚有单独验收边界；不得凭一般preflight改旧run身份或复用不等价请求。
 
 将来获准迁移的顺序是 stop admission → drain → reconcile unknown → checkpoint seal → 镜像/配置替换 → 经兼容合同验证的resume。不能假定容器退出即请求终态；保留共享guard、租约、已知响应与全部历史成本，unknown不盲重发。本文不授权停止任何活实验或更换服务。
+
+## 离线配置化来源验证
+
+`studies/speech-aware-evidence-acquisition/scripts/environment/configured_release_validation.py --config CONFIG.json` 支持 `saea-configured-release-validation-v1` 两种模式，stdout 为JSON，失配或异常退出非零。配置为独立新文件，不写入发布源码；所有路径使用容器内绝对路径。示例中的 `<…>` 为必填占位，不能直接执行。四个fragment从配置中输入名称与各自文件SHA，repo/data对应外部数据映射，`config_sha256` 为既有 `compose` 的配置摘要，不是JSON文件字节SHA。外部实验manifest按原有 `SAEA_EXPERIMENT_MANIFEST` / `SAEA_EXPERIMENT_MANIFEST_SHA256` 提供并只读挂载。
+
+```json
+{
+  "schema": "saea-configured-release-validation-v1",
+  "mode": "render",
+  "repo": "/opt/saea-release/studies/speech-aware-evidence-acquisition",
+  "data": "/data",
+  "fragments": {
+    "model": {"name": "<MODEL>", "sha256": "<MODEL_SHA256>"},
+    "dataset": {"name": "<DATASET>", "sha256": "<DATASET_SHA256>"},
+    "baseline": {"name": "<BASELINE>", "sha256": "<BASELINE_SHA256>"},
+    "experiment": {"name": "<EXPERIMENT>", "sha256": "<EXPERIMENT_SHA256>"}
+  },
+  "config_sha256": "<COMPOSED_CONFIG_SHA256>",
+  "session": {"path": "/input/session.json", "sha256": "<SESSION_SHA256>"},
+  "requests": [{"role": "<ROLE>", "intent": {"path": "/input/intent.json", "sha256": "<INTENT_SHA256>"}, "expected_body_sha256": "<BODY_SHA256>", "expected_receipt_sha256": "<RECEIPT_SHA256>"}]
+}
+```
+
+`render` 从带 `payload` 和 `agent_contact_id` 的历史intent读取并核文件SHA和角色，通过真实transport工厂生成共享projection body/receipt，逐项输出canonical摘要及比对结果；范围截止vllm_post翻译之前，未覆盖最终HTTP wire的model、thinking_token_budget和id_slot。只支持vLLM配置，forced-close按既有vLLM server_args解析。不会输出原始轨迹。为保持离线，session进程存活和身份探针被明确stub，transport POST拒绝；不执行generation、FIT或tokenizer。必须在禁网络环境运行；该结果不构成活服务身份验证或生成授权。数据媒体和知识引用仍需以原始身份只读挂载，文件读权限由实际owner配置，不能用其他内容代替。
+
+`bridge-precheck` 共用相同四片段、repo/data及配置摘要字段，删除 `session`/`requests`，另提供：
+
+```json
+{
+  "mode": "bridge-precheck",
+  "bridge": {"path": "/input/bridge.json", "sha256": "<BRIDGE_FILE_SHA256>"},
+  "checkpoint": {"path": "/input/checkpoint.jsonl", "sha256": "<CHECKPOINT_FILE_SHA256>"},
+  "run_id": "<ORIGINAL_RUN_ID>",
+  "predecessor_attempt_id": "<ORIGINAL_ATTEMPT_ID>",
+  "successor_attempt_id": "<NEW_ATTEMPT_ID>"
+}
+```
+
+这是一段合并到共同字段后的配置片段，bridge为既有 `saea-checkpoint-image-release-v1` 合同，并要求外部逐项pin的 commit对象、tree、archive、release manifest、reference pins和**已提供**的 source review。执行器不生成review。实际precheck使用原生 `ImageReleaseCompatibility.precheck`，校验checkpoint hash/header、旧源码/配置、最终release清单及review，输出 `activation_authorized=false`；它不读写终态ledger以冒充 `verify`，也不授权部署或恢复。最终review须对应实际最终镜像来源，历史诊断review不具备该效力。
+
+停前先完成工程、最终镜像、真实配置、科学body、恢复和预算CPU验收；就绪后仅首臂正常drain与结算，以新attempt正式接续并在首个600秒或终态窗口测实际效率，再决定另一臂交接及升档。服务与worker镜像可分别绑定原receipt；停前不伪造ABORTED或最终checkpoint。
