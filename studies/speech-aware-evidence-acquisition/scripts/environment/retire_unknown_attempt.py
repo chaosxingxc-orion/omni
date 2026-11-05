@@ -182,6 +182,10 @@ def execute(cfg):
         if not (out/'attempt-aborted.json').exists():publish_new(out/'attempt-aborted.json',attempt_path.read_bytes())
         require((out/'attempt-aborted.json').read_bytes()==attempt_path.read_bytes(),'aborted attempt copy differs')
         require(inventory(journal)==snapshot,'custody changed before release')
+        for name,expected in snapshot['files'].items():require(sha(out/name)==expected,'archive journal copy differs')
+        for name,expected in fit_files.items():require(sha(out/'fit'/name)==expected,'archive FIT copy differs')
+        require(sha(out/'lease.json')==cfg['lease_sha256'] and sha(out/'plan.json')==cfg['plan_sha256'] and
+                sha(out/'checkpoint.jsonl')==cfg['checkpoint_sha256'], 'final archive custody differs')
         verify_service(data,cfg,instances,runtime);quiescence(instances);guard_check();require(not Path('/proc',str(cfg['pid'])).exists(),'producer PID reappeared')
         if lease_blob is not None:
             require(lease.read_bytes()==lease_blob,'lease changed before release');os.unlink(lease);sync(lease.parent)
