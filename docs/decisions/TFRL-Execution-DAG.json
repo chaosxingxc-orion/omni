@@ -460,7 +460,7 @@
       "id": "CPU-CHECKPOINT-TERMINAL-CUSTODY",
       "lane": "CPU",
       "priority": 0,
-      "status": "natural-observe-and-capture-8-fixture-tests-verified-full-multi-ancestor-integration-in-progress",
+      "status": "natural-drain-and-full-multihop-fit-only-fixture-verified-independent-source-review-in-progress",
       "scientific_dependencies": [],
       "requirements": [
         "generation observed request closure and original actual cost",
