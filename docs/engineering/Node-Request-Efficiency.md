@@ -230,3 +230,5 @@ B本机归档因一次SSH inspect超时退出，已恢复并取得新快照。�
 ### 音频读取缓存增量
 
 本轮又在 transport 层加入了可关闭、有限容量的进程级音频 bytes/base64 缓存。缓存键绑定绝对路径、inode、文件大小和 mtime；文件 stat 变化自动失效，媒体身份门禁仍在缓存之外执行。它覆盖同一请求中的目标音频、exemplar 和候选重复读取，避免重复读盘和编码，不改变请求 wire 内容。固定镜像回归已验证一次命中和文件变化失效（21 passed）；尚未在新基座上做真实吞吐窗口，因此不报告业务加速倍数。
+
+native Agent 路径的 CPU 调度也增加了 debug-only 的三段计时：`*_capacity_wait` 表示有界准入信号量等待，`*_executor_wait` 表示线程池排队，`*_execute` 表示 role-input、ready-request 或 validation 实际执行。normal 模式不产生这些细粒度事件，取消仍会等待已提交的同步 worker 完成。固定镜像定向回归 4 项通过；它只证明观测和取消语义，不代表线上吞吐提升。

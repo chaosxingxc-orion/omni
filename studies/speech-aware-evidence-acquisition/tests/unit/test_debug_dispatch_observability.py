@@ -61,6 +61,34 @@ def test_worker_failure_is_error_and_original_exception_survives(sink):
     assert 'private failure' not in sink.read_text()
 
 
+def test_slot_fill_workers_expose_capacity_executor_and_body_intervals(sink):
+    """Native CPU stages expose the wait that can starve NPU admission."""
+    from speech_aware_evidence_acquisition.rails.dispatch_slot_fill import DispatchSlotFill
+    from speech_aware_evidence_acquisition.rails.runner import _SlotFillScheduler
+
+    scheduler = _SlotFillScheduler(DispatchSlotFill(
+        role_input_offload=True, prepare_workers=1, validation_workers=1,
+    ))
+
+    async def run():
+        assert await scheduler.role_input_runner(lambda phase, state: (phase, state), "slot", "state") == ("slot", "state")
+        assert await scheduler.validation_runner(lambda inputs: inputs + 1, 4) == 5
+
+    try:
+        asyncio.run(run())
+    finally:
+        scheduler.close()
+    stages = {row["stage"] for row in rows(sink)}
+    assert {
+        "dispatch_role_input_capacity_wait",
+        "dispatch_role_input_executor_wait",
+        "dispatch_role_input_execute",
+        "dispatch_validation_capacity_wait",
+        "dispatch_validation_executor_wait",
+        "dispatch_validation_execute",
+    } <= stages
+
+
 def test_lock_released_when_observation_write_fails(sink,monkeypatch):
     def fail(*args):raise OSError('sink failed')
     monkeypatch.setattr(timing,'_record',fail)

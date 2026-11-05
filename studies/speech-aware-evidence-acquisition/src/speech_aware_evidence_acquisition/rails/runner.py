@@ -7643,12 +7643,44 @@ class _SlotFillScheduler:
             self.prefetched_rows += 1
 
     @staticmethod
-    async def _run_bounded(executor, capacity, fn, *args):
+    async def _run_bounded(executor, capacity, fn, *args, timing_stage=None):
         import asyncio
         import contextvars
-        async with capacity:
-            context = contextvars.copy_context()
-            future = asyncio.get_running_loop().run_in_executor(executor, context.run, fn, *args)
+        import time
+
+        # Keep the three intervals separate: semaphore pressure is admission
+        # pressure, executor wait is CPU worker pressure, and execute is the
+        # actual builder/validator body.  All are debug-only observations;
+        # normal runs retain the old scheduling and event volume.
+        wait_stage = f"{timing_stage}_capacity_wait" if timing_stage else None
+        executor_wait_stage = f"{timing_stage}_executor_wait" if timing_stage else None
+        execute_stage = f"{timing_stage}_execute" if timing_stage else None
+        if wait_stage:
+            from ..core import stage_timing as operational_timing
+            capacity_context = operational_timing.span(wait_stage)
+        else:
+            capacity_context = contextvars.nullcontext() if hasattr(contextvars, "nullcontext") else None
+        # contextvars has no nullcontext; use the standard library contextlib
+        # lazily so normal imports remain unchanged.
+        if capacity_context is None:
+            from contextlib import nullcontext
+            capacity_context = nullcontext()
+        with capacity_context:
+            async with capacity:
+                context = contextvars.copy_context()
+                queued = time.perf_counter() if executor_wait_stage else None
+                wall = time.time_ns() if executor_wait_stage else None
+
+                def invoke():
+                    from ..core import stage_timing as operational_timing
+                    if executor_wait_stage:
+                        operational_timing.completed_interval(executor_wait_stage, queued, wall)
+                    if execute_stage:
+                        with operational_timing.span(execute_stage):
+                            return fn(*args)
+                    return fn(*args)
+
+                future = asyncio.get_running_loop().run_in_executor(executor, context.run, invoke)
             try:
                 return await asyncio.shield(future)
             except asyncio.CancelledError:
@@ -7669,13 +7701,15 @@ class _SlotFillScheduler:
             return None
         async def run(builder, phase_id, episode_state):
             return await self._run_bounded(self._role_input, self._prepare_capacity,
-                                           builder, phase_id, episode_state)
+                                           builder, phase_id, episode_state,
+                                           timing_stage="dispatch_role_input")
         return run
 
     @property
     def ready_request_runner(self):
         async def run(fn):
-            return await self._run_bounded(self._role_input, self._prepare_capacity, fn)
+            return await self._run_bounded(self._role_input, self._prepare_capacity, fn,
+                                           timing_stage="dispatch_ready_request")
         return run
 
     @property
@@ -7683,7 +7717,8 @@ class _SlotFillScheduler:
         if self._validation is None:
             return None
         async def run(fn, inputs):
-            return await self._run_bounded(self._validation, self._validation_capacity, fn, inputs)
+            return await self._run_bounded(self._validation, self._validation_capacity, fn, inputs,
+                                           timing_stage="dispatch_validation")
         return run
 
     def close(self) -> None:
