@@ -207,3 +207,73 @@ def test_pending_is_durable_before_intent_and_recovers(engine,monkeypatch):
     with pytest.raises(OSError):m.execute(e.path)
     assert not any(c[:2]==['docker','stop'] for c in e.calls)
     assert m.execute(e.path)['new_context']==65536
+
+def test_original_multi_instance_selects_only_declared_lane(engine):
+    e=engine
+    profile=copy.deepcopy(e.profile)
+    profile['profile_id']='original-multi'
+    profile['instances'].append({'name':'saea-untouched-b','cards':[6,7],'port':8204,'cpuset':'32-63','env':{}})
+    p=write(e.root/'original-multi.json',profile)
+    original=m.deployment.load_deployment_profile(p)
+    e.conf['original_profile']=pin(p);e.conf['original_instance_index']=0;write(e.path,e.conf)
+    e.old_container['Config']['Labels'][m.deployment.LABEL_PROFILE_SHA256]=original.sha256
+    e.old_container['Config']['Labels'][m.deployment.LABEL_PROFILE]=original.profile_id
+    assert m.execute(e.path,'plan')['mutates_services'] is False
+    e.conf['original_instance_index']=1;write(e.path,e.conf)
+    with pytest.raises(ValueError,match='instance and lane differ'):m.execute(e.path,'plan')
+
+
+def test_original_instance_container_cannot_include_other_lane(engine):
+    e=engine
+    profile=copy.deepcopy(e.profile)
+    profile['profile_id']='original-multi'
+    profile['instances'].append({'name':'saea-untouched-b','cards':[6,7],'port':8204,'cpuset':'32-63','env':{}})
+    p=write(e.root/'original-multi.json',profile);original=m.deployment.load_deployment_profile(p)
+    e.old_container['Config']['Labels'][m.deployment.LABEL_PROFILE_SHA256]=original.sha256
+    e.old_container['Config']['Labels'][m.deployment.LABEL_PROFILE]=original.profile_id
+    e.old_container['HostConfig']['Devices'].append({'PathOnHost':'/dev/davinci6'})
+    with pytest.raises(ValueError,match='devices'):m.verify_container(e.old_container,original,e.model,instance_index=0)
+
+
+def retirement_fixture(configured, tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal, canonical, digest
+    from scripts.environment.retire_unknown_attempt import inventory
+    f=configured; root=f.data; journal=ContactJournal(root,f.plan,'prepared-context-text')
+    # Construct a single unknown with complete accounting; no model transport is called.
+    journal._path('req-1','response').unlink()
+    snap=inventory(journal)
+    before={'state':'OPENED','actual':{'calls':1,'audio_seconds':100.0}}
+    after={'state':'ABORTED','actual':before['actual']}
+    write(f.attempt_path,after)
+    archive=tmp_path/'archive';archive.mkdir()
+    for name in snap['files']:(archive/name).write_bytes((journal.root/name).read_bytes())
+    (archive/'plan.json').write_bytes(f.source_plan.read_bytes());(archive/'checkpoint.jsonl').write_bytes(b'checkpoint')
+    fit=archive/'fit';fit.mkdir()
+    lease=write(archive/'lease.json',{'run_id':f.run,'attempt_id':f.attempt,'session_id':f.session,'study_head':'b'*40,'run_ids':[f.run]})
+    bp=write(archive/'attempt-before.json',before);ap=archive/'attempt-aborted.json';ap.write_bytes(f.attempt_path.read_bytes())
+    manifest=write(archive/'manifest.json',{'config_sha256':'c'*64,'run_id':f.run,'attempt_id':f.attempt,
+        'unknown_responses_remain_unknown':True,'automatic_retry':False,'lease_sha256':m.launch.digest(lease),
+        'cost':after['actual'],'snapshot':snap,'fit_files':{},'checkpoint_sha256':m.launch.digest(archive/'checkpoint.jsonl')})
+    marker=write(journal.root/'retirement.json',{'run_id':f.run,'attempt_id':f.attempt,'manifest_sha256':m.launch.digest(manifest),'automatic_retry':False,'unknown_count':1})
+    complete=write(archive/'complete.json',{'schema':'saea-unknown-attempt-retirement-v1','status':'RETIRED_UNKNOWN_RESOURCE_RELEASED',
+        'config_sha256':'c'*64,'manifest_sha256':m.launch.digest(manifest),'automatic_retry':False,'scientific_success':False,
+        'new_model_calls':0,'actual':after['actual'],'unknown_count':1,'observed_count':0})
+    source=write(tmp_path/'retirement.json',{'schema':'saea-engine-retirement-source-v1',
+        'manifest':pin(manifest),'complete':pin(complete),'lease':pin(lease),'attempt_before':pin(bp),'attempt_aborted':pin(ap),
+        'marker':pin(marker),'journal_root':str(journal.root),'config_sha256':'c'*64})
+    c={'source':f.config,'producer':f.launch_doc,'logical':f.logical,'expected':f.expected,'doc':{'source_retirement':pin(source)}}
+    return SimpleNamespace(**locals())
+
+
+def test_explicit_retirement_barrier_keeps_unknown(configured,tmp_path,monkeypatch):
+    f=retirement_fixture(configured,tmp_path,monkeypatch)
+    result=m.retirement_barrier(f.c)
+    assert result['unknown_count']==1 and result['observed_count']==0 and result['automatic_retry'] is False
+
+
+@pytest.mark.parametrize('fault',['manifest','marker','lease','cost','unknown','archive'])
+def test_explicit_retirement_refuses_changed_custody(configured,tmp_path,monkeypatch,fault):
+    f=retirement_fixture(configured,tmp_path,monkeypatch)
+    path={'manifest':f.manifest,'marker':f.marker,'lease':f.lease,'cost':f.ap,'unknown':f.journal._path('req-1','intent'),'archive':next(f.archive.glob('*.intent.json'))}[fault]
+    path.write_text('{}')
+    with pytest.raises((ValueError,KeyError)):m.retirement_barrier(f.c)

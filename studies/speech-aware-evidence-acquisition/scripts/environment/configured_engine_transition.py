@@ -68,7 +68,7 @@ def load(path):
     keys = {'schema', 'source_settlement', 'old_container_id', 'old_profile', 'old_model',
         'new_profile', 'new_model', 'native_model_config', 'logical_model_fragment',
         'new_session', 'data_root', 'nic', 'scope', 'state_dir', 'ready_timeout_seconds', 'ready_interval_seconds'}
-    require(set(doc) == keys and doc['schema'] == SCHEMA, 'exact engine transition configuration required')
+    require(set(doc) - {'source_retirement', 'original_profile', 'original_instance_index'} == keys and doc['schema'] == SCHEMA, 'exact engine transition configuration required')
     source, producer, release, logical, expected, _ = settlement.load(pin(doc['source_settlement']))
     paths = {key: pin(doc[key]) for key in ('old_profile','old_model','new_profile','new_model','native_model_config')}
     old, new = (deployment.load_deployment_profile(paths[key], data_root=str(logical)) for key in ('old_profile','new_profile'))
@@ -84,6 +84,15 @@ def load(path):
         for key in ('profile_id', 'model_fragment', 'basis'):value.pop(key, None)
         value['instances'][0].pop('name')
     require(old_doc == new_doc and old.instances[0].name != new.instances[0].name, 'only profile identity and native context may change')
+    original=old; original_index=0
+    if 'original_profile' in doc:
+        original=deployment.load_deployment_profile(pin(doc['original_profile']),data_root=str(logical))
+        original_index=doc.get('original_instance_index')
+        require(type(original_index) is int and 0 <= original_index < len(original.instances), 'original instance index required')
+        oi=original.instances[original_index]; li=old.instances[0]
+        require((oi.name,oi.cards,oi.port,oi.cpuset,oi.env)==(li.name,li.cards,li.port,li.cpuset,li.env), 'original instance and lane differ')
+        require(all(getattr(original,k)==getattr(old,k) for k in ('image','model_path','bind_host','tensor_parallel_size','max_num_seqs','gpu_memory_utilization','max_num_batched_tokens','mm_processor_cache_type','namespace_policy')), 'original profile geometry differs')
+    else:require('original_instance_index' not in doc,'original profile required')
     require(old_model['model_lock_key'] == new_model['model_lock_key']
         and old_model['model_materialization_root'] == new_model['model_materialization_root'] == str(logical),
         'model weights identity must not change')
@@ -123,24 +132,25 @@ def load(path):
     argv = deployment.docker_run_argv(new, new.instances[0], new_model, nic=doc['nic'])
     return {'doc':doc,'source':source,'producer':producer,'release':release,'logical':logical,'expected':expected,
         'old':old,'new':new,'old_model':old_model,'new_model':new_model,'receipt':receipt,
-        'out':out,'locks':locks,'serving':serving,'argv':argv}
+        'out':out,'locks':locks,'serving':serving,'argv':argv,'original':original,'original_index':original_index}
 
 
-def verify_container(container, profile, model, *, exact_id=None, require_running=True):
+def verify_container(container, profile, model, *, exact_id=None, require_running=True, instance_index=0):
+    instance = profile.instances[instance_index]
     require(container is not None and (exact_id is None or container['Id'] == exact_id)
-        and container['Name'] == '/' + profile.instances[0].name and container['Image'] == profile.image, 'engine container identity differs')
+        and container['Name'] == '/' + instance.name and container['Image'] == profile.image, 'engine container identity differs')
     labels = container['Config'].get('Labels') or {}
     require(labels.get(deployment.LABEL_PROFILE) == profile.profile_id
         and labels.get(deployment.LABEL_PROFILE_SHA256) == profile.sha256
-        and labels.get(deployment.LABEL_INSTANCE) == '0', 'engine profile labels differ')
+        and labels.get(deployment.LABEL_INSTANCE) == str(instance_index), 'engine profile labels differ')
     require(container['Config']['Entrypoint'] == [deployment.CONTAINER_INTERPRETER]
-        and container['Config']['Cmd'] == deployment.instance_container_args(profile, profile.instances[0], model),
+        and container['Config']['Cmd'] == deployment.instance_container_args(profile, instance, model),
         'engine process command differs')
     host = container['HostConfig']
     require(host['PidMode'] == host['NetworkMode'] == 'host' and host['RestartPolicy']['Name'] == 'no'
-        and host['CpusetCpus'] == profile.instances[0].cpuset, 'engine process namespace or CPU placement differs')
+        and host['CpusetCpus'] == instance.cpuset, 'engine process namespace or CPU placement differs')
     actual_devices = {v['PathOnHost'] for v in host['Devices']}
-    expected_devices = {*deployment.ASCEND_CONTROL_DEVICES, *(f'/dev/davinci{v}' for v in profile.cards)}
+    expected_devices = {*deployment.ASCEND_CONTROL_DEVICES, *(f'/dev/davinci{v}' for v in instance.cards)}
     require(actual_devices == expected_devices and container.get('RestartCount', 0) == 0, 'engine devices or restart history differs')
     if require_running:
         require(container['State']['Running'] is True and container['State']['Status'] == 'running'
@@ -148,9 +158,56 @@ def verify_container(container, profile, model, *, exact_id=None, require_runnin
     return container
 
 
+def retirement_barrier(c):
+    """Validate explicit unknown-retirement custody without converting it to settlement."""
+    from speech_aware_evidence_acquisition.contracts import ExecutionPlan
+    from speech_aware_evidence_acquisition.core.contact_journal import ContactJournal, canonical, digest
+    retirement = read(pin(c['doc']['source_retirement']))
+    require(set(retirement)=={'schema','manifest','complete','lease','attempt_before','attempt_aborted','marker','journal_root','config_sha256'}
+        and retirement['schema']=='saea-engine-retirement-source-v1', 'exact retirement source required')
+    paths={k:pin(retirement[k]) for k in ('manifest','complete','lease','attempt_before','attempt_aborted','marker')}
+    manifest,done,lease,before,after,marker=(read(paths[k]) for k in ('manifest','complete','lease','attempt_before','attempt_aborted','marker'))
+    expected=c['expected'];registered=read(pin(c['source']['source_plan'])); values=dict(registered['execution_plan'])
+    if 'owner_allowance' in registered:values['owner_allowance']=registered['owner_allowance']
+    plan=ExecutionPlan(**values).validate(source_root=Path(c['producer']['repo_path']))
+    require((plan.run_id,plan.attempt_id)==(expected['run_id'],expected['attempt_id']), 'retirement plan identity differs')
+    require(done.get('schema')=='saea-unknown-attempt-retirement-v1' and done.get('status')=='RETIRED_UNKNOWN_RESOURCE_RELEASED'
+        and done.get('config_sha256')==retirement['config_sha256'] and done.get('manifest_sha256')==launch.digest(paths['manifest'])
+        and done.get('automatic_retry') is False and done.get('scientific_success') is False and done.get('new_model_calls')==0,
+        'retirement completion differs')
+    require(manifest.get('config_sha256')==retirement['config_sha256'] and manifest.get('run_id')==plan.run_id
+        and manifest.get('attempt_id')==plan.attempt_id and manifest.get('unknown_responses_remain_unknown') is True
+        and manifest.get('automatic_retry') is False and manifest.get('lease_sha256')==launch.digest(paths['lease']), 'retirement manifest differs')
+    require(marker.get('run_id')==plan.run_id and marker.get('attempt_id')==plan.attempt_id
+        and marker.get('manifest_sha256')==launch.digest(paths['manifest']) and marker.get('automatic_retry') is False, 'retirement marker differs')
+    require(before.get('state')=='OPENED' and after.get('state')=='ABORTED' and before.get('actual')==after.get('actual')==manifest.get('cost')==done.get('actual'), 'retired attempt cost differs')
+    require(lease.get('run_id')==plan.run_id and lease.get('attempt_id')==plan.attempt_id and lease.get('session_id')==expected['service_session']
+        and lease.get('study_head')==expected['study_commit'] and lease.get('run_ids')==[plan.run_id], 'retired lease identity differs')
+    live_attempt=settlement.mapped(c['producer'],c['logical']/'attempts'/plan.run_id/(plan.attempt_id+'.json'))
+    require(live_attempt.read_bytes()==paths['attempt_aborted'].read_bytes(), 'live retired attempt differs')
+    live_root=settlement.mapped(c['producer'],c['logical']/'contact-journals'/plan.run_id/plan.attempt_id)
+    require(live_root==Path(retirement['journal_root']) and paths['marker']==live_root/'retirement.json', 'live retirement marker location differs')
+    journal=ContactJournal(c['logical'],plan,c['source']['arm']);journal.root=live_root
+    from retire_unknown_attempt import inventory
+    snapshot=inventory(journal)
+    require(snapshot==manifest['snapshot'] and snapshot['calls']==after['actual']['calls']
+        and snapshot['unknown_count']==done['unknown_count']==marker['unknown_count']
+        and done['observed_count']==snapshot['calls']-snapshot['unknown_count'], 'retired journal inventory differs')
+    archive=paths['manifest'].parent
+    for name,expected_sha in snapshot['files'].items():require(launch.digest(archive/name)==expected_sha,'retirement archive journal differs')
+    for name,expected_sha in manifest['fit_files'].items():require(launch.digest(archive/'fit'/name)==expected_sha,'retirement archive FIT differs')
+    require(launch.digest(archive/'plan.json')==launch.digest(pin(c['source']['source_plan']))
+        and launch.digest(archive/'checkpoint.jsonl')==manifest['checkpoint_sha256'], 'retirement archive plan/checkpoint differs')
+    return {'mode':'explicit-unknown-retirement','complete_sha256':launch.digest(paths['complete']),
+            'manifest_sha256':launch.digest(paths['manifest']),'unknown_count':snapshot['unknown_count'],
+            'observed_count':done['observed_count'],'cost':after['actual'],'automatic_retry':False}
+
+
 def source_barrier(c):
     """Independent branches require release OR exact completed source settlement."""
     d, producer, expected = c['source'], c['producer'], c['expected']
+    if 'source_retirement' in c['doc']:
+        return retirement_barrier(c)
     if c['release'].exists():
         observed = launch.status(producer, queue.canonical_hash(producer), d['producer_launcher']['sha256'])
         result = read(Path(producer['receipt_dir'])/'launch-result.json')
@@ -283,7 +340,7 @@ def execute(path, mode='run'):
     c = load(path); d = c['doc']; out = c['out']
     identity = {'config_sha256':launch.digest(path),'tool_sha256':launch.digest(__file__)}
     if mode == 'plan':
-        verify_container(inspect(d['old_container_id']), c['old'], c['old_model'], exact_id=d['old_container_id'])
+        verify_container(inspect(d['old_container_id']), c['original'], c['old_model'], exact_id=d['old_container_id'], instance_index=c['original_index'])
         require(inspect(c['new'].instances[0].name) is None, 'new engine already exists')
         return {'schema':SCHEMA,'identity':identity,'argv':c['argv'],'new_model_calls':0,'mutates_services':False}
     require(mode in ('run','recover-stop'), 'plan, run or recover-stop required')
@@ -303,7 +360,7 @@ def execute(path, mode='run'):
         intent_path = out/'intent.json'
         if pending.exists():
             marker = read(pending);require(marker['state_dir'] == str(out) and marker['identity'] == identity, 'another or changed transition is pending')
-        old = inspect(d['old_container_id']);verify_container(old,c['old'],c['old_model'],exact_id=d['old_container_id'],require_running=not intent_path.exists())
+        old = inspect(d['old_container_id']);verify_container(old,c['original'],c['old_model'],exact_id=d['old_container_id'],require_running=not intent_path.exists(),instance_index=c['original_index'])
         proof = source_barrier(c)
         if not intent_path.exists():
             require(inspect(c['new'].instances[0].name) is None, 'unowned new engine')
