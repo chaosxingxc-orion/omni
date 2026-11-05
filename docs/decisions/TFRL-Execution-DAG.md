@@ -4,10 +4,10 @@
 
 |资源|任务|正常生成 / FIT|状态与依赖|
 |---|---|---|---|
-|A：第一TP4|Reflexion2 selection80|240 / 240|已有持久队列，02:49快照23/80；不等待ACE CPU评分|
-|A|ACE0 selection80|240 / 240|Sol转换配置，等待Reflexion生成释放；冻结原候选|
+|A：第一TP4|Reflexion2 selection80|240 / 240|已完成80/80，生成资源释放；CPU评分独立验收|
+|A|ACE0 selection80|240 / 240|已自动接续，03:13:58快照16/80；冻结原候选|
 |A|ACE0 H2剩余232，80+80+72|696 / 696|复用稳定名单，逐片材料与review待绑定；不得按前片结果改候选|
-|B：第二TP4|GEPA1 selection80|640 / 640|新队列实际32生成intent/FIT记录32，完整checkpoint待核；旧joint已结束|
+|B：第二TP4|GEPA1 selection80|640 / 640|旧树遗漏aa分支修复导致exit1、0/80完整；先对账/修复再断点接续|
 |B|GEPA2 feedback剩余153，80+73|1224 / 1224|Terra准备后继，四臂独立P→S；不重跑原80|
 |CPU→NPU|TF-GRPO当前策略K4 pilot15|现有结构105 / 105|缺策略绑定及子集入口验证，不算ready；理想75次需另行实现|
 |CPU / 本机教师|完整轨迹归因及下一学习提案|另立预算|历史数据与当前策略分开；教师仅在本机调用，selection/TEST不入教师调优|
