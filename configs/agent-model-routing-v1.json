@@ -1,6 +1,6 @@
 {
   "schema": "omni.agent_model_routing.v1",
-  "updated_at": "2026-11-05T02:01:04.986625+00:00",
+  "updated_at": "2026-11-05T02:08:48.751083+00:00",
   "language": "zh-CN",
   "dispatch_policy": {
     "max_active_subagents": 3,
@@ -20,9 +20,9 @@
         "文档生成"
       ],
       "delivery": "REPORT.md + result.json + changed_files_sha256 + test evidence",
-      "routing_state": "preferred_restored_for_new_dispatch",
+      "routing_state": "preferred_tool_execution_observed",
       "original_model": "gpt-6.1-terra",
-      "switch_reason": "Owner confirmed Terra configuration restored; validate tool execution on next available dispatch"
+      "switch_reason": "Owner restored Terra; a dispatch requesting gpt-6.1-terra has executed tools and written its task receipt; full business delivery is pending"
     },
     "sample_analysis": {
       "model": "gpt-6.1-sol",
@@ -45,9 +45,11 @@
   },
   "availability": {
     "gpt-6.1-terra": {
-      "status": "owner_confirmed_configured_execution_pending",
-      "probe_required": true,
-      "do_not_claim_execution_before_probe": true
+      "status": "requested_model_tool_execution_observed",
+      "probe_required": false,
+      "do_not_claim_execution_before_probe": true,
+      "provider_model_identity": "not_independently_verified",
+      "business_delivery": "in_progress"
     },
     "gpt-6.1-sol": {
       "status": "verified_reachable"
