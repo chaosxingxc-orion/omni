@@ -4652,10 +4652,6 @@ class FlightRuntime:
         self._lock = lock
 
         previous_adapter = self._adapter
-        adapter = self._adapter_factory(lock, self._data_root)
-        if not isinstance(adapter, TaskAdapter):
-            raise FlightRuntimeError("adapter_factory must return a TaskAdapter instance")
-        self._adapter = adapter
 
         # Validate an armed scheduler before preparation can contact a service.
         if "system_search_measurement" in values:
@@ -4709,6 +4705,9 @@ class FlightRuntime:
             adapter = previous_adapter
             samples = self._samples
         else:
+            adapter = self._adapter_factory(lock, self._data_root)
+            if not isinstance(adapter, TaskAdapter):
+                raise FlightRuntimeError("adapter_factory must return a TaskAdapter instance")
             samples = tuple(adapter.load_split(split_id))
         self._adapter = adapter
         if not samples:
