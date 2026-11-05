@@ -202,7 +202,8 @@ def carrier_module_hooks(*, repo_root: Path | None = None) -> CarrierHooks:
 
         layer = copy.deepcopy(dict(lock_layer()))
         for relpath, sha256 in (LOCK_V2_0_REVIEWER_TEMPLATE, LOCK_V2_1_REVIEWER_TEMPLATE):
-            path = root / "configs" / relpath
+            from ...core.experiment_assets import resolve_asset
+            path = resolve_asset(root,"configs/"+relpath)
             if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != sha256:
                 raise ConsumptionModuleConfigError(
                     f"lock {LOCK_V2_1}: configs/{relpath} is missing or does not hash to {sha256}"

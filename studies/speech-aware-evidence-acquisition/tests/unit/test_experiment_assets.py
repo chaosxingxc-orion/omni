@@ -60,3 +60,18 @@ def test_already_mapped_path_named_configs_is_not_remapped(tmp_path,monkeypatch)
     repo,assets,_,_=setup(tmp_path,monkeypatch)
     path=assets/'configs/model/external.json';path.parent.mkdir(parents=True);path.write_text('actual external bytes')
     assert input_path(path)==path
+
+
+def test_external_lock_receipt_reaches_real_lock_parser(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.rails.adapters import slurp_module_lock_v2_2_npu_port_r01c as lock
+    repo, assets, manifest, doc = setup(tmp_path, monkeypatch)
+    receipt = {key: f"frozen-{key}" for _, key in lock.R01C_SOURCES}
+    path = assets / "minus-r01.json"
+    path.write_text(json.dumps(receipt))
+    doc["files"][lock.R01C_RECEIPT_RELPATH] = {"path": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+    manifest.write_text(json.dumps(doc))
+    monkeypatch.setenv("SAEA_EXPERIMENT_MANIFEST_SHA256", hashlib.sha256(manifest.read_bytes()).hexdigest())
+    assert lock.r01c_pins(repo) == {leaf: receipt[key] for leaf, key in lock.R01C_SOURCES}
+    path.write_text("{}")
+    with pytest.raises(ValueError, match="changed"):
+        lock.r01c_pins(repo)

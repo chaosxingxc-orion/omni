@@ -80,7 +80,8 @@ def port_pins(repo_root: Path) -> Mapping[str, object]:
 
     from ..consumption_module import ConsumptionModuleConfigError  # noqa: PLC0415
 
-    path = Path(repo_root) / PORT_PINS_RELPATH
+    from ...core.experiment_assets import resolve_asset
+    path = resolve_asset(repo_root,PORT_PINS_RELPATH)
     if not path.is_file():
         raise ConsumptionModuleConfigError(f"lock {LOCK_V2_2_NPU_PORT}: the port pins file {PORT_PINS_RELPATH} is missing")
     stores = json.loads(path.read_text(encoding="utf-8")).get(_STORES)

@@ -56,7 +56,8 @@ def r01c_pins(repo_root: Path) -> Mapping[tuple[str, ...], str]:
 
     from ..consumption_module import ConsumptionModuleConfigError  # noqa: PLC0415
 
-    path = Path(repo_root) / R01C_RECEIPT_RELPATH
+    from ...core.experiment_assets import resolve_asset
+    path = resolve_asset(repo_root,R01C_RECEIPT_RELPATH)
     if not path.is_file():
         raise ConsumptionModuleConfigError(f"lock {LOCK_V2_2_NPU_PORT_R01C}: the minus-R01 build receipt {R01C_RECEIPT_RELPATH} is missing")
     receipt = json.loads(path.read_text(encoding="utf-8"))
