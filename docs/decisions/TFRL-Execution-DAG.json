@@ -1,6 +1,6 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 11,
+  "source_revision": 12,
   "launcher_compatible": false,
   "execution_status": "Engineering efficiency first; existing Fold A arms continue until validated release migration; no new large-scale scientific experiments",
   "nodes": [
@@ -371,7 +371,7 @@
       "id": "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
       "lane": "CPU",
       "priority": 0,
-      "status": "base-entrypoints-integrated-c038b791-successor-recovery-pending",
+      "status": "runtime-successor-integrated-cc5ce670-external-admission-gap-separated",
       "scientific_dependencies": [
         "CPU-REQUEST-EFFICIENCY"
       ],
@@ -417,7 +417,8 @@
         "CPU-CHECKPOINT-COMPATIBILITY",
         "CPU-FINAL-SOURCE-REVIEW",
         "CPU-CONFIGURED-RELEASE-VALIDATION",
-        "CPU-CONFIGURED-CHECKPOINT-SUCCESSOR"
+        "CPU-CONFIGURED-CHECKPOINT-SUCCESSOR",
+        "CPU-EXTERNAL-SUCCESSOR-ADMISSION"
       ],
       "requirements": [
         "one integrated committed source and immutable image manifest",
@@ -442,16 +443,45 @@
       "id": "CPU-CONFIGURED-CHECKPOINT-SUCCESSOR",
       "lane": "CPU",
       "priority": 0,
-      "status": "implementation-in-progress",
+      "status": "finalize-wired-fixture-only-real-two-arm-validation-in-progress",
       "scientific_dependencies": [
         "CPU-CHECKPOINT-COMPATIBILITY",
-        "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS"
+        "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
+        "CPU-CHECKPOINT-TERMINAL-CUSTODY"
       ],
       "requirements": [
         "strict external JSON to held successor workspace; preserve original registered plan",
         "prepare before drain; finalize only with actual terminal checkpoint and contact reconciliation",
         "atomic publish, no scientific overrides, no launch or lease mutation",
         "fixed-image tests and original two-arm zero-model validation"
+      ]
+    },
+    {
+      "id": "CPU-CHECKPOINT-TERMINAL-CUSTODY",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "generation-primitives-only-full-fit-and-ancestry-verification-in-development",
+      "scientific_dependencies": [],
+      "requirements": [
+        "generation observed request closure and original actual cost",
+        "successful FIT artifacts and endpoint identity/hash/budget join; reverse orphan inventory",
+        "ABORTED and checkpoint ancestry; no fabricated FIT attempt ledger",
+        "complete fixture positive/negative cases; no mutation of live predecessors"
+      ]
+    },
+    {
+      "id": "CPU-EXTERNAL-SUCCESSOR-ADMISSION",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "partial-runtime-forwarding-only-external-workspace-and-new-receipt-in-development",
+      "scientific_dependencies": [
+        "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS"
+      ],
+      "requirements": [
+        "read-only source plus external input/workspace output",
+        "preserve original registered plans and receipt",
+        "separate successor generation/FIT plans and independent admission receipt",
+        "actual native admission fixture before deployment; no live premature mint"
       ]
     }
   ],
