@@ -89,3 +89,27 @@ def test_external_receipt_reaches_real_preparation_source_gate(tmp_path, monkeyp
     assert verify_source_receipts(pins,repo_root=repo,data_root=tmp_path)==pins
     path.write_text('changed')
     with pytest.raises(ValueError):verify_source_receipts(pins,repo_root=repo,data_root=tmp_path)
+
+
+@pytest.mark.parametrize('fault',['missing','dangling-symlink'])
+def test_declared_workspace_missing_never_falls_back(tmp_path,monkeypatch,fault):
+    from speech_aware_evidence_acquisition.core.experiment_assets import output_asset,seal_workspace
+    repo,assets,manifest,doc=setup(tmp_path,monkeypatch)
+    monkeypatch.setattr('speech_aware_evidence_acquisition.core.bundle.git_commit.require_clean_study_repo',lambda root:'b'*40)
+    workspace=tmp_path/'workspace';monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE',str(workspace))
+    relative='configs/model/external.json';out=output_asset(repo,relative);out.parent.mkdir(parents=True);out.write_text('{"transport":"new"}')
+    pin=seal_workspace(repo);monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_MANIFEST',pin['path']);monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_SHA256',pin['sha256'])
+    out.unlink()
+    if fault=='dangling-symlink':out.symlink_to(tmp_path/'absent')
+    with pytest.raises(ValueError,match='absent from pinned inventory'):resolve_asset(repo,relative)
+
+
+def test_uncovered_workspace_falls_back_only_after_identity_verification(tmp_path,monkeypatch):
+    from speech_aware_evidence_acquisition.core.experiment_assets import output_asset,seal_workspace
+    repo,assets,manifest,doc=setup(tmp_path,monkeypatch)
+    monkeypatch.setattr('speech_aware_evidence_acquisition.core.bundle.git_commit.require_clean_study_repo',lambda root:'b'*40)
+    workspace=tmp_path/'workspace';workspace.mkdir();monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE',str(workspace))
+    pin=seal_workspace(repo);monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_MANIFEST',pin['path']);monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_SHA256',pin['sha256'])
+    assert resolve_asset(repo,'configs/model/external.json')==assets/'model.json'
+    monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_SHA256','a'*64)
+    with pytest.raises(ValueError,match='inventory digest'):resolve_asset(repo,'configs/model/external.json')

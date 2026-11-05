@@ -72,9 +72,10 @@ def workspace_asset(repo_root,relative):
     root=workspace_root(repo_root)
     if root==Path(repo_root):return None
     path=root/relative
-    if not path.exists():return None
     manifest=os.environ.get('SAEA_EXPERIMENT_WORKSPACE_MANIFEST');expected=os.environ.get('SAEA_EXPERIMENT_WORKSPACE_SHA256')
-    if not manifest or not expected:raise ValueError('workspace read requires explicit inventory pin')
+    if not manifest or not expected:
+        if not path.exists() and not path.is_symlink():return None
+        raise ValueError('workspace read requires explicit inventory pin')
     raw=Path(manifest).read_bytes()
     if hashlib.sha256(raw).hexdigest()!=expected:raise ValueError('workspace inventory digest differs')
     doc=json.loads(raw)
@@ -82,7 +83,10 @@ def workspace_asset(repo_root,relative):
         or doc['source_commit']!=source_commit(repo_root)
         or doc['source_manifest_sha256']!=os.environ.get('SAEA_RELEASE_MANIFEST_SHA256')):
         raise ValueError('workspace source identity differs')
-    if path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest()!=doc['files'].get(relative):
+    if relative not in doc['files']:
+        if path.exists() or path.is_symlink():raise ValueError('workspace asset absent from pinned inventory or changed')
+        return None
+    if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=doc['files'][relative]:
         raise ValueError('workspace asset absent from pinned inventory or changed')
     return path
 
