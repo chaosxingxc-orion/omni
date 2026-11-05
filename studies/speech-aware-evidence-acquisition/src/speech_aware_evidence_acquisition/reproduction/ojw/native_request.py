@@ -617,70 +617,74 @@ class MeteredNativeSpeechRequest:
                 else rendered_names
             ),
         )
-        payload = prepared.as_payload()
-        selected = payload.get("tool_schemas", [])
-        _assert_framework_schemas(
-            request.tool_schemas,
-            selected,
-            constant_rendering=binding.rendered_tool_names is not None,
-        )
-        # The authoritative transport validates and renders the SAME object
-        # that dispatch consumes; capacity checks can inspect this body.
-        body = self._render_request(prepared.payload_bytes)
-        # Item E42 (2026-09-25): the declared supply-variant arm this contact was
-        # composed for, recorded in the role custody document ONLY when it is
-        # set. Conditional on purpose: every contact of every episode form
-        # written before E42 carries no arm, so its ``role_request_bytes`` stay
-        # byte-identical to the pre-E42 tree's, and
-        # ``PreparedNativeRoleContact.role_request`` reconstructs the context
-        # from the dataclass default.
-        arm_context: dict[str, object] = {
-            "sample_id": request.context.sample_id,
-            "agent_contact_id": request.context.agent_contact_id,
-            "evidence_pins": dict(request.context.evidence_pins),
-            "budget_id": request.context.budget_id,
-            "sample_index": sample_index,
-        }
-        variant_arm_id = getattr(request.context, "variant_arm_id", None)
-        if variant_arm_id is not None:
-            arm_context["variant_arm_id"] = variant_arm_id
-        # Same-flight instrument, PHASE 2 (merge set C): the declared
-        # Perception branch this contact was composed for -- variant_arm_id's
-        # own twin, and recorded in the role custody document the SAME
-        # conditional way, for the same reason: every contact of every
-        # episode form written before phase 2 carries no branch, so its
-        # ``role_request_bytes`` stay byte-identical to the pre-phase-2
-        # tree's.
-        perception_branch_id = getattr(request.context, "perception_branch_id", None)
-        if perception_branch_id is not None:
-            arm_context["perception_branch_id"] = perception_branch_id
-        role_bytes = _bytes({
-            "role_id": request.role_id,
-            "context": arm_context,
-            "messages": framework,
-            "tool_schemas": list(request.tool_schemas),
-            "visible_tool_names": list(request.visible_tool_names),
-            "decoding_controls": framework_controls,
-        })
-        return PreparedNativeRoleContact(
-            prepared, role_bytes, _bytes(body), self._owner, sample_index,
-            binding.rendered_tool_names, binding,
-        )
+        try:
+            payload = prepared.as_payload()
+            selected = payload.get("tool_schemas", [])
+            _assert_framework_schemas(
+                request.tool_schemas,
+                selected,
+                constant_rendering=binding.rendered_tool_names is not None,
+            )
+            # The authoritative transport validates and renders the SAME object
+            # that dispatch consumes; capacity checks can inspect this body.
+            body = self._render_request(prepared.payload_bytes)
+            # Item E42 (2026-09-25): the declared supply-variant arm this contact was
+            # composed for, recorded in the role custody document ONLY when it is
+            # set. Conditional on purpose: every contact of every episode form
+            # written before E42 carries no arm, so its ``role_request_bytes`` stay
+            # byte-identical to the pre-E42 tree's, and
+            # ``PreparedNativeRoleContact.role_request`` reconstructs the context
+            # from the dataclass default.
+            arm_context: dict[str, object] = {
+                "sample_id": request.context.sample_id,
+                "agent_contact_id": request.context.agent_contact_id,
+                "evidence_pins": dict(request.context.evidence_pins),
+                "budget_id": request.context.budget_id,
+                "sample_index": sample_index,
+            }
+            variant_arm_id = getattr(request.context, "variant_arm_id", None)
+            if variant_arm_id is not None:
+                arm_context["variant_arm_id"] = variant_arm_id
+            # Same-flight instrument, PHASE 2 (merge set C): the declared
+            # Perception branch this contact was composed for -- variant_arm_id's
+            # own twin, and recorded in the role custody document the SAME
+            # conditional way, for the same reason: every contact of every
+            # episode form written before phase 2 carries no branch, so its
+            # ``role_request_bytes`` stay byte-identical to the pre-phase-2
+            # tree's.
+            perception_branch_id = getattr(request.context, "perception_branch_id", None)
+            if perception_branch_id is not None:
+                arm_context["perception_branch_id"] = perception_branch_id
+            role_bytes = _bytes({
+                "role_id": request.role_id,
+                "context": arm_context,
+                "messages": framework,
+                "tool_schemas": list(request.tool_schemas),
+                "visible_tool_names": list(request.visible_tool_names),
+                "decoding_controls": framework_controls,
+            })
+            return PreparedNativeRoleContact(
+                prepared, role_bytes, _bytes(body), self._owner, sample_index,
+                binding.rendered_tool_names, binding,
+            )
+        except BaseException:
+            self._client.discard_prepared(prepared)
+            raise
 
     def _binds_branch_sample(self, request: NativeRoleModelRequest) -> bool:
         branch_id = getattr(request.context, "perception_branch_id", None)
         return branch_id is not None and request.role_id in self._branch_sampling.get(branch_id, {})
 
-    def dispatch(self, prepared: PreparedNativeRoleContact) -> CoreCompletion:
+    def dispatch(self, prepared: PreparedNativeRoleContact, *, id_slot: int | None = None) -> CoreCompletion:
         if not isinstance(prepared, PreparedNativeRoleContact) or prepared.owner is not self._owner:
             raise NativeSpeechRequestError("dispatch requires this adapter's prepared native contact")
-        completion = self._client.complete_prepared_with_metadata(prepared.request)
-        completion = self._answer_only_fallback(prepared, completion)
+        completion = self._client.complete_prepared_with_metadata(prepared.request, id_slot=id_slot)
+        completion = self._answer_only_fallback(prepared, completion, id_slot=id_slot)
         self._completion_sink(prepared.role_request, completion)
         return completion
 
     def _answer_only_fallback(
-        self, prepared: PreparedNativeRoleContact, completion: CoreCompletion,
+        self, prepared: PreparedNativeRoleContact, completion: CoreCompletion, *, id_slot: int | None = None,
     ) -> CoreCompletion:
         """Decision 278 / 283 A: ONE receipted answer-only re-ask of a budgeted thinking contact that came back empty.
 
@@ -711,7 +715,7 @@ class MeteredNativeSpeechRequest:
         reask_prepared = self.prepare(
             prepared.role_request, binding_override=prepared.binding, answer_only=True,
         )
-        second = self._client.complete_prepared_with_metadata(reask_prepared.request)
+        second = self._client.complete_prepared_with_metadata(reask_prepared.request, id_slot=id_slot)
         second_id, second_cost = last_cost_record(trace)
         if second_id == first_id:
             raise NativeSpeechRequestError("the answer-only re-ask left no COST record")

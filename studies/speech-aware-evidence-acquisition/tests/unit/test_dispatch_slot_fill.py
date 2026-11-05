@@ -64,6 +64,50 @@ ALL_ON = {
 }
 
 
+@pytest.mark.parametrize("kind", ["prepare", "validation"])
+def test_bounded_worker_repeated_cancel_keeps_capacity_until_thread_finishes(kind):
+    import asyncio
+    import threading
+    from speech_aware_evidence_acquisition.rails.runner import _SlotFillScheduler
+
+    entered, release, second = (threading.Event() for _ in range(3))
+    scheduler = _SlotFillScheduler(DispatchSlotFill(
+        role_input_offload=True, prepare_workers=1, validation_workers=1
+    ))
+
+    def first(*args):
+        entered.set()
+        if not release.wait(5):
+            raise TimeoutError("test worker was not released")
+
+    def next_work(*args):
+        second.set()
+
+    async def check():
+        run = scheduler.role_input_runner if kind == "prepare" else scheduler.validation_runner
+        args = ("phase", object()) if kind == "prepare" else (object(),)
+        first_task = asyncio.create_task(run(first, *args))
+        while not entered.is_set():
+            await asyncio.sleep(.001)
+        first_task.cancel()
+        await asyncio.sleep(.01)
+        first_task.cancel()
+        second_task = asyncio.create_task(run(next_work, *args))
+        await asyncio.sleep(.03)
+        assert not first_task.done() and not second.is_set()
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await first_task
+        await second_task
+        assert second.is_set()
+
+    try:
+        asyncio.run(check())
+    finally:
+        release.set()
+        scheduler.close()
+
+
 # ---------------------------------------------------------------------------
 # The key
 # ---------------------------------------------------------------------------
@@ -235,10 +279,19 @@ def _arrival_free(obj) -> str:
     return text
 
 
-def _fly_with(tmp_path, monkeypatch, name, sample_ids, dispatch, *, max_revisions=1):
+def _fly_with(tmp_path, monkeypatch, name, sample_ids, dispatch, *, max_revisions=1, harness_hook=None):
     from test_flight_resume_recovery import _harness, _skeleton
 
     harness = _harness(tmp_path, name, sample_ids, max_revisions=max_revisions)
+    if dispatch and dispatch.get("ready_request"):
+        # The harness post is a deterministic stub; retain its rendering and
+        # fake session while exercising the vLLM-only routing contract.
+        from speech_aware_evidence_acquisition.core.model.vllm_transport import VllmServerTransport
+        transport = harness.client._rollout_transport
+        transport.__class__ = VllmServerTransport
+        transport.served_model_name = "stub-model"
+    if harness_hook is not None:
+        harness_hook(harness)
     runtime = _skeleton(harness, monkeypatch)
     if dispatch is not None:
         runtime._composed = SimpleNamespace(
@@ -401,3 +454,206 @@ def test_a_crashed_attempt_resumes_with_identical_semantics_under_the_key(
     assert block["schema"] == RESUME_PREDECESSOR_SCHEMA
     assert block["kept_sample_ids"] == ["s1"]
     assert gc.get_freeze_count() == 0
+
+@pytestmark_episode
+def test_configured_prepare_and_validation_workers_preserve_real_native_outputs(tmp_path, monkeypatch):
+    config={"schema":DISPATCH_SLOT_FILL_SCHEMA,"role_input_offload":True,
+            "recall_prefetch":True,"prepare_workers":2,"validation_workers":2,
+            "model_inflight":1,"admitted_trajectories":4,"ready_request":True}
+    off,_,off_rows,_,_=_fly_with(tmp_path,monkeypatch,"thread-off",("s1","s2"),None,max_revisions=0)
+    on,_,on_rows,receipt,_=_fly_with(tmp_path,monkeypatch,"thread-on",("s1","s2"),config,max_revisions=0)
+    assert _rendered(on)==_rendered(off)
+    assert [(x['sample_id'],x['text']) for x in on_rows]==[(x['sample_id'],x['text']) for x in off_rows]
+    assert receipt['slot_fill']['validation_workers']==2
+
+
+def test_new_dispatch_limits_are_strict():
+    c=parse_dispatch_slot_fill({'dispatch':{'schema':DISPATCH_SLOT_FILL_SCHEMA,
+        'role_input_offload':True,'prepare_workers':4,'validation_workers':4,
+        'model_inflight':64,'admitted_trajectories':96}})
+    assert c.model_inflight==64 and c.admitted_trajectories==96
+    for bad in ({'prepare_workers':2},{'validation_workers':0},{'model_inflight':True},{'ready_request':True,'prepare_workers':2,'model_inflight':1}):
+        with pytest.raises(DispatchSlotFillError):parse_dispatch_slot_fill({'dispatch':{'schema':DISPATCH_SLOT_FILL_SCHEMA,**bad}})
+
+
+def test_validation_pool_drains_cancelled_work_and_closes():
+    import asyncio,threading
+    from speech_aware_evidence_acquisition.rails.runner import _SlotFillScheduler
+    started=threading.Event();release=threading.Event();done=threading.Event()
+    scheduler=_SlotFillScheduler.open(DispatchSlotFill(validation_workers=1))
+    async def run():
+        def work(_):started.set();release.wait(3);done.set();return 42
+        task=asyncio.create_task(scheduler.validation_runner(work,{}))
+        assert await asyncio.to_thread(started.wait,2)
+        task.cancel();await asyncio.sleep(0)
+        assert not task.done()
+        release.set()
+        with pytest.raises(asyncio.CancelledError):await task
+    try:asyncio.run(run())
+    finally:release.set();scheduler.close()
+    assert done.is_set()
+
+
+@pytestmark_episode
+def test_ready_request_fit_wait_does_not_hold_send_permit(tmp_path, monkeypatch):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    blocked = threading.Event()
+    release = threading.Event()
+    other_sent = threading.Event()
+    order = []
+
+    def install(harness):
+        original_gate = harness.request_gate
+        original_post = harness.transport._post
+
+        def gate(prepared, **kwargs):
+            payload = prepared.as_payload()
+            if payload["sample_id"] == "s1" and not blocked.is_set():
+                blocked.set()
+                if not release.wait(10):
+                    raise TimeoutError("blocked FIT gate not released")
+            return original_gate(prepared, **kwargs)
+
+        def post(url, body):
+            if blocked.is_set() and not release.is_set():
+                order.append("send-during-fit")
+                other_sent.set()
+            return original_post(url, body)
+
+        harness.request_gate = gate
+        harness.transport._post = post
+
+    config = {"schema": DISPATCH_SLOT_FILL_SCHEMA, "role_input_offload": True,
+              "prepare_workers": 2, "validation_workers": 2, "ready_request": True,
+              "model_inflight": 1, "admitted_trajectories": 2}
+    executor = ThreadPoolExecutor(max_workers=1)
+    try:
+        future = executor.submit(_fly_with, tmp_path, monkeypatch, "ready-overlap",
+                                 ("s1", "s2"), config, max_revisions=0, harness_hook=install)
+        assert blocked.wait(5)
+        assert other_sent.wait(5), "another sample must send while the first is blocked in FIT"
+        release.set()
+        future.result(timeout=15)
+        assert order
+    finally:
+        release.set()
+        executor.shutdown(wait=True)
+
+
+@pytestmark_episode
+def test_ready_fit_failure_discards_real_client_token_and_records_unsent(tmp_path, monkeypatch):
+    from test_flight_resume_recovery import _harness, _skeleton
+    from speech_aware_evidence_acquisition.core.model.vllm_transport import VllmServerTransport
+    harness = _harness(tmp_path, "ready-fit-failure", ("s1",), max_revisions=0)
+    transport = harness.client._rollout_transport
+    transport.__class__ = VllmServerTransport
+    transport.served_model_name = "stub-model"
+    runtime = _skeleton(harness, monkeypatch)
+    config = {"schema": DISPATCH_SLOT_FILL_SCHEMA, "role_input_offload": True,
+              "prepare_workers": 1, "ready_request": True, "model_inflight": 1,
+              "admitted_trajectories": 1}
+    runtime._composed = SimpleNamespace(values={**runtime._composed.values, "dispatch": config})
+    gate_calls = []
+    def fail_gate(prepared, **kwargs):
+        gate_calls.append(prepared.as_payload()["sample_id"])
+        raise RuntimeError("intentional fit failure")
+    harness.request_gate = fail_gate
+    try:
+        with pytest.raises(Exception, match="intentional fit failure"):
+            runtime._dispatch_phase_program(harness.client, harness.plan, harness.program.program_id)
+        assert len(gate_calls) == 1
+        assert not harness.client._prepared_requests
+        assert not harness.client._request_counter
+        trace_path = harness.world.run_dir / f"{harness.plan.run_id}.trace.jsonl"
+        assert 'ready-disposition' in trace_path.read_text()
+        records = [json.loads(line) for line in trace_path.read_text().splitlines()]
+        assert any(row.get("payload", {}).get("org_ready_state") == "unsent" for row in records)
+    finally:
+        harness.close()
+
+
+@pytestmark_episode
+@pytest.mark.parametrize("cancel_phase", ["preparing", "waiting_slot"])
+def test_ready_real_client_cancel_discards_token_retains_fixture_fit_and_trace(tmp_path, monkeypatch, cancel_phase):
+    import asyncio
+    import threading
+    from test_flight_resume_recovery import _harness, _skeleton
+    from speech_aware_evidence_acquisition.core.model.vllm_transport import VllmServerTransport
+    from speech_aware_evidence_acquisition.reproduction.ojw import runner as ojw_runner
+    harness = _harness(tmp_path, "ready-cancel-" + cancel_phase, ("s1", "s2"), max_revisions=0)
+    transport = harness.client._rollout_transport
+    transport.__class__ = VllmServerTransport
+    transport.served_model_name = "stub-model"
+    runtime = _skeleton(harness, monkeypatch)
+    config = {"schema": DISPATCH_SLOT_FILL_SCHEMA, "role_input_offload": True,
+              "prepare_workers": 2, "ready_request": True, "model_inflight": 1,
+              "admitted_trajectories": 2}
+    runtime._composed = SimpleNamespace(values={**runtime._composed.values, "dispatch": config})
+    first_send, second_fit, release_fit, release_send, cancel_observed = (threading.Event() for _ in range(5))
+    original_post, original_gate = transport._post, harness.request_gate
+    fit_samples = []
+    def post(url, body):
+        if not first_send.is_set():
+            first_send.set()
+            if not release_send.wait(10): raise TimeoutError("test send timeout")
+        return original_post(url, body)
+    def gate(request, **kwargs):
+        sample = request.as_payload()["sample_id"]
+        result = original_gate(request, **kwargs)
+        fit_samples.append(sample)
+        if sample == "s2":
+            second_fit.set()
+            if cancel_phase == "preparing" and not release_fit.wait(10):
+                raise TimeoutError("test fit timeout")
+        return result
+    transport._post = post
+    harness.request_gate = gate
+    original_execute = ojw_runner.execute_speech_agent_workflows
+    def intercept(states, *, episode_invoker, **kwargs):
+        async def wrapped(state, contact, session, **extra):
+            if state.prepared.sample.sample_id != "s2":
+                return await episode_invoker(state, contact, session, **extra)
+            while not first_send.is_set(): await asyncio.sleep(.001)
+            async def marked_contact(callback, **opts):
+                asyncio.current_task().set_name("ready-s2-slot-wait")
+                return await contact(callback, **opts)
+            task = asyncio.create_task(episode_invoker(state, marked_contact, session, **extra))
+            while not second_fit.is_set(): await asyncio.sleep(.001)
+            if cancel_phase == "waiting_slot":
+                for _ in range(5000):
+                    if any(t.get_name() == "ready-s2-slot-wait" for t in asyncio.all_tasks()):
+                        break
+                    await asyncio.sleep(.001)
+                else:
+                    raise AssertionError("s2 did not enter contact slot wait")
+            task.cancel()
+            await asyncio.sleep(.01)
+            task.cancel()
+            release_fit.set()
+            try:
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    cancel_observed.set()
+                else:
+                    raise AssertionError("episode did not propagate cancellation")
+            finally:
+                release_send.set()
+        return original_execute(states, episode_invoker=wrapped, **kwargs)
+    monkeypatch.setattr(ojw_runner, "execute_speech_agent_workflows", intercept)
+    try:
+        from speech_aware_evidence_acquisition.rails.runner import RailsRunnerError
+        with pytest.raises(RailsRunnerError, match="native graph ended without an accepted Solver outcome"):
+            runtime._dispatch_phase_program(harness.client, harness.plan, harness.program.program_id)
+        assert cancel_observed.is_set()
+        assert second_fit.is_set() and "s2" in fit_samples
+        assert any(event == "fit" and key[0] == "s2" for event, key in harness.events)
+        assert not harness.client._prepared_requests
+        records = [json.loads(line) for line in (harness.world.run_dir / f"{harness.plan.run_id}.trace.jsonl").read_text().splitlines()]
+        assert any(row.get("payload", {}).get("org_ready_state") == "unsent"
+                   and ":s2" in row.get("record_id", "") for row in records)
+        assert not any(x[0] == "dispatch" and x[1][0] == "s2" for x in harness.events)
+    finally:
+        release_fit.set(); release_send.set(); harness.close()

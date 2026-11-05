@@ -598,8 +598,10 @@ class _ApplyRole(WorkflowComponent):
         planner_actions: set[str] | None = None,
         react_exhaustion_policy: str = "raise",
         reviewer_verdict_vocabulary: str | None = None,
+        apply_runner=None,
     ) -> None:
         super().__init__()
+        self._apply_runner = apply_runner
         self._kind = kind
         self._actions = actions
         self._refresh_action = refresh_action
@@ -792,6 +794,11 @@ class _ApplyRole(WorkflowComponent):
     async def invoke(
         self, inputs: Input, session: Session, context: ModelContext
     ) -> Output:
+        if self._apply_runner is not None:
+            return await self._apply_runner(self._apply, inputs)
+        return self._apply(inputs)
+
+    def _apply(self, inputs: Input) -> Output:
         state = _state(inputs)
         role = inputs.get("role")
         if not isinstance(role, Mapping):
@@ -1593,7 +1600,9 @@ class NativeEpisodeWorkflow:
         spec: NativeEpisodeSpec,
         nodes: NativeEpisodeNodes,
         role_input_builder: RoleInputBuilder,
+        apply_runner=None,
     ) -> None:
+        self._apply_runner = apply_runner
         self.spec = spec
         self.nodes = nodes
         self._role_input_builder = role_input_builder
@@ -1670,6 +1679,7 @@ class NativeEpisodeWorkflow:
                 # the spec carries, exactly as `planner_actions` above is
                 # None for every stage but the Planner's.
                 self.spec.reviewer_verdict_vocabulary if kind == "review" else None,
+                self._apply_runner,
             ),
             inputs_schema={
                 "state": "${" + query_id + ".state}",
@@ -2034,6 +2044,7 @@ def build_native_episode(
     spec: NativeEpisodeSpec,
     nodes: NativeEpisodeNodes,
     role_input_builder: RoleInputBuilder,
+    apply_runner=None,
 ) -> NativeEpisodeWorkflow:
     """Validate role authority and compose a bounded conditional episode."""
     if not isinstance(spec, NativeEpisodeSpec):
@@ -2154,7 +2165,7 @@ def build_native_episode(
     if len(set(role_ids)) != len(role_ids):
         raise ValueError("episode role ids must be unique")
     return NativeEpisodeWorkflow(
-        spec=spec, nodes=nodes, role_input_builder=role_input_builder
+        spec=spec, nodes=nodes, role_input_builder=role_input_builder, apply_runner=apply_runner
     )
 
 

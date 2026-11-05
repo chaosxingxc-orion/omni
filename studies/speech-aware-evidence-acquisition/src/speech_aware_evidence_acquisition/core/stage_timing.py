@@ -122,14 +122,14 @@ def context(identity):
         _context.reset(token)
 
 
-def completed_interval(stage, started_monotonic, started_unix_ns):
+def completed_interval(stage, started_monotonic, started_unix_ns, *, elapsed_seconds=None):
     """Record a debug wait whose start precedes entry into a worker thread."""
     if not debug_enabled():
         return
     _record(os.environ['SAEA_STAGE_TIMING_PATH'], {
         'schema': 'saea-stage-timing-v1', 'stage': stage,
         'started_monotonic': started_monotonic, 'started_unix_ns': started_unix_ns,
-        'elapsed_seconds': time.perf_counter() - started_monotonic,
+        'elapsed_seconds': (time.perf_counter() - started_monotonic if elapsed_seconds is None else elapsed_seconds),
         'pid': os.getpid(), 'thread': threading.get_ident(), 'status': 'ok',
         **_context.get(), 'detail': 'debug', 'span_id': uuid.uuid4().hex,
         'parent_span_id': _active_span.get(), 'measurements': {}})

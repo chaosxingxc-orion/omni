@@ -12,7 +12,8 @@ importable from exactly ``core.model`` (this package's own ``__init__.py``).
 
 from __future__ import annotations
 
-from ..stage_timing import measure
+from ..stage_timing import measure, debug_enabled
+from contextlib import contextmanager
 
 import base64
 import hashlib
@@ -189,6 +190,7 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         # lock: holding it across a multi-second model request would
         # serialize the very concurrency batching exists to provide.
         self._metering_lock = threading.Lock()
+        self._response_totals_lock = threading.Lock()
         self._calls_used = 0
         self._audio_seconds_used = 0.0
         self._latency_total = 0.0
@@ -200,6 +202,35 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         # record_tool_call below -- so a future tool-using policy (X-series)
         # never has to invent a parallel accounting path.
         self._tool_calls = 0
+
+    @contextmanager
+    def _observed_lock(self, lock, label):
+        if not debug_enabled():
+            with lock:
+                yield
+            return
+        from .. import stage_timing
+        start = time.perf_counter()
+        start_wall = time.time_ns()
+        lock.acquire()
+        acquired = time.perf_counter()
+        acquired_wall = time.time_ns()
+        try:
+            yield
+        finally:
+            released = time.perf_counter()
+            lock.release()
+            # Never acquire the telemetry writer while holding the accounting lock.
+            stage_timing.completed_interval(label + "_wait", start, start_wall,
+                                            elapsed_seconds=acquired - start)
+            stage_timing.completed_interval(label + "_hold", acquired, acquired_wall,
+                                            elapsed_seconds=released - acquired)
+
+    def _observed_admission_lock(self):
+        return self._observed_lock(self._metering_lock, "metering_admission")
+
+    def _observed_response_lock(self):
+        return self._observed_lock(self._response_totals_lock, "metering_response")
 
     @measure("request_total", lambda self, payload: {"sample_id": payload.get("sample_id"), "request_id": payload.get("request_id")})
     def request(self, payload: Mapping[str, object]) -> CoreResponse:
@@ -375,7 +406,12 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
         # sibling read through the durable record_usage is ONE atomic section
         # under self._metering_lock (see __init__ for the race this closes);
         # order and messages inside are byte-identical to the pre-lock code.
-        with self._metering_lock:
+        # A live check does not lock the independent engine process. Perform it
+        # before the accounting lock; the transport performs its own full
+        # identity check again before POST. A later failure retains the charge.
+        if self._session_check is not None:
+            self._session_check()
+        with self._observed_admission_lock():
             sibling_calls, sibling_audio_seconds = self._store.prior_actual_usage(
                 self._plan.run_id, exclude_attempt_id=self._attempt_handle.attempt_id
             )
@@ -404,8 +440,6 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
             # amendment retired the first-slice caps), so a session valid at
             # construction time proves nothing about who is listening ten calls
             # later.
-            if self._session_check is not None:
-                self._session_check()
             request_id = str(payload["request_id"])
             request_bytes = _canonical(payload)
             request_sha256 = hashlib.sha256(request_bytes).hexdigest()
@@ -552,8 +586,9 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
             )
         # Post-transport aggregate counters: += on plain ints/floats races
         # under worker-thread concurrency exactly like the budget section;
-        # same lock, held only for the increments.
-        with self._metering_lock:
+        # Separate counters never participate in admission or durable usage.
+        # Their lock cannot wait behind the expensive admission session check.
+        with self._observed_response_lock():
             if replayed:
                 self._replay_totals['calls'] += 1
                 self._replay_totals['audio_seconds'] += float(audio_seconds)
@@ -612,6 +647,12 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
             self._tool_calls += count
 
     def cost_summary(self) -> dict[str, object]:
+        # Stable lock order: admission before response counters; request paths
+        # never hold them simultaneously.
+        with self._metering_lock, self._response_totals_lock:
+            return self._cost_summary_locked()
+
+    def _cost_summary_locked(self) -> dict[str, object]:
         return {
             **({"replayed_predecessor_cost": dict(self._replay_totals),
                 "native_replay_source": self._contact_replay.source_binding()} if self._contact_replay is not None else {}),

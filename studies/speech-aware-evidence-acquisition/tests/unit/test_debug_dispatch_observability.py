@@ -132,3 +132,90 @@ def test_ordinary_runner_scopes_live_maps_without_retaining_connections(sink,mon
     else:run()
     assert counts=={'read':2,'decode':1}
     assert len(observed)==1 and not observed[0].maps and not observed[0].connections
+
+
+def test_contact_scoped_slot_allows_other_ready_sample_while_first_validates(monkeypatch):
+    import threading
+    entered=threading.Event();second=threading.Event();order=[]
+    async def episode(state,contact,session):
+        def call(slot):
+            order.append((state.sample_id,slot))
+            if state.sample_id=='s2':second.set()
+            return 'ok'
+        await contact(call)
+        if state.sample_id=='s1':
+            entered.set()
+            while not second.is_set():
+                await asyncio.sleep(0.001)
+    def run():
+        return runner.execute_speech_agent_workflows([SimpleNamespace(sample_id='s1'),SimpleNamespace(sample_id='s2')],
+            episode_invoker=episode,branch_count=1,slot_count=1,queue_depth=2,
+            workflow_timeout_seconds=10,release_slot_after_contact=True)
+    from concurrent.futures import ThreadPoolExecutor
+    pool=ThreadPoolExecutor(max_workers=1)
+    try:
+        future=pool.submit(run)
+        assert entered.wait(3)
+        assert second.wait(3)
+        future.result(timeout=5)
+    finally:
+        second.set();pool.shutdown(wait=True)
+    assert sorted(x[0] for x in order)==['s1','s2']
+
+
+def test_repeated_cancel_drains_actual_worker_before_slot_released(monkeypatch):
+    import threading
+    entered=threading.Event(); release=threading.Event(); second=threading.Event(); checks=[]
+    async def episode(state,contact,session):
+        if state.sample_id=='s1':
+            def blocked(slot):entered.set();release.wait(5);return 'first'
+            task=asyncio.create_task(contact(blocked))
+            while not entered.is_set():await asyncio.sleep(.001)
+            task.cancel();await asyncio.sleep(.01);task.cancel();await asyncio.sleep(.02)
+            checks.append((task.done(),second.is_set()))
+            release.set()
+            with pytest.raises(asyncio.CancelledError):await task
+        else:
+            while not entered.is_set():
+                await asyncio.sleep(.001)
+            await contact(lambda slot:second.set())
+    try:
+        runner.execute_speech_agent_workflows([SimpleNamespace(sample_id='s1'),SimpleNamespace(sample_id='s2')],episode_invoker=episode,branch_count=1,slot_count=1,queue_depth=2,workflow_timeout_seconds=10,release_slot_after_contact=True)
+    finally:release.set()
+    assert checks==[(False,False)] and second.is_set()
+
+
+def test_ready_waiting_for_model_slot_cancel_never_dispatches():
+    import threading
+    from speech_aware_evidence_acquisition.rails.runner import _SlotFillScheduler
+    from speech_aware_evidence_acquisition.rails.dispatch_slot_fill import DispatchSlotFill
+    entered, release, prepared, illegal_send = (threading.Event() for _ in range(4))
+    scheduler = _SlotFillScheduler(DispatchSlotFill(role_input_offload=True,
+        prepare_workers=1, model_inflight=1, ready_request=True))
+    async def episode(state, contact, session):
+        if state.sample_id == 's1':
+            def blocking(slot):
+                entered.set()
+                if not release.wait(8):
+                    raise TimeoutError('test send not released')
+            await contact(blocking)
+        else:
+            while not entered.is_set():
+                await asyncio.sleep(.001)
+            ready = await scheduler.ready_request_runner(lambda: prepared.set() or object())
+            task = asyncio.create_task(contact(lambda slot: illegal_send.set()))
+            await asyncio.sleep(.03)
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert ready is not None and not illegal_send.is_set()
+            release.set()
+    try:
+        runner.execute_speech_agent_workflows([SimpleNamespace(sample_id='s1'),
+            SimpleNamespace(sample_id='s2')], episode_invoker=episode, branch_count=1,
+            slot_count=1, queue_depth=2, workflow_timeout_seconds=10,
+            release_slot_after_contact=True)
+        assert prepared.is_set() and not illegal_send.is_set()
+    finally:
+        release.set()
+        scheduler.close()

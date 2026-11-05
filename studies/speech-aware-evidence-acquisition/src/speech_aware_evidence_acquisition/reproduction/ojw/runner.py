@@ -480,6 +480,7 @@ def execute_speech_agent_workflows(
     admission_stop_policy: str = "drain_admitted",
     admission_stop_observed: Callable[[Mapping[str, object]], None] | None = None,
     admission_stop_summary: Callable[[Mapping[str, object]], None] | None = None,
+    release_slot_after_contact: bool = False,
 ) -> list[object]:
     """Run speech Agent workflows on one openJiuwen event loop.
 
@@ -574,6 +575,11 @@ def execute_speech_agent_workflows(
         node_batch_order = tuple(node_batch_order)
     elif node_batch_size is not None or node_batch_timing_sink is not None:
         raise ValueError("node batch settings require a declared node order")
+
+    if type(release_slot_after_contact) is not bool:
+        raise ValueError("release_slot_after_contact must be a boolean")
+    if release_slot_after_contact and (node_pipeline_order is not None or node_batch_order is not None or prefix_slot_bindings is not None):
+        raise ValueError("contact-scoped slots require ordinary scheduling")
 
     if sample_timing_sink is not None and not callable(sample_timing_sink):
         raise TypeError("sample timing sink must be callable")
@@ -706,6 +712,7 @@ def execute_speech_agent_workflows(
                 blocking_contact: Callable[[int], ContactResult],
                 *, prefix_family: str | None = None, contact_kind: str = "model",
             ) -> ContactResult:
+                nonlocal primary_slot_id
                 with operational_timing.context(_dispatch_identity(state)):
                     async with _observed_lock(contact_lock, "dispatch_contact_lock_wait"):
                         if node_pipeline is not None:
@@ -751,11 +758,22 @@ def execute_speech_agent_workflows(
                             # Cancelling the await does not stop the synchronous
                             # worker. Keep the trajectory lock and primary slot
                             # until that worker has genuinely settled.
-                            await asyncio.gather(worker, return_exceptions=True)
+                            while not worker.done():
+                                try:
+                                    await asyncio.shield(worker)
+                                except asyncio.CancelledError:
+                                    continue
+                                except BaseException:
+                                    break
+                            if not worker.cancelled():
+                                worker.exception()
                             raise
                         finally:
                             if worker.done():
                                 worker_tasks.discard(worker)
+                                if release_slot_after_contact and primary_slot_id is not None:
+                                    slots.put_nowait(primary_slot_id)
+                                    primary_slot_id = None
 
             async def run_prepare(blocking_prepare, *, prefix_family):
                 async with contact_lock:

@@ -56,7 +56,7 @@ from .errors import RailsError
 
 DISPATCH_SLOT_FILL_KEY = "dispatch"
 DISPATCH_SLOT_FILL_SCHEMA = "saea-dispatch-slot-fill-v1"
-_SWITCHES = ("recall_prefetch", "role_input_offload", "gc_freeze")
+_SWITCHES = ("recall_prefetch", "role_input_offload", "gc_freeze", "ready_request")
 
 
 class DispatchSlotFillError(RailsError):
@@ -68,12 +68,19 @@ class DispatchSlotFill:
     recall_prefetch: bool = False
     role_input_offload: bool = False
     gc_freeze: bool = False
+    ready_request: bool = False
+    prepare_workers: int = 0
+    validation_workers: int = 0
+    admitted_trajectories: int = 0
+    model_inflight: int = 0
 
     def as_json(self) -> dict[str, object]:
-        return {
-            "schema": DISPATCH_SLOT_FILL_SCHEMA,
-            **{name: getattr(self, name) for name in _SWITCHES},
-        }
+        result = {"schema": DISPATCH_SLOT_FILL_SCHEMA,
+                  **{name: getattr(self, name) for name in _SWITCHES if name != "ready_request" or self.ready_request}}
+        result.update({name: getattr(self, name) for name in
+                       ("prepare_workers", "validation_workers", "admitted_trajectories", "model_inflight")
+                       if getattr(self, name)})
+        return result
 
 
 def parse_dispatch_slot_fill(values: Mapping[str, object]) -> DispatchSlotFill | None:
@@ -89,7 +96,8 @@ def parse_dispatch_slot_fill(values: Mapping[str, object]) -> DispatchSlotFill |
         return None
     if not isinstance(raw, Mapping):
         raise DispatchSlotFillError("dispatch must be a mapping")
-    allowed = {"schema", *_SWITCHES}
+    numeric = ("prepare_workers", "validation_workers", "admitted_trajectories", "model_inflight")
+    allowed = {"schema", *_SWITCHES, *numeric}
     unknown = sorted(set(raw) - allowed)
     if unknown:
         raise DispatchSlotFillError(f"dispatch declares unknown key(s) {unknown}")
@@ -103,9 +111,22 @@ def parse_dispatch_slot_fill(values: Mapping[str, object]) -> DispatchSlotFill |
         if not isinstance(value, bool):
             raise DispatchSlotFillError(f"dispatch.{name} must be a boolean")
         switches[name] = value
-    if not any(switches.values()):
+    limits = {}
+    for name in numeric:
+        if name in raw:
+            value = raw[name]
+            if type(value) is not int or not 1 <= value <= 256:
+                raise DispatchSlotFillError(f"dispatch.{name} must be an integer in 1..256")
+            limits[name] = value
+    if not any(switches.values()) and not limits:
         raise DispatchSlotFillError("dispatch declares no switch; omit the key instead")
-    return DispatchSlotFill(**switches)
+    if limits.get("prepare_workers") and not switches["role_input_offload"]:
+        raise DispatchSlotFillError("prepare_workers requires role_input_offload")
+    if switches["ready_request"] and not switches["role_input_offload"]:
+        raise DispatchSlotFillError("ready_request requires role_input_offload")
+    if switches["ready_request"] and (not limits.get("prepare_workers") or not limits.get("model_inflight")):
+        raise DispatchSlotFillError("ready_request requires prepare_workers and model_inflight")
+    return DispatchSlotFill(**switches, **limits)
 
 
 class NativePrefixSlotsError(RailsError):

@@ -1325,7 +1325,7 @@ def build_supply_for_phase(
             )
         return multidim_recall(snapshot, dict(query_record), lookup, specs[phase].k)
 
-    def prefetch_recall(sample_id: str, submit: Callable[..., object]) -> int:
+    def prefetch_recall(sample_id: str, submit: Callable[..., object], max_pending: int = 256) -> int:
         """Submit this row's later-phase recall(s) through ``submit``
         (``Executor.submit``-shaped). Returns how many were submitted."""
 
@@ -1336,9 +1336,12 @@ def build_supply_for_phase(
                 continue
             key = (phase, sample_id)
             with prefetch_lock:
-                if key in recall_prefetches:
+                if key in recall_prefetches or len(recall_prefetches) >= max_pending:
                     continue
-                recall_prefetches[key] = submit(_recall_now, phase, query_record)
+                future = submit(_recall_now, phase, query_record)
+                if future is None:
+                    continue
+                recall_prefetches[key] = future
             submitted += 1
         return submitted
 

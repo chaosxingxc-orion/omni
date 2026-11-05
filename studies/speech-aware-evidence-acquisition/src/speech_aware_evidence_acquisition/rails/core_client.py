@@ -1915,6 +1915,23 @@ class FrozenCoreClient:
             self._prepared_requests[token] = raw
         return PreparedCoreRequest(raw, token)
 
+    def discard_prepared(self, request: PreparedCoreRequest) -> bool:
+        """Discard an owned, unsent template; never changes journal or usage.
+
+        False means the token is absent in this client (already consumed,
+        discarded, or foreign). A present token with changed bytes is refused.
+        """
+        if not isinstance(request, PreparedCoreRequest):
+            raise FrozenCoreClientError("expected a prepared core request")
+        with self._state_lock:
+            raw = self._prepared_requests.get(request.token)
+            if raw is None:
+                return False
+            if raw != request.payload_bytes:
+                raise FrozenCoreClientError("prepared request is foreign or changed")
+            del self._prepared_requests[request.token]
+            return True
+
     def complete_prepared(
         self, request: PreparedCoreRequest, *, id_slot: int | None = None,
     ) -> str:

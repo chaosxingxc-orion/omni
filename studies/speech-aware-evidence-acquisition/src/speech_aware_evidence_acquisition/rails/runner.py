@@ -36,7 +36,7 @@ from ..core.rollout_trace import cost_records as _rollout_cost_records
 from ..core.rollout_trace import node_of as _rollout_node_of
 from ..core.rollout_trace import record_contact as _rollout_record_contact
 from ..core.rollout_trace import supplied_values_from_payload as _rollout_supplied_values
-from ..core.tracing import TraceBuffer, set_current_trace_buffer
+from ..core.tracing import TraceBuffer, get_current_trace_buffer, set_current_trace_buffer
 from .consumption import ConsumptionTrace
 from .core_client import CoreClient, CoreCompletion, FrozenCoreClient, PreparedCoreRequest
 from .errors import RailsError
@@ -2617,7 +2617,7 @@ async def _invoke_native_role_episode(
     *, state, run_contact, session, binding, adapter, core_client, snapshot,
     snapshot_sha256, protected_material, base_decoding_params, run_id,
     knowledge_value_renderer, run_local=None, system_policy_decision=None,
-    role_input_runner=None,
+    role_input_runner=None, validation_runner=None, ready_request_runner=None,
 ):
     """Collect one public role graph through the shared speech request custody.
 
@@ -6013,7 +6013,7 @@ async def _invoke_native_role_episode(
             speech_binding_value, base_messages=tuple(messages), core_kwargs=kwargs
         )
 
-    def fit_contact_to_slot(request, prepared):
+    def fit_contact_to_slot(request, prepared, prepared_owner=None):
         """Budget the REALISED request against the LIVE slot before sending it.
 
         Returns the contact to dispatch -- the one handed in when it already
@@ -6050,6 +6050,8 @@ async def _invoke_native_role_episode(
                 candidate = adapter_request.prepare(
                     request, binding_override=_narrowed_binding(source_binding, view)
                 )
+                if prepared_owner is not None:
+                    prepared_owner.append(candidate.request)
                 cache[view_key] = (
                     candidate,
                     int(context_fit_budget.token_counter(candidate.body_bytes)),
@@ -6099,7 +6101,7 @@ async def _invoke_native_role_episode(
         )
 
     async def metered(request):
-        def contact(slot_id):
+        def setup():
             if state.scheduled_contacts >= config.max_contacts:
                 raise RailsRunnerError("native graph exceeds its registered contact ceiling")
             if request.context.agent_contact_id in state.seen_contact_ids:
@@ -6109,12 +6111,25 @@ async def _invoke_native_role_episode(
             state.trace_buffers[(state.scheduled_contacts, 0)] = trace
             rollout_contact_index = state.scheduled_contacts
             state.scheduled_contacts += 1
-            visits[request.role_id]["slot_id"] = slot_id
+            return trace, rollout_contact_index
+
+        trace = None
+        rollout_contact_index = None
+
+        owned_prepared = []
+        dispatch_entered = False
+
+        def prepare():
+            prior_trace = get_current_trace_buffer()
+            if trace is None:
+                raise RailsRunnerError("ready request has no contact custody")
             set_current_trace_buffer(trace)
-            prepared = None
             try:
                 prepared = adapter_request.prepare(request)
-                prepared, compaction = fit_contact_to_slot(request, prepared)
+                if ready_request_runner is not None:
+                    owned_prepared.append(prepared.request)
+                prepared, compaction = fit_contact_to_slot(
+                    request, prepared, owned_prepared if ready_request_runner is not None else None)
                 if context_fit_budget is not None:
                     context_fit_records.append({
                         "contact_id": request.context.agent_contact_id,
@@ -6139,8 +6154,24 @@ async def _invoke_native_role_episode(
                             tokens_after=fit_count,
                             limit_tokens=context_fit_budget.prompt_limit_tokens,
                         )
+                return prepared, compaction
+            finally:
+                set_current_trace_buffer(prior_trace)
+
+        def contact(slot_id, ready=None):
+            nonlocal trace, rollout_contact_index, dispatch_entered
+            if ready_request_runner is None:
+                trace, rollout_contact_index = setup()
+            visits[request.role_id]["slot_id"] = slot_id
+            set_current_trace_buffer(trace)
+            prepared = None
+            try:
+                prepared, compaction = prepare() if ready is None else ready
+                set_current_trace_buffer(trace)
                 try:
-                    completion = adapter_request.dispatch(prepared)
+                    dispatch_entered = True
+                    completion = (adapter_request.dispatch(prepared) if ready_request_runner is None
+                                  else adapter_request.dispatch(prepared, id_slot=slot_id))
                 except FrozenCoreContextSizeError as error:
                     # E20: the fork refused the request for width after the
                     # harness budgeted it as fitting. Under the armed policy
@@ -6181,7 +6212,26 @@ async def _invoke_native_role_episode(
             finally:
                 set_current_trace_buffer(None)
         options = {"prefix_family": request.role_id} if binding.prefix_slots is not None or binding.node_batch is not None or binding.node_pipeline is not None else {}
-        return await run_contact(contact, **options)
+        if ready_request_runner is None:
+            return await run_contact(contact, **options)
+        trace, rollout_contact_index = setup()
+        # Routing metadata is rewritten atomically by the one-use client
+        # at dispatch; vLLM drops it from the wire body.
+        visits[request.role_id]["slot_id"] = 0
+        try:
+            ready = await ready_request_runner(prepare)
+            return await run_contact(lambda slot_id: contact(slot_id, ready), **options)
+        except BaseException as error:
+            if not dispatch_entered:
+                trace.emit("ORG", f"{request.context.agent_contact_id}/ready-disposition", {
+                    "org_ready_contact_id": request.context.agent_contact_id,
+                    "org_ready_state": "unsent", "org_ready_reason": type(error).__name__,
+                })
+                trace_native_contact(request, None, None, trace, None, rollout_contact_index, error=error)
+            raise
+        finally:
+            for item in owned_prepared:
+                core_client.discard_prepared(item)
 
     def reject_tool_batch(phase_id, assistant_message):
         from ..reproduction.ojw.native_roles import restore_native_assistant_wire_message
@@ -6752,6 +6802,7 @@ async def _invoke_native_role_episode(
                 intent_slot_pipeline_json=config.intent_slot_pipeline_json,
             ),
             nodes=NativeEpisodeNodes(**nodes),
+            apply_runner=validation_runner,
             role_input_builder=(
                 role_input if role_input_runner is None
                 # Owner decision 159 (``role_input_offload``): the SAME
@@ -6772,7 +6823,10 @@ async def _invoke_native_role_episode(
                     "inventory": v["evidence_inventory"], "mappings": v["evidence_mappings"],
                     "response_text_sha256": v["evidence_response_sha256"]}
                     for v in visits.values() if v.get("evidence_mappings") is not None]
-            validate_receipt(receipt)
+            if validation_runner is None:
+                validate_receipt(receipt)
+            else:
+                await validation_runner(validate_receipt, receipt)
         from .native_episode_receipt import (
             validate_native_episode_delivery_receipt, validate_native_episode_finite_path,
             validate_native_episode_terminal_policy,
@@ -7539,9 +7593,16 @@ class _SlotFillScheduler:
             if switches.recall_prefetch else None
         )
         self._role_input = (
-            ThreadPoolExecutor(max_workers=1, thread_name_prefix="saea-slotfill-role-input")
+            ThreadPoolExecutor(max_workers=switches.prepare_workers or 1, thread_name_prefix="saea-slotfill-role-input")
             if switches.role_input_offload else None
         )
+        self._validation = (
+            ThreadPoolExecutor(max_workers=switches.validation_workers, thread_name_prefix="saea-role-validation")
+            if switches.validation_workers else None
+        )
+        import asyncio
+        self._prepare_capacity = asyncio.Semaphore(switches.prepare_workers or 1)
+        self._validation_capacity = asyncio.Semaphore(switches.validation_workers or 1)
         self._froze = False
         if switches.gc_freeze:
             import gc
@@ -7550,6 +7611,19 @@ class _SlotFillScheduler:
             gc.freeze()
             self._froze = True
         self.prefetched_rows = 0
+        import threading
+        self._recall_capacity = threading.BoundedSemaphore(switches.prepare_workers or 1)
+
+    def _submit_recall(self, fn, *args):
+        if not self._recall_capacity.acquire(blocking=False):
+            return None
+        try:
+            future = self._recall.submit(fn, *args)
+        except BaseException:
+            self._recall_capacity.release()
+            raise
+        future.add_done_callback(lambda _: self._recall_capacity.release())
+        return future
 
     @classmethod
     def open(cls, switches):
@@ -7565,28 +7639,55 @@ class _SlotFillScheduler:
         if self._recall is None:
             return
         forward = getattr(binding.supply_for_phase, "prefetch_recall", None)
-        if callable(forward) and forward(sample_id, self._recall.submit):
+        if callable(forward) and forward(sample_id, self._submit_recall, self.switches.admitted_trajectories or 256):
             self.prefetched_rows += 1
+
+    @staticmethod
+    async def _run_bounded(executor, capacity, fn, *args):
+        import asyncio
+        import contextvars
+        async with capacity:
+            context = contextvars.copy_context()
+            future = asyncio.get_running_loop().run_in_executor(executor, context.run, fn, *args)
+            try:
+                return await asyncio.shield(future)
+            except asyncio.CancelledError:
+                while not future.done():
+                    try:
+                        await asyncio.shield(future)
+                    except asyncio.CancelledError:
+                        continue
+                    except BaseException:
+                        break
+                if not future.cancelled():
+                    future.exception()
+                raise
 
     @property
     def role_input_runner(self):
         if self._role_input is None:
             return None
-        executor = self._role_input
-
         async def run(builder, phase_id, episode_state):
-            import asyncio
-            import contextvars
+            return await self._run_bounded(self._role_input, self._prepare_capacity,
+                                           builder, phase_id, episode_state)
+        return run
 
-            context = contextvars.copy_context()
-            return await asyncio.get_running_loop().run_in_executor(
-                executor, context.run, builder, phase_id, episode_state
-            )
+    @property
+    def ready_request_runner(self):
+        async def run(fn):
+            return await self._run_bounded(self._role_input, self._prepare_capacity, fn)
+        return run
 
+    @property
+    def validation_runner(self):
+        if self._validation is None:
+            return None
+        async def run(fn, inputs):
+            return await self._run_bounded(self._validation, self._validation_capacity, fn, inputs)
         return run
 
     def close(self) -> None:
-        for executor in (self._recall, self._role_input):
+        for executor in (self._recall, self._role_input, self._validation):
             if executor is not None:
                 executor.shutdown(wait=True, cancel_futures=True)
         if self._froze:
@@ -7724,7 +7825,30 @@ def _run_agent_openjiuwen(
         # Owner decision 159 (rails.dispatch_slot_fill): scheduling only.
         # ``None`` -- every committed configuration -- leaves every line below
         # exactly as it was; see _SlotFillScheduler for what each switch does.
-        slot_fill = _SlotFillScheduler.open(native_episode_binding.slot_fill)
+        switches = native_episode_binding.slot_fill
+        if switches is not None and switches.model_inflight:
+            transport = getattr(core_client, "_rollout_transport", None)
+            if getattr(transport, "instance_count", 1) != 1:
+                raise RailsRunnerError("contact-scoped slots require a single serving instance")
+            if switches.ready_request:
+                from ..core.model.vllm_transport import VllmServerTransport
+                from ..core.model.vllm_router_transport import VllmRouterTransport
+                if not (type(transport) is VllmServerTransport or
+                        (type(transport) is VllmRouterTransport and
+                         len(transport._transports) == 1 and
+                         type(transport._transports[0]) is VllmServerTransport)):
+                    raise RailsRunnerError("ready_request requires a single vLLM transport")
+            scheduling_options["release_slot_after_contact"] = True
+        if switches is not None and (switches.admitted_trajectories or switches.model_inflight):
+            if native_episode_binding.node_pipeline is not None or native_episode_binding.node_batch is not None or prefix_slots is not None:
+                raise RailsRunnerError("independent concurrency requires ordinary native scheduling")
+            if switches.model_inflight > slot_count:
+                raise RailsRunnerError("model_inflight exceeds admitted serving width")
+            slot_count = switches.model_inflight or slot_count
+            queue_depth = switches.admitted_trajectories or queue_depth
+            if queue_depth < slot_count:
+                raise RailsRunnerError("admitted_trajectories must cover model_inflight")
+        slot_fill = _SlotFillScheduler.open(switches)
 
         async def invoke_episode(state, run_contact, session, *, run_local=None, run_prepare=None):
             selected_binding = native_episode_binding
@@ -7753,6 +7877,9 @@ def _run_agent_openjiuwen(
                 snapshot_sha256=snapshot_sha256, protected_material=protected_material,
                 base_decoding_params=base_decoding_params, run_id=run_id,
                 knowledge_value_renderer=knowledge_value_renderer,
+                validation_runner=None if slot_fill is None else slot_fill.validation_runner,
+                ready_request_runner=(None if slot_fill is None or not switches.ready_request
+                                      else slot_fill.ready_request_runner),
                 role_input_runner=(
                     (lambda builder, phase_id, episode_state: run_prepare(
                         lambda: builder(phase_id, episode_state), prefix_family=phase_id,
