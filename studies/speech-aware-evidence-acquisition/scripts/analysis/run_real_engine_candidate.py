@@ -99,7 +99,7 @@ def recovery_options(cell):
                if cell.checkpoint_compatibility is not None else {})}
 
 
-def run(repo,data,name,out):
+def run(repo,data,name,out, runtime_config=None):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.atomic_file import publish_new
     from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
@@ -123,7 +123,7 @@ def run(repo,data,name,out):
     def save(name,doc):publish_new(out/name,(json.dumps(doc,indent=2)+'\n').encode())
     save('started.json',{'pid':os.getpid(),'time':time.time(),'study_commit':commit,'candidate':name,'profile':spec['profile'],'rows':rows})
     try:
-        runtime=measured_stage('runtime_build',spec,build_flight_runtime,repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],baseline=cell.document['baseline_fragment'],experiment=name,run_id=cell.run_id,attempt_id=cell.attempt_id,runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json', **recovery_options(cell))
+        runtime=measured_stage('runtime_build',spec,build_flight_runtime,repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],baseline=cell.document['baseline_fragment'],experiment=name,run_id=cell.run_id,attempt_id=cell.attempt_id,runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json',runtime_config_path=runtime_config, **recovery_options(cell))
         measured_stage('prepared_artifact_verification',spec,assert_prepared_artifacts_current,[runtime])
         started=time.monotonic()
         def released(flight):
@@ -143,5 +143,6 @@ def run(repo,data,name,out):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__)
     for key in ('repo','data','out'):p.add_argument('--'+key,type=Path,required=True)
+    p.add_argument('--runtime-config',type=Path)
     p.add_argument('--candidate',required=True);a=p.parse_args()
-    print(json.dumps(run(a.repo,a.data,a.candidate,a.out)))
+    print(json.dumps(run(a.repo,a.data,a.candidate,a.out,a.runtime_config)))

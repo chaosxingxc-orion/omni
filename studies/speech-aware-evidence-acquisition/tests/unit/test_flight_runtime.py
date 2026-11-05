@@ -3095,6 +3095,23 @@ def test_workers_one_keeps_the_serial_path_reproducible(tmp_path):
     assert runtime._client.max_in_flight == 0  # the client was never called directly
 
 
+def test_enabled_request_pipeline_is_used_at_width_one(tmp_path):
+    runtime = _concurrent_runtime(
+        tmp_path,
+        client_factory=_PreparedConcurrencyClient,
+        config_kwargs={
+            "arm": "bare-core", "policy": "fixed",
+            "experiment_extra": {"request_pipeline": {
+                "enabled": True, "prepare_workers": 1,
+                "validation_workers": 1, "queue_depth": 1,
+            }},
+        },
+    )
+    runtime.preflight(); runtime.preprocess(); runtime.serve()
+    receipt = runtime.run_phases(workers=1)
+    assert receipt["dispatch"]["dispatch"] == "prepared-pipeline"
+
+
 def test_concurrent_dispatch_refuses_a_bad_worker_count(tmp_path):
     runtime = _concurrent_runtime(tmp_path)
     runtime.preflight()

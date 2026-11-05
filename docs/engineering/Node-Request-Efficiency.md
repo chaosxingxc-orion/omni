@@ -76,6 +76,9 @@ model、validation 三段重叠墙钟和实际在途数；上线前必须在真�
 要求固定 schema，并可由 `SAEA_RUNTIME_CONFIG_SHA256` 绑定原始文件摘要。启动器
 通过 `runtime_config_path` 显式传入；摘要校验在 adapter、session、FIT 和模型请求
 之前执行。这样调度参数真正来自外部配置，且不会把运行态参数悄悄混入科学 fragment。
+候选启动器 `run_real_engine_candidate.py` 已增加 `--runtime-config`，并将该参数
+传入统一 factory；即使 dispatch 宽度暂时降到 1，显式开启的流水线仍保持生效，
+不会静默退回历史串行路径。
 
 三项进入同一固定Docker基座，外部配置选择workers、队列容量、并发与normal/debug模式，启动入口保持脚本化。纯Python校验不因使用线程便自动获得多核提速，须测真实收益。
 

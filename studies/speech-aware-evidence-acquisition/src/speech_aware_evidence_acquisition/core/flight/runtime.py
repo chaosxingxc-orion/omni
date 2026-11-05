@@ -7913,7 +7913,7 @@ class FlightRuntime:
         resolved = (
             self._flight_width() if workers is None else int(workers)
         )
-        if resolved > 1:
+        if resolved > 1 or self._request_pipeline_options(resolved).get("enabled"):
             rows, dispatch = self._dispatch_concurrent(client, workers=resolved)
             kind = "direct-speech-feature-packets" if packets else "direct"
             return rows, len(rows), kind, dispatch
