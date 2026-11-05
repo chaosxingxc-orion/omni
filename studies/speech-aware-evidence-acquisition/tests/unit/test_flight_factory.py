@@ -259,6 +259,30 @@ def test_runtime_view_population_is_exact_and_hashes_selected_media(tmp_path):
         load_runtime_view(doc, tmp_path, sample_ids=["absent"])
 
 
+def test_runtime_view_reuses_verified_media_hash_until_file_identity_changes(tmp_path, monkeypatch):
+    import speech_aware_evidence_acquisition.rails.adapters.runtime_view as module
+
+    doc = view(tmp_path)
+    original = module.hashlib.file_digest
+    calls = 0
+
+    def counting_digest(handle, algorithm):
+        nonlocal calls
+        calls += 1
+        return original(handle, algorithm)
+
+    monkeypatch.setattr(module.hashlib, "file_digest", counting_digest)
+    load_runtime_view(doc, tmp_path)
+    load_runtime_view(doc, tmp_path)
+    assert calls == 1
+
+    path = tmp_path / "media" / "one.wav"
+    path.write_bytes(b"changed media")
+    doc["items"][0]["audio_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    load_runtime_view(doc, tmp_path)
+    assert calls == 2
+
+
 def test_roster_samples_preserves_legacy_devel_default_without_split_id(tmp_path):
     from speech_aware_evidence_acquisition.rails.adapters.slurp_runtime import roster_samples
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Mapping, Sequence
@@ -16,6 +17,14 @@ _MEDIA_FIELDS = {
     "sample_id", "media_relpath", "audio_sha256", "audio_seconds",
     "sample_rate_hz", "packet_id",
 }
+
+# Runtime views are immutable, label-free manifests shared by many flights.
+# Keep verified media identities in this process so a second experiment does
+# not reread and rehash the same audio bytes.  The stat fingerprint and the
+# manifest's expected digest are both part of the key; any replacement or
+# manifest edit naturally takes the full hash path again.
+_VERIFIED_MEDIA_CACHE: dict[tuple[object, ...], Mapping[str, object]] = {}
+_VERIFIED_MEDIA_CACHE_LOCK = threading.Lock()
 
 
 def registered_population_ids(
@@ -89,11 +98,28 @@ def load_runtime_view(
 
     def verify(item):
         path = root / item["media_relpath"]
+        try:
+            stat = path.stat()
+        except OSError as error:
+            raise RuntimeViewError(
+                f"runtime view media is unreadable for {item['sample_id']}: {error}"
+            ) from error
+        cache_key = (
+            str(root), item["sample_id"], item["media_relpath"],
+            item["audio_sha256"], stat.st_ino, stat.st_size, stat.st_mtime_ns,
+        )
+        with _VERIFIED_MEDIA_CACHE_LOCK:
+            cached = _VERIFIED_MEDIA_CACHE.get(cache_key)
+        if cached is not None:
+            return dict(cached)
         with path.open("rb") as handle:
             digest = hashlib.file_digest(handle, "sha256").hexdigest()
         if digest != item["audio_sha256"]:
             raise RuntimeViewError(f"runtime view media hash differs for {item['sample_id']}")
-        return dict(item)
+        verified = dict(item)
+        with _VERIFIED_MEDIA_CACHE_LOCK:
+            _VERIFIED_MEDIA_CACHE[cache_key] = verified
+        return verified
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         verified = tuple(pool.map(verify, selected))
