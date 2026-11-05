@@ -102,7 +102,8 @@ def run(repo,data,name,out):
     assert_execution_environment()
     commit=require_clean_study_repo(repo)
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned output required; inspect existing attempts before resume')
-    spec=json.loads((repo/'docs/readiness'/name/'candidate.json').read_bytes())
+    from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
+    spec=json.loads(resolve_asset(repo, f'docs/readiness/{name}/candidate.json').read_bytes())
     from registered_workload import validate_workload, assert_execution_binding
     rows=validate_workload(repo,data,name,spec)
     assert_execution_binding(spec, repo=repo)

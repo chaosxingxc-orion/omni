@@ -30,6 +30,7 @@ class PairWorkload:
     LABEL = 'GEPA configured parent child comparison'
     PROGRAM = 'One shared P then verified current parent, mutation-derived child and original lock Solver.'
     MAX_ROWS = 80
+    MAX_ADMITTED_LEVEL = 96
     DATASET = observation.DATASET
 
     def __init__(self, config):
@@ -45,7 +46,7 @@ class PairWorkload:
                 or any(not isinstance(s,str) or not s.startswith('slurp:train:') for s in ids)):
             raise ValueError('bounded unique ordered TRAIN samples required')
         execution=config['execution']
-        if set(execution)!={'admitted_level'} or type(execution['admitted_level']) is not int or not 1<=execution['admitted_level']<=96:
+        if set(execution)!={'admitted_level'} or type(execution['admitted_level']) is not int or not 1<=execution['admitted_level']<=self.MAX_ADMITTED_LEVEL:
             raise ValueError('explicit bounded client width required')
         self.config=copy.deepcopy(config);self.NAME=config['name'];self.RUN=config['run_id']
         self.context_adaptation()
@@ -79,9 +80,9 @@ class PairWorkload:
             raise ValueError('exact paired deployment binding required')
         for k in ('model_fragment','service_session','profile'):
             if not re.fullmatch('[A-Za-z0-9][A-Za-z0-9_-]*',binding[k]):raise ValueError('safe deployment identity required')
-        model=read(confined(repo,'configs/model/'+binding['model_fragment']+'.json'))
-        profile=read(confined(repo,'configs/deployment/'+binding['profile']+'.json'))
-        receipt=read(confined(repo/'docs',binding['runtime_receipt']))
+        model=read(resolve_asset(repo,'configs/model/'+binding['model_fragment']+'.json'))
+        profile=read(resolve_asset(repo,'configs/deployment/'+binding['profile']+'.json'))
+        receipt=read(resolve_asset(repo,'docs/'+binding['runtime_receipt']))
         if model['runtime_receipt']!=binding['runtime_receipt'] or not profile.get('instances'):
             raise ValueError('model/profile runtime differs')
         if [x['name'] for x in profile['instances']] != [x['instance_id'] for x in receipt['deployment']['instances']]:
@@ -91,7 +92,7 @@ class PairWorkload:
         if self.config['execution']['admitted_level']>profile['admitted_level']:
             raise ValueError('paired width exceeds configured lane admission')
         if profile['model_fragment']!=binding['model_fragment']:
-            deployed=read(confined(repo,'configs/model/'+profile['model_fragment']+'.json'))
+            deployed=read(resolve_asset(repo,'configs/model/'+profile['model_fragment']+'.json'))
             operational={'geometry_basis','decoding_params','reasoning_budget_tokens','answer_reserve_tokens','enable_thinking'}
             if {k:v for k,v in model.items() if k not in operational}!={k:v for k,v in deployed.items() if k not in operational}:
                 raise ValueError('deployed model differs from registered alias')
@@ -323,8 +324,14 @@ class PairWorkload:
             if cell.get(key) != expected['cells'][0].get(key):
                 raise ValueError('registered probe cell changed')
         actual = read_asset(repo,f'configs/baseline/{self.NAME}.json')
-        if (scientific_hash(actual) != scientific_hash(base)
-                or scientific_hash(actual) != spec['scientific_baseline_sha256']
+        # Validate an explicitly declared operational dispatcher without
+        # letting it mask any scientific baseline field.
+        actual_scientific = copy.deepcopy(actual)
+        if 'dispatch' in actual_scientific:
+            from speech_aware_evidence_acquisition.rails.dispatch_slot_fill import parse_dispatch_slot_fill
+            parse_dispatch_slot_fill({'dispatch': actual_scientific.pop('dispatch')})
+        if (scientific_hash(actual_scientific) != scientific_hash(base)
+                or scientific_hash(actual_scientific) != spec['scientific_baseline_sha256']
                 or not native_contact_custody_enabled({**actual,'transport':'vllm','carrier_lock_key':'slurp'})):
             raise ValueError('registered probe program, material or recovery changed')
         if spec['gain_lock'] != {'relpath':observation.LOCK,'sha256':observation.LOCK_SHA} or pinned(repo,spec['gain_lock'])['status'] != 'locked_full_train_fold_b':

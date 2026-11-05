@@ -13,6 +13,7 @@ ARMS=('old-p-joint-s','enhanced-p-joint-s','enhanced-p-slot-decision')
 
 class NodeWorkload(PairWorkload):
     MAX_ROWS=1080
+    MAX_ADMITTED_LEVEL=128
     RESULT_SCHEMA='saea-intent-slot-arm-read-v1'
     LABEL='Fixed development native intent Slot Decision ablation'
     def __init__(self,config):

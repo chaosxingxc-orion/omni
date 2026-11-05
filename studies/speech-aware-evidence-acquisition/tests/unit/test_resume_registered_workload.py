@@ -63,7 +63,7 @@ def setup(tmp_path, monkeypatch, *, final_report=False):
     monkeypatch.setattr(contracts, 'assert_execution_environment', lambda: None)
     monkeypatch.setattr(git_commit, 'require_clean_study_repo', lambda _: 'clean-commit')
     monkeypatch.setattr(registered_workload, 'validate_workload', lambda *a: 4)
-    monkeypatch.setattr(registered_workload, 'assert_execution_binding', lambda *a: None)
+    monkeypatch.setattr(registered_workload, 'assert_execution_binding', lambda *a, **kw: None)
     monkeypatch.setattr(campaign, 'load_campaign_cells', lambda *a: [cell])
     monkeypatch.setenv('SAEA_DEPLOYMENT_PROFILE', 'profile')
     captured = {}

@@ -64,11 +64,12 @@ def assert_execution_binding(spec, environ=None, *, repo=None):
 def validate_workload(repo, data, name, spec):
     if name != spec["cell"] or name != spec["experiment"]:
         raise ValueError("registered workload identity mismatch")
-    exp = json.loads((repo / "configs/experiment" / (name + ".json")).read_bytes())
+    from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
+    exp = json.loads(resolve_asset(repo, "configs/experiment/" + name + ".json").read_bytes())
     cell, = exp["cells"]
     if cell["run_id"] != spec["run_id"] or cell["attempt_id"] != spec["attempt_id"]:
         raise ValueError("registered attempt differs")
-    view = json.loads((repo / "configs/dataset" / (cell["dataset_fragment"] + ".json")).read_bytes())
+    view = json.loads(resolve_asset(repo, "configs/dataset/" + cell["dataset_fragment"] + ".json").read_bytes())
     if spec.get("workload_kind") in ("concurrency-sweep-real100", "concurrency-sweep-real500"):
         count = 500 if spec["workload_kind"].endswith("real500") else 100
         import importlib.util

@@ -168,7 +168,8 @@ class CampaignCell:
 def load_campaign_cells(repo_root: Path, experiment: str) -> tuple[CampaignCell, ...]:
     if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", experiment) is None:
         raise CampaignError("experiment must be a plain fragment id")
-    path = Path(repo_root) / "configs/experiment" / f"{experiment}.json"
+    from ..experiment_assets import resolve_asset
+    path = resolve_asset(repo_root, f"configs/experiment/{experiment}.json")
     document = json.loads(path.read_text(encoding="utf-8"))
     cells = tuple(CampaignCell.from_document(item) for item in document.get("cells", ()))
     if not cells:

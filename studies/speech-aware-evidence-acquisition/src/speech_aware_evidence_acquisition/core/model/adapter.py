@@ -432,14 +432,9 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
                     f"({sibling_audio_seconds} already spent by other attempts on this "
                     f"run, {self._audio_seconds_used} by this attempt)"
                 )
-            # R0 repair T5 fix-3 (I5): re-verify RIGHT BEFORE this specific
-            # request's trace/budget side effects, not merely once at
-            # construction -- a transport instance is reused for an entire run
-            # (potentially many calls / hours of audio, per the plan's own
-            # declared budget -- no numeric ceiling since the 2026-08-06 owner
-            # amendment retired the first-slice caps), so a session valid at
-            # construction time proves nothing about who is listening ten calls
-            # later.
+            # The live session was checked before acquiring this lock; the
+            # transport checks it again before POST. A drift after reservation
+            # preserves the durable intent and conservative usage accounting.
             request_id = str(payload["request_id"])
             request_bytes = _canonical(payload)
             request_sha256 = hashlib.sha256(request_bytes).hexdigest()

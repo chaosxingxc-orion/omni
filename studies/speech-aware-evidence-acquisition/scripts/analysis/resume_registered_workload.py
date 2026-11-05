@@ -30,11 +30,12 @@ def main(repo,data,candidate,out,target_attempt,source_attempt=None):
     read=lambda p:json.loads(p.read_bytes())
     save=lambda p,d:publish_new(p,(json.dumps(d,sort_keys=True,indent=2)+'\n').encode())
     if out.exists() or not out.resolve().is_relative_to((data/'work/codex').resolve()):raise ValueError('fresh owned recovery output required')
-    package=repo/'docs/readiness'/candidate;spec=read(package/'candidate.json')
+    from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
+    spec=read(resolve_asset(repo,f'docs/readiness/{candidate}/candidate.json'))
     rows=validate_workload(repo,data,candidate,spec)
     assert_execution_binding(spec, repo=repo)
     if os.environ.get('SAEA_DEPLOYMENT_PROFILE')!=spec['profile']:raise ValueError('declared deployment differs')
-    registered=read(package/'generation-plan-registered-v1.json');original=registered['execution_plan']
+    registered=read(resolve_asset(repo,f'docs/readiness/{candidate}/generation-plan-registered-v1.json'));original=registered['execution_plan']
     allowed={f.name for f in fields(ExecutionPlan)}
     source=ExecutionPlan(**{k:v for k,v in original.items() if k in allowed},
         owner_allowance=registered.get('owner_allowance'))
@@ -43,7 +44,7 @@ def main(repo,data,candidate,out,target_attempt,source_attempt=None):
     source.validate(source_root=repo)
     if source.attempt_id == target_attempt:
         raise ValueError('source and target attempts must differ')
-    base=read(repo/f'configs/baseline/{candidate}.json');arm=base['arm']
+    base=read(resolve_asset(repo,f'configs/baseline/{candidate}.json'));arm=base['arm']
     out.mkdir(parents=True)
     recovery=prepare(data,source,target_attempt,arm,out/'recovery.json')['declaration']
     cell,=load_campaign_cells(repo,candidate)

@@ -364,7 +364,8 @@ def resolve_profile_path(profile: str | Path, repo_root: Path = REPO_ROOT) -> Pa
         return candidate
     if not _ID_PATTERN.fullmatch(str(profile)):
         raise DeploymentError(f"not a deployment profile id or path: {profile!r}")
-    return Path(repo_root).joinpath(*DEPLOYMENT_CONFIG_DIR, f"{profile}.json")
+    from .experiment_assets import resolve_asset
+    return resolve_asset(repo_root, "/".join((*DEPLOYMENT_CONFIG_DIR, f"{profile}.json")))
 
 
 def load_deployment_profile(
