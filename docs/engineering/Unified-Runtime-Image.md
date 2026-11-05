@@ -4,6 +4,8 @@
 
 工程基座收敛为一套版本化运行镜像，内含已验收的业务源码、通用执行脚本和依赖。同一镜像通过外部配置支撑不同实验；发布后修改实验无需复制执行树、修改源码或重新安装环境。一个镜像可以启动多个服务、队列和分析容器，维持两个四卡实例及CPU异步处理。
 
+通用[发布运行手册](https://github.com/chaosxingxc-orion/omni/blob/main/docker/saea-base/release/README.md)和[8份配置模板](https://github.com/chaosxingxc-orion/omni/tree/main/docker/saea-base/release/examples)已入仓，覆盖构建、预检、stage/prepare/register和队列；模板含明确占位项，填写真实来源pin后使用，不能直接执行。
+
 ## 配置边界
 
 |固定在发布镜像内|运行时外部输入|
