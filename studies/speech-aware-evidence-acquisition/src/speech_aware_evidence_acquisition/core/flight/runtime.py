@@ -10435,8 +10435,11 @@ class FlightRuntime:
         self._phase_planner_specs(policy)
         self._phase_tool_specs(policy)
 
+        configured_dispatch_workers = self._configured_worker_count(
+            "dispatch_workers", self._flight_width()
+        )
         if workers is None:
-            workers = self._configured_worker_count("dispatch_workers", self._flight_width())
+            workers = configured_dispatch_workers
 
         # The Earnings carrier (owner Decision 12-F item #9, 2026-09-08). An
         # obs policy is dispatched through the obs driver and builds NO
