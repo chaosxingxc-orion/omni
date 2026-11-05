@@ -2942,6 +2942,9 @@ class _PreparedConcurrencyClient(_ConcurrencyRecordingClient):
             key: value for key, value in kwargs.items() if key != "decoding_params"
         })
 
+    def discard_prepared(self, prepared):
+        return True
+
 
 _CONCURRENCY_LIMIT = {"slots": 2}
 
@@ -3110,6 +3113,39 @@ def test_enabled_request_pipeline_is_used_at_width_one(tmp_path):
     runtime.preflight(); runtime.preprocess(); runtime.serve()
     receipt = runtime.run_phases(workers=1)
     assert receipt["dispatch"]["dispatch"] == "prepared-pipeline"
+
+
+def test_request_pipeline_discards_prepared_requests_after_prepare_failure(tmp_path):
+    class FailingPrepareClient(_PreparedConcurrencyClient):
+        active = set()
+
+        def prepare_request(self, messages, **kwargs):
+            if "s3.wav" in json.dumps(messages):
+                raise RuntimeError("prepare failed")
+            prepared = super().prepare_request(messages, **kwargs)
+            type(self).active.add(id(prepared))
+            return prepared
+
+        def discard_prepared(self, prepared):
+            type(self).active.discard(id(prepared))
+            return True
+
+        def complete_prepared(self, prepared, *, id_slot=None):
+            type(self).active.discard(id(prepared))
+            return super().complete_prepared(prepared, id_slot=id_slot)
+
+    runtime = _concurrent_runtime(
+        tmp_path, client_factory=FailingPrepareClient,
+        config_kwargs={"arm": "bare-core", "policy": "fixed",
+                       "experiment_extra": {"request_pipeline": {
+                           "enabled": True, "prepare_workers": 2,
+                           "validation_workers": 1, "queue_depth": 4,
+                       }}},
+    )
+    runtime.preflight(); runtime.preprocess(); runtime.serve()
+    with pytest.raises(RuntimeError, match="prepare failed"):
+        runtime.run_phases()
+    assert not FailingPrepareClient.active
 
 
 def test_concurrent_dispatch_refuses_a_bad_worker_count(tmp_path):

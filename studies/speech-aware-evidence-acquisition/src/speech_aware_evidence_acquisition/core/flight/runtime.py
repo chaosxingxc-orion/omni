@@ -7306,6 +7306,7 @@ class FlightRuntime:
             slots.put(slot)
         buffers: dict[int, object] = {}
         buffer_lock = threading.Lock()
+        prepared_pending: dict[int, object] = {}
         in_flight = 0
         max_in_flight = 0
         meter = threading.Lock()
@@ -7346,6 +7347,8 @@ class FlightRuntime:
                 messages = self._adapter.assemble_prompt(sample, None)
                 kwargs = {}
             prepared = client.prepare_request(messages, decoding_params=decoding, **kwargs)
+            with buffer_lock:
+                prepared_pending[id(prepared)] = prepared
             mark_stage("prepare", started, time.monotonic())
             return index, sample, prepared, messages
 
@@ -7367,6 +7370,8 @@ class FlightRuntime:
                 started = time.monotonic()
                 response = complete(prepared, id_slot=slot)
                 response = getattr(response, "text", response)
+                with buffer_lock:
+                    prepared_pending.pop(id(prepared), None)
                 mark_stage("model", started, time.monotonic())
                 return index, sample, messages, response
             finally:
@@ -7384,41 +7389,70 @@ class FlightRuntime:
             return index, row
 
         model_results: list[object] = []
-        with (
-            ThreadPoolExecutor(max_workers=prepare_workers, thread_name_prefix="saea-request-prepare") as prep_pool,
-            ThreadPoolExecutor(max_workers=workers, thread_name_prefix="saea-flight-contact") as model_pool,
-            ThreadPoolExecutor(max_workers=validation_workers, thread_name_prefix="saea-response-validate") as validation_pool,
-        ):
-            next_index = 0
-            pending_prepare = set()
-            pending_model = set()
-            validation_futures = set()
-            while next_index < len(samples) and len(pending_prepare) < queue_depth:
-                pending_prepare.add(
-                    prep_pool.submit(build, next_index, samples[next_index])
-                )
-                next_index += 1
-            while pending_prepare or pending_model:
-                completed, _ = wait(
-                    tuple(pending_prepare | pending_model),
-                    return_when=FIRST_COMPLETED,
-                )
-                for future in completed:
-                    if future in pending_prepare:
-                        pending_prepare.remove(future)
-                        pending_model.add(model_pool.submit(send, future.result()))
-                    else:
-                        pending_model.remove(future)
-                        validation_futures.add(
-                            validation_pool.submit(validate, future.result())
-                        )
-                        if next_index < len(samples):
-                            pending_prepare.add(
-                                prep_pool.submit(build, next_index, samples[next_index])
-                            )
-                            next_index += 1
-            for completed in as_completed(validation_futures):
-                model_results.append(completed.result())
+        pipeline_error: BaseException | None = None
+        try:
+            with (
+                ThreadPoolExecutor(max_workers=prepare_workers, thread_name_prefix="saea-request-prepare") as prep_pool,
+                ThreadPoolExecutor(max_workers=workers, thread_name_prefix="saea-flight-contact") as model_pool,
+                ThreadPoolExecutor(max_workers=validation_workers, thread_name_prefix="saea-response-validate") as validation_pool,
+            ):
+                next_index = 0
+                pending_prepare = set()
+                pending_model = set()
+                validation_futures = set()
+                while next_index < len(samples) and len(pending_prepare) < queue_depth:
+                    pending_prepare.add(
+                        prep_pool.submit(build, next_index, samples[next_index])
+                    )
+                    next_index += 1
+                while pending_prepare or pending_model:
+                    completed, _ = wait(
+                        tuple(pending_prepare | pending_model),
+                        return_when=FIRST_COMPLETED,
+                    )
+                    for future in completed:
+                        if future in pending_prepare:
+                            pending_prepare.remove(future)
+                            try:
+                                item = future.result()
+                            except BaseException as error:  # noqa: BLE001
+                                pipeline_error = pipeline_error or error
+                                continue
+                            pending_model.add(model_pool.submit(send, item))
+                        else:
+                            pending_model.remove(future)
+                            try:
+                                item = future.result()
+                            except BaseException as error:  # noqa: BLE001
+                                pipeline_error = pipeline_error or error
+                            else:
+                                validation_futures.add(
+                                    validation_pool.submit(validate, item)
+                                )
+                            if next_index < len(samples) and pipeline_error is None:
+                                pending_prepare.add(
+                                    prep_pool.submit(build, next_index, samples[next_index])
+                                )
+                                next_index += 1
+                    if pipeline_error is not None:
+                        for pending in pending_prepare:
+                            pending.cancel()
+                        next_index = len(samples)
+                for completed in as_completed(validation_futures):
+                    try:
+                        model_results.append(completed.result())
+                    except BaseException as error:  # noqa: BLE001
+                        pipeline_error = pipeline_error or error
+        finally:
+            discard = getattr(client, "discard_prepared", None)
+            if callable(discard):
+                with buffer_lock:
+                    pending = tuple(prepared_pending.values())
+                for prepared in pending:
+                    try:
+                        discard(prepared)
+                    except BaseException as error:  # noqa: BLE001
+                        pipeline_error = pipeline_error or error
 
         rows: list[Mapping[str, object] | None] = [None] * len(samples)
         for index, row in model_results:
@@ -7427,6 +7461,8 @@ class FlightRuntime:
         if callable(flush):
             for index in sorted(buffers):
                 flush(buffers[index])
+        if pipeline_error is not None:
+            raise pipeline_error
         if any(row is None for row in rows):
             raise FlightRuntimeError("request pipeline lost a sample result")
         return list(rows), {
