@@ -1,0 +1,43 @@
+{
+  "schema": "omni.agent_model_routing.v1",
+  "updated_at": "2026-11-04",
+  "language": "zh-CN",
+  "dispatch_policy": {
+    "max_active_subagents": 3,
+    "require_file_delivery": true,
+    "message_is_not_delivery": true,
+    "unavailable_model_is_blocking": true
+  },
+  "roles": {
+    "engineering_development": {
+      "model": "gpt-6.1-terra",
+      "scope": ["工程开发", "固定脚本与配置", "测试实现", "文档生成"],
+      "delivery": "REPORT.md + result.json + changed_files_sha256 + test evidence"
+    },
+    "sample_analysis": {
+      "model": "gpt-6.1-sol",
+      "scope": ["样本分析", "统计结果", "bad case根因分析"],
+      "delivery": "REPORT.md + source evidence + reproducible analysis output"
+    },
+    "planning_evaluation_replanning": {
+      "model": "gpt-6-astra",
+      "scope": ["任务规划", "结果评价", "重新规划"],
+      "delivery": "evaluation report with evidence boundaries and next decision"
+    }
+  },
+  "availability": {
+    "gpt-6.1-terra": {
+      "status": "pending_probe",
+      "probe_required": true,
+      "do_not_claim_execution_before_probe": true
+    },
+    "gpt-6.1-sol": {"status": "configured"},
+    "gpt-6-astra": {"status": "configured"}
+  },
+  "fallback_policy": {
+    "engineering_development": "block_and_report_unavailable",
+    "sample_analysis": "use_configured_sol_only",
+    "planning_evaluation_replanning": "use_configured_astra_only",
+    "never_silent_substitute": true
+  }
+}
