@@ -1,7 +1,7 @@
 {
   "schema": "omni-two-line-research-dag-v1",
   "source_revision": 2,
-  "execution_status": "preparation; not a launched NPU queue",
+  "execution_status": "two NPU jobs running; successors and CPU feedback preparation in progress",
   "launcher_compatible": false,
   "nodes": [
     {
@@ -19,8 +19,8 @@
       "line": "knowledge-construction",
       "title": "ACE0原文固定80诊断适配48K",
       "resource": "CPU",
-      "status": "ready",
-      "status_reason": "原文、授权、真实名单均在本机；由既有activation owner整合，避免双启动",
+      "status": "completed",
+      "status_reason": "原文候选、稳定80、准入、固定镜像预检均完成",
       "depends_on": [],
       "planned_normal_generation_calls": 0
     },
@@ -29,8 +29,8 @@
       "line": "knowledge-construction",
       "title": "ACE0共享P原文80 paired",
       "resource": "NPU",
-      "status": "needs-preparation",
-      "status_reason": "科学诊断已授权；本地未见完整转换/准入/终态交接回执，不冒称可直接启动",
+      "status": "running",
+      "status_reason": "真实生成已启动；02:18快照13/80，02:21 vLLM running=16",
       "depends_on": [
         "A-ACE0-prepare"
       ],
@@ -41,8 +41,8 @@
       "line": "knowledge-construction",
       "title": "ACE0官方配对归因与回退分析",
       "resource": "CPU",
-      "status": "blocked",
-      "status_reason": "等待本候选真实生成；不阻塞其他独立NPU节点",
+      "status": "queued",
+      "status_reason": "已配置真实依赖队列，待该生成完成后官方CPU配对评分",
       "depends_on": [
         "A-ACE0-rollout"
       ],
@@ -63,8 +63,8 @@
       "line": "knowledge-construction",
       "title": "冻结Reflexion2的独立selection80诊断设计",
       "resource": "CPU",
-      "status": "ready",
-      "status_reason": "候选与预先固定selection80已存在；只冻结设计，不读取selection反馈改候选",
+      "status": "in-progress",
+      "status_reason": "原负责人独立配置化准备冻结候选的新selection80确认，尚未入NPU队列",
       "depends_on": [],
       "planned_normal_generation_calls": 0
     },
@@ -85,8 +85,8 @@
       "line": "knowledge-construction",
       "title": "下一轮TF-GRPO反馈包准备",
       "resource": "CPU",
-      "status": "needs-preparation",
-      "status_reason": "旧确认已失败；需当前冻结策略真实feedback轨迹及group-relative信号绑定，不能复用selection纠错",
+      "status": "in-progress",
+      "status_reason": "Sol正在核验完整历史轨迹、同策略组和曝光边界，交付教师可读反馈包",
       "depends_on": [],
       "planned_normal_generation_calls": 0
     },
@@ -107,8 +107,8 @@
       "line": "knowledge-consumption",
       "title": "核验native36记录与恢复边界",
       "resource": "CPU",
-      "status": "ready",
-      "status_reason": "本机checkpoint归档可读；本交付已核36条均空role_visits",
+      "status": "completed",
+      "status_reason": "主线程核验36条拒绝终态，完整P-Slot-Decision轨迹0/80；历史响应保留",
       "depends_on": [],
       "planned_normal_generation_calls": 0
     },
@@ -117,22 +117,22 @@
       "line": "knowledge-consumption",
       "title": "旧joint固定知识控制供给准备",
       "resource": "CPU",
-      "status": "ready",
-      "status_reason": "稳定native80和现有joint消费路径可供独立准备，无需native拆分修复",
+      "status": "completed",
+      "status_reason": "新TP4 runtime/session绑定、固定80准备和预检完成；通用配置化代码仍待验收",
       "depends_on": [],
       "planned_normal_generation_calls": 0
     },
     {
       "id": "B-legacy-reference",
       "line": "knowledge-consumption",
-      "title": "旧joint冻结知识独立AA基线",
+      "title": "旧P+joint S固定80结构参考（非AA）",
       "resource": "NPU",
-      "status": "needs-preparation",
-      "status_reason": "8202 TP4/64K合并尚需owner运行回执；本图未转launcher配置",
+      "status": "running",
+      "status_reason": "02:21真实32请求/vLLM running=32，尚无完整行；采用原old-P+joint-S单臂，不是AA",
       "depends_on": [
         "B-legacy-reference-prepare"
       ],
-      "planned_normal_generation_calls": 240
+      "planned_normal_generation_calls": 160
     },
     {
       "id": "B-matchedP-prepare",
@@ -182,5 +182,6 @@
       ],
       "planned_normal_generation_calls": 0
     }
-  ]
+  ],
+  "observed_at_utc": "2026-11-05T02:21:01.605872+00:00"
 }
