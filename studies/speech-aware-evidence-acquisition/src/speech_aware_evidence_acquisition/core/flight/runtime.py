@@ -4645,6 +4645,11 @@ class FlightRuntime:
             if not isinstance(pipeline, Mapping):
                 raise FlightRuntimeError("external runtime config has no request_pipeline")
             values["request_pipeline"] = dict(pipeline)
+            if "audio_cache" in self._runtime_config_overlay:
+                cache = self._runtime_config_overlay["audio_cache"]
+                if not isinstance(cache, Mapping):
+                    raise FlightRuntimeError("external runtime config audio_cache is invalid")
+                values["audio_cache"] = dict(cache)
             values["runtime_config_identity"] = dict(
                 self._runtime_config_overlay.get("_external_runtime_config", {})
             )
@@ -5969,6 +5974,44 @@ class FlightRuntime:
         if self._campaign_active:
             resolved_workers = min(resolved_workers, 8)
 
+        # Optional raw-media warmup is an operational optimization.  It is
+        # deliberately outside the scientific fragments and disabled unless
+        # an external runtime-efficiency config opts in.  The same transport
+        # loader performs confinement, stat identity and mutation checks, so
+        # warming cannot create an unverified alternate input path.
+        audio_cache_receipt: Mapping[str, object] | None = None
+        audio_cache = self._composed.values.get("audio_cache")
+        if audio_cache is not None:
+            if not isinstance(audio_cache, Mapping) or set(audio_cache) != {
+                "enabled", "max_entries", "max_bytes", "preload_workers"
+            }:
+                raise FlightRuntimeError(
+                    "audio_cache must declare enabled, max_entries, max_bytes and preload_workers"
+                )
+            from ..model import FrozenCoreError
+            from ..model.transport import configure_audio_cache, preload_audio_cache
+            try:
+                configure_audio_cache(
+                    enabled=audio_cache["enabled"],
+                    max_entries=audio_cache["max_entries"],
+                    max_bytes=audio_cache["max_bytes"],
+                )
+                paths = tuple(
+                    str(sample.media_relpath)
+                    for sample in self._samples
+                    if getattr(sample, "media_relpath", None)
+                )
+                audio_cache_receipt = preload_audio_cache(
+                    self._data_root, paths, workers=audio_cache["preload_workers"]
+                )
+            except (TypeError, ValueError, KeyError, FrozenCoreError) as error:
+                raise FlightRuntimeError(f"audio cache configuration is invalid: {error}") from error
+            if audio_cache_receipt.get("failed", 0):
+                raise FlightRuntimeError(
+                    "audio cache preload failed before model contact: "
+                    f"{audio_cache_receipt.get('failures', [])}"
+                )
+
         started = self._clock()
         packets, promoter_meta = self._packet_promoter(
             adapter=self._adapter,
@@ -6017,6 +6060,8 @@ class FlightRuntime:
             "packets_per_second": packets_per_second,
             "promoter_meta": dict(promoter_meta) if isinstance(promoter_meta, Mapping) else {},
         }
+        if audio_cache_receipt is not None:
+            payload["audio_cache"] = dict(audio_cache_receipt)
         require_mandatory_throughput_fields("preprocess", payload, ("packets_per_second",))
         return self.receipts.record("preprocess", payload)
 

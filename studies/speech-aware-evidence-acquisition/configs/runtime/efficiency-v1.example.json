@@ -1,0 +1,15 @@
+{
+  "schema": "saea-runtime-efficiency-v1",
+  "request_pipeline": {
+    "enabled": true,
+    "prepare_workers": 8,
+    "validation_workers": 8,
+    "queue_depth": 64
+  },
+  "audio_cache": {
+    "enabled": true,
+    "max_entries": 4096,
+    "max_bytes": 4294967296,
+    "preload_workers": 16
+  }
+}

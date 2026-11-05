@@ -45,6 +45,19 @@ def test_external_runtime_config_is_schema_and_sha_bound(tmp_path, monkeypatch):
         load_external_runtime_config(config)
 
 
+def test_efficiency_runtime_config_binds_audio_cache_policy(tmp_path):
+    config = tmp_path / "efficiency.json"
+    config.write_text(json.dumps({
+        "schema": "saea-runtime-efficiency-v1",
+        "request_pipeline": {"enabled": True, "prepare_workers": 2,
+                              "validation_workers": 2, "queue_depth": 8},
+        "audio_cache": {"enabled": True, "max_entries": 10,
+                        "max_bytes": 4096, "preload_workers": 2},
+    }) + "\n")
+    loaded = load_external_runtime_config(config)
+    assert loaded["audio_cache"]["preload_workers"] == 2
+
+
 @pytest.mark.parametrize("mutation,match", [
     (lambda doc: doc["items"][0].update(scenario="gold"), "label"),
     (lambda doc: doc["items"].append(dict(doc["items"][0])), "count"),

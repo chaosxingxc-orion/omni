@@ -39,18 +39,35 @@ def load_external_runtime_config(path: Path | None) -> Mapping[str, object]:
     document = json.loads(raw.decode("utf-8"))
     if not isinstance(document, Mapping):
         raise CoreError("external runtime config must be a JSON object")
-    if document.get("schema") != "saea-request-pipeline-v1":
+    schema = document.get("schema")
+    if schema not in {"saea-request-pipeline-v1", "saea-runtime-efficiency-v1"}:
         raise CoreError("unsupported external runtime config schema")
     overlay = document.get("request_pipeline")
     if not isinstance(overlay, Mapping):
         raise CoreError("external runtime config must declare request_pipeline")
     allowed = {"schema", "request_pipeline"}
+    if schema == "saea-runtime-efficiency-v1":
+        allowed.add("audio_cache")
+        cache = document.get("audio_cache")
+        if not isinstance(cache, Mapping):
+            raise CoreError("runtime efficiency config must declare audio_cache")
+        if set(cache) != {"enabled", "max_entries", "max_bytes", "preload_workers"}:
+            raise CoreError("audio_cache must declare enabled, max_entries, max_bytes and preload_workers")
+        if not isinstance(cache["enabled"], bool):
+            raise CoreError("audio_cache.enabled must be a boolean")
+        for key, upper in (("max_entries", 1_000_000), ("max_bytes", 64 * 1024 * 1024 * 1024), ("preload_workers", 64)):
+            value = cache[key]
+            if type(value) is not int or not 0 <= value <= upper or (key == "preload_workers" and value < 1):
+                raise CoreError(f"audio_cache.{key} is outside its allowed range")
     if set(document) != allowed:
         raise CoreError("external runtime config has unexpected fields")
-    return {
+    result = {
         "request_pipeline": dict(overlay),
         "_external_runtime_config": {"path": str(path), "sha256": actual},
     }
+    if schema == "saea-runtime-efficiency-v1":
+        result["audio_cache"] = dict(document["audio_cache"])
+    return result
 
 
 def register_builtin_task_adapters() -> None:
@@ -78,6 +95,8 @@ def build_flight_runtime(
     if overlay:
         values = dict(composed.values)
         values["request_pipeline"] = dict(overlay["request_pipeline"])
+        if "audio_cache" in overlay:
+            values["audio_cache"] = dict(overlay["audio_cache"])
         composed = type(composed)(
             values=values,
             config_hash=hashlib.sha256(

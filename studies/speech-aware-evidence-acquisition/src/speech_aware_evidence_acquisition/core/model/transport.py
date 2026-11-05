@@ -71,9 +71,11 @@ import hashlib
 import json
 import os
 import threading
+import time
 import urllib.error
 import urllib.request
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Callable, Mapping, Sequence
 
@@ -123,6 +125,84 @@ _AUDIO_CACHE_MAX_BYTES = max(0, int(os.environ.get("SAEA_AUDIO_CACHE_MAX_BYTES",
 _AUDIO_CACHE: "OrderedDict[tuple[object, ...], tuple[str, str, str]]" = OrderedDict()
 _AUDIO_CACHE_LOCK = threading.Lock()
 _AUDIO_CACHE_BYTES = 0
+
+
+def configure_audio_cache(*, enabled: bool, max_entries: int, max_bytes: int) -> None:
+    """Apply an external, operational cache policy before a flight starts.
+
+    The cache is process-local and identity-bound by ``stat``.  Configuration
+    is deliberately explicit so a release launcher can select a bounded
+    policy without changing the scientific fragments or environment variables.
+    Shrinking a live cache evicts oldest entries immediately.
+    """
+    if not isinstance(enabled, bool):
+        raise FrozenCoreError("audio cache enabled must be a boolean")
+    if type(max_entries) is not int or not 0 <= max_entries <= 1_000_000:
+        raise FrozenCoreError("audio cache max_entries must be an integer in [0, 1000000]")
+    if type(max_bytes) is not int or not 0 <= max_bytes <= 64 * 1024 * 1024 * 1024:
+        raise FrozenCoreError("audio cache max_bytes must be an integer in [0, 64GiB]")
+    global _AUDIO_CACHE_ENABLED, _AUDIO_CACHE_MAX_ENTRIES, _AUDIO_CACHE_MAX_BYTES
+    _AUDIO_CACHE_ENABLED = enabled
+    _AUDIO_CACHE_MAX_ENTRIES = max_entries
+    _AUDIO_CACHE_MAX_BYTES = max_bytes
+    with _AUDIO_CACHE_LOCK:
+        _evict_audio_cache_locked()
+
+
+def _evict_audio_cache_locked() -> None:
+    global _AUDIO_CACHE_BYTES
+    while (
+        len(_AUDIO_CACHE) > _AUDIO_CACHE_MAX_ENTRIES
+        or _AUDIO_CACHE_BYTES > _AUDIO_CACHE_MAX_BYTES
+    ):
+        _, (_, old_b64, _) = _AUDIO_CACHE.popitem(last=False)
+        _AUDIO_CACHE_BYTES -= len(old_b64)
+
+
+def preload_audio_cache(
+    data_root: Path,
+    media_relpaths: Sequence[str],
+    *,
+    workers: int = 8,
+) -> dict[str, object]:
+    """Warm the bounded raw-audio cache for a frozen roster.
+
+    Duplicate paths are read once; each read still passes the normal
+    confinement and mutation checks.  A disabled or zero-budget cache is a
+    valid no-op and is reported as such.  Exceptions are returned as a
+    structured refusal so callers can fail the preparation stage before any
+    model contact.
+    """
+    if type(workers) is not int or not 1 <= workers <= 64:
+        raise FrozenCoreError("audio cache preload workers must be an integer in [1, 64]")
+    paths = tuple(dict.fromkeys(media_relpaths))
+    started = time.monotonic()
+    if not _AUDIO_CACHE_ENABLED or not _AUDIO_CACHE_MAX_ENTRIES or not _AUDIO_CACHE_MAX_BYTES:
+        return {
+            "enabled": False, "requested": len(paths), "loaded": 0,
+            "cache_entries": len(_AUDIO_CACHE), "cache_bytes": _AUDIO_CACHE_BYTES,
+            "duration_seconds": max(time.monotonic() - started, 0.0),
+        }
+    loaded = 0
+    failures: list[dict[str, str]] = []
+    with ThreadPoolExecutor(max_workers=min(workers, max(1, len(paths)))) as pool:
+        futures = {
+            pool.submit(_load_audio_part, Path(data_root), relpath, "preload media_relpath"): relpath
+            for relpath in paths
+        }
+        for future in as_completed(futures):
+            relpath = futures[future]
+            try:
+                future.result()
+                loaded += 1
+            except Exception as error:  # noqa: BLE001 - report before model contact
+                failures.append({"media_relpath": str(relpath), "error": str(error)})
+    return {
+        "enabled": True, "requested": len(paths), "loaded": loaded,
+        "failed": len(failures), "failures": failures[:8],
+        "cache_entries": len(_AUDIO_CACHE), "cache_bytes": _AUDIO_CACHE_BYTES,
+        "duration_seconds": max(time.monotonic() - started, 0.0),
+    }
 
 
 def _audio_stat_identity(stat):

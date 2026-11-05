@@ -10,7 +10,12 @@ import numpy as np
 import pytest
 import soundfile
 
-from speech_aware_evidence_acquisition.core.model.transport import _clear_audio_cache, _load_audio_part
+from speech_aware_evidence_acquisition.core.model.transport import (
+    _clear_audio_cache,
+    _load_audio_part,
+    configure_audio_cache,
+    preload_audio_cache,
+)
 from speech_aware_evidence_acquisition.core.preparation import PreparationError
 from speech_aware_evidence_acquisition.core.preparation_fit import rendered_wav_seconds
 from test_direct_only_fit import _Runtime, _build, _plan, _request, ROWS
@@ -94,6 +99,18 @@ def test_concurrent_audio_cache_misses_charge_bytes_once(tmp_path, monkeypatch, 
     assert all(result == results[0] for result in results)
     assert len(audio_cache._AUDIO_CACHE) == 1
     assert audio_cache._AUDIO_CACHE_BYTES == 8
+
+
+def test_preload_audio_cache_deduplicates_and_reports_bounded_warmup(tmp_path, audio_cache):
+    (tmp_path / "a.wav").write_bytes(b"123456")
+    (tmp_path / "b.wav").write_bytes(b"abcdef")
+    configure_audio_cache(enabled=True, max_entries=4, max_bytes=1024)
+    receipt = preload_audio_cache(tmp_path, ("a.wav", "a.wav", "b.wav"), workers=2)
+    assert receipt["enabled"] is True
+    assert receipt["requested"] == 2
+    assert receipt["loaded"] == 2
+    assert receipt["failed"] == 0
+    assert receipt["cache_entries"] == 2
 
 
 def test_audio_mutation_during_read_is_rejected(tmp_path, monkeypatch, audio_cache):
