@@ -87,6 +87,45 @@ def test_factory_uses_label_free_slurp_and_same_runtime(tmp_path):
     assert runtime.adapter.serving_geometry()["slots"] == 2
 
 
+def test_factory_applies_external_request_pipeline_before_preflight(tmp_path, monkeypatch):
+    repo = _make_repo(
+        tmp_path, "SLURP-EXTERNAL-RUNTIME", carrier_lock_key="slurp",
+        model_extra={"server_args": ["-np", "2", "-c", "8192"],
+                     "base_url": "http://127.0.0.1:8080"},
+        baseline_extra={"task_instruction": "Listen and return the spoken command.",
+                        "serving_slots": 2, "serving_slot_tokens": 4096},
+    )
+    data = tmp_path / "data"
+    doc = view(data)
+    doc.update(carrier_lock_key="slurp", split_id="DEV-1000")
+    (repo / "configs/dataset/d.json").write_text(json.dumps(doc))
+    runtime_config = tmp_path / "runtime.json"
+    runtime_config.write_text(json.dumps({
+        "schema": "saea-request-pipeline-v1",
+        "request_pipeline": {
+            "enabled": True, "prepare_workers": 2,
+            "validation_workers": 2, "queue_depth": 8,
+        },
+    }) + "\n")
+    monkeypatch.setenv(
+        "SAEA_RUNTIME_CONFIG_SHA256",
+        hashlib.sha256(runtime_config.read_bytes()).hexdigest(),
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "bind external runtime")
+    runtime = build_flight_runtime(
+        repo, data, model="m", dataset="d", baseline="b", experiment="e",
+        run_id="SLURP-EXTERNAL-RUNTIME", attempt_id="a", runtime_root=tmp_path / "runtime",
+        runtime_config_path=runtime_config, lock={}, gate_factory=lambda *a, **kw: _FakeGate(),
+        **_HAPPY_PATH_KWARGS,
+    )
+    runtime.preflight()
+    assert runtime._composed.values["request_pipeline"]["queue_depth"] == 8
+    assert runtime._composed.values["runtime_config_identity"]["sha256"] == hashlib.sha256(
+        runtime_config.read_bytes()
+    ).hexdigest()
+
+
 def _factory_runtime_for_slurp_rows(
     tmp_path, *, split_id, sample_ids, registered_ids, split_role="discovery",
 ):
