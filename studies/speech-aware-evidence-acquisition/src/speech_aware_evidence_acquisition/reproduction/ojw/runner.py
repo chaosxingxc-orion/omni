@@ -471,6 +471,9 @@ def execute_speech_agent_workflows(
     node_pipeline_queue_bridge: object | None = None,
     admission_should_stop: Callable[[], bool] | None = None,
     admission_drained: Callable[[list[object]], None] | None = None,
+    admission_stop_policy: str = "drain_admitted",
+    admission_stop_observed: Callable[[Mapping[str, object]], None] | None = None,
+    admission_stop_summary: Callable[[Mapping[str, object]], None] | None = None,
 ) -> list[object]:
     """Run speech Agent workflows on one openJiuwen event loop.
 
@@ -606,14 +609,30 @@ def execute_speech_agent_workflows(
         raise ValueError("admission control requires stop and drained callbacks")
     if admission_should_stop is not None and (not callable(admission_should_stop) or not callable(admission_drained)):
         raise TypeError("admission control callbacks must be callable")
+    if admission_stop_policy not in ("drain_admitted", "cancel_unstarted"):
+        raise ValueError("invalid admission stop policy")
+    if admission_stop_policy == "cancel_unstarted":
+        if node_batch_order is not None or node_pipeline_order is not None:
+            raise ValueError("cancel_unstarted does not support node batch or pipeline")
+        if admission_should_stop is None or not callable(admission_stop_observed) or not callable(admission_stop_summary):
+            raise ValueError("cancel_unstarted requires admission evidence callbacks")
     ordered_states = list(states)
     admitted_indices = []
     stop_requested = False
+    started_indices: set[int] = set()
+    cancelled_indices: set[int] = set()
+    completed_indices: set[int] = set()
 
     def stopped():
         nonlocal stop_requested
         if not stop_requested and admission_should_stop is not None:
             stop_requested = bool(admission_should_stop())
+            if stop_requested and admission_stop_policy == "cancel_unstarted":
+                admission_stop_observed({"observed_unix_ns": time.time_ns(),
+                    "observed_monotonic_ns": _monotonic_ns(),
+                    "admitted_count": len(admitted_indices),
+                    "started_count": len(started_indices),
+                    "completed_count": len(completed_indices)})
         return stop_requested
     if node_pipeline_order is not None and len(ordered_states) > node_pipeline_max_jobs:
         raise ValueError("node pipeline exceeds its declared panel job bound")
@@ -640,21 +659,33 @@ def execute_speech_agent_workflows(
         class PeerFailedBeforeFirstContact(RuntimeError):
             """An admitted but unsent sample stopped after a peer failed."""
 
+        class StoppedBeforeFirstContact(RuntimeError):
+            pass
+
         stop_before_first_contact = False
 
-        async def one(state: object, node_batch=None, member=None, node_pipeline=None):
+        async def one(state: object, node_batch=None, member=None, node_pipeline=None, admission_index=None):
             nonlocal stop_before_first_contact
             primary_slot_id: int | None = None
             slot_assignment_lock = asyncio.Lock()
             contact_lock = asyncio.Lock()
             worker_tasks: set[asyncio.Future[object]] = set()
             has_started_contact = False
+            cancelled_by_stop = False
 
-            def starting_contact():
-                nonlocal has_started_contact
+            def starting_contact(contact_kind):
+                nonlocal has_started_contact, cancelled_by_stop
                 if stop_before_first_contact and not has_started_contact:
                     raise PeerFailedBeforeFirstContact("peer failed before first model dispatch")
-                has_started_contact = True
+                if contact_kind not in ("model", "tool"):
+                    raise ValueError("unknown contact kind")
+                if contact_kind == "model" or admission_stop_policy == "drain_admitted":
+                    if not has_started_contact and admission_stop_policy == "cancel_unstarted" and stopped():
+                        cancelled_by_stop = True
+                        raise StoppedBeforeFirstContact()
+                    has_started_contact = True
+                    if admission_index is not None:
+                        started_indices.add(admission_index)
 
             async def primary_slot() -> int:
                 nonlocal primary_slot_id
@@ -679,7 +710,7 @@ def execute_speech_agent_workflows(
                             if not isinstance(prefix_family, str) or prefix_family not in prefix_locks:
                                 raise ValueError("model contact lacks its declared prefix family")
                             async with _observed_lock(prefix_locks[prefix_family], "dispatch_prefix_slot_wait"):
-                                starting_contact()
+                                starting_contact(contact_kind)
                                 callback, arguments = _observed_worker(blocking_contact, prefix_slot_bindings[prefix_family])
                                 worker = asyncio.create_task(asyncio.to_thread(callback, *arguments))
                                 worker_tasks.add(worker)
@@ -704,7 +735,7 @@ def execute_speech_agent_workflows(
                         if prefix_family is not None:
                             raise ValueError("prefix family supplied without prefix slot bindings")
                         slot_id = await primary_slot()
-                        starting_contact()
+                        starting_contact(contact_kind)
                         callback, arguments = _observed_worker(blocking_contact, slot_id)
                         worker = asyncio.create_task(asyncio.to_thread(callback, *arguments))
                         worker_tasks.add(worker)
@@ -812,7 +843,22 @@ def execute_speech_agent_workflows(
                     raise
                 return state
             except BaseException as error:
-                if not isinstance(error, PeerFailedBeforeFirstContact):
+                # OJW's verified transparent path is exactly NativeEpisodeError
+                # -> ExecutionError -> our sentinel, linked by explicit causes.
+                # Implicit context may instead mean a cleanup error replaced the
+                # sentinel; never treat that as a successful cancellation.
+                from openjiuwen.core.common.exception.errors import ExecutionError
+                from .native_episode import NativeEpisodeError
+                transparent = (type(error) is NativeEpisodeError
+                    and type(error.__cause__) is ExecutionError
+                    and type(error.__cause__.__cause__) is StoppedBeforeFirstContact
+                    and all(not getattr(item, "__notes__", None) for item in
+                            (error, error.__cause__, error.__cause__.__cause__)))
+                if cancelled_by_stop and transparent:
+                    raise StoppedBeforeFirstContact() from error
+                if isinstance(error, StoppedBeforeFirstContact) and getattr(error, "__notes__", None):
+                    raise RuntimeError("stop cancellation has cleanup errors") from error
+                if not isinstance(error, (PeerFailedBeforeFirstContact, StoppedBeforeFirstContact)):
                     # Publish before releasing a slot to an already admitted
                     # peer. Issued contacts and their workflows still drain.
                     stop_before_first_contact = True
@@ -852,9 +898,14 @@ def execute_speech_agent_workflows(
                 admitted_ns = _monotonic_ns() if sample_timing_sink is not None else None
                 failure = None
                 try:
-                    await one(state)
+                    await one(state, admission_index=index)
                 except BaseException as error:
                     failure = error
+                if isinstance(failure, StoppedBeforeFirstContact):
+                    cancelled_indices.add(index)
+                    return
+                if failure is None:
+                    completed_indices.add(index)
                 if sample_timing_sink is not None:
                     timing = {
                         "schema": "saea-sample-execution-timing-v1",
@@ -1018,6 +1069,17 @@ def execute_speech_agent_workflows(
         raise failures[min(failures)]
     # Also observe a request published during the final admitted cohort.
     if stopped():
-        admission_drained([ordered_states[i] for i in admitted_indices])
-        return [ordered_states[i] for i in admitted_indices]
+        if admission_stop_policy == "cancel_unstarted":
+            summary = {"admitted_indices": list(admitted_indices),
+                "cancelled_indices": sorted(cancelled_indices),
+                "started_indices": sorted(started_indices),
+                "completed_indices": sorted(completed_indices)}
+            if set(admitted_indices) != cancelled_indices | completed_indices or cancelled_indices & completed_indices:
+                raise RuntimeError("stop accounting does not cover admitted samples")
+            admission_stop_summary(summary)
+            kept = [i for i in admitted_indices if i not in cancelled_indices]
+        else:
+            kept = admitted_indices
+        admission_drained([ordered_states[i] for i in kept])
+        return [ordered_states[i] for i in kept]
     return ordered_states

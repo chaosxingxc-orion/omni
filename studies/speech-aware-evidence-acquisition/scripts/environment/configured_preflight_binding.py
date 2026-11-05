@@ -134,12 +134,15 @@ def compatibility(source, successor, config, output_mount, *, require_fresh_timi
                 'regular confined admission control config required')
         document = json.loads(config_path.read_bytes())
         require(pin(config_path) in successor['required_inputs'], 'admission control config must be pinned')
-        require(set(document) == {'schema', 'run_id', 'attempt_id', 'request_path', 'receipt_path'}
+        require(set(document) in ({'schema', 'run_id', 'attempt_id', 'request_path', 'receipt_path'},
+                                  {'schema', 'run_id', 'attempt_id', 'request_path', 'receipt_path', 'stop_policy'})
+                and document.get('stop_policy', 'drain_admitted') in ('drain_admitted', 'cancel_unstarted')
                 and document['schema'] == 'saea-admission-control-v1'
                 and all(isinstance(document[k], str) and document[k] for k in ('run_id', 'attempt_id')),
                 'exact admission control identity required')
         paths = [Path(control['path']), Path(document['request_path']), Path(document['receipt_path'])]
-        require(len(set(paths)) == 3 and all(p.is_absolute() and p.parent == paths[0].parent for p in paths),
+        evidence = [paths[2].with_name(paths[2].name + suffix) for suffix in ('.observed', '.cancelled-traces.json')]
+        require(len(set(paths + evidence)) == 5 and all(p.is_absolute() and p.parent == paths[0].parent for p in paths),
                 'distinct admission files in one directory required')
         require(not any(overlap(control['mount'], p) for p in protected)
                 and not overlap(control['mount'], output_mount['target'])

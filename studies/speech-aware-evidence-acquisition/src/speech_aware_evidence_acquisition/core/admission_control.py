@@ -31,9 +31,14 @@ class AdmissionControl:
         self.path = Path(path)
         self.config = read_regular(self.path)
         expected = {'schema', 'run_id', 'attempt_id', 'request_path', 'receipt_path'}
-        if (set(self.config) != expected or self.config['schema'] != 'saea-admission-control-v1'
+        if (set(self.config) not in (expected, expected | {'stop_policy'}) or self.config['schema'] != 'saea-admission-control-v1'
                 or self.config['run_id'] != run_id or self.config['attempt_id'] != attempt_id):
             raise ValueError('admission control must bind current run and attempt')
+        self.stop_policy = self.config.get('stop_policy', 'drain_admitted')
+        if self.stop_policy not in ('drain_admitted', 'cancel_unstarted'):
+            raise ValueError('invalid admission stop policy')
+        self.stop_summary = None
+        self.cancelled_trace_proof = None
         self.digest = hashlib.sha256(canonical(self.config)).hexdigest()
         self.request_path = Path(self.config['request_path'])
         self.receipt_path = Path(self.config['receipt_path'])
@@ -41,6 +46,10 @@ class AdmissionControl:
                 for p in (self.request_path, self.receipt_path))
                 or len({self.path, self.request_path, self.receipt_path}) != 3):
             raise ValueError('distinct admission files in one absolute directory required')
+        self.observed_path = self.receipt_path.with_name(self.receipt_path.name + '.observed')
+        self.cancelled_trace_path = self.receipt_path.with_name(self.receipt_path.name + '.cancelled-traces.json')
+        if len({self.path, self.request_path, self.receipt_path, self.observed_path, self.cancelled_trace_path}) != 5:
+            raise ValueError('admission evidence paths must be distinct')
         self.request = None
         self.request_digest = None
 
@@ -64,6 +73,32 @@ class AdmissionControl:
         self.request = request
         self.request_digest = hashlib.sha256(canonical(request)).hexdigest()
         return True
+
+    def observe_stop(self, info):
+        if not self.should_stop():
+            raise ValueError('observation requires stop')
+        event = {'schema': 'saea-admission-stop-observed-v1',
+            'run_id': self.config['run_id'], 'attempt_id': self.config['attempt_id'],
+            'config_sha256': self.digest, 'stop_request_sha256': self.request_digest,
+            'request_id': self.request['request_id'], **info}
+        publish_new(self.observed_path, canonical(event))
+
+    def publish_cancelled_traces(self, traces):
+        """Persist partial trace records, including tool cost, before a drain receipt."""
+        if self.stop_summary is None or set(traces) != set(self.stop_summary['cancelled_sample_ids']):
+            raise ValueError('cancelled trace identities differ from stop summary')
+        payload = {'schema': 'saea-admission-cancelled-traces-v1',
+            'run_id': self.config['run_id'], 'attempt_id': self.config['attempt_id'],
+            'config_sha256': self.digest, 'stop_request_sha256': self.request_digest,
+            'samples': traces}
+        data = canonical(payload)
+        publish_new(self.cancelled_trace_path, data)
+        self.cancelled_trace_proof = {'path': str(self.cancelled_trace_path),
+            'sha256': hashlib.sha256(data).hexdigest(), 'sample_count': len(traces),
+            'trace_record_count': sum(len(records) for records in traces.values())}
+
+    def record_stop_summary(self, summary):
+        self.stop_summary = summary
 
     def finish(self, checkpoint, admitted_sample_ids):
         """Verify durable rows after workers settle; not a lease-release receipt."""
@@ -91,6 +126,25 @@ class AdmissionControl:
             'admitted_sample_ids': ids, 'checkpoint': proof, 'inflight_samples': 0,
             'generation_complete': False, 'generation_lease_released': False,
             'resume_requires_new_attempt_and_existing_recovery_validation': True}
+        if self.stop_policy == 'cancel_unstarted':
+            summary = self.stop_summary
+            keys = {'admitted_sample_ids', 'cancelled_sample_ids', 'started_sample_ids', 'completed_sample_ids'}
+            if not isinstance(summary, dict) or set(summary) != keys:
+                raise ValueError('stop summary required')
+            if any(not isinstance(summary[k], list) or any(not isinstance(i, str) for i in summary[k])
+                   or len(summary[k]) != len(set(summary[k])) for k in keys):
+                raise ValueError('invalid stop summary identifiers')
+            admitted = set(summary['admitted_sample_ids'])
+            cancelled = set(summary['cancelled_sample_ids'])
+            completed = set(summary['completed_sample_ids'])
+            started = set(summary['started_sample_ids'])
+            if (cancelled & completed or cancelled | completed != admitted
+                    or not started <= completed or completed != set(ids)):
+                raise ValueError('stop summary accounting differs')
+            if self.cancelled_trace_proof is None:
+                raise ValueError('cancelled trace custody required')
+            receipt['stop_summary'] = summary
+            receipt['cancelled_trace_custody'] = self.cancelled_trace_proof
         if self.receipt_path.exists():
             old = read_regular(self.receipt_path)
             previous_ids = old.get('admitted_sample_ids')
@@ -109,7 +163,12 @@ class AdmissionControl:
 
 def from_environment(*, run_id, attempt_id):
     path = os.environ.get(ENVIRONMENT_KEY)
-    return None if not path else AdmissionControl(path, run_id=run_id, attempt_id=attempt_id)
+    if not path:
+        return None
+    control = AdmissionControl(path, run_id=run_id, attempt_id=attempt_id)
+    if control.stop_policy == 'cancel_unstarted' and os.path.lexists(control.observed_path):
+        raise ValueError('existing stop observation; recovery requires a new attempt')
+    return control
 
 
 def request_stop(config_path, *, request_id):

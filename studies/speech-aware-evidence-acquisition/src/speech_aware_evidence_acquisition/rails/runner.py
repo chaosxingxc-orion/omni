@@ -6246,8 +6246,7 @@ async def _invoke_native_role_episode(
             if run_local is not None:
                 return await run_local(lambda: execute(None))
             options = {"prefix_family": role.phase_id} if binding.prefix_slots is not None or binding.node_batch is not None or binding.node_pipeline is not None else {}
-            if binding.node_batch is not None or binding.node_pipeline is not None:
-                options["contact_kind"] = "tool"
+            options["contact_kind"] = "tool"
             return await run_contact(execute, **options)
         async def invoke(**arguments):
             return await execute_arguments(arguments)
@@ -7798,11 +7797,31 @@ def _run_agent_openjiuwen(
                 raise RailsRunnerError("shared cross-flight panels require a panel-owned drain controller")
             from ..core.admission_control import AdmissionDrained
             def drained(admitted_states):
+                if admission_control.stop_policy == "cancel_unstarted":
+                    from ..core.row_checkpoint import serialize_trace_records
+                    cancelled = set(admission_control.stop_summary["cancelled_sample_ids"])
+                    traces = {
+                        state.prepared.sample.sample_id: serialize_trace_records(
+                            record for key in sorted(state.trace_buffers)
+                            for record in state.trace_buffers[key].iter_records()
+                        )
+                        for state in states if state.prepared.sample.sample_id in cancelled
+                    }
+                    admission_control.publish_cancelled_traces(traces)
                 admission_control.finish(admission_checkpoint_path,
                     [state.prepared.sample.sample_id for state in admitted_states])
                 raise AdmissionDrained("stop admission completed; retain checkpoints and recover in a new attempt")
             scheduling_options.update(admission_should_stop=admission_control.should_stop,
                                       admission_drained=drained)
+            if admission_control.stop_policy == "cancel_unstarted":
+                def record_stop_summary(summary):
+                    admission_control.record_stop_summary({
+                        key.replace("_indices", "_sample_ids"): [states[i].prepared.sample.sample_id for i in indices]
+                        for key, indices in summary.items()
+                    })
+                scheduling_options.update(admission_stop_policy=admission_control.stop_policy,
+                    admission_stop_observed=admission_control.observe_stop,
+                    admission_stop_summary=record_stop_summary)
 
         try:
             pipeline = native_episode_binding.node_pipeline
