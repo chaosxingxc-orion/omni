@@ -42,3 +42,5 @@ GEPA旧图恢复生成和GEPA2后继授权撤回，原128条已知响应与repin
 复用既有`configs/dataset/slurp-speech-native-evo-fold-a-1080.json`、`slurp-speech-native-evo-fold-b-1080.json`及对应`docs/receipts/rosters/slurp-evo-fold-{a,b}-v2.json`。两折均来自原始TRAIN，不能混称SLURP官方devel。清单摘要见`Existing-Fold-Baseline-Manifest.json`。
 
 比较表每折独立列出旧基座、新节点基座、定向调优候选的Intent、实体指标、SLU、strict、修复/破坏、置信区间和成本。固定官方scorer、失败分母、音频、模型、知识、检索及解码；记录有意调整的节点与所有不可消除的差异。没有匹配历史产物时补跑同名单控制，不重新抽样。完整Fold A/B结果未验收前不得冻结新基线或进入全TEST。
+
+已有两折指标与新图比较口径见[Fold A/B基线对照](Existing-Fold-Baseline-Comparison.md)。
