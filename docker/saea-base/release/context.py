@@ -17,5 +17,6 @@ for name,oid in selected:
  proc.stdin.write((oid+'\n').encode());proc.stdin.flush();header=proc.stdout.readline().decode().split();size=int(header[2]);data=proc.stdout.read(size);assert proc.stdout.read(1)==b'\n';dest=a.out/'umbrella'/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data);inventory[name]=hashlib.sha256(data).hexdigest()
 proc.stdin.close();assert proc.wait()==0
 manifest={'schema':'saea-release-source-v1','commit':commit,'files':inventory};(a.out/'source-manifest.json').write_text(json.dumps(manifest,sort_keys=True,separators=(',',':'))+'\n')
-for name in ('Dockerfile','verify-release.py'):(a.out/name).write_bytes((pathlib.Path(__file__).parent/name).read_bytes())
+for name in ('Dockerfile','verify-release.py'):
+ data=subprocess.check_output(['git','-C',str(a.repo),'show',commit+':docker/saea-base/release/'+name]);(a.out/name).write_bytes(data)
 print(json.dumps({'commit':commit,'files':len(inventory),'manifest_sha256':hashlib.sha256((a.out/'source-manifest.json').read_bytes()).hexdigest()}))

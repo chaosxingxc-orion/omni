@@ -28,6 +28,9 @@ def classify(row):
 
 
 def audit(path):
+    raw=Path(path).read_bytes()
+    if not raw:
+        return {'status':'waiting','reason':'empty checkpoint','checkpoint_sha256':hashlib.sha256(raw).hexdigest(),'terminal_rows':0,'complete_rows':0,'classifications':{},'torn_tail_bytes':0,'new_model_calls':0}
     doc=read_checkpoint(path);counts=Counter();selected=None
     for row in doc.rows:
         kind,out,receipt=classify(row);counts[kind]+=1

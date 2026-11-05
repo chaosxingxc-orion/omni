@@ -250,7 +250,7 @@ def test_release_source_is_explicit_and_rejects_source_overlay(tmp_path):
     path, doc = configured(tmp_path)
     doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'
     doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
-    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json', SAEA_RELEASE_MANIFEST_SHA256='c'*64)
+    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json', SAEA_RELEASE_MANIFEST_SHA256='c'*64, PYTHONPATH='/opt/saea-release/studies/speech-aware-evidence-acquisition/src', PYTHONDONTWRITEBYTECODE='1');doc['argv']=['/opt/saea-venv/bin/python','/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py']
     path.write_text(json.dumps(doc));assert m.load_config(path)['source_identity']['mode']=='image-release-v1'
     doc['mounts'].append({'source':str(tmp_path/'data'),'target':'/opt/saea-release/studies','readonly':True})
     path.write_text(json.dumps(doc))
@@ -260,7 +260,7 @@ def test_release_source_is_explicit_and_rejects_source_overlay(tmp_path):
 def test_release_manifest_verification_fails_closed_before_launch(tmp_path,monkeypatch):
     path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'
     doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
-    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',SAEA_RELEASE_MANIFEST_SHA256='c'*64)
+    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',SAEA_RELEASE_MANIFEST_SHA256='c'*64,PYTHONPATH='/opt/saea-release/studies/speech-aware-evidence-acquisition/src',PYTHONDONTWRITEBYTECODE='1');doc['argv']=['/opt/saea-venv/bin/python','/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py']
     path.write_text(json.dumps(doc))
     docker=Docker(doc)
     def run(args,**kwargs):
@@ -270,3 +270,20 @@ def test_release_manifest_verification_fails_closed_before_launch(tmp_path,monke
     m.execute(path,'layout')
     with pytest.raises(ValueError,match='manifest verification'):m.execute(path,'launch')
     assert not (Path(doc['receipt_dir'])/'launch-intent.json').exists()
+
+@pytest.mark.parametrize('fault',['pythonpath','entrypoint','bytecode'])
+def test_release_refuses_unsealed_code_execution(tmp_path,fault):
+    path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'
+    doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
+    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',SAEA_RELEASE_MANIFEST_SHA256='c'*64,PYTHONPATH='/opt/saea-release/studies/speech-aware-evidence-acquisition/src',PYTHONDONTWRITEBYTECODE='1')
+    doc['argv']=['/opt/saea-venv/bin/python','/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py']
+    if fault=='pythonpath':doc['environment']['PYTHONPATH']='/other'
+    if fault=='entrypoint':doc['argv'][1]='/data/other.py'
+    if fault=='bytecode':doc['environment'].pop('PYTHONDONTWRITEBYTECODE')
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError,match='release'):m.load_config(path)
+
+
+def test_release_rejects_unknown_identity_key(tmp_path):
+    path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition';doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64,'extra':1};path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError,match='identity'):m.load_config(path)

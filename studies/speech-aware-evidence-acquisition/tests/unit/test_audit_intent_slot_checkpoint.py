@@ -19,6 +19,7 @@ def test_refusal_then_complete_and_only_refusal(tmp_path,monkeypatch):
     result=m.audit(w.path);assert result['status']=='complete' and result['classifications']=={'refusal':1,'complete':1} and result['first_complete']['raw_equals_delivered_bytes']
 
 def test_empty_torn_and_malformed(tmp_path):
+    blank=tmp_path/'blank';blank.write_bytes(b'');assert m.audit(blank)['status']=='waiting'
     w=writer(tmp_path);w.close();assert m.audit(w.path)['status']=='waiting'
     with w.path.open('ab') as f:f.write(b'{"partial"')
     assert m.audit(w.path)['torn_tail_bytes']>0

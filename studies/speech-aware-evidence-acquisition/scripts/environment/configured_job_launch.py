@@ -64,6 +64,11 @@ def load_config(path):
         require(doc['repo_path'] == '/opt/saea-release/studies/speech-aware-evidence-acquisition', 'release repository path differs')
         require(doc['environment'].get('SAEA_RELEASE_MANIFEST') == '/opt/saea-release/source-manifest.json'
                 and doc['environment'].get('SAEA_RELEASE_MANIFEST_SHA256') == identity['manifest_sha256'], 'release manifest environment differs')
+        require(doc['environment'].get('PYTHONPATH') == '/opt/saea-release/studies/speech-aware-evidence-acquisition/src'
+                and doc['environment'].get('PYTHONDONTWRITEBYTECODE') == '1', 'release Python source environment differs')
+        require(doc['argv'][0] in ('/opt/saea-venv/bin/python', '/usr/local/python3.12.13/bin/python3')
+                and len(doc['argv']) >= 2 and doc['argv'][1].startswith('/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/')
+                and '..' not in Path(doc['argv'][1]).parts, 'release entrypoint must be a sealed study script')
         require(not any(Path('/opt/saea-release').is_relative_to(Path(m['target'])) or Path(m['target']).is_relative_to('/opt/saea-release') for m in doc['mounts']), 'release source cannot be mounted over')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
                          ('image', r'sha256:[a-f0-9]{64}'), ('expected_commit', r'[a-f0-9]{40}'),
