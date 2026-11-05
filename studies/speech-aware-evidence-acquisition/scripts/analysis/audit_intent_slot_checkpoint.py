@@ -21,9 +21,11 @@ def classify(row):
     disposition=receipt.get('terminal_disposition')
     if disposition is not None:
         if not isinstance(disposition,dict):raise ValueError('malformed terminal disposition')
-        return 'refusal',out,receipt
+        reason=disposition.get('reason')
+        return ('finite_completion' if reason=='finite_completion' else 'refusal' if reason=='seal_refusal' else 'terminal_other'),out,receipt
     if stages!=['perception','slot','solver']:
         raise ValueError('successful row lacks ordered P/Slot/Decision visits')
+    if not isinstance(receipt.get('intent_slot_pipeline'),dict):raise ValueError('complete row lacks pipeline receipt')
     return 'complete',out,receipt
 
 
@@ -36,7 +38,7 @@ def audit(path):
         kind,out,receipt=classify(row);counts[kind]+=1
         if kind=='complete' and selected is None:selected=(row,out,receipt)
     result={'status':'waiting' if selected is None else 'complete','checkpoint_sha256':doc.sha256,
-            'terminal_rows':len(doc.rows),'classifications':dict(counts),'complete_rows':counts['complete'],
+            'checkpoint_rows':len(doc.rows),'terminal_rows':len(doc.rows)-counts['unrendered'],'classifications':dict(counts),'complete_rows':counts['complete'],
             'torn_tail_bytes':doc.torn_tail_bytes,'new_model_calls':0}
     if selected is None:return result
     row,out,receipt=selected; records=[json.loads(x) for x in row.trace_lines]
@@ -46,7 +48,7 @@ def audit(path):
     validate_receipt(receipt,trace_records=trace);visits=[]
     for visit in receipt['role_visits']:
         source=visit['execution_receipt']['final_contact'];rid=source['request_id'];req=trace[rid+'/request'];resp=trace[rid+'/response'];payload=req['payload']
-        if req['payload_sha256']!=source['request_sha256'] or resp['response_text_sha256']!=source['response_text_sha256'] or hashlib.sha256(resp['text'].encode()).hexdigest()!=source['response_text_sha256'] or payload.get('sample_id')!=row.sample_id:raise ValueError('visit source or sample identity differs')
+        if hashlib.sha256(json.dumps(payload,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()!=req['payload_sha256'] or req['payload_sha256']!=source['request_sha256'] or resp['response_text_sha256']!=source['response_text_sha256'] or hashlib.sha256(resp['text'].encode()).hexdigest()!=source['response_text_sha256'] or payload.get('sample_id')!=row.sample_id:raise ValueError('visit source or sample identity differs')
         messages=payload.get('messages',payload.get('rendered',{}).get('messages',[]));parts=[p for msg in messages for p in msg.get('content',[]) if isinstance(p,dict)]
         visits.append({'stage':visit['stage'],'source':source,'request_sample_id_matches':True,'native_projection':trace.get(rid+'/native-evidence-projection'),'knowledge_views':[{'evidence_id':v['evidence_id'],'source_uri':v.get('source_uri'),'view_sha256':hashlib.sha256(v['text'].encode()).hexdigest()} for v in parts if 'evidence_id' in v and 'text' in v]})
     last=receipt['role_visits'][-1]['execution_receipt']['final_contact'];raw=trace[last['request_id']+'/response']['text']
