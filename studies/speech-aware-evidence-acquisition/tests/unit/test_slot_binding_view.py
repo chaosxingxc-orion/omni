@@ -486,3 +486,39 @@ def test_slot_node_uses_real_released_candidate_view_and_source_pin(tmp_path):
     payload['history'][-1]['content_sha256']=hashlib.sha256(payload['history'][-1]['content'].encode()).hexdigest()
     with pytest.raises(SlotBindingViewError,match='sealed Perception'):
         scope_for_payload(payload,context)
+
+@pytest.mark.parametrize('policy',['strict','identical_v1'])
+def test_pipeline_projection_duplicate_policy_bound_and_enforced(tmp_path, policy):
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import candidates, prompt_context, canonical
+    from speech_aware_evidence_acquisition.core.model.native_slot_binding_view import project_native_slot_binding_view
+    from speech_aware_evidence_acquisition.core.model import FrozenCoreError
+    config=_config(tmp_path)
+    graph={'schema':'saea-intent-slot-pipeline-v1','slot_mode':'batched','max_candidates':3,'candidate_outside_recovery':False}
+    if policy!='strict':graph['duplicate_candidate_policy']=policy
+    config['native_episode']['intent_slot_pipeline']=graph
+    config['native_episode']['roles']['slot']={'phase_id':'slot','max_iterations':1}
+    config['knowledge_stores']['slot-contracts']['candidate_supply']['slot']=copy.deepcopy(config['knowledge_stores']['slot-contracts']['candidate_supply']['solver'])
+    config['native_evidence_projection_params']['consumer_roles']=['slot','solver']
+    context=bind_slot_view_context(config,tmp_path)
+    assert context.duplicate_candidate_policy==policy
+    validate_slot_view_context(context)
+    row={'intent_id':'alpha_one','distinction':'same','evidence_refs':['intent:short'],'unresolved_fields':[]}
+    raw=canonical({'candidates':[row,row]});source=_perception(raw=raw)
+    parsed=candidates(raw,3,duplicate_policy='identical_v1')
+    payload=_payload(config,(source,),role='slot')
+    instruction=prompt_context(graph,{'intent_slot_context':{'candidates':parsed,'perception_source':{'response_text_sha256':source.source_response_sha256},'evidence_inventory':{'sample_id':SAMPLE,'candidate_ids':['alpha_one'],'sources':[]}}},'slot')
+    contract=json.loads(payload['history'][-1]['content']);contract['messages'][1]['content']+=instruction
+    payload['history'][-1]['content']=json.dumps(contract);payload['history'][-1]['content_sha256']=hashlib.sha256(payload['history'][-1]['content'].encode()).hexdigest()
+    messages=[{'role':'system','content':'Solve.'},{'role':'user','content':[{'type':'text','text':'speech'}]}]
+    if policy=='strict':
+        with pytest.raises(FrozenCoreError,match='candidate policy refused'):
+            project_native_slot_binding_view(payload=payload,messages=messages,local_results={},projection_context=context)
+    else:
+        _,receipt=project_native_slot_binding_view(payload=payload,messages=messages,local_results={},projection_context=context)
+        assert receipt['scope']['candidate_ids']==['alpha_one'] and receipt['scope']['fallback_reason'] is None
+        for key in ('distinction','evidence_refs','unresolved_fields'):
+            conflict=copy.deepcopy(row);conflict[key]='different' if key=='distinction' else ['different']
+            bad=_perception(raw=canonical({'candidates':[row,conflict]}));bad_payload=_payload(config,(bad,),role='slot')
+            bad_contract=json.loads(bad_payload['history'][-1]['content']);bad_contract['messages'][1]['content']+=instruction
+            bad_payload['history'][-1]['content']=json.dumps(bad_contract);bad_payload['history'][-1]['content_sha256']=hashlib.sha256(bad_payload['history'][-1]['content'].encode()).hexdigest()
+            with pytest.raises(FrozenCoreError):project_native_slot_binding_view(payload=bad_payload,messages=messages,local_results={},projection_context=context)

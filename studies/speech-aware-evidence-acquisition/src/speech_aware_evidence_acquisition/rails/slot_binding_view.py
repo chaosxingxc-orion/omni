@@ -289,7 +289,7 @@ def bind_slot_view_context(
         raise SlotBindingViewError("released slot rows differ from composite value IDs")
     episode = values.get("native_episode", {})
     pipeline = episode.get("intent_slot_pipeline") if isinstance(episode, Mapping) else None
-    duplicate_policy = pipeline.get("duplicate_candidate_policy", "strict") if isinstance(pipeline, Mapping) and "duplicate_candidate_policy" in pipeline else None
+    duplicate_policy = pipeline.get("duplicate_candidate_policy", "strict") if isinstance(pipeline, Mapping) else None
     if duplicate_policy not in (None, "strict", "identical_v1"):
         raise SlotBindingViewError("unsupported pipeline duplicate candidate policy")
     provisional = SlotBindingViewContext(
