@@ -1,6 +1,6 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 13,
+  "source_revision": 14,
   "launcher_compatible": false,
   "execution_status": "Engineering efficiency first; existing Fold A arms continue until validated release migration; no new large-scale scientific experiments",
   "nodes": [
@@ -460,7 +460,7 @@
       "id": "CPU-CHECKPOINT-TERMINAL-CUSTODY",
       "lane": "CPU",
       "priority": 0,
-      "status": "natural-drain-and-full-multihop-fit-only-fixture-verified-independent-source-review-in-progress",
+      "status": "live-observe-both-arms-complete-canonical-output-identity-review-finding-under-repair",
       "scientific_dependencies": [],
       "requirements": [
         "generation observed request closure and original actual cost",
@@ -473,7 +473,7 @@
       "id": "CPU-EXTERNAL-SUCCESSOR-ADMISSION",
       "lane": "CPU",
       "priority": 0,
-      "status": "full-entry-real-input-test-found-stale-supply-native-cpu-rebuild-and-marker-integration-in-progress",
+      "status": "A-native-entry-fixture-passed-four-incremental-review-findings-await-owner-repair",
       "scientific_dependencies": [
         "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS"
       ],
