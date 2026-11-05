@@ -727,7 +727,8 @@ def _require_record(value: object, *, field: str, repo_root: Path, must_exist: b
         or any(part in ("", ".", "..") for part in text.split("/"))
     ):
         raise ConsumptionModuleConfigError(f"{field} must be a repo-relative POSIX path: {text!r}")
-    if must_exist and not (repo_root / text).is_file():
+    from ..core.experiment_assets import resolve_asset
+    if must_exist and not resolve_asset(repo_root,text).is_file():
         raise ConsumptionModuleConfigError(
             f"{field} {text!r} does not resolve to a file in the repository; an "
             "armed component must name the record that admits it"

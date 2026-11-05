@@ -14,6 +14,7 @@ import tfrl_h1_observation as observation
 from tfrl_hardset_a0_registration import pin,pinned,scientific_hash
 from tfrl_hardset_a0_workload import read,raw,sha,confined
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
+from speech_aware_evidence_acquisition.core.experiment_assets import output_asset, seal_workspace, resolve_asset, workspace_root
 KIND='gepa-solver-template-pair'
 SCHEMA='saea-gepa-pair-workload-v1'
 
@@ -232,7 +233,8 @@ class PairWorkload:
         from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_study_repo
         assert_execution_environment(); head = require_clean_study_repo(repo)
         observation.require_unspent(repo, data, self.RUN); self.fresh_output(data, out)
-        paths = [repo/f'configs/{kind}/{self.NAME}.json' for kind in ('baseline','experiment')] + [repo/self.ROSTER]
+        logical_paths=[f'configs/{kind}/{self.NAME}.json' for kind in ('baseline','experiment')]+[self.ROSTER]
+        paths = [output_asset(repo,p) for p in logical_paths]
         if any(p.exists() for p in paths):
             raise ValueError('fresh probe configuration and roster required')
         base, exp, roster, _, binding = self.derive(repo, data, material)
@@ -246,9 +248,10 @@ class PairWorkload:
             **({'context_adaptation':self.context_adaptation()} if self.context_adaptation() is not None else {}),
             'dataset':pin(repo,f'configs/dataset/{self.DATASET}.json'),
             'source_experiment':pin(repo,observation.SOURCE_EXP),
-            'output_hashes':{str(p.relative_to(repo)):sha(p) for p in paths},
+            'output_hashes':{rel:sha(path) for rel,path in zip(logical_paths,paths)},
             'normal_generation_calls':self.CONTACTS*self.ROWS, 'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS, 'fit_calls':self.CONTACTS*self.ROWS,
             'new_model_calls':0, 'generation_authorized':False, 'claims_benefit':False}
+        record['workspace_manifest']=seal_workspace(repo)
         publish_new(out/'complete.json', raw(record)); return record
 
 
@@ -335,12 +338,16 @@ class PairWorkload:
         if (prep.get('schema') != 'saea-gepa-pair-prepared-v1' or prep['stage_sha256'] != sha(stage_record)
                 or prep['rows'] != self.ROWS or prep['run_id'] != self.RUN or prep['new_model_calls'] != 0):
             raise ValueError('exact prepared probe required')
-        bp, ep = [repo/f'configs/{kind}/{self.NAME}.json' for kind in ('baseline','experiment')]
-        base, exp = read(bp), read(ep); pkg = repo/'docs/readiness'/self.NAME
+        bp, ep = [output_asset(repo,f'configs/{kind}/{self.NAME}.json') for kind in ('baseline','experiment')]
+        base, exp = read(bp), read(ep); pkg = output_asset(repo,'docs/readiness/'+self.NAME)
         if pkg.exists(): raise ValueError('registration exists')
         base['prepared_phase_supply'] = prep['supply']
         exp['cells'][0]['readiness']['requirements'] = [{'kind':'preparation',**prep['supply']}]
         bp.write_bytes(raw(base)); ep.write_bytes(raw(exp))
+        updated_workspace=seal_workspace(repo)
+        if updated_workspace:
+            import os
+            os.environ['SAEA_EXPERIMENT_WORKSPACE_MANIFEST']=updated_workspace['path'];os.environ['SAEA_EXPERIMENT_WORKSPACE_SHA256']=updated_workspace['sha256']
         binding = staged['runtime_binding']; model = binding['model_fragment']
         cfg = compose(repo,model,self.DATASET,self.NAME,self.NAME); split = exp['population']['split_identity_hash']
         ph = protocol_hash(cfg.config_hash,cfg.values['arm'],split)
@@ -359,7 +366,7 @@ class PairWorkload:
             'roster':spec['roster'],'material':spec['material'],'normal_generation_calls':self.CONTACTS*self.ROWS,
             'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS,'fit_calls':self.CONTACTS*self.ROWS,'claims_benefit':False,
             **({'context_adaptation':self.context_adaptation()} if self.context_adaptation() is not None else {})}
-        protocol_pin = {'relpath':str((pkg/'protocol-registered-v1.json').relative_to(repo)),
+        protocol_pin = {'relpath':str((Path('docs/readiness')/self.NAME/'protocol-registered-v1.json')),
             'sha256':hashlib.sha256(raw(protocol)).hexdigest()}
         docs = {'candidate.json':spec,'protocol-registered-v1.json':protocol}
         rows = []
@@ -374,17 +381,19 @@ class PairWorkload:
             rel=f'{kind}-plan-registered-v1.json'; docs[rel]=doc
             rows.append(['2026-11-03',rid,'bounded-discovery-probe',self.LABEL+' '+kind,
                 model,'slurp TRAIN fixed '+self.config.get('evaluation_partition','feedback'),'discovery',split,'no',str(cap),str(budget['planned_speech_audio_seconds']),
-                str(budget['planned_gpu_hours']),'All historical costs retained; not a search result',str((pkg/rel).relative_to(repo)),
+                str(budget['planned_gpu_hours']),'All historical costs retained; not a search result',str(Path('docs/readiness')/self.NAME/rel),
                 'Plan SHA256 '+hashlib.sha256(raw(doc)).hexdigest()+'; held'])
         docs['analysis-recipe-v1.json'] = {'schema':self.RESULT_SCHEMA,'rows':self.ROWS,'generation_run_id':self.RUN,
             'attempt_id':'generation-v1','roster':spec['roster'],'arms':self.ARMS,'delivered_arm':getattr(self,'DELIVERED_ARM','lock'),'pair_material':staged['material'],
             'new_model_calls':0,'claims_benefit':False,'candidate_accepted':False}
         pkg.mkdir(parents=True)
         for rel,doc in docs.items(): publish_new(pkg/rel,raw(doc))
-        ledger=repo/'docs/exposure-ledger.md'
+        ledger=output_asset(repo,'docs/exposure-ledger.md')
+        if not ledger.exists():
+            ledger.parent.mkdir(parents=True,exist_ok=True);ledger.write_bytes(resolve_asset(repo,'docs/exposure-ledger.md').read_bytes())
         ledger.write_text(ledger.read_text()+'\n## '+self.LABEL+'\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| '+' | '.join(['---']*15)+' |\n'+'\n'.join('| '+' | '.join(row)+' |' for row in rows)+'\n')
-        publish_new(repo/'docs/readiness'/f'{self.NAME}-preregistration.md', ('# '+self.LABEL+'\n\n'+self.PROGRAM+' Exact configured population and verified source; '+str(self.CONTACTS)+'N normal calls, '+str(2*self.CONTACTS)+'N fallback cap; all costs retained. Commit, admit and preflight before detached dispatch; no quality claim.\n').encode())
-        return {'cell':self.NAME,'rows':self.ROWS,'source_commit':head,'new_model_calls':0,'readiness':'held'}
+        publish_new(output_asset(repo,f'docs/readiness/{self.NAME}-preregistration.md'), ('# '+self.LABEL+'\n\n'+self.PROGRAM+' Exact configured population and verified source; '+str(self.CONTACTS)+'N normal calls, '+str(2*self.CONTACTS)+'N fallback cap; all costs retained. Commit, admit and preflight before detached dispatch; no quality claim.\n').encode())
+        return {'cell':self.NAME,'rows':self.ROWS,'source_commit':head,'new_model_calls':0,'readiness':'held','workspace_manifest':seal_workspace(repo)}
 
 
 
@@ -395,11 +404,12 @@ def validate(repo,data,name,spec,exp,view):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['stage','prepare','register'])
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['stage','verify-stage','prepare','register'])
     for k in ('repo','data','config'):p.add_argument('--'+k,type=Path,required=True)
     for k in ('out','stage-record','prepared'):p.add_argument('--'+k,type=Path)
     a=p.parse_args();job=PairWorkload(read(a.config))
     if a.mode=='stage':result=job.stage(a.repo,a.data,job.config['material'],a.out)
+    elif a.mode=='verify-stage':result=job.verify_stage(a.repo,a.data,a.stage_record)
     elif a.mode=='prepare':result=job.prepare(a.repo,a.data,a.stage_record,a.out)
     else:result=job.register(a.repo,a.data,a.stage_record,a.prepared)
     print(json.dumps(result,sort_keys=True))

@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import sys
 import tempfile
 import time
@@ -86,10 +87,10 @@ def native_contacts(producer,logical,plan,arm):
     files=[];transient=[];vanished=[]
     for path in sorted(journal.root.glob('*')):
         try:
-            stat=path.lstat()
+            info=path.lstat()
         except FileNotFoundError:
             vanished.append(path.name);continue
-        require(not path.is_symlink() and path.is_file(),'unexpected contact journal file')
+        require(stat.S_ISREG(info.st_mode),'unexpected contact journal file')
         if re.fullmatch(r'\.[a-f0-9]{64}\.(intent|response|fit)\.json\.[A-Za-z0-9_-]+',path.name):
             transient.append(path.name);continue
         require(re.fullmatch(r'[a-f0-9]{64}\.(intent|response|fit)\.json',path.name),'unexpected contact journal file')

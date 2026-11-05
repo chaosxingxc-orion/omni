@@ -161,7 +161,8 @@ def runtime_binding(repo, binding):
 
 
 def require_unspent(repo, data, run):
-    ledger = (repo/'docs/exposure-ledger.md').read_text()
+    from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
+    ledger = resolve_asset(repo,'docs/exposure-ledger.md').read_text()
     for rid in (run, run+'-FIT'):
         if '| '+rid+' |' in ledger or any((data/k/rid).exists() for k in ('runs','attempts')):
             raise ValueError('existing registration or spend; never blindly repeat')

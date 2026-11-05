@@ -35,3 +35,19 @@ def test_external_template_and_roster_are_pinned_without_overwriting_code(tmp_pa
     manifest.write_text(json.dumps(doc));monkeypatch.setenv('SAEA_EXPERIMENT_MANIFEST_SHA256',hashlib.sha256(manifest.read_bytes()).hexdigest())
     assert resolve_asset(repo,'configs/probes/template.txt').read_text()=='External frozen template'
     assert json.loads(resolve_asset(repo,'docs/receipts/rosters/fold.json').read_bytes())['count']==1080
+
+
+def test_workspace_outputs_are_separate_and_pin_drift_rejected(tmp_path,monkeypatch):
+    import subprocess
+    from speech_aware_evidence_acquisition.core.experiment_assets import output_asset,seal_workspace
+    repo=tmp_path/'repo';repo.mkdir();subprocess.run(['git','init',str(repo)],check=True,capture_output=True)
+    (repo/'README').write_text('source')
+    subprocess.run(['git','-C',str(repo),'add','.'],check=True)
+    subprocess.run(['git','-C',str(repo),'-c','user.name=Test','-c','user.email=test@local','commit','-m','source'],check=True,capture_output=True)
+    workspace=tmp_path/'workspace';monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE',str(workspace))
+    out=output_asset(repo,'configs/model/external.json');out.parent.mkdir(parents=True);out.write_text('{"transport":"vllm"}')
+    pin=seal_workspace(repo);monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_MANIFEST',pin['path']);monkeypatch.setenv('SAEA_EXPERIMENT_WORKSPACE_SHA256',pin['sha256'])
+    assert resolve_asset(repo,'configs/model/external.json')==out
+    assert not (repo/'configs').exists()
+    out.write_text('changed')
+    with pytest.raises(ValueError,match='changed'):resolve_asset(repo,'configs/model/external.json')

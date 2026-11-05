@@ -155,11 +155,12 @@ def validate(repo,data,name,spec,exp,view):
     return job.validate(repo,data,name,spec,exp,view)
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['stage','prepare','register'])
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('mode',choices=['stage','verify-stage','prepare','register'])
     for k in ('repo','data','config'):p.add_argument('--'+k,type=Path,required=True)
     for k in ('out','stage-record','prepared'):p.add_argument('--'+k,type=Path)
     a=p.parse_args();job=NodeWorkload(read(a.config))
     if a.mode=='stage':result=job.stage(a.repo,a.data,job.config['material'],a.out)
+    elif a.mode=='verify-stage':result=job.verify_stage(a.repo,a.data,a.stage_record)
     elif a.mode=='prepare':result=job.prepare(a.repo,a.data,a.stage_record,a.out)
     else:result=job.register(a.repo,a.data,a.stage_record,a.prepared)
     print(json.dumps(result,sort_keys=True))

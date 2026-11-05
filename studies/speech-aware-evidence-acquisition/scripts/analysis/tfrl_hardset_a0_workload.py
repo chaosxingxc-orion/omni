@@ -22,14 +22,26 @@ NAME='slurp-tfrl-hardset-a0-observation-r1-v1'
 RUN='SAEA-SLURP-TFRL-HARDSET-A0-OBSERVATION-R1-V1'
 REASON='Fixed error candidates; independent P/S observation held for recovery activation, registration and admission.'
 
-def read(p):return json.loads(p.read_bytes())
-def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def input_path(p):
+    from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
+    p=Path(p)
+    import os
+    workspace=os.environ.get('SAEA_EXPERIMENT_WORKSPACE')
+    if workspace and p.is_relative_to(Path(workspace)):return p
+    for ancestor in p.parents:
+        if ancestor.name in ('configs','docs'):
+            return resolve_asset(ancestor.parent,p.relative_to(ancestor.parent).as_posix())
+    return p
+def read(p):return json.loads(input_path(p).read_bytes())
+def sha(p):return hashlib.sha256(input_path(p).read_bytes()).hexdigest()
 def raw(d):return (json.dumps(d,sort_keys=True,indent=2,allow_nan=False)+'\n').encode()
 def confined(root,rel):
     from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
     original=(root/rel).resolve()
     if not original.is_relative_to(root.resolve()):raise ValueError('source path escapes root')
-    p=resolve_asset(root,rel).resolve()
+    logical_root=root.parent if root.name in ('docs','configs') else root
+    logical_rel=(root.name+'/'+rel) if root!=logical_root else rel
+    p=resolve_asset(logical_root,logical_rel).resolve()
     if p!=original:return p
     if not p.is_relative_to(root.resolve()):raise ValueError('source path escapes root')
     return p
