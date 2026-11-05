@@ -271,6 +271,43 @@ class BindingTests(unittest.TestCase):
         self.assertEqual(binding['compatibility']['runtime_paths'], json.loads(self.config.read_text())['runtime_paths'])
         self.assertEqual(m.verify(self.binding, self.successor_path), self.successor)
 
+    def test_timing_existing_files_and_dangling_symlinks_rejected_without_mutation(self):
+        self.runtime_configuration()
+        state = self.root / 'state'
+        state.mkdir()
+        for name in ('timing.jsonl', 'timing.jsonl.config.json'):
+            for kind in ('file', 'symlink'):
+                with self.subTest(name=name, kind=kind):
+                    target = state / name
+                    if kind == 'file':
+                        target.write_bytes(b'preserve me')
+                    else:
+                        target.symlink_to(state / 'missing')
+                    with self.assertRaisesRegex(ValueError, 'timing output must be fresh'):
+                        self.bind()
+                    self.assertTrue(target.is_symlink() if kind == 'symlink' else target.read_bytes() == b'preserve me')
+                    target.unlink()
+
+    def test_timing_created_after_binding_blocks_dispatch_but_not_reconciliation(self):
+        self.runtime_configuration()
+        (self.root / 'state').mkdir()
+        self.bind()
+        sink = self.root / 'state/timing.jsonl'
+        sink.write_text('already present')
+        with patch.object(m.launcher, 'execute') as execute:
+            with self.assertRaisesRegex(ValueError, 'timing output must be fresh'):
+                m.execute(self.binding, self.successor_path, 'launch')
+            execute.assert_not_called()
+        receipt = Path(self.successor['receipt_dir'])
+        receipt.mkdir()
+        (receipt / 'launch-intent.json').write_text('{}')
+        sink.with_name(sink.name + '.config.json').write_text('snapshot')
+        self.assertEqual(m.verify(self.binding, self.successor_path), self.successor)
+        with patch.object(m.launcher, 'execute', return_value={'state': 'running', 'reused_launch': True}) as execute:
+            self.assertTrue(m.execute(self.binding, self.successor_path, 'launch')['reused_launch'])
+            execute.assert_called_once()
+        self.assertEqual(sink.read_text(), 'already present')
+
     def test_runtime_declaration_drift_invalidates_existing_binding(self):
         self.runtime_configuration()
         self.bind()

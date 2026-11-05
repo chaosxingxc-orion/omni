@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 SCHEMA = 'saea-preflight-binding-v1'
@@ -68,7 +69,7 @@ def source_artifacts(source, ready):
     return script, config, output_mount
 
 
-def compatibility(source, successor, config, output_mount):
+def compatibility(source, successor, config, output_mount, *, require_fresh_timing=False):
     require(source['network'] == 'none' and not source['pid_host'], 'CPU preflight must isolate network and processes')
     require(source['image'] == successor['image'], 'successor image drift')
     require(source['environment'] == successor['environment'], 'successor environment drift')
@@ -112,6 +113,9 @@ def compatibility(source, successor, config, output_mount):
         require(not Path(mount['source']).exists() or Path(mount['source']).is_dir(),
                 'timing mount source must be a directory')
         require(not sink.exists() or sink.is_file(), 'timing output must be a file')
+        if require_fresh_timing:
+            for target in (sink, sink.with_name(sink.name + '.config.json')):
+                require(not os.path.lexists(target), 'timing output must be fresh before dispatch: ' + str(target))
         require(not any(overlap(timing['path'], p) for p in protected)
                 and not overlap(timing['path'], output_mount['target']),
                 'timing output overlaps dependency or preflight evidence')
@@ -179,7 +183,7 @@ def bind(source_path, ready, successor_path, output):
     source = launcher.load_config(source_path)
     successor = launcher.load_config(successor_path)
     config, output_mount, inputs = validate_ready(source, ready)
-    footprint = compatibility(source, successor, config, output_mount)
+    footprint = compatibility(source, successor, config, output_mount, require_fresh_timing=True)
     require({'path': str(Path(ready).resolve()), 'sha256': sha(ready)} in successor['required_inputs'],
             'successor must pin successful readiness')
     intent, container_id = completed_source(source)
@@ -208,7 +212,10 @@ def verify(binding_path, successor_path):
             and intent.get('runner_sha256') == sha(launcher.__file__),
             'bound source launch identity differs')
     config, output_mount, _ = validate_ready(source, inputs[0])
-    require(compatibility(source, successor, config, output_mount) == binding['compatibility'],
+    # Once intent exists, launcher owns reconciliation and refuses a new start.
+    # A running or completed process is expected to have created these files.
+    fresh = not os.path.lexists(Path(successor['receipt_dir']) / 'launch-intent.json')
+    require(compatibility(source, successor, config, output_mount, require_fresh_timing=fresh) == binding['compatibility'],
             'environment compatibility binding differs')
     return successor
 
