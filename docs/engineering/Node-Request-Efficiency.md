@@ -43,6 +43,12 @@
 - **配置驱动**：固定镜像或版本固定的只读挂载代码，外部配置声明并发、线程数和 normal/debug；不为每个实验生成新业务实现。
 - **音频缓存**：`SAEA_AUDIO_CACHE_ENABLED=1` 显式启用，默认关闭；条目数和编码字节双限，绑定路径/device/inode/size/mtime/ctime，读取变化拒绝，并发 miss 不重复计费。新的外部 overlay 可在正式推理前并行预热同一缓存；仅用于冻结输入，不替代内容身份门禁。
 - **可观测性**：debug 区分 capacity_wait、executor_wait、execute；normal 保留关键统计。常规观测每 600 秒或终态事件触发。
+- **有界校验背压**：prepared pipeline 对已返回但尚未校验的响应设置与
+  `queue_depth` 相同的上限；达到上限时仅等待最早完成的校验，避免 CPU
+  校验落后时无界保留响应和轨迹。dispatch receipt 额外记录
+  `model_queue_wait_seconds`、`validation_backpressure_events`、
+  `validation_backpressure_seconds` 和 `max_validation_pending`，用于区分
+  NPU 槽位不足与 CPU 校验不足。
 
 单请求 direct 使用 `configs/runtime/request-pipeline.example.json`；native 多节点使用独立 `dispatch` 配置的 `prepare_workers`、`validation_workers`、`admitted_trajectories`、`model_inflight`、`ready_request`。两者不可混用。`model_inflight` 是 contact 许可，包含最终检查和响应处理，并非纯 HTTP 在途。
 
@@ -54,13 +60,14 @@
 |native 请求、持久 FIT 恢复及 fallback|既有固定镜像 91 项通过，另有 2 项取消边界测试|
 |runtime/factory/debug 组合|既有固定镜像 219 项通过；发生于最新音频缓存硬化之前|
 |音频缓存硬化|本轮固定 saea-base:20261027，27 项通过，源码来自独立候选快照；不是最终发布镜像自身验收|
+|prepared pipeline 背压|受影响单元测试 1 项通过；完整 `test_flight_runtime.py` 为 171 通过、1 个既有 `openjiuwen` 环境依赖失败|
 |跨版本恢复与外置准入|既有隔离三节点恢复正例、挂载和故障恢复测试通过；真实终态结算与正式接续仍待|
 
 已构建的发布镜像源码为 `6ea491c9`，后续 roster、调度观测和缓存改进尚不能自动视为已装入该镜像。交付须固定最终版本并使用通用发布入口，不覆盖旧执行树。测试通过不代表线上收益，也不代表全仓测试通过。
 
 ## 剩余工作与验收顺序
 
-1. 固定包含最新改进的发布源码与配置；复用已有通过证据，只补受新增改动影响的镜像集成验证。确认输入在正式推理前加载，动态 Slot/Decision 内容在上游结果产生后预取。新的效率 overlay 仍需重新生成源码清单和发布镜像，当前未部署。
+1. 固定包含最新改进的发布源码与配置；复用已有通过证据，只补受新增改动影响的镜像集成验证。确认输入在正式推理前加载，动态 Slot/Decision 内容在上游结果产生后预取。新的效率 overlay 和本轮背压改动仍需重新生成源码清单和发布镜像，当前未部署。
 2. 从 A 真实终态采集 checkpoint、生成/FIT 账本和共享 guard 证据；用原生 reader 确认可保留集合，再生成后继配置。919 条终态不自动等于 919 条可保留；未知请求禁止盲重发。
 3. 首实例用未完成的原 Fold A 数据做 600 秒真实效率窗口，同时记录完成数、有效完整轨迹、秒/条、各阶段等待、实际引擎在途、CPU 队列和 NPU 利用率。验证合格后再扩大实验。
 4. 根据实际瓶颈调整 32/64/96/128 并发及准备/校验池，直至增加并发不再增加有效吞吐或出现资源压力。不同数据窗口不能声称严格倍数收益；不把逐档重复整份实验设为必需。
