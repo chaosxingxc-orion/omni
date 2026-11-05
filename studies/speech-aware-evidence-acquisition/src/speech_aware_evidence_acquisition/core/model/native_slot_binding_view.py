@@ -48,8 +48,9 @@ def project_native_slot_binding_view(
     The framework caller has validated native source authority and complete groups.
     """
     try:
-        _validate_context(projection_context)
-        scope = _scope_for_payload(payload, projection_context)
+        from ...rails.slot_binding_view import _projection_snapshot, _scope_for_validated_payload, _project_validated_slot_value
+        projection_context = _projection_snapshot(projection_context)
+        scope = _scope_for_validated_payload(payload, projection_context)
     except ValueError as error:
         raise FrozenCoreError("native slot view context: " + str(error)) from error
     documents = _local_result_documents(messages, local_results)
@@ -67,7 +68,7 @@ def project_native_slot_binding_view(
 
     def derive(block, location):
         try:
-            text, audit = _project_slot_value(
+            text, audit = _project_validated_slot_value(
                 projection_context, evidence_id=block["evidence_id"],
                 source_uri=block["source_uri"], content=block["content"], scope=scope,
             )

@@ -522,3 +522,28 @@ def test_pipeline_projection_duplicate_policy_bound_and_enforced(tmp_path, polic
             bad_contract=json.loads(bad_payload['history'][-1]['content']);bad_contract['messages'][1]['content']+=instruction
             bad_payload['history'][-1]['content']=json.dumps(bad_contract);bad_payload['history'][-1]['content_sha256']=hashlib.sha256(bad_payload['history'][-1]['content'].encode()).hexdigest()
             with pytest.raises(FrozenCoreError):project_native_slot_binding_view(payload=bad_payload,messages=messages,local_results={},projection_context=context)
+
+
+def test_private_projection_snapshot_survives_original_mutation_and_rejects_changed_source(tmp_path):
+    from speech_aware_evidence_acquisition.rails.slot_binding_view import (
+        _projection_snapshot, _scope_for_validated_payload, _project_validated_slot_value,
+    )
+    context, config, payload = context_world(tmp_path)
+    frozen = _projection_snapshot(context)
+    evidence_id, uri, text = _target(context)
+    scope = _scope_for_validated_payload(payload, frozen)
+    before = _project_validated_slot_value(frozen, evidence_id=evidence_id,
+        source_uri=uri, content=text, scope=scope)
+    value = next(x for x in context.knowledge_binding.composite_snapshot.values
+                 if x.value_id == evidence_id)
+    old = value.content
+    try:
+        object.__setattr__(value, 'content', old + ' tampered')
+        with pytest.raises(SlotBindingViewError, match='snapshot'):
+            _projection_snapshot(context)
+        assert _project_validated_slot_value(frozen, evidence_id=evidence_id,
+            source_uri=uri, content=text, scope=scope) == before
+    finally:
+        object.__setattr__(value, 'content', old)
+    with pytest.raises(FrozenInstanceError):
+        frozen.knowledge_binding.binding_sha256 = '0' * 64

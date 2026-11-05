@@ -15,8 +15,10 @@ from test_native_evidence_projection import document, world
 def context(monkeypatch):
     context = SimpleNamespace(policy_id=module.POLICY_ID, context_sha256="b" * 64,
                               value_ids=("value:alpha",))
+    from speech_aware_evidence_acquisition.rails import slot_binding_view as rail
+    monkeypatch.setattr(rail, "_projection_snapshot", lambda value: value)
     monkeypatch.setattr(module, "_validate_context", lambda value: None)
-    monkeypatch.setattr(module, "_scope_for_payload", lambda payload, value: {
+    monkeypatch.setattr(rail, "_scope_for_validated_payload", lambda payload, value: {
         "eligible": True, "candidate_ids": ["a"], "fallback_reason": None,
         "source_states": [{"content_sha256": "c" * 64}],
     })
@@ -30,7 +32,7 @@ def context(monkeypatch):
             "selected_binding_addresses": ["intent_bindings/0"],
             "excluded_binding_addresses": ["intent_bindings/1"],
         }
-    monkeypatch.setattr(module, "_project_slot_value", project)
+    monkeypatch.setattr(rail, "_project_validated_slot_value", project)
     return context
 
 
@@ -62,7 +64,8 @@ def test_base_and_tool_have_explicit_views_without_mutating_source(context, spee
 
 def test_nonconsumer_and_fallback_keep_bytes_exact(context, monkeypatch):
     payload, messages, results = world()
-    monkeypatch.setattr(module, "_scope_for_payload", lambda *args: {
+    from speech_aware_evidence_acquisition.rails import slot_binding_view as rail
+    monkeypatch.setattr(rail, "_scope_for_validated_payload", lambda *args: {
         "eligible": False, "candidate_ids": [], "fallback_reason": "nonconsumer",
     })
     rendered, receipt = module.project_native_slot_binding_view(

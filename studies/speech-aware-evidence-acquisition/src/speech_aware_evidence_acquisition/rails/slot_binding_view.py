@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import hashlib
 import json
 from pathlib import Path
@@ -344,6 +344,57 @@ def validate_slot_view_context(context: SlotBindingViewContext) -> None:
             raise SlotBindingViewError("slot view row differs from canonical knowledge")
 
 
+
+@dataclass(frozen=True, slots=True)
+class _ProjectionValue:
+    value_id: str
+    content: str
+
+
+@dataclass(frozen=True, slots=True)
+class _ProjectionSnapshot:
+    values: tuple[_ProjectionValue, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _ProjectionKnowledge:
+    binding_sha256: str
+    store_role: str
+    composite_snapshot: _ProjectionSnapshot
+
+    def model_evidence_block(self, store_id, *, local_evidence_id, content):
+        return {"text": f"[knowledge store={store_id} role={self.store_role}] {content}"}
+
+
+def _projection_snapshot(context):
+    """Validate a fresh private copy, then retain only immutable projection data."""
+    # Snapshot records contain only frozen dataclasses and tuple/string fields;
+    # rebuild their immutable records while copying mutable pin mappings.
+    source = context.knowledge_binding
+    stores = {}
+    for key, store in source.stores.items():
+        stores[key] = replace(store, snapshot=store.snapshot,
+            snapshot_pin=dict(store.snapshot_pin), release_pin=dict(store.release_pin),
+            source_pin=dict(store.source_pin), phase_supply={}, candidate_supply={},
+            context_supply={}, alternates=())
+    binding = KnowledgeStoreBinding(stores=stores,
+        composite_snapshot=replace(source.composite_snapshot,
+            facets=tuple(replace(x) for x in source.composite_snapshot.facets),
+            values=tuple(replace(x) for x in source.composite_snapshot.values)),
+        binding_sha256=source.binding_sha256)
+    rows = tuple(context.rows)
+    private = replace(context, rows=rows,
+                      rows_by_value_id=MappingProxyType(dict(context.rows_by_value_id)),
+                      knowledge_binding=binding)
+    validate_slot_view_context(private)
+    store = binding.store(private.store_id)
+    values = tuple(_ProjectionValue(v.value_id, v.content)
+                   for v in binding.composite_snapshot.values
+                   if v.value_id in private.rows_by_value_id)
+    frozen = _ProjectionKnowledge(binding.binding_sha256, store.store_role,
+                                  _ProjectionSnapshot(values))
+    return replace(private, knowledge_binding=frozen)
+
 def _history_artifacts(payload: Mapping[str, object]) -> tuple[AgentStateArtifact, ...]:
     history = payload.get("history")
     if not isinstance(history, list) or not history:
@@ -449,6 +500,10 @@ def scope_for_payload(
 ) -> dict[str, object]:
     """Derive the current role's ordered candidate union from sealed state."""
     validate_slot_view_context(context)
+    return _scope_for_validated_payload(payload, context)
+
+
+def _scope_for_validated_payload(payload, context):
     if not isinstance(payload, Mapping):
         raise SlotBindingViewError("native payload must be a mapping")
     from ..core.model import FrozenCoreError
@@ -585,6 +640,10 @@ def project_slot_value(
 ) -> tuple[str, dict[str, object] | None]:
     """Project only an exact canonical target; retain full content on uncertainty."""
     validate_slot_view_context(context)
+    return _project_validated_slot_value(context, evidence_id=evidence_id, source_uri=source_uri, content=content, scope=scope)
+
+
+def _project_validated_slot_value(context, *, evidence_id, source_uri, content, scope):
     row = context.rows_by_value_id.get(evidence_id)
     if row is None:
         return content, None
