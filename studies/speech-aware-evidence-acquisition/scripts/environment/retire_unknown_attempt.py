@@ -140,8 +140,7 @@ def execute(cfg):
         verify_service(data,cfg,instances,runtime);quiet=quiescence(instances);guard_check()
         require(inventory(journal)==snapshot and attempt_path.read_bytes()==current, 'custody changed after quiescence')
         marker_path=journal.root/'retirement.json'
-        if out.exists():
-            require((out/'manifest.json').is_file(),'incomplete archive before manifest; preserve for inspection')
+        if (out/'manifest.json').exists():
             manifest=read(out/'manifest.json')
             require(manifest['config_sha256']==cfg['config_sha256'] and manifest['snapshot']==snapshot and
                     manifest['fit_files']==fit_files and manifest['cost']==state['actual'], 'archive manifest differs')
@@ -149,14 +148,16 @@ def execute(cfg):
                     sha(out/'plan.json')==cfg['plan_sha256'] and sha(out/'checkpoint.jsonl')==cfg['checkpoint_sha256'], 'archive custody differs')
             for name,expected in snapshot['files'].items():require(sha(out/name)==expected,'archive journal copy differs')
             for name,expected in fit_files.items():require(sha(out/'fit'/name)==expected,'archive FIT copy differs')
-            require(marker_path.is_file() and read(marker_path)['manifest_sha256']==sha(out/'manifest.json'), 'retirement marker differs')
         else:
             require(lease_blob is not None and state['state']=='OPENED' and not marker_path.exists(), 'fresh source custody required')
-            out.mkdir(parents=True);sync(out.parent)
-            for name in snapshot['files']:publish_new(out/name,(journal.root/name).read_bytes())
-            publish_new(out/'lease.json',lease_blob);publish_new(out/'attempt-before.json',current)
-            publish_new(out/'plan.json',plan_path.read_bytes());publish_new(out/'checkpoint.jsonl',checkpoint.read_bytes())
-            for name,expected in fit_files.items():publish_new(out/'fit'/name,(fit_root/name).read_bytes())
+            out.mkdir(parents=True,exist_ok=True);sync(out.parent)
+            def stage(path,content):
+                if path.exists():require(path.is_file() and not path.is_symlink() and path.read_bytes()==content,'partial archive differs')
+                else:publish_new(path,content)
+            for name in snapshot['files']:stage(out/name,(journal.root/name).read_bytes())
+            stage(out/'lease.json',lease_blob);stage(out/'attempt-before.json',current)
+            stage(out/'plan.json',plan_path.read_bytes());stage(out/'checkpoint.jsonl',checkpoint.read_bytes())
+            for name,expected in fit_files.items():stage(out/'fit'/name,(fit_root/name).read_bytes())
             for name,expected in snapshot['files'].items():require(sha(out/name)==expected,'archive journal copy differs')
             for name,expected in fit_files.items():require(sha(out/'fit'/name)==expected,'archive FIT copy differs')
             require(sha(out/'lease.json')==cfg['lease_sha256'] and sha(out/'attempt-before.json')==cfg['attempt_sha256'] and
@@ -168,8 +169,11 @@ def execute(cfg):
                       'producer_container':cfg['container'],'boot_id':boot,'quiescence':quiet,
                       'lease_sha256':cfg['lease_sha256'],'created_at':time.time()}
             publish_new(out/'manifest.json',canonical(manifest))
-            marker={'schema':SCHEMA,'run_id':run,'attempt_id':attempt_id,'automatic_retry':False,
-                    'unknown_count':snapshot['unknown_count'],'manifest_sha256':sha(out/'manifest.json')}
+        marker={'schema':SCHEMA,'run_id':run,'attempt_id':attempt_id,'automatic_retry':False,
+                'unknown_count':snapshot['unknown_count'],'manifest_sha256':sha(out/'manifest.json')}
+        if marker_path.exists():require(read(marker_path)==marker,'retirement marker differs')
+        else:
+            require(lease_blob is not None and state['state']=='OPENED','marker missing after abort or release')
             publish_new(marker_path,canonical(marker))
         if state['state']=='OPENED':
             require(lease_blob is not None,'lease missing before abort')

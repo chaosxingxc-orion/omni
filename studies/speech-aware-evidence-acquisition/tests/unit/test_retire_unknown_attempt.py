@@ -135,3 +135,15 @@ def test_wrong_live_service_refuses(tmp_path,monkeypatch):
     monkeypatch.setattr(m,'verify_service',lambda *a: (_ for _ in ()).throw(ValueError('wrong service')))
     with pytest.raises(ValueError,match='wrong service'):m.execute(c)
     assert (Path(c['data'])/'locks/flight.lock').exists()
+
+@pytest.mark.parametrize('phase',['copy','manifest'])
+def test_pre_marker_crash_resumes_without_deleting(tmp_path,monkeypatch,phase):
+    c,plan,j=fixture(tmp_path,monkeypatch);original=m.publish_new;calls=[]
+    def publish(path,blob):
+        if (phase=='copy' and path.name.endswith('.response.json')) or (phase=='manifest' and path.name=='retirement.json'):
+            raise RuntimeError('crash')
+        calls.append(str(path));return original(path,blob)
+    monkeypatch.setattr(m,'publish_new',publish)
+    with pytest.raises(RuntimeError):m.execute(c)
+    monkeypatch.setattr(m,'publish_new',original)
+    assert m.execute(c)['unknown_count']==1
