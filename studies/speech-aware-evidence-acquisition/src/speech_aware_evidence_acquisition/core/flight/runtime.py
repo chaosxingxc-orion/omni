@@ -1717,6 +1717,13 @@ class FlightRuntime:
         self._plan: ExecutionPlan | None = None
         self._split_id: str | None = None
         self._samples: tuple[object, ...] = ()
+        # ``_prepare`` is called by several contact-free stages.  Keep the
+        # immutable roster and its adapter for the lifetime of one flight so
+        # later stages do not re-scan media or rebuild carrier objects.  The
+        # cache is keyed by the composed config and split identity; a changed
+        # fragment necessarily takes the slow path and replaces it.
+        self._prepared_roster_key: tuple[str, str, str] | None = None
+        self._raw_phase_packet_bindings_cache: Mapping[str, Mapping[str, str]] | None = None
         self._gate = None
         self._attempt_store = None
         self._attempt_handle = None
@@ -4644,10 +4651,7 @@ class FlightRuntime:
         lock = self._lock if self._lock is not None else load_lock(umbrella_lock_path(self._repo_root))
         self._lock = lock
 
-        adapter = self._adapter_factory(lock, self._data_root)
-        if not isinstance(adapter, TaskAdapter):
-            raise FlightRuntimeError("adapter_factory must return a TaskAdapter instance")
-        self._adapter = adapter
+        previous_adapter = self._adapter
 
         # Validate an armed scheduler before preparation can contact a service.
         if "system_search_measurement" in values:
@@ -4685,10 +4689,33 @@ class FlightRuntime:
             raise FlightRuntimeError("dataset fragment must declare a non-empty split_id")
         self._split_id = split_id
 
-        samples = tuple(adapter.load_split(split_id))
+        # All callers in one flight must observe one roster.  Composition is
+        # still reread above, so this short-circuit remains invalidated by any
+        # config change while avoiding repeated adapter.load_split() work.
+        cached_key = (composed.config_hash, split_id, str(self._data_root.resolve()))
+        if (
+            self._prepared_roster_key == cached_key
+            and previous_adapter is not None
+            and self._samples
+        ):
+            # Keep the original adapter instance as well as its roster.  Some
+            # adapters memoize carrier views (contracts, media descriptors)
+            # alongside the samples; swapping in a newly constructed adapter
+            # would defeat that cache even though load_split was avoided.
+            adapter = previous_adapter
+            samples = self._samples
+        else:
+            adapter = self._adapter_factory(lock, self._data_root)
+            if not isinstance(adapter, TaskAdapter):
+                raise FlightRuntimeError("adapter_factory must return a TaskAdapter instance")
+            samples = tuple(adapter.load_split(split_id))
+        self._adapter = adapter
         if not samples:
             raise FlightRuntimeError(f"split {split_id!r} resolved to zero samples")
-        self._samples = samples
+        if self._prepared_roster_key != cached_key:
+            self._samples = samples
+            self._prepared_roster_key = cached_key
+            self._raw_phase_packet_bindings_cache = None
         sample_ids = tuple(sample.sample_id for sample in samples)
         if len(set(sample_ids)) != len(sample_ids):
             raise FlightRuntimeError(f"split {split_id!r} contains duplicate sample ids")
@@ -5559,17 +5586,26 @@ class FlightRuntime:
         self.validate_execution_unit_observation(unit, unit.query_descriptor("speech_audio"))
 
     def _raw_phase_packet_bindings(self):
+        if self._raw_phase_packet_bindings_cache is not None:
+            return self._raw_phase_packet_bindings_cache
         roster = self.execution_unit_roster()
         if roster is not None:
-            return {unit.parent_sample_id: {
+            bindings = {unit.parent_sample_id: {
                 "packet_id": unit.slice_record.parent_media_relpath,
                 "sha256": unit.slice_record.parent_sha256,
             } for unit in roster.units}
+            self._raw_phase_packet_bindings_cache = bindings
+            return bindings
         if self._adapter.preprocess_plan().get("kind") == "raw-speech-windows":
             raise FlightRuntimeError("raw window phase programs require prepared_execution_units")
-        return {sample.sample_id: {"packet_id": sample.audio_ref.path,
-                                  "sha256": sample.audio_ref.sha256}
-                for sample in self._adapter.load_split(self._split_id)}
+        # ``self._samples`` is the roster already identity-hashed by _prepare.
+        # Reusing it avoids a second media scan and guarantees packet bindings
+        # cannot drift from the roster used by the execution plan.
+        bindings = {sample.sample_id: {"packet_id": sample.audio_ref.path,
+                                       "sha256": sample.audio_ref.sha256}
+                    for sample in self._samples}
+        self._raw_phase_packet_bindings_cache = bindings
+        return bindings
 
     def _promotion_receipt_path(self) -> Path:
         value = self._composed.values.get("speech_packet_promotion_receipt")

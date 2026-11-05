@@ -95,6 +95,18 @@ class _FakeAdapter(TaskAdapter):
         return {"ok": True}
 
 
+class _CountingAdapter(_FakeAdapter):
+    """Expose split loads so roster reuse is a measurable contract."""
+
+    def __init__(self, lock: Mapping[str, object], root: Path) -> None:
+        super().__init__(lock, root)
+        self.load_calls = 0
+
+    def load_split(self, split_id: str):
+        self.load_calls += 1
+        return super().load_split(split_id)
+
+
 class _WideFakeAdapter(_FakeAdapter):
     """Same fake, a different serving geometry -- used to exercise geometry
     mismatch/reuse behavior."""
@@ -492,6 +504,28 @@ def test_stages_refuse_to_run_before_preflight(tmp_path):
     for stage in ("preprocess", "serve", "run_phases", "seal", "score"):
         with pytest.raises(FlightStageOrderError):
             getattr(runtime, stage)()
+
+
+def test_prepare_reuses_identity_hashed_roster_for_raw_bindings(tmp_path):
+    runtime = _make_runtime(
+        tmp_path,
+        adapter_cls=_CountingAdapter,
+        config_kwargs={
+            "baseline_extra": {"arm": "raw-speech-agent-native-tools"},
+        },
+    )
+
+    runtime._prepare()
+    adapter = runtime.adapter
+    first = runtime._raw_phase_packet_bindings()
+    runtime._prepare()
+    second = runtime._raw_phase_packet_bindings()
+
+    assert adapter.load_calls == 1
+    assert first == second == {
+        "s1": {"packet_id": "s1.wav", "sha256": "0" * 64},
+        "s2": {"packet_id": "s2.wav", "sha256": "0" * 64},
+    }
 
 
 def test_preflight_refuses_to_run_twice(tmp_path):
