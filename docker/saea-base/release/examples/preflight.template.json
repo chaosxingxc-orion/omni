@@ -1,0 +1,75 @@
+{
+  "schema": "saea-environment-preflight-v1",
+  "required_environment": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONPATH": "/opt/saea-release/studies/speech-aware-evidence-acquisition/src",
+    "SAEA_RELEASE_MANIFEST": "/opt/saea-release/source-manifest.json",
+    "SAEA_RELEASE_MANIFEST_SHA256": "<SOURCE_MANIFEST_SHA256>",
+    "SAEA_EXPERIMENT_MANIFEST": "/experiment/assets.json",
+    "SAEA_EXPERIMENT_MANIFEST_SHA256": "<EXPERIMENT_MANIFEST_SHA256>",
+    "SPEECHRL_DATA_DIR": "/data"
+  },
+  "interpreters": [
+    {
+      "name": "harness",
+      "python": "/opt/saea-venv/bin/python",
+      "environment_key": null,
+      "imports": [
+        "speech_aware_evidence_acquisition.core.scorers",
+        "speech_aware_evidence_acquisition.core.flight.factory"
+      ],
+      "distributions": {}
+    },
+    {
+      "name": "system",
+      "python": "/usr/local/python3.12.13/bin/python3",
+      "environment_key": null,
+      "imports": [
+        "speech_aware_evidence_acquisition.rails.intent_slot_pipeline"
+      ],
+      "distributions": {}
+    }
+  ],
+  "required_files": [
+    {
+      "path": "/experiment/configs/model/example-model.json",
+      "sha256": "<MODEL_FRAGMENT_SHA256>"
+    },
+    {
+      "path": "/experiment/configs/dataset/example-dataset.json",
+      "sha256": "<DATASET_FRAGMENT_SHA256>"
+    },
+    {
+      "path": "/experiment/configs/baseline/example-baseline.json",
+      "sha256": "<BASELINE_FRAGMENT_SHA256>"
+    },
+    {
+      "path": "/experiment/configs/experiment/example-experiment.json",
+      "sha256": "<EXPERIMENT_FRAGMENT_SHA256>"
+    },
+    {
+      "path": "/experiment/configs/probes/example-template.txt",
+      "sha256": "<TEMPLATE_SHA256>"
+    },
+    {
+      "path": "/experiment/docs/receipts/rosters/example-roster.json",
+      "sha256": "<ROSTER_SHA256>"
+    }
+  ],
+  "compositions": [
+    {
+      "id": "example-existing-population",
+      "repo_root": "/opt/saea-release/studies/speech-aware-evidence-acquisition",
+      "data_root": "/data",
+      "fragments": {
+        "model": "example-model",
+        "dataset": "example-dataset",
+        "baseline": "example-baseline",
+        "experiment": "example-experiment"
+      },
+      "expected_rows": "<EXACT_EXISTING_ROSTER_COUNT>",
+      "verify_media": true
+    }
+  ],
+  "timeout_seconds": 120
+}

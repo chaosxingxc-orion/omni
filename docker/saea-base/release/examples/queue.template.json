@@ -1,0 +1,17 @@
+{
+  "schema": "saea-configured-job-queue-v1",
+  "queue_id": "replace-with-unique-cpu-queue",
+  "state_dir": "/REPLACE_WITH_OWNED_ROOT/release-example/queue-state",
+  "monitor_interval_seconds": 600,
+  "jobs": [
+    {
+      "id": "preflight",
+      "launch": {
+        "path": "/REPLACE_WITH_OWNED_ROOT/release-example/launch-preflight.json",
+        "sha256": "<LAUNCH_PREFLIGHT_FILE_SHA256>"
+      },
+      "preflight": null,
+      "after": null
+    }
+  ]
+}

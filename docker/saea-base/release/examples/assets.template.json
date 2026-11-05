@@ -1,0 +1,29 @@
+{
+  "schema": "saea-experiment-assets-v1",
+  "files": {
+    "configs/model/example-model.json": {
+      "path": "/experiment/configs/model/example-model.json",
+      "sha256": "<MODEL_FRAGMENT_SHA256>"
+    },
+    "configs/dataset/example-dataset.json": {
+      "path": "/experiment/configs/dataset/example-dataset.json",
+      "sha256": "<DATASET_FRAGMENT_SHA256>"
+    },
+    "configs/baseline/example-baseline.json": {
+      "path": "/experiment/configs/baseline/example-baseline.json",
+      "sha256": "<BASELINE_FRAGMENT_SHA256>"
+    },
+    "configs/experiment/example-experiment.json": {
+      "path": "/experiment/configs/experiment/example-experiment.json",
+      "sha256": "<EXPERIMENT_FRAGMENT_SHA256>"
+    },
+    "configs/probes/example-template.txt": {
+      "path": "/experiment/configs/probes/example-template.txt",
+      "sha256": "<TEMPLATE_SHA256>"
+    },
+    "docs/receipts/rosters/example-roster.json": {
+      "path": "/experiment/docs/receipts/rosters/example-roster.json",
+      "sha256": "<ROSTER_SHA256>"
+    }
+  }
+}

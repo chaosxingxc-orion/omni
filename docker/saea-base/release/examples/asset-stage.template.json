@@ -1,0 +1,11 @@
+{
+  "schema": "saea-asset-stage-v1",
+  "output_root": "/output/private-assets",
+  "files": [
+    {
+      "source": "/inputs/knowledge-release.json",
+      "relative": "knowledge/example/release.json",
+      "sha256": "<KNOWLEDGE_FILE_SHA256>"
+    }
+  ]
+}

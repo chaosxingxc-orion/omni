@@ -1,0 +1,78 @@
+{
+  "schema": "saea-configured-job-launch-v1",
+  "container_name": "replace-with-unique-stage-name",
+  "image": "<IMAGE_ID>",
+  "expected_commit": "<IMAGE_SOURCE_COMMIT>",
+  "source_identity": {
+    "mode": "image-release-v1",
+    "manifest_sha256": "<SOURCE_MANIFEST_SHA256>"
+  },
+  "repo_path": "/opt/saea-release/studies/speech-aware-evidence-acquisition",
+  "working_directory": "/opt/saea-release/studies/speech-aware-evidence-acquisition",
+  "receipt_dir": "/REPLACE_WITH_OWNED_ROOT/release-example/custody/stage",
+  "argv": [
+    "/opt/saea-venv/bin/python",
+    "/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
+    "stage",
+    "--repo",
+    "/opt/saea-release/studies/speech-aware-evidence-acquisition",
+    "--data",
+    "/data",
+    "--config",
+    "/experiment/workload.json",
+    "--out",
+    "/data/work/example/stage"
+  ],
+  "network": "none",
+  "pid_host": false,
+  "cpuset_cpus": "<ALLOCATED_CPUSET>",
+  "environment": {
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONPATH": "/opt/saea-release/studies/speech-aware-evidence-acquisition/src",
+    "SAEA_RELEASE_MANIFEST": "/opt/saea-release/source-manifest.json",
+    "SAEA_RELEASE_MANIFEST_SHA256": "<SOURCE_MANIFEST_SHA256>",
+    "SAEA_EXPERIMENT_MANIFEST": "/experiment/assets.json",
+    "SAEA_EXPERIMENT_MANIFEST_SHA256": "<EXPERIMENT_MANIFEST_SHA256>",
+    "SPEECHRL_DATA_DIR": "/data",
+    "SAEA_EXPERIMENT_WORKSPACE": "/workspace"
+  },
+  "mounts": [
+    {
+      "source": "/REPLACE_WITH_OWNED_ROOT/release-example/inputs",
+      "target": "/experiment",
+      "readonly": true
+    },
+    {
+      "source": "/REPLACE_WITH_OWNED_ROOT/release-example/workspace",
+      "target": "/workspace",
+      "readonly": false
+    },
+    {
+      "source": "/REPLACE_WITH_OWNED_ROOT/release-example/data",
+      "target": "/data",
+      "readonly": false
+    },
+    {
+      "source": "/REPLACE_WITH_OWNED_ROOT/release-example/datasets",
+      "target": "/data/datasets",
+      "readonly": true
+    }
+  ],
+  "create_directories": [
+    "/REPLACE_WITH_OWNED_ROOT/release-example/custody/stage"
+  ],
+  "allowed_create_roots": [
+    "/REPLACE_WITH_OWNED_ROOT/release-example"
+  ],
+  "required_inputs": [
+    {
+      "path": "/REPLACE_WITH_OWNED_ROOT/release-example/inputs/assets.json",
+      "sha256": "<EXPERIMENT_MANIFEST_SHA256>"
+    },
+    {
+      "path": "/REPLACE_WITH_OWNED_ROOT/release-example/inputs/workload.json",
+      "sha256": "<WORKLOAD_FILE_SHA256>"
+    }
+  ],
+  "monitor_interval_seconds": 600
+}
