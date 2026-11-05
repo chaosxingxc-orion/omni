@@ -1,5 +1,7 @@
 # TFRL探索队列与异步接续
 
+> 当前优先级已覆盖下方旧图计划：先锁定P→Slot→Decision新基座，旧TFRL队列停止新增派发。详见 [新基座优先](../decisions/New-Baseline-First.md)。旧计划仅保留追溯，不能直接执行。
+
 最新已核验：Reflexion2 selection80已完成，第一TP4自动接续ACE selection80。GEPA1因旧树遗漏aa分支修复退出，完整0/80；优先修复后断点接续，第二实例当前有效负载未恢复。
 
 ## 当前队列

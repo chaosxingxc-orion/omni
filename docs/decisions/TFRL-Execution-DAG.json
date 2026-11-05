@@ -1,141 +1,213 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 3,
+  "source_revision": 4,
   "launcher_compatible": false,
-  "execution_status": "Reflexion complete80; ACE selection running; GEPA1 failed due to missing existing runtime fix, recovery in progress",
+  "execution_status": "user reprioritization: new P-Slot-Decision baseline must be locked before TFRL; old queues held",
   "nodes": [
+    {
+      "id": "NEW-BASELINE-REPAIR",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "implementation-in-progress",
+      "scientific_dependencies": []
+    },
+    {
+      "id": "NEW-BASELINE-DEV80",
+      "lane": "B",
+      "priority": 0,
+      "status": "not-yet-admitted",
+      "normal_generation_calls": 240,
+      "fit_call_cap": 240,
+      "scientific_dependencies": [
+        "NEW-BASELINE-REPAIR"
+      ],
+      "resource_dependencies": [
+        "B exact lease settlement and fixed runtime readiness"
+      ]
+    },
+    {
+      "id": "NEW-BASELINE-LOCK",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "awaiting-real-evidence",
+      "scientific_dependencies": [
+        "NEW-BASELINE-DEV80"
+      ],
+      "requirements": [
+        "fixed input and runtime pin closure",
+        "complete node and failure denominator audit",
+        "official metrics and cost",
+        "recovery and queue evidence"
+      ]
+    },
     {
       "id": "B-GEPA1-selection80",
       "lane": "B",
       "priority": 0,
-      "status": "failed-engineering-recovery-in-progress",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 640,
       "fit_call_cap": 640,
       "generation_fallback_inclusive_cap": 1280,
-      "scientific_dependencies": [],
+      "scientific_dependencies": [
+        "NEW-BASELINE-LOCK"
+      ],
       "resource_dependencies": [
         "B现有旧joint exact generation终态且lease settled；同lane独占guard"
-      ]
+      ],
+      "previous_status": "failed-engineering-recovery-in-progress"
     },
     {
       "id": "B-GEPA2-feedback-extension80",
       "lane": "B",
       "priority": 2,
-      "status": "spec-ready-for-conversion",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 640,
       "fit_call_cap": 640,
       "generation_fallback_inclusive_cap": 1280,
-      "scientific_dependencies": [],
+      "scientific_dependencies": [
+        "NEW-BASELINE-LOCK"
+      ],
       "resource_dependencies": [
         "B现有旧joint exact generation终态且lease settled；同lane独占guard"
-      ]
+      ],
+      "previous_status": "spec-ready-for-conversion"
     },
     {
       "id": "B-GEPA2-feedback-extension73",
       "lane": "B",
       "priority": 3,
-      "status": "spec-ready-for-conversion",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 584,
       "fit_call_cap": 584,
       "generation_fallback_inclusive_cap": 1168,
-      "scientific_dependencies": [],
+      "scientific_dependencies": [
+        "NEW-BASELINE-LOCK"
+      ],
       "resource_dependencies": [
         "B现有旧joint exact generation终态且lease settled；同lane独占guard",
         "同一B队列串行；前片若unknown则只按既有恢复规则处理，不自动跳过/重发"
-      ]
+      ],
+      "previous_status": "spec-ready-for-conversion"
     },
     {
       "id": "A-Reflexion2-selection80",
       "lane": "A",
       "priority": 0,
-      "status": "generation-completed-score-review-pending",
+      "status": "completed-not-promoted",
       "normal_generation_calls": 240,
       "fit_call_cap": 240,
       "generation_fallback_inclusive_cap": 480,
       "scientific_dependencies": [],
       "resource_dependencies": [
         "A lane exact prior generation terminal + lease/guard handoff"
-      ]
+      ],
+      "previous_status": "generation-completed-score-review-pending"
     },
     {
       "id": "A-ACE0-selection80",
       "lane": "A",
       "priority": 1,
-      "status": "running",
+      "status": "completed-not-promoted",
       "normal_generation_calls": 240,
       "fit_call_cap": 240,
       "generation_fallback_inclusive_cap": 480,
       "scientific_dependencies": [],
       "resource_dependencies": [
         "A lane exact prior generation terminal + lease/guard handoff"
-      ]
+      ],
+      "previous_status": "running"
     },
     {
       "id": "A-ACE0-H2-remainder232",
       "lane": "A",
       "priority": 2,
-      "status": "conversion-in-progress",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 696,
       "fit_call_cap": 696,
       "generation_fallback_inclusive_cap": 1392,
-      "scientific_dependencies": [],
+      "scientific_dependencies": [
+        "NEW-BASELINE-LOCK"
+      ],
       "resource_dependencies": [
         "A lane exact prior generation terminal + lease/guard handoff"
-      ]
+      ],
+      "previous_status": "conversion-in-progress"
     },
     {
       "id": "A-TFGRPO-current-K4-pilot15",
       "lane": "A",
       "priority": 3,
-      "status": "blocked-contract-and-subset-entry",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 105,
       "fit_call_cap": 105,
       "generation_fallback_inclusive_cap": 210,
       "scientific_dependencies": [
-        "CPU-current-policy-freeze-and-custody-audit"
+        "CPU-current-policy-freeze-and-custody-audit",
+        "NEW-BASELINE-LOCK"
       ],
       "resource_dependencies": [
         "与A lane后继串行，若调B须一次性重新绑定不两lane重复派发"
-      ]
+      ],
+      "previous_status": "blocked-contract-and-subset-entry"
     },
     {
       "id": "CPU-history-feedback-reuse",
-      "status": "inputs-ready",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
-      "scientific_dependencies": []
+      "scientific_dependencies": [
+        "NEW-BASELINE-LOCK"
+      ],
+      "previous_status": "inputs-ready"
     },
     {
       "id": "CPU-current-policy-freeze-and-custody-audit",
-      "status": "needs-owner-input",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
-      "scientific_dependencies": []
+      "scientific_dependencies": [
+        "NEW-BASELINE-LOCK"
+      ],
+      "previous_status": "needs-owner-input"
     },
     {
       "id": "CPU-frozen-candidate-scores",
-      "status": "wait-own-generation",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
-      "scientific_dependencies": []
+      "scientific_dependencies": [
+        "NEW-BASELINE-LOCK"
+      ],
+      "previous_status": "wait-own-generation"
     },
     {
       "id": "LOCAL-API-TFGRPO-reference-next",
-      "status": "not-started-not-NPU-ready",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
       "scientific_dependencies": [
-        "CPU-history-feedback-reuse"
-      ]
+        "CPU-history-feedback-reuse",
+        "NEW-BASELINE-LOCK"
+      ],
+      "previous_status": "not-started-not-NPU-ready"
     },
     {
       "id": "LOCAL-API-TFGRPO-fused-next",
-      "status": "not-started-not-NPU-ready",
+      "status": "held-until-new-baseline-locked",
       "normal_generation_calls": 0,
       "fit_call_cap": 0,
       "scientific_dependencies": [
-        "CPU-history-feedback-reuse"
-      ]
+        "CPU-history-feedback-reuse",
+        "NEW-BASELINE-LOCK"
+      ],
+      "previous_status": "not-started-not-NPU-ready"
     }
-  ]
+  ],
+  "baseline_first_policy": {
+    "required_baseline": "P-Slot-Decision",
+    "lock_status": "not-validated",
+    "tfrl_generation_allowed": false,
+    "baseline_validation_allowed": true,
+    "source": "New-Baseline-First.md"
+  }
 }
