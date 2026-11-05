@@ -554,6 +554,37 @@ def test_worker_count_rejects_unbounded_or_boolean_config(tmp_path):
         runtime._configured_worker_count("score_workers", 1)
 
 
+def test_request_pipeline_is_disabled_by_default_and_configured(tmp_path):
+    runtime = _make_runtime(tmp_path)
+    runtime._prepare()
+    assert runtime._request_pipeline_options(4) == {"enabled": False}
+    runtime._composed = type("Composed", (), {"values": {
+        "request_pipeline": {
+            "enabled": True, "prepare_workers": 6,
+            "validation_workers": 5, "queue_depth": 32,
+        },
+    }})()
+    assert runtime._request_pipeline_options(4) == {
+        "enabled": True, "prepare_workers": 6,
+        "validation_workers": 5, "queue_depth": 32,
+    }
+
+
+def test_request_pipeline_rejects_unknown_and_invalid_values(tmp_path):
+    runtime = _make_runtime(tmp_path)
+    runtime._prepare()
+    runtime._composed = type("Composed", (), {"values": {
+        "request_pipeline": {"enabled": True, "unknown": 1},
+    }})()
+    with pytest.raises(FlightRuntimeError, match="unknown"):
+        runtime._request_pipeline_options(4)
+    runtime._composed = type("Composed", (), {"values": {
+        "request_pipeline": {"enabled": True, "queue_depth": 0},
+    }})()
+    with pytest.raises(FlightRuntimeError, match="queue_depth"):
+        runtime._request_pipeline_options(4)
+
+
 def test_preflight_refuses_to_run_twice(tmp_path):
     runtime = _make_runtime(tmp_path)
     runtime.preflight()
@@ -2897,6 +2928,21 @@ class _ConcurrencyRecordingClient(_FakeClient):
         return "resp"
 
 
+class _PreparedConcurrencyClient(_ConcurrencyRecordingClient):
+    """Minimal prepared-request seam for the opt-in request pipeline."""
+
+    def prepare_request(self, messages, **kwargs):
+        return (tuple(messages), dict(kwargs))
+
+    def complete_prepared(self, prepared, *, id_slot=None):
+        messages, kwargs = prepared
+        decoding = dict(kwargs.get("decoding_params") or {})
+        decoding["id_slot"] = id_slot
+        return self.complete(messages, decoding_params=decoding, **{
+            key: value for key, value in kwargs.items() if key != "decoding_params"
+        })
+
+
 _CONCURRENCY_LIMIT = {"slots": 2}
 
 
@@ -2967,6 +3013,40 @@ def test_concurrent_results_come_back_in_sample_order(tmp_path):
 
     ordered = [row["sample_id"] for row in runtime._output_rows]
     assert ordered == [sample.sample_id for sample in runtime._samples]
+
+
+def test_prepared_request_pipeline_overlaps_and_records_bounded_stages(tmp_path):
+    _CONCURRENCY_LIMIT["slots"] = 2
+    runtime = _concurrent_runtime(
+        tmp_path,
+        client_factory=_PreparedConcurrencyClient,
+        config_kwargs={
+            "arm": "bare-core",
+            "policy": "fixed",
+            "experiment_extra": {
+                "request_pipeline": {
+                    "enabled": True,
+                    "prepare_workers": 2,
+                    "validation_workers": 2,
+                    "queue_depth": 4,
+                },
+            },
+        },
+    )
+    runtime.preflight()
+    runtime.preprocess()
+    runtime.serve()
+    receipt = runtime.run_phases()
+
+    dispatch = receipt["dispatch"]
+    assert dispatch["dispatch"] == "prepared-pipeline"
+    assert dispatch["prepare_workers"] == 2
+    assert dispatch["validation_workers"] == 2
+    assert dispatch["queue_depth"] == 4
+    assert dispatch["max_in_flight"] <= 2
+    assert [row["sample_id"] for row in runtime._output_rows] == [
+        sample.sample_id for sample in runtime._samples
+    ]
 
 
 def test_one_failed_contact_aborts_without_losing_completed_traces(tmp_path):

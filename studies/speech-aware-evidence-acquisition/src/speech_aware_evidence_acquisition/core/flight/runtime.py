@@ -5622,6 +5622,55 @@ class FlightRuntime:
             raise FlightRuntimeError(f"{key} must be an integer in [1, 256]")
         return value
 
+    def _request_pipeline_options(self, dispatch_workers: int) -> Mapping[str, object]:
+        """Resolve the optional prepare/send/validate pipeline from config.
+
+        The direct baseline historically rendered and validated a row on the
+        same worker that sent its model request.  Keep that behavior unless a
+        flight explicitly opts into the pipeline.  This makes the efficiency
+        change a reproducible config choice rather than a launcher-specific
+        code path, while allowing preparation and response validation to run
+        ahead/behind the NPU request window.
+        """
+        raw = self._composed.values.get("request_pipeline")
+        if raw is None:
+            return {"enabled": False}
+        if not isinstance(raw, Mapping):
+            raise FlightRuntimeError("request_pipeline must be a mapping")
+        allowed = {
+            "enabled", "prepare_workers", "validation_workers", "queue_depth",
+        }
+        unknown = sorted(set(raw) - allowed)
+        if unknown:
+            raise FlightRuntimeError(
+                f"request_pipeline declares unknown key(s): {unknown}"
+            )
+        enabled = raw.get("enabled", False)
+        if not isinstance(enabled, bool):
+            raise FlightRuntimeError("request_pipeline.enabled must be a boolean")
+        if not enabled:
+            return {"enabled": False}
+
+        def positive(name: str, fallback: int) -> int:
+            value = raw.get(name, fallback)
+            if type(value) is not int or not 1 <= value <= 256:
+                raise FlightRuntimeError(
+                    f"request_pipeline.{name} must be an integer in [1, 256]"
+                )
+            return value
+
+        prepare = positive("prepare_workers", min(dispatch_workers, 8))
+        validation = positive("validation_workers", min(dispatch_workers, 8))
+        queue_depth = positive(
+            "queue_depth", max(dispatch_workers * 2, dispatch_workers)
+        )
+        return {
+            "enabled": True,
+            "prepare_workers": prepare,
+            "validation_workers": validation,
+            "queue_depth": queue_depth,
+        }
+
     def _promotion_receipt_path(self) -> Path:
         value = self._composed.values.get("speech_packet_promotion_receipt")
         if not isinstance(value, str) or not value:
@@ -7109,6 +7158,9 @@ class FlightRuntime:
 
         if isinstance(workers, bool) or not isinstance(workers, int) or workers < 1:
             raise FlightRuntimeError("workers must be a positive integer")
+        pipeline = self._request_pipeline_options(workers)
+        if pipeline.get("enabled"):
+            return self._dispatch_prepared_pipeline(client, workers=workers, options=pipeline)
         packets = self.uses_speech_feature_packets()
         contact = self._speech_feature_contact if packets else self._raw_audio_contact
         base_decoding = dict(self._decoding_params() or {})
@@ -7190,6 +7242,159 @@ class FlightRuntime:
                 "sample, and more in-flight requests than slots is what the slot "
                 "pinning exists to forbid"
             ),
+        }
+
+    def _dispatch_prepared_pipeline(
+        self, client: object, *, workers: int, options: Mapping[str, object]
+    ) -> tuple[list[Mapping[str, object]], dict[str, object]]:
+        """Overlap request construction, NPU calls and response validation.
+
+        The queue is bounded by ``request_pipeline.queue_depth`` and the NPU
+        stage remains limited to the configured dispatch width.  This method
+        is deliberately used only for the one-contact direct policy: native
+        multi-node trajectories have their own admission and checkpoint
+        protocol and must not be silently moved to a different scheduler.
+        """
+        from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, as_completed, wait
+        from queue import Queue
+
+        prepare_workers = int(options["prepare_workers"])
+        validation_workers = int(options["validation_workers"])
+        queue_depth = int(options["queue_depth"])
+        if not callable(getattr(client, "prepare_request", None)):
+            raise FlightRuntimeError(
+                "request_pipeline requires a client with prepare_request()"
+            )
+        complete = getattr(client, "complete_prepared_with_metadata", None)
+        if not callable(complete):
+            complete = getattr(client, "complete_prepared", None)
+        if not callable(complete):
+            raise FlightRuntimeError(
+                "request_pipeline requires complete_prepared() support"
+            )
+
+        packets = self.uses_speech_feature_packets()
+        samples = tuple(self._samples)
+        base_decoding = dict(self._decoding_params() or {})
+        slots: "Queue[int]" = Queue()
+        for slot in range(workers):
+            slots.put(slot)
+        buffers: dict[int, object] = {}
+        buffer_lock = threading.Lock()
+        in_flight = 0
+        max_in_flight = 0
+        meter = threading.Lock()
+
+        def build(index: int, sample: object):
+            decoding = dict(self._sample_decoding_params(sample, base_decoding) or {})
+            if packets:
+                descriptor = self.speech_packet_bindings()[sample.sample_id]
+                messages = (
+                    {"role": "system", "content": self._adapter.instruction(sample)},
+                    {"role": "user", "content": [{
+                        "type": "input_speech_features",
+                        "speech_features": {
+                            "packet_id": descriptor["packet_id"],
+                            "sha256": descriptor["sha256"], "role": "query",
+                        },
+                    }]},
+                )
+                key_representation_id, matcher_policy_id = self._speech_feature_trace_ids()
+                kwargs = {
+                    "speech_feature_sample_id": sample.sample_id,
+                    "key_representation_id": key_representation_id,
+                    "matcher_policy_id": matcher_policy_id,
+                }
+            else:
+                messages = self._adapter.assemble_prompt(sample, None)
+                kwargs = {}
+            prepared = client.prepare_request(messages, decoding_params=decoding, **kwargs)
+            return index, sample, prepared, messages
+
+        def send(item):
+            nonlocal in_flight, max_in_flight
+            index, sample, prepared, messages = item
+            slot = slots.get()
+            buffer = None
+            make_buffer = getattr(client, "new_trace_buffer", None)
+            if callable(make_buffer):
+                buffer = make_buffer()
+                set_current_trace_buffer(buffer)
+                with buffer_lock:
+                    buffers[index] = buffer
+            with meter:
+                in_flight += 1
+                max_in_flight = max(max_in_flight, in_flight)
+            try:
+                response = complete(prepared, id_slot=slot)
+                response = getattr(response, "text", response)
+                return index, sample, messages, response
+            finally:
+                if buffer is not None:
+                    set_current_trace_buffer(None)
+                with meter:
+                    in_flight -= 1
+                slots.put(slot)
+
+        def validate(item):
+            index, sample, messages, response = item
+            return index, self._row_for(sample, messages, response)
+
+        model_results: list[object] = []
+        with (
+            ThreadPoolExecutor(max_workers=prepare_workers, thread_name_prefix="saea-request-prepare") as prep_pool,
+            ThreadPoolExecutor(max_workers=workers, thread_name_prefix="saea-flight-contact") as model_pool,
+            ThreadPoolExecutor(max_workers=validation_workers, thread_name_prefix="saea-response-validate") as validation_pool,
+        ):
+            next_index = 0
+            pending_prepare = set()
+            pending_model = set()
+            validation_futures = set()
+            while next_index < len(samples) and len(pending_prepare) < queue_depth:
+                pending_prepare.add(
+                    prep_pool.submit(build, next_index, samples[next_index])
+                )
+                next_index += 1
+            while pending_prepare or pending_model:
+                completed, _ = wait(
+                    tuple(pending_prepare | pending_model),
+                    return_when=FIRST_COMPLETED,
+                )
+                for future in completed:
+                    if future in pending_prepare:
+                        pending_prepare.remove(future)
+                        pending_model.add(model_pool.submit(send, future.result()))
+                    else:
+                        pending_model.remove(future)
+                        validation_futures.add(
+                            validation_pool.submit(validate, future.result())
+                        )
+                        if next_index < len(samples):
+                            pending_prepare.add(
+                                prep_pool.submit(build, next_index, samples[next_index])
+                            )
+                            next_index += 1
+            for completed in as_completed(validation_futures):
+                model_results.append(completed.result())
+
+        rows: list[Mapping[str, object] | None] = [None] * len(samples)
+        for index, row in model_results:
+            rows[index] = row
+        flush = getattr(client, "flush_trace_buffer", None)
+        if callable(flush):
+            for index in sorted(buffers):
+                flush(buffers[index])
+        if any(row is None for row in rows):
+            raise FlightRuntimeError("request pipeline lost a sample result")
+        return list(rows), {
+            "workers": workers,
+            "prepare_workers": prepare_workers,
+            "validation_workers": validation_workers,
+            "queue_depth": queue_depth,
+            "max_in_flight": max_in_flight,
+            "slot_ids_used": list(range(workers)),
+            "dispatch": "prepared-pipeline",
+            "contacts_per_sample": 1,
         }
 
     def _run_speech_feature_direct(self, client: object) -> list[Mapping[str, object]]:
