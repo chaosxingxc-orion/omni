@@ -1,6 +1,6 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 5,
+  "source_revision": 6,
   "launcher_compatible": false,
   "execution_status": "two TP4 lanes: new graph DEV metrics and targeted tuning, candidate freeze, full TEST and stable benefit, then TFRL",
   "nodes": [
@@ -12,18 +12,19 @@
       "scientific_dependencies": []
     },
     {
-      "id": "NEW-BASELINE-DEV80",
+      "id": "NEW-BASELINE-FOLD-A1080",
       "lane": "B",
       "priority": 0,
-      "status": "not-yet-admitted",
-      "normal_generation_calls": 240,
-      "fit_call_cap": 240,
+      "status": "configuration-conversion-required",
+      "normal_generation_calls": 3240,
+      "fit_call_cap": 3240,
       "scientific_dependencies": [
         "NEW-BASELINE-REPAIR"
       ],
       "resource_dependencies": [
         "B exact lease settlement and fixed runtime readiness"
-      ]
+      ],
+      "rows": 1080
     },
     {
       "id": "NEW-BASELINE-DEV-TUNING",
@@ -31,7 +32,7 @@
       "priority": 0,
       "status": "awaiting-development-baseline",
       "scientific_dependencies": [
-        "NEW-BASELINE-DEV80"
+        "NEW-BASELINE-FOLD-A1080"
       ],
       "requirements": [
         "same frozen development roster and comparable runtime",
@@ -40,19 +41,36 @@
       ]
     },
     {
+      "id": "NEW-BASELINE-FOLD-B1080",
+      "lane": "A+B",
+      "rows": 1080,
+      "priority": 0,
+      "status": "awaiting-fold-a-tuning-and-candidate-freeze",
+      "scientific_dependencies": [
+        "NEW-BASELINE-DEV-TUNING"
+      ],
+      "requirements": [
+        "reuse exact existing Fold B1080",
+        "freeze candidate before B evaluation",
+        "do not tune current candidate from B results",
+        "matched baseline and candidate full-roster comparison"
+      ]
+    },
+    {
       "id": "NEW-BASELINE-LOCK",
       "lane": "CPU",
       "priority": 0,
       "status": "awaiting-real-evidence",
       "scientific_dependencies": [
-        "NEW-BASELINE-DEV-TUNING"
+        "NEW-BASELINE-FOLD-B1080"
       ],
       "requirements": [
         "fixed input and runtime pin closure",
         "complete node and failure denominator audit",
         "official metrics and cost",
         "recovery and queue evidence",
-        "freeze tuned candidate before full TEST"
+        "freeze tuned candidate before full TEST",
+        "both existing folds fully scored and paired; no new development roster"
       ]
     },
     {
@@ -252,6 +270,11 @@
     "tfrl_generation_allowed": false,
     "baseline_validation_allowed": true,
     "source": "New-Baseline-First.md",
-    "full_test_and_stable_benefit_required_before_tfrl": true
+    "full_test_and_stable_benefit_required_before_tfrl": true,
+    "development_populations": [
+      "existing Fold A1080",
+      "existing Fold B1080"
+    ],
+    "new_development_rosters_allowed": false
   }
 }
