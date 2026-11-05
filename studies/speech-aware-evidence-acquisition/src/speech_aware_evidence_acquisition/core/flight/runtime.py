@@ -8085,7 +8085,7 @@ class FlightRuntime:
             getattr(self, "_deployment_profile", None), int(self._adapter.serving_geometry()["slots"])
         )
 
-    def _native_prefix_slots(self, native_config=None):
+    def _native_prefix_slots(self, native_config=None, *, slot_count: int | None = None):
         """Bind an optional role schedule to the actual serving geometry."""
         from ...rails.dispatch_slot_fill import (
             NativePrefixSlotsError, parse_native_prefix_slots,
@@ -8103,7 +8103,10 @@ class FlightRuntime:
                 native_config = load_native_episode_config(
                     self._composed.values, default_phase_program(policy),
                 )
-            parsed.validate(native_config, slot_count=self._flight_width())
+            parsed.validate(
+                native_config,
+                slot_count=self._flight_width() if slot_count is None else slot_count,
+            )
             return parsed
         except NativePrefixSlotsError as error:
             raise FlightRuntimeError(str(error)) from error
@@ -8165,7 +8168,7 @@ class FlightRuntime:
         except NativeNodePipelineError as error:
             raise FlightRuntimeError(str(error)) from error
 
-    def _native_node_batch(self, native_config=None):
+    def _native_node_batch(self, native_config=None, *, queue_depth: int | None = None):
         """Validate the bounded schedule before preparation opens any contact."""
         from ...rails.dispatch_slot_fill import NativeNodeBatchError, parse_native_node_batch
         from ...rails.native_episode_config import load_native_episode_config
@@ -8179,7 +8182,10 @@ class FlightRuntime:
                     raise NativeNodeBatchError("node batch requires a native role episode")
                 native_config = load_native_episode_config(self._composed.values, default_phase_program(policy))
             # The ordinary continuous phase runner admits four workflows/slot.
-            parsed.validate(native_config, queue_depth=4 * self._flight_width())
+            parsed.validate(
+                native_config,
+                queue_depth=(4 * self._flight_width() if queue_depth is None else queue_depth),
+            )
             return parsed
         except NativeNodeBatchError as error:
             raise FlightRuntimeError(str(error)) from error
@@ -8191,6 +8197,7 @@ class FlightRuntime:
         policy: str,
         *,
         model_free_check: bool = False,
+        slot_count: int | None = None,
     ) -> tuple[
         list[Mapping[str, object]],
         int,
@@ -8211,9 +8218,16 @@ class FlightRuntime:
         )
 
         native_config = load_native_episode_config(self._composed.values, program)
+        resolved_slot_count = self._flight_width() if slot_count is None else slot_count
+        if (
+            isinstance(resolved_slot_count, bool)
+            or not isinstance(resolved_slot_count, int)
+            or resolved_slot_count < 1
+        ):
+            raise FlightRuntimeError("phase dispatch slot_count must be a positive integer")
         measured_options = self._system_search_measurement_options(native_config)
-        prefix_slots = self._native_prefix_slots(native_config)
-        node_batch = self._native_node_batch(native_config)
+        prefix_slots = self._native_prefix_slots(native_config, slot_count=resolved_slot_count)
+        node_batch = self._native_node_batch(native_config, queue_depth=4 * resolved_slot_count)
         node_pipeline = self._native_node_pipeline(native_config)
         # Owner decision 159: the dispatcher slot-fill switches, or None --
         # the value of every committed configuration, under which nothing
@@ -8583,7 +8597,7 @@ class FlightRuntime:
         )
         # Deployment admission controls row concurrency on every phase path.
         # The adapter geometry remains the protocol identity, not the client width.
-        live_options["slot_count"] = self._flight_width()
+        live_options["slot_count"] = resolved_slot_count
         live_options.update(measured_options)
         if flown_sample_ids is not None:
             live_options["flown_sample_ids"] = flown_sample_ids
@@ -8648,7 +8662,7 @@ class FlightRuntime:
                 summaries = self._phase_runner(
                     program=program,
                     adapter=self._adapter,
-                    slot_count=self._flight_width(),
+                    slot_count=resolved_slot_count,
                     plan=plan,
                     data_root=self._data_root,
                     core_client=client,
@@ -10509,7 +10523,9 @@ class FlightRuntime:
                 policy_kind,
                 dispatch,
                 phase_receipt,
-            ) = self._dispatch_phase_program(client, self._plan, policy)
+            ) = self._dispatch_phase_program(
+                client, self._plan, policy, slot_count=workers
+            )
         ended = self._clock()
         wall_seconds = max(ended - started, 1e-9)
         # E7: the window the always-on session's monitor summary is taken
