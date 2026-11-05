@@ -238,3 +238,47 @@ def test_slot_refs_bound_to_actual_current_audio_on_real_graph(tmp_path, valid):
         assert h.speech_bindings[h.samples[0].sample_id]['packet_id'] in json.dumps(slot)
     else:
         assert receipt['terminal_disposition']['reason']=='seal_refusal'
+
+@pytest.mark.parametrize('repeated', [False, True])
+def test_runner_real_projection_keeps_sealed_short_id_and_duplicate_policy(tmp_path, repeated):
+    from test_slot_binding_view import _config as projection_config, bind_slot_view_context
+    from speech_aware_evidence_acquisition.rails.slurp_solver_protocol import response_format
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import validate_evidence_refs
+    h=harness(tmp_path/'run')
+    cfg=projection_config(h.world.data_root)
+    cfg['native_episode']['intent_slot_pipeline']={'schema':'saea-intent-slot-pipeline-v1','duplicate_candidate_policy':'identical_v1'}
+    cfg['native_episode']['roles']['slot']={'phase_id':'slot','max_iterations':1}
+    cfg['knowledge_stores']['slot-contracts']['candidate_supply']['slot']=cfg['knowledge_stores']['slot-contracts']['candidate_supply']['solver'].copy()
+    cfg['native_evidence_projection_params']['consumer_roles']=['slot','solver']
+    context=bind_slot_view_context(cfg,h.world.data_root)
+    h.transport._native_evidence_projection='native-candidate-slot-view-v1'
+    h.transport._native_evidence_projection_context=context
+    policy=json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(duplicate_candidate_policy='identical_v1',evidence_policy='unique_source_alias_v1')
+    h.config=replace(h.config,intent_slot_pipeline_json=canonical(policy))
+    original_material=h.material_for_phase
+    def material(phase,ctx,sealed):
+        result=original_material(phase,ctx,sealed)
+        fmt=result.response_format
+        if phase=='perception':
+            fmt=json.loads(json.dumps(fmt));fmt['json_schema']['schema']['properties']['candidates']['items']['properties']['intent_id']['enum']=['alpha_one']
+        elif phase=='solver':fmt=response_format({'alpha':['one']},['person'])
+        return replace(result,response_format=fmt)
+    h.material_for_phase=material
+    candidate={'intent_id':'alpha_one','distinction':'same','evidence_refs':['audio-ref'],'unresolved_fields':[]}
+    def output(key):
+        phase=key[1]
+        if phase=='perception':return canonical({'candidates':[candidate,candidate] if repeated else [candidate]})
+        if phase=='slot':return canonical({'candidates':[{'candidate_id':'alpha_one','entities':[],'evidence_refs':[],'unresolved_fields':[]}]})
+        return canonical({'scenario':'alpha','action':'one','entities':[]})
+    # The actual audio packet is a permitted evidence ID, so its raw spelling
+    # remains source-bound while the runner builds its native Slot context.
+    candidate['evidence_refs']=[next(iter(h.speech_bindings.values()))['packet_id']]
+    h._output=output
+    try:summary=h.run()
+    finally:h.close()
+    receipt=summary.results[0].native_episode_receipt
+    assert [v['stage'] for v in receipt['role_visits']]==['perception','slot','solver']
+    assert receipt['intent_slot_pipeline']['candidate_ids']==['alpha_one']
+    assert receipt['intent_slot_pipeline']['selected_candidate_id']=='alpha_one'
+    assert json.loads(summary.results[0].final_response_text)['entities']==[]

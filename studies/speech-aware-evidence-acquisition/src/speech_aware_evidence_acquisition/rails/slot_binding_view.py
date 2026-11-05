@@ -139,10 +139,11 @@ class SlotBindingViewContext:
     release_pin: tuple[tuple[str, str], ...]
     source_pin: tuple[tuple[str, str], ...]
     knowledge_binding: KnowledgeStoreBinding = field(repr=False, compare=False)
+    duplicate_candidate_policy: str | None = None
 
 
 def _context_document(context: SlotBindingViewContext) -> dict[str, object]:
-    return {
+    document = {
         "policy_id": context.policy_id,
         "value_ids": list(context.value_ids),
         "rows": [json.loads(row.canonical_json) for row in context.rows],
@@ -158,6 +159,9 @@ def _context_document(context: SlotBindingViewContext) -> dict[str, object]:
         "source_pin": dict(context.source_pin),
         "composite_snapshot_sha256": context.knowledge_binding.binding_sha256,
     }
+    if context.duplicate_candidate_policy is not None:
+        document["duplicate_candidate_policy"] = context.duplicate_candidate_policy
+    return document
 
 
 def _freeze_row(raw: Mapping[str, object]) -> SlotBindingRow:
@@ -283,6 +287,11 @@ def bind_slot_view_context(
     ))
     if value_ids != expected_ids:
         raise SlotBindingViewError("released slot rows differ from composite value IDs")
+    episode = values.get("native_episode", {})
+    pipeline = episode.get("intent_slot_pipeline") if isinstance(episode, Mapping) else None
+    duplicate_policy = pipeline.get("duplicate_candidate_policy", "strict") if isinstance(pipeline, Mapping) and "duplicate_candidate_policy" in pipeline else None
+    if duplicate_policy not in (None, "strict", "identical_v1"):
+        raise SlotBindingViewError("unsupported pipeline duplicate candidate policy")
     provisional = SlotBindingViewContext(
         policy_id=POLICY_ID, context_sha256="", value_ids=value_ids, rows=rows,
         rows_by_value_id=by_id, legal_candidate_ids=tuple(legal),
@@ -292,6 +301,7 @@ def bind_slot_view_context(
         snapshot_pin=tuple(sorted(store.snapshot_pin.items())),
         release_pin=tuple(sorted(store.release_pin.items())),
         source_pin=tuple(sorted(store.source_pin.items())), knowledge_binding=binding,
+        duplicate_candidate_policy=duplicate_policy,
     )
     context = SlotBindingViewContext(
         **{**provisional.__dict__, "context_sha256": content_hash(_context_document(provisional))}
@@ -489,6 +499,13 @@ def scope_for_payload(
             perception=candidate_source, target_states=target_states,
         )
     candidates = [item.intent_id for item in candidate_state.candidates]
+    if context.duplicate_candidate_policy is not None:
+        from .intent_slot_pipeline import candidates as parse_pipeline_candidates
+        try:
+            parse_pipeline_candidates(candidate_source.content, context.max_candidates,
+                context.legal_candidate_ids, duplicate_policy=context.duplicate_candidate_policy)
+        except ValueError as error:
+            raise SlotBindingViewError("pipeline Perception candidate policy refused") from error
     if role == "slot":
         marker = "\n\nCandidate-conditioned pipeline context: "
         query = contract["messages"][1]["content"]
@@ -497,7 +514,8 @@ def scope_for_payload(
         try:
             branch = json.loads(query.rsplit(marker, 1)[1])
             from .intent_slot_pipeline import candidates as parse_candidates
-            original = parse_candidates(candidate_source.content, context.max_candidates)
+            original = parse_candidates(candidate_source.content, context.max_candidates,
+                duplicate_policy=context.duplicate_candidate_policy or "strict")
             selected = branch["candidates"]
             if not selected or any(row not in original for row in selected):
                 raise ValueError("candidate mismatch")
