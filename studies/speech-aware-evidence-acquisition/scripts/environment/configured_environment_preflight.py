@@ -143,7 +143,7 @@ def composition_probe(spec):
     # All actual configured templates are opened through the same asset resolver.
     from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
     templates=[]
-    for material in materials:
+    for material in materials.values():
         path=resolve_asset(Path(spec['repo_root']),'configs/'+material.instruction_template)
         require(path.is_file(),'phase template absent')
         templates.append({'phase':material.phase,'path':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})

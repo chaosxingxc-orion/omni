@@ -7,12 +7,10 @@ def verify(manifest,root):
  import re
  if not re.fullmatch('[0-9a-f]{40}',doc['commit']):raise ValueError('invalid source commit')
  actual=set()
- for base in ('studies/speech-aware-evidence-acquisition','docs','scripts/npu','docker/saea-base/release'):
-  p=root/base
-  if p.exists():
-   for f in p.rglob('*'):
-    if f.is_symlink():raise ValueError('symlinks are not allowed')
-    if f.is_file():actual.add(f.relative_to(root).as_posix())
+ for f in root.rglob('*'):
+  if f.is_symlink():raise ValueError('symlinks are not allowed')
+  if f.is_file() and f.relative_to(root).as_posix() not in ('source-manifest.json','verify-release.py'):
+   actual.add(f.relative_to(root).as_posix())
  if actual!=set(doc['files']):raise ValueError('release file set differs')
  for name,digest in doc['files'].items():
   p=root/name
