@@ -1,6 +1,6 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 12,
+  "source_revision": 13,
   "launcher_compatible": false,
   "execution_status": "Engineering efficiency first; existing Fold A arms continue until validated release migration; no new large-scale scientific experiments",
   "nodes": [
@@ -398,7 +398,7 @@
       "id": "CPU-FINAL-SOURCE-REVIEW",
       "lane": "CPU",
       "priority": 0,
-      "status": "28-src-files-exact-old-arm-deltas-reviewed-at-cc5ce670-compiler-script-review-pending",
+      "status": "28-src-reviewed-at-cc5ce670-new-admission-src-and-launcher-deltas-await-final-review",
       "scientific_dependencies": [],
       "requirements": [
         "per-file source before and after pins with specific rationale and evidence",
@@ -443,7 +443,7 @@
       "id": "CPU-CONFIGURED-CHECKPOINT-SUCCESSOR",
       "lane": "CPU",
       "priority": 0,
-      "status": "finalize-wired-fixture-only-real-two-arm-validation-in-progress",
+      "status": "two-real-arms-1080-and-native-plan-validation-passed-compiler-incremental-review-accepted-awaiting-terminal-integration",
       "scientific_dependencies": [
         "CPU-CHECKPOINT-COMPATIBILITY",
         "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
@@ -460,7 +460,7 @@
       "id": "CPU-CHECKPOINT-TERMINAL-CUSTODY",
       "lane": "CPU",
       "priority": 0,
-      "status": "generation-primitives-only-full-fit-and-ancestry-verification-in-development",
+      "status": "natural-observe-and-capture-8-fixture-tests-verified-full-multi-ancestor-integration-in-progress",
       "scientific_dependencies": [],
       "requirements": [
         "generation observed request closure and original actual cost",
@@ -473,7 +473,7 @@
       "id": "CPU-EXTERNAL-SUCCESSOR-ADMISSION",
       "lane": "CPU",
       "priority": 0,
-      "status": "partial-runtime-forwarding-only-external-workspace-and-new-receipt-in-development",
+      "status": "full-entry-real-input-test-found-stale-supply-native-cpu-rebuild-and-marker-integration-in-progress",
       "scientific_dependencies": [
         "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS"
       ],
