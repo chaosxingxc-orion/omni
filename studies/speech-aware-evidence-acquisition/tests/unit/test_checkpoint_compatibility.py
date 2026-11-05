@@ -273,3 +273,150 @@ def test_campaign_accepts_only_exact_v2_bridge_set(multihop):
     cell['checkpoint_compatibility']['bridges'].pop('old')
     with pytest.raises(CampaignError,match='exactly match'):
         CampaignCell.from_document(cell)
+
+
+def _capture_fixture(tmp_path):
+    import subprocess, tarfile
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import authenticate_git_capture
+    root = tmp_path / 'capture'; root.mkdir()
+    subprocess.run(['git','init','-q',str(root)],check=True)
+    (root/'content').write_bytes(b'authentic')
+    subprocess.run(['git','-C',str(root),'add','content'],check=True)
+    subprocess.run(['git','-C',str(root),'-c','user.name=Test','-c','user.email=test@example.org','commit','-qm','fixture'],check=True)
+    def cmd(*args): return subprocess.check_output(['git','-C',str(root),*args])
+    commit=cmd('rev-parse','HEAD').decode().strip()
+    obj=tmp_path/'commit';obj.write_bytes(cmd('cat-file','commit',commit))
+    listing=tmp_path/'listing';listing.write_bytes(cmd('ls-tree','-r','--full-tree',commit))
+    archive=tmp_path/'source.tar';archive.write_bytes(cmd('archive',commit))
+    return commit,obj,listing,archive
+
+
+def test_git_capture_authenticates_tree_and_blob(tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import authenticate_git_capture
+    commit,obj,listing,archive=_capture_fixture(tmp_path)
+    files,_=authenticate_git_capture(commit,obj,listing,archive)
+    assert files['content']==b'authentic'
+    listing.write_text(listing.read_text().replace('content','different'))
+    with pytest.raises(CheckpointCompatibilityError,match='tree'):
+        authenticate_git_capture(commit,obj,listing,archive)
+
+
+def test_reference_requires_pins_and_matches_content(tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import verify_release_reference_closure, STUDY_PREFIX
+    repo=tmp_path/'repo'; path=repo/'configs/probes/test.txt'; path.parent.mkdir(parents=True);path.write_bytes(b'scientific')
+    old={STUDY_PREFIX+'configs/probes/test.txt':b'scientific'}
+    with pytest.raises(CheckpointCompatibilityError,match='pin'):
+        verify_release_reference_closure(repo_root=repo,old_files=old,references={'configs/probes/test.txt':None})
+    pin=digest(path)
+    assert verify_release_reference_closure(repo_root=repo,old_files=old,references={'configs/probes/test.txt':pin})
+    path.write_bytes(b'changed')
+    with pytest.raises(CheckpointCompatibilityError,match='current reference differs'):
+        verify_release_reference_closure(repo_root=repo,old_files=old,references={'configs/probes/test.txt':pin})
+
+
+def test_reviewed_source_delta_rejects_unreviewed_change():
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import verify_reviewed_source_delta, STUDY_PREFIX
+    old={STUDY_PREFIX+'src/a.py':b'old'}
+    with pytest.raises(CheckpointCompatibilityError,match='incomplete'):
+        verify_reviewed_source_delta(old_files=old,release_files={STUDY_PREFIX+'src/a.py':'f'*64},reviewed={})
+
+
+def test_image_bridge_schema_and_terminal_gate(tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import RELEASE_SCHEMA, ImageReleaseCompatibility
+    pin={'path':str(tmp_path/'x'), 'sha256':'a'*64}
+    doc={'schema':RELEASE_SCHEMA,'predecessor_commit':'a'*40,
+         'predecessor_fragments':dict.fromkeys(('model','dataset','baseline','experiment'),'x'),
+         'successor_attempt_id':'new','change':'image-release-operational-v1',
+         'evidence':{**dict.fromkeys(('commit_object','tree_listing','source_archive','release_manifest','source_review','reference_pins'),pin),'startup_data_root':'/old'}}
+    bridge=CheckpointCompatibility.from_document(doc,attempt_id='new')
+    assert isinstance(bridge, ImageReleaseCompatibility)
+    write(tmp_path/'attempts/run/old.json',{'run_id':'run','attempt_id':'old','state':'OPENED'})
+    with pytest.raises(CheckpointCompatibilityError,match='ABORTED'):
+        bridge.verify(data_root=tmp_path,run_id='run',predecessor_attempt_id='old')
+
+
+def test_historical_provenance_does_not_require_online_asset(tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import _verify_data_closure
+    nested=tmp_path/'nested.json'; nested.write_text(json.dumps({'historical':{'relpath':'absent','sha256':'b'*64}}))
+    assert _verify_data_closure(tmp_path,{'relpath':'nested.json','sha256':digest(nested)})
+
+
+def test_real_knowledge_source_and_snapshot_contract(tmp_path):
+    from test_knowledge_stores import _config
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import _verify_data_closure
+    config,_ = _config(tmp_path)
+    store = config['knowledge_stores']['intent-boundaries']
+    snapshot = tmp_path/store['snapshot']['relpath']
+    assert digest(snapshot) != store['snapshot']['sha256']
+    assert _verify_data_closure(tmp_path,config)
+    original = snapshot.read_text(); snapshot.write_text(original.replace('intent-boundaries-v1','tampered-v1'))
+    with pytest.raises(Exception): _verify_data_closure(tmp_path,config)
+    snapshot.write_text(original)
+    (tmp_path/'knowledge/intent-boundaries/construction-source.json').unlink()
+    with pytest.raises(Exception): _verify_data_closure(tmp_path,config)
+
+
+def test_source_review_binds_actual_content(tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import _verify_review, STUDY_PREFIX
+    old={STUDY_PREFIX+'src/a.py':b'old'}; new={STUDY_PREFIX+'src/a.py':'f'*64}
+    review=tmp_path/'review.json';write(review,{'schema':'saea-reviewed-source-delta-v1','changes':{'src/a.py':{'before':hashlib.sha256(b'old').hexdigest(),'after':'f'*64,'type':'scheduling','rationale':'Reviewed scheduling change'}}})
+    pin={'path':str(review),'sha256':digest(review)}
+    assert _verify_review(pin,old,new)==1
+    review.write_text('{}')
+    with pytest.raises(CheckpointCompatibilityError,match='evidence differs'): _verify_review(pin,old,new)
+
+
+def test_release_scientific_delta_rejects_model_change(transition):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import verify_config_delta
+    repo,data,header,decl,bridge,_=transition
+    names=bridge['predecessor_fragments']
+    old={k:json.loads((repo/'configs'/k/(names[k]+'.json')).read_text()) for k in ('model','dataset','baseline','experiment')}
+    new=copy.deepcopy(old);new['model']['unapproved_science']='changed'
+    with pytest.raises(CheckpointCompatibilityError,match='model changed'):
+        verify_config_delta(old,new,data=data,run_id=header['run_id'],predecessor_attempt_id='old',successor_attempt_id='new',declaration=decl)
+
+
+def test_release_dispatch_fields_are_bounded_and_explicit(transition):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import verify_config_delta
+    repo,data,header,decl,bridge,_=transition
+    names=bridge['predecessor_fragments']
+    new={k:json.loads((repo/'configs'/k/(names[k]+'.json')).read_text()) for k in names}
+    old=copy.deepcopy(new)
+    old['baseline']['native_contact_fit'].update(run_id='old-fit',attempt_id='old-fit-attempt')
+    old['experiment']['cells'][0].update(attempt_id='old')
+    old['experiment']['cells'][0].pop('resume_from');old['experiment']['cells'][0].pop('checkpoint_compatibility')
+    new['baseline']['dispatch']={'schema':'saea-dispatch-slot-fill-v1','role_input_offload':True,'ready_request':True,'prepare_workers':4,'validation_workers':4,'admitted_trajectories':32,'model_inflight':32}
+    args=dict(data=data,run_id='run',predecessor_attempt_id='old',successor_attempt_id='new',declaration=decl,allow_dispatch=True)
+    for width in (32,64,96,128):
+        new['baseline']['dispatch'].update(admitted_trajectories=width,model_inflight=width)
+        verify_config_delta(old,new,**args)
+    new['baseline']['dispatch']['max_candidates']=5
+    with pytest.raises(CheckpointCompatibilityError,match='invalid dispatch'): verify_config_delta(old,new,**args)
+
+
+def test_data_pin_root_routes_repository(tmp_path,monkeypatch):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import _verify_data_closure
+    repo=tmp_path/'repo';file=repo/'docs/a.json';file.parent.mkdir(parents=True);file.write_text('{}')
+    data=tmp_path/'data';data.mkdir()
+    assert _verify_data_closure(data,[{'root':'repository','relpath':'docs/a.json','sha256':digest(file)}],repo_root=repo)
+
+
+def test_data_relpath_is_data_even_with_repo_prefix(tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import _verify_data_closure
+    data=tmp_path/'data'; repo=tmp_path/'repo';(data/'docs').mkdir(parents=True);(repo/'docs').mkdir(parents=True)
+    (data/'docs/a.txt').write_text('data');(repo/'docs/a.txt').write_text('repo')
+    assert _verify_data_closure(data,{'data_relpath':'docs/a.txt','root':'repository','sha256':digest(data/'docs/a.txt')},repo_root=repo)
+    with pytest.raises(CheckpointCompatibilityError,match='differs'):
+        _verify_data_closure(data,{'data_relpath':'docs/a.txt','sha256':digest(repo/'docs/a.txt')},repo_root=repo)
+
+
+def test_knowledge_store_uses_loader_not_snapshot_byte_hash(monkeypatch,tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import _verify_data_closure
+    import speech_aware_evidence_acquisition.rails.knowledge_stores as knowledge
+    calls=[]
+    monkeypatch.setattr(knowledge,'load_knowledge_store_binding',lambda v,*,data_root:calls.append((v,data_root)))
+    config={'knowledge_stores':{'example':{'snapshot':{'relpath':'absent','sha256':'a'*64},'release':{'relpath':'absent2','sha256':'b'*64}}}}
+    assert _verify_data_closure(tmp_path,config)=={}
+    assert len(calls)==1
+    monkeypatch.setattr(knowledge,'load_knowledge_store_binding',lambda v,*,data_root: (_ for _ in ()).throw(ValueError('invalid snapshot')))
+    with pytest.raises(ValueError,match='invalid snapshot'): _verify_data_closure(tmp_path,config)
