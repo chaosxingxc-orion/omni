@@ -261,7 +261,12 @@ def test_release_manifest_verification_fails_closed_before_launch(tmp_path,monke
     path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'
     doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
     doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',SAEA_RELEASE_MANIFEST_SHA256='c'*64)
-    path.write_text(json.dumps(doc));monkeypatch.setattr(m,'run',lambda *a,**k:SimpleNamespace(returncode=1,stdout='',stderr='bad manifest'))
+    path.write_text(json.dumps(doc))
+    docker=Docker(doc)
+    def run(args,**kwargs):
+        if args[:3]==['docker','run','--rm']:return SimpleNamespace(returncode=1,stdout='',stderr='bad manifest')
+        return docker(args,**kwargs)
+    monkeypatch.setattr(m,'run',run)
     m.execute(path,'layout')
     with pytest.raises(ValueError,match='manifest verification'):m.execute(path,'launch')
     assert not (Path(doc['receipt_dir'])/'launch-intent.json').exists()
