@@ -132,8 +132,91 @@ class ArchiveTests(unittest.TestCase):
         with self.stream(raw, 'ssh: connection lost' + chr(10), 255):
             result = m.snapshot(self.load(), self.observed)
         self.assertEqual(result['status'], 'failed')
+        self.assertEqual(result['failure_kind'], 'transport')
         self.assertFalse(result['inventory_verified'])
         self.assertEqual((Path(result['directory']) / 'state.tar').read_bytes(), raw)
+        self.assertTrue((Path(result['directory']) / 'result.json').is_file())
+
+    def test_inspect_transport_retries_same_identity_and_persists_failure(self):
+        self.load()
+        running = self.observed
+        terminal = {**running, 'state': 'exited', 'running': False}
+        with (patch.object(m, 'inspect', side_effect=[running, m.TransportError('timeout'), terminal]),
+              patch.object(m, 'snapshot', return_value={'status': 'complete'}) as snapshot,
+              patch.object(m, 'wait_event'), patch.object(m.time, 'sleep') as sleep,
+              patch('builtins.print')):
+            m.execute(self.config, 'watch')
+        sleep.assert_called_once_with(600)
+        self.assertEqual([c.args[1]['container_id'] for c in snapshot.call_args_list], ['a' * 64] * 2)
+        event, = self.output.glob('transport-*.json')
+        self.assertEqual(json.loads(event.read_text())['container_id'], 'a' * 64)
+
+    def test_inspect_classifies_only_ssh_failures(self):
+        from types import SimpleNamespace
+        for failure in (subprocess.TimeoutExpired('ssh', 60), SimpleNamespace(returncode=255, stderr='lost')):
+            with self.subTest(failure=failure), patch.object(m.subprocess, 'run', side_effect=[failure]):
+                with self.assertRaises(m.TransportError): m.inspect(self.doc)
+        with patch.object(m.subprocess, 'run', return_value=SimpleNamespace(returncode=1, stderr='bad')):
+            with self.assertRaisesRegex(ValueError, 'inspection failed'): m.inspect(self.doc)
+        self.load()
+        with patch.object(m, 'inspect', side_effect=m.TransportError('lost')), patch.object(m.time, 'sleep') as sleep:
+            with self.assertRaises(m.TransportError): m.execute(self.config, 'once')
+        sleep.assert_not_called()
+
+    def test_snapshot_transport_retry_preserves_partial_and_rechecks_identity(self):
+        self.load()
+        raw, stderr = self.fixture()
+        terminal = {**self.observed, 'state': 'exited', 'running': False}
+        streams = iter([(b'partial', 'lost', 255), (raw, stderr, 0)])
+        real_snapshot = m.snapshot
+        def take_snapshot(doc, observed):
+            with self.stream(*next(streams)):
+                return real_snapshot(doc, observed)
+        with (patch.object(m, 'inspect', side_effect=[self.observed, terminal]),
+              patch.object(m, 'snapshot', side_effect=take_snapshot),
+              patch.object(m.time, 'sleep') as sleep, patch('builtins.print')):
+            result = m.execute(self.config, 'watch')
+        sleep.assert_called_once_with(600)
+        self.assertEqual(result['status'], 'complete')
+        records = [json.loads(p.read_text()) for p in self.output.glob('*/result.json')]
+        failed, = [r for r in records if r['status'] == 'failed']
+        self.assertEqual(failed['failure_kind'], 'transport')
+        partial, = [p for p in self.output.glob('*/state.tar') if p.read_bytes() == b'partial']
+        self.assertTrue(partial.is_file())
+
+    def test_failed_validation_and_once_transport_do_not_retry(self):
+        self.load()
+        for mode, record in [('watch', {'status': 'failed'}),
+                             ('once', {'status': 'failed', 'failure_kind': 'transport'})]:
+            with (self.subTest(mode=mode), patch.object(m, 'inspect', return_value=self.observed),
+                  patch.object(m, 'snapshot', return_value=record) as snapshot,
+                  patch.object(m.time, 'sleep') as sleep, patch('builtins.print')):
+                self.assertEqual(m.execute(self.config, mode), record)
+                snapshot.assert_called_once()
+                sleep.assert_not_called()
+
+    def test_retry_rejects_replacement_before_second_snapshot(self):
+        self.load()
+        replacement = {**self.observed, 'container_id': 'b' * 64}
+        with (patch.object(m, 'inspect', side_effect=[self.observed, replacement]),
+              patch.object(m, 'snapshot', return_value={'status': 'failed', 'failure_kind': 'transport'}) as snapshot,
+              patch.object(m.time, 'sleep') as sleep, patch('builtins.print')):
+            with self.assertRaisesRegex(ValueError, 'replaced'):
+                m.execute(self.config, 'watch')
+        sleep.assert_called_once_with(600)
+        snapshot.assert_called_once()
+
+    def test_exit_255_never_marks_even_valid_tar_complete(self):
+        raw, stderr = self.fixture()
+        with self.stream(raw, stderr, 255):
+            result = m.snapshot(self.load(), self.observed)
+        self.assertEqual((result['status'], result['failure_kind']), ('failed', 'transport'))
+        self.assertFalse(result['inventory_verified'])
+
+    def test_snapshot_timeout_is_preserved_and_retryable(self):
+        with patch.object(m.subprocess, 'Popen', side_effect=subprocess.TimeoutExpired('ssh', 60)):
+            result = m.snapshot(self.load(), self.observed)
+        self.assertEqual((result['status'], result['failure_kind']), ('failed', 'transport'))
         self.assertTrue((Path(result['directory']) / 'result.json').is_file())
 
     def test_bad_attempt_json_and_missing_member_refused(self):

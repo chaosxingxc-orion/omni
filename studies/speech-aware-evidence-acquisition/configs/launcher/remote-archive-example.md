@@ -18,4 +18,6 @@ watch 先取一份当前快照，然后等待 docker wait 明确终态或远端 
 
 result.status=complete 表示 tar 返回0且成员/attempt清单核验通过；changed-during-read 表示 tar 返回1，保留并核验已读取的内容，不能视为一致快照。任何失败都会保留已有 tar/错误日志并落盘失败结果。所有 included attempt 必须是正常大小的 JSON 对象；absent attempt 明确列出，不能把缺失记录说成已验证。即便退出0，tar也不是事务快照，consistent_snapshot 始终为false。
 
-本工具只检查归档完整性与 attempt JSON 可解析性，不替代 scientific custody、checkpoint 哈希链或请求终态审计。它不解包文件，不提供自动恢复授权；内部链接作为归档成员保存，不跟随到外部。归档失败不会盲重试，操作者可先检查保留证据，再配置新的单次/监测任务。
+watch 遇到 inspect SSH 退出码 255 或超时，会持久保存 transport 失败记录，等待 600 秒后重新 inspect 并核验原容器身份；wait 的通信故障也按 600 秒节流。snapshot 的 SSH 退出码 255 或超时保留部分 tar、日志和 failed 结果，等待 600 秒后重新检查身份再尝试新快照。身份、配置、清单和其他真实性错误不会作为通信故障重试。once 模式遇到通信失败仍明确失败退出。失败证据不覆盖；无论重试是否成功均应保留审计。
+
+本工具只检查归档完整性与 attempt JSON 可解析性，不替代 scientific custody、checkpoint 哈希链或请求终态审计。它不解包文件，不提供自动恢复授权；内部链接作为归档成员保存，不跟随到外部。

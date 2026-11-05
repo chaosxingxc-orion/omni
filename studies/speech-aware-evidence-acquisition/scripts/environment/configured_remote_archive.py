@@ -17,6 +17,12 @@ import uuid
 SCHEMA = 'saea-configured-remote-archive-v1'
 REMOTE_BASE = '/var/lib/omni-local-state'
 PREFIX = 'SAEA_ARCHIVE_INVENTORY='
+
+
+class TransportError(Exception):
+    """An SSH transport failure, not a remote validation failure."""
+
+
 REMOTE = '''import json, os, subprocess, sys
 from pathlib import Path
 spec=json.loads(sys.argv[1]); base=Path(spec['base']); owned=base/spec['owned_root']
@@ -120,8 +126,13 @@ def persist(path, doc):
 
 
 def inspect(doc):
-    result = subprocess.run(ssh(doc, ['sudo', '-n', 'docker', 'inspect', '--type', 'container', doc['container_name']]),
-                            capture_output=True, text=True, timeout=60)
+    try:
+        result = subprocess.run(ssh(doc, ['sudo', '-n', 'docker', 'inspect', '--type', 'container', doc['container_name']]),
+                                capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired as error:
+        raise TransportError('container inspection SSH timeout') from error
+    if result.returncode == 255:
+        raise TransportError('container inspection SSH exit 255: ' + result.stderr[-1000:])
     require(result.returncode == 0, 'container inspection failed: ' + result.stderr[-1000:])
     container, = json.loads(result.stdout)
     require(container['Name'] == '/' + doc['container_name'], 'container name differs')
@@ -188,12 +199,16 @@ def snapshot(doc, observed):
                 target.flush(); os.fsync(target.fileno())
                 errors.flush(); os.fsync(errors.fileno())
         stderr = (directory / 'stderr.log').read_text(errors='replace')
+        if record['tar_exit_code'] == 255:
+            raise TransportError('archive SSH exit 255: ' + stderr[-1000:])
         record.update(verify_inventory(archive_path, stderr, specification(doc)))
         record['status'] = {0: 'complete', 1: 'changed-during-read'}.get(record['tar_exit_code'], 'failed')
         record['consistent_snapshot'] = False  # tar is not a transactional snapshot, even at exit 0.
     except (KeyboardInterrupt, SystemExit) as error:
         record.update(status='interrupted', error_type=type(error).__name__)
         raise
+    except (TransportError, subprocess.TimeoutExpired) as error:
+        record.update(status='failed', failure_kind='transport', error_type=type(error).__name__, error=str(error))
     except Exception as error:
         record.update(status='failed', error_type=type(error).__name__, error=str(error))
     finally:
@@ -272,14 +287,30 @@ def execute(config, mode):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         identity = None
         while True:
-            observed = inspect(doc)
+            try:
+                observed = inspect(doc)
+            except TransportError as error:
+                if mode == 'once':
+                    raise
+                event = {'schema': SCHEMA, 'status': 'failed', 'failure_kind': 'transport',
+                         'operation': 'inspect', 'error': str(error), 'config_sha256': digest(doc),
+                         'container_id': identity, 'retry_seconds': doc['interval_seconds']}
+                persist(output / ('transport-' + uuid.uuid4().hex + '.json'), event)
+                print(json.dumps(event, sort_keys=True), flush=True)
+                time.sleep(doc['interval_seconds'])
+                continue
             bind_container(doc, observed)
             require(identity is None or identity == observed['container_id'], 'container replaced during archive watch')
             identity = observed['container_id']
             record = snapshot(doc, observed)
             print(json.dumps(record, sort_keys=True), flush=True)
-            if mode == 'once' or record['status'] == 'failed':
+            if mode == 'once':
                 return record
+            if record['status'] == 'failed':
+                if record.get('failure_kind') != 'transport':
+                    return record
+                time.sleep(doc['interval_seconds'])
+                continue
             if observed['state'] in ('exited', 'dead') and not observed['running']:
                 return record
             require(observed['state'] in ('running', 'paused', 'restarting'), 'container is not running or terminal')
