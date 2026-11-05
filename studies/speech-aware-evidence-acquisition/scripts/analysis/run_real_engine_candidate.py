@@ -92,6 +92,13 @@ def generation_release_document(runtime, *, candidate, spec, commit, rows, elaps
     return document
 
 
+def recovery_options(cell):
+    """Pass only registered whole-row recovery and its compatibility proof."""
+    return {**({'resume_from':cell.resume_from} if cell.resume_from is not None else {}),
+            **({'checkpoint_compatibility':cell.checkpoint_compatibility}
+               if cell.checkpoint_compatibility is not None else {})}
+
+
 def run(repo,data,name,out):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.atomic_file import publish_new
@@ -116,7 +123,7 @@ def run(repo,data,name,out):
     def save(name,doc):publish_new(out/name,(json.dumps(doc,indent=2)+'\n').encode())
     save('started.json',{'pid':os.getpid(),'time':time.time(),'study_commit':commit,'candidate':name,'profile':spec['profile'],'rows':rows})
     try:
-        runtime=measured_stage('runtime_build',spec,build_flight_runtime,repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],baseline=cell.document['baseline_fragment'],experiment=name,run_id=cell.run_id,attempt_id=cell.attempt_id,runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json')
+        runtime=measured_stage('runtime_build',spec,build_flight_runtime,repo,data,model=cell.document['model_fragment'],dataset=cell.document['dataset_fragment'],baseline=cell.document['baseline_fragment'],experiment=name,run_id=cell.run_id,attempt_id=cell.attempt_id,runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json', **recovery_options(cell))
         measured_stage('prepared_artifact_verification',spec,assert_prepared_artifacts_current,[runtime])
         started=time.monotonic()
         def released(flight):

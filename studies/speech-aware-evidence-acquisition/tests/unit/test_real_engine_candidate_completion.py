@@ -96,3 +96,12 @@ def test_candidate_timing_disabled_does_not_require_identity(monkeypatch):
     monkeypatch.delenv('SAEA_STAGE_TIMING_PATH', raising=False)
     value = object()
     assert m.measured_stage('runtime_build', {}, lambda arg: arg, value) is value
+
+
+def test_candidate_passes_registered_checkpoint_without_native_contact_recovery():
+    from types import SimpleNamespace
+    resume={'attempt_id':'old','checkpoint_sha256':'a'*64}
+    bridge={'schema':'registered-bridge'}
+    assert m.recovery_options(SimpleNamespace(resume_from=resume,checkpoint_compatibility=bridge)) == {
+        'resume_from':resume,'checkpoint_compatibility':bridge}
+    assert m.recovery_options(SimpleNamespace(resume_from=None,checkpoint_compatibility=None)) == {}

@@ -307,7 +307,9 @@ class PairWorkload:
         cell, = exp['cells']
         if spec.get('source_experiment') != pin(repo, observation.SOURCE_EXP):
             raise ValueError('source experiment changed after staging')
-        fixed = {'cell':self.NAME,'experiment':self.NAME,'baseline':self.NAME,'run_id':self.RUN,'attempt_id':'generation-v1',
+        is_checkpoint = cell.get('resume_from') is not None and cell.get('checkpoint_compatibility') is not None
+        selected_attempt = cell['attempt_id'] if is_checkpoint else 'generation-v1'
+        fixed = {'cell':self.NAME,'experiment':self.NAME,'baseline':self.NAME,'run_id':self.RUN,'attempt_id':selected_attempt,
             'fit_run_id':self.RUN+'-FIT','fit_attempt_id':'fit-v1','rows':self.ROWS,'workload_kind':self.KIND,
             'model_fragment':binding['model_fragment'],'runtime_binding':binding,'profile':binding['profile'],
             'service_session':binding['service_session'],'runtime_receipt':binding['runtime_receipt'],
@@ -321,6 +323,8 @@ class PairWorkload:
             if exp.get(key) != expected.get(key):
                 raise ValueError('probe population, budget or declared algorithm changed')
         for key in ('cell_id','baseline_fragment','model_fragment','dataset_fragment','run_id','attempt_id'):
+            if key == 'attempt_id' and is_checkpoint:
+                continue  # CampaignCell validated the exact predecessor and successor.
             if cell.get(key) != expected['cells'][0].get(key):
                 raise ValueError('registered probe cell changed')
         actual = read_asset(repo,f'configs/baseline/{self.NAME}.json')
