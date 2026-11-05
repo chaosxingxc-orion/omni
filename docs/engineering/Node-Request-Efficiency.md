@@ -97,6 +97,8 @@ normal不写细粒度日志，debug两组各实际写12事件；新debug原始�
 
 已合入主分支的 `0032118c`、`52a023b6` 将一次 flight 的 split roster、adapter 和 raw packet binding 变为进程内不可变复用对象：`_prepare()` 后续调用不再重复构造 adapter、执行 `adapter.load_split()`，也不会重新扫描媒体或构造不一致的样本集合。`da00f390` 又把 CPU 阶段并发参数纳入外部实验配置：`preprocess_workers` 控制预处理，`dispatch_workers` 控制模型请求供给，`score_workers` 控制独立评分池；缺省值保持历史行为，值域为 1–256，非法配置在模型接触前拒绝。`ae1713f2` 将 runtime view 的媒体 SHA 校验做成带 inode/size/mtime 失效的进程级缓存，数据变化仍回到完整 hash 校验。新增回归覆盖单次 split 加载、绑定一致性、配置解析、非法值拒绝和媒体缓存失效。
 
+`9c23724d` 补齐 phase/native 路径：`dispatch_workers` 现在同时传入 phase runner 的 `slot_count`，并参与 prefix-slot、node-batch 校验；fixed、phase 和 native 调度不再各自读取不同的并发来源。配置值若不满足 native 调度约束会在接触前拒绝，而不是静默退回默认宽度。
+
 本机已用当前 Python 环境完成新增四项回归（3+1 passed）和源码字节编译；完整 `test_flight_runtime.py` 已执行到 166 passed，随后在既有 A0 native-recovery 测试处因宿主缺少外部 `openjiuwen` 依赖停止，这不是本轮改动失败。固定 saea 镜像可完成语法检查，但该运行镜像不带 pytest，不能把它报告成完整测试绿灯。GitHub SSH（22/443）当前均网络超时，新增提交已在本地 `main`，远端同步待网络恢复后核对，不把本地提交误报为已推送。
 
 优先级固定为工程效率优化；新增大规模实验暂缓，当前两臂继续。统一镜像的外部配置、原1080条输入准备及启动入口已有验收材料；包含最新效率修改的最终镜像已构建，停前CPU验收已补充，两臂实际预检接线已完成，打包器原生编译链路仍待完成。不能用打包成功代表流水线提速。
