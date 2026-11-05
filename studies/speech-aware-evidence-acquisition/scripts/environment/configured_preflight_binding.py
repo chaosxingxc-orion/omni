@@ -124,6 +124,28 @@ def compatibility(source, successor, config, output_mount, *, require_fresh_timi
         require(not any(overlap(Path(mount['source']).resolve(), Path(m['source']).resolve())
                         for m in [*dependencies, output_mount]),
                 'timing output aliases dependency or preflight evidence')
+    control = declarations.get('SAEA_ADMISSION_CONTROL_CONFIG')
+    if control:
+        config_path, mount = host_path(successor, control['path'])
+        require(mount['target'] == control['mount'] and not mount['readonly'],
+                'admission control requires its declared writable parent mount')
+        require(config_path.is_file() and not config_path.is_symlink()
+                and config_path.resolve().is_relative_to(Path(mount['source']).resolve()),
+                'regular confined admission control config required')
+        document = json.loads(config_path.read_bytes())
+        require(pin(config_path) in successor['required_inputs'], 'admission control config must be pinned')
+        require(set(document) == {'schema', 'run_id', 'attempt_id', 'request_path', 'receipt_path'}
+                and document['schema'] == 'saea-admission-control-v1'
+                and all(isinstance(document[k], str) and document[k] for k in ('run_id', 'attempt_id')),
+                'exact admission control identity required')
+        paths = [Path(control['path']), Path(document['request_path']), Path(document['receipt_path'])]
+        require(len(set(paths)) == 3 and all(p.is_absolute() and p.parent == paths[0].parent for p in paths),
+                'distinct admission files in one directory required')
+        require(not any(overlap(control['mount'], p) for p in protected)
+                and not overlap(control['mount'], output_mount['target'])
+                and not any(overlap(Path(mount['source']).resolve(), Path(m['source']).resolve())
+                            for m in [*dependencies, output_mount]),
+                'admission control aliases protected dependencies')
     footprint = {'image': source['image'], 'environment': source['environment'],
             'working_directory': source['working_directory'], 'interpreters': interpreters,
             'dependency_mounts': dependencies, 'expected_commit': source['expected_commit']}

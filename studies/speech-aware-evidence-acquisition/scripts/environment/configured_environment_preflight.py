@@ -10,7 +10,7 @@ import subprocess
 import time
 
 SCHEMA = 'saea-environment-preflight-v1'
-RUNTIME_PATH_KINDS = {'SPEECHRL_DATA_DIR': 'data-root', 'SAEA_STAGE_TIMING_PATH': 'timing-file'}
+RUNTIME_PATH_KINDS = {'SPEECHRL_DATA_DIR': 'data-root', 'SAEA_STAGE_TIMING_PATH': 'timing-file', 'SAEA_ADMISSION_CONTROL_CONFIG': 'admission-control'}
 PROBE = '''import importlib, importlib.metadata, json, sys
 spec = json.loads(sys.argv[1])
 checks = []
@@ -53,13 +53,13 @@ def runtime_paths(doc):
     require(isinstance(declarations, dict) and set(declarations) <= set(RUNTIME_PATH_KINDS),
             'only known runtime environment paths may be declared')
     for key, item in declarations.items():
-        fields = {'kind', 'path', 'mount'} if key == 'SAEA_STAGE_TIMING_PATH' else {'kind', 'path'}
+        fields = {'kind', 'path', 'mount'} if key in ('SAEA_STAGE_TIMING_PATH', 'SAEA_ADMISSION_CONTROL_CONFIG') else {'kind', 'path'}
         require(isinstance(item, dict) and set(item) == fields
                 and item.get('kind') == RUNTIME_PATH_KINDS[key], 'exact runtime path semantics required: ' + key)
         value = canonical_runtime_path(item['path'])
         require(doc['required_environment'].get(key) == str(value),
                 'runtime path must match required environment: ' + key)
-        if key == 'SAEA_STAGE_TIMING_PATH':
+        if key in ('SAEA_STAGE_TIMING_PATH', 'SAEA_ADMISSION_CONTROL_CONFIG'):
             parent = canonical_runtime_path(item['mount'])
             require(value != parent and value.is_relative_to(parent),
                     'timing file must be strictly below its declared mount')

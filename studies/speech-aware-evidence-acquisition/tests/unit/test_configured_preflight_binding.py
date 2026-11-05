@@ -116,10 +116,57 @@ class BindingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'explicitly mounted'):
             self.bind()
 
+    def test_admission_control_runtime_rejects_wrong_attempt_and_symlink(self):
+        from speech_aware_evidence_acquisition.core.admission_control import AdmissionControl
+        control = self.root / 'admission-runtime'
+        control.mkdir()
+        config = control / 'config.json'
+        config.write_text(json.dumps({'schema': 'saea-admission-control-v1', 'run_id': 'run',
+            'attempt_id': 'a', 'request_path': str(control / 'request.json'),
+            'receipt_path': str(control / 'receipt.json')}))
+        with self.assertRaisesRegex(ValueError, 'bind current run'):
+            AdmissionControl(config, run_id='other', attempt_id='a')
+        with self.assertRaisesRegex(ValueError, 'bind current run'):
+            AdmissionControl(config, run_id='run', attempt_id='other')
+        alias = self.root / 'alias'
+        alias.symlink_to(control, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'symlinks forbidden'):
+            AdmissionControl(alias / 'config.json', run_id='run', attempt_id='a')
+
+
     def test_environment_mismatch(self):
         self.successor['environment']['PYTHONPATH'] = '/other'
         with self.assertRaisesRegex(ValueError, 'environment drift'):
             self.bind()
+
+    def test_admission_control_requires_pinned_confined_writable_directory(self):
+        control = self.root / 'admission'
+        control.mkdir()
+        config = control / 'config.json'
+        config.write_text(json.dumps({'schema': 'saea-admission-control-v1', 'run_id': 'run',
+            'attempt_id': 'generation-v1', 'request_path': '/admission/request.json',
+            'receipt_path': '/admission/receipt.json'}))
+        env = {'SAEA_ADMISSION_CONTROL_CONFIG': '/admission/config.json'}
+        self.source['environment'].update(env)
+        self.successor['environment'].update(env)
+        declaration = {'SAEA_ADMISSION_CONTROL_CONFIG': {'kind': 'admission-control',
+            'path': '/admission/config.json', 'mount': '/admission'}}
+        probe = json.loads(self.config.read_text())
+        probe['required_environment'].update(env)
+        probe['runtime_paths'] = declaration
+        self.config.write_text(json.dumps(probe))
+        with patch.dict('os.environ', env):
+            m.probe.execute(self.config, self.out / 'with-admission')
+        self.ready = self.out / 'with-admission/ready.json'
+        self.source['argv'][-1] = '/preflight/with-admission'
+        self.source['required_inputs'] = [m.pin(self.config)]
+        self.successor['mounts'].append({'source': str(control), 'target': '/admission', 'readonly': False})
+        self.successor['required_inputs'] = [m.pin(self.ready), m.pin(config)]
+        self.bind()
+        m.verify(self.binding, self.successor_path)
+        config.write_text(config.read_text() + ' ')
+        with self.assertRaisesRegex(ValueError, 'pinned'):
+            m.verify(self.binding, self.successor_path)
 
     def test_image_mismatch(self):
         self.successor['image'] = 'sha256:' + 'c' * 64
