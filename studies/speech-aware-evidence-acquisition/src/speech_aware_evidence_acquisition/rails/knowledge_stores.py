@@ -1905,7 +1905,7 @@ def build_knowledge_store_supply(
     if context_specs or candidate_callback is not None:
         route.automatic_for_phase = automatic_for_phase
 
-        def prefetch_recall(sample_id, submit):
+        def prefetch_recall(sample_id, submit, max_pending=256):
             """Owner decision 159 (``recall_prefetch``): forward the row to
             every store whose plain later-phase retrieval ``automatic_for_phase``
             composes. Nothing reads what this starts until that store's own
@@ -1922,7 +1922,7 @@ def build_knowledge_store_supply(
                     continue
                 forward = getattr(callbacks.get(store_id), "prefetch_recall", None)
                 if callable(forward):
-                    submitted += forward(sample_id, submit)
+                    submitted += forward(sample_id, submit, max_pending)
             return submitted
 
         automatic_for_phase.prefetch_recall = prefetch_recall
