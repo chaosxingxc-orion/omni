@@ -49,6 +49,9 @@
   `model_queue_wait_seconds`、`validation_backpressure_events`、
   `validation_backpressure_seconds` 和 `max_validation_pending`，用于区分
   NPU 槽位不足与 CPU 校验不足。
+- **校验失败快速收敛**：每轮完成事件中先消费已完成的校验 future；发现
+  响应不合格后取消尚未开始的准备和模型 future，保留已实际发送的响应与
+  trace，避免错误结果继续消耗 NPU。
 
 单请求 direct 使用 `configs/runtime/request-pipeline.example.json`；native 多节点使用独立 `dispatch` 配置的 `prepare_workers`、`validation_workers`、`admitted_trajectories`、`model_inflight`、`ready_request`。两者不可混用。`model_inflight` 是 contact 许可，包含最终检查和响应处理，并非纯 HTTP 在途。
 
@@ -60,7 +63,7 @@
 |native 请求、持久 FIT 恢复及 fallback|既有固定镜像 91 项通过，另有 2 项取消边界测试|
 |runtime/factory/debug 组合|既有固定镜像 219 项通过；发生于最新音频缓存硬化之前|
 |音频缓存硬化|本轮固定 saea-base:20261027，27 项通过，源码来自独立候选快照；不是最终发布镜像自身验收|
-|prepared pipeline 背压|受影响单元测试 1 项通过；完整 `test_flight_runtime.py` 为 171 通过、1 个既有 `openjiuwen` 环境依赖失败|
+|prepared pipeline 背压|受影响单元测试 3 项通过；完整 `test_flight_runtime.py` 为 171 通过、1 个既有 `openjiuwen` 环境依赖失败|
 |跨版本恢复与外置准入|既有隔离三节点恢复正例、挂载和故障恢复测试通过；真实终态结算与正式接续仍待|
 
 已构建的发布镜像源码为 `6ea491c9`，后续 roster、调度观测和缓存改进尚不能自动视为已装入该镜像。交付须固定最终版本并使用通用发布入口，不覆盖旧执行树。测试通过不代表线上收益，也不代表全仓测试通过。
