@@ -1,30 +1,110 @@
 {
   "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 6,
+  "source_revision": 7,
   "launcher_compatible": false,
-  "execution_status": "two TP4 lanes: new graph DEV metrics and targeted tuning, candidate freeze, full TEST and stable benefit, then TFRL",
+  "execution_status": "Original Fold A1080 Slot thinking off/on paired runs active; CPU engineering and attribution asynchronous; Fold B then full TEST then TFRL",
   "nodes": [
     {
       "id": "NEW-BASELINE-REPAIR",
       "lane": "CPU",
       "priority": 0,
-      "status": "implementation-in-progress",
+      "status": "node-policy-integrated-runtime-validation-in-progress",
       "scientific_dependencies": []
     },
     {
       "id": "NEW-BASELINE-FOLD-A1080",
-      "lane": "B",
+      "lane": "A+B",
       "priority": 0,
-      "status": "configuration-conversion-required",
+      "status": "two-frozen-arms-running",
       "normal_generation_calls": 3240,
       "fit_call_cap": 3240,
       "scientific_dependencies": [
         "NEW-BASELINE-REPAIR"
       ],
       "resource_dependencies": [
-        "B exact lease settlement and fixed runtime readiness"
+        "each lane has its own admitted frozen runtime and active lease"
       ],
-      "rows": 1080
+      "rows": 1080,
+      "budget_scope": "per arm; normal budget is not actual consumed cost",
+      "arms": [
+        {
+          "lane": "A",
+          "slot_thinking": false,
+          "run_id": "SAEA-SLURP-FOLD-A-SLOT-OFF-A64K-V1",
+          "attempt_id": "generation-v1",
+          "cards": 4
+        },
+        {
+          "lane": "B",
+          "slot_thinking": true,
+          "run_id": "SAEA-SLURP-FOLD-A-SPLIT-P-OFF-TP4-V1",
+          "attempt_id": "generation-v1",
+          "cards": 4
+        }
+      ]
+    },
+    {
+      "id": "CPU-PAIRED-FOLD-A-SCORE",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "comparison-implementation-verified-awaiting-finalized-arms",
+      "scientific_dependencies": [
+        "NEW-BASELINE-FOLD-A1080"
+      ],
+      "requirements": [
+        "1080 complete sealed scored rows per arm",
+        "same scorer and normalizer",
+        "official metrics and paired uncertainty; include refusals"
+      ]
+    },
+    {
+      "id": "CPU-UNIFIED-RUNTIME-IMAGE",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "candidate-image-built-business-validation-in-progress",
+      "scientific_dependencies": [],
+      "requirements": [
+        "one versioned image and external configurations",
+        "no source mount in release mode",
+        "two experiment configurations pass real zero-model preflight",
+        "do not mutate active runtime"
+      ]
+    },
+    {
+      "id": "CPU-REQUEST-EFFICIENCY",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "render-cache-first-version-no-measured-benefit-returned-for-profiling",
+      "scientific_dependencies": [],
+      "requirements": [
+        "live session and metering wait-hold profile",
+        "independent request concurrency",
+        "measured benefit before deployment"
+      ]
+    },
+    {
+      "id": "CPU-NODE-GOLD-ATTRIBUTION",
+      "lane": "CPU",
+      "priority": 0,
+      "status": "running-on-existing-fold-a-artifacts",
+      "scientific_dependencies": [],
+      "requirements": [
+        "original sample-to-gold binding",
+        "separate P recall, Slot content, Decision selection",
+        "observed subset is not full-fold accuracy"
+      ]
+    },
+    {
+      "id": "CPU-CANDIDATE-GROUPING",
+      "lane": "CPU",
+      "priority": 1,
+      "status": "analysis-accepted-implementation-not-started",
+      "scientific_dependencies": [],
+      "requirements": [
+        "retain every validated member and source",
+        "consistent compiler across all consumers and receipts",
+        "fixed-image functional regression before new NPU configuration"
+      ]
     },
     {
       "id": "NEW-BASELINE-DEV-TUNING",
@@ -32,12 +112,13 @@
       "priority": 0,
       "status": "awaiting-development-baseline",
       "scientific_dependencies": [
-        "NEW-BASELINE-FOLD-A1080"
+        "CPU-PAIRED-FOLD-A-SCORE"
       ],
       "requirements": [
         "same frozen development roster and comparable runtime",
         "node-targeted changes with repair and break counts",
-        "no TEST-guided tuning"
+        "no TEST-guided tuning",
+        "candidate grouping depends on CPU-CANDIDATE-GROUPING implementation acceptance; scientific changes isolated"
       ]
     },
     {
@@ -276,5 +357,6 @@
       "existing Fold B1080"
     ],
     "new_development_rosters_allowed": false
-  }
+  },
+  "observed_at_utc": "2026-11-05T08:03:00Z"
 }
