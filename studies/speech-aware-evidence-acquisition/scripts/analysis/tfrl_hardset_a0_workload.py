@@ -26,7 +26,11 @@ def read(p):return json.loads(p.read_bytes())
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 def raw(d):return (json.dumps(d,sort_keys=True,indent=2,allow_nan=False)+'\n').encode()
 def confined(root,rel):
-    p=(root/rel).resolve()
+    from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
+    original=(root/rel).resolve()
+    if not original.is_relative_to(root.resolve()):raise ValueError('source path escapes root')
+    p=resolve_asset(root,rel).resolve()
+    if p!=original:return p
     if not p.is_relative_to(root.resolve()):raise ValueError('source path escapes root')
     return p
 

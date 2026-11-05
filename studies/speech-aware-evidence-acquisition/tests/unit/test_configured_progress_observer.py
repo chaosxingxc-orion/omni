@@ -141,3 +141,35 @@ def test_recovery_rows_never_become_fresh_inference_throughput(tmp_path,monkeypa
     declaration['attempt_id']='wrong';(root/'resume-declaration.json').write_text(json.dumps(declaration))
     with pytest.raises(ValueError,match='declaration identity'):m.recovery_context(producer,tmp_path,plan)
 
+
+
+def test_real_atomic_publication_temporary_is_not_a_contact(tmp_path,monkeypatch):
+    import os, threading
+    from speech_aware_evidence_acquisition.core import atomic_file
+    plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
+    journal=ContactJournal(tmp_path,plan,'bare-core');journal.root.mkdir(parents=True,exist_ok=True)
+    reached=threading.Event();release=threading.Event();original=os.fsync;errors=[]
+    def fsync(fd):
+        if threading.current_thread().name=='publisher':
+            reached.set();assert release.wait(10)
+        return original(fd)
+    monkeypatch.setattr(atomic_file.os,'fsync',fsync)
+    def publish():
+        try:atomic_file.publish_new(journal._path('req-1','intent'),b'{}')
+        except Exception as e:errors.append(e)
+    thread=threading.Thread(target=publish,name='publisher');thread.start()
+    try:
+        assert reached.wait(10)
+        result,records=m.native_contacts(producer,tmp_path,plan,'bare-core')
+        assert result['attempted_contacts']==0 and len(result['uncommitted_publish_files'])==1 and records=={}
+    finally:release.set();thread.join(10)
+    assert not errors and not thread.is_alive()
+
+@pytest.mark.parametrize('name',['illegal.json','.'+'a'*64+'.intent.json.bad'])
+def test_observer_rejects_invalid_visible_files_and_temporary_symlinks(tmp_path,name):
+    plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
+    journal=ContactJournal(tmp_path,plan,'bare-core');journal.root.mkdir(parents=True,exist_ok=True)
+    path=journal.root/name
+    if name.startswith('.'):path.symlink_to(tmp_path/'absent')
+    else:path.write_text('{}')
+    with pytest.raises(ValueError,match='unexpected contact journal file'):m.native_contacts(producer,tmp_path,plan,'bare-core')

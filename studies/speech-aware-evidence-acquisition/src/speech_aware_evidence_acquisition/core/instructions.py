@@ -368,7 +368,8 @@ def render_template_with_fill(
             f"task_instruction_template {template_relpath!r} is not a plain relative path "
             "under configs/ (no absolute paths, no '..', no backslashes)"
         )
-    template_path = Path(repo_root) / "configs" / template_relpath
+    from .experiment_assets import resolve_asset
+    template_path = resolve_asset(repo_root, "configs/" + template_relpath)
     if not template_path.is_file():
         raise CoreError(f"task instruction template missing: {template_path}")
     try:

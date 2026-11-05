@@ -83,9 +83,17 @@ def source(j):
 def native_contacts(producer,logical,plan,arm):
     journal=ContactJournal(logical,plan,arm,source_root=producer.get('repo_path'))
     journal.root=settlement.mapped(producer,logical/'contact-journals'/plan.run_id/plan.attempt_id)
-    files=sorted(journal.root.glob('*')) if journal.root.exists() else []
-    require(all(p.is_file() and not p.is_symlink() and re.fullmatch(r'[a-f0-9]{64}\.(intent|response|fit)\.json',p.name)
-        for p in files),'unexpected contact journal file')
+    files=[];transient=[];vanished=[]
+    for path in sorted(journal.root.glob('*')):
+        try:
+            stat=path.lstat()
+        except FileNotFoundError:
+            vanished.append(path.name);continue
+        require(not path.is_symlink() and path.is_file(),'unexpected contact journal file')
+        if re.fullmatch(r'\.[a-f0-9]{64}\.(intent|response|fit)\.json\.[A-Za-z0-9_-]+',path.name):
+            transient.append(path.name);continue
+        require(re.fullmatch(r'[a-f0-9]{64}\.(intent|response|fit)\.json',path.name),'unexpected contact journal file')
+        files.append(path)
     fit_files=[p for p in files if p.name.endswith('.fit.json')]
     for path in fit_files:
         fit=settlement.read(path)
@@ -113,6 +121,7 @@ def native_contacts(producer,logical,plan,arm):
         'inflight_or_unknown_contacts':len(unknown),'known_usage':dict(known),
         'unknown_cost':None,'unknown_cost_reason':'Unreturned requests have unknown spend, never assumed zero.',
         'fit_custody_records':len(fit_files),'fit_cost':'accounted separately; not included in native generation contacts',
+        'uncommitted_publish_files':transient,'vanished_during_enumeration':vanished,
         'snapshot_boundary':'native intents present at directory enumeration; responses may finish during this read',
         **OBSERVER_CALL_ACCOUNTING,
         'workload_model_calls':{'attempted':len(intents),'observed':len(records),

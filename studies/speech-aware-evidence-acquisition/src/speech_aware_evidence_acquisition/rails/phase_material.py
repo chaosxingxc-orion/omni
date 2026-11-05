@@ -1146,7 +1146,8 @@ def render_static_instruction(
             root,
             spec.fill_params,
         )
-    template_path = Path(repo_root) / "configs" / spec.instruction_template
+    from ..core.experiment_assets import resolve_asset
+    template_path = resolve_asset(repo_root, "configs/" + spec.instruction_template)
     if not template_path.is_file():
         raise PhaseMaterialError(f"phase instruction template missing: {template_path}")
     try:

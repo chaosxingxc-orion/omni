@@ -293,7 +293,8 @@ def fragment_path(repo_root: Path, kind: str, name: str) -> Path:
         raise ConfigError(f"unknown config fragment kind {kind!r}; known kinds are {_KINDS}")
     if not isinstance(name, str) or not _FRAGMENT_NAME_PATTERN.fullmatch(name):
         raise ConfigError(f"invalid config fragment name for {kind}: {name!r}")
-    return Path(repo_root) / "configs" / kind / f"{name}.json"
+    from .experiment_assets import resolve_asset
+    return resolve_asset(repo_root, f"configs/{kind}/{name}.json")
 
 
 def read_fragment(repo_root: Path, kind: str, name: str) -> dict[str, object]:

@@ -55,21 +55,6 @@ def load_config(path):
             'argv', 'working_directory', 'network', 'pid_host', 'cpuset_cpus', 'environment',
             'mounts', 'create_directories', 'allowed_create_roots', 'required_inputs', 'monitor_interval_seconds'}
     require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
-    identity = doc.get('source_identity')
-    if identity is not None:
-        require(isinstance(identity, dict) and set(identity) == {'mode', 'manifest_sha256'}
-                and identity['mode'] == 'image-release-v1'
-                and isinstance(identity['manifest_sha256'], str)
-                and re.fullmatch('[a-f0-9]{64}', identity['manifest_sha256']), 'exact release source identity required')
-        require(doc['repo_path'] == '/opt/saea-release/studies/speech-aware-evidence-acquisition', 'release repository path differs')
-        require(doc['environment'].get('SAEA_RELEASE_MANIFEST') == '/opt/saea-release/source-manifest.json'
-                and doc['environment'].get('SAEA_RELEASE_MANIFEST_SHA256') == identity['manifest_sha256'], 'release manifest environment differs')
-        require(doc['environment'].get('PYTHONPATH') == '/opt/saea-release/studies/speech-aware-evidence-acquisition/src'
-                and doc['environment'].get('PYTHONDONTWRITEBYTECODE') == '1', 'release Python source environment differs')
-        require(doc['argv'][0] in ('/opt/saea-venv/bin/python', '/usr/local/python3.12.13/bin/python3')
-                and len(doc['argv']) >= 2 and doc['argv'][1].startswith('/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/')
-                and '..' not in Path(doc['argv'][1]).parts, 'release entrypoint must be a sealed study script')
-        require(not any(Path('/opt/saea-release').is_relative_to(Path(m['target'])) or Path(m['target']).is_relative_to('/opt/saea-release') for m in doc['mounts']), 'release source cannot be mounted over')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
                          ('image', r'sha256:[a-f0-9]{64}'), ('expected_commit', r'[a-f0-9]{40}'),
                          ('cpuset_cpus', r'[0-9]+(?:[-,][0-9]+)*')]:
@@ -117,6 +102,32 @@ def load_config(path):
         mount = max(mounts, key=lambda m: len(Path(m['target']).parts))
         mapped = Path(mount['source']) / logical.relative_to(mount['target'])
         require(locks == mapped, 'generation lease directory differs from runtime mount')
+    identity = doc.get('source_identity')
+    if identity is not None:
+        require(isinstance(identity, dict) and set(identity) == {'mode', 'manifest_sha256'}
+                and identity['mode'] == 'image-release-v1'
+                and isinstance(identity['manifest_sha256'], str)
+                and re.fullmatch('[a-f0-9]{64}', identity['manifest_sha256']), 'exact release source identity required')
+        require(doc['repo_path'] == '/opt/saea-release/studies/speech-aware-evidence-acquisition', 'release repository path differs')
+        require(doc['environment'].get('SAEA_RELEASE_MANIFEST') == '/opt/saea-release/source-manifest.json'
+                and doc['environment'].get('SAEA_RELEASE_MANIFEST_SHA256') == identity['manifest_sha256'], 'release manifest environment differs')
+        require(doc['environment'].get('PYTHONPATH') == '/opt/saea-release/studies/speech-aware-evidence-acquisition/src'
+                and doc['environment'].get('PYTHONDONTWRITEBYTECODE') == '1', 'release Python source environment differs')
+        require(doc['argv'][0] in ('/opt/saea-venv/bin/python', '/usr/local/python3.12.13/bin/python3')
+                and len(doc['argv']) >= 2 and (doc['argv'][1].startswith('/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/') or doc['argv'][1].startswith('/opt/saea-release/scripts/npu/'))
+                and '..' not in Path(doc['argv'][1]).parts, 'release entrypoint must be a sealed study script')
+        require(not any(Path('/opt/saea-release').is_relative_to(Path(m['target'])) or Path(m['target']).is_relative_to('/opt/saea-release') for m in doc['mounts']), 'release source cannot be mounted over')
+    if identity is not None:
+        require(not any(k.startswith(('PYTHON', 'LD_', 'DYLD_')) and k not in ('PYTHONPATH', 'PYTHONDONTWRITEBYTECODE', 'LD_LIBRARY_PATH') for k in doc['environment']), 'release interpreter environment override forbidden')
+        if 'SAEA_EXPERIMENT_MANIFEST' in doc['environment']:
+            asset=doc['environment']['SAEA_EXPERIMENT_MANIFEST'];absolute(asset)
+            require(re.fullmatch('[a-f0-9]{64}',doc['environment'].get('SAEA_EXPERIMENT_MANIFEST_SHA256','')),'external experiment manifest pin required')
+            matches=[m for m in doc['mounts'] if Path(asset).is_relative_to(Path(m['target']))]
+            require(matches and max(matches,key=lambda m:len(Path(m['target']).parts))['readonly'],'external experiment manifest requires readonly mount')
+        require(doc['working_directory'] == doc['repo_path'], 'release working directory must be sealed')
+        for mount in doc['mounts']:
+            target=Path(mount['target'])
+            require(not any(target.is_relative_to(p) or Path(p).is_relative_to(target) for p in ('/opt', '/usr', '/bin', '/lib', '/lib64', '/etc', '/root')), 'release dependency mount override forbidden')
     return doc
 
 
@@ -218,6 +229,8 @@ def preflight(doc):
 def command(doc, config_sha, runner_sha):
     args = ['docker', 'run', '-d', '--name', doc['container_name'], '--network', doc['network'], '--cpuset-cpus', doc['cpuset_cpus'],
             '--label', 'saea.launch.config=' + config_sha, '--label', 'saea.launch.runner=' + runner_sha]
+    if doc.get('source_identity') is not None:
+        args += ['--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges']
     if doc['pid_host']:
         args += ['--pid', 'host']
     for m in sorted(doc['mounts'], key=lambda m: len(Path(m['target']).parts)):

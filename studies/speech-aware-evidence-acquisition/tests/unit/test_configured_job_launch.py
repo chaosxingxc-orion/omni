@@ -248,7 +248,7 @@ def test_missing_guard_is_not_created_and_unreadable_root_blocks(tmp_path):
 
 def test_release_source_is_explicit_and_rejects_source_overlay(tmp_path):
     path, doc = configured(tmp_path)
-    doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'
+    doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition';doc['working_directory']=doc['repo_path']
     doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
     doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json', SAEA_RELEASE_MANIFEST_SHA256='c'*64, PYTHONPATH='/opt/saea-release/studies/speech-aware-evidence-acquisition/src', PYTHONDONTWRITEBYTECODE='1');doc['argv']=['/opt/saea-venv/bin/python','/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py']
     path.write_text(json.dumps(doc));assert m.load_config(path)['source_identity']['mode']=='image-release-v1'
@@ -258,7 +258,7 @@ def test_release_source_is_explicit_and_rejects_source_overlay(tmp_path):
 
 
 def test_release_manifest_verification_fails_closed_before_launch(tmp_path,monkeypatch):
-    path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'
+    path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition';doc['working_directory']=doc['repo_path']
     doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
     doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',SAEA_RELEASE_MANIFEST_SHA256='c'*64,PYTHONPATH='/opt/saea-release/studies/speech-aware-evidence-acquisition/src',PYTHONDONTWRITEBYTECODE='1');doc['argv']=['/opt/saea-venv/bin/python','/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py']
     path.write_text(json.dumps(doc))
@@ -273,7 +273,7 @@ def test_release_manifest_verification_fails_closed_before_launch(tmp_path,monke
 
 @pytest.mark.parametrize('fault',['pythonpath','entrypoint','bytecode'])
 def test_release_refuses_unsealed_code_execution(tmp_path,fault):
-    path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'
+    path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition';doc['working_directory']=doc['repo_path']
     doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
     doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',SAEA_RELEASE_MANIFEST_SHA256='c'*64,PYTHONPATH='/opt/saea-release/studies/speech-aware-evidence-acquisition/src',PYTHONDONTWRITEBYTECODE='1')
     doc['argv']=['/opt/saea-venv/bin/python','/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py']
@@ -285,5 +285,21 @@ def test_release_refuses_unsealed_code_execution(tmp_path,fault):
 
 
 def test_release_rejects_unknown_identity_key(tmp_path):
-    path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition';doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64,'extra':1};path.write_text(json.dumps(doc))
+    path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition';doc['working_directory']=doc['repo_path'];doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64,'extra':1};path.write_text(json.dumps(doc))
     with pytest.raises(ValueError,match='identity'):m.load_config(path)
+
+
+@pytest.mark.parametrize('fault',['PYTHONHOME','PYTHONSTARTUP','LD_PRELOAD','mount-dependency','workdir','argv-empty','mount-malformed'])
+def test_release_closed_execution_environment(tmp_path,fault):
+    path,doc=configured(tmp_path)
+    doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition';doc['working_directory']=doc['repo_path']
+    doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
+    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',SAEA_RELEASE_MANIFEST_SHA256='c'*64,PYTHONPATH=doc['repo_path']+'/src',PYTHONDONTWRITEBYTECODE='1')
+    doc['argv']=['/opt/saea-venv/bin/python',doc['repo_path']+'/scripts/analysis/intent_slot_workload.py']
+    if fault=='mount-dependency':doc['mounts'][0]['target']='/usr/local'
+    elif fault=='mount-malformed':doc['mounts']=[{}]
+    elif fault=='workdir':doc['working_directory']='/data'
+    elif fault=='argv-empty':doc['argv']=[]
+    else:doc['environment'][fault]='/data/inject'
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError):m.load_config(path)

@@ -7,7 +7,7 @@ def verify(manifest,root):
  import re
  if not re.fullmatch('[0-9a-f]{40}',doc['commit']):raise ValueError('invalid source commit')
  actual=set()
- for base in ('studies/speech-aware-evidence-acquisition','docs','scripts/npu'):
+ for base in ('studies/speech-aware-evidence-acquisition','docs','scripts/npu','docker/saea-base/release'):
   p=root/base
   if p.exists():
    for f in p.rglob('*'):
@@ -17,5 +17,6 @@ def verify(manifest,root):
  for name,digest in doc['files'].items():
   p=root/name
   if not p.resolve().is_relative_to(root) or hashlib.sha256(p.read_bytes()).hexdigest()!=digest:raise ValueError('release digest differs: '+name)
+ if hashlib.sha256((root/'verify-release.py').read_bytes()).hexdigest()!=doc['files']['docker/saea-base/release/verify-release.py']:raise ValueError('release verifier differs')
  return doc['commit']
 if __name__=='__main__':print(json.dumps({'commit':verify(sys.argv[1],sys.argv[2]),'verified':True}))

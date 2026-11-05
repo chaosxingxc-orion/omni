@@ -70,7 +70,7 @@ def runtime_paths(doc):
 
 def load_config(path):
     doc = json.loads(Path(path).read_bytes())
-    require(isinstance(doc, dict) and set(doc) - {'runtime_paths', 'required_files'} == {'schema', 'required_environment', 'interpreters', 'timeout_seconds'}, 'exact preflight schema required')
+    require(isinstance(doc, dict) and set(doc) - {'runtime_paths', 'required_files', 'compositions'} == {'schema', 'required_environment', 'interpreters', 'timeout_seconds'}, 'exact preflight schema required')
     require(doc['schema'] == SCHEMA, 'unsupported preflight schema')
     require(type(doc['timeout_seconds']) is int and 1 <= doc['timeout_seconds'] <= 300, 'bounded timeout required')
     require(isinstance(doc['required_environment'], dict) and all(
@@ -99,6 +99,14 @@ def load_config(path):
                 'interpreter selection must match required environment')
         require(isinstance(item['imports'], list) and item['imports'] and all(isinstance(x, str) and re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*', x) for x in item['imports']), 'module names required')
         require(isinstance(item['distributions'], dict) and all(isinstance(k, str) and re.fullmatch(r'[A-Za-z0-9_.-]+', k) and isinstance(v, str) and v for k, v in item['distributions'].items()), 'exact distribution versions required')
+    compositions=doc.get('compositions',[])
+    require(isinstance(compositions,list),'composition checks must be a list')
+    for item in compositions:
+        require(isinstance(item,dict) and set(item)=={'id','repo_root','data_root','fragments','expected_rows','verify_media'},'exact composition probe required')
+        require(isinstance(item['id'],str) and re.fullmatch('[a-z0-9-]+',item['id']),'composition identity required')
+        canonical_runtime_path(item['repo_root']);canonical_runtime_path(item['data_root'])
+        require(isinstance(item['fragments'],dict) and set(item['fragments'])=={'model','dataset','baseline','experiment'},'four real fragments required')
+        require(type(item['expected_rows']) is int and item['expected_rows']>0 and type(item['verify_media']) is bool,'explicit population and media verification required')
     return doc
 
 
@@ -112,6 +120,36 @@ def persist(path, doc):
         os.fsync(fd)
     finally:
         os.close(fd)
+
+
+def composition_probe(spec):
+    """Exercise production composition, graph parsing and native media binding only."""
+    import sys
+    root=Path(__file__).resolve().parents[2]
+    sys.path[:0]=[str(root/'src'),str(root/'scripts/analysis')]
+    from speech_aware_evidence_acquisition.core.config import compose
+    from speech_aware_evidence_acquisition.rails.adapters.runtime_view import load_runtime_view, registered_population_ids
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
+    from speech_aware_evidence_acquisition.rails.phase_material import load_phase_material_specs
+    cfg=compose(Path(spec['repo_root']),**spec['fragments'],data_root=spec['data_root']);values=cfg.values
+    ids=registered_population_ids(values,spec['fragments']['dataset'])
+    selected=load_runtime_view(values,Path(spec['data_root']),sample_ids=ids,workers=4) if spec['verify_media'] else ()
+    count=len(selected) if spec['verify_media'] else len(ids) if ids is not None else values['count']
+    require(count==spec['expected_rows'],'native population denominator differs')
+    program=default_phase_program(values['policy'])
+    native=load_native_episode_config(values,program)
+    materials=load_phase_material_specs(values,program)
+    # All actual configured templates are opened through the same asset resolver.
+    from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
+    templates=[]
+    for material in materials:
+        path=resolve_asset(Path(spec['repo_root']),'configs/'+material.instruction_template)
+        require(path.is_file(),'phase template absent')
+        templates.append({'phase':material.phase,'path':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+    return {'id':spec['id'],'ok':True,'config_hash':cfg.config_hash,'rows':count,
+            'media_hashes_verified':len(selected),'policy':values['policy'],'templates':templates,
+            'new_model_calls':0,'fit_calls':0}
 
 
 def execute(config, output):
@@ -149,6 +187,10 @@ def execute(config, output):
             except (OSError, subprocess.TimeoutExpired, ValueError, KeyError, TypeError) as exc:
                 checks.append({'interpreter': spec['name'], 'configured_python': spec['python'],
                                'ok': False, 'error_type': type(exc).__name__})
+    if all(check['ok'] for check in checks):
+        for spec in doc.get('compositions',[]):
+            try:checks.append(composition_probe(spec))
+            except Exception as exc:checks.append({'id':spec['id'],'ok':False,'error_type':type(exc).__name__,'error':str(exc)})
     ok = all(check['ok'] for check in checks)
     result = {'schema': SCHEMA, 'config_sha256': digest(doc), 'ok': ok,
               'script_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
