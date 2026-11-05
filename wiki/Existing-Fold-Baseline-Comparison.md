@@ -8,7 +8,7 @@
 |---|---|---:|---:|---|
 |Fold A1080|A0 current C2|85.7407%|73.3139%|已提交1080条官方结果摘要；旧joint，每条2次生成|
 |Fold B1080|A0合并结果|85.3704%|73.2225%|427历史+300首轮+353接续，一次完整汇总；不能当成单次新图运行|
-|Fold A1080|新P→Slot→Decision|尚无|尚无|完整1080条数据准备已成功；尚无新图有效指标|
+|Fold A1080|新P→Slot→Decision|尚无|尚无|完整1080条准备及运行登记已成功；队列启动尚未验收，无新图指标|
 |Fold B1080|新P→Slot→Decision|尚无|尚无|等待Fold A调优、候选冻结|
 
 来源：[Fold A已核验结果](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-fold-a-c2-verified-result.json)、[Fold B A0汇总锁定](https://github.com/chaosxingxc-orion/omni/blob/main/studies/speech-aware-evidence-acquisition/docs/results/2026-10-31-a0-full1080-baseline-lock.json)。本轮重新核验了这些已提交来源文件的哈希与数字；未重复推理，也未重新读取所有历史原始flight。不能把来源摘要核验说成完整原轨迹再次验收。
@@ -22,3 +22,7 @@ Fold A历史运行使用8卡/2个TP4，2160次生成；从启动到封存2773.60
 各折分别报告Intent、实体TP/FP/FN与F1、官方SLU、strict、修复/破坏及不确定性；全部1080条进入分母，程序拒绝和模型失败单列。完整三节点成功数量与checkpoint行数分开。成本列出完成/总量、吞吐、节点耗时、卡数/实例、ETA、生成/FIT/教师调用。
 
 历史数字用于横向结果对照。节点因果分析需同名单、模型与处理器、知识及检索、P语义输入、解码、normalizer和scorer的匹配控制；不同项明确列出。原A0的P thinking等配置差异不能藏在“拆节点”名义下。完整两折与测试稳定收益尚未验收，当前没有新基座收益结论。
+
+## 工程验证边界
+
+固定两折入口、跨节点重复供给修复、显式短证据ID映射与同内容候选去重已合入main。指定镜像测试82项通过、2项跳过；随后两行split_id绑定修复经完整Fold A准备和运行登记验证，不能称该最终版本已重跑全部单测。16个变更文件已与实际冻结运行树核对一致。上述结果是工程验证，不是精度或收益结果。
