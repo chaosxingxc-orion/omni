@@ -1,7 +1,7 @@
 """Registered independent native graph arms over one immutable development roster."""
 import argparse, copy, json, math
 from pathlib import Path
-from gepa_pair_workload import PairWorkload
+from gepa_pair_workload import PairWorkload,read_asset
 import tfrl_h1_observation as observation
 from tfrl_hardset_a0_registration import pin,pinned
 from tfrl_hardset_a0_workload import read,sha
@@ -86,8 +86,8 @@ class NodeWorkload(PairWorkload):
             source=checked['source_baseline']
             base=copy.deepcopy(source) if source.get('policy')=='phase-native-module-v1-c2' else lock_only(source, repo=repo)
         else:
-            base=read(repo/observation.SOURCE_BASE)
-        exp=read(repo/observation.SOURCE_EXP)
+            base=read_asset(repo,observation.SOURCE_BASE)
+        exp=read_asset(repo,observation.SOURCE_EXP)
         base['thinking_policy']={r:copy.deepcopy(observation.THINKING_ARMS['baseline']) for r in ('perception','solver')}
         arm=self.config['node_arm']
         if arm!='old-p-joint-s':
@@ -128,7 +128,7 @@ class NodeWorkload(PairWorkload):
                 raise ValueError('Perception instruction template pin differs')
             base['phase_material'][role]['instruction_template']=template['relpath'][len('configs/'):]
             base['thinking_policy'][role]=copy.deepcopy(policy['thinking'])
-        model=read(repo/f"configs/model/{binding['model_fragment']}.json")
+        model=read_asset(repo,f"configs/model/{binding['model_fragment']}.json")
         validate_thinking_policy(base['thinking_policy'],model)
         slot=int(model['server_args'][model['server_args'].index('--max-model-len')+1])
         base.pop('prepared_phase_supply',None);base['serving_slot_tokens']=slot

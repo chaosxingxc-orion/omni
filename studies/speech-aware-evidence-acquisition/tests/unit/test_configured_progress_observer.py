@@ -173,3 +173,17 @@ def test_observer_rejects_invalid_visible_files_and_temporary_symlinks(tmp_path,
     if name.startswith('.'):path.symlink_to(tmp_path/'absent')
     else:path.write_text('{}')
     with pytest.raises(ValueError,match='unexpected contact journal file'):m.native_contacts(producer,tmp_path,plan,'bare-core')
+
+
+def test_temporary_disappearing_after_lstat_is_snapshot_transient(tmp_path,monkeypatch):
+    plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
+    journal=ContactJournal(tmp_path,plan,'bare-core');journal.root.mkdir(parents=True,exist_ok=True)
+    path=journal.root/('.'+'a'*64+'.intent.json.inflight');path.write_bytes(b'{}')
+    original=Path.lstat
+    def lstat(p,*args,**kwargs):
+        result=original(p,*args,**kwargs)
+        if p==path:p.unlink()
+        return result
+    monkeypatch.setattr(Path,'lstat',lstat)
+    result,_=m.native_contacts(producer,tmp_path,plan,'bare-core')
+    assert result['uncommitted_publish_files']==[path.name] and result['attempted_contacts']==0

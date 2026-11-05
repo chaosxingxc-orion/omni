@@ -27,8 +27,14 @@ def checked_pin(root, pin):
             or '..' in Path(rel).parts or '\\' in rel
             or not isinstance(pin['sha256'],str) or not re.fullmatch('[a-f0-9]{64}',pin['sha256'])):
         raise ValueError('confined artifact and digest required')
-    path = (Path(root)/rel).resolve()
-    if not path.is_relative_to(Path(root).resolve()) or digest(path) != pin['sha256']:
+    root=Path(root)
+    if root.name=='configs':
+        from ..core.experiment_assets import resolve_asset
+        path=resolve_asset(root.parent,'configs/'+rel).resolve()
+    else:
+        path=(root/rel).resolve()
+        if not path.is_relative_to(root.resolve()):raise ValueError('experience artifact escaped root')
+    if digest(path) != pin['sha256']:
         raise ValueError('experience artifact changed or escaped root')
     return path
 

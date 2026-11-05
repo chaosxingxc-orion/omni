@@ -19,6 +19,10 @@ KIND='gepa-solver-template-pair'
 SCHEMA='saea-gepa-pair-workload-v1'
 
 
+def read_asset(repo,relative):
+    return read(resolve_asset(repo,str(relative)))
+
+
 class PairWorkload:
     CONTACTS = 4
     ARMS = ['parent', 'child', 'lock']
@@ -153,7 +157,7 @@ class PairWorkload:
         roster, view = self.population(repo, checked['source_pins']['partition'], checked['partition'])
         base = copy.deepcopy(checked['compiled_baseline'])
         source = checked['source_baseline']
-        live_model=read(repo/f"configs/model/{binding['model_fragment']}.json")
+        live_model=read_asset(repo,f"configs/model/{binding['model_fragment']}.json")
         archived_model=checked['model']
         from speech_aware_evidence_acquisition.core.reasoning_knobs import (
             fold_into_decoding, resolve_node_decoding, validate_fragment_knobs, validate_thinking_policy)
@@ -206,7 +210,7 @@ class PairWorkload:
         base['what_this_is'] = 'Configured fixed feedback paired GEPA evaluation: one P, current parent S, child S and original lock; no adoption claim.'
         if self.config.get('evaluation_partition') == 'selection':
             base['what_this_is'] = 'Configured fixed selection paired GEPA evaluation: one P, parent/child/lock S; no feedback mixing or adoption claim.'
-        exp = read(repo/observation.SOURCE_EXP)
+        exp = read_asset(repo,observation.SOURCE_EXP)
         cell, = exp['cells']
         cell.update(cell_id=self.NAME, baseline_fragment=self.NAME, model_fragment=binding['model_fragment'],
             run_id=self.RUN, attempt_id='generation-v1', allowed_execution_stages=['check','prepare-supply','worker','campaign'],
@@ -266,7 +270,7 @@ class PairWorkload:
         pinned(repo, staged['source_experiment']); pinned(repo, staged['dataset'])
         base, exp, roster, _, binding = self.derive(repo, data, staged['material'])
         expected = {f'configs/baseline/{self.NAME}.json':base, f'configs/experiment/{self.NAME}.json':exp, self.ROSTER:roster}
-        if set(staged['output_hashes']) != set(expected) or any(read(repo/p) != doc for p,doc in expected.items()):
+        if set(staged['output_hashes']) != set(expected) or any(read_asset(repo,p) != doc for p,doc in expected.items()):
             raise ValueError('stage differs from verified material derivation')
         if staged.get('context_adaptation') != self.context_adaptation():
             raise ValueError('staged context adaptation changed')
@@ -288,7 +292,7 @@ class PairWorkload:
             runtime_root=data/'work/scratch/runtime-root', lock_path=repo.parents[1]/'docs/datasets.lock.json')
         target = data/'prepared'/self.RUN/'phase-supply-v1.json'
         runtime.prepare_phase_supply(target, max_workers=16)
-        verify_output(read(target)['output'], [r['sample_id'] for r in read(repo/self.ROSTER)['items']])
+        verify_output(read(target)['output'], [r['sample_id'] for r in read_asset(repo,self.ROSTER)['items']])
         out.mkdir(parents=True)
         result = {'schema':'saea-gepa-pair-prepared-v1', 'stage_sha256':sha(stage_record), 'rows':self.ROWS,
             'run_id':self.RUN, 'supply':pin(data,str(target.relative_to(data))), 'new_model_calls':0}
@@ -318,7 +322,7 @@ class PairWorkload:
         for key in ('cell_id','baseline_fragment','model_fragment','dataset_fragment','run_id','attempt_id'):
             if cell.get(key) != expected['cells'][0].get(key):
                 raise ValueError('registered probe cell changed')
-        actual = read(repo/f'configs/baseline/{self.NAME}.json')
+        actual = read_asset(repo,f'configs/baseline/{self.NAME}.json')
         if (scientific_hash(actual) != scientific_hash(base)
                 or scientific_hash(actual) != spec['scientific_baseline_sha256']
                 or not native_contact_custody_enabled({**actual,'transport':'vllm','carrier_lock_key':'slurp'})):
@@ -361,7 +365,7 @@ class PairWorkload:
             'job_config':self.config,'material':staged['material'],'source_experiment':staged['source_experiment'],'execution':self.config['execution'],
             'scientific_baseline_sha256':scientific_hash(base),'stage_sha256':sha(stage_record),
             'generation_program':self.PROGRAM}
-        self.validate(repo,data,self.NAME,spec,exp,read(repo/spec['dataset']['relpath']))
+        self.validate(repo,data,self.NAME,spec,exp,read_asset(repo,spec['dataset']['relpath']))
         protocol = {'schema':'saea-gepa-pair-generation-v1','cells':{'arm':identity},'profile':binding['profile'],
             'roster':spec['roster'],'material':spec['material'],'normal_generation_calls':self.CONTACTS*self.ROWS,
             'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS,'fit_calls':self.CONTACTS*self.ROWS,'claims_benefit':False,

@@ -25,12 +25,10 @@ REASON='Fixed error candidates; independent P/S observation held for recovery ac
 def input_path(p):
     from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
     p=Path(p)
-    import os
-    workspace=os.environ.get('SAEA_EXPERIMENT_WORKSPACE')
-    if workspace and p.is_relative_to(Path(workspace)):return p
-    for ancestor in p.parents:
-        if ancestor.name in ('configs','docs'):
-            return resolve_asset(ancestor.parent,p.relative_to(ancestor.parent).as_posix())
+    # Only this imported source root is logical; data and already-mapped paths
+    # can themselves contain directories named configs/docs.
+    if p.is_relative_to(ROOT):
+        return resolve_asset(ROOT,p.relative_to(ROOT).as_posix())
     return p
 def read(p):return json.loads(input_path(p).read_bytes())
 def sha(p):return hashlib.sha256(input_path(p).read_bytes()).hexdigest()

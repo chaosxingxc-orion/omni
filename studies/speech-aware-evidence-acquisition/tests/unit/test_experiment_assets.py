@@ -51,3 +51,12 @@ def test_workspace_outputs_are_separate_and_pin_drift_rejected(tmp_path,monkeypa
     assert not (repo/'configs').exists()
     out.write_text('changed')
     with pytest.raises(ValueError,match='changed'):resolve_asset(repo,'configs/model/external.json')
+
+
+def test_already_mapped_path_named_configs_is_not_remapped(tmp_path,monkeypatch):
+    import sys
+    sys.path.insert(0,str(Path(__file__).parents[2]/'scripts/analysis'))
+    from tfrl_hardset_a0_workload import input_path
+    repo,assets,_,_=setup(tmp_path,monkeypatch)
+    path=assets/'configs/model/external.json';path.parent.mkdir(parents=True);path.write_text('actual external bytes')
+    assert input_path(path)==path
