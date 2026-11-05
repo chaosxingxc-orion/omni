@@ -7526,12 +7526,13 @@ class FlightRuntime:
                                     validation_backpressure[1] += max(
                                         time.monotonic() - blocked_started, 0.0
                                     )
-                                validation_futures.add(
-                                    validation_pool.submit(validate, item)
-                                )
-                                validation_backpressure[2] = max(
-                                    validation_backpressure[2], len(validation_futures)
-                                )
+                                if pipeline_error is None:
+                                    validation_futures.add(
+                                        validation_pool.submit(validate, item)
+                                    )
+                                    validation_backpressure[2] = max(
+                                        validation_backpressure[2], len(validation_futures)
+                                    )
                             if next_index < len(samples) and pipeline_error is None:
                                 pending_prepare.add(
                                     prep_pool.submit(build, next_index, samples[next_index])
