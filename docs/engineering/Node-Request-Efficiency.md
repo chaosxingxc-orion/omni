@@ -68,8 +68,14 @@ CPU负责数据读取、知识选择、上下文组装、请求渲染、token计
 解析与评分由独立线程池处理，队列满时施加背压。该开关只覆盖每样本一个联系的
 fixed direct 路径；native 多节点轨迹继续使用自己的 admission、FIT 和断点协议，
 不会被静默改调度。示例见
-`configs/runtime/request-pipeline.example.json`。上线前必须在真实数据上记录
-prepare、model、validation 三段墙钟和实际在途数，不能用单元测试吞吐替代线上结论。
+`configs/runtime/request-pipeline.example.json`。流水线收据同时记录 prepare、
+model、validation 三段重叠墙钟和实际在途数；上线前必须在真实数据上使用这些
+字段验收，不能用单元测试吞吐替代线上结论。
+
+外部运行配置现在由 `core.flight.factory.load_external_runtime_config()` 读取，
+要求固定 schema，并可由 `SAEA_RUNTIME_CONFIG_SHA256` 绑定原始文件摘要。启动器
+通过 `runtime_config_path` 显式传入；摘要校验在 adapter、session、FIT 和模型请求
+之前执行。这样调度参数真正来自外部配置，且不会把运行态参数悄悄混入科学 fragment。
 
 三项进入同一固定Docker基座，外部配置选择workers、队列容量、并发与normal/debug模式，启动入口保持脚本化。纯Python校验不因使用线程便自动获得多核提速，须测真实收益。
 

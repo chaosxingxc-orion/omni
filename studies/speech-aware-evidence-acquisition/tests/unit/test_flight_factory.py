@@ -5,6 +5,7 @@ import json
 import pytest
 
 from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
+from speech_aware_evidence_acquisition.core.flight.factory import load_external_runtime_config
 from speech_aware_evidence_acquisition.rails.adapters.runtime_view import (
     RuntimeViewError, load_runtime_view,
 )
@@ -24,6 +25,24 @@ def view(tmp_path):
             "audio_seconds": 1.0, "sample_rate_hz": 16000, "packet_id": "packet-one",
         }],
     }
+
+
+def test_external_runtime_config_is_schema_and_sha_bound(tmp_path, monkeypatch):
+    config = tmp_path / "runtime.json"
+    config.write_text(json.dumps({
+        "schema": "saea-request-pipeline-v1",
+        "request_pipeline": {
+            "enabled": True, "prepare_workers": 2,
+            "validation_workers": 2, "queue_depth": 8,
+        },
+    }) + "\n")
+    digest = hashlib.sha256(config.read_bytes()).hexdigest()
+    monkeypatch.setenv("SAEA_RUNTIME_CONFIG_SHA256", digest)
+    loaded = load_external_runtime_config(config)
+    assert loaded["request_pipeline"]["queue_depth"] == 8
+    monkeypatch.setenv("SAEA_RUNTIME_CONFIG_SHA256", "0" * 64)
+    with pytest.raises(Exception, match="SHA256"):
+        load_external_runtime_config(config)
 
 
 @pytest.mark.parametrize("mutation,match", [

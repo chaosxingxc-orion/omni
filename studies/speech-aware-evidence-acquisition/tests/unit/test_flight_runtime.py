@@ -3044,6 +3044,8 @@ def test_prepared_request_pipeline_overlaps_and_records_bounded_stages(tmp_path)
     assert dispatch["validation_workers"] == 2
     assert dispatch["queue_depth"] == 4
     assert dispatch["max_in_flight"] <= 2
+    assert set(dispatch["stage_wall_seconds"]) == {"prepare", "model", "validation"}
+    assert all(value > 0 for value in dispatch["stage_wall_seconds"].values())
     assert [row["sample_id"] for row in runtime._output_rows] == [
         sample.sample_id for sample in runtime._samples
     ]

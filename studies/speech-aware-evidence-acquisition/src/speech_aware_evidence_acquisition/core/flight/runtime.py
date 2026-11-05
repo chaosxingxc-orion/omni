@@ -1581,6 +1581,7 @@ class FlightRuntime:
         # by ``admitted_level`` when the profile declares one.
         deployment_profile: object | None = None,
         admitted_level: int | None = None,
+        runtime_config_overlay: Mapping[str, object] | None = None,
     ) -> None:
         if not isinstance(run_id, str) or not run_id:
             raise FlightRuntimeError("run_id must be a non-empty string")
@@ -1591,6 +1592,9 @@ class FlightRuntime:
         self._execution_policy = execution_policy
         self._deployment_profile = deployment_profile
         self._admitted_level = admitted_level
+        self._runtime_config_overlay = (
+            dict(runtime_config_overlay) if runtime_config_overlay is not None else None
+        )
         self._serve_fingerprint: str | None = None
         self._repo_root = Path(repo_root)
         self._data_root = Path(data_root)
@@ -4630,6 +4634,27 @@ class FlightRuntime:
         composed = compose_inputs(
             self._repo_root, self._model, self._dataset, self._baseline, self._experiment
         )
+        if self._runtime_config_overlay is not None:
+            values = dict(composed.values)
+            pipeline = values.get("request_pipeline")
+            if pipeline is not None:
+                raise FlightRuntimeError(
+                    "external runtime config collides with scientific request_pipeline"
+                )
+            pipeline = self._runtime_config_overlay.get("request_pipeline")
+            if not isinstance(pipeline, Mapping):
+                raise FlightRuntimeError("external runtime config has no request_pipeline")
+            values["request_pipeline"] = dict(pipeline)
+            values["runtime_config_identity"] = dict(
+                self._runtime_config_overlay.get("_external_runtime_config", {})
+            )
+            composed = type(composed)(
+                values=values,
+                config_hash=hashlib.sha256(
+                    json.dumps(values, sort_keys=True, separators=(",", ":")).encode()
+                ).hexdigest(),
+                fragments=composed.fragments,
+            )
         self._composed = composed
         values = composed.values
         self._phase_planner_specs(values.get("policy"))
@@ -7284,8 +7309,20 @@ class FlightRuntime:
         in_flight = 0
         max_in_flight = 0
         meter = threading.Lock()
+        stage_windows: dict[str, list[float]] = {
+            "prepare": [float("inf"), 0.0],
+            "model": [float("inf"), 0.0],
+            "validation": [float("inf"), 0.0],
+        }
+
+        def mark_stage(name: str, started: float, finished: float) -> None:
+            with meter:
+                window = stage_windows[name]
+                window[0] = min(window[0], started)
+                window[1] = max(window[1], finished)
 
         def build(index: int, sample: object):
+            started = time.monotonic()
             decoding = dict(self._sample_decoding_params(sample, base_decoding) or {})
             if packets:
                 descriptor = self.speech_packet_bindings()[sample.sample_id]
@@ -7309,6 +7346,7 @@ class FlightRuntime:
                 messages = self._adapter.assemble_prompt(sample, None)
                 kwargs = {}
             prepared = client.prepare_request(messages, decoding_params=decoding, **kwargs)
+            mark_stage("prepare", started, time.monotonic())
             return index, sample, prepared, messages
 
         def send(item):
@@ -7326,8 +7364,10 @@ class FlightRuntime:
                 in_flight += 1
                 max_in_flight = max(max_in_flight, in_flight)
             try:
+                started = time.monotonic()
                 response = complete(prepared, id_slot=slot)
                 response = getattr(response, "text", response)
+                mark_stage("model", started, time.monotonic())
                 return index, sample, messages, response
             finally:
                 if buffer is not None:
@@ -7337,8 +7377,11 @@ class FlightRuntime:
                 slots.put(slot)
 
         def validate(item):
+            started = time.monotonic()
             index, sample, messages, response = item
-            return index, self._row_for(sample, messages, response)
+            row = self._row_for(sample, messages, response)
+            mark_stage("validation", started, time.monotonic())
+            return index, row
 
         model_results: list[object] = []
         with (
@@ -7395,6 +7438,12 @@ class FlightRuntime:
             "slot_ids_used": list(range(workers)),
             "dispatch": "prepared-pipeline",
             "contacts_per_sample": 1,
+            "stage_wall_seconds": {
+                name: (
+                    0.0 if window[1] == 0.0 else max(window[1] - window[0], 0.0)
+                )
+                for name, window in stage_windows.items()
+            },
         }
 
     def _run_speech_feature_direct(self, client: object) -> list[Mapping[str, object]]:

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import inspect
+import hashlib
+import json
 import os
 from functools import partial
 from pathlib import Path
@@ -15,6 +17,40 @@ from ..base import TASK_ADAPTERS, CoreError, declared_derived_media_roots
 from ..config import compose
 from ..scoring_batch import ScoringContext, run_score_batch
 from .runtime import FlightRuntime
+
+
+def load_external_runtime_config(path: Path | None) -> Mapping[str, object]:
+    """Load an immutable operational overlay supplied by the launcher.
+
+    Scientific fields remain in the four registered fragments.  The overlay
+    is limited to scheduling/observability knobs and is copied into the
+    composed values before runtime construction.  A caller may bind its raw
+    SHA256 through ``SAEA_RUNTIME_CONFIG_SHA256``; a changed file then fails
+    before any adapter, session, FIT or model is touched.
+    """
+    if path is None:
+        return {}
+    path = Path(path).resolve(strict=True)
+    raw = path.read_bytes()
+    expected = os.environ.get("SAEA_RUNTIME_CONFIG_SHA256")
+    actual = hashlib.sha256(raw).hexdigest()
+    if expected is not None and expected != actual:
+        raise CoreError("external runtime config SHA256 differs from launcher pin")
+    document = json.loads(raw.decode("utf-8"))
+    if not isinstance(document, Mapping):
+        raise CoreError("external runtime config must be a JSON object")
+    if document.get("schema") != "saea-request-pipeline-v1":
+        raise CoreError("unsupported external runtime config schema")
+    overlay = document.get("request_pipeline")
+    if not isinstance(overlay, Mapping):
+        raise CoreError("external runtime config must declare request_pipeline")
+    allowed = {"schema", "request_pipeline"}
+    if set(document) != allowed:
+        raise CoreError("external runtime config has unexpected fields")
+    return {
+        "request_pipeline": dict(overlay),
+        "_external_runtime_config": {"path": str(path), "sha256": actual},
+    }
 
 
 def register_builtin_task_adapters() -> None:
@@ -36,7 +72,19 @@ def build_flight_runtime(
 ) -> FlightRuntime:
     """Resolve one carrier adapter; all arms keep the same controller and executor."""
     repo_root, data_root = Path(repo_root), Path(data_root)
-    values = compose(repo_root, model, dataset, baseline, experiment).values
+    composed = compose(repo_root, model, dataset, baseline, experiment, data_root=data_root)
+    overlay_path = runtime_seams.pop("runtime_config_path", None)
+    overlay = load_external_runtime_config(overlay_path)
+    if overlay:
+        values = dict(composed.values)
+        values["request_pipeline"] = dict(overlay["request_pipeline"])
+        composed = type(composed)(
+            values=values,
+            config_hash=hashlib.sha256(
+                json.dumps(values, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest(), fragments=composed.fragments,
+        )
+    values = composed.values
     descriptor = get_carrier_descriptor(str(values["carrier_lock_key"]))
     register_builtin_task_adapters()
     builder = TASK_ADAPTERS.resolve(descriptor.lock_key)
@@ -86,7 +134,9 @@ def build_flight_runtime(
         repo_root, data_root, model=model, dataset=dataset, baseline=baseline,
         experiment=experiment, run_id=run_id, attempt_id=attempt_id,
         runtime_root=runtime_root, adapter_factory=lambda *_args: adapter,
-        lock=resolved_lock, campaign_active=campaign_active, **options,
+        lock=resolved_lock, campaign_active=campaign_active,
+        runtime_config_overlay=overlay if overlay else None,
+        **options,
     )
     adapter.bind_runtime(runtime, values)
     return runtime
