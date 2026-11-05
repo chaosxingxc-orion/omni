@@ -1,0 +1,15 @@
+{
+  "dataset": {
+    "relpath": "configs/dataset/slurp-speech-native-evo-fold-b-1080.json",
+    "sha256": "1d30c501612686004936b5dd295885d9452175e6449b4a66187c08227a322cea"
+  },
+  "schema": "saea-intent-slot-fold-material-v1",
+  "source_baseline": {
+    "relpath": "configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json",
+    "sha256": "c228c873b39c1c9bd7eccedcf8c7c6f1c975deb008a5e8d2fd5d1c57e7c01b80"
+  },
+  "source_roster": {
+    "relpath": "docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+    "sha256": "47b89b9e33b1aed553ad94a1819acba6ac8837130ca546c33219d91a1ab944a8"
+  }
+}

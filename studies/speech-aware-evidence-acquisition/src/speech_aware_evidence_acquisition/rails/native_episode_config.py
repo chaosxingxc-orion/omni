@@ -732,6 +732,7 @@ class NativeEpisodeConfig:
     # Opt-in deterministic knowledge context node; absent preserves bytes.
     knowledge_context_json: str | None = None
     intent_slot_pipeline_json: str | None = None
+    matched_perception_context_json: str | None = None
 
     @property
     def knowledge_value_rendering(self) -> dict[str, object] | None:
@@ -1270,6 +1271,7 @@ def load_native_episode_config(
     }
     optional_fields = {
         "intent_slot_pipeline",
+        "matched_perception_context",
         "exhaustion_policy",
         "candidate_refresh",
         "local_tool_execution",
@@ -1422,6 +1424,12 @@ def load_native_episode_config(
     raw_roles = raw["roles"]
     kinds = ("perception", "solver", "reviewer", "planner")
     pipeline_json = None
+    matched_context_json = None
+    if "matched_perception_context" in raw:
+        from .intent_slot_pipeline import parse_config, canonical
+        if "intent_slot_pipeline" in raw:
+            raise ValueError("matched perception context belongs to joint control only")
+        matched_context_json = canonical(parse_config(raw["matched_perception_context"]))
     if "intent_slot_pipeline" in raw:
         from .intent_slot_pipeline import parse_config, canonical
         pipeline = parse_config(raw["intent_slot_pipeline"])
@@ -2710,6 +2718,7 @@ def load_native_episode_config(
         answer_selection=answer_selection,
         knowledge_context_json=knowledge_context_json,
         intent_slot_pipeline_json=pipeline_json,
+        matched_perception_context_json=matched_context_json,
     )
     validate_prompt_contact_limits(result)
     if solver_access:

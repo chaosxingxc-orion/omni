@@ -1339,6 +1339,38 @@ def _restricted_split_samples(
     return tuple(sample for sample in samples if sample.sample_id in keep)
 
 
+def _restrict_pipeline_cross_phase_supply(supply, context, snapshot, snapshot_sha256):
+    """Remove redundant acquisitions only after checking full snapshot bindings."""
+    from dataclasses import replace
+    supply.validate()
+    # The caller has validated and hashed this immutable snapshot once per
+    # run; do not rehash the full knowledge store on every node transition.
+    actual = snapshot_sha256
+    if context.knowledge_snapshot_sha256 != actual:
+        raise RailsRunnerError("cross-phase snapshot identity changed")
+    assert_knowledge_use_binding(snapshot=snapshot, query_state=context.query_state,
+        rank_result=supply.rank_result, fusion_decision=supply.fusion_decision,
+        snapshot_sha256=actual)
+    selected = tuple(supply.fusion_decision.selected_value_ids)
+    overlap = set(selected) & set(context.query_state.retrieved_value_ids)
+    if not overlap:
+        return supply
+    if supply.packet is not None:
+        values = {v.value_id: v for v in snapshot.values}
+        packet_values = {item.evidence_id: item.text for item in supply.packet.items
+                         if item.evidence_id in overlap}
+        if set(packet_values) != overlap or any(packet_values[key] != values[key].content for key in overlap):
+            raise RailsRunnerError("cross-phase value content differs or is absent for the same ID")
+    unseen = tuple(v for v in selected if v not in overlap)
+    visible_facets = set(context.query_state.visible_facet_ids)
+    new_facets = tuple(f for f in supply.fusion_decision.supporting_facet_ids if f not in visible_facets)
+    expose = supply.expose_facets or not selected
+    if not unseen and not (expose and new_facets):
+        return None
+    return replace(supply, fusion_decision=replace(supply.fusion_decision,
+        selected_value_ids=unseen).validate()).validate()
+
+
 def _validated_bootstrap_value_ids(
     snapshot: KnowledgeSnapshot,
     values: Sequence[str],
@@ -2640,6 +2672,10 @@ async def _invoke_native_role_episode(
     carrier_hooks = _carrier_hooks(getattr(config, "carrier_profile", None))
     pipeline_config = None
     pipeline_validator = None
+    matched_p_config = None
+    if config.matched_perception_context_json is not None:
+        from .intent_slot_pipeline import parse_config
+        matched_p_config = parse_config(json.loads(config.matched_perception_context_json))
     if config.intent_slot_pipeline_json is not None:
         from .intent_slot_pipeline import parse_config
         pipeline_config = parse_config(json.loads(config.intent_slot_pipeline_json))
@@ -3842,7 +3878,11 @@ async def _invoke_native_role_episode(
             # the SAME decision comes back for a phase whose values already
             # ride the accumulated QueryState. Acquire only what is new; the
             # first visit of every phase is returned unchanged.
-            supply = restrict_repeat_visit_supply(supply, before, phase_name=next_phase)
+            if pipeline_config is not None:
+                supply = _restrict_pipeline_cross_phase_supply(
+                    supply, before, snapshot, snapshot_sha256)
+            else:
+                supply = restrict_repeat_visit_supply(supply, before, phase_name=next_phase)
         if rollout_trace is not None and supply is not None:
             rollout_supply_scores.note(
                 before.sample_id, None, rank_result=supply.rank_result, fusion_decision=supply.fusion_decision,
@@ -4156,7 +4196,8 @@ async def _invoke_native_role_episode(
             instruction=material.instruction + "\n\nNative episode limits: "
             + json.dumps(limits, sort_keys=True),
         ).validate()
-        if pipeline_config is not None:
+        prompt_pipeline_config = pipeline_config or (matched_p_config if role_configs[phase_id].role_kind == "perception" else None)
+        if prompt_pipeline_config is not None:
             from .intent_slot_pipeline import prompt_context, evidence_inventory
             pipeline_context = copy.deepcopy(episode_state.get("intent_slot_context", {}))
             pipeline_context["evidence_inventory"] = evidence_inventory(
@@ -4164,9 +4205,19 @@ async def _invoke_native_role_episode(
                 speech_sha256=ctx.query_state.speech_packet_sha256,
                 messages=base_messages(ctx),
                 candidate_ids=[row["candidate_id"] for row in pipeline_context.get("candidates", [])])
+            # Canonical IDs in downstream context are derived solely from the
+            # previous contact's own validated inventory; raw responses remain
+            # unchanged in native custody.
+            for prior_kind, key in (("perception", "candidates"), ("slot", "slot_results")):
+                prior = next((v for v in visits.values() if v.get("pipeline_kind") == prior_kind and v.get("evidence_mappings") is not None), None)
+                if prior is not None and key in pipeline_context:
+                    mapping = {m["raw"]: m["source_id"] for m in prior["evidence_mappings"]}
+                    rows = pipeline_context[key].values() if isinstance(pipeline_context[key], dict) else pipeline_context[key]
+                    for row in rows:
+                        row["evidence_refs"] = [mapping.get(ref, ref) for ref in row.get("evidence_refs", [])]
             prompt_state = dict(episode_state, intent_slot_context=pipeline_context)
             material = replace(material, instruction=material.instruction + prompt_context(
-                pipeline_config, prompt_state, role_configs[phase_id].role_kind)).validate()
+                prompt_pipeline_config, prompt_state, role_configs[phase_id].role_kind)).validate()
         phase = program.phase(phase_id)
         if (phase.response_format_id is not None) != (material.response_format is not None):
             raise RailsRunnerError("native role response format differs from its phase")
@@ -4675,10 +4726,23 @@ async def _invoke_native_role_episode(
         if pipeline_config is not None and completion.finish_reason == "stop":
             visit = visits[request.role_id]
             try:
-                pipeline_validator(kind=role_configs[request.role_id].role_kind,
+                validated = pipeline_validator(kind=role_configs[request.role_id].role_kind,
                                    text=completion.text,
                                    response_format=visit["material"].response_format,
                                    context=visit["intent_slot_context"], config=pipeline_config)
+                kind = role_configs[request.role_id].role_kind
+                if kind in ("perception", "slot"):
+                    from .intent_slot_pipeline import validate_evidence_refs
+                    rows = validated.values() if isinstance(validated, dict) else validated
+                    rows = list(rows)
+                    ids = ([row["candidate_id"] for row in rows] if kind == "perception"
+                           else [row["candidate_id"] for row in visit["intent_slot_context"]["candidates"]])
+                    inventory = visit["intent_slot_context"]["evidence_inventory"]
+                    visit["pipeline_kind"] = kind
+                    visit["evidence_mappings"] = validate_evidence_refs(rows, inventory, ids,
+                        policy=pipeline_config.get("evidence_policy", "strict"))
+                    visit["evidence_inventory"] = copy.deepcopy(inventory)
+                    visit["evidence_response_sha256"] = completion.response_text_sha256
             except (ValueError, KeyError, TypeError) as error:
                 refusal = RailsRunnerError("intent-slot output contract refused: " + str(error))
                 refusal.seal_refusal_completion = completion
@@ -6712,6 +6776,13 @@ async def _invoke_native_role_episode(
         receipt = result["state"]
         if pipeline_config is not None:
             from .intent_slot_pipeline import validate_receipt
+            block = receipt.get("intent_slot_pipeline")
+            if block is not None and pipeline_config.get("evidence_policy") == "unique_source_alias_v1":
+                block["evidence_policy"] = "unique_source_alias_v1"
+                block["evidence_bindings"] = [{"stage": v["pipeline_kind"],
+                    "inventory": v["evidence_inventory"], "mappings": v["evidence_mappings"],
+                    "response_text_sha256": v["evidence_response_sha256"]}
+                    for v in visits.values() if v.get("evidence_mappings") is not None]
             validate_receipt(receipt)
         from .native_episode_receipt import (
             validate_native_episode_delivery_receipt, validate_native_episode_finite_path,

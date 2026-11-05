@@ -23,7 +23,7 @@ class CandidateSlotStage(WorkflowComponent):
     async def invoke(self, inputs, session, context):
         from .native_episode import _ApplyRole, _state
         state = copy.deepcopy(_state(inputs))
-        rows = candidates(state["perception"], self.config["max_candidates"])
+        rows = candidates(state["perception"], self.config["max_candidates"], duplicate_policy=self.config.get("duplicate_candidate_policy", "strict"))
         source = copy.deepcopy(state["latest_perception"]["execution_receipt"]["final_contact"])
         batches = [rows] if self.config["slot_mode"] == "batched" else [[row] for row in rows]
         results, contacts = {}, []
@@ -53,7 +53,7 @@ class CandidateSlotStage(WorkflowComponent):
         }
         state["intent_slot_pipeline"] = {
             "schema": self.config["schema"], "config_sha256": digest(self.config),
-            "slot_mode": self.config["slot_mode"], "candidate_ids": [r["candidate_id"] for r in rows],
+            "slot_mode": self.config["slot_mode"], "duplicate_candidate_policy": self.config.get("duplicate_candidate_policy", "strict"), "candidate_ids": [r["candidate_id"] for r in rows],
             "perception_source": source, "slot_sources": contacts,
         }
         return {"state": state}

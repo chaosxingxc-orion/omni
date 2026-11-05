@@ -24,6 +24,8 @@ class PairWorkload:
     RESULT_SCHEMA = 'saea-gepa-pair-read-v1'
     LABEL = 'GEPA configured parent child comparison'
     PROGRAM = 'One shared P then verified current parent, mutation-derived child and original lock Solver.'
+    MAX_ROWS = 80
+    DATASET = observation.DATASET
 
     def __init__(self, config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material'}
@@ -34,7 +36,7 @@ class PairWorkload:
         if not re.fullmatch('[a-z0-9][a-z0-9-]*',config['name']) or not re.fullmatch('[A-Z0-9][A-Z0-9-]*',config['run_id']):
             raise ValueError('safe pair identities required')
         ids=config['sample_ids']
-        if (not isinstance(ids,list) or not ids or len(ids)>80 or len(set(ids))!=len(ids)
+        if (not isinstance(ids,list) or not ids or len(ids)>self.MAX_ROWS or len(set(ids))!=len(ids)
                 or any(not isinstance(s,str) or not s.startswith('slurp:train:') for s in ids)):
             raise ValueError('bounded unique ordered TRAIN samples required')
         execution=config['execution']
@@ -114,7 +116,7 @@ class PairWorkload:
                     if k not in ('partition_sha256', 'input_files_sha256')})):
             raise ValueError('fixed GEPA partition integrity differs')
         expected_inputs = (observation.H1, observation.H2,
-            f'configs/dataset/{observation.DATASET}.json', 'configs/dataset/slurp-speech-native-test-full.json')
+            f'configs/dataset/{self.DATASET}.json', 'configs/dataset/slurp-speech-native-test-full.json')
         pins = partition.get('input_files_sha256', {})
         if set(pins) != set(expected_inputs) or any(sha(confined(repo,p)) != pins[p] for p in expected_inputs):
             raise ValueError('partition original population pins changed')
@@ -242,7 +244,7 @@ class PairWorkload:
         record = {'schema':'saea-gepa-pair-stage-v1', 'cell':self.NAME, 'run_id':self.RUN, 'rows':self.ROWS,
             'material':material, 'runtime_binding':binding, 'source_commit':head,
             **({'context_adaptation':self.context_adaptation()} if self.context_adaptation() is not None else {}),
-            'dataset':pin(repo,f'configs/dataset/{observation.DATASET}.json'),
+            'dataset':pin(repo,f'configs/dataset/{self.DATASET}.json'),
             'source_experiment':pin(repo,observation.SOURCE_EXP),
             'output_hashes':{str(p.relative_to(repo)):sha(p) for p in paths},
             'normal_generation_calls':self.CONTACTS*self.ROWS, 'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS, 'fit_calls':self.CONTACTS*self.ROWS,
@@ -279,7 +281,7 @@ class PairWorkload:
         observation.require_unspent(repo, data, self.RUN); self.fresh_output(data, out)
         staged = self.verify_stage(repo, data, stage_record)
         runtime = build_flight_runtime(repo, data, model=staged['runtime_binding']['model_fragment'],
-            dataset=observation.DATASET, baseline=self.NAME, experiment=self.NAME, run_id=self.RUN, attempt_id='generation-v1',
+            dataset=self.DATASET, baseline=self.NAME, experiment=self.NAME, run_id=self.RUN, attempt_id='generation-v1',
             runtime_root=data/'work/scratch/runtime-root', lock_path=repo.parents[1]/'docs/datasets.lock.json')
         target = data/'prepared'/self.RUN/'phase-supply-v1.json'
         runtime.prepare_phase_supply(target, max_workers=16)
@@ -340,7 +342,7 @@ class PairWorkload:
         exp['cells'][0]['readiness']['requirements'] = [{'kind':'preparation',**prep['supply']}]
         bp.write_bytes(raw(base)); ep.write_bytes(raw(exp))
         binding = staged['runtime_binding']; model = binding['model_fragment']
-        cfg = compose(repo,model,observation.DATASET,self.NAME,self.NAME); split = exp['population']['split_identity_hash']
+        cfg = compose(repo,model,self.DATASET,self.NAME,self.NAME); split = exp['population']['split_identity_hash']
         ph = protocol_hash(cfg.config_hash,cfg.values['arm'],split)
         identity = {'cell':self.NAME,'experiment':self.NAME,'run_id':self.RUN,'attempt_id':'generation-v1',
             'fit_run_id':self.RUN+'-FIT','fit_attempt_id':'fit-v1','rows':self.ROWS,'composed_config_hash':cfg.config_hash,

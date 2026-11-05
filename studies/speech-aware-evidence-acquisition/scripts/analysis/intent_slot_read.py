@@ -10,6 +10,24 @@ from h1_thinking_comparison import native_costs
 from intent_slot_workload import KIND,ARMS
 
 
+def protocol_status(receipt, trace_records):
+    """Keep storage completion separate from accepted three-node execution."""
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import validate_receipt
+    block=receipt.get('intent_slot_pipeline')
+    reason=(receipt.get('terminal_disposition') or {}).get('reason')
+    if reason:
+        return 'protocol_refusal' if reason=='seal_refusal' else 'other_terminal_failure'
+    if not block or [v.get('stage') for v in receipt.get('role_visits',[])]!=['perception','slot','solver']:
+        return 'incomplete_protocol'
+    if block.get('slot_mode')!='batched' or not receipt.get('accepted_solver_receipt') or not block.get('selected_candidate_id'):
+        return 'incomplete_protocol'
+    try:
+        validate_receipt(receipt,trace_records=trace_records)
+    except (ValueError, KeyError, TypeError):
+        return 'invalid_protocol'
+    return 'protocol_complete'
+
+
 def run(repo,data,out,name,attempt_id=None):
     from speech_aware_evidence_acquisition.contracts import assert_execution_environment
     from speech_aware_evidence_acquisition.core.bundle import verify_bundle
@@ -32,18 +50,21 @@ def run(repo,data,out,name,attempt_id=None):
     if not isinstance(aid,str) or RUN_ID_PATTERN.fullmatch(aid) is None:raise ValueError('safe explicit attempt required')
     directory=data/'runs'/rid/aid;mp=directory/(rid+'.run-manifest.json')
     bundle=verify_bundle(mp);roster=pinned(repo,spec['roster']);ids=[r['sample_id'] for r in roster['items']]
-    if bundle.attempt_state!='FINALIZED' or bundle.manifest['status']!='COMPLETED' or len(bundle.split_ids)!=80 or set(bundle.split_ids)!=set(ids):raise ValueError('complete finalized80 required')
+    if bundle.attempt_state!='FINALIZED' or bundle.manifest['status']!='COMPLETED' or len(bundle.split_ids)!=len(ids) or set(bundle.split_ids)!=set(ids):raise ValueError('complete finalized roster required')
     assert_registered_bundle(bundle.manifest,read(pkg/'generation-plan-registered-v1.json'),name,rid,aid)
     f=bundle.manifest['config']['fragments'];cfg=compose(repo,*(f[k] for k in ('model','dataset','baseline','experiment')))
     if cfg.config_hash!=bundle.manifest['config']['config_hash']:raise ValueError('sealed config changed')
     sp=directory/(rid+'.scores.json');scores=read(sp);scorer='slurp-slu-official-train'
     if set(scores)!={scorer,'cost'}:raise ValueError('official TRAIN and cost only')
-    result=summarize_scores(scores[scorer],roster['items'],expected_rows=80)
+    result=summarize_scores(scores[scorer],roster['items'],expected_rows=len(ids))
     labels=label_membership(roster['items'],load_slurp_split(load_lock(umbrella_lock_path(repo)),data,'train'))
-    covered=0;missing_p=0;failures={};coverage=[]
+    covered=0;missing_p=0;failures={};coverage=[];protocol_counts={};protocol_rows=[]
     for row in bundle.outputs_rows:
         receipt=row['native_episode_receipt'];visits=receipt['role_visits'];ps=[v for v in visits if v['stage']=='perception']
-        reason=receipt.get('terminal_disposition',{}).get('reason')
+        state=protocol_status(receipt,bundle.trace_records) if spec['job_config']['node_arm']=='enhanced-p-slot-decision' else 'not_split'
+        protocol_counts[state]=protocol_counts.get(state,0)+1
+        protocol_rows.append({'sample_id':row['sample_id'],'status':state})
+        reason=(receipt.get('terminal_disposition') or {}).get('reason')
         if reason:failures[reason]=failures.get(reason,0)+1
         candidates=[]
         if ps:
@@ -53,8 +74,10 @@ def run(repo,data,out,name,attempt_id=None):
         else:missing_p+=1
         hit=labels[row['sample_id']]['intent'] in candidates;covered+=hit
         coverage.append({'sample_id':row['sample_id'],'candidate_count':len(candidates),'gold_in_candidates':hit})
+    if len(protocol_rows)!=len(ids) or {r['sample_id'] for r in protocol_rows}!=set(ids):raise ValueError('each roster row must be counted exactly once')
     result.update(schema='saea-intent-slot-arm-result-v1',node_arm=spec['job_config']['node_arm'],run_id=rid,
-        candidate_coverage={'covered':covered,'total':80,'invalid_or_absent_perception':missing_p,'rows':coverage},
+        candidate_coverage={'covered':covered,'total':len(ids),'invalid_or_absent_perception':missing_p,'rows':coverage},
+        protocol={'total':len(ids),'counts':protocol_counts,'rows':protocol_rows},
         terminal_dispositions=failures,native_role_costs=native_costs(bundle.outputs_rows,bundle.trace_records),
         cost=bundle.manifest['cost'],new_model_calls=0,new_scoring_jobs=0,candidate_accepted=False,
         scorer_identity={k:scores[scorer]['aggregate'][k] for k in ('evaluator_commit','scorer_version','split_id','projection','filler_normalization')},
@@ -70,10 +93,10 @@ def compare(results):
     reference=results[ARMS[0]]
     ids=[r['sample_id'] for r in reference['candidate_coverage']['rows']]
     for arm,result in results.items():
-        if (result['node_arm']!=arm or result['rows']!=80 or result['scorer_identity']!=reference['scorer_identity']
+        if (result['node_arm']!=arm or result['rows']!=len(ids) or result['scorer_identity']!=reference['scorer_identity']
                 or [r['sample_id'] for r in result['candidate_coverage']['rows']]!=ids):
             raise ValueError('node arms differ in identity, scorer or population')
-    return {'schema':'saea-intent-slot-comparison-v1','rows':80,'arms':results,
+    return {'schema':'saea-intent-slot-comparison-v1','rows':len(ids),'arms':results,
             'contrasts':{arm:{'slu_f1_delta_pp':100*(r['official']['slu_f1']-reference['official']['slu_f1']),
                              'intent_delta_pp':100*(r['intent_accuracy']-reference['intent_accuracy']),
                              'strict_delta_rows':r['task_correct_rows']-reference['task_correct_rows']}

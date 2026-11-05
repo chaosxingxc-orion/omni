@@ -22,7 +22,7 @@ def digest(value):
 
 def parse_config(raw):
     fields = {"schema", "slot_mode", "max_candidates", "candidate_outside_recovery"}
-    if not isinstance(raw, Mapping) or set(raw) != fields:
+    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy"}:
         raise ValueError("intent_slot_pipeline requires schema, slot_mode, max_candidates and candidate_outside_recovery")
     if raw["schema"] != SCHEMA or raw["slot_mode"] not in {"batched", "per_candidate"}:
         raise ValueError("unsupported intent-slot graph/schema version or slot mode")
@@ -30,6 +30,10 @@ def parse_config(raw):
         raise ValueError("intent-slot max_candidates must be 1..3")
     if raw["candidate_outside_recovery"] is not False:
         raise ValueError("candidate-outside recovery is not implemented in this graph")
+    if raw.get("evidence_policy", "strict") not in {"strict", "unique_source_alias_v1"}:
+        raise ValueError("unsupported evidence policy")
+    if raw.get("duplicate_candidate_policy", "strict") not in {"strict", "identical_v1"}:
+        raise ValueError("unsupported duplicate candidate policy")
     return dict(raw)
 
 
@@ -50,7 +54,7 @@ def document(text):
     return value
 
 
-def candidates(text, maximum, legal_ids=None):
+def candidates(text, maximum, legal_ids=None, *, duplicate_policy="strict"):
     value = document(text)
     rows = value.get("candidates")
     if not isinstance(rows, list) or not 1 <= len(rows) <= maximum:
@@ -60,10 +64,17 @@ def candidates(text, maximum, legal_ids=None):
         if not isinstance(row, dict):
             raise ValueError("candidate must be an object")
         cid = row.get("intent_id")
-        if not isinstance(cid, str) or not cid.strip() or cid in seen:
-            raise ValueError("candidate ids must be nonempty and unique")
+        if not isinstance(cid, str) or not cid.strip():
+            raise ValueError("candidate ids must be nonempty")
         if legal_ids is not None and cid not in legal_ids:
             raise ValueError("candidate intent is not in the carrier inventory")
+        if cid in seen:
+            if duplicate_policy != "identical_v1":
+                raise ValueError("candidate ids must be nonempty and unique")
+            previous = next(item for item in result if item["candidate_id"] == cid)
+            if any(previous.get(k) != row.get(k) for k in ("distinction", "evidence_refs", "unresolved_fields")):
+                raise ValueError("duplicate candidate has conflicting content")
+            continue
         seen.add(cid)
         result.append(dict(row, candidate_id=cid))
     return result
@@ -160,9 +171,21 @@ def validate_receipt(receipt, *, trace_records=None):
             if response.get("response_sha256") != source["response_sha256"] or response.get("response_text_sha256") != source["response_text_sha256"]:
                 raise ValueError("candidate source response is absent or mismatched")
         perception_text = trace_records[block["perception_source"]["request_id"] + "/response"].get("text")
-        actual_candidates = candidates(perception_text, 3)
+        actual_candidates = candidates(perception_text, 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict"))
         if [r["candidate_id"] for r in actual_candidates] != ids:
             raise ValueError("candidate ids differ from archived Perception text")
+        if block.get("evidence_policy") == "unique_source_alias_v1":
+            bindings = block.get("evidence_bindings")
+            if not isinstance(bindings, list) or [b.get("stage") for b in bindings] != ["perception"] + ["slot"] * len(slots):
+                raise ValueError("missing source-bound evidence mapping")
+            for binding, source, expected in zip(bindings, sources, [ids] + [s["candidate_ids"] for s in slots]):
+                response = trace_records[source["request_id"] + "/response"]
+                if binding.get("response_text_sha256") != response.get("response_text_sha256"):
+                    raise ValueError("evidence mapping response identity differs")
+                rows = (candidates(response.get("text"), 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict"))
+                        if binding["stage"] == "perception" else slot_results(response.get("text"), expected).values())
+                if validate_evidence_refs(rows, binding["inventory"], expected, policy="unique_source_alias_v1") != binding.get("mappings"):
+                    raise ValueError("evidence mapping differs from raw response")
         for slot in slots:
             text = trace_records[slot["source"]["request_id"] + "/response"].get("text")
             actual = slot_results(text, slot["candidate_ids"])
@@ -186,13 +209,30 @@ def evidence_inventory(*, sample_id, speech_packet_id, speech_sha256, messages, 
     return {"sample_id": sample_id, "candidate_ids": list(candidate_ids), "sources": sources}
 
 
-def validate_evidence_refs(rows, inventory, expected_ids):
+def validate_evidence_refs(rows, inventory, expected_ids, *, policy="strict"):
     if not isinstance(inventory, Mapping) or not inventory.get("sample_id"):
         raise ValueError("missing current-sample evidence inventory")
     if inventory["candidate_ids"] and inventory["candidate_ids"] != list(expected_ids):
         raise ValueError("evidence inventory belongs to another candidate branch")
     available = {source["source_id"] for source in inventory["sources"]}
+    aliases = {}
+    for source in inventory["sources"]:
+        source_id = source["source_id"]
+        if source.get("kind") == "knowledge" and "::" in source_id:
+            aliases.setdefault(source_id.split("::", 1)[1], set()).add(source_id)
+    mappings = []
     for row in rows:
         refs = row.get("evidence_refs", [])
-        if not isinstance(refs, list) or any(not isinstance(ref, str) or ref not in available for ref in refs):
-            raise ValueError("evidence reference was not supplied to the current sample and candidate")
+        if not isinstance(refs, list):
+            raise ValueError("evidence references must be a list")
+        for ref in refs:
+            if not isinstance(ref, str):
+                raise ValueError("evidence reference must be text")
+            if ref in available:
+                canonical_id = ref
+            elif policy == "unique_source_alias_v1" and len(aliases.get(ref, ())) == 1:
+                canonical_id = next(iter(aliases[ref]))
+            else:
+                raise ValueError("evidence reference was not supplied uniquely to the current sample and candidate")
+            mappings.append({"raw": ref, "source_id": canonical_id})
+    return mappings
