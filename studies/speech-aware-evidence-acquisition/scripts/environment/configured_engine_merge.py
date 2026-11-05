@@ -103,7 +103,8 @@ def custody(s, logical):
             require(attempt['state'] in ('ABORTED', 'FINALIZED') and attempt['run_id'] == run
                     and attempt['attempt_id'] == aid, 'nonterminal or mismatched attempt')
             files = sorted(attempt_dir.iterdir()); intents = sorted(attempt_dir.glob('*.intent.json'))
-            require(len(files) == 2*len(intents) and len(intents) == attempt['actual']['calls'],
+            fits = sorted(attempt_dir.glob('*.fit.json'))
+            require(len(files) == 2*len(intents)+len(fits) and len(intents) == attempt['actual']['calls'],
                     'unknown or orphan request count')
             contacts = []
             identity = None
@@ -120,9 +121,21 @@ def custody(s, logical):
                 require(not response.is_symlink(), 'redirected response')
                 contacts.append({'request_id': rid, 'intent_sha256': engine.launch.digest(f),
                                  'response_sha256': engine.launch.digest(response)})
+            from speech_aware_evidence_acquisition.core.contact_journal import canonical, comparable_request, digest
+            fit_pins = []
+            for f in fits:
+                fit=read(f);payload=fit['payload']
+                require(fit['schema']=='saea-native-fit-custody-v1' and fit['identity']==identity
+                        and f.name==digest(canonical(comparable_request(payload)))+'.fit.json', 'FIT identity differs')
+                artifact=engine.settlement.mapped(p,Path(fit['receipt']['path']))
+                require(engine.launch.digest(artifact)==fit['receipt']['sha256'],'FIT artifact changed')
+                endpoint=artifact.with_name(artifact.name+'.contacts.jsonl')
+                require(engine.launch.digest(endpoint)==fit['endpoint_journal_sha256'],'FIT endpoint custody changed')
+                fit_pins.append({'path':str(f),'sha256':engine.launch.digest(f),'artifact_sha256':engine.launch.digest(artifact),
+                                 'endpoint_journal_sha256':engine.launch.digest(endpoint)})
             results.append({'run_id': run, 'attempt_id': aid, 'attempt_path': str(ap),
                             'attempt_sha256': engine.launch.digest(ap), 'state': attempt['state'],
-                            'actual': attempt['actual'], 'contacts': contacts})
+                            'actual': attempt['actual'], 'contacts': contacts, 'fits':fit_pins})
     require(results, 'source journal custody required')
     return results
 
