@@ -44,6 +44,9 @@ inside the load-bearing surface and still refuses.
 from __future__ import annotations
 
 import subprocess
+import os
+import hashlib
+import json
 from pathlib import Path
 
 from ..flight_lock import read_flight_lock
@@ -95,6 +98,9 @@ def _study_commit(repo_root: Path) -> str:
     applied to the study tree itself.
     """
 
+    release = _release_commit(repo_root)
+    if release is not None:
+        return release
     code, dirty, stderr = _git(repo_root, "status", "--porcelain")
     if code != 0:
         raise BundleError(f"cannot read git status for {repo_root}: {stderr}")
@@ -107,6 +113,26 @@ def _study_commit(repo_root: Path) -> str:
     commit = commit.strip()
     if code != 0 or not commit:
         raise BundleError(f"cannot read the study repo's HEAD commit at {repo_root}: {stderr}")
+    return commit
+
+
+def _release_commit(repo_root: Path) -> str | None:
+    """Explicit release mode validates the complete sealed image source inventory."""
+    manifest = os.environ.get("SAEA_RELEASE_MANIFEST")
+    if manifest is None:
+        return None
+    root = Path('/opt/saea-release')
+    if Path(repo_root).resolve() != root / 'studies/speech-aware-evidence-acquisition' or manifest != str(root / 'source-manifest.json'):
+        raise BundleError('release source location differs')
+    expected = os.environ.get('SAEA_RELEASE_MANIFEST_SHA256', '')
+    try:
+        raw = Path(manifest).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != expected:
+            raise ValueError('manifest digest differs')
+        result = subprocess.run([os.sys.executable, str(root/'verify-release.py'), manifest, str(root)], capture_output=True, text=True, check=True)
+        commit = json.loads(result.stdout)['commit']
+    except Exception as error:
+        raise BundleError(f'release source verification failed: {error}') from error
     return commit
 
 
@@ -182,6 +208,9 @@ def require_clean_load_bearing_surface(repo_root: Path) -> tuple[str, list[str]]
     refuses is refused at scoring too."""
 
     repo_root = Path(repo_root)
+    release = _release_commit(repo_root)
+    if release is not None:
+        return release, []
     code, porcelain, stderr = _git(
         repo_root, "status", "--porcelain=v1", "-z", "--untracked-files=all"
     )

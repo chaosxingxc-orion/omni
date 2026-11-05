@@ -54,7 +54,17 @@ def load_config(path):
     keys = {'schema', 'container_name', 'image', 'repo_path', 'expected_commit', 'receipt_dir',
             'argv', 'working_directory', 'network', 'pid_host', 'cpuset_cpus', 'environment',
             'mounts', 'create_directories', 'allowed_create_roots', 'required_inputs', 'monitor_interval_seconds'}
-    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    identity = doc.get('source_identity')
+    if identity is not None:
+        require(isinstance(identity, dict) and set(identity) == {'mode', 'manifest_sha256'}
+                and identity['mode'] == 'image-release-v1'
+                and isinstance(identity['manifest_sha256'], str)
+                and re.fullmatch('[a-f0-9]{64}', identity['manifest_sha256']), 'exact release source identity required')
+        require(doc['repo_path'] == '/opt/saea-release/studies/speech-aware-evidence-acquisition', 'release repository path differs')
+        require(doc['environment'].get('SAEA_RELEASE_MANIFEST') == '/opt/saea-release/source-manifest.json'
+                and doc['environment'].get('SAEA_RELEASE_MANIFEST_SHA256') == identity['manifest_sha256'], 'release manifest environment differs')
+        require(not any(Path('/opt/saea-release').is_relative_to(Path(m['target'])) or Path(m['target']).is_relative_to('/opt/saea-release') for m in doc['mounts']), 'release source cannot be mounted over')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
                          ('image', r'sha256:[a-f0-9]{64}'), ('expected_commit', r'[a-f0-9]{40}'),
                          ('cpuset_cpus', r'[0-9]+(?:[-,][0-9]+)*')]:
@@ -180,9 +190,18 @@ def mount_checks(doc):
 
 
 def preflight(doc):
-    head = run(['git', '-C', doc['repo_path'], 'rev-parse', 'HEAD'])
-    clean = run(['git', '-C', doc['repo_path'], 'status', '--porcelain'])
-    require(head.returncode == clean.returncode == 0 and head.stdout.strip() == doc['expected_commit'] and not clean.stdout.strip(), 'clean pinned execution repository required')
+    identity = doc.get('source_identity')
+    if identity is None:
+        head = run(['git', '-C', doc['repo_path'], 'rev-parse', 'HEAD'])
+        clean = run(['git', '-C', doc['repo_path'], 'status', '--porcelain'])
+        require(head.returncode == clean.returncode == 0 and head.stdout.strip() == doc['expected_commit'] and not clean.stdout.strip(), 'clean pinned execution repository required')
+    else:
+        check = ('import hashlib,json,subprocess,sys; p="/opt/saea-release/source-manifest.json"; '
+                 'b=open(p,"rb").read(); assert hashlib.sha256(b).hexdigest()==sys.argv[1]; '
+                 'assert json.loads(b)["commit"]==sys.argv[2]; '
+                 'subprocess.run([sys.executable,"/opt/saea-release/verify-release.py",p,"/opt/saea-release"],check=True)')
+        checked = run(['docker','run','--rm','--network','none','--entrypoint','/opt/saea-venv/bin/python',doc['image'],'-c',check,identity['manifest_sha256'],doc['expected_commit']])
+        require(checked.returncode == 0, 'release image/source manifest verification failed')
     for pin in doc['required_inputs']:
         require(Path(pin['path']).is_file() and digest(pin['path']) == pin['sha256'], 'required input absent or changed: ' + pin['path'])
     mount_checks(doc)

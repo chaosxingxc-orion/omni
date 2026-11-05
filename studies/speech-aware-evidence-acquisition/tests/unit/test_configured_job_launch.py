@@ -244,3 +244,24 @@ def test_missing_guard_is_not_created_and_unreadable_root_blocks(tmp_path):
     assert not (locks/'generation.guard').exists()
     locks.rmdir()
     assert m.generation_readiness(m.load_config(path))['state'] == 'unreadable'
+
+
+def test_release_source_is_explicit_and_rejects_source_overlay(tmp_path):
+    path, doc = configured(tmp_path)
+    doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'
+    doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
+    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json', SAEA_RELEASE_MANIFEST_SHA256='c'*64)
+    path.write_text(json.dumps(doc));assert m.load_config(path)['source_identity']['mode']=='image-release-v1'
+    doc['mounts'].append({'source':str(tmp_path/'data'),'target':'/opt/saea-release/studies','readonly':True})
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError,match='cannot be mounted'):m.load_config(path)
+
+
+def test_release_manifest_verification_fails_closed_before_launch(tmp_path,monkeypatch):
+    path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition'
+    doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}
+    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',SAEA_RELEASE_MANIFEST_SHA256='c'*64)
+    path.write_text(json.dumps(doc));monkeypatch.setattr(m,'run',lambda *a,**k:SimpleNamespace(returncode=1,stdout='',stderr='bad manifest'))
+    m.execute(path,'layout')
+    with pytest.raises(ValueError,match='manifest verification'):m.execute(path,'launch')
+    assert not (Path(doc['receipt_dir'])/'launch-intent.json').exists()
