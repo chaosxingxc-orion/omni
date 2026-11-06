@@ -532,6 +532,7 @@ def run_continuous_program(
     initial_feedback_states: Mapping[str, object] | None = None,
     flown_sample_ids: Sequence[str] | None = None,
     thinking_policy: Mapping[str, object] | None = None,
+    candidate_snapshot_root: Path | None = None,
 ) -> AgentLoopSummary:
     """Run the WHOLE program as ONE continuous per-sample trajectory (E6).
 
@@ -706,6 +707,10 @@ def run_continuous_program(
         runner_options["initial_feedback_states"] = initial_feedback_states
     if native_episode_binding is not None:
         runner_options["native_episode_binding"] = native_episode_binding
+    if candidate_snapshot_root is not None:
+        if native_episode_binding is None:
+            raise PhaseRunnerError("candidate snapshot root requires native episode custody")
+        runner_options["candidate_snapshot_root"] = candidate_snapshot_root
     if thinking_policy:
         runner_options["thinking_policy"] = thinking_policy
     if whole_roster_wave_barrier:

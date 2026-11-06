@@ -110,5 +110,7 @@ def test_continuous_dispatch_uses_real_native_budget(maximum):
     run_continuous_program(program=program,adapter=_FakeAdapter(),plan=SimpleNamespace(),
         data_root=Path('.'),core_client=SimpleNamespace(),split_id='all',knowledge_snapshot=SimpleNamespace(),
         speech_packet_bindings=_bindings(('s1',)),trace_sink=SimpleNamespace(),decoding_params={},
-        material_for_phase=material,native_episode_binding=binding,agent_runner=runner)
+        material_for_phase=material,native_episode_binding=binding,agent_runner=runner,
+        candidate_snapshot_root=Path('/owned/run'))
     assert captured['max_contacts']==maximum+2
+    assert captured['candidate_snapshot_root']==Path('/owned/run')
