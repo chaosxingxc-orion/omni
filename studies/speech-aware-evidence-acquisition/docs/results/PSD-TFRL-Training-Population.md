@@ -37,3 +37,7 @@ TF-GRPO需要真实同题同采集策略多轨迹，重复结果保留权重；�
 对应路径为：Fold A/B的 `configs/dataset/slurp-speech-native-evo-fold-{a,b}-1080.json`；构建视图 `configs/dataset/slurp-speech-native-stage3-construction-r01c.json`；构建与H1/H2名单 `docs/receipts/rosters/slurp-stage3-construction-r01c{,-h1,-h2}.json`。
 
 可复算脚本与结构化结果位于主仓同目录的 `PSD-TFRL-Training-Population-audit.py`、`PSD-TFRL-Training-Population.json`。从研究目录运行 `python docs/results/PSD-TFRL-Training-Population-audit.py . /tmp/psd-population-audit.json` 可重算。本次新增模型调用0，不产生新的精度、吞吐或NPU利用率结论。
+
+## 知识库来源补充核验
+
+三库来源进一步核验显示：构建625全部已存在于锁定TRAIN示例库中，且与意图卡、槽位卡直接来源无交集；Fold A/B与三库来源的样本和话语交集均为0。库内存在同题示例不等于实际召回，后继困难选择和轨迹分析必须记录实际供给来源，不能把构建池成功率直接作为迁移收益。详见[知识关联与来源核验](PSD-Knowledge-Binding-Audit)。不重新抽样、不改测试集资格。
