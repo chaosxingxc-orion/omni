@@ -1,5 +1,5 @@
 """Registered independent native graph arms over one immutable development roster."""
-import argparse, copy, json, math
+import argparse, copy, json, math, re
 from pathlib import Path
 from gepa_pair_workload import PairWorkload,read_asset
 import tfrl_h1_observation as observation
@@ -24,8 +24,16 @@ class NodeWorkload(PairWorkload):
         return super().contact_budgets()
     def __init__(self,config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material','node_arm'}
-        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
+        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
             raise ValueError('exact native node workload required')
+        if 'collection_decoding' in config:
+            from speech_aware_evidence_acquisition.core.config import ConfigError, effective_request_decoding_params
+            if config.get('population', {}).get('role') != 'construction' or set(config['collection_decoding']) != {'temperature', 'seed'}:
+                raise ValueError('construction collection requires explicit temperature and seed')
+            try:
+                effective_request_decoding_params({'request_decoding_overrides': config['collection_decoding']})
+            except ConfigError as error:
+                raise ValueError(str(error)) from error
         arm=config['node_arm']
         pipeline=config.get('pipeline')
         legacy = {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
@@ -47,13 +55,16 @@ class NodeWorkload(PairWorkload):
             raise ValueError('slot knowledge requires a fixed fold and v2 SDK pipeline')
         if 'decision_policy' in config and pipeline is None:
             raise ValueError('Decision policy requires explicit v2 SDK pipeline')
-        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience')})
+        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding')})
         if not config.get('population') and (len(config['sample_ids'])!=80 or config['sample_ids']!=sorted(config['sample_ids'])):
             raise ValueError('historical stable development80 required')
         if config.get('population'):
             pop=config['population']
             allowed={'slurp-speech-native-evo-fold-a-1080','slurp-speech-native-evo-fold-b-1080'}
-            if set(pop)!={'dataset','dataset_sha256','roster','source_baseline'} or pop['dataset'] not in allowed:
+            construction = pop.get('role') == 'construction'
+            if (set(pop) != ({'dataset','dataset_sha256','roster','source_baseline','role'} if construction else {'dataset','dataset_sha256','roster','source_baseline'})
+                or (not construction and pop['dataset'] not in allowed)
+                or (construction and (not isinstance(pop['dataset'], str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]*', pop['dataset'])))):
                 raise ValueError('explicit fixed fold dataset/roster/source baseline required')
             self.DATASET=pop['dataset']
         self.config=copy.deepcopy(config);self.KIND=KIND;self.ARMS=[arm];self.DELIVERED_ARM=arm
@@ -66,7 +77,8 @@ class NodeWorkload(PairWorkload):
         material=pinned(repo,material_pin)
         if self.config.get('population'):
             pop=self.config['population'];roster=pinned(repo,pop['roster']);view=pinned(repo,{'relpath':f'configs/dataset/{self.DATASET}.json','sha256':pop['dataset_sha256']});ids=self.config['sample_ids']
-            if len(ids)!=1080 or roster.get('count',len(roster['items']))!=len(ids) or view['count']!=len(ids) or [r['sample_id'] for r in roster['items']]!=ids or [r['sample_id'] for r in view['items']]!=ids or roster['split_identity_hash']!=view['split_identity_hash']:
+            construction = pop.get('role') == 'construction'
+            if ((not construction and len(ids)!=1080) or (construction and (roster.get('roster_role')!='construction' or roster.get('split_role')!='discovery' or view.get('split_role')!='discovery')) or roster.get('count',len(roster['items']))!=len(ids) or view['count']!=len(ids) or [r['sample_id'] for r in roster['items']]!=ids or [r['sample_id'] for r in view['items']]!=ids or roster['split_identity_hash']!=view['split_identity_hash']):
                 raise ValueError('fixed fold roster, order, or audio identity mismatch')
             if set(material)!={'schema','source_baseline','source_roster','dataset'} or material['schema']!='saea-intent-slot-fold-material-v1' or material['source_baseline']!=pop['source_baseline'] or material['source_roster']!=pop['roster'] or material['dataset']!={'relpath':f'configs/dataset/{self.DATASET}.json','sha256':pop['dataset_sha256']}:
                 raise ValueError('fold material pins differ from population')
@@ -175,9 +187,11 @@ class NodeWorkload(PairWorkload):
         base['native_contact_fit'].update(run_id=self.RUN+'-FIT',attempt_id='fit-v1',contact_cap=self.CONTACTS*self.ROWS)
         base['what_this_is']=self.PROGRAM+' Fixed TRAIN development, no promotion claim.'
         roster=checked['roster'];roster['parent']=self.config['population']['roster'] if self.config.get('population') else material['source_roster']
-        roster['selection_rule']='Reuse exact existing fold; no sampling or TEST tuning.' if self.config.get('population') else 'Reuse exact existing development80; no sampling or TEST tuning.'
+        roster['selection_rule']=('Reuse exact pinned construction roster; no sampling or TEST tuning.' if self.config.get('population',{}).get('role')=='construction' else 'Reuse exact existing fold; no sampling or TEST tuning.') if self.config.get('population') else 'Reuse exact existing development80; no sampling or TEST tuning.'
         cell,=exp['cells'];cell.update(cell_id=self.NAME,baseline_fragment=self.NAME,model_fragment=binding['model_fragment'],dataset_fragment=self.DATASET,run_id=self.RUN,attempt_id='generation-v1',allowed_execution_stages=['check','prepare-supply','worker','campaign'],readiness={'state':'held','requirements':[],'reason':'Registered native graph requires fresh preparation/admission.'})
         exp.update(experiment_id=self.RUN,purpose=base['what_this_is'],service_session=binding['service_session'])
+        if 'collection_decoding' in self.config:
+            exp['request_decoding_overrides']=copy.deepcopy(self.config['collection_decoding'])
         if self.config.get('population'):
             exp['split_id']=checked['view']['split_name']
         exp['population'].update(count=self.ROWS,roster_receipt=self.ROSTER,split_identity_hash=roster['split_identity_hash'])

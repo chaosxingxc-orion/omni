@@ -89,6 +89,17 @@ def test_two_round_target_bound_source_to_actual_node(tmp_path,monkeypatch,kind,
     assert set(second['learned_query_ids'])=={chosen[0]['sample_id'],chosen[1]['sample_id']}
     assert second['ancestor_usage_identities']==[first.get('usage_identity',first.get('request_sha256'))]
     descriptor={'schema':node.SCHEMA,'target':target,'source':data_pin(data,'final-params.json',json.loads(params_path.read_text())),'template':{'relpath':'configs/probes/node.txt','sha256':''}}
+    from psd_construction_group_read import verify_actor_parent
+    import speech_aware_evidence_acquisition.rails.external_exploration as exploration
+    parent_binding={'schema':'saea-psd-tfgrpo-parent-v1','repo':str(repo),'data':str(data),
+                    'params':exploration.pin(data/'final-params.json')}
+    actor_job={'runtime_binding':{'model_fragment':'frozen-actor'},'tfgrpo_experience':descriptor}
+    assert verify_actor_parent(actor_job, {**{'schema':'saea-tfgrpo-experience-v1','model_id':'frozen-actor',
+        'items':second['items'],'learned_query_ids':second['learned_query_ids'],'parent_sha256':second['sha256'],
+        'status':'candidate','deployment_accepted':False}, 'sha256':sha({'schema':'saea-tfgrpo-experience-v1','model_id':'frozen-actor',
+        'items':second['items'],'learned_query_ids':second['learned_query_ids'],'parent_sha256':second['sha256'],
+        'status':'candidate','deployment_accepted':False})}, repo=repo,data=data,binding=parent_binding)
+    with pytest.raises(ValueError):verify_actor_parent(actor_job,parent,repo=repo,data=data,binding=parent_binding)
     original_read=workload.read_asset
     monkeypatch.setattr(workload,'read_asset',lambda repo,rel:original_read(ROOT,'configs/model/bf16-thinking-tfgrpo-tp4-ctx48k-v1.json' if rel=='configs/model/frozen-actor.json' else rel))
     view={'split_name':'fixture','items':[chosen[2]]}

@@ -12,11 +12,12 @@ from test_native_episode_runner import _ActualEpisodeHarness
 from test_native_episode_config import config as raw_config
 
 
-def harness(tmp_path, mode='batched', *, plan=None, data=None, replay=None, failure=None, samples=1):
+def harness(tmp_path, mode='batched', *, plan=None, data=None, replay=None, failure=None, samples=1, sample_ids=None):
     cap = 3 if mode == 'batched' else 5
     h = _ActualEpisodeHarness(tmp_path, sample_count=samples, max_revisions=0, max_contacts=cap,
                               planner_actions=(), arm='raw-speech-agent-native-tools', query_source='speech_audio',
-                              contact_journal=True, execution_plan=plan, data_root=data, contact_replay=replay)
+                              contact_journal=True, execution_plan=plan, data_root=data, contact_replay=replay,
+                              sample_ids=sample_ids)
     values = raw_config()
     native = values['native_episode']
     native.update(review_loop='off', finite_completion_policy='deliver-latest-or-abstain',

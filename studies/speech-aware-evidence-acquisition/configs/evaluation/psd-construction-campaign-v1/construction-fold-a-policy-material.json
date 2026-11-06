@@ -1,0 +1,15 @@
+{
+  "dataset": {
+    "relpath": "configs/dataset/slurp-speech-native-stage3-construction-r01c.json",
+    "sha256": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba"
+  },
+  "schema": "saea-intent-slot-fold-material-v1",
+  "source_baseline": {
+    "relpath": "configs/evaluation/psd-construction-campaign-v1/construction-fold-a-policy-source.json",
+    "sha256": "137b53f309b720893981aeff4842ebb6c49ef0ff4d2023e81d8c9415e7814329"
+  },
+  "source_roster": {
+    "relpath": "docs/receipts/rosters/slurp-stage3-construction-r01c.json",
+    "sha256": "e8abc65ba4626cccb4aae9d2eb1bd73f077a6e9a407b3dba9c18bbe4c03eeddd"
+  }
+}

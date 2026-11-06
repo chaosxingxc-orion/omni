@@ -511,6 +511,8 @@ class PairWorkload:
         for key in ('population','populations','execution_plan','stage3_algorithm','stage3_measurement','service_session'):
             if exp.get(key) != expected.get(key):
                 raise ValueError('probe population, budget or declared algorithm changed')
+        if exp.get('request_decoding_overrides') != expected.get('request_decoding_overrides'):
+            raise ValueError('registered request decoding changed')
         original_cell = expected['cells'][0]
         compared_cell = copy.deepcopy(cell)
         if is_checkpoint:
