@@ -116,7 +116,7 @@ def run(config_path, output, *, draws=None):
     result = {'schema':SCHEMA,'rows':len(ids),'scorer_identity':identity,'arms':summaries,
               'strict_paired':contrast,'sources':sources,'new_model_calls':0,'new_scoring_jobs':0,
               'comparison_spec':spec,
-              'limitations':['Slot thinking changes effective answer budget: off 4096; on 3072 reasoning plus 1024 answer',
+              'limitations':['Node thinking and answer budgets must be established from each arm configuration; this comparison does not infer their equality or differences',
                              'independent requests; sample uncertainty is not run-to-run uncertainty']}
     publish_new(output / 'fold-comparison.json', (json.dumps(result,indent=2,sort_keys=True)+'\n').encode())
     return result
