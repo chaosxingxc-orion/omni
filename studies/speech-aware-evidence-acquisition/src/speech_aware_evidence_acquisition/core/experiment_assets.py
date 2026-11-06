@@ -2,7 +2,26 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
+
+
+def validate_asset_inventory(doc):
+    """Validate the shared live/archived external asset manifest contract."""
+    if (not isinstance(doc, dict) or set(doc) != {'schema', 'files'}
+            or doc['schema'] != 'saea-experiment-assets-v1' or not isinstance(doc['files'], dict)):
+        raise ValueError('exact external experiment asset manifest required')
+    for name, pin in doc['files'].items():
+        if (not isinstance(name, str) or not name.startswith(('configs/', 'docs/'))
+                or any(part in ('', '.', '..') for part in name.split('/'))
+                or Path(name).suffix not in ('.json', '.txt', '.md', '.jsonl')):
+            raise ValueError('external asset cannot replace executable source')
+        if (not isinstance(pin, dict) or set(pin) != {'path', 'sha256'}
+                or not isinstance(pin['path'], str) or not pin['path'].startswith('/')
+                or str(Path(pin['path'])) != pin['path'] or '..' in Path(pin['path']).parts
+                or not isinstance(pin['sha256'], str) or not re.fullmatch('[0-9a-f]{64}', pin['sha256'])):
+            raise ValueError('exact external asset pin required')
+    return doc['files']
 
 
 def resolve_asset(repo_root, relative):
@@ -17,15 +36,7 @@ def resolve_asset(repo_root, relative):
     if hashlib.sha256(raw).hexdigest()!=os.environ.get('SAEA_EXPERIMENT_MANIFEST_SHA256'):
         raise ValueError('experiment manifest digest differs')
     doc=json.loads(raw)
-    if set(doc)!={'schema','files'} or doc['schema']!='saea-experiment-assets-v1' or not isinstance(doc['files'],dict):
-        raise ValueError('exact external experiment asset manifest required')
-    for name,pin in doc['files'].items():
-        rp=Path(name)
-        if (rp.is_absolute() or '..' in rp.parts or not name.startswith(('configs/','docs/'))
-                or rp.suffix not in ('.json','.txt','.md','.jsonl')):
-            raise ValueError('external asset cannot replace executable source')
-        if not isinstance(pin,dict) or set(pin)!={'path','sha256'} or not Path(pin['path']).is_absolute():
-            raise ValueError('exact external asset pin required')
+    validate_asset_inventory(doc)
     pin=doc['files'].get(rel.as_posix())
     if pin is None:return root/rel
     path=Path(pin['path'])
@@ -77,7 +88,6 @@ def validate_workspace_inventory(doc, *, commit, source_manifest_sha256):
             or doc['source_manifest_sha256'] != source_manifest_sha256
             or not isinstance(doc['files'], dict)):
         raise ValueError('workspace source identity differs')
-    import re
     for name, digest in doc['files'].items():
         if (not isinstance(name, str) or not name.startswith(('configs/', 'docs/'))
                 or any(part in ('', '.', '..') for part in name.split('/'))

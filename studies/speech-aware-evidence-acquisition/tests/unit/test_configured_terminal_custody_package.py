@@ -153,7 +153,8 @@ def test_native_settlement_pins_and_observed_set(tmp_path):
         inspect_settlement(reconciliation=pin(recpath), lease=pin(lockpath), attempt=attempt, observed=[])
 
 
-def test_full_terminal_fixture(tmp_path):
+@pytest.mark.parametrize('external_receipt', [False, True])
+def test_full_terminal_fixture(tmp_path, external_receipt):
     import subprocess
     import copy
     from dataclasses import asdict, replace
@@ -203,7 +204,8 @@ def test_full_terminal_fixture(tmp_path):
     for rel in IMPLEMENTATION.values():
         if not (study/rel).exists(): put(study/rel, (source/rel).read_bytes())
     receipt_path = study/'docs/receipts/runtime-vllm.json'
-    put(receipt_path, world.receipt())
+    if not external_receipt:
+        put(receipt_path, world.receipt())
     for args in (['init','-q'], ['add','.'], ['-c','user.name=Test','-c','user.email=test@localhost','commit','-qm','fixture']):
         subprocess.run(['git',*args],cwd=repo,check=True,capture_output=True)
     def git(*args): return subprocess.check_output(['git',*args],cwd=repo)
@@ -211,6 +213,8 @@ def test_full_terminal_fixture(tmp_path):
     obj = tmp_path/'commit'; obj.write_bytes(git('cat-file','commit',commit))
     listing = tmp_path/'listing'; listing.write_bytes(git('ls-tree','-r','--full-tree',commit))
     archive = tmp_path/'archive.tar'; archive.write_bytes(git('archive',commit))
+    if external_receipt:
+        put(receipt_path, world.receipt())
     def pin(path): return {'path':str(path), 'sha256':digest(path.read_bytes())}
     from speech_aware_evidence_acquisition.core.data_root_placeholder import collapse_data_root
     normalized = {k: collapse_data_root(v, str(world.materialization_root)) for k,v in docs.items()}
@@ -315,11 +319,25 @@ def test_full_terminal_fixture(tmp_path):
     cfg = {'repo':str(source),'target':{'attempt_id':'next','fit_run_id':'SAEA-FIT-NEXT','fit_attempt_id':'fit-next'},'terminal':{'resume_from':{'attempt_id':source_plan.attempt_id,
            'checkpoint_sha256':digest(checkpoint.read_bytes())},'bridge':bridge,'evidence':[pin(index),pin(plan_path),pin(checkpoint),
            pin(roster_path),pin(reconciliation),pin(lock_path),pin(receipt_path)]}}
+    if external_receipt:
+        from test_producer_asset_bridge import bind_producer_assets
+        from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import evidence_pins
+        bind_producer_assets(bridge, tmp_path, {'docs/receipts/runtime-vllm.json': receipt_path.read_bytes()},
+                             run_id=source_plan.run_id, attempt_id=source_plan.attempt_id)
+        cfg['terminal']['evidence'].extend(evidence_pins(bridge['evidence']['producer_assets']))
     result = validate_terminal_custody(cfg=cfg,candidate={'run_id':source_plan.run_id,'attempt_id':source_plan.attempt_id},plan=plan_doc,data=data)
     assert result['generation_calls'] == 2 and result['fit_endpoint_calls'] == 2
     assert result['ancestors'][0]['checkpoint_complete_rows'] == 2
     assert result['ancestors'][0]['checkpoint_native_keepable_rows'] == 2
     assert result['ancestors'][0]['checkpoint_incomplete_rows'] == {}
+
+    if external_receipt:
+        omitted = copy.deepcopy(cfg)
+        manifest_pin = bridge['evidence']['producer_assets']['manifest']
+        omitted['terminal']['evidence'] = [p for p in omitted['terminal']['evidence'] if p != manifest_pin]
+        with pytest.raises(ValueError, match='referenced pin missing'):
+            validate_terminal_custody(cfg=omitted, candidate={'run_id':source_plan.run_id,
+                'attempt_id':source_plan.attempt_id}, plan=plan_doc, data=data)
 
     def audit():
         return validate_terminal_custody(cfg=cfg,candidate={'run_id':source_plan.run_id,'attempt_id':source_plan.attempt_id},plan=plan_doc,data=data)
@@ -522,6 +540,8 @@ def test_full_terminal_fixture(tmp_path):
     put(index,natural_index)
     natural_cfg = copy.deepcopy(cfg)
     natural_cfg['terminal']['evidence'] = [pin(index),pin(plan_path),pin(checkpoint),pin(roster_path),pin(natural_path),pin(receipt_path),pin(producer_path),pin(session_path),pin(live_config),pin(live_launch),pin(live_intent),pin(live_result)]
+    if external_receipt:
+        natural_cfg['terminal']['evidence'].extend(evidence_pins(bridge['evidence']['producer_assets']))
     natural_result = validate_terminal_custody(cfg=natural_cfg,
         candidate={'run_id':source_plan.run_id,'attempt_id':source_plan.attempt_id},plan=plan_doc,data=data)
     assert natural_result['ancestors'][0]['lease_session_id'] == 'session'
@@ -738,6 +758,12 @@ def test_full_terminal_fixture(tmp_path):
                   'bridges':{source_plan.attempt_id:bridge,middle_id:bridge2}},
         'evidence':[pin(multi_index),pin(plan_path),pin(checkpoint),pin(roster_path),pin(reconciliation),pin(lock_path),
                     pin(receipt_path),pin(middle_plan_path),pin(middle_cp),pin(middle_rec),pin(middle_lock)]}}
+    if external_receipt:
+        bind_producer_assets(bridge2, tmp_path / 'middle-producer',
+                             {'docs/receipts/runtime-vllm.json': receipt_path.read_bytes()},
+                             run_id=middle_plan.run_id, attempt_id=middle_id)
+        for b in (bridge, bridge2):
+            multi_cfg['terminal']['evidence'].extend(evidence_pins(b['evidence']['producer_assets']))
     multi_candidate = {'run_id':middle_plan.run_id,'attempt_id':middle_id}
     def multi_audit():
         return validate_terminal_custody(cfg=multi_cfg,candidate=multi_candidate,plan=middle_plan_doc,data=data)

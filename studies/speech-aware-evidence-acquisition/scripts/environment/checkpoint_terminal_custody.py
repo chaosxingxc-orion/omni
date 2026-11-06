@@ -402,7 +402,7 @@ def validate_terminal_custody(*, cfg, candidate, plan, data):
     from speech_aware_evidence_acquisition.core.flight.resume import resume_declarations_from_document
     from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import (
         CheckpointCompatibility, ImageReleaseCompatibility, MultiCheckpointCompatibility,
-        STUDY_PREFIX, authenticated_old_config, validate_bridge_declarations)
+        STUDY_PREFIX, authenticated_old_config, validate_bridge_declarations, evidence_pins)
     from speech_aware_evidence_acquisition.core.roster import verify_roster
     from speech_aware_evidence_acquisition.core.preparation import artifact_inputs
 
@@ -464,10 +464,9 @@ def validate_terminal_custody(*, cfg, candidate, plan, data):
         if a['bridge_key'] != aid or not isinstance(bridges[aid], ImageReleaseCompatibility):
             raise ValueError('authenticated image release bridge required')
         old_bridge = bridges[aid]
-        workspace = old_bridge.evidence.get('producer_workspace')
-        if workspace is not None:
-            for key in ('manifest', 'source_manifest', 'launch', 'container'):
-                evidence_blob(workspace[key])
+        for name in ('producer_workspace', 'producer_assets'):
+            for pin in evidence_pins(old_bridge.evidence.get(name)):
+                evidence_blob(pin)
         files = old_bridge.old_source(run_id=candidate['run_id'], predecessor_attempt_id=aid)
         registered = json.loads(evidence_blob(a['plan']))
         raw_plan = dict(registered['execution_plan'])

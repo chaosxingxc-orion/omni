@@ -614,20 +614,37 @@ def _regular_real_path(value):
     return path
 
 
-def _producer_workspace(files, commit, evidence, *, run_id=None, attempt_id=None):
-    """Join archived data to the producer; never overlay executable Git source."""
-    from ..experiment_assets import validate_workspace_inventory
+PRODUCER_SCHEMAS = {
+    'producer_workspace': 'saea-producer-workspace-evidence-v1',
+    'producer_assets': 'saea-producer-assets-evidence-v1',
+}
+
+
+def evidence_pins(value):
+    """Yield exact pin leaves without interpreting schemas, roots or metadata."""
+    if isinstance(value, Mapping):
+        if set(value) == {'path', 'sha256'}:
+            yield value
+        else:
+            for child in value.values():
+                yield from evidence_pins(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from evidence_pins(child)
+
+
+def _producer_context(files, commit, evidence, *, run_id=None, attempt_id=None):
+    """Authenticate common producer/source evidence for both external layers."""
     from ..contact_reconciliation import _host_path
     require(isinstance(evidence, Mapping) and set(evidence) == {
         'schema', 'root', 'manifest', 'source_manifest', 'launch', 'container'}
-        and evidence['schema'] == 'saea-producer-workspace-evidence-v1',
-        'invalid producer workspace evidence')
+        and evidence['schema'] in PRODUCER_SCHEMAS.values(), 'invalid producer evidence')
     blobs = {}
     for key in ('manifest', 'source_manifest', 'launch', 'container'):
         _regular_real_path(evidence[key]['path'])
         blobs[key] = _pinned_bytes(evidence[key])
-    manifest, source, launch, containers = (json.loads(blobs[k]) for k in
-                                           ('manifest', 'source_manifest', 'launch', 'container'))
+    source, launch, containers = (json.loads(blobs[k]) for k in
+                                 ('source_manifest', 'launch', 'container'))
     require(isinstance(containers, list) and len(containers) == 1, 'one producer container required')
     container = containers[0]
     env = launch['environment']
@@ -658,6 +675,14 @@ def _producer_workspace(files, commit, evidence, *, run_id=None, attempt_id=None
         require(isinstance(logical, str) and logical.startswith('/')
                 and str(Path(logical)) == logical and '..' not in Path(logical).parts,
                 'invalid producer logical path')
+        for m in launch['mounts']:
+            for key in ('source', 'target'):
+                value = m[key]
+                require(isinstance(value, str) and value.startswith('/') and value != '/'
+                        and str(Path(value)) == value and '..' not in Path(value).parts,
+                        'invalid producer mount path')
+        require(len({m['target'] for m in launch['mounts']}) == len(launch['mounts']),
+                'duplicate producer mount target')
         matches = [m for m in launch['mounts'] if Path(logical).is_relative_to(m['target'])]
         require(matches, 'producer evidence path is not mounted')
         mount = max(matches, key=lambda m: len(Path(m['target']).parts))
@@ -667,10 +692,10 @@ def _producer_workspace(files, commit, evidence, *, run_id=None, attempt_id=None
                 and actual[0]['RW'] is False and actual[0]['Type'] == 'bind',
                 'producer readonly mount differs')
         # A nested mount can hide bytes even when the parent is readonly.
-        require(not any(Path(m['target']).is_relative_to(logical)
+        require(not any(Path(m['target']).is_relative_to(mount['target'])
                         and m['target'] != mount['target'] for m in launch['mounts']),
                 'producer launch has shadow mounts')
-        require(not any(Path(m['Destination']).is_relative_to(logical)
+        require(not any(Path(m['Destination']).is_relative_to(mount['target'])
                         and m['Destination'] != mount['target'] for m in container['Mounts']),
                 'producer evidence has shadow mounts')
         return _host_path(launch, logical)
@@ -682,6 +707,41 @@ def _producer_workspace(files, commit, evidence, *, run_id=None, attempt_id=None
             'producer requires one complete readonly source mount')
     require(readonly_mapping('/opt/saea-release') + '/source-manifest.json' ==
             _host_path(launch, env['SAEA_RELEASE_MANIFEST']), 'producer source mount differs')
+    return blobs, launch, readonly_mapping
+
+
+def _producer_assets(files, commit, evidence, *, run_id=None, attempt_id=None):
+    from ..experiment_assets import validate_asset_inventory
+    blobs, launch, readonly_mapping = _producer_context(
+        files, commit, evidence, run_id=run_id, attempt_id=attempt_id)
+    env = launch['environment']
+    require(env.get('SAEA_EXPERIMENT_MANIFEST_SHA256') == sha(blobs['manifest']),
+            'producer asset manifest digest differs')
+    readonly_mapping(env['SAEA_EXPERIMENT_MANIFEST'])
+    inventory = validate_asset_inventory(json.loads(blobs['manifest']))
+    root = _regular_real_path(evidence['root'])
+    require(root.is_dir(), 'producer assets capture root missing')
+    result = dict(files)
+    for name, pin in inventory.items():
+        # The capture is indexed by original container absolute path, not by
+        # basename or today's resolver environment. Docker binds that path to
+        # its actual producer host source independently of archive relocation.
+        readonly_mapping(pin['path'])
+        path = _regular_real_path(root / pin['path'].lstrip('/'))
+        require(path.is_relative_to(root) and path.is_file(), 'producer asset missing: ' + name)
+        blob = path.read_bytes()
+        require(sha(blob) == pin['sha256'], 'producer asset bytes changed: ' + name)
+        result[STUDY_PREFIX + name] = blob
+    return result
+
+
+def _producer_workspace(files, commit, evidence, *, run_id=None, attempt_id=None):
+    from ..experiment_assets import validate_workspace_inventory
+    blobs, launch, readonly_mapping = _producer_context(
+        files, commit, evidence, run_id=run_id, attempt_id=attempt_id)
+    env = launch['environment']
+    manifest = json.loads(blobs['manifest'])
+    source_sha = sha(blobs['source_manifest'])
     logical_root = env['SAEA_EXPERIMENT_WORKSPACE']
     readonly_mapping(logical_root)
     manifest_sha = sha(blobs['manifest'])
@@ -725,15 +785,17 @@ class ImageReleaseCompatibility(CheckpointCompatibility):
             'change':'contact-executor-width-v1','reviewed_source_changes':{}}, attempt_id=attempt_id)
         require(document['change'] == 'image-release-operational-v1', 'unreviewed release transition')
         evidence = document['evidence']
-        require(isinstance(evidence, Mapping) and set(evidence) - {'producer_workspace'} == {'commit_object','tree_listing','source_archive','release_manifest','source_review','reference_pins','startup_data_root'}, 'invalid release bridge evidence')
+        require(isinstance(evidence, Mapping) and set(evidence) - set(PRODUCER_SCHEMAS) == {'commit_object','tree_listing','source_archive','release_manifest','source_review','reference_pins','startup_data_root'}, 'invalid release bridge evidence')
         for key in ('commit_object','tree_listing','source_archive','release_manifest','source_review','reference_pins'):
             pin = evidence[key]
             require(isinstance(pin, Mapping) and set(pin) == {'path','sha256'} and isinstance(pin['path'],str) and Path(pin['path']).is_absolute() and isinstance(pin['sha256'],str) and re.fullmatch('[0-9a-f]{64}',pin['sha256']), 'invalid evidence pin')
-        if 'producer_workspace' in evidence:
-            workspace = evidence['producer_workspace']
+        for name, schema in PRODUCER_SCHEMAS.items():
+            if name not in evidence:
+                continue
+            workspace = evidence[name]
             require(isinstance(workspace, Mapping) and set(workspace) == {
                 'schema', 'root', 'manifest', 'source_manifest', 'launch', 'container'}
-                and workspace['schema'] == 'saea-producer-workspace-evidence-v1'
+                and workspace['schema'] == schema
                 and isinstance(workspace['root'], str) and Path(workspace['root']).is_absolute(),
                 'invalid producer workspace evidence')
             for key in ('manifest', 'source_manifest', 'launch', 'container'):
@@ -749,12 +811,20 @@ class ImageReleaseCompatibility(CheckpointCompatibility):
         e = self.evidence
         for key in ('commit_object','tree_listing','source_archive'): _pinned_bytes(e[key])
         files = authenticate_git_capture(self.predecessor_commit,e['commit_object']['path'],e['tree_listing']['path'],e['source_archive']['path'])[0]
-        if 'producer_workspace' in e:
+        if all(name in e for name in PRODUCER_SCHEMAS):
+            require(all(e['producer_workspace'][key]['sha256'] == e['producer_assets'][key]['sha256']
+                        for key in ('source_manifest', 'launch', 'container')),
+                    'external layers must name the same producer')
+        # Exactly the live resolver order: workspace > external assets > Git.
+        for name, loader in (('producer_assets', _producer_assets),
+                             ('producer_workspace', _producer_workspace)):
+            if name not in e:
+                continue
             try:
-                return _producer_workspace(files, self.predecessor_commit, e['producer_workspace'],
-                                           run_id=run_id, attempt_id=predecessor_attempt_id)
+                files = loader(files, self.predecessor_commit, e[name],
+                               run_id=run_id, attempt_id=predecessor_attempt_id)
             except (ValueError, KeyError, TypeError, OSError) as exc:
-                raise CheckpointCompatibilityError('producer workspace verification failed: ' + str(exc)) from exc
+                raise CheckpointCompatibilityError('producer verification failed: ' + str(exc)) from exc
         return files
 
     def precheck(self, *, repo_root, data_root, current_fragments, header, run_id,

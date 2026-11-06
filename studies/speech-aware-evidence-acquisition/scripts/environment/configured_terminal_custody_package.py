@@ -96,6 +96,51 @@ def publish(src, dst):
     fsync_dir(dst.parent)
 
 
+def _has_evidence_location(value, field=None):
+    if field == 'root':
+        return True
+    if isinstance(value, dict):
+        return set(value) == {'path', 'sha256'} or any(
+            _has_evidence_location(child, key) for key, child in value.items())
+    if isinstance(value, list):
+        return any(_has_evidence_location(child) for child in value)
+    return False
+
+
+def relocate_evidence(value, mapping, field=None):
+    """Relocate only pin leaves/archive roots; preserve digests and metadata.
+
+    Mapping mirrors just the relocatable branches (no schema/startup root).
+    Original evidence may be offline; new pin bytes must match original SHA.
+    """
+    if field == 'root':
+        if not isinstance(mapping, str):
+            raise ValueError('archive root mapping must be an absolute directory')
+        root = Path(mapping)
+        if not root.is_absolute() or root.resolve() != root or root.is_symlink() or not root.is_dir():
+            raise ValueError('archive root mapping must be a real absolute directory')
+        return mapping
+    if isinstance(value, dict) and set(value) == {'path', 'sha256'}:
+        _pinned(mapping)
+        if Path(mapping['path']).resolve() != Path(mapping['path']):
+            raise ValueError('bridge evidence path must not traverse symlinks')
+        if mapping['sha256'] != value['sha256']:
+            raise ValueError('bridge evidence pin differs')
+        return copy.deepcopy(mapping)
+    if isinstance(value, dict):
+        keys = {key for key, child in value.items() if _has_evidence_location(child, key)}
+        if not isinstance(mapping, dict) or set(mapping) != keys:
+            raise ValueError('bridge mapping must cover exactly every evidence pin and archive root')
+        return {key: relocate_evidence(child, mapping[key], key) if key in keys else copy.deepcopy(child)
+                for key, child in value.items()}
+    if isinstance(value, list):
+        if not isinstance(mapping, list) or len(mapping) != len(value):
+            raise ValueError('bridge list mapping shape differs')
+        return [relocate_evidence(child, mapped) if _has_evidence_location(child)
+                else copy.deepcopy(child) for child, mapped in zip(value, mapping)]
+    raise ValueError('unrecognized evidence relocation')
+
+
 def prepare(config):
     """Resolve a pinned source manifest and native bridge into held templates."""
     keys = {'schema', 'source_manifest', 'source_paths', 'bridge', 'bridge_paths',
@@ -115,16 +160,11 @@ def prepare(config):
         if old['sha256'] != new['sha256']:
             raise ValueError('source asset pin differs: ' + name)
         manifest['files'][name] = copy.deepcopy(new)
-    evidence = bridge['evidence']
-    names = set(evidence) - {'startup_data_root'}
-    if set(config['bridge_paths']) != names:
-        raise ValueError('bridge mapping must cover exactly every evidence pin')
-    for name in names:
-        new = config['bridge_paths'][name]
-        _pinned(new)
-        if new['sha256'] != evidence[name]['sha256']:
-            raise ValueError('bridge evidence pin differs: ' + name)
-        evidence[name] = copy.deepcopy(new)
+    bridge['evidence'] = relocate_evidence(bridge['evidence'], config['bridge_paths'])
+    if any(name in bridge['evidence'] for name in ('producer_workspace', 'producer_assets')):
+        from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import ImageReleaseCompatibility
+        # Prove the relocated roots still hold the exact producer inventories.
+        ImageReleaseCompatibility.from_document(bridge).old_source()
     _pinned(config['lock'])
     _pinned(config['predecessor_decision_file'])
     if config['admission']['predecessor_decision']['sha256'] != config['predecessor_decision_file']['sha256']:

@@ -37,3 +37,79 @@ python -m pytest -q tests/unit/test_producer_workspace_bridge.py tests/unit/test
 ```
 
 这些是工程来源验证，不授权终态交接、重发 unknown 请求或改写成本。
+
+## 第二层外部资产（返工扩展）
+
+旧 producer 的解析优先级为 **workspace > SAEA_EXPERIMENT_MANIFEST > Git**。
+`evidence.producer_assets` 与 `producer_workspace` 独立可选；两者同时存在时，
+`launch`、`container`、`source_manifest` 三个 pin 的 SHA 必须分别一致。
+未设置第二层时保留旧 Git-only/workspace-only 行为；显式设置第二层但验证失败时绝不回退。
+
+```json
+{
+  "producer_assets": {
+    "schema": "saea-producer-assets-evidence-v1",
+    "root": "/capture/producer-assets",
+    "manifest": {"path": "/capture/experiment-assets.json", "sha256": "<原始 manifest SHA256>"},
+    "source_manifest": {"path": "/capture/source-manifest.json", "sha256": "<旧 release SHA256>"},
+    "launch": {"path": "/capture/launch.json", "sha256": "<原始文件 SHA256>"},
+    "container": {"path": "/capture/container.json", "sha256": "<原始文件 SHA256>"}
+  }
+}
+```
+
+该 manifest 原始字节保持不变，schema 为 `saea-experiment-assets-v1`；`files`
+以 `configs/` 或 `docs/` 相对路径为键，以 `{path, sha256}` 为值。
+`path` 是 producer 容器可见的绝对路径。例如 `/producer/final/docs/receipts/runtime.json`
+对应归档文件 `/capture/producer-assets/producer/final/docs/receipts/runtime.json`，
+即归档根拼接原路径去前导 `/`。容器路径经 launch/Docker 中一致的最长只读 bind mount
+映射到 producer host source；归档机不需要原主机路径存在。路径不可含 traversal、symlink，
+同一只读 mount 下有嵌套遮蔽时拒绝。整个 manifest 清单逐项校验 SHA，随后按层优先级合并；
+清单外文件不参与恢复。源码 `src/` 始终保留已认证 Git 字节。
+
+manifest 自身路径及 SHA 必须来自 pinned launch 的 `SAEA_EXPERIMENT_MANIFEST` 和
+`SAEA_EXPERIMENT_MANIFEST_SHA256`，并与 Docker `Config.Env` 一致；其路径也必须受
+只读 bind mount 保护。归档 manifest 由独立 pin 提供，无需在资产归档根再复制一份。
+恢复过程不调用当前环境的 `resolve_asset`，不读取当前环境的实验变量。
+
+terminal `evidence` 列表登记两层全部 pin；共享同路径的 pin 只登记一次。
+完整 custody 仍需单独登记 runtime receipt 的实际归档 `{path, sha256}` pin，
+与 bridge 恢复出的 receipt 字节相等，现有 FIT/session 来源核验继续执行。
+
+## prepare 的嵌套搬迁
+
+`saea-terminal-package-prepare-v1` 的 `bridge_paths` 继续支持原来的平面 pin 映射，
+并允许按 evidence 结构递归嵌套。仅列出 pin 和 archive `root`，不要放入 `schema`、
+`startup_data_root` 等不搬迁元数据。每个需搬迁分支都必须完整列出，拒绝遗漏或多余字段。
+
+```json
+{
+  "bridge_paths": {
+    "commit_object": {"path": "/new/commit", "sha256": "<保持原 SHA>"},
+    "tree_listing": {"path": "/new/tree", "sha256": "<保持原 SHA>"},
+    "source_archive": {"path": "/new/source.tar", "sha256": "<保持原 SHA>"},
+    "release_manifest": {"path": "/new/release.json", "sha256": "<保持原 SHA>"},
+    "source_review": {"path": "/new/review.json", "sha256": "<保持原 SHA>"},
+    "reference_pins": {"path": "/new/references.json", "sha256": "<保持原 SHA>"},
+    "producer_assets": {
+      "root": "/new/producer-assets",
+      "manifest": {"path": "/new/assets.json", "sha256": "<保持原 SHA>"},
+      "source_manifest": {"path": "/new/source-manifest.json", "sha256": "<保持原 SHA>"},
+      "launch": {"path": "/new/launch.json", "sha256": "<保持原 SHA>"},
+      "container": {"path": "/new/container.json", "sha256": "<保持原 SHA>"}
+    }
+  }
+}
+```
+
+若含 `producer_workspace`，同样提供对应五个字段（`root` 和四个 pin）。
+调用方先按原布局复制证据和归档树；prepare 只重定向配置并验证新位置字节，不复制、
+不重写原证据、不重签清单。新 pin SHA 必须等于旧 pin SHA；对含外部层的 bridge，
+prepare 调用 `old_source()` 认证新根内所有清单文件后才发布 HELD 模板。
+输出 bridge JSON 因路径变化产生新的包级 SHA，原证据文件 SHA 均保持不变。
+`source_paths` 原有 successor 输入清单搬迁语义保持不变，不得把它产生的新清单当作
+历史 producer 的 manifest。
+
+返工新增测试：`test_producer_asset_bridge.py`、`test_terminal_package_relocation.py`；
+`test_configured_terminal_custody_package.py` 增加无 Git runtime receipt 的完整 custody 变体。
+这些都是离线工程测试，真实 919+2 完整恢复仍需主线程验证。
