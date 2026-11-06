@@ -13,12 +13,12 @@
       "id": "baseline-off",
       "resource": "NPU-A",
       "depends_on": [],
-      "status": "v5_generation_running",
+      "status": "generation_sealed_official_scoring_failed",
       "rows": 1080,
-      "completed_rows": 963,
+      "completed_rows": 1080,
       "completed_rows_include_early_abstentions": true,
       "structural_task_answers": 715,
-      "observed_at_utc": "2026-11-06T16:08:45Z",
+      "observed_at_utc": "2026-11-06T16:19:20Z",
       "structural_task_answers_observed_at_utc": "2026-11-06T15:48:52Z"
     },
     {
@@ -27,10 +27,10 @@
       "depends_on": [],
       "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 550,
+      "completed_rows": 612,
       "completed_rows_include_early_abstentions": true,
       "structural_task_answers": 406,
-      "observed_at_utc": "2026-11-06T16:08:45Z",
+      "observed_at_utc": "2026-11-06T16:19:20Z",
       "structural_task_answers_observed_at_utc": "2026-11-06T15:48:52Z"
     },
     {
@@ -40,7 +40,7 @@
         "baseline-off",
         "baseline-on"
       ],
-      "status": "cpu_paired_analysis_armed_waiting_official_results"
+      "status": "blocked_on_cpu_score_recovery"
     },
     {
       "id": "fold-b-confirmation",
@@ -263,7 +263,7 @@
       "axis": "召回/排序/供给",
       "priority": 5,
       "depends_on": [],
-      "status": "both_native_queues_armed_pending_release",
+      "status": "off_generation_container_running_on_pending",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
@@ -289,15 +289,17 @@
         {
           "id": "E5-off",
           "resource": "NPU-A",
-          "after_generation_release": "baseline-off"
+          "after_generation_release": "baseline-off",
+          "status": "running_first_response_not_verified"
         },
         {
           "id": "E5-on",
           "resource": "NPU-B",
-          "after_generation_release": "baseline-on"
+          "after_generation_release": "baseline-on",
+          "status": "pending"
         }
       ],
-      "actual_release_verified": false
+      "actual_release_verified": true
     },
     {
       "id": "E6",
@@ -445,9 +447,9 @@
       "id": "coverage-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "reference_candidate_template_verified_release_preparation_running",
+      "status": "fresh_registration_fix_merged_cpu_prepare_running",
       "reuse": "fixed Fold A1080, KB, prepared input and image",
-      "approved_reference_source": "e9787511",
+      "approved_reference_source": "1c8d6c7c",
       "scope": "reference repair and existing bounded Slot recovery; length recovery not required for this candidate"
     },
     {
@@ -492,6 +494,22 @@
       ],
       "status": "not_ready_not_queued",
       "scope": "same frozen policy and existing real roster"
+    },
+    {
+      "id": "off-score-recovery",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "investigating_recorded_config_mismatch",
+      "input": "sealed baseline-off 1080 outputs",
+      "new_model_calls": 0
+    },
+    {
+      "id": "compact-perception-config",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "reviewed_config_only_not_ready",
+      "control": "reference-perception-evaluate",
+      "changed_node": "perception"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
