@@ -29,10 +29,10 @@
       "depends_on": [],
       "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 808,
+      "completed_rows": 938,
       "completed_rows_include_early_abstentions": true,
       "structural_task_answers": 406,
-      "observed_at_utc": "2026-11-06T16:51:18Z",
+      "observed_at_utc": "2026-11-06T17:12:45Z",
       "structural_task_answers_observed_at_utc": "2026-11-06T15:48:52Z"
     },
     {
@@ -292,7 +292,7 @@
           "id": "E5-off",
           "resource": "NPU-A",
           "after_generation_release": "baseline-off",
-          "status": "running_first_response_not_verified"
+          "status": "running_real_responses_verified"
         },
         {
           "id": "E5-on",
@@ -441,10 +441,10 @@
       "id": "coverage-fix",
       "resource": "CPU",
       "depends_on": [],
-      "status": "references_and_perception_length_merged_slot_length_implementation_running",
+      "status": "reference_perception_and_slot_length_merged_not_all_deployed",
       "priority": 1,
       "scope": "auxiliary reference quarantine; bounded length and required-field recovery",
-      "approved_source": "81d7ea7b"
+      "approved_source": "2586419b"
     },
     {
       "id": "coverage-ready",
@@ -481,7 +481,7 @@
       "id": "load-analysis",
       "resource": "CPU",
       "depends_on": [],
-      "status": "corrected_report_accepted"
+      "status": "fixed_timing_report_accepted_no_speedup_claim"
     },
     {
       "id": "concurrency-prepare",
@@ -505,7 +505,7 @@
       "id": "off-score-recovery",
       "resource": "CPU",
       "depends_on": [],
-      "status": "root_cause_accepted_scoring_tool_implementation_running",
+      "status": "official_cpu_recovery_container_running",
       "input": "sealed baseline-off 1080 outputs",
       "new_model_calls": 0
     },
@@ -521,7 +521,7 @@
       "id": "perception-length-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "stage_prepare_register_complete_admission_running",
+      "status": "stage_prepare_register_admission_complete",
       "source": "81d7ea7b",
       "scope": "reuse coverage FoldA1080 with externally pinned Perception repair template"
     },
@@ -531,7 +531,7 @@
       "depends_on": [
         "perception-length-ready"
       ],
-      "status": "not_ready_not_queued",
+      "status": "admitted_launch_plan_passed_dependency_binding_in_progress",
       "rows": 1080,
       "priority": 1
     },
@@ -541,6 +541,25 @@
       "depends_on": [],
       "status": "merged_c3d1dc17_not_deployed",
       "scope": "known nonempty Slot length; shared bounded repair budget; real source and failures retained"
+    },
+    {
+      "id": "complete-coverage-ready",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "deferred_cli_successor_scheduled_not_yet_delivered",
+      "source": "2586419b",
+      "reuse": "existing FoldA1080 k8 OFF C64 and bounded recovery shared pool",
+      "scope": "add reviewed Slot length to Perception length candidate"
+    },
+    {
+      "id": "complete-coverage-evaluate",
+      "resource": "NPU-A",
+      "depends_on": [
+        "complete-coverage-ready"
+      ],
+      "status": "not_ready_not_queued",
+      "rows": 1080,
+      "priority": 1
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -562,7 +581,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T17:02:54Z",
+  "updated_at": "2026-11-06T17:19:35Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Slot length implementation running; Perception merged",
     "deployment": "Reference coverage admitted and queue armed; Perception candidate follows",
