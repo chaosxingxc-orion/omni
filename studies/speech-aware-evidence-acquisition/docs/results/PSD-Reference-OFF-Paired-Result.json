@@ -1,0 +1,252 @@
+{
+  "schema": "psd-reference-off-paired-public-v1",
+  "rows": 1080,
+  "comparison": "reference OFF strategy bundle minus common k8 OFF",
+  "metrics": {
+    "k8": {
+      "rows": 1080,
+      "intent_correct": 882,
+      "intent_accuracy_pct": 81.66666666666667,
+      "slu_micro_f1_pct": 64.8754410737156,
+      "span_exact_micro_f1_pct": 53.94321766561513,
+      "strict_correct": 504,
+      "strict_accuracy_pct": 46.666666666666664,
+      "legal_rows": 1038,
+      "legal_rate_pct": 96.11111111111111,
+      "empty_rows": 42,
+      "legal_empty_entities": 325
+    },
+    "reference": {
+      "rows": 1080,
+      "intent_correct": 892,
+      "intent_accuracy_pct": 82.5925925925926,
+      "slu_micro_f1_pct": 64.94127932261941,
+      "span_exact_micro_f1_pct": 54.83870967741935,
+      "strict_correct": 510,
+      "strict_accuracy_pct": 47.22222222222222,
+      "legal_rows": 1052,
+      "legal_rate_pct": 97.4074074074074,
+      "empty_rows": 28,
+      "legal_empty_entities": 325
+    }
+  },
+  "paired_statistics": {
+    "strict": {
+      "point_estimate_pp": 0.5555555555555536,
+      "improvements": 59,
+      "regressions": 53,
+      "ties": 968,
+      "ci95_pp": [
+        -1.3888888888888888,
+        2.5
+      ],
+      "exact_sign_mcnemar_p": 0.6367997716142331
+    },
+    "intent": {
+      "cluster_bootstrap": {
+        "ci90_half_width_pp": 1.3888888888888888,
+        "ci90_pp": [
+          -0.4629629629629629,
+          2.314814814814815
+        ],
+        "ci95_half_width_pp": 1.712962962962963,
+        "ci95_pp": [
+          -0.7407407407407408,
+          2.685185185185185
+        ],
+        "n_replicates": 10000,
+        "point_estimate_pp": 0.9259259259259258,
+        "resampling": "paired whole-cluster bootstrap",
+        "seed": 20261106,
+        "sigma_hat_pp": 0.8605747027016546
+      },
+      "delta_pp": 0.92592592592593,
+      "estimand": "mean-per-row",
+      "harms": 38,
+      "left_pct": 81.66666666666667,
+      "mcnemar_p": 0.3318343545999156,
+      "n": 1080,
+      "right_pct": 82.5925925925926,
+      "saves": 48,
+      "ties": 994
+    },
+    "official_slu_micro": {
+      "cluster_bootstrap": {
+        "ci90_half_width_pp": 1.2155838484490478,
+        "ci90_pp": [
+          -1.133409579969003,
+          1.2977581169290926
+        ],
+        "ci95_half_width_pp": 1.4366534223244753,
+        "ci95_pp": [
+          -1.356696681518186,
+          1.516610163130765
+        ],
+        "n_replicates": 10000,
+        "point_estimate_pp": 0.06583824890377121,
+        "resampling": "paired whole-cluster bootstrap",
+        "seed": 20261106,
+        "sigma_hat_pp": 0.741280195323892
+      },
+      "delta_pp": 0.06583824890377121,
+      "estimand": "pooled-count-f1",
+      "fields": {
+        "fn": [
+          "slu_f1_word_fn",
+          "slu_f1_char_fn"
+        ],
+        "fp": [
+          "slu_f1_word_fp",
+          "slu_f1_char_fp"
+        ],
+        "tp": [
+          "slu_f1_word_tp",
+          "slu_f1_char_tp"
+        ]
+      },
+      "left_pct": 64.8754410737156,
+      "official_check_field": "slu_f1",
+      "right_pct": 64.94127932261938
+    },
+    "entity_exact_micro": {
+      "cluster_bootstrap": {
+        "ci90_half_width_pp": 1.4905431042892359,
+        "ci90_pp": [
+          -0.5833072488718661,
+          2.3977789597066055
+        ],
+        "ci95_half_width_pp": 1.767449201672385,
+        "ci95_pp": [
+          -0.8827241071272744,
+          2.6521742962174963
+        ],
+        "n_replicates": 10000,
+        "point_estimate_pp": 0.8954920118042109,
+        "resampling": "paired whole-cluster bootstrap",
+        "seed": 20261106,
+        "sigma_hat_pp": 0.9025154156184193
+      },
+      "delta_pp": 0.8954920118042109,
+      "estimand": "pooled-count-f1",
+      "fields": {
+        "fn": [
+          "slot_f1_exact_fn"
+        ],
+        "fp": [
+          "slot_f1_exact_fp"
+        ],
+        "tp": [
+          "slot_f1_exact_tp"
+        ]
+      },
+      "left_pct": 53.94321766561514,
+      "official_check_field": "span_f1",
+      "right_pct": 54.83870967741935
+    }
+  },
+  "coverage_transitions": {
+    "legal->legal": 1017,
+    "empty->empty": 7,
+    "empty->legal": 35,
+    "legal->empty": 21
+  },
+  "coverage_by_transition": {
+    "legal->legal": {
+      "strict_both_correct": 451,
+      "intent_both_correct": 844,
+      "strict_loss": 42,
+      "intent_loss": 20,
+      "strict_both_wrong": 479,
+      "intent_both_wrong": 133,
+      "strict_gain": 45,
+      "intent_gain": 20
+    },
+    "empty->empty": {
+      "strict_both_wrong": 7,
+      "intent_both_wrong": 7
+    },
+    "empty->legal": {
+      "strict_both_wrong": 21,
+      "intent_gain": 28,
+      "strict_gain": 14,
+      "intent_both_wrong": 7
+    },
+    "legal->empty": {
+      "strict_loss": 11,
+      "intent_loss": 18,
+      "strict_both_wrong": 10,
+      "intent_both_wrong": 3
+    }
+  },
+  "cost": {
+    "contacts": {
+      "k8": 3163,
+      "reference": 3186,
+      "delta": 23,
+      "relative_change_pct": 0.727157761618713
+    },
+    "prompt_tokens_total": {
+      "k8": 33890635,
+      "reference": 34349019,
+      "delta": 458384,
+      "relative_change_pct": 1.3525388355809742
+    },
+    "completion_tokens_total": {
+      "k8": 2245046,
+      "reference": 2375444,
+      "delta": 130398,
+      "relative_change_pct": 5.8082551537919525
+    },
+    "generation_wall_seconds": {
+      "k8": 5993.48952627182,
+      "reference": 6256.900146722794,
+      "delta": 263.4106204509735,
+      "relative_change_pct": 4.394945870787659
+    },
+    "repeated_speech_seconds": {
+      "k8": 9001.707937500041,
+      "reference": 9114.379500000052,
+      "delta": 112.67156250001062,
+      "relative_change_pct": 1.2516687197841048
+    },
+    "wall_scope": "run_phases wall_seconds; not admission-to-seal, deployment/scoring or pure NPU time",
+    "generation_wall_seconds_per_row": {
+      "k8": 5.549527339140574,
+      "reference": 5.793426061780364
+    },
+    "generation_wall_seconds_per_legal_answer": {
+      "k8": 5.77407468812314,
+      "reference": 5.9476237136148224
+    },
+    "gpu_active_seconds_and_gpu_hours": "unknown; driver numeric zeros reflect absent/zero monitor data, not zero NPU usage",
+    "additional_recovery_cost": "unknown; no observable extra recovery contact in sealed outputs; total call delta is not recovery-only spend",
+    "currency": "unknown"
+  },
+  "method": {
+    "sign": "reference minus k8",
+    "strict_rule": "scenario_action_exact==1 AND slot_f1_exact_fp==slot_f1_exact_fn==0",
+    "confidence_interval": "existing paired whole-utterance cluster percentile bootstrap",
+    "cluster_key": "utterance_id",
+    "unique_clusters": 1080,
+    "seed": 20261106,
+    "existing_replicates": 10000,
+    "new_replicates_this_task": 0,
+    "paired_tests": "exact two-sided sign/McNemar on discordant binary pairs; no multiple-testing correction or superiority verdict",
+    "official_slu": "2 pooled TP /(2 pooled TP + pooled FP + pooled FN), combined word/char counts, not per-row F1 mean"
+  },
+  "limits": [
+    "Both arms Slot thinking disabled; reference handling and recovery budget change jointly.",
+    "Paired sample confidence intervals cross zero; no stable superiority claim.",
+    "Contract legality does not imply semantic correctness.",
+    "Historical P-to-Solver comparison is aggregate only."
+  ],
+  "evidence": {
+    "private_report_sha256": "6e4df2cbc0a095c71d146e4d8126d592f66d133814f27727c4b17d4885140141",
+    "private_result_sha256": "cf038815d8b94052226c10c9bb36c25333bb52170963746148896c4795e83b02",
+    "primary_container_exit": 0,
+    "supplement_container_exit": 0,
+    "left_scores_sha256": "c805e7434e99d47dc293cc87bbe53a0d1ea3a814d3f73f60df7240da9f86facb",
+    "right_scores_sha256": "2759394de565f90b2ba2de8932d7ce490ad026a9e4feb8f6e449e4b77de2df46"
+  },
+  "new_model_calls": 0
+}
