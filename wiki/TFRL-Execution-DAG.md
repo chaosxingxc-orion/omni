@@ -19,7 +19,7 @@
 |新P-only/Slot-only提示|CPU准备→NPU-B|基共同完整覆盖ON父；8个CPU容器exit0与14项摘要主审通过；准备就绪、自动binder存活，等待真实前驱，未派发；完整覆盖ON→P-only→Slot-only|
 |Perception长度恢复|CPU→就绪池|已合main81d7ea7b；配置化模板、139项相关测试及8项集成测试；stage/prepare/register/admission成功；自动绑定器已核实存活，等引用候选真实容器身份|
 |Slot长度恢复|CPU|已知两条非空截断未触发空响应补答；修复已合main c3d1dc17，136相关+3定点测试通过；完整候选已准入；已绑定真实引用前驱的生成释放，P-only长度候选HOLD|
-|B故障后接续|NPU-B|旧请求全部已知、原租约结算成功；已21:04:07复用原completeON配置启动，主线程确认running；首HTTP待核，不等待旧结果评分|
+|B故障后接续|NPU-B|旧请求全部已知、原租约结算成功；已21:04:07复用原completeON配置启动，主线程确认running及真实HTTP成功；P后继来源队列绑定正在配置交接，不等待旧结果评分|
 |B旧结果封存恢复|CPU|已复现runtime overlay认证遗漏；独立工程CLI最小修复并做真实输入封存验证，不占NPU|
 |防止host缓存污染|CPU|已合main，7入口测试及202业务回归通过；未热部署|
 |官方评分恢复|CPU|四watcher已部署；引用OFF锁故障已通过原产物对账完成，未重评分；三个后继的锁挂载修复已部署；NPU不等评分|
