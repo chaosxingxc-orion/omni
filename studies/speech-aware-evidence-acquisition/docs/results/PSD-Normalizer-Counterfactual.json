@@ -1,0 +1,91 @@
+{
+  "schema": "psd-normalizer-counterfactual-v1",
+  "kind": "offline_diagnostic_not_new_run_score",
+  "rows": 1080,
+  "recovered_changed_samples": 285,
+  "targeted_contact_responses": 570,
+  "normalizer_exact_receipt_replays": 285,
+  "stage_deleted_mentions": {
+    "scope": 177,
+    "ti1": 73,
+    "ee10": 10
+  },
+  "stage_gold_exact_attribution": {
+    "scope": {
+      "correct_exact_mentions_deleted": 3,
+      "incorrect_exact_mentions_deleted": 174,
+      "rows": 168
+    },
+    "ti1": {
+      "correct_exact_mentions_deleted": 6,
+      "incorrect_exact_mentions_deleted": 67,
+      "rows": 66
+    },
+    "ee10": {
+      "correct_exact_mentions_deleted": 0,
+      "incorrect_exact_mentions_deleted": 10,
+      "rows": 5
+    }
+  },
+  "baseline_official_scores_sha256": "c805e7434e99d47dc293cc87bbe53a0d1ea3a814d3f73f60df7240da9f86facb",
+  "source_manifest_sha256": "010cb8ad044e010da187324ec0a4e75f1c34706a0a21905dd4fefbe20ffc62f7",
+  "official_python_sha256": "992fa89c3f0e0c13a704450d1d60c78431bc1d8e9303497399c98839c72a76dc",
+  "new_model_calls": 0,
+  "original_run_mutated": false,
+  "status": "COMPLETE",
+  "variants": {
+    "no_scope": {
+      "changed_rows": 150,
+      "unchanged_rows": 930,
+      "empty_terminal_rows_retained": 42,
+      "official_slu_f1": 0.6127972918491706,
+      "official_span_f1": 0.5012141816415735,
+      "intent_accuracy_unchanged": 0.8166666666666667,
+      "strict_correct": 411,
+      "strict_gains": 2,
+      "strict_losses": 95,
+      "slu_delta_pp": -3.5957118887985473,
+      "official_port_identity": true
+    },
+    "no_ti1": {
+      "changed_rows": 66,
+      "unchanged_rows": 1014,
+      "empty_terminal_rows_retained": 42,
+      "official_slu_f1": 0.6347905810627811,
+      "official_span_f1": 0.5255696202531646,
+      "intent_accuracy_unchanged": 0.8166666666666667,
+      "strict_correct": 490,
+      "strict_gains": 3,
+      "strict_losses": 17,
+      "slu_delta_pp": -1.396382967437504,
+      "official_port_identity": true
+    },
+    "no_ee10": {
+      "changed_rows": 5,
+      "unchanged_rows": 1075,
+      "empty_terminal_rows_retained": 42,
+      "official_slu_f1": 0.6457231823531703,
+      "official_span_f1": 0.5366108786610879,
+      "intent_accuracy_unchanged": 0.8166666666666667,
+      "strict_correct": 499,
+      "strict_gains": 0,
+      "strict_losses": 5,
+      "slu_delta_pp": -0.303122838398584,
+      "official_port_identity": true
+    },
+    "bypass_all": {
+      "changed_rows": 285,
+      "unchanged_rows": 795,
+      "empty_terminal_rows_retained": 42,
+      "official_slu_f1": 0.5851650630082171,
+      "official_span_f1": 0.4625346901017576,
+      "intent_accuracy_unchanged": 0.8166666666666667,
+      "strict_correct": 370,
+      "strict_gains": 4,
+      "strict_losses": 138,
+      "slu_delta_pp": -6.358934772893898,
+      "official_port_identity": true
+    }
+  },
+  "decision": "retain existing normalizer; independent diagnostic does not prove cross-run generalization"
+}
