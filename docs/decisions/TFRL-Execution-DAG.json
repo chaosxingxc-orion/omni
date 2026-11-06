@@ -15,10 +15,11 @@
       "depends_on": [],
       "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 749,
+      "completed_rows": 963,
       "completed_rows_include_early_abstentions": true,
       "structural_task_answers": 715,
-      "observed_at_utc": "2026-11-06T15:48:52Z"
+      "observed_at_utc": "2026-11-06T16:08:45Z",
+      "structural_task_answers_observed_at_utc": "2026-11-06T15:48:52Z"
     },
     {
       "id": "baseline-on",
@@ -26,10 +27,11 @@
       "depends_on": [],
       "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 425,
+      "completed_rows": 550,
       "completed_rows_include_early_abstentions": true,
       "structural_task_answers": 406,
-      "observed_at_utc": "2026-11-06T15:48:52Z"
+      "observed_at_utc": "2026-11-06T16:08:45Z",
+      "structural_task_answers_observed_at_utc": "2026-11-06T15:48:52Z"
     },
     {
       "id": "baseline-selection",
@@ -435,18 +437,18 @@
       "id": "coverage-fix",
       "resource": "CPU",
       "depends_on": [],
-      "status": "implementing_and_testing",
+      "status": "references_merged_length_implementation_returned_for_completion",
       "priority": 1,
       "scope": "auxiliary reference quarantine; bounded length and required-field recovery"
     },
     {
       "id": "coverage-ready",
       "resource": "CPU",
-      "depends_on": [
-        "coverage-fix"
-      ],
-      "status": "pending",
-      "reuse": "fixed Fold A1080, KB, prepared input and image"
+      "depends_on": [],
+      "status": "reference_candidate_template_verified_release_preparation_running",
+      "reuse": "fixed Fold A1080, KB, prepared input and image",
+      "approved_reference_source": "e9787511",
+      "scope": "reference repair and existing bounded Slot recovery; length recovery not required for this candidate"
     },
     {
       "id": "coverage-evaluate",
@@ -471,7 +473,7 @@
       "id": "load-analysis",
       "resource": "CPU",
       "depends_on": [],
-      "status": "report_delivered_one_classification_correction_requested"
+      "status": "corrected_report_accepted"
     },
     {
       "id": "concurrency-prepare",
