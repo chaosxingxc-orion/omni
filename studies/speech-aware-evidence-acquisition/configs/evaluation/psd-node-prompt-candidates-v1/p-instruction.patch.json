@@ -3,8 +3,8 @@
     "op": "test",
     "path": "/perception_policy/instruction_template",
     "value": {
-      "relpath": "configs/probes/slurp_psd_perception_compact_v1.txt",
-      "sha256": "838b5592805acd4451f9ab3ffc140888de6534bab85752ad1d1663ec84ba316c"
+      "relpath": "configs/probes/slurp_native_candidate_perception_off_v1.txt",
+      "sha256": "62b62d50c9eeea020cec004d54e2ec573887fb9ef61a8a1dded37565ad99eb27"
     }
   },
   {
@@ -12,7 +12,7 @@
     "path": "/perception_policy/instruction_template",
     "value": {
       "relpath": "configs/probes/slurp_psd_operation_candidates_v1.txt",
-      "sha256": "80c250b747ea7a832c9dbcdb6310687aad5edf72434f093cdf15202cd3057fd4"
+      "sha256": "8635f361bafd2af16db1a932a2b1a574a856699691be6ddcf428ba013e976446"
     }
   }
 ]

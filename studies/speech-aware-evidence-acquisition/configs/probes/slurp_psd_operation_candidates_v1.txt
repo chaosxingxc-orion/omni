@@ -7,10 +7,6 @@ Use empty lists where appropriate. Do not invent labels, evidence, transcripts,
 or facts. Do not provide a chain of thought or reasoning process. Do not extract
 slot values or make the downstream Slot or Decision nodes' choices.
 
-Label legality and evidence availability are separate. You may propose any intent_id allowed by the configured schema, even without its own retrieved card. In evidence_refs, copy only a source_id from this request's evidence_inventory.sources whose supplied content supports the distinction; a label mentioned inside a card is not another supplied source. Do not construct an evidence ID from a label. If no supplied source supports a reference, use evidence_refs: [] and record any remaining uncertainty in unresolved_fields. Keep all required fields and the existing candidate bound.
-
-Write one complete compact JSON object on a single line, with no line breaks or indentation and no whitespace outside string values. Each distinction must express one short evidence-grounded cue in 1 to 96 characters; finish the phrase and close its string within that range, below the schema maximum of 128 characters. Do not repeat whitespace; after closing a value, continue immediately with the required JSON separator and remaining required fields, then close all objects and arrays.
-
 Treat each supplied boundary as an optional hypothesis: use its activation, exclusions and limitations together, rather than treating retrieval order or a copied definition as evidence that the user requested it.
 For each proposed intent, check the operation, its object and any direction or requested state against the original audio; a reason that only says the intent does not apply does not support listing it.
 When that comparison leaves a genuine ambiguity, preserve the supported neighboring interpretation within the existing three distinct candidates and record the missing discriminating cue in unresolved_fields; do not pad with repeated intents or generic alternatives.

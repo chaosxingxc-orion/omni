@@ -3,8 +3,8 @@
     "op": "test",
     "path": "/slot_policy/instruction_template",
     "value": {
-      "relpath": "configs/probes/slurp_psd_reference_b_v1.txt",
-      "sha256": "82cb726f64e36400f867790c2f947782c59c64f680fd489aebf41944c8eaffeb"
+      "relpath": "configs/probes/slurp_native_candidate_slot_shared_v1.txt",
+      "sha256": "14003571e56eefaa7b6d36a3167f13763238dcddf0e129e7300522988725afa5"
     }
   },
   {
@@ -12,7 +12,7 @@
     "path": "/slot_policy/instruction_template",
     "value": {
       "relpath": "configs/probes/slurp_psd_slot_role_grounding_v1.txt",
-      "sha256": "1a6cf6580cc7f8beca7a1aed30a51e310156046622f90e510c2c2f9adba5a712"
+      "sha256": "59221ce0ba7feb0da108499aa870a9f41dae4c5e892e6a1ed7e74a5611a0b254"
     }
   }
 ]

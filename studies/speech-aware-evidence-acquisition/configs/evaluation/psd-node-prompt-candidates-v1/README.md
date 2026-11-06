@@ -1,13 +1,14 @@
-两份候选分别只替换 Perception 或 Slot instruction，复用已有 compact P、reference B 的完整文本再追加语义指导。它们是系统基线提示对照，不是 TFRL 算法。当前状态为 UNBOUND_NOT_READY：完整回答覆盖父基线尚未确定，未做模型实验、FIT、注册或准入。
+两份候选分别仅在真实正常 Perception / Slot instruction 后追加语义指导，是系统基线提示对照，不是 TFRL。未增加 reference A/B 或 compact 正常节点前缀。
 
-- `p-instruction.patch.json`：对标准 `saea-intent-slot-workload-v1` 执行 RFC6902 test/replace，仅改 `/perception_policy/instruction_template`。
-- `slot-instruction.patch.json`：同样仅改 `/slot_policy/instruction_template`。
-- `binding.json`：记录模板及父模板 pins、追加句子和固定条件；这是待绑定的审查元数据，不能直接当 workload 加载。disabled/parent 字段不是新增运行参数。
+具体父本是主线程已准入的 `complete-coverage-on-workload-v1.json`，SHA256 `1c502d1d8d3db034f6dbf1bbde02630d95ae654d14a220551f08891f95c4971c`。其正常P模板为 `slurp_native_candidate_perception_off_v1.txt`（62b62d50…），正常Slot模板为 `slurp_native_candidate_slot_shared_v1.txt`（14003571…）。完整pins及父路径见 binding.json。ON指Slot thinking ON；P保持父本 thinking OFF。
 
-主线程选定完整 coverage 基线后，先填写其 workload/config/protocol/coverage-result pins。每个候选各复制同一份完整父 workload，再应用对应 patch；test 失败时必须审查模板差异，不能直接改 test hash。结果对象仍由既有 `scripts/analysis/intent_slot_workload.py` 的 NodeWorkload 加载，不需要新执行框架。若父节点没有显式 policy，应先在共同基线中把既有有效 instruction 与 thinking 显式化并核对等价，再比较候选。不能把参考 OFF workload 的 thinking 粘到 ON 父基线上。
+- `p-coverage-on-workload.json`、`slot-coverage-on-workload.json` 是可由标准 `scripts/analysis/intent_slot_workload.py` 的 NodeWorkload 直接加载的完整派生配置。
+- 每份与父本的差异严格限于目标节点 instruction_template、独立 name/run_id。没有更换共同基线提示。
+- 两份 `*-instruction.patch.json` 各先测试真实正常父模板pin，再替换目标 instruction；仅模板科学差异允许变化。
+- binding.json是来源元数据，不是运行参数或准入回执；其状态为 BOUND_STATIC_DERIVED_NOT_ADMITTED。不继承父本准入，不声称已测收益或100%覆盖。
 
-仅模板 instruction 的科学差异允许变化；标准 staging 需分配独立 run/name 身份。保持原 FoldA1080 名单和音频、最大3候选、原知识及检索 k、其余节点、恢复预算、thinking/解码和 v4g 不变。不同时测试两份候选；不与 k16 召回数量实验混合。
+全部sample_ids顺序、material/population/audio、KB/检索k、3候选、其他节点、v4g、恢复策略/共享池、纠错子请求模板paths/hash、thinking/decoding/runtime/execution均原样继承。父ON/OFF选择无需先决定赢家：对另一个已pin的完整父本，要求正常模板pin相同，再独立应用同一instruction patch并分配新身份；保留那个父本自己的thinking，不能拷贝本ON派生配置的thinking覆盖OFF。
 
-静态核验已检查标准 NodeWorkload 构造、1080唯一ID、目标 instruction 以外字段完全相等、模板 SHA、父模板 test 及 thinking 保留。schema 示例只保存在私有审查目录，未作为完整 coverage 基线或 READY 配置交付。完整 material/renderer/FIT/注册检查仍需绑定最终父基线后完成。
+静态检查验证真实父SHA、标准NodeWorkload构造、完整1080同名单、精确差异、恢复模板pins及ON/OFF thinking独立保留；没有重跑prepare/FIT/注册/评分。正常source/material/renderer/FIT/注册准入须由部署者另行完成，不以静态加载代替。
 
-先用既有同名单机制样例及有实体/无实体正确负控作小规模对照，再完整1080配对；统计有效回答、intent/SLU/strict、正确→错误/错误→正确与原始失败/费用。Slot 同时看 normalizer 前后的实体指标，不能把减少本已被 v4g 消除的错抽当作最终收益。不得按 gold、样本ID或词表例外在线过滤。没有实际收益结论，不部署。
+两项独立实验先使用既有同名单机制样例及有/无实体正确负控，再全1080配对，保持v4g和k不变；看有效回答、intent/SLU/strict、得失/终态/费用，Slot另看normalizer前后实体TP/FP/FN。不得按gold或case ID在线过滤，不同时改两个节点，不自动安排部署。

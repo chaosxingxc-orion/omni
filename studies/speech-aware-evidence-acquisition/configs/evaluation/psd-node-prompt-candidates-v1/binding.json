@@ -1,32 +1,28 @@
 {
   "schema": "psd-node-prompt-comparison-binding-v1",
-  "status": "UNBOUND_NOT_READY",
+  "status": "BOUND_STATIC_DERIVED_NOT_ADMITTED",
   "base_source_commit": "3378432e7d57aec6466a012f08f88507a39bcfdf",
   "coverage_parent": {
-    "workload_relpath": null,
-    "workload_sha256": null,
-    "composed_config_sha256": null,
-    "protocol_sha256": null,
+    "workload_path": "/var/tmp/omni-psd-rails-preparation-v1/complete-coverage-on-workload-v1.json",
+    "workload_sha256": "1c502d1d8d3db034f6dbf1bbde02630d95ae654d14a220551f08891f95c4971c",
+    "arm_OFF_or_ON": "ON",
+    "admission": "Parent admitted per main review; no admission inherited by these instruction candidates.",
     "coverage_result_sha256": null,
-    "arm_OFF_or_ON": null
+    "coverage_result_note": "Runtime outcome and final strategy selection pending; not needed to derive/check workload bytes."
   },
-  "meaning": "Metadata for binding two RFC6902 patches; not a workload and not an admission receipt.",
+  "meaning": "Pinned actual coverage parent and two concrete standard workload derivatives; metadata is not a workload or admission receipt.",
   "candidates": [
     {
       "candidate": "p",
       "target_node": "perception",
       "instruction_template": {
         "relpath": "configs/probes/slurp_psd_operation_candidates_v1.txt",
-        "sha256": "80c250b747ea7a832c9dbcdb6310687aad5edf72434f093cdf15202cd3057fd4"
+        "sha256": "8635f361bafd2af16db1a932a2b1a574a856699691be6ddcf428ba013e976446"
       },
       "instruction_only_rfc6902_patch": "configs/evaluation/psd-node-prompt-candidates-v1/p-instruction.patch.json",
       "template_parent_pin": {
-        "relpath": "configs/probes/slurp_psd_perception_compact_v1.txt",
-        "sha256": "838b5592805acd4451f9ab3ffc140888de6534bab85752ad1d1663ec84ba316c"
-      },
-      "schema_example_parent": {
-        "relpath": "configs/evaluation/psd-reference-prompts-v1/compact-workload.json",
-        "sha256": "56bede2b5474c569bca500df4ad7dfd59e49ef192f581f8095a6ca2a7a740f94"
+        "relpath": "configs/probes/slurp_native_candidate_perception_off_v1.txt",
+        "sha256": "62b62d50c9eeea020cec004d54e2ec573887fb9ef61a8a1dded37565ad99eb27"
       },
       "semantic_delta_sentences": [
         "Treat each supplied boundary as an optional hypothesis: use its activation, exclusions and limitations together, rather than treating retrieval order or a copied definition as evidence that the user requested it.",
@@ -34,23 +30,29 @@
         "When that comparison leaves a genuine ambiguity, preserve the supported neighboring interpretation within the existing three distinct candidates and record the missing discriminating cue in unresolved_fields; do not pad with repeated intents or generic alternatives.",
         "Keep each distinction focused on the cue that separates the candidates, not a transcript or a restatement of a card; do not resolve ambiguity by inventing unheard words or by changing label definitions."
       ],
-      "template_parent_exact_prefix": true
+      "template_parent_exact_prefix": true,
+      "derived_workload": {
+        "relpath": "configs/evaluation/psd-node-prompt-candidates-v1/p-coverage-on-workload.json",
+        "sha256": "57eb64d04d080f51e29a18e03a0d40ffacfd230302e79490e1c2cff00c7851ef"
+      },
+      "allowed_changes": [
+        "/perception_policy/instruction_template",
+        "/name",
+        "/run_id"
+      ],
+      "runtime_effects_measured": false
     },
     {
       "candidate": "slot",
       "target_node": "slot",
       "instruction_template": {
         "relpath": "configs/probes/slurp_psd_slot_role_grounding_v1.txt",
-        "sha256": "1a6cf6580cc7f8beca7a1aed30a51e310156046622f90e510c2c2f9adba5a712"
+        "sha256": "59221ce0ba7feb0da108499aa870a9f41dae4c5e892e6a1ed7e74a5611a0b254"
       },
       "instruction_only_rfc6902_patch": "configs/evaluation/psd-node-prompt-candidates-v1/slot-instruction.patch.json",
       "template_parent_pin": {
-        "relpath": "configs/probes/slurp_psd_reference_b_v1.txt",
-        "sha256": "82cb726f64e36400f867790c2f947782c59c64f680fd489aebf41944c8eaffeb"
-      },
-      "schema_example_parent": {
-        "relpath": "configs/evaluation/psd-reference-prompts-v1/b-workload.json",
-        "sha256": "7d12ead483be65acbde17922615c3c87c083e47ae55d9fbf2cdb6a097ef7966d"
+        "relpath": "configs/probes/slurp_native_candidate_slot_shared_v1.txt",
+        "sha256": "14003571e56eefaa7b6d36a3167f13763238dcddf0e129e7300522988725afa5"
       },
       "semantic_delta_sentences": [
         "The intent bindings on a slot card describe a possible semantic role, not a required field or proof that its value was spoken; extract a value only when the original audio expresses that role for the current candidate.",
@@ -59,18 +61,28 @@
         "Preserve every supported mention, including ordinary words that really express a date, time, relation, mode or description; do not require a proper name or discard a real value because its intent binding is rare or absent.",
         "An alternative candidate is a condition for interpreting the same audio, not an extra fact or a request to fill its usual slots; when no value is supported keep that candidate row with entities: [], and record unresolved uncertainty without manufacturing a filler."
       ],
-      "template_parent_exact_prefix": true
+      "template_parent_exact_prefix": true,
+      "derived_workload": {
+        "relpath": "configs/evaluation/psd-node-prompt-candidates-v1/slot-coverage-on-workload.json",
+        "sha256": "19aa75eafecce54162c3b56a166636de259fcbbfd4c7a8c593a1ff32c416bf7a"
+      },
+      "allowed_changes": [
+        "/slot_policy/instruction_template",
+        "/name",
+        "/run_id"
+      ],
+      "runtime_effects_measured": false
     }
   ],
-  "application": "After a complete coverage parent is selected and pinned, apply exactly one matching instruction patch to a copy of that full saea-intent-slot-workload-v1 object; preserve effective thinking/decoding and all other scientific fields. Give the new run a separate identity during standard staging. Never load this binding metadata or the patch array as a workload.",
-  "required_parent_conditions": [
-    "enhanced-p-slot-decision, max_candidates=3, same FoldA1080 roster and original audio",
-    "complete coverage baseline selected by main thread; OFF/ON not selected here",
-    "v4g retained; knowledge/retrieval k/candidates/other nodes/recovery/decoding unchanged",
-    "effective target thinking copied exactly from chosen parent: do not paste the example OFF policy onto an ON parent",
-    "target instruction pin must equal template_parent_pin; if not, review/rebase the text delta before changing the test",
-    "all upstream/source/roster/snapshot hashes remain bound; no example admission"
+  "application": "Concrete *-coverage-on-workload.json files load with existing NodeWorkload. Each differs from pinned parent only in target instruction_template and independent name/run_id. For another OFF/ON parent, first pin its exact bytes, require matching normal-node template, apply the instruction-only RFC6902 patch, preserve its thinking and all other fields, and assign a separate identity. No common-baseline prompt swap.",
+  "fixed": [
+    "FoldA1080 original IDs/order/audio/material/population",
+    "all original KB/retrieval k, max_candidates=3 and P->Slot->Decision graph",
+    "all other normal-node instructions",
+    "whole recovery pipeline, P/Slot repair template paths+hashes and shared budgets",
+    "effective thinking/decoding, runtime binding, execution level and v4g inherited unchanged from parent"
   ],
+  "reference_A_B_compact_added_to_normal_prompt": false,
   "new_framework": false,
   "production_changes": false,
   "new_model_teacher_fit_score_calls": 0
