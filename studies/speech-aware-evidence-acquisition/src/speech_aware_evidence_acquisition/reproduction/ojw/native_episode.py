@@ -1417,7 +1417,9 @@ def _seal_refusal_terminal_outcome(
         answer_only = parent.text == "" and completion.agent_contact_id == parent.agent_contact_id + ":answer-only"
         length_repair = (checkpoint.stage == "perception" and parent.finish_reason == "length" and bool(parent.text)
                          and completion.agent_contact_id == parent.agent_contact_id + ":perception-length-repair")
-        if parent.sample_id != completion.sample_id or not (answer_only or length_repair):
+        slot_repair = (checkpoint.stage == "slot" and parent.finish_reason == "length" and bool(parent.text)
+                       and completion.agent_contact_id == parent.agent_contact_id + ":slot-length-repair")
+        if parent.sample_id != completion.sample_id or not (answer_only or length_repair or slot_repair):
             raise NativeEpisodeError("invalid seal refusal recovery parent")
         interrupted_contacts.insert(0, {
             "agent_contact_id": parent.agent_contact_id, "request_id": parent.request_id,

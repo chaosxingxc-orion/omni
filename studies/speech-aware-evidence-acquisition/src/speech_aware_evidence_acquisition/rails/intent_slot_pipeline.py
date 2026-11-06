@@ -42,6 +42,22 @@ def load_repair_template(repo, config):
     return text
 
 
+
+def slot_repair_template_pin(config):
+    return repair_template_pin({"perception_repair_template": config["slot_length_recovery"]["template"]})
+
+
+def load_slot_repair_template(repo, config):
+    return load_repair_template(repo, {"perception_repair_template": slot_repair_template_pin(config)})
+
+
+def slot_repair_decoding(decoding, policy):
+    out = dict(decoding)
+    out.pop("thinking_budget_tokens", None)
+    out["chat_template_kwargs"] = {"enable_thinking": False}
+    out["max_tokens"] = policy["answer_tokens"]
+    return out
+
 def canonical(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
@@ -52,7 +68,7 @@ def digest(value):
 
 def parse_config(raw):
     fields = {"schema", "slot_mode", "max_candidates", "candidate_outside_recovery"}
-    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery", "reference_normalizer", "perception_length_recovery", "perception_repair_template"}:
+    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery", "reference_normalizer", "perception_length_recovery", "perception_repair_template", "slot_length_recovery"}:
         raise ValueError("intent_slot_pipeline requires schema, slot_mode, max_candidates and candidate_outside_recovery")
     if raw["schema"] not in {SCHEMA, SCHEMA_V2} or raw["slot_mode"] not in {"batched", "per_candidate"}:
         raise ValueError("unsupported intent-slot graph/schema version or slot mode")
@@ -81,6 +97,14 @@ def parse_config(raw):
         repair_template_pin(raw)
     if "perception_length_recovery" in raw and (raw["perception_length_recovery"] != "compact-reask-v1" or "coverage_recovery" not in raw):
         raise ValueError("Perception length recovery requires shared coverage budget")
+    if "slot_length_recovery" in raw:
+        policy = raw["slot_length_recovery"]
+        if ("coverage_recovery" not in raw or not isinstance(policy, Mapping)
+                or set(policy) != {"strategy", "answer_tokens", "template"}
+                or policy["strategy"] != "answer-only-compact-v1"
+                or type(policy["answer_tokens"]) is not int or not 1 <= policy["answer_tokens"] <= 4096):
+            raise ValueError("invalid bounded Slot length recovery")
+        slot_repair_template_pin(raw)
     if "coverage_recovery" in raw:
         recovery = raw["coverage_recovery"]
         if (raw.get("node_rails") != "sdk-handoff-v1" or raw["slot_mode"] != "batched" or raw["max_candidates"] != 3
@@ -260,7 +284,9 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                 is_length_repair = (visit.get("stage") == "perception" and
                     config.get("perception_length_recovery") == "compact-reask-v1" and
                     child.get("agent_contact_id") == parent.get("agent_contact_id", "") + ":perception-length-repair")
-                if ((not is_length_repair and (config.get("answer_only_fallback") != "budgeted-v1"
+                is_slot_repair = (visit.get("stage") == "slot" and config.get("slot_length_recovery")
+                    and child.get("agent_contact_id") == parent.get("agent_contact_id", "") + ":slot-length-repair")
+                if ((not is_length_repair and not is_slot_repair and (config.get("answer_only_fallback") != "budgeted-v1"
                         or child.get("agent_contact_id") != parent.get("agent_contact_id", "") + ":answer-only"))
                         or execution.get("final_contact") != child):
                     raise ValueError("invalid answer-only parent-child identity")
@@ -290,12 +316,12 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                             "org_recovery_parent_request_id": parent["request_id"],
                             "org_recovery_parent_response_sha256": parent["response_sha256"],
                             "org_recovery_child_contact_id": child["agent_contact_id"]}
-                    if is_length_repair:
+                    if is_length_repair or is_slot_repair:
                         from .solver_protocol_audit import canonical_request
                         original, fmt = canonical_request(parent_payload)
                         revised, revised_fmt = canonical_request(child_payload)
                         suffix = relation.get("org_recovery_template_text")
-                        pin = repair_template_pin(config)
+                        pin = slot_repair_template_pin(config) if is_slot_repair else repair_template_pin(config)
                         if (not isinstance(suffix, str) or not suffix.strip()
                                 or hashlib.sha256(suffix.encode("utf-8")).hexdigest() != pin["sha256"]
                                 or relation.get("org_recovery_template") != pin):
@@ -304,12 +330,17 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                         control = json.loads(original["history"][-1]["content"])
                         control["messages"][0]["content"] += suffix
                         original["history"][-1]["content"] = canonical(control)
-                        if original != revised or fmt != revised_fmt or child_decoding != parent_decoding:
+                        if is_slot_repair:
+                            if type(parent_decoding.get("max_tokens")) is not int or config["slot_length_recovery"]["answer_tokens"] > parent_decoding["max_tokens"]:
+                                raise ValueError("Slot repair answer budget exceeds parent cap")
+                            original["decoding_params"] = slot_repair_decoding(original["decoding_params"], config["slot_length_recovery"])
+                        expected_decoding = slot_repair_decoding(parent_decoding, config["slot_length_recovery"]) if is_slot_repair else parent_decoding
+                        if original != revised or fmt != revised_fmt or child_decoding != expected_decoding:
                             raise ValueError("Perception repair changed original input or decoding: " + str([key for key in set(original) | set(revised) if original.get(key) != revised.get(key)]))
                         wire = trace_records.get(parent["request_id"] + "/wire-response", {})
                         if wire.get("finish_reason") != "length" or not parent_response.get("text"):
                             raise ValueError("Perception repair parent is not known nonempty length")
-                        expected_relation.update(org_recovery_policy="compact-reask-v1", org_recovery_reason="length",
+                        expected_relation.update(org_recovery_policy="answer-only-compact-v1" if is_slot_repair else "compact-reask-v1", org_recovery_reason="length",
                                                  org_recovery_template=pin, org_recovery_template_text=suffix)
                     elif (fallback_reserve(parent_decoding) is None or child_decoding != answer_only_decoding(parent_decoding)
                           or parent_response.get("text") != ""):

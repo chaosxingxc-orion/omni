@@ -695,7 +695,9 @@ def _seal_refusal_delivery(receipt, visits, *, error_type):
                 or rejected.get("agent_contact_id") not in (
                     interrupted_contacts[0].get("agent_contact_id", "") + ":answer-only",
                     *([interrupted_contacts[0].get("agent_contact_id", "") + ":perception-length-repair"]
-                      if disposition["stage"] == "perception" else []))
+                      if disposition["stage"] == "perception" else [])
+                    + ([interrupted_contacts[0].get("agent_contact_id", "") + ":slot-length-repair"]
+                       if disposition["stage"] == "slot" else []))
                 or interrupted_contacts[-1] != rejected):
             _raise(error_type, "seal-refusal recovery contact chain is invalid")
         _checked_contact(interrupted_contacts[0], error_type=error_type)

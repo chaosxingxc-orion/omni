@@ -1,0 +1,23 @@
+{
+  "protocol_version": "v2",
+  "node_rails": "sdk-handoff-v1",
+  "answer_only_fallback": "budgeted-v1",
+  "coverage_recovery": {
+    "strategy": "complete-original-candidate-set-v1",
+    "max_extra_contacts": 3
+  },
+  "perception_length_recovery": "compact-reask-v1",
+  "reference_normalizer": "quarantine-unsupplied-v1",
+  "perception_repair_template": {
+    "relpath": "configs/probes/slurp_perception_length_repair_v1.txt",
+    "sha256": "e9baa301ffa49bfc067d9571e517e7228d2ea48171a9c18448184c4f79a74507"
+  },
+  "slot_length_recovery": {
+    "strategy": "answer-only-compact-v1",
+    "answer_tokens": 4096,
+    "template": {
+      "relpath": "configs/probes/slurp_slot_length_repair_v1.txt",
+      "sha256": "29fe78371df29113791a5ebb0373ea0d8c799456a0d154a00f23b2346b0eaba0"
+    }
+  }
+}

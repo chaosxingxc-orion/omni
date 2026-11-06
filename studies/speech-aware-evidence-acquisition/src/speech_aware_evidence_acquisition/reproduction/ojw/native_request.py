@@ -445,6 +445,7 @@ class MeteredNativeSpeechRequest:
         binding_override: "NativeRoleSpeechBinding | None" = None,
         answer_only: bool = False,
         perception_length_repair: str | None = None,
+        slot_repair_policy: Mapping[str, object] | None = None,
     ) -> PreparedNativeRoleContact:
         """Compose one immutable request from this caller's task state.
 
@@ -587,6 +588,11 @@ class MeteredNativeSpeechRequest:
                 decoding = answer_only_decoding(decoding)
             except ReasoningKnobError as error:
                 raise NativeSpeechRequestError(str(error)) from error
+        if slot_repair_policy is not None:
+            from ...rails.intent_slot_pipeline import slot_repair_decoding
+            if type(decoding.get("max_tokens")) is not int or slot_repair_policy["answer_tokens"] > decoding["max_tokens"]:
+                raise NativeSpeechRequestError("Slot repair answer budget exceeds parent completion cap")
+            decoding = slot_repair_decoding(decoding, slot_repair_policy)
         kwargs["decoding_params"] = decoding
         # The control envelope restates the sequence against the WIRE system text (``native_framework_history`` requires ``messages[0]`` to equal the payload's
         # ``task_instruction``); for a contact with ``framework_system`` set that is the longer wire text, for every other contact the framework's own.

@@ -489,8 +489,8 @@ def analyze_verified_native_episode_statistics(
                             # contact; the terminal disposition is then a
                             # seal refusal, while the final child is stop.
                             repair_parent = (
-                                stage == "perception" and contact_index > 0
-                                and contacts[contact_index - 1]["agent_contact_id"] + ":perception-length-repair"
+                                stage in {"perception", "slot"} and contact_index > 0
+                                and contacts[contact_index - 1]["agent_contact_id"] + (":slot-length-repair" if stage == "slot" else ":perception-length-repair")
                                 == item["agent_contact_id"]
                                 and wire_reason == "stop"
                                 and disposition.get("reason") == "seal_refusal"
@@ -502,8 +502,8 @@ def analyze_verified_native_episode_statistics(
                     elif wire_reason in {"length", "content_filter"}:
                         # A known parent contact may itself be finite when the
                         # final child is the explicit bounded repair contact.
-                        parent_child = item["agent_contact_id"] + ":perception-length-repair"
-                        if (stage != "perception" or contacts[-1]["agent_contact_id"] != parent_child):
+                        parent_child = item["agent_contact_id"] + (":slot-length-repair" if stage == "slot" else ":perception-length-repair")
+                        if (stage not in {"perception", "slot"} or contacts[-1]["agent_contact_id"] != parent_child):
                             raise NativeEpisodeDiagnosticError(
                                 "only the interrupted role final contact may have a finite wire finish reason"
                             )

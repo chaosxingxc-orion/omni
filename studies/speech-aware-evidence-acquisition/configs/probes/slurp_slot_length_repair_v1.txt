@@ -1,0 +1,3 @@
+
+
+The previous Slot response reached the length limit before completion. Use the original audio and supplied evidence. Return one complete compact JSON object for every requested candidate_id with all required fields. Preserve audio-supported entities; do not invent or delete candidates, labels, evidence, or entities. Cite only supplied evidence IDs.

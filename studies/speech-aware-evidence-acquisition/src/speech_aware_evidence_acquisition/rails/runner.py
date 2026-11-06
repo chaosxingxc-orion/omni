@@ -2699,6 +2699,12 @@ async def _invoke_native_role_episode(
         if binding.repo_root is None:
             raise RailsRunnerError("Perception repair requires a pinned repository template")
         repair_template = load_repair_template(binding.repo_root, pipeline_config)
+    slot_repair_template = None
+    if pipeline_config and pipeline_config.get("slot_length_recovery"):
+        from .intent_slot_pipeline import load_slot_repair_template, slot_repair_template_pin
+        if binding.repo_root is None:
+            raise RailsRunnerError("Slot repair requires a pinned repository template")
+        slot_repair_template = load_slot_repair_template(binding.repo_root, pipeline_config)
     coverage_state = {"result": None, "missing": None, "slot_count": 0, "source": None, "extra_contacts": 0}
     slot_replay = getattr(core_client, "_contact_replay", None)
     slot_successor = (slot_replay.slot_pending(state.prepared.sample.sample_id)
@@ -6570,7 +6576,7 @@ async def _invoke_native_role_episode(
                 set_current_trace_buffer(trace)
                 try:
                     dispatch_entered = True
-                    managed = bool(coverage_policy and (pipeline_config["answer_only_fallback"] == "budgeted-v1" or pipeline_config.get("perception_length_recovery")))
+                    managed = bool(coverage_policy and (pipeline_config["answer_only_fallback"] == "budgeted-v1" or pipeline_config.get("perception_length_recovery") or pipeline_config.get("slot_length_recovery")))
                     dispatch_slot = slot_id if ready_request_runner is not None else None
                     completion = adapter_request.dispatch(prepared, id_slot=dispatch_slot, managed_recovery=managed)
                     recovery_parent = None
@@ -6583,7 +6589,11 @@ async def _invoke_native_role_episode(
                             and role_configs[request.role_id].role_kind == "perception"
                             and completion.finish_reason == "length" and completion.text
                             and not completion.tool_calls and reserve is None)
-                        if (reserve is not None or length_repair) and reserve_coverage_extra():
+                        slot_length_repair = bool(pipeline_config.get("slot_length_recovery")
+                            and role_configs[request.role_id].role_kind == "slot"
+                            and completion.finish_reason == "length" and completion.text
+                            and not completion.tool_calls and reserve is None)
+                        if (reserve is not None or length_repair or slot_length_repair) and reserve_coverage_extra():
                             from ..reproduction.ojw.native_roles import NativeRecoveryCompletion
                             parent = completion
                             parent.assert_binding(sample_id=request.context.sample_id,
@@ -6602,7 +6612,7 @@ async def _invoke_native_role_episode(
                                 speech_packet_sha256=before.query_state.speech_packet_sha256,
                                 slot_id=slot_id, response_sha256=parent.response_text_sha256))
                             state.response_sha256s.append(parent.response_text_sha256)
-                            child_suffix = ":perception-length-repair" if length_repair else ":answer-only"
+                            child_suffix = ":slot-length-repair" if slot_length_repair else ":perception-length-repair" if length_repair else ":answer-only"
                             child_id = request.context.agent_contact_id + child_suffix
                             if state.scheduled_contacts >= config.max_contacts or child_id in state.seen_contact_ids:
                                 raise RailsRunnerError("answer-only recovery exceeds contact ceiling or repeats identity")
@@ -6617,7 +6627,9 @@ async def _invoke_native_role_episode(
                             rollout_contact_index = child_index
                             set_current_trace_buffer(child_trace)
                             result_prepared = adapter_request.prepare(result_request, binding_override=prepared.binding,
-                                answer_only=not length_repair, perception_length_repair=repair_template if length_repair else None)
+                                answer_only=not (length_repair or slot_length_repair),
+                                perception_length_repair=slot_repair_template if slot_length_repair else repair_template if length_repair else None,
+                                slot_repair_policy=pipeline_config["slot_length_recovery"] if slot_length_repair else None)
                             fit_kwargs = ({"prompt_limit_tokens": context_fit_budget.prompt_limit_tokens}
                                 if context_fit_budget is not None and context_fit_budget.measured_by_request_gate else {})
                             fit_count = binding.request_gate(result_prepared.request, **fit_kwargs)
@@ -6635,7 +6647,10 @@ async def _invoke_native_role_episode(
                                 "org_recovery_child_contact_id": child_id,
                                 **({"org_recovery_policy": "compact-reask-v1", "org_recovery_reason": "length",
                                     "org_recovery_template": repair_template_pin(pipeline_config),
-                                    "org_recovery_template_text": repair_template} if length_repair else {})})
+                                    "org_recovery_template_text": repair_template} if length_repair else
+                                   {"org_recovery_policy": "answer-only-compact-v1", "org_recovery_reason": "length",
+                                    "org_recovery_template": slot_repair_template_pin(pipeline_config),
+                                    "org_recovery_template_text": slot_repair_template} if slot_length_repair else {})})
                             completion = adapter_request.dispatch(result_prepared, id_slot=dispatch_slot, managed_recovery=True)
                             recovery_parent = parent
                             recovery_parents[completion.request_id] = parent

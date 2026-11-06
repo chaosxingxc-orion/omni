@@ -1,0 +1,42 @@
+{
+  "schema": "psd-slot-length-recovery-result-v1",
+  "base_commit": "3dda77c43d0de8382988bd547ecbfb2ef90f0f31",
+  "case_pins": [
+    {
+      "seq": 152,
+      "request_sha256": "2553fa6475813dc53e5fcfbf5988b0dafe46ed15d5be495282a1c894759793d5",
+      "response_text_sha256": "eb60bcd800f78a8597fac12fcb1013c6a7ee75cfc2a10011c03049cce7ad25be",
+      "chars": 1071,
+      "trailing_whitespace": 982,
+      "valid_json": false
+    },
+    {
+      "seq": 188,
+      "request_sha256": "1bd5e2963e13ac4b852955b1c457dc0d601032656384a25f14ead2bfea900b1b",
+      "response_text_sha256": "73ec65ae072f05c46fdb015339b28e2e1c261c12b589080ff0df50088567a3d7",
+      "chars": 3327,
+      "trailing_whitespace": 6,
+      "valid_json": false
+    }
+  ],
+  "test": "136 passed, 5 warnings, 32.86s",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "files": {
+    "scripts/analysis/intent_slot_workload.py": "dfb34f2f82832d13a6e4cf7711e78b0101ddf00a60c1934c7ca868d1ff9bc777",
+    "src/speech_aware_evidence_acquisition/analysis/native_episode_diagnostics.py": "1cccae4eea3a865dd3be109487384abf1726deda40e2569ef89ed51bdb4cacec",
+    "src/speech_aware_evidence_acquisition/core/flight/native_recovery.py": "86ad3e028eb0e8cb3afa68c99db07eb636d4f3834f745d968ab3ebb817d5152a",
+    "src/speech_aware_evidence_acquisition/rails/intent_slot_pipeline.py": "fe26129b127910b335f5f1a2963f0306a14125f1e6181fc853d0bd89d10ee583",
+    "src/speech_aware_evidence_acquisition/rails/native_episode_receipt.py": "ba1b759fabf2abe6e60bc44192f3dbeff45c7c9d77ab02bf40f94fdbbd6f1456",
+    "src/speech_aware_evidence_acquisition/rails/runner.py": "a470bef78a6259cdb5ae45b1b6c376c7b50063cc4551aa7afff0960a873e9796",
+    "src/speech_aware_evidence_acquisition/reproduction/ojw/native_episode.py": "013594feb596930d2f517c3c723fa5f9c4b66400346a8c139c7bf23de724fa03",
+    "src/speech_aware_evidence_acquisition/reproduction/ojw/native_request.py": "13c110f27b1af13ae0d071960091d5c865de25bcfdaad5e4ab4f1b9750d9fbc8",
+    "tests/unit/test_intent_slot_runner.py": "9580d8b4863fbe5409488d93f227651ac1229ead8918423a341838db03480dee",
+    "configs/probes/slurp_slot_length_repair_v1.txt": "29fe78371df29113791a5ebb0373ea0d8c799456a0d154a00f23b2346b0eaba0",
+    "configs/examples/psd-slot-length-recovery-v1.json": "a944312ffdec04a138c18036568f8246789d731fc51b3c0119fa6fe4d7b21d02"
+  },
+  "real_model_calls": 0,
+  "teacher_calls": 0,
+  "real_fit_calls": 0,
+  "npu_calls": 0,
+  "real_fold_coverage_measured": false
+}

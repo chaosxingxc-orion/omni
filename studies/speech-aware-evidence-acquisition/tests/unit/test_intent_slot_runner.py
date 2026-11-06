@@ -1518,3 +1518,83 @@ def test_perception_repair_template_pin_rejects_mutation_and_escape(tmp_path):
     with pytest.raises(ValueError,match='pin differs'):load_repair_template(tmp_path,{'perception_repair_template':pin})
     pin['relpath']='configs/probes/../../secret'
     with pytest.raises(ValueError):load_repair_template(tmp_path,{'perception_repair_template':pin})
+
+
+def test_sdk_slot_nonempty_length_repair_preserves_candidates(tmp_path):
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    from test_native_episode_runner import _wire_response
+    h, policy = recovery_harness(tmp_path)
+    from pathlib import Path
+    h.repo_root=Path(__file__).resolve().parents[2]
+    policy.update(answer_only_fallback='off', slot_length_recovery={
+        'strategy':'answer-only-compact-v1','answer_tokens':64,
+        'template':{'relpath':'configs/probes/slurp_slot_length_repair_v1.txt',
+                    'sha256':'29fe78371df29113791a5ebb0373ea0d8c799456a0d154a00f23b2346b0eaba0'}},
+        coverage_recovery={'strategy':'complete-original-candidate-set-v1','max_extra_contacts':3})
+    h.config=replace(h.config,intent_slot_pipeline_json=canonical(policy))
+    original=h._output; calls=[]
+    def post(_url,body):
+        calls.append(json.loads(body)); n=len(calls)
+        if n==2:
+            response=json.loads(_wire_response('{"candidates":[{"candidate_id":"play_music"'+(' '*300)))
+            response['choices'][0]['finish_reason']='length';return json.dumps(response).encode()
+        if n==1: return _wire_response(original(('s1','perception',1,1)))
+        if n==3:
+            rows=[{'candidate_id':'play_music','entities':[{'type':'person','filler':'Alice'}],'evidence_refs':[],'unresolved_fields':[]},
+                  {'candidate_id':'play_radio','entities':[{'type':'person','filler':'Bob'}],'evidence_refs':[],'unresolved_fields':[]}]
+            return _wire_response(canonical({'candidates':rows}))
+        return _wire_response(canonical({'candidate_id':'play_radio'}))
+    h.post_override=post
+    h.transport._reasoning_content_guard='refuse-think-marker-in-content'
+    try:
+        summary=h.run(decoding_params={'temperature':0,'max_tokens':64,'thinking_budget_tokens':32,'chat_template_kwargs':{'enable_thinking':True}})
+        raw=_raw_native(h,solver_role={'max_iterations':1});raw['intent_slot_pipeline']=policy
+        rows=_runtime(h,summary,raw)._canonical_output_rows(h.client)
+    finally:cost=h.close()['cost']
+    records={rid:payload for _,rid,payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows),records)
+    assert cost['calls_used']==4 and len(h.fit_gate.receipts)==4
+    assert json.loads(rows[0]['text'])['entities']==[{'type':'person','filler':'Bob'}]
+    assert len(rows[0]['native_episode_receipt']['role_visits'][1]['execution_receipt']['contacts'])==2
+
+
+@pytest.mark.parametrize('failure', ['length','invalid','unknown'])
+def test_sdk_slot_length_repair_failure_custody(tmp_path, failure):
+    from pathlib import Path
+    from test_native_episode_runner import _wire_response
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    h,policy=recovery_harness(tmp_path); h.repo_root=Path(__file__).resolve().parents[2]
+    policy.update(answer_only_fallback='off',slot_length_recovery={'strategy':'answer-only-compact-v1','answer_tokens':64,
+        'template':{'relpath':'configs/probes/slurp_slot_length_repair_v1.txt','sha256':'29fe78371df29113791a5ebb0373ea0d8c799456a0d154a00f23b2346b0eaba0'}},
+        coverage_recovery={'strategy':'complete-original-candidate-set-v1','max_extra_contacts':3})
+    h.config=replace(h.config,intent_slot_pipeline_json=canonical(policy)); h.transport._reasoning_content_guard='refuse-think-marker-in-content'
+    original=h._output; calls=0
+    def post(_url,_body):
+        nonlocal calls
+        calls+=1
+        if calls==1:return _wire_response(original(('s1','perception',1,1)))
+        if calls==3 and failure=='unknown':raise RuntimeError('unknown child response')
+        response=json.loads(_wire_response('{"candidates":'+(' '*50)))
+        response['choices'][0]['finish_reason']='stop' if calls==3 and failure=='invalid' else 'length'
+        return json.dumps(response).encode()
+    h.post_override=post
+    try:
+        if failure=='unknown':
+            with pytest.raises(Exception):h.run(decoding_params={'temperature':0,'max_tokens':64,'thinking_budget_tokens':32,'chat_template_kwargs':{'enable_thinking':True}})
+            journal=h.client._adapter._contact_journal
+            intents=[json.loads(path.read_bytes()) for path in journal.root.glob('*.intent.json')]
+            states=[journal.inspect(item['request_id']) for item in intents]
+            assert sorted(item['state'] for item in states)==['observed','observed','unknown']
+        else:
+            summary=h.run(decoding_params={'temperature':0,'max_tokens':64,'thinking_budget_tokens':32,'chat_template_kwargs':{'enable_thinking':True}})
+            raw=_raw_native(h,solver_role={'max_iterations':1});raw['intent_slot_pipeline']=policy
+            rows=_runtime(h,summary,raw)._canonical_output_rows(h.client)
+            records={rid:payload for _,rid,payload in h.trace.records}
+            _verify_outputs_trace_binding(tuple(rows),records)
+            receipt=summary.results[0].native_episode_receipt
+            assert rows[0]['text']=='' and receipt['terminal_disposition']['reason']==('seal_refusal' if failure=='invalid' else 'finite_completion')
+            assert len(receipt['interrupted_role']['execution_receipt']['contacts'])==2
+    finally:cost=h.close()['cost']
+    assert calls==3 and cost['calls_used']>=2

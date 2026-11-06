@@ -45,10 +45,18 @@ class NodeWorkload(PairWorkload):
             if repair is None:
                 raise ValueError('Perception template requires recovery')
             repair_template_pin(pipeline)
+        slot_repair = pipeline.get('slot_length_recovery') if isinstance(pipeline, dict) else None
+        if slot_repair is not None:
+            from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import parse_config
+            probe = {'schema':'saea-intent-slot-pipeline-v2','slot_mode':'batched','max_candidates':3,
+                     'candidate_outside_recovery':False,'duplicate_candidate_policy':'group_v2',
+                     'node_rails':'sdk-handoff-v1','answer_only_fallback':pipeline.get('answer_only_fallback'),
+                     'coverage_recovery':pipeline.get('coverage_recovery'),'slot_length_recovery':slot_repair}
+            parse_config(probe)
         normalizer = pipeline.get('reference_normalizer') if isinstance(pipeline, dict) else None
         if normalizer is not None and normalizer != 'quarantine-unsupplied-v1':
             raise ValueError('unsupported reference normalizer')
-        base_pipeline = {k:v for k,v in pipeline.items() if k not in ('reference_normalizer', 'perception_length_recovery', 'perception_repair_template')} if isinstance(pipeline, dict) else pipeline
+        base_pipeline = {k:v for k,v in pipeline.items() if k not in ('reference_normalizer', 'perception_length_recovery', 'perception_repair_template', 'slot_length_recovery')} if isinstance(pipeline, dict) else pipeline
         recovery = base_pipeline.get('coverage_recovery') if isinstance(base_pipeline, dict) else None
         supported_recovery = (isinstance(recovery, dict)
             and set(base_pipeline) == set(legacy) | {'coverage_recovery'}
@@ -154,6 +162,10 @@ class NodeWorkload(PairWorkload):
                     from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import load_repair_template, repair_template_pin
                     load_repair_template(repo, pipeline)
                     base['native_episode']['intent_slot_pipeline']['perception_repair_template'] = repair_template_pin(pipeline)
+                if pipeline and pipeline.get('slot_length_recovery'):
+                    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import load_slot_repair_template
+                    load_slot_repair_template(repo, pipeline)
+                    base['native_episode']['intent_slot_pipeline']['slot_length_recovery'] = copy.deepcopy(pipeline['slot_length_recovery'])
                 if pipeline and pipeline.get('reference_normalizer'):
                     base['native_episode']['intent_slot_pipeline']['reference_normalizer'] = pipeline['reference_normalizer']
                 if pipeline and pipeline.get('coverage_recovery'):

@@ -1,0 +1,9 @@
+# PSD Slot length 恢复
+
+两条固定ON样本的Slot响应都未形成完整JSON，不能将length残片作为结果封存：seq152（请求 `2553fa6475813dc53e5fcfbf5988b0dafe46ed15d5be495282a1c894759793d5`，响应 `eb60bcd800f78a8597fac12fcb1013c6a7ee75cfc2a10011c03049cce7ad25be`）1071字符，尾随空白982；seq188（请求 `1bd5e2963e13ac4b852955b1c457dc0d601032656384a25f14ead2bfea900b1b`，响应 `73ec65ae072f05c46fdb015339b28e2e1c261c12b589080ff0df50088567a3d7`）3327字符，在候选字段中截断，尾随空白6。二者各4096 completion、3093 reasoning，分别供给30/41项；部分答案不可当完整业务结果。长空白与thinking占预算均有直接观测，但不能单凭两例确定grammar或模型机制。读取仅定位固定checkpoint的两行，不重新采集模型或扫描其他轨迹，原始内容不发布。
+
+新增默认关闭的 `slot_length_recovery` 配置；明确指定 `strategy: answer-only-compact-v1`、`answer_tokens` 和 `template:{relpath,sha256}`，须启用已有 `coverage_recovery` 共享extra池。示例 `configs/examples/psd-slot-length-recovery-v1.json`；模板SHA `29fe78371df29113791a5ebb0373ea0d8c799456a0d154a00f23b2346b0eaba0`。只针对已知非空Slot length进行一次真实补问：保留原音频、原候选、实际原供给及schema；增加有界诊断，关闭thinking、以显式answer_tokens替代父max_tokens，不得超过父上限，其余解码不变。每次新请求单独FIT及计费，parent/child、请求、响应、模板和解码变化在原生trace及bundle重算；不补默认标签或实体，不重发UNKNOWN。旧空thinking fallback与Perception修复共用预算。跨attempt仍拒绝，fresh资格保留。
+
+真实SDK加模拟传输/音频/tokenizer，固定镜像 `sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026`，CPU/断网/源码RO：`/opt/saea-venv/bin/python -m pytest -q --tb=short --show-capture=no -p no:cacheprovider /src/tests/unit/test_intent_slot_runner.py /src/tests/unit/test_intent_slot_pipeline.py /src/tests/unit/test_intent_slot_workload.py /src/tests/unit/test_native_episode_diagnostics.py --basetemp=/tmp/pytest`，`PYTHONPATH=/src/src:/src/scripts/analysis`；结果136 passed、5 warnings、32.86秒。包含脚本化Slot length→完整两候选→Decision及bundle核验、子length/invalid/UNKNOWN、现有Perception/Slot恢复回归。没有业务模型、教师、真实FIT或NPU调用。无真实注册或完整Fold结果，不能称达到100%。
+
+seq392的stop空实体由已有逐候选classify及预算化补问处理，本次未增加填值。剩余错误含补问仍截断、空响应、P schema失败、语义错误、漏候选、UNKNOWN和不可恢复祖先；需在独立注册后以原Fold A1080完整分母报告官方准确率、全部历史成本、候选和实体保留及有效回答吞吐，并只与已封存P→Solver历史结果按口径对齐，不重跑旧图。
