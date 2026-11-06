@@ -5692,8 +5692,33 @@ async def _invoke_native_role_episode(
                 error.seal_refusal_parent = recovery_parents[completion.request_id]
             raise
         from .candidate_handoff import normalized_response
-        normalized_node_text = (pending["source"].content if report is not None else
-            pending["source"].content)
+        # Rebuild from the metered response and this visit's original inventory;
+        # do not compare the sealed state to itself.
+        reconstructed_text = completion.text
+        context_for_replay = visits[phase_id]["intent_slot_context"]
+        if pipeline_config.get("reference_normalizer") and kind in ("perception", "slot"):
+            from .intent_slot_pipeline import normalize_evidence_references
+            reconstructed_text, _ = normalize_evidence_references(
+                completion.text, context_for_replay["evidence_inventory"],
+                [] if kind == "perception" else [row["candidate_id"] for row in context_for_replay["candidates"]],
+                policy=pipeline_config.get("evidence_policy", "strict"),
+                normalizer=pipeline_config["reference_normalizer"])
+        if report is not None:
+            from .adapters.slurp_intent_slot import classify_slot_coverage
+            try:
+                replay_report = classify_slot_coverage(text=reconstructed_text,
+                    response_format=visits[phase_id]["material"].response_format,
+                    context=context_for_replay, config=pipeline_config)
+            except (ValueError, KeyError, TypeError):
+                if not predecessor_refusal:
+                    raise
+                replay_report = {"valid": {}, "missing": [r["candidate_id"] for r in context_for_replay["candidates"]], "invalid": {}}
+            if replay_report != report:
+                raise RailsRunnerError("candidate coverage changed before settlement")
+            normalized_node_text = json.dumps({"candidates": list(replay_report["valid"].values())},
+                ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        else:
+            normalized_node_text = normalized_response(kind, reconstructed_text, context_for_replay, pipeline_config)
         source_hash = hashlib.sha256(normalized_node_text.encode("utf-8")).hexdigest()
         if pending["source"].content != normalized_node_text:
             raise RailsRunnerError("candidate normalized source changed before settlement")
