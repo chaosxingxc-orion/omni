@@ -32,14 +32,23 @@
       "id": "baseline-on",
       "resource": "NPU-B",
       "depends_on": [],
-      "status": "generation_sealed_official_cpu_recovery_running",
+      "status": "generation_and_official_scoring_finalized_verified",
       "rows": 1080,
       "completed_rows": 1080,
       "completed_rows_include_early_abstentions": true,
       "structural_task_answers": 1037,
       "observed_at_utc": "2026-11-06T17:46:28Z",
       "structural_task_answers_observed_at_utc": "2026-11-06T17:46:28Z",
-      "empty_answers": 43
+      "empty_answers": 43,
+      "quality": {
+        "intent_accuracy": 0.8203703703703704,
+        "slu_f1": 0.7121961643088053,
+        "strict_accuracy": 0.5370370370370371,
+        "strict_correct": 580,
+        "strict_rule": "scenario_action_exact == 1 and slot_f1_exact_fp == 0 and slot_f1_exact_fn == 0",
+        "scenario_accuracy": 0.8564814814814815,
+        "span_f1": 0.6219448777951118
+      }
     },
     {
       "id": "baseline-selection",
@@ -48,7 +57,7 @@
         "baseline-off",
         "baseline-on"
       ],
-      "status": "off_score_verified_on_score_and_paired_pending"
+      "status": "both_scores_verified_paired_execution_assigned"
     },
     {
       "id": "fold-b-confirmation",
@@ -586,7 +595,7 @@
       "id": "on-score-recovery",
       "resource": "CPU",
       "depends_on": [],
-      "status": "official_cpu_recovery_running",
+      "status": "official_finalized_verified_no_model_replay",
       "scope": "own terminal and pins required; reuse official tool; do not replay inference"
     },
     {
@@ -596,14 +605,14 @@
         "off-node-answer-audit",
         "off-score-recovery"
       ],
-      "status": "analysis_cli_live_targeted_normalizer_counterfactual",
+      "status": "complete_report_accepted_retain_normalizer",
       "scope": "recover known pre-normalizer responses; independent CPU diagnostic comparison; no model calls"
     },
     {
       "id": "complete-coverage-on-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "stage_prepare_register_reported_admission_retry_correct_resident",
+      "status": "admitted_ready_independently_verified",
       "source": "2586419b",
       "scope": "same complete recovery package, FoldA1080 k8 SlotON C64"
     },
@@ -613,7 +622,7 @@
       "depends_on": [
         "complete-coverage-on-ready"
       ],
-      "status": "not_ready_not_queued",
+      "status": "native_queue_armed_waiting_k16_on_generation_release",
       "rows": 1080,
       "runtime_predecessor": "E5 ON generation-released"
     },
@@ -623,7 +632,7 @@
       "depends_on": [
         "off-semantic-gap-analysis"
       ],
-      "status": "same_cli_followup_scheduled_not_delivered",
+      "status": "same_cli_analysis_running",
       "scope": "at most two evidence-backed P/Slot/Decision prompt candidates; fixed KB and normalizer; no model calls"
     }
   ],

@@ -1,0 +1,29 @@
+{
+  "status": "FINALIZED_VERIFIED",
+  "denominator": 1080,
+  "intent_correct": 886,
+  "metrics": {
+    "intent_accuracy": 0.8203703703703704,
+    "slu_f1": 0.7121961643088053,
+    "strict_accuracy": 0.5370370370370371,
+    "strict_correct": 580,
+    "strict_rule": "scenario_action_exact == 1 and slot_f1_exact_fp == 0 and slot_f1_exact_fn == 0",
+    "scenario_accuracy": 0.8564814814814815,
+    "span_f1": 0.6219448777951118
+  },
+  "score_sha256": "b9d2f4b8c882d2e50d2c2ff5fc6f688e627cb7e9e8e82382592a06db4b5e25f1",
+  "generation_manifest_sha256": "09db5ed3a0f7afdd194a1ae5338a45226cd8759ed47088e6c6bdd972ac511272",
+  "finalized_manifest_sha256": "726404c30ae1be6e01a97ce60c052f9df378503bbf471837513001e77da12e81",
+  "evaluator_commit": "8eb16545762be97ace75334109d73824217311f1",
+  "official_port_identity": true,
+  "new_model_calls_for_scoring": 0,
+  "empty_answers": 43,
+  "structurally_complete_answers": 1037,
+  "coverage_scope": "ON structural audit; not full legal-contract audit or semantic correctness",
+  "comparison_scope": "Same Fold A roster; Slot thinking and answer/reasoning allocation differ together; paired analysis pending",
+  "generation_cost": {
+    "calls_used": 3161,
+    "prompt_tokens_total": 33794650,
+    "completion_tokens_total": 4704160
+  }
+}
