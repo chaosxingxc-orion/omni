@@ -341,7 +341,7 @@
     },
     {
       "id": "native-successor-queue-preparation",
-      "status": "cli_deferred_after_construction_integration",
+      "status": "archived_held_inputs_current_session_rebinding_in_progress",
       "targets": [
         "construction-k2",
         "fold-b-confirmation"
@@ -350,7 +350,7 @@
     },
     {
       "id": "ace-slot-recipe-preparation",
-      "status": "cli_running",
+      "status": "merged_recipe_fixture_validated_real_evidence_pending",
       "targets": [
         "E6"
       ],

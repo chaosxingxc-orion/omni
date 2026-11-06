@@ -21,13 +21,13 @@
 |回答恢复|共享预算、一次后继正式receipt/加载器/SDK/bundle组合已合main，207项相关集成通过|仅单次有费用前驱；多代明确拒绝，未部署；不阻塞现有基线|
 |GEPA|Slot/Decision适配已有；两节点真实seed/contract已交付并核对11份文件|真实学习轨迹、教师提案与收益尚未完成，见[准备结果](PSD-GEPA-Seed-Readiness.md)|
 |TF-GRPO|节点经验消费、参考多阶段和融合路径、父经验继承已合main，独立143项测试通过|同策略K轨迹采集与真实学习尚未完成|
-|知识卡适配|候选快照接入Slot已合main，独立95项测试通过|不等于完整ACE迭代，更不等于精度提升|
-|构建池采集|625/K2两成员已完成一版真实stage/prepare/register；发现查询来源凭据还指Fold A后，已修为construction来源|修正来源后的两成员均已完成CPU链；未准入、未生成；正在与最新main集成|
+|知识卡适配|候选快照接入Slot已有；[ACE启发单卡配方](PSD-ACE-Slot-Recipe.md)及新CLI回归已合main|待真实H1轨迹和教师响应，不是完整ACE迭代或精度收益|
+|构建池采集|625/K2两成员已完成一版真实stage/prepare/register；发现查询来源凭据还指Fold A后，已修为construction来源|修正来源后的两成员均已完成CPU链；未准入、未生成；已集成main；旧session需重绑，条件候选的CPU准备继续|
 |Reflexion|保留既有研究与参考实现|当前PSD适配及跨题收益待验证|
 
 不同测试数对应不同功能范围，不相加作为系统覆盖率。新适配代码不会热改当前运行release；可运行候选通过独立版本进入下一批任务。
 
-当前三个Codex CLI并行：①修正启动外部配置、接续两TP4；②construction与最新main集成，完成后自动接续原生后继队列配置准备；③GEPA真实seed/contract交付后，转为ACE单卡编辑模板与输入配方。均通过CLI子进程执行，文件报告交接。主线程负责规划、审查、整合与用户沟通。
+当前三个Codex CLI并行：①修正启动外部配置、接续两TP4；②construction与最新main集成，完成后自动接续原生后继队列配置准备；③GEPA真实seed/contract与ACE单卡配方均已交付；当前复用construction执行者修正旧session并准备新身份。均通过CLI子进程执行，文件报告交接。主线程负责规划、审查、整合与用户沟通。
 
 k16配置已合main，两个分支各完成1080/1080条真实CPU stage/prepare；固定镜像容器均exit0，准备分别87.03/85.51秒，约0.081/0.079秒/条。这是供给准备效率，不是推理速度。尚未register/FIT/admission，待基线选型只保留相应分支。construction625两成员也已完成修正来源后的stage/prepare/register，仍held；这些准备不等于原生NPU任务已入队。
 
