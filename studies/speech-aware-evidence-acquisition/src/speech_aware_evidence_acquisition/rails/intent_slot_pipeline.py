@@ -11,6 +11,10 @@ from collections.abc import Mapping
 
 SCHEMA = "saea-intent-slot-pipeline-v1"
 SCHEMA_V2 = "saea-intent-slot-pipeline-v2"
+PERCEPTION_REPAIR_SUFFIX = ("\n\nThe previous Perception response stopped at the length limit before completion. "
+    "Use the original audio and supplied evidence. Return one complete compact JSON object matching the required schema; "
+    "keep distinctions very short, use only supplied evidence IDs, and include every required field. "
+    "Do not invent labels, evidence, transcripts, or slot values.")
 
 
 def canonical(value):
@@ -23,7 +27,7 @@ def digest(value):
 
 def parse_config(raw):
     fields = {"schema", "slot_mode", "max_candidates", "candidate_outside_recovery"}
-    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery", "reference_normalizer"}:
+    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery", "reference_normalizer", "perception_length_recovery"}:
         raise ValueError("intent_slot_pipeline requires schema, slot_mode, max_candidates and candidate_outside_recovery")
     if raw["schema"] not in {SCHEMA, SCHEMA_V2} or raw["slot_mode"] not in {"batched", "per_candidate"}:
         raise ValueError("unsupported intent-slot graph/schema version or slot mode")
@@ -46,6 +50,8 @@ def parse_config(raw):
         raise ValueError("answer_only_fallback requires node rails")
     if "reference_normalizer" in raw and (raw.get("node_rails") != "sdk-handoff-v1" or raw["reference_normalizer"] != "quarantine-unsupplied-v1"):
         raise ValueError("unsupported reference normalizer")
+    if "perception_length_recovery" in raw and (raw["perception_length_recovery"] != "compact-reask-v1" or "coverage_recovery" not in raw):
+        raise ValueError("Perception length recovery requires shared coverage budget")
     if "coverage_recovery" in raw:
         recovery = raw["coverage_recovery"]
         if (raw.get("node_rails") != "sdk-handoff-v1" or raw["slot_mode"] != "batched" or raw["max_candidates"] != 3
@@ -222,8 +228,11 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
             if len(contacts) == 2:
                 extras += 1
                 parent, child = contacts
-                if (config.get("answer_only_fallback") != "budgeted-v1"
-                        or child.get("agent_contact_id") != parent.get("agent_contact_id", "") + ":answer-only"
+                is_length_repair = (visit.get("stage") == "perception" and
+                    config.get("perception_length_recovery") == "compact-reask-v1" and
+                    child.get("agent_contact_id") == parent.get("agent_contact_id", "") + ":perception-length-repair")
+                if ((not is_length_repair and (config.get("answer_only_fallback") != "budgeted-v1"
+                        or child.get("agent_contact_id") != parent.get("agent_contact_id", "") + ":answer-only"))
                         or execution.get("final_contact") != child):
                     raise ValueError("invalid answer-only parent-child identity")
                 if trace_records is not None:
@@ -245,16 +254,32 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                     child_payload = trace_records[child["request_id"] + "/request"]["payload"]
                     parent_decoding = parent_payload.get("decoding_params", {})
                     child_decoding = child_payload.get("decoding_params", {})
-                    if fallback_reserve(parent_decoding) is None or child_decoding != answer_only_decoding(parent_decoding):
-                        raise ValueError("answer-only decoding differs from parent")
                     parent_response = trace_records[parent["request_id"] + "/response"]
                     relation = trace_records.get(child["agent_contact_id"] + "/recovery-parent", {})
-                    if (parent_response.get("text") != "" or relation != {
+                    expected_relation = {
                             "org_recovery_parent_contact_id": parent["agent_contact_id"],
                             "org_recovery_parent_request_id": parent["request_id"],
                             "org_recovery_parent_response_sha256": parent["response_sha256"],
-                            "org_recovery_child_contact_id": child["agent_contact_id"]}):
-                        raise ValueError("answer-only parent relationship differs from trace")
+                            "org_recovery_child_contact_id": child["agent_contact_id"]}
+                    if is_length_repair:
+                        from .solver_protocol_audit import canonical_request
+                        original, fmt = canonical_request(parent_payload)
+                        revised, revised_fmt = canonical_request(child_payload)
+                        original["task_instruction"] += PERCEPTION_REPAIR_SUFFIX
+                        control = json.loads(original["history"][-1]["content"])
+                        control["messages"][0]["content"] += PERCEPTION_REPAIR_SUFFIX
+                        original["history"][-1]["content"] = canonical(control)
+                        if original != revised or fmt != revised_fmt or child_decoding != parent_decoding:
+                            raise ValueError("Perception repair changed original input or decoding: " + str([key for key in set(original) | set(revised) if original.get(key) != revised.get(key)]))
+                        wire = trace_records.get(parent["request_id"] + "/wire-response", {})
+                        if wire.get("finish_reason") != "length" or not parent_response.get("text"):
+                            raise ValueError("Perception repair parent is not known nonempty length")
+                        expected_relation.update(org_recovery_policy="compact-reask-v1", org_recovery_reason="length")
+                    elif (fallback_reserve(parent_decoding) is None or child_decoding != answer_only_decoding(parent_decoding)
+                          or parent_response.get("text") != ""):
+                        raise ValueError("answer-only decoding differs from parent")
+                    if relation != expected_relation:
+                        raise ValueError("recovery parent relationship differs from trace")
         if extras > recovery["max_extra_contacts"]:
             raise ValueError("coverage recovery shared budget exceeded")
         retained = slots[0].get("valid_ids")

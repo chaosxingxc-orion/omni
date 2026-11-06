@@ -1,0 +1,11 @@
+{
+  "protocol_version": "v2",
+  "node_rails": "sdk-handoff-v1",
+  "answer_only_fallback": "budgeted-v1",
+  "coverage_recovery": {
+    "strategy": "complete-original-candidate-set-v1",
+    "max_extra_contacts": 3
+  },
+  "perception_length_recovery": "compact-reask-v1",
+  "reference_normalizer": "quarantine-unsupplied-v1"
+}

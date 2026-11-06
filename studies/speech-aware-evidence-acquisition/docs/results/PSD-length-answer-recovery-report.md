@@ -1,7 +1,13 @@
-# PSD P length恢复：调查交接
+# PSD Perception 非空 length 有界纠错
 
-本次尚未实现P length恢复，也未运行该功能测试；不能用于生产或声称100%覆盖。辅助引用修复及预审修正分别提交 `ab28828a` 和 `0b94479a`，固定镜像相关集114项通过。
+已实现可配置的 `compact-reask-v1`：Perception 得到已知、非空且 wire 终态为 length 的响应后，在原音频、原知识、原 schema、原采样设置上追加一条固定诊断指令，单次重新请求真实模型输出；成功后继续 Slot→Decision。初始失败文本不会被截取补全，也不填默认标签或伪造实体。当前未做真实Fold运行，不能声称100%有效回答。
 
-已有两条非thinking P length样本在distinction附近产生大量空白、未形成完整JSON；schema支持maxLength，当前提示已经要求简短JSON，证据不足以确定受限解码或模型为根因。现有answer-only路径仅在thinking保留预算且空响应时触发，不能覆盖非空length。
+入口为 NodeWorkload `pipeline.perception_length_recovery: "compact-reask-v1"`，必须同时配置现有 `coverage_recovery` 共享额外预算；示例 `configs/examples/psd-perception-length-recovery-v1.json` 同时启用引用隔离及已有 answer-only。纠错占用一个extra，Slot补问和thinking fallback使用同一计数，独立生成和FIT均受计划上限约束。有限次额外请求耗尽时保留失败，不循环。示例是配置片段，需由主线程按既有物料创建新的独立run和release，不热改生产。
 
-阻塞在正式来源链尚未完成：现有NativeRecoveryCompletion和bundle校验仅允许`:answer-only`子contact、父响应为空且特定解码变换；P修复需要一个新注册策略绑定原音频/知识和改写提示，记录父length的wire终态及两次FIT与成本，保证和Slot补问共享预算，并在SDK、bundle重放和异常/UNKNOWN下同时验证。直接套用旧路径会把非空length误记成answer-only或让正式bundle拒绝。尚未实现这些必要变更，因此没有声称可运行纠错。下一步在独立提交中完成上述闭环，并以thinking关闭的脚本化length、业务字段缺失、预算耗尽和UNKNOWN测试验收；沿既有PSD P→Slot→Decision，不重跑旧P→Solver历史基线。
+两条历史样本是在distinction附近出现大段空白且未闭合JSON；schema存在distinction长度约束、原提示已有简短JSON要求。该证据不足以确定grammar、模型或其他组件导致空白退化；新指令是已登记的纠错策略，并非根因定论。指令要求依据原音频与已供给知识，输出完整紧凑JSON、短distinction和所有必需字段。原样本response与wire reason保留；追加contact有独立request、response、FIT、COST及parent trace。正式bundle重算核对父响应hash和length、两个请求的原始音频、供给、schema与解码一致，仅允许登记的诊断后缀，以及child身份与parent关系。UNKNOWN不触发自动重发；恢复响应再次length保持终态失败。跨attempt恢复本策略尚未支持，入口明确拒绝；已有Slot空字段/缺候选可用同attempt既有补问，预算不足或补问失败仍为失败。
+
+已知范围：仅处理非空P length；P schema/必填字段错误、空非thinking length、Slot length、语义错误、漏候选、服务故障和UNKNOWN仍未解决。若有历史thinking fallback，既有机制和费用不变；不能由结构成功推断语义正确。100%须后续在真实完整Fold A1080验收全部legal字段、官方评分、失败类别和总成本，并与已封存历史P→Solver结果按口径比较，PSD仍为主流程。
+
+固定镜像 `sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026`，ssh npu2、CPU、断网、容器和源码只读、tmpfs。命令为 `/opt/saea-venv/bin/python -m pytest -q --tb=short --show-capture=no -p no:cacheprovider /src/tests/unit/test_intent_slot_runner.py /src/tests/unit/test_intent_slot_pipeline.py /src/tests/unit/test_intent_slot_workload.py /src/tests/unit/test_native_episode_source.py --basetemp=/tmp/pytest`，`PYTHONPATH=/src/src:/src/scripts/analysis`。结果 **117 passed，5 warnings，35.20秒**；新增工作负载配置检查单独 **1 passed，2.44秒**。真实SDK和正式canonical output/trace verifier，音频、网络模型和tokenizer为测试桩；没有实际模型、教师、真实FIT或业务NPU调用。覆盖首P非空length→纠错→Slot补问→Decision、五次模型及五份FIT桩、原生bundle重算、父wire篡改、纠错再次length、UNKNOWN中止和旧thinking fallback。测试未覆盖真实网络/服务及跨attempt恢复。代码与测试文件pin见配套JSON。
+
+诊断输入沿用固定快照：1174条终态中1121结构有效、53失败（20 refs、32 length、1实体非空）；结构有效不代表legal enum和语义正确，完整总分母为两臂各1080。业务P schema拒绝与系统来源拒绝不能统称模型语义错误。推理资源、成本及真实覆盖收益本次未知，未修改队列、lease或生产release。

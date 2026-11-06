@@ -6564,15 +6564,20 @@ async def _invoke_native_role_episode(
                 set_current_trace_buffer(trace)
                 try:
                     dispatch_entered = True
-                    managed = bool(coverage_policy and pipeline_config["answer_only_fallback"] == "budgeted-v1")
+                    managed = bool(coverage_policy and (pipeline_config["answer_only_fallback"] == "budgeted-v1" or pipeline_config.get("perception_length_recovery")))
                     dispatch_slot = slot_id if ready_request_runner is not None else None
                     completion = adapter_request.dispatch(prepared, id_slot=dispatch_slot, managed_recovery=managed)
                     recovery_parent = None
                     result_request = request
                     result_prepared = prepared
                     if managed:
-                        reserve = adapter_request.answer_only_reserve(prepared, completion)
-                        if reserve is not None and reserve_coverage_extra():
+                        reserve = (adapter_request.answer_only_reserve(prepared, completion)
+                                   if pipeline_config["answer_only_fallback"] == "budgeted-v1" else None)
+                        length_repair = bool(pipeline_config.get("perception_length_recovery")
+                            and role_configs[request.role_id].role_kind == "perception"
+                            and completion.finish_reason == "length" and completion.text
+                            and not completion.tool_calls and reserve is None)
+                        if (reserve is not None or length_repair) and reserve_coverage_extra():
                             from ..reproduction.ojw.native_roles import NativeRecoveryCompletion
                             parent = completion
                             parent.assert_binding(sample_id=request.context.sample_id,
@@ -6591,7 +6596,8 @@ async def _invoke_native_role_episode(
                                 speech_packet_sha256=before.query_state.speech_packet_sha256,
                                 slot_id=slot_id, response_sha256=parent.response_text_sha256))
                             state.response_sha256s.append(parent.response_text_sha256)
-                            child_id = request.context.agent_contact_id + ":answer-only"
+                            child_suffix = ":perception-length-repair" if length_repair else ":answer-only"
+                            child_id = request.context.agent_contact_id + child_suffix
                             if state.scheduled_contacts >= config.max_contacts or child_id in state.seen_contact_ids:
                                 raise RailsRunnerError("answer-only recovery exceeds contact ceiling or repeats identity")
                             state.seen_contact_ids.add(child_id)
@@ -6604,7 +6610,8 @@ async def _invoke_native_role_episode(
                             trace = child_trace
                             rollout_contact_index = child_index
                             set_current_trace_buffer(child_trace)
-                            result_prepared = adapter_request.prepare(result_request, binding_override=prepared.binding, answer_only=True)
+                            result_prepared = adapter_request.prepare(result_request, binding_override=prepared.binding,
+                                answer_only=not length_repair, perception_length_repair=length_repair)
                             fit_kwargs = ({"prompt_limit_tokens": context_fit_budget.prompt_limit_tokens}
                                 if context_fit_budget is not None and context_fit_budget.measured_by_request_gate else {})
                             fit_count = binding.request_gate(result_prepared.request, **fit_kwargs)
@@ -6619,7 +6626,8 @@ async def _invoke_native_role_episode(
                                 "org_recovery_parent_contact_id": parent.agent_contact_id,
                                 "org_recovery_parent_request_id": parent.request_id,
                                 "org_recovery_parent_response_sha256": parent.response_sha256,
-                                "org_recovery_child_contact_id": child_id})
+                                "org_recovery_child_contact_id": child_id,
+                                **({"org_recovery_policy": "compact-reask-v1", "org_recovery_reason": "length"} if length_repair else {})})
                             completion = adapter_request.dispatch(result_prepared, id_slot=dispatch_slot, managed_recovery=True)
                             recovery_parent = parent
                             recovery_parents[completion.request_id] = parent
@@ -6662,7 +6670,7 @@ async def _invoke_native_role_episode(
                     "use_agent_contact_id": completion.agent_contact_id,
                 })
                 trace_native_contact(result_request, result_prepared, completion, trace, slot_id, rollout_contact_index)
-                return NativeRecoveryCompletion(recovery_parent, completion) if recovery_parent is not None else completion
+                return NativeRecoveryCompletion(recovery_parent, completion, child_suffix) if recovery_parent is not None else completion
             except Exception as error:
                 trace_native_contact(locals().get("result_request", request), locals().get("result_prepared", prepared),
                                      None, trace, slot_id, rollout_contact_index, error=error)

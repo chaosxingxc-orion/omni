@@ -1,11 +1,37 @@
 {
   "schema": "psd-length-answer-recovery-result-v1",
-  "status": "not_implemented",
-  "base_commit": "0b94479a83707e1042bd0b77fee0a6026285db0b",
-  "reason": "native parent-child custody and bundle verification support only empty thinking answer-only; length repair requires registered prompt, budget, FIT, wire and UNKNOWN custody",
-  "model_calls": 0,
+  "status": "implemented_cpu_tested",
+  "base_commit": "f9b3b7ed",
+  "policy": "compact-reask-v1",
+  "scope": "known nonempty Perception length, one same-attempt repair",
+  "shared_budget": "coverage_recovery.max_extra_contacts",
+  "tests": [
+    "117 passed, 5 warnings, 35.20s",
+    "1 passed, 2.44s"
+  ],
+  "test_source_sha256": {
+    "scripts/analysis/intent_slot_workload.py": "da4404646a4d0de50028f3a7f99e9945bab0e448c6421031a9ee4294fcb4cd08",
+    "src/speech_aware_evidence_acquisition/core/flight/native_recovery.py": "b989f23394d77122c48e9855b77c5694ffcb306f24a5760308faaf9d00c2aef7",
+    "src/speech_aware_evidence_acquisition/rails/intent_slot_pipeline.py": "3e7731775a05577b477a6ce869eca2470841a865971aba91c8a2e928845a22bb",
+    "src/speech_aware_evidence_acquisition/rails/runner.py": "951f635e38159b3264dd86cf8c76fe08ea6e2a783752bcc22f3b61fd4a9ad337",
+    "src/speech_aware_evidence_acquisition/reproduction/ojw/native_request.py": "be08df66eddec6c645aa6d4f8f4c7f0a884898ad57bcc6edea26106e66df05f5",
+    "src/speech_aware_evidence_acquisition/reproduction/ojw/native_roles.py": "cafac9ce6a5b810147cfb6a3cc7d429b2951c6ebf36846aa7c7caa527eff3c8a",
+    "tests/unit/test_intent_slot_runner.py": "a897e656340822fd3bbdf4fb83c2edb5a940c65780403624bd81e66d72c2bd53",
+    "tests/unit/test_intent_slot_workload.py": "a4d9e58e46c2165137246b196667a4eb476abdf20f987e3b3c437aa4b4dad647",
+    "configs/examples/psd-perception-length-recovery-v1.json": "66ecc1958fc15c9dc19838dbda6e1b7ec5b77383abd5aa97c8ea459d68e8c811"
+  },
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "test_boundary": "real SDK and bundle verifier; mocked transport audio and tokenizer; CPU offline readonly",
+  "real_model_calls": 0,
   "real_fit_calls": 0,
   "npu_calls": 0,
-  "tests": [],
-  "coverage_measured": false
+  "coverage_measured": false,
+  "remaining": [
+    "schema and business errors at P",
+    "empty nonthinking length",
+    "Slot length",
+    "UNKNOWN",
+    "semantic errors",
+    "cross-attempt recovery"
+  ]
 }

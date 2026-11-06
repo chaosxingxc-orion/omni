@@ -628,6 +628,7 @@ class NativeRecoveryCompletion:
     """Two actual responses for one SDK invocation, in source order."""
     parent: CoreCompletion
     child: CoreCompletion
+    suffix: str = ":answer-only"
 
 
 class FrozenCoreRoleModel:
@@ -737,7 +738,7 @@ class FrozenCoreRoleModel:
                 parent.assert_binding(sample_id=context.sample_id,
                     agent_contact_id=context.agent_contact_id, response_text=parent.text)
                 completion.assert_binding(sample_id=context.sample_id,
-                    agent_contact_id=context.agent_contact_id + ":answer-only", response_text=completion.text)
+                    agent_contact_id=context.agent_contact_id + recovery.suffix, response_text=completion.text)
             except FrozenCoreClientError as error:
                 raise FrozenCoreRoleModelError("invalid recovery parent-child binding") from error
         if not isinstance(completion, CoreCompletion):
@@ -751,7 +752,7 @@ class FrozenCoreRoleModel:
         try:
             completion.assert_binding(
                 sample_id=context.sample_id,
-                agent_contact_id=(context.agent_contact_id + ":answer-only" if recovery else context.agent_contact_id),
+                agent_contact_id=(context.agent_contact_id + recovery.suffix if recovery else context.agent_contact_id),
                 response_text=completion.text,
             )
         except FrozenCoreClientError as error:

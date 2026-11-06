@@ -444,6 +444,7 @@ class MeteredNativeSpeechRequest:
         *,
         binding_override: "NativeRoleSpeechBinding | None" = None,
         answer_only: bool = False,
+        perception_length_repair: bool = False,
     ) -> PreparedNativeRoleContact:
         """Compose one immutable request from this caller's task state.
 
@@ -478,6 +479,9 @@ class MeteredNativeSpeechRequest:
             or framework[1] != {"role": "user", "content": binding.role_query}
         ):
             raise NativeSpeechRequestError("framework system or original query differs")
+        if perception_length_repair:
+            from ...rails.intent_slot_pipeline import PERCEPTION_REPAIR_SUFFIX
+            messages[0] = {**messages[0], "content": messages[0]["content"] + PERCEPTION_REPAIR_SUFFIX}
         kwargs = binding.kwargs()
         decoding = dict(kwargs.get("decoding_params") or {})
         expected_choice = "auto" if binding.tool_names else "none"
@@ -587,7 +591,7 @@ class MeteredNativeSpeechRequest:
         kwargs["decoding_params"] = decoding
         # The control envelope restates the sequence against the WIRE system text (``native_framework_history`` requires ``messages[0]`` to equal the payload's
         # ``task_instruction``); for a contact with ``framework_system`` set that is the longer wire text, for every other contact the framework's own.
-        envelope_messages = framework if binding.framework_system is None else [messages[0], *framework[1:]]
+        envelope_messages = framework if binding.framework_system is None and not perception_length_repair else [messages[0], *framework[1:]]
         instruction = framework_contact_instruction(
             role_id=binding.role_id, sample_id=binding.sample_id,
             contact_id=request.context.agent_contact_id, messages=envelope_messages,

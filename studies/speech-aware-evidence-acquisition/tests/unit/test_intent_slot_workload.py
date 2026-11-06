@@ -242,3 +242,13 @@ def test_reference_normalizer_is_explicit_and_composes_with_coverage():
     assert NodeWorkload(c).CONTACTS==6
     c['pipeline']['reference_normalizer']='unknown'
     with pytest.raises(ValueError): NodeWorkload(c)
+
+
+def test_perception_length_recovery_requires_shared_budget():
+    c=config(); c['node_arm']=ARMS[2]
+    c['pipeline']={'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'off',
+                   'coverage_recovery':{'strategy':'complete-original-candidate-set-v1','max_extra_contacts':3},
+                   'perception_length_recovery':'compact-reask-v1'}
+    assert NodeWorkload(c).CONTACTS == 6
+    del c['pipeline']['coverage_recovery']
+    with pytest.raises(ValueError): NodeWorkload(c)

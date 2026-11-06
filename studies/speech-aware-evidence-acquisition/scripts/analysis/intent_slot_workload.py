@@ -37,10 +37,13 @@ class NodeWorkload(PairWorkload):
         arm=config['node_arm']
         pipeline=config.get('pipeline')
         legacy = {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
+        repair = pipeline.get('perception_length_recovery') if isinstance(pipeline, dict) else None
+        if repair is not None and (repair != 'compact-reask-v1' or not pipeline.get('coverage_recovery')):
+            raise ValueError('unsupported Perception length recovery')
         normalizer = pipeline.get('reference_normalizer') if isinstance(pipeline, dict) else None
         if normalizer is not None and normalizer != 'quarantine-unsupplied-v1':
             raise ValueError('unsupported reference normalizer')
-        base_pipeline = {k:v for k,v in pipeline.items() if k != 'reference_normalizer'} if isinstance(pipeline, dict) else pipeline
+        base_pipeline = {k:v for k,v in pipeline.items() if k not in ('reference_normalizer', 'perception_length_recovery')} if isinstance(pipeline, dict) else pipeline
         recovery = base_pipeline.get('coverage_recovery') if isinstance(base_pipeline, dict) else None
         supported_recovery = (isinstance(recovery, dict)
             and set(base_pipeline) == set(legacy) | {'coverage_recovery'}
@@ -141,6 +144,8 @@ class NodeWorkload(PairWorkload):
                 coverage_recovery=bool(pipeline.get('coverage_recovery'))) if pipeline else split_graph(base)
             if arm=='enhanced-p-slot-decision':
                 base=expanded
+                if pipeline and pipeline.get('perception_length_recovery'):
+                    base['native_episode']['intent_slot_pipeline']['perception_length_recovery'] = pipeline['perception_length_recovery']
                 if pipeline and pipeline.get('reference_normalizer'):
                     base['native_episode']['intent_slot_pipeline']['reference_normalizer'] = pipeline['reference_normalizer']
                 if pipeline and pipeline.get('coverage_recovery'):

@@ -1398,3 +1398,75 @@ def test_sdk_rejects_normalized_source_changed_before_settlement(tmp_path, monke
     finally:
         cost = h.close()['cost']
     assert count == 2 and cost['calls_used'] == 1
+
+
+def test_sdk_nonempty_perception_length_repair_reaches_decision(tmp_path):
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    from test_native_episode_runner import _wire_response
+    h, policy = recovery_harness(tmp_path)
+    policy.update(answer_only_fallback='off', perception_length_recovery='compact-reask-v1',
+                  reference_normalizer='quarantine-unsupplied-v1',
+                  coverage_recovery={'strategy':'complete-original-candidate-set-v1','max_extra_contacts':3})
+    h.config=replace(h.config,intent_slot_pipeline_json=canonical(policy))
+    calls=[]
+    def post(_url,body):
+        calls.append(json.loads(body))
+        if len(calls)==1:
+            response=json.loads(_wire_response('{"candidates":[{"intent_id":"play_radio","distinction":"short"'+(' '*2000)))
+            response['choices'][0]['finish_reason']='length'
+            return json.dumps(response).encode()
+        phase='perception' if len(calls)==2 else 'slot' if len(calls) in (3,4) else 'solver'
+        if phase=='solver': text=canonical({'candidate_id':'play_radio'})
+        else: text=h._output(('s1',phase,1 if len(calls)==3 else 2,1))
+        return _wire_response(text)
+    h.post_override=post
+    try:
+        summary=h.run(decoding_params={'temperature':0,'max_tokens':64})
+        raw=_raw_native(h,solver_role={'max_iterations':1});raw['intent_slot_pipeline']=policy
+        rows=_runtime(h,summary,raw)._canonical_output_rows(h.client)
+    finally: cost=h.close()['cost']
+    records={rid:payload for _,rid,payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows),records)
+    assert cost['calls_used']==5
+    assert len(h.fit_gate.receipts)==5
+    assert json.loads(rows[0]['text'])['action']=='radio'
+    visit=rows[0]['native_episode_receipt']['role_visits'][0]
+    assert len(visit['execution_receipt']['contacts'])==2
+    assert 'previous Perception response stopped' in json.dumps(calls[1])
+    import copy
+    damaged=copy.deepcopy(records)
+    parent=visit['execution_receipt']['contacts'][0]
+    damaged[parent['request_id']+'/wire-response']['finish_reason']='stop'
+    with pytest.raises(Exception, match='Perception repair parent'):
+        _verify_outputs_trace_binding(tuple(rows),damaged)
+
+@pytest.mark.parametrize('failure', ['child_length', 'unknown'])
+def test_sdk_perception_length_repair_never_fabricates_or_reissues(tmp_path, failure):
+    from test_native_episode_runner import _wire_response
+    h,policy=recovery_harness(tmp_path)
+    policy.update(answer_only_fallback='off',perception_length_recovery='compact-reask-v1',
+                  coverage_recovery={'strategy':'complete-original-candidate-set-v1','max_extra_contacts':1})
+    h.config=replace(h.config,intent_slot_pipeline_json=canonical(policy),max_contacts=4)
+    # Harness uses a six-contact fixture plan and FIT ceiling; keep its graph
+    # geometry and reduce only the shared extra-call budget in the config.
+    h.config=replace(h.config,max_contacts=6)
+    calls=0
+    def post(_url,_body):
+        nonlocal calls
+        calls+=1
+        if calls==2 and failure=='unknown': raise RuntimeError('unknown response transport')
+        result=json.loads(_wire_response('{"candidates":'+(' '*100)))
+        result['choices'][0]['finish_reason']='length'
+        return json.dumps(result).encode()
+    h.post_override=post
+    try:
+        if failure=='unknown':
+            with pytest.raises(Exception):h.run()
+        else:
+            summary=h.run()
+            assert summary.results[0].final_response_text==''
+            assert summary.results[0].native_episode_receipt['terminal_disposition']['reason']=='finite_completion'
+    finally: cost=h.close()['cost']
+    assert calls==2
+    assert cost['calls_used'] >= 1
