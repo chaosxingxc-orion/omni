@@ -26,12 +26,62 @@ from speech_aware_evidence_acquisition.core.config import effective_request_deco
 from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
 from speech_aware_evidence_acquisition.rails.finite_policy_artifacts import _pinned_json, _confined_file
 from speech_aware_evidence_acquisition.rails.hashing import content_hash
-from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical, sha, DENSE_REWARD, intent_slot_reward, validate_experience
+from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical, sha, DENSE_REWARD, intent_slot_reward, validate_experience, empty_experience
 
 
 def require(ok, reason):
     if not ok:
         raise ValueError(reason)
+
+
+def verify_actor_parent(job, parent, *, repo, data, binding):
+    """Bind claimed parent to the actor's reviewed, target-specific consumer.
+
+    Unreviewed semantic mappings are not equivalent to the original parent.
+    Empty parent is accepted only for the unmodified native Slot/Decision
+    templates; arbitrary custom node templates have no auditable memory origin.
+    """
+    model = job['runtime_binding']['model_fragment']
+    validate_experience(parent, model)
+    descriptor = job.get('tfgrpo_experience')
+    if descriptor is None:
+        require(binding is None and parent == empty_experience(model), 'unconditioned actor requires empty unexposed parent')
+        require('slot_policy' not in job and 'decision_policy' not in job,
+                'custom node policy requires independently verified parent provenance')
+        return []
+    require(parent != empty_experience(model), 'experienced actor cannot use empty parent')
+    require(isinstance(descriptor, dict) and descriptor.get('target') in ('slot', 'decision')
+            and 'mapping' not in descriptor and 'deployment_binding' not in descriptor,
+            'actor parent requires direct reviewed target and same actor')
+    require(isinstance(binding, dict) and Path(binding.get('repo', '')).resolve() == Path(repo).resolve()
+            and Path(binding.get('data', '')).resolve() == Path(data).resolve(), 'parent source roots differ')
+    source, _ = _pinned_json(data, descriptor['source'], 'actor experience source')
+    params_path = Path(binding['params']['path']).resolve()
+    source_path = _confined_file(data, descriptor['source']['relpath']).resolve()
+    require(params_path == source_path and binding['params']['sha256'] == descriptor['source']['sha256'],
+            'actor and parent must bind the same reviewed source')
+    from speech_aware_evidence_acquisition.rails.tfgrpo_psd_parent import verify
+    return verify(parent, descriptor['target'], model, binding)
+
+
+def knowledge_index(data, values):
+    """Resolve pinned snapshot value sources, preserving ambiguous IDs."""
+    index = {}
+    for store_id, store in values.get('knowledge_stores', {}).items():
+        snapshot = store.get('snapshot') if isinstance(store, dict) else None
+        if not snapshot:
+            continue
+        doc, _ = _pinned_json(data, snapshot, 'knowledge snapshot')
+        for value in doc.get('values', []):
+            vid = value['value_id']
+            samples = value.get('source_sample_ids')
+            if not isinstance(samples, list) or any(not isinstance(x, str) for x in samples):
+                continue
+            item = {'store_id':store_id, 'snapshot':snapshot,
+                    'source_utterances':sorted({':'.join(x.split(':')[:3]) for x in samples})}
+            index.setdefault(vid, []).append(item)
+            index.setdefault(store_id+'::'+vid, []).append(item)
+    return index
 
 
 def verify_fit_receipts(data, native, receipts, member):
@@ -71,7 +121,7 @@ def verify_fit_receipts(data, native, receipts, member):
     return paid
 
 
-def read_groups(compiled, bindings, *, repo, data, gold, gold_pin, parent, common, learning_config_sha256, bounds):
+def read_groups(compiled, bindings, *, repo, data, gold, gold_pin, parent, common, learning_config_sha256, bounds, parent_binding=None):
     check_compiled(compiled)
     members = compiled['members']
     require(len(bindings) == len(members), 'one source binding per registered member required')
@@ -92,6 +142,7 @@ def read_groups(compiled, bindings, *, repo, data, gold, gold_pin, parent, commo
             expected_phase_sha256=binding['phases']['sha256'], repo_root=repo, data_root=data)
         manifest, values = native.bundle.manifest, native.composed.values
         job = member['job_config']
+        verify_actor_parent(job, parent, repo=repo, data=data, binding=parent_binding)
         require((native.plan.run_id, native.plan.attempt_id) == (job['run_id'], member['generation_attempt_id']), 'member run/attempt differs')
         require(native.plan.run_id not in seen_runs, 'duplicate member run')
         seen_runs.add(native.plan.run_id)
@@ -134,11 +185,12 @@ def read_groups(compiled, bindings, *, repo, data, gold, gold_pin, parent, commo
         require(len(fit) == len(contacts) and len(set(contacts)) == len(contacts) and {x['agent_contact_id'] for x in fit} == set(contacts), 'FIT contact custody differs')
         require(len(fit) <= member['fit_cap'], 'FIT exceeds registered cap')
         fit_cost = verify_fit_receipts(data, native, fit, member)
-        sources.append((member, native, feedback, score_index, cost, pin, fit_cost))
+        sources.append((member, native, feedback, score_index, cost, pin, fit_cost, knowledge_index(data, values)))
     groups = []
+    knowledge_diagnostics = []
     for sid in ids:
         rollouts, input_hashes, query = [], [], None
-        for member, native, feedback, score_index, cost, pin, fit_count in sources:
+        for member, native, feedback, score_index, cost, pin, fit_count, knowledge in sources:
             episode = native.phase_results[sid]['native_episode_receipt']
             visits = episode['role_visits']
             stages = [v['stage'] for v in visits]
@@ -160,6 +212,20 @@ def read_groups(compiled, bindings, *, repo, data, gold, gold_pin, parent, commo
                 require(isinstance(response.get('text'), str), 'missing response or UNKNOWN contact')
                 projected.append({'request':text_projection(request['payload']), 'response_text':response['text'],
                                   'request_sha256':contact['request_sha256'], 'response_text_sha256':contact['response_text_sha256']})
+                evidence = request['payload'].get('supplied_evidence')
+                require(isinstance(evidence, list), 'actual supplied evidence inventory required')
+                value_ids = [e.get('evidence_id') for e in evidence
+                             if isinstance(e,dict) and e.get('knowledge_role')=='value']
+                resolved = [{'value_id':vid, 'sources':knowledge.get(vid, [])} for vid in value_ids]
+                complete = all(len(x['sources']) == 1 for x in resolved)
+                own = ':'.join(sid.split(':')[:3])
+                knowledge_diagnostics.append({
+                    'run_id':member['job_config']['run_id'], 'sample_id':sid,
+                    'request_id':contact['request_id'], 'request_sha256':contact['request_sha256'],
+                    'supplied_values':resolved,
+                    'same_utterance_supplied': (any(own in x['sources'][0]['source_utterances'] for x in resolved)
+                                                 if complete else None),
+                })
                 fallback = trace.get(contact['agent_contact_id']+'/reasoning-fallback')
                 if fallback is not None:
                     from speech_aware_evidence_acquisition.rails.solver_protocol_audit import canonical_request
@@ -210,6 +276,7 @@ def read_groups(compiled, bindings, *, repo, data, gold, gold_pin, parent, commo
                            'evidence':project_group_evidence(g,evidence_view='full-query-v1')} for g in groups]}
     return {'schema':'saea-psd-construction-groups-v1', 'batch':batch,
             'tfgrpo_evidence':evidence,
+            'knowledge_diagnostics':knowledge_diagnostics,
             'provenance':{'campaign_sha256':compiled['content_sha256'],'source_bindings':bindings,
                           'gold':gold_pin,'generation_calls_used':sum(s[4]['calls_used'] for s in sources),
                           'fit_tokenizer_calls_used':sum(s[6] for s in sources), 'new_model_calls':0},
@@ -228,7 +295,7 @@ def main():
     gold,gold_pin=gold_train(load_lock(lock),a.data,ids)
     parent,_=_pinned_json(a.data,recipe['parent'],'experience parent')
     result=read_groups(compiled,recipe['bindings'],repo=a.repo,data=a.data,gold=gold,gold_pin=gold_pin,
-                       parent=parent,common=recipe['common'],learning_config_sha256=recipe['learning_config_sha256'],bounds=recipe['bounds'])
+                       parent=parent,common=recipe['common'],learning_config_sha256=recipe['learning_config_sha256'],bounds=recipe['bounds'],parent_binding=recipe.get('parent_binding'))
     publish_new(a.output,canonical(result))
     publish_new(a.output.with_name(a.output.stem+'-batch.json'),canonical(result['batch']))
     publish_new(a.output.with_name(a.output.stem+'-evidence.json'),canonical({'document':result['tfgrpo_evidence']}))

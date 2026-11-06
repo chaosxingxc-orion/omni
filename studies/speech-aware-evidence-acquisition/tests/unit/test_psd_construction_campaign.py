@@ -133,6 +133,7 @@ def test_two_real_sdk_episodes_supply_group_reader(tmp_path, monkeypatch):
     monkeypatch.setattr(reader,'pinned',lambda *args:{})
     monkeypatch.setattr(reader.NodeWorkload,'validate',lambda *args:None)
     monkeypatch.setattr(reader,'verify_fit_receipts',lambda data,native,fit,member:len(fit))
+    monkeypatch.setattr(reader,'knowledge_index',lambda data,values:{})
     # Harness request identity includes temporary media roots; normalize only its
     # common-input hash seam after the native binding checks have run.
     monkeypatch.setattr(reader,'initial_speech_input_hash',lambda p:'a'*64)
@@ -159,3 +160,33 @@ def test_two_real_sdk_episodes_supply_group_reader(tmp_path, monkeypatch):
     sources[2].bundle.attempt_state='FINALIZED'
     fits[2]['stages']['run_phases']['dispatch']['native_contact_fit_receipts'].pop()
     with pytest.raises(ValueError,match='FIT contact custody'):reader.read_groups(doc,bindings,**kwargs)
+
+
+def test_parent_cannot_be_invented_or_hidden(tmp_path):
+    from psd_construction_group_read import verify_actor_parent
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import empty_experience, sha
+    job=compile_campaign(config())['members'][0]['job_config']
+    parent=empty_experience('model')
+    assert verify_actor_parent(job,parent,repo=tmp_path,data=tmp_path,binding=None)==[]
+    altered=copy.deepcopy(parent);altered['items']={'x':'unreviewed'};altered['sha256']=sha({k:v for k,v in altered.items() if k!='sha256'})
+    with pytest.raises(ValueError,match='empty unexposed'):
+        verify_actor_parent(job,altered,repo=tmp_path,data=tmp_path,binding=None)
+    job['tfgrpo_experience']={'target':'slot'}
+    with pytest.raises(ValueError,match='experienced actor cannot'):
+        verify_actor_parent(job,parent,repo=tmp_path,data=tmp_path,binding=None)
+    del job['tfgrpo_experience']; job['slot_policy']={}
+    with pytest.raises(ValueError,match='custom node policy'):
+        verify_actor_parent(job,parent,repo=tmp_path,data=tmp_path,binding=None)
+
+
+def test_knowledge_diagnostics_resolve_only_actual_snapshot_values(tmp_path):
+    import hashlib
+    from psd_construction_group_read import knowledge_index
+    doc={'values':[{'value_id':'v1','source_sample_ids':['slurp:train:000001:audio-a']}]}
+    path=tmp_path/'snapshot.json';path.write_text(json.dumps(doc))
+    pin={'relpath':'snapshot.json','sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+    index=knowledge_index(tmp_path,{'knowledge_stores':{'train-exemplars':{'snapshot':pin}}})
+    assert index['train-exemplars::v1'][0]['source_utterances']==['slurp:train:000001']
+    assert 'not-supplied' not in index
+    path.write_text('{}')
+    with pytest.raises(ValueError):knowledge_index(tmp_path,{'knowledge_stores':{'train-exemplars':{'snapshot':pin}}})
