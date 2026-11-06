@@ -70,6 +70,35 @@ def test_prepare_atomic_held_and_preserves_original(case):
     with pytest.raises(ValueError, match='fresh output'): run()
 
 
+@pytest.mark.parametrize('fail', [False, True])
+def test_compiler_hash_uses_declared_root_and_restores_environment(case, monkeypatch, fail):
+    cfg, run, _ = case
+    monkeypatch.setenv('SAEA_DATA_ROOT', '/unrelated/root')
+    monkeypatch.delenv('SPEECHRL_DATA_DIR', raising=False)
+    from speech_aware_evidence_acquisition.core.config import _compose_fragments
+    fragments = {'model': {'model_path': cfg['data'] + '/models/frozen'},
+                 'dataset': {}, 'baseline': {}, 'experiment': {}}
+    names = {key: key for key in fragments}
+    def execute(document):
+        assert document == cfg
+        assert os.environ['SAEA_DATA_ROOT'] == cfg['data']
+        assert os.environ['SPEECHRL_DATA_DIR'] == cfg['data']
+        actual = _compose_fragments(names, fragments, cfg['data']).config_hash
+        canonical = dict(fragments, model={'model_path': '${SAEA_DATA_ROOT}/models/frozen'})
+        assert actual == _compose_fragments(names, canonical, cfg['data']).config_hash
+        if fail:
+            raise ValueError('validation failed')
+        return actual
+    monkeypatch.setattr(compiler, '_execute', execute)
+    if fail:
+        with pytest.raises(ValueError, match='validation failed'):
+            run()
+    else:
+        assert len(run()) == 64
+    assert os.environ['SAEA_DATA_ROOT'] == '/unrelated/root'
+    assert 'SPEECHRL_DATA_DIR' not in os.environ
+
+
 @pytest.mark.parametrize('mutator', [
     lambda c: c.update(extra=True),
     lambda c: c['target'].update(attempt_id='generation-v1'),
@@ -94,12 +123,32 @@ def finalize_case(case):
     cfg, run, tmp = case
     evidence = write(tmp/'evidence.json', {'test': True})
     cfg['mode'] = 'finalize'
+    manifest = json.loads(Path(cfg['assets_manifest']['path']).read_bytes())
+    ledger = tmp/'assets/docs/exposure-ledger.md'
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    ledger.write_text('Frozen predecessor exposure rows\n')
+    manifest['files']['docs/exposure-ledger.md'] = {
+        'path': str(ledger), 'sha256': hashlib.sha256(ledger.read_bytes()).hexdigest()}
+    cfg['assets_manifest'] = write(Path(cfg['assets_manifest']['path']), manifest)
     cfg['terminal'] = {'evidence': [evidence], 'lock': evidence, 'resume_from': {},
                        'bridge': {}, 'registration_relpath': 'docs/readiness/previous.json'}
     cfg['admission'] = {'workspace': str(tmp/'workspace'),
                         'decision_relpath': 'coordination/exp/new.json',
                         'predecessor_decision': {'relpath': 'coordination/exp/old.json', 'sha256': 'f'*64}}
     return cfg, run, tmp
+
+
+def test_missing_exposure_ledger_fails_before_terminal_audit(case, monkeypatch):
+    cfg, run, tmp = finalize_case(case)
+    manifest = json.loads(Path(cfg['assets_manifest']['path']).read_bytes())
+    del manifest['files']['docs/exposure-ledger.md']
+    cfg['assets_manifest'] = write(Path(cfg['assets_manifest']['path']), manifest)
+    def unexpected(**kwargs):
+        pytest.fail('terminal audit must not run without complete admission inputs')
+    monkeypatch.setattr(compiler, 'validate_terminal_custody', unexpected)
+    with pytest.raises(ValueError, match='pinned predecessor exposure ledger'):
+        run()
+    assert not (tmp/'output').exists()
 
 
 def test_terminal_rejection_propagates(case, monkeypatch):

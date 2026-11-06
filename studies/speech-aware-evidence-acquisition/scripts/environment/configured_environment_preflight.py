@@ -102,7 +102,11 @@ def load_config(path):
     compositions=doc.get('compositions',[])
     require(isinstance(compositions,list),'composition checks must be a list')
     for item in compositions:
-        require(isinstance(item,dict) and set(item)=={'id','repo_root','data_root','fragments','expected_rows','verify_media'},'exact composition probe required')
+        require(isinstance(item,dict) and set(item) - {'expected_config_hash'}=={'id','repo_root','data_root','fragments','expected_rows','verify_media'},'exact composition probe required')
+        if 'expected_config_hash' in item:
+            require(isinstance(item['expected_config_hash'], str)
+                    and re.fullmatch('[a-f0-9]{64}', item['expected_config_hash']),
+                    'expected composition hash must be lowercase SHA256')
         require(isinstance(item['id'],str) and re.fullmatch('[a-z0-9-]+',item['id']),'composition identity required')
         canonical_runtime_path(item['repo_root']);canonical_runtime_path(item['data_root'])
         require(isinstance(item['fragments'],dict) and set(item['fragments'])=={'model','dataset','baseline','experiment'},'four real fragments required')
@@ -133,6 +137,10 @@ def composition_probe(spec):
     from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
     from speech_aware_evidence_acquisition.rails.phase_material import load_phase_material_specs
     cfg=compose(Path(spec['repo_root']),**spec['fragments'],data_root=spec['data_root']);values=cfg.values
+    if 'expected_config_hash' in spec:
+        require(cfg.config_hash == spec['expected_config_hash'],
+                'composition identity differs: expected ' + spec['expected_config_hash']
+                + ', actual ' + cfg.config_hash)
     ids=registered_population_ids(values,spec['fragments']['dataset'])
     selected=load_runtime_view(values,Path(spec['data_root']),sample_ids=ids,workers=4) if spec['verify_media'] else ()
     count=len(selected) if spec['verify_media'] else len(ids) if ids is not None else values['count']

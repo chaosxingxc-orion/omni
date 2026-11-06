@@ -59,6 +59,38 @@ class EnvironmentPreflightTests(unittest.TestCase):
         self.doc['interpreters'][0]['python'] = str(self.root / 'missing-python')
         self.assert_failed()
 
+    def composition(self):
+        return {'id': 'native', 'repo_root': str(self.root / 'repo'),
+                'data_root': str(self.root / 'data'),
+                'fragments': {key: key for key in ('model', 'dataset', 'baseline', 'experiment')},
+                'expected_rows': 1080, 'verify_media': True,
+                'expected_config_hash': 'a' * 64}
+
+    def test_composition_identity_mismatch_blocks_media_and_ready(self):
+        self.doc['compositions'] = [self.composition()]
+        sys.path.insert(0, str(Path(__file__).parents[2] / 'src'))
+        with patch('speech_aware_evidence_acquisition.core.config.compose',
+                   return_value=SimpleNamespace(config_hash='b' * 64, values={})), \
+                patch('speech_aware_evidence_acquisition.rails.adapters.runtime_view.load_runtime_view') as media:
+            result = self.assert_failed()
+        media.assert_not_called()
+        self.assertIn('composition identity differs', result['checks'][-1]['error'])
+        self.assertIn('actual ' + 'b' * 64, result['checks'][-1]['error'])
+
+    def test_composition_hash_schema_is_optional_but_strict(self):
+        composition = self.composition()
+        self.doc['compositions'] = [composition]
+        self.path.write_text(json.dumps(self.doc))
+        self.assertEqual(m.load_config(self.path)['compositions'][0]['expected_config_hash'], 'a' * 64)
+        for bad in (None, '', 'A' * 64, 'a' * 63, 1):
+            composition['expected_config_hash'] = bad
+            self.path.write_text(json.dumps(self.doc))
+            with self.assertRaisesRegex(ValueError, 'composition hash'):
+                m.load_config(self.path)
+        del composition['expected_config_hash']
+        self.path.write_text(json.dumps(self.doc))
+        m.load_config(self.path)
+
     def test_required_file_checks_actual_bytes(self):
         source = self.root / 'source.json'
         source.write_bytes(b'frozen knowledge')

@@ -76,17 +76,11 @@
     "activation_authorized": false
   },
   "resident_snapshot": {
-    "checked_at_utc": "2026-11-06T01:08:21Z",
-    "deployment": "two TP4 instances on previous cf273e52 release",
-    "running_requests": [
-      0,
-      0
-    ],
-    "waiting_requests": [
-      0,
-      0
-    ],
-    "new_candidate_deployed": false
+    "checked_at_utc": "2026-11-06T01:49:34Z",
+    "deployment": "A stable dependency image TP4; B unchanged cf273e52 TP4",
+    "generation_workers_running": 0,
+    "new_candidate_deployed": false,
+    "note": "Engine ready and registered; optimized CPU worker not started"
   },
   "successor_compile": {
     "exit_code": 0,
@@ -94,9 +88,10 @@
     "status": "HELD",
     "new_model_calls": 0,
     "new_fit_calls": 0,
-    "assets_manifest_sha256": "aa10118c95b852607cf3932305e0010355babd618e949694099608389b3228ed",
-    "admission_config_sha256": "17dae0622e77ec1fe1ac1b8b33ca784052983e9e4e95ac82d661c455f685a587",
-    "live_admission_complete": false
+    "assets_manifest_sha256": "2d635d79546d3c0089a8dde6ab731d5c003ea0127f25617506a45a54a86f7bdc",
+    "admission_config_sha256": "e78d8575474ed077b01b6760fddb2b71a552af00ea55842bca08c89365d23e42",
+    "live_admission_complete": false,
+    "data_root_environment_aligned": true
   },
   "mounted_release_validation": {
     "mode": "mounted-release-v1",
@@ -115,7 +110,48 @@
     "deployment_plan_validated": true,
     "busy_card_refusal_preserved": true,
     "new_model_calls": 0,
-    "engine_cutover_complete": false,
-    "online_throughput_verified": false
+    "engine_cutover_complete": true,
+    "online_throughput_verified": false,
+    "resident_registration": {
+      "exit_code": 0,
+      "files": 4,
+      "new_model_calls": 0
+    }
+  },
+  "configuration_identity_fix": {
+    "root_cause": "compiler and admission used different data-root environments during hash normalization",
+    "without_data_root_environment": "07994ff8db9366dff377232cbc4a82dae426010e29867248298ef66f2c05e9be",
+    "with_data_root_environment": "ba7b8521adb81746c7ff4d86c32613415b63fa173a00794bf037e9377199b300",
+    "tests": {
+      "passed": 34,
+      "subtests_passed": 5,
+      "seconds": 3.61,
+      "environment": "fixed dependency image"
+    },
+    "new_model_calls": 0,
+    "admission_v1_exit_code": 1,
+    "workspace_published_by_failed_admission": false
+  },
+  "production_efficiency_gaps": [
+    "Full audio preload not connected to this checkpoint successor worker",
+    "Mounted-release observer integration pending",
+    "No online throughput window yet"
+  ],
+  "admission_input_closure": {
+    "missing_asset": "docs/exposure-ledger.md",
+    "compiler_early_check_added": true,
+    "source": "pinned predecessor execution tree ledger, copied byte-for-byte",
+    "new_model_calls": 0,
+    "admission_v2_exit_code": 1,
+    "admission_v3_exit_code": 1,
+    "admission_v3_failure": "Knowledge input permissions; partial workspace preserved"
+  },
+  "knowledge_stage": {
+    "exit_code": 0,
+    "files": 23,
+    "source_permissions_unchanged": true,
+    "hashes_verified_before_and_after_copy": true,
+    "local_readonly_worker_input": true,
+    "new_model_calls": 0
   }
 }

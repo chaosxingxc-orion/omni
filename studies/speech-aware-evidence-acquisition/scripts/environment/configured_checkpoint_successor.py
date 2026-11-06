@@ -213,6 +213,10 @@ def _admission_documents(*, cfg, candidate, output_pins, plan_paths,
 
 
 def finalize(cfg, assets, candidate, plan, repo, data, out):
+    # Release images omit operational ledgers. Admission needs the original
+    # exposure rows, so they must travel with the pinned experiment assets.
+    require('docs/exposure-ledger.md' in assets,
+            'pinned predecessor exposure ledger required for successor admission')
     terminal = cfg['terminal']
     require(isinstance(terminal, dict) and set(terminal) == {
         'evidence', 'resume_from', 'bridge', 'registration_relpath', 'lock'},
@@ -408,6 +412,26 @@ def build_successor_documents(*, original, plan, fragments, target, dispatch, wi
 
 def execute(config_path):
     cfg = strict_json(Path(config_path).read_bytes())
+    # Composition canonicalizes absolute data paths using these variables.
+    # Compile under the same explicit data root as admission, even when the
+    # container launching this CPU-only tool has no data-root environment.
+    data = cfg.get('data') if isinstance(cfg, dict) else None
+    require(isinstance(data, str) and Path(data).is_absolute(), 'absolute data root required')
+    keys = ('SAEA_DATA_ROOT', 'SPEECHRL_DATA_DIR')
+    previous = {key: os.environ.get(key) for key in keys}
+    try:
+        for key in keys:
+            os.environ[key] = data
+        return _execute(cfg)
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+def _execute(cfg):
     fields = {'schema', 'mode', 'repo', 'data', 'output', 'assets_manifest', 'candidate',
               'plan', 'fragments', 'target', 'dispatch', 'width', 'supply'}
     require(isinstance(cfg, dict) and set(cfg) == (fields | ({'terminal', 'admission'} if cfg.get('mode') == 'finalize' else set())) and
