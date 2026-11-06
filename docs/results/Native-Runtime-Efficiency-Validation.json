@@ -407,7 +407,7 @@
     "unknown_generation_contacts": 0,
     "fit_contacts": 36,
     "checkpoint_hash_chain_verified": true,
-    "combined_checkpoint_custody_verified": false,
+    "combined_checkpoint_custody_verified": true,
     "lease_settled": true,
     "checkpoint_native_keepable_rows": 2,
     "checkpoint_torn_tail_bytes": 0,
@@ -571,5 +571,33 @@
     "new_model_calls": 0,
     "full_ancestry_verified": false,
     "online_throughput_verified": false
+  },
+  "complete_ancestry_custody": {
+    "source_commit": "3b2670146b9d243eccf017be0f7e8228c8ffd8fc",
+    "audit_exit_code": 0,
+    "new_model_calls": 0,
+    "full_terminal_custody_verified": true,
+    "activation_authorized": false,
+    "generation_calls": 2239,
+    "fit_endpoint_calls": 2267,
+    "same_run_accumulated": {
+      "audio_seconds": 6179.129562500029,
+      "calls": 2239,
+      "gpu_seconds": 0.0
+    },
+    "ancestor_rows": [
+      919,
+      2
+    ],
+    "missing_fit_custody": 0,
+    "unique_sample_union_verified": true,
+    "successor_package_pending": false,
+    "unique_terminal_samples": 921,
+    "remaining_samples": 159,
+    "overlap": 0,
+    "sample_union_sha256": "ea70e93ec655f921f345ffe6cdbddbdac9c77b004aeccb99bb2b7d5b975fe2e0",
+    "package_exit_code": 0,
+    "successor_compile_exit_code": 1,
+    "successor_compile_failure": "compiler uses immediate predecessor registration, workload validator requires root generation-v1 registration"
   }
 }
