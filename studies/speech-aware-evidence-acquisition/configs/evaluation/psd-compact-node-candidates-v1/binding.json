@@ -1,0 +1,23 @@
+{
+  "schema": "psd-compact-node-comparison-binding-v1",
+  "status": "BOUND_STATIC_NOT_ADMITTED",
+  "parent": {
+    "path": "/var/tmp/omni-psd-rails-preparation-v1/complete-coverage-on-workload-v1.json",
+    "sha256": "1c502d1d8d3db034f6dbf1bbde02630d95ae654d14a220551f08891f95c4971c"
+  },
+  "p_template_provenance": "existing compact candidate sha256 838b5592805acd4451f9ab3ffc140888de6534bab85752ad1d1663ec84ba316c; includes prior reference-A source guidance",
+  "candidates": [
+    {
+      "node": "p",
+      "workload": "p-coverage-on-workload.json",
+      "patch": "p-instruction.patch.json",
+      "diff": "p-parent-diff.json"
+    },
+    {
+      "node": "slot",
+      "workload": "slot-coverage-on-workload.json",
+      "patch": "slot-instruction.patch.json",
+      "diff": "slot-parent-diff.json"
+    }
+  ]
+}

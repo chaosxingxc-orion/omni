@@ -1,0 +1,23 @@
+{
+  "parent_sha256": "1c502d1d8d3db034f6dbf1bbde02630d95ae654d14a220551f08891f95c4971c",
+  "changes": {
+    "/name": {
+      "from": "slurp-psd-complete-coverage-fold-a-slot-on-v1",
+      "to": "slurp-psd-compact-p-fold-a-slot-on-v1"
+    },
+    "/run_id": {
+      "from": "SAEA-SLURP-PSD-COMPLETE-COVERAGE-FOLD-A-SLOT-ON-V1",
+      "to": "SAEA-SLURP-PSD-COMPACT-P-FOLD-A-SLOT-ON-V1"
+    },
+    "/perception_policy/instruction_template": {
+      "from": {
+        "relpath": "configs/probes/slurp_native_candidate_perception_off_v1.txt",
+        "sha256": "62b62d50c9eeea020cec004d54e2ec573887fb9ef61a8a1dded37565ad99eb27"
+      },
+      "to": {
+        "relpath": "configs/probes/slurp_psd_perception_compact_v1.txt",
+        "sha256": "838b5592805acd4451f9ab3ffc140888de6534bab85752ad1d1663ec84ba316c"
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "op": "test",
+    "path": "/perception_policy/instruction_template",
+    "value": {
+      "relpath": "configs/probes/slurp_native_candidate_perception_off_v1.txt",
+      "sha256": "62b62d50c9eeea020cec004d54e2ec573887fb9ef61a8a1dded37565ad99eb27"
+    }
+  },
+  {
+    "op": "replace",
+    "path": "/perception_policy/instruction_template",
+    "value": {
+      "relpath": "configs/probes/slurp_psd_perception_compact_v1.txt",
+      "sha256": "838b5592805acd4451f9ab3ffc140888de6534bab85752ad1d1663ec84ba316c"
+    }
+  }
+]
