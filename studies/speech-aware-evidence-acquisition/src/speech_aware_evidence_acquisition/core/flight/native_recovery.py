@@ -179,7 +179,7 @@ def protocol_pair_layout_matches(values):
         return False
 
 
-def native_contact_custody_enabled(values):
+def native_contact_custody_enabled(values, *, allow_fresh_normalized=False):
     """Operational capture for the reviewed odd40 method or raw-vLLM A0 P/S.
 
     Do not widen this to tool, revision, branch or acquisition graphs merely
@@ -221,7 +221,7 @@ def native_contact_custody_enabled(values):
         graph = parse_config(json.loads(config.intent_slot_pipeline_json))
         expected = 2 + (1 if graph['slot_mode'] == 'batched' else graph['max_candidates'])
         recovery = graph.get('coverage_recovery')
-        if graph.get('reference_normalizer'):
+        if graph.get('reference_normalizer') and not allow_fresh_normalized:
             return False  # Cross-attempt sanitized Slot ancestry is not yet verified.
         expected += recovery['max_extra_contacts'] if recovery else 0
         policy = ('phase-native-intent-slot-batched-recovery-v1' if recovery else

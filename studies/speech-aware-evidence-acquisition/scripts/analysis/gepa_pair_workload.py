@@ -533,7 +533,7 @@ class PairWorkload:
             actual_scientific['native_contact_fit']['attempt_id'] = original_fit['attempt_id']
         if (scientific_hash(actual_scientific) != scientific_hash(base)
                 or scientific_hash(actual_scientific) != spec['scientific_baseline_sha256']
-                or not native_contact_custody_enabled({**actual,'transport':'vllm','carrier_lock_key':'slurp'})):
+                or not native_contact_custody_enabled({**actual,'transport':'vllm','carrier_lock_key':'slurp'}, allow_fresh_normalized=not is_checkpoint)):
             raise ValueError('registered probe program, material or recovery changed')
         if spec['gain_lock'] != {'relpath':observation.LOCK,'sha256':observation.LOCK_SHA} or pinned(repo,spec['gain_lock'])['status'] != 'locked_full_train_fold_b':
             raise ValueError('locked first-round baseline required')
