@@ -802,7 +802,7 @@
     "knowledge_supply": "locked-card visibility implementation under review; corrected preparation bound28->54 and testing retained context; not admitted",
     "load_analysis": "completed existing evidence analysis accepted; retain armed C96, no measured speedup",
     "tfrl_reader": "deferred",
-    "perception_miss_analysis": "completeOFF100 P misses aggregate plus bounded representative actual-supply audit running; no new inference"
+    "perception_miss_analysis": "complete100 receipt aggregation and12 actual P/retrieval diagnostics accepted; one historical ranking-policy comparison proposed, not prepared/admitted"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,

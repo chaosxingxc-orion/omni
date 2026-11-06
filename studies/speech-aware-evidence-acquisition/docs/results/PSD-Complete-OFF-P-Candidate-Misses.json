@@ -1,0 +1,329 @@
+{
+  "schema": "psd-P-miss-public-v1",
+  "population": {
+    "denominator": 1080,
+    "P_miss": 100,
+    "by_gold_intent": {
+      "iot_hue_lightoff": 1,
+      "takeaway_query": 2,
+      "music_query": 2,
+      "music_settings": 2,
+      "datetime_query": 2,
+      "weather_query": 2,
+      "music_likeness": 3,
+      "play_music": 4,
+      "iot_cleaning": 1,
+      "news_query": 5,
+      "iot_wemo_on": 2,
+      "audio_volume_up": 4,
+      "iot_hue_lightdim": 1,
+      "general_joke": 1,
+      "datetime_convert": 1,
+      "takeaway_order": 4,
+      "general_quirky": 15,
+      "alarm_set": 1,
+      "iot_coffee": 1,
+      "iot_hue_lightup": 1,
+      "alarm_query": 1,
+      "audio_volume_mute": 1,
+      "calendar_set": 3,
+      "calendar_remove": 1,
+      "calendar_query": 1,
+      "play_radio": 1,
+      "play_audiobook": 2,
+      "cooking_recipe": 3,
+      "play_game": 1,
+      "lists_createoradd": 2,
+      "lists_remove": 2,
+      "lists_query": 2,
+      "transport_taxi": 1,
+      "transport_ticket": 3,
+      "qa_factoid": 3,
+      "qa_stock": 1,
+      "social_post": 9,
+      "social_query": 2,
+      "email_sendemail": 3,
+      "email_querycontact": 1,
+      "email_query": 1,
+      "email_addcontact": 1
+    },
+    "by_original_scenario": {
+      "iot": 7,
+      "takeaway": 6,
+      "music": 7,
+      "datetime": 3,
+      "weather": 2,
+      "play": 8,
+      "news": 5,
+      "audio": 5,
+      "general": 16,
+      "alarm": 2,
+      "calendar": 5,
+      "cooking": 3,
+      "lists": 6,
+      "transport": 4,
+      "qa": 4,
+      "social": 11,
+      "email": 6
+    },
+    "candidate_count": {
+      "3": 77,
+      "1": 13,
+      "2": 10
+    },
+    "candidate_label_legal_rows": 100,
+    "final_selected_rank": {
+      "1": 84,
+      "2": 14,
+      "3": 2
+    },
+    "P_reask": {
+      "False": 99,
+      "True": 1
+    },
+    "gold_boundary_supplied_receipt": {
+      "True": 47,
+      "False": 53
+    },
+    "by_gold_intent_with_denominator": {
+      "iot_hue_lightoff": {
+        "miss": 1,
+        "total": 13,
+        "miss_rate": 0.07692307692307693
+      },
+      "takeaway_query": {
+        "miss": 2,
+        "total": 31,
+        "miss_rate": 0.06451612903225806
+      },
+      "music_query": {
+        "miss": 2,
+        "total": 32,
+        "miss_rate": 0.0625
+      },
+      "music_settings": {
+        "miss": 2,
+        "total": 9,
+        "miss_rate": 0.2222222222222222
+      },
+      "datetime_query": {
+        "miss": 2,
+        "total": 50,
+        "miss_rate": 0.04
+      },
+      "weather_query": {
+        "miss": 2,
+        "total": 60,
+        "miss_rate": 0.03333333333333333
+      },
+      "music_likeness": {
+        "miss": 3,
+        "total": 18,
+        "miss_rate": 0.16666666666666666
+      },
+      "play_music": {
+        "miss": 4,
+        "total": 19,
+        "miss_rate": 0.21052631578947367
+      },
+      "iot_cleaning": {
+        "miss": 1,
+        "total": 6,
+        "miss_rate": 0.16666666666666666
+      },
+      "news_query": {
+        "miss": 5,
+        "total": 60,
+        "miss_rate": 0.08333333333333333
+      },
+      "iot_wemo_on": {
+        "miss": 2,
+        "total": 4,
+        "miss_rate": 0.5
+      },
+      "audio_volume_up": {
+        "miss": 4,
+        "total": 24,
+        "miss_rate": 0.16666666666666666
+      },
+      "iot_hue_lightdim": {
+        "miss": 1,
+        "total": 8,
+        "miss_rate": 0.125
+      },
+      "general_joke": {
+        "miss": 1,
+        "total": 10,
+        "miss_rate": 0.1
+      },
+      "datetime_convert": {
+        "miss": 1,
+        "total": 10,
+        "miss_rate": 0.1
+      },
+      "takeaway_order": {
+        "miss": 4,
+        "total": 29,
+        "miss_rate": 0.13793103448275862
+      },
+      "general_quirky": {
+        "miss": 15,
+        "total": 45,
+        "miss_rate": 0.3333333333333333
+      },
+      "alarm_set": {
+        "miss": 1,
+        "total": 33,
+        "miss_rate": 0.030303030303030304
+      },
+      "iot_coffee": {
+        "miss": 1,
+        "total": 9,
+        "miss_rate": 0.1111111111111111
+      },
+      "iot_hue_lightup": {
+        "miss": 1,
+        "total": 6,
+        "miss_rate": 0.16666666666666666
+      },
+      "alarm_query": {
+        "miss": 1,
+        "total": 19,
+        "miss_rate": 0.05263157894736842
+      },
+      "audio_volume_mute": {
+        "miss": 1,
+        "total": 24,
+        "miss_rate": 0.041666666666666664
+      },
+      "calendar_set": {
+        "miss": 3,
+        "total": 25,
+        "miss_rate": 0.12
+      },
+      "calendar_remove": {
+        "miss": 1,
+        "total": 8,
+        "miss_rate": 0.125
+      },
+      "calendar_query": {
+        "miss": 1,
+        "total": 27,
+        "miss_rate": 0.037037037037037035
+      },
+      "play_radio": {
+        "miss": 1,
+        "total": 16,
+        "miss_rate": 0.0625
+      },
+      "play_audiobook": {
+        "miss": 2,
+        "total": 7,
+        "miss_rate": 0.2857142857142857
+      },
+      "cooking_recipe": {
+        "miss": 3,
+        "total": 59,
+        "miss_rate": 0.05084745762711865
+      },
+      "play_game": {
+        "miss": 1,
+        "total": 7,
+        "miss_rate": 0.14285714285714285
+      },
+      "lists_createoradd": {
+        "miss": 2,
+        "total": 22,
+        "miss_rate": 0.09090909090909091
+      },
+      "lists_remove": {
+        "miss": 2,
+        "total": 16,
+        "miss_rate": 0.125
+      },
+      "lists_query": {
+        "miss": 2,
+        "total": 22,
+        "miss_rate": 0.09090909090909091
+      },
+      "transport_taxi": {
+        "miss": 1,
+        "total": 13,
+        "miss_rate": 0.07692307692307693
+      },
+      "transport_ticket": {
+        "miss": 3,
+        "total": 17,
+        "miss_rate": 0.17647058823529413
+      },
+      "qa_factoid": {
+        "miss": 3,
+        "total": 27,
+        "miss_rate": 0.1111111111111111
+      },
+      "qa_stock": {
+        "miss": 1,
+        "total": 8,
+        "miss_rate": 0.125
+      },
+      "social_post": {
+        "miss": 9,
+        "total": 47,
+        "miss_rate": 0.19148936170212766
+      },
+      "social_query": {
+        "miss": 2,
+        "total": 13,
+        "miss_rate": 0.15384615384615385
+      },
+      "email_sendemail": {
+        "miss": 3,
+        "total": 19,
+        "miss_rate": 0.15789473684210525
+      },
+      "email_querycontact": {
+        "miss": 1,
+        "total": 6,
+        "miss_rate": 0.16666666666666666
+      },
+      "email_query": {
+        "miss": 1,
+        "total": 31,
+        "miss_rate": 0.03225806451612903
+      },
+      "email_addcontact": {
+        "miss": 1,
+        "total": 4,
+        "miss_rate": 0.25
+      }
+    }
+  },
+  "diagnostic_scope": {
+    "cases": 12,
+    "different_original_intents": 12,
+    "previously_analyzed_cases_excluded": true,
+    "not_random_or_population_prevalence": true
+  },
+  "diagnostic_primary_counts": {
+    "gold_boundary_absent": 6,
+    "audio_annotation_unknown": 2,
+    "supplied_not_selected_operation": 1,
+    "label_neighbor_information_insufficient": 3
+  },
+  "retrieval_arithmetic_only": {
+    "current_supply_exact": 12,
+    "k60_cosine_only_same_final8": 12,
+    "historical_k60_agreement_gold_card_gains": 2,
+    "historical_k60_agreement_gold_card_losses": 1,
+    "model_outcome_gain": null
+  },
+  "recommendation": "retain one independent historical P retrieval-policy package comparison, k60 cosine+sealed agreement, final8 cards; keep P thinking OFF and all other science fixed; no dispatch",
+  "limitations": [
+    "missing gold card is not proven recall bug",
+    "supplied card is not proof of sufficient semantic evidence",
+    "12 cases cannot estimate causes of100",
+    "generated distinction is not transcript or internal cause",
+    "retrieval arithmetic is not causal model quality gain"
+  ],
+  "new_model_teacher_FIT_scorer_bootstrap_calls": 0
+}
