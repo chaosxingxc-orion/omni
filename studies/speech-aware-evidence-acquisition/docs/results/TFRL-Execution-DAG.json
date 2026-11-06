@@ -15,8 +15,8 @@
       "depends_on": [],
       "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 385,
-      "observed_model_calls": 1240,
+      "completed_rows": 512,
+      "observed_model_calls": 1596,
       "completed_rows_include_early_abstentions": true
     },
     {
@@ -25,8 +25,8 @@
       "depends_on": [],
       "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 214,
-      "observed_model_calls": 699,
+      "completed_rows": 278,
+      "observed_model_calls": 895,
       "completed_rows_include_early_abstentions": true
     },
     {
@@ -253,7 +253,7 @@
       "axis": "召回/排序/供给",
       "priority": 5,
       "depends_on": [],
-      "status": "cpu_registered_admission_and_queue_pending",
+      "status": "both_native_queues_armed_pending_release",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
@@ -286,7 +286,8 @@
           "resource": "NPU-B",
           "after_generation_release": "baseline-on"
         }
-      ]
+      ],
+      "actual_release_verified": false
     },
     {
       "id": "E6",
@@ -371,6 +372,46 @@
       ],
       "status": "awaiting_required_construction_feedback",
       "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+    },
+    {
+      "id": "reference-perception-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "configuration_and_material_preparation_running",
+      "inputs": "accepted fixed v5 reference analysis; unchanged Fold A1080 k8 OFF control",
+      "changed_node": "perception"
+    },
+    {
+      "id": "reference-perception-evaluate",
+      "resource": "NPU-first-free",
+      "depends_on": [
+        "reference-perception-prepare"
+      ],
+      "status": "not_admitted",
+      "rows": 1080,
+      "control": "baseline-off",
+      "mutually_exclusive_with_other_prompt": true,
+      "changed_node": "perception"
+    },
+    {
+      "id": "reference-slot-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "configuration_and_material_preparation_running",
+      "inputs": "accepted fixed v5 reference analysis; unchanged Fold A1080 k8 OFF control",
+      "changed_node": "slot"
+    },
+    {
+      "id": "reference-slot-evaluate",
+      "resource": "NPU-first-free",
+      "depends_on": [
+        "reference-slot-prepare"
+      ],
+      "status": "not_admitted",
+      "rows": 1080,
+      "control": "baseline-off",
+      "mutually_exclusive_with_other_prompt": true,
+      "changed_node": "slot"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -392,7 +433,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T15:16:53.107908+00:00",
+  "updated_at": "2026-11-06T15:27:07.348692+00:00",
   "parallel_cpu_tasks": [
     {
       "id": "gepa-seed-contract-preparation",
@@ -428,7 +469,7 @@
     "successor_trigger": "generation-released",
     "score_blocks_successor": false,
     "full_verification_eliminated": false,
-    "native_successor_queue_status": "admission_and_queue_configuration_in_progress",
+    "native_successor_queue_status": "both_armed_waiting_for_generation_release",
     "queue_compatibility_commit": "25c6386f"
   }
 }
