@@ -178,6 +178,28 @@
     "real_environment_seconds": 4.32208797999192,
     "new_model_calls": 0,
     "worker_deployed": false,
-    "source_compatibility_pending": true
+    "source_compatibility_pending": false,
+    "admission_exit_code": 0,
+    "completion_published": true,
+    "workspace_manifest_sha256": "d3acaa332d76b9194c9b485df6cc3fab7a299c47117564c358a17c0263da98c0",
+    "bridge_precheck": {
+      "ok": true,
+      "exit_code": 0,
+      "checkpoint_rows": 919,
+      "reviewed_source_count": 35,
+      "data_pin_count": 21,
+      "reference_count": 10,
+      "new_model_calls": 0,
+      "request_body_equivalence": "requires final integration evidence"
+    },
+    "final_integration_pending": true
+  },
+  "checkpoint_recovery_observer": {
+    "source_commit": "c93b696d",
+    "tests_passed": 24,
+    "seconds": 4.78,
+    "environment": "fixed dependency image",
+    "deployed": false,
+    "fresh_inference_rate_verified": false
   }
 }
