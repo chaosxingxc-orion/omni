@@ -12,8 +12,8 @@
 |---|---|---|
 |v5 Slot OFF|已释放NPU-A|1080生成封存；1038结构完整、23P截断、19引用拒收；官方评分恢复验收成功：Intent81.6667%、SLU64.8754%|
 |v5 Slot ON|NPU-B|1080已封存，1037结构完整/43空答；评分及验收完成：Intent82.0370%、SLU71.2196%|
-|k16供给对照|NPU-A/B|两路均运行；ON17:37真实generation-release接续，不等评分|
-|引用隔离候选|NPU-A后继|正式准入和queue plan通过，后台队列等待真实OFF k16生成释放|
+|k16供给对照|NPU-A/B|OFF1080已封存并释放，引用修复后继18:15:33自动启动；ON继续生成，不等评分|
+|引用隔离候选|NPU-A后继|已按真实OFF k16生成释放自动启动，18:15:33容器running；首请求待验|
 |P-only/Slot-only提示|NPU-A后继|已准入，自动绑定器HOLD，覆盖候选优先|
 |Perception长度恢复|CPU→就绪池|已合main81d7ea7b；配置化模板、139项相关测试及8项集成测试；stage/prepare/register/admission成功；自动绑定器已核实存活，等引用候选真实容器身份|
 |Slot长度恢复|CPU|已知两条非空截断未触发空响应补答；修复已合main c3d1dc17，136相关+3定点测试通过；完整候选已准入；绑定器等待引用前驱身份，P-only长度候选HOLD|
@@ -34,7 +34,7 @@ flowchart LR
     Tune --> Prepare
   end
   subgraph NPU
-    A[k16 OFF运行] -->|生成释放| Cover[已就绪引用候选]
+    A[k16 OFF生成已释放] -->|已自动接续| Cover[引用候选容器运行]
     B[v5 ON已释放] -->|已接续| K[k16 ON运行]
     Cover --> Next[下一就绪候选]
   end

@@ -280,7 +280,7 @@
       "axis": "召回/排序/供给",
       "priority": 5,
       "depends_on": [],
-      "status": "off_and_on_generation_running",
+      "status": "off_generation_sealed_released_on_generation_running",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
@@ -483,7 +483,7 @@
       "depends_on": [
         "coverage-ready"
       ],
-      "status": "native_queue_armed_waiting_k16_off_generation_release",
+      "status": "successor_container_running_first_request_pending",
       "priority": 1,
       "rows": 1080,
       "runtime_predecessor": "E5 OFF generation; CPU score not required",
@@ -632,7 +632,7 @@
       "depends_on": [
         "off-semantic-gap-analysis"
       ],
-      "status": "same_cli_analysis_running",
+      "status": "evidence_report_accepted_parent_template_rebase_running",
       "scope": "at most two evidence-backed P/Slot/Decision prompt candidates; fixed KB and normalizer; no model calls"
     }
   ],

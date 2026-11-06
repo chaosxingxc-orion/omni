@@ -1,0 +1,14 @@
+{
+  "status": "generation_release_and_successor_container_verified",
+  "generation_rows": 1080,
+  "generation_sealed": true,
+  "release_sha256": "92d2048663d5e5add7da659339130a02afac9c7c68e280c6628002687e2dcfbf",
+  "campaign_seconds_to_release": 6737.6524981500115,
+  "campaign_seconds_per_row_to_release": 6.238567127916677,
+  "release_to_successor_container_seconds": 11.031245946884155,
+  "first_model_request_verified": false,
+  "cpu_scoring_complete_at_release": false,
+  "successor_kind": "reference-isolation OFF",
+  "B_k16_still_running": true,
+  "coverage_proven": false
+}
