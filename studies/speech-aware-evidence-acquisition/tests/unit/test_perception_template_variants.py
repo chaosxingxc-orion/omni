@@ -373,7 +373,7 @@ def _build(tmp_path, monkeypatch, *, armed=True, resolver="own-note"):
         extra = {"supply_for_phase": supply}
         if armed:
             extra["perception_branch_solver_supply"] = branch_supply
-        return real_binding(**kwargs, **extra)
+        return real_binding(**{**kwargs, **extra})
 
     monkeypatch.setattr(harness_module, "NativeEpisodeRunBinding", bind)
     if armed:
