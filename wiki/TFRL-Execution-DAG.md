@@ -22,7 +22,7 @@
 |B故障后接续|NPU-B|旧请求全部已知、原租约结算成功；已21:04:07复用原completeON配置启动，主线程确认running及真实HTTP成功；P后继已绑定真实生成释放，Slot等待P实际容器，两个binder交接已主审，不等待旧结果评分|
 |B旧结果封存恢复|CPU|已复现runtime overlay认证遗漏；独立工程CLI最小修复并做真实输入封存验证，不占NPU|
 |紧凑输出P/Slot|NPU-A后继|正式准备及A路由主审完成，binder已启动；完整覆盖OFF释放→紧凑P→紧凑Slot；同完整覆盖ON科学父，不等CPU评分|
-|Decision条件证据|CPU准备→NPU-A|仅D提示候选已合main715d22f4，固定静态验证通过；标准准备正在进行，未准入未启动|
+|Decision条件证据|CPU准备→NPU-A|仅D提示候选已合main715d22f4，四阶段准备真实通过主审；binder已启动，紧凑Slot生成释放后接续；未推理|
 |完整覆盖合同审计|CPU|已执行固定镜像reader并验收1080合法；不等官方评分、不阻NPU后继|
 |防止host缓存污染|CPU|已合main，7入口测试及202业务回归通过；未热部署|
 |官方评分恢复|CPU|四watcher已部署；引用OFF锁故障已通过原产物对账完成，未重评分；三个后继的锁挂载修复已部署；NPU不等评分|
@@ -49,7 +49,7 @@ flowchart LR
   subgraph NPU_A
     A[完整覆盖OFF 已封存释放 1080合法] -->|生成释放| CP[紧凑P 已绑定]
     CP -->|生成释放| CS[紧凑Slot 已绑定]
-    CS -.准备完成后绑定.-> D[独立D候选 准备中]
+    CS -->|生成释放| D[独立D候选 已绑定等待]
   end
   subgraph NPU_B
     B[完整覆盖ON 运行] -->|生成释放| P[P操作辨别 已绑定]

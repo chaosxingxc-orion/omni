@@ -700,7 +700,7 @@
       "resource_predecessor": "complete-coverage-evaluate",
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
-      "status": "container_running_first_http_unverified",
+      "status": "running_first_http_success_verified",
       "started_at_utc": "2026-11-06T22:06:40.70367096Z"
     },
     {
@@ -718,7 +718,7 @@
       "id": "decision-evidence-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "configuration_reviewed_merged_standard_preparation_live_not_admitted",
+      "status": "stage_prepare_register_admission_verified_complete",
       "commit": "715d22f4"
     },
     {
@@ -730,7 +730,7 @@
       "resource_predecessor": "compact-slot-a-evaluate",
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
-      "status": "planned_not_armed"
+      "status": "binder_armed_waiting_source_container"
     },
     {
       "id": "complete-off-contract-audit",
