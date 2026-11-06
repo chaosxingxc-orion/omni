@@ -636,7 +636,7 @@
       "depends_on": [
         "off-semantic-gap-analysis"
       ],
-      "status": "stage_prepare_register_reported_complete_admission_running_final_review_pending",
+      "status": "production_ready_independently_verified",
       "scope": "at most two evidence-backed P/Slot/Decision prompt candidates; fixed KB and normalizer; no model calls"
     },
     {
@@ -645,7 +645,7 @@
       "depends_on": [
         "node-prompt-candidates"
       ],
-      "status": "not_ready_admission_running",
+      "status": "ready_auto_binder_live_waiting_predecessor_not_launched",
       "rows": 1080,
       "control": "complete-coverage-on-evaluate",
       "changed_node": "perception",
@@ -657,7 +657,7 @@
       "depends_on": [
         "node-prompt-candidates"
       ],
-      "status": "not_ready_admission_running",
+      "status": "ready_auto_binder_live_waiting_predecessor_not_launched",
       "rows": 1080,
       "control": "complete-coverage-on-evaluate",
       "changed_node": "slot",
@@ -684,10 +684,10 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T18:32:20Z",
+  "updated_at": "2026-11-06T18:41:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Reference and P/Slot recovery merged; full online coverage not proven",
-    "deployment": "Two common-parent node prompt candidates admission running; complete coverage queues armed",
+    "deployment": "New P/Slot candidates admitted and auto-binders live; existing observer extension in progress",
     "scoring_recovery": "k16 OFF official CPU recovery running; no model replay",
     "paired_analysis": "Full v5 paired results accepted; 58 strict regressions node analysis running",
     "tfrl_reader": "deferred"

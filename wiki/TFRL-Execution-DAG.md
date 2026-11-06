@@ -15,7 +15,7 @@
 |k16供给对照|NPU-A/B|OFF1080已封存并释放，引用修复后继18:15:33自动启动；ON继续生成，不等评分|
 |引用隔离候选|NPU-A后继|已按真实OFF k16生成释放自动启动，18:15:33容器running；18:20:18原生dispatch已核|
 |旧引用提示候选|NPU-A后继|已准入但HOLD，完整覆盖优先；不与新的节点提示候选混称|
-|新P-only/Slot-only提示|CPU准备→NPU-B|基共同完整覆盖ON父；stage/prepare/register已由执行者报告成功，admission运行，尚未主审READY；计划完整覆盖ON→P-only→Slot-only|
+|新P-only/Slot-only提示|CPU准备→NPU-B|基共同完整覆盖ON父；8个CPU容器exit0与14项摘要主审通过；准备就绪、自动binder存活，等待真实前驱，未派发；完整覆盖ON→P-only→Slot-only|
 |Perception长度恢复|CPU→就绪池|已合main81d7ea7b；配置化模板、139项相关测试及8项集成测试；stage/prepare/register/admission成功；自动绑定器已核实存活，等引用候选真实容器身份|
 |Slot长度恢复|CPU|已知两条非空截断未触发空响应补答；修复已合main c3d1dc17，136相关+3定点测试通过；完整候选已准入；已绑定真实引用前驱的生成释放，P-only长度候选HOLD|
 |官方评分恢复|CPU|根因是运行overlay未在评分重放；OFF恢复及只读验收exit0，1080分母保留；ON恢复及独立验收完成|

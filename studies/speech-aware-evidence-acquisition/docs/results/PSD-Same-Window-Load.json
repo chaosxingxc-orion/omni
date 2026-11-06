@@ -1,0 +1,66 @@
+{
+  "schema": "psd-same-window-load-v1",
+  "scope": "Two historical 600s windows; successful checkpoint operations, not verified valid answers",
+  "source_sha256": "6d96b8cc686b3d4612660e8d0926f9079cce5a5b683d8155e1fa432cb76ef050",
+  "rows": [
+    {
+      "lane": "A",
+      "slot_thinking": "OFF",
+      "start_utc": "2026-11-06T17:44:42+00:00",
+      "end_utc": "2026-11-06T17:54:42+00:00",
+      "completed_checkpoint_events": 93,
+      "elapsed_seconds": 600.0,
+      "wall_seconds_per_checkpoint_event": 6.451612903225806,
+      "core_sparse_endpoint_means_percent": [
+        51.25,
+        47.75
+      ]
+    },
+    {
+      "lane": "A",
+      "slot_thinking": "OFF",
+      "start_utc": "2026-11-06T17:54:42+00:00",
+      "end_utc": "2026-11-06T18:04:42+00:00",
+      "completed_checkpoint_events": 94,
+      "elapsed_seconds": 600.0,
+      "wall_seconds_per_checkpoint_event": 6.382978723404255,
+      "core_sparse_endpoint_means_percent": [
+        47.75,
+        62.0
+      ]
+    },
+    {
+      "lane": "B",
+      "slot_thinking": "ON",
+      "start_utc": "2026-11-06T17:44:42+00:00",
+      "end_utc": "2026-11-06T17:54:42+00:00",
+      "completed_checkpoint_events": 56,
+      "elapsed_seconds": 600.0,
+      "wall_seconds_per_checkpoint_event": 10.714285714285714,
+      "core_sparse_endpoint_means_percent": [
+        61.75,
+        70.5
+      ]
+    },
+    {
+      "lane": "B",
+      "slot_thinking": "ON",
+      "start_utc": "2026-11-06T17:54:42+00:00",
+      "end_utc": "2026-11-06T18:04:42+00:00",
+      "completed_checkpoint_events": 56,
+      "elapsed_seconds": 600.0,
+      "wall_seconds_per_checkpoint_event": 10.714285714285714,
+      "core_sparse_endpoint_means_percent": [
+        70.5,
+        39.25
+      ]
+    }
+  ],
+  "limitations": [
+    "Hardware utilization is sparse endpoint sampling, not continuous window mean",
+    "ON early window may still include ramp-up",
+    "Different thinking and output budgets; not a concurrency causal comparison",
+    "Monotonic/UTC alignment uses a single host offset; boundary error possible"
+  ],
+  "new_model_calls": 0
+}
