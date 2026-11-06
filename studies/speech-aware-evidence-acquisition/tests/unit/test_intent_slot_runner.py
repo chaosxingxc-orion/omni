@@ -1370,3 +1370,31 @@ def test_sdk_normalizer_does_not_repair_business_fields(tmp_path, repair_succeed
         assert cost['calls_used']==3
         assert rows[0]['text']==''
         assert rows[0]['native_episode_receipt']['terminal_disposition']['reason']=='seal_refusal'
+
+
+def test_sdk_rejects_normalized_source_changed_before_settlement(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.rails import candidate_handoff
+    original = candidate_handoff.normalized_response
+    count = 0
+    def corrupt_second(kind, text, context, config):
+        nonlocal count
+        result = original(kind, text, context, config)
+        if kind == 'perception':
+            count += 1
+            if count == 2:
+                return result + ' '
+        return result
+    monkeypatch.setattr(candidate_handoff, 'normalized_response', corrupt_second)
+    h = harness(tmp_path)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2',
+                  node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1',
+                  reference_normalizer='quarantine-unsupplied-v1')
+    h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    try:
+        with pytest.raises(Exception, match='candidate normalized source changed'):
+            h.run()
+    finally:
+        cost = h.close()['cost']
+    assert count == 2 and cost['calls_used'] == 1

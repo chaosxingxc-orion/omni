@@ -41,5 +41,10 @@
     "semantic errors and missing candidates remain",
     "UNKNOWN cannot be resent",
     "no complete real-world coverage or precision result"
-  ]
+  ],
+  "review_correction_test": "114 passed, 5 warnings, 36.93s",
+  "review_correction_sha256": {
+    "src/speech_aware_evidence_acquisition/rails/runner.py": "11e4d9756b7a81973db4ab53a808e06a4fb2b7d1d1cb5483e43d25ac1eff064c",
+    "tests/unit/test_intent_slot_runner.py": "866a6776c888057de6fed7597772408fa8b898544f4de5f60c50f9d59a0bdf1a"
+  }
 }
