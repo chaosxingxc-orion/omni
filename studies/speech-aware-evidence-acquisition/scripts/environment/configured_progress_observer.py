@@ -97,9 +97,9 @@ def native_contacts(producer,logical,plan,arm):
         except FileNotFoundError:
             vanished.append(path.name);continue
         require(stat.S_ISREG(info.st_mode),'unexpected contact journal file')
-        if re.fullmatch(r'\.[a-f0-9]{64}\.(intent|response|fit)\.json\.[A-Za-z0-9_-]+',path.name):
+        if re.fullmatch(r'\.[a-f0-9]{64}\.(intent|response|fit|dispatch|not_sent|reconciliation)\.json\.[A-Za-z0-9_-]+',path.name):
             transient.append(path.name);continue
-        require(re.fullmatch(r'[a-f0-9]{64}\.(intent|response|fit)\.json',path.name),'unexpected contact journal file')
+        require(re.fullmatch(r'[a-f0-9]{64}\.(intent|response|fit|dispatch|not_sent|reconciliation)\.json',path.name),'unexpected contact journal file')
         files.append(path)
     fit_files=[p for p in files if p.name.endswith('.fit.json')]
     for path in fit_files:
@@ -107,14 +107,26 @@ def native_contacts(producer,logical,plan,arm):
         require(fit.get('schema')=='saea-native-fit-custody-v1' and fit.get('identity')==journal.identity
             and path.name==digest(canonical(comparable_request(fit['payload'])))+'.fit.json', 'native FIT custody differs')
     intents=[p for p in files if p.name.endswith('.intent.json')]
-    response_names={p.name for p in files if p.name.endswith('.response.json')}
-    require(response_names<={p.name.replace('.intent.','.response.') for p in intents},'orphan native response')
+    # A directory enumeration can see a newly published boundary without seeing
+    # its earlier intent. Validate that intent from disk but do not count it in
+    # this snapshot. Every committed boundary must have a validated parent.
+    intent_names={p.name for p in intents}
+    for path in files:
+        kind=path.name.split('.')[1]
+        if kind not in ('response','dispatch','not_sent','reconciliation'):continue
+        parent=journal.root/(path.name.split('.')[0]+'.intent.json')
+        if parent.name not in intent_names:
+            require(parent.exists() and stat.S_ISREG(parent.lstat().st_mode),'orphan native custody')
+            rid=settlement.read(parent)['request_id']
+            require(parent==journal._path(rid,'intent'),'native filename differs')
+            require(journal.inspect(rid)['state'] in ('observed','not_sent','unknown'),'native state differs')
     known=defaultdict(float,{'calls':0,'prompt_tokens':0,'completion_tokens':0,'latency_seconds':0})
-    unknown=[]; records={}
+    unknown=[]; not_sent=[]; records={}
     for ip in intents:
         rid=settlement.read(ip)['request_id'];require(ip==journal._path(rid,'intent'),'native filename differs')
         record=journal.inspect(rid)
         if record['state']=='unknown':unknown.append(rid);continue
+        if record['state']=='not_sent':not_sent.append(rid);continue
         require(record['state']=='observed','native state differs')
         response=json.loads(record['response_bytes']);usage=response.get('usage')
         require(isinstance(usage,dict),'observed response usage absent')
@@ -125,14 +137,14 @@ def native_contacts(producer,logical,plan,arm):
         # learning. It is not transmitted/billed audio and must not be charged.
         records[rid]=record
     return {'attempted_contacts':len(intents),'observed_contacts':len(records),
-        'inflight_or_unknown_contacts':len(unknown),'known_usage':dict(known),
-        'unknown_cost':None,'unknown_cost_reason':'Unreturned requests have unknown spend, never assumed zero.',
+        'not_sent_contacts':len(not_sent),'inflight_or_unknown_contacts':len(unknown),'known_usage':dict(known),
+        'unknown_cost':None,'unknown_cost_reason':'In-flight or unknown requests have unknown spend, never assumed zero; historical attempt costs remain in custody.',
         'fit_custody_records':len(fit_files),'fit_cost':'accounted separately; not included in native generation contacts',
         'uncommitted_publish_files':transient,'vanished_during_enumeration':vanished,
         'snapshot_boundary':'native intents present at directory enumeration; responses may finish during this read',
         **OBSERVER_CALL_ACCOUNTING,
         'workload_model_calls':{'attempted':len(intents),'observed':len(records),
-            'inflight_or_unknown':len(unknown),'run_id':plan.run_id,'attempt_id':plan.attempt_id,
+            'not_sent':len(not_sent),'inflight_or_unknown':len(unknown),'run_id':plan.run_id,'attempt_id':plan.attempt_id,
             'scope':'cumulative current attempt native journal; excludes FIT and prior attempts; not a polling-interval delta'}},records
 
 

@@ -288,3 +288,87 @@ def test_observe_checkpoint_recovery_reports_whole_roster_without_leaking_ids(tm
     assert result['wall_seconds_per_complete_row']==20 and result['estimated_remaining_seconds']==0
     assert result['recovery']['fresh_inference_rate_verified']
     assert '_completed_sample_ids' not in result and '_kept_sample_ids' not in result['recovery']
+
+
+def test_delivery_states_preserve_attempted_cost_and_observed_records(tmp_path):
+    plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
+    journal=ContactJournal(tmp_path,plan,'bare-core')
+    for rid in ('observed','not-sent','dispatched','pending'):
+        journal.intent(payload(rid))
+    for rid,kind in [('observed','dispatch'),('not-sent','not_sent'),('dispatched','dispatch')]:
+        journal.delivery_event(rid,digest(canonical(payload(rid))),kind,**({'error_type':'OSError'} if kind=='not_sent' else {}))
+    journal.response('observed',digest(canonical(payload('observed'))),canonical({'text':'ok','usage':{'prompt_tokens':4,'completion_tokens':2}}),1)
+    result,records=m.native_contacts(producer,tmp_path,plan,'bare-core')
+    assert (result['attempted_contacts'],result['observed_contacts'],result['not_sent_contacts'],result['inflight_or_unknown_contacts'])==(4,1,1,2)
+    assert result['known_usage']['calls']==1 and result['unknown_cost'] is None
+    assert result['workload_model_calls']['attempted']==4 and result['workload_model_calls']['not_sent']==1
+    assert set(records)=={'observed'}
+
+
+@pytest.mark.parametrize('kind',['response','dispatch','not_sent','reconciliation'])
+def test_orphan_delivery_custody_rejected(tmp_path,kind):
+    plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
+    j=ContactJournal(tmp_path,plan,'bare-core');j.root.mkdir(parents=True)
+    j._path('orphan',kind).write_text('{}')
+    with pytest.raises(ValueError,match='orphan'):m.native_contacts(producer,tmp_path,plan,'bare-core')
+
+
+@pytest.mark.parametrize('fault',['tampered','contradictory','response_conflict','wrong_filename'])
+def test_delivery_integrity_errors_fail_observation(tmp_path,fault):
+    plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
+    j=ContactJournal(tmp_path,plan,'bare-core');p=payload();j.intent(p)
+    j.delivery_event('req-1',digest(canonical(p)),'not_sent',error_type='OSError')
+    boundary=j._path('req-1','not_sent')
+    if fault=='tampered':
+        value=json.loads(boundary.read_bytes());value['intent_sha256']='0'*64;boundary.write_bytes(canonical(value))
+    elif fault=='contradictory':j._path('req-1','dispatch').write_bytes(boundary.read_bytes())
+    elif fault=='response_conflict':j._path('req-1','response').write_text('{}')
+    else:boundary.rename(j._path('other','not_sent'))
+    with pytest.raises(ValueError):m.native_contacts(producer,tmp_path,plan,'bare-core')
+
+
+def test_reconciliation_uses_real_evidence_and_detects_tampering(tmp_path):
+    from test_contact_reconciliation import fixture
+    j,plan,doc,*_=fixture(tmp_path)
+    producer={'mounts':[{'source':str(tmp_path/'data'),'target':str(tmp_path/'data'),'readonly':True}]}
+    j._path('req-1','reconciliation').write_bytes(canonical(doc))
+    result,_=m.native_contacts(producer,tmp_path/'data',plan,'bare-core')
+    assert result['attempted_contacts']==1 and result['not_sent_contacts']==1
+    assert result['known_usage']['calls']==0 and result['unknown_cost'] is None
+    Path(doc['evidence']['timing']['path']).write_bytes(b'tampered')
+    with pytest.raises(ValueError,match='evidence bytes changed'):m.native_contacts(producer,tmp_path/'data',plan,'bare-core')
+
+
+@pytest.mark.parametrize('kind',['dispatch','not_sent','reconciliation'])
+def test_delivery_atomic_temporary_is_uncommitted(tmp_path,kind):
+    plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
+    j=ContactJournal(tmp_path,plan,'bare-core');j.root.mkdir(parents=True)
+    temporary=j.root/('.'+'a'*64+'.'+kind+'.json.inflight');temporary.write_bytes(b'incomplete')
+    result,_=m.native_contacts(producer,tmp_path,plan,'bare-core')
+    assert result['uncommitted_publish_files']==[temporary.name] and result['attempted_contacts']==0
+
+
+def test_new_boundary_with_intent_outside_snapshot_is_validated(tmp_path,monkeypatch):
+    plan=_plan();producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True}]}
+    j=ContactJournal(tmp_path,plan,'bare-core');p=payload();j.intent(p)
+    j.delivery_event('req-1',digest(canonical(p)),'dispatch')
+    original=Path.glob
+    def snapshot(path,pattern):
+        return (x for x in original(path,pattern) if x.name!=j._path('req-1','intent').name) if path==j.root and pattern=='*' else original(path,pattern)
+    monkeypatch.setattr(Path,'glob',snapshot)
+    result,_=m.native_contacts(producer,tmp_path,plan,'bare-core')
+    assert result['attempted_contacts']==0
+    j._path('req-1','dispatch').write_text('{}')
+    with pytest.raises(ValueError):m.native_contacts(producer,tmp_path,plan,'bare-core')
+
+
+def test_observation_failure_does_not_report_zero_cost_or_retry(tmp_path,monkeypatch):
+    config=tmp_path/'config';config.write_text('{}')
+    job={'id':'broken','total_rows':5};lane={'id':'lane','cards':4,'instances':1,'jobs':[job]}
+    monkeypatch.setattr(m,'load',lambda path:({'lanes':[lane]},tmp_path/'out'))
+    def fail(*args):raise ValueError('corrupt delivery custody')
+    monkeypatch.setattr(m,'observe_job',fail)
+    result=m.observe(config)['lanes'][0]['jobs'][0]
+    assert result['state']=='observation-error' and result['completed_rows'] is None
+    assert 'contacts' not in result and 'workload_model_calls' not in result
+    assert 'cost' not in result and 'retry' not in result
