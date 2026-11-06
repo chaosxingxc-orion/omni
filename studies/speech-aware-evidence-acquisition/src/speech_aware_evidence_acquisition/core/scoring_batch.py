@@ -47,6 +47,7 @@ class ScoringContext:
     repo_root: Path
     data_root: Path
     lock_path: Path
+    tool_repo_root: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -256,7 +257,7 @@ def _official_job_process(
         arguments.append("--include-per-sample")
     cwd = _REPO_ROOT
     if context is not None:
-        cwd = Path(context.repo_root)
+        cwd = Path(context.tool_repo_root or context.repo_root)
         for key in ("repo_root", "data_root", "lock_path"):
             arguments.extend(("--" + key.replace("_", "-"), str(getattr(context, key))))
         environment["PYTHONPATH"] = os.pathsep.join(filter(None, (

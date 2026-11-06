@@ -448,6 +448,39 @@ def verify_delivery_bundle(manifest_path: Path, manifest: Mapping) -> VerifiedBu
         raise BundleError(f"delivery verification refused: {error}") from error
 
 
+def _recorded_delivery_config_hash(repo_root: Path, names: Mapping) -> str:
+    """Replay the factory's existing overlay hash; never normalize old identities.
+
+    SAEA_RUNTIME_CONFIG is an explicit score-only input. Its original absolute
+    path, raw pin and expanded data root must match the generation launcher.
+    This helper does not construct a runtime, adapter, session or model client.
+    """
+    composed = compose(repo_root, **names)
+    declared = os.environ.get("SAEA_RUNTIME_CONFIG")
+    if declared is None:
+        return composed.config_hash
+    expected = os.environ.get("SAEA_RUNTIME_CONFIG_SHA256", "")
+    if len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected):
+        raise BundleError("delivery runtime config requires an explicit SHA256 pin")
+    path = Path(declared)
+    if not path.is_absolute() or any(part.is_symlink() for part in (path, *path.parents)):
+        raise BundleError("delivery runtime config requires an absolute nonsymlink path")
+    from ..config import resolve_data_root_text
+    if resolve_data_root_text() is None:
+        raise BundleError("delivery runtime config requires the original data root")
+    from ..flight.factory import load_external_runtime_config
+    from ..flight.runtime_overlay import apply_runtime_overlay
+    import hashlib
+
+    overlay = load_external_runtime_config(path)
+    values = apply_runtime_overlay(composed.values, overlay, error_type=BundleError)
+    # Exact historical factory.py serialization: expanded values, default
+    # ensure_ascii=True. _canonical_hash would change the old identity.
+    return hashlib.sha256(
+        json.dumps(values, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+
 def recorded_phase_delivery_declarations(
     bundle: VerifiedBundle, repo_root: Path,
 ) -> tuple[Mapping, ...]:
@@ -490,8 +523,7 @@ def recorded_phase_delivery_declarations(
             selected = fragment_path(repo_root, kind, name)
             if any(part.is_symlink() for part in (selected, *selected.parents)):
                 raise BundleError("delivery config path traverses a symlink")
-        composed = compose(repo_root, **names)
-        if composed.config_hash != config.get("config_hash"):
+        if _recorded_delivery_config_hash(repo_root, names) != config.get("config_hash"):
             raise BundleError("delivery config differs from recorded run")
         path = fragment_path(repo_root, "experiment", names["experiment"])
         raw = path.read_bytes()
@@ -500,7 +532,7 @@ def recorded_phase_delivery_declarations(
         # changed pin or bytes during the scoring provenance check.
         if fragment_path(repo_root, "experiment", names["experiment"]).read_bytes() != raw:
             raise BundleError("delivery experiment changed during verification")
-        if compose(repo_root, **names).config_hash != config.get("config_hash"):
+        if _recorded_delivery_config_hash(repo_root, names) != config.get("config_hash"):
             raise BundleError("delivery config changed during verification")
     elif os.environ.get("SAEA_RELEASE_MANIFEST") is not None:
         # Fixed mounted releases are intentionally not Git checkouts. The
@@ -511,8 +543,7 @@ def recorded_phase_delivery_declarations(
         if current != commit:
             raise BundleError("delivery source commit differs from recorded run")
         names = {kind: fragments.get(kind) for kind in ("model", "dataset", "baseline", "experiment")}
-        composed = compose(repo_root, **names)
-        if composed.config_hash != config.get("config_hash"):
+        if _recorded_delivery_config_hash(repo_root, names) != config.get("config_hash"):
             raise BundleError("delivery config differs from recorded run")
         path = fragment_path(repo_root, "experiment", names["experiment"])
         document = json.loads(path.read_bytes(), object_pairs_hook=_reject_duplicate_keys(path))

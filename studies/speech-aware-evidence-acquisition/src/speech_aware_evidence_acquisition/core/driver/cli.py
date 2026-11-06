@@ -505,7 +505,8 @@ def _scoring_cli_context(args):
     root_path = getattr(args, "data_root", None)
     repo_path = getattr(args, "repo_root", None)
     if repo_path and Path(repo_path).resolve() != Path(__file__).resolve().parents[4]:
-        raise ValueError("scoring repo_root must match the imported source checkout")
+        from ..scoring_source import verify_separate_scoring_tool
+        verify_separate_scoring_tool(Path(repo_path), Path(__file__).resolve().parents[4])
     lock = load_lock(Path(lock_path) if lock_path else umbrella_lock_path())
     root = Path(root_path) if root_path else data_root()
     options = {"repo_root": Path(repo_path)} if repo_path else {}

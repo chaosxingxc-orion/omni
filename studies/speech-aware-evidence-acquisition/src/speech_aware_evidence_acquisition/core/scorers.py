@@ -624,7 +624,16 @@ def _assert_scoring_entry_gate(
             "verified bundle carries no usable plan.carrier_lock_key; refusing to score "
             "an unscoped bundle"
         )
-    gate = FrozenCoreGate.for_study_repo(REPO_ROOT, REPO_ROOT, REPO_ROOT)
+    # Keep the original workspace and E0 receipts rooted in the authenticated
+    # generation release while checking frozen scoring code in the actual tool.
+    scoring_source = Path(REPO_ROOT)
+    source_repo = Path(repo_root)
+    if scoring_source.resolve() != source_repo.resolve():
+        from .scoring_source import verify_separate_scoring_tool
+        verify_separate_scoring_tool(source_repo, scoring_source)
+    gate = FrozenCoreGate.for_study_repo(source_repo, source_repo, source_repo)
+    from dataclasses import replace
+    gate = replace(gate, source_root=scoring_source)
     gate._validate_e0()
     gate._resolve_carrier_dataset_entry(carrier_lock_key, lock)
 
