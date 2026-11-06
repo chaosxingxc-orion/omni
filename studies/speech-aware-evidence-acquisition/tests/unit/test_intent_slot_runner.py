@@ -1247,3 +1247,126 @@ def test_node_rails_preserves_wire_system_with_trailing_newline(tmp_path):
                for value in h.prepared.values())
 
 
+
+@pytest.mark.parametrize('bad_phase', ['perception', 'slot'])
+@pytest.mark.parametrize('coverage', [False, True])
+def test_sdk_quarantines_unsupplied_refs_with_source_bound_answer(tmp_path, bad_phase, coverage):
+    """Scripted SDK transport; original response, FIT stub and bundle trace stay visible."""
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    h = recovery_harness(tmp_path)[0] if coverage else harness(tmp_path)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2',
+                  node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1',
+                  reference_normalizer='quarantine-unsupplied-v1')
+    if coverage:
+        policy['coverage_recovery'] = {'strategy':'complete-original-candidate-set-v1', 'max_extra_contacts':3}
+    if not coverage:
+        h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy), max_contacts=6 if coverage else 3)
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == bad_phase:
+            value['candidates'][-1]['evidence_refs'] = ['slot-contracts::unsupplied']
+        if key[1] == 'solver': value = {'candidate_id':'play_radio'}
+        return canonical(value)
+    h._output = output
+    try:
+        summary = h.run()
+        raw = _raw_native(h, solver_role={'max_iterations':1}); raw['intent_slot_pipeline'] = policy
+        rows = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally:
+        cost = h.close()['cost']
+    records = {rid: payload for _,rid,payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows), records)
+    assert cost['calls_used'] == (4 if coverage else 3)
+    assert json.loads(rows[0]['text']) == {'scenario':'play','action':'radio','entities':[{'type':'person','filler':'Bob'}]}
+    block = rows[0]['native_episode_receipt']['intent_slot_pipeline']
+    binding = next(b for b in block['evidence_bindings'] if b['stage'] == bad_phase)
+    assert any(x['raw'] == 'slot-contracts::unsupplied' and x['status'] == 'quarantined'
+               for x in binding['reference_normalization']['mappings'])
+    import copy
+    damaged = copy.deepcopy(records)
+    trace = next(v['use_native_episode'] for v in damaged.values() if isinstance(v,dict) and v.get('use_native_episode',{}).get('intent_slot_pipeline'))
+    trace['intent_slot_pipeline']['evidence_bindings'][0]['reference_normalization']['normalized_sha256'] = '0'*64
+    with pytest.raises(Exception): _verify_outputs_trace_binding(tuple(rows), damaged)
+
+
+def test_reference_normalizer_rejects_wrong_scope_and_quarantines_ambiguous_alias():
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import normalize_evidence_references
+    inv={'sample_id':'s','candidate_ids':['play_radio'],'sources':[{'source_id':'a::x','kind':'knowledge'}, {'source_id':'b::x','kind':'knowledge'}]}
+    text=canonical({'candidates':[{'candidate_id':'play_radio','entities':[{'type':'person','filler':'Bob'}], 'evidence_refs':['x','a::x','missing'], 'unresolved_fields':[]}]})
+    clean, audit=normalize_evidence_references(text,inv,['play_radio'],policy='unique_source_alias_v1',normalizer='quarantine-unsupplied-v1')
+    assert json.loads(clean)['candidates'][0]['evidence_refs']==['a::x']
+    assert [r['status'] for r in audit]==['quarantined','supplied','quarantined']
+    assert json.loads(clean)['candidates'][0]['entities']==[{'type':'person','filler':'Bob'}]
+    with pytest.raises(ValueError): normalize_evidence_references(text,inv,['other'],policy='strict',normalizer='quarantine-unsupplied-v1')
+    malformed, _ = normalize_evidence_references('{"candidates":[{"entities":[]}]}',inv,['play_radio'],policy='strict',normalizer='quarantine-unsupplied-v1')
+    assert json.loads(malformed)["candidates"] == [{"entities":[]}]
+
+
+def test_sdk_normalizer_answer_only_fallback_preserves_original_and_cost(tmp_path):
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    from test_native_episode_runner import _plan, _wire_response
+    plan = _plan(run_id='SAEA-E-native-role-runner-proof',attempt_id='attempt-native-role-runner-proof',planned_model_calls=6)
+    h=harness(tmp_path,plan=plan)
+    policy=json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2',duplicate_candidate_policy='group_v2',node_rails='sdk-handoff-v1',answer_only_fallback='budgeted-v1',reference_normalizer='quarantine-unsupplied-v1')
+    h.program=default_phase_program('phase-native-intent-slot-batched-v2');h.config=replace(h.config,intent_slot_pipeline_json=canonical(policy))
+    count=0
+    def post(_url,_body):
+        nonlocal count
+        count+=1
+        if count==1:
+            return json.dumps({'choices':[{'message':{'role':'assistant','content':''},'finish_reason':'length'}], 'usage':{'prompt_tokens':7,'completion_tokens':64}}).encode()
+        phase='perception' if count==2 else 'slot' if count==3 else 'solver'
+        value=json.loads(h._output(('s1',phase,1,1))) if phase!='solver' else {'candidate_id':'play_radio'}
+        if phase=='perception':value['candidates'][1]['evidence_refs']=['missing-source']
+        return _wire_response(canonical(value))
+    h.post_override=post;h.transport._reasoning_content_guard='refuse-think-marker-in-content'
+    try:
+        summary=h.run(decoding_params={'temperature':0,'max_tokens':64,'thinking_budget_tokens':32,'chat_template_kwargs':{'enable_thinking':True}})
+        raw=_raw_native(h,solver_role={'max_iterations':1});raw['intent_slot_pipeline']=policy
+        rows=_runtime(h,summary,raw)._canonical_output_rows(h.client)
+    finally:cost=h.close()['cost']
+    records={rid:payload for _,rid,payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows),records)
+    assert cost['calls_used']==count==4
+    assert json.loads(rows[0]['text'])['action']=='radio'
+    assert any(r.get('status')=='quarantined' for r in rows[0]['native_episode_receipt']['intent_slot_pipeline']['evidence_bindings'][0]['reference_normalization']['mappings'])
+
+@pytest.mark.parametrize('repair_succeeds', [True, False])
+def test_sdk_normalizer_does_not_repair_business_fields(tmp_path, repair_succeeds):
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    h,policy=recovery_harness(tmp_path)
+    policy.update(answer_only_fallback='budgeted-v1',reference_normalizer='quarantine-unsupplied-v1',
+                  coverage_recovery={'strategy':'complete-original-candidate-set-v1','max_extra_contacts':3})
+    h.config=replace(h.config,intent_slot_pipeline_json=canonical(policy))
+    original=h._output
+    def output(key):
+        value=json.loads(original(key))
+        if key[1]=='slot':
+            if key[2] > 1:
+                cid = 'play_music' if key[2] == 2 else 'play_radio'
+                value['candidates'][0] = {'candidate_id':cid, 'entities':[{'type':'person','filler':'Alice' if cid == 'play_music' else 'Bob'}], 'evidence_refs':[], 'unresolved_fields':[]}
+            value['candidates'][0]['evidence_refs']=['not-supplied']
+            if key[2]==1 or not repair_succeeds: value['candidates'][0].pop('entities')
+        return canonical(value)
+    h._output=output
+    try:
+        summary=h.run()
+        raw=_raw_native(h,solver_role={'max_iterations':1});raw['intent_slot_pipeline']=policy
+        rows=_runtime(h,summary,raw)._canonical_output_rows(h.client)
+    finally: cost=h.close()['cost']
+    records={rid:payload for _,rid,payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows),records)
+    if repair_succeeds:
+        assert cost['calls_used']==5
+        assert json.loads(rows[0]['text'])['entities']==[{'type':'person','filler':'Bob'}]
+    else:
+        assert cost['calls_used']==3
+        assert rows[0]['text']==''
+        assert rows[0]['native_episode_receipt']['terminal_disposition']['reason']=='seal_refusal'

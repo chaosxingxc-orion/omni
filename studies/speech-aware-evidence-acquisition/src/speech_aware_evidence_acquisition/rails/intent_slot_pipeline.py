@@ -23,7 +23,7 @@ def digest(value):
 
 def parse_config(raw):
     fields = {"schema", "slot_mode", "max_candidates", "candidate_outside_recovery"}
-    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery"}:
+    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery", "reference_normalizer"}:
         raise ValueError("intent_slot_pipeline requires schema, slot_mode, max_candidates and candidate_outside_recovery")
     if raw["schema"] not in {SCHEMA, SCHEMA_V2} or raw["slot_mode"] not in {"batched", "per_candidate"}:
         raise ValueError("unsupported intent-slot graph/schema version or slot mode")
@@ -44,6 +44,8 @@ def parse_config(raw):
             raise ValueError("node rails require explicit answer_only_fallback: budgeted-v1 or off")
     elif "answer_only_fallback" in raw:
         raise ValueError("answer_only_fallback requires node rails")
+    if "reference_normalizer" in raw and (raw.get("node_rails") != "sdk-handoff-v1" or raw["reference_normalizer"] != "quarantine-unsupplied-v1"):
+        raise ValueError("unsupported reference normalizer")
     if "coverage_recovery" in raw:
         recovery = raw["coverage_recovery"]
         if (raw.get("node_rails") != "sdk-handoff-v1" or raw["slot_mode"] != "batched" or raw["max_candidates"] != 3
@@ -194,6 +196,13 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
     visits = receipt["role_visits"]
     slots = block["slot_sources"]
     recovery = block.get("coverage_recovery")
+    normalizer = block.get("reference_normalizer")
+    if normalizer:
+        ref_config = parse_config(block.get("reference_config"))
+        if ref_config.get("reference_normalizer") != normalizer or digest(ref_config) != block.get("config_sha256"):
+            raise ValueError("reference normalizer config identity differs")
+    elif "reference_config" in block:
+        raise ValueError("unexpected reference normalizer config")
     if recovery:
         config = parse_config(block.get("recovery_config"))
         if config.get("coverage_recovery") != recovery or digest(config) != block.get("config_sha256"):
@@ -318,6 +327,7 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                         "groups": [{"candidate_id": r["candidate_id"], "sources": r["sources"]} for r in actual_candidates]}
             if block.get("grouping") != grouping:
                 raise ValueError("candidate grouping differs from archived Perception")
+        cleaned_sources = {source["request_id"]: trace_records[source["request_id"] + "/response"]["text"] for source in sources}
         if block.get("evidence_policy") == "unique_source_alias_v1" or block.get("schema") == SCHEMA_V2:
             bindings = block.get("evidence_bindings")
             if not isinstance(bindings, list) or [b.get("stage") for b in bindings] != ["perception"] + ["slot"] * len(slots):
@@ -329,15 +339,26 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                     validate_inventory_against_request(binding["inventory"], trace_records[source["request_id"] + "/request"], expected)
                 if binding.get("response_text_sha256") != response.get("response_text_sha256"):
                     raise ValueError("evidence mapping response identity differs")
-                rows = ((document(response.get("text"))["candidates"] if block.get("schema") == SCHEMA_V2
-                         else candidates(response.get("text"), 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict")))
+                clean_text = response.get("text")
+                if normalizer:
+                    clean_text, ref_mapping = normalize_evidence_references(clean_text, binding["inventory"], expected,
+                        policy=block.get("evidence_policy", "strict"), normalizer=normalizer)
+                    expected_ref = {"policy": normalizer, "mappings": ref_mapping,
+                                    "normalized_sha256": hashlib.sha256(clean_text.encode()).hexdigest()}
+                    if binding.get("reference_normalization") != expected_ref:
+                        raise ValueError("reference normalization differs from raw response")
+                elif "reference_normalization" in binding:
+                    raise ValueError("unexpected reference normalization")
+                cleaned_sources[source["request_id"]] = clean_text
+                rows = ((document(clean_text)["candidates"] if block.get("schema") == SCHEMA_V2
+                         else candidates(clean_text, 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict")))
                         if binding["stage"] == "perception" else
-                        ([r for r in document(response.get("text")).get("candidates", []) if r.get("candidate_id") in slots[sources.index(source)-1]["valid_ids"]]
-                         if recovery else slot_results(response.get("text"), expected).values()))
+                        ([r for r in document(clean_text).get("candidates", []) if r.get("candidate_id") in slots[sources.index(source)-1]["valid_ids"]]
+                         if recovery else slot_results(clean_text, expected).values()))
                 if validate_evidence_refs(rows, binding["inventory"], expected, policy=block.get("evidence_policy", "strict")) != binding.get("mappings"):
                     raise ValueError("evidence mapping differs from raw response")
         for slot in slots:
-            text = trace_records[slot["source"]["request_id"] + "/response"].get("text")
+            text = cleaned_sources[slot["source"]["request_id"]]
             if recovery:
                 from .adapters.slurp_intent_slot import classify_slot_coverage
                 request = trace_records[slot["source"]["request_id"] + "/request"]
@@ -379,7 +400,7 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                 raise ValueError("Decision response/source differs from trace")
             combined = {}
             for slot in slots:
-                raw = trace_records[slot["source"]["request_id"] + "/response"]["text"]
+                raw = cleaned_sources[slot["source"]["request_id"]]
                 if recovery:
                     rows = [row for row in document(raw).get("candidates", []) if row.get("candidate_id") in slot["valid_ids"]]
                     parsed = slot_results(canonical({"candidates": rows}), slot["valid_ids"])
@@ -444,6 +465,43 @@ def validate_evidence_refs(rows, inventory, expected_ids, *, policy="strict"):
             mappings.append({"raw": ref, "source_id": canonical_id})
     return mappings
 
+
+
+def normalize_evidence_references(text, inventory, expected_ids, *, policy, normalizer):
+    """Remove only unresolvable auxiliary references; preserve all other fields.
+
+    Mappings record every occurrence, including ambiguous or missing aliases.
+    Schema/semantic validation remains the caller's responsibility.
+    """
+    if normalizer != "quarantine-unsupplied-v1":
+        raise ValueError("unsupported reference normalizer")
+    import copy
+    value = copy.deepcopy(document(text))
+    if set(value) != {"candidates"} or not isinstance(value["candidates"], list):
+        raise ValueError("candidate rows required for reference normalization")
+    mappings = []
+    for index, row in enumerate(value["candidates"]):
+        # Leave malformed business/schema fields untouched for the existing
+        # validator and bounded per-branch recovery to classify.
+        if not isinstance(row, dict) or not isinstance(row.get("evidence_refs"), list):
+            continue
+        kept = []
+        for offset, ref in enumerate(row["evidence_refs"]):
+            if not isinstance(ref, str):
+                kept.append(ref)
+                continue
+            try:
+                mapping = validate_evidence_refs([{"evidence_refs": [ref]}], inventory, expected_ids, policy=policy)[0]
+            except ValueError:
+                # Validate inventory independently; never quarantine a broken scope.
+                validate_evidence_refs([], inventory, expected_ids, policy=policy)
+                mappings.append({"row": index, "index": offset, "raw": ref, "status": "quarantined"})
+            else:
+                kept.append(mapping["source_id"])
+                mappings.append({"row": index, "index": offset, "raw": ref,
+                                 "status": "supplied", "source_id": mapping["source_id"]})
+        row["evidence_refs"] = kept
+    return canonical(value), mappings
 
 def dynamic_slot_format(base, ids):
     import copy

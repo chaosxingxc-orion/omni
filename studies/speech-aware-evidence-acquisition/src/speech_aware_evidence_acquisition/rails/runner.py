@@ -4820,14 +4820,25 @@ async def _invoke_native_role_episode(
         if pipeline_config is not None and completion.finish_reason == "stop" and not completion.tool_calls:
             visit = visits[request.role_id]
             try:
-                validated = coverage_result["valid"] if coverage_result is not None else pipeline_validator(kind=role_configs[request.role_id].role_kind,
-                                   text=completion.text,
+                kind = role_configs[request.role_id].role_kind
+                effective_text = completion.text
+                ref_mapping = None
+                if pipeline_config.get("reference_normalizer") and kind in ("perception", "slot"):
+                    from .intent_slot_pipeline import normalize_evidence_references
+                    ids_for_refs = ([] if kind == "perception" else
+                                    [row["candidate_id"] for row in visit["intent_slot_context"]["candidates"]])
+                    effective_text, ref_mapping = normalize_evidence_references(
+                        completion.text, visit["intent_slot_context"]["evidence_inventory"], ids_for_refs,
+                        policy=pipeline_config.get("evidence_policy", "strict"),
+                        normalizer=pipeline_config["reference_normalizer"])
+                validated = coverage_result["valid"] if coverage_result is not None else pipeline_validator(kind=kind,
+                                   text=effective_text,
                                    response_format=visit["material"].response_format,
                                    context=visit["intent_slot_context"], config=pipeline_config)
                 kind = role_configs[request.role_id].role_kind
                 if kind in ("perception", "slot"):
                     from .intent_slot_pipeline import validate_evidence_refs
-                    rows = (json.loads(completion.text)["candidates"] if kind == "perception" and pipeline_config["schema"].endswith("-v2")
+                    rows = (json.loads(effective_text)["candidates"] if kind == "perception" and pipeline_config["schema"].endswith("-v2")
                             else validated.values() if isinstance(validated, dict) else validated)
                     rows = list(rows)
                     ids = ([row["candidate_id"] for row in validated] if kind == "perception"
@@ -4839,7 +4850,10 @@ async def _invoke_native_role_episode(
                     visit["evidence_inventory"] = copy.deepcopy(inventory)
                     visit["evidence_response_sha256"] = completion.response_text_sha256
                     pipeline_evidence_visits.append({"stage": kind, "inventory": copy.deepcopy(inventory),
-                        "mappings": copy.deepcopy(visit["evidence_mappings"]), "response_text_sha256": completion.response_text_sha256})
+                        "mappings": copy.deepcopy(visit["evidence_mappings"]), "response_text_sha256": completion.response_text_sha256,
+                        **({"reference_normalization": {"policy": pipeline_config["reference_normalizer"],
+                            "mappings": ref_mapping, "normalized_sha256": hashlib.sha256(effective_text.encode()).hexdigest()}}
+                           if ref_mapping is not None else {})})
             except (ValueError, KeyError, TypeError) as error:
                 refusal = RailsRunnerError("intent-slot output contract refused: " + str(error))
                 refusal.seal_refusal_completion = completion
@@ -4851,7 +4865,7 @@ async def _invoke_native_role_episode(
             if coverage_result is not None:
                 state_content = json.dumps({"candidates": list(coverage_result["valid"].values())}, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
             else:
-                state_content = normalized_response(role_configs[request.role_id].role_kind, completion.text,
+                state_content = normalized_response(role_configs[request.role_id].role_kind, effective_text,
                                                     visits[request.role_id]["intent_slot_context"], pipeline_config)
         empty_solver_completion = (
             request.role_id == config.role("solver").phase_id
@@ -5611,7 +5625,15 @@ async def _invoke_native_role_episode(
             visit = visits[phase_id]
             predecessor_refusal = bool(slot_successor and completion.request_id == slot_successor['rejected_contact']['request_id'])
             try:
-                report = classify_slot_coverage(text=completion.text, response_format=visit["material"].response_format,
+                coverage_text = completion.text
+                if pipeline_config.get("reference_normalizer"):
+                    from .intent_slot_pipeline import normalize_evidence_references
+                    coverage_text, _ = normalize_evidence_references(completion.text,
+                        visit["intent_slot_context"]["evidence_inventory"],
+                        [r["candidate_id"] for r in visit["intent_slot_context"]["candidates"]],
+                        policy=pipeline_config.get("evidence_policy", "strict"),
+                        normalizer=pipeline_config["reference_normalizer"])
+                report = classify_slot_coverage(text=coverage_text, response_format=visit["material"].response_format,
                     context=visit["intent_slot_context"], config=pipeline_config)
             except (ValueError, KeyError, TypeError) as error:
                 if predecessor_refusal:
@@ -5671,7 +5693,7 @@ async def _invoke_native_role_episode(
             raise
         from .candidate_handoff import normalized_response
         normalized_node_text = (pending["source"].content if report is not None else
-            normalized_response(kind, completion.text, visits[phase_id]["intent_slot_context"], pipeline_config))
+            pending["source"].content)
         source_hash = hashlib.sha256(normalized_node_text.encode("utf-8")).hexdigest()
         if pending["source"].content != normalized_node_text:
             raise RailsRunnerError("candidate normalized source changed before settlement")
@@ -5681,6 +5703,7 @@ async def _invoke_native_role_episode(
             node_slot_cursor[0] = 0
             if coverage_policy:
                 coverage_state["source"] = completion
+                coverage_state["normalized_perception"] = normalized_node_text
             target = config.role("slot").phase_id
             settle(next_phase=target)
             batches = [node_slot_ids] if pipeline_config["slot_mode"] == "batched" else [[cid] for cid in node_slot_ids]
@@ -5692,7 +5715,7 @@ async def _invoke_native_role_episode(
                 settle()
                 cid = coverage_state["missing"][0]
                 original = coverage_state["source"]
-                normalized_node_text = normalized_response("perception", original.text, {}, pipeline_config)
+                normalized_node_text = coverage_state["normalized_perception"]
                 prepare_node_handoff(source_role=config.role("perception").phase_id, target_role=phase_id,
                     completion=original, candidate_ids=[cid], branch_index=node_slot_cursor[0])
                 original_messages = node_slot_materials[0]
@@ -6888,6 +6911,14 @@ async def _invoke_native_role_episode(
                 ),
                 delivery_allowed=role_delivery_allowed,
             )
+            if pipeline_config and pipeline_config.get("reference_normalizer") and role.role_kind == "slot":
+                def clean_source(kind, text, ids):
+                    from .intent_slot_pipeline import normalize_evidence_references
+                    phase = config.role(kind).phase_id
+                    return normalize_evidence_references(text, visits[phase]["intent_slot_context"]["evidence_inventory"], ids,
+                        policy=pipeline_config.get("evidence_policy", "strict"),
+                        normalizer=pipeline_config["reference_normalizer"])[0]
+                solver_node.clean_source = clean_source
             if coverage_policy and role.role_kind == "slot":
                 solver_node.coverage_result = lambda: copy.deepcopy(coverage_state["result"])
                 solver_node.coverage_successor = lambda: bool(slot_successor and coverage_state['result']['missing'])
@@ -7238,6 +7269,9 @@ async def _invoke_native_role_episode(
             if block is not None and node_rails_enabled:
                 block["node_rails"] = "sdk-handoff-v1"
                 block["node_handoffs"] = copy.deepcopy(node_handoffs)
+                if pipeline_config.get("reference_normalizer"):
+                    block["reference_normalizer"] = pipeline_config["reference_normalizer"]
+                    block["reference_config"] = copy.deepcopy(pipeline_config)
                 if slot_successor:
                     block['slot_successor'] = copy.deepcopy(slot_successor)
             if block is not None and (pipeline_config.get("evidence_policy") == "unique_source_alias_v1" or pipeline_config["schema"].endswith("-v2")):

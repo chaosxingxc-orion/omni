@@ -181,6 +181,14 @@ def verify_native_episode_source(
                 )
         elif episode.get("system_policy_decision") is not None:
             raise NativeEpisodeSourceError("whole-policy receipt has no registered catalog")
+        pipeline_receipt = episode.get("intent_slot_pipeline")
+        if pipeline_receipt is not None:
+            from ..rails.intent_slot_pipeline import digest
+            configured = json.loads(config.intent_slot_pipeline_json) if config.intent_slot_pipeline_json else None
+            if configured is None or pipeline_receipt.get("config_sha256") != digest(configured):
+                raise NativeEpisodeSourceError("native pipeline receipt differs from composed policy")
+            if pipeline_receipt.get("reference_normalizer") != configured.get("reference_normalizer"):
+                raise NativeEpisodeSourceError("reference normalizer differs from composed policy")
         if config.refresh_action is not None:
             from ..rails.native_episode_receipt import validate_native_candidate_refresh_receipt
 

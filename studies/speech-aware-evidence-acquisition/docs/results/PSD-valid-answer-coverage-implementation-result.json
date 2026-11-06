@@ -1,0 +1,45 @@
+{
+  "schema": "psd-valid-answer-coverage-implementation-result-v1",
+  "base_commit": "48cb0df4292affd27770fecc5662a5d0540ba14f",
+  "production_commit": "9a50852ef67b964ed7571bb1b08deeb78b2251ce",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "test": "113 passed, 5 warnings, 34.44s",
+  "test_source_sha256": {
+    "scripts/analysis/intent_slot_workload.py": "3ff96a4b4136473bdee983b8c07b2ba129cb3513a67802f7f5c57dfe6772ab2f",
+    "src/speech_aware_evidence_acquisition/analysis/native_episode_source.py": "dfec16261fe319c08b9c4f99bf3d394d7cfc37354f3fd0a8e1441ddb0787b9f0",
+    "src/speech_aware_evidence_acquisition/core/flight/native_recovery.py": "f156f4ce5afd5130b22b386bae656ff4fff06587eb265cf4d9d542d8b128e6b1",
+    "src/speech_aware_evidence_acquisition/rails/candidate_handoff.py": "b06177ff5b9b05e550728ee8c6f04245d0ccee2014a883f3b6a2a2c73a0b89a9",
+    "src/speech_aware_evidence_acquisition/rails/intent_slot_pipeline.py": "7d6dbf0d14358f1c8c66856603c5af28882998cb4c79e6f5ee6778db20660c51",
+    "src/speech_aware_evidence_acquisition/rails/runner.py": "4c00dd562ad8e83ee9f4822ebe395496047b2b211c667224ecc6dfc626fe58dd",
+    "src/speech_aware_evidence_acquisition/reproduction/ojw/native_intent_slot.py": "deb9c4b1f8cfb223e7ed1ac319f5d9f91352ccf71ef0d95a847a42b919d7f1cb",
+    "tests/unit/test_intent_slot_runner.py": "ee5168fc2fc23076748f05ba3c53a79a5c46b493049db21fb4eeafd58481784e",
+    "tests/unit/test_intent_slot_workload.py": "043be1b77bbbf25bbf5711872150188afe956bcd00887b462cba9a403d8a3fdb"
+  },
+  "test_environment": "npu2 fixed image CPU network none source read-only; fake transport and tokenizer",
+  "new_model_calls": 0,
+  "new_teacher_calls": 0,
+  "real_fit_calls": 0,
+  "new_npu_calls": 0,
+  "fold_coverage_measured": false,
+  "hundred_percent_achieved": false,
+  "cross_attempt_sanitized_recovery": "explicitly refused",
+  "policy": "quarantine-unsupplied-v1",
+  "original_fold_a_baseline": "P-to-Solver retained",
+  "sol_snapshot": {
+    "off_completed": 749,
+    "off_valid": 715,
+    "on_completed": 425,
+    "on_valid": 406,
+    "population_per_arm": 1080,
+    "aicore_sparse_sample_means_percent": [
+      48.36,
+      58.82
+    ]
+  },
+  "limitations": [
+    "P malformed or length failures remain",
+    "semantic errors and missing candidates remain",
+    "UNKNOWN cannot be resent",
+    "no complete real-world coverage or precision result"
+  ]
+}

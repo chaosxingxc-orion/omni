@@ -24,12 +24,16 @@ class CandidateSlotStage(WorkflowComponent):
         from .native_episode import _ApplyRole, _state
         state = copy.deepcopy(_state(inputs))
         rows = candidates(state["perception"], self.config["max_candidates"], duplicate_policy=self.config.get("duplicate_candidate_policy", "strict"))
+        raw_rows = copy.deepcopy(rows)
+        if self.config.get("reference_normalizer"):
+            clean = self.node.clean_source("perception", state["perception"], [])
+            rows = candidates(clean, self.config["max_candidates"], duplicate_policy=self.config.get("duplicate_candidate_policy", "strict"))
         source = copy.deepcopy(state["latest_perception"]["execution_receipt"]["final_contact"])
         normalized_perception_sha256 = None
         if self.config.get("node_rails") == "sdk-handoff-v1":
             import hashlib
             from ...rails.candidate_handoff import normalized_response
-            normalized_perception_sha256 = hashlib.sha256(normalized_response("perception", state["perception"], {}, self.config).encode()).hexdigest()
+            normalized_perception_sha256 = hashlib.sha256(normalized_response("perception", clean if self.config.get("reference_normalizer") else state["perception"], {}, self.config).encode()).hexdigest()
         batches = [rows] if self.config["slot_mode"] == "batched" else [[row] for row in rows]
         results, contacts = {}, []
         recovery = self.config.get("coverage_recovery")
@@ -80,6 +84,8 @@ class CandidateSlotStage(WorkflowComponent):
                         raise ValueError("Slot candidate recovery did not produce a valid result")
                     pending_batches.insert(0, batch)
                 continue
+            if self.config.get("reference_normalizer"):
+                parsed_text = self.node.clean_source("slot", parsed_text, ids)
             if self.config.get("node_rails") == "sdk-handoff-v1":
                 from ...rails.candidate_handoff import normalized_response
                 parsed_text = normalized_response("slot", parsed_text, {"candidates": batch}, self.config)
@@ -107,5 +113,5 @@ class CandidateSlotStage(WorkflowComponent):
         if self.config["schema"].endswith("-v2"):
             state["intent_slot_pipeline"]["grouping"] = {
                 "policy": "group_v2", "raw_count": len(json.loads(state["perception"])["candidates"]),
-                "groups": [{"candidate_id": r["candidate_id"], "sources": r["sources"]} for r in rows]}
+                "groups": [{"candidate_id": r["candidate_id"], "sources": r["sources"]} for r in raw_rows]}
         return {"state": state}
