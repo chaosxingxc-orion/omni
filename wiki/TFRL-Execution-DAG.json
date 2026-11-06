@@ -654,11 +654,11 @@
       "status": "running_http_verified",
       "rows": 1080,
       "runtime_predecessor": "E5 ON known terminal settlement; independent admitted launch",
-      "completed_rows": 666,
-      "observed_at_utc": "2026-11-06T23:02:13.041152+00:00",
-      "wall_seconds_per_complete_row": 10.638581982604018,
-      "remaining_rows": 414,
-      "estimated_remaining_seconds": 4404.372940798064
+      "completed_rows": 786,
+      "observed_at_utc": "2026-11-06T23:23:41.875759+00:00",
+      "wall_seconds_per_complete_row": 10.65410967758897,
+      "remaining_rows": 294,
+      "estimated_remaining_seconds": 3132.308245211157
     },
     {
       "id": "node-prompt-candidates",
@@ -726,12 +726,12 @@
       "cpu_score_dependency": false,
       "status": "running_first_http_success_verified",
       "started_at_utc": "2026-11-06T22:06:40.70367096Z",
-      "completed_rows": 283,
+      "completed_rows": 425,
       "total_rows": 1080,
-      "observed_at_utc": "2026-11-06T23:00:05.149639+00:00",
-      "remaining_rows": 797,
-      "wall_seconds_per_complete_row": 11.323130632879035,
-      "estimated_remaining_seconds": 9024.53511440459
+      "observed_at_utc": "2026-11-06T23:20:21.571041+00:00",
+      "remaining_rows": 655,
+      "wall_seconds_per_complete_row": 10.402040873134837,
+      "estimated_remaining_seconds": 6813.336771903319
     },
     {
       "id": "compact-slot-a-evaluate",
@@ -796,10 +796,10 @@
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
-    "scoring_recovery": "k16ON isolated successor FINALIZED verified; zero new model calls; coverage and k8ON pair binding CPU in progress",
+    "scoring_recovery": "k16ON FINALIZED; old coverage reader schema refusal preserved; successor-aware pair b685d22c running, no new scorer/model",
     "paired_analysis": "completeOFF full paired plus 40 entity regressions accepted; reuse existing Slot role-grounding candidate",
     "historical_configuration": "accepted limited request audit; historical k60 pre-retrieval final P cap8, current k8 cap8; normalized response envelope not rebuilt",
-    "knowledge_supply": "binding provenance accepted: finite TRAIN cooccurrence; bounded locked-card visibility CPU design/implementation in progress",
+    "knowledge_supply": "locked-card visibility implementation under review; corrected preparation bound28->54 and testing retained context; not admitted",
     "load_analysis": "completed existing evidence analysis accepted; retain armed C96, no measured speedup",
     "tfrl_reader": "deferred",
     "perception_miss_analysis": "completeOFF100 P misses aggregate plus bounded representative actual-supply audit running; no new inference"
