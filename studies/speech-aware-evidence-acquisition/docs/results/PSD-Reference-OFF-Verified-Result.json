@@ -1,0 +1,35 @@
+{
+  "schema": "saea-public-verified-result-v1",
+  "run_id": "SAEA-SLURP-PSD-COVERAGE-FOLD-A-SLOT-OFF-V1",
+  "split": "existing Fold A",
+  "samples": 1080,
+  "valid_answers": 1052,
+  "empty_answers": 28,
+  "official_intent_accuracy": 0.825925925925926,
+  "intent_correct": 892,
+  "official_slu_f1": 0.649412793226194,
+  "exact_slot_f1": 0.5483870967741935,
+  "official_port_identity_check_passed": true,
+  "evaluator_commit": "8eb16545762be97ace75334109d73824217311f1",
+  "cost": {
+    "calls": 3186,
+    "prompt_tokens": 34349019,
+    "completion_tokens": 2375444
+  },
+  "evidence": {
+    "generation_manifest_sha256": "6b197de01f1becf6f4d6805d9c6ea02714a48a5e47691f720d05473b85b4a4b6",
+    "scores_sha256": "2759394de565f90b2ba2de8932d7ce490ad026a9e4feb8f6e449e4b77de2df46",
+    "manifest_sha256": "13cbdbf5d2c39b74194c2c64f0609b7623a3b6818725a5725c5f6aba12173587",
+    "attempt_sha256": "202ec51447c301ae32479e058bb919fea72def29faa8bcc8ad5077c0886b8761",
+    "reconciliation_receipt_sha256": "0a92199f913dd84f4246130829d5bb68d1189e12818f098b14e7587683f68789",
+    "reconciliation_container_exit": 0,
+    "final_state": "FINALIZED",
+    "new_model_calls_during_reconciliation": 0
+  },
+  "limitations": [
+    "paired comparison pending",
+    "candidate changes reference handling and recovery/shared budget together; not a pure single-factor comparison",
+    "100% valid answers and historical P-to-Solver alignment not achieved",
+    "original recovery failure preserved"
+  ]
+}
