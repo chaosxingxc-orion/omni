@@ -177,7 +177,7 @@
     "real_environment_media_rows": 1080,
     "real_environment_seconds": 4.32208797999192,
     "new_model_calls": 0,
-    "worker_deployed": false,
+    "worker_deployed": true,
     "source_compatibility_pending": false,
     "admission_exit_code": 0,
     "completion_published": true,
@@ -192,14 +192,31 @@
       "new_model_calls": 0,
       "request_body_equivalence": "requires final integration evidence"
     },
-    "final_integration_pending": true
+    "final_integration_pending": true,
+    "worker_started_at_utc": "2026-11-06T02:53:02.65050783Z",
+    "worker_attempt": "generation-preload-v1",
+    "worker_state_at_launch": "running",
+    "generation_progress_verified": false,
+    "representative_render": {
+      "ok": true,
+      "roles": [
+        "perception",
+        "slot",
+        "solver"
+      ],
+      "body_and_receipt_hashes_equal": true,
+      "new_model_calls": 0,
+      "scope": "three historical request projections only; no network or live identity assertion"
+    }
   },
   "checkpoint_recovery_observer": {
-    "source_commit": "c93b696d",
-    "tests_passed": 24,
-    "seconds": 4.78,
+    "source_commit": "25568b15",
+    "tests_passed": 28,
+    "seconds": 4.69,
     "environment": "fixed dependency image",
-    "deployed": false,
-    "fresh_inference_rate_verified": false
+    "deployed": true,
+    "fresh_inference_rate_verified": false,
+    "interval_seconds": 600,
+    "progress_basis": "verified disjoint historical/current sample union; rate from fresh terminal rows only"
   }
 }
