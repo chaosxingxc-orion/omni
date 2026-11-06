@@ -38,23 +38,31 @@ def verify_actor_parent(job, parent, *, repo, data, binding):
     """Bind claimed parent to the actor's reviewed, target-specific consumer.
 
     Unreviewed semantic mappings are not equivalent to the original parent.
-    Empty parent is accepted only for the unmodified native Slot/Decision
-    templates; arbitrary custom node templates have no auditable memory origin.
+    Empty parent is accepted for explicitly pinned ordinary node templates;
+    known generated TF-GRPO consumer templates require their descriptor.
     """
     model = job['runtime_binding']['model_fragment']
     validate_experience(parent, model)
     descriptor = job.get('tfgrpo_experience')
     if descriptor is None:
         require(binding is None and parent == empty_experience(model), 'unconditioned actor requires empty unexposed parent')
-        require('slot_policy' not in job and 'decision_policy' not in job,
-                'custom node policy requires independently verified parent provenance')
+        for name in ('slot_policy', 'decision_policy'):
+            if name not in job:
+                continue
+            pin = job[name]['instruction_template']
+            require(isinstance(pin, dict) and set(pin) == {'relpath', 'sha256'}
+                    and pin['relpath'].startswith('configs/probes/')
+                    and '..' not in Path(pin['relpath']).parts, 'confined node template pin required')
+            template = resolve_asset(repo, pin['relpath'])
+            require(hashlib.sha256(template.read_bytes()).hexdigest() == pin['sha256'], 'node template pin differs')
+            text = template.read_text()
+            require('Use these conditional experiences only' not in text,
+                    'TF-GRPO template requires reviewed parent provenance')
         return []
     require(parent != empty_experience(model), 'experienced actor cannot use empty parent')
     require(isinstance(descriptor, dict) and descriptor.get('target') in ('slot', 'decision')
             and 'mapping' not in descriptor and 'deployment_binding' not in descriptor,
             'actor parent requires direct reviewed target and same actor')
-    other = 'decision_policy' if descriptor['target']=='slot' else 'slot_policy'
-    require(other not in job, 'other node has unverified experience provenance')
     require(isinstance(binding, dict) and Path(binding.get('repo', '')).resolve() == Path(repo).resolve()
             and Path(binding.get('data', '')).resolve() == Path(data).resolve(), 'parent source roots differ')
     source, _ = _pinned_json(data, descriptor['source'], 'actor experience source')
@@ -68,17 +76,18 @@ def verify_actor_parent(job, parent, *, repo, data, binding):
 
 def knowledge_index(data, values):
     """Resolve pinned snapshot value sources, preserving ambiguous IDs."""
+    from speech_aware_evidence_acquisition.rails.knowledge import KnowledgeSnapshot
     index = {}
     for store_id, store in values.get('knowledge_stores', {}).items():
         snapshot = store.get('snapshot') if isinstance(store, dict) else None
         if not snapshot:
             continue
-        doc, _ = _pinned_json(data, snapshot, 'knowledge snapshot')
-        for value in doc.get('values', []):
-            vid = value['value_id']
-            samples = value.get('source_sample_ids')
-            if not isinstance(samples, list) or any(not isinstance(x, str) for x in samples):
-                continue
+        path = _confined_file(data, snapshot['relpath'])
+        loaded = KnowledgeSnapshot.from_frozen_json(json.loads(path.read_bytes()))
+        require(loaded.content_hash() == snapshot['sha256'], 'knowledge snapshot content digest differs')
+        for value in loaded.values:
+            vid = value.value_id
+            samples = value.source_sample_ids
             item = {'store_id':store_id, 'snapshot':snapshot,
                     'source_utterances':sorted({':'.join(x.split(':')[:3]) for x in samples})}
             index.setdefault(vid, []).append(item)

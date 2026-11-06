@@ -174,19 +174,42 @@ def test_parent_cannot_be_invented_or_hidden(tmp_path):
     job['tfgrpo_experience']={'target':'slot'}
     with pytest.raises(ValueError,match='experienced actor cannot'):
         verify_actor_parent(job,parent,repo=tmp_path,data=tmp_path,binding=None)
-    del job['tfgrpo_experience']; job['slot_policy']={}
-    with pytest.raises(ValueError,match='custom node policy'):
+    del job['tfgrpo_experience']
+    p=tmp_path/'configs/probes/slot.txt';p.parent.mkdir(parents=True);p.write_text('Extract observed slots.\n')
+    import hashlib
+    job['slot_policy']={'instruction_template':{'relpath':'configs/probes/slot.txt','sha256':hashlib.sha256(p.read_bytes()).hexdigest()}}
+    assert verify_actor_parent(job,parent,repo=tmp_path,data=tmp_path,binding=None)==[]
+    p.write_text('Use these conditional experiences only for Slot extraction.\n')
+    job['slot_policy']['instruction_template']['sha256']=hashlib.sha256(p.read_bytes()).hexdigest()
+    with pytest.raises(ValueError,match='TF-GRPO template'):
         verify_actor_parent(job,parent,repo=tmp_path,data=tmp_path,binding=None)
 
 
 def test_knowledge_diagnostics_resolve_only_actual_snapshot_values(tmp_path):
-    import hashlib
+    from test_knowledge_stores import _config
     from psd_construction_group_read import knowledge_index
-    doc={'values':[{'value_id':'v1','source_sample_ids':['slurp:train:000001:audio-a']}]}
-    path=tmp_path/'snapshot.json';path.write_text(json.dumps(doc))
-    pin={'relpath':'snapshot.json','sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
-    index=knowledge_index(tmp_path,{'knowledge_stores':{'train-exemplars':{'snapshot':pin}}})
-    assert index['train-exemplars::v1'][0]['source_utterances']==['slurp:train:000001']
+    cfg, snapshots=_config(tmp_path)
+    index=knowledge_index(tmp_path,cfg)
+    for store, snapshot in snapshots.items():
+        value=snapshot.values[0]
+        assert index[store+'::'+value.value_id][0]['source_utterances']==sorted({':'.join(s.split(':')[:3]) for s in value.source_sample_ids})
     assert 'not-supplied' not in index
+    pin=cfg['knowledge_stores']['intent-boundaries']['snapshot'];path=tmp_path/pin['relpath']
     path.write_text('{}')
-    with pytest.raises(ValueError):knowledge_index(tmp_path,{'knowledge_stores':{'train-exemplars':{'snapshot':pin}}})
+    with pytest.raises(Exception):knowledge_index(tmp_path,cfg)
+
+
+def test_locked_real_three_store_content_hashes():
+    import os
+    data=os.environ.get('SAEA_PSD_LOCKED_KNOWLEDGE_TEST_ROOT')
+    if data is None:
+        pytest.skip('requires explicitly mounted locked knowledge data root')
+    from psd_construction_group_read import knowledge_index
+    baseline=json.loads((ROOT/'configs/baseline/slurp-tfrl-hardset-a0-observation-r1-v1.json').read_text())
+    index=knowledge_index(Path(data),baseline)
+    for store in baseline['knowledge_stores']:
+        assert any(key.startswith(store+'::') for key in index)
+    slot=baseline['knowledge_stores']['slot-contracts']['snapshot']
+    import hashlib
+    assert slot['sha256']=='e035c1b827b10cb711c7c31d345deb5e668489679b0d3979acfc95427f6e2a5e'
+    assert hashlib.sha256((Path(data)/slot['relpath']).read_bytes()).hexdigest() != slot['sha256']
