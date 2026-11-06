@@ -1,0 +1,18 @@
+[
+  {
+    "op": "test",
+    "path": "/slot_policy/instruction_template",
+    "value": {
+      "relpath": "configs/probes/slurp_psd_reference_b_v1.txt",
+      "sha256": "82cb726f64e36400f867790c2f947782c59c64f680fd489aebf41944c8eaffeb"
+    }
+  },
+  {
+    "op": "replace",
+    "path": "/slot_policy/instruction_template",
+    "value": {
+      "relpath": "configs/probes/slurp_psd_slot_role_grounding_v1.txt",
+      "sha256": "1a6cf6580cc7f8beca7a1aed30a51e310156046622f90e510c2c2f9adba5a712"
+    }
+  }
+]
