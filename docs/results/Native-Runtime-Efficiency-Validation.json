@@ -302,8 +302,8 @@
   },
   "framework_runtime_fix": {
     "source_commit": "f3e10540",
-    "tests_passed": 53,
-    "tests_seconds": 10.39,
+    "tests_passed": 55,
+    "tests_seconds": 10.31,
     "fixed_dependency_image": true,
     "real_workflow_import_exit_code": 0,
     "source_under_test": "4fa68e30",
@@ -312,7 +312,9 @@
     "new_model_calls": 0,
     "successor_generation_launched": false,
     "script_import_semantics_verified": true,
-    "real_workflow_import_revision": 2
+    "real_workflow_import_revision": 2,
+    "timing_collision_preflight_verified": true,
+    "runtime_check_omits_worker_timing": true
   },
   "framework_successor": {
     "source_commit": "4fa68e30",
@@ -321,7 +323,13 @@
     "predecessor_lease_settled": true,
     "historical_guard_preserved": true,
     "new_model_calls": 0,
-    "generation_launched": false,
-    "admission_complete": false
+    "generation_launched": true,
+    "admission_complete": true,
+    "bridge_precheck_ok": true,
+    "representative_render_ok": true,
+    "generation_state": "exited",
+    "generation_exit_code": 1,
+    "failure": "offline render inherited worker timing output; O_EXCL refused existing file",
+    "generation_attempt_ledger_present": false
   }
 }

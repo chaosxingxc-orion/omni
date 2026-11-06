@@ -289,6 +289,24 @@ def test_framework_runtime_uses_external_logs_and_same_bootstrap(tmp_path):
     assert not any('dst=/opt/saea-release/studies/' in a for a in live)
 
 
+@pytest.mark.parametrize('suffix', ['', '.config.json'])
+def test_release_timing_collision_is_caught_without_explicit_fresh_output(tmp_path, suffix):
+    path, doc = mounted_release(tmp_path)
+    doc['mounts'][0]['readonly'] = False
+    doc['environment']['SAEA_STAGE_TIMING_PATH'] = '/data/timing.jsonl'
+    doc['framework_runtime'] = {'log_directory': '/data/framework/logs'}
+    path.write_text(json.dumps(doc))
+    existing = tmp_path / 'data' / ('timing.jsonl' + suffix)
+    existing.write_text('prior validation evidence')
+    loaded = m.load_config(path)
+    assert m.fresh_output_conflicts(loaded) == [{
+        'container_path': '/data/timing.jsonl' + suffix, 'host_path': str(existing)}]
+    smoke = m.command(loaded, 'config', 'runner', runtime_check=True)
+    assert not any(x.startswith('SAEA_STAGE_TIMING_PATH=') for x in smoke)
+    assert 'SAEA_STAGE_TIMING_PATH=/data/timing.jsonl' in m.command(loaded, 'config', 'runner')
+    assert existing.read_text() == 'prior validation evidence'
+
+
 @pytest.mark.parametrize('target', ['/opt/saea-release/logs', '/tmp/logs', '/data'])
 def test_framework_runtime_rejects_unmanaged_or_source_logs(tmp_path, target):
     path, doc = mounted_release(tmp_path)

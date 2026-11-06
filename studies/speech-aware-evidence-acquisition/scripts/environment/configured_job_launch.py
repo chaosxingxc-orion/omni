@@ -185,6 +185,11 @@ def load_config(path):
         mapped = output_path(doc, runtime['log_directory'])
         require(any(mapped.resolve().is_relative_to(r) for r in roots),
                 'framework logs escape owned roots')
+    timing = doc['environment'].get('SAEA_STAGE_TIMING_PATH')
+    if timing and identity is not None:
+        mapped = output_path(doc, timing)
+        require(any(mapped.resolve().is_relative_to(r) for r in roots),
+                'stage timing escapes owned roots')
     return doc
 
 
@@ -205,7 +210,11 @@ def output_path(doc, value):
 def fresh_output_conflicts(doc):
     """Read-only advisory checks; runtime O_EXCL/attempt guards remain authoritative."""
     conflicts = []
-    for target in doc.get('fresh_outputs', []):
+    targets = list(doc.get('fresh_outputs', []))
+    timing = doc['environment'].get('SAEA_STAGE_TIMING_PATH')
+    if timing and doc.get('source_identity') is not None:
+        targets.extend((timing, timing + '.config.json'))
+    for target in dict.fromkeys(targets):
         mapped = output_path(doc, target)
         if os.path.lexists(mapped):
             conflicts.append({'container_path': target, 'host_path': str(mapped)})
@@ -392,6 +401,9 @@ def command(doc, config_sha, runner_sha, *, runtime_check=False):
     for m in sorted(doc['mounts'], key=lambda m: len(Path(m['target']).parts)):
         args += ['--mount', 'type=bind,src=' + m['source'] + ',dst=' + m['target'] + (',readonly' if m['readonly'] else '')]
     for key, value in sorted(doc['environment'].items()):
+        if runtime_check and key == 'SAEA_STAGE_TIMING_PATH':
+            # Import-only checks must not reserve the worker's timing journal.
+            continue
         args += ['-e', key + '=' + value]
     entry = doc['argv'][1:]
     if 'framework_runtime' in doc:

@@ -66,3 +66,8 @@ docker logs <container_name>-runtime-check
 exit 0 和 `framework_runtime_ready`。失败检查保留容器、intent和输出，不原地重提。
 该检查不证明完整业务路径、断点接续或推理吞吐通过；正式 launch 仍做自己的身份、
 输入、输出冲突和共享 guard 检查。运行中的旧任务不受影响。
+
+每个生成进程的 `SAEA_STAGE_TIMING_PATH` 必须独占。启动器会检查该路径及其
+`.config.json` 快照均不存在；不会删文件或追加到其他进程的日志。离线render、
+bridge与其他CPU验证配置不要继承正式worker计时路径，需单独指定或删除该环境项。
+`runtime-check` 自动省略正式计时路径，防止导入检查污染正式计时文件。
