@@ -190,3 +190,50 @@ def test_temporary_disappearing_after_lstat_is_snapshot_transient(tmp_path,monke
     monkeypatch.setattr(Path,'lstat',lstat)
     result,_=m.native_contacts(producer,tmp_path,plan,'bare-core')
     assert result['uncommitted_publish_files']==[path.name] and result['attempted_contacts']==0
+
+
+def checkpoint_recovery_fixture(tmp_path):
+    from speech_aware_evidence_acquisition.core.flight.receipts import FlightReceipts
+    ck,_=row_fixture(tmp_path)
+    logical=tmp_path/'data';run=logical/'runs'/'RUN';old=run/'attempt';old.mkdir(parents=True)
+    target=old/'RUN.rows.ckpt.jsonl';target.write_bytes(ck.read_bytes())
+    current=run/'successor';current.mkdir()
+    plan=SimpleNamespace(run_id='RUN',attempt_id='successor',protocol_hash='c'*64,split_identity_hash='b'*64)
+    producer={'mounts':[{'source':str(logical),'target':str(logical),'readonly':True}]}
+    declaration={'schema':'saea-resume-declaration-v1','run_id':'RUN','attempt_id':'successor',
+        'predecessors':[{'attempt_id':'attempt','mode':'checkpoint','pin_sha256':pin(target)['sha256']}]}
+    (current/'resume-declaration.json').write_text(json.dumps(declaration))
+    receipts=FlightReceipts('RUN','successor')
+    receipts.record('preflight',{**{k:getattr(plan,k) for k in ('run_id','attempt_id','protocol_hash','split_identity_hash')},
+        'resume':{'run_id':'RUN','counts':{'kept':1},'predecessors':[{'run_id':'RUN','attempt_id':'attempt',
+            'mode':'checkpoint','checkpoint_sha256':pin(target)['sha256'],'kept':1}]}})
+    return producer,logical,plan,current,target,declaration,receipts
+
+
+def test_checkpoint_recovery_verified_before_any_rate_claim(tmp_path):
+    producer,logical,plan,current,target,declaration,receipts=checkpoint_recovery_fixture(tmp_path)
+    pending=m.recovery_context(producer,logical,plan)
+    assert pending['historical_keepable_rows']==1 and not pending['runtime_preflight_verified']
+    (current/'flight-receipts.json').write_text(json.dumps(receipts.as_json()))
+    result=m.recovery_context(producer,logical,plan)
+    assert result['runtime_preflight_verified'] and result['historical_keepable_rows']==1
+    assert result['source_attempt_ids']==['attempt'] and not result['fresh_inference_rate_verified']
+    target.write_bytes(target.read_bytes()+b'\n')
+    with pytest.raises(RuntimeError,match='declared'):m.recovery_context(producer,logical,plan)
+
+
+@pytest.mark.parametrize('mutation',['duplicate','escape','wrong_identity','wrong_count','corrupt_receipt'])
+def test_checkpoint_recovery_rejects_invalid_evidence(tmp_path,mutation):
+    producer,logical,plan,current,target,declaration,receipts=checkpoint_recovery_fixture(tmp_path)
+    if mutation=='duplicate':declaration['predecessors']*=2
+    if mutation=='escape':declaration['predecessors'][0]['attempt_id']='../attempt'
+    if mutation=='wrong_identity':receipts.run_id='foreign'
+    if mutation=='wrong_count':
+        payload=dict(receipts.stages['preflight']);payload.pop('stage');payload.pop('stage_hash')
+        payload['resume']['counts']['kept']=2
+        receipts.stages.clear();receipts.record('preflight',payload)
+    (current/'resume-declaration.json').write_text(json.dumps(declaration))
+    document=receipts.as_json()
+    if mutation=='corrupt_receipt':document['stages']['preflight']['protocol_hash']='d'*64
+    (current/'flight-receipts.json').write_text(json.dumps(document))
+    with pytest.raises((ValueError,RuntimeError)):m.recovery_context(producer,logical,plan)

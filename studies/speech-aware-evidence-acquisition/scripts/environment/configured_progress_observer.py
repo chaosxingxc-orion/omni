@@ -197,6 +197,60 @@ def row_progress(j,producer,logical,plan,elapsed,state,scratch,lane):
     require(result['total_rows']==j['total_rows'],'checkpoint total differs');return result
 
 
+def checkpoint_recovery_context(producer, logical, plan, declaration):
+    """Verify declared historical checkpoints; never infer fresh rate by subtraction."""
+    from speech_aware_evidence_acquisition.core.flight.receipts import read_flight_receipts
+    from speech_aware_evidence_acquisition.core.row_checkpoint import read_checkpoint
+    predecessors=declaration.get('predecessors')
+    require(isinstance(predecessors,list) and predecessors,'observer checkpoint predecessors required')
+    seen=set();kept=set();pins=[]
+    for item in predecessors:
+        require(isinstance(item,dict) and set(item)=={'attempt_id','mode','pin_sha256'}
+            and item['mode']=='checkpoint' and isinstance(item['attempt_id'],str)
+            and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]*',item['attempt_id'])
+            and item['attempt_id'] not in seen and item['attempt_id']!=plan.attempt_id
+            and isinstance(item['pin_sha256'],str) and re.fullmatch('[a-f0-9]{64}',item['pin_sha256']),
+            'observer checkpoint predecessor differs')
+        seen.add(item['attempt_id'])
+        path=settlement.mapped(producer,logical/'runs'/plan.run_id/item['attempt_id']/(plan.run_id+'.rows.ckpt.jsonl'))
+        checkpoint=read_checkpoint(path,expected_sha256=item['pin_sha256'])
+        require(not checkpoint.torn_tail_bytes
+            and checkpoint.header.get('run_id')==plan.run_id
+            and checkpoint.header.get('attempt_id')==item['attempt_id']
+            and checkpoint.header.get('split_identity_hash')==plan.split_identity_hash,
+            'observer predecessor checkpoint identity differs')
+        ids={row.sample_id for row in checkpoint.rows if row.keep_defect() is None}
+        require(not kept & ids,'observer overlapping historical rows')
+        kept.update(ids);pins.append({'attempt_id':item['attempt_id'],'sha256':checkpoint.sha256,'kept_rows':len(ids)})
+    receipt_path=settlement.mapped(producer,logical/'runs'/plan.run_id/plan.attempt_id/'flight-receipts.json')
+    # Declaration can precede the first atomic receipt publication. Report the
+    # pending evidence explicitly, retaining the conservative rate suppression.
+    verified=False
+    if receipt_path.exists():
+        receipt=read_flight_receipts(receipt_path)
+        require(receipt['run_id']==plan.run_id and receipt['attempt_id']==plan.attempt_id,
+            'observer recovery flight receipt identity differs')
+        preflight=receipt['stages'].get('preflight',{})
+        require(all(preflight.get(k)==getattr(plan,k) for k in ('run_id','attempt_id','protocol_hash','split_identity_hash')),
+            'observer recovery preflight identity differs')
+        resume=preflight.get('resume',{})
+        entries=resume.get('predecessors',[])
+        require(resume.get('run_id')==plan.run_id and resume.get('counts',{}).get('kept')==len(kept)
+            and len(entries)==len(pins),'observer recovery kept count differs')
+        for expected,actual in zip(pins,entries):
+            require(actual.get('run_id')==plan.run_id and actual.get('mode')=='checkpoint'
+                and actual.get('attempt_id')==expected['attempt_id']
+                and actual.get('checkpoint_sha256')==expected['sha256']
+                and actual.get('kept')==expected['kept_rows'],'observer recovery preflight predecessor differs')
+        verified=True
+    return {'mode':'checkpoint','source_attempt_ids':[p['attempt_id'] for p in pins],
+        'predecessor_checkpoints':pins,'historical_keepable_rows':len(kept),
+        'runtime_preflight_verified':verified,
+        'checkpoint_basis':'historical checkpoints verified; current checkpoint coverage is reported independently',
+        'cost_basis':'current native journal counts new contacts; historical costs remain in predecessor custody',
+        'fresh_inference_rate_verified':False}
+
+
 def recovery_context(producer,logical,plan):
     """Identify recovery without treating replayed rows as new inference work."""
     path=settlement.mapped(producer,logical/'runs'/plan.run_id/plan.attempt_id/'resume-declaration.json')
@@ -205,6 +259,8 @@ def recovery_context(producer,logical,plan):
     require(declaration.get('schema')=='saea-resume-declaration-v1'
         and declaration.get('run_id')==plan.run_id and declaration.get('attempt_id')==plan.attempt_id,
         'observer recovery declaration identity differs')
+    if 'native_recovery_receipt' not in declaration:
+        return checkpoint_recovery_context(producer,logical,plan,declaration)
     pin=declaration.get('native_recovery_receipt')
     require(isinstance(pin,dict) and set(pin)=={'path','sha256'},'observer recovery receipt pin required')
     receipt_path=settlement.mapped(producer,Path(pin['path']))
