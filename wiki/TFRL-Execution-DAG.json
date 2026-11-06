@@ -514,9 +514,10 @@
       "id": "concurrency-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "c64_c96_c128_configs_loader_verified_no_runtime_trial",
+      "status": "c96_standard_preparation_live_hold_not_admitted",
       "delta": "C64 to C96 only",
-      "capacity_review": "actual bound single TP4 profile admission128 and receipt seq128 verified; C96 permitted not performance proven"
+      "capacity_review": "actual bound single TP4 profile admission128 and receipt seq128 verified; C96 permitted not performance proven",
+      "scientific_parent": "complete-coverage-evaluate"
     },
     {
       "id": "concurrency-evaluate",
@@ -524,8 +525,11 @@
       "depends_on": [
         "concurrency-prepare"
       ],
-      "status": "await_frozen_scientific_parent_not_queued",
-      "scope": "same frozen policy and existing real roster"
+      "status": "planned_hold_not_queued",
+      "scope": "same frozen policy and existing real roster",
+      "scientific_parent": "complete-coverage-evaluate",
+      "target_valid_throughput_gain_fraction": 0.1,
+      "required_legal_rows": 1080
     },
     {
       "id": "off-score-recovery",
@@ -633,8 +637,9 @@
       "status": "running_http_verified",
       "rows": 1080,
       "runtime_predecessor": "E5 ON known terminal settlement; independent admitted launch",
-      "completed_rows": 211,
-      "observed_at_utc": "2026-11-06T21:47:46.529006+00:00"
+      "completed_rows": 346,
+      "observed_at_utc": "2026-11-06T22:08:54.989577+00:00",
+      "wall_seconds_per_complete_row": 11.234809320097025
     },
     {
       "id": "node-prompt-candidates",
