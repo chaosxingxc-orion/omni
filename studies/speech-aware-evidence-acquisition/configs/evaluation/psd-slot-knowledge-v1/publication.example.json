@@ -1,0 +1,6 @@
+{
+  "schema": "saea-psd-slot-publication-config-v1",
+  "data_root": "/absolute/private/data-root",
+  "compiler": {"path": "/absolute/private/compiler.json", "sha256": "<compiler-file-sha256>"},
+  "output": "knowledge/slurp/semantic/slot-contracts-candidate-v1"
+}

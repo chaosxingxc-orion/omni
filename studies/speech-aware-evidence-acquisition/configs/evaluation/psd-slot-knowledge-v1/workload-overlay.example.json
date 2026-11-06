@@ -1,0 +1,9 @@
+{
+  "pipeline": {"protocol_version": "v2", "node_rails": "sdk-handoff-v1", "answer_only_fallback": "budgeted-v1"},
+  "slot_knowledge": {
+    "schema": "saea-psd-slot-knowledge-v1",
+    "compiler": {"path": "/absolute/private/compiler.json", "sha256": "<compiler-file-sha256>"},
+    "release": {"relpath": "knowledge/slurp/semantic/slot-contracts-candidate-v1/release.json", "sha256": "<release-file-sha256>"},
+    "snapshot": {"relpath": "knowledge/slurp/semantic/slot-contracts-candidate-v1/snapshot.json", "sha256": "<canonical-snapshot-sha256>"}
+  }
+}
