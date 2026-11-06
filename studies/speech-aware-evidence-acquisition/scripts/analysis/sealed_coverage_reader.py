@@ -192,7 +192,16 @@ def evaluate(config):
             or len(rid) != 1080 or len(set(rid)) != 1080 or ids != rid
             or split.get('count') != 1080 or split.get('identity_hash') != roster.get('split_identity_hash')):
         raise ValueError('manifest and locked roster differ')
-    lock_sha = sha(read_pin(config['lock'])) if successor else manifest.get('cost', {}).get('umbrella_lock_sha256')
+    if successor:
+        from speech_aware_evidence_acquisition.core.bundle.git_commit import require_clean_load_bearing_surface
+        generation = Path('/opt/saea-release/studies/speech-aware-evidence-acquisition')
+        commit, _ = require_clean_load_bearing_surface(generation)
+        if (commit != manifest.get('study_commit')
+                or config['lock']['path'] != '/opt/saea-release/docs/datasets.lock.json'):
+            raise ValueError('original generation release lock identity differs')
+        lock_sha = sha(read_pin(config['lock']))
+    else:
+        lock_sha = manifest.get('cost', {}).get('umbrella_lock_sha256')
     if lock_sha != inventory.get('lock_sha256'):
         raise ValueError('inventory dataset lock differs')
     journal_attempt = verify_finalized_successor(config, manifest, output, ids) if successor else manifest['attempt']['attempt_id']

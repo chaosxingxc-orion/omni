@@ -185,6 +185,13 @@ def test_successor_authentication_and_journal_source(tmp_path, monkeypatch, faul
         if fault == 'checkpoint': raise ValueError('checkpoint hash mismatch')
         return fake
     monkeypatch.setattr(bundle_module, 'verify_bundle', verify)
+    from speech_aware_evidence_acquisition.core.bundle import git_commit
+    monkeypatch.setattr(git_commit, 'require_clean_load_bearing_surface', lambda path: ('test-commit', None))
+    manifest['study_commit'] = 'test-commit'
+    cfg['manifest'] = pinned(p, manifest)
+    cfg['lock']['path'] = '/opt/saea-release/docs/datasets.lock.json'
+    original_read_pin = reader.read_pin
+    monkeypatch.setattr(reader, 'read_pin', lambda pin: (json.dumps({'datasets': []}) + '\n').encode() if pin is cfg['lock'] else original_read_pin(pin))
     if fault:
         with pytest.raises(ValueError): reader.evaluate(cfg)
     else:
