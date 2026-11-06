@@ -298,8 +298,8 @@
           "resource": "NPU-A",
           "after_generation_release": "baseline-off",
           "status": "running_real_responses_verified",
-          "completed_rows": 686,
-          "observed_at_utc": "2026-11-06T17:32:56Z",
+          "completed_rows": 740,
+          "observed_at_utc": "2026-11-06T17:39:05Z",
           "count_scope": "checkpoint rows not legal answer acceptance"
         },
         {
@@ -498,7 +498,8 @@
         "coverage-score"
       ],
       "status": "proposal_after_policy_freeze",
-      "delta": "C64 to C96 only"
+      "delta": "C64 to C96 only",
+      "capacity_review": "actual bound single TP4 profile admission128 and receipt seq128 verified; C96 permitted not performance proven"
     },
     {
       "id": "concurrency-evaluate",
@@ -539,7 +540,7 @@
       "depends_on": [
         "perception-length-ready"
       ],
-      "status": "admitted_auto_binder_live_waiting_real_coverage_container",
+      "status": "held_before_dispatch_complete_candidate_priority",
       "rows": 1080,
       "priority": 1
     },
@@ -554,7 +555,7 @@
       "id": "complete-coverage-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "deployment_cli_live_cpu_preparation",
+      "status": "admitted_ready_independently_verified",
       "source": "2586419b",
       "reuse": "existing FoldA1080 k8 OFF C64 and bounded recovery shared pool",
       "scope": "add reviewed Slot length to Perception length candidate"
@@ -565,7 +566,7 @@
       "depends_on": [
         "complete-coverage-ready"
       ],
-      "status": "not_ready_not_queued",
+      "status": "auto_binder_live_waiting_real_coverage_container",
       "rows": 1080,
       "priority": 1
     },
@@ -573,7 +574,7 @@
       "id": "off-node-answer-audit",
       "resource": "CPU",
       "depends_on": [],
-      "status": "analysis_cli_live",
+      "status": "complete_report_accepted",
       "scope": "sealed OFF1080 outputs and runtime-bound KB contracts; legal answers and node information preservation",
       "new_model_calls": 0
     },
@@ -591,8 +592,8 @@
         "off-node-answer-audit",
         "off-score-recovery"
       ],
-      "status": "same_cli_followup_scheduled",
-      "scope": "156 nonempty intent errors; node attribution and at most two targeted changes"
+      "status": "analysis_cli_live_targeted_normalizer_counterfactual",
+      "scope": "recover known pre-normalizer responses; independent CPU diagnostic comparison; no model calls"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -614,7 +615,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T17:32:56Z",
+  "updated_at": "2026-11-06T17:39:05Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Slot length implementation running; Perception merged",
     "deployment": "Reference coverage admitted and queue armed; Perception candidate follows",
