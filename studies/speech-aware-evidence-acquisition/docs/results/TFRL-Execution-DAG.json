@@ -292,7 +292,10 @@
           "id": "E5-off",
           "resource": "NPU-A",
           "after_generation_release": "baseline-off",
-          "status": "running_real_responses_verified"
+          "status": "running_real_responses_verified",
+          "completed_rows": 587,
+          "observed_at_utc": "2026-11-06T17:22:39Z",
+          "count_scope": "checkpoint rows not legal answer acceptance"
         },
         {
           "id": "E5-on",
@@ -531,7 +534,7 @@
       "depends_on": [
         "perception-length-ready"
       ],
-      "status": "admitted_launch_plan_passed_dependency_binding_in_progress",
+      "status": "admitted_auto_binder_live_waiting_real_coverage_container",
       "rows": 1080,
       "priority": 1
     },
@@ -546,7 +549,7 @@
       "id": "complete-coverage-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "deferred_cli_successor_scheduled_not_yet_delivered",
+      "status": "deployment_cli_live_cpu_preparation",
       "source": "2586419b",
       "reuse": "existing FoldA1080 k8 OFF C64 and bounded recovery shared pool",
       "scope": "add reviewed Slot length to Perception length candidate"
@@ -560,6 +563,14 @@
       "status": "not_ready_not_queued",
       "rows": 1080,
       "priority": 1
+    },
+    {
+      "id": "off-node-answer-audit",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "analysis_cli_live",
+      "scope": "sealed OFF1080 outputs and runtime-bound KB contracts; legal answers and node information preservation",
+      "new_model_calls": 0
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -581,7 +592,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T17:19:35Z",
+  "updated_at": "2026-11-06T17:22:39Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Slot length implementation running; Perception merged",
     "deployment": "Reference coverage admitted and queue armed; Perception candidate follows",
