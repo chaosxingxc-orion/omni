@@ -77,3 +77,42 @@ def test_v2_sdk_rails_selection_is_explicit_and_restricted():
     c['pipeline']={'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
     c['node_arm']=ARMS[1]
     with pytest.raises(ValueError,match='explicit supported'):NodeWorkload(c)
+
+
+def test_decision_policy_requires_v2():
+    c=config();c['node_arm']=ARMS[2];c['decision_policy']={}
+    with pytest.raises(ValueError,match='Decision policy requires'):
+        NodeWorkload(c)
+
+
+def test_decision_policy_changes_only_decision_material_and_renders(tmp_path,monkeypatch):
+    import hashlib
+    import intent_slot_workload as workload
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    from speech_aware_evidence_acquisition.rails.phase_material import load_phase_material_specs,render_static_instruction
+    c=config();c['node_arm']=ARMS[2]
+    c['pipeline']={'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
+    read_asset=workload.read_asset
+    monkeypatch.setattr(workload,'read_asset',lambda repo,relative:read_asset(ROOT,relative))
+    def derive(cfg):
+        job=NodeWorkload(cfg)
+        job.material_checked=lambda *args: ({'source_roster':{}},{
+            'roster':{'roster_id':'fixture','items':[{'audio_seconds':1}], 'split_identity_hash':'a'*64},'view':{}})
+        job.runtime_binding=lambda *args: {'model_fragment':'bf16-thinking-tfgrpo-tp4-ctx48k-v1','service_session':'fixture'}
+        return job.derive(tmp_path,tmp_path,{})[0]
+    baseline=derive(c)
+    path=tmp_path/'configs/probes/decision_candidate.txt'
+    path.parent.mkdir(parents=True)
+    path.write_text('Compare all supported hypotheses; return only the selected candidate_id.\n')
+    c['decision_policy']={'thinking':{'enable_thinking':False,'answer_reserve_tokens':4096},
+        'instruction_template':{'relpath':path.relative_to(tmp_path).as_posix(),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}}
+    candidate=derive(c)
+    expected=copy.deepcopy(baseline)
+    expected['thinking_policy']['solver']=c['decision_policy']['thinking']
+    expected['phase_material']['solver']['instruction_template']='probes/decision_candidate.txt'
+    assert candidate==expected
+    specs=load_phase_material_specs(candidate,default_phase_program(candidate['policy']))
+    assert render_static_instruction(specs['solver'],tmp_path,{},tmp_path)==path.read_text()
+    c['decision_policy']['instruction_template']['sha256']='0'*64
+    with pytest.raises(ValueError,match='template pin differs'):
+        derive(c)

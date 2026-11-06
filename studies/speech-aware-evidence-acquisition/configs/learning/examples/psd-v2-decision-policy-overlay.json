@@ -1,0 +1,13 @@
+{
+  "decision_policy": {
+    "thinking": {
+      "enable_thinking": true,
+      "reasoning_budget_tokens": 3072,
+      "answer_reserve_tokens": 1024
+    },
+    "instruction_template": {
+      "relpath": "configs/probes/slurp_native_candidate_decision_v2.txt",
+      "sha256": "a1705b1bb86e093440731952b30cc05e8dd244113e22c58dc53a1817cad45db8"
+    }
+  }
+}
