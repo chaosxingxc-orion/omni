@@ -2,7 +2,7 @@
 
 ## 当前结论
 
-当前运行准备：修复后的独立release `865273b4`已验证；A的新resident session已注册，两路新身份均完成Fold A1080的stage、prepare、register，准入从13:31:58 UTC起并行运行。主线程确认两准入容器仍live；尚无新generation首请求或完成样本证据。两路已验证完成数仍为0/1080，不能宣称NPU满载、精度基线或TFRL收益。
+最新核验（2026-11-06 14:39:44 UTC）：v4首请求前的system空白适配错误已修复合main `3db41546`，固定镜像78项回归通过。独立release `9a50852e`的v5双路generation均于14:36:12 UTC正式启动；主线程核验容器running、attempt OPENED，但contact文件0、尚无样本checkpoint。因此当前仍各0/1080，不能宣称NPU有效满载、精度基线或TFRL收益。两路由配置化队列托管，按600秒或终态观察。详见[根因与耗时分析](PSD-Precontact-Failure-Root-Cause.md)。
 
 前代B曾在13:10 UTC派发后、首请求前因`candidate_snapshot_root`参数未转发而ABORTED，实际模型调用0；旧attempt与租约结算记录保留。该接口已修复合main，当前使用独立版本接续。
 
@@ -17,17 +17,19 @@
 |---|---|---|
 |PSD v2主流程|P→Slot→Decision、模型调用前后知识供给/去重、候选归组、Decision按ID取实体已合main|同条件新Fold A实验未完成，不能宣称优于旧系统|
 |固定工程基座|固定镜像、外部配置、独立运行release、输入预载和后台观察器已有|启动配置存在session、资产挂载遗漏；只修实际阻塞，不扩框架|
-|启动接续|连续runner接口已修复；独立release验证，A新session、两臂输入及注册完成|两臂新准入并行运行，尚无generation请求|
+|启动接续|连续runner接口已修复；独立release验证，A新session、两臂输入及注册完成|system空白修复通过78项回归；v5两路generation已派发，待首请求|
 |回答恢复|共享预算、一次后继正式receipt/加载器/SDK/bundle组合已合main，207项相关集成通过|仅单次有费用前驱；多代明确拒绝，未部署；不阻塞现有基线|
-|GEPA|Slot/Decision提示适配已合main，独立68项测试通过|未完成当前PSD真实学习闭环和收益验证|
+|GEPA|Slot/Decision适配已有；两节点真实seed/contract已交付并核对11份文件|真实学习轨迹、教师提案与收益尚未完成，见[准备结果](PSD-GEPA-Seed-Readiness.md)|
 |TF-GRPO|节点经验消费、参考多阶段和融合路径、父经验继承已合main，独立143项测试通过|同策略K轨迹采集与真实学习尚未完成|
-|知识卡适配|候选快照接入Slot已合main，独立95项测试通过|不等于完整ACE迭代，更不等于精度提升|
-|构建池采集|625/K2两成员已完成一版真实stage/prepare/register；发现查询来源凭据还指Fold A后，已修为construction来源|正在以修正pin重做最小CPU链；未准入、未生成；之后与最新main集成|
+|知识卡适配|候选快照接入Slot已有；[ACE启发单卡配方](PSD-ACE-Slot-Recipe.md)及新CLI回归已合main|待真实H1轨迹和教师响应，不是完整ACE迭代或精度收益|
+|构建池采集|625/K2两成员已完成一版真实stage/prepare/register；发现查询来源凭据还指Fold A后，已修为construction来源|已使用当前A服务session重新完成两个625成员的stage/prepare/register；held、模型0，等待基线选择后派发|
 |Reflexion|保留既有研究与参考实现|当前PSD适配及跨题收益待验证|
 
 不同测试数对应不同功能范围，不相加作为系统覆盖率。新适配代码不会热改当前运行release；可运行候选通过独立版本进入下一批任务。
 
-三个Codex CLI分工保持：①真实启动；②回答恢复最小正常路径；③下一批可执行配置和构建采集正常链。恢复集成与Sol分析均已交付；Sol的六项建议经56份来源摘要核对，已写入[TFRL任务依赖图](TFRL-Execution-DAG.md)。k16独立配置已合main `6e07d07e`，真实stage/prepare正在继续。主线程负责排优先级、整合、判读结果和与用户沟通。第三项已复用原执行会话，不新建协作子智能体。
+当前CLI工作：①启动执行者守护两TP4正式派发及终态接续；②construction当前session两成员交付已验收，复用该执行者提前准备原Fold B1080两种条件输入，选型冻结后只派发赢家；③Sol的首次请求前耗时报告已交付，主线程核验3份证据摘要及38份源码摘要。完整文件报告交接，主线程负责规划、审查、整合和沟通。
+
+k16配置已合main，两个分支各完成1080/1080条真实CPU stage/prepare；固定镜像容器均exit0，准备分别87.03/85.51秒，约0.081/0.079秒/条。这是供给准备效率，不是推理速度。尚未register/FIT/admission，待基线选型只保留相应分支。construction625两成员也已完成修正来源后的stage/prepare/register，仍held；这些准备不等于原生NPU任务已入队。
 
 ## NPU实验设置与进度
 
@@ -45,7 +47,7 @@
 |采样|temperature=0，seed=20260913|相同|
 |已验证完成/总量|0/1080|0/1080|
 |剩余样本|1080|1080|
-|当前阶段|新session已注册；新run准入中|修复后新run准入中|
+|当前阶段|v5 generation运行，OPENED、contact0|v5 generation运行，OPENED、contact0|
 |秒/条、ETA|暂无有效观测|暂无有效观测|
 
 每臂正常三节点生成预算3240次，含现有fallback的上限6480次；FIT上限3240。它们是预算而非已发生调用数。开发中的新恢复功能若改变预算，须随候选配置明确记录。双臂合计2160次样本处理，但只有1080个不同样本。服务占卡不等于有效推理负载，也不等于AI Core>80%。
@@ -71,8 +73,8 @@
 
 |顺序|任务|资源与触发条件|交付|
 |---|---|---|---|
-|立即|修复连续runner参数转发后独立版本接续B；A接续启动|各自TP4独立推进，不互等|首请求、持久样本、进度和实际效率|
-|并行|下一批配置/输入预准备、最小回答恢复、CPU结果分析|三个CLI及CPU脚本；不占用对方lease|真实配置路径、版本、复用命令、依赖和报告|
+|立即|基于修复release与v5准入接续两路基线|各自TP4独立推进，不互等|首请求、持久样本、进度和实际效率|
+|并行|验收construction当前session注册、耗时分析及教师动态输入准备|三个CLI及CPU脚本；不占用对方lease|真实配置路径、版本、复用命令、依赖和报告|
 |两臂完成后|Fold A配对评分与选型|CPU；依赖两臂结果|覆盖率、Intent、SLU、Strict、正负样本和节点归因|
 |选型冻结后|既有Fold B1080确认|首个空闲TP4；不在B反复调参|独立确认结果|
 |共同基线稳定后|固定construction625的同策略多轨迹；TF-GRPO/GEPA先就绪先跑|NPU双实例与本机外部教师异步|候选策略、可追溯轨迹、Fold A收益|
@@ -88,3 +90,9 @@
 **当前没有必须等待用户决策的阻塞项。** 两TP4、原Fold A/B、P关闭thinking、Slot开关配对、三优化轴和外部教师已获明确指示，继续执行。暂不要求用户决定更多预算、权重或框架。
 
 后续只有出现可复核的Intent与SLU取舍、质量与推理成本取舍，或改变知识快照/方法范围的实质选择时，才提交配对证据和明确选项。LoRA仍后置于稳定轨迹和系统采集。
+
+## 本轮CPU准备验收
+
+两份construction注册产物来自main `7e0b7b5d`，绑定当前A服务会话。独立核验确认：两个供给文件与prepare回执摘要一致；baseline、experiment和roster与最终注册manifest摘要一致；两成员使用相同有序625样本名单、相同知识供给，temperature=0.7、seed=1001/1002。每成员正常generation预算1875、含fallback上限3750、FIT上限1875，实际调用仍0。stage之后prepare/register会更新配置，因此不能误用旧stage摘要判断最终配置损坏。完整执行者报告已交付，最终11份交付摘要核验通过；当前只能确认CPU准备，不能计为已执行K2轨迹。
+
+v4音频预载有独立实测：每臂1080条、77,788,012字节，约0.78秒、失败0。约319–321秒的首次请求前等待不能归因于这一步；其他初始化与校验分段尚未实测。v5仍未配置计时环境，不为补计时中断已派发任务；下一批使用既有normal/debug外部配置。
