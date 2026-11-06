@@ -51,7 +51,11 @@
 
 新worker的layout/plan通过，运行guard空闲且原inode保留，8个新输出路径无冲突。02:53 UTC通过通用启动器启动 `generation-preload-v1`，接续原名单剩余161条作为工程效率验收，不扩展科学实验。运行随后在runtime preflight退出：缺少源码路径下的 `docs/receipts/e0-closure.json`。原凭证实际存在于只读历史执行树，但门禁仍硬编码源码目录，未通过外部资产解析器读取。这是基座配置接线bug，不是模型错误。当前生成/FIT attempt账本和请求journal均未创建，零新模型/FIT调用；部分run目录和失败输出保留，不能原地重提。
 
-修复 `97b12bfd` 让E0、runtime和D1补充凭证统一通过已有哈希绑定的 `resolve_asset` 读取，源码/评分冻结核验继续保留。固定parent测试 **45 passed / 2.90秒**，6条pytest marker注册警告（测试挂载未带项目pytest配置）；测试包括凭证篡改和评分源码篡改必须拒绝。**修复尚未发布/重新准入**，不改写已准入源码。下一步将完整E0四项artifact随输入闭包提供，在生成前执行完整gate/preflight，再发布后继配置。
+修复 `97b12bfd` 让E0、runtime和D1补充凭证统一通过已有哈希绑定的 `resolve_asset` 读取，源码/评分冻结核验继续保留。固定parent测试 **45 passed / 2.90秒**，6条pytest marker注册警告（测试挂载未带项目pytest配置）；测试包括凭证篡改和评分源码篡改必须拒绝。修复已包含在新源码 `4fa68e30` 中，独立完整只读发布（7498文件，manifest `f6f3aa6e…40ed1f`），未改写旧源码。
+
+通用编译器新增E0四项artifact/runtime/D1闭包检查，缺项或内容变化在编译前拒绝；发布验证脚本增加 `gate` 模式，使用正式配置/计划调用生产 `FrozenCoreGate`。固定镜像回归 **37 passed / 4.46秒**。新候选编译exit0，新workspace准入正在进行，未启动新生成任务。
+
+真实 `gate` 模式 **exit0**：26个模型文件全哈希，共63,447,489,451字节，vLLM运行依赖、E0及评分冻结校验通过；零模型/FIT/教师请求。它验证模型调用门禁，不等于完整flight preflight、恢复bridge或实际吞吐验收。
 恢复候选内置dispatch：准入32、模型许可32、准备线程4、校验线程4；它是恢复起点，不是最优并发。缓存4096条/4GiB，预热候选建议8线程。不叠加第二套调度配置。normal/debug与服务指标600秒采集保持配置驱动。
 
 观测器修复 `c93b696d` 增加checkpoint恢复识别：核验前驱文件哈希、run/attempt/split身份与当前preflight凭证，拒绝重复前驱、路径越界和计数冲突。固定依赖镜像回归 **24 passed / 4.78秒**。该外部工具修复不修改已准入业务源码。

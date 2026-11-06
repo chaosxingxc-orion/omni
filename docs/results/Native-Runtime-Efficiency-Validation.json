@@ -229,7 +229,47 @@
     "seconds": 2.9,
     "warnings": 6,
     "environment": "fixed dependency image",
-    "deployed": false,
-    "next": "stage pinned E0 artifacts and run full gate before successor launch"
+    "deployed": true,
+    "next": "admit new workspace; verify recovery bridge and full runtime preflight"
+  },
+  "gate_candidate": {
+    "source_commit": "4fa68e30a3947fd8d6f6142f31e46cf40833f783",
+    "manifest_sha256": "f6f3aa6e1e3ef32a928c74e4c0c601bc9facb300031e10d47e87ee0d6e40ed1f",
+    "files": 7498,
+    "compiler_exit_code": 0,
+    "assets_manifest_sha256": "3b6498494be5be9525cfe0021a62471255ef54109fe39996fdd713e530dfd620",
+    "gate_probe": {
+      "attempt_id": "generation-gate-v1",
+      "config_sha256": "ff63a0839df77604c9b8de1ea634eec6429057f9cc4e3b6f61ae21ca50100ddf",
+      "diagnostics": {
+        "gguf_bytes_full_hashed": 63447489451,
+        "gguf_bytes_verified": 63447489451,
+        "gguf_fast_path_used": false,
+        "gguf_files_full_hashed": 26,
+        "gguf_files_memory_cache_hits": 0,
+        "gguf_files_total": 26,
+        "vllm_instances": [
+          "saea-baseline-a-tp4-ctx64k-v1"
+        ],
+        "vllm_protocol_sha256": "1890ef9fd3f973847b73b5bae74e6734f600518767ae360d1b3d22e3a36fc5e1"
+      },
+      "fit_calls": 0,
+      "input_sha256": "b051a80fcae60cf8d6567f7959e7c84af4c29df11d69071d35b908a39ad349f6",
+      "lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df",
+      "mode": "gate",
+      "new_model_calls": 0,
+      "ok": true,
+      "run_id": "SAEA-SLURP-FOLD-A-SLOT-OFF-A64K-V1",
+      "schema": "saea-configured-release-validation-v1",
+      "scope": "production frozen-core gate only; no attempt reservation, model/FIT contact or full flight preflight",
+      "teacher_calls": 0,
+      "tokenizer_calls": 0
+    },
+    "admission_state": "running",
+    "generation_launched": false,
+    "gate_compiler_tests": {
+      "passed": 37,
+      "seconds": 4.46
+    }
   }
 }
