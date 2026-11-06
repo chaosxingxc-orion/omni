@@ -76,11 +76,11 @@
     "activation_authorized": false
   },
   "resident_snapshot": {
-    "checked_at_utc": "2026-11-06T01:49:34Z",
+    "checked_at_utc": "2026-11-06T03:24:00Z",
     "deployment": "A stable dependency image TP4; B unchanged cf273e52 TP4",
     "generation_workers_running": 0,
     "new_candidate_deployed": false,
-    "note": "Engine ready and registered; optimized CPU worker not started"
+    "note": "A/B engines unchanged; candidate worker failed before model contact; independent workflow import check passed"
   },
   "successor_compile": {
     "exit_code": 0,
@@ -133,9 +133,9 @@
     "workspace_published_by_failed_admission": false
   },
   "production_efficiency_gaps": [
-    "Bind new preload candidate source to reviewed recovery transition and prepared inputs",
-    "Deploy actual observer config for final worker",
-    "No online throughput window yet"
+    "Reconcile failed attempt and retained lease metadata without replacing guard",
+    "Create independent successor configuration with external framework logs",
+    "Verify online throughput, concurrency scaling and effective NPU utilization"
   ],
   "admission_input_closure": {
     "missing_asset": "docs/exposure-ledger.md",
@@ -278,7 +278,39 @@
     "generation_started_at_utc": "2026-11-06T03:14:52.0674049Z",
     "generation_attempt": "generation-gate-v1",
     "worker_config_sha256": "48023ced32a6eeac4da57b9edd3ddc2064b8c25a8b6ae613a20d91318621ed7b",
-    "new_terminal_rows_verified": null,
-    "throughput_verified": false
+    "new_terminal_rows_verified": 0,
+    "throughput_verified": false,
+    "generation_state": "exited",
+    "generation_exit_code": 1,
+    "generation_finished_at_utc": "2026-11-06T03:19:13.82301863Z",
+    "new_model_calls": 0,
+    "new_fit_calls": 0,
+    "attempt_state": "ABORTED",
+    "failure": "openJiuwen default log directory points into read-only source",
+    "production_preflight": {
+      "passed": true,
+      "historical_rows_kept": 919,
+      "remaining_rows": 161
+    },
+    "audio_preload": {
+      "loaded": 1080,
+      "requested": 1080,
+      "failed": 0,
+      "cache_bytes": 77788012,
+      "duration_seconds": 1.1226604800322093,
+      "workers": 8
+    }
+  },
+  "framework_runtime_fix": {
+    "source_commit": "f3e10540",
+    "tests_passed": 51,
+    "tests_seconds": 0.33,
+    "fixed_dependency_image": true,
+    "real_workflow_import_exit_code": 0,
+    "source_under_test": "4fa68e30",
+    "source_readonly": true,
+    "network": "none",
+    "new_model_calls": 0,
+    "successor_generation_launched": false
   }
 }
