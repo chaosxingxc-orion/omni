@@ -521,7 +521,7 @@
       "id": "perception-length-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "independent_release_verified_cpu_preparation_running",
+      "status": "stage_prepare_register_complete_admission_running",
       "source": "81d7ea7b",
       "scope": "reuse coverage FoldA1080 with externally pinned Perception repair template"
     },
@@ -539,7 +539,7 @@
       "id": "slot-length-fix",
       "resource": "CPU",
       "depends_on": [],
-      "status": "implementation_running",
+      "status": "merged_c3d1dc17_not_deployed",
       "scope": "known nonempty Slot length; shared bounded repair budget; real source and failures retained"
     }
   ],

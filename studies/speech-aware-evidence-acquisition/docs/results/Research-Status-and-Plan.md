@@ -70,3 +70,8 @@ OFF生成已封存1080输出、3163次generation调用、输入33890635 tokens�
 17:02 UTC对封存outputs独立校验SHA并统计全部1080个唯一ID：**1038/1080结构完整（96.11%）**，且均完成P→Slot→Decision；其余42条均空交付，23条P length、19条引用拒收（P12/Slot7）。这是完整输出的结构统计，未作标签枚举/语义验收，不等于正确率。现已合入的引用隔离和P length恢复覆盖本轮观察到的失败类别，实际修复收益仍待运行验证。
 
 引用候选现已正式准入并排队，前驱是实际运行的OFF k16，触发条件为generation-released，不等待CPU评分。原计划中“register失败/尚未ready”已被此次成功取代；失败记录保留。Perception长度候选尚未READY；执行者已自动接续，81d7ea7b独立release完整校验通过，CPU准备进行中。
+
+
+Slot非空length恢复已合main `6614d6ab`/`c3d1dc17`：136项相关测试及3项主审修正测试通过，11项最终源码/模板摘要一致。修正保留非thinking模板参数，并验证P先用尽共享预算时Slot不超额重试。尚未部署或测真实覆盖收益。Perception独立候选stage/prepare/register已成功，正式准入进行中；不改变已armed引用候选。
+
+k16 OFF的normal计时首次提供持续运行证据：截至17:11，459个checkpoint成功事件/1080（操作计数，非合法回答验收），4卡1实例，6.45秒/事件，粗估余67分钟。HTTP均值101.47秒、FIT1.317秒、checkpoint0.0384秒，锁等待近零；详细边界及同窗口AI Core见[效率分析](PSD-Inference-Efficiency.md)。

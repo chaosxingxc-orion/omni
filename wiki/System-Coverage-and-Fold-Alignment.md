@@ -50,6 +50,6 @@ OFF封存1080个唯一样本ID，顺序与原manifest一致。终态原因计数
 
 评分失败已定位为配置重放不一致：生成端将dispatch、audio_cache及runtime_config_identity计入有效配置hash，评分端只重组原fragment。相同输入经生成逻辑重放可匹配原hash；需独立评分工具源码修复，原生成manifest不修改，不重跑推理。诊断probe不等于官方评分完成。
 
-另有既有ON快照中的两条Slot截断：正文非空，completion均4096、reasoning均3093。现有answer-only恢复只接空正文，Perception专用恢复也不覆盖它们；已交同执行者定点分析并完善配置化恢复。实体空字段由现有逐候选coverage分类处理，实际收益仍需全Fold验证。100%目标不能以“修复大多数失败”替代。
+另有既有ON快照中的两条Slot截断：正文非空，completion均4096、reasoning均3093。现有answer-only恢复只接空正文，Perception专用恢复也不覆盖它们；已完成定点修复并合main6614d6ab/c3d1dc17，136项相关测试加3项修正测试通过；尚未部署。实体空字段由现有逐候选coverage分类处理，实际收益仍需全Fold验证。100%目标不能以“修复大多数失败”替代。
 
 最新完整OFF结构验收：封存1080行、1080唯一ID、outputs SHA匹配；1038条结构完整且三个节点均完成，覆盖96.11%；42条空交付=23条P length+19条引用拒收（P12/Slot7）。合法标签和语义正确仍需单独验收。引用修复候选已准入并armed，Perception恢复虽已合main仍待独立部署，不把两者混称已全部运行。
