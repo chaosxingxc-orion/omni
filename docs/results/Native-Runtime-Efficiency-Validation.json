@@ -62,12 +62,18 @@
     "generation_audio_seconds": 6160.0578750000295,
     "generation_journal_cost_match": true,
     "new_model_calls": 0,
-    "full_terminal_custody_verified": false,
+    "full_terminal_custody_verified": true,
     "limitations": [
-      "Classification is not accuracy or a recoverable-row decision",
-      "Detailed P/Slot/Decision receipt audit covered the first complete row only",
-      "FIT, cross-ledger, source bridge and live guard validation remain pending"
-    ]
+      "Keepable terminal rows include refusals and do not imply correct answers",
+      "Full terminal custody passes; successor composition, request equivalence and live guard/deployment checks remain pending"
+    ],
+    "native_keepable_rows": 919,
+    "incomplete_rows": 0,
+    "fit_endpoint_calls": 2231,
+    "missing_fit_custody": 0,
+    "terminal_package_exit_code": 0,
+    "terminal_package_sha256": "8156c96b1cc3a1565c07b8ce50d247f942a50cfe01dca446f3fa8661d12925ca",
+    "activation_authorized": false
   },
   "resident_snapshot": {
     "checked_at_utc": "2026-11-06T01:08:21Z",
@@ -81,5 +87,15 @@
       0
     ],
     "new_candidate_deployed": false
+  },
+  "successor_compile": {
+    "exit_code": 0,
+    "rows": 1080,
+    "status": "HELD",
+    "new_model_calls": 0,
+    "new_fit_calls": 0,
+    "assets_manifest_sha256": "aa10118c95b852607cf3932305e0010355babd618e949694099608389b3228ed",
+    "admission_config_sha256": "17dae0622e77ec1fe1ac1b8b33ca784052983e9e4e95ac82d661c455f685a587",
+    "live_admission_complete": false
   }
 }
