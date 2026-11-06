@@ -33,6 +33,8 @@ OFF全1080互斥归因：42空答、96正确意图未进P候选、60正确候选
 
 知识语义审计已核4个既有错例、5张锁定卡和17段原文：日期卡虽自述标注变异，但新增锁定参考句证据显示该例根本没有新增日期，不能将它当作gold冲突；地点/主题及名单跨度仍缺少通用裁决；时间词式规则虽明确，正规化也不能解决全部跨度问题。只接受三项原文重排/并列规格，未改KB或新增实验；定点参考句和固定官方仓文档已取得，完整补证报告已交付并通过主审，详见[知识语义审计](PSD-Knowledge-Semantic-Review.md)。
 
+28条引用OFF长度失败定点根因已完整验收：P26均在某个distinction达到128字符后持续空白，Slot2在21/22条有效引用后持续空白并缺必填字段；全部thinking关闭、reasoning tokens0、completion4096。不是已证的上下文容量耗尽或具体引擎bug。正在准备两个单节点紧凑提示配置，不改当前运行队列；先验完整覆盖补问结果再决定派发。详见[长度失败根因](PSD-Length-Root-Causes.md)。
+
 ## NPU运行与后继
 
 两实例各TP4，共8卡；Qwen3-Omni-30B-A3B-Thinking BF16，ctx65536、seq128、batched_tokens2048、memory0.92；prefix cache/chunked prefill开启。客户端C64、准备/校验8/8线程，音频缓存4GiB/8线程。P OFF4096；Slot OFF4096或ON3072思考+1024回答；Decision ON3072+1024。temperature0、seed20260913。

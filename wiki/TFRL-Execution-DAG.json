@@ -712,7 +712,8 @@
     "scoring_recovery": "Three pending score watchers use verified lock-mount fix; reference partial-finalization reconciliation returned to original executor for implementation",
     "paired_analysis": "k8/k16 full paired diagnosis and locked source transcript evidence accepted; retain k8 parent",
     "tfrl_reader": "deferred",
-    "length_root_causes": "28 sealed failed response contacts targeted analysis in progress"
+    "length_root_causes": "complete28 targeted response analysis accepted; no thinking, whitespace stall at structural boundaries",
+    "compact_prompt_preparation": "two separate single-node instruction candidates from same completeON parent; configuration-only, not queued"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
