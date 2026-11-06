@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-效率基线尚未锁定，AI Core >80%尚未实测通过。两实例均为TP4、context65536、max_num_seqs128、max_num_batched_tokens2048、memory utilization0.92，原先服务镜像不同，B已开始配置化切换到A的固定镜像；服务就绪、session身份及完整配置仍须核验，不能据此宣称对齐完成。客户端并发32仅为起点。仅推进P→Slot→Decision，不启动P→Solver。
+效率基线尚未锁定，AI Core >80%尚未实测通过。两实例均为TP4、context65536、max_num_seqs128、max_num_batched_tokens2048、memory utilization0.92，服务层已完成对齐：B切换到A的固定镜像并注册新session，两者26个模型文件哈希、解释器及服务参数相同，启动日志确认prefix caching和chunked prefill开启。实验客户端配置与完整窗口性能尚待锁定。客户端并发32仅为起点。仅推进P→Slot→Decision，不启动P→Solver。
 
 ## 锁定内容
 
