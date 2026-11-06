@@ -30,7 +30,7 @@
   "new_model_requests": 0,
   "deployed": false,
   "online_throughput_verified": false,
-  "npu_dynamic_import_smoke": false,
+  "npu_dynamic_import_smoke": true,
   "limitations": [
     "CPU validation does not demonstrate online throughput",
     "Device-mounted import smoke covers runtime packages only; it does not prove model throughput",

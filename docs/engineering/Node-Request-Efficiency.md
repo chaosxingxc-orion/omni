@@ -89,10 +89,9 @@ node batch/pipeline 或 prefix-slot 调度混用。该改造只改变调度，�
 固定 parent、无网络 detached 构建退出 0；清单 7497 个文件验证通过。固定镜像内
 受影响回归 **111 passed，5 warnings，25.73 秒**；与在线服务相同的 Ascend 设备挂载
 下 `acl/torch_npu/vllm/vllm_ascend` 导入 smoke 通过，未发送模型请求。
-最终镜像内挂载只读测试文件、使用镜像内业务源码执行受影响回归，
-**111 passed，5 条依赖弃用 warning，26.48 秒**。测试包括外部配置真实
-native 调度接线、请求一致性、取消、恢复及有界背压；没有真实模型请求。
-临时测试仓用例仅在测试进程清除 `SAEA_RELEASE_MANIFEST`，生产门禁保持启用。
+测试包括外部配置真实 native 调度接线、请求一致性、取消、恢复及有界背压；
+没有真实模型请求。临时测试仓用例仅在测试进程清除 `SAEA_RELEASE_MANIFEST`，
+生产门禁保持启用。
 
 CPU harness 的 venv 导入和设备挂载动态库 smoke 均通过，但这仍不等于真实 NPU
 推理吞吐验收。旧双 TP4 服务仍使用 `cf273e52` 镜像；本轮没有停止或替换服务，
