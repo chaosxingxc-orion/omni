@@ -1545,6 +1545,7 @@ class CandidateSemanticProvider(KnowledgeProvider):
         projection_policy: str | None = None,
         fallback_candidates: Sequence[str] = (),
         fallback_distinction: str = DEFAULT_FALLBACK_DISTINCTION,
+        locked_snapshot_visibility: Mapping[str, object] | None = None,
         provider_id: str = SLURP_CANDIDATE_SEMANTIC_PROVIDER_ID,
     ) -> None:
         super().__init__(provider_id=provider_id)
@@ -1606,6 +1607,19 @@ class CandidateSemanticProvider(KnowledgeProvider):
             if len(values) != len(set(values)):
                 raise RailsError("candidate index contains a duplicate value ID")
             index[candidate_id] = values
+        if locked_snapshot_visibility is not None and (
+            not isinstance(locked_snapshot_visibility, Mapping)
+            or set(locked_snapshot_visibility) != {"policy", "max_values", "snapshot_sha256"}
+            or locked_snapshot_visibility.get("policy") != "all-released-v1"
+            or type(locked_snapshot_visibility.get("max_values")) is not int
+            or locked_snapshot_visibility.get("max_values") != 54
+            or not isinstance(locked_snapshot_visibility.get("snapshot_sha256"), str)
+            or len(locked_snapshot_visibility["snapshot_sha256"]) != 64
+            or any(c not in "0123456789abcdef" for c in locked_snapshot_visibility["snapshot_sha256"])
+            or provider_id != SLURP_CANDIDATE_SEMANTIC_PROVIDER_ID
+        ):
+            raise RailsError("invalid locked snapshot visibility option")
+        self._locked_snapshot_visibility = locked_snapshot_visibility
         self._candidate_values = index
         self._legal_candidate_ids = legal
         self._max_candidates = max_candidates
@@ -1658,6 +1672,12 @@ class CandidateSemanticProvider(KnowledgeProvider):
                 "candidate semantic index cites values outside the released snapshot: "
                 f"{sorted(unknown)[:5]}"
             )
+        if self._locked_snapshot_visibility is not None:
+            if snapshot.content_hash() != self._locked_snapshot_visibility["snapshot_sha256"]:
+                raise RailsError("locked visibility snapshot identity differs")
+            if len(value_by_id) > self._locked_snapshot_visibility["max_values"]:
+                raise RailsError("released snapshot exceeds locked visibility capacity")
+            indexed = set(value_by_id)
         for value_id in indexed:
             self._validate_value_facets(value_by_id[value_id], facet_ids)
         self._value_facets = {
@@ -1725,7 +1745,11 @@ class CandidateSemanticProvider(KnowledgeProvider):
                 or not 1 <= added_cap <= 32 * self._max_values_per_candidate
             ):
                 raise RailsError("proposal added-value cap must be a bounded positive integer")
-        expected_k = self._max_total_values + added_cap
+        if proposal_requested and self._locked_snapshot_visibility is not None:
+            raise RailsError("locked snapshot visibility cannot combine with proposals")
+        expected_k = (self._locked_snapshot_visibility["max_values"]
+                      if self._locked_snapshot_visibility is not None
+                      else self._max_total_values + added_cap)
         if k != expected_k:
             raise RailsError(
                 "CandidateSemanticProvider.candidates k must equal the baseline "
@@ -1788,6 +1812,19 @@ class CandidateSemanticProvider(KnowledgeProvider):
             candidate_ids = proposed_ids
             selected = selected + extra
             mappings = mappings + extra_mappings
+        visibility_audit = {}
+        if self._locked_snapshot_visibility is not None:
+            snapshot = self._built_object()
+            baseline = selected
+            seen = set(selected)
+            added = tuple(sorted(value.value_id for value in snapshot.values
+                                 if value.value_id not in seen))
+            selected = selected + added
+            visibility_audit = {
+                "locked_snapshot_visibility": dict(self._locked_snapshot_visibility),
+                "baseline_selected_value_ids": list(baseline),
+                "snapshot_added_value_ids": list(added),
+            }
         supporting_facets = self.supporting_facet_ids(selected)
         ranked = tuple(
             RankedFacet(facet_id=facet_id, score=float(len(supporting_facets) - index))
@@ -1820,6 +1857,7 @@ class CandidateSemanticProvider(KnowledgeProvider):
         }
         if self._compact_source_phase is not None:
             audit["compact_source_phase"] = self._compact_source_phase
+        audit.update(visibility_audit)
         audit.update(state_audit)
         audit.update(proposal_audit)
         audit["selection_sha256"] = content_hash(audit)
@@ -1853,6 +1891,8 @@ class CandidateSemanticProvider(KnowledgeProvider):
         expected = self._last_query_state.content_hash()
         if ranking.query_sha256 != expected or ranking.index_sha256 != self.snapshot_sha256():
             raise RailsError("candidate semantic ranking has a changed source binding")
+        if self._locked_snapshot_visibility is not None and k != self._locked_snapshot_visibility["max_values"]:
+            raise RailsError("locked snapshot fuse capacity differs")
         if self._last_proposal_expected_k is not None and k != self._last_proposal_expected_k:
             raise RailsError("candidate proposal fuse k must equal its total selection budget")
         selected = self._last_selected_value_ids[:k]

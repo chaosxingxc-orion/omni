@@ -77,6 +77,7 @@ _OPTIONAL_SPEC_KEYS = frozenset(
         "fallback_distinction",
         "exemplar_candidate_proposal",
         "candidate_legality_source",
+        "locked_snapshot_visibility",
     }
 )
 _SOURCE_KEYS = frozenset(
@@ -304,9 +305,25 @@ class CandidateSemanticSupplySpec:
     #: that narrows the authored candidate index; ``None`` is the authored
     #: index unchanged.
     candidate_legality_source: Mapping[str, object] | None = None
+    locked_snapshot_visibility: Mapping[str, object] | None = None
 
     def validate(self, program: PhaseProgram) -> "CandidateSemanticSupplySpec":
         program.validate()
+        if self.locked_snapshot_visibility is not None:
+            if (not isinstance(self.locked_snapshot_visibility, Mapping)
+                or set(self.locked_snapshot_visibility) != {"policy", "max_values", "snapshot_sha256"}
+                or self.locked_snapshot_visibility.get("policy") != "all-released-v1"
+                or type(self.locked_snapshot_visibility.get("max_values")) is not int
+                or self.locked_snapshot_visibility.get("max_values") != 54
+                or not isinstance(self.locked_snapshot_visibility.get("snapshot_sha256"), str)
+                or len(self.locked_snapshot_visibility["snapshot_sha256"]) != 64
+                or any(c not in "0123456789abcdef" for c in self.locked_snapshot_visibility["snapshot_sha256"])
+                or self.phase != "slot"
+                or self.provider != SLURP_CANDIDATE_SEMANTIC_PROVIDER_ID
+                or self.supply_mode != "provide"
+                or self.exemplar_candidate_proposal is not None
+                or self.candidate_legality_source is not None):
+                raise CandidateSemanticSupplyError("invalid locked snapshot visibility option")
         if self.candidate_legality_source is not None:
             validate_candidate_legality_source(self.candidate_legality_source)
             if self.provider != SLURP_CANDIDATE_SEMANTIC_PROVIDER_ID:
@@ -487,6 +504,8 @@ class CandidateSemanticSupplySpec:
             result["fallback_candidates"] = list(self.fallback_candidates)
             if self.fallback_distinction != DEFAULT_FALLBACK_DISTINCTION:
                 result["fallback_distinction"] = self.fallback_distinction
+        if self.locked_snapshot_visibility is not None:
+            result["locked_snapshot_visibility"] = dict(self.locked_snapshot_visibility)
         if self.candidate_legality_source is not None:
             result["candidate_legality_source"] = dict(self.candidate_legality_source)
         return result
@@ -578,6 +597,7 @@ def load_candidate_semantic_supply_specs(
                 fallback_distinction=raw.get(
                     "fallback_distinction", DEFAULT_FALLBACK_DISTINCTION
                 ),
+                locked_snapshot_visibility=raw.get("locked_snapshot_visibility"),
                 candidate_legality_source=(
                     validate_candidate_legality_source(raw["candidate_legality_source"])
                     if "candidate_legality_source" in raw else None
@@ -980,6 +1000,7 @@ def build_candidate_semantic_supply(
                 projection_policy=spec.projection_policy,
                 fallback_candidates=spec.fallback_candidates,
                 fallback_distinction=spec.fallback_distinction,
+                locked_snapshot_visibility=spec.locked_snapshot_visibility,
             )
         provider = KNOWLEDGE_PROVIDERS.resolve(spec.provider)(**provider_args).adopt(
             store.snapshot,
@@ -992,7 +1013,8 @@ def build_candidate_semantic_supply(
             "candidate_state": selected_state,
             "sample_id": sample_id,
         }
-        total_k = spec.max_total_values
+        total_k = (spec.locked_snapshot_visibility["max_values"]
+                   if spec.locked_snapshot_visibility is not None else spec.max_total_values)
         if spec.exemplar_candidate_proposal is not None:
             if candidate_proposal is None:
                 raise CandidateSemanticSupplyError("declared proposal lacks its bound exemplar selection")

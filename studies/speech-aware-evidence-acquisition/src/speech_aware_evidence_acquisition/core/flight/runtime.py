@@ -2810,7 +2810,9 @@ class FlightRuntime:
                     rendered.append((text, "value"))
                 selection_limit = min(
                     len(rendered),
-                    (spec.max_total_values + (
+                    ((spec.locked_snapshot_visibility["max_values"]
+                      if spec.locked_snapshot_visibility is not None
+                      else spec.max_total_values) + (
                         spec.exemplar_candidate_proposal["max_added_slot_values"]
                         if spec.exemplar_candidate_proposal is not None else 0
                     )) * selection_count,

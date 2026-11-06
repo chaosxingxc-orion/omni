@@ -1249,3 +1249,121 @@ def test_existing_slurp_receipt_identity_survives_shared_provider_extraction(tmp
         )
     router.automatic_for_phase("solve", context)
     assert content_hash(router.receipt) == expected
+
+
+
+def store_sha(config):
+    return config['knowledge_stores']['slot-contracts']['snapshot']['sha256']
+
+
+def test_locked_snapshot_visibility_adds_only_released_cards_with_audit(tmp_path):
+    config, legal = _config(tmp_path)
+    spec = config['knowledge_stores']['slot-contracts']['candidate_supply'].pop('solve')
+    config['knowledge_stores']['slot-contracts']['candidate_supply']['slot'] = spec
+    spec['locked_snapshot_visibility'] = {'policy': 'all-released-v1', 'max_values': 54, 'snapshot_sha256': store_sha(config)}
+    program = PhaseProgram(
+        program_id='slot-visibility-test',
+        phases=(PhaseSpec('hypotheses', 'propose', 'none', None, False),
+                PhaseSpec('slot', 'solve', 'supplied', None, False)),
+        max_contacts=2, stop_rule='always-run-full-program',
+    ).validate()
+    binding = load_knowledge_store_binding(config, data_root=tmp_path)
+    router = build_knowledge_store_supply(binding, program=program, data_root=tmp_path,
+                                          legal_candidate_ids=legal)
+    supply = router.automatic_for_phase('slot', _context(binding, _artifact('s1', ('beta', 'alpha'))))
+    selected = supply.fusion_decision.selected_value_ids
+    assert selected[:2] == ('slot-contracts::slot-contract:beta_one',
+                            'slot-contracts::slot-contract:alpha_one')
+    assert len(selected) == len(set(selected)) == 6
+    assert set(selected) == {f'slot-contracts::{v.value_id}' for v in binding.store('slot-contracts').snapshot.values}
+    audit = next(iter(router.receipt['candidate_selections'].values()))
+    assert len(audit['baseline_selected_value_ids']) == 2
+    assert len(audit['snapshot_added_value_ids']) == 4
+    assert audit['snapshot_sha256'] == binding.store('slot-contracts').snapshot.content_hash()
+
+
+@pytest.mark.parametrize("option", [
+    {"policy": "all-released-v1", "max_values": 53},
+    {"policy": "unknown", "max_values": 54},
+])
+def test_locked_snapshot_visibility_rejects_invalid_option(tmp_path, option):
+    config, legal = _config(tmp_path)
+    config['knowledge_stores']['slot-contracts']['candidate_supply']['solve']['locked_snapshot_visibility'] = option
+    binding = load_knowledge_store_binding(config, data_root=tmp_path)
+    with pytest.raises(CandidateSemanticSupplyError, match='invalid locked snapshot'):
+        build_knowledge_store_supply(binding, program=_program(), data_root=tmp_path, legal_candidate_ids=legal)
+
+
+def test_locked_snapshot_visibility_refuses_oversized_snapshot(tmp_path):
+    rows = tuple(_slot_row(f'slot_{i:02}', ('alpha',)) for i in range(55))
+    config, legal = _config(tmp_path, rows=rows)
+    spec = config['knowledge_stores']['slot-contracts']['candidate_supply'].pop('solve')
+    config['knowledge_stores']['slot-contracts']['candidate_supply']['slot'] = spec
+    spec['locked_snapshot_visibility'] = {'policy': 'all-released-v1', 'max_values': 54, 'snapshot_sha256': store_sha(config)}
+    program = PhaseProgram(program_id='slot-cap', phases=(
+        PhaseSpec('hypotheses', 'propose', 'none', None, False),
+        PhaseSpec('slot', 'solve', 'supplied', None, False)),
+        max_contacts=2, stop_rule='always-run-full-program').validate()
+    binding = load_knowledge_store_binding(config, data_root=tmp_path)
+    router = build_knowledge_store_supply(binding, program=program, data_root=tmp_path, legal_candidate_ids=legal)
+    with pytest.raises(Exception, match='exceeds locked visibility capacity'):
+        router.automatic_for_phase('slot', _context(binding, _artifact('s1', ('alpha',))))
+
+
+def test_locked_visibility_real_prompt_bound_covers_retained_values(tmp_path):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntime
+
+    rows = tuple(_slot_row(f'slot_{i:02}', ('alpha',)) for i in range(54))
+    config, _ = _config(tmp_path, rows=rows)
+    store = config['knowledge_stores']['slot-contracts']
+    spec = store['candidate_supply'].pop('solve')
+    spec['max_total_values'] = 3
+    store['candidate_supply']['slot'] = spec
+    program = PhaseProgram(program_id='slot-bound', phases=(
+        PhaseSpec('hypotheses', 'propose', 'none', None, False),
+        PhaseSpec('slot', 'solve', 'supplied', None, False),
+        PhaseSpec('decision', 'solve', 'none', None, False)),
+        max_contacts=3, stop_rule='always-run-full-program').validate()
+    binding = load_knowledge_store_binding(config, data_root=tmp_path)
+    runtime = SimpleNamespace(_composed=SimpleNamespace(values=config),
+                              _knowledge_store_binding=binding,
+                              _load_knowledge_snapshot=lambda: binding.composite_snapshot)
+    before = FlightRuntime._phase_supply_prompt_bound(runtime, program)
+    assert 'hypotheses' not in before
+    assert len(before['slot']) == len(before['decision']) == 3
+    spec['locked_snapshot_visibility'] = {'policy': 'all-released-v1', 'max_values': 54, 'snapshot_sha256': store_sha(config)}
+    binding = load_knowledge_store_binding(config, data_root=tmp_path)
+    runtime._knowledge_store_binding = binding
+    after = FlightRuntime._phase_supply_prompt_bound(runtime, program)
+    assert 'hypotheses' not in after
+    assert len(after['slot']) == len(after['decision']) == 54
+    assert set(before['slot']) <= set(after['slot'])
+    assert after['slot'] == after['decision']
+
+
+def test_locked_visibility_native_bound_retains_cards_for_all_roles(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntime
+    from speech_aware_evidence_acquisition.rails import native_episode_config
+
+    rows = tuple(_slot_row(f'slot_{i:02}', ('alpha',)) for i in range(54))
+    config, _ = _config(tmp_path, rows=rows)
+    store = config['knowledge_stores']['slot-contracts']
+    spec = store['candidate_supply'].pop('solve')
+    store['candidate_supply']['slot'] = spec
+    spec['locked_snapshot_visibility'] = {'policy': 'all-released-v1', 'max_values': 54, 'snapshot_sha256': store_sha(config)}
+    program = PhaseProgram(program_id='native-bound', phases=(
+        PhaseSpec('hypotheses', 'propose', 'none', None, False),
+        PhaseSpec('slot', 'solve', 'supplied', None, False),
+        PhaseSpec('decision', 'solve', 'none', None, False)),
+        max_contacts=3, stop_rule='native-role-episode').validate()
+    binding = load_knowledge_store_binding(config, data_root=tmp_path)
+    monkeypatch.setattr(native_episode_config, 'load_native_episode_config',
+                        lambda *_: SimpleNamespace(max_candidate_refreshes=0))
+    runtime = SimpleNamespace(_composed=SimpleNamespace(values=config),
+                              _knowledge_store_binding=binding,
+                              _load_knowledge_snapshot=lambda: binding.composite_snapshot)
+    bound = FlightRuntime._phase_supply_prompt_bound(runtime, program)
+    assert all(len(bound[phase]) == 54 for phase in ('hypotheses', 'slot', 'decision'))
+    assert bound['hypotheses'] == bound['slot'] == bound['decision']

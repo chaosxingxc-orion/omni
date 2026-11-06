@@ -24,7 +24,7 @@ class NodeWorkload(PairWorkload):
         return super().contact_budgets()
     def __init__(self,config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material','node_arm'}
-        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
+        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding','slot_locked_visibility'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
             raise ValueError('exact native node workload required')
         if 'collection_decoding' in config:
             from speech_aware_evidence_acquisition.core.config import ConfigError, effective_request_decoding_params
@@ -71,11 +71,13 @@ class NodeWorkload(PairWorkload):
             raise ValueError('explicit supported v2 SDK pipeline required')
         if 'tfgrpo_experience' in config and (pipeline is None or not config.get('population')):
             raise ValueError('TF-GRPO experience requires a fixed fold and v2 SDK pipeline')
+        if 'slot_locked_visibility' in config and (config['slot_locked_visibility'] != {'policy':'all-released-v1','max_values':54,'snapshot_sha256':'e035c1b827b10cb711c7c31d345deb5e668489679b0d3979acfc95427f6e2a5e'} or pipeline is None or not config.get('population') or 'slot_knowledge' in config):
+            raise ValueError('locked Slot visibility requires the fixed v2 fold and supported policy')
         if 'slot_knowledge' in config and (pipeline is None or not config.get('population')):
             raise ValueError('slot knowledge requires a fixed fold and v2 SDK pipeline')
         if 'decision_policy' in config and pipeline is None:
             raise ValueError('Decision policy requires explicit v2 SDK pipeline')
-        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding')})
+        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding','slot_locked_visibility')})
         if not config.get('population') and (len(config['sample_ids'])!=80 or config['sample_ids']!=sorted(config['sample_ids'])):
             raise ValueError('historical stable development80 required')
         if config.get('population'):
@@ -208,6 +210,8 @@ class NodeWorkload(PairWorkload):
         if 'slot_knowledge' in self.config:
             from psd_knowledge_adapter import apply as apply_slot_knowledge
             base=apply_slot_knowledge(base, data, self.config['slot_knowledge'], self.config['sample_ids'])
+        if 'slot_locked_visibility' in self.config:
+            base['knowledge_stores']['slot-contracts']['candidate_supply']['slot']['locked_snapshot_visibility'] = copy.deepcopy(self.config['slot_locked_visibility'])
         if 'tfgrpo_experience' in self.config:
             from psd_tfgrpo_adapter import apply as apply_tfgrpo
             base=apply_tfgrpo(base, repo, data, self.config['tfgrpo_experience'], self.config['sample_ids'], checked['view'], binding['model_fragment'])
