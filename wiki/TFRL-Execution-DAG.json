@@ -632,7 +632,7 @@
       "depends_on": [
         "off-semantic-gap-analysis"
       ],
-      "status": "evidence_report_accepted_parent_template_rebase_running",
+      "status": "corrected_configs_accepted_merged_cpu_preparation_followup_scheduled",
       "scope": "at most two evidence-backed P/Slot/Decision prompt candidates; fixed KB and normalizer; no model calls"
     }
   ],
