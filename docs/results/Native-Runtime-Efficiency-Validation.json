@@ -1,14 +1,14 @@
 {
   "schema": "saea-native-runtime-efficiency-validation-v1",
-  "source_commit": "4997a43bbfe6eae8e67a4b9323f14de8023c740b",
-  "image_id": "sha256:879127561b4426b6a76730ed48ed4266f5e3e9c3776b3887b4bce09b201b2bf0",
-  "manifest_sha256": "58eccc2fb597e55a9affc39dae22b365ac8c50dd2d7b1cdd2d1a6834b256be71",
+  "source_commit": "4ad9577457124bf66d4fa1f46de64cde7b65bab8",
+  "image_id": "sha256:2e8d3e239d9a052b7b40a58c97c5b30a81795bb8782ee8ef8b798e62930be126",
+  "manifest_sha256": "bbb13509b18e5afdaa540c643eab6cb53bcf2e6a462ffbe946f41f778399403d",
   "manifest_file_count": 7497,
   "build_exit_code": 0,
   "tests": {
     "passed": 111,
     "warnings": 5,
-    "seconds": 26.48,
+    "seconds": 25.73,
     "files": [
       "test_runtime_overlay.py",
       "test_flight_factory.py",
@@ -16,9 +16,16 @@
       "test_dispatch_slot_fill.py",
       "test_pipeline_backpressure.py"
     ],
-    "source": "image-embedded production source; read-only external tests",
+    "source": "image-embedded production source; read-only external tests mounted at release test path",
     "network": "none",
     "temporary_test_repo_release_env_unset": true
+  },
+  "device_mount_smoke": {
+    "ok": true,
+    "imports": ["acl", "torch_npu", "vllm", "vllm_ascend"],
+    "cards": [0, 1, 2, 3],
+    "network": "host",
+    "model_requests": 0
   },
   "new_model_requests": 0,
   "deployed": false,
@@ -26,7 +33,7 @@
   "npu_dynamic_import_smoke": false,
   "limitations": [
     "CPU validation does not demonstrate online throughput",
-    "Engine packages discovered with system Python; no device-mounted dynamic import in this round",
+    "Device-mounted import smoke covers runtime packages only; it does not prove model throughput",
     "Resident and checkpoint handoff remains outstanding"
   ]
 }

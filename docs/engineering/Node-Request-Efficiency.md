@@ -83,19 +83,20 @@ node batch/pipeline 或 prefix-slot 调度混用。该改造只改变调度，�
 |prepared pipeline 背压|固定镜像受影响回归通过；本机带源码路径 56 项通过，2 项为既有 `openjiuwen`/环境变量边界，不归因本轮改动|
 |跨版本恢复与外置准入|既有隔离三节点恢复正例、挂载和故障恢复测试通过；真实终态结算与正式接续仍待|
 
-最新候选已从 `4997a43b` 构建：镜像 ID
-`sha256:879127561b4426b6a76730ed48ed4266f5e3e9c3776b3887b4bce09b201b2bf0`，
-源码清单 SHA256 `58eccc2fb597e55a9affc39dae22b365ac8c50dd2d7b1cdd2d1a6834b256be71`。
-固定 parent、无网络 detached 构建退出 0；清单 7497 个文件验证通过。
+最新候选从 `4ad95774` 构建：镜像 ID
+`sha256:2e8d3e239d9a052b7b40a58c97c5b30a81795bb8782ee8ef8b798e62930be126`，
+源码清单 SHA256 `bbb13509b18e5afdaa540c643eab6cb53bcf2e6a462ffbe946f41f778399403d`。
+固定 parent、无网络 detached 构建退出 0；清单 7497 个文件验证通过。固定镜像内
+受影响回归 **111 passed，5 warnings，25.73 秒**；与在线服务相同的 Ascend 设备挂载
+下 `acl/torch_npu/vllm/vllm_ascend` 导入 smoke 通过，未发送模型请求。
 最终镜像内挂载只读测试文件、使用镜像内业务源码执行受影响回归，
 **111 passed，5 条依赖弃用 warning，26.48 秒**。测试包括外部配置真实
 native 调度接线、请求一致性、取消、恢复及有界背压；没有真实模型请求。
 临时测试仓用例仅在测试进程清除 `SAEA_RELEASE_MANIFEST`，生产门禁保持启用。
 
-CPU harness 的 venv 导入通过；系统 Python 的 ACL/NPU/vLLM 模块可发现。
-本轮未执行新镜像的设备挂载推理或动态库加载 smoke，因此不宣称新镜像已完成
-真实 NPU 推理验收。旧双 TP4 服务仍使用 `cf273e52` 镜像；本轮没有停止或
-替换服务，也没有扩大科学实验。候选完成 CPU 验收，在线吞吐仍待验证。
+CPU harness 的 venv 导入和设备挂载动态库 smoke 均通过，但这仍不等于真实 NPU
+推理吞吐验收。旧双 TP4 服务仍使用 `cf273e52` 镜像；本轮没有停止或替换服务，
+也没有扩大科学实验。新候选已完成 CPU/设备层验收，在线吞吐和断点接续窗口仍待验证。
 
 ## 剩余工作与验收顺序
 
