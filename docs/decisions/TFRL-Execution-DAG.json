@@ -15,9 +15,10 @@
       "depends_on": [],
       "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 512,
-      "observed_model_calls": 1596,
-      "completed_rows_include_early_abstentions": true
+      "completed_rows": 749,
+      "completed_rows_include_early_abstentions": true,
+      "structural_task_answers": 715,
+      "observed_at_utc": "2026-11-06T15:48:52Z"
     },
     {
       "id": "baseline-on",
@@ -25,9 +26,10 @@
       "depends_on": [],
       "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 278,
-      "observed_model_calls": 895,
-      "completed_rows_include_early_abstentions": true
+      "completed_rows": 425,
+      "completed_rows_include_early_abstentions": true,
+      "structural_task_answers": 406,
+      "observed_at_utc": "2026-11-06T15:48:52Z"
     },
     {
       "id": "baseline-selection",
@@ -36,7 +38,7 @@
         "baseline-off",
         "baseline-on"
       ],
-      "status": "pending"
+      "status": "cpu_paired_analysis_armed_waiting_official_results"
     },
     {
       "id": "fold-b-confirmation",
@@ -389,43 +391,105 @@
       "id": "reference-perception-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "cpu_stage_prepare_register_verified_held",
+      "status": "prepared_registered_admitted_runtime_checked",
       "inputs": "accepted fixed v5 reference analysis; unchanged Fold A1080 k8 OFF control",
       "changed_node": "perception",
       "configuration_commit": "ade951ee"
     },
     {
       "id": "reference-perception-evaluate",
-      "resource": "NPU-first-free",
+      "resource": "NPU-A",
       "depends_on": [
         "reference-perception-prepare"
       ],
-      "status": "not_admitted",
+      "status": "admitted_not_armed_waiting_real_predecessor_id",
       "rows": 1080,
       "control": "baseline-off",
       "mutually_exclusive_with_other_prompt": true,
-      "changed_node": "perception"
+      "changed_node": "perception",
+      "after_generation_release": "E5-off"
     },
     {
       "id": "reference-slot-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "cpu_stage_prepare_register_verified_held",
+      "status": "prepared_registered_admitted_runtime_checked",
       "inputs": "accepted fixed v5 reference analysis; unchanged Fold A1080 k8 OFF control",
       "changed_node": "slot",
       "configuration_commit": "ade951ee"
     },
     {
       "id": "reference-slot-evaluate",
-      "resource": "NPU-first-free",
+      "resource": "NPU-A",
       "depends_on": [
         "reference-slot-prepare"
       ],
-      "status": "not_admitted",
+      "status": "admitted_not_armed_waiting_real_predecessor_id",
       "rows": 1080,
       "control": "baseline-off",
       "mutually_exclusive_with_other_prompt": true,
-      "changed_node": "slot"
+      "changed_node": "slot",
+      "after_generation_release": "reference-perception-evaluate"
+    },
+    {
+      "id": "coverage-fix",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "implementing_and_testing",
+      "priority": 1,
+      "scope": "auxiliary reference quarantine; bounded length and required-field recovery"
+    },
+    {
+      "id": "coverage-ready",
+      "resource": "CPU",
+      "depends_on": [
+        "coverage-fix"
+      ],
+      "status": "pending",
+      "reuse": "fixed Fold A1080, KB, prepared input and image"
+    },
+    {
+      "id": "coverage-evaluate",
+      "resource": "NPU-first-free",
+      "depends_on": [
+        "coverage-ready"
+      ],
+      "status": "not_ready_not_queued",
+      "priority": 1,
+      "rows": 1080
+    },
+    {
+      "id": "coverage-score",
+      "resource": "CPU",
+      "depends_on": [
+        "coverage-evaluate"
+      ],
+      "status": "pending",
+      "scope": "full denominator coverage, official quality, paired regressions"
+    },
+    {
+      "id": "load-analysis",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "report_delivered_one_classification_correction_requested"
+    },
+    {
+      "id": "concurrency-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "coverage-score"
+      ],
+      "status": "proposal_after_policy_freeze",
+      "delta": "C64 to C96 only"
+    },
+    {
+      "id": "concurrency-evaluate",
+      "resource": "NPU-first-free",
+      "depends_on": [
+        "concurrency-prepare"
+      ],
+      "status": "not_ready_not_queued",
+      "scope": "same frozen policy and existing real roster"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
