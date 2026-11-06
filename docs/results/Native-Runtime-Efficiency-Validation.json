@@ -207,7 +207,11 @@
       "body_and_receipt_hashes_equal": true,
       "new_model_calls": 0,
       "scope": "three historical request projections only; no network or live identity assertion"
-    }
+    },
+    "worker_state": "exited",
+    "worker_exit_code": 1,
+    "worker_failure": "preflight: E0 closure receipt still resolved inside sealed source",
+    "new_fit_calls": 0
   },
   "checkpoint_recovery_observer": {
     "source_commit": "25568b15",
@@ -218,5 +222,14 @@
     "fresh_inference_rate_verified": false,
     "interval_seconds": 600,
     "progress_basis": "verified disjoint historical/current sample union; rate from fresh terminal rows only"
+  },
+  "external_gate_receipt_fix": {
+    "source_commit": "97b12bfd",
+    "tests_passed": 45,
+    "seconds": 2.9,
+    "warnings": 6,
+    "environment": "fixed dependency image",
+    "deployed": false,
+    "next": "stage pinned E0 artifacts and run full gate before successor launch"
   }
 }
