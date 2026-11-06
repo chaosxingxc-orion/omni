@@ -408,7 +408,12 @@
     "fit_contacts": 36,
     "checkpoint_hash_chain_verified": true,
     "combined_checkpoint_custody_verified": false,
-    "lease_settled": false
+    "lease_settled": false,
+    "checkpoint_native_keepable_rows": 2,
+    "checkpoint_torn_tail_bytes": 0,
+    "fit_missing_custody": 0,
+    "fit_recoverable": 36,
+    "production_custody_reader_verified": true
   },
   "environment_manifest_preflight": {
     "passed": 61,
@@ -457,5 +462,29 @@
     "failed_request_retry": false,
     "deployed_generation": false,
     "limitation": "send-time race remains; observed failure consistent with stale socket but not exclusively proven"
+  },
+  "delivery_boundary_recovery": {
+    "commit": "f9921be43cab6ffa41237d97719606a41659736e",
+    "tests": {
+      "passed": 163,
+      "skipped": 1,
+      "seconds": 24.97
+    },
+    "boundary_tests": {
+      "passed": 15,
+      "seconds": 2.02
+    },
+    "release_manifest_sha256": "787b28dde31bb402bd48d5a153978f44cd24dd6653a5012e97d59c68b345c5db",
+    "files": 7500,
+    "automatic_retry": false,
+    "old_unknown_contacts_reclassified": false,
+    "generation_deployed": false,
+    "real_release_render": {
+      "exit_code": 0,
+      "requests": 3,
+      "body_and_receipt_equal": true,
+      "network": "none",
+      "new_model_calls": 0
+    }
   }
 }
