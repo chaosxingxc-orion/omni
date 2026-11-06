@@ -1,0 +1,48 @@
+{
+  "schema": "psd-k16-off-score-execution-v1",
+  "status": "FINALIZED_VERIFIED",
+  "rows": 1080,
+  "per_sample_rows": 1080,
+  "official_metrics": {
+    "intent_accuracy": 0.8305555555555556,
+    "slu_f1": 0.6493153923017515,
+    "strict_accuracy": 0.45,
+    "strict_correct": 486,
+    "strict_rule": "scenario_action_exact == 1 and slot_f1_exact_fp == 0 and slot_f1_exact_fn == 0",
+    "scenario_accuracy": 0.8712962962962963,
+    "span_f1": 0.5435222672064779
+  },
+  "k8_off_aggregate_delta_pp": {
+    "intent_pp": 1.388888888888895,
+    "slu_pp": 0.05609815645953864,
+    "strict_pp": -1.6666666666666663
+  },
+  "k8_comparison": "aggregate only; no paired analysis performed",
+  "source_identities": {
+    "generation_commit": "9a50852ef67b964ed7571bb1b08deeb78b2251ce",
+    "generation_manifest_sha256": "010cb8ad044e010da187324ec0a4e75f1c34706a0a21905dd4fefbe20ffc62f7",
+    "tool_commit": "dd032b4243fb46006f55cf53a015301f425a41fc",
+    "tool_manifest_sha256": "e866ad613e7f270f98f1da4e8e36d9943e4dc30d77f17cf229c428523f7d2536"
+  },
+  "cost": {
+    "audio_seconds_used": 9127.049312500054,
+    "calls_used": 3197,
+    "completion_tokens_total": 2141166,
+    "latency_seconds_total": 373402.40063800255,
+    "prompt_tokens_total": 42804070,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "new_model_calls": 0,
+  "new_fit_calls": 0,
+  "paired_analysis_performed": false,
+  "artifact_sha256": {
+    "generation_manifest": "ffbb7b400c154e8440cf133fbced7b35ab4b46b53ec91c3810bcb4c17c83d866",
+    "intent": "21c76b7521c0e97f3235ff116972c4446d04c3c0e0d32523cc3f09e23600a774",
+    "receipt": "6a5983834ee96ee0ebadcee3370e99ad1d15d2c0f7aefad2ec077b1463ed1762",
+    "run_manifest": "66d193fbf8cfa0b70b7842bb86599670707a7f2a92db618ff1ecda42fd7fcf9a",
+    "scores": "cc6e28e4306ef6a326fe4b155fb550f676e0e4d825330884c220f77383634444"
+  },
+  "empty_answers": 22,
+  "decision": "Do not promote k16 as default from aggregate results; retain queued common k8 coverage parent"
+}

@@ -684,12 +684,12 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T18:41:00Z",
+  "updated_at": "2026-11-06T18:46:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Reference and P/Slot recovery merged; full online coverage not proven",
-    "deployment": "New P/Slot candidates admitted and auto-binders live; existing observer extension in progress",
-    "scoring_recovery": "k16 OFF official CPU recovery running; no model replay",
-    "paired_analysis": "Full v5 paired results accepted; 58 strict regressions node analysis running",
+    "deployment": "Prompt candidates ready, binders live; existing B observer extended and independently verified",
+    "scoring_recovery": "k16 OFF official recovery and independent verification accepted",
+    "paired_analysis": "v5 regression report accepted; locked knowledge ambiguity audit running",
     "tfrl_reader": "deferred"
   },
   "dispatch_policy": {

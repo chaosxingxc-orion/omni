@@ -1,0 +1,32 @@
+{
+  "schema": "psd-paired-regression-public-v1",
+  "denominator": 1080,
+  "strict_transitions": {
+    "loss": 58,
+    "always_wrong": 442,
+    "always_correct": 446,
+    "gain": 134
+  },
+  "loss_mechanisms": {
+    "answer_to_empty": 10,
+    "intent_change_gold_absent_in_failing_P": 9,
+    "same_correct_intent_entities_changed": 36,
+    "intent_change_gold_available_downstream": 3
+  },
+  "gain_mechanisms": {
+    "empty_to_answer": 13,
+    "same_correct_intent_entities_changed": 109,
+    "intent_change_gold_absent_in_failing_P": 4,
+    "intent_change_gold_available_downstream": 8
+  },
+  "verification_checks": {
+    "contact_identity_and_hash": 52,
+    "knowledge_text_inventory_bindings": 1287,
+    "audio_inventory_present": 52,
+    "selected_complete_derivation_and_normalizer_receipt": 17
+  },
+  "source_result_sha256": "9a2e43bc244e8f2ba31bfb4e9276cf530b08eedf61b51925f52e30c601d21d0b",
+  "audio_reviewed": false,
+  "new_model_calls": 0,
+  "interpretation": "observational attribution, not single-toggle causal result"
+}
