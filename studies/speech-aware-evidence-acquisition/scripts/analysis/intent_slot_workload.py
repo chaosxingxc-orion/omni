@@ -24,8 +24,16 @@ class NodeWorkload(PairWorkload):
         return super().contact_budgets()
     def __init__(self,config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material','node_arm'}
-        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
+        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
             raise ValueError('exact native node workload required')
+        if 'collection_decoding' in config:
+            from speech_aware_evidence_acquisition.core.config import ConfigError, effective_request_decoding_params
+            if config.get('population', {}).get('role') != 'construction' or set(config['collection_decoding']) != {'temperature', 'seed'}:
+                raise ValueError('construction collection requires explicit temperature and seed')
+            try:
+                effective_request_decoding_params({'request_decoding_overrides': config['collection_decoding']})
+            except ConfigError as error:
+                raise ValueError(str(error)) from error
         arm=config['node_arm']
         pipeline=config.get('pipeline')
         legacy = {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
@@ -47,7 +55,7 @@ class NodeWorkload(PairWorkload):
             raise ValueError('slot knowledge requires a fixed fold and v2 SDK pipeline')
         if 'decision_policy' in config and pipeline is None:
             raise ValueError('Decision policy requires explicit v2 SDK pipeline')
-        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience')})
+        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding')})
         if not config.get('population') and (len(config['sample_ids'])!=80 or config['sample_ids']!=sorted(config['sample_ids'])):
             raise ValueError('historical stable development80 required')
         if config.get('population'):
@@ -182,6 +190,8 @@ class NodeWorkload(PairWorkload):
         roster['selection_rule']=('Reuse exact pinned construction roster; no sampling or TEST tuning.' if self.config.get('population',{}).get('role')=='construction' else 'Reuse exact existing fold; no sampling or TEST tuning.') if self.config.get('population') else 'Reuse exact existing development80; no sampling or TEST tuning.'
         cell,=exp['cells'];cell.update(cell_id=self.NAME,baseline_fragment=self.NAME,model_fragment=binding['model_fragment'],dataset_fragment=self.DATASET,run_id=self.RUN,attempt_id='generation-v1',allowed_execution_stages=['check','prepare-supply','worker','campaign'],readiness={'state':'held','requirements':[],'reason':'Registered native graph requires fresh preparation/admission.'})
         exp.update(experiment_id=self.RUN,purpose=base['what_this_is'],service_session=binding['service_session'])
+        if 'collection_decoding' in self.config:
+            exp['request_decoding_overrides']=copy.deepcopy(self.config['collection_decoding'])
         if self.config.get('population'):
             exp['split_id']=checked['view']['split_name']
         exp['population'].update(count=self.ROWS,roster_receipt=self.ROSTER,split_identity_hash=roster['split_identity_hash'])
