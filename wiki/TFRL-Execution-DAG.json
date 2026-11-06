@@ -709,7 +709,7 @@
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Reference full1080 legal1052; complete P/Slot recovery OFF running; 100% not achieved",
     "deployment": "P/Slot fixed binders deployed and independently verified; completeON native queue preserved",
-    "scoring_recovery": "reference score file exists; attempt OPENED due readonly sibling lock; targeted repair in progress",
+    "scoring_recovery": "Three pending score watchers use verified lock-mount fix; reference partial-finalization reconciliation returned to original executor for implementation",
     "paired_analysis": "k8/k16 full paired diagnosis and locked source transcript evidence accepted; retain k8 parent",
     "tfrl_reader": "deferred",
     "length_root_causes": "28 sealed failed response contacts targeted analysis in progress"
