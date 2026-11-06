@@ -1,0 +1,326 @@
+{
+  "schema": "saea-research-dependency-spec-v1",
+  "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
+  "instruction": "可正常运行即执行；只保留阻止重复、错配或失真的必要校验，CPU与NPU异步。",
+  "resources": {
+    "inference_instances": 2,
+    "cards_per_instance": 4,
+    "max_codex_cli": 3,
+    "monitor_interval_seconds": 600
+  },
+  "nodes": [
+    {
+      "id": "baseline-off",
+      "resource": "NPU-A",
+      "depends_on": [],
+      "status": "activation_in_progress",
+      "rows": 1080
+    },
+    {
+      "id": "baseline-on",
+      "resource": "NPU-B",
+      "depends_on": [],
+      "status": "activation_in_progress",
+      "rows": 1080
+    },
+    {
+      "id": "baseline-selection",
+      "resource": "CPU",
+      "depends_on": [
+        "baseline-off",
+        "baseline-on"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "fold-b-confirmation",
+      "resource": "NPU-first-free",
+      "depends_on": [
+        "baseline-selection"
+      ],
+      "status": "pending",
+      "rows": 1080
+    },
+    {
+      "id": "construction-k2",
+      "resource": "NPU-A-or-B",
+      "depends_on": [
+        "fold-b-confirmation"
+      ],
+      "status": "cpu_preparing_not_admitted",
+      "rows_per_member": 625,
+      "members": 2
+    },
+    {
+      "id": "construction-score",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-k2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "E1",
+      "title": "GEPA Decision：在正确候选已存在时改善选择",
+      "target_node": "Decision",
+      "axis": "节点提示与理解",
+      "priority": 1,
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/gepa_v2_node_adapter.py",
+          "entry": "seed|compile --repo STUDY --data DATA --config CONFIG --tokenizer TOKENIZER --out OUTPUT"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-decision-seed.json",
+          "entry": "seed示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-decision-compile.json",
+          "entry": "compile示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-decision-profile.json",
+          "entry": "profile示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/gepa-v2-decision.md",
+          "entry": "独立固定教师模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/external_exploration.py",
+          "entry": "prepare|run|collect PATH，run仅由主线程授权的外部API执行者使用"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+    },
+    {
+      "id": "E2",
+      "title": "GEPA Slot：完整候选抽取与实体证据使用",
+      "target_node": "Slot",
+      "axis": "节点提示与理解",
+      "priority": 2,
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/gepa_v2_node_adapter.py",
+          "entry": "seed|compile --repo STUDY --data DATA --config CONFIG --tokenizer TOKENIZER --out OUTPUT"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-slot-seed.json",
+          "entry": "seed示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-slot-compile.json",
+          "entry": "compile示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-slot-profile.json",
+          "entry": "profile示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/gepa-v2-slot.md",
+          "entry": "独立固定教师模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/external_exploration.py",
+          "entry": "prepare|run|collect PATH，run仅由主线程授权的外部API执行者使用"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+    },
+    {
+      "id": "E3",
+      "title": "TF-GRPO decision：同策略K2相对反馈到目标经验",
+      "target_node": "Decision",
+      "axis": "节点提示与理解",
+      "priority": 3,
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_tfgrpo_adapter.py",
+          "entry": "--repo --data --workload --descriptor --output；workload.tfgrpo_experience.target=decision"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/learner-context.example.json",
+          "entry": "psd.target=decision，psd.source_batch及parent/actor/policy固定"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/descriptor-direct.example.json",
+          "entry": "target=decision，source为已审核目标经验；不经人工semantic-map伪装直接算法输出"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/parent-binding.example.json",
+          "entry": "后继同actor同target父来源"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learners/tfrl/tfgrpo-psd-decision.json",
+          "entry": "融合式教师profile"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/tfgrpo-psd-decision.md",
+          "entry": "融合式独立固定模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/tfgrpo-reference-psd-decision.md",
+          "entry": "参考式独立研究模板，保留各stage版本模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/reference-overlay.example.json",
+          "entry": "psd_target与teacher.research_prompt替换为decision"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/tfgrpo_external_reference.py",
+          "entry": "prepare|run|collect|audit PATH"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+    },
+    {
+      "id": "E4",
+      "title": "TF-GRPO slot：同策略K2相对反馈到目标经验",
+      "target_node": "Slot",
+      "axis": "节点提示与理解",
+      "priority": 4,
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_tfgrpo_adapter.py",
+          "entry": "--repo --data --workload --descriptor --output；workload.tfgrpo_experience.target=slot"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/learner-context.example.json",
+          "entry": "psd.target=slot，psd.source_batch及parent/actor/policy固定"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/descriptor-direct.example.json",
+          "entry": "target=slot，source为已审核目标经验；不经人工semantic-map伪装直接算法输出"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/parent-binding.example.json",
+          "entry": "后继同actor同target父来源"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learners/tfrl/tfgrpo-psd-slot.json",
+          "entry": "融合式教师profile"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/tfgrpo-psd-slot.md",
+          "entry": "融合式独立固定模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/tfgrpo-reference-psd-slot.md",
+          "entry": "参考式独立研究模板，保留各stage版本模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/reference-overlay.example.json",
+          "entry": "psd_target与teacher.research_prompt替换为slot"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/tfgrpo_external_reference.py",
+          "entry": "prepare|run|collect|audit PATH"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+    },
+    {
+      "id": "E5",
+      "title": "P boundary实际供给量：k8→k16单轴对照",
+      "target_node": "Perception",
+      "axis": "召回/排序/供给",
+      "priority": 5,
+      "depends_on": [
+        "baseline-selection"
+      ],
+      "status": "configuration_in_preparation",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
+          "entry": "population.source_baseline独立后继pin；derive不修改现有运行树"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/baseline/slurp-native-dual-store-train-fold-a-review-off-v1.json",
+          "entry": "字段示例：knowledge_stores.intent-boundaries.phase_supply.perception.{k,fuse_coverage}，不是声称当前部署源配置"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/rails/phase_supply.py",
+          "entry": "PhaseSupplySpec及prepared phase供给路径，k为正整数；新参数需prepare/FIT"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
+          "entry": "stage|verify-stage|prepare|register --repo --data --config，与现有队列执行者协作"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+    },
+    {
+      "id": "E6",
+      "title": "原槽位定义受限知识卡改写：仅解释字段单卡对照",
+      "target_node": "Slot（Decision间接受影响）",
+      "axis": "知识卡内容",
+      "priority": 6,
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/external_slot_candidate.py",
+          "entry": "--config CONFIG，schema saea-external-slot-candidate-config-v1；original/base/contract/dynamic/teacher/candidate_index/forbidden_sample_ids来源固定"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/rails/semantic_knowledge_edits.py",
+          "entry": "slot_value_edit_contract；仅VALUE_FIELDS，不改intent_bindings或新增slot"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_knowledge_adapter.py",
+          "entry": "--config CONFIG，重建原候选并发布descriptor"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-slot-knowledge-v1/publication.example.json",
+          "entry": "实际compiler pin待填"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-slot-knowledge-v1/workload-overlay.example.json",
+          "entry": "slot_knowledge descriptor；示例不是准入配置"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/ace.md",
+          "entry": "现有通用独立模板；不是已就绪单卡模板/配方"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+    }
+  ],
+  "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
+  "metrics": [
+    "completed/total",
+    "seconds_per_sample_and_wall_time",
+    "cards/instances",
+    "ETA",
+    "coverage",
+    "Intent",
+    "official pooled SLU",
+    "Strict",
+    "per-node cost and latency"
+  ],
+  "limitations": [
+    "No new v2 accuracy or TFRL gains yet",
+    "K2 registration is not native admission or launch",
+    "K2 OFF policy awaits baseline choice; if ON is selected, rebuild corresponding configurations without changing roster",
+    "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
+    "ACE/Reflexion current PSD integration incomplete"
+  ]
+}
