@@ -1407,6 +1407,17 @@ def read_checkpoint_predecessor(
     complete: dict[str, ReplayedEpisodeResult] = {}
     canonical: dict[str, tuple] = {}
     for row in document.rows:
+        # A coverage refusal carries paid, partially valid Slot work. Ordinary
+        # row resume cannot preserve that work or safely choose a new contact
+        # identity. Neither keep the refusal as a complete answer nor re-fly
+        # the row: require the source-bound contact recovery path instead.
+        if any(isinstance(record.get("native_episode_receipt"), Mapping)
+               and record["native_episode_receipt"].get("slot_recovery_pending") is not None
+               for record in row.output_rows):
+            raise ResumeRecoveryError(
+                f"sample {row.sample_id!r} has pending Slot coverage recovery; "
+                "ordinary checkpoint resume cannot safely continue it"
+            )
         defect = row.keep_defect()
         if defect is None:
             record = row.output_rows[0]

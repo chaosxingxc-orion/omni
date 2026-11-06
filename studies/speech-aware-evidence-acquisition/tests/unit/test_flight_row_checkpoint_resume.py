@@ -443,6 +443,18 @@ def test_a_column_row_is_kept_only_with_every_arm(tmp_path):
     assert "flight-0002/request" not in text and "flight-0003/request" not in text
 
 
+def test_checkpoint_resume_refuses_pending_slot_coverage(tmp_path):
+    attempt_dir, pin = _checkpoint_with(tmp_path, {
+        "partial": {"native_episode_receipt": {
+            "slot_recovery_pending": {"remaining_candidate_ids": ["radio"]}}},
+    })
+    with pytest.raises(ResumeRecoveryError, match="pending Slot coverage recovery"):
+        read_checkpoint_predecessor(
+            run_id="RUN-ARMS", attempt_id="attempt-arms", attempt_dir=attempt_dir,
+            expected_checkpoint_sha256=pin, materialize_dir=tmp_path / "m",
+        )
+
+
 # ---------------------------------------------------------------------------
 # (d) A tampered checkpoint is refused, by name.
 # ---------------------------------------------------------------------------
