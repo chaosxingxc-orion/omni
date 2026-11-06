@@ -6,6 +6,7 @@ the normal clean-tree/preflight/lease/FIT checks still precede dispatch.
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -176,6 +177,21 @@ def verify_registration_identity(repo, name, spec, cell, data=None):
         raise ValueError('registered configuration changed; rebuild registration before admission')
 
 
+def pinned_runtime_config(pin):
+    """Require the same immutable runtime overlay the worker will receive."""
+    import os
+    from speech_aware_evidence_acquisition.core.flight.factory import load_external_runtime_config
+    if (not isinstance(pin, dict) or set(pin) != {'path', 'sha256'}
+            or not isinstance(pin['path'], str) or not Path(pin['path']).is_absolute()
+            or str(Path(pin['path']).resolve()) != pin['path']
+            or not isinstance(pin['sha256'], str) or not re.fullmatch('[0-9a-f]{64}', pin['sha256'])
+            or Path(pin['path']).is_symlink() or sha(Path(pin['path'])) != pin['sha256']
+            or os.environ.get('SAEA_RUNTIME_CONFIG_SHA256') != pin['sha256']):
+        raise ValueError('exact pinned runtime config and environment required')
+    path = Path(pin['path'])
+    return path, load_external_runtime_config(path)
+
+
 def test_contact_authorized(repo, data, name, spec, exp):
     """Only an independently validated full-test registration gains this flag."""
     if spec.get('workload_kind') != 'final-report-method':
@@ -277,6 +293,7 @@ def _admit_external(repo, data, config):
     from speech_aware_evidence_acquisition.core.flight.campaign import CampaignCell, declared_readiness
     from speech_aware_evidence_acquisition.core.flight.cli import assert_prepared_artifacts_current
     from speech_aware_evidence_acquisition.core.flight.factory import build_flight_runtime
+    from speech_aware_evidence_acquisition.core.flight.runtime_overlay import apply_runtime_overlay
     from speech_aware_evidence_acquisition.core.flight.repin import _upsert_decision_requirement, _set_ready
     from speech_aware_evidence_acquisition.core.session.serving import find_resident_session, assert_identity_matches
     from speech_aware_evidence_acquisition.core.session.receipt import SessionReceipt
@@ -287,8 +304,13 @@ def _admit_external(repo, data, config):
 
     required = {'schema','candidate','candidate_pin','plans','decision_relpath','workspace'}
     fresh = isinstance(config,dict) and config.get('schema') == 'saea-external-fresh-admission-v1'
-    if not isinstance(config,dict) or set(config) != (required if fresh else required | {'predecessor_decision'}) or config['schema'] not in ('saea-external-successor-admission-v1','saea-external-fresh-admission-v1'):
+    expected = required if fresh else required | {'predecessor_decision'}
+    if not isinstance(config,dict) or set(config) not in (expected, expected | {'runtime_config'}) or config['schema'] not in ('saea-external-successor-admission-v1','saea-external-fresh-admission-v1'):
         raise ValueError('exact external admission configuration required')
+    runtime_path = None
+    overlay = None
+    if 'runtime_config' in config:
+        runtime_path, overlay = pinned_runtime_config(config['runtime_config'])
     repo, data = Path(repo).resolve(), Path(data).resolve()
     workspace = Path(config['workspace'])
     if (not workspace.is_absolute() or workspace.exists() or workspace.resolve().is_relative_to(repo)
@@ -300,7 +322,6 @@ def _admit_external(repo, data, config):
         raise ValueError('pinned external asset manifest required')
     assert_execution_environment(); require_clean_study_repo(repo)
     name = config['candidate']
-    import re
     if not isinstance(name,str) or not re.fullmatch('[a-z0-9][a-z0-9-]*',name):
         raise ValueError('candidate name invalid')
     candidate_rel = f'docs/readiness/{name}/candidate.json'
@@ -354,7 +375,7 @@ def _admit_external(repo, data, config):
         return build_flight_runtime(repo,data,model=cell_doc['model_fragment'],dataset=cell_doc['dataset_fragment'],
             baseline=cell_doc['baseline_fragment'],experiment=name,run_id=parsed.run_id,attempt_id=parsed.attempt_id,
             runtime_root=data/'work/scratch/runtime-root',lock_path=repo.parents[1]/'docs/datasets.lock.json',
-            **recovery_options(parsed))
+            runtime_config_path=runtime_path, **recovery_options(parsed))
     runtime = build(cell)
     resident = find_resident_session(data)
     if resident is None or resident[1]['session_id'] != spec['service_session']:
@@ -465,6 +486,11 @@ def _admit_external(repo, data, config):
     (workspace/exp_rel).write_text(json.dumps(exp,indent=2,ensure_ascii=False)+'\n')
     seal()
     composed=compose(repo,cell['model_fragment'],cell['dataset_fragment'],cell['baseline_fragment'],name,data_root=data)
+    if overlay:
+        effective=apply_runtime_overlay(composed.values,overlay)
+        composed=type(composed)(values=effective, config_hash=hashlib.sha256(
+            json.dumps(effective,sort_keys=True,separators=(',',':')).encode()).hexdigest(),
+            fragments=composed.fragments)
     new_hash=composed.config_hash; new_protocol=protocol_hash(new_hash,composed.values['arm'],spec['split_identity_hash'])
     old_hash,old_protocol=spec['composed_config_hash'],spec['protocol_hash']
     def rewrite(value):

@@ -303,3 +303,35 @@ def test_exclusive_same_repairs_directory_fsync_after_link_failure(tmp_path, mon
     with pytest.raises(ValueError, match='existing publication differs'):
         admission._exclusive_same(path, b'different')
     assert path.read_bytes() == b'exact'
+
+
+def test_pinned_external_runtime_identity_and_science_boundary(tmp_path, monkeypatch):
+    from admit_real_engine_candidate import pinned_runtime_config
+    from speech_aware_evidence_acquisition.core.flight.runtime_overlay import apply_runtime_overlay
+    from speech_aware_evidence_acquisition.core.preparation import artifact_inputs
+    path = tmp_path/'runtime.json'
+    document = {'schema':'saea-native-efficiency-v1',
+                'dispatch':{'schema':'saea-dispatch-slot-fill-v1','role_input_offload':True,
+                            'ready_request':True,'prepare_workers':8,'validation_workers':8,
+                            'admitted_trajectories':64,'model_inflight':64},
+                'audio_cache':{'enabled':True,'max_entries':1080,'max_bytes':4294967296,'preload_workers':8}}
+    def pin():
+        path.write_text(json.dumps(document)); digest=hashlib.sha256(path.read_bytes()).hexdigest()
+        monkeypatch.setenv('SAEA_RUNTIME_CONFIG_SHA256',digest)
+        return {'path':str(path),'sha256':digest}
+    initial=pin(); _, overlay=pinned_runtime_config(initial)
+    scientific={'native_episode':{'roles':{}},'policy':'native','transport':'vllm','thinking_policy':{'slot':False}}
+    def identity(values): return artifact_inputs(config=values,split_identity_hash='c'*64,sources={})
+    effective=apply_runtime_overlay(scientific,overlay)
+    assert identity(effective) == identity(apply_runtime_overlay(scientific,pinned_runtime_config(initial)[1]))
+    assert identity(effective) != identity(scientific)
+    changed=dict(scientific,thinking_policy={'slot':True})
+    assert identity(effective) != identity(apply_runtime_overlay(changed,overlay))
+    document['dispatch']['model_inflight']=63
+    revised=pin(); _, new_overlay=pinned_runtime_config(revised)
+    assert identity(effective) != identity(apply_runtime_overlay(scientific,new_overlay))
+    with pytest.raises(ValueError,match='pinned runtime'):
+        pinned_runtime_config(initial)
+    document['answer_budget']=1
+    with pytest.raises(Exception,match='unexpected fields'):
+        pinned_runtime_config(pin())
