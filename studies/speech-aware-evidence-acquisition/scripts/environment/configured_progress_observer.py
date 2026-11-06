@@ -185,7 +185,7 @@ def learning_progress(j,producer,logical,plan,native):
 
 def row_progress(j,producer,logical,plan,elapsed,state,scratch,lane):
     source=settlement.mapped(producer,logical/'runs'/plan.run_id/plan.attempt_id/(plan.run_id+'.rows.ckpt.jsonl'))
-    if not source.exists():return {'completed_rows':0,'total_rows':j['total_rows'],'completion_basis':'no durable checkpoint yet'}
+    if not source.exists():return {'completed_rows':0,'total_rows':j['total_rows'],'completion_basis':'no durable checkpoint yet','_completed_sample_ids':[]}
     # Bound the copy to its original byte length; append-only writers never block.
     with source.open('rb') as src,tempfile.NamedTemporaryFile(dir=scratch,suffix='.jsonl') as target:
         remaining=os.fstat(src.fileno()).st_size
@@ -193,7 +193,7 @@ def row_progress(j,producer,logical,plan,elapsed,state,scratch,lane):
             block=src.read(min(remaining,4*1024*1024));require(block,'checkpoint shrank');target.write(block);remaining-=len(block)
         target.flush()
         result=real_engine_progress.report(Path(target.name),queue.pin_path(j['roster']),state=state,
-            elapsed_seconds=elapsed,cards=lane['cards'],instances=lane['instances'])
+            elapsed_seconds=elapsed,cards=lane['cards'],instances=lane['instances'],include_completed_ids=True)
     require(result['total_rows']==j['total_rows'],'checkpoint total differs');return result
 
 
@@ -244,7 +244,7 @@ def checkpoint_recovery_context(producer, logical, plan, declaration):
                 and actual.get('kept')==expected['kept_rows'],'observer recovery preflight predecessor differs')
         verified=True
     return {'mode':'checkpoint','source_attempt_ids':[p['attempt_id'] for p in pins],
-        'predecessor_checkpoints':pins,'historical_keepable_rows':len(kept),
+        'predecessor_checkpoints':pins,'historical_keepable_rows':len(kept),'_kept_sample_ids':sorted(kept),
         'runtime_preflight_verified':verified,
         'checkpoint_basis':'historical checkpoints verified; current checkpoint coverage is reported independently',
         'cost_basis':'current native journal counts new contacts; historical costs remain in predecessor custody',
@@ -276,6 +276,30 @@ def recovery_context(producer,logical,plan):
         'fresh_inference_rate_verified':False}
 
 
+def checkpoint_completion_progress(j, recovery, progress, elapsed, state):
+    """Union verified old custody with disjoint newly checkpointed sample IDs."""
+    roster=settlement.read(queue.pin_path(j['roster']))
+    ids=[item['sample_id'] for item in roster['items']]
+    require(len(ids)==j['total_rows'] and len(set(ids))==len(ids),'observer recovery roster differs')
+    kept=set(recovery.pop('_kept_sample_ids'))
+    fresh_ids=progress.pop('_completed_sample_ids')
+    fresh=set(fresh_ids)
+    require(len(fresh)==len(fresh_ids) and len(fresh)==progress['completed_rows'],
+        'observer fresh checkpoint count differs')
+    require(kept <= set(ids) and fresh <= set(ids) and not kept & fresh,
+        'observer recovery samples overlap or escape roster')
+    total=len(ids);completed=len(kept | fresh)
+    verified=recovery['runtime_preflight_verified']
+    rate=len(fresh)/elapsed if fresh and verified else None
+    return {'completed_rows':completed,'remaining_rows':total-completed,
+        'historical_completed_rows':len(kept),'current_attempt_completed_rows':len(fresh),
+        'wall_seconds_per_complete_row':1/rate if rate else None,'rows_per_second':rate,
+        'estimated_remaining_seconds':(total-completed)/rate if rate and state=='running' else (0 if completed==total else None),
+        'completion_basis':'union of verified predecessor checkpoints and disjoint current-attempt checkpoint rows',
+        'eta_basis':'current-attempt new terminal rows per wall second, including startup/preparation; tail may change rate',
+        'fresh_inference_rate_verified':bool(rate)}
+
+
 def observe_job(j,lane,scratch,now):
     producer,observed,plan=source(j);logical=Path(j['logical_data'])
     result={'id':j['id'],'kind':j['kind'],'observed_at_utc':datetime.fromtimestamp(now,timezone.utc).isoformat(),
@@ -305,6 +329,10 @@ def observe_job(j,lane,scratch,now):
             estimated_remaining_seconds=0 if n==total else None,
             eta_basis='recovery mixes historical replay and new work; fresh inference ETA not established',
             reconstruction_wall_seconds_per_row=sp)
+    if recovery is not None and recovery.get('mode')=='checkpoint':
+        result.update(checkpoint_completion_progress(j,recovery,progress,elapsed,state))
+        recovery['fresh_inference_rate_verified']=result['fresh_inference_rate_verified']
+    result.pop('_completed_sample_ids',None)
     return result
 
 

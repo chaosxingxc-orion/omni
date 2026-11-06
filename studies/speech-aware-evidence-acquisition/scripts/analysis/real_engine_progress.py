@@ -19,7 +19,7 @@ def stats(values):
     return {'n':len(v),'mean_s':statistics.mean(v),'p50_s':statistics.median(v),'p95_s':v[int(.95*(len(v)-1))]} if v else None
 
 
-def report(checkpoint, roster, *, state, elapsed_seconds, cards, instances):
+def report(checkpoint, roster, *, state, elapsed_seconds, cards, instances, include_completed_ids=False):
     from speech_aware_evidence_acquisition.core.row_checkpoint import read_checkpoint,summarize_trace_lines
     if state not in {'running','complete','failed','stopped'}:raise ValueError('explicit observed state required')
     if elapsed_seconds<=0 or cards<1 or instances<1 or instances>cards:raise ValueError('invalid observed duration/resources')
@@ -55,6 +55,7 @@ def report(checkpoint, roster, *, state, elapsed_seconds, cards, instances):
     rate=n/elapsed_seconds if n else None
     eta=(total-n)/rate if rate and state=='running' else (0 if state=='complete' else None)
     return {'schema':'saea-real-engine-progress-v1','state':state,'completed_rows':n,'total_rows':total,
+        **({'_completed_sample_ids':complete} if include_completed_ids else {}),
         'checkpoint_rows':len(doc.rows),'unusable_checkpoint_rows':len(doc.rows)-n,'remaining_rows':total-n,
         'checkpoint_sha256':doc.sha256,'split_identity_hash':roster_doc['split_identity_hash'],
         'torn_tail_bytes':doc.torn_tail_bytes,'cards':cards,'instances':instances,'elapsed_seconds':elapsed_seconds,

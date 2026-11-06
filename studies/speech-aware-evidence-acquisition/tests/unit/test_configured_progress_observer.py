@@ -237,3 +237,43 @@ def test_checkpoint_recovery_rejects_invalid_evidence(tmp_path,mutation):
     if mutation=='corrupt_receipt':document['stages']['preflight']['protocol_hash']='d'*64
     (current/'flight-receipts.json').write_text(json.dumps(document))
     with pytest.raises((ValueError,RuntimeError)):m.recovery_context(producer,logical,plan)
+
+
+def test_checkpoint_recovery_uses_union_and_fresh_rate(tmp_path):
+    roster=tmp_path/'roster.json';roster.write_text(json.dumps({'items':[{'sample_id':x} for x in ['a','b','c']]}))
+    job={'roster':pin(roster),'total_rows':3}
+    recovery={'_kept_sample_ids':['a'],'runtime_preflight_verified':True}
+    progress={'_completed_sample_ids':['b'],'completed_rows':1}
+    result=m.checkpoint_completion_progress(job,recovery,progress,20,'running')
+    assert result['completed_rows']==2 and result['remaining_rows']==1
+    assert result['historical_completed_rows']==result['current_attempt_completed_rows']==1
+    assert result['wall_seconds_per_complete_row']==20 and result['estimated_remaining_seconds']==20
+    assert result['rows_per_second']==.05 and result['fresh_inference_rate_verified']
+    pending=m.checkpoint_completion_progress(job,{'_kept_sample_ids':['a'],'runtime_preflight_verified':False},
+        {'_completed_sample_ids':[],'completed_rows':0},20,'running')
+    assert pending['completed_rows']==1 and pending['estimated_remaining_seconds'] is None
+
+
+@pytest.mark.parametrize('fresh',['a','foreign'])
+def test_checkpoint_recovery_never_counts_replayed_or_foreign_rows_as_new(tmp_path,fresh):
+    roster=tmp_path/'roster.json';roster.write_text(json.dumps({'items':[{'sample_id':'a'},{'sample_id':'b'}]}))
+    with pytest.raises(ValueError,match='overlap or escape'):
+        m.checkpoint_completion_progress({'roster':pin(roster),'total_rows':2},
+            {'_kept_sample_ids':['a'],'runtime_preflight_verified':True},
+            {'_completed_sample_ids':[fresh],'completed_rows':1},20,'running')
+
+
+def test_observe_checkpoint_recovery_reports_whole_roster_without_leaking_ids(tmp_path,monkeypatch):
+    producer,logical,plan,current,target,declaration,receipts=checkpoint_recovery_fixture(tmp_path)
+    (current/'flight-receipts.json').write_text(json.dumps(receipts.as_json()))
+    roster=tmp_path/'roster.json';roster.write_text(json.dumps({'items':[{'sample_id':'a'},{'sample_id':'b'}]}))
+    observed={'state':'running','running':True,'exit_code':0,'started_at':'2026-11-03T10:00:00Z'}
+    monkeypatch.setattr(m,'source',lambda j:(producer,observed,plan))
+    monkeypatch.setattr(m,'native_contacts',lambda *a:({'known_usage':{'calls':3},'workload_model_calls':{'observed':3}},{}))
+    monkeypatch.setattr(m,'row_progress',lambda *a:{'completed_rows':1,'total_rows':2,'_completed_sample_ids':['b']})
+    job={'id':'recovery','kind':'row-checkpoint','total_rows':2,'logical_data':str(logical),'arm':'test','roster':pin(roster)}
+    result=m.observe_job(job,{'cards':4,'instances':1},tmp_path,m.timestamp('2026-11-03T10:00:20Z'))
+    assert result['completed_rows']==2 and result['current_attempt_completed_rows']==1
+    assert result['wall_seconds_per_complete_row']==20 and result['estimated_remaining_seconds']==0
+    assert result['recovery']['fresh_inference_rate_verified']
+    assert '_completed_sample_ids' not in result and '_kept_sample_ids' not in result['recovery']
