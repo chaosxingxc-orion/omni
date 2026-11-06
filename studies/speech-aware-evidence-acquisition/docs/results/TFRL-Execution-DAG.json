@@ -13,15 +13,19 @@
       "id": "baseline-off",
       "resource": "NPU-A",
       "depends_on": [],
-      "status": "activation_in_progress",
-      "rows": 1080
+      "status": "precontact_log_path_failure_external_config_recovery",
+      "rows": 1080,
+      "completed_rows": 0,
+      "observed_model_calls": 0
     },
     {
       "id": "baseline-on",
       "resource": "NPU-B",
       "depends_on": [],
-      "status": "activation_in_progress",
-      "rows": 1080
+      "status": "precontact_log_path_failure_external_config_recovery",
+      "rows": 1080,
+      "completed_rows": 0,
+      "observed_model_calls": 0
     },
     {
       "id": "baseline-selection",
@@ -47,7 +51,7 @@
       "depends_on": [
         "fold-b-confirmation"
       ],
-      "status": "cpu_preparing_not_admitted",
+      "status": "cpu_stage_prepare_registered_both_held_main_integration_in_progress",
       "rows_per_member": 625,
       "members": 2
     },
@@ -84,7 +88,7 @@
         },
         {
           "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-decision-profile.json",
-          "entry": "profile示例，含REPLACE占位符"
+          "entry": "节点专用profile；真实seed/compile绑定另行准备"
         },
         {
           "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/gepa-v2-decision.md",
@@ -122,7 +126,7 @@
         },
         {
           "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-slot-profile.json",
-          "entry": "profile示例，含REPLACE占位符"
+          "entry": "节点专用profile；真实seed/compile绑定另行准备"
         },
         {
           "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/gepa-v2-slot.md",
@@ -244,7 +248,7 @@
       "depends_on": [
         "baseline-selection"
       ],
-      "status": "configuration_in_preparation",
+      "status": "cpu_stage_prepare_complete_both_waiting_baseline_selection",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
@@ -322,5 +326,27 @@
     "K2 OFF policy awaits baseline choice; if ON is selected, rebuild corresponding configurations without changing roster",
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
+  ],
+  "updated_at": "2026-11-06T13:47:48.138703+00:00",
+  "parallel_cpu_tasks": [
+    {
+      "id": "gepa-seed-contract-preparation",
+      "status": "cli_running",
+      "depends_on": [],
+      "targets": [
+        "E1",
+        "E2"
+      ],
+      "model_calls_authorized": false
+    },
+    {
+      "id": "native-successor-queue-preparation",
+      "status": "cli_deferred_after_construction_integration",
+      "targets": [
+        "construction-k2",
+        "fold-b-confirmation"
+      ],
+      "native_queued": false
+    }
   ]
 }
