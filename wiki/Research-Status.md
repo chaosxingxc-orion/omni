@@ -51,7 +51,7 @@ k16 OFF完整1080中1058条合同合法、22空答（P截断17、P引用4、Slot
 
 A引用隔离候选18:50:27 UTC固定checkpoint前缀审计已验收：304条完成中297条合同合法（181有实体、116合法空entities），7空答均为P finite_completion，未观察到引用拒绝。是已完成前缀而非完整1080覆盖率，尚无精度；补证已显示7条均为P length，其中2条实际响应为非空且无tool calls，符合后继compact reask内容条件；仍需运行时共享预算和补问成功，不能据此保证100%。
 
-NPU只依赖已准备输入和本实例生成释放，不等待CPU评分；固定名单、KB、镜像、prepared复用，运行release不热改。当前原部署CLI正在配置CPU评分接续，复用已验证overlay恢复工具，待原worker评分终态后处理，成功结果不重复评分；配置尚未交付，不标已运行。最多三个CLI分工执行评分、后继部署、节点分析。B既有600秒observer已扩展到k16、完整覆盖、P-only、Slot-only四项，旧observer已退出，不增加重复轮询。
+NPU只依赖已准备输入和本实例生成释放，不等待CPU评分；固定名单、KB、镜像、prepared复用，运行release不热改。四项CPU评分身份模板已准备，但现有外部队列不支持已知exit1评分失败分支，且终态摘要尚不能预填。原部署CLI正实现最小配置化CPU终态接续，复用已验证overlay恢复工具；成功结果不重复评分、UNKNOWN等待，不改变NPU依赖。尚未部署或armed。最多三个CLI分工执行评分、后继部署、节点分析。B既有600秒observer已扩展到k16、完整覆盖、P-only、Slot-only四项，旧observer已退出，不增加重复轮询。
 
 ## 效率判断与验证方法
 

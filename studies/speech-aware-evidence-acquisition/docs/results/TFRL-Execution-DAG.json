@@ -663,6 +663,19 @@
       "changed_node": "slot",
       "after_generation_release": "node-prompt-p-evaluate",
       "dependency_note": "Resource order only; not dependent on P candidate results or CPU scoring"
+    },
+    {
+      "id": "cpu-score-terminal-adapter",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "implementation_running_not_deployed",
+      "scope": "Configured terminal continuation: successful scores no replay; known overlay failure recover once; unknown hold. Separate from NPU generation-release handoff.",
+      "targets": [
+        "coverage-evaluate",
+        "E5-on",
+        "complete-coverage-evaluate",
+        "complete-coverage-on-evaluate"
+      ]
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -684,12 +697,12 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T18:46:00Z",
+  "updated_at": "2026-11-06T19:06:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Reference and P/Slot recovery merged; full online coverage not proven",
     "deployment": "Prompt candidates ready, binders live; existing B observer extended and independently verified",
-    "scoring_recovery": "k16 OFF official recovery and independent verification accepted",
-    "paired_analysis": "v5 regression report accepted; locked knowledge ambiguity audit running",
+    "scoring_recovery": "CPU terminal adapter implementation running; four templates prepared but not executable or armed",
+    "paired_analysis": "k8/k16 full paired diagnosis and locked source transcript evidence accepted; retain k8 parent",
     "tfrl_reader": "deferred"
   },
   "dispatch_policy": {
