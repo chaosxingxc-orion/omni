@@ -65,12 +65,14 @@ def validate_evidence(cfg, bundle, receipts, generation, failed, identity):
         raise ValueError('expected synchronous finalizer failure evidence')
 
 
-def recover(config_path):
+def recover(config_path, check_only=False):
     assert_execution_environment()
     cfg = json.loads(Path(config_path).read_bytes())
     required = {'schema','run_id','attempt_id','rows','checkpoint_sha256','producer_id','inputs','output','lock'}
     if set(cfg) != required or cfg['schema'] != 'saea-seal-only-finalize-recovery-v1':
         raise ValueError('exact recovery config required')
+    rows = cfg['rows']
+    lock_path = checked(cfg['lock'])
     source = Path('/opt/saea-release/studies/speech-aware-evidence-acquisition')
     identity = verify_separate_scoring_tool(source, REPO)
     inputs = cfg['inputs']
@@ -119,6 +121,8 @@ def recover(config_path):
              'MLflow run':'not used', **{k:pending for k in ('effectiveness','reasonableness','efficiency','deviations','decision')}}
     out=Path(cfg['output'])
     if out.parent != paths['manifest'].parent or out.exists(): raise ValueError('fresh adjacent recovery output required')
+    if check_only:
+        return {'validated': True, 'rows': rows, 'source_identities': identity, 'new_model_calls': 0}
     lock = out.parent / '.seal-only-finalize-recovery.guard'
     fd = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
     with os.fdopen(fd, 'a+b') as guard:
@@ -131,7 +135,7 @@ def recover(config_path):
         publish('ledger-cells.json',cells)
         job=ScoreJob(attempt, paths['manifest'], ledger_cells=out/'ledger-cells.json')
         result=run_score_batch([job],output_dir=out/'batch',max_workers=1,operation='finalize',include_per_sample=True,
-            context=ScoringContext(source,Path(env['SPEECHRL_DATA_DIR']),checked(cfg['lock']),tool_repo_root=REPO))
+            context=ScoringContext(source,Path(env['SPEECHRL_DATA_DIR']),lock_path,tool_repo_root=REPO))
         if result.get('failed') or result.get('succeeded') != 1: raise ValueError('finalize failed; preserve intent and batch')
         after=verify_bundle(paths['manifest'])
         if after.attempt_state != 'FINALIZED' or len(after.outputs_rows) != rows: raise ValueError('finalized bundle incomplete')
@@ -143,5 +147,6 @@ def recover(config_path):
 
 
 if __name__ == '__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('--config',required=True)
-    print(json.dumps(recover(Path(parser.parse_args().config)),sort_keys=True))
+    parser=argparse.ArgumentParser();parser.add_argument('--config',required=True);parser.add_argument('--check-only',action='store_true')
+    args=parser.parse_args()
+    print(json.dumps(recover(Path(args.config),check_only=args.check_only),sort_keys=True))
