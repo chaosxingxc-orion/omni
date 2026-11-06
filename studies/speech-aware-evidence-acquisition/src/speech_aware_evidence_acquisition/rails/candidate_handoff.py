@@ -222,7 +222,13 @@ def validate_trace_handoffs(receipt, records, snapshot_cache=None):
             else:
                 source_context = {'candidates': [{'candidate_id': cid} for cid in block['slot_sources'][-1]['candidate_ids']]}
                 kind = 'slot'
-            normalized = normalized_response(kind, source_text, source_context, {'max_candidates': 3})
+            if block.get('coverage_recovery') and kind == 'slot':
+                from .intent_slot_pipeline import canonical, document
+                selected = block['slot_sources'][-1]['valid_ids']
+                normalized = canonical({'candidates': [r for r in document(source_text)['candidates']
+                                                       if r.get('candidate_id') in selected]})
+            else:
+                normalized = normalized_response(kind, source_text, source_context, {'max_candidates': 3})
             if body['normalized_sha256'] != _sha(normalized):
                 raise ValueError('node handoff normalized source mismatch')
         evidence = payload.get('supplied_evidence', [])

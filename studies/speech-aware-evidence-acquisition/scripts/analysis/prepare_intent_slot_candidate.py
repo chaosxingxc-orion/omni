@@ -14,7 +14,7 @@ ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'src'))
 
 
-def derive(source, mode='batched', version='v1', node_rails=False):
+def derive(source, mode='batched', version='v1', node_rails=False, coverage_recovery=False):
     from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
     from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
     if source['policy'] != 'phase-native-module-v1-c2':
@@ -28,6 +28,8 @@ def derive(source, mode='batched', version='v1', node_rails=False):
                                    'max_candidates':3,'candidate_outside_recovery':False}
     if node_rails and version != 'v2':
         raise ValueError('node rails require v2')
+    if coverage_recovery and (not node_rails or version != 'v2' or mode != 'batched'):
+        raise ValueError('coverage recovery requires batched v2 SDK node rails')
     if version not in ('v1', 'v2'):
         raise ValueError('unsupported candidate protocol version')
     if version == 'v2':
@@ -40,6 +42,12 @@ def derive(source, mode='batched', version='v1', node_rails=False):
     native['episode_id']='native-intent-slot-'+mode+'-'+version
     native['finite_completion_policy']='deliver-latest-or-abstain'
     out['policy']='phase-native-intent-slot-'+mode.replace('_','-')+'-'+version
+    if coverage_recovery:
+        native['intent_slot_pipeline']['answer_only_fallback'] = 'off'
+        native['intent_slot_pipeline']['coverage_recovery'] = {
+            'strategy': 'complete-original-candidate-set-v1', 'max_extra_contacts': 3}
+        native['episode_id'] = 'native-intent-slot-batched-coverage-recovery-v1'
+        out['policy'] = 'phase-native-intent-slot-batched-recovery-v1'
     materials=out['phase_material']
     materials['perception']['instruction_template']='probes/slurp_native_candidate_perception_v1.txt'
     materials['perception']['fill_params'].update(min_candidates=1,max_candidates=3,
@@ -77,11 +85,12 @@ def main():
     parser.add_argument('--slot-mode',choices=('batched','per_candidate'),default='batched')
     parser.add_argument('--protocol-version', choices=('v1', 'v2'), default='v1')
     parser.add_argument('--node-rails', action='store_true')
+    parser.add_argument('--coverage-recovery', action='store_true')
     args=parser.parse_args()
     raw=args.source.read_bytes()
     source=json.loads(raw)
     baseline=source.get('candidate_baseline',source)
-    candidate=derive(baseline,args.slot_mode,args.protocol_version,args.node_rails)
+    candidate=derive(baseline,args.slot_mode,args.protocol_version,args.node_rails,args.coverage_recovery)
     result={'schema':'saea-intent-slot-preparation-v1','status':'PREPARATION_ONLY',
             'source_sha256':hashlib.sha256(raw).hexdigest(),'candidate_baseline':candidate,
             'new_model_calls':0,

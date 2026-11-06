@@ -75,6 +75,203 @@ def harness(tmp_path, mode='batched', *, plan=None, data=None, replay=None, fail
     return h
 
 
+def recovery_harness(tmp_path, *, plan=None, data=None, replay=None):
+    from test_rails_runner import _plan
+    plan = plan or _plan(run_id='SAEA-E-native-role-runner-proof', attempt_id='attempt-native-role-runner-proof', planned_model_calls=6)
+    h = harness(tmp_path, plan=plan, data=data, replay=replay)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2',
+        node_rails='sdk-handoff-v1', answer_only_fallback='off',
+        coverage_recovery={'strategy': 'complete-original-candidate-set-v1', 'max_extra_contacts': 3})
+    h.program = default_phase_program('phase-native-intent-slot-batched-recovery-v1')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy), max_contacts=6)
+    from types import SimpleNamespace
+    from test_native_contact_fit import _raw_runtime, _RawTokenizer
+    from speech_aware_evidence_acquisition.core.native_fit_recovery import RecoverableNativeFitGate
+    from speech_aware_evidence_acquisition.core.preparation_fit import build_native_contact_fit_gate
+    runtime = _raw_runtime(h.world.data_root)
+    runtime._samples, runtime._transport = h.samples, h.transport
+    runtime._composed.values['native_contact_fit']['contact_cap'] = 6
+    runtime._adapter = SimpleNamespace(serving_geometry=lambda: {'slot_tokens': 24576})
+    h.fit_gate = RecoverableNativeFitGate(runtime, h.plan, lambda: build_native_contact_fit_gate(
+        runtime, h.program, h.plan, client_factory=_RawTokenizer), replay=replay)
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == 'slot':
+            value['candidates'] = [value['candidates'][0 if key[2] == 1 else 1]]
+        elif key[1] == 'solver':
+            value = {'candidate_id': 'play_radio'}
+        return canonical(value)
+    h._output = output
+    return h, policy
+
+
+def test_sdk_full_candidate_recovery_and_seal(tmp_path):
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    h, policy = recovery_harness(tmp_path)
+    try:
+        summary = h.run()
+        raw = _raw_native(h, solver_role={'max_iterations': 1})
+        raw['intent_slot_pipeline'] = policy
+        outputs = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally:
+        cost = h.close()['cost']
+    assert cost['calls_used'] == 4
+    assert len(h.fit_gate.receipts) == 4
+    assert len({visit['execution_receipt']['final_contact']['agent_contact_id']
+                for visit in summary.results[0].native_episode_receipt['role_visits']}) == 4
+    assert json.loads(summary.results[0].final_response_text)['entities'][0]['filler'] == 'Bob'
+    records = {rid: p for _, rid, p in h.trace.records}
+    _verify_outputs_trace_binding(tuple(outputs), records)
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import validate_receipt
+    receipt = summary.results[0].native_episode_receipt
+    assert json.loads(validate_receipt(receipt, trace_records=records))['entities'][0]['filler'] == 'Bob'
+    import copy
+    block = receipt['intent_slot_pipeline']
+    assert block['candidate_ids'] == ['play_music', 'play_radio']
+    assert [source['candidate_ids'] for source in block['slot_sources']] == [
+        ['play_music', 'play_radio'], ['play_radio']]
+    assert [source['valid_ids'] for source in block['slot_sources']] == [
+        ['play_music'], ['play_radio']]
+    requests = [v['rendered'] for key, v in h.prepared.items() if key[1] == 'slot']
+    assert len(requests) == 2
+    assert 'play_music' not in json.dumps(requests[1]['response_format'])
+    for index in (0, 1):
+        changed = copy.deepcopy(records)
+        response_id = block['slot_sources'][index]['source']['request_id'] + '/response'
+        changed[response_id]['text'] += ' '
+        with pytest.raises(ValueError):
+            validate_receipt(receipt, trace_records=changed)
+    bad = copy.deepcopy(receipt)
+    bad['intent_slot_pipeline']['slot_sources'][1]['valid_ids'] = ['play_music']
+    with pytest.raises(ValueError):
+        validate_receipt(bad, trace_records=records)
+
+
+@pytest.mark.parametrize('unknown', [False, True])
+def test_sdk_recovery_resume_does_not_resend_known_or_unknown(tmp_path, unknown):
+    from speech_aware_evidence_acquisition.core.contact_journal import NativeContactReplay
+    old, _ = recovery_harness(tmp_path / 'old')
+    if unknown:
+        output = old._output
+        def fail_repair(key):
+            if key[1] == 'slot' and key[2] == 2:
+                raise TimeoutError('unknown repair response')
+            return output(key)
+        old._output = fail_repair
+    else:
+        sink = old.client._adapter._sink
+        emit = sink.emit
+        count = 0
+        def stop(channel, rid, payload):
+            nonlocal count
+            result = emit(channel, rid, payload)
+            if channel == 'MODEL_RESPONSE':
+                count += 1
+                if count == 3:
+                    raise RuntimeError('stop after durable repair response')
+            return result
+        sink.emit = stop
+    try:
+        with pytest.raises(Exception):
+            old.run()
+    finally:
+        old.close()
+    old.client._adapter._attempt_handle.mark_aborted('recovery test source terminal')
+    plan = replace(old.plan, attempt_id='coverage-successor')
+    replay = NativeContactReplay(old.world.data_root, old.plan, plan, old.client.arm)
+    new, _ = recovery_harness(tmp_path / 'new', plan=plan, data=old.world.data_root, replay=replay)
+    gate = new.request_gate
+    def track(request):
+        gate(request)
+        if replay.match(request.as_payload()) is not None:
+            new.replayed_fixture_keys.add(next(reversed(new.prepared)))
+    new.request_gate = track
+    try:
+        if unknown:
+            with pytest.raises(Exception):
+                new.run()
+        else:
+            result = new.run()
+            assert json.loads(result.results[0].final_response_text)['entities'][0]['filler'] == 'Bob'
+    finally:
+        cost = new.close()['cost']
+    assert [key[1] for key in new.dispatched] == ([] if unknown else ['solver'])
+    assert cost['calls_used'] == (0 if unknown else 1)
+
+
+def test_sdk_invalid_repair_retains_pending_row(tmp_path):
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    h, policy = recovery_harness(tmp_path)
+    original = h._output
+    def invalid(key):
+        if key[1] == 'slot' and key[2] == 2:
+            return '{}'
+        return original(key)
+    h._output = invalid
+    try:
+        summary = h.run()
+        raw = _raw_native(h, solver_role={'max_iterations': 1})
+        raw['intent_slot_pipeline'] = policy
+        outputs = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally:
+        cost = h.close()['cost']
+    receipt = summary.results[0].native_episode_receipt
+    assert cost['calls_used'] == 3
+    assert receipt['terminal_disposition']['reason'] == 'seal_refusal'
+    pending = receipt['slot_recovery_pending']
+    assert list(pending['valid_results']) == ['play_music']
+    assert pending['remaining_candidate_ids'] == ['play_radio']
+    _verify_outputs_trace_binding(tuple(outputs), {rid: p for _, rid, p in h.trace.records})
+
+
+def test_sdk_recovers_two_missing_candidates(tmp_path):
+    h, _ = recovery_harness(tmp_path)
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == 'slot' and key[2] == 1:
+            value['candidates'] = []
+        elif key[1] == 'slot' and key[2] == 2:
+            value['candidates'][0]['candidate_id'] = 'play_music'
+        return canonical(value)
+    h._output = output
+    try:
+        summary = h.run()
+    finally:
+        cost = h.close()['cost']
+    assert cost['calls_used'] == 5
+    assert json.loads(summary.results[0].final_response_text)['entities'][0]['filler'] == 'Bob'
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import validate_receipt
+    validate_receipt(summary.results[0].native_episode_receipt,
+                     trace_records={rid: p for _, rid, p in h.trace.records})
+
+
+def test_sdk_recovery_budget_exhaustion_is_pending(tmp_path):
+    h, policy = recovery_harness(tmp_path)
+    policy['coverage_recovery']['max_extra_contacts'] = 1
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy), max_contacts=4)
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == 'slot':
+            value['candidates'] = []
+        return canonical(value)
+    h._output = output
+    try:
+        result = h.run()
+    finally:
+        cost = h.close()['cost']
+    receipt = result.results[0].native_episode_receipt
+    assert cost['calls_used'] == 2
+    assert receipt['terminal_disposition']['reason'] == 'seal_refusal'
+    assert receipt['slot_recovery_pending']['original_candidate_ids'] == ['play_music', 'play_radio']
+    assert 'budget exhausted' in receipt['terminal_disposition']['seal_refusal']['message']
+
+
 @pytest.mark.parametrize('mode,contacts',[('batched',3),('per_candidate',4)])
 def test_raw_audio_pipeline_and_bound_sources(tmp_path,mode,contacts):
     h=harness(tmp_path,mode)
@@ -803,3 +1000,121 @@ def test_sdk_budgeted_fallback_length_and_empty_preserves_cost(tmp_path, fallbac
         assert json.loads(rows[0]['text'])['action'] == 'radio'
     else:
         assert not fallbacks and rows[0]['text'] == ''
+
+@pytest.mark.parametrize('extra,expected_calls', [(3, 5), (1, 3)])
+def test_sdk_coverage_answer_only_then_slot_shared_budget(tmp_path, extra, expected_calls):
+    from test_native_episode_runner import _wire_response
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import validate_receipt
+    h, policy = recovery_harness(tmp_path)
+    policy['answer_only_fallback'] = 'budgeted-v1'
+    policy['coverage_recovery']['max_extra_contacts'] = extra
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy), max_contacts=3 + extra)
+    requests = []
+    def post(_url, body):
+        request = json.loads(body); requests.append(request)
+        if len(requests) == 1:
+            return json.dumps({'choices':[{'message':{'role':'assistant','content':''},'finish_reason':'length'}],
+                               'usage':{'prompt_tokens':7,'completion_tokens':64}}).encode()
+        phase, visit = {2: ('perception', 1), 3: ('slot', 1), 4: ('slot', 2), 5: ('solver', 1)}[len(requests)]
+        return _wire_response(h._output(('s1', phase, visit, 1)))
+    h.post_override = post
+    h.transport._reasoning_content_guard = 'refuse-think-marker-in-content'
+    try:
+        result = h.run(decoding_params={'temperature':0, 'max_tokens':64, 'thinking_budget_tokens':32,
+                                          'chat_template_kwargs':{'enable_thinking':True}})
+    finally:
+        cost = h.close()['cost']
+    assert cost['calls_used'] == expected_calls == len(requests)
+    assert len(h.fit_gate.receipts) == expected_calls
+    receipt = result.results[0].native_episode_receipt
+    if extra == 1:
+        assert receipt['terminal_disposition']['reason'] == 'seal_refusal'
+        return
+    assert json.loads(result.results[0].final_response_text)['entities'][0]['filler'] == 'Bob'
+    assert receipt['intent_slot_pipeline']['candidate_ids'] == ['play_music', 'play_radio']
+    assert len(receipt['role_visits'][0]['execution_receipt']['contacts']) == 2
+    records = {rid:p for _, rid, p in h.trace.records}
+    validate_receipt(receipt, trace_records=records)
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    raw = _raw_native(h, solver_role={'max_iterations': 1}); raw['intent_slot_pipeline'] = policy
+    rows = _runtime(h, result, raw)._canonical_output_rows(h.client)
+    _verify_outputs_trace_binding(tuple(rows), records)
+    import copy
+    contacts = receipt['role_visits'][0]['execution_receipt']['contacts']
+    for contact in contacts:
+        tampered = copy.deepcopy(records)
+        tampered[contact['request_id'] + '/response']['text'] += ' '
+        with pytest.raises(ValueError):
+            validate_receipt(receipt, trace_records=tampered)
+    for source in receipt['intent_slot_pipeline']['slot_sources']:
+        tampered = copy.deepcopy(records)
+        tampered[source['source']['request_id'] + '/response']['text'] += ' '
+        with pytest.raises(ValueError):
+            validate_receipt(receipt, trace_records=tampered)
+
+
+def test_sdk_answer_only_unknown_response_not_reissued(tmp_path):
+    from test_native_episode_runner import _wire_response
+    from speech_aware_evidence_acquisition.core.contact_journal import NativeContactReplay
+    old, policy = recovery_harness(tmp_path / 'old')
+    policy['answer_only_fallback'] = 'budgeted-v1'
+    old.config = replace(old.config, intent_slot_pipeline_json=canonical(policy))
+    count = 0
+    def post(_url, body):
+        nonlocal count
+        count += 1
+        if count == 1:
+            return json.dumps({'choices':[{'message':{'role':'assistant','content':''},'finish_reason':'length'}],
+                               'usage':{'prompt_tokens':7,'completion_tokens':64}}).encode()
+        raise TimeoutError('unknown answer-only response')
+    old.post_override = post
+    old.transport._reasoning_content_guard = 'refuse-think-marker-in-content'
+    decoding = {'temperature':0, 'max_tokens':64, 'thinking_budget_tokens':32,
+                'chat_template_kwargs':{'enable_thinking':True}}
+    try:
+        with pytest.raises(Exception): old.run(decoding_params=decoding)
+    finally:
+        old_cost = old.close()['cost']
+    assert old_cost['calls_used'] == 2
+    old.client._adapter._attempt_handle.mark_aborted('isolated unknown-response test')
+    plan = replace(old.plan, attempt_id='answer-only-unknown-successor')
+    replay = NativeContactReplay(old.world.data_root, old.plan, plan, old.client.arm)
+    new, _ = recovery_harness(tmp_path / 'new', plan=plan, data=old.world.data_root, replay=replay)
+    new.config = replace(new.config, intent_slot_pipeline_json=canonical(policy))
+    new.transport._reasoning_content_guard = 'refuse-think-marker-in-content'
+    new.post_override = lambda *_: pytest.fail('unknown request must never be reissued')
+    try:
+        with pytest.raises(Exception): new.run(decoding_params=decoding)
+    finally:
+        cost = new.close()['cost']
+    assert cost['calls_used'] == 0
+
+
+def test_sdk_invalid_answer_only_keeps_both_paid_contacts(tmp_path):
+    from test_native_episode_runner import _wire_response
+    from test_template_variants_delivery import _runtime, _raw_native
+    h, policy = recovery_harness(tmp_path)
+    policy['answer_only_fallback'] = 'budgeted-v1'
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    calls = 0
+    def post(_url, _body):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return json.dumps({'choices':[{'message':{'role':'assistant','content':''},'finish_reason':'length'}],
+                               'usage':{'prompt_tokens':7,'completion_tokens':64}}).encode()
+        return _wire_response('{}')
+    h.post_override = post
+    h.transport._reasoning_content_guard = 'refuse-think-marker-in-content'
+    try:
+        result = h.run(decoding_params={'temperature':0, 'max_tokens':64, 'thinking_budget_tokens':32,
+                                         'chat_template_kwargs':{'enable_thinking':True}})
+        raw = _raw_native(h, solver_role={'max_iterations':1}); raw['intent_slot_pipeline'] = policy
+        rows = _runtime(h, result, raw)._canonical_output_rows(h.client)
+    finally:
+        cost = h.close()['cost']
+    assert calls == cost['calls_used'] == 2
+    assert len(h.fit_gate.receipts) == 2
+    assert rows[0]['native_episode_receipt']['terminal_disposition']['reason'] == 'seal_refusal'
+    assert len(rows[0]['native_episode_receipt']['interrupted_role']['execution_receipt']['contacts']) == 2

@@ -32,10 +32,23 @@ class CandidateSlotStage(WorkflowComponent):
             normalized_perception_sha256 = hashlib.sha256(normalized_response("perception", state["perception"], {}, self.config).encode()).hexdigest()
         batches = [rows] if self.config["slot_mode"] == "batched" else [[row] for row in rows]
         results, contacts = {}, []
-        for batch in batches:
+        recovery = self.config.get("coverage_recovery")
+        recovery_contacts = []
+        pending_batches = list(batches)
+        while pending_batches:
+            batch = pending_batches.pop(0)
+            if recovery:
+                state["slot_recovery_pending"] = {"strategy": recovery["strategy"],
+                    "original_candidate_ids": [row["candidate_id"] for row in rows],
+                    "valid_results": copy.deepcopy(results), "sources": copy.deepcopy(recovery_contacts),
+                    "remaining_candidate_ids": [row["candidate_id"] for row in batch] +
+                        [row["candidate_id"] for pending in pending_batches for row in pending],
+                    "max_extra_contacts": recovery["max_extra_contacts"]}
             state["intent_slot_context"] = {
                 "candidates": batch, "perception_source": source,
                 "candidate_set_sha256": digest(rows),
+                **({"coverage_repair": {"reason": "missing_or_invalid_candidate_result",
+                    "candidate_id": batch[0]["candidate_id"]}} if recovery and recovery_contacts else {}),
                 **({"normalized_perception_sha256": normalized_perception_sha256} if normalized_perception_sha256 else {}),
             }
             self.checkpoint.capture(state=state, role_id=self.node.spec.role_id, stage="slot")
@@ -48,6 +61,23 @@ class CandidateSlotStage(WorkflowComponent):
             state = applied["state"]
             ids = [row["candidate_id"] for row in batch]
             parsed_text = role["actor_output"]
+            if recovery:
+                report = self.node.coverage_result()
+                parsed = report["valid"]
+                if set(parsed) & set(results):
+                    raise ValueError("Slot repair attempted to overwrite a valid candidate")
+                results.update(parsed)
+                recovery_contacts.append({"candidate_ids": ids,
+                    "source": copy.deepcopy(role["execution_receipt"]["final_contact"]),
+                    "valid_ids": list(parsed), "result_sha256": digest(parsed)})
+                if len(recovery_contacts) == 1:
+                    missing = report["missing"]
+                    if len(missing) > recovery["max_extra_contacts"]:
+                        raise ValueError("Slot coverage recovery budget exhausted")
+                    pending_batches.extend([[row] for row in rows if row["candidate_id"] in missing])
+                elif report["missing"]:
+                    raise ValueError("Slot candidate recovery did not produce a valid result")
+                continue
             if self.config.get("node_rails") == "sdk-handoff-v1":
                 from ...rails.candidate_handoff import normalized_response
                 parsed_text = normalized_response("slot", parsed_text, {"candidates": batch}, self.config)
@@ -56,6 +86,9 @@ class CandidateSlotStage(WorkflowComponent):
             contacts.append({"candidate_ids": ids,
                              "source": copy.deepcopy(role["execution_receipt"]["final_contact"]),
                              "result_sha256": digest(parsed)})
+        if recovery:
+            contacts = recovery_contacts
+            state.pop("slot_recovery_pending", None)
         state["intent_slot_context"] = {
             "candidates": rows, "perception_source": source,
             "candidate_set_sha256": digest(rows), "slot_results": results,
@@ -66,6 +99,9 @@ class CandidateSlotStage(WorkflowComponent):
             "slot_mode": self.config["slot_mode"], "duplicate_candidate_policy": self.config.get("duplicate_candidate_policy", "strict"), "candidate_ids": [r["candidate_id"] for r in rows],
             "perception_source": source, "slot_sources": contacts,
         }
+        if recovery:
+            state["intent_slot_pipeline"]["coverage_recovery"] = copy.deepcopy(recovery)
+            state["intent_slot_pipeline"]["recovery_config"] = copy.deepcopy(self.config)
         if self.config["schema"].endswith("-v2"):
             state["intent_slot_pipeline"]["grouping"] = {
                 "policy": "group_v2", "raw_count": len(json.loads(state["perception"])["candidates"]),

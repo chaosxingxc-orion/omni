@@ -16,13 +16,30 @@ class NodeWorkload(PairWorkload):
     MAX_ADMITTED_LEVEL=128
     RESULT_SCHEMA='saea-intent-slot-arm-read-v1'
     LABEL='Fixed development native intent Slot Decision ablation'
+    def contact_budgets(self):
+        if self.config.get('pipeline', {}).get('coverage_recovery'):
+            return {'normal_generation_calls': 3*self.ROWS,
+                    'fallback_inclusive_cap': self.CONTACTS*self.ROWS,
+                    'fit_calls': self.CONTACTS*self.ROWS}
+        return super().contact_budgets()
     def __init__(self,config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material','node_arm'}
         if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
             raise ValueError('exact native node workload required')
         arm=config['node_arm']
         pipeline=config.get('pipeline')
-        if pipeline is not None and (arm != 'enhanced-p-slot-decision' or pipeline != {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}):
+        legacy = {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
+        recovery = pipeline.get('coverage_recovery') if isinstance(pipeline, dict) else None
+        supported_recovery = (isinstance(recovery, dict)
+            and set(pipeline) == set(legacy) | {'coverage_recovery'}
+            and pipeline.get('protocol_version') == 'v2'
+            and pipeline.get('node_rails') == 'sdk-handoff-v1'
+            and pipeline.get('answer_only_fallback') in {'off', 'budgeted-v1'}
+            and set(recovery) == {'strategy', 'max_extra_contacts'}
+            and recovery['strategy'] == 'complete-original-candidate-set-v1'
+            and type(recovery['max_extra_contacts']) is int
+            and 1 <= recovery['max_extra_contacts'] <= 3)
+        if pipeline is not None and (arm != 'enhanced-p-slot-decision' or not (pipeline == legacy or supported_recovery)):
             raise ValueError('explicit supported v2 SDK pipeline required')
         if 'tfgrpo_experience' in config and (pipeline is None or not config.get('population')):
             raise ValueError('TF-GRPO experience requires a fixed fold and v2 SDK pipeline')
@@ -41,6 +58,8 @@ class NodeWorkload(PairWorkload):
             self.DATASET=pop['dataset']
         self.config=copy.deepcopy(config);self.KIND=KIND;self.ARMS=[arm];self.DELIVERED_ARM=arm
         self.CONTACTS=3 if arm=='enhanced-p-slot-decision' else 2
+        if pipeline and pipeline.get('coverage_recovery'):
+            self.CONTACTS=3+pipeline['coverage_recovery']['max_extra_contacts']
         self.PROGRAM=arm+' independent original-audio graph; no shared responses across runs.'
 
     def material_checked(self,repo,data,material_pin):
@@ -102,9 +121,13 @@ class NodeWorkload(PairWorkload):
         arm=self.config['node_arm']
         if arm!='old-p-joint-s':
             pipeline=self.config.get('pipeline')
-            expanded=split_graph(base, version='v2', node_rails=True) if pipeline else split_graph(base)
+            expanded=split_graph(base, version='v2', node_rails=True,
+                coverage_recovery=bool(pipeline.get('coverage_recovery'))) if pipeline else split_graph(base)
             if arm=='enhanced-p-slot-decision':
                 base=expanded
+                if pipeline and pipeline.get('coverage_recovery'):
+                    base['native_episode']['intent_slot_pipeline']['coverage_recovery'] = copy.deepcopy(pipeline['coverage_recovery'])
+                    base['native_episode']['intent_slot_pipeline']['answer_only_fallback'] = pipeline['answer_only_fallback']
                 if self.config.get('population'):
                     base['native_episode']['intent_slot_pipeline'].update(evidence_policy='unique_source_alias_v1',duplicate_candidate_policy='group_v2' if pipeline else 'identical_v1')
                 base.pop('carrier_lock_key',None)  # Dataset owns the carrier in composed configuration.
@@ -160,7 +183,7 @@ class NodeWorkload(PairWorkload):
         exp['population'].update(count=self.ROWS,roster_receipt=self.ROSTER,split_identity_hash=roster['split_identity_hash'])
         exp['populations']=[{'dataset_fragment':self.DATASET,'ids':self.config['sample_ids']}]
         exp['population']['dataset_fragment']=self.DATASET
-        cap=2*self.CONTACTS
+        cap=self.CONTACTS if self.config.get('pipeline', {}).get('coverage_recovery') else 2*self.CONTACTS
         exp['execution_plan'].update(planned_model_calls=cap*self.ROWS,planned_speech_audio_seconds=math.ceil(cap*math.fsum(r['audio_seconds'] for r in roster['items'])))
         exp['stage3_algorithm']={'id':'none','operators_used':[],'note':'Node architecture ablation, not a new learning algorithm.'}
         exp['stage3_measurement'].update(rows=self.ROWS,read_roster=roster['roster_id'],claims_benefit=False,expected_effect_pp=0,note=base['what_this_is'])

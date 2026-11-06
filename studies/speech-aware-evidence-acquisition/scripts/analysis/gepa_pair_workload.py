@@ -204,6 +204,11 @@ class PairWorkload:
     MAX_ADMITTED_LEVEL = 96
     DATASET = observation.DATASET
 
+    def contact_budgets(self):
+        return {'normal_generation_calls': self.CONTACTS*self.ROWS,
+                'fallback_inclusive_cap': 2*self.CONTACTS*self.ROWS,
+                'fit_calls': self.CONTACTS*self.ROWS}
+
     def __init__(self, config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material'}
         if not fields <= set(config) <= fields | {'evaluation_partition', 'context_adaptation'} or config['schema']!=SCHEMA:
@@ -425,7 +430,7 @@ class PairWorkload:
             'dataset':pin(repo,f'configs/dataset/{self.DATASET}.json'),
             'source_experiment':pin(repo,observation.SOURCE_EXP),
             'output_hashes':{rel:sha(path) for rel,path in zip(logical_paths,paths)},
-            'normal_generation_calls':self.CONTACTS*self.ROWS, 'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS, 'fit_calls':self.CONTACTS*self.ROWS,
+            **self.contact_budgets(),
             'new_model_calls':0, 'generation_authorized':False, 'claims_benefit':False}
         record['workspace_manifest']=seal_workspace(repo)
         publish_new(out/'complete.json', raw(record)); return record
@@ -568,8 +573,7 @@ class PairWorkload:
             'generation_program':self.PROGRAM}
         self.validate(repo,data,self.NAME,spec,exp,read_asset(repo,spec['dataset']['relpath']))
         protocol = {'schema':'saea-gepa-pair-generation-v1','cells':{'arm':identity},'profile':binding['profile'],
-            'roster':spec['roster'],'material':spec['material'],'normal_generation_calls':self.CONTACTS*self.ROWS,
-            'fallback_inclusive_cap':2*self.CONTACTS*self.ROWS,'fit_calls':self.CONTACTS*self.ROWS,'claims_benefit':False,
+            'roster':spec['roster'],'material':spec['material'],**self.contact_budgets(),'claims_benefit':False,
             **({'context_adaptation':self.context_adaptation()} if self.context_adaptation() is not None else {})}
         protocol_pin = {'relpath':str((Path('docs/readiness')/self.NAME/'protocol-registered-v1.json')),
             'sha256':hashlib.sha256(raw(protocol)).hexdigest()}

@@ -679,14 +679,26 @@ class MeteredNativeSpeechRequest:
         branch_id = getattr(request.context, "perception_branch_id", None)
         return branch_id is not None and request.role_id in self._branch_sampling.get(branch_id, {})
 
-    def dispatch(self, prepared: PreparedNativeRoleContact, *, id_slot: int | None = None) -> CoreCompletion:
+    def dispatch(self, prepared: PreparedNativeRoleContact, *, id_slot: int | None = None,
+                 managed_recovery: bool = False) -> CoreCompletion:
         if not isinstance(prepared, PreparedNativeRoleContact) or prepared.owner is not self._owner:
             raise NativeSpeechRequestError("dispatch requires this adapter's prepared native contact")
         completion = self._client.complete_prepared_with_metadata(prepared.request, id_slot=id_slot)
+        if managed_recovery:
+            # The caller owns custody and any subsequent independently prepared
+            # contact; never hide another request or settle this response here.
+            return completion
         if self._answer_only_fallback_enabled:
             completion = self._answer_only_fallback(prepared, completion, id_slot=id_slot)
         self._completion_sink(prepared.role_request, completion)
         return completion
+
+    @staticmethod
+    def answer_only_reserve(prepared: PreparedNativeRoleContact, completion: CoreCompletion) -> int | None:
+        """Return the registered reserve only for an eligible empty thinking response."""
+        if completion.text != "" or completion.tool_calls or completion.finish_reason not in ("length", None):
+            return None
+        return fallback_reserve(prepared.request.as_payload().get("decoding_params") or {})
 
     def _answer_only_fallback(
         self, prepared: PreparedNativeRoleContact, completion: CoreCompletion, *, id_slot: int | None = None,
@@ -701,14 +713,8 @@ class MeteredNativeSpeechRequest:
         caller sees that empty completion and the existing finite-completion disposition applies. No thinking text is carried.
         """
 
-        if completion.text != "" or completion.tool_calls:
-            return completion
         finish = completion.finish_reason
-        if finish not in ("length", None):
-            return completion
-        # The payload's own decoding block is the request's source of truth (the rendered HTTP body carries the same values at top
-        # level); reading it here keeps the check independent of how a caller renders the body.
-        reserve = fallback_reserve(prepared.request.as_payload().get("decoding_params") or {})
+        reserve = self.answer_only_reserve(prepared, completion)
         if reserve is None:
             return completion
         from ...core.tracing import get_current_trace_buffer  # noqa: PLC0415

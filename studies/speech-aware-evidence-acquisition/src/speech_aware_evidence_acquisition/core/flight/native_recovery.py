@@ -203,6 +203,7 @@ def native_contact_custody_enabled(values):
                 or values.get('policy') not in ('phase-native-intent-slot-batched-v1',
                                                 'phase-native-intent-slot-per-candidate-v1',
                                                 'phase-native-intent-slot-batched-v2',
+                                                'phase-native-intent-slot-batched-recovery-v1',
                                                 'phase-native-intent-slot-per-candidate-v2')):
             return False
         try:
@@ -214,7 +215,11 @@ def native_contact_custody_enabled(values):
         import json
         graph = parse_config(json.loads(config.intent_slot_pipeline_json))
         expected = 2 + (1 if graph['slot_mode'] == 'batched' else graph['max_candidates'])
-        return (values['policy'] == 'phase-native-intent-slot-' + graph['slot_mode'].replace('_', '-') + ('-v2' if graph['schema'].endswith('-v2') else '-v1')
+        recovery = graph.get('coverage_recovery')
+        expected += recovery['max_extra_contacts'] if recovery else 0
+        policy = ('phase-native-intent-slot-batched-recovery-v1' if recovery else
+                  'phase-native-intent-slot-' + graph['slot_mode'].replace('_', '-') + ('-v2' if graph['schema'].endswith('-v2') else '-v1'))
+        return (values['policy'] == policy
                 and config.max_contacts == expected and program.max_contacts >= expected
                 and {r.role_kind: r.max_iterations for r in config.roles} == {
                     'perception': 1, 'slot': 1, 'solver': 1, 'reviewer': 0, 'planner': 0}

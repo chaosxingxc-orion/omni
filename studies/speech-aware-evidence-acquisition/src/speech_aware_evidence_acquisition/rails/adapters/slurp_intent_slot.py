@@ -1,5 +1,49 @@
 """SLURP-specific ontology and final task projection for the generic graph."""
+import json
+
 from ..intent_slot_pipeline import candidates, decision, document, slot_results, validate_evidence_refs
+
+
+def classify_slot_coverage(*, text, response_format, context, config):
+    """Classify complete Slot rows without inventing values for missing IDs.
+
+    A duplicate or foreign ID makes the response ambiguous and is refused as a
+    whole. Individual invalid rows are never returned as usable results. The
+    inventory remains bound to the *original* candidate set, even though each
+    row is checked separately.
+    """
+    import jsonschema
+
+    value = document(text)
+    if set(value) != {"candidates"} or not isinstance(value["candidates"], list):
+        raise ValueError("Slot requires candidate-keyed results")
+    ids = [row["candidate_id"] for row in context["candidates"]]
+    if not ids or len(ids) != len(set(ids)):
+        raise ValueError("invalid original candidate set")
+    schema = response_format["json_schema"]["schema"]
+    row_schema = schema["properties"]["candidates"]["items"]
+    legal = row_schema["properties"]["entities"]["items"]["properties"]["type"]["enum"]
+    valid, invalid, seen = {}, {}, set()
+    if not isinstance(context["evidence_inventory"], dict) or context["evidence_inventory"].get("candidate_ids") != ids:
+        raise ValueError("evidence inventory belongs to another candidate branch")
+    for row in value["candidates"]:
+        if not isinstance(row, dict) or not isinstance(row.get("candidate_id"), str):
+            raise ValueError("Slot row has no identifiable candidate")
+        cid = row["candidate_id"]
+        if cid not in ids or cid in seen:
+            raise ValueError("Slot candidate is duplicate or belongs to another branch")
+        seen.add(cid)
+        try:
+            jsonschema.validate(row, row_schema)
+            parsed = slot_results(json.dumps({"candidates": [row]}), [cid], legal)
+            validate_evidence_refs(parsed.values(), context["evidence_inventory"], ids,
+                                   policy=config.get("evidence_policy", "strict"))
+        except (jsonschema.ValidationError, ValueError, KeyError, TypeError) as error:
+            invalid[cid] = str(error)
+        else:
+            valid[cid] = parsed[cid]
+    return {"valid": valid, "missing": [cid for cid in ids if cid not in valid],
+            "invalid": invalid}
 
 
 def registered_slot_format(lock, root, **params):

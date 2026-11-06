@@ -1411,11 +1411,22 @@ def _seal_refusal_terminal_outcome(
             "seal refusal checkpoint has invalid revision count"
         )
     state.pop("accepted_solver_receipt", None)
+    parent = getattr(error, "seal_refusal_parent", None)
+    interrupted_contacts = [dict(normalized_rejected)]
+    if parent is not None:
+        if (parent.sample_id != completion.sample_id or parent.text != ""
+                or completion.agent_contact_id != parent.agent_contact_id + ":answer-only"):
+            raise NativeEpisodeError("invalid seal refusal recovery parent")
+        interrupted_contacts.insert(0, {
+            "agent_contact_id": parent.agent_contact_id, "request_id": parent.request_id,
+            "request_sha256": parent.request_sha256, "response_sha256": parent.response_sha256,
+            "response_text_sha256": parent.response_text_sha256,
+        })
     state["interrupted_role"] = {
         "role_id": checkpoint.role_id,
         "stage": checkpoint.stage,
         "execution_receipt": {
-            "contacts": [dict(normalized_rejected)],
+            "contacts": interrupted_contacts,
             "final_contact": dict(normalized_rejected),
         },
     }

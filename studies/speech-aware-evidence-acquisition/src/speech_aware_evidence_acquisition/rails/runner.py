@@ -2692,6 +2692,8 @@ async def _invoke_native_role_episode(
     node_phase_supply = {}
     node_slot_materials = []
     node_raw_perception = {}
+    coverage_policy = pipeline_config.get("coverage_recovery") if pipeline_config else None
+    coverage_state = {"result": None, "missing": None, "slot_count": 0, "source": None, "extra_contacts": 0}
     node_snapshot_values = {value.value_id: value for value in snapshot.values} if node_rails_enabled else {}
     node_snapshot_facets = {facet.facet_id: facet for facet in snapshot.facets} if node_rails_enabled else {}
     node_store_binding = binding.knowledge_store_binding if node_rails_enabled else None
@@ -4765,7 +4767,7 @@ async def _invoke_native_role_episode(
             framework_system=framework_system,
         )
 
-    def capture_completion(request, completion, *, already_counted=False):
+    def capture_completion(request, completion, *, already_counted=False, coverage_result=None):
         if pending:
             raise RailsRunnerError("native completion overwrote an unsettled source")
         before, plan = state.current_context, state.current_contact
@@ -4807,7 +4809,7 @@ async def _invoke_native_role_episode(
         if pipeline_config is not None and completion.finish_reason == "stop" and not completion.tool_calls:
             visit = visits[request.role_id]
             try:
-                validated = pipeline_validator(kind=role_configs[request.role_id].role_kind,
+                validated = coverage_result["valid"] if coverage_result is not None else pipeline_validator(kind=role_configs[request.role_id].role_kind,
                                    text=completion.text,
                                    response_format=visit["material"].response_format,
                                    context=visit["intent_slot_context"], config=pipeline_config)
@@ -4835,8 +4837,11 @@ async def _invoke_native_role_episode(
         state_content, cited_value_ids = completion.text, ()
         if node_rails_enabled and completion.finish_reason == "stop" and not completion.tool_calls:
             from .candidate_handoff import normalized_response
-            state_content = normalized_response(role_configs[request.role_id].role_kind, completion.text,
-                                                visits[request.role_id]["intent_slot_context"], pipeline_config)
+            if coverage_result is not None:
+                state_content = json.dumps({"candidates": list(coverage_result["valid"].values())}, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            else:
+                state_content = normalized_response(role_configs[request.role_id].role_kind, completion.text,
+                                                    visits[request.role_id]["intent_slot_context"], pipeline_config)
         empty_solver_completion = (
             request.role_id == config.role("solver").phase_id
             and not completion.tool_calls and not completion.text.strip()
@@ -5574,6 +5579,8 @@ async def _invoke_native_role_episode(
                 raise RailsRunnerError("candidate handoff response is not a completed source")
         prepared["before_seen"] = True
 
+    recovery_parents = {}
+
     def after_candidate_model(phase_id, sdk_context):
         nonlocal normalized_node_text
         response = sdk_context.inputs.response
@@ -5586,10 +5593,53 @@ async def _invoke_native_role_episode(
         request, completion = item
         if getattr(response, "content", None) != completion.text:
             raise RailsRunnerError("SDK response differs from metered raw completion")
-        capture_completion(request, completion, already_counted=True)
         kind = role_configs[phase_id].role_kind
+        report = None
+        if coverage_policy and kind == "slot":
+            from .adapters.slurp_intent_slot import classify_slot_coverage
+            visit = visits[phase_id]
+            try:
+                report = classify_slot_coverage(text=completion.text, response_format=visit["material"].response_format,
+                    context=visit["intent_slot_context"], config=pipeline_config)
+            except (ValueError, KeyError, TypeError) as error:
+                refusal = RailsRunnerError("Slot coverage classification refused: " + str(error))
+                refusal.seal_refusal_completion = completion
+                refusal.seal_refusal_role_id = phase_id
+                if completion.request_id in recovery_parents:
+                    refusal.seal_refusal_parent = recovery_parents[completion.request_id]
+                raise refusal from error
+            supplied = visit["candidate_handoff"]["messages"]
+            if coverage_state["slot_count"] and supplied != node_slot_materials[0]:
+                raise RailsRunnerError("Slot recovery changed its frozen original evidence")
+            coverage_state["result"] = copy.deepcopy(report)
+            coverage_state["slot_count"] += 1
+            if coverage_state["missing"] is None:
+                coverage_state["missing"] = list(report["missing"])
+                if len(report["missing"]) > coverage_policy["max_extra_contacts"] - coverage_state["extra_contacts"]:
+                    refusal = RailsRunnerError("Slot coverage recovery budget exhausted")
+                    refusal.seal_refusal_completion = completion
+                    refusal.seal_refusal_role_id = phase_id
+                    raise refusal
+            elif report["missing"]:
+                refusal = RailsRunnerError("Slot recovery response remains invalid")
+                refusal.seal_refusal_completion = completion
+                refusal.seal_refusal_role_id = phase_id
+                if completion.request_id in recovery_parents:
+                    refusal.seal_refusal_parent = recovery_parents[completion.request_id]
+                raise refusal
+            else:
+                candidate_id = visit["intent_slot_context"]["candidates"][0]["candidate_id"]
+                if not coverage_state["missing"] or coverage_state["missing"].pop(0) != candidate_id:
+                    raise RailsRunnerError("Slot recovery candidate order differs")
+        try:
+            capture_completion(request, completion, already_counted=True, coverage_result=report)
+        except Exception as error:
+            if getattr(error, "seal_refusal_completion", None) is completion and completion.request_id in recovery_parents:
+                error.seal_refusal_parent = recovery_parents[completion.request_id]
+            raise
         from .candidate_handoff import normalized_response
-        normalized_node_text = normalized_response(kind, completion.text, visits[phase_id]["intent_slot_context"], pipeline_config)
+        normalized_node_text = (pending["source"].content if report is not None else
+            normalized_response(kind, completion.text, visits[phase_id]["intent_slot_context"], pipeline_config))
         source_hash = hashlib.sha256(normalized_node_text.encode("utf-8")).hexdigest()
         if pending["source"].content != normalized_node_text:
             raise RailsRunnerError("candidate normalized source changed before settlement")
@@ -5597,6 +5647,8 @@ async def _invoke_native_role_episode(
             from .intent_slot_pipeline import candidates
             node_slot_ids[:] = [row["candidate_id"] for row in candidates(completion.text, pipeline_config["max_candidates"], duplicate_policy="group_v2")]
             node_slot_cursor[0] = 0
+            if coverage_policy:
+                coverage_state["source"] = completion
             target = config.role("slot").phase_id
             settle(next_phase=target)
             batches = [node_slot_ids] if pipeline_config["slot_mode"] == "batched" else [[cid] for cid in node_slot_ids]
@@ -5604,8 +5656,23 @@ async def _invoke_native_role_episode(
                 prepare_node_handoff(source_role=phase_id, target_role=target, completion=completion, candidate_ids=ids, branch_index=index)
         elif kind == "slot":
             node_slot_cursor[0] += 1
+            if coverage_policy and coverage_state["missing"]:
+                settle()
+                cid = coverage_state["missing"][0]
+                original = coverage_state["source"]
+                normalized_node_text = normalized_response("perception", original.text, {}, pipeline_config)
+                prepare_node_handoff(source_role=config.role("perception").phase_id, target_role=phase_id,
+                    completion=original, candidate_ids=[cid], branch_index=node_slot_cursor[0])
+                original_messages = node_slot_materials[0]
+                node_handoff_queue[-1]["messages"] = copy.deepcopy(original_messages)
+                handoff = node_handoff_queue[-1]["receipt"]
+                handoff["knowledge"] = copy.deepcopy(node_handoffs[1]["knowledge"])
+                from .intent_slot_pipeline import digest
+                handoff.pop("handoff_sha256")
+                handoff["handoff_sha256"] = digest(handoff)
+                return
             total = 1 if pipeline_config["slot_mode"] == "batched" else len(node_slot_ids)
-            if node_slot_cursor[0] < total:
+            if not coverage_policy and node_slot_cursor[0] < total:
                 settle()
                 # Preserve the already prepared sibling packets, rebinding their
                 # query state after this sibling's independently metered visit.
@@ -6336,8 +6403,19 @@ async def _invoke_native_role_episode(
             record["assembly"], outcome.dropped_identifiers()
         )
 
+    def reserve_coverage_extra():
+        if coverage_state["extra_contacts"] >= coverage_policy["max_extra_contacts"]:
+            return False
+        coverage_state["extra_contacts"] += 1
+        return True
+
     async def metered(request):
         def setup():
+            # A subsequent Slot visit is an additional contact, independent of
+            # the total episode ceiling. Reserve before preparing or FIT.
+            if coverage_policy and role_configs[request.role_id].role_kind == "slot" and coverage_state["slot_count"]:
+                if not reserve_coverage_extra():
+                    raise RailsRunnerError("Slot coverage recovery budget exhausted")
             if state.scheduled_contacts >= config.max_contacts:
                 raise RailsRunnerError("native graph exceeds its registered contact ceiling")
             if request.context.agent_contact_id in state.seen_contact_ids:
@@ -6406,8 +6484,71 @@ async def _invoke_native_role_episode(
                 set_current_trace_buffer(trace)
                 try:
                     dispatch_entered = True
-                    completion = (adapter_request.dispatch(prepared) if ready_request_runner is None
-                                  else adapter_request.dispatch(prepared, id_slot=slot_id))
+                    managed = bool(coverage_policy and pipeline_config["answer_only_fallback"] == "budgeted-v1")
+                    dispatch_slot = slot_id if ready_request_runner is not None else None
+                    completion = adapter_request.dispatch(prepared, id_slot=dispatch_slot, managed_recovery=managed)
+                    recovery_parent = None
+                    result_request = request
+                    result_prepared = prepared
+                    if managed:
+                        reserve = adapter_request.answer_only_reserve(prepared, completion)
+                        if reserve is not None and reserve_coverage_extra():
+                            from ..reproduction.ojw.native_roles import NativeRecoveryCompletion
+                            parent = completion
+                            parent.assert_binding(sample_id=request.context.sample_id,
+                                agent_contact_id=request.context.agent_contact_id, response_text=parent.text)
+                            trace.emit("USE", f"{parent.request_id}/native-role-contact", {
+                                "use_role_id": request.role_id, "use_request_sha256": parent.request_sha256,
+                                "use_response_sha256": parent.response_sha256,
+                                "use_response_text_sha256": parent.response_text_sha256,
+                                "use_agent_contact_id": parent.agent_contact_id})
+                            trace_native_contact(request, prepared, parent, trace, slot_id, rollout_contact_index)
+                            parent_plan = state.current_contact
+                            before = state.current_context
+                            visits[request.role_id]["model_contacts"] += 1
+                            state.contacts.append(AgentContactRecord(plan=parent_plan,
+                                query_state_sha256=before.query_state.content_hash(),
+                                speech_packet_sha256=before.query_state.speech_packet_sha256,
+                                slot_id=slot_id, response_sha256=parent.response_text_sha256))
+                            state.response_sha256s.append(parent.response_text_sha256)
+                            child_id = request.context.agent_contact_id + ":answer-only"
+                            if state.scheduled_contacts >= config.max_contacts or child_id in state.seen_contact_ids:
+                                raise RailsRunnerError("answer-only recovery exceeds contact ceiling or repeats identity")
+                            state.seen_contact_ids.add(child_id)
+                            child_index = state.scheduled_contacts
+                            state.scheduled_contacts += 1
+                            child_trace = TraceBuffer(run_id, spool=state.trace_spool)
+                            state.trace_buffers[(child_index, 0)] = child_trace
+                            result_request = replace(request, context=replace(request.context, agent_contact_id=child_id))
+                            state.current_contact = replace(parent_plan, contact_id=child_id)
+                            trace = child_trace
+                            rollout_contact_index = child_index
+                            set_current_trace_buffer(child_trace)
+                            result_prepared = adapter_request.prepare(result_request, binding_override=prepared.binding, answer_only=True)
+                            fit_kwargs = ({"prompt_limit_tokens": context_fit_budget.prompt_limit_tokens}
+                                if context_fit_budget is not None and context_fit_budget.measured_by_request_gate else {})
+                            fit_count = binding.request_gate(result_prepared.request, **fit_kwargs)
+                            if context_fit_budget is not None and context_fit_budget.measured_by_request_gate:
+                                if isinstance(fit_count, bool) or not isinstance(fit_count, int) or fit_count < 0:
+                                    raise RailsRunnerError("registered FIT gate returned no exact prompt count")
+                                if fit_count > context_fit_budget.prompt_limit_tokens:
+                                    raise FrozenCoreRoleContextFitError(source="dispatch-budget", compaction_pass=0,
+                                        dropped_identifiers=(), tokens_before=fit_count, tokens_after=fit_count,
+                                        limit_tokens=context_fit_budget.prompt_limit_tokens)
+                            child_trace.emit("ORG", f"{child_id}/recovery-parent", {
+                                "org_recovery_parent_contact_id": parent.agent_contact_id,
+                                "org_recovery_parent_request_id": parent.request_id,
+                                "org_recovery_parent_response_sha256": parent.response_sha256,
+                                "org_recovery_child_contact_id": child_id})
+                            completion = adapter_request.dispatch(result_prepared, id_slot=dispatch_slot, managed_recovery=True)
+                            recovery_parent = parent
+                            recovery_parents[completion.request_id] = parent
+                        try:
+                            custody_completion(result_request, completion)
+                        except Exception as error:
+                            if recovery_parent is not None and getattr(error, "seal_refusal_completion", None) is completion:
+                                error.seal_refusal_parent = recovery_parent
+                            raise
                 except FrozenCoreContextSizeError as error:
                     # E20: the fork refused the request for width after the
                     # harness budgeted it as fitting. Under the armed policy
@@ -6440,10 +6581,11 @@ async def _invoke_native_role_episode(
                     "use_response_text_sha256": completion.response_text_sha256,
                     "use_agent_contact_id": completion.agent_contact_id,
                 })
-                trace_native_contact(request, prepared, completion, trace, slot_id, rollout_contact_index)
-                return completion
+                trace_native_contact(result_request, result_prepared, completion, trace, slot_id, rollout_contact_index)
+                return NativeRecoveryCompletion(recovery_parent, completion) if recovery_parent is not None else completion
             except Exception as error:
-                trace_native_contact(request, prepared, None, trace, slot_id, rollout_contact_index, error=error)
+                trace_native_contact(locals().get("result_request", request), locals().get("result_prepared", prepared),
+                                     None, trace, slot_id, rollout_contact_index, error=error)
                 raise
             finally:
                 set_current_trace_buffer(None)
@@ -6711,6 +6853,8 @@ async def _invoke_native_role_episode(
                 ),
                 delivery_allowed=role_delivery_allowed,
             )
+            if coverage_policy and role.role_kind == "slot":
+                solver_node.coverage_result = lambda: copy.deepcopy(coverage_state["result"])
             if role.role_kind == "solver" and role.samples > 1:
                 # E2b: the grouped Solver visit -- N real invoke_direct
                 # calls on the SAME solver_node above, through the SAME
@@ -7384,6 +7528,7 @@ async def _invoke_native_role_episode(
         compact_receipt = {key: receipt[key] for key in (
             "role_visits", "planner_routes", "accepted_solver_receipt", "interrupted_role",
             "intent_slot_pipeline",
+            "slot_recovery_pending",
             "abstention_receipt",
             # E8c: present exactly when a Planner output named no
             # registered action -- the row is retained and sealed, and
@@ -9238,7 +9383,7 @@ def run_speech_native_agent_loop(
                 for role in native_episode_binding.config.roles
                 if role.role_kind in ('perception', 'slot', 'solver')
                 for _ in range(graph['max_candidates'] if role.role_kind == 'slot' and graph['slot_mode'] == 'per_candidate' else 1)
-            ) if graph['answer_only_fallback'] == 'budgeted-v1' else 0)
+            ) if graph['answer_only_fallback'] == 'budgeted-v1' and not graph.get('coverage_recovery') else 0)
     planned_ceiling = (
         len(execution_units.units) if execution_units is not None else len(samples)
     ) * (max_contacts + fallback_ceiling)

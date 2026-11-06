@@ -687,8 +687,15 @@ def _seal_refusal_delivery(receipt, visits, *, error_type):
     execution = _receipt(
         interrupted.get("execution_receipt"), "interrupted role", error_type=error_type
     )
-    if execution["final_contact"] != rejected or execution["contacts"] != [rejected]:
+    interrupted_contacts = execution["contacts"]
+    if execution["final_contact"] != rejected:
         _raise(error_type, "seal-refusal disposition differs from its rejected contact")
+    if interrupted_contacts != [rejected]:
+        if (len(interrupted_contacts) != 2
+                or rejected.get("agent_contact_id") != interrupted_contacts[0].get("agent_contact_id", "") + ":answer-only"
+                or interrupted_contacts[-1] != rejected):
+            _raise(error_type, "seal-refusal recovery contact chain is invalid")
+        _checked_contact(interrupted_contacts[0], error_type=error_type)
     used = set()
     solvers = []
     for visit in visits:
@@ -1036,6 +1043,8 @@ def validate_native_episode_finite_path(
     if intent_slot_pipeline is not None:
         stages = [visit.get("stage") for visit in visits]
         slot_bound = 1 if intent_slot_pipeline["slot_mode"] == "batched" else intent_slot_pipeline["max_candidates"]
+        if intent_slot_pipeline.get("coverage_recovery"):
+            slot_bound += intent_slot_pipeline["coverage_recovery"]["max_extra_contacts"]
         interrupted = terminal["stage"]
         valid = (not stages and interrupted == "perception") or (
             stages and stages[0] == "perception" and all(v == "slot" for v in stages[1:])

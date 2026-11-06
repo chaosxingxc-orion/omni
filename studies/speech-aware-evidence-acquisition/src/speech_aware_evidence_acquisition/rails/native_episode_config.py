@@ -1440,6 +1440,8 @@ def load_native_episode_config(
         if pipeline["schema"].endswith("-v2") and values.get("slurp_projection_v3_delivery"):
             raise ValueError("v2 derived delivery does not yet support run-level projection")
         expected_policy = "phase-native-intent-slot-" + pipeline["slot_mode"].replace("_", "-") + ("-v2" if pipeline["schema"].endswith("-v2") else "-v1")
+        if "coverage_recovery" in pipeline:
+            expected_policy = "phase-native-intent-slot-batched-recovery-v1"
         if program.program_id != expected_policy:
             raise ValueError("intent-slot mode differs from its configured program")
         if raw.get("finite_completion_policy") != "deliver-latest-or-abstain":
@@ -2556,6 +2558,8 @@ def load_native_episode_config(
     ceiling = roles[0].max_iterations + (revisions + 1) * per_revision
     if pipeline_json is not None and pipeline["slot_mode"] == "per_candidate":
         ceiling += pipeline["max_candidates"] - 1
+    if pipeline_json is not None and "coverage_recovery" in pipeline:
+        ceiling += pipeline["coverage_recovery"]["max_extra_contacts"]
     ceiling += refreshes * roles[0].max_iterations
     if variant_fans_out_once:
         ceiling += variant_arm_count_for_ceiling - 1

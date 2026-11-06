@@ -6,7 +6,7 @@ import json
 import jsonschema
 import pytest
 
-from speech_aware_evidence_acquisition.rails.adapters.slurp_intent_slot import validate_response
+from speech_aware_evidence_acquisition.rails.adapters.slurp_intent_slot import classify_slot_coverage, validate_response
 from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import (
     SCHEMA_V2, candidates, canonical, derive_answer, digest, dynamic_decision_format,
     dynamic_slot_format, slot_results, validate_evidence_refs, validate_receipt,
@@ -65,6 +65,29 @@ def test_dynamic_slot_coverage_and_decision_schema():
     with pytest.raises(ValueError):
         slot_results(canonical({'candidates': [a, a]}), ids)
     assert dynamic_decision_format(ids)['json_schema']['schema']['properties']['candidate_id']['enum'] == ids
+
+
+def test_partial_slot_classification_preserves_valid_source_and_refuses_ambiguity():
+    ids = ['play_music', 'play_radio']
+    fmt = dynamic_slot_format(SFORMAT, ids)
+    context = {'candidates': [{'candidate_id': cid} for cid in ids],
+               'evidence_inventory': inventory(ids)}
+    valid = {'candidate_id': ids[0], 'entities': [{'type': 'person', 'filler': 'Alice'}],
+             'evidence_refs': ['audio'], 'unresolved_fields': []}
+    broken = {'candidate_id': ids[1], 'entities': [{'type': 'person', 'filler': ''}],
+              'evidence_refs': [], 'unresolved_fields': []}
+    report = classify_slot_coverage(text=canonical({'candidates': [valid, broken]}),
+                                    response_format=fmt, context=context, config=CFG)
+    assert report['valid'] == {ids[0]: valid}
+    assert report['missing'] == [ids[1]] and ids[1] in report['invalid']
+    broken['entities'][0]['filler'] = 'Bob'
+    broken['evidence_refs'] = ['unprovided']
+    assert classify_slot_coverage(text=canonical({'candidates': [valid, broken]}),
+        response_format=fmt, context=context, config=CFG)['missing'] == [ids[1]]
+    for rows in ([valid, valid], [valid, dict(broken, candidate_id='foreign')]):
+        with pytest.raises(ValueError):
+            classify_slot_coverage(text=canonical({'candidates': rows}),
+                                   response_format=fmt, context=context, config=CFG)
 
 
 def test_raw_three_node_replay_and_tamper():
@@ -130,6 +153,26 @@ def test_v2_preparation_and_recovery_admission(mode):
     assert len(load_phase_material_specs(prepared, program)) == 5
     assert prepared['native_episode']['intent_slot_pipeline']['schema'] == SCHEMA_V2
     assert prepared['task_instruction_template'].endswith('context_v2.txt')
+    prepared.update(transport='vllm', arm='raw-speech-agent-native-tools', phase_tools={})
+    assert native_contact_custody_enabled(prepared)
+
+
+def test_coverage_recovery_preparation_has_separate_identity_and_budget():
+    import sys
+    from pathlib import Path
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
+    root = Path(__file__).resolve().parents[2]
+    sys.path.insert(0, str(root / 'scripts/analysis'))
+    from derive_lock_only_baseline import derive as lock
+    from prepare_intent_slot_candidate import derive
+    source = json.loads((root / 'configs/baseline/slurp-native-stage3-l338-lever-column-fold-b-baseline-raw-port-v1.json').read_text())
+    prepared = derive(lock(source), 'batched', 'v2', True, True)
+    program = default_phase_program(prepared['policy'])
+    assert program.max_contacts == 6
+    assert load_native_episode_config(prepared, program).max_contacts == 6
+    assert prepared['native_episode']['intent_slot_pipeline']['answer_only_fallback'] == 'off'
     prepared.update(transport='vllm', arm='raw-speech-agent-native-tools', phase_tools={})
     assert native_contact_custody_enabled(prepared)
 

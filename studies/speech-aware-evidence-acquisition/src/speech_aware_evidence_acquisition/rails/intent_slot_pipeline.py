@@ -23,7 +23,7 @@ def digest(value):
 
 def parse_config(raw):
     fields = {"schema", "slot_mode", "max_candidates", "candidate_outside_recovery"}
-    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback"}:
+    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery"}:
         raise ValueError("intent_slot_pipeline requires schema, slot_mode, max_candidates and candidate_outside_recovery")
     if raw["schema"] not in {SCHEMA, SCHEMA_V2} or raw["slot_mode"] not in {"batched", "per_candidate"}:
         raise ValueError("unsupported intent-slot graph/schema version or slot mode")
@@ -44,6 +44,16 @@ def parse_config(raw):
             raise ValueError("node rails require explicit answer_only_fallback: budgeted-v1 or off")
     elif "answer_only_fallback" in raw:
         raise ValueError("answer_only_fallback requires node rails")
+    if "coverage_recovery" in raw:
+        recovery = raw["coverage_recovery"]
+        if (raw.get("node_rails") != "sdk-handoff-v1" or raw["slot_mode"] != "batched" or raw["max_candidates"] != 3
+                or raw.get("answer_only_fallback") not in {"off", "budgeted-v1"}
+                or not isinstance(recovery, Mapping)
+                or set(recovery) != {"strategy", "max_extra_contacts"}
+                or recovery["strategy"] != "complete-original-candidate-set-v1"
+                or type(recovery["max_extra_contacts"]) is not int
+                or not 1 <= recovery["max_extra_contacts"] <= raw["max_candidates"]):
+            raise ValueError("invalid bounded Slot coverage recovery policy")
     return dict(raw)
 
 
@@ -160,6 +170,8 @@ def prompt_context(config, state, role_kind):
             # the full source hash recorded separately in the stage context.
             payload["perception_source"] = {"response_text_sha256": context.get("normalized_perception_sha256", hashlib.sha256(normalized.encode()).hexdigest())}
         payload["evidence_inventory"] = context["evidence_inventory"]
+        if role_kind == "slot" and context.get("coverage_repair"):
+            payload["coverage_repair"] = context["coverage_repair"]
         return "\n\nCandidate-conditioned pipeline context: " + canonical(payload)
     if role_kind == "perception":
         payload["max_candidates"] = config["max_candidates"]
@@ -181,8 +193,70 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
         raise ValueError("invalid intent-slot candidate identity")
     visits = receipt["role_visits"]
     slots = block["slot_sources"]
-    expected = [ids] if block["slot_mode"] == "batched" else [[cid] for cid in ids]
-    if [s["candidate_ids"] for s in slots] != expected:
+    recovery = block.get("coverage_recovery")
+    if recovery:
+        config = parse_config(block.get("recovery_config"))
+        if config.get("coverage_recovery") != recovery or digest(config) != block.get("config_sha256"):
+            raise ValueError("Slot recovery config identity differs")
+    expected = ([ids] + [s["candidate_ids"] for s in slots[1:]] if recovery else
+                [ids] if block["slot_mode"] == "batched" else [[cid] for cid in ids])
+    if recovery and (not slots or len(slots) - 1 > recovery["max_extra_contacts"]
+                     or any(len(s["candidate_ids"]) != 1 for s in slots[1:])):
+        raise ValueError("invalid Slot recovery contact groups")
+    if recovery:
+        extras = len(slots) - 1
+        for visit in visits:
+            execution = visit.get("execution_receipt", {})
+            contacts = execution.get("contacts", [])
+            if not isinstance(contacts, list) or len(contacts) not in (1, 2):
+                raise ValueError("invalid coverage recovery contact chain")
+            if len(contacts) == 2:
+                extras += 1
+                parent, child = contacts
+                if (config.get("answer_only_fallback") != "budgeted-v1"
+                        or child.get("agent_contact_id") != parent.get("agent_contact_id", "") + ":answer-only"
+                        or execution.get("final_contact") != child):
+                    raise ValueError("invalid answer-only parent-child identity")
+                if trace_records is not None:
+                    for contact in contacts:
+                        rid = contact["request_id"]
+                        request = trace_records.get(rid + "/request", {})
+                        response = trace_records.get(rid + "/response", {})
+                        payload = request.get("payload", {})
+                        history = payload.get("history", [])
+                        if (request.get("payload_sha256") != contact.get("request_sha256")
+                                or not history or history[-1].get("contact_id") != contact.get("agent_contact_id")
+                                or response.get("response_sha256") != contact.get("response_sha256")
+                                or response.get("response_text_sha256") != contact.get("response_text_sha256")
+                                or not isinstance(response.get("text"), str)
+                                or hashlib.sha256(response["text"].encode()).hexdigest() != contact.get("response_text_sha256")):
+                            raise ValueError("answer-only contact differs from archived request or response")
+                    from ..core.reasoning_knobs import answer_only_decoding, fallback_reserve
+                    parent_payload = trace_records[parent["request_id"] + "/request"]["payload"]
+                    child_payload = trace_records[child["request_id"] + "/request"]["payload"]
+                    parent_decoding = parent_payload.get("decoding_params", {})
+                    child_decoding = child_payload.get("decoding_params", {})
+                    if fallback_reserve(parent_decoding) is None or child_decoding != answer_only_decoding(parent_decoding):
+                        raise ValueError("answer-only decoding differs from parent")
+                    parent_response = trace_records[parent["request_id"] + "/response"]
+                    relation = trace_records.get(child["agent_contact_id"] + "/recovery-parent", {})
+                    if (parent_response.get("text") != "" or relation != {
+                            "org_recovery_parent_contact_id": parent["agent_contact_id"],
+                            "org_recovery_parent_request_id": parent["request_id"],
+                            "org_recovery_parent_response_sha256": parent["response_sha256"],
+                            "org_recovery_child_contact_id": child["agent_contact_id"]}):
+                        raise ValueError("answer-only parent relationship differs from trace")
+        if extras > recovery["max_extra_contacts"]:
+            raise ValueError("coverage recovery shared budget exceeded")
+        retained = slots[0].get("valid_ids")
+        if (not isinstance(retained, list) or len(set(retained)) != len(retained)
+                or any(cid not in ids for cid in retained)):
+            raise ValueError("invalid initial Slot recovery sources")
+        missing = [cid for cid in ids if cid not in retained]
+        if ([s["candidate_ids"] for s in slots[1:]] != [[cid] for cid in missing]
+                or any(s.get("valid_ids") != s["candidate_ids"] for s in slots[1:])):
+            raise ValueError("Slot recovery sources do not fill exactly the missing branches")
+    if (not recovery and [s["candidate_ids"] for s in slots] != expected) or (recovery and slots[0]["candidate_ids"] != ids):
         raise ValueError("slot receipt groups differ from evaluated candidates")
     if [v["stage"] for v in visits] != ["perception"] + ["slot"] * len(slots) + ["solver"]:
         # Intermediate failures carry no completed pipeline receipt until the
@@ -235,11 +309,27 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                     raise ValueError("evidence mapping response identity differs")
                 rows = ((document(response.get("text"))["candidates"] if block.get("schema") == SCHEMA_V2
                          else candidates(response.get("text"), 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict")))
-                        if binding["stage"] == "perception" else slot_results(response.get("text"), expected).values())
+                        if binding["stage"] == "perception" else
+                        ([r for r in document(response.get("text"))["candidates"] if r.get("candidate_id") in slots[sources.index(source)-1]["valid_ids"]]
+                         if recovery else slot_results(response.get("text"), expected).values()))
                 if validate_evidence_refs(rows, binding["inventory"], expected, policy=block.get("evidence_policy", "strict")) != binding.get("mappings"):
                     raise ValueError("evidence mapping differs from raw response")
         for slot in slots:
             text = trace_records[slot["source"]["request_id"] + "/response"].get("text")
+            if recovery:
+                from .adapters.slurp_intent_slot import classify_slot_coverage
+                request = trace_records[slot["source"]["request_id"] + "/request"]
+                response_format = request["payload"]["decoding_params"]["response_format"]
+                binding = block["evidence_bindings"][slots.index(slot) + 1]
+                report = classify_slot_coverage(text=text, response_format=response_format,
+                    context={"candidates": [{"candidate_id": cid} for cid in slot["candidate_ids"]],
+                             "evidence_inventory": binding["inventory"]}, config=block)
+                if list(report["valid"]) != slot["valid_ids"]:
+                    raise ValueError("Slot recovery valid branches differ from archived response")
+                actual = report["valid"]
+                if digest(actual) != slot["result_sha256"]:
+                    raise ValueError("Slot recovery result differs from archived response")
+                continue
             if block.get("node_rails") == "sdk-handoff-v1":
                 from .candidate_handoff import normalized_response
                 text = normalized_response("slot", text, {"candidates": [{"candidate_id": cid} for cid in slot["candidate_ids"]]}, {"max_candidates": 3})
@@ -263,10 +353,19 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
             combined = {}
             for slot in slots:
                 raw = trace_records[slot["source"]["request_id"] + "/response"]["text"]
+                if recovery:
+                    rows = [row for row in document(raw)["candidates"] if row.get("candidate_id") in slot["valid_ids"]]
+                    parsed = slot_results(canonical({"candidates": rows}), slot["valid_ids"])
+                    if set(combined) & set(parsed):
+                        raise ValueError("Slot repair overwrote an existing result")
+                    combined.update(parsed)
+                    continue
                 if block.get("node_rails") == "sdk-handoff-v1":
                     from .candidate_handoff import normalized_response
                     raw = normalized_response("slot", raw, {"candidates": [{"candidate_id": cid} for cid in slot["candidate_ids"]]}, {"max_candidates": 3})
                 combined.update(slot_results(raw, slot["candidate_ids"]))
+            if set(combined) != set(ids):
+                raise ValueError("Slot recovery does not cover original candidates")
             answer = derive_answer(block["selected_candidate_id"], combined)
             if hashlib.sha256(answer.encode()).hexdigest() != block.get("derived_answer_sha256"):
                 raise ValueError("derived answer differs from Slot source")

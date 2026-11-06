@@ -623,6 +623,13 @@ def _contact_receipt(completion: CoreCompletion) -> dict[str, str]:
     }
 
 
+@dataclass(frozen=True)
+class NativeRecoveryCompletion:
+    """Two actual responses for one SDK invocation, in source order."""
+    parent: CoreCompletion
+    child: CoreCompletion
+
+
 class FrozenCoreRoleModel:
     """Public ``ReActAgent.set_llm`` target backed only by a metered callback."""
 
@@ -723,6 +730,16 @@ class FrozenCoreRoleModel:
         completion = self._metered_request(request)
         if inspect.isawaitable(completion):
             completion = await completion
+        recovery = completion if isinstance(completion, NativeRecoveryCompletion) else None
+        if recovery is not None:
+            parent, completion = recovery.parent, recovery.child
+            try:
+                parent.assert_binding(sample_id=context.sample_id,
+                    agent_contact_id=context.agent_contact_id, response_text=parent.text)
+                completion.assert_binding(sample_id=context.sample_id,
+                    agent_contact_id=context.agent_contact_id + ":answer-only", response_text=completion.text)
+            except FrozenCoreClientError as error:
+                raise FrozenCoreRoleModelError("invalid recovery parent-child binding") from error
         if not isinstance(completion, CoreCompletion):
             raise FrozenCoreRoleModelError(
                 "metered_request must return a source-bound CoreCompletion"
@@ -734,7 +751,7 @@ class FrozenCoreRoleModel:
         try:
             completion.assert_binding(
                 sample_id=context.sample_id,
-                agent_contact_id=context.agent_contact_id,
+                agent_contact_id=(context.agent_contact_id + ":answer-only" if recovery else context.agent_contact_id),
                 response_text=completion.text,
             )
         except FrozenCoreClientError as error:
@@ -743,6 +760,8 @@ class FrozenCoreRoleModel:
             ) from error
         contacts = self._receipt_contacts.get()
         if contacts is not None:
+            if recovery is not None:
+                contacts.append(_contact_receipt(recovery.parent))
             contacts.append(_contact_receipt(completion))
         return project_native_assistant_message(completion)
 

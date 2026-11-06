@@ -1427,6 +1427,7 @@ def default_controller_factory(program: PhaseProgram) -> Callable[[str], Evidenc
 
 
 _PROGRAM_CONFIG_FILENAMES: Mapping[str, str] = {
+    "phase-native-intent-slot-batched-recovery-v1": "phase-native-intent-slot-batched-recovery-v1.json",
     "phase-native-intent-slot-batched-v2": "phase-native-intent-slot-batched-v2.json",
     "phase-native-intent-slot-per-candidate-v2": "phase-native-intent-slot-per-candidate-v2.json",
     "phase-native-intent-slot-batched-v1": "phase-native-intent-slot-batched-v1.json",
@@ -2287,6 +2288,9 @@ def register_phase_programs_v1() -> None:
         if _program_id not in registered:
             AGENT_CONTROLLERS.register(_program_id,
                 default_controller_factory(default_phase_program(_program_id)))
+    if "phase-native-intent-slot-batched-recovery-v1" not in registered:
+        AGENT_CONTROLLERS.register("phase-native-intent-slot-batched-recovery-v1",
+            default_controller_factory(default_phase_program("phase-native-intent-slot-batched-recovery-v1")))
     unregistered = set(_PROGRAM_CONFIG_FILENAMES) - set(AGENT_CONTROLLERS.names())
     if unregistered:
         raise RailsControllersError(

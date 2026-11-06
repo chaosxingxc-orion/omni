@@ -79,6 +79,45 @@ def test_v2_sdk_rails_selection_is_explicit_and_restricted():
     with pytest.raises(ValueError,match='explicit supported'):NodeWorkload(c)
 
 
+def test_recovery_workload_reserves_six_contacts():
+    c=config();c['node_arm']=ARMS[2]
+    c['pipeline']={'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'off',
+                   'coverage_recovery':{'strategy':'complete-original-candidate-set-v1','max_extra_contacts':3}}
+    assert NodeWorkload(c).CONTACTS == 6
+    assert NodeWorkload(c).contact_budgets() == {
+        'normal_generation_calls': 240, 'fallback_inclusive_cap': 480, 'fit_calls': 480}
+
+
+@pytest.mark.parametrize('extra', [1, 2, 3])
+def test_recovery_workload_budget_comes_from_config(extra):
+    c = config(); c['node_arm'] = ARMS[2]
+    c['pipeline'] = {'protocol_version': 'v2', 'node_rails': 'sdk-handoff-v1',
+                     'answer_only_fallback': 'off', 'coverage_recovery': {
+                         'strategy': 'complete-original-candidate-set-v1', 'max_extra_contacts': extra}}
+    job = NodeWorkload(c)
+    assert job.CONTACTS == 3 + extra
+    assert job.contact_budgets()['fit_calls'] == 80 * (3 + extra)
+
+
+def test_recovery_workload_derive_binds_fit_and_generation_caps(tmp_path, monkeypatch):
+    import intent_slot_workload as workload
+    c = config(); c['node_arm'] = ARMS[2]
+    c['pipeline'] = json.loads((ROOT / 'configs/examples/psd-slot-coverage-recovery-v1.json').read_text())
+    read_asset = workload.read_asset
+    monkeypatch.setattr(workload, 'read_asset', lambda repo, relative: read_asset(ROOT, relative))
+    job = NodeWorkload(c)
+    job.material_checked = lambda *args: ({'source_roster': {}}, {
+        'roster': {'roster_id': 'fixture', 'items': [{'audio_seconds': 1}] * 80,
+                   'split_identity_hash': 'a' * 64}, 'view': {}})
+    job.runtime_binding = lambda *args: {
+        'model_fragment': 'bf16-thinking-tfgrpo-tp4-ctx48k-v1', 'service_session': 'fixture'}
+    base, experiment, _, _, _ = job.derive(tmp_path, tmp_path, {})
+    assert base['policy'] == 'phase-native-intent-slot-batched-recovery-v1'
+    assert base['native_contact_fit']['contact_cap'] == 480
+    assert experiment['execution_plan']['planned_model_calls'] == 480
+    assert base['native_episode']['intent_slot_pipeline']['coverage_recovery'] == c['pipeline']['coverage_recovery']
+
+
 def test_decision_policy_requires_v2():
     c=config();c['node_arm']=ARMS[2];c['decision_policy']={}
     with pytest.raises(ValueError,match='Decision policy requires'):
@@ -116,3 +155,23 @@ def test_decision_policy_changes_only_decision_material_and_renders(tmp_path,mon
     c['decision_policy']['instruction_template']['sha256']='0'*64
     with pytest.raises(ValueError,match='template pin differs'):
         derive(c)
+
+
+def test_recovery_workload_combines_fallback_and_configured_budget(tmp_path, monkeypatch):
+    import intent_slot_workload as workload
+    c = config(); c['node_arm'] = ARMS[2]
+    c['pipeline'] = {'protocol_version': 'v2', 'node_rails': 'sdk-handoff-v1',
+        'answer_only_fallback': 'budgeted-v1', 'coverage_recovery': {
+            'strategy': 'complete-original-candidate-set-v1', 'max_extra_contacts': 2}}
+    read_asset = workload.read_asset
+    monkeypatch.setattr(workload, 'read_asset', lambda repo, relative: read_asset(ROOT, relative))
+    job = NodeWorkload(c)
+    job.material_checked = lambda *args: ({'source_roster': {}}, {
+        'roster': {'roster_id':'fixture', 'items':[{'audio_seconds':1}] * 80,
+                   'split_identity_hash':'a' * 64}, 'view': {}})
+    job.runtime_binding = lambda *args: {'model_fragment':'bf16-thinking-tfgrpo-tp4-ctx48k-v1', 'service_session':'fixture'}
+    base, experiment, _, _, _ = job.derive(tmp_path, tmp_path, {})
+    pipeline = base['native_episode']['intent_slot_pipeline']
+    assert pipeline['answer_only_fallback'] == 'budgeted-v1'
+    assert pipeline['coverage_recovery']['max_extra_contacts'] == 2
+    assert base['native_contact_fit']['contact_cap'] == experiment['execution_plan']['planned_model_calls'] == 400
