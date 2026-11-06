@@ -6893,7 +6893,7 @@ class FlightRuntime:
             "request_id_prefix": self._request_id_prefix,
         }
         from .native_recovery import native_contact_custody_enabled
-        if native_contact_custody_enabled(baseline_values):
+        if native_contact_custody_enabled(baseline_values, allow_fresh_normalized=True):
             # Operational custody, outside model inputs. This is capture only;
             # journal replay still requires explicit recovery validation.
             kwargs['contact_journal'] = True
@@ -8785,7 +8785,7 @@ class FlightRuntime:
                 native_fit_gate.receipts = []
             else:
                 from .native_recovery import native_contact_custody_enabled
-                if native_contact_custody_enabled(self._composed.values):
+                if native_contact_custody_enabled(self._composed.values, allow_fresh_normalized=True):
                     from ..native_fit_recovery import RecoverableNativeFitGate
                     native_fit_gate = RecoverableNativeFitGate(
                         self, plan,

@@ -283,6 +283,15 @@ def test_sdk_known_invalid_repair_has_successor(tmp_path, budget):
         native['roles'][kind]['max_iterations'] = 0
     native['roles']['slot'] = {'phase_id': 'slot', 'max_iterations': 1}
     assert native_contact_custody_enabled(values)
+    native['intent_slot_pipeline'] = {**policy, 'reference_normalizer':'quarantine-unsupplied-v1'}
+    assert not native_contact_custody_enabled(values)
+    assert native_contact_custody_enabled(values, allow_fresh_normalized=True)
+    for extension in ({'perception_length_recovery':'compact-reask-v1'},
+                      {'reference_normalizer':'quarantine-unsupplied-v1', 'perception_length_recovery':'compact-reask-v1'}):
+        native['intent_slot_pipeline'] = {**policy, **extension}
+        assert native_contact_custody_enabled(values, allow_fresh_normalized=True)
+        assert not native_contact_custody_enabled(values)
+    native['intent_slot_pipeline'] = policy
     replay = load_native_recovery(declaration,
                                   data_root=old.world.data_root, plan=plan, arm=old.client.arm)
     original_checkpoint = writer.path.read_bytes()

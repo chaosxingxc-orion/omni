@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "instruction": "CPU准备与分析、NPU推理两条异步队列；输入提前READY，固定资产复用；生成释放即接续，不等评分报告。",
+  "instruction": "当前先利用率/样本负载、100%有效回答、FoldA对齐P→Solver；TFRL准备后置。CPU与NPU异步，已有真实推理继续。",
   "resources": {
     "inference_instances": 2,
     "cards_per_instance": 4,
@@ -53,10 +53,11 @@
       "depends_on": [
         "baseline-selection"
       ],
-      "status": "main_integrated_final_cpu_chain_complete_held",
+      "status": "deferred_by_user_system_coverage_priority",
       "rows_per_member": 625,
       "members": 2,
-      "dependency_note": "与Fold B并行；同策略K2，不能混OFF/ON。"
+      "dependency_note": "与Fold B并行；同策略K2，不能混OFF/ON。",
+      "prior_status": "main_integrated_final_cpu_chain_complete_held"
     },
     {
       "id": "construction-score",
@@ -64,7 +65,8 @@
       "depends_on": [
         "construction-k2"
       ],
-      "status": "pending"
+      "status": "deferred_by_user_system_coverage_priority",
+      "prior_status": "pending"
     },
     {
       "id": "E1",
@@ -75,7 +77,7 @@
       "depends_on": [
         "E1-prepare"
       ],
-      "status": "evidence_backed_proposal",
+      "status": "deferred_by_user_system_coverage_priority",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/gepa_v2_node_adapter.py",
@@ -103,7 +105,8 @@
         }
       ],
       "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
-      "resource": "NPU-first-free"
+      "resource": "NPU-first-free",
+      "prior_status": "evidence_backed_proposal"
     },
     {
       "id": "E2",
@@ -114,7 +117,7 @@
       "depends_on": [
         "E2-prepare"
       ],
-      "status": "evidence_backed_proposal",
+      "status": "deferred_by_user_system_coverage_priority",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/gepa_v2_node_adapter.py",
@@ -142,7 +145,8 @@
         }
       ],
       "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
-      "resource": "NPU-first-free"
+      "resource": "NPU-first-free",
+      "prior_status": "evidence_backed_proposal"
     },
     {
       "id": "E3",
@@ -153,7 +157,7 @@
       "depends_on": [
         "E3-prepare"
       ],
-      "status": "evidence_backed_proposal",
+      "status": "deferred_by_user_system_coverage_priority",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_tfgrpo_adapter.py",
@@ -193,7 +197,8 @@
         }
       ],
       "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
-      "resource": "NPU-first-free"
+      "resource": "NPU-first-free",
+      "prior_status": "evidence_backed_proposal"
     },
     {
       "id": "E4",
@@ -204,7 +209,7 @@
       "depends_on": [
         "E4-prepare"
       ],
-      "status": "evidence_backed_proposal",
+      "status": "deferred_by_user_system_coverage_priority",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_tfgrpo_adapter.py",
@@ -244,7 +249,8 @@
         }
       ],
       "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
-      "resource": "NPU-first-free"
+      "resource": "NPU-first-free",
+      "prior_status": "evidence_backed_proposal"
     },
     {
       "id": "E5",
@@ -298,7 +304,7 @@
       "depends_on": [
         "E6-prepare"
       ],
-      "status": "evidence_backed_proposal",
+      "status": "deferred_by_user_system_coverage_priority",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/external_slot_candidate.py",
@@ -326,7 +332,8 @@
         }
       ],
       "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
-      "resource": "NPU-first-free"
+      "resource": "NPU-first-free",
+      "prior_status": "evidence_backed_proposal"
     },
     {
       "id": "E1-prepare",
@@ -334,8 +341,9 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "awaiting_required_construction_feedback",
-      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+      "status": "deferred_by_user_system_coverage_priority",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
+      "prior_status": "awaiting_required_construction_feedback"
     },
     {
       "id": "E2-prepare",
@@ -343,8 +351,9 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "awaiting_required_construction_feedback",
-      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+      "status": "deferred_by_user_system_coverage_priority",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
+      "prior_status": "awaiting_required_construction_feedback"
     },
     {
       "id": "E3-prepare",
@@ -352,8 +361,9 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "awaiting_required_construction_feedback",
-      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+      "status": "deferred_by_user_system_coverage_priority",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
+      "prior_status": "awaiting_required_construction_feedback"
     },
     {
       "id": "E4-prepare",
@@ -361,8 +371,9 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "awaiting_required_construction_feedback",
-      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+      "status": "deferred_by_user_system_coverage_priority",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
+      "prior_status": "awaiting_required_construction_feedback"
     },
     {
       "id": "E6-prepare",
@@ -370,8 +381,9 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "awaiting_required_construction_feedback",
-      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+      "status": "deferred_by_user_system_coverage_priority",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
+      "prior_status": "awaiting_required_construction_feedback"
     },
     {
       "id": "reference-perception-prepare",
@@ -437,9 +449,10 @@
   ],
   "updated_at": "2026-11-06T15:27:07.348692+00:00",
   "parallel_cpu_tasks": {
-    "paired_analysis": "prepare actual v5 sealed-result comparison config and CPU-only trigger",
-    "terminal_trajectory_audit": "check construction reader handling of completed early failure episodes",
-    "efficiency": "existing-evidence diagnosis accepted; no current runtime changes"
+    "coverage_load_analysis": "running; use existing matching-window evidence",
+    "valid_answer_implementation": "running; audited auxiliary-reference handling and recovery",
+    "paired_analysis": "armed independent CPU queue; waits official score success",
+    "tfrl_reader": "interrupted and retained; deferred"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
@@ -449,5 +462,13 @@
     "full_verification_eliminated": false,
     "native_successor_queue_status": "both_armed_waiting_for_generation_release",
     "queue_compatibility_commit": "25c6386f"
+  },
+  "priority_override": {
+    "effective": "user_latest",
+    "target_valid_answers": 1080,
+    "total_fold_a": 1080,
+    "historical_P_solver_intent": 0.8574074074074074,
+    "historical_P_solver_slu_f1": 0.7331392140771492,
+    "tfrl_preparation": "deferred"
   }
 }
