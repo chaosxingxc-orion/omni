@@ -20,7 +20,7 @@
 |Perception长度恢复|CPU→就绪池|已合main81d7ea7b；配置化模板、139项相关测试及8项集成测试；stage/prepare/register/admission成功；自动绑定器已核实存活，等引用候选真实容器身份|
 |Slot长度恢复|CPU|已知两条非空截断未触发空响应补答；修复已合main c3d1dc17，136相关+3定点测试通过；完整候选已准入；已绑定真实引用前驱的生成释放，P-only长度候选HOLD|
 |B故障后接续|NPU-B|旧请求全部已知、原租约结算成功；已21:04:07复用原completeON配置启动，主线程确认running及真实HTTP成功；P后继已绑定真实生成释放，Slot等待P实际容器，两个binder交接已主审，不等待旧结果评分|
-|B旧结果封存恢复|CPU|唯一正式评分接续容器已启动，复用1080已生成结果；未验收FINALIZED，不重推模型|
+|B旧结果封存恢复|CPU|隔离接续已FINALIZED，官方分数主审通过，0新模型调用；覆盖及k8ON配对接续|
 |紧凑输出P/Slot|NPU-A后继|正式准备及A路由主审完成，binder已启动；完整覆盖OFF释放→紧凑P→紧凑Slot；同完整覆盖ON科学父，不等CPU评分|
 |Decision条件证据|CPU准备→NPU-A|仅D提示候选已合main715d22f4，四阶段准备真实通过主审；binder已启动，紧凑Slot生成释放后接续；未推理|
 |完整覆盖合同审计|CPU|已执行固定镜像reader并验收1080合法；不等官方评分、不阻NPU后继|
