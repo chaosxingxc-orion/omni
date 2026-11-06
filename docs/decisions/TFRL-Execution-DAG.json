@@ -483,11 +483,15 @@
       "depends_on": [
         "coverage-ready"
       ],
-      "status": "running_real_dispatch_verified",
+      "status": "running_first_http_completed_not_business_coverage_verified",
       "priority": 1,
       "rows": 1080,
       "runtime_predecessor": "E5 OFF generation; CPU score not required",
-      "scope": "reference quarantine plus existing Slot coverage recovery; Perception length not included"
+      "scope": "reference quarantine plus existing Slot coverage recovery; Perception length not included",
+      "completed_rows": 93,
+      "observed_at_utc": "2026-11-06T18:31:12Z",
+      "wall_seconds_per_complete_row": 10.094546343690606,
+      "estimated_remaining_seconds": 9963.317241222629
     },
     {
       "id": "coverage-score",
@@ -632,8 +636,33 @@
       "depends_on": [
         "off-semantic-gap-analysis"
       ],
-      "status": "accepted_merged_cpu_production_preparation_running",
+      "status": "stage_prepare_register_reported_complete_admission_running_final_review_pending",
       "scope": "at most two evidence-backed P/Slot/Decision prompt candidates; fixed KB and normalizer; no model calls"
+    },
+    {
+      "id": "node-prompt-p-evaluate",
+      "resource": "NPU-B",
+      "depends_on": [
+        "node-prompt-candidates"
+      ],
+      "status": "not_ready_admission_running",
+      "rows": 1080,
+      "control": "complete-coverage-on-evaluate",
+      "changed_node": "perception",
+      "after_generation_release": "complete-coverage-on-evaluate"
+    },
+    {
+      "id": "node-prompt-slot-evaluate",
+      "resource": "NPU-B",
+      "depends_on": [
+        "node-prompt-candidates"
+      ],
+      "status": "not_ready_admission_running",
+      "rows": 1080,
+      "control": "complete-coverage-on-evaluate",
+      "changed_node": "slot",
+      "after_generation_release": "node-prompt-p-evaluate",
+      "dependency_note": "Resource order only; not dependent on P candidate results or CPU scoring"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -655,12 +684,12 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T17:49:26Z",
+  "updated_at": "2026-11-06T18:32:20Z",
   "parallel_cpu_tasks": {
-    "valid_answer_implementation": "Slot length implementation running; Perception merged",
-    "deployment": "Reference coverage admitted and queue armed; Perception candidate follows",
-    "scoring_recovery": "Sol root cause accepted; Terra isolated scoring tool implementation running",
-    "paired_analysis": "old queue failed; new score-dependent continuation required",
+    "valid_answer_implementation": "Reference and P/Slot recovery merged; full online coverage not proven",
+    "deployment": "Two common-parent node prompt candidates admission running; complete coverage queues armed",
+    "scoring_recovery": "k16 OFF official CPU recovery running; no model replay",
+    "paired_analysis": "Full v5 paired results accepted; 58 strict regressions node analysis running",
     "tfrl_reader": "deferred"
   },
   "dispatch_policy": {

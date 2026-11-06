@@ -110,3 +110,12 @@ FIT容量等待均值约9微秒，锁等待约2微秒；当前证据不支持继
 后续效率对照可复用现有原生metrics，在同服务身份与任务窗口取计数差，检查重启/计数回退后再计算；无需先改引擎源代码或新建框架。优先测试客户端并发对decode吞吐与尾延迟的影响，仍保持提示/覆盖政策不变。当前没有足够证据优先重做输入缓存或FIT锁；也没有已实测加速收益。
 
 聚合证据见仓库 `studies/speech-aware-evidence-acquisition/docs/results/PSD-Recent-Efficiency-Evidence.json`；原始硬件副本摘要已锁定，服务一次查询另标生命周期范围，不与同窗吞吐混算。
+
+
+## 引用修复后继的启动窗口
+
+复用2026-11-06 18:29:39 UTC已有normal日志前缀，未增加硬件轮询或模型调用。该后继容器18:15:33.604启动，首HTTP18:20:18.539开始，相隔284.94秒。runtime构造1.43秒，prepared资产校验71.21秒；校验结束到首个已观察音频事件87.61秒，首音频事件到首HTTP111.88秒。后两个区间尚未完整拆分，不能全部归为音频搬运。首HTTP已完成，耗时468.21秒、status=ok；HTTP完成不证明业务答案合法。
+
+当前main调用顺序为：构造runtime→prepared校验→campaign preflight→preprocess→获取GenerationLease→serve/run。校验与预载均在租约前，但后继进程目前在前驱释放后才启动，因此仍占用了实例无推理的交接窗口。后续可让同一个后继worker提前完成不依赖服务的准备，再等待释放事件；这属于待实施优化，不能直接跳过校验或提前获取推理租约。音频缓存为进程内缓存，另起CPU进程预载不会自动填充worker缓存。prepared校验在同runtime内已有memoization，不是每条样本重复执行。
+
+另需区分计时边界：generation-release中的campaign计时从runtime构造与prepared校验之后开始，不是容器总墙钟。持续阶段瓶颈仍需通过同窗Core、请求负载与完成吞吐判断；缩短一次启动不代表持续吞吐成倍提升。当前先验收完整覆盖与节点提示收益，保持运行release不变。
