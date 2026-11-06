@@ -1,0 +1,7 @@
+{
+  "schema": "saea-psd-tfgrpo-consumer-v1",
+  "target": "decision",
+  "source": {"relpath": "tfgrpo/source-params.json", "sha256": "REPLACE_WITH_SHA256"},
+  "mapping": {"relpath": "tfgrpo/decision-semantic-map.json", "sha256": "REPLACE_WITH_SHA256"},
+  "template": {"relpath": "configs/probes/psd-tfgrpo-decision.txt", "sha256": "FILLED_BY_COMPILER"}
+}

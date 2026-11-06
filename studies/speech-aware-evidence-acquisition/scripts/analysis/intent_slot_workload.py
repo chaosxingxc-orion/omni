@@ -18,17 +18,19 @@ class NodeWorkload(PairWorkload):
     LABEL='Fixed development native intent Slot Decision ablation'
     def __init__(self,config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material','node_arm'}
-        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
+        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
             raise ValueError('exact native node workload required')
         arm=config['node_arm']
         pipeline=config.get('pipeline')
         if pipeline is not None and (arm != 'enhanced-p-slot-decision' or pipeline != {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}):
             raise ValueError('explicit supported v2 SDK pipeline required')
+        if 'tfgrpo_experience' in config and (pipeline is None or not config.get('population')):
+            raise ValueError('TF-GRPO experience requires a fixed fold and v2 SDK pipeline')
         if 'slot_knowledge' in config and (pipeline is None or not config.get('population')):
             raise ValueError('slot knowledge requires a fixed fold and v2 SDK pipeline')
         if 'decision_policy' in config and pipeline is None:
             raise ValueError('Decision policy requires explicit v2 SDK pipeline')
-        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge')})
+        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience')})
         if not config.get('population') and (len(config['sample_ids'])!=80 or config['sample_ids']!=sorted(config['sample_ids'])):
             raise ValueError('historical stable development80 required')
         if config.get('population'):
@@ -140,6 +142,9 @@ class NodeWorkload(PairWorkload):
         if 'slot_knowledge' in self.config:
             from psd_knowledge_adapter import apply as apply_slot_knowledge
             base=apply_slot_knowledge(base, data, self.config['slot_knowledge'], self.config['sample_ids'])
+        if 'tfgrpo_experience' in self.config:
+            from psd_tfgrpo_adapter import apply as apply_tfgrpo
+            base=apply_tfgrpo(base, repo, data, self.config['tfgrpo_experience'], self.config['sample_ids'], checked['view'], binding['model_fragment'])
         model=read_asset(repo,f"configs/model/{binding['model_fragment']}.json")
         validate_thinking_policy(base['thinking_policy'],model)
         slot=int(model['server_args'][model['server_args'].index('--max-model-len')+1])

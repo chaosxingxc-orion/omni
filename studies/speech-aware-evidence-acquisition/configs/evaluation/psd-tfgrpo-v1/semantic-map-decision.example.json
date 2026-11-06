@@ -1,0 +1,7 @@
+{
+  "schema": "saea-psd-tfgrpo-semantic-map-v1",
+  "target": "decision",
+  "candidate_sha256": "REPLACE_WITH_CANDIDATE_CONTENT_SHA256",
+  "rationale": "Explain how the cited source items apply to choosing among existing candidate IDs.",
+  "items": {"REPLACE_WITH_SOURCE_ITEM_ID": "Conditional comparison of available candidate evidence, without creating entities."}
+}
