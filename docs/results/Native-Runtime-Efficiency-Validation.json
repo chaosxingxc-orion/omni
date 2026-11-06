@@ -375,5 +375,25 @@
       "existing slot-fill, router and resource guard regression"
     ],
     "online_throughput_verified": false
+  },
+  "guard_successor": {
+    "source_commit": "d9c92b0870548e7cfab37f2e952dc2631bbc0f97",
+    "manifest_sha256": "1cbe16b97368a8b0cbc8999765165c44ba94a120768af290c14a96d72c618f01",
+    "files": 7499,
+    "source_inventory_verified": true,
+    "reviewed_source_count": 36,
+    "prior_lease_settled": true,
+    "prior_contacts": 0,
+    "compiler_exit_code": 0,
+    "admission_state": "running",
+    "generation_launched": false,
+    "assets_sha256": "c828e10cf929ac76f4610eff75f51423bcab014764d811670019ccc8083409c6",
+    "admission_sha256": "a732148e0cd9e73f27fe59347ea029bf673d8f460b4cc3febae1dd839ff81137"
+  },
+  "environment_manifest_preflight": {
+    "passed": 61,
+    "seconds": 10.22,
+    "real_stale_configuration_rejected": true,
+    "before_launch_intent": true
   }
 }

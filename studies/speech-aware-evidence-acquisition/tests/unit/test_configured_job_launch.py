@@ -70,6 +70,29 @@ def test_launch_once_with_literal_argv_and_reconcile_container(tmp_path, monkeyp
     assert observed['scientific_success'] != True
 
 
+@pytest.mark.parametrize('workspace', [False, True])
+@pytest.mark.parametrize('failure', [None, 'stale', 'missing-pin'])
+def test_environment_manifest_checked_before_launch_intent(tmp_path, monkeypatch, workspace, failure):
+    path, doc = configured(tmp_path)
+    name = 'SAEA_EXPERIMENT_WORKSPACE_MANIFEST' if workspace else 'SAEA_EXPERIMENT_MANIFEST'
+    digest_name = 'SAEA_EXPERIMENT_WORKSPACE_SHA256' if workspace else name + '_SHA256'
+    doc['environment'][name] = '/data/input.json'
+    if failure != 'missing-pin':
+        doc['environment'][digest_name] = 'c' * 64 if failure == 'stale' else doc['required_inputs'][0]['sha256']
+    path.write_text(json.dumps(doc))
+    docker = Docker(doc)
+    monkeypatch.setattr(m, 'run', docker)
+    m.execute(path, 'layout')
+    if failure is None:
+        assert m.execute(path, 'launch')['state'] == 'running'
+    else:
+        with pytest.raises(ValueError, match='environment manifest'):
+            m.execute(path, 'launch')
+        assert docker.launches == 0
+        assert not (Path(doc['receipt_dir']) / 'launch-intent.json').exists()
+    assert (tmp_path / 'data/input.json').read_text() == '{}'
+
+
 @pytest.mark.parametrize('failure', ['crash', 'error'])
 def test_launch_uncertainty_never_repeats_request(tmp_path, monkeypatch, failure):
     path, doc = configured(tmp_path)

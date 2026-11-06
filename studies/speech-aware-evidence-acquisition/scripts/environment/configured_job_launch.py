@@ -353,6 +353,19 @@ def validate_external_admission(pin, launch=None):
 
 
 def preflight(doc):
+    # Environment pins are consumed inside the container, independently of
+    # required_inputs. Check the actual mount projection before any launch.
+    env = doc['environment']
+    for name in ('SAEA_EXPERIMENT_MANIFEST', 'SAEA_EXPERIMENT_WORKSPACE_MANIFEST'):
+        digest_name = ('SAEA_EXPERIMENT_WORKSPACE_SHA256' if name.endswith('WORKSPACE_MANIFEST')
+                       else name + '_SHA256')
+        if name not in env and digest_name not in env:
+            continue
+        require(name in env and re.fullmatch('[a-f0-9]{64}', env.get(digest_name, '')),
+                'environment manifest requires path and digest: ' + name)
+        host = mapped_input(doc, env[name])
+        require(host.is_file() and not host.is_symlink() and digest(host) == env[digest_name],
+                'environment manifest absent or changed: ' + name)
     if doc.get('external_admission') is not None:
         marker = validate_external_admission(doc['external_admission'], doc)
         if doc['environment'].get('SAEA_EXPERIMENT_WORKSPACE'):
