@@ -1,0 +1,34 @@
+{
+  "schema": "saea-public-verified-result-v1",
+  "run_id": "SAEA-SLURP-PSD-COMPLETE-COVERAGE-FOLD-A-SLOT-OFF-V1",
+  "split": "existing Fold A",
+  "samples": 1080,
+  "valid_answers": 1080,
+  "empty_answers": 0,
+  "official_intent_accuracy": 0.85,
+  "intent_correct": 918,
+  "official_slu_f1": 0.6592171252257297,
+  "exact_slot_f1": 0.548321464903357,
+  "official_port_identity_check_passed": true,
+  "evaluator_commit": "8eb16545762be97ace75334109d73824217311f1",
+  "cost": {
+    "calls": 3259,
+    "prompt_tokens": 35006564,
+    "completion_tokens": 2345631
+  },
+  "evidence": {
+    "outputs_sha256": "203b63723455e61a76a92e691f1c92c93d40fc812bff87929759d2cdb38f3138",
+    "scores_sha256": "424274400c56820babd56207b42accc705619535e425696b88f99345b5c599d9",
+    "generation_manifest_sha256": "71fa47a2b233a97d251028945bccb65239da6cf8e34ce1cb55ab0d06105d2330",
+    "run_manifest_sha256": "75254deaae877670a63ea65444f04f28760b851f2d5c38c8e5d6200ecb137299",
+    "attempt_sha256": "38f49deaf90823a579db1093a8c17b01670bf7cdffa584f5a31dd6f024ea65da"
+  },
+  "score_recovery_receipt_sha256": "646b6f562cd0e2251197ce6a69441867c0d65f3b610a1812b26016553768adbb",
+  "final_state": "FINALIZED",
+  "limitations": [
+    "Aggregate official scores verified; full paired report and uncertainty pending review.",
+    "100% contract validity applies to this fixed Fold A run, not unseen input or all configurations.",
+    "Historical P-to-Solver comparison remains aggregate, not causal or paired.",
+    "Original failed scoring attempt retained; generation not repeated."
+  ]
+}
