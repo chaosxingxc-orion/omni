@@ -4,11 +4,12 @@ import argparse
 import fcntl
 import hashlib
 import json
+import os
 import socket
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(os.environ.get('SAEA_RECONCILE_SOURCE', Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(REPO / 'src'))
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 from speech_aware_evidence_acquisition.core.attempts import AttemptHandle
