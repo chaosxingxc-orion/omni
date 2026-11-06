@@ -279,7 +279,7 @@ def _arrival_free(obj) -> str:
     return text
 
 
-def _fly_with(tmp_path, monkeypatch, name, sample_ids, dispatch, *, max_revisions=1, harness_hook=None):
+def _fly_with(tmp_path, monkeypatch, name, sample_ids, dispatch, *, max_revisions=1, harness_hook=None, runtime_overlay=None):
     from test_flight_resume_recovery import _harness, _skeleton
 
     harness = _harness(tmp_path, name, sample_ids, max_revisions=max_revisions)
@@ -297,6 +297,11 @@ def _fly_with(tmp_path, monkeypatch, name, sample_ids, dispatch, *, max_revision
         runtime._composed = SimpleNamespace(
             values={**runtime._composed.values, "dispatch": dispatch}
         )
+    if runtime_overlay is not None:
+        from speech_aware_evidence_acquisition.core.flight.runtime_overlay import apply_runtime_overlay
+        runtime._composed = SimpleNamespace(values=apply_runtime_overlay(
+            runtime._composed.values, runtime_overlay,
+        ))
     try:
         rows, _contacts, _kind, receipt, _phases = runtime._dispatch_phase_program(
             harness.client, harness.plan, harness.program.program_id
@@ -465,6 +470,28 @@ def test_configured_prepare_and_validation_workers_preserve_real_native_outputs(
     assert _rendered(on)==_rendered(off)
     assert [(x['sample_id'],x['text']) for x in on_rows]==[(x['sample_id'],x['text']) for x in off_rows]
     assert receipt['slot_fill']['validation_workers']==2
+
+
+@pytestmark_episode
+def test_external_native_overlay_reaches_actual_dispatch_and_preserves_requests(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.core.flight.factory import load_external_runtime_config
+
+    # Use offload and validation here; the ready-request transport contract is
+    # covered by the preceding real-native test with the vLLM test transport.
+    path = tmp_path / "native-runtime.json"
+    block = {**ALL_ON, "prepare_workers": 2, "validation_workers": 2}
+    path.write_text(json.dumps({"schema": "saea-native-efficiency-v1", "dispatch": block,
+        "audio_cache": {"enabled": False, "max_entries": 0, "max_bytes": 0, "preload_workers": 1}}))
+    off, _, off_rows, _, _ = _fly_with(
+        tmp_path, monkeypatch, "overlay-off", ("s1", "s2"), None, max_revisions=0,
+    )
+    on, _, on_rows, receipt, _ = _fly_with(
+        tmp_path, monkeypatch, "overlay-on", ("s1", "s2"), None, max_revisions=0,
+        runtime_overlay=load_external_runtime_config(path),
+    )
+    assert _rendered(on) == _rendered(off)
+    assert [(x["sample_id"], x["text"]) for x in on_rows] == [(x["sample_id"], x["text"]) for x in off_rows]
+    assert receipt["slot_fill"] == block
 
 
 def test_new_dispatch_limits_are_strict():
