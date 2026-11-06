@@ -137,7 +137,7 @@ CPU共同窗口吞吐分析已验收：持续区间242条/1345秒，Core三点�
 
 ## 当前实现与分析验收
 
-锁定卡可见性候选已主审并合main `9389169f`：修复28/54卡准备预算不一致，固定镜像91项测试通过，真实父workload派生1080条身份一致。原执行进程已完成真实CPU stage/prepare，1080条供给准备容器退出0已独立核对；完整差异报告待验，未准入或推理，真实请求FIT及精度收益未知；不热改当前release。详见[可见性对照](PSD-Locked-Slot-Visibility.md)。P候选遗漏完整报告已验收：100条中53条未供给对应gold边界卡、47条已供给仍未选，不能作因果分割；12例当前8卡顺序精确重放，单独扩大k不改变8卡，历史agreement排序2入1出。保留一个同completeOFF父的检索策略包对照建议，P OFF及最终8卡不变。详见[候选遗漏](PSD-Complete-OFF-P-Candidate-Misses.md)。
+锁定卡可见性候选已主审并合main `9389169f`：修复28/54卡准备预算不一致，固定镜像91项测试通过，真实父workload派生1080条身份一致。原执行进程已完成真实CPU stage/prepare，1080条供给准备容器退出0已独立核对；完整CPU准备报告已验收，原执行者继续注册、准入及B路Slot之后的自动接续；未准入或推理，真实请求FIT及精度收益未知；不热改当前release。详见[可见性对照](PSD-Locked-Slot-Visibility.md)。P候选遗漏完整报告已验收：100条中53条未供给对应gold边界卡、47条已供给仍未选，不能作因果分割；12例当前8卡顺序精确重放，单独扩大k不改变8卡，历史agreement排序2入1出。保留一个同completeOFF父的检索策略包对照建议，P OFF及最终8卡不变。详见[候选遗漏](PSD-Complete-OFF-P-Candidate-Misses.md)。
 
 旧k16ON的现成覆盖reader因successor manifest不含旧row_checkpoint字段明确拒绝，未伪造兼容文件或覆盖结论。首个配对容器缺少真实前驱checkpoint挂载；修正后的重试又因同步finalize没有score-jobs.jsonl退出1，均已核终态。原执行者正在兼容真实恢复凭据，未得到配对结论。覆盖reader真实执行已退出0，完整代码与报告待主审。失败记录保留，不重新评分或推理。
 
