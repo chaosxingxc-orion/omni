@@ -713,7 +713,7 @@
     "paired_analysis": "k8/k16 full paired diagnosis and locked source transcript evidence accepted; retain k8 parent",
     "tfrl_reader": "deferred",
     "length_root_causes": "complete28 targeted response analysis accepted; no thinking, whitespace stall at structural boundaries",
-    "compact_prompt_preparation": "P returned for source-guidance confound; two candidates retained, not queued",
+    "compact_prompt_preparation": "two single-node configs accepted and merged; P confound removed; not admitted or queued",
     "seal_recovery": "k16ON exact release verification failure diagnosis and preservation in progress"
   },
   "dispatch_policy": {
