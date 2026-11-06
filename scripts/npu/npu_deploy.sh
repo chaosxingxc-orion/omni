@@ -17,6 +17,13 @@
 #                        $OMNI_ROOT/<profile model_relpath>. Default /mnt/cephfs/xingchao/omni.
 #   SAEA_SRC             the study's src dir; default $OMNI_ROOT/work/dev/umbrella/studies/speech-aware-evidence-acquisition/src
 #   DEPLOY_WAIT_SECONDS  readiness timeout for up/wait (default 2400)
+#   SAEA_DEPLOY_MODE     legacy | release | mounted-release. mounted-release uses
+#                        SAEA_RELEASE_SOURCE_DIR as a complete read-only source
+#                        tree for the planning helper only. Engine containers
+#                        retain the pinned dependency image's cwd/import paths.
+#   SAEA_RELEASE_IMAGE_ID / SAEA_RELEASE_SOURCE_MANIFEST_SHA256 pin dependencies
+#                        and source independently in both release modes.
+#   SAEA_DEPLOY_MODEL_FRAGMENT is the pinned external model JSON in release modes.
 set -euo pipefail
 CMD=${1:?usage: npu_deploy.sh plan|up|wait|status|down <profile>}
 PROFILE=${2:?usage: npu_deploy.sh plan|up|wait|status|down <profile>}
@@ -27,7 +34,9 @@ MODE=${SAEA_DEPLOY_MODE:-legacy}
 IMAGE=saea-base:20261027
 RELEASE_ROOT=/opt/saea-release
 RELEASE_STUDY=$RELEASE_ROOT/studies/speech-aware-evidence-acquisition
-if [[ "$MODE" == release ]]; then
+SOURCE_MOUNTS=()
+SOURCE_ENV=()
+if [[ "$MODE" == release || "$MODE" == mounted-release ]]; then
   IMAGE=${SAEA_RELEASE_IMAGE_ID:?release requires SAEA_RELEASE_IMAGE_ID}
   SOURCE_SHA=${SAEA_RELEASE_SOURCE_MANIFEST_SHA256:?release requires SAEA_RELEASE_SOURCE_MANIFEST_SHA256}
   MODEL_FILE=${SAEA_DEPLOY_MODEL_FRAGMENT:?release requires SAEA_DEPLOY_MODEL_FRAGMENT}
@@ -38,9 +47,16 @@ if [[ "$MODE" == release ]]; then
   PROFILE_SHA=$(sha256sum -- "$PROFILE" | cut -d ' ' -f 1)
   MODEL_SHA=$(sha256sum -- "$MODEL_FILE" | cut -d ' ' -f 1)
   [[ "$PROFILE" != *:* && "$MODEL_FILE" != *:* && "$PROFILE" != *$'\n'* && "$MODEL_FILE" != *$'\n'* ]] || { echo "refused: unsafe mount path" >&2; exit 1; }
+  if [[ "$MODE" == mounted-release ]]; then
+    SOURCE_DIR=${SAEA_RELEASE_SOURCE_DIR:?mounted-release requires SAEA_RELEASE_SOURCE_DIR}
+    [[ "$SOURCE_DIR" = /* && -d "$SOURCE_DIR" && ! -L "$SOURCE_DIR" && "$SOURCE_DIR" != *:* && "$SOURCE_DIR" != *,* && "$SOURCE_DIR" != *$'\n'* ]] || { echo "refused: invalid release source directory" >&2; exit 1; }
+    SOURCE_DIR=$(realpath -e -- "$SOURCE_DIR")
+    SOURCE_MOUNTS=(--mount "type=bind,src=$SOURCE_DIR,dst=$RELEASE_ROOT,readonly")
+    SOURCE_ENV=(-e "PYTHONPATH=$RELEASE_STUDY/src" -e PYTHONDONTWRITEBYTECODE=1)
+  fi
 
 elif [[ "$MODE" != legacy ]]; then
-  echo "refused: SAEA_DEPLOY_MODE must be legacy or release" >&2; exit 1
+  echo "refused: SAEA_DEPLOY_MODE must be legacy, release or mounted-release" >&2; exit 1
 fi
 WAIT_SECONDS=${DEPLOY_WAIT_SECONDS:-2400}
 LABEL=saea.deployment.profile
@@ -51,8 +67,9 @@ NIC=$(ip -o -4 addr show scope global | awk '{print $2; exit}')
 [[ -n "$NIC" ]] || { echo "refused: no global IPv4 NIC on $(hostname); cannot set HCCL_SOCKET_IFNAME" >&2; exit 1; }
 
 helper() {
-  if [[ "$MODE" == release ]]; then
+  if [[ "$MODE" == release || "$MODE" == mounted-release ]]; then
     local args=(docker run --rm -i --network none --user "$(id -u):$(id -g)" -e HOME=/tmp
+      "${SOURCE_MOUNTS[@]}" "${SOURCE_ENV[@]}"
       -v "$PROFILE:$PROFILE:ro" -v "$MODEL_FILE:$MODEL_FILE:ro"
       --entrypoint /opt/saea-venv/bin/python "$IMAGE"
       -m speech_aware_evidence_acquisition.core.deployment "$@" --repo-root "$RELEASE_STUDY"
@@ -67,13 +84,11 @@ helper() {
   fi
 }
 
-if [[ "$MODE" == release ]]; then
+if [[ "$MODE" == release || "$MODE" == mounted-release ]]; then
   # The ID and source hash are independent pins. Run only immutable image code.
   [[ "$(docker image inspect --format '{{.Id}}' "$IMAGE")" == "$IMAGE" ]] || { echo "refused: release image ID differs" >&2; exit 1; }
-  docker run --rm --network none --user "$(id -u):$(id -g)" --entrypoint /opt/saea-venv/bin/python "$IMAGE" \
-    -c 'import hashlib,sys; p="/opt/saea-release/source-manifest.json"; sys.exit(0 if hashlib.sha256(open(p,"rb").read()).hexdigest()==sys.argv[1] else 1)' "$SOURCE_SHA" || { echo "refused: release source manifest hash differs" >&2; exit 1; }
-  docker run --rm --network none --user "$(id -u):$(id -g)" --entrypoint /opt/saea-venv/bin/python "$IMAGE" \
-    "$RELEASE_ROOT/verify-release.py" "$RELEASE_ROOT/source-manifest.json" "$RELEASE_ROOT" >/dev/null || { echo "refused: release source inventory verification failed" >&2; exit 1; }
+  docker run --rm --network none --read-only --user "$(id -u):$(id -g)" "${SOURCE_MOUNTS[@]}" --entrypoint /opt/saea-venv/bin/python "$IMAGE" \
+    -I -c 'import hashlib,json,subprocess,sys; p="/opt/saea-release/source-manifest.json"; b=open(p,"rb").read(); assert hashlib.sha256(b).hexdigest()==sys.argv[1]; d=json.loads(b); v="/opt/saea-release/verify-release.py"; assert hashlib.sha256(open(v,"rb").read()).hexdigest()==d["files"]["docker/saea-base/release/verify-release.py"]; subprocess.run([sys.executable,v,p,"/opt/saea-release"],check=True)' "$SOURCE_SHA" >/dev/null || { echo "refused: release source inventory verification failed" >&2; exit 1; }
 fi
 
 npu_table() { command -v npu-smi >/dev/null 2>&1 && npu-smi info; }

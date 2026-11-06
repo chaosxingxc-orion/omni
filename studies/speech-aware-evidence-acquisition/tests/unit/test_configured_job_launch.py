@@ -257,6 +257,59 @@ def test_release_source_is_explicit_and_rejects_source_overlay(tmp_path):
     with pytest.raises(ValueError,match='cannot be mounted'):m.load_config(path)
 
 
+def mounted_release(tmp_path):
+    path, doc = configured(tmp_path)
+    release = tmp_path / 'release'
+    release.mkdir()
+    doc['repo_path'] = '/opt/saea-release/studies/speech-aware-evidence-acquisition'
+    doc['working_directory'] = doc['repo_path']
+    doc['source_identity'] = {'mode': 'mounted-release-v1', 'manifest_sha256': 'c' * 64}
+    doc['environment'].update(SAEA_RELEASE_MANIFEST='/opt/saea-release/source-manifest.json',
+        SAEA_RELEASE_MANIFEST_SHA256='c' * 64, PYTHONPATH=doc['repo_path'] + '/src',
+        PYTHONDONTWRITEBYTECODE='1')
+    doc['argv'] = ['/opt/saea-venv/bin/python', doc['repo_path'] + '/scripts/analysis/intent_slot_workload.py']
+    doc['mounts'].append({'source': str(release), 'target': '/opt/saea-release', 'readonly': True})
+    path.write_text(json.dumps(doc))
+    return path, doc
+
+
+@pytest.mark.parametrize('fault', ['writable', 'nested', 'parent', 'dependency', 'missing'])
+def test_mounted_release_rejects_unsealed_mounts(tmp_path, fault):
+    path, doc = mounted_release(tmp_path)
+    if fault == 'writable': doc['mounts'][-1]['readonly'] = False
+    elif fault == 'nested': doc['mounts'].append({'source': str(tmp_path), 'target': doc['repo_path'], 'readonly': True})
+    elif fault == 'parent': doc['mounts'][-1]['target'] = '/opt'
+    elif fault == 'dependency': doc['mounts'].append({'source': str(tmp_path), 'target': '/usr/local', 'readonly': True})
+    else: doc['mounts'].pop()
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match='release'): m.load_config(path)
+
+
+@pytest.mark.parametrize('valid', [False, True])
+def test_mounted_release_checks_exact_tree_before_launch(tmp_path, monkeypatch, valid):
+    path, doc = mounted_release(tmp_path)
+    docker = Docker(doc)
+    checks = []
+    def run(argv, **kwargs):
+        if argv[:3] == ['docker', 'run', '--rm']:
+            checks.append(argv)
+            assert 'type=bind,src=' + str(tmp_path / 'release') + ',dst=/opt/saea-release,readonly' in argv
+            assert '-I' in argv
+            assert 'docker/saea-base/release/verify-release.py' in argv[argv.index('-c') + 1]
+            return SimpleNamespace(returncode=0 if valid else 1, stdout='', stderr='')
+        return docker(argv, **kwargs)
+    monkeypatch.setattr(m, 'run', run)
+    m.execute(path, 'layout')
+    if valid:
+        assert m.execute(path, 'launch')['state'] == 'running'
+        assert docker.launches == 1
+    else:
+        with pytest.raises(ValueError, match='manifest verification'): m.execute(path, 'launch')
+        assert docker.launches == 0
+        assert not (Path(doc['receipt_dir']) / 'launch-intent.json').exists()
+    assert len(checks) == 1
+
+
 def test_release_manifest_verification_fails_closed_before_launch(tmp_path,monkeypatch):
     path,doc=configured(tmp_path);doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition';doc['working_directory']=doc['repo_path']
     doc['source_identity']={'mode':'image-release-v1','manifest_sha256':'c'*64}

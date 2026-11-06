@@ -97,5 +97,25 @@
     "assets_manifest_sha256": "aa10118c95b852607cf3932305e0010355babd618e949694099608389b3228ed",
     "admission_config_sha256": "17dae0622e77ec1fe1ac1b8b33ca784052983e9e4e95ac82d661c455f685a587",
     "live_admission_complete": false
+  },
+  "mounted_release_validation": {
+    "mode": "mounted-release-v1",
+    "dependency_image_id": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "source_manifest_sha256": "bbb13509b18e5afdaa540c643eab6cb53bcf2e6a462ffbe946f41f778399403d",
+    "launcher_tests": {
+      "passed": 46,
+      "seconds": 0.29,
+      "environment": "fixed dependency image"
+    },
+    "complete_source_inventory_verified": true,
+    "previous_engine_runtime_files_verified": true,
+    "native_composition_rows": 1080,
+    "verified_media_hashes": 1080,
+    "composition_seconds": 7.220897310005967,
+    "deployment_plan_validated": true,
+    "busy_card_refusal_preserved": true,
+    "new_model_calls": 0,
+    "engine_cutover_complete": false,
+    "online_throughput_verified": false
   }
 }

@@ -118,7 +118,7 @@ def load_config(path):
     identity = doc.get('source_identity')
     if identity is not None:
         require(isinstance(identity, dict) and set(identity) == {'mode', 'manifest_sha256'}
-                and identity['mode'] == 'image-release-v1'
+                and identity['mode'] in ('image-release-v1', 'mounted-release-v1')
                 and isinstance(identity['manifest_sha256'], str)
                 and re.fullmatch('[a-f0-9]{64}', identity['manifest_sha256']), 'exact release source identity required')
         require(doc['repo_path'] == '/opt/saea-release/studies/speech-aware-evidence-acquisition', 'release repository path differs')
@@ -129,7 +129,16 @@ def load_config(path):
         require(doc['argv'][0] in ('/opt/saea-venv/bin/python', '/usr/local/python3.12.13/bin/python3')
                 and len(doc['argv']) >= 2 and (doc['argv'][1].startswith('/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/') or doc['argv'][1].startswith('/opt/saea-release/scripts/npu/'))
                 and '..' not in Path(doc['argv'][1]).parts, 'release entrypoint must be a sealed study script')
-        require(not any(Path('/opt/saea-release').is_relative_to(Path(m['target'])) or Path(m['target']).is_relative_to('/opt/saea-release') for m in doc['mounts']), 'release source cannot be mounted over')
+        source_mounts = [m for m in doc['mounts'] if
+            Path('/opt/saea-release').is_relative_to(Path(m['target'])) or
+            Path(m['target']).is_relative_to('/opt/saea-release')]
+        if identity['mode'] == 'mounted-release-v1':
+            require(len(source_mounts) == 1 and
+                    source_mounts[0]['target'] == '/opt/saea-release' and
+                    source_mounts[0]['readonly'],
+                    'mounted release requires one complete read-only source mount')
+        else:
+            require(not source_mounts, 'release source cannot be mounted over')
     if identity is not None:
         require(not any(k.startswith(('PYTHON', 'LD_', 'DYLD_')) and k not in ('PYTHONPATH', 'PYTHONDONTWRITEBYTECODE', 'LD_LIBRARY_PATH') for k in doc['environment']), 'release interpreter environment override forbidden')
         if 'SAEA_EXPERIMENT_MANIFEST' in doc['environment']:
@@ -140,6 +149,8 @@ def load_config(path):
         require(doc['working_directory'] == doc['repo_path'], 'release working directory must be sealed')
         for mount in doc['mounts']:
             target=Path(mount['target'])
+            if identity['mode'] == 'mounted-release-v1' and target == Path('/opt/saea-release'):
+                continue
             require(not any(target.is_relative_to(p) or Path(p).is_relative_to(target) for p in ('/opt', '/usr', '/bin', '/lib', '/lib64', '/etc', '/root')), 'release dependency mount override forbidden')
     if 'user' in doc:
         require(isinstance(doc['user'], str) and re.fullmatch(r'[0-9]+:[0-9]+', doc['user']), 'numeric uid:gid required')
@@ -318,9 +329,19 @@ def preflight(doc):
     else:
         check = ('import hashlib,json,subprocess,sys; p="/opt/saea-release/source-manifest.json"; '
                  'b=open(p,"rb").read(); assert hashlib.sha256(b).hexdigest()==sys.argv[1]; '
-                 'assert json.loads(b)["commit"]==sys.argv[2]; '
+                 'd=json.loads(b); assert d["commit"]==sys.argv[2]; '
+                 'assert hashlib.sha256(open("/opt/saea-release/verify-release.py","rb").read()).hexdigest()=='
+                 'd["files"]["docker/saea-base/release/verify-release.py"]; '
                  'subprocess.run([sys.executable,"/opt/saea-release/verify-release.py",p,"/opt/saea-release"],check=True)')
-        checked = run(['docker','run','--rm','--network','none','--entrypoint','/opt/saea-venv/bin/python',doc['image'],'-c',check,identity['manifest_sha256'],doc['expected_commit']])
+        mounts = []
+        if identity['mode'] == 'mounted-release-v1':
+            source, = [m for m in doc['mounts'] if m['target'] == '/opt/saea-release']
+            require(Path(source['source']).is_dir() and not Path(source['source']).is_symlink(),
+                    'mounted release source directory absent or symlink')
+            mounts = ['--mount', 'type=bind,src=' + source['source'] + ',dst=/opt/saea-release,readonly']
+        checked = run(['docker','run','--rm','--network','none','--read-only',*mounts,
+                       '--entrypoint','/opt/saea-venv/bin/python',doc['image'],'-I','-c',check,
+                       identity['manifest_sha256'],doc['expected_commit']])
         require(checked.returncode == 0, 'release image/source manifest verification failed')
     for pin in doc['required_inputs']:
         require(Path(pin['path']).is_file() and digest(pin['path']) == pin['sha256'], 'required input absent or changed: ' + pin['path'])

@@ -112,6 +112,28 @@ CPU harness 的 venv 导入和设备挂载动态库 smoke 均通过，但这仍�
 推理吞吐验收。旧双 TP4 服务仍使用 `cf273e52` 镜像；本轮没有停止或替换服务，
 也没有扩大科学实验。新候选已完成 CPU/设备层验收，在线吞吐和断点接续窗口仍待验证。
 
+## 固定依赖镜像与只读业务基座
+
+新增 `mounted-release-v1` 启动模式，把依赖镜像与业务源码分别固定。完整源码目录
+只读挂载到 `/opt/saea-release`，使用现有 source manifest 校验完整文件集和内容；
+启动器在执行 verifier 前先核对其字节哈希。禁止可写源码、局部子目录覆盖和依赖
+目录覆盖。`image-release-v1` 保持原有约束，不放宽。
+
+`configured_job_launch.py` 的 `source_identity.mode` 选择此模式；`image` 固定
+依赖镜像 ID，`manifest_sha256` 和 `expected_commit` 固定业务源码。用 `user`
+明确运行 UID/GID，输出目录预先按同一属主创建。不得为了读取旧私有账本修改其权限。
+
+引擎使用 `scripts/npu/npu_deploy.sh` 的 `SAEA_DEPLOY_MODE=mounted-release`，另传
+`SAEA_RELEASE_SOURCE_DIR`、`SAEA_RELEASE_IMAGE_ID`、
+`SAEA_RELEASE_SOURCE_MANIFEST_SHA256` 和 `SAEA_DEPLOY_MODEL_FRAGMENT`。
+源码仅挂载到配置解析 helper；服务容器沿用固定基础镜像的工作目录和导入路径，
+业务代码升级无需改写引擎环境。`plan` 已在实际 TP4/64K 配置执行，通过源码验证并
+正确报告旧服务占卡；没有绕过占卡检查或启动第二个占用相同卡的实例。
+
+181验证结果：固定依赖镜像内启动器 **46 passed / 0.29s**；只读源码与旧引擎运行时
+文件核验通过；原生后继配置和 **1080 条真实媒体哈希验证通过 / 7.22s**。三项均
+零模型请求。该路径尚未完成真实服务切换及在线吞吐验收，不能据此报告效率提升。
+
 ## 剩余工作与验收顺序
 
 1. 候选镜像已构建并完成 CPU 验收。先核对真实 workload 的 native overlay 与外置准入配置、设备挂载 smoke、resident/session 身份和恢复证据，再决定首实例交接；已有 cf273e52 runtime receipt 不可冒用为新镜像的证明。
