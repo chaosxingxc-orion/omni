@@ -38,6 +38,47 @@ class Docker:
 def pin(path):return {'path':str(path),'sha256':m.launcher.digest(path)}
 
 
+def test_registered_real_engine_release_identity_without_observability(tmp_path):
+    root = tmp_path/'admission'; root.mkdir()
+    candidate = 'slurp-psd-rails-fold-a-slot-off-snapshot-v5'
+    expected = {'candidate':candidate,'run_id':'SAEA-OFF-V5','attempt_id':'generation-v1',
+                'study_commit':'b'*40,'profile':'profile','service_session':'session','rows':1080}
+    prefix = f'docs/readiness/{candidate}/'
+    rels = {'candidate':prefix+'candidate.json', 'generation':prefix+'generation-plan-registered-v1.json'}
+    documents = {'candidate':{**expected,'cell':candidate},
+                 'generation':{'schema':'saea-registered-generation-plan-v1','cell':candidate,
+                     'plan_kind':'generation','expected_session_id':'session',
+                     'execution_plan':{'run_id':'SAEA-OFF-V5','attempt_id':'generation-v1'}}}
+    for name, rel in rels.items():
+        file = root/rel; file.parent.mkdir(parents=True,exist_ok=True); file.write_text(json.dumps(documents[name]))
+    manifest = root/'manifest.json'
+    manifest.write_text(json.dumps({'schema':'saea-experiment-workspace-v1','source_commit':'b'*40,
+        'source_manifest_sha256':'a'*64,'files':{rel:m.launcher.digest(root/rel) for rel in rels.values()}}))
+    marker=root/'completion.json';marker.write_text(json.dumps({'schema':'saea-external-admission-completion-v1',
+        'candidate':candidate,'workspace_manifest':{'sha256':m.launcher.digest(manifest)},'binding':rels}))
+    output=tmp_path/'control';output.mkdir()
+    doc={'repo_path':'/opt/saea-release/studies/speech-aware-evidence-acquisition','expected_commit':'b'*40,
+         'argv':['/opt/saea-venv/bin/python','/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/analysis/run_real_engine_candidate.py',
+                 '--repo','/opt/saea-release/studies/speech-aware-evidence-acquisition','--data','/data',
+                 '--candidate',candidate,'--out','/data/work/codex/generation-v1','--runtime-config','/config/runtime.json'],
+         'environment':{'SAEA_DEPLOYMENT_PROFILE':'profile','SPEECHRL_DATA_DIR':'/data',
+             'SAEA_EXPERIMENT_WORKSPACE':'/experiment-workspace','SAEA_EXPERIMENT_WORKSPACE_MANIFEST':'/experiment-workspace/manifest.json',
+             'SAEA_EXPERIMENT_WORKSPACE_SHA256':m.launcher.digest(manifest),'SAEA_RELEASE_MANIFEST_SHA256':'a'*64},
+         'external_admission':{'marker':str(marker),'sha256':m.launcher.digest(marker),'workspace_manifest':str(manifest)},
+         'mounts':[{'source':str(root),'target':'/experiment-workspace','readonly':True},
+                   {'source':str(output),'target':'/data/work/codex','readonly':False}]}
+    release={'path':str(output/'generation-v1/generation-released.json'),'logical_data':'/data','expected':expected}
+    assert m.release_identity(doc,release)[0] == Path(release['path'])
+    wrong=copy.deepcopy(release);wrong['expected']['run_id']='OTHER'
+    with pytest.raises(ValueError,match='candidate or plan identity'):m.release_identity(doc,wrong)
+    wrong=copy.deepcopy(release);wrong['path'] += '.other'
+    with pytest.raises(ValueError,match='release path'):m.release_identity(doc,wrong)
+    wrong=copy.deepcopy(doc);wrong['environment']['SAEA_OBSERVABILITY_RUN_ID']='SAEA-OFF-V5'
+    with pytest.raises(ValueError,match='launch run or attempt'):m.release_identity(wrong,release)
+    (root/rels['generation']).write_text('{}')
+    with pytest.raises(ValueError,match='asset differs'):m.release_identity(doc,release)
+
+
 @pytest.fixture
 def queue(tmp_path,monkeypatch):
     jobs = []
@@ -73,6 +114,21 @@ def test_graph_plan_preserves_dependencies_and_failure_policy(queue):
     planned = m.execute(path, 'plan')
     assert planned['dependency_policy'] == 'dependency-ready-container-exit-zero'
     assert all('depends_on' in j for j in planned['jobs'])
+
+
+def test_plan_uses_pinned_predecessor_launcher(queue, monkeypatch):
+    path, config, _ = queue
+    historic = {'path':'/old/configured_job_launch.py','sha256':'a'*64}
+    config['jobs'][0]['after'] = {'condition':'container-exit-zero',
+        'launch':config['jobs'][1]['launch'],'container_id':'1'*64,'launcher_artifact':historic}
+    observed=[]
+    monkeypatch.setattr(m,'load',lambda path:config)
+    monkeypatch.setattr(m,'pin_path',lambda pin:Path(pin['path']))
+    monkeypatch.setattr(m,'identities',lambda path:{})
+    monkeypatch.setattr(m,'observe',lambda pin, artifact=None:(observed.append(artifact) or ({},{'container_id':'1'*64})))
+    monkeypatch.setattr(m.launcher,'execute',lambda path, mode:{})
+    m.execute(path,'plan')
+    assert observed == [historic]
 
 
 def test_graph_cycle_and_partial_dependency_declarations_rejected(queue):

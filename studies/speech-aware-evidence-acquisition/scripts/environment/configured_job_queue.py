@@ -216,6 +216,58 @@ def producer_output(producer, logical, expected):
         'job_manifest_sha256':hashlib.sha256(job_blob).hexdigest(), 'command':pins[0]}
 
 
+def registered_producer_identity(producer, expected):
+    """Bind older real-engine launches to their sealed external admission."""
+    args, env = producer['argv'], producer['environment']
+    repo = Path(producer['repo_path'])
+    require(len(args) in (10, 12) and args[1] == str(repo/'scripts/analysis/run_real_engine_candidate.py')
+            and args[2:4] == ['--repo', str(repo)] and args[4] == '--data'
+            and args[6] == '--candidate' and args[7] == expected['candidate']
+            and args[8] == '--out' and (len(args) == 10 or args[10] == '--runtime-config'),
+            'exact registered producer command required')
+    admission = producer.get('external_admission')
+    require(isinstance(admission, dict), 'registered producer admission required')
+    marker = launcher.absolute(admission['marker'])
+    require(marker.is_file() and not marker.is_symlink() and launcher.digest(marker) == admission['sha256'],
+            'registered producer admission marker differs')
+    completion = json.loads(marker.read_bytes())
+    require(completion.get('schema') == 'saea-external-admission-completion-v1'
+            and completion.get('candidate') == expected['candidate'], 'registered producer admission identity differs')
+    workspace = launcher.absolute(env['SAEA_EXPERIMENT_WORKSPACE'])
+    manifest, mount = binding.host_path(producer, env['SAEA_EXPERIMENT_WORKSPACE_MANIFEST'])
+    require(mount['readonly'] and str(manifest) == admission['workspace_manifest']
+            and not manifest.is_symlink() and manifest.is_file()
+            and launcher.digest(manifest) == env['SAEA_EXPERIMENT_WORKSPACE_SHA256']
+            and completion.get('workspace_manifest', {}).get('sha256') == env['SAEA_EXPERIMENT_WORKSPACE_SHA256'],
+            'registered producer workspace identity differs')
+    inventory = json.loads(manifest.read_bytes())
+    require(inventory.get('schema') == 'saea-experiment-workspace-v1'
+            and inventory.get('source_commit') == expected['study_commit']
+            and inventory.get('source_manifest_sha256') == env.get('SAEA_RELEASE_MANIFEST_SHA256'),
+            'registered producer workspace source differs')
+    def asset(rel):
+        require(isinstance(rel, str) and rel.startswith('docs/readiness/')
+                and '..' not in Path(rel).parts, 'registered producer asset path invalid')
+        host, mapping = binding.host_path(producer, str(workspace/rel))
+        require(mapping['readonly'] and not host.is_symlink() and host.is_file()
+                and launcher.digest(host) == inventory.get('files', {}).get(rel),
+                'registered producer asset differs')
+        return json.loads(host.read_bytes())
+    pins = completion.get('binding', {})
+    prefix = 'docs/readiness/' + expected['candidate'] + '/'
+    require(pins.get('candidate') == prefix + 'candidate.json'
+            and pins.get('generation') == prefix + 'generation-plan-registered-v1.json',
+            'registered producer asset binding differs')
+    candidate, plan = asset(pins['candidate']), asset(pins['generation'])
+    require(all(candidate.get(k) == expected[k] for k in ('run_id','attempt_id','profile','service_session','rows'))
+            and candidate.get('cell') == expected['candidate']
+            and plan.get('schema') == 'saea-registered-generation-plan-v1'
+            and plan.get('cell') == expected['candidate'] and plan.get('plan_kind') == 'generation'
+            and plan.get('expected_session_id') == expected['service_session']
+            and all(plan.get('execution_plan', {}).get(k) == expected[k] for k in ('run_id','attempt_id')),
+            'registered producer candidate or plan identity differs')
+
+
 def release_identity(producer, release):
     require(isinstance(release, dict) and set(release) == {'path', 'logical_data', 'expected'}, 'exact generation release mapping required')
     expected = release['expected']
@@ -226,9 +278,13 @@ def release_identity(producer, release):
     require(type(expected['rows']) is int and expected['rows'] > 0 and expected['study_commit'] == producer['expected_commit'],
             'producer commit or row count differs')
     env = producer['environment']
-    require(env.get('SAEA_OBSERVABILITY_RUN_ID') == expected['run_id']
-            and env.get('SAEA_OBSERVABILITY_ATTEMPT_ID') == expected['attempt_id']
-            and env.get('SAEA_DEPLOYMENT_PROFILE') == expected['profile'], 'producer launch run, attempt or deployment differs')
+    require(env.get('SAEA_DEPLOYMENT_PROFILE') == expected['profile'], 'producer deployment differs')
+    if 'SAEA_OBSERVABILITY_RUN_ID' not in env and 'SAEA_OBSERVABILITY_ATTEMPT_ID' not in env:
+        registered_producer_identity(producer, expected)
+    else:
+        require(env.get('SAEA_OBSERVABILITY_RUN_ID') == expected['run_id']
+                and env.get('SAEA_OBSERVABILITY_ATTEMPT_ID') == expected['attempt_id'],
+                'producer launch run or attempt differs')
     logical = launcher.absolute(release['logical_data'])
     output, _ = producer_output(producer, logical, expected)
     actual, mount = binding.host_path(producer, str(output / 'generation-released.json'))
@@ -493,7 +549,7 @@ def execute(path, mode):
             launch = pin_path(job['launch'])
             if job['preflight'] is not None:binding.verify(pin_path(job['preflight']), launch)
             if job['after'] is not None:
-                _, producer = observe(job['after']['launch'])
+                _, producer = observe(job['after']['launch'], job['after'].get('launcher_artifact'))
                 require(producer.get('container_id') == job['after']['container_id'], 'planned predecessor identity differs')
             plans.append({'id':job['id'], 'launch':launcher.execute(launch, 'plan'), 'after':job['after'],
                 **({'depends_on':job['depends_on'], 'after_terminal':job.get('after_terminal', []),
