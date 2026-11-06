@@ -404,16 +404,17 @@
     "generation_exit_code": 1,
     "generation_finished_at_utc": "2026-11-06T04:31:40.26200925Z",
     "observed_generation_responses": 6,
-    "unknown_generation_contacts": 2,
+    "unknown_generation_contacts": 0,
     "fit_contacts": 36,
     "checkpoint_hash_chain_verified": true,
     "combined_checkpoint_custody_verified": false,
-    "lease_settled": false,
+    "lease_settled": true,
     "checkpoint_native_keepable_rows": 2,
     "checkpoint_torn_tail_bytes": 0,
     "fit_missing_custody": 0,
     "fit_recoverable": 36,
-    "production_custody_reader_verified": true
+    "production_custody_reader_verified": true,
+    "not_sent_generation_contacts": 2
   },
   "environment_manifest_preflight": {
     "passed": 61,
@@ -486,5 +487,25 @@
       "network": "none",
       "new_model_calls": 0
     }
+  },
+  "reviewed_pre_dispatch_reconciliation": {
+    "commit": "af49f2dfa55e90c0fdc5dee54063551232eae092",
+    "policy": "reviewed-session-render-failure-v1",
+    "release_files": 7502,
+    "release_manifest_sha256": "2dd8970589f4a63281ae9facf3f6da644619156e514318e224be9a4077c40cf4",
+    "tests_passed_by_run": [
+      82,
+      60,
+      21
+    ],
+    "test_groups_overlap": true,
+    "published": true,
+    "observed": 6,
+    "not_sent": 2,
+    "unknown": 0,
+    "lease_settled": true,
+    "historical_calls_preserved": 8,
+    "new_model_calls": 0,
+    "generation_deployed": false
   }
 }
