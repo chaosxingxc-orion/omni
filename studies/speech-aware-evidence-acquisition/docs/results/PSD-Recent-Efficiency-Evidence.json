@@ -1,0 +1,164 @@
+{
+  "scope": "existing 600s hardware snapshots, not continuous utilization; checkpoints are separate sampled windows",
+  "source_snapshot_sha256": "aaef72f0ae33f8937a891b48e5faa6e5ae33e93ae0f0b142e130ee1a5ed3bea5",
+  "A_k16": {
+    "samples": 10,
+    "first": "2026-11-06T16:34:42Z",
+    "last": "2026-11-06T18:04:42Z",
+    "per_card_means": {
+      "0": 52.9,
+      "1": 65.9,
+      "2": 49.6,
+      "3": 57.7
+    },
+    "four_card_mean_by_point": [
+      56.25,
+      59.75,
+      68.0,
+      49.5,
+      48.75,
+      66.0,
+      56.0,
+      51.25,
+      47.75,
+      62.0
+    ],
+    "pooled_sample_mean": 56.525,
+    "running": [
+      63.0,
+      41.0,
+      60.0,
+      63.0,
+      62.0,
+      59.0,
+      60.0,
+      56.0,
+      63.0,
+      59.0
+    ],
+    "waiting": [
+      0.0,
+      4.0,
+      4.0,
+      0.0,
+      1.0,
+      5.0,
+      3.0,
+      2.0,
+      0.0,
+      4.0
+    ],
+    "all_four_cards_above_80_points": 0
+  },
+  "both_k16_recent": {
+    "A": {
+      "samples": 3,
+      "first": "2026-11-06T17:44:42Z",
+      "last": "2026-11-06T18:04:42Z",
+      "per_card_means": {
+        "0": 62.0,
+        "1": 53.0,
+        "2": 44.666666666666664,
+        "3": 55.0
+      },
+      "four_card_mean_by_point": [
+        51.25,
+        47.75,
+        62.0
+      ],
+      "pooled_sample_mean": 53.666666666666664,
+      "running": [
+        56.0,
+        63.0,
+        59.0
+      ],
+      "waiting": [
+        2.0,
+        0.0,
+        4.0
+      ],
+      "all_four_cards_above_80_points": 0
+    },
+    "B": {
+      "samples": 3,
+      "first": "2026-11-06T17:44:42Z",
+      "last": "2026-11-06T18:04:42Z",
+      "per_card_means": {
+        "4": 59.0,
+        "5": 54.0,
+        "6": 70.0,
+        "7": 45.666666666666664
+      },
+      "four_card_mean_by_point": [
+        61.75,
+        70.5,
+        39.25
+      ],
+      "pooled_sample_mean": 57.166666666666664,
+      "running": [
+        63.0,
+        63.0,
+        63.0
+      ],
+      "waiting": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "all_four_cards_above_80_points": 0
+    }
+  },
+  "interpretation": [
+    "Workload present at sampled times; low AI Core does not establish CPU starvation",
+    "No linear speedup inference from idle fraction",
+    "17:34:42 B idle point between runs excluded from k16 inference windows",
+    "No model calls or new sampling process"
+  ],
+  "service_lifetime_observation": {
+    "observed_at_utc": "2026-11-06T18:06:42.820171+00:00",
+    "source": "one read of existing vLLM /metrics for each instance",
+    "scope": "service-lifetime counters across workloads, not current experiment or paired window",
+    "A": {
+      "running": 53,
+      "waiting": 0,
+      "kv_cache_usage": 0.32396514161220047,
+      "prefix_queries": 81545800,
+      "prefix_hits": 25732992,
+      "preemptions": 0,
+      "request_count": 6652,
+      "queue_seconds_sum": 31528.714751489402,
+      "prefill_seconds_sum": 10401.977530089382,
+      "decode_seconds_sum": 681002.2815043568,
+      "prefix_counter_ratio": 0.315564897272453,
+      "per_completed_request_means": {
+        "queue": 4.739734628907006,
+        "prefill": 1.5637368505846936,
+        "decode": 102.37556847630138
+      }
+    },
+    "B": {
+      "running": 61,
+      "waiting": 0,
+      "kv_cache_usage": 0.5373665480427046,
+      "prefix_queries": 40649095,
+      "prefix_hits": 12549632,
+      "preemptions": 0,
+      "request_count": 3622,
+      "queue_seconds_sum": 6514.886948958621,
+      "prefill_seconds_sum": 5117.796032020997,
+      "decode_seconds_sum": 708953.5971604604,
+      "prefix_counter_ratio": 0.3087309077852779,
+      "per_completed_request_means": {
+        "queue": 1.7986987711095035,
+        "prefill": 1.4129751606905017,
+        "decode": 195.73539402552746
+      }
+    }
+  },
+  "limitations": [
+    "No change to running workload",
+    "Single service metrics observation is not a current experiment delta",
+    "AI Core samples cannot prove continuous utilization",
+    "No current C96 outcome or speedup claim"
+  ]
+}
