@@ -72,10 +72,11 @@ def test_interrupted_recovery_deduplicates_and_cost_is_unknown():
     child = {'request_id': 'r2', 'agent_contact_id': 'slot:0:slot-length-repair'}
     ep = {'role_visits': [{'stage': 'slot', 'execution_receipt': {'contacts': [parent]}}],
           'interrupted_role': {'stage': 'slot', 'execution_receipt': {'contacts': [parent, child]}}}
-    result = reader.recovery_contacts(ep)
+    result, uncertain = reader.recovery_contacts(ep)
+    assert uncertain == []
     assert len(result) == 1 and result[0]['request_id'] == 'r2'
     assert result[0]['parent_request_id'] == 'r1' and result[0]['cost'] == 'unknown'
-    assert result[0]['local_recovered'] == 'unknown'
+    assert result[0]['stage_recovered'] == 'unknown'
 
 
 def test_unidentified_failure_is_unknown():
@@ -95,6 +96,66 @@ def test_interrupted_slot_candidate_sources_counted_once():
           'slot_recovery_pending': {'sources': [
               {'source': first, 'valid_ids': ['a']},
               {'source': retry, 'valid_ids': []}]}}
-    found = reader.recovery_contacts(ep)
+    found, uncertain = reader.recovery_contacts(ep)
+    assert uncertain == []
     assert len(found) == 1 and found[0]['request_id'] == 'r2'
-    assert found[0]['local_recovered'] is False and found[0]['cost'] == 'unknown'
+    assert found[0]['local_candidate_recovered'] is False and found[0]['stage_recovered'] == 'unknown' and found[0]['cost'] == 'unknown'
+
+
+def test_scores_input_rejected(tmp_path):
+    cfg, _ = make_config(tmp_path)
+    cfg['scores'] = pinned(tmp_path / 'unrelated-score.json', {'accuracy': 1})
+    with pytest.raises(ValueError, match='scores not supported'):
+        reader.evaluate(cfg)
+
+
+def test_completed_length_child_stage_is_accepted_but_not_correctness():
+    for stage, suffix in [('perception', ':perception-length-repair'), ('slot', ':slot-length-repair')]:
+        parent = {'request_id': 'p', 'agent_contact_id': stage + ':0'}
+        child = {'request_id': 'c', 'agent_contact_id': stage + ':0' + suffix}
+        ep = {'role_visits': [{'stage': stage, 'execution_receipt': {
+            'contacts': [parent, child], 'final_contact': child}}]}
+        found, unknown = reader.recovery_contacts(ep)
+        assert not unknown and len(found) == 1
+        assert found[0]['stage_recovered'] is True
+        assert found[0]['local_candidate_recovered'] == 'unknown'
+
+
+def test_slot_candidate_recovered_does_not_mean_stage_recovered():
+    first = {'request_id': 'r1', 'agent_contact_id': 'slot:0'}
+    retry = {'request_id': 'r2', 'agent_contact_id': 'slot:1'}
+    ep = {'interrupted_role': {'stage': 'slot', 'execution_receipt': {'contacts': [retry]}},
+          'slot_recovery_pending': {'sources': [{'source': first, 'valid_ids': ['a']},
+                                                {'source': retry, 'valid_ids': ['b']}],
+                                    'remaining_candidate_ids': ['c']}}
+    found, unknown = reader.recovery_contacts(ep)
+    assert found[0]['local_candidate_recovered'] is True
+    assert found[0]['stage_recovered'] == 'unknown' and not unknown
+
+
+def test_unattributed_interrupted_contacts_are_retained_without_counting_as_retries():
+    ep = {'interrupted_role': {'stage': 'slot', 'execution_receipt': {'contacts': [
+        {'request_id': 'r1', 'agent_contact_id': 'slot:0'},
+        {'request_id': 'r2', 'agent_contact_id': 'slot:1'}]}}}
+    found, unknown = reader.recovery_contacts(ep)
+    assert not found and {v['request_id'] for v in unknown} == {'r1', 'r2'}
+    assert all(v['attribution'] == 'unknown' for v in unknown)
+
+
+def test_explicit_slot_sources_candidate_recovery():
+    first = {'request_id': 'r1', 'agent_contact_id': 'slot:0'}
+    retry = {'request_id': 'r2', 'agent_contact_id': 'slot:1'}
+    ep = {'role_visits': [{'stage': 'slot', 'execution_receipt': {'contacts': [first, retry], 'final_contact': retry}}],
+          'intent_slot_pipeline': {'coverage_recovery': {'max_extra_contacts': 3},
+                                   'slot_sources': [{'source': first, 'valid_ids': ['a']},
+                                                    {'source': retry, 'valid_ids': ['b']}]}}
+    found, _ = reader.recovery_contacts(ep)
+    assert found[0]['local_candidate_recovered'] is True
+    assert found[0]['stage_recovered'] == 'unknown'
+
+
+def test_nonempty_filler_and_valid_empty_entities_are_distinct():
+    pairs, types = {('x', 'y')}, {'t'}
+    assert reader.classify('{"scenario":"x","action":"y","entities":[]}', pairs, types) == 'contract_legal_empty_entities'
+    assert reader.classify('{"scenario":"x","action":"y","entities":[{"type":"t","filler":"v"}]}', pairs, types) == 'contract_legal_nonempty_entities'
+    assert reader.classify('{"scenario":"x","action":"y","entities":[{"type":"t","filler":""}]}', pairs, types) == 'nonempty_invalid_structure'

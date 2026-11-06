@@ -101,6 +101,10 @@ def recovery_contacts(ep):
     suffixes = {':perception-length-repair': 'perception_length',
                 ':slot-length-repair': 'slot_length', ':answer-only': 'answer_only'}
     agent_to_request = {item['contact'].get('agent_contact_id'): rid for rid, item in seen.items()}
+    completed_final = {
+        (visit.get('execution_receipt') or {}).get('final_contact', {}).get('request_id')
+        for visit in ep.get('role_visits') or []
+    }
     for rid, item in seen.items():
         agent = item['contact'].get('agent_contact_id', '')
         for suffix, kind in suffixes.items():
@@ -110,7 +114,8 @@ def recovery_contacts(ep):
                 found[rid] = {'request_id': rid, 'kind': kind, 'stage': item['stage'],
                               'parent_request_id': parent,
                               'parent_binding': 'contact_id_suffix' if parent else 'unknown', 'cost': 'unknown',
-                              'local_recovered': 'unknown'}
+                              'local_candidate_recovered': 'unknown',
+                              'stage_recovered': True if rid in completed_final else 'unknown'}
     block = ep.get('intent_slot_pipeline') or {}
     slots = block.get('slot_sources') or []
     pending = ep.get('slot_recovery_pending') or {}
@@ -127,12 +132,24 @@ def recovery_contacts(ep):
             if rid not in seen:
                 seen[rid] = {'contact': contact, 'stage': 'slot'}
             if rid in found:
-                found[rid]['local_recovered'] = bool(source.get('valid_ids'))
+                found[rid]['local_candidate_recovered'] = bool(source.get('valid_ids')) if isinstance(source.get('valid_ids'), list) else 'unknown'
             else:
                 found[rid] = {'request_id': rid, 'kind': 'slot_candidate', 'stage': 'slot',
                               'parent_binding': 'unknown', 'cost': 'unknown',
-                              'local_recovered': bool(source.get('valid_ids'))}
-    return list(found.values())
+                              'local_candidate_recovered': bool(source.get('valid_ids')) if isinstance(source.get('valid_ids'), list) else 'unknown',
+                              'stage_recovered': 'unknown'}
+    interrupted = ep.get('interrupted_role') or {}
+    interrupted_contacts = (interrupted.get('execution_receipt') or {}).get('contacts', [])
+    # Multiple contacts are evidence of additional activity, but without a
+    # recovery relation their roles cannot be inferred. Keep every unresolved ID.
+    uncertain = []
+    known_parents = {item.get('parent_request_id') for item in found.values()}
+    for contact in interrupted_contacts:
+        rid = contact['request_id']
+        if rid not in found and rid not in known_parents:
+            uncertain.append({'request_id': rid, 'stage': interrupted.get('stage'),
+                              'attribution': 'unknown', 'cost': 'unknown'})
+    return list(found.values()), uncertain
 
 
 def evaluate(config):
@@ -143,10 +160,8 @@ def evaluate(config):
     output = read_pin(config['outputs'])
     roster = json.loads(read_pin(config['roster']))
     inventory = json.loads(read_pin(config['inventory']))
-    score_pin = None
     if config['scores'] is not None:
-        json.loads(read_pin(config['scores']))
-        score_pin = config['scores']['sha256']
+        raise ValueError('scores not supported; use existing paired analysis')
     if (manifest.get('status') != 'COMPLETED' or manifest.get('outputs', {}).get('sha256') != sha(output)
             or manifest.get('row_checkpoint', {}).get('complete_rows') != 1080
             or manifest.get('row_checkpoint', {}).get('unrendered_rows') != 0):
@@ -163,7 +178,7 @@ def evaluate(config):
     pairs = {tuple(x) for x in inventory['pairs']}
     types = set(inventory['entity_types'])
     counts, failures, kinds = Counter(), Counter(), Counter()
-    samples, contacts = set(), []
+    samples, contacts, uncertain_contacts = set(), [], []
     for line in output.splitlines():
         if not line.strip():
             continue
@@ -177,7 +192,11 @@ def evaluate(config):
         ep = row.get('native_episode_receipt') or {}
         if category not in ('contract_legal_nonempty_entities', 'contract_legal_empty_entities'):
             failures[terminal_category(ep)] += 1
-        for contact in recovery_contacts(ep):
+        recovered, uncertain = recovery_contacts(ep)
+        for contact in uncertain:
+            contact['sample_id'] = sid
+            uncertain_contacts.append(contact)
+        for contact in recovered:
             contact['sample_id'] = sid
             contact['terminal_contract_legal'] = category.startswith('contract_legal_')
             contact['final_correctness'] = 'unknown'
@@ -185,25 +204,31 @@ def evaluate(config):
             contacts.append(contact)
     if len(samples) != 1080 or samples != set(ids):
         raise ValueError('outputs missing or extra samples')
-    for contact in contacts:
+    for contact in contacts + uncertain_contacts:
         contact['journal_locator'] = {
             'relative_directory': 'contact-journals/' + manifest['run_id'] + '/' + manifest['attempt']['attempt_id'],
-            'binding_status': 'filename unknown; resolve request ID through verified journal identity before use',
+            'intent_filename': sha(contact['request_id'].encode()) + '.intent.json',
+            'response_filename': sha(contact['request_id'].encode()) + '.response.json',
+            'binding_status': 'candidate paths only; verify journal identity and hashes before use',
         }
     return {'schema': SCHEMA, 'run_id': manifest['run_id'], 'total_rows': 1080,
             'input_sha256': {k: config[k]['sha256'] for k in ('manifest', 'outputs', 'roster', 'inventory')},
-            'scores_attachment_sha256': score_pin,
             'partitions': dict(counts), 'terminal_failures': dict(failures),
             'observable_recovery_contacts': len(contacts), 'recovery_kinds': dict(kinds),
             'recovery_outcomes': {
-                'local_stage_recovered': sum(c['local_recovered'] is True for c in contacts),
-                'local_stage_failed': sum(c['local_recovered'] is False for c in contacts),
-                'local_stage_unknown': sum(c['local_recovered'] == 'unknown' for c in contacts),
+                'local_candidate_recovered': sum(c['local_candidate_recovered'] is True for c in contacts),
+                'local_candidate_not_recovered': sum(c['local_candidate_recovered'] is False for c in contacts),
+                'local_candidate_unknown': sum(c['local_candidate_recovered'] == 'unknown' for c in contacts),
+                'stage_recovered': sum(c['stage_recovered'] is True for c in contacts),
+                'stage_recovery_unknown': sum(c['stage_recovered'] == 'unknown' for c in contacts),
+                'stage_recovery_unit': 'recovery contacts; multiple contacts may belong to one stage',
                 'terminal_contract_legal': sum(c['terminal_contract_legal'] for c in contacts),
                 'final_correctness_unknown': len(contacts),
             },
             'recovery_costs': {'status': 'unknown', 'reason': 'no bound per-contact COST or journal input'},
             'recovery_contacts': contacts,
+            'unknown_attribution_contact_count': len(uncertain_contacts),
+            'unknown_attribution_contacts': uncertain_contacts,
             'limitations': ['Only explicitly observable recovery contacts; interrupted slot candidate retries may be unknown.',
                             'Recovery parent binding and per-contact costs require separately verified evidence.',
                             'No model accuracy or final correctness inferred.',
@@ -221,8 +246,6 @@ def main():
         raise ValueError('fresh absolute output required')
     result = evaluate(config)
     inputs = [config[k]['path'] for k in ('manifest', 'outputs', 'roster', 'inventory')]
-    if config['scores'] is not None:
-        inputs.append(config['scores']['path'])
     if any(out.resolve().parent == Path(path).resolve().parent for path in inputs):
         raise ValueError('output must be in an independent analysis directory')
     with out.open('x') as handle:
