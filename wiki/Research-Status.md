@@ -27,7 +27,7 @@
 
 不同测试数对应不同功能范围，不相加作为系统覆盖率。新适配代码不会热改当前运行release；可运行候选通过独立版本进入下一批任务。
 
-当前CLI工作：k16后继两条原生队列已armed，独立watcher等待对应生成释放事件；Sol引用根因分析已验收，正分析现有吞吐证据；第三个CLI已启动P-only/Slot-only配置与CPU物料准备。详见[引用根因结果](PSD-Evidence-Reference-Analysis.md)。队列兼容修复已验收合main `25c6386f`，82项相关测试通过，两条真实v5前驱身份静态绑定通过；实际释放事件尚未出现。真实queue plan均通过，主线程核对6份配置/plan摘要及两个watcher进程；不等待CPU评分或报告。
+当前CLI工作：k16后继两条原生队列已armed，独立watcher等待对应生成释放事件；Sol引用根因与[吞吐分析](PSD-Inference-Efficiency.md)均已验收；P-only/Slot-only各1080条真实CPU准备与注册完成，配置合main `ade951ee`。CPU配对分析配置正在准备；另对construction reader能否保留提前终止失败轨迹进行定点审查，未认定已修复。详见[引用根因结果](PSD-Evidence-Reference-Analysis.md)。队列兼容修复已验收合main `25c6386f`，82项相关测试通过，两条真实v5前驱身份静态绑定通过；实际释放事件尚未出现。真实queue plan均通过，主线程核对6份配置/plan摘要及两个watcher进程；不等待CPU评分或报告。
 
 k16两分支各1080条CPU prepare与register已完成，失败注册现场保留，复用相同输入的prepared产物完成隔离注册；实际准入、两条原生queue plan与后台watch均完成；主审确认已armed。释放事件尚未出现，k16尚无首请求。OFF/ON分别对对应k8控制，无需先选赢家。Fold B两条件及construction625/K2已提前准备，仍保留策略冻结/同策略组依赖。这些CPU准备不等于NPU任务已入队。固定数据与基座复用规则见[调度约定](CPU-NPU-Dispatch-Policy.md)；启动器和worker的重复全量检查尚未全部移除。
 

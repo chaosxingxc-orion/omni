@@ -377,9 +377,10 @@
       "id": "reference-perception-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "configuration_and_material_preparation_running",
+      "status": "cpu_stage_prepare_register_verified_held",
       "inputs": "accepted fixed v5 reference analysis; unchanged Fold A1080 k8 OFF control",
-      "changed_node": "perception"
+      "changed_node": "perception",
+      "configuration_commit": "ade951ee"
     },
     {
       "id": "reference-perception-evaluate",
@@ -397,9 +398,10 @@
       "id": "reference-slot-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "configuration_and_material_preparation_running",
+      "status": "cpu_stage_prepare_register_verified_held",
       "inputs": "accepted fixed v5 reference analysis; unchanged Fold A1080 k8 OFF control",
-      "changed_node": "slot"
+      "changed_node": "slot",
+      "configuration_commit": "ade951ee"
     },
     {
       "id": "reference-slot-evaluate",
@@ -434,35 +436,11 @@
     "ACE/Reflexion current PSD integration incomplete"
   ],
   "updated_at": "2026-11-06T15:27:07.348692+00:00",
-  "parallel_cpu_tasks": [
-    {
-      "id": "gepa-seed-contract-preparation",
-      "status": "complete_conditional_off_seed_handoff_verified",
-      "depends_on": [],
-      "targets": [
-        "E1",
-        "E2"
-      ],
-      "model_calls_authorized": false
-    },
-    {
-      "id": "native-successor-queue-preparation",
-      "status": "archived_held_inputs_current_session_rebinding_in_progress",
-      "targets": [
-        "construction-k2",
-        "fold-b-confirmation"
-      ],
-      "native_queued": false
-    },
-    {
-      "id": "ace-slot-recipe-preparation",
-      "status": "merged_recipe_fixture_validated_real_evidence_pending",
-      "targets": [
-        "E6"
-      ],
-      "model_calls_authorized": false
-    }
-  ],
+  "parallel_cpu_tasks": {
+    "paired_analysis": "prepare actual v5 sealed-result comparison config and CPU-only trigger",
+    "terminal_trajectory_audit": "check construction reader handling of completed early failure episodes",
+    "efficiency": "existing-evidence diagnosis accepted; no current runtime changes"
+  },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
     "reuse_unchanged_assets": true,
