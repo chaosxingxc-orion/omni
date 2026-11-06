@@ -299,15 +299,18 @@
           "resource": "NPU-A",
           "after_generation_release": "baseline-off",
           "status": "running_real_responses_verified",
-          "completed_rows": 740,
-          "observed_at_utc": "2026-11-06T17:39:05Z",
+          "completed_rows": 845,
+          "observed_at_utc": "2026-11-06T17:49:26Z",
           "count_scope": "checkpoint rows not legal answer acceptance"
         },
         {
           "id": "E5-on",
           "resource": "NPU-B",
           "after_generation_release": "baseline-on",
-          "status": "generation_release_verified_successor_running"
+          "status": "generation_release_verified_successor_running",
+          "completed_rows": 9,
+          "observed_at_utc": "2026-11-06T17:47:43Z",
+          "count_scope": "early checkpoint count; no stable ETA"
         }
       ],
       "actual_release_verified": true
@@ -600,7 +603,7 @@
       "id": "complete-coverage-on-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "deployment_cli_live_preparation",
+      "status": "stage_prepare_register_reported_admission_retry_correct_resident",
       "source": "2586419b",
       "scope": "same complete recovery package, FoldA1080 k8 SlotON C64"
     },
@@ -613,6 +616,15 @@
       "status": "not_ready_not_queued",
       "rows": 1080,
       "runtime_predecessor": "E5 ON generation-released"
+    },
+    {
+      "id": "node-prompt-candidates",
+      "resource": "CPU",
+      "depends_on": [
+        "off-semantic-gap-analysis"
+      ],
+      "status": "same_cli_followup_scheduled_not_delivered",
+      "scope": "at most two evidence-backed P/Slot/Decision prompt candidates; fixed KB and normalizer; no model calls"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -634,7 +646,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T17:46:28Z",
+  "updated_at": "2026-11-06T17:49:26Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Slot length implementation running; Perception merged",
     "deployment": "Reference coverage admitted and queue armed; Perception candidate follows",
