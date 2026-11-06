@@ -307,19 +307,19 @@
           "id": "E5-off",
           "resource": "NPU-A",
           "after_generation_release": "baseline-off",
-          "status": "running_real_responses_verified",
-          "completed_rows": 845,
-          "observed_at_utc": "2026-11-06T17:49:26Z",
+          "status": "generation_and_official_scoring_finalized_verified",
+          "completed_rows": 1080,
+          "observed_at_utc": "2026-11-06T18:15:22Z",
           "count_scope": "checkpoint rows not legal answer acceptance"
         },
         {
           "id": "E5-on",
           "resource": "NPU-B",
           "after_generation_release": "baseline-on",
-          "status": "generation_release_verified_successor_running",
-          "completed_rows": 9,
-          "observed_at_utc": "2026-11-06T17:47:43Z",
-          "count_scope": "early checkpoint count; no stable ETA"
+          "status": "original_generation_exited_scoring_only_recovery_running",
+          "completed_rows": 1080,
+          "observed_at_utc": "2026-11-06T20:41:19.69151102Z",
+          "count_scope": "all original contacts known; existing outputs reused by CPU; no new generation"
         }
       ],
       "actual_release_verified": true
@@ -488,10 +488,12 @@
       "rows": 1080,
       "runtime_predecessor": "E5 OFF generation; CPU score not required",
       "scope": "reference quarantine plus existing Slot coverage recovery; Perception length not included",
-      "completed_rows": 93,
-      "observed_at_utc": "2026-11-06T18:31:12Z",
+      "completed_rows": 1080,
+      "observed_at_utc": "2026-11-06T20:06:01Z",
       "wall_seconds_per_complete_row": 10.094546343690606,
-      "estimated_remaining_seconds": 9963.317241222629
+      "estimated_remaining_seconds": 9963.317241222629,
+      "legal_answers": 1052,
+      "empty_answers": 28
     },
     {
       "id": "coverage-score",
@@ -508,7 +510,7 @@
       "id": "load-analysis",
       "resource": "CPU",
       "depends_on": [],
-      "status": "two_decode_dominant_windows_published_third_window_cpu_analysis_live"
+      "status": "existing_core_sample_service_window_alignment_cpu_running"
     },
     {
       "id": "concurrency-prepare",
@@ -590,7 +592,7 @@
       "depends_on": [
         "complete-coverage-ready"
       ],
-      "status": "generation_sealed_released_contract_legal_1080",
+      "status": "generation_and_official_scoring_finalized_verified",
       "rows": 1080,
       "priority": 1,
       "observed_at_utc": "2026-11-06T22:01:00.838409+00:00",
@@ -599,7 +601,15 @@
       "legal_rows": 1080,
       "official_intent_accuracy": 0.85,
       "official_slu_f1": 0.6592171252257297,
-      "score_state": "FINALIZED_aggregate_verified_pair_pending"
+      "score_state": "FINALIZED_aggregate_verified_pair_pending",
+      "legal_answers": 1080,
+      "empty_answers": 0,
+      "quality": {
+        "intent_accuracy": 0.85,
+        "slu_f1": 0.659217125,
+        "strict_correct": 517
+      },
+      "result": "PSD-Complete-OFF-Paired-Result.md"
     },
     {
       "id": "off-node-answer-audit",
@@ -643,9 +653,11 @@
       "status": "running_http_verified",
       "rows": 1080,
       "runtime_predecessor": "E5 ON known terminal settlement; independent admitted launch",
-      "completed_rows": 346,
-      "observed_at_utc": "2026-11-06T22:08:54.989577+00:00",
-      "wall_seconds_per_complete_row": 11.234809320097025
+      "completed_rows": 666,
+      "observed_at_utc": "2026-11-06T23:02:13.041152+00:00",
+      "wall_seconds_per_complete_row": 10.638581982604018,
+      "remaining_rows": 414,
+      "estimated_remaining_seconds": 4404.372940798064
     },
     {
       "id": "node-prompt-candidates",
@@ -685,7 +697,7 @@
       "id": "cpu-score-terminal-adapter",
       "resource": "CPU",
       "depends_on": [],
-      "status": "complete_off_finalized_aggregate_verified_pair_live_other_successors_waiting",
+      "status": "complete_off_official_and_paired_accepted_successor_watchers_waiting",
       "scope": "Configured terminal continuation: successful scores no replay; known overlay failure recover once; unknown hold. Separate from NPU generation-release handoff.",
       "targets": [
         "coverage-evaluate",
@@ -712,7 +724,13 @@
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
       "status": "running_first_http_success_verified",
-      "started_at_utc": "2026-11-06T22:06:40.70367096Z"
+      "started_at_utc": "2026-11-06T22:06:40.70367096Z",
+      "completed_rows": 283,
+      "total_rows": 1080,
+      "observed_at_utc": "2026-11-06T23:00:05.149639+00:00",
+      "remaining_rows": 797,
+      "wall_seconds_per_complete_row": 11.323130632879035,
+      "estimated_remaining_seconds": 9024.53511440459
     },
     {
       "id": "compact-slot-a-evaluate",
@@ -773,16 +791,16 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T20:21:00Z",
+  "updated_at": "2026-11-06T23:06:00.842285+00:00",
   "parallel_cpu_tasks": {
-    "valid_answer_implementation": "Reference full1080 legal1052; complete P/Slot recovery OFF running; 100% not achieved",
-    "deployment": "P/Slot fixed binders deployed and independently verified; completeON native queue preserved",
-    "scoring_recovery": "Three pending score watchers use verified lock-mount fix; reference partial-finalization reconciliation returned to original executor for implementation",
-    "paired_analysis": "k8/k16 full paired diagnosis and locked source transcript evidence accepted; retain k8 parent",
-    "tfrl_reader": "deferred",
-    "length_root_causes": "complete28 targeted response analysis accepted; no thinking, whitespace stall at structural boundaries",
-    "compact_prompt_preparation": "two single-node configs accepted and merged; P confound removed; not admitted or queued",
-    "seal_recovery": "k16ON exact release verification failure diagnosis and preservation in progress"
+    "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
+    "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
+    "scoring_recovery": "k16ON unique CPU seal-only finalization recovery e036bec6 confirmed running; completion not yet verified",
+    "paired_analysis": "completeOFF full paired plus 40 entity regressions accepted; reuse existing Slot role-grounding candidate",
+    "historical_configuration": "accepted limited request audit; historical k60 pre-retrieval final P cap8, current k8 cap8; normalized response envelope not rebuilt",
+    "knowledge_supply": "CPU exact missing meal_type card index/binding/filter audit running; no knowledge edits",
+    "load_analysis": "CPU align existing sparse Core points, sample increments and service subwindows; no new collector",
+    "tfrl_reader": "deferred"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
@@ -790,7 +808,7 @@
     "successor_trigger": "generation-released",
     "score_blocks_successor": false,
     "full_verification_eliminated": false,
-    "native_successor_queue_status": "completeOFF running; k16ON exited during seal release-source verification, release absent; completeON waiting; P/Slot binders armed",
+    "native_successor_queue_status": "A compactP running -> compactSlot -> D -> C96; B completeON running -> P operation -> Slot role; successors depend on generation release, not CPU scores",
     "queue_compatibility_commit": "25c6386f"
   },
   "priority_override": {
