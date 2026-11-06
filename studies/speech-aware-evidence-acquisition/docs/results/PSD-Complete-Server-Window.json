@@ -1,0 +1,121 @@
+{
+  "schema": "psd-complete-server-window-v1",
+  "window_start_utc": "2026-11-06T21:25:18.488023+00:00",
+  "window_end_utc": "2026-11-06T21:35:18.530001+00:00",
+  "duration_seconds": 600.041978,
+  "instances": {
+    "A": {
+      "completed_requests": 332.0,
+      "generated_tokens": 225482.0,
+      "generated_tokens_per_second": 375.7770427188346,
+      "prefix_hit_fraction": 0.29850194355545184,
+      "preemptions": 0.0,
+      "gauges_at_end": {
+        "kv_cache_usage_perc": [
+          0.2949891067538126
+        ],
+        "num_requests_running": [
+          56.0
+        ],
+        "num_requests_waiting": [
+          8.0
+        ]
+      },
+      "histograms": {
+        "e2e_request_latency_seconds": {
+          "count": 332.0,
+          "mean_seconds": 112.62138410576854,
+          "sum_seconds": 37390.29952311516
+        },
+        "inter_token_latency_seconds": {
+          "count": 225155.0,
+          "mean_seconds": 0.14630099010085726,
+          "sum_seconds": 32940.39942615852
+        },
+        "request_decode_time_seconds": {
+          "count": 332.0,
+          "mean_seconds": 105.53650821837827,
+          "sum_seconds": 35038.120728501584
+        },
+        "request_inference_time_seconds": {
+          "count": 332.0,
+          "mean_seconds": 107.03430618012061,
+          "sum_seconds": 35535.38965180004
+        },
+        "request_prefill_time_seconds": {
+          "count": 332.0,
+          "mean_seconds": 1.4977979617488237,
+          "sum_seconds": 497.26892330060946
+        },
+        "request_queue_time_seconds": {
+          "count": 332.0,
+          "mean_seconds": 5.410721738311688,
+          "sum_seconds": 1796.3596171194804
+        },
+        "time_to_first_token_seconds": {
+          "count": 327.0,
+          "mean_seconds": 7.118804504382865,
+          "sum_seconds": 2327.849072933197
+        }
+      }
+    },
+    "B": {
+      "completed_requests": 188.0,
+      "generated_tokens": 278931.0,
+      "generated_tokens_per_second": 464.85247737117487,
+      "prefix_hit_fraction": 0.318299148536211,
+      "preemptions": 0.0,
+      "gauges_at_end": {
+        "kv_cache_usage_perc": [
+          0.4613261674776672
+        ],
+        "num_requests_running": [
+          64.0
+        ],
+        "num_requests_waiting": [
+          0.0
+        ]
+      },
+      "histograms": {
+        "e2e_request_latency_seconds": {
+          "count": 188.0,
+          "mean_seconds": 199.6134494441621,
+          "sum_seconds": 37527.32849550247
+        },
+        "inter_token_latency_seconds": {
+          "count": 278743.0,
+          "mean_seconds": 0.1354243283964433,
+          "sum_seconds": 37748.5835702098
+        },
+        "request_decode_time_seconds": {
+          "count": 188.0,
+          "mean_seconds": 197.76856964531706,
+          "sum_seconds": 37180.49109331961
+        },
+        "request_inference_time_seconds": {
+          "count": 188.0,
+          "mean_seconds": 199.10821855218805,
+          "sum_seconds": 37432.34508781135
+        },
+        "request_prefill_time_seconds": {
+          "count": 188.0,
+          "mean_seconds": 1.339648906862923,
+          "sum_seconds": 251.85399449022952
+        },
+        "request_queue_time_seconds": {
+          "count": 188.0,
+          "mean_seconds": 0.3689675853721441,
+          "sum_seconds": 69.36590604996309
+        },
+        "time_to_first_token_seconds": {
+          "count": 188.0,
+          "mean_seconds": 1.864784097417872,
+          "sum_seconds": 350.57941031455994
+        }
+      }
+    }
+  },
+  "scope": "aggregate service window, not per-sample/node timing; no isolated-workload proof",
+  "source_sha256": "39d09c8ec865bc48dd5bbdc6b1a805185d95acfca67fd1431188c5a7553bc926",
+  "new_model_calls": 0
+}
