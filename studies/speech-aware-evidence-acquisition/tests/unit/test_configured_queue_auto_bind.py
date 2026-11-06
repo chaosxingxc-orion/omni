@@ -65,4 +65,43 @@ def test_chained_binder_waits_for_pinned_upstream(tmp_path):
     (upstream_dir/'status.json').write_text(json.dumps({'status':'waiting','config_sha256':up_pin['sha256'],'bound_queue_sha256':digest}))
     assert m.step(cfg,q)=='waiting'
     (upstream_dir/'status.json').write_text(json.dumps({'status':'failed','config_sha256':up_pin['sha256'],'bound_queue_sha256':digest}))
+    assert m.step(cfg,q)=='waiting'
+    (upstream_dir/'status.json').write_text(json.dumps({'status':'unknown','config_sha256':up_pin['sha256'],'bound_queue_sha256':digest}))
     with pytest.raises(ValueError,match='upstream'):m.step(cfg,q)
+
+
+@pytest.mark.parametrize('status', ['unknown', 'held'])
+def test_unsafe_source_states_remain_blocked(tmp_path, status):
+    cfg,q,state,calls=fixture(tmp_path)
+    state['status']=status
+    (tmp_path/'state.json').write_text(json.dumps(state))
+    with pytest.raises(ValueError, match='unknown'): m.step(cfg,q)
+    assert not calls
+
+
+def test_failed_source_exit_zero_dependency_remains_blocked(tmp_path):
+    cfg,q,state,calls=fixture(tmp_path)
+    fragment=json.loads(Path(cfg['dependency']['path']).read_text())
+    fragment['after_without_container_id']['condition']='container-exit-zero'
+    cfg['dependency']=pin(Path(cfg['dependency']['path']),fragment)
+    state['status']='failed'
+    (tmp_path/'state.json').write_text(json.dumps(state))
+    with pytest.raises(ValueError, match='source failed'): m.step(cfg,q)
+    assert not calls
+
+
+def test_multihop_failed_upstream_keeps_identity_and_never_rebinds(tmp_path):
+    cfg,q,state,calls=fixture(tmp_path)
+    upstream_dir=tmp_path/'upstream'; upstream_dir.mkdir()
+    source=Path(cfg['source_queue']['path'])
+    upstream_pin=pin(tmp_path/'upstream.json', {'state_dir':str(upstream_dir),'bound_queue':str(source)})
+    cfg['source_binding']=upstream_pin; cfg['source_queue']={'path':str(source)}
+    status={'status':'running','config_sha256':upstream_pin['sha256'],'bound_queue_sha256':hashlib.sha256(source.read_bytes()).hexdigest()}
+    (upstream_dir/'status.json').write_text(json.dumps(status))
+    assert m.step(cfg,q)=='waiting'
+    status['status']='failed'; (upstream_dir/'status.json').write_text(json.dumps(status))
+    state['status']='failed'; state['jobs'][0]['status']='failed'
+    (tmp_path/'state.json').write_text(json.dumps(state))
+    assert m.step(cfg,q)=='waiting'
+    status['bound_queue_sha256']='f'*64; (upstream_dir/'status.json').write_text(json.dumps(status))
+    with pytest.raises(ValueError, match='pinned input changed'): m.step(cfg,q)

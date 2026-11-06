@@ -709,3 +709,37 @@ def test_cross_version_foreign_container_without_intent_rejected(queue, tmp_path
     with pytest.raises(ValueError, match='durable launch intent'):
         m.execute(path, 'once')
     assert docker.launches == ['previous-version']
+
+
+@pytest.mark.parametrize('sealed', [True, False])
+def test_binder_real_release_after_scoring_failure_and_repeat(queue, tmp_path, sealed):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('binder_integration', Path(__file__).parents[2]/'scripts/environment/configured_queue_auto_bind.py')
+    binder = importlib.util.module_from_spec(spec); spec.loader.exec_module(binder)
+    release, value, _ = generation_fixture(queue, tmp_path)
+    path, config, docker = queue
+    dep = config['jobs'][0]['after']
+    config['jobs'] = config['jobs'][:1]
+    config['jobs'][0]['after'] = None
+    ready = tmp_path/'ready.json'; ready.write_text(json.dumps(config))
+    source = tmp_path/'source-queue.json'
+    source_doc = {'queue_id':'source','state_dir':str(tmp_path/'source-state'),
+                  'jobs':[{'id':'generation','launch':dep['launch']}]}
+    source.write_text(json.dumps(source_doc)); (tmp_path/'source-state').mkdir()
+    state = {'queue_id':'source','identity':m.identities(source),'status':'running',
+             'jobs':[{'id':'generation','status':'running','container_id':dep['container_id']}]}
+    (tmp_path/'source-state/state.json').write_text(json.dumps(state))
+    fragment = tmp_path/'fragment.json'
+    fragment.write_text(json.dumps({'after_without_container_id':{k:v for k,v in dep.items() if k != 'container_id'},
+                                    'handoff_verifier':config['handoff_verifier']}))
+    cfg={'source_queue':pin(source),'source_binding':None,'source_job':'generation','dependency':pin(fragment),
+         'successor_queue':pin(ready),'bound_queue':str(tmp_path/'bound.json'),'hold_path':str(tmp_path/'hold')}
+    m.launcher.execute(config['jobs'][0]['launch']['path'],'layout')
+    assert binder.step(cfg,m)=='waiting'
+    if sealed: release.write_text(json.dumps(value))
+    docker.containers['producer']['State'].update(Status='exited',Running=False,ExitCode=1)
+    state['status']='failed'; state['jobs'][0]['status']='failed'
+    (tmp_path/'source-state/state.json').write_text(json.dumps(state))
+    assert binder.step(cfg,m)==('running' if sealed else 'failed')
+    assert binder.step(cfg,m)==('running' if sealed else 'failed')
+    assert docker.launches==(['producer','job0'] if sealed else ['producer'])

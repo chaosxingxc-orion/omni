@@ -44,13 +44,15 @@ def write_new(path, value):
 
 
 def step(config, queue):
+    fragment = read_pin(config['dependency'])
+    generation = fragment['after_without_container_id'].get('condition') == 'generation-released'
     if config['source_binding'] is not None:
         upstream = read_pin(config['source_binding'])
         status_path = Path(upstream['state_dir']) / 'status.json'
         if not status_path.exists(): return 'waiting-source'
         status = json.loads(status_path.read_bytes())
-        if status.get('status') in ('failed', 'unknown'):
-            raise ValueError('upstream binder failed or unknown')
+        if status.get('status') in ('unknown', 'held') or (status.get('status') == 'failed' and not generation):
+            raise ValueError('upstream binder failed, held or unknown')
         if not status.get('bound_queue_sha256'): return 'waiting-source'
         if status.get('config_sha256') != config['source_binding']['sha256']:
             raise ValueError('upstream binder identity differs')
@@ -59,7 +61,6 @@ def step(config, queue):
         source = read_pin({'path':upstream['bound_queue'], 'sha256':status['bound_queue_sha256']})
     else:
         source = read_pin(config['source_queue'])
-    fragment = read_pin(config['dependency'])
     ready = read_pin(config['successor_queue'])
     source_path = Path(source['state_dir']) / 'state.json'
     if not source_path.exists(): return 'waiting-source'
@@ -71,7 +72,8 @@ def step(config, queue):
     if len(jobs) != 1 or len(records) != 1 or jobs[0]['launch'] != fragment['after_without_container_id']['launch']:
         raise ValueError('source job or launch differs')
     record = records[0]
-    if record.get('status') in ('failed', 'unknown', 'held') or state.get('status') in ('failed', 'unknown', 'held'):
+    if (record.get('status') in ('unknown', 'held') or state.get('status') in ('unknown', 'held')
+            or (not generation and (record.get('status') == 'failed' or state.get('status') == 'failed'))):
         raise ValueError('source failed or unknown')
     cid = record.get('container_id')
     if cid is None:
@@ -117,7 +119,20 @@ def main():
                     'bound_queue_sha256': hashlib.sha256(bound.read_bytes()).hexdigest() if bound.is_file() else None})
                 if status in ('complete','failed','unknown'): return 0 if status == 'complete' else 1
             except Exception as error:
-                queue.atomic(root / 'status.json', {'status':'failed','error_type':type(error).__name__,'message':str(error),'observed_at':time.time()})
+                # Preserve only an identity recorded by a previous successful step.
+                previous = {}
+                try:
+                    previous = json.loads((root / 'status.json').read_bytes())
+                except (OSError, ValueError):
+                    pass
+                config_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+                bound = Path(config['bound_queue'])
+                bound_hash = previous.get('bound_queue_sha256')
+                if (previous.get('config_sha256') != config_hash or not bound_hash
+                        or not bound.is_file() or hashlib.sha256(bound.read_bytes()).hexdigest() != bound_hash):
+                    bound_hash = None
+                queue.atomic(root / 'status.json', {'status':'failed','error_type':type(error).__name__,'message':str(error),'observed_at':time.time(),
+                    'config_sha256':config_hash,'bound_queue_sha256':bound_hash})
                 return 1
             time.sleep(600)
 
