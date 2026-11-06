@@ -395,13 +395,20 @@
     "bridge_precheck_ok": true,
     "representative_render_ok": true,
     "framework_runtime_check_exit_code": 0,
-    "generation_state": "running",
+    "generation_state": "exited",
     "generation_started_at_utc": "2026-11-06T04:24:13.7505876Z",
-    "observed_at_utc": "2026-11-06T04:26:25.863833+00:00",
     "historical_rows": 919,
-    "new_terminal_rows": 0,
-    "current_attempt_native_contacts": 0,
-    "throughput_verified": false
+    "new_terminal_rows": 2,
+    "current_attempt_native_contacts": 8,
+    "throughput_verified": false,
+    "generation_exit_code": 1,
+    "generation_finished_at_utc": "2026-11-06T04:31:40.26200925Z",
+    "observed_generation_responses": 6,
+    "unknown_generation_contacts": 2,
+    "fit_contacts": 36,
+    "checkpoint_hash_chain_verified": true,
+    "combined_checkpoint_custody_verified": false,
+    "lease_settled": false
   },
   "environment_manifest_preflight": {
     "passed": 61,
@@ -414,5 +421,41 @@
     "seconds": 4.17,
     "host_python310_regression": true,
     "production_worker_changed": false
+  },
+  "projection_lifetime_optimization": {
+    "before_commit": "d9c92b0870548e7cfab37f2e952dc2631bbc0f97",
+    "after_commit": "ec84f71a68da3794dab71da942f5c3d554363386",
+    "requests": 3,
+    "before_seconds": [
+      1.0548181500053033,
+      0.9621216199593619,
+      1.0279206100385636
+    ],
+    "after_seconds": [
+      0.03349492000415921,
+      0.02465863001998514,
+      0.02983503002906218
+    ],
+    "before_total_seconds": 3.044860380003229,
+    "after_total_seconds": 0.08798858005320653,
+    "render_speedup": 34.605176923664494,
+    "reduction_percent": 97.1102589586353,
+    "body_and_receipt_equal": true,
+    "new_model_calls": 0,
+    "network": "none",
+    "end_to_end_speedup_verified": false,
+    "scope": "one historical request per role; render only; session identity stubbed; excludes construction, FIT and HTTP",
+    "tests": {
+      "passed": 51,
+      "seconds": 10.31
+    }
+  },
+  "idle_probe_socket_fix": {
+    "commit": "994a688f",
+    "tests_passed": 59,
+    "test_seconds": 4.6,
+    "failed_request_retry": false,
+    "deployed_generation": false,
+    "limitation": "send-time race remains; observed failure consistent with stale socket but not exclusively proven"
   }
 }
