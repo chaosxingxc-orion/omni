@@ -45,6 +45,7 @@ def recover(args):
     failure = json.loads(Path(args.failed_summary).read_bytes())
     stderr = Path(args.failed_stderr).read_text()
     if (failure.get('failed') != 1 or failure.get('succeeded') != 0
+            or failure.get('job_count') != 1 or failure.get('operation') != 'finalize'
             or 'delivery config differs from recorded run' not in stderr):
         raise ValueError('expected a terminal delivery config scoring failure')
     evaluator = official_evaluator_python()
@@ -53,6 +54,17 @@ def recover(args):
     bundle = verify_bundle(manifest)
     receipts = read_flight_receipts(manifest.parent / 'flight-receipts.json')
     jobs = load_sealed_score_jobs(receipts['stages']['seal'])
+    score_stage = receipts['stages']['score']
+    if (score_stage.get('result') != failure or score_stage.get('operation') != 'finalize'
+            or Path(score_stage['output_dir']).resolve() != Path(args.failed_summary).resolve().parent):
+        raise ValueError('failed score evidence differs from original flight receipt')
+    failed_job, = failure['jobs']
+    if (failed_job.get('status') != 'failed' or failed_job.get('returncode') == 0
+            or failed_job.get('result_file') is not None or failed_job.get('complete_receipt_file') is not None
+            or failed_job.get('stderr_sha256') != args.failed_stderr_sha256
+            or Path(failed_job['manifest']).resolve() != manifest
+            or Path(args.failed_stderr).resolve() != Path(args.failed_summary).resolve().parent / failed_job['stderr_log']):
+        raise ValueError('failed score job evidence differs')
     if (bundle.attempt_state != 'OPENED' or bundle.manifest.get('status') != 'COMPLETED'
             or bundle.manifest.get('scores') is not None or len(jobs) != 1
             or jobs[0].manifest.resolve() != manifest or jobs[0].ledger_cells.resolve() != Path(args.ledger).resolve()
@@ -68,6 +80,7 @@ def recover(args):
     pins = {name: {'path': str(Path(getattr(args, name)).resolve()),
                    'sha256': sha(getattr(args, name))}
             for name in ('manifest', 'generation_manifest', 'jobs', 'ledger', 'failed_summary', 'failed_stderr')}
+    pins['flight_receipts'] = {'path':str(manifest.parent / 'flight-receipts.json'), 'sha256':sha(manifest.parent / 'flight-receipts.json')}
     intent = {'schema': 'saea-sealed-overlay-score-recovery-intent-v1',
               'source_identities': identity, 'inputs': pins, 'rows': args.rows,
               'runtime_config': {'path': os.environ['SAEA_RUNTIME_CONFIG'],
@@ -88,7 +101,7 @@ def recover(args):
     old = json.loads(generation.read_bytes())
     if {k:v for k,v in after.manifest.items() if k != 'scores'} != {k:v for k,v in old.items() if k != 'scores'}:
         raise ValueError('generation fields changed during scoring')
-    for name in ('generation_manifest', 'jobs', 'ledger', 'failed_summary', 'failed_stderr'):
+    for name in ('generation_manifest', 'jobs', 'ledger', 'failed_summary', 'failed_stderr', 'flight_receipts'):
         if sha(pins[name]['path']) != pins[name]['sha256']:
             raise ValueError('preserved source changed: ' + name)
     receipt = {'schema':'saea-sealed-overlay-score-recovery-v1', 'intent_sha256':sha(out/'intent.json'),
