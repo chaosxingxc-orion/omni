@@ -1,0 +1,11 @@
+{
+  "schema": "psd-length-answer-recovery-result-v1",
+  "status": "not_implemented",
+  "base_commit": "0b94479a83707e1042bd0b77fee0a6026285db0b",
+  "reason": "native parent-child custody and bundle verification support only empty thinking answer-only; length repair requires registered prompt, budget, FIT, wire and UNKNOWN custody",
+  "model_calls": 0,
+  "real_fit_calls": 0,
+  "npu_calls": 0,
+  "tests": [],
+  "coverage_measured": false
+}
