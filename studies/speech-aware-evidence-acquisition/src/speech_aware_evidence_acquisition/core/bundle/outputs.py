@@ -1863,8 +1863,71 @@ def _verify_raw_trace(
 def _request_record_sample_id(payload: Mapping[str, object]) -> object:
     """The sample id a MODEL_REQUEST record carries inside its own payload."""
 
+    if "tool_id" in payload:
+        return None
     inner = payload.get("payload")
-    return inner.get("sample_id") if isinstance(inner, Mapping) else None
+    if not isinstance(inner, Mapping) or "sample_id" in payload:
+        return None
+    return inner.get("sample_id")
+
+
+def _resume_delivery_sample_id(row, records, request_id):
+    """Reconstruct registered native delivery records in their own trace."""
+    request = records.get(f"{request_id}/request")
+    if not isinstance(request, Mapping):
+        return None
+    if "tool_id" not in request:
+        return _request_record_sample_id(request)
+    from ..delivery import (native_abstention_records, native_context_abstention_records,
+                            native_seal_refusal_abstention_records)
+
+    sample = request.get("sample_id")
+    episode = row.get("native_episode_receipt")
+    disposition = episode.get("terminal_disposition") if isinstance(episode, Mapping) else None
+    source = request.get("source")
+    if not isinstance(sample, str) or not sample or not isinstance(disposition, Mapping):
+        return None
+    if not isinstance(source, Mapping) or "payload" in request or "arm" in request:
+        return None
+    try:
+        kind = request.get("tool_id")
+        if kind == "native-context-abstention-v1":
+            expected = native_context_abstention_records(sample_id=sample, disposition=disposition)
+        elif kind in {"native-terminal-abstention-v1", "native-terminal-seal-refusal-abstention-v1"}:
+            contact = source.get("contact")
+            parent = source.get("source_request_id")
+            if not isinstance(contact, Mapping) or not isinstance(parent, str) or contact.get("request_id") != parent:
+                return None
+            parent_request = records.get(f"{parent}/request")
+            parent_response = records.get(f"{parent}/response")
+            rejected = disposition.get("rejected_contact")
+            if (not isinstance(parent_request, Mapping) or not isinstance(parent_response, Mapping)
+                or not isinstance(parent_request.get("arm"), str)
+                or _request_record_sample_id(parent_request) != sample
+                or parent_request.get("payload_sha256") != contact.get("request_sha256")
+                or parent_response.get("response_sha256") != contact.get("response_sha256")
+                or parent_response.get("response_text_sha256") != contact.get("response_text_sha256")
+                or not isinstance(parent_response.get("text"), str)
+                or hashlib.sha256(parent_response["text"].encode("utf-8")).hexdigest() != contact.get("response_text_sha256")
+                or not isinstance(rejected, Mapping)
+                or any(rejected.get(key) != value for key, value in contact.items())):
+                return None
+            if kind == "native-terminal-abstention-v1" and disposition.get("reason") == "finite_completion":
+                expected = native_abstention_records(sample_id=sample, source_contact=contact,
+                                                     finish_reason=disposition.get("finish_reason"))
+            elif kind == "native-terminal-seal-refusal-abstention-v1" and disposition.get("reason") == "seal_refusal":
+                expected = native_seal_refusal_abstention_records(sample_id=sample, source_contact=contact,
+                                                                 seal_refusal=disposition.get("seal_refusal"))
+            else:
+                return None
+        else:
+            return None
+    except (ValueError, TypeError, KeyError):
+        return None
+    if (expected[0] != request_id or expected[1] != request
+        or expected[2] != records.get(f"{request_id}/response")):
+        return None
+    return sample
 
 
 def _verify_resume_custody(
@@ -1905,6 +1968,15 @@ def _verify_resume_custody(
             sample_id = _request_record_sample_id(payload)
             if isinstance(sample_id, str):
                 recovery_samples[sample_id] = record_id
+            elif payload.get("tool_id") in {
+                "native-context-abstention-v1", "native-terminal-abstention-v1",
+                "native-terminal-seal-refusal-abstention-v1",
+            }:
+                # Even a damaged derived record is evidence of a competing
+                # attempt, never evidence permitting a kept row to be reused.
+                sample = payload.get("sample_id")
+                if isinstance(sample, str):
+                    recovery_samples[sample] = record_id
     re_flown = sorted(kept_sample_ids & set(recovery_samples))
     if re_flown:
         raise BundleError(
@@ -1912,6 +1984,7 @@ def _verify_resume_custody(
             f"e.g. {re_flown[:5]} -- a resume keeps a complete row OR re-flies it, "
             f"never both ({RESUME_PREDECESSOR_INVARIANT})"
         )
+    rows_by_sample = {row.get("sample_id"): row for row in outputs_rows}
     predecessor_presence: dict[str, bool] = {}
     for sample_id in kept_sample_ids:
         records = predecessor_records.get(sample_id) or {}
@@ -1919,6 +1992,10 @@ def _verify_resume_custody(
             record_id.endswith("/request")
             and _request_record_sample_id(payload) == sample_id
             for record_id, payload in records.items()
+        ) or (
+            sample_id in rows_by_sample
+            and _resume_delivery_sample_id(rows_by_sample[sample_id], records,
+                                           rows_by_sample[sample_id].get("request_id")) == sample_id
         )
     for row in outputs_rows:
         sample_id = str(row.get("sample_id"))
@@ -1944,7 +2021,7 @@ def _verify_resume_custody(
                 f"which is absent from the {label} trace it is held against "
                 f"({RESUME_PREDECESSOR_INVARIANT})"
             )
-        recorded = _request_record_sample_id(payload)
+        recorded = _resume_delivery_sample_id(row, source, row['request_id'])
         if recorded != sample_id:
             raise BundleError(
                 f"outputs row {sample_id!r} names request {row['request_id']!r}, but "
