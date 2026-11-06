@@ -14,6 +14,17 @@ m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
 def pin(p):return {'path':str(p),'sha256':m.queue.launcher.digest(p)}
 
+@pytest.mark.parametrize('fraction', ['', '.1', '.12', '.123', '.1234', '.12345', '.123456', '.1234567', '.12345678', '.123456789'])
+def test_docker_timestamp_fraction_precision(fraction):
+    from datetime import datetime, timezone
+    expected=datetime(2026,11,6,4,24,13,int(fraction[1:].ljust(6,'0')[:6]),tzinfo=timezone.utc).timestamp()
+    assert m.timestamp('2026-11-06T04:24:13'+fraction+'Z')==expected
+    assert m.timestamp('2026-11-06T05:24:13'+fraction+'+01:00')==expected
+
+@pytest.mark.parametrize('value', ['2026-11-06T04:24:13', '2026-11-06T04:24:13.1234567890Z', 'invalid'])
+def test_invalid_container_timestamp_rejected(value):
+    with pytest.raises(ValueError):m.timestamp(value)
+
 def test_pinned_plan_source_is_preserved_in_journal_validation(tmp_path):
     calls=[]
     class Plan:

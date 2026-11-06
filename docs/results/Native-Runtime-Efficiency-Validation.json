@@ -385,15 +385,34 @@
     "prior_lease_settled": true,
     "prior_contacts": 0,
     "compiler_exit_code": 0,
-    "admission_state": "running",
-    "generation_launched": false,
+    "admission_state": "completed",
+    "generation_launched": true,
     "assets_sha256": "c828e10cf929ac76f4610eff75f51423bcab014764d811670019ccc8083409c6",
-    "admission_sha256": "a732148e0cd9e73f27fe59347ea029bf673d8f460b4cc3febae1dd839ff81137"
+    "admission_sha256": "a732148e0cd9e73f27fe59347ea029bf673d8f460b4cc3febae1dd839ff81137",
+    "admission_exit_code": 0,
+    "workspace_manifest_sha256": "540acb3426c42a99029fe16bd5d4492d6abfc44606c8909699432b636917977e",
+    "final_config_sha256": "59575409d988d1e12f83bd8ae78292048a1359797e34b9ecc5cdcc4242ce2328",
+    "bridge_precheck_ok": true,
+    "representative_render_ok": true,
+    "framework_runtime_check_exit_code": 0,
+    "generation_state": "running",
+    "generation_started_at_utc": "2026-11-06T04:24:13.7505876Z",
+    "observed_at_utc": "2026-11-06T04:26:25.863833+00:00",
+    "historical_rows": 919,
+    "new_terminal_rows": 0,
+    "current_attempt_native_contacts": 0,
+    "throughput_verified": false
   },
   "environment_manifest_preflight": {
     "passed": 61,
     "seconds": 10.22,
     "real_stale_configuration_rejected": true,
     "before_launch_intent": true
+  },
+  "observer_timestamp_compatibility": {
+    "passed": 38,
+    "seconds": 4.17,
+    "host_python310_regression": true,
+    "production_worker_changed": false
   }
 }

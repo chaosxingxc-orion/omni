@@ -58,7 +58,13 @@ def load(path):
 
 
 def timestamp(value):
-    return datetime.fromisoformat(value.replace('Z','+00:00')).timestamp()
+    # Docker uses RFC3339Nano (0..9 fractional digits); Python 3.10's
+    # fromisoformat accepts only 3 or 6. Normalize to microsecond precision.
+    match = re.fullmatch(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?(Z|[+-]\d{2}:\d{2})', value)
+    require(match is not None, 'invalid timezone-aware container timestamp')
+    fraction = (match[2] or '').ljust(6, '0')[:6]
+    zone = '+00:00' if match[3] == 'Z' else match[3]
+    return datetime.fromisoformat(match[1] + '.' + fraction + zone).timestamp()
 
 
 def source(j):
