@@ -127,3 +127,42 @@ def test_frozen_gate_uses_pinned_workspace_ledger_and_rejects_tampering(tmp_path
     ledger.write_text('tampered')
     with pytest.raises(ValueError,match='changed'):
         FrozenCoreGate.for_study_repo(repo,tmp_path/'data',tmp_path/'runtime')
+
+
+@pytest.mark.parametrize('supplement',['media','evidence'])
+def test_frozen_gate_resolves_pinned_external_receipts_and_preserves_source(tmp_path,monkeypatch,supplement):
+    from speech_aware_evidence_acquisition.contracts import FrozenCoreGate
+    repo,assets,manifest,doc=setup(tmp_path,monkeypatch)
+    relatives=['docs/receipts/e0-closure.json','docs/receipts/runtime.json','docs/receipts/supplement.json']
+    for rel in relatives:
+        path=assets/Path(rel).name;path.write_text('{"frozen":true}')
+        doc['files'][rel]={'path':str(path),'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+    manifest.write_text(json.dumps(doc));monkeypatch.setenv('SAEA_EXPERIMENT_MANIFEST_SHA256',hashlib.sha256(manifest.read_bytes()).hexdigest())
+    kwargs={f'd1_{supplement}_supplement_relpath':'receipts/supplement.json',f'd1_{supplement}_supplement_sha256':doc['files'][relatives[-1]]['sha256']}
+    gate=FrozenCoreGate.for_study_repo(repo,tmp_path/'data',tmp_path/'runtime',**kwargs)
+    assert gate.source_root==repo and gate.e0_receipt==assets/'e0-closure.json'
+    assert gate.runtime_receipt==assets/'runtime.json'
+    assert getattr(gate,f'd1_{supplement}_supplement')==assets/'supplement.json'
+    (assets/'e0-closure.json').write_text('{}')
+    with pytest.raises(ValueError,match='changed'):
+        FrozenCoreGate.for_study_repo(repo,tmp_path/'data',tmp_path/'runtime',**kwargs)
+
+
+def test_external_e0_keeps_real_artifact_and_scoring_freeze_checks(tmp_path,monkeypatch):
+    import sys
+    sys.path.insert(0,str(Path(__file__).parents[1]/'contract'))
+    from gate_fixture import GateFixture
+    from speech_aware_evidence_acquisition.contracts import FrozenCoreGate,GateClosed
+    fixture=GateFixture(tmp_path);fixture.gate()
+    closure=fixture.receipts/'e0-closure.json'
+    manifest=tmp_path/'assets.json';manifest.write_text(json.dumps({'schema':'saea-experiment-assets-v1',
+        'files':{'docs/receipts/e0-closure.json':{'path':str(closure),'sha256':hashlib.sha256(closure.read_bytes()).hexdigest()}}}))
+    monkeypatch.setenv('SAEA_EXPERIMENT_MANIFEST',str(manifest))
+    monkeypatch.setenv('SAEA_EXPERIMENT_MANIFEST_SHA256',hashlib.sha256(manifest.read_bytes()).hexdigest())
+    gate=FrozenCoreGate.for_study_repo(tmp_path,fixture.data_root,fixture.runtime_root)
+    gate._validate_e0()
+    source=tmp_path/fixture.SCORING_REL;source.write_text('def score(): return 999\n')
+    with pytest.raises(GateClosed,match='scoring freeze drift'):gate._validate_e0()
+    source.write_bytes(fixture.SCORING_SOURCE)
+    artifact=fixture.receipts/fixture.deliverables['d1_identity']['artifact'];artifact.write_text('{}')
+    with pytest.raises(GateClosed,match='artifact hash drift'):gate._validate_e0()

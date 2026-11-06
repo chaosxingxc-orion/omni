@@ -211,8 +211,8 @@ class FrozenCoreGate(
             )
         from ..core.experiment_assets import resolve_asset
         return cls(
-            e0_receipt=root / "docs" / "receipts" / "e0-closure.json",
-            runtime_receipt=root / "docs" / runtime_receipt_relpath,
+            e0_receipt=resolve_asset(root, "docs/receipts/e0-closure.json"),
+            runtime_receipt=resolve_asset(root, "docs/" + runtime_receipt_relpath),
             data_root=Path(data_root),
             lock_path=root.parent.parent / "docs" / "datasets.lock.json",
             runtime_root=Path(runtime_root),
@@ -220,13 +220,13 @@ class FrozenCoreGate(
             source_root=root,
             model_root=Path(model_root) if model_root is not None else None,
             d1_media_supplement=(
-                root / "docs" / d1_media_supplement_relpath
+                resolve_asset(root, "docs/" + d1_media_supplement_relpath)
                 if d1_media_supplement_relpath is not None
                 else None
             ),
             d1_media_supplement_sha256=d1_media_supplement_sha256,
             d1_evidence_supplement=(
-                root / "docs" / d1_evidence_supplement_relpath
+                resolve_asset(root, "docs/" + d1_evidence_supplement_relpath)
                 if d1_evidence_supplement_relpath is not None
                 else None
             ),
