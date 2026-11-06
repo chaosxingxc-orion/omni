@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """Settle one configured producer without restarting or replaying any contact."""
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 from contextlib import contextmanager
 from datetime import datetime
@@ -10,7 +14,6 @@ import json
 import os
 from pathlib import Path
 import re
-import sys
 import time
 
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """Read configured lane progress every 600 seconds; never run or replay a job."""
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -9,7 +13,6 @@ import os
 from pathlib import Path
 import re
 import stat
-import sys
 import tempfile
 import time
 

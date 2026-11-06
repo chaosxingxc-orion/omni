@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """Bind a completed CPU preflight to one compatible successor configuration."""
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 import hashlib
 import importlib.util

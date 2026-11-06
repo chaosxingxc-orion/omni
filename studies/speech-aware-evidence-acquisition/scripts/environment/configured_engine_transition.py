@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """Change one idle resident's native context from pinned deployment configuration."""
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 import copy
 from datetime import datetime, timezone
@@ -9,7 +13,6 @@ import json
 import os
 from pathlib import Path
 import re
-import sys
 import time
 import urllib.request
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """CPU dependency checks; a successful receipt can be pinned by the launcher."""
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 import hashlib
 import json

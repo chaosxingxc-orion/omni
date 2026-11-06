@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Wait for a configured lane queue to finish, then prove safe resource handoff."""
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 import fcntl
 import importlib.util
 import json
 from pathlib import Path
-import sys
 import time
 
 ROOT=Path(__file__).resolve().parents[2]

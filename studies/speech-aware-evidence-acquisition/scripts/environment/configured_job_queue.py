@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """Finite, durable queue over the existing pinned configured job launcher."""
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 import fcntl
 import hashlib

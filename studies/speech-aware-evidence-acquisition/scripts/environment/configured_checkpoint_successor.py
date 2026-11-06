@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 """Compile held checkpoint successors after an independent terminal custody audit."""
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 import copy
 import ctypes
@@ -13,7 +17,6 @@ import tempfile
 from contextlib import contextmanager
 
 ROOT = Path(__file__).resolve().parents[2]
-import sys
 sys.path.insert(0, str(ROOT / 'src'))
 from speech_aware_evidence_acquisition.core.atomic_file import publish_new
 sys.path.insert(0, str(Path(__file__).resolve().parent))

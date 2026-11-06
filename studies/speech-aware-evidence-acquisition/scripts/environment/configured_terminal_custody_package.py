@@ -4,6 +4,10 @@
 All paths are absolute paths as visible inside the fixed source image. Inputs are
 read-only; output is a new directory on the same filesystem as its parent.
 """
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 import copy
 import ctypes
@@ -12,7 +16,6 @@ import json
 import os
 from pathlib import Path
 import shutil
-import sys
 import tempfile
 
 # This script may be mounted alone outside the release tree.  Its sibling

@@ -1,11 +1,14 @@
 """Preserve a dead worker's lease only after exact observed-contact reconciliation."""
+# Host tools import pinned release modules; keep its signed file set immutable.
+import sys
+sys.dont_write_bytecode = True
+
 import argparse
 import hashlib
 import json
 import os
 from pathlib import Path
 import subprocess
-import sys
 
 
 def settle(repo, data, out, container, expected_run, expected_attempt, expected_pid, plan, plan_sha256, arm='prepared-context-text', runtime_receipt=None, runtime_receipt_sha256=None):
