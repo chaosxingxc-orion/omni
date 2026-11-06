@@ -44,41 +44,30 @@ def validate_checkpoint_successor(repo, spec, cell_document, actual_base, expect
     bridge = CheckpointCompatibility.from_document(candidate.checkpoint_compatibility,
                                                      attempt_id=candidate.attempt_id)
     validate_bridge_declarations(bridge, declarations)
-    source_pin = spec.get('predecessor_registration')
-    if (not isinstance(source_pin, dict) or set(source_pin) != {'relpath', 'sha256'}
-            or not isinstance(source_pin.get('relpath'), str)
-            or not source_pin['relpath'].startswith('docs/')
-            or '..' in Path(source_pin['relpath']).parts):
+    from speech_aware_evidence_acquisition.core.registration_lineage import (
+        registration_lineage, scientific_registration, MAX_REGISTRATION_ANCESTORS)
+    source_pin, original, registrations = registration_lineage(spec, lambda pin: pinned(repo, pin))
+    if source_pin is None:
         raise ValueError('checkpoint successor requires pinned original registration')
-    original = pinned(repo, source_pin)
     if (original.get('workload_kind') != spec.get('workload_kind')
             or original.get('run_id') != spec.get('run_id')
             or original.get('attempt_id') != 'generation-v1'
             or original.get('fit_run_id') != expected_base['native_contact_fit']['run_id']
             or original.get('fit_attempt_id') != expected_base['native_contact_fit']['attempt_id']):
         raise ValueError('original registration identity differs')
-    # Only operational width and these successor-specific identities can move.
-    before, after = copy.deepcopy(original), copy.deepcopy(spec)
-    after.pop('predecessor_registration')
-    for obj in (before, after):
-        if (obj.get('execution') != obj.get('job_config', {}).get('execution')
-                or set(obj.get('execution', {})) != {'admitted_level'}):
-            raise ValueError('registration width identity differs')
-        obj['execution'].pop('admitted_level')
-        obj['job_config']['execution'].pop('admitted_level')
-    for key in ('attempt_id', 'fit_run_id', 'fit_attempt_id', 'composed_config_hash', 'protocol_hash'):
-        after[key] = before.get(key)
-    if before != after:
-        raise ValueError('successor scientific registration differs')
+    for document in [spec, *registrations]:
+        if scientific_registration(document) != scientific_registration(original):
+            raise ValueError('successor scientific registration differs')
     registered = read_asset(repo, f"docs/readiness/{spec['cell']}/generation-plan-registered-v1.json")
     allowed = {f.name for f in fields(ExecutionPlan)}
-    plan_fields = {k:v for k,v in registered['execution_plan'].items() if k in allowed}
+    if set(registered['execution_plan']) - allowed:
+        raise ValueError('unknown original registered plan fields')
+    plan_fields = dict(registered['execution_plan'])
     if 'owner_allowance' in registered:
         if 'owner_allowance' in plan_fields:
             raise ValueError('duplicate registered owner allowance')
         plan_fields['owner_allowance'] = registered['owner_allowance']
     source = ExecutionPlan(**plan_fields).validate(source_root=repo)
-    source_exp_plan = None
     expected_budget = expected_base['native_contact_fit']['contact_cap']
     if (type(expected_budget) is not int or expected_budget <= 0
             or type(actual_base['native_contact_fit'].get('contact_cap')) is not int
@@ -96,10 +85,17 @@ def validate_checkpoint_successor(repo, spec, cell_document, actual_base, expect
         raise ValueError('successor width identity differs')
     if source.attempt_id not in mapping:
         raise ValueError('original attempt missing from checkpoint chain')
+    if len(mapping) > MAX_REGISTRATION_ANCESTORS or candidate.attempt_id in mapping:
+        raise ValueError('cyclic or excessive checkpoint lineage')
+    graph = {}
+    registrations_by_attempt = {doc['attempt_id']: doc for doc in registrations}
+    if len(registrations_by_attempt) != len(registrations):
+        raise ValueError('registration lineage repeats an attempt')
+    declared = {d.attempt_id: d.checkpoint_sha256 for d in declarations}
     for prior, item in mapping.items():
         if not isinstance(item, ImageReleaseCompatibility):
             raise ValueError('image-release successor requires authenticated source bridge')
-        old = item.old_source()
+        old = item.old_source(run_id=source.run_id, predecessor_attempt_id=prior)
         from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import STUDY_PREFIX
         old_exp = json.loads(old[STUDY_PREFIX + 'configs/experiment/' + item.predecessor_fragments['experiment'] + '.json'])
         old_cell, = old_exp['cells']
@@ -107,19 +103,87 @@ def validate_checkpoint_successor(repo, spec, cell_document, actual_base, expect
             raise ValueError('checkpoint predecessor source identity differs')
         old_base = json.loads(old[STUDY_PREFIX + 'configs/baseline/' + item.predecessor_fragments['baseline'] + '.json'])
         old_fit = old_base.get('native_contact_fit', {})
+        prior_spec = registrations_by_attempt.get(prior)
+        if prior_spec is not None and (old_fit.get('run_id') != prior_spec.get('fit_run_id')
+                                       or old_fit.get('attempt_id') != prior_spec.get('fit_attempt_id')):
+            raise ValueError('registration FIT differs from authenticated predecessor')
         new_fit = actual_base.get('native_contact_fit', {})
         if any(new_fit.get(k) == old_fit.get(k) for k in ('run_id','attempt_id')):
             raise ValueError('fresh FIT identity repeats a predecessor')
-        if prior == source.attempt_id:
-            source_exp_plan = old_exp.get('execution_plan', {})
-            for budget_key in ('execution_profile','split_role','planned_model_calls','planned_gpu_hours','planned_speech_audio_seconds'):
-                if source_exp_plan.get(budget_key) != getattr(source, budget_key):
-                    raise ValueError('original registered budget differs from authenticated source')
-            if item.predecessor_fragments != {'model':original['model_fragment'], 'dataset':original['dataset']['relpath'].split('/')[-1][:-5], 'baseline':original['baseline'], 'experiment':original['experiment']}:
-                raise ValueError('original registered fragments differ from checkpoint')
-            old_base.pop('dispatch', None)
-            if scientific_hash(old_base) != original['scientific_baseline_sha256']:
-                raise ValueError('original scientific baseline differs from authenticated source')
+        parents = resume_declarations_from_document(old_cell['resume_from']) if old_cell.get('resume_from') is not None else []
+        if any(declared.get(d.attempt_id) != d.checkpoint_sha256 for d in parents):
+            raise ValueError('checkpoint ancestor omitted or changed')
+        graph[prior] = {d.attempt_id for d in parents}
+        for budget_key in ('execution_profile','split_role','planned_model_calls','planned_gpu_hours','planned_speech_audio_seconds'):
+            if old_exp.get('execution_plan', {}).get(budget_key) != getattr(source, budget_key):
+                raise ValueError('registered budget differs from authenticated source')
+        if item.predecessor_fragments != {'model':original['model_fragment'], 'dataset':original['dataset']['relpath'].split('/')[-1][:-5], 'baseline':original['baseline'], 'experiment':original['experiment']}:
+            raise ValueError('original registered fragments differ from checkpoint')
+        if old_fit.get('contact_cap') != expected_budget:
+            raise ValueError('ancestor FIT budget changed')
+        old_base.pop('dispatch', None)
+        old_base['native_contact_fit']['run_id'] = original['fit_run_id']
+        old_base['native_contact_fit']['attempt_id'] = original['fit_attempt_id']
+        if scientific_hash(old_base) != original['scientific_baseline_sha256']:
+            raise ValueError('original scientific baseline differs from authenticated source')
+    # Authenticate the full closed DAG without recursive traversal. A predecessor
+    # declares all its resumed ancestors, including their exact checkpoint pins.
+    pending = {key: set(value) for key, value in graph.items()}
+    visited = set()
+    while pending:
+        ready = {key for key, parents in pending.items() if parents <= visited}
+        if not ready:
+            raise ValueError('cyclic checkpoint ancestry')
+        visited.update(ready)
+        for key in ready:
+            del pending[key]
+    roots = {key for key, parents in graph.items() if not parents}
+    if roots != {source.attempt_id}:
+        raise ValueError('checkpoint root registration differs')
+    immediate = registrations[0]['attempt_id']
+    reachable, todo = set(), [immediate]
+    while todo:
+        prior = todo.pop()
+        if prior not in graph:
+            raise ValueError('immediate predecessor missing from checkpoint chain')
+        if prior not in reachable:
+            reachable.add(prior)
+            todo.extend(graph[prior])
+    if reachable != set(mapping):
+        raise ValueError('checkpoint ancestor is not reachable from immediate predecessor')
+    if any(doc['attempt_id'] not in mapping for doc in registrations):
+        raise ValueError('registration ancestor omitted from checkpoint chain')
+    # Every explicit edge also authenticates its direct predecessor's plan.
+    # Legacy one-hop registrations have no explicit edge/plan pair.
+    from dataclasses import asdict
+    from speech_aware_evidence_acquisition.core.registration_lineage import registration_pin
+    chain = [spec, *registrations]
+    for document, prior_spec in zip(chain, chain[1:]):
+        if 'immediate_predecessor_registration' not in document:
+            continue
+        if 'immediate_predecessor_plan' not in document:
+            raise ValueError('immediate predecessor plan pin required')
+        registered_prior = pinned(repo, registration_pin(document['immediate_predecessor_plan']))
+        prior_fields = dict(registered_prior['execution_plan'])
+        if set(prior_fields) - allowed:
+            raise ValueError('unknown immediate predecessor plan fields')
+        if 'owner_allowance' in registered_prior:
+            if 'owner_allowance' in prior_fields:
+                raise ValueError('duplicate immediate predecessor owner allowance')
+            prior_fields['owner_allowance'] = registered_prior['owner_allowance']
+        prior_plan = ExecutionPlan(**prior_fields).validate(source_root=repo)
+        if (any(getattr(prior_plan, k) != prior_spec.get(k) for k in
+                ('run_id', 'attempt_id', 'protocol_hash', 'split_identity_hash'))
+                or registered_prior.get('cell') != prior_spec['cell']
+                or registered_prior.get('experiment') != prior_spec['experiment']
+                or registered_prior.get('composed_config_hash') != prior_spec['composed_config_hash']):
+            raise ValueError('immediate predecessor registered plan differs')
+        normalized = asdict(prior_plan)
+        original_plan = asdict(source)
+        for key in ('attempt_id', 'protocol_hash'):
+            normalized[key] = original_plan[key]
+        if normalized != original_plan:
+            raise ValueError('immediate predecessor registered budget or scientific plan differs')
     fit, old_fit = actual_base['native_contact_fit'], expected_base['native_contact_fit']
     if (spec.get('attempt_id') != candidate.attempt_id
             or spec.get('fit_run_id') != fit.get('run_id')

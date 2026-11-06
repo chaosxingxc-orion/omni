@@ -271,6 +271,44 @@ def validate_gate_inputs(assets, fragments):
                 'D1 supplement absent or changed: ' + name)
 
 
+def complete_lineage_inputs(cfg, assets, candidate):
+    """Import only lineage closure from an optional pinned producer manifest.
+
+    Old compiler outputs must not shadow fresh output paths. A supplemental
+    manifest is a source catalog, not an instruction to import all its files.
+    """
+    from speech_aware_evidence_acquisition.core.registration_lineage import (
+        registration_lineage, registration_pin)
+    catalog = {}
+    if 'lineage_assets_manifest' in cfg:
+        manifest = strict_json(read_pin(cfg['lineage_assets_manifest']))
+        require(isinstance(manifest, dict) and set(manifest) == {'schema', 'files'}
+                and manifest['schema'] == 'saea-experiment-assets-v1'
+                and isinstance(manifest['files'], dict), 'invalid lineage assets manifest')
+        catalog = manifest['files']
+    def import_asset(name, expected=None):
+        logical(name)
+        if name in assets:
+            blob = assets[name]
+            if name in catalog:
+                require(read_pin(catalog[name]) == blob, 'conflicting lineage asset: ' + name)
+        else:
+            require(name in catalog, 'registration lineage asset missing: ' + name)
+            blob = read_pin(catalog[name])
+            assets[name] = blob
+        require(expected is None or digest(blob) == expected, 'registration lineage asset changed: ' + name)
+        return strict_json(blob)
+    def load(pin):
+        registration_pin(pin)
+        return import_asset(pin['relpath'], pin['sha256'])
+    root_pin, root, ancestors = registration_lineage(candidate, load)
+    if root_pin is not None:
+        import_asset('docs/readiness/' + root['cell'] + '/generation-plan-registered-v1.json')
+    for document in [candidate, *ancestors]:
+        if 'immediate_predecessor_plan' in document:
+            load(document['immediate_predecessor_plan'])
+
+
 def finalize(cfg, assets, candidate, plan, repo, data, out):
     # Release images omit operational ledgers. Admission needs the original
     # exposure rows, so they must travel with the pinned experiment assets.
@@ -291,6 +329,8 @@ def finalize(cfg, assets, candidate, plan, repo, data, out):
     read_pin(terminal['lock'])
     registration = logical(terminal['registration_relpath'])
     require(registration not in assets, 'predecessor registration path already exists')
+    complete_lineage_inputs(cfg, assets, candidate)
+    require(registration not in assets, 'predecessor registration path conflicts with lineage closure')
     # This independent gate must establish actual terminal custody; it is not a
     # count check or an admission decision.
     terminal_result = validate_terminal_custody(cfg=cfg, candidate=candidate, plan=plan, data=data)
@@ -308,7 +348,8 @@ def finalize(cfg, assets, candidate, plan, repo, data, out):
         original=candidate, plan=plan, fragments=fragments, target=cfg['target'],
         dispatch=cfg['dispatch'], width=cfg['width'], supply=cfg['supply']['new'],
         declarations=terminal['resume_from'], bridge=terminal['bridge'],
-        registration_relpath=registration, registration_sha256=digest(original_blob), data=data)
+        registration_relpath=registration, registration_sha256=digest(original_blob), data=data,
+        predecessor_plan=cfg['plan'])
     files = dict(assets)
     files[registration] = original_blob
     files[cfg['candidate']['relpath']] = encode(successor)
@@ -386,6 +427,7 @@ def finalize(cfg, assets, candidate, plan, repo, data, out):
         publish_new(temp / 'pin-index.json', encode({'schema':'saea-checkpoint-successor-pin-index-v1',
             'assets_manifest': {'path': str(out / 'assets.json'), 'sha256': digest(final_manifest)},
             'assets': manifest(out)['files'],
+            **({'source_lineage_manifest': cfg['lineage_assets_manifest']} if 'lineage_assets_manifest' in cfg else {}),
             'terminal_custody': {'path': str(out / terminal_path),
                                  'sha256': digest(files[terminal_path])},
             'admission_config': {'path': str(out / admission_path),
@@ -410,7 +452,8 @@ def finalize(cfg, assets, candidate, plan, repo, data, out):
 
 
 def build_successor_documents(*, original, plan, fragments, target, dispatch, width,
-                              supply, declarations, bridge, registration_relpath, registration_sha256, data):
+                              supply, declarations, bridge, registration_relpath, registration_sha256, data,
+                              predecessor_plan=None):
     """Derive held successor documents from original registration and four fragments.
 
     This pure compiler does not itself certify any terminal state or authorize use.
@@ -461,8 +504,11 @@ def build_successor_documents(*, original, plan, fragments, target, dispatch, wi
     candidate['execution']['admitted_level'] = width
     candidate['job_config']['execution']['admitted_level'] = width
     require(isinstance(registration_sha256, str) and HEX.fullmatch(registration_sha256), 'original byte hash required')
-    candidate['predecessor_registration'] = {'relpath': logical(registration_relpath),
-        'sha256': registration_sha256}
+    immediate = {'relpath': logical(registration_relpath), 'sha256': registration_sha256}
+    candidate['predecessor_registration'] = copy.deepcopy(original.get('predecessor_registration', immediate))
+    candidate['immediate_predecessor_registration'] = immediate
+    if predecessor_plan is not None:
+        candidate['immediate_predecessor_plan'] = copy.deepcopy(predecessor_plan)
     names = {'model': original['model_fragment'],
              'dataset': Path(original['dataset']['relpath']).stem,
              'baseline': original['baseline'], 'experiment': original['experiment']}
@@ -498,7 +544,7 @@ def execute(config_path):
 def _execute(cfg):
     fields = {'schema', 'mode', 'repo', 'data', 'output', 'assets_manifest', 'candidate',
               'plan', 'fragments', 'target', 'dispatch', 'width', 'supply'}
-    require(isinstance(cfg, dict) and set(cfg) == (fields | ({'terminal', 'admission'} if cfg.get('mode') == 'finalize' else set())) and
+    require(isinstance(cfg, dict) and set(cfg) - {'lineage_assets_manifest'} == (fields | ({'terminal', 'admission'} if cfg.get('mode') == 'finalize' else set())) and
             cfg['schema'] == 'saea-checkpoint-successor-compiler-v1', 'exact compiler schema required')
     require(cfg['mode'] in ('prepare', 'finalize'), 'invalid compiler mode')
     repo, data, out = (Path(cfg[k]) for k in ('repo', 'data', 'output'))
@@ -553,6 +599,8 @@ def _execute(cfg):
             strict_json((data / supply['new']['relpath']).read_bytes())['output'], 'supply output differs')
     base = strict_json(assets['configs/baseline/' + fragments['baseline'] + '.json'])
     require(base['prepared_phase_supply'] == supply['old'], 'registered supply differs')
+    if 'lineage_assets_manifest' in cfg:
+        complete_lineage_inputs(cfg, assets, candidate)
     if cfg['mode'] == 'finalize':
         return finalize(cfg, assets, candidate, plan, repo, data, out)
     temp = Path(tempfile.mkdtemp(prefix='.' + out.name + '.', dir=out.parent))
@@ -570,6 +618,7 @@ def _execute(cfg):
         publish_new(temp / 'held-template.json', encode(template))
         publish_new(temp / 'pin-index.json', encode({'schema':'saea-checkpoint-successor-pin-index-v1',
                     'source_manifest': cfg['assets_manifest'], 'assets': pins,
+                    **({'source_lineage_manifest': cfg['lineage_assets_manifest']} if 'lineage_assets_manifest' in cfg else {}),
                     'activation_authorized': False}))
         for path in sorted((p for p in temp.rglob('*') if p.is_dir()), reverse=True):
             fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)

@@ -145,7 +145,7 @@ def prepare(config):
     """Resolve a pinned source manifest and native bridge into held templates."""
     keys = {'schema', 'source_manifest', 'source_paths', 'bridge', 'bridge_paths',
             'compiler', 'admission', 'predecessor_decision_file', 'lock', 'output', 'package_output'}
-    if set(config) != keys or config['schema'] != 'saea-terminal-package-prepare-v1':
+    if set(config) - {'lineage_paths'} != keys or config['schema'] != 'saea-terminal-package-prepare-v1':
         raise ValueError('invalid prepare configuration')
     manifest = strict(_pinned(config['source_manifest']))
     bridge = strict(_pinned(config['bridge']))
@@ -160,17 +160,44 @@ def prepare(config):
         if old['sha256'] != new['sha256']:
             raise ValueError('source asset pin differs: ' + name)
         manifest['files'][name] = copy.deepcopy(new)
-    bridge['evidence'] = relocate_evidence(bridge['evidence'], config['bridge_paths'])
-    if any(name in bridge['evidence'] for name in ('producer_workspace', 'producer_assets')):
-        from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import ImageReleaseCompatibility
-        # Prove the relocated roots still hold the exact producer inventories.
-        ImageReleaseCompatibility.from_document(bridge).old_source()
+    lineage_manifest = None
+    if 'lineage_paths' in config and 'lineage_assets_manifest' not in compiler:
+        raise ValueError('lineage mapping requires compiler catalog pin')
+    if 'lineage_assets_manifest' in compiler:
+        import configured_checkpoint_successor as native
+        lineage_original = native.read_pin(compiler['lineage_assets_manifest'])
+        lineage_manifest = native.strict_json(lineage_original)
+        native.require(isinstance(lineage_manifest, dict) and set(lineage_manifest) == {'schema', 'files'}
+                       and lineage_manifest['schema'] == 'saea-experiment-assets-v1'
+                       and isinstance(lineage_manifest['files'], dict), 'invalid lineage assets manifest')
+        if 'lineage_paths' in config:
+            paths = config['lineage_paths']
+            native.require(isinstance(paths, dict) and set(paths) == set(lineage_manifest['files']),
+                           'lineage mapping must cover exactly every catalog asset')
+            for name, old in lineage_manifest['files'].items():
+                native.logical(name)
+                native.read_pin(paths[name])
+                native.require(paths[name]['sha256'] == old['sha256'], 'lineage asset pin differs: ' + name)
+            lineage_manifest['files'] = copy.deepcopy(paths)
+    from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import MULTI_SCHEMA
+    if bridge.get('schema') == MULTI_SCHEMA:
+        if not isinstance(config['bridge_paths'], dict) or set(config['bridge_paths']) != set(bridge['bridges']):
+            raise ValueError('bridge mapping must cover every ancestor')
+        bridges = [(item, config['bridge_paths'][key]) for key, item in bridge['bridges'].items()]
+    else:
+        bridges = [(bridge, config['bridge_paths'])]
+    for item, paths in bridges:
+        item['evidence'] = relocate_evidence(item['evidence'], paths)
+        if any(name in item['evidence'] for name in ('producer_workspace', 'producer_assets')):
+            from speech_aware_evidence_acquisition.core.flight.checkpoint_compatibility import ImageReleaseCompatibility
+            ImageReleaseCompatibility.from_document(item).old_source()
+        if item['predecessor_fragments'] != compiler['fragments']:
+            raise ValueError('bridge and compiler fragments differ')
+        item['successor_attempt_id'] = compiler['target']['attempt_id']
     _pinned(config['lock'])
     _pinned(config['predecessor_decision_file'])
     if config['admission']['predecessor_decision']['sha256'] != config['predecessor_decision_file']['sha256']:
         raise ValueError('predecessor decision pin differs')
-    if bridge['predecessor_fragments'] != compiler['fragments']:
-        raise ValueError('bridge and compiler fragments differ')
     bridge['successor_attempt_id'] = compiler['target']['attempt_id']
     out = Path(config['output'])
     if not out.is_absolute() or not out.parent.is_dir() or out.parent.resolve() != out.parent or os.path.lexists(out):
@@ -181,6 +208,23 @@ def prepare(config):
         write(stage / 'source-manifest.json', assets_bytes)
         write(stage / 'bridge.json', bridge_bytes)
         compiler['assets_manifest'] = {'path': str(out / 'source-manifest.json'), 'sha256': hashlib.sha256(assets_bytes).hexdigest()}
+        if lineage_manifest is not None:
+            lineage_bytes = encode(lineage_manifest)
+            write(stage / 'lineage-source-manifest.json', lineage_original)
+            write(stage / 'lineage-assets.json', lineage_bytes)
+            lineage_pin = {'path': str(out / 'lineage-assets.json'),
+                           'sha256': hashlib.sha256(lineage_bytes).hexdigest()}
+            write(stage / 'lineage-relocation.json', encode({
+                'schema': 'saea-lineage-relocation-v1', 'source_compiler': config['compiler'],
+                'source_manifest': compiler['lineage_assets_manifest'],
+                'source_manifest_copy': {'path': str(out / 'lineage-source-manifest.json'),
+                                         'sha256': hashlib.sha256(lineage_original).hexdigest()},
+                'relocated_manifest': lineage_pin, 'paths': lineage_manifest['files']}))
+            compiler['lineage_assets_manifest'] = lineage_pin
+            # Validate the consumed closure against staged bytes before publication.
+            staged = dict(compiler, lineage_assets_manifest=dict(lineage_pin, path=str(stage / 'lineage-assets.json')))
+            assets = {native.logical(name): native.read_pin(pin) for name, pin in manifest['files'].items()}
+            native.complete_lineage_inputs(staged, assets, native.strict_json(assets[compiler['candidate']['relpath']]))
         compiler['admission'] = copy.deepcopy(config['admission'])
         compiler['terminal'] = None
         for name in ('candidate', 'plan'):
@@ -232,7 +276,7 @@ def validate_compiler_template(cfg):
 
     fields = {'schema', 'mode', 'repo', 'data', 'output', 'assets_manifest', 'candidate',
               'plan', 'fragments', 'target', 'dispatch', 'width', 'supply', 'terminal', 'admission'}
-    native.require(isinstance(cfg, dict) and set(cfg) == fields and
+    native.require(isinstance(cfg, dict) and set(cfg) - {'lineage_assets_manifest'} == fields and
                    cfg['schema'] == 'saea-checkpoint-successor-compiler-v1' and
                    cfg['mode'] == 'finalize', 'exact compiler schema required')
     repo, data, out = (Path(cfg[k]) for k in ('repo', 'data', 'output'))
@@ -262,6 +306,8 @@ def validate_compiler_template(cfg):
         native.require(path in assets and native.digest(assets[path]) == item['sha256'], 'original source asset differs')
         originals.append(native.strict_json(assets[path]))
     candidate, plan = originals
+    if 'lineage_assets_manifest' in cfg:
+        native.complete_lineage_inputs(cfg, assets, candidate)
     for kind, name in fragments.items():
         native.require('configs/' + kind + '/' + name + '.json' in assets, 'fragment absent from pinned assets')
     native.require(candidate['experiment'] == fragments['experiment'] and candidate['baseline'] == fragments['baseline'] and
@@ -368,6 +414,7 @@ def build(config):
             raise ValueError('inventory changed during package generation')
         for p in evidence + [config['candidate'], config['plan'], config['bridge'], config['compiler']['template']]:
             _pinned(p)
+        validate_compiler_template(compiler)  # Recheck consumed pins after the custody audit.
         compiler['terminal'] = terminal
         write(stage / 'evidence-list.json', encode(terminal['evidence']))
         write(stage / 'terminal.json', encode(terminal))
