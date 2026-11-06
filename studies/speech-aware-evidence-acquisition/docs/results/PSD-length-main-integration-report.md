@@ -10,7 +10,7 @@
 pytest test_intent_slot_runner.py -k 'known_invalid_repair_has_successor or perception_length_repair'
 6 passed, 64 deselected, 5 warnings in 12.08s
 pytest test_intent_slot_workload.py -k 'recovery_workload_derive or perception_length_recovery'
-2 passed, 24 deselected, 2 warnings in 8.53s
+2 passed, 94 deselected, 2 warnings in 8.53s
 ```
 
 使用 `/opt/saea-venv/bin/python -m pytest -q --tb=short --show-capture=no -p no:cacheprovider`，`PYTHONPATH=/src/src:/src/scripts/analysis`；两条命令在固定镜像使用只读 `/src` 和临时 `/tmp`。第一条覆盖fresh资格和默认跨attempt拒绝、旧Slot后继、P length成功/失败/UNKNOWN；第二条覆盖workload配置和注册派生边界。真实SDK、mock transport与tokenizer，非业务模型/真实FIT。远端快照与本地关键代码五项SHA核对一致。此前模板及失败链的139项结果见 length报告，本次未重复该组。
