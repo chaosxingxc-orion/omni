@@ -68,7 +68,7 @@ def validate_evidence(cfg, bundle, receipts, generation, failed, identity):
 def recover(config_path, check_only=False):
     assert_execution_environment()
     cfg = json.loads(Path(config_path).read_bytes())
-    required = {'schema','run_id','attempt_id','rows','checkpoint_sha256','producer_id','inputs','output','lock'}
+    required = {'schema','run_id','attempt_id','rows','checkpoint_sha256','producer_id','failed_container_id','image','inputs','output','lock'}
     if set(cfg) != required or cfg['schema'] != 'saea-seal-only-finalize-recovery-v1':
         raise ValueError('exact recovery config required')
     rows = cfg['rows']
@@ -76,10 +76,11 @@ def recover(config_path, check_only=False):
     source = Path('/opt/saea-release/studies/speech-aware-evidence-acquisition')
     identity = verify_separate_scoring_tool(source, REPO)
     inputs = cfg['inputs']
-    if set(inputs) != {'manifest','generation','receipts','failed_stderr','original_launch','producer_container','runtime','admission','official_python'}:
+    if set(inputs) != {'manifest','generation','receipts','failed_stderr','original_launch','producer_container','failed_container','runtime','admission','official_python'}:
         raise ValueError('exact recovery input set required')
     paths = {k:checked(v) for k,v in inputs.items()}
     launch = json.loads(paths['original_launch'].read_bytes()); container = json.loads(paths['producer_container'].read_bytes())
+    failed_container = json.loads(paths['failed_container'].read_bytes())
     runtime = inputs['runtime']; args = launch['argv']; env = launch['environment']
     if (len(container) != 1 or container[0]['Id'] != cfg['producer_id']
             or container[0]['Config']['Labels'].get('saea.launch.config') != hashlib.sha256(json.dumps(launch,sort_keys=True,separators=(',',':')).encode()).hexdigest()
@@ -89,6 +90,14 @@ def recover(config_path, check_only=False):
             or os.environ.get('SAEA_RUNTIME_CONFIG_SHA256') != runtime['sha256']
             or os.environ.get('SPEECHRL_DATA_DIR') != env.get('SPEECHRL_DATA_DIR')):
         raise ValueError('original producer runtime identity differs')
+    if (container[0]['State']['Status'] != 'exited' or container[0]['State']['Running'] is not False
+            or len(failed_container) != 1 or failed_container[0]['Id'] != cfg['failed_container_id']
+            or failed_container[0]['State']['Status'] != 'exited' or failed_container[0]['State']['ExitCode'] != 1
+            or failed_container[0]['State']['Running'] is not False
+            or failed_container[0]['Config']['Image'] != cfg['image']
+            or 'seal-only' not in failed_container[0]['Args']
+            or runtime['path'] not in failed_container[0]['Args']):
+        raise ValueError('producer or failed seal container identity differs')
     target = Path(runtime['path']); mounts = [m for m in launch['mounts'] if target.is_relative_to(m['target'])]
     if not mounts: raise ValueError('runtime producer mount absent')
     mount = max(mounts,key=lambda m:len(m['target']))
@@ -133,13 +142,13 @@ def recover(config_path, check_only=False):
         publish('intent.json', {'schema':'saea-seal-only-finalize-recovery-intent-v1','config_sha256':sha(config_path),
             'source_identities':identity,'inputs':inputs,'generation_cost':generation['cost'],'rows':rows,'new_model_calls':0})
         publish('ledger-cells.json',cells)
-        job=ScoreJob(attempt, paths['manifest'], ledger_cells=out/'ledger-cells.json')
+        job=ScoreJob(cfg['attempt_id'], paths['manifest'], ledger_cells=out/'ledger-cells.json')
         result=run_score_batch([job],output_dir=out/'batch',max_workers=1,operation='finalize',include_per_sample=True,
             context=ScoringContext(source,Path(env['SPEECHRL_DATA_DIR']),lock_path,tool_repo_root=REPO))
         if result.get('failed') or result.get('succeeded') != 1: raise ValueError('finalize failed; preserve intent and batch')
         after=verify_bundle(paths['manifest'])
         if after.attempt_state != 'FINALIZED' or len(after.outputs_rows) != rows: raise ValueError('finalized bundle incomplete')
-        for key in ('generation','receipts','failed_stderr','original_launch','producer_container','runtime','admission','official_python'):
+        for key in ('generation','receipts','failed_stderr','original_launch','producer_container','failed_container','runtime','admission','official_python'):
             checked(inputs[key])
         publish('recovery-receipt.json',{'schema':'saea-seal-only-finalize-recovery-v1','intent_sha256':sha(out/'intent.json'),
             'finalized_manifest_sha256':sha(paths['manifest']),'result':result,'new_model_calls':0})
