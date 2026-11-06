@@ -22,8 +22,18 @@
   },
   "device_mount_smoke": {
     "ok": true,
-    "imports": ["acl", "torch_npu", "vllm", "vllm_ascend"],
-    "cards": [0, 1, 2, 3],
+    "imports": [
+      "acl",
+      "torch_npu",
+      "vllm",
+      "vllm_ascend"
+    ],
+    "cards": [
+      0,
+      1,
+      2,
+      3
+    ],
     "network": "host",
     "model_requests": 0
   },
@@ -35,5 +45,41 @@
     "CPU validation does not demonstrate online throughput",
     "Device-mounted import smoke covers runtime packages only; it does not prove model throughput",
     "Resident and checkpoint handoff remains outstanding"
-  ]
+  ],
+  "checkpoint_audit": {
+    "checked_at_utc": "2026-11-06T01:08:21Z",
+    "arm": "Fold A Slot off",
+    "total_samples": 1080,
+    "checkpoint_rows": 919,
+    "classifications": {
+      "complete": 601,
+      "finite_completion": 19,
+      "refusal": 299
+    },
+    "checkpoint_sha256": "91e3fe35d3dfa1a1dcd3c0da4b21b87b29fdf97f498cca1bdc0818dd4ce19158",
+    "torn_tail_bytes": 0,
+    "observed_generation_calls": 2231,
+    "generation_audio_seconds": 6160.0578750000295,
+    "generation_journal_cost_match": true,
+    "new_model_calls": 0,
+    "full_terminal_custody_verified": false,
+    "limitations": [
+      "Classification is not accuracy or a recoverable-row decision",
+      "Detailed P/Slot/Decision receipt audit covered the first complete row only",
+      "FIT, cross-ledger, source bridge and live guard validation remain pending"
+    ]
+  },
+  "resident_snapshot": {
+    "checked_at_utc": "2026-11-06T01:08:21Z",
+    "deployment": "two TP4 instances on previous cf273e52 release",
+    "running_requests": [
+      0,
+      0
+    ],
+    "waiting_requests": [
+      0,
+      0
+    ],
+    "new_candidate_deployed": false
+  }
 }
