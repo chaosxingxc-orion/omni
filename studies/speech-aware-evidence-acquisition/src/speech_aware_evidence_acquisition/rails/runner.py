@@ -7867,12 +7867,8 @@ def _run_agent_openjiuwen(
             if getattr(transport, "instance_count", 1) != 1:
                 raise RailsRunnerError("contact-scoped slots require a single serving instance")
             if switches.ready_request:
-                from ..core.model.vllm_transport import VllmServerTransport
-                from ..core.model.vllm_router_transport import VllmRouterTransport
-                if not (type(transport) is VllmServerTransport or
-                        (type(transport) is VllmRouterTransport and
-                         len(transport._transports) == 1 and
-                         type(transport._transports[0]) is VllmServerTransport)):
+                from ..core.model.transport_capabilities import supports_single_vllm_ready_request
+                if not supports_single_vllm_ready_request(transport):
                     raise RailsRunnerError("ready_request requires a single vLLM transport")
             scheduling_options["release_slot_after_contact"] = True
         if switches is not None and (switches.admitted_trajectories or switches.model_inflight):

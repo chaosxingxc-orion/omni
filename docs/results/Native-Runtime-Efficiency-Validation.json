@@ -344,8 +344,36 @@
     "generation_launched": true,
     "attempt": "generation-telemetry-v1",
     "started_at_utc": "2026-11-06T03:56:00.3234752Z",
-    "new_terminal_rows_verified": null,
+    "new_terminal_rows_verified": 0,
     "throughput_verified": false,
-    "validation_omits_worker_timing_path": true
+    "validation_omits_worker_timing_path": true,
+    "generation_state": "exited",
+    "generation_exit_code": 1,
+    "finished_at_utc": "2026-11-06T04:01:21.92137116Z",
+    "actual_model_calls": 0,
+    "attempt_state": "ABORTED",
+    "failure": "ready_request exact-type check rejected production lease/resource wrapper",
+    "audio_cache": {
+      "loaded": 1080,
+      "failed": 0,
+      "bytes": 77788012,
+      "seconds": 3.6628369199461304
+    }
+  },
+  "guarded_ready_request_fix": {
+    "deployed": false,
+    "passed": 93,
+    "seconds": 24.83,
+    "warnings": 5,
+    "network": "none",
+    "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "coverage": [
+      "single vLLM under known lease/resource guards",
+      "reject unknown proxy, multiple endpoints and cycle",
+      "actual workflow dispatch retains lease/resource checks",
+      "denied guard emits no HTTP request",
+      "existing slot-fill, router and resource guard regression"
+    ],
+    "online_throughput_verified": false
   }
 }

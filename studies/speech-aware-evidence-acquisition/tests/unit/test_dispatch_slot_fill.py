@@ -522,6 +522,55 @@ def test_validation_pool_drains_cancelled_work_and_closes():
 
 
 @pytestmark_episode
+@pytest.mark.parametrize("deny", [None, "lease", "resource"])
+def test_ready_request_preserves_production_dispatch_guards(tmp_path, monkeypatch, deny):
+    from speech_aware_evidence_acquisition.core.model.vllm_router_transport import VllmRouterTransport
+    from speech_aware_evidence_acquisition.core.session import resource_guard
+    from speech_aware_evidence_acquisition.core.session.worker import LeaseCheckedTransport
+
+    events = []
+
+    def guard(name):
+        events.append(name)
+        if deny == name:
+            raise RuntimeError(f"blocked by {name} guard")
+
+    def install(harness):
+        original = harness.transport._post
+
+        def post(url, body):
+            events.append("send")
+            return original(url, body)
+
+        harness.transport._post = post
+        monkeypatch.setattr(resource_guard, "assert_admission", lambda *a, **k: guard("resource"))
+        resource = resource_guard.ResourceCheckedTransport(harness.transport, None, None, None)
+        harness.client._rollout_transport = LeaseCheckedTransport(
+            VllmRouterTransport([resource]), lambda: guard("lease"),
+        )
+        # Production construction gives the same guarded object to both.
+        harness.client._adapter._transport = harness.client._rollout_transport
+
+    config = {"schema": DISPATCH_SLOT_FILL_SCHEMA, "role_input_offload": True,
+              "prepare_workers": 2, "validation_workers": 2, "ready_request": True,
+              "model_inflight": 1, "admitted_trajectories": 2}
+
+    def fly():
+        return _fly_with(tmp_path, monkeypatch, f"ready-guards-{deny}", ("s1",),
+                         config, max_revisions=0, harness_hook=install)
+
+    if deny is not None:
+        with pytest.raises(Exception, match=f"blocked by {deny} guard"):
+            fly()
+        assert "send" not in events
+        assert deny in events
+    else:
+        fly()
+        assert events and len(events) % 3 == 0
+        assert events == ["lease", "resource", "send"] * (len(events) // 3)
+
+
+@pytestmark_episode
 def test_ready_request_fit_wait_does_not_hold_send_permit(tmp_path, monkeypatch):
     import threading
     from concurrent.futures import ThreadPoolExecutor
