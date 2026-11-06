@@ -464,7 +464,11 @@ def validate_terminal_custody(*, cfg, candidate, plan, data):
         if a['bridge_key'] != aid or not isinstance(bridges[aid], ImageReleaseCompatibility):
             raise ValueError('authenticated image release bridge required')
         old_bridge = bridges[aid]
-        files = old_bridge.old_source()
+        workspace = old_bridge.evidence.get('producer_workspace')
+        if workspace is not None:
+            for key in ('manifest', 'source_manifest', 'launch', 'container'):
+                evidence_blob(workspace[key])
+        files = old_bridge.old_source(run_id=candidate['run_id'], predecessor_attempt_id=aid)
         registered = json.loads(evidence_blob(a['plan']))
         raw_plan = dict(registered['execution_plan'])
         if 'owner_allowance' in registered:

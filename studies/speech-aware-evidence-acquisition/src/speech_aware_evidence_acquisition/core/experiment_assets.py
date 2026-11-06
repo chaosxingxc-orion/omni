@@ -68,6 +68,25 @@ def seal_workspace(repo_root):
     return {'path':str(target),'sha256':sha}
 
 
+def validate_workspace_inventory(doc, *, commit, source_manifest_sha256):
+    """Shared inventory identity/path checks for live and archived workspaces."""
+    if (not isinstance(doc, dict)
+            or set(doc) != {'schema', 'source_commit', 'source_manifest_sha256', 'files'}
+            or doc['schema'] != 'saea-experiment-workspace-v1'
+            or doc['source_commit'] != commit
+            or doc['source_manifest_sha256'] != source_manifest_sha256
+            or not isinstance(doc['files'], dict)):
+        raise ValueError('workspace source identity differs')
+    import re
+    for name, digest in doc['files'].items():
+        if (not isinstance(name, str) or not name.startswith(('configs/', 'docs/'))
+                or any(part in ('', '.', '..') for part in name.split('/'))
+                or Path(name).suffix not in ('.json', '.txt', '.md', '.jsonl')
+                or not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest)):
+            raise ValueError('invalid workspace asset path or digest')
+    return doc['files']
+
+
 def workspace_asset(repo_root,relative):
     root=workspace_root(repo_root)
     if root==Path(repo_root):return None
@@ -79,10 +98,8 @@ def workspace_asset(repo_root,relative):
     raw=Path(manifest).read_bytes()
     if hashlib.sha256(raw).hexdigest()!=expected:raise ValueError('workspace inventory digest differs')
     doc=json.loads(raw)
-    if (set(doc)!={'schema','source_commit','source_manifest_sha256','files'} or doc['schema']!='saea-experiment-workspace-v1'
-        or doc['source_commit']!=source_commit(repo_root)
-        or doc['source_manifest_sha256']!=os.environ.get('SAEA_RELEASE_MANIFEST_SHA256')):
-        raise ValueError('workspace source identity differs')
+    validate_workspace_inventory(doc, commit=source_commit(repo_root),
+                                 source_manifest_sha256=os.environ.get('SAEA_RELEASE_MANIFEST_SHA256'))
     if relative not in doc['files']:
         if path.exists() or path.is_symlink():raise ValueError('workspace asset absent from pinned inventory or changed')
         return None
