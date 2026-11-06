@@ -37,3 +37,32 @@ python scripts/environment/configured_input_inventory.py --config /config/launch
 只读探测、逐项保留errno，文件pin流式计算完整SHA256；报告不包含环境变量值，不启动任务。输出必须是新文件；存在失败返回1，原报告不覆盖。目录检查仅验证目录可遍历，普通未pin文件只读首字节；不能据此声称整个数据集已缓存、完整或READY。原始资产路径可能含内部信息，公开只发布脱敏汇总。
 
 真实构建配置98个挂载根有26个EACCES；消费配对配置122个有36个EACCES。两者包含继承的历史run挂载，后续应按manifest依赖分析确认最小集合，不能仅因本次未直接使用就删挂载。固定镜像3项针对性回归通过，真实盘点零模型调用。
+
+## 只读基座的框架日志与启动检查
+
+使用完整只读源码的工作流任务，在启动配置中显式声明：
+
+```json
+"framework_runtime": {"log_directory": "/state/framework/logs"}
+```
+
+`/state` 必须映射到项目所属的本地可写目录，并在 `allowed_create_roots` 范围内。
+源码和依赖目录继续只读，不允许把 `logs` 子目录挂进源码树。
+启动器通过 openJiuwen 公共日志配置 API 设置目录，然后导入实际业务工作流，
+最后执行原 `argv` 中的固定源码脚本。日志、完整源码、科学配置分别管理；
+无需改依赖镜像或实验业务实现。未设置此字段的任务保持既有入口。
+
+先使用与正式 worker 一致的镜像、源码、用户和挂载配置运行：
+
+```bash
+python scripts/environment/configured_job_launch.py layout --config /config/worker.json
+python scripts/environment/configured_job_launch.py runtime-check --config /config/worker.json
+docker wait <container_name>-runtime-check
+docker logs <container_name>-runtime-check
+```
+
+检查会写框架日志，并导入真实工作流；强制 `network=none`，不会执行实验入口、
+预留 attempt 或发送模型请求。返回 `launched` 只表示检查容器启动，必须等待
+exit 0 和 `framework_runtime_ready`。失败检查保留容器、intent和输出，不原地重提。
+该检查不证明完整业务路径、断点接续或推理吞吐通过；正式 launch 仍做自己的身份、
+输入、输出冲突和共享 guard 检查。运行中的旧任务不受影响。

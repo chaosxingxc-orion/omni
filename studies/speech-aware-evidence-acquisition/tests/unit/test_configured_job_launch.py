@@ -273,6 +273,52 @@ def mounted_release(tmp_path):
     return path, doc
 
 
+def test_framework_runtime_uses_external_logs_and_same_bootstrap(tmp_path):
+    path, doc = mounted_release(tmp_path)
+    doc['mounts'][0]['readonly'] = False
+    doc['framework_runtime'] = {'log_directory': '/data/framework/logs'}
+    path.write_text(json.dumps(doc))
+    loaded = m.load_config(path)
+    live = m.command(loaded, 'config', 'runner')
+    smoke = m.command(loaded, 'config', 'runner', runtime_check=True)
+    assert m.FRAMEWORK_BOOTSTRAP in live and m.FRAMEWORK_BOOTSTRAP in smoke
+    assert live[-1] == doc['argv'][1]
+    assert smoke[-1] == '--runtime-check'
+    assert smoke[smoke.index('--network') + 1] == 'none'
+    assert '/data/framework/logs' in live
+    assert not any('dst=/opt/saea-release/studies/' in a for a in live)
+
+
+@pytest.mark.parametrize('target', ['/opt/saea-release/logs', '/tmp/logs', '/data'])
+def test_framework_runtime_rejects_unmanaged_or_source_logs(tmp_path, target):
+    path, doc = mounted_release(tmp_path)
+    doc['framework_runtime'] = {'log_directory': target}
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError):
+        m.load_config(path)
+
+
+def test_framework_smoke_cannot_dispatch_campaign_or_repeat(tmp_path, monkeypatch):
+    path, doc = mounted_release(tmp_path)
+    doc['mounts'][0]['readonly'] = False
+    doc['framework_runtime'] = {'log_directory': '/data/framework/logs'}
+    path.write_text(json.dumps(doc))
+    m.execute(path, 'layout')
+    monkeypatch.setattr(m, 'preflight', lambda doc: None)
+    calls = []
+    def run(argv, **kwargs):
+        calls.append(argv)
+        return SimpleNamespace(returncode=0, stdout='check-container', stderr='')
+    monkeypatch.setattr(m, 'run', run)
+    assert m.execute(path, 'runtime-check')['container_id'] == 'check-container'
+    assert calls[0][-1] == '--runtime-check'
+    assert doc['argv'][1] not in calls[0]
+    assert not (Path(doc['receipt_dir']) / 'launch-intent.json').exists()
+    with pytest.raises(FileExistsError):
+        m.execute(path, 'runtime-check')
+    assert len(calls) == 1
+
+
 @pytest.mark.parametrize('fault', ['writable', 'nested', 'parent', 'dependency', 'missing'])
 def test_mounted_release_rejects_unsealed_mounts(tmp_path, fault):
     path, doc = mounted_release(tmp_path)

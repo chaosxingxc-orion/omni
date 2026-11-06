@@ -13,6 +13,23 @@ import time
 SCHEMA = 'saea-configured-job-launch-v1'
 VERSION = '1.0.0'
 
+# Configure the dependency through its public API before importing the workflow.
+# The target remains the absolute, manifest-verified script from argv.
+FRAMEWORK_BOOTSTRAP = '''import sys, runpy
+from openjiuwen.core.common.logging.log_config import log_config
+cfg = log_config.get_snapshot()
+cfg['log_path'] = sys.argv[1]
+log_config.load_from_dict(cfg)
+from speech_aware_evidence_acquisition.reproduction.ojw import runner
+if sys.argv[2] == '--runtime-check':
+    from openjiuwen.core.common.logging import logger
+    logger.info('configured framework runtime check passed')
+    print('framework_runtime_ready')
+else:
+    sys.argv = sys.argv[2:]
+    runpy.run_path(sys.argv[0], run_name='__main__')
+'''
+
 
 def require(ok, message):
     if not ok:
@@ -54,7 +71,7 @@ def load_config(path):
     keys = {'schema', 'container_name', 'image', 'repo_path', 'expected_commit', 'receipt_dir',
             'argv', 'working_directory', 'network', 'pid_host', 'cpuset_cpus', 'environment',
             'mounts', 'create_directories', 'allowed_create_roots', 'required_inputs', 'monitor_interval_seconds'}
-    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access', 'user', 'external_admission'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access', 'user', 'external_admission', 'framework_runtime'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
                          ('image', r'sha256:[a-f0-9]{64}'), ('expected_commit', r'[a-f0-9]{40}'),
                          ('cpuset_cpus', r'[0-9]+(?:[-,][0-9]+)*')]:
@@ -158,6 +175,13 @@ def load_config(path):
         require(doc['process_access'] == 'resident-identity-read-v1' and identity is not None
                 and doc['pid_host'] and doc['network'] == 'host',
                 'resident process inspection requires release, host PID and network')
+    if 'framework_runtime' in doc:
+        runtime = doc['framework_runtime']
+        require(identity is not None and isinstance(runtime, dict)
+                and set(runtime) == {'log_directory'}, 'exact release framework runtime required')
+        mapped = output_path(doc, runtime['log_directory'])
+        require(any(mapped.resolve().is_relative_to(r) for r in roots),
+                'framework logs escape owned roots')
     return doc
 
 
@@ -351,8 +375,8 @@ def preflight(doc):
             + json.dumps(conflicts, sort_keys=True))
 
 
-def command(doc, config_sha, runner_sha):
-    args = ['docker', 'run', '-d', '--name', doc['container_name'], '--network', doc['network'], '--cpuset-cpus', doc['cpuset_cpus'],
+def command(doc, config_sha, runner_sha, *, runtime_check=False):
+    args = ['docker', 'run', '-d', '--name', doc['container_name'] + ('-runtime-check' if runtime_check else ''), '--network', 'none' if runtime_check else doc['network'], '--cpuset-cpus', doc['cpuset_cpus'],
             '--label', 'saea.launch.config=' + config_sha, '--label', 'saea.launch.runner=' + runner_sha]
     if doc.get('source_identity') is not None:
         args += ['--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges']
@@ -366,7 +390,11 @@ def command(doc, config_sha, runner_sha):
         args += ['--mount', 'type=bind,src=' + m['source'] + ',dst=' + m['target'] + (',readonly' if m['readonly'] else '')]
     for key, value in sorted(doc['environment'].items()):
         args += ['-e', key + '=' + value]
-    return args + ['-w', doc['working_directory'], '--entrypoint', doc['argv'][0], doc['image'], *doc['argv'][1:]]
+    entry = doc['argv'][1:]
+    if 'framework_runtime' in doc:
+        entry = ['-c', FRAMEWORK_BOOTSTRAP, doc['framework_runtime']['log_directory'],
+                 *(['--runtime-check'] if runtime_check else entry)]
+    return args + ['-w', doc['working_directory'], '--entrypoint', doc['argv'][0], doc['image'], *entry]
 
 
 def status(doc, config_sha, runner_sha):
@@ -393,6 +421,20 @@ def execute(path, mode):
     config_sha = hashlib.sha256(json.dumps(doc, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
     runner_sha = digest(__file__)
     root = Path(doc['receipt_dir'])
+    if mode == 'runtime-check':
+        require('framework_runtime' in doc and root.is_dir(), 'framework runtime and layout required')
+        preflight(doc)
+        # Separate identity: this imports the actual workflow and writes logs, but
+        # cannot dispatch the campaign or contact an engine (network=none).
+        intent = root / 'runtime-check-intent.json'
+        persist(intent, {'config_sha256': config_sha, 'runner_sha256': runner_sha,
+                         'automatic_retry': False})
+        result = run(command(doc, config_sha, runner_sha, runtime_check=True))
+        persist(root / 'runtime-check-launch.json', {'returncode': result.returncode,
+                'stdout': result.stdout, 'stderr': result.stderr})
+        require(result.returncode == 0, 'framework runtime check launch failed; intent retained')
+        return {'container_id': result.stdout.strip(), 'state': 'launched',
+                'new_model_calls': 0, 'automatic_retry': False}
     if mode == 'plan':
         preflight(doc)
         return {'version': VERSION, 'config_sha256': config_sha, 'runner_sha256': runner_sha,
@@ -441,7 +483,7 @@ def execute(path, mode):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('plan', 'layout', 'launch', 'status', 'watch'))
+    parser.add_argument('mode', choices=('plan', 'layout', 'launch', 'status', 'watch', 'runtime-check'))
     parser.add_argument('--config', type=Path, required=True)
     args = parser.parse_args()
     print(json.dumps(execute(args.config, args.mode), sort_keys=True))
