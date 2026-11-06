@@ -63,8 +63,10 @@ def relative_evidence(groups):
 def validate_context(context):
     fields = {'schema', 'model_id', 'parent', 'reward_mode', 'rollout_policy_sha256',
               'rollout_kind', 'offline_stale_policy', 'bounds'}
-    require(isinstance(context, dict) and set(context) == fields
+    require(isinstance(context, dict) and set(context) in (fields, fields | {'psd'})
             and context['schema'] == CONTEXT_SCHEMA, 'exact TF-GRPO context required')
+    if 'psd' in context:
+        require(isinstance(context['psd'], dict) and set(context['psd']) == {'target','source_batch'} and context['psd']['target'] in ('slot','decision'), 'explicit PSD target and batch required')
     require(context['reward_mode'] == DENSE_REWARD, 'explicit continuous reward required')
     validate_experience(context['parent'], context['model_id'])
     require(isinstance(context['rollout_policy_sha256'], str)
@@ -89,7 +91,8 @@ def validate_proposal(candidate, context, ledger):
     fields = {'id', 'target', 'parent_sha256', 'evidence_query_ids', 'relative_feedback',
               'hypothesis', 'operations', 'counterexample', 'validation'}
     require(isinstance(candidate, dict) and set(candidate) == fields, 'exact TF-GRPO operation proposal required')
-    require(candidate['target'] == 'solver_experience_library', 'only solver experience library edits implemented')
+    target = context.get('psd', {}).get('target')
+    require(candidate['target'] == (target + '_experience_library' if target else 'solver_experience_library'), 'exact experience target required')
     require(candidate['parent_sha256'] == context['parent']['sha256'], 'external experience parent differs')
     for field in ('id', 'hypothesis', 'counterexample', 'validation'):
         require(isinstance(candidate[field], str) and candidate[field].strip(), 'nonempty ' + field + ' required')

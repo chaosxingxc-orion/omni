@@ -122,6 +122,12 @@ def prepare(config_path):
     if profile['algorithm'] == 'tfgrpo':
         from speech_aware_evidence_acquisition.rails.tfgrpo_external_proposals import prepare_context, relative_evidence
         context = prepare_context(context, read(source)['document'])
+        if 'psd' in context:
+            from .tfgrpo_psd_evidence import verify as verify_psd
+            expected = ROOT / ('configs/learners/tfrl/tfgrpo-psd-' + context['psd']['target'] + '.json')
+            if profile != read(expected) or template.read_bytes() != checked(read(expected)['template'], expected.parent).read_bytes():
+                raise ValueError('fixed PSD learner profile required')
+            verify_psd(context, read(source)['document'], selected)
         relative = relative_evidence(selected)
     if profile['algorithm'] == 'gepa':
         contract = context['contract']

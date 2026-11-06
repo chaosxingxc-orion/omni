@@ -1,0 +1,3 @@
+# Reference multistage TF-GRPO for PSD decision
+
+Target is decision only. Select only an existing candidate ID; entities are copied from Slot. Freeze the actor, knowledge and other nodes. Follow the versioned reference summary, advantage, group update and batch update stage contracts. Use only genuine same-question, same-policy sampled trajectories, preserve duplicates and their weights and actual reward; never treat cross-policy OFF/ON or rewritten gold as sampled trajectories. Experiences are conditional runtime actions, no reference answers or sample IDs. Distinguish hypotheses from validated interventions. Stage outputs are pending review; no measured benefit is implied.

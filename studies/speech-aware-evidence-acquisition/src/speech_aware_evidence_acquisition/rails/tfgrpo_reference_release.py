@@ -82,6 +82,8 @@ def compile_preview(spec):
         'usage_scope': 'one complete reference batch shared by all releases and evaluations; count once by usage_identity',
         'semantic_validation': 'pending', 'deployment_accepted': False, 'candidate_publishable': False,
         'native_learning_seal': False, 'new_model_calls': 0}
+    if 'psd_target' in config:
+        body['psd_target'] = config['psd_target']
     return {**body, 'sha256': sha(body)}
 
 

@@ -38,6 +38,12 @@ def compile_preview(spec):
     profile = external.read(root / 'profile.json')
     if payload['context'] != context or payload['algorithm'] != 'tfgrpo' or profile['algorithm'] != 'tfgrpo':
         raise ValueError('TF-GRPO source and parent context required')
+    if 'psd' in context:
+        from .tfgrpo_psd_evidence import verify as verify_psd
+        expected = external.ROOT / ('configs/learners/tfrl/tfgrpo-psd-' + context['psd']['target'] + '.json')
+        if profile != external.read(expected) or (root/'template.md').read_bytes() != external.checked(profile['template'], expected.parent).read_bytes():
+            raise ValueError('fixed PSD learner profile differs')
+        verify_psd(context, external.read(source)['document'], payload['groups'])
     ledger = relative_evidence(payload['groups'])
     if ledger != payload.get('relative_evidence'):
         raise ValueError('relative evidence differs from complete supplied trajectories')
@@ -73,6 +79,8 @@ def compile_preview(spec):
             'native_learning_seal': False, 'candidate_publishable': False,
             'implementation': 'fused offline relative-feedback operation proposal, not native multistage reference TF-GRPO',
             'new_model_calls': 0}
+    if 'psd' in context:
+        body['psd_target'] = context['psd']['target']
     return {**body, 'sha256': sha(body)}
 
 

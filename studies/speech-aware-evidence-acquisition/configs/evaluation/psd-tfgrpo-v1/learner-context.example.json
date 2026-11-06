@@ -1,0 +1,11 @@
+{
+  "schema": "saea-tfgrpo-external-context-v1",
+  "model_id": "REPLACE_ACTOR_MODEL_ID",
+  "parent": "REPLACE_WITH_EMPTY_VALID_EXPERIENCE_OBJECT",
+  "reward_mode": "intent-exact-slot-f1-v1",
+  "rollout_policy_sha256": "REPLACE_WITH_ACTUAL_POLICY_SHA256",
+  "rollout_kind": "full-same-policy",
+  "offline_stale_policy": false,
+  "bounds": {"max_operations": 2, "max_items": 48, "max_characters": 10000},
+  "psd": {"target": "slot", "source_batch": {"path": "/ABSOLUTE/ORIGINAL/BATCH.json", "sha256": "REPLACE_WITH_SHA256"}}
+}

@@ -1,0 +1,6 @@
+{
+  "schema": "saea-psd-tfgrpo-consumer-v1",
+  "target": "slot",
+  "source": {"relpath": "tfgrpo/psd-source-params.json", "sha256": "REPLACE_WITH_SHA256"},
+  "template": {"relpath": "configs/probes/psd-tfgrpo-direct-slot.txt", "sha256": "FILLED_BY_COMPILER"}
+}

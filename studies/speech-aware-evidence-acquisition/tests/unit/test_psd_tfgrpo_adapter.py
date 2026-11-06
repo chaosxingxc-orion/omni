@@ -74,3 +74,79 @@ def test_old_workload_and_v2_gate():
     c=config(); assert 'tfgrpo_experience' not in workload.NodeWorkload(c).config
     c['tfgrpo_experience']={}
     with pytest.raises(ValueError,match='fixed fold'): workload.NodeWorkload(c)
+
+from test_tfgrpo_external_release import material as fused_material
+from test_tfgrpo_reference_release import release_material as reference_material
+
+@pytest.mark.parametrize('kind,target', [('fused','slot'),('reference','decision')])
+def test_complete_release_replay_to_node(tmp_path, monkeypatch, request, kind, target):
+    from speech_aware_evidence_acquisition.rails import tfgrpo_external_release as fused, tfgrpo_reference_release as reference
+    from speech_aware_evidence_acquisition.rails.phase_material import load_phase_material_specs, render_static_instruction
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    fixture = request.getfixturevalue('fused_material' if kind=='fused' else 'reference_material')
+    kwargs,candidate,*rest=fixture; repo=kwargs['repo'];data=kwargs['data']
+    params=(fused if kind=='fused' else reference).prepare(**kwargs)
+    source=pin(data,'psd-params.json',params)
+    mapping=pin(data,'psd-map.json',{'schema':'saea-psd-tfgrpo-semantic-map-v1','target':target,'candidate_sha256':candidate['sha256'],'items':{next(iter(candidate['items'])):'Fixture adaptation: inspect current evidence.'},'rationale':'fixture only; derived interpretation'})
+    descriptor={'schema':adapter.SCHEMA,'target':target,'source':source,'mapping':mapping,'template':{'relpath':'configs/probes/psd.txt','sha256':''}}
+    original_read=workload.read_asset
+    monkeypatch.setattr(workload,'read_asset',lambda repo,rel: original_read(ROOT, 'configs/model/bf16-thinking-tfgrpo-tp4-ctx48k-v1.json' if rel=='configs/model/frozen-actor.json' else rel))
+    rows=json.loads((repo/fused.DATASET).read_text())['items']; learned=set(candidate['learned_query_ids']); sid=next(r['sample_id'] for r in rows if r['sample_id'] not in learned and r['audio_sha256'] not in {x['audio_sha256'] for x in rows if x['sample_id'] in learned} and ':'.join(r['sample_id'].split(':')[:3]) not in {':'.join(x.split(':')[:3]) for x in learned})
+    row=next(r for r in rows if r['sample_id']==sid); view={'split_name':'fixture','items':[row]}
+    monkeypatch.setattr(workload.NodeWorkload,'material_checked',lambda *a: ({'source_roster':{}},{'roster':{'roster_id':'fixture','items':[{'audio_seconds':1}],'split_identity_hash':'a'*64},'view':view,'source_baseline':original_read(ROOT,workload.observation.SOURCE_BASE)}))
+    monkeypatch.setattr(workload.NodeWorkload,'runtime_binding',lambda *a:{'model_fragment':'frozen-actor','service_session':'fixture'})
+    c=config();c.update(node_arm='enhanced-p-slot-decision', pipeline={'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'},sample_ids=[sid],population={'dataset':'slurp-speech-native-evo-fold-a-1080','dataset_sha256':'x','roster':{},'source_baseline':{}})
+    baseline=workload.NodeWorkload(c).derive(repo,data,{})[0];role='slot' if target=='slot' else 'solver'
+    original=ROOT/'configs'/baseline['phase_material'][role]['instruction_template']; destination=repo/'configs'/baseline['phase_material'][role]['instruction_template'];destination.parent.mkdir(parents=True,exist_ok=True);destination.write_bytes(original.read_bytes())
+    text=adapter.verify_and_render(repo,data,descriptor,[sid],view,'frozen-actor',original.read_text())
+    path=repo/descriptor['template']['relpath'];path.write_text(text);descriptor['template']['sha256']=hashlib.sha256(path.read_bytes()).hexdigest();c['tfgrpo_experience']=descriptor
+    result=workload.NodeWorkload(c).derive(repo,data,{})[0]
+    specs=load_phase_material_specs(result,default_phase_program(result['policy']))
+    assert 'Fixture adaptation: inspect current evidence.' in render_static_instruction(specs[role],repo,{},data)
+    expected=copy.deepcopy(baseline);expected['phase_material'][role]['instruction_template']='probes/psd.txt';assert result==expected
+    # Corrupt underlying source bytes, not the new mapping.
+    spec=json.loads((data/'spec.json').read_text()); Path(spec['prepared']['path']).write_text('{}')
+    with pytest.raises(ValueError):workload.NodeWorkload(c).derive(repo,data,{})
+
+
+def test_cli_rolls_back_on_derive_failure(tmp_path, monkeypatch):
+    import sys
+    repo=tmp_path/'repo';repo.mkdir();data=tmp_path/'data';data.mkdir()
+    desc={'target':'slot','template':{'relpath':'configs/probes/new.txt','sha256':''}}
+    dp=tmp_path/'descriptor.json';dp.write_text(json.dumps(desc));wp=tmp_path/'workload.json';wp.write_text(json.dumps({'material':{},'sample_ids':[]}));output=tmp_path/'out.json'
+    calls=[]
+    class Job:
+        def __init__(self,c):pass
+        def derive(self,*a):
+            calls.append(1)
+            if len(calls)>1:raise ValueError('failed post validation')
+            return ({'phase_material':{'slot':{'instruction_template':'probes/base.txt'}}},None,None,{}, {'model_fragment':'actor'})
+    monkeypatch.setattr(workload,'NodeWorkload',Job)
+    p=repo/'configs/probes/base.txt';p.parent.mkdir(parents=True);p.write_text('base')
+    monkeypatch.setattr(adapter,'verify_and_render',lambda *a:'result')
+    monkeypatch.setattr(sys,'argv',['adapter','--repo',str(repo),'--data',str(data),'--workload',str(wp),'--descriptor',str(dp),'--output',str(output)])
+    with pytest.raises(ValueError,match='post validation'):adapter.main()
+    assert not (repo/'configs/probes/new.txt').exists() and not output.exists()
+    calls.clear();output.write_text('keep')
+    monkeypatch.setattr(Job,'derive',lambda *a: ({'phase_material':{'slot':{'instruction_template':'probes/base.txt'}}},None,None,{}, {'model_fragment':'actor'}))
+    with pytest.raises(FileExistsError):adapter.main()
+    assert output.read_text()=='keep' and not (repo/'configs/probes/new.txt').exists()
+
+@pytest.mark.parametrize('target',['slot','decision'])
+def test_direct_target_candidate_is_not_rewritten(tmp_path,monkeypatch,target):
+    from speech_aware_evidence_acquisition.rails import tfgrpo_external_release as release, tfgrpo_consumption as consumption
+    repo=tmp_path/'repo';data=tmp_path/'data';repo.mkdir();data.mkdir()
+    monkeypatch.setattr(consumption,'validate_params',lambda p:p)
+    monkeypatch.setattr(release,'verify_source',lambda *a,**k:None)
+    monkeypatch.setattr(release,'render',lambda c,b,ids:b+' old')
+    old=repo/'configs/probes/old';old.parent.mkdir(parents=True);old.write_text('base old');base=old.parent/'base';base.write_text('base')
+    def fp(p):return {'relpath':p.relative_to(repo/'configs').as_posix(),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}
+    cp=pin(data,'c.json',{'sha256':'c'*64,'psd_target':target,'items':{'x':'direct learned text'},'learned_query_ids':['slurp:train:1:a']})
+    ds=pin(repo,'d.json',{'items':[{'sample_id':'slurp:train:1:a','audio_sha256':'a'*64}]});rp=pin(data,'r.json',{'learning_dataset':ds})
+    sp=pin(data,'s.json',{'source_kind':adapter.KINDS[0],'candidate':cp,'candidate_release':rp,'model_id':'actor','base_template':fp(base),'template':fp(old),'consumer_ids':['legacy']})
+    desc={'schema':adapter.SCHEMA,'target':target,'source':sp,'template':{'relpath':'configs/probes/new','sha256':''}}
+    view={'items':[{'sample_id':'slurp:train:2:a','audio_sha256':'b'*64}]}
+    result=adapter.verify_and_render(repo,data,desc,['slurp:train:2:a'],view,'actor','node')
+    assert '[x]. direct learned text' in result
+    desc['target']='slot' if target=='decision' else 'decision'
+    with pytest.raises(ValueError,match='target-specific'):adapter.verify_and_render(repo,data,desc,['slurp:train:2:a'],view,'actor','node')

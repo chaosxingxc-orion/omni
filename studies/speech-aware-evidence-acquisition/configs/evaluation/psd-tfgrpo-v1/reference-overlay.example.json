@@ -1,0 +1,5 @@
+{
+  "psd_target": "decision",
+  "teacher": {"research_prompt": {"path": "/ABSOLUTE/REPO/configs/prompts/learner/tfrl/tfgrpo-reference-psd-decision.md", "sha256": "REPLACE_WITH_SHA256"}},
+  "note": "Overlay psd_target and teacher.research_prompt onto an otherwise complete reference job; keep its original version-pinned stage template and all other teacher fields."
+}
