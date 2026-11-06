@@ -53,6 +53,8 @@ def verify_actor_parent(job, parent, *, repo, data, binding):
     require(isinstance(descriptor, dict) and descriptor.get('target') in ('slot', 'decision')
             and 'mapping' not in descriptor and 'deployment_binding' not in descriptor,
             'actor parent requires direct reviewed target and same actor')
+    other = 'decision_policy' if descriptor['target']=='slot' else 'slot_policy'
+    require(other not in job, 'other node has unverified experience provenance')
     require(isinstance(binding, dict) and Path(binding.get('repo', '')).resolve() == Path(repo).resolve()
             and Path(binding.get('data', '')).resolve() == Path(data).resolve(), 'parent source roots differ')
     source, _ = _pinned_json(data, descriptor['source'], 'actor experience source')
@@ -176,6 +178,9 @@ def read_groups(compiled, bindings, *, repo, data, gold, gold_pin, parent, commo
         require(manifest.get('status') == 'COMPLETED' and native.bundle.attempt_state == 'FINALIZED', 'source is not final')
         cost = manifest.get('cost', {})
         require(type(cost.get('calls_used')) is int and cost['calls_used'] >= 0, 'recorded generation cost required')
+        require(not any(cost.get(key) for key in ('native_replay_source','replayed_predecessor_cost'))
+                and not manifest.get('predecessor_attempt') and not manifest.get('predecessor_attempts'),
+                'recovered source costs require complete ancestry reader')
         require(cost['calls_used'] <= member['generation_cap'], 'generation exceeds registered cap')
         receipts, _ = _pinned_json(data, binding['flight_receipts'], 'flight receipts')
         receipts = receipts.get('receipts', receipts)
