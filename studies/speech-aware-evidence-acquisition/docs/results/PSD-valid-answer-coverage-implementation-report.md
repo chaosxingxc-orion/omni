@@ -18,7 +18,7 @@ NodeWorkload 的 `pipeline` 可显式加入 `"reference_normalizer":"quarantine-
 
 ## 测试及pin
 
-通过 `ssh npu2`，指定镜像 `sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026`，容器 `--network none --cpus 4 --read-only`，源码只读挂载，临时文件在tmpfs。命令：
+通过固定执行主机，指定镜像 `sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026`，容器 `--network none --cpus 4 --read-only`，源码只读挂载，临时文件在tmpfs。命令：
 
 ```sh
 PYTHONPATH=/src/src:/src/scripts/analysis PYTHONDONTWRITEBYTECODE=1 \
