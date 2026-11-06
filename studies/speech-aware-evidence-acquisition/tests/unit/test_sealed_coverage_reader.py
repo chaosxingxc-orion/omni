@@ -166,6 +166,10 @@ def test_successor_authentication_and_journal_source(tmp_path, monkeypatch, faul
     from speech_aware_evidence_acquisition.core import bundle as bundle_module
     cfg, rows = make_config(tmp_path)
     cfg['schema'] = 'saea-sealed-coverage-successor-v1'
+    cfg['lock'] = pinned(tmp_path / 'lock.json', {'datasets': []})
+    inventory = json.loads(Path(cfg['inventory']['path']).read_text())
+    inventory['lock_sha256'] = cfg['lock']['sha256']
+    cfg['inventory'] = pinned(Path(cfg['inventory']['path']), inventory)
     p = Path(cfg['manifest']['path']); manifest = json.loads(p.read_text())
     ids = manifest['split']['ids']; manifest.pop('row_checkpoint')
     manifest['predecessor_attempt'] = {'attempt_id':'original', 'run_id':'R', 'mode':'checkpoint',

@@ -171,6 +171,8 @@ def verify_finalized_successor(config, manifest, output, ids):
 def evaluate(config):
     required = {'schema', 'manifest', 'outputs', 'roster', 'inventory', 'scores', 'expected_rows', 'out'}
     successor = config.get('schema') == 'saea-sealed-coverage-successor-v1'
+    if successor:
+        required = required | {'lock'}
     if set(config) != required or config['schema'] not in (SCHEMA, 'saea-sealed-coverage-successor-v1') or config['expected_rows'] != 1080:
         raise ValueError('exact 1080-row coverage configuration required')
     manifest = json.loads(read_pin(config['manifest']))
@@ -190,7 +192,8 @@ def evaluate(config):
             or len(rid) != 1080 or len(set(rid)) != 1080 or ids != rid
             or split.get('count') != 1080 or split.get('identity_hash') != roster.get('split_identity_hash')):
         raise ValueError('manifest and locked roster differ')
-    if manifest.get('cost', {}).get('umbrella_lock_sha256') != inventory.get('lock_sha256'):
+    lock_sha = sha(read_pin(config['lock'])) if successor else manifest.get('cost', {}).get('umbrella_lock_sha256')
+    if lock_sha != inventory.get('lock_sha256'):
         raise ValueError('inventory dataset lock differs')
     journal_attempt = verify_finalized_successor(config, manifest, output, ids) if successor else manifest['attempt']['attempt_id']
     pairs = {tuple(x) for x in inventory['pairs']}
@@ -264,6 +267,7 @@ def main():
         raise ValueError('fresh absolute output required')
     result = evaluate(config)
     inputs = [config[k]['path'] for k in ('manifest', 'outputs', 'roster', 'inventory')]
+    if 'lock' in config: inputs.append(config['lock']['path'])
     if any(out.resolve().parent == Path(path).resolve().parent for path in inputs):
         raise ValueError('output must be in an independent analysis directory')
     with out.open('x') as handle:
