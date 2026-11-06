@@ -507,5 +507,16 @@
     "historical_calls_preserved": 8,
     "new_model_calls": 0,
     "generation_deployed": false
+  },
+  "socket_candidate_lookup": {
+    "scope": "thread-owned bounded FD search hints; live LISTEN and FD reread on every call",
+    "tests_passed": 68,
+    "test_seconds": 5.86,
+    "identity_tests_passed": 54,
+    "identity_test_seconds": 2.39,
+    "network": "none",
+    "fixed_parent_image": true,
+    "generation_deployed": false,
+    "end_to_end_speedup_verified": false
   }
 }

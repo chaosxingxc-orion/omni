@@ -351,9 +351,11 @@ class _ProbeConnections:
         self.pid = os.getpid()
         self.connections = OrderedDict()
         self.maps = OrderedDict()
+        self.socket_candidates = OrderedDict()
 
     def close(self):
         self.maps.clear()
+        self.socket_candidates.clear()
         while self.connections:
             _, connection = self.connections.popitem(last=False)
             connection.close()
@@ -660,6 +662,23 @@ def _verify_owns_listening_socket(proc_root: Path, pid: int, host: str, port: in
             f"no LISTEN socket found for {expected_address}:{port} ({path}); socket ownership must be provable"
         )
     fd_dir = Path(proc_root) / str(pid) / "fd"
+    cache = getattr(_probe_local, "cache", None)
+    if cache is not None and cache.pid != os.getpid():
+        _close_http_probe_connections()
+        cache = None
+    key = (str(proc_root), pid, family, expected_address, port)
+    candidate = cache.socket_candidates.pop(key, None) if cache is not None else None
+    if candidate is not None:
+        try:
+            match = _SOCKET_FD_PATTERN.match(os.readlink(fd_dir / candidate))
+        except OSError:
+            match = None
+        # A search hint, never an identity result: BOTH the live LISTEN table
+        # above and this FD link are read on every call. PID/FD reuse is safe
+        # only if the current process still owns the exact current endpoint.
+        if match and int(match.group(1)) in inodes:
+            cache.socket_candidates[key] = candidate
+            return
     try:
         fds = list(fd_dir.iterdir())
     except OSError as error:
@@ -674,6 +693,10 @@ def _verify_owns_listening_socket(proc_root: Path, pid: int, host: str, port: in
             continue  # the fd raced away between listdir and readlink -- not fatal
         match = _SOCKET_FD_PATTERN.match(target)
         if match and int(match.group(1)) in inodes:
+            if cache is not None:
+                while len(cache.socket_candidates) >= _PROBE_MAX_CONNECTIONS:
+                    cache.socket_candidates.popitem(last=False)
+                cache.socket_candidates[key] = entry.name
             return
     raise _refuse(
         f"pid {pid} does not own the listening socket on {expected_address}:{port} -- interpreter and source-tree "
