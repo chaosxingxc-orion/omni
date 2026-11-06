@@ -79,7 +79,7 @@ def successor_ledger(text, old_generation, old_fit, new_fit, new_plan_path, new_
     return text + '\n## Fresh successor FIT\n\n| ' + ' | '.join(keys) + ' |\n| ' + ' | '.join(['---']*len(keys)) + ' |\n| ' + ' | '.join(copied[key] for key in keys) + ' |\n'
 
 
-def validate_successor_plans(repo, spec, experiment, pins):
+def validate_successor_plans(repo, spec, experiment, pins, *, fresh=False):
     """Validate the separately pinned successor documents before any receipt is made."""
     from dataclasses import fields
     from speech_aware_evidence_acquisition.contracts import ExecutionPlan
@@ -94,8 +94,11 @@ def validate_successor_plans(repo, spec, experiment, pins):
             raise ValueError('exact successor document pin required')
         rel = pin['relpath']
         if (not isinstance(rel, str) or not rel.startswith('docs/')
-                or rel.endswith('/generation-plan-registered-v1.json') or rel in paths):
+                or '..' in Path(rel).parts
+                or (not fresh and rel.endswith('/generation-plan-registered-v1.json')) or rel in paths):
             raise ValueError('successor documents must have distinct new paths')
+        if fresh and rel != f"docs/readiness/{spec['cell']}/{kind}-{'plan-' if kind != 'protocol' else ''}registered-v1.json":
+            raise ValueError('fresh document path differs from registration')
         paths.add(rel)
         path = resolve_asset(repo, rel)
         if sha(path) != pin['sha256']:
@@ -137,6 +140,27 @@ def validate_successor_plans(repo, spec, experiment, pins):
         if plan.planned_model_calls != expected_calls:
             raise ValueError('successor registered plan calls differ: ' + kind)
     return docs
+
+
+def fresh_ledger(text, run, fit, plans, original):
+    """Update only the two unconsumed fresh rows' final plan pins."""
+    from speech_aware_evidence_acquisition.contracts.ledger import _parse_ledger_tables
+    import re
+    rows = _parse_ledger_tables(text)
+    for kind, rid in (('generation', run), ('fit', fit)):
+        matches = [row for row in rows if row.get('run/experiment id') == rid]
+        if len(matches) != 1 or matches[0].get('consumed', '').lower() != 'no':
+            raise ValueError('one unconsumed fresh exposure row required')
+        if (matches[0].get('artifacts') != original[kind]['relpath'] or
+                re.findall(r'Plan SHA256 ([0-9a-f]{64})', matches[0].get('notes', '')) != [original[kind]['sha256']]):
+            raise ValueError('fresh exposure registration pin differs')
+    lines = text.splitlines(keepends=True)
+    for kind, rid in (('generation', run), ('fit', fit)):
+        indices = [i for i, line in enumerate(lines) if '| '+rid+' |' in line]
+        if len(indices) != 1 or len(re.findall(r'Plan SHA256 [0-9a-f]{64}', lines[indices[0]])) != 1:
+            raise ValueError('fresh exposure plan hash missing or ambiguous')
+        lines[indices[0]] = re.sub(r'Plan SHA256 [0-9a-f]{64}', 'Plan SHA256 '+plans[kind], lines[indices[0]])
+    return ''.join(lines)
 
 
 def verify_registration_identity(repo, name, spec, cell, data=None):
@@ -261,8 +285,9 @@ def _admit_external(repo, data, config):
     from run_real_engine_candidate import recovery_options
     from thinking_system_mint_receipt import mint
 
-    required = {'schema','candidate','candidate_pin','plans','predecessor_decision','decision_relpath','workspace'}
-    if not isinstance(config,dict) or set(config) != required or config['schema'] != 'saea-external-successor-admission-v1':
+    required = {'schema','candidate','candidate_pin','plans','decision_relpath','workspace'}
+    fresh = isinstance(config,dict) and config.get('schema') == 'saea-external-fresh-admission-v1'
+    if not isinstance(config,dict) or set(config) != (required if fresh else required | {'predecessor_decision'}) or config['schema'] not in ('saea-external-successor-admission-v1','saea-external-fresh-admission-v1'):
         raise ValueError('exact external admission configuration required')
     repo, data = Path(repo).resolve(), Path(data).resolve()
     workspace = Path(config['workspace'])
@@ -291,21 +316,32 @@ def _admit_external(repo, data, config):
         raise ValueError('only registered raw-speech successor workloads are supported')
     exp_rel = f'configs/experiment/{name}.json'
     exp = read(resolve_asset(repo,exp_rel)); cell, = exp['cells']
-    if cell['readiness']['state'] != 'held' or not cell.get('resume_from') or not cell.get('checkpoint_compatibility'):
-        raise ValueError('held checkpoint successor required')
-    ancestor = spec['predecessor_registration']
-    old_path = resolve_asset(repo,ancestor['relpath'])
-    if sha(old_path) != ancestor['sha256']: raise ValueError('predecessor registration changed')
-    old = read(old_path)
-    original_plan_rel = f"docs/readiness/{old['cell']}/generation-plan-registered-v1.json"
-    original_plan_bytes = resolve_asset(repo,original_plan_rel).read_bytes()
-    old_receipt = validate_predecessor_decision(data,spec,old,config['predecessor_decision'],config['decision_relpath'])
+    if cell['readiness']['state'] != 'held': raise ValueError('held registration required')
+    if fresh:
+        if cell.get('resume_from') is not None or cell.get('checkpoint_compatibility') is not None or 'predecessor_registration' in spec:
+            raise ValueError('fresh registration cannot have predecessor custody')
+        rel = config['decision_relpath']
+        if (not isinstance(rel,str) or not rel.startswith('coordination/') or '..' in Path(rel).parts
+                or not (data/rel).resolve().is_relative_to(data/'coordination')
+                or rel != spec['decision_relpath'] or (data/rel).exists() or (data/rel).is_symlink()):
+            raise ValueError('fresh decision destination differs or exists')
+    else:
+        if not cell.get('resume_from') or not cell.get('checkpoint_compatibility'):
+            raise ValueError('held checkpoint successor required')
+        ancestor = spec['predecessor_registration']
+        old_path = resolve_asset(repo,ancestor['relpath'])
+        if sha(old_path) != ancestor['sha256']: raise ValueError('predecessor registration changed')
+        old = read(old_path)
+        original_plan_rel = f"docs/readiness/{old['cell']}/generation-plan-registered-v1.json"
+        original_plan_bytes = resolve_asset(repo,original_plan_rel).read_bytes()
+        old_receipt = validate_predecessor_decision(data,spec,old,config['predecessor_decision'],config['decision_relpath'])
     verify_registration_identity(repo,name,spec,cell,data)
-    plans = validate_successor_plans(repo,spec,exp,config['plans'])
-    for kind in ('generation','fit'):
-        for field in ('execution_profile','split_role','split_identity_hash','planned_model_calls','planned_gpu_hours','planned_speech_audio_seconds'):
-            if old_receipt['budget'][kind].get(field) != plans[kind]['execution_plan'].get(field):
-                raise ValueError('successor budget differs from predecessor authority')
+    plans = validate_successor_plans(repo,spec,exp,config['plans'],fresh=fresh)
+    if not fresh:
+        for kind in ('generation','fit'):
+            for field in ('execution_profile','split_role','split_identity_hash','planned_model_calls','planned_gpu_hours','planned_speech_audio_seconds'):
+                if old_receipt['budget'][kind].get(field) != plans[kind]['execution_plan'].get(field):
+                    raise ValueError('successor budget differs from predecessor authority')
     rows = validate_workload(repo,data,name,spec)
     assert_execution_binding(spec,repo=repo)
     if 'stage3_algorithm' in exp:
@@ -328,6 +364,8 @@ def _admit_external(repo, data, config):
         instance_session = SessionReceipt.from_json(read(data/'serving'/instance['instance_id']/'session-receipt.json'))
         verify_vllm_session(instance_session,runtime_doc)
     for rid, aid in ((spec['run_id'],spec['attempt_id']),(spec['fit_run_id'],spec['fit_attempt_id'])):
+        if fresh and ((data/'attempts'/rid).exists() or (data/'runs'/rid).exists()):
+            raise ValueError('fresh run already has attempt or run custody')
         if (data/'attempts'/rid/(aid+'.json')).exists() or (data/'runs'/rid/aid).exists():
             raise ValueError('successor attempt already exists')
     rels = [config['plans'][kind]['relpath'] for kind in ('generation','fit','protocol')]
@@ -335,13 +373,20 @@ def _admit_external(repo, data, config):
     if snapshot_rel in rels or snapshot_rel == candidate_rel: raise ValueError('snapshot path collision')
     old_ledger = resolve_asset(repo,'docs/exposure-ledger.md').read_text()
     # Validate the predecessor ledger and fresh identity before creating any output.
-    successor_ledger(old_ledger,spec['run_id'],old['fit_run_id'],spec['fit_run_id'],rels[1],'0'*64)
+    if fresh:
+        fresh_ledger(old_ledger,spec['run_id'],spec['fit_run_id'],{'generation':'0'*64,'fit':'0'*64},config['plans'])
+    else:
+        successor_ledger(old_ledger,spec['run_id'],old['fit_run_id'],spec['fit_run_id'],rels[1],'0'*64)
     fragment_rels = [f"configs/{kind}/{cell[key]}.json" for kind,key in
                      (('model','model_fragment'),('dataset','dataset_fragment'),('baseline','baseline_fragment'))]
     for rel in [candidate_rel,exp_rel,'docs/exposure-ledger.md',*fragment_rels,*rels]:
         publish_new(workspace/rel,resolve_asset(repo,rel).read_bytes())
-    publish_new(workspace/original_plan_rel,original_plan_bytes)
-    publish_new(workspace/snapshot_rel,resolve_asset(repo,rels[2]).read_bytes())
+    if not fresh: publish_new(workspace/original_plan_rel,original_plan_bytes)
+    if fresh and 'prepared_phase_supply' not in plans['protocol']:
+        plans['protocol']['prepared_phase_supply'] = read(resolve_asset(repo,fragment_rels[2]))['prepared_phase_supply']
+        publish_new(workspace/snapshot_rel,(json.dumps(plans['protocol'],indent=2,ensure_ascii=False)+'\n').encode())
+    else:
+        publish_new(workspace/snapshot_rel,resolve_asset(repo,rels[2]).read_bytes())
     os.environ['SAEA_EXPERIMENT_WORKSPACE'] = str(workspace)
     def seal():
         result=seal_workspace(repo)
@@ -393,8 +438,8 @@ def _admit_external(repo, data, config):
         'decision_id':spec['decision_id'],'eligible_run_ids':[spec['run_id'],spec['fit_run_id']],
         'eligible_attempt_ids':[spec['attempt_id'],spec['fit_attempt_id']],
         'authorization_basis':spec['authority'],'owner':'root',
-        'decision':'Continue the registered workload with all predecessor costs retained.',
-        'predecessor_decision':config['predecessor_decision'],
+        'decision':'Execute the fresh registered workload.' if fresh else 'Continue the registered workload with all predecessor costs retained.',
+        **({} if fresh else {'predecessor_decision':config['predecessor_decision']}),
         'antecedents':{'owner':{'path':spec['authority'],'sha256':sha(resolve_asset(repo,spec['authority']))},
             'protocol':{'path':snapshot_rel,'sha256':snapshot_sha},
             'runtime':{'path':receipt_rel,'sha256':sha(resolve_asset(repo,receipt_rel))}},
@@ -430,7 +475,7 @@ def _admit_external(repo, data, config):
     for rel in (candidate_rel,rels[2]):
         path=workspace/rel; path.write_text(json.dumps(rewrite(read(path)),indent=2,ensure_ascii=False)+'\n')
     final_protocol_doc = rewrite(read(workspace/rels[2]))
-    if 'prepared_phase_supply' in final_protocol_doc:
+    if fresh or 'prepared_phase_supply' in final_protocol_doc:
         final_protocol_doc['prepared_phase_supply'] = supply_pin
     final_protocol_doc['admission_snapshot'] = {'relpath':snapshot_rel,'sha256':snapshot_sha}
     binding = {**draft['protocol_binding'], 'final_identity':{'composed_config_hash':new_hash, 'protocol_hash':new_protocol}}
@@ -442,14 +487,15 @@ def _admit_external(repo, data, config):
         if 'prepared_phase_supply' in doc:
             doc['prepared_phase_supply'] = supply_pin
         path.write_text(json.dumps(doc,indent=2,ensure_ascii=False)+'\n')
-    ledger=successor_ledger(old_ledger,spec['run_id'],old['fit_run_id'],spec['fit_run_id'],rels[1],sha(workspace/rels[1]))
+    ledger=(fresh_ledger(old_ledger,spec['run_id'],spec['fit_run_id'],{k:sha(workspace/config['plans'][k]['relpath']) for k in ('generation','fit')},config['plans'])
+            if fresh else successor_ledger(old_ledger,spec['run_id'],old['fit_run_id'],spec['fit_run_id'],rels[1],sha(workspace/rels[1])))
     (workspace/'docs/exposure-ledger.md').write_text(ledger)
     seal()
     final_spec=read(resolve_asset(repo,candidate_rel))
     final_exp=read(resolve_asset(repo,exp_rel)); final_cell,=final_exp['cells']
     validate_workload(repo,data,name,final_spec)
     final_pins={kind:{'relpath':config['plans'][kind]['relpath'],'sha256':sha(resolve_asset(repo,config['plans'][kind]['relpath']))} for kind in ('generation','fit','protocol')}
-    final_plans=validate_successor_plans(repo,final_spec,final_exp,final_pins)
+    final_plans=validate_successor_plans(repo,final_spec,final_exp,final_pins,fresh=fresh)
     for kind in ('generation', 'fit'):
         if 'prepared_phase_supply' in final_plans[kind] and final_plans[kind]['prepared_phase_supply'] != supply_pin:
             raise ValueError('registered plan prepared supply differs')
@@ -462,7 +508,7 @@ def _admit_external(repo, data, config):
     expected_protocol['protocol_binding']=binding
     if expected_protocol != read(resolve_asset(repo,rels[2])):
         raise ValueError('execution protocol differs from admission snapshot')
-    if resolve_asset(repo,original_plan_rel).read_bytes() != original_plan_bytes:
+    if not fresh and resolve_asset(repo,original_plan_rel).read_bytes() != original_plan_bytes:
         raise ValueError('original generation plan changed')
     if declared_readiness(CampaignCell.from_document(final_cell),data,decision_documents={config['decision_relpath']:decision_bytes}).state != 'ready':
         raise ValueError('staged decision does not satisfy readiness')

@@ -53,6 +53,44 @@ def test_pinned_successor_plans_and_tamper(tmp_path):
         validate_successor_plans(tmp_path, spec, exp, pins)
 
 
+def test_fresh_original_plan_is_explicit_and_budget_checked(tmp_path):
+    spec, exp, pins = fixture(tmp_path)
+    for kind in ('generation', 'fit', 'protocol'):
+        old=tmp_path/pins[kind]['relpath']
+        new=tmp_path/'docs/readiness/c'/f"{kind}-{'plan-' if kind != 'protocol' else ''}registered-v1.json"
+        new.parent.mkdir(parents=True, exist_ok=True);old.rename(new)
+        pins[kind]['relpath']=new.relative_to(tmp_path).as_posix()
+    for kind in ('generation', 'fit'):
+        path=tmp_path/pins[kind]['relpath'];doc=json.loads(path.read_bytes());doc['protocol_document']=pins['protocol']
+        path.write_text(json.dumps(doc));pins[kind]['sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+    new=tmp_path/pins['generation']['relpath']
+    with pytest.raises(ValueError,match='distinct new paths'):
+        validate_successor_plans(tmp_path,spec,exp,pins)
+    assert validate_successor_plans(tmp_path,spec,exp,pins,fresh=True)['generation']['execution_plan']['planned_model_calls']==8
+    plan=json.loads(new.read_bytes());plan['execution_plan']['planned_model_calls']=9;new.write_text(json.dumps(plan))
+    pins['generation']['sha256']=hashlib.sha256(new.read_bytes()).hexdigest()
+    with pytest.raises(ValueError,match='calls differ'):
+        validate_successor_plans(tmp_path,spec,exp,pins,fresh=True)
+
+
+def test_fresh_ledger_rewrites_only_new_plan_pins():
+    from admit_real_engine_candidate import fresh_ledger
+    keys=['date','run/experiment id','execution profile','scope','model/tool','speech carrier + split',
+          'split role','split identity hash','consumed','calls','speech audio seconds','gpu hours',
+          'inherited exposure','artifacts','notes']
+    def row(run):
+        return '| '+' | '.join(['2026-01-01',run,'bounded-discovery-probe','fixture','model','slurp','discovery',
+                                'c'*64,'no','8','10','1','historical','docs/p.json','Plan SHA256 '+'a'*64])+' |\n'
+    history=row('HISTORY');text='| '+' | '.join(keys)+' |\n| '+' | '.join(['---']*len(keys))+' |\n'+history+row('RUN')+row('FIT')
+    original={k:{'relpath':'docs/p.json','sha256':'a'*64} for k in ('generation','fit')}
+    result=fresh_ledger(text,'RUN','FIT',{'generation':'b'*64,'fit':'d'*64},original)
+    assert history in result and 'Plan SHA256 '+'b'*64 in result and 'Plan SHA256 '+'d'*64 in result
+    with pytest.raises(ValueError,match='unconsumed'):
+        fresh_ledger(text.replace('| RUN |','| MISSING |'),'RUN','FIT',{'generation':'b'*64,'fit':'d'*64},original)
+    with pytest.raises(ValueError,match='registration pin differs'):
+        fresh_ledger(text.replace('docs/p.json','docs/other.json'),'RUN','FIT',{'generation':'b'*64,'fit':'d'*64},original)
+
+
 def test_reject_original_generation_path_and_mutated_pin(tmp_path):
     spec, exp, pins = fixture(tmp_path)
     bad = copy.deepcopy(pins);bad['generation']['relpath']='docs/readiness/generation-plan-registered-v1.json'
