@@ -6,6 +6,8 @@
 
 2026-11-05/06 UTC 的配置化切换使用 release 镜像 `sha256:3aa751e2864ca1206bee89e1a517c2c533a3d7ee50b42e1b78b42bc63bc1f17f`，源码提交 `cf273e52`。两个四卡实例 `saea-efficiency-a/b-cf273e52` 已运行，分别使用 0–3/4–7 卡，端口 8200/8202，重启次数为 0；两个 `/health` 和 `/v1/models` 均通过。切换阶段没有发送科学请求，不能把启动成功当作吞吐收益。
 
+只读 runtime receipt 已生成并通过 `gate_runtime_vllm`：`docs/receipts/runtime-vllm-efficiency-dual-tp4-ctx64k-v1.json`，文件 SHA256 为 `96c2a11f…8144ac66`，协议 SHA256 为 `4da7dc0d…362ac98a`。receipt 固化了 26 个模型文件、运行时包/源码身份、两个实际 PID、端口、卡映射和 HCCL 环境；生成过程零模型请求。
+
 本轮基座改造加入外部 `saea-runtime-efficiency-v1` 配置：在 `preprocess`
 阶段并行预热冻结 roster 的原始音频，并复用既有身份绑定的有界缓存；同时
 保留准备、模型接触和响应校验三段流水线。预热默认关闭，缓存条数和字节数
