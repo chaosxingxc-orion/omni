@@ -484,13 +484,29 @@ def analyze_verified_native_episode_statistics(
                             episode.get("terminal_disposition"), "finite terminal disposition"
                         )
                         if wire_reason != disposition.get("finish_reason"):
-                            raise NativeEpisodeDiagnosticError(
-                                "interrupted role wire finish reason differs from disposition"
+                            # A bounded Perception repair may end with a
+                            # schema/seal refusal after its parent length
+                            # contact; the terminal disposition is then a
+                            # seal refusal, while the final child is stop.
+                            repair_parent = (
+                                stage == "perception" and contact_index > 0
+                                and contacts[contact_index - 1]["agent_contact_id"] + ":perception-length-repair"
+                                == item["agent_contact_id"]
+                                and wire_reason == "stop"
+                                and disposition.get("reason") == "seal_refusal"
                             )
+                            if not repair_parent:
+                                raise NativeEpisodeDiagnosticError(
+                                    "interrupted role wire finish reason differs from disposition"
+                                )
                     elif wire_reason in {"length", "content_filter"}:
-                        raise NativeEpisodeDiagnosticError(
-                            "only the interrupted role final contact may have a finite wire finish reason"
-                        )
+                        # A known parent contact may itself be finite when the
+                        # final child is the explicit bounded repair contact.
+                        parent_child = item["agent_contact_id"] + ":perception-length-repair"
+                        if (stage != "perception" or contacts[-1]["agent_contact_id"] != parent_child):
+                            raise NativeEpisodeDiagnosticError(
+                                "only the interrupted role final contact may have a finite wire finish reason"
+                            )
                 row = {
                     "sample_id": sample_id,
                     "role_id": role_id,
@@ -577,16 +593,16 @@ def analyze_verified_native_episode_statistics(
         delivered_request_id: str | None = None
         derived_request_id: str | None = None
         if delivery.kind == "abstention":
-            from ..core.delivery import native_abstention_records
+            from ..core.delivery import native_abstention_records, native_seal_refusal_abstention_records
 
-            disposition = _map(delivery.terminal_disposition, "finite terminal disposition")
-            derived_request_id, request_document, response_document = (
-                native_abstention_records(
-                    sample_id=sample_id,
-                    source_contact=delivered_final,
-                    finish_reason=str(disposition["finish_reason"]),
-                )
-            )
+            disposition = _map(delivery.terminal_disposition, "terminal disposition")
+            if disposition.get("reason") == "seal_refusal":
+                derived_request_id, request_document, response_document = native_seal_refusal_abstention_records(
+                    sample_id=sample_id, source_contact=delivered_final, seal_refusal=disposition["seal_refusal"])
+            else:
+                derived_request_id, request_document, response_document = native_abstention_records(
+                    sample_id=sample_id, source_contact=delivered_final,
+                    finish_reason=str(disposition["finish_reason"]))
             if (
                 text != ""
                 or output.get("request_id") != derived_request_id
@@ -667,13 +683,19 @@ def analyze_verified_native_episode_statistics(
             terminal_revisions[int(disposition["revision_count"])] += 1
         elif delivery.kind in {"finite", "abstention"}:
             disposition = _map(delivery.terminal_disposition, "finite terminal disposition")
-            finite_finish_reasons[str(disposition["finish_reason"])] += 1
-            finite_roles[str(disposition["role_id"])] += 1
-            finite_stages[str(disposition["stage"])] += 1
-            if delivery.kind == "finite":
-                finite_solver_deliveries += 1
+            if disposition.get("reason") == "seal_refusal":
+                if delivery.kind == "finite":
+                    finite_solver_deliveries += 1
+                else:
+                    abstentions += 1
             else:
-                abstentions += 1
+                finite_finish_reasons[str(disposition["finish_reason"])] += 1
+                finite_roles[str(disposition["role_id"])] += 1
+                finite_stages[str(disposition["stage"])] += 1
+                if delivery.kind == "finite":
+                    finite_solver_deliveries += 1
+                else:
+                    abstentions += 1
 
         tools = _tool_rows(sample_id, controller_policy_id, trace_records, by_request)
         consumption = _consumption(

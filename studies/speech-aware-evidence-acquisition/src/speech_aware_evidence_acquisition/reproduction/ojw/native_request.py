@@ -444,7 +444,7 @@ class MeteredNativeSpeechRequest:
         *,
         binding_override: "NativeRoleSpeechBinding | None" = None,
         answer_only: bool = False,
-        perception_length_repair: bool = False,
+        perception_length_repair: str | None = None,
     ) -> PreparedNativeRoleContact:
         """Compose one immutable request from this caller's task state.
 
@@ -480,8 +480,7 @@ class MeteredNativeSpeechRequest:
         ):
             raise NativeSpeechRequestError("framework system or original query differs")
         if perception_length_repair:
-            from ...rails.intent_slot_pipeline import PERCEPTION_REPAIR_SUFFIX
-            messages[0] = {**messages[0], "content": messages[0]["content"] + PERCEPTION_REPAIR_SUFFIX}
+            messages[0] = {**messages[0], "content": messages[0]["content"] + perception_length_repair}
         kwargs = binding.kwargs()
         decoding = dict(kwargs.get("decoding_params") or {})
         expected_choice = "auto" if binding.tool_names else "none"

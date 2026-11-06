@@ -692,7 +692,10 @@ def _seal_refusal_delivery(receipt, visits, *, error_type):
         _raise(error_type, "seal-refusal disposition differs from its rejected contact")
     if interrupted_contacts != [rejected]:
         if (len(interrupted_contacts) != 2
-                or rejected.get("agent_contact_id") != interrupted_contacts[0].get("agent_contact_id", "") + ":answer-only"
+                or rejected.get("agent_contact_id") not in (
+                    interrupted_contacts[0].get("agent_contact_id", "") + ":answer-only",
+                    *([interrupted_contacts[0].get("agent_contact_id", "") + ":perception-length-repair"]
+                      if disposition["stage"] == "perception" else []))
                 or interrupted_contacts[-1] != rejected):
             _raise(error_type, "seal-refusal recovery contact chain is invalid")
         _checked_contact(interrupted_contacts[0], error_type=error_type)

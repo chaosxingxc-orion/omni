@@ -1405,6 +1405,7 @@ def test_sdk_nonempty_perception_length_repair_reaches_decision(tmp_path):
     from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
     from test_native_episode_runner import _wire_response
     h, policy = recovery_harness(tmp_path)
+    h.repo_root = __import__('pathlib').Path(__file__).resolve().parents[2]
     policy.update(answer_only_fallback='off', perception_length_recovery='compact-reask-v1',
                   reference_normalizer='quarantine-unsupplied-v1',
                   coverage_recovery={'strategy':'complete-original-candidate-set-v1','max_extra_contacts':3})
@@ -1441,10 +1442,11 @@ def test_sdk_nonempty_perception_length_repair_reaches_decision(tmp_path):
     with pytest.raises(Exception, match='Perception repair parent'):
         _verify_outputs_trace_binding(tuple(rows),damaged)
 
-@pytest.mark.parametrize('failure', ['child_length', 'unknown'])
+@pytest.mark.parametrize('failure', ['child_length', 'child_invalid', 'unknown'])
 def test_sdk_perception_length_repair_never_fabricates_or_reissues(tmp_path, failure):
     from test_native_episode_runner import _wire_response
     h,policy=recovery_harness(tmp_path)
+    h.repo_root = __import__('pathlib').Path(__file__).resolve().parents[2]
     policy.update(answer_only_fallback='off',perception_length_recovery='compact-reask-v1',
                   coverage_recovery={'strategy':'complete-original-candidate-set-v1','max_extra_contacts':1})
     h.config=replace(h.config,intent_slot_pipeline_json=canonical(policy),max_contacts=4)
@@ -1457,16 +1459,53 @@ def test_sdk_perception_length_repair_never_fabricates_or_reissues(tmp_path, fai
         calls+=1
         if calls==2 and failure=='unknown': raise RuntimeError('unknown response transport')
         result=json.loads(_wire_response('{"candidates":'+(' '*100)))
-        result['choices'][0]['finish_reason']='length'
+        result['choices'][0]['finish_reason']='stop' if calls==2 and failure=='child_invalid' else 'length'
         return json.dumps(result).encode()
     h.post_override=post
     try:
         if failure=='unknown':
             with pytest.raises(Exception):h.run()
+            journal=h.client._adapter._contact_journal
+            import json as json_module
+            intents=[json_module.loads(path.read_bytes()) for path in journal.root.glob('*.intent.json')]
+            assert len(intents)==2
+            states=[journal.inspect(item['request_id']) for item in intents]
+            assert sorted(item['state'] for item in states)==['observed','unknown']
+            unknown=next(item for item in states if item['state']=='unknown')
+            assert unknown['intent']['agent_contact_id'].endswith(':perception-length-repair')
+            assert 'previous Perception response stopped' in unknown['intent']['payload']['task_instruction']
         else:
             summary=h.run()
             assert summary.results[0].final_response_text==''
-            assert summary.results[0].native_episode_receipt['terminal_disposition']['reason']=='finite_completion'
+            receipt=summary.results[0].native_episode_receipt
+            assert receipt['terminal_disposition']['reason']==('seal_refusal' if failure=='child_invalid' else 'finite_completion')
+            from test_template_variants_delivery import _runtime, _raw_native
+            from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+            raw=_raw_native(h,solver_role={'max_iterations':1});raw['intent_slot_pipeline']=policy
+            rows=_runtime(h,summary,raw)._canonical_output_rows(h.client)
+            records={rid:payload for _,rid,payload in h.trace.records}
+            _verify_outputs_trace_binding(tuple(rows),records)
+            from speech_aware_evidence_acquisition.analysis.native_episode_diagnostics import analyze_verified_native_episode_statistics
+            analyze_verified_native_episode_statistics(sample_ids=('s1',),controller_policy_id=h.program.program_id,
+                phase_results={'s1':summary.results[0].as_json()}, output_rows={'s1':rows[0]}, trace_records=records)
+            contacts=receipt['interrupted_role']['execution_receipt']['contacts']
+            assert len(contacts)==2
+            for item in contacts:
+                assert item['request_id']+'/request' in records
+                assert item['request_id']+'/response' in records
+                assert item['request_id']+'/cost' in records
     finally: cost=h.close()['cost']
     assert calls==2
     assert cost['calls_used'] >= 1
+
+
+def test_perception_repair_template_pin_rejects_mutation_and_escape(tmp_path):
+    import hashlib
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import load_repair_template
+    path=tmp_path/'configs/probes/repair.txt';path.parent.mkdir(parents=True);path.write_text('Fixed diagnostic.\n')
+    pin={'relpath':'configs/probes/repair.txt','sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+    assert load_repair_template(tmp_path,{'perception_repair_template':pin})=='Fixed diagnostic.\n'
+    path.write_text('modified')
+    with pytest.raises(ValueError,match='pin differs'):load_repair_template(tmp_path,{'perception_repair_template':pin})
+    pin['relpath']='configs/probes/../../secret'
+    with pytest.raises(ValueError):load_repair_template(tmp_path,{'perception_repair_template':pin})

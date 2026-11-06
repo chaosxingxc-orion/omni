@@ -1,0 +1,3 @@
+
+
+The previous Perception response stopped at the length limit before completion. Use the original audio and supplied evidence. Return one complete compact JSON object matching the required schema; keep distinctions very short, use only supplied evidence IDs, and include every required field. Do not invent labels, evidence, transcripts, or slot values.

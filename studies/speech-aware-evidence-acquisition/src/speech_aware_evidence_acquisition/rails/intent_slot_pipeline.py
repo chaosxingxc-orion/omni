@@ -11,10 +11,35 @@ from collections.abc import Mapping
 
 SCHEMA = "saea-intent-slot-pipeline-v1"
 SCHEMA_V2 = "saea-intent-slot-pipeline-v2"
-PERCEPTION_REPAIR_SUFFIX = ("\n\nThe previous Perception response stopped at the length limit before completion. "
-    "Use the original audio and supplied evidence. Return one complete compact JSON object matching the required schema; "
-    "keep distinctions very short, use only supplied evidence IDs, and include every required field. "
-    "Do not invent labels, evidence, transcripts, or slot values.")
+DEFAULT_REPAIR_TEMPLATE = {"relpath": "configs/probes/slurp_perception_length_repair_v1.txt",
+                           "sha256": "e9baa301ffa49bfc067d9571e517e7228d2ea48171a9c18448184c4f79a74507"}
+
+
+def repair_template_pin(config):
+    from pathlib import Path
+    pin = config.get("perception_repair_template", DEFAULT_REPAIR_TEMPLATE)
+    if (not isinstance(pin, Mapping) or set(pin) != {"relpath", "sha256"}
+            or not isinstance(pin["relpath"], str) or not pin["relpath"].startswith("configs/probes/")
+            or ".." in Path(pin["relpath"]).parts or not isinstance(pin["sha256"], str)
+            or len(pin["sha256"]) != 64 or any(c not in "0123456789abcdef" for c in pin["sha256"])):
+        raise ValueError("invalid Perception repair template pin")
+    return dict(pin)
+
+
+def load_repair_template(repo, config):
+    from pathlib import Path
+    pin = repair_template_pin(config)
+    root = Path(repo).resolve()
+    path = (root / pin["relpath"]).resolve()
+    if not path.is_relative_to(root / "configs" / "probes"):
+        raise ValueError("Perception repair template escapes probes")
+    blob = path.read_bytes()
+    if hashlib.sha256(blob).hexdigest() != pin["sha256"]:
+        raise ValueError("Perception repair template pin differs")
+    text = blob.decode("utf-8")
+    if not text.strip():
+        raise ValueError("Perception repair template is empty")
+    return text
 
 
 def canonical(value):
@@ -27,7 +52,7 @@ def digest(value):
 
 def parse_config(raw):
     fields = {"schema", "slot_mode", "max_candidates", "candidate_outside_recovery"}
-    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery", "reference_normalizer", "perception_length_recovery"}:
+    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery", "reference_normalizer", "perception_length_recovery", "perception_repair_template"}:
         raise ValueError("intent_slot_pipeline requires schema, slot_mode, max_candidates and candidate_outside_recovery")
     if raw["schema"] not in {SCHEMA, SCHEMA_V2} or raw["slot_mode"] not in {"batched", "per_candidate"}:
         raise ValueError("unsupported intent-slot graph/schema version or slot mode")
@@ -50,6 +75,10 @@ def parse_config(raw):
         raise ValueError("answer_only_fallback requires node rails")
     if "reference_normalizer" in raw and (raw.get("node_rails") != "sdk-handoff-v1" or raw["reference_normalizer"] != "quarantine-unsupplied-v1"):
         raise ValueError("unsupported reference normalizer")
+    if "perception_repair_template" in raw:
+        if "perception_length_recovery" not in raw:
+            raise ValueError("Perception repair template requires recovery")
+        repair_template_pin(raw)
     if "perception_length_recovery" in raw and (raw["perception_length_recovery"] != "compact-reask-v1" or "coverage_recovery" not in raw):
         raise ValueError("Perception length recovery requires shared coverage budget")
     if "coverage_recovery" in raw:
@@ -265,16 +294,23 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                         from .solver_protocol_audit import canonical_request
                         original, fmt = canonical_request(parent_payload)
                         revised, revised_fmt = canonical_request(child_payload)
-                        original["task_instruction"] += PERCEPTION_REPAIR_SUFFIX
+                        suffix = relation.get("org_recovery_template_text")
+                        pin = repair_template_pin(config)
+                        if (not isinstance(suffix, str) or not suffix.strip()
+                                or hashlib.sha256(suffix.encode("utf-8")).hexdigest() != pin["sha256"]
+                                or relation.get("org_recovery_template") != pin):
+                            raise ValueError("Perception repair template identity differs")
+                        original["task_instruction"] += suffix
                         control = json.loads(original["history"][-1]["content"])
-                        control["messages"][0]["content"] += PERCEPTION_REPAIR_SUFFIX
+                        control["messages"][0]["content"] += suffix
                         original["history"][-1]["content"] = canonical(control)
                         if original != revised or fmt != revised_fmt or child_decoding != parent_decoding:
                             raise ValueError("Perception repair changed original input or decoding: " + str([key for key in set(original) | set(revised) if original.get(key) != revised.get(key)]))
                         wire = trace_records.get(parent["request_id"] + "/wire-response", {})
                         if wire.get("finish_reason") != "length" or not parent_response.get("text"):
                             raise ValueError("Perception repair parent is not known nonempty length")
-                        expected_relation.update(org_recovery_policy="compact-reask-v1", org_recovery_reason="length")
+                        expected_relation.update(org_recovery_policy="compact-reask-v1", org_recovery_reason="length",
+                                                 org_recovery_template=pin, org_recovery_template_text=suffix)
                     elif (fallback_reserve(parent_decoding) is None or child_decoding != answer_only_decoding(parent_decoding)
                           or parent_response.get("text") != ""):
                         raise ValueError("answer-only decoding differs from parent")

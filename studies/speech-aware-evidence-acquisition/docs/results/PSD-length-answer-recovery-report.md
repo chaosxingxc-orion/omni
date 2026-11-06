@@ -11,3 +11,11 @@
 固定镜像 `sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026`，ssh npu2、CPU、断网、容器和源码只读、tmpfs。命令为 `/opt/saea-venv/bin/python -m pytest -q --tb=short --show-capture=no -p no:cacheprovider /src/tests/unit/test_intent_slot_runner.py /src/tests/unit/test_intent_slot_pipeline.py /src/tests/unit/test_intent_slot_workload.py /src/tests/unit/test_native_episode_source.py --basetemp=/tmp/pytest`，`PYTHONPATH=/src/src:/src/scripts/analysis`。结果 **117 passed，5 warnings，35.20秒**；新增工作负载配置检查单独 **1 passed，2.44秒**。真实SDK和正式canonical output/trace verifier，音频、网络模型和tokenizer为测试桩；没有实际模型、教师、真实FIT或业务NPU调用。覆盖首P非空length→纠错→Slot补问→Decision、五次模型及五份FIT桩、原生bundle重算、父wire篡改、纠错再次length、UNKNOWN中止和旧thinking fallback。测试未覆盖真实网络/服务及跨attempt恢复。代码与测试文件pin见配套JSON。
 
 诊断输入沿用固定快照：1174条终态中1121结构有效、53失败（20 refs、32 length、1实体非空）；结构有效不代表legal enum和语义正确，完整总分母为两臂各1080。业务P schema拒绝与系统来源拒绝不能统称模型语义错误。推理资源、成本及真实覆盖收益本次未知，未修改队列、lease或生产release。
+
+## 模板和失败路径补充（本轮）
+
+纠错指令现为 `configs/probes/slurp_perception_length_repair_v1.txt`，SHA256 `e9baa301ffa49bfc067d9571e517e7228d2ea48171a9c18448184c4f79a74507`。可用 `pipeline.perception_repair_template: {relpath, sha256}` 指定位于 `configs/probes/` 的其他固定模板；旧 `compact-reask-v1` 默认使用上述 pin。注册派生与运行前均核路径和内容摘要；独立子contact的parent记录保留模板pin和内容，bundle从receipt重算并核实原请求只增加该模板，native source核实receipt与composed配置一致。更改模板须新的pin及独立身份。
+
+补充脚本化SDK覆盖子contact length、invalid JSON和UNKNOWN：前两项核对两个contact的原始request、response和cost，并通过canonical output和原生诊断；UNKNOWN检查持久journal有已观察父响应和未知子intent，且不重发。模板篡改/路径逃逸拒绝；现有shared budget、旧thinking fallback和Slot补问回归保留。测试为模拟传输与tokenizer；新固定镜像相关集 **139 passed、5 warnings、38.45秒**。UNKNOWN没有响应或最终费用时如实保持未知，不能声称已有子response/cost。
+
+注册重要限制：本分支早期 `d2e5b28c` 改动 `native_contact_custody_enabled`，会误禁用首次捕获，独占启动者修复已在主线 `1c8d6c7c`；本次新提交没有更改该文件。主线程整合时必须保留启动者修复，不得把 `d2e5b28c` 的旧 `False` 覆盖回去；length策略的跨attempt许可及整合后的真实注册仍须主线程核验。本次未进行真实注册、业务模型、真实FIT或部署，不能称可部署或声称覆盖率收益。

@@ -40,10 +40,15 @@ class NodeWorkload(PairWorkload):
         repair = pipeline.get('perception_length_recovery') if isinstance(pipeline, dict) else None
         if repair is not None and (repair != 'compact-reask-v1' or not pipeline.get('coverage_recovery')):
             raise ValueError('unsupported Perception length recovery')
+        if isinstance(pipeline, dict) and 'perception_repair_template' in pipeline:
+            from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import repair_template_pin
+            if repair is None:
+                raise ValueError('Perception template requires recovery')
+            repair_template_pin(pipeline)
         normalizer = pipeline.get('reference_normalizer') if isinstance(pipeline, dict) else None
         if normalizer is not None and normalizer != 'quarantine-unsupplied-v1':
             raise ValueError('unsupported reference normalizer')
-        base_pipeline = {k:v for k,v in pipeline.items() if k not in ('reference_normalizer', 'perception_length_recovery')} if isinstance(pipeline, dict) else pipeline
+        base_pipeline = {k:v for k,v in pipeline.items() if k not in ('reference_normalizer', 'perception_length_recovery', 'perception_repair_template')} if isinstance(pipeline, dict) else pipeline
         recovery = base_pipeline.get('coverage_recovery') if isinstance(base_pipeline, dict) else None
         supported_recovery = (isinstance(recovery, dict)
             and set(base_pipeline) == set(legacy) | {'coverage_recovery'}
@@ -146,6 +151,9 @@ class NodeWorkload(PairWorkload):
                 base=expanded
                 if pipeline and pipeline.get('perception_length_recovery'):
                     base['native_episode']['intent_slot_pipeline']['perception_length_recovery'] = pipeline['perception_length_recovery']
+                    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import load_repair_template, repair_template_pin
+                    load_repair_template(repo, pipeline)
+                    base['native_episode']['intent_slot_pipeline']['perception_repair_template'] = repair_template_pin(pipeline)
                 if pipeline and pipeline.get('reference_normalizer'):
                     base['native_episode']['intent_slot_pipeline']['reference_normalizer'] = pipeline['reference_normalizer']
                 if pipeline and pipeline.get('coverage_recovery'):

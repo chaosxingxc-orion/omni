@@ -1414,8 +1414,10 @@ def _seal_refusal_terminal_outcome(
     parent = getattr(error, "seal_refusal_parent", None)
     interrupted_contacts = [dict(normalized_rejected)]
     if parent is not None:
-        if (parent.sample_id != completion.sample_id or parent.text != ""
-                or completion.agent_contact_id != parent.agent_contact_id + ":answer-only"):
+        answer_only = parent.text == "" and completion.agent_contact_id == parent.agent_contact_id + ":answer-only"
+        length_repair = (checkpoint.stage == "perception" and parent.finish_reason == "length" and bool(parent.text)
+                         and completion.agent_contact_id == parent.agent_contact_id + ":perception-length-repair")
+        if parent.sample_id != completion.sample_id or not (answer_only or length_repair):
             raise NativeEpisodeError("invalid seal refusal recovery parent")
         interrupted_contacts.insert(0, {
             "agent_contact_id": parent.agent_contact_id, "request_id": parent.request_id,

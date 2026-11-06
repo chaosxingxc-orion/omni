@@ -2693,6 +2693,12 @@ async def _invoke_native_role_episode(
     node_slot_materials = []
     node_raw_perception = {}
     coverage_policy = pipeline_config.get("coverage_recovery") if pipeline_config else None
+    repair_template = None
+    if pipeline_config and pipeline_config.get("perception_length_recovery"):
+        from .intent_slot_pipeline import load_repair_template, repair_template_pin
+        if binding.repo_root is None:
+            raise RailsRunnerError("Perception repair requires a pinned repository template")
+        repair_template = load_repair_template(binding.repo_root, pipeline_config)
     coverage_state = {"result": None, "missing": None, "slot_count": 0, "source": None, "extra_contacts": 0}
     slot_replay = getattr(core_client, "_contact_replay", None)
     slot_successor = (slot_replay.slot_pending(state.prepared.sample.sample_id)
@@ -6611,7 +6617,7 @@ async def _invoke_native_role_episode(
                             rollout_contact_index = child_index
                             set_current_trace_buffer(child_trace)
                             result_prepared = adapter_request.prepare(result_request, binding_override=prepared.binding,
-                                answer_only=not length_repair, perception_length_repair=length_repair)
+                                answer_only=not length_repair, perception_length_repair=repair_template if length_repair else None)
                             fit_kwargs = ({"prompt_limit_tokens": context_fit_budget.prompt_limit_tokens}
                                 if context_fit_budget is not None and context_fit_budget.measured_by_request_gate else {})
                             fit_count = binding.request_gate(result_prepared.request, **fit_kwargs)
@@ -6627,7 +6633,9 @@ async def _invoke_native_role_episode(
                                 "org_recovery_parent_request_id": parent.request_id,
                                 "org_recovery_parent_response_sha256": parent.response_sha256,
                                 "org_recovery_child_contact_id": child_id,
-                                **({"org_recovery_policy": "compact-reask-v1", "org_recovery_reason": "length"} if length_repair else {})})
+                                **({"org_recovery_policy": "compact-reask-v1", "org_recovery_reason": "length",
+                                    "org_recovery_template": repair_template_pin(pipeline_config),
+                                    "org_recovery_template_text": repair_template} if length_repair else {})})
                             completion = adapter_request.dispatch(result_prepared, id_slot=dispatch_slot, managed_recovery=True)
                             recovery_parent = parent
                             recovery_parents[completion.request_id] = parent
@@ -7305,6 +7313,9 @@ async def _invoke_native_role_episode(
                 if pipeline_config.get("reference_normalizer"):
                     block["reference_normalizer"] = pipeline_config["reference_normalizer"]
                     block["reference_config"] = copy.deepcopy(pipeline_config)
+                if pipeline_config.get("perception_length_recovery"):
+                    block["perception_length_recovery"] = pipeline_config["perception_length_recovery"]
+                    block["perception_repair_template"] = repair_template_pin(pipeline_config)
                 if slot_successor:
                     block['slot_successor'] = copy.deepcopy(slot_successor)
             if block is not None and (pipeline_config.get("evidence_policy") == "unique_source_alias_v1" or pipeline_config["schema"].endswith("-v2")):

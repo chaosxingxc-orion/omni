@@ -7,5 +7,9 @@
     "max_extra_contacts": 3
   },
   "perception_length_recovery": "compact-reask-v1",
-  "reference_normalizer": "quarantine-unsupplied-v1"
+  "reference_normalizer": "quarantine-unsupplied-v1",
+  "perception_repair_template": {
+    "relpath": "configs/probes/slurp_perception_length_repair_v1.txt",
+    "sha256": "e9baa301ffa49bfc067d9571e517e7228d2ea48171a9c18448184c4f79a74507"
+  }
 }
