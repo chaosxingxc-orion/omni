@@ -238,3 +238,54 @@ def test_actual_fit_gate_reuses_runtime_repair_without_retokenization(tmp_path,m
     proof=gate.receipts[0]['native_fit_reuse']['runtime_repair']
     assert proof['previous_runtime_sha256']=='a'*64 and proof['current_runtime_sha256']=='b'*64
     assert gate.receipts[0]['native_fit_reuse']['new_tokenizer_contacts']==0
+
+
+def test_slow_initialization_does_not_block_reused_contact(tmp_path):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    runtime, plan, replay, request, old = source(tmp_path)
+    entered, release = threading.Event(), threading.Event()
+    calls = []
+    def factory():
+        calls.append(1)
+        entered.set()
+        assert release.wait(5)
+        return build_native_contact_fit_gate(runtime, _program(), plan,
+                                            client_factory=_RawTokenizer, max_concurrency=2)
+    gate = RecoverableNativeFitGate(runtime, plan, factory, replay=replay)
+    fresh = _raw_prepared('s2', 'contact-2', runtime._transport.raw)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        pending = pool.submit(gate, fresh)
+        try:
+            assert entered.wait(5)
+            assert pool.submit(gate, request).result(timeout=3) == 7
+            assert not pending.done()
+        finally:
+            release.set()
+        assert pending.result(timeout=5) == 7
+    assert calls == [1] and len(gate.receipts) == 2
+
+
+@pytest.mark.parametrize('failure', [RuntimeError, KeyboardInterrupt])
+def test_initialization_failure_is_not_retried_by_waiting_contacts(tmp_path, failure):
+    from concurrent.futures import ThreadPoolExecutor
+    runtime = _raw_runtime(tmp_path)
+    plan = _plan(run_id='SAEA-FIT-FAILED-INITIALIZATION-V1')
+    calls = []
+    def factory():
+        calls.append(1)
+        raise failure('partial initialization')
+    gate = RecoverableNativeFitGate(runtime, plan, factory)
+    requests = [_raw_prepared(s, s+'-contact', runtime._transport.raw) for s in ('s1', 's2')]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(gate, r) for r in requests]
+        errors = []
+        for future in futures:
+            try:
+                future.result(timeout=5)
+            except BaseException as error:
+                errors.append(error)
+    assert calls == [1]
+    assert sum(type(e) is failure for e in errors) == 1
+    assert sum(isinstance(e, PreparationError) for e in errors) == 1
+    assert not gate.receipts

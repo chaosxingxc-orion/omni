@@ -816,7 +816,7 @@ def test_deferred_raw_context_consumes_one_journaled_fit_and_preserves_overflow(
     assert len(tokenizer.calls) == 1
 
 
-def test_runtime_deferred_budget_selects_registered_fit_not_default_estimate():
+def test_runtime_budget_requires_explicit_measured_gate_binding():
     from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntime, _default_token_counter
     runtime = SimpleNamespace(
         _context_fit_policy=lambda: "compact-or-abstain",
@@ -824,7 +824,10 @@ def test_runtime_deferred_budget_selects_registered_fit_not_default_estimate():
         _completion_token_ceiling=lambda: 4096,
         _token_counter=_default_token_counter,
         _composed=SimpleNamespace(values={"preflight_budget_mode": "defer-to-native-contact-fit"}))
-    budget = FlightRuntime._context_fit_budget(runtime)
+    # Deferral alone is not authority: the dispatch binding also checks raw
+    # vLLM, a real gate, no feature packets and the default token counter.
+    assert FlightRuntime._context_fit_budget(runtime).measured_by_request_gate is False
+    budget = FlightRuntime._context_fit_budget(runtime, measured_by_request_gate=True)
     assert budget.measured_by_request_gate is True
     runtime._token_counter = lambda _: 3
     assert FlightRuntime._context_fit_budget(runtime).measured_by_request_gate is False

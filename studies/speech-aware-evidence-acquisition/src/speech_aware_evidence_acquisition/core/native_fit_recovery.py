@@ -8,7 +8,7 @@ from pathlib import Path
 from .atomic_file import publish_new
 from .contact_journal import ContactJournal, canonical, comparable_request, digest, logical_contact
 from .preparation import PreparationError, load_artifact
-from .stage_timing import measured_lock
+from .stage_timing import measured_lock, span
 
 
 def runtime_only_fit_repair(current, original):
@@ -76,6 +76,8 @@ class RecoverableNativeFitGate:
         self.journal = NativeFitJournal(runtime._data_root, plan, runtime._arm())
         self._gate = None
         self._lock = threading.Lock()
+        self._init_lock = threading.Lock()
+        self._init_failed = False
         self.receipts = []
         self._used = set()
         self._source = None
@@ -106,9 +108,24 @@ class RecoverableNativeFitGate:
                 return self._reuse(source_path, payload, prompt_limit_tokens)
             if source_path.exists() or observed_payload is not None:
                 raise PreparationError('predecessor FIT missing or changed; no automatic tokenizer repeat')
-        with self._lock:
+        # Initialization may attach a service and perform slow identity I/O.
+        # It must not block claims or completed/reused receipt publication.
+        with measured_lock(self._init_lock, "native_fit_initialization_wait", lambda: {
+                "sample_id": payload["sample_id"], "request_id": payload["request_id"]}):
+            if self._init_failed:
+                raise PreparationError('native FIT initialization previously failed; new attempt required')
             if self._gate is None:
-                self._gate = self.factory()
+                try:
+                    with span("native_fit_initialization"):
+                        gate = self.factory()
+                        if not callable(gate) or not callable(getattr(gate, 'receipt_for', None)):
+                            raise PreparationError('concurrent native FIT requires contact-bound receipt access')
+                    self._gate = gate
+                except BaseException:
+                    # Partial initialization can already have durable effects.
+                    # Other waiting contacts must not implicitly retry it.
+                    self._init_failed = True
+                    raise
             gate = self._gate
         if not callable(getattr(gate, 'receipt_for', None)):
             raise PreparationError('concurrent native FIT requires contact-bound receipt access')
