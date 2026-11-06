@@ -547,3 +547,26 @@ def test_private_projection_snapshot_survives_original_mutation_and_rejects_chan
         object.__setattr__(value, 'content', old)
     with pytest.raises(FrozenInstanceError):
         frozen.knowledge_binding.binding_sha256 = '0' * 64
+
+
+def test_transport_owned_view_reuses_projection_without_full_corpus_hash(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.core.model.native_slot_binding_view import _bind_config
+    from speech_aware_evidence_acquisition.rails.slot_binding_view import _projection_snapshot
+    context, config, payload = context_world(tmp_path)
+    frozen = _bind_config(config, tmp_path)
+    evidence_id, uri, text = _target(context)
+    expected_scope = scope_for_payload(payload, context)
+    expected = project_slot_value(context, evidence_id=evidence_id, source_uri=uri,
+                                  content=text, scope=expected_scope)
+    def forbidden(*args, **kwargs):
+        pytest.fail('render must not rehash the full source corpus')
+    monkeypatch.setattr(type(context.knowledge_binding.composite_snapshot), 'content_hash', forbidden)
+    for _ in range(3):
+        assert _projection_snapshot(frozen) is frozen
+        assert scope_for_payload(payload, frozen) == expected_scope
+        assert project_slot_value(frozen, evidence_id=evidence_id, source_uri=uri,
+                                  content=text, scope=expected_scope) == expected
+    corrupted = replace(frozen, knowledge_binding=replace(
+        frozen.knowledge_binding, store_role='tampered'))
+    with pytest.raises(SlotBindingViewError, match='seal'):
+        validate_slot_view_context(corrupted)

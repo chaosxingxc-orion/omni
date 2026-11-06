@@ -324,18 +324,25 @@ def validate_slot_view_context(context: SlotBindingViewContext) -> None:
             raise SlotBindingViewError("slot view context row index differs")
     if context.context_sha256 != content_hash(_context_document(context)):
         raise SlotBindingViewError("slot view context hash differs")
-    if context.knowledge_binding.composite_snapshot.content_hash() != context.knowledge_binding.binding_sha256:
-        raise SlotBindingViewError("slot view composite snapshot differs")
-    try:
-        store = context.knowledge_binding.store(context.store_id)
-    except RailsError as error:
-        raise SlotBindingViewError("slot view store binding differs") from error
-    if (
-        tuple(sorted(store.snapshot_pin.items())) != context.snapshot_pin
-        or tuple(sorted(store.release_pin.items())) != context.release_pin
-        or tuple(sorted(store.source_pin.items())) != context.source_pin
-    ):
-        raise SlotBindingViewError("slot view source pins differ")
+    binding = context.knowledge_binding
+    if type(binding) is _ProjectionKnowledge:
+        # This transport-owned view was copied only after full source validation.
+        # Recheck its compact seal, not thousands of unrelated corpus records.
+        if binding.seal_sha256 != _projection_seal(context, binding):
+            raise SlotBindingViewError("slot view projection seal differs")
+    else:
+        if binding.composite_snapshot.content_hash() != binding.binding_sha256:
+            raise SlotBindingViewError("slot view composite snapshot differs")
+        try:
+            store = binding.store(context.store_id)
+        except RailsError as error:
+            raise SlotBindingViewError("slot view store binding differs") from error
+        if (
+            tuple(sorted(store.snapshot_pin.items())) != context.snapshot_pin
+            or tuple(sorted(store.release_pin.items())) != context.release_pin
+            or tuple(sorted(store.source_pin.items())) != context.source_pin
+        ):
+            raise SlotBindingViewError("slot view source pins differ")
     values = {value.value_id: value for value in context.knowledge_binding.composite_snapshot.values}
     for value_id, row in context.rows_by_value_id.items():
         _slot_id, _bindings, expected = _slot(row.document())
@@ -361,13 +368,26 @@ class _ProjectionKnowledge:
     binding_sha256: str
     store_role: str
     composite_snapshot: _ProjectionSnapshot
+    seal_sha256: str = ""
 
     def model_evidence_block(self, store_id, *, local_evidence_id, content):
         return {"text": f"[knowledge store={store_id} role={self.store_role}] {content}"}
 
 
+def _projection_seal(context, binding):
+    return content_hash({
+        "context_sha256": context.context_sha256,
+        "binding_sha256": binding.binding_sha256,
+        "store_role": binding.store_role,
+        "values": [(v.value_id, v.content) for v in binding.composite_snapshot.values],
+    })
+
+
 def _projection_snapshot(context):
     """Validate a fresh private copy, then retain only immutable projection data."""
+    if type(context.knowledge_binding) is _ProjectionKnowledge:
+        validate_slot_view_context(context)
+        return context
     # Snapshot records contain only frozen dataclasses and tuple/string fields;
     # rebuild their immutable records while copying mutable pin mappings.
     source = context.knowledge_binding
@@ -393,6 +413,7 @@ def _projection_snapshot(context):
                    if v.value_id in private.rows_by_value_id)
     frozen = _ProjectionKnowledge(binding.binding_sha256, store.store_role,
                                   _ProjectionSnapshot(values))
+    frozen = replace(frozen, seal_sha256=_projection_seal(private, frozen))
     return replace(private, knowledge_binding=frozen)
 
 def _history_artifacts(payload: Mapping[str, object]) -> tuple[AgentStateArtifact, ...]:

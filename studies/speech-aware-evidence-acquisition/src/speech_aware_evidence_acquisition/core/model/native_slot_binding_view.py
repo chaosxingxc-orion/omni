@@ -16,9 +16,9 @@ POLICY_ID = "native-candidate-slot-view-v1"
 
 
 def _bind_config(values, data_root):
-    from ...rails.slot_binding_view import bind_slot_view_context
+    from ...rails.slot_binding_view import bind_slot_view_context, _projection_snapshot
 
-    return bind_slot_view_context(values, data_root)
+    return _projection_snapshot(bind_slot_view_context(values, data_root))
 
 
 def _validate_context(context):
