@@ -654,11 +654,11 @@
       "status": "running_http_verified",
       "rows": 1080,
       "runtime_predecessor": "E5 ON known terminal settlement; independent admitted launch",
-      "completed_rows": 786,
-      "observed_at_utc": "2026-11-06T23:23:41.875759+00:00",
-      "wall_seconds_per_complete_row": 10.65410967758897,
-      "remaining_rows": 294,
-      "estimated_remaining_seconds": 3132.308245211157
+      "completed_rows": 916,
+      "observed_at_utc": "2026-11-06T23:45:16.339351+00:00",
+      "wall_seconds_per_complete_row": 10.555233404625971,
+      "remaining_rows": 164,
+      "estimated_remaining_seconds": 1731.0582783586592
     },
     {
       "id": "node-prompt-candidates",
@@ -726,12 +726,12 @@
       "cpu_score_dependency": false,
       "status": "running_first_http_success_verified",
       "started_at_utc": "2026-11-06T22:06:40.70367096Z",
-      "completed_rows": 553,
+      "completed_rows": 614,
       "total_rows": 1080,
-      "observed_at_utc": "2026-11-06T23:40:43.386012+00:00",
-      "remaining_rows": 527,
-      "wall_seconds_per_complete_row": 10.203765536303115,
-      "estimated_remaining_seconds": 5377.384437631741
+      "observed_at_utc": "2026-11-06T23:50:56.366830+00:00",
+      "remaining_rows": 466,
+      "wall_seconds_per_complete_row": 10.188376481835927,
+      "estimated_remaining_seconds": 4747.7834405355425
     },
     {
       "id": "compact-slot-a-evaluate",
@@ -796,7 +796,7 @@
       "id": "locked-slot-visibility-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "admission_verified_cpu_score_handoff_pending",
+      "status": "admission_and_cpu_handoff_verified_score_compatibility_check_pending",
       "implementation_commit": "9389169f",
       "scientific_parent": "complete-coverage-on-evaluate",
       "scope": "same pinned54-card snapshot; preserve selected cards then append deduplicated remaining cards; no new knowledge/bindings"
@@ -840,7 +840,7 @@
     "scoring_recovery": "k16ON FINALIZED; first coverage schema refusal and pair missing-mount failure preserved; corrected pair retry and successor-reader18tests reported, complete result awaiting main review",
     "paired_analysis": "completeOFF full paired plus 40 entity regressions accepted; reuse existing Slot role-grounding candidate",
     "historical_configuration": "accepted limited request audit; historical k60 pre-retrieval final P cap8, current k8 cap8; normalized response envelope not rebuilt",
-    "knowledge_supply": "real admission verified, B-after-Slot binder live waiting-source; CPU scoring handoff final report pending",
+    "knowledge_supply": "admission/binder/score/600s observer accepted; fixed-image CPU score-tool compatibility check in progress, no new inference",
     "load_analysis": "completed existing evidence analysis accepted; retain armed C96, no measured speedup",
     "tfrl_reader": "deferred",
     "perception_miss_analysis": "P historical ranking stage/prepare/register/effective diff accepted89pins; admission and A-after-C96 handoff in progress, not armed"
