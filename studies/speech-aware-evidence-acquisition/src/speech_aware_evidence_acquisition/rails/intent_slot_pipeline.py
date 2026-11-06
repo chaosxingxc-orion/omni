@@ -54,7 +54,10 @@ def load_slot_repair_template(repo, config):
 def slot_repair_decoding(decoding, policy):
     out = dict(decoding)
     out.pop("thinking_budget_tokens", None)
-    out["chat_template_kwargs"] = {"enable_thinking": False}
+    template_kwargs = out.get("chat_template_kwargs", {})
+    if not isinstance(template_kwargs, Mapping):
+        raise ValueError("Slot repair chat_template_kwargs must be a mapping")
+    out["chat_template_kwargs"] = {**template_kwargs, "enable_thinking": False}
     out["max_tokens"] = policy["answer_tokens"]
     return out
 

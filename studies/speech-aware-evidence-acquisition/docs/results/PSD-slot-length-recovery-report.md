@@ -7,3 +7,5 @@
 真实SDK加模拟传输/音频/tokenizer，固定镜像 `sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026`，CPU/断网/源码RO：`/opt/saea-venv/bin/python -m pytest -q --tb=short --show-capture=no -p no:cacheprovider /src/tests/unit/test_intent_slot_runner.py /src/tests/unit/test_intent_slot_pipeline.py /src/tests/unit/test_intent_slot_workload.py /src/tests/unit/test_native_episode_diagnostics.py --basetemp=/tmp/pytest`，`PYTHONPATH=/src/src:/src/scripts/analysis`；结果136 passed、5 warnings、32.86秒。包含脚本化Slot length→完整两候选→Decision及bundle核验、子length/invalid/UNKNOWN、现有Perception/Slot恢复回归。没有业务模型、教师、真实FIT或NPU调用。无真实注册或完整Fold结果，不能称达到100%。
 
 seq392的stop空实体由已有逐候选classify及预算化补问处理，本次未增加填值。剩余错误含补问仍截断、空响应、P schema失败、语义错误、漏候选、UNKNOWN和不可恢复祖先；需在独立注册后以原Fold A1080完整分母报告官方准确率、全部历史成本、候选和实体保留及有效回答吞吐，并只与已封存P→Solver历史结果按口径对齐，不重跑旧图。
+
+审查修正：Slot补问解码复制原 `chat_template_kwargs` 后只设置 `enable_thinking=false`，保留其他键；非mapping拒绝。共享extra=1时先完成P length纠错，再遇Slot length，SDK不发第四次请求，三次实际模型调用和三份FIT桩留账，输出为有限终止空交付，canonical output及bundle绑定通过。固定镜像对变化定点测试 **3 passed、73 deselected、5 warnings、11.90秒**；真实SDK、模拟传输及tokenizer。此前136项结果对应审查前快照，未重复。新旧文件pin及命令见 `PSD-slot-length-review-fix-result.json`。未进行真实注册或部署。

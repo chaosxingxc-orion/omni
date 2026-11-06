@@ -1,0 +1,16 @@
+{
+  "schema": "psd-slot-length-review-fix-result-v1",
+  "base_commit": "54f030390a594e01597f476752682de446fdfd11",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "test_command": "/opt/saea-venv/bin/python -m pytest -q --tb=short --show-capture=no -p no:cacheprovider /src/tests/unit/test_intent_slot_runner.py -k 'slot_repair_preserves_non_thinking_template_options or perception_repair_exhausts_shared_budget_before_slot_length or slot_nonempty_length_repair' --basetemp=/tmp/pytest",
+  "test_log": "3 passed, 73 deselected, 5 warnings in 11.90s",
+  "source_sha256": {
+    "src/speech_aware_evidence_acquisition/rails/intent_slot_pipeline.py": "8facba18c1d4e32916279def8a0d520f6ab345340e20cfff27b398afb243a946",
+    "tests/unit/test_intent_slot_runner.py": "94198e20ad52c18415b8f4deedafb28026dd516bdc62665f238dd2bfa07a65f9"
+  },
+  "environment": "CPU network none readonly source; real SDK mock transport/tokenizer",
+  "new_model_calls": 0,
+  "real_fit_calls": 0,
+  "npu_calls": 0,
+  "real_registration": false
+}

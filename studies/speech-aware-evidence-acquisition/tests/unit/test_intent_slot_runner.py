@@ -1598,3 +1598,50 @@ def test_sdk_slot_length_repair_failure_custody(tmp_path, failure):
             assert len(receipt['interrupted_role']['execution_receipt']['contacts'])==2
     finally:cost=h.close()['cost']
     assert calls==3 and cost['calls_used']>=2
+
+
+def test_slot_repair_preserves_non_thinking_template_options():
+    from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import slot_repair_decoding
+    base={'max_tokens':4096,'temperature':0,'thinking_budget_tokens':3072,
+          'chat_template_kwargs':{'enable_thinking':True,'custom_option':'keep','nested':{'x':1}}}
+    result=slot_repair_decoding(base,{'answer_tokens':2048})
+    assert result=={'max_tokens':2048,'temperature':0,
+                    'chat_template_kwargs':{'enable_thinking':False,'custom_option':'keep','nested':{'x':1}}}
+    assert base['chat_template_kwargs']['enable_thinking'] is True
+    with pytest.raises(ValueError,match='must be a mapping'):
+        slot_repair_decoding({'chat_template_kwargs':None},{'answer_tokens':100})
+
+
+def test_perception_repair_exhausts_shared_budget_before_slot_length(tmp_path):
+    from pathlib import Path
+    from test_native_episode_runner import _wire_response
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    h,policy=recovery_harness(tmp_path);h.repo_root=Path(__file__).resolve().parents[2]
+    policy.update(answer_only_fallback='off',perception_length_recovery='compact-reask-v1',
+        slot_length_recovery={'strategy':'answer-only-compact-v1','answer_tokens':64,
+          'template':{'relpath':'configs/probes/slurp_slot_length_repair_v1.txt','sha256':'29fe78371df29113791a5ebb0373ea0d8c799456a0d154a00f23b2346b0eaba0'}},
+        coverage_recovery={'strategy':'complete-original-candidate-set-v1','max_extra_contacts':1})
+    h.config=replace(h.config,intent_slot_pipeline_json=canonical(policy),max_contacts=6)
+    original=h._output;calls=[]
+    def post(_url,body):
+        calls.append(json.loads(body));n=len(calls)
+        if n==2:return _wire_response(original(('s1','perception',1,1)))
+        response=json.loads(_wire_response('{"candidates":'+(' '*80)))
+        response['choices'][0]['finish_reason']='length'
+        return json.dumps(response).encode()
+    h.post_override=post
+    try:
+        summary=h.run()
+        raw=_raw_native(h,solver_role={'max_iterations':1});raw['intent_slot_pipeline']=policy
+        rows=_runtime(h,summary,raw)._canonical_output_rows(h.client)
+    finally:cost=h.close()['cost']
+    records={rid:payload for _,rid,payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows),records)
+    receipt=summary.results[0].native_episode_receipt
+    assert len(calls)==cost['calls_used']==3 and len(h.fit_gate.receipts)==3
+    assert rows[0]['text']=='' and receipt['terminal_disposition']['reason']=='finite_completion'
+    assert receipt['terminal_disposition']['stage']=='slot'
+    assert len(receipt['role_visits'][0]['execution_receipt']['contacts'])==2
+    assert len(receipt['interrupted_role']['execution_receipt']['contacts'])==1
+    assert all(c['request_id']+'/cost' in records for v in receipt['role_visits']+[receipt['interrupted_role']] for c in v['execution_receipt']['contacts'])
