@@ -117,5 +117,121 @@
   },
   "scope": "aggregate service window, not per-sample/node timing; no isolated-workload proof",
   "source_sha256": "39d09c8ec865bc48dd5bbdc6b1a805185d95acfca67fd1431188c5a7553bc926",
-  "new_model_calls": 0
+  "new_model_calls": 0,
+  "followup_window": {
+    "start_utc": "2026-11-06T21:35:18.530001+00:00",
+    "end_utc": "2026-11-06T21:45:18.568209+00:00",
+    "duration_seconds": 600.038208,
+    "source_sha256": "c3b1138b4b5f082d9604698e6453227e651375be2f58ebb8a77ac6bf728b126b",
+    "instances": {
+      "A": {
+        "completed_requests": 312.0,
+        "generated_tokens_per_second": 394.6965323914839,
+        "prefix_hit_fraction": 0.3035234735065878,
+        "preemptions": 0.0,
+        "gauges_at_end": {
+          "kv_cache_usage_perc": [
+            0.341757443718228
+          ],
+          "num_requests_running": [
+            64.0
+          ],
+          "num_requests_waiting": [
+            0.0
+          ]
+        },
+        "histograms": {
+          "e2e_request_latency_seconds": {
+            "count": 312.0,
+            "mean_seconds": 111.05898325336285,
+            "sum_seconds": 34650.40277504921
+          },
+          "inter_token_latency_seconds": {
+            "count": 236512.0,
+            "mean_seconds": 0.14675511404853794,
+            "sum_seconds": 34709.34553384781
+          },
+          "request_decode_time_seconds": {
+            "count": 312.0,
+            "mean_seconds": 105.30754887048104,
+            "sum_seconds": 32855.955247590085
+          },
+          "request_inference_time_seconds": {
+            "count": 312.0,
+            "mean_seconds": 106.78946917804289,
+            "sum_seconds": 33318.31438354938
+          },
+          "request_prefill_time_seconds": {
+            "count": 312.0,
+            "mean_seconds": 1.4819203075637164,
+            "sum_seconds": 462.3591359598795
+          },
+          "request_queue_time_seconds": {
+            "count": 312.0,
+            "mean_seconds": 4.0881671482698625,
+            "sum_seconds": 1275.508150260197
+          },
+          "time_to_first_token_seconds": {
+            "count": 321.0,
+            "mean_seconds": 5.83597533353764,
+            "sum_seconds": 1873.3480820655823
+          }
+        }
+      },
+      "B": {
+        "completed_requests": 185.0,
+        "generated_tokens_per_second": 476.12301381981325,
+        "prefix_hit_fraction": 0.31963220906934253,
+        "preemptions": 0.0,
+        "gauges_at_end": {
+          "kv_cache_usage_perc": [
+            0.45704117946110834
+          ],
+          "num_requests_running": [
+            63.0
+          ],
+          "num_requests_waiting": [
+            0.0
+          ]
+        },
+        "histograms": {
+          "e2e_request_latency_seconds": {
+            "count": 185.0,
+            "mean_seconds": 211.64060506434055,
+            "sum_seconds": 39153.511936903
+          },
+          "inter_token_latency_seconds": {
+            "count": 285508.0,
+            "mean_seconds": 0.13219910227475495,
+            "sum_seconds": 37743.901292260736
+          },
+          "request_decode_time_seconds": {
+            "count": 185.0,
+            "mean_seconds": 209.79641698070526,
+            "sum_seconds": 38812.33714143047
+          },
+          "request_inference_time_seconds": {
+            "count": 185.0,
+            "mean_seconds": 211.14798805481325,
+            "sum_seconds": 39062.377790140454
+          },
+          "request_prefill_time_seconds": {
+            "count": 185.0,
+            "mean_seconds": 1.3515710741054971,
+            "sum_seconds": 250.04064870951697
+          },
+          "request_queue_time_seconds": {
+            "count": 185.0,
+            "mean_seconds": 0.35510532027078995,
+            "sum_seconds": 65.69448425009614
+          },
+          "time_to_first_token_seconds": {
+            "count": 184.0,
+            "mean_seconds": 1.9030694119308307,
+            "sum_seconds": 350.1647717952728
+          }
+        }
+      }
+    }
+  }
 }
