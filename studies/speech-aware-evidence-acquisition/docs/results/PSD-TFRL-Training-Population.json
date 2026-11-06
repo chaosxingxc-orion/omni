@@ -1,0 +1,111 @@
+{
+  "schema": "omni-psd-training-population-audit-v1",
+  "inputs": {
+    "fold_a": {
+      "path": "configs/dataset/slurp-speech-native-evo-fold-a-1080.json",
+      "sha256": "4ba55688e80d8d768ec6cfc3ff4bacc9802fb34e4dab54913934015184497215",
+      "samples": 1080,
+      "utterances": 1080,
+      "audio_digests": 1080,
+      "split_identity_verified": true,
+      "runtime_view_verified": true
+    },
+    "fold_b": {
+      "path": "configs/dataset/slurp-speech-native-evo-fold-b-1080.json",
+      "sha256": "1d30c501612686004936b5dd295885d9452175e6449b4a66187c08227a322cea",
+      "samples": 1080,
+      "utterances": 1080,
+      "audio_digests": 1080,
+      "split_identity_verified": true,
+      "runtime_view_verified": true
+    },
+    "construction": {
+      "path": "configs/dataset/slurp-speech-native-stage3-construction-r01c.json",
+      "sha256": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba",
+      "samples": 625,
+      "utterances": 625,
+      "audio_digests": 625,
+      "split_identity_verified": true,
+      "runtime_view_verified": true
+    },
+    "construction_roster": {
+      "path": "docs/receipts/rosters/slurp-stage3-construction-r01c.json",
+      "sha256": "e8abc65ba4626cccb4aae9d2eb1bd73f077a6e9a407b3dba9c18bbe4c03eeddd",
+      "samples": 625,
+      "utterances": 625,
+      "audio_digests": 0,
+      "split_identity_verified": true,
+      "runtime_view_verified": false
+    },
+    "h1": {
+      "path": "docs/receipts/rosters/slurp-stage3-construction-r01c-h1.json",
+      "sha256": "7f540a76dec8eed29cc2295f6090c4551e2910bfd61cc0d8e98f09ba044a51c0",
+      "samples": 313,
+      "utterances": 313,
+      "audio_digests": 0,
+      "split_identity_verified": true,
+      "runtime_view_verified": false,
+      "audio_digests_resolved_from_parent": 313
+    },
+    "h2": {
+      "path": "docs/receipts/rosters/slurp-stage3-construction-r01c-h2.json",
+      "sha256": "87b3fa7032e4b51650bce2bb68f9f336a807a55b9ebc94f50661521711fccca7",
+      "samples": 312,
+      "utterances": 312,
+      "audio_digests": 0,
+      "split_identity_verified": true,
+      "runtime_view_verified": false,
+      "audio_digests_resolved_from_parent": 312
+    }
+  },
+  "comparisons": [
+    {
+      "left": "fold_a",
+      "right": "fold_b",
+      "overlap": {
+        "samples": 0,
+        "utterances": 0,
+        "audio": 0
+      }
+    },
+    {
+      "left": "construction",
+      "right": "fold_a",
+      "overlap": {
+        "samples": 0,
+        "utterances": 0,
+        "audio": 0
+      }
+    },
+    {
+      "left": "construction",
+      "right": "fold_b",
+      "overlap": {
+        "samples": 0,
+        "utterances": 0,
+        "audio": 0
+      }
+    },
+    {
+      "left": "h1",
+      "right": "h2",
+      "overlap": {
+        "samples": 0,
+        "utterances": 0,
+        "audio": 0
+      }
+    }
+  ],
+  "all_examined_intersections_empty": true,
+  "h1_h2_exact_partition": true,
+  "construction_media_manifest": {
+    "path": "docs/receipts/artifacts/d1-slurp-stage3-construction-r01.json",
+    "sha256": "7cf5f978dbff16645866ce6bee501efbb9fb48d69b1a5243ba2781491a4d9f56",
+    "parent_records": 800,
+    "matched_records": 625
+  },
+  "scope": "Existing roster/view/manifest identity and overlap only; no raw audio bytes, annotation labels, ancestor exposure, current rollout availability or model performance verified.",
+  "new_sample_ids": 0,
+  "model_calls": 0,
+  "resampling": false
+}
