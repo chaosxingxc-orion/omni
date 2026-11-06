@@ -672,10 +672,11 @@
       "scope": "Configured terminal continuation: successful scores no replay; known overlay failure recover once; unknown hold. Separate from NPU generation-release handoff.",
       "targets": [
         "coverage-evaluate",
-        "E5-on",
+        "E5",
         "complete-coverage-evaluate",
         "complete-coverage-on-evaluate"
-      ]
+      ],
+      "target_note": "E5 target is its ON member only; OFF already finalized."
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
