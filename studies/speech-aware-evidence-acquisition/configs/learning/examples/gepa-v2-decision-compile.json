@@ -1,0 +1,32 @@
+{
+  "schema": "saea-gepa-v2-node-adapter-v1",
+  "node": "decision",
+  "workload": {
+    "relpath": "configs/learning/REPLACE-WORKLOAD.json",
+    "sha256": "REPLACE-WITH-SHA256"
+  },
+  "feedback_query_ids": [
+    "slurp:train:REPLACE"
+  ],
+  "excluded_query_ids": [],
+  "contract": {
+    "relpath": "configs/learning/REPLACE-CONTRACT.json",
+    "sha256": "REPLACE-WITH-SHA256"
+  },
+  "parent": {
+    "relpath": "configs/learning/REPLACE-PARENT.json",
+    "sha256": "REPLACE-WITH-SHA256"
+  },
+  "external_mutation": {
+    "schema": "saea-gepa-external-mutation-v1",
+    "prepared": {
+      "path": "REPLACE/prepared.json",
+      "sha256": "REPLACE-WITH-SHA256"
+    },
+    "collected": {
+      "path": "REPLACE/collected.json",
+      "sha256": "REPLACE-WITH-SHA256"
+    },
+    "candidate_index": 0
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema": "saea-external-exploration-profile-v1",
+  "algorithm": "gepa",
+  "template": {
+    "path": "../../prompts/learner/tfrl/gepa-v2-decision.md",
+    "sha256": "a5d0d63a47d499414441eebc6bee432fd873740c956034af1da81b4b003c51fe"
+  },
+  "min_candidates": 2,
+  "max_candidates": 6,
+  "max_tokens": 131072
+}

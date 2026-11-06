@@ -1,0 +1,12 @@
+{
+  "schema": "saea-gepa-v2-node-adapter-v1",
+  "node": "slot",
+  "workload": {
+    "relpath": "configs/learning/REPLACE-WORKLOAD.json",
+    "sha256": "REPLACE-WITH-SHA256"
+  },
+  "feedback_query_ids": [
+    "slurp:train:REPLACE"
+  ],
+  "excluded_query_ids": []
+}

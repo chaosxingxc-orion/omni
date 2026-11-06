@@ -49,7 +49,7 @@ class PromptCandidateContract:
     """Node-specific immutable schema vocabulary over a single provenance engine."""
 
     def __init__(self, node):
-        if node not in ('solver', 'perception'):
+        if node not in ('solver', 'perception', 'slot', 'decision'):
             raise ValueError('unsupported editable node')
         self.node = node
         self.instruction_field = node + '_instruction'
@@ -61,10 +61,14 @@ class PromptCandidateContract:
         self.MUTATION_SCHEMA = 'saea-' + node + '-prompt-mutation-v1'
         self.BLOCK_START = '<SAEA_' + node.upper() + '_CONSUMPTION>'
         self.BLOCK_END = '</SAEA_' + node.upper() + '_CONSUMPTION>'
-        other = 'perception' if node == 'solver' else 'solver'
-        self.FROZEN_FIELDS = frozenset(name + '_sha256' for name in (
-            'knowledge', other, 'supply', 'model', 'decoding', 'roles', 'tools',
-            'output_schema', 'tokenizer'))
+        if node in ('slot', 'decision'):
+            self.FROZEN_FIELDS = frozenset(name + '_sha256' for name in (
+                'knowledge', 'supply', 'baseline', 'model', 'tokenizer'))
+        else:
+            other = 'perception' if node == 'solver' else 'solver'
+            self.FROZEN_FIELDS = frozenset(name + '_sha256' for name in (
+                'knowledge', other, 'supply', 'model', 'decoding', 'roles', 'tools',
+                'output_schema', 'tokenizer'))
         self.CONTRACT_FIELDS = frozenset((
             'schema', 'strategy', 'candidate_kind', 'allowed_module', 'base_template',
             'base_template_sha256', 'original_instruction', 'frozen', 'feedback_query_ids',
@@ -268,6 +272,9 @@ def for_contract(contract):
     from . import solver_prompt_candidate, perception_prompt_candidate
     options = {solver_prompt_candidate.CONTRACT_SCHEMA: solver_prompt_candidate,
                perception_prompt_candidate.CONTRACT_SCHEMA: perception_prompt_candidate}
+    for node in ('slot', 'decision'):
+        instance = PromptCandidateContract(node)
+        options[instance.CONTRACT_SCHEMA] = instance
     try:
         return options[contract['schema']]
     except (KeyError, TypeError) as exc:
