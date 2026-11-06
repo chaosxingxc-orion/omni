@@ -1,0 +1,55 @@
+{
+  "schema": "psd-complete-off-node-cost-summary-v1",
+  "rows": 1080,
+  "run_id": "SAEA-SLURP-PSD-COMPLETE-COVERAGE-FOLD-A-SLOT-OFF-V1",
+  "source_sha256": "50dd163a7c0a949ef2e512a6798b63a2d48ab5064e5f3616cad2f9aab21a6c6e",
+  "full_contact_calls": 3259,
+  "request_latency_sum_seconds": 357707.4649093006,
+  "roles": {
+    "perception": {
+      "calls": 1099,
+      "prompt_tokens": 5853921,
+      "completion_tokens": 300660,
+      "request_seconds": {
+        "mean": 44.08758672776162,
+        "n": 1099,
+        "p50": 34.429957820044365,
+        "p95": 46.6335362700047
+      },
+      "request_latency_sum_share": 0.13545218528244987,
+      "completion_tokens_share": 0.12817872887935058
+    },
+    "slot": {
+      "calls": 1080,
+      "prompt_tokens": 18961803,
+      "completion_tokens": 258590,
+      "request_seconds": {
+        "mean": 44.52617769982446,
+        "n": 1080,
+        "p50": 38.30828625499271,
+        "p95": 93.07009296998149
+      },
+      "request_latency_sum_share": 0.13443463341757084,
+      "completion_tokens_share": 0.11024325650539236
+    },
+    "Decision": {
+      "calls": 1080,
+      "prompt_tokens": 10190840,
+      "completion_tokens": 1786381,
+      "request_seconds": {
+        "mean": 241.82123627748166,
+        "n": 1080,
+        "p50": 198.85454374499386,
+        "p95": 470.2519510400016
+      },
+      "request_latency_sum_share": 0.7301131812999793,
+      "completion_tokens_share": 0.7615780146152571
+    }
+  },
+  "limits": [
+    "Request latency includes transport, service queuing and inference; it is not pure NPU time.",
+    "Summed concurrent latency share is not wall-clock share or potential wall-clock speedup.",
+    "This is the Slot OFF run; do not extrapolate node shares to Slot ON.",
+    "No new inference, scoring or bootstrap."
+  ]
+}
