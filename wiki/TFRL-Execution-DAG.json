@@ -280,7 +280,7 @@
       "axis": "召回/排序/供给",
       "priority": 5,
       "depends_on": [],
-      "status": "off_generation_sealed_released_on_generation_running",
+      "status": "off_finalized_on_1080_checkpointed_cpu_seal_recovery_resource_settled",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
@@ -499,22 +499,22 @@
       "depends_on": [
         "coverage-evaluate"
       ],
-      "status": "contract_coverage_accepted_scores_written_attempt_finalization_failed_readonly_lock",
-      "scope": "full denominator coverage, official quality, paired regressions"
+      "status": "finalized_and_paired_accepted",
+      "scope": "full denominator coverage, official quality, paired regressions",
+      "legal_rows": 1052,
+      "empty_rows": 28
     },
     {
       "id": "load-analysis",
       "resource": "CPU",
       "depends_on": [],
-      "status": "recent_sparse_hardware_and_asynchronous_throughput_report_accepted_no_speedup_claim"
+      "status": "two_decode_dominant_windows_published_third_window_cpu_analysis_live"
     },
     {
       "id": "concurrency-prepare",
       "resource": "CPU",
-      "depends_on": [
-        "coverage-score"
-      ],
-      "status": "proposal_after_policy_freeze",
+      "depends_on": [],
+      "status": "c64_c96_c128_configs_loader_verified_no_runtime_trial",
       "delta": "C64 to C96 only",
       "capacity_review": "actual bound single TP4 profile admission128 and receipt seq128 verified; C96 permitted not performance proven"
     },
@@ -524,7 +524,7 @@
       "depends_on": [
         "concurrency-prepare"
       ],
-      "status": "not_ready_not_queued",
+      "status": "await_frozen_scientific_parent_not_queued",
       "scope": "same frozen policy and existing real roster"
     },
     {
@@ -539,9 +539,9 @@
       "id": "compact-perception-config",
       "resource": "CPU",
       "depends_on": [],
-      "status": "reviewed_config_only_not_ready",
-      "control": "reference-perception-evaluate",
-      "changed_node": "perception"
+      "status": "two_single_node_configs_prepared_admitted_route_a_binders_armed",
+      "control": "complete-coverage-on-evaluate",
+      "changed_node": "two independent candidates: perception or slot"
     },
     {
       "id": "perception-length-ready",
@@ -583,9 +583,13 @@
       "depends_on": [
         "complete-coverage-ready"
       ],
-      "status": "running_native_bound_queue_after_generation_release",
+      "status": "generation_sealed_released_contract_legal_1080",
       "rows": 1080,
-      "priority": 1
+      "priority": 1,
+      "observed_at_utc": "2026-11-06T22:01:00.838409+00:00",
+      "completed_rows": 1080,
+      "wall_seconds_per_complete_row": 6.043093964870409,
+      "legal_rows": 1080
     },
     {
       "id": "off-node-answer-audit",
@@ -626,9 +630,11 @@
       "depends_on": [
         "complete-coverage-on-ready"
       ],
-      "status": "native_queue_armed_waiting_k16_on_generation_release",
+      "status": "running_http_verified",
       "rows": 1080,
-      "runtime_predecessor": "E5 ON generation-released"
+      "runtime_predecessor": "E5 ON known terminal settlement; independent admitted launch",
+      "completed_rows": 211,
+      "observed_at_utc": "2026-11-06T21:47:46.529006+00:00"
     },
     {
       "id": "node-prompt-candidates",
@@ -668,7 +674,7 @@
       "id": "cpu-score-terminal-adapter",
       "resource": "CPU",
       "depends_on": [],
-      "status": "four_watchers_live_complete_pair_tool2586_compatibility_fixed",
+      "status": "complete_off_on_watchers_live_compact_p_slot_watchers_live_prior_reference_finalized",
       "scope": "Configured terminal continuation: successful scores no replay; known overlay failure recover once; unknown hold. Separate from NPU generation-release handoff.",
       "targets": [
         "coverage-evaluate",
@@ -684,6 +690,56 @@
       "depends_on": [],
       "status": "merged_deployed_p_slot_binders_verified_native_complete_on_queue_preserved",
       "scope": "Do not block verified generation release on subsequent CPU score exit1; preserve unknown/held and identity checks"
+    },
+    {
+      "id": "compact-p-a-evaluate",
+      "resource": "NPU-A",
+      "depends_on": [
+        "compact-perception-config"
+      ],
+      "resource_predecessor": "complete-coverage-evaluate",
+      "scientific_parent": "complete-coverage-on-evaluate",
+      "cpu_score_dependency": false,
+      "status": "binder_armed_waiting_generation_release"
+    },
+    {
+      "id": "compact-slot-a-evaluate",
+      "resource": "NPU-A",
+      "depends_on": [
+        "compact-perception-config"
+      ],
+      "resource_predecessor": "compact-p-a-evaluate",
+      "scientific_parent": "complete-coverage-on-evaluate",
+      "cpu_score_dependency": false,
+      "status": "binder_armed_waiting_real_predecessor"
+    },
+    {
+      "id": "decision-evidence-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "configuration_reviewed_merged_standard_preparation_live_not_admitted",
+      "commit": "715d22f4"
+    },
+    {
+      "id": "decision-evidence-evaluate",
+      "resource": "NPU-A",
+      "depends_on": [
+        "decision-evidence-prepare"
+      ],
+      "resource_predecessor": "compact-slot-a-evaluate",
+      "scientific_parent": "complete-coverage-on-evaluate",
+      "cpu_score_dependency": false,
+      "status": "planned_not_armed"
+    },
+    {
+      "id": "complete-off-contract-audit",
+      "resource": "CPU",
+      "depends_on": [
+        "complete-coverage-evaluate"
+      ],
+      "dependency_event": "sealed_generation_outputs",
+      "score_dependency": false,
+      "status": "completed_verified_1080_legal_zero_empty_invalid"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
