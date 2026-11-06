@@ -506,7 +506,7 @@
       "id": "load-analysis",
       "resource": "CPU",
       "depends_on": [],
-      "status": "fixed_timing_report_accepted_no_speedup_claim"
+      "status": "recent_sparse_hardware_and_asynchronous_throughput_report_accepted_no_speedup_claim"
     },
     {
       "id": "concurrency-prepare",
@@ -682,7 +682,7 @@
       "id": "generation-release-binder-fix",
       "resource": "CPU",
       "depends_on": [],
-      "status": "implementation_in_progress",
+      "status": "merged_4a6f5ff0_92_tests_passed_independent_deployment_in_progress",
       "scope": "Do not block verified generation release on subsequent CPU score exit1; preserve unknown/held and identity checks"
     }
   ],
