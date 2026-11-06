@@ -1,0 +1,16 @@
+{
+  "schema": "saea-overlay-score-handoff-v1",
+  "state_dir": "/var/lib/omni-local-state/EXAMPLE/score-handoff",
+  "producer_launch": {"path": "/var/tmp/EXAMPLE/producer-launch.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+  "producer_launcher": {"path": "/var/tmp/EXAMPLE/configured_job_launch.py", "sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+  "container_id": null,
+  "run_id": "EXAMPLE-RUN",
+  "attempt_id": "generation-v1",
+  "score_tool": "/var/tmp/EXAMPLE/score-tool",
+  "tool_manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "tool_script_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "official_python_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "worktree": "/var/tmp/EXAMPLE/clean-tool-worktree",
+  "worktree_commit": "0000000000000000000000000000000000000000",
+  "interval_seconds": 600
+}
