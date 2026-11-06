@@ -1222,3 +1222,28 @@ def test_sdk_invalid_answer_only_keeps_both_paid_contacts(tmp_path):
     assert len(h.fit_gate.receipts) == 2
     assert rows[0]['native_episode_receipt']['terminal_disposition']['reason'] == 'seal_refusal'
     assert len(rows[0]['native_episode_receipt']['interrupted_role']['execution_receipt']['contacts']) == 2
+
+
+def test_node_rails_preserves_wire_system_with_trailing_newline(tmp_path):
+    h = harness(tmp_path)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2',
+                  duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1',
+                  answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    original = h.adapter.assemble_prompt
+    def assemble(sample, supply):
+        system, user = original(sample, supply)
+        return ({**system, 'content': f"fake task\n\nTask contract:\ntask-contract-for-{sample.sample_id}\n"}, user)
+    h.adapter.assemble_prompt = assemble
+    try:
+        result = h.run()
+    finally:
+        cost = h.close()['cost']
+    assert len(result.results) == 1
+    assert cost['calls_used'] == 3
+    assert all(value['rendered']['messages'][0]['content'].endswith('\n')
+               for value in h.prepared.values())
+
+

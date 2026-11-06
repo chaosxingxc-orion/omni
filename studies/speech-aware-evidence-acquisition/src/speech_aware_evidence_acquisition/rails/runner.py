@@ -4736,9 +4736,17 @@ async def _invoke_native_role_episode(
                 raise RailsRunnerError(
                     "one perception-branch Solver contact composed two different renderings"
                 )
-        framework_system = None
+        # OpenJiuwen normalizes the node's configured prompt with strip().
+        # Keep the original wire text, and accept the normalized framework
+        # text only when the handoff still has exactly that node prompt.
+        framework_system = (
+            prompt.strip()
+            if node_rails_enabled and messages[0]["content"] == prompt
+            and prompt != prompt.strip() else None
+        )
         if tfrl_bank is not None and _tfrl_bank_consumes(request, solver_phase_id, supply_variant_group, perception_branch_group):
-            framework_system = messages[0]["content"]          # the role node's own (constant) system text; the wire system message grows by the rule suffix
+            original_system = messages[0]["content"]
+            framework_system = framework_system or original_system
             messages = compose_tfrl_bank_messages(messages, render_ctx, plan.contact_id)
             if messages[0]["content"] == framework_system:
                 framework_system = None
@@ -4766,7 +4774,7 @@ async def _invoke_native_role_episode(
             # ``"constant"``. None -- the default -- renders exactly
             # ``names``, byte-identically to the pre-E17 tree.
             rendered_tool_names=constant_tool_names,
-            # TFRL-v2: None unless this contact's wire system message carries the rule-bank suffix.
+            # The framework prompt can differ from the preserved wire text.
             framework_system=framework_system,
         )
 
