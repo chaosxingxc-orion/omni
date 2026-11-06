@@ -700,7 +700,8 @@
       "resource_predecessor": "complete-coverage-evaluate",
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
-      "status": "binder_armed_waiting_generation_release"
+      "status": "container_running_first_http_unverified",
+      "started_at_utc": "2026-11-06T22:06:40.70367096Z"
     },
     {
       "id": "compact-slot-a-evaluate",
