@@ -1,5 +1,7 @@
 # 节点 Thinking 配置决策
 
+> 当前状态（2026-11-06 07:10 UTC）：两个实例均使用同一Fold A1080；Slot off为921/1080（剩159），Slot on为1080/1080生成完成。新后继正式准入及框架启动检查通过，尚未生成；两服务在线，本次8卡AICore均0%。下文早期进度为历史快照，最新综合说明见Research-Status，工程验收见Node-Request-Efficiency。
+
 ## 首轮固定策略
 
 新首轮候选将关闭 Perception thinking，并在请求 instruction 中明确：只返回配置的 JSON；输出 1–3 个按可信度排序的合法意图候选；每个候选只提供简短区分依据、已供给的证据 ID 和待确认字段；不输出思维过程，不提取槽位，不代替后续节点决策，不补造音频或知识中不存在的事实。保留 `max_tokens=4096`，避免同时改变输出预算。最终必须从实际 wire payload 验证 `enable_thinking=false`，包括 fallback 路径。
