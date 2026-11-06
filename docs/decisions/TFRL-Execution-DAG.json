@@ -1,521 +1,434 @@
 {
-  "schema": "omni-two-line-research-dag-v1",
-  "source_revision": 14,
-  "launcher_compatible": false,
-  "execution_status": "Engineering efficiency first; existing Fold A arms continue until validated release migration; no new large-scale scientific experiments",
+  "schema": "saea-research-dependency-spec-v1",
+  "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
+  "instruction": "CPU准备与分析、NPU推理两条异步队列；输入提前READY，固定资产复用；生成释放即接续，不等评分报告。",
+  "resources": {
+    "inference_instances": 2,
+    "cards_per_instance": 4,
+    "max_codex_cli": 3,
+    "monitor_interval_seconds": 600
+  },
   "nodes": [
     {
-      "id": "NEW-BASELINE-REPAIR",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "node-policy-integrated-runtime-validation-in-progress",
-      "scientific_dependencies": []
+      "id": "baseline-off",
+      "resource": "NPU-A",
+      "depends_on": [],
+      "status": "v5_generation_running",
+      "rows": 1080,
+      "completed_rows": 385,
+      "observed_model_calls": 1240,
+      "completed_rows_include_early_abstentions": true
     },
     {
-      "id": "NEW-BASELINE-FOLD-A1080",
-      "lane": "A+B",
-      "priority": 0,
-      "status": "two-frozen-arms-running",
-      "normal_generation_calls": 3240,
-      "fit_call_cap": 3240,
-      "scientific_dependencies": [
-        "NEW-BASELINE-REPAIR"
-      ],
-      "resource_dependencies": [
-        "each lane has its own admitted frozen runtime and active lease"
-      ],
+      "id": "baseline-on",
+      "resource": "NPU-B",
+      "depends_on": [],
+      "status": "v5_generation_running",
       "rows": 1080,
-      "budget_scope": "per arm; normal budget is not actual consumed cost",
-      "arms": [
+      "completed_rows": 214,
+      "observed_model_calls": 699,
+      "completed_rows_include_early_abstentions": true
+    },
+    {
+      "id": "baseline-selection",
+      "resource": "CPU",
+      "depends_on": [
+        "baseline-off",
+        "baseline-on"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "fold-b-confirmation",
+      "resource": "NPU-first-free",
+      "depends_on": [
+        "baseline-selection"
+      ],
+      "status": "pending",
+      "rows": 1080
+    },
+    {
+      "id": "construction-k2",
+      "resource": "NPU-A-or-B",
+      "depends_on": [
+        "baseline-selection"
+      ],
+      "status": "main_integrated_final_cpu_chain_complete_held",
+      "rows_per_member": 625,
+      "members": 2,
+      "dependency_note": "与Fold B并行；同策略K2，不能混OFF/ON。"
+    },
+    {
+      "id": "construction-score",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-k2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "E1",
+      "title": "GEPA Decision：在正确候选已存在时改善选择",
+      "target_node": "Decision",
+      "axis": "节点提示与理解",
+      "priority": 1,
+      "depends_on": [
+        "E1-prepare"
+      ],
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
         {
-          "lane": "A",
-          "slot_thinking": false,
-          "run_id": "SAEA-SLURP-FOLD-A-SLOT-OFF-A64K-V1",
-          "attempt_id": "generation-v1",
-          "cards": 4
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/gepa_v2_node_adapter.py",
+          "entry": "seed|compile --repo STUDY --data DATA --config CONFIG --tokenizer TOKENIZER --out OUTPUT"
         },
         {
-          "lane": "B",
-          "slot_thinking": true,
-          "run_id": "SAEA-SLURP-FOLD-A-SPLIT-P-OFF-TP4-V1",
-          "attempt_id": "generation-v1",
-          "cards": 4
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-decision-seed.json",
+          "entry": "seed示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-decision-compile.json",
+          "entry": "compile示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-decision-profile.json",
+          "entry": "节点专用profile；真实seed/compile绑定另行准备"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/gepa-v2-decision.md",
+          "entry": "独立固定教师模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/external_exploration.py",
+          "entry": "prepare|run|collect PATH，run仅由主线程授权的外部API执行者使用"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
+    },
+    {
+      "id": "E2",
+      "title": "GEPA Slot：完整候选抽取与实体证据使用",
+      "target_node": "Slot",
+      "axis": "节点提示与理解",
+      "priority": 2,
+      "depends_on": [
+        "E2-prepare"
+      ],
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/gepa_v2_node_adapter.py",
+          "entry": "seed|compile --repo STUDY --data DATA --config CONFIG --tokenizer TOKENIZER --out OUTPUT"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-slot-seed.json",
+          "entry": "seed示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-slot-compile.json",
+          "entry": "compile示例，含REPLACE占位符"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learning/examples/gepa-v2-slot-profile.json",
+          "entry": "节点专用profile；真实seed/compile绑定另行准备"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/gepa-v2-slot.md",
+          "entry": "独立固定教师模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/external_exploration.py",
+          "entry": "prepare|run|collect PATH，run仅由主线程授权的外部API执行者使用"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
+    },
+    {
+      "id": "E3",
+      "title": "TF-GRPO decision：同策略K2相对反馈到目标经验",
+      "target_node": "Decision",
+      "axis": "节点提示与理解",
+      "priority": 3,
+      "depends_on": [
+        "E3-prepare"
+      ],
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_tfgrpo_adapter.py",
+          "entry": "--repo --data --workload --descriptor --output；workload.tfgrpo_experience.target=decision"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/learner-context.example.json",
+          "entry": "psd.target=decision，psd.source_batch及parent/actor/policy固定"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/descriptor-direct.example.json",
+          "entry": "target=decision，source为已审核目标经验；不经人工semantic-map伪装直接算法输出"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/parent-binding.example.json",
+          "entry": "后继同actor同target父来源"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learners/tfrl/tfgrpo-psd-decision.json",
+          "entry": "融合式教师profile"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/tfgrpo-psd-decision.md",
+          "entry": "融合式独立固定模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/tfgrpo-reference-psd-decision.md",
+          "entry": "参考式独立研究模板，保留各stage版本模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/reference-overlay.example.json",
+          "entry": "psd_target与teacher.research_prompt替换为decision"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/tfgrpo_external_reference.py",
+          "entry": "prepare|run|collect|audit PATH"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
+    },
+    {
+      "id": "E4",
+      "title": "TF-GRPO slot：同策略K2相对反馈到目标经验",
+      "target_node": "Slot",
+      "axis": "节点提示与理解",
+      "priority": 4,
+      "depends_on": [
+        "E4-prepare"
+      ],
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_tfgrpo_adapter.py",
+          "entry": "--repo --data --workload --descriptor --output；workload.tfgrpo_experience.target=slot"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/learner-context.example.json",
+          "entry": "psd.target=slot，psd.source_batch及parent/actor/policy固定"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/descriptor-direct.example.json",
+          "entry": "target=slot，source为已审核目标经验；不经人工semantic-map伪装直接算法输出"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/parent-binding.example.json",
+          "entry": "后继同actor同target父来源"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/learners/tfrl/tfgrpo-psd-slot.json",
+          "entry": "融合式教师profile"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/tfgrpo-psd-slot.md",
+          "entry": "融合式独立固定模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/tfgrpo-reference-psd-slot.md",
+          "entry": "参考式独立研究模板，保留各stage版本模板"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-tfgrpo-v1/reference-overlay.example.json",
+          "entry": "psd_target与teacher.research_prompt替换为slot"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/tfgrpo_external_reference.py",
+          "entry": "prepare|run|collect|audit PATH"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
+    },
+    {
+      "id": "E5",
+      "title": "P boundary实际供给量：k8→k16单轴对照",
+      "target_node": "Perception",
+      "axis": "召回/排序/供给",
+      "priority": 5,
+      "depends_on": [],
+      "status": "cpu_registered_admission_and_queue_pending",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
+          "entry": "population.source_baseline独立后继pin；derive不修改现有运行树"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/baseline/slurp-native-dual-store-train-fold-a-review-off-v1.json",
+          "entry": "字段示例：knowledge_stores.intent-boundaries.phase_supply.perception.{k,fuse_coverage}，不是声称当前部署源配置"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/rails/phase_supply.py",
+          "entry": "PhaseSupplySpec及prepared phase供给路径，k为正整数；新参数需prepare/FIT"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
+          "entry": "stage|verify-stage|prepare|register --repo --data --config，与现有队列执行者协作"
+        }
+      ],
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-A-and-B",
+      "dependency_note": "OFF/ON分别对各自k8；对应实例generation-released且自身READY后运行，不等赢家。",
+      "arms": [
+        {
+          "id": "E5-off",
+          "resource": "NPU-A",
+          "after_generation_release": "baseline-off"
+        },
+        {
+          "id": "E5-on",
+          "resource": "NPU-B",
+          "after_generation_release": "baseline-on"
         }
       ]
     },
     {
-      "id": "CPU-PAIRED-FOLD-A-SCORE",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "comparison-implementation-verified-awaiting-finalized-arms",
-      "scientific_dependencies": [
-        "NEW-BASELINE-FOLD-A1080"
+      "id": "E6",
+      "title": "原槽位定义受限知识卡改写：仅解释字段单卡对照",
+      "target_node": "Slot（Decision间接受影响）",
+      "axis": "知识卡内容",
+      "priority": 6,
+      "depends_on": [
+        "E6-prepare"
       ],
-      "requirements": [
-        "1080 complete sealed scored rows per arm",
-        "same scorer and normalizer",
-        "official metrics and paired uncertainty; include refusals"
-      ]
-    },
-    {
-      "id": "CPU-UNIFIED-RUNTIME-IMAGE",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "v8-packaging-accepted-final-efficiency-image-awaiting-source-freeze",
-      "scientific_dependencies": [],
-      "requirements": [
-        "one versioned image and external configurations",
-        "no source mount in release mode",
-        "two experiment configurations pass real zero-model preflight",
-        "do not mutate active runtime"
-      ]
-    },
-    {
-      "id": "CPU-REQUEST-EFFICIENCY",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "pipeline-and-projection-integrated-local-render-verified-online-throughput-pending",
-      "scientific_dependencies": [],
-      "requirements": [
-        "precompute immutable inputs; dynamic nodes preserve dependencies",
-        "separately configured bounded preparation, model concurrency and validation workers",
-        "measure and shorten safe metering critical sections",
-        "no cross-sample global barrier for independent ready work",
-        "offline correctness before first lane handover; measure real throughput during first resumed lane"
-      ]
-    },
-    {
-      "id": "CPU-NODE-GOLD-ATTRIBUTION",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "completed-evidence-reviewed",
-      "scientific_dependencies": [],
-      "requirements": [
-        "original sample-to-gold binding",
-        "separate P recall, Slot content, Decision selection",
-        "observed subset is not full-fold accuracy"
-      ]
-    },
-    {
-      "id": "CPU-CANDIDATE-GROUPING",
-      "lane": "CPU",
-      "priority": 1,
-      "status": "analysis-accepted-implementation-not-started",
-      "scientific_dependencies": [],
-      "requirements": [
-        "retain every validated member and source",
-        "consistent compiler across all consumers and receipts",
-        "fixed-image functional regression before new NPU configuration"
-      ]
-    },
-    {
-      "id": "NEW-BASELINE-DEV-TUNING",
-      "lane": "A+B",
-      "priority": 0,
-      "status": "awaiting-development-baseline",
-      "scientific_dependencies": [
-        "CPU-PAIRED-FOLD-A-SCORE"
+      "status": "evidence_backed_proposal",
+      "configuration_entries": [
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/external_slot_candidate.py",
+          "entry": "--config CONFIG，schema saea-external-slot-candidate-config-v1；original/base/contract/dynamic/teacher/candidate_index/forbidden_sample_ids来源固定"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/src/speech_aware_evidence_acquisition/rails/semantic_knowledge_edits.py",
+          "entry": "slot_value_edit_contract；仅VALUE_FIELDS，不改intent_bindings或新增slot"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_knowledge_adapter.py",
+          "entry": "--config CONFIG，重建原候选并发布descriptor"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-slot-knowledge-v1/publication.example.json",
+          "entry": "实际compiler pin待填"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/evaluation/psd-slot-knowledge-v1/workload-overlay.example.json",
+          "entry": "slot_knowledge descriptor；示例不是准入配置"
+        },
+        {
+          "file": "studies/speech-aware-evidence-acquisition/configs/prompts/learner/tfrl/ace.md",
+          "entry": "现有通用独立模板；不是已就绪单卡模板/配方"
+        }
       ],
-      "requirements": [
-        "same frozen development roster and comparable runtime",
-        "node-targeted changes with repair and break counts",
-        "no TEST-guided tuning",
-        "candidate grouping depends on CPU-CANDIDATE-GROUPING implementation acceptance; scientific changes isolated"
-      ],
-      "resource_dependencies": [
-        "ENGINEERING-RELEASE-MIGRATION accepted; user prioritizes engineering efficiency"
-      ]
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
     },
     {
-      "id": "NEW-BASELINE-FOLD-B1080",
-      "lane": "A+B",
-      "rows": 1080,
-      "priority": 0,
-      "status": "awaiting-fold-a-tuning-and-candidate-freeze",
-      "scientific_dependencies": [
-        "NEW-BASELINE-DEV-TUNING"
+      "id": "E1-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
       ],
-      "requirements": [
-        "reuse exact existing Fold B1080",
-        "freeze candidate before B evaluation",
-        "do not tune current candidate from B results",
-        "matched baseline and candidate full-roster comparison"
-      ]
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
     },
     {
-      "id": "NEW-BASELINE-LOCK",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "awaiting-real-evidence",
-      "scientific_dependencies": [
-        "NEW-BASELINE-FOLD-B1080"
+      "id": "E2-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
       ],
-      "requirements": [
-        "fixed input and runtime pin closure",
-        "complete node and failure denominator audit",
-        "official metrics and cost",
-        "recovery and queue evidence",
-        "freeze tuned candidate before full TEST",
-        "both existing folds fully scored and paired; no new development roster"
-      ]
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
     },
     {
-      "id": "NEW-BASELINE-FULL-TEST",
-      "lane": "A+B",
-      "priority": 1,
-      "status": "not-ready",
-      "rows": 13078,
-      "scientific_dependencies": [
-        "NEW-BASELINE-LOCK"
+      "id": "E3-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
       ],
-      "requirements": [
-        "candidate frozen before evaluation",
-        "full denominator including failures"
-      ]
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
     },
     {
-      "id": "NEW-BASELINE-STABLE-BENEFIT",
-      "lane": "CPU",
-      "priority": 1,
-      "status": "unproven",
-      "scientific_dependencies": [
-        "NEW-BASELINE-FULL-TEST"
+      "id": "E4-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
       ],
-      "requirements": [
-        "paired full-test comparison and uncertainty",
-        "intent and strict regression review",
-        "no test feedback to candidate tuning"
-      ]
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
     },
     {
-      "id": "B-GEPA1-selection80",
-      "lane": "B",
-      "priority": 0,
-      "status": "historical-held-not-auto-resumable-on-new-graph",
-      "normal_generation_calls": 640,
-      "fit_call_cap": 640,
-      "generation_fallback_inclusive_cap": 1280,
-      "scientific_dependencies": [
-        "NEW-BASELINE-STABLE-BENEFIT"
+      "id": "E6-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
       ],
-      "resource_dependencies": [
-        "B现有旧joint exact generation终态且lease settled；同lane独占guard"
-      ],
-      "previous_status": "failed-engineering-recovery-in-progress"
-    },
-    {
-      "id": "B-GEPA2-feedback-extension80",
-      "lane": "B",
-      "priority": 2,
-      "status": "historical-held-not-auto-resumable-on-new-graph",
-      "normal_generation_calls": 640,
-      "fit_call_cap": 640,
-      "generation_fallback_inclusive_cap": 1280,
-      "scientific_dependencies": [
-        "NEW-BASELINE-STABLE-BENEFIT"
-      ],
-      "resource_dependencies": [
-        "B现有旧joint exact generation终态且lease settled；同lane独占guard"
-      ],
-      "previous_status": "spec-ready-for-conversion"
-    },
-    {
-      "id": "B-GEPA2-feedback-extension73",
-      "lane": "B",
-      "priority": 3,
-      "status": "historical-held-not-auto-resumable-on-new-graph",
-      "normal_generation_calls": 584,
-      "fit_call_cap": 584,
-      "generation_fallback_inclusive_cap": 1168,
-      "scientific_dependencies": [
-        "NEW-BASELINE-STABLE-BENEFIT"
-      ],
-      "resource_dependencies": [
-        "B现有旧joint exact generation终态且lease settled；同lane独占guard",
-        "同一B队列串行；前片若unknown则只按既有恢复规则处理，不自动跳过/重发"
-      ],
-      "previous_status": "spec-ready-for-conversion"
-    },
-    {
-      "id": "A-Reflexion2-selection80",
-      "lane": "A",
-      "priority": 0,
-      "status": "completed-not-promoted",
-      "normal_generation_calls": 240,
-      "fit_call_cap": 240,
-      "generation_fallback_inclusive_cap": 480,
-      "scientific_dependencies": [],
-      "resource_dependencies": [
-        "A lane exact prior generation terminal + lease/guard handoff"
-      ],
-      "previous_status": "generation-completed-score-review-pending"
-    },
-    {
-      "id": "A-ACE0-selection80",
-      "lane": "A",
-      "priority": 1,
-      "status": "completed-not-promoted",
-      "normal_generation_calls": 240,
-      "fit_call_cap": 240,
-      "generation_fallback_inclusive_cap": 480,
-      "scientific_dependencies": [],
-      "resource_dependencies": [
-        "A lane exact prior generation terminal + lease/guard handoff"
-      ],
-      "previous_status": "running"
-    },
-    {
-      "id": "A-ACE0-H2-remainder232",
-      "lane": "A",
-      "priority": 2,
-      "status": "historical-held-not-auto-resumable-on-new-graph",
-      "normal_generation_calls": 696,
-      "fit_call_cap": 696,
-      "generation_fallback_inclusive_cap": 1392,
-      "scientific_dependencies": [
-        "NEW-BASELINE-STABLE-BENEFIT"
-      ],
-      "resource_dependencies": [
-        "A lane exact prior generation terminal + lease/guard handoff"
-      ],
-      "previous_status": "conversion-in-progress"
-    },
-    {
-      "id": "A-TFGRPO-current-K4-pilot15",
-      "lane": "A",
-      "priority": 3,
-      "status": "historical-held-not-auto-resumable-on-new-graph",
-      "normal_generation_calls": 105,
-      "fit_call_cap": 105,
-      "generation_fallback_inclusive_cap": 210,
-      "scientific_dependencies": [
-        "CPU-current-policy-freeze-and-custody-audit",
-        "NEW-BASELINE-STABLE-BENEFIT"
-      ],
-      "resource_dependencies": [
-        "与A lane后继串行，若调B须一次性重新绑定不两lane重复派发"
-      ],
-      "previous_status": "blocked-contract-and-subset-entry"
-    },
-    {
-      "id": "CPU-history-feedback-reuse",
-      "status": "held-until-full-test-stable-benefit",
-      "normal_generation_calls": 0,
-      "fit_call_cap": 0,
-      "scientific_dependencies": [
-        "NEW-BASELINE-STABLE-BENEFIT"
-      ],
-      "previous_status": "inputs-ready"
-    },
-    {
-      "id": "CPU-current-policy-freeze-and-custody-audit",
-      "status": "held-until-full-test-stable-benefit",
-      "normal_generation_calls": 0,
-      "fit_call_cap": 0,
-      "scientific_dependencies": [
-        "NEW-BASELINE-STABLE-BENEFIT"
-      ],
-      "previous_status": "needs-owner-input"
-    },
-    {
-      "id": "CPU-frozen-candidate-scores",
-      "status": "held-until-full-test-stable-benefit",
-      "normal_generation_calls": 0,
-      "fit_call_cap": 0,
-      "scientific_dependencies": [
-        "NEW-BASELINE-STABLE-BENEFIT"
-      ],
-      "previous_status": "wait-own-generation"
-    },
-    {
-      "id": "LOCAL-API-TFGRPO-reference-next",
-      "status": "held-until-full-test-stable-benefit",
-      "normal_generation_calls": 0,
-      "fit_call_cap": 0,
-      "scientific_dependencies": [
-        "CPU-history-feedback-reuse",
-        "NEW-BASELINE-STABLE-BENEFIT"
-      ],
-      "previous_status": "not-started-not-NPU-ready"
-    },
-    {
-      "id": "LOCAL-API-TFGRPO-fused-next",
-      "status": "held-until-full-test-stable-benefit",
-      "normal_generation_calls": 0,
-      "fit_call_cap": 0,
-      "scientific_dependencies": [
-        "CPU-history-feedback-reuse",
-        "NEW-BASELINE-STABLE-BENEFIT"
-      ],
-      "previous_status": "not-started-not-NPU-ready"
-    },
-    {
-      "id": "ENGINEERING-RELEASE-MIGRATION",
-      "lane": "CPU+A+B",
-      "priority": 0,
-      "status": "awaiting-offline-engineering-readiness-no-stop-issued",
-      "scientific_dependencies": [
-        "CPU-FINAL-EFFICIENCY-RELEASE",
-        "CPU-CHECKPOINT-COMPATIBILITY"
-      ],
-      "requirements": [
-        "accept offline image, functionality, scientific and recovery evidence",
-        "drain and settle first lane only",
-        "seal checkpoint, retain all costs, transfer original lease",
-        "resume unfinished samples on final worker image at width 32",
-        "measure real throughput in resumed research traffic",
-        "accept first lane then transfer second lane; widen only with bottleneck evidence"
-      ]
-    },
-    {
-      "id": "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "runtime-successor-integrated-cc5ce670-external-admission-gap-separated",
-      "scientific_dependencies": [
-        "CPU-REQUEST-EFFICIENCY"
-      ],
-      "requirements": [
-        "external configuration resolver used by actual generation and resume entrypoints",
-        "pinned missing or altered assets rejected without stale image fallback",
-        "existing configuration behavior retained"
-      ]
-    },
-    {
-      "id": "CPU-CHECKPOINT-COMPATIBILITY",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "bridge-and-successor-entry-integrated-real-two-arm-runtime-construction-verified-final-image-pending",
-      "scientific_dependencies": [],
-      "requirements": [
-        "native asset hash semantics and real input dependencies verified",
-        "only explicit operational scheduling changes allowed",
-        "preserve scientific parameters and checkpoint ancestry",
-        "OPENED predecessor cannot activate resume"
-      ]
-    },
-    {
-      "id": "CPU-FINAL-SOURCE-REVIEW",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "28-src-reviewed-at-cc5ce670-new-admission-src-and-launcher-deltas-await-final-review",
-      "scientific_dependencies": [],
-      "requirements": [
-        "per-file source before and after pins with specific rationale and evidence",
-        "include pending compatibility and external entrypoint changes before final approval"
-      ]
-    },
-    {
-      "id": "CPU-FINAL-EFFICIENCY-RELEASE",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "awaiting-integrated-source-no-build-started",
-      "scientific_dependencies": [
-        "CPU-UNIFIED-RUNTIME-IMAGE",
-        "CPU-REQUEST-EFFICIENCY",
-        "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
-        "CPU-CHECKPOINT-COMPATIBILITY",
-        "CPU-FINAL-SOURCE-REVIEW",
-        "CPU-CONFIGURED-RELEASE-VALIDATION",
-        "CPU-CONFIGURED-CHECKPOINT-SUCCESSOR",
-        "CPU-EXTERNAL-SUCCESSOR-ADMISSION"
-      ],
-      "requirements": [
-        "one integrated committed source and immutable image manifest",
-        "actual current-arm preparation and recovery validation; existing TFRL compose preflight",
-        "offline request body, budget and exception equivalence",
-        "retain both existing experiments until offline engineering acceptance"
-      ]
-    },
-    {
-      "id": "CPU-CONFIGURED-RELEASE-VALIDATION",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "integrated-583b4f71-11-tests-and-offline-role-render-verified-final-image-pending",
-      "scientific_dependencies": [],
-      "requirements": [
-        "configuration driven offline render and bridge precheck",
-        "no hardcoded experiment paths or hidden network requests",
-        "explicit precheck versus activation boundary"
-      ]
-    },
-    {
-      "id": "CPU-CONFIGURED-CHECKPOINT-SUCCESSOR",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "two-real-arms-1080-and-native-plan-validation-passed-compiler-incremental-review-accepted-awaiting-terminal-integration",
-      "scientific_dependencies": [
-        "CPU-CHECKPOINT-COMPATIBILITY",
-        "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS",
-        "CPU-CHECKPOINT-TERMINAL-CUSTODY"
-      ],
-      "requirements": [
-        "strict external JSON to held successor workspace; preserve original registered plan",
-        "prepare before drain; finalize only with actual terminal checkpoint and contact reconciliation",
-        "atomic publish, no scientific overrides, no launch or lease mutation",
-        "fixed-image tests and original two-arm zero-model validation"
-      ]
-    },
-    {
-      "id": "CPU-CHECKPOINT-TERMINAL-CUSTODY",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "live-observe-both-arms-complete-canonical-output-identity-review-finding-under-repair",
-      "scientific_dependencies": [],
-      "requirements": [
-        "generation observed request closure and original actual cost",
-        "successful FIT artifacts and endpoint identity/hash/budget join; reverse orphan inventory",
-        "ABORTED and checkpoint ancestry; no fabricated FIT attempt ledger",
-        "complete fixture positive/negative cases; no mutation of live predecessors"
-      ]
-    },
-    {
-      "id": "CPU-EXTERNAL-SUCCESSOR-ADMISSION",
-      "lane": "CPU",
-      "priority": 0,
-      "status": "A-native-entry-fixture-passed-four-incremental-review-findings-await-owner-repair",
-      "scientific_dependencies": [
-        "CPU-EXTERNAL-RUNTIME-ENTRYPOINTS"
-      ],
-      "requirements": [
-        "read-only source plus external input/workspace output",
-        "preserve original registered plans and receipt",
-        "separate successor generation/FIT plans and independent admission receipt",
-        "actual native admission fixture before deployment; no live premature mint"
-      ]
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
     }
   ],
-  "baseline_first_policy": {
-    "required_baseline": "P-Slot-Decision",
-    "lock_status": "not-validated",
-    "tfrl_generation_allowed": false,
-    "baseline_validation_allowed": true,
-    "source": "New-Baseline-First.md",
-    "full_test_and_stable_benefit_required_before_tfrl": true,
-    "development_populations": [
-      "existing Fold A1080",
-      "existing Fold B1080"
-    ],
-    "new_development_rosters_allowed": false
-  },
-  "observed_at_utc": "2026-11-05T12:04:48.503290+00:00",
-  "engineering_first_policy": {
-    "active_experiments_continue": true,
-    "new_large_scale_experiments_allowed": false,
-    "bounded_efficiency_validation_allowed": true,
-    "migration_order": [
-      "accept offline image, functionality, scientific and recovery evidence",
-      "drain and settle first lane only",
-      "seal checkpoint, retain all costs, transfer original lease",
-      "resume unfinished samples on final worker image at width 32",
-      "measure real throughput in resumed research traffic",
-      "accept first lane then transfer second lane; widen only with bottleneck evidence"
-    ],
-    "acceptance": [
-      "offline engineering acceptance before first lane drain",
-      "real throughput and NPU idle evidence after first lane lease transfer",
-      "no parallel probe under occupied old lease",
-      "no mandatory four-level repeated benchmark"
-    ]
+  "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
+  "metrics": [
+    "completed/total",
+    "seconds_per_sample_and_wall_time",
+    "cards/instances",
+    "ETA",
+    "coverage",
+    "Intent",
+    "official pooled SLU",
+    "Strict",
+    "per-node cost and latency"
+  ],
+  "limitations": [
+    "No new v2 accuracy or TFRL gains yet",
+    "K2 registration is not native admission or launch",
+    "K2 OFF policy awaits baseline choice; if ON is selected, rebuild corresponding configurations without changing roster",
+    "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
+    "ACE/Reflexion current PSD integration incomplete"
+  ],
+  "updated_at": "2026-11-06T15:16:53.107908+00:00",
+  "parallel_cpu_tasks": [
+    {
+      "id": "gepa-seed-contract-preparation",
+      "status": "complete_conditional_off_seed_handoff_verified",
+      "depends_on": [],
+      "targets": [
+        "E1",
+        "E2"
+      ],
+      "model_calls_authorized": false
+    },
+    {
+      "id": "native-successor-queue-preparation",
+      "status": "archived_held_inputs_current_session_rebinding_in_progress",
+      "targets": [
+        "construction-k2",
+        "fold-b-confirmation"
+      ],
+      "native_queued": false
+    },
+    {
+      "id": "ace-slot-recipe-preparation",
+      "status": "merged_recipe_fixture_validated_real_evidence_pending",
+      "targets": [
+        "E6"
+      ],
+      "model_calls_authorized": false
+    }
+  ],
+  "dispatch_policy": {
+    "cpu_preparation_before_npu_lease": true,
+    "reuse_unchanged_assets": true,
+    "successor_trigger": "generation-released",
+    "score_blocks_successor": false,
+    "full_verification_eliminated": false,
+    "native_successor_queue_status": "admission_and_queue_configuration_in_progress",
+    "queue_compatibility_commit": "25c6386f"
   }
 }

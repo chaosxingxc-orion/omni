@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "instruction": "可正常运行即执行；只保留阻止重复、错配或失真的必要校验，CPU与NPU异步。",
+  "instruction": "CPU准备与分析、NPU推理两条异步队列；输入提前READY，固定资产复用；生成释放即接续，不等评分报告。",
   "resources": {
     "inference_instances": 2,
     "cards_per_instance": 4,
@@ -13,19 +13,21 @@
       "id": "baseline-off",
       "resource": "NPU-A",
       "depends_on": [],
-      "status": "v4_aborted_zero_calls_framework_prompt_mismatch_fix_integration",
+      "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 0,
-      "observed_model_calls": 0
+      "completed_rows": 385,
+      "observed_model_calls": 1240,
+      "completed_rows_include_early_abstentions": true
     },
     {
       "id": "baseline-on",
       "resource": "NPU-B",
       "depends_on": [],
-      "status": "v4_aborted_zero_calls_framework_prompt_mismatch_fix_integration",
+      "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 0,
-      "observed_model_calls": 0
+      "completed_rows": 214,
+      "observed_model_calls": 699,
+      "completed_rows_include_early_abstentions": true
     },
     {
       "id": "baseline-selection",
@@ -49,11 +51,12 @@
       "id": "construction-k2",
       "resource": "NPU-A-or-B",
       "depends_on": [
-        "fold-b-confirmation"
+        "baseline-selection"
       ],
       "status": "main_integrated_final_cpu_chain_complete_held",
       "rows_per_member": 625,
-      "members": 2
+      "members": 2,
+      "dependency_note": "与Fold B并行；同策略K2，不能混OFF/ON。"
     },
     {
       "id": "construction-score",
@@ -70,7 +73,7 @@
       "axis": "节点提示与理解",
       "priority": 1,
       "depends_on": [
-        "construction-score"
+        "E1-prepare"
       ],
       "status": "evidence_backed_proposal",
       "configuration_entries": [
@@ -99,7 +102,8 @@
           "entry": "prepare|run|collect PATH，run仅由主线程授权的外部API执行者使用"
         }
       ],
-      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
     },
     {
       "id": "E2",
@@ -108,7 +112,7 @@
       "axis": "节点提示与理解",
       "priority": 2,
       "depends_on": [
-        "construction-score"
+        "E2-prepare"
       ],
       "status": "evidence_backed_proposal",
       "configuration_entries": [
@@ -137,7 +141,8 @@
           "entry": "prepare|run|collect PATH，run仅由主线程授权的外部API执行者使用"
         }
       ],
-      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
     },
     {
       "id": "E3",
@@ -146,7 +151,7 @@
       "axis": "节点提示与理解",
       "priority": 3,
       "depends_on": [
-        "construction-score"
+        "E3-prepare"
       ],
       "status": "evidence_backed_proposal",
       "configuration_entries": [
@@ -187,7 +192,8 @@
           "entry": "prepare|run|collect|audit PATH"
         }
       ],
-      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
     },
     {
       "id": "E4",
@@ -196,7 +202,7 @@
       "axis": "节点提示与理解",
       "priority": 4,
       "depends_on": [
-        "construction-score"
+        "E4-prepare"
       ],
       "status": "evidence_backed_proposal",
       "configuration_entries": [
@@ -237,7 +243,8 @@
           "entry": "prepare|run|collect|audit PATH"
         }
       ],
-      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
     },
     {
       "id": "E5",
@@ -245,10 +252,8 @@
       "target_node": "Perception",
       "axis": "召回/排序/供给",
       "priority": 5,
-      "depends_on": [
-        "baseline-selection"
-      ],
-      "status": "cpu_stage_prepare_complete_both_waiting_baseline_selection",
+      "depends_on": [],
+      "status": "cpu_registered_admission_and_queue_pending",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py",
@@ -267,7 +272,21 @@
           "entry": "stage|verify-stage|prepare|register --repo --data --config，与现有队列执行者协作"
         }
       ],
-      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-A-and-B",
+      "dependency_note": "OFF/ON分别对各自k8；对应实例generation-released且自身READY后运行，不等赢家。",
+      "arms": [
+        {
+          "id": "E5-off",
+          "resource": "NPU-A",
+          "after_generation_release": "baseline-off"
+        },
+        {
+          "id": "E5-on",
+          "resource": "NPU-B",
+          "after_generation_release": "baseline-on"
+        }
+      ]
     },
     {
       "id": "E6",
@@ -276,7 +295,7 @@
       "axis": "知识卡内容",
       "priority": 6,
       "depends_on": [
-        "construction-score"
+        "E6-prepare"
       ],
       "status": "evidence_backed_proposal",
       "configuration_entries": [
@@ -305,7 +324,53 @@
           "entry": "现有通用独立模板；不是已就绪单卡模板/配方"
         }
       ],
-      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies."
+      "prerequisite_note": "Freeze chosen policy; prepare registered candidate and check actual resource/session. CPU input preparation may precede scientific dependencies.",
+      "resource": "NPU-first-free"
+    },
+    {
+      "id": "E1-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+    },
+    {
+      "id": "E2-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+    },
+    {
+      "id": "E3-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+    },
+    {
+      "id": "E4-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
+    },
+    {
+      "id": "E6-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "construction-score"
+      ],
+      "status": "awaiting_required_construction_feedback",
+      "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -327,7 +392,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T13:47:48.138703+00:00",
+  "updated_at": "2026-11-06T15:16:53.107908+00:00",
   "parallel_cpu_tasks": [
     {
       "id": "gepa-seed-contract-preparation",
@@ -356,5 +421,14 @@
       ],
       "model_calls_authorized": false
     }
-  ]
+  ],
+  "dispatch_policy": {
+    "cpu_preparation_before_npu_lease": true,
+    "reuse_unchanged_assets": true,
+    "successor_trigger": "generation-released",
+    "score_blocks_successor": false,
+    "full_verification_eliminated": false,
+    "native_successor_queue_status": "admission_and_queue_configuration_in_progress",
+    "queue_compatibility_commit": "25c6386f"
+  }
 }
