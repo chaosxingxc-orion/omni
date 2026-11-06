@@ -499,7 +499,7 @@
       "depends_on": [
         "coverage-evaluate"
       ],
-      "status": "pending",
+      "status": "paired_configs_prepared_waiting_terminal_coverage_reader_in_progress",
       "scope": "full denominator coverage, official quality, paired regressions"
     },
     {
@@ -668,7 +668,7 @@
       "id": "cpu-score-terminal-adapter",
       "resource": "CPU",
       "depends_on": [],
-      "status": "deployed_four_watchers_live_waiting_producer_no_score_yet",
+      "status": "four_watchers_live_complete_pair_tool2586_compatibility_fixed",
       "scope": "Configured terminal continuation: successful scores no replay; known overlay failure recover once; unknown hold. Separate from NPU generation-release handoff.",
       "targets": [
         "coverage-evaluate",
