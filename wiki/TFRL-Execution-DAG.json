@@ -499,7 +499,7 @@
       "depends_on": [
         "coverage-evaluate"
       ],
-      "status": "contract_audit_1052_legal_28_length_failures_official_score_recovery_running",
+      "status": "contract_coverage_accepted_scores_written_attempt_finalization_failed_readonly_lock",
       "scope": "full denominator coverage, official quality, paired regressions"
     },
     {
@@ -682,7 +682,7 @@
       "id": "generation-release-binder-fix",
       "resource": "CPU",
       "depends_on": [],
-      "status": "merged_4a6f5ff0_92_tests_passed_independent_deployment_in_progress",
+      "status": "merged_deployed_p_slot_binders_verified_native_complete_on_queue_preserved",
       "scope": "Do not block verified generation release on subsequent CPU score exit1; preserve unknown/held and identity checks"
     }
   ],
@@ -705,13 +705,14 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T20:14:00Z",
+  "updated_at": "2026-11-06T20:21:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Reference full1080 legal1052; complete P/Slot recovery OFF running; 100% not achieved",
-    "deployment": "Prompt candidates ready, binders live; existing B observer extended and independently verified",
-    "scoring_recovery": "Four watchers deployed; reference OFF automatic CPU recovery running",
+    "deployment": "P/Slot fixed binders deployed and independently verified; completeON native queue preserved",
+    "scoring_recovery": "reference score file exists; attempt OPENED due readonly sibling lock; targeted repair in progress",
     "paired_analysis": "k8/k16 full paired diagnosis and locked source transcript evidence accepted; retain k8 parent",
-    "tfrl_reader": "deferred"
+    "tfrl_reader": "deferred",
+    "length_root_causes": "28 sealed failed response contacts targeted analysis in progress"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
