@@ -37,7 +37,7 @@ def compile_campaign(config):
     template = copy.deepcopy(config['workload'])
     if (template.get('population', {}).get('role') != 'construction'
             or template.get('node_arm') != 'enhanced-p-slot-decision'
-            or template.get('pipeline') != {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
+            or not isinstance(template.get('pipeline'), dict)
             or 'collection_decoding' in template):
         raise ValueError('construction PSD v2 SDK workload template required')
     policy = {'workload': {k:v for k,v in template.items() if k not in ('name','run_id')},
@@ -49,12 +49,13 @@ def compile_campaign(config):
         job.update(name=f'{name}-k{index:03}', run_id=f'{run}-K{index:03}',
                    collection_decoding={'temperature':collection['temperature'], 'seed':seed})
         parsed = NodeWorkload(job)
-        n, contacts = parsed.ROWS, parsed.CONTACTS
+        budgets = parsed.contact_budgets()
         members.append({'index':index, 'seed':seed, 'job_config':job,
                         'fit_run_id':job['run_id']+'-FIT', 'fit_attempt_id':'fit-v1',
                         'generation_attempt_id':'generation-v1',
-                        'normal_generation_calls':contacts*n, 'generation_cap':2*contacts*n,
-                        'fit_cap':contacts*n})
+                        'normal_generation_calls':budgets['normal_generation_calls'],
+                        'generation_cap':budgets['fallback_inclusive_cap'],
+                        'fit_cap':budgets['fit_calls']})
     source_exp = read(ROOT/'configs/experiment/slurp-tfrl-hardset-a0-observation-r1-v1.json')
     gpu_hours = source_exp['execution_plan']['planned_gpu_hours']
     result = {'schema':'saea-psd-construction-campaign-compiled-v1', 'campaign':config,

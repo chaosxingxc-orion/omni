@@ -34,6 +34,16 @@ def test_compile_registers_independent_full_graph_and_budget():
     with pytest.raises(ValueError):check_compiled(altered)
 
 
+def test_recovery_campaign_uses_node_shared_contact_budget():
+    c=config()
+    c['workload']['pipeline']['coverage_recovery']={
+        'strategy':'complete-original-candidate-set-v1', 'max_extra_contacts':2}
+    doc=compile_campaign(c)
+    assert doc['budget']['normal_generation_calls']==3750
+    assert doc['budget']['generation_cap']==6250
+    assert doc['budget']['fit_cap']==6250
+
+
 def test_queue_uses_existing_schema_and_member_dependencies():
     doc=compile_campaign(config())
     pins=[{'launch':{'path':f'/tmp/launch{i}','sha256':'a'*64},'preflight':{'path':f'/tmp/preflight{i}','sha256':'b'*64}} for i in range(2)]
