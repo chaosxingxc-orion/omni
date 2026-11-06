@@ -124,6 +124,17 @@ def finalize_case(case):
     evidence = write(tmp/'evidence.json', {'test': True})
     cfg['mode'] = 'finalize'
     manifest = json.loads(Path(cfg['assets_manifest']['path']).read_bytes())
+    candidate_path = Path(manifest['files'][cfg['candidate']['relpath']]['path'])
+    candidate = json.loads(candidate_path.read_bytes())
+    candidate['authority'] = 'docs/decisions/authority.md'
+    candidate_pin = write(candidate_path, candidate)
+    manifest['files'][cfg['candidate']['relpath']] = candidate_pin
+    cfg['candidate']['sha256'] = candidate_pin['sha256']
+    authority = tmp/'assets/docs/decisions/authority.md'
+    authority.parent.mkdir(parents=True, exist_ok=True)
+    authority.write_text('Original authorization\n')
+    manifest['files'][candidate['authority']] = {
+        'path': str(authority), 'sha256': hashlib.sha256(authority.read_bytes()).hexdigest()}
     ledger = tmp/'assets/docs/exposure-ledger.md'
     ledger.parent.mkdir(parents=True, exist_ok=True)
     ledger.write_text('Frozen predecessor exposure rows\n')
@@ -149,6 +160,40 @@ def test_missing_exposure_ledger_fails_before_terminal_audit(case, monkeypatch):
     with pytest.raises(ValueError, match='pinned predecessor exposure ledger'):
         run()
     assert not (tmp/'output').exists()
+
+
+def test_preparation_sources_require_complete_pinned_asset_closure(tmp_path):
+    blob = b'frozen source receipt'
+    data = tmp_path/'data'
+    data.mkdir()
+    (data/'source.json').write_bytes(blob)
+    pins = [{'root': root, 'relpath': rel, 'sha256': compiler.digest(blob)}
+            for root, rel in [('repository', 'docs/source.json'), ('data', 'source.json')]]
+    assets = {'configs/baseline/base.json': compiler.encode({'preparation_source_receipts': pins}),
+              'docs/source.json': blob}
+    assert compiler.validate_preparation_inputs(assets, {'baseline': 'base'}, data) == 2
+    del assets['docs/source.json']
+    with pytest.raises(ValueError, match='missing from experiment assets'):
+        compiler.validate_preparation_inputs(assets, {'baseline': 'base'}, data)
+    assets['docs/source.json'] = b'changed'
+    with pytest.raises(ValueError, match='hash differs'):
+        compiler.validate_preparation_inputs(assets, {'baseline': 'base'}, data)
+    assets['docs/source.json'] = blob
+    (data/'source.json').write_bytes(b'changed')
+    with pytest.raises(ValueError, match='hash differs'):
+        compiler.validate_preparation_inputs(assets, {'baseline': 'base'}, data)
+
+
+def test_preparation_source_cannot_escape_data_root(tmp_path):
+    data = tmp_path/'data'
+    data.mkdir()
+    external = tmp_path/'external.json'
+    external.write_bytes(b'secret')
+    (data/'source.json').symlink_to(external)
+    pins = [{'root': 'data', 'relpath': 'source.json', 'sha256': compiler.digest(b'secret')}]
+    assets = {'configs/baseline/base.json': compiler.encode({'preparation_source_receipts': pins})}
+    with pytest.raises(Exception, match='escapes|outside|confined'):
+        compiler.validate_preparation_inputs(assets, {'baseline': 'base'}, data)
 
 
 def test_terminal_rejection_propagates(case, monkeypatch):

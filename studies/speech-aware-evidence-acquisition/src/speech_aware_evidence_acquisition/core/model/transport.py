@@ -225,6 +225,24 @@ def preload_audio_cache(
     }
 
 
+def environment_audio_preload_workers(*, has_runtime_policy: bool) -> int | None:
+    """Opt into warmup without replacing a registered native scheduler.
+
+    Cache capacity still comes from the existing explicit cache environment.
+    An overlay and environment warmup cannot compete for the same policy.
+    """
+    raw = os.environ.get("SAEA_AUDIO_PRELOAD_WORKERS")
+    if raw is None:
+        return None
+    if has_runtime_policy:
+        raise FrozenCoreError("audio preload environment conflicts with runtime audio_cache policy")
+    if not raw.isascii() or not raw.isdecimal() or not 1 <= int(raw) <= 64:
+        raise FrozenCoreError("SAEA_AUDIO_PRELOAD_WORKERS must be an integer in [1, 64]")
+    if not _AUDIO_CACHE_ENABLED or not _AUDIO_CACHE_MAX_ENTRIES or not _AUDIO_CACHE_MAX_BYTES:
+        raise FrozenCoreError("audio preload requires an enabled cache with positive capacity")
+    return int(raw)
+
+
 def _audio_stat_identity(stat):
     return (stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
 

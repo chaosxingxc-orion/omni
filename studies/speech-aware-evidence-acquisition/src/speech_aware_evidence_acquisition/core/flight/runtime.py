@@ -5967,6 +5967,25 @@ class FlightRuntime:
         # warming cannot create an unverified alternate input path.
         audio_cache_receipt: Mapping[str, object] | None = None
         audio_cache = self._composed.values.get("audio_cache")
+        from ..model import FrozenCoreError
+        from ..model.transport import environment_audio_preload_workers, preload_audio_cache
+        try:
+            preload_workers = environment_audio_preload_workers(has_runtime_policy=audio_cache is not None)
+        except FrozenCoreError as error:
+            raise FlightRuntimeError(f"audio cache configuration is invalid: {error}") from error
+        if preload_workers is not None:
+            # Warm in this worker process: an earlier CPU subprocess would not
+            # populate the transport's process-local cache used by inference.
+            audio_cache_receipt = preload_audio_cache(
+                self._data_root,
+                tuple(str(sample.media_relpath) for sample in self._samples
+                      if getattr(sample, "media_relpath", None)),
+                workers=min(preload_workers, 8) if self._campaign_active else preload_workers,
+            )
+            if audio_cache_receipt.get("failed", 0):
+                raise FlightRuntimeError(
+                    f"audio cache preload failed before model contact: {audio_cache_receipt.get('failures', [])}"
+                )
         if audio_cache is not None:
             if not isinstance(audio_cache, Mapping) or set(audio_cache) != {
                 "enabled", "max_entries", "max_bytes", "preload_workers"

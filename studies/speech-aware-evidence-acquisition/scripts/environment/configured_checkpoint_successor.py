@@ -212,11 +212,41 @@ def _admission_documents(*, cfg, candidate, output_pins, plan_paths,
     return external, operation
 
 
+def validate_preparation_inputs(assets, fragments, data):
+    """Check every declared source receipt before costly custody or publication."""
+    from speech_aware_evidence_acquisition.core.model.paths import (
+        _normalized_relative_path, _resolve_confined)
+    count = 0
+    for kind, name in fragments.items():
+        document = strict_json(assets['configs/' + kind + '/' + name + '.json'])
+        pins = document.get('preparation_source_receipts', [])
+        require(isinstance(pins, list), 'source receipt pins must be a list')
+        for pin in pins:
+            require(isinstance(pin, dict) and set(pin) == {'root', 'relpath', 'sha256'}
+                    and pin['root'] in ('repository', 'data')
+                    and isinstance(pin['sha256'], str) and HEX.fullmatch(pin['sha256']),
+                    'exact preparation source receipt pin required')
+            relative = _normalized_relative_path(pin['relpath'], 'source receipt')
+            if pin['root'] == 'repository':
+                require(relative in assets, 'source receipt missing from experiment assets: ' + relative)
+                blob = assets[relative]
+            else:
+                path = _resolve_confined(data, relative, data, 'source receipt', strict=True)
+                blob = path.read_bytes()
+            require(digest(blob) == pin['sha256'], 'source receipt hash differs: ' + relative)
+            count += 1
+    return count
+
+
 def finalize(cfg, assets, candidate, plan, repo, data, out):
     # Release images omit operational ledgers. Admission needs the original
     # exposure rows, so they must travel with the pinned experiment assets.
     require('docs/exposure-ledger.md' in assets,
             'pinned predecessor exposure ledger required for successor admission')
+    authority = candidate.get('authority')
+    require(isinstance(authority, str) and logical(authority) in assets,
+            'pinned predecessor authority document required for successor admission')
+    validate_preparation_inputs(assets, cfg['fragments'], data)
     terminal = cfg['terminal']
     require(isinstance(terminal, dict) and set(terminal) == {
         'evidence', 'resume_from', 'bridge', 'registration_relpath', 'lock'},

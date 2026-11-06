@@ -66,6 +66,9 @@ def test_real_runtime_learning_updates_are_replayed_not_call_divided(tmp_path,mo
     if strategy=='ace':from test_ace_runtime import setup
     else:from test_reflexion_runtime import setup
     runtime,transport,captured,source,spec,fits=setup(tmp_path,monkeypatch)
+    # The learning fixture constructs a partial runtime without its carrier
+    # adapter. Supply the real serving-width interface now used by scheduling.
+    runtime._adapter=SimpleNamespace(serving_geometry=lambda: {'slots': 1})
     runtime.run_phases();plan=runtime.plan;root=runtime._run_dir()/'tfgrpo/learner'
     job=tmp_path/'observer-job.json';job.write_text(json.dumps({'run_id':plan.run_id,'runtime_rows':1,'batch_sha256':m.sha(json.loads((root/'batch.json').read_bytes()))}))
     producer={'mounts':[{'source':str(tmp_path),'target':str(tmp_path),'readonly':True},
