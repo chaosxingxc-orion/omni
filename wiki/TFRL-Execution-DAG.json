@@ -668,7 +668,7 @@
       "id": "cpu-score-terminal-adapter",
       "resource": "CPU",
       "depends_on": [],
-      "status": "implementation_accepted_main_5c7d92ed_deployment_in_progress",
+      "status": "deployed_four_watchers_live_waiting_producer_no_score_yet",
       "scope": "Configured terminal continuation: successful scores no replay; known overlay failure recover once; unknown hold. Separate from NPU generation-release handoff.",
       "targets": [
         "coverage-evaluate",
