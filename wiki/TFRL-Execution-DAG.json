@@ -514,23 +514,25 @@
       "id": "concurrency-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "c96_admitted_plan_verified_handoff_preparation_live",
+      "status": "c96_admitted_armed_after_D_cpu_handoff_verified",
       "delta": "C64 to C96 only",
       "capacity_review": "actual bound single TP4 profile admission128 and receipt seq128 verified; C96 permitted not performance proven",
       "scientific_parent": "complete-coverage-evaluate",
-      "review": "9 remote pins and 4 successful fixed containers verified; HOLD retained until configured binder activation"
+      "review": "CPU readiness and live binder/score/observer independently verified; no candidate inference yet"
     },
     {
       "id": "concurrency-evaluate",
-      "resource": "NPU-first-free",
+      "resource": "NPU-A",
       "depends_on": [
         "concurrency-prepare"
       ],
-      "status": "planned_hold_not_queued",
+      "status": "binder_armed_waiting_D_source",
       "scope": "same frozen policy and existing real roster",
       "scientific_parent": "complete-coverage-evaluate",
       "target_valid_throughput_gain_fraction": 0.1,
-      "required_legal_rows": 1080
+      "required_legal_rows": 1080,
+      "resource_predecessor": "decision candidate generation release",
+      "cpu_score_dependency": false
     },
     {
       "id": "off-score-recovery",
