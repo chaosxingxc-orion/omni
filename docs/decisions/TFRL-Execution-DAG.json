@@ -13,7 +13,7 @@
       "id": "baseline-off",
       "resource": "NPU-A",
       "depends_on": [],
-      "status": "generation_sealed_official_scoring_failed",
+      "status": "generation_and_official_scoring_finalized_verified",
       "rows": 1080,
       "completed_rows": 1080,
       "completed_rows_include_early_abstentions": true,
@@ -21,7 +21,12 @@
       "observed_at_utc": "2026-11-06T16:19:20Z",
       "structural_task_answers_observed_at_utc": "2026-11-06T17:02:54Z",
       "structural_scope": "Full sealed 1080 outputs; not semantic correctness or legal enum audit",
-      "empty_answers": 42
+      "empty_answers": 42,
+      "quality": {
+        "intent_accuracy": 0.8166666666666667,
+        "slu_f1": 0.6487544107371561,
+        "strict_accuracy": 0.4666666666666667
+      }
     },
     {
       "id": "baseline-on",
@@ -29,10 +34,10 @@
       "depends_on": [],
       "status": "v5_generation_running",
       "rows": 1080,
-      "completed_rows": 938,
+      "completed_rows": 996,
       "completed_rows_include_early_abstentions": true,
       "structural_task_answers": 406,
-      "observed_at_utc": "2026-11-06T17:12:45Z",
+      "observed_at_utc": "2026-11-06T17:23:30Z",
       "structural_task_answers_observed_at_utc": "2026-11-06T15:48:52Z"
     },
     {
@@ -42,7 +47,7 @@
         "baseline-off",
         "baseline-on"
       ],
-      "status": "blocked_on_cpu_score_recovery"
+      "status": "off_score_verified_on_score_and_paired_pending"
     },
     {
       "id": "fold-b-confirmation",
@@ -293,8 +298,8 @@
           "resource": "NPU-A",
           "after_generation_release": "baseline-off",
           "status": "running_real_responses_verified",
-          "completed_rows": 587,
-          "observed_at_utc": "2026-11-06T17:22:39Z",
+          "completed_rows": 686,
+          "observed_at_utc": "2026-11-06T17:32:56Z",
           "count_scope": "checkpoint rows not legal answer acceptance"
         },
         {
@@ -508,7 +513,7 @@
       "id": "off-score-recovery",
       "resource": "CPU",
       "depends_on": [],
-      "status": "official_cpu_recovery_container_running",
+      "status": "official_finalized_verified_no_model_replay",
       "input": "sealed baseline-off 1080 outputs",
       "new_model_calls": 0
     },
@@ -571,6 +576,23 @@
       "status": "analysis_cli_live",
       "scope": "sealed OFF1080 outputs and runtime-bound KB contracts; legal answers and node information preservation",
       "new_model_calls": 0
+    },
+    {
+      "id": "on-score-recovery",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "same_cli_followup_scheduled_after_off_delivery",
+      "scope": "own terminal and pins required; reuse official tool; do not replay inference"
+    },
+    {
+      "id": "off-semantic-gap-analysis",
+      "resource": "CPU",
+      "depends_on": [
+        "off-node-answer-audit",
+        "off-score-recovery"
+      ],
+      "status": "same_cli_followup_scheduled",
+      "scope": "156 nonempty intent errors; node attribution and at most two targeted changes"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -592,7 +614,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T17:22:39Z",
+  "updated_at": "2026-11-06T17:32:56Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "Slot length implementation running; Perception merged",
     "deployment": "Reference coverage admitted and queue armed; Perception candidate follows",

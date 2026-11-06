@@ -1,0 +1,67 @@
+{
+  "schema": "psd-fold-a-off-verified-result-v1",
+  "status": "official_finalized_verified",
+  "rows": 1080,
+  "quality": {
+    "intent_accuracy": 0.8166666666666667,
+    "slu_f1": 0.6487544107371561,
+    "span_f1": 0.5394321766561513,
+    "scenario_accuracy": 0.8546296296296296
+  },
+  "strict_accuracy": 0.4666666666666667,
+  "strict_correct": 504,
+  "intent_correct": 882,
+  "structural_answers": 1038,
+  "empty_answers": 42,
+  "full_denominator": true,
+  "evaluator_commit": "8eb16545762be97ace75334109d73824217311f1",
+  "official_identity_passed": true,
+  "generation_commit": "9a50852ef67b964ed7571bb1b08deeb78b2251ce",
+  "scoring_tool_commit": "dd032b4243fb46006f55cf53a015301f425a41fc",
+  "artifact_sha256": {
+    "generation_manifest": "96dec5564e33ed4dda105eca4afa5035766a0ef730515115dd426d8bd7f04a3e",
+    "intent": "c5d2da79f2a61343c572e9e13d9c525d47709b3058678b46c7ea1a80486a51ff",
+    "receipt": "1dae1883b827499e79054500c9c4a817b6f698e056800faa904b155403bf0f6c",
+    "run_manifest": "4c9dc4cbd08eff2e51262c94e41a5d9ec23c65adeba546091c24a5b50b5e404f",
+    "scores": "c805e7434e99d47dc293cc87bbe53a0d1ea3a814d3f73f60df7240da9f86facb"
+  },
+  "generation_cost": {
+    "audio_seconds_used": 9001.707937500041,
+    "calls_used": 3163,
+    "completion_tokens_total": 2245046,
+    "latency_seconds_total": 347012.6572314802,
+    "prompt_tokens_total": 33890635,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "recovery_model_calls": 0,
+  "historical_comparison": {
+    "schema": "psd-off-alignment-gap-v1",
+    "status": "official_score_and_finalized_source_verified",
+    "rows": 1080,
+    "current_intent_correct": 882,
+    "historical_intent_correct": 926,
+    "intent_gap_count": 44,
+    "empty_answers": 42,
+    "nonempty_intent_errors": 156,
+    "coverage_only_best_case_intent_correct": 924,
+    "coverage_only_best_case_intent_accuracy": 0.8555555555555555,
+    "remaining_gap_even_if_all_empty_intents_correct": 2,
+    "intent_delta_percentage_points": -4.074074074074074,
+    "slu_delta_percentage_points": -8.43848033399931,
+    "span_delta_percentage_points": -10.519592251740239,
+    "strict_accuracy": 0.4666666666666667,
+    "scores_sha256": "c805e7434e99d47dc293cc87bbe53a0d1ea3a814d3f73f60df7240da9f86facb",
+    "interpretation": [
+      "All 1080 rows retained; empty answers counted as errors",
+      "924/1080 hypothetical ceiling only if all 42 empty become correct and all existing answers unchanged",
+      "Not a causal node attribution; paired historical outputs needed for gain/regression",
+      "SLU nonlinear; do not apply intent-count bound to SLU"
+    ]
+  },
+  "limitations": [
+    "Structural answer coverage is distinct from legal contract audit and correctness",
+    "Same Fold A roster; system graph and contexts differ; aggregate delta is not node causality",
+    "Original generation/failed scoring evidence retained; recovery does not replay inference"
+  ]
+}
