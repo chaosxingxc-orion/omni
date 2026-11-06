@@ -796,7 +796,7 @@
       "id": "locked-slot-visibility-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "real_stage_prepare_verified_registration_admission_in_progress",
+      "status": "admission_verified_cpu_score_handoff_pending",
       "implementation_commit": "9389169f",
       "scientific_parent": "complete-coverage-on-evaluate",
       "scope": "same pinned54-card snapshot; preserve selected cards then append deduplicated remaining cards; no new knowledge/bindings"
@@ -807,11 +807,11 @@
       "depends_on": [
         "locked-slot-visibility-prepare"
       ],
-      "status": "held_not_dispatched",
-      "proposed_resource_predecessor": "node-prompt-slot-evaluate",
+      "status": "binder_armed_waiting_B_slot_source",
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
-      "required_legal_rows": 1080
+      "required_legal_rows": 1080,
+      "resource_predecessor": "node-prompt-slot-evaluate"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -840,7 +840,7 @@
     "scoring_recovery": "k16ON FINALIZED; first coverage schema refusal and pair missing-mount failure preserved; corrected pair retry and successor-reader18tests reported, complete result awaiting main review",
     "paired_analysis": "completeOFF full paired plus 40 entity regressions accepted; reuse existing Slot role-grounding candidate",
     "historical_configuration": "accepted limited request audit; historical k60 pre-retrieval final P cap8, current k8 cap8; normalized response envelope not rebuilt",
-    "knowledge_supply": "real stage/prepare accepted1080; registration/admission and configured B-Slot successor handoff in progress; actual FIT/efficacy unknown",
+    "knowledge_supply": "real admission verified, B-after-Slot binder live waiting-source; CPU scoring handoff final report pending",
     "load_analysis": "completed existing evidence analysis accepted; retain armed C96, no measured speedup",
     "tfrl_reader": "deferred",
     "perception_miss_analysis": "P historical ranking stage/prepare/register/effective diff accepted89pins; admission and A-after-C96 handoff in progress, not armed"
