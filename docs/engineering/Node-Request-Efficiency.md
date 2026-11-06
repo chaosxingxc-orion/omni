@@ -135,7 +135,15 @@ CPU分析覆盖4730条历史计时。91次session检查平均0.729秒，其中so
 
 真实历史证据的离线审计已通过：旧config/protocol/实现标识一致，新增2条checkpoint可读取，6份响应与2条not_sent记录可审计；历史8次调用及全部音频成本保留，新增模型调用0。此项没有验证原919条与新增2条的完整祖先合并。
 
-继续追查发现第二层缺口：运行时资产按workspace、外置experiment manifest、Git顺序解析；当前恢复桥只覆盖第一和第三层。原runtime receipt仅存在于第二层。该manifest的33项资产已归档并逐项SHA核验，已将完整恢复层及嵌套证据搬迁支持交回原Codex CLI实现会话返工。固定镜像回归与完整恢复验收通过前不切换基座、不新增科学实验。
+第二层缺口已修复并合入`3b267014`：按照workspace > 外置experiment manifest > Git恢复实际输入，绑定原producer身份、只读挂载和每项SHA；通用prepare入口支持嵌套证据与归档根搬迁，保留原证据SHA。最终固定镜像**209项通过（26.59秒）**；覆盖完整恢复夹具、三层优先级、篡改拒绝和搬迁后独立加载。
+
+完整只读发布包7503文件清单验证通过，manifest为`7f985e14c66527088373a33198f7faed54a937a5aeec136b3eae1e0736da65fd`。使用该完整包的真实离线审计exit 0：33项资产校验通过，runtime receipt成功恢复，旧config/protocol/implementation一致，2条checkpoint与6份响应、2条not_sent、历史8次费用可审计；新增模型调用0。
+
+剩余放行条件是原919条与新增2条的完整祖先合并、后继准入和真实稳态吞吐。宿主旧目录是只读bind挂载占位，完整验证须复用原挂载关系；原始数据未丢失，不复制空占位冒充账本。在这些条件通过前不切换基座、不新增科学实验。
+
+## 引擎配置核对
+
+两路实际启动参数均为TP4、max_num_seqs=128、max_num_batched_tokens=2048、max_model_len=65536、gpu_memory_utilization=0.92。B启动日志明确启用prefix caching；A最后一组历史指标报告prefix命中35.7%、多模态缓存命中66.7%，当时running/waiting均为0。这证明已有缓存机制，不能把慢速简单归因为“未开启prefix cache”，也不能把历史命中率当当前负载。两个实例当前依赖镜像摘要不同，推广前需分别验证固定依赖版本；不能仅凭相同参数称它们是严格配对基线。
 
 ## 基座验收与切换标准
 

@@ -552,6 +552,24 @@
     "new_model_calls": 0,
     "full_ancestry_verified": false,
     "external_manifest_assets_verified": 33,
-    "remaining_gap": "Restore producer external experiment-manifest layer and nested evidence relocation before complete ancestry validation"
+    "remaining_gap": "External asset layer fixed in 3b267014; complete ancestry integration remains pending"
+  },
+  "producer_external_asset_recovery": {
+    "commit": "3b2670146b9d243eccf017be0f7e8228c8ffd8fc",
+    "release_manifest_sha256": "7f985e14c66527088373a33198f7faed54a937a5aeec136b3eae1e0736da65fd",
+    "release_files": 7503,
+    "tests_passed": 209,
+    "test_seconds": 26.59,
+    "fixed_dependency_image": true,
+    "complete_release_real_audit_exit_code": 0,
+    "external_asset_count": 33,
+    "runtime_receipt_restored": true,
+    "checkpoint_rows": 2,
+    "observed_contacts": 6,
+    "not_sent_contacts": 2,
+    "historical_calls_preserved": 8,
+    "new_model_calls": 0,
+    "full_ancestry_verified": false,
+    "online_throughput_verified": false
   }
 }
