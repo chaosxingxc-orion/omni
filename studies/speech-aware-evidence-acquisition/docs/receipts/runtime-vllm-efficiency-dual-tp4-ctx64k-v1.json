@@ -1,0 +1,388 @@
+{
+  "container": {
+    "image_id": "sha256:3aa751e2864ca1206bee89e1a517c2c533a3d7ee50b42e1b78b42bc63bc1f17f",
+    "image_ref": "sha256:3aa751e2864ca1206bee89e1a517c2c533a3d7ee50b42e1b78b42bc63bc1f17f"
+  },
+  "deployment": {
+    "harness_hostname": "A800I-03",
+    "instances": [
+      {
+        "device_binding": "container-device-nodes",
+        "device_ids": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "env": {
+          "GLOO_SOCKET_IFNAME": "enp61s0f2",
+          "HCCL_IF_BASE_PORT": "61000",
+          "HCCL_SOCKET_IFNAME": "enp61s0f2",
+          "TP_SOCKET_IFNAME": "enp61s0f2"
+        },
+        "gpu_memory_utilization": 0.92,
+        "host": "127.0.0.1",
+        "instance_id": "efficiency-a",
+        "max_num_batched_tokens": 2048,
+        "max_num_seqs": 128,
+        "mm_processor_cache_type": "shm",
+        "port": 8200,
+        "tensor_parallel_size": 4
+      },
+      {
+        "device_binding": "container-device-nodes",
+        "device_ids": [
+          4,
+          5,
+          6,
+          7
+        ],
+        "env": {
+          "GLOO_SOCKET_IFNAME": "enp61s0f2",
+          "HCCL_IF_BASE_PORT": "61400",
+          "HCCL_SOCKET_IFNAME": "enp61s0f2",
+          "TP_SOCKET_IFNAME": "enp61s0f2"
+        },
+        "gpu_memory_utilization": 0.92,
+        "host": "127.0.0.1",
+        "instance_id": "efficiency-b",
+        "max_num_batched_tokens": 2048,
+        "max_num_seqs": 128,
+        "mm_processor_cache_type": "shm",
+        "port": 8202,
+        "tensor_parallel_size": 4
+      }
+    ],
+    "namespace_policy": "shared-pid-host"
+  },
+  "import_path_files": [
+    {
+      "bytes": 64,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/00-saea-release.pth",
+      "sha256": "dd38a5cf458a94379e002eb7d0b4cd39ad2fdccdef09e58c1c6adcc50bde7178"
+    },
+    {
+      "bytes": 97,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/__editable__.saea_adapters-0.1.0.pth",
+      "sha256": "20837ebb6c22e47b0069392a16fe640b0d771d5d8892fdac854a945d3e090589"
+    },
+    {
+      "bytes": 64,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/__editable__.speech_aware_evidence_acquisition-0.0.1.pth",
+      "sha256": "dd38a5cf458a94379e002eb7d0b4cd39ad2fdccdef09e58c1c6adcc50bde7178"
+    },
+    {
+      "bytes": 93,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/__editable__.vllm-0.30.0+empty.pth",
+      "sha256": "55d97d39e66b1e2b8b84f4d589c612b77bd400d5d370374570058443f8d86582"
+    },
+    {
+      "bytes": 101,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/__editable__.vllm_ascend-0.30.0rc2.pth",
+      "sha256": "a6f321a2ca9a8fce27effb384728b7765361814bb559a71f366d432ab39bc8b2"
+    },
+    {
+      "bytes": 3390,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/__editable___saea_adapters_0_1_0_finder.py",
+      "sha256": "f4a243addda39d515687bf42fc7c38c169e32a7af73cf9b4924e7e958c462b00"
+    },
+    {
+      "bytes": 5074,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/__editable___vllm_0_30_0_empty_finder.py",
+      "sha256": "305f2a0f4726cec719a8f00304fe8bcd9647d1d280b98ec762815b7b18193748"
+    },
+    {
+      "bytes": 3402,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/__editable___vllm_ascend_0_30_0rc2_finder.py",
+      "sha256": "65031bef6a91c2fceb4b78172f25477e2b2bfa202e41852f749a2a7a18199fbf"
+    },
+    {
+      "bytes": 151,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/distutils-precedence.pth",
+      "sha256": "2638ce9e2500e572a5e0de7faed6661eb569d1b696fcba07b0dd223da5f5d224"
+    },
+    {
+      "bytes": 23,
+      "path": "/usr/local/python3.12.13/lib/python3.12/site-packages/fla_npu_opp_env.pth",
+      "sha256": "6b1fa2913a263f7efda047dea72862ca42f48a4a9dd6b0681f2a911d8f6bb9ed"
+    }
+  ],
+  "interpreter": {
+    "bytes": 10696,
+    "path": "/usr/local/python3.12.13/bin/python3.12",
+    "sha256": "5d137e6378d886d6ee0390e126011e9e8af81290032e3fefa13a81f72651fda0"
+  },
+  "model": {
+    "files": [
+      {
+        "bytes": 1519,
+        "path": "models/qwen3-omni-30b-a3b-thinking/.gitattributes",
+        "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361"
+      },
+      {
+        "bytes": 90295,
+        "path": "models/qwen3-omni-30b-a3b-thinking/README.md",
+        "sha256": "0e44065c4c4a27071f7239afd5b5a33af5bc2e437dd7ea9950e51aafabfde3df"
+      },
+      {
+        "bytes": 5946,
+        "path": "models/qwen3-omni-30b-a3b-thinking/chat_template.json",
+        "sha256": "3afb9519448b62e252cefeed1c0c1939b01b4e8ed70adbaf3c9f952969aa0ec7"
+      },
+      {
+        "bytes": 8528,
+        "path": "models/qwen3-omni-30b-a3b-thinking/config.json",
+        "sha256": "e6f8c637528461398ef4e11d48b6112ce73db2458a563dfea548127c2cce253f"
+      },
+      {
+        "bytes": 113,
+        "path": "models/qwen3-omni-30b-a3b-thinking/generation_config.json",
+        "sha256": "4c8ba35b3dfaed05c648b933ef8d9daca74da0a8ef87084fa5738f3209cdbadc"
+      },
+      {
+        "bytes": 1671839,
+        "path": "models/qwen3-omni-30b-a3b-thinking/merges.txt",
+        "sha256": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3"
+      },
+      {
+        "bytes": 4000129664,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00001-of-00016.safetensors",
+        "sha256": "ba3b117f1fe9a10f670e87c73321c0651e89f425de598ede20185fdc94df997b"
+      },
+      {
+        "bytes": 3999992216,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00002-of-00016.safetensors",
+        "sha256": "0c419d9fc447b83ab36be8243f1da793125f01ce0ca0fc49d4ad8aca5a03b6f0"
+      },
+      {
+        "bytes": 3997362968,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00003-of-00016.safetensors",
+        "sha256": "bdd6cc1cb3bf3422eefaca3be1a730d78253bf158a53aa5ec73310cacb2f7d5a"
+      },
+      {
+        "bytes": 3999984424,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00004-of-00016.safetensors",
+        "sha256": "c8228f28c83b8355ec441ea8caf33e847ec71192e2a378568289e6653d8d72f4"
+      },
+      {
+        "bytes": 3999985496,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00005-of-00016.safetensors",
+        "sha256": "4317632b9dd26e4c950bbd90d1e89304325725f3290db00a642918a364ca1e01"
+      },
+      {
+        "bytes": 3999985528,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00006-of-00016.safetensors",
+        "sha256": "c86a2cdcdf7eb7b8d5e6846a778798a12d14344ae4f178d4c9a4842c8fcaf9e5"
+      },
+      {
+        "bytes": 3997372200,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00007-of-00016.safetensors",
+        "sha256": "e670918aaab9144dfe7e1132924c706d56b4c6b4c2b6e94a5cf796c3c55e7916"
+      },
+      {
+        "bytes": 3999985488,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00008-of-00016.safetensors",
+        "sha256": "1f44c6e93b85b0cc05284beac60a4076caf61c803f569bf5dcb5ab6a6a810312"
+      },
+      {
+        "bytes": 3999985496,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00009-of-00016.safetensors",
+        "sha256": "5439c95a4cbbd6a6ea7c498d8a71fcf3dacba64b4dac5bf5ad2834fda4140929"
+      },
+      {
+        "bytes": 3999985496,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00010-of-00016.safetensors",
+        "sha256": "c75a2bb738fcb3da89798e5faffd627e3b2592325491bb9df915835afaac64c0"
+      },
+      {
+        "bytes": 3999985544,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00011-of-00016.safetensors",
+        "sha256": "35439fa67730c6f2553ac6ae11f97a34dff37a61341275d3416d080423aa689b"
+      },
+      {
+        "bytes": 3997372160,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00012-of-00016.safetensors",
+        "sha256": "61415e98a78c64a790c946be3145877886b4e6b681425dc061225df511b76e04"
+      },
+      {
+        "bytes": 3999985504,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00013-of-00016.safetensors",
+        "sha256": "70587b5b7e51e8a6e4bf2d069ef465aea913c337f8d951e2790cd1e426bf5378"
+      },
+      {
+        "bytes": 3999985496,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00014-of-00016.safetensors",
+        "sha256": "bee3c092d2966c401ef4b9899a4659e1fc2e9112667354c4e7bcb8a2faff2be7"
+      },
+      {
+        "bytes": 3999985496,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00015-of-00016.safetensors",
+        "sha256": "80ea0e6c2cb35f485ae7534a3092793c18a429e102c820b77338726758d30e30"
+      },
+      {
+        "bytes": 3448914464,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model-00016-of-00016.safetensors",
+        "sha256": "da33b1078d1b474f83ccc455928b18b731e3b09ad46b21af88e68d7cbb8488a5"
+      },
+      {
+        "bytes": 1928791,
+        "path": "models/qwen3-omni-30b-a3b-thinking/model.safetensors.index.json",
+        "sha256": "13ae0b6fa947acd1ec5e163d493884724999788752b699266eb09b14ba914c90"
+      },
+      {
+        "bytes": 603,
+        "path": "models/qwen3-omni-30b-a3b-thinking/preprocessor_config.json",
+        "sha256": "b10e27fd4542cf89ec7145942b87f3e65408d4e9f9d031a29acdd293c15fb3fc"
+      },
+      {
+        "bytes": 7344,
+        "path": "models/qwen3-omni-30b-a3b-thinking/tokenizer_config.json",
+        "sha256": "dc3c31c3bdaedd5016382bb3cbe07323026775ad51f5a4fb564505992ae4a670"
+      },
+      {
+        "bytes": 2776833,
+        "path": "models/qwen3-omni-30b-a3b-thinking/vocab.json",
+        "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      }
+    ],
+    "model_dir": "/mnt/cephfs/xingchao/omni/models/qwen3-omni-30b-a3b-thinking",
+    "other_entries": [
+      ".hfd"
+    ]
+  },
+  "model_lock_key": "qwen3-omni-30b-a3b-thinking-bf16",
+  "packages": [
+    {
+      "dist_info": "/usr/local/python3.12.13/lib/python3.12/site-packages/torch-2.10.0+cpu.dist-info",
+      "metadata_sha256": "d6031f9f56089c835e78a75875c1be87a34bcfdf5a79ef9f069084ed9244a5d4",
+      "name": "torch",
+      "record_sha256": "87ab916aa9dc86ffc9547f9d0dc7f0188944aac79438e11be9b25ba17b49cdec",
+      "version": "2.10.0+cpu"
+    },
+    {
+      "dist_info": "/usr/local/python3.12.13/lib/python3.12/site-packages/torch_npu-2.10.0.post7.dist-info",
+      "metadata_sha256": "3b2748974d953f767c8d3ee27f0e1b8278fedadd283ddba6aa2bed13b80b09f8",
+      "name": "torch_npu",
+      "record_sha256": "6ddb1939fb0a5d7babe8c447878fb8091f41e02067a8feade40bdaee65f95991",
+      "version": "2.10.0.post7"
+    },
+    {
+      "dist_info": "/usr/local/python3.12.13/lib/python3.12/site-packages/transformers-5.14.1.dist-info",
+      "metadata_sha256": "be47444bbcf63c6813decf9509d4076972f261699bbddd8c0fdf53fb73b09307",
+      "name": "transformers",
+      "record_sha256": "d4474fb536f62581fd8be811d1fe31206e56b391a5a4d74246ba73cc11e76bf9",
+      "version": "5.14.1"
+    },
+    {
+      "dist_info": "/usr/local/python3.12.13/lib/python3.12/site-packages/vllm-0.30.0+empty.dist-info",
+      "metadata_sha256": "fd8af1ad9a3d8f02f3645c1e3968b82f805baeb20347f7bc620505ba31b29725",
+      "name": "vllm",
+      "record_sha256": "8c4f568ac9c00220328ccf3a6492e11fc20a48b60027022c0be61050ddcc3244",
+      "version": "0.30.0+empty"
+    },
+    {
+      "dist_info": "/usr/local/python3.12.13/lib/python3.12/site-packages/vllm_ascend-0.30.0rc2.dist-info",
+      "metadata_sha256": "b870759e06694b52e324baaec46039b14432ceed23141eceb3cd1c11a86f3e13",
+      "name": "vllm_ascend",
+      "record_sha256": "3332ed7e89c3821d7c787a6fcad360e601bfa3081fd597b1702406ac3ffc9ce8",
+      "version": "0.30.0rc2"
+    }
+  ],
+  "protocol": {
+    "argv0": "/usr/local/python3.12.13/bin/python3",
+    "cwd": "/opt/saea-release/studies/speech-aware-evidence-acquisition",
+    "entrypoint": [
+      "-m",
+      "vllm.entrypoints.cli.main",
+      "serve"
+    ],
+    "env": {
+      "ASCEND_AICPU_PATH": "/usr/local/Ascend/cann-9.2.0",
+      "ASCEND_HOME_PATH": "/usr/local/Ascend/cann-9.2.0",
+      "ASCEND_OPP_PATH": "/usr/local/Ascend/cann-9.2.0/opp",
+      "ASCEND_TOOLKIT_HOME": "/usr/local/Ascend/cann-9.2.0",
+      "ASCEND_TOOLKIT_LATEST_HOME": "/usr/local/Ascend/ascend-toolkit/latest",
+      "ATB_COMPARE_TILING_EVERY_KERNEL": "0",
+      "ATB_CXX_ABI": "1",
+      "ATB_HOME_PATH": "/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1",
+      "ATB_MATMUL_SHUFFLE_K_ENABLE": "1",
+      "ATB_OPSRUNNER_KERNEL_CACHE_GLOABL_COUNT": "5",
+      "ATB_OPSRUNNER_KERNEL_CACHE_LOCAL_COUNT": "1",
+      "ATB_SHARE_MEMORY_NAME_SUFFIX": "",
+      "ATB_STREAM_SYNC_EVERY_KERNEL_ENABLE": "0",
+      "ATB_STREAM_SYNC_EVERY_OPERATION_ENABLE": "0",
+      "ATB_STREAM_SYNC_EVERY_RUNNER_ENABLE": "0",
+      "ATB_WORKSPACE_MEM_ALLOC_ALG_TYPE": "1",
+      "CANN_VERSION": "9.2.0",
+      "HF_HUB_OFFLINE": "1",
+      "LCCL_DETERMINISTIC": "0",
+      "LCCL_PARALLEL": "0",
+      "LD_LIBRARY_PATH": "/usr/local/Ascend/cann-9.2.0/lib64:/usr/local/Ascend/cann-9.2.0/lib64/plugin/opskernel:/usr/local/Ascend/cann-9.2.0/lib64/plugin/nnengine:/usr/local/Ascend/cann-9.2.0/opp/built-in/op_impl/ai_core/tbe/op_tiling:/usr/local/Ascend/driver/lib64:/usr/local/Ascend/driver/lib64/common:/usr/local/Ascend/driver/lib64/driver:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/lib:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/examples:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/tests/atbopstest:/usr/local/Ascend/ascend-toolkit/latest/tools/aml/lib64:/usr/local/Ascend/ascend-toolkit/latest/tools/aml/lib64/plugin:/usr/local/Ascend/ascend-toolkit/latest/lib64:/usr/local/Ascend/ascend-toolkit/latest/lib64/plugin/opskernel:/usr/local/Ascend/ascend-toolkit/latest/lib64/plugin/nnengine:/usr/local/Ascend/ascend-toolkit/latest/opp/built-in/op_impl/ai_core/tbe/op_tiling:/usr/local/python3.12.13/lib:",
+      "OMP_NUM_THREADS": "1",
+      "PATH": "/root/.cargo/bin:/usr/local/Ascend/nnal/atb/latest/atb/cxx_abi_1/bin:/usr/local/Ascend/ascend-toolkit/latest/bin:/usr/local/Ascend/ascend-toolkit/latest/compiler/ccec_compiler/bin:/usr/local/Ascend/ascend-toolkit/latest/tools/ccec_compiler/bin:/usr/local/Ascend/cann-9.2.0/tools/show_kernel_debug_data:/usr/local/Ascend/cann-9.2.0/tools/msobjdump:/usr/local/Ascend/cann-9.2.0/bin:/usr/local/Ascend/cann-9.2.0/tools/ccec_compiler/bin:/usr/local/Ascend/cann-9.2.0/tools/profiler/bin:/usr/local/Ascend/cann-9.2.0/tools/ascend_system_advisor/asys:/usr/local/python3.12.13/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "PYTHONNOUSERSITE": "1",
+      "PYTHONPATH": "/opt/saea-release/studies/speech-aware-evidence-acquisition/src:/usr/local/Ascend/ascend-toolkit/latest/python/site-packages:/usr/local/Ascend/ascend-toolkit/latest/opp/built-in/op_impl/ai_core/tbe:/usr/local/Ascend/cann-9.2.0/python/site-packages:/usr/local/Ascend/cann-9.2.0/opp/built-in/op_impl/ai_core/tbe:",
+      "SOC_VERSION": "ascend910b1",
+      "TASK_QUEUE_ENABLE": "1",
+      "TRANSFORMERS_OFFLINE": "1"
+    },
+    "served_model_name": "qwen3-omni-30b-a3b-thinking",
+    "server_args": [
+      "--max-model-len",
+      "65536",
+      "--dtype",
+      "bfloat16",
+      "--reasoning-parser",
+      "qwen3",
+      "--reasoning-config",
+      "{\"reasoning_end_str\": \"Considering the limited time by the user, I have to give the solution based on the thinking directly now.\\n</think>\"}",
+      "--enable-auto-tool-choice",
+      "--tool-call-parser",
+      "hermes",
+      "--limit-mm-per-prompt",
+      "{\"audio\": 1, \"image\": 0, \"video\": 0}",
+      "--seed",
+      "0"
+    ]
+  },
+  "protocol_sha256": "4da7dc0d265d7888fb86a63d90d3820e15958b54e2cd07d04f306e38362ac98a",
+  "runtime_libraries": [
+    {
+      "bytes": 30924152,
+      "path": "/usr/local/python3.12.13/lib/libpython3.12.so.1.0",
+      "sha256": "ce6c3d6ba590ee06e081c0c20829eacb9c20691b4f942085767e96fd3a4ffed2"
+    }
+  ],
+  "schema": "saea-runtime-receipt-vllm-v1",
+  "site_packages": "/usr/local/python3.12.13/lib/python3.12/site-packages",
+  "source_trees": [
+    {
+      "bytes": 96607285,
+      "files": 3090,
+      "manifest_sha256": "68a51b8ce04c632680da79472957d28e6638468043ee2e89cc7c81b8210b82bb",
+      "package": "vllm",
+      "root": "/vllm-workspace/vllm/vllm"
+    },
+    {
+      "bytes": 54497672,
+      "files": 1746,
+      "manifest_sha256": "4650518b5694df35469f055e893ba4972bd9cf8863856caebf1b5ab99d9364ab",
+      "package": "vllm_ascend",
+      "root": "/vllm-workspace/vllm-ascend/vllm_ascend",
+      "symlinks": [
+        {
+          "kind": "symlink",
+          "path": "_cann_ops_custom/vendors/custom_transformer/op_impl/ai_core/tbe/op_tiling/liboptiling.so",
+          "resolves_outside": false,
+          "target": "lib/linux/aarch64/libcust_opmaster_rt2.0.so",
+          "target_bytes": 4248416,
+          "target_kind": "file",
+          "target_path": "_cann_ops_custom/vendors/custom_transformer/op_impl/ai_core/tbe/op_tiling/lib/linux/aarch64/libcust_opmaster_rt2.0.so",
+          "target_sha256": "36c6f7babd7c71c84dec3f39c5cd6c45aface410e07a7ec90344d605094504eb"
+        }
+      ]
+    }
+  ],
+  "study": "speech-aware-evidence-acquisition"
+}
