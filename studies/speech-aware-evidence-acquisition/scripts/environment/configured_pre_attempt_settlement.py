@@ -13,16 +13,31 @@ import configured_terminal_settlement as s
 SCHEMA = 'saea-pre-attempt-settlement-v1'
 
 
-def absent(producer, logical, expected):
-    paths = []
+def absent(producer, logical, expected, plan):
+    """Allow only hash-validated pre-dispatch receipts, retaining every byte."""
+    from speech_aware_evidence_acquisition.core.flight.receipts import read_flight_receipts
+    evidence = []
     for run, attempt in ((expected['run_id'], expected['attempt_id']),
                          (expected['fit_run_id'], expected['fit_attempt_id'])):
-        for rel in (Path('attempts')/run/(attempt+'.json'),
-                    Path('runs')/run/attempt, Path('contact-journals')/run/attempt):
+        for rel in (Path('attempts')/run/(attempt+'.json'), Path('contact-journals')/run/attempt):
             path = s.mapped(producer, logical/rel, writable=True)
-            s.require(not os.path.lexists(path), 'attempt, run or contact custody exists; settlement refused')
-            paths.append(str(path))
-    return paths
+            s.require(not os.path.lexists(path), 'attempt or contact custody exists; settlement refused')
+            evidence.append({'path':str(path),'state':'absent'})
+        runpath = s.mapped(producer,logical/'runs'/run/attempt,writable=True)
+        if not os.path.lexists(runpath):
+            evidence.append({'path':str(runpath),'state':'absent'}); continue
+        s.require(run == expected['run_id'] and runpath.is_dir() and not runpath.is_symlink(), 'unexpected FIT or non-directory run custody')
+        files=list(runpath.iterdir()); allowed={'flight-receipts.json','.flight-receipts.json.lock',run+'-'+attempt+'.session-attach-receipt.json'}
+        s.require(all(p.name in allowed and p.is_file() and not p.is_symlink() for p in files), 'unexpected run custody')
+        rp=runpath/'flight-receipts.json'; document=read_flight_receipts(rp)
+        stages=document['stages']; pre=stages.get('preflight',{})
+        s.require((document['run_id'],document['attempt_id'])==(run,attempt) and set(stages) in ({'preflight','preprocess'},{'preflight','preprocess','serve'})
+                  and pre.get('run_id')==run and pre.get('attempt_id')==attempt and pre.get('study_commit')==expected['study_commit']
+                  and pre.get('protocol_hash')==plan.protocol_hash and pre.get('split_identity_hash')==plan.split_identity_hash
+                  and pre.get('attempt_reservation')=='deferred to core.model.adapter.FrozenCoreAdapter', 'run receipts do not prove pre-attempt state')
+        if 'serve' in stages: s.require(stages['serve'].get('session_id')==expected['service_session'], 'serve session differs')
+        evidence.append({'path':str(runpath),'state':'pre-dispatch-receipts','files':{p.name:s.launcher.digest(p) for p in sorted(files)}})
+    return evidence
 
 
 def execute(path):
@@ -97,8 +112,8 @@ def execute(path):
             s.require(lease.get('schema')=='saea-generation-lease-v1' and lease.get('run_id')==exp['run_id'] and lease.get('attempt_id')==exp['attempt_id'] and lease.get('run_ids')==[exp['run_id']] and lease.get('session_id')==exp['service_session'] and lease.get('study_head')==exp['study_commit'], 'lease identity differs')
             pid=lease.get('pid'); s.require(type(pid) is int and pid>0 and not Path('/proc',str(pid)).exists() and start.get('pid')==pid, 'owner PID alive, reused or differs')
             s.require(s.stamp(terminal['state']['StartedAt']) <= start.get('time',0) <= s.stamp(lease['started_at']) <= s.stamp(terminal['state']['FinishedAt']), 'startup or lease outside container lifetime')
-            missing=absent(producer,logical,exp); quiet=s.transition.quiescence(instances)
-            s.require(s.producer_terminal(doc,producer)==terminal and absent(producer,logical,exp)==missing and source.read_bytes()==blob, 'custody changed during settlement')
+            missing=absent(producer,logical,exp,ep); quiet=s.transition.quiescence(instances)
+            s.require(s.producer_terminal(doc,producer)==terminal and absent(producer,logical,exp,ep)==missing and source.read_bytes()==blob, 'custody changed during settlement')
             check_guard(); digest=hashlib.sha256(blob).hexdigest(); identity={'config_sha256':s.launcher.digest(path),'tool_sha256':s.launcher.digest(__file__)}
             record={'schema':SCHEMA,'identity':identity,'boot_id':boot,'guard':gi,'terminal':terminal,'lease_sha256':digest,'absent_paths':missing,'quiescence':quiet,'observed_at':time.time()}
             if not saved.exists():
@@ -109,7 +124,7 @@ def execute(path):
             else:
                 prior=s.read(audit); s.require(prior['identity']==identity and prior['lease_sha256']==digest and prior['terminal']==terminal and prior['guard']==gi, 'prior audit differs')
             if lease_path.exists():
-                s.require(lease_path.read_bytes()==blob and absent(producer,logical,exp)==missing, 'lease or custody changed')
+                s.require(lease_path.read_bytes()==blob and absent(producer,logical,exp,ep)==missing, 'lease or custody changed')
                 s.require(not Path('/proc',str(pid)).exists() and s.producer_terminal(doc,producer)==terminal, 'producer changed before settlement')
                 s.transition.quiescence(instances)
                 check_guard(); lease_path.unlink(); s.sync(locks)

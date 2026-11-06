@@ -16,10 +16,10 @@ m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 def test_absence_rejects_generation_and_fit_custody(tmp_path,monkeypatch):
     monkeypatch.setattr(m.s,'mapped',lambda producer,path,**kwargs:tmp_path/path.relative_to('/data'))
     exp={'run_id':'RUN','attempt_id':'gen','fit_run_id':'RUN-FIT','fit_attempt_id':'fit'}
-    assert len(m.absent({},Path('/data'),exp)) == 6
+    assert len(m.absent({},Path('/data'),exp,SimpleNamespace())) == 6
     for relative in ('attempts/RUN/gen.json','runs/RUN/gen','contact-journals/RUN/gen','attempts/RUN-FIT/fit.json','runs/RUN-FIT/fit','contact-journals/RUN-FIT/fit'):
         p=tmp_path/relative;p.parent.mkdir(parents=True,exist_ok=True);p.touch()
-        with pytest.raises(ValueError,match='custody exists'):m.absent({},Path('/data'),exp)
+        with pytest.raises(ValueError,match='custody'):m.absent({},Path('/data'),exp,SimpleNamespace())
         p.unlink()
 
 
@@ -54,7 +54,7 @@ def setup_case(tmp_path, monkeypatch):
     monkeypatch.setattr(m.s,'mapped',mapped)
     monkeypatch.setattr(m.s.launcher,'validate_external_admission',lambda *args:{'candidate':'candidate','binding':{'generation':'generation','fit':'fit','candidate':'candidate'}})
     import speech_aware_evidence_acquisition.contracts as contracts
-    monkeypatch.setattr(contracts,'ExecutionPlan',lambda **kwargs:SimpleNamespace(validate=lambda **unused:SimpleNamespace(**kwargs)))
+    monkeypatch.setattr(contracts,'ExecutionPlan',lambda **kwargs:SimpleNamespace(validate=lambda **unused:SimpleNamespace(**kwargs,protocol_hash='p',split_identity_hash='s')))
     terminal={'container_id':'f'*64,'state':{'ExitCode':1,'StartedAt':'2026-01-01T00:00:00+00:00','FinishedAt':'2026-01-01T00:01:00+00:00'}}
     monkeypatch.setattr(m.s,'producer_terminal',lambda *a:terminal);monkeypatch.setattr(m.s.transition,'quiescence',lambda instances:{'queues':{'0':'clear'}})
     monkeypatch.setattr(m.s,'stamp',lambda value: {'2026-01-01T00:00:00+00:00':2e10,'2026-01-01T00:00:10+00:00':2e10+10,'2026-01-01T00:01:00+00:00':2e10+60}[value])
@@ -121,3 +121,14 @@ def test_interruption_recovers_without_losing_original(tmp_path,monkeypatch,phas
     assert ((locks/'flight.lock').read_bytes() if (locks/'flight.lock').exists() else saved.read_bytes())==raw
     assert m.execute(cp)['settled'] and saved.read_bytes()==raw
     assert (locks/'generation.guard').stat().st_ino==guard
+
+
+def test_valid_predispatch_receipts_and_unexpected_file(tmp_path,monkeypatch):
+    from speech_aware_evidence_acquisition.core.flight.receipts import FlightReceipts,write_flight_receipts
+    monkeypatch.setattr(m.s,'mapped',lambda producer,path,**kwargs:tmp_path/path.relative_to('/data'))
+    exp={'run_id':'RUN','attempt_id':'gen','fit_run_id':'RUN-FIT','fit_attempt_id':'fit','study_commit':'a'*40,'service_session':'session'}
+    root=tmp_path/'runs/RUN/gen';root.mkdir(parents=True)
+    f=FlightReceipts('RUN','gen');f.record('preflight',{'run_id':'RUN','attempt_id':'gen','study_commit':'a'*40,'protocol_hash':'p','split_identity_hash':'s','attempt_reservation':'deferred to core.model.adapter.FrozenCoreAdapter'});f.record('preprocess',{});f.record('serve',{'session_id':'session'});write_flight_receipts(root/'flight-receipts.json',f)
+    evidence=m.absent({},Path('/data'),exp,SimpleNamespace(protocol_hash='p',split_identity_hash='s'));assert any(x['state']=='pre-dispatch-receipts' for x in evidence)
+    (root/'unknown.json').write_text('{}')
+    with pytest.raises(ValueError,match='unexpected run custody'):m.absent({},Path('/data'),exp,SimpleNamespace(protocol_hash='p',split_identity_hash='s'))
