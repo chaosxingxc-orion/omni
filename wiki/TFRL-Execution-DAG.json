@@ -726,12 +726,12 @@
       "cpu_score_dependency": false,
       "status": "running_first_http_success_verified",
       "started_at_utc": "2026-11-06T22:06:40.70367096Z",
-      "completed_rows": 490,
+      "completed_rows": 553,
       "total_rows": 1080,
-      "observed_at_utc": "2026-11-06T23:30:31.857871+00:00",
-      "remaining_rows": 590,
-      "wall_seconds_per_complete_row": 10.267661634270025,
-      "estimated_remaining_seconds": 6057.920364219315
+      "observed_at_utc": "2026-11-06T23:40:43.386012+00:00",
+      "remaining_rows": 527,
+      "wall_seconds_per_complete_row": 10.203765536303115,
+      "estimated_remaining_seconds": 5377.384437631741
     },
     {
       "id": "compact-slot-a-evaluate",
@@ -776,7 +776,7 @@
       "id": "historical-ranking-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "real_cpu_preparation_in_progress_not_admitted",
+      "status": "real_stage_prepare_register_diff_verified_admission_in_progress",
       "scientific_parent": "complete-coverage-evaluate",
       "scope": "P k60 plus exact frozen agreement source and original weights; final8/P OFF unchanged"
     },
@@ -843,7 +843,7 @@
     "knowledge_supply": "real stage/prepare accepted1080; registration/admission and configured B-Slot successor handoff in progress; actual FIT/efficacy unknown",
     "load_analysis": "completed existing evidence analysis accepted; retain armed C96, no measured speedup",
     "tfrl_reader": "deferred",
-    "perception_miss_analysis": "complete100/12diagnostic accepted; exact historical-ranking package CPU preparation in progress on completeOFF parent; no model calls"
+    "perception_miss_analysis": "P historical ranking stage/prepare/register/effective diff accepted89pins; admission and A-after-C96 handoff in progress, not armed"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
