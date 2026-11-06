@@ -713,7 +713,8 @@
     "paired_analysis": "k8/k16 full paired diagnosis and locked source transcript evidence accepted; retain k8 parent",
     "tfrl_reader": "deferred",
     "length_root_causes": "complete28 targeted response analysis accepted; no thinking, whitespace stall at structural boundaries",
-    "compact_prompt_preparation": "two separate single-node instruction candidates from same completeON parent; configuration-only, not queued"
+    "compact_prompt_preparation": "P returned for source-guidance confound; two candidates retained, not queued",
+    "seal_recovery": "k16ON exact release verification failure diagnosis and preservation in progress"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
@@ -721,7 +722,7 @@
     "successor_trigger": "generation-released",
     "score_blocks_successor": false,
     "full_verification_eliminated": false,
-    "native_successor_queue_status": "Reference OFF released; complete OFF running via existing bound queue; k16 ON running; remaining B successors prepared",
+    "native_successor_queue_status": "completeOFF running; k16ON exited during seal release-source verification, release absent; completeON waiting; P/Slot binders armed",
     "queue_compatibility_commit": "25c6386f"
   },
   "priority_override": {
