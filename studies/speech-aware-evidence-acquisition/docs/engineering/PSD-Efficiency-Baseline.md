@@ -44,10 +44,25 @@
 
 已有通用stage timing支持normal/debug配置；debug可记录音频读取/编码、上下文与请求构建、FIT、HTTP、准备/校验容量等待、线程等待与执行、checkpoint/fsync。复用这些埋点，先核对新PSD调用路径是否实际经过它们。normal保留低成本汇总，debug用于定位，二者配置及观测开销必须列入基线。
 
-当前客户端HTTP埋点不能区分服务端排队、prefill、decode或TTFT；非流式响应头耗时也不是TTFT。有服务端指标时按实例/测量窗口取差分；没有逐请求关联就仅报告聚合，不伪造逐样本拆解。逐卡完整窗口>80%的验收尚未接通，也尚无通过证据。
+当前客户端HTTP埋点不能区分服务端排队、prefill、decode或TTFT；非流式响应头耗时也不是TTFT。有服务端指标时按实例/测量窗口取差分；没有逐请求关联就仅报告聚合，不伪造逐样本拆解。完整窗口验收计算已实现并通过固定镜像7项测试；真实任务边界与后台采集尚未联调，尚无真实利用率通过证据。
 
 ### 固定报告表
 
 每轮原位更新：配置hash与资源 → 生成/验收/评分进度 → 供给、推理、验收各自平均/P50/P95与等待 → ready及验收队列 → 逐卡利用率/覆盖 → 吞吐、样本延迟、ETA → 首要瓶颈与下一项配置调整。没有证据的字段写“未测得”，不填0。
 
 优化顺序由瓶颈决定：供给不足先缓存/预载/并行准备；供给充足而推理慢再调并发/批处理及prefix；验收不足先并行校验、复用不变资产核验与异步评分。所有优化保留冻结知识、合法性验证、checkpoint持久性和原始费用。
+
+## 完整窗口验收工具
+
+复用 `scripts/npu/card_utilization_monitor.py`，采集模式不变；新增只读离线验收：
+
+```bash
+python scripts/npu/card_utilization_monitor.py \
+  --assess-samples samples.jsonl --windows windows.json --out acceptance.json
+```
+
+`windows.json` 使用 `schema: saea-utilization-windows-v1`、`threshold_percent: 80`、`max_sample_gap_seconds: 60`，以及 `windows` 数组。每个实例指定唯一 `id`、互不重叠且总计覆盖8卡的 `cards`、带时区的 `first_dispatch` / `last_response` 与 `boundary_evidence_sha256`。边界必须来自完整请求账本，hash只是证据引用，工具自身不证明窗口选择正确。60秒为30秒采样的最大允许间隔配置，实际间隔同时留在原始记录中。
+
+工具要求采样覆盖窗口两端，以相邻观测线性插值得到时间加权均值；这是观测估计，不是连续硬件计量。任一卡缺测、非法读数、超限间隔或未覆盖窗口时返回 `INSUFFICIENT_EVIDENCE`；完整证据下任一卡均值不大于80返回 `FAIL`；仅全部通过返回 `PASS` 和退出码0，其余退出码2。输出保留采样及窗口配置hash，不覆盖已有报告。P10和零利用率比例仍为离散观测统计。
+
+代码 `67a78af5` 已在固定镜像执行7项测试，覆盖逐卡失败、严格阈值、采样断档、缺测、两实例不同窗口和输入身份。该结果只证明验收计算，真实PSD基线仍待启动和测量。
