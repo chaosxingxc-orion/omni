@@ -338,11 +338,8 @@ def load_arm(data_root: Path, spec: ArmSpec, *, scorer_id: str | None = None) ->
     scores = load_json(scores_path)
     generation_manifest = load_json(generation_manifest_path)
     attempt_record = load_json(attempt_record_path)
-    score_jobs = [
-        json.loads(line)
-        for line in score_jobs_path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    score_jobs = ([json.loads(line) for line in score_jobs_path.read_text(encoding="utf-8").splitlines()
+                   if line.strip()] if score_jobs_path.exists() else [])
     flight_receipts = load_json(flight_receipts_path) if flight_receipts_path.exists() else None
 
     parent_manifest_sha256 = None
@@ -562,7 +559,44 @@ def _stage3_algorithm_block(
 # --------------------------------------------------------------------------
 
 
+def _check_recovery_finalize(arm: Arm) -> None:
+    """Accept the actual synchronous recovery receipt, never synthesize a score job."""
+    root = arm.run_dir / "score-finalize-recovery-v1"
+    receipt = load_json(root / "recovery-receipt.json")
+    intent_path = root / "intent.json"
+    intent = load_json(intent_path)
+    result = receipt.get("result") or {}
+    jobs = result.get("jobs") or []
+    if (receipt.get("schema") != "saea-seal-only-finalize-recovery-v1"
+            or receipt.get("finalized_manifest_sha256") != arm.manifest_sha256
+            or receipt.get("intent_sha256") != digest(intent_path)
+            or intent.get("schema") != "saea-seal-only-finalize-recovery-intent-v1"
+            or intent.get("inputs", {}).get("generation", {}).get("sha256") != arm.generation_manifest_sha256
+            or result.get("schema") != "saea-parallel-score-batch-v1"
+            or result.get("operation") != "finalize" or result.get("job_count") != 1
+            or result.get("succeeded") != 1 or result.get("failed") != 0 or len(jobs) != 1):
+        raise StopStageError(f"{arm.spec.label}: invalid synchronous recovery receipt")
+    job = jobs[0]
+    file = job.get("result_file")
+    if (job.get("job_id") != arm.spec.attempt_id or job.get("operation") != "finalize"
+            or job.get("status") != "succeeded" or job.get("returncode") != 0
+            or job.get("manifest") != str(arm.manifest_path) or not isinstance(file, str)
+            or Path(file).name != file):
+        raise StopStageError(f"{arm.spec.label}: recovery finalizer job differs")
+    output = root / "batch" / file
+    if digest(output) != job.get("result_sha256"):
+        raise StopStageError(f"{arm.spec.label}: recovery finalizer result differs")
+    payload = load_json(output)
+    if (payload.get("verified") is not True or payload.get("attempt_state") != "FINALIZED"
+            or payload.get("manifest") != str(arm.manifest_path)
+            or payload.get("scores") != str(arm.scores_path)):
+        raise StopStageError(f"{arm.spec.label}: recovery finalizer output differs")
+
+
 def _check_score_job(arm: Arm) -> None:
+    if not arm.score_jobs:
+        _check_recovery_finalize(arm)
+        return
     if len(arm.score_jobs) != 1:
         raise StopStageError(
             f"{arm.spec.label}: expected exactly one score job, found {len(arm.score_jobs)}"
