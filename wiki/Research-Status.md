@@ -27,7 +27,7 @@ v5 Slot OFF正式评分恢复及独立只读验收均已成功，原生bundle为
 
 槽位F1下降约10.52个百分点，需单独分析抽取与下游使用，不从Intent差距推导SLU变化。上述同Fold聚合差值不是某个节点的因果证据。节点审计将区分正确候选未进入P、下游遗漏、Decision选错及信息未记录；没有证据时标unknown，不将合法空实体当拒答。
 
-官方evaluator提交为`8eb16545762be97ace75334109d73824217311f1`，无标签投影或filler归一化；scores SHA256为`c805e7434e99d47dc293cc87bbe53a0d1ea3a814d3f73f60df7240da9f86facb`。公开聚合证据保存在仓库`studies/speech-aware-evidence-acquisition/docs/results/PSD-Fold-A-OFF-Verified-Result.json`。ON评分接续已预排，须自身真实终态、来源和失败原因核实后执行；不重跑推理。
+官方evaluator提交为`8eb16545762be97ace75334109d73824217311f1`，无标签投影或filler归一化；scores SHA256为`c805e7434e99d47dc293cc87bbe53a0d1ea3a814d3f73f60df7240da9f86facb`。公开聚合证据保存在仓库`studies/speech-aware-evidence-acquisition/docs/results/PSD-Fold-A-OFF-Verified-Result.json`。ON已确认完整封存1080，原worker因同overlay评分错误exit1；独立CPU恢复容器已于17:43 UTC启动，不重跑推理。
 
 ## NPU设置与进度
 
@@ -36,7 +36,7 @@ v5 Slot OFF正式评分恢复及独立只读验收均已成功，原生bundle为
 |任务|证据时间UTC|进度/1080|资源|累计墙钟秒/终态条|该时刻粗估剩余|
 |---|---|---:|---|---:|---|
 |v5 Slot OFF|完整封存|1080|原4卡1实例，生成已释放|约5.73至生成封存|生成和正式评分均完成|
-|v5 Slot ON|11月6日17:23:30|996|4卡1实例|10.08|84条，约14分钟|
+|v5 Slot ON|完整封存|1080|原4卡1实例，已释放给k16 ON|最终生成耗时待结算|CPU评分恢复中|
 |k16 Slot OFF|11月6日17:39:05|740条落盘终态|4卡1实例|6.28|340条，约36分钟|
 
 这是带时间的快照，ETA不是当前倒计时；checkpoint事件也不是合法答案验收。17:33 UTC左右独立确认两个生成容器仍running。每条实验共享原Fold A1080，不能累加为不同样本数。现有v5观察器和新OFF后继链观察器各覆盖不同任务，均每600秒更新。后继链统一覆盖k16、引用修复和P长度候选；后两项尚未启动，不报告虚构ETA。
@@ -84,3 +84,12 @@ normal计时中HTTP平均101.47秒、p95约503.24秒；FIT平均1.317秒、锁�
 - 378条最终意图正确但实体不完全匹配。交付normalizer在230条中删除260个实体，163条因此变空；其中35条gold有实体。删除行为已证实，被删内容是否正确仍未知，不能直接关闭规则。
 
 初稿中的285个最终答案hash差异已解释：它们对应规范化前后文本，1038条均满足“派生答案hash=normalizer输入hash、交付hash=normalizer输出hash”，没有据此判定来源损坏。下一步复用已有原响应做独立CPU反事实，分别检查scope/ti1/ee10删除规则的收益与损害；不改正式结果、不重跑模型、不用gold作为在线规则。
+
+
+## ON完整覆盖与B实例接续
+
+17:46 UTC对ON封存输出一次性审计，1080个唯一ID、outputs SHA与generation manifest匹配：**1037条结构完整（96.02%）、43条空答**。空答为P length28、Slot length2、引用拒收12（P8/Slot4）、Slot实体字段空1。结构覆盖尚非合法标签或语义准确率；正常空entities与实体对象内部空type/filler不同，后者违反合同。
+
+ON生成3161 calls，输入33,794,650 tokens、输出4,704,160 tokens；OFF为3163 calls、输入33,890,635、输出2,245,046。输入量约为OFF的99.72%，输出量约2.095倍；覆盖没有提高。是否提升准确率及是否值得额外成本仍待正式ON分数和逐样本配对，不能凭输出量决定关闭thinking。
+
+B实例k16已在17:37:06 UTC按真实generation-release自动启动，主线程核release摘要及存活容器；CPU评分未阻塞NPU接续。B完整coverage候选已交原部署CLI实际准备，将复用同2586419b release与原Fold/KB，保持Slot ON预算，与OFF使用同一修复包。尚未READY或armed，不冒称已开始实验。NPU配置和后继输入在CPU提前完成，后继不等待评分报告。

@@ -1,0 +1,28 @@
+{
+  "schema": "psd-v5-full-generation-cost-comparison-v1",
+  "rows_per_arm": 1080,
+  "same_split": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6",
+  "off_calls": 3163,
+  "on_calls": 3161,
+  "off_completion_tokens": 2245046,
+  "on_completion_tokens": 4704160,
+  "completion_ratio_on_over_off": 2.095351275653149,
+  "prompt_ratio_on_over_off": 0.9971678016655634,
+  "off_structural_complete": 1038,
+  "on_structural_complete": 1037,
+  "on_empty_answers": 43,
+  "on_empty_causes": {
+    "p_length": 28,
+    "slot_length": 2,
+    "p_unsupplied_reference": 8,
+    "slot_unsupplied_reference": 4,
+    "slot_empty_entity_field": 1
+  },
+  "on_official_score_pending": true,
+  "limits": [
+    "Same roster; no causal claim from unpaired quality results",
+    "Generation token costs exclude FIT and historical attempts",
+    "Structural completeness not semantic accuracy",
+    "No speedup or thinking-selection decision until full paired results"
+  ]
+}
