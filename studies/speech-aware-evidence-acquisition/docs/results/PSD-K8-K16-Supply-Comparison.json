@@ -1,0 +1,67 @@
+{
+  "schema": "psd-k8-k16-paired-public-v1",
+  "rows": 1080,
+  "strict_transitions": {
+    "always_correct": 435,
+    "always_wrong": 525,
+    "gain": 51,
+    "loss": 69
+  },
+  "intent_transitions": {
+    "always_correct": 841,
+    "always_wrong": 142,
+    "gain": 56,
+    "loss": 41
+  },
+  "metrics": {
+    "k8": {
+      "intent_accuracy": 0.8166666666666667,
+      "slu_f1": 0.6487544107371561,
+      "strict_accuracy": 0.4666666666666667,
+      "strict_correct": 504,
+      "strict_rule": "scenario_action_exact == 1 and slot_f1_exact_fp == 0 and slot_f1_exact_fn == 0",
+      "scenario_accuracy": 0.8546296296296296,
+      "span_f1": 0.5394321766561513
+    },
+    "k16": {
+      "intent_accuracy": 0.8305555555555556,
+      "slu_f1": 0.6493153923017515,
+      "strict_accuracy": 0.45,
+      "strict_correct": 486,
+      "strict_rule": "scenario_action_exact == 1 and slot_f1_exact_fp == 0 and slot_f1_exact_fn == 0",
+      "scenario_accuracy": 0.8712962962962963,
+      "span_f1": 0.5435222672064779
+    }
+  },
+  "delta_pp": {
+    "intent": 1.3888888888888888,
+    "strict": -1.6666666666666667,
+    "slu": 0.05609815645953864
+  },
+  "stages": {
+    "stage_k8": {
+      "strict_correct": 504,
+      "P_gold_candidate_missing": 96,
+      "coverage_failure": 42,
+      "correct_intent_entity_error": 378,
+      "D_wrong_with_gold_available": 60
+    },
+    "stage_k16": {
+      "strict_correct": 486,
+      "P_gold_candidate_missing": 98,
+      "D_wrong_with_gold_available": 63,
+      "correct_intent_entity_error": 411,
+      "coverage_failure": 22
+    }
+  },
+  "decision": "retain k8 common parent",
+  "report_sha256": "8add52818429fe5abf10218423f05df357ef3ef3cc6bfc78ae26090888255a26",
+  "limits": [
+    "None in boundary/candidate supply means missing complete pipeline receipt; not evidence that no P request/knowledge existed",
+    "Gold summary lacks entity types and fillers; cannot audit specific missed gold fillers or copying origin",
+    "No confidence intervals computed and no significance claim",
+    "Slot response hashes show changed bytes, not necessarily semantically changed entities; no raw intermediate responses read",
+    "Delivery normalizer applied before final scores; no pre-normalizer prediction attribution",
+    "Not an isolated causal estimate of k or P randomness; historical P-to-Solver aggregate evidence not paired"
+  ]
+}
