@@ -19,6 +19,9 @@
 |新P-only/Slot-only提示|CPU准备→NPU-B|基共同完整覆盖ON父；8个CPU容器exit0与14项摘要主审通过；准备就绪、自动binder存活，等待真实前驱，未派发；完整覆盖ON→P-only→Slot-only|
 |Perception长度恢复|CPU→就绪池|已合main81d7ea7b；配置化模板、139项相关测试及8项集成测试；stage/prepare/register/admission成功；自动绑定器已核实存活，等引用候选真实容器身份|
 |Slot长度恢复|CPU|已知两条非空截断未触发空响应补答；修复已合main c3d1dc17，136相关+3定点测试通过；完整候选已准入；已绑定真实引用前驱的生成释放，P-only长度候选HOLD|
+|B故障后接续|NPU-B|旧请求全部已知、原租约结算成功；独立工程CLI复用已准入completeON配置激活，不等待旧结果评分，尚待启动证据|
+|B旧结果封存恢复|CPU|已复现runtime overlay认证遗漏；独立工程CLI最小修复并做真实输入封存验证，不占NPU|
+|防止host缓存污染|CPU|已合main，7入口测试及202业务回归通过；未热部署|
 |官方评分恢复|CPU|四watcher已部署；引用OFF锁故障已通过原产物对账完成，未重评分；三个后继的锁挂载修复已部署；NPU不等评分|
 |生成释放绑定器修复|CPU|已识别CPU评分失败误阻断已释放生成；A已用原生队列接续，修复已合main，92项相关测试通过；P/Slot后继binder部署已主审，completeON原生队列保留|
 |答案与节点审计|CPU|完整报告已验收；1038合法，96个P候选遗漏、60个Decision误选；normalizer反事实完整验收，保留原规则；节点提示配置已合main，58条配对回退报告已验收；锁定参考句补证已验收，已纠正日期错例归因|
