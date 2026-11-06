@@ -140,6 +140,15 @@ def finalize_case(case):
     ledger.write_text('Frozen predecessor exposure rows\n')
     manifest['files']['docs/exposure-ledger.md'] = {
         'path': str(ledger), 'sha256': hashlib.sha256(ledger.read_bytes()).hexdigest()}
+    from speech_aware_evidence_acquisition.contracts import FrozenCoreGate,E0_RECEIPT_SCHEMA,STUDY_SLUG
+    deliverables={}
+    for name in FrozenCoreGate.E0_DELIVERABLES:
+        relative='docs/receipts/artifacts/'+name+'.json'
+        pin=write(tmp/'assets'/relative,{'fixture':name});manifest['files'][relative]=pin
+        deliverables[name]={'artifact':'artifacts/'+name+'.json','sha256':pin['sha256'],'status':'CLOSED'}
+    manifest['files']['docs/receipts/e0-closure.json']=write(tmp/'assets/docs/receipts/e0-closure.json',
+        {'schema':E0_RECEIPT_SCHEMA,'study':STUDY_SLUG,'deliverables':deliverables})
+    manifest['files']['docs/receipts/runtime.json']=write(tmp/'assets/docs/receipts/runtime.json',{'fixture':True})
     cfg['assets_manifest'] = write(Path(cfg['assets_manifest']['path']), manifest)
     cfg['terminal'] = {'evidence': [evidence], 'lock': evidence, 'resume_from': {},
                        'bridge': {}, 'registration_relpath': 'docs/readiness/previous.json'}
@@ -307,3 +316,17 @@ def test_derive_real_campaign_and_identity(tmp_path):
     args['target']['fit_run_id'] = 'fit-old'
     with pytest.raises(ValueError, match='identity reused'):
         compiler.build_successor_documents(**args)
+
+
+@pytest.mark.parametrize('fault',['closure','artifact','runtime','tamper'])
+def test_gate_input_closure_refuses_before_terminal_audit(case,monkeypatch,fault):
+    cfg,run,tmp=finalize_case(case)
+    manifest=json.loads(Path(cfg['assets_manifest']['path']).read_bytes())
+    name={'closure':'docs/receipts/e0-closure.json','artifact':'docs/receipts/artifacts/d1_identity.json',
+          'runtime':'docs/receipts/runtime.json','tamper':'docs/receipts/artifacts/d1_identity.json'}[fault]
+    if fault=='tamper':manifest['files'][name]=write(tmp/'changed.json',{'wrong':True})
+    else:del manifest['files'][name]
+    cfg['assets_manifest']=write(Path(cfg['assets_manifest']['path']),manifest)
+    monkeypatch.setattr(compiler,'validate_terminal_custody',lambda **kw:pytest.fail('late terminal audit reached'))
+    with pytest.raises(ValueError,match='E0|runtime'):run()
+    assert not (tmp/'output').exists()

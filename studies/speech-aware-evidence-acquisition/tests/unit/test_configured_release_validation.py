@@ -151,3 +151,40 @@ def test_bridge_torn_checkpoint_and_missing_review_are_refused(render_config, tm
     evidence_file.unlink()
     with pytest.raises(ValueError,match='missing'):m.execute(config)
     assert not (Path(cfg['data'])/'attempts').exists()
+
+
+@pytest.mark.parametrize('fault',[None,'plan_hash','protocol','e0','scoring'])
+def test_gate_probe_runs_real_gate_without_attempt_or_network(tmp_path,monkeypatch,fault):
+    import sys
+    from dataclasses import asdict,replace
+    sys.path.insert(0,str(Path(__file__).parents[1]/'contract'))
+    from gate_fixture import GateFixture
+    from speech_aware_evidence_acquisition.contracts import FrozenCoreGate,GateClosed
+    from speech_aware_evidence_acquisition.core.config import protocol_hash
+    fixture=GateFixture(tmp_path/'fixture');gate=fixture.gate()
+    repo=fixture.source_root;fragments={}
+    for kind,doc in [('model',{'model_lock_key':gate.expected_model_lock_key}),('dataset',{}),('baseline',{'arm':'bare-core'}),('experiment',{})]:
+        target=write(repo/'configs'/kind/'probe.json',doc);fragments[kind]={'name':'probe','sha256':pin(target)['sha256']}
+    cfg=compose(repo,**{k:'probe' for k in fragments},data_root=fixture.data_root)
+    plan=fixture.plan(protocol_hash=protocol_hash(cfg.config_hash,'bare-core','a'*64))
+    if fault=='protocol':plan=replace(plan,protocol_hash='c'*64)
+    plan_path=write(tmp_path/'plan.json',{'execution_plan':asdict(plan),'composed_config_hash':cfg.config_hash})
+    doc={'schema':m.SCHEMA,'mode':'gate','repo':str(repo),'data':str(fixture.data_root),
+         'fragments':fragments,'config_sha256':cfg.config_hash,'plan':pin(plan_path),'runtime_root':str(fixture.runtime_root)}
+    seen=[]
+    def factory(*args,**kwargs):
+        seen.append(kwargs);return gate
+    monkeypatch.setattr(FrozenCoreGate,'for_study_repo',factory)
+    monkeypatch.setattr(socket.socket,'connect',lambda *a:pytest.fail('gate opened network'))
+    if fault=='plan_hash':plan_path.write_text('{}')
+    if fault=='e0':gate.e0_receipt.unlink()
+    if fault=='scoring':(repo/fixture.SCORING_REL).write_text('altered')
+    config=write(tmp_path/'gate-config.json',doc)
+    if fault is None:
+        result=m.execute(config)
+        assert result['ok'] and result['new_model_calls']==result['fit_calls']==0
+        assert result['lock_sha256']==pin(fixture.lock_path)['sha256'] and seen[0]['transport']=='llama-server'
+    else:
+        with pytest.raises((ValueError,GateClosed)):m.execute(config)
+    assert not (fixture.data_root/'attempts').exists()
+    assert not (fixture.data_root/'contact-journals').exists()

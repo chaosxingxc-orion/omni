@@ -238,6 +238,39 @@ def validate_preparation_inputs(assets, fragments, data):
     return count
 
 
+def validate_gate_inputs(assets, fragments):
+    """Require the entire frozen gate input closure before publishing a candidate."""
+    from speech_aware_evidence_acquisition.contracts import FrozenCoreGate, E0_RECEIPT_SCHEMA, STUDY_SLUG
+    from speech_aware_evidence_acquisition.core import config
+    name = 'docs/receipts/e0-closure.json'
+    require(name in assets, 'pinned E0 closure receipt required')
+    e0 = strict_json(assets[name])
+    require(set(e0) == {'schema','study','deliverables'} and e0['schema'] == E0_RECEIPT_SCHEMA
+        and e0['study'] == STUDY_SLUG and set(e0['deliverables']) == set(FrozenCoreGate.E0_DELIVERABLES),
+        'exact E0 closure required')
+    for key, entry in e0['deliverables'].items():
+        require(set(entry) == {'artifact','sha256','status'} and entry['status'] == 'CLOSED',
+            'closed E0 deliverable required: ' + key)
+        relative = entry['artifact']
+        require(isinstance(relative,str) and relative and not Path(relative).is_absolute()
+            and '..' not in Path(relative).parts and '\\' not in relative, 'confined E0 artifact required')
+        artifact = logical('docs/receipts/' + relative)
+        require(artifact in assets and digest(assets[artifact]) == entry['sha256'],
+            'E0 artifact absent or changed: ' + artifact)
+    values = {}
+    for kind in ('model','dataset','baseline','experiment'):
+        values.update(strict_json(assets['configs/' + kind + '/' + fragments[kind] + '.json']))
+    receipt = 'docs/' + config.runtime_receipt_relpath(values)
+    require(receipt in assets, 'pinned runtime receipt required: ' + receipt)
+    for path_fn, hash_fn in ((config.d1_media_supplement_relpath,config.d1_media_supplement_sha256),
+                            (config.d1_evidence_supplement_relpath,config.d1_evidence_supplement_sha256)):
+        relative = path_fn(values)
+        if relative is not None:
+            name = 'docs/' + relative
+            require(name in assets and digest(assets[name]) == hash_fn(values),
+                'D1 supplement absent or changed: ' + name)
+
+
 def finalize(cfg, assets, candidate, plan, repo, data, out):
     # Release images omit operational ledgers. Admission needs the original
     # exposure rows, so they must travel with the pinned experiment assets.
@@ -247,6 +280,7 @@ def finalize(cfg, assets, candidate, plan, repo, data, out):
     require(isinstance(authority, str) and logical(authority) in assets,
             'pinned predecessor authority document required for successor admission')
     validate_preparation_inputs(assets, cfg['fragments'], data)
+    validate_gate_inputs(assets, cfg['fragments'])
     terminal = cfg['terminal']
     require(isinstance(terminal, dict) and set(terminal) == {
         'evidence', 'resume_from', 'bridge', 'registration_relpath', 'lock'},

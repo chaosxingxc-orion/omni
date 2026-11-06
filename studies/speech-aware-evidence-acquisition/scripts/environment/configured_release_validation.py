@@ -144,6 +144,38 @@ def _bridge(doc):
             'scope': 'offline bridge precheck only; no terminal ledger verification or authorization'}
 
 
+def _gate(doc):
+    """Run the production model-touch authorization checks without any contact."""
+    from speech_aware_evidence_acquisition.contracts import ExecutionPlan, FrozenCoreGate
+    from speech_aware_evidence_acquisition.core import config
+    repo, data, names, cfg = _composition(doc)
+    document = json.loads(_pin(doc['plan']))
+    if document.get('composed_config_hash') != cfg.config_hash:
+        raise ValueError('gate plan composed config differs')
+    values = dict(document['execution_plan'])
+    if 'owner_allowance' in document:
+        values['owner_allowance'] = document['owner_allowance']
+    plan = ExecutionPlan(**values)
+    plan.validate(source_root=repo)
+    if config.protocol_hash(cfg.config_hash, cfg.values['arm'], plan.split_identity_hash) != plan.protocol_hash:
+        raise ValueError('gate plan protocol differs')
+    model_root = config.model_materialization_root(cfg.values)
+    gate = FrozenCoreGate.for_study_repo(repo, data, _root(doc['runtime_root']),
+        runtime_receipt_relpath=config.runtime_receipt_relpath(cfg.values),
+        expected_model_lock_key=config.model_lock_key(cfg.values),
+        transport=config.runtime_transport(cfg.values),
+        model_root=Path(model_root) if model_root is not None else None,
+        d1_media_supplement_relpath=config.d1_media_supplement_relpath(cfg.values),
+        d1_media_supplement_sha256=config.d1_media_supplement_sha256(cfg.values),
+        d1_evidence_supplement_relpath=config.d1_evidence_supplement_relpath(cfg.values),
+        d1_evidence_supplement_sha256=config.d1_evidence_supplement_sha256(cfg.values))
+    diagnostics = {}
+    lock = gate.assert_model_touch_allowed(plan, arm=cfg.values['arm'], diagnostics=diagnostics)
+    return {'ok': True, 'run_id': plan.run_id, 'attempt_id': plan.attempt_id,
+        'config_sha256': cfg.config_hash, 'lock_sha256': lock, 'diagnostics': diagnostics,
+        'scope': 'production frozen-core gate only; no attempt reservation, model/FIT contact or full flight preflight'}
+
+
 def execute(path):
     raw = Path(path).read_bytes()
     doc = json.loads(raw)
@@ -151,10 +183,10 @@ def execute(path):
     if not isinstance(doc, dict) or doc.get('schema') != SCHEMA:
         raise ValueError('invalid validation schema')
     mode = doc.get('mode')
-    fields = {'render': {'session', 'requests'}, 'bridge-precheck': {'bridge', 'checkpoint', 'run_id', 'predecessor_attempt_id', 'successor_attempt_id'}}
+    fields = {'render': {'session', 'requests'}, 'bridge-precheck': {'bridge', 'checkpoint', 'run_id', 'predecessor_attempt_id', 'successor_attempt_id'}, 'gate': {'plan', 'runtime_root'}}
     if mode not in fields or set(doc) != common | fields[mode]:
         raise ValueError('exact validation mode and fields required')
-    result = (_render if mode == 'render' else _bridge)(doc)
+    result = {'render': _render, 'bridge-precheck': _bridge, 'gate': _gate}[mode](doc)
     return {'schema': SCHEMA, 'mode': mode, 'input_sha256': hashlib.sha256(raw).hexdigest(),
             'new_model_calls': 0, 'fit_calls': 0, 'teacher_calls': 0, 'tokenizer_calls': 0, **result}
 
