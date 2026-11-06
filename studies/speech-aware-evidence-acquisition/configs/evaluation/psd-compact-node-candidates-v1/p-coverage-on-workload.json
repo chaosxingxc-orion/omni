@@ -10,8 +10,8 @@
   "node_arm": "enhanced-p-slot-decision",
   "perception_policy": {
     "instruction_template": {
-      "relpath": "configs/probes/slurp_psd_perception_compact_v1.txt",
-      "sha256": "838b5592805acd4451f9ab3ffc140888de6534bab85752ad1d1663ec84ba316c"
+      "relpath": "configs/probes/slurp_psd_perception_format_compact_v1.txt",
+      "sha256": "b39cf03d82d56ad098ced5a3f8e90768680d2cfa2c828bdb0c25cb3053ebac12"
     },
     "thinking": {
       "answer_reserve_tokens": 4096,

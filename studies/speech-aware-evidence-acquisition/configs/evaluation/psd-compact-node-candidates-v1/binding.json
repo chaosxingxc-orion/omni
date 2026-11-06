@@ -5,7 +5,7 @@
     "path": "/var/tmp/omni-psd-rails-preparation-v1/complete-coverage-on-workload-v1.json",
     "sha256": "1c502d1d8d3db034f6dbf1bbde02630d95ae654d14a220551f08891f95c4971c"
   },
-  "p_template_provenance": "existing compact candidate sha256 838b5592805acd4451f9ab3ffc140888de6534bab85752ad1d1663ec84ba316c; includes prior reference-A source guidance",
+  "p_template_provenance": "exact common-parent P template plus compact-format paragraph reused from existing 838b5592805acd4451f9ab3ffc140888de6534bab85752ad1d1663ec84ba316c; no reference-A source guidance",
   "candidates": [
     {
       "node": "p",
