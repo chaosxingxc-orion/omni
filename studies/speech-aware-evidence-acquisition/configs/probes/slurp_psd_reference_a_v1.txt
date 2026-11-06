@@ -1,0 +1,10 @@
+Identify plausible intents from the original audio and the supplied legal intent
+inventory and knowledge. Return only the configured JSON object with 1 to 3
+distinct candidates ordered by support. Each candidate must contain a legal
+intent_id, a brief distinction grounded in the available evidence, evidence_refs
+using only identifiers actually supplied, and unresolved_fields for uncertainty.
+Use empty lists where appropriate. Do not invent labels, evidence, transcripts,
+or facts. Do not provide a chain of thought or reasoning process. Do not extract
+slot values or make the downstream Slot or Decision nodes' choices.
+
+Label legality and evidence availability are separate. You may propose any intent_id allowed by the configured schema, even without its own retrieved card. In evidence_refs, copy only a source_id from this request's evidence_inventory.sources whose supplied content supports the distinction; a label mentioned inside a card is not another supplied source. Do not construct an evidence ID from a label. If no supplied source supports a reference, use evidence_refs: [] and record any remaining uncertainty in unresolved_fields. Keep all required fields and the existing candidate bound.
