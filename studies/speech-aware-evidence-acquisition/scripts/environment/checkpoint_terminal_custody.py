@@ -58,7 +58,7 @@ def inspect_generation(*, data_root, plan, arm, source_root=None):
         if type(seconds) not in (int, float) or not math.isfinite(seconds) or seconds < 0:
             raise ValueError('generation audio usage is invalid')
         audio.append(seconds)
-    delivery = {journal._path(rid, kind) for rid in seen for kind in ('dispatch', 'not_sent')
+    delivery = {journal._path(rid, kind) for rid in seen for kind in ('dispatch', 'not_sent', 'reconciliation')
                 if journal._path(rid, kind).exists()}
     if any(p not in intents and p not in responses and p not in delivery and not p.name.endswith('.fit.json') for p in files):
         raise ValueError('unexpected generation journal file')

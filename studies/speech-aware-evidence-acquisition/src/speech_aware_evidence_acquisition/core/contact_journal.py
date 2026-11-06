@@ -120,7 +120,8 @@ class ContactJournal:
         self._validate_intent(intent, request_id)
         if intent['request_sha256'] != request_sha256:
             raise ContactJournalError('delivery request differs from intent')
-        if (self._path(request_id, 'response').exists()
+        if (self._path(request_id, 'reconciliation').exists()
+                or self._path(request_id, 'response').exists()
                 or self._path(request_id, 'not_sent' if kind == 'dispatch' else 'dispatch').exists()):
             raise ContactJournalError('contradictory delivery boundary')
         if kind == 'not_sent' and (not isinstance(error_type, str) or not error_type):
@@ -136,6 +137,13 @@ class ContactJournal:
 
     def _delivery_state(self, request_id, intent_blob, intent):
         found = []
+        reconciliation = self._path(request_id, 'reconciliation')
+        if reconciliation.exists():
+            if any(self._path(request_id, k).exists() for k in ('dispatch', 'not_sent', 'response')):
+                raise ContactJournalError('reconciliation conflicts with live custody')
+            from .contact_reconciliation import validate
+            validate(json.loads(reconciliation.read_bytes()), intent_blob=intent_blob, identity=self.identity)
+            return 'not_sent'
         for kind in ('dispatch', 'not_sent'):
             path = self._path(request_id, kind)
             if not path.exists():
@@ -166,7 +174,7 @@ class ContactJournal:
         """Read a contact without mutating it; UNKNOWN can only be reconciled."""
         intent_path, response_path = self._path(request_id, 'intent'), self._path(request_id, 'response')
         if not intent_path.exists():
-            if any(self._path(request_id, kind).exists() for kind in ('response', 'dispatch', 'not_sent')):
+            if any(self._path(request_id, kind).exists() for kind in ('response', 'dispatch', 'not_sent', 'reconciliation')):
                 raise ContactJournalError('orphan custody has no intent')
             return {'state': 'absent', 'request_id': request_id}
         try:
@@ -279,7 +287,7 @@ class NativeContactReplay:
                 raise ContactJournalError('duplicate logical request in source; reconcile before replay')
             variants[comparison] = rid
             self._records[rid] = observed
-            for kind in ('intent', 'response', 'dispatch', 'not_sent'):
+            for kind in ('intent', 'response', 'dispatch', 'not_sent', 'reconciliation'):
                 p = self.source._path(rid, kind)
                 self._pins[p] = digest(p.read_bytes()) if p.exists() else None
             if prepared_text:
@@ -294,11 +302,17 @@ class NativeContactReplay:
         if (type(actual['calls']) is not int or type(actual['audio_seconds']) not in (int, float)
                 or actual['calls'] != len(intents) or not math.isclose(actual['audio_seconds'], math.fsum(audio), rel_tol=1e-12, abs_tol=1e-9)):
             raise ContactJournalError('source attempt usage and contact journal differ; reconcile before recovery')
-        for kind in ('dispatch', 'not_sent'):
+        for kind in ('dispatch', 'not_sent', 'reconciliation'):
             expected_delivery = {self.source._path(rid, kind) for rid in self._records
                                  if self._pins[self.source._path(rid, kind)] is not None}
             if set(self.source.root.glob('*.' + kind + '.json')) != expected_delivery:
                 raise ContactJournalError('orphan delivery boundary')
+        self._reconciliation_pins = {}
+        for rid in self._records:
+            path = self.source._path(rid, 'reconciliation')
+            if path.exists():
+                for pin in json.loads(path.read_bytes())['evidence'].values():
+                    self._reconciliation_pins[Path(pin['path'])] = pin['sha256']
         self.scientific_source_plan = source_plan
         self._empty_ancestry = None
         self._empty_ancestor = None
@@ -357,7 +371,7 @@ class NativeContactReplay:
             plan['owner_allowance'] = asdict(self.source_plan.owner_allowance)
         delivery = {p.name: sha for p, sha in self._pins.items()
                     if p.parent == self.source.root and sha is not None
-                    and p.name.endswith(('.dispatch.json', '.not_sent.json'))}
+                    and p.name.endswith(('.dispatch.json', '.not_sent.json', '.reconciliation.json'))}
         return {'schema': 'saea-native-replay-source-v1',
             'plan': plan, 'arm': self.source.identity['arm'],
             'attempt_path': str(self._attempt_path.resolve()),
@@ -398,6 +412,9 @@ class NativeContactReplay:
             current = digest(path.read_bytes()) if path.exists() else None
             if current != expected:
                 raise ContactJournalError('source custody changed after recovery inspection')
+        for path, sha in self._reconciliation_pins.items():
+            if digest(path.read_bytes()) != sha:
+                raise ContactJournalError('reconciliation evidence changed after inspection')
         self._assert_contact_inventory()
         if any(record['state'] not in ('observed', 'not_sent') for record in self._records.values()):
             raise ContactJournalError('contact outcome unknown; reconcile before dispatching any work')
@@ -411,7 +428,7 @@ class NativeContactReplay:
         if (set(self.source.root.glob('*.intent.json')) != intents
                 or set(self.source.root.glob('*.response.json')) != responses):
             raise ContactJournalError('source contact inventory changed after recovery inspection')
-        for kind in ('dispatch', 'not_sent'):
+        for kind in ('dispatch', 'not_sent', 'reconciliation'):
             expected = {self.source._path(rid, kind) for rid in self._records
                         if self._pins[self.source._path(rid, kind)] is not None}
             if set(self.source.root.glob('*.' + kind + '.json')) != expected:
@@ -428,11 +445,15 @@ class NativeContactReplay:
         if digest(self._attempt_path.read_bytes()) != self._attempt_sha256:
             raise ContactJournalError('source attempt changed after recovery inspection')
         self._assert_empty_ancestry()
-        for kind in ('intent', 'response', 'dispatch', 'not_sent'):
+        for kind in ('intent', 'response', 'dispatch', 'not_sent', 'reconciliation'):
             p = self.source._path(rid, kind)
             current = digest(p.read_bytes()) if p.exists() else None
             if current != self._pins[p]:
                 raise ContactJournalError('source contact changed after recovery inspection')
+
+        if self.source._path(rid, 'reconciliation').exists():
+            # Recompute retrospective evidence at the rare fresh-send boundary.
+            self.source.inspect(rid)
 
     def _assert_empty_ancestry(self):
         # Keep hot-path work proportional to ancestry, not predecessor contacts.
