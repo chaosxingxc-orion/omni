@@ -57,7 +57,7 @@
         "baseline-off",
         "baseline-on"
       ],
-      "status": "both_scores_verified_paired_execution_assigned"
+      "status": "paired_completed_coverage_and_alignment_still_pending"
     },
     {
       "id": "fold-b-confirmation",
@@ -483,7 +483,7 @@
       "depends_on": [
         "coverage-ready"
       ],
-      "status": "successor_container_running_first_request_pending",
+      "status": "running_real_dispatch_verified",
       "priority": 1,
       "rows": 1080,
       "runtime_predecessor": "E5 OFF generation; CPU score not required",
@@ -579,7 +579,7 @@
       "depends_on": [
         "complete-coverage-ready"
       ],
-      "status": "auto_binder_live_waiting_real_coverage_container",
+      "status": "bound_queue_armed_waiting_reference_generation_release",
       "rows": 1080,
       "priority": 1
     },
@@ -632,7 +632,7 @@
       "depends_on": [
         "off-semantic-gap-analysis"
       ],
-      "status": "corrected_configs_accepted_merged_cpu_preparation_followup_scheduled",
+      "status": "accepted_merged_cpu_production_preparation_running",
       "scope": "at most two evidence-backed P/Slot/Decision prompt candidates; fixed KB and normalizer; no model calls"
     }
   ],
