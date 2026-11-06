@@ -18,10 +18,13 @@ class NodeWorkload(PairWorkload):
     LABEL='Fixed development native intent Slot Decision ablation'
     def __init__(self,config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material','node_arm'}
-        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
+        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','pipeline'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
             raise ValueError('exact native node workload required')
         arm=config['node_arm']
-        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy')})
+        pipeline=config.get('pipeline')
+        if pipeline is not None and (arm != 'enhanced-p-slot-decision' or pipeline != {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}):
+            raise ValueError('explicit supported v2 SDK pipeline required')
+        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','pipeline')})
         if not config.get('population') and (len(config['sample_ids'])!=80 or config['sample_ids']!=sorted(config['sample_ids'])):
             raise ValueError('historical stable development80 required')
         if config.get('population'):
@@ -92,11 +95,12 @@ class NodeWorkload(PairWorkload):
         base['thinking_policy']={r:copy.deepcopy(observation.THINKING_ARMS['baseline']) for r in ('perception','solver')}
         arm=self.config['node_arm']
         if arm!='old-p-joint-s':
-            expanded=split_graph(base)
+            pipeline=self.config.get('pipeline')
+            expanded=split_graph(base, version='v2', node_rails=True) if pipeline else split_graph(base)
             if arm=='enhanced-p-slot-decision':
                 base=expanded
                 if self.config.get('population'):
-                    base['native_episode']['intent_slot_pipeline'].update(evidence_policy='unique_source_alias_v1',duplicate_candidate_policy='identical_v1')
+                    base['native_episode']['intent_slot_pipeline'].update(evidence_policy='unique_source_alias_v1',duplicate_candidate_policy='group_v2' if pipeline else 'identical_v1')
                 base.pop('carrier_lock_key',None)  # Dataset owns the carrier in composed configuration.
                 base['thinking_policy']['slot']=copy.deepcopy(observation.THINKING_ARMS['baseline'])
             else:

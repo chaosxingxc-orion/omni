@@ -64,3 +64,16 @@ def test_node_width_ceiling_is_128():
     c['execution']['admitted_level']=129
     with pytest.raises(ValueError,match='bounded client width'):
         NodeWorkload(c)
+
+
+def test_v2_sdk_rails_selection_is_explicit_and_restricted():
+    c=config();c['node_arm']=ARMS[2]
+    c['pipeline']={'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
+    assert NodeWorkload(c).config['pipeline']==c['pipeline']
+    for bad in ({'protocol_version':'v2','node_rails':'sdk-handoff-v1'},
+                {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'off'}):
+        c['pipeline']=bad
+        with pytest.raises(ValueError,match='explicit supported'):NodeWorkload(c)
+    c['pipeline']={'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
+    c['node_arm']=ARMS[1]
+    with pytest.raises(ValueError,match='explicit supported'):NodeWorkload(c)
