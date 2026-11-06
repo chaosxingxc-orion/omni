@@ -144,7 +144,12 @@ def test_two_real_sdk_episodes_supply_group_reader(tmp_path, monkeypatch):
     assert len(rolls)==2 and rolls[0]['reward']==rolls[1]['reward']==1
     assert result['provenance']['generation_calls_used']==6 and result['provenance']['fit_tokenizer_calls_used']==6
     from speech_aware_evidence_acquisition.rails.tfgrpo_external_proposals import relative_evidence
-    relative=relative_evidence(result['tfgrpo_evidence']['groups'])
+    from speech_aware_evidence_acquisition.rails.external_exploration import expand_evidence
+    groups=copy.deepcopy(result['tfgrpo_evidence']['groups'])
+    for group in groups:
+        packed=group['evidence']; table=packed.get('development_evidence_dictionary',{})
+        group['evidence']=expand_evidence({k:v for k,v in packed.items() if not k.startswith('development_evidence_')},table)
+    relative=relative_evidence(groups)
     assert [x['sample_weight'] for x in relative['groups'][0]['rollouts']]==[0.5,0.5]
     sources[2].composed.values['knowledge_stores']={'changed':'yes'}
     with pytest.raises(ValueError,match='mixed model'):reader.read_groups(doc,bindings,**kwargs)
