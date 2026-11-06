@@ -19,7 +19,7 @@
     },
     "material": {
       "relpath": "configs/evaluation/psd-construction-campaign-v1/construction-fold-a-policy-material.json",
-      "sha256": "441cc1ebc7994a6a8a98249acfa7efb2f6548bd0befe9b5da05577773d2fd747"
+      "sha256": "91a31eb356631448819b4cdf030bc8a0638a940b00ea508d699ddc311cf7bee6"
     },
     "name": "template",
     "node_arm": "enhanced-p-slot-decision",
@@ -48,7 +48,7 @@
       },
       "source_baseline": {
         "relpath": "configs/evaluation/psd-construction-campaign-v1/construction-fold-a-policy-source.json",
-        "sha256": "2de7ff82247078a5fdb9944c2d91ef1d108dbcc8c95db17d0d67e7a88afbd505"
+        "sha256": "137b53f309b720893981aeff4842ebb6c49ef0ff4d2023e81d8c9415e7814329"
       }
     },
     "run_id": "TEMPLATE",

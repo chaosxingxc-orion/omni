@@ -6,7 +6,7 @@
   "schema": "saea-intent-slot-fold-material-v1",
   "source_baseline": {
     "relpath": "configs/evaluation/psd-construction-campaign-v1/construction-fold-a-policy-source.json",
-    "sha256": "2de7ff82247078a5fdb9944c2d91ef1d108dbcc8c95db17d0d67e7a88afbd505"
+    "sha256": "137b53f309b720893981aeff4842ebb6c49ef0ff4d2023e81d8c9415e7814329"
   },
   "source_roster": {
     "relpath": "docs/receipts/rosters/slurp-stage3-construction-r01c.json",

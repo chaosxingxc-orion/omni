@@ -330,29 +330,24 @@
       "sha256": "48d0f34cf536ebf9806d55b5dcced1b607080bec3c68ca7dea27cdb01478cc72"
     },
     {
-      "relpath": "preparation-runs/SAEA-SLURP-FOLD-A-SPEECH-QUERY-CPU-ISOLATED-V1/encode-v1/receipt.json",
+      "relpath": "preparation-runs/SAEA-SLURP-R01C-SPEECH-QUERY-CPU-ISOLATED-V1/encode-v1/receipt.json",
       "root": "data",
-      "sha256": "3b1f2b2c7904353ab4c2641c817988cc1ae9b834e0bdff80cd7a6b471b2c5008"
+      "sha256": "5f241a1c6a5da573c43ba324d3125982bdd1bb578780ce53064ddfcb2b5ae746"
     },
     {
-      "relpath": "work/codex/fold-a-cpu-adopt-v1/complete.json",
+      "relpath": "prepared/SAEA-SLURP-STAGE3-CONSTRUCTION-R01C-ALIAS-NPU-PORT-V1/query-dimension-alias.json",
       "root": "data",
-      "sha256": "38a7b6b032ae4c6403d37677f8d1c9e27929da2b5629c6708d57d19a784bf7e4"
+      "sha256": "38cc25d72863034612daad2c6019a549736f34f4e8e9355940bf275b529a436b"
     },
     {
-      "relpath": "prepared/SAEA-SLURP-INTENT-BOUNDARY-TRAIN-FOLD-A-ALIAS-NPU-PORT-V1/query-dimension-alias.json",
+      "relpath": "vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-content-v1.provenance.json",
       "root": "data",
-      "sha256": "b3275de18146ae5ada15e1abff0091995280ca4537ae5fc59c108eab7cab7790"
+      "sha256": "cf5e117a68af966268102e1d216b0f3ffdc70f01398e2e70464b4d34a6085aff"
     },
     {
-      "relpath": "vectors/slurp-stage3-filler-fold-a-npu-port-v1/query-vectors-speech-content-v1.provenance.json",
-      "root": "data",
-      "sha256": "f22dc4aef1b3306ec71a58d73b9f88f34f809af641ec9fdb499ec70c18c32647"
-    },
-    {
-      "relpath": "docs/receipts/rosters/slurp-evo-fold-a-v2.json",
+      "relpath": "docs/receipts/rosters/slurp-stage3-construction-r01c.json",
       "root": "repository",
-      "sha256": "1fe7908c31396774d7535fdf37bd791762215c324999d66ed7beb9e7b2f9033d"
+      "sha256": "e8abc65ba4626cccb4aae9d2eb1bd73f077a6e9a407b3dba9c18bbe4c03eeddd"
     }
   ],
   "scorers": [
