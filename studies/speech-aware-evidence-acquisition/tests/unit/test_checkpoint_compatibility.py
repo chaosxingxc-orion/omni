@@ -420,3 +420,18 @@ def test_knowledge_store_uses_loader_not_snapshot_byte_hash(monkeypatch,tmp_path
     assert len(calls)==1
     monkeypatch.setattr(knowledge,'load_knowledge_store_binding',lambda v,*,data_root: (_ for _ in ()).throw(ValueError('invalid snapshot')))
     with pytest.raises(ValueError,match='invalid snapshot'): _verify_data_closure(tmp_path,config)
+
+
+@pytest.mark.parametrize('stages,accepted', [(['check', 'seal-only'], True),
+    (['check', 'seal-only', 'worker'], False), (['seal-only'], False)])
+def test_bridge_only_accepts_exact_seal_only_stage_narrowing(transition, stages, accepted):
+    repo, _, _, _, _, verify = transition
+    path = repo/'configs/experiment/e.json'
+    doc = json.loads(path.read_bytes())
+    doc['cells'][0]['allowed_execution_stages'] = stages
+    write(path, doc)
+    if accepted:
+        verify()
+    else:
+        with pytest.raises(CheckpointCompatibilityError, match='experiment semantics'):
+            verify()

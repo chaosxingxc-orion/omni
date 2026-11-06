@@ -53,3 +53,9 @@ Prepare 同时接受单桥与 multi bridge；multi `bridge_paths` 以 ancestor a
 ## 验证边界
 
 `tests/test_repeated_successor_lineage.py` 包含 package prepare/build → compiler execute/finalize → registered_workload.validate_workload → PairWorkload.validate → validate_checkpoint_successor 的两跳测试；业务 validator 均执行真实函数体。fixture 替换 producer `old_source`、terminal custody/inventory、gate、derive、prepared output/native custody 判定和 runtime 构建；它证明接口组合及业务验证路径，不证明真实 producer 认证或 1080 条运行成功。真实挂载输入测试 `test_successor_real_integration.py` 的 skip 只表示缺少挂载，不能作为固定镜像执行证据。
+
+### 显式封存后继
+
+编译器配置可选 `execution_mode`：省略或 `generation` 保持原 cell 阶段；`seal-only` 将后继 cell 的允许阶段严格收窄为 `["check", "seal-only"]`。package prepare/build 保留并验证该字段，未知值拒绝。新 attempt、FIT 计划身份仍须独立，FIT 计划及预算用于合法性校验，不代表执行 FIT。原注册、原计划、全部 checkpoint 声明和 bridge 保持固定并参与现有来源校验。
+
+只有执行 `core.flight.cli seal-only` 且 native preflight 确认所有 roster 行均由前驱完整保留时才进入零调用封存与评分；缺行或部分行均拒绝。编译和外部准入生成的是 held 资产，均不证明实际行已全保留，也不启动模型。bridge 只认可精确的封存阶段收窄，其他阶段变更仍拒绝；协议和计划哈希因此须由编译器重算并经准入校验。

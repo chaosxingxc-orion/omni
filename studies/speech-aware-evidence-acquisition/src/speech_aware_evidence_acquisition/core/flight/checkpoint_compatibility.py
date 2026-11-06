@@ -332,6 +332,12 @@ def verify_config_delta(old, new, *, data, run_id, predecessor_attempt_id,
     # Readiness remains independently checked by the ordinary campaign gates;
     # it cannot alter requests or the full roster and may pin fresh evidence.
     new_cell['readiness'] = old_cell['readiness']
+    # A seal-only successor narrows execution custody; it changes no request.
+    if new_cell.get('allowed_execution_stages') == ['check', 'seal-only']:
+        if 'allowed_execution_stages' in old_cell:
+            new_cell['allowed_execution_stages'] = old_cell['allowed_execution_stages']
+        else:
+            new_cell.pop('allowed_execution_stages')
     require(old_exp == new_exp, 'experiment semantics changed')
 
 # Offline release migration primitives. These functions do not settle attempts,

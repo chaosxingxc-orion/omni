@@ -349,7 +349,7 @@ def finalize(cfg, assets, candidate, plan, repo, data, out):
         dispatch=cfg['dispatch'], width=cfg['width'], supply=cfg['supply']['new'],
         declarations=terminal['resume_from'], bridge=terminal['bridge'],
         registration_relpath=registration, registration_sha256=digest(original_blob), data=data,
-        predecessor_plan=cfg['plan'])
+        predecessor_plan=cfg['plan'], execution_mode=validate_execution_mode(cfg))
     files = dict(assets)
     files[registration] = original_blob
     files[cfg['candidate']['relpath']] = encode(successor)
@@ -453,7 +453,7 @@ def finalize(cfg, assets, candidate, plan, repo, data, out):
 
 def build_successor_documents(*, original, plan, fragments, target, dispatch, width,
                               supply, declarations, bridge, registration_relpath, registration_sha256, data,
-                              predecessor_plan=None):
+                              predecessor_plan=None, execution_mode='generation'):
     """Derive held successor documents from original registration and four fragments.
 
     This pure compiler does not itself certify any terminal state or authorize use.
@@ -465,6 +465,7 @@ def build_successor_documents(*, original, plan, fragments, target, dispatch, wi
         CheckpointCompatibility, validate_bridge_declarations)
     from speech_aware_evidence_acquisition.core.flight.resume import resume_declarations_from_document
     from speech_aware_evidence_acquisition.rails.dispatch_slot_fill import parse_dispatch_slot_fill
+    validate_execution_mode({'execution_mode': execution_mode})
     require(set(fragments) == {'model', 'dataset', 'baseline', 'experiment'}, 'four fragments required')
     require(type(width) is int and 1 <= width <= 128, 'invalid width')
     parse_dispatch_slot_fill({'dispatch': dispatch})
@@ -494,6 +495,8 @@ def build_successor_documents(*, original, plan, fragments, target, dispatch, wi
     else:
         baseline['dispatch'] = copy.deepcopy(dispatch)
     cell['attempt_id'] = target['attempt_id']
+    if execution_mode == 'seal-only':
+        cell['allowed_execution_stages'] = ['check', 'seal-only']
     cell['resume_from'] = copy.deepcopy(declarations)
     cell['checkpoint_compatibility'] = copy.deepcopy(bridge)
     cell['readiness'] = {'state':'held', 'requirements':[], 'reason':'checkpoint successor requires native admission'}
@@ -541,12 +544,19 @@ def execute(config_path):
                 os.environ[key] = value
 
 
+def validate_execution_mode(cfg):
+    mode = cfg.get('execution_mode', 'generation')
+    require(mode in ('generation', 'seal-only'), 'invalid successor execution mode')
+    return mode
+
+
 def _execute(cfg):
     fields = {'schema', 'mode', 'repo', 'data', 'output', 'assets_manifest', 'candidate',
               'plan', 'fragments', 'target', 'dispatch', 'width', 'supply'}
-    require(isinstance(cfg, dict) and set(cfg) - {'lineage_assets_manifest'} == (fields | ({'terminal', 'admission'} if cfg.get('mode') == 'finalize' else set())) and
+    require(isinstance(cfg, dict) and set(cfg) - {'lineage_assets_manifest', 'execution_mode'} == (fields | ({'terminal', 'admission'} if cfg.get('mode') == 'finalize' else set())) and
             cfg['schema'] == 'saea-checkpoint-successor-compiler-v1', 'exact compiler schema required')
     require(cfg['mode'] in ('prepare', 'finalize'), 'invalid compiler mode')
+    validate_execution_mode(cfg)
     repo, data, out = (Path(cfg[k]) for k in ('repo', 'data', 'output'))
     require(all(p.is_absolute() for p in (repo, data, out)) and repo.is_dir() and data.is_dir(), 'absolute existing roots required')
     require(out.parent.is_dir() and not out.parent.is_symlink() and not os.path.lexists(out), 'fresh output required')

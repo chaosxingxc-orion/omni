@@ -313,6 +313,22 @@ def test_derive_real_campaign_and_identity(tmp_path):
     assert base['native_contact_fit']['run_id'] == 'fit-new'
     assert successor['composed_config_hash'] != original['composed_config_hash']
     assert fragments['baseline']['native_contact_fit']['run_id'] == 'fit-old'
+    from speech_aware_evidence_acquisition.core.flight.campaign import CampaignError
+    assert 'allowed_execution_stages' not in exp['cells'][0]
+    _, sealed, sealed_candidate = compiler.build_successor_documents(**args, execution_mode='seal-only')
+    seal_cell = CampaignCell.from_document(sealed['cells'][0])
+    assert seal_cell.document['allowed_execution_stages'] == ['check', 'seal-only']
+    for mode in ('check', 'seal-only'):
+        seal_cell.assert_mode(mode)
+    for mode in ('worker', 'campaign', 'prepare-supply'):
+        with pytest.raises(CampaignError):
+            seal_cell.assert_mode(mode)
+    assert sealed_candidate['composed_config_hash'] != successor['composed_config_hash']
+    assert sealed['cells'][0]['resume_from'] == args['declarations']
+    assert sealed['cells'][0]['checkpoint_compatibility'] == bridge
+    assert 'allowed_execution_stages' not in fragments['experiment']['cells'][0]
+    with pytest.raises(ValueError, match='execution mode'):
+        compiler.build_successor_documents(**args, execution_mode='invalid')
     args['target']['fit_run_id'] = 'fit-old'
     with pytest.raises(ValueError, match='identity reused'):
         compiler.build_successor_documents(**args)
@@ -329,4 +345,20 @@ def test_gate_input_closure_refuses_before_terminal_audit(case,monkeypatch,fault
     cfg['assets_manifest']=write(Path(cfg['assets_manifest']['path']),manifest)
     monkeypatch.setattr(compiler,'validate_terminal_custody',lambda **kw:pytest.fail('late terminal audit reached'))
     with pytest.raises(ValueError,match='E0|runtime'):run()
+    assert not (tmp/'output').exists()
+
+
+def test_prepare_mode_schema_and_template(case):
+    cfg, run, tmp = case
+    cfg['execution_mode'] = 'seal-only'
+    run()
+    assert json.loads((tmp/'output/held-template.json').read_bytes())['config']['execution_mode'] == 'seal-only'
+
+
+@pytest.mark.parametrize('mode', ['other', None, 1])
+def test_invalid_execution_mode_refused(case, mode):
+    cfg, run, tmp = case
+    cfg['execution_mode'] = mode
+    with pytest.raises(ValueError, match='execution mode'):
+        run()
     assert not (tmp/'output').exists()

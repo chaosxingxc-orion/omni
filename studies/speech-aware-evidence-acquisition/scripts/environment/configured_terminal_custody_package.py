@@ -276,9 +276,10 @@ def validate_compiler_template(cfg):
 
     fields = {'schema', 'mode', 'repo', 'data', 'output', 'assets_manifest', 'candidate',
               'plan', 'fragments', 'target', 'dispatch', 'width', 'supply', 'terminal', 'admission'}
-    native.require(isinstance(cfg, dict) and set(cfg) - {'lineage_assets_manifest'} == fields and
+    native.require(isinstance(cfg, dict) and set(cfg) - {'lineage_assets_manifest', 'execution_mode'} == fields and
                    cfg['schema'] == 'saea-checkpoint-successor-compiler-v1' and
                    cfg['mode'] == 'finalize', 'exact compiler schema required')
+    native.validate_execution_mode(cfg)
     repo, data, out = (Path(cfg[k]) for k in ('repo', 'data', 'output'))
     native.require(all(p.is_absolute() for p in (repo, data, out)) and repo.is_dir() and data.is_dir(), 'absolute existing roots required')
     native.require(out.parent.is_dir() and not out.parent.is_symlink() and not os.path.lexists(out), 'fresh output required')

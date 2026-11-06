@@ -390,3 +390,39 @@ def test_compiler_prepare_preserves_relocated_closure(package_chain):
         assert (output/name).read_bytes() == Path(pin['path']).read_bytes()
     index = compiler.strict_json((output/'pin-index.json').read_bytes())
     assert index['source_lineage_manifest'] == cfg['lineage_assets_manifest']
+
+
+def test_seal_only_package_chain_and_registration_hashes(package_chain):
+    case = package_chain
+    template = Path(case['prepare']['compiler']['path'])
+    cfg = compiler.strict_json(template.read_bytes())
+    cfg['execution_mode'] = 'seal-only'
+    case['prepare']['compiler'] = case['put'](template, cfg)
+    result = case['build']()
+    final = compiler.strict_json(Path(result['compiler']['path']).read_bytes())
+    assert final['execution_mode'] == 'seal-only'
+    case['package'].validate_compiler_template(final)
+    compiler.execute(result['compiler']['path'])
+    out = case['tmp']/'compiled'
+    cell = compiler.strict_json((out/'configs/experiment/e.json').read_bytes())['cells'][0]
+    assert cell['allowed_execution_stages'] == ['check', 'seal-only']
+    candidate = compiler.strict_json((out/'docs/readiness/e/candidate.json').read_bytes())
+    assert compiler.digest((out/'docs/direct.json').read_bytes()) == candidate['immediate_predecessor_registration']['sha256']
+    admission = compiler.strict_json((out/'docs/readiness/e/external-successor-admission.json').read_bytes())
+    for pin in admission['plans'].values():
+        assert compiler.digest((out/pin['relpath']).read_bytes()) == pin['sha256']
+    from admit_real_engine_candidate import validate_successor_plans
+    experiment = compiler.strict_json((out/'configs/experiment/e.json').read_bytes())
+    with compiler.asset_environment(out/'assets.json'):
+        plans = validate_successor_plans(case['tmp'], candidate, experiment, admission['plans'])
+    assert plans['generation']['execution_plan']['attempt_id'] == candidate['attempt_id']
+    assert plans['fit']['execution_plan']['attempt_id'] == candidate['fit_attempt_id']
+    assert (out/'docs/exposure-ledger.md').read_bytes() == (case['tmp']/'docs/exposure-ledger.md').read_bytes()
+
+
+def test_package_template_rejects_invalid_execution_mode(package_chain):
+    case = package_chain
+    cfg = copy.deepcopy(case['cfg'])
+    cfg['execution_mode'] = 'worker'
+    with pytest.raises(ValueError, match='execution mode'):
+        case['package'].validate_compiler_template(cfg)
