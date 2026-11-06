@@ -43,14 +43,21 @@ def execute(path):
     s.require(values['--repo'] == producer['repo_path'] and values['--candidate'] == exp['candidate'] and values['--out'].startswith(str(logical/'work/codex')+'/'), 'producer binding differs')
     plan = s.read(s.pin(doc['source_plan']))
     from speech_aware_evidence_acquisition.contracts import ExecutionPlan
-    ep = ExecutionPlan(**plan['execution_plan']).validate(source_root=Path(producer['repo_path']))
+    source_root = s.mapped(producer,Path(producer['repo_path']))
+    s.require(source_root.is_dir(), 'mapped producer source root absent')
+    ep = ExecutionPlan(**plan['execution_plan']).validate(source_root=source_root)
     s.require((ep.run_id,ep.attempt_id) == (exp['run_id'],exp['attempt_id']) and plan.get('cell') == exp['candidate']
               and plan.get('expected_session_id') == exp['service_session'], 'registered plan differs')
     admission = s.launcher.validate_external_admission(producer['external_admission'],producer)
     manifest = s.read(Path(producer['external_admission']['workspace_manifest']))
-    bound_plan = s.mapped(producer,Path(producer['environment']['SAEA_EXPERIMENT_WORKSPACE'])/admission['binding']['generation'])
-    candidate = s.read(s.mapped(producer,Path(producer['environment']['SAEA_EXPERIMENT_WORKSPACE'])/admission['binding']['candidate']))
-    s.require(bound_plan == Path(doc['source_plan']['path']) and manifest['files'][admission['binding']['generation']] == doc['source_plan']['sha256']
+    bound_plan = s.mapped(producer,Path(producer['environment']['SAEA_EXPERIMENT_WORKSPACE'])/admission['binding']['generation'],writable=False)
+    candidate = s.read(s.mapped(producer,Path(producer['environment']['SAEA_EXPERIMENT_WORKSPACE'])/admission['binding']['candidate'],writable=False))
+    fit_plan = s.read(s.mapped(producer,Path(producer['environment']['SAEA_EXPERIMENT_WORKSPACE'])/admission['binding']['fit'],writable=False))
+    fit_ep = ExecutionPlan(**fit_plan['execution_plan']).validate(source_root=source_root)
+    s.require(admission['candidate']==exp['candidate'] and candidate.get('cell')==exp['candidate']
+              and (fit_ep.run_id,fit_ep.attempt_id)==(exp['fit_run_id'],exp['fit_attempt_id'])
+              and fit_plan.get('cell')==exp['candidate'] and fit_plan.get('expected_session_id')==exp['service_session']
+              and bound_plan == Path(doc['source_plan']['path']) and manifest['files'][admission['binding']['generation']] == doc['source_plan']['sha256']
               and all(candidate.get(k)==exp[k] for k in ('run_id','attempt_id','fit_run_id','fit_attempt_id'))
               and candidate.get('service_session')==exp['service_session'], 'admitted run and FIT binding differs')
     receipt = s.read(s.pin(doc['runtime_receipt']))
@@ -78,7 +85,12 @@ def execute(path):
             lease_path = locks/'flight.lock'; saved = out/'preserved-flight.lock.json'; audit = out/'audit.json'; done = out/'complete.json'
             if done.exists():
                 result=s.read(done); identity={'config_sha256':s.launcher.digest(path),'tool_sha256':s.launcher.digest(__file__)}
-                s.require(result.get('identity')==identity and s.launcher.digest(saved)==result['lease_sha256'] and s.launcher.digest(audit)==result['audit_sha256'] and not lease_path.exists(), 'completed settlement changed'); return result
+                prior=s.read(audit)
+                s.require(result.get('identity')==identity and prior.get('identity')==identity
+                          and prior.get('lease_sha256')==result.get('lease_sha256') and prior.get('terminal')==terminal
+                          and prior.get('guard')==gi and result.get('container_id')==terminal['container_id']
+                          and s.launcher.digest(saved)==result['lease_sha256'] and s.launcher.digest(audit)==result['audit_sha256'] and not lease_path.exists(), 'completed settlement changed'); return result
+            s.require(lease_path.exists() or audit.exists(), 'missing durable audit for detached preserved lease')
             source = lease_path if lease_path.exists() else saved
             s.require(source.is_file() and not source.is_symlink(), 'lease absent or redirected')
             blob=source.read_bytes(); lease=json.loads(blob)
