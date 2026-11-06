@@ -1,0 +1,37 @@
+{
+  "schema": "psd-length-main-integration-result-v1",
+  "tested_commit": "e18569ebb2f142d0f2ea3b3d0353f356bd730f1f",
+  "main_parent": "b3fa1eba2317e6b851c3d966181ece95540e44ce",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "test_log": [
+    "6 passed, 64 deselected, 5 warnings in 12.08s",
+    "2 passed, 24 deselected, 2 warnings in 8.53s"
+  ],
+  "environment": "npu2 CPU network none source readonly mock transport and tokenizer",
+  "source_sha256": {
+    "scripts/analysis/intent_slot_workload.py": "734244dd895d582b805adaa7d6ac2abf92320bc89b71769c02333c530d13540a",
+    "scripts/analysis/gepa_pair_workload.py": "5d5db4b924bcbfde1f8f2d309917a63e05b8a23213a1a35100ae39945d338fff",
+    "src/speech_aware_evidence_acquisition/core/flight/native_recovery.py": "5e1051a3e8425f247ff9b61dfb1d621503f1f93710959209562b0321980f4b31",
+    "src/speech_aware_evidence_acquisition/core/flight/runtime.py": "ce31579bb3faa4a372e860cd61f6759282efa6bd3f59b43d9285b3ebcaa3831c",
+    "src/speech_aware_evidence_acquisition/rails/intent_slot_pipeline.py": "9f99cb343730cd13b498a6818f4c8ce3ac73afa00eac163b634703d695e969c1",
+    "src/speech_aware_evidence_acquisition/rails/runner.py": "572bdf4c8182636164fb508d3160f2a28c82983636ad0359cdc90e0ad9a5eec4",
+    "src/speech_aware_evidence_acquisition/analysis/native_episode_source.py": "fb21d33fd7f1ee510378d0b1cadae791a17e5df2c76e862b999acb9e3e696ac3",
+    "src/speech_aware_evidence_acquisition/analysis/native_episode_diagnostics.py": "ddec1435f839ee139b34255263a859c45e12c8edccd490133852afae962839d9",
+    "src/speech_aware_evidence_acquisition/reproduction/ojw/native_request.py": "822db61be3ff76f833b5ced8dfa4a97ab426469329316359b65f9b6a137e28d4",
+    "src/speech_aware_evidence_acquisition/reproduction/ojw/native_roles.py": "cafac9ce6a5b810147cfb6a3cc7d429b2951c6ebf36846aa7c7caa527eff3c8a",
+    "src/speech_aware_evidence_acquisition/reproduction/ojw/native_episode.py": "73424c6b00b33841d9929780e32489604acd95c98806d864ce894dfc90408811",
+    "src/speech_aware_evidence_acquisition/rails/native_episode_receipt.py": "e48baef03afc850a5674dbd915632b64782efac7358a976ff3f6cb1e8d4f268a",
+    "tests/unit/test_intent_slot_runner.py": "164a2807d0383d7bd8f559d67b84de01636dac777d620e68436b9a2e94ccffa1",
+    "tests/unit/test_intent_slot_workload.py": "a4d9e58e46c2165137246b196667a4eb476abdf20f987e3b3c437aa4b4dad647",
+    "configs/probes/slurp_perception_length_repair_v1.txt": "e9baa301ffa49bfc067d9571e517e7228d2ea48171a9c18448184c4f79a74507",
+    "configs/examples/psd-perception-length-recovery-v1.json": "2f1a6c7225c046dbd0b9b49a4aadb973560e69b91bc24bff4e37577efea404cb"
+  },
+  "fresh_capture_qualification": "passed fixture",
+  "cross_attempt_replay": "refused by eligibility unless fresh",
+  "actual_registration": "not tested",
+  "real_model_calls": 0,
+  "teacher_calls": 0,
+  "real_fit_calls": 0,
+  "npu_calls": 0,
+  "real_fold_coverage": "not measured"
+}
