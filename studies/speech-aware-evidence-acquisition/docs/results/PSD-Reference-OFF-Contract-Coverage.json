@@ -1,0 +1,24 @@
+{
+  "schema": "psd-reference-off-contract-coverage-v1",
+  "fold": "A",
+  "rows": 1080,
+  "contract_legal": 1052,
+  "legal_nonempty_entities": 727,
+  "legal_empty_entities": 325,
+  "empty_answers": 28,
+  "terminal_failures": {
+    "P_length": 26,
+    "Slot_length": 2
+  },
+  "generation_seconds_per_row": 6.058043995074049,
+  "cards": 4,
+  "instances": 1,
+  "generation_manifest_sha256": "6b197de01f1becf6f4d6805d9c6ea02714a48a5e47691f720d05473b85b4a4b6",
+  "outputs_sha256": "7e9af4623d8c3a37b1b1b7b256821f99dd0435eaeb0592a1404f2ad4bfc13322",
+  "audit_result_sha256": "f0a4d574783bdd40a7d0c1a3412cc101f9cfc513421a1f1cc1f2dc0c0c2f0c90",
+  "limitations": [
+    "Contract validity does not prove semantic correctness or official quality.",
+    "Independent generations and changed recovery budget preclude pure reference-only causal attribution.",
+    "Official score and paired comparison pending."
+  ]
+}

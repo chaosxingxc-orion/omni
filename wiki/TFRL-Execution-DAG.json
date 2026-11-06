@@ -483,7 +483,7 @@
       "depends_on": [
         "coverage-ready"
       ],
-      "status": "running_first_http_completed_not_business_coverage_verified",
+      "status": "generation_sealed_1080_released",
       "priority": 1,
       "rows": 1080,
       "runtime_predecessor": "E5 OFF generation; CPU score not required",
@@ -499,7 +499,7 @@
       "depends_on": [
         "coverage-evaluate"
       ],
-      "status": "paired_configs_prepared_waiting_terminal_coverage_reader_in_progress",
+      "status": "contract_audit_1052_legal_28_length_failures_official_score_recovery_running",
       "scope": "full denominator coverage, official quality, paired regressions"
     },
     {
@@ -565,7 +565,7 @@
       "id": "slot-length-fix",
       "resource": "CPU",
       "depends_on": [],
-      "status": "merged_c3d1dc17_not_deployed",
+      "status": "merged_deployed_complete_off_running",
       "scope": "known nonempty Slot length; shared bounded repair budget; real source and failures retained"
     },
     {
@@ -583,7 +583,7 @@
       "depends_on": [
         "complete-coverage-ready"
       ],
-      "status": "bound_queue_armed_waiting_reference_generation_release",
+      "status": "running_native_bound_queue_after_generation_release",
       "rows": 1080,
       "priority": 1
     },
@@ -677,6 +677,13 @@
         "complete-coverage-on-evaluate"
       ],
       "target_note": "E5 target is its ON member only; OFF already finalized."
+    },
+    {
+      "id": "generation-release-binder-fix",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "implementation_in_progress",
+      "scope": "Do not block verified generation release on subsequent CPU score exit1; preserve unknown/held and identity checks"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -698,11 +705,11 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T19:06:00Z",
+  "updated_at": "2026-11-06T20:14:00Z",
   "parallel_cpu_tasks": {
-    "valid_answer_implementation": "Reference and P/Slot recovery merged; full online coverage not proven",
+    "valid_answer_implementation": "Reference full1080 legal1052; complete P/Slot recovery OFF running; 100% not achieved",
     "deployment": "Prompt candidates ready, binders live; existing B observer extended and independently verified",
-    "scoring_recovery": "CPU terminal adapter implementation running; four templates prepared but not executable or armed",
+    "scoring_recovery": "Four watchers deployed; reference OFF automatic CPU recovery running",
     "paired_analysis": "k8/k16 full paired diagnosis and locked source transcript evidence accepted; retain k8 parent",
     "tfrl_reader": "deferred"
   },
@@ -712,7 +719,7 @@
     "successor_trigger": "generation-released",
     "score_blocks_successor": false,
     "full_verification_eliminated": false,
-    "native_successor_queue_status": "OFF k16 running; ON k16 armed; reference coverage armed after OFF k16 release",
+    "native_successor_queue_status": "Reference OFF released; complete OFF running via existing bound queue; k16 ON running; remaining B successors prepared",
     "queue_compatibility_commit": "25c6386f"
   },
   "priority_override": {
