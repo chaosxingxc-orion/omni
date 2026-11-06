@@ -1141,15 +1141,19 @@ def stage_contrast(args: Args, left: Arm, right: Arm, roster: Roster) -> tuple[d
 def _arm_efficiency(arm: Arm) -> dict:
     cost = arm.generation_manifest.get("cost") or {}
     rows = arm.rows or 1
+    def per_row(key):
+        value = cost.get(key)
+        return value / rows if isinstance(value, (int, float)) and not isinstance(value, bool) else None
     entry: dict[str, object] = {
+        "cost_scope": ("predecessor-attempts" if (arm.generation_manifest.get("cost_provenance") or {}).get("kind") == "predecessor-attempts" else "generation"),
         "rows": arm.rows,
         "contacts": cost.get("calls_used"),
-        "contacts_per_row": (cost.get("calls_used") or 0) / rows,
+        "contacts_per_row": per_row("calls_used"),
         "repeated_speech_seconds": cost.get("audio_seconds_used"),
         "prompt_tokens_total": cost.get("prompt_tokens_total"),
-        "prompt_tokens_per_row": (cost.get("prompt_tokens_total") or 0) / rows,
+        "prompt_tokens_per_row": per_row("prompt_tokens_total"),
         "completion_tokens_total": cost.get("completion_tokens_total"),
-        "completion_tokens_per_row": (cost.get("completion_tokens_total") or 0) / rows,
+        "completion_tokens_per_row": per_row("completion_tokens_total"),
         "tool_calls": cost.get("tool_calls"),
     }
     rec = arm.flight_receipts
@@ -1172,7 +1176,7 @@ def _arm_efficiency(arm: Arm) -> dict:
             entry.update(
                 {
                     "generation_wall_seconds": run_phases.get("wall_seconds"),
-                    "contacts_per_minute": (run_phases.get("contacts_per_second") or 0) * 60.0,
+                    "contacts_per_minute": (run_phases["contacts_per_second"] * 60.0 if isinstance(run_phases.get("contacts_per_second"), (int, float)) and not isinstance(run_phases.get("contacts_per_second"), bool) else None),
                 }
             )
     return entry

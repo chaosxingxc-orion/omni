@@ -34,3 +34,14 @@ def test_synchronous_receipt_validates_real_finalizer_chain(tmp_path, fault):
     if fault:
         with pytest.raises(module.StopStageError):module._check_score_job(arm)
     else:module._check_score_job(arm)
+
+def test_successor_cost_scope_preserves_totals_and_unknown_rates():
+    arm=SimpleNamespace(rows=1080,generation_manifest={'cost_provenance':{'kind':'predecessor-attempts'},
+        'cost':{'calls_used':3196,'prompt_tokens_total':42568396,'completion_tokens_total':4445366}},
+        flight_receipts={'stages':{'run_phases':{ 'wall_seconds':None}}})
+    v=module._arm_efficiency(arm)
+    assert v['cost_scope']=='predecessor-attempts' and v['contacts']==3196
+    assert v['prompt_tokens_total']==42568396 and v['completion_tokens_total']==4445366
+    assert v['contacts_per_minute'] is None
+    arm.generation_manifest['cost']['calls_used']=None
+    assert module._arm_efficiency(arm)['contacts_per_row'] is None
