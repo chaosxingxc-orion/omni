@@ -221,6 +221,8 @@ def native_contact_custody_enabled(values):
         graph = parse_config(json.loads(config.intent_slot_pipeline_json))
         expected = 2 + (1 if graph['slot_mode'] == 'batched' else graph['max_candidates'])
         recovery = graph.get('coverage_recovery')
+        if graph.get('reference_normalizer'):
+            return False  # Cross-attempt sanitized Slot ancestry is not yet verified.
         expected += recovery['max_extra_contacts'] if recovery else 0
         policy = ('phase-native-intent-slot-batched-recovery-v1' if recovery else
                   'phase-native-intent-slot-' + graph['slot_mode'].replace('_', '-') + ('-v2' if graph['schema'].endswith('-v2') else '-v1'))

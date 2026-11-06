@@ -209,6 +209,14 @@ def validate_trace_handoffs(receipt, records, snapshot_cache=None):
             source = block['perception_source'] if visit['stage'] == 'slot' else block['slot_sources'][-1]['source']
             source_role = visits[0]['role_id'] if visit['stage'] == 'slot' else visits[-2]['role_id']
             source_text = records[source['request_id'] + '/response']['text']
+            if block.get('reference_normalizer'):
+                from .intent_slot_pipeline import normalize_evidence_references
+                binding = next(b for b, item in zip(block['evidence_bindings'],
+                    [block['perception_source']] + [slot['source'] for slot in block['slot_sources']])
+                    if item['request_id'] == source['request_id'])
+                source_text, _ = normalize_evidence_references(source_text, binding['inventory'],
+                    binding['inventory']['candidate_ids'], policy=block.get('evidence_policy', 'strict'),
+                    normalizer=block['reference_normalizer'])
             if (body['source_request_id'] != source['request_id'] or body['source_response_sha256'] != source['response_text_sha256']
                 or body['source_role'] != source_role):
                 raise ValueError('node handoff source mismatch')

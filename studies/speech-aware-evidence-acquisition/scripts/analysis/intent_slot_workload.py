@@ -37,9 +37,13 @@ class NodeWorkload(PairWorkload):
         arm=config['node_arm']
         pipeline=config.get('pipeline')
         legacy = {'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1'}
-        recovery = pipeline.get('coverage_recovery') if isinstance(pipeline, dict) else None
+        normalizer = pipeline.get('reference_normalizer') if isinstance(pipeline, dict) else None
+        if normalizer is not None and normalizer != 'quarantine-unsupplied-v1':
+            raise ValueError('unsupported reference normalizer')
+        base_pipeline = {k:v for k,v in pipeline.items() if k != 'reference_normalizer'} if isinstance(pipeline, dict) else pipeline
+        recovery = base_pipeline.get('coverage_recovery') if isinstance(base_pipeline, dict) else None
         supported_recovery = (isinstance(recovery, dict)
-            and set(pipeline) == set(legacy) | {'coverage_recovery'}
+            and set(base_pipeline) == set(legacy) | {'coverage_recovery'}
             and pipeline.get('protocol_version') == 'v2'
             and pipeline.get('node_rails') == 'sdk-handoff-v1'
             and pipeline.get('answer_only_fallback') in {'off', 'budgeted-v1'}
@@ -47,7 +51,7 @@ class NodeWorkload(PairWorkload):
             and recovery['strategy'] == 'complete-original-candidate-set-v1'
             and type(recovery['max_extra_contacts']) is int
             and 1 <= recovery['max_extra_contacts'] <= 3)
-        if pipeline is not None and (arm != 'enhanced-p-slot-decision' or not (pipeline == legacy or supported_recovery)):
+        if pipeline is not None and (arm != 'enhanced-p-slot-decision' or not (base_pipeline == legacy or supported_recovery)):
             raise ValueError('explicit supported v2 SDK pipeline required')
         if 'tfgrpo_experience' in config and (pipeline is None or not config.get('population')):
             raise ValueError('TF-GRPO experience requires a fixed fold and v2 SDK pipeline')
@@ -137,6 +141,8 @@ class NodeWorkload(PairWorkload):
                 coverage_recovery=bool(pipeline.get('coverage_recovery'))) if pipeline else split_graph(base)
             if arm=='enhanced-p-slot-decision':
                 base=expanded
+                if pipeline and pipeline.get('reference_normalizer'):
+                    base['native_episode']['intent_slot_pipeline']['reference_normalizer'] = pipeline['reference_normalizer']
                 if pipeline and pipeline.get('coverage_recovery'):
                     base['native_episode']['intent_slot_pipeline']['coverage_recovery'] = copy.deepcopy(pipeline['coverage_recovery'])
                     base['native_episode']['intent_slot_pipeline']['answer_only_fallback'] = pipeline['answer_only_fallback']

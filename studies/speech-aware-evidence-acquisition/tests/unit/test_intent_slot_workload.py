@@ -231,3 +231,14 @@ def test_node_stage_prepare_register_shared_budget(repo, monkeypatch):
     assert pair.read(package/'generation-plan-registered-v1.json')['execution_plan']['planned_model_calls']==400
     assert pair.read(package/'fit-plan-registered-v1.json')['execution_plan']['planned_model_calls']==400
     assert pair.read(path/f'configs/baseline/{job.NAME}.json')['native_episode']['intent_slot_pipeline']['answer_only_fallback']=='budgeted-v1'
+
+
+def test_reference_normalizer_is_explicit_and_composes_with_coverage():
+    c=config(); c['node_arm']=ARMS[2]
+    c['pipeline']={'protocol_version':'v2','node_rails':'sdk-handoff-v1','answer_only_fallback':'budgeted-v1',
+                   'reference_normalizer':'quarantine-unsupplied-v1'}
+    assert NodeWorkload(c).config['pipeline']==c['pipeline']
+    c['pipeline']['coverage_recovery']={'strategy':'complete-original-candidate-set-v1','max_extra_contacts':3}
+    assert NodeWorkload(c).CONTACTS==6
+    c['pipeline']['reference_normalizer']='unknown'
+    with pytest.raises(ValueError): NodeWorkload(c)
