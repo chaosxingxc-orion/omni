@@ -703,6 +703,7 @@ def _verify_delivery_normalisation(
     row: Mapping[str, object],
     block: Mapping[str, object],
     response_payload: Mapping[str, object],
+    derived_input: str | None = None,
 ) -> None:
     """I7n: re-derive a normalised row's delivered text from the recorded
     model response, and refuse the row when it does not reproduce.
@@ -743,7 +744,7 @@ def _verify_delivery_normalisation(
             "the delivered text cannot be re-derived from the recorded response "
             f"({DELIVER_NORMALISER_INVARIANT})"
         )
-    source_text = response_payload.get("text")
+    source_text = derived_input if derived_input is not None else response_payload.get("text")
     if not isinstance(source_text, str):
         raise BundleError(
             f"{label}: its trace response record carries no text to re-derive the "
@@ -2064,6 +2065,7 @@ def _verify_outputs_trace_binding(
         _verify_resume_custody(
             outputs_rows, trace_records, predecessor_records, kept_sample_ids
         )
+    candidate_snapshot_cache = {}
     for row in outputs_rows:
         sample_id = str(row.get("sample_id"))
         records = (
@@ -2096,9 +2098,12 @@ def _verify_outputs_trace_binding(
         # from this record's own response text by
         # ``_verify_delivery_normalisation`` below.
         deliver_normaliser = _delivery_normalisation_receipt(row)
+        episode = row.get("native_episode_receipt")
+        pipeline = episode.get("intent_slot_pipeline", {}) if isinstance(episode, Mapping) else {}
+        derived = pipeline.get("schema") == "saea-intent-slot-pipeline-v2" and "selected_candidate_id" in pipeline
         bound_fields = (
             ("response_sha256",)
-            if solver_group is not None or deliver_normaliser is not None
+            if solver_group is not None or deliver_normaliser is not None or derived
             else ("text", "response_sha256", "response_text_sha256")
         )
         for field in bound_fields:
@@ -2129,7 +2134,9 @@ def _verify_outputs_trace_binding(
         if isinstance(episode, Mapping) and "intent_slot_pipeline" in episode:
             from ...rails.intent_slot_pipeline import validate_receipt
             try:
-                validate_receipt(episode, trace_records=records)
+                replayed_answer = validate_receipt(episode, trace_records=records, snapshot_cache=candidate_snapshot_cache)
+                if derived and deliver_normaliser is None and (replayed_answer != row.get("text") or hashlib.sha256(replayed_answer.encode()).hexdigest() != row.get("response_text_sha256")):
+                    raise ValueError("derived delivery differs from archived sources")
             except (ValueError, KeyError, TypeError) as error:
                 raise BundleError("intent-slot provenance failed: " + str(error)) from error
         if isinstance(episode, Mapping) and 'answer_selection' in episode and 'supply_variants' not in row:
@@ -2141,7 +2148,7 @@ def _verify_outputs_trace_binding(
                 error_type=BundleError,
             )
         if deliver_normaliser is not None:
-            _verify_delivery_normalisation(row, deliver_normaliser, payload)
+            _verify_delivery_normalisation(row, deliver_normaliser, payload, replayed_answer if derived else None)
         if solver_group is not None:
             _verify_grouped_solver_trace_binding(row, solver_group, records)
         if "supply_variants" in row:

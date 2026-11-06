@@ -8866,6 +8866,7 @@ class FlightRuntime:
                 material_for_phase=binding["material_for_phase"],
                 render_request=render_request, request_gate=native_fit_gate,
                 tools_for_phase=tool_dispatcher, supply_for_phase=supply_for_phase,
+                knowledge_store_binding=getattr(self, "_knowledge_store_binding", None),
                 candidate_proposal_for_context=getattr(
                     supply_for_phase, "candidate_proposal_for_context", None,
                 ),
@@ -9015,6 +9016,9 @@ class FlightRuntime:
             live_options["initial_feedback_states"] = binding["initial_feedback_states"]
         if native_binding is not None:
             live_options["native_episode_binding"] = native_binding
+            if (native_binding.config.intent_slot_pipeline_json is not None
+                and json.loads(native_binding.config.intent_slot_pipeline_json).get('node_rails') == 'sdk-handoff-v1'):
+                live_options["candidate_snapshot_root"] = self._run_dir()
         # Decision 283 A: the composed per-node thinking override map (validated at composition), when declared.
         if self._composed.values.get("thinking_policy"):
             live_options["thinking_policy"] = self._composed.values["thinking_policy"]
@@ -12645,6 +12649,10 @@ class FlightRuntime:
                 episode_receipt.get("deliver_normaliser")
                 if isinstance(episode_receipt, Mapping) else None
             )
+            pipeline_receipt = (episode_receipt.get("intent_slot_pipeline", {})
+                                if isinstance(episode_receipt, Mapping) else {})
+            derived_candidate = (pipeline_receipt.get("schema") == "saea-intent-slot-pipeline-v2"
+                                 and "selected_candidate_id" in pipeline_receipt)
             if episode_receipt is not None:
                 # The delivery Solver can precede Reviewer/Planner contacts.
                 # Bind the existing response, without deriving or rewriting text.
@@ -12847,11 +12855,17 @@ class FlightRuntime:
                             "request_sha256", "response_sha256", "response_text_sha256",
                         ))
                         or (delivery.kind != "abstention" and solver_group is None
-                            and deliver_normaliser is None
+                            and deliver_normaliser is None and not derived_candidate
                             and hashlib.sha256(sources[0].final_response_text.encode("utf-8")).hexdigest()
                             != contact.get("response_text_sha256"))
                     ):
                         raise FlightRuntimeError("native source differs from the recorded model response")
+                if derived_candidate:
+                    if (not isinstance(raw_native, Mapping)
+                        or raw_native.get("intent_slot_pipeline", {}).get("schema") != "saea-intent-slot-pipeline-v2"
+                        or pipeline_receipt.get("decision_source") != contact
+                        or pipeline_receipt.get("derived_answer_sha256") != (deliver_normaliser.get("input_sha256") if isinstance(deliver_normaliser, Mapping) else hashlib.sha256(sources[0].final_response_text.encode("utf-8")).hexdigest())):
+                        raise FlightRuntimeError("derived candidate delivery lacks its configured source binding")
                 if deliver_normaliser is not None:
                     # E11: what a normalised row owes INSTEAD of the equality
                     # relaxed just above -- the node's recorded INPUT must be
@@ -12869,7 +12883,7 @@ class FlightRuntime:
                         )
                     if (
                         deliver_normaliser.get("input_sha256")
-                        != contact.get("response_text_sha256")
+                        != (pipeline_receipt.get("derived_answer_sha256") if derived_candidate else contact.get("response_text_sha256"))
                     ):
                         raise FlightRuntimeError(
                             "native delivery normalisation did not run on the recorded "
@@ -13130,7 +13144,7 @@ class FlightRuntime:
             # self-consistency (I7) is kept by hashing what is DELIVERED.
             response_text_sha256 = (
                 hashlib.sha256(text.encode("utf-8")).hexdigest()
-                if solver_group is not None or deliver_normaliser is not None
+                if solver_group is not None or deliver_normaliser is not None or derived_candidate
                 else timing.response_text_sha256
             )
             projection_v3_fields: dict[str, object] = {}

@@ -2617,7 +2617,7 @@ async def _invoke_native_role_episode(
     *, state, run_contact, session, binding, adapter, core_client, snapshot,
     snapshot_sha256, protected_material, base_decoding_params, run_id,
     knowledge_value_renderer, run_local=None, system_policy_decision=None,
-    role_input_runner=None, validation_runner=None, ready_request_runner=None,
+    role_input_runner=None, validation_runner=None, ready_request_runner=None, node_snapshot_ref=None,
 ):
     """Collect one public role graph through the shared speech request custody.
 
@@ -2682,6 +2682,25 @@ async def _invoke_native_role_episode(
         pipeline_validator = getattr(carrier_hooks, "intent_slot_response_validator", None)
         if pipeline_validator is None:
             raise RailsRunnerError("carrier has no intent-slot protocol adapter")
+    node_rails_enabled = bool(pipeline_config and pipeline_config.get("node_rails") == "sdk-handoff-v1")
+    raw_node_completions = {}
+    node_handoffs = []
+    node_handoff_queue = []
+    node_active_handoff = {}
+    node_slot_ids = []
+    node_slot_cursor = [0]
+    node_phase_supply = {}
+    node_slot_materials = []
+    node_raw_perception = {}
+    node_snapshot_values = {value.value_id: value for value in snapshot.values} if node_rails_enabled else {}
+    node_snapshot_facets = {facet.facet_id: facet for facet in snapshot.facets} if node_rails_enabled else {}
+    node_store_binding = binding.knowledge_store_binding if node_rails_enabled else None
+    node_store_pins = ({store_id: node_store_binding.store_receipt(store_id) for store_id in node_store_binding.store_ids}
+                       if node_store_binding is not None else {})
+    if node_store_binding is not None and node_store_binding.binding_sha256 != snapshot_sha256:
+        raise RailsRunnerError("candidate node rails store binding differs from snapshot")
+    if node_rails_enabled and (config.knowledge_context_json is not None or knowledge_value_renderer is not None):
+        raise RailsRunnerError("candidate SDK rails require the unprojected snapshot renderer")
     relisten_blind_template = relisten_confirm_template = None
     if relisten_config is not None:
         if binding.repo_root is None:
@@ -2918,6 +2937,7 @@ async def _invoke_native_role_episode(
     perception_branch_solver_render_by_branch: dict[str, str] = {}
     pending = {}
     visits = {}
+    pipeline_evidence_visits = []
     completed = {}
     role_configs = {role.phase_id: role for role in config.roles}
     # E18 (2026-09-19, owner decisions 43-44): the SIXTH node. Everything
@@ -3604,6 +3624,7 @@ async def _invoke_native_role_episode(
         completion, source, before, plan, slot_id = (
             pending[name] for name in ("completion", "source", "context", "plan", "slot_id")
         )
+        handoff_supply_ids = None
         if completion.tool_calls and tool_step is None and not rejected_steps:
             raise RailsRunnerError("native tool request has no source-bound observation")
         # E2c (SLURP v2 base program M2): module M2 is sample-and-aggregate
@@ -3856,8 +3877,21 @@ async def _invoke_native_role_episode(
             response_record = tuple(item[1].text for item in perception_branch_solver_contacts)
             slot_ids = tuple(item[2] for item in perception_branch_solver_contacts)
             perception_branch_solver_contacts.clear()
+        retrieval_source = source
+        if node_rails_enabled and pending["phase_id"] == config.role("perception").phase_id:
+            # The existing pinned candidate provider deliberately requires raw
+            # response hash equality. Give only that trusted provider the raw
+            # artifact; downstream model history keeps the sanitized view.
+            retrieval_source = seal_phase_response_state(phase_name=pending["phase_id"], sample_id=before.sample_id,
+                state_content=completion.text, raw_response_text=completion.text,
+                source_query_state_sha256=before.query_state.content_hash(),
+                producer_policy_id=program.program_id, state_namespace=plan.contact_id)
+            node_raw_perception["source"] = retrieval_source
+        retrieval_states = tuple(node_raw_perception.get("source", item)
+            if node_rails_enabled and item.state_kind == f"phase:{config.role('perception').phase_id}" else item
+            for item in before.agent_states)
         staged = replace(
-            before, agent_states=before.agent_states + (source,),
+            before, agent_states=retrieval_states + (retrieval_source,),
             prior_response_sha256s=before.prior_response_sha256s + (completion.response_text_sha256,),
             core_completions=(completion,),
         )
@@ -3872,6 +3906,8 @@ async def _invoke_native_role_episode(
                 supply = order_supply_by_retrieval_rank(supply, snapshot, rank_order_stores)
         if supply is not None and next_phase is not None and program.phase(next_phase).knowledge != "supplied":
             raise RailsRunnerError("native knowledge supply requires a supplied destination")
+        if node_rails_enabled and next_phase is not None:
+            handoff_supply_ids = (() if supply is None else tuple(supply.fusion_decision.selected_value_ids))
         if supply is not None and next_phase is not None:
             # E3c: the Planner's REVISE route re-enters the Solver, and a
             # prepared phase supply is a pure function of (phase, sample), so
@@ -4038,12 +4074,38 @@ async def _invoke_native_role_episode(
         state.transitions.append(transition)
         state.state_store.update((artifact.state_id, artifact) for artifact in added)
         state.query_state = next_state
+        if node_rails_enabled and next_phase is not None:
+            node_phase_supply[next_phase] = handoff_supply_ids or ()
         pending.clear()
 
     @measure("context_build", lambda phase_id, episode_state: {"sample_id": state.prepared.sample.sample_id, "phase": phase_id})
     def role_input(phase_id, episode_state):
         nonlocal context_binding, node_context_binding
-        settle(next_phase=phase_id)
+        if not node_rails_enabled:
+            settle(next_phase=phase_id)
+        elif pending:
+            raise RailsRunnerError("candidate rail left an unsettled completion")
+        if node_rails_enabled:
+            if role_configs[phase_id].role_kind == "perception":
+                from .candidate_handoff import project_snapshot_messages, POLICY
+                from .intent_slot_pipeline import digest
+                current = context()
+                messages, evidence = project_snapshot_messages(base_messages(current), snapshot_sha256=snapshot_sha256, values=node_snapshot_values, facets=node_snapshot_facets)
+                item = {"schema": "saea-sdk-node-handoff-v1", "policy": POLICY, "sample_id": current.sample_id,
+                        "source_role": "bootstrap", "target_role": phase_id, "source_response_sha256": None,
+                        "source_request_id": None, "snapshot_sha256": snapshot_sha256,
+                        "query_state_sha256": current.query_state.content_hash(), "branch_index": 0,
+                        "candidate_ids": [], "knowledge": evidence, "store_pins": node_store_pins, "normalized_sha256": None}
+                item["handoff_sha256"] = digest(item)
+                node_handoffs.append(item)
+                node_active_handoff[phase_id] = {"receipt": item, "messages": messages}
+            else:
+                if not node_handoff_queue:
+                    raise RailsRunnerError("candidate role has no upstream handoff")
+                prepared_handoff = node_handoff_queue.pop(0)
+                if prepared_handoff["receipt"]["target_role"] != phase_id:
+                    raise RailsRunnerError("candidate handoff belongs to a different role")
+                node_active_handoff[phase_id] = prepared_handoff
         ctx = context()
         previous = ctx.agent_states[-1] if ctx.agent_states else None
         material = binding.material_for_phase(
@@ -4203,8 +4265,23 @@ async def _invoke_native_role_episode(
             pipeline_context["evidence_inventory"] = evidence_inventory(
                 sample_id=ctx.sample_id, speech_packet_id=ctx.query_state.speech_packet_id,
                 speech_sha256=ctx.query_state.speech_packet_sha256,
-                messages=base_messages(ctx),
+                messages=(node_active_handoff[phase_id]["messages"] if node_rails_enabled and phase_id in node_active_handoff else base_messages(ctx)),
                 candidate_ids=[row["candidate_id"] for row in pipeline_context.get("candidates", [])])
+            if pipeline_config is not None and pipeline_config["schema"].endswith("-v2"):
+                from .intent_slot_pipeline import dynamic_slot_format, dynamic_decision_format
+                ids = [row["candidate_id"] for row in pipeline_context.get("candidates", [])]
+                if role_configs[phase_id].role_kind == "slot":
+                    material = replace(material, response_format=dynamic_slot_format(material.response_format, ids)).validate()
+                elif role_configs[phase_id].role_kind == "solver":
+                    # Verify that the deterministic split is an actual ontology pair.
+                    branches = material.response_format["json_schema"]["schema"]["oneOf"]
+                    pairs = {(b["properties"]["scenario"]["const"], action)
+                             for b in branches for action in b["properties"]["action"]["enum"]}
+                    if any("_" not in cid or tuple(cid.split("_", 1)) not in pairs for cid in ids):
+                        raise RailsRunnerError("candidate identity cannot be mapped uniquely to the SLURP pair")
+                    material = replace(material, response_format=dynamic_decision_format(ids)).validate()
+            if node_rails_enabled and phase_id in node_active_handoff:
+                node_active_handoff[phase_id]["expected_ids"] = [row["candidate_id"] for row in pipeline_context.get("candidates", [])]
             prompt_state = dict(episode_state, intent_slot_context=pipeline_context)
             material = replace(material, instruction=material.instruction + prompt_context(
                 prompt_pipeline_config, prompt_state, role_configs[phase_id].role_kind)).validate()
@@ -4428,6 +4505,8 @@ async def _invoke_native_role_episode(
             # the SOLVER's own phase instead of Perception's -- the Solver's
             # first-visit branch fan-out (design section 3, "Level 2").
             messages = perception_branch_solver_messages(ctx, request=request, plan=plan)
+        elif node_rails_enabled:
+            messages = node_active_handoff[request.role_id]["messages"]
         elif knowledge_index is None:
             messages = base_messages(ctx)
         else:
@@ -4453,6 +4532,15 @@ async def _invoke_native_role_episode(
                     "an armed knowledge index composed no assembly for this contact"
                 )
             record["system_message"] = messages[0]["content"]
+        if node_rails_enabled:
+            prepared_handoff = node_active_handoff.pop(request.role_id, None)
+            if prepared_handoff is None or not prepared_handoff.get("before_seen"):
+                raise RailsRunnerError("candidate handoff was not admitted by the SDK before hook")
+            messages = copy.deepcopy(prepared_handoff["messages"])
+            if role.role_kind == "slot":
+                node_slot_materials.append(copy.deepcopy(messages))
+            prepared_handoff["request_contact_id"] = request.context.agent_contact_id
+            visits[request.role_id]["candidate_handoff"] = prepared_handoff
         if config.knowledge_context_json is not None:
             from .knowledge_context import prepare_messages
 
@@ -4473,6 +4561,9 @@ async def _invoke_native_role_episode(
             role=role, solver_phase_id=config.role("solver").phase_id,
             states=render_ctx.agent_states, local_tool_result_ids=tuple(visit["local_ids"]),
         )
+        if node_rails_enabled:
+            exposed_states = tuple(replace(s, source_response_sha256=hashlib.sha256(s.content.encode("utf-8")).hexdigest())
+                for s in exposed_states if s.state_kind == f"phase:{config.role('perception').phase_id}")
         if pipeline_config is not None and role.role_kind == "slot":
             # Independent hypotheses: do not expose another candidate's Slot
             # completion through the otherwise-full native conversation.
@@ -4647,7 +4738,6 @@ async def _invoke_native_role_episode(
             if messages[0]["content"] == framework_system:
                 framework_system = None
         if config.answer_selection is not None and request.context.variant_arm_id in ('b', 'lock'):
-            import copy
             selection_inputs[request.context.variant_arm_id] = {
                 'messages': copy.deepcopy(messages),
                 'perception': tuple(a for a in exposed_states if a.state_kind == 'phase:' + config.role('perception').phase_id),
@@ -4675,7 +4765,7 @@ async def _invoke_native_role_episode(
             framework_system=framework_system,
         )
 
-    def capture_completion(request, completion):
+    def capture_completion(request, completion, *, already_counted=False):
         if pending:
             raise RailsRunnerError("native completion overwrote an unsettled source")
         before, plan = state.current_context, state.current_contact
@@ -4706,14 +4796,15 @@ async def _invoke_native_role_episode(
         # A contract refusal still spent this contact, although its answer must
         # never enter the pending/completed delivery state below.
         slot_id = visits[request.role_id]["slot_id"]
-        visits[request.role_id]["model_contacts"] += 1
-        state.contacts.append(AgentContactRecord(
-            plan=plan, query_state_sha256=before.query_state.content_hash(),
-            speech_packet_sha256=before.query_state.speech_packet_sha256,
-            slot_id=slot_id, response_sha256=completion.response_text_sha256,
-        ))
-        state.response_sha256s.append(completion.response_text_sha256)
-        if pipeline_config is not None and completion.finish_reason == "stop":
+        if not already_counted:
+            visits[request.role_id]["model_contacts"] += 1
+            state.contacts.append(AgentContactRecord(
+                plan=plan, query_state_sha256=before.query_state.content_hash(),
+                speech_packet_sha256=before.query_state.speech_packet_sha256,
+                slot_id=slot_id, response_sha256=completion.response_text_sha256,
+            ))
+            state.response_sha256s.append(completion.response_text_sha256)
+        if pipeline_config is not None and completion.finish_reason == "stop" and not completion.tool_calls:
             visit = visits[request.role_id]
             try:
                 validated = pipeline_validator(kind=role_configs[request.role_id].role_kind,
@@ -4723,9 +4814,10 @@ async def _invoke_native_role_episode(
                 kind = role_configs[request.role_id].role_kind
                 if kind in ("perception", "slot"):
                     from .intent_slot_pipeline import validate_evidence_refs
-                    rows = validated.values() if isinstance(validated, dict) else validated
+                    rows = (json.loads(completion.text)["candidates"] if kind == "perception" and pipeline_config["schema"].endswith("-v2")
+                            else validated.values() if isinstance(validated, dict) else validated)
                     rows = list(rows)
-                    ids = ([row["candidate_id"] for row in rows] if kind == "perception"
+                    ids = ([row["candidate_id"] for row in validated] if kind == "perception"
                            else [row["candidate_id"] for row in visit["intent_slot_context"]["candidates"]])
                     inventory = visit["intent_slot_context"]["evidence_inventory"]
                     visit["pipeline_kind"] = kind
@@ -4733,12 +4825,18 @@ async def _invoke_native_role_episode(
                         policy=pipeline_config.get("evidence_policy", "strict"))
                     visit["evidence_inventory"] = copy.deepcopy(inventory)
                     visit["evidence_response_sha256"] = completion.response_text_sha256
+                    pipeline_evidence_visits.append({"stage": kind, "inventory": copy.deepcopy(inventory),
+                        "mappings": copy.deepcopy(visit["evidence_mappings"]), "response_text_sha256": completion.response_text_sha256})
             except (ValueError, KeyError, TypeError) as error:
                 refusal = RailsRunnerError("intent-slot output contract refused: " + str(error))
                 refusal.seal_refusal_completion = completion
                 refusal.seal_refusal_role_id = request.role_id
                 raise refusal from error
         state_content, cited_value_ids = completion.text, ()
+        if node_rails_enabled and completion.finish_reason == "stop" and not completion.tool_calls:
+            from .candidate_handoff import normalized_response
+            state_content = normalized_response(role_configs[request.role_id].role_kind, completion.text,
+                                                visits[request.role_id]["intent_slot_context"], pipeline_config)
         empty_solver_completion = (
             request.role_id == config.role("solver").phase_id
             and not completion.tool_calls and not completion.text.strip()
@@ -4799,9 +4897,10 @@ async def _invoke_native_role_episode(
             from .review_handoff import normalize_review_handoff
 
             state_content = normalize_review_handoff(completion.text)
-        if empty_solver_completion:
-            # Preserve the raw empty response hash while allowing the later wire
-            # projection to apply its existing non-stop completion disposition.
+        if empty_solver_completion or (node_rails_enabled and not completion.tool_calls
+                                       and not completion.text.strip() and completion.finish_reason != "stop"):
+            # A non-authoritative empty response has no phase content. Preserve
+            # its actual hash and let finite completion produce an abstention.
             state_content = '{"schema":"saea-empty-phase-response-v1","response_text":""}'
         if rollout_trace is not None and rollout_nodes.get(request.role_id) == "solver":
             # Plan T1 / M4: the answer text the Solver node takes into custody (the cited-answer contract's answer, not its
@@ -5414,9 +5513,146 @@ async def _invoke_native_role_episode(
             )
         solver_commit["actor_output"] = actor_output
 
+    def prepare_node_handoff(*, source_role, target_role, completion, candidate_ids, branch_index):
+        from .candidate_handoff import project_snapshot_messages, POLICY
+        from .intent_slot_pipeline import digest
+        current = context()
+        allowed_values = set(node_phase_supply.get(target_role, ())) | set(state.prepared.initial_query_state.retrieved_value_ids)
+        view_query = replace(current.query_state, retrieved_value_ids=tuple(
+            value_id for value_id in current.query_state.retrieved_value_ids if value_id in allowed_values))
+        messages = list(base_messages(replace(current, query_state=view_query)))
+        if pipeline_config["slot_mode"] == "per_candidate" and role_configs[target_role].role_kind == "solver":
+            # Union the already supplied Slot branch values before the handoff
+            # is sealed; no provider is called again by the next role.
+            user = dict(messages[1]); content = list(user["content"])
+            present = {part.get("evidence_id") for part in content if isinstance(part, Mapping)}
+            for item in node_slot_materials:
+                for part in item[1]["content"]:
+                    if isinstance(part, Mapping) and part.get("knowledge_role") == "value" and part.get("evidence_id") not in present:
+                        content.append(copy.deepcopy(part)); present.add(part["evidence_id"])
+            user["content"] = content; messages[1] = user
+        messages, evidence = project_snapshot_messages(messages, snapshot_sha256=snapshot_sha256,
+            values=node_snapshot_values, facets=node_snapshot_facets)
+        handoff = {"schema": "saea-sdk-node-handoff-v1", "policy": POLICY,
+            "sample_id": current.sample_id, "source_role": source_role, "target_role": target_role,
+            "source_response_sha256": completion.response_text_sha256, "source_request_id": completion.request_id,
+            "snapshot_sha256": snapshot_sha256, "query_state_sha256": current.query_state.content_hash(),
+            "branch_index": branch_index, "candidate_ids": list(candidate_ids), "knowledge": evidence,
+            "store_pins": node_store_pins, "normalized_sha256": hashlib.sha256(normalized_node_text.encode("utf-8")).hexdigest()}
+        handoff["handoff_sha256"] = digest(handoff)
+        node_handoff_queue.append({"receipt": handoff, "messages": messages})
+        node_handoffs.append(handoff)
+
+    def before_candidate_model(phase_id, _ctx):
+        from .intent_slot_pipeline import digest
+        prepared = node_active_handoff.get(phase_id)
+        if prepared is None:
+            raise RailsRunnerError("candidate SDK before hook lacks a prepared handoff")
+        handoff = prepared["receipt"]
+        expected = dict(handoff)
+        claim = expected.pop("handoff_sha256")
+        kind = role_configs[phase_id].role_kind
+        expected_source = ("bootstrap" if kind == "perception" else config.role("perception").phase_id
+                           if kind == "slot" else config.role("slot").phase_id)
+        expected_branch = node_slot_cursor[0] if kind == "slot" else 0
+        if (claim != digest(expected) or handoff["sample_id"] != state.prepared.sample.sample_id
+            or handoff["target_role"] != phase_id or handoff["source_role"] != expected_source
+            or handoff["branch_index"] != expected_branch or handoff["snapshot_sha256"] != snapshot_sha256
+            or handoff["query_state_sha256"] != state.query_state.content_hash()
+            or handoff["candidate_ids"] != prepared.get("expected_ids", [])):
+            raise RailsRunnerError("candidate SDK handoff identity differs from the active visit")
+        from .candidate_handoff import project_snapshot_messages
+        checked_messages, checked_knowledge = project_snapshot_messages(prepared["messages"], snapshot_sha256=snapshot_sha256,
+            values=node_snapshot_values, facets=node_snapshot_facets)
+        if checked_messages != prepared["messages"] or checked_knowledge != handoff["knowledge"]:
+            raise RailsRunnerError("candidate handoff knowledge changed after preparation")
+        if handoff["source_role"] != "bootstrap":
+            source = next((contact for contact in state.contacts if contact.plan.contact_id
+                and completed.get(contact.plan.contact_id) is not None
+                and completed[contact.plan.contact_id].request_id == handoff["source_request_id"]), None)
+            if source is None or completed[source.plan.contact_id].response_text_sha256 != handoff["source_response_sha256"]:
+                raise RailsRunnerError("candidate handoff response is not a completed source")
+        prepared["before_seen"] = True
+
+    def after_candidate_model(phase_id, sdk_context):
+        nonlocal normalized_node_text
+        response = sdk_context.inputs.response
+        if getattr(response, "tool_calls", None):
+            return
+        item = raw_node_completions.pop(phase_id, None)
+        if item is None:
+            # Non-stop completions were handled by the existing finite path.
+            return
+        request, completion = item
+        if getattr(response, "content", None) != completion.text:
+            raise RailsRunnerError("SDK response differs from metered raw completion")
+        capture_completion(request, completion, already_counted=True)
+        kind = role_configs[phase_id].role_kind
+        from .candidate_handoff import normalized_response
+        normalized_node_text = normalized_response(kind, completion.text, visits[phase_id]["intent_slot_context"], pipeline_config)
+        source_hash = hashlib.sha256(normalized_node_text.encode("utf-8")).hexdigest()
+        if pending["source"].content != normalized_node_text:
+            raise RailsRunnerError("candidate normalized source changed before settlement")
+        if kind == "perception":
+            from .intent_slot_pipeline import candidates
+            node_slot_ids[:] = [row["candidate_id"] for row in candidates(completion.text, pipeline_config["max_candidates"], duplicate_policy="group_v2")]
+            node_slot_cursor[0] = 0
+            target = config.role("slot").phase_id
+            settle(next_phase=target)
+            batches = [node_slot_ids] if pipeline_config["slot_mode"] == "batched" else [[cid] for cid in node_slot_ids]
+            for index, ids in enumerate(batches):
+                prepare_node_handoff(source_role=phase_id, target_role=target, completion=completion, candidate_ids=ids, branch_index=index)
+        elif kind == "slot":
+            node_slot_cursor[0] += 1
+            total = 1 if pipeline_config["slot_mode"] == "batched" else len(node_slot_ids)
+            if node_slot_cursor[0] < total:
+                settle()
+                # Preserve the already prepared sibling packets, rebinding their
+                # query state after this sibling's independently metered visit.
+                from .intent_slot_pipeline import digest
+                for item in node_handoff_queue:
+                    item["receipt"]["query_state_sha256"] = state.query_state.content_hash()
+                    item["receipt"].pop("handoff_sha256")
+                    item["receipt"]["handoff_sha256"] = digest(item["receipt"])
+            else:
+                target = config.role("solver").phase_id
+                settle(next_phase=target)
+                prepare_node_handoff(source_role=phase_id, target_role=target, completion=completion,
+                                     candidate_ids=node_slot_ids, branch_index=0)
+        elif kind == "solver":
+            settle()
+        else:
+            raise RailsRunnerError("candidate SDK hook reached an unsupported role")
+
+    normalized_node_text = ""
+
+    def custody_completion(request, completion):
+        if not node_rails_enabled or completion.tool_calls or completion.finish_reason != "stop":
+            return capture_completion(request, completion)
+        before, plan = state.current_context, state.current_contact
+        if pending or before is None or plan is None or plan.contact_id != request.context.agent_contact_id:
+            raise RailsRunnerError("native raw completion lost its source")
+        completion.assert_binding(sample_id=before.sample_id, agent_contact_id=plan.contact_id, response_text=completion.text)
+        from .intent_slot_pipeline import digest
+        handoff = visits[request.role_id]["candidate_handoff"]["receipt"]
+        handoff["target_request_id"] = completion.request_id
+        handoff["target_request_sha256"] = completion.request_sha256
+        handoff.pop("handoff_sha256")
+        handoff["handoff_sha256"] = digest(handoff)
+        if request.role_id in raw_node_completions:
+            raise RailsRunnerError("node has an unsettled raw completion")
+        slot_id = visits[request.role_id]["slot_id"]
+        visits[request.role_id]["model_contacts"] += 1
+        state.contacts.append(AgentContactRecord(plan=plan, query_state_sha256=before.query_state.content_hash(),
+            speech_packet_sha256=before.query_state.speech_packet_sha256, slot_id=slot_id,
+            response_sha256=completion.response_text_sha256))
+        state.response_sha256s.append(completion.response_text_sha256)
+        raw_node_completions[request.role_id] = (request, completion)
+
     adapter_request = MeteredNativeSpeechRequest(
         client=core_client, binding_provider=speech_binding,
-        render_request=binding.render_request, completion_sink=capture_completion,
+        render_request=binding.render_request, completion_sink=custody_completion,
+        answer_only_fallback_enabled=(not node_rails_enabled or pipeline_config["answer_only_fallback"] == "budgeted-v1"),
         solver_role_id=(
             solver_role_config.phase_id if solver_group_samples > 1 else None
         ),
@@ -6464,6 +6700,8 @@ async def _invoke_native_role_episode(
                 ),
                 metered_request=metered, contact_context_provider=contact_context,
                 reject_tool_batch=reject_tool_batch if role.tool_names else None,
+                candidate_before=before_candidate_model if node_rails_enabled else None,
+                candidate_after=after_candidate_model if node_rails_enabled else None,
                 abilities=tuple(ability_for(role, schema_by_name[name]) for name in role.tool_names),
                 tool_allowed=(
                     (lambda phase, name, role=role: phase == role.phase_id and name in role.tool_names)
@@ -6817,12 +7055,18 @@ async def _invoke_native_role_episode(
         if pipeline_config is not None:
             from .intent_slot_pipeline import validate_receipt
             block = receipt.get("intent_slot_pipeline")
-            if block is not None and pipeline_config.get("evidence_policy") == "unique_source_alias_v1":
-                block["evidence_policy"] = "unique_source_alias_v1"
-                block["evidence_bindings"] = [{"stage": v["pipeline_kind"],
-                    "inventory": v["evidence_inventory"], "mappings": v["evidence_mappings"],
-                    "response_text_sha256": v["evidence_response_sha256"]}
-                    for v in visits.values() if v.get("evidence_mappings") is not None]
+            if block is not None and node_rails_enabled:
+                block["node_rails"] = "sdk-handoff-v1"
+                block["node_handoffs"] = copy.deepcopy(node_handoffs)
+            if block is not None and (pipeline_config.get("evidence_policy") == "unique_source_alias_v1" or pipeline_config["schema"].endswith("-v2")):
+                block["evidence_policy"] = pipeline_config.get("evidence_policy", "strict")
+                if pipeline_config["schema"].endswith("-v2"):
+                    block["evidence_bindings"] = copy.deepcopy(pipeline_evidence_visits)
+                else:
+                    block["evidence_bindings"] = [{"stage": v["pipeline_kind"],
+                        "inventory": v["evidence_inventory"], "mappings": v["evidence_mappings"],
+                        "response_text_sha256": v["evidence_response_sha256"]}
+                        for v in visits.values() if v.get("evidence_mappings") is not None]
             if validation_runner is None:
                 validate_receipt(receipt)
             else:
@@ -7055,6 +7299,10 @@ async def _invoke_native_role_episode(
             else result["delivery"]["actor_output"] if solver_group is not None
             else completion.text
         )
+        if pipeline_config is not None and pipeline_config["schema"].endswith("-v2") and delivery.kind == "accepted":
+            from .intent_slot_pipeline import derive_answer
+            final_text = derive_answer(selected, receipt["intent_slot_context"]["slot_results"])
+            receipt["intent_slot_pipeline"]["derived_answer_sha256"] = hashlib.sha256(final_text.encode("utf-8")).hexdigest()
         answer_selection_receipt = None
         if config.answer_selection is not None and delivery.kind not in ('abstention', 'context-abstention'):
             final_text, answer_selection_receipt = await run_answer_selection()
@@ -7506,6 +7754,12 @@ async def _invoke_native_role_episode(
             f"{state.prepared.sample.sample_id}/{program.program_id}/native-episode",
             state.prepared.execution_unit_id,
         )
+        if node_rails_enabled and receipt.get("intent_slot_pipeline") is not None:
+            trace.emit("ORG", episode_trace_id + "/candidate-node-handoffs", {
+                "org_candidate_node_handoffs": copy.deepcopy(node_handoffs),
+                "org_knowledge_snapshot_sha256": snapshot_sha256,
+                "org_sample_id": state.prepared.sample.sample_id, "org_knowledge_store_pins": node_store_pins,
+                "org_knowledge_snapshot_ref": node_snapshot_ref})
         for compilation in proposal_contacts.values():
             trace.emit("ORG", compilation["contact_id"] + "/candidate-proposal", {
                 "org_candidate_proposal": compilation,
@@ -7759,6 +8013,7 @@ def _run_agent_openjiuwen(
     on_outcome: Callable[[_AgentRuntimeOutcome], object] | None = None,
     admission_control: object = None,
     admission_checkpoint_path: Path | None = None,
+    node_snapshot_ref=None,
 ) -> tuple[_AgentRuntimeOutcome, ...]:
     """Run the speech AgentLoop on the pinned openJiuwen workflow engine.
 
@@ -7908,6 +8163,7 @@ def _run_agent_openjiuwen(
                 core_client=core_client, snapshot=snapshot,
                 snapshot_sha256=snapshot_sha256, protected_material=protected_material,
                 base_decoding_params=base_decoding_params, run_id=run_id,
+                node_snapshot_ref=node_snapshot_ref,
                 knowledge_value_renderer=knowledge_value_renderer,
                 validation_runner=None if slot_fill is None else slot_fill.validation_runner,
                 ready_request_runner=(None if slot_fill is None or not switches.ready_request
@@ -8703,6 +8959,7 @@ def run_speech_native_agent_loop(
     # declares ``admitted_level``, the flight width is instances x admitted level (a deployment fact); ``None`` -- every
     # existing caller -- keeps ``slot_count`` (the hashed ``serving_slots``) exactly.
     deployment_profile: object = None,
+    candidate_snapshot_root: Path | None = None,
 ) -> AgentLoopSummary:
     """Run a bounded, batched, speech-native AgentLoop over one DEV split.
 
@@ -8971,9 +9228,20 @@ def run_speech_native_agent_loop(
     # family-level number of fallback contacts per row (0 for every request that is not a budgeted thinking request).
     from ..core.reasoning_knobs import fallback_contacts_per_row  # noqa: PLC0415
 
+    fallback_ceiling = fallback_contacts_per_row(controller_policy_id, decoding_params)
+    if (native_episode_binding is not None and native_episode_binding.config.intent_slot_pipeline_json is not None):
+        graph = json.loads(native_episode_binding.config.intent_slot_pipeline_json)
+        if graph.get('node_rails') == 'sdk-handoff-v1':
+            from ..core.reasoning_knobs import fallback_reserve, resolve_node_decoding
+            fallback_ceiling = (sum(
+                fallback_reserve(resolve_node_decoding(dict(decoding_params or {}), thinking_policy, role.phase_id)) is not None
+                for role in native_episode_binding.config.roles
+                if role.role_kind in ('perception', 'slot', 'solver')
+                for _ in range(graph['max_candidates'] if role.role_kind == 'slot' and graph['slot_mode'] == 'per_candidate' else 1)
+            ) if graph['answer_only_fallback'] == 'budgeted-v1' else 0)
     planned_ceiling = (
         len(execution_units.units) if execution_units is not None else len(samples)
-    ) * (max_contacts + fallback_contacts_per_row(controller_policy_id, decoding_params))
+    ) * (max_contacts + fallback_ceiling)
     if planned_ceiling > plan.planned_model_calls:
         raise RailsRunnerError(
             f"AgentLoop contact ceiling {planned_ceiling} exceeds the ExecutionPlan "
@@ -9149,6 +9417,11 @@ def run_speech_native_agent_loop(
             )
         return runtime_trace_sha256
 
+    node_snapshot_ref = None
+    if (native_episode_binding is not None and native_episode_binding.config.intent_slot_pipeline_json is not None
+        and json.loads(native_episode_binding.config.intent_slot_pipeline_json).get('node_rails') == 'sdk-handoff-v1'):
+        from .candidate_handoff import persist_shared_snapshot
+        node_snapshot_ref = persist_shared_snapshot(knowledge_snapshot, candidate_snapshot_root or data_root)
     if agent_executor_id == "openjiuwen-workflow-v1":
         outcomes = list(
             _run_agent_openjiuwen(
@@ -9176,6 +9449,7 @@ def run_speech_native_agent_loop(
                 on_outcome=settle_outcome,
                 admission_control=admission_control,
                 admission_checkpoint_path=admission_checkpoint_path,
+                node_snapshot_ref=node_snapshot_ref,
             )
         )
     else:

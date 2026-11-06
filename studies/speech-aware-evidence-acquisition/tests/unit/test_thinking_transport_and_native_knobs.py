@@ -426,3 +426,12 @@ def test_ready_dispatch_preserves_slot_on_answer_only_fallback(tmp_path):
     assert completion.text == "slot values" and sunk == [completion]
     assert [call["decoding_params"]["id_slot"] for call in transport.calls] == [3, 3]
     assert len(_receipts(buffer)) == 1 and len(transport.calls) == 2
+
+
+def test_native_answer_only_retry_can_be_disabled_for_candidate_rails(tmp_path):
+    adapter, transport, sunk = _native(tmp_path, [('', 'length', 4096)])
+    adapter._answer_only_fallback_enabled = False
+    buffer = TraceBuffer('SAEA-E-TEST-native-tools-client')
+    completion = _dispatch(adapter, buffer)
+    assert completion.text == '' and completion.finish_reason == 'length'
+    assert len(transport.calls) == 1 and sunk == [completion] and _receipts(buffer) == []

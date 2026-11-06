@@ -1427,6 +1427,8 @@ def default_controller_factory(program: PhaseProgram) -> Callable[[str], Evidenc
 
 
 _PROGRAM_CONFIG_FILENAMES: Mapping[str, str] = {
+    "phase-native-intent-slot-batched-v2": "phase-native-intent-slot-batched-v2.json",
+    "phase-native-intent-slot-per-candidate-v2": "phase-native-intent-slot-per-candidate-v2.json",
     "phase-native-intent-slot-batched-v1": "phase-native-intent-slot-batched-v1.json",
     "phase-native-intent-slot-per-candidate-v1": "phase-native-intent-slot-per-candidate-v1.json",
     "phase-native-slot-review-contract-v1": "phase-native-slot-review-contract-v1.json",
@@ -2280,6 +2282,11 @@ def register_phase_programs_v1() -> None:
     if "phase-native-intent-slot-per-candidate-v1" not in registered:
         AGENT_CONTROLLERS.register("phase-native-intent-slot-per-candidate-v1",
             default_controller_factory(default_phase_program("phase-native-intent-slot-per-candidate-v1")))
+    for _protocol_v2 in ("batched", "per-candidate"):
+        _program_id = "phase-native-intent-slot-" + _protocol_v2 + "-v2"
+        if _program_id not in registered:
+            AGENT_CONTROLLERS.register(_program_id,
+                default_controller_factory(default_phase_program(_program_id)))
     unregistered = set(_PROGRAM_CONFIG_FILENAMES) - set(AGENT_CONTROLLERS.names())
     if unregistered:
         raise RailsControllersError(

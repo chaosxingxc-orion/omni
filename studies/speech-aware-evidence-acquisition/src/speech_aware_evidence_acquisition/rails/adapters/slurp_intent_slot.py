@@ -35,8 +35,9 @@ def validate_response(*, kind, text, response_format, context, config):
         raise ValueError("pipeline response does not satisfy its node schema") from error
     if kind == "perception":
         legal = schema["properties"]["candidates"]["items"]["properties"]["intent_id"]["enum"]
+        raw_rows = document(text)["candidates"]
         rows = candidates(text, config["max_candidates"], legal, duplicate_policy=config.get("duplicate_candidate_policy", "strict"))
-        validate_evidence_refs(rows, context["evidence_inventory"], [r["candidate_id"] for r in rows], policy=config.get("evidence_policy", "strict"))
+        validate_evidence_refs(raw_rows if config["schema"].endswith("-v2") else rows, context["evidence_inventory"], [r["candidate_id"] for r in rows], policy=config.get("evidence_policy", "strict"))
         return rows
     if kind == "slot":
         legal = schema["properties"]["candidates"]["items"]["properties"]["entities"]["items"]["properties"]["type"]["enum"]
@@ -45,6 +46,11 @@ def validate_response(*, kind, text, response_format, context, config):
         validate_evidence_refs(rows.values(), context["evidence_inventory"], ids, policy=config.get("evidence_policy", "strict"))
         return rows
     if kind == "solver":
+        if config["schema"].endswith("-v2"):
+            cid = document(text)["candidate_id"]
+            if cid not in context["slot_results"] or cid not in [r["candidate_id"] for r in context["candidates"]]:
+                raise ValueError("Decision chose an intent outside the evaluated candidate set")
+            return cid
         return decision(text, context["candidates"], context["slot_results"],
                         lambda row: row["scenario"] + "_" + row["action"])
     raise ValueError("unsupported pipeline role")

@@ -633,7 +633,9 @@ class FrozenCoreRoleModel:
         metered_request: MeteredRoleRequest,
         context: NativeRoleContactContext | None = None,
         context_provider: ContactContextProvider | None = None,
+        candidate_gate=None,
     ) -> None:
+        self._candidate_gate = candidate_gate
         if not callable(metered_request):
             raise ValueError("metered_request must be callable")
         if (context is None) == (context_provider is None):
@@ -697,6 +699,8 @@ class FrozenCoreRoleModel:
         return context
 
     async def invoke(self, messages, *, tools=None, **kwargs) -> AssistantMessage:
+        if self._candidate_gate is not None:
+            self._candidate_gate()
         context = self._next_context()
         message_documents = tuple(_document(message) for message in messages)
         tool_documents = tuple(_document(tool) for tool in (tools or ()))
@@ -752,7 +756,10 @@ class _RoleAuthorityRail(AgentRail):
         tool_allowed: Callable[[str, str], bool],
         final_report_iteration: int | None = None,
         reject_tool_batch=None,
+        candidate_before=None, candidate_after=None,
     ) -> None:
+        self._candidate_before, self._candidate_after = candidate_before, candidate_after
+        self._candidate_error = ContextVar(f"candidate_rail_error_{uuid.uuid4().hex}", default=None)
         self._role_id = role_id
         self._advertised_names = advertised_names
         self._tool_allowed = tool_allowed
@@ -762,6 +769,13 @@ class _RoleAuthorityRail(AgentRail):
         self._rejection_key = f"saea-native-rejected-batch:{role_id}"
 
     async def before_model_call(self, ctx) -> None:
+        if self._candidate_before is not None:
+            try:
+                result = self._candidate_before(self._role_id, ctx)
+                if inspect.isawaitable(result):
+                    await result
+            except Exception as error:
+                self._candidate_error.set(error)
         if self._final_report_iteration is None:
             return
         iteration = ctx.extra.get(self._iteration_key, 0) + 1
@@ -772,6 +786,15 @@ class _RoleAuthorityRail(AgentRail):
 
 
     async def after_model_call(self, ctx) -> None:
+        if self._candidate_after is not None:
+            try:
+                result = self._candidate_after(self._role_id, ctx)
+                if inspect.isawaitable(result):
+                    await result
+            except Exception as error:
+                # The SDK callback dispatcher logs and swallows hook exceptions.
+                # Carry the refusal to _run, where Workflow can retain its paid row.
+                self._candidate_error.set(error)
         if self._reject_tool_batch is None:
             return
         if ctx.extra.get(self._rejection_key):
@@ -879,7 +902,7 @@ class NativeRoleNode(WorkflowComponent):
         abilities: Sequence[object] = (),
         tool_allowed: Callable[[str, str], bool] | None = None,
         delivery_allowed: Callable[[str, str], bool] | None = None,
-        reject_tool_batch=None,
+        reject_tool_batch=None, candidate_before=None, candidate_after=None,
     ) -> None:
         super().__init__()
         self.spec = spec
@@ -923,6 +946,8 @@ class NativeRoleNode(WorkflowComponent):
             context=contact_context,
             context_provider=contact_context_provider,
         )
+        if candidate_before is not None:
+            self._model._candidate_gate = self._check_candidate_gate
         self._agent.set_llm(self._model)
         for ability in abilities:
             card = getattr(ability, "card", None)
@@ -954,6 +979,7 @@ class NativeRoleNode(WorkflowComponent):
             tool_allowed=allowed,
             final_report_iteration=(spec.max_iterations if spec.reserve_final_report else None),
             reject_tool_batch=reject_tool_batch,
+            candidate_before=candidate_before, candidate_after=candidate_after,
         )
         self._rail_registered = False
         self._registration_lock = asyncio.Lock()
@@ -981,6 +1007,11 @@ class NativeRoleNode(WorkflowComponent):
         }
         log.append(entry)
         return entry
+
+    def _check_candidate_gate(self):
+        error = self._rail._candidate_error.get()
+        if error is not None:
+            raise error
 
     def _begin_tool_capture(
         self,
@@ -1033,6 +1064,7 @@ class NativeRoleNode(WorkflowComponent):
             raise ValueError("native role query must be non-empty text")
         receipt_token, receipt_contacts = self._model._begin_receipt_capture()
         tool_token, tool_calls = self._begin_tool_capture()
+        rail_error_token = self._rail._candidate_error.set(None)
         try:
             result = await self._agent.invoke(
                 {
@@ -1043,6 +1075,9 @@ class NativeRoleNode(WorkflowComponent):
                     ),
                 },
             )
+            rail_error = self._rail._candidate_error.get()
+            if rail_error is not None:
+                raise rail_error
         except FrozenCoreRoleContextFitError as error:
             # E20: the request never reached the wire (or the wire refused
             # it), so there is no completion to bind -- only the contacts
@@ -1077,6 +1112,7 @@ class NativeRoleNode(WorkflowComponent):
         finally:
             self._model._end_receipt_capture(receipt_token)
             self._end_tool_capture(tool_token)
+            self._rail._candidate_error.reset(rail_error_token)
         actor_output = result.get("output")
         result_type = result.get("result_type")
         if not isinstance(actor_output, str) or not isinstance(result_type, str):

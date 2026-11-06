@@ -12,9 +12,9 @@ from test_native_episode_runner import _ActualEpisodeHarness
 from test_native_episode_config import config as raw_config
 
 
-def harness(tmp_path, mode='batched', *, plan=None, data=None, replay=None, failure=None):
+def harness(tmp_path, mode='batched', *, plan=None, data=None, replay=None, failure=None, samples=1):
     cap = 3 if mode == 'batched' else 5
-    h = _ActualEpisodeHarness(tmp_path, sample_count=1, max_revisions=0, max_contacts=cap,
+    h = _ActualEpisodeHarness(tmp_path, sample_count=samples, max_revisions=0, max_contacts=cap,
                               planner_actions=(), arm='raw-speech-agent-native-tools', query_source='speech_audio',
                               contact_journal=True, execution_plan=plan, data_root=data, contact_replay=replay)
     values = raw_config()
@@ -58,7 +58,7 @@ def harness(tmp_path, mode='batched', *, plan=None, data=None, replay=None, fail
     runtime=_raw_runtime(h.world.data_root)
     runtime._samples=h.samples
     runtime._transport=h.transport
-    runtime._composed.values['native_contact_fit']['contact_cap']=cap
+    runtime._composed.values['native_contact_fit']['contact_cap']=cap * samples
     runtime._adapter=SimpleNamespace(serving_geometry=lambda:{'slot_tokens':24576})
     h.fit_calls=[]
     class Tokenizer(_RawTokenizer):
@@ -282,3 +282,524 @@ def test_runner_real_projection_keeps_sealed_short_id_and_duplicate_policy(tmp_p
     assert receipt['intent_slot_pipeline']['candidate_ids']==['alpha_one']
     assert receipt['intent_slot_pipeline']['selected_candidate_id']=='alpha_one'
     assert json.loads(summary.results[0].final_response_text)['entities']==[]
+
+@pytest.mark.parametrize('mode', ['batched', 'per_candidate'])
+def test_v2_real_runner_three_nodes_and_raw_trace_replay(tmp_path, mode):
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    from speech_aware_evidence_acquisition.core.bundle import BundleError
+    from test_template_variants_delivery import _runtime, _raw_native
+    h = harness(tmp_path, mode)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2')
+    h.program = default_phase_program('phase-native-intent-slot-' + mode.replace('_', '-') + '-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == 'perception':
+            extra = dict(value['candidates'][0], distinction='second independent cue')
+            value['candidates'].insert(1, extra)
+        if key[1] == 'solver':
+            value = {'candidate_id': 'play_radio'}
+        return canonical(value)
+    h._output = output
+    try:
+        summary = h.run()
+        raw = _raw_native(h, solver_role={'max_iterations': 1})
+        raw['intent_slot_pipeline'] = policy
+        outputs = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally:
+        cost = h.close()['cost']
+    assert cost['calls_used'] == (3 if mode == 'batched' else 4)
+    assert json.loads(summary.results[0].final_response_text) == {
+        'scenario': 'play', 'action': 'radio', 'entities': [{'type': 'person', 'filler': 'Bob'}]}
+    records = {rid: p for channel, rid, p in h.trace.records}
+    _verify_outputs_trace_binding(tuple(outputs), records)
+    assert len(summary.results[0].native_episode_receipt['intent_slot_pipeline']['grouping']['groups'][0]['sources']) == 2
+    tampered = [dict(outputs[0], text='{}')]
+    with pytest.raises(BundleError):
+        _verify_outputs_trace_binding(tuple(tampered), records)
+
+@pytest.mark.parametrize('mode', ['batched', 'per_candidate'])
+@pytest.mark.parametrize('rails_enabled', [False, True])
+def test_v2_v4g_normaliser_source_chain_and_trace_tamper(tmp_path, monkeypatch, mode, rails_enabled):
+    """The real v4g implementation transforms the derived Slot answer before seal."""
+    import copy
+    import hashlib
+    from speech_aware_evidence_acquisition.core.bundle import BundleError
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    from speech_aware_evidence_acquisition.rails import delivery_normalisers as dn
+    from speech_aware_evidence_acquisition.rails import slurp_projection_v3 as v3
+    from speech_aware_evidence_acquisition.reproduction.slurp_scoring import legal_intent_inventory
+    from test_template_variants_delivery import _runtime, _raw_native
+
+    # Deterministic, model-free TRAIN-statistics stand-ins; use the registered
+    # v4g and v3 implementations themselves in both runner and bundle replay.
+    stats = dn.SlurpV4Statistics(article_strip=[], oclock_strip=False,
+        intent_n={'play_radio': 10}, intent_with_entities={'play_radio': 10},
+        intent_type={'play_radio': {'person': 10}})
+    table = dn.ScopeRuleTable({}, sha256='0' * 64, floor=5)
+    monkeypatch.setattr(dn, 'default_v4_statistics', lambda: stats)
+    monkeypatch.setattr(dn, 'default_scope_rule_table', lambda: table)
+    monkeypatch.setattr(v3, '_default_legal_intent_inventory',
+                        lambda: legal_intent_inventory({'play': ('music', 'radio')}))
+
+    h = harness(tmp_path, mode)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2')
+    if rails_enabled: policy.update(node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-' + mode.replace('_', '-') + '-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy),
+                       deliver_normaliser_id=dn.DELIVER_NORMALISE_V4G)
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == 'slot':
+            for row in value['candidates']:
+                if row['candidate_id'] == 'play_radio':
+                    row['entities'][0]['filler'] = '  BOB   Smith  '
+        elif key[1] == 'solver':
+            value = {'candidate_id': 'play_radio'}
+        return canonical(value)
+    h._output = output
+    try:
+        summary = h.run()
+        raw = _raw_native(h, solver_role={'max_iterations': 1})
+        raw['intent_slot_pipeline'] = policy
+        raw['deliver_normaliser'] = {'normaliser': dn.DELIVER_NORMALISE_V4G}
+        runtime = _runtime(h, summary, raw)
+        # The generic mock harness uses fake-carrier; the registered v4g and
+        # its Flight output contract are SLURP-only.
+        runtime._plan = replace(h.plan, carrier_lock_key='slurp')
+        outputs = runtime._canonical_output_rows(h.client)
+    finally:
+        cost = h.close()['cost']
+    assert cost['calls_used'] == (3 if mode == 'batched' else 4)
+    row = outputs[0]
+    receipt = row['native_episode_receipt']
+    block = receipt['intent_slot_pipeline']
+    norm = receipt['deliver_normaliser']
+    records = {rid: payload for _, rid, payload in h.trace.records}
+    raw_decision = records[block['decision_source']['request_id'] + '/response']
+    raw_text = raw_decision['text']
+    sha = lambda value: hashlib.sha256(value.encode('utf-8')).hexdigest()
+    assert json.loads(raw_text) == {'candidate_id': 'play_radio'}
+    assert sha(raw_text) == raw_decision['response_text_sha256'] == block['decision_source']['response_text_sha256']
+    assert raw_decision['response_sha256'] == block['decision_source']['response_sha256'] == row['response_sha256']
+    derived = canonical({'scenario': 'play', 'action': 'radio',
+                         'entities': [{'type': 'person', 'filler': '  BOB   Smith  '}]})
+    assert block['derived_answer_sha256'] == norm['input_sha256'] == sha(derived)
+    assert norm['normaliser_id'] == dn.DELIVER_NORMALISE_V4G and norm['changed'] is True
+    assert json.loads(row['text'])['entities'] == [{'type': 'person', 'filler': 'bob smith'}]
+    assert row['text'] != derived
+    assert norm['output_sha256'] == row['response_text_sha256'] == sha(row['text'])
+    _verify_outputs_trace_binding(tuple(outputs), records)
+
+    for target in ('decision', 'slot', 'derived_hash', 'normaliser_input', 'normaliser_output', 'answer'):
+        changed_row, changed_records = copy.deepcopy(row), copy.deepcopy(records)
+        changed_block = changed_row['native_episode_receipt']['intent_slot_pipeline']
+        changed_norm = changed_row['native_episode_receipt']['deliver_normaliser']
+        if target == 'decision':
+            changed_records[block['decision_source']['request_id'] + '/response']['text'] = canonical({'candidate_id': 'play_music'})
+        elif target == 'slot':
+            changed_records[block['slot_sources'][-1]['source']['request_id'] + '/response']['text'] += ' '
+        elif target == 'derived_hash':
+            changed_block['derived_answer_sha256'] = '0' * 64
+        elif target == 'normaliser_input':
+            changed_norm['input_sha256'] = '0' * 64
+        elif target == 'normaliser_output':
+            changed_norm['output_sha256'] = '0' * 64
+        else:
+            changed_row['text'] = '{}'
+            changed_row['response_text_sha256'] = sha('{}')
+        with pytest.raises(BundleError):
+            _verify_outputs_trace_binding((changed_row,), changed_records)
+
+@pytest.mark.parametrize('mode', ['batched', 'per_candidate'])
+def test_sdk_candidate_hooks_actual_runner(mode, tmp_path, monkeypatch):
+    import hashlib
+    from speech_aware_evidence_acquisition.reproduction.ojw import native_roles
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    from test_template_variants_delivery import _runtime, _raw_native
+    events = []
+    before, after = native_roles._RoleAuthorityRail.before_model_call, native_roles._RoleAuthorityRail.after_model_call
+    async def record_before(self, ctx):
+        events.append(('before', self._role_id))
+        return await before(self, ctx)
+    async def record_after(self, ctx):
+        events.append(('after', self._role_id))
+        return await after(self, ctx)
+    monkeypatch.setattr(native_roles._RoleAuthorityRail, 'before_model_call', record_before)
+    monkeypatch.setattr(native_roles._RoleAuthorityRail, 'after_model_call', record_after)
+    h = harness(tmp_path, mode)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-' + mode.replace('_', '-') + '-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == 'perception':
+            value['candidates'][0]['unresolved_fields'] = ['uncertain sample cue']
+            value['candidates'].insert(1, dict(value['candidates'][0], distinction='different words', unresolved_fields=['another uncertainty']))
+        elif key[1] == 'slot':
+            for row in value['candidates']:
+                row['entities'].append(dict(row['entities'][0]))
+                row['unresolved_fields'] = ['uncertain entity']
+        elif key[1] == 'solver':
+            value = {'candidate_id': 'play_radio'}
+        return canonical(value)
+    h._output = output
+    try:
+        summary = h.run()
+        raw = _raw_native(h, solver_role={'max_iterations': 1}); raw['intent_slot_pipeline'] = policy
+        outputs = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally:
+        cost = h.close()['cost']
+    expected = ['perception'] + ['slot'] * (1 if mode == 'batched' else 2) + ['solver']
+    assert events == [(side, role) for role in expected for side in ('before', 'after')]
+    assert cost['calls_used'] == len(expected)
+    row = outputs[0]; block = row['native_episode_receipt']['intent_slot_pipeline']
+    assert len(json.loads(row['text'])['entities']) == 2
+    records = {rid: payload for _, rid, payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(outputs), records)
+    assert len(block['node_handoffs']) == len(expected)
+    assert hashlib.sha256(records[block['perception_source']['request_id'] + '/response']['text'].encode()).hexdigest() == block['perception_source']['response_text_sha256']
+    assert 'uncertain sample cue' in str([v['rendered'] for k, v in h.prepared.items() if k[1] == 'slot'])
+
+@pytest.mark.parametrize('target', ['digest', 'source', 'snapshot', 'knowledge', 'branch', 'normalized', 'request', 'inventory'])
+def test_sdk_handoff_trace_tamper_rejected(tmp_path, target):
+    import copy
+    from speech_aware_evidence_acquisition.core.bundle import BundleError
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    from test_template_variants_delivery import _runtime, _raw_native
+    h = harness(tmp_path)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    original = h._output
+    h._output = lambda key: canonical({'candidate_id': 'play_radio'}) if key[1] == 'solver' else original(key)
+    try:
+        summary = h.run()
+        raw = _raw_native(h, solver_role={'max_iterations': 1}); raw['intent_slot_pipeline'] = policy
+        rows = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally: h.close()
+    records = {rid: payload for _, rid, payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows), records)
+    row = copy.deepcopy(rows[0]); records = copy.deepcopy(records)
+    block = row['native_episode_receipt']['intent_slot_pipeline']
+    handoff = block['node_handoffs'][1]
+    if target == 'inventory':
+        block['evidence_bindings'][0]['inventory']['sources'][0]['source_id'] = 'other-audio'
+    else:
+        keys = {'digest':'handoff_sha256', 'source':'source_response_sha256',
+                'snapshot':'snapshot_sha256', 'branch':'branch_index',
+                'normalized':'normalized_sha256', 'request':'target_request_sha256'}
+        if target == 'knowledge': handoff['knowledge'].append({'id':'invented'})
+        else: handoff[keys[target]] = 99 if target == 'branch' else '0'*64
+    with pytest.raises(BundleError): _verify_outputs_trace_binding((row,), records)
+
+@pytest.mark.parametrize('mode', ['batched', 'per_candidate'])
+def test_sdk_snapshot_provider_supplies_next_node_and_preserves_raw(tmp_path, mode):
+    from dataclasses import replace as dc_replace
+    from test_rails_runner import _knowledge_snapshot
+    from test_knowledge_stores import _supply
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    snapshot = _knowledge_snapshot()
+    calls = []
+    def supply(phase, context):
+        calls.append((phase, context.sample_id))
+        return _supply(snapshot, context)
+    h = harness(tmp_path, mode)
+    h.supply_for_phase = supply
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-' + mode.replace('_', '-') + '-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == 'perception':
+            value['candidates'][0]['distinction'] = 'invented model knowledge MUST_NOT_BECOME_RULE'
+        if key[1] == 'solver': value = {'candidate_id':'play_radio'}
+        return canonical(value)
+    h._output = output
+    try:
+        summary = h.run(snapshot=snapshot)
+        raw = _raw_native(h, solver_role={'max_iterations': 1}); raw['intent_slot_pipeline'] = policy
+        rows = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally: h.close()
+    assert [phase for phase, _ in calls] == ['slot','solver']
+    records = {rid: payload for _, rid, payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows), records)
+    receipt = rows[0]['native_episode_receipt']['intent_slot_pipeline']
+    for handoff in receipt['node_handoffs'][1:]:
+        payload = records[handoff['target_request_id'] + '/request']['payload']
+        evidence = payload['supplied_evidence']
+        assert any(e['evidence_id'] == snapshot.values[0].value_id and e['content'] == snapshot.values[0].content for e in evidence)
+        assert 'MUST_NOT_BECOME_RULE' not in json.dumps(evidence)
+        assert handoff['snapshot_sha256'] == snapshot.content_hash()
+    assert any('MUST_NOT_BECOME_RULE' in payload.get('text','') for key,payload in records.items() if key.endswith('/response'))
+
+@pytest.mark.parametrize('bad_phase', ['perception', 'slot'])
+def test_sdk_hook_rejects_invalid_raw_refs_before_dedup(tmp_path, bad_phase):
+    h = harness(tmp_path)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == bad_phase:
+            if bad_phase == 'perception':
+                value['candidates'].insert(1, dict(value['candidates'][0], evidence_refs=['invented']))
+            else:
+                value['candidates'][0]['evidence_refs'] = ['invented', 'invented']
+        elif key[1] == 'solver': value = {'candidate_id': 'play_radio'}
+        return canonical(value)
+    h._output = output
+    try: summary = h.run()
+    finally: cost = h.close()['cost']
+    assert cost['calls_used'] == (1 if bad_phase == 'perception' else 2)
+    assert summary.results[0].native_episode_receipt['terminal_disposition']['reason'] == 'seal_refusal'
+    assert summary.results[0].final_response_text == ''
+
+
+def test_node_rails_normalization_preserves_uncertainty_and_multiplicity():
+    from speech_aware_evidence_acquisition.rails.candidate_handoff import normalized_response
+    p = {'candidates': [{'intent_id':'play_music', 'distinction':'one', 'evidence_refs':[], 'unresolved_fields':['maybe x']},
+                        {'intent_id':'play_music', 'distinction':'other', 'evidence_refs':[], 'unresolved_fields':['maybe y']}]}
+    result = json.loads(normalized_response('perception', canonical(p), {}, {'max_candidates':3}))
+    assert result['candidates'][0]['unresolved_fields'] == ['maybe x','maybe y']
+    item = {'type':'person','filler':'Bob'}
+    slot = {'candidates':[{'candidate_id':'play_music','entities':[item,item], 'evidence_refs':[], 'unresolved_fields':['uncertain']} ]}
+    result = json.loads(normalized_response('slot', canonical(slot), {'candidates':[{'candidate_id':'play_music'}]}, {}))
+    assert result['candidates'][0]['entities'] == [item,item]
+    assert result['candidates'][0]['unresolved_fields'] == ['uncertain']
+
+
+@pytest.mark.parametrize('mode', ['batched', 'per_candidate'])
+def test_sdk_hooks_with_real_slot_view_projection(tmp_path, mode):
+    from test_slot_binding_view import _config as projection_config, bind_slot_view_context
+    from speech_aware_evidence_acquisition.rails.slurp_solver_protocol import response_format
+    h = harness(tmp_path / 'run', mode)
+    cfg = projection_config(h.world.data_root)
+    cfg['native_episode']['intent_slot_pipeline'] = {'schema':'saea-intent-slot-pipeline-v2', 'duplicate_candidate_policy':'group_v2'}
+    cfg['native_episode']['roles']['slot'] = {'phase_id':'slot','max_iterations':1}
+    cfg['knowledge_stores']['slot-contracts']['candidate_supply']['slot'] = cfg['knowledge_stores']['slot-contracts']['candidate_supply']['solver'].copy()
+    cfg['native_evidence_projection_params']['consumer_roles'] = ['slot','solver']
+    context = bind_slot_view_context(cfg, h.world.data_root)
+    from speech_aware_evidence_acquisition.rails.knowledge_stores import build_knowledge_store_supply
+    router = build_knowledge_store_supply(context.knowledge_binding,
+        program=default_phase_program('phase-native-intent-slot-' + mode.replace('_', '-') + '-v1'),
+        data_root=h.world.data_root, legal_candidate_ids=('alpha_one', 'beta_two', 'gamma_three'))
+    calls = []
+    def supply(phase, current):
+        calls.append(phase)
+        return router.automatic_for_phase(phase, current)
+    h.supply_for_phase = supply
+    h.knowledge_store_binding = context.knowledge_binding
+    h.transport._native_evidence_projection = 'native-candidate-slot-view-v1'
+    h.transport._native_evidence_projection_context = context
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-' + mode.replace('_', '-') + '-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    original_material = h.material_for_phase
+    def material(phase, ctx, sealed):
+        result = original_material(phase, ctx, sealed); fmt = result.response_format
+        if phase == 'perception':
+            fmt = json.loads(json.dumps(fmt)); fmt['json_schema']['schema']['properties']['candidates']['items']['properties']['intent_id']['enum'] = ['alpha_one', 'beta_two']
+        elif phase == 'solver': fmt = response_format({'alpha':['one'], 'beta':['two']}, ['person'])
+        return replace(result, response_format=fmt)
+    h.material_for_phase = material
+    candidate = {'intent_id':'alpha_one', 'distinction':'first', 'evidence_refs':[], 'unresolved_fields':['uncertain']}
+    def output(key):
+        if key[1] == 'perception': return canonical({'candidates':[candidate, dict(candidate, distinction='other'), dict(candidate, intent_id='beta_two')]})
+        if key[1] == 'slot':
+            ids = ['alpha_one', 'beta_two'] if mode == 'batched' else [['alpha_one'], ['beta_two']][key[2]-1]
+            return canonical({'candidates':[{'candidate_id':cid,'entities':[], 'evidence_refs':[], 'unresolved_fields':[]} for cid in ids]})
+        return canonical({'candidate_id':'alpha_one'})
+    h._output = output
+    try: summary = h.run(snapshot=context.knowledge_binding.composite_snapshot)
+    finally: h.close()
+    assert calls == ['slot', 'solver']
+    rendered_slots = [json.dumps(v['rendered']) for k, v in h.prepared.items() if k[1] == 'slot']
+    assert all('Alpha role.' in item or 'Beta role.' in item for item in rendered_slots)
+    if mode == 'per_candidate':
+        assert 'Alpha role.' in rendered_slots[0] and 'Beta role.' not in rendered_slots[0]
+        assert 'Beta role.' in rendered_slots[1] and 'Alpha role.' not in rendered_slots[1]
+    assert json.loads(summary.results[0].final_response_text)['action'] == 'one'
+    records = {rid: payload for _,rid,payload in h.trace.records}
+    projections = [v['org_native_evidence_projection'] for v in records.values() if 'org_native_evidence_projection' in v]
+    scopes = [p.get('scope') for p in projections if isinstance(p.get('scope'), dict) and p['scope'].get('role_kind') in ('slot','solver')]
+    assert scopes and all(s['fallback_reason'] is None for s in scopes), [(s['role_kind'],s['fallback_reason'],s['candidate_ids']) for s in scopes]
+    assert [s['candidate_ids'] for s in scopes if s['role_kind'] == 'slot'] == ([['alpha_one', 'beta_two']] if mode == 'batched' else [['alpha_one'], ['beta_two']])
+    assert [s['candidate_ids'] for s in scopes if s['role_kind'] == 'solver'] == [['alpha_one', 'beta_two']]
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    raw = _raw_native(h, solver_role={'max_iterations':1}); raw['intent_slot_pipeline'] = policy
+    rows = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    _verify_outputs_trace_binding(tuple(rows), records)
+
+
+def test_sdk_three_pinned_stores_remain_namespaced(tmp_path):
+    from test_knowledge_stores import _config, _supply
+    from speech_aware_evidence_acquisition.rails.knowledge_stores import load_knowledge_store_binding
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    store_config, _ = _config(tmp_path / 'stores', ('intent-boundaries','slot-contracts','train-exemplars'))
+    store_binding = load_knowledge_store_binding(store_config, data_root=tmp_path / 'stores')
+    snapshot = store_binding.composite_snapshot
+    h = harness(tmp_path / 'run')
+    h.knowledge_store_binding = store_binding
+    h.supply_for_phase = lambda phase, context: _supply(snapshot, context)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    original = h._output
+    h._output = lambda key: canonical({'candidate_id':'play_radio'}) if key[1] == 'solver' else original(key)
+    try:
+        summary = h.run(snapshot=snapshot)
+        raw = _raw_native(h, solver_role={'max_iterations': 1}); raw['intent_slot_pipeline'] = policy
+        rows = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally: h.close()
+    records = {rid: payload for _,rid,payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows), records)
+    handoffs = rows[0]['native_episode_receipt']['intent_slot_pipeline']['node_handoffs']
+    for handoff in handoffs:
+        assert set(handoff['store_pins']) == {'intent-boundaries','slot-contracts','train-exemplars'}
+        assert all(pin['composite_snapshot_sha256'] == snapshot.content_hash() for pin in handoff['store_pins'].values())
+    assert any('::' in item['id'] for handoff in handoffs for item in handoff['knowledge'])
+
+
+def test_sdk_hooks_two_samples_isolated_under_parallel_dispatch(tmp_path):
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    h = harness(tmp_path, samples=2)
+    h.slot_count = 2
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    original = h._output
+    def output(key):
+        value = json.loads(original(key))
+        if key[1] == 'slot':
+            for row in value['candidates']: row['entities'][0]['filler'] = key[0]
+        elif key[1] == 'solver': value = {'candidate_id':'play_radio'}
+        return canonical(value)
+    h._output = output
+    try:
+        summary = h.run()
+        raw = _raw_native(h, solver_role={'max_iterations': 1}); raw['intent_slot_pipeline'] = policy
+        rows = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally: cost = h.close()['cost']
+    assert cost['calls_used'] == 6
+    records = {rid: payload for _,rid,payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows), records)
+    for row in rows:
+        assert json.loads(row['text'])['entities'][0]['filler'] == row['sample_id']
+        assert all(item['sample_id'] == row['sample_id'] for item in row['native_episode_receipt']['intent_slot_pipeline']['node_handoffs'])
+
+
+def test_sdk_before_invalid_handoff_stops_before_any_model_contact(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.reproduction.ojw import native_roles
+    original = native_roles._RoleAuthorityRail.before_model_call
+    async def corrupt(self, ctx):
+        original_before = self._candidate_before
+        if original_before is not None:
+            def invalid(role, context):
+                raise ValueError('invalid handoff identity')
+            self._candidate_before = invalid
+            try:
+                return await original(self, ctx)
+            finally:
+                self._candidate_before = original_before
+        return await original(self, ctx)
+    monkeypatch.setattr(native_roles._RoleAuthorityRail, 'before_model_call', corrupt)
+    h = harness(tmp_path)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    try:
+        with pytest.raises(Exception): h.run()
+    finally:
+        cost = h.close()['cost']
+    assert cost['calls_used'] == 0
+    assert h.dispatched == {}
+
+
+def test_sdk_shared_snapshot_absent_and_tampered_fail_replay(tmp_path):
+    from pathlib import Path
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    from test_template_variants_delivery import _runtime, _raw_native
+    h = harness(tmp_path)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback='budgeted-v1')
+    h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    output = h._output
+    h._output = lambda key: canonical({'candidate_id':'play_radio'}) if key[1] == 'solver' else output(key)
+    try:
+        summary = h.run()
+        raw = _raw_native(h, solver_role={'max_iterations':1}); raw['intent_slot_pipeline'] = policy
+        rows = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally: h.close()
+    records = {rid: payload for _, rid, payload in h.trace.records}
+    node = next(v for v in records.values() if 'org_candidate_node_handoffs' in v)
+    assert 'org_knowledge_snapshot' not in node
+    path = Path(node['org_knowledge_snapshot_ref']['path'])
+    _verify_outputs_trace_binding(tuple(rows), records)
+    original = path.read_text()
+    path.write_text('{}')
+    with pytest.raises(Exception): _verify_outputs_trace_binding(tuple(rows), records)
+    path.unlink()
+    with pytest.raises(Exception): _verify_outputs_trace_binding(tuple(rows), records)
+    path.write_text(original)
+    _verify_outputs_trace_binding(tuple(rows), records)
+
+
+@pytest.mark.parametrize('fallback,expected_calls', [('budgeted-v1', 4), ('off', 1)])
+def test_sdk_budgeted_fallback_length_and_empty_preserves_cost(tmp_path, fallback, expected_calls):
+    from test_template_variants_delivery import _runtime, _raw_native
+    from speech_aware_evidence_acquisition.core.bundle.outputs import _verify_outputs_trace_binding
+    from test_native_episode_runner import _plan, _wire_response
+    plan = _plan(run_id='SAEA-E-native-role-runner-proof', attempt_id='attempt-native-role-runner-proof', planned_model_calls=6)
+    h = harness(tmp_path, plan=plan)
+    policy = json.loads(h.config.intent_slot_pipeline_json)
+    policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2', node_rails='sdk-handoff-v1', answer_only_fallback=fallback)
+    h.program = default_phase_program('phase-native-intent-slot-batched-v2')
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy))
+    requests = []
+    def post(_url, body):
+        request = json.loads(body); requests.append(request)
+        if len(requests) == 1:
+            return json.dumps({'choices':[{'message':{'role':'assistant','content':''},'finish_reason':'length'}],
+                               'usage':{'prompt_tokens':7,'completion_tokens':64}}).encode()
+        phase = ('perception' if len(requests) == 2 else 'slot' if len(requests) == 3 else 'solver')
+        text = h._output(('s1', phase, 1, 1)) if phase != 'solver' else canonical({'candidate_id':'play_radio'})
+        return _wire_response(text)
+    h.post_override = post
+    h.transport._reasoning_content_guard = 'refuse-think-marker-in-content'
+    try:
+        summary = h.run(decoding_params={'temperature':0, 'max_tokens':64, 'thinking_budget_tokens':32,
+                                          'chat_template_kwargs':{'enable_thinking':True}})
+        raw = _raw_native(h, solver_role={'max_iterations':1}); raw['intent_slot_pipeline'] = policy
+        rows = _runtime(h, summary, raw)._canonical_output_rows(h.client)
+    finally: cost = h.close()['cost']
+    assert cost['calls_used'] == expected_calls == len(requests)
+    records = {rid: payload for _, rid, payload in h.trace.records}
+    _verify_outputs_trace_binding(tuple(rows), records)
+    fallbacks = [p for channel, rid, p in h.trace.records if channel == 'TOOL' and rid.endswith('/reasoning-fallback')]
+    if fallback == 'budgeted-v1':
+        assert len(fallbacks) == 1 and fallbacks[0]['first_finish_reason'] == 'length'
+        assert len(h.fit_calls) == 3
+        assert json.loads(rows[0]['text'])['action'] == 'radio'
+    else:
+        assert not fallbacks and rows[0]['text'] == ''

@@ -899,6 +899,7 @@ class NativeEpisodeRunBinding:
     request_gate: Callable
     tools_for_phase: object = None
     supply_for_phase: Callable | None = None
+    knowledge_store_binding: object = None
     review_for_phase: Callable | None = None
     # E8a: the repository root a declared ``context_policy`` reads its
     # committed, hash-pinned templates from (``configs/probes/ncp_*.txt``).
@@ -1434,7 +1435,11 @@ def load_native_episode_config(
         from .intent_slot_pipeline import parse_config, canonical
         pipeline = parse_config(raw["intent_slot_pipeline"])
         pipeline_json = canonical(pipeline)
-        expected_policy = "phase-native-intent-slot-" + pipeline["slot_mode"].replace("_", "-") + "-v1"
+        if pipeline.get("node_rails") == "sdk-handoff-v1" and {"knowledge_context", "knowledge_index", "knowledge_value_rendering"} & set(raw):
+            raise ValueError("candidate SDK rails cannot combine with additional knowledge renderers")
+        if pipeline["schema"].endswith("-v2") and values.get("slurp_projection_v3_delivery"):
+            raise ValueError("v2 derived delivery does not yet support run-level projection")
+        expected_policy = "phase-native-intent-slot-" + pipeline["slot_mode"].replace("_", "-") + ("-v2" if pipeline["schema"].endswith("-v2") else "-v1")
         if program.program_id != expected_policy:
             raise ValueError("intent-slot mode differs from its configured program")
         if raw.get("finite_completion_policy") != "deliver-latest-or-abstain":

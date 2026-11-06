@@ -10,6 +10,7 @@ import json
 from collections.abc import Mapping
 
 SCHEMA = "saea-intent-slot-pipeline-v1"
+SCHEMA_V2 = "saea-intent-slot-pipeline-v2"
 
 
 def canonical(value):
@@ -22,9 +23,9 @@ def digest(value):
 
 def parse_config(raw):
     fields = {"schema", "slot_mode", "max_candidates", "candidate_outside_recovery"}
-    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy"}:
+    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback"}:
         raise ValueError("intent_slot_pipeline requires schema, slot_mode, max_candidates and candidate_outside_recovery")
-    if raw["schema"] != SCHEMA or raw["slot_mode"] not in {"batched", "per_candidate"}:
+    if raw["schema"] not in {SCHEMA, SCHEMA_V2} or raw["slot_mode"] not in {"batched", "per_candidate"}:
         raise ValueError("unsupported intent-slot graph/schema version or slot mode")
     if type(raw["max_candidates"]) is not int or not 1 <= raw["max_candidates"] <= 3:
         raise ValueError("intent-slot max_candidates must be 1..3")
@@ -32,8 +33,17 @@ def parse_config(raw):
         raise ValueError("candidate-outside recovery is not implemented in this graph")
     if raw.get("evidence_policy", "strict") not in {"strict", "unique_source_alias_v1"}:
         raise ValueError("unsupported evidence policy")
-    if raw.get("duplicate_candidate_policy", "strict") not in {"strict", "identical_v1"}:
+    if raw.get("duplicate_candidate_policy", "strict") not in {"strict", "identical_v1", "group_v2"}:
         raise ValueError("unsupported duplicate candidate policy")
+    if (raw.get("duplicate_candidate_policy") == "group_v2") != (raw["schema"] == SCHEMA_V2):
+        raise ValueError("v2 requires group_v2 and v1 cannot use it")
+    if "node_rails" in raw and (raw["schema"] != SCHEMA_V2 or raw["node_rails"] != "sdk-handoff-v1"):
+        raise ValueError("unsupported candidate node rails")
+    if raw.get("node_rails") == "sdk-handoff-v1":
+        if raw.get("answer_only_fallback") not in {"budgeted-v1", "off"}:
+            raise ValueError("node rails require explicit answer_only_fallback: budgeted-v1 or off")
+    elif "answer_only_fallback" in raw:
+        raise ValueError("answer_only_fallback requires node rails")
     return dict(raw)
 
 
@@ -69,6 +79,10 @@ def candidates(text, maximum, legal_ids=None, *, duplicate_policy="strict"):
         if legal_ids is not None and cid not in legal_ids:
             raise ValueError("candidate intent is not in the carrier inventory")
         if cid in seen:
+            if duplicate_policy == "group_v2":
+                previous = next(item for item in result if item["candidate_id"] == cid)
+                previous["sources"].append(dict(row))
+                continue
             if duplicate_policy != "identical_v1":
                 raise ValueError("candidate ids must be nonempty and unique")
             previous = next(item for item in result if item["candidate_id"] == cid)
@@ -76,7 +90,10 @@ def candidates(text, maximum, legal_ids=None, *, duplicate_policy="strict"):
                 raise ValueError("duplicate candidate has conflicting content")
             continue
         seen.add(cid)
-        result.append(dict(row, candidate_id=cid))
+        projected = dict(row, candidate_id=cid)
+        if duplicate_policy == "group_v2":
+            projected["sources"] = [dict(row)]
+        result.append(projected)
     return result
 
 
@@ -123,8 +140,27 @@ def decision(text, candidate_rows, slots, identity):
 
 
 def prompt_context(config, state, role_kind):
-    payload = {"schema": SCHEMA, "config_sha256": digest(config),
+    payload = {"schema": config["schema"], "config_sha256": digest(config),
                "candidate_outside_recovery": False}
+    if config.get("node_rails") == "sdk-handoff-v1" and role_kind != "perception":
+        context = state.get("intent_slot_context", {})
+        payload["node_rails"] = "sdk-handoff-v1"
+        payload["candidates"] = [{"candidate_id": r["candidate_id"], "kind": "sample_hypothesis",
+            "unresolved_fields": list(dict.fromkeys(field for source in r.get("sources", [r]) for field in source.get("unresolved_fields", [])))} for r in context.get("candidates", [])]
+        if role_kind == "solver":
+            payload["slot_results"] = {cid: {"candidate_id": row["candidate_id"], "entities": row["entities"],
+                "status": "unresolved" if row["unresolved_fields"] else "observed", "unresolved_fields": row["unresolved_fields"]}
+                for cid, row in context.get("slot_results", {}).items()}
+        if role_kind == "slot":
+            from .candidate_handoff import normalized_response
+            # Transport projection reads the normalized state artifact, not raw model prose.
+            raw_grouped = {"candidates": [source for row in context["candidates"] for source in row.get("sources", [row])]}
+            normalized = normalized_response("perception", canonical(raw_grouped), {}, config)
+            # In batched mode this is the full P view; per-candidate branches use
+            # the full source hash recorded separately in the stage context.
+            payload["perception_source"] = {"response_text_sha256": context.get("normalized_perception_sha256", hashlib.sha256(normalized.encode()).hexdigest())}
+        payload["evidence_inventory"] = context["evidence_inventory"]
+        return "\n\nCandidate-conditioned pipeline context: " + canonical(payload)
     if role_kind == "perception":
         payload["max_candidates"] = config["max_candidates"]
         payload["evidence_inventory"] = state["intent_slot_context"]["evidence_inventory"]
@@ -133,12 +169,12 @@ def prompt_context(config, state, role_kind):
     return "\n\nCandidate-conditioned pipeline context: " + canonical(payload)
 
 
-def validate_receipt(receipt, *, trace_records=None):
+def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
     """Bind candidate groups to the actual native visits and archived responses."""
     block = receipt.get("intent_slot_pipeline")
     if block is None:
         return
-    if block.get("schema") != SCHEMA or block.get("slot_mode") not in {"batched", "per_candidate"}:
+    if block.get("schema") not in {SCHEMA, SCHEMA_V2} or block.get("slot_mode") not in {"batched", "per_candidate"}:
         raise ValueError("invalid intent-slot receipt identity")
     ids = block.get("candidate_ids")
     if not isinstance(ids, list) or not 1 <= len(ids) <= 3 or len(set(ids)) != len(ids):
@@ -160,6 +196,12 @@ def validate_receipt(receipt, *, trace_records=None):
         if block["selected_candidate_id"] not in ids or block.get("decision_source") != visits[-1]["execution_receipt"]["final_contact"]:
             raise ValueError("Decision selection/source is not bound to the final native visit")
     if trace_records is not None:
+        trace_receipts = [value.get("use_native_episode") for value in trace_records.values()
+                          if isinstance(value, Mapping) and isinstance(value.get("use_native_episode"), Mapping)
+                          and value["use_native_episode"].get("accepted_solver_receipt") == receipt.get("accepted_solver_receipt")
+                          and receipt.get("accepted_solver_receipt") is not None]
+        if block.get("node_rails") == "sdk-handoff-v1" and (len(trace_receipts) != 1 or trace_receipts[0] != receipt):
+            raise ValueError("native episode receipt differs from raw trace")
         if receipt.get("accepted_solver_receipt") is not None and "selected_candidate_id" not in block:
             raise ValueError("accepted pipeline receipt omits its selected candidate")
         for source in sources:
@@ -168,29 +210,68 @@ def validate_receipt(receipt, *, trace_records=None):
             response = trace_records.get(rid + "/response", {})
             if request.get("payload_sha256") != source["request_sha256"]:
                 raise ValueError("candidate source request is absent or mismatched")
-            if response.get("response_sha256") != source["response_sha256"] or response.get("response_text_sha256") != source["response_text_sha256"]:
+            if (response.get("response_sha256") != source["response_sha256"] or response.get("response_text_sha256") != source["response_text_sha256"]
+                or (block.get("schema") == SCHEMA_V2 and (not isinstance(response.get("text"), str) or hashlib.sha256(response["text"].encode()).hexdigest() != source["response_text_sha256"]))):
                 raise ValueError("candidate source response is absent or mismatched")
         perception_text = trace_records[block["perception_source"]["request_id"] + "/response"].get("text")
         actual_candidates = candidates(perception_text, 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict"))
         if [r["candidate_id"] for r in actual_candidates] != ids:
             raise ValueError("candidate ids differ from archived Perception text")
-        if block.get("evidence_policy") == "unique_source_alias_v1":
+        if block.get("schema") == SCHEMA_V2:
+            grouping = {"policy": "group_v2", "raw_count": len(document(perception_text)["candidates"]),
+                        "groups": [{"candidate_id": r["candidate_id"], "sources": r["sources"]} for r in actual_candidates]}
+            if block.get("grouping") != grouping:
+                raise ValueError("candidate grouping differs from archived Perception")
+        if block.get("evidence_policy") == "unique_source_alias_v1" or block.get("schema") == SCHEMA_V2:
             bindings = block.get("evidence_bindings")
             if not isinstance(bindings, list) or [b.get("stage") for b in bindings] != ["perception"] + ["slot"] * len(slots):
                 raise ValueError("missing source-bound evidence mapping")
             for binding, source, expected in zip(bindings, sources, [ids] + [s["candidate_ids"] for s in slots]):
                 response = trace_records[source["request_id"] + "/response"]
+                if block.get("node_rails") == "sdk-handoff-v1":
+                    from .candidate_handoff import validate_inventory_against_request
+                    validate_inventory_against_request(binding["inventory"], trace_records[source["request_id"] + "/request"], expected)
                 if binding.get("response_text_sha256") != response.get("response_text_sha256"):
                     raise ValueError("evidence mapping response identity differs")
-                rows = (candidates(response.get("text"), 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict"))
+                rows = ((document(response.get("text"))["candidates"] if block.get("schema") == SCHEMA_V2
+                         else candidates(response.get("text"), 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict")))
                         if binding["stage"] == "perception" else slot_results(response.get("text"), expected).values())
-                if validate_evidence_refs(rows, binding["inventory"], expected, policy="unique_source_alias_v1") != binding.get("mappings"):
+                if validate_evidence_refs(rows, binding["inventory"], expected, policy=block.get("evidence_policy", "strict")) != binding.get("mappings"):
                     raise ValueError("evidence mapping differs from raw response")
         for slot in slots:
             text = trace_records[slot["source"]["request_id"] + "/response"].get("text")
+            if block.get("node_rails") == "sdk-handoff-v1":
+                from .candidate_handoff import normalized_response
+                text = normalized_response("slot", text, {"candidates": [{"candidate_id": cid} for cid in slot["candidate_ids"]]}, {"max_candidates": 3})
             actual = slot_results(text, slot["candidate_ids"])
             if digest(actual) != slot["result_sha256"]:
                 raise ValueError("Slot parsed result differs from archived response")
+        if block.get("node_rails") == "sdk-handoff-v1":
+            from .candidate_handoff import validate_trace_handoffs
+            validate_trace_handoffs(receipt, trace_records, snapshot_cache=snapshot_cache)
+        if block.get("schema") == SCHEMA_V2 and "selected_candidate_id" in block:
+            source = block["decision_source"]
+            request = trace_records[source["request_id"] + "/request"]
+            response = trace_records[source["request_id"] + "/response"]
+            text = response.get("text")
+            if (request.get("payload_sha256") != source["request_sha256"]
+                or response.get("response_sha256") != source["response_sha256"]
+                or response.get("response_text_sha256") != source["response_text_sha256"]
+                or hashlib.sha256(text.encode()).hexdigest() != source["response_text_sha256"]
+                or document(text) != {"candidate_id": block["selected_candidate_id"]}):
+                raise ValueError("Decision response/source differs from trace")
+            combined = {}
+            for slot in slots:
+                raw = trace_records[slot["source"]["request_id"] + "/response"]["text"]
+                if block.get("node_rails") == "sdk-handoff-v1":
+                    from .candidate_handoff import normalized_response
+                    raw = normalized_response("slot", raw, {"candidates": [{"candidate_id": cid} for cid in slot["candidate_ids"]]}, {"max_candidates": 3})
+                combined.update(slot_results(raw, slot["candidate_ids"]))
+            answer = derive_answer(block["selected_candidate_id"], combined)
+            if hashlib.sha256(answer.encode()).hexdigest() != block.get("derived_answer_sha256"):
+                raise ValueError("derived answer differs from Slot source")
+            return answer
+
 
 
 def evidence_inventory(*, sample_id, speech_packet_id, speech_sha256, messages, candidate_ids):
@@ -236,3 +317,31 @@ def validate_evidence_refs(rows, inventory, expected_ids, *, policy="strict"):
                 raise ValueError("evidence reference was not supplied uniquely to the current sample and candidate")
             mappings.append({"raw": ref, "source_id": canonical_id})
     return mappings
+
+
+def dynamic_slot_format(base, ids):
+    import copy
+    if not ids or len(ids) != len(set(ids)):
+        raise ValueError("dynamic Slot requires unique candidate IDs")
+    result = copy.deepcopy(base)
+    array = result["json_schema"]["schema"]["properties"]["candidates"]
+    array["minItems"] = array["maxItems"] = len(ids)
+    array["items"]["properties"]["candidate_id"] = {"type": "string", "enum": list(ids)}
+    # JSON Schema uniqueItems alone does not enforce uniqueness of a field.
+    # Exact coverage is checked at the seal; no missing row is synthesized.
+    return result
+
+
+def dynamic_decision_format(ids):
+    return {"type": "json_schema", "json_schema": {"name": "slurp_candidate_decision_v2",
+        "strict": True, "schema": {"type": "object", "additionalProperties": False,
+        "required": ["candidate_id"], "properties": {"candidate_id": {"type": "string", "enum": list(ids)}}}}}
+
+
+def derive_answer(cid, slots):
+    if cid not in slots or "_" not in cid:
+        raise ValueError("selected candidate has no Slot source or SLURP identity")
+    scenario, action = cid.split("_", 1)
+    if not scenario or not action:
+        raise ValueError("invalid SLURP candidate identity")
+    return canonical({"scenario": scenario, "action": action, "entities": slots[cid]["entities"]})

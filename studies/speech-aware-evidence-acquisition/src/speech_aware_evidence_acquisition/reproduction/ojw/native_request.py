@@ -322,6 +322,7 @@ class MeteredNativeSpeechRequest:
         solver_arm_decoding: Mapping[str, Mapping[str, object]] | None = None,
         solver_arm_decoding_role_id: str | None = None,
         branch_sampling: Mapping[str, Mapping[str, Mapping[str, object]]] | None = None,
+        answer_only_fallback_enabled: bool = True,
     ):
         if not isinstance(client, FrozenCoreClient):
             raise NativeSpeechRequestError("use the flight's existing FrozenCoreClient")
@@ -431,6 +432,9 @@ class MeteredNativeSpeechRequest:
         self._binding_provider = binding_provider
         self._render_request = render_request
         self._completion_sink = completion_sink
+        if type(answer_only_fallback_enabled) is not bool:
+            raise NativeSpeechRequestError("answer_only_fallback_enabled must be boolean")
+        self._answer_only_fallback_enabled = answer_only_fallback_enabled
         self._solver_role_id = solver_role_id
         self._solver_sampling = solver_sampling
 
@@ -679,7 +683,8 @@ class MeteredNativeSpeechRequest:
         if not isinstance(prepared, PreparedNativeRoleContact) or prepared.owner is not self._owner:
             raise NativeSpeechRequestError("dispatch requires this adapter's prepared native contact")
         completion = self._client.complete_prepared_with_metadata(prepared.request, id_slot=id_slot)
-        completion = self._answer_only_fallback(prepared, completion, id_slot=id_slot)
+        if self._answer_only_fallback_enabled:
+            completion = self._answer_only_fallback(prepared, completion, id_slot=id_slot)
         self._completion_sink(prepared.role_request, completion)
         return completion
 

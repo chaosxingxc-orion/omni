@@ -290,7 +290,7 @@ def bind_slot_view_context(
     episode = values.get("native_episode", {})
     pipeline = episode.get("intent_slot_pipeline") if isinstance(episode, Mapping) else None
     duplicate_policy = pipeline.get("duplicate_candidate_policy", "strict") if isinstance(pipeline, Mapping) else None
-    if duplicate_policy not in (None, "strict", "identical_v1"):
+    if duplicate_policy not in (None, "strict", "identical_v1", "group_v2"):
         raise SlotBindingViewError("unsupported pipeline duplicate candidate policy")
     provisional = SlotBindingViewContext(
         policy_id=POLICY_ID, context_sha256="", value_ids=value_ids, rows=rows,
@@ -593,9 +593,16 @@ def _scope_for_validated_payload(payload, context):
             original = parse_candidates(candidate_source.content, context.max_candidates,
                 duplicate_policy=context.duplicate_candidate_policy or "strict")
             selected = branch["candidates"]
-            if not selected or any(row not in original for row in selected):
-                raise ValueError("candidate mismatch")
-            branch_ids = [row["candidate_id"] for row in selected]
+            if branch.get("node_rails") == "sdk-handoff-v1" and context.duplicate_candidate_policy == "group_v2":
+                if not selected or any(not isinstance(row, Mapping) or row.get("kind") != "sample_hypothesis" for row in selected):
+                    raise ValueError("typed candidate mismatch")
+                branch_ids = [row["candidate_id"] for row in selected]
+                if not set(branch_ids) <= {row["candidate_id"] for row in original}:
+                    raise ValueError("candidate mismatch")
+            else:
+                if not selected or any(row not in original for row in selected):
+                    raise ValueError("candidate mismatch")
+                branch_ids = [row["candidate_id"] for row in selected]
             if len(set(branch_ids)) != len(branch_ids) or not set(branch_ids) <= set(candidates):
                 raise ValueError("candidate identity mismatch")
             if branch["perception_source"]["response_text_sha256"] != candidate_source.source_response_sha256:

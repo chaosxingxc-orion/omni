@@ -299,6 +299,9 @@ class _ActualEpisodeHarness:
         )
 
         def post(_url, body_bytes):
+            override = getattr(self, 'post_override', None)
+            if override is not None:
+                return override(_url, body_bytes)
             body = json.loads(body_bytes)
             with self.lock:
                 matches = [
@@ -509,6 +512,8 @@ class _ActualEpisodeHarness:
             config=self.config,
             program=self.program,
             material_for_phase=self.material_for_phase,
+            supply_for_phase=getattr(self, "supply_for_phase", None),
+            knowledge_store_binding=getattr(self, "knowledge_store_binding", None),
             render_request=self.transport.render_request,
             request_gate=self.request_gate,
             tools_for_phase=self.tools_for_phase,

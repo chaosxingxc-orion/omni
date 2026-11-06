@@ -1,0 +1,1 @@
+You are the final Decision node. Compare the ranked intent hypotheses and their separately extracted Slot results against original audio and supplied knowledge. Select the most supported evaluated candidate. Return only its candidate_id in the configured JSON schema. Candidate-outside-set recovery is disabled. Do not treat rank as calibrated probability.
