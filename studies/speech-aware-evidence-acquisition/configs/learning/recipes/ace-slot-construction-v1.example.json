@@ -1,0 +1,12 @@
+{
+  "schema": "saea-ace-slot-recipe-v1",
+  "authored": {"path": "/PRIVATE/authored.json", "sha256": "REPLACE_WITH_SHA256"},
+  "records": {"path": "/PRIVATE/h1-records.json", "sha256": "REPLACE_WITH_SHA256"},
+  "pool": {"path": "/PRIVATE/h1-pool.json", "sha256": "REPLACE_WITH_SHA256"},
+  "forbidden_sample_ids": {"path": "/PRIVATE/forbidden.json", "sha256": "REPLACE_WITH_SHA256"},
+  "slot_ids": ["REPLACE_WITH_DELIVERED_SLOT"],
+  "fields": ["extraction_cues", "admissible_formats", "missing_behavior", "ambiguity_behavior", "limitations"],
+  "max_edits": 5,
+  "max_field_chars": 2000,
+  "output": "/PRIVATE/new-ace-slot-material"
+}
