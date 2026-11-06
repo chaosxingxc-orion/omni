@@ -230,7 +230,6 @@ def test_sdk_invalid_repair_retains_pending_row(tmp_path):
 
 @pytest.mark.parametrize('budget', [1, 3])
 def test_sdk_known_invalid_repair_has_successor(tmp_path, budget):
-    from speech_aware_evidence_acquisition.core.contact_journal import NativeContactReplay
     old, _ = recovery_harness(tmp_path / 'old')
     policy = json.loads(old.config.intent_slot_pipeline_json)
     policy['coverage_recovery']['max_extra_contacts'] = budget
@@ -255,15 +254,35 @@ def test_sdk_known_invalid_repair_has_successor(tmp_path, budget):
         old.close()
     old.client._adapter._attempt_handle.mark_aborted('known invalid successor source')
     plan = replace(old.plan, attempt_id='known-invalid-successor')
-    replay = NativeContactReplay(old.world.data_root, old.plan, plan, old.client.arm)
-    replay.bind_slot_checkpoint(writer.path, sha256_file(writer.path))
-    from dataclasses import asdict
-    from speech_aware_evidence_acquisition.core.contact_journal import canonical as contact_canonical, digest as contact_digest, ContactJournalError
-    from speech_aware_evidence_acquisition.core.flight.native_recovery import load_native_recovery
+    from speech_aware_evidence_acquisition.core.contact_journal import ContactJournalError
+    from speech_aware_evidence_acquisition.core.flight.campaign import CampaignCell
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import load_native_recovery, select_recovery_cell
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts' / 'analysis'))
+    from native_recovery_receipt import prepare
     receipt_path = old.world.data_root / 'slot-successor-recovery.json'
-    receipt_path.write_bytes(contact_canonical({'schema': 'saea-native-recovery-v1',
-        'source': replay.source_binding(), 'target_plan': asdict(plan)}))
-    replay = load_native_recovery({'path': str(receipt_path), 'sha256': contact_digest(receipt_path.read_bytes())},
+    declaration = prepare(old.world.data_root, old.plan, plan.attempt_id, old.client.arm, receipt_path,
+                          slot_checkpoint_sha256=sha256_file(writer.path))['declaration']
+    cell = CampaignCell.from_document({'cell_id': 'coverage', 'model_fragment': 'm',
+        'dataset_fragment': 'd', 'baseline_fragment': 'b', 'run_id': old.plan.run_id,
+        'attempt_id': old.plan.attempt_id, 'readiness': {'state': 'ready'},
+        'allowed_execution_stages': ['worker', 'check']})
+    selected = select_recovery_cell(cell, declaration, data_root=old.world.data_root)
+    assert selected.attempt_id == plan.attempt_id
+    assert selected.document == {**cell.document, 'attempt_id': plan.attempt_id}
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
+    values = raw_config()
+    values.update(transport='vllm', arm=old.client.arm, carrier_lock_key='slurp',
+                  policy='phase-native-intent-slot-batched-recovery-v1')
+    native = values['native_episode']
+    native.update(review_loop='off', finite_completion_policy='deliver-latest-or-abstain',
+                  intent_slot_pipeline=policy)
+    for kind in ('reviewer', 'planner'):
+        native['roles'][kind]['max_iterations'] = 0
+    native['roles']['slot'] = {'phase_id': 'slot', 'max_iterations': 1}
+    assert native_contact_custody_enabled(values)
+    replay = load_native_recovery(declaration,
                                   data_root=old.world.data_root, plan=plan, arm=old.client.arm)
     original_checkpoint = writer.path.read_bytes()
     writer.path.write_bytes(original_checkpoint + b'changed')
@@ -299,6 +318,17 @@ def test_sdk_known_invalid_repair_has_successor(tmp_path, budget):
     assert cost['calls_used'] == 2
     assert cost['replayed_predecessor_cost']['calls'] == 3
     assert result.results[0].native_episode_receipt['intent_slot_pipeline']['slot_successor']['extra_contacts'] == 1
+    from speech_aware_evidence_acquisition.core.bundle.native_replay import verify_native_replay
+    from speech_aware_evidence_acquisition.core.bundle import BundleError
+    import copy
+    records = {rid: payload for _, rid, payload in new.trace.records}
+    manifest = {'arm': new.client.arm, 'cost': cost, 'attempt': {'attempt_id': plan.attempt_id,
+                'state_path': str(new.client._adapter._attempt_handle.path)}}
+    assert len(verify_native_replay(manifest, records, plan)) == 3
+    bad = copy.deepcopy(manifest)
+    bad['cost']['replayed_predecessor_cost']['calls'] += 1
+    with pytest.raises(BundleError):
+        verify_native_replay(bad, records, plan)
 
 
 def test_sdk_recovers_two_missing_candidates(tmp_path):
