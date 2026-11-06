@@ -144,7 +144,10 @@
     "new_model_calls": 0,
     "admission_v2_exit_code": 1,
     "admission_v3_exit_code": 1,
-    "admission_v3_failure": "Knowledge input permissions; partial workspace preserved"
+    "admission_v3_failure": "Knowledge input permissions; partial workspace preserved",
+    "admission_v4_exit_code": 1,
+    "admission_v4_failure": "frozen source receipt is not valid and confined",
+    "completion_published": false
   },
   "knowledge_stage": {
     "exit_code": 0,
