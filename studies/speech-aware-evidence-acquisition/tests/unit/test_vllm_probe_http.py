@@ -75,7 +75,7 @@ def servers():
                     self.wfile.flush()
                 except (BrokenPipeError, ConnectionResetError):
                     pass
-                if action.get('close'):
+                if action.get('close') or action.get('idle_close'):
                     self.close_connection = True
 
         server = Server(('127.0.0.1', 0), Handler)
@@ -109,6 +109,18 @@ def test_each_probe_reaches_server_on_same_socket_and_reads_new_body(servers, pr
     assert [m._http_get_json(server.url, 1)['request'] for _ in range(3)] == [1, 2, 3]
     assert len(server.requests) == 3 and server.accepted == 1
     assert len({row[1] for row in server.requests}) == 1
+    assert all(row[0] == '/v1/models' and row[2] != 'close' for row in server.requests)
+
+
+def test_idle_peer_close_is_discarded_before_next_probe_without_retry(servers, probe_scope):
+    import select
+    server = servers([{'idle_close': True}])
+    assert m._http_get_json(server.url, 1)['request'] == 1
+    connection = next(iter(m._probe_local.cache.connections.values()))
+    assert select.select([connection.sock], [], [], 2)[0], 'server EOF must arrive'
+    assert m._http_get_json(server.url, 1)['request'] == 2
+    assert server.accepted == 2 and len(server.requests) == 2
+    assert len({row[1] for row in server.requests}) == 2
     assert all(row[0] == '/v1/models' and row[2] != 'close' for row in server.requests)
 
 

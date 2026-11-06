@@ -67,6 +67,7 @@ import os
 import re
 import signal
 import socket
+import select
 import stat
 import subprocess
 import threading
@@ -413,6 +414,17 @@ def _http_get_json(url: str, timeout_seconds: float) -> object:
         _close_http_probe_connections()
         cache = None
     connection = cache.connections.pop(key, None) if cache is not None else None
+    # A server may close an idle keep-alive socket without a Connection: close
+    # header. Discard readable idle sockets (EOF or unexpected pending bytes)
+    # BEFORE sending the next GET. No failed request is retried.
+    if connection is not None and connection.sock is not None:
+        try:
+            readable, _, exceptional = select.select([connection.sock], [], [connection.sock], 0)
+        except (OSError, ValueError):
+            readable, exceptional = [connection.sock], []
+        if readable or exceptional:
+            connection.close()
+            connection = None
     reused = connection is not None and connection.sock is not None
     if connection is None:
         if cache is not None and len(cache.connections) >= _PROBE_MAX_CONNECTIONS:
