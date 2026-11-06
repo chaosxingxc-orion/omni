@@ -10,16 +10,16 @@
 
 |任务|状态|依赖与交付|
 |---|---|---|
-|Fold A1080 OFF/ON基线|两臂正式启动后在首请求前退出；正修正外部日志路径配置接续|先就绪先跑；完整评分、覆盖和逐节点耗时|
+|Fold A1080 OFF/ON基线|v4外部日志配置修正后双臂generation运行；待首请求证据|先就绪先跑；完整评分、覆盖和逐节点耗时|
 |回答恢复|共享预算与单次后继已合main，207项相关测试通过|独立候选复验，不阻塞当前两臂|
 |构建625/K2|修正construction来源后的两成员均stage→prepare→register通过，held未准入|共同基线冻结后采集；OFF只是预备配置，不代表胜出|
 |Fold B1080|待A选型冻结|固定策略确认；不反复在B挑选|
-|GEPA Slot/Decision|节点适配已有；独立CLI准备真实seed/contract|准备seed/contract与合法构建轨迹；不等全部算法完成|
+|GEPA Slot/Decision|真实OFF条件seed/contract两节点已交付；待轨迹|准备seed/contract与合法构建轨迹；不等全部算法完成|
 |TF-GRPO Slot/Decision|节点经验消费适配已有|K2实际轨迹、反馈和来源reader产出后学习|
 |供给k8→k16|两分支各1080条CPU stage/prepare通过；未注册准入|无需教师；待同条件基线，沿现有launcher执行|
 |知识卡/ACE、Reflexion|有组件，当前PSD配方未完整就绪|按实际节点证据补最小适配，不冒称已排入队列|
 
-三个CLI目前分别负责真实启动、construction集成/后继原生配置、GEPA CPU材料。construction集成结束后，同执行会话自动接续后继队列准备；不等人工重新派单。规划项满足自身依赖后按就绪顺序执行，不等待全部算法适配，不为占卡重复无研究价值的任务。
+三个CLI目前分别负责真实启动、construction集成/后继原生配置、ACE单卡模板/输入配方。construction集成结束后，同执行会话自动接续后继队列准备；不等人工重新派单。规划项满足自身依赖后按就绪顺序执行，不等待全部算法适配，不为占卡重复无研究价值的任务。
 
 已锁名单不变：construction625及H1/H2；Fold A1080选型、Fold B1080冻结确认，最终完整TEST13078不参与调优。CPU可以提前准备；实际任务只有满足自身科学依赖和运行条件才派发。
 

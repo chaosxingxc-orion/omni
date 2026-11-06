@@ -13,7 +13,7 @@
       "id": "baseline-off",
       "resource": "NPU-A",
       "depends_on": [],
-      "status": "precontact_log_path_failure_external_config_recovery",
+      "status": "v4_generation_container_running_first_contact_not_verified",
       "rows": 1080,
       "completed_rows": 0,
       "observed_model_calls": 0
@@ -22,7 +22,7 @@
       "id": "baseline-on",
       "resource": "NPU-B",
       "depends_on": [],
-      "status": "precontact_log_path_failure_external_config_recovery",
+      "status": "v4_generation_container_running_first_contact_not_verified",
       "rows": 1080,
       "completed_rows": 0,
       "observed_model_calls": 0
@@ -331,7 +331,7 @@
   "parallel_cpu_tasks": [
     {
       "id": "gepa-seed-contract-preparation",
-      "status": "cli_running",
+      "status": "complete_conditional_off_seed_handoff_verified",
       "depends_on": [],
       "targets": [
         "E1",
@@ -347,6 +347,14 @@
         "fold-b-confirmation"
       ],
       "native_queued": false
+    },
+    {
+      "id": "ace-slot-recipe-preparation",
+      "status": "cli_running",
+      "targets": [
+        "E6"
+      ],
+      "model_calls_authorized": false
     }
   ]
 }
