@@ -9,6 +9,7 @@ proof that a writer with access to all source files really ran a model.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Mapping
 
@@ -462,22 +463,72 @@ def recorded_phase_delivery_declarations(
     fragments = config.get("fragments", {})
     if not isinstance(fragments, Mapping) or "experiment" not in fragments:
         return ()
-    from .git_commit import _git
-
-    path = fragment_path(repo_root, "experiment", fragments["experiment"])
-    relative = path.relative_to(repo_root).as_posix()
     commit = bundle.manifest.get("study_commit")
     if not isinstance(commit, str) or len(commit) != 40 or any(
         c not in "0123456789abcdef" for c in commit
     ):
         raise BundleError("cannot inspect phase delivery without a valid study commit")
-    code, _, _ = _git(repo_root, "cat-file", "-e", commit + "^{commit}")
-    if code:
-        raise BundleError("cannot inspect phase delivery: recorded study commit is unavailable")
-    code, raw, _ = _git(repo_root, "show", f"{commit}:{relative}")
-    if code:
-        return ()
-    document = json.loads(raw, object_pairs_hook=_reject_duplicate_keys(path))
+
+    from .git_commit import _git, require_clean_load_bearing_surface
+
+    # A workspace or external asset is not a Git blob. Authenticate the
+    # complete composed configuration against the bundle before trusting its
+    # experiment declaration. This also supports immutable mounted releases
+    # without .git: the release manifest authenticates their commit.
+    external_config = any(os.environ.get(key) is not None for key in (
+        "SAEA_EXPERIMENT_WORKSPACE", "SAEA_EXPERIMENT_MANIFEST",
+    ))
+    if external_config:
+        current, _ = require_clean_load_bearing_surface(repo_root)
+        if current != commit:
+            raise BundleError("delivery source commit differs from recorded run")
+        names = {kind: fragments.get(kind) for kind in ("model", "dataset", "baseline", "experiment")}
+        # fragment_path enforces the same names and pinned resolver as compose.
+        # A workspace may legitimately inherit an immutable release fragment;
+        # its full composition is still bound by the recorded config hash.
+        for kind, name in names.items():
+            selected = fragment_path(repo_root, kind, name)
+            if any(part.is_symlink() for part in (selected, *selected.parents)):
+                raise BundleError("delivery config path traverses a symlink")
+        composed = compose(repo_root, **names)
+        if composed.config_hash != config.get("config_hash"):
+            raise BundleError("delivery config differs from recorded run")
+        path = fragment_path(repo_root, "experiment", names["experiment"])
+        raw = path.read_bytes()
+        document = json.loads(raw, object_pairs_hook=_reject_duplicate_keys(path))
+        # Re-resolve and recompose after reading the declaration; detect a
+        # changed pin or bytes during the scoring provenance check.
+        if fragment_path(repo_root, "experiment", names["experiment"]).read_bytes() != raw:
+            raise BundleError("delivery experiment changed during verification")
+        if compose(repo_root, **names).config_hash != config.get("config_hash"):
+            raise BundleError("delivery config changed during verification")
+    elif os.environ.get("SAEA_RELEASE_MANIFEST") is not None:
+        # Fixed mounted releases are intentionally not Git checkouts. The
+        # release verifier already authenticates the mounted source tree and
+        # its commit; resolve the fragment through the same asset resolver,
+        # then bind its bytes to the recorded composed config hash.
+        current, _ = require_clean_load_bearing_surface(repo_root)
+        if current != commit:
+            raise BundleError("delivery source commit differs from recorded run")
+        names = {kind: fragments.get(kind) for kind in ("model", "dataset", "baseline", "experiment")}
+        composed = compose(repo_root, **names)
+        if composed.config_hash != config.get("config_hash"):
+            raise BundleError("delivery config differs from recorded run")
+        path = fragment_path(repo_root, "experiment", names["experiment"])
+        document = json.loads(path.read_bytes(), object_pairs_hook=_reject_duplicate_keys(path))
+    else:
+        # Legacy Git-only scoring must inspect the historical commit, not the
+        # current checkout, including when the current fragment has moved.
+        name = fragments["experiment"]
+        fragment_path(repo_root, "experiment", name)  # validate name
+        relative = f"configs/experiment/{name}.json"
+        code, _, _ = _git(repo_root, "cat-file", "-e", commit + "^{commit}")
+        if code:
+            raise BundleError("cannot inspect phase delivery: recorded study commit is unavailable")
+        code, raw, _ = _git(repo_root, "show", f"{commit}:{relative}")
+        if code:
+            return ()
+        document = json.loads(raw, object_pairs_hook=_reject_duplicate_keys(Path(relative)))
     if not isinstance(document, Mapping):
         raise BundleError("recorded experiment fragment must be a mapping")
     return selected_phase_delivery_declarations(document, {

@@ -86,7 +86,10 @@ def _produce(tmp_path, monkeypatch, sample, kind, plan):
 
 
 @pytest.mark.parametrize("all_kept", [True, False], ids=["seal-only", "current-row"])
-def test_native_checkpoint_seal_with_real_bundle_verifier(tmp_path, monkeypatch, all_kept):
+@pytest.mark.parametrize("external_score", [False, True], ids=["custody", "workspace-cpu-score"])
+def test_native_checkpoint_seal_with_real_bundle_verifier(tmp_path, monkeypatch, all_kept, external_score):
+    if external_score and not all_kept:
+        pytest.skip("workspace scoring integration covers seal-only")
     # _make_runtime fakes infrastructure only; manifest and verifier here are
     # production functions. No substitute may stand in for verify_bundle.
     source = _harness(tmp_path, "configuration", ("s1",))
@@ -113,6 +116,28 @@ def test_native_checkpoint_seal_with_real_bundle_verifier(tmp_path, monkeypatch,
     documents = [item[3] for item in ((normal, finite, refusal, current) if all_kept else (normal, finite, refusal))]
     declarations = [{"attempt_id": doc.header["attempt_id"], "checkpoint_sha256": doc.sha256} for doc in documents]
     runtime._resume_declarations = resume_declarations_from_document(declarations)
+    if external_score:
+        # The resolver serves the same admitted bytes from a pinned external
+        # workspace; the actual runtime seal calls the real score_bundle.
+        import shutil
+        from speech_aware_evidence_acquisition.core.experiment_assets import seal_workspace
+        from speech_aware_evidence_acquisition.core import scorers
+        from test_flight_runtime import _fake_bundle_finalizer
+        workspace = tmp_path / "admitted-workspace"
+        shutil.copytree(runtime._repo_root / "configs", workspace / "configs")
+        monkeypatch.setenv("SAEA_EXPERIMENT_WORKSPACE", str(workspace))
+        pin = seal_workspace(runtime._repo_root)
+        monkeypatch.setenv("SAEA_EXPERIMENT_WORKSPACE_MANIFEST", pin["path"])
+        monkeypatch.setenv("SAEA_EXPERIMENT_WORKSPACE_SHA256", pin["sha256"])
+        monkeypatch.setattr(scorers, "_assert_scoring_entry_gate", lambda *_a, **_k: None)
+        calls = []
+        monkeypatch.setattr(scorers.SCORERS, "resolve", lambda name: lambda path, lock, root: (
+            calls.append(name) or {"aggregate": {"samples": len(path.read_text().splitlines())}, "per_sample": []}))
+        def score_at_finalize(path, lock, root, *, repo_root, ledger_cells=None):
+            scores = scorers.score_bundle(verify_bundle(path), lock, root, repo_root=repo_root)
+            assert scores["asr-wer"]["aggregate"]["samples"] == 4
+            return _fake_bundle_finalizer(path, lock, root, repo_root=repo_root, ledger_cells=ledger_cells)
+        runtime._bundle_finalizer = score_at_finalize
     preflight = runtime.preflight()
     assert preflight["resume"]["counts"]["kept"] == (4 if all_kept else 3)
     assert runtime.is_seal_only is all_kept
@@ -154,6 +179,8 @@ def test_native_checkpoint_seal_with_real_bundle_verifier(tmp_path, monkeypatch,
     assert {block["attempt_id"] for block in blocks} == {d["attempt_id"] for d in declarations}
     assert sum(row.contacts for doc in documents for row in doc.rows) == sum(
         item[2]["calls_used"] for item in ((normal, finite, refusal, current) if all_kept else (normal, finite, refusal)))
+    if external_score:
+        assert calls == ["asr-wer"]
     if all_kept:
         assert result["cost"]["calls_used"] == 0 and not bundle.trace_records
         generation = json.loads((Path(result["manifest_path"]).parent / (RUN + ".generation-manifest.json")).read_text())
