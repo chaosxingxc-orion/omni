@@ -83,7 +83,9 @@ def compile_preview(spec):
         'semantic_validation': 'pending', 'deployment_accepted': False, 'candidate_publishable': False,
         'native_learning_seal': False, 'new_model_calls': 0}
     if 'psd_target' in config:
+        from .tfgrpo_psd_parent import verify as verify_parent
         body['psd_target'] = config['psd_target']
+        body['ancestor_usage_identities'] = verify_parent(parent, body['psd_target'], config['actor_model_id'], config.get('parent_binding'))
     return {**body, 'sha256': sha(body)}
 
 

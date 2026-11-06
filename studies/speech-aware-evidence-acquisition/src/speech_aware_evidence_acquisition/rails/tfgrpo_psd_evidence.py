@@ -11,8 +11,8 @@ def verify(context, document, selected):
         or batch['parent'] != context['parent'] or batch['policy_sha256'] != context['rollout_policy_sha256']
         or batch['rollout_kind'] != context['rollout_kind'] or batch['common']['reward_mode'] != DENSE_REWARD):
         raise ValueError('PSD source batch provenance differs')
-    if context['parent']['items']:
-        raise ValueError('PSD initial learner requires an empty parent library')
+    from .tfgrpo_psd_parent import verify as verify_parent
+    verify_parent(context['parent'], context['psd']['target'], context['model_id'], context['psd'].get('parent_binding'))
     originals = {g['query_id']: g for g in batch['groups']}
     if len(originals) != len(batch['groups']): raise ValueError('duplicate source groups')
     source_groups = {g['query_id']: g for g in document['groups']}

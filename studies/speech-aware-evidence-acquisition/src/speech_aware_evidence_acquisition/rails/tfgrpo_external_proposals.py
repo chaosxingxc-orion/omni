@@ -66,7 +66,7 @@ def validate_context(context):
     require(isinstance(context, dict) and set(context) in (fields, fields | {'psd'})
             and context['schema'] == CONTEXT_SCHEMA, 'exact TF-GRPO context required')
     if 'psd' in context:
-        require(isinstance(context['psd'], dict) and set(context['psd']) == {'target','source_batch'} and context['psd']['target'] in ('slot','decision'), 'explicit PSD target and batch required')
+        require(isinstance(context['psd'], dict) and set(context['psd']) in ({'target','source_batch'}, {'target','source_batch','parent_binding'}) and context['psd']['target'] in ('slot','decision'), 'explicit PSD target and batch required')
     require(context['reward_mode'] == DENSE_REWARD, 'explicit continuous reward required')
     validate_experience(context['parent'], context['model_id'])
     require(isinstance(context['rollout_policy_sha256'], str)

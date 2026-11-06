@@ -29,14 +29,15 @@ def require(ok, message):
 def verified_material(config):
     fields = {'schema', 'source', 'source_batch', 'parent', 'query_ids', 'actor_model_id',
               'teacher', 'template', 'stage_completion_caps', 'bounds', 'objectives', 'output_root'}
-    require(isinstance(config, dict) and set(config) in (fields, fields | {'psd_target'}) and config['schema'] == SCHEMA,
+    require(isinstance(config, dict) and set(config) in (fields, fields | {'psd_target'}, fields | {'psd_target','parent_binding'}) and config['schema'] == SCHEMA,
             'exact reference job configuration required')
     if 'psd_target' in config:
         target = config['psd_target']
         require(target in ('slot','decision'), 'explicit PSD target required')
         policy = ROOT / ('configs/prompts/learner/tfrl/tfgrpo-reference-psd-' + target + '.md')
         require(checked(config['teacher']['research_prompt']).read_bytes() == policy.read_bytes(), 'fixed reference PSD policy required')
-        require(not read(checked(config['parent']))['items'], 'PSD initial learner requires an empty parent library')
+        from .tfgrpo_psd_parent import verify as verify_parent
+        verify_parent(read(checked(config['parent'])), target, config['actor_model_id'], config.get('parent_binding'))
     source = read(checked(config['source'])); document = source['document']
     batch = read(checked(config['source_batch'])); parent = read(checked(config['parent']))
     actor = config['actor_model_id']

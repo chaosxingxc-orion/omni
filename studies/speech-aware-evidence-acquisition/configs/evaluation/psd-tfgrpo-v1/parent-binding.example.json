@@ -1,0 +1,6 @@
+{
+  "schema": "saea-psd-tfgrpo-parent-v1",
+  "repo": "/ABSOLUTE/REPOSITORY",
+  "data": "/ABSOLUTE/DATA",
+  "params": {"path": "/ABSOLUTE/PREVIOUS/REVIEWED-PARAMS.json", "sha256": "REPLACE_WITH_SHA256"}
+}

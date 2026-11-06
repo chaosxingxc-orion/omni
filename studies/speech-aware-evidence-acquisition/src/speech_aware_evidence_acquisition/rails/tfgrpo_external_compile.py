@@ -80,7 +80,9 @@ def compile_preview(spec):
             'implementation': 'fused offline relative-feedback operation proposal, not native multistage reference TF-GRPO',
             'new_model_calls': 0}
     if 'psd' in context:
+        from .tfgrpo_psd_parent import verify as verify_parent
         body['psd_target'] = context['psd']['target']
+        body['ancestor_usage_identities'] = verify_parent(context['parent'], body['psd_target'], context['model_id'], context['psd'].get('parent_binding'))
     return {**body, 'sha256': sha(body)}
 
 
