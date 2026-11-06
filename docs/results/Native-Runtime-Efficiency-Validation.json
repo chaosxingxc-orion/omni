@@ -133,8 +133,7 @@
     "workspace_published_by_failed_admission": false
   },
   "production_efficiency_gaps": [
-    "Reconcile failed attempt and retained lease metadata without replacing guard",
-    "Create independent successor configuration with external framework logs",
+    "Complete independent successor admission and configuration binding",
     "Verify online throughput, concurrency scaling and effective NPU utilization"
   ],
   "admission_input_closure": {
@@ -303,14 +302,26 @@
   },
   "framework_runtime_fix": {
     "source_commit": "f3e10540",
-    "tests_passed": 51,
-    "tests_seconds": 0.33,
+    "tests_passed": 53,
+    "tests_seconds": 10.39,
     "fixed_dependency_image": true,
     "real_workflow_import_exit_code": 0,
     "source_under_test": "4fa68e30",
     "source_readonly": true,
     "network": "none",
     "new_model_calls": 0,
-    "successor_generation_launched": false
+    "successor_generation_launched": false,
+    "script_import_semantics_verified": true,
+    "real_workflow_import_revision": 2
+  },
+  "framework_successor": {
+    "source_commit": "4fa68e30",
+    "compiler_exit_code": 0,
+    "assets_manifest_sha256": "47f9190175afb04df7d04313c97340c321442722846f347fda01001d4cd45b14",
+    "predecessor_lease_settled": true,
+    "historical_guard_preserved": true,
+    "new_model_calls": 0,
+    "generation_launched": false,
+    "admission_complete": false
   }
 }

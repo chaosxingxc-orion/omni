@@ -49,7 +49,7 @@ python scripts/environment/configured_input_inventory.py --config /config/launch
 `/state` 必须映射到项目所属的本地可写目录，并在 `allowed_create_roots` 范围内。
 源码和依赖目录继续只读，不允许把 `logs` 子目录挂进源码树。
 启动器通过 openJiuwen 公共日志配置 API 设置目录，然后导入实际业务工作流，
-最后执行原 `argv` 中的固定源码脚本。日志、完整源码、科学配置分别管理；
+最后执行原 `argv` 中的固定源码脚本。包装入口保留脚本所在目录的模块导入路径和原始参数，兼容同目录工具模块。日志、完整源码、科学配置分别管理；
 无需改依赖镜像或实验业务实现。未设置此字段的任务保持既有入口。
 
 先使用与正式 worker 一致的镜像、源码、用户和挂载配置运行：

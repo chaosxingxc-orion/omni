@@ -16,6 +16,9 @@ VERSION = '1.0.0'
 # Configure the dependency through its public API before importing the workflow.
 # The target remains the absolute, manifest-verified script from argv.
 FRAMEWORK_BOOTSTRAP = '''import sys, runpy
+from pathlib import Path
+# Match direct `python /sealed/scripts/job.py` sibling-import semantics.
+sys.path.insert(0, str(Path(sys.argv[3]).parent))
 from openjiuwen.core.common.logging.log_config import log_config
 cfg = log_config.get_snapshot()
 cfg['log_path'] = sys.argv[1]
@@ -26,7 +29,7 @@ if sys.argv[2] == '--runtime-check':
     logger.info('configured framework runtime check passed')
     print('framework_runtime_ready')
 else:
-    sys.argv = sys.argv[2:]
+    sys.argv = sys.argv[3:]
     runpy.run_path(sys.argv[0], run_name='__main__')
 '''
 
@@ -393,7 +396,7 @@ def command(doc, config_sha, runner_sha, *, runtime_check=False):
     entry = doc['argv'][1:]
     if 'framework_runtime' in doc:
         entry = ['-c', FRAMEWORK_BOOTSTRAP, doc['framework_runtime']['log_directory'],
-                 *(['--runtime-check'] if runtime_check else entry)]
+                 '--runtime-check' if runtime_check else '--run-script', *entry]
     return args + ['-w', doc['working_directory'], '--entrypoint', doc['argv'][0], doc['image'], *entry]
 
 

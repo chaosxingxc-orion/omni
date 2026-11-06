@@ -283,7 +283,7 @@ def test_framework_runtime_uses_external_logs_and_same_bootstrap(tmp_path):
     smoke = m.command(loaded, 'config', 'runner', runtime_check=True)
     assert m.FRAMEWORK_BOOTSTRAP in live and m.FRAMEWORK_BOOTSTRAP in smoke
     assert live[-1] == doc['argv'][1]
-    assert smoke[-1] == '--runtime-check'
+    assert '--runtime-check' in smoke and smoke[-1] == doc['argv'][1]
     assert smoke[smoke.index('--network') + 1] == 'none'
     assert '/data/framework/logs' in live
     assert not any('dst=/opt/saea-release/studies/' in a for a in live)
@@ -311,12 +311,41 @@ def test_framework_smoke_cannot_dispatch_campaign_or_repeat(tmp_path, monkeypatc
         return SimpleNamespace(returncode=0, stdout='check-container', stderr='')
     monkeypatch.setattr(m, 'run', run)
     assert m.execute(path, 'runtime-check')['container_id'] == 'check-container'
-    assert calls[0][-1] == '--runtime-check'
-    assert doc['argv'][1] not in calls[0]
+    assert '--runtime-check' in calls[0]
     assert not (Path(doc['receipt_dir']) / 'launch-intent.json').exists()
     with pytest.raises(FileExistsError):
         m.execute(path, 'runtime-check')
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize('check_only', [False, True])
+def test_framework_bootstrap_preserves_script_imports_and_arguments(tmp_path, check_only):
+    import subprocess
+    import sys
+    # Framework stubs isolate bootstrap semantics, without importing an installed
+    # framework or executing model code. Real framework import has its own smoke.
+    modules = {
+        'openjiuwen/core/common/logging/log_config.py':
+            'class Config:\n def get_snapshot(self): return {}\n'
+            ' def load_from_dict(self, cfg): assert cfg["log_path"]\nlog_config = Config()\n',
+        'openjiuwen/core/common/logging/__init__.py':
+            'class Logger:\n def info(self, msg): pass\nlogger = Logger()\n',
+        'speech_aware_evidence_acquisition/reproduction/ojw/runner.py': '',
+        'job_helpers.py': 'VALUE = "sibling imported"\n',
+        'job.py': 'import sys\nfrom job_helpers import VALUE\n'
+            'assert sys.argv[1:] == ["--literal", "$(untouched)"]\nprint(VALUE)\n',
+    }
+    for name, content in modules.items():
+        file = tmp_path / name
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(content)
+    result = subprocess.run([sys.executable, '-I', '-c', m.FRAMEWORK_BOOTSTRAP,
+        str(tmp_path / 'logs'), '--runtime-check' if check_only else '--run-script',
+        str(tmp_path / 'job.py'), '--literal', '$(untouched)'],
+        cwd='/', capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert ('sibling imported' in result.stdout) is not check_only
+    assert ('framework_runtime_ready' in result.stdout) is check_only
 
 
 @pytest.mark.parametrize('fault', ['writable', 'nested', 'parent', 'dependency', 'missing'])
