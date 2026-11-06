@@ -6,6 +6,7 @@ External proposal custody is verified by the existing GEPA receipt verifier.
 import argparse
 import copy
 import json
+import re
 from pathlib import Path
 
 from gepa_external_mutation import verify_external_mutation
@@ -18,27 +19,27 @@ from tfrl_hardset_a0_registration import pinned
 
 PIPELINE = {'protocol_version': 'v2', 'node_rails': 'sdk-handoff-v1',
             'answer_only_fallback': 'budgeted-v1'}
-HEADERS = {
-    'slot': 'Extract separately for every supplied candidate; use only speech-supported entities.',
-    'decision': 'Compare the evaluated candidates and select only an existing candidate ID.',
-}
+NODES = ('slot', 'decision')
 
 
 def prepare(repo, data, workload, node, tokenizer, feedback_ids, excluded_ids):
-    if node not in HEADERS:
+    if node not in NODES:
         raise ValueError('v2 target must be slot or decision')
     if workload.get('node_arm') != 'enhanced-p-slot-decision' or workload.get('pipeline') != PIPELINE:
         raise ValueError('GEPA v2 requires explicit v2 SDK pipeline')
-    if node + '_policy' in workload:
-        raise ValueError('target policy must be absent from the source workload')
     job = NodeWorkload(workload)
     baseline, _, _, _, binding = job.derive(repo, data, workload['material'])
     role = 'slot' if node == 'slot' else 'solver'
     path = confined(repo / 'configs', baseline['phase_material'][role]['instruction_template'])
-    original = path.read_text(encoding='utf-8')
+    original = path.read_bytes().decode('utf-8')
     if node == 'decision' and baseline['phase_material'][role]['response_format_id'] != 'slurp-solver-paired-label-json-v1':
         raise ValueError('unexpected Decision response format')
-    # The uneditable original remains intact, including response format and handoff rules.
+    # Edit the first sentence, retaining all subsequent protocol instructions.
+    # Delimiters are metadata and disappear when the candidate is compiled.
+    match = re.search(r'[.!?](?=\s|$)', original)
+    if match is None:
+        raise ValueError('source template needs a complete first sentence to edit')
+    first, rest = original[:match.end()], original[match.end():]
     engine = PromptCandidateContract(node)
     templates = {name: file_sha(confined(repo / 'configs', material['instruction_template']))
                  for name, material in baseline['phase_material'].items()}
@@ -50,7 +51,7 @@ def prepare(repo, data, workload, node, tokenizer, feedback_ids, excluded_ids):
               'baseline_sha256': sha({'baseline': baseline, 'phase_template_sha256': templates}),
               'model_sha256': sha({'binding': binding, 'model_sha256': file_sha(model_path)}),
               'tokenizer_sha256': sha(tokenizer)}
-    contract = engine.build_contract(base_template=engine.BLOCK_START + HEADERS[node] + engine.BLOCK_END + '\n\n' + original,
+    contract = engine.build_contract(base_template=engine.BLOCK_START + first + engine.BLOCK_END + rest,
         frozen=frozen, feedback_query_ids=feedback_ids, excluded_query_ids=excluded_ids)
     return engine, contract, baseline
 

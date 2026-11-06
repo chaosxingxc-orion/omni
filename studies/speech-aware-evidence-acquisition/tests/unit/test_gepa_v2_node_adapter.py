@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 from pathlib import Path
 
@@ -33,12 +34,24 @@ def test_external_candidate_reaches_real_workload_and_keeps_handoff(tmp_path, mo
         return real_confined(ROOT/'configs' if root.name == 'configs' else ROOT, rel)
     monkeypatch.setattr(adapter, 'confined', fixture_confined)
     c = config(); c['node_arm'] = 'enhanced-p-slot-decision'; c['pipeline'] = adapter.PIPELINE.copy()
+    thinking = {'enable_thinking': False, 'answer_reserve_tokens': 4096}
+    for n in ('slot', 'decision'):
+        path = tmp_path/'configs/probes'/('slurp_native_candidate_slot_v1.txt' if n == 'slot' else 'slurp_native_candidate_decision_v2.txt')
+        c[n+'_policy'] = {'thinking': copy.deepcopy(thinking), 'instruction_template': {
+            'relpath': path.relative_to(tmp_path).as_posix(), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}}
     tokenizer = {'rendering': {'mode':'text', 'add_generation_prompt':False,
                     'add_special_tokens':False, 'truncation':False}, 'fixture': 'words'}
     count = lambda text: len(text.split())
     engine, contract, baseline = adapter.prepare(tmp_path, tmp_path, c, node, tokenizer, ['slurp:train:1'], [])
     assert for_contract(contract).node == node
     parent = engine.seed_candidate(contract=contract, expected_contract_sha256=contract['contract_sha256'], count_tokens=count)
+    original = (tmp_path/'configs'/baseline['phase_material'][role]['instruction_template']).read_bytes()
+    seed = engine.executable_template(parent, contract=contract,
+        expected_contract_sha256=contract['contract_sha256'], count_tokens=count)
+    assert seed.encode('utf-8') == original
+    source_specs = load_phase_material_specs(baseline, default_phase_program(baseline['policy']))
+    assert render_static_instruction(source_specs[role], tmp_path, {}, tmp_path) == seed
+    assert baseline['thinking_policy'][role] == c[node+'_policy']['thinking']
     instruction = {'slot': 'Check every candidate for speech supported entities.',
                    'decision': 'Compare evidence before selecting an existing candidate ID.'}[node]
     mutation = {'schema': engine.MUTATION_SCHEMA, 'module': engine.MODULE,
@@ -85,9 +98,9 @@ def test_external_candidate_reaches_real_workload_and_keeps_handoff(tmp_path, mo
     assert derived == expected
     specs = load_phase_material_specs(derived, default_phase_program(derived['policy']))
     rendered = render_static_instruction(specs[role], tmp_path, {}, tmp_path)
-    assert rendered.startswith(instruction + '\n\n')
-    original = (tmp_path/'configs'/baseline['phase_material'][role]['instruction_template']).read_text()
-    assert rendered.endswith(original)
+    assert rendered == instruction + original.decode('utf-8')[len(contract['original_instruction']):]
+    assert result['workload'][node+'_policy']['thinking'] == c[node+'_policy']['thinking']
+    assert result['workload'][('decision' if node == 'slot' else 'slot')+'_policy'] == c[('decision' if node == 'slot' else 'slot')+'_policy']
     assert ('candidate_id' in rendered) if node == 'decision' else ('every requested candidate' in rendered)
     other = 'decision' if node == 'slot' else 'slot'
     foreign = copy.deepcopy(mutation); foreign['schema'] = adapter.PromptCandidateContract(other).MUTATION_SCHEMA
@@ -103,3 +116,82 @@ def test_external_candidate_reaches_real_workload_and_keeps_handoff(tmp_path, mo
         adapter.compile_node(tmp_path, tmp_path, c, node, contract=bad_contract,
             expected_contract_sha256=bad_contract['contract_sha256'], parent=parent,
             expected_parent_sha256=parent['candidate_sha256'], external_mutation={}, count_tokens=count, tokenizer=tokenizer)
+
+
+def test_full_fold_source_fields_derive_without_material_or_binding_mocks(tmp_path, monkeypatch):
+    """Real Fold A 1080 roster/source shape, with isolated fake vector and runtime assets."""
+    import shutil
+    from tfrl_hardset_a0_registration import pin
+    from speech_aware_evidence_acquisition.rails.tfgrpo_learning import canonical
+    repo, data = tmp_path/'repo', tmp_path/'data'
+    repo.mkdir(); data.mkdir()
+    c = json.loads((ROOT/'configs/evaluation/fold-baseline-v1/fold-a-workload.json').read_text())
+    # Reuse the checked-in population, dataset and source fields; external vector bytes
+    # and deployment receipt are offline fixtures with newly computed pins.
+    for rel in (c['population']['roster']['relpath'],
+                'configs/dataset/'+c['population']['dataset']+'.json',
+                workload_module.observation.SOURCE_EXP):
+        (repo/rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT/rel, repo/rel)
+    shutil.copytree(ROOT/'configs/probes', repo/'configs/probes')
+    source = json.loads((ROOT/c['population']['source_baseline']['relpath']).read_text())
+    view = json.loads((repo/('configs/dataset/'+c['population']['dataset']+'.json')).read_text())
+    for store, role in [('intent-boundaries', 'perception'), ('train-exemplars', 'solver')]:
+        query = source['knowledge_stores'][store]['phase_supply'][role]['query_source']
+        rel = 'vectors/'+store+'.jsonl'; path = data/rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open('w') as stream:
+            for row in view['items']:
+                record = {'id':row['sample_id'], 'audio_sha256':row['audio_sha256'], 'source_sample_rate_hz':row['sample_rate_hz']}
+                stream.write(json.dumps(record)+'\n')
+        query.update(relpath=rel, sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+    source_path = repo/'configs/evaluation/fold-baseline-v1/source-fixture.json'
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    source_path.write_text(json.dumps(source))
+    c['population']['source_baseline'] = pin(repo, str(source_path.relative_to(repo)))
+    material = {'schema':'saea-intent-slot-fold-material-v1',
+        'source_baseline':c['population']['source_baseline'], 'source_roster':c['population']['roster'],
+        'dataset':{'relpath':'configs/dataset/'+c['population']['dataset']+'.json',
+                   'sha256':c['population']['dataset_sha256']}}
+    material_path = repo/'configs/evaluation/fold-baseline-v1/material-fixture.json'
+    material_path.write_text(json.dumps(material)); c['material'] = pin(repo, str(material_path.relative_to(repo)))
+    model_name = 'bf16-thinking-tfgrpo-tp4-ctx48k-v1'
+    model_path = repo/('configs/model/'+model_name+'.json'); model_path.parent.mkdir(parents=True)
+    model = json.loads((ROOT/('configs/model/'+model_name+'.json')).read_text())
+    model['runtime_receipt'] = 'receipts/fixture.json'; model_path.write_text(json.dumps(model))
+    profile_path = repo/'configs/deployment/fixture.json'; profile_path.parent.mkdir(parents=True)
+    profile_path.write_text(json.dumps({'model_fragment':model_name, 'admitted_level':32,
+                                        'instances':[{'name':'fixture','cards':[0,1,2,3]}]}))
+    receipt = repo/'docs/receipts/fixture.json'; receipt.parent.mkdir(parents=True, exist_ok=True)
+    receipt.write_text(json.dumps({'deployment':{'instances':[{'instance_id':'fixture'}]}}))
+    c['runtime_binding'] = {'model_fragment':model_name, 'profile':'fixture',
+                            'service_session':'fixture', 'runtime_receipt':'receipts/fixture.json'}
+    c['pipeline'] = adapter.PIPELINE.copy()
+    for node, filename in [('slot','slurp_native_candidate_slot_v1.txt'),
+                           ('decision','slurp_native_candidate_decision_v2.txt')]:
+        path = repo/'configs/probes'/filename
+        c[node+'_policy'] = {'thinking':{'enable_thinking':False,'answer_reserve_tokens':4096},
+                             'instruction_template':pin(repo, str(path.relative_to(repo)))}
+    job = workload_module.NodeWorkload(c)
+    base, exp, roster, derived_view, _ = job.derive(repo, data, c['material'])
+    assert job.ROWS == len(roster['items']) == derived_view['count'] == 1080
+    assert exp['execution_plan']['planned_model_calls'] == 6480
+    tokenizer = {'rendering':{'mode':'text','add_generation_prompt':False,
+                              'add_special_tokens':False,'truncation':False}, 'fixture':'words'}
+    count = lambda value: len(value.split())
+    for node, role in [('slot','slot'), ('decision','solver')]:
+        engine, contract, seed_base = adapter.prepare(repo, data, c, node, tokenizer, [c['sample_ids'][0]], [])
+        parent = engine.seed_candidate(contract=contract, expected_contract_sha256=contract['contract_sha256'], count_tokens=count)
+        assert engine.executable_template(parent, contract=contract, expected_contract_sha256=contract['contract_sha256'], count_tokens=count).encode() == (repo/'configs'/base['phase_material'][role]['instruction_template']).read_bytes()
+        mutation = {'schema':engine.MUTATION_SCHEMA,'module':engine.MODULE,
+                    'parent_sha256':parent['candidate_sha256'], 'evidence_query_ids':[c['sample_ids'][0]],
+                    'diagnosis':'Fixture.', node+'_instruction':'Examine all provided evidence.'}
+        monkeypatch.setattr(adapter, 'verify_external_mutation', lambda *args, **kwargs: {'mutation_text':canonical(mutation).decode()})
+        result = adapter.compile_node(repo, data, c, node, contract=contract,
+            expected_contract_sha256=contract['contract_sha256'], parent=parent,
+            expected_parent_sha256=parent['candidate_sha256'], external_mutation={}, count_tokens=count, tokenizer=tokenizer)
+        compiled = workload_module.NodeWorkload(result['workload']).derive(repo, data, c['material'])[0]
+        expected = copy.deepcopy(seed_base)
+        expected['phase_material'][role]['instruction_template'] = result['publication']['instruction_template']['relpath']
+        assert compiled == expected
+        assert result['workload'][node+'_policy']['thinking'] == c[node+'_policy']['thinking']
