@@ -132,3 +132,58 @@ def test_valid_predispatch_receipts_and_unexpected_file(tmp_path,monkeypatch):
     evidence=m.absent({},Path('/data'),exp,SimpleNamespace(protocol_hash='p',split_identity_hash='s'));assert any(x['state']=='pre-dispatch-receipts' for x in evidence)
     (root/'unknown.json').write_text('{}')
     with pytest.raises(ValueError,match='unexpected run custody'):m.absent({},Path('/data'),exp,SimpleNamespace(protocol_hash='p',split_identity_hash='s'))
+
+
+def make_receipts(root, *, protocol='p', split='s', run_phases=False):
+    from speech_aware_evidence_acquisition.core.flight.receipts import FlightReceipts,write_flight_receipts
+    root.mkdir(parents=True,exist_ok=True);f=FlightReceipts('RUN','gen');f.record('preflight',{'run_id':'RUN','attempt_id':'gen','study_commit':'a'*40,'protocol_hash':protocol,'split_identity_hash':split,'attempt_reservation':'deferred to core.model.adapter.FrozenCoreAdapter'});f.record('preprocess',{});f.record('serve',{'session_id':'session'})
+    if run_phases:f.record('run_phases',{})
+    write_flight_receipts(root/'flight-receipts.json',f)
+
+
+@pytest.mark.parametrize('fault',['protocol','split','hash','run_phases','fit_directory'])
+def test_preflight_receipt_refusals(tmp_path,monkeypatch,fault):
+    monkeypatch.setattr(m.s,'mapped',lambda producer,path,**kwargs:tmp_path/path.relative_to('/data'))
+    exp={'run_id':'RUN','attempt_id':'gen','fit_run_id':'RUN-FIT','fit_attempt_id':'fit','study_commit':'a'*40,'service_session':'session'};root=tmp_path/'runs/RUN/gen';make_receipts(root,protocol='wrong' if fault=='protocol' else 'p',split='wrong' if fault=='split' else 's',run_phases=fault=='run_phases')
+    if fault=='hash':
+        p=root/'flight-receipts.json';d=json.loads(p.read_bytes());d['stages']['serve']['session_id']='other';p.write_text(json.dumps(d))
+    if fault=='fit_directory':(tmp_path/'runs/RUN-FIT/fit').mkdir(parents=True)
+    with pytest.raises(Exception):m.absent({},Path('/data'),exp,SimpleNamespace(protocol_hash='p',split_identity_hash='s'))
+
+
+@pytest.mark.parametrize('phase',['none','after_save','after_unlink'])
+def test_execute_preflight_receipts_idempotence_and_recovery(tmp_path,monkeypatch,phase):
+    cp,locks,_,_=setup_case(tmp_path,monkeypatch);root=tmp_path/'empty/runs/RUN/gen';make_receipts(root);raw=(root/'flight-receipts.json').read_bytes();lease=(locks/'flight.lock').read_bytes();guard=(locks/'generation.guard').stat().st_ino
+    if phase!='none':
+        real=m.s.queue.atomic
+        with monkeypatch.context() as patch:
+            def fail(path,value):
+                if (phase=='after_save' and path.name=='audit.json') or (phase=='after_unlink' and path.name=='complete.json'):raise OSError('interrupt')
+                return real(path,value)
+            patch.setattr(m.s.queue,'atomic',fail)
+            with pytest.raises(OSError):m.execute(cp)
+    result=m.execute(cp);assert m.execute(cp)==result
+    assert (root/'flight-receipts.json').read_bytes()==raw and (tmp_path/'state/output/preserved-flight.lock.json').read_bytes()==lease and (locks/'generation.guard').stat().st_ino==guard
+
+
+def test_receipt_changes_before_unlink_refused(tmp_path,monkeypatch):
+    cp,locks,_,_=setup_case(tmp_path,monkeypatch);root=tmp_path/'empty/runs/RUN/gen';make_receipts(root);original=m.s.transition.quiescence;calls=[]
+    def change(instances):
+        calls.append(1)
+        if len(calls)==1:(root/'flight-receipts.json').write_text('{}')
+        return original(instances)
+    monkeypatch.setattr(m.s.transition,'quiescence',change);raw=(locks/'flight.lock').read_bytes()
+    with pytest.raises(Exception):m.execute(cp)
+    assert (locks/'flight.lock').read_bytes()==raw
+
+
+def test_receipt_changes_each_identity_field_refused(tmp_path,monkeypatch):
+    monkeypatch.setattr(m.s,'mapped',lambda producer,path,**kwargs:tmp_path/path.relative_to('/data'))
+    exp={'run_id':'RUN','attempt_id':'gen','fit_run_id':'RUN-FIT','fit_attempt_id':'fit','study_commit':'a'*40,'service_session':'session'}
+    for key in ('protocol_hash','split_identity_hash','study_commit'):
+        root=tmp_path/'runs/RUN/gen'; make_receipts(root, protocol='p' if key!='protocol_hash' else 'bad', split='s' if key!='split_identity_hash' else 'bad')
+        p=root/'flight-receipts.json'; d=json.loads(p.read_bytes());
+        if key=='study_commit': d['stages']['preflight']['study_commit']='bad'
+        p.write_text(json.dumps(d))
+        with pytest.raises(Exception): m.absent({},Path('/data'),exp,SimpleNamespace(protocol_hash='p',split_identity_hash='s'))
+        for child in root.iterdir(): child.unlink()
