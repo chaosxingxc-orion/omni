@@ -1,0 +1,63 @@
+{
+  "schema": "psd-decision-evidence-ablation-design-v1",
+  "status": "BOUND_REVIEWABLE_NOT_STAGED_NOT_ADMITTED",
+  "candidate_count": 1,
+  "parent": {
+    "path": "/var/tmp/omni-psd-rails-preparation-v1/complete-coverage-on-workload-v1.json",
+    "sha256": "1c502d1d8d3db034f6dbf1bbde02630d95ae654d14a220551f08891f95c4971c",
+    "arm": "ON",
+    "decision_policy_explicit": false
+  },
+  "parent_effective_decision": {
+    "template": {
+      "relpath": "configs/probes/slurp_native_candidate_decision_v2.txt",
+      "sha256": "a1705b1bb86e093440731952b30cc05e8dd244113e22c58dc53a1817cad45db8"
+    },
+    "thinking": {
+      "enable_thinking": true,
+      "reasoning_budget_tokens": 3072,
+      "answer_reserve_tokens": 1024
+    },
+    "derivation": "NodeWorkload baseline thinking solver then split_graph v2 solver template; loader maps decision_policy to solver"
+  },
+  "candidate_template": {
+    "relpath": "configs/probes/slurp_psd_decision_conditional_evidence_v1.txt",
+    "sha256": "1a2b58a1ec1eaf6c6dfda48575faee5c292688cfafba391c3d7d12b7f6ce5cbc"
+  },
+  "semantic_delta_sentences": [
+    "Compare the requested operation, its object and any direction or requested state in the original audio with the supplied activation boundaries and confusable exclusions; use only the knowledge actually supplied, without inventing a rule or a missing fact.",
+    "Slot results are conditional extractions under each candidate, not independent evidence that the candidate intent was requested: a nonempty entity list, more entities, or an apparently complete Slot result does not make that intent better supported.",
+    "Keep and use Slot facts that the original audio actually supports in the relevant semantic role, while treating unsupported or mismatched extractions as uncertain; do not discard all Slot information or assume an empty entity list rules a candidate out."
+  ],
+  "derived_workload": {
+    "relpath": "configs/evaluation/psd-decision-evidence-ablation-v1/decision-coverage-on-workload.json",
+    "sha256": "423f04e0fe940287479f0a46bf324bcec594877905d2014c3dc5233cd140441c"
+  },
+  "allowed_raw_paths": [
+    "/decision_policy",
+    "/name",
+    "/run_id"
+  ],
+  "allowed_effective_scientific_paths": [
+    "/phase_material/solver/instruction_template"
+  ],
+  "explicit_policy_note": "Absent parent decision_policy is materialized with identical inherited solver thinking; raw added policy is not a new thinking intervention.",
+  "loader_extension_required": false,
+  "historical_controls": {
+    "D_corrections_to_wrong_P_first": 60,
+    "D_harms_to_correct_P_first": 16,
+    "not_new_score": true
+  },
+  "no_forced_first_candidate": true,
+  "fixed": [
+    "sample_ids/roster/split/evaluator",
+    "P and Slot normal templates",
+    "thinking and reasoning/answer budgets all roles",
+    "KB/retrieval/candidate count and output schema",
+    "reference and length recovery",
+    "v4g",
+    "runtime_binding/execution/material/population"
+  ],
+  "no_new_model_teacher_fit_score_calls": 0,
+  "approval_state": "For main review only; no stage/prepare/FIT/register/admit/queue/dispatch."
+}

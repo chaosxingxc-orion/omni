@@ -1,0 +1,37 @@
+[
+  {
+    "op": "test",
+    "path": "/name",
+    "value": "slurp-psd-complete-coverage-fold-a-slot-on-v1"
+  },
+  {
+    "op": "test",
+    "path": "/run_id",
+    "value": "SAEA-SLURP-PSD-COMPLETE-COVERAGE-FOLD-A-SLOT-ON-V1"
+  },
+  {
+    "op": "add",
+    "path": "/decision_policy",
+    "value": {
+      "thinking": {
+        "enable_thinking": true,
+        "reasoning_budget_tokens": 3072,
+        "answer_reserve_tokens": 1024
+      },
+      "instruction_template": {
+        "relpath": "configs/probes/slurp_psd_decision_conditional_evidence_v1.txt",
+        "sha256": "1a2b58a1ec1eaf6c6dfda48575faee5c292688cfafba391c3d7d12b7f6ce5cbc"
+      }
+    }
+  },
+  {
+    "op": "replace",
+    "path": "/name",
+    "value": "slurp-psd-decision-conditional-evidence-coverage-on-v1"
+  },
+  {
+    "op": "replace",
+    "path": "/run_id",
+    "value": "SAEA-SLURP-PSD-DECISION-CONDITIONAL-EVIDENCE-COVERAGE-ON-V1"
+  }
+]
