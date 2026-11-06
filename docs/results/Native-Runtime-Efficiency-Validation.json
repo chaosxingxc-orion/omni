@@ -331,5 +331,21 @@
     "generation_exit_code": 1,
     "failure": "offline render inherited worker timing output; O_EXCL refused existing file",
     "generation_attempt_ledger_present": false
+  },
+  "telemetry_successor": {
+    "source_commit": "4fa68e30",
+    "compiler_exit_code": 0,
+    "admission_exit_code": 0,
+    "workspace_manifest_sha256": "875f6f493d56af2e08c07f69ea63ec7b529cb2484c9b57aedf22e4f5c8242caa",
+    "final_config_sha256": "76d41a12b7ab39aef20a87a3f80d680311276e7ad056a80613790a5e8f90459d",
+    "bridge_precheck_ok": true,
+    "representative_render_ok": true,
+    "framework_runtime_check_exit_code": 0,
+    "generation_launched": true,
+    "attempt": "generation-telemetry-v1",
+    "started_at_utc": "2026-11-06T03:56:00.3234752Z",
+    "new_terminal_rows_verified": null,
+    "throughput_verified": false,
+    "validation_omits_worker_timing_path": true
   }
 }
