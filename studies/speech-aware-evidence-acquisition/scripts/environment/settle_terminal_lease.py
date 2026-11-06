@@ -34,11 +34,11 @@ def settle(repo, data, out, container, expected_run, expected_attempt, expected_
         journal=ContactJournal(data,execution,arm)
         intents=list(journal.root.glob('*.intent.json'))
         if len(intents)!=state['actual']['calls']:raise ValueError('attempt and contacts differ')
-        observed=[]
+        observed=[];not_sent=[]
         for p in intents:
             request=read(p)['request_id'];contact=journal.inspect(request)
-            if contact['state']!='observed':raise ValueError('unknown request; no lease settlement')
-            observed.append(request)
+            if contact['state'] not in ('observed','not_sent'):raise ValueError('unknown request; no lease settlement')
+            (observed if contact['state']=='observed' else not_sent).append(request)
         if runtime_receipt is None:
             if runtime_receipt_sha256 is not None:raise ValueError('receipt path required with digest')
             quiet=quiescence([8200,8201])
@@ -62,7 +62,8 @@ def settle(repo, data, out, container, expected_run, expected_attempt, expected_
         if lease.read_bytes()!=blob:raise ValueError('lease changed')
         out.mkdir(parents=True)
         publish_new(out/'reconciliation.json',raw({'container':doc['Id'],'state':doc['State'],
-            'attempt':state,'observed_requests':observed,'quiescence':quiet,'lease_sha256':hashlib.sha256(blob).hexdigest(),'no_model_calls':True}))
+            'attempt':state,'observed_requests':observed,
+            **({'not_sent_requests':sorted(not_sent)} if not_sent else {}),'quiescence':quiet,'lease_sha256':hashlib.sha256(blob).hexdigest(),'no_model_calls':True}))
         publish_new(out/'preserved-flight.lock.json',blob)
         if lease.read_bytes()!=blob:raise ValueError('lease changed before release')
         lease.unlink()
@@ -70,7 +71,8 @@ def settle(repo, data, out, container, expected_run, expected_attempt, expected_
             fd=os.open(p,os.O_RDONLY|os.O_DIRECTORY)
             try:os.fsync(fd)
             finally:os.close(fd)
-    return {'settled':True,'observed_contacts':len(observed),'new_model_calls':0}
+    return {'settled':True,'observed_contacts':len(observed),
+        **({'not_sent_contacts':len(not_sent)} if not_sent else {}),'new_model_calls':0}
 
 
 if __name__=='__main__':

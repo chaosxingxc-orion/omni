@@ -40,6 +40,7 @@ def inspect_generation(*, data_root, plan, arm, source_root=None):
     expected = set()
     audio = []
     seen = set()
+    not_sent = []
     for path in intents:
         record = json.loads(path.read_bytes())
         rid = record['request_id']
@@ -47,14 +48,19 @@ def inspect_generation(*, data_root, plan, arm, source_root=None):
             raise ValueError('duplicate or misnamed generation intent')
         seen.add(rid)
         observed = journal.inspect(rid)
-        if observed['state'] != 'observed':
+        if observed['state'] not in ('observed', 'not_sent'):
             raise ValueError('generation outcome unknown; reconciliation required')
-        expected.add(journal._path(rid, 'response'))
+        if observed['state'] == 'observed':
+            expected.add(journal._path(rid, 'response'))
+        else:
+            not_sent.append(rid)
         seconds = observed['intent']['payload'].get('audio_seconds')
         if type(seconds) not in (int, float) or not math.isfinite(seconds) or seconds < 0:
             raise ValueError('generation audio usage is invalid')
         audio.append(seconds)
-    if any(p not in intents and p not in responses and not p.name.endswith('.fit.json') for p in files):
+    delivery = {journal._path(rid, kind) for rid in seen for kind in ('dispatch', 'not_sent')
+                if journal._path(rid, kind).exists()}
+    if any(p not in intents and p not in responses and p not in delivery and not p.name.endswith('.fit.json') for p in files):
         raise ValueError('unexpected generation journal file')
     if responses != expected:
         raise ValueError('orphan generation response')
@@ -71,7 +77,8 @@ def inspect_generation(*, data_root, plan, arm, source_root=None):
             or gpu_seconds < 0 or gpu_seconds > plan.planned_gpu_hours * 3600):
         raise ValueError('generation GPU actual exceeds authenticated plan budget')
     return {'run_id': plan.run_id, 'attempt_id': plan.attempt_id,
-            'observed_requests': sorted(seen), 'actual': actual}
+            'observed_requests': sorted(seen - set(not_sent)), 'actual': actual,
+            **({'not_sent_requests': sorted(not_sent)} if not_sent else {})}
 
 
 def inspect_checkpoint(*, path, sha256, plan):
@@ -287,7 +294,7 @@ def inventory_snapshot(inventory):
     return result
 
 
-def inspect_settlement(*, reconciliation, lease, attempt, observed, ports=None):
+def inspect_settlement(*, reconciliation, lease, attempt, observed, ports=None, not_sent=()):
     """Check the native stale-lease settlement receipt against preserved bytes."""
     rec = json.loads(_pinned(reconciliation))
     blob = _pinned(lease)
@@ -303,6 +310,9 @@ def inspect_settlement(*, reconciliation, lease, attempt, observed, ports=None):
             or rec.get('lease_sha256') != hashlib.sha256(blob).hexdigest()
             or sorted(rec.get('observed_requests', [])) != sorted(observed)
             or len(set(rec.get('observed_requests', []))) != len(observed)
+            or sorted(rec.get('not_sent_requests', [])) != sorted(not_sent)
+            or len(set(rec.get('not_sent_requests', []))) != len(not_sent)
+            or set(observed) & set(not_sent)
             or rec.get('no_model_calls') is not True
             or type(quiet.get('observed_at')) not in (int, float)
             or not math.isfinite(quiet.get('observed_at'))
@@ -322,7 +332,7 @@ def inspect_settlement(*, reconciliation, lease, attempt, observed, ports=None):
 
 def inspect_natural_drain(*, observation, attempt, plan_sha256, attempt_sha256,
                           observed, runtime_receipt, session, session_sha256=None,
-                          ports=None, runtime_receipt_sha256=None):
+                          ports=None, runtime_receipt_sha256=None, not_sent=()):
     """Authenticate a producer's normal GenerationLease context exit.
 
     The absent lease is one fact observed while holding the stable guard; the
@@ -338,6 +348,8 @@ def inspect_natural_drain(*, observation, attempt, plan_sha256, attempt_sha256,
             or doc.get('plan_sha256') != plan_sha256
             or doc.get('attempt_sha256') != attempt_sha256
             or doc.get('observed_requests') != sorted(observed)
+            or doc.get('not_sent_requests', []) != sorted(not_sent)
+            or set(observed) & set(not_sent)
             or doc.get('session_id') != session.get('session_id')
             or doc.get('lease_absent_under_guard') is not True
             or not isinstance(doc.get('boot_id'), str) or not doc['boot_id']
@@ -533,7 +545,7 @@ def validate_terminal_custody(*, cfg, candidate, plan, data):
         if mode == 'stale-lease':
             evidence_blob(a['lease'])
             lease = inspect_settlement(reconciliation=a['reconciliation'], lease=a['lease'], attempt=attempt,
-                                       observed=observed['observed_requests'])
+                                       observed=observed['observed_requests'], not_sent=observed.get('not_sent_requests', []))
         else:
             observation = json.loads(evidence_blob(a['reconciliation']))
             producer = json.loads(evidence_blob(a['producer_identity']))
@@ -581,7 +593,7 @@ def validate_terminal_custody(*, cfg, candidate, plan, data):
             lease = inspect_natural_drain(observation=a['reconciliation'], attempt=attempt,
                 plan_sha256=hashlib.sha256(evidence_blob(a['plan'])).hexdigest(),
                 attempt_sha256=hashlib.sha256(attempt_path.read_bytes()).hexdigest(),
-                observed=observed['observed_requests'], runtime_receipt={},
+                observed=observed['observed_requests'], not_sent=observed.get('not_sent_requests', []), runtime_receipt={},
                 session={'session_id': observation.get('session_id')}, ports=None,
                 session_sha256=observation.get('session_sha256'),
                 runtime_receipt_sha256=observation.get('runtime_receipt_sha256'))
@@ -616,7 +628,7 @@ def validate_terminal_custody(*, cfg, candidate, plan, data):
             raise ValueError('invalid deployment endpoints')
         if mode == 'stale-lease':
             inspect_settlement(reconciliation=a['reconciliation'], lease=a['lease'], attempt=attempt,
-                               observed=observed['observed_requests'], ports=ports)
+                               observed=observed['observed_requests'], ports=ports, not_sent=observed.get('not_sent_requests', []))
         else:
             ndoc = json.loads(_pinned(a['reconciliation']))
             if set(ndoc['quiescence'].get('queues', {})) != {str(p) for p in ports}:

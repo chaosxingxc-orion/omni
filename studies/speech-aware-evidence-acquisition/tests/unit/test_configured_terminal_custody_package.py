@@ -167,7 +167,7 @@ def test_full_terminal_fixture(tmp_path):
     from speech_aware_evidence_acquisition.core.session.vllm_resident import required_identity
     from speech_aware_evidence_acquisition.data.splits import prefixed, split_identity_hash
 
-    source = Path('/opt/saea-release/studies/speech-aware-evidence-acquisition')
+    source = Path(__file__).resolve().parents[2]
     world = VllmWorld(tmp_path / 'world')
     repo = tmp_path / 'git'; repo.mkdir()
     study = repo / STUDY_PREFIX

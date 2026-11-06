@@ -469,7 +469,9 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
             self._calls_used = new_calls_used
             self._audio_seconds_used = new_audio_seconds_used
         started = time.monotonic()
-        response_bytes = self._transport(request_bytes)
+        from ..contact_delivery import delivery_scope
+        with delivery_scope(self._contact_journal, request_id, request_sha256):
+            response_bytes = self._transport(request_bytes)
         latency = time.monotonic() - started
         if self._contact_journal is not None:
             # Keep even malformed responses before parsing or trace emission can

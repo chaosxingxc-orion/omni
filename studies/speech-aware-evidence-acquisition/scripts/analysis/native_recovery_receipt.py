@@ -34,6 +34,8 @@ def prepare(data_root, source_plan, target_attempt, arm, out):
         raise ValueError('target attempt already has state; inspect instead of overwriting')
     replay = NativeContactReplay(data_root, source_plan, target, arm)
     counts = {'observed': 0, 'unknown': 0}
+    if any(replay.source.inspect(rid)['state'] == 'not_sent' for rid in replay.request_ids):
+        counts['not_sent'] = 0
     for rid in sorted(replay.request_ids):
         state = replay.source.inspect(rid)['state']
         counts[state] += 1

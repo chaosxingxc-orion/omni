@@ -99,6 +99,8 @@ class ContactJournal:
         self._validate_intent(intent, request_id)
         if intent['request_sha256'] != request_sha256:
             raise ContactJournalError('response does not match request intent')
+        if self._delivery_state(request_id, intent_blob, intent) == 'not_sent':
+            raise ContactJournalError('not-sent contact cannot have a response')
         record = {'schema': 'saea-contact-response-v1', 'identity': self.identity,
             'request_id': request_id, 'request_sha256': request_sha256,
             'intent_sha256': digest(intent_blob), 'response_sha256': digest(response_bytes),
@@ -108,6 +110,50 @@ class ContactJournal:
             publish_new(self._path(request_id, 'response'), canonical(record))
         except FileExistsError as error:
             raise ContactJournalError('response already recorded; never overwrite') from error
+
+    def delivery_event(self, request_id, request_sha256, kind, *, error_type=None):
+        """Publish a transport-owned boundary; never infer one from missing logs."""
+        if kind not in ('dispatch', 'not_sent'):
+            raise ContactJournalError('unsupported delivery boundary')
+        intent_blob = self._path(request_id, 'intent').read_bytes()
+        intent = json.loads(intent_blob)
+        self._validate_intent(intent, request_id)
+        if intent['request_sha256'] != request_sha256:
+            raise ContactJournalError('delivery request differs from intent')
+        if (self._path(request_id, 'response').exists()
+                or self._path(request_id, 'not_sent' if kind == 'dispatch' else 'dispatch').exists()):
+            raise ContactJournalError('contradictory delivery boundary')
+        if kind == 'not_sent' and (not isinstance(error_type, str) or not error_type):
+            raise ContactJournalError('not-sent boundary requires failure type')
+        record = {'schema': 'saea-contact-delivery-v1', 'identity': self.identity,
+                  'request_id': request_id, 'request_sha256': request_sha256,
+                  'intent_sha256': digest(intent_blob), 'kind': kind,
+                  'boundary': 'generation-post-v1', 'error_type': error_type}
+        try:
+            publish_new(self._path(request_id, kind), canonical(record))
+        except FileExistsError as error:
+            raise ContactJournalError('delivery boundary already recorded') from error
+
+    def _delivery_state(self, request_id, intent_blob, intent):
+        found = []
+        for kind in ('dispatch', 'not_sent'):
+            path = self._path(request_id, kind)
+            if not path.exists():
+                continue
+            record = json.loads(path.read_bytes())
+            if (record.get('schema') != 'saea-contact-delivery-v1'
+                    or record.get('identity') != self.identity
+                    or record.get('request_id') != request_id
+                    or record.get('request_sha256') != intent['request_sha256']
+                    or record.get('intent_sha256') != digest(intent_blob)
+                    or record.get('kind') != kind
+                    or record.get('boundary') != 'generation-post-v1'
+                    or (kind == 'not_sent' and not isinstance(record.get('error_type'), str))):
+                raise ContactJournalError('delivery boundary integrity failed')
+            found.append(kind)
+        if len(found) > 1 or ('not_sent' in found and self._path(request_id, 'response').exists()):
+            raise ContactJournalError('contradictory delivery custody')
+        return found[0] if found else None
 
     def _validate_intent(self, intent, request_id):
         if (intent.get('schema') != 'saea-contact-intent-v1' or intent.get('identity') != self.identity
@@ -120,15 +166,16 @@ class ContactJournal:
         """Read a contact without mutating it; UNKNOWN can only be reconciled."""
         intent_path, response_path = self._path(request_id, 'intent'), self._path(request_id, 'response')
         if not intent_path.exists():
-            if response_path.exists():
-                raise ContactJournalError('orphan response has no intent')
+            if any(self._path(request_id, kind).exists() for kind in ('response', 'dispatch', 'not_sent')):
+                raise ContactJournalError('orphan custody has no intent')
             return {'state': 'absent', 'request_id': request_id}
         try:
             intent_blob = intent_path.read_bytes()
             intent = json.loads(intent_blob)
             self._validate_intent(intent, request_id)
+            delivery = self._delivery_state(request_id, intent_blob, intent)
             if not response_path.exists():
-                return {'state': 'unknown', 'intent': intent}
+                return {'state': 'not_sent' if delivery == 'not_sent' else 'unknown', 'intent': intent}
             response = json.loads(response_path.read_bytes())
             blob = base64.b64decode(response['response_b64'], validate=True)
             latency = response['latency_seconds']
@@ -221,7 +268,7 @@ class NativeContactReplay:
             if path != self.source._path(rid, 'intent'):
                 raise ContactJournalError('journal filename does not match request')
             observed = self.source.inspect(rid)
-            if observed['state'] not in ('observed', 'unknown'):
+            if observed['state'] not in ('observed', 'unknown', 'not_sent'):
                 raise ContactJournalError('unreadable predecessor contact')
             payload = observed['intent']['payload']
             logical = logical_contact(payload)
@@ -232,7 +279,7 @@ class NativeContactReplay:
                 raise ContactJournalError('duplicate logical request in source; reconcile before replay')
             variants[comparison] = rid
             self._records[rid] = observed
-            for kind in ('intent', 'response'):
+            for kind in ('intent', 'response', 'dispatch', 'not_sent'):
                 p = self.source._path(rid, kind)
                 self._pins[p] = digest(p.read_bytes()) if p.exists() else None
             if prepared_text:
@@ -247,6 +294,11 @@ class NativeContactReplay:
         if (type(actual['calls']) is not int or type(actual['audio_seconds']) not in (int, float)
                 or actual['calls'] != len(intents) or not math.isclose(actual['audio_seconds'], math.fsum(audio), rel_tol=1e-12, abs_tol=1e-9)):
             raise ContactJournalError('source attempt usage and contact journal differ; reconcile before recovery')
+        for kind in ('dispatch', 'not_sent'):
+            expected_delivery = {self.source._path(rid, kind) for rid in self._records
+                                 if self._pins[self.source._path(rid, kind)] is not None}
+            if set(self.source.root.glob('*.' + kind + '.json')) != expected_delivery:
+                raise ContactJournalError('orphan delivery boundary')
         self.scientific_source_plan = source_plan
         self._empty_ancestry = None
         self._empty_ancestor = None
@@ -303,11 +355,15 @@ class NativeContactReplay:
         plan = asdict(self.source_plan)
         if self.source_plan.owner_allowance is not None:
             plan['owner_allowance'] = asdict(self.source_plan.owner_allowance)
+        delivery = {p.name: sha for p, sha in self._pins.items()
+                    if p.parent == self.source.root and sha is not None
+                    and p.name.endswith(('.dispatch.json', '.not_sent.json'))}
         return {'schema': 'saea-native-replay-source-v1',
             'plan': plan, 'arm': self.source.identity['arm'],
             'attempt_path': str(self._attempt_path.resolve()),
             'attempt_sha256': self._attempt_sha256,
             'actual_usage': dict(self.source_actual_usage),
+            **({'delivery_custody': delivery} if delivery else {}),
             **({'empty_ancestry':self._empty_ancestry} if self._empty_ancestry else {})}
 
     def receipt(self, request_id):
@@ -326,6 +382,11 @@ class NativeContactReplay:
         return frozenset(self._records)
 
     def assert_all_contacts_observed(self):
+        self.assert_all_contacts_resolved()
+        if any(record['state'] != 'observed' for record in self._records.values()):
+            raise ContactJournalError('observed-only consumer cannot use not-sent contacts')
+
+    def assert_all_contacts_resolved(self):
         """Audit pinned predecessor custody before dispatching any fresh work.
 
         This does not consume responses or reconcile unknown outcomes. Changed
@@ -338,7 +399,7 @@ class NativeContactReplay:
             if current != expected:
                 raise ContactJournalError('source custody changed after recovery inspection')
         self._assert_contact_inventory()
-        if any(record['state'] != 'observed' for record in self._records.values()):
+        if any(record['state'] not in ('observed', 'not_sent') for record in self._records.values()):
             raise ContactJournalError('contact outcome unknown; reconcile before dispatching any work')
 
     def _assert_contact_inventory(self):
@@ -350,6 +411,11 @@ class NativeContactReplay:
         if (set(self.source.root.glob('*.intent.json')) != intents
                 or set(self.source.root.glob('*.response.json')) != responses):
             raise ContactJournalError('source contact inventory changed after recovery inspection')
+        for kind in ('dispatch', 'not_sent'):
+            expected = {self.source._path(rid, kind) for rid in self._records
+                        if self._pins[self.source._path(rid, kind)] is not None}
+            if set(self.source.root.glob('*.' + kind + '.json')) != expected:
+                raise ContactJournalError('source delivery inventory changed after recovery inspection')
         if self._empty_ancestor is not None:
             self._empty_ancestor._assert_contact_inventory()
 
@@ -362,7 +428,7 @@ class NativeContactReplay:
         if digest(self._attempt_path.read_bytes()) != self._attempt_sha256:
             raise ContactJournalError('source attempt changed after recovery inspection')
         self._assert_empty_ancestry()
-        for kind in ('intent', 'response'):
+        for kind in ('intent', 'response', 'dispatch', 'not_sent'):
             p = self.source._path(rid, kind)
             current = digest(p.read_bytes()) if p.exists() else None
             if current != self._pins[p]:
@@ -413,6 +479,10 @@ class NativeContactReplay:
             raise ContactJournalError('known contact request changed; refusing replay or resend')
         self._unchanged(rid)
         record = self._records[rid]
+        if record['state'] == 'not_sent':
+            if payload['request_id'] in self._records:
+                raise ContactJournalError('not-sent recovery requires a fresh request identity')
+            return None
         if record['state'] != 'observed':
             raise ContactJournalError('contact outcome unknown; reconcile before sending')
         return copy.deepcopy(record['intent']['payload'])

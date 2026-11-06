@@ -886,7 +886,7 @@ class _ExposureAndCarrierMixin:
                     declaration, data_root=self.data_root, plan=plan,
                     arm=receipt["source"]["arm"],
                 )
-                replay.assert_all_contacts_observed()
+                replay.assert_all_contacts_resolved()
                 binding = replay.source_binding()
                 expected = [{"attempt_id": replay.source_plan.attempt_id,
                     "mode": "native-contact-journal",

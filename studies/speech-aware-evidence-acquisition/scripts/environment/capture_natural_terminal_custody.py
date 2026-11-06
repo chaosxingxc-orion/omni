@@ -214,7 +214,8 @@ def capture(*, data, identity_path, identity_sha256, arm, output, repo):
             'attempt_sha256':hashlib.sha256(attempt_blob).hexdigest(),
             'runtime_receipt_sha256':hashlib.sha256(receipt_blob).hexdigest(),
             'session_sha256':hashlib.sha256(session_blob).hexdigest(),
-            'observed_requests':observation['observed_requests'],'quiescence':quiet,'captured_at':time.time()}
+            'observed_requests':observation['observed_requests'],
+            **({'not_sent_requests':observation['not_sent_requests']} if observation.get('not_sent_requests') else {}),'quiescence':quiet,'captured_at':time.time()}
         verify_guard()
         publish_new(output, (json.dumps(result, sort_keys=True, indent=2)+'\n').encode())
     return result

@@ -109,3 +109,16 @@ def test_configured_settlement_preserves_unproven_partition(tmp_path, monkeypatc
         session.write_text(json.dumps(doc))
     with pytest.raises(ValueError):m.settle(**args)
     assert (tmp_path/'locks/flight.lock').read_bytes() == blob
+
+
+def test_not_sent_settlement_preserves_classification_and_original_charge(tmp_path,monkeypatch):
+    args,blob=prepared(tmp_path,monkeypatch)
+    from speech_aware_evidence_acquisition.core import contact_journal
+    monkeypatch.setattr(contact_journal,'ContactJournal',lambda *a:SimpleNamespace(
+        root=tmp_path/'native',inspect=lambda rid:{'state':'not_sent'}))
+    result=m.settle(**args)
+    assert result['observed_contacts']==0 and result['not_sent_contacts']==1
+    rec=json.loads((args['out']/'reconciliation.json').read_bytes())
+    assert rec['observed_requests']==[] and rec['not_sent_requests']==['request']
+    assert rec['attempt']['actual']['calls']==1
+    assert (args['out']/'preserved-flight.lock.json').read_bytes()==blob

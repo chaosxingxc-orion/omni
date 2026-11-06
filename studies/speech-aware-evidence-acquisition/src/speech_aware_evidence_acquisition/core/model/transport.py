@@ -1697,6 +1697,8 @@ class LlamaServerTransport:
 
     @measure("transport_total")
     def __call__(self, request_bytes: bytes) -> bytes:
+        from ..contact_delivery import begin_render, before_post
+        begin_render(request_bytes)
         body, projection_receipt = self.render_request_with_receipt(request_bytes)
         # The text-only construction receipt (2026-09-23, ADV-1) rides the
         # same return channel but is NOT a projection record: it names no
@@ -1732,6 +1734,7 @@ class LlamaServerTransport:
             with span('request_json_encode') as observation:
                 encoded_body=json.dumps(body).encode("utf-8")
                 observation['request_bytes']=len(encoded_body)
+            before_post(request_bytes)
             raw = self._post(self._url, encoded_body)
         except urllib.error.HTTPError as error:
             # 2026-08-08: surface the server's diagnostic body — a bare

@@ -1714,7 +1714,7 @@ def build_direct_only_raw_fit_gate(
         runtime._require_exposure_row_unconsumed(fit_plan.run_id)
     else:
         replay.assert_target(runtime._data_root, plan, runtime._arm())
-        replay.assert_all_contacts_observed()
+        replay.assert_all_contacts_resolved()
     fit_root = runtime._data_root / "prepared" / fit_plan.run_id / fit_plan.attempt_id
     fit_root.mkdir(parents=True, exist_ok=True)
     identity = runtime.session_required_identity()

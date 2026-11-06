@@ -802,3 +802,17 @@ def test_layered_ancestor_reachability():
         validate_ancestry({'new': set(), 'old': set()}, 'new')
     with pytest.raises(ValueError, match='cyclic'):
         validate_ancestry({'new': {'old'}, 'old': {'new'}}, 'new')
+
+
+def test_not_sent_is_resolved_but_never_an_observed_response(tmp_path):
+    from test_contact_delivery import journal_with_terminal_attempt
+    journal, plan = journal_with_terminal_attempt(tmp_path)
+    path = tmp_path/'attempts'/plan.run_id/(plan.attempt_id+'.json')
+    doc=json.loads(path.read_bytes());doc['schema']='saea-attempt-v1';path.write_bytes(canonical(doc))
+    result=inspect_generation(data_root=tmp_path,plan=plan,arm='bare-core')
+    assert result['observed_requests']==['req-1']
+    assert result['not_sent_requests']==['req-2']
+    assert result['actual']=={'calls':2,'audio_seconds':200.0}
+    journal._path('req-2','not_sent').unlink()
+    with pytest.raises(ValueError,match='unknown'):
+        inspect_generation(data_root=tmp_path,plan=plan,arm='bare-core')
