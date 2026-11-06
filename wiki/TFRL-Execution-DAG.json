@@ -491,7 +491,7 @@
       "completed_rows": 1080,
       "observed_at_utc": "2026-11-06T20:06:01Z",
       "wall_seconds_per_complete_row": 10.094546343690606,
-      "estimated_remaining_seconds": 9963.317241222629,
+      "estimated_remaining_seconds": 0,
       "legal_answers": 1052,
       "empty_answers": 28
     },
@@ -602,7 +602,7 @@
       "legal_rows": 1080,
       "official_intent_accuracy": 0.85,
       "official_slu_f1": 0.6592171252257297,
-      "score_state": "FINALIZED_aggregate_verified_pair_pending",
+      "score_state": "FINALIZED_aggregate_and_full_pair_verified",
       "legal_answers": 1080,
       "empty_answers": 0,
       "quality": {
@@ -726,12 +726,12 @@
       "cpu_score_dependency": false,
       "status": "running_first_http_success_verified",
       "started_at_utc": "2026-11-06T22:06:40.70367096Z",
-      "completed_rows": 425,
+      "completed_rows": 490,
       "total_rows": 1080,
-      "observed_at_utc": "2026-11-06T23:20:21.571041+00:00",
-      "remaining_rows": 655,
-      "wall_seconds_per_complete_row": 10.402040873134837,
-      "estimated_remaining_seconds": 6813.336771903319
+      "observed_at_utc": "2026-11-06T23:30:31.857871+00:00",
+      "remaining_rows": 590,
+      "wall_seconds_per_complete_row": 10.267661634270025,
+      "estimated_remaining_seconds": 6057.920364219315
     },
     {
       "id": "compact-slot-a-evaluate",
@@ -771,6 +771,47 @@
       "dependency_event": "sealed_generation_outputs",
       "score_dependency": false,
       "status": "completed_verified_1080_legal_zero_empty_invalid"
+    },
+    {
+      "id": "historical-ranking-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "real_cpu_preparation_in_progress_not_admitted",
+      "scientific_parent": "complete-coverage-evaluate",
+      "scope": "P k60 plus exact frozen agreement source and original weights; final8/P OFF unchanged"
+    },
+    {
+      "id": "historical-ranking-evaluate",
+      "resource": "NPU-A",
+      "depends_on": [
+        "historical-ranking-prepare"
+      ],
+      "status": "held_not_dispatched",
+      "proposed_resource_predecessor": "concurrency-evaluate",
+      "scientific_parent": "complete-coverage-evaluate",
+      "cpu_score_dependency": false,
+      "required_legal_rows": 1080
+    },
+    {
+      "id": "locked-slot-visibility-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "implementation_merged91tests_verified_real_preparation_in_progress",
+      "implementation_commit": "9389169f",
+      "scientific_parent": "complete-coverage-on-evaluate",
+      "scope": "same pinned54-card snapshot; preserve selected cards then append deduplicated remaining cards; no new knowledge/bindings"
+    },
+    {
+      "id": "locked-slot-visibility-evaluate",
+      "resource": "NPU-B",
+      "depends_on": [
+        "locked-slot-visibility-prepare"
+      ],
+      "status": "held_not_dispatched",
+      "proposed_resource_predecessor": "node-prompt-slot-evaluate",
+      "scientific_parent": "complete-coverage-on-evaluate",
+      "cpu_score_dependency": false,
+      "required_legal_rows": 1080
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -786,23 +827,23 @@
     "per-node cost and latency"
   ],
   "limitations": [
-    "No new v2 accuracy or TFRL gains yet",
+    "CompleteOFF has verified FoldA accuracy and1080legal answers; historical alignment and TFRL gains not established",
     "K2 registration is not native admission or launch",
     "K2 OFF policy awaits baseline choice; if ON is selected, rebuild corresponding configurations without changing roster",
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-06T23:06:00.842285+00:00",
+  "updated_at": "2026-11-06T23:35:31.518830+00:00",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
-    "scoring_recovery": "k16ON FINALIZED; old coverage reader schema refusal preserved; successor-aware pair b685d22c running, no new scorer/model",
+    "scoring_recovery": "k16ON FINALIZED; first coverage schema refusal and pair missing-mount failure preserved; corrected pair retry and successor-reader18tests reported, complete result awaiting main review",
     "paired_analysis": "completeOFF full paired plus 40 entity regressions accepted; reuse existing Slot role-grounding candidate",
     "historical_configuration": "accepted limited request audit; historical k60 pre-retrieval final P cap8, current k8 cap8; normalized response envelope not rebuilt",
-    "knowledge_supply": "locked-card visibility implementation under review; corrected preparation bound28->54 and testing retained context; not admitted",
+    "knowledge_supply": "9389169f merged,91fixed-image tests independently verified; real CPU stage/prepare in progress, no FIT/admission/dispatch",
     "load_analysis": "completed existing evidence analysis accepted; retain armed C96, no measured speedup",
     "tfrl_reader": "deferred",
-    "perception_miss_analysis": "complete100 receipt aggregation and12 actual P/retrieval diagnostics accepted; one historical ranking-policy comparison proposed, not prepared/admitted"
+    "perception_miss_analysis": "complete100/12diagnostic accepted; exact historical-ranking package CPU preparation in progress on completeOFF parent; no model calls"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
