@@ -26,9 +26,10 @@
   "score_recovery_receipt_sha256": "646b6f562cd0e2251197ce6a69441867c0d65f3b610a1812b26016553768adbb",
   "final_state": "FINALIZED",
   "limitations": [
-    "Aggregate official scores verified; full paired report and uncertainty pending review.",
+    "Official aggregate and full paired analysis verified; see PSD-Complete-OFF-Paired-Result.json for uncertainty and scope.",
     "100% contract validity applies to this fixed Fold A run, not unseen input or all configurations.",
     "Historical P-to-Solver comparison remains aggregate, not causal or paired.",
     "Original failed scoring attempt retained; generation not repeated."
-  ]
+  ],
+  "strict_correct": 517
 }

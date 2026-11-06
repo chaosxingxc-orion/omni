@@ -1,0 +1,170 @@
+{
+  "schema": "psd-complete-off-quality-public-aggregate-v1",
+  "rows": 1080,
+  "metrics": {
+    "reference": {
+      "rows": 1080,
+      "intent_correct": 892,
+      "intent_pct": 82.5925925925926,
+      "slu_micro_pct": 64.94127932261941,
+      "exact_entity_f1_pct": 54.83870967741935,
+      "strict_correct": 510,
+      "strict_pct": 47.22222222222222,
+      "contract_legal": 1052,
+      "official_entity_counts": {
+        "f_measure": 0.5483870967741935,
+        "fn": 414.0,
+        "fp": 454.0,
+        "official_label": "Entities",
+        "precision": 0.5372069317023446,
+        "recall": 0.5600425079702445,
+        "tp": 527.0
+      }
+    },
+    "complete": {
+      "rows": 1080,
+      "intent_correct": 918,
+      "intent_pct": 85.0,
+      "slu_micro_pct": 65.92171252257297,
+      "exact_entity_f1_pct": 54.832146490335695,
+      "strict_correct": 517,
+      "strict_pct": 47.87037037037037,
+      "contract_legal": 1080,
+      "official_entity_counts": {
+        "f_measure": 0.548321464903357,
+        "fn": 402.0,
+        "fp": 486.0,
+        "official_label": "Entities",
+        "precision": 0.5258536585365854,
+        "recall": 0.5727948990435706,
+        "tp": 539.0
+      }
+    }
+  },
+  "delta": {
+    "intent_correct": 26,
+    "intent_pct": 2.4074074074074048,
+    "slu_micro_pct": 0.9804331999535663,
+    "exact_entity_f1_pct": -0.006563187083656885,
+    "strict_correct": 7,
+    "strict_pct": 0.6481481481481453,
+    "contract_legal": 28
+  },
+  "strict": {
+    "bootstrap": {
+      "ci_high": 0.025,
+      "ci_level": 0.95,
+      "ci_low": -0.012037037037037037,
+      "n_replicates": 10000,
+      "point_estimate": 0.006481481481481481,
+      "seed": 20261106,
+      "sigma_hat": 0.009372766937982143
+    },
+    "delta": 0.006481481481481477,
+    "harms": 47,
+    "left_mean": 0.4722222222222222,
+    "metric": "strict",
+    "n": 1080,
+    "per_stratum": {},
+    "right_mean": 0.4787037037037037,
+    "saves": 54,
+    "sign_test_p": 0.5507089135982718,
+    "ties": 979
+  },
+  "intent": {
+    "cluster_bootstrap": {
+      "ci90_half_width_pp": 1.1574074074074074,
+      "ci90_pp": [
+        1.2037037037037037,
+        3.5185185185185186
+      ],
+      "ci95_half_width_pp": 1.4351851851851851,
+      "ci95_pp": [
+        0.9259259259259258,
+        3.7962962962962963
+      ],
+      "n_replicates": 10000,
+      "point_estimate_pp": 2.4074074074074074,
+      "resampling": "paired whole-cluster bootstrap",
+      "seed": 20261106,
+      "sigma_hat_pp": 0.7176126085022088
+    },
+    "delta_pp": 2.4074074074074026,
+    "estimand": "mean-per-row",
+    "harms": 17,
+    "left_pct": 82.5925925925926,
+    "mcnemar_p": 0.0010657657791434353,
+    "n": 1080,
+    "right_pct": 85.0,
+    "saves": 43,
+    "ties": 1020
+  },
+  "slu_micro": {
+    "cluster_bootstrap": {
+      "ci90_half_width_pp": 1.2098198968061393,
+      "ci90_pp": [
+        -0.2160868421559531,
+        2.2035529514563255
+      ],
+      "ci95_half_width_pp": 1.4533901202759376,
+      "ci95_pp": [
+        -0.4774314037824694,
+        2.429348836769406
+      ],
+      "n_replicates": 10000,
+      "point_estimate_pp": 0.9804331999535787,
+      "resampling": "paired whole-cluster bootstrap",
+      "seed": 20261106,
+      "sigma_hat_pp": 0.733169648520247
+    },
+    "delta_pp": 0.9804331999535787,
+    "estimand": "pooled-count-f1",
+    "fields": {
+      "fn": [
+        "slu_f1_word_fn",
+        "slu_f1_char_fn"
+      ],
+      "fp": [
+        "slu_f1_word_fp",
+        "slu_f1_char_fp"
+      ],
+      "tp": [
+        "slu_f1_word_tp",
+        "slu_f1_char_tp"
+      ]
+    },
+    "left_pct": 64.94127932261938,
+    "official_check_field": "slu_f1",
+    "right_pct": 65.92171252257296
+  },
+  "coverage_old_empty_now_legal": 28,
+  "old_empty_intent_correct": 25,
+  "old_empty_strict_correct": 13,
+  "current_reask_rows": 19,
+  "current_reask_intent_correct": 17,
+  "current_reask_strict_correct": 7,
+  "comparison": "OFF vs OFF recovery package; independent requests; development set",
+  "recommendations": [
+    {
+      "priority": 1,
+      "node": "Slot",
+      "direction": "复用已准入Slot语义/角色提示候选，保持compact恢复及v4g；重点检查完整关系/范围、不碎拆同一跨度、条件抽取不把知识当已听到事实",
+      "acceptance": "同FoldA1080保留失败；合同100%，Strict/SLU及FP/FN、原正确损伤、完整成本；标注歧义独立保留，不据gold造在线规则"
+    },
+    {
+      "priority": 2,
+      "node": "P_then_D_separate_existing_candidates",
+      "direction": "按已有独立候选复用P操作辨别与D条件证据增强，分别比较，先核实际P候选召回和D从含gold候选选错；不与Slot混合、不强制第一候选、不新增KB",
+      "acceptance": "复用同complete父及已准备对照，保留D改正首选的正控制，100%合法/1080分母及cost；本轮不新建或派发实验"
+    }
+  ],
+  "limitations": [
+    "未核逐token mask/logits/backend，不确证engine版本bug",
+    "不能把全1080实体错统一归Slot或normalizer；仅19条链有定点输入绑定",
+    "7/10等节点计数仅首次可观察错误，不证明模型内部理由或独立干预收益",
+    "锁定卡存在标注边界歧义，未听音裁决，gold不是在线知识",
+    "历史P→Solver只有聚合，历史逐样本翻转/Strict对照未知",
+    "并发latency之和不是墙钟或纯NPU时间；货币费用未知",
+    "当前完整覆盖仅本run观测，不保证未来请求不发生length；本run无Slot length child，无法测Slot compact实际收益"
+  ]
+}
