@@ -12,19 +12,19 @@
 |---|---|---|
 |v5 Slot OFF|已释放NPU-A|1080生成封存；1038结构完整、23P截断、19引用拒收；官方评分恢复验收成功：Intent81.6667%、SLU64.8754%|
 |v5 Slot ON|已释放NPU-B|1080已封存，1037结构完整/43空答；评分及验收完成：Intent82.0370%、SLU71.2196%|
-|k16供给对照|NPU-A/B|OFF1080已封存并释放，引用修复后继18:15:33自动启动；OFF正式评分Intent83.06%/SLU64.93%/Strict486已验收；ON继续生成，不等评分|
-|引用隔离候选|已释放NPU-A|1080封存；1052合同合法/28空答（P length26、Slot length2），评分产物已写出，attempt登记锁只读故障待修复|
+|k16供给对照|NPU-A/B|OFF1080已封存并释放，引用修复后继18:15:33自动启动；OFF正式评分Intent83.06%/SLU64.93%/Strict486已验收；ON1080已落盘、3196请求全部已知，但封存失败阻塞接续，正保全恢复|
+|引用隔离候选|已释放NPU-A|1080封存；1052合同合法/28空答（P length26、Slot length2），CPU对账20:47:58成功，attempt已FINALIZED，原评分不变；配对处理中|
 |完整覆盖OFF|NPU-A|20:10:48实际容器启动；包含P/Slot长度补问，等待真实完整覆盖结果|
 |旧引用提示候选|NPU-A后继|已准入但HOLD，完整覆盖优先；不与新的节点提示候选混称|
 |新P-only/Slot-only提示|CPU准备→NPU-B|基共同完整覆盖ON父；8个CPU容器exit0与14项摘要主审通过；准备就绪、自动binder存活，等待真实前驱，未派发；完整覆盖ON→P-only→Slot-only|
 |Perception长度恢复|CPU→就绪池|已合main81d7ea7b；配置化模板、139项相关测试及8项集成测试；stage/prepare/register/admission成功；自动绑定器已核实存活，等引用候选真实容器身份|
 |Slot长度恢复|CPU|已知两条非空截断未触发空响应补答；修复已合main c3d1dc17，136相关+3定点测试通过；完整候选已准入；已绑定真实引用前驱的生成释放，P-only长度候选HOLD|
-|官方评分恢复|CPU|四watcher已部署；引用OFF恢复已产生scores但attempt登记因锁文件只读失败，正在原产物上接续；NPU不等评分|
+|官方评分恢复|CPU|四watcher已部署；引用OFF锁故障已通过原产物对账完成，未重评分；三个后继的锁挂载修复已部署；NPU不等评分|
 |生成释放绑定器修复|CPU|已识别CPU评分失败误阻断已释放生成；A已用原生队列接续，修复已合main，92项相关测试通过；P/Slot后继binder部署已主审，completeON原生队列保留|
 |答案与节点审计|CPU|完整报告已验收；1038合法，96个P候选遗漏、60个Decision误选；normalizer反事实完整验收，保留原规则；节点提示配置已合main，58条配对回退报告已验收；锁定参考句补证已验收，已纠正日期错例归因|
 |完整配对与历史对齐|CPU|消费真实官方评分与完整1080分母；两臂score-ready已验证；原failed队列保留，fresh CPU配对完整验收；SLU+6.34pp，Strict134改善/58退步，覆盖与历史对齐未完成|
 
-CPU评分接续已部署并实际触发；另发现binder在前驱已生成释放但CPU评分失败时提前退出。A完整覆盖已用原有bound queue恢复接续，最小通用修复正在独立工作树完成，不改运行release。
+CPU评分接续已部署并实际触发；另发现binder在前驱已生成释放但CPU评分失败时提前退出。A完整覆盖已用原有bound queue恢复接续，最小通用修复已合main并部署到两个后继binder，不改运行release。B当前另有封存源码校验故障，不能称8卡持续满载。
 
 引用候选不包含Perception长度修复。待部署候选只有真实准备完成后才进入NPU队列；不把计划当READY，不热改正在运行release。来源/镜像/稳定名单、KB和prepared资产尽量复用。正常推理资源释放后立即接下一项，CPU评分和报告不成为后继依赖。
 
@@ -40,7 +40,7 @@ flowchart LR
   end
   subgraph NPU
     A[k16 OFF生成已释放] -->|已自动接续| Cover[引用候选已封存释放]
-    B[v5 ON已释放] -->|已接续| K[k16 ON运行]
+    B[v5 ON已释放] -->|已接续| K[k16 ON生成完成，封存恢复中]
     Cover --> Next[完整覆盖OFF运行]
   end
   Prepare --> Next
