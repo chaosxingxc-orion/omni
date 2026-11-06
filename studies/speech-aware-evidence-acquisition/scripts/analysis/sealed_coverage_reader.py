@@ -152,9 +152,26 @@ def recovery_contacts(ep):
     return list(found.values()), uncertain
 
 
+def verify_finalized_successor(config, manifest, output, ids):
+    # Full verifier authenticates attempt state, predecessor checkpoint and kept rows.
+    from speech_aware_evidence_acquisition.core.bundle import verify_bundle
+    bundle = verify_bundle(Path(config['manifest']['path']))
+    pred = manifest.get('predecessor_attempt') or {}
+    if (bundle.attempt_state != 'FINALIZED' or bundle.manifest != manifest
+            or Path(bundle.outputs_path).resolve() != Path(config['outputs']['path']).resolve()
+            or pred.get('mode') != 'checkpoint' or pred.get('run_id') != manifest.get('run_id')
+            or pred.get('counts') != {'kept': 1080, 'flown': 0, 'partial': 0}
+            or set(pred.get('kept_sample_ids', [])) != set(ids)
+            or len(pred.get('kept_sample_ids', [])) != 1080
+            or len(bundle.outputs_rows) != 1080 or set(bundle.split_ids) != set(ids)):
+        raise ValueError('finalized full-kept successor identity differs')
+    return pred['attempt_id']
+
+
 def evaluate(config):
     required = {'schema', 'manifest', 'outputs', 'roster', 'inventory', 'scores', 'expected_rows', 'out'}
-    if set(config) != required or config['schema'] != SCHEMA or config['expected_rows'] != 1080:
+    successor = config.get('schema') == 'saea-sealed-coverage-successor-v1'
+    if set(config) != required or config['schema'] not in (SCHEMA, 'saea-sealed-coverage-successor-v1') or config['expected_rows'] != 1080:
         raise ValueError('exact 1080-row coverage configuration required')
     manifest = json.loads(read_pin(config['manifest']))
     output = read_pin(config['outputs'])
@@ -163,8 +180,8 @@ def evaluate(config):
     if config['scores'] is not None:
         raise ValueError('scores not supported; use existing paired analysis')
     if (manifest.get('status') != 'COMPLETED' or manifest.get('outputs', {}).get('sha256') != sha(output)
-            or manifest.get('row_checkpoint', {}).get('complete_rows') != 1080
-            or manifest.get('row_checkpoint', {}).get('unrendered_rows') != 0):
+            or (not successor and (manifest.get('row_checkpoint', {}).get('complete_rows') != 1080
+            or manifest.get('row_checkpoint', {}).get('unrendered_rows') != 0))):
         raise ValueError('sealed generation output identity differs')
     split = manifest.get('split') or {}
     ids = split.get('ids')
@@ -175,6 +192,7 @@ def evaluate(config):
         raise ValueError('manifest and locked roster differ')
     if manifest.get('cost', {}).get('umbrella_lock_sha256') != inventory.get('lock_sha256'):
         raise ValueError('inventory dataset lock differs')
+    journal_attempt = verify_finalized_successor(config, manifest, output, ids) if successor else manifest['attempt']['attempt_id']
     pairs = {tuple(x) for x in inventory['pairs']}
     types = set(inventory['entity_types'])
     counts, failures, kinds = Counter(), Counter(), Counter()
@@ -206,14 +224,14 @@ def evaluate(config):
         raise ValueError('outputs missing or extra samples')
     for contact in contacts + uncertain_contacts:
         contact['journal_locator'] = {
-            'relative_directory': 'contact-journals/' + manifest['run_id'] + '/' + manifest['attempt']['attempt_id'],
+            'relative_directory': 'contact-journals/' + manifest['run_id'] + '/' + journal_attempt,
             'intent_filename': sha(contact['request_id'].encode()) + '.intent.json',
             'response_filename': sha(contact['request_id'].encode()) + '.response.json',
             'binding_status': 'candidate paths only; verify journal identity and hashes before use',
         }
     return {'schema': SCHEMA, 'run_id': manifest['run_id'], 'total_rows': 1080,
             'input_sha256': {k: config[k]['sha256'] for k in ('manifest', 'outputs', 'roster', 'inventory')},
-            'partitions': dict(counts), 'terminal_failures': dict(failures),
+            'journal_source_attempt': journal_attempt, 'partitions': dict(counts), 'terminal_failures': dict(failures),
             'observable_recovery_contacts': len(contacts), 'recovery_kinds': dict(kinds),
             'recovery_outcomes': {
                 'local_candidate_recovered': sum(c['local_candidate_recovered'] is True for c in contacts),
@@ -232,7 +250,7 @@ def evaluate(config):
             'limitations': ['Only explicitly observable recovery contacts; interrupted slot candidate retries may be unknown.',
                             'Recovery parent binding and per-contact costs require separately verified evidence.',
                             'No model accuracy or final correctness inferred.',
-                            'This reader validates pins and coverage, not a full bundle.'],
+                            ('Successor bundle and predecessor were verified.' if successor else 'This reader validates pins and coverage, not a full bundle.')],
             'new_model_calls': 0}
 
 

@@ -159,3 +159,31 @@ def test_nonempty_filler_and_valid_empty_entities_are_distinct():
     assert reader.classify('{"scenario":"x","action":"y","entities":[]}', pairs, types) == 'contract_legal_empty_entities'
     assert reader.classify('{"scenario":"x","action":"y","entities":[{"type":"t","filler":"v"}]}', pairs, types) == 'contract_legal_nonempty_entities'
     assert reader.classify('{"scenario":"x","action":"y","entities":[{"type":"t","filler":""}]}', pairs, types) == 'nonempty_invalid_structure'
+
+@pytest.mark.parametrize('fault', [None, 'open', 'partial', 'roster', 'checkpoint'])
+def test_successor_authentication_and_journal_source(tmp_path, monkeypatch, fault):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core import bundle as bundle_module
+    cfg, rows = make_config(tmp_path)
+    cfg['schema'] = 'saea-sealed-coverage-successor-v1'
+    p = Path(cfg['manifest']['path']); manifest = json.loads(p.read_text())
+    ids = manifest['split']['ids']; manifest.pop('row_checkpoint')
+    manifest['predecessor_attempt'] = {'attempt_id':'original', 'run_id':'R', 'mode':'checkpoint',
+        'counts':{'kept':1080,'flown':0,'partial':0}, 'kept_sample_ids':ids}
+    cfg['manifest'] = pinned(p, manifest)
+    fake = SimpleNamespace(attempt_state='FINALIZED', manifest=manifest,
+        outputs_path=Path(cfg['outputs']['path']), outputs_rows=rows, split_ids=set(ids))
+    if fault == 'open': fake.attempt_state = 'OPENED'
+    if fault == 'partial': manifest['predecessor_attempt']['counts']['partial'] = 1
+    if fault == 'roster': manifest['predecessor_attempt']['kept_sample_ids'] = ids[:-1]
+    if fault in ('partial','roster'): cfg['manifest'] = pinned(p, manifest)
+    def verify(path):
+        if fault == 'checkpoint': raise ValueError('checkpoint hash mismatch')
+        return fake
+    monkeypatch.setattr(bundle_module, 'verify_bundle', verify)
+    if fault:
+        with pytest.raises(ValueError): reader.evaluate(cfg)
+    else:
+        result = reader.evaluate(cfg)
+        assert result['total_rows'] == 1080 and result['journal_source_attempt'] == 'original'
+        assert result['partitions']['contract_legal_empty_entities'] == 1080
