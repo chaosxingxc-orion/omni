@@ -510,7 +510,8 @@
       "id": "load-analysis",
       "resource": "CPU",
       "depends_on": [],
-      "status": "existing_core_sample_service_window_alignment_cpu_running"
+      "status": "existing_window_alignment_completed_main_review_accepted",
+      "result": "PSD-Core-Sample-Throughput.md"
     },
     {
       "id": "concurrency-prepare",
@@ -799,8 +800,9 @@
     "paired_analysis": "completeOFF full paired plus 40 entity regressions accepted; reuse existing Slot role-grounding candidate",
     "historical_configuration": "accepted limited request audit; historical k60 pre-retrieval final P cap8, current k8 cap8; normalized response envelope not rebuilt",
     "knowledge_supply": "CPU exact missing meal_type card index/binding/filter audit running; no knowledge edits",
-    "load_analysis": "CPU align existing sparse Core points, sample increments and service subwindows; no new collector",
-    "tfrl_reader": "deferred"
+    "load_analysis": "completed existing evidence analysis accepted; retain armed C96, no measured speedup",
+    "tfrl_reader": "deferred",
+    "perception_miss_analysis": "completeOFF100 P misses aggregate plus bounded representative actual-supply audit running; no new inference"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
