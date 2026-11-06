@@ -195,6 +195,8 @@ def test_real_make_launch_passes_launcher_contract(tmp_path, monkeypatch):
     logical = Path('/mnt/cephfs/xingchao/omni')
     data = tmp_path / 'data'
     data.mkdir()
+    (data / 'attempts').mkdir()
+    (data / 'attempts/.RUN.generation-v1.lock').touch()
     producer = {
         'schema':'saea-configured-job-launch-v1','container_name':'parent',
         'image':'sha256:'+'1'*64,'repo_path':'/opt/saea-release/studies/speech-aware-evidence-acquisition',
@@ -218,6 +220,6 @@ def test_real_make_launch_passes_launcher_contract(tmp_path, monkeypatch):
     path=tmp_path/'launch.json';path.write_text(json.dumps(doc))
     assert h.launcher.load_config(path)==doc
     writable={m['target'] for m in doc['mounts'] if not m['readonly']}
-    assert writable=={str(run),str(logical/'attempts/RUN')}
+    assert writable=={str(run),str(logical/'attempts/RUN'),str(logical/'attempts/.RUN.generation-v1.lock')}
     assert doc['network']=='none' and doc['cpuset_cpus']=='72-75'
     assert doc['argv'][1].startswith('/score-tool/')

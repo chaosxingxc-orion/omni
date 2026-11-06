@@ -142,11 +142,16 @@ def make_launch(d, producer, pins, logical, run, host):
     run_root = map_path(producer, logical / 'runs')
     attempt_root = map_path(producer, logical / 'attempts')
     attempt_dir = attempt_root / d['run_id']
+    lock_name = f".{d['run_id']}.{d['attempt_id']}.lock"
+    attempt_lock = attempt_root / lock_name
+    check(attempt_lock.is_file() and not attempt_lock.is_symlink(),
+          'existing attempt lock required for scoring')
     mounts.extend([
         {'source': str(run_root), 'target': str(logical / 'runs'), 'readonly': True},
         {'source': str(attempt_root), 'target': str(logical / 'attempts'), 'readonly': True},
         {'source': str(host), 'target': str(run), 'readonly': False},
         {'source': str(attempt_dir), 'target': str(logical / 'attempts' / d['run_id']), 'readonly': False},
+        {'source': str(attempt_lock), 'target': str(logical / 'attempts' / lock_name), 'readonly': False},
         {'source': d['score_tool'], 'target': '/score-tool', 'readonly': True},
     ])
     doc['mounts'] = mounts
