@@ -1,0 +1,198 @@
+{
+  "schema": "omni-knowledge-binding-audit-v1",
+  "inputs": {
+    "authored-slot-contracts-v2.json": {
+      "file_sha256": "8994f773c886f2c207cd9db6436507e53e7f7da79ff7bdf441ab3799f244d34c"
+    },
+    "slot-contracts-snapshot.json": {
+      "file_sha256": "557080ad9cb4562e9e57174be083957b412903ddda0403038033f68f804bf0fc",
+      "snapshot_sha256": "e035c1b827b10cb711c7c31d345deb5e668489679b0d3979acfc95427f6e2a5e"
+    },
+    "intent-boundaries-snapshot.json": {
+      "file_sha256": "08976279d0cb1f033809285cf0c1a4fac31cd982dc9236328d4422448e27129d",
+      "snapshot_sha256": "cb6ef966cb3a68a49c325d0bfa643e9e97402d963a49bc93c0c15024fc62eabc"
+    },
+    "train-exemplars-snapshot.json": {
+      "file_sha256": "fcb5506c63653abe996dea15fdccd7c81a84a837b6377ca13f5b35d73283d6b2",
+      "snapshot_sha256": "4c498dc0282055b9fe036ed7e950af519bd48b5f26e76876d0250727196a72e9"
+    }
+  },
+  "populations": {
+    "fold_a": {
+      "count": 1080,
+      "file_sha256": "4ba55688e80d8d768ec6cfc3ff4bacc9802fb34e4dab54913934015184497215"
+    },
+    "fold_b": {
+      "count": 1080,
+      "file_sha256": "1d30c501612686004936b5dd295885d9452175e6449b4a66187c08227a322cea"
+    },
+    "construction": {
+      "count": 625,
+      "file_sha256": "36949a683739676616d4e4845fb302cad59721c8032ce4d65d18b35823a56cba"
+    }
+  },
+  "slot_cards": 54,
+  "intent_cards": 60,
+  "exemplar_rows": 9354,
+  "empty_slot_exemplars": 2949,
+  "nonempty_slot_exemplars": 6405,
+  "declared_pairs": 402,
+  "observed_pairs": 402,
+  "observed_pairs_without_binding": [],
+  "bindings_without_exemplar_observation": [],
+  "pairs_by_observed_exemplar_support": {
+    "1": 116,
+    "2": 52,
+    "3": 25,
+    "4": 21,
+    "5": 8,
+    "6": 17,
+    "7": 10,
+    "8": 11,
+    "9": 4,
+    "10": 6,
+    "11": 3,
+    "12": 5,
+    "13": 4,
+    "14": 3,
+    "15": 6,
+    "16": 5,
+    "17": 7,
+    "18": 2,
+    "19": 2,
+    "20": 3,
+    "21": 3,
+    "23": 1,
+    "24": 2,
+    "25": 1,
+    "26": 3,
+    "27": 1,
+    "28": 1,
+    "29": 4,
+    "30": 1,
+    "31": 2,
+    "32": 1,
+    "33": 3,
+    "34": 1,
+    "35": 2,
+    "38": 2,
+    "39": 2,
+    "46": 1,
+    "47": 2,
+    "48": 1,
+    "49": 2,
+    "50": 2,
+    "53": 1,
+    "55": 2,
+    "56": 1,
+    "57": 1,
+    "59": 2,
+    "62": 3,
+    "63": 1,
+    "65": 1,
+    "66": 1,
+    "70": 1,
+    "71": 1,
+    "74": 1,
+    "77": 3,
+    "79": 1,
+    "80": 1,
+    "82": 1,
+    "83": 1,
+    "91": 1,
+    "94": 1,
+    "95": 1,
+    "97": 1,
+    "99": 1,
+    "100": 2,
+    "101": 1,
+    "103": 1,
+    "106": 1,
+    "107": 1,
+    "108": 1,
+    "109": 1,
+    "114": 1,
+    "118": 2,
+    "135": 2,
+    "140": 1,
+    "144": 1,
+    "147": 1,
+    "169": 1,
+    "170": 1,
+    "195": 1,
+    "208": 1,
+    "210": 1,
+    "243": 1,
+    "246": 1,
+    "265": 1,
+    "391": 1,
+    "490": 1
+  },
+  "source_counts": {
+    "slot_cards": {
+      "samples": 3162,
+      "utterances": 803
+    },
+    "intent_cards": {
+      "samples": 2037,
+      "utterances": 474
+    },
+    "train_exemplars": {
+      "samples": 37407,
+      "utterances": 9354
+    }
+  },
+  "source_population_overlaps": {
+    "fold_a": {
+      "slot_cards": {
+        "samples": 0,
+        "utterances": 0
+      },
+      "intent_cards": {
+        "samples": 0,
+        "utterances": 0
+      },
+      "train_exemplars": {
+        "samples": 0,
+        "utterances": 0
+      }
+    },
+    "fold_b": {
+      "slot_cards": {
+        "samples": 0,
+        "utterances": 0
+      },
+      "intent_cards": {
+        "samples": 0,
+        "utterances": 0
+      },
+      "train_exemplars": {
+        "samples": 0,
+        "utterances": 0
+      }
+    },
+    "construction": {
+      "slot_cards": {
+        "samples": 0,
+        "utterances": 0
+      },
+      "intent_cards": {
+        "samples": 0,
+        "utterances": 0
+      },
+      "train_exemplars": {
+        "samples": 625,
+        "utterances": 625
+      }
+    }
+  },
+  "limits": [
+    "Association coverage only within the locked TRAIN exemplar snapshot; not the entire original dataset ontology.",
+    "No original annotation or audio reread, semantic correctness check, current model request or accuracy measurement.",
+    "Source-ID overlap audit is not proof of absence of all historical teacher or ancestor exposure.",
+    "Empty exemplar marker none is counted as an empty annotation, not an entity type or a valid runtime JSON answer."
+  ],
+  "model_calls": 0,
+  "new_samples": 0,
+  "runtime_changes": false
+}
