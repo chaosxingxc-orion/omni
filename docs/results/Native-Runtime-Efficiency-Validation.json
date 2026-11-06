@@ -265,11 +265,20 @@
       "teacher_calls": 0,
       "tokenizer_calls": 0
     },
-    "admission_state": "running",
-    "generation_launched": false,
+    "admission_state": "exited",
+    "generation_launched": true,
     "gate_compiler_tests": {
       "passed": 37,
       "seconds": 4.46
-    }
+    },
+    "admission_exit_code": 0,
+    "workspace_manifest_sha256": "a36925378902e3f70e99a5b95ee0310c02297dc2ba67a236e915fedb7f245463",
+    "bridge_precheck_ok": true,
+    "representative_render_ok": true,
+    "generation_started_at_utc": "2026-11-06T03:14:52.0674049Z",
+    "generation_attempt": "generation-gate-v1",
+    "worker_config_sha256": "48023ced32a6eeac4da57b9edd3ddc2064b8c25a8b6ae613a20d91318621ed7b",
+    "new_terminal_rows_verified": null,
+    "throughput_verified": false
   }
 }
