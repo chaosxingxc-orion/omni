@@ -1,0 +1,27 @@
+{
+  "schema": "psd-full-output-coverage-audit-v1",
+  "observed_at_utc": "2026-11-06T17:02:54.990187+00:00",
+  "generation_manifest_sha256": "96dec5564e33ed4dda105eca4afa5035766a0ef730515115dd426d8bd7f04a3e",
+  "outputs_sha256": "bcfef75ead42e676e6a0faa4ccfd8ad189f18e6bef22cf9dddd5cd43b7ab973d",
+  "total_rows": 1080,
+  "unique_ids": 1080,
+  "structural_valid": 1038,
+  "structural_coverage_percent": 96.11111111111111,
+  "terminal_reasons": {
+    "none": 1038,
+    "finite_completion": 23,
+    "seal_refusal": 19
+  },
+  "completed_role_sequences": {
+    "perception>slot>solver": 1038,
+    "": 35,
+    "perception": 7
+  },
+  "invalid_by_stage_reason": {
+    "perception:finite_completion": 23,
+    "slot:seal_refusal": 7,
+    "perception:seal_refusal": 12
+  },
+  "scope": "Full sealed outputs only; structure and terminal classification, no semantic accuracy, legal-enum or official score claim",
+  "new_model_calls": 0
+}

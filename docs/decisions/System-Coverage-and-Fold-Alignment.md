@@ -40,7 +40,7 @@ CPU三路分工：Sol分析负载/错例，Terra完成覆盖修复与相关测�
 
 引用候选的真实stage与CPU prepare均成功，但register失败，尚未准入或派发。原因已定位：`native_contact_custody_enabled` 对引用清洗策略返回false，本意禁止尚未支持的跨attempt恢复，却同时阻断正常注册、请求记录和FIT记录的共享入口。前述114项SDK/bundle测试未覆盖这一真实注册边界，不能将其通过解释成可部署。
 
-当前定点修复区分首次运行的记录能力与跨attempt恢复资格；正常运行允许记录，未支持的恢复继续明确拒绝。修复已合main `1c8d6c7c`，固定镜像81项相关测试通过、4受测源摘要独立核验，新独立release的stage、prepare、register已全部exit0；准入仍因外部资产/挂载配置不一致失败，原执行者继续修正，保留失败记录，不修改在跑版本。覆盖尚未ready期间提示A/B恢复待命，ready后重新优先调整；OFF k16已在生成释放后启动，不等待失败的CPU评分，ON后继继续等待。
+当前定点修复区分首次运行的记录能力与跨attempt恢复资格；正常运行允许记录，未支持的恢复继续明确拒绝。修复已合main `1c8d6c7c`，固定镜像81项相关测试通过、4受测源摘要独立核验，新独立release的stage、prepare、register已全部exit0；外部资产、prepared、profile及E0/D1映射已修正，正式准入与原生queue plan成功；主线程核对实际来源及存活watcher，等待OFF k16生成释放，未启动。失败记录保留，不修改在跑版本。覆盖尚未ready期间提示A/B恢复待命，ready后重新优先调整；OFF k16已在生成释放后启动，不等待失败的CPU评分，ON后继继续等待。
 
 P length纠错已完成外部模板绑定，真实SDK配合模拟传输的139项相关测试通过；覆盖子请求再次length、内容非法及UNKNOWN的父子失败记录。与首次注册修复已完成集成验收并合main `3dda77c4`：追加6项runner及2项workload测试通过，16项最终源码/配置摘要核对一致；仍未部署或取得真实覆盖收益。重复空白的引擎约束分析独立进行，不把已支持的紧凑JSON选项等同于实测修复收益。
 
@@ -51,3 +51,5 @@ OFF封存1080个唯一样本ID，顺序与原manifest一致。终态原因计数
 评分失败已定位为配置重放不一致：生成端将dispatch、audio_cache及runtime_config_identity计入有效配置hash，评分端只重组原fragment。相同输入经生成逻辑重放可匹配原hash；需独立评分工具源码修复，原生成manifest不修改，不重跑推理。诊断probe不等于官方评分完成。
 
 另有既有ON快照中的两条Slot截断：正文非空，completion均4096、reasoning均3093。现有answer-only恢复只接空正文，Perception专用恢复也不覆盖它们；已交同执行者定点分析并完善配置化恢复。实体空字段由现有逐候选coverage分类处理，实际收益仍需全Fold验证。100%目标不能以“修复大多数失败”替代。
+
+最新完整OFF结构验收：封存1080行、1080唯一ID、outputs SHA匹配；1038条结构完整且三个节点均完成，覆盖96.11%；42条空交付=23条P length+19条引用拒收（P12/Slot7）。合法标签和语义正确仍需单独验收。引用修复候选已准入并armed，Perception恢复虽已合main仍待独立部署，不把两者混称已全部运行。
