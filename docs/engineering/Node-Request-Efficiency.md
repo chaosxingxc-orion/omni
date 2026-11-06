@@ -67,7 +67,7 @@ node batch/pipeline 或 prefix-slot 调度混用。该改造只改变调度，�
   响应不合格后取消尚未开始的准备和模型 future，保留已实际发送的响应与
   trace，避免错误结果继续消耗 NPU。
 
-单请求 direct 使用 `configs/runtime/request-pipeline.example.json`；native 多节点使用独立 `dispatch` 配置的 `prepare_workers`、`validation_workers`、`admitted_trajectories`、`model_inflight`、`ready_request`。两者不可混用。`model_inflight` 是 contact 许可，包含最终检查和响应处理，并非纯 HTTP 在途。
+单请求 direct 使用 `configs/runtime/request-pipeline.example.json`；native 多节点使用 `configs/runtime/native-slotfill-efficiency-v1.example.json` 的 `dispatch` 配置，包括 `prepare_workers`、`validation_workers`、`admitted_trajectories`、`model_inflight`、`ready_request`。两者不可混用。`model_inflight` 是 contact 许可，包含最终检查和响应处理，并非纯 HTTP 在途。
 
 原生节点的效率开关可通过同一外部 overlay 提供，避免为每次调度探测修改
 科学 baseline；准入前仍严格校验角色图、传输引擎和并发窗口。
@@ -83,20 +83,28 @@ node batch/pipeline 或 prefix-slot 调度混用。该改造只改变调度，�
 |prepared pipeline 背压|固定镜像受影响回归通过；本机带源码路径 56 项通过，2 项为既有 `openjiuwen`/环境变量边界，不归因本轮改动|
 |跨版本恢复与外置准入|既有隔离三节点恢复正例、挂载和故障恢复测试通过；真实终态结算与正式接续仍待|
 
-当前候选发布镜像由提交 `30b8924a` 构建：镜像 ID 为
-`sha256:17839ec2bf309f4d4db4882513ac8e1d6f1a44ccbddf6e0dd8d66d2ef7cf979c`，
-source-manifest SHA256 为
-`67a416db35d2a287344d72caac4485ad70d4529547fec2d8d840e4976d834482`。
-manifest 校验、固定镜像内源码导入和真实 NPU 挂载下 `acl`、`torch_npu`、
-`vllm`、`vllm_ascend` smoke 均通过。该镜像尚未替换运行中的服务，也没有
-科学请求或线上吞吐证据；不能把构建通过称为效率收益。
+最新候选已从 `4997a43b` 构建：镜像 ID
+`sha256:879127561b4426b6a76730ed48ed4266f5e3e9c3776b3887b4bce09b201b2bf0`，
+源码清单 SHA256 `58eccc2fb597e55a9affc39dae22b365ac8c50dd2d7b1cdd2d1a6834b256be71`。
+固定 parent、无网络 detached 构建退出 0；清单 7497 个文件验证通过。
+最终镜像内挂载只读测试文件、使用镜像内业务源码执行受影响回归，
+**111 passed，5 条依赖弃用 warning，26.48 秒**。测试包括外部配置真实
+native 调度接线、请求一致性、取消、恢复及有界背压；没有真实模型请求。
+临时测试仓用例仅在测试进程清除 `SAEA_RELEASE_MANIFEST`，生产门禁保持启用。
+
+CPU harness 的 venv 导入通过；系统 Python 的 ACL/NPU/vLLM 模块可发现。
+本轮未执行新镜像的设备挂载推理或动态库加载 smoke，因此不宣称新镜像已完成
+真实 NPU 推理验收。旧双 TP4 服务仍使用 `cf273e52` 镜像；本轮没有停止或
+替换服务，也没有扩大科学实验。候选完成 CPU 验收，在线吞吐仍待验证。
 
 ## 剩余工作与验收顺序
 
-1. 保持两个新实例只作为已验收服务，不发送科学请求；先生成 runtime receipt 和服务身份记录，确认源码清单、配置及卡映射可追溯。
+1. 候选镜像已构建并完成 CPU 验收。先核对真实 workload 的 native overlay 与外置准入配置、设备挂载 smoke、resident/session 身份和恢复证据，再决定首实例交接；已有 cf273e52 runtime receipt 不可冒用为新镜像的证明。
 2. 从 A 真实终态采集 checkpoint、生成/FIT 账本和共享 guard 证据；用原生 reader 确认可保留集合，再生成后继配置。919 条终态不自动等于 919 条可保留；未知请求禁止盲重发。
 3. 首实例用已核验可保留的原 Fold A 后继数据做 600 秒真实效率窗口，同时记录完成数、有效完整轨迹、秒/条、各阶段等待、实际引擎在途、CPU 队列和 NPU 利用率；未知请求不得重发。验证合格后再扩大实验。
 4. 根据实际瓶颈调整 32/64/96/128 并发及准备/校验池，直至增加并发不再增加有效吞吐或出现资源压力。不同数据窗口不能声称严格倍数收益；不把逐档重复整份实验设为必需。
 5. 只有供给充足后，才考虑 batch token 2048→4096/8192。prefix 已开启；修改 prompt 顺序须另做精度回归。全量科学实验和 TFRL 保持暂缓。
 
 当前无新增用户决策项。GitHub main 与 Wiki 本轮推送均超时，最新本地提交尚未确认远端同步。
+
+验收结果文件：[Native-Runtime-Efficiency-Validation.json](../results/Native-Runtime-Efficiency-Validation.json)。示例并发 64、准入轨迹 128 是配置起点，并非已测最优值；调档以真实有效吞吐和稳定性为准。

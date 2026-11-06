@@ -1,0 +1,32 @@
+{
+  "schema": "saea-native-runtime-efficiency-validation-v1",
+  "source_commit": "4997a43bbfe6eae8e67a4b9323f14de8023c740b",
+  "image_id": "sha256:879127561b4426b6a76730ed48ed4266f5e3e9c3776b3887b4bce09b201b2bf0",
+  "manifest_sha256": "58eccc2fb597e55a9affc39dae22b365ac8c50dd2d7b1cdd2d1a6834b256be71",
+  "manifest_file_count": 7497,
+  "build_exit_code": 0,
+  "tests": {
+    "passed": 111,
+    "warnings": 5,
+    "seconds": 26.48,
+    "files": [
+      "test_runtime_overlay.py",
+      "test_flight_factory.py",
+      "test_direct_audio_fit.py",
+      "test_dispatch_slot_fill.py",
+      "test_pipeline_backpressure.py"
+    ],
+    "source": "image-embedded production source; read-only external tests",
+    "network": "none",
+    "temporary_test_repo_release_env_unset": true
+  },
+  "new_model_requests": 0,
+  "deployed": false,
+  "online_throughput_verified": false,
+  "npu_dynamic_import_smoke": false,
+  "limitations": [
+    "CPU validation does not demonstrate online throughput",
+    "Engine packages discovered with system Python; no device-mounted dynamic import in this round",
+    "Resident and checkpoint handoff remains outstanding"
+  ]
+}
