@@ -1,0 +1,25 @@
+{
+  "schema": "psd-concurrency-config-binding-v1",
+  "status": "configuration-only-not-admitted",
+  "parent_runtime_sha256": "82885d6cfd91dc0c4f3ab79644062082982d0e7d22392771398d7e76741d4819",
+  "changed_fields": [
+    "/dispatch/admitted_trajectories",
+    "/dispatch/model_inflight"
+  ],
+  "unchanged": [
+    "prepare_workers=8",
+    "validation_workers=8",
+    "audio_cache=1080 entries / 4GiB / 8 preload workers",
+    "role_input_offload=true",
+    "ready_request=true"
+  ],
+  "files": {
+    "c64.json": "82885d6cfd91dc0c4f3ab79644062082982d0e7d22392771398d7e76741d4819",
+    "c96.json": "631626072624125247340a4d56b6798c98dd61b0705dca94a92a6970f87d3e5d",
+    "c128.json": "afdbc19eafd36fc3dd45c1695f96ba44f27a5b765a882656f7925d3e69323c59"
+  },
+  "scientific_parent": "must be selected and pinned before launch; identical across arms",
+  "deployment": "two TP4; session/profile capacity must support selected level; no implicit engine reconfiguration",
+  "evaluation": "existing fixed Fold A1080; all failures retained; compare valid answers/second and official quality",
+  "new_model_calls": 0
+}

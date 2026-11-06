@@ -17,3 +17,14 @@ batch/pipeline schedulers, or a scientific `dispatch` block. The effective
 dispatch is copied into the runtime config hash and is reported in the native
 dispatch receipt, while prompts, knowledge, roster, and algorithm parameters
 remain in the four scientific fragments.
+
+
+## PSD single-variable concurrency comparison
+
+`psd-concurrency-v1/` contains C64/C96/C128 configurations derived from the
+actual complete-coverage runtime. C64 preserves the original bytes; C96/C128
+change only admitted trajectories and model inflight. These are configuration
+artifacts, not admitted jobs or measured performance improvements. The fixed
+runtime loader and overlay application accepted all three in the frozen image
+with no model calls. Use the directory README and `binding.json` when preparing
+an experiment; do not substitute the broader example configuration above.
