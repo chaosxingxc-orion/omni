@@ -1,0 +1,10 @@
+{
+  "schema": "saea-sealed-coverage-reader-v1",
+  "manifest": {"path": "/readonly/GENERATION-MANIFEST.json", "sha256": "REPLACE_WITH_ACTUAL_SHA256"},
+  "outputs": {"path": "/readonly/OUTPUTS.jsonl", "sha256": "REPLACE_WITH_ACTUAL_SHA256"},
+  "roster": {"path": "/readonly/REGISTERED-ROSTER.json", "sha256": "REPLACE_WITH_ACTUAL_SHA256"},
+  "inventory": {"path": "/readonly/LABEL-INVENTORY.json", "sha256": "REPLACE_WITH_ACTUAL_SHA256"},
+  "scores": null,
+  "expected_rows": 1080,
+  "out": "/private-analysis/FRESH-coverage-result.json"
+}
