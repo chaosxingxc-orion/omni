@@ -13,7 +13,7 @@
       "id": "baseline-off",
       "resource": "NPU-A",
       "depends_on": [],
-      "status": "v4_generation_container_running_first_contact_not_verified",
+      "status": "v4_aborted_zero_calls_framework_prompt_mismatch_fix_integration",
       "rows": 1080,
       "completed_rows": 0,
       "observed_model_calls": 0
@@ -22,7 +22,7 @@
       "id": "baseline-on",
       "resource": "NPU-B",
       "depends_on": [],
-      "status": "v4_generation_container_running_first_contact_not_verified",
+      "status": "v4_aborted_zero_calls_framework_prompt_mismatch_fix_integration",
       "rows": 1080,
       "completed_rows": 0,
       "observed_model_calls": 0
@@ -51,7 +51,7 @@
       "depends_on": [
         "fold-b-confirmation"
       ],
-      "status": "cpu_stage_prepare_registered_both_held_main_integration_in_progress",
+      "status": "main_integrated_final_cpu_chain_complete_held",
       "rows_per_member": 625,
       "members": 2
     },

@@ -1,11 +1,24 @@
 {
-  "status": "partial",
-  "population_entry": "implemented; stage/prepare/register integration not verified",
-  "real_sdk_multi_trajectory": "not implemented",
-  "same_policy_group_reader": "not implemented",
-  "h1_h2_runtime_views": "not prepared or verified",
-  "test": {"image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026", "python": "/opt/saea-venv/bin/python", "cpu": true, "network": "none", "source": "read-only", "passed": 20},
-  "new_model_calls": 0,
-  "npu_experiments": 0,
-  "external_teacher_calls": 0
+  "status": "integrated_cpu_registered_held",
+  "implementation_commit": "9ab2df47",
+  "members": 2,
+  "rows_per_member": 625,
+  "cpu_stage_prepare_register": "passed",
+  "model_calls": 0,
+  "tests": [
+    {
+      "passed": 177,
+      "seconds": 46.81
+    },
+    {
+      "passed": 75,
+      "seconds": 21.05
+    }
+  ],
+  "pending": [
+    "production_overlay_admission",
+    "native_queue",
+    "real_generation_and_sealed_reader",
+    "H1_H2_runtime_views"
+  ]
 }

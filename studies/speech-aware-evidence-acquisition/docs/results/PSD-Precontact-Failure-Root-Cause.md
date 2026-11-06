@@ -1,0 +1,30 @@
+# PSD 首次模型调用前失败的根因
+
+## 结论与证据
+
+这是工程适配bug。snapshot-v4两路generation在首个Perception模型调用前退出：两路13:57:39 UTC启动，ON于14:02:57.892、OFF于14:03:00.004退出，退出码1。原生attempt均ABORTED、actual.calls=0，contact目录均无文件。完成数各0/1080，推理秒/条和ETA不可计算。
+
+异常为 `perception_role` → `framework system or original query differs`，位于 `MeteredNativeSpeechRequest.prepare`，在请求送入vLLM之前。容器运行状态只能证明进程存在，不能证明有效推理；此前14:01:48观察器的running快照先于实际退出，不能覆盖后来的终态。
+
+## 直接机制
+
+1. 当前baseline用 `probes/slurp_native_candidate_context_v2.txt` 生成各角色共用的system文本。模板文件1090字符，末尾有一个换行；标签清单填充不会移除它。
+2. runner把原始system文本交给OpenJiuwen角色节点；框架渲染会执行首尾空白规范化。
+3. `native_request.py` 将框架返回的system文本与原始绑定文本逐字比较。仅一个末尾换行不同也会抛异常，故在第一个P请求前阻止整条样本链。
+4. 两臂使用相同模板与适配路径，所以同时受影响，与Slot thinking开关无关。P/Slot/Decision各自指令文件也有末尾换行，但本次直接比较失败的是共同system文本，不能混淆角色指令和system模板。
+
+主线程用实际candidate context模板、固定镜像和安装的OpenJiuwen运行隔离诊断：断言框架system等于原文strip、query保持原样、适配器抛同一错误且transport调用0，1项通过。这项通过表示成功复现bug。
+
+## 为什么已有测试没拦住
+
+已有提示兼容测试其实记录过“带换行拒绝、无换行通过”，但没有把当前候选system模板接到PSD正常运行用例。PSD主要SDK测试使用 `fake task` 等不带末尾换行的system fixture，因而节点钩子与预算测试通过不证明真实模板能通过首次请求。这是测试输入与生产模板脱节。
+
+准入检查通过也不等于当前真实模板已通过SDK请求适配。之前日志目录不可写的问题属于另一个已修部署缺陷；本次已越过日志初始化，暴露了请求适配问题。
+
+## 修复与剩余验证
+
+最小修复为：在启用SDK节点交接且system仍严格等于该节点原提示的条件下，用已知规范化后的文本校验框架；实际发给模型的system仍保留原文。保留query、角色、样本与工具范围校验，不关闭来源检查，不逐份删模板换行。修复提交 `9a50852e`，main集成为 `3db41546`；运行release独立升级，不热改原有运行树。
+
+开发固定镜像三项针对性测试已通过，新增真实SDK P→Slot→Decision执行用例，验证3次模拟模型接触且各请求system保留换行。主线程在固定镜像独立执行main与现有恢复实现的集成测试，78项通过（29.45秒）；测试不代表线上首次请求已成功。后续验收看实际FIT/contact及持久样本，而不是容器Up。
+
+另一个具体缺口是v4启动环境没有 `SAEA_STAGE_TIMING_PATH`，也没有观测模式配置。因此318.831/320.892秒只是启动至退出的总墙钟，不能声称都花在推理、数据加载或校验。下一后继应通过现有外部配置启用既有阶段计时，无需开发新监控系统。常规仍600秒或明确终态观察。

@@ -2,7 +2,7 @@
 
 ## 当前结论
 
-最新核验：两路v4已完成正式准入，13:57:39 UTC同时启动generation；主线程直接inspect确认两容器running。已通过现有 `framework_runtime` 外部配置将日志写入本地持久目录。尚未核实首个模型请求或完成样本，两路已验证完成数仍为0/1080，不能宣称有效满载或新精度结果。此前v3在首请求前因只读日志路径退出，ABORTED与0调用记录保留并已结算；没有删除历史attempt。
+最新核验：v4两路已在首请求前退出，均exit1、ABORTED、实际模型调用0，完成数各0/1080。根因已复现：共同system模板末尾换行被OpenJiuwen规范化，而请求适配器严格比较原文，触发 `framework system or original query differs`。最小修复已实现，正在集成验证与独立release接续，详见[根因分析](PSD-Precontact-Failure-Root-Cause.md)。此前容器running快照早于终态，不代表有效推理或满载。
 
 前代B曾在13:10 UTC派发后、首请求前因`candidate_snapshot_root`参数未转发而ABORTED，实际模型调用0；旧attempt与租约结算记录保留。该接口已修复合main，当前使用独立版本接续。
 
@@ -17,7 +17,7 @@
 |---|---|---|
 |PSD v2主流程|P→Slot→Decision、模型调用前后知识供给/去重、候选归组、Decision按ID取实体已合main|同条件新Fold A实验未完成，不能宣称优于旧系统|
 |固定工程基座|固定镜像、外部配置、独立运行release、输入预载和后台观察器已有|启动配置存在session、资产挂载遗漏；只修实际阻塞，不扩框架|
-|启动接续|连续runner接口已修复；独立release验证，A新session、两臂输入及注册完成|v4日志配置修正后两臂同时启动；等待首请求/样本账本|
+|启动接续|连续runner接口已修复；独立release验证，A新session、两臂输入及注册完成|v4在请求适配前失败；system空白兼容修复后接续|
 |回答恢复|共享预算、一次后继正式receipt/加载器/SDK/bundle组合已合main，207项相关集成通过|仅单次有费用前驱；多代明确拒绝，未部署；不阻塞现有基线|
 |GEPA|Slot/Decision适配已有；两节点真实seed/contract已交付并核对11份文件|真实学习轨迹、教师提案与收益尚未完成，见[准备结果](PSD-GEPA-Seed-Readiness.md)|
 |TF-GRPO|节点经验消费、参考多阶段和融合路径、父经验继承已合main，独立143项测试通过|同策略K轨迹采集与真实学习尚未完成|
@@ -47,7 +47,7 @@ k16配置已合main，两个分支各完成1080/1080条真实CPU stage/prepare�
 |采样|temperature=0，seed=20260913|相同|
 |已验证完成/总量|0/1080|0/1080|
 |剩余样本|1080|1080|
-|当前阶段|v4 generation容器运行；待首请求证据|v4 generation容器运行；待首请求证据|
+|当前阶段|v4 ABORTED，0调用；修复接续中|v4 ABORTED，0调用；修复接续中|
 |秒/条、ETA|暂无有效观测|暂无有效观测|
 
 每臂正常三节点生成预算3240次，含现有fallback的上限6480次；FIT上限3240。它们是预算而非已发生调用数。开发中的新恢复功能若改变预算，须随候选配置明确记录。双臂合计2160次样本处理，但只有1080个不同样本。服务占卡不等于有效推理负载，也不等于AI Core>80%。

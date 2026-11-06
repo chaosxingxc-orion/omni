@@ -1,7 +1,9 @@
-# PSD construction rollout 入口：未完成
+# PSD construction 多轨迹采集入口
 
-本分支增加 NodeWorkload 的显式 construction population 入口：外部配置必须提供 roster、运行视图及基线的摘要绑定，并要求 roster 为 construction/discovery、视图为 discovery；沿用原有顺序、split 摘要、音频身份、查询源摘要及其样本身份检查。原有 Fold A/B 与默认入口未改变。原生媒体字节和历史祖先曝光检查仍由原有执行门禁负责，人口审计不能代替这些检查。
+construction625入口、独立K成员编译器与组反馈reader已集成main。相同策略temperature0.7、seed1001/1002的两个625条成员在最终集成版本9ab2df47上完成真实CPU stage、prepare、register，均held，模型调用0。正常生成预算合计3750次、fallback上限7500次、FIT上限3750次；预算不等于实际调用。
 
-该变更只是入口的一部分，尚不能用于声明完整 PSD 多轨迹采集：没有交付 K 次完整 SDK 轨迹的执行配置及来源绑定、同题同 policy 的组评分 reader、FIT/恢复总预算的组合验证，也没有完成 stage/prepare/register 的真实端到端验证。H1/H2 需要各自严格匹配的运行视图及查询向量，未在此生成或验证。现有历史诊断分组器不证明同一采集策略，不能作为 GRPO 组。采集和部署策略、temperature/seed 必须明确绑定；seed 不构成多样性证明，重复结果须保留权重。既有难例规则应单独固定引用，不能重采样评估集。
+沿用原construction625及H1/H2，知识与当前Fold A预备策略一致，查询来源改为真实construction来源。OFF仅预备候选，不能假定已选胜；ON/OFF不能混成同policy组。重复和同分轨迹保留，seed不同不证明多样性或统计难度。
 
-验证：指定 sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026 镜像，/opt/saea-venv/bin/python，CPU、network none、源码只读，20 项通过（实际 625 roster 及查询源篡改、原 NodeWorkload 与 Fold 测试）。测试查询向量为离线 fixture，非业务调用；未启动 NPU、外部教师或模型。人口审计的 625 与 Fold A/B 样本、话语、清单音频摘要交集为零，H1/H2 是完整划分；该审计不验证原始音频或祖先曝光。
+固定镜像CPU/无网络/源码只读：集成回归177项通过；预算接口修正后75项通过。主线程核最终15个变更文件与受测快照一致，并直接读取最终两候选与625条prepare记录。SDK/评分组合测试使用模拟封存边界，不是生产封存到reader的端到端证明。
+
+待完成：同C64/p8/v8 overlay下的原生准入及最终供给、持久release与launcher/queue、真实生成与封存组反馈。reader明确拒绝未支持的恢复成本祖先；H1/H2独立运行视图尚未准备。现有K2供给不冒充生产准入，也没有TFRL收益结论。
