@@ -2694,6 +2694,9 @@ async def _invoke_native_role_episode(
     node_raw_perception = {}
     coverage_policy = pipeline_config.get("coverage_recovery") if pipeline_config else None
     coverage_state = {"result": None, "missing": None, "slot_count": 0, "source": None, "extra_contacts": 0}
+    slot_replay = getattr(core_client, "_contact_replay", None)
+    slot_successor = (slot_replay.slot_pending(state.prepared.sample.sample_id)
+                      if coverage_policy and slot_replay is not None and slot_replay._slot_checkpoint else None)
     node_snapshot_values = {value.value_id: value for value in snapshot.values} if node_rails_enabled else {}
     node_snapshot_facets = {facet.facet_id: facet for facet in snapshot.facets} if node_rails_enabled else {}
     node_store_binding = binding.knowledge_store_binding if node_rails_enabled else None
@@ -5598,16 +5601,37 @@ async def _invoke_native_role_episode(
         if coverage_policy and kind == "slot":
             from .adapters.slurp_intent_slot import classify_slot_coverage
             visit = visits[phase_id]
+            predecessor_refusal = bool(slot_successor and completion.request_id == slot_successor['rejected_contact']['request_id'])
             try:
                 report = classify_slot_coverage(text=completion.text, response_format=visit["material"].response_format,
                     context=visit["intent_slot_context"], config=pipeline_config)
             except (ValueError, KeyError, TypeError) as error:
-                refusal = RailsRunnerError("Slot coverage classification refused: " + str(error))
-                refusal.seal_refusal_completion = completion
-                refusal.seal_refusal_role_id = phase_id
-                if completion.request_id in recovery_parents:
-                    refusal.seal_refusal_parent = recovery_parents[completion.request_id]
-                raise refusal from error
+                if predecessor_refusal:
+                    report = {"valid": {}, "missing": [r["candidate_id"] for r in visit["intent_slot_context"]["candidates"]], "invalid": {}}
+                else:
+                    refusal = RailsRunnerError("Slot coverage classification refused: " + str(error))
+                    refusal.seal_refusal_completion = completion
+                    refusal.seal_refusal_role_id = phase_id
+                    if completion.request_id in recovery_parents:
+                        refusal.seal_refusal_parent = recovery_parents[completion.request_id]
+                    raise refusal from error
+            if predecessor_refusal:
+                if (report['valid'] or report['missing'] != slot_successor['remaining_candidate_ids'][:1]
+                        or coverage_state['missing'] != slot_successor['remaining_candidate_ids']
+                        or coverage_state['extra_contacts'] != slot_successor['extra_contacts']
+                        or node_slot_ids != slot_successor['candidate_ids']
+                        or coverage_policy['max_extra_contacts'] != slot_successor['max_extra_contacts']):
+                    raise RailsRunnerError('Slot successor checkpoint differs from replayed state')
+                if coverage_state['source'].request_id != slot_successor['perception_source']['request_id']:
+                    raise RailsRunnerError('Slot successor Perception source differs')
+                if (visits[phase_id]['intent_slot_context']['candidates'][0]['candidate_id']
+                        != slot_successor['remaining_candidate_ids'][0]):
+                    raise RailsRunnerError('Slot successor candidate differs from checkpoint')
+                if coverage_state['extra_contacts'] >= coverage_policy['max_extra_contacts']:
+                    refusal = RailsRunnerError('Slot coverage recovery budget exhausted')
+                    refusal.seal_refusal_completion = completion
+                    refusal.seal_refusal_role_id = phase_id
+                    raise refusal
             supplied = visit["candidate_handoff"]["messages"]
             if coverage_state["slot_count"] and supplied != node_slot_materials[0]:
                 raise RailsRunnerError("Slot recovery changed its frozen original evidence")
@@ -5620,14 +5644,14 @@ async def _invoke_native_role_episode(
                     refusal.seal_refusal_completion = completion
                     refusal.seal_refusal_role_id = phase_id
                     raise refusal
-            elif report["missing"]:
+            elif report["missing"] and not predecessor_refusal:
                 refusal = RailsRunnerError("Slot recovery response remains invalid")
                 refusal.seal_refusal_completion = completion
                 refusal.seal_refusal_role_id = phase_id
                 if completion.request_id in recovery_parents:
                     refusal.seal_refusal_parent = recovery_parents[completion.request_id]
                 raise refusal
-            else:
+            elif not report["missing"]:
                 candidate_id = visit["intent_slot_context"]["candidates"][0]["candidate_id"]
                 if not coverage_state["missing"] or coverage_state["missing"].pop(0) != candidate_id:
                     raise RailsRunnerError("Slot recovery candidate order differs")
@@ -6707,6 +6731,9 @@ async def _invoke_native_role_episode(
 
             def contact_context(index, role=role):
                 contact_program, contact_index = program.program_id, index
+                if (slot_successor and role.role_kind == 'slot'
+                        and index == slot_successor['extra_contacts'] + 1):
+                    contact_program += ':successor:' + slot_successor['source_attempt_sha256'][:16]
                 if config.prompt_contact_limits == "legacy-c17-lock-v1":
                     # Keep the delivering lock's historical state namespace:
                     # its Perception was index 7, Solver index 8. These are
@@ -6855,6 +6882,7 @@ async def _invoke_native_role_episode(
             )
             if coverage_policy and role.role_kind == "slot":
                 solver_node.coverage_result = lambda: copy.deepcopy(coverage_state["result"])
+                solver_node.coverage_successor = lambda: bool(slot_successor and coverage_state['result']['missing'])
             if role.role_kind == "solver" and role.samples > 1:
                 # E2b: the grouped Solver visit -- N real invoke_direct
                 # calls on the SAME solver_node above, through the SAME
@@ -7202,6 +7230,8 @@ async def _invoke_native_role_episode(
             if block is not None and node_rails_enabled:
                 block["node_rails"] = "sdk-handoff-v1"
                 block["node_handoffs"] = copy.deepcopy(node_handoffs)
+                if slot_successor:
+                    block['slot_successor'] = copy.deepcopy(slot_successor)
             if block is not None and (pipeline_config.get("evidence_policy") == "unique_source_alias_v1" or pipeline_config["schema"].endswith("-v2")):
                 block["evidence_policy"] = pipeline_config.get("evidence_policy", "strict")
                 if pipeline_config["schema"].endswith("-v2"):

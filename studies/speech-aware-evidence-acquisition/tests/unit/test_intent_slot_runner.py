@@ -228,6 +228,79 @@ def test_sdk_invalid_repair_retains_pending_row(tmp_path):
     _verify_outputs_trace_binding(tuple(outputs), {rid: p for _, rid, p in h.trace.records})
 
 
+@pytest.mark.parametrize('budget', [1, 3])
+def test_sdk_known_invalid_repair_has_successor(tmp_path, budget):
+    from speech_aware_evidence_acquisition.core.contact_journal import NativeContactReplay
+    old, _ = recovery_harness(tmp_path / 'old')
+    policy = json.loads(old.config.intent_slot_pipeline_json)
+    policy['coverage_recovery']['max_extra_contacts'] = budget
+    old.config = replace(old.config, intent_slot_pipeline_json=canonical(policy), max_contacts=3 + budget)
+    output = old._output
+    old._output = lambda key: '{}' if key[1] == 'slot' and key[2] == 2 else output(key)
+    try:
+        first = old.run()
+        assert first.results[0].native_episode_receipt['slot_recovery_pending']['remaining_candidate_ids'] == ['play_radio']
+        from test_template_variants_delivery import _runtime, _raw_native
+        from speech_aware_evidence_acquisition.core.row_checkpoint import RowCheckpointWriter, serialize_trace_records, sha256_file
+        raw = _raw_native(old, solver_role={'max_iterations': 1})
+        raw['intent_slot_pipeline'] = json.loads(old.config.intent_slot_pipeline_json)
+        rows = _runtime(old, first, raw)._canonical_output_rows(old.client)
+        writer = RowCheckpointWriter(old.world.data_root / 'runs' / old.plan.run_id / old.plan.attempt_id,
+            old.plan.run_id, old.plan.attempt_id, identity={'protocol_hash': old.plan.protocol_hash,
+            'split_identity_hash': old.plan.split_identity_hash})
+        writer.append_row(sample_id=rows[0]['sample_id'], complete=True, output_rows=rows,
+            trace_lines=serialize_trace_records(old.trace.records))
+        writer.close()
+    finally:
+        old.close()
+    old.client._adapter._attempt_handle.mark_aborted('known invalid successor source')
+    plan = replace(old.plan, attempt_id='known-invalid-successor')
+    replay = NativeContactReplay(old.world.data_root, old.plan, plan, old.client.arm)
+    replay.bind_slot_checkpoint(writer.path, sha256_file(writer.path))
+    from dataclasses import asdict
+    from speech_aware_evidence_acquisition.core.contact_journal import canonical as contact_canonical, digest as contact_digest, ContactJournalError
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import load_native_recovery
+    receipt_path = old.world.data_root / 'slot-successor-recovery.json'
+    receipt_path.write_bytes(contact_canonical({'schema': 'saea-native-recovery-v1',
+        'source': replay.source_binding(), 'target_plan': asdict(plan)}))
+    replay = load_native_recovery({'path': str(receipt_path), 'sha256': contact_digest(receipt_path.read_bytes())},
+                                  data_root=old.world.data_root, plan=plan, arm=old.client.arm)
+    original_checkpoint = writer.path.read_bytes()
+    writer.path.write_bytes(original_checkpoint + b'changed')
+    with pytest.raises(ContactJournalError):
+        replay.slot_pending('s1')
+    writer.path.write_bytes(original_checkpoint)
+    new, _ = recovery_harness(tmp_path / 'new', plan=plan, data=old.world.data_root, replay=replay)
+    new.config = replace(new.config, intent_slot_pipeline_json=canonical(policy), max_contacts=3 + budget)
+    gate = new.request_gate
+    def track(request):
+        gate(request)
+        if replay.match(request.as_payload()) is not None:
+            new.replayed_fixture_keys.add(next(reversed(new.prepared)))
+    new.request_gate = track
+    try:
+        result = new.run()
+        if budget > 1:
+            raw = _raw_native(new, solver_role={'max_iterations': 1})
+            raw['intent_slot_pipeline'] = json.loads(new.config.intent_slot_pipeline_json)
+            _runtime(new, result, raw)._canonical_output_rows(new.client)
+            from speech_aware_evidence_acquisition.rails.intent_slot_pipeline import validate_receipt
+            validate_receipt(result.results[0].native_episode_receipt,
+                             trace_records={rid: payload for _, rid, payload in new.trace.records})
+    finally:
+        cost = new.close()['cost']
+    if budget == 1:
+        assert result.results[0].final_response_text == ''
+        assert not new.dispatched
+        assert cost['calls_used'] == 0
+        return
+    assert json.loads(result.results[0].final_response_text)['entities'][0]['filler'] == 'Bob'
+    assert [key[1] for key in new.dispatched] == ['slot', 'solver']
+    assert cost['calls_used'] == 2
+    assert cost['replayed_predecessor_cost']['calls'] == 3
+    assert result.results[0].native_episode_receipt['intent_slot_pipeline']['slot_successor']['extra_contacts'] == 1
+
+
 def test_sdk_recovers_two_missing_candidates(tmp_path):
     h, _ = recovery_harness(tmp_path)
     original = h._output

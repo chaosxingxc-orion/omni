@@ -253,8 +253,30 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                 or any(cid not in ids for cid in retained)):
             raise ValueError("invalid initial Slot recovery sources")
         missing = [cid for cid in ids if cid not in retained]
-        if ([s["candidate_ids"] for s in slots[1:]] != [[cid] for cid in missing]
-                or any(s.get("valid_ids") != s["candidate_ids"] for s in slots[1:])):
+        outstanding = list(missing)
+        successor = block.get('slot_successor')
+        invalid_sources = [s for s in slots[1:] if not s.get('valid_ids')]
+        if invalid_sources:
+            if (not isinstance(successor, Mapping) or len(invalid_sources) != 1
+                    or successor.get('rejected_contact') != invalid_sources[0]['source']
+                    or successor.get('candidate_ids') != ids
+                    or successor.get('remaining_candidate_ids') != missing
+                    or successor.get('max_extra_contacts') != recovery['max_extra_contacts']):
+                raise ValueError('Slot successor source or budget differs')
+            prior_fallbacks = sum(len(v['execution_receipt']['contacts']) - 1
+                                  for v in visits[:slots.index(invalid_sources[0]) + 2])
+            if successor.get('extra_contacts') != slots.index(invalid_sources[0]) + prior_fallbacks:
+                raise ValueError('Slot successor shared extra budget differs')
+            following = slots[slots.index(invalid_sources[0]) + 1:]
+            if (not following or ':successor:' + successor['source_attempt_sha256'][:16]
+                    not in following[0]['source']['agent_contact_id']):
+                raise ValueError('Slot successor contact generation differs')
+        for source in slots[1:]:
+            if not outstanding or source['candidate_ids'] != [outstanding[0]] or source.get('valid_ids') not in ([], source['candidate_ids']):
+                raise ValueError("Slot recovery source is not the next missing branch")
+            if source['valid_ids']:
+                outstanding.pop(0)
+        if outstanding:
             raise ValueError("Slot recovery sources do not fill exactly the missing branches")
     if (not recovery and [s["candidate_ids"] for s in slots] != expected) or (recovery and slots[0]["candidate_ids"] != ids):
         raise ValueError("slot receipt groups differ from evaluated candidates")
@@ -310,7 +332,7 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                 rows = ((document(response.get("text"))["candidates"] if block.get("schema") == SCHEMA_V2
                          else candidates(response.get("text"), 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict")))
                         if binding["stage"] == "perception" else
-                        ([r for r in document(response.get("text"))["candidates"] if r.get("candidate_id") in slots[sources.index(source)-1]["valid_ids"]]
+                        ([r for r in document(response.get("text")).get("candidates", []) if r.get("candidate_id") in slots[sources.index(source)-1]["valid_ids"]]
                          if recovery else slot_results(response.get("text"), expected).values()))
                 if validate_evidence_refs(rows, binding["inventory"], expected, policy=block.get("evidence_policy", "strict")) != binding.get("mappings"):
                     raise ValueError("evidence mapping differs from raw response")
@@ -321,9 +343,14 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                 request = trace_records[slot["source"]["request_id"] + "/request"]
                 response_format = request["payload"]["decoding_params"]["response_format"]
                 binding = block["evidence_bindings"][slots.index(slot) + 1]
-                report = classify_slot_coverage(text=text, response_format=response_format,
-                    context={"candidates": [{"candidate_id": cid} for cid in slot["candidate_ids"]],
-                             "evidence_inventory": binding["inventory"]}, config=block)
+                try:
+                    report = classify_slot_coverage(text=text, response_format=response_format,
+                        context={"candidates": [{"candidate_id": cid} for cid in slot["candidate_ids"]],
+                                 "evidence_inventory": binding["inventory"]}, config=block)
+                except (ValueError, KeyError, TypeError):
+                    if slot['valid_ids'] or slots.index(slot) == 0:
+                        raise
+                    report = {'valid': {}}
                 if list(report["valid"]) != slot["valid_ids"]:
                     raise ValueError("Slot recovery valid branches differ from archived response")
                 actual = report["valid"]
@@ -354,7 +381,7 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
             for slot in slots:
                 raw = trace_records[slot["source"]["request_id"] + "/response"]["text"]
                 if recovery:
-                    rows = [row for row in document(raw)["candidates"] if row.get("candidate_id") in slot["valid_ids"]]
+                    rows = [row for row in document(raw).get("candidates", []) if row.get("candidate_id") in slot["valid_ids"]]
                     parsed = slot_results(canonical({"candidates": rows}), slot["valid_ids"])
                     if set(combined) & set(parsed):
                         raise ValueError("Slot repair overwrote an existing result")

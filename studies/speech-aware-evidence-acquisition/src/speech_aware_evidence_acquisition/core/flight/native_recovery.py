@@ -25,6 +25,11 @@ def load_native_recovery(declaration, *, data_root, plan, arm):
         raise ValueError('native recovery receipt names another target plan')
     source = document['source']
     replay = NativeContactReplay(data_root, ExecutionPlan(**source['plan']), plan, arm)
+    if 'slot_checkpoint' in source:
+        checkpoint = source['slot_checkpoint']
+        if not isinstance(checkpoint, dict) or set(checkpoint) != {'path', 'sha256'}:
+            raise ValueError('invalid Slot checkpoint declaration')
+        replay.bind_slot_checkpoint(checkpoint['path'], checkpoint['sha256'])
     if replay.source_binding() != source:
         raise ValueError('native recovery predecessor changed')
     return replay

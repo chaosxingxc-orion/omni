@@ -76,7 +76,9 @@ class CandidateSlotStage(WorkflowComponent):
                         raise ValueError("Slot coverage recovery budget exhausted")
                     pending_batches.extend([[row] for row in rows if row["candidate_id"] in missing])
                 elif report["missing"]:
-                    raise ValueError("Slot candidate recovery did not produce a valid result")
+                    if not getattr(self.node, "coverage_successor", lambda: False)():
+                        raise ValueError("Slot candidate recovery did not produce a valid result")
+                    pending_batches.insert(0, batch)
                 continue
             if self.config.get("node_rails") == "sdk-handoff-v1":
                 from ...rails.candidate_handoff import normalized_response

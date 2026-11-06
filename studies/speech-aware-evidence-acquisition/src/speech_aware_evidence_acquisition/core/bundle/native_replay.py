@@ -37,8 +37,17 @@ def verify_native_replay(manifest, records, plan):
                 or digest(source_path.read_bytes()) != source['attempt_sha256']):
             raise ValueError('predecessor attempt bytes changed')
         replay = NativeContactReplay(data_root, source_plan, plan, manifest['arm'])
+        if 'slot_checkpoint' in source:
+            checkpoint = source['slot_checkpoint']
+            replay.bind_slot_checkpoint(checkpoint['path'], checkpoint['sha256'])
         if replay.source_binding() != source:
             raise ValueError('predecessor usage/plan differs from its source binding')
+        successors = [value.get('use_native_episode', {}).get('intent_slot_pipeline', {}).get('slot_successor')
+                      for value in records.values() if isinstance(value, Mapping)
+                      and isinstance(value.get('use_native_episode'), Mapping)]
+        for successor in (item for item in successors if item is not None):
+            if successor != replay.slot_pending(successor['sample_id']):
+                raise ValueError('Slot successor differs from pinned predecessor checkpoint')
         # Complete-row reuse has its own accounting contract. Do not mix it
         # with contact replay until their disjointness is explicitly proved.
         if manifest.get('predecessor_attempt') or manifest.get('predecessor_attempts'):

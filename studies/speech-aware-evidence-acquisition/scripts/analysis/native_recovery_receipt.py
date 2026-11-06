@@ -19,7 +19,7 @@ from speech_aware_evidence_acquisition.core.contact_journal import (
 from speech_aware_evidence_acquisition.core.flight.native_recovery import load_native_recovery
 
 
-def prepare(data_root, source_plan, target_attempt, arm, out):
+def prepare(data_root, source_plan, target_attempt, arm, out, slot_checkpoint_sha256=None):
     """Validate durable custody and publish once; preserve scientific parameters."""
     data_root = Path(data_root).resolve()
     out = Path(out)
@@ -33,6 +33,10 @@ def prepare(data_root, source_plan, target_attempt, arm, out):
     if any(p.exists() for p in existing):
         raise ValueError('target attempt already has state; inspect instead of overwriting')
     replay = NativeContactReplay(data_root, source_plan, target, arm)
+    if slot_checkpoint_sha256 is not None:
+        from speech_aware_evidence_acquisition.core.row_checkpoint import checkpoint_path
+        replay.bind_slot_checkpoint(checkpoint_path(data_root/'runs'/source_plan.run_id/source_plan.attempt_id,
+                                                    source_plan.run_id), slot_checkpoint_sha256)
     counts = {'observed': 0, 'unknown': 0}
     if any(replay.source.inspect(rid)['state'] == 'not_sent' for rid in replay.request_ids):
         counts['not_sent'] = 0
@@ -66,6 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('--target-attempt', required=True)
     parser.add_argument('--arm', required=True)
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--slot-checkpoint-sha256', help='Pinned predecessor row checkpoint containing pending Slot state')
     args = vars(parser.parse_args())
     args['source_plan'] = ExecutionPlan(**json.loads(args['source_plan'].read_bytes()))
     print(json.dumps(prepare(**args), sort_keys=True))

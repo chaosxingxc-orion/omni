@@ -265,6 +265,8 @@ class NativeContactReplay:
         self.source_actual_usage = dict(attempt["actual"])
         self._by_contact, self._records, self._pins, self._used = {}, {}, {}, set()
         self._lock = threading.Lock()
+        self._slot_pending = {}
+        self._slot_checkpoint = None
         intents = list(self.source.root.glob('*.intent.json'))
         if not intents and not ((prepared_text or arm == 'raw-speech-agent-native-tools')
                                 and self.source_actual_usage == {'calls':0,'audio_seconds':0.0}):
@@ -347,6 +349,9 @@ class NativeContactReplay:
                 raise ContactJournalError('ancestor target differs from immediate source')
             ancestor = NativeContactReplay(data_root,ExecutionPlan(**receipt['source']['plan']),source_plan,arm,
                 _ancestry_seen=(*_ancestry_seen,recovery_plan.attempt_id))
+            if 'slot_checkpoint' in receipt['source']:
+                pin = receipt['source']['slot_checkpoint']
+                ancestor.bind_slot_checkpoint(pin['path'], pin['sha256'])
             if (ancestor.source_binding() != receipt['source'] or ancestor.request_ids
                     or ancestor.source_actual_usage != {'calls':0,'audio_seconds':0.0}):
                 raise ContactJournalError('spent ancestor requires explicit multi-predecessor recovery')
@@ -363,6 +368,120 @@ class NativeContactReplay:
                 ancestor._attempt_path: ancestor._attempt_sha256, **ancestor._pins}
             self._pins.update(self._ancestry_pins)
 
+    def bind_slot_checkpoint(self, path, sha256):
+        """Bind pending Slot state to an immutable predecessor row checkpoint.
+
+        This inspects custody only; it does not authorize or dispatch a contact.
+        """
+        from .row_checkpoint import read_checkpoint, checkpoint_path
+        path = Path(path)
+        expected = checkpoint_path(self._attempt_path.parent.parent.parent / 'runs' /
+                                   self.source_plan.run_id / self.source_plan.attempt_id,
+                                   self.source_plan.run_id)
+        if path.resolve() != expected.resolve():
+            raise ContactJournalError('Slot checkpoint is not owned by source attempt')
+        document = read_checkpoint(path, expected_sha256=sha256)
+        header = document.header
+        if any(header.get(key) != value for key, value in (
+            ('run_id', self.source_plan.run_id), ('attempt_id', self.source_plan.attempt_id),
+            ('protocol_hash', self.source_plan.protocol_hash),
+            ('split_identity_hash', self.source_plan.split_identity_hash))):
+            raise ContactJournalError('Slot checkpoint identity differs from source plan')
+        self.assert_all_contacts_resolved()
+        pending = {}
+        for row in document.rows:
+            if len(row.output_rows) != 1:
+                continue
+            receipt = row.output_rows[0].get('native_episode_receipt') or {}
+            state = receipt.get('slot_recovery_pending')
+            if state is None:
+                continue
+            try:
+                if row.output_rows[0]['sample_id'] != row.sample_id:
+                    raise ValueError('sample identity differs')
+                ids, remaining = state['original_candidate_ids'], state['remaining_candidate_ids']
+                valid, sources = state['valid_results'], state['sources']
+                maximum = state['max_extra_contacts']
+                if (not isinstance(ids, list) or not ids or len(set(ids)) != len(ids)
+                        or not isinstance(remaining, list) or not remaining
+                        or len(set(remaining)) != len(remaining)
+                        or set(valid) | set(remaining) != set(ids)
+                        or set(valid) & set(remaining)
+                        or type(maximum) is not int or maximum < 1 or not sources):
+                    raise ValueError('invalid candidate coverage')
+                if (state.get('strategy') != 'complete-original-candidate-set-v1'
+                        or remaining != [cid for cid in ids if cid not in valid]):
+                    raise ValueError('pending coverage strategy or candidate order differs')
+                rejected = receipt['terminal_disposition']['rejected_contact']
+                if (receipt['terminal_disposition']['reason'] != 'seal_refusal'
+                        or receipt['interrupted_role']['stage'] != 'slot'
+                        or receipt['interrupted_role']['execution_receipt']['final_contact'] != rejected):
+                    raise ValueError('missing terminal Slot refusal')
+                visits = receipt['role_visits']
+                if ([v['stage'] for v in visits] != ['perception'] + ['slot'] * len(sources)
+                        or [v['execution_receipt']['final_contact'] for v in visits[1:]] != [s['source'] for s in sources]):
+                    raise ValueError('pending Slot sources differ from role visits')
+                perception = visits[0]['execution_receipt']['final_contact']
+                contacts = [perception] + [s['source'] for s in sources] + [rejected]
+                records = {json.loads(line)['record_id']: json.loads(line)['payload'] for line in row.trace_lines}
+                for contact in contacts:
+                    rid = contact['request_id']
+                    observed = self._records[rid]
+                    if observed['state'] != 'observed' or observed['intent']['sample_id'] != row.sample_id:
+                        raise ValueError('source contact is not observed for sample')
+                    if (observed['intent']['request_sha256'] != contact['request_sha256']
+                            or observed['response']['response_sha256'] != contact['response_sha256']
+                            or digest(json.loads(observed['response_bytes'])['text'].encode()) != contact['response_text_sha256']
+                            or records[rid + '/request']['payload_sha256'] != contact['request_sha256']
+                            or records[rid + '/response']['response_sha256'] != contact['response_sha256']):
+                        raise ValueError('checkpoint and contact custody differ')
+                rejected_payload = self._records[rejected['request_id']]['intent']['payload']
+                response_format = rejected_payload['decoding_params']['response_format']
+                row_schema = response_format['json_schema']['schema']['properties']['candidates']['items']
+                candidate_enum = row_schema['properties']['candidate_id']['enum']
+                if candidate_enum != [remaining[0]]:
+                    raise ValueError('refused Slot request is not scoped to the missing branch')
+                if records[rejected['request_id'] + '/request']['payload'] != rejected_payload:
+                    raise ValueError('refused Slot request bytes differ')
+                from ..rails.intent_slot_pipeline import slot_results, canonical as slot_canonical, digest as slot_digest
+                from ..rails.intent_slot_pipeline import candidates
+                perception_text = json.loads(self._records[perception['request_id']]['response_bytes'])['text']
+                if [r['candidate_id'] for r in candidates(perception_text, 3, duplicate_policy='group_v2')] != ids:
+                    raise ValueError('original candidates differ from Perception response')
+                derived = {}
+                for item in sources:
+                    raw = json.loads(self._records[item['source']['request_id']]['response_bytes'])['text']
+                    rows = json.loads(raw)['candidates']
+                    chosen = [r for r in rows if r.get('candidate_id') in item['valid_ids']]
+                    parsed = slot_results(slot_canonical({'candidates': chosen}), item['valid_ids'])
+                    if slot_digest(parsed) != item['result_sha256'] or set(derived) & set(parsed):
+                        raise ValueError('valid Slot source differs')
+                    derived.update(parsed)
+                if derived != valid:
+                    raise ValueError('pending valid Slot values differ from responses')
+                extras = len(sources)  # initial Slot is free; rejected repair is extra
+                for visit in receipt['role_visits']:
+                    extras += len(visit['execution_receipt']['contacts']) - 1
+                extras += len(receipt['interrupted_role']['execution_receipt']['contacts']) - 1
+                if extras > maximum:
+                    raise ValueError('historical extra-contact budget exceeded')
+                pending[row.sample_id] = {'sample_id': row.sample_id, 'candidate_ids': list(ids),
+                    'perception_source': perception, 'valid_results': valid, 'sources': sources, 'remaining_candidate_ids': list(remaining),
+                    'rejected_contact': rejected, 'extra_contacts': extras, 'max_extra_contacts': maximum,
+                    'checkpoint_path': str(path.resolve()), 'checkpoint_sha256': sha256,
+                    'source_attempt_sha256': self._attempt_sha256, 'source_actual_usage': dict(self.source_actual_usage),
+                    'target_identity': dict(self.target_identity)}
+            except (KeyError, TypeError, ValueError, IndexError) as error:
+                raise ContactJournalError('invalid pending Slot checkpoint: ' + str(error)) from error
+        self._pins[path] = sha256
+        self._slot_pending = pending
+        self._slot_checkpoint = {'path': str(path.resolve()), 'sha256': sha256}
+        return json.loads(canonical(pending))
+
+    def slot_pending(self, sample_id):
+        self.assert_all_contacts_resolved()
+        return json.loads(canonical(self._slot_pending.get(sample_id)))
+
     def source_binding(self):
         """Pin complete predecessor spend, including contacts not reused."""
         from dataclasses import asdict
@@ -377,6 +496,7 @@ class NativeContactReplay:
             'attempt_path': str(self._attempt_path.resolve()),
             'attempt_sha256': self._attempt_sha256,
             'actual_usage': dict(self.source_actual_usage),
+            **({'slot_checkpoint': dict(self._slot_checkpoint)} if self._slot_checkpoint else {}),
             **({'delivery_custody': delivery} if delivery else {}),
             **({'empty_ancestry':self._empty_ancestry} if self._empty_ancestry else {})}
 
