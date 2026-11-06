@@ -6,6 +6,7 @@ ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'scripts/analysis'))
 from intent_slot_workload import NodeWorkload,ARMS
 from registered_workload import assert_execution_binding
+from test_gepa_probe_workload import repo  # noqa: F401
 
 def config():
     return {'schema':'saea-intent-slot-workload-v1','name':'node-test-v1','run_id':'NODE-TEST-V1',
@@ -175,3 +176,58 @@ def test_recovery_workload_combines_fallback_and_configured_budget(tmp_path, mon
     assert pipeline['answer_only_fallback'] == 'budgeted-v1'
     assert pipeline['coverage_recovery']['max_extra_contacts'] == 2
     assert base['native_contact_fit']['contact_cap'] == experiment['execution_plan']['planned_model_calls'] == 400
+
+
+def test_combined_recovery_example_is_accepted():
+    c = config(); c['node_arm'] = ARMS[2]
+    c['pipeline'] = json.loads((ROOT / 'configs/examples/psd-slot-coverage-answer-only-v1.json').read_text())
+    job = NodeWorkload(c)
+    assert job.contact_budgets() == {'normal_generation_calls': 240,
+        'fallback_inclusive_cap': 480, 'fit_calls': 480}
+
+
+def test_node_stage_prepare_register_shared_budget(repo, monkeypatch):
+    from types import SimpleNamespace
+    import gepa_pair_workload as pair
+    import intent_slot_workload as workload
+    from speech_aware_evidence_acquisition import contracts
+    from speech_aware_evidence_acquisition.core.bundle import git_commit
+    from speech_aware_evidence_acquisition.core import config as composition
+    from speech_aware_evidence_acquisition.core.flight import factory
+    import tfrl_odd40_cells
+    path, data, _ = repo
+    c = config(); c['node_arm'] = ARMS[2]
+    c['pipeline'] = {'protocol_version':'v2', 'node_rails':'sdk-handoff-v1',
+        'answer_only_fallback':'budgeted-v1', 'coverage_recovery': {
+            'strategy':'complete-original-candidate-set-v1', 'max_extra_contacts':2}}
+    job = NodeWorkload(c)
+    read_asset = workload.read_asset
+    monkeypatch.setattr(workload, 'read_asset', lambda root, rel: read_asset(ROOT if not (root / rel).exists() else root, rel))
+    job.material_checked = lambda *args: ({'source_roster':{}}, {
+        'roster': {'roster_id':'fixture', 'items':[{'sample_id': sid, 'audio_seconds':1} for sid in c['sample_ids']],
+                   'split_identity_hash':'a'*64}, 'view': {}})
+    binding = {'model_fragment':'bf16-thinking-tfgrpo-tp4-ctx48k-v1','service_session':'fixture',
+               'profile':'fixture','runtime_receipt':'fixture'}
+    job.runtime_binding = lambda *args: binding
+    monkeypatch.setattr(contracts, 'assert_execution_environment', lambda: None)
+    monkeypatch.setattr(git_commit, 'require_clean_study_repo', lambda *_: 'a'*40)
+    monkeypatch.setattr(composition, 'compose', lambda *_: SimpleNamespace(config_hash='b'*64,
+        values={'arm':'raw-speech-agent-native-tools'}))
+    monkeypatch.setattr(job, 'validate', lambda *args:80)
+    monkeypatch.setattr(tfrl_odd40_cells, 'verify_output', lambda *args:None)
+    class Runtime:
+        def prepare_phase_supply(self, target, max_workers):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(json.dumps({'output': {}}))
+    monkeypatch.setattr(factory, 'build_flight_runtime', lambda *args, **kwargs: Runtime())
+    lock=path/pair.observation.LOCK; lock.parent.mkdir(parents=True,exist_ok=True); lock.write_text('{}')
+    (path/'docs/exposure-ledger.md').write_text('history\n')
+    stage=data/'work/codex/node-stage'
+    job.stage(path,data,c['material'],stage)
+    prepared=data/'work/codex/node-prepared'
+    job.prepare(path,data,stage/'complete.json',prepared)
+    job.register(path,data,stage/'complete.json',prepared/'complete.json')
+    package=path/'docs/readiness'/job.NAME
+    assert pair.read(package/'generation-plan-registered-v1.json')['execution_plan']['planned_model_calls']==400
+    assert pair.read(package/'fit-plan-registered-v1.json')['execution_plan']['planned_model_calls']==400
+    assert pair.read(path/f'configs/baseline/{job.NAME}.json')['native_episode']['intent_slot_pipeline']['answer_only_fallback']=='budgeted-v1'

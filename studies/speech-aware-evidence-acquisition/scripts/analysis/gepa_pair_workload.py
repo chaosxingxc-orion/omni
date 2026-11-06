@@ -579,7 +579,7 @@ class PairWorkload:
             'sha256':hashlib.sha256(raw(protocol)).hexdigest()}
         docs = {'candidate.json':spec,'protocol-registered-v1.json':protocol}
         rows = []
-        for kind,rid,aid,cap in [('generation',self.RUN,'generation-v1',2*self.CONTACTS*self.ROWS),('fit',self.RUN+'-FIT','fit-v1',self.CONTACTS*self.ROWS)]:
+        for kind,rid,aid,cap in [('generation',self.RUN,'generation-v1',self.contact_budgets()['fallback_inclusive_cap']),('fit',self.RUN+'-FIT','fit-v1',self.contact_budgets()['fit_calls'])]:
             budget = {**exp['execution_plan'],'planned_model_calls':cap}
             ExecutionPlan(run_id=rid,attempt_id=aid,carrier_lock_key='slurp',split_identity_hash=split,protocol_hash=ph,**budget).validate(source_root=repo)
             doc = {'schema':f'saea-registered-{kind}-plan-v1','plan_kind':kind,'cell':self.NAME,'experiment':self.NAME,
@@ -601,7 +601,7 @@ class PairWorkload:
         if not ledger.exists():
             ledger.parent.mkdir(parents=True,exist_ok=True);ledger.write_bytes(resolve_asset(repo,'docs/exposure-ledger.md').read_bytes())
         ledger.write_text(ledger.read_text()+'\n## '+self.LABEL+'\n\n| date | run/experiment id | execution profile | scope | model/tool | speech carrier + split | split role | split identity hash | consumed | calls | speech audio seconds | gpu hours | inherited exposure | artifacts | notes |\n| '+' | '.join(['---']*15)+' |\n'+'\n'.join('| '+' | '.join(row)+' |' for row in rows)+'\n')
-        publish_new(output_asset(repo,f'docs/readiness/{self.NAME}-preregistration.md'), ('# '+self.LABEL+'\n\n'+self.PROGRAM+' Exact configured population and verified source; '+str(self.CONTACTS)+'N normal calls, '+str(2*self.CONTACTS)+'N fallback cap; all costs retained. Commit, admit and preflight before detached dispatch; no quality claim.\n').encode())
+        publish_new(output_asset(repo,f'docs/readiness/{self.NAME}-preregistration.md'), ('# '+self.LABEL+'\n\n'+self.PROGRAM+' Exact configured population and verified source; '+str(self.contact_budgets()['normal_generation_calls'])+' normal calls, '+str(self.contact_budgets()['fallback_inclusive_cap'])+' fallback-inclusive cap; all costs retained. Commit, admit and preflight before detached dispatch; no quality claim.\n').encode())
         return {'cell':self.NAME,'rows':self.ROWS,'source_commit':head,'new_model_calls':0,'readiness':'held','workspace_manifest':seal_workspace(repo)}
 
 

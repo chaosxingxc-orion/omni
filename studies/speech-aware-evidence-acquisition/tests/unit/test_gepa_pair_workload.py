@@ -309,3 +309,34 @@ def test_original_registration_external_pin_resolves_and_local_escape_refused(tm
     (repo/'docs'/'escape.json').symlink_to(external)
     with pytest.raises(ValueError,match='escapes root'):
         m.pinned(repo,{'relpath':'docs/escape.json','sha256':hashlib.sha256(external.read_bytes()).hexdigest()})
+
+
+def test_registration_uses_overridden_shared_contact_budgets(repo, monkeypatch):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition import contracts
+    from speech_aware_evidence_acquisition.core.bundle import git_commit
+    from speech_aware_evidence_acquisition.core import config as composition
+    job, _ = derived(repo, monkeypatch); path, data, _ = repo
+    # A coverage workload exposes its budget through this existing hook.
+    monkeypatch.setattr(job, 'contact_budgets', lambda: {
+        'normal_generation_calls': 48, 'fallback_inclusive_cap': 80, 'fit_calls': 80})
+    monkeypatch.setattr(contracts, 'assert_execution_environment', lambda: None)
+    monkeypatch.setattr(git_commit, 'require_clean_study_repo', lambda *_: 'a' * 40)
+    monkeypatch.setattr(composition, 'compose', lambda *_: SimpleNamespace(
+        config_hash='b' * 64, values={'arm': 'raw-speech-agent-native-tools'}))
+    monkeypatch.setattr(job, 'validate', lambda *args: 16)
+    lock = path / m.observation.LOCK; lock.parent.mkdir(parents=True, exist_ok=True); lock.write_bytes(b'{}\n')
+    (path / 'docs/exposure-ledger.md').write_text('old cost\n')
+    stage = data / 'work/codex/stage'
+    job.stage(path, data, job.config['material'], stage)
+    supply = data / 'prepared' / job.RUN / 'phase-supply-v1.json'
+    supply.parent.mkdir(parents=True); supply.write_bytes(b'{}\n')
+    prepared = data / 'work/codex/prepared.json'
+    prepared.write_bytes(m.raw({'schema': 'saea-gepa-pair-prepared-v1',
+        'stage_sha256': m.sha(stage / 'complete.json'), 'rows': 16, 'run_id': job.RUN,
+        'new_model_calls': 0, 'supply': m.pin(data, str(supply.relative_to(data)))}))
+    job.register(path, data, stage / 'complete.json', prepared)
+    package = path / 'docs/readiness' / job.NAME
+    assert m.read(package / 'generation-plan-registered-v1.json')['execution_plan']['planned_model_calls'] == 80
+    assert m.read(package / 'fit-plan-registered-v1.json')['execution_plan']['planned_model_calls'] == 80
+    assert m.read(package / 'protocol-registered-v1.json')['fallback_inclusive_cap'] == 80
