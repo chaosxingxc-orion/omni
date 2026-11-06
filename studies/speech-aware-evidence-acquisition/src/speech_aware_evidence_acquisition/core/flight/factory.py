@@ -17,6 +17,7 @@ from ..base import TASK_ADAPTERS, CoreError, declared_derived_media_roots
 from ..config import compose
 from ..scoring_batch import ScoringContext, run_score_batch
 from .runtime import FlightRuntime
+from .runtime_overlay import apply_runtime_overlay
 
 
 def load_external_runtime_config(path: Path | None) -> Mapping[str, object]:
@@ -40,13 +41,20 @@ def load_external_runtime_config(path: Path | None) -> Mapping[str, object]:
     if not isinstance(document, Mapping):
         raise CoreError("external runtime config must be a JSON object")
     schema = document.get("schema")
-    if schema not in {"saea-request-pipeline-v1", "saea-runtime-efficiency-v1"}:
+    if schema not in {"saea-request-pipeline-v1", "saea-runtime-efficiency-v1", "saea-native-efficiency-v1"}:
         raise CoreError("unsupported external runtime config schema")
-    overlay = document.get("request_pipeline")
+    scheduler = "dispatch" if schema == "saea-native-efficiency-v1" else "request_pipeline"
+    overlay = document.get(scheduler)
     if not isinstance(overlay, Mapping):
-        raise CoreError("external runtime config must declare request_pipeline")
-    allowed = {"schema", "request_pipeline"}
-    if schema == "saea-runtime-efficiency-v1":
+        raise CoreError(f"external runtime config must declare {scheduler}")
+    if scheduler == "dispatch":
+        from ...rails.dispatch_slot_fill import DispatchSlotFillError, parse_dispatch_slot_fill
+        try:
+            parse_dispatch_slot_fill({"dispatch": overlay})
+        except DispatchSlotFillError as error:
+            raise CoreError(str(error)) from error
+    allowed = {"schema", scheduler}
+    if schema in {"saea-runtime-efficiency-v1", "saea-native-efficiency-v1"}:
         allowed.add("audio_cache")
         cache = document.get("audio_cache")
         if not isinstance(cache, Mapping):
@@ -62,10 +70,10 @@ def load_external_runtime_config(path: Path | None) -> Mapping[str, object]:
     if set(document) != allowed:
         raise CoreError("external runtime config has unexpected fields")
     result = {
-        "request_pipeline": dict(overlay),
+        scheduler: dict(overlay),
         "_external_runtime_config": {"path": str(path), "sha256": actual},
     }
-    if schema == "saea-runtime-efficiency-v1":
+    if "audio_cache" in document:
         result["audio_cache"] = dict(document["audio_cache"])
     return result
 
@@ -93,18 +101,7 @@ def build_flight_runtime(
     overlay_path = runtime_seams.pop("runtime_config_path", None)
     overlay = load_external_runtime_config(overlay_path)
     if overlay:
-        values = dict(composed.values)
-        if "request_pipeline" in values:
-            raise CoreError(
-                "external runtime config collides with scientific request_pipeline"
-            )
-        values["request_pipeline"] = dict(overlay["request_pipeline"])
-        if "audio_cache" in overlay:
-            if "audio_cache" in values:
-                raise CoreError(
-                    "external runtime config collides with scientific audio_cache"
-                )
-            values["audio_cache"] = dict(overlay["audio_cache"])
+        values = apply_runtime_overlay(composed.values, overlay, error_type=CoreError)
         composed = type(composed)(
             values=values,
             config_hash=hashlib.sha256(

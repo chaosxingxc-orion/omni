@@ -148,6 +148,7 @@ from ..session.serving import (
 )
 from ..split_receipt import VerifiedSplit
 from .lease import WorkerExecutionPolicy
+from .runtime_overlay import apply_runtime_overlay
 from .receipts import FLIGHT_STAGES, FlightReceipts, require_mandatory_throughput_fields
 from .resume import (
     RESUME_PREDECESSOR_SCHEMA,
@@ -4635,25 +4636,8 @@ class FlightRuntime:
             self._repo_root, self._model, self._dataset, self._baseline, self._experiment
         )
         if self._runtime_config_overlay is not None:
-            values = dict(composed.values)
-            pipeline = values.get("request_pipeline")
-            if pipeline is not None:
-                raise FlightRuntimeError(
-                    "external runtime config collides with scientific request_pipeline"
-                )
-            pipeline = self._runtime_config_overlay.get("request_pipeline")
-            if not isinstance(pipeline, Mapping):
-                raise FlightRuntimeError("external runtime config has no request_pipeline")
-            values["request_pipeline"] = dict(pipeline)
-            if "audio_cache" in self._runtime_config_overlay:
-                if "audio_cache" in values:
-                    raise FlightRuntimeError("external runtime config collides with scientific audio_cache")
-                cache = self._runtime_config_overlay["audio_cache"]
-                if not isinstance(cache, Mapping):
-                    raise FlightRuntimeError("external runtime config audio_cache is invalid")
-                values["audio_cache"] = dict(cache)
-            values["runtime_config_identity"] = dict(
-                self._runtime_config_overlay.get("_external_runtime_config", {})
+            values = apply_runtime_overlay(
+                composed.values, self._runtime_config_overlay, error_type=FlightRuntimeError,
             )
             composed = type(composed)(
                 values=values,

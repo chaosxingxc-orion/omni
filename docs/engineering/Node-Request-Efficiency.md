@@ -14,6 +14,16 @@
 双上限，文件缺失或读期间变化会在首个模型请求前失败。它只改变输入准备
 时机，不改变请求字节、样本顺序或科学参数。
 
+原生 P→Slot→Decision 路径现在也支持独立的
+`saea-native-efficiency-v1` 外部 overlay（示例：
+`configs/runtime/native-slotfill-efficiency-v1.example.json`）。它把
+`recall_prefetch`、`role_input_offload`、`ready_request`、准备/校验池和
+`admitted_trajectories`/`model_inflight` 放在运行配置中；配置在工厂和实际
+FlightRuntime 两处使用同一校验器，并写入有效 config hash。只有 native role
+episode 才能启用，且不能和 scientific `dispatch`、`request_pipeline`、
+node batch/pipeline 或 prefix-slot 调度混用。该改造只改变调度，不改变模型
+可见请求、知识、名单或算法参数；真实收益仍需在后续受控 600 秒窗口测量。
+
 最新终态证据来自 2026-11-05 20:08/20:10 UTC 的后台观测记录，本轮另核对实际容器退出状态和 A 日志。两个 TP4 服务仍监听，8 张卡的本轮瞬时 AICore 均为 0%；不是持续利用率统计。本轮没有停止或重启实验。
 
 |同一 Fold A 上的实验臂|已记录终态/总样本|退出原因|运行期资源|累计秒/终态|后续|
@@ -58,6 +68,9 @@
   trace，避免错误结果继续消耗 NPU。
 
 单请求 direct 使用 `configs/runtime/request-pipeline.example.json`；native 多节点使用独立 `dispatch` 配置的 `prepare_workers`、`validation_workers`、`admitted_trajectories`、`model_inflight`、`ready_request`。两者不可混用。`model_inflight` 是 contact 许可，包含最终检查和响应处理，并非纯 HTTP 在途。
+
+原生节点的效率开关可通过同一外部 overlay 提供，避免为每次调度探测修改
+科学 baseline；准入前仍严格校验角色图、传输引擎和并发窗口。
 
 ## 验证范围
 

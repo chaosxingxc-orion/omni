@@ -1,0 +1,20 @@
+{
+  "schema": "saea-native-efficiency-v1",
+  "dispatch": {
+    "schema": "saea-dispatch-slot-fill-v1",
+    "recall_prefetch": true,
+    "role_input_offload": true,
+    "gc_freeze": true,
+    "ready_request": true,
+    "prepare_workers": 8,
+    "validation_workers": 8,
+    "admitted_trajectories": 128,
+    "model_inflight": 64
+  },
+  "audio_cache": {
+    "enabled": true,
+    "max_entries": 4096,
+    "max_bytes": 4294967296,
+    "preload_workers": 8
+  }
+}
