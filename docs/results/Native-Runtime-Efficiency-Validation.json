@@ -90,7 +90,7 @@
     "new_fit_calls": 0,
     "assets_manifest_sha256": "2d635d79546d3c0089a8dde6ab731d5c003ea0127f25617506a45a54a86f7bdc",
     "admission_config_sha256": "e78d8575474ed077b01b6760fddb2b71a552af00ea55842bca08c89365d23e42",
-    "live_admission_complete": false,
+    "live_admission_complete": true,
     "data_root_environment_aligned": true
   },
   "mounted_release_validation": {
@@ -133,8 +133,8 @@
     "workspace_published_by_failed_admission": false
   },
   "production_efficiency_gaps": [
-    "Full audio preload not connected to this checkpoint successor worker",
-    "Mounted-release observer integration pending",
+    "Bind new preload candidate source to reviewed recovery transition and prepared inputs",
+    "Deploy actual observer config for final worker",
     "No online throughput window yet"
   ],
   "admission_input_closure": {
@@ -147,7 +147,9 @@
     "admission_v3_failure": "Knowledge input permissions; partial workspace preserved",
     "admission_v4_exit_code": 1,
     "admission_v4_failure": "frozen source receipt is not valid and confined",
-    "completion_published": false
+    "completion_published": true,
+    "admission_v6_exit_code": 0,
+    "source_receipts_verified": 12
   },
   "knowledge_stage": {
     "exit_code": 0,
@@ -156,5 +158,26 @@
     "hashes_verified_before_and_after_copy": true,
     "local_readonly_worker_input": true,
     "new_model_calls": 0
+  },
+  "admitted_worker_plan": {
+    "source_commit": "4ad9577457124bf66d4fa1f46de64cde7b65bab8",
+    "plan_passed": true,
+    "generation_readiness": "clear",
+    "launched": false
+  },
+  "preload_candidate": {
+    "source_commit": "de1429f5db371699072b1ff7c5f9de56edc03c57",
+    "manifest_sha256": "7d25450916f9ad7ae594f6c3e9e0c095a13d72027552a708ba51b74b6cc463ae",
+    "file_count": 7498,
+    "tests_passed": 42,
+    "tests_seconds": 5.34,
+    "source_closure_tests_passed": 36,
+    "source_closure_subtests_passed": 5,
+    "observer_launcher_tests_passed": 61,
+    "real_environment_media_rows": 1080,
+    "real_environment_seconds": 4.32208797999192,
+    "new_model_calls": 0,
+    "worker_deployed": false,
+    "source_compatibility_pending": true
   }
 }
