@@ -538,5 +538,20 @@
     "body_and_receipt_equal": true,
     "generation_deployed": false,
     "factory_retry_after_failure": false
+  },
+  "producer_workspace_recovery": {
+    "commit": "95c5821d2eaf55e1433dd74a6f47509030acb37c",
+    "tests_passed": 83,
+    "test_seconds": 9.58,
+    "fixed_dependency_image": true,
+    "real_audit_exit_code": 0,
+    "checkpoint_rows": 2,
+    "observed_contacts": 6,
+    "not_sent_contacts": 2,
+    "historical_calls_preserved": 8,
+    "new_model_calls": 0,
+    "full_ancestry_verified": false,
+    "external_manifest_assets_verified": 33,
+    "remaining_gap": "Restore producer external experiment-manifest layer and nested evidence relocation before complete ancestry validation"
   }
 }
