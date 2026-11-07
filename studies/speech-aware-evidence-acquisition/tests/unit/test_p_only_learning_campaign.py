@@ -66,3 +66,25 @@ def test_vector_view_must_preserve_source_bytes_and_order(tmp_path):
         verify_vector_selection(tmp_path, {'relpath': 'view.jsonl'}, pin, ['2', '0'])
     with pytest.raises(ValueError, match='source differs'):
         verify_vector_selection(tmp_path, {'relpath': 'view.jsonl'}, {**pin, 'sha256': '0' * 64}, ['2', '0'])
+
+
+def test_candidate_evaluation_is_single_axis_and_never_a_tf_campaign():
+    c = learning_config()
+    job = c['workload']
+    job.update(learning_mode='candidate-evaluation', collection_decoding={'temperature': 0, 'seed': 17})
+    for axis in ({'kind': 'control'}, {'kind': 'instruction', 'patch': {}, 'template': {}},
+                 {'kind': 'breadth', 'value': 12}, {'kind': 'breadth', 'value': 16}):
+        job['axis'] = axis
+        assert PerceptionOnlyWorkload(job).ARMS == ['perception']
+    for axis in ({'kind': 'breadth', 'value': 8}, {'kind': 'control', 'value': 12},
+                 {'kind': 'knowledge-construction', 'publication': {}, 'patch': {}, 'audit': {}}, None):
+        job['axis'] = axis
+        with pytest.raises(ValueError):
+            PerceptionOnlyWorkload(job)
+    job['axis'] = {'kind': 'control'}
+    job['collection_decoding']['temperature'] = .7
+    with pytest.raises(ValueError):
+        PerceptionOnlyWorkload(job)
+    job.pop('collection_decoding')
+    with pytest.raises(ValueError, match='not a TF rollout campaign'):
+        compile_campaign(c)

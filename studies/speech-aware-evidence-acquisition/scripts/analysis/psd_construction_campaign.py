@@ -36,6 +36,8 @@ def compile_campaign(config):
         raise ValueError('separate deployment policy declaration required')
     template = copy.deepcopy(config['workload'])
     p_only = template.get('schema') == 'saea-perception-only-workload-v1'
+    if p_only and template.get('learning_mode', 'tf-collection') != 'tf-collection':
+        raise ValueError('candidate evaluation is not a TF rollout campaign')
     if (template.get('population', {}).get('role') != 'construction'
             or (not p_only and (template.get('node_arm') != 'enhanced-p-slot-decision'
                                 or not isinstance(template.get('pipeline'), dict)))

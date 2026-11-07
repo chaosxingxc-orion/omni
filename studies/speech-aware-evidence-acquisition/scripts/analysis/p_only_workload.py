@@ -39,23 +39,26 @@ class PerceptionOnlyWorkload(NodeWorkload):
     def __init__(self, config):
         fields = {'schema', 'name', 'run_id', 'sample_ids', 'runtime_binding', 'execution',
                   'material', 'population', 'parent_baseline', 'parent_registration', 'axis'}
-        if not fields <= set(config) <= fields | {'runtime_binding_adaptation', 'collection_decoding', 'learning_authorization', 'learning_source_vectors'} or config['schema'] != SCHEMA:
+        if not fields <= set(config) <= fields | {'runtime_binding_adaptation', 'collection_decoding', 'learning_authorization', 'learning_source_vectors', 'learning_mode'} or config['schema'] != SCHEMA:
             raise ValueError('exact P-only configuration required')
         learning = 'learning_authorization' in config
         if learning:
+            mode = config.get('learning_mode', 'tf-collection')
             if (config['population'].get('role') != 'construction' or len(config['sample_ids']) != 80
-                    or len(set(config['sample_ids'])) != 80 or config.get('axis') != {'kind': 'control'}
+                    or len(set(config['sample_ids'])) != 80
                     or not isinstance(config.get('collection_decoding'), dict)
                     or set(config['collection_decoding']) != {'temperature', 'seed'}
                     or type(config['collection_decoding']['temperature']) not in (int, float)
                     or not math.isfinite(config['collection_decoding']['temperature'])
-                    or config['collection_decoding']['temperature'] <= 0
+                    or (mode == 'tf-collection' and (config.get('axis') != {'kind': 'control'} or config['collection_decoding']['temperature'] <= 0))
+                    or (mode == 'candidate-evaluation' and (not isinstance(config.get('axis'), dict) or config['axis'].get('kind') not in ('control', 'instruction', 'breadth') or config['collection_decoding']['temperature'] != 0))
+                    or mode not in ('tf-collection', 'candidate-evaluation')
                     or not isinstance(config.get('learning_authorization'), dict)
                     or set(config['learning_authorization']) != {'source', 'source_roster'}
                     or not isinstance(config.get('learning_source_vectors'), dict)
                     or set(config['learning_source_vectors']) != {'perception', 'solver'}):
-                raise ValueError('authorized construction80 control and explicit exploration required')
-        elif ('collection_decoding' in config or 'learning_source_vectors' in config or config['population'].get('dataset') != 'slurp-speech-native-evo-fold-a-1080' or len(config['sample_ids']) != 1080):
+                raise ValueError('authorized construction80 learning mode and decoding required')
+        elif ('learning_mode' in config or 'collection_decoding' in config or 'learning_source_vectors' in config or config['population'].get('dataset') != 'slurp-speech-native-evo-fold-a-1080' or len(config['sample_ids']) != 1080):
             raise ValueError('original Fold A 1080 required')
         axis = config['axis']
         if not isinstance(axis, dict) or axis.get('kind') not in ('control', 'instruction', 'breadth', 'knowledge-construction'):
@@ -65,7 +68,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
             (axis['kind'] == 'knowledge-construction' and set(axis) != {'kind', 'publication', 'patch', 'audit'}) or
             (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or axis['value'] not in (12, 16)))):
             raise ValueError('invalid P-only axis')
-        parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation', 'learning_authorization', 'learning_source_vectors')}
+        parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation', 'learning_authorization', 'learning_source_vectors', 'learning_mode')}
         parent.update(schema='saea-intent-slot-workload-v1', node_arm='enhanced-p-slot-decision')
         super().__init__(parent)
         self.config = copy.deepcopy(config)
