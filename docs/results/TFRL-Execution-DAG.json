@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T14:42:34.768196+00:00",
+  "updated_at_utc": "2026-11-07T14:44:48.006094+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -490,7 +490,7 @@
       "id": "C-image-migrate",
       "resource": "CPU_STORAGE",
       "depends_on": [],
-      "status": "archive_verified_loading",
+      "status": "complete_exact_image_verified",
       "owner": "main supervisor",
       "scope": "exact stable image, shared storage, no dataset transfer"
     },
@@ -500,7 +500,7 @@
       "depends_on": [
         "C-image-migrate"
       ],
-      "status": "deployment_config_prepared_not_started",
+      "status": "deployment_in_progress_not_validated",
       "owner": "Terra CLI",
       "scope": "different real audio requests, structured output, independent cost journal, preserve unknown"
     }
@@ -556,7 +556,7 @@
       "completed": 122,
       "total": 625,
       "observed_at_utc": "2026-11-07T13:25:01.292597+00:00",
-      "state": "stable_image_archive_verified_loading_on_175",
+      "state": "stable_exact_image_loaded_service_deployment_in_progress",
       "observed_contacts": 367,
       "unknown_contacts": 2,
       "retirement_verified": true,
