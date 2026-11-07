@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T16:11:37.371928+00:00",
+  "updated_at_utc": "2026-11-07T16:18:57.487907+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -222,7 +222,7 @@
         "P-runtime",
         "P-ace-material"
       ],
-      "status": "breadth12_16_registered1080_fresh_admission_running",
+      "status": "breadth12_16_admitted_actual_successor_queue_and_binder_running",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -555,7 +555,7 @@
       "depends_on": [
         "P-binding-cache"
       ],
-      "status": "owner_preparing_native_drain_and_remaining_only_source_transition",
+      "status": "not_applied_live_control_lacks_drain_callback_successor_config_fix_in_progress",
       "acceptance": [
         "preserve_all_prior_cost_and_rows",
         "no_unknown_POST_retry",
@@ -606,12 +606,12 @@
       "historical_CPU_score_completed": 1080
     },
     "B": {
-      "state": "running_old_source_safe_cache_transition_preparation",
+      "state": "running_old_source_missing_drain_callback_successors_queued",
       "total": 1080,
       "observed_at_utc": "2026-11-07T16:09:43.391262+00:00",
       "seconds_per_row": null,
       "eta_seconds": null,
-      "successors": "breadth12_then16_configuration_in_progress_not_yet_queued",
+      "successors": "breadth12_queue_waiting_actual_control_release_breadth16_binder_waiting_breadth12",
       "completed": 144,
       "known_responses": 153,
       "prompt_tokens": 816594,
@@ -646,9 +646,9 @@
         "pid": 3596130
       },
       {
-        "role": "B_cache_transition_and_successor_queue",
+        "role": "B_successor_drain_config_and_continuation_validation",
         "model": "gpt-6.1-terra",
-        "pid": 3603706
+        "pid": 3609598
       },
       {
         "role": "P_paired_analysis",
