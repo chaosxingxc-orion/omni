@@ -41,23 +41,32 @@ def card_patch(operation, cards):
     require(isinstance(new,str) and old!=new and isinstance(refs,list) and refs,'nonempty non-noop patch required')
     require(isinstance(operation['semantic_equivalence'],str) and operation['semantic_equivalence'].strip(),'semantic rationale required')
     expected = section_spans(old)
-    used = []; dest = []
+    used = []; dest = []; proof = []
     for ref in refs:
         require(set(ref)=={'card_id','source_uri','content_sha256','old_start','old_end','new_start','new_end'},'exact source span fields required')
         require(ref['card_id']==card['id'] and ref['source_uri']==card['source_uri']
             and ref['content_sha256']==card['content_sha256']==sha(old.encode()),'card source/hash mismatch')
         a,b,c,d=(ref[k] for k in ('old_start','old_end','new_start','new_end'))
         require(all(type(v) is int for v in (a,b,c,d)) and 0<=a<b<=len(old) and 0<=c<d<=len(new),'invalid source span')
-        require((a,b) in expected and old[a:b]==new[c:d],'span must copy a complete unchanged existing section')
-        used.append((a,b)); dest.append((c,d))
+        matches = [(start, end) for start, end in expected
+                   if a == start and (b == end or (end < len(old) and b == end - 1 and old[b:end] == '\n'))]
+        require(len(matches)==1 and old[a:b]==new[c:d],'span must copy a complete unchanged existing section')
+        start,end=matches[0]
+        used.append((start,end)); dest.append((c,d))
+        proof.append({'raw_old_span':[a,b], 'raw_new_span':[c,d],
+                      'canonical_old_span':[start,end], 'excluded_separator':b != end})
     require(sorted(used)==expected,'all original sections must occur exactly once')
     ordered=sorted(dest)
-    require(ordered[0][0]==0 and ordered[-1][1]==len(new) and all(x[1]==y[0] for x,y in zip(ordered,ordered[1:])),
+    require(ordered[0][0]==0 and ordered[-1][1]==len(new) and all(new[x[1]:y[0]] in ('','\n') and x[1]<=y[0] for x,y in zip(ordered,ordered[1:])),
         'new content has additions, holes or overlaps')
+    require(sum(1 for x,y in zip(ordered,ordered[1:]) if new[x[1]:y[0]]=='\n') == sum(item['excluded_separator'] for item in proof),
+        'section separators must be preserved exactly')
     header=next(r for r in refs if r['old_start']==0)
-    require(header['new_start']==0 and new.startswith(old[:expected[0][1]]),'Intent header moved or changed')
+    require(header['new_start']==0 and new.startswith(old[:header['old_end']]),'Intent header moved or changed')
     return {'target_id':card['id'],'old_content_sha256':card['content_sha256'],'new_content_sha256':sha(new.encode()),
         'source_uri':card['source_uri'],'new':new,'source_refs':copy.deepcopy(refs),
+        'derived_section_proof':{'coordinate_unit':'unicode_codepoints','sections':proof,
+            'separator_convention':'single LF excluded from source section and retained between destination sections'},
         'semantic_equivalence_proof':'complete byte-identical section permutation; all original statements/conditions/exceptions retained',
         'production_status':'PROPOSAL_ONLY_SNAPSHOT_RELEASE_ADAPTER_REQUIRED'}
 
