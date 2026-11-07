@@ -3,6 +3,8 @@ import hashlib
 import json
 import os
 import re
+from functools import lru_cache
+from types import MappingProxyType
 from pathlib import Path
 
 
@@ -24,6 +26,20 @@ def validate_asset_inventory(doc):
     return doc['files']
 
 
+@lru_cache(maxsize=4)
+def _external_inventory(raw):
+    files = validate_asset_inventory(json.loads(raw))
+    return MappingProxyType({name: (pin['path'], pin['sha256'])
+                             for name, pin in files.items()})
+
+
+@lru_cache(maxsize=4)
+def _workspace_inventory(raw, commit, source_manifest_sha256):
+    files = validate_workspace_inventory(json.loads(raw), commit=commit,
+                                         source_manifest_sha256=source_manifest_sha256)
+    return MappingProxyType(files)
+
+
 def resolve_asset(repo_root, relative):
     root=Path(repo_root).resolve();rel=Path(relative)
     if rel.is_absolute() or '..' in rel.parts:
@@ -35,12 +51,10 @@ def resolve_asset(repo_root, relative):
     raw=Path(manifest).read_bytes()
     if hashlib.sha256(raw).hexdigest()!=os.environ.get('SAEA_EXPERIMENT_MANIFEST_SHA256'):
         raise ValueError('experiment manifest digest differs')
-    doc=json.loads(raw)
-    validate_asset_inventory(doc)
-    pin=doc['files'].get(rel.as_posix())
+    pin=_external_inventory(raw).get(rel.as_posix())
     if pin is None:return root/rel
-    path=Path(pin['path'])
-    if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=pin['sha256']:
+    path=Path(pin[0])
+    if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=pin[1]:
         raise ValueError('external experiment asset absent or changed: '+str(rel))
     return path
 
@@ -107,13 +121,12 @@ def workspace_asset(repo_root,relative):
         raise ValueError('workspace read requires explicit inventory pin')
     raw=Path(manifest).read_bytes()
     if hashlib.sha256(raw).hexdigest()!=expected:raise ValueError('workspace inventory digest differs')
-    doc=json.loads(raw)
-    validate_workspace_inventory(doc, commit=source_commit(repo_root),
-                                 source_manifest_sha256=os.environ.get('SAEA_RELEASE_MANIFEST_SHA256'))
-    if relative not in doc['files']:
+    files=_workspace_inventory(raw, source_commit(repo_root),
+                               os.environ.get('SAEA_RELEASE_MANIFEST_SHA256'))
+    if relative not in files:
         if path.exists() or path.is_symlink():raise ValueError('workspace asset absent from pinned inventory or changed')
         return None
-    if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=doc['files'][relative]:
+    if path.is_symlink() or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=files[relative]:
         raise ValueError('workspace asset absent from pinned inventory or changed')
     return path
 

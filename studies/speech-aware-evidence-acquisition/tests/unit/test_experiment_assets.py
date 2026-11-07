@@ -166,3 +166,56 @@ def test_external_e0_keeps_real_artifact_and_scoring_freeze_checks(tmp_path,monk
     source.write_bytes(fixture.SCORING_SOURCE)
     artifact=fixture.receipts/fixture.deliverables['d1_identity']['artifact'];artifact.write_text('{}')
     with pytest.raises(GateClosed,match='artifact hash drift'):gate._validate_e0()
+
+
+def test_content_cache_revalidates_pins_and_selected_files(tmp_path, monkeypatch):
+    from speech_aware_evidence_acquisition.core import experiment_assets as m
+    repo, assets, manifest, doc = setup(tmp_path, monkeypatch)
+    m._external_inventory.cache_clear()
+    rel = 'configs/model/external.json'
+    for _ in range(3):
+        assert resolve_asset(repo, rel) == assets / 'model.json'
+    assert m._external_inventory.cache_info().misses == 1
+    assert m._external_inventory.cache_info().hits == 2
+    with pytest.raises(TypeError):
+        m._external_inventory(manifest.read_bytes())[rel] = ('/tmp/x', '0' * 64)
+    (assets / 'model.json').write_text('changed')
+    with pytest.raises(ValueError, match='changed'):
+        resolve_asset(repo, rel)
+    doc['files'][rel]['sha256'] = hashlib.sha256((assets / 'model.json').read_bytes()).hexdigest()
+    manifest.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match='manifest digest'):
+        resolve_asset(repo, rel)
+    monkeypatch.setenv('SAEA_EXPERIMENT_MANIFEST_SHA256', hashlib.sha256(manifest.read_bytes()).hexdigest())
+    assert resolve_asset(repo, rel) == assets / 'model.json'
+    doc['files']['src/bad.py'] = doc['files'][rel]
+    manifest.write_text(json.dumps(doc))
+    monkeypatch.setenv('SAEA_EXPERIMENT_MANIFEST_SHA256', hashlib.sha256(manifest.read_bytes()).hexdigest())
+    with pytest.raises(ValueError, match='executable source'):
+        resolve_asset(repo, rel)
+
+
+def test_inventory_cache_bounds_and_workspace_identity():
+    from speech_aware_evidence_acquisition.core import experiment_assets as m
+    m._external_inventory.cache_clear()
+    m._workspace_inventory.cache_clear()
+    for i in range(8):
+        # Distinct valid content, retaining exactly the approved schema.
+        raw = json.dumps({'schema': 'saea-experiment-assets-v1', 'files': {},}, indent=i).encode()
+        m._external_inventory(raw)
+    assert m._external_inventory.cache_info().currsize == 4
+    for i in range(8):
+        workspace_raw = json.dumps({'schema': 'saea-experiment-workspace-v1',
+                                    'source_commit': str(i), 'source_manifest_sha256': 'b',
+                                    'files': {}}).encode()
+        m._workspace_inventory(workspace_raw, str(i), 'b')
+    assert m._workspace_inventory.cache_info().currsize == 4
+    raw = json.dumps({'schema': 'saea-experiment-workspace-v1', 'source_commit': 'a',
+                      'source_manifest_sha256': 'b', 'files': {}}).encode()
+    index = m._workspace_inventory(raw, 'a', 'b')
+    with pytest.raises(TypeError):
+        index['configs/x.json'] = '0' * 64
+    with pytest.raises(ValueError, match='identity'):
+        m._workspace_inventory(raw, 'different', 'b')
+    with pytest.raises(ValueError, match='identity'):
+        m._workspace_inventory(raw, 'a', 'different')
