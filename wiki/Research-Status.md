@@ -1,3 +1,5 @@
+> 当前状态校正（2026-11-07 03:48 UTC）：A 正在运行紧凑 Slot（817/1080，03:41 快照）；B 的 P 提示实验在583/1080后失败，B当前空闲。TFRL已进入并行准备，K2尚未准入。下方旧运行表已过时，最新完整汇报以 [当前任务与下一计划](TFRL-Current-Status-and-Next-Plan.md) 为准。
+
 正式ON终态与完整配对结果见[PSD-Complete-ON-Paired-Result](PSD-Complete-ON-Paired-Result.md)。
 
 # 当前研究状态与下一阶段计划

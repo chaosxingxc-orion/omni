@@ -1,3 +1,5 @@
+> 最新状态：A紧凑Slot运行；B因P协议失败空闲；K2与P ON均未准入。CPU准备并行推进，旧图不是当前执行队列。详见 [当前任务与下一计划](TFRL-Current-Status-and-Next-Plan.md) 和同名任务图JSON。
+
 # 系统优化与TFRL任务依赖图
 
 ## 当前优先级

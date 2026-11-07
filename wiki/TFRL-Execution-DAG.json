@@ -74,11 +74,13 @@
       "depends_on": [
         "baseline-selection"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "held_registration_release_closure_pending",
       "rows_per_member": 625,
       "members": 2,
       "dependency_note": "与Fold B并行；同策略K2，不能混OFF/ON。",
-      "prior_status": "main_integrated_final_cpu_chain_complete_held"
+      "prior_status": "main_integrated_final_cpu_chain_complete_held",
+      "completed_rows": 0,
+      "generation_authorized": false
     },
     {
       "id": "construction-score",
@@ -651,7 +653,7 @@
       "depends_on": [
         "complete-coverage-on-ready"
       ],
-      "status": "generation_released_cpu_score_recovery_running",
+      "status": "generation_official_scoring_and_pair_verified",
       "rows": 1080,
       "runtime_predecessor": "E5 ON known terminal settlement; independent admitted launch",
       "completed_rows": 1080,
@@ -677,12 +679,13 @@
       "depends_on": [
         "node-prompt-candidates"
       ],
-      "status": "running_first_response_identity_verified",
+      "status": "failed_protocol_unresolved_fields",
       "rows": 1080,
       "control": "complete-coverage-on-evaluate",
       "changed_node": "perception",
       "after_generation_release": "complete-coverage-on-evaluate",
-      "started_at_utc": "2026-11-07T00:21:06.35788051Z"
+      "started_at_utc": "2026-11-07T00:21:06.35788051Z",
+      "completed_rows": 583
     },
     {
       "id": "node-prompt-slot-evaluate",
@@ -690,7 +693,7 @@
       "depends_on": [
         "node-prompt-candidates"
       ],
-      "status": "bound_to_real_P_generation_release_waiting",
+      "status": "not_launched_predecessor_failed",
       "rows": 1080,
       "control": "complete-coverage-on-evaluate",
       "changed_node": "slot",
@@ -727,9 +730,9 @@
       "resource_predecessor": "complete-coverage-evaluate",
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
-      "status": "running_first_http_success_verified",
+      "status": "generation_complete_score_ready_pair_review_pending",
       "started_at_utc": "2026-11-06T22:06:40.70367096Z",
-      "completed_rows": 873,
+      "completed_rows": 1080,
       "total_rows": 1080,
       "observed_at_utc": "2026-11-07T00:32:03.683903+00:00",
       "remaining_rows": 207,
@@ -745,7 +748,9 @@
       "resource_predecessor": "compact-p-a-evaluate",
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
-      "status": "binder_armed_waiting_real_predecessor"
+      "status": "running",
+      "completed_rows": 817,
+      "observed_at_utc": "2026-11-07T03:41:34Z"
     },
     {
       "id": "decision-evidence-prepare",
@@ -820,7 +825,7 @@
       "id": "perception-thinking-on-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "fresh_release_cpu_preparation",
+      "status": "fresh_stage_prepare_complete_register_failed",
       "scientific_parent": "complete-coverage-on-evaluate",
       "scope": "P thinking on; retain original4096 answer reserve and proposed3072 thinking budget; native config validation pending; no prompt or knowledge changes"
     },
@@ -856,7 +861,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-07T01:00:00Z",
+  "updated_at": "2026-11-07T03:48:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
@@ -889,5 +894,19 @@
     "historical_P_solver_intent": 0.8574074074074074,
     "historical_P_solver_slu_f1": 0.7331392140771492,
     "tfrl_preparation": "deferred"
+  },
+  "live_resource_snapshot": {
+    "observed_at_utc": "2026-11-07T03:48:00Z",
+    "A": {
+      "running_requests": 60,
+      "waiting_requests": 0,
+      "cards": 4
+    },
+    "B": {
+      "running_requests": 0,
+      "waiting_requests": 0,
+      "cards": 4
+    },
+    "all_eight_cards_busy": false
   }
 }
