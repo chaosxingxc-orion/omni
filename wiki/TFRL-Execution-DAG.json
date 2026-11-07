@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T17:21:40.505284+00:00",
+  "updated_at_utc": "2026-11-07T17:32:39.171700+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -100,7 +100,7 @@
         "P-runtime",
         "P-teacher-input"
       ],
-      "status": "four80_registered_held_P_only_group_reader_incomplete_returned_to_owner",
+      "status": "four80_registered_reader_external_bridge_main769624e6c_54tests_passed_A_admission_preparation",
       "scope": "same pinned inputs/policy; independent draw identities",
       "collection": {
         "rows": 80,
@@ -150,7 +150,7 @@
         "P-runtime",
         "P-gepa-material"
       ],
-      "status": "superseding_identity_admitted_framework_check_passed_generation_not_confirmed",
+      "status": "superseding_run_admitted_generation_active",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -159,7 +159,7 @@
       "depends_on": [
         "P-gepa-prepare"
       ],
-      "status": "not_dispatched",
+      "status": "running256of1080_verified",
       "run_nodes": [
         "P"
       ],
@@ -191,7 +191,7 @@
         "P-runtime",
         "P-reflexion-material"
       ],
-      "status": "C1_complete_C2_admitted_successor_permissions_fix",
+      "status": "C1_complete_C2_actual_successor_active",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -200,7 +200,7 @@
       "depends_on": [
         "P-reflexion-prepare"
       ],
-      "status": "C1_FINALIZED1080_C2_admitted_queue_permission_fix",
+      "status": "C1_final1080_C2_running135_verified",
       "run_nodes": [
         "P"
       ],
@@ -216,7 +216,7 @@
         "P-reflexion-sample",
         "P-baseline"
       ],
-      "status": "C1_native_complete_valid1080_top1873_r2955_r3957_matched_control_pending",
+      "status": "C1_native_complete_valid1080_top1873_r3957_Sol_matched_pair_running",
       "metrics": [
         "valid_coverage",
         "gold_candidate_set_recall_K_le_3",
@@ -243,7 +243,7 @@
       "depends_on": [
         "P-ace-prepare"
       ],
-      "status": "not_dispatched",
+      "status": "breadth12_actual_handoff_started_dispatch11_response_unconfirmed",
       "run_nodes": [
         "P"
       ],
@@ -406,7 +406,7 @@
       "depends_on": [
         "P-control-prepare"
       ],
-      "status": "running973of1080",
+      "status": "completed1080_exit0",
       "run_nodes": [
         "P"
       ],
@@ -419,7 +419,7 @@
         "P-control-sample",
         "P-baseline"
       ],
-      "status": "waiting_outputs"
+      "status": "Sol_final_native_paired_analysis_running"
     },
     {
       "id": "P-gepa-material",
@@ -608,7 +608,7 @@
       "depends_on": [
         "P-intent-knowledge-release"
       ],
-      "status": "two_registered1080_accepted_main_B_post_breadth16_admission_preparation"
+      "status": "two_admitted_binders2133095_2133096_verified_waiting_upstream"
     },
     {
       "id": "P-intent-music-sample",
@@ -616,7 +616,7 @@
       "depends_on": [
         "P-intent-knowledge-prepare"
       ],
-      "status": "not_dispatched",
+      "status": "queued_waiting_breadth16_release",
       "axis": "locked_card_section_order_only",
       "rows": 1080
     },
@@ -626,7 +626,7 @@
       "depends_on": [
         "P-intent-knowledge-prepare"
       ],
-      "status": "not_dispatched",
+      "status": "queued_waiting_music_release",
       "axis": "locked_card_section_order_only",
       "rows": 1080
     }
@@ -652,9 +652,9 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "B_running_C1_complete_A_and_C2_activation",
-      "observed_at_utc": "2026-11-07T17:17:07.218795+00:00",
-      "known_B_responses": 990,
+      "status": "B_control_and_C1_complete_A_C2_running_B_breadth12_started",
+      "observed_at_utc": "2026-11-07T17:29:47.636189+00:00",
+      "known_B_responses": 1097,
       "runtime": "dcbc2a5c_B_active_59cf0ade_successors_ready"
     },
     "held": [
@@ -665,31 +665,36 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "state": "superseding_identity_admitted_framework_check_only_no_generation_response_confirmed",
+      "state": "running_real_responses_verified",
       "total": 1080,
-      "new_P_responses_confirmed": false,
+      "new_P_responses_confirmed": true,
       "historical_PON_completed": 1080,
-      "historical_CPU_score_completed": 1080
+      "historical_CPU_score_completed": 1080,
+      "completed": 256,
+      "known_responses": 261,
+      "observed_at_utc": "2026-11-07T17:25:21.394082+00:00",
+      "prompt_tokens": 1419913,
+      "completion_tokens": 70602
     },
     "B": {
-      "state": "running_old_source_missing_drain_callback_successors_queued",
+      "state": "control_complete1080_breadth12_started",
       "total": 1080,
-      "observed_at_utc": "2026-11-07T17:17:07.218795+00:00",
-      "seconds_per_row": null,
-      "eta_seconds": 524.53451390625,
-      "successors": "verifier_v3_queue2067397_binder2067398_verified_waiting_actual_generation_release",
-      "completed": 973,
-      "known_responses": 990,
-      "prompt_tokens": 5274107,
-      "completion_tokens": 269999,
+      "observed_at_utc": "2026-11-07T17:29:47.636189+00:00",
+      "seconds_per_row": 5.257709444444445,
+      "eta_seconds": 0,
+      "successors": "breadth12_started_breadth16_bound_waiting_then_two_knowledge_binders",
+      "completed": 1080,
+      "known_responses": 1097,
+      "prompt_tokens": 5843257,
+      "completion_tokens": 291927,
       "mean_response_latency_seconds": 12.40239789939469,
-      "dispatches": 992,
-      "interval_seconds_per_row": 4.90219171875,
-      "eta_basis": "within-host complete-row delta; not completion guarantee",
-      "observed_at_remote_host_utc": "2026-11-07T17:17:07.218795+00:00"
+      "dispatches": 1097,
+      "eta_basis": "control finalized; successor ETA unknown",
+      "observed_at_remote_host_utc": "2026-11-07T17:17:07.218795+00:00",
+      "container_wall_seconds": 5678.3262
     },
     "C": {
-      "state": "C1_FINALIZED1080_native_scored_C2_admitted_not_running",
+      "state": "C1_FINALIZED_and_scored_C2_actual_running",
       "diagnostic_requests_succeeded": 6,
       "new_P_responses_confirmed": true,
       "historical_unknown_contacts": 2,
@@ -710,7 +715,9 @@
       "top1_count": 873,
       "recall2_count": 955,
       "recall3_count": 957,
-      "MRR": 0.8469135802469135
+      "MRR": 0.8469135802469135,
+      "successor_completed": 135,
+      "successor_responses": 138
     },
     "teacher_gepa": {
       "state": "index3_compiled_registered1080_pending_current_binding",
@@ -727,19 +734,14 @@
     },
     "cpu_workers": [
       {
-        "role": "A_C_prompt_activation_rework",
-        "model": "gpt-6.1-terra",
-        "pid": 3640732
+        "role": "P_matched_candidate_analysis",
+        "model": "gpt-6.1-sol",
+        "pid": 3659294
       },
       {
-        "role": "P_TFGRPO_group_reader_external_bridge_rework",
+        "role": "P_TFGRPO_A_successor_activation",
         "model": "gpt-6.1-terra",
-        "pid": 3643457
-      },
-      {
-        "role": "P_knowledge_B_successor_activation",
-        "model": "gpt-6.1-terra",
-        "pid": 3650675
+        "pid": 3660013
       }
     ],
     "clock_caveat": "Host clocks differ; use within-host deltas, not cross-host timestamp subtraction.",
