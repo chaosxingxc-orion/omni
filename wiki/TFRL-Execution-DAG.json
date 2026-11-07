@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T17:32:39.171700+00:00",
+  "updated_at_utc": "2026-11-07T18:15:12.406951+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -100,7 +100,7 @@
         "P-runtime",
         "P-teacher-input"
       ],
-      "status": "four80_registered_reader_external_bridge_main769624e6c_54tests_passed_A_admission_preparation",
+      "status": "A_four80_prepared_registered_K001_admission_running",
       "scope": "same pinned inputs/policy; independent draw identities",
       "collection": {
         "rows": 80,
@@ -159,7 +159,7 @@
       "depends_on": [
         "P-gepa-prepare"
       ],
-      "status": "running256of1080_verified",
+      "status": "completed1080_exit0",
       "run_nodes": [
         "P"
       ],
@@ -173,7 +173,7 @@
         "P-gepa-sample",
         "P-baseline"
       ],
-      "status": "waiting_outputs",
+      "status": "CPU_scoring_dispatched",
       "metrics": [
         "valid_coverage",
         "gold_candidate_set_recall_K_le_3",
@@ -200,13 +200,13 @@
       "depends_on": [
         "P-reflexion-prepare"
       ],
-      "status": "C1_final1080_C2_running135_verified",
+      "status": "C1_C2_completed1080_each",
       "run_nodes": [
         "P"
       ],
       "scientific_parent": "same_frozen_P_parent_within_round",
       "score_blocks_next_independent_candidate": false,
-      "completed": 69,
+      "completed": 1080,
       "total": 1080
     },
     {
@@ -216,7 +216,7 @@
         "P-reflexion-sample",
         "P-baseline"
       ],
-      "status": "C1_native_complete_valid1080_top1873_r3957_Sol_matched_pair_running",
+      "status": "C1_complete_paired_recall3_minus24_retain_parent_C2_CPU_pending",
       "metrics": [
         "valid_coverage",
         "gold_candidate_set_recall_K_le_3",
@@ -243,7 +243,7 @@
       "depends_on": [
         "P-ace-prepare"
       ],
-      "status": "breadth12_actual_handoff_started_dispatch11_response_unconfirmed",
+      "status": "breadth12_completed1080_breadth16_running127of1080",
       "run_nodes": [
         "P"
       ],
@@ -257,7 +257,7 @@
         "P-ace-sample",
         "P-baseline"
       ],
-      "status": "waiting_outputs",
+      "status": "breadth12_CPU_scoring_dispatched",
       "metrics": [
         "valid_coverage",
         "gold_candidate_set_recall_K_le_3",
@@ -419,7 +419,7 @@
         "P-control-sample",
         "P-baseline"
       ],
-      "status": "Sol_final_native_paired_analysis_running"
+      "status": "complete_B872_954_981_MRR461over540"
     },
     {
       "id": "P-gepa-material",
@@ -524,7 +524,7 @@
       "id": "P-production-queue-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "B_control_queue_running_AC_and_B_successors_in_progress",
+      "status": "B_breadth16_running_A_admission_C_control_queue_started",
       "owner": "Terra CLI",
       "scope": "Reuse prepared parent1080; compile executable parent/GEPA3/Reflexionc1c2/supply12/16 queue. Final release required only for dispatch."
     },
@@ -570,7 +570,7 @@
       "depends_on": [
         "P-binding-cache"
       ],
-      "status": "not_applied_live_B_continues_successors_cache_and_drain_configured",
+      "status": "old_B_completed_naturally_cached_successors_running",
       "acceptance": [
         "preserve_all_prior_cost_and_rows",
         "no_unknown_POST_retry",
@@ -629,6 +629,30 @@
       "status": "queued_waiting_music_release",
       "axis": "locked_card_section_order_only",
       "rows": 1080
+    },
+    {
+      "id": "P-C-control-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "admitted_same_supply_parent_queue_started"
+    },
+    {
+      "id": "P-C-control-sample",
+      "resource": "NPU_C_TP4",
+      "depends_on": [
+        "P-C-control-prepare"
+      ],
+      "status": "queue_started_response_pending",
+      "run_nodes": [
+        "P"
+      ]
+    },
+    {
+      "id": "P-teacher-learning-reference",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "TFGRPO_reference_input_gap_identified_other_methods_already_have_reference",
+      "scope": "reuse pinned original80 teacher-only TRAIN reference; no actor or validation labels"
     }
   ],
   "round_policy": {
@@ -652,10 +676,10 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "B_control_and_C1_complete_A_C2_running_B_breadth12_started",
-      "observed_at_utc": "2026-11-07T17:29:47.636189+00:00",
+      "status": "five1080_runs_complete_B_breadth16_running_A_preparing_C_control_queue_started",
+      "observed_at_utc": "2026-11-07T18:15:12.406951+00:00",
       "known_B_responses": 1097,
-      "runtime": "dcbc2a5c_B_active_59cf0ade_successors_ready"
+      "runtime": "old_B_finalized_dcbc2a5c_successors59cf0ade"
     },
     "held": [
       "Rescan",
@@ -665,62 +689,97 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "state": "running_real_responses_verified",
-      "total": 1080,
-      "new_P_responses_confirmed": true,
-      "historical_PON_completed": 1080,
-      "historical_CPU_score_completed": 1080,
-      "completed": 256,
-      "known_responses": 261,
-      "observed_at_utc": "2026-11-07T17:25:21.394082+00:00",
-      "prompt_tokens": 1419913,
-      "completion_tokens": 70602
+      "observed_at_utc": "2026-11-07T17:46:52.633440+00:00",
+      "run_id": "SAEA-SLURP-P-ONLY-GEPA3-A-SUPERSEDE-V1",
+      "rows_complete": 1080,
+      "rows_total": 1080,
+      "duplicates": 0,
+      "torn_lines": 0,
+      "contacts": {
+        "fit": 1098,
+        "dispatch": 1098,
+        "intent": 1098,
+        "response": 1098
+      },
+      "known_tokens": {
+        "prompt_tokens": 5964842,
+        "completion_tokens": 280992
+      },
+      "cards": 4,
+      "instances": 1,
+      "generation_container_state": "exited",
+      "container_wall_seconds": 1817.95667,
+      "container_seconds_per_row_including_startup": 1.683293212962963,
+      "mean_response_latency_seconds": 31.96182370109302,
+      "response_window_seconds": 1400.308000087738,
+      "first_response_unix": 1794072022.0,
+      "last_response_unix": 1794073422.308,
+      "eta_seconds": null,
+      "eta_note": "startup included; interval delta needed for steady rate",
+      "successor": "TFGRPO_K001_admission_pending_no_draw_confirmed"
     },
     "B": {
-      "state": "control_complete1080_breadth12_started",
-      "total": 1080,
-      "observed_at_utc": "2026-11-07T17:29:47.636189+00:00",
-      "seconds_per_row": 5.257709444444445,
-      "eta_seconds": 0,
-      "successors": "breadth12_started_breadth16_bound_waiting_then_two_knowledge_binders",
-      "completed": 1080,
-      "known_responses": 1097,
-      "prompt_tokens": 5843257,
-      "completion_tokens": 291927,
-      "mean_response_latency_seconds": 12.40239789939469,
-      "dispatches": 1097,
-      "eta_basis": "control finalized; successor ETA unknown",
-      "observed_at_remote_host_utc": "2026-11-07T17:17:07.218795+00:00",
-      "container_wall_seconds": 5678.3262
+      "observed_at_utc": "2026-11-07T18:09:00.730371+00:00",
+      "run_id": "SLURP-P-ONLY-BREADTH16-SUCCESSOR-V1",
+      "rows_complete": 127,
+      "rows_total": 1080,
+      "duplicates": 0,
+      "torn_lines": 0,
+      "contacts": {
+        "fit": 191,
+        "intent": 191,
+        "dispatch": 191,
+        "response": 189
+      },
+      "known_tokens": {
+        "prompt_tokens": 1506148,
+        "completion_tokens": 40148
+      },
+      "cards": 4,
+      "instances": 1,
+      "generation_container_state": "running",
+      "container_wall_seconds": 539.418554,
+      "container_seconds_per_row_including_startup": 4.247390188976378,
+      "mean_response_latency_seconds": 44.97626653602642,
+      "response_window_seconds": 197.4520001411438,
+      "first_response_unix": 1794074733.748,
+      "last_response_unix": 1794074931.2,
+      "eta_seconds": null,
+      "eta_note": "startup included; interval delta needed for steady rate",
+      "successor": "two_knowledge_binders_waiting"
     },
     "C": {
-      "state": "C1_FINALIZED_and_scored_C2_actual_running",
-      "diagnostic_requests_succeeded": 6,
-      "new_P_responses_confirmed": true,
-      "historical_unknown_contacts": 2,
-      "automatic_retry": false,
-      "completed": 1080,
-      "total": 1080,
-      "known_responses": 1092,
-      "dispatches": 1092,
-      "prompt_tokens": 5974413,
-      "completion_tokens": 203141,
-      "mean_response_latency_seconds": 25.92036847412097,
-      "observed_at_remote_host_utc": "2026-11-07T17:15:10.254460+00:00",
-      "eta_seconds": 0,
-      "eta_basis": "C1 exited0; no remaining samples",
-      "container_wall_seconds": 2202.788636,
-      "container_seconds_per_row": 2.0396191074074075,
-      "valid": 1080,
-      "top1_count": 873,
-      "recall2_count": 955,
-      "recall3_count": 957,
-      "MRR": 0.8469135802469135,
-      "successor_completed": 135,
-      "successor_responses": 138
+      "observed_at_utc": "2026-11-07T18:05:42.774192+00:00",
+      "run_id": "SAEA-SLURP-P-ONLY-REFLEXION-C2-C-REWORK-V1",
+      "rows_complete": 1080,
+      "rows_total": 1080,
+      "duplicates": 0,
+      "torn_lines": 0,
+      "contacts": {
+        "response": 1091,
+        "intent": 1091,
+        "fit": 1091,
+        "dispatch": 1091
+      },
+      "known_tokens": {
+        "prompt_tokens": 5987455,
+        "completion_tokens": 224407
+      },
+      "cards": 4,
+      "instances": 1,
+      "generation_container_state": "exited",
+      "container_wall_seconds": 1684.451677,
+      "container_seconds_per_row_including_startup": 1.5596774787037038,
+      "mean_response_latency_seconds": 28.85501552240132,
+      "response_window_seconds": 1283.4879999160767,
+      "first_response_unix": 1794072328.016,
+      "last_response_unix": 1794073611.504,
+      "eta_seconds": null,
+      "eta_note": "startup included; interval delta needed for steady rate",
+      "successor": "same_parent_control_admitted_queue_started_response_pending"
     },
     "teacher_gepa": {
-      "state": "index3_compiled_registered1080_pending_current_binding",
+      "state": "candidate_index3_generation_complete1080_CPU_score_pending",
       "raw_candidates": 6,
       "prompt_tokens": 167496,
       "completion_tokens": 24582,
@@ -734,14 +793,19 @@
     },
     "cpu_workers": [
       {
-        "role": "P_matched_candidate_analysis",
+        "role": "P_completed_candidate_scoring",
         "model": "gpt-6.1-sol",
-        "pid": 3659294
+        "pid": 3670286
       },
       {
         "role": "P_TFGRPO_A_successor_activation",
         "model": "gpt-6.1-terra",
-        "pid": 3660013
+        "pid": 3663553
+      },
+      {
+        "role": "P_C_matched_control_activation",
+        "model": "gpt-6.1-terra",
+        "pid": 3662779
       }
     ],
     "clock_caveat": "Host clocks differ; use within-host deltas, not cross-host timestamp subtraction.",

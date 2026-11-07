@@ -1,0 +1,5081 @@
+{
+  "schema": "p-only-paired-cpu-analysis-v1",
+  "source_sha": "59cf0ade5cdd54d3d4af9f7e8d17f00b3f05e7e8",
+  "native_image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "rank_semantics": "Original P support-order, stable group_v2 first occurrence; not calibrated confidence",
+  "new_model_calls": 0,
+  "new_teacher_calls": 0,
+  "D_scores_used": false,
+  "status": "final_1080_paired",
+  "arms": {
+    "B": {
+      "final_scores": {
+        "denominator": 1080,
+        "observed": 1080,
+        "missing": 0,
+        "valid": 1080,
+        "invalid_or_incomplete_observed": 0,
+        "valid_coverage_full_denominator": 1.0,
+        "status_counts": {
+          "valid": 1080
+        },
+        "top1_count": 872,
+        "recall2_count": 954,
+        "recall3_count": 981,
+        "candidate_count_distribution": {
+          "3": 768,
+          "1": 189,
+          "2": 123
+        },
+        "candidate_count_sum": 2739,
+        "reciprocal_rank_sum": 922.0,
+        "raw_duplicate_rows": 229,
+        "gold_card_supply_observed": 1080,
+        "gold_card_supplied": 1024,
+        "gold_card_missing_when_observed": 56,
+        "gold_card_supply_rank_distribution": {
+          "1": 787,
+          "3": 57,
+          "8": 11,
+          "7": 13,
+          "2": 105,
+          "None": 56,
+          "5": 16,
+          "4": 19,
+          "6": 16
+        },
+        "supply_by_outcome": {
+          "rank1:supplied": 869,
+          "miss:supplied": 49,
+          "rank2or3:supplied": 106,
+          "miss:not_supplied": 50,
+          "rank1:not_supplied": 3,
+          "rank2or3:not_supplied": 3
+        },
+        "top1": 0.8074074074074075,
+        "recall2": 0.8833333333333333,
+        "recall3": 0.9083333333333333,
+        "MRR": 0.8537037037037037,
+        "MRR_exact": "461/540",
+        "candidate_count_mean": 2.536111111111111
+      },
+      "per_original_intent": {
+        "alarm_query": {
+          "denominator": 19,
+          "observed": 19,
+          "missing": 0,
+          "valid": 19,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 19
+          },
+          "top1_count": 17,
+          "recall2_count": 17,
+          "recall3_count": 17,
+          "candidate_count_distribution": {
+            "2": 3,
+            "3": 16
+          },
+          "candidate_count_sum": 54,
+          "reciprocal_rank_sum": 17.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 19,
+          "gold_card_supplied": 19,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 4,
+            "7": 2,
+            "1": 12,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 17,
+            "miss:supplied": 2
+          },
+          "top1": 0.8947368421052632,
+          "recall2": 0.8947368421052632,
+          "recall3": 0.8947368421052632,
+          "MRR": 0.8947368421052632,
+          "MRR_exact": "17/19",
+          "candidate_count_mean": 2.8421052631578947
+        },
+        "alarm_remove": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 8,
+          "recall2_count": 8,
+          "recall3_count": 8,
+          "candidate_count_distribution": {
+            "1": 3,
+            "3": 5
+          },
+          "candidate_count_sum": 18,
+          "reciprocal_rank_sum": 8.0,
+          "raw_duplicate_rows": 3,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 7,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 4,
+            "2": 2,
+            "None": 1,
+            "5": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 7,
+            "rank1:not_supplied": 1
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.25
+        },
+        "alarm_set": {
+          "denominator": 33,
+          "observed": 33,
+          "missing": 0,
+          "valid": 33,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 33
+          },
+          "top1_count": 32,
+          "recall2_count": 33,
+          "recall3_count": 33,
+          "candidate_count_distribution": {
+            "1": 10,
+            "3": 23
+          },
+          "candidate_count_sum": 79,
+          "reciprocal_rank_sum": 32.5,
+          "raw_duplicate_rows": 10,
+          "gold_card_supply_observed": 33,
+          "gold_card_supplied": 33,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 33
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 32,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.9696969696969697,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9848484848484849,
+          "MRR_exact": "65/66",
+          "candidate_count_mean": 2.393939393939394
+        },
+        "audio_volume_down": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 8,
+          "recall2_count": 8,
+          "recall3_count": 8,
+          "candidate_count_distribution": {
+            "3": 7,
+            "1": 1
+          },
+          "candidate_count_sum": 22,
+          "reciprocal_rank_sum": 8.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 8
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 8
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.75
+        },
+        "audio_volume_mute": {
+          "denominator": 24,
+          "observed": 24,
+          "missing": 0,
+          "valid": 24,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 24
+          },
+          "top1_count": 18,
+          "recall2_count": 20,
+          "recall3_count": 21,
+          "candidate_count_distribution": {
+            "3": 20,
+            "2": 2,
+            "1": 2
+          },
+          "candidate_count_sum": 66,
+          "reciprocal_rank_sum": 19.333333333333332,
+          "raw_duplicate_rows": 3,
+          "gold_card_supply_observed": 24,
+          "gold_card_supplied": 24,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 14,
+            "3": 6,
+            "2": 3,
+            "5": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 18,
+            "rank2or3:supplied": 3,
+            "miss:supplied": 3
+          },
+          "top1": 0.75,
+          "recall2": 0.8333333333333334,
+          "recall3": 0.875,
+          "MRR": 0.8055555555555556,
+          "MRR_exact": "29/36",
+          "candidate_count_mean": 2.75
+        },
+        "audio_volume_other": {
+          "denominator": 4,
+          "observed": 4,
+          "missing": 0,
+          "valid": 4,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 4
+          },
+          "top1_count": 3,
+          "recall2_count": 4,
+          "recall3_count": 4,
+          "candidate_count_distribution": {
+            "3": 3,
+            "1": 1
+          },
+          "candidate_count_sum": 10,
+          "reciprocal_rank_sum": 3.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 4,
+          "gold_card_supplied": 4,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "4": 1,
+            "1": 2,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 1,
+            "rank1:supplied": 3
+          },
+          "top1": 0.75,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 2.5
+        },
+        "audio_volume_up": {
+          "denominator": 24,
+          "observed": 24,
+          "missing": 0,
+          "valid": 24,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 24
+          },
+          "top1_count": 19,
+          "recall2_count": 19,
+          "recall3_count": 19,
+          "candidate_count_distribution": {
+            "3": 14,
+            "1": 6,
+            "2": 4
+          },
+          "candidate_count_sum": 56,
+          "reciprocal_rank_sum": 19.0,
+          "raw_duplicate_rows": 9,
+          "gold_card_supply_observed": 24,
+          "gold_card_supplied": 24,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 6,
+            "1": 16,
+            "3": 1,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 19,
+            "miss:supplied": 5
+          },
+          "top1": 0.7916666666666666,
+          "recall2": 0.7916666666666666,
+          "recall3": 0.7916666666666666,
+          "MRR": 0.7916666666666666,
+          "MRR_exact": "19/24",
+          "candidate_count_mean": 2.3333333333333335
+        },
+        "calendar_query": {
+          "denominator": 27,
+          "observed": 27,
+          "missing": 0,
+          "valid": 27,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 27
+          },
+          "top1_count": 19,
+          "recall2_count": 25,
+          "recall3_count": 26,
+          "candidate_count_distribution": {
+            "2": 5,
+            "1": 4,
+            "3": 18
+          },
+          "candidate_count_sum": 68,
+          "reciprocal_rank_sum": 22.333333333333332,
+          "raw_duplicate_rows": 5,
+          "gold_card_supply_observed": 27,
+          "gold_card_supplied": 27,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 15,
+            "2": 9,
+            "3": 3
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 19,
+            "rank2or3:supplied": 7,
+            "miss:supplied": 1
+          },
+          "top1": 0.7037037037037037,
+          "recall2": 0.9259259259259259,
+          "recall3": 0.9629629629629629,
+          "MRR": 0.8271604938271605,
+          "MRR_exact": "67/81",
+          "candidate_count_mean": 2.5185185185185186
+        },
+        "calendar_remove": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 7,
+          "recall2_count": 7,
+          "recall3_count": 7,
+          "candidate_count_distribution": {
+            "3": 5,
+            "1": 3
+          },
+          "candidate_count_sum": 18,
+          "reciprocal_rank_sum": 7.0,
+          "raw_duplicate_rows": 3,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 7,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "None": 1,
+            "1": 7
+          },
+          "supply_by_outcome": {
+            "miss:not_supplied": 1,
+            "rank1:supplied": 7
+          },
+          "top1": 0.875,
+          "recall2": 0.875,
+          "recall3": 0.875,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 2.25
+        },
+        "calendar_set": {
+          "denominator": 25,
+          "observed": 25,
+          "missing": 0,
+          "valid": 25,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 25
+          },
+          "top1_count": 20,
+          "recall2_count": 23,
+          "recall3_count": 23,
+          "candidate_count_distribution": {
+            "2": 4,
+            "3": 16,
+            "1": 5
+          },
+          "candidate_count_sum": 61,
+          "reciprocal_rank_sum": 21.5,
+          "raw_duplicate_rows": 5,
+          "gold_card_supply_observed": 25,
+          "gold_card_supplied": 24,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "2": 3,
+            "None": 1,
+            "1": 19,
+            "5": 1,
+            "8": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 20,
+            "miss:not_supplied": 1,
+            "rank2or3:supplied": 3,
+            "miss:supplied": 1
+          },
+          "top1": 0.8,
+          "recall2": 0.92,
+          "recall3": 0.92,
+          "MRR": 0.86,
+          "MRR_exact": "43/50",
+          "candidate_count_mean": 2.44
+        },
+        "cooking_query": {
+          "denominator": 1,
+          "observed": 1,
+          "missing": 0,
+          "valid": 1,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 1
+          },
+          "top1_count": 0,
+          "recall2_count": 1,
+          "recall3_count": 1,
+          "candidate_count_distribution": {
+            "3": 1
+          },
+          "candidate_count_sum": 3,
+          "reciprocal_rank_sum": 0.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 1,
+          "gold_card_supplied": 1,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.5,
+          "MRR_exact": "1/2",
+          "candidate_count_mean": 3.0
+        },
+        "cooking_recipe": {
+          "denominator": 59,
+          "observed": 59,
+          "missing": 0,
+          "valid": 59,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 59
+          },
+          "top1_count": 52,
+          "recall2_count": 54,
+          "recall3_count": 55,
+          "candidate_count_distribution": {
+            "3": 43,
+            "2": 12,
+            "1": 4
+          },
+          "candidate_count_sum": 157,
+          "reciprocal_rank_sum": 53.333333333333336,
+          "raw_duplicate_rows": 8,
+          "gold_card_supply_observed": 59,
+          "gold_card_supplied": 57,
+          "gold_card_missing_when_observed": 2,
+          "gold_card_supply_rank_distribution": {
+            "1": 51,
+            "2": 4,
+            "None": 2,
+            "8": 1,
+            "4": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 52,
+            "miss:not_supplied": 2,
+            "rank2or3:supplied": 3,
+            "miss:supplied": 2
+          },
+          "top1": 0.8813559322033898,
+          "recall2": 0.9152542372881356,
+          "recall3": 0.9322033898305084,
+          "MRR": 0.903954802259887,
+          "MRR_exact": "160/177",
+          "candidate_count_mean": 2.6610169491525424
+        },
+        "datetime_convert": {
+          "denominator": 10,
+          "observed": 10,
+          "missing": 0,
+          "valid": 10,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 10
+          },
+          "top1_count": 9,
+          "recall2_count": 9,
+          "recall3_count": 9,
+          "candidate_count_distribution": {
+            "3": 2,
+            "1": 1,
+            "2": 7
+          },
+          "candidate_count_sum": 21,
+          "reciprocal_rank_sum": 9.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 10,
+          "gold_card_supplied": 9,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 9,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 9,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.9,
+          "recall2": 0.9,
+          "recall3": 0.9,
+          "MRR": 0.9,
+          "MRR_exact": "9/10",
+          "candidate_count_mean": 2.1
+        },
+        "datetime_query": {
+          "denominator": 50,
+          "observed": 50,
+          "missing": 0,
+          "valid": 50,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 50
+          },
+          "top1_count": 40,
+          "recall2_count": 45,
+          "recall3_count": 47,
+          "candidate_count_distribution": {
+            "3": 28,
+            "1": 13,
+            "2": 9
+          },
+          "candidate_count_sum": 115,
+          "reciprocal_rank_sum": 43.166666666666664,
+          "raw_duplicate_rows": 13,
+          "gold_card_supply_observed": 50,
+          "gold_card_supplied": 47,
+          "gold_card_missing_when_observed": 3,
+          "gold_card_supply_rank_distribution": {
+            "1": 32,
+            "None": 3,
+            "2": 9,
+            "3": 3,
+            "6": 1,
+            "7": 1,
+            "5": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 39,
+            "miss:not_supplied": 1,
+            "rank2or3:supplied": 6,
+            "rank1:not_supplied": 1,
+            "miss:supplied": 2,
+            "rank2or3:not_supplied": 1
+          },
+          "top1": 0.8,
+          "recall2": 0.9,
+          "recall3": 0.94,
+          "MRR": 0.8633333333333333,
+          "MRR_exact": "259/300",
+          "candidate_count_mean": 2.3
+        },
+        "email_addcontact": {
+          "denominator": 4,
+          "observed": 4,
+          "missing": 0,
+          "valid": 4,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 4
+          },
+          "top1_count": 3,
+          "recall2_count": 3,
+          "recall3_count": 3,
+          "candidate_count_distribution": {
+            "3": 4
+          },
+          "candidate_count_sum": 12,
+          "reciprocal_rank_sum": 3.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 4,
+          "gold_card_supplied": 3,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 3,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 3,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.75,
+          "recall2": 0.75,
+          "recall3": 0.75,
+          "MRR": 0.75,
+          "MRR_exact": "3/4",
+          "candidate_count_mean": 3.0
+        },
+        "email_query": {
+          "denominator": 31,
+          "observed": 31,
+          "missing": 0,
+          "valid": 31,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 31
+          },
+          "top1_count": 28,
+          "recall2_count": 30,
+          "recall3_count": 30,
+          "candidate_count_distribution": {
+            "3": 16,
+            "1": 11,
+            "2": 4
+          },
+          "candidate_count_sum": 67,
+          "reciprocal_rank_sum": 29.0,
+          "raw_duplicate_rows": 11,
+          "gold_card_supply_observed": 31,
+          "gold_card_supplied": 30,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 24,
+            "2": 5,
+            "4": 1,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 28,
+            "rank2or3:supplied": 2,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.9032258064516129,
+          "recall2": 0.967741935483871,
+          "recall3": 0.967741935483871,
+          "MRR": 0.9354838709677419,
+          "MRR_exact": "29/31",
+          "candidate_count_mean": 2.161290322580645
+        },
+        "email_querycontact": {
+          "denominator": 6,
+          "observed": 6,
+          "missing": 0,
+          "valid": 6,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 6
+          },
+          "top1_count": 4,
+          "recall2_count": 5,
+          "recall3_count": 5,
+          "candidate_count_distribution": {
+            "3": 4,
+            "1": 1,
+            "2": 1
+          },
+          "candidate_count_sum": 15,
+          "reciprocal_rank_sum": 4.5,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 6,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 1,
+            "1": 4,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 1,
+            "rank1:supplied": 4,
+            "miss:supplied": 1
+          },
+          "top1": 0.6666666666666666,
+          "recall2": 0.8333333333333334,
+          "recall3": 0.8333333333333334,
+          "MRR": 0.75,
+          "MRR_exact": "3/4",
+          "candidate_count_mean": 2.5
+        },
+        "email_sendemail": {
+          "denominator": 19,
+          "observed": 19,
+          "missing": 0,
+          "valid": 19,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 19
+          },
+          "top1_count": 16,
+          "recall2_count": 16,
+          "recall3_count": 16,
+          "candidate_count_distribution": {
+            "3": 17,
+            "2": 1,
+            "1": 1
+          },
+          "candidate_count_sum": 54,
+          "reciprocal_rank_sum": 16.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 19,
+          "gold_card_supplied": 17,
+          "gold_card_missing_when_observed": 2,
+          "gold_card_supply_rank_distribution": {
+            "1": 16,
+            "None": 2,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 16,
+            "miss:not_supplied": 2,
+            "miss:supplied": 1
+          },
+          "top1": 0.8421052631578947,
+          "recall2": 0.8421052631578947,
+          "recall3": 0.8421052631578947,
+          "MRR": 0.8421052631578947,
+          "MRR_exact": "16/19",
+          "candidate_count_mean": 2.8421052631578947
+        },
+        "general_greet": {
+          "denominator": 5,
+          "observed": 5,
+          "missing": 0,
+          "valid": 5,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 5
+          },
+          "top1_count": 5,
+          "recall2_count": 5,
+          "recall3_count": 5,
+          "candidate_count_distribution": {
+            "3": 4,
+            "2": 1
+          },
+          "candidate_count_sum": 14,
+          "reciprocal_rank_sum": 5.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 5,
+          "gold_card_supplied": 5,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 5
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 5
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.8
+        },
+        "general_joke": {
+          "denominator": 10,
+          "observed": 10,
+          "missing": 0,
+          "valid": 10,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 10
+          },
+          "top1_count": 9,
+          "recall2_count": 9,
+          "recall3_count": 9,
+          "candidate_count_distribution": {
+            "1": 2,
+            "2": 2,
+            "3": 6
+          },
+          "candidate_count_sum": 24,
+          "reciprocal_rank_sum": 9.0,
+          "raw_duplicate_rows": 3,
+          "gold_card_supply_observed": 10,
+          "gold_card_supplied": 9,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 9,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 9,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.9,
+          "recall2": 0.9,
+          "recall3": 0.9,
+          "MRR": 0.9,
+          "MRR_exact": "9/10",
+          "candidate_count_mean": 2.4
+        },
+        "general_quirky": {
+          "denominator": 45,
+          "observed": 45,
+          "missing": 0,
+          "valid": 45,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 45
+          },
+          "top1_count": 7,
+          "recall2_count": 21,
+          "recall3_count": 31,
+          "candidate_count_distribution": {
+            "3": 35,
+            "2": 6,
+            "1": 4
+          },
+          "candidate_count_sum": 121,
+          "reciprocal_rank_sum": 17.333333333333332,
+          "raw_duplicate_rows": 6,
+          "gold_card_supply_observed": 45,
+          "gold_card_supplied": 37,
+          "gold_card_missing_when_observed": 8,
+          "gold_card_supply_rank_distribution": {
+            "7": 4,
+            "None": 8,
+            "8": 4,
+            "2": 6,
+            "5": 4,
+            "3": 9,
+            "4": 5,
+            "6": 3,
+            "1": 2
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 24,
+            "miss:not_supplied": 8,
+            "miss:supplied": 6,
+            "rank1:supplied": 7
+          },
+          "top1": 0.15555555555555556,
+          "recall2": 0.4666666666666667,
+          "recall3": 0.6888888888888889,
+          "MRR": 0.3851851851851852,
+          "MRR_exact": "52/135",
+          "candidate_count_mean": 2.688888888888889
+        },
+        "iot_cleaning": {
+          "denominator": 6,
+          "observed": 6,
+          "missing": 0,
+          "valid": 6,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 6
+          },
+          "top1_count": 4,
+          "recall2_count": 4,
+          "recall3_count": 4,
+          "candidate_count_distribution": {
+            "3": 5,
+            "2": 1
+          },
+          "candidate_count_sum": 17,
+          "reciprocal_rank_sum": 4.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 6,
+          "gold_card_supplied": 5,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "None": 1,
+            "1": 4,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "miss:not_supplied": 1,
+            "miss:supplied": 1,
+            "rank1:supplied": 4
+          },
+          "top1": 0.6666666666666666,
+          "recall2": 0.6666666666666666,
+          "recall3": 0.6666666666666666,
+          "MRR": 0.6666666666666666,
+          "MRR_exact": "2/3",
+          "candidate_count_mean": 2.8333333333333335
+        },
+        "iot_coffee": {
+          "denominator": 9,
+          "observed": 9,
+          "missing": 0,
+          "valid": 9,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 9
+          },
+          "top1_count": 8,
+          "recall2_count": 8,
+          "recall3_count": 8,
+          "candidate_count_distribution": {
+            "3": 8,
+            "1": 1
+          },
+          "candidate_count_sum": 25,
+          "reciprocal_rank_sum": 8.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 9,
+          "gold_card_supplied": 9,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 8,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 8,
+            "miss:supplied": 1
+          },
+          "top1": 0.8888888888888888,
+          "recall2": 0.8888888888888888,
+          "recall3": 0.8888888888888888,
+          "MRR": 0.8888888888888888,
+          "MRR_exact": "8/9",
+          "candidate_count_mean": 2.7777777777777777
+        },
+        "iot_hue_lightchange": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 7,
+          "recall2_count": 7,
+          "recall3_count": 7,
+          "candidate_count_distribution": {
+            "3": 8
+          },
+          "candidate_count_sum": 24,
+          "reciprocal_rank_sum": 7.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "3": 1,
+            "1": 6,
+            "7": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 7,
+            "miss:supplied": 1
+          },
+          "top1": 0.875,
+          "recall2": 0.875,
+          "recall3": 0.875,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 3.0
+        },
+        "iot_hue_lightdim": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 6,
+          "recall2_count": 7,
+          "recall3_count": 8,
+          "candidate_count_distribution": {
+            "1": 1,
+            "2": 1,
+            "3": 6
+          },
+          "candidate_count_sum": 21,
+          "reciprocal_rank_sum": 6.833333333333333,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 6,
+            "2": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 6,
+            "rank2or3:supplied": 2
+          },
+          "top1": 0.75,
+          "recall2": 0.875,
+          "recall3": 1.0,
+          "MRR": 0.8541666666666666,
+          "MRR_exact": "41/48",
+          "candidate_count_mean": 2.625
+        },
+        "iot_hue_lightoff": {
+          "denominator": 13,
+          "observed": 13,
+          "missing": 0,
+          "valid": 13,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 13
+          },
+          "top1_count": 11,
+          "recall2_count": 12,
+          "recall3_count": 12,
+          "candidate_count_distribution": {
+            "3": 6,
+            "2": 2,
+            "1": 5
+          },
+          "candidate_count_sum": 27,
+          "reciprocal_rank_sum": 11.5,
+          "raw_duplicate_rows": 7,
+          "gold_card_supply_observed": 13,
+          "gold_card_supplied": 13,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "8": 1,
+            "1": 10,
+            "3": 1,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "miss:supplied": 1,
+            "rank1:supplied": 11,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.8461538461538461,
+          "recall2": 0.9230769230769231,
+          "recall3": 0.9230769230769231,
+          "MRR": 0.8846153846153846,
+          "MRR_exact": "23/26",
+          "candidate_count_mean": 2.076923076923077
+        },
+        "iot_hue_lighton": {
+          "denominator": 5,
+          "observed": 5,
+          "missing": 0,
+          "valid": 5,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 5
+          },
+          "top1_count": 4,
+          "recall2_count": 4,
+          "recall3_count": 4,
+          "candidate_count_distribution": {
+            "1": 1,
+            "3": 3,
+            "2": 1
+          },
+          "candidate_count_sum": 12,
+          "reciprocal_rank_sum": 4.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 5,
+          "gold_card_supplied": 5,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 2,
+            "3": 3
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 4,
+            "miss:supplied": 1
+          },
+          "top1": 0.8,
+          "recall2": 0.8,
+          "recall3": 0.8,
+          "MRR": 0.8,
+          "MRR_exact": "4/5",
+          "candidate_count_mean": 2.4
+        },
+        "iot_hue_lightup": {
+          "denominator": 6,
+          "observed": 6,
+          "missing": 0,
+          "valid": 6,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 6
+          },
+          "top1_count": 5,
+          "recall2_count": 5,
+          "recall3_count": 5,
+          "candidate_count_distribution": {
+            "3": 5,
+            "2": 1
+          },
+          "candidate_count_sum": 17,
+          "reciprocal_rank_sum": 5.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 6,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 5,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 5,
+            "miss:supplied": 1
+          },
+          "top1": 0.8333333333333334,
+          "recall2": 0.8333333333333334,
+          "recall3": 0.8333333333333334,
+          "MRR": 0.8333333333333334,
+          "MRR_exact": "5/6",
+          "candidate_count_mean": 2.8333333333333335
+        },
+        "iot_wemo_off": {
+          "denominator": 1,
+          "observed": 1,
+          "missing": 0,
+          "valid": 1,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 1
+          },
+          "top1_count": 1,
+          "recall2_count": 1,
+          "recall3_count": 1,
+          "candidate_count_distribution": {
+            "3": 1
+          },
+          "candidate_count_sum": 3,
+          "reciprocal_rank_sum": 1.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 1,
+          "gold_card_supplied": 1,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 1
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 3.0
+        },
+        "iot_wemo_on": {
+          "denominator": 4,
+          "observed": 4,
+          "missing": 0,
+          "valid": 4,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 4
+          },
+          "top1_count": 2,
+          "recall2_count": 3,
+          "recall3_count": 3,
+          "candidate_count_distribution": {
+            "3": 2,
+            "2": 2
+          },
+          "candidate_count_sum": 10,
+          "reciprocal_rank_sum": 2.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 4,
+          "gold_card_supplied": 4,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "6": 1,
+            "1": 2,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "miss:supplied": 1,
+            "rank1:supplied": 2,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.5,
+          "recall2": 0.75,
+          "recall3": 0.75,
+          "MRR": 0.625,
+          "MRR_exact": "5/8",
+          "candidate_count_mean": 2.5
+        },
+        "lists_createoradd": {
+          "denominator": 22,
+          "observed": 22,
+          "missing": 0,
+          "valid": 22,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 22
+          },
+          "top1_count": 18,
+          "recall2_count": 20,
+          "recall3_count": 20,
+          "candidate_count_distribution": {
+            "1": 8,
+            "2": 1,
+            "3": 13
+          },
+          "candidate_count_sum": 49,
+          "reciprocal_rank_sum": 19.0,
+          "raw_duplicate_rows": 8,
+          "gold_card_supply_observed": 22,
+          "gold_card_supplied": 21,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 15,
+            "None": 1,
+            "4": 2,
+            "3": 2,
+            "8": 1,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 18,
+            "miss:not_supplied": 1,
+            "miss:supplied": 1,
+            "rank2or3:supplied": 2
+          },
+          "top1": 0.8181818181818182,
+          "recall2": 0.9090909090909091,
+          "recall3": 0.9090909090909091,
+          "MRR": 0.8636363636363636,
+          "MRR_exact": "19/22",
+          "candidate_count_mean": 2.227272727272727
+        },
+        "lists_query": {
+          "denominator": 22,
+          "observed": 22,
+          "missing": 0,
+          "valid": 22,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 22
+          },
+          "top1_count": 18,
+          "recall2_count": 19,
+          "recall3_count": 20,
+          "candidate_count_distribution": {
+            "1": 4,
+            "3": 15,
+            "2": 3
+          },
+          "candidate_count_sum": 55,
+          "reciprocal_rank_sum": 18.833333333333332,
+          "raw_duplicate_rows": 5,
+          "gold_card_supply_observed": 22,
+          "gold_card_supplied": 20,
+          "gold_card_missing_when_observed": 2,
+          "gold_card_supply_rank_distribution": {
+            "4": 3,
+            "1": 13,
+            "2": 1,
+            "5": 1,
+            "3": 1,
+            "6": 1,
+            "None": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 18,
+            "rank2or3:supplied": 2,
+            "miss:not_supplied": 2
+          },
+          "top1": 0.8181818181818182,
+          "recall2": 0.8636363636363636,
+          "recall3": 0.9090909090909091,
+          "MRR": 0.8560606060606061,
+          "MRR_exact": "113/132",
+          "candidate_count_mean": 2.5
+        },
+        "lists_remove": {
+          "denominator": 16,
+          "observed": 16,
+          "missing": 0,
+          "valid": 16,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 16
+          },
+          "top1_count": 14,
+          "recall2_count": 14,
+          "recall3_count": 14,
+          "candidate_count_distribution": {
+            "3": 12,
+            "1": 4
+          },
+          "candidate_count_sum": 40,
+          "reciprocal_rank_sum": 14.0,
+          "raw_duplicate_rows": 4,
+          "gold_card_supply_observed": 16,
+          "gold_card_supplied": 14,
+          "gold_card_missing_when_observed": 2,
+          "gold_card_supply_rank_distribution": {
+            "1": 14,
+            "None": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 14,
+            "miss:not_supplied": 2
+          },
+          "top1": 0.875,
+          "recall2": 0.875,
+          "recall3": 0.875,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 2.5
+        },
+        "music_dislikeness": {
+          "denominator": 1,
+          "observed": 1,
+          "missing": 0,
+          "valid": 1,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 1
+          },
+          "top1_count": 1,
+          "recall2_count": 1,
+          "recall3_count": 1,
+          "candidate_count_distribution": {
+            "3": 1
+          },
+          "candidate_count_sum": 3,
+          "reciprocal_rank_sum": 1.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 1,
+          "gold_card_supplied": 1,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 1
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 3.0
+        },
+        "music_likeness": {
+          "denominator": 18,
+          "observed": 18,
+          "missing": 0,
+          "valid": 18,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 18
+          },
+          "top1_count": 13,
+          "recall2_count": 16,
+          "recall3_count": 16,
+          "candidate_count_distribution": {
+            "3": 15,
+            "2": 2,
+            "1": 1
+          },
+          "candidate_count_sum": 50,
+          "reciprocal_rank_sum": 14.5,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 18,
+          "gold_card_supplied": 17,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "3": 4,
+            "2": 7,
+            "1": 5,
+            "7": 1,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 13,
+            "miss:supplied": 1,
+            "miss:not_supplied": 1,
+            "rank2or3:supplied": 3
+          },
+          "top1": 0.7222222222222222,
+          "recall2": 0.8888888888888888,
+          "recall3": 0.8888888888888888,
+          "MRR": 0.8055555555555556,
+          "MRR_exact": "29/36",
+          "candidate_count_mean": 2.7777777777777777
+        },
+        "music_query": {
+          "denominator": 32,
+          "observed": 32,
+          "missing": 0,
+          "valid": 32,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 32
+          },
+          "top1_count": 25,
+          "recall2_count": 30,
+          "recall3_count": 30,
+          "candidate_count_distribution": {
+            "3": 20,
+            "2": 3,
+            "1": 9
+          },
+          "candidate_count_sum": 75,
+          "reciprocal_rank_sum": 27.5,
+          "raw_duplicate_rows": 9,
+          "gold_card_supply_observed": 32,
+          "gold_card_supplied": 31,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "5": 1,
+            "1": 28,
+            "2": 1,
+            "None": 1,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "miss:supplied": 1,
+            "rank1:supplied": 25,
+            "rank2or3:supplied": 5,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.78125,
+          "recall2": 0.9375,
+          "recall3": 0.9375,
+          "MRR": 0.859375,
+          "MRR_exact": "55/64",
+          "candidate_count_mean": 2.34375
+        },
+        "music_settings": {
+          "denominator": 9,
+          "observed": 9,
+          "missing": 0,
+          "valid": 9,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 9
+          },
+          "top1_count": 4,
+          "recall2_count": 6,
+          "recall3_count": 7,
+          "candidate_count_distribution": {
+            "2": 1,
+            "3": 8
+          },
+          "candidate_count_sum": 26,
+          "reciprocal_rank_sum": 5.333333333333333,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 9,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "None": 1,
+            "4": 1,
+            "3": 2,
+            "2": 1,
+            "1": 3,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "miss:not_supplied": 1,
+            "rank2or3:supplied": 3,
+            "rank1:supplied": 4,
+            "miss:supplied": 1
+          },
+          "top1": 0.4444444444444444,
+          "recall2": 0.6666666666666666,
+          "recall3": 0.7777777777777778,
+          "MRR": 0.5925925925925926,
+          "MRR_exact": "16/27",
+          "candidate_count_mean": 2.888888888888889
+        },
+        "news_query": {
+          "denominator": 60,
+          "observed": 60,
+          "missing": 0,
+          "valid": 60,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 60
+          },
+          "top1_count": 50,
+          "recall2_count": 55,
+          "recall3_count": 55,
+          "candidate_count_distribution": {
+            "3": 41,
+            "2": 10,
+            "1": 9
+          },
+          "candidate_count_sum": 152,
+          "reciprocal_rank_sum": 52.5,
+          "raw_duplicate_rows": 17,
+          "gold_card_supply_observed": 60,
+          "gold_card_supplied": 55,
+          "gold_card_missing_when_observed": 5,
+          "gold_card_supply_rank_distribution": {
+            "2": 2,
+            "1": 48,
+            "None": 5,
+            "5": 1,
+            "4": 1,
+            "6": 2,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 4,
+            "rank1:supplied": 50,
+            "miss:not_supplied": 4,
+            "rank2or3:not_supplied": 1,
+            "miss:supplied": 1
+          },
+          "top1": 0.8333333333333334,
+          "recall2": 0.9166666666666666,
+          "recall3": 0.9166666666666666,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 2.533333333333333
+        },
+        "play_audiobook": {
+          "denominator": 7,
+          "observed": 7,
+          "missing": 0,
+          "valid": 7,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 7
+          },
+          "top1_count": 5,
+          "recall2_count": 6,
+          "recall3_count": 6,
+          "candidate_count_distribution": {
+            "3": 6,
+            "1": 1
+          },
+          "candidate_count_sum": 19,
+          "reciprocal_rank_sum": 5.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 7,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 1,
+            "3": 1,
+            "7": 1,
+            "5": 1,
+            "None": 1,
+            "6": 1,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 1,
+            "rank1:supplied": 5,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.7142857142857143,
+          "recall2": 0.8571428571428571,
+          "recall3": 0.8571428571428571,
+          "MRR": 0.7857142857142857,
+          "MRR_exact": "11/14",
+          "candidate_count_mean": 2.7142857142857144
+        },
+        "play_game": {
+          "denominator": 7,
+          "observed": 7,
+          "missing": 0,
+          "valid": 7,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 7
+          },
+          "top1_count": 6,
+          "recall2_count": 6,
+          "recall3_count": 6,
+          "candidate_count_distribution": {
+            "1": 2,
+            "3": 5
+          },
+          "candidate_count_sum": 17,
+          "reciprocal_rank_sum": 6.0,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 7,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 5,
+            "None": 1,
+            "4": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 6,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.8571428571428571,
+          "recall2": 0.8571428571428571,
+          "recall3": 0.8571428571428571,
+          "MRR": 0.8571428571428571,
+          "MRR_exact": "6/7",
+          "candidate_count_mean": 2.4285714285714284
+        },
+        "play_music": {
+          "denominator": 19,
+          "observed": 19,
+          "missing": 0,
+          "valid": 19,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 19
+          },
+          "top1_count": 16,
+          "recall2_count": 17,
+          "recall3_count": 17,
+          "candidate_count_distribution": {
+            "1": 6,
+            "3": 13
+          },
+          "candidate_count_sum": 45,
+          "reciprocal_rank_sum": 16.5,
+          "raw_duplicate_rows": 6,
+          "gold_card_supply_observed": 19,
+          "gold_card_supplied": 16,
+          "gold_card_missing_when_observed": 3,
+          "gold_card_supply_rank_distribution": {
+            "1": 15,
+            "None": 3,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 15,
+            "miss:not_supplied": 2,
+            "rank1:not_supplied": 1,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.8421052631578947,
+          "recall2": 0.8947368421052632,
+          "recall3": 0.8947368421052632,
+          "MRR": 0.868421052631579,
+          "MRR_exact": "33/38",
+          "candidate_count_mean": 2.3684210526315788
+        },
+        "play_podcasts": {
+          "denominator": 11,
+          "observed": 11,
+          "missing": 0,
+          "valid": 11,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 11
+          },
+          "top1_count": 10,
+          "recall2_count": 11,
+          "recall3_count": 11,
+          "candidate_count_distribution": {
+            "3": 8,
+            "2": 2,
+            "1": 1
+          },
+          "candidate_count_sum": 29,
+          "reciprocal_rank_sum": 10.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 11,
+          "gold_card_supplied": 11,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 8,
+            "3": 1,
+            "2": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 10,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.9090909090909091,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9545454545454546,
+          "MRR_exact": "21/22",
+          "candidate_count_mean": 2.6363636363636362
+        },
+        "play_radio": {
+          "denominator": 16,
+          "observed": 16,
+          "missing": 0,
+          "valid": 16,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 16
+          },
+          "top1_count": 14,
+          "recall2_count": 15,
+          "recall3_count": 15,
+          "candidate_count_distribution": {
+            "3": 13,
+            "1": 2,
+            "2": 1
+          },
+          "candidate_count_sum": 43,
+          "reciprocal_rank_sum": 14.5,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 16,
+          "gold_card_supplied": 15,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 13,
+            "5": 2,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 14,
+            "rank2or3:supplied": 1,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.875,
+          "recall2": 0.9375,
+          "recall3": 0.9375,
+          "MRR": 0.90625,
+          "MRR_exact": "29/32",
+          "candidate_count_mean": 2.6875
+        },
+        "qa_currency": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 8,
+          "recall2_count": 8,
+          "recall3_count": 8,
+          "candidate_count_distribution": {
+            "3": 6,
+            "1": 1,
+            "2": 1
+          },
+          "candidate_count_sum": 21,
+          "reciprocal_rank_sum": 8.0,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 8
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 8
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.625
+        },
+        "qa_definition": {
+          "denominator": 11,
+          "observed": 11,
+          "missing": 0,
+          "valid": 11,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 11
+          },
+          "top1_count": 11,
+          "recall2_count": 11,
+          "recall3_count": 11,
+          "candidate_count_distribution": {
+            "3": 5,
+            "2": 3,
+            "1": 3
+          },
+          "candidate_count_sum": 24,
+          "reciprocal_rank_sum": 11.0,
+          "raw_duplicate_rows": 3,
+          "gold_card_supply_observed": 11,
+          "gold_card_supplied": 11,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 11
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 11
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.1818181818181817
+        },
+        "qa_factoid": {
+          "denominator": 27,
+          "observed": 27,
+          "missing": 0,
+          "valid": 27,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 27
+          },
+          "top1_count": 21,
+          "recall2_count": 21,
+          "recall3_count": 23,
+          "candidate_count_distribution": {
+            "1": 10,
+            "3": 15,
+            "2": 2
+          },
+          "candidate_count_sum": 59,
+          "reciprocal_rank_sum": 21.666666666666668,
+          "raw_duplicate_rows": 10,
+          "gold_card_supply_observed": 27,
+          "gold_card_supplied": 24,
+          "gold_card_missing_when_observed": 3,
+          "gold_card_supply_rank_distribution": {
+            "1": 16,
+            "5": 1,
+            "2": 5,
+            "None": 3,
+            "3": 1,
+            "4": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 21,
+            "rank2or3:supplied": 2,
+            "miss:not_supplied": 3,
+            "miss:supplied": 1
+          },
+          "top1": 0.7777777777777778,
+          "recall2": 0.7777777777777778,
+          "recall3": 0.8518518518518519,
+          "MRR": 0.8024691358024691,
+          "MRR_exact": "65/81",
+          "candidate_count_mean": 2.185185185185185
+        },
+        "qa_maths": {
+          "denominator": 6,
+          "observed": 6,
+          "missing": 0,
+          "valid": 6,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 6
+          },
+          "top1_count": 6,
+          "recall2_count": 6,
+          "recall3_count": 6,
+          "candidate_count_distribution": {
+            "3": 4,
+            "1": 2
+          },
+          "candidate_count_sum": 14,
+          "reciprocal_rank_sum": 6.0,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 6,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 6
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 6
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.3333333333333335
+        },
+        "qa_stock": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 7,
+          "recall2_count": 7,
+          "recall3_count": 7,
+          "candidate_count_distribution": {
+            "3": 8
+          },
+          "candidate_count_sum": 24,
+          "reciprocal_rank_sum": 7.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 7,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 7,
+            "miss:supplied": 1
+          },
+          "top1": 0.875,
+          "recall2": 0.875,
+          "recall3": 0.875,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 3.0
+        },
+        "recommendation_events": {
+          "denominator": 20,
+          "observed": 20,
+          "missing": 0,
+          "valid": 20,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 20
+          },
+          "top1_count": 19,
+          "recall2_count": 20,
+          "recall3_count": 20,
+          "candidate_count_distribution": {
+            "3": 19,
+            "1": 1
+          },
+          "candidate_count_sum": 58,
+          "reciprocal_rank_sum": 19.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 20,
+          "gold_card_supplied": 20,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 19,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 19,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.95,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.975,
+          "MRR_exact": "39/40",
+          "candidate_count_mean": 2.9
+        },
+        "recommendation_locations": {
+          "denominator": 30,
+          "observed": 30,
+          "missing": 0,
+          "valid": 30,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 30
+          },
+          "top1_count": 30,
+          "recall2_count": 30,
+          "recall3_count": 30,
+          "candidate_count_distribution": {
+            "3": 21,
+            "1": 5,
+            "2": 4
+          },
+          "candidate_count_sum": 76,
+          "reciprocal_rank_sum": 30.0,
+          "raw_duplicate_rows": 9,
+          "gold_card_supply_observed": 30,
+          "gold_card_supplied": 30,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 30
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 30
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.533333333333333
+        },
+        "recommendation_movies": {
+          "denominator": 10,
+          "observed": 10,
+          "missing": 0,
+          "valid": 10,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 10
+          },
+          "top1_count": 9,
+          "recall2_count": 10,
+          "recall3_count": 10,
+          "candidate_count_distribution": {
+            "3": 10
+          },
+          "candidate_count_sum": 30,
+          "reciprocal_rank_sum": 9.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 10,
+          "gold_card_supplied": 10,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 9,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 9,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.9,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.95,
+          "MRR_exact": "19/20",
+          "candidate_count_mean": 3.0
+        },
+        "social_post": {
+          "denominator": 47,
+          "observed": 47,
+          "missing": 0,
+          "valid": 47,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 47
+          },
+          "top1_count": 33,
+          "recall2_count": 36,
+          "recall3_count": 39,
+          "candidate_count_distribution": {
+            "3": 35,
+            "1": 9,
+            "2": 3
+          },
+          "candidate_count_sum": 120,
+          "reciprocal_rank_sum": 35.5,
+          "raw_duplicate_rows": 10,
+          "gold_card_supply_observed": 47,
+          "gold_card_supplied": 42,
+          "gold_card_missing_when_observed": 5,
+          "gold_card_supply_rank_distribution": {
+            "None": 5,
+            "2": 6,
+            "1": 32,
+            "8": 1,
+            "4": 1,
+            "3": 1,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "miss:not_supplied": 4,
+            "rank2or3:supplied": 5,
+            "rank1:supplied": 33,
+            "miss:supplied": 4,
+            "rank2or3:not_supplied": 1
+          },
+          "top1": 0.7021276595744681,
+          "recall2": 0.7659574468085106,
+          "recall3": 0.8297872340425532,
+          "MRR": 0.7553191489361702,
+          "MRR_exact": "71/94",
+          "candidate_count_mean": 2.5531914893617023
+        },
+        "social_query": {
+          "denominator": 13,
+          "observed": 13,
+          "missing": 0,
+          "valid": 13,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 13
+          },
+          "top1_count": 9,
+          "recall2_count": 11,
+          "recall3_count": 11,
+          "candidate_count_distribution": {
+            "3": 10,
+            "2": 3
+          },
+          "candidate_count_sum": 36,
+          "reciprocal_rank_sum": 10.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 13,
+          "gold_card_supplied": 12,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 9,
+            "None": 1,
+            "2": 1,
+            "6": 1,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 9,
+            "miss:not_supplied": 1,
+            "rank2or3:supplied": 2,
+            "miss:supplied": 1
+          },
+          "top1": 0.6923076923076923,
+          "recall2": 0.8461538461538461,
+          "recall3": 0.8461538461538461,
+          "MRR": 0.7692307692307693,
+          "MRR_exact": "10/13",
+          "candidate_count_mean": 2.769230769230769
+        },
+        "takeaway_order": {
+          "denominator": 29,
+          "observed": 29,
+          "missing": 0,
+          "valid": 29,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 29
+          },
+          "top1_count": 21,
+          "recall2_count": 24,
+          "recall3_count": 24,
+          "candidate_count_distribution": {
+            "3": 20,
+            "2": 2,
+            "1": 7
+          },
+          "candidate_count_sum": 71,
+          "reciprocal_rank_sum": 22.5,
+          "raw_duplicate_rows": 8,
+          "gold_card_supply_observed": 29,
+          "gold_card_supplied": 28,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "7": 1,
+            "1": 20,
+            "2": 2,
+            "3": 4,
+            "5": 1,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 21,
+            "rank2or3:supplied": 3,
+            "miss:supplied": 4,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.7241379310344828,
+          "recall2": 0.8275862068965517,
+          "recall3": 0.8275862068965517,
+          "MRR": 0.7758620689655172,
+          "MRR_exact": "45/58",
+          "candidate_count_mean": 2.4482758620689653
+        },
+        "takeaway_query": {
+          "denominator": 31,
+          "observed": 31,
+          "missing": 0,
+          "valid": 31,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 31
+          },
+          "top1_count": 27,
+          "recall2_count": 29,
+          "recall3_count": 30,
+          "candidate_count_distribution": {
+            "2": 3,
+            "3": 26,
+            "1": 2
+          },
+          "candidate_count_sum": 86,
+          "reciprocal_rank_sum": 28.333333333333332,
+          "raw_duplicate_rows": 4,
+          "gold_card_supply_observed": 31,
+          "gold_card_supplied": 30,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "2": 2,
+            "None": 1,
+            "1": 24,
+            "3": 1,
+            "7": 1,
+            "8": 1,
+            "4": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 3,
+            "miss:not_supplied": 1,
+            "rank1:supplied": 27
+          },
+          "top1": 0.8709677419354839,
+          "recall2": 0.9354838709677419,
+          "recall3": 0.967741935483871,
+          "MRR": 0.9139784946236559,
+          "MRR_exact": "85/93",
+          "candidate_count_mean": 2.774193548387097
+        },
+        "transport_query": {
+          "denominator": 17,
+          "observed": 17,
+          "missing": 0,
+          "valid": 17,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 17
+          },
+          "top1_count": 12,
+          "recall2_count": 16,
+          "recall3_count": 17,
+          "candidate_count_distribution": {
+            "3": 12,
+            "1": 4,
+            "2": 1
+          },
+          "candidate_count_sum": 42,
+          "reciprocal_rank_sum": 14.333333333333334,
+          "raw_duplicate_rows": 4,
+          "gold_card_supply_observed": 17,
+          "gold_card_supplied": 17,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 12,
+            "2": 4,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 12,
+            "rank2or3:supplied": 5
+          },
+          "top1": 0.7058823529411765,
+          "recall2": 0.9411764705882353,
+          "recall3": 1.0,
+          "MRR": 0.8431372549019608,
+          "MRR_exact": "43/51",
+          "candidate_count_mean": 2.4705882352941178
+        },
+        "transport_taxi": {
+          "denominator": 13,
+          "observed": 13,
+          "missing": 0,
+          "valid": 13,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 13
+          },
+          "top1_count": 12,
+          "recall2_count": 12,
+          "recall3_count": 12,
+          "candidate_count_distribution": {
+            "3": 12,
+            "2": 1
+          },
+          "candidate_count_sum": 38,
+          "reciprocal_rank_sum": 12.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 13,
+          "gold_card_supplied": 12,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 11,
+            "None": 1,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 12,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.9230769230769231,
+          "recall2": 0.9230769230769231,
+          "recall3": 0.9230769230769231,
+          "MRR": 0.9230769230769231,
+          "MRR_exact": "12/13",
+          "candidate_count_mean": 2.923076923076923
+        },
+        "transport_ticket": {
+          "denominator": 17,
+          "observed": 17,
+          "missing": 0,
+          "valid": 17,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 17
+          },
+          "top1_count": 12,
+          "recall2_count": 14,
+          "recall3_count": 14,
+          "candidate_count_distribution": {
+            "3": 13,
+            "1": 4
+          },
+          "candidate_count_sum": 43,
+          "reciprocal_rank_sum": 13.0,
+          "raw_duplicate_rows": 4,
+          "gold_card_supply_observed": 17,
+          "gold_card_supplied": 16,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "7": 1,
+            "1": 11,
+            "2": 3,
+            "None": 1,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 2,
+            "rank1:supplied": 12,
+            "miss:not_supplied": 1,
+            "miss:supplied": 2
+          },
+          "top1": 0.7058823529411765,
+          "recall2": 0.8235294117647058,
+          "recall3": 0.8235294117647058,
+          "MRR": 0.7647058823529411,
+          "MRR_exact": "13/17",
+          "candidate_count_mean": 2.5294117647058822
+        },
+        "transport_traffic": {
+          "denominator": 13,
+          "observed": 13,
+          "missing": 0,
+          "valid": 13,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 13
+          },
+          "top1_count": 12,
+          "recall2_count": 13,
+          "recall3_count": 13,
+          "candidate_count_distribution": {
+            "3": 12,
+            "1": 1
+          },
+          "candidate_count_sum": 37,
+          "reciprocal_rank_sum": 12.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 13,
+          "gold_card_supplied": 13,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 12,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 12,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.9230769230769231,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9615384615384616,
+          "MRR_exact": "25/26",
+          "candidate_count_mean": 2.8461538461538463
+        },
+        "weather_query": {
+          "denominator": 60,
+          "observed": 60,
+          "missing": 0,
+          "valid": 60,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 60
+          },
+          "top1_count": 57,
+          "recall2_count": 57,
+          "recall3_count": 59,
+          "candidate_count_distribution": {
+            "3": 39,
+            "1": 13,
+            "2": 8
+          },
+          "candidate_count_sum": 146,
+          "reciprocal_rank_sum": 57.666666666666664,
+          "raw_duplicate_rows": 16,
+          "gold_card_supply_observed": 60,
+          "gold_card_supplied": 59,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 54,
+            "None": 1,
+            "8": 1,
+            "3": 2,
+            "2": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 57,
+            "miss:not_supplied": 1,
+            "rank2or3:supplied": 2
+          },
+          "top1": 0.95,
+          "recall2": 0.95,
+          "recall3": 0.9833333333333333,
+          "MRR": 0.9611111111111111,
+          "MRR_exact": "173/180",
+          "candidate_count_mean": 2.433333333333333
+        }
+      },
+      "cost": {
+        "audio_seconds_used": 3125.7507499999947,
+        "calls_used": 1097,
+        "completion_tokens_total": 291927,
+        "latency_seconds_total": 13366.204818251194,
+        "prompt_tokens_total": 5843257,
+        "tool_calls": 0,
+        "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+      },
+      "latency": {
+        "n": 1097,
+        "mean": 12.184325267321052,
+        "p50": 10.607915329979733,
+        "p90": 12.647790159983561,
+        "p95": 13.321747361985036,
+        "max": 123.71536412998103
+      },
+      "throughput": {
+        "completed_rows": 1080,
+        "total_rows": 1080,
+        "container_wall_seconds": 5678.3262,
+        "container_seconds_per_completed_row": 5.257709444444445,
+        "campaign_to_release_seconds": 5548.769016679958,
+        "campaign_seconds_per_completed_row": 5.13774908951848,
+        "allocated_card_hours_container_window": 6.309251333333334,
+        "allocated_card_hours_campaign_window": 6.1652989074221765,
+        "cards": 4,
+        "instances": 1,
+        "remaining_rows": 0,
+        "eta_seconds": 0,
+        "scope": "Full 1080 per-run wall windows include CPU/preflight/tail as recorded; neither is single-request latency or proven steady-state NPU utilization"
+      }
+    },
+    "C1": {
+      "final_scores": {
+        "denominator": 1080,
+        "observed": 1080,
+        "missing": 0,
+        "valid": 1080,
+        "invalid_or_incomplete_observed": 0,
+        "valid_coverage_full_denominator": 1.0,
+        "status_counts": {
+          "valid": 1080
+        },
+        "top1_count": 873,
+        "recall2_count": 955,
+        "recall3_count": 957,
+        "candidate_count_distribution": {
+          "2": 948,
+          "1": 104,
+          "3": 28
+        },
+        "candidate_count_sum": 2084,
+        "reciprocal_rank_sum": 914.6666666666666,
+        "raw_duplicate_rows": 44,
+        "gold_card_supply_observed": 1080,
+        "gold_card_supplied": 1024,
+        "gold_card_missing_when_observed": 56,
+        "gold_card_supply_rank_distribution": {
+          "1": 787,
+          "3": 57,
+          "8": 11,
+          "7": 13,
+          "2": 105,
+          "None": 56,
+          "5": 16,
+          "4": 19,
+          "6": 16
+        },
+        "supply_by_outcome": {
+          "rank1:supplied": 871,
+          "rank2or3:supplied": 82,
+          "miss:supplied": 71,
+          "miss:not_supplied": 52,
+          "rank1:not_supplied": 2,
+          "rank2or3:not_supplied": 2
+        },
+        "top1": 0.8083333333333333,
+        "recall2": 0.8842592592592593,
+        "recall3": 0.8861111111111111,
+        "MRR": 0.8469135802469135,
+        "MRR_exact": "343/405",
+        "candidate_count_mean": 1.9296296296296296
+      },
+      "per_original_intent": {
+        "alarm_query": {
+          "denominator": 19,
+          "observed": 19,
+          "missing": 0,
+          "valid": 19,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 19
+          },
+          "top1_count": 16,
+          "recall2_count": 17,
+          "recall3_count": 17,
+          "candidate_count_distribution": {
+            "2": 16,
+            "1": 3
+          },
+          "candidate_count_sum": 35,
+          "reciprocal_rank_sum": 16.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 19,
+          "gold_card_supplied": 19,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 4,
+            "7": 2,
+            "1": 12,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 1,
+            "miss:supplied": 2,
+            "rank1:supplied": 16
+          },
+          "top1": 0.8421052631578947,
+          "recall2": 0.8947368421052632,
+          "recall3": 0.8947368421052632,
+          "MRR": 0.868421052631579,
+          "MRR_exact": "33/38",
+          "candidate_count_mean": 1.8421052631578947
+        },
+        "alarm_remove": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 8,
+          "recall2_count": 8,
+          "recall3_count": 8,
+          "candidate_count_distribution": {
+            "2": 7,
+            "1": 1
+          },
+          "candidate_count_sum": 15,
+          "reciprocal_rank_sum": 8.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 7,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 4,
+            "2": 2,
+            "None": 1,
+            "5": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 7,
+            "rank1:not_supplied": 1
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 1.875
+        },
+        "alarm_set": {
+          "denominator": 33,
+          "observed": 33,
+          "missing": 0,
+          "valid": 33,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 33
+          },
+          "top1_count": 32,
+          "recall2_count": 33,
+          "recall3_count": 33,
+          "candidate_count_distribution": {
+            "2": 25,
+            "1": 8
+          },
+          "candidate_count_sum": 58,
+          "reciprocal_rank_sum": 32.5,
+          "raw_duplicate_rows": 4,
+          "gold_card_supply_observed": 33,
+          "gold_card_supplied": 33,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 33
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 32,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.9696969696969697,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9848484848484849,
+          "MRR_exact": "65/66",
+          "candidate_count_mean": 1.7575757575757576
+        },
+        "audio_volume_down": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 8,
+          "recall2_count": 8,
+          "recall3_count": 8,
+          "candidate_count_distribution": {
+            "1": 3,
+            "2": 5
+          },
+          "candidate_count_sum": 13,
+          "reciprocal_rank_sum": 8.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 8
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 8
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 1.625
+        },
+        "audio_volume_mute": {
+          "denominator": 24,
+          "observed": 24,
+          "missing": 0,
+          "valid": 24,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 24
+          },
+          "top1_count": 19,
+          "recall2_count": 20,
+          "recall3_count": 20,
+          "candidate_count_distribution": {
+            "2": 19,
+            "1": 3,
+            "3": 2
+          },
+          "candidate_count_sum": 47,
+          "reciprocal_rank_sum": 19.5,
+          "raw_duplicate_rows": 3,
+          "gold_card_supply_observed": 24,
+          "gold_card_supplied": 24,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 14,
+            "3": 6,
+            "2": 3,
+            "5": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 19,
+            "miss:supplied": 4,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.7916666666666666,
+          "recall2": 0.8333333333333334,
+          "recall3": 0.8333333333333334,
+          "MRR": 0.8125,
+          "MRR_exact": "13/16",
+          "candidate_count_mean": 1.9583333333333333
+        },
+        "audio_volume_other": {
+          "denominator": 4,
+          "observed": 4,
+          "missing": 0,
+          "valid": 4,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 4
+          },
+          "top1_count": 3,
+          "recall2_count": 4,
+          "recall3_count": 4,
+          "candidate_count_distribution": {
+            "2": 3,
+            "3": 1
+          },
+          "candidate_count_sum": 9,
+          "reciprocal_rank_sum": 3.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 4,
+          "gold_card_supplied": 4,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "4": 1,
+            "1": 2,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 1,
+            "rank1:supplied": 3
+          },
+          "top1": 0.75,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 2.25
+        },
+        "audio_volume_up": {
+          "denominator": 24,
+          "observed": 24,
+          "missing": 0,
+          "valid": 24,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 24
+          },
+          "top1_count": 19,
+          "recall2_count": 19,
+          "recall3_count": 19,
+          "candidate_count_distribution": {
+            "2": 19,
+            "1": 5
+          },
+          "candidate_count_sum": 43,
+          "reciprocal_rank_sum": 19.0,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 24,
+          "gold_card_supplied": 24,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 6,
+            "1": 16,
+            "3": 1,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 19,
+            "miss:supplied": 5
+          },
+          "top1": 0.7916666666666666,
+          "recall2": 0.7916666666666666,
+          "recall3": 0.7916666666666666,
+          "MRR": 0.7916666666666666,
+          "MRR_exact": "19/24",
+          "candidate_count_mean": 1.7916666666666667
+        },
+        "calendar_query": {
+          "denominator": 27,
+          "observed": 27,
+          "missing": 0,
+          "valid": 27,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 27
+          },
+          "top1_count": 20,
+          "recall2_count": 24,
+          "recall3_count": 25,
+          "candidate_count_distribution": {
+            "2": 19,
+            "1": 7,
+            "3": 1
+          },
+          "candidate_count_sum": 48,
+          "reciprocal_rank_sum": 22.333333333333332,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 27,
+          "gold_card_supplied": 27,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 15,
+            "2": 9,
+            "3": 3
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 20,
+            "rank2or3:supplied": 5,
+            "miss:supplied": 2
+          },
+          "top1": 0.7407407407407407,
+          "recall2": 0.8888888888888888,
+          "recall3": 0.9259259259259259,
+          "MRR": 0.8271604938271605,
+          "MRR_exact": "67/81",
+          "candidate_count_mean": 1.7777777777777777
+        },
+        "calendar_remove": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 7,
+          "recall2_count": 7,
+          "recall3_count": 7,
+          "candidate_count_distribution": {
+            "2": 6,
+            "1": 2
+          },
+          "candidate_count_sum": 14,
+          "reciprocal_rank_sum": 7.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 7,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "None": 1,
+            "1": 7
+          },
+          "supply_by_outcome": {
+            "miss:not_supplied": 1,
+            "rank1:supplied": 7
+          },
+          "top1": 0.875,
+          "recall2": 0.875,
+          "recall3": 0.875,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 1.75
+        },
+        "calendar_set": {
+          "denominator": 25,
+          "observed": 25,
+          "missing": 0,
+          "valid": 25,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 25
+          },
+          "top1_count": 20,
+          "recall2_count": 23,
+          "recall3_count": 23,
+          "candidate_count_distribution": {
+            "2": 23,
+            "1": 2
+          },
+          "candidate_count_sum": 48,
+          "reciprocal_rank_sum": 21.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 25,
+          "gold_card_supplied": 24,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "2": 3,
+            "None": 1,
+            "1": 19,
+            "5": 1,
+            "8": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 20,
+            "miss:not_supplied": 1,
+            "rank2or3:supplied": 3,
+            "miss:supplied": 1
+          },
+          "top1": 0.8,
+          "recall2": 0.92,
+          "recall3": 0.92,
+          "MRR": 0.86,
+          "MRR_exact": "43/50",
+          "candidate_count_mean": 1.92
+        },
+        "cooking_query": {
+          "denominator": 1,
+          "observed": 1,
+          "missing": 0,
+          "valid": 1,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 1
+          },
+          "top1_count": 0,
+          "recall2_count": 1,
+          "recall3_count": 1,
+          "candidate_count_distribution": {
+            "2": 1
+          },
+          "candidate_count_sum": 2,
+          "reciprocal_rank_sum": 0.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 1,
+          "gold_card_supplied": 1,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.5,
+          "MRR_exact": "1/2",
+          "candidate_count_mean": 2.0
+        },
+        "cooking_recipe": {
+          "denominator": 59,
+          "observed": 59,
+          "missing": 0,
+          "valid": 59,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 59
+          },
+          "top1_count": 52,
+          "recall2_count": 56,
+          "recall3_count": 56,
+          "candidate_count_distribution": {
+            "2": 56,
+            "3": 3
+          },
+          "candidate_count_sum": 121,
+          "reciprocal_rank_sum": 54.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 59,
+          "gold_card_supplied": 57,
+          "gold_card_missing_when_observed": 2,
+          "gold_card_supply_rank_distribution": {
+            "1": 51,
+            "2": 4,
+            "None": 2,
+            "8": 1,
+            "4": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 52,
+            "miss:not_supplied": 2,
+            "rank2or3:supplied": 4,
+            "miss:supplied": 1
+          },
+          "top1": 0.8813559322033898,
+          "recall2": 0.9491525423728814,
+          "recall3": 0.9491525423728814,
+          "MRR": 0.9152542372881356,
+          "MRR_exact": "54/59",
+          "candidate_count_mean": 2.0508474576271185
+        },
+        "datetime_convert": {
+          "denominator": 10,
+          "observed": 10,
+          "missing": 0,
+          "valid": 10,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 10
+          },
+          "top1_count": 9,
+          "recall2_count": 9,
+          "recall3_count": 9,
+          "candidate_count_distribution": {
+            "2": 10
+          },
+          "candidate_count_sum": 20,
+          "reciprocal_rank_sum": 9.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 10,
+          "gold_card_supplied": 9,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 9,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 9,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.9,
+          "recall2": 0.9,
+          "recall3": 0.9,
+          "MRR": 0.9,
+          "MRR_exact": "9/10",
+          "candidate_count_mean": 2.0
+        },
+        "datetime_query": {
+          "denominator": 50,
+          "observed": 50,
+          "missing": 0,
+          "valid": 50,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 50
+          },
+          "top1_count": 42,
+          "recall2_count": 44,
+          "recall3_count": 44,
+          "candidate_count_distribution": {
+            "2": 44,
+            "1": 6
+          },
+          "candidate_count_sum": 94,
+          "reciprocal_rank_sum": 43.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 50,
+          "gold_card_supplied": 47,
+          "gold_card_missing_when_observed": 3,
+          "gold_card_supply_rank_distribution": {
+            "1": 32,
+            "None": 3,
+            "2": 9,
+            "3": 3,
+            "6": 1,
+            "7": 1,
+            "5": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 42,
+            "miss:not_supplied": 3,
+            "miss:supplied": 3,
+            "rank2or3:supplied": 2
+          },
+          "top1": 0.84,
+          "recall2": 0.88,
+          "recall3": 0.88,
+          "MRR": 0.86,
+          "MRR_exact": "43/50",
+          "candidate_count_mean": 1.88
+        },
+        "email_addcontact": {
+          "denominator": 4,
+          "observed": 4,
+          "missing": 0,
+          "valid": 4,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 4
+          },
+          "top1_count": 3,
+          "recall2_count": 3,
+          "recall3_count": 3,
+          "candidate_count_distribution": {
+            "2": 4
+          },
+          "candidate_count_sum": 8,
+          "reciprocal_rank_sum": 3.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 4,
+          "gold_card_supplied": 3,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 3,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 3,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.75,
+          "recall2": 0.75,
+          "recall3": 0.75,
+          "MRR": 0.75,
+          "MRR_exact": "3/4",
+          "candidate_count_mean": 2.0
+        },
+        "email_query": {
+          "denominator": 31,
+          "observed": 31,
+          "missing": 0,
+          "valid": 31,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 31
+          },
+          "top1_count": 28,
+          "recall2_count": 31,
+          "recall3_count": 31,
+          "candidate_count_distribution": {
+            "2": 25,
+            "1": 6
+          },
+          "candidate_count_sum": 56,
+          "reciprocal_rank_sum": 29.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 31,
+          "gold_card_supplied": 30,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 24,
+            "2": 5,
+            "4": 1,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 28,
+            "rank2or3:supplied": 2,
+            "rank2or3:not_supplied": 1
+          },
+          "top1": 0.9032258064516129,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9516129032258065,
+          "MRR_exact": "59/62",
+          "candidate_count_mean": 1.8064516129032258
+        },
+        "email_querycontact": {
+          "denominator": 6,
+          "observed": 6,
+          "missing": 0,
+          "valid": 6,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 6
+          },
+          "top1_count": 4,
+          "recall2_count": 5,
+          "recall3_count": 5,
+          "candidate_count_distribution": {
+            "2": 6
+          },
+          "candidate_count_sum": 12,
+          "reciprocal_rank_sum": 4.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 6,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 1,
+            "1": 4,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 1,
+            "rank1:supplied": 4,
+            "miss:supplied": 1
+          },
+          "top1": 0.6666666666666666,
+          "recall2": 0.8333333333333334,
+          "recall3": 0.8333333333333334,
+          "MRR": 0.75,
+          "MRR_exact": "3/4",
+          "candidate_count_mean": 2.0
+        },
+        "email_sendemail": {
+          "denominator": 19,
+          "observed": 19,
+          "missing": 0,
+          "valid": 19,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 19
+          },
+          "top1_count": 16,
+          "recall2_count": 16,
+          "recall3_count": 16,
+          "candidate_count_distribution": {
+            "2": 18,
+            "1": 1
+          },
+          "candidate_count_sum": 37,
+          "reciprocal_rank_sum": 16.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 19,
+          "gold_card_supplied": 17,
+          "gold_card_missing_when_observed": 2,
+          "gold_card_supply_rank_distribution": {
+            "1": 16,
+            "None": 2,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 16,
+            "miss:not_supplied": 2,
+            "miss:supplied": 1
+          },
+          "top1": 0.8421052631578947,
+          "recall2": 0.8421052631578947,
+          "recall3": 0.8421052631578947,
+          "MRR": 0.8421052631578947,
+          "MRR_exact": "16/19",
+          "candidate_count_mean": 1.9473684210526316
+        },
+        "general_greet": {
+          "denominator": 5,
+          "observed": 5,
+          "missing": 0,
+          "valid": 5,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 5
+          },
+          "top1_count": 5,
+          "recall2_count": 5,
+          "recall3_count": 5,
+          "candidate_count_distribution": {
+            "2": 4,
+            "3": 1
+          },
+          "candidate_count_sum": 11,
+          "reciprocal_rank_sum": 5.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 5,
+          "gold_card_supplied": 5,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 5
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 5
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.2
+        },
+        "general_joke": {
+          "denominator": 10,
+          "observed": 10,
+          "missing": 0,
+          "valid": 10,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 10
+          },
+          "top1_count": 9,
+          "recall2_count": 9,
+          "recall3_count": 9,
+          "candidate_count_distribution": {
+            "1": 1,
+            "2": 8,
+            "3": 1
+          },
+          "candidate_count_sum": 20,
+          "reciprocal_rank_sum": 9.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 10,
+          "gold_card_supplied": 9,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 9,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 9,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.9,
+          "recall2": 0.9,
+          "recall3": 0.9,
+          "MRR": 0.9,
+          "MRR_exact": "9/10",
+          "candidate_count_mean": 2.0
+        },
+        "general_quirky": {
+          "denominator": 45,
+          "observed": 45,
+          "missing": 0,
+          "valid": 45,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 45
+          },
+          "top1_count": 7,
+          "recall2_count": 18,
+          "recall3_count": 19,
+          "candidate_count_distribution": {
+            "2": 41,
+            "3": 3,
+            "1": 1
+          },
+          "candidate_count_sum": 92,
+          "reciprocal_rank_sum": 12.833333333333334,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 45,
+          "gold_card_supplied": 37,
+          "gold_card_missing_when_observed": 8,
+          "gold_card_supply_rank_distribution": {
+            "7": 4,
+            "None": 8,
+            "8": 4,
+            "2": 6,
+            "5": 4,
+            "3": 9,
+            "4": 5,
+            "6": 3,
+            "1": 2
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 12,
+            "miss:not_supplied": 8,
+            "miss:supplied": 18,
+            "rank1:supplied": 7
+          },
+          "top1": 0.15555555555555556,
+          "recall2": 0.4,
+          "recall3": 0.4222222222222222,
+          "MRR": 0.2851851851851852,
+          "MRR_exact": "77/270",
+          "candidate_count_mean": 2.0444444444444443
+        },
+        "iot_cleaning": {
+          "denominator": 6,
+          "observed": 6,
+          "missing": 0,
+          "valid": 6,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 6
+          },
+          "top1_count": 4,
+          "recall2_count": 4,
+          "recall3_count": 4,
+          "candidate_count_distribution": {
+            "2": 5,
+            "1": 1
+          },
+          "candidate_count_sum": 11,
+          "reciprocal_rank_sum": 4.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 6,
+          "gold_card_supplied": 5,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "None": 1,
+            "1": 4,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "miss:not_supplied": 1,
+            "miss:supplied": 1,
+            "rank1:supplied": 4
+          },
+          "top1": 0.6666666666666666,
+          "recall2": 0.6666666666666666,
+          "recall3": 0.6666666666666666,
+          "MRR": 0.6666666666666666,
+          "MRR_exact": "2/3",
+          "candidate_count_mean": 1.8333333333333333
+        },
+        "iot_coffee": {
+          "denominator": 9,
+          "observed": 9,
+          "missing": 0,
+          "valid": 9,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 9
+          },
+          "top1_count": 8,
+          "recall2_count": 9,
+          "recall3_count": 9,
+          "candidate_count_distribution": {
+            "2": 8,
+            "3": 1
+          },
+          "candidate_count_sum": 19,
+          "reciprocal_rank_sum": 8.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 9,
+          "gold_card_supplied": 9,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 8,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 8,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.8888888888888888,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9444444444444444,
+          "MRR_exact": "17/18",
+          "candidate_count_mean": 2.111111111111111
+        },
+        "iot_hue_lightchange": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 6,
+          "recall2_count": 7,
+          "recall3_count": 7,
+          "candidate_count_distribution": {
+            "2": 6,
+            "1": 2
+          },
+          "candidate_count_sum": 14,
+          "reciprocal_rank_sum": 6.5,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "3": 1,
+            "1": 6,
+            "7": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 1,
+            "rank1:supplied": 6,
+            "miss:supplied": 1
+          },
+          "top1": 0.75,
+          "recall2": 0.875,
+          "recall3": 0.875,
+          "MRR": 0.8125,
+          "MRR_exact": "13/16",
+          "candidate_count_mean": 1.75
+        },
+        "iot_hue_lightdim": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 6,
+          "recall2_count": 7,
+          "recall3_count": 7,
+          "candidate_count_distribution": {
+            "2": 8
+          },
+          "candidate_count_sum": 16,
+          "reciprocal_rank_sum": 6.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 6,
+            "2": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 6,
+            "rank2or3:supplied": 1,
+            "miss:supplied": 1
+          },
+          "top1": 0.75,
+          "recall2": 0.875,
+          "recall3": 0.875,
+          "MRR": 0.8125,
+          "MRR_exact": "13/16",
+          "candidate_count_mean": 2.0
+        },
+        "iot_hue_lightoff": {
+          "denominator": 13,
+          "observed": 13,
+          "missing": 0,
+          "valid": 13,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 13
+          },
+          "top1_count": 10,
+          "recall2_count": 12,
+          "recall3_count": 12,
+          "candidate_count_distribution": {
+            "2": 12,
+            "1": 1
+          },
+          "candidate_count_sum": 25,
+          "reciprocal_rank_sum": 11.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 13,
+          "gold_card_supplied": 13,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "8": 1,
+            "1": 10,
+            "3": 1,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "miss:supplied": 1,
+            "rank1:supplied": 10,
+            "rank2or3:supplied": 2
+          },
+          "top1": 0.7692307692307693,
+          "recall2": 0.9230769230769231,
+          "recall3": 0.9230769230769231,
+          "MRR": 0.8461538461538461,
+          "MRR_exact": "11/13",
+          "candidate_count_mean": 1.9230769230769231
+        },
+        "iot_hue_lighton": {
+          "denominator": 5,
+          "observed": 5,
+          "missing": 0,
+          "valid": 5,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 5
+          },
+          "top1_count": 3,
+          "recall2_count": 5,
+          "recall3_count": 5,
+          "candidate_count_distribution": {
+            "2": 5
+          },
+          "candidate_count_sum": 10,
+          "reciprocal_rank_sum": 4.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 5,
+          "gold_card_supplied": 5,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "2": 2,
+            "3": 3
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 3,
+            "rank2or3:supplied": 2
+          },
+          "top1": 0.6,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.8,
+          "MRR_exact": "4/5",
+          "candidate_count_mean": 2.0
+        },
+        "iot_hue_lightup": {
+          "denominator": 6,
+          "observed": 6,
+          "missing": 0,
+          "valid": 6,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 6
+          },
+          "top1_count": 5,
+          "recall2_count": 6,
+          "recall3_count": 6,
+          "candidate_count_distribution": {
+            "2": 6
+          },
+          "candidate_count_sum": 12,
+          "reciprocal_rank_sum": 5.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 6,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 5,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 5,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.8333333333333334,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9166666666666666,
+          "MRR_exact": "11/12",
+          "candidate_count_mean": 2.0
+        },
+        "iot_wemo_off": {
+          "denominator": 1,
+          "observed": 1,
+          "missing": 0,
+          "valid": 1,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 1
+          },
+          "top1_count": 1,
+          "recall2_count": 1,
+          "recall3_count": 1,
+          "candidate_count_distribution": {
+            "2": 1
+          },
+          "candidate_count_sum": 2,
+          "reciprocal_rank_sum": 1.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 1,
+          "gold_card_supplied": 1,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 1
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.0
+        },
+        "iot_wemo_on": {
+          "denominator": 4,
+          "observed": 4,
+          "missing": 0,
+          "valid": 4,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 4
+          },
+          "top1_count": 2,
+          "recall2_count": 3,
+          "recall3_count": 3,
+          "candidate_count_distribution": {
+            "2": 3,
+            "1": 1
+          },
+          "candidate_count_sum": 7,
+          "reciprocal_rank_sum": 2.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 4,
+          "gold_card_supplied": 4,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "6": 1,
+            "1": 2,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "miss:supplied": 1,
+            "rank1:supplied": 2,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.5,
+          "recall2": 0.75,
+          "recall3": 0.75,
+          "MRR": 0.625,
+          "MRR_exact": "5/8",
+          "candidate_count_mean": 1.75
+        },
+        "lists_createoradd": {
+          "denominator": 22,
+          "observed": 22,
+          "missing": 0,
+          "valid": 22,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 22
+          },
+          "top1_count": 19,
+          "recall2_count": 20,
+          "recall3_count": 20,
+          "candidate_count_distribution": {
+            "2": 18,
+            "1": 4
+          },
+          "candidate_count_sum": 40,
+          "reciprocal_rank_sum": 19.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 22,
+          "gold_card_supplied": 21,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 15,
+            "None": 1,
+            "4": 2,
+            "3": 2,
+            "8": 1,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 19,
+            "miss:not_supplied": 1,
+            "miss:supplied": 1,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.8636363636363636,
+          "recall2": 0.9090909090909091,
+          "recall3": 0.9090909090909091,
+          "MRR": 0.8863636363636364,
+          "MRR_exact": "39/44",
+          "candidate_count_mean": 1.8181818181818181
+        },
+        "lists_query": {
+          "denominator": 22,
+          "observed": 22,
+          "missing": 0,
+          "valid": 22,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 22
+          },
+          "top1_count": 18,
+          "recall2_count": 19,
+          "recall3_count": 19,
+          "candidate_count_distribution": {
+            "2": 15,
+            "1": 4,
+            "3": 3
+          },
+          "candidate_count_sum": 43,
+          "reciprocal_rank_sum": 18.5,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 22,
+          "gold_card_supplied": 20,
+          "gold_card_missing_when_observed": 2,
+          "gold_card_supply_rank_distribution": {
+            "4": 3,
+            "1": 13,
+            "2": 1,
+            "5": 1,
+            "3": 1,
+            "6": 1,
+            "None": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 18,
+            "rank2or3:supplied": 1,
+            "miss:supplied": 1,
+            "miss:not_supplied": 2
+          },
+          "top1": 0.8181818181818182,
+          "recall2": 0.8636363636363636,
+          "recall3": 0.8636363636363636,
+          "MRR": 0.8409090909090909,
+          "MRR_exact": "37/44",
+          "candidate_count_mean": 1.9545454545454546
+        },
+        "lists_remove": {
+          "denominator": 16,
+          "observed": 16,
+          "missing": 0,
+          "valid": 16,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 16
+          },
+          "top1_count": 14,
+          "recall2_count": 14,
+          "recall3_count": 14,
+          "candidate_count_distribution": {
+            "2": 13,
+            "1": 3
+          },
+          "candidate_count_sum": 29,
+          "reciprocal_rank_sum": 14.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 16,
+          "gold_card_supplied": 14,
+          "gold_card_missing_when_observed": 2,
+          "gold_card_supply_rank_distribution": {
+            "1": 14,
+            "None": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 14,
+            "miss:not_supplied": 2
+          },
+          "top1": 0.875,
+          "recall2": 0.875,
+          "recall3": 0.875,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 1.8125
+        },
+        "music_dislikeness": {
+          "denominator": 1,
+          "observed": 1,
+          "missing": 0,
+          "valid": 1,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 1
+          },
+          "top1_count": 1,
+          "recall2_count": 1,
+          "recall3_count": 1,
+          "candidate_count_distribution": {
+            "2": 1
+          },
+          "candidate_count_sum": 2,
+          "reciprocal_rank_sum": 1.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 1,
+          "gold_card_supplied": 1,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 1
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.0
+        },
+        "music_likeness": {
+          "denominator": 18,
+          "observed": 18,
+          "missing": 0,
+          "valid": 18,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 18
+          },
+          "top1_count": 14,
+          "recall2_count": 15,
+          "recall3_count": 15,
+          "candidate_count_distribution": {
+            "2": 17,
+            "3": 1
+          },
+          "candidate_count_sum": 37,
+          "reciprocal_rank_sum": 14.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 18,
+          "gold_card_supplied": 17,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "3": 4,
+            "2": 7,
+            "1": 5,
+            "7": 1,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 14,
+            "miss:supplied": 2,
+            "miss:not_supplied": 1,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.7777777777777778,
+          "recall2": 0.8333333333333334,
+          "recall3": 0.8333333333333334,
+          "MRR": 0.8055555555555556,
+          "MRR_exact": "29/36",
+          "candidate_count_mean": 2.0555555555555554
+        },
+        "music_query": {
+          "denominator": 32,
+          "observed": 32,
+          "missing": 0,
+          "valid": 32,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 32
+          },
+          "top1_count": 26,
+          "recall2_count": 30,
+          "recall3_count": 30,
+          "candidate_count_distribution": {
+            "2": 31,
+            "3": 1
+          },
+          "candidate_count_sum": 65,
+          "reciprocal_rank_sum": 28.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 32,
+          "gold_card_supplied": 31,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "5": 1,
+            "1": 28,
+            "2": 1,
+            "None": 1,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "miss:supplied": 1,
+            "rank1:supplied": 26,
+            "rank2or3:supplied": 4,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.8125,
+          "recall2": 0.9375,
+          "recall3": 0.9375,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 2.03125
+        },
+        "music_settings": {
+          "denominator": 9,
+          "observed": 9,
+          "missing": 0,
+          "valid": 9,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 9
+          },
+          "top1_count": 4,
+          "recall2_count": 6,
+          "recall3_count": 6,
+          "candidate_count_distribution": {
+            "2": 9
+          },
+          "candidate_count_sum": 18,
+          "reciprocal_rank_sum": 5.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 9,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "None": 1,
+            "4": 1,
+            "3": 2,
+            "2": 1,
+            "1": 3,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "miss:not_supplied": 1,
+            "miss:supplied": 2,
+            "rank1:supplied": 4,
+            "rank2or3:supplied": 2
+          },
+          "top1": 0.4444444444444444,
+          "recall2": 0.6666666666666666,
+          "recall3": 0.6666666666666666,
+          "MRR": 0.5555555555555556,
+          "MRR_exact": "5/9",
+          "candidate_count_mean": 2.0
+        },
+        "news_query": {
+          "denominator": 60,
+          "observed": 60,
+          "missing": 0,
+          "valid": 60,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 60
+          },
+          "top1_count": 48,
+          "recall2_count": 54,
+          "recall3_count": 54,
+          "candidate_count_distribution": {
+            "2": 52,
+            "1": 5,
+            "3": 3
+          },
+          "candidate_count_sum": 118,
+          "reciprocal_rank_sum": 51.0,
+          "raw_duplicate_rows": 4,
+          "gold_card_supply_observed": 60,
+          "gold_card_supplied": 55,
+          "gold_card_missing_when_observed": 5,
+          "gold_card_supply_rank_distribution": {
+            "2": 2,
+            "1": 48,
+            "None": 5,
+            "5": 1,
+            "4": 1,
+            "6": 2,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 6,
+            "rank1:supplied": 48,
+            "miss:not_supplied": 5,
+            "miss:supplied": 1
+          },
+          "top1": 0.8,
+          "recall2": 0.9,
+          "recall3": 0.9,
+          "MRR": 0.85,
+          "MRR_exact": "17/20",
+          "candidate_count_mean": 1.9666666666666666
+        },
+        "play_audiobook": {
+          "denominator": 7,
+          "observed": 7,
+          "missing": 0,
+          "valid": 7,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 7
+          },
+          "top1_count": 6,
+          "recall2_count": 7,
+          "recall3_count": 7,
+          "candidate_count_distribution": {
+            "2": 7
+          },
+          "candidate_count_sum": 14,
+          "reciprocal_rank_sum": 6.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 7,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 1,
+            "3": 1,
+            "7": 1,
+            "5": 1,
+            "None": 1,
+            "6": 1,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 6,
+            "rank2or3:not_supplied": 1
+          },
+          "top1": 0.8571428571428571,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9285714285714286,
+          "MRR_exact": "13/14",
+          "candidate_count_mean": 2.0
+        },
+        "play_game": {
+          "denominator": 7,
+          "observed": 7,
+          "missing": 0,
+          "valid": 7,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 7
+          },
+          "top1_count": 6,
+          "recall2_count": 6,
+          "recall3_count": 6,
+          "candidate_count_distribution": {
+            "2": 6,
+            "1": 1
+          },
+          "candidate_count_sum": 13,
+          "reciprocal_rank_sum": 6.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 7,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 5,
+            "None": 1,
+            "4": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 6,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.8571428571428571,
+          "recall2": 0.8571428571428571,
+          "recall3": 0.8571428571428571,
+          "MRR": 0.8571428571428571,
+          "MRR_exact": "6/7",
+          "candidate_count_mean": 1.8571428571428572
+        },
+        "play_music": {
+          "denominator": 19,
+          "observed": 19,
+          "missing": 0,
+          "valid": 19,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 19
+          },
+          "top1_count": 16,
+          "recall2_count": 17,
+          "recall3_count": 17,
+          "candidate_count_distribution": {
+            "2": 19
+          },
+          "candidate_count_sum": 38,
+          "reciprocal_rank_sum": 16.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 19,
+          "gold_card_supplied": 16,
+          "gold_card_missing_when_observed": 3,
+          "gold_card_supply_rank_distribution": {
+            "1": 15,
+            "None": 3,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 15,
+            "miss:not_supplied": 2,
+            "rank1:not_supplied": 1,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.8421052631578947,
+          "recall2": 0.8947368421052632,
+          "recall3": 0.8947368421052632,
+          "MRR": 0.868421052631579,
+          "MRR_exact": "33/38",
+          "candidate_count_mean": 2.0
+        },
+        "play_podcasts": {
+          "denominator": 11,
+          "observed": 11,
+          "missing": 0,
+          "valid": 11,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 11
+          },
+          "top1_count": 10,
+          "recall2_count": 11,
+          "recall3_count": 11,
+          "candidate_count_distribution": {
+            "2": 11
+          },
+          "candidate_count_sum": 22,
+          "reciprocal_rank_sum": 10.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 11,
+          "gold_card_supplied": 11,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 8,
+            "3": 1,
+            "2": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 10,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.9090909090909091,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9545454545454546,
+          "MRR_exact": "21/22",
+          "candidate_count_mean": 2.0
+        },
+        "play_radio": {
+          "denominator": 16,
+          "observed": 16,
+          "missing": 0,
+          "valid": 16,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 16
+          },
+          "top1_count": 14,
+          "recall2_count": 15,
+          "recall3_count": 15,
+          "candidate_count_distribution": {
+            "2": 16
+          },
+          "candidate_count_sum": 32,
+          "reciprocal_rank_sum": 14.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 16,
+          "gold_card_supplied": 15,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 13,
+            "5": 2,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 14,
+            "rank2or3:supplied": 1,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.875,
+          "recall2": 0.9375,
+          "recall3": 0.9375,
+          "MRR": 0.90625,
+          "MRR_exact": "29/32",
+          "candidate_count_mean": 2.0
+        },
+        "qa_currency": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 8,
+          "recall2_count": 8,
+          "recall3_count": 8,
+          "candidate_count_distribution": {
+            "2": 7,
+            "1": 1
+          },
+          "candidate_count_sum": 15,
+          "reciprocal_rank_sum": 8.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 8
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 8
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 1.875
+        },
+        "qa_definition": {
+          "denominator": 11,
+          "observed": 11,
+          "missing": 0,
+          "valid": 11,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 11
+          },
+          "top1_count": 11,
+          "recall2_count": 11,
+          "recall3_count": 11,
+          "candidate_count_distribution": {
+            "1": 1,
+            "2": 10
+          },
+          "candidate_count_sum": 21,
+          "reciprocal_rank_sum": 11.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 11,
+          "gold_card_supplied": 11,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 11
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 11
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 1.9090909090909092
+        },
+        "qa_factoid": {
+          "denominator": 27,
+          "observed": 27,
+          "missing": 0,
+          "valid": 27,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 27
+          },
+          "top1_count": 20,
+          "recall2_count": 22,
+          "recall3_count": 22,
+          "candidate_count_distribution": {
+            "2": 26,
+            "1": 1
+          },
+          "candidate_count_sum": 53,
+          "reciprocal_rank_sum": 21.0,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 27,
+          "gold_card_supplied": 24,
+          "gold_card_missing_when_observed": 3,
+          "gold_card_supply_rank_distribution": {
+            "1": 16,
+            "5": 1,
+            "2": 5,
+            "None": 3,
+            "3": 1,
+            "4": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 20,
+            "miss:supplied": 2,
+            "miss:not_supplied": 3,
+            "rank2or3:supplied": 2
+          },
+          "top1": 0.7407407407407407,
+          "recall2": 0.8148148148148148,
+          "recall3": 0.8148148148148148,
+          "MRR": 0.7777777777777778,
+          "MRR_exact": "7/9",
+          "candidate_count_mean": 1.962962962962963
+        },
+        "qa_maths": {
+          "denominator": 6,
+          "observed": 6,
+          "missing": 0,
+          "valid": 6,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 6
+          },
+          "top1_count": 6,
+          "recall2_count": 6,
+          "recall3_count": 6,
+          "candidate_count_distribution": {
+            "1": 3,
+            "2": 3
+          },
+          "candidate_count_sum": 9,
+          "reciprocal_rank_sum": 6.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 6,
+          "gold_card_supplied": 6,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 6
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 6
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 1.5
+        },
+        "qa_stock": {
+          "denominator": 8,
+          "observed": 8,
+          "missing": 0,
+          "valid": 8,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 8
+          },
+          "top1_count": 7,
+          "recall2_count": 7,
+          "recall3_count": 7,
+          "candidate_count_distribution": {
+            "2": 8
+          },
+          "candidate_count_sum": 16,
+          "reciprocal_rank_sum": 7.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 8,
+          "gold_card_supplied": 8,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 7,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 7,
+            "miss:supplied": 1
+          },
+          "top1": 0.875,
+          "recall2": 0.875,
+          "recall3": 0.875,
+          "MRR": 0.875,
+          "MRR_exact": "7/8",
+          "candidate_count_mean": 2.0
+        },
+        "recommendation_events": {
+          "denominator": 20,
+          "observed": 20,
+          "missing": 0,
+          "valid": 20,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 20
+          },
+          "top1_count": 19,
+          "recall2_count": 20,
+          "recall3_count": 20,
+          "candidate_count_distribution": {
+            "2": 15,
+            "1": 1,
+            "3": 4
+          },
+          "candidate_count_sum": 43,
+          "reciprocal_rank_sum": 19.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 20,
+          "gold_card_supplied": 20,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 19,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 19,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.95,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.975,
+          "MRR_exact": "39/40",
+          "candidate_count_mean": 2.15
+        },
+        "recommendation_locations": {
+          "denominator": 30,
+          "observed": 30,
+          "missing": 0,
+          "valid": 30,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 30
+          },
+          "top1_count": 30,
+          "recall2_count": 30,
+          "recall3_count": 30,
+          "candidate_count_distribution": {
+            "2": 28,
+            "3": 2
+          },
+          "candidate_count_sum": 62,
+          "reciprocal_rank_sum": 30.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 30,
+          "gold_card_supplied": 30,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 30
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 30
+          },
+          "top1": 1.0,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 1.0,
+          "MRR_exact": "1",
+          "candidate_count_mean": 2.066666666666667
+        },
+        "recommendation_movies": {
+          "denominator": 10,
+          "observed": 10,
+          "missing": 0,
+          "valid": 10,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 10
+          },
+          "top1_count": 9,
+          "recall2_count": 10,
+          "recall3_count": 10,
+          "candidate_count_distribution": {
+            "2": 9,
+            "1": 1
+          },
+          "candidate_count_sum": 19,
+          "reciprocal_rank_sum": 9.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 10,
+          "gold_card_supplied": 10,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 9,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 9,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.9,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.95,
+          "MRR_exact": "19/20",
+          "candidate_count_mean": 1.9
+        },
+        "social_post": {
+          "denominator": 47,
+          "observed": 47,
+          "missing": 0,
+          "valid": 47,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 47
+          },
+          "top1_count": 33,
+          "recall2_count": 36,
+          "recall3_count": 36,
+          "candidate_count_distribution": {
+            "2": 44,
+            "1": 3
+          },
+          "candidate_count_sum": 91,
+          "reciprocal_rank_sum": 34.5,
+          "raw_duplicate_rows": 2,
+          "gold_card_supply_observed": 47,
+          "gold_card_supplied": 42,
+          "gold_card_missing_when_observed": 5,
+          "gold_card_supply_rank_distribution": {
+            "None": 5,
+            "2": 6,
+            "1": 32,
+            "8": 1,
+            "4": 1,
+            "3": 1,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "miss:not_supplied": 5,
+            "rank2or3:supplied": 3,
+            "rank1:supplied": 33,
+            "miss:supplied": 6
+          },
+          "top1": 0.7021276595744681,
+          "recall2": 0.7659574468085106,
+          "recall3": 0.7659574468085106,
+          "MRR": 0.7340425531914894,
+          "MRR_exact": "69/94",
+          "candidate_count_mean": 1.9361702127659575
+        },
+        "social_query": {
+          "denominator": 13,
+          "observed": 13,
+          "missing": 0,
+          "valid": 13,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 13
+          },
+          "top1_count": 11,
+          "recall2_count": 11,
+          "recall3_count": 11,
+          "candidate_count_distribution": {
+            "2": 13
+          },
+          "candidate_count_sum": 26,
+          "reciprocal_rank_sum": 11.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 13,
+          "gold_card_supplied": 12,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 9,
+            "None": 1,
+            "2": 1,
+            "6": 1,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 11,
+            "miss:not_supplied": 1,
+            "miss:supplied": 1
+          },
+          "top1": 0.8461538461538461,
+          "recall2": 0.8461538461538461,
+          "recall3": 0.8461538461538461,
+          "MRR": 0.8461538461538461,
+          "MRR_exact": "11/13",
+          "candidate_count_mean": 2.0
+        },
+        "takeaway_order": {
+          "denominator": 29,
+          "observed": 29,
+          "missing": 0,
+          "valid": 29,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 29
+          },
+          "top1_count": 20,
+          "recall2_count": 24,
+          "recall3_count": 24,
+          "candidate_count_distribution": {
+            "2": 26,
+            "1": 3
+          },
+          "candidate_count_sum": 55,
+          "reciprocal_rank_sum": 22.0,
+          "raw_duplicate_rows": 3,
+          "gold_card_supply_observed": 29,
+          "gold_card_supplied": 28,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "7": 1,
+            "1": 20,
+            "2": 2,
+            "3": 4,
+            "5": 1,
+            "None": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 20,
+            "rank2or3:supplied": 4,
+            "miss:supplied": 4,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.6896551724137931,
+          "recall2": 0.8275862068965517,
+          "recall3": 0.8275862068965517,
+          "MRR": 0.7586206896551724,
+          "MRR_exact": "22/29",
+          "candidate_count_mean": 1.896551724137931
+        },
+        "takeaway_query": {
+          "denominator": 31,
+          "observed": 31,
+          "missing": 0,
+          "valid": 31,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 31
+          },
+          "top1_count": 27,
+          "recall2_count": 28,
+          "recall3_count": 28,
+          "candidate_count_distribution": {
+            "2": 31
+          },
+          "candidate_count_sum": 62,
+          "reciprocal_rank_sum": 27.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 31,
+          "gold_card_supplied": 30,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "2": 2,
+            "None": 1,
+            "1": 24,
+            "3": 1,
+            "7": 1,
+            "8": 1,
+            "4": 1
+          },
+          "supply_by_outcome": {
+            "miss:supplied": 2,
+            "miss:not_supplied": 1,
+            "rank1:supplied": 27,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.8709677419354839,
+          "recall2": 0.9032258064516129,
+          "recall3": 0.9032258064516129,
+          "MRR": 0.8870967741935484,
+          "MRR_exact": "55/62",
+          "candidate_count_mean": 2.0
+        },
+        "transport_query": {
+          "denominator": 17,
+          "observed": 17,
+          "missing": 0,
+          "valid": 17,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 17
+          },
+          "top1_count": 12,
+          "recall2_count": 16,
+          "recall3_count": 16,
+          "candidate_count_distribution": {
+            "2": 16,
+            "1": 1
+          },
+          "candidate_count_sum": 33,
+          "reciprocal_rank_sum": 14.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 17,
+          "gold_card_supplied": 17,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 12,
+            "2": 4,
+            "6": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 12,
+            "rank2or3:supplied": 4,
+            "miss:supplied": 1
+          },
+          "top1": 0.7058823529411765,
+          "recall2": 0.9411764705882353,
+          "recall3": 0.9411764705882353,
+          "MRR": 0.8235294117647058,
+          "MRR_exact": "14/17",
+          "candidate_count_mean": 1.9411764705882353
+        },
+        "transport_taxi": {
+          "denominator": 13,
+          "observed": 13,
+          "missing": 0,
+          "valid": 13,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 13
+          },
+          "top1_count": 12,
+          "recall2_count": 12,
+          "recall3_count": 12,
+          "candidate_count_distribution": {
+            "2": 12,
+            "1": 1
+          },
+          "candidate_count_sum": 25,
+          "reciprocal_rank_sum": 12.0,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 13,
+          "gold_card_supplied": 12,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 11,
+            "None": 1,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 12,
+            "miss:not_supplied": 1
+          },
+          "top1": 0.9230769230769231,
+          "recall2": 0.9230769230769231,
+          "recall3": 0.9230769230769231,
+          "MRR": 0.9230769230769231,
+          "MRR_exact": "12/13",
+          "candidate_count_mean": 1.9230769230769231
+        },
+        "transport_ticket": {
+          "denominator": 17,
+          "observed": 17,
+          "missing": 0,
+          "valid": 17,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 17
+          },
+          "top1_count": 12,
+          "recall2_count": 15,
+          "recall3_count": 15,
+          "candidate_count_distribution": {
+            "2": 17
+          },
+          "candidate_count_sum": 34,
+          "reciprocal_rank_sum": 13.5,
+          "raw_duplicate_rows": 0,
+          "gold_card_supply_observed": 17,
+          "gold_card_supplied": 16,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "7": 1,
+            "1": 11,
+            "2": 3,
+            "None": 1,
+            "3": 1
+          },
+          "supply_by_outcome": {
+            "rank2or3:supplied": 3,
+            "rank1:supplied": 12,
+            "miss:not_supplied": 1,
+            "miss:supplied": 1
+          },
+          "top1": 0.7058823529411765,
+          "recall2": 0.8823529411764706,
+          "recall3": 0.8823529411764706,
+          "MRR": 0.7941176470588235,
+          "MRR_exact": "27/34",
+          "candidate_count_mean": 2.0
+        },
+        "transport_traffic": {
+          "denominator": 13,
+          "observed": 13,
+          "missing": 0,
+          "valid": 13,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 13
+          },
+          "top1_count": 12,
+          "recall2_count": 13,
+          "recall3_count": 13,
+          "candidate_count_distribution": {
+            "2": 12,
+            "1": 1
+          },
+          "candidate_count_sum": 25,
+          "reciprocal_rank_sum": 12.5,
+          "raw_duplicate_rows": 1,
+          "gold_card_supply_observed": 13,
+          "gold_card_supplied": 13,
+          "gold_card_missing_when_observed": 0,
+          "gold_card_supply_rank_distribution": {
+            "1": 12,
+            "2": 1
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 12,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.9230769230769231,
+          "recall2": 1.0,
+          "recall3": 1.0,
+          "MRR": 0.9615384615384616,
+          "MRR_exact": "25/26",
+          "candidate_count_mean": 1.9230769230769231
+        },
+        "weather_query": {
+          "denominator": 60,
+          "observed": 60,
+          "missing": 0,
+          "valid": 60,
+          "invalid_or_incomplete_observed": 0,
+          "valid_coverage_full_denominator": 1.0,
+          "status_counts": {
+            "valid": 60
+          },
+          "top1_count": 56,
+          "recall2_count": 57,
+          "recall3_count": 57,
+          "candidate_count_distribution": {
+            "1": 16,
+            "2": 43,
+            "3": 1
+          },
+          "candidate_count_sum": 105,
+          "reciprocal_rank_sum": 56.5,
+          "raw_duplicate_rows": 5,
+          "gold_card_supply_observed": 60,
+          "gold_card_supplied": 59,
+          "gold_card_missing_when_observed": 1,
+          "gold_card_supply_rank_distribution": {
+            "1": 54,
+            "None": 1,
+            "8": 1,
+            "3": 2,
+            "2": 2
+          },
+          "supply_by_outcome": {
+            "rank1:supplied": 56,
+            "miss:not_supplied": 1,
+            "miss:supplied": 2,
+            "rank2or3:supplied": 1
+          },
+          "top1": 0.9333333333333333,
+          "recall2": 0.95,
+          "recall3": 0.95,
+          "MRR": 0.9416666666666667,
+          "MRR_exact": "113/120",
+          "candidate_count_mean": 1.75
+        }
+      },
+      "cost": {
+        "audio_seconds_used": 3121.069874999994,
+        "calls_used": 1092,
+        "completion_tokens_total": 203141,
+        "latency_seconds_total": 28305.0423737401,
+        "prompt_tokens_total": 5974413,
+        "tool_calls": 0,
+        "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+      },
+      "latency": {
+        "n": 1092,
+        "mean": 25.92036847412097,
+        "p50": 25.122826744998747,
+        "p90": 32.731687179999426,
+        "p95": 33.82277952449222,
+        "max": 187.67611353998655
+      },
+      "throughput": {
+        "completed_rows": 1080,
+        "total_rows": 1080,
+        "container_wall_seconds": 2202.788636,
+        "container_seconds_per_completed_row": 2.0396191074074075,
+        "campaign_to_release_seconds": 2087.7187025099993,
+        "campaign_seconds_per_completed_row": 1.9330728726944437,
+        "allocated_card_hours_container_window": 2.4475429288888892,
+        "allocated_card_hours_campaign_window": 2.3196874472333326,
+        "cards": 4,
+        "instances": 1,
+        "remaining_rows": 0,
+        "eta_seconds": 0,
+        "scope": "Full 1080 per-run wall windows include CPU/preflight/tail as recorded; neither is single-request latency or proven steady-state NPU utilization"
+      }
+    }
+  },
+  "paired_uncertainty": {
+    "top1": {
+      "mean_delta": 0.000925925925925926,
+      "repairs": 13,
+      "regressions": 12,
+      "ties": 1055,
+      "paired_stratified_bootstrap_95_percentile_CI": [
+        -0.008333333333333333,
+        0.009259259259259259
+      ],
+      "paired_standard_error": 0.00463168869186981,
+      "exact_two_sided_discordance_p": 1.0,
+      "p_test": "McNemar exact conditional binomial"
+    },
+    "recall2": {
+      "mean_delta": 0.000925925925925926,
+      "repairs": 14,
+      "regressions": 13,
+      "ties": 1053,
+      "paired_stratified_bootstrap_95_percentile_CI": [
+        -0.008333333333333333,
+        0.010185185185185186
+      ],
+      "paired_standard_error": 0.004813398686469095,
+      "exact_two_sided_discordance_p": 1.0,
+      "p_test": "McNemar exact conditional binomial"
+    },
+    "recall3": {
+      "mean_delta": -0.022222222222222223,
+      "repairs": 10,
+      "regressions": 34,
+      "ties": 1036,
+      "paired_stratified_bootstrap_95_percentile_CI": [
+        -0.03425925925925926,
+        -0.011111111111111112
+      ],
+      "paired_standard_error": 0.006107388799050558,
+      "exact_two_sided_discordance_p": 0.00038813090293388086,
+      "p_test": "McNemar exact conditional binomial"
+    },
+    "MRR": {
+      "mean_delta": -0.006790123456790123,
+      "repairs": 28,
+      "regressions": 45,
+      "ties": 1007,
+      "paired_stratified_bootstrap_95_percentile_CI": [
+        -0.013734567901234567,
+        0.0
+      ],
+      "paired_standard_error": 0.003608319142419672,
+      "exact_two_sided_discordance_p": 0.060370037339928545,
+      "p_test": "sign test; tests sign, not mean MRR"
+    },
+    "valid": {
+      "mean_delta": 0.0,
+      "repairs": 0,
+      "regressions": 0,
+      "ties": 1080,
+      "paired_stratified_bootstrap_95_percentile_CI": [
+        0.0,
+        0.0
+      ],
+      "paired_standard_error": 0.0,
+      "exact_two_sided_discordance_p": 1.0,
+      "p_test": "McNemar exact conditional binomial"
+    }
+  },
+  "decision": "retain B parent; C1 does not establish top1 gain and loses recall3; no SLU evaluation performed"
+}
