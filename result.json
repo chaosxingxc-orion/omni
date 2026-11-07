@@ -1,0 +1,31 @@
+{
+  "schema": "raw-vllm-fit-max-concurrency-delivery-v1",
+  "status": "implemented_not_deployed",
+  "commit": "ca2110be6a01d84fd9de2b5c6c2f3c412e7ef42d",
+  "branch": "feat/raw-vllm-fit-concurrency",
+  "worktree": "/home/xingchao/workspace/omni/repro/worktrees/raw-vllm-fit-concurrency",
+  "configuration": {
+    "schema": "saea-native-efficiency-v1",
+    "key": "native_fit.max_concurrency",
+    "accepted_values": [8, 16, 32],
+    "default_without_key": 8,
+    "scope": "raw-speech-agent-native-tools + vllm + dispatch"
+  },
+  "validation": {
+    "factory_config_and_real_gate_tests": {"passed": 14, "deselected": 35},
+    "overlay_real_gate_recovery_tests": {"passed": 25, "deselected": 46},
+    "diff_check": "passed",
+    "py_compile": "passed",
+    "fixed_saea_container": "not_run",
+    "model_calls": 0,
+    "teacher_calls": 0,
+    "ssh": false,
+    "spawn": false
+  },
+  "known_unmeasured": [
+    "fixed-image validation",
+    "real vLLM throughput and NPU behavior",
+    "deployment cost and completed-sample progress"
+  ],
+  "delivery_files": ["report.md", "result.json", "final.txt"]
+}

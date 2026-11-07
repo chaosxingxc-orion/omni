@@ -1,0 +1,12 @@
+已完成并提交 raw-vLLM FIT max_concurrency 配置接线。
+
+源码 commit：ca2110be6a01d84fd9de2b5c6c2f3c412e7ef42d
+分支：feat/raw-vllm-fit-concurrency
+
+配置键：native_fit.max_concurrency
+允许值：8、16、32
+缺省：8
+
+已验证：外部 runtime config → FlightRuntime composition/overlay → 真实 build_native_contact_fit_gate factory，以及 8/16/32 并发上限、默认值、非法值拒绝和 recovery factory 链路。针对性测试 39 passed；diff check 与 py_compile 通过。
+
+未部署、未运行固定 saea 镜像、未调用服务或模型。完整测试的既有 openjiuwen 缺失项见 report.md。8 vs 16 的部署后对照方案已写入 report.md。
