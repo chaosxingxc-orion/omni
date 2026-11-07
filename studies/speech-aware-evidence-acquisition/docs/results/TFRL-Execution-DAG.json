@@ -654,11 +654,11 @@
       "status": "running_http_verified",
       "rows": 1080,
       "runtime_predecessor": "E5 ON known terminal settlement; independent admitted launch",
-      "completed_rows": 967,
-      "observed_at_utc": "2026-11-06T23:56:05.851932+00:00",
-      "wall_seconds_per_complete_row": 10.67022376420456,
-      "remaining_rows": 113,
-      "estimated_remaining_seconds": 1205.7352853551151
+      "completed_rows": 1043,
+      "observed_at_utc": "2026-11-07T00:06:56.421960+00:00",
+      "wall_seconds_per_complete_row": 10.516468271884571,
+      "remaining_rows": 37,
+      "estimated_remaining_seconds": 389.10932605972914
     },
     {
       "id": "node-prompt-candidates",
@@ -726,12 +726,12 @@
       "cpu_score_dependency": false,
       "status": "running_first_http_success_verified",
       "started_at_utc": "2026-11-06T22:06:40.70367096Z",
-      "completed_rows": 614,
+      "completed_rows": 685,
       "total_rows": 1080,
-      "observed_at_utc": "2026-11-06T23:50:56.366830+00:00",
-      "remaining_rows": 466,
-      "wall_seconds_per_complete_row": 10.188376481835927,
-      "estimated_remaining_seconds": 4747.7834405355425
+      "observed_at_utc": "2026-11-07T00:01:10.752727+00:00",
+      "remaining_rows": 395,
+      "wall_seconds_per_complete_row": 10.029268696360344,
+      "estimated_remaining_seconds": 3961.561135062336
     },
     {
       "id": "compact-slot-a-evaluate",
@@ -833,7 +833,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-07T00:05:00Z",
+  "updated_at": "2026-11-07T00:10:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
@@ -845,7 +845,7 @@
     "tfrl_reader": "deferred",
     "perception_miss_analysis": "historical P ranking admission and A-after-C96 successor armed;216pins verified; actual generation pending",
     "complete_on_terminal": "existing score watcher retained; CLI3058570 prepares terminal coverage and same-k8ON comparison, no live trace scan",
-    "efficiency_measurement": "CLI3060660 reuses existing600s instrumentation for future windows; no new model calls or generation dependencies"
+    "efficiency_measurement": "existing600s collector started fixed-image CPU76-77; first two-instance snapshot verified00:08:56; full handoff pending; no NPU dependency"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
