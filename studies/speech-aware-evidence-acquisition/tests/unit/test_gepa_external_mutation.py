@@ -59,3 +59,35 @@ def test_external_source_rejections(tmp_path, monkeypatch, fault):
         directory, _ = caller._binding(request)
         (directory / 'response/response.bin').write_text('{}')
     with pytest.raises(Exception): verify_external_mutation(spec, contract=contract, parent=parent)
+
+
+def test_derived_citations_are_deterministic_and_reject_unknown():
+    from gepa_external_mutation import normalize_citations
+    groups = [{'query_id': 'slurp:train:000001:audio-42'}, {'query_id': 'slurp:train:000002:audio-43'}]
+    source = {'diagnosis': 'See slurp:train:000001.', 'evidence_query_ids': ['slurp:train:000002:audio-43'], 'perception_instruction': 'unchanged'}
+    result, proof = normalize_citations(source, groups)
+    assert result['diagnosis'] == 'See slurp:train:000001:audio-42.'
+    assert result['evidence_query_ids'] == sorted(g['query_id'] for g in groups)
+    assert result['perception_instruction'] == source['perception_instruction']
+    assert proof['original_candidate_sha256'] != proof['derived_candidate_sha256']
+    with pytest.raises(ValueError):
+        normalize_citations(dict(source, diagnosis='slurp:train:000003'), groups)
+    with pytest.raises(ValueError):
+        normalize_citations(source, groups + [{'query_id': 'slurp:train:000001:audio-other'}])
+
+
+def test_derived_wire_replay_and_tamper(tmp_path, monkeypatch):
+    spec, contract, parent, root, caller, request = material(tmp_path, monkeypatch)
+    source = {'schema': 'saea-gepa-derived-citation-v1', 'prepared': spec['prepared'],
+              'candidate_index': 1, 'request_sha256': exploration.sha(request),
+              'response_sha256': caller.reconcile(request)['response']['wire_response_sha256']}
+    result = verify_external_mutation(source, contract=contract, parent=parent)
+    assert result['receipt_kind'] == 'external-chat-derived-citation-v1'
+    with pytest.raises(ValueError):
+        verify_external_mutation(dict(source, response_sha256='0' * 64), contract=contract, parent=parent)
+    with pytest.raises(ValueError):
+        verify_external_mutation(source, contract=contract, parent=dict(parent, candidate_sha256='f' * 64))
+    directory, _ = caller._binding(request)
+    (directory / 'response/response.bin').write_text('{}')
+    with pytest.raises(Exception):
+        verify_external_mutation(source, contract=contract, parent=parent)
