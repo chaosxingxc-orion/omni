@@ -1,7 +1,7 @@
 {
   "schema": "omni-sequential-node-optimization-plan-v1",
   "status": "planning-contract-not-runtime-registration",
-  "updated_at_utc": "2026-11-07T12:55:11.006211+00:00",
+  "updated_at_utc": "2026-11-07T13:34:49.970012+00:00",
   "user_order": [
     "optimize_P",
     "freeze_P_optimize_S",
@@ -125,7 +125,17 @@
     "failure_rows_kept": true,
     "runtime_answer_coverage_target": 1.0,
     "automatic_pass_from_ci_crossing_zero": false,
-    "claimed_every_node_perfect": false
+    "claimed_every_node_perfect": false,
+    "freeze_artifacts": [
+      "model_and_decode_identity",
+      "instruction_and_schema",
+      "knowledge_and_retrieval_identity",
+      "original_roster",
+      "actual_upstream_output_corpus_including_failures",
+      "ordered_candidates_evidence_and_handoff",
+      "paired_metrics_costs_and_regressions"
+    ],
+    "upstream_change_invalidates_downstream_freeze": true
   },
   "rounds": {
     "candidate_parallelism": "same target node, frozen parent, pinned roster",

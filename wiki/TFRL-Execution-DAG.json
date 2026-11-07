@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T13:17:56.247467+00:00",
+  "updated_at_utc": "2026-11-07T13:34:49.970012+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -16,13 +16,16 @@
       "id": "P-runtime",
       "resource": "CPU",
       "depends_on": [],
-      "status": "native_graph_tested_173_production_checkpoint_integration_in_progress",
+      "status": "node_seal_and_production_recipe_incomplete_rework5",
       "owner": "Terra CLI",
       "acceptance": [
         "native_P_only",
         "S_D_calls_zero",
         "original_audio_supply",
-        "native_cost_checkpoint_unknown_protection"
+        "native_cost_checkpoint_unknown_protection",
+        "real_SLURP_node_seal_release",
+        "remaining_only_restart",
+        "same_scientific_identity_across_attempts"
       ]
     },
     {
@@ -42,7 +45,7 @@
       "id": "P-teacher-input",
       "resource": "CPU",
       "depends_on": [],
-      "status": "GEPA_v2_accepted_other_method_context_rework",
+      "status": "four_v3_method_axis_requests_fixed_image_verified",
       "owner": "Sol CLI",
       "scope": "original construction625 learning partition; method-specific templates"
     },
@@ -52,11 +55,12 @@
       "depends_on": [
         "P-teacher-input"
       ],
-      "status": "external_request_streaming_no_collected_candidate",
+      "status": "six_raw_candidates_citation_and_semantic_review",
       "method": "gepa",
       "run_nodes": [
         "P"
-      ]
+      ],
+      "accepted_candidates": 0
     },
     {
       "id": "P-teacher-reflexion",
@@ -64,7 +68,7 @@
       "depends_on": [
         "P-teacher-input"
       ],
-      "status": "pending_verified_inputs",
+      "status": "construction_and_consumption_requests_running",
       "method": "reflexion",
       "run_nodes": [
         "P"
@@ -76,11 +80,12 @@
       "depends_on": [
         "P-teacher-input"
       ],
-      "status": "pending_verified_inputs",
+      "status": "consumption_running_construction_unknown_held",
       "method": "ace-inspired_until_complete_cycle_verified",
       "run_nodes": [
         "P"
-      ]
+      ],
+      "partial_failure_blocks_other_axes": false
     },
     {
       "id": "P-tfgrpo-group-prepare",
@@ -397,9 +402,9 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "completed": 592,
+      "completed": 671,
       "total": 1080,
-      "observed_at_utc": "2026-11-07T13:15:07.190307+00:00",
+      "observed_at_utc": "2026-11-07T13:30:53.725546+00:00",
       "state": "running_legacy_PON"
     },
     "B": {
@@ -409,14 +414,27 @@
       "pending": "new_P_only_recipe"
     },
     "C": {
-      "completed": 30,
+      "completed": 122,
       "total": 625,
-      "observed_at_utc": "2026-11-07T13:04:56.748013+00:00",
-      "state": "running_legacy_B625"
+      "observed_at_utc": "2026-11-07T13:25:01.292597+00:00",
+      "state": "failed_grammar_POST500_lease_retained_native_retirement_rework",
+      "observed_contacts": 367,
+      "unknown_contacts": 2
     },
     "teacher_gepa": {
-      "state": "streaming",
-      "validated_candidates": 0
+      "state": "response_received_collect_failed_citation_review",
+      "raw_candidates": 6,
+      "validated_candidates": 0,
+      "prompt_tokens": 167496,
+      "completion_tokens": 24582,
+      "automatic_retry": false,
+      "citation_audit": "31 abbreviated references uniquely map to original feedback; deployment approval pending"
+    },
+    "teacher_methods_v3": {
+      "reflexion_consumption": "running",
+      "reflexion_construction": "running",
+      "ace_consumption": "running",
+      "ace_construction": "unknown_held_no_retry"
     }
   },
   "historical_plan": {
