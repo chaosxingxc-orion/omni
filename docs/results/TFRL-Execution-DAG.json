@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T17:10:07.754322+00:00",
+  "updated_at_utc": "2026-11-07T17:21:40.505284+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -150,7 +150,7 @@
         "P-runtime",
         "P-gepa-material"
       ],
-      "status": "zero_contact_aborted_new_identity_supersession_in_progress",
+      "status": "superseding_identity_admitted_framework_check_passed_generation_not_confirmed",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -191,7 +191,7 @@
         "P-runtime",
         "P-reflexion-material"
       ],
-      "status": "C1_admitted_and_running_C2_successor_binding_in_progress",
+      "status": "C1_complete_C2_admitted_successor_permissions_fix",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -200,7 +200,7 @@
       "depends_on": [
         "P-reflexion-prepare"
       ],
-      "status": "C1_running768of1080_independently_verified",
+      "status": "C1_FINALIZED1080_C2_admitted_queue_permission_fix",
       "run_nodes": [
         "P"
       ],
@@ -216,7 +216,7 @@
         "P-reflexion-sample",
         "P-baseline"
       ],
-      "status": "waiting_outputs",
+      "status": "C1_native_complete_valid1080_top1873_r2955_r3957_matched_control_pending",
       "metrics": [
         "valid_coverage",
         "gold_candidate_set_recall_K_le_3",
@@ -406,7 +406,7 @@
       "depends_on": [
         "P-control-prepare"
       ],
-      "status": "running813of1080",
+      "status": "running973of1080",
       "run_nodes": [
         "P"
       ],
@@ -608,7 +608,7 @@
       "depends_on": [
         "P-intent-knowledge-release"
       ],
-      "status": "complete_two_native1080_registrations_main_a5e939f02_pending_admission"
+      "status": "two_registered1080_accepted_main_B_post_breadth16_admission_preparation"
     },
     {
       "id": "P-intent-music-sample",
@@ -652,9 +652,9 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "B_control_and_C_reflexion_running_A_continuation",
-      "observed_at_utc": "2026-11-07T17:04:02.868120+00:00",
-      "known_B_responses": 830,
+      "status": "B_running_C1_complete_A_and_C2_activation",
+      "observed_at_utc": "2026-11-07T17:17:07.218795+00:00",
+      "known_B_responses": 990,
       "runtime": "dcbc2a5c_B_active_59cf0ade_successors_ready"
     },
     "held": [
@@ -665,7 +665,7 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "state": "admitted_zero_contact_attempt_aborted_writable_FIT_fixed_continuation_preparation",
+      "state": "superseding_identity_admitted_framework_check_only_no_generation_response_confirmed",
       "total": 1080,
       "new_P_responses_confirmed": false,
       "historical_PON_completed": 1080,
@@ -674,37 +674,43 @@
     "B": {
       "state": "running_old_source_missing_drain_callback_successors_queued",
       "total": 1080,
-      "observed_at_utc": "2026-11-07T17:04:02.868120+00:00",
+      "observed_at_utc": "2026-11-07T17:17:07.218795+00:00",
       "seconds_per_row": null,
-      "eta_seconds": 1311.27076715625,
+      "eta_seconds": 524.53451390625,
       "successors": "verifier_v3_queue2067397_binder2067398_verified_waiting_actual_generation_release",
-      "completed": 813,
-      "known_responses": 830,
-      "prompt_tokens": 4423907,
-      "completion_tokens": 229842,
-      "mean_response_latency_seconds": 12.534329715857272,
-      "dispatches": 830,
-      "interval_seconds_per_row": 4.91112646875,
+      "completed": 973,
+      "known_responses": 990,
+      "prompt_tokens": 5274107,
+      "completion_tokens": 269999,
+      "mean_response_latency_seconds": 12.40239789939469,
+      "dispatches": 992,
+      "interval_seconds_per_row": 4.90219171875,
       "eta_basis": "within-host complete-row delta; not completion guarantee",
-      "observed_at_remote_host_utc": "2026-11-07T17:04:02.868120+00:00"
+      "observed_at_remote_host_utc": "2026-11-07T17:17:07.218795+00:00"
     },
     "C": {
-      "state": "C1_running_verified_actual_model_responses",
+      "state": "C1_FINALIZED1080_native_scored_C2_admitted_not_running",
       "diagnostic_requests_succeeded": 6,
       "new_P_responses_confirmed": true,
       "historical_unknown_contacts": 2,
       "automatic_retry": false,
-      "completed": 768,
+      "completed": 1080,
       "total": 1080,
-      "known_responses": 838,
-      "dispatches": 839,
-      "prompt_tokens": 4586864,
-      "completion_tokens": 147414,
-      "mean_response_latency_seconds": 25.793673457052513,
-      "observed_at_remote_host_utc": "2026-11-07T17:04:41.281742+00:00",
-      "eta_seconds": 375.285956806867,
-      "interval_seconds_per_row": 1.2028396051502146,
-      "eta_basis": "within-host complete-row delta; not completion guarantee"
+      "known_responses": 1092,
+      "dispatches": 1092,
+      "prompt_tokens": 5974413,
+      "completion_tokens": 203141,
+      "mean_response_latency_seconds": 25.92036847412097,
+      "observed_at_remote_host_utc": "2026-11-07T17:15:10.254460+00:00",
+      "eta_seconds": 0,
+      "eta_basis": "C1 exited0; no remaining samples",
+      "container_wall_seconds": 2202.788636,
+      "container_seconds_per_row": 2.0396191074074075,
+      "valid": 1080,
+      "top1_count": 873,
+      "recall2_count": 955,
+      "recall3_count": 957,
+      "MRR": 0.8469135802469135
     },
     "teacher_gepa": {
       "state": "index3_compiled_registered1080_pending_current_binding",
@@ -726,14 +732,14 @@
         "pid": 3640732
       },
       {
-        "role": "B_successor_verifier_configuration_rework",
-        "model": "gpt-6.1-terra",
-        "pid": 3642691
-      },
-      {
-        "role": "P_TFGRPO_group_reader_rework",
+        "role": "P_TFGRPO_group_reader_external_bridge_rework",
         "model": "gpt-6.1-terra",
         "pid": 3643457
+      },
+      {
+        "role": "P_knowledge_B_successor_activation",
+        "model": "gpt-6.1-terra",
+        "pid": 3650675
       }
     ],
     "clock_caveat": "Host clocks differ; use within-host deltas, not cross-host timestamp subtraction.",
