@@ -772,7 +772,7 @@
       "resource_predecessor": "compact-slot-a-evaluate",
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
-      "status": "container_running_startup_verification_no_model_calls_confirmed",
+      "status": "running_real_model_requests_confirmed",
       "started_at_utc": "2026-11-07T04:30:42Z",
       "container_id": "ecbd46b72571ed13255942dd3f924c0a5b056bc5a14c2dfd70632ae237b1cc79"
     },
@@ -867,7 +867,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-07T04:34:00Z",
+  "updated_at": "2026-11-07T04:39:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
@@ -890,7 +890,7 @@
     "successor_trigger": "generation-released",
     "score_blocks_successor": false,
     "full_verification_eliminated": false,
-    "native_successor_queue_status": "A compactSlot generation released -> Decision container started startup verification -> C96 waiting-container; B K2 activation and actual lane settlement in progress",
+    "native_successor_queue_status": "A Decision true model requests -> C96 waiting-container; B old P lease settled, K2 admission in progress",
     "queue_compatibility_commit": "25c6386f"
   },
   "priority_override": {
@@ -902,12 +902,11 @@
     "tfrl_preparation": "parallel_cpu_preparation_quality_priority_retained"
   },
   "live_resource_snapshot": {
-    "observed_at_utc": "2026-11-07T04:32:00Z",
+    "observed_at_utc": "2026-11-07T04:38:00Z",
     "A": {
-      "running_requests": 0,
-      "waiting_requests": 0,
+      "running_requests": 64,
       "cards": 4,
-      "reason": "Decision startup verification"
+      "waiting_requests": null
     },
     "B": {
       "running_requests": 0,
