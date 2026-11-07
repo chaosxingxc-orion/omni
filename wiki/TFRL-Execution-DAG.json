@@ -735,9 +735,9 @@
       "completed_rows": 1080,
       "total_rows": 1080,
       "observed_at_utc": "2026-11-07T00:32:03.683903+00:00",
-      "remaining_rows": 207,
+      "remaining_rows": 0,
       "wall_seconds_per_complete_row": 9.991959029729697,
-      "estimated_remaining_seconds": 2068.3355191540472
+      "estimated_remaining_seconds": 0
     },
     {
       "id": "compact-slot-a-evaluate",
@@ -749,8 +749,12 @@
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
       "status": "running",
-      "completed_rows": 817,
-      "observed_at_utc": "2026-11-07T03:41:34Z"
+      "completed_rows": 1061,
+      "observed_at_utc": "2026-11-07T04:22:58Z",
+      "total_rows": 1080,
+      "remaining_rows": 19,
+      "wall_seconds_per_complete_row": 11.0196489293,
+      "estimated_remaining_seconds": 209.373329657
     },
     {
       "id": "decision-evidence-prepare",
@@ -861,7 +865,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-07T03:48:00Z",
+  "updated_at": "2026-11-07T04:23:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
@@ -884,7 +888,7 @@
     "successor_trigger": "generation-released",
     "score_blocks_successor": false,
     "full_verification_eliminated": false,
-    "native_successor_queue_status": "A compactP running -> compactSlot -> D -> C96; B P operation -> Slot role; PON fresh admission pending; TFRL K2 ready candidates join after CPU readiness and generation release",
+    "native_successor_queue_status": "A compactSlot tail -> Decision waiting generation-release -> C96 waiting-container; B idle, K2 admission unresolved",
     "queue_compatibility_commit": "25c6386f"
   },
   "priority_override": {
@@ -893,19 +897,21 @@
     "total_fold_a": 1080,
     "historical_P_solver_intent": 0.8574074074074074,
     "historical_P_solver_slu_f1": 0.7331392140771492,
-    "tfrl_preparation": "deferred"
+    "tfrl_preparation": "parallel_cpu_preparation_quality_priority_retained"
   },
   "live_resource_snapshot": {
-    "observed_at_utc": "2026-11-07T03:48:00Z",
+    "observed_at_utc": "2026-11-07T04:21:00Z",
     "A": {
-      "running_requests": 60,
+      "running_requests": 38,
       "waiting_requests": 0,
-      "cards": 4
+      "cards": 4,
+      "kv_cache_percent": 29.43
     },
     "B": {
       "running_requests": 0,
       "waiting_requests": 0,
-      "cards": 4
+      "cards": 4,
+      "kv_cache_percent": 0
     },
     "all_eight_cards_busy": false
   }
