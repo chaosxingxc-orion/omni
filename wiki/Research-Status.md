@@ -1,13 +1,13 @@
 # 当前研究状态
 
-> 最新研究路线已改为逐阶段：先只优化P，多轮收益后锁定P优化S，再锁定P/S优化D，最后系统。旧未启动全链队列已HOLD，详见[逐节点阶段方案](Sequential-Node-Optimization)。
+更新：2026-11-07 22:00（北京时间）。详细进度、成本和限制见[当前任务与下一计划](TFRL-Current-Status-and-Next-Plan)，方法及冻结规则见[逐节点阶段方案](Sequential-Node-Optimization)。
 
-更新：2026-11-07 20:30（北京时间）。详见[当前任务与下一计划](TFRL-Current-Status-and-Next-Plan)。
+当前只优化P：多轮验证收益并冻结P配置及真实输出后优化S；冻结P/S后优化D，最后组合系统。同阶段并行多个算法候选，不并行调优三个节点。默认P OFF/S ON/D ON。
 
-ON仍是工作比较基线：P OFF、Slot/D ON，Fold A1080的Intent84.0741%、SLU70.9703%、合法1077/1080。紧凑P的SLU71.5145%、合法1080/1080，但配对区间跨零，未锁定稳定收益；历史同Fold A的P→Solver SLU73.3139%仍为对齐参照。
+原Fold A1080的P独立复核为1079有效、977候选集合召回（90.4630%），不是top1意图准确率。新P-only运行尚未派发；执行封存与教师候选编译仍在完成。GEPA6、Reflexion消费4、ACE消费3个候选已收到，均尚无新NPU收益结论。
 
-A的P thinking ON至347/1080；B已结算失败Decision并启动Surface真实请求，完整样本尚0/1080；175兼容服务加载中，B625未恢复。12卡资源已分配不代表持续有效满载。
+历史A至21:56:58完成798/1080；B失败181条已结算；C失败122条已完成原生unknown退休，grammar根因仍未解决。12卡授权资源不等于持续满载。既有全链后继HOLD；优先派发原父P控制，不等待所有算法准备完毕。
 
-新PSD上的Reflexion/ACE首轮候选运行或等待；TF-GRPO恢复与GEPA闭环未完成。Slot1536已通过CPU准入，启动器/队列待绑定。优先100%有效回答、实体质量与连续有效负载，不扩展通用加固。当前无新增用户决策，TEST/LoRA后置。
+历史系统参照：completeON的Intent84.0741%、SLU70.9703%、合法1077/1080；紧凑P为SLU71.5145%、合法1080/1080，尚未证明稳定提升；P→Solver同Fold A的SLU73.3139%保留参考。这些不能作为P独立奖励。
 
-[异步任务图](TFRL-Execution-DAG)与[实验队列](TFRL-Exploration-Queue)均按稳定页面原位更新。
+没有新增用户决策。TEST/LoRA后置，CPU三条Codex子进程异步推进；[任务图](TFRL-Execution-DAG)与[实验队列](TFRL-Exploration-Queue)原位维护。

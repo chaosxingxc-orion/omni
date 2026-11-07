@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T13:34:49.970012+00:00",
+  "updated_at_utc": "2026-11-07T14:00:36.891002+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -16,7 +16,7 @@
       "id": "P-runtime",
       "resource": "CPU",
       "depends_on": [],
-      "status": "node_seal_and_production_recipe_incomplete_rework5",
+      "status": "node_seal_slice_committed_production_recipe_incomplete_rework6",
       "owner": "Terra CLI",
       "acceptance": [
         "native_P_only",
@@ -55,12 +55,16 @@
       "depends_on": [
         "P-teacher-input"
       ],
-      "status": "six_raw_candidates_citation_and_semantic_review",
+      "status": "six_received_semantic_review_complete_compilation_pending",
       "method": "gepa",
       "run_nodes": [
         "P"
       ],
-      "accepted_candidates": 0
+      "accepted_candidates": 0,
+      "priority_indices": [
+        3,
+        5
+      ]
     },
     {
       "id": "P-teacher-reflexion",
@@ -68,7 +72,7 @@
       "depends_on": [
         "P-teacher-input"
       ],
-      "status": "construction_and_consumption_requests_running",
+      "status": "consumption_four_received_construction_pending_independent_axes",
       "method": "reflexion",
       "run_nodes": [
         "P"
@@ -80,7 +84,7 @@
       "depends_on": [
         "P-teacher-input"
       ],
-      "status": "consumption_running_construction_unknown_held",
+      "status": "consumption_three_received_construction_unknown_held_independent_axes",
       "method": "ace-inspired_until_complete_cycle_verified",
       "run_nodes": [
         "P"
@@ -134,9 +138,9 @@
       "resource": "CPU",
       "depends_on": [
         "P-runtime",
-        "P-teacher-gepa"
+        "P-gepa-material"
       ],
-      "status": "pending_candidate",
+      "status": "awaiting_runtime_and_method_material",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -174,9 +178,9 @@
       "resource": "CPU",
       "depends_on": [
         "P-runtime",
-        "P-teacher-reflexion"
+        "P-reflexion-material"
       ],
-      "status": "pending_candidate",
+      "status": "awaiting_runtime_and_method_material",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -214,9 +218,9 @@
       "resource": "CPU",
       "depends_on": [
         "P-runtime",
-        "P-teacher-ace"
+        "P-ace-material"
       ],
-      "status": "pending_candidate",
+      "status": "awaiting_runtime_and_method_material",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -370,6 +374,105 @@
         "S",
         "D"
       ]
+    },
+    {
+      "id": "P-control-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-runtime"
+      ],
+      "status": "production_recipe_pending",
+      "scope": "original parent, original roster, reused inputs; no teacher dependency"
+    },
+    {
+      "id": "P-control-sample",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-control-prepare"
+      ],
+      "status": "not_dispatched",
+      "run_nodes": [
+        "P"
+      ],
+      "priority": "first ready B task"
+    },
+    {
+      "id": "P-control-score",
+      "resource": "CPU",
+      "depends_on": [
+        "P-control-sample",
+        "P-baseline"
+      ],
+      "status": "waiting_outputs"
+    },
+    {
+      "id": "P-gepa-material",
+      "resource": "CPU",
+      "depends_on": [
+        "P-teacher-gepa"
+      ],
+      "status": "wire_to_actual_baseline_patch_rework",
+      "scope": "candidate3 first; optional5; must apply to phase_material/perception"
+    },
+    {
+      "id": "P-reflexion-consumption-result",
+      "resource": "CPU",
+      "depends_on": [
+        "P-teacher-input"
+      ],
+      "status": "four_received_semantic_review_complete",
+      "priority_candidates": [
+        "c1",
+        "c2"
+      ],
+      "hold": [
+        "c3"
+      ],
+      "optional": [
+        "c4"
+      ]
+    },
+    {
+      "id": "P-reflexion-material",
+      "resource": "CPU",
+      "depends_on": [
+        "P-reflexion-consumption-result"
+      ],
+      "status": "compiler_pending",
+      "scope": "consumption independent of construction terminal"
+    },
+    {
+      "id": "P-ace-consumption-result",
+      "resource": "CPU",
+      "depends_on": [
+        "P-teacher-input"
+      ],
+      "status": "three_received",
+      "candidates": [
+        "breadth12",
+        "breadth16",
+        "tau0.1"
+      ]
+    },
+    {
+      "id": "P-ace-supply-delta",
+      "resource": "CPU",
+      "depends_on": [
+        "P-ace-consumption-result"
+      ],
+      "status": "native_sealed_vector_analysis_running",
+      "owner": "Sol CLI",
+      "scope": "original population, real changed supply, gold-card coverage, context growth; no new embeddings"
+    },
+    {
+      "id": "P-ace-material",
+      "resource": "CPU",
+      "depends_on": [
+        "P-ace-consumption-result",
+        "P-ace-supply-delta"
+      ],
+      "status": "compiler_and_fresh_supply_pending",
+      "scope": "consumption independent of held construction; only changed relevant supply enters NPU"
     }
   ],
   "round_policy": {
@@ -385,7 +488,10 @@
     "new_whole_graph_candidates": "HOLD",
     "already_running_legacy": "preserve; not P-only",
     "hardware_comparison": "same engine policy or matched/crossover controls",
-    "runtime_registry": "native prepared queue required; not this planning file"
+    "runtime_registry": "native prepared queue required; not this planning file",
+    "control_requires_teacher": false,
+    "cpu_material_requires_runtime": false,
+    "construction_blocks_consumption": false
   },
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
@@ -402,9 +508,9 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "completed": 671,
+      "completed": 798,
       "total": 1080,
-      "observed_at_utc": "2026-11-07T13:30:53.725546+00:00",
+      "observed_at_utc": "2026-11-07T13:56:58.571345+00:00",
       "state": "running_legacy_PON"
     },
     "B": {
@@ -417,25 +523,48 @@
       "completed": 122,
       "total": 625,
       "observed_at_utc": "2026-11-07T13:25:01.292597+00:00",
-      "state": "failed_grammar_POST500_lease_retained_native_retirement_rework",
+      "state": "native_retirement_complete_grammar_unresolved",
       "observed_contacts": 367,
-      "unknown_contacts": 2
+      "unknown_contacts": 2,
+      "retirement_verified": true,
+      "automatic_retry": false
     },
     "teacher_gepa": {
-      "state": "response_received_collect_failed_citation_review",
+      "state": "six_received_semantically_reviewed_compiler_rework",
       "raw_candidates": 6,
       "validated_candidates": 0,
       "prompt_tokens": 167496,
       "completion_tokens": 24582,
       "automatic_retry": false,
-      "citation_audit": "31 abbreviated references uniquely map to original feedback; deployment approval pending"
+      "citation_audit": "31 uniquely resolved source references; raw instructions unchanged; runtime source bridge pending",
+      "priority_candidates": [
+        3,
+        5
+      ]
     },
     "teacher_methods_v3": {
-      "reflexion_consumption": "running",
+      "reflexion_consumption": "four_received_c1_c2_priority_compiler_pending",
       "reflexion_construction": "running",
-      "ace_consumption": "running",
+      "ace_consumption": "three_received_native_supply_delta_running",
       "ace_construction": "unknown_held_no_retry"
-    }
+    },
+    "cpu_workers": [
+      {
+        "role": "P runtime",
+        "model": "gpt-6.1-terra",
+        "pid": 3498567
+      },
+      {
+        "role": "P teacher compiler",
+        "model": "gpt-6.1-terra",
+        "pid": 3494137
+      },
+      {
+        "role": "P supply analysis",
+        "model": "gpt-6.1-sol",
+        "pid": 3494714
+      }
+    ]
   },
   "historical_plan": {
     "status": "superseded_not_dispatch_authority",

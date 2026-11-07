@@ -1,7 +1,7 @@
 {
   "schema": "omni-sequential-node-optimization-plan-v1",
   "status": "planning-contract-not-runtime-registration",
-  "updated_at_utc": "2026-11-07T13:34:49.970012+00:00",
+  "updated_at_utc": "2026-11-07T14:00:36.891002+00:00",
   "user_order": [
     "optimize_P",
     "freeze_P_optimize_S",
@@ -47,7 +47,8 @@
       ],
       "candidate_limit": 3,
       "validation_semantics": "preserve native group_v2 semantics; raw duplicates separate from unrecoverable failure",
-      "baseline_audit_status": "native_response_reanalysis_complete_1079_valid_977_recalled_of_1080"
+      "baseline_audit_status": "native_response_reanalysis_complete_1079_valid_977_recalled_of_1080",
+      "ranking_metrics": "report top1 and ranked recall when measured; baseline currently set recall only"
     },
     "S": {
       "requires": "validated_P_freeze_receipt",
@@ -106,7 +107,10 @@
     "monitor_seconds": 600,
     "running_legacy_jobs": "preserve_no_reconfiguration",
     "new_whole_graph_candidates": "held",
-    "task_graph": "wiki/TFRL-Execution-DAG.json"
+    "task_graph": "wiki/TFRL-Execution-DAG.json",
+    "control_requires_teacher": false,
+    "material_compilation_requires_runtime": false,
+    "construction_blocks_consumption": false
   },
   "datasets": {
     "reuse": [
