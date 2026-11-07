@@ -677,7 +677,7 @@
       "depends_on": [
         "node-prompt-candidates"
       ],
-      "status": "container_running_first_request_pending",
+      "status": "running_first_response_identity_verified",
       "rows": 1080,
       "control": "complete-coverage-on-evaluate",
       "changed_node": "perception",
@@ -690,7 +690,7 @@
       "depends_on": [
         "node-prompt-candidates"
       ],
-      "status": "ready_auto_binder_live_waiting_predecessor_not_launched",
+      "status": "bound_to_real_P_generation_release_waiting",
       "rows": 1080,
       "control": "complete-coverage-on-evaluate",
       "changed_node": "slot",
@@ -729,12 +729,12 @@
       "cpu_score_dependency": false,
       "status": "running_first_http_success_verified",
       "started_at_utc": "2026-11-06T22:06:40.70367096Z",
-      "completed_rows": 685,
+      "completed_rows": 873,
       "total_rows": 1080,
-      "observed_at_utc": "2026-11-07T00:01:10.752727+00:00",
-      "remaining_rows": 395,
-      "wall_seconds_per_complete_row": 10.029268696360344,
-      "estimated_remaining_seconds": 3961.561135062336
+      "observed_at_utc": "2026-11-07T00:32:03.683903+00:00",
+      "remaining_rows": 207,
+      "wall_seconds_per_complete_row": 9.991959029729697,
+      "estimated_remaining_seconds": 2068.3355191540472
     },
     {
       "id": "compact-slot-a-evaluate",
@@ -815,6 +815,26 @@
       "cpu_score_dependency": false,
       "required_legal_rows": 1080,
       "resource_predecessor": "node-prompt-slot-evaluate"
+    },
+    {
+      "id": "perception-thinking-on-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "preparation_in_progress_user_requested",
+      "scientific_parent": "complete-coverage-on-evaluate",
+      "scope": "P thinking on; retain original4096 answer reserve and proposed3072 thinking budget; native config validation pending; no prompt or knowledge changes"
+    },
+    {
+      "id": "perception-thinking-on-evaluate",
+      "resource": "NPU-first-free",
+      "depends_on": [
+        "perception-thinking-on-prepare"
+      ],
+      "status": "not_admitted_not_armed",
+      "priority": "next-safe-handoff-after-current-generation",
+      "scientific_parent": "complete-coverage-on-evaluate",
+      "cpu_score_dependency": false,
+      "rows": 1080
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -849,7 +869,8 @@
     "perception_miss_analysis": "historical P ranking admission and A-after-C96 successor armed;216pins verified; actual generation pending",
     "complete_on_terminal": "generation1080 sealed; coverage preliminary1077legal3empty; existing recovery56d3 running; official pair pending",
     "efficiency_measurement": "600s service collector and small-status archival accepted; hardware observer reused; first snapshots verified, bounded24h; no NPU dependency",
-    "remaining_empty_root_causes": "CLI3073928 only three real failed sample request/recovery chains; no new model calls"
+    "remaining_empty_root_causes": "CLI3073928 only three real failed sample request/recovery chains; no new model calls",
+    "perception_thinking": "CLI3083900 prepares user-requested PON/SlotON/DON comparison; safe priority insertion only after ready, no active generation restart"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
