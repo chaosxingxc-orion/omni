@@ -103,9 +103,34 @@ def compile_ace(cfg):
     return results
 
 
+def apply_parent_patch(baseline, patch):
+    """Apply the narrowly permitted RFC 6902 test/replace to the real parent."""
+    import copy
+    path = '/phase_material/perception/instruction_template'
+    if (len(patch) != 2 or any(set(op) != {'op', 'path', 'value'} for op in patch)
+            or [op['op'] for op in patch] != ['test', 'replace']
+            or any(op['path'] != path or not isinstance(op['value'], str) for op in patch)):
+        raise ValueError('invalid P patch')
+    result = copy.deepcopy(baseline)
+    entry = result['phase_material']['perception']
+    if entry['instruction_template'] != patch[0]['value']:
+        raise ValueError('parent test failed')
+    entry['instruction_template'] = patch[1]['value']
+    return result
+
+
 def compile_config(cfg):
-    if set(cfg) != {'schema', 'source', 'tokenizer_identity', 'tokenizer_dir', 'output_dir', 'parent_template', 'actor_context'} or cfg['schema'] != 'saea-p-teacher-bridge-v1':
+    if set(cfg) != {'schema', 'source', 'tokenizer_identity', 'tokenizer_dir', 'output_dir', 'parent_template', 'actor_context', 'parent_baseline', 'parent_repo'} or cfg['schema'] != 'saea-p-teacher-bridge-v1':
         raise ValueError('exact bridge configuration required')
+    baseline_path = external.checked(cfg['parent_baseline'])
+    baseline_bytes = baseline_path.read_bytes()
+    baseline = json.loads(baseline_bytes)
+    old = cfg['parent_template']
+    parent_file = Path(cfg['parent_repo']) / 'configs' / old['relpath']
+    if (set(old) != {'relpath', 'sha256'} or old['relpath'] != 'probes/slurp_native_candidate_perception_off_v1.txt'
+            or hashlib.sha256(parent_file.read_bytes()).hexdigest() != old['sha256']
+            or baseline['phase_material']['perception']['instruction_template'] != old['relpath']):
+        raise ValueError('actual parent baseline/template differs')
     prepared = external.checked(cfg['source']['prepared'])
     context = external.read(prepared.parent / 'context.json')
     actor_context = external.read(external.checked(cfg['actor_context']))
@@ -129,14 +154,32 @@ def compile_config(cfg):
     out = Path(cfg['output_dir']).resolve()
     out.mkdir(parents=True, exist_ok=True)
     material = publish_template(out, candidate=child, contract=contract, expected_contract_sha256=contract['contract_sha256'], count_tokens=count, tokenizer_identity=identity, expected_tokenizer_sha256=contract['frozen']['tokenizer_sha256'], parent=parent, expected_parent_sha256=parent['candidate_sha256'], mutation_text=receipt['mutation_text'])
-    old = cfg['parent_template']
     parent_text = engine.executable_template(parent, contract=contract, expected_contract_sha256=contract['contract_sha256'], count_tokens=count)
-    if set(old) != {'relpath', 'sha256'} or old['sha256'] != hashlib.sha256(parent_text.encode()).hexdigest():
-        raise ValueError('parent template pin differs')
-    pin = dict(material['instruction_template'])
-    pin['relpath'] = 'configs/' + pin['relpath']
-    patch = [{'op': 'test', 'path': '/perception_policy/instruction_template', 'value': old}, {'op': 'replace', 'path': '/perception_policy/instruction_template', 'value': pin}]
-    result = {'schema': 'saea-p-teacher-bridge-result-v1', 'source_receipt': receipt, 'material': material, 'patch': patch, 'candidate': child, 'new_api_calls': 0, 'new_npu_calls': 0}
+    if parent_file.read_bytes() != parent_text.encode():
+        raise ValueError('parent template differs from scientific parent')
+    pin = material['instruction_template']
+    patch = [{'op': 'test', 'path': '/phase_material/perception/instruction_template', 'value': old['relpath']},
+             {'op': 'replace', 'path': '/phase_material/perception/instruction_template', 'value': pin['relpath']}]
+    applied = apply_parent_patch(baseline, patch)
+    from speech_aware_evidence_acquisition.rails.controllers import default_phase_program
+    from speech_aware_evidence_acquisition.rails.phase_material import load_phase_material_specs, render_static_instruction
+    spec = load_phase_material_specs(applied, default_phase_program(applied['policy']))['perception']
+    rendered = render_static_instruction(spec, out, {}, out)
+    if hashlib.sha256(rendered.encode()).hexdigest() != pin['sha256']:
+        raise ValueError('native resolver template hash differs')
+    original_spec = load_phase_material_specs(baseline, default_phase_program(baseline['policy']))['perception']
+    if render_static_instruction(original_spec, Path(cfg['parent_repo']), {}, out).encode() != parent_file.read_bytes():
+        raise ValueError('native parent resolver differs')
+    (out / 'parent.baseline.json').write_bytes(baseline_bytes)
+    before = json.dumps(old['relpath']).encode()
+    after = json.dumps(pin['relpath']).encode()
+    if baseline_bytes.count(before) != 1:
+        raise ValueError('parent template occurrence not unique')
+    applied_bytes = baseline_bytes.replace(before, after, 1)
+    if json.loads(applied_bytes) != applied:
+        raise ValueError('byte-preserving patch differs')
+    (out / 'baseline.json').write_bytes(applied_bytes)
+    result = {'schema': 'saea-p-teacher-bridge-result-v1', 'source_receipt': receipt, 'material': material, 'patch': patch, 'candidate': child, 'new_api_calls': 0, 'new_npu_calls': 0, 'parent_baseline_sha256': cfg['parent_baseline']['sha256'], 'parent_template': old, 'native_phase_parser_and_read_verified': True, 'native_fit_completed': False, 'supply_ready': False}
     for name, value in [('result.json', result), ('patch.json', patch)]:
         path = out / name
         data = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2) + '\n').encode()
