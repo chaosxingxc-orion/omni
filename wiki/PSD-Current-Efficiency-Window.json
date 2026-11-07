@@ -1,0 +1,72 @@
+{
+  "schema": "omni-efficiency-window-summary-v1",
+  "window_start_utc": "2026-11-07T06:18:58.171548+00:00",
+  "window_end_utc": "2026-11-07T06:28:58.227207+00:00",
+  "duration_seconds": 600.055659,
+  "resource": {
+    "instance": "A",
+    "cards": 4,
+    "tensor_parallel_size": 4,
+    "client_concurrency": 64,
+    "engine_max_num_seqs": 128,
+    "engine_max_num_batched_tokens": 2048
+  },
+  "completed_model_requests": 169.0,
+  "output_tokens": 273726.0,
+  "output_tokens_per_second": 456.1676836048304,
+  "prefix_hit_fraction": 0.2993672331366526,
+  "multimodal_cache_hits": 171.0,
+  "multimodal_cache_queries": 171.0,
+  "preemptions": 0.0,
+  "end_gauges": {
+    "kv_cache_usage_perc": [
+      0.4832970225127088
+    ],
+    "num_requests_running": [
+      64.0
+    ],
+    "num_requests_waiting": [
+      0.0
+    ]
+  },
+  "request_stage_histograms": {
+    "e2e_request_latency_seconds": {
+      "count": 169.0,
+      "mean_seconds": 231.92060835827033,
+      "sum_seconds": 39194.582812547684
+    },
+    "inter_token_latency_seconds": {
+      "count": 273555.0,
+      "mean_seconds": 0.1383268485723408,
+      "sum_seconds": 37840.00106120668
+    },
+    "request_decode_time_seconds": {
+      "count": 168.0,
+      "mean_seconds": 229.8339173293983,
+      "sum_seconds": 38612.09811133891
+    },
+    "request_inference_time_seconds": {
+      "count": 169.0,
+      "mean_seconds": 231.4458415979222,
+      "sum_seconds": 39114.34723004885
+    },
+    "request_prefill_time_seconds": {
+      "count": 168.0,
+      "mean_seconds": 1.457588183213721,
+      "sum_seconds": 244.87481477990514
+    },
+    "request_queue_time_seconds": {
+      "count": 169.0,
+      "mean_seconds": 0.33088857005970257,
+      "sum_seconds": 55.92016834008973
+    },
+    "time_to_first_token_seconds": {
+      "count": 171.0,
+      "mean_seconds": 1.8976637118043955,
+      "sum_seconds": 324.50049471855164
+    }
+  },
+  "valid_sample_throughput": null,
+  "sustained_aicore_gt80_verified": false,
+  "interpretation": "Service aggregate window, not per-sample attribution. No new model calls. Compare C96 only against matched OFF C64 configuration, not this ON Decision window."
+}
