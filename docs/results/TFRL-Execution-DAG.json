@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T18:15:12.406951+00:00",
+  "updated_at_utc": "2026-11-07T18:38:32.545215+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -100,7 +100,7 @@
         "P-runtime",
         "P-teacher-input"
       ],
-      "status": "A_four80_prepared_registered_K001_admission_running",
+      "status": "four80_admitted_actual_runner_overlap_failure",
       "scope": "same pinned inputs/policy; independent draw identities",
       "collection": {
         "rows": 80,
@@ -117,7 +117,7 @@
       "depends_on": [
         "P-tfgrpo-group-prepare"
       ],
-      "status": "not_dispatched",
+      "status": "ABORTED_zero_contact_learning_source_overlap_under_audit",
       "run_nodes": [
         "P"
       ]
@@ -173,7 +173,7 @@
         "P-gepa-sample",
         "P-baseline"
       ],
-      "status": "CPU_scoring_dispatched",
+      "status": "complete865_951_966_retain_parent",
       "metrics": [
         "valid_coverage",
         "gold_candidate_set_recall_K_le_3",
@@ -216,7 +216,7 @@
         "P-reflexion-sample",
         "P-baseline"
       ],
-      "status": "C1_complete_paired_recall3_minus24_retain_parent_C2_CPU_pending",
+      "status": "C1_C2_complete_no_stable_gain_C2_one_length_failure",
       "metrics": [
         "valid_coverage",
         "gold_candidate_set_recall_K_le_3",
@@ -257,7 +257,7 @@
         "P-ace-sample",
         "P-baseline"
       ],
-      "status": "breadth12_CPU_scoring_dispatched",
+      "status": "breadth12_complete878_957_983_small_positive_not_locked",
       "metrics": [
         "valid_coverage",
         "gold_candidate_set_recall_K_le_3",
@@ -626,7 +626,7 @@
       "depends_on": [
         "P-intent-knowledge-prepare"
       ],
-      "status": "queued_waiting_music_release",
+      "status": "B_waiting_task_transfer_to_A_preparing_not_dispatched",
       "axis": "locked_card_section_order_only",
       "rows": 1080
     },
@@ -651,8 +651,36 @@
       "id": "P-teacher-learning-reference",
       "resource": "CPU",
       "depends_on": [],
-      "status": "TFGRPO_reference_input_gap_identified_other_methods_already_have_reference",
+      "status": "merged_main2813d2718_fixed_image76_tests_passed",
       "scope": "reuse pinned original80 teacher-only TRAIN reference; no actor or validation labels"
+    },
+    {
+      "id": "P-learning-source-audit",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "Sol_read_only_audit_running",
+      "scope": "source roster overlap versus actual rendered label/text; explicit learning/evaluation purpose"
+    },
+    {
+      "id": "P-learning-candidate-evaluation",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "Terra_minimal_feature_in_progress",
+      "scope": "reuse original80 for existing candidate axes; preserve TF grouping and evaluation isolation"
+    },
+    {
+      "id": "P-C-breadth12-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "planned_not_executable_queue",
+      "scope": "same C hardware matched replication of small positive retrieval candidate"
+    },
+    {
+      "id": "P-A-alarm-transfer",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "original_owner_dispatch_preparation",
+      "scope": "verify not dispatched on B and zero-contact A retirement before independent activation"
     }
   ],
   "round_policy": {
@@ -676,8 +704,8 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "five1080_runs_complete_B_breadth16_running_A_preparing_C_control_queue_started",
-      "observed_at_utc": "2026-11-07T18:15:12.406951+00:00",
+      "status": "completed_candidates_scored_B_C_running_A_backfill_preparation_TF_zero_contact_failure",
+      "observed_at_utc": "2026-11-07T18:38:32.545215+00:00",
       "known_B_responses": 1097,
       "runtime": "old_B_finalized_dcbc2a5c_successors59cf0ade"
     },
@@ -716,70 +744,74 @@
       "last_response_unix": 1794073422.308,
       "eta_seconds": null,
       "eta_note": "startup included; interval delta needed for steady rate",
-      "successor": "TFGRPO_K001_admission_pending_no_draw_confirmed"
+      "successor": "TF_K001_ABORTED_zero_contact; knowledge_alarm_A_backfill_preparation"
     },
     "B": {
-      "observed_at_utc": "2026-11-07T18:09:00.730371+00:00",
+      "observed_at_utc": "2026-11-07T18:24:05.530913+00:00",
       "run_id": "SLURP-P-ONLY-BREADTH16-SUCCESSOR-V1",
-      "rows_complete": 127,
+      "rows_complete": 745,
       "rows_total": 1080,
       "duplicates": 0,
       "torn_lines": 0,
       "contacts": {
-        "fit": 191,
-        "intent": 191,
-        "dispatch": 191,
-        "response": 189
+        "dispatch": 814,
+        "intent": 814,
+        "fit": 814,
+        "response": 809
       },
       "known_tokens": {
-        "prompt_tokens": 1506148,
-        "completion_tokens": 40148
+        "prompt_tokens": 6442303,
+        "completion_tokens": 188370
       },
       "cards": 4,
       "instances": 1,
       "generation_container_state": "running",
-      "container_wall_seconds": 539.418554,
-      "container_seconds_per_row_including_startup": 4.247390188976378,
-      "mean_response_latency_seconds": 44.97626653602642,
-      "response_window_seconds": 197.4520001411438,
+      "container_wall_seconds": 1444.219096,
+      "container_seconds_per_row_including_startup": 1.938549122147651,
+      "mean_response_latency_seconds": 44.910949151284505,
+      "response_window_seconds": 1103.2039999961853,
       "first_response_unix": 1794074733.748,
-      "last_response_unix": 1794074931.2,
+      "last_response_unix": 1794075836.952,
       "eta_seconds": null,
       "eta_note": "startup included; interval delta needed for steady rate",
-      "successor": "two_knowledge_binders_waiting"
+      "interval": {
+        "seconds": 904.800542,
+        "rows": 618,
+        "seconds_per_row": 1.4640785469255662,
+        "eta_seconds": 490.46631322006465
+      }
     },
     "C": {
-      "observed_at_utc": "2026-11-07T18:05:42.774192+00:00",
-      "run_id": "SAEA-SLURP-P-ONLY-REFLEXION-C2-C-REWORK-V1",
-      "rows_complete": 1080,
+      "observed_at_utc": "2026-11-07T18:24:49.996493+00:00",
+      "run_id": "SAEA-SLURP-P-ONLY-CONTROL-C-SUCCESSOR-V1",
+      "rows_complete": 323,
       "rows_total": 1080,
       "duplicates": 0,
       "torn_lines": 0,
       "contacts": {
-        "response": 1091,
-        "intent": 1091,
-        "fit": 1091,
-        "dispatch": 1091
+        "intent": 358,
+        "fit": 361,
+        "dispatch": 356,
+        "response": 327
       },
       "known_tokens": {
-        "prompt_tokens": 5987455,
-        "completion_tokens": 224407
+        "prompt_tokens": 1743869,
+        "completion_tokens": 83559
       },
       "cards": 4,
       "instances": 1,
-      "generation_container_state": "exited",
-      "container_wall_seconds": 1684.451677,
-      "container_seconds_per_row_including_startup": 1.5596774787037038,
-      "mean_response_latency_seconds": 28.85501552240132,
-      "response_window_seconds": 1283.4879999160767,
-      "first_response_unix": 1794072328.016,
-      "last_response_unix": 1794073611.504,
+      "generation_container_state": "running",
+      "container_wall_seconds": 705.727003,
+      "container_seconds_per_row_including_startup": 2.184913321981424,
+      "mean_response_latency_seconds": 34.09420235804273,
+      "response_window_seconds": 360.6319999694824,
+      "first_response_unix": 1794075502.632,
+      "last_response_unix": 1794075863.264,
       "eta_seconds": null,
-      "eta_note": "startup included; interval delta needed for steady rate",
-      "successor": "same_parent_control_admitted_queue_started_response_pending"
+      "eta_note": "startup included; interval delta needed for steady rate"
     },
     "teacher_gepa": {
-      "state": "candidate_index3_generation_complete1080_CPU_score_pending",
+      "state": "complete_A_no_benefit",
       "raw_candidates": 6,
       "prompt_tokens": 167496,
       "completion_tokens": 24582,
@@ -793,19 +825,19 @@
     },
     "cpu_workers": [
       {
-        "role": "P_completed_candidate_scoring",
+        "role": "A_knowledge_backfill",
+        "model": "gpt-6.1-terra",
+        "pid": 3685143
+      },
+      {
+        "role": "learning80_candidate_evaluation",
+        "model": "gpt-6.1-terra",
+        "pid": 3683230
+      },
+      {
+        "role": "learning_KB_overlap_audit",
         "model": "gpt-6.1-sol",
-        "pid": 3670286
-      },
-      {
-        "role": "P_TFGRPO_A_successor_activation",
-        "model": "gpt-6.1-terra",
-        "pid": 3663553
-      },
-      {
-        "role": "P_C_matched_control_activation",
-        "model": "gpt-6.1-terra",
-        "pid": 3662779
+        "pid": 3684766
       }
     ],
     "clock_caveat": "Host clocks differ; use within-host deltas, not cross-host timestamp subtraction.",

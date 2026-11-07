@@ -5077,5 +5077,289 @@
       "p_test": "McNemar exact conditional binomial"
     }
   },
-  "decision": "retain B parent; C1 does not establish top1 gain and loses recall3; no SLU evaluation performed"
+  "decision": "retain B parent; C1 does not establish top1 gain and loses recall3; no SLU evaluation performed",
+  "additional_completed_candidates": {
+    "A": {
+      "metrics": {
+        "denominator": 1080,
+        "observed": 1080,
+        "missing": 0,
+        "valid": 1080,
+        "invalid_or_incomplete_observed": 0,
+        "valid_coverage_full_denominator": 1.0,
+        "status_counts": {
+          "valid": 1080
+        },
+        "top1_count": 865,
+        "recall2_count": 951,
+        "recall3_count": 966,
+        "candidate_count_distribution": {
+          "3": 582,
+          "1": 273,
+          "2": 225
+        },
+        "candidate_count_sum": 2469,
+        "reciprocal_rank_sum": 913.0,
+        "raw_duplicate_rows": 289,
+        "gold_card_supply_observed": 1080,
+        "gold_card_supplied": 1024,
+        "gold_card_missing_when_observed": 56,
+        "gold_card_supply_rank_distribution": {
+          "1": 787,
+          "3": 57,
+          "8": 11,
+          "7": 13,
+          "2": 105,
+          "None": 56,
+          "5": 16,
+          "4": 19,
+          "6": 16
+        },
+        "supply_by_outcome": {
+          "rank1:supplied": 862,
+          "miss:supplied": 62,
+          "rank2or3:supplied": 100,
+          "rank2or3:not_supplied": 1,
+          "miss:not_supplied": 52,
+          "rank1:not_supplied": 3
+        },
+        "top1": 0.8009259259259259,
+        "recall2": 0.8805555555555555,
+        "recall3": 0.8944444444444445,
+        "MRR": 0.8453703703703703,
+        "MRR_exact": "913/1080",
+        "candidate_count_mean": 2.286111111111111
+      },
+      "paired_with_new_B": {
+        "top1": {
+          "repairs": 15,
+          "regressions": 22,
+          "ties": 1043,
+          "mean_delta": -0.006481481481481481,
+          "full_denominator_final_delta": -0.006481481481481481
+        },
+        "recall2": {
+          "repairs": 19,
+          "regressions": 22,
+          "ties": 1039,
+          "mean_delta": -0.002777777777777778,
+          "full_denominator_final_delta": -0.002777777777777778
+        },
+        "recall3": {
+          "repairs": 16,
+          "regressions": 31,
+          "ties": 1033,
+          "mean_delta": -0.013888888888888888,
+          "full_denominator_final_delta": -0.013888888888888888
+        },
+        "MRR": {
+          "repairs": 33,
+          "regressions": 53,
+          "ties": 994,
+          "mean_delta": -0.008333333333333333,
+          "full_denominator_final_delta": -0.008333333333333333
+        },
+        "valid": {
+          "repairs": 0,
+          "regressions": 0,
+          "ties": 1080,
+          "mean_delta": 0.0,
+          "full_denominator_final_delta": 0.0
+        }
+      },
+      "denominator": 1080,
+      "evidence_result_sha256": "77f9b38351e4fb35ab8b2672dd400f1f476ce17dc3c7313e73660e1d79754777",
+      "stable_benefit_confirmed": false
+    },
+    "C2": {
+      "metrics": {
+        "denominator": 1080,
+        "observed": 1080,
+        "missing": 0,
+        "valid": 1079,
+        "invalid_or_incomplete_observed": 1,
+        "valid_coverage_full_denominator": 0.9990740740740741,
+        "status_counts": {
+          "valid": 1079,
+          "incomplete": 1
+        },
+        "top1_count": 871,
+        "recall2_count": 958,
+        "recall3_count": 967,
+        "candidate_count_distribution": {
+          "2": 740,
+          "3": 253,
+          "1": 86,
+          "0": 1
+        },
+        "candidate_count_sum": 2325,
+        "reciprocal_rank_sum": 917.5,
+        "raw_duplicate_rows": 87,
+        "gold_card_supply_observed": 1080,
+        "gold_card_supplied": 1024,
+        "gold_card_missing_when_observed": 56,
+        "gold_card_supply_rank_distribution": {
+          "1": 787,
+          "3": 57,
+          "8": 11,
+          "7": 13,
+          "2": 105,
+          "None": 56,
+          "5": 16,
+          "4": 19,
+          "6": 16
+        },
+        "supply_by_outcome": {
+          "rank1:supplied": 869,
+          "rank2or3:supplied": 95,
+          "miss:supplied": 59,
+          "miss:not_supplied": 53,
+          "incomplete:supplied": 1,
+          "rank1:not_supplied": 2,
+          "rank2or3:not_supplied": 1
+        },
+        "top1": 0.8064814814814815,
+        "recall2": 0.8870370370370371,
+        "recall3": 0.8953703703703704,
+        "MRR": 0.8495370370370371,
+        "MRR_exact": "367/432",
+        "candidate_count_mean": 2.1527777777777777
+      },
+      "paired_with_new_B": {
+        "top1": {
+          "repairs": 13,
+          "regressions": 14,
+          "ties": 1053,
+          "mean_delta": -0.000925925925925926,
+          "full_denominator_final_delta": -0.000925925925925926
+        },
+        "recall2": {
+          "repairs": 23,
+          "regressions": 19,
+          "ties": 1038,
+          "mean_delta": 0.003703703703703704,
+          "full_denominator_final_delta": 0.003703703703703704
+        },
+        "recall3": {
+          "repairs": 19,
+          "regressions": 33,
+          "ties": 1028,
+          "mean_delta": -0.012962962962962963,
+          "full_denominator_final_delta": -0.012962962962962963
+        },
+        "MRR": {
+          "repairs": 35,
+          "regressions": 48,
+          "ties": 997,
+          "mean_delta": -0.004166666666666667,
+          "full_denominator_final_delta": -0.004166666666666667
+        },
+        "valid": {
+          "repairs": 0,
+          "regressions": 1,
+          "ties": 1079,
+          "mean_delta": -0.000925925925925926,
+          "full_denominator_final_delta": -0.000925925925925926
+        }
+      },
+      "denominator": 1080,
+      "evidence_result_sha256": "990f678494d2a9eb079f897f02ba88a2602223b2fb3147328c1e5047d91a7d53",
+      "stable_benefit_confirmed": false
+    },
+    "breadth12": {
+      "metrics": {
+        "denominator": 1080,
+        "observed": 1080,
+        "missing": 0,
+        "valid": 1080,
+        "invalid_or_incomplete_observed": 0,
+        "valid_coverage_full_denominator": 1.0,
+        "status_counts": {
+          "valid": 1080
+        },
+        "top1_count": 878,
+        "recall2_count": 957,
+        "recall3_count": 983,
+        "candidate_count_distribution": {
+          "3": 801,
+          "1": 176,
+          "2": 103
+        },
+        "candidate_count_sum": 2785,
+        "reciprocal_rank_sum": 926.1666666666666,
+        "raw_duplicate_rows": 240,
+        "gold_card_supply_observed": 1080,
+        "gold_card_supplied": 1045,
+        "gold_card_missing_when_observed": 35,
+        "gold_card_supply_rank_distribution": {
+          "1": 787,
+          "3": 57,
+          "8": 11,
+          "7": 13,
+          "2": 105,
+          "12": 5,
+          "5": 16,
+          "None": 35,
+          "4": 19,
+          "9": 8,
+          "6": 16,
+          "10": 4,
+          "11": 4
+        },
+        "supply_by_outcome": {
+          "rank1:supplied": 877,
+          "miss:supplied": 63,
+          "rank2or3:supplied": 105,
+          "miss:not_supplied": 34,
+          "rank1:not_supplied": 1
+        },
+        "top1": 0.812962962962963,
+        "recall2": 0.8861111111111111,
+        "recall3": 0.9101851851851852,
+        "MRR": 0.8575617283950617,
+        "MRR_exact": "5557/6480",
+        "candidate_count_mean": 2.5787037037037037
+      },
+      "paired_with_new_B": {
+        "top1": {
+          "repairs": 23,
+          "regressions": 17,
+          "ties": 1040,
+          "mean_delta": 0.005555555555555556,
+          "full_denominator_final_delta": 0.005555555555555556
+        },
+        "recall2": {
+          "repairs": 26,
+          "regressions": 23,
+          "ties": 1031,
+          "mean_delta": 0.002777777777777778,
+          "full_denominator_final_delta": 0.002777777777777778
+        },
+        "recall3": {
+          "repairs": 27,
+          "regressions": 25,
+          "ties": 1028,
+          "mean_delta": 0.001851851851851852,
+          "full_denominator_final_delta": 0.001851851851851852
+        },
+        "MRR": {
+          "repairs": 47,
+          "regressions": 46,
+          "ties": 987,
+          "mean_delta": 0.003858024691358025,
+          "full_denominator_final_delta": 0.003858024691358025
+        },
+        "valid": {
+          "repairs": 0,
+          "regressions": 0,
+          "ties": 1080,
+          "mean_delta": 0.0,
+          "full_denominator_final_delta": 0.0
+        }
+      },
+      "denominator": 1080,
+      "evidence_result_sha256": "980277485c78a961eaf21af05b7e87742e44b4c6fff971ca059be2cdbdd1fa4a",
+      "stable_benefit_confirmed": false
+    }
+  }
 }
