@@ -1,31 +1,64 @@
 {
-  "observed_utc": "2026-11-07T11:17:00Z",
+  "observed_utc": "2026-11-07T12:04:00Z",
+  "sample_count_is_not_model_call_count": true,
   "a": {
-    "complete": 1080,
-    "total": 1080,
-    "calls": 3263,
-    "generation": "sealed-released",
-    "score": "failed",
-    "successor": "PON-config-repair-running-unverified-response"
+    "observed_at_utc": "2026-11-07T12:00:29.942655+00:00",
+    "state": "running",
+    "completed_rows": 201,
+    "total_rows": 1080,
+    "checkpoint_rows": 201,
+    "unusable_rows": 0,
+    "torn_tail_bytes": 0,
+    "wall_seconds_per_row": 13.841349260130926,
+    "eta_seconds": 12166.545999655084,
+    "mean_admitted_to_finished_seconds": 674.3790843745273,
+    "timing_n": 201,
+    "checkpoint_sha256": "1b94ae905b2cc2e2218f494f376316f07b0ff5c88f15478272bdbe260c004f8a"
   },
   "b": {
-    "total": 625,
-    "calls": 1887,
-    "observed_responses": 1887,
-    "lease_settled": true,
-    "generation": "outputs-present-seal-failed",
-    "recovery": "preflight-rejected-normalized-PSD",
-    "teacher": "release-consistent-admission-v8-running",
-    "complete": 625,
-    "keepable": 625,
-    "checkpoint_sha": "878fdb2ad825beb3c25f08910af5f558c863eeb2c46faacf00b3cc647442db96"
+    "observed_at_utc": "2026-11-07T12:00:26.451981+00:00",
+    "state": "failed",
+    "completed_rows": 63,
+    "total_rows": 1080,
+    "remaining_rows": 1017,
+    "wall_seconds_per_complete_row": 20.24186527161371,
+    "estimated_remaining_seconds": null,
+    "workload_model_calls": {
+      "attempted": 191,
+      "observed": 190,
+      "not_sent": 1,
+      "inflight_or_unknown": 0,
+      "run_id": "SAEA-SLURP-TEACHER-REFLEXION-DECISION-FOLD-A-V1",
+      "attempt_id": "generation-v1",
+      "scope": "cumulative current attempt native journal; excludes FIT and prior attempts; not a polling-interval delta"
+    },
+    "failed_attempt_known_usage": {
+      "calls": 190,
+      "prompt_tokens": 2005136,
+      "completion_tokens": 277695,
+      "latency_seconds": 27402.89729895955
+    }
   },
   "third": {
-    "complete": 320,
-    "total": 1080,
-    "calls": 964,
-    "responses": 963,
-    "unknown": 1,
-    "state": "aborted-xgrammar-repair-active"
+    "state": "failed-http500-backend-import",
+    "observed_utc": "2026-11-07T12:04:00Z",
+    "finished_at_utc": "2026-11-07T12:01:31.4603425Z",
+    "completed_rows": 0,
+    "total_rows": 625,
+    "dispatched_requests": 8,
+    "successful_native_responses_observed": 0,
+    "cost_unresolved": true,
+    "estimated_remaining_seconds": null
+  },
+  "complete_off_c96": {
+    "state": "FINALIZED",
+    "completed_rows": 1080,
+    "total_rows": 1080,
+    "intent_pct": 84.8148148148,
+    "slu_pct": 65.8220659013,
+    "strict_correct": 521,
+    "legal_answers": 1079,
+    "paired_comparisons": "both_completed",
+    "recovery_new_model_calls": 0
   }
 }
