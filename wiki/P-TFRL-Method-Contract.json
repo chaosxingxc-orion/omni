@@ -1,6 +1,6 @@
 {
   "schema": "omni-P-tfrl-method-contract-v1",
-  "updated_at_utc": "2026-11-07T16:30:49.279237+00:00",
+  "updated_at_utc": "2026-11-07T16:54:10.660824+00:00",
   "status": "mechanism_contract_not_runtime_registration",
   "references": [
     {
@@ -76,7 +76,7 @@
     ]
   },
   "Reflexion": {
-    "current_claim": "cross_task_adaptation_proposals",
+    "current_claim": "cross_task_adaptation_C1_actual_P_validation_running_not_gain_verified",
     "same_task_retry_observed": false
   },
   "current_stage": "P",
@@ -107,10 +107,13 @@
     }
   ],
   "P_only_progress": {
-    "B_control_known_responses": 395,
-    "B_control_completed": 390,
+    "B_control_known_responses": 695,
+    "B_control_completed": 685,
     "total": 1080,
-    "at_utc": "2026-11-07T16:29:20.545126+00:00",
-    "stable_TFRL_gain_verified": false
+    "at_utc": "2026-11-07T16:53:34.243932+00:00",
+    "stable_TFRL_gain_verified": false,
+    "C_reflexion_known_responses": 69,
+    "C_reflexion_completed": 69,
+    "clock_caveat": "B and C source timestamps differ; see current status snapshots."
   }
 }

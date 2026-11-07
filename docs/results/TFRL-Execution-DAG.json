@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T16:30:49.275955+00:00",
+  "updated_at_utc": "2026-11-07T16:54:10.657372+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -100,7 +100,7 @@
         "P-runtime",
         "P-teacher-input"
       ],
-      "status": "Terra_implementing_original_construction80_four_independent_P_draws",
+      "status": "implementation_rework_configurable_source_pins_real_CPU_preparation_in_progress",
       "scope": "same pinned inputs/policy; independent draw identities",
       "collection": {
         "rows": 80,
@@ -150,7 +150,7 @@
         "P-runtime",
         "P-gepa-material"
       ],
-      "status": "A_fresh_admission_complete_launch_configuration_corrections",
+      "status": "A_admitted_zero_contact_attempt_aborted_FIX_writable_FIT_and_checkpoint_recovery",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -191,7 +191,7 @@
         "P-runtime",
         "P-reflexion-material"
       ],
-      "status": "C_c1_admitted_c2_registered_admission_running",
+      "status": "C1_admitted_and_running_C2_successor_binding_in_progress",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -200,12 +200,14 @@
       "depends_on": [
         "P-reflexion-prepare"
       ],
-      "status": "not_dispatched",
+      "status": "C1_running_real_responses_and69_complete_verified",
       "run_nodes": [
         "P"
       ],
       "scientific_parent": "same_frozen_P_parent_within_round",
-      "score_blocks_next_independent_candidate": false
+      "score_blocks_next_independent_candidate": false,
+      "completed": 69,
+      "total": 1080
     },
     {
       "id": "P-reflexion-score",
@@ -404,7 +406,7 @@
       "depends_on": [
         "P-control-prepare"
       ],
-      "status": "running390of1080_old_source_no_drain_callback",
+      "status": "running685of1080",
       "run_nodes": [
         "P"
       ],
@@ -583,13 +585,50 @@
       "depends_on": [
         "P-teacher-reflexion"
       ],
-      "status": "native_snapshot_release_adapter_in_progress",
+      "status": "complete_two_native_snapshots_and_1080_supply_comparisons_main031e5f1f6",
       "candidate_indices": [
         2,
         3
       ],
       "scope": "locked existing card sections only; no new facts",
-      "blocks_consumption": false
+      "blocks_consumption": false,
+      "tests": "fixed_image16_passed_independently_repeated",
+      "affected_rows": [
+        97,
+        136
+      ],
+      "ordered_supply_changes": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "P-intent-knowledge-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-intent-knowledge-release"
+      ],
+      "status": "construction_axis_and_two_native1080_registrations_in_progress"
+    },
+    {
+      "id": "P-intent-music-sample",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-intent-knowledge-prepare"
+      ],
+      "status": "not_dispatched",
+      "axis": "locked_card_section_order_only",
+      "rows": 1080
+    },
+    {
+      "id": "P-intent-alarm-sample",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-intent-knowledge-prepare"
+      ],
+      "status": "not_dispatched",
+      "axis": "locked_card_section_order_only",
+      "rows": 1080
     }
   ],
   "round_policy": {
@@ -613,9 +652,9 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "B_running_AC_preparing",
-      "observed_at_utc": "2026-11-07T15:58:15Z",
-      "known_B_responses": 16,
+      "status": "B_control_and_C_reflexion_running_A_continuation",
+      "observed_at_utc": "2026-11-07T16:53:34.243932+00:00",
+      "known_B_responses": 695,
       "runtime": "dcbc2a5c_B_active_59cf0ade_successors_ready"
     },
     "held": [
@@ -626,7 +665,7 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "state": "GEPA3_rebinding_and_admission_pending",
+      "state": "admitted_zero_contact_attempt_aborted_writable_FIT_fixed_continuation_preparation",
       "total": 1080,
       "new_P_responses_confirmed": false,
       "historical_PON_completed": 1080,
@@ -635,25 +674,34 @@
     "B": {
       "state": "running_old_source_missing_drain_callback_successors_queued",
       "total": 1080,
-      "observed_at_utc": "2026-11-07T16:29:20.545126+00:00",
+      "observed_at_utc": "2026-11-07T16:53:34.243932+00:00",
       "seconds_per_row": null,
-      "eta_seconds": 3301.773033170732,
+      "eta_seconds": 1946.4780622711867,
       "successors": "breadth12_queue_waiting_actual_control_release_breadth16_binder_waiting_breadth12",
-      "completed": 390,
-      "known_responses": 395,
-      "prompt_tokens": 2106003,
-      "completion_tokens": 100746,
-      "mean_response_latency_seconds": 11.640746034231167,
-      "dispatches": 404,
-      "interval_seconds_per_row": 4.78517830894309,
-      "eta_basis": "last1177.15seconds246rows; assumes stable rate"
+      "completed": 685,
+      "known_responses": 695,
+      "prompt_tokens": 3705659,
+      "completion_tokens": 182261,
+      "mean_response_latency_seconds": 12.034669043125062,
+      "dispatches": 705,
+      "interval_seconds_per_row": 4.927792562711865,
+      "eta_basis": "host-local1453.70seconds295rows; assumes stable rate"
     },
     "C": {
-      "state": "same_image_service_validated_reflexion_binding_pending",
+      "state": "C1_running_verified_actual_model_responses",
       "diagnostic_requests_succeeded": 6,
-      "new_P_responses_confirmed": false,
+      "new_P_responses_confirmed": true,
       "historical_unknown_contacts": 2,
-      "automatic_retry": false
+      "automatic_retry": false,
+      "completed": 69,
+      "total": 1080,
+      "known_responses": 69,
+      "dispatches": 82,
+      "prompt_tokens": 378276,
+      "completion_tokens": 9833,
+      "mean_response_latency_seconds": 24.31953694710261,
+      "observed_at_remote_host_utc": "2026-11-07T16:50:40.496858+00:00",
+      "eta_seconds": null
     },
     "teacher_gepa": {
       "state": "index3_compiled_registered1080_pending_current_binding",
@@ -675,15 +723,16 @@
         "pid": 3596130
       },
       {
-        "role": "P_TFGRPO_collection",
+        "role": "P_TFGRPO_collection_config_rework",
         "model": "gpt-6.1-terra",
-        "pid": 3618741
+        "pid": 3627188
       },
       {
-        "role": "P_intent_knowledge_release",
+        "role": "P_intent_knowledge_axis_registration",
         "model": "gpt-6.1-terra",
-        "pid": 3615828
+        "pid": 3624745
       }
-    ]
+    ],
+    "clock_caveat": "Host clocks differ; use within-host deltas, not cross-host timestamp subtraction."
   }
 }
