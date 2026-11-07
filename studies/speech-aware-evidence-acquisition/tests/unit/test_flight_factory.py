@@ -58,6 +58,99 @@ def test_efficiency_runtime_config_binds_audio_cache_policy(tmp_path):
     assert loaded["audio_cache"]["preload_workers"] == 2
 
 
+@pytest.mark.parametrize("limit", [8, 16, 32])
+def test_native_efficiency_runtime_config_loads_fit_concurrency(tmp_path, limit):
+    config = tmp_path / f"native-{limit}.json"
+    config.write_text(json.dumps({
+        "schema": "saea-native-efficiency-v1",
+        "dispatch": {
+            "schema": "saea-dispatch-slot-fill-v1", "role_input_offload": True,
+            "ready_request": True, "prepare_workers": 2, "validation_workers": 2,
+            "model_inflight": 1, "admitted_trajectories": 4,
+        },
+        "native_fit": {"max_concurrency": limit},
+        "audio_cache": {"enabled": False, "max_entries": 0,
+                        "max_bytes": 0, "preload_workers": 1},
+    }) + "\n")
+    loaded = load_external_runtime_config(config)
+    assert loaded["native_fit"] == {"max_concurrency": limit}
+
+
+@pytest.mark.parametrize("value", [0, 1, 7, 9, 64, True, "16"])
+def test_native_efficiency_runtime_config_rejects_unsupported_fit_concurrency(tmp_path, value):
+    config = tmp_path / "native-invalid.json"
+    config.write_text(json.dumps({
+        "schema": "saea-native-efficiency-v1",
+        "dispatch": {"schema": "saea-dispatch-slot-fill-v1", "role_input_offload": True,
+                     "ready_request": True, "prepare_workers": 2,
+                     "validation_workers": 2, "model_inflight": 1,
+                     "admitted_trajectories": 4},
+        "native_fit": {"max_concurrency": value},
+        "audio_cache": {"enabled": False, "max_entries": 0,
+                        "max_bytes": 0, "preload_workers": 1},
+    }) + "\n")
+    with pytest.raises(Exception, match="native_fit.max_concurrency"):
+        load_external_runtime_config(config)
+
+
+@pytest.mark.parametrize("limit", [None, 8, 16, 32])
+def test_native_fit_external_config_through_flight_factory_to_gate(tmp_path, monkeypatch, limit):
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.config import ComposedConfig
+    from speech_aware_evidence_acquisition.core.flight import factory
+    from test_flight_runtime import _FakeAdapter
+    from test_native_contact_fit import _raw_runtime, _program, _plan
+
+    fixture = _raw_runtime(tmp_path)
+    values = {**fixture._composed.values, "native_episode": {},
+              "arm": "raw-speech-agent-native-tools", "transport": "vllm",
+              "carrier_lock_key": "slurp", "policy": "native"}
+    composed = ComposedConfig(values=values, config_hash="a" * 64, fragments={})
+    monkeypatch.setattr(factory, "compose", lambda *args, **kwargs: composed)
+    monkeypatch.setattr(factory, "register_builtin_task_adapters", lambda: None)
+    monkeypatch.setattr(factory.TASK_ADAPTERS, "resolve", lambda _: (
+        lambda values, lock, data, repo, *, dataset_fragment: _FakeAdapter(lock, data)))
+    monkeypatch.setattr(factory, "get_carrier_descriptor", lambda _: SimpleNamespace(lock_key="slurp"))
+    document = {
+        "schema": "saea-native-efficiency-v1",
+        "dispatch": {"schema": "saea-dispatch-slot-fill-v1", "role_input_offload": True,
+                     "ready_request": True, "prepare_workers": 2,
+                     "validation_workers": 2, "model_inflight": 1,
+                     "admitted_trajectories": 4},
+        "audio_cache": {"enabled": False, "max_entries": 0,
+                        "max_bytes": 0, "preload_workers": 1},
+    }
+    if limit is not None:
+        document["native_fit"] = {"max_concurrency": limit}
+    config = tmp_path / "runtime.json"
+    config.write_text(json.dumps(document))
+    monkeypatch.setenv("SAEA_RUNTIME_CONFIG_SHA256", hashlib.sha256(config.read_bytes()).hexdigest())
+    runtime = build_flight_runtime(
+        tmp_path, tmp_path, model="m", dataset="d", baseline="b", experiment="e",
+        run_id="SAEA-FIT-CONFIG-TEST", attempt_id="a", runtime_root=tmp_path,
+        runtime_config_path=config, lock={},
+    )
+    # Stop after real _prepare composition, before unrelated preflight I/O.
+    class CompositionReached(Exception):
+        pass
+    runtime._composition_cache = SimpleNamespace(compose=lambda *args, **kwargs: composed)
+    def stop_after_composition(_policy):
+        raise CompositionReached
+    runtime._phase_planner_specs = stop_after_composition
+    with pytest.raises(CompositionReached):
+        runtime._prepare()
+    runtime._samples = fixture._samples
+    runtime._session, runtime._transport, runtime._adapter = fixture._session, fixture._transport, fixture._adapter
+    runtime._gate = fixture._gate
+    runtime.assert_generation_lease = fixture.assert_generation_lease
+    runtime._gate_touch = fixture._gate_touch
+    runtime._require_exposure_row_unconsumed = fixture._require_exposure_row_unconsumed
+    runtime.session_required_identity = fixture.session_required_identity
+    gate = runtime._build_native_contact_fit_gate(_program(), _plan())
+    assert gate.max_concurrency == (8 if limit is None else limit)
+    assert runtime._composed.values["runtime_config_identity"]["sha256"] == hashlib.sha256(config.read_bytes()).hexdigest()
+
+
 @pytest.mark.parametrize("field", ["request_pipeline", "audio_cache"])
 @pytest.mark.parametrize("entry", ["factory", "runtime"])
 def test_external_operational_collision_refused_before_adapter(tmp_path, monkeypatch, field, entry):

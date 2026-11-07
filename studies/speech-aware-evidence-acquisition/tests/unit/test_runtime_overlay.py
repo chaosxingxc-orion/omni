@@ -92,3 +92,16 @@ def test_native_queue_cannot_be_smaller_than_model_window():
             {"native_episode": {}, "policy": "native", "transport": "vllm"},
             {"dispatch": {**DISPATCH, "model_inflight": 8}},
         )
+
+
+def test_native_fit_overlay_binds_only_raw_vllm_native_dispatch():
+    values = {"native_episode": {}, "native_contact_fit": {},
+              "arm": "raw-speech-agent-native-tools", "transport": "vllm"}
+    overlay = {"dispatch": DISPATCH, "native_fit": {"max_concurrency": 16}}
+    result = apply_runtime_overlay(values, overlay)
+    assert result["native_fit"]["max_concurrency"] == 16
+
+    with pytest.raises(ValueError, match="requires raw-speech"):
+        apply_runtime_overlay({"native_episode": {}, "native_contact_fit": {},
+                               "arm": "raw-speech-agent-native-tools",
+                               "transport": "llama-server"}, overlay)

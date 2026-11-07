@@ -8607,6 +8607,13 @@ class FlightRuntime:
         except NativeNodeBatchError as error:
             raise FlightRuntimeError(str(error)) from error
 
+    def _build_native_contact_fit_gate(self, program, plan):
+        from ..preparation_fit import build_native_contact_fit_gate
+
+        fit = self._composed.values.get("native_fit")
+        options = {} if fit is None else {"max_concurrency": fit["max_concurrency"]}
+        return build_native_contact_fit_gate(self, program, self._fit_base_plan(plan), **options)
+
     def _dispatch_phase_program(
         self,
         client: object,
@@ -8771,7 +8778,7 @@ class FlightRuntime:
         native_fit_gate = None
         if native_config is not None:
             from ..preparation_fit import (
-                build_native_contact_fit_gate, validate_native_contact_fit_config,
+                validate_native_contact_fit_config,
             )
 
             validate_native_contact_fit_config(self._composed.values, program)
@@ -8796,13 +8803,11 @@ class FlightRuntime:
                     from ..native_fit_recovery import RecoverableNativeFitGate
                     native_fit_gate = RecoverableNativeFitGate(
                         self, plan,
-                        lambda: build_native_contact_fit_gate(self, program, self._fit_base_plan(plan)),
+                        lambda: self._build_native_contact_fit_gate(program, plan),
                         replay=getattr(self, '_native_contact_replay', None),
                     )
                 else:
-                    native_fit_gate = build_native_contact_fit_gate(
-                        self, program, self._fit_base_plan(plan),
-                    )
+                    native_fit_gate = self._build_native_contact_fit_gate(program, plan)
             # Same-flight instrument, PHASE 2 (merge set C): the Perception
             # branch group's own pre-flight, whole-roster seed. None --
             # and therefore byte-identical to the pre-phase-2 tree -- unless

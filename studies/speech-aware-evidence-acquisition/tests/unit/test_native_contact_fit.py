@@ -664,7 +664,7 @@ def test_native_contact_fit_preserves_failed_contact_journal_and_refuses_retry(
     assert gate.receipts == []
 
 
-@pytest.mark.parametrize("limit", [1, 2])
+@pytest.mark.parametrize("limit", [8, 16, 32])
 def test_native_contact_fit_bounds_concurrent_tokenizer_endpoints(tmp_path, monkeypatch, limit):
     import speech_aware_evidence_acquisition.core.preparation_fit as fitting
 
@@ -672,6 +672,8 @@ def test_native_contact_fit_bounds_concurrent_tokenizer_endpoints(tmp_path, monk
     state_lock = threading.Lock()
     active = 0
     maximum_active = 0
+    full = threading.Event()
+    release = threading.Event()
 
     class ObservedTokenizer(_RawTokenizer):
         def request_json(self, method, path, payload):
@@ -679,32 +681,44 @@ def test_native_contact_fit_bounds_concurrent_tokenizer_endpoints(tmp_path, monk
             with state_lock:
                 active += 1
                 maximum_active = max(maximum_active, active)
+                if active == limit:
+                    full.set()
             try:
-                time.sleep(0.005)
+                assert release.wait(15)
                 return super().request_json(method, path, payload)
             finally:
                 with state_lock:
                     active -= 1
 
     runtime = _raw_runtime(tmp_path)
+    runtime._samples = tuple(_Sample(f"s{index}") for index in range(limit + 1))
+    runtime._composed.values["native_contact_fit"]["contact_cap"] = limit + 1
+    program = _program(max_contacts=1)
     gate = build_native_contact_fit_gate(
         runtime,
-        _program(),
+        program,
         _plan(),
         client_factory=lambda **kwargs: ObservedTokenizer(**kwargs),
         max_concurrency=limit,
     )
 
-    with ThreadPoolExecutor(max_workers=2) as pool:
+    with ThreadPoolExecutor(max_workers=limit + 1) as pool:
         futures = [
-            pool.submit(gate, _raw_prepared("s1", "s1-contact", runtime._transport.raw)),
-            pool.submit(gate, _raw_prepared("s2", "s2-contact", runtime._transport.raw)),
+            pool.submit(gate, _raw_prepared(f"s{index}", f"s{index}-contact", runtime._transport.raw))
+            for index in range(limit + 1)
         ]
+        try:
+            assert full.wait(15)
+            with state_lock:
+                assert active == limit
+            assert not all(f.done() for f in futures)
+        finally:
+            release.set()
         for future in futures:
             future.result()
 
     assert maximum_active == limit
-    assert len(gate.receipts) == 2
+    assert len(gate.receipts) == limit + 1
     journals = []
     for receipt in gate.receipts:
         from pathlib import Path
@@ -715,7 +729,7 @@ def test_native_contact_fit_bounds_concurrent_tokenizer_endpoints(tmp_path, monk
         assert len(journal) == 1
         assert json.loads(path.read_text())["output"]["cumulative_contacts"] == journal[-1]["contact"]
         journals.extend(journal)
-    assert sorted(r['contact'] for r in journals) == list(range(1, 3))
+    assert sorted(r['contact'] for r in journals) == list(range(1, limit + 2))
 
 
 def test_native_raw_fit_budgets_and_observations_are_isolated_by_window(tmp_path):
@@ -890,3 +904,22 @@ def test_only_raw_vllm_concurrency_defaults_to_eight(tmp_path):
     assert build_native_contact_fit_gate(feature, _program(), _plan()).max_concurrency == 1
     with pytest.raises(PreparationError, match='verifier support'):
         build_native_contact_fit_gate(feature, _program(), _plan(), max_concurrency=2)
+
+
+@pytest.mark.parametrize("limit", [8, 16, 32])
+def test_runtime_fit_configuration_reaches_real_gate_factory(tmp_path, limit):
+    from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntime
+
+    runtime = _raw_runtime(tmp_path / str(limit))
+    runtime._composed.values["transport"] = "vllm"
+    runtime._composed.values["native_fit"] = {"max_concurrency": limit}
+    runtime._fit_base_plan = lambda plan: plan
+    gate = FlightRuntime._build_native_contact_fit_gate(runtime, _program(), _plan())
+    assert gate.max_concurrency == limit
+
+
+def test_real_gate_rejects_invalid_configured_concurrency(tmp_path):
+    runtime = _raw_runtime(tmp_path)
+    runtime._composed.values["transport"] = "vllm"
+    with pytest.raises(PreparationError, match="positive integer"):
+        build_native_contact_fit_gate(runtime, _program(), _plan(), max_concurrency=0)

@@ -12,7 +12,7 @@ def apply_runtime_overlay(values, overlay, *, error_type=ValueError):
     need a new attempt and the usual checkpoint compatibility proof.
     """
     result = dict(values)
-    controls = ("request_pipeline", "dispatch", "audio_cache")
+    controls = ("request_pipeline", "dispatch", "audio_cache", "native_fit")
     if not isinstance(overlay, Mapping) or set(overlay) - {
         *controls, "_external_runtime_config",
     }:
@@ -28,6 +28,17 @@ def apply_runtime_overlay(values, overlay, *, error_type=ValueError):
         if not isinstance(overlay[key], Mapping):
             raise error_type(f"external runtime config {key} is invalid")
         result[key] = copy.deepcopy(dict(overlay[key]))
+    if "native_fit" in overlay:
+        fit = result["native_fit"]
+        if (set(fit) != {"max_concurrency"}
+                or type(fit["max_concurrency"]) is not int
+                or fit["max_concurrency"] not in (8, 16, 32)):
+            raise error_type("native_fit.max_concurrency must be 8, 16 or 32")
+        if ("dispatch" not in overlay or not isinstance(result.get("native_episode"), Mapping)
+                or not isinstance(result.get("native_contact_fit"), Mapping)
+                or result.get("arm") != "raw-speech-agent-native-tools"
+                or result.get("transport") != "vllm"):
+            raise error_type("native_fit requires raw-speech native contact FIT with vllm dispatch")
     if "dispatch" in overlay:
         from ...rails.dispatch_slot_fill import DispatchSlotFillError, parse_dispatch_slot_fill
 

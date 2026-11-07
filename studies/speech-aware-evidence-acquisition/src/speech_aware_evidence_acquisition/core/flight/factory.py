@@ -54,6 +54,13 @@ def load_external_runtime_config(path: Path | None) -> Mapping[str, object]:
         except DispatchSlotFillError as error:
             raise CoreError(str(error)) from error
     allowed = {"schema", scheduler}
+    if schema == "saea-native-efficiency-v1" and "native_fit" in document:
+        allowed.add("native_fit")
+        fit = document["native_fit"]
+        if (not isinstance(fit, Mapping) or set(fit) != {"max_concurrency"}
+                or type(fit["max_concurrency"]) is not int
+                or fit["max_concurrency"] not in (8, 16, 32)):
+            raise CoreError("native_fit.max_concurrency must be 8, 16 or 32")
     if schema in {"saea-runtime-efficiency-v1", "saea-native-efficiency-v1"}:
         allowed.add("audio_cache")
         cache = document.get("audio_cache")
@@ -75,6 +82,8 @@ def load_external_runtime_config(path: Path | None) -> Mapping[str, object]:
     }
     if "audio_cache" in document:
         result["audio_cache"] = dict(document["audio_cache"])
+    if "native_fit" in document:
+        result["native_fit"] = dict(document["native_fit"])
     return result
 
 
