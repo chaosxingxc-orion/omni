@@ -1,0 +1,125 @@
+{
+  "schema": "saea-p-retrieval-supply-public-summary-v1",
+  "updated_at_utc": "2026-11-07T14:07:53.911471+00:00",
+  "source_sha256": "04936716e3aae20df5b90a3cd7d7040beeaba0a0140bc4827402ee79009c837c",
+  "parent_candidate_sha256": "205ce07adaf5c2fc5fb7a1c1569a5b264859318b31199b1e31e5eade1da1156c",
+  "source_commit": "2586419b119d7077a405a4fb951e00ee59c231eb",
+  "scope": "CPU supply only, not model accuracy",
+  "cohorts": {
+    "fold_a1080": {
+      "parent": {
+        "n": 1080,
+        "gold_in_supply": 1024,
+        "gold_in_supply_ratio": 0.9481481481481482,
+        "gold_gained": 0,
+        "gold_lost": 0,
+        "order_unchanged_count": 1080,
+        "selected_count_distribution": {
+          "8": 1080
+        },
+        "mean_extra_knowledge_tokens": 0.0
+      },
+      "p-retrieval-breadth-12": {
+        "n": 1080,
+        "gold_in_supply": 1045,
+        "gold_in_supply_ratio": 0.9675925925925926,
+        "gold_gained": 21,
+        "gold_lost": 0,
+        "order_unchanged_count": 0,
+        "selected_count_distribution": {
+          "12": 1080
+        },
+        "mean_extra_knowledge_tokens": 616.800925925926
+      },
+      "p-retrieval-breadth-16": {
+        "n": 1080,
+        "gold_in_supply": 1058,
+        "gold_in_supply_ratio": 0.9796296296296296,
+        "gold_gained": 34,
+        "gold_lost": 0,
+        "order_unchanged_count": 0,
+        "selected_count_distribution": {
+          "16": 1080
+        },
+        "mean_extra_knowledge_tokens": 1234.3370370370371
+      },
+      "p-retrieval-tau-010": {
+        "n": 1080,
+        "gold_in_supply": 1024,
+        "gold_in_supply_ratio": 0.9481481481481482,
+        "gold_gained": 0,
+        "gold_lost": 0,
+        "order_unchanged_count": 1080,
+        "selected_count_distribution": {
+          "8": 1080
+        },
+        "mean_extra_knowledge_tokens": 0.0
+      }
+    },
+    "original80": {
+      "parent": {
+        "n": 80,
+        "gold_in_supply": 75,
+        "gold_in_supply_ratio": 0.9375,
+        "gold_gained": 0,
+        "gold_lost": 0,
+        "order_unchanged_count": 80,
+        "selected_count_distribution": {
+          "8": 80
+        },
+        "mean_extra_knowledge_tokens": 0.0
+      },
+      "p-retrieval-breadth-12": {
+        "n": 80,
+        "gold_in_supply": 76,
+        "gold_in_supply_ratio": 0.95,
+        "gold_gained": 1,
+        "gold_lost": 0,
+        "order_unchanged_count": 0,
+        "selected_count_distribution": {
+          "12": 80
+        },
+        "mean_extra_knowledge_tokens": 618.65
+      },
+      "p-retrieval-breadth-16": {
+        "n": 80,
+        "gold_in_supply": 77,
+        "gold_in_supply_ratio": 0.9625,
+        "gold_gained": 2,
+        "gold_lost": 0,
+        "order_unchanged_count": 0,
+        "selected_count_distribution": {
+          "16": 80
+        },
+        "mean_extra_knowledge_tokens": 1233.3125
+      },
+      "p-retrieval-tau-010": {
+        "n": 80,
+        "gold_in_supply": 75,
+        "gold_in_supply_ratio": 0.9375,
+        "gold_gained": 0,
+        "gold_lost": 0,
+        "order_unchanged_count": 80,
+        "selected_count_distribution": {
+          "8": 80
+        },
+        "mean_extra_knowledge_tokens": 0.0
+      }
+    }
+  },
+  "npu_calls": 0,
+  "teacher_calls": 0,
+  "embedding_calls": 0,
+  "token_scope": "actual tokenizer, knowledge-card bodies only, not complete multimodal request",
+  "historical80_equal_supply_sets": 31,
+  "no_op_candidates": [
+    "p-retrieval-tau-010"
+  ],
+  "runtime_admitted": false,
+  "cpu_seconds": {
+    "native_supply_stage": 36.79,
+    "postprocessing_resume": 27.81615106004756,
+    "all_analysis_starts_including_failures": 72.71,
+    "scope": "excludes inspection and final verifier overhead"
+  }
+}

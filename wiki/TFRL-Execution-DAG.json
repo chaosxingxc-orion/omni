@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T14:00:36.891002+00:00",
+  "updated_at_utc": "2026-11-07T14:09:20.528762+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -72,7 +72,7 @@
       "depends_on": [
         "P-teacher-input"
       ],
-      "status": "consumption_four_received_construction_pending_independent_axes",
+      "status": "consumption_four_construction_five_received",
       "method": "reflexion",
       "run_nodes": [
         "P"
@@ -460,9 +460,17 @@
       "depends_on": [
         "P-ace-consumption-result"
       ],
-      "status": "native_sealed_vector_analysis_running",
+      "status": "native_supply_delta_complete",
       "owner": "Sol CLI",
-      "scope": "original population, real changed supply, gold-card coverage, context growth; no new embeddings"
+      "scope": "original population, real changed supply, gold-card coverage, context growth; no new embeddings",
+      "skip_npu": [
+        "tau0.1"
+      ],
+      "priority": [
+        "breadth12",
+        "breadth16"
+      ],
+      "evidence": "P-Retrieval-Supply-Review.json"
     },
     {
       "id": "P-ace-material",
@@ -530,7 +538,7 @@
       "automatic_retry": false
     },
     "teacher_gepa": {
-      "state": "six_received_semantically_reviewed_compiler_rework",
+      "state": "wire_template_published_actual_config_patch_wrong_rework2",
       "raw_candidates": 6,
       "validated_candidates": 0,
       "prompt_tokens": 167496,
@@ -544,8 +552,8 @@
     },
     "teacher_methods_v3": {
       "reflexion_consumption": "four_received_c1_c2_priority_compiler_pending",
-      "reflexion_construction": "running",
-      "ace_consumption": "three_received_native_supply_delta_running",
+      "reflexion_construction": "five_received_section_span_compiler_mismatch",
+      "ace_consumption": "three_received_tau_noop_excluded_breadth12_16_prioritized",
       "ace_construction": "unknown_held_no_retry"
     },
     "cpu_workers": [
@@ -557,12 +565,13 @@
       {
         "role": "P teacher compiler",
         "model": "gpt-6.1-terra",
-        "pid": 3494137
+        "pid": 3504549
       },
       {
         "role": "P supply analysis",
         "model": "gpt-6.1-sol",
-        "pid": 3494714
+        "pid": 3494714,
+        "status": "analysis_complete_report_delivered"
       }
     ]
   },
