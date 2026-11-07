@@ -45,6 +45,28 @@ def test_section_separator_normalization_keeps_wire_and_proof():
     assert sum(x['excluded_separator'] for x in result['derived_section_proof']['sections']) == 4
 
 
+def test_equal_gap_count_cannot_move_header_separator_to_another_boundary():
+    card, op = _permutation()
+    refs = op['source_refs']
+    # Include the second section's original LF, then shift the header's gap
+    # after it.  The old count-only check saw three gaps and three exclusions.
+    refs[1]['old_end'] += 1
+    pieces = [op['old'][r['old_start']:r['old_end']] for r in refs]
+    gaps = ['', '\n', '\n', '\n']
+    new = ''
+    for i, (ref, piece) in enumerate(zip(refs, pieces)):
+        ref['new_start'] = len(new)
+        new += piece
+        ref['new_end'] = len(new)
+        if i < len(gaps):
+            new += gaps[i]
+    op['new'] = new
+    assert new.startswith(pieces[0] + pieces[1])
+    assert sum(bool(g) for g in gaps) == 3
+    with pytest.raises(ValueError, match='section boundary'):
+        card_patch(op, {'card': card})
+
+
 @pytest.mark.parametrize('damage', ['omit', 'duplicate', 'overlap', 'insert', 'modify', 'cross_card', 'sha', 'offset', 'header'])
 def test_section_permutation_rejects_damage(damage):
     card, op = _permutation(); refs = op['source_refs']

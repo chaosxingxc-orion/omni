@@ -52,7 +52,7 @@ def card_patch(operation, cards):
                    if a == start and (b == end or (end < len(old) and b == end - 1 and old[b:end] == '\n'))]
         require(len(matches)==1 and old[a:b]==new[c:d],'span must copy a complete unchanged existing section')
         start,end=matches[0]
-        used.append((start,end)); dest.append((c,d))
+        used.append((start,end)); dest.append((c,d,b != end))
         proof.append({'raw_old_span':[a,b], 'raw_new_span':[c,d],
                       'canonical_old_span':[start,end], 'excluded_separator':b != end})
     require(sorted(used)==expected,'all original sections must occur exactly once')
@@ -61,6 +61,9 @@ def card_patch(operation, cards):
         'new content has additions, holes or overlaps')
     require(sum(1 for x,y in zip(ordered,ordered[1:]) if new[x[1]:y[0]]=='\n') == sum(item['excluded_separator'] for item in proof),
         'section separators must be preserved exactly')
+    require(all(new[x[1]:y[0]] == ('' if new[x[1]-1:x[1]] == '\n' else '\n')
+                for x,y in zip(ordered,ordered[1:])),
+        'each section boundary must start at a line without an extra separator')
     header=next(r for r in refs if r['old_start']==0)
     require(header['new_start']==0 and new.startswith(old[:header['old_end']]),'Intent header moved or changed')
     return {'target_id':card['id'],'old_content_sha256':card['content_sha256'],'new_content_sha256':sha(new.encode()),
