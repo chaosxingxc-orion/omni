@@ -26,9 +26,11 @@ def publish_template(repo, *, candidate, contract, expected_contract_sha256,
             or sha(tokenizer_identity) != expected_tokenizer_sha256
             or contract['frozen']['tokenizer_sha256'] != expected_tokenizer_sha256):
         raise ValueError('externally pinned tokenizer identity differs')
-    if tokenizer_identity.get('rendering') != {
-            'mode': 'text', 'add_generation_prompt': False,
-            'add_special_tokens': False, 'truncation': False}:
+    rendering = tokenizer_identity.get('rendering')
+    if rendering not in (
+            {'mode': 'text', 'add_special_tokens': False, 'truncation': False},
+            {'mode': 'text', 'add_generation_prompt': False,
+             'add_special_tokens': False, 'truncation': False}):
         raise ValueError('untruncated plain-text tokenizer required')
     text = for_contract(contract).executable_template(candidate, contract=contract,
         expected_contract_sha256=expected_contract_sha256, count_tokens=count_tokens,

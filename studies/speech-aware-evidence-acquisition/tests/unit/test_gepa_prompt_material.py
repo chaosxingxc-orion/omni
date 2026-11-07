@@ -43,6 +43,28 @@ def test_real_seed_bytes_reentry_and_native_parser(tmp_path, monkeypatch):
     assert not result['native_fit_completed']
 
 
+@pytest.mark.parametrize('rendering,accepted', [
+    ({'mode': 'text', 'add_special_tokens': False, 'truncation': False}, True),
+    ({'mode': 'text', 'add_generation_prompt': True, 'add_special_tokens': False, 'truncation': False}, False),
+    ({'mode': 'chat', 'add_generation_prompt': False, 'add_special_tokens': False, 'truncation': False}, False),
+])
+def test_rendering_identity_compatibility(tmp_path, rendering, accepted):
+    _, args = inputs()
+    tokenizer = dict(args['tokenizer_identity'], rendering=rendering)
+    frozen = dict(args['contract']['frozen'], tokenizer_sha256=c.sha(tokenizer))
+    contract = c.build_contract(base_template=args['contract']['base_template'], frozen=frozen,
+        feedback_query_ids=['slurp:train:1'], excluded_query_ids=[])
+    args.update(tokenizer_identity=tokenizer, expected_tokenizer_sha256=c.sha(tokenizer),
+        contract=contract, expected_contract_sha256=contract['contract_sha256'],
+        candidate=c.seed_candidate(contract=contract, expected_contract_sha256=contract['contract_sha256'],
+                                   count_tokens=args['count_tokens']))
+    if accepted:
+        assert m.publish_template(tmp_path, **args)['instruction_template']
+    else:
+        with pytest.raises(ValueError, match='plain-text tokenizer'):
+            m.publish_template(tmp_path, **args)
+
+
 @pytest.mark.parametrize('fault', ['candidate', 'contract', 'tokenizer', 'count'])
 def test_bad_inputs_leave_no_published_file(tmp_path, fault):
     _, args = inputs()
