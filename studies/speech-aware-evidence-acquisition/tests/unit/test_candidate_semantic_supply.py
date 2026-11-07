@@ -1173,6 +1173,49 @@ def test_bounded_projection_is_shared_by_treatment_and_control(tmp_path, mode):
     assert router.receipt["candidate_supply"]["specs"][0]["projection_policy"] == spec["projection_policy"]
 
 
+@pytest.mark.parametrize("projected", [False, True])
+def test_supply_audits_unresolved_field_normalization_without_changing_source(
+    tmp_path, projected
+):
+    config, legal = _config(tmp_path)
+    spec = config["knowledge_stores"]["slot-contracts"]["candidate_supply"]["solve"]
+    source = _artifact("s1", ("beta", "alpha"))
+    document = json.loads(source.content)
+    document["candidates"][0]["unresolved_fields"] = ["", "location", " "]
+    if projected:
+        spec.update(
+            compact_source_phase="hypotheses",
+            projection_policy="bounded-first-occurrence-distinct-slurp-intent-hypotheses-v1",
+        )
+        document = {"candidates": document["candidates"]}
+    raw = json.dumps(document)
+    source = replace(
+        source, content=raw,
+        source_response_sha256=hashlib.sha256(raw.encode()).hexdigest(),
+    )
+    binding = load_knowledge_store_binding(config, data_root=tmp_path)
+    router = build_knowledge_store_supply(
+        binding, program=_program(), data_root=tmp_path, legal_candidate_ids=legal,
+    )
+
+    router.automatic_for_phase("solve", _context(binding, source))
+
+    audit = next(iter(router.receipt["candidate_selections"].values()))
+    assert audit["candidate_ids"] == ["beta", "alpha"]
+    assert audit["candidate_source_response_sha256"] == source.source_response_sha256
+    assert audit["unresolved_fields_normalizations"] == [{
+        "candidate_index": 0,
+        "field": "unresolved_fields",
+        "raw_values": ("", "location", " "),
+        "normalized_values": ("location",),
+        "reason": "whitespace-only entries represent no unresolved field",
+    }]
+    if projected:
+        assert audit["candidate_projection"]["original_text_sha256"] == source.source_response_sha256
+    assert source.content == raw
+    assert json.loads(source.content)["candidates"][0]["unresolved_fields"] == ["", "location", " "]
+
+
 def test_configurable_projection_flows_five_raw_candidates_through_supply(tmp_path):
     inventory = ("alpha", "beta", "gamma", "delta", "epsilon")
     rows = tuple(_slot_row(f"{intent}_one", (intent,)) for intent in inventory)

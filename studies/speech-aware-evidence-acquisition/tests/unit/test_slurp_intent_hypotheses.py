@@ -30,6 +30,7 @@ from speech_aware_evidence_acquisition.rails.slurp_intent_hypotheses import (
     SlurpIntentHypothesisError,
     SlurpIntentHypothesisStateFill,
     append_fallback_slurp_intent_hypothesis_candidates,
+    parse_slurp_intent_hypothesis_content,
     parse_slurp_intent_hypothesis_state,
     project_fixed_three_slurp_intent_hypotheses,
     project_bounded_slurp_intent_hypotheses,
@@ -107,6 +108,99 @@ def test_single_candidate_is_valid_for_n1_controls():
     assert [candidate.intent_id for candidate in parsed.candidates] == [
         "weather_query"
     ]
+
+
+@pytest.mark.parametrize("raw_unresolved", [[], [""], [" "]])
+def test_unresolved_fields_empty_and_whitespace_entries_mean_no_unresolved_fields(
+    raw_unresolved,
+):
+    candidate = {
+        **_payload()["candidates"][0],
+        "unresolved_fields": raw_unresolved,
+    }
+    raw = json.dumps(_payload(candidates=[candidate]), ensure_ascii=False)
+
+    parsed = parse_slurp_intent_hypothesis_content(
+        raw,
+        expected_sample_id=SAMPLE_ID,
+        legal_intent_ids=LEGAL,
+        max_candidates=1,
+    )
+
+    assert parsed.candidates[0].unresolved_fields == ()
+    assert parsed.unresolved_fields_normalizations[0].raw_values == tuple(raw_unresolved)
+    assert parsed.unresolved_fields_normalizations[0].normalized_values == ()
+    assert parsed.unresolved_fields_normalizations[0].reason == (
+        "whitespace-only entries represent no unresolved field"
+        if raw_unresolved
+        else "no normalization required"
+    )
+
+
+def test_unresolved_fields_normalization_preserves_real_order_and_audits_raw_values():
+    raw_unresolved = [" ", "location", "\t"]
+    candidate = {
+        **_payload()["candidates"][0],
+        "unresolved_fields": raw_unresolved,
+    }
+    raw = json.dumps(_payload(candidates=[candidate]), ensure_ascii=False)
+    parsed = parse_slurp_intent_hypothesis_content(
+        raw,
+        expected_sample_id=SAMPLE_ID,
+        legal_intent_ids=LEGAL,
+        max_candidates=1,
+    )
+
+    assert parsed.candidates[0].unresolved_fields == ("location",)
+    audit = parsed.unresolved_fields_normalizations[0]
+    assert audit.raw_values == tuple(raw_unresolved)
+    assert audit.normalized_values == ("location",)
+    assert audit.field == "unresolved_fields"
+    assert "whitespace-only" in audit.reason
+
+
+@pytest.mark.parametrize(
+    "raw_unresolved,match",
+    [
+        (["location", "location"], "unique"),
+        (["location", 1], "non-empty string"),
+        (["x" * 513], "512-character bound"),
+    ],
+)
+def test_unresolved_fields_keeps_invalid_entries_fail_closed(raw_unresolved, match):
+    candidate = {
+        **_payload()["candidates"][0],
+        "unresolved_fields": raw_unresolved,
+    }
+    raw = json.dumps(_payload(candidates=[candidate]), ensure_ascii=False)
+
+    with pytest.raises(SlurpIntentHypothesisError, match=match):
+        parse_slurp_intent_hypothesis_content(
+            raw,
+            expected_sample_id=SAMPLE_ID,
+            legal_intent_ids=LEGAL,
+            max_candidates=1,
+        )
+
+
+def test_unresolved_fields_raw_artifact_content_remains_unchanged():
+    raw_unresolved = ["", "location"]
+    candidate = {
+        **_payload()["candidates"][0],
+        "unresolved_fields": raw_unresolved,
+    }
+    artifact = _state(_payload(candidates=[candidate]))
+    raw = artifact.content
+    parsed = parse_slurp_intent_hypothesis_state(
+        artifact,
+        expected_sample_id=SAMPLE_ID,
+        legal_intent_ids=LEGAL,
+        max_candidates=1,
+    )
+
+    assert artifact.content == raw
+    assert artifact.source_response_sha256 == hashlib.sha256(raw.encode()).hexdigest()
+    assert parsed.candidates[0].unresolved_fields == ("location",)
 
 
 @pytest.mark.parametrize(

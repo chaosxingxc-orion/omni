@@ -1994,8 +1994,13 @@ class SlurpCandidateSemanticProvider(CandidateSemanticProvider):
         audit = {}
         if state.projection is not None:
             audit["candidate_projection"] = asdict(state.projection)
+        normalizations = [
+            asdict(item) for item in state.unresolved_fields_normalizations
+            if item.raw_values != item.normalized_values
+        ]
+        if normalizations:
+            audit["unresolved_fields_normalizations"] = normalizations
         if not self._fallback_candidates:
-            # Unconfigured: byte/shape-identical to before this option existed.
             return tuple(item.intent_id for item in state.candidates), audit
         candidates = append_fallback_slurp_intent_hypothesis_candidates(
             state.candidates,

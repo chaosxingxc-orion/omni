@@ -130,11 +130,23 @@ class SlurpIntentHypothesisCandidate:
 
 
 @dataclass(frozen=True)
+class SlurpIntentHypothesisNormalization:
+    """Audit one field-specific, semantics-preserving normalization."""
+
+    candidate_index: int
+    field: str
+    raw_values: tuple[str, ...]
+    normalized_values: tuple[str, ...]
+    reason: str
+
+
+@dataclass(frozen=True)
 class SlurpIntentHypothesisState:
     """A compact ordered set of alternatives for one source-bound sample."""
 
     sample_id: str
     candidates: tuple[SlurpIntentHypothesisCandidate, ...]
+    unresolved_fields_normalizations: tuple[SlurpIntentHypothesisNormalization, ...] = ()
     projection: SlurpIntentHypothesisProjection | None = None
 
 
@@ -181,6 +193,40 @@ def _texts(value: object, *, field: str) -> tuple[str, ...]:
     if len(set(result)) != len(result):
         raise SlurpIntentHypothesisError(f"{field} entries must be unique and ordered")
     return result
+
+
+def _unresolved_fields(
+    value: object, *, field: str, candidate_index: int
+) -> tuple[tuple[str, ...], SlurpIntentHypothesisNormalization]:
+    """Treat whitespace-only unresolved-field entries as the empty set.
+
+    This is intentionally separate from ``_texts``: evidence references and
+    other text lists remain strictly non-empty, while this schema explicitly
+    permits ``[]`` to mean that no field is unresolved. Every item still goes
+    through the normal type and length checks before whitespace-only entries
+    are removed.
+    """
+
+    if not isinstance(value, list) or len(value) > _MAX_LIST_ITEMS:
+        raise SlurpIntentHypothesisError(
+            f"{field} must be a list with at most {_MAX_LIST_ITEMS} entries"
+        )
+    raw_values = tuple(_text(item, field=field, allow_empty=True) for item in value)
+    normalized = tuple(item for item in raw_values if item.strip())
+    if len(set(normalized)) != len(normalized):
+        raise SlurpIntentHypothesisError(f"{field} entries must be unique and ordered")
+    reason = (
+        "whitespace-only entries represent no unresolved field"
+        if len(normalized) != len(raw_values)
+        else "no normalization required"
+    )
+    return normalized, SlurpIntentHypothesisNormalization(
+        candidate_index=candidate_index,
+        field="unresolved_fields",
+        raw_values=raw_values,
+        normalized_values=normalized,
+        reason=reason,
+    )
 
 
 def _legal_ids(values: Iterable[str]) -> frozenset[str]:
@@ -354,6 +400,7 @@ def parse_slurp_intent_hypothesis_content(
             f"candidates must contain between 1 and at most {max_candidates} alternatives"
         )
     candidates: list[SlurpIntentHypothesisCandidate] = []
+    unresolved_fields_normalizations: list[SlurpIntentHypothesisNormalization] = []
     for index, row in enumerate(rows):
         if not isinstance(row, Mapping) or set(row) != _CANDIDATE_KEYS:
             raise SlurpIntentHypothesisError(
@@ -364,6 +411,12 @@ def parse_slurp_intent_hypothesis_content(
             raise SlurpIntentHypothesisError(
                 f"candidate {index} intent_id {intent_id!r} is not legal"
             )
+        unresolved_fields, normalization = _unresolved_fields(
+            row["unresolved_fields"],
+            field=f"candidate {index} unresolved_fields",
+            candidate_index=index,
+        )
+        unresolved_fields_normalizations.append(normalization)
         candidates.append(
             SlurpIntentHypothesisCandidate(
                 intent_id=intent_id,
@@ -373,10 +426,7 @@ def parse_slurp_intent_hypothesis_content(
                 evidence_refs=_texts(
                     row["evidence_refs"], field=f"candidate {index} evidence_refs"
                 ),
-                unresolved_fields=_texts(
-                    row["unresolved_fields"],
-                    field=f"candidate {index} unresolved_fields",
-                ),
+                unresolved_fields=unresolved_fields,
             )
         )
     intent_ids = [candidate.intent_id for candidate in candidates]
@@ -385,7 +435,9 @@ def parse_slurp_intent_hypothesis_content(
             "candidate intent_ids must be unique and ordered"
         )
     return SlurpIntentHypothesisState(
-        sample_id=sample_id, candidates=tuple(candidates)
+        sample_id=sample_id,
+        candidates=tuple(candidates),
+        unresolved_fields_normalizations=tuple(unresolved_fields_normalizations),
     )
 
 
