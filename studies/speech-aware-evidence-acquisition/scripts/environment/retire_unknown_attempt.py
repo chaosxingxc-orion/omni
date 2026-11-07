@@ -46,7 +46,8 @@ def inventory(journal):
     records={}; names=set()
     for p in files:
         if p.name=='retirement.json': continue
-        require(p.name.endswith(('.intent.json','.response.json','.fit.json')), 'unknown journal file')
+        require(p.name.endswith(('.intent.json','.response.json','.fit.json',
+                                 '.dispatch.json','.not_sent.json','.reconciliation.json')), 'unknown journal file')
         names.add(p.name);records[p.name]=sha(p)
     intents=sorted(p for p in files if p.name.endswith('.intent.json'))
     rows=[];audio=[];expected_responses=set()
@@ -60,6 +61,10 @@ def inventory(journal):
                      'request_sha256':x['intent']['request_sha256'],
                      'response_sha256':records.get(response.name)})
     require({n for n in names if n.endswith('.response.json')}==expected_responses,'orphan response')
+    stems={p.name[:-len('.intent.json')] for p in intents}
+    for name in names:
+        if name.endswith(('.dispatch.json','.not_sent.json','.reconciliation.json')):
+            require(name.rsplit('.',2)[0] in stems,'orphan delivery record')
     return {'files':records,'contacts':rows,'calls':len(rows),'audio_seconds':math.fsum(audio),
             'unknown_count':sum(r['state']=='unknown' for r in rows)}
 
@@ -120,7 +125,8 @@ def execute(cfg):
         attempt_path=data/'attempts'/run/(attempt_id+'.json')
         current=attempt_path.read_bytes();state=json.loads(current)
         require(state['actual']==cfg['actual'] and state['state'] in ('OPENED','ABORTED'), 'attempt or cost changed')
-        if state['state']=='OPENED':require(digest(current)==cfg['attempt_sha256'],'attempt changed')
+        if state['state']=='OPENED' or not (out/'manifest.json').exists():
+            require(digest(current)==cfg['attempt_sha256'],'attempt changed')
         require(sha(cfg['runtime_receipt'])==cfg['runtime_receipt_sha256'],'runtime receipt differs')
         session=read(data/'serving'/cfg['session_id']/'session.json');runtime=read(cfg['runtime_receipt'])
         instances=runtime['deployment']['instances']
@@ -149,7 +155,7 @@ def execute(cfg):
             for name,expected in snapshot['files'].items():require(sha(out/name)==expected,'archive journal copy differs')
             for name,expected in fit_files.items():require(sha(out/'fit'/name)==expected,'archive FIT copy differs')
         else:
-            require(lease_blob is not None and state['state']=='OPENED' and not marker_path.exists(), 'fresh source custody required')
+            require(lease_blob is not None and state['state'] in ('OPENED','ABORTED') and not marker_path.exists(), 'fresh source custody required')
             out.mkdir(parents=True,exist_ok=True);sync(out.parent)
             def stage(path,content):
                 if path.exists():require(path.is_file() and not path.is_symlink() and path.read_bytes()==content,'partial archive differs')
@@ -173,7 +179,7 @@ def execute(cfg):
                 'unknown_count':snapshot['unknown_count'],'manifest_sha256':sha(out/'manifest.json')}
         if marker_path.exists():require(read(marker_path)==marker,'retirement marker differs')
         else:
-            require(lease_blob is not None and state['state']=='OPENED','marker missing after abort or release')
+            require(lease_blob is not None and state['state'] in ('OPENED','ABORTED'),'marker missing after abort or release')
             publish_new(marker_path,canonical(marker))
         if state['state']=='OPENED':
             require(lease_blob is not None,'lease missing before abort')

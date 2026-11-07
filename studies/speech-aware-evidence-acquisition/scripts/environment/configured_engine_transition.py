@@ -190,7 +190,7 @@ def retirement_barrier(c):
         and manifest.get('automatic_retry') is False and manifest.get('lease_sha256')==launch.digest(paths['lease']), 'retirement manifest differs')
     require(marker.get('run_id')==plan.run_id and marker.get('attempt_id')==plan.attempt_id
         and marker.get('manifest_sha256')==launch.digest(paths['manifest']) and marker.get('automatic_retry') is False, 'retirement marker differs')
-    require(before.get('state')=='OPENED' and after.get('state')=='ABORTED' and before.get('actual')==after.get('actual')==manifest.get('cost')==done.get('actual'), 'retired attempt cost differs')
+    require(before.get('state') in ('OPENED','ABORTED') and after.get('state')=='ABORTED' and before.get('actual')==after.get('actual')==manifest.get('cost')==done.get('actual'), 'retired attempt cost differs')
     require(lease.get('run_id')==plan.run_id and lease.get('attempt_id')==plan.attempt_id and lease.get('session_id')==expected['service_session']
         and lease.get('study_head')==expected['study_commit'] and lease.get('run_ids')==[plan.run_id], 'retired lease identity differs')
     live_attempt=settlement.mapped(c['producer'],c['logical']/'attempts'/plan.run_id/(plan.attempt_id+'.json'))

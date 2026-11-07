@@ -52,6 +52,35 @@ def test_retire_unknown_and_idempotent(tmp_path,monkeypatch):
         NativeContactReplay(c['data'],plan,replace(plan,attempt_id='other'),'bare-core')
 
 
+def test_aborted_dispatch_is_archived_without_erasing_cost(tmp_path,monkeypatch):
+    c,plan,j=fixture(tmp_path,monkeypatch)
+    request=j.inspect('req-2')['intent']['request_sha256']
+    j.delivery_event('req-2',request,'dispatch')
+    store=AttemptStore(Path(c['data'])/'attempts')
+    assert store.abort_if_opened(plan.run_id,plan.attempt_id,reason='HTTP 500')
+    before=Path(c['data'])/'attempts'/plan.run_id/(plan.attempt_id+'.json')
+    c['attempt_sha256']=m.sha(before);c['inventory_sha256']=digest(canonical(m.inventory(j)))
+    result=m.execute(c)
+    assert result['actual']=={'calls':2,'audio_seconds':200.0} and result['unknown_count']==1
+    assert list(Path(c['out']).glob('*.dispatch.json'))
+    assert json.loads((Path(c['out'])/'attempt-before.json').read_bytes())['state']=='ABORTED'
+    assert not (Path(c['data'])/'locks/flight.lock').exists()
+    assert (Path(c['data'])/'locks/generation.guard').exists()
+
+
+def test_aborted_changed_evidence_never_releases(tmp_path,monkeypatch):
+    c,plan,j=fixture(tmp_path,monkeypatch)
+    AttemptStore(Path(c['data'])/'attempts').abort_if_opened(plan.run_id,plan.attempt_id,reason='failed')
+    with pytest.raises(ValueError,match='attempt changed'):m.execute(c)
+    assert (Path(c['data'])/'locks/flight.lock').exists()
+
+
+def test_orphan_dispatch_is_rejected(tmp_path,monkeypatch):
+    c,plan,j=fixture(tmp_path,monkeypatch)
+    (j.root/('f'*64+'.dispatch.json')).write_text('{}')
+    with pytest.raises(ValueError,match='orphan delivery'):m.inventory(j)
+
+
 @pytest.mark.parametrize('fault',['boot','pid','container','lease','plan','attempt','cost','inventory','busy','guard','same_run','unknown'])
 def test_no_release_on_bad_evidence(tmp_path,monkeypatch,fault):
     c,plan,j=fixture(tmp_path,monkeypatch)
