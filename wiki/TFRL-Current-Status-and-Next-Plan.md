@@ -1,6 +1,6 @@
 # TFRL 当前任务状态与下一阶段计划
 
-更新：2026-11-07 11:10 UTC。09:10/09:20的“两个实例正常运行”已失效；本页原位替换旧状态。
+更新：2026-11-07 11:17 UTC。09:10/09:20的“两个实例正常运行”已失效；本页原位替换旧状态。
 
 ## 当前结论
 
@@ -11,8 +11,8 @@
 |资源|目的及设置|已确认结果|当前执行状态|
 |---|---|---|---|
 |A，4卡TP4|OFF C96；Fold A1080；P OFF/Slot OFF/D ON|1080/1080生成封存，3263calls；输入34,910,769、输出2,372,805tokens；生成至release6047秒，5.60秒/条|已释放NPU，CPU官方评分失败待恢复；P ON接续先失败于timing目录、后失败于E0映射，独立执行者已配置真实E0重新启动，尚待业务响应验收|
-|B，4卡TP4|construction625 MINUS-R01 ON，K002 seed1002/temp0.7|已生成完整outputs，1887calls全部observed；ABORTED源保留，checkpoint完整性需正式reader终态复核|旧release多出一个宿主pyc，源码7628文件哈希均未变；干净副本与安全结算完成。恢复在PSD归一化策略预检失败，无新恢复attempt；暂由独立教师候选优先使用B|
-|第三路，4卡TP4|旧P Fold A1080，C64|320/1080完整checkpoint，964calls/963responses/1unknown；输出tokens下界1,461,985|xgrammar拒绝token后HTTP500、worker退出；未知请求保全、终态结算与配置修复由原Codex会话继续，不盲重发|
+|B，4卡TP4|construction625 MINUS-R01 ON，K002 seed1002/temp0.7|固定镜像正式reader核验625/625完整且可保留，损坏尾部0；1887calls全部observed；ABORTED源保留|旧release多出一个宿主pyc，源码7628文件哈希均未变；干净副本与安全结算完成。恢复在PSD归一化策略预检失败，无新恢复attempt；暂由独立教师候选优先使用B|
+|第三路，4卡TP4|旧P Fold A1080，C64|320/1080完整checkpoint，964calls/963responses/1unknown；输出tokens下界1,461,985|xgrammar拒绝token后HTTP500、worker退出；原执行者报告退休barrier已通过（963observed、1unknown仍保留），主审与实际B资源交接待完成；不盲重发|
 
 服务配置仍为Qwen3-Omni30B-A3B BF16、TP4、ctx65536、max_num_seqs128、max_num_batched_tokens2048。资源已部署不等于持续工作；当前无80%持续AI Core证据。对停止/准备中的任务不报虚构ETA。
 
@@ -21,7 +21,7 @@
 1. PON日志目录与E0路径缺失：属于外部运行配置错误。保留两次失败记录，复用科学配置和已准入输入，独立后继修复，禁止重做数据集。PON执行者同时更新后续P历史排序任务的真实绑定。
 2. K002发布校验：唯一额外文件为configured_job_queue.cpython-310.pyc。已复制清单内同哈希文件到独立只读发布目录，不修改原失败证据；原生工具核验1887响应全部已知后结算旧租约。contact恢复仍被normalized/length-recovery策略拒绝，需要验证规范化Slot出处、原始contacts与FIT账本；不能删除守卫冒充兼容。
 3. 175：tokenizer缓存阻塞已解决并产生320真实结果；新故障是xgrammar HTTP500及一个未记response请求。替代解码后端只通过CPU schema解析，不提前宣称NPU兼容。原执行者继续处理，不以失联为由重复推理。
-4. 教师候选：独立Reflexion Decision已真正尝试启动，但模型前因workspace source identity不一致退出。根因是准入在Git目录产生source_manifest_sha256=null，而生成使用固定release的非空hash。主线程已改用同一固定release、保留既有输入重新执行必要准入，首次重准入发现旧coordination输出冲突，保留旧记录并使用独立coordination目录，容器teacher-psd-admit-release-decision-v6正在运行。其余同源候选也需一致处理。此前“已admit”不足以证明能实际生成。
+4. 教师候选：独立Reflexion Decision已真正尝试启动，但模型前因workspace source identity不一致退出。根因是准入在Git目录产生source_manifest_sha256=null，而生成使用固定release的非空hash。主线程已改用同一固定release、保留既有输入重新执行必要准入，重准入发现coordination输出冲突及Git树中存在但release未包含的结果/知识来源凭据；已保留旧记录，使用独立coordination并将原文件按原SHA显式注入。容器teacher-psd-admit-release-decision-v8正在运行，尚未完成。其余同源候选也需一致处理。此前“已admit”不足以证明能实际生成。
 
 ## 完整质量结果
 

@@ -1,5 +1,5 @@
 {
-  "observed_utc": "2026-11-07T11:10:00Z",
+  "observed_utc": "2026-11-07T11:17:00Z",
   "a": {
     "complete": 1080,
     "total": 1080,
@@ -15,7 +15,10 @@
     "lease_settled": true,
     "generation": "outputs-present-seal-failed",
     "recovery": "preflight-rejected-normalized-PSD",
-    "teacher": "release-consistent-admission-running"
+    "teacher": "release-consistent-admission-v8-running",
+    "complete": 625,
+    "keepable": 625,
+    "checkpoint_sha": "878fdb2ad825beb3c25f08910af5f558c863eeb2c46faacf00b3cc647442db96"
   },
   "third": {
     "complete": 320,
