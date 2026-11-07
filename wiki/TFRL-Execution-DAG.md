@@ -1,4 +1,4 @@
-> 最新状态：A紧凑Slot运行；B因P协议失败空闲；K2与P ON均未准入。CPU准备并行推进，旧图不是当前执行队列。详见 [当前任务与下一计划](TFRL-Current-Status-and-Next-Plan.md) 和同名任务图JSON。
+> 最新运行状态：A Decision 672/1080；B K001失败、K002待清算；第三服务健康但worker未运行。下文历史图不是当前可执行队列。当前任务见[当前任务与下一计划](TFRL-Current-Status-and-Next-Plan)。
 
 # 系统优化与TFRL任务依赖图
 

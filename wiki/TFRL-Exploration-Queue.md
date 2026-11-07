@@ -1,3 +1,5 @@
+> 现态覆盖（2026-11-07 06:30 UTC）：当前三实例并行推进TFRL，A Decision 672/1080真实生成，B K001失败待接续，第三实例服务健康但worker受阻。历史“暂停TFRL/只有两实例”不再是当前计划；以[当前任务与下一计划](TFRL-Current-Status-and-Next-Plan)为准。
+
 # 实验队列与异步接续
 
 当前只推进新P→Slot→Decision基座，复用既有Fold A1080/B1080；不新增DEV80。完整测试稳定收益确认前不生成TFRL任务。详见[任务依赖图](../decisions/TFRL-Execution-DAG.md)。

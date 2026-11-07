@@ -1,12 +1,13 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "instruction": "当前先做到真实有效回答、FoldA对齐与效率提升；TFRL工程基座和轨迹采集并行准备，CPU不阻塞NPU。",
+  "instruction": "三个TP4异步推进；工程只修实验阻塞；CPU准备完成才放入NPU执行队列；研究节点不冒充已派发任务。",
   "resources": {
-    "inference_instances": 2,
+    "inference_instances": 3,
     "cards_per_instance": 4,
     "max_codex_cli": 3,
-    "monitor_interval_seconds": 600
+    "monitor_interval_seconds": 600,
+    "total_authorized_cards": 12
   },
   "nodes": [
     {
@@ -914,5 +915,42 @@
       "cards": 4
     },
     "all_eight_cards_busy": false
+  },
+  "updated_at_utc": "2026-11-07T06:30:00Z",
+  "current_dispatch": {
+    "A": {
+      "status": "generation_running",
+      "completed_rows": 672,
+      "total_rows": 1080,
+      "running_requests": 64,
+      "successors": [
+        "complete-off-c96",
+        "perception-thinking-on"
+      ],
+      "successors_status": "existing_binders_waiting"
+    },
+    "B": {
+      "status": "k001_failed_k002_pending",
+      "known_dispatch_response_pairs": 263,
+      "missing_dispatched_responses": 0,
+      "action": "reconcile_and_resume_by_original_codex_session"
+    },
+    "C": {
+      "status": "service_healthy_worker_not_running",
+      "completed_rows": 0,
+      "total_rows": 1080,
+      "action": "correct_sealed_launch_configuration"
+    },
+    "cpu": {
+      "teacher_ace_reflexion": "responses_collected_reviewed_adapter_in_progress",
+      "candidate_order": [
+        "reflexion_decision_operation_object",
+        "reflexion_slot_spoken_surface",
+        "ace_locked_card_presentation"
+      ],
+      "tfgrpo": "requires_same_policy_K2_rewards",
+      "gepa": "node_adapter_available_candidate_evaluation_pending"
+    },
+    "all_cards_busy_claim": false
   }
 }

@@ -1,3 +1,5 @@
+> 现态覆盖（2026-11-07 06:30 UTC）：当前三实例并行推进TFRL，A Decision 672/1080真实生成，B K001失败待接续，第三实例服务健康但worker受阻。历史“暂停TFRL/只有两实例”不再是当前计划；以[当前任务与下一计划](TFRL-Current-Status-and-Next-Plan)为准。
+
 > 当前状态校正（2026-11-07 03:48 UTC）：A 正在运行紧凑 Slot（817/1080，03:41 快照）；B 的 P 提示实验在583/1080后失败，B当前空闲。TFRL已进入并行准备，K2尚未准入。下方旧运行表已过时，最新完整汇报以 [当前任务与下一计划](TFRL-Current-Status-and-Next-Plan.md) 为准。
 
 正式ON终态与完整配对结果见[PSD-Complete-ON-Paired-Result](PSD-Complete-ON-Paired-Result.md)。
