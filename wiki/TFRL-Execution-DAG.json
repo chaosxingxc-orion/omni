@@ -916,7 +916,7 @@
     },
     "all_eight_cards_busy": false
   },
-  "updated_at_utc": "2026-11-07T06:30:00Z",
+  "updated_at_utc": "2026-11-07T06:45:03Z",
   "current_dispatch": {
     "A": {
       "status": "generation_running",
@@ -930,19 +930,28 @@
       "successors_status": "existing_binders_waiting"
     },
     "B": {
-      "status": "k001_failed_k002_pending",
+      "status": "k002_generation_running_k001_recovery_queued",
       "known_dispatch_response_pairs": 263,
       "missing_dispatched_responses": 0,
-      "action": "reconcile_and_resume_by_original_codex_session"
+      "action": "reconcile_and_resume_by_original_codex_session",
+      "k001_completed_rows": 87,
+      "k001_total_rows": 625,
+      "k002_completed_rows": 0,
+      "k002_total_rows": 625,
+      "k002_calls": 75,
+      "k002_responses": 66,
+      "running_requests": 7,
+      "recovery_dependency": "verified_k002_generation_release",
+      "recovery_waiter_pid": 868834
     },
     "C": {
-      "status": "service_healthy_worker_not_running",
+      "status": "v18_preflight_failed_model_directory_mount_missing",
       "completed_rows": 0,
       "total_rows": 1080,
       "action": "correct_sealed_launch_configuration"
     },
     "cpu": {
-      "teacher_ace_reflexion": "responses_collected_reviewed_adapter_in_progress",
+      "teacher_ace_reflexion": "8_workloads_compiled_6_fixed_image_tests_passed_review_rework_and_actual_stage_prepare_pending",
       "candidate_order": [
         "reflexion_decision_operation_object",
         "reflexion_slot_spoken_surface",
