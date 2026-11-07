@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T15:35:21.725794+00:00",
+  "updated_at_utc": "2026-11-07T16:02:22.599146+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -58,15 +58,14 @@
       "depends_on": [
         "P-teacher-input"
       ],
-      "status": "six_received_semantic_review_complete_compilation_pending",
+      "status": "six_received_index3_parent_patch_compiled",
       "method": "gepa",
       "run_nodes": [
         "P"
       ],
-      "accepted_candidates": 0,
+      "accepted_candidates": 1,
       "priority_indices": [
-        3,
-        5
+        3
       ]
     },
     {
@@ -101,7 +100,7 @@
         "P-runtime",
         "P-teacher-input"
       ],
-      "status": "pending_runtime",
+      "status": "runtime_available_sampling_configuration_pending",
       "scope": "same pinned inputs/policy; independent draw identities"
     },
     {
@@ -143,7 +142,7 @@
         "P-runtime",
         "P-gepa-material"
       ],
-      "status": "material_ready_awaiting_runtime_admission",
+      "status": "registered1080_rebinding_A_and_fresh_admission_in_progress",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -183,7 +182,7 @@
         "P-runtime",
         "P-reflexion-material"
       ],
-      "status": "material_ready_awaiting_runtime_admission",
+      "status": "registered1080_rebinding_C_and_fresh_admission_in_progress",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -223,7 +222,7 @@
         "P-runtime",
         "P-ace-material"
       ],
-      "status": "awaiting_runtime_and_method_material",
+      "status": "breadth12_16_preparation_and_B_successor_queue_in_progress",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -384,7 +383,7 @@
       "depends_on": [
         "P-runtime"
       ],
-      "status": "production_recipe_pending",
+      "status": "complete_fresh_admission_and_configuration_bound",
       "scope": "original parent, original roster, reused inputs; no teacher dependency"
     },
     {
@@ -393,7 +392,7 @@
       "depends_on": [
         "P-control-prepare"
       ],
-      "status": "not_dispatched",
+      "status": "running_actual_P_responses_confirmed",
       "run_nodes": [
         "P"
       ],
@@ -414,7 +413,7 @@
       "depends_on": [
         "P-teacher-gepa"
       ],
-      "status": "native_parent_patch_compiled_verified_not_admitted",
+      "status": "index3_parent_patch_verified_registered1080",
       "scope": "candidate3 first; optional5; must apply to phase_material/perception",
       "evidence": "main:27bb879a",
       "deployed": false
@@ -443,7 +442,7 @@
       "depends_on": [
         "P-reflexion-consumption-result"
       ],
-      "status": "native_parent_patch_compiled_verified_not_admitted",
+      "status": "c1_c2_parent_patches_verified_registered1080",
       "scope": "consumption independent of construction terminal",
       "evidence": "main:27bb879a",
       "deployed": false
@@ -511,7 +510,7 @@
       "id": "P-production-queue-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "parent1080_registered_B_activation_and_AC_prompt_activation_in_parallel",
+      "status": "B_control_queue_running_AC_and_B_successors_in_progress",
       "owner": "Terra CLI",
       "scope": "Reuse prepared parent1080; compile executable parent/GEPA3/Reflexionc1c2/supply12/16 queue. Final release required only for dispatch."
     },
@@ -522,6 +521,33 @@
       "status": "offline_official_score1080_complete_original_failure_preserved_lease_released",
       "owner": "Sol CLI",
       "new_model_calls": 0
+    },
+    {
+      "id": "P-binding-cache",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "merged_main_59cf0ade_fixed_image_23_tests_passed",
+      "result": {
+        "manifest_lookup_cpu_seconds_before": 9.24181281,
+        "manifest_lookup_cpu_seconds_after": 0.56139512,
+        "lookups": 20,
+        "scope": "CPU microbenchmark only"
+      }
+    },
+    {
+      "id": "P-paired-analysis-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-baseline"
+      ],
+      "status": "Sol_CLI_analysis_entrypoint_in_progress",
+      "acceptance": [
+        "full_roster_denominator",
+        "native_P_order",
+        "paired_fixes_regressions",
+        "historical1080_reproduction",
+        "no_new_model_requests"
+      ]
     }
   ],
   "round_policy": {
@@ -545,9 +571,10 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "not_dispatched",
-      "new_calls": 0,
-      "runtime": "prepare_and_producer_consumer_integration_in_progress"
+      "status": "B_running_AC_preparing",
+      "observed_at_utc": "2026-11-07T15:58:15Z",
+      "known_B_responses": 16,
+      "runtime": "dcbc2a5c_B_active_59cf0ade_successors_ready"
     },
     "held": [
       "Rescan",
@@ -557,66 +584,58 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "completed": 1020,
+      "state": "GEPA3_rebinding_and_admission_pending",
       "total": 1080,
-      "observed_at_utc": "2026-11-07T14:41:30.656407+00:00",
-      "state": "running_legacy_PON",
-      "wall_seconds_per_row": 12.47666431884058,
-      "remaining": 60,
-      "eta_minutes": 12.47666431884058
+      "new_P_responses_confirmed": false,
+      "historical_PON_completed": 1080,
+      "historical_CPU_score_completed": 1080
     },
     "B": {
-      "completed": 181,
+      "state": "P_only_control_running",
+      "completed_at_early_snapshot": 1,
       "total": 1080,
-      "state": "failed_native_settlement_completed",
-      "pending": "new_P_only_recipe"
+      "observed_at_utc": "2026-11-07T15:58:15Z",
+      "subsequent_checkpoint_line_count": 10,
+      "line_count_is_not_sample_count": true,
+      "seconds_per_row": null,
+      "eta_seconds": null,
+      "successors": "breadth12_then16_configuration_in_progress_not_yet_queued"
     },
     "C": {
-      "completed": 122,
-      "total": 625,
-      "observed_at_utc": "2026-11-07T13:25:01.292597+00:00",
-      "state": "stable_exact_image_loaded_service_deployment_in_progress",
-      "observed_contacts": 367,
-      "unknown_contacts": 2,
-      "retirement_verified": true,
-      "automatic_retry": false,
-      "grammar_fix_verified": false
+      "state": "same_image_service_validated_reflexion_binding_pending",
+      "diagnostic_requests_succeeded": 6,
+      "new_P_responses_confirmed": false,
+      "historical_unknown_contacts": 2,
+      "automatic_retry": false
     },
     "teacher_gepa": {
-      "state": "wire_template_published_actual_config_patch_wrong_rework2",
+      "state": "index3_compiled_registered1080_pending_current_binding",
       "raw_candidates": 6,
-      "validated_candidates": 0,
       "prompt_tokens": 167496,
       "completion_tokens": 24582,
-      "automatic_retry": false,
-      "citation_audit": "31 uniquely resolved source references; raw instructions unchanged; runtime source bridge pending",
-      "priority_candidates": [
-        3,
-        5
-      ]
+      "automatic_retry": false
     },
     "teacher_methods_v3": {
-      "reflexion_consumption": "four_received_c1_c2_priority_compiler_pending",
-      "reflexion_construction": "five_received_section_span_compiler_mismatch",
-      "ace_consumption": "three_received_tau_noop_excluded_breadth12_16_prioritized",
+      "reflexion_consumption": "c1_c2_compiled_registered1080",
+      "reflexion_construction": "three_compiled_two_invalid_snapshot_adapter_pending",
+      "ace_consumption": "breadth12_16_successor_preparation",
       "ace_construction": "unknown_held_no_retry"
     },
     "cpu_workers": [
       {
-        "role": "P runtime",
+        "role": "A_C_prompt_activation",
         "model": "gpt-6.1-terra",
-        "pid": 3498567
+        "pid": 3596130
       },
       {
-        "role": "P teacher compiler",
+        "role": "B_successor_queue",
         "model": "gpt-6.1-terra",
-        "pid": 3504549
+        "pid": 3597865
       },
       {
-        "role": "P supply analysis",
+        "role": "P_paired_analysis",
         "model": "gpt-6.1-sol",
-        "pid": 3494714,
-        "status": "analysis_complete_report_delivered"
+        "pid": 3597866
       }
     ]
   }

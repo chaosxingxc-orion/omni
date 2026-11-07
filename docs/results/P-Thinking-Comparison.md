@@ -65,7 +65,7 @@ Strict 要求原始 scenario_action 完全正确且原始实体集合无 FP/FN�
 | gold_has_entities | 666 | 323 | 318 | 36/41 | 74.8745% | 76.1395% |
 | gold_no_entities | 414 | 264 | 265 | 24/23 | 0.0000% | 0.0000% |
 
-按原始60个 intent 的完整聚合与P指标在 result.json中；逐行金标、配对分数、响应来源、正常恢复和原始失败原因仅保留在 private 中。
+金标无实体组的SLU-F1按官方计数约定为0，因为该组没有实体TP，不能将0解释为该组回答全部错误；该组应结合Strict及FP考察。按原始60个 intent 的完整聚合与P指标在 result.json中；逐行金标、配对分数、响应来源、正常恢复和原始失败原因仅保留在 private 中。
 
 ## 历史节点对照位置
 
@@ -78,6 +78,8 @@ Strict 要求原始 scenario_action 完全正确且原始实体集合无 FP/FN�
 两臂使用同一 Fold A1080、同一 TRAIN 金标、同一官方 evaluator 和评分开关。phase material一致：True；knowledge snapshot一致：True。初始P供给顺序匹配 1080/1080，正文hash顺序匹配 1080/1080。
 
 目标变化为P thinking OFF→ON；S/D保持各自 thinking ON 和原合同。实际P解码、原始基础配置与runtime overlay均逐项封存在private。原始供给不重新抽样，下游请求随P候选变化；因此系统结果是历史全链响应比较，不能拆成独立 Decision 因果收益。运行时期、source提交与调度差异会限制效率归因。
+
+下游观察性转换：P ON召回gold的932条中919条最终Intent正确；P OFF对应977条中908条。两臂未召回gold时最终Intent正确均为0。该条件统计受P候选及样本难度影响，不是独立D优化收益。
 
 系统Intent净+11条的95%区间跨0，Strict净−4条且区间跨0；当前结果不足以支持默认替换。保留现默认P OFF，并把P ON视为历史排名/候选覆盖取舍的证据，不归因于新TFRL。
 
@@ -104,6 +106,8 @@ P ON恢复子集共 31 次额外contacts、输入 338,949 / 输出 27,046 tokens
 本轮新增模型/teacher请求、tokens、NPU卡秒及推理API支出均为0；CPU仅1实例、2核配额。CPU分析wall 18.318秒、进程CPU 18.249秒；完整评分与容器耗时见 result.json/runtime。CPU硬件单价、历史API费率与真实device-hours未知。
 
 本轮容器累计wall **806.104秒**（包括首次失败分析和两次独立校验）；官方评分及原始bundle验证 760.399秒，其中score_bundle 612.774秒。该累计包含容器启动开销，不等于主线程端到端时间。当前完成1080/1080、剩余0、ETA0。
+
+相对原控制，历史P ON输入tokens -9.52%，输出tokens +32.99%，generation wall +15.10%。
 
 ## 原生资源交接与可复核交付
 
