@@ -1,0 +1,33 @@
+{
+  "observed_utc": "2026-11-07T09:06:00Z",
+  "review": "accepted-persistent-binders-not-yet-generating",
+  "candidates": [
+    {
+      "name": "reflexion-surface",
+      "status": "waiting-source",
+      "config_sha256": "52cebc4aae4eb195c61b7512083d5918ec5c1d57035a886002f1258e0a336234",
+      "pins_match": true,
+      "process_verified": true,
+      "hold": false,
+      "new_model_calls": 0
+    },
+    {
+      "name": "reflexion-rescan",
+      "status": "waiting-source",
+      "config_sha256": "24ad99174ee0a6e8914ba039dbb4b237e643f124a82a121a237eac01ee83af33",
+      "pins_match": true,
+      "process_verified": true,
+      "hold": false,
+      "new_model_calls": 0
+    },
+    {
+      "name": "ace-person",
+      "status": "waiting-source",
+      "config_sha256": "ce1804a034d8bd58a3e59fc7315ad17ea616438a4ef435fea9bcbcce8d4a34b8",
+      "pins_match": true,
+      "process_verified": true,
+      "hold": false,
+      "new_model_calls": 0
+    }
+  ]
+}

@@ -862,9 +862,10 @@
     "per-node cost and latency"
   ],
   "limitations": [
-    "Third instance has zero experimental model calls; not all cards busy",
-    "Teacher candidates not yet admitted or evaluated",
-    "TF-GRPO requires same-policy group rewards; transferred ACE/Reflexion not native PSD algorithm gains"
+    "Teacher local evaluation still zero; binders waiting is not generation",
+    "Third instance first business response pending",
+    "FIT fixed-image tests passed; real throughput benefit unverified",
+    "Historical nodes retain historical observations; current_dispatch is current snapshot"
   ],
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
@@ -888,7 +889,7 @@
     "successor_trigger": "generation-released",
     "score_blocks_successor": false,
     "full_verification_eliminated": false,
-    "native_successor_queue_status": "A Decision -> C96 -> P ON; B K002 -> K001 recovery; teacher candidates preparing queue",
+    "native_successor_queue_status": "A C96 -> P ON -> P history; B K002 -> K001 -> teacher Decision -> Surface -> Rescan -> ACE",
     "queue_compatibility_commit": "25c6386f"
   },
   "priority_override": {
@@ -914,19 +915,19 @@
     "scope": "181 instantaneous, not sustained utilization",
     "all_authorized_cards_busy": false
   },
-  "updated_at_utc": "2026-11-07T07:46:00Z",
+  "updated_at_utc": "2026-11-07T09:06:00Z",
   "current_dispatch": {
     "A": {
-      "status": "Decision_1080_generation_released_score_failed_C96_worker_started",
-      "completed_rows": 1080,
+      "status": "off_c96_generation_running",
+      "completed_rows": 842,
       "total_rows": 1080,
       "running_requests": 64,
       "successors": [
         "complete-off-c96",
         "perception-thinking-on"
       ],
-      "successors_status": "existing_binders_waiting",
-      "observed_at_utc": "2026-11-07T07:44:00Z"
+      "successors_status": "pon_and_history_binders_live_verified",
+      "observed_at_utc": "2026-11-07T09:04:50.997057+00:00"
     },
     "B": {
       "status": "k002_generation_running_k001_recovery_queued",
@@ -935,27 +936,33 @@
       "action": "keep_running_and_handoff_to_k001_recovery",
       "k001_completed_rows": 87,
       "k001_total_rows": 625,
-      "k002_completed_rows": 184,
+      "k002_completed_rows": 467,
       "k002_total_rows": 625,
       "recovery_dependency": "verified_k002_generation_release",
       "recovery_waiter_pid": 868834,
-      "observed_at_utc": "2026-11-07T07:44:00Z",
+      "observed_at_utc": "2026-11-07T09:04:48.186169+00:00",
       "teacher_successor": {
         "candidate": "Reflexion Decision Fold A1080",
-        "status": "waiting-container",
+        "status": "Decision_waiting_container_other3_persistent_waiting_source",
         "after": "K001_recovery_generation_release",
-        "monitor_interval_seconds": 600
+        "monitor_interval_seconds": 600,
+        "chain": [
+          "Decision",
+          "Surface",
+          "Rescan",
+          "ACE"
+        ]
       }
     },
     "C": {
-      "status": "generation_v20_live_lease_invokeprep_wait_zero_calls",
+      "status": "zero_request_worker_stopped_cache_fix_verified_safe_handoff_in_progress",
       "completed_rows": 0,
       "total_rows": 1080,
       "action": "correct_sealed_launch_configuration",
       "model_calls": 0
     },
     "cpu": {
-      "teacher_ace_reflexion": "all4_admitted_Decision_binder_waiting_K001_other3_queue_configuration",
+      "teacher_ace_reflexion": "all4_admitted_persistent_binders_verified",
       "candidate_order": [
         "reflexion_decision_operation_object",
         "reflexion_slot_spoken_surface",

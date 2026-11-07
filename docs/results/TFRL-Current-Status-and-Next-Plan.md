@@ -50,7 +50,7 @@ K001已终止但87/625结果、263个调用及全部响应保留，unknown0；�
 
 外部教师历史ACE、Reflexion各一次，总输入614834、输出63686 tokens，均正常stop。其来源为16条TRAIN、每条4rollout的旧P→joint Solver轨迹；迁移到PSD的候选可验证，但不能称PSD原生学习闭环。
 
-已编译8份A/B候选；4份Fold A均stage/prepare/register/admit成功。只有Reflexion Decision有实际等待接续的binder；surface、rescan、ACE是已准入但held-before-queue，不能把4份准入都写成可执行队列。当前四者本地生成均0/1080，收益未知。
+已编译8份A/B候选；4份Fold A均stage/prepare/register/admit成功。09:06主审确认：Decision持久binder等待K001 container，Surface/Rescan/ACE三个持久binder均waiting-source。其脚本/配置哈希、上游映射和进程已核验，无HOLD。四项均已具备依赖驱动的接续，尚未实际生成，各0/1080，收益未知。
 
 |方法|优化对象|下一项可验证的工作|
 |---|---|---|
@@ -89,3 +89,5 @@ CPU与NPU异步，资源排序不等于科学依赖。下面是计划；运行�
 08:50 UTC补充：原175 context修复和教师队列补齐两个Codex会话已续接且进程存活，B175准备进程仍独立运行。三个教师后继尚未交付最终运行凭据，不提前改成queued。A/B最近正式快照08:42分别576/1080和400/625，无损坏尾部；未重复刷新硬件窗口。
 
 08:53 UTC补充：175隔离调用栈已显示tiktoken.get_encoding(cl100k_base)经read_file_cached进入requests.get等待，词表缓存缺失是当前已定位的初始化问题；原执行者正验证外部缓存方案，修复尚未验收，业务0调用状态不变。
+
+09:06 UTC现态：A842/1080、B467/625（正式read_checkpoint，均可保留、无损坏尾部）。三个教师后继已主验持久binder，并在任务图原位更新；不要继续把它们列为未排队。175修复只需已有词表缓存只读挂载与TIKTOKEN_CACHE_DIR，隔离测试通过，旧worker零请求证据确认后已停止，安全结算/新接续尚在执行。Decision官方配对由独立Sol Codex子进程处理，无模型请求；三个CLI分别负责context修复、B175、CPU配对。

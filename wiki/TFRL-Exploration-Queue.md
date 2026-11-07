@@ -1,14 +1,14 @@
 # 实验队列与异步接续
 
-更新：2026-11-07 08:35 UTC。三服务可用，两路真实生成；第三路0业务调用。详见[状态与计划](TFRL-Current-Status-and-Next-Plan)。
+更新：2026-11-07 09:06 UTC。三个教师后继已完成持久化配置，主线程核验脚本/配置SHA、前驱映射、无HOLD及真实binder进程。等待不等于生成；当前教师候选尚无本地结果。
 
-|资源|当前实测任务|接续状态|
+|资源|当前实测任务|真实已配置后继|
 |---|---|---|
-|A，TP4|OFF C96，471/1080|既有P thinking ON后继待真实handoff；Decision1080生成已完，CPU评分独立恢复|
-|B，TP4|ON K002，352/625|K001恢复已配置等待K002 release；Reflexion Decision binder等待K001 release|
-|第三实例，TP4|P任务0/1080；context准备约131秒/次|B175完整625由Codex子进程准备，尚无完整文件交付，不能称已入队|
-|CPU|结果评分、教师反馈、FIT配置验证、第三实例阻塞诊断|与NPU异步，不占生成lease做输入准备|
+|A，TP4|OFF C96，09:04 checkpoint842/1080|P thinking ON binder存活 → 历史P排序binder存活|
+|B，TP4|ON K002，09:04 checkpoint467/625|K001恢复 → Reflexion Decision → Surface → Rescan → ACE|
+|第三实例，TP4|P原worker零请求故障，缓存验证完成，安全接续处理中|B175完整625已admit、queue plan通过；runtime与实际前驱绑定待完整交付|
+|CPU|Decision正式配对/独立coverage分析；175缓存交接；B175配置|与NPU异步，不占生成lease做输入准备|
 
-surface、rescan、ACE三个教师候选均已准入，但最新交付明确held-before-queue；补齐真正队列是下一步。四个教师候选各自独立继承同一基线，资源执行顺序不代表叠加策略。
+B的Decision binder为waiting-container；Surface/Rescan/ACE均waiting-source，后者已有脱离SSH的进程。复用既有source_binding：等上游真实bound queue/container，再核验generation-released后派发；未预填假容器ID或release。四个教师候选科学父均为completeON，各项1080，共4320条待评估样本；资源顺序不代表叠加改动。
 
-只复用configured_job_queue及现有auto-bind/handoff；以真实generation-released交接，不等待CPU评分。TF-GRPO的组内奖励必须依赖K2有效轨迹，这是科学依赖；教师单节点候选无需等待无关评分。固定Fold A/B1080与construction625复用，未知请求不盲重发。观察600秒或终态。
+TF-GRPO必须等待同策略K2有效组内奖励；这项科学依赖不阻挡已准备的独立Reflexion/ACE。CPU评分不阻挡资源后继。输入和知识复用，不重复采样、未知请求不盲重发；600秒或明确终态观察。
