@@ -1,6 +1,6 @@
 {
   "schema": "omni-P-tfrl-method-contract-v1",
-  "updated_at_utc": "2026-11-07T13:12:32.919262+00:00",
+  "updated_at_utc": "2026-11-07T16:30:49.279237+00:00",
   "status": "mechanism_contract_not_runtime_registration",
   "references": [
     {
@@ -43,7 +43,7 @@
       "draws_per_input": 4,
       "original_authorized_feedback_rows": 80,
       "primary_contacts": 320,
-      "status": "not_registered_not_dispatched"
+      "status": "native_P_only_collection_adapter_in_progress_not_dispatched"
     },
     "runtime_evaluation_temperature": 0,
     "same_model_reflection_in_paper": "adapted to external teacher by explicit user instruction",
@@ -63,7 +63,7 @@
       "real_mutation_evaluation",
       "iterative_parent_selection"
     ],
-    "current": "first_external_proposal_started; no_new_P_candidate_evaluation"
+    "current": "index3_parent_patch_compiled_A_admitted_no_new_candidate_response_confirmed"
   },
   "ACE": {
     "current_claim": "inspired",
@@ -80,7 +80,6 @@
     "same_task_retry_observed": false
   },
   "current_stage": "P",
-  "new_P_only_npu_calls": 0,
   "primary_source_downloads": [
     {
       "method": "tfgrpo",
@@ -106,5 +105,12 @@
       "html_sha256": "c96741a6170d6a8a1ec17f3780d561f813078190404f47792178080c4118f002",
       "bytes": 208124
     }
-  ]
+  ],
+  "P_only_progress": {
+    "B_control_known_responses": 395,
+    "B_control_completed": 390,
+    "total": 1080,
+    "at_utc": "2026-11-07T16:29:20.545126+00:00",
+    "stable_TFRL_gain_verified": false
+  }
 }

@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T16:18:57.487907+00:00",
+  "updated_at_utc": "2026-11-07T16:30:49.275955+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -100,8 +100,16 @@
         "P-runtime",
         "P-teacher-input"
       ],
-      "status": "runtime_available_sampling_configuration_pending",
-      "scope": "same pinned inputs/policy; independent draw identities"
+      "status": "Terra_implementing_original_construction80_four_independent_P_draws",
+      "scope": "same pinned inputs/policy; independent draw identities",
+      "collection": {
+        "rows": 80,
+        "draws_per_row": 4,
+        "temperature": 0.7,
+        "P_thinking": false,
+        "normal_contacts": 320,
+        "new_requests": 0
+      }
     },
     {
       "id": "P-tfgrpo-group-sample",
@@ -142,7 +150,7 @@
         "P-runtime",
         "P-gepa-material"
       ],
-      "status": "registered1080_rebinding_A_and_fresh_admission_in_progress",
+      "status": "A_fresh_admission_complete_launch_configuration_corrections",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -173,7 +181,8 @@
         "paired_repairs_regressions",
         "candidate_count",
         "all_contact_cost_latency"
-      ]
+      ],
+      "final_pairing_requires": "P-control-score; per-arm CPU scoring can start independently; does not block NPU dispatch"
     },
     {
       "id": "P-reflexion-prepare",
@@ -182,7 +191,7 @@
         "P-runtime",
         "P-reflexion-material"
       ],
-      "status": "registered1080_rebinding_C_and_fresh_admission_in_progress",
+      "status": "C_c1_admitted_c2_registered_admission_running",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -213,7 +222,8 @@
         "paired_repairs_regressions",
         "candidate_count",
         "all_contact_cost_latency"
-      ]
+      ],
+      "final_pairing_requires": "P-control-score; per-arm CPU scoring can start independently; does not block NPU dispatch"
     },
     {
       "id": "P-ace-prepare",
@@ -253,7 +263,8 @@
         "paired_repairs_regressions",
         "candidate_count",
         "all_contact_cost_latency"
-      ]
+      ],
+      "final_pairing_requires": "P-control-score; per-arm CPU scoring can start independently; does not block NPU dispatch"
     },
     {
       "id": "P-tfgrpo-prepare",
@@ -293,7 +304,8 @@
         "paired_repairs_regressions",
         "candidate_count",
         "all_contact_cost_latency"
-      ]
+      ],
+      "final_pairing_requires": "P-control-score; per-arm CPU scoring can start independently; does not block NPU dispatch"
     },
     {
       "id": "P-round-select",
@@ -392,7 +404,7 @@
       "depends_on": [
         "P-control-prepare"
       ],
-      "status": "running144_safe_cache_transition_preparation",
+      "status": "running390of1080_old_source_no_drain_callback",
       "run_nodes": [
         "P"
       ],
@@ -540,14 +552,15 @@
       "depends_on": [
         "P-baseline"
       ],
-      "status": "Sol_CLI_analysis_entrypoint_in_progress",
+      "status": "complete_fixed_image_historical1080_and_native64_verified",
       "acceptance": [
         "full_roster_denominator",
         "native_P_order",
         "paired_fixes_regressions",
         "historical1080_reproduction",
         "no_new_model_requests"
-      ]
+      ],
+      "evidence": "P-Node-Paired-Evaluation.md"
     },
     {
       "id": "P-control-cache-transition",
@@ -555,7 +568,7 @@
       "depends_on": [
         "P-binding-cache"
       ],
-      "status": "not_applied_live_control_lacks_drain_callback_successor_config_fix_in_progress",
+      "status": "not_applied_live_B_continues_successors_cache_and_drain_configured",
       "acceptance": [
         "preserve_all_prior_cost_and_rows",
         "no_unknown_POST_retry",
@@ -563,6 +576,20 @@
         "continuation_ready_before_drain",
         "successors_bind_actual_generation_release"
       ]
+    },
+    {
+      "id": "P-intent-knowledge-release",
+      "resource": "CPU",
+      "depends_on": [
+        "P-teacher-reflexion"
+      ],
+      "status": "native_snapshot_release_adapter_in_progress",
+      "candidate_indices": [
+        2,
+        3
+      ],
+      "scope": "locked existing card sections only; no new facts",
+      "blocks_consumption": false
     }
   ],
   "round_policy": {
@@ -608,16 +635,18 @@
     "B": {
       "state": "running_old_source_missing_drain_callback_successors_queued",
       "total": 1080,
-      "observed_at_utc": "2026-11-07T16:09:43.391262+00:00",
+      "observed_at_utc": "2026-11-07T16:29:20.545126+00:00",
       "seconds_per_row": null,
-      "eta_seconds": null,
+      "eta_seconds": 3301.773033170732,
       "successors": "breadth12_queue_waiting_actual_control_release_breadth16_binder_waiting_breadth12",
-      "completed": 144,
-      "known_responses": 153,
-      "prompt_tokens": 816594,
-      "completion_tokens": 35780,
-      "seconds_per_row_including_startup": 7.187677097222222,
-      "mean_response_latency_seconds": 10.814941464838864
+      "completed": 390,
+      "known_responses": 395,
+      "prompt_tokens": 2106003,
+      "completion_tokens": 100746,
+      "mean_response_latency_seconds": 11.640746034231167,
+      "dispatches": 404,
+      "interval_seconds_per_row": 4.78517830894309,
+      "eta_basis": "last1177.15seconds246rows; assumes stable rate"
     },
     "C": {
       "state": "same_image_service_validated_reflexion_binding_pending",
@@ -646,14 +675,14 @@
         "pid": 3596130
       },
       {
-        "role": "B_successor_drain_config_and_continuation_validation",
+        "role": "P_TFGRPO_collection",
         "model": "gpt-6.1-terra",
-        "pid": 3609598
+        "pid": 3618741
       },
       {
-        "role": "P_paired_analysis",
-        "model": "gpt-6.1-sol",
-        "pid": 3597866
+        "role": "P_intent_knowledge_release",
+        "model": "gpt-6.1-terra",
+        "pid": 3615828
       }
     ]
   }
