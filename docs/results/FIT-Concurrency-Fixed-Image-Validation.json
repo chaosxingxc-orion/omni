@@ -1,0 +1,15 @@
+{
+  "commit": "840fa84b72c4279064188f5539e63062de5909db",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "container_id": "0fe31739db07b8e2f97b5003d7afba3a1f5726d471e51f0f50dba6f344d26444",
+  "exit_code": 0,
+  "passed": 39,
+  "deselected": 81,
+  "seconds": 6.94,
+  "network": "none",
+  "source_mount": "read-only",
+  "new_model_calls": 0,
+  "source_archive_sha256": "2caa8cfa5906f0dc0f373d317624d248aa07692143f9f31b63646e116f4c8517",
+  "scope": "native_efficiency_runtime_config or native_fit_external_config_through_flight_factory_to_gate or native_fit or only_raw_vllm or bounds_concurrent or recovery or custody",
+  "real_throughput_validated": false
+}
