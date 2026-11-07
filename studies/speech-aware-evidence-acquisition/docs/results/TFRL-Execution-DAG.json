@@ -845,7 +845,7 @@
     "tfrl_reader": "deferred",
     "perception_miss_analysis": "historical P ranking admission and A-after-C96 successor armed;216pins verified; actual generation pending",
     "complete_on_terminal": "existing score watcher retained; CLI3058570 prepares terminal coverage and same-k8ON comparison, no live trace scan",
-    "efficiency_measurement": "existing600s collector started fixed-image CPU76-77; first two-instance snapshot verified00:08:56; full handoff pending; no NPU dependency"
+    "efficiency_measurement": "600s service collector and small-status archival accepted; hardware observer reused; first snapshots verified, bounded24h; no NPU dependency"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
