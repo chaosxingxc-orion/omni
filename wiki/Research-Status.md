@@ -1,9 +1,11 @@
 # 当前研究状态
 
-当前执行策略和最新样本/效率/资源/ETA见[当前任务与下一计划](TFRL-Current-Status-and-Next-Plan)。
+更新：2026-11-07 20:30（北京时间）。详见[当前任务与下一计划](TFRL-Current-Status-and-Next-Plan)。
 
-三实例并行推进系统优化与远程教师TFRL；两个实例真实生成，第三实例启动受配置问题阻塞。目标仍是100%有效回答、提升官方SLU并兼顾效率；TFRL不再等待所有非功能优化完成。
+ON仍是工作比较基线：P OFF、Slot/D ON，Fold A1080的Intent84.0741%、SLU70.9703%、合法1077/1080。紧凑P的SLU71.5145%、合法1080/1080，但配对区间跨零，未锁定稳定收益；历史同Fold A的P→Solver SLU73.3139%仍为对齐参照。
 
-完整Fold A1080结果：completeON Intent84.0741%、SLU70.9703%；紧凑P Intent84.5370%、SLU71.5145%、1080合法；紧凑Slot Intent85.0926%、SLU70.9481%、1079合法。紧凑P质量差异区间跨零，不能宣称稳定精度提升。历史P→Solver SLU73.3139%仍为对齐参照。
+A的P thinking ON至347/1080；B已结算失败Decision并启动Surface真实请求，完整样本尚0/1080；175兼容服务加载中，B625未恢复。12卡资源已分配不代表持续有效满载。
 
-当前无新增用户决策。NPU队列与CPU准备、评分、教师调用异步，见[任务图](TFRL-Execution-DAG)和[队列](TFRL-Exploration-Queue)。
+新PSD上的Reflexion/ACE首轮候选运行或等待；TF-GRPO恢复与GEPA闭环未完成。Slot1536已通过CPU准入，启动器/队列待绑定。优先100%有效回答、实体质量与连续有效负载，不扩展通用加固。当前无新增用户决策，TEST/LoRA后置。
+
+[异步任务图](TFRL-Execution-DAG)与[实验队列](TFRL-Exploration-Queue)均按稳定页面原位更新。

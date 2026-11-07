@@ -1,29 +1,31 @@
 # CPU与NPU异步任务图
 
-更新：2026-11-07 09:06 UTC。图为研究/资源依赖摘要；运行由已存在的配置队列执行，实际进度见[当前任务](TFRL-Current-Status-and-Next-Plan)。
+更新：2026-11-07 20:30（北京时间）。具体进度见[当前任务与下一计划](TFRL-Current-Status-and-Next-Plan)。实线为资源顺序或准备依赖，虚线为CPU反馈；资源串行不表示策略叠加。
 
 ```mermaid
 flowchart LR
- A["NPU A: OFF C96 842/1080"] -->|生成释放| PON["P thinking ON: binder存活"]
- PON --> HIST["P排序: binder存活"]
- K2["NPU B: K002 467/625"] -->|生成释放| K1["K001断点恢复"]
- K1 --> D["Reflexion Decision: waiting-container"]
- D --> S["Surface: waiting-source"]
- S --> R["Rescan: waiting-source"]
- R --> ACE["ACE: waiting-source"]
- FIX["CPU: 缓存已验证，安全接续"] --> C["NPU C: P任务"]
- C --> B175["B175 625: 准入完成，绑定待交付"]
- K1 -.轨迹.-> REWARD["CPU: 同策略K2奖励"]
- K2 -.轨迹.-> REWARD
- REWARD --> TF["本机远程教师: TF-GRPO独立模板"]
- TF --> BUILD["CPU: 编译新候选"]
- D -.结果.-> EVAL["CPU: 官方配对与节点归因"]
- S -.结果.-> EVAL
- EVAL --> GEPA["本机远程教师: GEPA独立模板"]
- GEPA --> BUILD
- OLD["Decision人工候选: FINALIZED"] --> PAIR["CPU: 配对分析已派发"]
+ A["NPU A：P ON 347/1080"] -->|资源释放| H["P历史排序：后继已绑定"]
+ B["NPU B：Surface真实请求，完整0/1080"] -->|资源释放| R["Rescan：已重绑等待"]
+ R -->|资源释放| ACE["ACE person：已重绑等待"]
+ C0["CPU：175兼容测试通过、服务加载"] --> C["NPU C：B625待激活"]
+ SB0["CPU：Slot1536准入完成"] --> SB1["待补launcher和队列绑定"]
+ SB1 --> SB2["NPU：Slot1536受控实验"]
+ A -.结果.-> E["CPU：官方评分、配对、节点归因"]
+ B -.结果.-> E
+ R -.结果.-> E
+ ACE -.结果.-> E
+ C -.结果.-> E
+ SB2 -.结果.-> E
+ K["CPU：K002625原生恢复，不重推"] --> G["完整费用与组内奖励读取"]
+ G --> TF["本机远程教师：TF-GRPO专属模板"]
+ E --> T["本机远程教师：各算法模板与多策略"]
+ TF --> P["CPU：编译、准备独立候选"]
+ T --> P
+ P --> Q["后续NPU任务队列"]
 ```
 
-教师四个候选各自继承同一completeON父，不能沿图累加科学改动。所有未知前驱由现有binder读取真实队列状态后绑定。175零请求原因是tiktoken词表缓存未挂载，离线get_encoding0.212秒、create_context2.086秒；正在做旧worker结算与新挂载接续，尚无业务首请求。FIT8/16/32固定镜像39项通过，真实吞吐对照待后继配置，不能宣称提速。
+PON、Surface实际运行；175仅服务部署、Slot1536仅CPU准入，不冒充生成。失败Decision63条及旧175P320条保留，恢复不阻塞独立候选。K002625/1887已知请求在CPU恢复链中，不重跑完整数据。
 
-候选先固定Fold A1080比较，冻结后Fold B1080确认，再完整TEST13078、不调优。CPU分析异步，只有必要科学依赖阻挡对应实验。当前尚未实现12卡持续满载。
+生成释放后下一任务不等评分；数据与配置派发前准备。不依赖前驱科学结果的候选只等资源安全释放，不要求前驱算法成功。当前未证明12卡持续满载或Core持续80%以上。监测600秒或终态事件。
+
+先在Fold A1080选择正向单项，再用既有Fold B1080确认，冻结后完整TEST13078，LoRA后置。供给深度128/模型在途96为独立未启动提案。
