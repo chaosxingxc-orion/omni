@@ -12,16 +12,11 @@ from gepa_pair_workload import read_asset
 
 KIND = 'perception-only-native'
 SCHEMA = 'saea-perception-only-workload-v1'
-CONSTRUCTION_VECTORS = {
-    'perception': ('vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-segments.jsonl', '4250a2330cecc41f05d776f3421ce27a460d03ccf8752bf9e1b847f6a79c9ace'),
-    'solver': ('vectors/slurp-stage3-construction-r01c-npu-port-v1/query-vectors-speech-content-v1.jsonl', 'be1a0f201598e8330576d99038edc50dcac7547b97811c703c10499e48714845'),
-}
-
-
-def verify_vector_selection(data, query, role, ids):
-    path, digest = CONSTRUCTION_VECTORS[role]
-    original = confined(data, path)
-    if sha(original) != digest:
+def verify_vector_selection(data, query, source_pin, ids):
+    if not isinstance(source_pin, dict) or set(source_pin) != {'relpath', 'sha256'}:
+        raise ValueError('explicit vector source pin required')
+    original = confined(data, source_pin['relpath'])
+    if sha(original) != source_pin['sha256']:
         raise ValueError('construction625 vector source differs')
     selected = set(ids)
     lines = {}
@@ -44,7 +39,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
     def __init__(self, config):
         fields = {'schema', 'name', 'run_id', 'sample_ids', 'runtime_binding', 'execution',
                   'material', 'population', 'parent_baseline', 'parent_registration', 'axis'}
-        if not fields <= set(config) <= fields | {'runtime_binding_adaptation', 'collection_decoding', 'learning_authorization'} or config['schema'] != SCHEMA:
+        if not fields <= set(config) <= fields | {'runtime_binding_adaptation', 'collection_decoding', 'learning_authorization', 'learning_source_vectors'} or config['schema'] != SCHEMA:
             raise ValueError('exact P-only configuration required')
         learning = 'learning_authorization' in config
         if learning:
@@ -52,9 +47,15 @@ class PerceptionOnlyWorkload(NodeWorkload):
                     or len(set(config['sample_ids'])) != 80 or config.get('axis') != {'kind': 'control'}
                     or not isinstance(config.get('collection_decoding'), dict)
                     or set(config['collection_decoding']) != {'temperature', 'seed'}
-                    or config['collection_decoding']['temperature'] != 0.7):
+                    or type(config['collection_decoding']['temperature']) not in (int, float)
+                    or not math.isfinite(config['collection_decoding']['temperature'])
+                    or config['collection_decoding']['temperature'] <= 0
+                    or not isinstance(config.get('learning_authorization'), dict)
+                    or set(config['learning_authorization']) != {'source', 'source_roster'}
+                    or not isinstance(config.get('learning_source_vectors'), dict)
+                    or set(config['learning_source_vectors']) != {'perception', 'solver'}):
                 raise ValueError('authorized construction80 control and explicit exploration required')
-        elif ('collection_decoding' in config or config['population'].get('dataset') != 'slurp-speech-native-evo-fold-a-1080' or len(config['sample_ids']) != 1080):
+        elif ('collection_decoding' in config or 'learning_source_vectors' in config or config['population'].get('dataset') != 'slurp-speech-native-evo-fold-a-1080' or len(config['sample_ids']) != 1080):
             raise ValueError('original Fold A 1080 required')
         axis = config['axis']
         if not isinstance(axis, dict) or axis.get('kind') not in ('control', 'instruction', 'breadth', 'knowledge-construction'):
@@ -64,7 +65,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
             (axis['kind'] == 'knowledge-construction' and set(axis) != {'kind', 'publication', 'patch', 'audit'}) or
             (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or axis['value'] not in (12, 16)))):
             raise ValueError('invalid P-only axis')
-        parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation', 'learning_authorization')}
+        parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation', 'learning_authorization', 'learning_source_vectors')}
         parent.update(schema='saea-intent-slot-workload-v1', node_arm='enhanced-p-slot-decision')
         super().__init__(parent)
         self.config = copy.deepcopy(config)
@@ -144,11 +145,17 @@ class PerceptionOnlyWorkload(NodeWorkload):
         if scientific_hash(parent_science) != parent_registration['scientific_baseline_sha256']:
             raise ValueError('P-only parent differs from registered scientific baseline')
         if learning:
-            if self.config['learning_authorization'].get('sha256') != 'c7b64eec868e40d0246dde13726c4f53b2e3115bb22037ce3399198db3a7c5bf':
-                raise ValueError('original authorized feedback source required')
-            authorization = pinned(repo, self.config['learning_authorization'])
+            authorization = pinned(repo, self.config['learning_authorization']['source'])
             ids = [g['query_id'] for g in authorization['document']['groups']]
-            if ids != self.config['sample_ids'] or len(set(ids)) != 80:
+            source_roster = pinned(repo, self.config['learning_authorization']['source_roster'])
+            source_items = {item['sample_id']: item for item in source_roster['items']}
+            if (ids != self.config['sample_ids'] or len(set(ids)) != 80
+                    or source_roster.get('roster_role') != 'construction'
+                    or source_roster.get('split_role') != 'discovery'
+                    or len(source_items) != len(source_roster['items'])
+                    or any(not i.startswith('slurp:train:') or i not in source_items for i in ids)
+                    or set(ids) & set(original['sample_ids'])
+                    or any(item != source_items[item['sample_id']] for item in checked['roster']['items'])):
                 raise ValueError('authorized learning roster differs')
             old_source = pinned(repo, original['population']['source_baseline'])
             if old_source.get('policy') != 'phase-native-module-v1-c2':
@@ -157,7 +164,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
             new_source = copy.deepcopy(checked['source_baseline'])
             old_source = copy.deepcopy(old_source)
             for store, role in (('intent-boundaries', 'perception'), ('train-exemplars', 'solver')):
-                verify_vector_selection(data, checked['source_baseline']['knowledge_stores'][store]['phase_supply'][role]['query_source'], role, ids)
+                verify_vector_selection(data, checked['source_baseline']['knowledge_stores'][store]['phase_supply'][role]['query_source'], self.config['learning_source_vectors'][role], ids)
                 old_source['knowledge_stores'][store]['phase_supply'][role].pop('query_source')
                 new_source['knowledge_stores'][store]['phase_supply'][role].pop('query_source')
             if old_source != new_source:

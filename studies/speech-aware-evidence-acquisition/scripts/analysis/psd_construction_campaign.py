@@ -39,7 +39,6 @@ def compile_campaign(config):
     if (template.get('population', {}).get('role') != 'construction'
             or (not p_only and (template.get('node_arm') != 'enhanced-p-slot-decision'
                                 or not isinstance(template.get('pipeline'), dict)))
-            or (p_only and (len(collection['seeds']) != 4 or collection['temperature'] != 0.7))
             or 'collection_decoding' in template):
         raise ValueError('construction PSD v2 SDK workload template required')
     if p_only:

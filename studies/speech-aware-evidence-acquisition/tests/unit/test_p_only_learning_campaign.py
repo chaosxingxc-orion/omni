@@ -17,7 +17,8 @@ def learning_config():
     job.pop('node_arm')
     job.pop('pipeline')
     job.update(parent_baseline={}, parent_registration={}, axis={'kind': 'control'},
-               learning_authorization={'relpath': 'feedback.json', 'sha256': 'a' * 64})
+               learning_authorization={'source': {'relpath': 'feedback.json', 'sha256': 'a' * 64}, 'source_roster': {'relpath': 'roster.json', 'sha256': 'b' * 64}},
+               learning_source_vectors={'perception': {'relpath': 'p.jsonl', 'sha256': 'c' * 64}, 'solver': {'relpath': 's.jsonl', 'sha256': 'd' * 64}})
     campaign['collection']['seeds'] = [101, 102, 103, 104]
     return campaign
 
@@ -52,15 +53,16 @@ def test_reject_invalid_learning_campaign(change):
         compile_campaign(c)
 
 
-def test_vector_view_must_preserve_source_bytes_and_order(tmp_path, monkeypatch):
-    import p_only_workload as workload
+def test_vector_view_must_preserve_source_bytes_and_order(tmp_path):
     source = tmp_path / 'source.jsonl'
     rows = [json.dumps({'id': str(i), 'vector': [i]}).encode() + b'\n' for i in range(3)]
     source.write_bytes(b''.join(rows))
-    monkeypatch.setitem(workload.CONSTRUCTION_VECTORS, 'perception', ('source.jsonl', hashlib.sha256(source.read_bytes()).hexdigest()))
+    pin = {'relpath': 'source.jsonl', 'sha256': hashlib.sha256(source.read_bytes()).hexdigest()}
     view = tmp_path / 'view.jsonl'
     view.write_bytes(rows[2] + rows[0])
-    verify_vector_selection(tmp_path, {'relpath': 'view.jsonl'}, 'perception', ['2', '0'])
+    verify_vector_selection(tmp_path, {'relpath': 'view.jsonl'}, pin, ['2', '0'])
     view.write_bytes(rows[0] + rows[2])
     with pytest.raises(ValueError, match='exact construction625'):
-        verify_vector_selection(tmp_path, {'relpath': 'view.jsonl'}, 'perception', ['2', '0'])
+        verify_vector_selection(tmp_path, {'relpath': 'view.jsonl'}, pin, ['2', '0'])
+    with pytest.raises(ValueError, match='source differs'):
+        verify_vector_selection(tmp_path, {'relpath': 'view.jsonl'}, {**pin, 'sha256': '0' * 64}, ['2', '0'])
