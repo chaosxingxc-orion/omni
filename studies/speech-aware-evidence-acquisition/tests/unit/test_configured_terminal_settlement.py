@@ -23,6 +23,10 @@ def write(path, doc):
 def pin(path):return {'path': str(path), 'sha256': m.launcher.digest(path)}
 
 
+def test_docker_nanosecond_timestamp_is_accepted():
+    assert m.stamp('2026-11-07T10:23:37.05639452Z') == m.stamp('2026-11-07T10:23:37.056394+00:00')
+
+
 @pytest.fixture
 def configured(tmp_path, monkeypatch):
     data, repo = tmp_path / 'data', tmp_path / 'repo'

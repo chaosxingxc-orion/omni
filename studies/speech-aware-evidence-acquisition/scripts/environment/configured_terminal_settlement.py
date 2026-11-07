@@ -55,7 +55,11 @@ def mapped(producer, path, *, writable=None):
 
 
 def stamp(value):
-    result = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    # Docker timestamps may contain nanoseconds; Python 3.10 accepts at most
+    # microseconds. Truncate fractional precision without changing timezone.
+    normalized = value.replace('Z', '+00:00')
+    normalized = re.sub(r'(\.\d{6})\d+(?=[+-]\d\d:\d\d$)', r'\1', normalized)
+    result = datetime.fromisoformat(normalized)
     require(result.utcoffset() is not None, 'timezone-aware producer timing required')
     return result.timestamp()
 
