@@ -340,3 +340,36 @@ def test_registration_uses_overridden_shared_contact_budgets(repo, monkeypatch):
     assert m.read(package / 'generation-plan-registered-v1.json')['execution_plan']['planned_model_calls'] == 80
     assert m.read(package / 'fit-plan-registered-v1.json')['execution_plan']['planned_model_calls'] == 80
     assert m.read(package / 'protocol-registered-v1.json')['fallback_inclusive_cap'] == 80
+
+
+def test_registration_custody_uses_composed_reasoning_context_and_keeps_recovery_guard():
+    from test_native_episode_config import config as native_config
+    from speech_aware_evidence_acquisition.core.config import _compose_fragments, ConfigError
+    from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
+
+    baseline = native_config()
+    native = baseline['native_episode']
+    native.update(review_loop='off', finite_completion_policy='deliver-latest-or-abstain',
+        intent_slot_pipeline={'schema':'saea-intent-slot-pipeline-v1','slot_mode':'batched',
+                              'max_candidates':3,'candidate_outside_recovery':False})
+    for name in ('reviewer','planner'):
+        native['roles'][name]['max_iterations']=0
+    native['roles']['slot']={'phase_id':'slot','max_iterations':1}
+    baseline.update(arm='raw-speech-agent-native-tools',policy='phase-native-intent-slot-batched-v1',
+        node_request_completion_ceiling=7168,serving_slot_tokens=65536,
+        thinking_policy={'perception':{'enable_thinking':True,'reasoning_budget_tokens':3072,'answer_reserve_tokens':4096}})
+    model={'reasoning_content_guard':'refuse-think-marker-in-content',
+        'decoding_params':{'max_tokens':4096},'reasoning_budget_tokens':3072,
+        'answer_reserve_tokens':1024,'enable_thinking':True}
+    fragments={'model':model,'dataset':{},'baseline':baseline,'experiment':{}}
+    values=_compose_fragments({},fragments,None).values
+    assert not native_contact_custody_enabled({**baseline,'transport':'vllm','carrier_lock_key':'slurp'},allow_fresh_normalized=True)
+    assert native_contact_custody_enabled({**values,'transport':'vllm','carrier_lock_key':'slurp'},allow_fresh_normalized=True)
+    bad=copy.deepcopy(fragments);bad['model'].pop('reasoning_content_guard')
+    with pytest.raises(ConfigError,match='reasoning fragment'):
+        _compose_fragments({},bad,None)
+    bad=copy.deepcopy(fragments);bad['baseline']['node_request_completion_ceiling']=4096
+    with pytest.raises(ConfigError):
+        _compose_fragments({},bad,None)
+    values['native_episode']['roles']['slot']['max_iterations']=2
+    assert not native_contact_custody_enabled({**values,'transport':'vllm','carrier_lock_key':'slurp'},allow_fresh_normalized=True)

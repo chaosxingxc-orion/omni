@@ -479,6 +479,7 @@ class PairWorkload:
     def validate(self, repo, data, name, spec, exp, view):
         from tfrl_odd40_cells import verify_output
         from speech_aware_evidence_acquisition.core.flight.native_recovery import native_contact_custody_enabled
+        from speech_aware_evidence_acquisition.core.config import compose, protocol_hash
         base, expected, roster, expected_view, binding = self.derive(repo, data, spec['material'])
         cell, = exp['cells']
         if spec.get('source_experiment') != pin(repo, observation.SOURCE_EXP):
@@ -500,7 +501,6 @@ class PairWorkload:
         if name != self.NAME or any(spec.get(k) != v for k,v in fixed.items()):
             raise ValueError('exact GEPA probe runtime identity required')
         if is_checkpoint:
-            from speech_aware_evidence_acquisition.core.config import compose, protocol_hash
             current = compose(repo, binding['model_fragment'], self.DATASET, self.NAME, self.NAME, data_root=data)
             if (spec.get('composed_config_hash') != current.config_hash
                     or spec.get('protocol_hash') != protocol_hash(current.config_hash, current.values['arm'], roster['split_identity_hash'])):
@@ -531,9 +531,19 @@ class PairWorkload:
         if original_fit is not None:
             actual_scientific['native_contact_fit']['run_id'] = original_fit['run_id']
             actual_scientific['native_contact_fit']['attempt_id'] = original_fit['attempt_id']
+        # The scientific baseline document is intentionally material-only.  Native
+        # custody must inspect the composed model fragment as well, because the
+        # reasoning policy and request ceiling are validated against the fragment's
+        # reasoning_content_guard and decoding capacity.  Keep the scientific hash
+        # comparison on the material document above; use the already registered
+        # composition for the operational custody predicate.
+        composed = compose(repo, binding['model_fragment'], self.DATASET, self.NAME, self.NAME,
+                           data_root=data)
+        custody_values = {**composed.values, 'transport': 'vllm', 'carrier_lock_key': 'slurp'}
         if (scientific_hash(actual_scientific) != scientific_hash(base)
                 or scientific_hash(actual_scientific) != spec['scientific_baseline_sha256']
-                or not native_contact_custody_enabled({**actual,'transport':'vllm','carrier_lock_key':'slurp'}, allow_fresh_normalized=not is_checkpoint)):
+                or not native_contact_custody_enabled(custody_values,
+                                                       allow_fresh_normalized=not is_checkpoint)):
             raise ValueError('registered probe program, material or recovery changed')
         if spec['gain_lock'] != {'relpath':observation.LOCK,'sha256':observation.LOCK_SHA} or pinned(repo,spec['gain_lock'])['status'] != 'locked_full_train_fold_b':
             raise ValueError('locked first-round baseline required')
