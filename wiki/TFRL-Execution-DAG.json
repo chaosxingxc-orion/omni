@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T14:09:20.528762+00:00",
+  "updated_at_utc": "2026-11-07T14:22:50.947029+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -16,7 +16,7 @@
       "id": "P-runtime",
       "resource": "CPU",
       "depends_on": [],
-      "status": "node_seal_slice_committed_production_recipe_incomplete_rework6",
+      "status": "production_prepare_and_restart_in_progress_release_consumer_integrating",
       "owner": "Terra CLI",
       "acceptance": [
         "native_P_only",
@@ -140,7 +140,7 @@
         "P-runtime",
         "P-gepa-material"
       ],
-      "status": "awaiting_runtime_and_method_material",
+      "status": "material_ready_awaiting_runtime_admission",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -180,7 +180,7 @@
         "P-runtime",
         "P-reflexion-material"
       ],
-      "status": "awaiting_runtime_and_method_material",
+      "status": "material_ready_awaiting_runtime_admission",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -411,8 +411,10 @@
       "depends_on": [
         "P-teacher-gepa"
       ],
-      "status": "wire_to_actual_baseline_patch_rework",
-      "scope": "candidate3 first; optional5; must apply to phase_material/perception"
+      "status": "native_parent_patch_compiled_verified_not_admitted",
+      "scope": "candidate3 first; optional5; must apply to phase_material/perception",
+      "evidence": "main:27bb879a",
+      "deployed": false
     },
     {
       "id": "P-reflexion-consumption-result",
@@ -438,8 +440,10 @@
       "depends_on": [
         "P-reflexion-consumption-result"
       ],
-      "status": "compiler_pending",
-      "scope": "consumption independent of construction terminal"
+      "status": "native_parent_patch_compiled_verified_not_admitted",
+      "scope": "consumption independent of construction terminal",
+      "evidence": "main:27bb879a",
+      "deployed": false
     },
     {
       "id": "P-ace-consumption-result",
@@ -479,7 +483,7 @@
         "P-ace-consumption-result",
         "P-ace-supply-delta"
       ],
-      "status": "compiler_and_fresh_supply_pending",
+      "status": "retrieval_patch_compiled_fresh_supply_required",
       "scope": "consumption independent of held construction; only changed relevant supply enters NPU"
     }
   ],
@@ -506,7 +510,7 @@
     "P_only": {
       "status": "not_dispatched",
       "new_calls": 0,
-      "runtime": "incomplete_returned_to_original_worktree"
+      "runtime": "prepare_and_producer_consumer_integration_in_progress"
     },
     "held": [
       "Rescan",
@@ -516,10 +520,13 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "completed": 798,
+      "completed": 905,
       "total": 1080,
-      "observed_at_utc": "2026-11-07T13:56:58.571345+00:00",
-      "state": "running_legacy_PON"
+      "observed_at_utc": "2026-11-07T14:16:51.872599+00:00",
+      "state": "running_legacy_PON",
+      "wall_seconds_per_row": 11.152348168224298,
+      "remaining": 175,
+      "eta_minutes": 32.527682157320875
     },
     "B": {
       "completed": 181,

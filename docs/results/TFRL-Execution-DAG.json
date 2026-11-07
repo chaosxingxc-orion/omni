@@ -1,202 +1,489 @@
 {
   "schema": "saea-research-dependency-spec-v1",
-  "status": "PLANNING_AND_EXECUTION_INDEX_NOT_LAUNCH_CONFIG",
+  "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
   "observed_at_utc": "2026-11-07T05:36:00Z",
   "resources": {
     "inference_instances": 3,
     "cards_per_instance": 4,
-    "authorized_cards": 12,
     "max_codex_cli": 3,
-    "monitor_interval_seconds": 600
+    "monitor_interval_seconds": 600,
+    "total_authorized_cards": 12
   },
   "dispatch_rule": "CPU preparation finishes before dispatch. NPU successor waits for predecessor generation release, not CPU scoring; same-lane jobs do not compete.",
   "nodes": [
     {
-      "id": "decision-a",
-      "resource": "NPU-A",
-      "depends_on": [],
-      "status": "running",
-      "rows": 1080,
-      "completed_rows": 332,
-      "row_snapshot_utc": "2026-11-07T05:32:00Z"
-    },
-    {
-      "id": "off-c96",
-      "resource": "NPU-A",
-      "depends_on": [
-        "decision-a"
-      ],
-      "edge": "generation-released",
-      "status": "bound_waiting",
-      "rows": 1080
-    },
-    {
-      "id": "p-thinking-on",
-      "resource": "NPU-A",
-      "depends_on": [
-        "off-c96"
-      ],
-      "edge": "generation-released",
-      "status": "admitted_binder_waiting",
-      "rows": 1080
-    },
-    {
-      "id": "p-history-retrieval",
-      "resource": "NPU-A",
-      "depends_on": [
-        "p-thinking-on"
-      ],
-      "edge": "generation-released",
-      "status": "rebound_binder_waiting_source",
-      "rows": 1080
-    },
-    {
-      "id": "on-k001",
-      "resource": "NPU-B",
-      "depends_on": [],
-      "status": "actual_model_responses_observed",
-      "rows": 625,
-      "knowledge": "minus-R01 exemplars; original fixed625 roster"
-    },
-    {
-      "id": "on-k002",
-      "resource": "NPU-B",
-      "depends_on": [
-        "on-k001"
-      ],
-      "status": "admitted_executable_queue_pending",
-      "rows": 625,
-      "knowledge": "same as K001"
-    },
-    {
-      "id": "p-full-third",
-      "resource": "NPU-C",
-      "depends_on": [],
-      "status": "admitted_dispatch_directory_fix",
-      "rows": 1080,
-      "model_calls_verified": false
-    },
-    {
-      "id": "teacher-ace",
-      "resource": "CPU-remote-teacher",
-      "depends_on": [],
-      "status": "response_collected",
-      "candidate_count": 4,
-      "source": "historical16TRAINx4 P-joint-Solver, cross-system hypotheses"
-    },
-    {
-      "id": "teacher-reflexion",
-      "resource": "CPU-remote-teacher",
-      "depends_on": [],
-      "status": "response_collected",
-      "candidate_count": 4,
-      "source": "historical16TRAINx4 P-joint-Solver, cross-system hypotheses"
-    },
-    {
-      "id": "teacher-review",
+      "id": "P-runtime",
       "resource": "CPU",
-      "depends_on": [
-        "teacher-ace",
-        "teacher-reflexion"
-      ],
-      "status": "analysis_running",
-      "requirements": [
-        "locked knowledge support",
-        "node scope",
-        "Fold A/B exposure",
-        "counterexamples",
-        "exact source pins"
+      "depends_on": [],
+      "status": "production_prepare_and_restart_in_progress_release_consumer_integrating",
+      "owner": "Terra CLI",
+      "acceptance": [
+        "native_P_only",
+        "S_D_calls_zero",
+        "original_audio_supply",
+        "native_cost_checkpoint_unknown_protection",
+        "real_SLURP_node_seal_release",
+        "remaining_only_restart",
+        "same_scientific_identity_across_attempts"
       ]
     },
     {
-      "id": "teacher-compile",
+      "id": "P-baseline",
       "resource": "CPU",
+      "depends_on": [],
+      "status": "native_response_reanalysis_complete",
+      "owner": "Sol CLI",
+      "result": {
+        "n": 1080,
+        "valid": 1079,
+        "gold_recalled": 977
+      },
+      "evidence": "P-Node-Baseline.json"
+    },
+    {
+      "id": "P-teacher-input",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "four_v3_method_axis_requests_fixed_image_verified",
+      "owner": "Sol CLI",
+      "scope": "original construction625 learning partition; method-specific templates"
+    },
+    {
+      "id": "P-teacher-gepa",
+      "resource": "CPU_EXTERNAL_API",
       "depends_on": [
-        "teacher-review"
+        "P-teacher-input"
       ],
-      "status": "pending",
-      "requirements": [
-        "single node adapter",
-        "fixed parent policy",
-        "unchanged output contract",
-        "prepared runtime inputs",
-        "configured queue"
+      "status": "six_received_semantic_review_complete_compilation_pending",
+      "method": "gepa",
+      "run_nodes": [
+        "P"
+      ],
+      "accepted_candidates": 0,
+      "priority_indices": [
+        3,
+        5
       ]
     },
     {
-      "id": "reflexion-decision-eval",
-      "resource": "NPU-first-free",
+      "id": "P-teacher-reflexion",
+      "resource": "CPU_EXTERNAL_API",
       "depends_on": [
-        "teacher-compile"
+        "P-teacher-input"
       ],
-      "status": "planned_not_yet_executable",
-      "axis": "Decision operation/object comparison",
-      "evaluation": "fixed Fold A1080; report exposed development status"
+      "status": "consumption_four_construction_five_received",
+      "method": "reflexion",
+      "run_nodes": [
+        "P"
+      ]
     },
     {
-      "id": "ace-slot-eval",
-      "resource": "NPU-first-free",
+      "id": "P-teacher-ace",
+      "resource": "CPU_EXTERNAL_API",
       "depends_on": [
-        "teacher-compile"
+        "P-teacher-input"
       ],
-      "status": "planned_not_yet_executable",
-      "axis": "locked-card explanation at Slot; no invented facts",
-      "evaluation": "same fixed Fold A1080"
+      "status": "consumption_three_received_construction_unknown_held_independent_axes",
+      "method": "ace-inspired_until_complete_cycle_verified",
+      "run_nodes": [
+        "P"
+      ],
+      "partial_failure_blocks_other_axes": false
     },
     {
-      "id": "k2-score",
+      "id": "P-tfgrpo-group-prepare",
       "resource": "CPU",
       "depends_on": [
-        "on-k001",
-        "on-k002"
+        "P-runtime",
+        "P-teacher-input"
       ],
-      "status": "pending",
-      "note": "K001 score can start independently as soon as its outputs seal"
+      "status": "pending_runtime",
+      "scope": "same pinned inputs/policy; independent draw identities"
     },
     {
-      "id": "tfgrpo-teacher",
-      "resource": "CPU-remote-teacher",
+      "id": "P-tfgrpo-group-sample",
+      "resource": "NPU_ANY_TP4",
       "depends_on": [
-        "k2-score"
+        "P-tfgrpo-group-prepare"
       ],
-      "status": "pending_actual_group_rewards",
-      "note": "same-policy rewards; all-wrong ties remain no-learning-signal"
+      "status": "not_dispatched",
+      "run_nodes": [
+        "P"
+      ]
     },
     {
-      "id": "gepa-preparation",
+      "id": "P-tfgrpo-group-evaluate",
+      "resource": "CPU",
+      "depends_on": [
+        "P-tfgrpo-group-sample"
+      ],
+      "status": "waiting_real_groups",
+      "scope": "P relative rewards; retain failures and costs"
+    },
+    {
+      "id": "P-teacher-tfgrpo",
+      "resource": "CPU_EXTERNAL_API",
+      "depends_on": [
+        "P-tfgrpo-group-evaluate"
+      ],
+      "status": "waiting_real_groups",
+      "method": "tfgrpo",
+      "run_nodes": [
+        "P"
+      ]
+    },
+    {
+      "id": "P-gepa-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-runtime",
+        "P-gepa-material"
+      ],
+      "status": "material_ready_awaiting_runtime_admission",
+      "scope": "all assets ready before NPU acquisition"
+    },
+    {
+      "id": "P-gepa-sample",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-gepa-prepare"
+      ],
+      "status": "not_dispatched",
+      "run_nodes": [
+        "P"
+      ],
+      "scientific_parent": "same_frozen_P_parent_within_round",
+      "score_blocks_next_independent_candidate": false
+    },
+    {
+      "id": "P-gepa-score",
+      "resource": "CPU",
+      "depends_on": [
+        "P-gepa-sample",
+        "P-baseline"
+      ],
+      "status": "waiting_outputs",
+      "metrics": [
+        "valid_coverage",
+        "gold_candidate_set_recall_K_le_3",
+        "per_intent_recall",
+        "paired_repairs_regressions",
+        "candidate_count",
+        "all_contact_cost_latency"
+      ]
+    },
+    {
+      "id": "P-reflexion-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-runtime",
+        "P-reflexion-material"
+      ],
+      "status": "material_ready_awaiting_runtime_admission",
+      "scope": "all assets ready before NPU acquisition"
+    },
+    {
+      "id": "P-reflexion-sample",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-reflexion-prepare"
+      ],
+      "status": "not_dispatched",
+      "run_nodes": [
+        "P"
+      ],
+      "scientific_parent": "same_frozen_P_parent_within_round",
+      "score_blocks_next_independent_candidate": false
+    },
+    {
+      "id": "P-reflexion-score",
+      "resource": "CPU",
+      "depends_on": [
+        "P-reflexion-sample",
+        "P-baseline"
+      ],
+      "status": "waiting_outputs",
+      "metrics": [
+        "valid_coverage",
+        "gold_candidate_set_recall_K_le_3",
+        "per_intent_recall",
+        "paired_repairs_regressions",
+        "candidate_count",
+        "all_contact_cost_latency"
+      ]
+    },
+    {
+      "id": "P-ace-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-runtime",
+        "P-ace-material"
+      ],
+      "status": "awaiting_runtime_and_method_material",
+      "scope": "all assets ready before NPU acquisition"
+    },
+    {
+      "id": "P-ace-sample",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-ace-prepare"
+      ],
+      "status": "not_dispatched",
+      "run_nodes": [
+        "P"
+      ],
+      "scientific_parent": "same_frozen_P_parent_within_round",
+      "score_blocks_next_independent_candidate": false
+    },
+    {
+      "id": "P-ace-score",
+      "resource": "CPU",
+      "depends_on": [
+        "P-ace-sample",
+        "P-baseline"
+      ],
+      "status": "waiting_outputs",
+      "metrics": [
+        "valid_coverage",
+        "gold_candidate_set_recall_K_le_3",
+        "per_intent_recall",
+        "paired_repairs_regressions",
+        "candidate_count",
+        "all_contact_cost_latency"
+      ]
+    },
+    {
+      "id": "P-tfgrpo-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-runtime",
+        "P-teacher-tfgrpo"
+      ],
+      "status": "pending_candidate",
+      "scope": "all assets ready before NPU acquisition"
+    },
+    {
+      "id": "P-tfgrpo-sample",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-tfgrpo-prepare"
+      ],
+      "status": "not_dispatched",
+      "run_nodes": [
+        "P"
+      ],
+      "scientific_parent": "same_frozen_P_parent_within_round",
+      "score_blocks_next_independent_candidate": false
+    },
+    {
+      "id": "P-tfgrpo-score",
+      "resource": "CPU",
+      "depends_on": [
+        "P-tfgrpo-sample",
+        "P-baseline"
+      ],
+      "status": "waiting_outputs",
+      "metrics": [
+        "valid_coverage",
+        "gold_candidate_set_recall_K_le_3",
+        "per_intent_recall",
+        "paired_repairs_regressions",
+        "candidate_count",
+        "all_contact_cost_latency"
+      ]
+    },
+    {
+      "id": "P-round-select",
       "resource": "CPU",
       "depends_on": [],
-      "status": "adapter_merged_candidate_task_pending",
-      "note": "complete-coverage pipeline preserved by93413cd1; no algorithm-gain claim"
+      "status": "not_started",
+      "dependency_rule": "selected completed candidate evidence only; not every method",
+      "scope": "evidence-supported candidates and explicit next-round lineage"
     },
     {
-      "id": "candidate-scoring",
+      "id": "P-finalist-repeat",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-round-select"
+      ],
+      "status": "not_dispatched",
+      "run_nodes": [
+        "P"
+      ],
+      "scope": "same-roster independent decoding repeats and matched controls"
+    },
+    {
+      "id": "P-freeze",
       "resource": "CPU",
       "depends_on": [
-        "reflexion-decision-eval",
-        "ace-slot-eval"
+        "P-finalist-repeat"
       ],
-      "status": "pending_per_arm_independent",
-      "note": "paired full denominator, node breakdown, efficiency and exposure disclosure"
+      "status": "not_ready",
+      "scope": "multi-round gains, regressions, cost; freeze config AND output corpus"
     },
     {
-      "id": "fold-b-confirmation",
-      "resource": "NPU-first-free",
+      "id": "S-optimize",
+      "resource": "NPU_ANY_TP4",
       "depends_on": [
-        "candidate-scoring"
+        "P-freeze"
       ],
-      "status": "pending_selection",
-      "note": "reuse fixed Fold B; disclose any teacher exposure"
+      "status": "deferred",
+      "run_nodes": [
+        "S"
+      ],
+      "input": "pinned P output corpus"
     },
     {
-      "id": "full-test",
-      "resource": "NPU-designated",
+      "id": "S-freeze",
+      "resource": "CPU",
       "depends_on": [
-        "fold-b-confirmation"
+        "S-optimize"
       ],
-      "status": "pending_dev_baseline_lock",
-      "rows": 13078,
-      "note": "no test tuning; report full test"
+      "status": "deferred"
+    },
+    {
+      "id": "D-optimize",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "S-freeze"
+      ],
+      "status": "deferred",
+      "run_nodes": [
+        "D"
+      ],
+      "input": "pinned P and S output corpus"
+    },
+    {
+      "id": "D-freeze",
+      "resource": "CPU",
+      "depends_on": [
+        "D-optimize"
+      ],
+      "status": "deferred"
+    },
+    {
+      "id": "system-optimize",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "D-freeze"
+      ],
+      "status": "deferred",
+      "run_nodes": [
+        "P",
+        "S",
+        "D"
+      ]
+    },
+    {
+      "id": "P-control-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-runtime"
+      ],
+      "status": "production_recipe_pending",
+      "scope": "original parent, original roster, reused inputs; no teacher dependency"
+    },
+    {
+      "id": "P-control-sample",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-control-prepare"
+      ],
+      "status": "not_dispatched",
+      "run_nodes": [
+        "P"
+      ],
+      "priority": "first ready B task"
+    },
+    {
+      "id": "P-control-score",
+      "resource": "CPU",
+      "depends_on": [
+        "P-control-sample",
+        "P-baseline"
+      ],
+      "status": "waiting_outputs"
+    },
+    {
+      "id": "P-gepa-material",
+      "resource": "CPU",
+      "depends_on": [
+        "P-teacher-gepa"
+      ],
+      "status": "native_parent_patch_compiled_verified_not_admitted",
+      "scope": "candidate3 first; optional5; must apply to phase_material/perception",
+      "evidence": "main:27bb879a",
+      "deployed": false
+    },
+    {
+      "id": "P-reflexion-consumption-result",
+      "resource": "CPU",
+      "depends_on": [
+        "P-teacher-input"
+      ],
+      "status": "four_received_semantic_review_complete",
+      "priority_candidates": [
+        "c1",
+        "c2"
+      ],
+      "hold": [
+        "c3"
+      ],
+      "optional": [
+        "c4"
+      ]
+    },
+    {
+      "id": "P-reflexion-material",
+      "resource": "CPU",
+      "depends_on": [
+        "P-reflexion-consumption-result"
+      ],
+      "status": "native_parent_patch_compiled_verified_not_admitted",
+      "scope": "consumption independent of construction terminal",
+      "evidence": "main:27bb879a",
+      "deployed": false
+    },
+    {
+      "id": "P-ace-consumption-result",
+      "resource": "CPU",
+      "depends_on": [
+        "P-teacher-input"
+      ],
+      "status": "three_received",
+      "candidates": [
+        "breadth12",
+        "breadth16",
+        "tau0.1"
+      ]
+    },
+    {
+      "id": "P-ace-supply-delta",
+      "resource": "CPU",
+      "depends_on": [
+        "P-ace-consumption-result"
+      ],
+      "status": "native_supply_delta_complete",
+      "owner": "Sol CLI",
+      "scope": "original population, real changed supply, gold-card coverage, context growth; no new embeddings",
+      "skip_npu": [
+        "tau0.1"
+      ],
+      "priority": [
+        "breadth12",
+        "breadth16"
+      ],
+      "evidence": "P-Retrieval-Supply-Review.json"
+    },
+    {
+      "id": "P-ace-material",
+      "resource": "CPU",
+      "depends_on": [
+        "P-ace-consumption-result",
+        "P-ace-supply-delta"
+      ],
+      "status": "retrieval_patch_compiled_fresh_supply_required",
+      "scope": "consumption independent of held construction; only changed relevant supply enters NPU"
     }
   ],
   "completed_results": {
