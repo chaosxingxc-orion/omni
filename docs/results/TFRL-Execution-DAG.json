@@ -1,7 +1,9 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "observed_at_utc": "2026-11-07T05:36:00Z",
+  "updated_at_utc": "2026-11-07T14:42:34.768196+00:00",
+  "current_stage": "P",
+  "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
     "inference_instances": 3,
     "cards_per_instance": 4,
@@ -9,7 +11,6 @@
     "monitor_interval_seconds": 600,
     "total_authorized_cards": 12
   },
-  "dispatch_rule": "CPU preparation finishes before dispatch. NPU successor waits for predecessor generation release, not CPU scoring; same-lane jobs do not compete.",
   "nodes": [
     {
       "id": "P-runtime",
@@ -484,31 +485,120 @@
       ],
       "status": "retrieval_patch_compiled_fresh_supply_required",
       "scope": "consumption independent of held construction; only changed relevant supply enters NPU"
+    },
+    {
+      "id": "C-image-migrate",
+      "resource": "CPU_STORAGE",
+      "depends_on": [],
+      "status": "archive_verified_loading",
+      "owner": "main supervisor",
+      "scope": "exact stable image, shared storage, no dataset transfer"
+    },
+    {
+      "id": "C-engine-validate",
+      "resource": "NPU_C_TP4",
+      "depends_on": [
+        "C-image-migrate"
+      ],
+      "status": "deployment_config_prepared_not_started",
+      "owner": "Terra CLI",
+      "scope": "different real audio requests, structured output, independent cost journal, preserve unknown"
     }
   ],
-  "completed_results": {
-    "completeON": {
-      "rows": 1080,
-      "intent_percent": 84.0741,
-      "slu_percent": 70.9703,
-      "strict": 587,
-      "legal": 1077
+  "round_policy": {
+    "candidate_parallelism": "same stage and frozen parent; first ready independent candidate runs",
+    "next_round_requires": "relevant candidate feedback only",
+    "s_d_requires": "explicit upstream freeze receipt"
+  },
+  "dispatch_policy": {
+    "cpu_preparation_before_npu_lease": true,
+    "reuse_unchanged_assets": true,
+    "score_blocks_successor": false,
+    "monitor_interval_seconds": 600,
+    "new_whole_graph_candidates": "HOLD",
+    "already_running_legacy": "preserve; not P-only",
+    "hardware_comparison": "same engine policy or matched/crossover controls",
+    "runtime_registry": "native prepared queue required; not this planning file",
+    "control_requires_teacher": false,
+    "cpu_material_requires_runtime": false,
+    "construction_blocks_consumption": false
+  },
+  "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
+  "current_dispatch": {
+    "P_only": {
+      "status": "not_dispatched",
+      "new_calls": 0,
+      "runtime": "prepare_and_producer_consumer_integration_in_progress"
     },
-    "compactP": {
-      "rows": 1080,
-      "intent_percent": 84.537,
-      "slu_percent": 71.5145,
-      "strict": 595,
-      "legal": 1080,
-      "verdict": "efficiency_candidate_quality_CI_crosses_zero"
+    "held": [
+      "Rescan",
+      "ACE whole graph",
+      "P-history whole graph",
+      "Slot1536 whole graph"
+    ],
+    "all_cards_busy_claim": false,
+    "A": {
+      "completed": 1020,
+      "total": 1080,
+      "observed_at_utc": "2026-11-07T14:41:30.656407+00:00",
+      "state": "running_legacy_PON",
+      "wall_seconds_per_row": 12.47666431884058,
+      "remaining": 60,
+      "eta_minutes": 12.47666431884058
     },
-    "compactSlot": {
-      "rows": 1080,
-      "intent_percent": 85.0926,
-      "slu_percent": 70.9481,
-      "strict": 600,
-      "legal": 1079,
-      "verdict": "do_not_promote_entity_recall_regression"
-    }
+    "B": {
+      "completed": 181,
+      "total": 1080,
+      "state": "failed_native_settlement_completed",
+      "pending": "new_P_only_recipe"
+    },
+    "C": {
+      "completed": 122,
+      "total": 625,
+      "observed_at_utc": "2026-11-07T13:25:01.292597+00:00",
+      "state": "stable_image_archive_verified_loading_on_175",
+      "observed_contacts": 367,
+      "unknown_contacts": 2,
+      "retirement_verified": true,
+      "automatic_retry": false,
+      "grammar_fix_verified": false
+    },
+    "teacher_gepa": {
+      "state": "wire_template_published_actual_config_patch_wrong_rework2",
+      "raw_candidates": 6,
+      "validated_candidates": 0,
+      "prompt_tokens": 167496,
+      "completion_tokens": 24582,
+      "automatic_retry": false,
+      "citation_audit": "31 uniquely resolved source references; raw instructions unchanged; runtime source bridge pending",
+      "priority_candidates": [
+        3,
+        5
+      ]
+    },
+    "teacher_methods_v3": {
+      "reflexion_consumption": "four_received_c1_c2_priority_compiler_pending",
+      "reflexion_construction": "five_received_section_span_compiler_mismatch",
+      "ace_consumption": "three_received_tau_noop_excluded_breadth12_16_prioritized",
+      "ace_construction": "unknown_held_no_retry"
+    },
+    "cpu_workers": [
+      {
+        "role": "P runtime",
+        "model": "gpt-6.1-terra",
+        "pid": 3498567
+      },
+      {
+        "role": "P teacher compiler",
+        "model": "gpt-6.1-terra",
+        "pid": 3504549
+      },
+      {
+        "role": "P supply analysis",
+        "model": "gpt-6.1-sol",
+        "pid": 3494714,
+        "status": "analysis_complete_report_delivered"
+      }
+    ]
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T14:22:50.947029+00:00",
+  "updated_at_utc": "2026-11-07T14:42:34.768196+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -485,6 +485,24 @@
       ],
       "status": "retrieval_patch_compiled_fresh_supply_required",
       "scope": "consumption independent of held construction; only changed relevant supply enters NPU"
+    },
+    {
+      "id": "C-image-migrate",
+      "resource": "CPU_STORAGE",
+      "depends_on": [],
+      "status": "archive_verified_loading",
+      "owner": "main supervisor",
+      "scope": "exact stable image, shared storage, no dataset transfer"
+    },
+    {
+      "id": "C-engine-validate",
+      "resource": "NPU_C_TP4",
+      "depends_on": [
+        "C-image-migrate"
+      ],
+      "status": "deployment_config_prepared_not_started",
+      "owner": "Terra CLI",
+      "scope": "different real audio requests, structured output, independent cost journal, preserve unknown"
     }
   ],
   "round_policy": {
@@ -520,13 +538,13 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "completed": 905,
+      "completed": 1020,
       "total": 1080,
-      "observed_at_utc": "2026-11-07T14:16:51.872599+00:00",
+      "observed_at_utc": "2026-11-07T14:41:30.656407+00:00",
       "state": "running_legacy_PON",
-      "wall_seconds_per_row": 11.152348168224298,
-      "remaining": 175,
-      "eta_minutes": 32.527682157320875
+      "wall_seconds_per_row": 12.47666431884058,
+      "remaining": 60,
+      "eta_minutes": 12.47666431884058
     },
     "B": {
       "completed": 181,
@@ -538,11 +556,12 @@
       "completed": 122,
       "total": 625,
       "observed_at_utc": "2026-11-07T13:25:01.292597+00:00",
-      "state": "native_retirement_complete_grammar_unresolved",
+      "state": "stable_image_archive_verified_loading_on_175",
       "observed_contacts": 367,
       "unknown_contacts": 2,
       "retirement_verified": true,
-      "automatic_retry": false
+      "automatic_retry": false,
+      "grammar_fix_verified": false
     },
     "teacher_gepa": {
       "state": "wire_template_published_actual_config_patch_wrong_rework2",
