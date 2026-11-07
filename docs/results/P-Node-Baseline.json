@@ -1,0 +1,90 @@
+{
+  "schema": "omni-P-node-baseline-summary-v1",
+  "updated_at_utc": "2026-11-07T12:57:15.958180+00:00",
+  "status": "native_response_reanalysis_complete_teacher_pack_pending",
+  "source_commit": "2586419b119d7077a405a4fb951e00ee59c231eb",
+  "source_scope": "original completeON Fold A1080; isolated evaluation of historical P responses, not new P-only generation",
+  "roster_n": 1080,
+  "P_thinking": false,
+  "K_max": 3,
+  "metrics": {
+    "n": 1080,
+    "evaluable": 1079,
+    "gold_recalled": 977,
+    "raw_valid": 1072,
+    "native_P_receipt_present": 1077,
+    "candidate_count": 2765,
+    "valid_output_coverage": 0.9990740740740741,
+    "gold_recall_full": 0.9046296296296297,
+    "gold_recall_evaluable": 0.9054680259499537
+  },
+  "missing_gold_among_valid": 102,
+  "invalid_node_outputs": 1,
+  "P_correct_without_terminal_P_block": 2,
+  "raw_duplicate_rows": 221,
+  "duplicate_semantics": "native group_v2 + request-bound evidence normalization; raw duplicate does not imply invalid output",
+  "cost": {
+    "prompt_tokens": 5880781,
+    "completion_tokens": 325447,
+    "latency_seconds_sum": 45940.97717892943
+  },
+  "verified_P_contacts": 1104,
+  "recovery": {
+    "extra_P_contacts": 24,
+    "rows_with_extra_P_contacts": 24
+  },
+  "recovery_extra_cost_included_in_total": {
+    "prompt_tokens": 129461,
+    "completion_tokens": 8746,
+    "latency_seconds_sum": 1214.0103299600887
+  },
+  "contact_latency_seconds": {
+    "count": 1104,
+    "mean": 41.61320396642159,
+    "p50": 29.985409469984006,
+    "p95": 37.61055608000606,
+    "sum_is_not_walltime": true
+  },
+  "scientific_decoding_count_excluding_id_slot": 1,
+  "new_P_only_wall_seconds_per_row": null,
+  "new_P_only_ETA": null,
+  "new_model_calls": 0,
+  "new_teacher_calls": 0,
+  "learning_preparation": {
+    "verified_existing_feedback_rows": 80,
+    "P_failure_rows": 15,
+    "authorized_parent_dataset_size": 625,
+    "new_dev_roster": false,
+    "eligible_tfgrpo_P_multi_draw_groups": 0,
+    "old_feedback_policy_matches_current_P": false,
+    "use": "observational failure hypotheses; fresh current-P samples needed for policy comparison"
+  },
+  "evidence_sha256": {
+    "on-refined-aggregate.json": "6bc5fa09fb90965bd1006c5b2d9c1244fddbd3443e5b3ed4960ca911a3b09195",
+    "on-refined-rows.private.json": "3f5d52443ed0da0ff755d8a08158768a8a090bc3a58e102787c7383ef4c5f2ab",
+    "learning-audit.json": "0d64124fa6f5fc82f850ed975659cc3a7dbdcd048b19d115218b0b81403070a7",
+    "baseline-aggregate.json": "572f811b8eaa13d09f1541c1e4d4660f7ba8aa7413b763c1f49a49baf9066d61"
+  },
+  "lowest_original_strata": [
+    {
+      "stratum": "general",
+      "gold_recalled": 43,
+      "n": 60
+    },
+    {
+      "stratum": "social",
+      "gold_recalled": 48,
+      "n": 60
+    },
+    {
+      "stratum": "iot",
+      "gold_recalled": 52,
+      "n": 60
+    },
+    {
+      "stratum": "music",
+      "gold_recalled": 53,
+      "n": 60
+    }
+  ]
+}

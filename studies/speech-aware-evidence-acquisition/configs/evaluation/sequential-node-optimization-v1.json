@@ -1,7 +1,7 @@
 {
   "schema": "omni-sequential-node-optimization-plan-v1",
   "status": "planning-contract-not-runtime-registration",
-  "updated_at_utc": "2026-11-07T12:43:41.474238+00:00",
+  "updated_at_utc": "2026-11-07T12:55:11.006211+00:00",
   "user_order": [
     "optimize_P",
     "freeze_P_optimize_S",
@@ -26,10 +26,7 @@
       "run_nodes": [
         "P"
       ],
-      "frozen_nodes": [
-        "S",
-        "D"
-      ],
+      "frozen_nodes": [],
       "selection_metrics": [
         "valid_output_coverage",
         "gold_intent_candidate_recall",
@@ -43,7 +40,14 @@
         "test_gold_in_actor_input",
         "invented_knowledge",
         "system_score_as_P_only_reward"
-      ]
+      ],
+      "excluded_nodes": [
+        "S",
+        "D"
+      ],
+      "candidate_limit": 3,
+      "validation_semantics": "preserve native group_v2 semantics; raw duplicates separate from unrecoverable failure",
+      "baseline_audit_status": "native_response_reanalysis_complete_1079_valid_977_recalled_of_1080"
     },
     "S": {
       "requires": "validated_P_freeze_receipt",
@@ -101,7 +105,8 @@
     "cpu_npu_async": true,
     "monitor_seconds": 600,
     "running_legacy_jobs": "preserve_no_reconfiguration",
-    "new_whole_graph_candidates": "held"
+    "new_whole_graph_candidates": "held",
+    "task_graph": "wiki/TFRL-Execution-DAG.json"
   },
   "datasets": {
     "reuse": [
@@ -121,5 +126,19 @@
     "runtime_answer_coverage_target": 1.0,
     "automatic_pass_from_ci_crossing_zero": false,
     "claimed_every_node_perfect": false
+  },
+  "rounds": {
+    "candidate_parallelism": "same target node, frozen parent, pinned roster",
+    "parent_after_selection": "versioned winner with paired evidence",
+    "minimum_round_count": "multiple rounds and repeatable gains; no arbitrary fixed count",
+    "candidate_execution": "fresh responses; recorded response only control or checkpoint recovery",
+    "after_P_freeze": "pin P output corpus once for S",
+    "after_S_freeze": "pin S output corpus once for D"
+  },
+  "tfgrpo_sampling": {
+    "runtime_baseline_temperature": 0,
+    "exploration_profile": "declare explicitly before sampling; common policy and decoding within group",
+    "duplicates_are_not_reward_variation": true,
+    "promotion_evaluation": "same runtime decoding for control and candidate"
   }
 }
