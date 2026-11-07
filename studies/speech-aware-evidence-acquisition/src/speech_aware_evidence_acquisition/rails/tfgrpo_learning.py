@@ -511,7 +511,7 @@ class ExperienceLearner:
               summary_import=None, imported_summaries=None, import_custody=None,
               final_import=None, imported_operations=None, stage_custody=None,
               reward_mode=BINARY_REWARD, final_merge_limits=None, final_merge_policy=None,
-              actor_model_id=None):
+              actor_model_id=None, teacher_diagnostics=None):
         """Produce a candidate version; no gold enters a task inference request."""
         validate_reward_mode(reward_mode)
         if reward_mode != BINARY_REWARD and summary_import is not None:
@@ -593,6 +593,10 @@ class ExperienceLearner:
                            'max_characters':self.max_characters}}
         if actor_model_id is not None:
             binding.update(actor_model_id=actor, learner_model_id=self.model_id)
+        if teacher_diagnostics is not None:
+            if not isinstance(teacher_diagnostics, dict) or set(teacher_diagnostics) != seen_queries:
+                raise LearningError('teacher diagnostics must match all original groups')
+            binding['teacher_diagnostics'] = copy.deepcopy(teacher_diagnostics)
         if summary_import is not None:binding['summary_import']=copy.deepcopy(summary_import)
         if final_import is not None:binding['final_import']=copy.deepcopy(final_import)
         with self._exclusive_batch():
@@ -619,17 +623,23 @@ class ExperienceLearner:
                 if candidate.get('accounting')!=self.accounting():raise LearningError('candidate accounting changed')
                 return candidate
             current='\n'.join(f'[{k}]. {v}' for k,v in sorted(parent['items'].items())) or 'None'
+            def teacher_answer(group):
+                if teacher_diagnostics is None:
+                    return group['answer']
+                return json.dumps({'original_label_feedback': json.loads(group['answer']),
+                                   'teacher_only_reference': teacher_diagnostics[group['query_id']]},
+                                  ensure_ascii=False, sort_keys=True)
             def summarize(pair):
                 group,rollout=pair
                 from .tfgrpo_projection import summary_trajectory
                 return self._call('summary',rollout['trajectory_id'],self._messages(
-                    'SINGLE_ROLLOUT_SUMMARY_TEMPLATE',common,question=group['query'],answer=group['answer'],
+                    'SINGLE_ROLLOUT_SUMMARY_TEMPLATE',common,question=group['query'],answer=teacher_answer(group),
                     critique=rollout['critique'],trajectory=summary_trajectory(group['query'],rollout['trajectory'])))
             summary_by_id=dict(imported_summaries)
             def advantage(group):
                 formatted='\n\n'.join(f"Attempt {i+1} (Reward {r['reward']}):\n{summary_by_id[r['trajectory_id']]}" for i,r in enumerate(group['rollouts']))
                 result=self._call('advantage',group['query_id'],self._messages(
-                    'SINGLE_QUERY_GROUP_ADVANTAGE',common,question=group['query'],answer=group['answer'],trajectories=formatted))
+                    'SINGLE_QUERY_GROUP_ADVANTAGE',common,question=group['query'],answer=teacher_answer(group),trajectories=formatted))
                 return semantic_advantage(result)
             def update_group(group,experience):
                 proposed=self._call('group_update',group['query_id'],self._messages(

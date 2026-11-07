@@ -26,12 +26,48 @@ def require(ok, message):
         raise LearningError(message)
 
 
+def teacher_references(reference_pin, ids, groups=None):
+    """Validate the pinned private source against the complete TRAIN population."""
+    source = read(checked(reference_pin))
+    require(isinstance(source.get('provenance'), dict) and source['provenance'], 'reference provenance required')
+    rows = source['document']['groups']
+    require(isinstance(rows, list), 'reference groups required')
+    index = {}
+    for row in rows:
+        qid = row['query_id']; evidence = row['evidence']
+        require(isinstance(qid, str) and qid.startswith('slurp:train:') and qid not in index,
+                'duplicate or non-TRAIN reference identity')
+        require(evidence['query']['sample_id'] == qid and evidence['audio_available_to_reflector'] is False,
+                'reference sample identity or audio boundary differs')
+        feedback = evidence['reference_feedback_private']
+        require(isinstance(feedback.get('reference_sentence'), str) and feedback['reference_sentence'].strip()
+                and isinstance(feedback.get('intent'), str) and feedback['intent'].strip()
+                and feedback.get('actor_input_contains_gold_feedback') is False,
+                'original reference sentence and label required')
+        label = {key: copy.deepcopy(feedback[key]) for key in
+                 ('intent', 'historical_reference_intent', 'label_source_sha256', 'actor_input_contains_gold_feedback') if key in feedback}
+        index[qid] = {'reference_sentence': feedback['reference_sentence'], 'original_label_feedback': label,
+                      'audio_available_to_reflector': False,
+                      'interpretation': 'Reference text is supplied supervision, not independent listening to the audio.'}
+    require(len(ids) == len(set(ids)) and set(index) == set(ids), 'reference population missing or outside query IDs')
+    if groups is not None:
+        require({g['query_id'] for g in groups} == set(ids) and len(groups) == len(ids), 'original group population differs')
+        for g in groups:
+            require(json.loads(g['answer'])['gold_intent'] == index[g['query_id']]['original_label_feedback']['intent'],
+                    'reference label differs from original group label')
+    return index
+
+
 def verified_material(config):
     fields = {'schema', 'source', 'source_batch', 'parent', 'query_ids', 'actor_model_id',
               'teacher', 'template', 'stage_completion_caps', 'bounds', 'objectives', 'output_root'}
-    require(isinstance(config, dict) and set(config) in (fields, fields | {'psd_target'}, fields | {'psd_target','parent_binding'}, fields | {'p_only_binary'}) and config['schema'] == SCHEMA,
+    optional_reference = {'teacher_reference'} if isinstance(config, dict) and 'teacher_reference' in config else set()
+    require(isinstance(config, dict) and set(config) - optional_reference in (fields, fields | {'psd_target'}, fields | {'psd_target','parent_binding'}, fields | {'p_only_binary'}) and config['schema'] == SCHEMA,
             'exact reference job configuration required')
     p_only = config.get('p_only_binary') is True
+    require(not optional_reference or p_only, 'teacher reference is limited to P-only TF-GRPO')
+    if optional_reference:
+        checked(config['teacher']['research_prompt'])
     require('p_only_binary' not in config or p_only, 'explicit P binary mode required')
     if 'psd_target' in config:
         target = config['psd_target']
@@ -112,6 +148,9 @@ def verified_material(config):
                 require(hashlib.sha256(trajectory['scored_answer_after_fixed_normalization'].encode()).hexdigest()
                         == feedback['scored_answer_sha256'], 'source scored response digest differs')
         groups.append(copy.deepcopy(group))
+    if optional_reference:
+        require(set(originals) == set(ids) == set(projected), 'complete original population required for reference')
+        teacher_references(config['teacher_reference'], ids, groups)
     contrast = [g for g in groups if group_has_contrast(g['rollouts'], BINARY_REWARD if config.get('p_only_binary') else DENSE_REWARD)]
     counts = {'summary': sum(len(g['rollouts']) for g in contrast), 'advantage': len(contrast),
               'group_update': len(contrast), 'batch_update': int(bool(contrast))}
@@ -197,7 +236,8 @@ def execute(root, *, collect_only=False):
         require((root/'learner/candidate.json').is_file(), 'no completed reference candidate to collect')
     candidate = learner.learn(groups, parent, **config['objectives'], actor_model_id=config['actor_model_id'],
         policy_sha256=batch['policy_sha256'], rollout_kind=batch['rollout_kind'],
-        num_experiences=bounds['num_experiences'], reward_mode=BINARY_REWARD if config.get('p_only_binary') else DENSE_REWARD)
+        num_experiences=bounds['num_experiences'], reward_mode=BINARY_REWARD if config.get('p_only_binary') else DENSE_REWARD,
+        teacher_diagnostics=teacher_references(config['teacher_reference'], config['query_ids'], groups) if 'teacher_reference' in config else None)
     # Reconcile every complete reference contact against original provider wire.
     receipts = []
     for path in sorted((root/'learner/contacts').glob('*.intent.json')):
