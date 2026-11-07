@@ -1,0 +1,23 @@
+{
+  "scores_sha256": "01f9432a4945079507cd2b46676818bf6e82875becb55f512d78f8a390451857",
+  "samples": 1080,
+  "intent": 0.8490740740740741,
+  "slu": 0.7054795738787504,
+  "strict": 595,
+  "parsed": 1076,
+  "cost": {
+    "audio_seconds_used": 9315.901250000044,
+    "calls_used": 3260,
+    "completion_tokens_total": 4861246,
+    "latency_seconds_total": 666717.457502048,
+    "prompt_tokens_total": 35069077,
+    "tool_calls": 0,
+    "umbrella_lock_sha256": "61f3d111b7bed7dfc191358f2ce557efd824795cc3cdbb28f32761d8b2ee20df"
+  },
+  "identity_check": {
+    "passed": true,
+    "slu_f1_abs_diff": 0.0,
+    "span_f1_abs_diff": 0.0,
+    "tolerance": 1e-06
+  }
+}
