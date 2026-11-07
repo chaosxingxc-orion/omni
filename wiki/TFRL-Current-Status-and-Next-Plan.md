@@ -1,10 +1,10 @@
 # TFRL 当前任务状态与下一阶段计划
 
-观测窗口：2026-11-07 04:21–04:23 UTC（洛杉矶时间 11 月 6 日 20:21–20:23）。运行数字是快照，不是实时倒计时。
+观测窗口：2026-11-07 04:24–04:34 UTC（洛杉矶时间 11 月 6 日 20:24–20:34）。运行数字是快照，不是实时倒计时。
 
 ## 结论
 
-TFRL 的 CPU 工程基座已经具备继续准备的条件，但真实 NPU 轨迹采集还没有形成可运行的 successor 队列。现在不应重复加固已经可用的服务和队列框架；应把已有 K001/K002 的 held 资产通过正式配置入口登记为新的候选，完成准入后接入空闲的 B 实例。当前 8200/A 有负载，8202/B 服务健康但空闲，八卡尚未持续有效利用。
+TFRL 的 CPU 工程基座已经具备继续准备的条件，但真实 NPU 轨迹采集还没有形成可运行的 successor 队列。现在不应重复加固已经可用的服务和队列框架；应把已有 K001/K002 的 held 资产通过正式配置入口登记为新的候选，完成准入后接入空闲的 B 实例。紧凑 Slot 已生成完整 1080 条；A 的 Decision 后继于 04:30:42 UTC 经正式队列启动，当前尚在启动校验，未确认真实模型请求。B 服务健康但空闲，八卡尚未持续有效利用。
 
 ## 已完成进度
 
@@ -18,12 +18,13 @@ TFRL 的 CPU 工程基座已经具备继续准备的条件，但真实 NPU 轨�
 
 | 实验 | 资源与设置 | 进度 | 当前判断 |
 |---|---|---:|---|
-| A：紧凑 Slot 提示，P OFF / Slot ON / Decision ON | TP4，4 卡，客户端并发 64 | 1061/1080，98.24% | 04:22:58 checkpoint 核实 1061 个唯一完整样本；累计 11.02 秒/落盘条，余 19 条，线性估计约 3.5 分钟，尾部慢请求可能延长 |
+| A：紧凑 Slot 提示，P OFF / Slot ON / Decision ON | TP4，4 卡，客户端并发 64 | 1080/1080 | 04:24:41 observer 确认完整生成、3258 observed contacts、0 in-flight；generation-released 已产生，评分待正式验收 |
 | 已完成：紧凑 P 提示 | 原 4 卡 1 实例，已释放 | 1080/1080 | CPU score-ready；完整合法覆盖、官方指标与配对本轮未审，不能宣布收益 |
 | B：P 操作辨别提示 | 原 TP4，4 卡 | 583/1080，53.98% | 02:03:44 退出 1；后继 Slot 尚未启动，无有效 ETA |
 | ON K2 K001/K002 | 计划 B 实例执行 | 每成员 0/625，0 新模型调用 | 625 个独立样本、两次 rollout，共 1250 样本次；尚未准入 |
 | P thinking ON 对照 | CPU 准备，未占 NPU | 0/1080 | request-only 预算修复已合 main；fresh stage/prepare 完成，register 仍失败 |
-| C96 / Decision 条件证据 | A 后继 | 各 0/1080 | 现有 binder 等待前驱，不计作在跑实验 |
+| Decision 条件证据 | A，TP4，客户端并发64 | 0/1080 | 04:30:42 已正式启动容器，启动校验中；不能算有效推理负载 |
+| C96 | A 后继 | 0/1080 | binder 等待 Decision，不计作在跑实验 |
 
 04:21 服务快照：A 端 38 个请求运行、等待为 0，KV 使用约 29.43%；B 端服务当前运行和等待均为 0。当前没有证据证明八张卡都持续达到 AI Core 80%，因此不能把“两实例在线”表述为“八卡满载”。
 
@@ -31,7 +32,9 @@ TFRL 的 CPU 工程基座已经具备继续准备的条件，但真实 NPU 轨�
 
 已经具备的部分包括：固定镜像、外部配置启动、真实数据来源绑定、原生 FIT、断点文件、历史响应和成本留存、600 秒轮巡、CPU 评分与 NPU 生成解耦，以及 GEPA/ACE/Reflexion/TF-GRPO 的独立输入字段。
 
-当前 K2 的直接阻塞是执行注册与准入闭环：旧 ON 队列已经 `failed`，不能复用或盲目重发；共享 `flight.lock` 仍绑定旧 TF-GRPO 会话；K001/K002 的编译和阶段文件由 root 持有，当前 release 的可读 candidate/readiness/experiment 树尚未核实。原执行者报告注册包已生成，因此应先核对归档与隔离树，不能直接推断注册功能未实现。8202 的 resident preflight 已通过，问题不在服务本身，而在候选、来源、策略、checkpoint、runtime receipt、session 和 PID 的一致绑定。
+当前 K2 的直接工作是完成新候选准入和实际 B lane 的旧失败任务交接。04:30 后复核纠正了此前“B resident receipt 缺失”的判断：runtime/session receipt 已存在，旧原生 preflight 容器确实 exit0，绑定当前 B PID1397553/8202。旧报告只在 rails-preparation 目录寻找文件，遗漏实际 resident 目录。live profile 标签采用 canonical JSON SHA；两个文件仅 model_fragment 名称不同，推理几何相同，不能将 raw SHA 与 canonical SHA 直接混比。
+
+实际 B 运行使用 tp4-lane-merge 的 lane locks，并非此前引用的宿主全局 flight.lock。当前 lane lease 仍绑定失败 P 实验，需要核对1763个已观察响应后通过既有终态清算入口交接；不能删除锁或重放请求。独立 Terra CLI 正在执行这一任务，尚未交付成功的 K2 admission/queue，不能声明已启动。
 
 ## 需要决策的内容
 
@@ -102,3 +105,13 @@ P ON 的新阻塞是 register 报 `registered probe program, material or recover
 - TF-GRPO 等待同策略组内反馈；GEPA、ACE、Reflexion 可先准备各自模板和真实失败上下文。统一评估指标、开发集、父策略与成本账本，不强行共用不同算法的动态采样。教师通过本机外部 API，当前没有新教师结果可宣布。
 - C96 优先检验同策略吞吐，收益存在再推进 C128。当前 C96 候选为 OFF，不能拿其速度直接证明 ON 同比例加速；ON 若采用新并发需做同配置对照。关注有负载窗口的 AI Core 均值、tokens/s、样本吞吐和节点 P95，不能用结束阶段单点代替稳态结论。
 - 当前无需用户重复授权；工程接续不是研究决策。若出现稳定 SLU 收益但 Intent 明显退化，则提交配对错例、置信区间和成本差异再讨论取舍。LoRA 暂不进入本轮主线，全量测试待开发基线确定后执行。
+
+## 本轮实际执行与同步
+
+主线程收到紧凑 Slot 的 generation-released 后，通过既有 configured_job_queue once 触发 Decision 后继，启动容器 ecbd46b72571ed13255942dd3f924c0a5b056bc5a14c2dfd70632ae237b1cc79，04:30:42 UTC running。首次普通用户调用因0600配置无读取权限退出，随后用已有owner身份执行成功；未改文件权限、未跳过校验。
+
+Decision 启动耗时已定位：runtime build 18.75秒、prepared verification 71.34秒，随后实际进程在读取模型权重分片做校验。这是启动CPU/存储成本，不能混入模型推理耗时。当前不重启；后续应将可复用资产验证前移到占用实例前，且不凭缓存跳过真实身份核验。
+
+独立CLI并行任务：Terra负责B K2配置化激活；Sol负责紧凑P/Slot覆盖与正式配对分析。两者禁止协作子智能体及重复生成，必须交付完整文件。当前尚无新精度结论。
+
+GitHub SSH直连超时、HTTPS写入缺认证；复用本机已有SSH代理配置后main2fa2b1d6、Wiki fe569c7已推送成功。两仓已设置本地core.sshCommand复用该代理，避免以后重复排查或误报远端已同步。
