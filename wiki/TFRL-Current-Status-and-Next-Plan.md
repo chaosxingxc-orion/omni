@@ -1,6 +1,6 @@
 # TFRL 当前任务状态与下一阶段计划
 
-更新：2026-11-07 07:32 UTC。样本快照约07:26 UTC；状态分别核验，不混用两台主机的时区。
+更新：2026-11-07 07:41 UTC。样本快照约07:26 UTC；状态分别核验，不混用两台主机的时区。
 
 ## 当前结论
 
@@ -26,9 +26,9 @@ completeON 的节点请求平均耗时为 P 40.85秒、Slot 373.74秒、Decision
 |---|---|---|---|
 |A：Decision条件证据|Fold A1080；completeON父，只改Decision提示；4卡、C64|1001/1080检查点完整行（排除头部），继续生成|精度待完整评分；约10.4累计墙钟秒/条，余79条按累计速率约14分钟，尾部可能更慢|
 |B：同策略K2|固定construction625；ON、temperature0.7、seed1001/1002；4卡|K002完整127/625；K001已知87/625保留，排在K002生成释放后恢复|同题相对奖励所需轨迹，尚无算法收益；K002累计约25.5秒/完成条，仍含启动和准备，稳态ETA未知|
-|第三实例：旧P提示完整复跑|固定Fold A1080；4卡、C64，准备/校验8/8|0/1080、0模型调用；服务健康。v19缺D1媒体补充文件，已清算并补齐；新身份已prepare/register/admit；后台generation-v20已启动，仍在preflight，未核实真实请求|当前闲置是启动配置缺陷，不能解释为模型慢；原执行者负责完成|
+|第三实例：旧P提示完整复跑|固定Fold A1080；4卡、C64，准备/校验8/8|0/1080、0模型调用；服务健康。v19缺D1媒体补充文件，已清算并补齐；新身份已prepare/register/admit；后台generation-v20已启动并获得lease，InvokePrep请求准备持续等待；仍0 calls、检查点仅头部|当前闲置是启动配置缺陷，不能解释为模型慢；原执行者负责完成|
 |A后继：OFF C96、P thinking ON|分别只改并发、P思考配置；复用1080名单|既有binder等待上游真实生成释放|已有排队，不等CPU评分；尚无新收益|
-|远程教师候选|Reflexion Decision、Slot surface/rescan、ACE锁定卡说明；各Fold A1080|8份A/B配置已编译；4份A均已stage/prepare/register；Decision已admit exit0，后继队列配置中，其余准入接续中|7项固定镜像测试通过；无本地生成结果，不能宣称TFRL收益|
+|远程教师候选|Reflexion Decision、Slot surface/rescan、ACE锁定卡说明；各Fold A1080|8份A/B配置已编译；4份A均已stage/prepare/register；Decision已admit exit0，接续器状态waiting-container，等待K001 recovery；其余3个准入并行执行中|7项固定镜像测试通过；无本地生成结果，不能宣称TFRL收益|
 
 A/B及第三实例均为TP4 BF16、上下文65536、引擎最大序列128、调度token上限2048、显存比例0.92，prefix cache及多模态SHM缓存开启。C64/C96是客户端样本并发。第三实例硬件910B3，另两实例910B4-1；跨硬件速度不作为算法收益。
 
