@@ -1,0 +1,84 @@
+{
+  "observed_utc": "2026-11-07T08:32:53Z",
+  "a": {
+    "observed_utc": "2026-11-07T08:32:53.269759+00:00",
+    "run": "SAEA-SLURP-PSD-COMPLETE-COVERAGE-FOLD-A-SLOT-OFF-V1-C96-V1",
+    "complete": 471,
+    "keepable": 471,
+    "rows": 471,
+    "torn_tail_bytes": 0,
+    "checkpoint_sha": "942d635f2c5556a8fcf6aa1b29044b3329e8b93175c8e4da8a439b2ab8bc9b89",
+    "completed_row_cost": {
+      "audio_seconds": 3805.0998749999953,
+      "calls": 1418,
+      "completion_tokens": 970855,
+      "latency_seconds": 202485.55212573096,
+      "prompt_tokens": 14661250,
+      "tool_calls": 0
+    },
+    "attempt": {
+      "actual": {
+        "audio_seconds": 4483.444812500005,
+        "calls": 1664
+      },
+      "attempt_id": "generation-v1",
+      "carrier_lock_key": "slurp",
+      "reserved": {
+        "audio_seconds": 18508.0,
+        "calls": 6480
+      },
+      "run_id": "SAEA-SLURP-PSD-COMPLETE-COVERAGE-FOLD-A-SLOT-OFF-V1-C96-V1",
+      "schema": "saea-attempt-v1",
+      "state": "OPENED"
+    },
+    "total": 1080,
+    "seconds_per_completed": 6.149699660297239,
+    "provisional_eta_minutes": 62.41945155201698,
+    "cards": 4,
+    "instances": 1
+  },
+  "b": {
+    "observed_utc": "2026-11-07T08:32:52.587437+00:00",
+    "run": "SAEA-PSD-CONSTRUCTION-COMPLETE-ON-MINUS-R01-K2-K002",
+    "complete": 352,
+    "keepable": 352,
+    "rows": 352,
+    "torn_tail_bytes": 0,
+    "checkpoint_sha": "464f4c8ef96845c81350ad9bc3add26add69739940123c240fc494ce697582eb",
+    "completed_row_cost": {
+      "audio_seconds": 4397.255625000001,
+      "calls": 1060,
+      "completion_tokens": 1472206,
+      "latency_seconds": 103649.77684796049,
+      "prompt_tokens": 11003433,
+      "tool_calls": 0
+    },
+    "attempt": {
+      "actual": {
+        "audio_seconds": 4911.291999999999,
+        "calls": 1188
+      },
+      "attempt_id": "generation-v1",
+      "carrier_lock_key": "slurp",
+      "reserved": {
+        "audio_seconds": 16362.0,
+        "calls": 3750
+      },
+      "run_id": "SAEA-PSD-CONSTRUCTION-COMPLETE-ON-MINUS-R01-K2-K002",
+      "schema": "saea-attempt-v1",
+      "state": "OPENED"
+    },
+    "total": 625,
+    "seconds_per_completed": 20.617325414772726,
+    "provisional_eta_minutes": 93.80883063721589,
+    "cards": 4,
+    "instances": 1
+  },
+  "third": {
+    "complete": 0,
+    "total": 1080,
+    "calls": 0,
+    "status": "blocked-before-business-dispatch"
+  },
+  "tokens_scope": "completed checkpoint rows only; lower bound"
+}

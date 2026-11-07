@@ -1,14 +1,14 @@
 # 实验队列与异步接续
 
-当前三套TP4、12张授权卡。A/B真实运行，第三实例服务健康但实验启动受阻。详见[当前状态](TFRL-Current-Status-and-Next-Plan)。本页记录资源安排，未准入候选不称为可执行队列。
+更新：2026-11-07 08:35 UTC。三服务可用，两路真实生成；第三路0业务调用。详见[状态与计划](TFRL-Current-Status-and-Next-Plan)。
 
-|资源|正在执行|已配置/准备的后继|
+|资源|当前实测任务|接续状态|
 |---|---|---|
-|A|Decision条件证据，Fold A1080|OFF C96 → P thinking ON → 历史P排序，既有binder|
-|B|K002，同策略625|K001断点恢复，已绑定真实生成释放；其后Reflexion Decision → Slot surface → Slot rescan → ACE卡片说明正在注册排队|
-|第三实例|旧P任务启动配置修复；0模型调用|真实启动后完整1080；后续可分担已准备候选，必须先绑定实际runtime|
-|CPU|教师候选准备/注册、效率分析、官方评分|与生成异步，只有真实科学依赖阻挡对应下一候选|
+|A，TP4|OFF C96，471/1080|既有P thinking ON后继待真实handoff；Decision1080生成已完，CPU评分独立恢复|
+|B，TP4|ON K002，352/625|K001恢复已配置等待K002 release；Reflexion Decision binder等待K001 release|
+|第三实例，TP4|P任务0/1080；context准备约131秒/次|B175完整625由Codex子进程准备，尚无完整文件交付，不能称已入队|
+|CPU|结果评分、教师反馈、FIT配置验证、第三实例阻塞诊断|与NPU异步，不占生成lease做输入准备|
 
-运行使用configured_job_queue及现有auto-bind/handoff；不新造调度器。NPU租约前准备好输入与配置。接续依赖generation-released，不依赖CPU评分完成。各节点科学父单独记录，资源顺序不表示累加改动。固定Fold A/B各1080，construction625复用，不重抽样。
+surface、rescan、ACE三个教师候选均已准入，但最新交付明确held-before-queue；补齐真正队列是下一步。四个教师候选各自独立继承同一基线，资源执行顺序不代表叠加策略。
 
-TF-GRPO等待K2奖励；GEPA等待相应节点反馈；Reflexion/ACE第一批已用真实外部教师响应编译，可独立接入。Fold B只确认冻结候选。保留失败分母、断点、已知响应和全部成本；未知请求禁止盲重发。观测600秒或明确终态触发。
+只复用configured_job_queue及现有auto-bind/handoff；以真实generation-released交接，不等待CPU评分。TF-GRPO的组内奖励必须依赖K2有效轨迹，这是科学依赖；教师单节点候选无需等待无关评分。固定Fold A/B1080与construction625复用，未知请求不盲重发。观察600秒或终态。
