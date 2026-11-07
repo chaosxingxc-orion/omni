@@ -1100,6 +1100,11 @@ def _serving_geometry_max_tokens(values: Mapping) -> int | None:
     # A request-only output override governs both raw preflight and live
     # dispatch. Resolve it through the shared validator; unrelated overrides
     # retain the historical explicit-geometry precedence below.
+    node_ceiling = values.get("node_request_completion_ceiling")
+    if node_ceiling is not None:
+        from ..core.reasoning_knobs import validate_thinking_policy
+        validate_thinking_policy(values.get("thinking_policy"), values)
+        return node_ceiling
     overrides = values.get("request_decoding_overrides")
     if isinstance(overrides, Mapping) and "max_tokens" in overrides:
         from ..core.config import effective_request_decoding_params

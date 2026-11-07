@@ -493,3 +493,33 @@ def test_the_pinned_fork_source_still_carries_the_fields_this_harness_relies_on(
     assert "reasoning_budget_message" in common and "reasoning_budget_message" in schema, "budget message forwarded to the sampler"
     assert rk.BUDGET_MESSAGE_FLAG in arg, "server flag --reasoning-budget-message"
     assert "--reasoning-budget" in arg and "--reasoning-format" in arg
+
+
+def test_explicit_node_ceiling_composes_and_preserves_model_identity(tmp_path):
+    model = thinking_fragment(server_args=['--max-model-len', '65536'], forced_close_message_sha256=None)
+    # Use the ordinary validated fixture's budget-message server args plus context.
+    model = thinking_fragment(server_args=thinking_fragment()['server_args'] + ['--max-model-len', '65536'])
+    policy = {'perception': {'enable_thinking': True, 'reasoning_budget_tokens': 3072, 'answer_reserve_tokens': 4096},
+              'slot': {'enable_thinking': True, 'reasoning_budget_tokens': 3072, 'answer_reserve_tokens': 1024},
+              'solver': {'enable_thinking': True, 'reasoning_budget_tokens': 3072, 'answer_reserve_tokens': 1024}}
+    with pytest.raises(ConfigError, match='geometry cap'):
+        _compose(tmp_path / 'refused', model, baseline={'thinking_policy': policy})
+    values = _compose(tmp_path / 'accepted', model, baseline={'thinking_policy': policy, 'node_request_completion_ceiling': 7168}).values
+    assert values['decoding_params']['max_tokens'] == 4096
+    assert rk.resolve_node_decoding(values['decoding_params'], policy, 'perception')['max_tokens'] == 7168
+    assert rk.resolve_node_decoding(values['decoding_params'], policy, 'slot')['max_tokens'] == 4096
+    assert rk.resolve_node_decoding(values['decoding_params'], policy, 'solver')['max_tokens'] == 4096
+    from speech_aware_evidence_acquisition.rails.native_episode_config import _serving_geometry_max_tokens
+    assert _serving_geometry_max_tokens(values) == 7168
+    from types import SimpleNamespace
+    from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntime
+    stub = SimpleNamespace(_composed=SimpleNamespace(values=values), _adapter=SimpleNamespace(serving_geometry=lambda: {'max_tokens': 4096}))
+    assert FlightRuntime._completion_token_ceiling(stub) == 7168
+
+
+@pytest.mark.parametrize('ceiling', [0, -1, True, 7167, 65536, '7168'])
+def test_explicit_node_ceiling_refuses_invalid_or_inadequate_values(tmp_path, ceiling):
+    model = thinking_fragment(server_args=thinking_fragment()['server_args'] + ['--max-model-len', '65536'])
+    policy = {'perception': {'enable_thinking': True, 'reasoning_budget_tokens': 3072, 'answer_reserve_tokens': 4096}}
+    with pytest.raises(ConfigError):
+        _compose(tmp_path, model, baseline={'thinking_policy': policy, 'node_request_completion_ceiling': ceiling})

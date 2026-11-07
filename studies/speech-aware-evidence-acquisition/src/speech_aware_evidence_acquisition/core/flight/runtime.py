@@ -6995,6 +6995,11 @@ class FlightRuntime:
 
     def _completion_token_ceiling(self) -> int:
         """Return the configured request cap used by preflight and fitting."""
+        ceiling = self._composed.values.get("node_request_completion_ceiling")
+        if ceiling is not None:
+            from ..reasoning_knobs import validate_thinking_policy
+            validate_thinking_policy(self._composed.values.get("thinking_policy"), self._composed.values)
+            return max(ceiling, int(self._adapter.serving_geometry()["max_tokens"]))
         override = self._composed.values.get("request_decoding_overrides")
         if override is None:
             return int(self._adapter.serving_geometry()["max_tokens"])

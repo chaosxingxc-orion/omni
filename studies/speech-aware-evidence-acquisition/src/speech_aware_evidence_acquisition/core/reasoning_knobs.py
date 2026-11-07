@@ -286,6 +286,8 @@ def validate_thinking_policy(policy: object, values: Mapping[str, object]) -> No
     """Validate a ``thinking_policy`` map against the composed config. ``None`` is absent."""
 
     if policy is None:
+        if values.get("node_request_completion_ceiling") is not None:
+            raise ReasoningKnobError("node request ceiling requires an explicit thinking policy")
         return
     if not isinstance(policy, Mapping) or not policy:
         raise ReasoningKnobError("thinking_policy must be a non-empty mapping of node id to override")
@@ -293,6 +295,22 @@ def validate_thinking_policy(policy: object, values: Mapping[str, object]) -> No
         raise ReasoningKnobError("thinking_policy is valid only on a reasoning fragment (reasoning_content_guard)")
     decoding = values.get("decoding_params")
     base_cap = decoding.get("max_tokens") if isinstance(decoding, Mapping) else None
+    declared_ceiling = values.get("node_request_completion_ceiling")
+    if declared_ceiling is not None:
+        declared_ceiling = _int(declared_ceiling, "node_request_completion_ceiling", minimum=1)
+        context = values.get("serving_slot_tokens")
+        if context is None:
+            args = values.get("server_args", ())
+            if isinstance(args, (list, tuple)) and args.count("--max-model-len") == 1:
+                try:
+                    context = int(args[args.index("--max-model-len") + 1])
+                except (ValueError, IndexError, TypeError):
+                    raise ReasoningKnobError("invalid model context capacity") from None
+        if isinstance(context, bool) or not isinstance(context, int) or declared_ceiling >= context:
+            raise ReasoningKnobError("node request ceiling must be below the explicit context capacity")
+        if not policy:
+            raise ReasoningKnobError("node request ceiling requires an explicit thinking policy")
+        base_cap = declared_ceiling
     base_cap = _int(base_cap, "decoding_params.max_tokens", minimum=1) if base_cap is not None else None
     folded = fold_into_decoding(values)
     base = dict((folded or values).get("decoding_params") or {}) if isinstance((folded or values).get("decoding_params"), Mapping) else {}

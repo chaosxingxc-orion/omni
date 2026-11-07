@@ -24,7 +24,7 @@ class NodeWorkload(PairWorkload):
         return super().contact_budgets()
     def __init__(self,config):
         fields={'schema','name','run_id','sample_ids','runtime_binding','execution','material','node_arm'}
-        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding','slot_locked_visibility'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
+        if not fields <= set(config) <= fields | {'population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding','slot_locked_visibility','node_request_completion_ceiling'} or config['schema']!=SCHEMA or config['node_arm'] not in ARMS:
             raise ValueError('exact native node workload required')
         if 'collection_decoding' in config:
             from speech_aware_evidence_acquisition.core.config import ConfigError, effective_request_decoding_params
@@ -71,13 +71,15 @@ class NodeWorkload(PairWorkload):
             raise ValueError('explicit supported v2 SDK pipeline required')
         if 'tfgrpo_experience' in config and (pipeline is None or not config.get('population')):
             raise ValueError('TF-GRPO experience requires a fixed fold and v2 SDK pipeline')
+        if 'node_request_completion_ceiling' in config and (pipeline is None or not config.get('population') or type(config['node_request_completion_ceiling']) is not int or config['node_request_completion_ceiling'] < 1):
+            raise ValueError('explicit positive node request ceiling requires fixed native fold')
         if 'slot_locked_visibility' in config and (config['slot_locked_visibility'] != {'policy':'all-released-v1','max_values':54,'snapshot_sha256':'e035c1b827b10cb711c7c31d345deb5e668489679b0d3979acfc95427f6e2a5e'} or pipeline is None or not config.get('population') or 'slot_knowledge' in config):
             raise ValueError('locked Slot visibility requires the fixed v2 fold and supported policy')
         if 'slot_knowledge' in config and (pipeline is None or not config.get('population')):
             raise ValueError('slot knowledge requires a fixed fold and v2 SDK pipeline')
         if 'decision_policy' in config and pipeline is None:
             raise ValueError('Decision policy requires explicit v2 SDK pipeline')
-        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding','slot_locked_visibility')})
+        super().__init__({k:v for k,v in {**config,'schema':'saea-gepa-pair-workload-v1'}.items() if k not in ('node_arm','population','perception_policy','slot_policy','decision_policy','pipeline','slot_knowledge','tfgrpo_experience','collection_decoding','slot_locked_visibility','node_request_completion_ceiling')})
         if not config.get('population') and (len(config['sample_ids'])!=80 or config['sample_ids']!=sorted(config['sample_ids'])):
             raise ValueError('historical stable development80 required')
         if config.get('population'):
@@ -216,7 +218,9 @@ class NodeWorkload(PairWorkload):
             from psd_tfgrpo_adapter import apply as apply_tfgrpo
             base=apply_tfgrpo(base, repo, data, self.config['tfgrpo_experience'], self.config['sample_ids'], checked['view'], binding['model_fragment'])
         model=read_asset(repo,f"configs/model/{binding['model_fragment']}.json")
-        validate_thinking_policy(base['thinking_policy'],model)
+        if 'node_request_completion_ceiling' in self.config:
+            base['node_request_completion_ceiling'] = self.config['node_request_completion_ceiling']
+        validate_thinking_policy(base['thinking_policy'], {**model, **({'node_request_completion_ceiling': self.config['node_request_completion_ceiling']} if 'node_request_completion_ceiling' in self.config else {})})
         slot=int(model['server_args'][model['server_args'].index('--max-model-len')+1])
         base.pop('prepared_phase_supply',None);base['serving_slot_tokens']=slot
         base['native_contact_fit'].update(run_id=self.RUN+'-FIT',attempt_id='fit-v1',contact_cap=self.CONTACTS*self.ROWS)

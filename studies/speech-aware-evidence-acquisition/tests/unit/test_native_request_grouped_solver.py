@@ -213,3 +213,23 @@ def test_samples_one_ungrouped_adapter_is_unaffected(tmp_path):
     decoding = prepared.rendered_body()["decoding_params"]
     assert "seed" not in decoding
     assert prepared.sample_index is None
+
+
+def test_node_budget_reaches_native_request_without_changing_other_role(tmp_path):
+    world = _World(tmp_path)
+    feature_root, packet, bindings = _speech_feature_world(world, tmp_path)
+    client, _gate, _transport = _client(world, tmp_path, arm='speech-feature-query-native-tools',
+        tool_schemas=_TOOLS, speech_feature_root=feature_root, speech_packet_bindings=bindings)
+    for role, expected in [('perception', 7168), ('slot', 4096), ('solver', 4096)]:
+        binding = _binding(role_id=role, packet=packet)
+        binding.core_kwargs['decoding_params'].update(max_tokens=4096, thinking_budget_tokens=3072,
+            chat_template_kwargs={'enable_thinking': True})
+        policy = {role: {'enable_thinking': True, 'reasoning_budget_tokens': 3072,
+                         'answer_reserve_tokens': 4096 if role == 'perception' else 1024}}
+        adapter = MeteredNativeSpeechRequest(client=client, binding_provider=lambda _request: binding,
+            render_request=lambda payload: json.loads(payload), completion_sink=lambda *_: None,
+            role_thinking_policy=policy)
+        request = _role_request(role_id=role, contact_id='contact-' + role)
+        decoding = adapter.prepare(request).rendered_body()['decoding_params']
+        assert decoding['max_tokens'] == expected
+        assert decoding['thinking_budget_tokens'] == 3072
