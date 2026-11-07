@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T15:08:58.988667+00:00",
+  "updated_at_utc": "2026-11-07T15:35:21.727974+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -16,7 +16,7 @@
       "id": "P-runtime",
       "resource": "CPU",
       "depends_on": [],
-      "status": "node_seal_verified_normal_FIT_resume_fix_in_progress",
+      "status": "merged_main_dcbc2a5c_fixed_image_133_tests_passed_release_ready",
       "owner": "Terra CLI",
       "acceptance": [
         "native_P_only",
@@ -511,7 +511,7 @@
       "id": "P-production-queue-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "active_configuration_and_admission_preparation",
+      "status": "parent1080_registered_B_activation_and_AC_prompt_activation_in_parallel",
       "owner": "Terra CLI",
       "scope": "Reuse prepared parent1080; compile executable parent/GEPA3/Reflexionc1c2/supply12/16 queue. Final release required only for dispatch."
     },
@@ -519,7 +519,7 @@
       "id": "A-PON-final-score",
       "resource": "CPU",
       "depends_on": [],
-      "status": "generation1080_complete_official_CPU_score_failed_recovery_in_progress",
+      "status": "offline_official_score1080_complete_original_failure_preserved_lease_released",
       "owner": "Sol CLI",
       "new_model_calls": 0
     }
