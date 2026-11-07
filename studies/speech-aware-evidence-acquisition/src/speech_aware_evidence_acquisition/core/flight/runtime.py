@@ -267,6 +267,28 @@ TOOL_FREE_NATIVE_ARMS = frozenset({
 })
 
 
+def _node_scientific_identity(values: Mapping[str, object]) -> str:
+    """Bind P inputs while excluding explicitly operational attempt controls."""
+    import copy
+
+    scientific = copy.deepcopy(dict(values))
+    # These two fields identify the overlay file and dispatch scheduling; the
+    # actual request pipeline, cache and FIT settings remain part of the pin.
+    scientific.pop("runtime_config_identity", None)
+    scientific.pop("dispatch", None)
+    fit = scientific.get("native_contact_fit")
+    if isinstance(fit, dict):
+        fit.pop("run_id", None)
+        fit.pop("attempt_id", None)
+    cells = scientific.get("cells")
+    if isinstance(cells, list):
+        for cell in cells:
+            if isinstance(cell, dict):
+                for key in ("attempt_id", "resume_from", "checkpoint_compatibility"):
+                    cell.pop(key, None)
+    return hashlib.sha256(json.dumps(scientific, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
+
+
 def tool_free_native_arm(arm: object, baseline_values) -> bool:
     """True when ``arm`` is a native-tools arm and the baseline declares no
     ``phase_tools``: the episode has no role with tool authority, so the
@@ -2008,6 +2030,9 @@ class FlightRuntime:
         """
 
         declarations = self._resume_declarations
+        if values.get("native_episode", {}).get("perception_only") and any(
+                declaration.mode != "checkpoint" for declaration in declarations):
+            raise FlightRuntimeError("perception node recovery requires durable row checkpoints")
         policy = values.get("policy")
         needs_native = any(declaration.mode == "trace" for declaration in declarations)
         if (
@@ -2046,6 +2071,7 @@ class FlightRuntime:
             except CheckpointCompatibilityError as error:
                 raise FlightRuntimeError(str(error)) from error
         proofs = {}
+        self._checkpoint_fit_lineage = {}
         for declaration in declarations:
             attempt_dir = self._predecessor_attempt_dir(declaration.attempt_id)
             try:
@@ -2054,7 +2080,8 @@ class FlightRuntime:
                     # durable (core.row_checkpoint); keep what it made durable.
                     # The kept rows' trace is materialized under THIS attempt's
                     # directory, never in the predecessor's.
-                    protocol = self._plan.protocol_hash
+                    node_mode = bool(values.get("native_episode", {}).get("perception_only"))
+                    protocol = None if node_mode else self._plan.protocol_hash
                     implementation = self.row_checkpoint_implementation()
                     compatibility = getattr(self, "_checkpoint_compatibility", None)
                     if isinstance(compatibility, MultiCheckpointCompatibility):
@@ -2095,7 +2122,11 @@ class FlightRuntime:
                         protocol_hash=protocol,
                         split_identity_hash=self._plan.split_identity_hash,
                         implementation=implementation,
+                        node_config_hash=(self._node_checkpoint_identity()
+                            if node_mode else None),
                     )
+                    if node_mode:
+                        self._checkpoint_fit_lineage[declaration.attempt_id] = self._audit_node_checkpoint_custody(declaration.attempt_id, predecessor)
                 else:
                     predecessor = read_predecessor_attempt(
                         run_id=self._run_id,
@@ -2131,6 +2162,14 @@ class FlightRuntime:
         except ResumeRecoveryError as error:
             raise FlightRuntimeError(str(error)) from error
         kept = set(merged.complete_sample_ids)
+        seen_fit = {}
+        for lineage in self._checkpoint_fit_lineage.values():
+            for item in lineage['fits']:
+                key = tuple(item['key'])
+                previous = seen_fit.get(key)
+                if previous is not None and previous != item['custody_sha256']:
+                    raise FlightRuntimeError('checkpoint predecessors contain conflicting FIT custody')
+                seen_fit[key] = item['custody_sha256']
         self._resume = merged
         self._resume_flown_sample_ids = tuple(
             sample_id for sample_id in roster if sample_id not in kept
@@ -2141,6 +2180,18 @@ class FlightRuntime:
         # refusal is retired: it is exactly the case a seal-only completion
         # exists to serve).
         self._seal_only = not self._resume_flown_sample_ids
+        if self._checkpoint_fit_lineage:
+            from ..atomic_file import publish_new
+            from ..contact_journal import canonical
+            lineage_path = self._run_dir() / 'checkpoint-fit-lineage.json'
+            lineage_path.parent.mkdir(parents=True, exist_ok=True)
+            lineage_bytes = canonical({'schema': 'saea-checkpoint-fit-lineage-v1',
+                'run_id': self._run_id, 'predecessors': self._checkpoint_fit_lineage})
+            if lineage_path.exists():
+                if lineage_path.read_bytes() != lineage_bytes:
+                    raise FlightRuntimeError('checkpoint FIT lineage already differs')
+            else:
+                publish_new(lineage_path, lineage_bytes)
         partial = tuple(
             sample_id
             for sample_id in self._resume_flown_sample_ids
@@ -2160,6 +2211,8 @@ class FlightRuntime:
                         "mode": "checkpoint",
                         "checkpoint_path": str(predecessor.checkpoint_path),
                         "checkpoint_sha256": predecessor.checkpoint_sha256,
+                        **({"native_fit_lineage": self._checkpoint_fit_lineage[predecessor.attempt_id]}
+                           if self._checkpoint_fit_lineage.get(predecessor.attempt_id) else {}),
                     }
                     if getattr(predecessor, "mode", None) == "checkpoint" else {}
                 ),
@@ -5429,6 +5482,8 @@ class FlightRuntime:
             raise FlightStageOrderError(
                 "result kind is unavailable before config composition"
             )
+        if self._composed.values.get("native_episode", {}).get("perception_only"):
+            return "node"
         return str(self._composed.values.get("result_kind", "task-answer"))
 
     def uses_speech_feature_packets(self) -> bool:
@@ -7779,6 +7834,8 @@ class FlightRuntime:
                 "phase": phase_id,
                 "sample_id": result.sample_id,
                 "final_response_text": getattr(result, "final_response_text", None),
+                **({"node_outcome": dict(result.node_outcome)}
+                   if getattr(result, "node_outcome", None) is not None else {}),
                 # Item E4 fix: includes a relisten receipt's own spend (see
                 # _result_contact_count) -- this field previously undercounted
                 # a relisten-armed row by its blind/confirm contacts.
@@ -8799,15 +8856,20 @@ class FlightRuntime:
                 native_fit_gate.receipts = []
             else:
                 from .native_recovery import native_contact_custody_enabled
-                if native_contact_custody_enabled(self._composed.values, allow_fresh_normalized=True):
+                if (native_contact_custody_enabled(self._composed.values, allow_fresh_normalized=True)
+                        or self._composed.values.get('native_episode', {}).get('perception_only')):
                     from ..native_fit_recovery import RecoverableNativeFitGate
                     native_fit_gate = RecoverableNativeFitGate(
                         self, plan,
                         lambda: self._build_native_contact_fit_gate(program, plan),
                         replay=getattr(self, '_native_contact_replay', None),
+                        checkpoint_fits=list({tuple(item['key']): item
+                            for lineage in getattr(self, '_checkpoint_fit_lineage', {}).values()
+                            for item in lineage['fits'] if not item['generation_complete']}.values()),
                     )
                 else:
                     native_fit_gate = self._build_native_contact_fit_gate(program, plan)
+            self._active_node_fit_gate = native_fit_gate
             # Same-flight instrument, PHASE 2 (merge set C): the Perception
             # branch group's own pre-flight, whole-roster seed. None --
             # and therefore byte-identical to the pre-phase-2 tree -- unless
@@ -9079,7 +9141,7 @@ class FlightRuntime:
                         bootstrap_value_ids=value_seed.get(
                             program.phase_names()[0], ()
                         ),
-                        result_kind=self._result_kind(),
+                        result_kind=("task-answer" if self._result_kind() == "node" else self._result_kind()),
                         **live_options,
                         **source_options,
                     ),
@@ -9102,7 +9164,7 @@ class FlightRuntime:
                     review_for_phase=review_for_phase,
                     bootstrap_facet_ids_by_phase=facet_seed,
                     bootstrap_value_ids_by_phase=value_seed,
-                    result_kind=self._result_kind(),
+                    result_kind=("task-answer" if self._result_kind() == "node" else self._result_kind()),
                     **source_options,
                 )
             if review_specs:
@@ -12377,6 +12439,175 @@ class FlightRuntime:
             "row_checkpoint": _sha256_file(Path(_format.__file__)),
         }
 
+    def _audit_node_checkpoint_custody(self, attempt_id, predecessor):
+        """Never reissue a contacted P row missing its durable checkpoint."""
+        from ..contact_journal import ContactJournal, ContactJournalError
+
+        root = self._data_root / "contact-journals" / self._run_id / attempt_id
+        if not root.is_dir():
+            raise FlightRuntimeError("node checkpoint recovery requires predecessor contact journal")
+        if (root / 'retirement.json').exists():
+            raise FlightRuntimeError('retired node predecessor cannot be resumed')
+        intents = sorted(root.glob("*.intent.json"))
+        stems = {p.name.removesuffix(".intent.json") for p in intents}
+        for path in root.glob("*.json"):
+            if path.name == "retirement.json":
+                raise FlightRuntimeError("retired node predecessor cannot be resumed")
+            if path.name.endswith('.fit.json'):
+                continue  # FIT custody is retained at its original path.
+            if not any(path.name == f"{stem}.{kind}.json" for stem in stems
+                       for kind in ("intent", "response", "dispatch", "not_sent", "reconciliation")):
+                raise FlightRuntimeError(f"node predecessor has orphan or unrecognized contact custody: {path.name}")
+        kept = set(predecessor.complete_sample_ids)
+        by_sample = {}
+        for path in intents:
+            try:
+                record = json.loads(path.read_bytes())
+                identity = record["identity"]
+                if (identity["run_id"] != self._run_id or identity["attempt_id"] != attempt_id
+                        or identity["arm"] != self._arm() or identity["split_identity_hash"] != self._plan.split_identity_hash):
+                    raise ValueError("contact identity differs")
+                journal = object.__new__(ContactJournal)
+                journal.root, journal.identity = root, identity
+                rid = record["request_id"]
+                if path != journal._path(rid, "intent"):
+                    raise ValueError("contact filename differs")
+                observed = journal.inspect(rid)
+                sid = observed["intent"]["sample_id"]
+                if observed["state"] == "unknown":
+                    raise ValueError("unknown contact outcome")
+                if observed["state"] == "observed":
+                    by_sample.setdefault(sid, {})[rid] = observed
+            except (OSError, ValueError, KeyError, TypeError, ContactJournalError) as error:
+                raise FlightRuntimeError(f"node predecessor custody requires reconciliation: {error}") from error
+        for sid, contacts in by_sample.items():
+            if sid not in kept:
+                raise FlightRuntimeError(f"node sample {sid!r} has known contacts without a complete row; reconcile before retry")
+            row = predecessor.canonical[sid][0]
+            receipt = row.get("node_outcome", {}).get("node_receipt", {})
+            recorded = {c.get("request_id") for c in receipt.get("contacts", []) if isinstance(c, Mapping)}
+            if set(contacts) != recorded:
+                raise FlightRuntimeError(f"node sample {sid!r} journal and checkpoint contacts differ")
+            for contact in receipt['contacts']:
+                observed = contacts[contact['request_id']]
+                if (contact.get('request_sha256') != observed['intent']['request_sha256']
+                        or contact.get('response_sha256') != observed['response']['response_sha256']):
+                    raise FlightRuntimeError(f"node sample {sid!r} journal and checkpoint bytes differ")
+        if kept != set(by_sample):
+            raise FlightRuntimeError("node checkpoint rows lack complete journal custody")
+        # FIT may precede generation. Validate the same original artifact and
+        # endpoint accounting used by native contact recovery; pin every source
+        # before either preserving a row or considering a new request.
+        from types import SimpleNamespace
+        from ..native_fit_recovery import RecoverableNativeFitGate
+        from ..contact_journal import canonical, comparable_request, digest, logical_contact
+        from ..preparation import PreparationError
+
+        inherited_pins = {pin['path']: pin['sha256'] for pins in predecessor.fit_pins.values() for pin in pins}
+        paths = sorted(set(root.glob('*.fit.json')) | {Path(p) for p in inherited_pins})
+        verifier = object.__new__(RecoverableNativeFitGate)
+        verifier.runtime = self
+        verifier.receipts = []
+        verifier.fit_pins_by_sample = {}
+        import threading
+        verifier._lock = threading.Lock()
+        fits, artifact_journals, keys = [], set(), set()
+        for path in paths:
+            try:
+                blob = path.read_bytes()
+                document = json.loads(blob)
+                payload = document['payload']
+                logical = logical_contact(payload)
+                key = (logical['sample_id'], logical['agent_contact_id'])
+                identity = document['identity']
+                if (identity['run_id'] != self._run_id
+                        or (identity['attempt_id'] != attempt_id and str(path) not in inherited_pins)
+                        or (str(path) in inherited_pins and digest(blob) != inherited_pins[str(path)])
+                        or path.resolve().parent != (self._data_root / 'contact-journals' / self._run_id / identity['attempt_id']).resolve()
+                        or identity['arm'] != self._arm()
+                        or identity['split_identity_hash'] != self._plan.split_identity_hash
+                        or path.name != digest(canonical(comparable_request(payload))) + '.fit.json'
+                        or key in keys):
+                    raise ValueError('FIT custody identity differs')
+                source = SimpleNamespace(contacts=SimpleNamespace(identity=identity),
+                                         path=lambda original: path)
+                pin = digest(blob)
+                verifier._reuse(path, payload, None, check_lease=False, source=source, pin=pin, checkpoint=True)
+                receipt = verifier.receipts[-1]
+                reuse = receipt['native_fit_reuse']
+                artifact_journals.add(Path(reuse['endpoint_journal_path']).resolve())
+                if key[0] in kept:
+                    matched = [v for v in by_sample[key[0]].values()
+                               if logical_contact(v['intent']['payload']) == logical]
+                    if not matched or not any(comparable_request(v['intent']['payload']) == comparable_request(payload)
+                                              for v in matched):
+                        raise ValueError('FIT and checkpoint generation request differ')
+                keys.add(key)
+                fits.append({'key': list(key), 'identity': identity,
+                    'custody_path': str(path), 'custody_sha256': pin,
+                    'artifact_path': receipt['path'], 'artifact_sha256': receipt['sha256'],
+                    'endpoint_journal_path': reuse['endpoint_journal_path'],
+                    'endpoint_journal_sha256': reuse['endpoint_journal_sha256'],
+                    'fit_plan': reuse['fit_plan'], 'accounting': reuse['accounting'],
+                    'generation_complete': key[0] in kept})
+            except (OSError, ValueError, KeyError, TypeError, PreparationError) as error:
+                raise FlightRuntimeError(f'node predecessor FIT custody requires reconciliation: {error}') from error
+        for sid, pins in predecessor.fit_pins.items():
+            for pin in pins:
+                if not any(item['custody_path'] == pin.get('path') and item['custody_sha256'] == pin.get('sha256')
+                           and item['key'][0] == sid for item in fits):
+                    raise FlightRuntimeError('node checkpoint FIT pin changed or missing')
+        fit = self._composed.values.get('native_contact_fit')
+        fit_roots = {p.parent for p in artifact_journals}
+        if isinstance(fit, Mapping):
+            fit_roots.add(self._data_root / 'prepared' / str(fit['run_id']) / str(fit['attempt_id']))
+        for fit_root in fit_roots:
+            for journal in fit_root.glob('*.request-fit.json.contacts.jsonl'):
+                if journal.resolve() not in artifact_journals:
+                    raise FlightRuntimeError('unknown predecessor FIT endpoint outcome; preserve journal and do not retry')
+        return {'fits': fits, 'endpoint_contacts': sum(x['accounting']['endpoint_contacts'] for x in fits)}
+
+    def node_checkpoint_fit_inputs(self, payloads, original, document):
+        """Rebuild the source FIT config using its recorded operational IDs."""
+        import copy
+        from ..preparation import artifact_inputs
+
+        current = self.request_fit_inputs(payloads)
+        context = self.preparation_context()
+        values = copy.deepcopy(context['values'])
+        source_spec = document.get('fit_spec')
+        if source_spec is not None:
+            values['native_contact_fit'] = copy.deepcopy(source_spec)
+        else:
+            fit_plan = json.loads(Path(document['receipt']['path']).read_bytes())['inputs']['fit_plan']
+            fit = values.get('native_contact_fit')
+            if isinstance(fit, dict):
+                fit['run_id'], fit['attempt_id'] = fit_plan['run_id'], fit_plan['attempt_id']
+        return artifact_inputs(config=values, split_identity_hash=context['split_identity_hash'],
+                               sources=current['sources'])
+
+    def _node_checkpoint_identity(self) -> str:
+        """Bind recovery to scientific values, template bytes and audio pins."""
+        from ..experiment_assets import resolve_asset
+
+        values = self._composed.values
+        templates = {}
+        phase = values.get("phase_material", {}).get("perception", {})
+        names = [phase.get("instruction_template"), values.get("task_instruction_template")]
+        for name in names:
+            if name:
+                path = resolve_asset(self._repo_root, "configs/" + name)
+                templates[name] = _sha256_file(path)
+        audio = {}
+        for sample in self._samples:
+            ref = getattr(sample, "audio_ref", None)
+            if ref is not None:
+                audio[sample.sample_id] = {"path": ref.path, "sha256": ref.sha256}
+        identity = {"values": _node_scientific_identity(values),
+                    "templates": templates, "audio": audio}
+        return hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":"),
+                                         ensure_ascii=False).encode()).hexdigest()
+
     def _attach_row_checkpoint(
         self, sink: object, client: object, plan: ExecutionPlan, program: object,
         policy: str, *, model_free_check: bool,
@@ -12408,6 +12639,8 @@ class FlightRuntime:
                     "protocol_hash": plan.protocol_hash,
                     "split_identity_hash": plan.split_identity_hash,
                     "config_hash": getattr(self._composed, "config_hash", None),
+                    **({"node_scientific_hash": self._node_checkpoint_identity()}
+                       if self._composed.values.get("native_episode", {}).get("perception_only") else {}),
                     "policy": policy,
                     "implementation": dict(self.row_checkpoint_implementation()),
                 },
@@ -12456,6 +12689,7 @@ class FlightRuntime:
                 solver_group=getattr(outcome, "solver_group", None),
                 supply_variants=getattr(outcome, "supply_variants", None),
                 relisten=getattr(outcome, "relisten", None),
+                node_outcome=getattr(outcome, "node_outcome", None),
                 initial_query_state=outcome.prepared.initial_query_state,
                 final_query_state=outcome.final_query_state,
             )
@@ -12471,12 +12705,15 @@ class FlightRuntime:
         except Exception as error:  # noqa: BLE001 -- recorded, never swallowed silently
             rendered = []
             reason = f"{type(error).__name__}: {error}"[:600]
+        gate = getattr(self, '_active_node_fit_gate', None)
+        fit_pins = list(getattr(gate, 'fit_pins_by_sample', {}).get(sample_id, ()))
         self._row_checkpoint_writer.append_row(
             sample_id=sample_id,
             complete=reason is None,
             output_rows=rendered,
             trace_lines=serialize_trace_records(trace_records),
             reason=reason,
+            fit_pins=fit_pins,
         )
 
     def _seal_row_checkpoint(self, canonical_rows) -> Mapping[str, object] | None:
@@ -12614,6 +12851,28 @@ class FlightRuntime:
         rows: list[Mapping[str, object]] = []
         for row in output_rows:
             sample_id = str(row.get("sample_id"))
+            node = row.get("node_outcome")
+            if node is not None:
+                if (not self._composed.values.get("native_episode", {}).get("perception_only")
+                        or not isinstance(node, Mapping) or node.get("stage") != "perception"
+                        or node.get("sample_id") != sample_id):
+                    raise FlightRuntimeError("undeclared or mismatched perception node outcome")
+                contact = node.get("node_receipt", {}).get("final_contact", {})
+                timing = timing_by_request.get(contact.get("request_id"))
+                response = node.get("response")
+                if (timing is None or timing.sample_id != sample_id or not isinstance(response, str)
+                        or any(getattr(timing, key, None) != contact.get(key) for key in
+                               ("request_sha256", "response_sha256", "response_text_sha256"))
+                        or hashlib.sha256(response.encode("utf-8")).hexdigest() != timing.response_text_sha256):
+                    raise FlightRuntimeError("node outcome differs from recorded contact")
+                rows.append({"request_id": timing.request_id, "sample_id": sample_id,
+                             "carrier_lock_key": self._plan.carrier_lock_key,
+                             "arm": arm, "text": response, "admitted": True,
+                             "request_sha256": timing.request_sha256,
+                             "response_sha256": timing.response_sha256,
+                             "response_text_sha256": timing.response_text_sha256,
+                             "result_kind": "node", "node_outcome": dict(node)})
+                continue
             # The Earnings/obs dispatch reads its rows back from the obs
             # driver's own sealed outputs, which ARE this contract's field
             # set: the three hashes there are the STITCH descriptors the obs
@@ -13667,7 +13926,10 @@ class FlightRuntime:
                             "final_response_sha256": hashlib.sha256(
                                 result.final_response_text.encode("utf-8")
                             ).hexdigest(),
-                            "native_episode_receipt": dict(result.native_episode_receipt),
+                            "native_episode_receipt": (dict(result.native_episode_receipt)
+                                                       if result.native_episode_receipt is not None else None),
+                            **({"node_outcome": dict(result.node_outcome)}
+                               if result.node_outcome is not None else {}),
                             "consumption": None,
                             **(
                                 {"solver_group": dict(result.solver_group)}
@@ -13948,11 +14210,11 @@ class FlightRuntime:
                 "before it will score"
             )
         deferred_scoring = None
-        if self._result_kind() == "artifact" and (deliveries or defer_scoring):
+        if self._result_kind() in {"artifact", "node"} and (deliveries or defer_scoring):
             raise FlightRuntimeError(
                 "artifact results must finalize directly with no scoring delivery"
             )
-        if self._result_kind() != "artifact" and (
+        if self._result_kind() not in {"artifact", "node"} and (
             deliveries or defer_scoring or self._execution_policy is not None
         ):
             from .scoring import seal_scoring_inputs
@@ -13985,11 +14247,15 @@ class FlightRuntime:
                 "ledger_markdown_path": str(finalize_result.ledger_markdown_path),
                 "attempt_state": finalize_result.attempt_state,
                 **(
-                    {"status": "not-applicable", "result_kind": "artifact"}
-                    if self._result_kind() == "artifact"
+                    {"status": "not-applicable", "result_kind": self._result_kind()}
+                    if self._result_kind() in {"artifact", "node"}
                     else {}
                 ),
             }
+            if self._result_kind() == "node":
+                # The finalizer changes the attempt state after the initial
+                # verification; release consumers require the sealed state.
+                verified = self._bundle_verifier(manifest_path)
 
         flight_receipt: Mapping[str, object] | None = None
         if flight_receipt_kwargs is not None:
@@ -14051,6 +14317,8 @@ class FlightRuntime:
                             else dict(predecessor_block)
                         ),
                         "sealed_row_count": len(canonical_rows),
+                        **({"native_fit_lineage": self._checkpoint_fit_lineage}
+                           if getattr(self, "_checkpoint_fit_lineage", None) else {}),
                     }
                 }
                 if predecessor_block is not None
@@ -14134,7 +14402,7 @@ class FlightRuntime:
                 jobs_path=self._run_dir() / "delivery-score-jobs.jsonl",
                 delivery_builder=self._delivery_builder,
             )
-        if self._result_kind() == "artifact":
+        if self._result_kind() in {"artifact", "node"}:
             verified = self._bundle_verifier(manifest_path)
             if (
                 getattr(verified, "attempt_state", None) != "FINALIZED"
@@ -14142,13 +14410,13 @@ class FlightRuntime:
                 or verified.manifest.get("scorers") != []
             ):
                 raise FlightRuntimeError(
-                    "artifact score stage requires a finalized scoreless proposal bundle"
+                    "score stage requires a finalized scoreless bundle"
                 )
             return self.receipts.record(
                 "score",
                 {
                     "status": "not-applicable",
-                    "result_kind": "artifact",
+                    "result_kind": self._result_kind(),
                     "manifest_path": str(manifest_path),
                     "manifest_sha256": _sha256_file(manifest_path),
                     "job_count": 0,

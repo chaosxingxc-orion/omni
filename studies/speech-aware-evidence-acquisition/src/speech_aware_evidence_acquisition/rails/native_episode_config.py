@@ -732,6 +732,7 @@ class NativeEpisodeConfig:
     # Opt-in deterministic knowledge context node; absent preserves bytes.
     knowledge_context_json: str | None = None
     intent_slot_pipeline_json: str | None = None
+    perception_only: bool = False
     matched_perception_context_json: str | None = None
 
     @property
@@ -1276,6 +1277,7 @@ def load_native_episode_config(
         "schema", "episode_id", "max_revisions", "actions", "roles",
     }
     optional_fields = {
+        "perception_only",
         "intent_slot_pipeline",
         "matched_perception_context",
         "exhaustion_policy",
@@ -1315,6 +1317,8 @@ def load_native_episode_config(
         raise ValueError("native_episode has unknown or missing fields")
     if not isinstance(raw["episode_id"], str) or not raw["episode_id"].strip():
         raise ValueError("native episode identity must be nonempty")
+    if type(raw.get("perception_only", False)) is not bool:
+        raise ValueError("native_episode.perception_only must be a bool")
     solver_access = raw.get("solver_tool_access")
     if "solver_tool_access" in raw and solver_access != SOLVER_TOOL_ACCESS_MODE:
         raise ValueError("solver_tool_access must be bounded-slot-lookup-v1 or absent")
@@ -2732,6 +2736,7 @@ def load_native_episode_config(
         answer_selection=answer_selection,
         knowledge_context_json=knowledge_context_json,
         intent_slot_pipeline_json=pipeline_json,
+        perception_only=raw.get("perception_only", False),
         matched_perception_context_json=matched_context_json,
     )
     validate_prompt_contact_limits(result)

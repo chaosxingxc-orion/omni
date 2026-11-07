@@ -944,6 +944,7 @@ class AgentLoopResult:
     # every construction written before E4 composes exactly the result it
     # always did.
     relisten: Mapping[str, object] | None = None
+    node_outcome: Mapping[str, object] | None = None
 
     def as_json(self) -> dict[str, object]:
         result = {
@@ -971,6 +972,8 @@ class AgentLoopResult:
             result["supply_variants"] = dict(self.supply_variants)
         if self.relisten is not None:
             result["relisten"] = dict(self.relisten)
+        if self.node_outcome is not None:
+            result["node_outcome"] = dict(self.node_outcome)
         if self.result_kind != TASK_ANSWER_RESULT_KIND:
             result["result_kind"] = self.result_kind
         if self.execution_unit_id is not None:
@@ -1050,6 +1053,7 @@ class _AgentRuntimeOutcome:
     # -- byte-identical to before this field existed. See
     # ``AgentLoopResult.relisten``.
     relisten: Mapping[str, object] | None = None
+    node_outcome: Mapping[str, object] | None = None
 
 
 @dataclass
@@ -1075,6 +1079,7 @@ class _ContactAgentState:
     current_context: AgentRuntimeContext | None = None
     current_nodes: tuple[_AgentContactNode, ...] = ()
     final_outcome: _AgentRuntimeOutcome | None = None
+    node_outcome: _AgentRuntimeOutcome | None = None
 
 
 @dataclass(frozen=True)
@@ -7307,6 +7312,7 @@ async def _invoke_native_role_episode(
                 intent_slot_pipeline_json=config.intent_slot_pipeline_json,
             ),
             nodes=NativeEpisodeNodes(**nodes),
+            config=config,
             apply_runner=validation_runner,
             role_input_builder=(
                 role_input if role_input_runner is None
@@ -7318,6 +7324,36 @@ async def _invoke_native_role_episode(
             ),
         )
         result = await workflow.invoke_direct(state.prepared.task_contract, (), session=session)
+        if config.perception_only:
+            if result.get("result_type") != "node_outcome" or result.get("stage") != "perception":
+                raise RailsRunnerError("perception-only graph returned no node outcome")
+            # A finite or seal-refused contact is in custody but must not be
+            # promoted into semantic state. Normal contacts take the usual
+            # settle path, including state and supply validation.
+            if result.get("status") == "ok":
+                settle()
+            trace = TraceBuffer(run_id, spool=state.trace_spool)
+            for key in sorted(state.trace_buffers):
+                trace.extend_from(state.trace_buffers[key])
+            node = copy.deepcopy(result)
+            node.setdefault("finish_reason", "stop")
+            visit = visits.get(config.role("perception").phase_id, {})
+            node["sample_id"] = state.prepared.sample.sample_id
+            if pipeline_config is not None:
+                node["pipeline_config"] = copy.deepcopy(pipeline_config)
+                node["evidence_inventory"] = copy.deepcopy(visit.get("intent_slot_context", {}).get("evidence_inventory"))
+                material = visit.get("material")
+                node["response_format"] = copy.deepcopy(getattr(material, "response_format", None))
+            trace.emit("USE", f"{state.prepared.sample.sample_id}/{program.program_id}/perception-node", {"use_node_outcome": node})
+            state.node_outcome = _AgentRuntimeOutcome(
+                prepared=state.prepared, final_query_state=state.query_state,
+                final_response_text="", contacts=tuple(state.contacts), waves=tuple(state.waves),
+                transitions=tuple(state.transitions),
+                agent_states=tuple(state.state_store[k] for k in state.query_state.agent_state_ids),
+                final_supply=_supply_for_state(snapshot, state.query_state),
+                trace_buffer=trace, node_outcome=node,
+            )
+            return
         receipt = result["state"]
         if pipeline_config is not None:
             from .intent_slot_pipeline import validate_receipt
@@ -8094,8 +8130,9 @@ async def _invoke_native_role_episode(
 def _flush_agent_state_traces(states, trace_sink) -> None:
     """Preserve completed and interrupted episodes when their shared run fails."""
     for state in states:
-        if state.final_outcome is not None:
-            state.final_outcome.trace_buffer.flush_into(trace_sink)
+        outcome = state.final_outcome or state.node_outcome
+        if outcome is not None:
+            outcome.trace_buffer.flush_into(trace_sink)
         for key in sorted(state.trace_buffers):
             state.trace_buffers[key].flush_into(trace_sink)
 
@@ -8457,8 +8494,9 @@ def _run_agent_openjiuwen(
 
             sample_id = state.prepared.sample.sample_id
             unit_id = state.prepared.execution_unit_id
-            if state.final_outcome is not None:
-                trace = state.final_outcome.trace_buffer
+            outcome = state.final_outcome or state.node_outcome
+            if outcome is not None:
+                trace = outcome.trace_buffer
             else:
                 trace = TraceBuffer(run_id, spool=state.trace_spool)
                 state.trace_buffers[(-2, 0)] = trace
@@ -8473,8 +8511,8 @@ def _run_agent_openjiuwen(
             )
             # Decision 309: the row is whole here (episode records, then its
             # own timing record); make it durable before the next row's work.
-            if on_outcome is not None and state.final_outcome is not None:
-                on_outcome(state.final_outcome)
+            if on_outcome is not None and outcome is not None:
+                on_outcome(outcome)
 
         panel_participation = native_episode_binding.workflow_panel
         if panel_participation is not None:
@@ -8539,8 +8577,8 @@ def _run_agent_openjiuwen(
                 sample_timing_sink=record_sample_timing,
                 **scheduling_options,
             )
-            if any(state.final_outcome is None for state in states):
-                raise RailsRunnerError("native graph ended without an accepted Solver outcome")
+            if any(state.final_outcome is None and state.node_outcome is None for state in states):
+                raise RailsRunnerError("native graph ended without an outcome")
         except BaseException:
             try:
                 _flush_agent_state_traces(states, trace_sink)
@@ -8551,7 +8589,7 @@ def _run_agent_openjiuwen(
         finally:
             if slot_fill is not None:
                 slot_fill.close()
-        return tuple(state.final_outcome for state in states)
+        return tuple(state.final_outcome or state.node_outcome for state in states)
 
     states: list[_ContactAgentState] = []
     states_by_task_index: dict[int, _ContactAgentState] = {}
@@ -9803,7 +9841,7 @@ def run_speech_native_agent_loop(
         outcomes, runtime_trace_sha256s, strict=True
     ):
         assert outcome is not None
-        if result_kind == ARTIFACT_RESULT_KIND or execution_units is not None:
+        if outcome.node_outcome is not None or result_kind == ARTIFACT_RESULT_KIND or execution_units is not None:
             metrics = {}
             consumption = None
         else:
@@ -9828,16 +9866,17 @@ def run_speech_native_agent_loop(
                 agent_states=outcome.agent_states,
                 metrics=metrics,
                 consumption=consumption,
-                result_kind=result_kind,
+                result_kind="node" if outcome.node_outcome is not None else result_kind,
                 native_episode_receipt=outcome.native_episode_receipt,
                 execution_unit_id=outcome.prepared.execution_unit_id,
                 execution_unit_binding=outcome.prepared.execution_unit_binding,
                 solver_group=getattr(outcome, "solver_group", None),
                 supply_variants=getattr(outcome, "supply_variants", None),
                 relisten=getattr(outcome, "relisten", None),
+                node_outcome=outcome.node_outcome,
             )
         )
-        if result_kind == TASK_ANSWER_RESULT_KIND and execution_units is None:
+        if outcome.node_outcome is None and result_kind == TASK_ANSWER_RESULT_KIND and execution_units is None:
             _emit_agent_posthoc_trace(
                 sink=trace_sink,
                 result=results[-1],

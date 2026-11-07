@@ -50,6 +50,23 @@ def test_known_contact_reuses_verified_fit_without_tokenizer_or_duplicate_receip
     with pytest.raises(PreparationError, match='repeated'): gate(request)
 
 
+def test_fit_reuse_rejects_endpoint_accounting_changed_even_if_journal_hash_rewritten(tmp_path):
+    from pathlib import Path
+    runtime, plan, replay, request, old = source(tmp_path)
+    custody = next((replay.source.root).glob('*.fit.json'))
+    document = json.loads(custody.read_bytes())
+    artifact = Path(old.receipts[0]['path'])
+    journal = artifact.with_name(artifact.name + '.contacts.jsonl')
+    lines = [json.loads(line) for line in journal.read_bytes().splitlines()]
+    lines[0]['route'] = '/different'
+    journal.write_bytes(b''.join(canonical(line) + b'\n' for line in lines))
+    document['endpoint_journal_sha256'] = digest(journal.read_bytes())
+    custody.write_bytes(canonical(document))
+    gate = RecoverableNativeFitGate(runtime, plan, no_tokenizer, replay=replay)
+    with pytest.raises(PreparationError, match='endpoint accounting'):
+        gate(request)
+
+
 @pytest.mark.parametrize('change', ['custody', 'artifact', 'journal', 'identity', 'inputs', 'missing', 'limit'])
 def test_fit_reuse_rejects_changed_evidence_before_any_tokenizer(tmp_path, change):
     runtime, plan, replay, request, old = source(tmp_path)

@@ -9,6 +9,7 @@ import math
 
 
 ARTIFACT_RELEASE_SCHEMA = 'saea-artifact-generation-released-v1'
+NODE_RELEASE_SCHEMA = 'saea-node-generation-released-v1'
 
 
 def release_paths(document, *, data, expected):
@@ -18,14 +19,15 @@ def release_paths(document, *, data, expected):
         return {key: root/name for key, name in {
             'generation_manifest': expected['run_id']+'.generation-manifest.json',
             'score_ledger_cells': 'score-ledger-cells.json', 'score_jobs': 'score-jobs.jsonl'}.items()}
-    if document.get('schema') != ARTIFACT_RELEASE_SCHEMA:
+    if document.get('schema') not in (ARTIFACT_RELEASE_SCHEMA, NODE_RELEASE_SCHEMA):
         raise ValueError('unsupported generation release schema')
     seal = document.get('seal_receipt', {})
     final = seal.get('finalize', {})
-    if (final.get('status') != 'not-applicable' or final.get('result_kind') != 'artifact'
+    kind = 'node' if document['schema'] == NODE_RELEASE_SCHEMA else 'artifact'
+    if (final.get('status') != 'not-applicable' or final.get('result_kind') != kind
             or final.get('attempt_state') != 'FINALIZED' or final.get('scores_path') is not None
             or seal.get('outputs_row_count') != expected['rows']):
-        raise ValueError('artifact release needs finalized scoreless proposal seal')
+        raise ValueError('release needs finalized scoreless '+kind+' seal')
     paths = {'manifest': root/(expected['run_id']+'.run-manifest.json'),
         'outputs': root/(expected['run_id']+'.outputs.jsonl'),
         'attempt': Path(data)/'attempts'/expected['run_id']/(expected['attempt_id']+'.json')}
@@ -82,7 +84,7 @@ def verify_release_document(document, *, data, expected, resolve_artifact=None):
                 or (resolve_artifact is not None and str(target) != pin['path'])
                 or (resolve_artifact is not None and target != want)):
             raise ValueError("generation release input path differs")
-        if schema != ARTIFACT_RELEASE_SCHEMA or key in ('manifest', 'phases'):
+        if schema not in (ARTIFACT_RELEASE_SCHEMA, NODE_RELEASE_SCHEMA) or key in ('manifest', 'phases'):
             if seal.get(key + "_path") != str(target) or seal.get(key + "_sha256") != pin["sha256"]:
                 raise ValueError("generation release seal differs")
         elif key == 'outputs' and seal.get('outputs_path') != str(target):
@@ -99,10 +101,11 @@ def verify_release_document(document, *, data, expected, resolve_artifact=None):
         if digest != pin["sha256"]:
             raise ValueError("generation release sealed input changed")
         physical_paths[key] = physical
-    if schema == ARTIFACT_RELEASE_SCHEMA:
+    if schema in (ARTIFACT_RELEASE_SCHEMA, NODE_RELEASE_SCHEMA):
         manifest = json.loads(physical_paths['manifest'].read_bytes())
         attempt = json.loads(physical_paths['attempt'].read_bytes())
-        if (manifest.get('result_kind') != 'artifact' or manifest.get('status') != 'COMPLETED'
+        kind = 'node' if schema == NODE_RELEASE_SCHEMA else 'artifact'
+        if (manifest.get('result_kind') != kind or manifest.get('status') != 'COMPLETED'
                 or manifest.get('run_id') != expected['run_id']
                 or manifest.get('study_commit') != expected['study_commit']
                 or manifest.get('plan', {}).get('run_id') != expected['run_id']
@@ -118,10 +121,44 @@ def verify_release_document(document, *, data, expected, resolve_artifact=None):
         with physical_paths['outputs'].open() as handle:
             rows = [json.loads(line) for line in handle]
         if (len(rows) != expected['rows']
-                or any(not isinstance(row, dict) or row.get('result_kind') != 'artifact'
+                or any(not isinstance(row, dict) or row.get('result_kind') != kind
                        or not isinstance(row.get('sample_id'), str) or not row['sample_id'] for row in rows)
                 or len({row['sample_id'] for row in rows}) != len(rows)):
             raise ValueError('artifact release row coverage differs')
+        if schema == NODE_RELEASE_SCHEMA:
+            split = manifest.get('split', {})
+            ids = split.get('ids')
+            carrier = split.get('carrier_lock_key')
+            config = manifest.get('config', {}).get('config_hash')
+            arm = manifest.get('arm')
+            if (manifest.get('node_result') != {'schema': 'saea-perception-node-v1', 'stage': 'perception'}
+                    or not isinstance(ids, list) or len(ids) != expected['rows']
+                    or any(not isinstance(i, str) or not i for i in ids)
+                    or ids != sorted(set(ids)) or set(ids) != {row['sample_id'] for row in rows}
+                    or split.get('count') != len(ids) or not isinstance(carrier, str) or not carrier
+                    or not isinstance(arm, str) or not arm
+                    or not isinstance(config, str) or len(config) != 64
+                    or any(c not in '0123456789abcdef' for c in config)):
+                raise ValueError('node release split or configuration differs')
+            identity = hashlib.sha256('\n'.join(sorted(carrier+'/'+i for i in ids)).encode()).hexdigest()
+            protocol = hashlib.sha256(json.dumps({'arm': arm, 'config': config,
+                'scoring': 'saea-scoring-v1', 'split': identity}, ensure_ascii=False,
+                sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+            plan = manifest['plan']
+            if (split.get('identity_hash') != identity or plan.get('split_identity_hash') != identity
+                    or manifest.get('protocol_hash') != protocol or plan.get('protocol_hash') != protocol
+                    or not isinstance(manifest.get('cost'), dict) or manifest['cost'] != seal.get('cost')
+                    or seal.get('verified_attempt_state') != 'FINALIZED'):
+                raise ValueError('node release protocol, cost or seal identity differs')
+            for row in rows:
+                node = row.get('node_outcome')
+                if (not isinstance(node, dict) or node.get('result_type') != 'node_outcome'
+                        or node.get('stage') != 'perception' or node.get('sample_id') != row['sample_id']
+                        or node.get('status') not in ('ok', 'invalid_output', 'finite_completion')
+                        or not isinstance(row.get('text'), str) or node.get('response') != row['text']
+                        or row.get('final_response_text') not in (None, '')
+                        or row.get('system_answer') not in (None, '')):
+                    raise ValueError('node release contains invalid perception outcome')
     return document
 
 

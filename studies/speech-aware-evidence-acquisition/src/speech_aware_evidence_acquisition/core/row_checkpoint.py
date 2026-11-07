@@ -198,6 +198,7 @@ class CheckpointRow:
     contacts: int
     audio_seconds: float
     cost: Mapping[str, object]
+    fit_pins: tuple[Mapping[str, object], ...] = ()
 
     @property
     def keepable(self) -> bool:
@@ -335,6 +336,7 @@ class RowCheckpointWriter:
         output_rows: Sequence[Mapping[str, object]],
         trace_lines: Sequence[str],
         reason: str | None = None,
+        fit_pins: Sequence[Mapping[str, object]] = (),
     ) -> str:
         """Append one row. ``output_rows`` are the row's canonical records
         (empty when ``complete`` is false); ``trace_lines`` its serialized trace."""
@@ -349,6 +351,8 @@ class RowCheckpointWriter:
             "contacts": int(cost["calls"]), "audio_seconds": float(cost["audio_seconds"]),
             "cost": cost,
         }
+        if fit_pins:
+            body["fit_pins"] = [dict(pin) for pin in fit_pins]
         with self._lock:
             if self._closed:
                 raise RowCheckpointError("row checkpoint is closed")
@@ -460,6 +464,7 @@ def read_checkpoint(path: Path, *, expected_sha256: str | None = None) -> Checkp
             contacts=int(record.get("contacts", 0)),
             audio_seconds=float(record.get("audio_seconds", 0.0)),
             cost=dict(record.get("cost") or {}),
+            fit_pins=tuple(record.get("fit_pins") or ()),
         ))
     if header is None:
         raise RowCheckpointError(f"row checkpoint {path} has no header record")

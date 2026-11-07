@@ -46,7 +46,69 @@ from speech_aware_evidence_acquisition.reproduction.ojw.native_roles import (
     NativeRoleContactContext,
     NativeRoleNode,
     NativeRoleNodeSpec,
+    NativeRecoveryCompletion,
 )
+
+
+@pytest.mark.parametrize("case", ["normal", "recovery", "invalid", "finite"])
+def test_configured_perception_only_runs_real_graph_and_hooks(case):
+    from speech_aware_evidence_acquisition.rails.controllers import PhaseProgram, PhaseSpec
+    from speech_aware_evidence_acquisition.rails.native_episode_config import load_native_episode_config
+
+    phases = ("perception", "solver", "reviewer", "planner")
+    program = PhaseProgram(program_id="p-only-test", phases=tuple(
+        PhaseSpec(name, name, "none", None, False) for name in phases),
+        max_contacts=4, stop_rule="native-role-episode").validate()
+    values = {"native_episode": {"schema": "saea-native-episode-config-v1",
+        "episode_id": "p-only", "max_revisions": 0,
+        "actions": {"accept": "ACCEPT", "revise": "REVISE", "acquire": "ACQUIRE"},
+        "roles": {name: {"phase_id": name, "max_iterations": 1} for name in phases},
+        "perception_only": True}}
+    config = load_native_episode_config(values, program)
+    seen, requests = [], []
+    response = json.dumps({"candidates": [{"intent_id": "intent-a"}]})
+
+    def transport(request):
+        requests.append(request)
+        cid = request.context.agent_contact_id
+        if case == "recovery":
+            parent = _completion("partial", cid, 1, finish_reason="length")
+            child = _completion(response, cid + ":perception-length-repair", 2)
+            return NativeRecoveryCompletion(parent, child, ":perception-length-repair")
+        if case == "finite":
+            return _completion("partial", cid, 1, finish_reason="length")
+        return _completion("not-json" if case == "invalid" else response, cid, 1)
+
+    perception = NativeRoleNode(
+        spec=NativeRoleNodeSpec(role_id="perception", role_kind="perception", prompt="P", max_iterations=1),
+        metered_request=transport,
+        contact_context_provider=lambda _: NativeRoleContactContext(sample_id="sample-1", agent_contact_id="p-1"),
+        candidate_before=lambda role, ctx: seen.append(("before", role)),
+        candidate_after=lambda role, ctx: seen.append(("after", role)),
+    )
+    solver, ss = _node("solver", "solver", [])
+    reviewer, rs = _node("reviewer", "reviewer", [])
+    planner, ps = _node("planner", "planner", [])
+    inputs = []
+    def build_input(role, state):
+        inputs.append((role, state["original_query"], state["candidates"]))
+        return "original actor input"
+    workflow = build_native_episode(spec=NativeEpisodeSpec(
+        episode_id="p-only", max_revisions=0,
+        actions=NativeEpisodeActions("ACCEPT", "REVISE", "ACQUIRE")),
+        nodes=NativeEpisodeNodes(perception=perception, solver=solver, reviewer=reviewer, planner=planner),
+        role_input_builder=build_input, config=config)
+    result = asyncio.run(workflow.invoke_direct("audio query", ("original candidate",)))
+    assert inputs == [("perception", "audio query", ["original candidate"])]
+    assert len(requests) == 1 and not (ss.requests or rs.requests or ps.requests)
+    assert seen[0] == ("before", "perception")
+    if case != "finite":
+        assert seen == [("before", "perception"), ("after", "perception")]
+    assert result["result_type"] == "node_outcome" and "delivery" not in result
+    assert result["status"] == {"normal": "ok", "recovery": "ok", "invalid": "invalid_output", "finite": "finite_completion"}[case]
+    assert result["response"] == ("not-json" if case == "invalid" else "partial" if case == "finite" else response)
+    assert len(result["node_receipt"]["contacts"]) == (2 if case == "recovery" else 1)
+    assert (result["normalized_candidates"] is not None) == (case in {"normal", "recovery"})
 
 
 def _completion(

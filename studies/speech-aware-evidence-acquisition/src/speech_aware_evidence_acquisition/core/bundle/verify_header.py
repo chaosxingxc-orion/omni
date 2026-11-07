@@ -79,7 +79,13 @@ def _verify_manifest_header(manifest: Mapping[str, object]) -> str:
     result_kind = manifest.get("result_kind", "task-answer")
     artifact_result = manifest.get("artifact_result")
     scorer_names_value = manifest.get("scorers")
-    if result_kind == "artifact":
+    if result_kind != "node" and "node_result" in manifest:
+        raise BundleError("node_result is valid only for node result manifests")
+    if result_kind == "node":
+        if (manifest.get("node_result") != {"schema": "saea-perception-node-v1", "stage": "perception"}
+                or artifact_result is not None or scorer_names_value != []):
+            raise BundleError("invalid perception node result declaration")
+    elif result_kind == "artifact":
         if not isinstance(artifact_result, Mapping):
             raise BundleError(
                 "artifact result manifest requires an exact artifact_result binding"
@@ -139,7 +145,7 @@ def _verify_manifest_header(manifest: Mapping[str, object]) -> str:
                 f"{scorer_names_value!r}"
             )
     else:
-        raise BundleError("run manifest result_kind must be task-answer or artifact")
+        raise BundleError("run manifest result_kind must be task-answer, artifact or node")
     unregistered_scorers = sorted(set(scorer_names_value) - set(SCORERS.names()))
     if unregistered_scorers:
         raise BundleError(

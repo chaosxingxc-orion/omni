@@ -32,6 +32,41 @@ from .outputs import (
 from .verify_header import _verify_manifest_header
 
 
+def _verify_node_results(result_kind, outputs_rows, trace_records, predecessor_records, kept_sample_ids):
+    if result_kind == "node":
+        for row in outputs_rows:
+            records = predecessor_records.get(row["sample_id"], {}) if row["sample_id"] in kept_sample_ids else trace_records
+            node = row.get("node_outcome")
+            if (row.get("result_kind") != "node" or not isinstance(node, Mapping)
+                    or node.get("result_type") != "node_outcome" or node.get("stage") != "perception"
+                    or node.get("status") not in {"ok", "invalid_output", "finite_completion"}
+                    or node.get("sample_id") != row["sample_id"] or node.get("response") != row["text"]
+                    or not any(p.get("use_node_outcome") == node for p in records.values())):
+                raise BundleError("perception node outcome differs from its trace")
+            receipt = node.get("node_receipt")
+            if not isinstance(receipt, Mapping) or not isinstance(receipt.get("contacts"), list) or not receipt["contacts"]:
+                raise BundleError("perception node contact custody missing")
+            if receipt.get("final_contact") != receipt["contacts"][-1]:
+                raise BundleError("perception node final contact differs")
+            for contact in receipt["contacts"]:
+                if not isinstance(contact, Mapping):
+                    raise BundleError("invalid perception node contact")
+                rid = contact.get("request_id")
+                if (not isinstance(rid, str) or not rid or any(
+                        not isinstance(contact.get(k), str) or len(contact[k]) != 64
+                        or any(c not in "0123456789abcdef" for c in contact[k])
+                        for k in ("request_sha256", "response_sha256", "response_text_sha256"))):
+                    raise BundleError("invalid perception node contact identity")
+                request, response = records.get(f"{rid}/request", {}), records.get(f"{rid}/response", {})
+                if (request.get("payload_sha256") != contact.get("request_sha256")
+                        or any(response.get(k) != contact.get(k) for k in ("response_sha256", "response_text_sha256"))):
+                    raise BundleError("perception node contact differs from trace")
+            if receipt["final_contact"].get("request_id") != row["request_id"]:
+                raise BundleError("perception node row differs from final contact")
+    elif any(row.get("result_kind") == "node" or "node_outcome" in row for row in outputs_rows):
+        raise BundleError("node output requires node manifest")
+
+
 def verify_bundle(manifest_path: Path) -> VerifiedBundle:
     """Recompute every hash the manifest names from the bytes actually on
     disk right now, and cross-check outputs<->split<->trace. Never trusts a
@@ -219,6 +254,7 @@ def verify_bundle(manifest_path: Path) -> VerifiedBundle:
         kept_sample_ids=kept_sample_ids,
         bank_context=bank_context,
     )
+    _verify_node_results(manifest.get("result_kind"), outputs_rows, trace_records, predecessor_records, kept_sample_ids)
     # Owner decision 309 (2026-10-14): an attempt that made its rows durable
     # pins its row checkpoint in the manifest. The file is re-hashed, its chain
     # re-verified, and every COMPLETE row's stored canonical record must equal

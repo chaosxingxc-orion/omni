@@ -76,10 +76,11 @@ def harness(tmp_path, mode='batched', *, plan=None, data=None, replay=None, fail
     return h
 
 
-def recovery_harness(tmp_path, *, plan=None, data=None, replay=None):
+def recovery_harness(tmp_path, *, plan=None, data=None, replay=None, sample_ids=None):
     from test_rails_runner import _plan
     plan = plan or _plan(run_id='SAEA-E-native-role-runner-proof', attempt_id='attempt-native-role-runner-proof', planned_model_calls=6)
-    h = harness(tmp_path, plan=plan, data=data, replay=replay)
+    h = harness(tmp_path, plan=plan, data=data, replay=replay,
+                samples=len(sample_ids) if sample_ids else 1, sample_ids=sample_ids)
     policy = json.loads(h.config.intent_slot_pipeline_json)
     policy.update(schema='saea-intent-slot-pipeline-v2', duplicate_candidate_policy='group_v2',
         node_rails='sdk-handoff-v1', answer_only_fallback='off',

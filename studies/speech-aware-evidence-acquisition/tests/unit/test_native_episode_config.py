@@ -43,6 +43,16 @@ def test_absent_default_remains_absent():
         load_native_episode_config({}, program())
 
 
+def test_perception_only_requires_explicit_boolean():
+    assert load_native_episode_config(config(), program()).perception_only is False
+    values = config()
+    values["native_episode"]["perception_only"] = True
+    assert load_native_episode_config(values, program()).perception_only is True
+    values["native_episode"]["perception_only"] = "true"
+    with pytest.raises(ValueError, match="perception_only"):
+        load_native_episode_config(values, program())
+
+
 def test_revision_and_inner_tool_iterations_determine_the_ceiling():
     values = config()
     values["native_episode"]["max_revisions"] = 2

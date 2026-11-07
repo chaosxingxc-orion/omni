@@ -200,7 +200,7 @@ def finalize_bundle(
     run_dir = Path(manifest_path).resolve().parent
     run_id = str(bundle.manifest["run_id"])
     scores_path = None
-    if bundle.manifest.get("result_kind", "task-answer") == "artifact":
+    if bundle.manifest.get("result_kind", "task-answer") in {"artifact", "node"}:
         # Proposal artifacts are auditable model outputs, not task answers.
         # Their empty scorer declaration closes without entering a task scorer.
         bundle = verify_bundle(manifest_path)

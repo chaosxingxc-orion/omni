@@ -313,13 +313,13 @@ def test_plan_does_not_create_queue_or_launch(queue):
     assert not Path(config['state_dir']).exists() and not docker.launches
 
 
-def generation_fixture(queue, tmp_path, *, learning=False):
+def generation_fixture(queue, tmp_path, *, learning=False, rows=312):
     import os
     path, config, docker = queue
     root=tmp_path/'producer';root.mkdir();producer,doc=configured(root)
     output=root/'output';output.mkdir();data=root/'state';data.mkdir()
     expected={'candidate':'candidate','run_id':'SAEA-PRODUCER','attempt_id':'generation-v1',
-        'study_commit':'b'*40,'profile':'profile','service_session':'session','rows':312}
+        'study_commit':'b'*40,'profile':'profile','service_session':'session','rows':rows}
     doc.update(container_name='producer',argv=['/bin/python3','/job.py','--data','/logical','--out','/output'])
     doc['environment'].update(SAEA_OBSERVABILITY_RUN_ID=expected['run_id'],
         SAEA_OBSERVABILITY_ATTEMPT_ID=expected['attempt_id'],SAEA_DEPLOYMENT_PROFILE='profile',SPEECHRL_DATA_DIR='/logical')
@@ -364,7 +364,7 @@ def generation_fixture(queue, tmp_path, *, learning=False):
     release={'schema':'saea-generation-released-v1',**expected,'generation_sealed':True,
         'generation_lease_released':True,'scoring_complete':False,'consumer_requires_own_lease_and_readiness':True,
         'released_at_unix':123.,'campaign_seconds_to_release':12.,'artifacts':artifacts,'seal_receipt':seal}
-    (output/'started.json').write_text(json.dumps({'study_commit':expected['study_commit'],'candidate':'candidate','rows':312}))
+    (output/'started.json').write_text(json.dumps({'study_commit':expected['study_commit'],'candidate':'candidate','rows':rows}))
     if learning:
         (output/'started.json').write_text(json.dumps({'study_commit':expected['study_commit'],'job':'candidate'}))
     path.write_text(json.dumps(config))
@@ -473,8 +473,8 @@ def test_release_wait_uses_file_event_not_scoring_container_wait(queue,tmp_path,
     assert all(cid!=docker.containers['producer']['Id'] for cid,_ in docker.waits)
 
 
-def internal_generation_fixture(queue, tmp_path, *, learning=True):
-    release, value, data = generation_fixture(queue, tmp_path, learning=learning)
+def internal_generation_fixture(queue, tmp_path, *, learning=True, rows=312):
+    release, value, data = generation_fixture(queue, tmp_path, learning=learning, rows=rows)
     path, config, docker = queue
     dependency = config['jobs'][0]['after']
     producer = {'id':'producer', 'launch':dependency['launch'], 'preflight':None, 'after':None,

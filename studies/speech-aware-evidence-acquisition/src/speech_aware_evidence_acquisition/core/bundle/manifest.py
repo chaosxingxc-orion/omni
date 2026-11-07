@@ -339,8 +339,11 @@ def _manifest_document(
             if artifact_content_source is not None
             else {}
         ),
-        "scorers": list(composed.values.get("scorers", [])),
+        "scorers": ([] if composed.values.get("native_episode", {}).get("perception_only") else list(composed.values.get("scorers", []))),
         **(
+            {"result_kind": "node", "node_result": {"schema": "saea-perception-node-v1", "stage": "perception"}}
+            if composed.values.get("native_episode", {}).get("perception_only")
+            else
             {
                 "result_kind": "artifact",
                 "artifact_result": dict(composed.values["artifact_result"]),

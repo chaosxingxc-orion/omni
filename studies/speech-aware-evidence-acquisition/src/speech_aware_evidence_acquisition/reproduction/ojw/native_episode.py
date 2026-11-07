@@ -250,8 +250,11 @@ class NativeEpisodeSpec:
     # LAST, for the same reason ``reviewer_verdict_vocabulary`` was.
     finite_completion_scope: str = "episode"
     intent_slot_pipeline_json: str | None = None
+    perception_only: bool = False
 
     def __post_init__(self) -> None:
+        if type(self.perception_only) is not bool:
+            raise ValueError("perception_only must be a bool")
         if not isinstance(self.episode_id, str) or not self.episode_id:
             raise ValueError("episode_id must be a non-empty string")
         if (
@@ -1731,6 +1734,13 @@ class NativeEpisodeWorkflow:
             predecessors=("episode_state",),
             kind="perception",
         )
+        if self.spec.perception_only:
+            workflow.set_end_comp(
+                "end", End(),
+                inputs_schema={"state": "${" + perception + ".state}"},
+            )
+            workflow.add_connection(perception, "end")
+            return workflow
         if self.spec.intent_slot_pipeline_json is not None:
             from .native_intent_slot import CandidateSlotStage
             workflow.add_workflow_comp(
@@ -1994,6 +2004,30 @@ class NativeEpisodeWorkflow:
                 ),
             )
         except Exception as error:
+            if self.spec.perception_only:
+                finite = _finite_error_in_chain(error)
+                if finite is not None:
+                    return {
+                        "result_type": "node_outcome", "stage": "perception",
+                        "status": "finite_completion", "response": finite.completion.text,
+                        "normalized_candidates": None,
+                        "node_receipt": copy.deepcopy(finite.execution_receipt),
+                        "finish_reason": finite.finish_reason,
+                    }
+                refusal = _seal_refusal_error_in_chain(error)
+                if refusal is not None:
+                    completion = refusal.seal_refusal_completion
+                    parent = getattr(refusal, "seal_refusal_parent", None)
+                    contacts = []
+                    for item in ([parent] if parent is not None else []) + [completion]:
+                        contacts.append({key: getattr(item, key) for key in (
+                            "agent_contact_id", "request_id", "request_sha256",
+                            "response_sha256", "response_text_sha256")})
+                    return {"result_type": "node_outcome", "stage": "perception",
+                            "status": "invalid_output", "response": completion.text,
+                            "normalized_candidates": None,
+                            "node_receipt": {"contacts": contacts, "final_contact": contacts[-1]},
+                            "validation_error": str(refusal)}
             context_error = _context_fit_error_in_chain(error)
             if (
                 context_error is not None
@@ -2049,6 +2083,24 @@ class NativeEpisodeWorkflow:
         if not isinstance(result, Mapping):
             raise NativeEpisodeError("OpenJiuwen returned no episode result")
         end = result.get("output")
+        if self.spec.perception_only:
+            if not isinstance(end, Mapping) or not isinstance(end.get("state"), Mapping):
+                raise NativeEpisodeError("OpenJiuwen returned no perception state")
+            state = end["state"]
+            role = state["latest_perception"]
+            response = role["actor_output"]
+            from ...rails.intent_slot_pipeline import candidates as parse_candidates
+            config = json.loads(self.spec.intent_slot_pipeline_json) if self.spec.intent_slot_pipeline_json else {}
+            try:
+                rows = parse_candidates(response, config.get("max_candidates", 3),
+                                        duplicate_policy=config.get("duplicate_candidate_policy", "strict"))
+                status, reason = "ok", None
+            except ValueError as error:
+                rows, status, reason = None, "invalid_output", str(error)
+            return {"result_type": "node_outcome", "stage": "perception", "status": status,
+                    "response": response, "normalized_candidates": rows,
+                    "node_receipt": copy.deepcopy(role["execution_receipt"]),
+                    "validation_error": reason}
         if not isinstance(end, Mapping) or not isinstance(end.get("accepted"), Mapping):
             raise NativeEpisodeError("OpenJiuwen returned no accepted episode state")
         return copy.deepcopy(dict(end["accepted"]))
@@ -2060,10 +2112,18 @@ def build_native_episode(
     nodes: NativeEpisodeNodes,
     role_input_builder: RoleInputBuilder,
     apply_runner=None,
+    config=None,
 ) -> NativeEpisodeWorkflow:
     """Validate role authority and compose a bounded conditional episode."""
     if not isinstance(spec, NativeEpisodeSpec):
         raise ValueError("spec must be NativeEpisodeSpec")
+    if config is not None:
+        from dataclasses import replace
+        from ...rails.native_episode_config import NativeEpisodeConfig
+        if not isinstance(config, NativeEpisodeConfig):
+            raise ValueError("config must be NativeEpisodeConfig")
+        spec = replace(spec, perception_only=config.perception_only,
+                       intent_slot_pipeline_json=config.intent_slot_pipeline_json)
     if not isinstance(nodes, NativeEpisodeNodes):
         raise ValueError("nodes must be NativeEpisodeNodes")
     if not callable(role_input_builder):

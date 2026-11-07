@@ -6,9 +6,11 @@ from pathlib import Path
 
 def assert_execution_binding(spec, environ=None, *, repo=None):
     """Bind an explicit full-test client width to the shared factory environment."""
-    if spec.get('workload_kind') in ('gepa-solver-template-pair', 'gepa-perception-template-pair', 'external-experience-pair', 'external-slot-knowledge-pair', 'solver-output-protocol-pair', 'intent-slot-node-ablation'):
+    if spec.get('workload_kind') in ('gepa-solver-template-pair', 'gepa-perception-template-pair', 'external-experience-pair', 'external-slot-knowledge-pair', 'solver-output-protocol-pair', 'intent-slot-node-ablation', 'perception-only-native'):
         import os
-        if spec['workload_kind'] == 'intent-slot-node-ablation':
+        if spec['workload_kind'] == 'perception-only-native':
+            from p_only_workload import PerceptionOnlyWorkload as PairWorkload
+        elif spec['workload_kind'] == 'intent-slot-node-ablation':
             from intent_slot_workload import NodeWorkload as PairWorkload
         elif spec['workload_kind'] == 'solver-output-protocol-pair':
             from solver_protocol_workload import ProtocolWorkload as PairWorkload
@@ -129,6 +131,9 @@ def validate_workload(repo, data, name, spec):
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "final-report-method":
         from final_report_workload import validate
+        return validate(repo, data, name, spec, exp, view)
+    if spec.get("workload_kind") == "perception-only-native":
+        from p_only_workload import validate
         return validate(repo, data, name, spec, exp, view)
     if spec.get("workload_kind") == "intent-slot-node-ablation":
         from intent_slot_workload import validate

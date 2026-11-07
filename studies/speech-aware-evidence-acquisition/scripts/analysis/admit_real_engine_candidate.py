@@ -332,7 +332,7 @@ def _admit_external(repo, data, config):
     if sha(candidate_path) != config['candidate_pin']['sha256']: raise ValueError('candidate changed')
     spec = read(candidate_path)
     supported = {'gepa-solver-template-pair', 'gepa-perception-template-pair',
-                 'intent-slot-node-ablation'}
+                 'intent-slot-node-ablation', 'perception-only-native'}
     if spec.get('workload_kind') not in supported:
         raise ValueError('only registered raw-speech successor workloads are supported')
     exp_rel = f'configs/experiment/{name}.json'

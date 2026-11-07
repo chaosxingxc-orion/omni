@@ -1211,8 +1211,17 @@ def build_native_contact_fit_gate(
     if feature_packets and max_concurrency != 1:
         raise PreparationError("feature FIT concurrency requires multi-endpoint receipt verifier support")
     slots = threading.BoundedSemaphore(max_concurrency)
+    # A checkpoint continuation may use the same registered FIT plan.
+    # Account for its original endpoint sequences before reserving new work.
+    inherited = getattr(runtime, '_checkpoint_fit_lineage', {})
+    unique = {item['custody_sha256']: item for lineage in inherited.values()
+              for item in lineage['fits']
+              if item['fit_plan']['run_id'] == fit_plan.run_id
+              and item['fit_plan']['attempt_id'] == fit_plan.attempt_id}
     endpoint_counts = Counter()
-    reserved_endpoints = 0
+    for item in unique.values():
+        endpoint_counts.update(item['accounting']['endpoint_counts'])
+    reserved_endpoints = endpoint_counts.total()
     per_contact_cap = native_contact_endpoints_per_contact(
         feature_packets=feature_packets, max_speech_packets=spec["max_speech_packets"])
     receipt_by_contact = {}

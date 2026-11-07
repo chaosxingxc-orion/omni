@@ -49,8 +49,10 @@ def generation_release_document(runtime, *, candidate, spec, commit, rows, elaps
         raise ValueError('generation release must precede scoring')
     # Pin immutable inputs, not the mutable run manifest or growing stage ledger.
     pins = {}
-    artifact = seal.get('finalize', {}).get('result_kind') == 'artifact'
-    for key in (() if artifact else ('generation_manifest', 'score_ledger_cells', 'score_jobs')):
+    result_kind = seal.get('finalize', {}).get('result_kind')
+    artifact = result_kind == 'artifact'
+    node = result_kind == 'node'
+    for key in (() if artifact or node else ('generation_manifest', 'score_ledger_cells', 'score_jobs')):
         path = Path(seal[key + '_path'])
         with path.open('rb') as handle:
             actual = hashlib.file_digest(handle, 'sha256').hexdigest()
@@ -58,7 +60,8 @@ def generation_release_document(runtime, *, candidate, spec, commit, rows, elaps
             raise ValueError('generation release sealed input changed: ' + key)
         pins[key] = {'path': str(path), 'sha256': actual}
     document = {
-        'schema': 'saea-artifact-generation-released-v1' if artifact else 'saea-generation-released-v1',
+        'schema': ('saea-artifact-generation-released-v1' if artifact else
+                   'saea-node-generation-released-v1' if node else 'saea-generation-released-v1'),
         'candidate': candidate, 'run_id': runtime.run_id,
         'attempt_id': runtime.attempt_id, 'study_commit': commit,
         'profile': spec['profile'], 'service_session': spec['service_session'],
@@ -69,17 +72,20 @@ def generation_release_document(runtime, *, candidate, spec, commit, rows, elaps
         'seal_receipt': dict(seal),
         'consumer_requires_own_lease_and_readiness': True,
     }
-    if artifact:
+    if artifact or node:
         import importlib.util
         from speech_aware_evidence_acquisition.core.bundle import verify_bundle
         manifest_path = Path(seal['manifest_path'])
         verified = verify_bundle(manifest_path)
-        if verified.attempt_state != 'FINALIZED':
+        if node and (verified.attempt_state != 'FINALIZED' or verified.manifest.get('result_kind') != 'node'):
+            raise ValueError('node release requires the sealed finalized node bundle')
+        if artifact and verified.attempt_state != 'FINALIZED':
             raise ValueError('artifact release requires verified finalized bundle')
         helper_path = ROOT.parents[1]/'scripts/npu/generation_release_handoff.py'
         module_spec = importlib.util.spec_from_file_location('artifact_handoff', helper_path)
         helper = importlib.util.module_from_spec(module_spec); module_spec.loader.exec_module(helper)
-        expected = {**spec, 'candidate': candidate, 'study_commit': commit, 'rows': rows}
+        expected = {key: document[key] for key in
+                    ('candidate', 'run_id', 'attempt_id', 'study_commit', 'profile', 'service_session', 'rows')}
         paths = helper.release_paths(document, data=runtime._data_root, expected=expected)
         for key, path in paths.items():
             if path.is_symlink() or not path.is_file():

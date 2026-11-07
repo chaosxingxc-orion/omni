@@ -262,9 +262,10 @@ class ReplayedEpisodeResult:
     sample_id: str
     final_response_text: str
     contacts: tuple[PredecessorContact, ...]
-    native_episode_receipt: Mapping[str, object]
+    native_episode_receipt: Mapping[str, object] | None
     solver_group: Mapping[str, object] | None = None
     relisten: Mapping[str, object] | None = None
+    node_outcome: Mapping[str, object] | None = None
 
 
 @dataclass(frozen=True)
@@ -1276,6 +1277,7 @@ class CheckpointPredecessor(PredecessorAttempt):
     checkpoint_sha256: str = ""
     canonical: Mapping[str, tuple] = field(default_factory=dict)
     row_costs: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+    fit_pins: Mapping[str, tuple] = field(default_factory=dict)
 
     @property
     def started_sample_ids(self) -> tuple[str, ...]:
@@ -1348,6 +1350,7 @@ def read_checkpoint_predecessor(
     protocol_hash: str | None = None,
     split_identity_hash: str | None = None,
     implementation: Mapping[str, str] | None = None,
+    node_config_hash: str | None = None,
 ) -> CheckpointPredecessor:
     """Read one aborted attempt's row checkpoint (mode B); model-free, read-only.
 
@@ -1376,6 +1379,8 @@ def read_checkpoint_predecessor(
     except RowCheckpointError as error:
         raise ResumeRecoveryError(str(error)) from error
     header = document.header
+    if node_config_hash is not None and header.get("node_scientific_hash", header.get("config_hash")) != node_config_hash:
+        raise ResumeRecoveryError("node checkpoint config identity differs; candidate responses cannot be replayed")
     for name, expected in (
         ("run_id", run_id), ("attempt_id", attempt_id),
         ("protocol_hash", protocol_hash), ("split_identity_hash", split_identity_hash),
@@ -1430,17 +1435,22 @@ def read_checkpoint_predecessor(
             elif not wanted <= present:
                 defect = "the stored trace lacks the request/response the stored record names"
         if defect is not None:
+            if node_config_hash is not None and row.trace_lines:
+                raise ResumeRecoveryError(
+                    f"sample {row.sample_id!r} has an incomplete node checkpoint; reconcile contact custody before retry"
+                )
             incomplete[row.sample_id] = defect
             continue
         kept_rows.append(row)
         record = row.output_rows[0]
         complete[row.sample_id] = ReplayedEpisodeResult(
             sample_id=row.sample_id,
-            final_response_text=str(record.get("pre_projection_text", record.get("text", ""))),
+            final_response_text=("" if record.get("result_kind") == "node" else str(record.get("pre_projection_text", record.get("text", "")))),
             contacts=(),
-            native_episode_receipt=dict(record.get("native_episode_receipt") or {}),
+            native_episode_receipt=(None if record.get("result_kind") == "node" else dict(record.get("native_episode_receipt") or {})),
             solver_group=record.get("solver_group"),
             relisten=record.get("relisten"),
+            node_outcome=record.get("node_outcome"),
         )
         canonical[row.sample_id] = row.output_rows
     destination = Path(materialize_dir) / f"{run_id}.trace.jsonl"
@@ -1462,6 +1472,7 @@ def read_checkpoint_predecessor(
         checkpoint_sha256=document.sha256,
         canonical=canonical,
         row_costs={row.sample_id: dict(row.cost) for row in document.rows},
+        fit_pins={row.sample_id: row.fit_pins for row in document.rows},
     )
 
 

@@ -3,12 +3,40 @@ from __future__ import annotations
 
 import json
 import threading
+from collections import Counter
 from pathlib import Path
 
 from .atomic_file import publish_new
 from .contact_journal import ContactJournal, canonical, comparable_request, digest, logical_contact
 from .preparation import PreparationError, load_artifact
 from .stage_timing import measured_lock, span
+
+
+def validate_fit_endpoint_accounting(journal, output, fit_plan, generation_run_id):
+    """Validate the original endpoint spend independently of generation cost."""
+    try:
+        entries = [json.loads(line) for line in journal.splitlines()]
+        counts = Counter(f"{entry['method']} {entry['route']}" for entry in entries)
+        sequences = [entry['contact'] for entry in entries]
+        if (len(entries) != output['contacts'] or not entries
+                or dict(counts) != output['contact_counts']
+                or output['generation_contacts'] != 0
+                or any(type(value) is not int or value < 1 for value in sequences)
+                or sequences != sorted(set(sequences))
+                or sequences[-1] != output['cumulative_contacts']
+                or any(entry.get('sample_id') != output['sample_id']
+                       or entry.get('agent_contact_id') != output['agent_contact_id']
+                       or entry.get('contact_identity_sha256') != output['contact_identity_sha256']
+                       or entry.get('run_id') != fit_plan['run_id']
+                       or entry.get('attempt_id') != fit_plan['attempt_id']
+                       or entry.get('generation_run_id') != generation_run_id
+                       or entry.get('session_id') != output['session_id']
+                       for entry in entries)):
+            raise PreparationError('predecessor FIT endpoint accounting differs')
+        return {'endpoint_contacts': len(entries), 'endpoint_counts': dict(counts),
+                'cumulative_contacts': sequences[-1]}
+    except (KeyError, TypeError, ValueError) as error:
+        raise PreparationError(f'invalid predecessor FIT endpoint accounting: {error}') from error
 
 
 def runtime_only_fit_repair(current, original):
@@ -47,7 +75,7 @@ class NativeFitJournal:
     def path(self, payload):
         return self.root / (digest(canonical(comparable_request(payload))) + '.fit.json')
 
-    def record(self, payload, inputs, receipt, measured, session_identity):
+    def record(self, payload, inputs, receipt, measured, session_identity, fit_spec=None):
         path = Path(receipt['path'])
         journal = path.with_name(path.name + '.contacts.jsonl')
         if not journal.is_file():
@@ -59,7 +87,8 @@ class NativeFitJournal:
             'identity': self.contacts.identity, 'payload': payload, 'inputs': inputs,
             'receipt': receipt, 'measured_prompt_tokens': measured,
             'session_identity': session_identity,
-            'endpoint_journal_sha256': digest(journal.read_bytes())}
+            'endpoint_journal_sha256': digest(journal.read_bytes()),
+            **({'fit_spec': fit_spec} if fit_spec is not None else {})}
         publish_new(self.path(payload), canonical(document))
         return document
 
@@ -71,7 +100,7 @@ class RecoverableNativeFitGate:
     current service identity, and the original endpoint journal. Unknown source
     FIT outcomes are refused by the original gate's durable contact journal.
     """
-    def __init__(self, runtime, plan, gate_factory, *, replay=None):
+    def __init__(self, runtime, plan, gate_factory, *, replay=None, checkpoint_fits=()):
         self.runtime, self.plan, self.factory, self.replay = runtime, plan, gate_factory, replay
         self.journal = NativeFitJournal(runtime._data_root, plan, runtime._arm())
         self._gate = None
@@ -79,9 +108,13 @@ class RecoverableNativeFitGate:
         self._init_lock = threading.Lock()
         self._init_failed = False
         self.receipts = []
+        self.fit_pins_by_sample = {}
         self._used = set()
         self._source = None
         self._pins = {}
+        self._checkpoint_fits = {tuple(item["key"]): item for item in checkpoint_fits}
+        if len(self._checkpoint_fits) != len(checkpoint_fits):
+            raise PreparationError('duplicate checkpoint FIT contact')
         if replay is not None:
             replay.assert_target(runtime._data_root, plan, runtime._arm())
             self._source = NativeFitJournal(runtime._data_root, replay.source_plan, runtime._arm())
@@ -98,9 +131,19 @@ class RecoverableNativeFitGate:
             key = (logical['sample_id'], logical['agent_contact_id'])
             if key in self._used:
                 raise PreparationError('native FIT repeated agent_contact_id')
+            if (key not in self._checkpoint_fits and any(k[0] == key[0] for k in self._checkpoint_fits)):
+                raise PreparationError('predecessor FIT contact identity changed; do not repeat tokenizer')
             # Claim before any I/O; failures and unknown outcomes retain this
             # identity. Other contacts may proceed without replaying this one.
             self._used.add(key)
+        if key in self._checkpoint_fits:
+            item = self._checkpoint_fits[key]
+            from types import SimpleNamespace
+            source = SimpleNamespace(contacts=SimpleNamespace(identity=item['identity']),
+                                     path=lambda original: Path(item['custody_path']))
+            path = Path(item['custody_path'])
+            return self._reuse(path, payload, prompt_limit_tokens, source=source,
+                               pin=item['custody_sha256'], checkpoint=True)
         if self.replay is not None:
             observed_payload = self.replay.match(payload)
             source_path = self._source.path(payload)
@@ -134,28 +177,36 @@ class RecoverableNativeFitGate:
         receipt = gate.receipt_for(request)
         if (receipt.get('sample_id'), receipt.get('agent_contact_id')) != key:
             raise PreparationError('native FIT receipt contact differs')
-        self.journal.record(payload, self.runtime.request_fit_inputs((payload,)), receipt,
-            measured, self.runtime.session_required_identity())
+        document = self.journal.record(payload, self.runtime.request_fit_inputs((payload,)), receipt,
+            measured, self.runtime.session_required_identity(),
+            self.runtime._composed.values.get("native_contact_fit"))
         with self._lock:
             self.receipts.append(dict(receipt))
+            self.fit_pins_by_sample.setdefault(key[0], []).append({
+                'path': str(self.journal.path(payload)), 'sha256': digest(canonical(document))})
         return measured
 
-    def _reuse(self, path, payload, prompt_limit_tokens):
+    def _reuse(self, path, payload, prompt_limit_tokens, *, check_lease=True, source=None, pin=None, checkpoint=False):
+        source = source or self._source
+        pin = pin or self._pins[path]
         try:
-            self.runtime.assert_generation_lease()
+            if check_lease:
+                self.runtime.assert_generation_lease()
             blob = path.read_bytes()
-            if digest(blob) != self._pins[path]:
+            if digest(blob) != pin:
                 raise PreparationError('predecessor FIT custody changed')
             document = json.loads(blob)
             original = document['payload']
             if (document['schema'] != 'saea-native-fit-custody-v1'
-                    or document['identity'] != self._source.contacts.identity
+                    or document['identity'] != source.contacts.identity
                     or comparable_request(original) != comparable_request(payload)
-                    or self._source.path(original) != path):
+                    or source.path(original) != path):
                 raise PreparationError('predecessor FIT request/identity differs')
             if document['session_identity'] != self.runtime.session_required_identity():
                 raise PreparationError('predecessor FIT service identity changed')
-            current = self.runtime.request_fit_inputs((original,))
+            current = (self.runtime.node_checkpoint_fit_inputs((original,), document['inputs'], document)
+                       if checkpoint and hasattr(self.runtime, 'node_checkpoint_fit_inputs')
+                       else self.runtime.request_fit_inputs((original,)))
             runtime_repair = None
             if canonical(current) != canonical(document['inputs']):
                 runtime_repair = runtime_only_fit_repair(current, document['inputs'])
@@ -178,17 +229,25 @@ class RecoverableNativeFitGate:
                     or output['rows'][0].get('measured_prompt_tokens') != measured):
                 raise PreparationError('predecessor FIT output does not certify this raw request')
             journal = artifact_path.with_name(artifact_path.name + '.contacts.jsonl')
-            if digest(journal.read_bytes()) != document['endpoint_journal_sha256']:
+            journal_blob = journal.read_bytes()
+            if digest(journal_blob) != document['endpoint_journal_sha256']:
                 raise PreparationError('predecessor FIT endpoint journal changed')
+            accounting = validate_fit_endpoint_accounting(journal_blob, output, fit_plan,
+                                             source.contacts.identity['run_id'])
             if prompt_limit_tokens is not None:
                 if type(prompt_limit_tokens) is not int or prompt_limit_tokens < 1 or measured > prompt_limit_tokens:
                     raise PreparationError('predecessor FIT exceeds current prompt limit')
             reused_receipt = {**receipt, 'native_fit_reuse': {
                 'schema': 'saea-native-fit-reuse-v1', 'source_path': str(path),
-                'source_sha256': self._pins[path], 'new_tokenizer_contacts': 0,
+                'source_sha256': pin, 'new_tokenizer_contacts': 0,
+                'endpoint_journal_path': str(journal),
+                'endpoint_journal_sha256': document['endpoint_journal_sha256'],
+                'fit_plan': fit_plan, 'accounting': accounting,
                 **({'runtime_repair': runtime_repair} if runtime_repair is not None else {})}}
             with self._lock:
                 self.receipts.append(reused_receipt)
+                self.fit_pins_by_sample.setdefault(payload['sample_id'], []).append({
+                    'path': str(path), 'sha256': pin})
             return measured
         except (KeyError, TypeError, ValueError, OSError) as error:
             raise PreparationError(f'cannot reuse predecessor native FIT: {error}') from error

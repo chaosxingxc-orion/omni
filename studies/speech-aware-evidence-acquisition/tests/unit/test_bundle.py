@@ -860,6 +860,113 @@ def test_verify_bundle_accepts_a_legitimate_completed_bundle(synthetic_world, bu
     assert bundle.attempt_state == "OPENED"
 
 
+def test_perception_node_bundle_verifies_and_finalizes_without_system_score(synthetic_world, bundled_repo, tmp_path):
+    from speech_aware_evidence_acquisition.core.tracing import TraceRecord
+
+    manifest_path, _, _, lock = _run_completed(synthetic_world, bundled_repo, tmp_path)
+    manifest = _read_manifest(manifest_path)
+    outputs_path = Path(manifest['outputs']['path'])
+    trace_path = Path(manifest['raw_trace']['path'])
+    trace_manifest_path = Path(manifest['trace_manifest']['path'])
+    rows = [json.loads(line) for line in outputs_path.read_text().splitlines()]
+    traces = [json.loads(line) for line in trace_path.read_text().splitlines()]
+    for index, row in enumerate(rows):
+        contact = {k: row[k] for k in ('request_id', 'request_sha256', 'response_sha256', 'response_text_sha256')}
+        node = {'result_type': 'node_outcome', 'stage': 'perception', 'sample_id': row['sample_id'],
+                'response': row['text'], 'status': ('ok', 'invalid_output', 'finite_completion')[index],
+                'node_receipt': {'contacts': [contact], 'final_contact': contact}}
+        row.update(result_kind='node', node_outcome=node)
+        traces.append({'channel': 'USE', 'record_id': f"{row['sample_id']}/perception-node",
+                       'payload': {'use_node_outcome': node}})
+    outputs_path.write_text(''.join(json.dumps(row, sort_keys=True) + '\n' for row in rows))
+    trace_path.write_text(''.join(json.dumps(row, sort_keys=True) + '\n' for row in traces))
+    trace_manifest = json.loads(trace_manifest_path.read_text())
+    trace_manifest['records'] = {r['record_id']: TraceRecord(channel=r['channel'], record_id=r['record_id'], payload=r['payload']).content_hash() for r in traces}
+    write_json_artifact(trace_manifest_path, trace_manifest)
+    manifest.update(result_kind='node', node_result={'schema': 'saea-perception-node-v1', 'stage': 'perception'}, scorers=[])
+    for key in ('outputs', 'raw_trace', 'trace_manifest'):
+        manifest[key]['sha256'] = sha256_file(Path(manifest[key]['path']))
+    write_json_artifact(manifest_path, manifest)
+    assert len(verify_bundle(manifest_path).outputs_rows) == 3
+    result = finalize_bundle(manifest_path, lock, synthetic_world.data_root, repo_root=bundled_repo[1], ledger_cells=_HUMAN_LEDGER_CELLS)
+    assert result.attempt_state == 'FINALIZED' and result.scores_path is None
+
+
+def test_node_flight_seal_calls_finalizer_and_generation_release(synthetic_world, bundled_repo, tmp_path):
+    """Exercise the public seal and release against a real verified node bundle."""
+    from types import SimpleNamespace
+    import importlib.util
+    from speech_aware_evidence_acquisition.core.flight.runtime import FlightRuntime
+    from speech_aware_evidence_acquisition.core.flight.receipts import FlightReceipts
+    from speech_aware_evidence_acquisition.core.tracing import TraceRecord
+
+    path, composed, plan, lock = _run_completed(
+        synthetic_world, bundled_repo, tmp_path,
+        run_dir_name=synthetic_world.data_root / 'runs' / 'SAEA-E-000-bundle' / 'attempt-bundle',
+    )
+    manifest = _read_manifest(path)
+    outputs_path = Path(manifest['outputs']['path'])
+    trace_path = Path(manifest['raw_trace']['path'])
+    trace_manifest_path = Path(manifest['trace_manifest']['path'])
+    rows = [json.loads(line) for line in outputs_path.read_text().splitlines()]
+    traces = [json.loads(line) for line in trace_path.read_text().splitlines()]
+    for row in rows:
+        contact = {k: row[k] for k in ('request_id', 'request_sha256', 'response_sha256', 'response_text_sha256')}
+        node = {'result_type': 'node_outcome', 'stage': 'perception', 'sample_id': row['sample_id'],
+                'response': row['text'], 'status': 'ok',
+                'node_receipt': {'contacts': [contact], 'final_contact': contact}}
+        row.update(result_kind='node', node_outcome=node)
+        traces.append({'channel': 'USE', 'record_id': f"{row['sample_id']}/perception-node",
+                       'payload': {'use_node_outcome': node}})
+    outputs_path.write_text(''.join(json.dumps(row, sort_keys=True) + '\n' for row in rows))
+    trace_path.write_text(''.join(json.dumps(row, sort_keys=True) + '\n' for row in traces))
+    trace_manifest = json.loads(trace_manifest_path.read_text())
+    trace_manifest['records'] = {r['record_id']: TraceRecord(channel=r['channel'], record_id=r['record_id'], payload=r['payload']).content_hash() for r in traces}
+    write_json_artifact(trace_manifest_path, trace_manifest)
+    manifest.update(result_kind='node', node_result={'schema':'saea-perception-node-v1','stage':'perception'}, scorers=[])
+    for key in ('outputs', 'raw_trace', 'trace_manifest'):
+        manifest[key]['sha256'] = sha256_file(Path(manifest[key]['path']))
+    write_json_artifact(path, manifest)
+    runtime = object.__new__(FlightRuntime)
+    runtime._run_id, runtime._attempt_id, runtime._plan = plan.run_id, plan.attempt_id, plan
+    runtime.receipts = FlightReceipts(plan.run_id, plan.attempt_id)
+    for stage in ('preflight', 'preprocess', 'serve', 'run_phases'):
+        runtime.receipts.record(stage, {})
+    runtime._composed = SimpleNamespace(values={'native_episode': {'perception_only': True}}, config_hash=composed.config_hash)
+    runtime._repo_root, runtime._data_root, runtime._lock = bundled_repo[1], synthetic_world.data_root, lock
+    runtime._model = runtime._dataset = runtime._baseline = 'unused'
+    runtime._samples = tuple(SimpleNamespace(sample_id=row['sample_id']) for row in rows)
+    runtime._split_id = 'discovery'
+    runtime._run_dir = lambda: path.parent
+    runtime._close_live_speech_provider = lambda **kw: None
+    runtime._merged_canonical_rows = lambda: (rows, None, None)
+    runtime._seal_row_checkpoint = lambda _rows: None
+    runtime._emit_seal_time_traces = lambda *_args: None
+    runtime._phase_summaries, runtime._output_rows = [], rows
+    runtime._obs_result, runtime._seal_only = None, False
+    runtime._client = SimpleNamespace(close=lambda: {'arm': manifest['arm'], 'trace_manifest_hash': manifest['trace_manifest']['sha256'], 'cost': manifest['cost']})
+    runtime._manifest_builder = lambda **kw: path
+    runtime._session_receipt_path = None
+    runtime._bundle_verifier, runtime._bundle_finalizer = verify_bundle, finalize_bundle
+    runtime._default_ledger_cells = lambda _plan: dict(_HUMAN_LEDGER_CELLS)
+    runtime._execution_policy = None
+    runtime.serving_monitor_summary = lambda: None
+    runtime._serving_session_dir = runtime._session_attach_receipt = None
+    runtime._session_attach_receipt_path = None
+    seal = runtime.seal()
+    assert seal['finalize']['attempt_state'] == 'FINALIZED'
+    assert _read_manifest(path)['cost'] == seal['cost']
+    assert seal['verified_attempt_state'] == 'FINALIZED'
+    runner_path = Path(__file__).resolve().parents[2] / 'scripts/analysis/run_real_engine_candidate.py'
+    spec = importlib.util.spec_from_file_location('node_release_runner', runner_path)
+    runner = importlib.util.module_from_spec(spec); spec.loader.exec_module(runner)
+    release = runner.generation_release_document(runtime, candidate='node',
+        spec={'run_id': plan.run_id, 'attempt_id': plan.attempt_id, 'profile':'fixture', 'service_session':'fixture'},
+        commit=manifest['study_commit'], rows=len(rows), elapsed=0)
+    assert release['schema'] == 'saea-node-generation-released-v1'
+    assert release['artifacts']['manifest']['sha256'] == seal['manifest_sha256']
+
+
 def test_verify_bundle_accepts_a_manifest_missing_study_repo_dirt_field(
     synthetic_world, bundled_repo, tmp_path
 ):
