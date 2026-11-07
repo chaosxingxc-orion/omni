@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T14:44:48.006094+00:00",
+  "updated_at_utc": "2026-11-07T15:08:58.986759+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -16,7 +16,7 @@
       "id": "P-runtime",
       "resource": "CPU",
       "depends_on": [],
-      "status": "production_prepare_and_restart_in_progress_release_consumer_integrating",
+      "status": "node_seal_verified_normal_FIT_resume_fix_in_progress",
       "owner": "Terra CLI",
       "acceptance": [
         "native_P_only",
@@ -32,12 +32,15 @@
       "id": "P-baseline",
       "resource": "CPU",
       "depends_on": [],
-      "status": "native_response_reanalysis_complete",
+      "status": "complete_native_order_and_supply_audit",
       "owner": "Sol CLI",
       "result": {
         "n": 1080,
         "valid": 1079,
-        "gold_recalled": 977
+        "gold_recalled": 977,
+        "top1_correct": 867,
+        "recall_at_2_correct": 951,
+        "mrr": 0.8496913580246913
       },
       "evidence": "P-Node-Baseline.json"
     },
@@ -490,7 +493,7 @@
       "id": "C-image-migrate",
       "resource": "CPU_STORAGE",
       "depends_on": [],
-      "status": "complete_exact_image_verified",
+      "status": "complete_exact_image_loaded_and_service_switched",
       "owner": "main supervisor",
       "scope": "exact stable image, shared storage, no dataset transfer"
     },
@@ -500,9 +503,25 @@
       "depends_on": [
         "C-image-migrate"
       ],
-      "status": "deployment_in_progress_not_validated",
+      "status": "six_real_audio_requests_passed_not_large_scale_proof",
       "owner": "Terra CLI",
       "scope": "different real audio requests, structured output, independent cost journal, preserve unknown"
+    },
+    {
+      "id": "P-production-queue-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "active_configuration_and_admission_preparation",
+      "owner": "Terra CLI",
+      "scope": "Reuse prepared parent1080; compile executable parent/GEPA3/Reflexionc1c2/supply12/16 queue. Final release required only for dispatch."
+    },
+    {
+      "id": "A-PON-final-score",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "generation1080_complete_official_CPU_score_failed_recovery_in_progress",
+      "owner": "Sol CLI",
+      "new_model_calls": 0
     }
   ],
   "round_policy": {
