@@ -34,6 +34,11 @@ def servers():
             protocol_version = 'HTTP/1.1'
             def log_message(self, *args):
                 pass
+            def do_POST(self):
+                self.server.posts.append(self.path)
+                self.send_response(204)
+                self.send_header('Content-Length', '0')
+                self.end_headers()
             def do_GET(self):
                 server = self.server
                 if self.path == '/metrics':
@@ -81,6 +86,7 @@ def servers():
         server = Server(('127.0.0.1', 0), Handler)
         server.accepted = 0
         server.requests = []
+        server.posts = []
         server.actions = deque(actions)
         server.release = threading.Event()
         thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': .01}, daemon=True)
@@ -135,7 +141,7 @@ def test_complete_close_or_chunked_response_has_exact_reuse_semantics(servers, p
 @pytest.mark.parametrize('primed', [False, True])
 @pytest.mark.parametrize('action', [
     {'status': 500}, {'status': 302}, {'raw': b'bad json'}, {'raw': b'\xff'},
-    {'timeout': True}, {'disconnect': True},
+    {'timeout': True},
     {'raw': b'{}', 'length': 20, 'close': True},
     {'raw': b'{}', 'length': m._PROBE_MAX_RESPONSE_BYTES + 1},
     {'raw': b'x' * (m._PROBE_MAX_RESPONSE_BYTES + 1), 'chunked': True},
@@ -395,3 +401,49 @@ def test_direct_whole_wave_owns_probe_scope_only_during_render(servers, tmp_path
     for server in (first, second):
         m._http_get_json(server.url, 1)
     assert first.accepted == second.accepted == 2
+
+
+def test_reused_socket_disconnect_retries_fresh_get(servers, probe_scope, caplog):
+    server = servers([{}, {'disconnect': True}, {}])
+    assert m._http_get_json(server.url, 1)['request'] == 1
+    assert m._http_get_json(server.url, 1)['request'] == 3
+    assert server.accepted == 2
+    assert len(server.requests) == 3
+    assert server.requests[0][1] == server.requests[1][1] != server.requests[2][1]
+    assert all(row[0] == '/v1/models' for row in server.requests)
+    assert 'RemoteDisconnected' in caplog.text and 'recovered' in caplog.text
+
+
+def test_two_disconnects_fail_closed_and_discard_both(servers, probe_scope, caplog):
+    server = servers([{'disconnect': True}, {'disconnect': True}, {}])
+    with pytest.raises(http.client.RemoteDisconnected):
+        m._http_get_json(server.url, 1)
+    assert len(server.requests) == server.accepted == 2
+    assert not m._probe_local.cache.connections
+    assert 'RemoteDisconnected' in caplog.text and 'recovered' not in caplog.text
+
+
+def test_retry_does_not_repeat_business_post_or_accept_wrong_model(servers, probe_scope, monkeypatch, tmp_path):
+    server = servers([{'disconnect': True}, {'model': 'wrong'}])
+    monkeypatch.setattr(m, 'current_hostname', lambda _: 'host')
+    monkeypatch.setattr(m, 'interpreter_identity', lambda _: ('/python', '', 0))
+    monkeypatch.setattr(m, 'assert_argv_matches_instance', lambda *args: None)
+    monkeypatch.setattr(m, '_live_argv', lambda *args: [])
+    process = tmp_path / '42'
+    process.mkdir()
+    (process / 'exe').symlink_to('/python')
+    monkeypatch.setattr(m, 'harness_hostname', lambda _: 'host')
+    receipt = {'protocol': {'served_model_name': 'served'}}
+    port = server.server_port
+    def guarded_post():
+        m._verify_shared_pid_host(tmp_path, 42, receipt, {'instance_id': 'test'}, '127.0.0.1', port)
+        connection = http.client.HTTPConnection('127.0.0.1', port, timeout=1)
+        connection.request('POST', '/business', body=b'{}')
+        connection.getresponse().read()
+        connection.close()
+    with pytest.raises(SessionError, match='wrong'):
+        guarded_post()
+    assert len(server.requests) == 2 and server.accepted == 2 and server.posts == []
+    server.actions.extend([{'disconnect': True}, {}])
+    guarded_post()
+    assert len(server.requests) == 4 and server.posts == ['/business']

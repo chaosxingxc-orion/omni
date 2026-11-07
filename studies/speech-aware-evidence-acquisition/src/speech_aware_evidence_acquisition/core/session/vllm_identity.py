@@ -62,6 +62,7 @@ from __future__ import annotations
 import hashlib
 import http.client
 import json
+import logging
 import math
 import os
 import re
@@ -342,6 +343,7 @@ _PROBE_MAX_CONNECTIONS = 8
 _PROBE_MAX_RESPONSE_BYTES = 1024 * 1024
 _MAPS_CACHE_MAX_BYTES = 8 * 1024 * 1024
 _probe_local = threading.local()
+_logger = logging.getLogger(__name__)
 
 
 class _ProbeConnections:
@@ -398,8 +400,8 @@ def http_probe_connection_scope():
 def _http_get_json(url: str, timeout_seconds: float) -> object:
     """Issue every probe; reuse sockets only inside an explicit owned scope.
 
-    No retries, redirects or identity caching. Any failed/partial response
-    discards its socket; a later independent call may open a fresh connection.
+    One fresh-connection retry is allowed only for an explicit connection
+    closure/reset. No redirects or identity caching; other failures fail closed.
     """
     parsed = urlsplit(url)
     if (parsed.scheme != "http" or parsed.path != "/v1/models"
@@ -418,7 +420,7 @@ def _http_get_json(url: str, timeout_seconds: float) -> object:
     connection = cache.connections.pop(key, None) if cache is not None else None
     # A server may close an idle keep-alive socket without a Connection: close
     # header. Discard readable idle sockets (EOF or unexpected pending bytes)
-    # BEFORE sending the next GET. No failed request is retried.
+    # BEFORE sending the next GET; the peer can still close after this check.
     if connection is not None and connection.sock is not None:
         try:
             readable, _, exceptional = select.select([connection.sock], [], [connection.sock], 0)
@@ -433,33 +435,49 @@ def _http_get_json(url: str, timeout_seconds: float) -> object:
             _, evicted = cache.connections.popitem(last=False)
             evicted.close()
         connection = http.client.HTTPConnection(host, port, timeout=float(timeout_seconds))
-    try:
-        with span("session_namespace_probe", {"cache_hits": int(reused),
-                "timeout_seconds": timeout_seconds}) as observation:
-            connection.request("GET", "/v1/models", headers={"Accept": "application/json"})
-            with connection.getresponse() as response:
-                observation["http_status"] = response.status
-                if response.status != 200:
-                    raise ValueError(f"model probe returned HTTP {response.status}")
-                declared_length = response.length
-                if declared_length is not None and declared_length > _PROBE_MAX_RESPONSE_BYTES:
-                    raise ValueError("model probe response exceeds byte limit")
-                raw = response.read(_PROBE_MAX_RESPONSE_BYTES + 1)
-                observation["response_bytes"] = len(raw)
-                if len(raw) > _PROBE_MAX_RESPONSE_BYTES:
-                    raise ValueError("model probe response exceeds byte limit")
-                if declared_length is not None and len(raw) != declared_length:
-                    raise ValueError("model probe response was truncated")
-                result = json.loads(raw.decode("utf-8"))
-                will_close = response.will_close
-        if cache is None or will_close or connection.sock is None:
+    first_error = None
+    for attempt in range(2):
+        transport_error = None
+        try:
+            with span("session_namespace_probe", {"cache_hits": int(reused),
+                    "timeout_seconds": timeout_seconds}) as observation:
+                try:
+                    connection.request("GET", "/v1/models", headers={"Accept": "application/json"})
+                    with connection.getresponse() as response:
+                        observation["http_status"] = response.status
+                        if response.status != 200:
+                            raise ValueError(f"model probe returned HTTP {response.status}")
+                        declared_length = response.length
+                        if declared_length is not None and declared_length > _PROBE_MAX_RESPONSE_BYTES:
+                            raise ValueError("model probe response exceeds byte limit")
+                        raw = response.read(_PROBE_MAX_RESPONSE_BYTES + 1)
+                        observation["response_bytes"] = len(raw)
+                        if len(raw) > _PROBE_MAX_RESPONSE_BYTES:
+                            raise ValueError("model probe response exceeds byte limit")
+                        if declared_length is not None and len(raw) != declared_length:
+                            raise ValueError("model probe response was truncated")
+                        result = json.loads(raw.decode("utf-8"))
+                        will_close = response.will_close
+                except (http.client.RemoteDisconnected, ConnectionResetError,
+                        BrokenPipeError, ConnectionAbortedError) as error:
+                    transport_error = error
+                    raise
+            if cache is None or will_close or connection.sock is None:
+                connection.close()
+            else:
+                cache.connections[key] = connection
+            if first_error is not None:
+                _logger.warning("model identity probe recovered after %s", type(first_error).__name__)
+            return result
+        except BaseException as error:
             connection.close()
-        else:
-            cache.connections[key] = connection
-        return result
-    except BaseException:
-        connection.close()
-        raise
+            if attempt or error is not transport_error:
+                raise
+            first_error = error
+            _logger.warning("model identity probe connection failed (%s); retrying once on a fresh connection",
+                            type(error).__name__)
+            connection = http.client.HTTPConnection(host, port, timeout=float(timeout_seconds))
+            reused = False
 
 
 http_get_json: Callable[[str, float], object] = _http_get_json
