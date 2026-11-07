@@ -1,0 +1,22 @@
+{
+  "schema": "psd-working-baseline-record-v1",
+  "decision": "complete-coverage-slot-on",
+  "purpose": "shared parent for quality exploration; not production acceptance",
+  "run_id": "SAEA-SLURP-PSD-COMPLETE-COVERAGE-FOLD-A-SLOT-ON-V1",
+  "source_commit": "2586419b119d7077a405a4fb951e00ee59c231eb",
+  "admitted_baseline_sha256": "3fee2fe0b520a7537caedc6de3887a95728b64d646c2229014c334461cd90879",
+  "runtime_sha256": "82885d6cfd91dc0c4f3ab79644062082982d0e7d22392771398d7e76741d4819",
+  "generation_manifest_sha256": "926cbc4a2b6e7efc900574c9d086cd394cf73b478517a11ca870d9d1ce15fbb2",
+  "score_file_sha256_observed": "425c60572dcb141c60ade685521c34015f7cd81b88865049116fe44bce7c42ef",
+  "score_state_at_read": "official scores present; attempt OPENED; finalization and paired analysis pending",
+  "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6",
+  "rows": 1080,
+  "legal_answers": 1077,
+  "remaining_empty": 3,
+  "intent_accuracy": 0.8407407407407408,
+  "slu_f1": 0.709703282718507,
+  "exact_slot_f1": 0.6144455747711088,
+  "strict_correct": 587,
+  "efficiency_reference": "SAEA-SLURP-PSD-COMPLETE-COVERAGE-FOLD-A-SLOT-OFF-V1",
+  "no_dataset_or_baseline_rerun_required": true
+}
