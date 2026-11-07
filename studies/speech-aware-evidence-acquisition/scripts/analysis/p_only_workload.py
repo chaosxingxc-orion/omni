@@ -1,6 +1,7 @@
 """Source-bound P-only workload using the shared stage/prepare/register machinery."""
 import copy
 import math
+import re
 from pathlib import Path
 
 from intent_slot_workload import NodeWorkload
@@ -20,7 +21,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
     def __init__(self, config):
         fields = {'schema', 'name', 'run_id', 'sample_ids', 'runtime_binding', 'execution',
                   'material', 'population', 'parent_baseline', 'parent_registration', 'axis'}
-        if set(config) != fields or config['schema'] != SCHEMA:
+        if not fields <= set(config) <= fields | {'runtime_binding_adaptation'} or config['schema'] != SCHEMA:
             raise ValueError('exact P-only configuration required')
         if config['population'].get('dataset') != 'slurp-speech-native-evo-fold-a-1080' or len(config['sample_ids']) != 1080:
             raise ValueError('original Fold A 1080 required')
@@ -31,7 +32,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
             (axis['kind'] == 'instruction' and set(axis) != {'kind', 'patch', 'template'}) or
             (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or axis['value'] not in (12, 16)))):
             raise ValueError('invalid P-only axis')
-        parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis')}
+        parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation')}
         parent.update(schema='saea-intent-slot-workload-v1', node_arm='enhanced-p-slot-decision')
         super().__init__(parent)
         self.config = copy.deepcopy(config)
@@ -44,6 +45,51 @@ class PerceptionOnlyWorkload(NodeWorkload):
         return {'normal_generation_calls': self.ROWS, 'fallback_inclusive_cap': 6*self.ROWS,
                 'fit_calls': 6*self.ROWS}
 
+    def check_parent_binding(self, repo, original):
+        current = self.config['runtime_binding']
+        policy = self.config.get('runtime_binding_adaptation')
+        if policy is None:
+            if original != current:
+                raise ValueError('P-only parent registration source differs')
+            return
+        if (not isinstance(policy, dict) or set(policy) != {'schema', 'comparison_scope', 'parent_model', 'current_model', 'parent_receipt', 'current_receipt'}
+                or policy['schema'] != 'saea-p-only-runtime-binding-adaptation-v1'
+                or policy['comparison_scope'] != 'same-model-and-request'):
+            raise ValueError('exact P-only runtime binding adaptation required')
+        models, receipts = [], []
+        for label, binding in (('parent', original), ('current', current)):
+            model_pin, receipt_pin = policy[label+'_model'], policy[label+'_receipt']
+            if (not isinstance(binding, dict) or set(binding) != {'model_fragment', 'service_session', 'profile', 'runtime_receipt'}
+                    or not isinstance(binding['model_fragment'], str)
+                    or not re.fullmatch('[A-Za-z0-9][A-Za-z0-9_-]*', binding['model_fragment'])):
+                raise ValueError('invalid P-only binding identity')
+            if (not isinstance(binding['runtime_receipt'], str)
+                    or not isinstance(model_pin, dict) or set(model_pin) != {'relpath', 'sha256'} or model_pin.get('relpath') != 'configs/model/'+binding['model_fragment']+'.json'
+                    or not isinstance(receipt_pin, dict) or set(receipt_pin) != {'relpath', 'sha256'} or receipt_pin.get('relpath') != 'docs/'+binding['runtime_receipt']):
+                raise ValueError('adaptation pins must identify bound model and receipt')
+            model, receipt = pinned(repo, model_pin), pinned(repo, receipt_pin)
+            if (not isinstance(model.get('model_lock_key'), str) or not model['model_lock_key']
+                    or model.get('runtime_receipt') != binding['runtime_receipt'] or receipt.get('model_lock_key') != model['model_lock_key']):
+                raise ValueError('adaptation model and receipt differ')
+            files = receipt.get('model', {}).get('files')
+            if not isinstance(files, list) or not files:
+                raise ValueError('adaptation requires model file identities')
+            identities = {}
+            for item in files:
+                if not isinstance(item, dict) or set(item) != {'path', 'bytes', 'sha256'} or not isinstance(item['path'], str):
+                    raise ValueError('invalid model file identity')
+                name = Path(item['path']).name
+                if (not name or name in identities or type(item['bytes']) is not int or item['bytes'] <= 0
+                        or not isinstance(item['sha256'], str) or not re.fullmatch('[0-9a-f]{64}', item['sha256'])):
+                    raise ValueError('invalid model file identity')
+                identities[name] = (item['bytes'], item['sha256'])
+            if not any(name.endswith('.safetensors') for name in identities):
+                raise ValueError('adaptation requires weight identities')
+            receipts.append(identities)
+            models.append({k: v for k, v in model.items() if k not in {'base_url', 'runtime_receipt', 'model_materialization_root', 'geometry_basis'}})
+        if models[0] != models[1] or receipts[0] != receipts[1]:
+            raise ValueError('P-only deployment model science or weights differ')
+
     def derive(self, repo, data, material_pin):
         material, checked = self.material_checked(repo, data, material_pin)
         binding = self.runtime_binding(repo)
@@ -54,8 +100,9 @@ class PerceptionOnlyWorkload(NodeWorkload):
         parent_registration = pinned(repo, self.config['parent_registration'])
         original = parent_registration['job_config']
         if (parent_registration.get('workload_kind') != 'intent-slot-node-ablation'
-                or any(original.get(k) != self.config[k] for k in ('sample_ids', 'population', 'material', 'runtime_binding', 'execution'))):
+                or any(original.get(k) != self.config[k] for k in ('sample_ids', 'population', 'material', 'execution'))):
             raise ValueError('P-only parent registration source differs')
+        self.check_parent_binding(repo, original.get('runtime_binding'))
         from tfrl_hardset_a0_registration import scientific_hash
         parent_science = copy.deepcopy(base)
         parent_science['native_episode'].pop('perception_only')

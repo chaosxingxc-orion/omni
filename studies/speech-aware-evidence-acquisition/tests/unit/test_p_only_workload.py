@@ -36,6 +36,12 @@ def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch)
     monkeypatch.setattr(job, 'runtime_binding', lambda *args: {'model_fragment': 'm', 'service_session': 's'})
     monkeypatch.setattr(p, 'read_asset', lambda *args: {'cells': [{}], 'population': {}, 'execution_plan': {}, 'stage3_measurement': {}})
     control = job.derive(tmp_path, tmp_path, {})[0]
+    parent_bytes = registration.read_bytes()
+    job.config['sample_ids'] = ['changed']
+    with pytest.raises(ValueError, match='source differs'):
+        job.derive(tmp_path, tmp_path, {})
+    job.config['sample_ids'] = ['id']
+    assert registration.read_bytes() == parent_bytes
     expected = copy.deepcopy(parent); expected.pop('prepared_phase_supply'); expected['native_contact_fit'].update(run_id='P-TEST-FIT', attempt_id='fit-v1')
     assert control == expected
     job.config['axis'] = {'kind': 'breadth', 'value': 12}
@@ -50,3 +56,45 @@ def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch)
     template.write_text('tampered')
     with pytest.raises(ValueError, match='template pin'):
         job.derive(tmp_path,tmp_path,{})
+
+
+def test_explicit_binding_adaptation_pins_science_and_preserves_history(tmp_path):
+    def write(rel, value):
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(value))
+        return pin(path, tmp_path)
+
+    bindings = [dict(model_fragment=name, profile=name, service_session=name,
+                     runtime_receipt='receipts/'+name+'.json') for name in ('old', 'new')]
+    models = [dict(model_lock_key='frozen', base_url=name, runtime_receipt=b['runtime_receipt'],
+                   decoding_params={'temperature': 0, 'max_tokens': 4096},
+                   server_args=['--max-model-len', '65536']) for name, b in zip(('old', 'new'), bindings)]
+    receipt = {'model_lock_key':'frozen', 'model':{'files':[
+        {'path':'models/frozen/model.safetensors', 'bytes':42, 'sha256':'a'*64},
+        {'path':'models/frozen/config.json', 'bytes':5, 'sha256':'b'*64}]}}
+    policy = {'schema':'saea-p-only-runtime-binding-adaptation-v1', 'comparison_scope':'same-model-and-request'}
+    for label, binding, model in zip(('parent','current'), bindings, models):
+        policy[label+'_model'] = write('configs/model/'+binding['model_fragment']+'.json', model)
+        policy[label+'_receipt'] = write('docs/'+binding['runtime_receipt'], receipt)
+    job = object.__new__(p.PerceptionOnlyWorkload)
+    job.config = {'runtime_binding':copy.deepcopy(bindings[0])}
+    job.check_parent_binding(tmp_path, bindings[0])
+    job.config['runtime_binding'] = bindings[1]
+    with pytest.raises(ValueError, match='source differs'):
+        job.check_parent_binding(tmp_path, bindings[0])
+    job.config['runtime_binding_adaptation'] = policy
+    before = copy.deepcopy(bindings[0])
+    job.check_parent_binding(tmp_path, bindings[0])
+    assert bindings[0] == before
+    for key, value in [('decoding_params', {'temperature':0.1, 'max_tokens':4096}),
+                       ('server_args', ['--max-model-len', '32768'])]:
+        changed = copy.deepcopy(models[1]); changed[key] = value
+        policy['current_model'] = write('configs/model/new.json', changed)
+        with pytest.raises(ValueError, match='science or weights'):
+            job.check_parent_binding(tmp_path, bindings[0])
+    policy['current_model'] = write('configs/model/new.json', models[1])
+    changed = copy.deepcopy(receipt); changed['model']['files'][0]['sha256'] = 'c'*64
+    policy['current_receipt'] = write('docs/receipts/new.json', changed)
+    with pytest.raises(ValueError, match='science or weights'):
+        job.check_parent_binding(tmp_path, bindings[0])
