@@ -75,13 +75,13 @@
       "depends_on": [
         "baseline-selection"
       ],
-      "status": "held_registration_release_closure_pending",
+      "status": "k002_running_k001_recovery_queued",
       "rows_per_member": 625,
       "members": 2,
       "dependency_note": "与Fold B并行；同策略K2，不能混OFF/ON。",
       "prior_status": "main_integrated_final_cpu_chain_complete_held",
-      "completed_rows": 0,
-      "generation_authorized": false
+      "completed_rows": 62,
+      "generation_authorized": true
     },
     {
       "id": "construction-score",
@@ -89,7 +89,7 @@
       "depends_on": [
         "construction-k2"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_member_outputs_async",
       "prior_status": "pending"
     },
     {
@@ -101,7 +101,7 @@
       "depends_on": [
         "E1-prepare"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/gepa_v2_node_adapter.py",
@@ -141,7 +141,7 @@
       "depends_on": [
         "E2-prepare"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/gepa_v2_node_adapter.py",
@@ -181,7 +181,7 @@
       "depends_on": [
         "E3-prepare"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_tfgrpo_adapter.py",
@@ -233,7 +233,7 @@
       "depends_on": [
         "E4-prepare"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/psd_tfgrpo_adapter.py",
@@ -336,7 +336,7 @@
       "depends_on": [
         "E6-prepare"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "configuration_entries": [
         {
           "file": "studies/speech-aware-evidence-acquisition/scripts/analysis/external_slot_candidate.py",
@@ -373,7 +373,7 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
       "prior_status": "awaiting_required_construction_feedback"
     },
@@ -383,7 +383,7 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
       "prior_status": "awaiting_required_construction_feedback"
     },
@@ -393,7 +393,7 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
       "prior_status": "awaiting_required_construction_feedback"
     },
@@ -403,7 +403,7 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
       "prior_status": "awaiting_required_construction_feedback"
     },
@@ -413,7 +413,7 @@
       "depends_on": [
         "construction-score"
       ],
-      "status": "deferred_by_user_system_coverage_priority",
+      "status": "pending_specific_input_preparation",
       "note": "本机教师生成候选、编译准备在CPU完成；不占NPU，通用模板与固定资产可提前准备。",
       "prior_status": "awaiting_required_construction_feedback"
     },
@@ -862,13 +862,10 @@
     "per-node cost and latency"
   ],
   "limitations": [
-    "CompleteOFF has verified FoldA accuracy and1080legal answers; historical alignment and TFRL gains not established",
-    "K2 registration is not native admission or launch",
-    "K2 OFF policy awaits baseline choice; if ON is selected, rebuild corresponding configurations without changing roster",
-    "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
-    "ACE/Reflexion current PSD integration incomplete"
+    "Third instance has zero experimental model calls; not all cards busy",
+    "Teacher candidates not yet admitted or evaluated",
+    "TF-GRPO requires same-policy group rewards; transferred ACE/Reflexion not native PSD algorithm gains"
   ],
-  "updated_at": "2026-11-07T04:41:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
@@ -891,7 +888,7 @@
     "successor_trigger": "generation-released",
     "score_blocks_successor": false,
     "full_verification_eliminated": false,
-    "native_successor_queue_status": "A Decision true model requests -> C96 waiting-container; B old P lease settled, K2 admission in progress",
+    "native_successor_queue_status": "A Decision -> C96 -> P ON; B K002 -> K001 recovery; teacher candidates preparing queue",
     "queue_compatibility_commit": "25c6386f"
   },
   "priority_override": {
@@ -903,55 +900,56 @@
     "tfrl_preparation": "parallel_cpu_preparation_quality_priority_retained"
   },
   "live_resource_snapshot": {
-    "observed_at_utc": "2026-11-07T04:40:00Z",
-    "A": {
-      "running_requests": 64,
-      "waiting_requests": null,
-      "cards": 4
-    },
-    "B": {
-      "running_requests": 0,
-      "waiting_requests": 0,
-      "cards": 4
-    },
-    "all_eight_cards_busy": false
+    "observed_at_utc": "2026-11-07T07:06:00Z",
+    "AICore_percent": [
+      74,
+      33,
+      54,
+      56,
+      50,
+      57,
+      41,
+      58
+    ],
+    "scope": "181 instantaneous, not sustained utilization",
+    "all_authorized_cards_busy": false
   },
-  "updated_at_utc": "2026-11-07T06:45:03Z",
+  "updated_at_utc": "2026-11-07T07:10:00Z",
   "current_dispatch": {
     "A": {
       "status": "generation_running",
-      "completed_rows": 672,
+      "completed_rows": 892,
       "total_rows": 1080,
       "running_requests": 64,
       "successors": [
         "complete-off-c96",
         "perception-thinking-on"
       ],
-      "successors_status": "existing_binders_waiting"
+      "successors_status": "existing_binders_waiting",
+      "observed_at_utc": "2026-11-07T07:06:00Z"
     },
     "B": {
       "status": "k002_generation_running_k001_recovery_queued",
       "known_dispatch_response_pairs": 263,
       "missing_dispatched_responses": 0,
-      "action": "reconcile_and_resume_by_original_codex_session",
+      "action": "keep_running_and_handoff_to_k001_recovery",
       "k001_completed_rows": 87,
       "k001_total_rows": 625,
-      "k002_completed_rows": 0,
+      "k002_completed_rows": 62,
       "k002_total_rows": 625,
-      "k002_calls": 75,
-      "k002_responses": 66,
-      "running_requests": 7,
       "recovery_dependency": "verified_k002_generation_release",
-      "recovery_waiter_pid": 868834
+      "recovery_waiter_pid": 868834,
+      "observed_at_utc": "2026-11-07T07:06:00Z"
     },
     "C": {
-      "status": "v18_preflight_failed_model_directory_mount_missing",
+      "status": "v19_zero_contact_settled_new_identity_cpu_preparation",
       "completed_rows": 0,
       "total_rows": 1080,
-      "action": "correct_sealed_launch_configuration"
+      "action": "correct_sealed_launch_configuration",
+      "model_calls": 0
     },
     "cpu": {
-      "teacher_ace_reflexion": "8_workloads_compiled_6_fixed_image_tests_passed_review_rework_and_actual_stage_prepare_pending",
+      "teacher_ace_reflexion": "7_fixed_image_tests_passed_4_fold_a_staged_3_prepared_1_preparing_registration_queue_in_progress",
       "candidate_order": [
         "reflexion_decision_operation_object",
         "reflexion_slot_spoken_surface",
