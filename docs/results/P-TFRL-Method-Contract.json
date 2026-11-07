@@ -1,0 +1,110 @@
+{
+  "schema": "omni-P-tfrl-method-contract-v1",
+  "updated_at_utc": "2026-11-07T13:12:32.919262+00:00",
+  "status": "mechanism_contract_not_runtime_registration",
+  "references": [
+    {
+      "method": "gepa",
+      "arxiv": "2507.19457v1",
+      "sections": [
+        "3",
+        "Algorithm 1",
+        "Algorithm 2"
+      ]
+    },
+    {
+      "method": "reflexion",
+      "arxiv": "2303.11366",
+      "venue": "NeurIPS 2023"
+    },
+    {
+      "method": "ace",
+      "arxiv": "2510.04618v1",
+      "sections": [
+        "3"
+      ]
+    },
+    {
+      "method": "tfgrpo",
+      "arxiv": "2510.08191v1",
+      "sections": [
+        "2",
+        "3.1"
+      ]
+    }
+  ],
+  "tfgrpo": {
+    "scalar_advantage_is_algorithm_complete": false,
+    "semantic_advantage_required": true,
+    "experience_update_and_next_round_required": true,
+    "all_tie_groups": "retain evidence and costs, no invented advantage",
+    "development_sampling_proposal": {
+      "temperature": 0.7,
+      "draws_per_input": 4,
+      "original_authorized_feedback_rows": 80,
+      "primary_contacts": 320,
+      "status": "not_registered_not_dispatched"
+    },
+    "runtime_evaluation_temperature": 0,
+    "same_model_reflection_in_paper": "adapted to external teacher by explicit user instruction",
+    "prohibited": [
+      "cross_policy_grouping",
+      "S_branches_as_P_draws",
+      "repair_reasks_as_same_input_draws",
+      "new_domain_facts",
+      "sample_answer_lookup"
+    ]
+  },
+  "GEPA": {
+    "required": [
+      "ancestry",
+      "per_instance_selection_scores",
+      "pareto_pool",
+      "real_mutation_evaluation",
+      "iterative_parent_selection"
+    ],
+    "current": "first_external_proposal_started; no_new_P_candidate_evaluation"
+  },
+  "ACE": {
+    "current_claim": "inspired",
+    "required": [
+      "actor",
+      "reflection",
+      "curator_delta",
+      "deterministic_merge_dedup",
+      "next_actor_feedback"
+    ]
+  },
+  "Reflexion": {
+    "current_claim": "cross_task_adaptation_proposals",
+    "same_task_retry_observed": false
+  },
+  "current_stage": "P",
+  "new_P_only_npu_calls": 0,
+  "primary_source_downloads": [
+    {
+      "method": "tfgrpo",
+      "url": "https://arxiv.org/html/2510.08191v1",
+      "html_sha256": "a2ae3d7c45d79a44c06ec1eb4ebe54bda7203bd87819f86ae936ba893eacef09",
+      "bytes": 396390
+    },
+    {
+      "method": "gepa",
+      "url": "https://arxiv.org/html/2507.19457v1",
+      "html_sha256": "5253da8155f530d77387c0ec02d63e92f481e07858999abb387700ec8a64ddad",
+      "bytes": 7056000
+    },
+    {
+      "method": "ace",
+      "url": "https://arxiv.org/html/2510.04618v1",
+      "html_sha256": "1d227a0ab14c907252768f633dd6da7a1d091556a2395d85e8edf967f80ff89b",
+      "bytes": 206563
+    },
+    {
+      "method": "reflexion",
+      "url": "https://arxiv.org/html/2303.11366v4",
+      "html_sha256": "c96741a6170d6a8a1ec17f3780d561f813078190404f47792178080c4118f002",
+      "bytes": 208124
+    }
+  ]
+}

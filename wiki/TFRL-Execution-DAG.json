@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T12:57:41.932245+00:00",
+  "updated_at_utc": "2026-11-07T13:17:56.247467+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -16,7 +16,7 @@
       "id": "P-runtime",
       "resource": "CPU",
       "depends_on": [],
-      "status": "returned_for_completion",
+      "status": "native_graph_tested_173_production_checkpoint_integration_in_progress",
       "owner": "Terra CLI",
       "acceptance": [
         "native_P_only",
@@ -42,7 +42,7 @@
       "id": "P-teacher-input",
       "resource": "CPU",
       "depends_on": [],
-      "status": "source_verified_method_inputs_in_preparation",
+      "status": "GEPA_v2_accepted_other_method_context_rework",
       "owner": "Sol CLI",
       "scope": "original construction625 learning partition; method-specific templates"
     },
@@ -52,7 +52,7 @@
       "depends_on": [
         "P-teacher-input"
       ],
-      "status": "pending_verified_inputs",
+      "status": "external_request_streaming_no_collected_candidate",
       "method": "gepa",
       "run_nodes": [
         "P"
@@ -395,7 +395,29 @@
       "P-history whole graph",
       "Slot1536 whole graph"
     ],
-    "all_cards_busy_claim": false
+    "all_cards_busy_claim": false,
+    "A": {
+      "completed": 592,
+      "total": 1080,
+      "observed_at_utc": "2026-11-07T13:15:07.190307+00:00",
+      "state": "running_legacy_PON"
+    },
+    "B": {
+      "completed": 181,
+      "total": 1080,
+      "state": "failed_native_settlement_completed",
+      "pending": "new_P_only_recipe"
+    },
+    "C": {
+      "completed": 30,
+      "total": 625,
+      "observed_at_utc": "2026-11-07T13:04:56.748013+00:00",
+      "state": "running_legacy_B625"
+    },
+    "teacher_gepa": {
+      "state": "streaming",
+      "validated_candidates": 0
+    }
   },
   "historical_plan": {
     "status": "superseded_not_dispatch_authority",
