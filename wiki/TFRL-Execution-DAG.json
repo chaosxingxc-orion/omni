@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T16:02:22.599146+00:00",
+  "updated_at_utc": "2026-11-07T16:11:37.371928+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -222,7 +222,7 @@
         "P-runtime",
         "P-ace-material"
       ],
-      "status": "breadth12_16_preparation_and_B_successor_queue_in_progress",
+      "status": "breadth12_16_registered1080_fresh_admission_running",
       "scope": "all assets ready before NPU acquisition"
     },
     {
@@ -392,7 +392,7 @@
       "depends_on": [
         "P-control-prepare"
       ],
-      "status": "running_actual_P_responses_confirmed",
+      "status": "running144_safe_cache_transition_preparation",
       "run_nodes": [
         "P"
       ],
@@ -548,6 +548,21 @@
         "historical1080_reproduction",
         "no_new_model_requests"
       ]
+    },
+    {
+      "id": "P-control-cache-transition",
+      "resource": "CPU",
+      "depends_on": [
+        "P-binding-cache"
+      ],
+      "status": "owner_preparing_native_drain_and_remaining_only_source_transition",
+      "acceptance": [
+        "preserve_all_prior_cost_and_rows",
+        "no_unknown_POST_retry",
+        "no_hot_source_edit",
+        "continuation_ready_before_drain",
+        "successors_bind_actual_generation_release"
+      ]
     }
   ],
   "round_policy": {
@@ -591,15 +606,18 @@
       "historical_CPU_score_completed": 1080
     },
     "B": {
-      "state": "P_only_control_running",
-      "completed_at_early_snapshot": 1,
+      "state": "running_old_source_safe_cache_transition_preparation",
       "total": 1080,
-      "observed_at_utc": "2026-11-07T15:58:15Z",
-      "subsequent_checkpoint_line_count": 10,
-      "line_count_is_not_sample_count": true,
+      "observed_at_utc": "2026-11-07T16:09:43.391262+00:00",
       "seconds_per_row": null,
       "eta_seconds": null,
-      "successors": "breadth12_then16_configuration_in_progress_not_yet_queued"
+      "successors": "breadth12_then16_configuration_in_progress_not_yet_queued",
+      "completed": 144,
+      "known_responses": 153,
+      "prompt_tokens": 816594,
+      "completion_tokens": 35780,
+      "seconds_per_row_including_startup": 7.187677097222222,
+      "mean_response_latency_seconds": 10.814941464838864
     },
     "C": {
       "state": "same_image_service_validated_reflexion_binding_pending",
@@ -628,9 +646,9 @@
         "pid": 3596130
       },
       {
-        "role": "B_successor_queue",
+        "role": "B_cache_transition_and_successor_queue",
         "model": "gpt-6.1-terra",
-        "pid": 3597865
+        "pid": 3603706
       },
       {
         "role": "P_paired_analysis",
