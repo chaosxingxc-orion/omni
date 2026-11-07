@@ -116,4 +116,10 @@ Decision 启动耗时已定位：runtime build 18.75秒、prepared verification 
 
 GitHub SSH直连超时、HTTPS写入缺认证；复用本机已有SSH代理配置后main2fa2b1d6、Wiki fe569c7已推送成功。两仓已设置本地core.sshCommand复用该代理，避免以后重复排查或误报远端已同步。
 
-后续确认：Decision 已进入真实 vLLM 生成，先观测 running33/waiting27，随后 running64。紧凑 Slot 的最终容器退出1原因明确为生成后的官方评分批处理失败，非1080条生成失败；既有CPU工具处理评分，不重发模型。B旧P lease原生清算容器exit0，1763 observed contacts、新模型调用0，归档旧lease和reconciliation；K2正在配置化admission，尚未确认新生成。
+后续确认：Decision 已进入真实 vLLM 生成，先观测 running33/waiting27，随后 running64。紧凑 Slot 的最终容器退出1原因明确为生成后的官方评分批处理失败，非1080条生成失败；既有CPU工具处理评分，不重发模型。B旧P lease原生清算容器exit0，1763 observed contacts、新模型调用0，归档旧lease和reconciliation；K2正在配置化admission，K001 admission 已实际执行但退出码1；错误为 `registered configuration changed; rebuild registration before admission`，尚未创建workspace或模型调用。
+
+## K2 最新准入状态
+
+固定 release `b322be85` 已生成并验证，B resident/runtime/session 凭证已用原生 preflight 核验，旧 P lane lease 已清算。K001 的正式 admission 在配置组合校验阶段失败，错误是注册配置与当前 admission 配置不一致；这不是服务故障、数据损坏或模型调用失败。当前重点是比较注册时使用的 `data/repo/model fragment/session/experiment manifest` 与 admission 的实际映射，修正外部配置后从 held 资产继续。现阶段 K001/K002 仍为 0/1250 NPU 样本、新模型调用 0。
+
+当前资源快照：A/8200 的 Decision 任务 running=64，B/8202 running=0；因此仍不能宣称八卡满载。B 的有效负载接入被 K2 admission 阻塞，A 任务不受影响。

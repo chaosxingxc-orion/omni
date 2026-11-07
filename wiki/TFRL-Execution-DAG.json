@@ -867,7 +867,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-07T04:39:00Z",
+  "updated_at": "2026-11-07T04:41:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
@@ -902,11 +902,11 @@
     "tfrl_preparation": "parallel_cpu_preparation_quality_priority_retained"
   },
   "live_resource_snapshot": {
-    "observed_at_utc": "2026-11-07T04:38:00Z",
+    "observed_at_utc": "2026-11-07T04:40:00Z",
     "A": {
       "running_requests": 64,
-      "cards": 4,
-      "waiting_requests": null
+      "waiting_requests": null,
+      "cards": 4
     },
     "B": {
       "running_requests": 0,
