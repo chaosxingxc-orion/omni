@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "instruction": "当前先利用率/样本负载、100%有效回答、FoldA对齐P→Solver；TFRL准备后置。CPU与NPU异步，已有真实推理继续。",
+  "instruction": "当前先做到真实有效回答、FoldA对齐与效率提升；TFRL工程基座和轨迹采集并行准备，CPU不阻塞NPU。",
   "resources": {
     "inference_instances": 2,
     "cards_per_instance": 4,
@@ -820,7 +820,7 @@
       "id": "perception-thinking-on-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "stage_prepare_register_complete_admission_rejected_request_budget_fix_running",
+      "status": "fresh_release_cpu_preparation",
       "scientific_parent": "complete-coverage-on-evaluate",
       "scope": "P thinking on; retain original4096 answer reserve and proposed3072 thinking budget; native config validation pending; no prompt or knowledge changes"
     },
@@ -830,7 +830,7 @@
       "depends_on": [
         "perception-thinking-on-prepare"
       ],
-      "status": "not_admitted_not_armed",
+      "status": "not_admitted_waits_fresh_release",
       "priority": "next-safe-handoff-after-current-generation",
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
@@ -856,7 +856,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-07T00:47:00Z",
+  "updated_at": "2026-11-07T01:00:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
@@ -867,10 +867,11 @@
     "load_analysis": "completed existing evidence analysis accepted; retain armed C96, no measured speedup",
     "tfrl_reader": "deferred",
     "perception_miss_analysis": "historical P ranking admission and A-after-C96 successor armed;216pins verified; actual generation pending",
-    "complete_on_terminal": "FINALIZED independently verified; recovery56d3 exited0; official pair0768 running",
+    "complete_on_terminal": "FINALIZED、官方评分、完整旧k8ON配对已验收；Intent+22、SLU-0.2493pp、Strict+7，覆盖仍3空答",
     "efficiency_measurement": "600s service collector and small-status archival accepted; hardware observer reused; first snapshots verified, bounded24h; no NPU dependency",
     "remaining_empty_root_causes": "accepted native parser replay82 checks: two whitespace-truncated JSON; one repeated empty filler; reuse queued fixes",
-    "perception_thinking": "stage/prepare/register complete; admission rejected fragment budget identity; original worker CLI3090100 implementing request-only budget separation, candidate HOLD"
+    "perception_thinking": "main37bfc271预算解耦测试111通过；fresh release准入准备中，旧活动队列不动",
+    "tfrl_preparation": "ON父基线下GEPA Slot/Decision兼容与K2同策略轨迹配置准备中；construction旧OFF held不当ON rollout"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
@@ -878,7 +879,7 @@
     "successor_trigger": "generation-released",
     "score_blocks_successor": false,
     "full_verification_eliminated": false,
-    "native_successor_queue_status": "A compactP -> compactSlot -> D -> C96 -> historical P; B P operation -> Slot role -> locked54; PON priority insertion pending ready; scores do not block generation",
+    "native_successor_queue_status": "A compactP running -> compactSlot -> D -> C96; B P operation -> Slot role; PON fresh admission pending; TFRL K2 ready candidates join after CPU readiness and generation release",
     "queue_compatibility_commit": "25c6386f"
   },
   "priority_override": {

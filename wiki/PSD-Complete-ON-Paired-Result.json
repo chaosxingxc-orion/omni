@@ -1,0 +1,220 @@
+{
+  "schema": "psd-complete-on-terminal-quality-public-v1",
+  "rows": 1080,
+  "status": "complete",
+  "contract_partitions": {
+    "contract_legal_nonempty_entities": 716,
+    "contract_legal_empty_entities": 361,
+    "empty_answer": 3
+  },
+  "recovery_kinds": {
+    "perception_length": 24,
+    "slot_length": 4
+  },
+  "recovery_outcomes": {
+    "local_candidate_recovered": 0,
+    "local_candidate_not_recovered": 0,
+    "local_candidate_unknown": 28,
+    "stage_recovered": 26,
+    "stage_recovery_unknown": 2,
+    "stage_recovery_unit": "recovery contacts; multiple contacts may belong to one stage",
+    "terminal_contract_legal": 26,
+    "final_correctness_unknown": 28
+  },
+  "generation_cost": {
+    "audio_seconds_used": 9327.678500000045,
+    "calls_used": 3265,
+    "completion_tokens_total": 4973031,
+    "latency_seconds_total": 679522.7564593807,
+    "prompt_tokens_total": 35005713,
+    "tool_calls": 0
+  },
+  "efficiency": {
+    "campaign_seconds_to_generation_release": 11434.305709790031,
+    "wall_seconds_per_all_row": 10.587320101657436,
+    "wall_seconds_per_legal_answer": 10.616811244001886,
+    "allocated_cards": 4,
+    "instances": 1,
+    "measured_npu_active_seconds": null,
+    "monitored_hardware_samples_in_seal": 0
+  },
+  "failure_mechanisms": {
+    "contract_failure_rows": 3,
+    "P_original_compact_both_length_identical_text": 1,
+    "Slot_original_candidate_recovery_both_stop_empty_fillers": 1,
+    "Slot_original_compact_both_length_unclosed_JSON_whitespace": 1,
+    "targeted_unique_contacts": 6,
+    "reader_Slot_unknown_resolved": "Slot recovery response remains invalid; original and retry have three empty filler strings; stop",
+    "per_contact_all_recovery_cost": "unknown; only 6 failure contacts inspected; do not extrapolate"
+  },
+  "comparison": "completeON repair package vs locked k8ON; not a thinking causal intervention",
+  "new_model_calls_by_analysis": 0,
+  "limitations": [
+    "ON/ON normal Slot settings; fallback may disable thinking/change effective budget, so this is a repair-package observation, not a single-factor thinking/length causal intervention",
+    "legal empty entities are valid; full 1080 including all failures retained",
+    "P/D internal reasoning and semantic causes of legal errors not inferred by score category",
+    "utterance bootstrap estimates roster uncertainty, not run-to-run decoding uncertainty",
+    "historical P→Solver aggregate only, historical Strict and per-row pairing unknown",
+    "sealed hardware monitor has zero samples: no utilization/active-NPU-time claim",
+    "FIT history not read again; generation cost excludes FIT, monetary cost unknown"
+  ],
+  "arms": {
+    "control": {
+      "intent_correct": 886,
+      "strict_correct": 580,
+      "contract": {
+        "empty_answer": 43,
+        "contract_legal_nonempty_entities": 687,
+        "contract_legal_empty_entities": 350
+      },
+      "exact_slot_counts": {
+        "slot_f1_exact_tp": 598.0,
+        "slot_f1_exact_fp": 384.0,
+        "slot_f1_exact_fn": 343.0
+      },
+      "intent_percent": 82.03703703703704,
+      "slu_percent": 71.21961643088054,
+      "span_percent": 62.19448777951118
+    },
+    "split": {
+      "intent_correct": 908,
+      "strict_correct": 587,
+      "contract": {
+        "contract_legal_nonempty_entities": 716,
+        "contract_legal_empty_entities": 361,
+        "empty_answer": 3
+      },
+      "exact_slot_counts": {
+        "slot_f1_exact_tp": 604.0,
+        "slot_f1_exact_fp": 421.0,
+        "slot_f1_exact_fn": 337.0
+      },
+      "intent_percent": 84.07407407407409,
+      "slu_percent": 70.9703282718507,
+      "span_percent": 61.444557477110884
+    }
+  },
+  "strict_transitions": {
+    "gain": 57,
+    "both_wrong": 443,
+    "both_correct": 530,
+    "loss": 50
+  },
+  "intent_transitions": {
+    "gain": 48,
+    "both_wrong": 146,
+    "both_correct": 860,
+    "loss": 26
+  },
+  "coverage_transitions": {
+    "empty->legal": 42,
+    "legal->legal": 1035,
+    "empty->empty": 1,
+    "legal->empty": 2
+  },
+  "groups": {
+    "all": {
+      "rows": 1080,
+      "strict_gain": 57,
+      "intent_gain": 48,
+      "split_intent_correct": 908,
+      "split_strict_correct": 587,
+      "split_exact_fp": 421.0,
+      "split_exact_fn": 337.0,
+      "strict_both_wrong": 443,
+      "intent_both_wrong": 146,
+      "strict_both_correct": 530,
+      "intent_both_correct": 860,
+      "strict_loss": 50,
+      "intent_loss": 26
+    },
+    "empty->legal": {
+      "rows": 42,
+      "strict_gain": 19,
+      "intent_gain": 32,
+      "split_intent_correct": 32,
+      "split_strict_correct": 19,
+      "split_exact_fp": 16.0,
+      "split_exact_fn": 21.0,
+      "strict_both_wrong": 23,
+      "intent_both_wrong": 10
+    },
+    "without_observable_recovery": {
+      "rows": 1052,
+      "strict_gain": 52,
+      "intent_gain": 42,
+      "split_intent_correct": 889,
+      "split_strict_correct": 575,
+      "split_exact_fp": 407.0,
+      "split_exact_fn": 324.0,
+      "strict_both_wrong": 429,
+      "intent_both_wrong": 139,
+      "strict_both_correct": 523,
+      "intent_both_correct": 847,
+      "strict_loss": 48,
+      "intent_loss": 24
+    },
+    "legal->legal": {
+      "rows": 1035,
+      "strict_both_wrong": 419,
+      "intent_gain": 16,
+      "split_intent_correct": 876,
+      "split_strict_correct": 568,
+      "split_exact_fp": 405.0,
+      "split_exact_fn": 315.0,
+      "intent_both_wrong": 135,
+      "strict_both_correct": 530,
+      "intent_both_correct": 860,
+      "strict_gain": 38,
+      "strict_loss": 48,
+      "intent_loss": 24
+    },
+    "empty->empty": {
+      "rows": 1,
+      "strict_both_wrong": 1,
+      "intent_both_wrong": 1,
+      "split_intent_correct": 0,
+      "split_strict_correct": 0,
+      "split_exact_fp": 0.0,
+      "split_exact_fn": 0.0
+    },
+    "with_recovery": {
+      "rows": 28,
+      "strict_both_wrong": 14,
+      "intent_both_wrong": 7,
+      "split_intent_correct": 19,
+      "split_strict_correct": 12,
+      "split_exact_fp": 14.0,
+      "split_exact_fn": 13.0,
+      "strict_gain": 5,
+      "intent_gain": 6,
+      "strict_both_correct": 7,
+      "intent_both_correct": 13,
+      "intent_loss": 2,
+      "strict_loss": 2
+    },
+    "legal->empty": {
+      "rows": 2,
+      "strict_loss": 2,
+      "intent_loss": 2,
+      "split_intent_correct": 0,
+      "split_strict_correct": 0,
+      "split_exact_fp": 0.0,
+      "split_exact_fn": 1.0
+    }
+  },
+  "ci95_pp": {
+    "intent": [
+      0.4629629629629629,
+      3.6111111111111107
+    ],
+    "slu": [
+      -1.736135711561015,
+      1.2450093079218458
+    ],
+    "strict": [
+      -1.2037037037037037,
+      2.5
+    ]
+  }
+}

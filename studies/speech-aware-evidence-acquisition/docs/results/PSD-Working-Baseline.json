@@ -8,7 +8,7 @@
   "runtime_sha256": "82885d6cfd91dc0c4f3ab79644062082982d0e7d22392771398d7e76741d4819",
   "generation_manifest_sha256": "926cbc4a2b6e7efc900574c9d086cd394cf73b478517a11ca870d9d1ce15fbb2",
   "score_file_sha256_observed": "425c60572dcb141c60ade685521c34015f7cd81b88865049116fe44bce7c42ef",
-  "score_state_at_read": "FINALIZED; recovery exited0; official pair pending",
+  "score_state_at_read": "FINALIZED; official full paired analysis accepted",
   "split_identity_hash": "61b0f06254975873bea6afb287ab54823dc71b57e5398697b9bef817e25398b6",
   "rows": 1080,
   "legal_answers": 1077,
