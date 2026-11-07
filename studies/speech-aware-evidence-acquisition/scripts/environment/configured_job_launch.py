@@ -171,6 +171,10 @@ def load_config(path):
             target=Path(mount['target'])
             if identity['mode'] == 'mounted-release-v1' and target == Path('/opt/saea-release'):
                 continue
+            if target == Path('/usr/local/python3.12.13/lib/python3.12/site-packages/sitecustomize.py'):
+                require(mount['readonly'] and any(pin['path'] == mount['source'] for pin in doc['required_inputs']),
+                        'sitecustomize must be read-only and explicitly pinned')
+                continue
             require(not any(target.is_relative_to(p) or Path(p).is_relative_to(target) for p in ('/opt', '/usr', '/bin', '/lib', '/lib64', '/etc', '/root')), 'release dependency mount override forbidden')
     if 'user' in doc:
         require(isinstance(doc['user'], str) and re.fullmatch(r'[0-9]+:[0-9]+', doc['user']), 'numeric uid:gid required')

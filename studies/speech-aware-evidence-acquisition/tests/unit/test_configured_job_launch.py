@@ -296,6 +296,22 @@ def mounted_release(tmp_path):
     return path, doc
 
 
+@pytest.mark.parametrize('pinned,readonly', [(False, True), (True, False), (True, True)])
+def test_sitecustomize_requires_pinned_readonly_file(tmp_path, pinned, readonly):
+    path, doc = mounted_release(tmp_path)
+    hook = tmp_path / 'sitecustomize.py'
+    hook.write_text('pass\n')
+    doc['mounts'].append({'source': str(hook), 'target': '/usr/local/python3.12.13/lib/python3.12/site-packages/sitecustomize.py', 'readonly': readonly})
+    if pinned:
+        doc['required_inputs'].append({'path': str(hook), 'sha256': m.digest(hook)})
+    path.write_text(json.dumps(doc))
+    if pinned and readonly:
+        m.load_config(path)
+    else:
+        with pytest.raises(ValueError, match='sitecustomize'):
+            m.load_config(path)
+
+
 def test_framework_runtime_uses_external_logs_and_same_bootstrap(tmp_path):
     path, doc = mounted_release(tmp_path)
     doc['mounts'][0]['readonly'] = False
