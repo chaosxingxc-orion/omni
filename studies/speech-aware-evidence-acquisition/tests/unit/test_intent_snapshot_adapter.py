@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from intent_snapshot_adapter import publish
+from intent_snapshot_adapter import publish, validate_published
 
 
 @pytest.fixture
@@ -58,3 +58,34 @@ def test_unchanged_card_tampering_is_rejected(inputs):
     change('context', corrupt)
     with pytest.raises(ValueError):
         publish(cfg)
+
+
+def test_existing_publication_is_source_bound_and_read_only(inputs, tmp_path):
+    cfg, change = inputs
+    root = Path(cfg['data_root']) / cfg['output']
+    def pin(name):
+        path = root / name
+        return {'relpath': path.relative_to(cfg['data_root']).as_posix(),
+                'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+    parent = json.loads(Path(cfg['baseline']['path']).read_bytes())
+    before = {name: (root / name).read_bytes() for name in ('snapshot.json', 'release.json', 'patch.json', 'audit.json')}
+    updated = validate_published(cfg, parent, pin('patch.json'), pin('audit.json'))
+    expected = copy.deepcopy(parent)
+    expected['knowledge_stores']['intent-boundaries']['snapshot'] = updated['knowledge_stores']['intent-boundaries']['snapshot']
+    expected['knowledge_stores']['intent-boundaries']['release'] = updated['knowledge_stores']['intent-boundaries']['release']
+    expected.pop('prepared_phase_supply', None)
+    assert updated == expected
+    assert before == {name: (root / name).read_bytes() for name in before}
+    wrong = copy.deepcopy(parent)
+    wrong['knowledge_stores']['intent-boundaries']['snapshot']['sha256'] = '0' * 64
+    with pytest.raises(ValueError, match='baseline differs'):
+        validate_published(cfg, wrong, pin('patch.json'), pin('audit.json'))
+    fake = json.loads(before['patch.json'])
+    fake[2]['path'] = '/knowledge_stores/slot-contracts/snapshot'
+    path = tmp_path / 'patch.json'; path.write_text(json.dumps(fake))
+    # The data-root confinement is itself enforced for an outside asset.
+    with pytest.raises(ValueError):
+        validate_published(cfg, parent, {'relpath': str(path), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}, pin('audit.json'))
+    change('candidate', lambda c: c['raw_candidate']['memory']['card_operations'][0].__setitem__('new', 'invented'))
+    with pytest.raises(ValueError):
+        validate_published(cfg, parent, pin('patch.json'), pin('audit.json'))

@@ -22,7 +22,7 @@ def read_pin(pin):
     return json.loads(data)
 
 
-def publish(cfg):
+def _construct(cfg):
     if set(cfg) != {'schema', 'data_root', 'baseline', 'candidate', 'collected', 'context', 'parent_context', 'source', 'output', 'snapshot_id'} or cfg['schema'] != SCHEMA:
         raise ValueError('exact publication configuration required')
     data = Path(cfg['data_root']).resolve()
@@ -55,6 +55,11 @@ def publish(cfg):
     if not isinstance(cfg['snapshot_id'], str) or not cfg['snapshot_id'].strip():
         raise ValueError('snapshot id required')
     child = replace(store.snapshot, snapshot_id=cfg['snapshot_id'], builder_policy_id=POLICY, values=new_values)
+    return data, base, binding, store, child, patches, values
+
+
+def publish(cfg):
+    data, base, binding, store, child, patches, values = _construct(cfg)
     frozen = child.frozen_json()
     root = (data / cfg['output']).resolve()
     if not root.is_relative_to(data) or root == data:
@@ -81,6 +86,44 @@ def publish(cfg):
     write('patch.json', patch)
     write('audit.json', audit)
     return audit
+
+
+def validate_published(cfg, parent, patch_pin, audit_pin):
+    """Reconstruct and verify an existing publication without writing it."""
+    data, base, binding, store, child, patches, values = _construct(cfg)
+    comparable_base, comparable_parent = copy.deepcopy(base), copy.deepcopy(parent)
+    for value in (comparable_base, comparable_parent):
+        value.pop('prepared_phase_supply', None)
+        value.pop('native_contact_fit', None)
+    if comparable_base != comparable_parent:
+        raise ValueError('publication baseline differs from registered parent')
+    def asset(pin):
+        if not isinstance(pin, dict) or set(pin) != {'relpath', 'sha256'}:
+            raise ValueError('exact published asset pin required')
+        path = (data / pin['relpath']).resolve()
+        if not path.is_relative_to(data) or path == data:
+            raise ValueError('published asset outside data root')
+        return read_pin({'path': str(path), 'sha256': pin['sha256']})
+    patch, audit = asset(patch_pin), asset(audit_pin)
+    snapshot_pin, release_pin = audit['snapshot'], audit['release']
+    expected_patch = [
+        {'op':'test', 'path':'/knowledge_stores/intent-boundaries/snapshot', 'value':dict(store.snapshot_pin)},
+        {'op':'test', 'path':'/knowledge_stores/intent-boundaries/release', 'value':dict(store.release_pin)},
+        {'op':'replace', 'path':'/knowledge_stores/intent-boundaries/snapshot', 'value':snapshot_pin},
+        {'op':'replace', 'path':'/knowledge_stores/intent-boundaries/release', 'value':release_pin}]
+    expected_audit = {'schema':'saea-intent-section-release-audit-v1', 'parent_snapshot':dict(store.snapshot_pin), 'parent_release':dict(store.release_pin), 'parent_composite_sha256':binding.binding_sha256, 'snapshot':snapshot_pin, 'snapshot_file_sha256':audit['snapshot_file_sha256'], 'release':release_pin, 'source':dict(store.source_pin), 'source_split_identity_hash':child.source_split_identity_hash, 'candidate_sha256':cfg['candidate']['sha256'], 'collected_sha256':cfg['collected']['sha256'], 'context_sha256':cfg['context']['sha256'], 'source_context_sha256':cfg['source']['sha256'], 'changed_cards':sorted(patches), 'card_count':len(values), 'unchanged_facets':True, 'unchanged_lineage':True, 'index_strategy':'reuse parent sealed facet vectors and original audio query vectors; recompute supply against child snapshot', 'phase_supply':copy.deepcopy(base['knowledge_stores']['intent-boundaries']['phase_supply']), 'new_model_calls':0}
+    if patch != expected_patch or audit != expected_audit:
+        raise ValueError('published patch or audit differs')
+    if snapshot_pin['sha256'] != child.content_hash() or asset({'relpath':snapshot_pin['relpath'], 'sha256':audit['snapshot_file_sha256']}) != child.frozen_json():
+        raise ValueError('published snapshot differs from reconstructed child')
+    asset(release_pin)
+    updated = copy.deepcopy(parent)
+    updated['knowledge_stores']['intent-boundaries']['snapshot'] = snapshot_pin
+    updated['knowledge_stores']['intent-boundaries']['release'] = release_pin
+    updated.pop('prepared_phase_supply', None)
+    if load_knowledge_store_binding(updated, data_root=data).store('intent-boundaries').snapshot != child:
+        raise ValueError('native child resolution differs')
+    return updated
 
 
 def main():

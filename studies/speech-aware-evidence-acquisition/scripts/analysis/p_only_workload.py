@@ -26,10 +26,11 @@ class PerceptionOnlyWorkload(NodeWorkload):
         if config['population'].get('dataset') != 'slurp-speech-native-evo-fold-a-1080' or len(config['sample_ids']) != 1080:
             raise ValueError('original Fold A 1080 required')
         axis = config['axis']
-        if not isinstance(axis, dict) or axis.get('kind') not in ('control', 'instruction', 'breadth'):
+        if not isinstance(axis, dict) or axis.get('kind') not in ('control', 'instruction', 'breadth', 'knowledge-construction'):
             raise ValueError('explicit P-only axis required')
         if ((axis['kind'] == 'control' and set(axis) != {'kind'}) or
             (axis['kind'] == 'instruction' and set(axis) != {'kind', 'patch', 'template'}) or
+            (axis['kind'] == 'knowledge-construction' and set(axis) != {'kind', 'publication', 'patch', 'audit'}) or
             (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or axis['value'] not in (12, 16)))):
             raise ValueError('invalid P-only axis')
         parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation')}
@@ -123,6 +124,18 @@ class PerceptionOnlyWorkload(NodeWorkload):
             base = apply_parent_patch(base, patch)
             if base['phase_material']['perception']['instruction_template'] != template['relpath'][len('configs/'):]:
                 raise ValueError('patch and instruction template differ')
+        elif axis['kind'] == 'knowledge-construction':
+            from intent_snapshot_adapter import validate_published
+            from speech_aware_evidence_acquisition.core.experiment_assets import resolve_asset
+            publication = copy.deepcopy(pinned(repo, axis['publication']))
+            publication['data_root'] = str(data)
+            for key in ('baseline', 'candidate', 'collected', 'context', 'parent_context', 'source'):
+                item = publication[key]
+                if set(item) != {'relpath', 'sha256'}:
+                    raise ValueError('repository publication input pin required')
+                pinned(repo, item)
+                publication[key] = {'path': str(resolve_asset(repo, item['relpath'])), 'sha256': item['sha256']}
+            base = validate_published(publication, base, axis['patch'], axis['audit'])
         elif axis['kind'] == 'breadth':
             supply = base['knowledge_stores']['intent-boundaries']['phase_supply']['perception']
             if (supply['k'], supply['fuse_coverage']['m'], supply['fuse_coverage']['top_l']) != (8, 8, 8):
