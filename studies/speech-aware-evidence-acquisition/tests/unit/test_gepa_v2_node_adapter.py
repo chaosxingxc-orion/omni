@@ -13,7 +13,8 @@ from speech_aware_evidence_acquisition.rails.controllers import default_phase_pr
 
 
 @pytest.mark.parametrize('node,role', [('slot', 'slot'), ('decision', 'solver')])
-def test_external_candidate_reaches_real_workload_and_keeps_handoff(tmp_path, monkeypatch, node, role):
+@pytest.mark.parametrize('complete_coverage', [False, True])
+def test_external_candidate_reaches_real_workload_and_keeps_handoff(tmp_path, monkeypatch, node, role, complete_coverage):
     original_read = workload_module.read_asset
     monkeypatch.setattr(workload_module, 'read_asset', lambda repo, rel: original_read(ROOT, rel))
     monkeypatch.setattr(workload_module.NodeWorkload, 'material_checked', lambda *args: (
@@ -34,6 +35,18 @@ def test_external_candidate_reaches_real_workload_and_keeps_handoff(tmp_path, mo
         return real_confined(ROOT/'configs' if root.name == 'configs' else ROOT, rel)
     monkeypatch.setattr(adapter, 'confined', fixture_confined)
     c = config(); c['node_arm'] = 'enhanced-p-slot-decision'; c['pipeline'] = adapter.PIPELINE.copy()
+    if complete_coverage:
+        c['pipeline'].update({
+            'coverage_recovery': {'strategy': 'complete-original-candidate-set-v1', 'max_extra_contacts': 3},
+            'perception_length_recovery': 'compact-reask-v1',
+            'perception_repair_template': {'relpath': 'configs/probes/slurp_perception_length_repair_v1.txt',
+                                           'sha256': 'e9baa301ffa49bfc067d9571e517e7228d2ea48171a9c18448184c4f79a74507'},
+            'reference_normalizer': 'quarantine-unsupplied-v1',
+            'slot_length_recovery': {'strategy': 'answer-only-compact-v1', 'answer_tokens': 4096,
+                'template': {'relpath': 'configs/probes/slurp_slot_length_repair_v1.txt',
+                             'sha256': '29fe78371df29113791a5ebb0373ea0d8c799456a0d154a00f23b2346b0eaba0'}}})
+        for name in ('slurp_perception_length_repair_v1.txt', 'slurp_slot_length_repair_v1.txt'):
+            (tmp_path/'configs/probes'/name).write_bytes((ROOT/'configs/probes'/name).read_bytes())
     thinking = {'enable_thinking': False, 'answer_reserve_tokens': 4096}
     for n in ('slot', 'decision'):
         path = tmp_path/'configs/probes'/('slurp_native_candidate_slot_v1.txt' if n == 'slot' else 'slurp_native_candidate_decision_v2.txt')
@@ -101,6 +114,8 @@ def test_external_candidate_reaches_real_workload_and_keeps_handoff(tmp_path, mo
     assert rendered == instruction + original.decode('utf-8')[len(contract['original_instruction']):]
     assert result['workload'][node+'_policy']['thinking'] == c[node+'_policy']['thinking']
     assert result['workload'][('decision' if node == 'slot' else 'slot')+'_policy'] == c[('decision' if node == 'slot' else 'slot')+'_policy']
+    assert result['workload']['pipeline'] == c['pipeline']
+    assert derived['native_episode']['intent_slot_pipeline'] == baseline['native_episode']['intent_slot_pipeline']
     assert ('candidate_id' in rendered) if node == 'decision' else ('every requested candidate' in rendered)
     other = 'decision' if node == 'slot' else 'slot'
     foreign = copy.deepcopy(mutation); foreign['schema'] = adapter.PromptCandidateContract(other).MUTATION_SCHEMA
@@ -108,8 +123,17 @@ def test_external_candidate_reaches_real_workload_and_keeps_handoff(tmp_path, mo
         engine.validate_mutation(json.dumps(foreign), contract=contract,
             expected_contract_sha256=contract['contract_sha256'], expected_parent_sha256=parent['candidate_sha256'])
     bad = copy.deepcopy(c); bad.pop('pipeline')
-    with pytest.raises(ValueError, match='explicit v2'):
+    with pytest.raises(ValueError, match='explicit compatible v2'):
         adapter.prepare(tmp_path, tmp_path, bad, node, tokenizer, ['slurp:train:1'], [])
+    if complete_coverage:
+        bad = copy.deepcopy(c); bad['pipeline']['coverage_recovery']['max_extra_contacts'] = 4
+        with pytest.raises(ValueError, match='invalid bounded Slot coverage recovery policy'):
+            adapter.prepare(tmp_path, tmp_path, bad, node, tokenizer, ['slurp:train:1'], [])
+        changed = copy.deepcopy(c); changed['pipeline']['coverage_recovery']['max_extra_contacts'] = 2
+        with pytest.raises(ValueError, match='contract differs'):
+            adapter.compile_node(tmp_path, tmp_path, changed, node, contract=contract,
+                expected_contract_sha256=contract['contract_sha256'], parent=parent,
+                expected_parent_sha256=parent['candidate_sha256'], external_mutation={}, count_tokens=count, tokenizer=tokenizer)
     bad_contract = copy.deepcopy(contract); bad_contract['frozen']['knowledge_sha256'] = '0' * 64
     bad_contract['contract_sha256'] = sha({k:v for k,v in bad_contract.items() if k != 'contract_sha256'})
     with pytest.raises(ValueError, match='contract differs'):

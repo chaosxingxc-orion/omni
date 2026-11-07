@@ -22,11 +22,24 @@ PIPELINE = {'protocol_version': 'v2', 'node_rails': 'sdk-handoff-v1',
 NODES = ('slot', 'decision')
 
 
+def _gepa_pipeline_is_compatible(pipeline):
+    """Accept the shared v2 core while preserving every supported ON option.
+
+    GEPA edits only one node instruction.  The native workload owns the
+    detailed recovery and reference settings, so this adapter must carry them
+    into the derived baseline instead of replacing the pipeline with the old
+    three-field seed contract.
+    """
+    if not isinstance(pipeline, dict):
+        return False
+    return all(pipeline.get(key) == value for key, value in PIPELINE.items())
+
+
 def prepare(repo, data, workload, node, tokenizer, feedback_ids, excluded_ids):
     if node not in NODES:
         raise ValueError('v2 target must be slot or decision')
-    if workload.get('node_arm') != 'enhanced-p-slot-decision' or workload.get('pipeline') != PIPELINE:
-        raise ValueError('GEPA v2 requires explicit v2 SDK pipeline')
+    if workload.get('node_arm') != 'enhanced-p-slot-decision' or not _gepa_pipeline_is_compatible(workload.get('pipeline')):
+        raise ValueError('GEPA v2 requires explicit compatible v2 SDK pipeline')
     job = NodeWorkload(workload)
     baseline, _, _, _, binding = job.derive(repo, data, workload['material'])
     role = 'slot' if node == 'slot' else 'solver'
