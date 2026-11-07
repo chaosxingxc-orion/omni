@@ -1,5 +1,7 @@
 # 当前研究状态
 
+> 最新研究路线已改为逐阶段：先只优化P，多轮收益后锁定P优化S，再锁定P/S优化D，最后系统。旧未启动全链队列已HOLD，详见[逐节点阶段方案](Sequential-Node-Optimization)。
+
 更新：2026-11-07 20:30（北京时间）。详见[当前任务与下一计划](TFRL-Current-Status-and-Next-Plan)。
 
 ON仍是工作比较基线：P OFF、Slot/D ON，Fold A1080的Intent84.0741%、SLU70.9703%、合法1077/1080。紧凑P的SLU71.5145%、合法1080/1080，但配对区间跨零，未锁定稳定收益；历史同Fold A的P→Solver SLU73.3139%仍为对齐参照。

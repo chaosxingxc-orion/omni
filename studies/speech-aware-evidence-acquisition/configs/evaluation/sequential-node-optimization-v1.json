@@ -1,0 +1,125 @@
+{
+  "schema": "omni-sequential-node-optimization-plan-v1",
+  "status": "planning-contract-not-runtime-registration",
+  "updated_at_utc": "2026-11-07T12:43:41.474238+00:00",
+  "user_order": [
+    "optimize_P",
+    "freeze_P_optimize_S",
+    "freeze_P_S_optimize_D",
+    "system_optimization"
+  ],
+  "current_stage": "optimize_P",
+  "baseline": {
+    "graph": [
+      "P",
+      "S",
+      "D"
+    ],
+    "thinking": {
+      "P": false,
+      "S": true,
+      "D": true
+    }
+  },
+  "stage_tasks": {
+    "P": {
+      "run_nodes": [
+        "P"
+      ],
+      "frozen_nodes": [
+        "S",
+        "D"
+      ],
+      "selection_metrics": [
+        "valid_output_coverage",
+        "gold_intent_candidate_recall",
+        "candidate_count",
+        "per_intent_recall",
+        "paired_repairs_and_regressions",
+        "latency_tokens"
+      ],
+      "prohibited": [
+        "downstream_calls_in_node_trial",
+        "test_gold_in_actor_input",
+        "invented_knowledge",
+        "system_score_as_P_only_reward"
+      ]
+    },
+    "S": {
+      "requires": "validated_P_freeze_receipt",
+      "run_nodes": [
+        "S"
+      ],
+      "input": "pinned_outputs_of_frozen_P",
+      "selection_metrics": [
+        "candidate_conditioned_entity_quality",
+        "upstream_candidate_miss_count",
+        "false_positive_empty_entity_rows",
+        "false_negative_entities",
+        "valid_output_coverage"
+      ]
+    },
+    "D": {
+      "requires": [
+        "validated_P_freeze_receipt",
+        "validated_S_freeze_receipt"
+      ],
+      "run_nodes": [
+        "D"
+      ],
+      "input": "pinned_P_and_S_handoffs",
+      "selection_metrics": [
+        "choice_accuracy_given_correct_candidate_available",
+        "selection_regressions",
+        "valid_output_coverage"
+      ]
+    },
+    "system": {
+      "requires": [
+        "validated_P_freeze_receipt",
+        "validated_S_freeze_receipt",
+        "validated_D_freeze_receipt"
+      ],
+      "scope": "composition, handoff optimization, E2E regression then frozen full TEST"
+    }
+  },
+  "optimization_axes": [
+    "knowledge_construction",
+    "knowledge_consumption"
+  ],
+  "one_axis_per_trial": true,
+  "methods": [
+    "gepa",
+    "reflexion",
+    "ace",
+    "tfgrpo"
+  ],
+  "method_specific_templates": true,
+  "execution": {
+    "parallel_instances_same_stage": true,
+    "maximum_project_codex_cli_workers": 3,
+    "cpu_npu_async": true,
+    "monitor_seconds": 600,
+    "running_legacy_jobs": "preserve_no_reconfiguration",
+    "new_whole_graph_candidates": "held"
+  },
+  "datasets": {
+    "reuse": [
+      "construction625",
+      "Fold A1080",
+      "Fold B1080"
+    ],
+    "new_roster": false,
+    "teacher_feedback": "existing authorized learning partitions only, record exposures",
+    "test_tuning": false
+  },
+  "promotion": {
+    "multiple_rounds": true,
+    "paired_comparison": true,
+    "independent_decoding_repeats": "for finalists to distinguish sampling noise",
+    "failure_rows_kept": true,
+    "runtime_answer_coverage_target": 1.0,
+    "automatic_pass_from_ci_crossing_zero": false,
+    "claimed_every_node_perfect": false
+  }
+}
