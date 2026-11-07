@@ -1,0 +1,12 @@
+{
+  "schema": "saea-intent-section-publication-v1",
+  "data_root": "/data",
+  "baseline": {"path": "/inputs/baseline.json", "sha256": "REPLACE_WITH_FILE_SHA256"},
+  "candidate": {"path": "/inputs/candidate.json", "sha256": "REPLACE_WITH_FILE_SHA256"},
+  "collected": {"path": "/inputs/collected.json", "sha256": "REPLACE_WITH_FILE_SHA256"},
+  "context": {"path": "/inputs/context.json", "sha256": "REPLACE_WITH_FILE_SHA256"},
+  "parent_context": {"path": "/inputs/parent.json", "sha256": "REPLACE_WITH_FILE_SHA256"},
+  "source": {"path": "/inputs/source.json", "sha256": "REPLACE_WITH_FILE_SHA256"},
+  "output": "knowledge/example/fresh-version",
+  "snapshot_id": "example-intent-section-reorder-v1"
+}
