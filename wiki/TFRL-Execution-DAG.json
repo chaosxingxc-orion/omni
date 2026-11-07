@@ -651,14 +651,16 @@
       "depends_on": [
         "complete-coverage-on-ready"
       ],
-      "status": "running_http_verified",
+      "status": "generation_released_cpu_score_recovery_running",
       "rows": 1080,
       "runtime_predecessor": "E5 ON known terminal settlement; independent admitted launch",
-      "completed_rows": 1043,
-      "observed_at_utc": "2026-11-07T00:06:56.421960+00:00",
-      "wall_seconds_per_complete_row": 10.516468271884571,
-      "remaining_rows": 37,
-      "estimated_remaining_seconds": 389.10932605972914
+      "completed_rows": 1080,
+      "observed_at_utc": "2026-11-07T00:16:10.166268+00:00",
+      "wall_seconds_per_complete_row": 10.587320101657436,
+      "remaining_rows": 0,
+      "estimated_remaining_seconds": 0,
+      "legal_rows_preliminary": 1077,
+      "empty_rows_preliminary": 3
     },
     {
       "id": "node-prompt-candidates",
@@ -675,11 +677,12 @@
       "depends_on": [
         "node-prompt-candidates"
       ],
-      "status": "ready_auto_binder_live_waiting_predecessor_not_launched",
+      "status": "container_running_first_request_pending",
       "rows": 1080,
       "control": "complete-coverage-on-evaluate",
       "changed_node": "perception",
-      "after_generation_release": "complete-coverage-on-evaluate"
+      "after_generation_release": "complete-coverage-on-evaluate",
+      "started_at_utc": "2026-11-07T00:21:06.35788051Z"
     },
     {
       "id": "node-prompt-slot-evaluate",
@@ -833,7 +836,7 @@
     "GEPA current adapter does not accept coverage_recovery pipeline; minimal compatibility required only if that policy is selected",
     "ACE/Reflexion current PSD integration incomplete"
   ],
-  "updated_at": "2026-11-07T00:10:00Z",
+  "updated_at": "2026-11-07T00:22:00Z",
   "parallel_cpu_tasks": {
     "valid_answer_implementation": "completeOFF sealed1080/1080 legal verified; ON and every successor still require full coverage acceptance",
     "deployment": "existing two TP4 generation workers confirmed running; queued prompt and C96 successors retained",
@@ -844,8 +847,9 @@
     "load_analysis": "completed existing evidence analysis accepted; retain armed C96, no measured speedup",
     "tfrl_reader": "deferred",
     "perception_miss_analysis": "historical P ranking admission and A-after-C96 successor armed;216pins verified; actual generation pending",
-    "complete_on_terminal": "existing score watcher retained; CLI3058570 prepares terminal coverage and same-k8ON comparison, no live trace scan",
-    "efficiency_measurement": "600s service collector and small-status archival accepted; hardware observer reused; first snapshots verified, bounded24h; no NPU dependency"
+    "complete_on_terminal": "generation1080 sealed; coverage preliminary1077legal3empty; existing recovery56d3 running; official pair pending",
+    "efficiency_measurement": "600s service collector and small-status archival accepted; hardware observer reused; first snapshots verified, bounded24h; no NPU dependency",
+    "remaining_empty_root_causes": "CLI3073928 only three real failed sample request/recovery chains; no new model calls"
   },
   "dispatch_policy": {
     "cpu_preparation_before_npu_lease": true,
