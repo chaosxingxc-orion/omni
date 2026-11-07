@@ -35,11 +35,16 @@ def compile_campaign(config):
     if not isinstance(config['deployment_policy'], dict) or not config['deployment_policy']:
         raise ValueError('separate deployment policy declaration required')
     template = copy.deepcopy(config['workload'])
+    p_only = template.get('schema') == 'saea-perception-only-workload-v1'
     if (template.get('population', {}).get('role') != 'construction'
-            or template.get('node_arm') != 'enhanced-p-slot-decision'
-            or not isinstance(template.get('pipeline'), dict)
+            or (not p_only and (template.get('node_arm') != 'enhanced-p-slot-decision'
+                                or not isinstance(template.get('pipeline'), dict)))
+            or (p_only and (len(collection['seeds']) != 4 or collection['temperature'] != 0.7))
             or 'collection_decoding' in template):
         raise ValueError('construction PSD v2 SDK workload template required')
+    if p_only:
+        from p_only_workload import PerceptionOnlyWorkload
+    workload_class = PerceptionOnlyWorkload if p_only else NodeWorkload
     policy = {'workload': {k:v for k,v in template.items() if k not in ('name','run_id')},
               'temperature': collection['temperature'],
               'seed_rule': 'ordered-explicit-seeds-v1'}
@@ -48,7 +53,7 @@ def compile_campaign(config):
         job = copy.deepcopy(template)
         job.update(name=f'{name}-k{index:03}', run_id=f'{run}-K{index:03}',
                    collection_decoding={'temperature':collection['temperature'], 'seed':seed})
-        parsed = NodeWorkload(job)
+        parsed = workload_class(job)
         budgets = parsed.contact_budgets()
         members.append({'index':index, 'seed':seed, 'job_config':job,
                         'fit_run_id':job['run_id']+'-FIT', 'fit_attempt_id':'fit-v1',
@@ -89,7 +94,12 @@ def cpu_step(doc, index, mode, repo, data, out, stage_record=None, prepared=None
     check_compiled(doc)
     if type(index) is not int or not 1 <= index <= len(doc['members']):
         raise ValueError('unknown campaign member')
-    job = NodeWorkload(doc['members'][index-1]['job_config'])
+    config = doc['members'][index-1]['job_config']
+    if config.get('schema') == 'saea-perception-only-workload-v1':
+        from p_only_workload import PerceptionOnlyWorkload
+        job = PerceptionOnlyWorkload(config)
+    else:
+        job = NodeWorkload(config)
     if mode == 'stage':
         return job.stage(repo, data, job.config['material'], out)
     if mode == 'prepare':
