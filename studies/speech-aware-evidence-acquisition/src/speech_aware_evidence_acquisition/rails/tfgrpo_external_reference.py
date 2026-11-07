@@ -11,7 +11,7 @@ from pathlib import Path
 from .external_exploration import checked, pin, read, save
 from .external_teacher import ExternalTeacher
 from .grounded_synthesis_fusion import project_group_evidence
-from .tfgrpo_learning import (DENSE_REWARD, ExperienceLearner, LearningError,
+from .tfgrpo_learning import (DENSE_REWARD, BINARY_REWARD, ExperienceLearner, LearningError,
     canonical, group_has_contrast, intent_slot_reward, sha, validate_experience,
     semantic_advantage, parse_operations, batch_operation_limit)
 from .tfgrpo_prompts import SOURCE_SHA256, UPSTREAM_COMMIT
@@ -29,8 +29,10 @@ def require(ok, message):
 def verified_material(config):
     fields = {'schema', 'source', 'source_batch', 'parent', 'query_ids', 'actor_model_id',
               'teacher', 'template', 'stage_completion_caps', 'bounds', 'objectives', 'output_root'}
-    require(isinstance(config, dict) and set(config) in (fields, fields | {'psd_target'}, fields | {'psd_target','parent_binding'}) and config['schema'] == SCHEMA,
+    require(isinstance(config, dict) and set(config) in (fields, fields | {'psd_target'}, fields | {'psd_target','parent_binding'}, fields | {'p_only_binary'}) and config['schema'] == SCHEMA,
             'exact reference job configuration required')
+    p_only = config.get('p_only_binary') is True
+    require('p_only_binary' not in config or p_only, 'explicit P binary mode required')
     if 'psd_target' in config:
         target = config['psd_target']
         require(target in ('slot','decision'), 'explicit PSD target required')
@@ -48,8 +50,8 @@ def verified_material(config):
             and document['rollout_parent_sha256'] == parent['sha256']
             and document['rollout_policy_sha256'] == batch['policy_sha256']
             and document['rollout_kind'] == batch['rollout_kind'], 'original actor, parent or policy differs')
-    require(document['reward_mode'] == batch['common']['reward_mode'] == DENSE_REWARD,
-            'explicit source continuous reward required')
+    mode = BINARY_REWARD if p_only else DENSE_REWARD
+    require(document['reward_mode'] == batch['common'].get('reward_mode', BINARY_REWARD) == mode, 'source reward mode differs')
     template = config['template']
     require(template == {'upstream_commit': UPSTREAM_COMMIT, 'source_sha256': SOURCE_SHA256},
             'original stage template version differs')
@@ -99,12 +101,18 @@ def verified_material(config):
             require(trajectory['request']['sample_id'] == qid
                     and {'task_instruction', 'supplied_evidence', 'history'} <= trajectory['request'].keys()
                     and isinstance(trajectory['response_text'], str), 'actual source request and response required')
-            require(feedback['reward_mode'] == DENSE_REWARD and type(row['reward']) in (int, float)
-                    and intent_slot_reward(feedback) == feedback['reward'] == row['reward'], 'source reward differs')
-            require(hashlib.sha256(trajectory['scored_answer_after_fixed_normalization'].encode()).hexdigest()
-                    == feedback['scored_answer_sha256'], 'source scored response digest differs')
+            if p_only:
+                require(type(row['reward']) is int and row['reward'] in (0, 1)
+                        and type(feedback['recall3']) is bool and int(feedback['recall3']) == row['reward']
+                        and isinstance(feedback['legal'], bool) and isinstance(feedback['top1'], bool), 'P recall feedback differs')
+                require(trajectory['response_text'] == trajectory['scored_answer_after_fixed_normalization'], 'P delivered response differs')
+            else:
+                require(feedback['reward_mode'] == DENSE_REWARD and type(row['reward']) in (int, float)
+                        and intent_slot_reward(feedback) == feedback['reward'] == row['reward'], 'source reward differs')
+                require(hashlib.sha256(trajectory['scored_answer_after_fixed_normalization'].encode()).hexdigest()
+                        == feedback['scored_answer_sha256'], 'source scored response digest differs')
         groups.append(copy.deepcopy(group))
-    contrast = [g for g in groups if group_has_contrast(g['rollouts'], DENSE_REWARD)]
+    contrast = [g for g in groups if group_has_contrast(g['rollouts'], BINARY_REWARD if config.get('p_only_binary') else DENSE_REWARD)]
     counts = {'summary': sum(len(g['rollouts']) for g in contrast), 'advantage': len(contrast),
               'group_update': len(contrast), 'batch_update': int(bool(contrast))}
     calls = sum(counts.values()); allocation = sum(counts[s] * caps[s] for s in STAGES)
@@ -137,7 +145,7 @@ def prepare(config_path):
         'source_batch_sha256': sha(batch), 'parent_sha256': parent['sha256'],
         'actor_model_id': config['actor_model_id'], 'learner_model_id': caller.model_id,
         'template': config['template'], 'plan': plan, 'new_model_calls': 0,
-        'algorithm': 'tfgrpo-reference-multistage-external-dense-offline-v1',
+        'algorithm': ('tfgrpo-reference-multistage-external-p-binary-v1' if config.get('p_only_binary') else 'tfgrpo-reference-multistage-external-dense-offline-v1'),
         'evidence_scope': {'summary': 'full original query and losslessly factored original trajectory',
             'advantage': 'original query, TRAIN reference and model summaries with original rewards',
             'group_update': 'parent experiences and model semantic advantage',
@@ -189,7 +197,7 @@ def execute(root, *, collect_only=False):
         require((root/'learner/candidate.json').is_file(), 'no completed reference candidate to collect')
     candidate = learner.learn(groups, parent, **config['objectives'], actor_model_id=config['actor_model_id'],
         policy_sha256=batch['policy_sha256'], rollout_kind=batch['rollout_kind'],
-        num_experiences=bounds['num_experiences'], reward_mode=DENSE_REWARD)
+        num_experiences=bounds['num_experiences'], reward_mode=BINARY_REWARD if config.get('p_only_binary') else DENSE_REWARD)
     # Reconcile every complete reference contact against original provider wire.
     receipts = []
     for path in sorted((root/'learner/contacts').glob('*.intent.json')):
@@ -286,7 +294,7 @@ def audit(root):
                     limit = config['bounds']['max_operations']
                     if request['stage'] == 'batch_update':
                         require(valid_group_ids == {g['query_id'] for g in groups
-                                if group_has_contrast(g['rollouts'], DENSE_REWARD)},
+                                if group_has_contrast(g['rollouts'], BINARY_REWARD if config.get('p_only_binary') else DENSE_REWARD)},
                                 'batch requires complete valid group proposals')
                         limit = batch_operation_limit(proposal_count, limit)
                     parse_operations(response['text'], parent['items'],
