@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T23:08:01.876501+00:00",
+  "updated_at_utc": "2026-11-08T23:25:53.039794+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -10,10 +10,10 @@
     "max_codex_cli": 3,
     "monitor_interval_seconds": 600,
     "total_authorized_cards": 8,
-    "active_scientific_NPU_jobs": 2,
-    "active_scientific_NPU_cards": 8,
-    "idle_cards": 0,
-    "resource_scope": "npu2 W active requests and X actual outbound HTTP verified; AICore saturation unproven"
+    "active_scientific_NPU_jobs": 1,
+    "active_scientific_NPU_cards": 4,
+    "idle_cards": 4,
+    "resource_scope": "W complete; X continues; successor CPU admitted and teacher streaming; no AICore saturation claim"
   },
   "nodes": [
     {
@@ -399,7 +399,7 @@
       "automatic_retry": false
     }
   },
-  "historical_nodes_note": "nodes, historical_active_tracks, latest_recall_revision and current_followups retain historical stage evidence. Current state: active_tracks and current_snapshot. Planning specification is not an executable queue or remote job receipt.",
+  "historical_nodes_note": "Historical node/followup entries retain their original experiment context. Current execution is authoritative in current_snapshot and active_tracks.",
   "current_followups": {
     "P_operation_prompt": {
       "state": "complete_not_promoted",
@@ -501,32 +501,34 @@
       "blocks_T": false
     },
     "recall_minimum_growth": {
-      "state": "seed724_frozen_main_independent_recall_audit_completed_incremental_growth_rework_active",
+      "state": "seed59_growth76_reverse75_main_verified_joint_replacement_implementation",
       "resource": "CPU",
       "retain_all4451": false,
       "development_feedback_for_selection": true,
       "TEST_tuning": false,
-      "candidate_source": "real_TRAIN_excluding_query_source_closure",
+      "candidate_source": "real_TRAIN_excluding_full_DEV_source_closure",
       "depends_on": [
         "existing_embedding_cache"
       ],
       "does_not_depend_on": [
-        "T_terminal",
-        "P_regression_report",
-        "second_instance_binding"
+        "P_W_terminal",
+        "P_X_terminal",
+        "P_regression_report"
       ],
-      "seed_size": 724,
+      "seed_size": 59,
+      "accepted_bank_size": 75,
+      "bank_floor": null,
+      "global_minimum_claim": false,
       "seed_Q50_question": {
-        "fit": 584,
-        "valid": 1039,
-        "FoldA": 1049
+        "fit": 594,
+        "valid": 1049,
+        "FoldA": 1058
       },
       "seed_Q50D5_union": {
-        "fit": 594,
-        "valid": 1043,
-        "FoldA": 1057
-      },
-      "accepted_insertions_confirmed": 0
+        "fit": 601,
+        "valid": 1059,
+        "FoldA": 1062
+      }
     }
   },
   "updated_at": "2026-11-08T22:39:57.758969+00:00",
@@ -541,7 +543,8 @@
     "acceptance_objectives": [
       "zero_regressions_and_Q15_gain",
       "zero_regressions_and_strictly_smaller_bank"
-    ]
+    ],
+    "fixed_size_floor": false
   },
   "group_policy_round5_formal_run": {
     "state": "complete_main_full_hitsets_recount_passed",
@@ -628,7 +631,19 @@
     "stable_seconds_per_sample": 4.6997586861252785,
     "total": 1080,
     "seconds_per_row_recent": 4.70083200186491,
-    "eta_seconds_at_snapshot": 2068.3660808205605
+    "eta_seconds_at_snapshot": 2068.3660808205605,
+    "status": "complete1080_main_paired_recount_report_in_progress",
+    "completed": 1080,
+    "top3": 1010,
+    "top1": 922,
+    "valid": 1080,
+    "supply": 1067,
+    "repair": 43,
+    "regression": 14,
+    "seconds_per_row": 4.922772504962955,
+    "remaining": 0,
+    "eta_seconds": 0,
+    "promotion": false
   },
   "p_wide_supply_thinking_transfer": {
     "resource": "NPU_B_after_CPU_admission",
@@ -649,21 +664,27 @@
     "generation_started_at_utc": "2026-11-08T22:32:37.78652903Z",
     "first_actual_POST_unix": 1794177449.9816473,
     "HTTP_response_verified": false,
-    "status": "first_valid_response_main_accepted",
-    "completed_snapshot": 1,
+    "status": "running_scheduled_snapshot454",
+    "completed_snapshot": 454,
     "total": 1080,
     "first_response_at_unix": 1794177788.061468,
     "steady_throughput": null,
-    "early_ETA_rejected": true
+    "early_ETA_rejected": true,
+    "snapshot_at_unix": 1794180195.7789264,
+    "remaining": 626,
+    "seconds_per_row_recent": 8.602045406614032,
+    "eta_seconds_at_snapshot": 5384.8804245403835
   },
   "current_snapshot": {
     "recall_bank": 75,
     "bank_floor": null,
     "round6_formal": "complete_main_verified",
     "reverse76": "complete_75_main_verified",
-    "P_W_completed_snapshot": 896,
-    "P_X_completed_snapshot": 256,
-    "NPU_sustained_80_percent_proven": false
+    "P_W_completed_snapshot": 1080,
+    "P_X_completed_snapshot": 454,
+    "NPU_sustained_80_percent_proven": false,
+    "P_W_top3": 1010,
+    "P_X_snapshot_at_unix": 1794180195.7789264
   },
   "historical_active_tracks": [
     {
@@ -698,42 +719,31 @@
   ],
   "active_tracks": [
     {
-      "id": "P-W",
-      "resource": "NPU_A",
-      "status": "running_scheduled_snapshot896",
-      "total": 1080,
-      "completed_snapshot": 896,
-      "cards": 4,
-      "instances": 1,
-      "depends_on": [],
-      "snapshot_at_unix": 1794179045.5154092
-    },
-    {
       "id": "P-X",
       "resource": "NPU_B",
-      "status": "running_scheduled_snapshot256",
+      "status": "running_snapshot",
       "total": 1080,
-      "completed_snapshot": 256,
+      "completed_snapshot": 454,
+      "snapshot_at_unix": 1794180195.7789264,
       "cards": 4,
       "instances": 1,
-      "depends_on": [],
-      "snapshot_at_unix": 1794178991.523605
+      "depends_on": []
     },
     {
-      "id": "round6-reverse-and-analysis",
+      "id": "recall-joint-duty-proposal",
       "resource": "CPU",
       "owner": "Sol CLI",
-      "status": "science_complete_full_reports_finalizing",
+      "status": "implementation_and_directed_verification",
       "depends_on": [],
       "blocks_NPU": false
     },
     {
       "id": "P-consumption-successor",
-      "resource": "CPU",
+      "resource": "CPU_EXTERNAL_API",
       "owner": "Sol CLI",
-      "status": "preparing_inputs_and_causal_teacher_feedback",
-      "depends_on": [],
+      "status": "CPU_admitted_teacher_unique_request_HTTP200_streaming",
       "NPU_started": false,
+      "depends_on": [],
       "blocks_NPU": false
     }
   ],
@@ -785,6 +795,25 @@
     "all_four_hitsets_unchanged": true,
     "queries": 2783,
     "receipt_files": 166,
-    "minimum_proven": false
+    "minimum_proven": false,
+    "full_reports_main_accepted": true
+  },
+  "p_consumption_successor": {
+    "status": "CPU_admitted_teacher_streaming",
+    "candidate": "V_fixed_supply_fs0_to1_only",
+    "n": 1080,
+    "CPU_admission_seconds": 494.49,
+    "NPU_started": false,
+    "teacher": "ACE_inspired_mechanism_review_one_existing_config_or_DECLINE",
+    "test_used": false,
+    "duplicate_preparation_required": false
+  },
+  "joint_duty_proposal": {
+    "status": "CLI_started_implementation",
+    "final_state": "bank_minus_up_to_two_old_same_label_plus_one_real_TRAIN",
+    "base_size": 75,
+    "global_minimum_claim": false,
+    "formal_run_started": false,
+    "teacher_sent": false
   }
 }
