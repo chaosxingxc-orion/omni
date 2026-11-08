@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T08:43:59.384002+00:00",
+  "updated_at_utc": "2026-11-08T08:56:29.954828+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1703,6 +1703,35 @@
       "resource": "CPU",
       "depends_on": [],
       "status": "running_full_legal_TRAIN_and_fixed_audio_matrix_no_API"
+    },
+    {
+      "id": "retrieval-soft-calibration-v2",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "implementation_and_cpu_evaluation_running",
+      "arms": 6
+    },
+    {
+      "id": "source-distinct-p-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "preparing"
+    },
+    {
+      "id": "source-distinct-p-consumption",
+      "resource": "NPU-B",
+      "depends_on": [
+        "source-distinct-p-prepare"
+      ],
+      "status": "not_ready",
+      "rows": 1080
+    },
+    {
+      "id": "mask-failure-mechanism-analysis",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "completed_aggregate_main_review",
+      "rows": 1080
     }
   ],
   "round_policy": {
@@ -1731,13 +1760,10 @@
   },
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
-    "scope": "research planning graph, not authoritative runtime queue",
-    "A": "control7513 actual generation container running; boundary ready",
-    "B": "rotate complete963/1080 verified; selcontrol actual generation container running; boundary/hub queued",
-    "C": "control953 complete verified; boundary running; GEPA CPU task returned to restarted owner",
-    "CPU": "GEPA teacher complete; one exact behavior-first template accepted for preparation, two held; bidirectional/LCO independent",
-    "polling": "600 seconds or terminal signals",
-    "utilization": "single 181 AI Core snapshot 7,11,10,10,26,22,31,19 percent; not sustained utilization measurement; efficiency decomposition assigned"
+    "A": "paired parent complete; position container live",
+    "B": "source-distinct P3to1 CPU preparation; no verified model request yet",
+    "CPU": "soft calibration implementation/evaluation and paired evidence review, 3 CLI live",
+    "poll_seconds": 600
   },
   "objective": "valid_gold_intent_in_output_K_le_3_over_full_roster",
   "milestones": [

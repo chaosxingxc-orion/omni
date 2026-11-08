@@ -943,6 +943,35 @@
       "depends_on": [],
       "status": "implementation_in_progress",
       "scope": "cached original1080 audio query matrix, strict positive cosines, separate count denominator controls"
+    },
+    {
+      "id": "retrieval-soft-calibration-v2",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "implementation_and_cpu_evaluation_running",
+      "arms": 6
+    },
+    {
+      "id": "source-distinct-p-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "preparing"
+    },
+    {
+      "id": "source-distinct-p-consumption",
+      "resource": "NPU-B",
+      "depends_on": [
+        "source-distinct-p-prepare"
+      ],
+      "status": "not_ready",
+      "rows": 1080
+    },
+    {
+      "id": "mask-failure-mechanism-analysis",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "completed_aggregate_main_review",
+      "rows": 1080
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -998,13 +1027,10 @@
     "tfrl_preparation": "deferred"
   },
   "current_dispatch": {
-    "scope": "planning graph, actual queue receipts authoritative",
-    "A": "exclusion883 complete; position running after path repair, no first response yet",
-    "B": "capacity16 CPU admission in progress, no generation yet",
-    "C": "no ready NPU successor",
-    "CPU": "retrieval teacher streams live; source-distinct support CPU control being prepared",
-    "polling": "600 seconds or terminal events",
-    "utilization": "A active only; not all instances occupied; no sustained AI Core utilization proof"
+    "A": "paired parent complete; position container live",
+    "B": "source-distinct P3to1 CPU preparation; no verified model request yet",
+    "CPU": "soft calibration implementation/evaluation and paired evidence review, 3 CLI live",
+    "poll_seconds": 600
   },
-  "updated_at_utc": "2026-11-08T08:06:19.017857+00:00"
+  "updated_at_utc": "2026-11-08T08:56:29.954828+00:00"
 }

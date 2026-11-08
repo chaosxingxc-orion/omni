@@ -131,11 +131,22 @@ def workspace_asset(repo_root,relative):
     return path
 
 
+_NONSTRING_COMMIT = object()
+
+
+@lru_cache(maxsize=4)
+def _source_manifest_commit(raw):
+    commit = json.loads(raw)['commit']
+    return commit if isinstance(commit, str) else _NONSTRING_COMMIT
+
+
 def source_commit(repo_root):
     manifest=os.environ.get('SAEA_RELEASE_MANIFEST')
     if manifest:
         raw=Path(manifest).read_bytes()
         if hashlib.sha256(raw).hexdigest()!=os.environ.get('SAEA_RELEASE_MANIFEST_SHA256'):raise ValueError('release source inventory differs')
-        return json.loads(raw)['commit']
+        commit = _source_manifest_commit(raw)
+        # Preserve fresh mutable values for unusual but previously accepted JSON.
+        return json.loads(raw)['commit'] if commit is _NONSTRING_COMMIT else commit
     from .bundle.git_commit import require_clean_study_repo
     return require_clean_study_repo(repo_root)

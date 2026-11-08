@@ -1,7 +1,16 @@
-Teacher contract v2 修复已离线验证。observer接受完整单一JSON对象或完整JSON代码围栏，拒绝前后垃圾/多对象/坏输入，并支持独立输出根和单次终态收集；保留原始响应、receipt核验和共享guard。固定镜像23项测试通过，已有两份终态响应各3候选重新解析成功，无新API。
+# 教师接口与策略验证
 
-下一轮prepare与ACE/TFGROUP独立模板将gold_covered_in_input与all_rows_have_cards拆开，固定完整合法TRAIN父/coverage分母，区分历史选库控制。卡槽是distinct label卡；运行路径为audio→TRAIN问句相似度→per-label聚合→label卡→ranking indices，不依赖query转写。新增source-distinct匹配反证、p值解释约束与未测reward=null规则。TF C2主适配已由独立工程完成11臂CPU全量评分并主独立复核，全部R3低于父，输入标completed_cpu_rejected并附真实检索奖励；下游P奖励未测。不重复同策略或同族微阈值，不将词项重合失败泛化为所有语义方法无效。
+每算法独立固定模板，动态证据由脚本拼接。共享执行器负责请求、终态收集与来源绑定；教师提出机制，不决定真实奖励。单JSON或单完整JSON代码围栏解析已通过固定镜像23项测试。
 
-完整私有report/result/commands/sourcepins及真实ExternalTeacher.preflight绑定位于任务独立输出根teacher-contract-v2，保留旧contact/compiled字节。两教师历史成本104869 tokens（reason包含于output），本次新增API/encoder/NPU调用0；干跑与环境验证不代表新策略训练或收益。
+TFGROUP本轮终态HTTP200/stop，4个结构化策略，用时835.032秒，输入20038、输出46404（含reasoning37956）、总66442 tokens；货币价格未知。主审条件接受CPU试验，不代表采用策略或已取得收益。
 
-下一轮ACE与TFGROUP已在开发机各发一次请求，均收到headers和SSE，尚未终态。输入分别63887/64058字节（不是token），输出上限131072；采用上述纠正接口和11臂CPU反证，各自独立模板，动态证据最多16代表。独立后台观察器按终态/600秒收集，不重发未知请求；实际usage及候选质量等待终态。
+|策略|主审与执行|
+|---|---|
+|保留支持的hubness/local scaling校正|执行4臂；正分资格仍按原余弦，负校正分不再剔除；尺度及标准化仅合法TRAIN排同源拟合|
+|Top1/2近分仲裁|执行2臂；阈值仅TRAIN拟合；逐行检查Top3集合不变，不能称缺供给修复|
+|锁定描述仲裁|已有描述召回与缓存，教师“从未测量”判断错误；留作独立描述通道实验，不重编码|
+|同源group-max|复用已有848/976/1007结果，准备独立P消费验证；不自动替换父|
+
+教师用开发查询分布拟合尺度不符合本轮TRAIN-only契约，主适配已记录。R3修退0/0也不代表Top3集合相同，交独立逐行审计。ACE进程及终态观察器最近确认仍存活；未知请求不重发，终态后另行语义审核。
+
+CPU与NPU异步，完整旧请求、原始响应、主适配和实际收益分别保留。下一轮反馈加入硬过滤失败分解，既有已发送输入不改写。
