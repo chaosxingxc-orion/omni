@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T22:33:48.002591+00:00",
+  "updated_at_utc": "2026-11-08T22:39:57.758969+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -10,10 +10,10 @@
     "max_codex_cli": 3,
     "monitor_interval_seconds": 600,
     "total_authorized_cards": 8,
-    "resource_scope": "npu2 only; W requests verified, X generation container launched but model requests pending verification",
-    "active_scientific_NPU_jobs": 1,
-    "active_scientific_NPU_cards": 4,
-    "idle_cards": 4
+    "resource_scope": "npu2 W active requests and X actual outbound HTTP verified; AICore saturation unproven",
+    "active_scientific_NPU_jobs": 2,
+    "active_scientific_NPU_cards": 8,
+    "idle_cards": 0
   },
   "nodes": [
     {
@@ -835,7 +835,7 @@
     "member_CPU_seconds": 106.560554,
     "default_promoted": false
   },
-  "updated_at": "2026-11-08T22:33:48.002591+00:00",
+  "updated_at": "2026-11-08T22:39:57.758969+00:00",
   "candidate_discovery_diagnostic": {
     "status": "fixed_cache_single_insertion_diagnostics_complete_no_new_accepted_bank",
     "seed": 70,
@@ -981,9 +981,9 @@
   "p_representative_thinking_transfer": {
     "state": "running_real_first64_verified",
     "queries": 1080,
-    "completed_snapshot": 384,
+    "completed_snapshot": 512,
     "valid_snapshot": 64,
-    "remaining_snapshot": 696,
+    "remaining_snapshot": 568,
     "cards": 4,
     "instances": 1,
     "thinking_budget": 3072,
@@ -995,8 +995,8 @@
     "first64_input_tokens": 295039,
     "first64_output_tokens": 198314,
     "first64_reasoning_tokens_in_output": 197199,
-    "stable_seconds_per_sample": 4.698616163805127,
-    "ETA_seconds": 3270.2368500083685,
+    "stable_seconds_per_sample": 4.6997586861252785,
+    "ETA_seconds": 2669.462933719158,
     "AICore_snapshot_percent_range": [
       38,
       43
@@ -1004,7 +1004,7 @@
     "AICore_average": null,
     "baseline": "V_OFF_981",
     "default_promoted": false,
-    "snapshot_at_unix": 1794176638.4197583
+    "snapshot_at_unix": 1794177239.9888701
   },
   "group_policy_round5_formal_run": {
     "state": "complete_main_full_hitsets_recount_passed",
@@ -1058,7 +1058,7 @@
   },
   "minimum74_reanchor_diagnostic": {
     "resource": "CPU",
-    "state": "codex_subprocess_started",
+    "state": "scientific_outputs_main_verified_full_report_finalizing",
     "depends_on": [
       "group_policy_round5_formal_run",
       "round5_reverse_prune"
@@ -1069,11 +1069,17 @@
     ],
     "max_causal_Replay_trials": 12,
     "automatic_bank_acceptance": false,
-    "API_requests_authorized": 0
+    "API_requests_authorized": 0,
+    "profiled_candidates": 6885,
+    "safe_positive_candidates": 4,
+    "safe_support_union": 5,
+    "causal_trials": 12,
+    "passing_replacements": 0,
+    "accepted_bank_size": 74
   },
   "p_wide_supply_thinking_transfer": {
     "resource": "NPU_B_after_CPU_admission",
-    "state": "generation_container_started_actual_request_pending_verification",
+    "state": "actual_outbound_HTTP_and_controls_main_verified_response_pending",
     "queries": 1080,
     "baseline_top3": 966,
     "cards": 4,
@@ -1087,14 +1093,16 @@
       "minimum74_reanchor_diagnostic",
       "p_representative_thinking_transfer"
     ],
-    "generation_started_at_utc": "2026-11-08T22:32:37.78652903Z"
+    "generation_started_at_utc": "2026-11-08T22:32:37.78652903Z",
+    "first_actual_POST_unix": 1794177449.9816473,
+    "HTTP_response_verified": false
   },
   "current_snapshot": {
     "candidate_bank_size": 74,
     "reverse_pruning_complete": true,
-    "current_CPU_task": "new74_profile_and_minimal_causal_replacements",
+    "current_CPU_task": "round6_teacher_package_preparation_after12_rejected_replacements",
     "P_W_verified_running": true,
-    "P_X_real_request_verified": false,
+    "P_X_real_request_verified": true,
     "all_DEV_adaptively_used": true,
     "TEST_tuned": false
   },
@@ -1340,7 +1348,7 @@
       "id": "minimum74-reanchor-diagnostic",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "subprocess_running",
+      "status": "scientific_outputs_main_verified_full_report_finalizing",
       "depends_on": [
         "round5_reverse_prune"
       ],
@@ -1350,9 +1358,9 @@
     {
       "id": "P-W",
       "resource": "NPU_A",
-      "status": "running_verified_first64_latest_snapshot384",
+      "status": "running_scheduled_snapshot512",
       "total": 1080,
-      "completed_snapshot": 384,
+      "completed_snapshot": 512,
       "cards": 4,
       "instances": 1,
       "depends_on": []
@@ -1361,12 +1369,36 @@
       "id": "P-X",
       "owner": "Sol CLI",
       "resource": "NPU_B",
-      "status": "generation_container_started_actual_request_pending_verification",
+      "status": "actual_outbound_HTTP_main_verified_response_pending",
       "total": 1080,
       "completed_snapshot": null,
       "cards": 4,
       "instances": 1,
       "depends_on": []
+    },
+    {
+      "id": "round6-teacher-feedback",
+      "owner": "Sol CLI",
+      "resource": "CPU_local",
+      "status": "prepare_only_not_sent",
+      "depends_on": [
+        "minimum74-reanchor-diagnostic"
+      ],
+      "blocks_NPU": false
     }
-  ]
+  ],
+  "round6_teacher_feedback": {
+    "resource": "CPU_local",
+    "state": "preparing_not_sent",
+    "depends_on": [
+      "minimum74_reanchor_diagnostic"
+    ],
+    "does_not_depend_on": [
+      "P-W",
+      "P-X"
+    ],
+    "API_calls": 0,
+    "template": "algorithm_specific_TFGRPO_inspired",
+    "objective": "joint_coverage_and_cross_class_competition_with_safe_incremental_growth"
+  }
 }
