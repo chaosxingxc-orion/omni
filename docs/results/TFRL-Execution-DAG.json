@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T00:33:29.398323+00:00",
+  "updated_at_utc": "2026-11-08T00:48:51.387829+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -336,7 +336,7 @@
         "P-finalist-repeat"
       ],
       "status": "not_ready",
-      "scope": "multi-round gains, regressions, cost; freeze config AND output corpus"
+      "scope": "FoldA1080 recall1080of1080 at K<=3 plus same-config repeat; freeze config and actual output corpus"
     },
     {
       "id": "S-optimize",
@@ -524,7 +524,7 @@
       "id": "P-production-queue-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "B_breadth16_running_A_admission_C_control_queue_started",
+      "status": "B_c3_running_C_breadth12_and_B_cached_control_preparing",
       "owner": "Terra CLI",
       "scope": "Reuse prepared parent1080; compile executable parent/GEPA3/Reflexionc1c2/supply12/16 queue. Final release required only for dispatch."
     },
@@ -616,7 +616,7 @@
       "depends_on": [
         "P-intent-knowledge-prepare"
       ],
-      "status": "completed1080_exit0_score_pending",
+      "status": "completed1080_scored_recall981_valid1079_no_net_gain",
       "axis": "locked_card_section_order_only",
       "rows": 1080
     },
@@ -626,7 +626,7 @@
       "depends_on": [
         "P-intent-knowledge-prepare"
       ],
-      "status": "B_waiting_task_transfer_to_A_preparing_not_dispatched",
+      "status": "running_124_of_1080_real_responses_confirmed",
       "axis": "locked_card_section_order_only",
       "rows": 1080
     },
@@ -658,14 +658,14 @@
       "id": "P-learning-source-audit",
       "resource": "CPU",
       "depends_on": [],
-      "status": "Sol_read_only_audit_running",
+      "status": "complete80_inactive_exemplar_overlap_P_visible_no_direct_self_example",
       "scope": "source roster overlap versus actual rendered label/text; explicit learning/evaluation purpose"
     },
     {
       "id": "P-learning-candidate-evaluation",
       "resource": "CPU",
       "depends_on": [],
-      "status": "Terra_minimal_feature_in_progress",
+      "status": "partial_delivery_returned_to_same_owner_for_runtime_scope_fix",
       "scope": "reuse original80 for existing candidate axes; preserve TF grouping and evaluation isolation"
     },
     {
@@ -679,8 +679,50 @@
       "id": "P-A-alarm-transfer",
       "resource": "CPU",
       "depends_on": [],
-      "status": "original_owner_dispatch_preparation",
+      "status": "superseded_B_now_free_reuse_original_B_c3_admission",
       "scope": "verify not dispatched on B and zero-contact A retirement before independent activation"
+    },
+    {
+      "id": "P-B-cached-control-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "planned_after_c3_activation",
+      "scope": "same B hardware and current cached source; original parent and roster, not a new throughput study"
+    },
+    {
+      "id": "P-scale-cohort-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-freeze"
+      ],
+      "status": "planned_deferred",
+      "scope": "stable nested original1080/5000/10000 TRAIN roster; ontology distribution; exclude reserved FoldB/TEST"
+    },
+    {
+      "id": "P-scale-5000",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-scale-cohort-prepare"
+      ],
+      "status": "planned_deferred",
+      "required_recalled": 4900,
+      "rows": 5000,
+      "run_nodes": [
+        "P"
+      ]
+    },
+    {
+      "id": "P-scale-10000",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-scale-5000"
+      ],
+      "status": "planned_deferred",
+      "required_recalled": 9800,
+      "rows": 10000,
+      "run_nodes": [
+        "P"
+      ]
     }
   ],
   "round_policy": {
@@ -704,9 +746,9 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "all_services_online_no_active_generation_three_CLI_restarted_after_503",
-      "observed_at_utc": "2026-11-08T00:33:29.398323+00:00",
-      "known_B_responses": 1097,
+      "status": "B_c3_real_generation_A_C_successors_preparing",
+      "observed_at_utc": "2026-11-08T00:48:39.137952+00:00",
+      "known_B_responses": 124,
       "runtime": "old_B_finalized_dcbc2a5c_successors59cf0ade"
     },
     "held": [
@@ -744,38 +786,38 @@
       "last_response_unix": 1794073422.308,
       "eta_seconds": null,
       "eta_note": "startup included; interval delta needed for steady rate",
-      "successor": "TF_K001_ABORTED_zero_contact; knowledge_alarm_A_backfill_preparation",
+      "successor": "P_learning_scope_fix_pending_no_duplicate_alarm_run",
       "current_generation_active": false
     },
     "B": {
-      "observed_at_utc": "2026-11-08T00:32:44.421545+00:00",
-      "run_id": "SLURP-P-ONLY-BREADTH16-SUCCESSOR-V1",
-      "rows_complete": 1080,
+      "observed_at_utc": "2026-11-08T00:48:39.137952+00:00",
+      "run_id": "SAEA-SLURP-P-KNOWLEDGE-C3-FOLDA1080-V1",
+      "rows_complete": 124,
       "rows_total": 1080,
       "duplicates": 0,
       "torn_lines": 0,
       "contacts": {
-        "fit": 1097,
-        "dispatch": 1097,
-        "intent": 1097,
-        "response": 1097
+        "dispatch": 166,
+        "fit": 168,
+        "intent": 168,
+        "response": 124
       },
       "known_tokens": {
-        "prompt_tokens": 8731375,
-        "completion_tokens": 302681
+        "prompt_tokens": 659304,
+        "completion_tokens": 26118
       },
       "cards": 4,
       "instances": 1,
-      "generation_container_state": "exited",
-      "container_wall_seconds": 2065.380559,
-      "container_seconds_per_row_including_startup": 1.9123894064814817,
-      "mean_response_latency_seconds": 46.5397647035544,
-      "response_window_seconds": 1623.4960000514984,
-      "first_response_unix": 1794074733.748,
-      "last_response_unix": 1794076357.244,
+      "generation_container_state": "running",
+      "container_wall_seconds": 465.026313,
+      "container_seconds_per_row_including_startup": 3.750212201612903,
+      "mean_response_latency_seconds": 32.06404369217043,
+      "response_window_seconds": 93.50399994850159,
+      "first_response_unix": 1794098781.496,
+      "last_response_unix": 1794098875.0,
       "eta_seconds": null,
       "eta_note": "startup included; interval delta needed for steady rate",
-      "current_generation_active": false
+      "current_generation_active": true
     },
     "C": {
       "observed_at_utc": "2026-11-08T00:30:48.672226+00:00",
@@ -822,14 +864,14 @@
     },
     "cpu_workers": [
       {
-        "role": "A_backfill_C_successor",
+        "role": "B_c3_activation_C_breadth12_prepare",
         "model": "gpt-6.1-terra",
-        "pid": 3691971
+        "pid": 3713472
       },
       {
-        "role": "learning80_candidate_evaluation",
+        "role": "learning80_explicit_runtime_scope_fix",
         "model": "gpt-6.1-terra",
-        "pid": 3691972
+        "pid": 3712465
       },
       {
         "role": "learning_overlap_and_completed_results",
@@ -859,6 +901,59 @@
         29
       ],
       "scope": "instantaneous; not interval utilization; other users cards excluded"
+    },
+    "B_previous_breadth16": {
+      "observed_at_utc": "2026-11-08T00:32:44.421545+00:00",
+      "run_id": "SLURP-P-ONLY-BREADTH16-SUCCESSOR-V1",
+      "rows_complete": 1080,
+      "rows_total": 1080,
+      "duplicates": 0,
+      "torn_lines": 0,
+      "contacts": {
+        "fit": 1097,
+        "dispatch": 1097,
+        "intent": 1097,
+        "response": 1097
+      },
+      "known_tokens": {
+        "prompt_tokens": 8731375,
+        "completion_tokens": 302681
+      },
+      "cards": 4,
+      "instances": 1,
+      "generation_container_state": "exited",
+      "container_wall_seconds": 2065.380559,
+      "container_seconds_per_row_including_startup": 1.9123894064814817,
+      "mean_response_latency_seconds": 46.5397647035544,
+      "response_window_seconds": 1623.4960000514984,
+      "first_response_unix": 1794074733.748,
+      "last_response_unix": 1794076357.244,
+      "eta_seconds": null,
+      "eta_note": "startup included; interval delta needed for steady rate",
+      "current_generation_active": false
     }
-  }
+  },
+  "objective": "valid_gold_intent_in_output_K_le_3_over_full_roster",
+  "milestones": [
+    {
+      "cohort": "original_Fold_A",
+      "size": 1080,
+      "required_recalled": 1080,
+      "status": "active"
+    },
+    {
+      "cohort": "fixed_TRAIN_5000",
+      "size": 5000,
+      "required_recalled": 4900,
+      "status": "after_1080_lock_and_repeat"
+    },
+    {
+      "cohort": "fixed_TRAIN_10000",
+      "size": 10000,
+      "required_recalled": 9800,
+      "status": "after_5000_stage"
+    }
+  ],
+  "research_plan": "P-Recall-TFRL-Plan.json",
+  "knowledge_construction_scope": "source_supported_additions_and_content_optimization_not_only_section_reorder"
 }

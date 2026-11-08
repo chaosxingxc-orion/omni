@@ -1,0 +1,88 @@
+{
+  "schema": "p-recall-tfrl-research-plan-v1",
+  "status": "active_research_not_completed",
+  "updated_at_utc": "2026-11-08T00:48:51.387829+00:00",
+  "stage": "P",
+  "primary_metric": "valid_gold_intent_in_output_K_le_3_over_full_roster",
+  "max_candidates": 3,
+  "upstream_metric": "gold_intent_knowledge_supplied_over_full_roster",
+  "milestones": [
+    {
+      "cohort": "original_Fold_A",
+      "size": 1080,
+      "required_recalled": 1080,
+      "status": "active"
+    },
+    {
+      "cohort": "fixed_TRAIN_5000",
+      "size": 5000,
+      "required_recalled": 4900,
+      "status": "after_1080_lock_and_repeat"
+    },
+    {
+      "cohort": "fixed_TRAIN_10000",
+      "size": 10000,
+      "required_recalled": 9800,
+      "status": "after_5000_stage"
+    }
+  ],
+  "axes": {
+    "construction": [
+      "source_supported_knowledge_addition",
+      "definition_and_boundary_clarity",
+      "positive_negative_examples",
+      "retrieval_key_description"
+    ],
+    "consumption": [
+      "retrieval",
+      "programmatic_dedup_and_grouping",
+      "ranking",
+      "context_presentation",
+      "intent_extraction",
+      "candidate_retention"
+    ]
+  },
+  "methods": [
+    "GEPA",
+    "ACE",
+    "Reflexion",
+    "TF-GRPO"
+  ],
+  "rules": {
+    "failed_rows_in_denominator": true,
+    "test_for_tuning": false,
+    "runtime_gold_or_answer_lookup": false,
+    "invented_knowledge_facts": false,
+    "retain_source_provenance": true,
+    "S_D_frozen": true,
+    "new_5000_10000_sampling_authorized_but_deferred": true
+  },
+  "current_comparable_counts": {
+    "parent_recall": 981,
+    "breadth12_recall": 983,
+    "denominator": 1080
+  },
+  "diagnostic_oracle": {
+    "parent_or_breadth12": 1008,
+    "any_of_five": 1022,
+    "all_five_miss": 58,
+    "deployable_result": false
+  },
+  "failure_categories": [
+    "knowledge_content_gap",
+    "retrieval_or_ranking_omission",
+    "visible_knowledge_misunderstood_or_candidate_dropped",
+    "invalid_output_or_input_ambiguity"
+  ],
+  "selection": {
+    "primary": "full_roster_valid_recall",
+    "report": [
+      "paired_fixes",
+      "paired_regressions",
+      "intent_distribution",
+      "validity",
+      "cost"
+    ],
+    "combined_changes_require_regression": true
+  }
+}
