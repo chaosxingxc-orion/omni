@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T01:46:34.831747+00:00",
+  "updated_at_utc": "2026-11-08T01:58:02.635925+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -779,7 +779,7 @@
       "resource": "CPU",
       "depends_on": [],
       "status": "assigned",
-      "scope": "reuse original speech queries and real TRAIN question vectors; per-intent max/limited-neighbor aggregation; current version Recall3/5 and source exclusion"
+      "scope": "real TRAIN questions only; provenance/text/intent/utterance checks; no synthetic or test-derived entries; independent mode metrics"
     },
     {
       "id": "P-dual-route-fusion-analysis",
@@ -788,7 +788,7 @@
         "P-real-question-recall-analysis",
         "P-key-recall-analysis"
       ],
-      "status": "planned",
+      "status": "deferred_independent_modes_first",
       "scope": "description/question RRF versus single routes; current centroid interim baseline; actual fused Recall3/5"
     },
     {
@@ -798,7 +798,7 @@
         "P-dual-route-fusion-analysis",
         "P-ranking-window-runtime"
       ],
-      "status": "planned",
+      "status": "deferred_independent_modes_first",
       "scope": "ready source-pinned numbered inputs before NPU lease"
     },
     {
@@ -807,7 +807,7 @@
       "depends_on": [
         "P-dual-route-ranking-inputs"
       ],
-      "status": "planned_not_executable_queue",
+      "status": "deferred_independent_modes_first",
       "scope": "independent 3/1,3/2,5/3 paired ranking runs"
     },
     {
@@ -928,6 +928,25 @@
       "depends_on": [],
       "status": "assigned",
       "scope": "complete original 60-description embeddings, compatible query geometry, source-bound index; reuse 13 already encoded originals"
+    },
+    {
+      "id": "P-real-question-mode-runtime",
+      "resource": "CPU",
+      "depends_on": [
+        "P-real-question-recall-analysis"
+      ],
+      "status": "planned_separate_mode",
+      "scope": "source-bound per-question retrieval, per-intent aggregation, same ranking rail; no fusion dependency"
+    },
+    {
+      "id": "P-real-question-mode-eval",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-real-question-mode-runtime",
+        "P-ranking-window-runtime"
+      ],
+      "status": "planned_inputs_before_lease",
+      "scope": "independent same-window question-mode comparison, frozen real TRAIN pool"
     }
   ],
   "round_policy": {
@@ -1228,5 +1247,6 @@
     "teacher_output_max_tokens": 131072,
     "implementation_status": "assigned_not_deployed"
   },
-  "intent_key_definition": "locked_description_embedding; individual_question_index_separate; centroid_history_only"
+  "intent_key_definition": "locked_description_embedding; individual_question_index_separate; centroid_history_only",
+  "retrieval_mode_policy": "independent_description_and_real_TRAIN_question_first; no synthetic/test-derived queries; fusion deferred"
 }

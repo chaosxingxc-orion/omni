@@ -1,7 +1,7 @@
 {
   "schema": "p-recall-tfrl-research-plan-v1",
   "status": "active_research_not_completed",
-  "updated_at_utc": "2026-11-08T01:46:34.831747+00:00",
+  "updated_at_utc": "2026-11-08T01:58:02.635042+00:00",
   "stage": "P",
   "primary_metric": "valid_gold_intent_in_output_K_le_3_over_full_roster",
   "max_candidates": 3,
@@ -120,7 +120,7 @@
     "implementation_status": "assigned_not_deployed"
   },
   "multi_route_retrieval": {
-    "status": "assigned_pending_current_vector_evaluation",
+    "status": "future_design_independent_modes_first",
     "query": "original_speech_embedding_no_gold_transcript",
     "routes": [
       "source_grounded_label_description",
@@ -162,5 +162,24 @@
     ],
     "intent_key_definition": "embedding_of_locked_intent_description_not_mean_question_vector",
     "new_baseline": "all_60_locked_intent_descriptions"
+  },
+  "retrieval_modes": {
+    "description": {
+      "key": "locked_description_embedding",
+      "optimization": "source_grounded_TFRL_description_changes_and_reencoding"
+    },
+    "real_question": {
+      "key": "one_real_TRAIN_question_vector_per_entry",
+      "allow_synthetic": false,
+      "allow_teacher_generated_question": false,
+      "allow_test_derived_question": false,
+      "checks": [
+        "TRAIN_source_id",
+        "source_text_equality",
+        "locked_intent",
+        "utterance_exclusion"
+      ]
+    },
+    "fusion_status": "deferred_until_independent_mode_evaluation"
   }
 }
