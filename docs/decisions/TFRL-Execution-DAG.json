@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T22:25:28.763580+00:00",
+  "updated_at_utc": "2026-11-08T22:27:24.690678+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -588,14 +588,22 @@
     {
       "id": "formal-recall-round5",
       "resource": "CPU",
-      "status": "started_fixed_image_real_teacher71",
+      "status": "complete_main_recount_71_to74",
       "depends_on": [
         "reanchor-config",
         "group-feedback-round5"
       ],
       "actual_policy": "risk_aware_cover_cap1_gain_or_shrink_r5",
       "rows": 2783,
-      "maximum_distinct_states_bound": 582
+      "maximum_distinct_states_bound": 582,
+      "accepted_actions": 3,
+      "distinct_states": 576,
+      "complete_rows": 2783,
+      "Q15_question_repairs": 12,
+      "Q15_union_repairs": 8,
+      "Q50_question_repairs": 2,
+      "Q50_union_repairs": 1,
+      "regressions": 0
     },
     {
       "id": "p-wide-supply-thinking-X",
@@ -613,6 +621,19 @@
       "control": "U_OFF966",
       "cards": 4,
       "thinking": "ON3072_answer128"
+    },
+    {
+      "id": "minimum74-reverse-prune",
+      "resource": "CPU",
+      "status": "authorized_new_bank_pending",
+      "depends_on": [
+        "formal-recall-round5"
+      ],
+      "does_not_depend_on": [
+        "P_W",
+        "P_X",
+        "report_formatting"
+      ]
     }
   ],
   "historical_nodes_note": "nodes and latest_recall_revision retain historical evidence; active_tracks and group_policy_round2_formal_run describe current work. Planning specification is not an execution receipt.",
@@ -733,7 +754,7 @@
       "blocks_T": false
     },
     "recall_minimum_growth": {
-      "state": "seed59_growth71_reverse_complete_R5_formal_running",
+      "state": "seed59_growth74_main_recount_reverse_pending",
       "resource": "CPU",
       "retain_all4451": false,
       "development_feedback_for_selection": true,
@@ -769,17 +790,17 @@
     "seed_FoldA_Q15_union": 1002,
     "seed_FoldA_Q50_question": 1058,
     "seed_FoldA_Q50_union": 1062,
-    "status": "R4_growth71_and_reverse_prune_complete",
+    "status": "R5_growth74_main_recount_reverse_pending",
     "NPU_calls": 0,
-    "final_size": 71,
-    "accepted_additions": 12,
-    "FoldA_Q15_question": 980,
-    "FoldA_Q15_union": 1019,
+    "final_size": 74,
+    "accepted_additions": 15,
+    "FoldA_Q15_question": 985,
+    "FoldA_Q15_union": 1023,
     "FoldA_Q50_question": 1070,
     "FoldA_Q50_union": 1071,
     "CPU_wall_seconds": 165.07169253006577,
     "followup_maximum_new_acceptances": 24,
-    "total_accepted_additions": 12,
+    "total_accepted_additions": 15,
     "last_round_CPU_seconds": 92.44105488993227,
     "last_stop": "71_full_single_deletion_pass_zero_accepted_not_global_minimum"
   },
