@@ -425,7 +425,7 @@
     {
       "id": "next-formal-recall",
       "resource": "CPU",
-      "status": "actual_E3_running",
+      "status": "E3_complete_positive_causal_analysis_in_progress",
       "depends_on": [
         "causal-depth-search",
         "group-feedback-round3",
@@ -445,7 +445,7 @@
       "id": "accepted133-P-transfer",
       "owner": "Sol CLI",
       "resource": "CPU_prepare_then_two_TP4_NPU",
-      "status": "preparing_not_launched",
+      "status": "CPU_admission_release_verification_failed_owner_repair",
       "depends_on": [
         "frozen_S2_133_bank",
         "prepared_P_inputs",
@@ -475,7 +475,8 @@
         "answer_tokens": 128,
         "prompt": "A_original"
       },
-      "default_bank_promoted": false
+      "default_bank_promoted": false,
+      "model_POST_verified": 0
     }
   ],
   "historical_nodes_note": "nodes and latest_recall_revision retain historical evidence; active_tracks and group_policy_round2_formal_run describe current work. Planning specification is not an execution receipt.",
@@ -754,7 +755,7 @@
   "minimum_seed_growth_policy": {
     "fixed_size_target": null,
     "seed_lower_bound": 59,
-    "current_candidate_size": 68,
+    "current_candidate_size": 70,
     "objective": "fixed_TopK_label_coverage_and_stability",
     "next": "root_cause_driven_action_depth_search_then_TRAIN_compensation_and_reverse_pruning",
     "seed_members_immutable": false,
@@ -869,7 +870,7 @@
     "elapsed_seconds": 255.42817
   },
   "group_policy_round3_formal_run": {
-    "state": "running_actual_container_verified",
+    "state": "complete_main_full_hitset_recount_passed",
     "queries": 2783,
     "initial_bank": 68,
     "new_strategy": "E3_causal_depth_v1",
@@ -877,6 +878,30 @@
     "NPU_cards": 0,
     "maximum_distinct_states": 600,
     "references_cached": true,
-    "results_pending": true
+    "results_pending": false,
+    "final_bank": 70,
+    "accepted_actions": 1,
+    "net_additions": 2,
+    "net_deletions": 0,
+    "distinct_states": 600,
+    "Q15_question_repairs": [
+      4,
+      1,
+      2
+    ],
+    "Q15_union_repairs": [
+      3,
+      1,
+      2
+    ],
+    "Q50_question_repairs": [
+      1,
+      1,
+      0
+    ],
+    "all_protected_regressions": 0,
+    "member_wall_seconds": 106.989188,
+    "member_CPU_seconds": 106.560554,
+    "default_promoted": false
   }
 }
