@@ -425,7 +425,7 @@
     {
       "id": "next-formal-recall",
       "resource": "CPU",
-      "status": "staged_waiting_valid_corrected_teacher_policy",
+      "status": "actual_E3_running",
       "depends_on": [
         "causal-depth-search",
         "group-feedback-round3",
@@ -855,12 +855,28 @@
     "report_status": "complete_main_accepted_586_manifest_files"
   },
   "group_feedback_round3_correction": {
-    "state": "dispatched_response_stream_present",
+    "state": "terminal_valid_policy_main_reviewed",
     "actual_POST": 1,
     "automatic_retries": 0,
-    "final_received": false,
+    "final_received": true,
     "local_teacher": true,
     "max_output_tokens": 131072,
-    "scientific_gain": false
+    "scientific_gain": false,
+    "input_tokens": 12611,
+    "output_tokens": 34921,
+    "reasoning_tokens_included": 30302,
+    "total_tokens": 47532,
+    "elapsed_seconds": 255.42817
+  },
+  "group_policy_round3_formal_run": {
+    "state": "running_actual_container_verified",
+    "queries": 2783,
+    "initial_bank": 68,
+    "new_strategy": "E3_causal_depth_v1",
+    "CPU_quota": 4,
+    "NPU_cards": 0,
+    "maximum_distinct_states": 600,
+    "references_cached": true,
+    "results_pending": true
   }
 }
