@@ -50,3 +50,25 @@ def test_template_must_be_in_manifest(tmp_path):
     c['release']['manifest_sha256'] = m.sha(manifest)
     with pytest.raises(ValueError, match='template manifest pin mismatch'):
         m.prepare(c, False)
+
+
+def test_configured_ordered_supply_accepts_dynamic_window_and_checks_pins(tmp_path):
+    parent = tmp_path / 'parent'
+    (parent / 'workspace').mkdir(parents=True)
+    (parent / 'workspace/job-config.private.json').write_text(json.dumps({'sample_ids': ['s']}))
+    cards = ['intent-boundaries::intent-boundary:' + str(i) for i in range(8)]
+    payload = {key: {'perception': {'s': cards}} for key in ('facets', 'values')}
+    path = tmp_path / 'supply.json'
+    path.write_text(json.dumps(payload))
+    bank = tmp_path / 'bank.json'; bank.write_text('{}')
+    manifest = tmp_path / 'manifest.json'; manifest.write_text('{}')
+    files = [{'path': str(p), 'name': p.name, 'sha256': m.sha(p)} for p in (path, bank, manifest)]
+    c = {'ordered_supply': {'files': files, 'supply': path.name}, 'ranking_window': {'input_k': 25, 'output_k': 3, 'max_tokens': 128, 'manifest': manifest.name, 'bank': bank.name, 'fewshots_per_label': 3}}
+    m.validate_ordered_supply(c, parent)
+    c['ranking_window']['input_k'] = 5
+    with pytest.raises(ValueError, match='invalid supply row'):
+        m.validate_ordered_supply(c, parent)
+    c['ranking_window']['input_k'] = 25
+    path.write_text('{}')
+    with pytest.raises(ValueError, match='pin mismatch'):
+        m.validate_ordered_supply(c, parent)

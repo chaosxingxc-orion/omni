@@ -33,9 +33,11 @@ def bind(messages, values, *, input_k, output_k, dynamic=False):
 
 
 def response_format(count, output_k, transport='json-schema', *, dynamic=False):
-    if dynamic and (type(count) is not int or type(output_k) is not int or not 1 <= count <= 5 or not 1 <= output_k <= min(3, count)):
+    if dynamic and (type(count) is not int or type(output_k) is not int or not 1 <= count <= 60 or not 1 <= output_k <= min(3, count)):
         raise ValueError('invalid dynamic ranking window')
     if transport == 'finite-choice-v1':
+        if dynamic and count > 5:
+            raise ValueError('finite choice is limited to five candidates')
         if not dynamic and (count, output_k) not in ((3, 1), (3, 2), (5, 3)):
             raise ValueError('unsupported finite ranking window')
         choices = [json.dumps(list(p), separators=(',', ':'))

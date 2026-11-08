@@ -151,3 +151,66 @@ def test_reject_invalid_indices(raw):
 def test_reject_duplicate_indices_with_correct_output_length():
     with pytest.raises(ValueError):
         parse('[1,1]', [{'intent_id': str(i)} for i in range(3)], 2)
+
+
+def test_large_dynamic_schema_is_linear_and_finite_choice_is_refused():
+    from speech_aware_evidence_acquisition.rails.ranked_candidate_indices import response_format
+    schema = response_format(60, 3, dynamic=True)['json_schema']['schema']
+    assert schema['items']['enum'] == list(range(1, 61))
+    assert (schema['minItems'], schema['maxItems']) == (3, 3)
+    with pytest.raises(ValueError):
+        response_format(60, 3, 'finite-choice-v1', dynamic=True)
+
+
+def test_manifest_native_before_after(tmp_path):
+    from speech_aware_evidence_acquisition.rails.fewshot_manifest import prepare
+    h, policy = recovery_harness(tmp_path)
+    snapshot = _knowledge_snapshot()
+    names = ('play_music', 'play_radio', 'play_video', 'play_game', 'play_movie', 'play_book')
+    values = tuple(replace(snapshot.values[0], value_id='intent-boundaries::intent-boundary:'+name,
+                           content='Description for '+name, task_target=name) for name in names)
+    snapshot = replace(snapshot, values=values).validate()
+    h.bootstrap_value_ids = tuple(v.value_id for v in values)
+    template = tmp_path/'configs/probes/rank.txt'; template.parent.mkdir(parents=True)
+    template.write_text('Rank by relevance.')
+    bank = []
+    candidates = []
+    for i, name in enumerate(names):
+        text = 'Actual example for '+name
+        bank.append({'member_index':i, 'intent':name, 'source_group':str(i+10), 'text':text,
+                     'sentence_sha256':hashlib.sha256(text.encode()).hexdigest()})
+        candidates.append({'label':name, 'knowledge_id':values[i].value_id,
+                           'routes':['question','description'] if i == 0 else ['question'],
+                           'question_source_rank':i+1, 'description_rank':i+1,
+                           'fewshot_member_indices_top5': [] if i == 1 else [i]})
+    manifest = {'gold_read_for_candidates':False, 'rows':[{'sample_id':'s1', 'excluded_source_groups':['1'],
+        'candidate_labels':list(names), 'candidates':candidates}]}
+    mp = tmp_path/'manifest.json'; mp.write_text(json.dumps(manifest))
+    bp = tmp_path/'bank.jsonl'; bp.write_text(''.join(json.dumps(x)+'\n' for x in bank))
+    cfg = {'manifest_path':str(mp), 'manifest_sha256':hashlib.sha256(mp.read_bytes()).hexdigest(),
+           'bank_path':str(bp), 'bank_sha256':hashlib.sha256(bp.read_bytes()).hexdigest(), 'fewshots_per_label':3}
+    h.repo_root = tmp_path
+    policy.update(max_candidates=3, ranking_window={'mode':'ranked-candidate-indices', 'input_k':60,
+        'output_k':3, 'dynamic':True, 'max_tokens':128, 'fewshot_manifest':cfg,
+        'template':{'relpath':'configs/probes/rank.txt','sha256':hashlib.sha256(template.read_bytes()).hexdigest()}})
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy), perception_only=True)
+    sent = []
+    h.post_override = lambda _url, body: (sent.append(json.loads(body)) or _wire_response('[6,2,1]'))
+    h.request_gate = lambda request: None
+    try:
+        node = h.run(snapshot=snapshot).results[0].node_outcome
+    finally:
+        h.close()
+    assert node['ranking_result']['candidate_ids'] == ['play_book','play_radio','play_music']
+    wire = json.dumps(sent[0])
+    assert 'Actual example for play_music' in wire and 'Examples: none available' in wire
+    from speech_aware_evidence_acquisition.rails.fewshot_manifest import render
+    assert render([{'index': 1, 'intent_id': 'play_music', 'fewshot_evidence': {'examples': []}}], include_empty=False) == '1. play_music'
+    assert node['ranking_result']['input'][0]['fewshot_evidence']['routes'] == ['question','description']
+    assert values[0].content == 'Description for play_music'
+    manifest['rows'][0]['excluded_source_groups'] = ['10']
+    mp.write_text(json.dumps(manifest)); cfg['manifest_sha256'] = hashlib.sha256(mp.read_bytes()).hexdigest()
+    with pytest.raises(ValueError, match='source excluded'):
+        prepare([{}, {'content':[]}], {v.value_id:v for v in values}, 'a'*64, 's1', cfg)
+    with pytest.raises(ValueError):
+        prepare([{}, {'content':[]}], {v.value_id:v for v in values}, 'a'*64, 's1', {})

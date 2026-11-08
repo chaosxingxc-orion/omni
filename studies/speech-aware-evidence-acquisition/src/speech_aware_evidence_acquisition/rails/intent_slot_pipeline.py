@@ -79,15 +79,28 @@ def parse_config(raw):
         raise ValueError("intent-slot max_candidates must be 1..3")
     if 'ranking_window' in raw:
         window = raw['ranking_window']
-        if (not isinstance(window, Mapping) or not {'mode', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(window) <= {'mode', 'input_k', 'output_k', 'max_tokens', 'template', 'transport', 'dynamic'}
+        if (not isinstance(window, Mapping) or not {'mode', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(window) <= {'mode', 'input_k', 'output_k', 'max_tokens', 'template', 'transport', 'dynamic', 'fewshot_manifest'}
                 or window.get('transport', 'json-schema') not in {'json-schema', 'finite-choice-v1'}
                 or window['mode'] != 'ranked-candidate-indices'
                 or (window.get('dynamic') is not True if 'dynamic' in window else False)
-                or ((window['input_k'], window['output_k']) not in ((5, 1), (5, 3)) if window.get('dynamic') else (window['input_k'], window['output_k']) not in ((3, 1), (3, 2), (5, 3)))
+                or ((type(window['input_k']) is not int or not 1 <= window['input_k'] <= 60 or window['output_k'] not in (1, 3) or (window['input_k'] > 5 and window.get('transport', 'json-schema') != 'json-schema')) if window.get('dynamic') else (window['input_k'], window['output_k']) not in ((3, 1), (3, 2), (5, 3)))
                 or type(window['max_tokens']) is not int or window['max_tokens'] < 1
                 or window['output_k'] != raw['max_candidates']
                 or raw.get('node_rails') != 'sdk-handoff-v1'):
             raise ValueError('invalid ranked-candidate-indices window')
+        if 'fewshot_manifest' in window:
+            fs = window['fewshot_manifest']
+            path_fields = {'manifest_path', 'bank_path'}
+            rel_fields = {'manifest_relpath', 'bank_relpath'}
+            location_fields = set(fs) - {'manifest_sha256', 'bank_sha256', 'fewshots_per_label'} if isinstance(fs, Mapping) else set()
+            if (not window.get('dynamic') or not isinstance(fs, Mapping)
+                or location_fields not in (path_fields, rel_fields)
+                or set(fs) != location_fields | {'manifest_sha256', 'bank_sha256', 'fewshots_per_label'}
+                or any(not isinstance(fs[k], str) or not fs[k] for k in location_fields | {'manifest_sha256', 'bank_sha256'})
+                or (location_fields == rel_fields and any(fs[k].startswith('/') or '..' in fs[k].split('/') for k in rel_fields))
+                or any(len(fs[k]) != 64 or any(c not in '0123456789abcdef' for c in fs[k]) for k in ('manifest_sha256', 'bank_sha256'))
+                or type(fs['fewshots_per_label']) is not int or not 0 <= fs['fewshots_per_label'] <= 5):
+                raise ValueError('invalid fewshot manifest configuration')
         repair_template_pin({'perception_repair_template': window['template']})
     if raw["candidate_outside_recovery"] is not False:
         raise ValueError("candidate-outside recovery is not implemented in this graph")

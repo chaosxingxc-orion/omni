@@ -115,12 +115,12 @@ class PerceptionOnlyWorkload(NodeWorkload):
             (axis['kind'] == 'instruction' and set(axis) != {'kind', 'patch', 'template'}) or
             (axis['kind'] == 'knowledge-construction' and set(axis) != {'kind', 'publication', 'patch', 'audit'}) or
             (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or not 1 <= axis['value'] <= 60)) or
-            (axis['kind'] == 'ranking-window' and (not {'kind', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(axis) <= {'kind', 'input_k', 'output_k', 'max_tokens', 'template', 'facet_source', 'transport', 'source_receipts', 'ordered_supply', 'dynamic'}
+            (axis['kind'] == 'ranking-window' and (not {'kind', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(axis) <= {'kind', 'input_k', 'output_k', 'max_tokens', 'template', 'facet_source', 'transport', 'source_receipts', 'ordered_supply', 'dynamic', 'fewshot_manifest'}
                 or ('source_receipts' in axis and 'facet_source' not in axis)
                 or ('ordered_supply' in axis and (axis.get('ordered_supply') not in axis.get('source_receipts', [])))
                 or axis.get('transport', 'json-schema') not in {'json-schema', 'finite-choice-v1'}
                 or ('dynamic' in axis and axis['dynamic'] is not True)
-                or ((axis['input_k'], axis['output_k']) not in ((5, 1), (5, 3)) if axis.get('dynamic') else (axis['input_k'], axis['output_k']) not in ((3, 1), (3, 2), (5, 3)))
+                or ((type(axis['input_k']) is not int or not 1 <= axis['input_k'] <= 60 or axis['output_k'] not in (1, 3) or (axis['input_k'] > 5 and axis.get('transport') != 'json-schema')) if axis.get('dynamic') else (axis['input_k'], axis['output_k']) not in ((3, 1), (3, 2), (5, 3)))
                 or (axis.get('dynamic') and 'ordered_supply' not in axis)
                 or type(axis['max_tokens']) is not int or not 1 <= axis['max_tokens'] <= 4096))):
             raise ValueError('invalid P-only axis')
@@ -351,6 +351,21 @@ class PerceptionOnlyWorkload(NodeWorkload):
                 pipeline['ranking_window']['dynamic'] = True
             if 'transport' in axis:
                 pipeline['ranking_window']['transport'] = axis['transport']
+            if 'fewshot_manifest' in axis:
+                fs = axis['fewshot_manifest']
+                if (not isinstance(fs, dict) or set(fs) != {'manifest', 'bank', 'fewshots_per_label'}
+                    or type(fs['fewshots_per_label']) is not int or not 0 <= fs['fewshots_per_label'] <= 5):
+                    raise ValueError('invalid fewshot sources')
+                resolved = {'fewshots_per_label': fs['fewshots_per_label']}
+                for key in ('manifest', 'bank'):
+                    ref = fs[key]
+                    if (not isinstance(ref, dict) or set(ref) != {'root', 'relpath', 'sha256'}
+                        or ref['root'] != 'data' or ref not in axis.get('source_receipts', [])
+                        or sha(confined(data, ref['relpath'])) != ref['sha256']):
+                        raise ValueError('fewshot artifact pin mismatch: ' + key)
+                    resolved[key + '_relpath'] = ref['relpath']
+                    resolved[key + '_sha256'] = ref['sha256']
+                pipeline['ranking_window']['fewshot_manifest'] = resolved
             if 'coverage_recovery' in pipeline:
                 pipeline['coverage_recovery']['max_extra_contacts'] = min(pipeline['coverage_recovery']['max_extra_contacts'], axis['output_k'])
         base.pop('prepared_phase_supply', None)

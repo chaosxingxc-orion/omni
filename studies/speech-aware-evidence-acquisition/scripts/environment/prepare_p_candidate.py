@@ -41,6 +41,40 @@ def within(root, rel):
     return result
 
 
+def validate_ordered_supply(c, parent):
+    """Validate all bytes and identities before creating an execution tree."""
+    spec = c['ordered_supply']
+    require(set(spec) == {'files', 'supply'}, 'invalid ordered supply specification')
+    files = spec['files']
+    require(isinstance(files, list) and files, 'ordered supply pins required')
+    names = set()
+    for item in files:
+        require(set(item) == {'path', 'sha256', 'name'}, 'invalid supply file pin')
+        name = item['name']
+        require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]*', name) and name not in names, 'invalid supply filename')
+        names.add(name)
+        p = pathlib.Path(item['path'])
+        require(p.is_absolute() and p.is_file() and sha(p) == item['sha256'], 'supply file pin mismatch: ' + name)
+    require(spec['supply'] in names, 'supply pin missing')
+    if 'ranking_window' in c:
+        window = c['ranking_window']
+        require(set(window) == {'input_k', 'output_k', 'max_tokens', 'manifest', 'bank', 'fewshots_per_label'}, 'invalid ranking window configuration')
+        require(type(window['input_k']) is int and 1 <= window['input_k'] <= 60 and window['output_k'] == 3 and type(window['max_tokens']) is int and 1 <= window['max_tokens'] <= 4096 and type(window['fewshots_per_label']) is int and 0 <= window['fewshots_per_label'] <= 5, 'invalid ranking window values')
+        require(window['manifest'] in names and window['bank'] in names and window['manifest'] != window['bank'], 'missing ranking artifacts')
+    source = next(item for item in files if item['name'] == spec['supply'])
+    payload = read(source['path'])
+    ids = read(parent / 'workspace/job-config.private.json')['sample_ids']
+    require(len(ids) == len(set(ids)), 'duplicate parent sample')
+    require(set(payload) == {'facets', 'values'} and all(set(payload[k]) == {'perception'} for k in ('facets', 'values')), 'invalid supply structure')
+    values = payload['values']['perception']
+    require(set(values) == set(ids) and payload['facets']['perception'] == values, 'supply sample or facet mismatch')
+    limit = c.get('ranking_window', {}).get('input_k', 5)
+    require(type(limit) is int and 1 <= limit <= 60, 'invalid ranking window')
+    for sid in ids:
+        rows = values[sid]
+        require(isinstance(rows, list) and 1 <= len(rows) <= limit and len(rows) == len(set(rows)) and all(isinstance(x, str) and x.startswith('intent-boundaries::intent-boundary:') and len(x) > len('intent-boundaries::intent-boundary:') for x in rows), 'invalid supply row: ' + sid)
+
+
 def preflight(c):
     require(c['schema'] == 'saea-p-candidate-preparation-v1', 'invalid schema')
     for key in ('id', 'name', 'run_id', 'generation_name', 'admission_name'):
@@ -57,7 +91,12 @@ def preflight(c):
     require(sha(manifest_path) == c['release']['manifest_sha256'], 'release manifest SHA mismatch')
     manifest = read(manifest_path)
     require(manifest['commit'] == c['release']['commit'], 'release commit mismatch')
-    require('template' in c or 'task_contract' in c, 'candidate mutation required')
+    require('template' in c or 'task_contract' in c or 'ordered_supply' in c, 'candidate mutation required')
+    if 'ordered_supply' in c:
+        validate_ordered_supply(c, parent)
+        axis = read(parent / 'workspace/job-config.private.json')['axis']
+        require(axis.get('kind') == 'ranking-window' and axis.get('input_k') == 5 and axis.get('output_k') == 3 and axis.get('dynamic') is True and axis.get('transport') == 'finite-choice-v1', 'parent must be dynamic B 5-to-min3')
+        require('template' not in c and 'task_contract' not in c, 'ordered supply must preserve parent template')
     bindings = [c[k] for k in ('template', 'task_contract') if k in c]
     if 'task_contract' in c:
         contract_path = within(release, 'studies/speech-aware-evidence-acquisition/' + c['task_contract']['relpath'])
@@ -116,7 +155,9 @@ def preflight(c):
     protected_files = {k for k in old_files if k.startswith(prefix) and any(k[len(prefix):].startswith(p) for p in protected)}
     require(protected_files, 'parent runtime files missing')
     changes = c.get('allowed_source_changes', {})
-    require(set(changes) <= {prefix + 'scripts/analysis/p_only_workload.py'} and all(k in protected_files and manifest['files'].get(k) == v for k, v in changes.items()), 'invalid allowed source changes')
+    new_protected = {k for k in manifest['files'] if k.startswith(prefix) and any(k[len(prefix):].startswith(p) for p in protected)}
+    actual_changes = {k: manifest['files'].get(k) for k in protected_files | new_protected if old_files.get(k) != manifest['files'].get(k)}
+    require(changes == actual_changes and all(v is not None for v in changes.values()), 'invalid allowed source changes')
     require(all(manifest['files'].get(k) == changes.get(k, old_files[k]) for k in protected_files), 'runtime source differs from parent')
     for mode in ('stage', 'prepare', 'register', 'admission'):
         argv = read(parent / (mode + '-argv.json'))
@@ -149,6 +190,27 @@ def prepare(c, dry_run):
         shutil.copytree(parent / 'prepared' / d, root / 'prepared' / d, symlinks=True)
     job = read(root / 'workspace/job-config.private.json')
     job.update(name=name, run_id=run)
+    if 'ordered_supply' in c:
+        dest = root / 'prepared' / 'configured-ordered-supply'
+        dest.mkdir()
+        receipts = []
+        for item in c['ordered_supply']['files']:
+            target = dest / item['name']
+            shutil.copyfile(item['path'], target)
+            require(sha(target) == item['sha256'], 'supply changed during copy')
+            receipts.append({'root': 'data', 'relpath': 'prepared/configured-ordered-supply/' + item['name'], 'sha256': item['sha256']})
+        job['axis']['source_receipts'] = receipts
+        job['axis']['ordered_supply'] = next(r for r in receipts if r['relpath'].endswith('/' + c['ordered_supply']['supply']))
+        if 'ranking_window' in c:
+            window = c['ranking_window']
+            require(set(window) == {'input_k', 'output_k', 'max_tokens', 'manifest', 'bank', 'fewshots_per_label'}, 'invalid ranking window configuration')
+            require(window['output_k'] == 3 and type(window['max_tokens']) is int and 1 <= window['max_tokens'] <= 4096, 'invalid ranking output')
+            job['axis'].update(input_k=window['input_k'], output_k=window['output_k'], max_tokens=window['max_tokens'], dynamic=True, transport='json-schema')
+            def receipt(name):
+                matches = [r for r in receipts if r['relpath'].endswith('/' + name)]
+                require(len(matches) == 1, 'missing ranking artifact: ' + name)
+                return matches[0]
+            job['axis']['fewshot_manifest'] = {'manifest': receipt(window['manifest']), 'bank': receipt(window['bank']), 'fewshots_per_label': window['fewshots_per_label']}
     if 'template' in c:
         job['axis']['template'] = c['template']
     if 'task_contract' in c:

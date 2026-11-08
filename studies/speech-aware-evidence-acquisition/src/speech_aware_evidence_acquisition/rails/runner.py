@@ -4117,11 +4117,29 @@ async def _invoke_native_role_episode(
                 from .candidate_handoff import project_snapshot_messages, POLICY
                 from .intent_slot_pipeline import digest
                 current = context()
-                messages, evidence = project_snapshot_messages(base_messages(current), snapshot_sha256=snapshot_sha256, values=node_snapshot_values, facets=node_snapshot_facets)
+                raw_messages = base_messages(current)
+                fs_evidence = None
+                window = pipeline_config.get('ranking_window', {}) if pipeline_config else {}
+                if window.get('fewshot_manifest'):
+                    from .fewshot_manifest import prepare
+                    fs_config = dict(window['fewshot_manifest'])
+                    for artifact in ('manifest', 'bank'):
+                        relkey = artifact + '_relpath'
+                        if relkey in fs_config:
+                            root = Path(binding.data_root).resolve()
+                            path = (root / fs_config.pop(relkey)).resolve()
+                            if not path.is_relative_to(root):
+                                raise ValueError('fewshot artifact escapes data root')
+                            fs_config[artifact + '_path'] = str(path)
+                    raw_messages, fs_evidence = prepare(raw_messages, node_snapshot_values, snapshot_sha256, current.sample_id, fs_config)
+                messages, evidence = project_snapshot_messages(raw_messages, snapshot_sha256=snapshot_sha256, values=node_snapshot_values, facets=node_snapshot_facets)
                 if pipeline_config and pipeline_config.get('ranking_window'):
                     from .ranked_candidate_indices import bind
                     window = pipeline_config['ranking_window']
                     ranking_rows = bind(messages, node_snapshot_values, **{k: window[k] for k in ('input_k', 'output_k')}, dynamic=window.get('dynamic', False))
+                    if fs_evidence is not None:
+                        from .fewshot_manifest import attach
+                        attach(ranking_rows, fs_evidence)
                 item = {"schema": "saea-sdk-node-handoff-v1", "policy": POLICY, "sample_id": current.sample_id,
                         "source_role": "bootstrap", "target_role": phase_id, "source_response_sha256": None,
                         "source_request_id": None, "snapshot_sha256": snapshot_sha256,
@@ -4322,8 +4340,13 @@ async def _invoke_native_role_episode(
             effective_k = min(window['output_k'], len(ranking_rows)) if window.get('dynamic') else window['output_k']
             from .intent_slot_pipeline import load_repair_template
             template = load_repair_template(binding.repo_root, {'perception_repair_template': window['template']})
+            if window.get('fewshot_manifest'):
+                from .fewshot_manifest import render
+                candidate_instruction = render(ranking_rows, include_empty=window['fewshot_manifest']['fewshots_per_label'] > 0)
+            else:
+                candidate_instruction = '\n'.join(f"{r['index']}. {r['intent_id']}" for r in ranking_rows)
             material = replace(material,
-                instruction=template + (f"\n\nReturn exactly {effective_k} distinct candidate numbers as a JSON array, best first.\n" if window.get('dynamic') else '\n\nReturn only a JSON array of distinct candidate numbers, best first.\n') + '\n'.join(f"{r['index']}. {r['intent_id']}" for r in ranking_rows),
+                instruction=template + (f"\n\nReturn exactly {effective_k} distinct candidate numbers as a JSON array, best first.\n" if window.get('dynamic') else '\n\nReturn only a JSON array of distinct candidate numbers, best first.\n') + candidate_instruction,
                 response_format=response_format(len(ranking_rows), effective_k, window.get('transport', 'json-schema'), dynamic=window.get('dynamic', False))).validate()
         phase = program.phase(phase_id)
         if (phase.response_format_id is not None) != (material.response_format is not None):
