@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T03:57:11.320281+00:00",
+  "updated_at_utc": "2026-11-08T04:15:08.691699+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1100,7 +1100,7 @@
       "depends_on": [
         "P-positive-description-3-1-input"
       ],
-      "status": "admission_complete_exit0_launch_checks_running_no_generation_response_verified",
+      "status": "complete1080_exit0_main_independent_score",
       "rows": 1080,
       "input_k": 3,
       "output_k": 1,
@@ -1108,6 +1108,14 @@
       "preparation_cost": {
         "admission_seconds": 268.53881648,
         "model_calls": 0
+      },
+      "result": {
+        "valid": 1080,
+        "input_R3": 845,
+        "P_top1": 720,
+        "prior_P_top1": 712,
+        "repairs": 27,
+        "regressions": 19
       }
     },
     {
@@ -1116,11 +1124,12 @@
       "depends_on": [
         "P-positive-description-3-1-input"
       ],
-      "status": "planned_not_yet_admitted",
+      "status": "successor_generation_running_response_not_yet_verified",
       "rows": 1080,
       "input_k": 3,
       "output_k": 1,
-      "scope": "low-regression key candidate against same original baseline; independent NPU lane"
+      "scope": "low-regression key candidate against same original baseline; independent NPU lane",
+      "owner": "A dedicated Terra CLI"
     },
     {
       "id": "retrieval-description-TRAIN-source-coverage",
@@ -1163,8 +1172,22 @@
         "retrieval-description-TRAIN-source-coverage",
         "retrieval-description-positive-assets"
       ],
-      "status": "HTTP200_streaming_terminal_and_official_usage_pending",
-      "scope": "independent ACE source-grounded same-parent patches; fixed1299 author context/full8554 reservoir; full Fold A1080 CPU scoring; no P dependency"
+      "status": "HTTP_complete_3_candidates_full1080_main_metrics_verified_no_winner",
+      "scope": "independent ACE source-grounded same-parent patches; fixed1299 author context/full8554 reservoir; full Fold A1080 CPU scoring; no P dependency",
+      "results_R3_R5": [
+        [
+          837,
+          890
+        ],
+        [
+          841,
+          899
+        ],
+        [
+          840,
+          895
+        ]
+      ]
     },
     {
       "id": "retrieval-question-round4-gepa",
@@ -1174,6 +1197,40 @@
       ],
       "status": "HTTP200_streaming_terminal_and_official_usage_pending",
       "scope": "independent GEPA aggregation and TRAIN support calibration; same mean5 parent plus top3 and NNmax controls; no description/P dependency"
+    },
+    {
+      "id": "P-positive-description-multiwindow-input",
+      "resource": "CPU",
+      "depends_on": [
+        "retrieval-description-positive-assets",
+        "P-ranking-whitespace-real-probe"
+      ],
+      "status": "assigned_A_owner_prepare_before_lease",
+      "scope": "reuse combined frozen keys/cards/Fold A1080; configure3to2 and5to3 finite transport; prepare one shared source, no encoding"
+    },
+    {
+      "id": "P-positive-description-combined-3-2",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-positive-description-multiwindow-input"
+      ],
+      "status": "planned_not_yet_ready",
+      "rows": 1080,
+      "input_k": 3,
+      "output_k": 2,
+      "scope": "test retention of newly supplied correct intent; compare original-description C control, no CPU analysis prerequisite"
+    },
+    {
+      "id": "P-positive-description-combined-5-3",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-positive-description-multiwindow-input"
+      ],
+      "status": "planned_not_yet_ready",
+      "rows": 1080,
+      "input_k": 5,
+      "output_k": 3,
+      "scope": "same-parent window control on B; A successor after prepared ready, no analysis prerequisite"
     }
   ],
   "round_policy": {
