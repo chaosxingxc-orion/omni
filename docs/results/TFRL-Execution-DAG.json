@@ -407,14 +407,14 @@
       "id": "representative-bank",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "4451_P_running_S3_4469_complete_no_hit_gain_main_verified",
+      "status": "4451_P_complete993_not_promoted_S3_4469_complete_no_hit_gain",
       "depends_on": []
     },
     {
       "id": "p-consumption",
       "owner": "Terra CLI",
       "resource": "CPU_prepare_then_NPU",
-      "status": "AB_C_complete_not_promoted_R_running_T_preparing",
+      "status": "AB_C_R_complete_not_promoted_T_preparation_and_queue_active",
       "depends_on": [
         "frozen_original_Q50D5"
       ],
@@ -467,7 +467,7 @@
       "scope": "unchanged fresh identity reads; reuse byte-identical maps parsing; no C/R mutation"
     },
     "representative_to_P": {
-      "state": "running_first15_responses_confirmed",
+      "state": "complete_scored_not_promoted_full_checkpoint_audit_pending",
       "index_size": 4451,
       "control": "actual_A_original_prompt_zero_examples_OFF",
       "purpose": "verify_supply_gain_transfers_to_P",
@@ -478,8 +478,14 @@
       "source_losses": 2,
       "max_labels": 28,
       "started_utc": "2026-11-08T16:50:19Z",
-      "completed_snapshot": 15,
-      "first_four_valid": true
+      "completed_snapshot": 1080,
+      "first_four_valid": true,
+      "top3": 993,
+      "top1": 908,
+      "repair": 17,
+      "regression": 25,
+      "common_supply_net": -8,
+      "new_supply_hits": 2
     },
     "P_thinking_control": {
       "state": "detached_CPU_prepare_and_after_R_queue_active_no_model_call_confirmed",
