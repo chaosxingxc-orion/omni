@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T20:22:50.214353+00:00",
+  "updated_at_utc": "2026-11-08T20:31:34.024422+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -416,7 +416,7 @@
       "id": "group-feedback-round3",
       "owner": "Sol CLI",
       "resource": "CPU_then_local_external_API",
-      "status": "prepared_template_conflicts_returned_for_targeted_rework_not_sent",
+      "status": "actual_HTTP200_stream_in_progress_terminal_observer_attached",
       "depends_on": [],
       "final_schema_binding_depends_on": [
         "causal-depth-search"
@@ -795,5 +795,18 @@
     "known_CPU_seconds": 75.71587,
     "scientific_gain": false,
     "formal_search_started": false
+  },
+  "group_feedback_round3": {
+    "resource": "local_external_API",
+    "state": "HTTP200_stream_in_progress",
+    "actual_POST": 1,
+    "pre_network_failed_launches": 1,
+    "pre_network_failure_tokens": 0,
+    "automatic_retries": 0,
+    "max_output_tokens": 131072,
+    "terminal_cadence_seconds": 600,
+    "pidfd_observation": true,
+    "final_policy_received": false,
+    "cost_unknown_until_terminal": true
   }
 }
