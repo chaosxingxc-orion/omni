@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T16:28:53.608527+00:00",
+  "updated_at_utc": "2026-11-08T16:31:45.800173+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -429,13 +429,14 @@
   "historical_nodes_note": "nodes retain historical stage records; active_tracks is the current priority. Planning specification only, not remote job receipts.",
   "current_followups": {
     "P_operation_prompt": {
-      "state": "CPU_admission_running_zero_model_responses_last_verified",
+      "state": "experiment_container_running_first_response_not_yet_confirmed",
       "baseline": "A_Q50D5_zero_examples_OFF",
       "change": "operation_object_target_state_negation_prompt_only",
       "rows": 1080,
       "NPU_cards_planned": 4,
       "configured_inflight": 64,
-      "detached_prepare_queue_observer": true
+      "detached_prepare_queue_observer": true,
+      "started_utc": "2026-11-08T16:31:10Z"
     },
     "teacher_compatibility": {
       "previous_status": "HTTP400",
