@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T06:11:21.693833+00:00",
+  "updated_at_utc": "2026-11-08T06:17:01.550798+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1514,7 +1514,7 @@
       "id": "P-selection-dose-followup",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned_not_admission_evidence",
+      "status": "complete_full1080_main_verified_no_further_R3_gain",
       "rows": 1080
     },
     {
@@ -1548,6 +1548,22 @@
       ],
       "status": "planned_wait_ready_and_lane_release",
       "rows": 1080
+    },
+    {
+      "id": "P-selection-C-supply-ready",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "background_preparation_started",
+      "rows": 1080
+    },
+    {
+      "id": "P-selection-C-consumption",
+      "resource": "NPU_C_TP4",
+      "depends_on": [
+        "P-selection-C-supply-ready"
+      ],
+      "status": "planned_wait_ready_and_lane_release",
+      "rows": 1080
     }
   ],
   "round_policy": {
@@ -1578,9 +1594,9 @@
   "current_dispatch": {
     "scope": "research planning graph, not authoritative runtime queue",
     "A": "reverse3to1 container running; rotate admitted; light-control and boundary successor preparation assigned",
-    "B": "reverse5to3 container running; rotate admitted; light-control/boundary/crosshub preparation assigned",
-    "C": "mix3 3to2 container running",
-    "CPU": "round2 full1080 independently verified; two dose variants assigned; bidirectional and LCO encoding running",
+    "B": "reverse complete 942/1080; rotate1 actual container running; selection supplies preparing",
+    "C": "Sol CLI collects top3/mix3; control7513/boundary020 CPU preparation started",
+    "CPU": "dose variants complete no further R3 gain; stop local dense sweep; bidirectional and LCO continue independently",
     "polling": "600 seconds or terminal signals",
     "utilization": "no fresh AI Core measurement, no full-utilization claim"
   },
