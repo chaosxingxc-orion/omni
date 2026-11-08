@@ -1,0 +1,12 @@
+{
+  "enabled": false,
+  "threshold": null,
+  "threshold_provenance": "TRAIN source-heldout fit and valid required",
+  "parent": "question_top15_label_max_cap5",
+  "description_score": "cosine_audio_query_exact_locked_card_representation",
+  "max_additions": 2,
+  "cap": 5,
+  "tie_break": "knowledge_id_ascending",
+  "unresolved_card_sources": "exclude",
+  "p_selection": "min(3,n)"
+}
