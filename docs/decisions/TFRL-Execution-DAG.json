@@ -573,7 +573,7 @@
     "seed_FoldA_Q15_union": 1002,
     "seed_FoldA_Q50_question": 1058,
     "seed_FoldA_Q50_union": 1062,
-    "status": "growth68_bundle_rejected_same_engineering_role_rework_running",
+    "status": "growth68_rework_complete_no_new_accepted_bank",
     "NPU_calls": 0,
     "final_size": 68,
     "accepted_additions": 9,
@@ -614,15 +614,18 @@
   },
   "compensated_growth": {
     "resource": "CPU",
-    "state": "first_path_rejected_rework_subprocess_started",
+    "state": "rework_verified_limited_path_rejected_teacher_feedback_preparing",
     "accepted_new_banks": 0,
     "retained_size": 68,
     "Q15_repair": 50,
-    "Q15_regression": 12,
+    "Q15_regression": 4,
     "Q50_repair": 5,
-    "Q50_regression": 5,
+    "Q50_regression": 4,
     "wall_seconds_rejected_path": 312.95534919,
     "previous_cycle_bug_seconds": 287.606,
-    "TEST_tuning": false
+    "TEST_tuning": false,
+    "rework_continuous_seconds": 25.10155525,
+    "reference_checks": 27830,
+    "resume_continuous_equal": true
   }
 }
