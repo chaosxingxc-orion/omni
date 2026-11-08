@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T03:46:20.216837+00:00",
+  "updated_at_utc": "2026-11-08T03:51:23.859184+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1091,7 +1091,7 @@
       "depends_on": [
         "retrieval-description-positive-assets"
       ],
-      "status": "running_dedicated_A_CLI_configuration_binding",
+      "status": "source_receipt_adapter_merged_fixed_image_2tests_passed_native_prepare_register_running",
       "scope": "use already validated single-index window; preserve original card content and instructions for first attribution"
     },
     {
@@ -1122,7 +1122,7 @@
       "id": "retrieval-description-TRAIN-source-coverage",
       "resource": "CPU",
       "depends_on": [],
-      "status": "report_complete_final_manifest_review_pending",
+      "status": "complete_61pins_main_verified",
       "scope": "full legal8554 TRAIN evidence coverage beyond prior474 author examples; TRAIN-only representative selection; no DEV text backfill",
       "result": {
         "legal_train": 8554,
@@ -1151,6 +1151,25 @@
       "status": "planned_prepared_before_lease",
       "rows": 1080,
       "scope": "same P window comparisons; actual adapter gap must be explicit, no fusion or gold-derived input"
+    },
+    {
+      "id": "retrieval-description-round4-ace",
+      "resource": "CPU_EXTERNAL_API",
+      "depends_on": [
+        "retrieval-description-TRAIN-source-coverage",
+        "retrieval-description-positive-assets"
+      ],
+      "status": "CLI_input_preparation_no_send_evidence_yet",
+      "scope": "independent ACE source-grounded same-parent patches; fixed1299 author context/full8554 reservoir; full Fold A1080 CPU scoring; no P dependency"
+    },
+    {
+      "id": "retrieval-question-round4-gepa",
+      "resource": "CPU_EXTERNAL_API",
+      "depends_on": [
+        "retrieval-question-gepa-evaluation"
+      ],
+      "status": "CLI_input_preparation_no_send_evidence_yet",
+      "scope": "independent GEPA aggregation and TRAIN support calibration; same mean5 parent plus top3 and NNmax controls; no description/P dependency"
     }
   ],
   "round_policy": {
