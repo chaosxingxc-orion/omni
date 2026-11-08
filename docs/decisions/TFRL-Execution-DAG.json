@@ -835,6 +835,88 @@
       "scientific_parent": "complete-coverage-on-evaluate",
       "cpu_score_dependency": false,
       "rows": 1080
+    },
+    {
+      "id": "P-configured-candidate-preparation",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "code_delivered_preflight_passed_original_owner_executing_real_chain",
+      "purpose": "Replace per-candidate script copies with configuration-driven original prepare/register/admit/launcher chain; fail early for missing template and inconsistent source identity",
+      "no_model_calls_for_validation": true
+    },
+    {
+      "id": "P-consumption-ace-tfgroup-templates",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "two_teachers_terminal_semantic_review_complete_two_tfgroup_candidates_selected",
+      "scope": "Two exact original templates main4580ee70b for A3to1; no repeated API"
+    },
+    {
+      "id": "P-gepa-behavior-B-evaluate",
+      "resource": "NPU_B_TP4",
+      "depends_on": [
+        "P-gepa-behavior-B-prepare"
+      ],
+      "status": "complete_main_checkpoint_verified_991_vs992_repairs5_regressions6",
+      "rows": 1080,
+      "parent": "original complete coverage supply, same window",
+      "changed_component": "opening_instruction_only",
+      "completed_rows": 1080
+    },
+    {
+      "id": "P-gepa-behavior-C-evaluate",
+      "resource": "NPU_C_TP4",
+      "depends_on": [
+        "P-gepa-behavior-C-prepare"
+      ],
+      "status": "complete_main_checkpoint_verified_945_vs946_repairs4_regressions5",
+      "rows": 1080,
+      "parent": "original complete coverage supply, same window",
+      "changed_component": "opening_instruction_only",
+      "completed_rows": 1080
+    },
+    {
+      "id": "P-tfgroup-exclusion-A-evaluate",
+      "resource": "NPU_A_TP4",
+      "depends_on": [
+        "P-tfgroup-exclusion-A-prepare"
+      ],
+      "status": "not_ready_not_launched",
+      "rows": 1080,
+      "order_priority": 1
+    },
+    {
+      "id": "P-tfgroup-exclusion-A-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned_configuration_preparation",
+      "template_commit": "4580ee70b",
+      "parent": "coverage881 A3to1 FoldA1080"
+    },
+    {
+      "id": "P-tfgroup-position-A-evaluate",
+      "resource": "NPU_A_TP4",
+      "depends_on": [
+        "P-tfgroup-position-A-prepare"
+      ],
+      "status": "not_ready_not_launched",
+      "rows": 1080,
+      "order_priority": 2
+    },
+    {
+      "id": "P-tfgroup-position-A-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned_configuration_preparation",
+      "template_commit": "4580ee70b",
+      "parent": "coverage881 A3to1 FoldA1080"
+    },
+    {
+      "id": "P-train-geometry-strategy-evidence",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "active_Sol_CLI",
+      "deliverable": "Full TRAIN coverage audit, cached geometry analysis, strategy-level teacher evidence; no per-example teacher loop"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -888,5 +970,15 @@
     "historical_P_solver_intent": 0.8574074074074074,
     "historical_P_solver_slu_f1": 0.7331392140771492,
     "tfrl_preparation": "deferred"
-  }
+  },
+  "current_dispatch": {
+    "scope": "planning graph; actual queue receipts remain authoritative",
+    "A": "idle; two accepted candidates in CPU configuration preparation; not ready",
+    "B": "worker16 generation running; previous GEPA complete991/1080",
+    "C": "GEPA complete945/1080; no ready successor",
+    "CPU": "full TRAIN strategy evidence and A config entry in parallel; existing CPU vector encoders continue independently",
+    "polling": "600 seconds or terminal events",
+    "utilization": "not all lanes occupied; sustained AI Core utilization unproven"
+  },
+  "updated_at_utc": "2026-11-08T07:36:00.563231+00:00"
 }
