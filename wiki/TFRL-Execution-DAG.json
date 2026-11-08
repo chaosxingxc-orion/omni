@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T17:41:28.574905+00:00",
+  "updated_at_utc": "2026-11-08T17:45:34.809610+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -491,7 +491,7 @@
       "HTTP_seconds_per_sample": 0.3924462962962963
     },
     "P_thinking_control": {
-      "state": "generation_running_first64_responses_owner_verified_checkpoint33_main_snapshot",
+      "state": "generation_running_main_inspect_checkpoint273_snapshot",
       "control": "A_original8554_Q50D5_prompt_zero_examples",
       "change": "thinking_enabled_with_sufficient_budget",
       "rows": 1080,
@@ -508,12 +508,15 @@
       "answer_reserve_tokens": 128,
       "max_output_tokens": 3200,
       "started_utc": "2026-11-08T17:12:35Z",
-      "completed_checkpoint_snapshot": 33,
+      "completed_checkpoint_snapshot": 273,
       "first_four_valid": true,
-      "first64_reasoning_budget_forced_close": true
+      "first64_reasoning_budget_forced_close": true,
+      "snapshot_utc": "2026-11-08T17:42:06Z",
+      "recent_HTTP_seconds_per_sample": 4.651162790697675,
+      "snapshot_estimated_remaining_seconds": 3753.4883720930234
     },
     "second_TP4_binding": {
-      "state": "CPU_stage_prepare_complete_admission_container_running_launcher_review_pending_no_model_POST",
+      "state": "correct_log_session_registered_new_session_CPU_prepare_started_acceptance_pending",
       "resource": "CPU",
       "depends_on": [],
       "must_not_change": "B_service_or_T_inflight_state"
@@ -567,7 +570,13 @@
       },
       "seed_immutable": false,
       "next": "review_seed_business_necessity_and_actual_regressions_then_targeted_delete_swap_replenish",
-      "teacher": "PREPARED_NOT_SENT_pending_regression_mechanisms"
+      "teacher": "PREPARED_NOT_SENT_pending_regression_mechanisms",
+      "regression_triage": {
+        "old4451_Q_regressions": 29,
+        "already_missing_in_seed": 29,
+        "old_nearest_correct_TRAIN_removed": 29,
+        "next": "semantic_geometry_audit_and_teacher_packet_revision"
+      }
     }
   }
 }
