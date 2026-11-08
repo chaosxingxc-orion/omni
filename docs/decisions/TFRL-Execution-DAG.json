@@ -881,15 +881,17 @@
       "depends_on": [
         "P-tfgroup-exclusion-A-prepare"
       ],
-      "status": "not_ready_not_launched",
+      "status": "running_actual_response_main_verified",
       "rows": 1080,
-      "order_priority": 1
+      "order_priority": 1,
+      "completed_rows_snapshot": 78,
+      "total_rows": 1080
     },
     {
       "id": "P-tfgroup-exclusion-A-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned_configuration_preparation",
+      "status": "complete_real_admission_exit0_source_chain_main_verified",
       "template_commit": "4580ee70b",
       "parent": "coverage881 A3to1 FoldA1080"
     },
@@ -899,7 +901,7 @@
       "depends_on": [
         "P-tfgroup-position-A-prepare"
       ],
-      "status": "not_ready_not_launched",
+      "status": "ready_bound_to_actual_exclusion_container",
       "rows": 1080,
       "order_priority": 2
     },
@@ -907,7 +909,7 @@
       "id": "P-tfgroup-position-A-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned_configuration_preparation",
+      "status": "complete_real_admission_exit0_source_chain_main_verified",
       "template_commit": "4580ee70b",
       "parent": "coverage881 A3to1 FoldA1080"
     },
@@ -972,13 +974,13 @@
     "tfrl_preparation": "deferred"
   },
   "current_dispatch": {
-    "scope": "planning graph; actual queue receipts remain authoritative",
-    "A": "idle; two accepted candidates in CPU configuration preparation; not ready",
-    "B": "worker16 generation running; previous GEPA complete991/1080",
-    "C": "GEPA complete945/1080; no ready successor",
-    "CPU": "full TRAIN strategy evidence and A config entry in parallel; existing CPU vector encoders continue independently",
+    "scope": "planning graph, actual queue receipts authoritative",
+    "A": "exclusion running, main snapshot78/1080; position ready bound after actual exclusion",
+    "B": "worker16 complete1080; no end-to-end gain; capacity and non-HTTP analysis active; no worker32",
+    "C": "no ready NPU successor; full TRAIN geometry CPU analysis active",
+    "CPU": "full geometry uses existing11514 vectors; eligible8554 selection evidence separated; stricter source exclusion requires affected cache correction",
     "polling": "600 seconds or terminal events",
-    "utilization": "not all lanes occupied; sustained AI Core utilization unproven"
+    "utilization": "A active only; not all instances occupied; no sustained AI Core utilization proof"
   },
-  "updated_at_utc": "2026-11-08T07:36:00.563231+00:00"
+  "updated_at_utc": "2026-11-08T07:48:38.711497+00:00"
 }
