@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T16:10:05.777988+00:00",
+  "updated_at_utc": "2026-11-08T16:16:28.875920+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -333,7 +333,7 @@
         "mean_labels": 8.6842592593,
         "p95_labels": 17,
         "max_labels": 25,
-        "P_gain": "not established; A paired control running"
+        "P_gain": "Top3 -3/1080; no demonstrated gain"
       },
       "execution": {
         "B_status": "complete_1080_main_independent_recount",
@@ -342,7 +342,7 @@
         "top3": 998,
         "top1": 905,
         "supply_condition_retention": 0.9415094339622642,
-        "A_status": "auto_started_2026_11_08_16_02_31_UTC",
+        "A_status": "complete_1080_independent_recount",
         "cards": 4,
         "instances": 1,
         "configured_model_inflight": 64,
@@ -352,7 +352,12 @@
         "HTTP_seconds_per_row": 0.40081441,
         "input_tokens": 4483293,
         "output_tokens": 15078,
-        "paired_fewshot_gain": null
+        "paired_fewshot_gain": -3,
+        "A_top3": 1001,
+        "A_top1": 900,
+        "paired_repairs": 12,
+        "paired_regressions": 15,
+        "promotion": "HOLD_NO_TOP3_GAIN"
       }
     },
     "confirmed_exclusion": {
@@ -409,7 +414,7 @@
       "id": "p-consumption",
       "owner": "Terra CLI",
       "resource": "CPU_prepare_then_NPU",
-      "status": "B_complete_1080_Top3_998_A_auto_started_CPU_analysis_parallel",
+      "status": "AB_complete_1080_B_repairs12_regressions15_hold",
       "depends_on": [
         "frozen_original_Q50D5"
       ],
