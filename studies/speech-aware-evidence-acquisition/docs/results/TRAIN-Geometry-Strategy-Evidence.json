@@ -1,0 +1,271 @@
+{
+  "scope": "Cached text-space diagnostics; not audio P accuracy or strategy gain",
+  "counts": {
+    "original_TRAIN": 11514,
+    "eligible_TRAIN": 8554,
+    "excluded_by_existing_rosters": 2960,
+    "original_labels": 60,
+    "eligible_labels": 59
+  },
+  "metrics": {
+    "full_original_TRAIN": {
+      "n": 11514,
+      "nonempty_labels": 60,
+      "nearest_other_beats_same": 2151,
+      "negative_mean5_margin": 1851,
+      "text_LOO_R1": 9663,
+      "text_LOO_R3": 10854,
+      "purity20": {
+        "min": 0.0,
+        "p10": 0.15,
+        "median": 0.8,
+        "p90": 1.0,
+        "max": 1.0
+      },
+      "margin5": {
+        "min": -0.09611669192824912,
+        "p10": -0.0037993976937786725,
+        "median": 0.013375189575528412,
+        "p90": 0.03614707189982526,
+        "max": 0.11486843124547474
+      },
+      "incoming_hubness": {
+        "min": 0.0,
+        "p10": 1.0,
+        "median": 13.0,
+        "p90": 48.0,
+        "max": 299.0
+      },
+      "cross_hubness": {
+        "min": 0.0,
+        "p10": 0.0,
+        "median": 2.0,
+        "p90": 17.0,
+        "max": 278.0
+      },
+      "balanced_cross_hubness": {
+        "min": 0.0,
+        "p10": 0.0,
+        "median": 0.008504901960784314,
+        "p90": 0.11538461538461539,
+        "max": 1.5072396391567087
+      },
+      "macro_R1": 0.797293046928544,
+      "macro_R3": 0.9168271814263446,
+      "top_one_percent_hubs": {
+        "count": 116,
+        "cross_edges": 8786,
+        "total_cross_edges": 75831,
+        "cross_edge_fraction": 0.11586290567182286
+      }
+    },
+    "legal_TRAIN": {
+      "n": 8554,
+      "nonempty_labels": 59,
+      "nearest_other_beats_same": 1576,
+      "negative_mean5_margin": 1323,
+      "text_LOO_R1": 7231,
+      "text_LOO_R3": 8073,
+      "purity20": {
+        "min": 0.0,
+        "p10": 0.15,
+        "median": 0.75,
+        "p90": 1.0,
+        "max": 1.0
+      },
+      "margin5": {
+        "min": -0.06323544093356082,
+        "p10": -0.0033148547471306246,
+        "median": 0.013214424305473371,
+        "p90": 0.03483532562789177,
+        "max": 0.10747730086774321
+      },
+      "incoming_hubness": {
+        "min": 0.0,
+        "p10": 1.0,
+        "median": 13.0,
+        "p90": 48.0,
+        "max": 241.0
+      },
+      "cross_hubness": {
+        "min": 0.0,
+        "p10": 0.0,
+        "median": 2.0,
+        "p90": 18.0,
+        "max": 217.0
+      },
+      "balanced_cross_hubness": {
+        "min": 0.0,
+        "p10": 0.0,
+        "median": 0.009433962264150943,
+        "p90": 0.1625433531942856,
+        "max": 1.7981368005732865
+      },
+      "macro_R1": 0.7901148680463825,
+      "macro_R3": 0.9142709495481909,
+      "top_one_percent_hubs": {
+        "count": 86,
+        "cross_edges": 6955,
+        "total_cross_edges": 57023,
+        "cross_edge_fraction": 0.12196832856917385
+      }
+    }
+  },
+  "source_exclusion": {
+    "old_neighbor_edges_rejected": 72,
+    "strict_legal_text_R3": 8073,
+    "prior_legal_text_R3": 8077,
+    "encoder_changed": false
+  },
+  "cluster_totals": {
+    "2": {
+      "components": 5739,
+      "supported_components": 740,
+      "supported_members": 2727,
+      "singletons": 4214,
+      "coverage": {
+        "coverage7513": {
+          "uncovered_supported_components": 5,
+          "uncovered_supported_members": 15,
+          "lost_singletons": 317
+        },
+        "boundary020": {
+          "uncovered_supported_components": 4,
+          "uncovered_supported_members": 13,
+          "lost_singletons": 327
+        },
+        "crosshub030": {
+          "uncovered_supported_components": 7,
+          "uncovered_supported_members": 21,
+          "lost_singletons": 314
+        },
+        "boundary_strong": {
+          "uncovered_supported_components": 98,
+          "uncovered_supported_members": 325,
+          "lost_singletons": 2978
+        },
+        "hub_strong": {
+          "uncovered_supported_components": 228,
+          "uncovered_supported_members": 773,
+          "lost_singletons": 3759
+        }
+      }
+    },
+    "5": {
+      "components": 3238,
+      "supported_components": 432,
+      "supported_members": 5332,
+      "singletons": 2433,
+      "coverage": {
+        "coverage7513": {
+          "uncovered_supported_components": 2,
+          "uncovered_supported_members": 7,
+          "lost_singletons": 106
+        },
+        "boundary020": {
+          "uncovered_supported_components": 1,
+          "uncovered_supported_members": 3,
+          "lost_singletons": 122
+        },
+        "crosshub030": {
+          "uncovered_supported_components": 2,
+          "uncovered_supported_members": 7,
+          "lost_singletons": 103
+        },
+        "boundary_strong": {
+          "uncovered_supported_components": 53,
+          "uncovered_supported_members": 200,
+          "lost_singletons": 1621
+        },
+        "hub_strong": {
+          "uncovered_supported_components": 117,
+          "uncovered_supported_members": 468,
+          "lost_singletons": 2115
+        }
+      }
+    },
+    "10": {
+      "components": 1810,
+      "supported_components": 170,
+      "supported_members": 6681,
+      "singletons": 1450,
+      "coverage": {
+        "coverage7513": {
+          "uncovered_supported_components": 0,
+          "uncovered_supported_members": 0,
+          "lost_singletons": 39
+        },
+        "boundary020": {
+          "uncovered_supported_components": 0,
+          "uncovered_supported_members": 0,
+          "lost_singletons": 40
+        },
+        "crosshub030": {
+          "uncovered_supported_components": 0,
+          "uncovered_supported_members": 0,
+          "lost_singletons": 38
+        },
+        "boundary_strong": {
+          "uncovered_supported_components": 15,
+          "uncovered_supported_members": 61,
+          "lost_singletons": 874
+        },
+        "hub_strong": {
+          "uncovered_supported_components": 38,
+          "uncovered_supported_members": 149,
+          "lost_singletons": 1217
+        }
+      }
+    }
+  },
+  "cost": {
+    "wall_seconds": 61.095190639956854,
+    "cpu_seconds": 174.67884868,
+    "peak_rss_kib": 787400,
+    "new_encoder_calls": 0,
+    "new_api_calls": 0,
+    "npu_cards": 0,
+    "full_geometry_block_products": 45,
+    "reused_legal_geometry_rows_for_comparison": 8554,
+    "strict_legal_geometry_block_products": 34,
+    "reused_class_cosine_files": 59
+  },
+  "verification": {
+    "owner_all_edge_checks": {
+      "status": "PASS",
+      "fixture_source_groups": true,
+      "geometries": {
+        "full-train": {
+          "rows": 11514,
+          "edges": 230280,
+          "source_exclusion": true,
+          "unique_source_neighbors": true,
+          "max_cosine_error": 1.5543122344752192e-15
+        },
+        "legal-strict": {
+          "rows": 8554,
+          "edges": 171080,
+          "source_exclusion": true,
+          "unique_source_neighbors": true,
+          "max_cosine_error": 1.5543122344752192e-15
+        }
+      },
+      "teacher_legal_only": true,
+      "original_representatives": 16,
+      "locked_gold_rows": 1080,
+      "cluster_membership_verified": true,
+      "encoder_calls": 0,
+      "new_api_calls": 0
+    },
+    "main_review": "Independently checked per-class totals and aggregate arithmetic; reviewed computation and teacher scope; not independently recomputed all cosine edges"
+  },
+  "limitations": [
+    "No completed dual-encoding comparison: partial ongoing job must not be treated as full coverage.",
+    "No authoritative exhaustive business ontology: locked card plus observed TRAIN only.",
+    "No verified semantic annotation of graph components; components are geometry proxies.",
+    "No audio accuracy or new strategy score measured in this analysis.",
+    "Full TRAIN descriptive census contains development roster members; teacher fitting evidence restricted to eligible TRAIN.",
+    "Support aggregation for diagnostics allows signed finite cosine; runtime uses positive cosine and query-dependent support. Not interchangeable.",
+    "Source groups use known metadata/text/recording aliases; arbitrary semantic equivalence is not asserted."
+  ]
+}
