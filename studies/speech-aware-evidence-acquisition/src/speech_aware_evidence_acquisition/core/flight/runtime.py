@@ -8932,7 +8932,13 @@ class FlightRuntime:
                     )
                     or None
                 )
+            from ...rails.p_only_learning_scope import load_scope
+            p_learning_scope = load_scope(
+                self._repo_root, self._data_root, self._composed.values, plan,
+                getattr(self, '_knowledge_store_binding', None), native_config, self._experiment,
+            )
             native_binding = NativeEpisodeRunBinding(
+                p_only_learning_scope=p_learning_scope,
                 thinking_policy=self._composed.values.get("thinking_policy") or None,
                 # TFRL-v2: the bank ``_prepare_native_phase_runtime`` verified at flight start (None unless the cell declares ``tfrl_v2_bank``).
                 tfrl_v2_bank=getattr(self, "_tfrl_v2_bank", None),

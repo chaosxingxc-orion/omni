@@ -901,6 +901,7 @@ class NativeEpisodeRunBinding:
     tools_for_phase: object = None
     supply_for_phase: Callable | None = None
     knowledge_store_binding: object = None
+    p_only_learning_scope: object = None
     review_for_phase: Callable | None = None
     # E8a: the repository root a declared ``context_policy`` reads its
     # committed, hash-pinned templates from (``configs/probes/ncp_*.txt``).

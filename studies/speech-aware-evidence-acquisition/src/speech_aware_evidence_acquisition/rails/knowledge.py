@@ -1371,6 +1371,7 @@ def assert_agent_step_binding(
     transition: AgentStepTransition,
     snapshot_sha256: str | None = None,
     origin_speech_packet: tuple[str, str] | None = None,
+    p_only_learning_scope=None,
 ) -> None:
     """Prove one Agent step preserves speech and reports its exact delta.
 
@@ -1409,7 +1410,12 @@ def assert_agent_step_binding(
         raise RailsError("AgentStepTransition is bound to a different snapshot")
     if transition.prior_query_state_sha256 != prior_query_state.content_hash():
         raise RailsError("AgentStepTransition is bound to a different prior QueryState")
-    if prior_query_state.query_sample_id in set(snapshot.source_sample_ids):
+    if p_only_learning_scope is not None:
+        p_only_learning_scope.assert_snapshot(snapshot, prior_query_state.query_sample_id)
+        p_only_learning_scope.assert_visible(prior_query_state)
+        if next_query_state is not None:
+            p_only_learning_scope.assert_visible(next_query_state)
+    if p_only_learning_scope is None and prior_query_state.query_sample_id in set(snapshot.source_sample_ids):
         raise RailsError(
             "AgentStepTransition query overlaps the TRAIN snapshot source roster"
         )
@@ -1423,7 +1429,7 @@ def assert_agent_step_binding(
     next_query_state.validate()
     if transition.next_query_state_sha256 != next_query_state.content_hash():
         raise RailsError("AgentStepTransition is bound to a different next QueryState")
-    if next_query_state.query_sample_id in set(snapshot.source_sample_ids):
+    if p_only_learning_scope is None and next_query_state.query_sample_id in set(snapshot.source_sample_ids):
         raise RailsError(
             "AgentStepTransition successor overlaps the TRAIN snapshot source roster"
         )
@@ -1553,6 +1559,7 @@ def assert_knowledge_use_binding(
     rank_result: RankResult,
     fusion_decision: FusionDecision,
     snapshot_sha256: str | None = None,
+    p_only_learning_scope=None,
 ) -> None:
     """Fail closed unless one DEV decision uses one disjoint TRAIN snapshot.
 
@@ -1572,7 +1579,13 @@ def assert_knowledge_use_binding(
     rank_result.validate()
     fusion_decision.validate()
 
-    if query_state.query_sample_id in set(snapshot.source_sample_ids):
+    if p_only_learning_scope is not None:
+        p_only_learning_scope.assert_snapshot(snapshot, query_state.query_sample_id)
+        p_only_learning_scope.assert_visible(query_state)
+        ids = [x.facet_id for x in rank_result.candidates] + list(fusion_decision.supporting_facet_ids) + list(fusion_decision.selected_value_ids)
+        if any(not item.startswith('intent-boundaries::') for item in ids):
+            raise RailsError('P learning supply contains unauthorized source')
+    if p_only_learning_scope is None and query_state.query_sample_id in set(snapshot.source_sample_ids):
         raise RailsError(
             "knowledge USE query sample overlaps the TRAIN snapshot source roster"
         )

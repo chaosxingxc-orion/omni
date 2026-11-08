@@ -679,6 +679,7 @@ def _validate_agent_knowledge_decision(
     snapshot_sha256: str,
     query_state: QueryState,
     advance: AgentLoopAdvance,
+    p_only_learning_scope=None,
 ) -> None:
     supply_action = advance.transition.action_kind in {
         "acquire",
@@ -701,6 +702,7 @@ def _validate_agent_knowledge_decision(
         rank_result=advance.rank_result,
         fusion_decision=advance.fusion_decision,
         snapshot_sha256=snapshot_sha256,
+        p_only_learning_scope=p_only_learning_scope,
     )
     if advance.fusion_decision.selected_value_ids != advance.transition.new_value_ids:
         raise RailsRunnerError(
@@ -1344,7 +1346,7 @@ def _restricted_split_samples(
     return tuple(sample for sample in samples if sample.sample_id in keep)
 
 
-def _restrict_pipeline_cross_phase_supply(supply, context, snapshot, snapshot_sha256):
+def _restrict_pipeline_cross_phase_supply(supply, context, snapshot, snapshot_sha256, p_only_learning_scope=None):
     """Remove redundant acquisitions only after checking full snapshot bindings."""
     from dataclasses import replace
     supply.validate()
@@ -1355,7 +1357,7 @@ def _restrict_pipeline_cross_phase_supply(supply, context, snapshot, snapshot_sh
         raise RailsRunnerError("cross-phase snapshot identity changed")
     assert_knowledge_use_binding(snapshot=snapshot, query_state=context.query_state,
         rank_result=supply.rank_result, fusion_decision=supply.fusion_decision,
-        snapshot_sha256=actual)
+        snapshot_sha256=actual, p_only_learning_scope=p_only_learning_scope)
     selected = tuple(supply.fusion_decision.selected_value_ids)
     overlap = set(selected) & set(context.query_state.retrieved_value_ids)
     if not overlap:
@@ -3938,7 +3940,7 @@ async def _invoke_native_role_episode(
             # first visit of every phase is returned unchanged.
             if pipeline_config is not None:
                 supply = _restrict_pipeline_cross_phase_supply(
-                    supply, before, snapshot, snapshot_sha256)
+                    supply, before, snapshot, snapshot_sha256, binding.p_only_learning_scope)
             else:
                 supply = restrict_repeat_visit_supply(supply, before, phase_name=next_phase)
         if rollout_trace is not None and supply is not None:
@@ -4073,11 +4075,13 @@ async def _invoke_native_role_episode(
         _validate_agent_knowledge_decision(
             snapshot=snapshot, snapshot_sha256=snapshot_sha256,
             query_state=before.query_state, advance=advance,
+            p_only_learning_scope=binding.p_only_learning_scope,
         )
         assert_agent_step_binding(
             snapshot=snapshot, snapshot_sha256=snapshot_sha256,
             prior_query_state=before.query_state, next_query_state=next_state,
             transition=transition,
+            p_only_learning_scope=binding.p_only_learning_scope,
             origin_speech_packet=(
                 state.prepared.initial_query_state.speech_packet_id,
                 state.prepared.initial_query_state.speech_packet_sha256,
@@ -5740,6 +5744,9 @@ async def _invoke_native_role_episode(
         if pending["source"].content != normalized_node_text:
             raise RailsRunnerError("candidate normalized source changed before settlement")
         if kind == "perception":
+            if config.perception_only:
+                settle()
+                return
             from .intent_slot_pipeline import candidates
             node_slot_ids[:] = [row["candidate_id"] for row in candidates(completion.text, pipeline_config["max_candidates"], duplicate_policy="group_v2")]
             node_slot_cursor[0] = 0
@@ -6541,6 +6548,9 @@ async def _invoke_native_role_episode(
                     owned_prepared.append(prepared.request)
                 prepared, compaction = fit_contact_to_slot(
                     request, prepared, owned_prepared if ready_request_runner is not None else None)
+                if binding.p_only_learning_scope is not None:
+                    binding.p_only_learning_scope.assert_visible(state.query_state)
+                    binding.p_only_learning_scope.assert_request(prepared, request.context.sample_id)
                 if context_fit_budget is not None:
                     context_fit_records.append({
                         "contact_id": request.context.agent_contact_id,
@@ -6635,6 +6645,9 @@ async def _invoke_native_role_episode(
                                 answer_only=not (length_repair or slot_length_repair),
                                 perception_length_repair=slot_repair_template if slot_length_repair else repair_template if length_repair else None,
                                 slot_repair_policy=pipeline_config["slot_length_recovery"] if slot_length_repair else None)
+                            if binding.p_only_learning_scope is not None:
+                                binding.p_only_learning_scope.assert_visible(state.query_state)
+                                binding.p_only_learning_scope.assert_request(result_prepared, request.context.sample_id)
                             fit_kwargs = ({"prompt_limit_tokens": context_fit_budget.prompt_limit_tokens}
                                 if context_fit_budget is not None and context_fit_budget.measured_by_request_gate else {})
                             fit_count = binding.request_gate(result_prepared.request, **fit_kwargs)
@@ -7330,7 +7343,7 @@ async def _invoke_native_role_episode(
             # A finite or seal-refused contact is in custody but must not be
             # promoted into semantic state. Normal contacts take the usual
             # settle path, including state and supply validation.
-            if result.get("status") == "ok":
+            if result.get("status") == "ok" and pending:
                 settle()
             trace = TraceBuffer(run_id, spool=state.trace_spool)
             for key in sorted(state.trace_buffers):
@@ -9509,7 +9522,19 @@ def run_speech_native_agent_loop(
         raise RailsRunnerError(
             "speech_packet_bindings must materialize every query sample exactly once"
         )
-    overlap = set(sample_ids) & set(knowledge_snapshot.source_sample_ids)
+    learning_scope = None if native_episode_binding is None else native_episode_binding.p_only_learning_scope
+    if learning_scope is not None:
+        if not native_episode_binding.config.perception_only:
+            raise RailsRunnerError('P learning scope requires P-only execution')
+        for sample_id in sample_ids:
+            learning_scope.assert_snapshot(knowledge_snapshot, sample_id)
+        for ids in (bootstrap_facets, bootstrap_ids):
+            if any(not item.startswith('intent-boundaries::') for item in ids):
+                raise RailsRunnerError('P learning bootstrap source is not intent-boundaries')
+        for raw in (per_sample_facets_raw, per_sample_values_raw):
+            if isinstance(raw, Mapping) and any(not item.startswith('intent-boundaries::') for ids in raw.values() for item in ids):
+                raise RailsRunnerError('P learning bootstrap source is not intent-boundaries')
+    overlap = set(sample_ids) & set(knowledge_snapshot.source_sample_ids) if learning_scope is None else set()
     if overlap:
         raise RailsRunnerError(
             "AgentLoop query samples overlap the TRAIN knowledge source roster: "

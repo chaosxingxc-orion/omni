@@ -514,6 +514,7 @@ class _ActualEpisodeHarness:
             material_for_phase=self.material_for_phase,
             supply_for_phase=getattr(self, "supply_for_phase", None),
             knowledge_store_binding=getattr(self, "knowledge_store_binding", None),
+            p_only_learning_scope=getattr(self, "p_only_learning_scope", None),
             render_request=self.transport.render_request,
             request_gate=self.request_gate,
             tools_for_phase=self.tools_for_phase,

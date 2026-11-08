@@ -223,6 +223,14 @@ class PerceptionOnlyWorkload(NodeWorkload):
         exp.update(experiment_id=self.RUN, purpose=self.PROGRAM, service_session=binding['service_session'], split_id=checked['view']['split_name'])
         if learning:
             exp['request_decoding_overrides'] = copy.deepcopy(self.config['collection_decoding'])
+            base['p_only_learning_scope'] = {
+                'schema': 'saea-p-only-learning-scope-v1',
+                'authorization': copy.deepcopy(self.config['learning_authorization']),
+                'parent_baseline': copy.deepcopy(self.config['parent_baseline']),
+                'parent_registration': copy.deepcopy(self.config['parent_registration']),
+                'source_baseline': copy.deepcopy(self.config['population']['source_baseline']),
+                'mode': self.config.get('learning_mode', 'tf-collection'),
+            }
         exp['population'].update(count=self.ROWS, roster_receipt=self.ROSTER, split_identity_hash=roster['split_identity_hash'], dataset_fragment=self.DATASET)
         exp['populations'] = [{'dataset_fragment':self.DATASET, 'ids':self.config['sample_ids']}]
         exp['execution_plan'].update(planned_model_calls=6*self.ROWS, planned_speech_audio_seconds=math.ceil(6*math.fsum(r['audio_seconds'] for r in roster['items'])))
