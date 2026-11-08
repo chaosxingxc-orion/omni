@@ -1,0 +1,8 @@
+{
+  "members": {"path": "/external/input/members-with-source-groups.json", "sha256": "REPLACE_WITH_SHA256"},
+  "queries": {"path": "/external/input/query-identities-and-source-groups.json", "sha256": "REPLACE_WITH_SHA256"},
+  "matrices": {"embedding": {"path": "/external/input/cosine.npy", "sha256": "REPLACE_WITH_SHA256"}},
+  "source_distinct": [true, false],
+  "k": [3, 5, 10, 15],
+  "output": "/external/output/rankings.json"
+}
