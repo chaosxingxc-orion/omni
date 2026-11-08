@@ -4,7 +4,7 @@ import re
 from itertools import permutations
 
 
-def bind(messages, values, *, input_k, output_k):
+def bind(messages, values, *, input_k, output_k, dynamic=False):
     rows, seen = [], set()
     for part in messages[1]['content']:
         if not isinstance(part, dict) or part.get('knowledge_role') != 'value':
@@ -27,14 +27,16 @@ def bind(messages, values, *, input_k, output_k):
         seen.add(intent)
         rows.append({'index': len(rows)+1, 'intent_id': intent, 'knowledge_id': value_id,
                      'description': value.content})
-    if len(rows) != input_k or output_k > len(rows):
+    if (not 1 <= len(rows) <= input_k if dynamic else len(rows) != input_k or output_k > len(rows)):
         raise ValueError('ranking actual candidate count differs from configured window')
     return rows
 
 
-def response_format(count, output_k, transport='json-schema'):
+def response_format(count, output_k, transport='json-schema', *, dynamic=False):
+    if dynamic and (type(count) is not int or type(output_k) is not int or not 1 <= count <= 5 or not 1 <= output_k <= min(3, count)):
+        raise ValueError('invalid dynamic ranking window')
     if transport == 'finite-choice-v1':
-        if (count, output_k) not in ((3, 1), (3, 2), (5, 3)):
+        if not dynamic and (count, output_k) not in ((3, 1), (3, 2), (5, 3)):
             raise ValueError('unsupported finite ranking window')
         choices = [json.dumps(list(p), separators=(',', ':'))
                    for p in permutations(range(1, count + 1), output_k)]

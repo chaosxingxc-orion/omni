@@ -2095,7 +2095,7 @@ class NativeEpisodeWorkflow:
                 if config.get('ranking_window'):
                     indices = json.loads(response)
                     window = config['ranking_window']
-                    if (not isinstance(indices, list) or len(indices) != window['output_k']
+                    if (not isinstance(indices, list) or (not 1 <= len(indices) <= window['output_k'] if window.get('dynamic') else len(indices) != window['output_k'])
                             or any(type(i) is not int or not 1 <= i <= window['input_k'] for i in indices)
                             or len(set(indices)) != len(indices)):
                         raise ValueError('ranking indices violate the bound window')

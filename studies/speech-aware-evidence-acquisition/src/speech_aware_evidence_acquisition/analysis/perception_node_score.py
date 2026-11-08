@@ -64,7 +64,7 @@ def score(roster, outputs, *, maximum, legal_ids):
                 if config.get('ranking_window'):
                     from ..rails.ranked_candidate_indices import parse
                     ranking = output['ranking_result']
-                    selected = parse(output['text'], ranking['input'], maximum)
+                    selected = parse(output['text'], ranking['input'], min(maximum, len(ranking['input'])) if config['ranking_window'].get('dynamic') else maximum)
                     candidate_ids = [row['intent_id'] for row in selected]
                     if candidate_ids != ranking['candidate_ids'] or any(cid not in legal_ids for cid in candidate_ids):
                         raise ValueError('ranking mapping differs from registered output')

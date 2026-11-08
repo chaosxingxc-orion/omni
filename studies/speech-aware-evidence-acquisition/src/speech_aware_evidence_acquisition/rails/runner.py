@@ -4120,7 +4120,8 @@ async def _invoke_native_role_episode(
                 messages, evidence = project_snapshot_messages(base_messages(current), snapshot_sha256=snapshot_sha256, values=node_snapshot_values, facets=node_snapshot_facets)
                 if pipeline_config and pipeline_config.get('ranking_window'):
                     from .ranked_candidate_indices import bind
-                    ranking_rows = bind(messages, node_snapshot_values, **{k: pipeline_config['ranking_window'][k] for k in ('input_k', 'output_k')})
+                    window = pipeline_config['ranking_window']
+                    ranking_rows = bind(messages, node_snapshot_values, **{k: window[k] for k in ('input_k', 'output_k')}, dynamic=window.get('dynamic', False))
                 item = {"schema": "saea-sdk-node-handoff-v1", "policy": POLICY, "sample_id": current.sample_id,
                         "source_role": "bootstrap", "target_role": phase_id, "source_response_sha256": None,
                         "source_request_id": None, "snapshot_sha256": snapshot_sha256,
@@ -4318,11 +4319,12 @@ async def _invoke_native_role_episode(
         if pipeline_config and pipeline_config.get('ranking_window') and role_configs[phase_id].role_kind == 'perception':
             from .ranked_candidate_indices import response_format
             window = pipeline_config['ranking_window']
+            effective_k = min(window['output_k'], len(ranking_rows)) if window.get('dynamic') else window['output_k']
             from .intent_slot_pipeline import load_repair_template
             template = load_repair_template(binding.repo_root, {'perception_repair_template': window['template']})
             material = replace(material,
-                instruction=template + '\n\nReturn only a JSON array of distinct candidate numbers, best first.\n' + '\n'.join(f"{r['index']}. {r['intent_id']}" for r in ranking_rows),
-                response_format=response_format(len(ranking_rows), window['output_k'], window.get('transport', 'json-schema'))).validate()
+                instruction=template + (f"\n\nReturn exactly {effective_k} distinct candidate numbers as a JSON array, best first.\n" if window.get('dynamic') else '\n\nReturn only a JSON array of distinct candidate numbers, best first.\n') + '\n'.join(f"{r['index']}. {r['intent_id']}" for r in ranking_rows),
+                response_format=response_format(len(ranking_rows), effective_k, window.get('transport', 'json-schema'), dynamic=window.get('dynamic', False))).validate()
         phase = program.phase(phase_id)
         if (phase.response_format_id is not None) != (material.response_format is not None):
             raise RailsRunnerError("native role response format differs from its phase")
@@ -4863,7 +4865,7 @@ async def _invoke_native_role_episode(
                 ref_mapping = None
                 if kind == 'perception' and pipeline_config.get('ranking_window'):
                     from .ranked_candidate_indices import parse, semantic_projection
-                    selected = parse(completion.text, ranking_rows, pipeline_config['ranking_window']['output_k'])
+                    selected = parse(completion.text, ranking_rows, min(pipeline_config['ranking_window']['output_k'], len(ranking_rows)) if pipeline_config['ranking_window'].get('dynamic') else pipeline_config['ranking_window']['output_k'])
                     effective_text = semantic_projection(selected)
                     visit['ranking_result'].update(indices=json.loads(completion.text),
                                                    candidate_ids=[r['intent_id'] for r in selected], status='ok')
@@ -5742,7 +5744,7 @@ async def _invoke_native_role_episode(
         context_for_replay = visits[phase_id]["intent_slot_context"]
         if kind == 'perception' and pipeline_config.get('ranking_window'):
             from .ranked_candidate_indices import parse, semantic_projection
-            reconstructed_text = semantic_projection(parse(completion.text, ranking_rows, pipeline_config['ranking_window']['output_k']))
+            reconstructed_text = semantic_projection(parse(completion.text, ranking_rows, min(pipeline_config['ranking_window']['output_k'], len(ranking_rows)) if pipeline_config['ranking_window'].get('dynamic') else pipeline_config['ranking_window']['output_k']))
         if pipeline_config.get("reference_normalizer") and kind in ("perception", "slot") and not (kind == 'perception' and pipeline_config.get('ranking_window')):
             from .intent_slot_pipeline import normalize_evidence_references
             reconstructed_text, _ = normalize_evidence_references(
@@ -7023,7 +7025,7 @@ async def _invoke_native_role_episode(
             if pipeline_config and pipeline_config.get('ranking_window') and role.role_kind == 'slot':
                 from .ranked_candidate_indices import parse, semantic_projection
                 solver_node.ranking_projection = lambda text: semantic_projection(
-                    parse(text, ranking_rows, pipeline_config['ranking_window']['output_k']))
+                    parse(text, ranking_rows, min(pipeline_config['ranking_window']['output_k'], len(ranking_rows)) if pipeline_config['ranking_window'].get('dynamic') else pipeline_config['ranking_window']['output_k']))
             if coverage_policy and role.role_kind == "slot":
                 solver_node.coverage_result = lambda: copy.deepcopy(coverage_state["result"])
                 solver_node.coverage_successor = lambda: bool(slot_successor and coverage_state['result']['missing'])

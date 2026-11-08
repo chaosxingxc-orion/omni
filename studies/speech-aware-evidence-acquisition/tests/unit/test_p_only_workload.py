@@ -29,6 +29,20 @@ def test_ordered_supply_keeps_sample_order_and_rejects_bad_rows():
         p.verify_ordered_supply(bad, ids, 3)
 
 
+def test_dynamic_ordered_supply_requires_one_to_five_real_unique_cards():
+    prefix = 'intent-boundaries::intent-boundary:'
+    for count in range(1, 6):
+        rows = [prefix + str(i) for i in range(count)]
+        payload = {key: {'perception': {'a': rows[:]}} for key in ('facets', 'values')}
+        p.verify_ordered_supply(payload, ['a'], 5, dynamic=True)
+        with pytest.raises(ValueError):
+            p.verify_ordered_supply(payload, ['a'], 6)
+    for rows in ([], [prefix+'a']*2, [prefix+str(i) for i in range(6)]):
+        payload = {key: {'perception': {'a': rows[:]}} for key in ('facets', 'values')}
+        with pytest.raises(ValueError):
+            p.verify_ordered_supply(payload, ['a'], 5, dynamic=True)
+
+
 def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch):
     from dataclasses import replace
     from test_rails_runner import _knowledge_snapshot

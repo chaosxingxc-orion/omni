@@ -15,6 +15,38 @@ from test_native_episode_runner import _wire_response
 from test_rails_runner import _knowledge_snapshot
 
 
+@pytest.mark.parametrize('count,output_k', [(n, k) for n in range(1, 6) for k in (1, 3)])
+def test_dynamic_native_window(tmp_path, count, output_k):
+    h, policy = recovery_harness(tmp_path)
+    snapshot = _knowledge_snapshot()
+    names = ('play_music', 'play_radio', 'play_video', 'play_game', 'play_movie')[:count]
+    values = tuple(replace(snapshot.values[0], value_id='intent-boundaries::intent-boundary:'+name,
+                           content='Description for '+name, task_target=name) for name in names)
+    snapshot = replace(snapshot, values=values).validate()
+    h.bootstrap_value_ids = tuple(v.value_id for v in values)
+    template = tmp_path/'configs/probes/rank.txt'
+    template.parent.mkdir(parents=True); template.write_text('Rank the candidates.')
+    h.repo_root = tmp_path
+    policy.update(max_candidates=output_k, ranking_window={'mode':'ranked-candidate-indices',
+        'input_k':5, 'output_k':output_k, 'dynamic':True, 'max_tokens':128, 'transport':'finite-choice-v1',
+        'template':{'relpath':'configs/probes/rank.txt','sha256':hashlib.sha256(template.read_bytes()).hexdigest()}})
+    policy['coverage_recovery']['max_extra_contacts'] = output_k
+    h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy), perception_only=True)
+    sent = []
+    answer = json.dumps(list(range(1, min(count, output_k)+1)), separators=(',', ':'))
+    h.post_override = lambda _url, body: (sent.append(json.loads(body)) or _wire_response(answer))
+    h.request_gate = lambda request: None
+    try:
+        node = h.run(snapshot=snapshot).results[0].node_outcome
+    finally:
+        h.close()
+    assert node['ranking_result']['candidate_ids'] == list(names[:output_k])
+    assert len(sent) == 1 and re.fullmatch(sent[0]['structured_outputs']['regex'], answer)
+    result = score([{'sample_id':'s1','gold_intent':names[0]}], [{**node, 'text':node['response']}],
+                   maximum=output_k, legal_ids=list(names))
+    assert result['gold_recall_count'] == 1
+
+
 @pytest.mark.parametrize('transport', ['json-schema', 'finite-choice-v1'])
 @pytest.mark.parametrize('input_k,output_k,answer', [(3, 1, '[2]'), (3, 2, '[2,1]'), (5, 3, '[2,1,3]'), (3, 1, '[4]'), (3, 1, '[1]'), (3, 2, '[1,1]')])
 def test_native_ranking_before_after_and_node_score(tmp_path, input_k, output_k, answer, transport):

@@ -31,7 +31,7 @@ def verify_vector_selection(data, query, source_pin, ids):
         raise ValueError('query vectors are not exact construction625 selection')
 
 
-def verify_ordered_supply(payload, ids, input_k):
+def verify_ordered_supply(payload, ids, input_k, dynamic=False):
     from tfrl_odd40_cells import verify_output
     verify_output(payload, ids)
     if set(payload['facets']) != {'perception'}:
@@ -39,7 +39,7 @@ def verify_ordered_supply(payload, ids, input_k):
     for sample_id in ids:
         values = payload['values']['perception'][sample_id]
         facets = payload['facets']['perception'][sample_id]
-        if (not isinstance(values, list) or len(values) != input_k
+        if (not isinstance(values, list) or (not 1 <= len(values) <= input_k if dynamic else len(values) != input_k)
                 or any(not isinstance(v, str) or not v.startswith('intent-boundaries::intent-boundary:') for v in values)
                 or len(set(values)) != len(values) or facets != values):
             raise ValueError('invalid ordered intent-boundary supply')
@@ -81,11 +81,13 @@ class PerceptionOnlyWorkload(NodeWorkload):
             (axis['kind'] == 'instruction' and set(axis) != {'kind', 'patch', 'template'}) or
             (axis['kind'] == 'knowledge-construction' and set(axis) != {'kind', 'publication', 'patch', 'audit'}) or
             (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or not 1 <= axis['value'] <= 60)) or
-            (axis['kind'] == 'ranking-window' and (not {'kind', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(axis) <= {'kind', 'input_k', 'output_k', 'max_tokens', 'template', 'facet_source', 'transport', 'source_receipts', 'ordered_supply'}
+            (axis['kind'] == 'ranking-window' and (not {'kind', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(axis) <= {'kind', 'input_k', 'output_k', 'max_tokens', 'template', 'facet_source', 'transport', 'source_receipts', 'ordered_supply', 'dynamic'}
                 or ('source_receipts' in axis and 'facet_source' not in axis)
                 or ('ordered_supply' in axis and (axis.get('ordered_supply') not in axis.get('source_receipts', [])))
                 or axis.get('transport', 'json-schema') not in {'json-schema', 'finite-choice-v1'}
-                or (axis['input_k'], axis['output_k']) not in ((3, 1), (3, 2), (5, 3))
+                or ('dynamic' in axis and axis['dynamic'] is not True)
+                or ((axis['input_k'], axis['output_k']) not in ((5, 1), (5, 3)) if axis.get('dynamic') else (axis['input_k'], axis['output_k']) not in ((3, 1), (3, 2), (5, 3)))
+                or (axis.get('dynamic') and 'ordered_supply' not in axis)
                 or type(axis['max_tokens']) is not int or not 1 <= axis['max_tokens'] <= 4096))):
             raise ValueError('invalid P-only axis')
         parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation', 'learning_authorization', 'learning_source_vectors', 'learning_mode')}
@@ -116,7 +118,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
         if source['root'] != 'data' or sha(confined(data, source['relpath'])) != source['sha256']:
             raise ValueError('ordered supply source differs')
         payload = read(confined(data, source['relpath']))
-        verify_ordered_supply(payload, self.config['sample_ids'], axis['input_k'])
+        verify_ordered_supply(payload, self.config['sample_ids'], axis['input_k'], axis.get('dynamic', False))
         runtime = build_flight_runtime(repo, data, model=staged['runtime_binding']['model_fragment'],
             dataset=self.DATASET, baseline=self.NAME, experiment=self.NAME, run_id=self.RUN, attempt_id='generation-v1',
             runtime_root=data/'work/scratch/runtime-root', lock_path=repo.parents[1]/'docs/datasets.lock.json')
@@ -306,6 +308,8 @@ class PerceptionOnlyWorkload(NodeWorkload):
             pipeline = base['native_episode']['intent_slot_pipeline']
             pipeline['max_candidates'] = axis['output_k']
             pipeline['ranking_window'] = {'mode':'ranked-candidate-indices', **{k:axis[k] for k in ('input_k','output_k','max_tokens','template')}}
+            if axis.get('dynamic'):
+                pipeline['ranking_window']['dynamic'] = True
             if 'transport' in axis:
                 pipeline['ranking_window']['transport'] = axis['transport']
             if 'coverage_recovery' in pipeline:

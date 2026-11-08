@@ -79,10 +79,11 @@ def parse_config(raw):
         raise ValueError("intent-slot max_candidates must be 1..3")
     if 'ranking_window' in raw:
         window = raw['ranking_window']
-        if (not isinstance(window, Mapping) or not {'mode', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(window) <= {'mode', 'input_k', 'output_k', 'max_tokens', 'template', 'transport'}
+        if (not isinstance(window, Mapping) or not {'mode', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(window) <= {'mode', 'input_k', 'output_k', 'max_tokens', 'template', 'transport', 'dynamic'}
                 or window.get('transport', 'json-schema') not in {'json-schema', 'finite-choice-v1'}
                 or window['mode'] != 'ranked-candidate-indices'
-                or (window['input_k'], window['output_k']) not in ((3, 1), (3, 2), (5, 3))
+                or (window.get('dynamic') is not True if 'dynamic' in window else False)
+                or ((window['input_k'], window['output_k']) not in ((5, 1), (5, 3)) if window.get('dynamic') else (window['input_k'], window['output_k']) not in ((3, 1), (3, 2), (5, 3)))
                 or type(window['max_tokens']) is not int or window['max_tokens'] < 1
                 or window['output_k'] != raw['max_candidates']
                 or raw.get('node_rails') != 'sdk-handoff-v1'):
