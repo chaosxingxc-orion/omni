@@ -440,6 +440,42 @@
         "accepted_recall_candidate",
         "prepared_inputs"
       ]
+    },
+    {
+      "id": "accepted133-P-transfer",
+      "owner": "Sol CLI",
+      "resource": "CPU_prepare_then_two_TP4_NPU",
+      "status": "preparing_not_launched",
+      "depends_on": [
+        "frozen_S2_133_bank",
+        "prepared_P_inputs",
+        "available_lane_guard"
+      ],
+      "does_not_depend_on": [
+        "minimum68_teacher_correction",
+        "minimum68_search"
+      ],
+      "arms": [
+        {
+          "id": "U",
+          "Q": 50,
+          "D": 5
+        },
+        {
+          "id": "V",
+          "Q": 15,
+          "D": 5
+        }
+      ],
+      "fixed": {
+        "queries": 1080,
+        "thinking": "OFF",
+        "fewshot": 0,
+        "output_indices": 3,
+        "answer_tokens": 128,
+        "prompt": "A_original"
+      },
+      "default_bank_promoted": false
     }
   ],
   "historical_nodes_note": "nodes and latest_recall_revision retain historical evidence; active_tracks and group_policy_round2_formal_run describe current work. Planning specification is not an execution receipt.",
@@ -815,6 +851,16 @@
     "elapsed_seconds": 145.5408192398,
     "compiled": false,
     "scientific_run_started": false,
-    "correction_status": "returned_to_original_CLI_responsibility"
+    "correction_status": "returned_to_original_CLI_responsibility",
+    "report_status": "complete_main_accepted_586_manifest_files"
+  },
+  "group_feedback_round3_correction": {
+    "state": "dispatched_response_stream_present",
+    "actual_POST": 1,
+    "automatic_retries": 0,
+    "final_received": false,
+    "local_teacher": true,
+    "max_output_tokens": 131072,
+    "scientific_gain": false
   }
 }
