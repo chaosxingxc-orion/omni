@@ -113,7 +113,7 @@
     "Three raw-text vector anchors support compatibility, not exhaustive re-encoding"
   ],
   "parallel_optimization": {
-    "updated_at": "2026-11-08T03:13:37.081163+00:00",
+    "updated_at": "2026-11-08T03:20:45.664721+00:00",
     "description": {
       "methods": [
         "ACE",
@@ -328,11 +328,106 @@
             "alarm_query"
           ]
         }
+      },
+      "ablation": {
+        "results": {
+          "ablation-r3-coffee-only": {
+            "metrics": {
+              "n": 1080,
+              "Recall1": 650,
+              "Recall3": 831,
+              "Recall5": 893,
+              "MRR": 0.7054256774160307,
+              "positive_candidates_min": 60,
+              "mean_cut_margin3": 0.04045727778786044,
+              "mean_cut_margin5": 0.05254128748858142
+            },
+            "paired_vs_original": {
+              "3": {
+                "repairs": 10,
+                "regressions": 1,
+                "unchanged_gold_key_regressions": 0
+              },
+              "5": {
+                "repairs": 12,
+                "regressions": 0,
+                "unchanged_gold_key_regressions": 0
+              }
+            }
+          },
+          "ablation-r3-maths-only": {
+            "metrics": {
+              "n": 1080,
+              "Recall1": 646,
+              "Recall3": 829,
+              "Recall5": 887,
+              "MRR": 0.7020630095343459,
+              "positive_candidates_min": 60,
+              "mean_cut_margin3": 0.0396076376149877,
+              "mean_cut_margin5": 0.05180923253678691
+            },
+            "paired_vs_original": {
+              "3": {
+                "repairs": 7,
+                "regressions": 0,
+                "unchanged_gold_key_regressions": 0
+              },
+              "5": {
+                "repairs": 6,
+                "regressions": 0,
+                "unchanged_gold_key_regressions": 0
+              }
+            }
+          },
+          "ablation-r3-competitor-plus-alarm": {
+            "metrics": {
+              "n": 1080,
+              "Recall1": 662,
+              "Recall3": 845,
+              "Recall5": 899,
+              "MRR": 0.7145127622665741,
+              "positive_candidates_min": 60,
+              "mean_cut_margin3": 0.04139430382475984,
+              "mean_cut_margin5": 0.05325311920274133
+            },
+            "paired_vs_original": {
+              "3": {
+                "repairs": 25,
+                "regressions": 2,
+                "unchanged_gold_key_regressions": 0
+              },
+              "5": {
+                "repairs": 19,
+                "regressions": 1,
+                "unchanged_gold_key_regressions": 0
+              }
+            }
+          }
+        },
+        "cost": {
+          "model_file_hash_seconds": 0,
+          "worker_load_seconds_including_readiness_probes": 0,
+          "new_key_forwards": 0,
+          "encoding_seconds": 0,
+          "seconds_per_key": null,
+          "resume_encoded_cache_hits": 3,
+          "original_keys_reused": 60,
+          "query_vectors_reencoded": 0,
+          "true_batch": 1,
+          "workers": 1,
+          "threads": 16,
+          "wall_seconds": 2.2345848699333146,
+          "NPU_cards": 0,
+          "actor_calls": 0,
+          "teacher_calls": 0,
+          "currency_cost": null
+        },
+        "acceptance": "main independently recomputed all1080 metrics; final source artifact packaging pending"
       }
     },
     "real_question_bank": {
       "input_review": "accepted",
-      "execution": "HTTP200_response_received; candidate compile and CPU evaluation follow",
+      "execution": "two candidates evaluated; pure mean5 aggregation collector correction and full report pending",
       "new_request_limit": 1,
       "editable": [
         "real_source_selection",
@@ -345,7 +440,190 @@
         "output_including_reasoning": 49837,
         "reasoning": 38946,
         "elapsed_seconds": 527.3480339497328
-      }
+      },
+      "candidate_results": {
+        "question-gepa-source-confidence-max": {
+          "metrics": {
+            "n": 1080,
+            "recall1_count": 822,
+            "recall3_count": 957,
+            "recall5_count": 994,
+            "mrr": 0.8331249849054764,
+            "missing": 1
+          },
+          "paired_vs": {
+            "parent": {
+              "1": {
+                "repair": 1,
+                "regression": 0,
+                "both_hit": 821,
+                "both_miss": 258,
+                "net": 1,
+                "success_retention": 1.0
+              },
+              "3": {
+                "repair": 0,
+                "regression": 0,
+                "both_hit": 957,
+                "both_miss": 123,
+                "net": 0,
+                "success_retention": 1.0
+              },
+              "5": {
+                "repair": 1,
+                "regression": 1,
+                "both_hit": 993,
+                "both_miss": 85,
+                "net": 0,
+                "success_retention": 0.9989939637826962
+              }
+            },
+            "top3": {
+              "1": {
+                "repair": 20,
+                "regression": 46,
+                "both_hit": 802,
+                "both_miss": 212,
+                "net": -26,
+                "success_retention": 0.9457547169811321
+              },
+              "3": {
+                "repair": 13,
+                "regression": 21,
+                "both_hit": 944,
+                "both_miss": 102,
+                "net": -8,
+                "success_retention": 0.9782383419689119
+              },
+              "5": {
+                "repair": 9,
+                "regression": 21,
+                "both_hit": 985,
+                "both_miss": 65,
+                "net": -12,
+                "success_retention": 0.9791252485089463
+              }
+            },
+            "mix3_w050": {
+              "1": {
+                "repair": 11,
+                "regression": 27,
+                "both_hit": 811,
+                "both_miss": 231,
+                "net": -16,
+                "success_retention": 0.9677804295942721
+              },
+              "3": {
+                "repair": 3,
+                "regression": 11,
+                "both_hit": 954,
+                "both_miss": 112,
+                "net": -8,
+                "success_retention": 0.9886010362694301
+              },
+              "5": {
+                "repair": 5,
+                "regression": 11,
+                "both_hit": 989,
+                "both_miss": 75,
+                "net": -6,
+                "success_retention": 0.989
+              }
+            }
+          }
+        },
+        "question-gepa-source-confidence-balanced": {
+          "metrics": {
+            "n": 1080,
+            "recall1_count": 838,
+            "recall3_count": 967,
+            "recall5_count": 1000,
+            "mrr": 0.843811060595525,
+            "missing": 1
+          },
+          "paired_vs": {
+            "parent": {
+              "1": {
+                "repair": 28,
+                "regression": 11,
+                "both_hit": 810,
+                "both_miss": 231,
+                "net": 17,
+                "success_retention": 0.9866017052375152
+              },
+              "3": {
+                "repair": 13,
+                "regression": 3,
+                "both_hit": 954,
+                "both_miss": 110,
+                "net": 10,
+                "success_retention": 0.9968652037617555
+              },
+              "5": {
+                "repair": 11,
+                "regression": 5,
+                "both_hit": 989,
+                "both_miss": 75,
+                "net": 6,
+                "success_retention": 0.9949698189134809
+              }
+            },
+            "top3": {
+              "1": {
+                "repair": 9,
+                "regression": 19,
+                "both_hit": 829,
+                "both_miss": 223,
+                "net": -10,
+                "success_retention": 0.9775943396226415
+              },
+              "3": {
+                "repair": 12,
+                "regression": 10,
+                "both_hit": 955,
+                "both_miss": 103,
+                "net": 2,
+                "success_retention": 0.9896373056994818
+              },
+              "5": {
+                "repair": 6,
+                "regression": 12,
+                "both_hit": 994,
+                "both_miss": 68,
+                "net": -6,
+                "success_retention": 0.9880715705765407
+              }
+            },
+            "mix3_w050": {
+              "1": {
+                "repair": 0,
+                "regression": 0,
+                "both_hit": 838,
+                "both_miss": 242,
+                "net": 0,
+                "success_retention": 1.0
+              },
+              "3": {
+                "repair": 2,
+                "regression": 0,
+                "both_hit": 965,
+                "both_miss": 113,
+                "net": 2,
+                "success_retention": 1.0
+              },
+              "5": {
+                "repair": 2,
+                "regression": 2,
+                "both_hit": 998,
+                "both_miss": 78,
+                "net": 0,
+                "success_retention": 0.998
+              }
+            }
+          }
+        }
+      },
+      "cpu_wall_seconds": 2.3004409599816427
     },
     "shared_population": "existing Fold A1080",
     "system_dependency": false,

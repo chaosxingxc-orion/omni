@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T03:17:42.783561+00:00",
+  "updated_at_utc": "2026-11-08T03:20:45.670096+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -873,7 +873,7 @@
         "P-gepa-r2-1-input",
         "P-ranking-whitespace-real-probe"
       ],
-      "status": "started_then_native_stop_admission_requested_drain_pending",
+      "status": "native_drained_zero_admitted_pending_fixed_source_successor",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
@@ -1020,8 +1020,18 @@
       "depends_on": [
         "retrieval-question-gepa-teacher"
       ],
-      "status": "planned",
-      "scope": "reuse fixed1080 and cached question cosines; evaluate full denominator and paired regression; no query/gold conditional strategy"
+      "status": "two_full1080_complete_mean5_false_rejection_fix_pending",
+      "scope": "reuse fixed1080 and cached question cosines; evaluate full denominator and paired regression; no query/gold conditional strategy",
+      "results": {
+        "source_confidence_max_R3_R5": [
+          957,
+          994
+        ],
+        "balanced_R3_R5": [
+          967,
+          1000
+        ]
+      }
     },
     {
       "id": "P-ranking-whitespace-fix",
@@ -1045,8 +1055,22 @@
       "depends_on": [
         "retrieval-description-candidate-CPU-batch"
       ],
-      "status": "assigned_existing_owner",
-      "scope": "coffee-only, maths-only, competitor+alarm; reuse encoded vectors; full1080 paired evaluation"
+      "status": "three_new_full1080_variants_complete_main_metrics_verified",
+      "scope": "coffee-only, maths-only, competitor+alarm; reuse encoded vectors; full1080 paired evaluation",
+      "results": {
+        "coffee_R3_R5": [
+          831,
+          893
+        ],
+        "maths_R3_R5": [
+          829,
+          887
+        ],
+        "combined_R3_R5": [
+          845,
+          899
+        ]
+      }
     }
   ],
   "round_policy": {
@@ -1374,7 +1398,7 @@
       "monitor_seconds": 600
     },
     "gepa_c1_successor": {
-      "status": "native_stop_admission_requested_drain_pending",
+      "status": "native_drained_zero_admitted_zero_inflight_lease_not_released",
       "request_id": "main-multi-index-whitespace-remediation-v1",
       "reason": "completed C50 and B45 invalid multi-index outcomes; repair before more large same-schema workloads"
     }
