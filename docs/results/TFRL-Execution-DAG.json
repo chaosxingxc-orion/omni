@@ -214,21 +214,33 @@
       "regression": 0
     },
     "vacancy_P": {
-      "status": "running_real_responses",
-      "completed": 72,
+      "status": "complete_main_independent_checkpoint_count",
+      "completed": 1080,
       "total": 1080,
-      "observed_utc": "2026-11-08T14:00:05.271733+00:00",
+      "Top3": 1002,
+      "repair": 4,
+      "regression": 3,
+      "wall_seconds": 687.05550104,
       "cards": 4,
       "instances": 1,
-      "ETA_seconds": null
+      "ETA_seconds": 0
     },
     "teacher_previous": "complete_requires_strategy_revision",
-    "teacher_incremental": "unique_local_dispatch_streaming_not_terminal",
+    "teacher_incremental": {
+      "status": "complete_HTTP200_stop_raw_JSON_syntax_error",
+      "input_tokens": 38660,
+      "output_tokens": 38542,
+      "total_tokens": 77202,
+      "seconds": 725.09791854,
+      "automatic_retry": false
+    },
     "subprocess_roles": [
       "engineering_vacancy_P",
       "P_case_analysis",
       "teacher_feedback_preparation"
     ],
-    "teacher_analysis": "durable_successor_waiting_on_live_observer"
+    "teacher_analysis": "active_full_semantic_review",
+    "relative_merge": "active_CPU_implementation_and_replay",
+    "official_train_coverage": "CPU_census_completed_report_review_pending"
   }
 }
