@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T06:17:01.550798+00:00",
+  "updated_at_utc": "2026-11-08T06:29:16.121407+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1564,6 +1564,14 @@
       ],
       "status": "planned_wait_ready_and_lane_release",
       "rows": 1080
+    },
+    {
+      "id": "P-consumption-gepa-teacher",
+      "resource": "CPU_EXTERNAL_TEACHER",
+      "depends_on": [],
+      "status": "request_live_headers_sse",
+      "evidence": "six full1080 runs plus 22 representative cases",
+      "blocks_npu": false
     }
   ],
   "round_policy": {
@@ -1593,10 +1601,10 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "scope": "research planning graph, not authoritative runtime queue",
-    "A": "reverse3to1 container running; rotate admitted; light-control and boundary successor preparation assigned",
-    "B": "reverse complete 942/1080; rotate1 actual container running; selection supplies preparing",
-    "C": "Sol CLI collects top3/mix3; control7513/boundary020 CPU preparation started",
-    "CPU": "dose variants complete no further R3 gain; stop local dense sweep; bidirectional and LCO continue independently",
+    "A": "rotate running at last observation; control7513 and boundary02 admission complete per owner",
+    "B": "rotate exited0; control successor bound, owner requested event handoff",
+    "C": "control7513 generation container confirmed running; boundary admission running",
+    "CPU": "GEPA consumption teacher live on local host, bidirectional/LCO independent, no new dense parameter search",
     "polling": "600 seconds or terminal signals",
     "utilization": "no fresh AI Core measurement, no full-utilization claim"
   },
