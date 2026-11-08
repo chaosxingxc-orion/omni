@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T09:45:55.175498+00:00",
+  "updated_at_utc": "2026-11-08T09:55:17.463575+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1771,7 +1771,7 @@
       "depends_on": [
         "P-LCO-model-score"
       ],
-      "status": "CLI_running_config_preparation",
+      "status": "superseded_by_user_global_topk_no_further_dispatch",
       "owner": "Terra CLI",
       "scope": "reuse frozen rankings, locked cards and A runtime; no new encoding"
     },
@@ -1781,7 +1781,7 @@
       "depends_on": [
         "P-LCO-consumption-prepare"
       ],
-      "status": "not_yet_admitted",
+      "status": "already_started_during_transition_preserve_no_successor",
       "resource_gate": "current A parent generation sealed and released; no CPU score dependency"
     },
     {
@@ -1791,7 +1791,7 @@
         "P-LCO-consumption-prepare",
         "P-LCO-consumption-A"
       ],
-      "status": "preparation_requested",
+      "status": "superseded_by_user_global_topk_no_further_dispatch",
       "resource_gate": "preceding generation release only; score asynchronous",
       "scope": "same LCO supply, reuse historical position prompt; no baseline promotion"
     },
@@ -1822,7 +1822,7 @@
       "depends_on": [
         "P-Nemotron-bidirectional-score"
       ],
-      "status": "CLI_auto_started_after_B_owner_terminal",
+      "status": "superseded_by_user_global_topk_no_further_dispatch",
       "scope": "reuse matrix; freeze gold-free rankings; prepare mean5+position"
     },
     {
@@ -1831,7 +1831,7 @@
       "depends_on": [
         "P-Nemotron-bidirectional-prepare"
       ],
-      "status": "not_yet_admitted",
+      "status": "superseded_by_user_global_topk_no_further_dispatch",
       "scope": "fixed B P3to1 OFF max128; same locked cards"
     },
     {
@@ -1841,8 +1841,50 @@
         "P-Nemotron-bidirectional-prepare",
         "P-Nemotron-bidirectional-B"
       ],
-      "status": "preparation_requested",
+      "status": "superseded_by_user_global_topk_no_further_dispatch",
       "scope": "same supply; existing position prompt; release dependency, CPU scoring async"
+    },
+    {
+      "id": "global-topk-operator",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "CLI_running",
+      "scope": "three cached models K3/5/10/15 global neighbors then variable labels"
+    },
+    {
+      "id": "train-synthetic-test-audit",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "CLI_running",
+      "scope": "full source coverage and fixed TEST sample manifest; no model evaluation"
+    },
+    {
+      "id": "global-topk-variable-consumption",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "CLI_running",
+      "scope": "configuration-driven variable1to5 card rails; outputs1 or min3; no padded labels"
+    },
+    {
+      "id": "global-topk-combination-NPU",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "global-topk-operator",
+        "global-topk-variable-consumption"
+      ],
+      "status": "preparation_not_yet_inference",
+      "scope": "predeclared neighborK15; same up-to5-label supply; output1 vs min3; development diagnostic then frozen TEST",
+      "cpu_scoring_blocks_next": false
+    },
+    {
+      "id": "global-topk-fixed-test-report",
+      "resource": "CPU_NPU",
+      "depends_on": [
+        "train-synthetic-test-audit",
+        "global-topk-combination-NPU"
+      ],
+      "status": "pending_frozen_development_selection",
+      "scope": "fixed TEST sample; no TEST error feedback or threshold tuning"
     }
   ],
   "round_policy": {
@@ -1872,25 +1914,13 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "A": {
-      "observed_at_utc": "2026-11-08T09:39:08.306990+00:00",
-      "status": "median_candidate_complete_parent_running",
-      "candidate_rows": 1080,
-      "candidate_correct": 890,
-      "candidate_wall_seconds": 816.046923,
+      "status": "old_LCO_already_started_preserved_no_successor",
       "cards": 4,
       "instances": 1,
-      "parent_last_observed_rows": 0,
-      "parent_total": 1080,
-      "parent_eta_seconds": null
+      "current_progress": null
     },
     "B": {
-      "status": "complete_groupmax_pair_parent_retained_successor_CPU_preparation",
-      "parent": 887,
-      "candidate": 885,
-      "repair": 2,
-      "regression": 4,
-      "n_per_arm": 1080,
-      "cards_per_instance": 4,
+      "status": "idle_new_global_topk_preparation",
       "inference_active": false
     },
     "CPU": "soft-correction decomposition completed pending full delivery; LCO score repair queued after analysis CLI",
