@@ -680,7 +680,7 @@
   },
   "group_policy_formal_run": {
     "resource": "CPU",
-    "state": "detached_container_running_main_verified",
+    "state": "complete_no_accepted_action_analysis_in_progress",
     "seed": 68,
     "queries_per_member": 2783,
     "members": 3,
@@ -688,6 +688,23 @@
     "depends_on": [],
     "NPU_calls": 0,
     "TEST_tuning": false,
-    "CPU_quota": 4
+    "CPU_quota": 4,
+    "distinct_states_per_member": [
+      96,
+      600,
+      600
+    ],
+    "accepted_actions": 0,
+    "final_bank_size": 68,
+    "group_wall_seconds": 199.03489691007417
+  },
+  "minimum_seed_growth_policy": {
+    "fixed_size_target": null,
+    "seed_lower_bound": 59,
+    "current_candidate_size": 68,
+    "objective": "fixed_TopK_label_coverage_and_stability",
+    "next": "diagnose_weak_representatives_and_bounded_compensation_failures_then_TRAIN_only_growth",
+    "seed_members_immutable": false,
+    "TEST_tuning": false
   }
 }
