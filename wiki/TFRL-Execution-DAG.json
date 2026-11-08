@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T11:16:45.699530+00:00",
+  "updated_at_utc": "2026-11-08T11:34:41.767009+00:00",
   "current_stage": "P",
   "instruction": "三路：召回供给、P Top3保留、开发冻结后TEST验证；根因驱动，达标后冻结P转S；不追求Top1极致",
   "resources": {
@@ -126,7 +126,7 @@
       "depends_on": [
         "teacher-global-feedback"
       ],
-      "status": "ACE_rule_family_incomplete_CPU_case_support_audit_active_no_grid",
+      "status": "count_bound_audit_complete_next_ACE_recall_teacher_package_preparing_not_sent",
       "target": "64_supply_misses"
     },
     {
@@ -135,7 +135,7 @@
       "depends_on": [
         "teacher-global-feedback"
       ],
-      "status": "B_fixture_admitted_launcher_plan_passed_request_comparison_and_ACE_activation_in_progress",
+      "status": "ACE_C1_container_running_first_response_pending_C2_live_queue_after_generation_release",
       "target": "15_supplied_but_dropped"
     },
     {
@@ -181,7 +181,16 @@
         "b-top3",
         "c-lco-top3"
       ],
-      "status": "active_readonly_source_and_archived_transport_audit",
+      "status": "complete40_body_hash_matches2160_structure_checks_no_proven_program_bug",
+      "blocks_NPU_successors": false
+    },
+    {
+      "id": "tfg-opfirst-A",
+      "resource": "CPU_THEN_NPU_A",
+      "depends_on": [
+        "teacher-global-feedback"
+      ],
+      "status": "active_CLI_preparation_no_model_call_verified",
       "blocks_NPU_successors": false
     }
   ]
