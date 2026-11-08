@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T10:56:42.178204+00:00",
+  "updated_at_utc": "2026-11-08T11:02:38.430050+00:00",
   "current_stage": "P",
   "instruction": "三路：召回供给、P Top3保留、开发冻结后TEST验证；根因驱动，达标后冻结P转S；不追求Top1极致",
   "resources": {
@@ -99,7 +99,7 @@
       "depends_on": [
         "badcase-evidence"
       ],
-      "status": "v3_29_representatives_returned_owner_for_v4_le16_not_sent",
+      "status": "v4_main_reviewed_two_unique_local_teacher_requests_dispatched_live",
       "acceptance": [
         "per_algorithm_template",
         "root_cause_strategies_not_per_case_answers",
@@ -142,7 +142,7 @@
       "id": "test-evaluation-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "active_codex_cli_cpu_only_no_TEST_inference",
+      "status": "offline_aggregator_prototype_returned_for_real_DEV_mapping_and_fixed_image_test",
       "uses_TEST_for_tuning": false
     },
     {
