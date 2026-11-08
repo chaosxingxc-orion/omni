@@ -122,3 +122,52 @@ def test_not_sent_settlement_preserves_classification_and_original_charge(tmp_pa
     assert rec['observed_requests']==[] and rec['not_sent_requests']==['request']
     assert rec['attempt']['actual']['calls']==1
     assert (args['out']/'preserved-flight.lock.json').read_bytes()==blob
+
+
+def pre_attempt_world(tmp_path, monkeypatch):
+    args, blob, session = configured_deployment(tmp_path, monkeypatch)
+    (tmp_path/'attempts/r/a.json').unlink()
+    (tmp_path/'native/r.intent.json').unlink()
+    record=json.loads(blob); record.update(study_head='a'*40, started_at='2026-01-01T00:00:01+00:00')
+    blob=json.dumps(record).encode(); (tmp_path/'locks/flight.lock').write_bytes(blob)
+    plan=json.loads(args['plan'].read_bytes());plan['expected_session_id']='resident';args['plan'].write_text(json.dumps(plan))
+    args['plan_sha256']=m.hashlib.sha256(args['plan'].read_bytes()).hexdigest()
+    doc={'Id':'f'*64,'Config':{'Env':['SAEA_OBSERVABILITY_RUN_ID=r','SAEA_OBSERVABILITY_ATTEMPT_ID=a']},
+         'State':{'Running':False,'Status':'exited','Pid':0,'StartedAt':'2026-01-01T00:00:00Z','FinishedAt':'2026-01-01T00:00:02Z'}}
+    monkeypatch.setattr(m.subprocess,'check_output',lambda argv,**kw: b'error log' if argv[1]=='logs' else json.dumps([doc]).encode())
+    import transition_serving_budget as transition
+    monkeypatch.setattr(transition,'quiescence',lambda instances:{'quiet':True})
+    args.update(container='f'*64, pre_attempt=True, lease_sha256=m.hashlib.sha256(blob).hexdigest(), expected_study_head='a'*40)
+    return args,blob,doc
+
+
+def test_pre_attempt_preserves_original_evidence(tmp_path, monkeypatch):
+    args,blob,_=pre_attempt_world(tmp_path,monkeypatch)
+    assert m.settle(**args)['new_model_calls']==0
+    assert (args['out']/'preserved-flight.lock.json').read_bytes()==blob
+    assert (args['out']/'container.log').read_bytes()==b'error log'
+    assert not (tmp_path/'locks/flight.lock').exists()
+    assert (tmp_path/'locks/generation.guard').exists()
+
+
+@pytest.mark.parametrize('fault',['attempt','intent','run','lease','container','environment','time','multiple','busy'])
+def test_pre_attempt_refuses_uncertain_custody(tmp_path,monkeypatch,fault):
+    args,blob,doc=pre_attempt_world(tmp_path,monkeypatch)
+    if fault=='attempt':(tmp_path/'attempts/r/a.json').write_text('{}')
+    elif fault in ('intent','run'):
+        path=tmp_path/('contact-journals/r/a' if fault=='intent' else 'runs/r/a');path.mkdir(parents=True)
+        (path/'unknown').write_text('x')
+    elif fault=='lease':args['lease_sha256']='0'*64
+    elif fault=='container':doc['Id']='0'*64
+    elif fault=='environment':doc['Config']['Env']=[]
+    elif fault=='time':doc['State']['FinishedAt']='2025-01-01T00:00:00Z'
+    elif fault=='multiple':
+        receipt=json.loads(args['runtime_receipt'].read_bytes()); receipt['deployment']['instances'].append(receipt['deployment']['instances'][0]);args['runtime_receipt'].write_text(json.dumps(receipt))
+        args['runtime_receipt_sha256']=m.hashlib.sha256(args['runtime_receipt'].read_bytes()).hexdigest()
+        s=tmp_path/'serving/resident/session.json';session=json.loads(s.read_bytes());session['identity']['runtime_receipt_sha256']=args['runtime_receipt_sha256'];s.write_text(json.dumps(session))
+    else:
+        import transition_serving_budget as transition
+        def busy(_):raise ValueError('busy')
+        monkeypatch.setattr(transition,'quiescence',busy)
+    with pytest.raises(ValueError):m.settle(**args)
+    assert (tmp_path/'locks/flight.lock').read_bytes()==blob
