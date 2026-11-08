@@ -13,8 +13,8 @@ FIELDS = {'min_per_label', 'scale', 'cap_per_label', 'boundary_fraction',
 def validate_config(config):
     if not isinstance(config, dict) or set(config) != FIELDS:
         raise ValueError('exact selection configuration required')
-    for key, values in [('min_per_label', (8, 16, 32)), ('scale', (2, 4, 6)),
-                        ('cap_per_label', (64, 128, 256)), ('boundary_fraction', (0, .1, .2))]:
+    for key, values in [('min_per_label', (8, 16, 32)), ('scale', (2, 4, 6, 8, 12, 16, 24, 32)),
+                        ('cap_per_label', (64, 128, 256, 512, 1024)), ('boundary_fraction', (0, .1, .2))]:
         if type(config[key]) not in (int, float) or config[key] not in values:
             raise ValueError('invalid '+key)
     for key in ('margin_weight', 'crosshub_weight', 'redundancy_weight'):
@@ -47,6 +47,11 @@ def crosshub(topidx, labels):
     return out
 
 
+def class_budget(unique_count, config):
+    validate_config(config)
+    return min(unique_count, max(config['min_per_label'], min(config['cap_per_label'], math.ceil(config['scale'] * math.sqrt(unique_count)))))
+
+
 def greedy(similarity, representatives, margin, hub, nearest_same, config):
     """Select representatives while covering every original member; columns index representatives."""
     validate_config(config)
@@ -57,7 +62,7 @@ def greedy(similarity, representatives, margin, hub, nearest_same, config):
     quality = midrank(margin); penalty = midrank(hub)
     if len(quality) != n or len(penalty) != n or len(nearest_same) != n:
         raise ValueError('original class geometry dimensions differ')
-    budget = min(k, max(config['min_per_label'], min(config['cap_per_label'], math.ceil(config['scale'] * math.sqrt(k)))))
+    budget = class_budget(k, config)
     eligible = (quality[reps] <= .25) & (np.asarray(nearest_same)[reps] >= np.median(nearest_same))
     reserve = math.ceil(budget * config['boundary_fraction']); chosen = []; audit = []
     coverage = np.zeros(n); redundancy = np.zeros(k); available = np.ones(k, dtype=bool)

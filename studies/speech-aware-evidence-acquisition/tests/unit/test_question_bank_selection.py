@@ -33,6 +33,12 @@ def test_config_exact_no_hidden_source_or_nan():
     with pytest.raises(ValueError):q.validate_config({**C,'source_ids':[1]})
     with pytest.raises(ValueError):q.validate_config({**C,'margin_weight':float('nan')})
 
+def test_budget_extension_preserves_old_and_allows_light_and_zero_pruning():
+    assert q.class_budget(745, C) == 55
+    assert q.class_budget(745, {**C, 'scale':24, 'cap_per_label':1024}) == 656
+    assert q.class_budget(745, {**C, 'scale':32, 'cap_per_label':1024}) == 745
+    assert q.class_budget(6, {**C, 'scale':32, 'cap_per_label':1024}) == 6
+
 def test_runtime_rank_uses_mask_only_and_frozen_count():
     from question_bank_selection_cli import rank
     members=[{'intent':'a','sentence_sha256':'x'},{'intent':'a','sentence_sha256':'y'},{'intent':'b','sentence_sha256':'x'}]
