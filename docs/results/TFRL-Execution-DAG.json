@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T02:28:35.938909+00:00",
+  "updated_at_utc": "2026-11-08T02:46:22.952778+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -954,7 +954,7 @@
       "depends_on": [
         "P-key-recall-analysis"
       ],
-      "status": "prepared_templates_main_reviewed",
+      "status": "accepted_exact_final_inputs_69k_proxy",
       "scope": "current full60 baseline vs ACE13 regression; source-grounded patches; no system-run dependency"
     },
     {
@@ -963,7 +963,7 @@
       "depends_on": [
         "retrieval-description-next-teacher-input"
       ],
-      "status": "prepared_new_identity_no_POST_confirmed",
+      "status": "sent_both_streaming_queue_PID3788599",
       "scope": "method-specific template + dynamic recall feedback; unique request; no old replay"
     },
     {
@@ -1259,6 +1259,18 @@
         "eta_note": "startup included; interval delta needed for steady rate",
         "current_generation_active": false
       }
+    },
+    "teacher_round3": {
+      "status": "ace_gepa_running_streaming",
+      "queue_pid": 3788599,
+      "new_requests": 2,
+      "input_proxy_tokens": {
+        "ace": 69205,
+        "gepa": 69062
+      },
+      "output_limit_each": 131072,
+      "usage_not_final": true,
+      "monitor_seconds": 600
     }
   },
   "objective": "valid_gold_intent_in_output_K_le_3_over_full_roster",
