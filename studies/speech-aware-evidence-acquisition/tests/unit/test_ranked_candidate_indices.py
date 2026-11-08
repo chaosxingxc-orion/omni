@@ -1,4 +1,6 @@
 import json
+import re
+from itertools import permutations
 import hashlib
 from dataclasses import replace
 
@@ -13,8 +15,9 @@ from test_native_episode_runner import _wire_response
 from test_rails_runner import _knowledge_snapshot
 
 
+@pytest.mark.parametrize('transport', ['json-schema', 'finite-choice-v1'])
 @pytest.mark.parametrize('input_k,output_k,answer', [(3, 1, '[2]'), (3, 2, '[2,1]'), (5, 3, '[2,1,3]'), (3, 1, '[4]'), (3, 1, '[1]'), (3, 2, '[1,1]')])
-def test_native_ranking_before_after_and_node_score(tmp_path, input_k, output_k, answer):
+def test_native_ranking_before_after_and_node_score(tmp_path, input_k, output_k, answer, transport):
     h, policy = recovery_harness(tmp_path)
     snapshot = _knowledge_snapshot()
     facet = snapshot.facets[0]
@@ -27,7 +30,7 @@ def test_native_ranking_before_after_and_node_score(tmp_path, input_k, output_k,
     template.write_text('Prefer action and object.' if answer == '[1]' else 'Order the candidates by relevance to the audio.')
     h.repo_root = tmp_path
     policy.update(max_candidates=output_k, ranking_window={'mode':'ranked-candidate-indices',
-        'input_k':input_k,'output_k':output_k,'max_tokens':128,
+        'input_k':input_k,'output_k':output_k,'max_tokens':128,'transport':transport,
         'template':{'relpath':'configs/probes/rank.txt','sha256':hashlib.sha256(template.read_bytes()).hexdigest()}}, coverage_recovery={
         'strategy':'complete-original-candidate-set-v1','max_extra_contacts':1})
     h.config = replace(h.config, intent_slot_pipeline_json=canonical(policy), perception_only=True)
@@ -53,10 +56,22 @@ def test_native_ranking_before_after_and_node_score(tmp_path, input_k, output_k,
     assert len(sent) == 1
     assert ('Prefer action and object.' if answer == '[1]' else 'Order the candidates by relevance') in json.dumps(sent[0])
     assert sent[0]['max_tokens'] == 128
-    assert 'uniqueItems' not in json.dumps(sent[0]['response_format'])
-    assert sent[0]['response_format']['json_schema']['schema']['minItems'] == output_k
-    assert sent[0]['response_format']['json_schema']['schema']['maxItems'] == output_k
-    assert sent[0]['response_format']['json_schema']['schema']['items']['enum'] == list(range(1, input_k+1))
+    if transport == 'finite-choice-v1':
+        regex = sent[0]['structured_outputs']['regex']
+        choices = [json.dumps(list(p), separators=(',', ':')) for p in permutations(range(1, input_k+1), output_k) if re.fullmatch(regex, json.dumps(list(p), separators=(',', ':')))]
+        assert not re.fullmatch(regex, '[1,1]')
+        assert not re.fullmatch(regex, '[1, 2]')
+        assert 'response_format' not in sent[0]
+        assert len(choices) == {(3, 1): 3, (3, 2): 6, (5, 3): 60}[input_k, output_k]
+        assert all(len(x) == output_k and len(set(x)) == output_k
+                   and all(1 <= i <= input_k for i in x)
+                   for x in map(json.loads, choices))
+    else:
+        assert 'uniqueItems' not in json.dumps(sent[0]['response_format'])
+        assert sent[0]['response_format']['json_schema']['schema']['minItems'] == output_k
+        assert sent[0]['response_format']['json_schema']['schema']['maxItems'] == output_k
+        assert sent[0]['response_format']['json_schema']['schema']['items']['enum'] == list(range(1, input_k+1))
+
 
 
 def test_native_ranking_to_slot_handoff(tmp_path):

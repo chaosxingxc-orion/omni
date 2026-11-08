@@ -79,7 +79,8 @@ def parse_config(raw):
         raise ValueError("intent-slot max_candidates must be 1..3")
     if 'ranking_window' in raw:
         window = raw['ranking_window']
-        if (not isinstance(window, Mapping) or set(window) != {'mode', 'input_k', 'output_k', 'max_tokens', 'template'}
+        if (not isinstance(window, Mapping) or not {'mode', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(window) <= {'mode', 'input_k', 'output_k', 'max_tokens', 'template', 'transport'}
+                or window.get('transport', 'json-schema') not in {'json-schema', 'finite-choice-v1'}
                 or window['mode'] != 'ranked-candidate-indices'
                 or (window['input_k'], window['output_k']) not in ((3, 1), (3, 2), (5, 3))
                 or type(window['max_tokens']) is not int or window['max_tokens'] < 1

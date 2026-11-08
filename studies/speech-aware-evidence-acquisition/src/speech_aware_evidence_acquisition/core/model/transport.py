@@ -1617,6 +1617,9 @@ class LlamaServerTransport:
             except ReasoningKnobError as error:
                 raise FrozenCoreError(str(error)) from error
         for key, value in decoding_params.items():
+            if key == 'response_format' and isinstance(value, Mapping) and value.get('type') == 'ranked_indices_finite_choice':
+                body['structured_outputs'] = {'regex': value['regex']}
+                continue
             if key in NATIVE_TOOL_REQUEST_CONTROL_KEYS:
                 continue
             if key in body:

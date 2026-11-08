@@ -4322,7 +4322,7 @@ async def _invoke_native_role_episode(
             template = load_repair_template(binding.repo_root, {'perception_repair_template': window['template']})
             material = replace(material,
                 instruction=template + '\n\nReturn only a JSON array of distinct candidate numbers, best first.\n' + '\n'.join(f"{r['index']}. {r['intent_id']}" for r in ranking_rows),
-                response_format=response_format(len(ranking_rows), window['output_k'])).validate()
+                response_format=response_format(len(ranking_rows), window['output_k'], window.get('transport', 'json-schema'))).validate()
         phase = program.phase(phase_id)
         if (phase.response_format_id is not None) != (material.response_format is not None):
             raise RailsRunnerError("native role response format differs from its phase")

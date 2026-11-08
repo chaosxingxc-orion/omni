@@ -1,5 +1,7 @@
 """Per-contact numbered candidates projected from actual pinned P evidence."""
 import json
+import re
+from itertools import permutations
 
 
 def bind(messages, values, *, input_k, output_k):
@@ -30,7 +32,15 @@ def bind(messages, values, *, input_k, output_k):
     return rows
 
 
-def response_format(count, output_k):
+def response_format(count, output_k, transport='json-schema'):
+    if transport == 'finite-choice-v1':
+        if (count, output_k) not in ((3, 1), (3, 2), (5, 3)):
+            raise ValueError('unsupported finite ranking window')
+        choices = [json.dumps(list(p), separators=(',', ':'))
+                   for p in permutations(range(1, count + 1), output_k)]
+        return {'type': 'ranked_indices_finite_choice', 'regex': '(' + '|'.join(map(re.escape, choices)) + ')'}
+    if transport != 'json-schema':
+        raise ValueError('unsupported ranking transport')
     return {'type': 'json_schema', 'json_schema': {'name': 'ranked_candidate_indices', 'strict': True,
         'schema': {'type': 'array', 'minItems': output_k, 'maxItems': output_k,
                    'items': {'type': 'integer', 'enum': list(range(1, count+1))}}}}

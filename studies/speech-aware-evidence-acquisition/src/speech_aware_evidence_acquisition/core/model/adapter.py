@@ -307,6 +307,11 @@ class FrozenCoreAdapter(_PayloadBindingMixin, _AttemptLifecycleMixin):
                         raise FrozenCoreError(
                             "json_schema response_format must contain a mapping schema"
                         )
+                elif response_type == "ranked_indices_finite_choice":
+                    regex = response_format.get("regex")
+                    if (set(response_format) != {"type", "regex"} or not isinstance(regex, str)
+                            or not regex or len(regex) > 8192 or "\x00" in regex):
+                        raise FrozenCoreError("invalid structured output regex")
                 else:
                     raise FrozenCoreError(
                         "decoding_params response_format type must be json_object or "
