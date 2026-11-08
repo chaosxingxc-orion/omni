@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T11:02:38.430050+00:00",
+  "updated_at_utc": "2026-11-08T11:10:34.551974+00:00",
   "current_stage": "P",
   "instruction": "三路：召回供给、P Top3保留、开发冻结后TEST验证；根因驱动，达标后冻结P转S；不追求Top1极致",
   "resources": {
@@ -135,14 +135,14 @@
       "depends_on": [
         "teacher-global-feedback"
       ],
-      "status": "prototype_incomplete_returned_owner_for_executable_channel",
+      "status": "B_fixture_stage_prepare_register_completed_admission_in_progress_no_model_calls",
       "target": "15_supplied_but_dropped"
     },
     {
       "id": "test-evaluation-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "offline_aggregator_prototype_returned_for_real_DEV_mapping_and_fixed_image_test",
+      "status": "offline_scoring_merged_main_4_fixed_image_tests_and_B1080_mapping_verified_TEST_runner_pending",
       "uses_TEST_for_tuning": false
     },
     {
@@ -173,6 +173,16 @@
       ],
       "status": "pending_verified_P_gate",
       "acceptance": "correct_intent_in_top3_for_all_nonexception_samples"
+    },
+    {
+      "id": "audio-transport-evidence-audit",
+      "resource": "CPU",
+      "depends_on": [
+        "b-top3",
+        "c-lco-top3"
+      ],
+      "status": "active_readonly_source_and_archived_transport_audit",
+      "blocks_NPU_successors": false
     }
   ]
 }
