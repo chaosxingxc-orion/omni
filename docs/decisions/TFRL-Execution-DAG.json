@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T23:44:01.557908+00:00",
+  "updated_at_utc": "2026-11-08T23:52:47.361144+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -1382,35 +1382,33 @@
   ],
   "active_tracks": [
     {
+      "id": "recall-joint-duty-evaluation",
+      "resource": "CPU",
+      "status": "running",
+      "depends_on": [],
+      "CPU_quota": 4,
+      "NPU": 0,
+      "starting_bank_size": 75,
+      "blocks_NPU": false
+    },
+    {
       "id": "P-X",
       "resource": "NPU_B",
-      "status": "running_snapshot",
-      "total": 1080,
+      "status": "running_old_snapshot",
       "completed_snapshot": 578,
+      "total": 1080,
       "snapshot_at_unix": 1794180798.245924,
       "cards": 4,
       "instances": 1,
       "depends_on": []
     },
     {
-      "id": "recall-joint-duty-proposal",
+      "id": "P-fs1-root-cause-successor",
       "resource": "CPU",
-      "owner": "Sol CLI",
-      "status": "teacher_streaming_and_formal_inputs_preparing",
+      "status": "preparation_assigned",
+      "NPU_started": false,
       "depends_on": [],
       "blocks_NPU": false
-    },
-    {
-      "id": "P-consumption-successor",
-      "resource": "CPU_AND_NPU_A",
-      "owner": "Sol CLI",
-      "status": "running_actual_model_response_verified",
-      "NPU_started": true,
-      "depends_on": [],
-      "blocks_NPU": false,
-      "NPU_launch_started": true,
-      "cards": 4,
-      "instances": 1
     }
   ],
   "round6_teacher_feedback": {
@@ -1465,7 +1463,7 @@
     "full_reports_main_accepted": true
   },
   "p_consumption_successor": {
-    "status": "running_first_real_request_response_and_inputs_main_verified",
+    "status": "complete_scored_main_pair_recount",
     "candidate": "V_fixed_supply_fs0_to1_only",
     "n": 1080,
     "CPU_admission_seconds": 494.49,
@@ -1482,15 +1480,23 @@
     "teacher_total_tokens": 57915,
     "first_response_valid": true,
     "full_accuracy_pending": true,
-    "early_ETA_not_reported": true
+    "early_ETA_not_reported": true,
+    "completed": 1080,
+    "top3": 996,
+    "top1": 895,
+    "repairs": 32,
+    "regressions": 17,
+    "promotion": false
   },
   "joint_duty_proposal": {
-    "status": "implemented_validated_teacher_unique_request_HTTP200",
+    "status": "formal_CPU_running_teacher_compiled_main_approved",
     "final_state": "bank_minus_up_to_two_old_same_label_plus_one_real_TRAIN",
     "base_size": 75,
     "global_minimum_claim": false,
     "formal_run_started": false,
     "teacher_sent": true,
-    "source_label_correction": "both example representatives qa_factoid; no proven cross-intent replacement gain"
+    "source_label_correction": "both example representatives qa_factoid; no proven cross-intent replacement gain",
+    "starting_bank_size": 75,
+    "new_gain_unproven": true
   }
 }
