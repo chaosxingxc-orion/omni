@@ -1,0 +1,90 @@
+{
+  "position": {
+    "n": 1080,
+    "parent": 881,
+    "candidate": 890,
+    "repair": 13,
+    "regression": 4,
+    "same_full_cards_and_evidence": 1080,
+    "sealed_released": true,
+    "checked_release_artifacts": [
+      "manifest",
+      "outputs",
+      "phases"
+    ],
+    "unavailable_in_local_archive": [
+      "attempt"
+    ],
+    "descriptive_exact_mcnemar_p": 0.049041748046875,
+    "rank_strata": {
+      "1": {
+        "n": 846,
+        "parent": 835,
+        "candidate": 838,
+        "repair": 5,
+        "regression": 2
+      },
+      "3": {
+        "n": 46,
+        "parent": 15,
+        "candidate": 15,
+        "repair": 2,
+        "regression": 2
+      },
+      "0": {
+        "n": 104,
+        "parent": 0,
+        "candidate": 0,
+        "repair": 0,
+        "regression": 0
+      },
+      "2": {
+        "n": 84,
+        "parent": 31,
+        "candidate": 37,
+        "repair": 6,
+        "regression": 0
+      }
+    },
+    "cost": {
+      "audio_seconds": 3084.5284374999947,
+      "calls": 1080,
+      "completion_tokens": 4371,
+      "latency_seconds": 1681.161686211126,
+      "prompt_tokens": 3335742,
+      "tool_calls": 0
+    },
+    "wall_seconds": 865.082556,
+    "seconds_per_sample": 0.8010023666666666,
+    "source_sha256": {
+      "parent_checkpoint": "ffc0296607df9660dc8932abf68b3d00794a96f71c207fc0fe46605c15816387",
+      "candidate_checkpoint": "fddb8874859216bf9ff278ce892f75454308a1c0b04d78693eb4be1f65d47dc4"
+    },
+    "interpretation": "Single adapted-fold execution; nominal paired p does not correct sequential candidate selection or inference variability; promising for replication, not stable winner"
+  },
+  "fit_capacity": {
+    "n": 1080,
+    "all_valid": true,
+    "same_cards": 1080,
+    "parent": 993,
+    "candidate": 991,
+    "repair": 0,
+    "regression": 2,
+    "http_span": 535.2170448199613,
+    "http_mean_inflight": 1.1938415990912226,
+    "http_peak": 15,
+    "http_zero_seconds": 308.3094470599899,
+    "sum_stage_seconds": {
+      "http_request": 638.9643726487411,
+      "native_fit": 3790.13149005163,
+      "native_fit_capacity_wait": 0.010046799667179585,
+      "request_render": 3935.759073040914
+    },
+    "container_wall_seconds": 853.490724,
+    "seconds_per_sample": 0.7902691888888889,
+    "sealed_released": true,
+    "checkpoint_sha256": "757cdf80be30f65e646f0fa848e47be778d4d2dbae3a1ac7b63b5394ed008450",
+    "timing_sha256": "37b54cd1be2fc492f9b0011e28177b4d64ffdbfee910b0fd507ef134b8784ddc",
+    "interpretation": "Gate wait removed but overall acceleration not observed; CPU saturation not proven; do not increase concurrency blindly"
+  }
+}

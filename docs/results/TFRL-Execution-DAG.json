@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T07:25:20.795308+00:00",
+  "updated_at_utc": "2026-11-08T08:28:12.559027+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1397,6 +1397,34 @@
       "status": "implementation_assigned_existing_A_cli",
       "purpose": "Replace per-candidate script copies with configuration-driven original prepare/register/admit/launcher chain; fail early for missing template and inconsistent source identity",
       "no_model_calls_for_validation": true
+    },
+    {
+      "id": "P-task-geometry-mask-cpu",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "complete_11_candidates_rejected_R3_908_to963_below976"
+    },
+    {
+      "id": "P-teacher-contract-correction",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "implementation_and_dryrun_in_progress_no_API"
+    },
+    {
+      "id": "P-position-paired-replication-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "preparing_actual_configs_and_admissions"
+    },
+    {
+      "id": "P-position-paired-replication-A",
+      "resource": "NPU_A_TP4",
+      "depends_on": [
+        "P-position-paired-replication-prepare"
+      ],
+      "status": "not_yet_confirmed_started",
+      "rows": 2160,
+      "design": "parent1080 then position1080, identical supply/runtime; one paired replication"
     }
   ],
   "round_policy": {

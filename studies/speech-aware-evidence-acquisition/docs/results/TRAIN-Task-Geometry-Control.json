@@ -1,0 +1,82 @@
+{
+  "status": "MAIN_FROZEN_RANKING_GOLD_JOIN_VERIFIED",
+  "n": 1080,
+  "routes": 12,
+  "freeze_sha256": "acf50991c3d412f70f7e075f688d03d69e79388325efeec57e62a7c2c1f5dfc8",
+  "metrics": {
+    "parent": {
+      "R1": 846,
+      "R3": 976,
+      "R5": 1007,
+      "MRR": 0.8496816365666978
+    },
+    "joint_df8_peer2": {
+      "R1": 795,
+      "R3": 911,
+      "R5": 945,
+      "MRR": 0.7978489655832897
+    },
+    "joint_df8_peer3": {
+      "R1": 788,
+      "R3": 908,
+      "R5": 941,
+      "MRR": 0.7938676212349647
+    },
+    "lexical_df8": {
+      "R1": 802,
+      "R3": 915,
+      "R5": 953,
+      "MRR": 0.8048150483008952
+    },
+    "joint_df10_peer2": {
+      "R1": 795,
+      "R3": 921,
+      "R5": 957,
+      "MRR": 0.8023300139457791
+    },
+    "joint_df10_peer3": {
+      "R1": 790,
+      "R3": 916,
+      "R5": 947,
+      "MRR": 0.7982947261370599
+    },
+    "lexical_df10": {
+      "R1": 806,
+      "R3": 925,
+      "R5": 960,
+      "MRR": 0.8103173540842994
+    },
+    "joint_df12_peer2": {
+      "R1": 799,
+      "R3": 923,
+      "R5": 957,
+      "MRR": 0.804766059657515
+    },
+    "joint_df12_peer3": {
+      "R1": 796,
+      "R3": 917,
+      "R5": 947,
+      "MRR": 0.8015531868195442
+    },
+    "lexical_df12": {
+      "R1": 812,
+      "R3": 927,
+      "R5": 959,
+      "MRR": 0.8136932083900131
+    },
+    "geometric_peer2": {
+      "R1": 825,
+      "R3": 963,
+      "R5": 996,
+      "MRR": 0.8352479804411527
+    },
+    "geometric_peer3": {
+      "R1": 815,
+      "R3": 951,
+      "R5": 985,
+      "MRR": 0.8263226200190132
+    }
+  },
+  "decision": "No candidate promoted; all eleven observed R3 below parent; send failure feedback to teacher, do not run NPU consumption on these masks",
+  "limitations": "Scoring/hash verification only; no independent recomputation of all geometry/masks; adapted FoldA is not confirmation set"
+}
