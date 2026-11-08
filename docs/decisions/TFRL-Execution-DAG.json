@@ -477,6 +477,27 @@
       },
       "default_bank_promoted": false,
       "model_POST_verified": 0
+    },
+    {
+      "id": "minimum70-reverse-prune",
+      "owner": "Sol CLI",
+      "resource": "CPU",
+      "status": "complete_main_accepted",
+      "depends_on": [
+        "accepted_E3_70_bank"
+      ],
+      "does_not_depend_on": [
+        "E3_report_formatting",
+        "P_transfer"
+      ],
+      "purpose": "retest_all_members_for_safe_deletion_preserving70_hits",
+      "target_size": null,
+      "NPU_cards": 0,
+      "TEST_tuning": false,
+      "attempted_deletions": 70,
+      "accepted_deletions": 0,
+      "final_size": 70,
+      "minimum_scope": "conditional_single_deletion_fixed_point_not_global"
     }
   ],
   "historical_nodes_note": "nodes and latest_recall_revision retain historical evidence; active_tracks and group_policy_round2_formal_run describe current work. Planning specification is not an execution receipt.",
