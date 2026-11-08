@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Single candidate discovery proposed policy; actual seed from runtime inputs",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "algorithm_id",
+    "status",
+    "strategies",
+    "preferred_strategy_id"
+  ],
+  "properties": {
+    "algorithm_id": {
+      "const": "TFGRPO_inspired_group_policy_feedback_search_exploration_v1"
+    },
+    "status": {
+      "const": "PROPOSED_NOT_EVALUATED"
+    },
+    "strategies": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "policy",
+          "failure_feedback_dimensions",
+          "evidence_ids",
+          "root_cause",
+          "counterevidence",
+          "falsification",
+          "expected_new_information"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$"
+          },
+          "policy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "maximum_rounds",
+              "maximum_accepted_actions",
+              "maximum_trials",
+              "maximum_pool_candidates",
+              "maximum_additions",
+              "maximum_deletions",
+              "candidates_per_error",
+              "maximum_same_label_deletions",
+              "maximum_observed_competitor_deletions",
+              "maximum_causal_chain_deletions",
+              "dependencies_per_loss",
+              "mode",
+              "proposal_order",
+              "final_joint_gate",
+              "proposal_plugin",
+              "compensation_budget"
+            ],
+            "properties": {
+              "maximum_rounds": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              },
+              "maximum_accepted_actions": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3
+              },
+              "maximum_trials": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 600
+              },
+              "maximum_pool_candidates": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 96
+              },
+              "maximum_additions": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 6
+              },
+              "maximum_deletions": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2
+              },
+              "candidates_per_error": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 6
+              },
+              "maximum_same_label_deletions": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3
+              },
+              "maximum_observed_competitor_deletions": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3
+              },
+              "maximum_causal_chain_deletions": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2
+              },
+              "dependencies_per_loss": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              },
+              "mode": {
+                "const": "compensation_chain"
+              },
+              "proposal_order": {
+                "const": "least_remaining_losses_then_repairs"
+              },
+              "final_joint_gate": {
+                "const": true
+              },
+              "proposal_plugin": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "proposal_plugin candidate-discovery-v1",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "generation",
+                  "selection",
+                  "tie_break"
+                ],
+                "properties": {
+                  "generation": {
+                    "enum": [
+                      "legacy_topn",
+                      "all_train"
+                    ]
+                  },
+                  "selection": {
+                    "enum": [
+                      "similarity",
+                      "incremental_cover",
+                      "class_round_robin",
+                      "risk_aware_cover"
+                    ]
+                  },
+                  "tie_break": {
+                    "const": "source_diversity_then_index"
+                  }
+                }
+              },
+              "compensation_budget": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mode"
+                ],
+                "properties": {
+                  "max_new_states_per_candidate": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 600
+                  },
+                  "initial_states_per_candidate": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 600
+                  },
+                  "max_new_states_per_layer": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 32
+                  },
+                  "beam_width": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8
+                  },
+                  "max_depth": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 7
+                  },
+                  "max_nonmonotone_steps": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 3
+                  },
+                  "max_loss_increase": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 32
+                  },
+                  "max_extended_primaries": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 18
+                  },
+                  "extended_min_lost_classes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 59
+                  },
+                  "mode": {
+                    "const": "causal_depth_v1"
+                  },
+                  "action_order": {
+                    "type": "array",
+                    "items": {
+                      "enum": [
+                        "add",
+                        "delete",
+                        "replace"
+                      ]
+                    },
+                    "uniqueItems": true,
+                    "minItems": 3,
+                    "maxItems": 3
+                  }
+                }
+              },
+              "acceptance_mode": {
+                "enum": [
+                  "strict_gain",
+                  "gain_or_shrink"
+                ],
+                "default": "strict_gain",
+                "description": "Preserve all gates; gain_or_shrink additionally allows strictly fewer entries relative to current accepted bank with no Q15 gain. Equal-size no-gain rejected."
+              }
+            }
+          },
+          "failure_feedback_dimensions": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "Q15_question",
+                "Q50_question",
+                "Q15_union",
+                "Q50_union",
+                "unique_labels",
+                "source_availability",
+                "KB_size",
+                "CPU_cost",
+                "engineering_validity",
+                "semantic_uncertainty"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "evidence_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "C1",
+                "C2",
+                "C3",
+                "C4"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "root_cause": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "counterevidence": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "falsification": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "expected_new_information": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "preferred_strategy_id": {
+      "type": "string"
+    }
+  }
+}

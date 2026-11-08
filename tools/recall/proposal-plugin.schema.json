@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "proposal_plugin candidate-discovery-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "generation",
+    "selection",
+    "tie_break"
+  ],
+  "properties": {
+    "generation": {
+      "enum": [
+        "legacy_topn",
+        "all_train"
+      ]
+    },
+    "selection": {
+      "enum": [
+        "similarity",
+        "incremental_cover",
+        "class_round_robin",
+        "risk_aware_cover"
+      ]
+    },
+    "tie_break": {
+      "const": "source_diversity_then_index"
+    }
+  }
+}

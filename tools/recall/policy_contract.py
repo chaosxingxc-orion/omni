@@ -18,8 +18,8 @@ JOINT = dict(COMMON, mode='joint_swap_reference', candidates_per_error=1,
              proposal_order='historical_then_similarity')
 REFERENCES = [dict(id='R0_single_insert', policy=SINGLE), dict(id='R1_cause_joint', policy=JOINT)]
 CATALOG = {
- 'single_insert_reference': 'Top2 distinct eligible TRAIN sources per current Q15 miss; no deletion. Existing 68 single-insert action family.',
- 'joint_swap_reference': 'Historical actual Q15 correct representatives plus nearest eligible TRAIN; same-label or observed regressed-query competitor deletes, depth<=2. Existing S2 action family, re-evaluated from68.',
+ 'single_insert_reference': 'Top2 distinct eligible TRAIN sources per current Q15 miss; no deletion. Frozen historical single-insert action family; execution seed comes from input refs.',
+ 'joint_swap_reference': 'Historical actual Q15 correct representatives plus nearest eligible TRAIN; same-label or observed regressed-query competitor deletes, depth<=2. Existing S2 action family, execution seed comes from input refs; cached from68 results remain historical only.',
  'alternative_representative': 'Top3..6 eligible distinct-source TRAIN per Q15 miss; keep closest as counterfactual. Test all bounded alternatives and prefer fewer induced protected loss events, then repairs, target cosine, original index. Never globally prefer weak similarity without replay evidence.',
  'compensation_chain': 'Start from one bounded proposed insertion. Along its ACTUAL protected losses add top1..4 eligible same-gold TRAIN dependencies or remove observed wrong keys; legacy at most3 adds2 deletes; optional causal_depth_v1 allows bounded6/2 with measured loss-class admission; canonical state dedup; choose smallest remaining loss-event count before repair gain. Final joint gate only.'
 }
@@ -33,7 +33,12 @@ CAUSAL_DEFAULTS = dict(max_new_states_per_candidate=24, initial_states_per_candi
  max_loss_increase=2, max_extended_primaries=0, extended_min_lost_classes=4)
 
 def validate_policy(p):
- if set(p) not in (set(COMMON)|{'mode'}, set(COMMON)|{'mode','compensation_budget'}): raise ValueError('Unsupported policy fields')
+ if 'proposal_plugin' in p:
+  from candidate_proposals import validate_plugin
+  validate_plugin(p['proposal_plugin'])
+  if p.get('mode') in ('single_insert_reference','joint_swap_reference'):raise ValueError('Reference plugin forbidden')
+ if p.get('acceptance_mode','strict_gain') not in ('strict_gain','gain_or_shrink'):raise ValueError('Unsupported acceptance_mode')
+ if set(p)-{'proposal_plugin','acceptance_mode'} not in (set(COMMON)|{'mode'}, set(COMMON)|{'mode','compensation_budget'}): raise ValueError('Unsupported policy fields')
  causal=False
  if 'compensation_budget' in p:
   b=p['compensation_budget']
@@ -68,7 +73,7 @@ def validate_policy(p):
   if not (p['maximum_additions']>=2 and p['dependencies_per_loss']>=1 and p['proposal_order']=='least_remaining_losses_then_repairs'): raise ValueError('Compensation family mismatch')
  return p
 
-def compile_group(x):
+def _compile_legacy_group(x,input_refs=None):
  x=copy.deepcopy(x)
  if x.get('algorithm_id')!=ALGORITHM or x.get('status')!='PROPOSED_NOT_EVALUATED': raise ValueError('Proposal identity/status')
  ss=x['strategies']
@@ -84,9 +89,36 @@ def compile_group(x):
   if not s['evidence_ids'] or not set(s['evidence_ids']) <= {'C1','C2','C3','C4'}: raise ValueError('Evidence references')
  if len({s['policy']['mode'] for s in ss})!=len(ss): raise ValueError('Duplicate action families')
  if x['preferred_strategy_id'] not in {s['id'] for s in ss}: raise ValueError('Preferred ID')
+ seed_identity=dict(same_seed=None,input_refs_status="UNBOUND_NO_EXECUTION_SEED_CLAIM") if input_refs is None else dict(same_seed=input_refs['seed_size'],input_refs_sha256=digest(input_refs),seed_sha256=input_refs['local_inputs']['seed']['sha256'],query_baseline_sha256=input_refs['local_inputs'].get('query_baseline',input_refs['local_inputs'].get('query68'))['sha256'])
  return dict(schema='executable-group-policies-v1',algorithm_id=ALGORITHM,status='COMPILED_NOT_EVALUATED',
-             group_sha256=digest(x),strategies=copy.deepcopy(ss),same_seed=68,
+             group_sha256=digest(x),strategies=copy.deepcopy(ss),**seed_identity,
              evaluation=dict(roles={'fit':624,'valid':1079,'FoldA':1080},depths=[15,50],description_depth=5,
               unique_label_caps={'question':{'15':15,'50':50},'union':{'15':20,'50':55}},
               preserve_initial_classes=59,preserve_initial_source_availability=True,per_query_zero_regressions=True),
-             feedback_memory_update='consume paired witnesses and centered feasible ranks; propose bounded rule delta, do not execute automatically')
+             feedback_memory_update='consume paired witnesses; historical reference seeds remain explicit, no centered rank without actual same-start evaluation; propose bounded rule delta, do not execute automatically')
+
+
+def compile_group(x,input_refs=None):
+ """Legacy groups remain compatible; explicit singleton discovery uses actual refs."""
+ if len(x.get('strategies',[]))!=1:return _compile_legacy_group(x,input_refs=input_refs)
+ if set(x)!={'algorithm_id','status','strategies','preferred_strategy_id'}:raise ValueError('Unsupported singleton output fields')
+ required={'id','policy','failure_feedback_dimensions','root_cause','counterevidence','falsification','expected_new_information','evidence_ids'}
+ if set(x['strategies'][0])!=required:raise ValueError('Unsupported singleton strategy fields')
+ if input_refs is None:raise ValueError('Single discovery requires explicit runtime input refs')
+ if type(input_refs.get('seed_size')) is not int or input_refs['seed_size']<59:raise ValueError('Explicit actual seed_size required')
+ for key in ['seed','query_baseline']:
+  entry=input_refs['local_inputs'][key]
+  if not isinstance(entry.get('path'),str) or not re.fullmatch('[0-9a-f]{64}',entry.get('sha256','')):raise ValueError('Invalid input ref: '+key)
+ ss=x['strategies'];strategy=ss[0]
+ if strategy['id'] in {r['id'] for r in REFERENCES}:raise ValueError('Historical reference cannot be singleton discovery')
+ if strategy['policy'].get('compensation_budget',{}).get('mode')!='causal_depth_v1':raise ValueError('Single discovery requires causal_depth_v1 budget')
+ if strategy['policy'].get('mode')!='compensation_chain' or 'proposal_plugin' not in strategy['policy']:raise ValueError('Single discovery requires compensation_chain and explicit proposal_plugin')
+ enriched=copy.deepcopy(x)
+ for ref in REFERENCES:
+  enriched['strategies'].append(dict(copy.deepcopy(ref),failure_feedback_dimensions=[],root_cause='Historical compiler compatibility only; not a requested execution',counterevidence='Different historical seed; no current comparison',falsification='Not executed',expected_new_information='None',evidence_ids=['C1']))
+ compiled=_compile_legacy_group(enriched,input_refs=input_refs)
+ compiled.update(group_sha256=digest(x),strategies=[copy.deepcopy(validate_strategy_policy(strategy))],same_start_group=False,historical_reference_seed=68,centered_feedback_supported=False,execution_scope='SINGLE_DISCOVERY_EXPLORATION_NOT_REFERENCE_GROUP')
+ return compiled
+
+def validate_strategy_policy(strategy):
+ out=copy.deepcopy(strategy);out['policy']=validate_policy(out['policy']);return out

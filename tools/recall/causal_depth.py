@@ -9,7 +9,7 @@ def state_hash(state):
  return digest(sorted(state))
 
 def frontier(single_state,single_eval,*,ids,primary,budget,add_cap,delete_cap,
-             losses,repairs,lost_classes,successors,test,structural,audit):
+             losses,repairs,lost_classes,successors,test,structural,audit,expand_loss_free=False):
  """Yield after each measured child; caller owns all global/local charging."""
  first=dict(state=set(single_state),evaluation=single_eval,nonmonotone=0,
             path=[],layer=0,loss=len(losses(single_eval)))
@@ -19,7 +19,7 @@ def frontier(single_state,single_eval,*,ids,primary,budget,add_cap,delete_cap,
  for layer in range(1,budget['max_depth']+1):
   choices=[];queues={f:[] for f in budget['action_order']}
   for node in sorted(nodes,key=rank):
-   if not node['loss']:continue
+   if not node['loss'] and not expand_loss_free:continue
    remaining=add_cap-len(node['state']-ids);bound=len(lost_classes(node['evaluation']))
    if bound>remaining:
     audit.append(dict(primary=primary,layer=layer,parent=state_hash(node['state']),
