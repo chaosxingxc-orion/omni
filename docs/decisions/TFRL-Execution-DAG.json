@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T18:19:35.698646+00:00",
+  "updated_at_utc": "2026-11-08T18:34:12.713864+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -564,23 +564,31 @@
     "seed_FoldA_Q15_union": 1002,
     "seed_FoldA_Q50_question": 1058,
     "seed_FoldA_Q50_union": 1062,
-    "status": "first_growth_complete_followup_queued",
+    "status": "growth68_complete_compensated_successor_queued",
     "NPU_calls": 0,
-    "final_size": 65,
+    "final_size": 68,
     "accepted_additions": 6,
-    "FoldA_Q15_question": 968,
-    "FoldA_Q15_union": 1015,
+    "FoldA_Q15_question": 971,
+    "FoldA_Q15_union": 1016,
     "FoldA_Q50_question": 1070,
     "FoldA_Q50_union": 1071,
     "CPU_wall_seconds": 165.07169253006577,
-    "followup_maximum_new_acceptances": 24
+    "followup_maximum_new_acceptances": 24,
+    "total_accepted_additions": 9,
+    "last_round_CPU_seconds": 92.44105488993227,
+    "last_stop": "finite_top2_single_insert_pool_no_zero_regression_gain"
   },
   "teacher_feedback_current": {
-    "status": "final_received_strategy_review_and_CPU_pending",
+    "status": "S1_verified133_S2_CPU_running",
     "input_tokens": 16431,
     "output_tokens": 39221,
     "total_tokens": 55652,
     "elapsed_seconds": 472.484558,
-    "new_gain_proven": false
+    "new_gain_proven": false,
+    "S1_final_size": 133,
+    "S1_FoldA_Q15_question": 1060,
+    "S1_FoldA_Q50_question": 1078,
+    "S1_new_gain_proven": "development_retrieval_only",
+    "S2_verified_result": null
   }
 }
