@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T23:52:47.361144+00:00",
+  "updated_at_utc": "2026-11-08T23:58:58.718430+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -1395,17 +1395,20 @@
       "id": "P-X",
       "resource": "NPU_B",
       "status": "running_old_snapshot",
-      "completed_snapshot": 578,
+      "completed_snapshot": 704,
       "total": 1080,
-      "snapshot_at_unix": 1794180798.245924,
+      "snapshot_at_unix": 1794181400.8178043,
       "cards": 4,
       "instances": 1,
-      "depends_on": []
+      "depends_on": [],
+      "remaining": 376,
+      "seconds_per_row_recent": 4.782316510639493,
+      "eta_at_snapshot_seconds": 1798.1510080004496
     },
     {
       "id": "P-fs1-root-cause-successor",
       "resource": "CPU",
-      "status": "preparation_assigned",
+      "status": "configurable_template_draft_and_CPU_teacher_preparing",
       "NPU_started": false,
       "depends_on": [],
       "blocks_NPU": false
@@ -1498,5 +1501,17 @@
     "source_label_correction": "both example representatives qa_factoid; no proven cross-intent replacement gain",
     "starting_bank_size": 75,
     "new_gain_unproven": true
+  },
+  "cross_component_coverage_review": {
+    "n": 1080,
+    "75_Q15_union": 1026,
+    "133_Q15_union": 1067,
+    "lost_supply": 46,
+    "new_supply": 5,
+    "fs1_correct_among_lost": 26,
+    "Q50_residual": 9,
+    "fs1_correct_among_Q50_residual": 5,
+    "new_inference": 0,
+    "sample_exclusions": 0
   }
 }
