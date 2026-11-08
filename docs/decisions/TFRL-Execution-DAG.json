@@ -680,7 +680,7 @@
   },
   "group_policy_formal_run": {
     "resource": "CPU",
-    "state": "complete_no_accepted_action_analysis_in_progress",
+    "state": "complete_negative_independent_ledger_recount_passed",
     "seed": 68,
     "queries_per_member": 2783,
     "members": 3,
@@ -696,7 +696,8 @@
     ],
     "accepted_actions": 0,
     "final_bank_size": 68,
-    "group_wall_seconds": 199.03489691007417
+    "group_wall_seconds": 199.03489691007417,
+    "cross_member_distinct_banks": 1203
   },
   "minimum_seed_growth_policy": {
     "fixed_size_target": null,
@@ -706,5 +707,21 @@
     "next": "diagnose_weak_representatives_and_bounded_compensation_failures_then_TRAIN_only_growth",
     "seed_members_immutable": false,
     "TEST_tuning": false
+  },
+  "fair_compensation_implementation": {
+    "resource": "CPU",
+    "state": "codex_process_running",
+    "depends_on": [],
+    "objective": "full_finite_pool_prescreen_measured_ranking_and_bounded_per_candidate_compensation",
+    "preserve_final_gates": true
+  },
+  "group_feedback_round2": {
+    "resource": "CPU_then_external_API",
+    "state": "codex_preparation_running_not_sent",
+    "depends_on": [],
+    "final_schema_binding_depends_on": [
+      "fair_compensation_implementation"
+    ],
+    "new_API_requests": 0
   }
 }
