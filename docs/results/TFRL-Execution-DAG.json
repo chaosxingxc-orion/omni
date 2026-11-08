@@ -1,9 +1,9 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T10:28:24.349735+00:00",
+  "updated_at_utc": "2026-11-08T10:50:42.848912+00:00",
   "current_stage": "P",
-  "instruction": "机制驱动；P独立优化后冻结P→S→D；三实例并行不做参数组合扫描",
+  "instruction": "三路：召回供给、P Top3保留、开发冻结后TEST验证；根因驱动，达标后冻结P转S；不追求Top1极致",
   "resources": {
     "inference_instances": 3,
     "cards_per_instance": 4,
@@ -49,7 +49,7 @@
         "global-rankings",
         "dynamic-interface"
       ],
-      "status": "A_profile_missing_rework_B_existing_binding_first",
+      "status": "complete_B_launched_once_A_independent_config_ready",
       "acceptance": [
         "one_B_top1_launch_only",
         "A_independent_sealed_config_successor",
@@ -62,8 +62,9 @@
       "depends_on": [
         "a-top1-prepare"
       ],
-      "status": "rerouted_B_top1_not_yet_confirmed",
-      "intended_final_lane": "B_existing_ready_binding"
+      "status": "complete_B_main_verified_900_of1080_valid1080",
+      "intended_final_lane": "B_existing_ready_binding",
+      "seconds_per_sample": 0.6243716472222222
     },
     {
       "id": "c-lco-prepare",
@@ -72,7 +73,7 @@
         "global-rankings",
         "dynamic-interface"
       ],
-      "status": "owner_returned_for_actual_implementation_not_status_only",
+      "status": "complete_current_generation_started",
       "hypothesis": "16_recovered_supply_cases_convert_to_P_hits_measure_22_supply_regressions"
     },
     {
@@ -81,7 +82,7 @@
       "depends_on": [
         "c-lco-prepare"
       ],
-      "status": "not_yet_confirmed_dispatched"
+      "status": "running_last_main_verified64_of1080_at_10_44_03UTC"
     },
     {
       "id": "downstream-triage",
@@ -89,7 +90,7 @@
       "depends_on": [
         "badcase-evidence"
       ],
-      "status": "active_cli_badcase_followup"
+      "status": "64_registered_zero_confirmed_insufficient_unresolved"
     },
     {
       "id": "teacher-global-feedback",
@@ -103,7 +104,9 @@
         "root_cause_strategies_not_per_case_answers",
         "TRAIN_calibration",
         "no_TEST_feedback",
-        "no_parameter_grid"
+        "no_parameter_grid",
+        "P_top3_retention_primary_top1_diagnostic_only",
+        "at_most16_mechanism_selected_representatives"
       ]
     },
     {
@@ -111,11 +114,64 @@
       "resource": "CPU",
       "depends_on": [
         "b-top3",
-        "a-top1",
-        "c-lco-top3"
+        "a-top1"
       ],
-      "status": "waiting_required_results_only",
+      "status": "B_pair_complete_101_top3_only_0_top1_only_C_pair_separate",
       "blocks_NPU_successors": false
+    },
+    {
+      "id": "recall-strategy-candidate",
+      "resource": "CPU",
+      "depends_on": [
+        "teacher-global-feedback"
+      ],
+      "status": "pending_teacher_strategy",
+      "target": "64_supply_misses"
+    },
+    {
+      "id": "p-retention-candidate",
+      "resource": "CPU",
+      "depends_on": [
+        "teacher-global-feedback"
+      ],
+      "status": "config_channel_in_progress_no_candidate_dispatched",
+      "target": "15_supplied_but_dropped"
+    },
+    {
+      "id": "test-evaluation-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "fixed_TEST_sample_exists_full_evaluation_entry_pending",
+      "uses_TEST_for_tuning": false
+    },
+    {
+      "id": "development-freeze",
+      "resource": "CPU",
+      "depends_on": [
+        "recall-strategy-candidate",
+        "p-retention-candidate"
+      ],
+      "status": "not_achieved",
+      "acceptance": "measured_nonexception_top3_coverage_and_regression_review"
+    },
+    {
+      "id": "frozen-test-validation",
+      "resource": "NPU_AVAILABLE",
+      "depends_on": [
+        "development-freeze",
+        "test-evaluation-prepare"
+      ],
+      "status": "not_started",
+      "final_denominator": 13078
+    },
+    {
+      "id": "s-node-optimization",
+      "resource": "CPU_NPU",
+      "depends_on": [
+        "frozen-test-validation"
+      ],
+      "status": "pending_verified_P_gate",
+      "acceptance": "correct_intent_in_top3_for_all_nonexception_samples"
     }
   ]
 }
