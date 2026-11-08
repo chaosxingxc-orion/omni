@@ -61,6 +61,17 @@ def score(roster, outputs, *, maximum, legal_ids):
                         or config.get('duplicate_candidate_policy') != 'group_v2'
                         or not config['schema'].endswith('-v2')):
                     raise ValueError('unexpected native pipeline configuration')
+                if config.get('ranking_window'):
+                    from ..rails.ranked_candidate_indices import parse
+                    ranking = output['ranking_result']
+                    selected = parse(output['text'], ranking['input'], maximum)
+                    candidate_ids = [row['intent_id'] for row in selected]
+                    if candidate_ids != ranking['candidate_ids'] or any(cid not in legal_ids for cid in candidate_ids):
+                        raise ValueError('ranking mapping differs from registered output')
+                    records.append({'sample_id': sid, 'gold_intent': gold, 'status': status,
+                                    'candidate_ids': candidate_ids, 'raw_duplicate_candidates': False,
+                                    'gold_recalled': gold in candidate_ids})
+                    continue
                 raw = document(output['text'])
                 raw_ids = [row['intent_id'] for row in raw['candidates']]
                 raw_duplicate = len(set(raw_ids)) != len(raw_ids)
@@ -91,12 +102,21 @@ def score(roster, outputs, *, maximum, legal_ids):
     n = len(records)
     counts = Counter(r['gold_intent'] for r in records)
     hits = Counter(r['gold_intent'] for r in records if r['gold_recalled'])
+    ranks = [r['candidate_ids'].index(r['gold_intent']) + 1 for r in records if r['gold_recalled']]
+    ranked = [by_id[r['sample_id']][0].get('ranking_result') for r in records if len(by_id.get(r['sample_id'], [])) == 1]
+    supplied = [r for r in records if len(by_id.get(r['sample_id'], [])) == 1
+                and isinstance(by_id[r['sample_id']][0].get('ranking_result'), Mapping)
+                and r['gold_intent'] in [v['intent_id'] for v in by_id[r['sample_id']][0]['ranking_result']['input']]]
     return {'schema': 'saea-perception-node-score-v1',
             'node_complete': all(len(by_id.get(sid, [])) == 1 for sid in ids),
             'system_complete': False, 'rows': records, 'denominator': n,
             'valid_output_count': sum(r['status'] == 'valid' for r in records),
             'raw_duplicate_candidate_rows': sum(r['raw_duplicate_candidates'] for r in records),
             'gold_recall_count': sum(r['gold_recalled'] for r in records),
+            'top1_count': sum(r == 1 for r in ranks),
+            'reciprocal_rank_sum': sum(1 / r for r in ranks),
+            **({'ranking_input_gold_count': len(supplied),
+                'ranking_input_retained_count': sum(r['gold_recalled'] for r in supplied)} if any(ranked) else {}),
             'candidate_count': sum(len(r['candidate_ids']) for r in records),
             'per_intent': {k: {'denominator': v, 'recall_count': hits[k]}
                            for k, v in sorted(counts.items())}}

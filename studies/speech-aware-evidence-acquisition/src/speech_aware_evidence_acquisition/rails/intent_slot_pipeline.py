@@ -71,12 +71,22 @@ def digest(value):
 
 def parse_config(raw):
     fields = {"schema", "slot_mode", "max_candidates", "candidate_outside_recovery"}
-    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery", "reference_normalizer", "perception_length_recovery", "perception_repair_template", "slot_length_recovery"}:
+    if not isinstance(raw, Mapping) or not fields <= set(raw) <= fields | {"ranking_window", "evidence_policy", "duplicate_candidate_policy", "node_rails", "answer_only_fallback", "coverage_recovery", "reference_normalizer", "perception_length_recovery", "perception_repair_template", "slot_length_recovery"}:
         raise ValueError("intent_slot_pipeline requires schema, slot_mode, max_candidates and candidate_outside_recovery")
     if raw["schema"] not in {SCHEMA, SCHEMA_V2} or raw["slot_mode"] not in {"batched", "per_candidate"}:
         raise ValueError("unsupported intent-slot graph/schema version or slot mode")
     if type(raw["max_candidates"]) is not int or not 1 <= raw["max_candidates"] <= 3:
         raise ValueError("intent-slot max_candidates must be 1..3")
+    if 'ranking_window' in raw:
+        window = raw['ranking_window']
+        if (not isinstance(window, Mapping) or set(window) != {'mode', 'input_k', 'output_k', 'max_tokens', 'template'}
+                or window['mode'] != 'ranked-candidate-indices'
+                or (window['input_k'], window['output_k']) not in ((3, 1), (3, 2), (5, 3))
+                or type(window['max_tokens']) is not int or window['max_tokens'] < 1
+                or window['output_k'] != raw['max_candidates']
+                or raw.get('node_rails') != 'sdk-handoff-v1'):
+            raise ValueError('invalid ranked-candidate-indices window')
+        repair_template_pin({'perception_repair_template': window['template']})
     if raw["candidate_outside_recovery"] is not False:
         raise ValueError("candidate-outside recovery is not implemented in this graph")
     if raw.get("evidence_policy", "strict") not in {"strict", "unique_source_alias_v1"}:
@@ -110,7 +120,7 @@ def parse_config(raw):
         slot_repair_template_pin(raw)
     if "coverage_recovery" in raw:
         recovery = raw["coverage_recovery"]
-        if (raw.get("node_rails") != "sdk-handoff-v1" or raw["slot_mode"] != "batched" or raw["max_candidates"] != 3
+        if (raw.get("node_rails") != "sdk-handoff-v1" or raw["slot_mode"] != "batched" or (raw["max_candidates"] != 3 and 'ranking_window' not in raw)
                 or raw.get("answer_only_fallback") not in {"off", "budgeted-v1"}
                 or not isinstance(recovery, Mapping)
                 or set(recovery) != {"strategy", "max_extra_contacts"}
@@ -414,6 +424,13 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                 or (block.get("schema") == SCHEMA_V2 and (not isinstance(response.get("text"), str) or hashlib.sha256(response["text"].encode()).hexdigest() != source["response_text_sha256"]))):
                 raise ValueError("candidate source response is absent or mismatched")
         perception_text = trace_records[block["perception_source"]["request_id"] + "/response"].get("text")
+        if block.get('ranking_result'):
+            from .ranked_candidate_indices import parse, semantic_projection
+            ranking = block['ranking_result']
+            selected = parse(perception_text, ranking['input'], len(ids))
+            if [r['intent_id'] for r in selected] != ranking['candidate_ids']:
+                raise ValueError('ranking source mapping differs')
+            perception_text = semantic_projection(selected)
         actual_candidates = candidates(perception_text, 3, duplicate_policy=block.get("duplicate_candidate_policy", "strict"))
         if [r["candidate_id"] for r in actual_candidates] != ids:
             raise ValueError("candidate ids differ from archived Perception text")
@@ -423,6 +440,8 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
             if block.get("grouping") != grouping:
                 raise ValueError("candidate grouping differs from archived Perception")
         cleaned_sources = {source["request_id"]: trace_records[source["request_id"] + "/response"]["text"] for source in sources}
+        if block.get('ranking_result'):
+            cleaned_sources[block['perception_source']['request_id']] = perception_text
         if block.get("evidence_policy") == "unique_source_alias_v1" or block.get("schema") == SCHEMA_V2:
             bindings = block.get("evidence_bindings")
             if not isinstance(bindings, list) or [b.get("stage") for b in bindings] != ["perception"] + ["slot"] * len(slots):
@@ -434,8 +453,8 @@ def validate_receipt(receipt, *, trace_records=None, snapshot_cache=None):
                     validate_inventory_against_request(binding["inventory"], trace_records[source["request_id"] + "/request"], expected)
                 if binding.get("response_text_sha256") != response.get("response_text_sha256"):
                     raise ValueError("evidence mapping response identity differs")
-                clean_text = response.get("text")
-                if normalizer:
+                clean_text = cleaned_sources[source['request_id']]
+                if normalizer and not (binding['stage'] == 'perception' and block.get('ranking_result')):
                     clean_text, ref_mapping = normalize_evidence_references(clean_text, binding["inventory"], expected,
                         policy=block.get("evidence_policy", "strict"), normalizer=normalizer)
                     expected_ref = {"policy": normalizer, "mappings": ref_mapping,

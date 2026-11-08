@@ -576,6 +576,7 @@ class _ActualEpisodeHarness:
             split_id="all",
             knowledge_snapshot=active_snapshot,
             speech_packet_bindings=self.speech_bindings,
+            bootstrap_value_ids=getattr(self, 'bootstrap_value_ids', ()),
             **source_kwargs,
             controller_policy_id=self.program.program_id,
             controller_registry=_controller_registry(

@@ -2092,10 +2092,19 @@ class NativeEpisodeWorkflow:
             from ...rails.intent_slot_pipeline import candidates as parse_candidates
             config = json.loads(self.spec.intent_slot_pipeline_json) if self.spec.intent_slot_pipeline_json else {}
             try:
-                rows = parse_candidates(response, config.get("max_candidates", 3),
-                                        duplicate_policy=config.get("duplicate_candidate_policy", "strict"))
+                if config.get('ranking_window'):
+                    indices = json.loads(response)
+                    window = config['ranking_window']
+                    if (not isinstance(indices, list) or len(indices) != window['output_k']
+                            or any(type(i) is not int or not 1 <= i <= window['input_k'] for i in indices)
+                            or len(set(indices)) != len(indices)):
+                        raise ValueError('ranking indices violate the bound window')
+                    rows = None
+                else:
+                    rows = parse_candidates(response, config.get("max_candidates", 3),
+                                            duplicate_policy=config.get("duplicate_candidate_policy", "strict"))
                 status, reason = "ok", None
-            except ValueError as error:
+            except (ValueError, TypeError) as error:
                 rows, status, reason = None, "invalid_output", str(error)
             return {"result_type": "node_outcome", "stage": "perception", "status": status,
                     "response": response, "normalized_candidates": rows,

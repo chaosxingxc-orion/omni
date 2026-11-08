@@ -2678,6 +2678,7 @@ async def _invoke_native_role_episode(
     # ceiling, delivered units) come from the run's carrier hooks.
     carrier_hooks = _carrier_hooks(getattr(config, "carrier_profile", None))
     pipeline_config = None
+    ranking_rows = None
     pipeline_validator = None
     matched_p_config = None
     if config.matched_perception_context_json is not None:
@@ -4106,7 +4107,7 @@ async def _invoke_native_role_episode(
 
     @measure("context_build", lambda phase_id, episode_state: {"sample_id": state.prepared.sample.sample_id, "phase": phase_id})
     def role_input(phase_id, episode_state):
-        nonlocal context_binding, node_context_binding
+        nonlocal context_binding, node_context_binding, ranking_rows
         if not node_rails_enabled:
             settle(next_phase=phase_id)
         elif pending:
@@ -4117,6 +4118,9 @@ async def _invoke_native_role_episode(
                 from .intent_slot_pipeline import digest
                 current = context()
                 messages, evidence = project_snapshot_messages(base_messages(current), snapshot_sha256=snapshot_sha256, values=node_snapshot_values, facets=node_snapshot_facets)
+                if pipeline_config and pipeline_config.get('ranking_window'):
+                    from .ranked_candidate_indices import bind
+                    ranking_rows = bind(messages, node_snapshot_values, **{k: pipeline_config['ranking_window'][k] for k in ('input_k', 'output_k')})
                 item = {"schema": "saea-sdk-node-handoff-v1", "policy": POLICY, "sample_id": current.sample_id,
                         "source_role": "bootstrap", "target_role": phase_id, "source_response_sha256": None,
                         "source_request_id": None, "snapshot_sha256": snapshot_sha256,
@@ -4311,11 +4315,22 @@ async def _invoke_native_role_episode(
             prompt_state = dict(episode_state, intent_slot_context=pipeline_context)
             material = replace(material, instruction=material.instruction + prompt_context(
                 prompt_pipeline_config, prompt_state, role_configs[phase_id].role_kind)).validate()
+        if pipeline_config and pipeline_config.get('ranking_window') and role_configs[phase_id].role_kind == 'perception':
+            from .ranked_candidate_indices import response_format
+            window = pipeline_config['ranking_window']
+            from .intent_slot_pipeline import load_repair_template
+            template = load_repair_template(binding.repo_root, {'perception_repair_template': window['template']})
+            material = replace(material,
+                instruction=template + '\n\nReturn only a JSON array of distinct candidate numbers, best first.\n' + '\n'.join(f"{r['index']}. {r['intent_id']}" for r in ranking_rows),
+                response_format=response_format(len(ranking_rows), window['output_k'])).validate()
         phase = program.phase(phase_id)
         if (phase.response_format_id is not None) != (material.response_format is not None):
             raise RailsRunnerError("native role response format differs from its phase")
         visits[phase_id] = {
             "query": material.instruction, "material": material, "local_ids": [], "model_contacts": 0,
+            **({'ranking_result': {'mode':'ranked-candidate-indices', 'input':copy.deepcopy(ranking_rows),
+                                   'indices':None, 'candidate_ids':[], 'status':'pending'}}
+               if ranking_rows is not None and role_configs[phase_id].role_kind == 'perception' else {}),
             # E8a: the same bounded limits this visit's instruction already
             # carries, kept so a node-context rendering can restate them
             # without inventing one (revision index, revision bound, the
@@ -4434,6 +4449,8 @@ async def _invoke_native_role_episode(
         visit = visits[request.role_id]
         material = visit["material"]
         decoding = dict(base_decoding_params or {})
+        if pipeline_config and pipeline_config.get('ranking_window') and role.role_kind == 'perception':
+            decoding['max_tokens'] = pipeline_config['ranking_window']['max_tokens']
         if material.response_format is not None:
             decoding["response_format"] = dict(material.response_format)
         names = role.tool_names
@@ -4844,7 +4861,13 @@ async def _invoke_native_role_episode(
                 kind = role_configs[request.role_id].role_kind
                 effective_text = completion.text
                 ref_mapping = None
-                if pipeline_config.get("reference_normalizer") and kind in ("perception", "slot"):
+                if kind == 'perception' and pipeline_config.get('ranking_window'):
+                    from .ranked_candidate_indices import parse, semantic_projection
+                    selected = parse(completion.text, ranking_rows, pipeline_config['ranking_window']['output_k'])
+                    effective_text = semantic_projection(selected)
+                    visit['ranking_result'].update(indices=json.loads(completion.text),
+                                                   candidate_ids=[r['intent_id'] for r in selected], status='ok')
+                if pipeline_config.get("reference_normalizer") and kind in ("perception", "slot") and not (kind == 'perception' and pipeline_config.get('ranking_window')):
                     from .intent_slot_pipeline import normalize_evidence_references
                     ids_for_refs = ([] if kind == "perception" else
                                     [row["candidate_id"] for row in visit["intent_slot_context"]["candidates"]])
@@ -4852,10 +4875,10 @@ async def _invoke_native_role_episode(
                         completion.text, visit["intent_slot_context"]["evidence_inventory"], ids_for_refs,
                         policy=pipeline_config.get("evidence_policy", "strict"),
                         normalizer=pipeline_config["reference_normalizer"])
-                validated = coverage_result["valid"] if coverage_result is not None else pipeline_validator(kind=kind,
+                validated = ([{'candidate_id': r['intent_id']} for r in selected] if kind == 'perception' and pipeline_config.get('ranking_window') else coverage_result["valid"] if coverage_result is not None else pipeline_validator(kind=kind,
                                    text=effective_text,
                                    response_format=visit["material"].response_format,
-                                   context=visit["intent_slot_context"], config=pipeline_config)
+                                   context=visit["intent_slot_context"], config=pipeline_config))
                 kind = role_configs[request.role_id].role_kind
                 if kind in ("perception", "slot"):
                     from .intent_slot_pipeline import validate_evidence_refs
@@ -5717,7 +5740,10 @@ async def _invoke_native_role_episode(
         # do not compare the sealed state to itself.
         reconstructed_text = completion.text
         context_for_replay = visits[phase_id]["intent_slot_context"]
-        if pipeline_config.get("reference_normalizer") and kind in ("perception", "slot"):
+        if kind == 'perception' and pipeline_config.get('ranking_window'):
+            from .ranked_candidate_indices import parse, semantic_projection
+            reconstructed_text = semantic_projection(parse(completion.text, ranking_rows, pipeline_config['ranking_window']['output_k']))
+        if pipeline_config.get("reference_normalizer") and kind in ("perception", "slot") and not (kind == 'perception' and pipeline_config.get('ranking_window')):
             from .intent_slot_pipeline import normalize_evidence_references
             reconstructed_text, _ = normalize_evidence_references(
                 completion.text, context_for_replay["evidence_inventory"],
@@ -5748,7 +5774,7 @@ async def _invoke_native_role_episode(
                 settle()
                 return
             from .intent_slot_pipeline import candidates
-            node_slot_ids[:] = [row["candidate_id"] for row in candidates(completion.text, pipeline_config["max_candidates"], duplicate_policy="group_v2")]
+            node_slot_ids[:] = [row["candidate_id"] for row in candidates(reconstructed_text, pipeline_config["max_candidates"], duplicate_policy="group_v2")]
             node_slot_cursor[0] = 0
             if coverage_policy:
                 coverage_state["source"] = completion
@@ -5836,7 +5862,8 @@ async def _invoke_native_role_episode(
         # Item E39 (2026-09-22): the per-role completion caps this episode
         # declares. Empty for every config written before E39, which leaves
         # every composed request byte-identical.
-        role_completion_caps=config.role_completion_caps,
+        role_completion_caps=({**config.role_completion_caps, config.role('perception').phase_id: pipeline_config['ranking_window']['max_tokens']}
+                              if pipeline_config and pipeline_config.get('ranking_window') else config.role_completion_caps),
         # Decision 283 A: the per-node thinking override map, keyed by role phase id. None for every config that declares no
         # ``thinking_policy`` -- which leaves every composed request byte-identical.
         role_thinking_policy=_role_thinking_policy(config, binding.thinking_policy),
@@ -6993,6 +7020,10 @@ async def _invoke_native_role_episode(
                         policy=pipeline_config.get("evidence_policy", "strict"),
                         normalizer=pipeline_config["reference_normalizer"])[0]
                 solver_node.clean_source = clean_source
+            if pipeline_config and pipeline_config.get('ranking_window') and role.role_kind == 'slot':
+                from .ranked_candidate_indices import parse, semantic_projection
+                solver_node.ranking_projection = lambda text: semantic_projection(
+                    parse(text, ranking_rows, pipeline_config['ranking_window']['output_k']))
             if coverage_policy and role.role_kind == "slot":
                 solver_node.coverage_result = lambda: copy.deepcopy(coverage_state["result"])
                 solver_node.coverage_successor = lambda: bool(slot_successor and coverage_state['result']['missing'])
@@ -7349,6 +7380,10 @@ async def _invoke_native_role_episode(
             for key in sorted(state.trace_buffers):
                 trace.extend_from(state.trace_buffers[key])
             node = copy.deepcopy(result)
+            if ranking_rows is not None:
+                node['ranking_result'] = copy.deepcopy(visits[config.role('perception').phase_id].get('ranking_result'))
+                if node['ranking_result'] and node.get('status') != 'ok':
+                    node['ranking_result']['status'] = node.get('status')
             node.setdefault("finish_reason", "stop")
             visit = visits.get(config.role("perception").phase_id, {})
             node["sample_id"] = state.prepared.sample.sample_id
@@ -7374,6 +7409,8 @@ async def _invoke_native_role_episode(
             if block is not None and node_rails_enabled:
                 block["node_rails"] = "sdk-handoff-v1"
                 block["node_handoffs"] = copy.deepcopy(node_handoffs)
+                if pipeline_config.get('ranking_window'):
+                    block['ranking_result'] = copy.deepcopy(visits[config.role('perception').phase_id]['ranking_result'])
                 if pipeline_config.get("reference_normalizer"):
                     block["reference_normalizer"] = pipeline_config["reference_normalizer"]
                     block["reference_config"] = copy.deepcopy(pipeline_config)

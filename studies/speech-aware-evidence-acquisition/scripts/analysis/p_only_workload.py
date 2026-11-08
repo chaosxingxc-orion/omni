@@ -51,7 +51,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
                     or type(config['collection_decoding']['temperature']) not in (int, float)
                     or not math.isfinite(config['collection_decoding']['temperature'])
                     or (mode == 'tf-collection' and (config.get('axis') != {'kind': 'control'} or config['collection_decoding']['temperature'] <= 0))
-                    or (mode == 'candidate-evaluation' and (not isinstance(config.get('axis'), dict) or config['axis'].get('kind') not in ('control', 'instruction', 'breadth') or config['collection_decoding']['temperature'] != 0))
+                    or (mode == 'candidate-evaluation' and (not isinstance(config.get('axis'), dict) or config['axis'].get('kind') not in ('control', 'instruction', 'breadth', 'ranking-window') or config['collection_decoding']['temperature'] != 0))
                     or mode not in ('tf-collection', 'candidate-evaluation')
                     or not isinstance(config.get('learning_authorization'), dict)
                     or set(config['learning_authorization']) != {'source', 'source_roster'}
@@ -61,12 +61,15 @@ class PerceptionOnlyWorkload(NodeWorkload):
         elif ('learning_mode' in config or 'collection_decoding' in config or 'learning_source_vectors' in config or config['population'].get('dataset') != 'slurp-speech-native-evo-fold-a-1080' or len(config['sample_ids']) != 1080):
             raise ValueError('original Fold A 1080 required')
         axis = config['axis']
-        if not isinstance(axis, dict) or axis.get('kind') not in ('control', 'instruction', 'breadth', 'knowledge-construction'):
+        if not isinstance(axis, dict) or axis.get('kind') not in ('control', 'instruction', 'breadth', 'knowledge-construction', 'ranking-window'):
             raise ValueError('explicit P-only axis required')
         if ((axis['kind'] == 'control' and set(axis) != {'kind'}) or
             (axis['kind'] == 'instruction' and set(axis) != {'kind', 'patch', 'template'}) or
             (axis['kind'] == 'knowledge-construction' and set(axis) != {'kind', 'publication', 'patch', 'audit'}) or
-            (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or not 1 <= axis['value'] <= 60))):
+            (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or not 1 <= axis['value'] <= 60)) or
+            (axis['kind'] == 'ranking-window' and (not {'kind', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(axis) <= {'kind', 'input_k', 'output_k', 'max_tokens', 'template', 'facet_source'}
+                or (axis['input_k'], axis['output_k']) not in ((3, 1), (3, 2), (5, 3))
+                or type(axis['max_tokens']) is not int or not 1 <= axis['max_tokens'] <= 4096))):
             raise ValueError('invalid P-only axis')
         parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation', 'learning_authorization', 'learning_source_vectors', 'learning_mode')}
         parent.update(schema='saea-intent-slot-workload-v1', node_arm='enhanced-p-slot-decision')
@@ -217,6 +220,33 @@ class PerceptionOnlyWorkload(NodeWorkload):
             if axis['value'] > inventory:
                 raise ValueError('retrieval breadth exceeds pinned intent inventory')
             supply['k'] = supply['fuse_coverage']['m'] = supply['fuse_coverage']['top_l'] = axis['value']
+        elif axis['kind'] == 'ranking-window':
+            supply = base['knowledge_stores']['intent-boundaries']['phase_supply']['perception']
+            if (supply['k'], supply['fuse_coverage']['m'], supply['fuse_coverage']['top_l']) != (8, 8, 8):
+                raise ValueError('parent retrieval breadth differs')
+            supply['k'] = supply['fuse_coverage']['m'] = supply['fuse_coverage']['top_l'] = axis['input_k']
+            if 'facet_source' in axis:
+                facet = axis['facet_source']
+                if not isinstance(facet, dict) or set(facet) != set(supply['facet_source']) or facet.get('kind') != supply['facet_source'].get('kind'):
+                    raise ValueError('ranking facet source must retain the pinned vector contract')
+                if sha(confined(data, facet['relpath'])) != facet['sha256']:
+                    raise ValueError('ranking facet source pin differs')
+                from speech_aware_evidence_acquisition.rails.knowledge import KnowledgeSnapshot
+                pin = base['knowledge_stores']['intent-boundaries']['snapshot']
+                snapshot = KnowledgeSnapshot.from_frozen_json(json.loads(confined(data, pin['relpath']).read_bytes()))
+                if snapshot.content_hash() != pin['sha256']:
+                    raise ValueError('ranking intent snapshot pin differs')
+                expected = {f.facet_id for f in snapshot.facets if f.dimension in supply['dimensions']}
+                with confined(data, facet['relpath']).open() as stream:
+                    rows = [json.loads(line) for line in stream if line.strip()]
+                if len(rows) != len(expected) or {row['id'] for row in rows} != expected:
+                    raise ValueError('ranking facet source must cover the exact intent inventory')
+                supply['facet_source'] = copy.deepcopy(facet)
+            pipeline = base['native_episode']['intent_slot_pipeline']
+            pipeline['max_candidates'] = axis['output_k']
+            pipeline['ranking_window'] = {'mode':'ranked-candidate-indices', **{k:axis[k] for k in ('input_k','output_k','max_tokens','template')}}
+            if 'coverage_recovery' in pipeline:
+                pipeline['coverage_recovery']['max_extra_contacts'] = min(pipeline['coverage_recovery']['max_extra_contacts'], axis['output_k'])
         base.pop('prepared_phase_supply', None)
         base['native_contact_fit'].update(run_id=self.RUN+'-FIT', attempt_id='fit-v1', contact_cap=6*self.ROWS)
         roster = checked['roster']

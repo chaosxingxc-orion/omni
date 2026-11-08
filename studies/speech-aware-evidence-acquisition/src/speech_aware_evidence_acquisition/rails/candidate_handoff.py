@@ -209,7 +209,11 @@ def validate_trace_handoffs(receipt, records, snapshot_cache=None):
             source = block['perception_source'] if visit['stage'] == 'slot' else block['slot_sources'][-1]['source']
             source_role = visits[0]['role_id'] if visit['stage'] == 'slot' else visits[-2]['role_id']
             source_text = records[source['request_id'] + '/response']['text']
-            if block.get('reference_normalizer'):
+            if visit['stage'] == 'slot' and block.get('ranking_result'):
+                from .ranked_candidate_indices import parse, semantic_projection
+                ranking = block['ranking_result']
+                source_text = semantic_projection(parse(source_text, ranking['input'], len(block['candidate_ids'])))
+            if block.get('reference_normalizer') and not (visit['stage'] == 'slot' and block.get('ranking_result')):
                 from .intent_slot_pipeline import normalize_evidence_references
                 binding = next(b for b, item in zip(block['evidence_bindings'],
                     [block['perception_source']] + [slot['source'] for slot in block['slot_sources']])
