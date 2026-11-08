@@ -67,7 +67,8 @@ class PerceptionOnlyWorkload(NodeWorkload):
             (axis['kind'] == 'instruction' and set(axis) != {'kind', 'patch', 'template'}) or
             (axis['kind'] == 'knowledge-construction' and set(axis) != {'kind', 'publication', 'patch', 'audit'}) or
             (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or not 1 <= axis['value'] <= 60)) or
-            (axis['kind'] == 'ranking-window' and (not {'kind', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(axis) <= {'kind', 'input_k', 'output_k', 'max_tokens', 'template', 'facet_source', 'transport'}
+            (axis['kind'] == 'ranking-window' and (not {'kind', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(axis) <= {'kind', 'input_k', 'output_k', 'max_tokens', 'template', 'facet_source', 'transport', 'source_receipts'}
+                or ('source_receipts' in axis and 'facet_source' not in axis)
                 or axis.get('transport', 'json-schema') not in {'json-schema', 'finite-choice-v1'}
                 or (axis['input_k'], axis['output_k']) not in ((3, 1), (3, 2), (5, 3))
                 or type(axis['max_tokens']) is not int or not 1 <= axis['max_tokens'] <= 4096))):
@@ -243,6 +244,18 @@ class PerceptionOnlyWorkload(NodeWorkload):
                 if len(rows) != len(expected) or {row['id'] for row in rows} != expected:
                     raise ValueError('ranking facet source must cover the exact intent inventory')
                 supply['facet_source'] = copy.deepcopy(facet)
+                if 'source_receipts' in axis:
+                    receipts = axis['source_receipts']
+                    if not isinstance(receipts, list) or not receipts:
+                        raise ValueError('ranking source receipts must be nonempty')
+                    existing = base.setdefault('preparation_source_receipts', [])
+                    for receipt in receipts:
+                        if (not isinstance(receipt, dict) or set(receipt) != {'root', 'relpath', 'sha256'}
+                                or receipt['root'] != 'data'
+                                or sha(confined(data, receipt['relpath'])) != receipt['sha256']
+                                or any(r['root'] == receipt['root'] and r['relpath'] == receipt['relpath'] for r in existing)):
+                            raise ValueError('ranking source receipt pin differs or duplicates')
+                        existing.append(copy.deepcopy(receipt))
             pipeline = base['native_episode']['intent_slot_pipeline']
             pipeline['max_candidates'] = axis['output_k']
             pipeline['ranking_window'] = {'mode':'ranked-candidate-indices', **{k:axis[k] for k in ('input_k','output_k','max_tokens','template')}}

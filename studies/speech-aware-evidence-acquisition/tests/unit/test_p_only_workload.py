@@ -81,6 +81,14 @@ def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch)
     result = job.derive(tmp_path,tmp_path,{})[0]
     assert result['knowledge_stores']['intent-boundaries']['phase_supply']['perception']['facet_source'] == new_source
     assert result['native_episode']['intent_slot_pipeline']['ranking_window']['transport'] == 'finite-choice-v1'
+    receipt = tmp_path/'source.json'; receipt.write_text('{"source":"actual"}')
+    receipt_pin = {'root':'data', **pin(receipt,tmp_path)}
+    job.config['axis']['source_receipts'] = [receipt_pin]
+    assert job.derive(tmp_path,tmp_path,{})[0]['preparation_source_receipts'] == [receipt_pin]
+    receipt.write_text('tampered')
+    with pytest.raises(ValueError, match='source receipt pin'):
+        job.derive(tmp_path,tmp_path,{})
+    receipt.write_text('{"source":"actual"}')
     vector.write_text(vector.read_text()+'\n')
     with pytest.raises(ValueError, match='facet source pin'):
         job.derive(tmp_path,tmp_path,{})
