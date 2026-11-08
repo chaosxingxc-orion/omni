@@ -132,7 +132,7 @@ def pre_attempt_world(tmp_path, monkeypatch):
     blob=json.dumps(record).encode(); (tmp_path/'locks/flight.lock').write_bytes(blob)
     plan=json.loads(args['plan'].read_bytes());plan['expected_session_id']='resident';args['plan'].write_text(json.dumps(plan))
     args['plan_sha256']=m.hashlib.sha256(args['plan'].read_bytes()).hexdigest()
-    doc={'Id':'f'*64,'Config':{'Env':['SAEA_OBSERVABILITY_RUN_ID=r','SAEA_OBSERVABILITY_ATTEMPT_ID=a']},
+    doc={'Id':'f'*64,'Mounts':[],'Config':{'Env':['SAEA_OBSERVABILITY_RUN_ID=r','SAEA_OBSERVABILITY_ATTEMPT_ID=a']},
          'State':{'Running':False,'Status':'exited','Pid':0,'StartedAt':'2026-01-01T00:00:00Z','FinishedAt':'2026-01-01T00:00:02Z'}}
     monkeypatch.setattr(m.subprocess,'check_output',lambda argv,**kw: b'error log' if argv[1]=='logs' else json.dumps([doc]).encode())
     import transition_serving_budget as transition

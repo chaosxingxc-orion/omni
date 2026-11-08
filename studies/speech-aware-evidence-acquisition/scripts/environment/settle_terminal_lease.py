@@ -91,7 +91,10 @@ def settle(repo, data, out, container, expected_run, expected_attempt, expected_
         if pre_attempt:
             no_custody()
             if guard.is_symlink() or (guard.stat().st_dev,guard.stat().st_ino)!=(guard_stat.st_dev,guard_stat.st_ino):raise ValueError('guard changed')
-            if json.loads(subprocess.check_output(['docker','inspect',container]))[0]!=doc:raise ValueError('container changed')
+            again=json.loads(subprocess.check_output(['docker','inspect',container]))[0]
+            if (any(again[k]!=doc[k] for k in ('Id','State','Config')) or
+                    sorted(again['Mounts'],key=lambda m:m['Destination'])!=sorted(doc['Mounts'],key=lambda m:m['Destination'])):
+                raise ValueError('container changed')
         out.mkdir(parents=True)
         if pre_attempt:
             publish_new(out/'container-inspect.json',subprocess.check_output(['docker','inspect',container]))
