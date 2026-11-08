@@ -1,7 +1,7 @@
 {
   "schema": "p-recall-tfrl-research-plan-v1",
   "status": "active_research_not_completed",
-  "updated_at_utc": "2026-11-08T01:34:49.342223+00:00",
+  "updated_at_utc": "2026-11-08T01:46:34.831747+00:00",
   "stage": "P",
   "primary_metric": "valid_gold_intent_in_output_K_le_3_over_full_roster",
   "max_candidates": 3,
@@ -126,7 +126,7 @@
       "source_grounded_label_description",
       "real_train_question_to_intent"
     ],
-    "existing_control": "train_text_centroid",
+    "existing_control": "centroid_historical_offline_only",
     "aggregation": "per_intent_before_fusion",
     "fusion": "configurable_rank_fusion_RRF_baseline",
     "windows": [
@@ -159,6 +159,8 @@
       "output_recallK",
       "conditional_retention",
       "latency_memory"
-    ]
+    ],
+    "intent_key_definition": "embedding_of_locked_intent_description_not_mean_question_vector",
+    "new_baseline": "all_60_locked_intent_descriptions"
   }
 }

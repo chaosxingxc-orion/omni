@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T01:42:13.169524+00:00",
+  "updated_at_utc": "2026-11-08T01:46:34.831747+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -763,7 +763,7 @@
         "P-ranking-window-runtime"
       ],
       "status": "planned",
-      "scope": "ready input and runtime before lease; parent keys may be used as control without waiting all new keys"
+      "scope": "prepare numbered description-index candidates before lease; no centroid successor dispatch"
     },
     {
       "id": "P-ranking-window-sample",
@@ -818,40 +818,43 @@
       "scope": "3 strategies adapted to numbered index protocol; fourth out-of-domain rejected"
     },
     {
-      "id": "P-rank-centroid-3-1",
+      "id": "P-rank-description-3-1",
       "resource": "NPU_ANY_TP4",
       "depends_on": [
-        "P-ranking-input-prepare"
+        "P-ranking-input-prepare",
+        "P-description-index-ready"
       ],
-      "status": "planned_inputs_preparing_not_ready",
+      "status": "planned_description_index_pending_centroid_draft_held",
       "rows": 1080,
       "input_k": 3,
       "output_k": 1,
-      "scope": "fixed centroid control; new runtime required"
+      "scope": "complete 60-description baseline; reuse existing roster and window layout"
     },
     {
-      "id": "P-rank-centroid-3-2",
+      "id": "P-rank-description-3-2",
       "resource": "NPU_ANY_TP4",
       "depends_on": [
-        "P-ranking-input-prepare"
+        "P-ranking-input-prepare",
+        "P-description-index-ready"
       ],
-      "status": "planned_inputs_preparing_not_ready",
+      "status": "planned_description_index_pending_centroid_draft_held",
       "rows": 1080,
       "input_k": 3,
       "output_k": 2,
-      "scope": "fixed centroid control; new runtime required"
+      "scope": "complete 60-description baseline; reuse existing roster and window layout"
     },
     {
-      "id": "P-rank-centroid-5-3",
+      "id": "P-rank-description-5-3",
       "resource": "NPU_ANY_TP4",
       "depends_on": [
-        "P-ranking-input-prepare"
+        "P-ranking-input-prepare",
+        "P-description-index-ready"
       ],
-      "status": "planned_inputs_preparing_not_ready",
+      "status": "planned_description_index_pending_centroid_draft_held",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
-      "scope": "fixed centroid control; new runtime required"
+      "scope": "complete 60-description baseline; reuse existing roster and window layout"
     },
     {
       "id": "P-gepa-r2-1-input",
@@ -873,7 +876,7 @@
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
-      "scope": "paired with same-window centroid control; baseline scoring is not a dispatch prerequisite"
+      "scope": "same-window description-index control; scoring asynchronous"
     },
     {
       "id": "P-gepa-r2-2-input",
@@ -895,7 +898,7 @@
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
-      "scope": "paired with same-window centroid control; baseline scoring is not a dispatch prerequisite"
+      "scope": "same-window description-index control; scoring asynchronous"
     },
     {
       "id": "P-gepa-r2-3-input",
@@ -917,7 +920,14 @@
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
-      "scope": "paired with same-window centroid control; baseline scoring is not a dispatch prerequisite"
+      "scope": "same-window description-index control; scoring asynchronous"
+    },
+    {
+      "id": "P-description-index-ready",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned",
+      "scope": "complete original 60-description embeddings, compatible query geometry, source-bound index; reuse 13 already encoded originals"
     }
   ],
   "round_policy": {
@@ -1165,7 +1175,8 @@
       "ace_construction": "response_complete_pending_candidate_review",
       "automatic_retry": false
     },
-    "queue_owner_delivery": "activation5_complete_remote_runs_continue"
+    "queue_owner_delivery": "activation5_complete_remote_runs_continue",
+    "successor_policy": "description baseline only; centroid drafts held; existing running jobs finish"
   },
   "objective": "valid_gold_intent_in_output_K_le_3_over_full_roster",
   "milestones": [
@@ -1216,5 +1227,6 @@
     "candidate_prompt_max_output_tokens": 128,
     "teacher_output_max_tokens": 131072,
     "implementation_status": "assigned_not_deployed"
-  }
+  },
+  "intent_key_definition": "locked_description_embedding; individual_question_index_separate; centroid_history_only"
 }
