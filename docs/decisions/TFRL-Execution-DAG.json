@@ -967,7 +967,7 @@
       ],
       "status": "model_response_verified",
       "rows": 1080,
-      "completed_rows": 33
+      "completed_rows": 532
     },
     {
       "id": "mask-failure-mechanism-analysis",
@@ -988,8 +988,9 @@
       "depends_on": [
         "a-median-tie-prepare"
       ],
-      "status": "container_running_model_response_unverified",
-      "rows": 1080
+      "status": "model_response_verified",
+      "rows": 1080,
+      "completed_rows": 72
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -1045,10 +1046,10 @@
     "tfrl_preparation": "deferred"
   },
   "current_dispatch": {
-    "A": "median candidate generation container running; first response not verified",
-    "B": "groupmax model inference verified33/1080; parent admitted; detached successor",
+    "A": "median candidate model response verified72/1080; parent queued",
+    "B": "groupmax model response verified532/1080; interval0.467sec/row; parent queued",
     "CPU": "soft-correction decomposition completed pending full delivery; LCO score repair queued after analysis CLI",
     "poll_seconds": 600
   },
-  "updated_at_utc": "2026-11-08T09:19:55.533046+00:00"
+  "updated_at_utc": "2026-11-08T09:23:48.902924+00:00"
 }
