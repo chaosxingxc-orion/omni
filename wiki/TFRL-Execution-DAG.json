@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T17:45:34.809610+00:00",
+  "updated_at_utc": "2026-11-08T17:54:30.126035+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -491,7 +491,7 @@
       "HTTP_seconds_per_sample": 0.3924462962962963
     },
     "P_thinking_control": {
-      "state": "generation_running_main_inspect_checkpoint273_snapshot",
+      "state": "generation_running_checkpoint400_main_snapshot",
       "control": "A_original8554_Q50D5_prompt_zero_examples",
       "change": "thinking_enabled_with_sufficient_budget",
       "rows": 1080,
@@ -508,15 +508,15 @@
       "answer_reserve_tokens": 128,
       "max_output_tokens": 3200,
       "started_utc": "2026-11-08T17:12:35Z",
-      "completed_checkpoint_snapshot": 273,
+      "completed_checkpoint_snapshot": 400,
       "first_four_valid": true,
       "first64_reasoning_budget_forced_close": true,
-      "snapshot_utc": "2026-11-08T17:42:06Z",
-      "recent_HTTP_seconds_per_sample": 4.651162790697675,
-      "snapshot_estimated_remaining_seconds": 3753.4883720930234
+      "snapshot_utc": "2026-11-08T17:52:06Z",
+      "recent_HTTP_seconds_per_sample": 4.724409448818897,
+      "snapshot_estimated_remaining_seconds": 3212.5984251968503
     },
     "second_TP4_binding": {
-      "state": "correct_log_session_registered_new_session_CPU_prepare_started_acceptance_pending",
+      "state": "actual_mount_mapping_bug_repaired_existing_register_checkpoint_resumed_admission_running",
       "resource": "CPU",
       "depends_on": [],
       "must_not_change": "B_service_or_T_inflight_state"
@@ -581,7 +581,8 @@
         "FoldA_deletion_sufficient": 5,
         "FoldA_addition_after_deletion": 3,
         "mask_provenance": "two_gold_cards_overlap_query_source_not_business_illegality"
-      }
+      },
+      "next_candidate": "initial59_class_availability_bug_corrected_CPU_prune_repair_running_no_result"
     }
   }
 }
