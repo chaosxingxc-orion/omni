@@ -120,8 +120,9 @@ def prepare_cache(keys_path, members_path, geometry_path, rankings_path, out):
 def select(cache, keys, members_path, geometry_path, rankings_path, source_geometry_path, config, out):
     validate_config(config); cache = Path(cache); expected = cache_identity([keys,members_path,geometry_path,rankings_path])
     if json.loads((cache/'identity.json').read_bytes()) != expected: raise ValueError('cached source identity differs')
-    members = json.loads(Path(members_path).read_bytes()); source = json.loads(Path(source_geometry_path).read_bytes()); intents = json.loads(Path(rankings_path).read_bytes())['intents']
+    members = json.loads(Path(members_path).read_bytes()); source = json.loads(Path(source_geometry_path).read_bytes()); intents = json.loads(Path(rankings_path).read_bytes())['intents']; geometry = np.load(geometry_path)
     if len(source) != len(members) or any(x['member_index'] != i or x['intent'] != members[i]['intent'] or x['sentence_sha256'] != members[i]['sentence_sha256'] for i,x in enumerate(source)): raise ValueError('source geometry identity differs')
+    if not np.array_equal(np.asarray([x['mean5_margin'] for x in source]), geometry['positive']-geometry['negative']) or not np.array_equal(np.asarray([x['nearest_same'] for x in source]), geometry['same_max']): raise ValueError('source geometry values differ from pinned geometry')
     chosen_all=[]; selected=[]; omitted=[]; classes={}
     for index, intent in enumerate(intents):
         path = cache/f'{index:02d}.npz'
