@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T06:36:21.176946+00:00",
+  "updated_at_utc": "2026-11-08T06:42:59.042345+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1562,7 +1562,7 @@
       "depends_on": [
         "P-selection-C-supply-ready"
       ],
-      "status": "control_running_successors_queued",
+      "status": "control_complete953_boundary_running",
       "rows": 1080
     },
     {
@@ -1577,7 +1577,7 @@
       "id": "P-gepa-behavior-A-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned_not_yet_verified_ready",
+      "status": "stage_prepare_register_complete_admission_running_per_owner",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
@@ -1597,7 +1597,7 @@
       "id": "P-gepa-behavior-B-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned_not_yet_verified_ready",
+      "status": "stage_prepare_register_complete_admission_running_per_owner",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
@@ -1663,10 +1663,10 @@
     "scope": "research planning graph, not authoritative runtime queue",
     "A": "control7513 actual generation container running; boundary ready",
     "B": "rotate complete963/1080 verified; selcontrol actual generation container running; boundary/hub queued",
-    "C": "control7513 running with real response; boundary CPU ready queued",
+    "C": "control953 complete verified; boundary running; GEPA CPU task returned to restarted owner",
     "CPU": "GEPA teacher complete; one exact behavior-first template accepted for preparation, two held; bidirectional/LCO independent",
     "polling": "600 seconds or terminal signals",
-    "utilization": "no fresh AI Core measurement, no full-utilization claim"
+    "utilization": "single 181 AI Core snapshot 7,11,10,10,26,22,31,19 percent; not sustained utilization measurement; efficiency decomposition assigned"
   },
   "objective": "valid_gold_intent_in_output_K_le_3_over_full_roster",
   "milestones": [
