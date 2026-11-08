@@ -570,7 +570,7 @@
       },
       "seed_immutable": false,
       "next": "review_seed_business_necessity_and_actual_regressions_then_targeted_delete_swap_replenish",
-      "teacher": "PREPARED_NOT_SENT_pending_regression_mechanisms",
+      "teacher": "not_sent_returned_to_owner_for_compact_evidence_and_mask_provenance",
       "regression_triage": {
         "old4451_Q_regressions": 29,
         "already_missing_in_seed": 29,
@@ -582,7 +582,12 @@
         "FoldA_addition_after_deletion": 3,
         "mask_provenance": "two_gold_cards_overlap_query_source_not_business_illegality"
       },
-      "next_candidate": "initial59_class_availability_bug_corrected_CPU_prune_repair_running_no_result"
+      "next_candidate": "143_complete_reference_checked_and_main_recounted_not_P",
+      "candidate_size": 143,
+      "candidate_FoldA_Q50": 1077,
+      "candidate_FoldA_Q50D5": 1080,
+      "candidate_FoldA_Q15": 1058,
+      "candidate_FoldA_Q15D5": 1063
     }
   }
 }
