@@ -753,8 +753,8 @@
       "id": "P-ranking-window-runtime",
       "resource": "CPU",
       "depends_on": [],
-      "status": "accepted_main_a75f34adf",
-      "scope": "98 functional/regression cases resolved; native live response not yet verified"
+      "status": "schema_and_role_cap_fixes_accepted_main_ae2a6b535",
+      "scope": "fixedimage120tests; HTTP200 short-text array compatibility probe; real_audio_resume_pending"
     },
     {
       "id": "P-ranking-input-prepare",
@@ -850,7 +850,7 @@
         "P-ranking-input-prepare",
         "P-description-index-ready"
       ],
-      "status": "HTTP400_schema_fix_required",
+      "status": "old_HTTP400_aborted_fix_probe_passed_successor_preparing",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
@@ -981,7 +981,7 @@
       "depends_on": [
         "P-real-question-mode-runtime"
       ],
-      "status": "running_CLI_3778112_fixed8_candidates",
+      "status": "fixed8_full1080_accepted_neighborhood_supplement_running",
       "scope": "real TRAIN knowledge bank coverage/deduplication/representativeness and fixed8 aggregation candidates; no system dependencies"
     }
   ],
@@ -1006,7 +1006,7 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "native_schema_uniqueItems_400_targeted_fix_in_progress",
+      "status": "transport_and_cap_fixed_compatibility_probe_passed_real_audio_successor_preparing",
       "new_ranking_response_confirmed": false,
       "all_cards_busy_claim": false
     },
@@ -1019,7 +1019,7 @@
     "all_cards_busy_claim": false,
     "A": {
       "observed_at_utc": "2026-11-08T02:28:35.938909+00:00",
-      "status": "admission_preparing_generation_not_confirmed",
+      "status": "old_attempt_drained_zero_contacts",
       "cards": 4,
       "instances": 1,
       "rows_total": 1080,
@@ -1029,7 +1029,7 @@
     },
     "B": {
       "observed_at_utc": "2026-11-08T02:28:35.938909+00:00",
-      "status": "HTTP400_uniqueItems_unsupported",
+      "status": "old_HTTP400_aborted_short_text_probe_passed",
       "cards": 4,
       "instances": 1,
       "rows_total": 1080,
@@ -1167,7 +1167,7 @@
       "automatic_retry": false
     },
     "queue_owner_delivery": "activation5_complete_remote_runs_continue",
-    "successor_policy": "pause_same_unsupported_schema_until_targeted_transport_fix_and_real_response; CPU_retrieval_and_teacher_independent",
+    "successor_policy": "resume_from_separate_fixed_source_after_retiring_old_terminal_attempts; CPU_retrieval_independent",
     "prior_generation_terminal": {
       "A": {
         "observed_at_utc": "2026-11-08T02:08:43.966386+00:00",

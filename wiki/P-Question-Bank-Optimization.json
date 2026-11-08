@@ -1,0 +1,550 @@
+{
+  "schema": "question-bank-independent-results-v1",
+  "scope": "fixed_Fold_A1080_development_only",
+  "rows": 1080,
+  "fixed_candidates": 8,
+  "metrics": {
+    "parent": {
+      "n": 1080,
+      "recall1_count": 821,
+      "recall3_count": 957,
+      "recall5_count": 994,
+      "recall1": 0.7601851851851852,
+      "recall3": 0.8861111111111111,
+      "recall5": 0.9203703703703704,
+      "mrr": 0.8325971008026146,
+      "missing": 1
+    },
+    "top2": {
+      "n": 1080,
+      "recall1_count": 841,
+      "recall3_count": 964,
+      "recall5_count": 1001,
+      "recall1": 0.7787037037037037,
+      "recall3": 0.8925925925925926,
+      "recall5": 0.9268518518518518,
+      "mrr": 0.8445765467844883,
+      "missing": 1
+    },
+    "top3": {
+      "n": 1080,
+      "recall1_count": 848,
+      "recall3_count": 965,
+      "recall5_count": 1006,
+      "recall1": 0.7851851851851852,
+      "recall3": 0.8935185185185185,
+      "recall5": 0.9314814814814815,
+      "mrr": 0.8486279351057647,
+      "missing": 1
+    },
+    "mix2_w050": {
+      "n": 1080,
+      "recall1_count": 839,
+      "recall3_count": 962,
+      "recall5_count": 996,
+      "recall1": 0.7768518518518519,
+      "recall3": 0.8907407407407407,
+      "recall5": 0.9222222222222223,
+      "mrr": 0.8431941522474485,
+      "missing": 1
+    },
+    "mix2_w075": {
+      "n": 1080,
+      "recall1_count": 828,
+      "recall3_count": 962,
+      "recall5_count": 997,
+      "recall1": 0.7666666666666667,
+      "recall3": 0.8907407407407407,
+      "recall5": 0.9231481481481482,
+      "mrr": 0.8378087450128844,
+      "missing": 1
+    },
+    "mix3_w050": {
+      "n": 1080,
+      "recall1_count": 838,
+      "recall3_count": 965,
+      "recall5_count": 1000,
+      "recall1": 0.7759259259259259,
+      "recall3": 0.8935185185185185,
+      "recall5": 0.9259259259259259,
+      "mrr": 0.8437991831665221,
+      "missing": 1
+    },
+    "mix3_w075": {
+      "n": 1080,
+      "recall1_count": 831,
+      "recall3_count": 964,
+      "recall5_count": 998,
+      "recall1": 0.7694444444444445,
+      "recall3": 0.8925925925925926,
+      "recall5": 0.924074074074074,
+      "mrr": 0.8397332459676197,
+      "missing": 1
+    },
+    "dedup_max": {
+      "n": 1080,
+      "recall1_count": 821,
+      "recall3_count": 957,
+      "recall5_count": 994,
+      "recall1": 0.7601851851851852,
+      "recall3": 0.8861111111111111,
+      "recall5": 0.9203703703703704,
+      "mrr": 0.8325971008026146,
+      "missing": 1
+    },
+    "dedup_top3": {
+      "n": 1080,
+      "recall1_count": 848,
+      "recall3_count": 965,
+      "recall5_count": 1006,
+      "recall1": 0.7851851851851852,
+      "recall3": 0.8935185185185185,
+      "recall5": 0.9314814814814815,
+      "mrr": 0.8486279351057647,
+      "missing": 1
+    }
+  },
+  "paired_vs_parent": {
+    "top2": {
+      "1": {
+        "both_hit": 804,
+        "both_miss": 222,
+        "repair": 37,
+        "regression": 17,
+        "net": 20,
+        "mean_delta": 0.018518518518518517,
+        "descriptive_paired_95_ci": [
+          0.005222063456541554,
+          0.03181497358049548
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "3": {
+        "both_hit": 950,
+        "both_miss": 109,
+        "repair": 14,
+        "regression": 7,
+        "net": 7,
+        "mean_delta": 0.006481481481481481,
+        "descriptive_paired_95_ci": [
+          -0.0018299047753739485,
+          0.01479286773833691
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "5": {
+        "both_hit": 987,
+        "both_miss": 72,
+        "repair": 14,
+        "regression": 7,
+        "net": 7,
+        "mean_delta": 0.006481481481481481,
+        "descriptive_paired_95_ci": [
+          -0.0018299047753739485,
+          0.01479286773833691
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "mrr": {
+        "mean_delta": 0.011979445981873863,
+        "descriptive_paired_95_ci": [
+          0.004565320368080302,
+          0.019393571595667423
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      }
+    },
+    "top3": {
+      "1": {
+        "both_hit": 801,
+        "both_miss": 212,
+        "repair": 47,
+        "regression": 20,
+        "net": 27,
+        "mean_delta": 0.025,
+        "descriptive_paired_95_ci": [
+          0.010213271440147314,
+          0.039786728559852685
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "3": {
+        "both_hit": 944,
+        "both_miss": 102,
+        "repair": 21,
+        "regression": 13,
+        "net": 8,
+        "mean_delta": 0.007407407407407408,
+        "descriptive_paired_95_ci": [
+          -0.0031703628322547837,
+          0.017985177647069597
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "5": {
+        "both_hit": 985,
+        "both_miss": 65,
+        "repair": 21,
+        "regression": 9,
+        "net": 12,
+        "mean_delta": 0.011111111111111112,
+        "descriptive_paired_95_ci": [
+          0.0011884799395800501,
+          0.021033742282642175
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "mrr": {
+        "mean_delta": 0.01603083430315021,
+        "descriptive_paired_95_ci": [
+          0.007476185962010702,
+          0.024585482644289718
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      }
+    },
+    "mix2_w050": {
+      "1": {
+        "both_hit": 815,
+        "both_miss": 235,
+        "repair": 24,
+        "regression": 6,
+        "net": 18,
+        "mean_delta": 0.016666666666666666,
+        "descriptive_paired_95_ci": [
+          0.006771760140469098,
+          0.026561573192864237
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "3": {
+        "both_hit": 953,
+        "both_miss": 114,
+        "repair": 9,
+        "regression": 4,
+        "net": 5,
+        "mean_delta": 0.004629629629629629,
+        "descriptive_paired_95_ci": [
+          -0.0019109787220445828,
+          0.011170237981303842
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "5": {
+        "both_hit": 992,
+        "both_miss": 82,
+        "repair": 4,
+        "regression": 2,
+        "net": 2,
+        "mean_delta": 0.001851851851851852,
+        "descriptive_paired_95_ci": [
+          -0.002594205018782785,
+          0.006297908722486489
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "mrr": {
+        "mean_delta": 0.010597051444834086,
+        "descriptive_paired_95_ci": [
+          0.005323834332869486,
+          0.015870268556798687
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      }
+    },
+    "mix2_w075": {
+      "1": {
+        "both_hit": 817,
+        "both_miss": 248,
+        "repair": 11,
+        "regression": 4,
+        "net": 7,
+        "mean_delta": 0.006481481481481481,
+        "descriptive_paired_95_ci": [
+          -0.0005398795094339482,
+          0.01350284247239691
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "3": {
+        "both_hit": 955,
+        "both_miss": 116,
+        "repair": 7,
+        "regression": 2,
+        "net": 5,
+        "mean_delta": 0.004629629629629629,
+        "descriptive_paired_95_ci": [
+          -0.0008103277886528136,
+          0.010069587047912072
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "5": {
+        "both_hit": 994,
+        "both_miss": 83,
+        "repair": 3,
+        "regression": 0,
+        "net": 3,
+        "mean_delta": 0.002777777777777778,
+        "descriptive_paired_95_ci": [
+          -0.0003626591285691037,
+          0.0059182146841246595
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "mrr": {
+        "mean_delta": 0.005211644210269956,
+        "descriptive_paired_95_ci": [
+          0.0014616346336899784,
+          0.008961653786849932
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      }
+    },
+    "mix3_w050": {
+      "1": {
+        "both_hit": 810,
+        "both_miss": 231,
+        "repair": 28,
+        "regression": 11,
+        "net": 17,
+        "mean_delta": 0.01574074074074074,
+        "descriptive_paired_95_ci": [
+          0.004440941777502604,
+          0.027040539703978874
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "3": {
+        "both_hit": 954,
+        "both_miss": 112,
+        "repair": 11,
+        "regression": 3,
+        "net": 8,
+        "mean_delta": 0.007407407407407408,
+        "descriptive_paired_95_ci": [
+          0.0006282394085478302,
+          0.014186575406266985
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "5": {
+        "both_hit": 989,
+        "both_miss": 75,
+        "repair": 11,
+        "regression": 5,
+        "net": 6,
+        "mean_delta": 0.005555555555555556,
+        "descriptive_paired_95_ci": [
+          -0.0016994976315855663,
+          0.012810608742696678
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "mrr": {
+        "mean_delta": 0.011202082363907559,
+        "descriptive_paired_95_ci": [
+          0.004983085499398941,
+          0.017421079228416177
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      }
+    },
+    "mix3_w075": {
+      "1": {
+        "both_hit": 816,
+        "both_miss": 244,
+        "repair": 15,
+        "regression": 5,
+        "net": 10,
+        "mean_delta": 0.009259259259259259,
+        "descriptive_paired_95_ci": [
+          0.001158218384047751,
+          0.017360300134470767
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "3": {
+        "both_hit": 955,
+        "both_miss": 114,
+        "repair": 9,
+        "regression": 2,
+        "net": 7,
+        "mean_delta": 0.006481481481481481,
+        "descriptive_paired_95_ci": [
+          0.0004720647654029046,
+          0.012490898197560059
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "5": {
+        "both_hit": 993,
+        "both_miss": 81,
+        "repair": 5,
+        "regression": 1,
+        "net": 4,
+        "mean_delta": 0.003703703703703704,
+        "descriptive_paired_95_ci": [
+          -0.0007382319948381622,
+          0.00814563940224557
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "mrr": {
+        "mean_delta": 0.00713614516500514,
+        "descriptive_paired_95_ci": [
+          0.002837690243039377,
+          0.011434600086970902
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      }
+    },
+    "dedup_max": {
+      "1": {
+        "both_hit": 821,
+        "both_miss": 259,
+        "repair": 0,
+        "regression": 0,
+        "net": 0,
+        "mean_delta": 0.0,
+        "descriptive_paired_95_ci": [
+          0.0,
+          0.0
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "3": {
+        "both_hit": 957,
+        "both_miss": 123,
+        "repair": 0,
+        "regression": 0,
+        "net": 0,
+        "mean_delta": 0.0,
+        "descriptive_paired_95_ci": [
+          0.0,
+          0.0
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "5": {
+        "both_hit": 994,
+        "both_miss": 86,
+        "repair": 0,
+        "regression": 0,
+        "net": 0,
+        "mean_delta": 0.0,
+        "descriptive_paired_95_ci": [
+          0.0,
+          0.0
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "mrr": {
+        "mean_delta": 0.0,
+        "descriptive_paired_95_ci": [
+          0.0,
+          0.0
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      }
+    },
+    "dedup_top3": {
+      "1": {
+        "both_hit": 801,
+        "both_miss": 212,
+        "repair": 47,
+        "regression": 20,
+        "net": 27,
+        "mean_delta": 0.025,
+        "descriptive_paired_95_ci": [
+          0.010213271440147314,
+          0.039786728559852685
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "3": {
+        "both_hit": 944,
+        "both_miss": 102,
+        "repair": 21,
+        "regression": 13,
+        "net": 8,
+        "mean_delta": 0.007407407407407408,
+        "descriptive_paired_95_ci": [
+          -0.0031703628322547837,
+          0.017985177647069597
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "5": {
+        "both_hit": 985,
+        "both_miss": 65,
+        "repair": 21,
+        "regression": 9,
+        "net": 12,
+        "mean_delta": 0.011111111111111112,
+        "descriptive_paired_95_ci": [
+          0.0011884799395800501,
+          0.021033742282642175
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      },
+      "mrr": {
+        "mean_delta": 0.01603083430315021,
+        "descriptive_paired_95_ci": [
+          0.007476185962010702,
+          0.024585482644289718
+        ],
+        "method": "Paired normal approximation over query differences; no multiple-candidate adjustment; development-only"
+      }
+    }
+  },
+  "retained_candidates": [
+    "top3",
+    "mix3_w050"
+  ],
+  "knowledge_bank": {
+    "real_TRAIN_entries": 8554,
+    "covered_intents": 59,
+    "unique_sentences": 8549,
+    "lexical_groups": 8500,
+    "missing_intent": "cooking_query",
+    "legal_new_entries_59_covered_intents": 0,
+    "missing_intent_source_audit": "pending"
+  },
+  "timing_seconds": {
+    "input_load": 17.543550139991567,
+    "cosine_matrix": 3.2948081099893898,
+    "original_support": 0.5035850399872288,
+    "dedup_support": 0.5059514899039641,
+    "per_candidate_aggregation": {
+      "top2": 0.05377865000627935,
+      "top3": 0.053830820019356906,
+      "mix2_w050": 0.05388099001720548,
+      "mix2_w075": 0.05382193997502327,
+      "mix3_w050": 0.053734489949420094,
+      "mix3_w075": 0.057878330000676215,
+      "dedup_max": 0.05110390007030219,
+      "dedup_top3": 0.053762730094604194
+    },
+    "retrieval_wall": 23.46728489000816,
+    "scoring_wall": 5.395268999971449
+  },
+  "all_attempts_wall_seconds": 62.757359,
+  "resources": {
+    "cpu_limit": 4,
+    "blas_threads": 1,
+    "memory_limit_gib": 8,
+    "npu_cards": 0,
+    "instances": 1,
+    "new_model_calls": 0,
+    "new_teacher_calls": 0,
+    "cost_tokens": 0,
+    "remaining_samples": 0,
+    "remaining_seconds": 0,
+    "cpu_monetary_cost": "Unknown: host billing rate unavailable"
+  },
+  "new_model_calls": 0,
+  "verified_delivery_files": 71,
+  "sourcepins_sha256": "25c3ed12a58b68b59dc86b263ed60db28255041cb347db0da0447da1237b852f",
+  "generalization_proven": false
+}
