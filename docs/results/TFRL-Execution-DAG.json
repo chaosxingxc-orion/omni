@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T08:43:59.387377+00:00",
+  "updated_at_utc": "2026-11-08T09:39:08.306990+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1422,7 +1422,7 @@
       "depends_on": [
         "P-position-paired-replication-prepare"
       ],
-      "status": "parent_real_inference_352_of1080_position_queued_after_release",
+      "status": "complete_parent885_position891_repair9_regression3",
       "rows": 2160,
       "design": "parent1080 then position1080, identical supply/runtime; one paired replication",
       "completed_rows": 352
@@ -1444,6 +1444,57 @@
       "resource": "CPU",
       "depends_on": [],
       "status": "running_full_legal_TRAIN_and_fixed_audio_matrix_no_API"
+    },
+    {
+      "id": "P-LCO-model-score",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "complete_independent1080_metrics_review",
+      "result": {
+        "parent_R3": 976,
+        "candidate_R3": 1000,
+        "repair": 43,
+        "regression": 19
+      },
+      "evidence": "Embedding-Model-Retrieval-Comparison"
+    },
+    {
+      "id": "P-LCO-consumption-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-LCO-model-score"
+      ],
+      "status": "CLI_running_config_preparation",
+      "owner": "Terra CLI",
+      "scope": "reuse frozen rankings, locked cards and A runtime; no new encoding"
+    },
+    {
+      "id": "P-LCO-consumption-A",
+      "resource": "NPU_A_TP4",
+      "depends_on": [
+        "P-LCO-consumption-prepare"
+      ],
+      "status": "not_yet_admitted",
+      "resource_gate": "current A parent generation sealed and released; no CPU score dependency"
+    },
+    {
+      "id": "P-LCO-position-A",
+      "resource": "NPU_A_TP4",
+      "depends_on": [
+        "P-LCO-consumption-prepare",
+        "P-LCO-consumption-A"
+      ],
+      "status": "preparation_requested",
+      "resource_gate": "preceding generation release only; score asynchronous",
+      "scope": "same LCO supply, reuse historical position prompt; no baseline promotion"
+    },
+    {
+      "id": "P-teacher-compact-feedback",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "v3_dryrun_pass_semantic_revision_v4_in_progress",
+      "owner": "Sol CLI",
+      "scope": "classifier scope and normalization cancellation; model comparison separate from strategy rewards; no API sent"
     }
   ],
   "round_policy": {
@@ -1485,50 +1536,27 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "observed_at_utc": "2026-11-08T03:10:45.435376+00:00",
-      "status": "completed_scored",
+      "observed_at_utc": "2026-11-08T09:39:08.306990+00:00",
+      "status": "median_candidate_complete_parent_running",
+      "candidate_rows": 1080,
+      "candidate_correct": 890,
+      "candidate_wall_seconds": 816.046923,
       "cards": 4,
       "instances": 1,
-      "rows_complete": 1080,
-      "rows_total": 1080,
-      "valid_outputs": 1080,
-      "output_correct": 712,
-      "output_k": 1,
-      "wall_seconds": 833.285011,
-      "wall_seconds_per_row": 0.7715601953703705,
-      "mean_request_seconds": 1.652496823718711,
-      "row_cost": {
-        "audio_seconds": 3084.528437499994,
-        "calls": 1080,
-        "completion_tokens": 5376,
-        "latency_seconds": 1784.6965696162079,
-        "prompt_tokens": 3089405,
-        "tool_calls": 0
-      },
-      "eta_seconds": 0
+      "parent_last_observed_rows": 0,
+      "parent_total": 1080,
+      "parent_eta_seconds": null
     },
     "B": {
-      "observed_at_utc": "2026-11-08T03:14:59.861273+00:00",
-      "status": "completed_scored",
+      "observed_at_utc": "2026-11-08T09:39:08.306990+00:00",
+      "status": "groupmax_candidate_complete_parent_running",
+      "candidate_rows": 1080,
+      "candidate_correct": 885,
+      "candidate_wall_seconds": 825.660957,
       "cards": 4,
       "instances": 1,
-      "rows_complete": 1080,
-      "rows_total": 1080,
-      "valid_outputs": 1035,
-      "output_correct": 832,
-      "output_k": 3,
-      "wall_seconds": 901.442039,
-      "wall_seconds_per_row": 0.8346685546296296,
-      "mean_request_seconds": 4.296727410571101,
-      "row_cost": {
-        "audio_seconds": 3637.904437499991,
-        "calls": 1265,
-        "completion_tokens": 43431,
-        "latency_seconds": 5435.360174372443,
-        "prompt_tokens": 4063726,
-        "tool_calls": 0
-      },
-      "eta_seconds": 0
+      "parent_progress": null,
+      "parent_eta_seconds": null
     },
     "C": {
       "observed_at_utc": "2026-11-08T03:11:02.154166+00:00",
