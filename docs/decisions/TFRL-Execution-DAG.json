@@ -655,10 +655,10 @@
   },
   "group_policy_feedback": {
     "resource": "CPU_API_local",
-    "state": "final_evidence_revision_in_progress_NOT_SENT",
+    "state": "one_unique_API_request_live_HTTP200_stream_persisting",
     "algorithm": "TFGRPO_inspired_group_policy_feedback_search_exploration_v1",
     "paper_reproduction": false,
-    "API_requests_sent": 0,
+    "API_requests_sent": 1,
     "max_output_tokens": 131072,
     "fixed_references": 2,
     "maximum_new_policy": 1,
@@ -671,7 +671,7 @@
   },
   "group_policy_cpu_executor": {
     "resource": "CPU",
-    "state": "resume_implementation_subprocess_started",
+    "state": "trial_resume_validation_passed_accepted_action_validation_rework_active",
     "formal_group_runs": 0
   }
 }
