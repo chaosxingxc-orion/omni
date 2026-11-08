@@ -256,3 +256,45 @@ def test_projected_view_refuses_literal_instruction_source_before_roster_loading
         )
 
 
+
+
+def test_frozen_runtime_batch_loads_contract_once_and_new_batch_revalidates(slurp_world, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    import json
+    import os
+    from speech_aware_evidence_acquisition.data import slurp_contract_cache as cache
+    from speech_aware_evidence_acquisition.rails.adapters import slurp as base
+
+    lock = load_lock(slurp_world.lock_path)
+    calls = 0
+    original = base.load_cached_slurp_contract
+
+    def counted(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(base, "load_cached_slurp_contract", counted)
+
+    def new_batch():
+        return RuntimeSlurpAdapter(lock, slurp_world.data_root, repo_root=REPO_ROOT,
+            split_id="devel", samples=(_sample(),), instruction_text=_INSTRUCTION)
+
+    adapter = new_batch()
+    expected = cache.load_cached_slurp_contract(lock, slurp_world.data_root)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(lambda _: adapter.build_task_contract(_sample(), None), range(1080)))
+    assert results == [expected] * 1080
+    assert calls == 1
+
+    _, _, metadata = cache._governed_roots(lock, slurp_world.data_root)
+    train = metadata / cache._SPLIT_FILES["train"]
+    stat = train.stat()
+    rows = [json.loads(line) for line in train.read_text().splitlines() if line.strip()]
+    rows[0]["scenario"] = "new_runtime_scenario"
+    train.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+    os.utime(train, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+    assert adapter.build_task_contract(_sample(), None) == expected
+    updated = new_batch().build_task_contract(_sample(), None)
+    assert calls == 2
+    assert updated != expected and "new_runtime_scenario" in updated

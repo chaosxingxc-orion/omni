@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from threading import RLock
 from typing import Mapping
 
 from ...core.base import TASK_ADAPTERS
@@ -170,6 +171,10 @@ class RuntimeSlurpAdapter(SlurpAdapter):
                 raise RuntimeViewError(
                     "runtime SLURP instruction must contain its projected label inventory"
                 )
+        # A runtime adapter binds one frozen batch. Reuse the verified contract
+        # within it; the general source cache still hashes bytes on every load.
+        self._runtime_task_contract = self._projected_task_contract
+        self._task_contract_lock = RLock()
         self._samples = tuple(samples)
         _assert_sample_namespaces(
             self._samples, split_id=split_id, split_role=split_role,
@@ -199,9 +204,15 @@ class RuntimeSlurpAdapter(SlurpAdapter):
         return self._instruction_text
 
     def build_task_contract(self, sample, obs):
-        if self._projected_task_contract is not None:
-            return self._projected_task_contract
-        return super().build_task_contract(sample, obs)
+        """Bind the TRAIN-only contract once for this frozen runtime batch.
+
+        A new adapter revalidates source bytes; an active batch never changes
+        its prompt contract halfway through its samples.
+        """
+        with self._task_contract_lock:
+            if self._runtime_task_contract is None:
+                self._runtime_task_contract = super().build_task_contract(sample, obs)
+            return self._runtime_task_contract
 
     def gold(self, sample):
         raise RuntimeViewError("gold never enters a runtime flight; score the sealed manifest")
