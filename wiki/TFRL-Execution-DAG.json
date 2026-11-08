@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T17:54:30.126035+00:00",
+  "updated_at_utc": "2026-11-08T18:10:46.809672+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -573,7 +573,7 @@
       },
       "seed_immutable": false,
       "next": "review_seed_business_necessity_and_actual_regressions_then_targeted_delete_swap_replenish",
-      "teacher": "not_sent_returned_to_owner_for_compact_evidence_and_mask_provenance",
+      "teacher": "unique_local_ACE_request_dispatched_actual_executor_live_result_pending",
       "regression_triage": {
         "old4451_Q_regressions": 29,
         "already_missing_in_seed": 29,
@@ -591,6 +591,27 @@
       "candidate_FoldA_Q50D5": 1080,
       "candidate_FoldA_Q15": 1058,
       "candidate_FoldA_Q15D5": 1063
+    },
+    "recall_teacher_143": {
+      "resource": "CPU_external_API",
+      "state": "dispatched",
+      "algorithm": "ACE_strategy_feedback",
+      "max_output_tokens": 131072,
+      "thinking": "enabled",
+      "mechanisms": 6,
+      "max_examples_per_mechanism": 2,
+      "requested_strategies_max": 3,
+      "automatic_retry": false,
+      "query_key_scores_main_verified": 47,
+      "candidate_baseline": 143,
+      "new_gain": null,
+      "depends_on": [
+        "frozen143_actual_CPU_results"
+      ],
+      "does_not_depend_on": [
+        "T_terminal",
+        "second_TP4_binding"
+      ]
     }
   }
 }
