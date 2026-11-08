@@ -72,3 +72,27 @@ def test_configured_ordered_supply_accepts_dynamic_window_and_checks_pins(tmp_pa
     path.write_text('{}')
     with pytest.raises(ValueError, match='pin mismatch'):
         m.validate_ordered_supply(c, parent)
+
+
+def test_map_binding_argv_replaces_exact_serving_and_profile():
+    launcher = {'mounts': [{'target': '/data/serving', 'source': '/old'}], 'environment': {'SAEA_DEPLOYMENT_PROFILE': 'old'}}
+    binding = {'serving_root': '/new/serving', 'runtime_binding': {'profile': 'new'}}
+    result = m.map_binding_argv(['/old:/data/serving:ro', 'SAEA_DEPLOYMENT_PROFILE=old'], launcher, binding)
+    assert result == ['/new/serving:/data/serving:ro', 'SAEA_DEPLOYMENT_PROFILE=new']
+    assert m.map_binding_argv(['/other-parent-copy:/data/serving:ro'], launcher, binding) == ['/new/serving:/data/serving:ro']
+    with pytest.raises(ValueError, match='serving mount'):
+        m.map_binding_argv(['SAEA_DEPLOYMENT_PROFILE=old'], launcher, binding)
+
+
+def test_default_argv_unchanged():
+    argv = ['a', 'b']
+    assert m.map_binding_argv(argv, {}, None) is argv
+
+
+def test_serving_mount_exact_match_and_readonly():
+    launcher = {'mounts': [{'target': '/data/serving', 'source': '/old'}], 'environment': {'SAEA_DEPLOYMENT_PROFILE': 'old'}}
+    binding = {'serving_root': '/new', 'runtime_binding': {'profile': 'new'}}
+    for mount in ('/old:/data/serving:rw', 'relative:/data/serving:ro', '/old:/data/serving:ro:extra'):
+        with pytest.raises(ValueError, match='serving mount'):
+            m.map_binding_argv([mount], launcher, binding)
+    assert m.map_binding_argv(['/old:/data/serving:ro', 'x:/data/serving-extra:ro'], launcher, binding)[1] == 'x:/data/serving-extra:ro'

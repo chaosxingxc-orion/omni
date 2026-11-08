@@ -75,6 +75,54 @@ def validate_ordered_supply(c, parent):
         require(isinstance(rows, list) and 1 <= len(rows) <= limit and len(rows) == len(set(rows)) and all(isinstance(x, str) and x.startswith('intent-boundaries::intent-boundary:') and len(x) > len('intent-boundaries::intent-boundary:') for x in rows), 'invalid supply row: ' + sid)
 
 
+def binding_config(c, parent, launcher):
+    """Validate an optional deployment override before creating any workspace."""
+    b = c.get('runtime_binding_override')
+    if b is None:
+        return None
+    require(set(b) == {'runtime_binding', 'runtime_binding_adaptation', 'assets', 'serving_root', 'guard_directory'}, 'invalid runtime binding override')
+    identity = b['runtime_binding']
+    require(set(identity) == {'model_fragment', 'profile', 'runtime_receipt', 'service_session'}, 'invalid binding identity')
+    require(set(b['assets']) == {'configs/model/' + identity['model_fragment'] + '.json', 'configs/deployment/' + identity['profile'] + '.json', 'docs/' + identity['runtime_receipt']}, 'missing binding assets')
+    for rel, pin in b['assets'].items():
+        require(set(pin) == {'path', 'sha256'} and pathlib.Path(pin['path']).is_absolute(), 'invalid asset pin')
+        require(sha(pin['path']) == pin['sha256'], 'binding asset mismatch: ' + rel)
+    policy = b['runtime_binding_adaptation']
+    require(policy['schema'] == 'saea-p-only-runtime-binding-adaptation-v1' and policy['comparison_scope'] == 'same-model-and-request', 'invalid adaptation')
+    for side in ('parent', 'current'):
+        for kind in ('model', 'receipt'):
+            pin = policy[side + '_' + kind]
+            path = within(parent / 'workspace', pin['relpath']) if side == 'parent' else pathlib.Path(b['assets'][pin['relpath']]['path'])
+            require(sha(path) == pin['sha256'], 'adaptation asset mismatch')
+    serving = pathlib.Path(b['serving_root'])
+    guard = pathlib.Path(b['guard_directory'])
+    require(serving.is_absolute() and serving.is_dir() and guard.is_absolute() and guard.is_dir(), 'binding directories missing')
+    session = read(within(serving, identity['service_session'] + '/session.json'))
+    require(session['identity']['model_fragment'] == identity['model_fragment'] and session['identity']['runtime_receipt_sha256'] == b['assets']['docs/' + identity['runtime_receipt']]['sha256'], 'session identity mismatch')
+    return b
+
+
+def map_binding_argv(argv, launcher, b):
+    if b is None:
+        return argv
+    target = next(m['target'] for m in launcher['mounts'] if m['target'].endswith('/serving'))
+    old_profile = launcher['environment']['SAEA_DEPLOYMENT_PROFILE']
+    out = []
+    count = 0
+    for value in argv:
+        if value.startswith('SAEA_DEPLOYMENT_PROFILE='):
+            require(value == 'SAEA_DEPLOYMENT_PROFILE=' + old_profile, 'admission profile mismatch')
+            value = 'SAEA_DEPLOYMENT_PROFILE=' + b['runtime_binding']['profile']
+        parts = value.split(':')
+        if len(parts) == 3 and parts[1] == target:
+            require(parts[2] == 'ro' and pathlib.Path(parts[0]).is_absolute(), 'admission serving mount mismatch')
+            value = b['serving_root'] + ':' + target + ':ro'
+            count += 1
+        out.append(value)
+    require(count == 1, 'admission serving mount mismatch')
+    return out
+
+
 def preflight(c):
     require(c['schema'] == 'saea-p-candidate-preparation-v1', 'invalid schema')
     for key in ('id', 'name', 'run_id', 'generation_name', 'admission_name'):
@@ -162,6 +210,7 @@ def preflight(c):
     for mode in ('stage', 'prepare', 'register', 'admission'):
         argv = read(parent / (mode + '-argv.json'))
         require(c['image'] in argv and any(old_sha in x for x in argv) and any(old_release in x for x in argv), mode + ' source/image mismatch')
+    binding_config(c, parent, launcher)
     old_name = read(parent / 'workspace/job-config.private.json')['name']
     old_run = read(parent / 'workspace/job-config.private.json')['run_id']
     require(launcher['argv'][launcher['argv'].index('--candidate') + 1] == old_name, 'parent candidate mismatch')
@@ -174,6 +223,7 @@ def prepare(c, dry_run):
     parent, root, release, launcher, old_release, old_sha, old_name, old_run, old_generation = preflight(c)
     if dry_run:
         return {'status': 'preflight-passed', 'model_calls': 0, 'target_created': False, 'release_files_verified': len(read(release / 'source-manifest.json')['files'])}
+    b = binding_config(c, parent, launcher)
     name, run = c['candidate']['name'], c['candidate']['run_id']
     replacements = [(str(parent), str(root)), (old_release, str(release)), (old_sha, c['release']['manifest_sha256']), (launcher['expected_commit'], c['release']['commit']), (old_run, run), (old_name, name)]
     def replace(s):
@@ -211,6 +261,15 @@ def prepare(c, dry_run):
                 require(len(matches) == 1, 'missing ranking artifact: ' + name)
                 return matches[0]
             job['axis']['fewshot_manifest'] = {'manifest': receipt(window['manifest']), 'bank': receipt(window['bank']), 'fewshots_per_label': window['fewshots_per_label']}
+    if b is not None:
+        for rel, asset in b['assets'].items():
+            dest = within(root / 'workspace', rel)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if dest.exists() or dest.is_symlink():
+                dest.unlink()
+            shutil.copyfile(asset['path'], dest)
+        job['runtime_binding'] = b['runtime_binding']
+        job['runtime_binding_adaptation'] = b['runtime_binding_adaptation']
     if 'template' in c:
         job['axis']['template'] = c['template']
     if 'task_contract' in c:
@@ -247,7 +306,7 @@ def prepare(c, dry_run):
     write(root / 'admission.json', admission)
     if (legacy / 'work').is_dir():
         shutil.copytree(legacy / 'work', root / 'work', symlinks=True)
-    argv = [replace(s) for s in read(parent / 'admission-argv.json')]
+    argv = [replace(s) for s in map_binding_argv(read(parent / 'admission-argv.json'), launcher, b)]
     argv[argv.index('--name') + 1] = c['candidate']['admission_name']
     argv = ['SAEA_EXPERIMENT_MANIFEST_SHA256=' + sha(assets) if s.startswith('SAEA_EXPERIMENT_MANIFEST_SHA256=') else s for s in argv]
     write(root / 'admission-argv.json', argv)
@@ -270,6 +329,14 @@ def prepare(c, dry_run):
         require(rel.startswith(pre) and rel in admitted['files'], 'admission binding missing: ' + key)
         require(sha(within(root / 'admission-root/successor-v1', rel)) == admitted['files'][rel], 'admission binding content mismatch: ' + key)
     x = json.loads(replace(json.dumps(launcher)))
+    if b is not None:
+        x['environment']['SAEA_DEPLOYMENT_PROFILE'] = b['runtime_binding']['profile']
+        for mount in x['mounts']:
+            if mount['target'].endswith('/serving'):
+                mount['source'] = b['serving_root']
+            if mount['target'].endswith('/locks'):
+                mount['source'] = b['guard_directory']
+        x['generation_lease']['lock_directory'] = b['guard_directory']
     # The generation name identifies the container, not the inherited --out path.
     x['container_name'] = c['candidate']['generation_name']
     (root / 'admission-control').mkdir(exist_ok=True)
