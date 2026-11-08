@@ -15,11 +15,21 @@ def pin(path, root):
 
 
 def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch):
+    from dataclasses import replace
+    from test_rails_runner import _knowledge_snapshot
+    original_snapshot = _knowledge_snapshot()
+    facets = tuple(replace(original_snapshot.facets[0], facet_id=f'intent-boundary:i{i}', dimension='intent-boundary') for i in range(12))
+    values = tuple(replace(original_snapshot.values[0], value_id=f'intent-boundary:i{i}', associated_facet_ids=(facet.facet_id,)) for i, facet in enumerate(facets))
+    snapshot = replace(original_snapshot, facets=facets, values=values).validate()
+    snapshot_file = tmp_path/'snapshot.json'; snapshot_file.write_text(json.dumps(snapshot.frozen_json()))
+    snapshot_pin = {'relpath':'snapshot.json', 'sha256':snapshot.content_hash()}
+    facet_source = {'kind':'sealed-vectors','relpath':'old.jsonl','sha256':'a'*64,
+                    'tool_contact_ledger_row':'old','embedded_signal':'text: old'}
     parent = {'native_episode': {'perception_only': True},
               'thinking_policy': {'perception': {'enable_thinking': False}},
               'native_contact_fit': {'run_id': 'old', 'attempt_id': 'old', 'contact_cap': 6480},
               'phase_material': {'perception': {'instruction_template': 'probes/old.txt'}},
-              'knowledge_stores': {'intent-boundaries': {'phase_supply': {'perception': {'k': 8, 'fuse_coverage': {'m': 8, 'top_l': 8}}}}},
+              'knowledge_stores': {'intent-boundaries': {'snapshot':snapshot_pin, 'phase_supply': {'perception': {'k': 8, 'dimensions':['intent-boundary'], 'facet_source':facet_source, 'fuse_coverage': {'m': 8, 'top_l': 8}}}}},
               'prepared_phase_supply': {'relpath': 'old', 'sha256': 'old'}}
     src = tmp_path / 'parent.json'; src.write_text(json.dumps(parent))
     job = object.__new__(p.PerceptionOnlyWorkload)
@@ -55,6 +65,27 @@ def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch)
     assert changed['phase_material']['perception']['instruction_template'] == 'probes/new.txt'
     template.write_text('tampered')
     with pytest.raises(ValueError, match='template pin'):
+        job.derive(tmp_path,tmp_path,{})
+    vector = tmp_path/'new.jsonl'
+    vector.write_text(''.join(json.dumps({'id':f.facet_id, 'vectors':{'intent-boundary':[1.0]}})+'\n' for f in facets))
+    new_source = {**facet_source, **pin(vector,tmp_path)}
+    job.config['axis'] = {'kind':'ranking-window','input_k':3,'output_k':1,'max_tokens':128,
+                          'template':{'relpath':'configs/probes/new.txt','sha256':'a'*64}, 'facet_source':new_source}
+    # The parent must supply its registered native pipeline for the new axis.
+    parent['native_episode']['intent_slot_pipeline'] = {'max_candidates':3}
+    src.write_text(json.dumps(parent)); job.config['parent_baseline'] = pin(src,tmp_path)
+    science = copy.deepcopy(parent); science['native_episode'].pop('perception_only')
+    science['native_contact_fit'].update(run_id='old',attempt_id='old')
+    reg = json.loads(registration.read_text()); reg['scientific_baseline_sha256'] = scientific_hash(science)
+    registration.write_text(json.dumps(reg)); job.config['parent_registration'] = pin(registration,tmp_path)
+    result = job.derive(tmp_path,tmp_path,{})[0]
+    assert result['knowledge_stores']['intent-boundaries']['phase_supply']['perception']['facet_source'] == new_source
+    vector.write_text(vector.read_text()+'\n')
+    with pytest.raises(ValueError, match='facet source pin'):
+        job.derive(tmp_path,tmp_path,{})
+    rows = vector.read_text().splitlines(); rows[0] = json.dumps({'id':'other','vectors':{'intent-boundary':[1.0]}})
+    vector.write_text('\n'.join(rows)+'\n'); job.config['axis']['facet_source'] = {**facet_source, **pin(vector,tmp_path)}
+    with pytest.raises(ValueError, match='exact intent inventory'):
         job.derive(tmp_path,tmp_path,{})
 
 
