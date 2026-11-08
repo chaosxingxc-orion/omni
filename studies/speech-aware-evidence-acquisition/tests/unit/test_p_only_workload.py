@@ -14,6 +14,21 @@ def pin(path, root):
     return {'relpath': str(path.relative_to(root)), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
+def test_ordered_supply_keeps_sample_order_and_rejects_bad_rows():
+    ids = ['a', 'b']
+    first = ['intent-boundaries::intent-boundary:' + x for x in ('z', 'a', 'm')]
+    second = list(reversed(first))
+    payload = {key: {'perception': {'a': first[:], 'b': second[:]}} for key in ('facets', 'values')}
+    p.verify_ordered_supply(payload, ids, 3)
+    assert payload['values']['perception']['a'] == first
+    bad = copy.deepcopy(payload); bad['values']['perception']['a'][1] = first[0]
+    with pytest.raises(ValueError):
+        p.verify_ordered_supply(bad, ids, 3)
+    bad = copy.deepcopy(payload); bad['values']['perception']['a'][0] = 'gold:label'
+    with pytest.raises(ValueError):
+        p.verify_ordered_supply(bad, ids, 3)
+
+
 def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch):
     from dataclasses import replace
     from test_rails_runner import _knowledge_snapshot
