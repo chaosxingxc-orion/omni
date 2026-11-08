@@ -33,7 +33,7 @@ def bind(messages, values, *, input_k, output_k):
 def response_format(count, output_k):
     return {'type': 'json_schema', 'json_schema': {'name': 'ranked_candidate_indices', 'strict': True,
         'schema': {'type': 'array', 'minItems': output_k, 'maxItems': output_k,
-                   'uniqueItems': True, 'items': {'type': 'integer', 'enum': list(range(1, count+1))}}}}
+                   'items': {'type': 'integer', 'enum': list(range(1, count+1))}}}}
 
 
 def parse(text, rows, output_k):

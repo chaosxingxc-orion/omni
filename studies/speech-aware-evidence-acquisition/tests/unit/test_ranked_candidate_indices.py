@@ -13,7 +13,7 @@ from test_native_episode_runner import _wire_response
 from test_rails_runner import _knowledge_snapshot
 
 
-@pytest.mark.parametrize('input_k,output_k,answer', [(3, 1, '[2]'), (3, 2, '[2,1]'), (5, 3, '[2,1,3]'), (3, 1, '[4]'), (3, 1, '[1]')])
+@pytest.mark.parametrize('input_k,output_k,answer', [(3, 1, '[2]'), (3, 2, '[2,1]'), (5, 3, '[2,1,3]'), (3, 1, '[4]'), (3, 1, '[1]'), (3, 2, '[1,1]')])
 def test_native_ranking_before_after_and_node_score(tmp_path, input_k, output_k, answer):
     h, policy = recovery_harness(tmp_path)
     snapshot = _knowledge_snapshot()
@@ -43,7 +43,7 @@ def test_native_ranking_before_after_and_node_score(tmp_path, input_k, output_k,
         h.close()
     node = summary.results[0].node_outcome
     assert node['response'] == answer
-    invalid = answer == '[4]'
+    invalid = answer in ('[4]', '[1,1]')
     assert node['ranking_result']['candidate_ids'] == ([] if invalid else ['play_music'] if answer == '[1]' else ['play_radio','play_music','play_video'][:output_k])
     result = score([{'sample_id':'s1','gold_intent':'play_radio'}], [{**node, 'text':node['response']}], maximum=output_k,
                    legal_ids=['play_music','play_radio','play_video','play_game','play_movie'])
@@ -53,6 +53,9 @@ def test_native_ranking_before_after_and_node_score(tmp_path, input_k, output_k,
     assert len(sent) == 1
     assert ('Prefer action and object.' if answer == '[1]' else 'Order the candidates by relevance') in json.dumps(sent[0])
     assert sent[0]['max_tokens'] == 128
+    assert 'uniqueItems' not in json.dumps(sent[0]['response_format'])
+    assert sent[0]['response_format']['json_schema']['schema']['minItems'] == output_k
+    assert sent[0]['response_format']['json_schema']['schema']['maxItems'] == output_k
     assert sent[0]['response_format']['json_schema']['schema']['items']['enum'] == list(range(1, input_k+1))
 
 
@@ -96,3 +99,8 @@ def test_native_ranking_to_slot_handoff(tmp_path):
 def test_reject_invalid_indices(raw):
     with pytest.raises(ValueError):
         parse(raw, [{'intent_id': str(i)} for i in range(3)], 1)
+
+
+def test_reject_duplicate_indices_with_correct_output_length():
+    with pytest.raises(ValueError):
+        parse('[1,1]', [{'intent_id': str(i)} for i in range(3)], 2)
