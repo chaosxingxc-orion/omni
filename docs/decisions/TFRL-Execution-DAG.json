@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T16:36:09.202684+00:00",
+  "updated_at_utc": "2026-11-08T16:49:48.675667+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -429,7 +429,7 @@
   "historical_nodes_note": "nodes retain historical stage records; active_tracks is the current priority. Planning specification only, not remote job receipts.",
   "current_followups": {
     "P_operation_prompt": {
-      "state": "model_inference_confirmed",
+      "state": "complete_not_promoted",
       "baseline": "A_Q50D5_zero_examples_OFF",
       "change": "operation_object_target_state_negation_prompt_only",
       "rows": 1080,
@@ -437,30 +437,46 @@
       "configured_inflight": 64,
       "detached_prepare_queue_observer": true,
       "started_utc": "2026-11-08T16:31:10Z",
-      "completed_snapshot": 32,
+      "completed_snapshot": 1080,
       "total": 1080,
-      "responses_snapshot": 33,
+      "responses_snapshot": 1080,
       "first_four_valid": true,
-      "completed_prompt_tokens": 124782,
-      "completed_output_tokens": 356
+      "completed_prompt_tokens": 4211449,
+      "completed_output_tokens": 12542,
+      "top3": 995,
+      "top1": 897,
+      "repair": 2,
+      "regression": 8,
+      "HTTP_seconds_per_sample": 0.39452232
     },
     "teacher_compatibility": {
       "previous_status": "HTTP400",
       "official_evidence": "GLM-5.3-Flash only supports thinking enabled",
-      "next_state": "enabled_corrected_request_sent_stream_observed_final_pending",
+      "next_state": "valid_final_received_adversarial_review_in_progress",
       "max_tokens": 131072,
-      "old_unknown_retry": false
+      "old_unknown_retry": false,
+      "elapsed_seconds": 746.823438,
+      "prompt_tokens": 49340,
+      "completion_tokens": 34625,
+      "reasoning_tokens": 30783,
+      "final_strategies": 3,
+      "strategies_promoted": 0
     },
     "CPU_efficiency": {
-      "state": "Sol_CLI_active",
-      "scope": "existing timing and source; admission and repeated rendering; no C mutation"
+      "state": "minimal_ready_scope_patch_offline_verified_public_test_pending",
+      "scope": "unchanged fresh identity reads; reuse byte-identical maps parsing; no C/R mutation"
     },
     "representative_to_P": {
-      "state": "assigned_CPU_preparation_not_confirmed_NPU",
+      "state": "CPU_preparation_and_durable_queue_running",
       "index_size": 4451,
       "control": "actual_A_original_prompt_zero_examples_OFF",
       "purpose": "verify_supply_gain_transfers_to_P",
-      "new_prompt_mixed": false
+      "new_prompt_mixed": false,
+      "rows": 1080,
+      "supply": 1063,
+      "source_gains": 5,
+      "source_losses": 2,
+      "max_labels": 28
     }
   }
 }
