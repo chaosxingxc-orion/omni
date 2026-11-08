@@ -803,5 +803,26 @@
     "completion_tokens": 5280,
     "wall_seconds": 829.6339709,
     "scope": "development Fold A, P only, no generalization claim"
+  },
+  "finite_B_protocol_control": {
+    "n": 1080,
+    "valid": 1080,
+    "input_R5": 881,
+    "P_top3": 869,
+    "P_top1": 721,
+    "prior_P_top3": 832,
+    "old_invalid": 45,
+    "old_invalid_now_correct": 40,
+    "old_valid_repairs_regressions": [
+      1,
+      4
+    ],
+    "calls": 1080,
+    "prompt_tokens": 3461646,
+    "completion_tokens": 8640,
+    "container_wall_seconds": 810.70609283,
+    "campaign_to_release_seconds": 707.0832222499885,
+    "mean_request_seconds": 1.3154880171097358,
+    "scope": "engineering protocol repair, not TFRL improvement"
   }
 }

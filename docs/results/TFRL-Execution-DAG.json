@@ -1231,6 +1231,22 @@
       "input_k": 5,
       "output_k": 3,
       "scope": "same-parent window control on B; A successor after prepared ready, no analysis prerequisite"
+    },
+    {
+      "id": "P-ranking-finite-B-control",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-ranking-whitespace-real-probe"
+      ],
+      "status": "complete1080_exit0_released_main_metrics_verified",
+      "result": {
+        "valid": 1080,
+        "input_R5": 881,
+        "P_top3": 869,
+        "P_top1": 721,
+        "prior_P_top3": 832,
+        "old_invalid_now_correct": 40
+      }
     }
   ],
   "round_policy": {
@@ -1249,7 +1265,13 @@
     "runtime_registry": "native prepared queue required; not this planning file",
     "control_requires_teacher": false,
     "cpu_material_requires_runtime": false,
-    "construction_blocks_consumption": false
+    "construction_blocks_consumption": false,
+    "next_B_priority": [
+      "question_mean5_5to3",
+      "question_top3_5to3",
+      "question_mix3_5to3",
+      "prior_GEPA_consumption_candidates"
+    ]
   },
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
