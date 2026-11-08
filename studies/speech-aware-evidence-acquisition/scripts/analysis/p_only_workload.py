@@ -301,6 +301,8 @@ class PerceptionOnlyWorkload(NodeWorkload):
                                 or any(r['root'] == receipt['root'] and r['relpath'] == receipt['relpath'] for r in existing)):
                             raise ValueError('ranking source receipt pin differs or duplicates')
                         existing.append(copy.deepcopy(receipt))
+                if 'ordered_supply' in axis:
+                    base['ordered_phase_supply'] = copy.deepcopy(axis['ordered_supply'])
             pipeline = base['native_episode']['intent_slot_pipeline']
             pipeline['max_candidates'] = axis['output_k']
             pipeline['ranking_window'] = {'mode':'ranked-candidate-indices', **{k:axis[k] for k in ('input_k','output_k','max_tokens','template')}}

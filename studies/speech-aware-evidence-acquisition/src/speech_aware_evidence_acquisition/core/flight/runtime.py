@@ -10396,6 +10396,18 @@ class FlightRuntime:
         )
 
         def produce():
+            ordered = self._composed.values.get("ordered_phase_supply")
+            if ordered is not None:
+                from ..preparation import PreparationError, verify_source_receipts
+                if ordered not in self._composed.values.get("preparation_source_receipts", []):
+                    raise PreparationError("ordered phase supply must be a pinned source receipt")
+                verify_source_receipts([ordered], repo_root=self._repo_root, data_root=self._data_root)
+                from ..model.paths import _resolve_confined
+                source = _resolve_confined(self._data_root, ordered['relpath'], self._data_root, 'ordered phase supply', strict=True)
+                output = json.loads(source.read_bytes())
+                if not isinstance(output, dict) or set(output) != {'facets', 'values'}:
+                    raise PreparationError("invalid ordered phase supply")
+                return output
             facets, selected = self._phase_supply_seeds(
                 program, binding, specs, SimpleNamespace(split_identity_hash=identity),
                 max_workers=max_workers,
