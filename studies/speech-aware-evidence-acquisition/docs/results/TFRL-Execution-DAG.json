@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T09:08:24.232511+00:00",
+  "updated_at_utc": "2026-11-08T09:19:55.533046+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1717,7 +1717,7 @@
       "id": "source-distinct-p-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "original_owner_rework_in_progress_no_model_request_verified"
+      "status": "complete_admitted"
     },
     {
       "id": "source-distinct-p-consumption",
@@ -1725,8 +1725,9 @@
       "depends_on": [
         "source-distinct-p-prepare"
       ],
-      "status": "not_ready",
-      "rows": 1080
+      "status": "model_response_verified",
+      "rows": 1080,
+      "completed_rows": 33
     },
     {
       "id": "mask-failure-mechanism-analysis",
@@ -1739,7 +1740,7 @@
       "id": "a-median-tie-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "preparing"
+      "status": "complete_admitted"
     },
     {
       "id": "a-median-tie-consumption",
@@ -1747,7 +1748,7 @@
       "depends_on": [
         "a-median-tie-prepare"
       ],
-      "status": "not_ready",
+      "status": "container_running_model_response_unverified",
       "rows": 1080
     }
   ],
@@ -1777,9 +1778,9 @@
   },
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
-    "A": "paired generation complete:885->891 repair9/regression3; median tie successor preparing, no model call verified",
-    "B": "source-distinct P3to1 CPU preparation; no verified model request yet",
-    "CPU": "Six retrieval arms completed; portable entry delivery and paired input analysis running",
+    "A": "median candidate generation container running; first response not verified",
+    "B": "groupmax model inference verified33/1080; parent admitted; detached successor",
+    "CPU": "soft-correction decomposition completed pending full delivery; LCO score repair queued after analysis CLI",
     "poll_seconds": 600
   },
   "objective": "valid_gold_intent_in_output_K_le_3_over_full_roster",

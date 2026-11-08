@@ -957,7 +957,7 @@
       "id": "source-distinct-p-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "original_owner_rework_in_progress_no_model_request_verified"
+      "status": "complete_admitted"
     },
     {
       "id": "source-distinct-p-consumption",
@@ -965,8 +965,9 @@
       "depends_on": [
         "source-distinct-p-prepare"
       ],
-      "status": "not_ready",
-      "rows": 1080
+      "status": "model_response_verified",
+      "rows": 1080,
+      "completed_rows": 33
     },
     {
       "id": "mask-failure-mechanism-analysis",
@@ -979,7 +980,7 @@
       "id": "a-median-tie-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "preparing"
+      "status": "complete_admitted"
     },
     {
       "id": "a-median-tie-consumption",
@@ -987,7 +988,7 @@
       "depends_on": [
         "a-median-tie-prepare"
       ],
-      "status": "not_ready",
+      "status": "container_running_model_response_unverified",
       "rows": 1080
     }
   ],
@@ -1044,10 +1045,10 @@
     "tfrl_preparation": "deferred"
   },
   "current_dispatch": {
-    "A": "paired generation complete:885->891 repair9/regression3; median tie successor preparing, no model call verified",
-    "B": "source-distinct P3to1 CPU preparation; no verified model request yet",
-    "CPU": "Six retrieval arms completed; portable entry delivery and paired input analysis running",
+    "A": "median candidate generation container running; first response not verified",
+    "B": "groupmax model inference verified33/1080; parent admitted; detached successor",
+    "CPU": "soft-correction decomposition completed pending full delivery; LCO score repair queued after analysis CLI",
     "poll_seconds": 600
   },
-  "updated_at_utc": "2026-11-08T09:08:24.232511+00:00"
+  "updated_at_utc": "2026-11-08T09:19:55.533046+00:00"
 }
