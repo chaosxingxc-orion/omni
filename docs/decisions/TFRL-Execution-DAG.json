@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T15:13:26.736681+00:00",
+  "updated_at_utc": "2026-11-08T15:41:58.770779+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -313,17 +313,17 @@
       "pilot_selection": "predeclared_semantic_subset_le100_within_existing_FoldA1080_no_outcome_or_gold_selection"
     },
     "union_recall": {
-      "status": "CPU_analysis_and_implementation_started",
+      "status": "frozen_supply_main_verified_P_not_started",
       "baseline_supply": 1016,
       "baseline_P": 1001,
       "n": 1080,
       "union_not_cap5": true,
       "fewshots_per_label_default": 3,
-      "question_depth": null,
-      "description_depth": null,
+      "question_depth": 50,
+      "description_depth": 5,
       "gold_used_for_runtime_selection": false,
-      "thinking_comparison": "deferred",
-      "engineering_status": "partial_delivery_rejected_owner_rework2_active",
+      "thinking_comparison": "authorized_after_information_gain_comparison",
+      "engineering_status": "v3_admission_success_same_owner_execution_continuation",
       "first_candidate": {
         "question_depth": 50,
         "description_depth": 5,
@@ -337,16 +337,30 @@
       }
     },
     "confirmed_exclusion": {
-      "status": "authorized_config_implementation",
+      "status": "four_effective_views_verified96_hashes_zero_exclusion",
       "confirmed_actual": 0,
       "raw_artifacts_preserved": true,
-      "suspected_not_deleted": true
+      "suspected_not_deleted": true,
+      "suspects_retained": 2
     },
     "minimum_question_set": {
-      "status": "CPU_subprocess_started",
+      "status": "two_CPU_candidates_verified_not_promoted",
       "selection_data": "TRAIN_full_bank_not_DEV_gold",
       "proposed_scope": "representative_retrieval_index_separate_clean_fewshot_support_pool",
-      "claim_global_optimum": false
+      "claim_global_optimum": false,
+      "first_index": 4451,
+      "first_hits": 1063,
+      "task_aware_index": 4844,
+      "task_aware_hits": 1061
+    },
+    "teacher_cover_feedback": {
+      "status": "unknown_stream_no_final_answer",
+      "seconds": 632.3569622701034,
+      "reasoning_characters": 125200,
+      "content_characters": 0,
+      "input_tokens": null,
+      "output_tokens": null,
+      "automatic_retry": false
     }
   },
   "active_tracks": [
@@ -354,21 +368,21 @@
       "id": "confirmed-defects",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "audit_in_progress",
+      "status": "effective_views_verified_zero_confirmed_two_suspects_semantics_followup",
       "depends_on": []
     },
     {
       "id": "representative-bank",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "first_candidate_4451_of8554_Q50D5_1063_of1080_not_promoted",
+      "status": "both_candidates_main_verified_HOLD_teacher_unknown_no_content",
       "depends_on": []
     },
     {
       "id": "p-consumption",
       "owner": "Terra CLI",
       "resource": "CPU_prepare_then_NPU",
-      "status": "runtime_partial_37_tests_no_real_probe_yet",
+      "status": "v3_admission_success_P_0_of1080_launch_in_progress",
       "depends_on": [
         "frozen_original_Q50D5"
       ],
@@ -376,7 +390,8 @@
         "OFF_no_fewshot",
         "OFF_3_fewshot"
       ],
-      "subsequent": "root_cause_prompt_or_thinking"
+      "subsequent": "root_cause_prompt_or_thinking",
+      "interface_check": "first_real_responses_of_existing_durable1080_queue"
     }
   ],
   "historical_nodes_note": "nodes retain historical stage records; active_tracks is the current priority. Planning specification only, not remote job receipts."
