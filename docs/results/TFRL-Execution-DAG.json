@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T11:34:41.767009+00:00",
+  "updated_at_utc": "2026-11-08T13:49:25.993970+00:00",
   "current_stage": "P",
   "instruction": "三路：召回供给、P Top3保留、开发冻结后TEST验证；根因驱动，达标后冻结P转S；不追求Top1极致",
   "resources": {
@@ -193,5 +193,32 @@
       "status": "active_CLI_preparation_no_model_call_verified",
       "blocks_NPU_successors": false
     }
-  ]
+  ],
+  "latest_recall_revision": {
+    "original_m2_P": {
+      "status": "complete",
+      "n": 1080,
+      "top3": 999,
+      "parent_top3": 1001,
+      "repair": 11,
+      "regression": 13,
+      "wall_seconds": 691.014,
+      "cards": 4
+    },
+    "vacancy_supply": {
+      "status": "complete",
+      "n": 1080,
+      "hit": 1020,
+      "repair": 4,
+      "regression": 0
+    },
+    "vacancy_P": "prepared_no_requests_owner_continuing_full1080",
+    "teacher_previous": "complete_requires_strategy_revision",
+    "teacher_incremental": "owner_rework_not_sent",
+    "subprocess_roles": [
+      "engineering_vacancy_P",
+      "P_case_analysis",
+      "teacher_feedback_preparation"
+    ]
+  }
 }
