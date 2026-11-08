@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T09:39:08.306990+00:00",
+  "updated_at_utc": "2026-11-08T09:45:55.175498+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1492,9 +1492,50 @@
       "id": "P-teacher-compact-feedback",
       "resource": "CPU",
       "depends_on": [],
-      "status": "v3_dryrun_pass_semantic_revision_v4_in_progress",
+      "status": "v4_approved_ACE_TFGROUP_unique_local_requests_live",
       "owner": "Sol CLI",
-      "scope": "classifier scope and normalization cancellation; model comparison separate from strategy rewards; no API sent"
+      "scope": "aggregate+16 representatives; per algorithm template; max_tokens131072; terminal events/600sec observer"
+    },
+    {
+      "id": "P-Nemotron-bidirectional-score",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "complete1080_mean5_main_review",
+      "result": {
+        "R1": 874,
+        "R3": 1004,
+        "R5": 1032,
+        "repair_vs_causal": 51,
+        "regression_vs_causal": 16
+      }
+    },
+    {
+      "id": "P-Nemotron-bidirectional-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "P-Nemotron-bidirectional-score"
+      ],
+      "status": "CLI_auto_started_after_B_owner_terminal",
+      "scope": "reuse matrix; freeze gold-free rankings; prepare mean5+position"
+    },
+    {
+      "id": "P-Nemotron-bidirectional-B",
+      "resource": "NPU_B_TP4",
+      "depends_on": [
+        "P-Nemotron-bidirectional-prepare"
+      ],
+      "status": "not_yet_admitted",
+      "scope": "fixed B P3to1 OFF max128; same locked cards"
+    },
+    {
+      "id": "P-Nemotron-bidirectional-position-B",
+      "resource": "NPU_B_TP4",
+      "depends_on": [
+        "P-Nemotron-bidirectional-prepare",
+        "P-Nemotron-bidirectional-B"
+      ],
+      "status": "preparation_requested",
+      "scope": "same supply; existing position prompt; release dependency, CPU scoring async"
     }
   ],
   "round_policy": {
@@ -1548,15 +1589,14 @@
       "parent_eta_seconds": null
     },
     "B": {
-      "observed_at_utc": "2026-11-08T09:39:08.306990+00:00",
-      "status": "groupmax_candidate_complete_parent_running",
-      "candidate_rows": 1080,
-      "candidate_correct": 885,
-      "candidate_wall_seconds": 825.660957,
-      "cards": 4,
-      "instances": 1,
-      "parent_progress": null,
-      "parent_eta_seconds": null
+      "status": "complete_groupmax_pair_parent_retained_successor_CPU_preparation",
+      "parent": 887,
+      "candidate": 885,
+      "repair": 2,
+      "regression": 4,
+      "n_per_arm": 1080,
+      "cards_per_instance": 4,
+      "inference_active": false
     },
     "C": {
       "observed_at_utc": "2026-11-08T03:11:02.154166+00:00",
