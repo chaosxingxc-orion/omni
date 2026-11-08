@@ -240,7 +240,19 @@
       "teacher_feedback_preparation"
     ],
     "teacher_analysis": "active_full_semantic_review",
-    "relative_merge": "active_CPU_implementation_and_replay",
-    "official_train_coverage": "CPU_census_completed_report_review_pending"
+    "relative_merge": {
+      "status": "CPU_replay_verified_full_P_authorized_preparing",
+      "folda_supply": 1021,
+      "repair": 10,
+      "loss": 5,
+      "P": null
+    },
+    "official_train_coverage": {
+      "status": "accepted_source_census_not_admitted",
+      "new_sources": 1514,
+      "labels": 57,
+      "cooking_query": 0
+    },
+    "generic_slot": "authorized_fixed60_samebank_pipe_NPU_text_probe_preparing"
   }
 }
