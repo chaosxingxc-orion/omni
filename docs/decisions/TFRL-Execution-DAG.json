@@ -881,11 +881,12 @@
       "depends_on": [
         "P-tfgroup-exclusion-A-prepare"
       ],
-      "status": "running_actual_response_main_verified",
+      "status": "complete_main_verified_883_vs881_repairs11_regressions9",
       "rows": 1080,
       "order_priority": 1,
       "completed_rows_snapshot": 78,
-      "total_rows": 1080
+      "total_rows": 1080,
+      "completed_rows": 1080
     },
     {
       "id": "P-tfgroup-exclusion-A-prepare",
@@ -901,7 +902,7 @@
       "depends_on": [
         "P-tfgroup-position-A-prepare"
       ],
-      "status": "ready_bound_to_actual_exclusion_container",
+      "status": "running_container_confirmed_after_handoff_path_repair",
       "rows": 1080,
       "order_priority": 2
     },
@@ -917,8 +918,31 @@
       "id": "P-train-geometry-strategy-evidence",
       "resource": "CPU",
       "depends_on": [],
-      "status": "active_Sol_CLI",
+      "status": "complete_full11514_legal8554_aggregate_verified_teachers_live",
       "deliverable": "Full TRAIN coverage audit, cached geometry analysis, strategy-level teacher evidence; no per-example teacher loop"
+    },
+    {
+      "id": "P-worker16-capacity16-B-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "real_admission_running",
+      "single_change": "native_fit.max_concurrency 8 to16; parent worker16"
+    },
+    {
+      "id": "P-worker16-capacity16-B-evaluate",
+      "resource": "NPU_B_TP4",
+      "depends_on": [
+        "P-worker16-capacity16-B-prepare"
+      ],
+      "status": "not_yet_confirmed_generated",
+      "rows": 1080
+    },
+    {
+      "id": "P-source-distinct-support-control",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "implementation_in_progress",
+      "scope": "cached original1080 audio query matrix, strict positive cosines, separate count denominator controls"
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -975,12 +999,12 @@
   },
   "current_dispatch": {
     "scope": "planning graph, actual queue receipts authoritative",
-    "A": "exclusion running, main snapshot78/1080; position ready bound after actual exclusion",
-    "B": "worker16 complete1080; no end-to-end gain; capacity and non-HTTP analysis active; no worker32",
-    "C": "no ready NPU successor; full TRAIN geometry CPU analysis active",
-    "CPU": "full geometry uses existing11514 vectors; eligible8554 selection evidence separated; stricter source exclusion requires affected cache correction",
+    "A": "exclusion883 complete; position running after path repair, no first response yet",
+    "B": "capacity16 CPU admission in progress, no generation yet",
+    "C": "no ready NPU successor",
+    "CPU": "retrieval teacher streams live; source-distinct support CPU control being prepared",
     "polling": "600 seconds or terminal events",
     "utilization": "A active only; not all instances occupied; no sustained AI Core utilization proof"
   },
-  "updated_at_utc": "2026-11-08T07:48:38.711497+00:00"
+  "updated_at_utc": "2026-11-08T08:06:19.017857+00:00"
 }
