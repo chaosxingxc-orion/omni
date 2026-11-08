@@ -113,7 +113,7 @@
     "Three raw-text vector anchors support compatibility, not exhaustive re-encoding"
   ],
   "parallel_optimization": {
-    "updated_at": "2026-11-08T03:20:45.664721+00:00",
+    "updated_at": "2026-11-08T03:29:36.103630+00:00",
     "description": {
       "methods": [
         "ACE",
@@ -124,7 +124,7 @@
         "ACE": 2,
         "GEPA": 4
       },
-      "candidate_evaluation": "six full1080 evaluations independently metrics-verified; final provenance packaging pending",
+      "candidate_evaluation": "six teacher plus three ablation configurations full1080 accepted; final170pins with archived reviewer receipt binding",
       "teacher_usage": {
         "ACE": {
           "input": 62258,
@@ -423,11 +423,12 @@
           "currency_cost": null
         },
         "acceptance": "main independently recomputed all1080 metrics; final source artifact packaging pending"
-      }
+      },
+      "next": "TRAIN-only source coverage audit plus prepared positive-key handoff"
     },
     "real_question_bank": {
       "input_review": "accepted",
-      "execution": "two candidates evaluated; pure mean5 aggregation collector correction and full report pending",
+      "execution": "three_candidates_complete_delivery97pins_accepted; separate P input handoff preparing",
       "new_request_limit": 1,
       "editable": [
         "real_source_selection",
@@ -618,6 +619,96 @@
                 "both_miss": 78,
                 "net": 0,
                 "success_retention": 0.998
+              }
+            }
+          }
+        },
+        "question-gepa-mean5-depth": {
+          "metrics": {
+            "n": 1080,
+            "recall1_count": 839,
+            "recall3_count": 969,
+            "recall5_count": 1007,
+            "mrr": 0.8441411748912037,
+            "missing": 1
+          },
+          "paired_vs": {
+            "parent": {
+              "1": {
+                "repair": 59,
+                "regression": 41,
+                "both_hit": 780,
+                "both_miss": 200,
+                "net": 18,
+                "success_retention": 0.9500609013398295
+              },
+              "3": {
+                "repair": 31,
+                "regression": 19,
+                "both_hit": 938,
+                "both_miss": 92,
+                "net": 12,
+                "success_retention": 0.9801462904911181
+              },
+              "5": {
+                "repair": 26,
+                "regression": 13,
+                "both_hit": 981,
+                "both_miss": 60,
+                "net": 13,
+                "success_retention": 0.9869215291750503
+              }
+            },
+            "top3": {
+              "1": {
+                "repair": 14,
+                "regression": 23,
+                "both_hit": 825,
+                "both_miss": 218,
+                "net": -9,
+                "success_retention": 0.972877358490566
+              },
+              "3": {
+                "repair": 10,
+                "regression": 6,
+                "both_hit": 959,
+                "both_miss": 105,
+                "net": 4,
+                "success_retention": 0.9937823834196892
+              },
+              "5": {
+                "repair": 6,
+                "regression": 5,
+                "both_hit": 1001,
+                "both_miss": 68,
+                "net": 1,
+                "success_retention": 0.9950298210735586
+              }
+            },
+            "mix3_w050": {
+              "1": {
+                "repair": 32,
+                "regression": 31,
+                "both_hit": 807,
+                "both_miss": 210,
+                "net": 1,
+                "success_retention": 0.9630071599045346
+              },
+              "3": {
+                "repair": 22,
+                "regression": 18,
+                "both_hit": 947,
+                "both_miss": 93,
+                "net": 4,
+                "success_retention": 0.9813471502590674
+              },
+              "5": {
+                "repair": 17,
+                "regression": 10,
+                "both_hit": 990,
+                "both_miss": 63,
+                "net": 7,
+                "success_retention": 0.99
               }
             }
           }

@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T03:20:45.670096+00:00",
+  "updated_at_utc": "2026-11-08T03:46:20.216837+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -975,7 +975,7 @@
       "depends_on": [
         "retrieval-description-next-teacher"
       ],
-      "status": "six_candidates_full1080_complete_metrics_verified",
+      "status": "six_candidates_full1080_accepted_final170pins_with_archived_reviewer_receipt",
       "scope": "encode independent patches, full1080 retrieval score, reject regressions before NPU"
     },
     {
@@ -1020,7 +1020,7 @@
       "depends_on": [
         "retrieval-question-gepa-teacher"
       ],
-      "status": "two_full1080_complete_mean5_false_rejection_fix_pending",
+      "status": "three_full1080_complete_final_delivery97pins_accepted",
       "scope": "reuse fixed1080 and cached question cosines; evaluate full denominator and paired regression; no query/gold conditional strategy",
       "results": {
         "source_confidence_max_R3_R5": [
@@ -1030,6 +1030,10 @@
         "balanced_R3_R5": [
           967,
           1000
+        ],
+        "mean5_R3_R5": [
+          969,
+          1007
         ]
       }
     },
@@ -1037,7 +1041,7 @@
       "id": "P-ranking-whitespace-fix",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned_owner_direct_blocker",
+      "status": "merged_main_finite_regex_and_axis_20_unique_tests_passed_in_batches",
       "scope": "preserve integer array exactK; bound whitespace with supported engine output config; no fabricated indices or budget inflation"
     },
     {
@@ -1046,7 +1050,7 @@
       "depends_on": [
         "P-ranking-whitespace-fix"
       ],
-      "status": "planned_existing_failure_samples",
+      "status": "complete_6_distinct_audio_requests_valid_exactK_stop",
       "scope": "real failing audio inputs, prior response costs retained; validate before large successors"
     },
     {
@@ -1071,6 +1075,82 @@
           899
         ]
       }
+    },
+    {
+      "id": "retrieval-description-positive-assets",
+      "resource": "CPU",
+      "depends_on": [
+        "retrieval-description-positive-ablation"
+      ],
+      "status": "accepted_texts_full60_vectors_route_configs_ready",
+      "scope": "combined and maths-only; source-bound changes, no new encoding; baseline retained"
+    },
+    {
+      "id": "P-positive-description-3-1-input",
+      "resource": "CPU",
+      "depends_on": [
+        "retrieval-description-positive-assets"
+      ],
+      "status": "running_dedicated_A_CLI_configuration_binding",
+      "scope": "use already validated single-index window; preserve original card content and instructions for first attribution"
+    },
+    {
+      "id": "P-positive-description-combined-3-1",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-positive-description-3-1-input"
+      ],
+      "status": "planned_not_yet_admitted",
+      "rows": 1080,
+      "input_k": 3,
+      "output_k": 1,
+      "scope": "compare against existing original-description output712; no multi-index-fix dependency"
+    },
+    {
+      "id": "P-positive-description-maths-3-1",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-positive-description-3-1-input"
+      ],
+      "status": "planned_not_yet_admitted",
+      "rows": 1080,
+      "input_k": 3,
+      "output_k": 1,
+      "scope": "low-regression key candidate against same original baseline; independent NPU lane"
+    },
+    {
+      "id": "retrieval-description-TRAIN-source-coverage",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "report_complete_final_manifest_review_pending",
+      "scope": "full legal8554 TRAIN evidence coverage beyond prior474 author examples; TRAIN-only representative selection; no DEV text backfill",
+      "result": {
+        "legal_train": 8554,
+        "registered_intents": 60,
+        "nonempty_intents": 59,
+        "new_evidence": 882,
+        "next_author_context": 1299
+      }
+    },
+    {
+      "id": "retrieval-question-ranking-supply-handoff",
+      "resource": "CPU",
+      "depends_on": [
+        "retrieval-question-gepa-evaluation"
+      ],
+      "status": "complete_91_pins_main_verified_3240_rankings_6480_windows",
+      "scope": "freeze original1080 top3/mix3/mean5 rankings and candidate-index-to-locked-card inputs; no encoder or model calls"
+    },
+    {
+      "id": "P-question-ranking-frontier-eval",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "retrieval-question-ranking-supply-handoff",
+        "P-ranking-whitespace-real-probe"
+      ],
+      "status": "planned_prepared_before_lease",
+      "rows": 1080,
+      "scope": "same P window comparisons; actual adapter gap must be explicit, no fusion or gold-derived input"
     }
   ],
   "round_policy": {
@@ -1197,8 +1277,8 @@
         "role": "description_optimization_Sol"
       },
       {
-        "pid": 3797261,
-        "role": "real_question_optimization_Sol"
+        "pid": 3809705,
+        "role": "real_question_supply_handoff_Sol"
       }
     ],
     "clock_caveat": "Host clocks differ; use within-host deltas, not cross-host timestamp subtraction.",
@@ -1455,5 +1535,21 @@
   },
   "intent_key_definition": "locked_description_embedding; individual_question_index_separate; centroid_history_only",
   "retrieval_mode_policy": "independent_description_and_real_TRAIN_question_first; no synthetic/test-derived queries; fusion deferred",
-  "retrieval_optimization_dependencies": "no_P_S_D_no_NPU_no_native_registration"
+  "retrieval_optimization_dependencies": "no_P_S_D_no_NPU_no_native_registration",
+  "parallel_research_lines": {
+    "description": {
+      "resource": "CPU_EXTERNAL_API",
+      "objective": "source-grounded discriminative descriptions; vectors encoded from descriptions",
+      "evaluation": "original Fold A1080; Recall1/3/5 MRR paired repairs/regressions",
+      "depends_on_question_line": false
+    },
+    "real_question_bank": {
+      "resource": "CPU_EXTERNAL_API",
+      "objective": "real TRAIN coverage, representatives, weights and aggregation; no synthetic or heldout-derived questions",
+      "evaluation": "same Fold A1080; reuse frozen query-question matrix",
+      "depends_on_description_line": false
+    },
+    "fusion": "deferred",
+    "P_validation": "independent downstream; no prerequisite for offline research"
+  }
 }
