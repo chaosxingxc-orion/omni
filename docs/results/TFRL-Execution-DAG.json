@@ -1,15 +1,19 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T17:29:56.680273+00:00",
+  "updated_at_utc": "2026-11-08T22:33:48.002591+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
-    "inference_instances": 3,
+    "inference_instances": 2,
     "cards_per_instance": 4,
     "max_codex_cli": 3,
     "monitor_interval_seconds": 600,
-    "total_authorized_cards": 12
+    "total_authorized_cards": 8,
+    "active_scientific_NPU_jobs": 1,
+    "active_scientific_NPU_cards": 4,
+    "idle_cards": 4,
+    "resource_scope": "npu2 only; W requests verified, X generation container launched but model requests pending verification"
   },
   "nodes": [
     {
@@ -395,38 +399,7 @@
       "automatic_retry": false
     }
   },
-  "active_tracks": [
-    {
-      "id": "confirmed-defects",
-      "owner": "Sol CLI",
-      "resource": "CPU",
-      "status": "complete_audit_views_and_three_state_semantics_main_verified",
-      "depends_on": []
-    },
-    {
-      "id": "representative-bank",
-      "owner": "Sol CLI",
-      "resource": "CPU",
-      "status": "4451_P_complete993_not_promoted_S3_4469_complete_no_hit_gain",
-      "depends_on": []
-    },
-    {
-      "id": "p-consumption",
-      "owner": "Terra CLI",
-      "resource": "CPU_prepare_then_NPU",
-      "status": "AB_C_R_complete_not_promoted_T_preparation_and_queue_active",
-      "depends_on": [
-        "frozen_original_Q50D5"
-      ],
-      "planned_arms": [
-        "OFF_no_fewshot",
-        "OFF_3_fewshot"
-      ],
-      "subsequent": "root_cause_prompt_or_thinking",
-      "interface_check": "first_real_responses_of_existing_durable1080_queue"
-    }
-  ],
-  "historical_nodes_note": "nodes retain historical stage records; active_tracks is the current priority. Planning specification only, not remote job receipts.",
+  "historical_nodes_note": "nodes, historical_active_tracks, latest_recall_revision and current_followups retain historical stage evidence. Current state: active_tracks and current_snapshot. Planning specification is not an executable queue or remote job receipt.",
   "current_followups": {
     "P_operation_prompt": {
       "state": "complete_not_promoted",
@@ -555,5 +528,185 @@
       },
       "accepted_insertions_confirmed": 0
     }
-  }
+  },
+  "updated_at": "2026-11-08T22:33:48.002591+00:00",
+  "minimum_seed_growth_policy": {
+    "fixed_size_target": null,
+    "seed_lower_bound": 59,
+    "current_candidate_size": 74,
+    "objective": "fixed_TopK_label_coverage_and_stability",
+    "seed_members_immutable": false,
+    "TEST_tuning": false,
+    "next": "new74_profile_and_causal_minimal_replacement_diagnostics",
+    "acceptance_objectives": [
+      "zero_regressions_and_Q15_gain",
+      "zero_regressions_and_strictly_smaller_bank"
+    ]
+  },
+  "group_policy_round5_formal_run": {
+    "state": "complete_main_full_hitsets_recount_passed",
+    "queries": 2783,
+    "initial_bank": 71,
+    "final_bank": 74,
+    "distinct_states": 576,
+    "accepted_actions": 3,
+    "Q15_question_repairs": [
+      3,
+      4,
+      5
+    ],
+    "Q15_union_repairs": [
+      2,
+      2,
+      4
+    ],
+    "Q50_question_repairs": [
+      1,
+      1,
+      0
+    ],
+    "Q50_union_repairs": [
+      0,
+      1,
+      0
+    ],
+    "all_regressions": 0,
+    "stop": "configured_three_round_action_cap_not_search_exhaustion",
+    "CPU_quota": 4,
+    "NPU_cards": 0
+  },
+  "round5_reverse_prune": {
+    "state": "complete_main_independent_acceptance",
+    "queries": 2783,
+    "initial_size": 74,
+    "final_size": 74,
+    "attempted": 74,
+    "accepted": 0,
+    "receipt_files_verified": 88,
+    "class_source_loss": 53,
+    "hit_loss_only": 21,
+    "all_members_deletable": true,
+    "minimum_size_floor": null,
+    "global_minimum_proven": false,
+    "CPU_quota": 4,
+    "NPU_cards": 0,
+    "wall_seconds": 14.013764,
+    "CPU_seconds": 14.445928
+  },
+  "minimum74_reanchor_diagnostic": {
+    "resource": "CPU",
+    "state": "codex_subprocess_started",
+    "depends_on": [
+      "group_policy_round5_formal_run",
+      "round5_reverse_prune"
+    ],
+    "does_not_depend_on": [
+      "p_representative_thinking_transfer",
+      "p_wide_supply_thinking_transfer"
+    ],
+    "max_causal_Replay_trials": 12,
+    "automatic_bank_acceptance": false,
+    "API_requests_authorized": 0
+  },
+  "p_representative_thinking_transfer": {
+    "state": "running",
+    "cards": 4,
+    "instances": 1,
+    "completed_snapshot": 384,
+    "snapshot_at_unix": 1794176638.4197583,
+    "remaining_snapshot": 696,
+    "ETA_seconds": 3270.2368500083685
+  },
+  "p_wide_supply_thinking_transfer": {
+    "resource": "NPU_B_after_CPU_admission",
+    "state": "generation_container_started_actual_request_pending_verification",
+    "queries": 1080,
+    "baseline_top3": 966,
+    "cards": 4,
+    "instances": 1,
+    "thinking_budget": 3072,
+    "answer_budget": 128,
+    "configured_inflight": 64,
+    "CPU_prepare_wall_seconds": 493.447761,
+    "depends_on": [],
+    "does_not_depend_on": [
+      "minimum74_reanchor_diagnostic",
+      "p_representative_thinking_transfer"
+    ],
+    "generation_started_at_utc": "2026-11-08T22:32:37.78652903Z"
+  },
+  "current_snapshot": {
+    "candidate_bank_size": 74,
+    "reverse_pruning_complete": true,
+    "current_CPU_task": "new74_profile_and_minimal_causal_replacements",
+    "P_W_verified_running": true,
+    "P_X_real_request_verified": false,
+    "all_DEV_adaptively_used": true,
+    "TEST_tuned": false
+  },
+  "historical_active_tracks": [
+    {
+      "id": "confirmed-defects",
+      "owner": "Sol CLI",
+      "resource": "CPU",
+      "status": "complete_audit_views_and_three_state_semantics_main_verified",
+      "depends_on": []
+    },
+    {
+      "id": "representative-bank",
+      "owner": "Sol CLI",
+      "resource": "CPU",
+      "status": "4451_P_complete993_not_promoted_S3_4469_complete_no_hit_gain",
+      "depends_on": []
+    },
+    {
+      "id": "p-consumption",
+      "owner": "Terra CLI",
+      "resource": "CPU_prepare_then_NPU",
+      "status": "AB_C_R_complete_not_promoted_T_preparation_and_queue_active",
+      "depends_on": [
+        "frozen_original_Q50D5"
+      ],
+      "planned_arms": [
+        "OFF_no_fewshot",
+        "OFF_3_fewshot"
+      ],
+      "subsequent": "root_cause_prompt_or_thinking",
+      "interface_check": "first_real_responses_of_existing_durable1080_queue"
+    }
+  ],
+  "active_tracks": [
+    {
+      "id": "minimum74-reanchor-diagnostic",
+      "owner": "Sol CLI",
+      "resource": "CPU",
+      "status": "subprocess_running",
+      "depends_on": [
+        "round5_reverse_prune"
+      ],
+      "max_causal_trials": 12,
+      "auto_accept": false
+    },
+    {
+      "id": "P-W",
+      "resource": "NPU_A",
+      "status": "running_verified_first64_latest_snapshot384",
+      "total": 1080,
+      "completed_snapshot": 384,
+      "cards": 4,
+      "instances": 1,
+      "depends_on": []
+    },
+    {
+      "id": "P-X",
+      "owner": "Sol CLI",
+      "resource": "NPU_B",
+      "status": "generation_container_started_actual_request_pending_verification",
+      "total": 1080,
+      "completed_snapshot": null,
+      "cards": 4,
+      "instances": 1,
+      "depends_on": []
+    }
+  ]
 }
