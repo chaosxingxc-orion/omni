@@ -416,7 +416,7 @@
       "id": "group-feedback-round3",
       "owner": "Sol CLI",
       "resource": "CPU_then_local_external_API",
-      "status": "terminal_invalid_policy_correction_preparing",
+      "status": "complete_invalid_original_and_valid_explicit_correction_archived",
       "depends_on": [],
       "final_schema_binding_depends_on": [
         "causal-depth-search"
@@ -425,7 +425,7 @@
     {
       "id": "next-formal-recall",
       "resource": "CPU",
-      "status": "E3_complete_positive_causal_analysis_in_progress",
+      "status": "E3_complete_positive_full_report_main_accepted",
       "depends_on": [
         "causal-depth-search",
         "group-feedback-round3",
@@ -445,7 +445,7 @@
       "id": "accepted133-P-transfer",
       "owner": "Sol CLI",
       "resource": "CPU_prepare_then_two_TP4_NPU",
-      "status": "CPU_admission_release_verification_failed_owner_repair",
+      "status": "admission_passed_generation_containers_running_first_response_pending",
       "depends_on": [
         "frozen_S2_133_bank",
         "prepared_P_inputs",
@@ -476,7 +476,15 @@
         "prompt": "A_original"
       },
       "default_bank_promoted": false,
-      "model_POST_verified": 0
+      "model_POST_verified": null,
+      "model_POST_evidence": "pending_first_request_or_response",
+      "started_at_utc": "2026-11-08T21:03:31Z",
+      "completed_snapshot": {
+        "U": 0,
+        "V": 0
+      },
+      "per_arm_total": 1080,
+      "inflight_per_arm": 64
     },
     {
       "id": "minimum70-reverse-prune",
@@ -498,6 +506,38 @@
       "accepted_deletions": 0,
       "final_size": 70,
       "minimum_scope": "conditional_single_deletion_fixed_point_not_global"
+    },
+    {
+      "id": "candidate-discovery",
+      "owner": "Sol CLI",
+      "resource": "CPU",
+      "status": "CLI_running_diagnostic_and_configuration_extension",
+      "depends_on": [
+        "accepted_E3_70_bank",
+        "existing_TRAIN_score_cache"
+      ],
+      "does_not_depend_on": [
+        "P_transfer",
+        "teacher_request"
+      ],
+      "formal_new_policy_run": false
+    },
+    {
+      "id": "group-feedback-round4",
+      "owner": "Sol CLI",
+      "resource": "CPU_then_local_external_API",
+      "status": "CLI_preparing_compact_evidence_and_template",
+      "depends_on": [
+        "accepted_E3_analysis",
+        "reverse_prune70"
+      ],
+      "final_contract_binding_depends_on": [
+        "candidate-discovery"
+      ],
+      "does_not_depend_on": [
+        "P_transfer"
+      ],
+      "API_sent": false
     }
   ],
   "historical_nodes_note": "nodes and latest_recall_revision retain historical evidence; active_tracks and group_policy_round2_formal_run describe current work. Planning specification is not an execution receipt.",
@@ -611,7 +651,7 @@
       "blocks_T": false
     },
     "recall_minimum_growth": {
-      "state": "seed59_growth68_complete_E2_no_gain_next_causal_depth_preparing",
+      "state": "seed59_growth70_reverse_prune_complete_candidate_discovery_next",
       "resource": "CPU",
       "retain_all4451": false,
       "development_feedback_for_selection": true,
@@ -636,7 +676,7 @@
         "valid": 1059,
         "FoldA": 1062
       },
-      "accepted_insertions_confirmed": 9
+      "accepted_insertions_confirmed": 11
     }
   },
   "minimum_seed_progress": {
@@ -647,19 +687,19 @@
     "seed_FoldA_Q15_union": 1002,
     "seed_FoldA_Q50_question": 1058,
     "seed_FoldA_Q50_union": 1062,
-    "status": "growth68_rework_complete_no_new_accepted_bank",
+    "status": "E3_growth70_and_reverse_pruning_complete",
     "NPU_calls": 0,
-    "final_size": 68,
-    "accepted_additions": 9,
-    "FoldA_Q15_question": 971,
-    "FoldA_Q15_union": 1016,
+    "final_size": 70,
+    "accepted_additions": 11,
+    "FoldA_Q15_question": 973,
+    "FoldA_Q15_union": 1018,
     "FoldA_Q50_question": 1070,
     "FoldA_Q50_union": 1071,
     "CPU_wall_seconds": 165.07169253006577,
     "followup_maximum_new_acceptances": 24,
-    "total_accepted_additions": 9,
+    "total_accepted_additions": 11,
     "last_round_CPU_seconds": 92.44105488993227,
-    "last_stop": "finite_top2_single_insert_pool_no_zero_regression_gain"
+    "last_stop": "70_full_single_deletion_pass_zero_accepted_not_global_minimum"
   },
   "teacher_feedback_current": {
     "status": "S1_and_S2_CPU_complete_reference_verified",
@@ -778,10 +818,14 @@
     "seed_lower_bound": 59,
     "current_candidate_size": 70,
     "objective": "fixed_TopK_label_coverage_and_stability",
-    "next": "root_cause_driven_action_depth_search_then_TRAIN_compensation_and_reverse_pruning",
+    "next": "candidate_discovery_then_TRAIN_compensation_or_joint_shrink_and_reverse_pruning",
     "seed_members_immutable": false,
     "TEST_tuning": false,
-    "maximum_additions_is_business_invariant": false
+    "maximum_additions_is_business_invariant": false,
+    "acceptance_objectives": [
+      "zero_regressions_and_Q15_gain",
+      "zero_regressions_and_strictly_smaller_bank"
+    ]
   },
   "fair_compensation_implementation": {
     "resource": "CPU",
@@ -852,7 +896,7 @@
     "known_container_wall_seconds": 73.814372,
     "known_CPU_seconds": 75.71587,
     "scientific_gain": false,
-    "formal_search_started": false
+    "formal_search_started": true
   },
   "group_feedback_round3": {
     "resource": "local_external_API",
@@ -873,7 +917,7 @@
     "elapsed_seconds": 145.5408192398,
     "compiled": false,
     "scientific_run_started": false,
-    "correction_status": "returned_to_original_CLI_responsibility",
+    "correction_status": "complete_valid_correction_and_formal_E3",
     "report_status": "complete_main_accepted_586_manifest_files"
   },
   "group_feedback_round3_correction": {
@@ -924,5 +968,6 @@
     "member_wall_seconds": 106.989188,
     "member_CPU_seconds": 106.560554,
     "default_promoted": false
-  }
+  },
+  "updated_at": "2026-11-08T21:10:43.794205+00:00"
 }
