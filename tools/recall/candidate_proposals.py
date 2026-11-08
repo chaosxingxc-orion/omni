@@ -4,10 +4,14 @@ import numpy as np
 
 FIELDS={'generation','selection','tie_break'}
 def validate_plugin(config):
-    if not isinstance(config,dict) or set(config)!=FIELDS:raise ValueError('Unsupported proposal_plugin fields')
+    if not isinstance(config,dict) or set(config)-{'joint_duty'}!=FIELDS:raise ValueError('Unsupported proposal_plugin fields')
     if config['generation'] not in ('legacy_topn','all_train'):raise ValueError('Unsupported generation')
     if config['selection'] not in ('similarity','incremental_cover','class_round_robin','risk_aware_cover'):raise ValueError('Unsupported selection')
     if config['tie_break']!='source_diversity_then_index':raise ValueError('Unsupported tie_break')
+    if 'joint_duty' in config:
+        from joint_duty import validate
+        validate(config['joint_duty'])
+        if config['generation']!='all_train':raise ValueError('joint_duty requires all_train')
     return dict(config)
 
 def legacy_proposals(rt,cur,ids,allowed,history,p,nearest):

@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T23:32:29.647857+00:00",
+  "updated_at_utc": "2026-11-08T23:44:01.560669+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -10,10 +10,10 @@
     "max_codex_cli": 3,
     "monitor_interval_seconds": 600,
     "total_authorized_cards": 8,
-    "active_scientific_NPU_jobs": 1,
-    "active_scientific_NPU_cards": 4,
-    "idle_cards": null,
-    "resource_scope": "X actual inference; fs1 generation container launched with first request pending; idle utilization not freshly measured",
+    "active_scientific_NPU_jobs": 2,
+    "active_scientific_NPU_cards": 8,
+    "idle_cards": 0,
+    "resource_scope": "X and fs1 have actual model responses; assigned cards are not AICore saturation proof",
     "allocated_jobs": 2,
     "allocated_cards": 8
   },
@@ -666,16 +666,16 @@
     "generation_started_at_utc": "2026-11-08T22:32:37.78652903Z",
     "first_actual_POST_unix": 1794177449.9816473,
     "HTTP_response_verified": false,
-    "status": "running_scheduled_snapshot454",
-    "completed_snapshot": 454,
+    "status": "running_snapshot578",
+    "completed_snapshot": 578,
     "total": 1080,
     "first_response_at_unix": 1794177788.061468,
     "steady_throughput": null,
     "early_ETA_rejected": true,
-    "snapshot_at_unix": 1794180195.7789264,
-    "remaining": 626,
-    "seconds_per_row_recent": 8.602045406614032,
-    "eta_seconds_at_snapshot": 5384.8804245403835
+    "snapshot_at_unix": 1794180798.245924,
+    "remaining": 502,
+    "seconds_per_row_recent": 4.8586048195439,
+    "eta_seconds_at_snapshot": 2439.0196194110376
   },
   "current_snapshot": {
     "recall_bank": 75,
@@ -683,12 +683,12 @@
     "round6_formal": "complete_main_verified",
     "reverse76": "complete_75_main_verified",
     "P_W_completed_snapshot": 1080,
-    "P_X_completed_snapshot": 454,
+    "P_X_completed_snapshot": 578,
     "NPU_sustained_80_percent_proven": false,
     "P_W_top3": 1010,
-    "P_X_snapshot_at_unix": 1794180195.7789264,
+    "P_X_snapshot_at_unix": 1794180798.245924,
     "P_fs1_generation_started": true,
-    "P_fs1_first_model_request_verified": false
+    "P_fs1_first_model_request_verified": true
   },
   "historical_active_tracks": [
     {
@@ -727,8 +727,8 @@
       "resource": "NPU_B",
       "status": "running_snapshot",
       "total": 1080,
-      "completed_snapshot": 454,
-      "snapshot_at_unix": 1794180195.7789264,
+      "completed_snapshot": 578,
+      "snapshot_at_unix": 1794180798.245924,
       "cards": 4,
       "instances": 1,
       "depends_on": []
@@ -737,7 +737,7 @@
       "id": "recall-joint-duty-proposal",
       "resource": "CPU",
       "owner": "Sol CLI",
-      "status": "implementation_and_directed_verification",
+      "status": "teacher_streaming_and_formal_inputs_preparing",
       "depends_on": [],
       "blocks_NPU": false
     },
@@ -745,8 +745,8 @@
       "id": "P-consumption-successor",
       "resource": "CPU_AND_NPU_A",
       "owner": "Sol CLI",
-      "status": "generation_container_launched_first_model_request_pending",
-      "NPU_started": false,
+      "status": "running_actual_model_response_verified",
+      "NPU_started": true,
       "depends_on": [],
       "blocks_NPU": false,
       "NPU_launch_started": true,
@@ -806,11 +806,11 @@
     "full_reports_main_accepted": true
   },
   "p_consumption_successor": {
-    "status": "generation_container_launched_first_model_request_pending",
+    "status": "running_first_real_request_response_and_inputs_main_verified",
     "candidate": "V_fixed_supply_fs0_to1_only",
     "n": 1080,
     "CPU_admission_seconds": 494.49,
-    "NPU_started": false,
+    "NPU_started": true,
     "teacher": "complete_PROPOSE_existing_config_main_approved_one_run_not_promotion",
     "test_used": false,
     "duplicate_preparation_required": false,
@@ -820,14 +820,18 @@
     "teacher_input_tokens": 32308,
     "teacher_output_tokens_including_reasoning": 25607,
     "teacher_reasoning_tokens": 21336,
-    "teacher_total_tokens": 57915
+    "teacher_total_tokens": 57915,
+    "first_response_valid": true,
+    "full_accuracy_pending": true,
+    "early_ETA_not_reported": true
   },
   "joint_duty_proposal": {
-    "status": "CLI_started_implementation",
+    "status": "implemented_validated_teacher_unique_request_HTTP200",
     "final_state": "bank_minus_up_to_two_old_same_label_plus_one_real_TRAIN",
     "base_size": 75,
     "global_minimum_claim": false,
     "formal_run_started": false,
-    "teacher_sent": false
+    "teacher_sent": true,
+    "source_label_correction": "both example representatives qa_factoid; no proven cross-intent replacement gain"
   }
 }

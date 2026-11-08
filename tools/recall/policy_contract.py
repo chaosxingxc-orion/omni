@@ -37,6 +37,8 @@ def validate_policy(p):
   from candidate_proposals import validate_plugin
   validate_plugin(p['proposal_plugin'])
   if p.get('mode') in ('single_insert_reference','joint_swap_reference'):raise ValueError('Reference plugin forbidden')
+  if 'joint_duty' in p['proposal_plugin']:
+   if p.get('mode')!='compensation_chain' or p.get('maximum_deletions',0)<max(p['proposal_plugin']['joint_duty']['delete_sizes']):raise ValueError('joint_duty requires compensation family and deletion bounds')
  if p.get('acceptance_mode','strict_gain') not in ('strict_gain','gain_or_shrink'):raise ValueError('Unsupported acceptance_mode')
  if set(p)-{'proposal_plugin','acceptance_mode'} not in (set(COMMON)|{'mode'}, set(COMMON)|{'mode','compensation_budget'}): raise ValueError('Unsupported policy fields')
  causal=False
