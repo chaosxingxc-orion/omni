@@ -1,0 +1,7 @@
+Teacher contract v2 修复已离线验证。observer接受完整单一JSON对象或完整JSON代码围栏，拒绝前后垃圾/多对象/坏输入，并支持独立输出根和单次终态收集；保留原始响应、receipt核验和共享guard。固定镜像23项测试通过，已有两份终态响应各3候选重新解析成功，无新API。
+
+下一轮prepare与ACE/TFGROUP独立模板将gold_covered_in_input与all_rows_have_cards拆开，固定完整合法TRAIN父/coverage分母，区分历史选库控制。卡槽是distinct label卡；运行路径为audio→TRAIN问句相似度→per-label聚合→label卡→ranking indices，不依赖query转写。新增source-distinct匹配反证、p值解释约束与未测reward=null规则。TF C2主适配已由独立工程完成11臂CPU全量评分并主独立复核，全部R3低于父，输入标completed_cpu_rejected并附真实检索奖励；下游P奖励未测。不重复同策略或同族微阈值，不将词项重合失败泛化为所有语义方法无效。
+
+完整私有report/result/commands/sourcepins及真实ExternalTeacher.preflight绑定位于任务独立输出根teacher-contract-v2，保留旧contact/compiled字节。两教师历史成本104869 tokens（reason包含于output），本次新增API/encoder/NPU调用0；干跑与环境验证不代表新策略训练或收益。
+
+下一轮ACE与TFGROUP已在开发机各发一次请求，均收到headers和SSE，尚未终态。输入分别63887/64058字节（不是token），输出上限131072；采用上述纠正接口和11臂CPU反证，各自独立模板，动态证据最多16代表。独立后台观察器按终态/600秒收集，不重发未知请求；实际usage及候选质量等待终态。

@@ -1408,13 +1408,13 @@
       "id": "P-teacher-contract-correction",
       "resource": "CPU",
       "depends_on": [],
-      "status": "implementation_and_dryrun_in_progress_no_API"
+      "status": "complete_fixed_image23tests_offline_verified_next_API_live"
     },
     {
       "id": "P-position-paired-replication-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "preparing_actual_configs_and_admissions"
+      "status": "complete_admissions_exit0_queue_started"
     },
     {
       "id": "P-position-paired-replication-A",
@@ -1422,9 +1422,10 @@
       "depends_on": [
         "P-position-paired-replication-prepare"
       ],
-      "status": "not_yet_confirmed_started",
+      "status": "parent_container_running_no_first_response_yet_main_snapshot",
       "rows": 2160,
-      "design": "parent1080 then position1080, identical supply/runtime; one paired replication"
+      "design": "parent1080 then position1080, identical supply/runtime; one paired replication",
+      "completed_rows": 0
     }
   ],
   "round_policy": {
