@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T01:58:02.635925+00:00",
+  "updated_at_utc": "2026-11-08T02:10:17.571295+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -746,15 +746,15 @@
       "depends_on": [
         "P-key-reencode"
       ],
-      "status": "planned",
+      "status": "full60_independent_CPU_result_available_report_pending",
       "scope": "Recall3_5/rank/margin and paired repairs/regressions"
     },
     {
       "id": "P-ranking-window-runtime",
       "resource": "CPU",
       "depends_on": [],
-      "status": "implementation_assigned",
-      "scope": "before_model numbered candidates; numeric index array 3/1,3/2,5/3; deterministic after_model locked-KB card handoff"
+      "status": "accepted_main_a75f34adf",
+      "scope": "98 functional/regression cases resolved; native live response not yet verified"
     },
     {
       "id": "P-ranking-input-prepare",
@@ -926,7 +926,7 @@
       "id": "P-description-index-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned",
+      "status": "original60_cached_vectors_verified_ready",
       "scope": "complete original 60-description embeddings, compatible query geometry, source-bound index; reuse 13 already encoded originals"
     },
     {
@@ -935,8 +935,8 @@
       "depends_on": [
         "P-real-question-recall-analysis"
       ],
-      "status": "planned_separate_mode",
-      "scope": "source-bound per-question retrieval, per-intent aggregation, same ranking rail; no fusion dependency"
+      "status": "implementation_in_progress",
+      "scope": "standalone configurable real TRAIN question retrieval CLI first; native system adapter later"
     },
     {
       "id": "P-real-question-mode-eval",
@@ -947,6 +947,42 @@
       ],
       "status": "planned_inputs_before_lease",
       "scope": "independent same-window question-mode comparison, frozen real TRAIN pool"
+    },
+    {
+      "id": "retrieval-description-next-teacher-input",
+      "resource": "CPU",
+      "depends_on": [
+        "P-key-recall-analysis"
+      ],
+      "status": "assigned",
+      "scope": "current full60 baseline vs ACE13 regression; source-grounded patches; no system-run dependency"
+    },
+    {
+      "id": "retrieval-description-next-teacher",
+      "resource": "CPU_EXTERNAL_API",
+      "depends_on": [
+        "retrieval-description-next-teacher-input"
+      ],
+      "status": "planned_inputs_pending",
+      "scope": "method-specific template + dynamic recall feedback; unique request; no old replay"
+    },
+    {
+      "id": "retrieval-description-candidate-CPU-batch",
+      "resource": "CPU",
+      "depends_on": [
+        "retrieval-description-next-teacher"
+      ],
+      "status": "planned",
+      "scope": "encode independent patches, full1080 retrieval score, reject regressions before NPU"
+    },
+    {
+      "id": "retrieval-question-CPU-optimization",
+      "resource": "CPU",
+      "depends_on": [
+        "P-real-question-mode-runtime"
+      ],
+      "status": "planned",
+      "scope": "real TRAIN fixed-source NN/kNN aggregation comparison; no system dependencies"
     }
   ],
   "round_policy": {
@@ -970,9 +1006,9 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "A_confirmed_responses_B1080_generation_done_C1034_at_snapshot",
-      "utilization": "not_proven_sustained_full_load",
-      "successors": "numeric_index_runtime_pending_preparing_inputs"
+      "status": "previous_A_B_C_complete_new_description_windows_preparing",
+      "new_ranking_response_confirmed": false,
+      "all_cards_busy_claim": false
     },
     "held": [
       "Rescan",
@@ -982,38 +1018,37 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "observed_at_utc": "2026-11-08T01:39:04.026395+00:00",
+      "observed_at_utc": "2026-11-08T02:08:43.966386+00:00",
       "run_id": "SAEA-SLURP-P-REFLEXION-CONSUMPTION-C3-A-V1",
-      "rows_complete": 469,
+      "rows_complete": 1080,
       "rows_total": 1080,
       "duplicates": 0,
       "torn_lines": 0,
       "contacts": {
-        "dispatch": 537,
-        "intent": 537,
-        "fit": 537,
-        "response": 473
+        "fit": 1099,
+        "dispatch": 1099,
+        "intent": 1099,
+        "response": 1099
       },
       "known_tokens": {
-        "prompt_tokens": 2607354,
-        "completion_tokens": 110492
+        "prompt_tokens": 6055024,
+        "completion_tokens": 292150
       },
       "cards": 4,
       "instances": 1,
-      "generation_container_state": "running",
-      "container_wall_seconds": 871.098258,
-      "container_seconds_per_row_including_startup": 1.8573523624733475,
-      "mean_response_latency_seconds": 31.289166555789656,
-      "response_window_seconds": 571.7560000419617,
+      "generation_container_state": "exited",
+      "container_wall_seconds": 1733.542378,
+      "container_seconds_per_row_including_startup": 1.6051318314814815,
+      "mean_response_latency_seconds": 33.94199466829831,
+      "response_window_seconds": 1327.9400000572205,
       "first_response_unix": 1794101367.192,
-      "last_response_unix": 1794101938.948,
-      "eta_seconds": null,
+      "last_response_unix": 1794102695.132,
+      "eta_seconds": 0,
       "eta_note": "startup included; interval delta needed for steady rate",
-      "first_response_confirmed": true,
-      "current_generation_active": true
+      "current_generation_active": false
     },
     "B": {
-      "observed_at_utc": "2026-11-08T01:39:31.514693+00:00",
+      "observed_at_utc": "2026-11-08T02:08:43.958156+00:00",
       "run_id": "SAEA-SLURP-P-ONLY-CACHED-PARENT-B-RECHECK-V1",
       "rows_complete": 1080,
       "rows_total": 1080,
@@ -1031,48 +1066,46 @@
       },
       "cards": 4,
       "instances": 1,
-      "generation_container_state": "running",
-      "container_wall_seconds": 1747.413325,
-      "container_seconds_per_row_including_startup": 1.617975300925926,
+      "generation_container_state": "exited",
+      "container_wall_seconds": 1788.000773,
+      "container_seconds_per_row_including_startup": 1.6555562712962963,
       "mean_response_latency_seconds": 36.846484426127404,
       "response_window_seconds": 1390.0240001678467,
       "first_response_unix": 1794100514.82,
       "last_response_unix": 1794101904.844,
-      "eta_seconds": null,
+      "eta_seconds": 0,
       "eta_note": "startup included; interval delta needed for steady rate",
-      "first_response_confirmed": true,
       "current_generation_active": false
     },
     "C": {
-      "observed_at_utc": "2026-11-08T01:37:34.829343+00:00",
+      "observed_at_utc": "2026-11-08T02:07:07.770574+00:00",
       "run_id": "SAEA-SLURP-P-ONLY-BREADTH12-C-RECHECK-V1",
-      "rows_complete": 1034,
+      "rows_complete": 1080,
       "rows_total": 1080,
       "duplicates": 0,
       "torn_lines": 0,
       "contacts": {
-        "response": 1049,
-        "fit": 1067,
-        "intent": 1067,
-        "dispatch": 1066
+        "response": 1098,
+        "fit": 1098,
+        "intent": 1098,
+        "dispatch": 1098
       },
       "known_tokens": {
-        "prompt_tokens": 6968424,
-        "completion_tokens": 279326
+        "prompt_tokens": 7293200,
+        "completion_tokens": 301338
       },
       "cards": 4,
       "instances": 1,
-      "generation_container_state": "running",
-      "container_wall_seconds": 1708.917381,
-      "container_seconds_per_row_including_startup": 1.6527247398452611,
-      "mean_response_latency_seconds": 40.2533239232698,
-      "response_window_seconds": 1381.1960000991821,
+      "generation_container_state": "exited",
+      "container_wall_seconds": 1896.686279,
+      "container_seconds_per_row_including_startup": 1.756190999074074,
+      "mean_response_latency_seconds": 40.233624958133056,
+      "response_window_seconds": 1488.7400000095367,
       "first_response_unix": 1794100448.692,
-      "last_response_unix": 1794101829.888,
-      "eta_seconds": null,
+      "last_response_unix": 1794101937.432,
+      "eta_seconds": 0,
       "eta_note": "startup included; interval delta needed for steady rate",
-      "first_response_confirmed": true,
-      "current_generation_active": true
+      "current_generation_active": false
     },
     "teacher_gepa": {
       "state": "complete_A_no_benefit",
@@ -1089,18 +1122,18 @@
     },
     "cpu_workers": [
       {
-        "role": "ranking_runtime",
-        "pid": 3712465,
+        "role": "description_system_queue",
+        "pid": 3763188,
         "model": "gpt-6.1-terra"
       },
       {
-        "role": "teacher_and_dual_recall_analysis",
+        "role": "retrieval_analysis_and_teacher",
         "pid": 3743096,
         "model": "gpt-6.1-sol"
       },
       {
-        "role": "ranking_window_queue",
-        "pid": 3747500,
+        "role": "standalone_real_question_mode",
+        "pid": 3763993,
         "model": "gpt-6.1-terra"
       }
     ],
@@ -1248,5 +1281,6 @@
     "implementation_status": "assigned_not_deployed"
   },
   "intent_key_definition": "locked_description_embedding; individual_question_index_separate; centroid_history_only",
-  "retrieval_mode_policy": "independent_description_and_real_TRAIN_question_first; no synthetic/test-derived queries; fusion deferred"
+  "retrieval_mode_policy": "independent_description_and_real_TRAIN_question_first; no synthetic/test-derived queries; fusion deferred",
+  "retrieval_optimization_dependencies": "no_P_S_D_no_NPU_no_native_registration"
 }

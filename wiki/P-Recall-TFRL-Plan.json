@@ -1,7 +1,7 @@
 {
   "schema": "p-recall-tfrl-research-plan-v1",
   "status": "active_research_not_completed",
-  "updated_at_utc": "2026-11-08T01:58:02.635042+00:00",
+  "updated_at_utc": "2026-11-08T02:10:17.571295+00:00",
   "stage": "P",
   "primary_metric": "valid_gold_intent_in_output_K_le_3_over_full_roster",
   "max_candidates": 3,
@@ -181,5 +181,25 @@
       ]
     },
     "fusion_status": "deferred_until_independent_mode_evaluation"
+  },
+  "retrieval_optimization_loop": {
+    "runtime": "standalone_CPU_no_actor_calls",
+    "system_dependencies": [],
+    "steps": [
+      "source_grounded_candidate",
+      "encode_changed_description_keys_only",
+      "fixed1080_retrieval_evaluation",
+      "method_specific_teacher_feedback",
+      "paired_candidate_selection"
+    ],
+    "metrics": [
+      "input_recall3_5",
+      "gold_rank_MRR",
+      "repairs_regressions",
+      "per_intent",
+      "CPU_cost"
+    ],
+    "system_validation": "subsequent_for_selected_candidates_only",
+    "parallel_system_baseline": "not_a_retrieval_prerequisite"
   }
 }
