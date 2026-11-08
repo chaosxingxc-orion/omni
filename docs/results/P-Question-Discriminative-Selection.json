@@ -1,0 +1,49 @@
+{
+  "status": "COMPLETE_FULL_LEGAL_TRAIN_GEOMETRY",
+  "members": 8554,
+  "nonempty_intents": 59,
+  "text_loo_recall1": 7235,
+  "text_loo_recall3": 8077,
+  "negative_mean5_margin": 1319,
+  "nearest_other_beats_same": 1565,
+  "purity20": {
+    "min": 0.0,
+    "p10": 0.15,
+    "median": 0.75,
+    "p90": 1.0,
+    "max": 1.0
+  },
+  "margin5": {
+    "min": -0.06323544093356082,
+    "p10": -0.003297502673097141,
+    "median": 0.013228767914558126,
+    "p90": 0.03509718596009399,
+    "max": 0.10747730086774321
+  },
+  "cross_label_exact_text_conflicts": 0,
+  "teacher_representatives": 785,
+  "source_count_range": [
+    6,
+    745
+  ],
+  "resources": {
+    "npu_cards": 0,
+    "new_encoder_calls": 0,
+    "load_seconds": 14.60236292006448,
+    "geometry_and_summary_seconds": 12.867934320005588,
+    "wall_seconds": 27.470383320003748,
+    "peak_rss_kib": 445652
+  },
+  "limitations": [
+    "Text-key to text-key geometry is not speech-query retrieval performance.",
+    "TRAIN labels are analysis targets; DEV, FoldB and TEST are not loaded.",
+    "Self and every exact-text duplicate are excluded from all nearest-neighbor statistics.",
+    "Global kNN purity and hubness depend on class sizes; per-label competitor margins reduce but do not eliminate imbalance.",
+    "Negative margin is not proof of annotation error and does not authorize deleting or relabeling a source.",
+    "No knowledge-bank selection policy has yet been accepted or deployed."
+  ],
+  "macro": {
+    "macro_r1": 0.7903896311862016,
+    "macro_r3": 0.9144896975175255
+  }
+}

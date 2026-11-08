@@ -1,5 +1,8 @@
 # 真实相似问知识库：独立优化结果
 
+最新：[优化路线对抗性复盘](Optimization-Adversarial-Review)与[全域向量诊断及选库方案](P-Question-Discriminative-Selection)。全8554几何已完成；最新TF-GRPO式三候选未超过现有coverage，不派发到NPU。
+
+
 ## 当前：根因反馈与远程教师TFRL
 
 两路新教师实验已HTTP200：描述ACE、相似问检索专用TF-GRPO式组内相对奖励；补充真实query、Top3/gold关系、关键词关联与others业务边界。问句coverage完整结果846/976/1007，修8退1；maths P Top1=712持平。以[根因分析与TFRL实验](P-Retrieval-Root-Cause-TFRL)为最新结果；下文旧阶段保留历史对照。

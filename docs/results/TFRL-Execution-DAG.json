@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T04:42:14.350147+00:00",
+  "updated_at_utc": "2026-11-08T04:57:36.096500+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1214,11 +1214,12 @@
       "depends_on": [
         "P-positive-description-multiwindow-input"
       ],
-      "status": "generation_created_worker_reported_first_response_unverified",
+      "status": "running_worker_reported177_of1080_at_044433UTC",
       "rows": 1080,
       "input_k": 3,
       "output_k": 2,
-      "scope": "test retention of newly supplied correct intent; compare original-description C control, no CPU analysis prerequisite"
+      "scope": "test retention of newly supplied correct intent; compare original-description C control, no CPU analysis prerequisite",
+      "first_response_seen_by_worker": true
     },
     {
       "id": "P-positive-description-combined-5-3",
@@ -1262,9 +1263,10 @@
       "depends_on": [
         "P-retrieval-root-cause-evidence"
       ],
-      "status": "HTTP200_streaming",
+      "status": "complete_HTTP200_stop",
       "algorithm": "ACE",
-      "diagnostic_cases": 400
+      "diagnostic_cases": 400,
+      "total_tokens": 533969
     },
     {
       "id": "P-question-TFGRPO-root-cause-teacher",
@@ -1272,9 +1274,10 @@
       "depends_on": [
         "P-retrieval-root-cause-evidence"
       ],
-      "status": "HTTP200_streaming",
+      "status": "complete_HTTP200_stop",
       "algorithm": "TFGRPO-inspired deterministic retrieval-strategy group reflection",
-      "diagnostic_cases": 278
+      "diagnostic_cases": 278,
+      "total_tokens": 835347
     },
     {
       "id": "P-desc-ACE-root-cause-cpu",
@@ -1282,7 +1285,7 @@
       "depends_on": [
         "P-desc-ACE-root-cause-teacher"
       ],
-      "status": "awaiting_teacher_candidates",
+      "status": "one_valid_candidate_fixed_image_launched_two_held_for_source_semantics",
       "rows": 1080
     },
     {
@@ -1291,8 +1294,43 @@
       "depends_on": [
         "P-question-TFGRPO-root-cause-teacher"
       ],
-      "status": "awaiting_teacher_candidates",
-      "rows": 1080
+      "status": "complete1080_three_candidates_no_adoption",
+      "rows": 1080,
+      "R3": [
+        969,
+        697,
+        941
+      ]
+    },
+    {
+      "id": "P-question-full-TRAIN-geometry",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "complete8554_fixed_image_exit0",
+      "result": {
+        "nearest_other_beats_same": 1565,
+        "negative_mean5_margin": 1319,
+        "seconds": 27.470383320003748,
+        "npu_cards": 0
+      }
+    },
+    {
+      "id": "P-question-ACE-discriminative-selection",
+      "resource": "LOCAL_EXTERNAL_API",
+      "depends_on": [
+        "P-question-full-TRAIN-geometry"
+      ],
+      "status": "planned_not_sent",
+      "scope": "Full TRAIN-conditioned source selection, coverage and boundary protection; configuration interpreter pending"
+    },
+    {
+      "id": "P-embedding-compatible-model-comparison",
+      "resource": "CPU_PREPARE",
+      "depends_on": [
+        "P-question-full-TRAIN-geometry"
+      ],
+      "status": "inventory_config_inspected_not_benchmarked",
+      "scope": "Same-source audio-text embedding compatibility and full-corpus comparisons; no mixed-model vectors"
     }
   ],
   "round_policy": {
