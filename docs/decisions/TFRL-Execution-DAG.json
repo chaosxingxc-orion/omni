@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T15:57:08.123793+00:00",
+  "updated_at_utc": "2026-11-08T16:10:05.777988+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -333,25 +333,26 @@
         "mean_labels": 8.6842592593,
         "p95_labels": 17,
         "max_labels": 25,
-        "P_gain": null
+        "P_gain": "not established; A paired control running"
       },
       "execution": {
-        "B_container_running": true,
-        "A_admitted_queued": true,
-        "first_model_response_verified": true,
-        "snapshot_utc": "2026-11-08T15:55:49Z",
-        "completed_verified": 360,
-        "total": 1080,
-        "responses_verified": 361,
-        "valid_index_responses": 361,
+        "B_status": "complete_1080_main_independent_recount",
+        "valid": 1080,
+        "supply_hits": 1060,
+        "top3": 998,
+        "top1": 905,
+        "supply_condition_retention": 0.9415094339622642,
+        "A_status": "auto_started_2026_11_08_16_02_31_UTC",
         "cards": 4,
         "instances": 1,
-        "model_inflight": 64,
-        "seconds_per_completed_row_estimate": 0.4064792454,
-        "ETA_seconds_estimate": 292.665,
-        "estimate_excludes": "startup and final scoring",
-        "input_tokens_completed": 1463454,
-        "output_tokens_completed": 4864
+        "configured_model_inflight": 64,
+        "actual_HTTP_concurrent_mean": 8.655534,
+        "actual_HTTP_concurrent_peak": 19,
+        "HTTP_window_seconds": 432.87956255,
+        "HTTP_seconds_per_row": 0.40081441,
+        "input_tokens": 4483293,
+        "output_tokens": 15078,
+        "paired_fewshot_gain": null
       }
     },
     "confirmed_exclusion": {
@@ -408,7 +409,7 @@
       "id": "p-consumption",
       "owner": "Terra CLI",
       "resource": "CPU_prepare_then_NPU",
-      "status": "B_verified360_of1080_A_admitted_durable_queued",
+      "status": "B_complete_1080_Top3_998_A_auto_started_CPU_analysis_parallel",
       "depends_on": [
         "frozen_original_Q50D5"
       ],
