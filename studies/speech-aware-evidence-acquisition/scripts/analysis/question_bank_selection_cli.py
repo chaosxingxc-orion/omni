@@ -59,7 +59,7 @@ def main():
                 for k in (1,3,5):
                     aa=(comp>0)&(comp<=k);bb=(x>0)&(x<=k);paired[str(k)]={'repair':int((~aa&bb).sum()),'regression':int((aa&~bb).sum())}
             sizes={t:classes[t]['original'] for t in intents}; strata={}
-            for label, predicate in [('1-32',lambda n:0<n<=32),('33-128',lambda n:32<n<=128),('129+',lambda n:n>128)]:
+            for label, predicate in [('0',lambda n:n==0),('1-32',lambda n:0<n<=32),('33-128',lambda n:32<n<=128),('129+',lambda n:n>128)]:
                 selected=np.array([predicate(sizes[gold[s]]) for s in ids]); strata[label]={'samples':int(selected.sum()),**metric(x[selected])} if selected.any() else {'samples':0}
             result[name]={'metrics':metric(x),'paired':paired,'original_class_size_strata':strata,'fewer_than3':sum(len(v)<3 for v in orders),'fewer_than5':sum(len(v)<5 for v in orders),'per_intent':{t:metric(x[np.array([gold[s]==t for s in ids])]) for t in intents if any(gold[s]==t for s in ids)}}
             per=result[name]['per_intent'];result[name]['macro_recall']={str(k):float(np.mean([v['recall'+str(k)]/v['n'] for v in per.values()])) for k in (1,3,5)}
