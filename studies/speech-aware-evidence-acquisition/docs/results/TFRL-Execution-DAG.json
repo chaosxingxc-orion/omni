@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T08:28:12.555859+00:00",
+  "updated_at_utc": "2026-11-08T08:43:59.384002+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1681,10 +1681,28 @@
       "depends_on": [
         "P-position-paired-replication-prepare"
       ],
-      "status": "parent_container_running_no_first_response_yet_main_snapshot",
+      "status": "parent_real_inference_352_of1080_position_queued_after_release",
       "rows": 2160,
       "design": "parent1080 then position1080, identical supply/runtime; one paired replication",
-      "completed_rows": 0
+      "completed_rows": 352
+    },
+    {
+      "id": "P-render-digest-microbenchmark",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "complete_real1080_3240_loops_no_material_gain_no_code_change"
+    },
+    {
+      "id": "P-workspace-render-profile",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "running_bounded_profile_existing_real_process"
+    },
+    {
+      "id": "P-mask-failure-mechanism-analysis",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "running_full_legal_TRAIN_and_fixed_audio_matrix_no_API"
     }
   ],
   "round_policy": {

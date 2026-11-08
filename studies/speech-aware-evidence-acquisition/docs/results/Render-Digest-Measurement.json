@@ -1,0 +1,107 @@
+{
+  "schema": "real-render-digest-microbench-v1",
+  "intents": 1080,
+  "verified": 1080,
+  "distinct_intents": 1080,
+  "sizes_bytes": {
+    "min": 14858,
+    "p50": 49743,
+    "p90": 85782,
+    "p95": 97928,
+    "p99": 139754,
+    "max": 197153,
+    "mean": 54018.47222222222,
+    "sum": 58339950
+  },
+  "preparation": {
+    "wall_s": 0.69521902,
+    "cpu_s": 0.69474399
+  },
+  "roles": {
+    "construction": {
+      "wall_s": 0.1578725,
+      "cpu_s": 0.15783865,
+      "item_wall_ns": {
+        "min": 57880,
+        "p50": 131280,
+        "p90": 220810,
+        "p95": 256760,
+        "p99": 372770,
+        "max": 571010,
+        "mean": 143968.7037037037,
+        "sum": 155486200
+      },
+      "item_cpu_ns": {
+        "min": 56880,
+        "p50": 130230,
+        "p90": 219650,
+        "p95": 255660,
+        "p99": 371480,
+        "max": 569540,
+        "mean": 142787.52777777778,
+        "sum": 154210530
+      },
+      "mismatches": 0
+    },
+    "fit": {
+      "wall_s": 0.15841437,
+      "cpu_s": 0.15841488,
+      "item_wall_ns": {
+        "min": 58220,
+        "p50": 131560,
+        "p90": 225930,
+        "p95": 257380,
+        "p99": 391700,
+        "max": 596770,
+        "mean": 144422.30555555556,
+        "sum": 155976090
+      },
+      "item_cpu_ns": {
+        "min": 57080,
+        "p50": 130420,
+        "p90": 224460,
+        "p95": 256240,
+        "p99": 390260,
+        "max": 595290,
+        "mean": 143150.02777777778,
+        "sum": 154602030
+      },
+      "mismatches": 0
+    },
+    "transport": {
+      "wall_s": 0.15802129,
+      "cpu_s": 0.1578928,
+      "item_wall_ns": {
+        "min": 58130,
+        "p50": 131550,
+        "p90": 223410,
+        "p95": 257140,
+        "p99": 376620,
+        "max": 597070,
+        "mean": 144086.7685185185,
+        "sum": 155613710
+      },
+      "item_cpu_ns": {
+        "min": 56650,
+        "p50": 130230,
+        "p90": 220360,
+        "p95": 253920,
+        "p99": 374850,
+        "max": 595460,
+        "mean": 142662.6851851852,
+        "sum": 154075700
+      },
+      "mismatches": 0
+    }
+  },
+  "affinity_count": 1,
+  "maxrss_kib": 99720,
+  "main_review": "3240 row arithmetic and original 1080 intent SHA set independently verified; audio decode benchmark not re-executed",
+  "result_sha256": "ec2782a6bf67560cbc3b38a34bcb17baf486025bc9b218f1ab561f7da6302802",
+  "decision": "Do not implement digest optimization based on current measured magnitude",
+  "limitations": [
+    "Simulated three role loops on real audio bytes; not actual render/session replay",
+    "Serial microbenchmark is not a strict runtime saving bound",
+    "Preparation includes one re-encoding; no encoder-model or API call"
+  ]
+}
