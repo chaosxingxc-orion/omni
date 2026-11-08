@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T04:57:36.096500+00:00",
+  "updated_at_utc": "2026-11-08T05:13:44.435704+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1214,12 +1214,18 @@
       "depends_on": [
         "P-positive-description-multiwindow-input"
       ],
-      "status": "running_worker_reported177_of1080_at_044433UTC",
+      "status": "complete1080_exit0_main_paired",
       "rows": 1080,
       "input_k": 3,
       "output_k": 2,
       "scope": "test retention of newly supplied correct intent; compare original-description C control, no CPU analysis prerequisite",
-      "first_response_seen_by_worker": true
+      "first_response_seen_by_worker": true,
+      "valid": 1080,
+      "output_top2": 826,
+      "paired_original_finite": {
+        "repairs": 28,
+        "regressions": 2
+      }
     },
     {
       "id": "P-positive-description-combined-5-3",
@@ -1227,11 +1233,17 @@
       "depends_on": [
         "P-positive-description-multiwindow-input"
       ],
-      "status": "admitted_ready_waiting_predecessor",
+      "status": "complete1080_exit0_main_paired",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
-      "scope": "same-parent window control on B; A successor after prepared ready, no analysis prerequisite"
+      "scope": "same-parent window control on B; A successor after prepared ready, no analysis prerequisite",
+      "valid": 1080,
+      "output_top3": 882,
+      "paired_original_finite": {
+        "repairs": 18,
+        "regressions": 5
+      }
     },
     {
       "id": "P-ranking-finite-B-control",
@@ -1285,8 +1297,11 @@
       "depends_on": [
         "P-desc-ACE-root-cause-teacher"
       ],
-      "status": "one_valid_candidate_fixed_image_launched_two_held_for_source_semantics",
-      "rows": 1080
+      "status": "complete1080_rejected_no_NPU",
+      "rows": 1080,
+      "Recall3": 828,
+      "repairs": 0,
+      "regressions": 17
     },
     {
       "id": "P-question-TFGRPO-root-cause-cpu",
@@ -1320,8 +1335,11 @@
       "depends_on": [
         "P-question-full-TRAIN-geometry"
       ],
-      "status": "planned_not_sent",
-      "scope": "Full TRAIN-conditioned source selection, coverage and boundary protection; configuration interpreter pending"
+      "status": "HTTP200_streaming_compact_full8554",
+      "scope": "Full TRAIN-conditioned source selection, coverage and boundary protection; configuration interpreter pending",
+      "initial_attempt": "HTTP400_prompt_exceeds_max_length_terminal_no_usage",
+      "all_source_texts_retained": true,
+      "implementation": "active_existing_Terra_CLI"
     },
     {
       "id": "P-embedding-compatible-model-comparison",
@@ -1329,8 +1347,33 @@
       "depends_on": [
         "P-question-full-TRAIN-geometry"
       ],
-      "status": "inventory_config_inspected_not_benchmarked",
+      "status": "Sol_CLI_active_contract_and_global_geometry_audit",
       "scope": "Same-source audio-text embedding compatibility and full-corpus comparisons; no mixed-model vectors"
+    },
+    {
+      "id": "P-question-mean5-5to3-complete",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [],
+      "status": "complete1080_exit0_main_paired",
+      "valid": 1080,
+      "input_R5": 1007,
+      "output_R3": 992,
+      "repairs_vs_description": 142,
+      "regressions_vs_description": 19
+    },
+    {
+      "id": "P-question-mean5-3to2-running",
+      "resource": "NPU_C_TP4",
+      "depends_on": [],
+      "status": "container_running_first_response_not_main_verified",
+      "rows": 1080
+    },
+    {
+      "id": "P-question-multiwindow-3to1-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "owner_preparing_mean5_and_coverage",
+      "rows": 1080
     }
   ],
   "round_policy": {

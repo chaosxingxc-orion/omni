@@ -1,5 +1,8 @@
 # 当前任务进度、实验设置与下一阶段计划
 
+最新完整结果：[P排序与召回对照](P-Ranking-Retrieval-Comparison)。问句mean5 5→3输出992/1080，对原描述869修142退19；combined5→3为882，combined3→2为826，均1080合法。新ACE全域选库教师已HTTP200，CPU选库与模型分析并行。
+
+
 最新：[优化路线对抗性复盘](Optimization-Adversarial-Review)与[全域向量诊断及选库方案](P-Question-Discriminative-Selection)。全8554几何已完成；最新TF-GRPO式三候选未超过现有coverage，不派发到NPU。
 
 
