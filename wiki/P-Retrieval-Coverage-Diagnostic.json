@@ -1,0 +1,69 @@
+{
+  "status": "CPU_DIAGNOSTIC_NOT_MODEL_OUTPUT_RECALL",
+  "n": 1080,
+  "single_segment_verified": true,
+  "source_sha256": {
+    "query": "e90fc17d4b76e3d70964bb54aa6ea26f06737bafecdf20408a05482c85ecff9a",
+    "facets": "f05287550e2ee895a6444b2e909db643df6f8d586c648eb7cc32c7b9f2c46d31",
+    "labels": "5bd8cd157cfaaf91805124d0a84134405028ca5adab22c6f79f5b02a2f579d9c"
+  },
+  "knowledge_coverage_by_depth": {
+    "1": 787,
+    "3": 949,
+    "5": 984,
+    "8": 1024,
+    "12": 1045,
+    "16": 1058,
+    "24": 1070,
+    "32": 1074,
+    "48": 1079,
+    "60": 1080
+  },
+  "gold_rank_histogram": {
+    "1": 787,
+    "3": 57,
+    "8": 11,
+    "7": 13,
+    "2": 105,
+    "12": 5,
+    "5": 16,
+    "18": 5,
+    "15": 4,
+    "14": 4,
+    "4": 19,
+    "17": 2,
+    "42": 2,
+    "9": 8,
+    "6": 16,
+    "16": 3,
+    "24": 2,
+    "10": 4,
+    "19": 1,
+    "11": 4,
+    "46": 1,
+    "29": 2,
+    "20": 1,
+    "53": 1,
+    "13": 2,
+    "30": 1,
+    "28": 1,
+    "21": 1,
+    "33": 1,
+    "44": 1
+  },
+  "nonpositive_gold_count": 0,
+  "all_card_count": 60,
+  "new_model_calls": 0,
+  "elapsed_seconds": 22.390510519966483,
+  "limitations": [
+    "Matches native scalar cosine and positive admission, single segment verified.",
+    "Coverage is knowledge input coverage, not P output recall or improved accuracy.",
+    "Teacher or actor cannot use gold ranks for runtime selection."
+  ],
+  "latest_priority_depths": [
+    3,
+    5,
+    8
+  ],
+  "depth24_60_policy": "diagnostic_only_hold_new_NPU_runs_under_latest_user_direction"
+}
