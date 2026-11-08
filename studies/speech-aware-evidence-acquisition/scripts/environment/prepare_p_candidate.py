@@ -57,11 +57,19 @@ def preflight(c):
     require(sha(manifest_path) == c['release']['manifest_sha256'], 'release manifest SHA mismatch')
     manifest = read(manifest_path)
     require(manifest['commit'] == c['release']['commit'], 'release commit mismatch')
-    template = 'studies/speech-aware-evidence-acquisition/' + c['template']['relpath']
-    template_path = within(release, template)
-    require(template_path.is_file(), 'template missing from release')
-    require(manifest['files'].get(template) == c['template']['sha256'], 'template manifest pin mismatch')
-    require(sha(template_path) == c['template']['sha256'], 'template content mismatch')
+    require('template' in c or 'task_contract' in c, 'candidate mutation required')
+    bindings = [c[k] for k in ('template', 'task_contract') if k in c]
+    if 'task_contract' in c:
+        contract_path = within(release, 'studies/speech-aware-evidence-acquisition/' + c['task_contract']['relpath'])
+        contract = read(contract_path)
+        require(contract.get('schema') == 'saea-p-task-contract-v1', 'invalid task contract')
+        bindings.append(contract['template'])
+    for binding in bindings:
+        template = 'studies/speech-aware-evidence-acquisition/' + binding['relpath']
+        template_path = within(release, template)
+        require(template_path.is_file(), 'template missing from release')
+        require(manifest['files'].get(template) == binding['sha256'], 'template manifest pin mismatch')
+        require(sha(template_path) == binding['sha256'], 'template content mismatch')
     # Check every manifest entry, including code, not just the requested template.
     for rel, digest in manifest['files'].items():
         path = within(release, rel)
@@ -70,15 +78,31 @@ def preflight(c):
     for rel, digest in pins.items():
         require(sha(within(parent, rel)) == digest, 'parent pin mismatch: ' + rel)
     required = {'stage-argv.json', 'prepare-argv.json', 'register-argv.json', 'admission-argv.json', 'launcher.json', 'workspace/job-config.private.json', 'config/runtime.json', 'admission-control/config.json'}
-    require(required <= pins.keys(), 'missing parent pins')
+    require((required - {'admission-control/config.json'}) <= pins.keys(), 'missing parent pins')
     require(pathlib.Path(c['asset_parent_root']).is_absolute(), 'asset parent must be absolute')
     legacy = pathlib.Path(c['asset_parent_root']).resolve(strict=True)
     require(not root.is_relative_to(legacy) and not legacy.is_relative_to(root), 'target and asset parent overlap')
     require(sha(legacy / 'assets.json') == c['asset_parent_sha256'], 'asset parent mismatch')
-    require((legacy / 'work').is_dir(), 'asset parent work missing')
     for d in c['prepared_caches']:
         require('/' not in d and d not in ('.', '..') and (parent / 'prepared' / d).is_dir(), 'invalid or missing cache: ' + d)
     launcher = read(parent / 'launcher.json')
+    guards = [m for m in launcher['mounts'] if m['target'].endswith('/locks')]
+    require(len(guards) == 1 and not guards[0]['readonly'] and
+            guards[0]['source'] == launcher['generation_lease']['lock_directory'] and
+            pathlib.Path(guards[0]['source']).is_dir(), 'shared guard identity mismatch')
+    prepared = [m for m in launcher['mounts'] if m['source'] == str(parent / 'prepared')]
+    require(len(prepared) == 1 and prepared[0]['source'] == str(parent / 'prepared') and
+            not prepared[0]['readonly'], 'parent prepared mount mismatch')
+    prepared_target = prepared[0]['target'].rstrip('/')
+    for mount in launcher['mounts']:
+        if mount['target'].startswith(prepared_target + '/'):
+            require(mount['readonly'] and pathlib.Path(mount['source']).is_dir(), 'shared prepared mount mismatch')
+    control_mounts = [m for m in launcher['mounts'] if m['target'] == '/admission-control']
+    require(len(control_mounts) == 1, 'missing admission-control mount')
+    control_file = pathlib.Path(control_mounts[0]['source']) / 'config.json'
+    require(control_file.is_file() and c['control_sha256'] == sha(control_file), 'admission control mismatch')
+    require(isinstance(c.get('output'), str) and c['output'].startswith('/'), 'fresh output required')
+    require(c['output'] not in launcher['fresh_outputs'], 'output must differ from parent')
     require(launcher['image'] == c['image'], 'launcher image mismatch')
     old_release = next(m['source'] for m in launcher['mounts'] if m['target'] == '/opt/saea-release' and m['readonly'])
     old_sha = launcher['environment']['SAEA_RELEASE_MANIFEST_SHA256']
@@ -91,7 +115,9 @@ def preflight(c):
     old_files = old_manifest['files']
     protected_files = {k for k in old_files if k.startswith(prefix) and any(k[len(prefix):].startswith(p) for p in protected)}
     require(protected_files, 'parent runtime files missing')
-    require(all(manifest['files'].get(k) == old_files[k] for k in protected_files), 'runtime source differs from parent')
+    changes = c.get('allowed_source_changes', {})
+    require(set(changes) <= {prefix + 'scripts/analysis/p_only_workload.py'} and all(k in protected_files and manifest['files'].get(k) == v for k, v in changes.items()), 'invalid allowed source changes')
+    require(all(manifest['files'].get(k) == changes.get(k, old_files[k]) for k in protected_files), 'runtime source differs from parent')
     for mode in ('stage', 'prepare', 'register', 'admission'):
         argv = read(parent / (mode + '-argv.json'))
         require(c['image'] in argv and any(old_sha in x for x in argv) and any(old_release in x for x in argv), mode + ' source/image mismatch')
@@ -123,13 +149,22 @@ def prepare(c, dry_run):
         shutil.copytree(parent / 'prepared' / d, root / 'prepared' / d, symlinks=True)
     job = read(root / 'workspace/job-config.private.json')
     job.update(name=name, run_id=run)
-    job['axis']['template'] = c['template']
+    if 'template' in c:
+        job['axis']['template'] = c['template']
+    if 'task_contract' in c:
+        job['task_contract'] = c['task_contract']
     write(root / 'workspace/job-config.private.json', job)
+    argv = [replace(s) for s in read(parent / 'stage-argv.json')]
+    argv = argv[:argv.index('-c')] + ['-c', "from pathlib import Path;import json;from speech_aware_evidence_acquisition.core.experiment_assets import seal_workspace;print(json.dumps(seal_workspace(Path('/opt/saea-release/studies/speech-aware-evidence-acquisition'))))"]
+    pin = json.loads(subprocess.check_output(argv, text=True).splitlines()[-1])
     for mode in ('stage', 'prepare', 'register'):
         argv = [replace(s) for s in read(parent / (mode + '-argv.json'))]
+        argv = [('SAEA_EXPERIMENT_WORKSPACE_MANIFEST=' + pin['path'] if s.startswith('SAEA_EXPERIMENT_WORKSPACE_MANIFEST=') else 'SAEA_EXPERIMENT_WORKSPACE_SHA256=' + pin['sha256'] if s.startswith('SAEA_EXPERIMENT_WORKSPACE_SHA256=') else s) for s in argv]
         write(root / (mode + '-argv.json'), argv)
         with (root / (mode + '.log')).open('w') as f:
             subprocess.run(argv, stdout=f, stderr=subprocess.STDOUT, check=True)
+        if mode in ('stage', 'register'):
+            pin = json.loads((root / (mode + '.log')).read_text().splitlines()[-1])['workspace_manifest']
     reg = json.loads((root / 'register.log').read_text().splitlines()[-1])
     digest = reg['workspace_manifest']['sha256']
     manifest_path = root / 'workspace/manifests' / (digest + '.json')
@@ -148,7 +183,8 @@ def prepare(c, dry_run):
         return {'relpath': rel, 'sha256': m['files'][rel]}
     admission = {'schema': 'saea-external-fresh-admission-v1', 'candidate': name, 'candidate_pin': pin(pre + 'candidate.json'), 'plans': {k: pin(pre + k + ('-plan-' if k != 'protocol' else '-') + 'registered-v1.json') for k in ('generation', 'fit', 'protocol')}, 'decision_relpath': 'coordination/' + name + '/root-admission-v1.json', 'workspace': '/admission-root/successor-v1', 'runtime_config': {'path': '/config/runtime.json', 'sha256': sha(root / 'config/runtime.json')}}
     write(root / 'admission.json', admission)
-    shutil.copytree(legacy / 'work', root / 'work', symlinks=True)
+    if (legacy / 'work').is_dir():
+        shutil.copytree(legacy / 'work', root / 'work', symlinks=True)
     argv = [replace(s) for s in read(parent / 'admission-argv.json')]
     argv[argv.index('--name') + 1] = c['candidate']['admission_name']
     argv = ['SAEA_EXPERIMENT_MANIFEST_SHA256=' + sha(assets) if s.startswith('SAEA_EXPERIMENT_MANIFEST_SHA256=') else s for s in argv]
@@ -175,15 +211,22 @@ def prepare(c, dry_run):
     # The generation name identifies the container, not the inherited --out path.
     x['container_name'] = c['candidate']['generation_name']
     (root / 'admission-control').mkdir(exist_ok=True)
-    ctrl = read(parent / 'admission-control/config.json')
+    ctrl = read(pathlib.Path(next(m['source'] for m in launcher['mounts'] if m['target'] == '/admission-control')) / 'config.json')
     ctrl['run_id'] = run
     write(root / 'admission-control/config.json', ctrl)
+    for mount in x['mounts']:
+        if mount['target'] == '/admission-control':
+            mount['source'] = str(root / 'admission-control')
+    x['argv'][x['argv'].index('--out') + 1] = c['output']
+    x['fresh_outputs'] = [c['output']]
     x['environment']['SAEA_EXPERIMENT_MANIFEST_SHA256'] = sha(assets)
     x['environment']['SAEA_EXPERIMENT_WORKSPACE_MANIFEST'] = '/experiment-workspace/manifests/' + digest + '.json'
     x['environment']['SAEA_EXPERIMENT_WORKSPACE_SHA256'] = digest
     x['external_admission']['sha256'] = sha(marker)
     x['external_admission']['workspace_manifest'] = str(admitted_manifest)
     for i in x['required_inputs']:
+        if i['path'].endswith('/config.json') and 'admission-control' in i['path']:
+            i['path'] = str(root / 'admission-control/config.json')
         i['sha256'] = sha(i['path'])
     (root / 'prepared' / (run + '-FIT')).mkdir(exist_ok=True)
     for mount in x['mounts']:

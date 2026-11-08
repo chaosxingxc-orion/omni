@@ -50,3 +50,5 @@ def test_template_must_be_in_manifest(tmp_path):
     c['release']['manifest_sha256'] = m.sha(manifest)
     with pytest.raises(ValueError, match='template manifest pin mismatch'):
         m.prepare(c, False)
+
+

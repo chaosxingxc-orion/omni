@@ -14,6 +14,28 @@ def pin(path, root):
     return {'relpath': str(path.relative_to(root)), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
 
 
+def test_task_contract_pin_is_scoped_and_checked_before_use(tmp_path):
+    template = tmp_path/'configs/probes/system.txt'
+    template.parent.mkdir(parents=True)
+    template.write_text('Inventory: {tool_schemas}')
+    config = tmp_path/'configs/contract.json'
+    config.write_text(json.dumps({'schema':'saea-p-task-contract-v1', 'template':pin(template, tmp_path),
+        'slurp_task_contract_view':'label-inventory-v1', 'task_instruction_fill':'slurp-label-inventory-only-v1'}))
+    binding = pin(config, tmp_path)
+    assert p.task_contract_override(tmp_path, binding) == {
+        'slurp_task_contract_view':'label-inventory-v1',
+        'task_instruction_fill':'slurp-label-inventory-only-v1',
+        'task_instruction_template':'probes/system.txt', 'task_instruction_template_active':True}
+    template.write_text('changed')
+    with pytest.raises(ValueError, match='template pin'):
+        p.task_contract_override(tmp_path, binding)
+    with pytest.raises(ValueError, match='invalid task contract config pin'):
+        p.task_contract_override(tmp_path, {'relpath':'configs/../contract.json', 'sha256':'a'*64})
+    config.write_text('{}')
+    with pytest.raises(ValueError, match='pinned artifact changed'):
+        p.task_contract_override(tmp_path, binding)
+
+
 def test_ordered_supply_keeps_sample_order_and_rejects_bad_rows():
     ids = ['a', 'b']
     first = ['intent-boundaries::intent-boundary:' + x for x in ('z', 'a', 'm')]
@@ -110,6 +132,17 @@ def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch)
     result = job.derive(tmp_path,tmp_path,{})[0]
     assert result['knowledge_stores']['intent-boundaries']['phase_supply']['perception']['facet_source'] == new_source
     assert result['native_episode']['intent_slot_pipeline']['ranking_window']['transport'] == 'finite-choice-v1'
+    system_template = tmp_path/'configs/probes/system.txt'
+    system_template.write_text('Inventory: {tool_schemas}')
+    contract = tmp_path/'configs/contract.json'
+    contract.write_text(json.dumps({'schema':'saea-p-task-contract-v1', 'template':pin(system_template, tmp_path),
+        'slurp_task_contract_view':'label-inventory-v1', 'task_instruction_fill':'slurp-label-inventory-only-v1'}))
+    job.config['task_contract'] = pin(contract, tmp_path)
+    changed_contract = job.derive(tmp_path,tmp_path,{})[0]
+    for key in ('slurp_task_contract_view', 'task_instruction_fill', 'task_instruction_template', 'task_instruction_template_active'):
+        changed_contract.pop(key)
+    assert changed_contract == result
+    del job.config['task_contract']
     receipt = tmp_path/'source.json'; receipt.write_text('{"source":"actual"}')
     receipt_pin = {'root':'data', **pin(receipt,tmp_path)}
     job.config['axis']['source_receipts'] = [receipt_pin]

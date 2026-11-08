@@ -12,6 +12,40 @@ from gepa_pair_workload import read_asset
 
 KIND = 'perception-only-native'
 SCHEMA = 'saea-perception-only-workload-v1'
+
+
+def task_contract_override(repo, binding):
+    """Validate a pinned, narrowly scoped SLURP system contract before deriving."""
+    if not isinstance(binding, dict) or set(binding) != {'relpath', 'sha256'}:
+        raise ValueError('pinned task contract config required')
+    rel = binding['relpath']
+    if (not isinstance(rel, str) or not rel.startswith('configs/')
+            or Path(rel).is_absolute() or '..' in Path(rel).parts
+            or not isinstance(binding['sha256'], str)
+            or not re.fullmatch('[0-9a-f]{64}', binding['sha256'])):
+        raise ValueError('invalid task contract config pin')
+    config = pinned(repo, binding)
+    required = {'schema', 'template', 'slurp_task_contract_view', 'task_instruction_fill'}
+    if (not isinstance(config, dict) or set(config) != required
+            or config['schema'] != 'saea-p-task-contract-v1'
+            or config['slurp_task_contract_view'] != 'label-inventory-v1'
+            or config['task_instruction_fill'] != 'slurp-label-inventory-only-v1'):
+        raise ValueError('invalid P task contract config')
+    template = config['template']
+    if (not isinstance(template, dict) or set(template) != {'relpath', 'sha256'}
+            or not isinstance(template['relpath'], str)
+            or not template['relpath'].startswith('configs/probes/')
+            or '..' in Path(template['relpath']).parts
+            or not isinstance(template['sha256'], str)
+            or not re.fullmatch('[0-9a-f]{64}', template['sha256'])
+            or sha(confined(repo, template['relpath'])) != template['sha256']):
+        raise ValueError('task contract template pin differs')
+    return {'slurp_task_contract_view': config['slurp_task_contract_view'],
+            'task_instruction_fill': config['task_instruction_fill'],
+            'task_instruction_template': template['relpath'][len('configs/'):],
+            'task_instruction_template_active': True}
+
+
 def verify_vector_selection(data, query, source_pin, ids):
     if not isinstance(source_pin, dict) or set(source_pin) != {'relpath', 'sha256'}:
         raise ValueError('explicit vector source pin required')
@@ -53,7 +87,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
     def __init__(self, config):
         fields = {'schema', 'name', 'run_id', 'sample_ids', 'runtime_binding', 'execution',
                   'material', 'population', 'parent_baseline', 'parent_registration', 'axis'}
-        if not fields <= set(config) <= fields | {'runtime_binding_adaptation', 'collection_decoding', 'learning_authorization', 'learning_source_vectors', 'learning_mode'} or config['schema'] != SCHEMA:
+        if not fields <= set(config) <= fields | {'runtime_binding_adaptation', 'collection_decoding', 'learning_authorization', 'learning_source_vectors', 'learning_mode', 'task_contract'} or config['schema'] != SCHEMA:
             raise ValueError('exact P-only configuration required')
         learning = 'learning_authorization' in config
         if learning:
@@ -90,7 +124,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
                 or (axis.get('dynamic') and 'ordered_supply' not in axis)
                 or type(axis['max_tokens']) is not int or not 1 <= axis['max_tokens'] <= 4096))):
             raise ValueError('invalid P-only axis')
-        parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation', 'learning_authorization', 'learning_source_vectors', 'learning_mode')}
+        parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation', 'learning_authorization', 'learning_source_vectors', 'learning_mode', 'task_contract')}
         parent.update(schema='saea-intent-slot-workload-v1', node_arm='enhanced-p-slot-decision')
         super().__init__(parent)
         self.config = copy.deepcopy(config)
@@ -179,6 +213,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
             raise ValueError('P-only deployment model science or weights differ')
 
     def derive(self, repo, data, material_pin):
+        override = task_contract_override(repo, self.config['task_contract']) if 'task_contract' in self.config else None
         material, checked = self.material_checked(repo, data, material_pin)
         binding = self.runtime_binding(repo)
         base = copy.deepcopy(pinned(repo, self.config['parent_baseline']))
@@ -199,6 +234,10 @@ class PerceptionOnlyWorkload(NodeWorkload):
         parent_science['native_contact_fit']['attempt_id'] = parent_registration['fit_attempt_id']
         if scientific_hash(parent_science) != parent_registration['scientific_baseline_sha256']:
             raise ValueError('P-only parent differs from registered scientific baseline')
+        if override is not None:
+            base.pop('task_instruction', None)
+            base.pop('task_instruction_fill_params', None)
+            base.update(override)
         if learning:
             authorization = pinned(repo, self.config['learning_authorization']['source'])
             ids = [g['query_id'] for g in authorization['document']['groups']]

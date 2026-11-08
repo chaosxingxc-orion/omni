@@ -1,0 +1,9 @@
+{
+  "schema": "saea-p-task-contract-v1",
+  "template": {
+    "relpath": "configs/probes/slurp_native_candidate_context_v2.txt",
+    "sha256": "c9db16d72beb7cca6cc74c287ea879c81d926d9d2cb1ea8e6028b5a2b86a8529"
+  },
+  "slurp_task_contract_view": "label-inventory-v1",
+  "task_instruction_fill": "slurp-label-inventory-only-v1"
+}
