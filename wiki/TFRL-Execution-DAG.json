@@ -213,7 +213,15 @@
       "repair": 4,
       "regression": 0
     },
-    "vacancy_P": "generation_container_started_13:55:31_UTC_first_response_not_verified",
+    "vacancy_P": {
+      "status": "running_real_responses",
+      "completed": 72,
+      "total": 1080,
+      "observed_utc": "2026-11-08T14:00:05.271733+00:00",
+      "cards": 4,
+      "instances": 1,
+      "ETA_seconds": null
+    },
     "teacher_previous": "complete_requires_strategy_revision",
     "teacher_incremental": "unique_local_dispatch_streaming_not_terminal",
     "subprocess_roles": [
