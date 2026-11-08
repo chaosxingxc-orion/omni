@@ -516,10 +516,13 @@
       "snapshot_estimated_remaining_seconds": 3212.5984251968503
     },
     "second_TP4_binding": {
-      "state": "actual_mount_mapping_bug_repaired_existing_register_checkpoint_resumed_admission_running",
+      "state": "new_session_actual_admission_runtime_pass_main_integration7tests_merged",
       "resource": "CPU",
       "depends_on": [],
-      "must_not_change": "B_service_or_T_inflight_state"
+      "must_not_change": "B_service_or_T_inflight_state",
+      "integration_commit": "952787a69",
+      "new_model_POST": 0,
+      "scientific_generation_launched": false
     },
     "R_mechanism_analysis": {
       "state": "extraction_complete_superseded_P_order_plan_not_execute",
