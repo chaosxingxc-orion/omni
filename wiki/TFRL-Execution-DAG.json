@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T15:41:58.770779+00:00",
+  "updated_at_utc": "2026-11-08T15:50:16.043033+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -323,7 +323,7 @@
       "description_depth": 5,
       "gold_used_for_runtime_selection": false,
       "thinking_comparison": "authorized_after_information_gain_comparison",
-      "engineering_status": "v3_admission_success_same_owner_execution_continuation",
+      "engineering_status": "B_generation_container_started_15_48_29_UTC",
       "first_candidate": {
         "question_depth": 50,
         "description_depth": 5,
@@ -334,6 +334,15 @@
         "p95_labels": 17,
         "max_labels": 25,
         "P_gain": null
+      },
+      "execution": {
+        "B_container_running": true,
+        "A_CPU_prepare_running": true,
+        "first_model_response_verified": false,
+        "completed_verified": 0,
+        "total": 1080,
+        "seconds_per_sample": null,
+        "ETA_seconds": null
       }
     },
     "confirmed_exclusion": {
@@ -368,21 +377,21 @@
       "id": "confirmed-defects",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "effective_views_verified_zero_confirmed_two_suspects_semantics_followup",
+      "status": "complete_audit_views_and_three_state_semantics_main_verified",
       "depends_on": []
     },
     {
       "id": "representative-bank",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "both_candidates_main_verified_HOLD_teacher_unknown_no_content",
+      "status": "anchored_fixed_image_CPU_container_running",
       "depends_on": []
     },
     {
       "id": "p-consumption",
       "owner": "Terra CLI",
       "resource": "CPU_prepare_then_NPU",
-      "status": "v3_admission_success_P_0_of1080_launch_in_progress",
+      "status": "B_generation_container_running_A_CPU_prepare_running_response_unverified",
       "depends_on": [
         "frozen_original_Q50D5"
       ],
