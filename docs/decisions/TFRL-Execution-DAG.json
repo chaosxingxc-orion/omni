@@ -675,20 +675,19 @@
   },
   "group_policy_cpu_executor": {
     "resource": "CPU",
-    "state": "accepted_resume_verified_final_commit_windows_rework_active",
-    "formal_group_runs": 0
+    "state": "accepted_resume_and_commit_windows_verified",
+    "formal_group_runs": 1
   },
   "group_policy_formal_run": {
     "resource": "CPU",
-    "state": "configuration_prepared_not_launched",
+    "state": "detached_container_running_main_verified",
     "seed": 68,
     "queries_per_member": 2783,
     "members": 3,
     "max_distinct_trials_per_member": 600,
-    "depends_on": [
-      "final_commit_window_recovery_validation"
-    ],
+    "depends_on": [],
     "NPU_calls": 0,
-    "TEST_tuning": false
+    "TEST_tuning": false,
+    "CPU_quota": 4
   }
 }
