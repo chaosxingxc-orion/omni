@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T03:51:23.859184+00:00",
+  "updated_at_utc": "2026-11-08T03:57:11.320281+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1100,11 +1100,15 @@
       "depends_on": [
         "P-positive-description-3-1-input"
       ],
-      "status": "planned_not_yet_admitted",
+      "status": "admission_complete_exit0_launch_checks_running_no_generation_response_verified",
       "rows": 1080,
       "input_k": 3,
       "output_k": 1,
-      "scope": "compare against existing original-description output712; no multi-index-fix dependency"
+      "scope": "compare against existing original-description output712; no multi-index-fix dependency",
+      "preparation_cost": {
+        "admission_seconds": 268.53881648,
+        "model_calls": 0
+      }
     },
     {
       "id": "P-positive-description-maths-3-1",
@@ -1159,7 +1163,7 @@
         "retrieval-description-TRAIN-source-coverage",
         "retrieval-description-positive-assets"
       ],
-      "status": "CLI_input_preparation_no_send_evidence_yet",
+      "status": "HTTP200_streaming_terminal_and_official_usage_pending",
       "scope": "independent ACE source-grounded same-parent patches; fixed1299 author context/full8554 reservoir; full Fold A1080 CPU scoring; no P dependency"
     },
     {
@@ -1168,7 +1172,7 @@
       "depends_on": [
         "retrieval-question-gepa-evaluation"
       ],
-      "status": "CLI_input_preparation_no_send_evidence_yet",
+      "status": "HTTP200_streaming_terminal_and_official_usage_pending",
       "scope": "independent GEPA aggregation and TRAIN support calibration; same mean5 parent plus top3 and NNmax controls; no description/P dependency"
     }
   ],
