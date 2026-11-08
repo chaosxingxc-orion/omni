@@ -1,9 +1,9 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T14:57:08.671529+00:00",
+  "updated_at_utc": "2026-11-08T15:13:26.736681+00:00",
   "current_stage": "P",
-  "instruction": "前置召回深度覆盖分析；两路标签去重取并集；每label来源独立fewshot；先P OFF验证，不新增抽取任务",
+  "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
     "inference_instances": 3,
     "cards_per_instance": 4,
@@ -348,5 +348,36 @@
       "proposed_scope": "representative_retrieval_index_separate_clean_fewshot_support_pool",
       "claim_global_optimum": false
     }
-  }
+  },
+  "active_tracks": [
+    {
+      "id": "confirmed-defects",
+      "owner": "Sol CLI",
+      "resource": "CPU",
+      "status": "audit_in_progress",
+      "depends_on": []
+    },
+    {
+      "id": "representative-bank",
+      "owner": "Sol CLI",
+      "resource": "CPU",
+      "status": "first_candidate_4451_of8554_Q50D5_1063_of1080_not_promoted",
+      "depends_on": []
+    },
+    {
+      "id": "p-consumption",
+      "owner": "Terra CLI",
+      "resource": "CPU_prepare_then_NPU",
+      "status": "runtime_partial_37_tests_no_real_probe_yet",
+      "depends_on": [
+        "frozen_original_Q50D5"
+      ],
+      "planned_arms": [
+        "OFF_no_fewshot",
+        "OFF_3_fewshot"
+      ],
+      "subsequent": "root_cause_prompt_or_thinking"
+    }
+  ],
+  "historical_nodes_note": "nodes retain historical stage records; active_tracks is the current priority. Planning specification only, not remote job receipts."
 }
