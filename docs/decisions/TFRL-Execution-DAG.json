@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T21:29:34.100535+00:00",
+  "updated_at_utc": "2026-11-08T21:36:15.374777+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -435,10 +435,10 @@
     {
       "id": "next-P-validation",
       "resource": "NPU",
-      "status": "U_V_complete_negative_transfer_successor_queued_not_verified_started",
+      "status": "CLI_active_preparing_inputs_no_model_start_yet",
       "depends_on": [
         "prepared_V_inputs",
-        "P_owner_terminal_resource_handoff"
+        "available_lane_guard"
       ]
     },
     {
@@ -514,7 +514,7 @@
       "id": "candidate-discovery",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "risk_aware_and_gain_or_shrink_implemented_targeted_fixed_image_PASS_final_report_sealing",
+      "status": "complete_308_manifest_main_accepted_and_merged",
       "depends_on": [
         "accepted_E3_70_bank",
         "existing_TRAIN_score_cache"
@@ -529,7 +529,7 @@
       "id": "group-feedback-round4",
       "owner": "Sol CLI",
       "resource": "CPU_then_local_external_API",
-      "status": "final_actual_contract_binding_and_wire_preparation",
+      "status": "real_local_HTTP200_SSE_in_progress",
       "depends_on": [
         "accepted_E3_analysis",
         "reverse_prune70"
@@ -540,7 +540,7 @@
       "does_not_depend_on": [
         "P_transfer"
       ],
-      "API_sent": false
+      "API_sent": true
     }
   ],
   "historical_nodes_note": "nodes and latest_recall_revision retain historical evidence; active_tracks and group_policy_round2_formal_run describe current work. Planning specification is not an execution receipt.",
@@ -979,7 +979,7 @@
     "member_CPU_seconds": 106.560554,
     "default_promoted": false
   },
-  "updated_at": "2026-11-08T21:29:34.100535+00:00",
+  "updated_at": "2026-11-08T21:36:15.374777+00:00",
   "candidate_discovery_diagnostic": {
     "status": "fixed_cache_single_insertion_diagnostics_complete_no_new_accepted_bank",
     "seed": 70,
@@ -1039,7 +1039,18 @@
     "cards_each": 4,
     "instances": 2,
     "remaining": 0,
-    "next": "queued_V_supply_thinking_ON_3072_plus128_same1080_possible_disjoint540_shards",
+    "next": "CLI_active_V_supply_thinking_ON_input_preparation_possible540shards",
     "successor_model_start_verified": false
+  },
+  "group_feedback_round4": {
+    "state": "unique_local_POST_HTTP200_SSE_running",
+    "actual_POST": 1,
+    "automatic_retries": 0,
+    "max_output_tokens": 131072,
+    "teacher_seed": 70,
+    "current_round_compiled": false,
+    "formal_CPU_started": false,
+    "observer": "existing_pidfd_or600s",
+    "costs_pending_terminal": true
   }
 }
