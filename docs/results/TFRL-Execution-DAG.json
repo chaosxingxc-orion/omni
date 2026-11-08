@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-07T18:38:32.545215+00:00",
+  "updated_at_utc": "2026-11-08T00:33:29.398323+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -243,7 +243,7 @@
       "depends_on": [
         "P-ace-prepare"
       ],
-      "status": "breadth12_completed1080_breadth16_running127of1080",
+      "status": "breadth12_and16_completed1080_each",
       "run_nodes": [
         "P"
       ],
@@ -616,7 +616,7 @@
       "depends_on": [
         "P-intent-knowledge-prepare"
       ],
-      "status": "queued_waiting_breadth16_release",
+      "status": "completed1080_exit0_score_pending",
       "axis": "locked_card_section_order_only",
       "rows": 1080
     },
@@ -642,7 +642,7 @@
       "depends_on": [
         "P-C-control-prepare"
       ],
-      "status": "queue_started_response_pending",
+      "status": "completed1080_exit0_score_pending",
       "run_nodes": [
         "P"
       ]
@@ -704,8 +704,8 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "completed_candidates_scored_B_C_running_A_backfill_preparation_TF_zero_contact_failure",
-      "observed_at_utc": "2026-11-07T18:38:32.545215+00:00",
+      "status": "all_services_online_no_active_generation_three_CLI_restarted_after_503",
+      "observed_at_utc": "2026-11-08T00:33:29.398323+00:00",
       "known_B_responses": 1097,
       "runtime": "old_B_finalized_dcbc2a5c_successors59cf0ade"
     },
@@ -744,71 +744,68 @@
       "last_response_unix": 1794073422.308,
       "eta_seconds": null,
       "eta_note": "startup included; interval delta needed for steady rate",
-      "successor": "TF_K001_ABORTED_zero_contact; knowledge_alarm_A_backfill_preparation"
+      "successor": "TF_K001_ABORTED_zero_contact; knowledge_alarm_A_backfill_preparation",
+      "current_generation_active": false
     },
     "B": {
-      "observed_at_utc": "2026-11-07T18:24:05.530913+00:00",
+      "observed_at_utc": "2026-11-08T00:32:44.421545+00:00",
       "run_id": "SLURP-P-ONLY-BREADTH16-SUCCESSOR-V1",
-      "rows_complete": 745,
+      "rows_complete": 1080,
       "rows_total": 1080,
       "duplicates": 0,
       "torn_lines": 0,
       "contacts": {
-        "dispatch": 814,
-        "intent": 814,
-        "fit": 814,
-        "response": 809
+        "fit": 1097,
+        "dispatch": 1097,
+        "intent": 1097,
+        "response": 1097
       },
       "known_tokens": {
-        "prompt_tokens": 6442303,
-        "completion_tokens": 188370
+        "prompt_tokens": 8731375,
+        "completion_tokens": 302681
       },
       "cards": 4,
       "instances": 1,
-      "generation_container_state": "running",
-      "container_wall_seconds": 1444.219096,
-      "container_seconds_per_row_including_startup": 1.938549122147651,
-      "mean_response_latency_seconds": 44.910949151284505,
-      "response_window_seconds": 1103.2039999961853,
+      "generation_container_state": "exited",
+      "container_wall_seconds": 2065.380559,
+      "container_seconds_per_row_including_startup": 1.9123894064814817,
+      "mean_response_latency_seconds": 46.5397647035544,
+      "response_window_seconds": 1623.4960000514984,
       "first_response_unix": 1794074733.748,
-      "last_response_unix": 1794075836.952,
+      "last_response_unix": 1794076357.244,
       "eta_seconds": null,
       "eta_note": "startup included; interval delta needed for steady rate",
-      "interval": {
-        "seconds": 904.800542,
-        "rows": 618,
-        "seconds_per_row": 1.4640785469255662,
-        "eta_seconds": 490.46631322006465
-      }
+      "current_generation_active": false
     },
     "C": {
-      "observed_at_utc": "2026-11-07T18:24:49.996493+00:00",
+      "observed_at_utc": "2026-11-08T00:30:48.672226+00:00",
       "run_id": "SAEA-SLURP-P-ONLY-CONTROL-C-SUCCESSOR-V1",
-      "rows_complete": 323,
+      "rows_complete": 1080,
       "rows_total": 1080,
       "duplicates": 0,
       "torn_lines": 0,
       "contacts": {
-        "intent": 358,
-        "fit": 361,
-        "dispatch": 356,
-        "response": 327
+        "response": 1103,
+        "intent": 1103,
+        "dispatch": 1103,
+        "fit": 1103
       },
       "known_tokens": {
-        "prompt_tokens": 1743869,
-        "completion_tokens": 83559
+        "prompt_tokens": 5875296,
+        "completion_tokens": 316920
       },
       "cards": 4,
       "instances": 1,
-      "generation_container_state": "running",
-      "container_wall_seconds": 705.727003,
-      "container_seconds_per_row_including_startup": 2.184913321981424,
-      "mean_response_latency_seconds": 34.09420235804273,
-      "response_window_seconds": 360.6319999694824,
+      "generation_container_state": "exited",
+      "container_wall_seconds": 1837.560964,
+      "container_seconds_per_row_including_startup": 1.701445337037037,
+      "mean_response_latency_seconds": 34.836634380761865,
+      "response_window_seconds": 1418.6760001182556,
       "first_response_unix": 1794075502.632,
-      "last_response_unix": 1794075863.264,
+      "last_response_unix": 1794076921.308,
       "eta_seconds": null,
-      "eta_note": "startup included; interval delta needed for steady rate"
+      "eta_note": "startup included; interval delta needed for steady rate",
+      "current_generation_active": false
     },
     "teacher_gepa": {
       "state": "complete_A_no_benefit",
@@ -825,19 +822,19 @@
     },
     "cpu_workers": [
       {
-        "role": "A_knowledge_backfill",
+        "role": "A_backfill_C_successor",
         "model": "gpt-6.1-terra",
-        "pid": 3685143
+        "pid": 3691971
       },
       {
         "role": "learning80_candidate_evaluation",
         "model": "gpt-6.1-terra",
-        "pid": 3683230
+        "pid": 3691972
       },
       {
-        "role": "learning_KB_overlap_audit",
+        "role": "learning_overlap_and_completed_results",
         "model": "gpt-6.1-sol",
-        "pid": 3684766
+        "pid": 3691973
       }
     ],
     "clock_caveat": "Host clocks differ; use within-host deltas, not cross-host timestamp subtraction.",
