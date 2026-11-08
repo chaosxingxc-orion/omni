@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T04:15:08.691699+00:00",
+  "updated_at_utc": "2026-11-08T04:42:14.350147+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1214,7 +1214,7 @@
       "depends_on": [
         "P-positive-description-multiwindow-input"
       ],
-      "status": "planned_not_yet_ready",
+      "status": "generation_created_worker_reported_first_response_unverified",
       "rows": 1080,
       "input_k": 3,
       "output_k": 2,
@@ -1226,7 +1226,7 @@
       "depends_on": [
         "P-positive-description-multiwindow-input"
       ],
-      "status": "planned_not_yet_ready",
+      "status": "admitted_ready_waiting_predecessor",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
@@ -1247,6 +1247,52 @@
         "prior_P_top3": 832,
         "old_invalid_now_correct": 40
       }
+    },
+    {
+      "id": "P-retrieval-root-cause-evidence",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "complete1080",
+      "new_model_calls": 0,
+      "scope": "Real query, top3/gold, lexical association and residual business categories"
+    },
+    {
+      "id": "P-desc-ACE-root-cause-teacher",
+      "resource": "LOCAL_EXTERNAL_API",
+      "depends_on": [
+        "P-retrieval-root-cause-evidence"
+      ],
+      "status": "HTTP200_streaming",
+      "algorithm": "ACE",
+      "diagnostic_cases": 400
+    },
+    {
+      "id": "P-question-TFGRPO-root-cause-teacher",
+      "resource": "LOCAL_EXTERNAL_API",
+      "depends_on": [
+        "P-retrieval-root-cause-evidence"
+      ],
+      "status": "HTTP200_streaming",
+      "algorithm": "TFGRPO-inspired deterministic retrieval-strategy group reflection",
+      "diagnostic_cases": 278
+    },
+    {
+      "id": "P-desc-ACE-root-cause-cpu",
+      "resource": "CPU",
+      "depends_on": [
+        "P-desc-ACE-root-cause-teacher"
+      ],
+      "status": "awaiting_teacher_candidates",
+      "rows": 1080
+    },
+    {
+      "id": "P-question-TFGRPO-root-cause-cpu",
+      "resource": "CPU",
+      "depends_on": [
+        "P-question-TFGRPO-root-cause-teacher"
+      ],
+      "status": "awaiting_teacher_candidates",
+      "rows": 1080
     }
   ],
   "round_policy": {

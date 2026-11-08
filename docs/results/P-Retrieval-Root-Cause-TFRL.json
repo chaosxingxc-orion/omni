@@ -1,0 +1,128 @@
+{
+  "n": 1080,
+  "query_mode": "frozen original speech embedding; reference text is diagnostic only",
+  "missing_query_text_in_round4": true,
+  "stats": {
+    "description": {
+      "hit": 845,
+      "miss": 235,
+      "miss_top1_same_scenario": 42,
+      "hit_wrong_has_more_word_overlap": 137,
+      "miss_wrong_has_more_word_overlap": 37
+    },
+    "question": {
+      "hit": 976,
+      "hit_wrong_has_more_word_overlap": 187,
+      "miss": 104,
+      "miss_top1_same_scenario": 11,
+      "miss_wrong_has_more_word_overlap": 45
+    }
+  },
+  "lexical_association": {
+    "description": {
+      "hit": {
+        "n": 845,
+        "mean_wrong_minus_gold_jaccard": -0.05815935080118859
+      },
+      "miss": {
+        "n": 235,
+        "mean_wrong_minus_gold_jaccard": -0.02017676767676768
+      }
+    },
+    "question": {
+      "hit": {
+        "n": 976,
+        "mean_wrong_minus_gold_jaccard": -0.17533409788547016
+      },
+      "miss": {
+        "n": 104,
+        "mean_wrong_minus_gold_jaccard": 0.017381963656002124
+      }
+    }
+  },
+  "audio_volume_boundary": {
+    "description": {
+      "audio_volume_mute": {
+        "n": 24,
+        "hit3": 14,
+        "miss_exposed:general_greet": 4,
+        "miss_exposed:general_quirky": 3,
+        "miss_exposed:play_game": 1,
+        "miss_exposed:audio_volume_other": 3,
+        "miss_exposed:audio_volume_up": 2,
+        "miss_exposed:iot_cleaning": 1,
+        "miss_exposed:play_radio": 4,
+        "miss_exposed:play_audiobook": 1,
+        "miss_exposed:play_music": 1,
+        "miss_exposed:qa_stock": 1,
+        "miss_exposed:qa_maths": 2,
+        "miss_exposed:alarm_set": 2,
+        "miss_exposed:music_settings": 1,
+        "miss_exposed:weather_query": 1,
+        "miss_exposed:qa_definition": 1,
+        "miss_exposed:transport_traffic": 2
+      },
+      "other_displaces_nonother": {
+        "n": 25
+      },
+      "audio_volume_up": {
+        "n": 24,
+        "hit3": 20,
+        "miss_exposed:transport_traffic": 3,
+        "miss_exposed:qa_stock": 3,
+        "miss_exposed:general_quirky": 2,
+        "miss_exposed:general_greet": 2,
+        "miss_exposed:alarm_set": 1,
+        "miss_exposed:email_sendemail": 1
+      },
+      "audio_volume_down": {
+        "n": 8,
+        "hit3": 7,
+        "miss_exposed:play_radio": 1,
+        "miss_exposed:audio_volume_up": 1,
+        "miss_exposed:audio_volume_other": 1
+      },
+      "audio_volume_other": {
+        "n": 4,
+        "hit3": 4
+      }
+    },
+    "question": {
+      "audio_volume_mute": {
+        "n": 24,
+        "hit3": 22,
+        "miss_exposed:play_radio": 1,
+        "miss_exposed:play_music": 1,
+        "miss_exposed:play_podcasts": 1,
+        "miss_exposed:alarm_set": 1,
+        "miss_exposed:calendar_set": 1,
+        "miss_exposed:audio_volume_down": 1
+      },
+      "audio_volume_up": {
+        "n": 24,
+        "hit3": 24
+      },
+      "audio_volume_down": {
+        "n": 8,
+        "hit3": 7,
+        "miss_exposed:play_radio": 1,
+        "miss_exposed:iot_hue_lightup": 1,
+        "miss_exposed:iot_hue_lightoff": 1
+      },
+      "audio_volume_other": {
+        "n": 4,
+        "hit3": 3,
+        "miss_exposed:audio_volume_up": 1,
+        "miss_exposed:iot_hue_lightup": 1,
+        "miss_exposed:audio_volume_down": 1
+      }
+    }
+  },
+  "limitation": "Selected-pair lexical association is not causal attribution; no token perturbation, text-query embedding, or audio intervention was performed.",
+  "resources": {
+    "npu_cards": 0,
+    "new_encoder_calls": 0,
+    "new_matrix_products": 0,
+    "preparation_seconds": 5.2615962703712285
+  }
+}
