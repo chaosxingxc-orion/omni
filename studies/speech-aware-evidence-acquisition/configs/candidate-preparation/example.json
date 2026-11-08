@@ -1,0 +1,15 @@
+{
+  "schema": "saea-p-candidate-preparation-v1",
+  "candidate": {"id": "example", "name": "example-name", "run_id": "EXAMPLE-RUN", "generation_name": "example-generation", "admission_name": "example-admission"},
+  "template": {"relpath": "configs/probes/REPLACE.txt", "sha256": "REPLACE"},
+  "release": {"root": "/absolute/sealed-release", "manifest_sha256": "REPLACE", "commit": "REPLACE"},
+  "parent_root": "/absolute/coverage-root",
+  "target_root": "/absolute/new-candidate-root",
+  "image": "sha256:REPLACE",
+  "asset_parent_root": "/absolute/original-asset-root",
+  "asset_parent_sha256": "REPLACE",
+  "prepared_caches": ["REPLACE"],
+  "parent_pins": {
+    "stage-argv.json": "REPLACE", "prepare-argv.json": "REPLACE", "register-argv.json": "REPLACE", "admission-argv.json": "REPLACE", "launcher.json": "REPLACE", "workspace/job-config.private.json": "REPLACE", "config/runtime.json": "REPLACE", "admission-control/config.json": "REPLACE"
+  }
+}
