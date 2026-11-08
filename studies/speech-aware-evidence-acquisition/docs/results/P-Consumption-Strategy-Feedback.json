@@ -1,0 +1,201 @@
+{
+  "schema": "p-gepa-fixed-supply-three-window-feedback-v1",
+  "dataset": "original Fold A1080",
+  "independent_folds": false,
+  "gold_sha256": "5bd8cd157cfaaf91805124d0a84134405028ca5adab22c6f79f5b02a2f579d9c",
+  "windows": [
+    {
+      "lane": "A",
+      "input_k": 3,
+      "output_k": 1,
+      "n": 1080,
+      "valid": 1080,
+      "input_supplied": 976,
+      "parent_hits": 881,
+      "candidate_hits": 885,
+      "repair": 9,
+      "regression": 5,
+      "descriptive_exact_mcnemar_p": 0.4239501953125,
+      "rank_strata": {
+        "0": {
+          "n": 104,
+          "parent": 0,
+          "candidate": 0,
+          "repair": 0,
+          "regression": 0
+        },
+        "1": {
+          "n": 846,
+          "parent": 835,
+          "candidate": 837,
+          "repair": 4,
+          "regression": 2
+        },
+        "2": {
+          "n": 84,
+          "parent": 31,
+          "candidate": 35,
+          "repair": 5,
+          "regression": 1
+        },
+        "3": {
+          "n": 46,
+          "parent": 15,
+          "candidate": 13,
+          "repair": 0,
+          "regression": 2
+        }
+      },
+      "sources": [
+        {
+          "checkpoint_sha256": "ffc0296607df9660dc8932abf68b3d00794a96f71c207fc0fe46605c15816387"
+        },
+        {
+          "checkpoint_sha256": "ae74c06c4714176365d957b892ec6d9c76adeac560fed8b5284cb21862a2e47f"
+        }
+      ],
+      "candidate_cost": {
+        "calls": 1080,
+        "prompt_tokens": 3289302,
+        "completion_tokens": 6072,
+        "latency_seconds": 1844.3319772918476
+      }
+    },
+    {
+      "lane": "C",
+      "input_k": 3,
+      "output_k": 2,
+      "n": 1080,
+      "valid": 1080,
+      "input_supplied": 976,
+      "parent_hits": 946,
+      "candidate_hits": 945,
+      "repair": 4,
+      "regression": 5,
+      "descriptive_exact_mcnemar_p": 1,
+      "rank_strata": {
+        "0": {
+          "n": 104,
+          "parent": 0,
+          "candidate": 0,
+          "repair": 0,
+          "regression": 0
+        },
+        "1": {
+          "n": 846,
+          "parent": 846,
+          "candidate": 846,
+          "repair": 0,
+          "regression": 0
+        },
+        "2": {
+          "n": 84,
+          "parent": 78,
+          "candidate": 82,
+          "repair": 4,
+          "regression": 0
+        },
+        "3": {
+          "n": 46,
+          "parent": 22,
+          "candidate": 17,
+          "repair": 0,
+          "regression": 5
+        }
+      },
+      "sources": [
+        {
+          "checkpoint_sha256": "c357000558a6636683be56d846e4276c0de959275e485c87a959635927ba3215"
+        },
+        {
+          "checkpoint_sha256": "562824b6b3f433451d3f6850fac966bb3ca22a253b8815486e5bfcabb0bc317d"
+        }
+      ],
+      "candidate_cost": {
+        "calls": 1080,
+        "prompt_tokens": 3289302,
+        "completion_tokens": 6480,
+        "latency_seconds": 1695.8683174808684
+      }
+    },
+    {
+      "lane": "B",
+      "input_k": 5,
+      "output_k": 3,
+      "n": 1080,
+      "valid": 1080,
+      "input_supplied": 1007,
+      "parent_hits": 992,
+      "candidate_hits": 991,
+      "repair": 5,
+      "regression": 6,
+      "descriptive_exact_mcnemar_p": 1,
+      "rank_strata": {
+        "0": {
+          "n": 73,
+          "parent": 0,
+          "candidate": 0,
+          "repair": 0,
+          "regression": 0
+        },
+        "1": {
+          "n": 846,
+          "parent": 846,
+          "candidate": 846,
+          "repair": 0,
+          "regression": 0
+        },
+        "2": {
+          "n": 84,
+          "parent": 80,
+          "candidate": 83,
+          "repair": 3,
+          "regression": 0
+        },
+        "3": {
+          "n": 46,
+          "parent": 43,
+          "candidate": 45,
+          "repair": 2,
+          "regression": 0
+        },
+        "4": {
+          "n": 16,
+          "parent": 13,
+          "candidate": 11,
+          "repair": 0,
+          "regression": 2
+        },
+        "5": {
+          "n": 15,
+          "parent": 10,
+          "candidate": 6,
+          "repair": 0,
+          "regression": 4
+        }
+      },
+      "sources": [
+        {
+          "checkpoint_sha256": "edb1079aeb5b55298585ec0a2e54e4bcd4dab6ff24777633b34c08daf30cd081"
+        },
+        {
+          "checkpoint_sha256": "9784931a67a33d998d5acc817d0efbdc427267533581575fd28db2d4cca542e6"
+        }
+      ],
+      "candidate_cost": {
+        "calls": 1080,
+        "prompt_tokens": 3735836,
+        "completion_tokens": 8640,
+        "latency_seconds": 1901.91208123893
+      }
+    }
+  ],
+  "decision": "No general winner; preserve fixed parent per window; next accepted candidates A3to1 only",
+  "teacher_use": "Aggregate feedback only; do not include raw reward matrix or sample IDs",
+  "limitations": [
+    "Same adapted fold, not independent confirmation",
+    "Single execution per candidate; small paired changes not stable gains",
+    "Inference nondeterminism not isolated",
+    "Different windows are not a same-input group for group-relative advantages"
+  ]
+}
