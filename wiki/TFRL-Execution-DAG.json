@@ -1,9 +1,9 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T14:35:52.279073+00:00",
+  "updated_at_utc": "2026-11-08T14:45:30.178370+00:00",
   "current_stage": "P",
-  "instruction": "当前优化相似问和query关键值/操作关系的派生表示；冻结意图描述；不以扩库替代主目标；oracle小规模先验机制验证",
+  "instruction": "前置召回深度覆盖分析；两路标签去重取并集；每label来源独立fewshot；先P OFF验证，不新增抽取任务",
   "resources": {
     "inference_instances": 3,
     "cards_per_instance": 4,
@@ -235,20 +235,24 @@
       "automatic_retry": false
     },
     "subprocess_roles": [
-      "finish_existing_relative_P",
-      "finish_candidate_geometry_side_asset",
-      "question_slot_representation_teacher_preparation"
+      "recall_depth_union_analysis",
+      "union_fewshot_implementation"
     ],
     "teacher_analysis": "complete_reviewed_26_output_hashes",
     "relative_merge": {
-      "status": "generation_running_main_checkpoint128",
+      "status": "complete_main_independent_checkpoint1080",
       "folda_supply": 1021,
       "repair": 10,
       "loss": 5,
-      "P": null,
-      "completed": 128,
+      "P": 1002,
+      "completed": 1080,
       "total": 1080,
-      "observed_utc": "2026-11-08T14:29:54.462625+00:00"
+      "observed_utc": "2026-11-08T14:29:54.462625+00:00",
+      "P_repairs": 8,
+      "P_regressions": 7,
+      "P_top1": 901,
+      "wall_seconds": 689.39552889,
+      "seconds_per_row": 0.6383291934166667
     },
     "official_train_coverage": {
       "status": "accepted_source_census_not_admitted",
@@ -273,12 +277,16 @@
       "oracle": true
     },
     "question_candidate_geometry": {
-      "status": "CLI_started_not_encoding_confirmed",
+      "status": "complete_side_asset_not_admitted",
       "source_groups": 1514,
-      "automatic_bank_admission": false
+      "automatic_bank_admission": false,
+      "encoded": 1514,
+      "negative_margin": 321,
+      "wall_seconds": 137.71549992,
+      "service_restored": true
     },
     "next_feedback": {
-      "status": "old_CLI_interrupted_new_question_representation_CLI_started_not_sent",
+      "status": "preparation_stopped_not_sent",
       "depends_on": [
         "existing_question_bank_audit"
       ],
@@ -289,7 +297,7 @@
       "blocks_independent_NPU": false
     },
     "question_representation": {
-      "status": "teacher_package_preparation",
+      "status": "paused_by_user_direction_no_new_task",
       "intent_descriptions": "frozen",
       "knowledge_target": "similar_question_derived_embedding_keys",
       "query_scope": "small_fixed_oracle_slot_diagnostic",
@@ -300,7 +308,20 @@
       "oracle_stage": "small_fixed_upper_bound_before_real_prediction",
       "prediction_stage": "only_after_oracle_gain_same_samples_frozen_keys",
       "unknown_policy": "do_not_impute_from_label",
-      "teacher_requirement": "executable_query_path_and_shared_schema_not_key_rewrite_only"
+      "teacher_requirement": "executable_query_path_and_shared_schema_not_key_rewrite_only",
+      "pilot_selection": "predeclared_semantic_subset_le100_within_existing_FoldA1080_no_outcome_or_gold_selection"
+    },
+    "union_recall": {
+      "status": "CPU_analysis_and_implementation_started",
+      "baseline_supply": 1016,
+      "baseline_P": 1001,
+      "n": 1080,
+      "union_not_cap5": true,
+      "fewshots_per_label_default": 3,
+      "question_depth": null,
+      "description_depth": null,
+      "gold_used_for_runtime_selection": false,
+      "thinking_comparison": "deferred"
     }
   }
 }
