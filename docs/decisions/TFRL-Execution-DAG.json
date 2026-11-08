@@ -1,15 +1,17 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T19:10:57.594741+00:00",
+  "updated_at_utc": "2026-11-08T20:09:38.863765+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
-    "inference_instances": 3,
+    "inference_instances": 2,
     "cards_per_instance": 4,
     "max_codex_cli": 3,
     "monitor_interval_seconds": 600,
-    "total_authorized_cards": 12
+    "total_authorized_cards": 8,
+    "resource_scope": "last verified npu2 TP4 services; historical third instance not freshly verified",
+    "active_scientific_NPU_jobs": 0
   },
   "nodes": [
     {
@@ -397,36 +399,50 @@
   },
   "active_tracks": [
     {
-      "id": "confirmed-defects",
+      "id": "E2-result-analysis",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "complete_audit_views_and_three_state_semantics_main_verified",
+      "status": "complete_report_delivered_main_review",
       "depends_on": []
     },
     {
-      "id": "representative-bank",
+      "id": "causal-depth-search",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "4451_P_complete993_not_promoted_S3_4469_complete_no_hit_gain",
+      "status": "implementation_running",
       "depends_on": []
     },
     {
-      "id": "p-consumption",
-      "owner": "Terra CLI",
-      "resource": "CPU_prepare_then_NPU",
-      "status": "AB_C_R_complete_not_promoted_T_preparation_and_queue_active",
+      "id": "group-feedback-round3",
+      "owner": "Sol CLI",
+      "resource": "CPU_then_local_external_API",
+      "status": "evidence_preparation_running_not_sent",
+      "depends_on": [],
+      "final_schema_binding_depends_on": [
+        "causal-depth-search"
+      ]
+    },
+    {
+      "id": "next-formal-recall",
+      "resource": "CPU",
+      "status": "not_started",
       "depends_on": [
-        "frozen_original_Q50D5"
-      ],
-      "planned_arms": [
-        "OFF_no_fewshot",
-        "OFF_3_fewshot"
-      ],
-      "subsequent": "root_cause_prompt_or_thinking",
-      "interface_check": "first_real_responses_of_existing_durable1080_queue"
+        "causal-depth-search",
+        "group-feedback-round3",
+        "main-scientific-review"
+      ]
+    },
+    {
+      "id": "next-P-validation",
+      "resource": "NPU",
+      "status": "pending_informative_accepted_supply_candidate",
+      "depends_on": [
+        "accepted_recall_candidate",
+        "prepared_inputs"
+      ]
     }
   ],
-  "historical_nodes_note": "nodes retain historical stage records; active_tracks is the current priority. Planning specification only, not remote job receipts.",
+  "historical_nodes_note": "nodes and latest_recall_revision retain historical evidence; active_tracks and group_policy_round2_formal_run describe current work. Planning specification is not an execution receipt.",
   "current_followups": {
     "P_operation_prompt": {
       "state": "complete_not_promoted",
@@ -467,7 +483,7 @@
       "scope": "unchanged fresh identity reads; reuse byte-identical maps parsing; no C/R mutation"
     },
     "representative_to_P": {
-      "state": "complete_checkpoint_main_verified_not_promoted_mechanism_analysis_active",
+      "state": "complete_not_promoted_mechanism_analysis_complete",
       "index_size": 4451,
       "control": "actual_A_original_prompt_zero_examples_OFF",
       "purpose": "verify_supply_gain_transfers_to_P",
@@ -522,7 +538,7 @@
       "reasoning_tokens": 3307884
     },
     "second_TP4_binding": {
-      "state": "CPU_stage_prepare_complete_admission_container_running_launcher_review_pending_no_model_POST",
+      "state": "complete_main_accepted_no_new_scientific_POST",
       "resource": "CPU",
       "depends_on": [],
       "must_not_change": "B_service_or_T_inflight_state"
@@ -537,7 +553,7 @@
       "blocks_T": false
     },
     "recall_minimum_growth": {
-      "state": "seed59_growth68_complete_bundle_rejected_engineering_returned_for_completion",
+      "state": "seed59_growth68_complete_E2_no_gain_next_causal_depth_preparing",
       "resource": "CPU",
       "retain_all4451": false,
       "development_feedback_for_selection": true,
@@ -704,24 +720,67 @@
     "seed_lower_bound": 59,
     "current_candidate_size": 68,
     "objective": "fixed_TopK_label_coverage_and_stability",
-    "next": "diagnose_weak_representatives_and_bounded_compensation_failures_then_TRAIN_only_growth",
+    "next": "root_cause_driven_action_depth_search_then_TRAIN_compensation_and_reverse_pruning",
     "seed_members_immutable": false,
-    "TEST_tuning": false
+    "TEST_tuning": false,
+    "maximum_additions_is_business_invariant": false
   },
   "fair_compensation_implementation": {
     "resource": "CPU",
-    "state": "codex_process_running",
+    "state": "complete_main_accepted_used_in_formal_E2",
     "depends_on": [],
     "objective": "full_finite_pool_prescreen_measured_ranking_and_bounded_per_candidate_compensation",
     "preserve_final_gates": true
   },
   "group_feedback_round2": {
     "resource": "CPU_then_external_API",
-    "state": "codex_preparation_running_not_sent",
+    "state": "complete_valid_terminal_reviewed_and_executed",
     "depends_on": [],
     "final_schema_binding_depends_on": [
       "fair_compensation_implementation"
     ],
-    "new_API_requests": 0
+    "new_API_requests": 1,
+    "input_tokens": 17775,
+    "output_tokens": 27240,
+    "reasoning_tokens_included": 23493,
+    "elapsed_seconds": 246.018563
+  },
+  "group_policy_round2_formal_run": {
+    "resource": "CPU",
+    "state": "complete_negative",
+    "seed": 68,
+    "final_bank_size": 68,
+    "queries": 2783,
+    "distinct_states": 576,
+    "budget": 600,
+    "prescreen": 96,
+    "primary_starts": 96,
+    "single_states": 96,
+    "compensation_states": 480,
+    "compensation_shape": "2add0delete_only",
+    "delete_states": 0,
+    "three_add_states": 0,
+    "primaries_with_loss_reduction": 18,
+    "accepted_actions": 0,
+    "group_wall_seconds": 80.241043,
+    "member_CPU_seconds": 76.319454,
+    "CPU_quota": 4,
+    "NPU_cards": 0,
+    "new_API_requests": 0,
+    "TEST_tuning": false,
+    "cached_references": [
+      "R0_single_insert",
+      "R1_cause_joint"
+    ],
+    "simultaneous_three_member_comparison": false,
+    "container_wall_seconds": 81.20784,
+    "process_CPU_seconds": 81.083504,
+    "actual_mean_CPU_cores": 0.998469
+  },
+  "radio_source_audit": {
+    "state": "complete_uncertain_retained",
+    "index_binding_bug_found": false,
+    "new_exclusions": 0,
+    "audio_listened": false
   }
 }
