@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T07:21:47.345233+00:00",
+  "updated_at_utc": "2026-11-08T07:25:20.795308+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1389,6 +1389,14 @@
       "depends_on": [],
       "status": "review_passed_two_teacher_requests_dispatched_streams_live",
       "scope": "Independent ACE and training-free group-relative templates/configuration; existing teacher executor; no API; fixed coverage 3to1 opening only"
+    },
+    {
+      "id": "P-configured-candidate-preparation",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "implementation_assigned_existing_A_cli",
+      "purpose": "Replace per-candidate script copies with configuration-driven original prepare/register/admit/launcher chain; fail early for missing template and inconsistent source identity",
+      "no_model_calls_for_validation": true
     }
   ],
   "round_policy": {
