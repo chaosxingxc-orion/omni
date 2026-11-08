@@ -31,3 +31,28 @@ def test_fill_preserves_parent_order_and_respects_capacity():
         assert result == parent + ['z', 'y'][:5-len(parent)]
     with pytest.raises(ValueError):
         merge_description([], candidates, {'query'}, threshold=.5, merge_policy='dominance')
+
+
+def test_strict_dominance_append_then_compare_and_keep_original_order():
+    policy = dict(threshold=.2, merge_policy='strict_description_dominance')
+    parent = ['a', 'b', 'c', 'd']
+    cards = [card('d', -.1), card('x', .9), card('y', .8)]
+    assert merge_description(parent, iter(cards), {'query'}, **policy)[0] == ['a', 'b', 'c', 'x', 'y']
+    assert merge_description(['a', 'b', 'c'], cards, {'query'}, **policy)[0] == ['a', 'b', 'c', 'x', 'y']
+
+
+def test_strict_dominance_does_not_skip_strong_or_unknown_victim():
+    policy = dict(threshold=.2, merge_policy='strict_description_dominance')
+    parent = ['a', 'b', 'c', 'd', 'e']
+    for last in [card('e', .9), card('e', float('nan')), card('e', .1, 'query'), card('e', .1, complete=False)]:
+        cards = [card('d', -.5), last, card('x', .8), card('y', .7)]
+        assert merge_description(parent, cards, {'query'}, **policy)[0] == parent
+    assert merge_description(parent, [card('d', -.5), card('x', .8)], {'query'}, **policy)[0] == parent
+    assert merge_description(parent, [card('e', .8), card('x', .8)], {'query'}, **policy)[0] == parent
+
+
+def test_strict_dominance_two_swaps_and_only_original_top_two():
+    parent = ['a', 'b', 'c', 'd', 'e']
+    cards = [card('d', .6), card('e', .1), card('x', .9), card('y', .7), card('z', .65)]
+    result, _ = merge_description(parent, cards, {'query'}, threshold=.2, merge_policy='strict_description_dominance')
+    assert result == ['a', 'b', 'c', 'x', 'y']

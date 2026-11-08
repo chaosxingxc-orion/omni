@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "threshold": 0.21988573670387268,
+  "threshold_provenance": "frozen TRAIN source-heldout M2 fit",
+  "parent": "question_top15_label_max_cap5",
+  "description_score": "cosine_audio_query_exact_locked_card_representation",
+  "merge_policy": "strict_description_dominance",
+  "max_additions": 2,
+  "cap": 5,
+  "tie_break": "knowledge_id_ascending",
+  "unresolved_card_sources": "exclude",
+  "p_selection": "min(3,n)"
+}
