@@ -183,4 +183,4 @@ worker16容器墙钟847.546秒，即0.7848秒/条，剩余0；与campaign/释放
 
 配置驱动候选准备入口已合入main `ebc3f1b76`，附示例配置、README和3个固定镜像负向测试。两个真实候选完成原stage/prepare/register/admission；最终版本另增admission日志保存，该日志分支未额外重跑完整链。运行中的封存树保持原版本。
 
-完整TRAIN诊断与策略建议见 [TRAIN向量空间诊断](TRAIN-Geometry-Strategy-Evidence)。本轮不会把支持图分量直接当语义簇，或用未校正的纯度阈值删小类。下一教师输入仍在审核准备，尚未发送。
+完整TRAIN诊断与策略建议见 [TRAIN向量空间诊断](TRAIN-Geometry-Strategy-Evidence)。本轮不会把支持图分量直接当语义簇，或用未校正的纯度阈值删小类。新检索策略ACE/组相对教师已分别发送一次并收到流式响应，尚未终态；实际usage与候选待收。
