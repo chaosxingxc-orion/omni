@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T13:49:25.993970+00:00",
+  "updated_at_utc": "2026-11-08T14:26:02.142938+00:00",
   "current_stage": "P",
   "instruction": "三路：召回供给、P Top3保留、开发冻结后TEST验证；根因驱动，达标后冻结P转S；不追求Top1极致",
   "resources": {
@@ -126,7 +126,7 @@
       "depends_on": [
         "teacher-global-feedback"
       ],
-      "status": "count_bound_audit_complete_next_ACE_recall_teacher_package_preparing_not_sent",
+      "status": "M1_retired_M2_999_vacancy1002_relative_P_admission",
       "target": "64_supply_misses"
     },
     {
@@ -135,7 +135,7 @@
       "depends_on": [
         "teacher-global-feedback"
       ],
-      "status": "ACE_C1_container_running_first_response_pending_C2_live_queue_after_generation_release",
+      "status": "complete_C1_1004_C2_1002_not_new_frozen_baseline",
       "target": "15_supplied_but_dropped"
     },
     {
@@ -190,7 +190,7 @@
       "depends_on": [
         "teacher-global-feedback"
       ],
-      "status": "active_CLI_preparation_no_model_call_verified",
+      "status": "complete_1000_of1080",
       "blocks_NPU_successors": false
     }
   ],
@@ -235,13 +235,13 @@
       "automatic_retry": false
     },
     "subprocess_roles": [
-      "engineering_vacancy_P",
-      "P_case_analysis",
-      "teacher_feedback_preparation"
+      "relative_P_execution",
+      "question_candidate_geometry",
+      "next_incremental_feedback_preparation"
     ],
-    "teacher_analysis": "active_full_semantic_review",
+    "teacher_analysis": "complete_reviewed_26_output_hashes",
     "relative_merge": {
-      "status": "CPU_replay_verified_full_P_authorized_preparing",
+      "status": "CPU_verified_P_driver_QUEUE_WATCH_no_response_confirmed",
       "folda_supply": 1021,
       "repair": 10,
       "loss": 5,
@@ -253,6 +253,30 @@
       "labels": 57,
       "cooking_query": 0
     },
-    "generic_slot": "authorized_fixed60_samebank_pipe_NPU_text_probe_preparing"
+    "generic_slot": {
+      "status": "complete_main_recount_service_restored",
+      "n": 60,
+      "base_top3": 54,
+      "raw_top3": 54,
+      "generic_top3": 54,
+      "base_top5": 55,
+      "raw_top5": 56,
+      "generic_top5": 56,
+      "generic_vs_raw_repairs": 0,
+      "generic_vs_raw_regressions": 0,
+      "npu_cards": 1,
+      "unique_query_forwards": 140,
+      "pilot_wall_seconds": 43.36564564,
+      "oracle": true
+    },
+    "question_candidate_geometry": {
+      "status": "CLI_started_not_encoding_confirmed",
+      "source_groups": 1514,
+      "automatic_bank_admission": false
+    },
+    "next_feedback": {
+      "status": "CLI_preparing_not_sent",
+      "blocks_independent_NPU": false
+    }
   }
 }
