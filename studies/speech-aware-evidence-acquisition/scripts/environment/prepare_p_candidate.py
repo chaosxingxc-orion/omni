@@ -108,7 +108,7 @@ def prepare(c, dry_run):
     if dry_run:
         return {'status': 'preflight-passed', 'model_calls': 0, 'target_created': False, 'release_files_verified': len(read(release / 'source-manifest.json')['files'])}
     name, run = c['candidate']['name'], c['candidate']['run_id']
-    replacements = [(str(parent), str(root)), (old_release, str(release)), (old_sha, c['release']['manifest_sha256']), (launcher['expected_commit'], c['release']['commit']), (old_run, run), (old_name, name), (old_generation, c['candidate']['generation_name'])]
+    replacements = [(str(parent), str(root)), (old_release, str(release)), (old_sha, c['release']['manifest_sha256']), (launcher['expected_commit'], c['release']['commit']), (old_run, run), (old_name, name)]
     def replace(s):
         for a, b in replacements:
             s = s.replace(a, b)
@@ -172,6 +172,8 @@ def prepare(c, dry_run):
         require(rel.startswith(pre) and rel in admitted['files'], 'admission binding missing: ' + key)
         require(sha(within(root / 'admission-root/successor-v1', rel)) == admitted['files'][rel], 'admission binding content mismatch: ' + key)
     x = json.loads(replace(json.dumps(launcher)))
+    # The generation name identifies the container, not the inherited --out path.
+    x['container_name'] = c['candidate']['generation_name']
     (root / 'admission-control').mkdir(exist_ok=True)
     ctrl = read(parent / 'admission-control/config.json')
     ctrl['run_id'] = run
