@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T22:09:35.344712+00:00",
+  "updated_at_utc": "2026-11-08T22:16:01.657184+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -555,19 +555,21 @@
       "id": "reanchor-config",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "started_delivery_pending",
+      "status": "complete_main_accepted62_manifest_new71_inputs",
       "depends_on": [
         "accepted_R4_71_bank"
       ],
       "does_not_depend_on": [
         "P_transfer"
-      ]
+      ],
+      "maximum_distinct_states_bound": 582,
+      "core_runtime_changed": false
     },
     {
       "id": "group-feedback-round5",
       "owner": "Sol CLI",
       "resource": "CPU_then_local_external_API",
-      "status": "preparing_not_sent",
+      "status": "unique_local_request_dispatched_terminal_pending",
       "depends_on": [
         "accepted_R4_analysis"
       ],
@@ -577,7 +579,8 @@
       "does_not_depend_on": [
         "P_transfer"
       ],
-      "API_sent": false
+      "API_sent": true,
+      "automatic_retries": 0
     }
   ],
   "historical_nodes_note": "nodes and latest_recall_revision retain historical evidence; active_tracks and group_policy_round2_formal_run describe current work. Planning specification is not an execution receipt.",
@@ -698,7 +701,7 @@
       "blocks_T": false
     },
     "recall_minimum_growth": {
-      "state": "seed59_growth71_reverse_complete_reanchor_config_and_teacher_preparing",
+      "state": "seed59_growth71_reverse_complete_reanchor_config_accepted_teacher_inflight",
       "resource": "CPU",
       "retain_all4451": false,
       "development_feedback_for_selection": true,
