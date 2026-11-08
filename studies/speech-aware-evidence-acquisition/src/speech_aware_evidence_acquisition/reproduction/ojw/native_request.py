@@ -543,6 +543,10 @@ class MeteredNativeSpeechRequest:
                 decoding = resolve_node_decoding(decoding, self._role_thinking_policy, request.role_id)
             except ReasoningKnobError as error:
                 raise NativeSpeechRequestError(str(error)) from error
+        # A thinking policy can restore its own answer reserve; the registered
+        # role cap remains the final upper bound on the actual request.
+        if cap is not None:
+            decoding['max_tokens'] = min(decoding['max_tokens'], cap)
         # NX-T R1: this contact's ARM override (the per-node thinking policy of the Perception branch it belongs to), composed after
         # the role-level one. The delivering branch and the twin have no entry, so their requests are the locked plan's.
         arm_id = getattr(request.context, "perception_branch_id", None)

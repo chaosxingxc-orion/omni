@@ -414,6 +414,15 @@ def test_p_off_4096_native_wire_and_fallback_never_reenables(tmp_path):
     assert _receipts(buffer) == []
 
 
+def test_role_cap_survives_thinking_policy_at_transport(tmp_path):
+    policy = {'perception': {'enable_thinking': False, 'answer_reserve_tokens': 4096}}
+    adapter, _transport, _ = _native(tmp_path, [], policy=policy)
+    adapter._role_completion_caps = {'perception': 128}
+    wire = adapter.prepare(_role_request('perception', 'c-perception')).rendered_body()['decoding_params']
+    assert wire['max_tokens'] == 128
+    assert wire['chat_template_kwargs'] == {'enable_thinking': False}
+
+
 def test_ready_dispatch_preserves_slot_on_answer_only_fallback(tmp_path):
     adapter, transport, sunk = _native(tmp_path, [("", "length", 4096), ("slot values", "stop", 20)])
     buffer = TraceBuffer("SAEA-E-TEST-native-tools-client")
