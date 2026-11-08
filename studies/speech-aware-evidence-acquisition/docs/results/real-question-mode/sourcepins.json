@@ -1,0 +1,55 @@
+{
+  "additional_k": [
+    3,
+    5
+  ],
+  "aggregation": "max",
+  "batch_size": 64,
+  "expected_intents": 59,
+  "expected_members": 8554,
+  "expected_queries": 1080,
+  "intent_snapshot": {
+    "path": "/data/knowledge/slurp/semantic/intent-boundaries-npu-port-v1/snapshot.json",
+    "sha256": "08976279d0cb1f033809285cf0c1a4fac31cd982dc9236328d4422448e27129d"
+  },
+  "k": 60,
+  "pool": {
+    "path": "/data/knowledge/slurp/saea-kb-distmodel-v1/size-pool-annotated-exemplars-minus-r01/snapshot.json",
+    "sha256": "f549466f22bb0cae00a99849a1a811889eb82af9b632305c815fa123ad5795ca"
+  },
+  "query": {
+    "path": "/state/psd-registered-v1/shared-vectors/query-vectors-speech-segments.jsonl",
+    "sha256": "e90fc17d4b76e3d70964bb54aa6ea26f06737bafecdf20408a05482c85ecff9a"
+  },
+  "query_limit": 1080,
+  "query_roster": {
+    "path": "/data/work/dev/odd40-runtime-v1/studies/speech-aware-evidence-acquisition/docs/receipts/rosters/slurp-evo-fold-a-v2.json",
+    "sha256": "1fe7908c31396774d7535fdf37bd791762215c324999d66ed7beb9e7b2f9033d"
+  },
+  "rosters": [
+    {
+      "path": "/data/work/dev/odd40-runtime-v1/studies/speech-aware-evidence-acquisition/docs/receipts/rosters/slurp-evo-fold-a-v2.json",
+      "sha256": "1fe7908c31396774d7535fdf37bd791762215c324999d66ed7beb9e7b2f9033d"
+    },
+    {
+      "path": "/data/work/dev/odd40-runtime-v1/studies/speech-aware-evidence-acquisition/docs/receipts/rosters/slurp-evo-fold-b-v2.json",
+      "sha256": "47b89b9e33b1aed553ad94a1819acba6ac8837130ca546c33219d91a1ab944a8"
+    },
+    {
+      "path": "/data/work/dev/odd40-runtime-v1/studies/speech-aware-evidence-acquisition/docs/receipts/rosters/slurp-stage3-construction-r01.json",
+      "sha256": "fdb6521a0863b5f11f7ccea9fba5a1e598d65c5eb05b13a68d1198d5e01ba5f0"
+    },
+    {
+      "path": "/data/work/dev/odd40-runtime-v1/studies/speech-aware-evidence-acquisition/docs/receipts/rosters/slurp-stage3-construction-r01c.json",
+      "sha256": "e8abc65ba4626cccb4aae9d2eb1bd73f077a6e9a407b3dba9c18bbe4c03eeddd"
+    }
+  ],
+  "train": {
+    "path": "/data/datasets/slurp/metadata/train.jsonl",
+    "sha256": "4a05a3de6c7f028aff298c4a90196e6a3fecd1938d96fb1c125d6fd10d5e301e"
+  },
+  "vectors": {
+    "path": "/data/vectors/slurp-kus3/facet-vectors.jsonl",
+    "sha256": "24f0cdf7005f722651631fa91407a6c7e68ac4aa9ec70ac042328fe2020cf2c4"
+  }
+}

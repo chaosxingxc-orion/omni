@@ -1,0 +1,115 @@
+{
+  "schema": "omni-independent-retrieval-evaluation-v1",
+  "status": "completed_CPU_development_evaluation",
+  "population": "existing Fold A1080",
+  "completed_samples": 1080,
+  "total_samples": 1080,
+  "query": "fixed original speech embeddings",
+  "metrics": {
+    "description60-original": {
+      "n": 1080,
+      "Recall1_count": 641,
+      "Recall3_count": 822,
+      "Recall5_count": 881,
+      "query_to_key_MRR": 0.6976090629894691,
+      "not_retrieved_count": 0,
+      "mean_gold_rank_when_retrieved": 4.392592592592592,
+      "unique_intents_per_window": true
+    },
+    "description60-ACE13": {
+      "n": 1080,
+      "Recall1_count": 558,
+      "Recall3_count": 722,
+      "Recall5_count": 779,
+      "query_to_key_MRR": 0.6145052773807985,
+      "not_retrieved_count": 0,
+      "mean_gold_rank_when_retrieved": 8.748148148148148,
+      "unique_intents_per_window": true
+    },
+    "question_nn1_by_intent": {
+      "n": 1080,
+      "Recall1_count": 821,
+      "Recall3_count": 957,
+      "Recall5_count": 994,
+      "query_to_key_MRR": 0.8325971008026145,
+      "not_retrieved_count": 1,
+      "mean_gold_rank_when_retrieved": 2.2585727525486563,
+      "unique_intents_per_window": true
+    },
+    "question_knn10_weighted": {
+      "n": 1080,
+      "Recall1_count": 823,
+      "Recall3_count": 956,
+      "Recall5_count": 976,
+      "query_to_key_MRR": 0.8229949294532628,
+      "not_retrieved_count": 99,
+      "mean_gold_rank_when_retrieved": 1.273190621814475,
+      "unique_intents_per_window": true
+    },
+    "question_knn20_weighted": {
+      "n": 1080,
+      "Recall1_count": 799,
+      "Recall3_count": 959,
+      "Recall5_count": 986,
+      "query_to_key_MRR": 0.8154644660894661,
+      "not_retrieved_count": 69,
+      "mean_gold_rank_when_retrieved": 1.4609297725024728,
+      "unique_intents_per_window": true
+    },
+    "question_knn40_weighted": {
+      "n": 1080,
+      "Recall1_count": 763,
+      "Recall3_count": 956,
+      "Recall5_count": 995,
+      "query_to_key_MRR": 0.8019826336064081,
+      "not_retrieved_count": 42,
+      "mean_gold_rank_when_retrieved": 1.688824662813102,
+      "unique_intents_per_window": true
+    }
+  },
+  "pool": {
+    "snapshot_members": 8554,
+    "remaining_members": 8554,
+    "excluded_members": 0,
+    "excluded_roster_utterances": {
+      "slurp-evo-fold-a-v2": 1080,
+      "slurp-evo-fold-b-v2": 1080,
+      "slurp-stage3-construction-r01": 800,
+      "slurp-stage3-construction-r01c": 625
+    },
+    "retained_intents": 59,
+    "no_member_intents": [
+      "cooking_query"
+    ],
+    "query_utterance_self_retrieval": 0,
+    "labels_source": "frozen pool task_target; never evaluation gold",
+    "roster_ids_only": true
+  },
+  "CPU_total_wall_seconds": 26.543732300051488,
+  "latency_seconds": {
+    "description60-original": 0.03824374999385327,
+    "description60-ACE13": 0.03315329004544765,
+    "question_cosine_matrix": 3.2745398200349882,
+    "question_intent_max_aggregation": 0.04434726003091782,
+    "question_knn10_aggregation": 0.15465116000268608,
+    "question_knn20_aggregation": 0.15576712996698916,
+    "question_knn40_aggregation": 0.15719235001597553,
+    "RRF60__description60-original__question_nn1_by_intent": 0.3978329600067809,
+    "RRF60__description60-original__question_knn20_weighted": 0.25262923003174365,
+    "RRF60__description60-ACE13__question_nn1_by_intent": 0.3998575999867171,
+    "RRF60__description60-ACE13__question_knn20_weighted": 0.2528361299773678
+  },
+  "model_calls": 0,
+  "npu_cards": 0,
+  "independent_modes": true,
+  "fusion": "deferred",
+  "description_policy": "locked descriptions; no question means",
+  "question_policy": "real TRAIN original sentences only; no synthetic/test-derived questions",
+  "acceptance": "210 delivery/source file checks matched",
+  "limitations": [
+    "Retrieval input coverage, not model output accuracy",
+    "FoldA repeatedly used for development",
+    "Current real question pool has no cooking_query; no fabricated fallback",
+    "Three raw-text vector anchors support compatibility, not exhaustive re-encoding"
+  ]
+}
