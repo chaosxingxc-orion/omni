@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T14:32:51.748806+00:00",
+  "updated_at_utc": "2026-11-08T14:35:52.279073+00:00",
   "current_stage": "P",
   "instruction": "当前优化相似问和query关键值/操作关系的派生表示；冻结意图描述；不以扩库替代主目标；oracle小规模先验机制验证",
   "resources": {
@@ -294,7 +294,13 @@
       "knowledge_target": "similar_question_derived_embedding_keys",
       "query_scope": "small_fixed_oracle_slot_diagnostic",
       "label_as_runtime_feature": false,
-      "new_bank_admission": false
+      "new_bank_admission": false,
+      "shared_task": "evidence_grounded_discriminative_feature_extraction",
+      "query_production_input": "original_audio_only",
+      "oracle_stage": "small_fixed_upper_bound_before_real_prediction",
+      "prediction_stage": "only_after_oracle_gain_same_samples_frozen_keys",
+      "unknown_policy": "do_not_impute_from_label",
+      "teacher_requirement": "executable_query_path_and_shared_schema_not_key_rewrite_only"
     }
   }
 }
