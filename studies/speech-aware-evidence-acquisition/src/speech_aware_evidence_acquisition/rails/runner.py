@@ -8315,10 +8315,15 @@ class _SlotFillScheduler:
                 from ..core import stage_timing as operational_timing
                 if executor_wait_stage:
                     operational_timing.completed_interval(executor_wait_stage, queued, wall)
-                if execute_stage:
-                    with operational_timing.span(execute_stage):
-                        return fn(*args)
-                return fn(*args)
+                from contextlib import nullcontext
+                from ..core.session.vllm_identity import http_probe_connection_scope
+                scope = (http_probe_connection_scope()
+                         if timing_stage == "dispatch_ready_request" else nullcontext())
+                with scope:
+                    if execute_stage:
+                        with operational_timing.span(execute_stage):
+                            return fn(*args)
+                    return fn(*args)
 
             future = asyncio.get_running_loop().run_in_executor(executor, context.run, invoke)
             try:
