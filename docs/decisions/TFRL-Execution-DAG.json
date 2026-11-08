@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T21:36:15.374777+00:00",
+  "updated_at_utc": "2026-11-08T22:01:48.595690+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -11,7 +11,9 @@
     "monitor_interval_seconds": 600,
     "total_authorized_cards": 8,
     "resource_scope": "last verified npu2 TP4 services; historical third instance not freshly verified",
-    "active_scientific_NPU_jobs": 0
+    "active_scientific_NPU_jobs": 1,
+    "active_scientific_NPU_cards": 4,
+    "idle_cards": 4
   },
   "nodes": [
     {
@@ -435,11 +437,15 @@
     {
       "id": "next-P-validation",
       "resource": "NPU",
-      "status": "CLI_active_preparing_inputs_no_model_start_yet",
+      "status": "single_TP4_running_first64_valid_model_calls_verified",
       "depends_on": [
         "prepared_V_inputs",
         "available_lane_guard"
-      ]
+      ],
+      "completed_snapshot": 64,
+      "total": 1080,
+      "cards": 4,
+      "instances": 1
     },
     {
       "id": "accepted133-P-transfer",
@@ -529,7 +535,7 @@
       "id": "group-feedback-round4",
       "owner": "Sol CLI",
       "resource": "CPU_then_local_external_API",
-      "status": "real_local_HTTP200_SSE_in_progress",
+      "status": "terminal_valid_real_policy_compiled",
       "depends_on": [
         "accepted_E3_analysis",
         "reverse_prune70"
@@ -697,17 +703,17 @@
     "seed_FoldA_Q15_union": 1002,
     "seed_FoldA_Q50_question": 1058,
     "seed_FoldA_Q50_union": 1062,
-    "status": "E3_growth70_and_reverse_pruning_complete",
+    "status": "R4_growth71_and_reverse_prune_complete",
     "NPU_calls": 0,
-    "final_size": 70,
+    "final_size": 71,
     "accepted_additions": 11,
-    "FoldA_Q15_question": 973,
-    "FoldA_Q15_union": 1018,
+    "FoldA_Q15_question": 980,
+    "FoldA_Q15_union": 1019,
     "FoldA_Q50_question": 1070,
     "FoldA_Q50_union": 1071,
     "CPU_wall_seconds": 165.07169253006577,
     "followup_maximum_new_acceptances": 24,
-    "total_accepted_additions": 11,
+    "total_accepted_additions": 12,
     "last_round_CPU_seconds": 92.44105488993227,
     "last_stop": "70_full_single_deletion_pass_zero_accepted_not_global_minimum"
   },
@@ -826,9 +832,9 @@
   "minimum_seed_growth_policy": {
     "fixed_size_target": null,
     "seed_lower_bound": 59,
-    "current_candidate_size": 70,
+    "current_candidate_size": 71,
     "objective": "fixed_TopK_label_coverage_and_stability",
-    "next": "candidate_discovery_then_TRAIN_compensation_or_joint_shrink_and_reverse_pruning",
+    "next": "recompute71_candidates_safe_gain_early_accept_then_reserved_budget_and_joint_replacement",
     "seed_members_immutable": false,
     "TEST_tuning": false,
     "maximum_additions_is_business_invariant": false,
@@ -979,7 +985,7 @@
     "member_CPU_seconds": 106.560554,
     "default_promoted": false
   },
-  "updated_at": "2026-11-08T21:36:15.374777+00:00",
+  "updated_at": "2026-11-08T22:01:48.595690+00:00",
   "candidate_discovery_diagnostic": {
     "status": "fixed_cache_single_insertion_diagnostics_complete_no_new_accepted_bank",
     "seed": 70,
@@ -1039,18 +1045,114 @@
     "cards_each": 4,
     "instances": 2,
     "remaining": 0,
-    "next": "CLI_active_V_supply_thinking_ON_input_preparation_possible540shards",
-    "successor_model_start_verified": false
+    "next": "single_TP4_full1080_ON_container_started_first_response_pending",
+    "successor_model_start_verified": false,
+    "other_four_cards_idle_reason": "driver requires full1080 and exact parent IDs; no duplicate inference for utilization"
   },
   "group_feedback_round4": {
-    "state": "unique_local_POST_HTTP200_SSE_running",
+    "state": "terminal_valid_compiled_and_formal_CPU_running",
     "actual_POST": 1,
     "automatic_retries": 0,
     "max_output_tokens": 131072,
     "teacher_seed": 70,
-    "current_round_compiled": false,
-    "formal_CPU_started": false,
+    "current_round_compiled": true,
+    "formal_CPU_started": true,
     "observer": "existing_pidfd_or600s",
-    "costs_pending_terminal": true
+    "costs_pending_terminal": false,
+    "input_tokens": 14408,
+    "output_tokens": 32274,
+    "reasoning_tokens_included": 30117,
+    "total_tokens": 46682,
+    "elapsed_seconds": 580.960694
+  },
+  "group_policy_round4_formal_run": {
+    "state": "complete_main_full_hitsets_recount_passed",
+    "queries": 2783,
+    "initial_bank": 70,
+    "CPU_quota": 4,
+    "NPU_cards": 0,
+    "max_states": 600,
+    "maximum_rounds": 2,
+    "net_add_cap_per_round": 2,
+    "net_delete_cap_per_round": 2,
+    "selection": "all_train_risk_aware_cover",
+    "acceptance": "gain_or_shrink",
+    "accepted_result_pending": false,
+    "final_bank": 71,
+    "accepted_actions": 1,
+    "distinct_states": 600,
+    "all_regressions": 0,
+    "Q15_question_repairs": [
+      2,
+      5,
+      7
+    ],
+    "Q15_union_repairs": [
+      1,
+      1,
+      1
+    ],
+    "Q50_question_repairs": [
+      2,
+      1,
+      0
+    ],
+    "Q50_union_repairs": [
+      1,
+      1,
+      0
+    ],
+    "group_wall_seconds": 88.24079,
+    "member_CPU_seconds": 84.084609,
+    "profiled_candidates": 6890,
+    "candidate_query_comparisons": 19174870,
+    "profile_CPU_seconds": 1.484968,
+    "feasible_shrink_states": 0,
+    "completed_rounds": 1
+  },
+  "round4_reverse_prune": {
+    "state": "complete_main_85_receipt_and71_ledger_verified",
+    "initial_size": 71,
+    "all_members_deletable": true,
+    "CPU_quota": 4,
+    "NPU_cards": 0,
+    "queries": 2783,
+    "final_size_pending": false,
+    "final_size": 71,
+    "attempted": 71,
+    "accepted": 0,
+    "protected_success_loss": 71,
+    "class_source_loss": 53,
+    "hit_loss_only": 18,
+    "wall_seconds": 13.321252,
+    "CPU_seconds": 13.750578,
+    "global_minimum_proven": false
+  },
+  "p_representative_thinking_transfer": {
+    "state": "running_real_first64_verified",
+    "queries": 1080,
+    "completed_snapshot": 64,
+    "valid_snapshot": 64,
+    "remaining_snapshot": 1016,
+    "cards": 4,
+    "instances": 1,
+    "thinking_budget": 3072,
+    "answer_budget": 128,
+    "max_tokens": 3200,
+    "configured_inflight": 64,
+    "CPU_prepare_seconds": 488.783527,
+    "generation_pre_HTTP_seconds": 270.152,
+    "first64_input_tokens": 295039,
+    "first64_output_tokens": 198314,
+    "first64_reasoning_tokens_in_output": 197199,
+    "stable_seconds_per_sample": null,
+    "ETA_seconds": null,
+    "AICore_snapshot_percent_range": [
+      38,
+      43
+    ],
+    "AICore_average": null,
+    "baseline": "V_OFF_981",
+    "default_promoted": false
   }
 }
