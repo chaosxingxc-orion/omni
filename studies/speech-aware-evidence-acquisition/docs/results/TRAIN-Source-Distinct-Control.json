@@ -1,0 +1,184 @@
+{
+  "review": {
+    "status": "MAIN_INDEPENDENT_GOLD_JOIN_VERIFIED",
+    "n": 1080,
+    "ranking_sha256": "61c7a4755ac204b729f4fb37e97cbf1289f306880c0da150482b901bc5417fbf",
+    "all_freeze_hashes_verified": true,
+    "metrics": {
+      "legacy_mean5": {
+        "R1": 839,
+        "R3": 969,
+        "R5": 1007,
+        "MRR": 0.8441411748912035,
+        "macro60": {
+          "R1": 0.7285941053349386,
+          "R3": 0.8675076218016006,
+          "R5": 0.903195858066198
+        }
+      },
+      "legacy_coverage": {
+        "R1": 846,
+        "R3": 976,
+        "R5": 1007,
+        "MRR": 0.8496816365666978,
+        "macro60": {
+          "R1": 0.7436455838377534,
+          "R3": 0.873521311501731,
+          "R5": 0.9028231967822762
+        }
+      },
+      "exacttext_groupmax_frozen": {
+        "R1": 846,
+        "R3": 976,
+        "R5": 1007,
+        "MRR": 0.8496816365666978,
+        "macro60": {
+          "R1": 0.7436455838377534,
+          "R3": 0.873521311501731,
+          "R5": 0.9028231967822762
+        }
+      },
+      "source_groupmax_mean5": {
+        "R1": 839,
+        "R3": 969,
+        "R5": 1006,
+        "MRR": 0.8440536698036986,
+        "macro60": {
+          "R1": 0.7285941053349386,
+          "R3": 0.8675076218016006,
+          "R5": 0.9025785741155807
+        }
+      },
+      "source_groupmax_frozen_original_count": {
+        "R1": 848,
+        "R3": 976,
+        "R5": 1007,
+        "MRR": 0.8505799820483767,
+        "macro60": {
+          "R1": 0.745760968453138,
+          "R3": 0.873521311501731,
+          "R5": 0.9028231967822762
+        }
+      },
+      "source_groupmax_new_count": {
+        "R1": 848,
+        "R3": 976,
+        "R5": 1007,
+        "MRR": 0.8505799820483767,
+        "macro60": {
+          "R1": 0.745760968453138,
+          "R3": 0.873521311501731,
+          "R5": 0.9028231967822762
+        }
+      }
+    },
+    "pairs_vs_legacy_coverage": {
+      "legacy_mean5": {
+        "R1": {
+          "repair": 5,
+          "regression": 12
+        },
+        "R3": {
+          "repair": 1,
+          "regression": 8
+        },
+        "R5": {
+          "repair": 3,
+          "regression": 3
+        }
+      },
+      "legacy_coverage": {
+        "R1": {
+          "repair": 0,
+          "regression": 0
+        },
+        "R3": {
+          "repair": 0,
+          "regression": 0
+        },
+        "R5": {
+          "repair": 0,
+          "regression": 0
+        }
+      },
+      "exacttext_groupmax_frozen": {
+        "R1": {
+          "repair": 0,
+          "regression": 0
+        },
+        "R3": {
+          "repair": 0,
+          "regression": 0
+        },
+        "R5": {
+          "repair": 0,
+          "regression": 0
+        }
+      },
+      "source_groupmax_mean5": {
+        "R1": {
+          "repair": 5,
+          "regression": 12
+        },
+        "R3": {
+          "repair": 1,
+          "regression": 8
+        },
+        "R5": {
+          "repair": 2,
+          "regression": 3
+        }
+      },
+      "source_groupmax_frozen_original_count": {
+        "R1": {
+          "repair": 2,
+          "regression": 0
+        },
+        "R3": {
+          "repair": 0,
+          "regression": 0
+        },
+        "R5": {
+          "repair": 0,
+          "regression": 0
+        }
+      },
+      "source_groupmax_new_count": {
+        "R1": {
+          "repair": 2,
+          "regression": 0
+        },
+        "R3": {
+          "repair": 0,
+          "regression": 0
+        },
+        "R5": {
+          "repair": 0,
+          "regression": 0
+        }
+      }
+    },
+    "limitations": [
+      "Independent scoring of frozen rankings, not independent recomputation of vector aggregation",
+      "No Top3 gain; no stable TFRL improvement established",
+      "No additional model or encoder call"
+    ]
+  },
+  "teacher_semantic_review": {
+    "status": "TEACHER_FALSE_PREMISE_CONFIRMED_FROM_PARENT_CHECKPOINT",
+    "counts": {
+      "all_rows_have_3_distinct_label_cards": 1080,
+      "gold_label_recalled": 976,
+      "valid_index_outputs": 1080
+    },
+    "checkpoint_sha256": "ffc0296607df9660dc8932abf68b3d00794a96f71c207fc0fe46605c15816387",
+    "decision": {
+      "ACE_D1": "reject: 104 rows have cards but lack gold label; removing supposed supply gate cannot recover absent label under fixed index output",
+      "ACE_D2_TF_C1": "not executable as written: P slots are unique labels, not question neighbors",
+      "TF_C3": "reuse completed coverage7513 control, no duplicate run",
+      "TF_C2": "adaptation selected for CPU implementation: training-only mask before label aggregation; no runtime query transcript",
+      "statistics": "p>=.05 does not prove null; do not force relative advantage to zero by significance"
+    },
+    "caveat": "Checkpoint audit establishes actual supplies; source-code gold-access audit delegated to original owner"
+  }
+}
