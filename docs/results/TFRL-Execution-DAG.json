@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T06:53:28.876117+00:00",
+  "updated_at_utc": "2026-11-08T06:59:16.957767+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1379,7 +1379,7 @@
       "id": "P-supply-concurrency-optimization",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned_to_existing_B_cli_implementation_pending",
+      "status": "worker16_stage_prepare_register_complete_admission_config_digest_correction_pending",
       "deliverable": "Trace effective preparation/dispatch limits; prepare one-factor real1080 throughput successor without changing active scientific runs",
       "evidence": "HTTP mean inflight 3.205, peak13 despite configured64; FIT peak8; no service saturation proof"
     }
