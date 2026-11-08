@@ -1,0 +1,33 @@
+{
+  "schema": "saea-p-test-evaluation-contract-v1",
+  "state": "PREPARED_ONLY_NOT_LAUNCHABLE",
+  "sample": {
+    "count": 1080,
+    "seed": 20261108,
+    "manifest_sha256": "6ab4a016887cc62f2deeda673b6bf80fa2ab5f87fde5082b623cf8a1fc4a9972"
+  },
+  "full": {
+    "count": 13078,
+    "roster": "docs/receipts/rosters/slurp-test-full-13078-v1.json",
+    "sha256": "b925e90ab99727e7d0ff9fc4ec6b7c91a0d86bff0a5b0a4746b9cc98237b19c3",
+    "official_metadata_sha256": "fe3449af69b42fda7163345482556066c35a80f7e552a6d67e212a0e2f0783cc",
+    "official_revision": "8eb16545762be97ace75334109d73824217311f1"
+  },
+  "required_frozen_pins": [
+    "source_commit_and_manifest",
+    "container_image",
+    "model_weights_and_serving_decoding",
+    "retrieval_encoder_vectors_operator_k_aggregation_and_exclusions",
+    "knowledge_snapshot_and_provenance",
+    "p_prompt_context_index_mapping_and_decoding",
+    "supply_receipts_and_query_vectors",
+    "exception_policy_and_confirmed_records"
+  ],
+  "confirmed_exceptions_at_preparation": 0,
+  "selection_policy": "reuse_fixed_sample_and_full_roster_no_resampling",
+  "test_data_policy": "no_teacher_no_tuning_no_launch_before_development_freeze",
+  "output_contract": "private JSON array: sample_id, gold, ordered unique supply labels, output_indices (1-based), status; one row per roster identity",
+  "exception_contract": "private JSON array of confirmed evidence records; no automatic inference from failures",
+  "archived_checkpoint_contract": "ranked-index JSONL header plus one row per roster identity; independent pinned gold array sample_id/gold_intent; output text, indices, selected IDs and ordered input indices must agree",
+  "zero_nonexception_acceptance": false
+}
