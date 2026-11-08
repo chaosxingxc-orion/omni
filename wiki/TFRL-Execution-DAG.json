@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T11:10:34.551974+00:00",
+  "updated_at_utc": "2026-11-08T11:16:45.699530+00:00",
   "current_stage": "P",
   "instruction": "三路：召回供给、P Top3保留、开发冻结后TEST验证；根因驱动，达标后冻结P转S；不追求Top1极致",
   "resources": {
@@ -99,7 +99,7 @@
       "depends_on": [
         "badcase-evidence"
       ],
-      "status": "v4_main_reviewed_two_unique_local_teacher_requests_dispatched_live",
+      "status": "ACE_TFG_complete_main_reviewed_113816_tokens_two_ACE_candidates_approved",
       "acceptance": [
         "per_algorithm_template",
         "root_cause_strategies_not_per_case_answers",
@@ -126,7 +126,7 @@
       "depends_on": [
         "teacher-global-feedback"
       ],
-      "status": "pending_teacher_strategy",
+      "status": "ACE_rule_family_incomplete_CPU_case_support_audit_active_no_grid",
       "target": "64_supply_misses"
     },
     {
@@ -135,7 +135,7 @@
       "depends_on": [
         "teacher-global-feedback"
       ],
-      "status": "B_fixture_stage_prepare_register_completed_admission_in_progress_no_model_calls",
+      "status": "B_fixture_admitted_launcher_plan_passed_request_comparison_and_ACE_activation_in_progress",
       "target": "15_supplied_but_dropped"
     },
     {
