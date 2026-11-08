@@ -416,7 +416,7 @@
       "id": "group-feedback-round3",
       "owner": "Sol CLI",
       "resource": "CPU_then_local_external_API",
-      "status": "actual_HTTP200_stream_in_progress_terminal_observer_attached",
+      "status": "terminal_invalid_policy_correction_preparing",
       "depends_on": [],
       "final_schema_binding_depends_on": [
         "causal-depth-search"
@@ -425,7 +425,7 @@
     {
       "id": "next-formal-recall",
       "resource": "CPU",
-      "status": "accepted_code_and_frozen_inputs_staged_waiting_actual_teacher_policy",
+      "status": "staged_waiting_valid_corrected_teacher_policy",
       "depends_on": [
         "causal-depth-search",
         "group-feedback-round3",
@@ -798,7 +798,7 @@
   },
   "group_feedback_round3": {
     "resource": "local_external_API",
-    "state": "HTTP200_stream_in_progress",
+    "state": "terminal_policy_compile_failed_correction_preparing",
     "actual_POST": 1,
     "pre_network_failed_launches": 1,
     "pre_network_failure_tokens": 0,
@@ -806,7 +806,15 @@
     "max_output_tokens": 131072,
     "terminal_cadence_seconds": 600,
     "pidfd_observation": true,
-    "final_policy_received": false,
-    "cost_unknown_until_terminal": true
+    "final_policy_received": true,
+    "cost_unknown_until_terminal": false,
+    "input_tokens": 19504,
+    "output_tokens": 19491,
+    "reasoning_tokens_included": 15846,
+    "total_tokens": 38995,
+    "elapsed_seconds": 145.5408192398,
+    "compiled": false,
+    "scientific_run_started": false,
+    "correction_status": "returned_to_original_CLI_responsibility"
   }
 }
