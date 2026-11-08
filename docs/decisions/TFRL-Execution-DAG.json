@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T20:31:34.024422+00:00",
+  "updated_at_utc": "2026-11-08T21:29:34.100535+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -435,17 +435,17 @@
     {
       "id": "next-P-validation",
       "resource": "NPU",
-      "status": "pending_informative_accepted_supply_candidate",
+      "status": "U_V_complete_negative_transfer_successor_queued_not_verified_started",
       "depends_on": [
-        "accepted_recall_candidate",
-        "prepared_inputs"
+        "prepared_V_inputs",
+        "P_owner_terminal_resource_handoff"
       ]
     },
     {
       "id": "accepted133-P-transfer",
       "owner": "Sol CLI",
       "resource": "CPU_prepare_then_two_TP4_NPU",
-      "status": "running_real_first_response_verified_both_arms",
+      "status": "complete_U966_V981_not_promoted",
       "depends_on": [
         "frozen_S2_133_bank",
         "prepared_P_inputs",
@@ -480,13 +480,14 @@
       "model_POST_evidence": "persisted_request_and_successful_checkpoint_response_main_verified",
       "started_at_utc": "2026-11-08T21:03:31Z",
       "completed_snapshot": {
-        "U": 1,
-        "V": 1
+        "U": 1080,
+        "V": 1080
       },
       "per_arm_total": 1080,
       "inflight_per_arm": 64,
-      "snapshot_is_lower_bound": true,
-      "first_response_observed_utc": "2026-11-08T21:09:22Z"
+      "snapshot_is_lower_bound": false,
+      "first_response_observed_utc": "2026-11-08T21:09:22Z",
+      "terminal_results": "p_representative_transfer"
     },
     {
       "id": "minimum70-reverse-prune",
@@ -513,7 +514,7 @@
       "id": "candidate-discovery",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "CLI_running_diagnostic_and_configuration_extension",
+      "status": "risk_aware_and_gain_or_shrink_implemented_targeted_fixed_image_PASS_final_report_sealing",
       "depends_on": [
         "accepted_E3_70_bank",
         "existing_TRAIN_score_cache"
@@ -528,7 +529,7 @@
       "id": "group-feedback-round4",
       "owner": "Sol CLI",
       "resource": "CPU_then_local_external_API",
-      "status": "CLI_preparing_compact_evidence_and_template",
+      "status": "final_actual_contract_binding_and_wire_preparation",
       "depends_on": [
         "accepted_E3_analysis",
         "reverse_prune70"
@@ -583,7 +584,7 @@
       "scope": "unchanged fresh identity reads; reuse byte-identical maps parsing; no C/R mutation"
     },
     "representative_to_P": {
-      "state": "complete_not_promoted_mechanism_analysis_complete",
+      "state": "complete_U966_V981_not_promoted",
       "index_size": 4451,
       "control": "actual_A_original_prompt_zero_examples_OFF",
       "purpose": "verify_supply_gain_transfers_to_P",
@@ -594,7 +595,10 @@
       "source_losses": 2,
       "max_labels": 28,
       "started_utc": "2026-11-08T16:50:19Z",
-      "completed_snapshot": 1080,
+      "completed_snapshot": {
+        "U": 1080,
+        "V": 1080
+      },
       "first_four_valid": true,
       "top3": 993,
       "top1": 908,
@@ -604,7 +608,11 @@
       "new_supply_hits": 2,
       "prompt_tokens": 4579042,
       "completion_tokens": 13184,
-      "HTTP_seconds_per_sample": 0.3924462962962963
+      "HTTP_seconds_per_sample": 0.3924462962962963,
+      "terminal_results": "p_representative_transfer",
+      "status": "complete",
+      "snapshot_is_lower_bound": false,
+      "results_reference": "p_representative_transfer"
     },
     "P_thinking_control": {
       "state": "complete_main_raw_and_wire_verified_not_promoted",
@@ -971,7 +979,7 @@
     "member_CPU_seconds": 106.560554,
     "default_promoted": false
   },
-  "updated_at": "2026-11-08T21:10:43.794205+00:00",
+  "updated_at": "2026-11-08T21:29:34.100535+00:00",
   "candidate_discovery_diagnostic": {
     "status": "fixed_cache_single_insertion_diagnostics_complete_no_new_accepted_bank",
     "seed": 70,
@@ -989,6 +997,49 @@
     "class_round_robin96_positive_zero_hit_regression_candidates": 0,
     "formal_new_policy_run": false,
     "combined_gain_proven": false,
-    "next": "risk_aware_candidate_selection_then_Replay_and_teacher_strategy"
+    "next": "final_teacher_binding_then_unique_local_send_then_formal_70_origin_search",
+    "safe_representative_actual_Replay": {
+      "Q15_question_repairs": 14,
+      "Q15_union_repairs": 3,
+      "Q50_question_repairs": 3,
+      "Q50_union_repairs": 2,
+      "all_regressions": 0,
+      "formal_accepted": false
+    },
+    "engineering_delta_tests": "6_PASS",
+    "acceptance_mode": "gain_or_shrink_available_default_strict_gain"
+  },
+  "p_representative_transfer": {
+    "state": "U_V_complete_not_promoted",
+    "queries_each": 1080,
+    "valid_each": 1080,
+    "A_top3": 1001,
+    "U": {
+      "supply": 1080,
+      "top3": 966,
+      "top1": 851,
+      "repair_A": 22,
+      "regression_A": 57,
+      "http_seconds": 776.8261,
+      "sec_per_row": 0.71928,
+      "mean_inflight": 59.764,
+      "peak_inflight": 64
+    },
+    "V": {
+      "supply": 1067,
+      "top3": 981,
+      "top1": 857,
+      "repair_A": 28,
+      "regression_A": 48,
+      "http_seconds": 457.9726,
+      "sec_per_row": 0.42405,
+      "mean_inflight": 7.155,
+      "peak_inflight": 20
+    },
+    "cards_each": 4,
+    "instances": 2,
+    "remaining": 0,
+    "next": "queued_V_supply_thinking_ON_3072_plus128_same1080_possible_disjoint540_shards",
+    "successor_model_start_verified": false
   }
 }
