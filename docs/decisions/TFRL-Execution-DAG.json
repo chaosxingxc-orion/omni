@@ -948,14 +948,16 @@
       "id": "retrieval-soft-calibration-v2",
       "resource": "CPU",
       "depends_on": [],
-      "status": "implementation_and_cpu_evaluation_running",
-      "arms": 6
+      "status": "completed_main_rank_and_gold_review",
+      "arms": 6,
+      "completed_rows": 1080,
+      "decision": "N1 all rejected; N2 p10 ranking candidate only, P unmeasured"
     },
     {
       "id": "source-distinct-p-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "preparing"
+      "status": "original_owner_rework_in_progress_no_model_request_verified"
     },
     {
       "id": "source-distinct-p-consumption",
@@ -1029,8 +1031,8 @@
   "current_dispatch": {
     "A": "paired parent complete; position container live",
     "B": "source-distinct P3to1 CPU preparation; no verified model request yet",
-    "CPU": "soft calibration implementation/evaluation and paired evidence review, 3 CLI live",
+    "CPU": "Six retrieval arms completed; portable entry delivery and paired input analysis running",
     "poll_seconds": 600
   },
-  "updated_at_utc": "2026-11-08T08:56:29.954828+00:00"
+  "updated_at_utc": "2026-11-08T09:03:31.513867+00:00"
 }
