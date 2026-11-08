@@ -203,7 +203,8 @@
       "repair": 11,
       "regression": 13,
       "wall_seconds": 691.014,
-      "cards": 4
+      "cards": 4,
+      "independent_recompute": "fixed_image_pass_1080"
     },
     "vacancy_supply": {
       "status": "complete",
@@ -212,13 +213,14 @@
       "repair": 4,
       "regression": 0
     },
-    "vacancy_P": "CPU_registration_running_durable_terminal_successor_no_first_response",
+    "vacancy_P": "generation_container_started_13:55:31_UTC_first_response_not_verified",
     "teacher_previous": "complete_requires_strategy_revision",
     "teacher_incremental": "unique_local_dispatch_streaming_not_terminal",
     "subprocess_roles": [
       "engineering_vacancy_P",
       "P_case_analysis",
       "teacher_feedback_preparation"
-    ]
+    ],
+    "teacher_analysis": "durable_successor_waiting_on_live_observer"
   }
 }
