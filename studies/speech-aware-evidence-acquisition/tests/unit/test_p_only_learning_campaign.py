@@ -73,10 +73,12 @@ def test_candidate_evaluation_is_single_axis_and_never_a_tf_campaign():
     job = c['workload']
     job.update(learning_mode='candidate-evaluation', collection_decoding={'temperature': 0, 'seed': 17})
     for axis in ({'kind': 'control'}, {'kind': 'instruction', 'patch': {}, 'template': {}},
-                 {'kind': 'breadth', 'value': 12}, {'kind': 'breadth', 'value': 16}):
+                 {'kind': 'breadth', 'value': 12}, {'kind': 'breadth', 'value': 16},
+                 {'kind': 'breadth', 'value': 24}, {'kind': 'breadth', 'value': 60}):
         job['axis'] = axis
         assert PerceptionOnlyWorkload(job).ARMS == ['perception']
-    for axis in ({'kind': 'breadth', 'value': 8}, {'kind': 'control', 'value': 12},
+    for axis in ({'kind': 'breadth', 'value': 0}, {'kind': 'breadth', 'value': 61},
+                 {'kind': 'breadth', 'value': True}, {'kind': 'control', 'value': 12},
                  {'kind': 'knowledge-construction', 'publication': {}, 'patch': {}, 'audit': {}}, None):
         job['axis'] = axis
         with pytest.raises(ValueError):

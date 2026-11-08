@@ -66,7 +66,7 @@ class PerceptionOnlyWorkload(NodeWorkload):
         if ((axis['kind'] == 'control' and set(axis) != {'kind'}) or
             (axis['kind'] == 'instruction' and set(axis) != {'kind', 'patch', 'template'}) or
             (axis['kind'] == 'knowledge-construction' and set(axis) != {'kind', 'publication', 'patch', 'audit'}) or
-            (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or axis['value'] not in (12, 16)))):
+            (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or not 1 <= axis['value'] <= 60))):
             raise ValueError('invalid P-only axis')
         parent = {k: copy.deepcopy(v) for k, v in config.items() if k not in ('parent_baseline', 'parent_registration', 'axis', 'runtime_binding_adaptation', 'learning_authorization', 'learning_source_vectors', 'learning_mode')}
         parent.update(schema='saea-intent-slot-workload-v1', node_arm='enhanced-p-slot-decision')
@@ -207,6 +207,15 @@ class PerceptionOnlyWorkload(NodeWorkload):
             supply = base['knowledge_stores']['intent-boundaries']['phase_supply']['perception']
             if (supply['k'], supply['fuse_coverage']['m'], supply['fuse_coverage']['top_l']) != (8, 8, 8):
                 raise ValueError('parent retrieval breadth differs')
+            from speech_aware_evidence_acquisition.rails.knowledge import KnowledgeSnapshot
+            pin = base['knowledge_stores']['intent-boundaries']['snapshot']
+            snapshot = KnowledgeSnapshot.from_frozen_json(json.loads(confined(data, pin['relpath']).read_bytes()))
+            if snapshot.content_hash() != pin['sha256']:
+                raise ValueError('intent inventory snapshot pin differs')
+            dimensions = set(supply['dimensions'])
+            inventory = sum(f.dimension in dimensions for f in snapshot.facets)
+            if axis['value'] > inventory:
+                raise ValueError('retrieval breadth exceeds pinned intent inventory')
             supply['k'] = supply['fuse_coverage']['m'] = supply['fuse_coverage']['top_l'] = axis['value']
         base.pop('prepared_phase_supply', None)
         base['native_contact_fit'].update(run_id=self.RUN+'-FIT', attempt_id='fit-v1', contact_cap=6*self.ROWS)
