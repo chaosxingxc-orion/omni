@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T16:58:29.120726+00:00",
+  "updated_at_utc": "2026-11-08T17:03:34.924229+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -407,7 +407,7 @@
       "id": "representative-bank",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "4451_P_running_S3_4469_CPU_no_hit_gain_pending_main_acceptance",
+      "status": "4451_P_running_S3_4469_complete_no_hit_gain_main_verified",
       "depends_on": []
     },
     {
@@ -452,7 +452,7 @@
     "teacher_compatibility": {
       "previous_status": "HTTP400",
       "official_evidence": "GLM-5.3-Flash only supports thinking enabled",
-      "next_state": "strategies_reviewed_S2_equivalent_S3_4469_no_hit_change_owner_result_pending_main_acceptance",
+      "next_state": "complete_164_files_main_verified_S2_equivalent_S3_no_hit_gain_no_promotion",
       "max_tokens": 131072,
       "old_unknown_retry": false,
       "elapsed_seconds": 746.823438,
@@ -482,7 +482,7 @@
       "first_four_valid": true
     },
     "P_thinking_control": {
-      "state": "CLI_preparing_not_yet_launched",
+      "state": "detached_CPU_prepare_and_after_R_queue_active_no_model_call_confirmed",
       "control": "A_original8554_Q50D5_prompt_zero_examples",
       "change": "thinking_enabled_with_sufficient_budget",
       "rows": 1080,
@@ -494,7 +494,10 @@
         "teacher_review",
         "R_scientific_acceptance",
         "efficiency_patch"
-      ]
+      ],
+      "thinking_budget_tokens": 3072,
+      "answer_reserve_tokens": 128,
+      "max_output_tokens": 3200
     }
   }
 }
