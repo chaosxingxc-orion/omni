@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T16:52:37.425870+00:00",
+  "updated_at_utc": "2026-11-08T16:58:29.120726+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -407,14 +407,14 @@
       "id": "representative-bank",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "anchored4936_complete_FoldA1061_not_promoted_main48_hashes",
+      "status": "4451_P_running_S3_4469_CPU_no_hit_gain_pending_main_acceptance",
       "depends_on": []
     },
     {
       "id": "p-consumption",
       "owner": "Terra CLI",
       "resource": "CPU_prepare_then_NPU",
-      "status": "AB_complete_1080_B_repairs12_regressions15_hold",
+      "status": "AB_C_complete_not_promoted_R_running_T_preparing",
       "depends_on": [
         "frozen_original_Q50D5"
       ],
@@ -452,7 +452,7 @@
     "teacher_compatibility": {
       "previous_status": "HTTP400",
       "official_evidence": "GLM-5.3-Flash only supports thinking enabled",
-      "next_state": "valid_final_received_adversarial_review_in_progress",
+      "next_state": "strategies_reviewed_S2_equivalent_S3_4469_no_hit_change_owner_result_pending_main_acceptance",
       "max_tokens": 131072,
       "old_unknown_retry": false,
       "elapsed_seconds": 746.823438,
@@ -463,11 +463,11 @@
       "strategies_promoted": 0
     },
     "CPU_efficiency": {
-      "state": "minimal_ready_scope_patch_offline_verified_public_test_pending",
+      "state": "integrated_main_new14_pass_related32_pass_15_preexisting_fail_no_new_failure_not_deployed",
       "scope": "unchanged fresh identity reads; reuse byte-identical maps parsing; no C/R mutation"
     },
     "representative_to_P": {
-      "state": "experiment_container_running_first_response_pending",
+      "state": "running_first15_responses_confirmed",
       "index_size": 4451,
       "control": "actual_A_original_prompt_zero_examples_OFF",
       "purpose": "verify_supply_gain_transfers_to_P",
@@ -477,7 +477,24 @@
       "source_gains": 5,
       "source_losses": 2,
       "max_labels": 28,
-      "started_utc": "2026-11-08T16:50:19Z"
+      "started_utc": "2026-11-08T16:50:19Z",
+      "completed_snapshot": 15,
+      "first_four_valid": true
+    },
+    "P_thinking_control": {
+      "state": "CLI_preparing_not_yet_launched",
+      "control": "A_original8554_Q50D5_prompt_zero_examples",
+      "change": "thinking_enabled_with_sufficient_budget",
+      "rows": 1080,
+      "depends_on": [
+        "CPU_configuration_ready",
+        "available_instance_guard"
+      ],
+      "does_not_depend_on": [
+        "teacher_review",
+        "R_scientific_acceptance",
+        "efficiency_patch"
+      ]
     }
   }
 }
