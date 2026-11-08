@@ -1,0 +1,15 @@
+{
+  "schema": "teacher-tfg-v2-adapted-train-calibration-v1",
+  "block_rows": 128,
+  "bias_multipliers": [0.5, 1.0],
+  "tau_quantiles": [0.1, 0.05],
+  "inputs": {
+    "matrix": {"path": "/path/to/query-question-cosine.npy", "sha256": "REPLACE_WITH_SHA256"},
+    "members": {"path": "/path/to/members.json", "sha256": "REPLACE_WITH_SHA256"},
+    "metadata": {"path": "/path/to/train.jsonl", "sha256": "REPLACE_WITH_SHA256"},
+    "parent": {"path": "/path/to/parent-rankings.json", "sha256": "REPLACE_WITH_SHA256"},
+    "keys": {"path": "/path/to/normalized-question-keys.npy", "sha256": "REPLACE_WITH_SHA256"},
+    "gold": {"path": "/path/to/locked-gold.json", "sha256": "REPLACE_WITH_SHA256"}
+  },
+  "policy": "TRAIN source-excluded calibration; rank sealed before gold scoring"
+}

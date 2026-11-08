@@ -974,6 +974,21 @@
       "depends_on": [],
       "status": "completed_aggregate_main_review",
       "rows": 1080
+    },
+    {
+      "id": "a-median-tie-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "preparing"
+    },
+    {
+      "id": "a-median-tie-consumption",
+      "resource": "NPU-A",
+      "depends_on": [
+        "a-median-tie-prepare"
+      ],
+      "status": "not_ready",
+      "rows": 1080
     }
   ],
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
@@ -1029,10 +1044,10 @@
     "tfrl_preparation": "deferred"
   },
   "current_dispatch": {
-    "A": "paired parent complete; position container live",
+    "A": "paired generation complete:885->891 repair9/regression3; median tie successor preparing, no model call verified",
     "B": "source-distinct P3to1 CPU preparation; no verified model request yet",
     "CPU": "Six retrieval arms completed; portable entry delivery and paired input analysis running",
     "poll_seconds": 600
   },
-  "updated_at_utc": "2026-11-08T09:03:31.513867+00:00"
+  "updated_at_utc": "2026-11-08T09:08:24.232511+00:00"
 }
