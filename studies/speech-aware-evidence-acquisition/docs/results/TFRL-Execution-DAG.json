@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T07:05:27.156904+00:00",
+  "updated_at_utc": "2026-11-08T07:11:21.343891+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1617,7 +1617,7 @@
       "id": "P-gepa-behavior-C-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "overlay_admission_passed_queue_rejected_nested_mount_switch_complete_release",
+      "status": "original_entry_rebuild_after_workspace_source_identity_failure",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
@@ -1637,9 +1637,16 @@
       "id": "P-supply-concurrency-optimization",
       "resource": "CPU",
       "depends_on": [],
-      "status": "worker16_stage_prepare_register_complete_admission_config_digest_correction_pending",
+      "status": "worker16_single_config_diff_main_verified_admission_passed_pending_successor_binding",
       "deliverable": "Trace effective preparation/dispatch limits; prepare one-factor real1080 throughput successor without changing active scientific runs",
       "evidence": "HTTP mean inflight 3.205, peak13 despite configured64; FIT peak8; no service saturation proof"
+    },
+    {
+      "id": "P-consumption-ace-tfgroup-templates",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "existing_A_owner_reworked_cli_implementation_started",
+      "scope": "Independent ACE and training-free group-relative templates/configuration; existing teacher executor; no API; fixed coverage 3to1 opening only"
     }
   ],
   "round_policy": {
