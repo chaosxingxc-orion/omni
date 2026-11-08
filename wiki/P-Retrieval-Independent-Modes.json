@@ -113,7 +113,7 @@
     "Three raw-text vector anchors support compatibility, not exhaustive re-encoding"
   ],
   "parallel_optimization": {
-    "updated_at": "2026-11-08T03:06:12.412782+00:00",
+    "updated_at": "2026-11-08T03:13:37.081163+00:00",
     "description": {
       "methods": [
         "ACE",
@@ -122,9 +122,9 @@
       "teacher_responses_received": 2,
       "compiled_candidates": {
         "ACE": 2,
-        "GEPA": 3
+        "GEPA": 4
       },
-      "candidate_evaluation": "pending",
+      "candidate_evaluation": "six full1080 evaluations independently metrics-verified; final provenance packaging pending",
       "teacher_usage": {
         "ACE": {
           "input": 62258,
@@ -136,18 +136,216 @@
           "output_including_reasoning": 45509,
           "reasoning": 40531
         }
+      },
+      "cpu_cost": {
+        "model_file_hash_seconds": 7.718990709981881,
+        "worker_load_seconds_including_readiness_probes": 15.626991380006075,
+        "new_key_forwards": 16,
+        "encoding_seconds": 19.23527417005971,
+        "seconds_per_key": 1.202204635628732,
+        "resume_encoded_cache_hits": 0,
+        "original_keys_reused": 60,
+        "query_vectors_reencoded": 0,
+        "true_batch": 1,
+        "workers": 1,
+        "threads": 16,
+        "wall_seconds": 48.25879069999792,
+        "NPU_cards": 0,
+        "actor_calls": 0,
+        "teacher_calls": 0,
+        "currency_cost": null
+      },
+      "results": {
+        "ace-r3-compact-merge-v1": {
+          "metrics": {
+            "n": 1080,
+            "Recall1": 635,
+            "Recall3": 795,
+            "Recall5": 852,
+            "MRR": 0.6823739464762769,
+            "positive_candidates_min": 60,
+            "mean_cut_margin3": 0.03620832386889327,
+            "mean_cut_margin5": 0.048745947666043045
+          },
+          "paired_vs_original": {
+            "3": {
+              "repairs": 6,
+              "regressions": 33,
+              "unchanged_gold_key_regressions": 0
+            },
+            "5": {
+              "repairs": 6,
+              "regressions": 35,
+              "unchanged_gold_key_regressions": 0
+            }
+          },
+          "changed_labels": [
+            "calendar_set",
+            "cooking_recipe",
+            "general_quirky",
+            "music_query",
+            "play_music",
+            "qa_factoid",
+            "social_post"
+          ]
+        },
+        "ace-r3-secondtier-merge-v1": {
+          "metrics": {
+            "n": 1080,
+            "Recall1": 640,
+            "Recall3": 821,
+            "Recall5": 875,
+            "MRR": 0.6960826555850314,
+            "positive_candidates_min": 60,
+            "mean_cut_margin3": 0.038465855483552976,
+            "mean_cut_margin5": 0.05090824974147867
+          },
+          "paired_vs_original": {
+            "3": {
+              "repairs": 3,
+              "regressions": 4,
+              "unchanged_gold_key_regressions": 0
+            },
+            "5": {
+              "repairs": 0,
+              "regressions": 6,
+              "unchanged_gold_key_regressions": 0
+            }
+          },
+          "changed_labels": [
+            "iot_cleaning",
+            "lists_query",
+            "music_settings",
+            "social_query"
+          ]
+        },
+        "gepa-r3-datetime-place": {
+          "metrics": {
+            "n": 1080,
+            "Recall1": 636,
+            "Recall3": 816,
+            "Recall5": 872,
+            "MRR": 0.6925259586306889,
+            "positive_candidates_min": 60,
+            "mean_cut_margin3": 0.03826119517993558,
+            "mean_cut_margin5": 0.050545145389427
+          },
+          "paired_vs_original": {
+            "3": {
+              "repairs": 0,
+              "regressions": 6,
+              "unchanged_gold_key_regressions": 0
+            },
+            "5": {
+              "repairs": 0,
+              "regressions": 9,
+              "unchanged_gold_key_regressions": 0
+            }
+          },
+          "changed_labels": [
+            "datetime_query"
+          ]
+        },
+        "gepa-r3-mute-quiet": {
+          "metrics": {
+            "n": 1080,
+            "Recall1": 639,
+            "Recall3": 819,
+            "Recall5": 879,
+            "MRR": 0.6949452659118303,
+            "positive_candidates_min": 60,
+            "mean_cut_margin3": 0.03854514233346932,
+            "mean_cut_margin5": 0.0508771266485703
+          },
+          "paired_vs_original": {
+            "3": {
+              "repairs": 0,
+              "regressions": 3,
+              "unchanged_gold_key_regressions": 0
+            },
+            "5": {
+              "repairs": 3,
+              "regressions": 5,
+              "unchanged_gold_key_regressions": 0
+            }
+          },
+          "changed_labels": [
+            "audio_volume_mute"
+          ]
+        },
+        "gepa-r3-competitor-binding": {
+          "metrics": {
+            "n": 1080,
+            "Recall1": 657,
+            "Recall3": 839,
+            "Recall5": 897,
+            "MRR": 0.7110072334628644,
+            "positive_candidates_min": 60,
+            "mean_cut_margin3": 0.04130110978540314,
+            "mean_cut_margin5": 0.053119573493078415
+          },
+          "paired_vs_original": {
+            "3": {
+              "repairs": 18,
+              "regressions": 1,
+              "unchanged_gold_key_regressions": 0
+            },
+            "5": {
+              "repairs": 16,
+              "regressions": 0,
+              "unchanged_gold_key_regressions": 0
+            }
+          },
+          "changed_labels": [
+            "iot_coffee",
+            "qa_maths"
+          ]
+        },
+        "gepa-r3-alarm-when-binding": {
+          "metrics": {
+            "n": 1080,
+            "Recall1": 645,
+            "Recall3": 826,
+            "Recall5": 881,
+            "MRR": 0.7006110228519853,
+            "positive_candidates_min": 60,
+            "mean_cut_margin3": 0.038919017656721414,
+            "mean_cut_margin5": 0.05121324052759146
+          },
+          "paired_vs_original": {
+            "3": {
+              "repairs": 5,
+              "regressions": 1,
+              "unchanged_gold_key_regressions": 0
+            },
+            "5": {
+              "repairs": 1,
+              "regressions": 1,
+              "unchanged_gold_key_regressions": 0
+            }
+          },
+          "changed_labels": [
+            "alarm_query"
+          ]
+        }
       }
     },
     "real_question_bank": {
       "input_review": "accepted",
-      "execution": "assigned_to_existing_owner_new_cli_phase",
+      "execution": "HTTP200_response_received; candidate compile and CPU evaluation follow",
       "new_request_limit": 1,
       "editable": [
         "real_source_selection",
         "source_weights",
         "support_aggregation"
       ],
-      "frozen_real_train_count": 8554
+      "frozen_real_train_count": 8554,
+      "usage": {
+        "input": 212518,
+        "output_including_reasoning": 49837,
+        "reasoning": 38946,
+        "elapsed_seconds": 527.3480339497328
+      }
     },
     "shared_population": "existing Fold A1080",
     "system_dependency": false,

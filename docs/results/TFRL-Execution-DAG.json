@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T02:54:10.717113+00:00",
+  "updated_at_utc": "2026-11-08T03:17:42.783561+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -753,7 +753,7 @@
       "id": "P-ranking-window-runtime",
       "resource": "CPU",
       "depends_on": [],
-      "status": "schema_and_role_cap_fixes_accepted_main_ae2a6b535",
+      "status": "single_index_validated_multi_index_whitespace_issue_under_repair",
       "scope": "fixedimage120tests; HTTP200 short-text array compatibility probe; real_audio_resume_pending"
     },
     {
@@ -762,7 +762,7 @@
       "depends_on": [
         "P-ranking-window-runtime"
       ],
-      "status": "planned",
+      "status": "three_control_inputs_prepared",
       "scope": "prepare numbered description-index candidates before lease; no centroid successor dispatch"
     },
     {
@@ -824,7 +824,7 @@
         "P-ranking-input-prepare",
         "P-description-index-ready"
       ],
-      "status": "fixed_source_generation_running_first_response_pending",
+      "status": "completed1080_valid1080_top1_712",
       "rows": 1080,
       "input_k": 3,
       "output_k": 1,
@@ -837,7 +837,7 @@
         "P-ranking-input-prepare",
         "P-description-index-ready"
       ],
-      "status": "fixed_source_admission_running",
+      "status": "completed1080_valid1030_top2_758_whitespace_length_failures50",
       "rows": 1080,
       "input_k": 3,
       "output_k": 2,
@@ -850,7 +850,7 @@
         "P-ranking-input-prepare",
         "P-description-index-ready"
       ],
-      "status": "fixed1080_prepared_old_unknown_accounting_preserved",
+      "status": "completed1080_valid1035_top3_832",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
@@ -863,16 +863,17 @@
         "P-gepa-r2-adapt-config",
         "P-ranking-window-runtime"
       ],
-      "status": "planned",
+      "status": "admission_complete",
       "scope": "prepare source-bound strategy and 5/3 inputs before lease"
     },
     {
       "id": "P-gepa-r2-1-rank-5-3",
       "resource": "NPU_ANY_TP4",
       "depends_on": [
-        "P-gepa-r2-1-input"
+        "P-gepa-r2-1-input",
+        "P-ranking-whitespace-real-probe"
       ],
-      "status": "planned_not_ready",
+      "status": "started_then_native_stop_admission_requested_drain_pending",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
@@ -892,9 +893,10 @@
       "id": "P-gepa-r2-2-rank-5-3",
       "resource": "NPU_ANY_TP4",
       "depends_on": [
-        "P-gepa-r2-2-input"
+        "P-gepa-r2-2-input",
+        "P-ranking-whitespace-real-probe"
       ],
-      "status": "planned_not_ready",
+      "status": "hold_same_schema_pending_whitespace_fix",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
@@ -914,9 +916,10 @@
       "id": "P-gepa-r2-3-rank-5-3",
       "resource": "NPU_ANY_TP4",
       "depends_on": [
-        "P-gepa-r2-3-input"
+        "P-gepa-r2-3-input",
+        "P-ranking-whitespace-real-probe"
       ],
-      "status": "planned_not_ready",
+      "status": "hold_same_schema_pending_whitespace_fix",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
@@ -963,7 +966,7 @@
       "depends_on": [
         "retrieval-description-next-teacher-input"
       ],
-      "status": "sent_both_streaming_queue_PID3788599",
+      "status": "two_complete_response_received",
       "scope": "method-specific template + dynamic recall feedback; unique request; no old replay"
     },
     {
@@ -972,7 +975,7 @@
       "depends_on": [
         "retrieval-description-next-teacher"
       ],
-      "status": "planned",
+      "status": "six_candidates_full1080_complete_metrics_verified",
       "scope": "encode independent patches, full1080 retrieval score, reject regressions before NPU"
     },
     {
@@ -999,7 +1002,7 @@
       "depends_on": [
         "retrieval-question-CPU-optimization"
       ],
-      "status": "assigned_CLI3778112_preparing",
+      "status": "accepted_38sourcepins_15exact_files",
       "scope": "knowledge-bank/source-selection/support-aggregation reflection; true TRAIN only; top3/mix3 repair-regression and protected rare evidence; one method template"
     },
     {
@@ -1008,7 +1011,7 @@
       "depends_on": [
         "retrieval-question-gepa-input"
       ],
-      "status": "planned_unique_request_not_sent",
+      "status": "complete_HTTP200_response_received",
       "scope": "one external teacher request,2..4 independent source-grounded configurable candidates; max output131072; no NPU dependency"
     },
     {
@@ -1019,6 +1022,31 @@
       ],
       "status": "planned",
       "scope": "reuse fixed1080 and cached question cosines; evaluate full denominator and paired regression; no query/gold conditional strategy"
+    },
+    {
+      "id": "P-ranking-whitespace-fix",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned_owner_direct_blocker",
+      "scope": "preserve integer array exactK; bound whitespace with supported engine output config; no fabricated indices or budget inflation"
+    },
+    {
+      "id": "P-ranking-whitespace-real-probe",
+      "resource": "NPU_ANY_TP4",
+      "depends_on": [
+        "P-ranking-whitespace-fix"
+      ],
+      "status": "planned_existing_failure_samples",
+      "scope": "real failing audio inputs, prior response costs retained; validate before large successors"
+    },
+    {
+      "id": "retrieval-description-positive-ablation",
+      "resource": "CPU",
+      "depends_on": [
+        "retrieval-description-candidate-CPU-batch"
+      ],
+      "status": "assigned_existing_owner",
+      "scope": "coffee-only, maths-only, competitor+alarm; reuse encoded vectors; full1080 paired evaluation"
     }
   ],
   "round_policy": {
@@ -1042,8 +1070,8 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "A_fixed_generation_running_C_admitting_B_preparing",
-      "new_ranking_response_confirmed": false,
+      "status": "three_controls_complete_multi_index_fix_priority",
+      "new_ranking_response_confirmed": true,
       "all_cards_busy_claim": false
     },
     "held": [
@@ -1054,38 +1082,73 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "observed_at_utc": "2026-11-08T02:54:00.952979+00:00",
-      "status": "fixed_source_generation_running",
-      "container_id": "516402b7fe96",
-      "container_pid": 252826,
+      "observed_at_utc": "2026-11-08T03:10:45.435376+00:00",
+      "status": "completed_scored",
       "cards": 4,
       "instances": 1,
+      "rows_complete": 1080,
       "rows_total": 1080,
-      "confirmed_model_responses": 0,
-      "eta_seconds": null,
-      "note": "startup snapshot; no confirmed contacts yet; not active AI Core evidence"
+      "valid_outputs": 1080,
+      "output_correct": 712,
+      "output_k": 1,
+      "wall_seconds": 833.285011,
+      "wall_seconds_per_row": 0.7715601953703705,
+      "mean_request_seconds": 1.652496823718711,
+      "row_cost": {
+        "audio_seconds": 3084.528437499994,
+        "calls": 1080,
+        "completion_tokens": 5376,
+        "latency_seconds": 1784.6965696162079,
+        "prompt_tokens": 3089405,
+        "tool_calls": 0
+      },
+      "eta_seconds": 0
     },
     "B": {
-      "observed_at_utc": "2026-11-08T02:28:35.938909+00:00",
-      "status": "old_HTTP400_aborted_short_text_probe_passed",
+      "observed_at_utc": "2026-11-08T03:14:59.861273+00:00",
+      "status": "completed_scored",
       "cards": 4,
       "instances": 1,
+      "rows_complete": 1080,
       "rows_total": 1080,
-      "confirmed_model_responses": 0,
-      "eta_seconds": null,
-      "note": "No contact/checkpoint observed at snapshot; not proof of service failure",
-      "container_id": "85f3239fe679",
-      "confirmed_dispatches": 8
+      "valid_outputs": 1035,
+      "output_correct": 832,
+      "output_k": 3,
+      "wall_seconds": 901.442039,
+      "wall_seconds_per_row": 0.8346685546296296,
+      "mean_request_seconds": 4.296727410571101,
+      "row_cost": {
+        "audio_seconds": 3637.904437499991,
+        "calls": 1265,
+        "completion_tokens": 43431,
+        "latency_seconds": 5435.360174372443,
+        "prompt_tokens": 4063726,
+        "tool_calls": 0
+      },
+      "eta_seconds": 0
     },
     "C": {
-      "observed_at_utc": "2026-11-08T02:28:35.938909+00:00",
-      "status": "fixed_source_admission_running",
+      "observed_at_utc": "2026-11-08T03:11:02.154166+00:00",
+      "status": "completed_scored",
       "cards": 4,
       "instances": 1,
+      "rows_complete": 1080,
       "rows_total": 1080,
-      "confirmed_model_responses": 0,
-      "eta_seconds": null,
-      "note": "No contact/checkpoint observed at snapshot; not proof of service failure"
+      "valid_outputs": 1030,
+      "output_correct": 758,
+      "output_k": 2,
+      "wall_seconds": 863.672277,
+      "wall_seconds_per_row": 0.7996965527777777,
+      "mean_request_seconds": 3.700792568804724,
+      "row_cost": {
+        "audio_seconds": 3668.4769999999944,
+        "calls": 1263,
+        "completion_tokens": 38135,
+        "latency_seconds": 4674.101014400367,
+        "prompt_tokens": 3622861,
+        "tool_calls": 0
+      },
+      "eta_seconds": 0
     },
     "teacher_gepa": {
       "state": "complete_A_no_benefit",
@@ -1102,16 +1165,16 @@
     },
     "cpu_workers": [
       {
-        "pid": 3763188,
-        "role": "queue_Terra"
+        "pid": 3802861,
+        "role": "queue_engineering_Terra"
       },
       {
         "pid": 3771220,
-        "role": "description_teacher_Sol"
+        "role": "description_optimization_Sol"
       },
       {
-        "pid": 3778112,
-        "role": "question_aggregation_Sol"
+        "pid": 3797261,
+        "role": "real_question_optimization_Sol"
       }
     ],
     "clock_caveat": "Host clocks differ; use within-host deltas, not cross-host timestamp subtraction.",
@@ -1135,7 +1198,7 @@
         29,
         29
       ],
-      "scope": "instantaneous; not interval utilization; other users cards excluded"
+      "scope": "historical snapshot only; not current utilization"
     },
     "B_previous_breadth16": {
       "observed_at_utc": "2026-11-08T00:32:44.421545+00:00",
@@ -1205,7 +1268,7 @@
       "automatic_retry": false
     },
     "queue_owner_delivery": "activation5_complete_remote_runs_continue",
-    "successor_policy": "resume_from_separate_fixed_source_after_retiring_old_terminal_attempts; CPU_retrieval_independent",
+    "successor_policy": "hold same-schema multi-index successors until real whitespace-fix probe; CPU retrieval continues independently",
     "prior_generation_terminal": {
       "A": {
         "observed_at_utc": "2026-11-08T02:08:43.966386+00:00",
@@ -1309,6 +1372,11 @@
       "output_limit_each": 131072,
       "usage_not_final": true,
       "monitor_seconds": 600
+    },
+    "gepa_c1_successor": {
+      "status": "native_stop_admission_requested_drain_pending",
+      "request_id": "main-multi-index-whitespace-remediation-v1",
+      "reason": "completed C50 and B45 invalid multi-index outcomes; repair before more large same-schema workloads"
     }
   },
   "objective": "valid_gold_intent_in_output_K_le_3_over_full_roster",
