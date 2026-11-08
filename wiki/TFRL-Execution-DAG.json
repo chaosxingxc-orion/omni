@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T15:50:16.043033+00:00",
+  "updated_at_utc": "2026-11-08T15:57:08.123793+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -337,12 +337,21 @@
       },
       "execution": {
         "B_container_running": true,
-        "A_CPU_prepare_running": true,
-        "first_model_response_verified": false,
-        "completed_verified": 0,
+        "A_admitted_queued": true,
+        "first_model_response_verified": true,
+        "snapshot_utc": "2026-11-08T15:55:49Z",
+        "completed_verified": 360,
         "total": 1080,
-        "seconds_per_sample": null,
-        "ETA_seconds": null
+        "responses_verified": 361,
+        "valid_index_responses": 361,
+        "cards": 4,
+        "instances": 1,
+        "model_inflight": 64,
+        "seconds_per_completed_row_estimate": 0.4064792454,
+        "ETA_seconds_estimate": 292.665,
+        "estimate_excludes": "startup and final scoring",
+        "input_tokens_completed": 1463454,
+        "output_tokens_completed": 4864
       }
     },
     "confirmed_exclusion": {
@@ -360,7 +369,15 @@
       "first_index": 4451,
       "first_hits": 1063,
       "task_aware_index": 4844,
-      "task_aware_hits": 1061
+      "task_aware_hits": 1061,
+      "anchored": {
+        "selected": 4936,
+        "fit_hits": 604,
+        "valid_hits": 1054,
+        "FoldA_hits": 1061,
+        "main_pins_checked": 48,
+        "promotion": false
+      }
     },
     "teacher_cover_feedback": {
       "status": "unknown_stream_no_final_answer",
@@ -384,14 +401,14 @@
       "id": "representative-bank",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "anchored_fixed_image_CPU_container_running",
+      "status": "anchored4936_complete_FoldA1061_not_promoted_main48_hashes",
       "depends_on": []
     },
     {
       "id": "p-consumption",
       "owner": "Terra CLI",
       "resource": "CPU_prepare_then_NPU",
-      "status": "B_generation_container_running_A_CPU_prepare_running_response_unverified",
+      "status": "B_verified360_of1080_A_admitted_durable_queued",
       "depends_on": [
         "frozen_original_Q50D5"
       ],
