@@ -971,5 +971,24 @@
     "member_CPU_seconds": 106.560554,
     "default_promoted": false
   },
-  "updated_at": "2026-11-08T21:10:43.794205+00:00"
+  "updated_at": "2026-11-08T21:10:43.794205+00:00",
+  "candidate_discovery_diagnostic": {
+    "status": "fixed_cache_single_insertion_diagnostics_complete_no_new_accepted_bank",
+    "seed": 70,
+    "DEV_queries": 2783,
+    "Q15_misses": 315,
+    "legal_Q15_misses": 313,
+    "eligible_TRAIN": 8523,
+    "profiled_relevant_candidates": 6890,
+    "positive_single_support_candidates": 4744,
+    "positive_zero_hit_regression_candidates": 45,
+    "safe_single_support_union": 35,
+    "old96_support_union": 220,
+    "full_domain_support_union": 311,
+    "coverage96_positive_zero_hit_regression_candidates": 0,
+    "class_round_robin96_positive_zero_hit_regression_candidates": 0,
+    "formal_new_policy_run": false,
+    "combined_gain_proven": false,
+    "next": "risk_aware_candidate_selection_then_Replay_and_teacher_strategy"
+  }
 }
