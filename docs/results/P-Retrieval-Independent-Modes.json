@@ -111,5 +111,64 @@
     "FoldA repeatedly used for development",
     "Current real question pool has no cooking_query; no fabricated fallback",
     "Three raw-text vector anchors support compatibility, not exhaustive re-encoding"
-  ]
+  ],
+  "parallel_optimization": {
+    "updated_at": "2026-11-08T03:06:12.412782+00:00",
+    "description": {
+      "methods": [
+        "ACE",
+        "GEPA"
+      ],
+      "teacher_responses_received": 2,
+      "compiled_candidates": {
+        "ACE": 2,
+        "GEPA": 3
+      },
+      "candidate_evaluation": "pending",
+      "teacher_usage": {
+        "ACE": {
+          "input": 62258,
+          "output_including_reasoning": 59519,
+          "reasoning": 49126
+        },
+        "GEPA": {
+          "input": 62119,
+          "output_including_reasoning": 45509,
+          "reasoning": 40531
+        }
+      }
+    },
+    "real_question_bank": {
+      "input_review": "accepted",
+      "execution": "assigned_to_existing_owner_new_cli_phase",
+      "new_request_limit": 1,
+      "editable": [
+        "real_source_selection",
+        "source_weights",
+        "support_aggregation"
+      ],
+      "frozen_real_train_count": 8554
+    },
+    "shared_population": "existing Fold A1080",
+    "system_dependency": false,
+    "fusion": "deferred",
+    "acceptance_metrics": [
+      "Recall@1",
+      "Recall@3",
+      "Recall@5",
+      "MRR",
+      "repairs",
+      "regressions",
+      "per_intent",
+      "cost"
+    ],
+    "question_source_ceiling": {
+      "reachable": 1079,
+      "total": 1080,
+      "missing_intents": 1,
+      "original_train_sources_for_missing_intent": 4,
+      "excluded_by_fold_a": 1,
+      "excluded_by_r01": 3
+    }
+  }
 }
