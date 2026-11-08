@@ -445,7 +445,7 @@
       "id": "accepted133-P-transfer",
       "owner": "Sol CLI",
       "resource": "CPU_prepare_then_two_TP4_NPU",
-      "status": "admission_passed_generation_containers_running_first_response_pending",
+      "status": "running_real_first_response_verified_both_arms",
       "depends_on": [
         "frozen_S2_133_bank",
         "prepared_P_inputs",
@@ -476,15 +476,17 @@
         "prompt": "A_original"
       },
       "default_bank_promoted": false,
-      "model_POST_verified": null,
-      "model_POST_evidence": "pending_first_request_or_response",
+      "model_POST_verified": true,
+      "model_POST_evidence": "persisted_request_and_successful_checkpoint_response_main_verified",
       "started_at_utc": "2026-11-08T21:03:31Z",
       "completed_snapshot": {
-        "U": 0,
-        "V": 0
+        "U": 1,
+        "V": 1
       },
       "per_arm_total": 1080,
-      "inflight_per_arm": 64
+      "inflight_per_arm": 64,
+      "snapshot_is_lower_bound": true,
+      "first_response_observed_utc": "2026-11-08T21:09:22Z"
     },
     {
       "id": "minimum70-reverse-prune",
