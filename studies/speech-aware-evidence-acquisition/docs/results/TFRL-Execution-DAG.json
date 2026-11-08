@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T06:59:16.954297+00:00",
+  "updated_at_utc": "2026-11-08T07:05:27.156904+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1588,7 +1588,7 @@
       "depends_on": [
         "P-gepa-behavior-A-prepare"
       ],
-      "status": "planned_after_current_lane_release",
+      "status": "running_first_model_response_confirmed_104_of_1080_snapshot",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
@@ -1597,7 +1597,7 @@
       "id": "P-gepa-behavior-B-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "template_runtime_path_fix_required_before_launch",
+      "status": "new_complete_release_runtime_equivalence_verified_preparing",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
@@ -1617,7 +1617,7 @@
       "id": "P-gepa-behavior-C-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "repreparing_readonly_template_mount_after_zero_contact_runtime_failure",
+      "status": "overlay_admission_passed_queue_rejected_nested_mount_switch_complete_release",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
