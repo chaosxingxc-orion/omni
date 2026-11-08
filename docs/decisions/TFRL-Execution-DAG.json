@@ -1,9 +1,9 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T17:03:34.924229+00:00",
-  "current_stage": "P",
-  "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
+  "updated_at_utc": "2026-11-08T17:18:15.159112+00:00",
+  "current_stage": "retrieval_minimum_then_development_growth",
+  "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
     "inference_instances": 3,
     "cards_per_instance": 4,
@@ -467,7 +467,7 @@
       "scope": "unchanged fresh identity reads; reuse byte-identical maps parsing; no C/R mutation"
     },
     "representative_to_P": {
-      "state": "complete_scored_not_promoted_full_checkpoint_audit_pending",
+      "state": "complete_checkpoint_main_verified_not_promoted_mechanism_analysis_active",
       "index_size": 4451,
       "control": "actual_A_original_prompt_zero_examples_OFF",
       "purpose": "verify_supply_gain_transfers_to_P",
@@ -485,10 +485,13 @@
       "repair": 17,
       "regression": 25,
       "common_supply_net": -8,
-      "new_supply_hits": 2
+      "new_supply_hits": 2,
+      "prompt_tokens": 4579042,
+      "completion_tokens": 13184,
+      "HTTP_seconds_per_sample": 0.3924462962962963
     },
     "P_thinking_control": {
-      "state": "detached_CPU_prepare_and_after_R_queue_active_no_model_call_confirmed",
+      "state": "v3_CPU_admission_live_after_two_prelaunch_failures_no_calls",
       "control": "A_original8554_Q50D5_prompt_zero_examples",
       "change": "thinking_enabled_with_sufficient_budget",
       "rows": 1080,
@@ -504,6 +507,37 @@
       "thinking_budget_tokens": 3072,
       "answer_reserve_tokens": 128,
       "max_output_tokens": 3200
+    },
+    "second_TP4_binding": {
+      "state": "Terra_CLI_active_configuration_repair",
+      "resource": "CPU",
+      "depends_on": [],
+      "must_not_change": "B_service_or_T_inflight_state"
+    },
+    "R_mechanism_analysis": {
+      "state": "extraction_complete_superseded_P_order_plan_not_execute",
+      "resource": "CPU",
+      "depends_on": [
+        "R_terminal_artifacts"
+      ],
+      "scope": "42_top3_transitions_and_supply_gains_losses",
+      "blocks_T": false
+    },
+    "recall_minimum_growth": {
+      "state": "Sol_CLI_active_latest_user_override_read_required",
+      "resource": "CPU",
+      "retain_all4451": false,
+      "development_feedback_for_selection": true,
+      "TEST_tuning": false,
+      "candidate_source": "real_TRAIN_excluding_query_source_closure",
+      "depends_on": [
+        "existing_embedding_cache"
+      ],
+      "does_not_depend_on": [
+        "T_terminal",
+        "P_regression_report",
+        "second_instance_binding"
+      ]
     }
   }
 }
