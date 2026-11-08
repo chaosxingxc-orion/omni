@@ -575,7 +575,12 @@
         "old4451_Q_regressions": 29,
         "already_missing_in_seed": 29,
         "old_nearest_correct_TRAIN_removed": 29,
-        "next": "semantic_geometry_audit_and_teacher_packet_revision"
+        "next": "repair59_class_availability_bug_then_targeted_prune_and_teacher_strategy_feedback",
+        "intersection4451_and731": 552,
+        "new_members_relative4451": 179,
+        "FoldA_deletion_sufficient": 5,
+        "FoldA_addition_after_deletion": 3,
+        "mask_provenance": "two_gold_cards_overlap_query_source_not_business_illegality"
       }
     }
   }
