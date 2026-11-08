@@ -1,7 +1,7 @@
 {
   "schema": "p-recall-tfrl-research-plan-v1",
   "status": "active_research_not_completed",
-  "updated_at_utc": "2026-11-08T02:10:17.571295+00:00",
+  "updated_at_utc": "2026-11-08T02:30:27.520201+00:00",
   "stage": "P",
   "primary_metric": "valid_gold_intent_in_output_K_le_3_over_full_roster",
   "max_candidates": 3,
@@ -178,7 +178,15 @@
         "source_text_equality",
         "locked_intent",
         "utterance_exclusion"
-      ]
+      ],
+      "optimization": [
+        "real_TRAIN_coverage",
+        "source_grounded_bank_additions",
+        "deduplication",
+        "representative_selection",
+        "intent_aggregation"
+      ],
+      "bank_candidate_policy": "freeze_source_ids_and_label_free_selection_rule; no_DEV_refill_no_synthetic_no_TEST_derivatives"
     },
     "fusion_status": "deferred_until_independent_mode_evaluation"
   },
@@ -201,5 +209,26 @@
     ],
     "system_validation": "subsequent_for_selected_candidates_only",
     "parallel_system_baseline": "not_a_retrieval_prerequisite"
+  },
+  "parallel_retrieval_workstreams": {
+    "description": {
+      "owner": "description_teacher_Sol",
+      "methods": [
+        "ACE",
+        "GEPA"
+      ],
+      "parent_recall3": 822,
+      "parent_recall5": 881
+    },
+    "real_question_bank": {
+      "owner": "question_bank_Sol",
+      "parent_recall3": 957,
+      "parent_recall5": 994,
+      "fixed_initial_candidates": 8
+    },
+    "rows": 1080,
+    "CPU_independent": true,
+    "requires_P_S_D": false,
+    "fusion": "deferred"
   }
 }
