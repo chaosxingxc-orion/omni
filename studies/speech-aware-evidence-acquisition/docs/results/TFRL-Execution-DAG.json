@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T06:00:46.495946+00:00",
+  "updated_at_utc": "2026-11-08T06:11:21.693833+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1484,7 +1484,7 @@
       "id": "P-question-C-aggregation-successors",
       "resource": "NPU_C_TP4",
       "depends_on": [],
-      "status": "top3_running_mix3_ready_native_queue",
+      "status": "mix3_container_running_top3_terminal_result_pending_review",
       "rows": 1080
     },
     {
@@ -1499,9 +1499,55 @@
       "depends_on": [
         "P-nemotron-bidirectional-contract"
       ],
-      "status": "Sol_CLI_verifying_causal_cache_reuse_then_launch_bidir_only",
+      "status": "container_running_parent_cache_reused_full_accuracy_pending",
       "rows": 9634,
       "independent_of": "LCO_success_or_NPU_queue"
+    },
+    {
+      "id": "P-selection-round2-main-review",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "complete_full1080_verified",
+      "rows": 1080
+    },
+    {
+      "id": "P-selection-dose-followup",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned_not_admission_evidence",
+      "rows": 1080
+    },
+    {
+      "id": "P-selection-A-supply-ready",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned_not_admission_evidence",
+      "rows": 1080
+    },
+    {
+      "id": "P-selection-B-supply-ready",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned_not_admission_evidence",
+      "rows": 1080
+    },
+    {
+      "id": "P-selection-A-consumption",
+      "resource": "NPU_A_TP4",
+      "depends_on": [
+        "P-selection-A-supply-ready"
+      ],
+      "status": "planned_wait_ready_and_lane_release",
+      "rows": 1080
+    },
+    {
+      "id": "P-selection-B-consumption",
+      "resource": "NPU_B_TP4",
+      "depends_on": [
+        "P-selection-B-supply-ready"
+      ],
+      "status": "planned_wait_ready_and_lane_release",
+      "rows": 1080
     }
   ],
   "round_policy": {
@@ -1531,10 +1577,10 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "scope": "research planning graph, not authoritative runtime queue",
-    "A": "positions3to1 CPU prepare; prior coverage complete",
-    "B": "positions5to3 reverse running then rotate",
-    "C": "top3 then mix3 native queue",
-    "CPU": "two ACE single-factor candidates; Nemotron cache reuse/bidir; independent LCO encoding",
+    "A": "reverse3to1 container running; rotate admitted; light-control and boundary successor preparation assigned",
+    "B": "reverse5to3 container running; rotate admitted; light-control/boundary/crosshub preparation assigned",
+    "C": "mix3 3to2 container running",
+    "CPU": "round2 full1080 independently verified; two dose variants assigned; bidirectional and LCO encoding running",
     "polling": "600 seconds or terminal signals",
     "utilization": "no fresh AI Core measurement, no full-utilization claim"
   },
