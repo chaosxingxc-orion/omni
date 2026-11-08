@@ -47,7 +47,7 @@ def main():
         gold={x['sample_id']:x['gold_intent'] for x in read(a.gold)}; baseline=read(a.baseline); ids=sealed['sample_ids'];intents=sealed['intents'];idx={v:i for i,v in enumerate(intents)}
         if set(gold)!=set(ids) or baseline['sample_ids']!=ids or baseline['intents']!=intents: raise ValueError('evaluation population differs')
         def ranks(orders):return np.array([row.index(idx[gold[s]])+1 if idx[gold[s]] in row else 0 for s,row in zip(ids,orders)])
-        def metric(x):return {'recall1':int(((x>0)&(x<=1)).sum()),'recall3':int(((x>0)&(x<=3)).sum()),'recall5':int(((x>0)&(x<=5)).sum()),'mrr':float(np.divide(1.,x,out=np.zeros(len(x)),where=x>0).mean())}
+        def metric(x):return {'n':len(x),'recall1':int(((x>0)&(x<=1)).sum()),'recall3':int(((x>0)&(x<=3)).sum()),'recall5':int(((x>0)&(x<=5)).sum()),'mrr':float(np.divide(1.,x,out=np.zeros(len(x)),where=x>0).mean())}
         baseline_mean=read(a.baseline_mean5)
         if baseline_mean['sample_ids']!=ids or baseline_mean['intents']!=intents: raise ValueError('mean5 population differs')
         b={'mean5':ranks(baseline_mean['orders']['question-gepa-mean5-depth']),'coverage':ranks(baseline['orders']['question-gepa-coverage-gated-depth'])}
@@ -62,6 +62,7 @@ def main():
             for label, predicate in [('1-32',lambda n:0<n<=32),('33-128',lambda n:32<n<=128),('129+',lambda n:n>128)]:
                 selected=np.array([predicate(sizes[gold[s]]) for s in ids]); strata[label]={'samples':int(selected.sum()),**metric(x[selected])} if selected.any() else {'samples':0}
             result[name]={'metrics':metric(x),'paired':paired,'original_class_size_strata':strata,'fewer_than3':sum(len(v)<3 for v in orders),'fewer_than5':sum(len(v)<5 for v in orders),'per_intent':{t:metric(x[np.array([gold[s]==t for s in ids])]) for t in intents if any(gold[s]==t for s in ids)}}
+            per=result[name]['per_intent'];result[name]['macro_recall']={str(k):float(np.mean([v['recall'+str(k)]/v['n'] for v in per.values()])) for k in (1,3,5)}
         save(a.out,{'results':result,'population':len(ids),'development_only':True,'gold_sha256':a.gold_sha256,'sealed_sha256':q.digest(a.sealed),'wall_seconds':time.monotonic()-start,'peak_rss_kib':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss})
     print(json.dumps({'mode':a.mode,'wall_seconds':time.monotonic()-start,'peak_rss_kib':resource.getrusage(resource.RUSAGE_SELF).ru_maxrss},sort_keys=True))
 if __name__=='__main__':main()
