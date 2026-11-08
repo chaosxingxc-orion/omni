@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "compensation_budget causal_depth_v1",
+  "description": "独立工程接口；教师提案经主审后执行。字段缺省在compiler补齐，显式字段均生效。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mode"
+  ],
+  "properties": {
+    "mode": {
+      "const": "causal_depth_v1",
+      "description": "启用有界分层最佳优先补偿；旧模式及缺省策略不变"
+    },
+    "max_new_states_per_candidate": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 24,
+      "description": "每轮每primary新补偿状态上限；预筛single另计入全局预算，缓存不重复扣费"
+    },
+    "max_new_states_per_layer": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32,
+      "default": 2,
+      "description": "每primary每深度新增评价上限；未用额度不阻止下一深度"
+    },
+    "beam_width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8,
+      "default": 2,
+      "description": "每层按真实loss、Q15修复、库大小、状态ID保留的frontier宽度"
+    },
+    "max_depth": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 7,
+      "default": 4,
+      "description": "single之后最多动作边数；replace原子边同时一加一删"
+    },
+    "action_order": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "add",
+          "delete",
+          "replace"
+        ]
+      },
+      "minItems": 3,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "default": [
+        "delete",
+        "replace",
+        "add"
+      ],
+      "description": "跨层持续轮转动作族；族为空时跳过，避免低index新增吞掉删除机会"
+    },
+    "max_nonmonotone_steps": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "default": 1,
+      "description": "每路径允许loss不严格下降的边数；不放宽最终gate"
+    },
+    "max_loss_increase": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 32,
+      "default": 2,
+      "description": "单边真实protected loss事件数最多增加量"
+    },
+    "max_extended_primaries": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 18,
+      "default": 0,
+      "description": "每轮可使用大于3add上限的实测丢类primary数量，按预筛排名分配；0关闭"
+    },
+    "extended_min_lost_classes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 59,
+      "default": 4,
+      "description": "允许扩展add额度的single实测丢gold类数门槛；不锁seed成员"
+    },
+    "initial_states_per_candidate": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 600,
+      "default": 4,
+      "description": "第一阶段每primary新状态配额；第二阶段将剩余预算优先给实测loss下降路径，且不超过每primary总上限"
+    }
+  },
+  "allOf": [
+    {
+      "description": "initial_states_per_candidate <= max_new_states_per_candidate; compiler enforces cross-field inequality"
+    }
+  ],
+  "x-policy-fields": {
+    "maximum_trials": {
+      "range": [
+        1,
+        600
+      ],
+      "default": 600,
+      "scope": "all distinct states of this member across rounds, including prescreen and diagnostic counterfactuals"
+    },
+    "maximum_additions": {
+      "old_range": [
+        1,
+        3
+      ],
+      "causal_range": [
+        2,
+        6
+      ],
+      "effective_default": 3,
+      "effect": "cap6 only within configured measured-loss-class primary subset"
+    },
+    "maximum_deletions": {
+      "range": [
+        0,
+        2
+      ],
+      "effective_default": 2,
+      "effect": "net deletions from current anchor, including atomic replace"
+    },
+    "maximum_pool_candidates": {
+      "range": [
+        1,
+        96
+      ],
+      "default": 96,
+      "effect": "unchanged generated cosine-truncated eligible TRAIN primary pool"
+    }
+  }
+}

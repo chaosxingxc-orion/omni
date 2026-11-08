@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T20:09:38.863765+00:00",
+  "updated_at_utc": "2026-11-08T20:22:50.214353+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -409,14 +409,14 @@
       "id": "causal-depth-search",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "implementation_running",
+      "status": "complete_fixed_image_validation_main_accepted",
       "depends_on": []
     },
     {
       "id": "group-feedback-round3",
       "owner": "Sol CLI",
       "resource": "CPU_then_local_external_API",
-      "status": "evidence_preparation_running_not_sent",
+      "status": "prepared_template_conflicts_returned_for_targeted_rework_not_sent",
       "depends_on": [],
       "final_schema_binding_depends_on": [
         "causal-depth-search"
@@ -425,7 +425,7 @@
     {
       "id": "next-formal-recall",
       "resource": "CPU",
-      "status": "not_started",
+      "status": "accepted_code_and_frozen_inputs_staged_waiting_actual_teacher_policy",
       "depends_on": [
         "causal-depth-search",
         "group-feedback-round3",
@@ -782,5 +782,18 @@
     "index_binding_bug_found": false,
     "new_exclusions": 0,
     "audio_listened": false
+  },
+  "causal_depth_engineering": {
+    "state": "complete_main_accepted",
+    "real_cache_distinct_states": 14,
+    "primary_candidates": 4,
+    "continuous_resume_byte_equal": true,
+    "delete_replace_and_layer2_reached": true,
+    "fixture_four_and_six_additions_not_science": true,
+    "manifest_files_checked": 398,
+    "known_container_wall_seconds": 73.814372,
+    "known_CPU_seconds": 75.71587,
+    "scientific_gain": false,
+    "formal_search_started": false
   }
 }
