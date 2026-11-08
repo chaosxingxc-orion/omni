@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T14:45:30.178370+00:00",
+  "updated_at_utc": "2026-11-08T14:57:08.671529+00:00",
   "current_stage": "P",
   "instruction": "前置召回深度覆盖分析；两路标签去重取并集；每label来源独立fewshot；先P OFF验证，不新增抽取任务",
   "resources": {
@@ -236,7 +236,8 @@
     },
     "subprocess_roles": [
       "recall_depth_union_analysis",
-      "union_fewshot_implementation"
+      "question_minimum_cover",
+      "union_fewshot_implementation_rework2"
     ],
     "teacher_analysis": "complete_reviewed_26_output_hashes",
     "relative_merge": {
@@ -321,7 +322,31 @@
       "question_depth": null,
       "description_depth": null,
       "gold_used_for_runtime_selection": false,
-      "thinking_comparison": "deferred"
+      "thinking_comparison": "deferred",
+      "engineering_status": "partial_delivery_rejected_owner_rework2_active",
+      "first_candidate": {
+        "question_depth": 50,
+        "description_depth": 5,
+        "fewshots_per_label": 3,
+        "offline_supply_hits": 1060,
+        "n": 1080,
+        "mean_labels": 8.6842592593,
+        "p95_labels": 17,
+        "max_labels": 25,
+        "P_gain": null
+      }
+    },
+    "confirmed_exclusion": {
+      "status": "authorized_config_implementation",
+      "confirmed_actual": 0,
+      "raw_artifacts_preserved": true,
+      "suspected_not_deleted": true
+    },
+    "minimum_question_set": {
+      "status": "CPU_subprocess_started",
+      "selection_data": "TRAIN_full_bank_not_DEV_gold",
+      "proposed_scope": "representative_retrieval_index_separate_clean_fewshot_support_pool",
+      "claim_global_optimum": false
     }
   }
 }
