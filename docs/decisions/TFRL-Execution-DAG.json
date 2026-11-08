@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T16:49:48.675667+00:00",
+  "updated_at_utc": "2026-11-08T16:52:37.425870+00:00",
   "current_stage": "P",
   "instruction": "三Codex子进程：缺陷确认排除、覆盖代表集、冻结Q50D5的P消费对照；thinking获重新授权，先验证fewshot增益",
   "resources": {
@@ -467,7 +467,7 @@
       "scope": "unchanged fresh identity reads; reuse byte-identical maps parsing; no C/R mutation"
     },
     "representative_to_P": {
-      "state": "CPU_preparation_and_durable_queue_running",
+      "state": "experiment_container_running_first_response_pending",
       "index_size": 4451,
       "control": "actual_A_original_prompt_zero_examples_OFF",
       "purpose": "verify_supply_gain_transfers_to_P",
@@ -476,7 +476,8 @@
       "supply": 1063,
       "source_gains": 5,
       "source_losses": 2,
-      "max_labels": 28
+      "max_labels": 28,
+      "started_utc": "2026-11-08T16:50:19Z"
     }
   }
 }
