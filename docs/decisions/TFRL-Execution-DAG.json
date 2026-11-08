@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T22:39:57.758969+00:00",
+  "updated_at_utc": "2026-11-08T22:53:02.260869+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -981,7 +981,7 @@
   "p_representative_thinking_transfer": {
     "state": "running_real_first64_verified",
     "queries": 1080,
-    "completed_snapshot": 512,
+    "completed_snapshot": 640,
     "valid_snapshot": 64,
     "remaining_snapshot": 568,
     "cards": 4,
@@ -1004,7 +1004,10 @@
     "AICore_average": null,
     "baseline": "V_OFF_981",
     "default_promoted": false,
-    "snapshot_at_unix": 1794177239.9888701
+    "snapshot_at_unix": 1794177841.6953664,
+    "total": 1080,
+    "seconds_per_row_recent": 4.70083200186491,
+    "eta_seconds_at_snapshot": 2068.3660808205605
   },
   "group_policy_round5_formal_run": {
     "state": "complete_main_full_hitsets_recount_passed",
@@ -1075,7 +1078,10 @@
     "safe_support_union": 5,
     "causal_trials": 12,
     "passing_replacements": 0,
-    "accepted_bank_size": 74
+    "accepted_bank_size": 74,
+    "status": "complete_main_accepted",
+    "manifest_files": 117,
+    "bank_after": 74
   },
   "p_wide_supply_thinking_transfer": {
     "resource": "NPU_B_after_CPU_admission",
@@ -1095,16 +1101,22 @@
     ],
     "generation_started_at_utc": "2026-11-08T22:32:37.78652903Z",
     "first_actual_POST_unix": 1794177449.9816473,
-    "HTTP_response_verified": false
+    "HTTP_response_verified": false,
+    "status": "first_valid_response_main_accepted",
+    "completed_snapshot": 1,
+    "total": 1080,
+    "first_response_at_unix": 1794177788.061468,
+    "steady_throughput": null,
+    "early_ETA_rejected": true
   },
   "current_snapshot": {
-    "candidate_bank_size": 74,
-    "reverse_pruning_complete": true,
-    "current_CPU_task": "round6_teacher_package_preparation_after12_rejected_replacements",
-    "P_W_verified_running": true,
-    "P_X_real_request_verified": true,
-    "all_DEV_adaptively_used": true,
-    "TEST_tuned": false
+    "recall_bank": 74,
+    "bank_floor": null,
+    "diagnostic_complete": true,
+    "teacher_round6": "sent_HTTP200_terminal_pending",
+    "P_W_completed_snapshot": 640,
+    "P_X_first_valid_response": true,
+    "NPU_sustained_80_percent_proven": false
   },
   "historical_active_tracks": [
     {
@@ -1345,44 +1357,40 @@
   ],
   "active_tracks": [
     {
-      "id": "minimum74-reanchor-diagnostic",
-      "owner": "Sol CLI",
-      "resource": "CPU",
-      "status": "scientific_outputs_main_verified_full_report_finalizing",
-      "depends_on": [
-        "round5_reverse_prune"
-      ],
-      "max_causal_trials": 12,
-      "auto_accept": false
-    },
-    {
       "id": "P-W",
       "resource": "NPU_A",
-      "status": "running_scheduled_snapshot512",
+      "status": "running_scheduled_snapshot640",
       "total": 1080,
-      "completed_snapshot": 512,
+      "completed_snapshot": 640,
       "cards": 4,
       "instances": 1,
       "depends_on": []
     },
     {
       "id": "P-X",
-      "owner": "Sol CLI",
       "resource": "NPU_B",
-      "status": "actual_outbound_HTTP_main_verified_response_pending",
+      "status": "first_valid_response_main_accepted",
       "total": 1080,
-      "completed_snapshot": null,
+      "completed_snapshot": 1,
       "cards": 4,
       "instances": 1,
       "depends_on": []
     },
     {
-      "id": "round6-teacher-feedback",
-      "owner": "Sol CLI",
+      "id": "round6-teacher-terminal",
       "resource": "CPU_local",
-      "status": "prepare_only_not_sent",
+      "owner": "Sol CLI",
+      "status": "collect_existing_single_request",
+      "depends_on": [],
+      "blocks_NPU": false
+    },
+    {
+      "id": "round6-formal-recall",
+      "resource": "CPU",
+      "status": "core_and_inputs_prepared",
       "depends_on": [
-        "minimum74-reanchor-diagnostic"
+        "round6-teacher-terminal",
+        "main_policy_review"
       ],
       "blocks_NPU": false
     }
@@ -1399,6 +1407,12 @@
     ],
     "API_calls": 0,
     "template": "algorithm_specific_TFGRPO_inspired",
-    "objective": "joint_coverage_and_cross_class_competition_with_safe_incremental_growth"
+    "objective": "joint_coverage_and_cross_class_competition_with_safe_incremental_growth",
+    "status": "single_request_sent_http200_streaming",
+    "actual_API_posts": 1,
+    "formal_core_and_actual74_inputs_prepared": true,
+    "formal_run_started": false,
+    "terminal_owner": "Sol CLI",
+    "automatic_retry": false
   }
 }
