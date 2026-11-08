@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T06:29:16.121407+00:00",
+  "updated_at_utc": "2026-11-08T06:32:48.090463+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1521,14 +1521,14 @@
       "id": "P-selection-A-supply-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned_not_admission_evidence",
+      "status": "admission_complete_per_owner",
       "rows": 1080
     },
     {
       "id": "P-selection-B-supply-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "assigned_not_admission_evidence",
+      "status": "admission_complete_per_owner",
       "rows": 1080
     },
     {
@@ -1537,7 +1537,7 @@
       "depends_on": [
         "P-selection-A-supply-ready"
       ],
-      "status": "planned_wait_ready_and_lane_release",
+      "status": "control_running_successors_queued",
       "rows": 1080
     },
     {
@@ -1546,14 +1546,14 @@
       "depends_on": [
         "P-selection-B-supply-ready"
       ],
-      "status": "planned_wait_ready_and_lane_release",
+      "status": "control_running_successors_queued",
       "rows": 1080
     },
     {
       "id": "P-selection-C-supply-ready",
       "resource": "CPU",
       "depends_on": [],
-      "status": "background_preparation_started",
+      "status": "admission_complete_per_owner",
       "rows": 1080
     },
     {
@@ -1562,7 +1562,7 @@
       "depends_on": [
         "P-selection-C-supply-ready"
       ],
-      "status": "planned_wait_ready_and_lane_release",
+      "status": "control_running_successors_queued",
       "rows": 1080
     },
     {
@@ -1601,9 +1601,9 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "scope": "research planning graph, not authoritative runtime queue",
-    "A": "rotate running at last observation; control7513 and boundary02 admission complete per owner",
-    "B": "rotate exited0; control successor bound, owner requested event handoff",
-    "C": "control7513 generation container confirmed running; boundary admission running",
+    "A": "control7513 actual generation container running; boundary ready",
+    "B": "rotate complete963/1080 verified; selcontrol actual generation container running; boundary/hub queued",
+    "C": "control7513 running with real response; boundary CPU ready queued",
     "CPU": "GEPA consumption teacher live on local host, bidirectional/LCO independent, no new dense parameter search",
     "polling": "600 seconds or terminal signals",
     "utilization": "no fresh AI Core measurement, no full-utilization claim"
