@@ -509,7 +509,18 @@
     "lexical_groups": 8500,
     "missing_intent": "cooking_query",
     "legal_new_entries_59_covered_intents": 0,
-    "missing_intent_source_audit": "pending"
+    "missing_intent_source_audit": {
+      "status": "accepted",
+      "original_TRAIN_utterances": 4,
+      "excluded_Fold_A": 1,
+      "excluded_R01": 3,
+      "legal_remaining": 0,
+      "fixed_view_Fold_A_upper_bound": [
+        1079,
+        1080
+      ],
+      "files_verified": 17
+    }
   },
   "timing_seconds": {
     "input_load": 17.543550139991567,
@@ -546,5 +557,17 @@
   "new_model_calls": 0,
   "verified_delivery_files": 71,
   "sourcepins_sha256": "25c3ed12a58b68b59dc86b263ed60db28255041cb347db0da0447da1237b852f",
-  "generalization_proven": false
+  "generalization_proven": false,
+  "neighborhood_supplement": {
+    "rows": 1080,
+    "recall1": 848,
+    "recall3": 965,
+    "recall5": 1006,
+    "gold_rank_differences_vs_top3": 0,
+    "top5_order_differences": 6,
+    "additional_process_wall_seconds": 25.553931970032863,
+    "additional_matrix_recomputations": 1,
+    "files_verified": 28,
+    "decision": "do_not_adopt_added_group_layer"
+  }
 }

@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T02:46:22.952778+00:00",
+  "updated_at_utc": "2026-11-08T02:54:10.717113+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -824,7 +824,7 @@
         "P-ranking-input-prepare",
         "P-description-index-ready"
       ],
-      "status": "CPU_admission_preparing",
+      "status": "fixed_source_generation_running_first_response_pending",
       "rows": 1080,
       "input_k": 3,
       "output_k": 1,
@@ -837,7 +837,7 @@
         "P-ranking-input-prepare",
         "P-description-index-ready"
       ],
-      "status": "admission_complete_launch_preparing",
+      "status": "fixed_source_admission_running",
       "rows": 1080,
       "input_k": 3,
       "output_k": 2,
@@ -850,7 +850,7 @@
         "P-ranking-input-prepare",
         "P-description-index-ready"
       ],
-      "status": "old_HTTP400_aborted_fix_probe_passed_successor_preparing",
+      "status": "fixed1080_prepared_old_unknown_accounting_preserved",
       "rows": 1080,
       "input_k": 5,
       "output_k": 3,
@@ -981,8 +981,44 @@
       "depends_on": [
         "P-real-question-mode-runtime"
       ],
-      "status": "fixed8_full1080_accepted_neighborhood_supplement_running",
+      "status": "fixed8_and_neighborhood_supplement_accepted",
       "scope": "real TRAIN knowledge bank coverage/deduplication/representativeness and fixed8 aggregation candidates; no system dependencies"
+    },
+    {
+      "id": "retrieval-question-source-coverage-audit",
+      "resource": "CPU",
+      "depends_on": [
+        "retrieval-question-CPU-optimization"
+      ],
+      "status": "accepted_17_pins_cooking_4_train_4_excluded_zero_legal",
+      "scope": "fixed TRAIN plus four roster identities only; no test feedback"
+    },
+    {
+      "id": "retrieval-question-gepa-input",
+      "resource": "CPU",
+      "depends_on": [
+        "retrieval-question-CPU-optimization"
+      ],
+      "status": "assigned_CLI3778112_preparing",
+      "scope": "knowledge-bank/source-selection/support-aggregation reflection; true TRAIN only; top3/mix3 repair-regression and protected rare evidence; one method template"
+    },
+    {
+      "id": "retrieval-question-gepa-teacher",
+      "resource": "CPU_EXTERNAL_API",
+      "depends_on": [
+        "retrieval-question-gepa-input"
+      ],
+      "status": "planned_unique_request_not_sent",
+      "scope": "one external teacher request,2..4 independent source-grounded configurable candidates; max output131072; no NPU dependency"
+    },
+    {
+      "id": "retrieval-question-gepa-evaluation",
+      "resource": "CPU",
+      "depends_on": [
+        "retrieval-question-gepa-teacher"
+      ],
+      "status": "planned",
+      "scope": "reuse fixed1080 and cached question cosines; evaluate full denominator and paired regression; no query/gold conditional strategy"
     }
   ],
   "round_policy": {
@@ -1006,7 +1042,7 @@
   "teacher": "local external API with algorithm-specific fixed template and dynamically selected legal TRAIN trajectories",
   "current_dispatch": {
     "P_only": {
-      "status": "transport_and_cap_fixed_compatibility_probe_passed_real_audio_successor_preparing",
+      "status": "A_fixed_generation_running_C_admitting_B_preparing",
       "new_ranking_response_confirmed": false,
       "all_cards_busy_claim": false
     },
@@ -1018,14 +1054,16 @@
     ],
     "all_cards_busy_claim": false,
     "A": {
-      "observed_at_utc": "2026-11-08T02:28:35.938909+00:00",
-      "status": "old_attempt_drained_zero_contacts",
+      "observed_at_utc": "2026-11-08T02:54:00.952979+00:00",
+      "status": "fixed_source_generation_running",
+      "container_id": "516402b7fe96",
+      "container_pid": 252826,
       "cards": 4,
       "instances": 1,
       "rows_total": 1080,
       "confirmed_model_responses": 0,
       "eta_seconds": null,
-      "note": "No contact/checkpoint observed at snapshot; not proof of service failure"
+      "note": "startup snapshot; no confirmed contacts yet; not active AI Core evidence"
     },
     "B": {
       "observed_at_utc": "2026-11-08T02:28:35.938909+00:00",
@@ -1041,7 +1079,7 @@
     },
     "C": {
       "observed_at_utc": "2026-11-08T02:28:35.938909+00:00",
-      "status": "admitted_launch_preparing",
+      "status": "fixed_source_admission_running",
       "cards": 4,
       "instances": 1,
       "rows_total": 1080,
