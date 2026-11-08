@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T07:15:46.678940+00:00",
+  "updated_at_utc": "2026-11-08T07:21:47.341759+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1609,7 +1609,7 @@
       "depends_on": [
         "P-gepa-behavior-B-prepare"
       ],
-      "status": "planned_after_current_lane_release",
+      "status": "running_concrete_container_confirmed",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
@@ -1618,7 +1618,7 @@
       "id": "P-gepa-behavior-C-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "original_entry_rebuild_after_workspace_source_identity_failure",
+      "status": "complete_original_entry_identity_chain_main_verified",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
@@ -1629,7 +1629,7 @@
       "depends_on": [
         "P-gepa-behavior-C-prepare"
       ],
-      "status": "initial_container_exit1_template_missing_zero_calls_recovery_pending",
+      "status": "running_actual_response_confirmed_64_of1080_snapshot",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
@@ -1638,7 +1638,7 @@
       "id": "P-supply-concurrency-optimization",
       "resource": "CPU",
       "depends_on": [],
-      "status": "worker16_single_config_diff_main_verified_admission_passed_pending_successor_binding",
+      "status": "worker16_verified_and_bound_after_actual_GEPA_container",
       "deliverable": "Trace effective preparation/dispatch limits; prepare one-factor real1080 throughput successor without changing active scientific runs",
       "evidence": "HTTP mean inflight 3.205, peak13 despite configured64; FIT peak8; no service saturation proof"
     },
@@ -1646,7 +1646,7 @@
       "id": "P-consumption-ace-tfgroup-templates",
       "resource": "CPU",
       "depends_on": [],
-      "status": "draft_dryrun_passed_returned_to_remove_full_reward_table_and_add_new_counterexamples",
+      "status": "review_passed_two_teacher_requests_dispatched_streams_live",
       "scope": "Independent ACE and training-free group-relative templates/configuration; existing teacher executor; no API; fixed coverage 3to1 opening only"
     }
   ],
