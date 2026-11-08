@@ -1,9 +1,9 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T14:26:02.142938+00:00",
+  "updated_at_utc": "2026-11-08T14:32:51.748806+00:00",
   "current_stage": "P",
-  "instruction": "三路：召回供给、P Top3保留、开发冻结后TEST验证；根因驱动，达标后冻结P转S；不追求Top1极致",
+  "instruction": "当前优化相似问和query关键值/操作关系的派生表示；冻结意图描述；不以扩库替代主目标；oracle小规模先验机制验证",
   "resources": {
     "inference_instances": 3,
     "cards_per_instance": 4,
@@ -235,17 +235,20 @@
       "automatic_retry": false
     },
     "subprocess_roles": [
-      "relative_P_execution",
-      "question_candidate_geometry",
-      "next_incremental_feedback_preparation"
+      "finish_existing_relative_P",
+      "finish_candidate_geometry_side_asset",
+      "question_slot_representation_teacher_preparation"
     ],
     "teacher_analysis": "complete_reviewed_26_output_hashes",
     "relative_merge": {
-      "status": "CPU_verified_P_driver_QUEUE_WATCH_no_response_confirmed",
+      "status": "generation_running_main_checkpoint128",
       "folda_supply": 1021,
       "repair": 10,
       "loss": 5,
-      "P": null
+      "P": null,
+      "completed": 128,
+      "total": 1080,
+      "observed_utc": "2026-11-08T14:29:54.462625+00:00"
     },
     "official_train_coverage": {
       "status": "accepted_source_census_not_admitted",
@@ -275,8 +278,23 @@
       "automatic_bank_admission": false
     },
     "next_feedback": {
-      "status": "CLI_preparing_not_sent",
+      "status": "old_CLI_interrupted_new_question_representation_CLI_started_not_sent",
+      "depends_on": [
+        "existing_question_bank_audit"
+      ],
+      "not_dependencies": [
+        "relative_P_terminal",
+        "new1514_geometry"
+      ],
       "blocks_independent_NPU": false
+    },
+    "question_representation": {
+      "status": "teacher_package_preparation",
+      "intent_descriptions": "frozen",
+      "knowledge_target": "similar_question_derived_embedding_keys",
+      "query_scope": "small_fixed_oracle_slot_diagnostic",
+      "label_as_runtime_feature": false,
+      "new_bank_admission": false
     }
   }
 }
