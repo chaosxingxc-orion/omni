@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T17:29:56.681495+00:00",
+  "updated_at_utc": "2026-11-08T17:41:28.574905+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -407,7 +407,7 @@
       "id": "representative-bank",
       "owner": "Sol CLI",
       "resource": "CPU",
-      "status": "4451_P_complete993_not_promoted_S3_4469_complete_no_hit_gain",
+      "status": "seed724_to731_Q50_growth_complete_not_promoted_regression_review_next",
       "depends_on": []
     },
     {
@@ -528,7 +528,7 @@
       "blocks_T": false
     },
     "recall_minimum_growth": {
-      "state": "seed724_frozen_main_independent_recall_audit_completed_incremental_growth_rework_active",
+      "state": "first_growth_complete_independent_verification_and_main_paired_recount_pass_not_final",
       "resource": "CPU",
       "retain_all4451": false,
       "development_feedback_for_selection": true,
@@ -553,7 +553,21 @@
         "valid": 1043,
         "FoldA": 1057
       },
-      "accepted_insertions_confirmed": 0
+      "accepted_insertions_confirmed": 7,
+      "final_size": 731,
+      "final_Q50_question": {
+        "fit": 599,
+        "valid": 1057,
+        "FoldA": 1063
+      },
+      "final_Q50D5_union": {
+        "fit": 605,
+        "valid": 1057,
+        "FoldA": 1069
+      },
+      "seed_immutable": false,
+      "next": "review_seed_business_necessity_and_actual_regressions_then_targeted_delete_swap_replenish",
+      "teacher": "PREPARED_NOT_SENT_pending_regression_mechanisms"
     }
   }
 }
