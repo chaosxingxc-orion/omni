@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T07:11:21.343891+00:00",
+  "updated_at_utc": "2026-11-08T07:15:46.678940+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1588,16 +1588,17 @@
       "depends_on": [
         "P-gepa-behavior-A-prepare"
       ],
-      "status": "running_first_model_response_confirmed_104_of_1080_snapshot",
+      "status": "complete_main_verified_885_vs881_repairs9_regressions5",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
-      "changed_component": "opening_instruction_only"
+      "changed_component": "opening_instruction_only",
+      "completed_rows": 1080
     },
     {
       "id": "P-gepa-behavior-B-prepare",
       "resource": "CPU",
       "depends_on": [],
-      "status": "new_complete_release_runtime_equivalence_verified_preparing",
+      "status": "complete_admission_and_template_read_passed_bound_after_crosshub",
       "rows": 1080,
       "parent": "original complete coverage supply, same window",
       "changed_component": "opening_instruction_only"
@@ -1645,7 +1646,7 @@
       "id": "P-consumption-ace-tfgroup-templates",
       "resource": "CPU",
       "depends_on": [],
-      "status": "existing_A_owner_reworked_cli_implementation_started",
+      "status": "draft_dryrun_passed_returned_to_remove_full_reward_table_and_add_new_counterexamples",
       "scope": "Independent ACE and training-free group-relative templates/configuration; existing teacher executor; no API; fixed coverage 3to1 opening only"
     }
   ],
