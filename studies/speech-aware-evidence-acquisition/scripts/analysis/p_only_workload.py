@@ -67,7 +67,8 @@ class PerceptionOnlyWorkload(NodeWorkload):
             (axis['kind'] == 'instruction' and set(axis) != {'kind', 'patch', 'template'}) or
             (axis['kind'] == 'knowledge-construction' and set(axis) != {'kind', 'publication', 'patch', 'audit'}) or
             (axis['kind'] == 'breadth' and (set(axis) != {'kind', 'value'} or type(axis['value']) is not int or not 1 <= axis['value'] <= 60)) or
-            (axis['kind'] == 'ranking-window' and (not {'kind', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(axis) <= {'kind', 'input_k', 'output_k', 'max_tokens', 'template', 'facet_source'}
+            (axis['kind'] == 'ranking-window' and (not {'kind', 'input_k', 'output_k', 'max_tokens', 'template'} <= set(axis) <= {'kind', 'input_k', 'output_k', 'max_tokens', 'template', 'facet_source', 'transport'}
+                or axis.get('transport', 'json-schema') not in {'json-schema', 'finite-choice-v1'}
                 or (axis['input_k'], axis['output_k']) not in ((3, 1), (3, 2), (5, 3))
                 or type(axis['max_tokens']) is not int or not 1 <= axis['max_tokens'] <= 4096))):
             raise ValueError('invalid P-only axis')
@@ -245,6 +246,8 @@ class PerceptionOnlyWorkload(NodeWorkload):
             pipeline = base['native_episode']['intent_slot_pipeline']
             pipeline['max_candidates'] = axis['output_k']
             pipeline['ranking_window'] = {'mode':'ranked-candidate-indices', **{k:axis[k] for k in ('input_k','output_k','max_tokens','template')}}
+            if 'transport' in axis:
+                pipeline['ranking_window']['transport'] = axis['transport']
             if 'coverage_recovery' in pipeline:
                 pipeline['coverage_recovery']['max_extra_contacts'] = min(pipeline['coverage_recovery']['max_extra_contacts'], axis['output_k'])
         base.pop('prepared_phase_supply', None)

@@ -70,7 +70,7 @@ def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch)
     vector.write_text(''.join(json.dumps({'id':f.facet_id, 'vectors':{'intent-boundary':[1.0]}})+'\n' for f in facets))
     new_source = {**facet_source, **pin(vector,tmp_path)}
     job.config['axis'] = {'kind':'ranking-window','input_k':3,'output_k':1,'max_tokens':128,
-                          'template':{'relpath':'configs/probes/new.txt','sha256':'a'*64}, 'facet_source':new_source}
+                          'template':{'relpath':'configs/probes/new.txt','sha256':'a'*64}, 'facet_source':new_source, 'transport':'finite-choice-v1'}
     # The parent must supply its registered native pipeline for the new axis.
     parent['native_episode']['intent_slot_pipeline'] = {'max_candidates':3}
     src.write_text(json.dumps(parent)); job.config['parent_baseline'] = pin(src,tmp_path)
@@ -80,6 +80,7 @@ def test_axes_preserve_parent_and_reject_changed_template(tmp_path, monkeypatch)
     registration.write_text(json.dumps(reg)); job.config['parent_registration'] = pin(registration,tmp_path)
     result = job.derive(tmp_path,tmp_path,{})[0]
     assert result['knowledge_stores']['intent-boundaries']['phase_supply']['perception']['facet_source'] == new_source
+    assert result['native_episode']['intent_slot_pipeline']['ranking_window']['transport'] == 'finite-choice-v1'
     vector.write_text(vector.read_text()+'\n')
     with pytest.raises(ValueError, match='facet source pin'):
         job.derive(tmp_path,tmp_path,{})
