@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T23:25:53.039794+00:00",
+  "updated_at_utc": "2026-11-08T23:32:29.647857+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -12,8 +12,10 @@
     "total_authorized_cards": 8,
     "active_scientific_NPU_jobs": 1,
     "active_scientific_NPU_cards": 4,
-    "idle_cards": 4,
-    "resource_scope": "W complete; X continues; successor CPU admitted and teacher streaming; no AICore saturation claim"
+    "idle_cards": null,
+    "resource_scope": "X actual inference; fs1 generation container launched with first request pending; idle utilization not freshly measured",
+    "allocated_jobs": 2,
+    "allocated_cards": 8
   },
   "nodes": [
     {
@@ -684,7 +686,9 @@
     "P_X_completed_snapshot": 454,
     "NPU_sustained_80_percent_proven": false,
     "P_W_top3": 1010,
-    "P_X_snapshot_at_unix": 1794180195.7789264
+    "P_X_snapshot_at_unix": 1794180195.7789264,
+    "P_fs1_generation_started": true,
+    "P_fs1_first_model_request_verified": false
   },
   "historical_active_tracks": [
     {
@@ -739,12 +743,15 @@
     },
     {
       "id": "P-consumption-successor",
-      "resource": "CPU_EXTERNAL_API",
+      "resource": "CPU_AND_NPU_A",
       "owner": "Sol CLI",
-      "status": "CPU_admitted_teacher_unique_request_HTTP200_streaming",
+      "status": "generation_container_launched_first_model_request_pending",
       "NPU_started": false,
       "depends_on": [],
-      "blocks_NPU": false
+      "blocks_NPU": false,
+      "NPU_launch_started": true,
+      "cards": 4,
+      "instances": 1
     }
   ],
   "round6_teacher_feedback": {
@@ -799,14 +806,21 @@
     "full_reports_main_accepted": true
   },
   "p_consumption_successor": {
-    "status": "CPU_admitted_teacher_streaming",
+    "status": "generation_container_launched_first_model_request_pending",
     "candidate": "V_fixed_supply_fs0_to1_only",
     "n": 1080,
     "CPU_admission_seconds": 494.49,
     "NPU_started": false,
-    "teacher": "ACE_inspired_mechanism_review_one_existing_config_or_DECLINE",
+    "teacher": "complete_PROPOSE_existing_config_main_approved_one_run_not_promotion",
     "test_used": false,
-    "duplicate_preparation_required": false
+    "duplicate_preparation_required": false,
+    "NPU_launch_started": true,
+    "launched_at": "2026-11-08T23:32:19.04926311Z",
+    "teacher_seconds": 301.21930459002033,
+    "teacher_input_tokens": 32308,
+    "teacher_output_tokens_including_reasoning": 25607,
+    "teacher_reasoning_tokens": 21336,
+    "teacher_total_tokens": 57915
   },
   "joint_duty_proposal": {
     "status": "CLI_started_implementation",
