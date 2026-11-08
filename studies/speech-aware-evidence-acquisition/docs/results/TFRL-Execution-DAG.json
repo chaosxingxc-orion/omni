@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T06:32:48.090463+00:00",
+  "updated_at_utc": "2026-11-08T06:36:21.176946+00:00",
   "current_stage": "P",
   "instruction": "P独立多轮→冻结P优化S→冻结P/S优化D→系统优化；同阶段候选多实例并行。",
   "resources": {
@@ -1569,9 +1569,69 @@
       "id": "P-consumption-gepa-teacher",
       "resource": "CPU_EXTERNAL_TEACHER",
       "depends_on": [],
-      "status": "request_live_headers_sse",
+      "status": "terminal_200_stop_three_proposals_one_accepted_two_held",
       "evidence": "six full1080 runs plus 22 representative cases",
       "blocks_npu": false
+    },
+    {
+      "id": "P-gepa-behavior-A-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned_not_yet_verified_ready",
+      "rows": 1080,
+      "parent": "original complete coverage supply, same window",
+      "changed_component": "opening_instruction_only"
+    },
+    {
+      "id": "P-gepa-behavior-A-evaluate",
+      "resource": "NPU_A_TP4",
+      "depends_on": [
+        "P-gepa-behavior-A-prepare"
+      ],
+      "status": "planned_after_current_lane_release",
+      "rows": 1080,
+      "parent": "original complete coverage supply, same window",
+      "changed_component": "opening_instruction_only"
+    },
+    {
+      "id": "P-gepa-behavior-B-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned_not_yet_verified_ready",
+      "rows": 1080,
+      "parent": "original complete coverage supply, same window",
+      "changed_component": "opening_instruction_only"
+    },
+    {
+      "id": "P-gepa-behavior-B-evaluate",
+      "resource": "NPU_B_TP4",
+      "depends_on": [
+        "P-gepa-behavior-B-prepare"
+      ],
+      "status": "planned_after_current_lane_release",
+      "rows": 1080,
+      "parent": "original complete coverage supply, same window",
+      "changed_component": "opening_instruction_only"
+    },
+    {
+      "id": "P-gepa-behavior-C-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "assigned_not_yet_verified_ready",
+      "rows": 1080,
+      "parent": "original complete coverage supply, same window",
+      "changed_component": "opening_instruction_only"
+    },
+    {
+      "id": "P-gepa-behavior-C-evaluate",
+      "resource": "NPU_C_TP4",
+      "depends_on": [
+        "P-gepa-behavior-C-prepare"
+      ],
+      "status": "planned_after_current_lane_release",
+      "rows": 1080,
+      "parent": "original complete coverage supply, same window",
+      "changed_component": "opening_instruction_only"
     }
   ],
   "round_policy": {
@@ -1604,7 +1664,7 @@
     "A": "control7513 actual generation container running; boundary ready",
     "B": "rotate complete963/1080 verified; selcontrol actual generation container running; boundary/hub queued",
     "C": "control7513 running with real response; boundary CPU ready queued",
-    "CPU": "GEPA consumption teacher live on local host, bidirectional/LCO independent, no new dense parameter search",
+    "CPU": "GEPA teacher complete; one exact behavior-first template accepted for preparation, two held; bidirectional/LCO independent",
     "polling": "600 seconds or terminal signals",
     "utilization": "no fresh AI Core measurement, no full-utilization claim"
   },
