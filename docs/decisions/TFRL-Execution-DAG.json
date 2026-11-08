@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T18:41:30.336736+00:00",
+  "updated_at_utc": "2026-11-08T18:53:25.927481+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -491,7 +491,7 @@
       "HTTP_seconds_per_sample": 0.3924462962962963
     },
     "P_thinking_control": {
-      "state": "generation_running_first64_responses_owner_verified_checkpoint33_main_snapshot",
+      "state": "complete_main_raw_and_wire_verified_not_promoted",
       "control": "A_original8554_Q50D5_prompt_zero_examples",
       "change": "thinking_enabled_with_sufficient_budget",
       "rows": 1080,
@@ -508,9 +508,18 @@
       "answer_reserve_tokens": 128,
       "max_output_tokens": 3200,
       "started_utc": "2026-11-08T17:12:35Z",
-      "completed_checkpoint_snapshot": 33,
+      "completed_checkpoint_snapshot": 1080,
       "first_four_valid": true,
-      "first64_reasoning_budget_forced_close": true
+      "first64_reasoning_budget_forced_close": true,
+      "top3": 1024,
+      "top1": 925,
+      "repair": 35,
+      "regression": 12,
+      "valid": 1080,
+      "HTTP_window_seconds": 5207.57288011,
+      "HTTP_seconds_per_sample": 4.82182674084,
+      "forced_close": 1007,
+      "reasoning_tokens": 3307884
     },
     "second_TP4_binding": {
       "state": "CPU_stage_prepare_complete_admission_container_running_launcher_review_pending_no_model_POST",
@@ -528,7 +537,7 @@
       "blocks_T": false
     },
     "recall_minimum_growth": {
-      "state": "seed724_frozen_main_independent_recall_audit_completed_incremental_growth_rework_active",
+      "state": "seed59_growth68_complete_bundle_rejected_engineering_returned_for_completion",
       "resource": "CPU",
       "retain_all4451": false,
       "development_feedback_for_selection": true,
@@ -542,18 +551,18 @@
         "P_regression_report",
         "second_instance_binding"
       ],
-      "seed_size": 724,
+      "seed_size": 59,
       "seed_Q50_question": {
-        "fit": 584,
-        "valid": 1039,
-        "FoldA": 1049
+        "fit": 594,
+        "valid": 1049,
+        "FoldA": 1058
       },
       "seed_Q50D5_union": {
-        "fit": 594,
-        "valid": 1043,
-        "FoldA": 1057
+        "fit": 601,
+        "valid": 1059,
+        "FoldA": 1062
       },
-      "accepted_insertions_confirmed": 0
+      "accepted_insertions_confirmed": 9
     }
   },
   "minimum_seed_progress": {
@@ -564,10 +573,10 @@
     "seed_FoldA_Q15_union": 1002,
     "seed_FoldA_Q50_question": 1058,
     "seed_FoldA_Q50_union": 1062,
-    "status": "growth68_complete_compensated_successor_queued",
+    "status": "growth68_bundle_rejected_same_engineering_role_rework_running",
     "NPU_calls": 0,
     "final_size": 68,
-    "accepted_additions": 6,
+    "accepted_additions": 9,
     "FoldA_Q15_question": 971,
     "FoldA_Q15_union": 1016,
     "FoldA_Q50_question": 1070,
@@ -602,5 +611,18 @@
       "strict_single_add_and_delete_fail_but_joint_succeeds_actions": 1,
       "NPU_calls": 0
     }
+  },
+  "compensated_growth": {
+    "resource": "CPU",
+    "state": "first_path_rejected_rework_subprocess_started",
+    "accepted_new_banks": 0,
+    "retained_size": 68,
+    "Q15_repair": 50,
+    "Q15_regression": 12,
+    "Q50_repair": 5,
+    "Q50_regression": 5,
+    "wall_seconds_rejected_path": 312.95534919,
+    "previous_cycle_bug_seconds": 287.606,
+    "TEST_tuning": false
   }
 }
