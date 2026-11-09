@@ -1,21 +1,21 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T01:07:17.297430+00:00",
-  "current_stage": "retrieval_minimum_then_development_growth",
-  "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
+  "updated_at_utc": "2026-11-09T01:26:17.783233+00:00",
+  "current_stage": "locked133_residual13_quality_audit_then_P_consumption",
+  "instruction": "User locks133 KB and stops minimization. First audit13 missed samples; exclude confirmed annotation defects or intrinsic insufficiency, retain system errors and original denominators.",
   "resources": {
     "inference_instances": 2,
     "cards_per_instance": 4,
     "max_codex_cli": 3,
     "monitor_interval_seconds": 600,
     "total_authorized_cards": 8,
-    "active_scientific_NPU_jobs": 1,
-    "active_scientific_NPU_cards": 4,
+    "active_scientific_NPU_jobs": 2,
+    "active_scientific_NPU_cards": 8,
     "idle_cards": null,
-    "resource_scope": "A container started; first response pending; B teacher running. No measured utilization proof.",
-    "allocated_jobs": 1,
-    "allocated_cards": 4
+    "resource_scope": "A actual response and B actual request; assigned resources do not prove AIcore saturation",
+    "allocated_jobs": 2,
+    "allocated_cards": 8
   },
   "nodes": [
     {
@@ -535,18 +535,9 @@
   },
   "updated_at": "2026-11-08T22:39:57.758969+00:00",
   "minimum_seed_growth_policy": {
-    "fixed_size_target": null,
-    "seed_lower_bound": 59,
-    "current_candidate_size": 74,
-    "objective": "fixed_TopK_label_coverage_and_stability",
-    "seed_members_immutable": false,
-    "TEST_tuning": false,
-    "next": "new74_profile_and_causal_minimal_replacement_diagnostics",
-    "acceptance_objectives": [
-      "zero_regressions_and_Q15_gain",
-      "zero_regressions_and_strictly_smaller_bank"
-    ],
-    "fixed_size_floor": false
+    "status": "STOPPED_BY_USER_LOCK133",
+    "resume_automatically": false,
+    "history_preserved": true
   },
   "group_policy_round5_formal_run": {
     "state": "complete_main_full_hitsets_recount_passed",
@@ -682,16 +673,15 @@
     "http_seconds_per_row": 5.465301855583352
   },
   "current_snapshot": {
-    "recall_bank_size": 76,
-    "initial_class_covered_seed_size": 59,
-    "size_floor": false,
-    "FoldA_Q15_question_hits": 993,
-    "FoldA_Q15_D5_union_hits": 1027,
-    "historical133_Q15_D5_union_hits": 1067,
+    "operating_bank_size": 133,
+    "minimization_enabled": false,
+    "bank_selected_file_sha256": "784d1fa5fe29935833f051538f678c22dc1536431e0e8e005ef0c18dd13cbfda",
+    "FoldA_Q15_D5_union_hits": 1067,
     "denominator": 1080,
-    "recall_next": "safe76 teacher uniquely sent; no new bank accepted",
-    "A": "container started, first response pending",
-    "B": "CPU admitted1080, teacher running; not launched"
+    "residual13_audit": "in_progress_no_exclusions_applied_yet",
+    "A": "first_actual_response_verified",
+    "B": "actual_HTTP_request_captured_first_response_pending",
+    "historical79": "archived_not_operating_baseline"
   },
   "historical_active_tracks": [
     {
@@ -725,9 +715,9 @@
     }
   ],
   "active_tracks": [
-    "CPU recall safe76 teacher",
-    "NPU A fs1 plus thinking launched",
-    "CPU B exclusion check teacher; admission complete"
+    "CPU fixed133 residual13 quality audit and confirmed exclusion view",
+    "NPU A fewshot+thinking full1080",
+    "NPU B exclusion-check template full1080"
   ],
   "round6_teacher_feedback": {
     "resource": "CPU_local",
@@ -941,7 +931,7 @@
     "NPU_started": false
   },
   "recall76_safe_teacher": {
-    "status": "unique_request_dispatched",
+    "status": "complete_76_to79_then_prune0_archived",
     "request_sha256": "c26907ecc6c4fc005dca0896d341d53ca6629c71ce1f8cc2c74e8a26721a0215",
     "safe_single_candidates": 16,
     "new_accepted_actions": 0
