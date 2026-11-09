@@ -1,0 +1,14 @@
+{
+  "schema": "logical-seed-attempt-map-v1",
+  "purpose": "Use the confirmed pre-contact seed03 retry without relabelling the original failed attempt.",
+  "logical_seed_to_task": {
+    "2026110903": "grpo-fewshot-seed2026110903-retry2"
+  },
+  "evidence": {
+    "original_task": "grpo-fewshot-seed2026110903",
+    "original_status": "blocked",
+    "original_reason": "launcher container-name conflict before model contact",
+    "retry_task": "grpo-fewshot-seed2026110903-retry2",
+    "acceptance": "retry task must independently reach COMPLETE with unknown=0 and an integrity-checked archive"
+  }
+}

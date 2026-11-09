@@ -1,0 +1,21 @@
+{
+  "schema": "s-tfgrpo-bounded-operations-v1",
+  "parent_version": "prepared-v5-dynamic/single_intent_fewshot",
+  "no_business_content_parameters": true,
+  "operations": {
+    "compare_evidence_for_competing_roles": {
+      "mechanism_family": "candidate_role_evidence_comparison",
+      "instruction": "When a heard mention could fill more than one supplied slot role, compare the relation expressed in the audio with each supplied binding cue before assigning it. Keep an assignment only when that relation supports the role; do not choose a role merely because its description contains a matching word."
+    },
+    "separate_example_structure_from_values": {
+      "mechanism_family": "example_value_interference",
+      "instruction": "After using a TRAIN demonstration to understand the output structure, check each proposed entity independently against the current audio and its supplied binding cue. A value occurring in a demonstration supplies no evidence that this value occurred in the current audio."
+    },
+    "preserve_relational_direction": {
+      "mechanism_family": "relational_role_direction",
+      "instruction": "For mentions whose supplied roles express different sides of a relation, preserve the direction expressed in the current audio. Assign each mention using its own local relation to the requested operation, and do not exchange roles because the mentions have similar surface forms."
+    }
+  },
+  "preexisting_redundant_operations": ["separate_example_structure_from_values"],
+  "admission": "actual same-policy complete group feedback must support a novel mechanism and counterexample; whitelist alone is not efficacy"
+}

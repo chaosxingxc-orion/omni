@@ -1,32 +1,27 @@
-<!-- rolling-four-lane-report-v1 -->
+# 四路持续实验队列
 
-四lane滚动执行中；更新时间 2026-11-09 19:56:31 UTC。唯一窗口 2026-11-09T16:16:20.648141+00:00 至 2026-11-10T04:16:20.648141+00:00，不重置，到期停止准入并drain在途。
+更新时间：2026-11-10T05:05:52+08:00
 
-实际driver PID 2352894（live=True），四worker状态 {'lane-A': True, 'lane-B': True, 'lane-C': True, 'lane-D': True}。原C/D保持在途，不重跑。16卡 / 4实例 / TP4；四路有任务不代表AIcore满算力。
+**固定窗口：2026-11-10T04:10:52+08:00 至 2026-11-10T16:10:52+08:00。** 到期停止新准入，在途请求排空；不再次重置窗口。
 
-|lane|task|分支完成/总量|整样本完成/总量|秒/分支|估计剩余h|ready / CPU待处理|running快照|快照epoch|
-|---|---|---|---|---|---|---|---|---|
-|A|grpo-fewshot-seed2026110901|859/1635|282/545|4.442|0.96|4 / 0|64.0|1794254196.754594|
-|B|grpo-fewshot-seed2026110906|143/1635|38/545|4.285|1.78|2 / 0|64.0|1794254197.3616738|
-|C|compact-json-v1|1267/1635|414/545|4.317|0.44|5 / 0|64.0|1794254082.9818277|
-|D|grpo-fewshot-seed2026110904|324/1635|101/545|4.578|1.67|4 / 0|64.0|1794254083.6120553|
+四实例、每实例 TP4，共16卡。NPU任务独立接续；CPU提前准备输入、预算和远端文件，评分、归档、教师分析异步执行。
 
-ready 15，估计 46.03 lane h；在途余量估计 6.89 lane h，合四路约 13.23 h。窗口剩余 8.33 h。CPU待处理 0 项，仅预算验收后才能计ready；最短lane reserve 2 ready + 0 CPU待处理。尚未完成或证明12h覆盖；时长为估计，不能当承诺。
+|路|实验|完成整样本|完成分支|秒/分支|剩余分钟|服务 running / waiting|
+|---|---|---:|---:|---:|---:|---:|
+|A|grpo-fewshot-seed2026110905|35/545|132/1635|4.57|114|64.0 / 0.0|
+|B|grpo-fewshot-seed2026110906|399/545|1219/1635|3.93|27|64.0 / 0.0|
+|C|grpo-fewshot-seed2026110907|150/545|472/1635|3.83|74|64.0 / 0.0|
+|D|grpo-fewshot-seed2026110904|437/545|1338/1635|4.23|21|64.0 / 0.0|
 
-ready时长范围 46.03–49.16 lane h（实测各lane速度，跨策略/96后继仍有不确定性），最快估计见上。
+待执行 16 项、40,299 分支；在途剩余 3,379 分支。按每分支3/4/5秒，四路容量分别估计 9.10/12.13/15.17 小时；窗口剩余 11.08 小时。吞吐加速会更快消耗库存，容量估计不能证明未来连续满载。
 
-A 容器 ebe9b17c2292e9d2bbbcaf13b5405147938c5557d72714e729a32b253df2ec16，PID 515455，回执 delivery/s-single-intent-execution-v1/rolling-state/lanes/A-CURRENT.json；next staged=True。
+最新16卡瞬时AI Core：[17, 34, 55, 6, 16, 64, 6, 52, 57, 7, 13, 42, 52, 6, 11, 46]；平均 30.25%。已有接续间隙，未证明持续80%以上，也未完成12小时验收。
 
-B 容器 e5353ebbaa5240b26f0670d5031cf2a9f3d7b4995a0e00e265ae00a1fbeb6c39，PID 1751289，回执 delivery/s-single-intent-execution-v1/rolling-state/lanes/B-CURRENT.json；next staged=False。
+## 接续与学习
 
-C 容器 1f4c0fcad6ad5a2c15babc021b75510d95c6d3c98f580673307795a26294724b，PID 3147625，回执 delivery/s-single-intent-execution-v1/rolling-state/lanes/C-CURRENT.json；next staged=True。
-
-D 容器 e21bdeed7dccc91f96add9aedeb3fb1e48a1361ba8821fe38b8f27c248b16e27，PID 3451859，回执 delivery/s-single-intent-execution-v1/rolling-state/lanes/D-CURRENT.json；next staged=True。
-
-当前快照已观察tokens 16,592,803、卡时 12.646；未含所有历史失败/CPU总成本，金额未知。
-
-另有0个已固定镜像预算的条件CPU后备，共0分支，尚未准入，不计ready；fresh容量不足时自动发布。
-
-执行状态、launch回执、历史成本在 rolling-state/；READY-TASKS只由producer写。CPU评分/归档独立接续；unknown不重发，known failure留证后需新attempt。typed/strict/official并报，all/eligible/hold/evaluation单列并隔离教师输入；货币成本未知，已用tokens/card_hours见各lane快照。
-
-detached进程 driver=2352894, resource=2334994, group_collector=2338925, producer_continuation=2324942, producer_paired=2322485, producer_Svalid=2335551。固定镜像CPU评分集成回放PASS见 rolling-state/SCORE-EVALUATION-ISOLATION.json（工程fixture，非科学成绩）。资源证据见 rolling-state/RESOURCE-LATEST.json。公开push由主线程。
+- 当前固定545真实样本、P Top3共1635分支；八种子组保持相同策略与预算，不扩种子填时长。
+- seed03明确的调用前失败保留；retry2按显式映射收集，要求相同seed/config/pins、完整终态且unknown=0。
+- 剩余两个组成员优先执行，完整组反馈后由本机外部教师提出有界策略；其他实例继续独立TRAIN任务。
+- CPU采用prepare_plan.py --plan，复用已发布输入；后续优先运行真实根因策略，避免重复基线占位。
+- S_valid仅独立评价，禁止进入教师调优。两项角色提示探针是主智能体假设，并非已验证教师收益。
+- 每600秒或明确终态更新；公开页面原位刷新。当前tokens仅为各路快照，全部历史失败成本另存，金额未知。

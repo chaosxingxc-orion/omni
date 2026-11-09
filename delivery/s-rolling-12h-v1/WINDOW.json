@@ -1,0 +1,13 @@
+{
+  "start_epoch": 1794255052.5882633,
+  "end_epoch": 1794298252.5882633,
+  "start_utc": "2026-11-09T20:10:52.588263+00:00",
+  "end_utc": "2026-11-10T08:10:52.588263+00:00",
+  "duration_seconds": 43200,
+  "stop_policy": "stop admitting new jobs at deadline; drain already admitted jobs",
+  "extension_of": {
+    "previous_start_epoch": 1794240980.648141,
+    "previous_end_epoch": 1794284180.648141,
+    "reason": "continuous 12-hour rolling coverage from current runtime"
+  }
+}

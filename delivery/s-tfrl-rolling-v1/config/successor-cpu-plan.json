@@ -1,0 +1,27 @@
+{
+  "schema": "configured-cpu-plan-v1",
+  "cpu_workers": 2,
+  "receipt": "delivery/s-tfrl-rolling-v1/CPU-PLAN-RECEIPT.json",
+  "tasks": [
+    {
+      "task_id": "candidate-role-evidence-v1",
+      "prepared": "delivery/s-tfrl-rolling-v1/candidates/candidate-role-evidence-v1",
+      "config": "delivery/s-tfrl-rolling-v1/candidates/candidate-role-evidence-v1/single_intent_fewshot/native-UNBOUND.json",
+      "preferred_lane": "C",
+      "parent_version": "prepared-v5-dynamic/single_intent_fewshot",
+      "method": "single_mechanism_role_evidence_instruction",
+      "purpose": "same545 causal probe; main-agent hypothesis, not teacher-derived update",
+      "estimated_seconds": 11000
+    },
+    {
+      "task_id": "relational-direction-v1",
+      "prepared": "delivery/s-tfrl-rolling-v1/candidates/relational-direction-v1",
+      "config": "delivery/s-tfrl-rolling-v1/candidates/relational-direction-v1/single_intent_fewshot/native-UNBOUND.json",
+      "preferred_lane": "D",
+      "parent_version": "prepared-v5-dynamic/single_intent_fewshot",
+      "method": "single_mechanism_role_evidence_instruction",
+      "purpose": "same545 causal probe; main-agent hypothesis, not teacher-derived update",
+      "estimated_seconds": 11000
+    }
+  ]
+}

@@ -1,132 +1,130 @@
 {
-  "schema": "s-rolling-12h-runtime-receipt-v5",
-  "at": 1794254223.993126,
+  "schema": "public-rolling-aggregate-v2",
+  "generated_at": "2026-11-10T05:05:52+08:00",
   "window": {
-    "start_epoch": 1794240980.648141,
-    "end_epoch": 1794284180.648141,
-    "start_utc": "2026-11-09T16:16:20.648141+00:00",
-    "end_utc": "2026-11-10T04:16:20.648141+00:00",
-    "duration_seconds": 43200,
-    "stop_policy": "stop admitting new jobs at deadline; drain already admitted jobs"
+    "start": "2026-11-10T04:10:52+08:00",
+    "end": "2026-11-10T16:10:52+08:00",
+    "duration_hours": 12,
+    "admission_policy": "close at deadline; drain inflight"
   },
-  "driver": {
-    "pid": 2352894,
-    "ppid": 1,
-    "at": 1794252926.830536,
-    "boot": "cce12053-8db5-4a8c-a831-414c574f60df",
-    "window": {
-      "start_epoch": 1794240980.648141,
-      "end_epoch": 1794284180.648141,
-      "start_utc": "2026-11-09T16:16:20.648141+00:00",
-      "end_utc": "2026-11-10T04:16:20.648141+00:00",
-      "duration_seconds": 43200,
-      "stop_policy": "stop admitting new jobs at deadline; drain already admitted jobs"
-    },
-    "monitor_seconds": 600
-  },
+  "cards": 16,
+  "instances": 4,
+  "TP": 4,
   "lanes": {
     "A": {
-      "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110901",
-      "attempt": "v1",
-      "completed_branches": 859,
-      "total_branches": 1635,
-      "completed_samples": 282,
+      "task": "grpo-fewshot-seed2026110905",
+      "state": "running",
+      "snapshot_at": 1794257894.5205908,
+      "completed_samples": 35,
       "total_samples": 545,
-      "seconds_per_branch": 4.442391601236097,
-      "inflight_or_unknown": 64,
-      "scheduler": {
-        "running": 64.0,
-        "waiting": 0.0
-      },
-      "terminal": false,
-      "current_status": "running",
-      "cards": [
-        0,
-        1,
-        2,
-        3
-      ]
+      "completed_branches": 132,
+      "total_branches": 1635,
+      "seconds_per_branch": 4.5686151656237515,
+      "remaining_seconds": 6866.628593932499,
+      "invalid": 3,
+      "tokens": 682677,
+      "concurrency": 64,
+      "cards": 4,
+      "client_inflight_or_unknown": 64,
+      "server_running": 64.0,
+      "server_waiting": 0.0
     },
     "B": {
-      "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110906",
-      "attempt": "v1",
-      "completed_branches": 143,
-      "total_branches": 1635,
-      "completed_samples": 38,
+      "task": "grpo-fewshot-seed2026110906",
+      "state": "running",
+      "snapshot_at": 1794258372.0637376,
+      "completed_samples": 399,
       "total_samples": 545,
-      "seconds_per_branch": 4.285444197954831,
-      "inflight_or_unknown": 64,
-      "scheduler": {
-        "running": 64.0,
-        "waiting": 0.0
-      },
-      "terminal": false,
-      "current_status": "running",
-      "cards": [
-        4,
-        5,
-        6,
-        7
-      ]
+      "completed_branches": 1219,
+      "total_branches": 1635,
+      "seconds_per_branch": 3.9274163756632627,
+      "remaining_seconds": 1633.8052122759173,
+      "invalid": 16,
+      "tokens": 7522330,
+      "concurrency": 64,
+      "cards": 4,
+      "client_inflight_or_unknown": 64,
+      "server_running": 64.0,
+      "server_waiting": 0.0
     },
     "C": {
-      "task": "S-ROLLING-COMPACT-JSON-V1",
-      "attempt": "v1",
-      "completed_branches": 1267,
-      "total_branches": 1635,
-      "completed_samples": 414,
+      "task": "grpo-fewshot-seed2026110907",
+      "state": "running",
+      "snapshot_at": 1794257670.5672576,
+      "completed_samples": 150,
       "total_samples": 545,
-      "seconds_per_branch": 4.316894399527028,
-      "inflight_or_unknown": 64,
-      "scheduler": {
-        "running": 64.0,
-        "waiting": 0.0
-      },
-      "terminal": false,
-      "current_status": "running",
-      "cards": [
-        0,
-        1,
-        2,
-        3
-      ]
+      "completed_branches": 472,
+      "total_branches": 1635,
+      "seconds_per_branch": 3.8303508253420815,
+      "remaining_seconds": 4454.698009872841,
+      "invalid": 6,
+      "tokens": 2740189,
+      "concurrency": 64,
+      "cards": 4,
+      "client_inflight_or_unknown": 64,
+      "server_running": 64.0,
+      "server_waiting": 0.0
     },
     "D": {
-      "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110904",
-      "attempt": "v1",
-      "completed_branches": 324,
-      "total_branches": 1635,
-      "completed_samples": 101,
+      "task": "grpo-fewshot-seed2026110904",
+      "state": "running",
+      "snapshot_at": 1794258254.5702991,
+      "completed_samples": 437,
       "total_samples": 545,
-      "seconds_per_branch": 4.577624860369129,
-      "inflight_or_unknown": 64,
-      "scheduler": {
-        "running": 64.0,
-        "waiting": 0.0
-      },
-      "terminal": false,
-      "current_status": "running",
-      "cards": [
-        4,
-        5,
-        6,
-        7
-      ]
+      "completed_branches": 1338,
+      "total_branches": 1635,
+      "seconds_per_branch": 4.225790913329531,
+      "remaining_seconds": 1255.0599012588707,
+      "invalid": 18,
+      "tokens": 8500658,
+      "concurrency": 64,
+      "cards": 4,
+      "client_inflight_or_unknown": 64,
+      "server_running": 64.0,
+      "server_waiting": 0.0
     }
   },
-  "ready_tasks": 15,
-  "ready_branches": 38664,
-  "cpu_preparing": 0,
-  "estimated_queue_wall_hours": 13.229114398704134,
-  "remaining_window_hours": 8.321293059256341,
-  "coverage_12h": "NOT_PROVEN",
-  "ai_core_target": "monitor; current snapshots include cards below 80%, no stable >=80% proof",
-  "no_resend": [
-    "train-s_fit-single-fewshot-v1-retry2"
-  ],
-  "notes": [
-    "A/B/C/D authoritative snapshots refreshed directly from fixed-image read-only host_driver snapshot.",
-    "B seed06 has 143/1635 branches and 64 in-flight; D seed04 has 324/1635.",
-    "CPU preparation remains asynchronous and complete; S_valid tasks are evaluation_only and teacher_update_allowed=false."
-  ]
+  "queue": {
+    "ready_tasks": 16,
+    "ready_branches": 40299,
+    "running_residual_branches": 3379,
+    "remaining_window_hours": 11.083390618628925,
+    "estimated_wall_hours_by_seconds_per_branch": {
+      "3": 9.099583333333333,
+      "4": 12.132777777777777,
+      "5": 15.165972222222223
+    },
+    "estimate_is_guarantee": false,
+    "cpu_pending": 0,
+    "preference_is_exclusive_reservation": false
+  },
+  "resource": {
+    "snapshot_at": 1794258310.2233534,
+    "ai_core_percent": [
+      17,
+      34,
+      55,
+      6,
+      16,
+      64,
+      6,
+      52,
+      57,
+      7,
+      13,
+      42,
+      52,
+      6,
+      11,
+      46
+    ],
+    "mean_ai_core_percent": 30.25,
+    "continuous_80_percent_proven": false
+  },
+  "coverage_12h": "NOT_YET_PROVEN",
+  "observed_handoff_gaps": true,
+  "monitoring_seconds": 600,
+  "cpu_and_npu_async": true,
+  "unknown_request_replay": false,
+  "cost_scope": "tokens reflect current lane snapshots only; historical failures preserved privately; currency unknown"
 }

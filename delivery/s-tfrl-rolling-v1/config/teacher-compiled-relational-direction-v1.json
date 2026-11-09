@@ -1,0 +1,16 @@
+{
+  "admission": "ACCEPT_SINGLE_MECHANISM_HYPOTHESIS",
+  "target": "instruction_append",
+  "parent_version": "prepared-v5-dynamic/single_intent_fewshot",
+  "experience": {
+    "mechanism": "preserve relational direction across competing slot roles",
+    "instruction": "For mentions whose supplied roles express different sides of a relation, preserve the direction expressed in the current audio. Assign each mention using its own local relation to the requested operation, and do not exchange roles because the mentions have similar surface forms.",
+    "evidence": [
+      "delivery/s-single-semantic-comparison-v1/results/BADCASE-REPORT.md",
+      "delivery/s-tfrl-rolling-v1/config/tfgrpo-operations-v1.json"
+    ],
+    "counterevidence": "Relation direction is not identifiable for every utterance; do not force an assignment when the current audio lacks the evidence needed to distinguish roles.",
+    "falsification": "Retire after one complete paired 545-sample run if typed or strict exact does not improve, or if role swaps, invalid outputs, length failures, or unsupported slot fillers increase."
+  },
+  "provenance": "main-agent hypothesis; not an external teacher TFGRPO update"
+}

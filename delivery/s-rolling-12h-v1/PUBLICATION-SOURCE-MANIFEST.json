@@ -1,0 +1,215 @@
+{
+  "at": 1794258473.6827404,
+  "privacy_replacements": [
+    "/workspace/omni",
+    "/srv/omni-local-state",
+    "/mnt/cephfs/omni"
+  ],
+  "files": [
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/scheduler.py",
+      "runtime_sha256": "5098335b380644ba9340c4bd633db3064945b65ce1dbbd31d9d6d1096db9009c",
+      "publication_sha256": "911cbee5ab8c22fa6346d2b1a0e3032a494a7b66ce6bd2472dbccb0df9c35abe"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/host_driver.py",
+      "runtime_sha256": "f5f0df5fe5b2ba87ffeb6ffd51b1cd4edb12e19c312f7153665b8a7a29e24280",
+      "publication_sha256": "87a1a7b1a4749d9916347d0518285676c00577bc502569d6af4cbd88e1e01556"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/score_rolling.py",
+      "runtime_sha256": "d97a46143b8969cad300b405108be7c844f6f211bc2125e2f1f08d4e64fb3e04",
+      "publication_sha256": "d97a46143b8969cad300b405108be7c844f6f211bc2125e2f1f08d4e64fb3e04"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/official_rolling.py",
+      "runtime_sha256": "9bb3b1676f41d4a9db89bc01667f4610e57d1ebc5eb1b77b553e39c64141ae3c",
+      "publication_sha256": "9bb3b1676f41d4a9db89bc01667f4610e57d1ebc5eb1b77b553e39c64141ae3c"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/train_runtime.py",
+      "runtime_sha256": "9e6e6eaead9831d1e03e291abec5e44d9eaf315bf0a878aff6ebc915b5627890",
+      "publication_sha256": "9e6e6eaead9831d1e03e291abec5e44d9eaf315bf0a878aff6ebc915b5627890"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/bind_train.py",
+      "runtime_sha256": "172914488af0117760f54be174f4ebcf5ac967a98225783044870faaddb0be04",
+      "publication_sha256": "172914488af0117760f54be174f4ebcf5ac967a98225783044870faaddb0be04"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/group_collector.py",
+      "runtime_sha256": "511611d98e15ce3a08d2bc04af346a452327dbc9e97ca3c986772e072248980e",
+      "publication_sha256": "d614e5eec959b2e3f437e3434a6213ac8f2d4a09483dd09c3f0ab14114e5d0f3"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/resource_monitor.py",
+      "runtime_sha256": "2409ee42b44119a91f2570360d7166ab7b0351ba799dbeb2b51b929869f54a68",
+      "publication_sha256": "2409ee42b44119a91f2570360d7166ab7b0351ba799dbeb2b51b929869f54a68"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/report_monitor.py",
+      "runtime_sha256": "e56bf7cc0355700a85922dfa60595b10e87c318adbb130bbd827c402a06859fb",
+      "publication_sha256": "e56bf7cc0355700a85922dfa60595b10e87c318adbb130bbd827c402a06859fb"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/workspace_reclaimer.py",
+      "runtime_sha256": "e4e951c841915e32c355d5d34fcc1c720037ffbc99380854ac42affcdc368a83",
+      "publication_sha256": "e4e951c841915e32c355d5d34fcc1c720037ffbc99380854ac42affcdc368a83"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/train-runtime-v1/run_s_native.py",
+      "runtime_sha256": "e910bec32c5bc2f30c35f173f836ead5f2c75681afb9c5d8222268f57a776217",
+      "publication_sha256": "e910bec32c5bc2f30c35f173f836ead5f2c75681afb9c5d8222268f57a776217"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/train-runtime-v1/native_resources.py",
+      "runtime_sha256": "2a7dbec17a2e718b99e4929a92d5390687b2df1ab9c7fe18d198731e0998b14c",
+      "publication_sha256": "2a7dbec17a2e718b99e4929a92d5390687b2df1ab9c7fe18d198731e0998b14c"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/prepare_plan.py",
+      "runtime_sha256": "13e0d0043035fb1ebc94cbfd839a4ce4e640230db75521a2e232d5aea805139c",
+      "publication_sha256": "13e0d0043035fb1ebc94cbfd839a4ce4e640230db75521a2e232d5aea805139c"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/prepare_two_followups.py",
+      "runtime_sha256": "8313671c2ab00adadb099257dbf7b01e880118a427c21562fcd2d12b9b021394",
+      "publication_sha256": "8313671c2ab00adadb099257dbf7b01e880118a427c21562fcd2d12b9b021394"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/verify_two_followups.py",
+      "runtime_sha256": "eb65835af7f65b3b367a93848208acf92f5d1644b4ced5042e823a744c74c1ee",
+      "publication_sha256": "eb65835af7f65b3b367a93848208acf92f5d1644b4ced5042e823a744c74c1ee"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/producer.py",
+      "runtime_sha256": "a2c6f155089125bcfff0427c05406084b369d3ed3c97fa5c56a407c0f8465d2c",
+      "publication_sha256": "d9962bf8fe574ab6bad5228764d69141ac33a0700ff42ce44d81e7de12d2bf17"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/local_prepare.py",
+      "runtime_sha256": "8c3f9cee3ac21a2f64766ea75c5cf3b4d6ea89d06bdfdb5e9054e6c1ab5aab25",
+      "publication_sha256": "8c3f9cee3ac21a2f64766ea75c5cf3b4d6ea89d06bdfdb5e9054e6c1ab5aab25"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/continuation.py",
+      "runtime_sha256": "00acda4a714a04e2c3b40e31406a072306d605de009effb8dad311af88b11fc3",
+      "publication_sha256": "00acda4a714a04e2c3b40e31406a072306d605de009effb8dad311af88b11fc3"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/prepare_followups.py",
+      "runtime_sha256": "db7bcc5865b89c8b0aafc765eefbe6c9b29ec71a83d28e1c5535e911b5a1a647",
+      "publication_sha256": "db7bcc5865b89c8b0aafc765eefbe6c9b29ec71a83d28e1c5535e911b5a1a647"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/prepare_candidates.py",
+      "runtime_sha256": "bd2c2e3b28c88280307ff545b34ab5265a2694effde5192e010fee37e78ce3c5",
+      "publication_sha256": "bd2c2e3b28c88280307ff545b34ab5265a2694effde5192e010fee37e78ce3c5"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/prepare_train.py",
+      "runtime_sha256": "8474ed9191bbabd3e8cb67afda3bff9a92fd985a3674b8118d43220b996fff9f",
+      "publication_sha256": "8474ed9191bbabd3e8cb67afda3bff9a92fd985a3674b8118d43220b996fff9f"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/prepare_train_fewshot.py",
+      "runtime_sha256": "38a5440005d09d0829a00f7d9c450636ffd96becb03278eff357841b462d0ef2",
+      "publication_sha256": "38a5440005d09d0829a00f7d9c450636ffd96becb03278eff357841b462d0ef2"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/shard_train.py",
+      "runtime_sha256": "d5821f1d57a25b3d9297e4d74d7175ddf7e3dfbddd058eef0537ed4545f1c843",
+      "publication_sha256": "d5821f1d57a25b3d9297e4d74d7175ddf7e3dfbddd058eef0537ed4545f1c843"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/verify_one.py",
+      "runtime_sha256": "6c14fb0cf59925c7da84a34c00e75da42f196a730e1070b7f9456fced59ba0d2",
+      "publication_sha256": "6c14fb0cf59925c7da84a34c00e75da42f196a730e1070b7f9456fced59ba0d2"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/run_n.py",
+      "runtime_sha256": "dfdaa3734ea9112666d0100e3fd03c678ab306c6efc8481c8b4405d0f785853d",
+      "publication_sha256": "dfdaa3734ea9112666d0100e3fd03c678ab306c6efc8481c8b4405d0f785853d"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/bind_n.py",
+      "runtime_sha256": "e9b6a19714e2c9144f1999716ea60b0fa3a3f76b4a8381b13f63dbee935a33c4",
+      "publication_sha256": "e9b6a19714e2c9144f1999716ea60b0fa3a3f76b4a8381b13f63dbee935a33c4"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/feedback_teacher.py",
+      "runtime_sha256": "c2a622b3ab2bb232434bc78e37adb578c3abe60c6bcd1ac308ddea8b1f08a5e2",
+      "publication_sha256": "c2a622b3ab2bb232434bc78e37adb578c3abe60c6bcd1ac308ddea8b1f08a5e2"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/group_feedback.py",
+      "runtime_sha256": "912d26c26e246d1c9ee1d720dd76dc89ca65a4f55f067b1c3cf73b170d44346a",
+      "publication_sha256": "912d26c26e246d1c9ee1d720dd76dc89ca65a4f55f067b1c3cf73b170d44346a"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/teacher_round.py",
+      "runtime_sha256": "4a85ea4ff0e9cc635f2ab27b9957a331957d414989430dc9fd382a6a3f6ec5f3",
+      "publication_sha256": "4a85ea4ff0e9cc635f2ab27b9957a331957d414989430dc9fd382a6a3f6ec5f3"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/report_worker.py",
+      "runtime_sha256": "d3ba8ce210f3d1f952047e74f18396df85a9cd5e886f7fdd8e0ca5a68a21cf11",
+      "publication_sha256": "d3ba8ce210f3d1f952047e74f18396df85a9cd5e886f7fdd8e0ca5a68a21cf11"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/code/svalid_reserve.py",
+      "runtime_sha256": "923bb06a05fc5db395b718d0208d7cba9026d60cbf765aa7a24c04ed4519e897",
+      "publication_sha256": "923bb06a05fc5db395b718d0208d7cba9026d60cbf765aa7a24c04ed4519e897"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/dispatch-priority.json",
+      "runtime_sha256": "4930f1374980fd652c03ef2516ada321ae2b8b0e3aac83b268e84b1a7ecc59a0",
+      "publication_sha256": "4930f1374980fd652c03ef2516ada321ae2b8b0e3aac83b268e84b1a7ecc59a0"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-state/GROUP-MEMBER-MAP.json",
+      "runtime_sha256": "bd15234e75f44129a08c7738ce547853f2eecf74eadba0648895c63c497f671d",
+      "publication_sha256": "bd15234e75f44129a08c7738ce547853f2eecf74eadba0648895c63c497f671d"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/config/successor-cpu-plan.json",
+      "runtime_sha256": "1742b906ab9f62e30347483e562a2ad22d4a0ed67993912caf75099f85e6a819",
+      "publication_sha256": "1742b906ab9f62e30347483e562a2ad22d4a0ed67993912caf75099f85e6a819"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/config/grpo-v1.json",
+      "runtime_sha256": "7e76be96aff14b0c1111cc456ab8d9a342ba70ab686a3b9d165b6c70356e3e6f",
+      "publication_sha256": "7e76be96aff14b0c1111cc456ab8d9a342ba70ab686a3b9d165b6c70356e3e6f"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/config/tfgrpo-operations-v1.json",
+      "runtime_sha256": "00b329d3b23b7c29f242a975e934ef46e75da50c861798b112743c2b32c4b870",
+      "publication_sha256": "00b329d3b23b7c29f242a975e934ef46e75da50c861798b112743c2b32c4b870"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/config/training-free-grpo-template-v1.md",
+      "runtime_sha256": "ff4f26f467a56ed51407167bcf076cd5ae2b5e85a209ca6f19c99ecc7904a610",
+      "publication_sha256": "ff4f26f467a56ed51407167bcf076cd5ae2b5e85a209ca6f19c99ecc7904a610"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/config/teacher-compiled-candidate-role-evidence-v1.json",
+      "runtime_sha256": "a1b42716358d9239c6a0589b56a517ac54a7f51e812ba83991c75a973e32e85d",
+      "publication_sha256": "a1b42716358d9239c6a0589b56a517ac54a7f51e812ba83991c75a973e32e85d"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/config/teacher-compiled-relational-direction-v1.json",
+      "runtime_sha256": "163008a8290d6563bd9b0e8e517e89c6291f8fe6ada45219fd9e9d2ba6f9e5dd",
+      "publication_sha256": "163008a8290d6563bd9b0e8e517e89c6291f8fe6ada45219fd9e9d2ba6f9e5dd"
+    },
+    {
+      "path": "delivery/s-rolling-12h-v1/WINDOW.json",
+      "runtime_sha256": "04bb16f910f2d8d99e000fcf00e2cbb7a89406f53e14ec97b94ec6fa692ce5ed",
+      "publication_sha256": "04bb16f910f2d8d99e000fcf00e2cbb7a89406f53e14ec97b94ec6fa692ce5ed"
+    },
+    {
+      "path": "delivery/s-rolling-12h-v1/code/public_status.py",
+      "runtime_sha256": "7d3a28c3360dde31fba120e0ee08f4f12b030f641223e5c98a6c15a9391a7552",
+      "publication_sha256": "7d3a28c3360dde31fba120e0ee08f4f12b030f641223e5c98a6c15a9391a7552"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "admission": "ACCEPT_SINGLE_MECHANISM_HYPOTHESIS",
+  "target": "instruction_append",
+  "parent_version": "prepared-v5-dynamic/single_intent_fewshot",
+  "experience": {
+    "mechanism": "candidate role evidence comparison for similar slots",
+    "instruction": "When a heard mention could fill more than one supplied slot role, compare the relation expressed in the audio with each supplied binding cue before assigning it. Keep an assignment only when that relation supports the role; do not choose a role merely because its description contains a matching word.",
+    "evidence": [
+      "delivery/s-single-semantic-comparison-v1/results/BADCASE-REPORT.md",
+      "delivery/s-tfrl-rolling-v1/config/tfgrpo-operations-v1.json"
+    ],
+    "counterevidence": "The current evidence is diagnostic and does not prove that every similar-slot error has this cause; regressions and samples with insufficient spoken evidence must be reported separately.",
+    "falsification": "Retire after one complete paired 545-sample run if typed or strict exact does not improve, or if relation-direction regressions, invalid outputs, length failures, or empty-filler errors increase."
+  },
+  "provenance": "main-agent hypothesis; not an external teacher TFGRPO update"
+}
