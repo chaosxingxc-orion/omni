@@ -52,3 +52,6 @@ CPU子进程提前准备原3734条TRAIN四片的推广输入，只有上述验�
 
 
 [条件实验自动准入](S-Conditional-Admission)已通过固定镜像25项测试并部署。等待真实compact545结果；当前没有提前发布训练推广任务。
+
+
+[知识消费错例结论](S-Knowledge-Consumption-Findings)：12个TRAIN具体案例已验收；当前去重草案不准入，独立ACE教师输入正在CPU准备。
