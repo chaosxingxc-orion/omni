@@ -1,8 +1,8 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T02:11:00.564641+00:00",
-  "current_stage": "145_full_supply_candidate_P_transfer_preparation",
+  "updated_at_utc": "2026-11-09T02:43:56.374289+00:00",
+  "current_stage": "P145_full_supply_transfer_OFF_and_ON_CPU_preparation",
   "instruction": "Preserve133 reference and139 intermediate;145 verified full effective FoldA supply, not P accuracy. Prepare145-only transfer1075; no extra139 NPU run or pruning.",
   "resources": {
     "inference_instances": 2,
@@ -232,36 +232,16 @@
       "regressions": 0
     },
     {
-      "id": "P145-transfer-prepare",
-      "resource": "CPU",
-      "depends_on": [
-        "recall-multiloss-compensation"
-      ],
-      "status": "same_owner_CLI_resumed145_ACK_preserving_failed139_preparation",
-      "input_count": 1075,
-      "parent": "F_133_Q15D5_fs1_OFF",
-      "intervention": "KB133_to145_only"
-    },
-    {
-      "id": "P145-transfer",
-      "resource": "NPU_A",
-      "depends_on": [
-        "P145-transfer-prepare"
-      ],
-      "status": "not_launched_requires_ready_inputs_and_lane_release",
-      "input_count": 1075
-    },
-    {
       "id": "A-fewshot-thinking",
       "resource": "NPU_A",
       "depends_on": [],
       "status": "running_confirmed_container",
       "snapshot": {
-        "at_unix": 1794189915.2859,
-        "completed": 640,
+        "at_unix": 1794192163.625085,
+        "rows": 1080,
         "total": 1080,
-        "seconds_per_row_recent": 4.701501676812768,
-        "eta_seconds": 2068.660737797618
+        "seconds_per_row_recent": 3.9849460661948264,
+        "eta_seconds": 0.0
       }
     },
     {
@@ -270,11 +250,11 @@
       "depends_on": [],
       "status": "running_confirmed_container",
       "snapshot": {
-        "at_unix": 1794190426.3399405,
-        "completed": 577,
+        "at_unix": 1794191631.128984,
+        "rows": 832,
         "total": 1080,
-        "seconds_per_row_recent": 4.77830453902956,
-        "eta_seconds": 2403.4871831318687
+        "seconds_per_row_recent": 4.706900553777814,
+        "eta_seconds": 1167.3113373368979
       }
     },
     {
@@ -283,6 +263,56 @@
       "depends_on": [],
       "status": "same_owner_readonly_analysis_requested",
       "source": "existing_logs_only_no_frequent_polling"
+    },
+    {
+      "id": "P145-transfer-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "CPU_admission_complete_main_verified",
+      "input_count": 1075
+    },
+    {
+      "id": "P145-transfer",
+      "resource": "NPU_A",
+      "depends_on": [
+        "P145-transfer-prepare"
+      ],
+      "resource_wait": "A_predecessor_terminal_and_guard_release",
+      "status": "detached_continuation_live_waiting_A_release",
+      "input_count": 1075
+    },
+    {
+      "id": "P145-ON-prepare",
+      "resource": "CPU",
+      "depends_on": [],
+      "input_source": "frozen145_OFF1075_requests",
+      "status": "assigned_same_B_CLI_no_new_inference",
+      "input_count": 1075
+    },
+    {
+      "id": "P145-ON-transfer",
+      "resource": "NPU_B",
+      "depends_on": [
+        "P145-ON-prepare"
+      ],
+      "resource_wait": "B_predecessor_terminal_and_guard_release",
+      "status": "not_ready_not_started",
+      "input_count": 1075
+    },
+    {
+      "id": "P145-paired-analysis",
+      "resource": "CPU",
+      "depends_on": [
+        "P145-transfer",
+        "P145-ON-transfer"
+      ],
+      "status": "pending_real_outputs",
+      "strata": [
+        "new_supply8",
+        "old_supply_set_changed572",
+        "old_supply_order_only68",
+        "old_supply_identical427"
+      ]
     }
   ],
   "latest_recall_revision": {
@@ -1461,9 +1491,36 @@
     }
   ],
   "active_tracks": [
-    "CPU 133 targeted8 TRAIN additions preparation; no pruning",
-    "NPU A full1080 ongoing; effective1075 postscore",
-    "NPU B full1080 ongoing; effective1075 postscore"
+    {
+      "id": "P145-OFF",
+      "resource": "CPU_then_NPU_A",
+      "status": "detached_continuation_live_waiting_A_release",
+      "rows": 1075
+    },
+    {
+      "id": "P145-ON-prepare",
+      "resource": "CPU",
+      "status": "assigned_to_existing_B_owner",
+      "rows": 1075,
+      "depends_on": [
+        "frozen145_inputs"
+      ],
+      "does_not_depend_on": [
+        "A_terminal",
+        "B_terminal",
+        "P145_OFF_results"
+      ]
+    },
+    {
+      "id": "A-fewshot-thinking",
+      "resource": "NPU_A",
+      "status": "running"
+    },
+    {
+      "id": "B-exclusion-check",
+      "resource": "NPU_B",
+      "status": "running"
+    }
   ],
   "round6_teacher_feedback": {
     "resource": "CPU_local",
@@ -1689,5 +1746,37 @@
     "learning": 50623,
     "scope": "exact_sample_ids",
     "original_preserved": true
+  },
+  "p145_successor_policy": {
+    "OFF": {
+      "KB": 145,
+      "Q": 15,
+      "D": 5,
+      "fewshot_per_label": 1,
+      "thinking": false,
+      "answer_tokens": 128,
+      "cap": 64
+    },
+    "ON": {
+      "KB": 145,
+      "Q": 15,
+      "D": 5,
+      "fewshot_per_label": 1,
+      "thinking_budget": 3072,
+      "answer_tokens": 128,
+      "cap": 64
+    },
+    "new_teacher_calls": 0,
+    "cross_instance_effects_reported": true,
+    "no_new_bank_search": true
+  },
+  "p145_OFF_continuation": {
+    "status": "systemd_process_verified_live",
+    "local_archive_and_first_response_watchers": "verified_live",
+    "inference_started": false,
+    "unique_launch": true,
+    "waits_for": "exact_predecessor_terminal_and_shared_guard",
+    "SSH_loss_does_not_stop_remote": true,
+    "read_only_archive_reconnect_seconds": 600
   }
 }
