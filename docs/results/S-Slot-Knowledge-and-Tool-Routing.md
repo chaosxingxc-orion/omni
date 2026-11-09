@@ -63,3 +63,13 @@ S是候选意图条件下、以当前语音为事实依据的槽位提取节点�
 直接读取官方固定commit `8eb16545762be97ace75334109d73824217311f1` 的 [util.py](https://github.com/pswietojanski/slurp/blob/8eb16545762be97ace75334109d73824217311f1/scripts/evaluation/util.py)、[metrics.py](https://github.com/pswietojanski/slurp/blob/8eb16545762be97ace75334109d73824217311f1/scripts/evaluation/metrics/metrics.py) 与 [distance.py](https://github.com/pswietojanski/slurp/blob/8eb16545762be97ace75334109d73824217311f1/scripts/evaluation/metrics/distance.py)。测试/开发使用同一加载和计分函数，并非测试专用语义等价评分。没有读取测试样本做调优。
 
 本机CPU公式示例（不是数据集成绩，也不是固定镜像验证）：同type、gold=five thirty am时，原样输出exact/SLU-F1均为1；输出05:30的exact为0、SLU-F1为0.5。说明“非逐字即零分”和“语义等价即满分”都不准确。原545官方条件F1与严格指标分开保留，不以修改评分证明系统收益。
+
+## 测试标注格式核实与指标调整
+
+直接核对官方固定版本test.jsonl（SHA256 `fe3449af69b42fda7163345482556066c35a80f7e552a6d67e212a0e2f0783cc`）：2974个文本样本、13078段录音，2823个实体标注全部只有span/type，没有normalized value字段。按文本实体计，time194条均不含数字字符或冒号，其中152条含本次枚举的英文数词；date420条，其中268条含today/tomorrow/yesterday/next/last/this之一。词面计数不等于逐例语义判定，但结合官方加载及计分代码证明当前官方协议没有时间/数量语义归一化评分。此次只审计标注格式，不按TEST错例修改策略。
+
+研究目标应增加系统能力指标：保留官方SLU-F1作横向对比，另报告双边、按类型归一化后的实体micro-F1与整句联合正确率，并保留严格原词指标作诊断。意图也参与端到端联合正确率；S545仍只报告条件槽位结果。解析失败率、歧义率、协议失败、重复/漏提和成本单列，不能通过丢弃不可解析样本提高分数。
+
+规范化对象是gold和prediction双方，原输出和原标注保留。数值表示应保留值、单位、目标/增量关系、否定和范围；时刻保留am/pm与时区，日期缺参考时间时保留相对语义，不能用执行当天补真值。不能确认等价时不判为等价，必要时报告保守回退与未决比例。规则以业务定义和TRAIN/DEV验证冻结，不从TEST错例拟合；所有对照重新用同版本计分，归一化分数变化不称模型收益。
+
+已有slurp_slot_normalizer.py提供R0大小写空白、R1 Whisper、R2 am/pm连接和R3 TRAIN前置词剥离。它是可复用组件而非已验收方案；尤其R3候选含to/by/in等，可能删除数量关系、时间关系，不能因TRAIN同类型出现过剩余字符串就认定语义等价。优先按类型审查并禁用未证明安全规则，再用含to/by、am/pm、next/last、否定、区间和重复提及的正反例锁定归一化边界。
