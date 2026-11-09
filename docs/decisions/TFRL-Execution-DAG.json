@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-08T23:58:58.718430+00:00",
+  "updated_at_utc": "2026-11-09T00:04:21.646801+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -1408,7 +1408,7 @@
     {
       "id": "P-fs1-root-cause-successor",
       "resource": "CPU",
-      "status": "configurable_template_draft_and_CPU_teacher_preparing",
+      "status": "teacher_HTTP200_streaming_CPU_admission_preparing",
       "NPU_started": false,
       "depends_on": [],
       "blocks_NPU": false
@@ -1513,5 +1513,16 @@
     "fs1_correct_among_Q50_residual": 5,
     "new_inference": 0,
     "sample_exclusions": 0
+  },
+  "p_example_use_successor": {
+    "status": "teacher_HTTP200_streaming_CPU_admission_preparing",
+    "parent": "F_fs1",
+    "axis": "template_only",
+    "rows_prepared": 1080,
+    "CPU_budget_pass": true,
+    "incremental_input_tokens_per_row": 92,
+    "max_context_with_output": 6081,
+    "new_NPU_launch": false,
+    "automatic_promotion": false
   }
 }
