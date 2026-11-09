@@ -1,5 +1,5 @@
 {
-  "at": 1794266911.3007045,
+  "at": 1794268211.9446695,
   "privacy_replacements": [
     "/workspace/omni",
     "/srv/omni-local-state",
@@ -208,8 +208,8 @@
     },
     {
       "path": "delivery/s-rolling-12h-v1/code/public_status.py",
-      "runtime_sha256": "3c23266b9e52a3d07ba8ef308268330a51f2d02ffa505711883b9f7e0d41efad",
-      "publication_sha256": "3c23266b9e52a3d07ba8ef308268330a51f2d02ffa505711883b9f7e0d41efad"
+      "runtime_sha256": "9886c6578a0e5a371b5d48a944311461768593ae9bb1b3847250ff6350419918",
+      "publication_sha256": "9886c6578a0e5a371b5d48a944311461768593ae9bb1b3847250ff6350419918"
     },
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/test_terminal_continuation.py",
@@ -300,6 +300,16 @@
       "path": "delivery/s-train128-config-v1/code/host_driver.py",
       "runtime_sha256": "3f738b44498a63a65ef89a20e762e2c3f891c71efca95a5c10bd679b3b74a948",
       "publication_sha256": "2afd5c6b3479c1c8a25aeb15667c90203f3680ea2211b2fd42bf857adbfecc47"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/code/collector_local.py",
+      "runtime_sha256": "c0612868d3095829935ee7a9f4800425e3add254681806501b2090261f0f3dcb",
+      "publication_sha256": "8ef749baeac376989f7acb8801fe1a65894186581be2cfb44e11a1e4c1a629d5"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/code/paired_collector_local.py",
+      "runtime_sha256": "1001c50548e6f9b3e4eaa1850d7d1629e80462eab06ef90e0d9765e2aabac76f",
+      "publication_sha256": "595f5e740a2e48b35277fefdd57b854620fcda1e805cf0d79369320bfa1ea466"
     }
   ]
 }

@@ -113,6 +113,11 @@ def render():
                   f'有效待执行分支 {capacity.get("ready_useful_policy_and_eval_branches")}；低优先级高浪费对照另列 {capacity.get("branch_counts", {}).get("deprioritized_no_examples")} 分支。有效库存加在途按3/4/5秒估计 {useful.get("3", 0):.2f}/{useful.get("4", 0):.2f}/{useful.get("5", 0):.2f} 小时，尚不足以无条件覆盖剩余窗口。此容量核算自带时间戳，不是实时保证。', '',
                   '四片compact TRAIN已完成CPU准备，共3734样本/11202分支；科学门槛未通过前不计READY。并行CPU任务正在补齐ACE小规模候选的运行物料、准备基于真实知识卡冲突的下一轮教师请求，并修复已复现的失败后接续故障。', '',
                   '知识卡全54张、402绑定及5598条合法TRAIN来源已审计；发现可选槽被绝对提取指令覆盖，以及无来源长度限制两个机制。它们是待检验因果假设。few-shot分差的高总体AUC主要重复父top1信息，当前没有足够证据部署新的选择器。', '']
+    recovery = read(ROOT / 'delivery/s-rolling-12h-v1/175-ARCHIVE-SPACE-RECOVERY.json')
+    if recovery:
+        lines += ['## 存储故障恢复', '',
+                  '旧归档进程重复打包并将二进制归档留在Docker日志，导致一台主机Docker分区耗尽。已停止三个旧归档进程，回收2430个确认成功退出的重复归档容器，可用空间恢复约570GB；原始轨迹、模型镜像和在途推理保留。C/D监测容器已恢复，未重启推理。旧脚本修正一次性终态事件、600秒重试和禁用归档日志留存，旧进程保持停用。', '',
+                  '详细结果见 [持续队列存储故障与恢复](S-Storage-And-Queue-Recovery)。', '']
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT/'TWELVE_HOUR-RUNTIME-RECEIPT.json').write_text(json.dumps(record, ensure_ascii=False, indent=2))
     (OUT/'S-Rolling-Experiment-Queue.md').write_text(chr(10).join(lines))
