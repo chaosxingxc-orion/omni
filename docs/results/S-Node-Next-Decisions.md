@@ -38,20 +38,18 @@ D→B虽micro F1略升，完整正确样本及等权样本reward下降；空gold
 
 CPU数据准备/评分/错例/教师分析继续独立执行；任务有库存不等于AI Core满算力。运行记录按600秒或终态更新。
 
+## 异步准备与教师反馈现态
 
-## 异步接续更新
+八种子中已有5组完整，seed07 typed F1为57.07%、typed exact为219/545，尚未证明超过父D的稳定净收益。C路已自动接续seed03 retry2，其他在途任务保持。
 
-compact+fewshot 已完成固定545样本/1635分支CPU验收并进入A路后继；只有两个原instruction位置变化，音频、知识卡、示例与预算不变。尚无组合推理收益。晋升要求strict/typed exact至少163/219、mean reward与micro F1不退、invalid<15且length<8。
+独立ACE知识评审已通过主审并从本机单次派发，供给6个机制代表、锁定知识卡与97条真实TRAIN支持，HTTP已接收。请求聚焦来源有据的知识卡限制修正和运行信号驱动的few-shot选择；最多3策略，尚无返回或实验收益。它与等待完整8组的TFGRPO请求独立，均不阻塞NPU。
 
-CPU子进程提前准备原3734条TRAIN四片的推广输入，只有上述验证通过且对应对照完整后准入；条件准备不计READY。教师编译按实际parent+instruction复用原任务，保留原策略和成本归属，退役策略不再准入；固定镜像16项fixture通过，CPU进程已部署。
+compact+fewshot原3734条TRAIN四片已提前CPU准备，最终交付验收尚待完成。条件门控已部署，每600秒读取本地归档；只有545组合通过预注册精度及协议门槛、四片CPU验收完成且对应TRAIN对照完整，才逐片准入。条件任务不能计入当前READY容量。
 
-已就绪库存、在途和未来有条件任务分列，不能把准备计划当成12小时保障。当前AI Core利用率仍低于目标，接续间隙如实保留。
+当前无需新的用户决策。12小时窗口不重置；队列容量按吞吐估计、持续负载按真实接续和资源记录验收，不能把任务处于running视为AI Core已达80%。
 
+545组合仅追加紧凑JSON指令；音频、知识卡、示例与预算不变。晋升要求strict/typed exact至少163/219、micro F1和mean reward不退、invalid<15且length<8。教师编译按实际parent+instruction复用原任务和成本；退役策略不准入，固定镜像16项fixture已通过。
 
-四个已完成随机轨迹的完整结果及效率根因，见 [S-Group-Preliminary-Results](S-Group-Preliminary-Results)。当前四seed均未超过父D的exact和mean reward；B无示例TRAIN长尾空白复现，未启动动态fewshot已提优先级。
-
-
-[条件实验自动准入](S-Conditional-Admission)已通过固定镜像25项测试并部署。等待真实compact545结果；当前没有提前发布训练推广任务。
-
-
-[知识消费错例结论](S-Knowledge-Consumption-Findings)：12个TRAIN具体案例已验收；当前去重草案不准入，独立ACE教师输入正在CPU准备。
+- [已完成随机轨迹结果](S-Group-Preliminary-Results)：五组描述性结果，四组配对修复/回退分析；未启动动态few-shot优先于高空白损耗对照。
+- [条件实验自动准入](S-Conditional-Admission)：固定镜像25项测试通过，后台门控等待真实结果。
+- [知识消费错例结论](S-Knowledge-Consumption-Findings)：12个TRAIN案例已验收；去重草案不准入，独立ACE请求已发出。
