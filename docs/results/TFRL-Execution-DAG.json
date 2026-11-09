@@ -735,14 +735,14 @@
     {
       "id": "recall74-growth76-prune",
       "resource": "CPU",
-      "status": "formal_complete_main_accepted_reverse_prune_authorized",
+      "status": "reverse_complete_next_feedback_preparing",
       "bank_size": 76,
       "blocks_NPU": false
     },
     {
       "id": "P-direct-support-successor",
       "resource": "CPU_LOCAL_TEACHER_PREPARATION",
-      "status": "CPU_input_main_verified_admission_started",
+      "status": "teacher_dispatched_CPU_admission_running",
       "NPU_started": false
     },
     {
@@ -897,16 +897,18 @@
     "default_promoted": false
   },
   "p_direct_support_successor": {
-    "status": "CPU_complete_template_only_main_verified_admission_preparing",
+    "status": "teacher_dispatched_CPU_admission_running",
     "parent": "X",
     "rows": 1080,
     "axis": "template_only",
     "original_supply_and_audio_unchanged": true,
     "NPU_started": false,
-    "teacher_sent": false
+    "teacher_sent": true,
+    "input_budget_pass": true,
+    "incremental_input_tokens_per_row": 95
   },
   "recall74_followup": {
-    "status": "complete_main_accepted_reverse_prune_authorized",
+    "status": "complete_with_reverse_prune_main_accepted",
     "initial_size": 74,
     "final_size": 76,
     "DEV_rows": 2783,
@@ -917,6 +919,9 @@
     "all_four_regressions": 0,
     "Replay_states": 48,
     "CPU_attempt_wall_seconds": 15.883006489952095,
-    "NPU_cards": 0
+    "NPU_cards": 0,
+    "reverse_attempts": 76,
+    "reverse_deletions": 0,
+    "final_after_prune": 76
   }
 }
