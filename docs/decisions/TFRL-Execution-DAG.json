@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T00:48:56.045197+00:00",
+  "updated_at_utc": "2026-11-09T01:07:17.297430+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -10,12 +10,12 @@
     "max_codex_cli": 3,
     "monitor_interval_seconds": 600,
     "total_authorized_cards": 8,
-    "resource_scope": "X and fs1 have actual model responses; assigned cards are not AICore saturation proof",
-    "active_scientific_NPU_jobs": 2,
-    "active_scientific_NPU_cards": 8,
-    "idle_cards": 0,
-    "allocated_jobs": 2,
-    "allocated_cards": 8
+    "resource_scope": "A container started; first response pending; B teacher running. No measured utilization proof.",
+    "active_scientific_NPU_jobs": 1,
+    "active_scientific_NPU_cards": 4,
+    "idle_cards": null,
+    "allocated_jobs": 1,
+    "allocated_cards": 4
   },
   "nodes": [
     {
@@ -1135,23 +1135,16 @@
     "http_seconds_per_row": 5.465301855583352
   },
   "current_snapshot": {
-    "recall_bank": 76,
-    "bank_floor": null,
-    "round6_formal": "complete_main_verified",
-    "reverse76": "complete_75_main_verified",
-    "P_W_completed_snapshot": 1080,
-    "P_X_completed_snapshot": 1080,
-    "NPU_sustained_80_percent_proven": false,
-    "P_W_top3": 1010,
-    "P_X_snapshot_at_unix": 1794183493.535446,
-    "P_fs1_generation_started": true,
-    "P_fs1_first_model_request_verified": true,
-    "P_X_top3": 1014,
-    "P_X_remaining": 0,
-    "P_A_completed_snapshot": 1080,
-    "P_A_snapshot_at_unix": 1794184304.3805466,
-    "P_A_top3": 996,
-    "P_A_top1": 880
+    "recall_bank_size": 76,
+    "initial_class_covered_seed_size": 59,
+    "size_floor": false,
+    "FoldA_Q15_question_hits": 993,
+    "FoldA_Q15_D5_union_hits": 1027,
+    "historical133_Q15_D5_union_hits": 1067,
+    "denominator": 1080,
+    "recall_next": "safe76 teacher uniquely sent; no new bank accepted",
+    "A": "container started, first response pending",
+    "B": "CPU admitted1080, teacher running; not launched"
   },
   "historical_active_tracks": [
     {
@@ -1391,23 +1384,9 @@
     }
   ],
   "active_tracks": [
-    {
-      "id": "recall76-risk-diagnostic",
-      "resource": "CPU",
-      "status": "safe16_main_verified_next_feedback_preparing"
-    },
-    {
-      "id": "P-exclusion-check-v2",
-      "resource": "CPU_THEN_NPU_B",
-      "status": "v2_teacher_dispatched_CPU_admission",
-      "NPU_started": false
-    },
-    {
-      "id": "P-fewshot-thinking",
-      "resource": "LOCAL_TEACHER_AND_CPU_THEN_NPU_A",
-      "status": "CPU_admitted_teacher_running",
-      "NPU_started": false
-    }
+    "CPU recall safe76 teacher",
+    "NPU A fs1 plus thinking launched",
+    "CPU B exclusion check teacher; admission complete"
   ],
   "round6_teacher_feedback": {
     "resource": "CPU_local",
@@ -1594,14 +1573,15 @@
     "accepted_actions": 0
   },
   "p_fewshot_thinking_successor": {
-    "status": "CPU_admitted_teacher_running",
-    "direct_parent": "F_fs1_OFF",
-    "only_axis": "budgeted_thinking",
-    "teacher_sent": true,
-    "NPU_started": false,
+    "status": "container_started_first_response_pending",
     "rows": 1080,
-    "CPU_admitted_rows": 1080,
-    "CPU_admission_wall_seconds": 492.6964586999966
+    "cards": 4,
+    "cap": 64,
+    "parent": "F/fs1",
+    "only_change": "existing ON3072+128 bundle",
+    "teacher_complete": true,
+    "teacher_tokens": 89504,
+    "promotion": false
   },
   "recall76_safe_profile": {
     "status": "main_verified",
@@ -1618,5 +1598,11 @@
     "status": "teacher_dispatched_CPU_admission_running",
     "template_only_main_verified_rows": 1080,
     "NPU_started": false
+  },
+  "recall76_safe_teacher": {
+    "status": "unique_request_dispatched",
+    "request_sha256": "c26907ecc6c4fc005dca0896d341d53ca6629c71ce1f8cc2c74e8a26721a0215",
+    "safe_single_candidates": 16,
+    "new_accepted_actions": 0
   }
 }
