@@ -1,9 +1,9 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T01:59:46.415111+00:00",
-  "current_stage": "139_safe_candidate_multiloss_compensation_and_P_transfer_preparation",
-  "instruction": "Preserve133 reference;139 source-clean candidate verified. Pursue residual2 using actual-loss multi-step compensation. Prepare1075 P transfer independently while A/B run; no new TEST or pruning.",
+  "updated_at_utc": "2026-11-09T02:11:00.564641+00:00",
+  "current_stage": "145_full_supply_candidate_P_transfer_preparation",
+  "instruction": "Preserve133 reference and139 intermediate;145 verified full effective FoldA supply, not P accuracy. Prepare145-only transfer1075; no extra139 NPU run or pruning.",
   "resources": {
     "inference_instances": 2,
     "cards_per_instance": 4,
@@ -219,27 +219,34 @@
       "depends_on": [
         "recall139-ledger"
       ],
-      "status": "CLI_implementation_and_profile_in_progress",
+      "status": "complete_main_raw_ledger_verified",
       "new_state_budget": 40,
       "prior_combination_states": 24,
-      "algorithm": "risk-aware actual-loss cover; multi-step beam; no deletion or encoding"
+      "algorithm": "risk-aware actual-loss cover; multi-step beam; no deletion or encoding",
+      "new_states": 22,
+      "KB_size": 145,
+      "foldA_supply": {
+        "correct": 1075,
+        "total": 1075
+      },
+      "regressions": 0
     },
     {
-      "id": "P139-transfer-prepare",
+      "id": "P145-transfer-prepare",
       "resource": "CPU",
       "depends_on": [
-        "recall139-ledger"
+        "recall-multiloss-compensation"
       ],
-      "status": "CLI_preparation_in_progress_not_admitted",
+      "status": "CPU_preparation_in_progress_source_assertion_failure_preserved",
       "input_count": 1075,
       "parent": "F_133_Q15D5_fs1_OFF",
-      "intervention": "KB133_to139_only"
+      "intervention": "KB133_to145_only"
     },
     {
-      "id": "P139-transfer",
+      "id": "P145-transfer",
       "resource": "NPU_A",
       "depends_on": [
-        "P139-transfer-prepare"
+        "P145-transfer-prepare"
       ],
       "status": "not_launched_requires_ready_inputs_and_lane_release",
       "input_count": 1075
@@ -263,11 +270,11 @@
       "depends_on": [],
       "status": "running_confirmed_container",
       "snapshot": {
-        "at_unix": 1794189222.382148,
-        "completed": 384,
+        "at_unix": 1794189824.2735686,
+        "completed": 451,
         "total": 1080,
-        "seconds_per_row_recent": 4.701346872374415,
-        "eta_seconds": 3272.137423172593
+        "seconds_per_row_recent": 8.983454038847738,
+        "eta_seconds": 5650.592590435227
       }
     },
     {
