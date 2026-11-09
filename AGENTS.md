@@ -10,7 +10,7 @@
 
 ## 主机、目录与执行
 
-只通过`ssh npu2`访问181；禁止访问npu/175，不操作其他人的容器。共享根为`/mnt/cephfs/xingchao/omni`。当前开发权威树为`work/dev/odd40-runtime-v1/studies/speech-aware-evidence-acquisition`；公开仓为`publish/omni`，Wiki为`publish/omni-wiki`。旧umbrella和封存执行树保留。
+使用用户授权的NPU主机和实例，按部署配置调度实验资源。共享根为`/mnt/cephfs/xingchao/omni`。当前开发权威树为`work/dev/odd40-runtime-v1/studies/speech-aware-evidence-acquisition`；公开仓为`publish/omni`，Wiki为`publish/omni-wiki`。旧umbrella和封存执行树保留。
 
 正式测试在固定saea镜像内通过`work/scripts/port_py.sh`或等效固定镜像容器运行。服务、实验与队列须脱离SSH运行。181的Ceph客户端存在已复现内核故障；热日志、attempt与checkpoint写本地持久盘，保留fsync，通过开发机异步归档。
 

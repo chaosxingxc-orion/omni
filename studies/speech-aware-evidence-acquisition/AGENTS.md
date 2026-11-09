@@ -10,7 +10,7 @@
 
 ## 执行、测试与风格
 
-仅使用npu2（181），禁止npu/175。正式命令在固定saea容器运行，例如`bash work/scripts/port_py.sh -m pytest tests/unit/test_local_state.py -q`（从数据根调用）。Python使用4空格缩进和明确命名，遵循相邻实现；配置和来源需可追溯。运行与变更相关的测试，未执行测试如实标记。
+使用用户授权的NPU主机和实例，按部署配置调度实验资源。正式命令在固定saea容器运行，例如`bash work/scripts/port_py.sh -m pytest tests/unit/test_local_state.py -q`（从数据根调用）。Python使用4空格缩进和明确命名，遵循相邻实现；配置和来源需可追溯。运行与变更相关的测试，未执行测试如实标记。
 
 ## 调度与可靠性
 
