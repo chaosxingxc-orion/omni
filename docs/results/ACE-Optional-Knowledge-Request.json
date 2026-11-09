@@ -1,0 +1,15 @@
+{
+  "at": 1794265980.8048532,
+  "revision": "revision-v7-ace-optional-evidence",
+  "status": "HTTP200_STREAM_IN_PROGRESS",
+  "new_requests": 1,
+  "automatic_retry": 0,
+  "representative_chains": 6,
+  "legal_TRAIN_supports": 21,
+  "max_output_tokens": 131072,
+  "prior_v6_tokens": 118745,
+  "actual_v7_tokens": null,
+  "proposals": null,
+  "NPU_candidates_admitted": 0,
+  "independent_of_incomplete_eight_seed_group": true
+}
