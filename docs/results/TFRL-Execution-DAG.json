@@ -895,5 +895,14 @@
       "further_deletions": 0
     },
     "default_promoted": false
+  },
+  "p_direct_support_successor": {
+    "status": "CPU_complete_template_only_main_verified_admission_preparing",
+    "parent": "X",
+    "rows": 1080,
+    "axis": "template_only",
+    "original_supply_and_audio_unchanged": true,
+    "NPU_started": false,
+    "teacher_sent": false
   }
 }
