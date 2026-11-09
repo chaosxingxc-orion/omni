@@ -1,9 +1,9 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T01:26:17.783233+00:00",
-  "current_stage": "locked133_residual13_quality_audit_then_P_consumption",
-  "instruction": "User locks133 KB and stops minimization. First audit13 missed samples; exclude confirmed annotation defects or intrinsic insufficiency, retain system errors and original denominators.",
+  "updated_at_utc": "2026-11-09T01:34:21.467440+00:00",
+  "current_stage": "locked133_confirmed5_excluded_targeted8_growth",
+  "instruction": "Keep133 baseline; minimization stopped. Exact5 exclusions applied. User authorizes targeted TRAIN additions for retained8, source-isolated and all-DEV regression evaluated; no automatic growth promotion.",
   "resources": {
     "inference_instances": 2,
     "cards_per_instance": 4,
@@ -678,10 +678,12 @@
     "bank_selected_file_sha256": "784d1fa5fe29935833f051538f678c22dc1536431e0e8e005ef0c18dd13cbfda",
     "FoldA_Q15_D5_union_hits": 1067,
     "denominator": 1080,
-    "residual13_audit": "in_progress_no_exclusions_applied_yet",
-    "A": "first_actual_response_verified",
-    "B": "actual_HTTP_request_captured_first_response_pending",
-    "historical79": "archived_not_operating_baseline"
+    "residual13_audit": "complete_5excluded_8retained",
+    "A": "128of1080 scheduled snapshot; both request and response verified",
+    "B": "first_request_and_response_verified",
+    "historical79": "archived_not_operating_baseline",
+    "effective_denominator": 1075,
+    "residual8_next": "CPU targeted TRAIN candidate preparation"
   },
   "historical_active_tracks": [
     {
@@ -715,9 +717,9 @@
     }
   ],
   "active_tracks": [
-    "CPU fixed133 residual13 quality audit and confirmed exclusion view",
-    "NPU A fewshot+thinking full1080",
-    "NPU B exclusion-check template full1080"
+    "CPU 133 targeted8 TRAIN additions preparation; no pruning",
+    "NPU A full1080 ongoing; effective1075 postscore",
+    "NPU B full1080 ongoing; effective1075 postscore"
   ],
   "round6_teacher_feedback": {
     "resource": "CPU_local",
@@ -935,5 +937,13 @@
     "request_sha256": "c26907ecc6c4fc005dca0896d341d53ca6629c71ce1f8cc2c74e8a26721a0215",
     "safe_single_candidates": 16,
     "new_accepted_actions": 0
+  },
+  "effective_sample_view": {
+    "manifest_sha256": "775b4da927d85bc28835e3ebff77933663518f5b93b192db74ba43d935004a5e",
+    "confirmed_excluded": 5,
+    "FoldA": 1075,
+    "learning": 50623,
+    "scope": "exact_sample_ids",
+    "original_preserved": true
   }
 }
