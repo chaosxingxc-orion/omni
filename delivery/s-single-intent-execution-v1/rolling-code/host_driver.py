@@ -57,12 +57,34 @@ def apply_runtime_policy(cfg,task,policy):
  if cfg.get('dataset_partition') not in ('S_fit','eligible_remainder'):return None
  setting=policy.get('tasks',{}).get(task['task_id'],policy.get('TRAIN',{}))
  if not setting:return None
- assert set(setting)<= {'timeout_seconds'},'runtime policy only supports request deadline'
+ assert set(setting)<= {'timeout_seconds','concurrency'},'runtime policy only supports request deadline and TRAIN concurrency'
  timeout=setting.get('timeout_seconds',cfg['timeout_seconds'])
  assert type(timeout) is int and 600<=timeout<=1200,'bounded request deadline'
+ concurrency=setting.get('concurrency',cfg['concurrency'])
+ assert type(concurrency) is int and concurrency in (64,96,128),'explicit TRAIN concurrency64/96/128'
  before=cfg['timeout_seconds'];cfg['timeout_seconds']=timeout
+ original_concurrency=cfg['concurrency'];cfg['concurrency']=concurrency
  return dict(task_id=task['task_id'],original_timeout_seconds=before,effective_timeout_seconds=timeout,
+             original_concurrency=original_concurrency,effective_concurrency=concurrency,
              scope='new uncontacted TRAIN attempt only; no request replay or model input change')
+
+def configure_train_execution(H,cfg,task,original_config,policy):
+ if cfg.get('dataset_partition') not in ('S_fit','eligible_remainder'):return None,None
+ original_concurrency=cfg['concurrency'];assert original_concurrency==64,'frozen source TRAIN concurrency64'
+ cfg['concurrency']=96
+ change=apply_runtime_policy(cfg,task,policy)
+ assert type(cfg['timeout_seconds']) is int and 600<=cfg['timeout_seconds']<=1200,'bounded request deadline'
+ fixed=read(H/'TRAIN96-VERIFIED.json')
+ required={'train_runtime.py','bind_train.py','train-runtime-v1/run_s_native.py','train-runtime-v1/native_resources.py'}
+ assert required<=set(fixed['pins']),'complete fixed TRAIN execution package required'
+ for rel,pinvalue in fixed['pins'].items():assert sha(H/'execution-code'/rel)==pinvalue,'fixed execution package pin'
+ cfg['attempt_id']+='-c'+str(cfg['concurrency'])
+ task['runner']='delivery/s-single-intent-execution-v1/rolling-code/train_runtime.py'
+ task['bind_script']='delivery/s-single-intent-execution-v1/rolling-code/bind_train.py'
+ return dict(at=time.time(),original_config=original_config,original_concurrency=original_concurrency,
+             effective_concurrency=cfg['concurrency'],effective_timeout_seconds=cfg['timeout_seconds'],
+             scope='new TRAIN attempt only; frozen scientific packets unchanged',
+             runner=task['runner'],bind_script=task['bind_script'],fixed_package=fixed),change
 
 def launch(a):
  H=Path(a.root);task=read(a.spec);W=Path(task['workspace']);state=H/'jobs'/task['task_id'];state.mkdir(parents=True,exist_ok=True)
@@ -70,21 +92,15 @@ def launch(a):
  if (state/'LAUNCH.json').exists():print((state/'LAUNCH.json').read_text());return
  assert time.time()<task['window_end_epoch'],'window ended'
  assert not (state/'launch-intent.json').exists(),'UNKNOWN_LAUNCH_NO_RESEND'
+ if (state/'run').exists():raise RuntimeError('EXISTING_RUN_STATE_RECONCILE_NO_RESEND')
  rt=read(task['runtime_file']) if task.get('runtime_file') else task['runtime'];rt['container_lane']=str(Path(rt['shared_guard']).parent.parent)
  cfg=read(W/task['config']);original_cfg_pin=pin(W/task['config'])
- if cfg.get('dataset_partition') in ('S_fit','eligible_remainder') and (H/'TRAIN96-VERIFIED.json').exists():
-  assert cfg['concurrency']==64 and cfg['dataset_partition'] in ('S_fit','eligible_remainder')
-  cfg['concurrency']=96;cfg['attempt_id']+='-c96'
-  fixed=read(H/'TRAIN96-VERIFIED.json')
-  for rel,pinvalue in fixed['pins'].items():assert sha(H/'execution-code'/rel)==pinvalue,'fixed execution package pin'
-  save(state/'EXECUTION-OVERRIDE.json',dict(at=time.time(),original_config=original_cfg_pin,original_concurrency=64,effective_concurrency=96,scope='new TRAIN control/fewshot only; frozen scientific packets unchanged',runner='delivery/s-single-intent-execution-v1/rolling-code/train_runtime.py',fixed_package=read(H/'TRAIN96-VERIFIED.json')))
-  task['runner']='delivery/s-single-intent-execution-v1/rolling-code/train_runtime.py';task['bind_script']='delivery/s-single-intent-execution-v1/rolling-code/bind_train.py'
  policy_path=H/'runtime-policy.json'
- if policy_path.exists():
-  change=apply_runtime_policy(cfg,task,read(policy_path))
-  if change:save(state/'RUNTIME-POLICY-OVERRIDE.json',dict(at=time.time(),policy=pin(policy_path),**change))
+ override,change=configure_train_execution(H,cfg,task,original_cfg_pin,read(policy_path) if policy_path.exists() else {})
+ if change:save(state/'RUNTIME-POLICY-OVERRIDE.json',dict(at=time.time(),policy=pin(policy_path),**change))
  if task.get('execution_attempt_suffix'):
   suffix=task['execution_attempt_suffix'];assert suffix.startswith('-') and suffix.replace('-','').isalnum();cfg['attempt_id']+=suffix
+ if override:save(state/'EXECUTION-OVERRIDE.json',dict(**override,attempt_id=cfg['attempt_id']))
  budget=W/task['budget'];fit=read(budget);assert fit['status']=='PASS_FIXED_IMAGE_CPU' and fit['rows']==cfg['expected_rows'] and fit['manifest_sha256']==cfg['manifest_sha256']
  pred=task['predecessor'];old=inspect(pred['container']);assert not old['State']['Running'] and old['State']['Pid']==0,'predecessor live'
  term=historic(pred['terminal']);assert term['status']=='COMPLETE' and term['unknown']==0,'predecessor unknown/failed requires explicit reconciliation'
@@ -98,7 +114,7 @@ def launch(a):
   save(state/'RUNTIME-CAPTURE.json',dict(status='PASS_RUNTIME_CAPTURE_NOT_STARTED',released=True,unknown=0,**{k:rt[k] for k in ['boot_id','session_id','service_pid','service_id']},lane_root=rt['container_lane'],guard_inode=rt['shared_guard_inode'],predecessor=dict(receipt=rt['predecessor_receipt']),fit_sha256=sha(budget),scheduler=metrics(rt),at=time.time()))
   rt['capture_receipt']=pin(state/'RUNTIME-CAPTURE.json');cfg['runtime']=rt;save(state/'runtime-config.json',cfg)
  mounts=['--mount',f'type=bind,src={W},dst={M},readonly','--mount',f'type=bind,src={W},dst={W},readonly','--mount',f'type=bind,src={H},dst={H}','--mount',f'type=bind,src={rt["container_lane"]},dst={rt["container_lane"]}','--mount',f'type=bind,src={rt["serving_root"]},dst={rt["serving_root"]},readonly']
- if cfg.get('dataset_partition') in ('S_fit','eligible_remainder') and cfg['concurrency']!=64:mounts+=['--mount',f'type=bind,src={H}/execution-code,dst={M}/delivery/s-single-intent-execution-v1/rolling-code,readonly']
+ if override:mounts+=['--mount',f'type=bind,src={H}/execution-code,dst={M}/delivery/s-single-intent-execution-v1/rolling-code,readonly']
  common=['--pull','never','--pid','host','--cpus','8','--memory','16g','-e','TORCH_DEVICE_BACKEND_AUTOLOAD=0','-e','PYTHONDONTWRITEBYTECODE=1','-e','PYTHONUNBUFFERED=1']+mounts+['--entrypoint','/opt/saea-venv/bin/python',IMAGE,'-B']
  name='omni-s12-'+a.lane.lower()+'-'+hashlib.sha256(task['task_id'].encode()).hexdigest()[:12]
  argv=['docker','run','--name',name+'-bind','--network','none']+common+[M+'/'+task.get('bind_script',PK+'/code/bind_execution.py'),'--config',str(state/'runtime-config.json'),'--state',str(state/'run'),'--output',str(state/'execution-config.json')]

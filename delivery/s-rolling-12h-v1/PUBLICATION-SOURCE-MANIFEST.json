@@ -1,5 +1,5 @@
 {
-  "at": 1794262079.9703455,
+  "at": 1794263704.684057,
   "privacy_replacements": [
     "/workspace/omni",
     "/srv/omni-local-state",
@@ -13,8 +13,8 @@
     },
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/host_driver.py",
-      "runtime_sha256": "652fbf987d7de1b195d063e7480c5fa8bec229b7a70a3546e91438df6dd10751",
-      "publication_sha256": "adda6e07f8abb66611b65bcb471a5d24205e4c40a5f112bfe3385612d6eca951"
+      "runtime_sha256": "3f738b44498a63a65ef89a20e762e2c3f891c71efca95a5c10bd679b3b74a948",
+      "publication_sha256": "2afd5c6b3479c1c8a25aeb15667c90203f3680ea2211b2fd42bf857adbfecc47"
     },
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/score_rolling.py",
@@ -223,8 +223,8 @@
     },
     {
       "path": "delivery/s-single-intent-execution-v1/runtime-policy.json",
-      "runtime_sha256": "ce26e057b908b8361646ee3d852a2bf93d8bef1a851e6afc227fb7925b58fa4b",
-      "publication_sha256": "ce26e057b908b8361646ee3d852a2bf93d8bef1a851e6afc227fb7925b58fa4b"
+      "runtime_sha256": "64a6cc4f7682810e41e99baedcc6bdbe5ad5230220e0d7639c8190dba7e6b05a",
+      "publication_sha256": "64a6cc4f7682810e41e99baedcc6bdbe5ad5230220e0d7639c8190dba7e6b05a"
     },
     {
       "path": "delivery/s-rolling-12h-v1/code/relocate_archives.py",
@@ -290,6 +290,16 @@
       "path": "delivery/s-compact-successor-gate-v1/config.json",
       "runtime_sha256": "36e6a0ef299cca509fa800e8e39330620d09885ceb8a952cd727654502b15767",
       "publication_sha256": "7bc0f9f2a9acdeca8e74849051e3f30dbedbfb750386a33cbbed0b6c41114d13"
+    },
+    {
+      "path": "delivery/s-train128-config-v1/code/test_runtime_policy.py",
+      "runtime_sha256": "b064690c1aeb82c9ea34a7f79ea033a05f7f99b5b37aa47d87ec23734938440a",
+      "publication_sha256": "b064690c1aeb82c9ea34a7f79ea033a05f7f99b5b37aa47d87ec23734938440a"
+    },
+    {
+      "path": "delivery/s-train128-config-v1/code/host_driver.py",
+      "runtime_sha256": "3f738b44498a63a65ef89a20e762e2c3f891c71efca95a5c10bd679b3b74a948",
+      "publication_sha256": "2afd5c6b3479c1c8a25aeb15667c90203f3680ea2211b2fd42bf857adbfecc47"
     }
   ]
 }

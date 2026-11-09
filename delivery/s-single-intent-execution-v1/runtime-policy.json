@@ -1,9 +1,17 @@
 {
   "schema": "runtime-deadline-policy-v1",
-  "reason": "Observed TRAIN96 request timeout stopped the 1080-sample attempt at 1246/3240 branches. Test a bounded longer client deadline on new tasks; never replay that failed attempt.",
+  "reason": "Per-task CPU-verified execution: preserve existing TRAIN96 and deadlines; one conditional compact TRAIN candidate uses128/900, only if scientific admission passes. Both resource settings are explicit; no causal128 claim.",
   "tasks": {
-    "train-remainder-part4-v1": {"timeout_seconds": 900},
-    "train-remainder-part4-fewshot-v1": {"timeout_seconds": 900}
+    "train-remainder-part4-v1": {
+      "timeout_seconds": 900
+    },
+    "train-remainder-part4-fewshot-v1": {
+      "timeout_seconds": 900
+    },
+    "train-remainder-part1-compact-fewshot-v1": {
+      "concurrency": 128,
+      "timeout_seconds": 900
+    }
   },
   "model_configuration_changed": false,
   "automatic_retry": false,
