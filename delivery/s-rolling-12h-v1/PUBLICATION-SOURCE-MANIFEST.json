@@ -218,8 +218,8 @@
     },
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/test_runtime_policy.py",
-      "runtime_sha256": "8250d68ad0c41392a99bee504b7f3384afec1d0681f54976367c779f87dcd48f",
-      "publication_sha256": "8250d68ad0c41392a99bee504b7f3384afec1d0681f54976367c779f87dcd48f"
+      "runtime_sha256": "b064690c1aeb82c9ea34a7f79ea033a05f7f99b5b37aa47d87ec23734938440a",
+      "publication_sha256": "b064690c1aeb82c9ea34a7f79ea033a05f7f99b5b37aa47d87ec23734938440a"
     },
     {
       "path": "delivery/s-single-intent-execution-v1/runtime-policy.json",
