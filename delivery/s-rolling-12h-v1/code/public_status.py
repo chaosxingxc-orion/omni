@@ -57,13 +57,16 @@ def render():
             kind = 'ready_hypotheses'
         groups[kind].append(dict(task_id=name, branches=task.get('branches', 0)))
     counts = {k: sum(t['branches'] for t in v) for k, v in groups.items()}
-    useful = branches - counts['deprioritized_no_examples']
+    unknown_eta = [s['task']['task_id'] for s in ready if not s['task'].get('capacity_estimate_eligible', True)]
+    unknown_eta_branches = sum(s['task'].get('branches', 0) for s in ready if s['task']['task_id'] in unknown_eta)
+    useful = branches - counts['deprioritized_no_examples'] - unknown_eta_branches
     capacity = dict(at=time.time(), groups=groups, branch_counts=counts,
                     ready_useful_policy_and_eval_branches=useful, running_residual_branches=residual,
                     useful_plus_running_four_lane_hours={str(s): (useful + residual) * s / 14400 for s in (3, 4, 5)},
                     conditional_compact_CPU_branches=11202, conditional_is_ready=False,
+                    unknown_eta_task_ids=unknown_eta, unknown_eta_branches=unknown_eta_branches,
                     no_filler_seeds=True, estimate_is_guarantee=False)
-    scenarios = {str(s): (branches + residual) * s / 14400 for s in (3, 4, 5)}
+    scenarios = {str(s): (branches - unknown_eta_branches + residual) * s / 14400 for s in (3, 4, 5)}
     record = dict(schema='public-rolling-aggregate-v2', generated_at=stamp(time.time()),
         window=dict(start=stamp(window['start_epoch']), end=stamp(window['end_epoch']), duration_hours=12,
                     admission_policy='close at deadline; drain inflight'),

@@ -1,15 +1,34 @@
 {
-  "at": 1794265980.8048532,
+  "at": 1794266408.5092647,
   "revision": "revision-v7-ace-optional-evidence",
-  "status": "HTTP200_STREAM_IN_PROGRESS",
-  "new_requests": 1,
-  "automatic_retry": 0,
-  "representative_chains": 6,
-  "legal_TRAIN_supports": 21,
-  "max_output_tokens": 131072,
-  "prior_v6_tokens": 118745,
-  "actual_v7_tokens": null,
-  "proposals": null,
-  "NPU_candidates_admitted": 0,
-  "independent_of_incomplete_eight_seed_group": true
+  "proposals": 3,
+  "accepted_for_source_review": true,
+  "scope": "three narrow bindings of one optionality mechanism; no gain yet",
+  "cost": {
+    "candidate_accepted": false,
+    "elapsed_seconds": 490.25877310009673,
+    "finish_reasons": [
+      "stop"
+    ],
+    "http_status": 200,
+    "model": "glm-5.3-flash",
+    "request_id": null,
+    "response_sha256": "5cdebaa3b89c8587b707ead2a557f2cc99517bae28f35101752ef9bdf8a6a4bb",
+    "semantic_validation": "pending",
+    "state": "response_received",
+    "usage": {
+      "completion_tokens": 40377,
+      "completion_tokens_details": {
+        "reasoning_tokens": 30527
+      },
+      "prompt_tokens": 64626,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "total_tokens": 105003
+    }
+  },
+  "response_sha256": "4d3112df6630f0f741049632789afa5c2be0eab11a2f5c72b9ab8a900ab5f98a",
+  "exact_card_and_line_verified": true,
+  "NPU_admitted": false
 }

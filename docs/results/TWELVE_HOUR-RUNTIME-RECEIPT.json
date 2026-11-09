@@ -1,6 +1,6 @@
 {
   "schema": "public-rolling-aggregate-v2",
-  "generated_at": "2026-11-10T07:13:00+08:00",
+  "generated_at": "2026-11-10T07:27:58+08:00",
   "window": {
     "start": "2026-11-10T04:10:52+08:00",
     "end": "2026-11-10T16:10:52+08:00",
@@ -14,15 +14,15 @@
     "A": {
       "task": "compact-fewshot-v1",
       "state": "running",
-      "snapshot_at": 1794265794.9728868,
-      "completed_samples": 226,
+      "snapshot_at": 1794266398.9219291,
+      "completed_samples": 273,
       "total_samples": 545,
-      "completed_branches": 694,
+      "completed_branches": 824,
       "total_branches": 1635,
-      "seconds_per_branch": 3.8459371173759704,
-      "remaining_seconds": 3619.026827450788,
+      "seconds_per_branch": 3.97212305057396,
+      "remaining_seconds": 3221.3917940154815,
       "invalid": 1,
-      "tokens": 4404396,
+      "tokens": 5403169,
       "concurrency": 64,
       "cards": 4,
       "client_inflight_or_unknown": 64,
@@ -32,15 +32,15 @@
     "B": {
       "task": "train-remainder-part2-fewshot-v1",
       "state": "running",
-      "snapshot_at": 1794265794.909433,
-      "completed_samples": 145,
+      "snapshot_at": 1794266398.159693,
+      "completed_samples": 211,
       "total_samples": 934,
-      "completed_branches": 470,
+      "completed_branches": 668,
       "total_branches": 2802,
-      "seconds_per_branch": 3.1614909258294612,
-      "remaining_seconds": 7372.596839034303,
-      "invalid": 2,
-      "tokens": 2921182,
+      "seconds_per_branch": 3.127471590470411,
+      "remaining_seconds": 6674.024374063857,
+      "invalid": 6,
+      "tokens": 4194566,
       "concurrency": 96,
       "cards": 4,
       "client_inflight_or_unknown": 96,
@@ -50,15 +50,15 @@
     "C": {
       "task": "grpo-fewshot-seed2026110903-retry2",
       "state": "running",
-      "snapshot_at": 1794265680.1018164,
-      "completed_samples": 248,
+      "snapshot_at": 1794266283.8831143,
+      "completed_samples": 284,
       "total_samples": 545,
-      "completed_branches": 754,
+      "completed_branches": 858,
       "total_branches": 1635,
-      "seconds_per_branch": 4.44370514897516,
-      "remaining_seconds": 3914.904236247116,
+      "seconds_per_branch": 4.608782010200696,
+      "remaining_seconds": 3581.023621925941,
       "invalid": 11,
-      "tokens": 4609040,
+      "tokens": 5427470,
       "concurrency": 64,
       "cards": 4,
       "client_inflight_or_unknown": 64,
@@ -68,15 +68,15 @@
     "D": {
       "task": "train-remainder-part4-fewshot-v1",
       "state": "running",
-      "snapshot_at": 1794265713.4971755,
-      "completed_samples": 94,
+      "snapshot_at": 1794266315.1547832,
+      "completed_samples": 155,
       "total_samples": 934,
-      "completed_branches": 315,
+      "completed_branches": 492,
       "total_branches": 2802,
-      "seconds_per_branch": 3.837041373479934,
-      "remaining_seconds": 9542.721895844596,
-      "invalid": 1,
-      "tokens": 1976087,
+      "seconds_per_branch": 3.6795236851141704,
+      "remaining_seconds": 8499.699712613734,
+      "invalid": 2,
+      "tokens": 3151713,
       "concurrency": 96,
       "cards": 4,
       "client_inflight_or_unknown": 96,
@@ -85,40 +85,40 @@
     }
   },
   "queue": {
-    "ready_tasks": 10,
-    "ready_branches": 26988,
-    "running_residual_branches": 6641,
-    "remaining_window_hours": 8.964372120698293,
+    "ready_tasks": 11,
+    "ready_branches": 26997,
+    "running_residual_branches": 6032,
+    "remaining_window_hours": 8.714920235408677,
     "estimated_wall_hours_by_seconds_per_branch": {
-      "3": 7.0060416666666665,
-      "4": 9.341388888888888,
-      "5": 11.676736111111111
+      "3": 6.879166666666666,
+      "4": 9.172222222222222,
+      "5": 11.465277777777779
     },
     "estimate_is_guarantee": false,
     "cpu_pending": 0,
     "preference_is_exclusive_reservation": false
   },
   "resource": {
-    "snapshot_at": 1794265550.4659708,
+    "snapshot_at": 1794266757.2416353,
     "ai_core_percent": [
-      50,
-      15,
-      39,
+      40,
+      16,
+      37,
+      56,
+      0,
+      77,
+      8,
       59,
       31,
-      57,
-      10,
-      74,
-      36,
+      22,
       53,
-      7,
-      55,
       5,
-      73,
-      1,
-      66
+      12,
+      47,
+      44,
+      17
     ],
-    "mean_ai_core_percent": 39.4375,
+    "mean_ai_core_percent": 32.75,
     "continuous_80_percent_proven": false
   },
   "coverage_12h": "NOT_YET_PROVEN",
@@ -127,7 +127,7 @@
   "cpu_and_npu_async": true,
   "unknown_request_replay": false,
   "useful_capacity": {
-    "at": 1794265980.8485782,
+    "at": 1794266878.8753643,
     "groups": {
       "ready_dynamic_TRAIN": [
         {
@@ -157,6 +157,10 @@
         {
           "task_id": "absent-slot-v1",
           "branches": 1635
+        },
+        {
+          "task_id": "ace-game-name-unbounded-v1-mechanism-pilot-3x3",
+          "branches": 9
         }
       ],
       "deprioritized_no_examples": [
@@ -181,18 +185,22 @@
     "branch_counts": {
       "ready_dynamic_TRAIN": 5598,
       "ready_evaluation_only": 6480,
-      "ready_hypotheses": 3270,
+      "ready_hypotheses": 3279,
       "deprioritized_no_examples": 11640
     },
     "ready_useful_policy_and_eval_branches": 15348,
-    "running_residual_branches": 6641,
+    "running_residual_branches": 6032,
     "useful_plus_running_four_lane_hours": {
-      "3": 4.581041666666667,
-      "4": 6.108055555555556,
-      "5": 7.6350694444444445
+      "3": 4.454166666666667,
+      "4": 5.938888888888889,
+      "5": 7.423611111111111
     },
     "conditional_compact_CPU_branches": 11202,
     "conditional_is_ready": false,
+    "unknown_eta_task_ids": [
+      "ace-game-name-unbounded-v1-mechanism-pilot-3x3"
+    ],
+    "unknown_eta_branches": 9,
     "no_filler_seeds": true,
     "estimate_is_guarantee": false
   },
