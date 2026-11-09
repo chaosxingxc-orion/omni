@@ -5,17 +5,49 @@
   "operations": {
     "compare_evidence_for_competing_roles": {
       "mechanism_family": "candidate_role_evidence_comparison",
-      "instruction": "When a heard mention could fill more than one supplied slot role, compare the relation expressed in the audio with each supplied binding cue before assigning it. Keep an assignment only when that relation supports the role; do not choose a role merely because its description contains a matching word."
+      "instruction": "When a heard mention could fill more than one supplied slot role, compare the relation expressed in the audio with each supplied binding cue before assigning it. Keep an assignment only when that relation supports the role; do not choose a role merely because its description contains a matching word.",
+      "lifecycle": "active",
+      "reason": "Retained role-evidence hypothesis. Same parent/instruction already prepared and published; reuse its task/results, never relabel as a new teacher strategy.",
+      "evidence": [
+        "delivery/s-semantic-next-policy-v1/REPORT.md",
+        "delivery/s-tfrl-rolling-v1/MAIN-SEMANTIC-ADMISSION.json"
+      ],
+      "existing_task_id": "candidate-role-evidence-v1"
     },
     "separate_example_structure_from_values": {
       "mechanism_family": "example_value_interference",
-      "instruction": "After using a TRAIN demonstration to understand the output structure, check each proposed entity independently against the current audio and its supplied binding cue. A value occurring in a demonstration supplies no evidence that this value occurred in the current audio."
+      "instruction": "After using a TRAIN demonstration to understand the output structure, check each proposed entity independently against the current audio and its supplied binding cue. A value occurring in a demonstration supplies no evidence that this value occurred in the current audio.",
+      "lifecycle": "retired",
+      "reason": "Mechanism already explicit in the actual parent instruction; preexisting redundancy, not a new policy.",
+      "evidence": [
+        "delivery/s-single-intent-fewshot-v1/config/single-intent.txt",
+        "delivery/s-tfrl-rolling-v1/config/tfgrpo-operations-v1.json"
+      ]
     },
     "preserve_relational_direction": {
       "mechanism_family": "relational_role_direction",
-      "instruction": "For mentions whose supplied roles express different sides of a relation, preserve the direction expressed in the current audio. Assign each mention using its own local relation to the requested operation, and do not exchange roles because the mentions have similar surface forms."
+      "instruction": "For mentions whose supplied roles express different sides of a relation, preserve the direction expressed in the current audio. Assign each mention using its own local relation to the requested operation, and do not exchange roles because the mentions have similar surface forms.",
+      "lifecycle": "retired",
+      "reason": "Current full545 audit rejected independent direction admission: native same-type relations have no scorer-identifiable direction-swap cohort. No new prepare/publish/execution.",
+      "evidence": [
+        "delivery/s-semantic-next-policy-v1/REPORT.md",
+        "delivery/s-tfrl-rolling-v1/MAIN-SEMANTIC-ADMISSION.json"
+      ]
     }
   },
-  "preexisting_redundant_operations": ["separate_example_structure_from_values"],
-  "admission": "actual same-policy complete group feedback must support a novel mechanism and counterexample; whitelist alone is not efficacy"
+  "preexisting_redundant_operations": [
+    "separate_example_structure_from_values"
+  ],
+  "admission": "Actual same-policy complete group analysis required. Active existing policies resolve to original tasks/results; retired operations fail closed; zero novel candidates is valid. Semantic identity is reviewed catalog instruction bytes plus exact parent, never proposal ID.",
+  "rejected_strategies": [
+    {
+      "task_id": "binding-role-first-card-v1",
+      "status": "rejected_not_published",
+      "reason": "Full wrong-case audit does not show the moved ambiguity clause supplies a decisive unused discriminator; parent semantic_role was already first. No independent position-effect evidence.",
+      "evidence": [
+        "delivery/s-semantic-next-policy-v1/REPORT.md",
+        "delivery/s-tfrl-rolling-v1/MAIN-SEMANTIC-ADMISSION.json"
+      ]
+    }
+  ]
 }

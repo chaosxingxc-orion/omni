@@ -147,6 +147,123 @@ def group_context(data):
     # Keep bounded request; optional full semantics must supply a bounded summary.
     return data
 
+def instruction_identity(parent,instruction):
+    # Fixed catalog text is the reviewed semantic representation. No fuzzy matching.
+    return sha(canonical(dict(parent_version=parent,instruction=instruction)))
+
+def policy_inventory():
+    """Read prepared and published append policies, including vetoed history."""
+    ready=OUT/'READY-TASKS.json'
+    tasks={task['task_id']:copy.deepcopy(task) for task in read(ready)['tasks']} if ready.exists() else {}
+    records=[]
+    for folder in sorted((OUT/'candidates').glob('*')):
+        ep=folder/'experience.json';cp=folder/'CPU-PREPARED.json'
+        if not ep.is_file() or not cp.is_file():continue
+        exp,prepared=read(ep),read(cp)
+        if prepared.get('policy_type')!='single mechanism instruction':continue
+        parent=prepared.get('parent');instruction=exp.get('instruction')
+        if not isinstance(instruction,str) or not instruction or exp.get('parent_version')!=parent:continue
+        task=tasks.get(folder.name,dict(task_id=folder.name,prepared=str(folder.relative_to(ROOT)),
+            config=str((folder/prepared['arm']/'native-UNBOUND.json').relative_to(ROOT)),parent_version=parent))
+        if task.get('parent_version')!=parent:continue
+        config=ROOT/task['config']
+        if not config.is_file():continue
+        cfg=read(config)
+        compiled=OUT/'config'/('teacher-compiled-'+folder.name+'.json')
+        origin=read(compiled) if compiled.exists() else {}
+        records.append(dict(task_id=folder.name,parent_version=parent,instruction=instruction,
+            identity=instruction_identity(parent,instruction),task=task,
+            status=task.get('status','prepared'),manifest=cfg['manifest'],manifest_sha256=cfg['manifest_sha256'],
+            provenance=origin.get('provenance','existing prepared policy; not a new feedback-teacher strategy'),
+            experience_source=str(ep.relative_to(ROOT)),experience_sha256=sha(ep.read_bytes())))
+    return records
+
+def verify_reusable_policy(record):
+    """Prove actual packets are precisely the same parent plus this append.
+
+    All audio/examples/schema/sampling fields must restore the parent's abstract
+    wire digests, not merely agree with an experience/proposal name.
+    """
+    parent=record['parent_version'];base,arm=parent.split('/')
+    require(base=='prepared-v5-dynamic','unsupported parent custody')
+    native=ROOT/'delivery/s-single-intent-fewshot-v1'/base/arm/'native-UNBOUND.json'
+    cfg=read(native);mp=ROOT/cfg['manifest']
+    require(sha(mp.read_bytes())==cfg['manifest_sha256'],'parent manifest custody')
+    parents={row['sample_id']:row for row in map(json.loads,mp.read_bytes().splitlines())}
+    mp=ROOT/record['manifest'];raw=mp.read_bytes()
+    require(sha(raw)==record['manifest_sha256'],'existing policy manifest custody')
+    rows=[json.loads(line) for line in raw.splitlines()]
+    require(len(rows)==len(parents) and {r['sample_id'] for r in rows}==set(parents),'same parent roster')
+    addition='\n\n'+record['instruction'];marker='\n\nCandidate-conditioned pipeline context:'
+    for row in rows:
+        raw=(ROOT/row['payload']).read_bytes()
+        require(sha(raw)==row['packet_sha256'],'existing policy packet custody')
+        wire=json.loads(raw)['wire']
+        require(wire['messages'][0]['content'].endswith(addition),'actual system append mismatch')
+        wire['messages'][0]['content']=wire['messages'][0]['content'][:-len(addition)]
+        block=wire['messages'][1]['content'][-1]
+        prefix,context=block['text'].split(marker,1)
+        require(prefix.endswith(addition),'actual user append mismatch')
+        block['text']=prefix[:-len(addition)]+marker+context
+        require(sha(canonical(wire))==parents[row['sample_id']]['abstract_wire_sha256'],
+            'existing policy differs from actual parent beyond instruction')
+    return dict(parent_manifest_sha256=cfg['manifest_sha256'],policy_manifest_sha256=record['manifest_sha256'],
+        verified_branches=len(rows),all_parent_wire_fields_preserved=True)
+
+def policy_reference(record):
+    """Resolve only local receipts; missing/unknown is never permission to resend."""
+    state=ROOT/'delivery/s-single-intent-execution-v1/rolling-state'
+    path=state/'tasks'/(record['task_id']+'.json')
+    current=read(path) if path.exists() else {}
+    terminal=current.get('terminal',{})
+    status=current.get('status',record['status'])
+    complete=(status=='completed' and terminal.get('status')=='COMPLETE' and terminal.get('unknown')==0
+        and terminal.get('completed')==terminal.get('total') and terminal.get('total',0)>0)
+    unknown=terminal.get('unknown',0)>0 or 'UNKNOWN' in str(current.get('reason','')).upper()
+    ref={key:record[key] for key in ('task_id','parent_version','identity','manifest','manifest_sha256','provenance',
+        'experience_source','experience_sha256')}
+    ref.update(status='complete' if complete else 'unknown_no_resend' if unknown else
+        'rejected_no_resend' if status in ('rejected','failed','blocked') else 'pending',
+        execution_status=status,learning_result_owner_task_id=record['task_id'],
+        result_source=str(path.relative_to(ROOT)),result_source_sha256=sha(path.read_bytes()) if path.exists() else None,
+        result_resolution='read authoritative local task/score receipts again; never dispatch this reference',
+        new_teacher_policy=False,new_execution_requests=0,gain_proven=False)
+    ref['terminal']={k:terminal[k] for k in ('status','completed','total','unknown','usage','money') if k in terminal}
+    cid=current.get('launch',{}).get('container_id')
+    ref['score_status']='pending'
+    if cid:
+        score=state/'scores'/('omni-s12-score-'+sha(cid.encode())[:12]+'.json')
+        ref.update(score_source=str(score.relative_to(ROOT)),score_source_sha256=sha(score.read_bytes()) if score.exists() else None)
+        if score.exists():
+            receipt=read(score);ref['score_status']=receipt.get('status','unknown')
+            if receipt.get('status')=='completed':
+                try:metrics=json.loads(receipt['stdout'])
+                except (KeyError,ValueError):ref['score_status']='unparsed_receipt_preserved'
+                else:ref['learning_result']={k:metrics[k] for k in ('status','groups','denominator','scope','usage','money') if k in metrics}
+    return ref
+
+def teacher_policy_context(operations):
+    inventory=policy_inventory();entries=[]
+    for opid,op in operations['operations'].items():
+        refs=[policy_reference(r) for r in inventory if r['identity']==instruction_identity(operations['parent_version'],op['instruction'])]
+        entries.append(dict(operation_id=opid,lifecycle=op.get('lifecycle','active'),reason=op.get('reason'),
+            evidence=op.get('evidence',[]),existing_policy_references=refs,
+            execution='not_admissible' if op.get('lifecycle')=='retired' or opid in operations['preexisting_redundant_operations']
+                else 'reuse_existing' if refs else 'bounded_new_candidate_if_actual_group_supported'))
+    ready=OUT/'READY-TASKS.json'
+    published=[]
+    for task in read(ready)['tasks'] if ready.exists() else []:
+        state=ROOT/'delivery/s-single-intent-execution-v1/rolling-state/tasks'/(task['task_id']+'.json')
+        current=read(state) if state.exists() else {}
+        published.append(dict(task_id=task['task_id'],parent_version=task.get('parent_version'),
+            method=task.get('method'),purpose=task.get('purpose'),admission_status=task.get('status'),
+            execution_status=current.get('status','not_observed'),reason=task.get('reason',current.get('reason'))))
+    return dict(operations=entries,prepared_and_published_policies=[policy_reference(r) for r in inventory],
+        published_task_history=published,rejected_strategies=operations.get('rejected_strategies',[]),
+        no_novel_candidate_allowed=True,analysis_required='Compare actual positive/negative group trajectories; propose, reference or stop with reasons.',
+        attribution='Group advantages belong to actual eight-seed parent. Reused evaluation belongs to its original task; endorsement is new analysis, not a new strategy or causal gain.')
+
+
 def prepare_feedback(source,summary,kind):
     digest=sha(source.read_bytes());revision='revision-v5-'+kind+'-'+digest[:12];folder=OUT/'teacher'/revision
     if folder.exists():return revision
@@ -179,6 +296,7 @@ def prepare_feedback(source,summary,kind):
     template=(OUT/'config/training-free-grpo-template-v1.md').read_text()+'\n\n'+DIAGNOSTIC_BOUNDARY+'\n'
     p=OUT/'config/tfgrpo-operations-v1.json'
     add('bounded-operations',p,read(p),meta|dict(unit='fixed_generic_operation_catalog'))
+    context['policy_history']=teacher_policy_context(read(p))
     save(folder/'dynamic-context.private.json',context);(folder/'template.md').write_text(template)
     save(folder/'messages.private.json',[dict(role='user',content=json.dumps(context,ensure_ascii=False))])
     cfg=copy.deepcopy(read(OUT/'teacher/revision-v4-parent-unit-correction/executor-config.private.json'));cfg['output_root']=str(folder/'response')
@@ -205,6 +323,8 @@ def compile_and_prepare(revision):
         if parent!=operations['parent_version']:reasons.append('not actual dynamic fewshot group parent')
         refs=set(proposal.get('source_evidence_ids',[]))
         if not refs<=known or 'actual-complete-feedback' not in refs:reasons.append('no current full feedback support')
+        if opid in operations['operations'] and operations['operations'][opid].get('lifecycle')=='retired':
+            reasons.append('operation retired by current evidence: '+operations['operations'][opid]['reason'])
         if opid in operations['preexisting_redundant_operations']:reasons.append('semantic mechanism already explicit in parent instruction')
         if opid in operations['operations'] and proposal.get('mechanism_family')!=operations['operations'][opid]['mechanism_family']:reasons.append('mechanism family mismatch')
         support=proposal.get('semantic_advantage')
@@ -218,7 +338,24 @@ def compile_and_prepare(revision):
         if opid in operations['operations']:value=operations['operations'][opid]['instruction']
         if reasons:
             decisions.append(dict(index=i,status='NO_ADMISSION',reasons=reasons,proposal=proposal));continue
-        name='tfgrpo-feedback-'+sha(canonical(proposal))[:12]
+        matches=[r for r in policy_inventory() if r['identity']==instruction_identity(parent,value)]
+        learning=dict(teacher_revision=revision,proposal_id=proposal.get('candidate_id'),
+            semantic_advantage=copy.deepcopy(support),source_evidence_ids=proposal['source_evidence_ids'],
+            actual_group_feedback_sha256=sha(canonical(read(folder/'dynamic-context.private.json')['evidence'][0])),
+            group_advantage_owner='actual same-policy eight-seed parent; not reused candidate outcomes',
+            teacher_final_sha256=sha((folder/'teacher-final.json').read_bytes()),new_policy=False)
+        if matches:
+            try:
+                custody=verify_reusable_policy(matches[0])
+                ref=policy_reference(matches[0])
+                decisions.append(dict(index=i,status='REUSE_EXISTING_POLICY',proposal=proposal,
+                    policy_reference=ref,custody=custody,TFGRPO_learning=learning))
+            except Exception as e:
+                decisions.append(dict(index=i,status='REUSE_CUSTODY_FAILED_NO_RESEND',proposal=proposal,
+                    existing_task_id=matches[0]['task_id'],error=str(e),TFGRPO_learning=learning))
+            continue
+        # Deterministic execution identity survives different teacher proposal IDs/restarts.
+        name='tfgrpo-feedback-'+instruction_identity(parent,value)[:20]
         entry=dict(mechanism=proposal['mechanism'],instruction=value,evidence=proposal['source_evidence_ids'],
             counterevidence=proposal['counterevidence'],falsification=proposal['falsification'],
             semantic_advantage=support,causal_status='BOUNDED_UNTESTED_HYPOTHESIS_NOT_PROVEN',
@@ -231,9 +368,10 @@ def compile_and_prepare(revision):
             purpose='test current full-feedback supported single mechanism; no weights update')
         try:
             producer.prepare(task);producer.verify(task);producer.publish(task)
-            decisions.append(dict(index=i,status='CPU_READY_NOT_PROVEN_GAIN',task=task))
+            decisions.append(dict(index=i,status='CPU_READY_NOT_PROVEN_GAIN',task=task,TFGRPO_learning=learning|dict(new_policy=True)))
         except Exception as e:decisions.append(dict(index=i,status='CPU_FAILED_NOT_ADMITTED',error=str(e),task=task))
     save(folder/'LOCAL-REVIEW.json',dict(at=time.time(),status='BOUNDED_COMPLETE_FEEDBACK_REVIEW',decisions=decisions,
+        novelty='NEW_CANDIDATE' if any(d['status']=='CPU_READY_NOT_PROVEN_GAIN' for d in decisions) else 'no-novel-candidate',
         no_arbitrary_code=True,no_weight_update=True,gain_proven=False))
     save(OUT/'experience'/('curator-'+revision+'.json'),dict(at=time.time(),parent_revision=revision,
         entries=result['curator']['experience_entries'],retirements=result['curator']['retirements'],local_decisions=decisions,

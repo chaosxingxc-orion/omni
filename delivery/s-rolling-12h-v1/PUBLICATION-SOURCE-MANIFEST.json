@@ -1,5 +1,5 @@
 {
-  "at": 1794260040.853767,
+  "at": 1794260855.1301,
   "privacy_replacements": [
     "/workspace/omni",
     "/srv/omni-local-state",
@@ -138,8 +138,8 @@
     },
     {
       "path": "delivery/s-tfrl-rolling-v1/code/feedback_teacher.py",
-      "runtime_sha256": "c2a622b3ab2bb232434bc78e37adb578c3abe60c6bcd1ac308ddea8b1f08a5e2",
-      "publication_sha256": "c2a622b3ab2bb232434bc78e37adb578c3abe60c6bcd1ac308ddea8b1f08a5e2"
+      "runtime_sha256": "d371bbdeb1b3848b56a7e70fb5ed28068a06a4947414dc758eae4bf383ae2300",
+      "publication_sha256": "d371bbdeb1b3848b56a7e70fb5ed28068a06a4947414dc758eae4bf383ae2300"
     },
     {
       "path": "delivery/s-tfrl-rolling-v1/code/group_feedback.py",
@@ -163,8 +163,8 @@
     },
     {
       "path": "delivery/s-single-intent-execution-v1/dispatch-priority.json",
-      "runtime_sha256": "4930f1374980fd652c03ef2516ada321ae2b8b0e3aac83b268e84b1a7ecc59a0",
-      "publication_sha256": "4930f1374980fd652c03ef2516ada321ae2b8b0e3aac83b268e84b1a7ecc59a0"
+      "runtime_sha256": "a247baa97061bec98d5f2db93917d63a903c355683727c86262bf663339e3cbf",
+      "publication_sha256": "a247baa97061bec98d5f2db93917d63a903c355683727c86262bf663339e3cbf"
     },
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-state/GROUP-MEMBER-MAP.json",
@@ -183,13 +183,13 @@
     },
     {
       "path": "delivery/s-tfrl-rolling-v1/config/tfgrpo-operations-v1.json",
-      "runtime_sha256": "00b329d3b23b7c29f242a975e934ef46e75da50c861798b112743c2b32c4b870",
-      "publication_sha256": "00b329d3b23b7c29f242a975e934ef46e75da50c861798b112743c2b32c4b870"
+      "runtime_sha256": "9a131a1ca3637f45d0fe1a15d79bc7834320fc7e4076871f3bff0f69587aee0d",
+      "publication_sha256": "9a131a1ca3637f45d0fe1a15d79bc7834320fc7e4076871f3bff0f69587aee0d"
     },
     {
       "path": "delivery/s-tfrl-rolling-v1/config/training-free-grpo-template-v1.md",
-      "runtime_sha256": "ff4f26f467a56ed51407167bcf076cd5ae2b5e85a209ca6f19c99ecc7904a610",
-      "publication_sha256": "ff4f26f467a56ed51407167bcf076cd5ae2b5e85a209ca6f19c99ecc7904a610"
+      "runtime_sha256": "f5e004a20afd4ebb07ea1dc489db312868a8cf66dca9b6a57faf10eaec187b29",
+      "publication_sha256": "f5e004a20afd4ebb07ea1dc489db312868a8cf66dca9b6a57faf10eaec187b29"
     },
     {
       "path": "delivery/s-tfrl-rolling-v1/config/teacher-compiled-candidate-role-evidence-v1.json",
@@ -208,8 +208,8 @@
     },
     {
       "path": "delivery/s-rolling-12h-v1/code/public_status.py",
-      "runtime_sha256": "e9aeb588cf6b39af5b9978a40b5dd4a6c6ead8431ebca5748b78471fc68a7892",
-      "publication_sha256": "e9aeb588cf6b39af5b9978a40b5dd4a6c6ead8431ebca5748b78471fc68a7892"
+      "runtime_sha256": "c575c84ffa50abcd584c38749c8b84ebab3564148bd66c168b51940d83093048",
+      "publication_sha256": "c575c84ffa50abcd584c38749c8b84ebab3564148bd66c168b51940d83093048"
     },
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/test_terminal_continuation.py",
@@ -260,6 +260,26 @@
       "path": "delivery/s-rolling-efficiency-v1/VALIDATION.json",
       "runtime_sha256": "bffeaacf4e9e2ab48a499d7ccf8c41dd93cfa11aa1e1cdc697198370bda7349a",
       "publication_sha256": "bffeaacf4e9e2ab48a499d7ccf8c41dd93cfa11aa1e1cdc697198370bda7349a"
+    },
+    {
+      "path": "delivery/s-teacher-policy-reuse-v1/tests/test_policy_reuse.py",
+      "runtime_sha256": "4a384678bd797001c17c6a69625769f12525ba405456ee548855563a024ac26a",
+      "publication_sha256": "4a384678bd797001c17c6a69625769f12525ba405456ee548855563a024ac26a"
+    },
+    {
+      "path": "delivery/s-teacher-policy-reuse-v1/code/feedback_teacher.py",
+      "runtime_sha256": "d371bbdeb1b3848b56a7e70fb5ed28068a06a4947414dc758eae4bf383ae2300",
+      "publication_sha256": "d371bbdeb1b3848b56a7e70fb5ed28068a06a4947414dc758eae4bf383ae2300"
+    },
+    {
+      "path": "delivery/s-teacher-policy-reuse-v1/config/tfgrpo-operations-v1.json",
+      "runtime_sha256": "9a131a1ca3637f45d0fe1a15d79bc7834320fc7e4076871f3bff0f69587aee0d",
+      "publication_sha256": "9a131a1ca3637f45d0fe1a15d79bc7834320fc7e4076871f3bff0f69587aee0d"
+    },
+    {
+      "path": "delivery/s-teacher-policy-reuse-v1/config/training-free-grpo-template-v1.md",
+      "runtime_sha256": "f5e004a20afd4ebb07ea1dc489db312868a8cf66dca9b6a57faf10eaec187b29",
+      "publication_sha256": "f5e004a20afd4ebb07ea1dc489db312868a8cf66dca9b6a57faf10eaec187b29"
     }
   ]
 }
