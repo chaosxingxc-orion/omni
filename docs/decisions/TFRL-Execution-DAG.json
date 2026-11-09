@@ -1,16 +1,16 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T01:34:21.464733+00:00",
-  "current_stage": "locked133_confirmed5_excluded_targeted8_growth",
-  "instruction": "Keep133 baseline; minimization stopped. Exact5 exclusions applied. User authorizes targeted TRAIN additions for retained8, source-isolated and all-DEV regression evaluated; no automatic growth promotion.",
+  "updated_at_utc": "2026-11-09T01:59:46.415111+00:00",
+  "current_stage": "139_safe_candidate_multiloss_compensation_and_P_transfer_preparation",
+  "instruction": "Preserve133 reference;139 source-clean candidate verified. Pursue residual2 using actual-loss multi-step compensation. Prepare1075 P transfer independently while A/B run; no new TEST or pruning.",
   "resources": {
     "inference_instances": 2,
     "cards_per_instance": 4,
     "max_codex_cli": 3,
     "monitor_interval_seconds": 600,
     "total_authorized_cards": 8,
-    "resource_scope": "A actual response and B actual request; assigned resources do not prove AIcore saturation",
+    "resource_scope": "A and B containers independently confirmed running; assigned8 cards and near64 inflight do not prove AIcore saturation",
     "active_scientific_NPU_jobs": 2,
     "active_scientific_NPU_cards": 8,
     "idle_cards": null,
@@ -198,6 +198,84 @@
       ],
       "status": "complete_1000_of1080",
       "blocks_NPU_successors": false
+    },
+    {
+      "id": "recall139-ledger",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "complete_main_verified",
+      "effective_queries": 2778,
+      "foldA_supply": {
+        "correct": 1073,
+        "total": 1075
+      },
+      "added": 6,
+      "regressions": 0,
+      "runtime_promoted": false
+    },
+    {
+      "id": "recall-multiloss-compensation",
+      "resource": "CPU",
+      "depends_on": [
+        "recall139-ledger"
+      ],
+      "status": "CLI_implementation_and_profile_in_progress",
+      "new_state_budget": 40,
+      "prior_combination_states": 24,
+      "algorithm": "risk-aware actual-loss cover; multi-step beam; no deletion or encoding"
+    },
+    {
+      "id": "P139-transfer-prepare",
+      "resource": "CPU",
+      "depends_on": [
+        "recall139-ledger"
+      ],
+      "status": "CLI_preparation_in_progress_not_admitted",
+      "input_count": 1075,
+      "parent": "F_133_Q15D5_fs1_OFF",
+      "intervention": "KB133_to139_only"
+    },
+    {
+      "id": "P139-transfer",
+      "resource": "NPU_A",
+      "depends_on": [
+        "P139-transfer-prepare"
+      ],
+      "status": "not_launched_requires_ready_inputs_and_lane_release",
+      "input_count": 1075
+    },
+    {
+      "id": "A-fewshot-thinking",
+      "resource": "NPU_A",
+      "depends_on": [],
+      "status": "running_confirmed_container",
+      "snapshot": {
+        "at_unix": 1794189313.4936855,
+        "completed": 512,
+        "total": 1080,
+        "seconds_per_row_recent": 4.699889807030559,
+        "eta_seconds": 2669.5374103933573
+      }
+    },
+    {
+      "id": "B-exclusion-check",
+      "resource": "NPU_B",
+      "depends_on": [],
+      "status": "running_confirmed_container",
+      "snapshot": {
+        "at_unix": 1794189222.382148,
+        "completed": 384,
+        "total": 1080,
+        "seconds_per_row_recent": 4.701346872374415,
+        "eta_seconds": 3272.137423172593
+      }
+    },
+    {
+      "id": "B-efficiency-analysis",
+      "resource": "CPU",
+      "depends_on": [],
+      "status": "same_owner_readonly_analysis_requested",
+      "source": "existing_logs_only_no_frequent_polling"
     }
   ],
   "latest_recall_revision": {
