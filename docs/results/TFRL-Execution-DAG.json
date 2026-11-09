@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T00:25:42.057747+00:00",
+  "updated_at_utc": "2026-11-09T00:37:13.890716+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -682,7 +682,7 @@
     "http_seconds_per_row": 5.465301855583352
   },
   "current_snapshot": {
-    "recall_bank": 74,
+    "recall_bank": 76,
     "bank_floor": null,
     "round6_formal": "complete_main_verified",
     "reverse76": "complete_75_main_verified",
@@ -695,8 +695,10 @@
     "P_fs1_first_model_request_verified": true,
     "P_X_top3": 1014,
     "P_X_remaining": 0,
-    "P_A_completed_snapshot": 20,
-    "P_A_snapshot_at_unix": 1794183761.9194286
+    "P_A_completed_snapshot": 1080,
+    "P_A_snapshot_at_unix": 1794184304.3805466,
+    "P_A_top3": 996,
+    "P_A_top1": 880
   },
   "historical_active_tracks": [
     {
@@ -731,30 +733,24 @@
   ],
   "active_tracks": [
     {
-      "id": "recall74-feedback",
-      "resource": "LOCAL_TEACHER_THEN_CPU",
-      "status": "teacher_dispatched",
-      "starting_bank_size": 74,
+      "id": "recall74-growth76-prune",
+      "resource": "CPU",
+      "status": "formal_complete_main_accepted_reverse_prune_authorized",
+      "bank_size": 76,
       "blocks_NPU": false
     },
     {
-      "id": "P-X-successor",
-      "resource": "CPU",
-      "status": "X_inference_complete_successor_preparation",
-      "completed": 1080,
-      "total": 1080,
+      "id": "P-direct-support-successor",
+      "resource": "CPU_LOCAL_TEACHER_PREPARATION",
+      "status": "CPU_input_main_verified_admission_started",
       "NPU_started": false
     },
     {
-      "id": "P-example-use",
-      "resource": "NPU_A",
-      "status": "actual_first_response_observed",
-      "completed_snapshot": 20,
-      "total": 1080,
-      "snapshot_at_unix": 1794183761.9194286,
-      "cards": 4,
-      "instances": 1,
-      "configured_inflight": 64
+      "id": "P-example-use-analysis",
+      "resource": "CPU",
+      "status": "inference_complete_negative_no_promotion",
+      "completed": 1080,
+      "total": 1080
     }
   ],
   "round6_teacher_feedback": {
@@ -858,7 +854,7 @@
     "sample_exclusions": 0
   },
   "p_example_use_successor": {
-    "status": "actual_first_response_observed",
+    "status": "complete_no_net_top3_gain_not_promoted",
     "parent": "F_fs1",
     "axis": "template_only",
     "rows_prepared": 1080,
@@ -871,8 +867,12 @@
     "instances": 1,
     "total": 1080,
     "teacher_terminal": true,
-    "completed_snapshot": 20,
-    "snapshot_at_unix": 1794183761.9194286
+    "completed_snapshot": 1080,
+    "snapshot_at_unix": 1794184304.3805466,
+    "top3": 996,
+    "top1": 880,
+    "repairs": 7,
+    "regressions": 7
   },
   "joint_duty_formal_completed": {
     "status": "main_recount_accepted",
@@ -904,5 +904,19 @@
     "original_supply_and_audio_unchanged": true,
     "NPU_started": false,
     "teacher_sent": false
+  },
+  "recall74_followup": {
+    "status": "complete_main_accepted_reverse_prune_authorized",
+    "initial_size": 74,
+    "final_size": 76,
+    "DEV_rows": 2783,
+    "Q15_question_repairs": 13,
+    "Q15_union_repairs": 10,
+    "Q50_question_repairs": 3,
+    "Q50_union_repairs": 3,
+    "all_four_regressions": 0,
+    "Replay_states": 48,
+    "CPU_attempt_wall_seconds": 15.883006489952095,
+    "NPU_cards": 0
   }
 }
