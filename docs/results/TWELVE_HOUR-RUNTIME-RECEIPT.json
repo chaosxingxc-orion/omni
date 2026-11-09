@@ -1,6 +1,6 @@
 {
   "schema": "public-rolling-aggregate-v2",
-  "generated_at": "2026-11-10T06:46:17+08:00",
+  "generated_at": "2026-11-10T06:58:49+08:00",
   "window": {
     "start": "2026-11-10T04:10:52+08:00",
     "end": "2026-11-10T16:10:52+08:00",
@@ -14,15 +14,15 @@
     "A": {
       "task": "compact-fewshot-v1",
       "state": "running",
-      "snapshot_at": 1794264331.0569153,
-      "completed_samples": 94,
+      "snapshot_at": 1794264592.3077354,
+      "completed_samples": 114,
       "total_samples": 545,
-      "completed_branches": 292,
+      "completed_branches": 363,
       "total_branches": 1635,
-      "seconds_per_branch": 4.127275315049577,
-      "remaining_seconds": 5542.930748111581,
+      "seconds_per_branch": 4.039711342041814,
+      "remaining_seconds": 5138.5128270771875,
       "invalid": 0,
-      "tokens": 1792364,
+      "tokens": 2267066,
       "concurrency": 64,
       "cards": 4,
       "client_inflight_or_unknown": 64,
@@ -32,33 +32,33 @@
     "B": {
       "task": "train-remainder-part2-fewshot-v1",
       "state": "running",
-      "snapshot_at": 1794264312.093277,
-      "completed_samples": 0,
+      "snapshot_at": 1794264592.2079372,
+      "completed_samples": 1,
       "total_samples": 934,
-      "completed_branches": 0,
+      "completed_branches": 34,
       "total_branches": 2802,
-      "seconds_per_branch": null,
+      "seconds_per_branch": 8.329390448682448,
       "remaining_seconds": null,
       "invalid": 0,
-      "tokens": null,
+      "tokens": 157704,
       "concurrency": 96,
       "cards": 4,
-      "client_inflight_or_unknown": 0,
-      "server_running": 6.0,
-      "server_waiting": 90.0
+      "client_inflight_or_unknown": 96,
+      "server_running": 96.0,
+      "server_waiting": 0.0
     },
     "C": {
       "task": "grpo-fewshot-seed2026110903-retry2",
       "state": "running",
-      "snapshot_at": 1794264139.2761037,
-      "completed_samples": 121,
+      "snapshot_at": 1794264477.1368897,
+      "completed_samples": 144,
       "total_samples": 545,
-      "completed_branches": 382,
+      "completed_branches": 459,
       "total_branches": 1635,
-      "seconds_per_branch": 4.737507777688391,
-      "remaining_seconds": 5936.097245443554,
-      "invalid": 8,
-      "tokens": 2265601,
+      "seconds_per_branch": 4.678842603770736,
+      "remaining_seconds": 5502.318902034385,
+      "invalid": 9,
+      "tokens": 2761169,
       "concurrency": 64,
       "cards": 4,
       "client_inflight_or_unknown": 64,
@@ -66,59 +66,59 @@
       "server_waiting": 0.0
     },
     "D": {
-      "task": null,
-      "state": "failed",
-      "snapshot_at": 1794264265.6918392,
-      "completed_samples": 367,
-      "total_samples": 545,
-      "completed_branches": 1103,
-      "total_branches": 1635,
-      "seconds_per_branch": 4.221388548585575,
-      "remaining_seconds": 2245.778707847526,
-      "invalid": 15,
-      "tokens": 6800582,
-      "concurrency": null,
+      "task": "train-remainder-part4-fewshot-v1",
+      "state": "running",
+      "snapshot_at": 1794264762.8778322,
+      "completed_samples": 0,
+      "total_samples": 934,
+      "completed_branches": 22,
+      "total_branches": 2802,
+      "seconds_per_branch": 11.729487267407505,
+      "remaining_seconds": null,
+      "invalid": 0,
+      "tokens": 89122,
+      "concurrency": 96,
       "cards": 4,
-      "client_inflight_or_unknown": 1,
-      "server_running": 0.0,
+      "client_inflight_or_unknown": 96,
+      "server_running": 96.0,
       "server_waiting": 0.0
     }
   },
   "queue": {
     "ready_tasks": 10,
     "ready_branches": 26988,
-    "running_residual_branches": 5398,
-    "remaining_window_hours": 9.40985928369893,
+    "running_residual_branches": 7996,
+    "remaining_window_hours": 9.200922020872435,
     "estimated_wall_hours_by_seconds_per_branch": {
-      "3": 6.747083333333333,
-      "4": 8.99611111111111,
-      "5": 11.245138888888889
+      "3": 7.288333333333333,
+      "4": 9.717777777777778,
+      "5": 12.147222222222222
     },
     "estimate_is_guarantee": false,
     "cpu_pending": 0,
     "preference_is_exclusive_reservation": false
   },
   "resource": {
-    "snapshot_at": 1794264343.3961391,
+    "snapshot_at": 1794264947.2976863,
     "ai_core_percent": [
-      34,
-      56,
-      42,
-      10,
-      25,
-      34,
-      35,
-      32,
-      28,
-      30,
-      18,
-      34,
-      0,
-      0,
-      0,
-      0
+      22,
+      27,
+      59,
+      37,
+      76,
+      4,
+      64,
+      27,
+      38,
+      17,
+      55,
+      8,
+      59,
+      15,
+      48,
+      29
     ],
-    "mean_ai_core_percent": 23.625,
+    "mean_ai_core_percent": 36.5625,
     "continuous_80_percent_proven": false
   },
   "coverage_12h": "NOT_YET_PROVEN",
@@ -126,5 +126,107 @@
   "monitoring_seconds": 600,
   "cpu_and_npu_async": true,
   "unknown_request_replay": false,
+  "useful_capacity": {
+    "at": 1794264961.121987,
+    "groups": {
+      "ready_dynamic_TRAIN": [
+        {
+          "task_id": "train-remainder-part3-fewshot-v1",
+          "branches": 2799
+        },
+        {
+          "task_id": "train-remainder-part1-fewshot-v1",
+          "branches": 2799
+        }
+      ],
+      "ready_evaluation_only": [
+        {
+          "task_id": "train-s_valid-single-fewshot-v1",
+          "branches": 3240
+        },
+        {
+          "task_id": "train-s_valid-single-v1",
+          "branches": 3240
+        }
+      ],
+      "ready_hypotheses": [
+        {
+          "task_id": "candidate-role-evidence-v1",
+          "branches": 1635
+        },
+        {
+          "task_id": "absent-slot-v1",
+          "branches": 1635
+        }
+      ],
+      "deprioritized_no_examples": [
+        {
+          "task_id": "train-remainder-part2-v1",
+          "branches": 2802
+        },
+        {
+          "task_id": "train-remainder-part1-v1",
+          "branches": 2799
+        },
+        {
+          "task_id": "train-s_fit-single-v1",
+          "branches": 3240
+        },
+        {
+          "task_id": "train-remainder-part3-v1",
+          "branches": 2799
+        }
+      ]
+    },
+    "branch_counts": {
+      "ready_dynamic_TRAIN": 5598,
+      "ready_evaluation_only": 6480,
+      "ready_hypotheses": 3270,
+      "deprioritized_no_examples": 11640
+    },
+    "ready_useful_policy_and_eval_branches": 15348,
+    "running_residual_branches": 7996,
+    "lanes": {
+      "A": {
+        "task": "compact-fewshot-v1",
+        "status": "running",
+        "snapshot_at": 1794264592.3077354,
+        "residual": 1272
+      },
+      "B": {
+        "task": "train-remainder-part2-fewshot-v1",
+        "status": "running",
+        "snapshot_at": 1794264592.2079372,
+        "residual": 2768
+      },
+      "C": {
+        "task": "grpo-fewshot-seed2026110903-retry2",
+        "status": "running",
+        "snapshot_at": 1794264477.1368897,
+        "residual": 1176
+      },
+      "D": {
+        "task": "train-remainder-part4-fewshot-v1",
+        "status": "running",
+        "snapshot_at": 1794264762.8778322,
+        "residual": 2780
+      }
+    },
+    "remaining_window_hours": 9.247629521555371,
+    "inventory_four_lane_hours": {
+      "3": 3.1975,
+      "4": 4.263333333333334,
+      "5": 5.329166666666667
+    },
+    "useful_plus_running_four_lane_hours": {
+      "3": 4.863333333333333,
+      "4": 6.484444444444445,
+      "5": 8.105555555555556
+    },
+    "conditional_compact_CPU_branches": 11202,
+    "conditional_is_ready": false,
+    "explicit_risk": "Low-priority no-example controls have demonstrated high whitespace waste. Conditional compact cannot guarantee inventory if gate fails.",
+    "no_filler_seeds": true
+  },
   "cost_scope": "tokens reflect current lane snapshots only; historical failures preserved privately; currency unknown"
 }

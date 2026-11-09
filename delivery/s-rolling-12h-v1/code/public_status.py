@@ -19,6 +19,7 @@ def render():
     window = read(ROOT / 'delivery/s-rolling-12h-v1/WINDOW.json')
     resource = read(STATE / 'RESOURCE-LATEST.json')
     reserve = read(STATE / 'RESERVE.json')
+    capacity = read(ROOT / 'delivery/s-rolling-12h-v1/USEFUL-QUEUE-CAPACITY.json')
     lanes = {}
     for lane in 'ABCD':
         current = read(STATE / 'lanes' / (lane + '-CURRENT.json'))
@@ -58,6 +59,7 @@ def render():
                       continuous_80_percent_proven=False),
         coverage_12h='NOT_YET_PROVEN', observed_handoff_gaps=True,
         monitoring_seconds=600, cpu_and_npu_async=True, unknown_request_replay=False,
+        useful_capacity=capacity,
         cost_scope='tokens reflect current lane snapshots only; historical failures preserved privately; currency unknown')
     lines=['# 四路持续实验队列', '', '更新时间：'+record['generated_at'], '',
            '**固定窗口：'+record['window']['start']+' 至 '+record['window']['end']+'。** 到期停止新准入，在途请求排空；不再次重置窗口。', '',
@@ -73,7 +75,9 @@ def render():
               '## 接续与学习', '',
               '- 当前固定545真实样本、P Top3共1635分支；八种子组保持相同策略与预算，不扩种子填时长。',
               '- seed03明确的调用前失败保留；retry2按显式映射收集，要求相同seed/config/pins、完整终态且unknown=0。',
-              '- 剩余两个组成员优先执行，完整组反馈后由本机外部教师提出有界策略；其他实例继续独立TRAIN任务。',
+              '- seed08在1103/1635分支后超时，保留1个未知请求，不重发、不拼成完整八种子组。六个成员已完整，seed03仍在运行；TFGRPO全组学习暂缺前提，独立ACE与TRAIN继续。',
+              '- D路旧进程已退出且引擎空闲后，持共享guard归档并清理失效flight元数据；未改未知请求journal。独立TRAIN后继已产生真实响应，96并发；没有重启模型服务。',
+              '- B路高浪费无示例对照主动停止新准入并排空至891/2802分支，354非法；保留全部成本。已自动接续动态few-shot TRAIN，不能把部分对照算完整结果。',
               '- CPU采用prepare_plan.py --plan，复用已发布输入；后续优先运行真实根因策略，避免重复基线占位。',
               '- S_valid仅独立评价，禁止进入教师调优。保留竞争角色提示假设；关系方向探针缺乏可评分错例，已在启动前退役；单纯前移ambiguity字段的候选不准入。',
               '- 紧凑JSON在无示例父上显著减少非法输出，但精度仍低于动态few-shot；compact+fewshot组合已通过545/1635固定镜像CPU验收并加入A路后继，尚无组合推理收益。',
@@ -81,6 +85,12 @@ def render():
               '- 教师编译已修复：相同父策略与实际instruction复用原任务和结果，退役策略不再准入；固定镜像16项fixture通过。CPU教师worker已接管，付费quota及未知请求不重发规则不变。',
               '- 各路进度和资源为异步快照，表内时间不能视为同一时刻测量；新任务启动阶段的秒/分支不代表稳定吞吐。',
               '- 每600秒或明确终态更新；公开页面原位刷新。当前tokens仅为各路快照，全部历史失败成本另存，金额未知。', '']
+    if capacity:
+        useful = capacity.get('useful_plus_running_four_lane_hours', {})
+        lines += ['## 有效库存与CPU补给', '',
+                  f'有效待执行分支 {capacity.get("ready_useful_policy_and_eval_branches")}；低优先级高浪费对照另列 {capacity.get("branch_counts", {}).get("deprioritized_no_examples")} 分支。有效库存加在途按3/4/5秒估计 {useful.get("3", 0):.2f}/{useful.get("4", 0):.2f}/{useful.get("5", 0):.2f} 小时，尚不足以无条件覆盖剩余窗口。此容量核算自带时间戳，不是实时保证。', '',
+                  '四片compact TRAIN已完成CPU准备，共3734样本/11202分支；科学门槛未通过前不计READY。并行CPU任务正在补齐ACE小规模候选的运行物料、准备基于真实知识卡冲突的下一轮教师请求，并修复已复现的失败后接续故障。', '',
+                  '知识卡全54张、402绑定及5598条合法TRAIN来源已审计；发现可选槽被绝对提取指令覆盖，以及无来源长度限制两个机制。它们是待检验因果假设。few-shot分差的高总体AUC主要重复父top1信息，当前没有足够证据部署新的选择器。', '']
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT/'TWELVE_HOUR-RUNTIME-RECEIPT.json').write_text(json.dumps(record, ensure_ascii=False, indent=2))
     (OUT/'S-Rolling-Experiment-Queue.md').write_text(chr(10).join(lines))
