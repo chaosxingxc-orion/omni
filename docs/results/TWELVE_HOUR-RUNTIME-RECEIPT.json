@@ -1,6 +1,6 @@
 {
   "schema": "public-rolling-aggregate-v2",
-  "generated_at": "2026-11-10T06:58:49+08:00",
+  "generated_at": "2026-11-10T07:01:27+08:00",
   "window": {
     "start": "2026-11-10T04:10:52+08:00",
     "end": "2026-11-10T16:10:52+08:00",
@@ -14,15 +14,15 @@
     "A": {
       "task": "compact-fewshot-v1",
       "state": "running",
-      "snapshot_at": 1794264592.3077354,
-      "completed_samples": 114,
+      "snapshot_at": 1794265193.9738336,
+      "completed_samples": 168,
       "total_samples": 545,
-      "completed_branches": 363,
+      "completed_branches": 526,
       "total_branches": 1635,
-      "seconds_per_branch": 4.039711342041814,
-      "remaining_seconds": 5138.5128270771875,
+      "seconds_per_branch": 3.9317135257865994,
+      "remaining_seconds": 4360.270300097339,
       "invalid": 0,
-      "tokens": 2267066,
+      "tokens": 3332327,
       "concurrency": 64,
       "cards": 4,
       "client_inflight_or_unknown": 64,
@@ -32,15 +32,15 @@
     "B": {
       "task": "train-remainder-part2-fewshot-v1",
       "state": "running",
-      "snapshot_at": 1794264592.2079372,
-      "completed_samples": 1,
+      "snapshot_at": 1794265193.880514,
+      "completed_samples": 72,
       "total_samples": 934,
-      "completed_branches": 34,
+      "completed_branches": 250,
       "total_branches": 2802,
-      "seconds_per_branch": 8.329390448682448,
-      "remaining_seconds": null,
-      "invalid": 0,
-      "tokens": 157704,
+      "seconds_per_branch": 3.539487373352051,
+      "remaining_seconds": 9032.771776794434,
+      "invalid": 1,
+      "tokens": 1535923,
       "concurrency": 96,
       "cards": 4,
       "client_inflight_or_unknown": 96,
@@ -50,15 +50,15 @@
     "C": {
       "task": "grpo-fewshot-seed2026110903-retry2",
       "state": "running",
-      "snapshot_at": 1794264477.1368897,
-      "completed_samples": 144,
+      "snapshot_at": 1794265078.8930535,
+      "completed_samples": 192,
       "total_samples": 545,
-      "completed_branches": 459,
+      "completed_branches": 605,
       "total_branches": 1635,
-      "seconds_per_branch": 4.678842603770736,
-      "remaining_seconds": 5502.318902034385,
-      "invalid": 9,
-      "tokens": 2761169,
+      "seconds_per_branch": 4.544371764127873,
+      "remaining_seconds": 4680.702917051709,
+      "invalid": 10,
+      "tokens": 3666825,
       "concurrency": 64,
       "cards": 4,
       "client_inflight_or_unknown": 64,
@@ -68,15 +68,15 @@
     "D": {
       "task": "train-remainder-part4-fewshot-v1",
       "state": "running",
-      "snapshot_at": 1794264762.8778322,
-      "completed_samples": 0,
+      "snapshot_at": 1794265112.1637306,
+      "completed_samples": 24,
       "total_samples": 934,
-      "completed_branches": 22,
+      "completed_branches": 107,
       "total_branches": 2802,
-      "seconds_per_branch": 11.729487267407505,
-      "remaining_seconds": null,
+      "seconds_per_branch": 5.6760244213532065,
+      "remaining_seconds": 15296.885815546892,
       "invalid": 0,
-      "tokens": 89122,
+      "tokens": 621692,
       "concurrency": 96,
       "cards": 4,
       "client_inflight_or_unknown": 96,
@@ -87,12 +87,12 @@
   "queue": {
     "ready_tasks": 10,
     "ready_branches": 26988,
-    "running_residual_branches": 7996,
-    "remaining_window_hours": 9.200922020872435,
+    "running_residual_branches": 7386,
+    "remaining_window_hours": 9.157066058251592,
     "estimated_wall_hours_by_seconds_per_branch": {
-      "3": 7.288333333333333,
-      "4": 9.717777777777778,
-      "5": 12.147222222222222
+      "3": 7.16125,
+      "4": 9.548333333333334,
+      "5": 11.935416666666667
     },
     "estimate_is_guarantee": false,
     "cpu_pending": 0,
@@ -127,7 +127,7 @@
   "cpu_and_npu_async": true,
   "unknown_request_replay": false,
   "useful_capacity": {
-    "at": 1794264961.121987,
+    "at": 1794265287.1504042,
     "groups": {
       "ready_dynamic_TRAIN": [
         {
@@ -185,48 +185,16 @@
       "deprioritized_no_examples": 11640
     },
     "ready_useful_policy_and_eval_branches": 15348,
-    "running_residual_branches": 7996,
-    "lanes": {
-      "A": {
-        "task": "compact-fewshot-v1",
-        "status": "running",
-        "snapshot_at": 1794264592.3077354,
-        "residual": 1272
-      },
-      "B": {
-        "task": "train-remainder-part2-fewshot-v1",
-        "status": "running",
-        "snapshot_at": 1794264592.2079372,
-        "residual": 2768
-      },
-      "C": {
-        "task": "grpo-fewshot-seed2026110903-retry2",
-        "status": "running",
-        "snapshot_at": 1794264477.1368897,
-        "residual": 1176
-      },
-      "D": {
-        "task": "train-remainder-part4-fewshot-v1",
-        "status": "running",
-        "snapshot_at": 1794264762.8778322,
-        "residual": 2780
-      }
-    },
-    "remaining_window_hours": 9.247629521555371,
-    "inventory_four_lane_hours": {
-      "3": 3.1975,
-      "4": 4.263333333333334,
-      "5": 5.329166666666667
-    },
+    "running_residual_branches": 7386,
     "useful_plus_running_four_lane_hours": {
-      "3": 4.863333333333333,
-      "4": 6.484444444444445,
-      "5": 8.105555555555556
+      "3": 4.73625,
+      "4": 6.315,
+      "5": 7.89375
     },
     "conditional_compact_CPU_branches": 11202,
     "conditional_is_ready": false,
-    "explicit_risk": "Low-priority no-example controls have demonstrated high whitespace waste. Conditional compact cannot guarantee inventory if gate fails.",
-    "no_filler_seeds": true
+    "no_filler_seeds": true,
+    "estimate_is_guarantee": false
   },
   "cost_scope": "tokens reflect current lane snapshots only; historical failures preserved privately; currency unknown"
 }

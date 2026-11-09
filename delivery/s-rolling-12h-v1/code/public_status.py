@@ -19,7 +19,6 @@ def render():
     window = read(ROOT / 'delivery/s-rolling-12h-v1/WINDOW.json')
     resource = read(STATE / 'RESOURCE-LATEST.json')
     reserve = read(STATE / 'RESERVE.json')
-    capacity = read(ROOT / 'delivery/s-rolling-12h-v1/USEFUL-QUEUE-CAPACITY.json')
     lanes = {}
     for lane in 'ABCD':
         current = read(STATE / 'lanes' / (lane + '-CURRENT.json'))
@@ -44,6 +43,26 @@ def render():
     ready = [read(p) for p in (STATE / 'tasks').glob('*.json') if read(p).get('status') == 'ready']
     branches = sum(s['task'].get('branches', 0) for s in ready)
     residual = sum(max(0, (d.get('total_branches') or 0) - (d.get('completed_branches') or 0)) for d in lanes.values() if d['state'] == 'running')
+    groups = {k: [] for k in ('ready_dynamic_TRAIN', 'ready_evaluation_only', 'ready_hypotheses', 'deprioritized_no_examples')}
+    for state in ready:
+        task = state['task']
+        name = task['task_id']
+        if name in {'train-remainder-part1-v1', 'train-remainder-part2-v1', 'train-remainder-part3-v1', 'train-s_fit-single-v1'}:
+            kind = 'deprioritized_no_examples'
+        elif 's_valid' in name:
+            kind = 'ready_evaluation_only'
+        elif 'remainder' in name:
+            kind = 'ready_dynamic_TRAIN'
+        else:
+            kind = 'ready_hypotheses'
+        groups[kind].append(dict(task_id=name, branches=task.get('branches', 0)))
+    counts = {k: sum(t['branches'] for t in v) for k, v in groups.items()}
+    useful = branches - counts['deprioritized_no_examples']
+    capacity = dict(at=time.time(), groups=groups, branch_counts=counts,
+                    ready_useful_policy_and_eval_branches=useful, running_residual_branches=residual,
+                    useful_plus_running_four_lane_hours={str(s): (useful + residual) * s / 14400 for s in (3, 4, 5)},
+                    conditional_compact_CPU_branches=11202, conditional_is_ready=False,
+                    no_filler_seeds=True, estimate_is_guarantee=False)
     scenarios = {str(s): (branches + residual) * s / 14400 for s in (3, 4, 5)}
     record = dict(schema='public-rolling-aggregate-v2', generated_at=stamp(time.time()),
         window=dict(start=stamp(window['start_epoch']), end=stamp(window['end_epoch']), duration_hours=12,
