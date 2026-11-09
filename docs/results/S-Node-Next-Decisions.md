@@ -49,3 +49,6 @@ CPU子进程提前准备原3734条TRAIN四片的推广输入，只有上述验�
 
 
 四个已完成随机轨迹的完整结果及效率根因，见 [S-Group-Preliminary-Results](S-Group-Preliminary-Results)。当前四seed均未超过父D的exact和mean reward；B无示例TRAIN长尾空白复现，未启动动态fewshot已提优先级。
+
+
+[条件实验自动准入](S-Conditional-Admission)已通过固定镜像25项测试并部署。等待真实compact545结果；当前没有提前发布训练推广任务。

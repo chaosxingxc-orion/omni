@@ -1,0 +1,160 @@
+{
+  "schema": "s-compact-successor-admission-v1",
+  "root": "/workspace/omni",
+  "cadence_seconds": 600,
+  "window": "delivery/s-rolling-12h-v1/WINDOW.json",
+  "promotion_task": "delivery/s-compact-fewshot-ready-v1/TASK.json",
+  "promotion_gate": {
+    "full_branches": 1635,
+    "full_samples": 545,
+    "invalid_branches_strictly_below": 15,
+    "length_branches_parent": 8,
+    "length_rule": "strictly decrease if parent positive; remain zero if parent zero",
+    "on_failure": "Do not replace parent D; report full paired repairs/regressions, all failures and historical/new costs",
+    "report_required": [
+      "full paired strict and typed exact repairs/regressions",
+      "per-sample reward directions",
+      "full 1635 protocol invalid/length counts",
+      "all-three secondary",
+      "gold empty/nonempty and both-legal strata",
+      "all historical and new cost"
+    ],
+    "strict_exact_min": 163,
+    "strict_mean_sample_reward_min": 0.44109085613672777,
+    "strict_micro_F1_min": 0.3576594345825115,
+    "typed_exact_min": 219,
+    "typed_mean_sample_reward_min": 0.5905948078425145,
+    "typed_micro_F1_min": 0.5680473372781065,
+    "unknown": 0
+  },
+  "promotion": {
+    "task_id": "compact-fewshot-v1",
+    "config": "delivery/s-tfrl-rolling-v1/candidates/compact-fewshot-v1/single_intent_fewshot/native-UNBOUND.json",
+    "run_id": "S-ROLLING-COMPACT-FEWSHOT-V1",
+    "attempt_ids": [
+      "v1"
+    ],
+    "samples": 545,
+    "branches": 1635,
+    "require_launch_task_id": true
+  },
+  "parent": {
+    "task_id": "parent-D-original545",
+    "config": "delivery/s-single-intent-fewshot-v1/prepared-v5-dynamic/single_intent_fewshot/native-UNBOUND.json",
+    "run_id": "S-SINGLE-INTENT-FIT545-SINGLE_INTENT_FEWSHOT-V5-DYNAMIC",
+    "attempt_ids": [
+      "v1-dynamic-main-admitted"
+    ],
+    "samples": 545,
+    "branches": 1635,
+    "require_launch_task_id": false
+  },
+  "parts": [
+    {
+      "candidate_task_id": "train-remainder-part1-compact-fewshot-v1",
+      "preferred_lane": "A",
+      "control": {
+        "task_id": "train-remainder-part1-fewshot-v1",
+        "config": "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part1-fewshot-v1/single_intent_fewshot/native-UNBOUND.json",
+        "run_id": "S-ROLLING-TRAIN-REMAINDER-PART1-FEWSHOT-V1",
+        "attempt_ids": [
+          "v1",
+          "v1-c96"
+        ],
+        "samples": 933,
+        "branches": 2799,
+        "require_launch_task_id": true
+      }
+    },
+    {
+      "candidate_task_id": "train-remainder-part2-compact-fewshot-v1",
+      "preferred_lane": "B",
+      "control": {
+        "task_id": "train-remainder-part2-fewshot-v1",
+        "config": "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part2-fewshot-v1/single_intent_fewshot/native-UNBOUND.json",
+        "run_id": "S-ROLLING-TRAIN-REMAINDER-PART2-FEWSHOT-V1",
+        "attempt_ids": [
+          "v1",
+          "v1-c96"
+        ],
+        "samples": 934,
+        "branches": 2802,
+        "require_launch_task_id": true
+      }
+    },
+    {
+      "candidate_task_id": "train-remainder-part3-compact-fewshot-v1",
+      "preferred_lane": "C",
+      "control": {
+        "task_id": "train-remainder-part3-fewshot-v1",
+        "config": "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part3-fewshot-v1/single_intent_fewshot/native-UNBOUND.json",
+        "run_id": "S-ROLLING-TRAIN-REMAINDER-PART3-FEWSHOT-V1",
+        "attempt_ids": [
+          "v1",
+          "v1-c96"
+        ],
+        "samples": 933,
+        "branches": 2799,
+        "require_launch_task_id": true
+      }
+    },
+    {
+      "candidate_task_id": "train-remainder-part4-compact-fewshot-v1",
+      "preferred_lane": "D",
+      "control": {
+        "task_id": "train-remainder-part4-fewshot-v1",
+        "config": "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part4-fewshot-v1/single_intent_fewshot/native-UNBOUND.json",
+        "run_id": "S-ROLLING-TRAIN-REMAINDER-PART4-FEWSHOT-V1",
+        "attempt_ids": [
+          "v1",
+          "v1-c96"
+        ],
+        "samples": 934,
+        "branches": 2802,
+        "require_launch_task_id": true
+      }
+    }
+  ],
+  "cpu_ready": "delivery/s-compact-train-ready-v1/READY.json",
+  "cpu_tasks": "delivery/s-compact-train-ready-v1/TASKS.json",
+  "archives": "delivery/s-single-intent-execution-v1/rolling-state/archives",
+  "execution_tasks": "delivery/s-single-intent-execution-v1/rolling-state/tasks",
+  "published_tasks": "delivery/s-tfrl-rolling-v1/READY-TASKS.json",
+  "publisher": "delivery/s-tfrl-rolling-v1/code/producer.py",
+  "producer_output": "delivery/s-tfrl-rolling-v1",
+  "fixed_image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "score_rules": {
+    "rule_config_sha256": "delivery/s-typed-normalized-scoring-v1/CONFIG.json",
+    "rule_freeze_sha256": "delivery/s-typed-normalized-scoring-v1/CODE-CONFIG-FROZEN.json"
+  },
+  "input_pins": {
+    "delivery/s-compact-fewshot-ready-v1/TASK.json": "4beff5dfa628b8cbcfa114afe923723e2111b823059952d3b48e99b366b3aa58",
+    "delivery/s-rolling-12h-v1/WINDOW.json": "04bb16f910f2d8d99e000fcf00e2cbb7a89406f53e14ec97b94ec6fa692ce5ed",
+    "delivery/s-single-intent-fewshot-v1/prepared-v5-dynamic/single_intent_fewshot/native-UNBOUND.json": "3e04dc17e8f04b18a8fb75e68769e026a8d758f5be58cf509a6653e175da3023",
+    "delivery/s-tfrl-rolling-v1/candidates/compact-fewshot-v1/single_intent_fewshot/native-UNBOUND.json": "ef8c5707f275a83162e47e0220823e12e9ba199b2000193195115723bcd2f38d",
+    "delivery/s-typed-normalized-scoring-v1/CONFIG.json": "5335d273947a02d426fb36c5687537ec75331aa5f99c14d13d810f6c584cd2af",
+    "delivery/s-typed-normalized-scoring-v1/CODE-CONFIG-FROZEN.json": "f394a46cee3f31c554a56509c8d4835e7a98a35b9babd42f20fb717128968db4",
+    "delivery/s-tfrl-rolling-v1/candidates/compact-fewshot-v1/samples.private.jsonl": "7d604442abebb86bc34ba927cc3e586fb866b8200901f41a5b959584081895f0",
+    "delivery/s-single-intent-fewshot-v1/prepared-v5-dynamic/samples.private.jsonl": "7d604442abebb86bc34ba927cc3e586fb866b8200901f41a5b959584081895f0",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part1-fewshot-v1/single_intent_fewshot/native-UNBOUND.json": "a2f804a0ff2851a23ef348ed69b59a8d2efc92884002de4e04c7c5bf3b30c00a",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part1-fewshot-v1/samples.private.jsonl": "7ee4912e2d6c235ecf3c0fd976833485cb870f35be956df8fdf2852af5ae4684",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part2-fewshot-v1/single_intent_fewshot/native-UNBOUND.json": "9b100d9adf29899e9ac0f41b46d5d9842eed9bc988f51301418ff94e1bb7d0c1",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part2-fewshot-v1/samples.private.jsonl": "8ee88c5726baa180149d762591dbbb0f1e62d08dd2619600f8dec6e08e553e95",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part3-fewshot-v1/single_intent_fewshot/native-UNBOUND.json": "42fecb945b2e78af8d6c0ac07248e2ffe9d58dbb5731112e35f00cb3fefda706",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part3-fewshot-v1/samples.private.jsonl": "0337bcb22bd08d14b5a49330c8046a6d1c255f51e76bdbe12e39deee12908d48",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part4-fewshot-v1/single_intent_fewshot/native-UNBOUND.json": "1cdf3e764777d11d4d5bdf4784b36c168cfc1a7a5c9878a0505f988e9ed66810",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part4-fewshot-v1/samples.private.jsonl": "240c243dab5261c62022013cc2be5f7acddf81890db596c6db652c731e0159fe",
+    "delivery/s-typed-normalized-scoring-v1/inputs/baseline545.private.jsonl": "61b77b950af78bee36fecf46d3785d35dcc241aa40082b2a5e060c7ad697f1b9",
+    "delivery/s-correct-p-data-v1/runs/development/ledger.private.jsonl": "0fbacec1ad13659d853f8653e222a1757f85b464bdcaa5ed97c000f6f57e3fb8",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part1-fewshot-v1/offline/gold.private.jsonl": "8671aec8199e4fe74dce2ad47ddf03a8829e9b9afe7a37696929cb8bba74b626",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part2-fewshot-v1/offline/gold.private.jsonl": "0575758d2a31b0d7e84390008cd298f40dde65dd4d59ac8791a4a6956a8ef8ea",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part3-fewshot-v1/offline/gold.private.jsonl": "97b57e32bfea3aedc26c9f20e8573f3dd6cb43620fe1a2af2545fa065c483e90",
+    "delivery/s-tfrl-rolling-v1/train-paired-fewshot/train-remainder-part4-fewshot-v1/offline/gold.private.jsonl": "fdcd26dd5f7f35d71d91317e250cdfa1ed3dc136b18806451d180071a841d9be"
+  },
+  "publisher_pins": {
+    "delivery/s-tfrl-rolling-v1/code/producer.py": "a2c6f155089125bcfff0427c05406084b369d3ed3c97fa5c56a407c0f8465d2c",
+    "delivery/s-single-intent-fewshot-v1/code/common.py": "36521514e914fde3caf32da62ec385b635fe3d652eb2a0ba64d0ae6b5ee55586"
+  },
+  "gold545": "delivery/s-typed-normalized-scoring-v1/inputs/baseline545.private.jsonl",
+  "intent_ledger": "delivery/s-correct-p-data-v1/runs/development/ledger.private.jsonl"
+}

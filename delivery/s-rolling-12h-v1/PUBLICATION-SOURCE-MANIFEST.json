@@ -1,5 +1,5 @@
 {
-  "at": 1794261578.1024334,
+  "at": 1794262079.9703455,
   "privacy_replacements": [
     "/workspace/omni",
     "/srv/omni-local-state",
@@ -280,6 +280,16 @@
       "path": "delivery/s-teacher-policy-reuse-v1/config/training-free-grpo-template-v1.md",
       "runtime_sha256": "f5e004a20afd4ebb07ea1dc489db312868a8cf66dca9b6a57faf10eaec187b29",
       "publication_sha256": "f5e004a20afd4ebb07ea1dc489db312868a8cf66dca9b6a57faf10eaec187b29"
+    },
+    {
+      "path": "delivery/s-compact-successor-gate-v1/code/gate.py",
+      "runtime_sha256": "7faea21ea4cce577edb09c0f56765ee29bbcd514dc04b7adb35ea567dd00239b",
+      "publication_sha256": "7faea21ea4cce577edb09c0f56765ee29bbcd514dc04b7adb35ea567dd00239b"
+    },
+    {
+      "path": "delivery/s-compact-successor-gate-v1/config.json",
+      "runtime_sha256": "36e6a0ef299cca509fa800e8e39330620d09885ceb8a952cd727654502b15767",
+      "publication_sha256": "7bc0f9f2a9acdeca8e74849051e3f30dbedbfb750386a33cbbed0b6c41114d13"
     }
   ]
 }
