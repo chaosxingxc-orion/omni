@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T00:20:11.201239+00:00",
+  "updated_at_utc": "2026-11-09T00:25:42.057747+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -649,7 +649,7 @@
   },
   "p_wide_supply_thinking_transfer": {
     "resource": "NPU_B_after_CPU_admission",
-    "state": "actual_outbound_HTTP_and_controls_main_verified_response_pending",
+    "state": "complete",
     "queries": 1080,
     "baseline_top3": 966,
     "cards": 4,
@@ -665,30 +665,38 @@
     ],
     "generation_started_at_utc": "2026-11-08T22:32:37.78652903Z",
     "first_actual_POST_unix": 1794177449.9816473,
-    "HTTP_response_verified": false,
-    "status": "running_snapshot578",
-    "completed_snapshot": 578,
+    "HTTP_response_verified": true,
+    "status": "complete_paired_recount_accepted",
+    "completed_snapshot": 1080,
     "total": 1080,
     "first_response_at_unix": 1794177788.061468,
     "steady_throughput": null,
     "early_ETA_rejected": true,
-    "snapshot_at_unix": 1794180798.245924,
-    "remaining": 502,
-    "seconds_per_row_recent": 4.8586048195439,
-    "eta_seconds_at_snapshot": 2439.0196194110376
+    "snapshot_at_unix": 1794183493.535446,
+    "remaining": 0,
+    "eta_seconds_at_snapshot": 0,
+    "top3": 1014,
+    "top1": 929,
+    "repairs": 64,
+    "regressions": 16,
+    "http_seconds_per_row": 5.465301855583352
   },
   "current_snapshot": {
-    "recall_bank": 75,
+    "recall_bank": 74,
     "bank_floor": null,
     "round6_formal": "complete_main_verified",
     "reverse76": "complete_75_main_verified",
     "P_W_completed_snapshot": 1080,
-    "P_X_completed_snapshot": 578,
+    "P_X_completed_snapshot": 1080,
     "NPU_sustained_80_percent_proven": false,
     "P_W_top3": 1010,
-    "P_X_snapshot_at_unix": 1794180798.245924,
+    "P_X_snapshot_at_unix": 1794183493.535446,
     "P_fs1_generation_started": true,
-    "P_fs1_first_model_request_verified": true
+    "P_fs1_first_model_request_verified": true,
+    "P_X_top3": 1014,
+    "P_X_remaining": 0,
+    "P_A_completed_snapshot": 20,
+    "P_A_snapshot_at_unix": 1794183761.9194286
   },
   "historical_active_tracks": [
     {
@@ -723,39 +731,30 @@
   ],
   "active_tracks": [
     {
-      "id": "recall-joint-duty-evaluation",
-      "resource": "CPU",
-      "status": "complete_primary74_selected_next_feedback_preparing",
-      "depends_on": [],
-      "CPU_quota": 4,
-      "NPU": 0,
+      "id": "recall74-feedback",
+      "resource": "LOCAL_TEACHER_THEN_CPU",
+      "status": "teacher_dispatched",
       "starting_bank_size": 74,
       "blocks_NPU": false
     },
     {
-      "id": "P-X",
-      "resource": "NPU_B",
-      "status": "running_old_snapshot",
-      "completed_snapshot": 704,
+      "id": "P-X-successor",
+      "resource": "CPU",
+      "status": "X_inference_complete_successor_preparation",
+      "completed": 1080,
       "total": 1080,
-      "snapshot_at_unix": 1794181400.8178043,
-      "cards": 4,
-      "instances": 1,
-      "depends_on": [],
-      "remaining": 376,
-      "seconds_per_row_recent": 4.782316510639493,
-      "eta_at_snapshot_seconds": 1798.1510080004496
+      "NPU_started": false
     },
     {
-      "id": "P-fs1-root-cause-successor",
-      "resource": "NPU_A_AND_CPU",
-      "status": "generation_started_first_response_pending",
-      "NPU_started": true,
-      "depends_on": [],
-      "blocks_NPU": false,
+      "id": "P-example-use",
+      "resource": "NPU_A",
+      "status": "actual_first_response_observed",
+      "completed_snapshot": 20,
+      "total": 1080,
+      "snapshot_at_unix": 1794183761.9194286,
       "cards": 4,
       "instances": 1,
-      "total": 1080
+      "configured_inflight": 64
     }
   ],
   "round6_teacher_feedback": {
@@ -859,7 +858,7 @@
     "sample_exclusions": 0
   },
   "p_example_use_successor": {
-    "status": "generation_container_started_first_response_pending",
+    "status": "actual_first_response_observed",
     "parent": "F_fs1",
     "axis": "template_only",
     "rows_prepared": 1080,
@@ -871,7 +870,9 @@
     "cards": 4,
     "instances": 1,
     "total": 1080,
-    "teacher_terminal": true
+    "teacher_terminal": true,
+    "completed_snapshot": 20,
+    "snapshot_at_unix": 1794183761.9194286
   },
   "joint_duty_formal_completed": {
     "status": "main_recount_accepted",
