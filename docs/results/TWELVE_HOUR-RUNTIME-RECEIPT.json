@@ -1,6 +1,6 @@
 {
-  "schema": "s-rolling-12h-runtime-receipt-v4",
-  "at": 1794253988.4211645,
+  "schema": "s-rolling-12h-runtime-receipt-v5",
+  "at": 1794254223.993126,
   "window": {
     "start_epoch": 1794240980.648141,
     "end_epoch": 1794284180.648141,
@@ -28,11 +28,11 @@
     "A": {
       "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110901",
       "attempt": "v1",
-      "completed_branches": 738,
+      "completed_branches": 859,
       "total_branches": 1635,
-      "completed_samples": 241,
+      "completed_samples": 282,
       "total_samples": 545,
-      "seconds_per_branch": 4.319188615493982,
+      "seconds_per_branch": 4.442391601236097,
       "inflight_or_unknown": 64,
       "scheduler": {
         "running": 64.0,
@@ -50,14 +50,14 @@
     "B": {
       "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110906",
       "attempt": "v1",
-      "completed_branches": 0,
+      "completed_branches": 143,
       "total_branches": 1635,
-      "completed_samples": 0,
+      "completed_samples": 38,
       "total_samples": 545,
-      "seconds_per_branch": null,
-      "inflight_or_unknown": 0,
+      "seconds_per_branch": 4.285444197954831,
+      "inflight_or_unknown": 64,
       "scheduler": {
-        "running": 0.0,
+        "running": 64.0,
         "waiting": 0.0
       },
       "terminal": false,
@@ -72,11 +72,11 @@
     "C": {
       "task": "S-ROLLING-COMPACT-JSON-V1",
       "attempt": "v1",
-      "completed_branches": 1118,
+      "completed_branches": 1267,
       "total_branches": 1635,
-      "completed_samples": 368,
+      "completed_samples": 414,
       "total_samples": 545,
-      "seconds_per_branch": 4.328774436002127,
+      "seconds_per_branch": 4.316894399527028,
       "inflight_or_unknown": 64,
       "scheduler": {
         "running": 64.0,
@@ -94,11 +94,11 @@
     "D": {
       "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110904",
       "attempt": "v1",
-      "completed_branches": 163,
+      "completed_branches": 324,
       "total_branches": 1635,
-      "completed_samples": 44,
+      "completed_samples": 101,
       "total_samples": 545,
-      "seconds_per_branch": 5.227271943004585,
+      "seconds_per_branch": 4.577624860369129,
       "inflight_or_unknown": 64,
       "scheduler": {
         "running": 64.0,
@@ -117,15 +117,16 @@
   "ready_tasks": 15,
   "ready_branches": 38664,
   "cpu_preparing": 0,
-  "estimated_queue_wall_hours": 13.319718159796754,
-  "remaining_window_hours": 8.386729715135363,
+  "estimated_queue_wall_hours": 13.229114398704134,
+  "remaining_window_hours": 8.321293059256341,
   "coverage_12h": "NOT_PROVEN",
-  "ai_core_target": "monitor; no stable >=80% proof",
+  "ai_core_target": "monitor; current snapshots include cards below 80%, no stable >=80% proof",
   "no_resend": [
     "train-s_fit-single-fewshot-v1-retry2"
   ],
   "notes": [
-    "D independent successor grpo-fewshot-seed2026110904 is live; old unknown attempt retained and not resent.",
-    "CPU preparation is complete and asynchronous; S_valid tasks are evaluation_only and teacher_update_allowed=false."
+    "A/B/C/D authoritative snapshots refreshed directly from fixed-image read-only host_driver snapshot.",
+    "B seed06 has 143/1635 branches and 64 in-flight; D seed04 has 324/1635.",
+    "CPU preparation remains asynchronous and complete; S_valid tasks are evaluation_only and teacher_update_allowed=false."
   ]
 }
