@@ -1,6 +1,6 @@
 {
-  "schema": "s-rolling-12h-runtime-receipt-v2",
-  "at": 1794253059.0679975,
+  "schema": "s-rolling-12h-runtime-receipt-v3",
+  "at": 1794253614.3171096,
   "window": {
     "start_epoch": 1794240980.648141,
     "end_epoch": 1794284180.648141,
@@ -28,11 +28,11 @@
     "A": {
       "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110901",
       "attempt": "v1",
-      "completed_branches": 590,
+      "completed_branches": 738,
       "total_branches": 1635,
-      "completed_samples": 188,
+      "completed_samples": 241,
       "total_samples": 545,
-      "seconds_per_branch": 4.380037240254677,
+      "seconds_per_branch": 4.319188615493982,
       "inflight_or_unknown": 64,
       "scheduler": {
         "running": 64.0,
@@ -48,16 +48,16 @@
       ]
     },
     "B": {
-      "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110902",
+      "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110906",
       "attempt": "v1",
-      "completed_branches": 1473,
+      "completed_branches": 0,
       "total_branches": 1635,
-      "completed_samples": 481,
+      "completed_samples": 0,
       "total_samples": 545,
-      "seconds_per_branch": 3.431697480466523,
-      "inflight_or_unknown": 64,
+      "seconds_per_branch": null,
+      "inflight_or_unknown": 0,
       "scheduler": {
-        "running": 64.0,
+        "running": 0.0,
         "waiting": 0.0
       },
       "terminal": false,
@@ -72,11 +72,11 @@
     "C": {
       "task": "S-ROLLING-COMPACT-JSON-V1",
       "attempt": "v1",
-      "completed_branches": 982,
+      "completed_branches": 1118,
       "total_branches": 1635,
-      "completed_samples": 319,
+      "completed_samples": 368,
       "total_samples": 545,
-      "seconds_per_branch": 4.313821138286785,
+      "seconds_per_branch": 4.328774436002127,
       "inflight_or_unknown": 64,
       "scheduler": {
         "running": 64.0,
@@ -94,11 +94,11 @@
     "D": {
       "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110904",
       "attempt": "v1",
-      "completed_branches": 16,
+      "completed_branches": 163,
       "total_branches": 1635,
-      "completed_samples": 0,
+      "completed_samples": 44,
       "total_samples": 545,
-      "seconds_per_branch": 15.551943436264992,
+      "seconds_per_branch": 5.227271943004585,
       "inflight_or_unknown": 64,
       "scheduler": {
         "running": 64.0,
@@ -117,15 +117,15 @@
   "ready_tasks": 15,
   "ready_branches": 38664,
   "cpu_preparing": 0,
-  "estimated_queue_wall_hours": 9.76329025622518,
-  "remaining_window_hours": 8.681204513774977,
+  "estimated_queue_wall_hours": 10.53007989555282,
+  "remaining_window_hours": 8.51381867978308,
   "coverage_12h": "NOT_PROVEN",
-  "ai_core_target": "monitor; current instantaneous snapshot is below 80% on several cards",
+  "ai_core_target": "monitor; no stable >=80% proof",
   "no_resend": [
     "train-s_fit-single-fewshot-v1-retry2"
   ],
   "notes": [
-    "D was released from UNKNOWN_NO_RESEND into independent grpo-fewshot-seed2026110904 after stale flight.lock cleanup and complete staging dependency.",
-    "CPU preparation and NPU execution remain asynchronous; no CPU verification is currently blocking admission."
+    "D independent successor grpo-fewshot-seed2026110904 is live; old unknown attempt is retained and not resent.",
+    "CPU preparation is complete and asynchronous; no CPU verification is blocking."
   ]
 }
