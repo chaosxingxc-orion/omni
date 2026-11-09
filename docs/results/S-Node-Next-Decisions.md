@@ -46,3 +46,6 @@ compact+fewshot 已完成固定545样本/1635分支CPU验收并进入A路后继�
 CPU子进程提前准备原3734条TRAIN四片的推广输入，只有上述验证通过且对应对照完整后准入；条件准备不计READY。教师编译按实际parent+instruction复用原任务，保留原策略和成本归属，退役策略不再准入；固定镜像16项fixture通过，CPU进程已部署。
 
 已就绪库存、在途和未来有条件任务分列，不能把准备计划当成12小时保障。当前AI Core利用率仍低于目标，接续间隙如实保留。
+
+
+四个已完成随机轨迹的完整结果及效率根因，见 [S-Group-Preliminary-Results](S-Group-Preliminary-Results)。当前四seed均未超过父D的exact和mean reward；B无示例TRAIN长尾空白复现，未启动动态fewshot已提优先级。

@@ -1,1 +1,77 @@
-{"at":1794260545.5763872,"default_priority":10,"reason":"Complete missing fixed eight-seed group on already staged hosts; enable teacher feedback while independent TRAIN tasks continue","tasks":{"absent-slot-v1":{"preferred_lane":"D","priority":1},"compact-fewshot-v1":{"preferred_lane":"A","priority":0},"compact-json-v1":{"preferred_lane":"C","priority":1},"grpo-fewshot-seed2026110903-retry2":{"preferred_lane":"C","priority":0},"grpo-fewshot-seed2026110908":{"preferred_lane":"D","priority":0},"train-remainder-part3-v1":{"preferred_lane":"D","priority":1},"train-remainder-part4-fewshot-v1":{"preferred_lane":"D","priority":2},"train-remainder-part4-v1":{"preferred_lane":"B","priority":1},"train-s_fit-single-fewshot-v1":{"preferred_lane":"D","priority":0},"train-s_fit-single-fewshot-v1-retry2":{"preferred_lane":"D","priority":0}},"unready_priority_fallback":"immediate already staged ready","window_only":true}
+{
+  "at": 1794261416.332944,
+  "default_priority": 10,
+  "reason": "Finish eight-seed feedback and compact545 first, then dynamic fewshot TRAIN controls before known high-whitespace no-example arms; running tasks unchanged",
+  "tasks": {
+    "absent-slot-v1": {
+      "preferred_lane": "D",
+      "priority": 15
+    },
+    "compact-fewshot-v1": {
+      "preferred_lane": "A",
+      "priority": 0
+    },
+    "compact-json-v1": {
+      "preferred_lane": "C",
+      "priority": 1
+    },
+    "grpo-fewshot-seed2026110903-retry2": {
+      "preferred_lane": "C",
+      "priority": 0
+    },
+    "grpo-fewshot-seed2026110908": {
+      "preferred_lane": "D",
+      "priority": 0
+    },
+    "train-remainder-part3-v1": {
+      "preferred_lane": "C",
+      "priority": 20
+    },
+    "train-remainder-part4-fewshot-v1": {
+      "preferred_lane": "D",
+      "priority": 2
+    },
+    "train-remainder-part4-v1": {
+      "preferred_lane": "D",
+      "priority": 20
+    },
+    "train-s_fit-single-fewshot-v1": {
+      "preferred_lane": "D",
+      "priority": 0
+    },
+    "train-s_fit-single-fewshot-v1-retry2": {
+      "preferred_lane": "D",
+      "priority": 0
+    },
+    "train-remainder-part1-fewshot-v1": {
+      "preferred_lane": "A",
+      "priority": 2
+    },
+    "train-remainder-part1-v1": {
+      "preferred_lane": "A",
+      "priority": 20
+    },
+    "train-remainder-part2-fewshot-v1": {
+      "preferred_lane": "B",
+      "priority": 2
+    },
+    "train-remainder-part2-v1": {
+      "preferred_lane": "B",
+      "priority": 20
+    },
+    "train-remainder-part3-fewshot-v1": {
+      "preferred_lane": "C",
+      "priority": 2
+    },
+    "train-s_fit-single-v1": {
+      "preferred_lane": "B",
+      "priority": 20
+    },
+    "candidate-role-evidence-v1": {
+      "preferred_lane": "C",
+      "priority": 1
+    }
+  },
+  "unready_priority_fallback": "immediate already staged ready",
+  "window_only": true
+}
