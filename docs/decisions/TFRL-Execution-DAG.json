@@ -1392,21 +1392,20 @@
   ],
   "active_tracks": [
     {
-      "id": "recall76-feedback",
-      "resource": "LOCAL_TEACHER_THEN_CPU",
-      "status": "teacher_dispatched",
-      "blocks_NPU": false
+      "id": "recall76-risk-diagnostic",
+      "resource": "CPU",
+      "status": "negative_run_root_cause_followup"
     },
     {
-      "id": "P-direct-support",
-      "resource": "LOCAL_TEACHER_THEN_NPU_B",
-      "status": "CPU_ready_teacher_running",
+      "id": "P-exclusion-check-v2",
+      "resource": "CPU_THEN_NPU_B",
+      "status": "preparing_after_teacher_decline",
       "NPU_started": false
     },
     {
       "id": "P-fewshot-thinking",
-      "resource": "CPU_THEN_NPU_A",
-      "status": "preparing",
+      "resource": "LOCAL_TEACHER_AND_CPU_THEN_NPU_A",
+      "status": "teacher_running_CPU_admission",
       "NPU_started": false
     }
   ],
@@ -1554,7 +1553,7 @@
     "default_promoted": false
   },
   "p_direct_support_successor": {
-    "status": "CPU_admitted_teacher_running",
+    "status": "teacher_declined_main_accepted_no_launch",
     "parent": "X",
     "rows": 1080,
     "axis": "template_only",
@@ -1564,7 +1563,8 @@
     "input_budget_pass": true,
     "incremental_input_tokens_per_row": 95,
     "CPU_admitted_rows": 1080,
-    "CPU_admission_wall_seconds": 491.9920925999759
+    "CPU_admission_wall_seconds": 491.9920925999759,
+    "teacher_terminal": true
   },
   "recall74_followup": {
     "status": "complete_with_reverse_prune_main_accepted",
@@ -1584,16 +1584,20 @@
     "final_after_prune": 76
   },
   "recall76_teacher": {
-    "status": "actual_request_dispatched",
+    "status": "complete_policy_run_no_accept",
     "baseline": 76,
-    "next_formal_started": false,
-    "NPU": 0
+    "next_formal_started": true,
+    "NPU": 0,
+    "formal_completed": true,
+    "unique_states": 68,
+    "logged_paths": 233,
+    "accepted_actions": 0
   },
   "p_fewshot_thinking_successor": {
-    "status": "evidence_and_CPU_preparing",
+    "status": "teacher_dispatched_CPU_admission_running",
     "direct_parent": "F_fs1_OFF",
     "only_axis": "budgeted_thinking",
-    "teacher_sent": false,
+    "teacher_sent": true,
     "NPU_started": false,
     "rows": 1080
   }
