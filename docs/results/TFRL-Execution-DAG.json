@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T00:04:21.649668+00:00",
+  "updated_at_utc": "2026-11-09T00:20:11.201239+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -725,11 +725,11 @@
     {
       "id": "recall-joint-duty-evaluation",
       "resource": "CPU",
-      "status": "running",
+      "status": "complete_primary74_selected_next_feedback_preparing",
       "depends_on": [],
       "CPU_quota": 4,
       "NPU": 0,
-      "starting_bank_size": 75,
+      "starting_bank_size": 74,
       "blocks_NPU": false
     },
     {
@@ -748,11 +748,14 @@
     },
     {
       "id": "P-fs1-root-cause-successor",
-      "resource": "CPU",
-      "status": "teacher_HTTP200_streaming_CPU_admission_preparing",
-      "NPU_started": false,
+      "resource": "NPU_A_AND_CPU",
+      "status": "generation_started_first_response_pending",
+      "NPU_started": true,
       "depends_on": [],
-      "blocks_NPU": false
+      "blocks_NPU": false,
+      "cards": 4,
+      "instances": 1,
+      "total": 1080
     }
   ],
   "round6_teacher_feedback": {
@@ -856,14 +859,40 @@
     "sample_exclusions": 0
   },
   "p_example_use_successor": {
-    "status": "teacher_HTTP200_streaming_CPU_admission_preparing",
+    "status": "generation_container_started_first_response_pending",
     "parent": "F_fs1",
     "axis": "template_only",
     "rows_prepared": 1080,
     "CPU_budget_pass": true,
     "incremental_input_tokens_per_row": 92,
     "max_context_with_output": 6081,
-    "new_NPU_launch": false,
-    "automatic_promotion": false
+    "new_NPU_launch": true,
+    "automatic_promotion": false,
+    "cards": 4,
+    "instances": 1,
+    "total": 1080,
+    "teacher_terminal": true
+  },
+  "joint_duty_formal_completed": {
+    "status": "main_recount_accepted",
+    "queries": 2783,
+    "profile_combinations": 1030412,
+    "Replay_states": 35,
+    "primary74": {
+      "size": 74,
+      "Q15_repairs": 4,
+      "four_regressions": 0,
+      "reverse_prune_trials": 74,
+      "further_deletions": 0
+    },
+    "reference75": {
+      "size": 75,
+      "Q15_repairs": 12,
+      "union_repairs": 4,
+      "four_regressions": 0,
+      "reverse_prune_trials": 75,
+      "further_deletions": 0
+    },
+    "default_promoted": false
   }
 }
