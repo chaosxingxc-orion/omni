@@ -1,8 +1,8 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T02:43:56.374289+00:00",
-  "current_stage": "P145_full_supply_transfer_OFF_and_ON_CPU_preparation",
+  "updated_at_utc": "2026-11-09T03:11:43.156135+00:00",
+  "current_stage": "frozen145_fullTEST_retrieval_evaluation",
   "instruction": "Preserve133 reference and139 intermediate;145 verified full effective FoldA supply, not P accuracy. Prepare145-only transfer1075; no extra139 NPU run or pruning.",
   "resources": {
     "inference_instances": 2,
@@ -313,6 +313,16 @@
         "old_supply_order_only68",
         "old_supply_identical427"
       ]
+    },
+    {
+      "id": "recall145-fulltest",
+      "resource": "CPU_and_embedding_if_missing",
+      "status": "worker_live_input_asset_discovery",
+      "depends_on": [],
+      "frozen_inputs": "145_KB_Q15_D5",
+      "rows": 13078,
+      "P_required": false,
+      "teacher_required": false
     }
   ],
   "latest_recall_revision": {
@@ -1492,34 +1502,24 @@
   ],
   "active_tracks": [
     {
-      "id": "P145-OFF",
-      "resource": "CPU_then_NPU_A",
-      "status": "detached_continuation_live_waiting_A_release",
-      "rows": 1075
+      "id": "recall145-fulltest",
+      "resource": "CPU_and_embedding_if_missing",
+      "status": "worker_live_input_asset_discovery",
+      "rows": 13078,
+      "question_depth": 15,
+      "description_depth": 5,
+      "frozen_bank": 145,
+      "tuning": false
     },
     {
-      "id": "P145-ON-prepare",
+      "id": "P145-existing-result",
       "resource": "CPU",
-      "status": "assigned_to_existing_B_owner",
-      "rows": 1075,
-      "depends_on": [
-        "frozen145_inputs"
-      ],
-      "does_not_depend_on": [
-        "A_terminal",
-        "B_terminal",
-        "P145_OFF_results"
-      ]
+      "status": "completed_generation_scoring_repair_only"
     },
     {
-      "id": "A-fewshot-thinking",
-      "resource": "NPU_A",
-      "status": "running"
-    },
-    {
-      "id": "B-exclusion-check",
-      "resource": "NPU_B",
-      "status": "running"
+      "id": "P145-ON",
+      "resource": "CPU",
+      "status": "preparation_only_no_new_P_launch_current_user_focus"
     }
   ],
   "round6_teacher_feedback": {
