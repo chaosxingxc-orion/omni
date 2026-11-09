@@ -1,6 +1,6 @@
 {
-  "schema": "s-rolling-12h-runtime-receipt-v3",
-  "at": 1794253614.3171096,
+  "schema": "s-rolling-12h-runtime-receipt-v4",
+  "at": 1794253988.4211645,
   "window": {
     "start_epoch": 1794240980.648141,
     "end_epoch": 1794284180.648141,
@@ -117,15 +117,15 @@
   "ready_tasks": 15,
   "ready_branches": 38664,
   "cpu_preparing": 0,
-  "estimated_queue_wall_hours": 10.53007989555282,
-  "remaining_window_hours": 8.51381867978308,
+  "estimated_queue_wall_hours": 13.319718159796754,
+  "remaining_window_hours": 8.386729715135363,
   "coverage_12h": "NOT_PROVEN",
   "ai_core_target": "monitor; no stable >=80% proof",
   "no_resend": [
     "train-s_fit-single-fewshot-v1-retry2"
   ],
   "notes": [
-    "D independent successor grpo-fewshot-seed2026110904 is live; old unknown attempt is retained and not resent.",
-    "CPU preparation is complete and asynchronous; no CPU verification is blocking."
+    "D independent successor grpo-fewshot-seed2026110904 is live; old unknown attempt retained and not resent.",
+    "CPU preparation is complete and asynchronous; S_valid tasks are evaluation_only and teacher_update_allowed=false."
   ]
 }
