@@ -1,0 +1,13 @@
+{
+  "completed_candidates": 3,
+  "total_candidates": 3,
+  "native_parser_and_resolver": "passed",
+  "test_count": 4,
+  "npu_samples": 0,
+  "npu_cards": 0,
+  "seconds_per_sample": null,
+  "eta": null,
+  "new_model_cost": 0,
+  "fit": "pending runtime",
+  "supply": "pending runtime"
+}

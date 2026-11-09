@@ -1,0 +1,36 @@
+{
+  "schema": "saea-p-teacher-bridge-v1",
+  "source": {
+    "schema": "saea-p-collected-proposal-v1",
+    "prepared": {
+      "path": "/home/xingchao/workspace/omni/repro/codex-subprocess/p-stage-evidence/private/rework3-teacher-review-v3/rework3-reflexion-P-consumption/rework3-prepared/prepared.json",
+      "sha256": "04fee4c0693c1c0ebba38fee4185b1c3d6d1dbf77670ccf19798915bd69c183a"
+    },
+    "collected": {
+      "path": "/home/xingchao/workspace/omni/repro/codex-subprocess/p-stage-evidence/private/rework3-teacher-review-v3/rework3-reflexion-P-consumption/rework3-prepared/collected.json",
+      "sha256": "748d82e71a99f97ff0b736da02363a524830f680e9a4ecaf8b6afca89af67924"
+    },
+    "candidate_index": 0,
+    "request_sha256": "611b102535596a8bbb591cb660381a61eec35d5392f3ec8352b3030721bb7253",
+    "response_sha256": "076d017ec0bfcab60c3cc810bd3590f7e92e9e8d8d82ddb9cc54fddd35d16c74"
+  },
+  "tokenizer_identity": {
+    "path": "/home/xingchao/workspace/omni/repro/p-stage-gepa-offline-review-v1/private/tokenizer-identity.snapshot.json",
+    "sha256": "40c7160c2822aa30c119c2a6cd33017579787081f692dd1b495d2e7bc13e46ac"
+  },
+  "tokenizer_dir": "/actor-tokenizer",
+  "output_dir": "/result/reflexion-c1",
+  "parent_template": {
+    "relpath": "probes/slurp_native_candidate_perception_off_v1.txt",
+    "sha256": "62b62d50c9eeea020cec004d54e2ec573887fb9ef61a8a1dded37565ad99eb27"
+  },
+  "actor_context": {
+    "path": "/home/xingchao/workspace/omni/repro/p-stage-gepa-offline-review-v1/private/context.snapshot.json",
+    "sha256": "e364a7e230bbbedc776578d6645e11d007734b48bc6ad291b7a7e356c633a31b"
+  },
+  "parent_baseline": {
+    "path": "/home/xingchao/workspace/omni/repro/codex-subprocess/p-retrieval-supply-analysis/inputs/parent.baseline.json",
+    "sha256": "3933c579ec1610744a8202b267aae0f096df534d51284ebdb057afa274cff89a"
+  },
+  "parent_repo": "/home/xingchao/workspace/omni/repro/worktrees/p-teacher-candidate-bridge/studies/speech-aware-evidence-acquisition"
+}
