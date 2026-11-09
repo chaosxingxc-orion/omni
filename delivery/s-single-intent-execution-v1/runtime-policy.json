@@ -1,0 +1,11 @@
+{
+  "schema": "runtime-deadline-policy-v1",
+  "reason": "Observed TRAIN96 request timeout stopped the 1080-sample attempt at 1246/3240 branches. Test a bounded longer client deadline on new tasks; never replay that failed attempt.",
+  "tasks": {
+    "train-remainder-part4-v1": {"timeout_seconds": 900},
+    "train-remainder-part4-fewshot-v1": {"timeout_seconds": 900}
+  },
+  "model_configuration_changed": false,
+  "automatic_retry": false,
+  "promotion_requires": "Observe complete known terminal, latency tail, unknown count and valid throughput before extending to other tasks; different policies are not a causal timeout comparison."
+}

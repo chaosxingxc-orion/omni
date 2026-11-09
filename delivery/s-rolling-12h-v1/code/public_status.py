@@ -75,7 +75,8 @@ def render():
               '- seed03明确的调用前失败保留；retry2按显式映射收集，要求相同seed/config/pins、完整终态且unknown=0。',
               '- 剩余两个组成员优先执行，完整组反馈后由本机外部教师提出有界策略；其他实例继续独立TRAIN任务。',
               '- CPU采用prepare_plan.py --plan，复用已发布输入；后续优先运行真实根因策略，避免重复基线占位。',
-              '- S_valid仅独立评价，禁止进入教师调优。两项角色提示探针是主智能体假设，并非已验证教师收益。',
+              '- S_valid仅独立评价，禁止进入教师调优。保留竞争角色提示假设；关系方向探针缺乏可评分错例，已在启动前退役；单纯前移ambiguity字段的候选不准入。',
+              '- 紧凑JSON在无示例父上显著减少非法输出，但精度仍低于动态few-shot；正在异步准备同545上的compact+fewshot组合，尚未计入READY。',
               '- 每600秒或明确终态更新；公开页面原位刷新。当前tokens仅为各路快照，全部历史失败成本另存，金额未知。', '']
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT/'TWELVE_HOUR-RUNTIME-RECEIPT.json').write_text(json.dumps(record, ensure_ascii=False, indent=2))

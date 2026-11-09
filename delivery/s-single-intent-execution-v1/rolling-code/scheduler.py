@@ -136,7 +136,10 @@ def wait_container(lane,launch):
    term=d.get('terminal')
    if term is None:
     time.sleep(30);continue
-   assert term['unknown']==0,'UNKNOWN_NO_RESEND'
+   # A known terminal with unknown contacts is still a terminal observation.
+   # Return it to the lane failure branch, which preserves the attempt and
+   # selects an independent job. Raising here bypassed that branch and stopped
+   # the worker. This does not authorize replay of any unknown request.
    return term,result
   if event.is_set():time.sleep(30)
   else:event.wait(10)

@@ -1,0 +1,12 @@
+{
+  "source_directory": "/var/tmp",
+  "destination": "/srv/omni-source-archives",
+  "files": [
+    "/var/tmp/omni-release-source-v5.tar",
+    "/var/tmp/omni-release-source-v6.tar",
+    "/var/tmp/omni-release-source-v7.tar",
+    "/var/tmp/omni-release-source-v8.tar",
+    "/var/tmp/omni-release-source-v9.tar",
+    "/var/tmp/omni-fusion-tests-v1.tar"
+  ]
+}

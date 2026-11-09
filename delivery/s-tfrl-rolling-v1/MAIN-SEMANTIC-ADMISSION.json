@@ -1,0 +1,9 @@
+{
+  "at": 1794259821.0649152,
+  "binding-role-first-card-v1": "reject_not_published",
+  "relational-direction-v1": "rejected_before_launch",
+  "candidate-role-evidence-v1": "retain_single_hypothesis",
+  "basis": "delivery/s-semantic-next-policy-v1/REPORT.md",
+  "scientific_gain_proven": false,
+  "prepared_artifacts_deleted": false
+}

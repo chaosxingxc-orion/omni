@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "checks": {
+    "resource_points_equal_snapshots_x4": true,
+    "AI_Core_four_cards_each": true,
+    "adjacent_intervals_equal_snapshots_minus1_x4": true,
+    "valid_delta_no_negative": true,
+    "no_delta_from_missing_reset": true,
+    "queue_prefill_decode_count_agree": true,
+    "reference_four_lanes_seven_metrics": true,
+    "archive_rows_terminal_denom": true,
+    "archive_token_totals_match": true,
+    "archive_valid_counts_match": true,
+    "TRAIN96_failed_not_complete": true,
+    "TRAIN96_not_compared_causally": true,
+    "TRAIN96_timeout600_config": true,
+    "outputs_no_symlink": true
+  },
+  "summary": {
+    "archives": 7,
+    "completed_archive_branches": 11445,
+    "AI_Core_card_points": 496,
+    "intervals": 120,
+    "reference_numeric_checks": 28
+  },
+  "limits": "local offline only; no fixed-image/NPU test"
+}

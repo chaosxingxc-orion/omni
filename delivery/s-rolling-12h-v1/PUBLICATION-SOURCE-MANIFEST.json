@@ -1,5 +1,5 @@
 {
-  "at": 1794258473.6827404,
+  "at": 1794260040.853767,
   "privacy_replacements": [
     "/workspace/omni",
     "/srv/omni-local-state",
@@ -8,13 +8,13 @@
   "files": [
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/scheduler.py",
-      "runtime_sha256": "5098335b380644ba9340c4bd633db3064945b65ce1dbbd31d9d6d1096db9009c",
-      "publication_sha256": "911cbee5ab8c22fa6346d2b1a0e3032a494a7b66ce6bd2472dbccb0df9c35abe"
+      "runtime_sha256": "f812074ac2f0fd02f6e7ee1b83ac97a5f1013e8fd0e004bd67a3a15a20bdd81b",
+      "publication_sha256": "f065351d8cf25fc9714f1d8216db9dfbbd21720d07c1a2225229367d470d7f44"
     },
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/host_driver.py",
-      "runtime_sha256": "f5f0df5fe5b2ba87ffeb6ffd51b1cd4edb12e19c312f7153665b8a7a29e24280",
-      "publication_sha256": "87a1a7b1a4749d9916347d0518285676c00577bc502569d6af4cbd88e1e01556"
+      "runtime_sha256": "652fbf987d7de1b195d063e7480c5fa8bec229b7a70a3546e91438df6dd10751",
+      "publication_sha256": "adda6e07f8abb66611b65bcb471a5d24205e4c40a5f112bfe3385612d6eca951"
     },
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/score_rolling.py",
@@ -208,8 +208,58 @@
     },
     {
       "path": "delivery/s-rolling-12h-v1/code/public_status.py",
-      "runtime_sha256": "7d3a28c3360dde31fba120e0ee08f4f12b030f641223e5c98a6c15a9391a7552",
-      "publication_sha256": "7d3a28c3360dde31fba120e0ee08f4f12b030f641223e5c98a6c15a9391a7552"
+      "runtime_sha256": "e9aeb588cf6b39af5b9978a40b5dd4a6c6ead8431ebca5748b78471fc68a7892",
+      "publication_sha256": "e9aeb588cf6b39af5b9978a40b5dd4a6c6ead8431ebca5748b78471fc68a7892"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/test_terminal_continuation.py",
+      "runtime_sha256": "079f05b8d2347f5eb3822ed55cf1b1ec3b8e728350ee8c34d1d6871ac0c052bd",
+      "publication_sha256": "079f05b8d2347f5eb3822ed55cf1b1ec3b8e728350ee8c34d1d6871ac0c052bd"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/rolling-code/test_runtime_policy.py",
+      "runtime_sha256": "8250d68ad0c41392a99bee504b7f3384afec1d0681f54976367c779f87dcd48f",
+      "publication_sha256": "8250d68ad0c41392a99bee504b7f3384afec1d0681f54976367c779f87dcd48f"
+    },
+    {
+      "path": "delivery/s-single-intent-execution-v1/runtime-policy.json",
+      "runtime_sha256": "ce26e057b908b8361646ee3d852a2bf93d8bef1a851e6afc227fb7925b58fa4b",
+      "publication_sha256": "ce26e057b908b8361646ee3d852a2bf93d8bef1a851e6afc227fb7925b58fa4b"
+    },
+    {
+      "path": "delivery/s-rolling-12h-v1/code/relocate_archives.py",
+      "runtime_sha256": "bff591d1ab849794c93768cb1e55cc83ef3cedd32707554b0afd148d5d997f2b",
+      "publication_sha256": "bff591d1ab849794c93768cb1e55cc83ef3cedd32707554b0afd148d5d997f2b"
+    },
+    {
+      "path": "delivery/s-rolling-12h-v1/archive-relocation.json",
+      "runtime_sha256": "01094b073ca8209fcaf4cd34663b9b75d0780a92e92a09f1027b58ad22dfaa75",
+      "publication_sha256": "01094b073ca8209fcaf4cd34663b9b75d0780a92e92a09f1027b58ad22dfaa75"
+    },
+    {
+      "path": "delivery/s-tfrl-rolling-v1/MAIN-SEMANTIC-ADMISSION.json",
+      "runtime_sha256": "1e0d78ba766d6fa387ac65f0053d6f50a342292f0f5a7bc1da1e693ccf969ca6",
+      "publication_sha256": "1e0d78ba766d6fa387ac65f0053d6f50a342292f0f5a7bc1da1e693ccf969ca6"
+    },
+    {
+      "path": "delivery/s-rolling-efficiency-v1/REPORT.md",
+      "runtime_sha256": "bf657a0d9625377e4f2a78b6db2dfe90dacbab8b4e2054ede41f82825df14da2",
+      "publication_sha256": "bf657a0d9625377e4f2a78b6db2dfe90dacbab8b4e2054ede41f82825df14da2"
+    },
+    {
+      "path": "delivery/s-rolling-efficiency-v1/analyze.py",
+      "runtime_sha256": "246f14fe7f42835a516375e143ad247d796ed69aeedc5be3ed0084544839b837",
+      "publication_sha256": "246f14fe7f42835a516375e143ad247d796ed69aeedc5be3ed0084544839b837"
+    },
+    {
+      "path": "delivery/s-rolling-efficiency-v1/build_report.py",
+      "runtime_sha256": "5ddeee13febbc373df40a32c9159915c5e49337a34f3ccf3d66fd0d2931ab6e2",
+      "publication_sha256": "5ddeee13febbc373df40a32c9159915c5e49337a34f3ccf3d66fd0d2931ab6e2"
+    },
+    {
+      "path": "delivery/s-rolling-efficiency-v1/VALIDATION.json",
+      "runtime_sha256": "bffeaacf4e9e2ab48a499d7ccf8c41dd93cfa11aa1e1cdc697198370bda7349a",
+      "publication_sha256": "bffeaacf4e9e2ab48a499d7ccf8c41dd93cfa11aa1e1cdc697198370bda7349a"
     }
   ]
 }
