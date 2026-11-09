@@ -735,18 +735,18 @@
     {
       "id": "recall76-risk-diagnostic",
       "resource": "CPU",
-      "status": "negative_run_root_cause_followup"
+      "status": "safe16_main_verified_next_feedback_preparing"
     },
     {
       "id": "P-exclusion-check-v2",
       "resource": "CPU_THEN_NPU_B",
-      "status": "preparing_after_teacher_decline",
+      "status": "v2_teacher_dispatched_CPU_admission",
       "NPU_started": false
     },
     {
       "id": "P-fewshot-thinking",
       "resource": "LOCAL_TEACHER_AND_CPU_THEN_NPU_A",
-      "status": "teacher_running_CPU_admission",
+      "status": "CPU_admitted_teacher_running",
       "NPU_started": false
     }
   ],
@@ -935,11 +935,29 @@
     "accepted_actions": 0
   },
   "p_fewshot_thinking_successor": {
-    "status": "teacher_dispatched_CPU_admission_running",
+    "status": "CPU_admitted_teacher_running",
     "direct_parent": "F_fs1_OFF",
     "only_axis": "budgeted_thinking",
     "teacher_sent": true,
     "NPU_started": false,
-    "rows": 1080
+    "rows": 1080,
+    "CPU_admitted_rows": 1080,
+    "CPU_admission_wall_seconds": 492.6964586999966
+  },
+  "recall76_safe_profile": {
+    "status": "main_verified",
+    "profiled": 6883,
+    "safe_positive": 16,
+    "safe_missing_round_robin": 16,
+    "safe_selected_riskaware": 16,
+    "support_union": 11,
+    "not_joint_gain": true,
+    "wall_seconds": 3.9279275599401444,
+    "new_Replay": 0
+  },
+  "p_exclusion_check_v2": {
+    "status": "teacher_dispatched_CPU_admission_running",
+    "template_only_main_verified_rows": 1080,
+    "NPU_started": false
   }
 }
