@@ -1,0 +1,131 @@
+{
+  "schema": "s-rolling-12h-runtime-receipt-v2",
+  "at": 1794253059.0679975,
+  "window": {
+    "start_epoch": 1794240980.648141,
+    "end_epoch": 1794284180.648141,
+    "start_utc": "2026-11-09T16:16:20.648141+00:00",
+    "end_utc": "2026-11-10T04:16:20.648141+00:00",
+    "duration_seconds": 43200,
+    "stop_policy": "stop admitting new jobs at deadline; drain already admitted jobs"
+  },
+  "driver": {
+    "pid": 2352894,
+    "ppid": 1,
+    "at": 1794252926.830536,
+    "boot": "cce12053-8db5-4a8c-a831-414c574f60df",
+    "window": {
+      "start_epoch": 1794240980.648141,
+      "end_epoch": 1794284180.648141,
+      "start_utc": "2026-11-09T16:16:20.648141+00:00",
+      "end_utc": "2026-11-10T04:16:20.648141+00:00",
+      "duration_seconds": 43200,
+      "stop_policy": "stop admitting new jobs at deadline; drain already admitted jobs"
+    },
+    "monitor_seconds": 600
+  },
+  "lanes": {
+    "A": {
+      "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110901",
+      "attempt": "v1",
+      "completed_branches": 590,
+      "total_branches": 1635,
+      "completed_samples": 188,
+      "total_samples": 545,
+      "seconds_per_branch": 4.380037240254677,
+      "inflight_or_unknown": 64,
+      "scheduler": {
+        "running": 64.0,
+        "waiting": 0.0
+      },
+      "terminal": false,
+      "current_status": "running",
+      "cards": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "B": {
+      "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110902",
+      "attempt": "v1",
+      "completed_branches": 1473,
+      "total_branches": 1635,
+      "completed_samples": 481,
+      "total_samples": 545,
+      "seconds_per_branch": 3.431697480466523,
+      "inflight_or_unknown": 64,
+      "scheduler": {
+        "running": 64.0,
+        "waiting": 0.0
+      },
+      "terminal": false,
+      "current_status": "running",
+      "cards": [
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    "C": {
+      "task": "S-ROLLING-COMPACT-JSON-V1",
+      "attempt": "v1",
+      "completed_branches": 982,
+      "total_branches": 1635,
+      "completed_samples": 319,
+      "total_samples": 545,
+      "seconds_per_branch": 4.313821138286785,
+      "inflight_or_unknown": 64,
+      "scheduler": {
+        "running": 64.0,
+        "waiting": 0.0
+      },
+      "terminal": false,
+      "current_status": "running",
+      "cards": [
+        0,
+        1,
+        2,
+        3
+      ]
+    },
+    "D": {
+      "task": "S-ROLLING-GRPO-FEWSHOT-SEED2026110904",
+      "attempt": "v1",
+      "completed_branches": 16,
+      "total_branches": 1635,
+      "completed_samples": 0,
+      "total_samples": 545,
+      "seconds_per_branch": 15.551943436264992,
+      "inflight_or_unknown": 64,
+      "scheduler": {
+        "running": 64.0,
+        "waiting": 0.0
+      },
+      "terminal": false,
+      "current_status": "running",
+      "cards": [
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  },
+  "ready_tasks": 15,
+  "ready_branches": 38664,
+  "cpu_preparing": 0,
+  "estimated_queue_wall_hours": 9.76329025622518,
+  "remaining_window_hours": 8.681204513774977,
+  "coverage_12h": "NOT_PROVEN",
+  "ai_core_target": "monitor; current instantaneous snapshot is below 80% on several cards",
+  "no_resend": [
+    "train-s_fit-single-fewshot-v1-retry2"
+  ],
+  "notes": [
+    "D was released from UNKNOWN_NO_RESEND into independent grpo-fewshot-seed2026110904 after stale flight.lock cleanup and complete staging dependency.",
+    "CPU preparation and NPU execution remain asynchronous; no CPU verification is currently blocking admission."
+  ]
+}
