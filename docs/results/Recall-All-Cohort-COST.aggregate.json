@@ -1,0 +1,552 @@
+{
+  "cohorts": {
+    "R01C-fit624": {
+      "Q15": {
+        "completed": 624,
+        "total": 624,
+        "new_P": 0,
+        "reused": 624,
+        "reported_usage": {
+          "prompt_tokens": 3189591,
+          "completion_tokens": 7076,
+          "total_tokens": 3196667
+        },
+        "new_usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "usage_scope": "historical responses; no new charge",
+        "wall_span_seconds": 22.778266668319702,
+        "seconds_per_logical_sample": 0.03650363248128157,
+        "seconds_per_new_request": null,
+        "HTTP_latency_seconds": {
+          "sum": 2483.268610200612,
+          "mean": 3.97959713173175,
+          "median": 4.030481009918731,
+          "p95": 5.580846110009588
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 0.04686061084451568,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      },
+      "Q10": {
+        "completed": 624,
+        "total": 624,
+        "new_P": 0,
+        "reused": 624,
+        "reported_usage": {
+          "prompt_tokens": 2842400,
+          "completion_tokens": 6806,
+          "total_tokens": 2849206
+        },
+        "new_usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "usage_scope": "historical responses; no new charge",
+        "wall_span_seconds": 97.04129195213318,
+        "seconds_per_logical_sample": 0.15551489094893137,
+        "seconds_per_new_request": null,
+        "HTTP_latency_seconds": {
+          "sum": 10631.614916679682,
+          "mean": 17.037844417755903,
+          "median": 18.383965469955,
+          "p95": 21.253894409979694
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 0.20687425536672688,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      },
+      "Q5": {
+        "completed": 624,
+        "total": 624,
+        "new_P": 0,
+        "reused": 624,
+        "reported_usage": {
+          "prompt_tokens": 2521731,
+          "completion_tokens": 6435,
+          "total_tokens": 2528166
+        },
+        "new_usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "usage_scope": "historical responses; no new charge",
+        "wall_span_seconds": 80.62506675720215,
+        "seconds_per_logical_sample": 0.1292068377519265,
+        "seconds_per_new_request": null,
+        "HTTP_latency_seconds": {
+          "sum": 8919.97021687089,
+          "mean": 14.29482406549822,
+          "median": 15.28240777499741,
+          "p95": 17.623262249981053
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 0.17231616394452026,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      }
+    },
+    "FoldB1078": {
+      "Q15": {
+        "completed": 1078,
+        "total": 1078,
+        "new_P": 0,
+        "reused": 1078,
+        "reported_usage": {
+          "prompt_tokens": 5416988,
+          "completion_tokens": 12037,
+          "total_tokens": 5429025
+        },
+        "new_usage": {
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "total_tokens": 0
+        },
+        "usage_scope": "historical responses; no new charge",
+        "wall_span_seconds": 206.44272875785828,
+        "seconds_per_logical_sample": 0.1915053142466218,
+        "seconds_per_new_request": null,
+        "HTTP_latency_seconds": {
+          "sum": 24203.990931042703,
+          "mean": 22.45268175421401,
+          "median": 23.526793900004122,
+          "p95": 26.098525619949214
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 0.4479352280776948,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      },
+      "Q10": {
+        "completed": 1078,
+        "total": 1078,
+        "new_P": 1078,
+        "reused": 0,
+        "reported_usage": {
+          "prompt_tokens": 4822448,
+          "completion_tokens": 11560,
+          "total_tokens": 4834008
+        },
+        "new_usage": {
+          "prompt_tokens": 4822448,
+          "completion_tokens": 11560,
+          "total_tokens": 4834008
+        },
+        "usage_scope": "new unique requests",
+        "wall_span_seconds": 174.06016540527344,
+        "seconds_per_logical_sample": 0.16146583061713676,
+        "seconds_per_new_request": 0.16146583061713676,
+        "HTTP_latency_seconds": {
+          "sum": 20454.704652499175,
+          "mean": 18.974679640537268,
+          "median": 19.820967445033602,
+          "p95": 21.78243041993119
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 0.3786287317665604,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      },
+      "Q5": {
+        "completed": 1078,
+        "total": 1078,
+        "new_P": 1078,
+        "reused": 0,
+        "reported_usage": {
+          "prompt_tokens": 4281686,
+          "completion_tokens": 11001,
+          "total_tokens": 4292687
+        },
+        "new_usage": {
+          "prompt_tokens": 4281686,
+          "completion_tokens": 11001,
+          "total_tokens": 4292687
+        },
+        "usage_scope": "new unique requests",
+        "wall_span_seconds": 128.27579927444458,
+        "seconds_per_logical_sample": 0.11899424793547735,
+        "seconds_per_new_request": 0.11899424793547735,
+        "HTTP_latency_seconds": {
+          "sum": 15251.715218830388,
+          "mean": 14.148158830083847,
+          "median": 14.810977525019553,
+          "p95": 15.926313990028575
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 0.2814790325000003,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      }
+    },
+    "FoldA1075": {
+      "Q15": {
+        "completed": 1075,
+        "total": 1075,
+        "new_P": 1075,
+        "reused": 0,
+        "reported_usage": {
+          "prompt_tokens": 5400701,
+          "completion_tokens": 11957,
+          "total_tokens": 5412658
+        },
+        "new_usage": {
+          "prompt_tokens": 5400701,
+          "completion_tokens": 11957,
+          "total_tokens": 5412658
+        },
+        "usage_scope": "new unique requests",
+        "wall_span_seconds": 206.75951099395752,
+        "seconds_per_logical_sample": 0.19233442883158838,
+        "seconds_per_new_request": 0.19233442883158838,
+        "HTTP_latency_seconds": {
+          "sum": 24543.102227200987,
+          "mean": 22.83079276948929,
+          "median": 24.009210329968482,
+          "p95": 25.62430902000051
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 0.4541460688334579,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      },
+      "Q10": {
+        "completed": 1075,
+        "total": 1075,
+        "new_P": 1075,
+        "reused": 0,
+        "reported_usage": {
+          "prompt_tokens": 4795416,
+          "completion_tokens": 11499,
+          "total_tokens": 4806915
+        },
+        "new_usage": {
+          "prompt_tokens": 4795416,
+          "completion_tokens": 11499,
+          "total_tokens": 4806915
+        },
+        "usage_scope": "new unique requests",
+        "wall_span_seconds": 165.34572315216064,
+        "seconds_per_logical_sample": 0.15380997502526572,
+        "seconds_per_new_request": 0.15380997502526572,
+        "HTTP_latency_seconds": {
+          "sum": 19210.189777669846,
+          "mean": 17.869943979227763,
+          "median": 18.724458759999834,
+          "p95": 20.97086447000038
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 0.35452868968882184,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      },
+      "Q5": {
+        "completed": 1075,
+        "total": 1075,
+        "new_P": 1075,
+        "reused": 0,
+        "reported_usage": {
+          "prompt_tokens": 4267710,
+          "completion_tokens": 10966,
+          "total_tokens": 4278676
+        },
+        "new_usage": {
+          "prompt_tokens": 4267710,
+          "completion_tokens": 10966,
+          "total_tokens": 4278676
+        },
+        "usage_scope": "new unique requests",
+        "wall_span_seconds": 127.7681725025177,
+        "seconds_per_logical_sample": 0.11885411395583041,
+        "seconds_per_new_request": 0.11885411395583041,
+        "HTTP_latency_seconds": {
+          "sum": 15366.083810419776,
+          "mean": 14.294031451553279,
+          "median": 15.006849120021798,
+          "p95": 16.202752799959853
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 0.28309787430011457,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      }
+    },
+    "TEST13078": {
+      "Q15": {
+        "completed": 13078,
+        "total": 13078,
+        "new_P": 13078,
+        "reused": 0,
+        "reported_usage": {
+          "prompt_tokens": 65470285,
+          "completion_tokens": 145222,
+          "total_tokens": 65615507
+        },
+        "new_usage": {
+          "prompt_tokens": 65470285,
+          "completion_tokens": 145222,
+          "total_tokens": 65615507
+        },
+        "usage_scope": "new unique requests",
+        "wall_span_seconds": 2482.638777256012,
+        "seconds_per_logical_sample": 0.18983321434898395,
+        "seconds_per_new_request": 0.18983321434898395,
+        "HTTP_latency_seconds": {
+          "mean": 23.66838304719913,
+          "median": 23.61556234501768,
+          "p95": 26.444354280014522,
+          "sum": 309535.1134912702
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 5.405105938200011,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      },
+      "Q10": {
+        "completed": 13078,
+        "total": 13078,
+        "new_P": 13031,
+        "reused": 47,
+        "reported_usage": {
+          "prompt_tokens": 58003978,
+          "completion_tokens": 139709,
+          "total_tokens": 58143687
+        },
+        "new_usage": {
+          "prompt_tokens": 58003978,
+          "completion_tokens": 139709,
+          "total_tokens": 58143687
+        },
+        "usage_scope": "new unique requests",
+        "wall_span_seconds": 2064.651075363159,
+        "seconds_per_logical_sample": 0.15787208100345307,
+        "seconds_per_new_request": 0.15844149147134978,
+        "HTTP_latency_seconds": {
+          "mean": 20.076714407943033,
+          "median": 20.003398439963348,
+          "p95": 22.338145829970017,
+          "sum": 261619.66544990567
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 4.568848358266728,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      },
+      "Q5": {
+        "completed": 13078,
+        "total": 13078,
+        "new_P": 12873,
+        "reused": 205,
+        "reported_usage": {
+          "prompt_tokens": 51066578,
+          "completion_tokens": 131790,
+          "total_tokens": 51198368
+        },
+        "new_usage": {
+          "prompt_tokens": 51066578,
+          "completion_tokens": 131790,
+          "total_tokens": 51198368
+        },
+        "usage_scope": "new unique requests",
+        "wall_span_seconds": 1665.5715737342834,
+        "seconds_per_logical_sample": 0.12735674978852143,
+        "seconds_per_new_request": 0.1293848810482625,
+        "HTTP_latency_seconds": {
+          "mean": 16.458480377048428,
+          "median": 16.355883959913626,
+          "p95": 18.279567730030976,
+          "sum": 211870.0178937444
+        },
+        "cards": 8,
+        "instances": 2,
+        "TP": 4,
+        "cap_each": 64,
+        "allocated_card_hours_proxy": 3.700879150911157,
+        "remaining": 0,
+        "ETA_seconds": 0,
+        "money": "unknown",
+        "energy": "unknown"
+      }
+    }
+  },
+  "total_new_P": 44363,
+  "total_new_tokens": 198582506,
+  "historical_fit_reused": 1872,
+  "historical_FoldB_Q15_reused": 1078,
+  "TEST_exact_reused": 252,
+  "known_CPU": {
+    "TRAIN_cache_recount": {
+      "wall_seconds": 4.418203699868172,
+      "CPU_seconds": 4.26954954
+    },
+    "FoldB_allocated_core_hours_proxy": 0.7256724822222221,
+    "FoldA_allocated_core_hours_proxy": 1.1698890533333335,
+    "TEST_fixed_image_verification": {
+      "wall_seconds": 75.13579606998246,
+      "CPU_seconds": 75.07978529
+    },
+    "TEST_seven_container_allocated_core_hours_proxy": 13.772103637777779,
+    "monitor_correction_CPU_seconds": "unknown",
+    "efficiency_snapshot_CPU_seconds": "unknown",
+    "historical_cost_snapshots_verified": 10,
+    "producer_preparation": {
+      "total_allocated_CPU_hours_proxy": 2.0172664477777777,
+      "measured_process_CPU_seconds": {
+        "FoldA_independent_verification": 6.926712869999999,
+        "FoldA_success": 55.334750189999994,
+        "FoldA_template": 8.45985911,
+        "TEST_cache_audit": 125.20908191000001,
+        "TEST_identity_plan": 1.0763445099999998,
+        "TEST_materialization": 666.8065164,
+        "TEST_supply": 149.49068689,
+        "TEST_verification": 60.6269854
+      },
+      "failed_attempt_CPU": "exact process CPU unknown; full container allocation proxy included",
+      "stages": [
+        {
+          "stage": "FoldA failed1",
+          "wall_seconds": 3.236497,
+          "cpus": 4.0,
+          "exit_code": 1,
+          "allocated_CPU_hours_proxy": 0.003596107777777778
+        },
+        {
+          "stage": "FoldA failed2",
+          "wall_seconds": 10.057665,
+          "cpus": 4.0,
+          "exit_code": 1,
+          "allocated_CPU_hours_proxy": 0.011175183333333333
+        },
+        {
+          "stage": "FoldA success3",
+          "wall_seconds": 64.523419,
+          "cpus": 4.0,
+          "exit_code": 0,
+          "allocated_CPU_hours_proxy": 0.07169268777777778
+        },
+        {
+          "stage": "TEST cache audit",
+          "wall_seconds": 134.033727,
+          "cpus": 4.0,
+          "exit_code": 0,
+          "allocated_CPU_hours_proxy": 0.14892636333333334
+        },
+        {
+          "stage": "TEST actual supply and materialization",
+          "wall_seconds": 740.449474,
+          "cpus": 8.0,
+          "exit_code": 0,
+          "allocated_CPU_hours_proxy": 1.6454432755555555
+        },
+        {
+          "stage": "TEST verification failed order comparison",
+          "wall_seconds": 60.917693,
+          "cpus": 4.0,
+          "exit_code": 1,
+          "allocated_CPU_hours_proxy": 0.06768632555555555
+        },
+        {
+          "stage": "TEST independent verification success",
+          "wall_seconds": 61.871854,
+          "cpus": 4.0,
+          "exit_code": 0,
+          "allocated_CPU_hours_proxy": 0.06874650444444444
+        }
+      ],
+      "note": "All failed attempts retained. Process CPU and enclosing container allocation overlap; do not add them. Historical producer source pins retained privately, not charged again."
+    },
+    "prior_supplement_attempts_not_discarded": [
+      {
+        "attempt": "result-v1",
+        "status": "PENDING_REMOTE_EVIDENCE",
+        "wall_seconds": 0.6536039900965989,
+        "CPU_seconds": 0.46986704999999995
+      },
+      {
+        "attempt": "result-v2",
+        "status": "PENDING_FAILURE_ATTRIBUTION",
+        "wall_seconds": 0.6452932199463248,
+        "CPU_seconds": 0.47293211
+      },
+      {
+        "attempt": "result-v3",
+        "status": "PENDING_FAILURE_ATTRIBUTION",
+        "wall_seconds": 0.743556059896946,
+        "CPU_seconds": 0.5108902200000001
+      }
+    ]
+  },
+  "missed_exact_reuse_FoldA": 18,
+  "FoldA_actual_new": 3225,
+  "FoldA_unique_sample_wire": 3207,
+  "remaining_requests": 0,
+  "ETA_seconds": 0,
+  "model_calls_this_supplement": 0,
+  "new_teacher_this_supplement": 0,
+  "new_embedding_this_supplement": 0,
+  "money": "unknown",
+  "energy": "unknown",
+  "archive_CPU": "unknown",
+  "agent_cost": "unknown",
+  "note": "Historical CPU/model attempts remain in original costs; TRAIN7096 is a subset of TRAIN9985, cohorts are not independent additive samples. Container allocated CPU includes CPU allocation of NPU clients and is not measured CPU use; never sum overlapping proxy/actual CPU as total expense."
+}
