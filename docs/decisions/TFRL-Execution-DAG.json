@@ -1,7 +1,7 @@
 {
   "schema": "saea-research-dependency-spec-v1",
   "status": "PLANNING_SPEC_NOT_EXECUTABLE_QUEUE",
-  "updated_at_utc": "2026-11-09T00:37:13.887808+00:00",
+  "updated_at_utc": "2026-11-09T00:48:56.045197+00:00",
   "current_stage": "retrieval_minimum_then_development_growth",
   "instruction": "4451可继续删除；先紧凑最小起点，再按已有DEV错例从TRAIN增量回补；目标固定TopK标签覆盖与稳定性，不是压缩效率",
   "resources": {
@@ -1392,24 +1392,22 @@
   ],
   "active_tracks": [
     {
-      "id": "recall74-growth76-prune",
-      "resource": "CPU",
-      "status": "reverse_complete_next_feedback_preparing",
-      "bank_size": 76,
+      "id": "recall76-feedback",
+      "resource": "LOCAL_TEACHER_THEN_CPU",
+      "status": "teacher_dispatched",
       "blocks_NPU": false
     },
     {
-      "id": "P-direct-support-successor",
-      "resource": "CPU_LOCAL_TEACHER_PREPARATION",
-      "status": "teacher_dispatched_CPU_admission_running",
+      "id": "P-direct-support",
+      "resource": "LOCAL_TEACHER_THEN_NPU_B",
+      "status": "CPU_ready_teacher_running",
       "NPU_started": false
     },
     {
-      "id": "P-example-use-analysis",
-      "resource": "CPU",
-      "status": "inference_complete_negative_no_promotion",
-      "completed": 1080,
-      "total": 1080
+      "id": "P-fewshot-thinking",
+      "resource": "CPU_THEN_NPU_A",
+      "status": "preparing",
+      "NPU_started": false
     }
   ],
   "round6_teacher_feedback": {
@@ -1556,7 +1554,7 @@
     "default_promoted": false
   },
   "p_direct_support_successor": {
-    "status": "teacher_dispatched_CPU_admission_running",
+    "status": "CPU_admitted_teacher_running",
     "parent": "X",
     "rows": 1080,
     "axis": "template_only",
@@ -1564,7 +1562,9 @@
     "NPU_started": false,
     "teacher_sent": true,
     "input_budget_pass": true,
-    "incremental_input_tokens_per_row": 95
+    "incremental_input_tokens_per_row": 95,
+    "CPU_admitted_rows": 1080,
+    "CPU_admission_wall_seconds": 491.9920925999759
   },
   "recall74_followup": {
     "status": "complete_with_reverse_prune_main_accepted",
@@ -1582,5 +1582,19 @@
     "reverse_attempts": 76,
     "reverse_deletions": 0,
     "final_after_prune": 76
+  },
+  "recall76_teacher": {
+    "status": "actual_request_dispatched",
+    "baseline": 76,
+    "next_formal_started": false,
+    "NPU": 0
+  },
+  "p_fewshot_thinking_successor": {
+    "status": "evidence_and_CPU_preparing",
+    "direct_parent": "F_fs1_OFF",
+    "only_axis": "budgeted_thinking",
+    "teacher_sent": false,
+    "NPU_started": false,
+    "rows": 1080
   }
 }
