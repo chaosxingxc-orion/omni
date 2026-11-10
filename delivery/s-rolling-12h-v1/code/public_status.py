@@ -64,6 +64,7 @@ def render():
                     ready_useful_policy_and_eval_branches=useful, running_residual_branches=residual,
                     useful_plus_running_four_lane_hours={str(s): (useful + residual) * s / 14400 for s in (3, 4, 5)},
                     conditional_compact_CPU_branches=11202, conditional_is_ready=False,
+                    compact_promotion_status="REJECTED_FULL545_ACCURACY_GATE",
                     unknown_eta_task_ids=unknown_eta, unknown_eta_branches=unknown_eta_branches,
                     no_filler_seeds=True, estimate_is_guarantee=False)
     scenarios = {str(s): (branches - unknown_eta_branches + residual) * s / 14400 for s in (3, 4, 5)}
@@ -97,13 +98,13 @@ def render():
               '## 接续与学习', '',
               '- 当前固定545真实样本、P Top3共1635分支；八种子组保持相同策略与预算，不扩种子填时长。',
               '- seed03明确的调用前失败保留；retry2按显式映射收集，要求相同seed/config/pins、完整终态且unknown=0。',
-              '- seed08在1103/1635分支后超时，保留1个未知请求，不重发、不拼成完整八种子组。六个成员已完整，seed03仍在运行；TFGRPO全组学习暂缺前提，独立ACE与TRAIN继续。',
+              '- seed08在1103/1635分支后超时，保留1个未知请求，不重发、不拼成完整八种子组。seed03已完成545/1635，现七个成员完整；TFGRPO全组学习暂缺前提，独立ACE与TRAIN继续。',
               '- D路旧进程已退出且引擎空闲后，持共享guard归档并清理失效flight元数据；未改未知请求journal。独立TRAIN后继已产生真实响应，96并发；没有重启模型服务。',
               '- B路高浪费无示例对照主动停止新准入并排空至891/2802分支，354非法；保留全部成本。已自动接续动态few-shot TRAIN，不能把部分对照算完整结果。',
               '- CPU采用prepare_plan.py --plan，复用已发布输入；后续优先运行真实根因策略，避免重复基线占位。',
               '- S_valid仅独立评价，禁止进入教师调优。保留竞争角色提示假设；关系方向探针缺乏可评分错例，已在启动前退役；单纯前移ambiguity字段的候选不准入。',
-              '- 紧凑JSON在无示例父上显著减少非法输出，但精度仍低于动态few-shot；compact+fewshot组合已通过545/1635固定镜像CPU验收并加入A路后继，尚无组合推理收益。',
-              '- 原3734条TRAIN四片的compact+fewshot推广输入由独立CPU子进程提前准备；仅在545组合精度、均值奖励与协议门槛通过且相应对照完整后准入，条件准备不计READY。',
+              '- 紧凑JSON在无示例父上显著减少非法输出，但精度仍低于动态few-shot；compact+fewshot组合已完成545/1635：全分支非法1，typed F1 0.57236、整样本正确217；strict F1 0.34971、整样本正确155。父版对应219/163条，组合未通过锁定精度门槛，不扩展TRAIN。',
+              '- 原3734条TRAIN四片的compact+fewshot推广输入由独立CPU子进程提前准备；545组合已未通过精度门槛，11202分支不准入、不计READY；保留CPU准备产物。',
               '- 教师编译已修复：相同父策略与实际instruction复用原任务和结果，退役策略不再准入；固定镜像16项fixture通过。CPU教师worker已接管，付费quota及未知请求不重发规则不变。',
               '- 各路进度和资源为异步快照，表内时间不能视为同一时刻测量；新任务启动阶段的秒/分支不代表稳定吞吐。',
               '- 每600秒或明确终态更新；公开页面原位刷新。当前tokens仅为各路快照，全部历史失败成本另存，金额未知。', '']
@@ -111,7 +112,7 @@ def render():
         useful = capacity.get('useful_plus_running_four_lane_hours', {})
         lines += ['## 有效库存与CPU补给', '',
                   f'有效待执行分支 {capacity.get("ready_useful_policy_and_eval_branches")}；低优先级高浪费对照另列 {capacity.get("branch_counts", {}).get("deprioritized_no_examples")} 分支。有效库存加在途按3/4/5秒估计 {useful.get("3", 0):.2f}/{useful.get("4", 0):.2f}/{useful.get("5", 0):.2f} 小时，尚不足以无条件覆盖剩余窗口。此容量核算自带时间戳，不是实时保证。', '',
-                  '四片compact TRAIN已完成CPU准备，共3734样本/11202分支；科学门槛未通过前不计READY。并行CPU任务正在补齐ACE小规模候选的运行物料、准备基于真实知识卡冲突的下一轮教师请求，并修复已复现的失败后接续故障。', '',
+                  '四片compact TRAIN已完成CPU准备，共3734样本/11202分支；组合精度门槛已失败，不能计READY。ACE三个可选槽卡片候选及共享父对照共648请求已完成正式CPU验收、预部署并发布；本轮教师消费分析返回零策略，CPU正在核查重复槽位、完整545回退和机制pilot结果。失败后接续最小修复已完成固定镜像验收并部署，未知请求不重发。', '',
                   '知识卡全54张、402绑定及5598条合法TRAIN来源已审计；发现可选槽被绝对提取指令覆盖，以及无来源长度限制两个机制。它们是待检验因果假设。few-shot分差的高总体AUC主要重复父top1信息，当前没有足够证据部署新的选择器。', '']
     recovery = read(ROOT / 'delivery/s-rolling-12h-v1/175-ARCHIVE-SPACE-RECOVERY.json')
     if recovery:
