@@ -78,7 +78,7 @@
       "wall_seconds": 829.8029103279114
     }
   },
-  "updated_epoch": 1794349886.1724296,
+  "updated_epoch": 1794350313.782006,
   "successors": {
     "A": {
       "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
@@ -281,20 +281,19 @@
     "reasoning_target_soft": 8192,
     "resends": 0
   },
-  "active_npu_experiments_verified": 3,
+  "active_npu_experiments_verified": 1,
   "cpu_successors": [
     {
-      "task": "starved-role-pair-gate",
-      "status": "ACTUAL_RUNNING_MAIN_REMOTE_VERIFIED",
-      "changed_wire_branches": 18
+      "task": "TFGRPO-consumption-next",
+      "status": "CLASS_FEEDBACK_PREPARING"
     },
     {
-      "task": "intent-card-scope-ACE-two-candidates",
-      "status": "B_C_ACTUAL_RUNNING_DIRECT_REMOTE_VERIFIED"
+      "task": "ACE-construction-next",
+      "status": "CLASS_FEEDBACK_PREPARING"
     },
     {
-      "task": "root-capacity-recovery",
-      "status": "CLI_ACTUAL_STARTED"
+      "task": "S-D-real-handoff",
+      "status": "CLI_CPU_PREPARING"
     }
   ],
   "all_cards_busy_proven": false,
@@ -364,35 +363,27 @@
   },
   "normalization_summary": "S-Type-Normalization-Summary.json",
   "latest_card_candidates": {
-    "C": {
-      "status": "ACTUAL_RUNNING_DIRECT_DOCKER_VERIFIED",
-      "cards": 4,
-      "instances": 1,
-      "concurrency": 64,
-      "total_samples": 545,
-      "total_branches": 1635,
-      "completed_samples": null,
-      "ETA_seconds": null
-    },
     "B": {
-      "status": "ACTUAL_RUNNING_DIRECT_DOCKER_VERIFIED",
-      "cards": 4,
-      "instances": 1,
-      "concurrency": 64,
-      "total_samples": 545,
-      "total_branches": 1635,
-      "completed_samples": null,
-      "ETA_seconds": null
+      "status": "COMPLETE_SCORED",
+      "completed_samples": 545,
+      "completed_branches": 1635,
+      "ETA_seconds": 0,
+      "summary": "S-Card-Scope-Summary.json"
+    },
+    "C": {
+      "status": "COMPLETE_SCORED",
+      "completed_samples": 545,
+      "completed_branches": 1635,
+      "ETA_seconds": 0,
+      "summary": "S-Card-Scope-Summary.json"
     },
     "A_gate": {
-      "status": "ACTUAL_RUNNING_DIRECT_DOCKER_VERIFIED",
-      "cards": 4,
-      "instances": 1,
-      "concurrency": 64,
+      "status": "RUNNING_LAST_DIRECT_VERIFIED",
       "total_samples": 545,
       "total_branches": 1635,
       "completed_samples": null,
       "ETA_seconds": null
     }
-  }
+  },
+  "capacity_recovery": "COMPLETE"
 }

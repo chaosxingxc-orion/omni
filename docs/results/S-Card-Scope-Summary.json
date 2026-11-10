@@ -1,0 +1,180 @@
+{
+  "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
+  "learning": 476,
+  "report_only": 69,
+  "promotion": false,
+  "arms": {
+    "email-card": {
+      "samples": 545,
+      "branches": 1635,
+      "unknown": 0,
+      "absent": 0,
+      "metrics": {
+        "samples": 476,
+        "exact": 277,
+        "tp": 449,
+        "fp": 143,
+        "fn": 103,
+        "invalid": 0,
+        "nonempty": 341,
+        "complete_recall": 244,
+        "empty_fp_samples": 57
+      },
+      "paired": {
+        "changed": {
+          "before": {
+            "samples": 19,
+            "exact": 11,
+            "tp": 14,
+            "fp": 11,
+            "fn": 4,
+            "invalid": 0,
+            "nonempty": 16,
+            "complete_recall": 13,
+            "empty_fp_samples": 1
+          },
+          "after": {
+            "samples": 19,
+            "exact": 10,
+            "tp": 13,
+            "fp": 10,
+            "fn": 5,
+            "invalid": 0,
+            "nonempty": 16,
+            "complete_recall": 12,
+            "empty_fp_samples": 1
+          },
+          "repairs": 0,
+          "regressions": 1
+        },
+        "same": {
+          "before": {
+            "samples": 457,
+            "exact": 272,
+            "tp": 439,
+            "fp": 139,
+            "fn": 95,
+            "invalid": 0,
+            "nonempty": 325,
+            "complete_recall": 236,
+            "empty_fp_samples": 54
+          },
+          "after": {
+            "samples": 457,
+            "exact": 267,
+            "tp": 436,
+            "fp": 133,
+            "fn": 98,
+            "invalid": 0,
+            "nonempty": 325,
+            "complete_recall": 232,
+            "empty_fp_samples": 56
+          },
+          "repairs": 14,
+          "regressions": 19
+        }
+      },
+      "cost": {
+        "card_hours": 0.8832445650630527,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.458569006526142,
+        "session_wall_seconds": 766.6149554799777,
+        "usage": {
+          "completion_tokens": 43701,
+          "prompt_tokens": 7011814,
+          "total_tokens": 7055515
+        },
+        "wall_seconds": 794.9201085567474
+      },
+      "strict_and_normalized_equal": true
+    },
+    "news-card": {
+      "samples": 545,
+      "branches": 1635,
+      "unknown": 0,
+      "absent": 0,
+      "metrics": {
+        "samples": 476,
+        "exact": 283,
+        "tp": 457,
+        "fp": 150,
+        "fn": 95,
+        "invalid": 0,
+        "nonempty": 341,
+        "complete_recall": 254,
+        "empty_fp_samples": 53
+      },
+      "paired": {
+        "changed": {
+          "before": {
+            "samples": 62,
+            "exact": 39,
+            "tp": 37,
+            "fp": 21,
+            "fn": 6,
+            "invalid": 0,
+            "nonempty": 32,
+            "complete_recall": 26,
+            "empty_fp_samples": 10
+          },
+          "after": {
+            "samples": 62,
+            "exact": 40,
+            "tp": 37,
+            "fp": 21,
+            "fn": 6,
+            "invalid": 0,
+            "nonempty": 32,
+            "complete_recall": 26,
+            "empty_fp_samples": 7
+          },
+          "repairs": 4,
+          "regressions": 3
+        },
+        "same": {
+          "before": {
+            "samples": 414,
+            "exact": 244,
+            "tp": 416,
+            "fp": 129,
+            "fn": 93,
+            "invalid": 0,
+            "nonempty": 309,
+            "complete_recall": 223,
+            "empty_fp_samples": 45
+          },
+          "after": {
+            "samples": 414,
+            "exact": 243,
+            "tp": 420,
+            "fp": 129,
+            "fn": 89,
+            "invalid": 0,
+            "nonempty": 309,
+            "complete_recall": 228,
+            "empty_fp_samples": 46
+          },
+          "repairs": 17,
+          "regressions": 18
+        }
+      },
+      "cost": {
+        "card_hours": 0.9104109377331204,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.5034309063482723,
+        "session_wall_seconds": 790.7192433199962,
+        "usage": {
+          "completion_tokens": 41672,
+          "prompt_tokens": 7006127,
+          "total_tokens": 7047799
+        },
+        "wall_seconds": 819.3698439598083
+      },
+      "strict_and_normalized_equal": true
+    }
+  }
+}

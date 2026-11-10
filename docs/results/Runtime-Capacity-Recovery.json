@@ -1,0 +1,31 @@
+{
+  "status": "COMPLETE_ROOT_CAPACITY_RECOVERED",
+  "root_available_before_bytes": 0,
+  "root_available_after_bytes": 10401034240,
+  "var_available_after_bytes": 3783741440,
+  "deleted_root_items": 51,
+  "deleted_allocated_bytes": 19617296384,
+  "original_active_containers_identity_preserved": 20,
+  "protected_mount_records_preserved": 55,
+  "cost": {
+    "wall_seconds": 588.7481646537781,
+    "model_calls": 0,
+    "teacher_calls": 0,
+    "new_NPU_cards": 0,
+    "new_NPU_instances": 0,
+    "new_NPU_card_hours": 0,
+    "inference_samples": "not applicable: storage recovery",
+    "seconds_per_sample": null,
+    "remaining_seconds": 0,
+    "money": null,
+    "historical_costs_preserved": true
+  },
+  "archive": {
+    "archive_bytes": 19232317440,
+    "sha256": "80eac1aede39f640d4f7add47cf16f41000f90febbca724bbeadca8b1cf63a34",
+    "verified_records": 693001,
+    "verified_files": 641156
+  },
+  "write_probe": "1MiB write/fsync/readback passed and removed",
+  "model_services_restarted": false
+}
