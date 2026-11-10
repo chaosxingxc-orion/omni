@@ -10,7 +10,7 @@
 
 ## 当前执行状态
 
-两个Codex CLI子进程已启动：一条准备历史类型统计与类型专用实验，另一条核文本模型兼容性并准备填值数据。权重目录已只读确认存在；官方Qwen3.8-27B也使用Qwen3_5ForConditionalGeneration架构名，本地服务兼容性尚待验证。官方部署说明见 https://docs.vllm.ai/projects/ascend/en/latest/tutorials/models/Qwen3.8-27B.html 。
+三个Codex CLI子进程分别准备并执行类型专用实验、文本填值诊断，以及后继类型TFRL模板与反馈。历史分解已完成，详见 [S-Type-Value-Error-Decomposition](S-Type-Value-Error-Decomposition)。权重目录已只读确认存在；官方Qwen3.8-27B也使用Qwen3_5ForConditionalGeneration架构名，本地服务兼容性尚待验证。官方部署说明见 https://docs.vllm.ai/projects/ascend/en/latest/tutorials/models/Qwen3.8-27B.html 。
 
 旧整槽位指令候选已在发请求前停止准入，新增请求0。新类型及填值实验尚无结果，不能宣称NPU满载或收益成立。先保留可用Omni服务准备类型实验，文本部署不阻塞类型实验。旧教师请求尚未派发，后继教师目标改为类型混淆或填值根因分别优化。
 
