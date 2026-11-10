@@ -1,0 +1,109 @@
+{
+  "scope": "SourceGate legal TRAIN only; no development/test support imported",
+  "runtime_changed": false,
+  "model_calls": 0,
+  "pairs": {
+    "calendar_set:person/relation": {
+      "records": 572,
+      "states": {
+        "A_only": 102,
+        "B_only": 42,
+        "neither": 427,
+        "both": 1
+      },
+      "normalized_text_pair_disagreements": 0,
+      "coexistence_support_present": true
+    },
+    "calendar_set:time/timeofday": {
+      "records": 572,
+      "states": {
+        "neither": 346,
+        "A_only": 186,
+        "B_only": 29,
+        "both": 11
+      },
+      "normalized_text_pair_disagreements": 0,
+      "coexistence_support_present": true
+    },
+    "calendar_set:date/time": {
+      "records": 572,
+      "states": {
+        "A_only": 171,
+        "both": 129,
+        "B_only": 68,
+        "neither": 204
+      },
+      "normalized_text_pair_disagreements": 0,
+      "coexistence_support_present": true
+    },
+    "play_music:artist_name/song_name": {
+      "records": 403,
+      "states": {
+        "neither": 237,
+        "A_only": 98,
+        "B_only": 40,
+        "both": 28
+      },
+      "normalized_text_pair_disagreements": 0,
+      "coexistence_support_present": true
+    },
+    "play_music:artist_name/music_genre": {
+      "records": 403,
+      "states": {
+        "neither": 192,
+        "B_only": 85,
+        "A_only": 122,
+        "both": 4
+      },
+      "normalized_text_pair_disagreements": 0,
+      "coexistence_support_present": true
+    },
+    "play_music:song_name/music_genre": {
+      "records": 403,
+      "states": {
+        "neither": 246,
+        "B_only": 89,
+        "A_only": 68
+      },
+      "normalized_text_pair_disagreements": 0,
+      "coexistence_support_present": false
+    },
+    "cooking_recipe:food_type/ingredient": {
+      "records": 32,
+      "states": {
+        "A_only": 24,
+        "B_only": 4,
+        "neither": 4
+      },
+      "normalized_text_pair_disagreements": 0,
+      "coexistence_support_present": false
+    },
+    "weather_query:time/timeofday": {
+      "records": 288,
+      "states": {
+        "neither": 254,
+        "A_only": 15,
+        "B_only": 19
+      },
+      "normalized_text_pair_disagreements": 0,
+      "coexistence_support_present": false
+    },
+    "weather_query:date/time": {
+      "records": 288,
+      "states": {
+        "neither": 135,
+        "A_only": 138,
+        "B_only": 12,
+        "both": 3
+      },
+      "normalized_text_pair_disagreements": 0,
+      "coexistence_support_present": true
+    }
+  },
+  "evidence_sha256": "cabf8a1ee03ed9e42c8da1efc5a7bc32cf802f685865114e07581c073f7ac97d",
+  "limits": [
+    "No repeated text disagreement does not establish semantic consistency.",
+    "A missing annotation is not a verified negative.",
+    "Missing pair states identify evidence gaps, not forbidden combinations."
+  ]
+}
