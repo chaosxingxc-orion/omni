@@ -1,0 +1,754 @@
+{
+  "schema": "s-clean-successor-results-v1",
+  "baseline_clean": {
+    "all": {
+      "F1": 0.7687687687687688,
+      "empty_false_positive_samples": 75,
+      "exact": 304,
+      "fn": 117,
+      "fp": 191,
+      "nonempty_all_gold_covered": 282,
+      "samples": 545,
+      "tp": 512
+    },
+    "held": {
+      "F1": 0.7066666666666667,
+      "empty_false_positive_samples": 9,
+      "exact": 35,
+      "fn": 24,
+      "fp": 20,
+      "nonempty_all_gold_covered": 29,
+      "samples": 69,
+      "tp": 53
+    },
+    "learning": {
+      "F1": 0.7766497461928934,
+      "empty_false_positive_samples": 66,
+      "exact": 269,
+      "fn": 93,
+      "fp": 171,
+      "nonempty_all_gold_covered": 253,
+      "samples": 476,
+      "tp": 459
+    }
+  },
+  "arms": {
+    "examples-only": {
+      "status": "RUNNING_ACTUAL_INFERENCE",
+      "completed_samples": 101,
+      "completed_requests": 306,
+      "total_samples": 545,
+      "total_requests": 1635,
+      "seconds_per_sample": 1.7683706448809935,
+      "remaining_seconds_estimate": 775.7079192540226,
+      "card_hours": 0.19845048348108926,
+      "usage": {
+        "completion_tokens": 12602,
+        "prompt_tokens": 1195267,
+        "total_tokens": 1207869
+      },
+      "cards": 4,
+      "instances": 1,
+      "money": null
+    },
+    "organization-only": {
+      "status": "COMPLETE_ANALYZED",
+      "scores": {
+        "all": {
+          "F1": 0.7503628447024674,
+          "empty_false_positive_samples": 79,
+          "exact": 304,
+          "failures": 1,
+          "fn": 112,
+          "fp": 232,
+          "gold_empty_samples": 154,
+          "nonempty_all_gold_covered": 285,
+          "nonempty_samples": 391,
+          "precision": 0.6902536715620827,
+          "recall": 0.821939586645469,
+          "resolved_type_exact": 32,
+          "samples": 545,
+          "tp": 517,
+          "unresolved_samples": 503
+        },
+        "held": {
+          "F1": 0.7058823529411765,
+          "empty_false_positive_samples": 11,
+          "exact": 33,
+          "failures": 0,
+          "fn": 23,
+          "fp": 22,
+          "gold_empty_samples": 19,
+          "nonempty_all_gold_covered": 28,
+          "nonempty_samples": 50,
+          "precision": 0.7105263157894737,
+          "recall": 0.7012987012987013,
+          "resolved_type_exact": 1,
+          "samples": 69,
+          "tp": 54,
+          "unresolved_samples": 68
+        },
+        "learning": {
+          "F1": 0.7559183673469387,
+          "empty_false_positive_samples": 68,
+          "exact": 271,
+          "failures": 1,
+          "fn": 89,
+          "fp": 210,
+          "gold_empty_samples": 135,
+          "nonempty_all_gold_covered": 257,
+          "nonempty_samples": 341,
+          "precision": 0.687964338781575,
+          "recall": 0.8387681159420289,
+          "resolved_type_exact": 31,
+          "samples": 476,
+          "tp": 463,
+          "unresolved_samples": 435
+        }
+      },
+      "paired_clean": {
+        "all": {
+          "changed_types": 90,
+          "changed_unresolved": 108,
+          "classifications": {
+            "exact": 304,
+            "fn_only": 60,
+            "fp_only": 135,
+            "mixed_fp_fn": 45,
+            "protocol_failure": 1
+          },
+          "transitions": {
+            "both_correct": 279,
+            "both_wrong_changed": 40,
+            "both_wrong_same": 176,
+            "regression": 25,
+            "repair": 25
+          },
+          "type_events": {
+            "FN->FN": 96,
+            "FN->TP": 21,
+            "FP->FP": 159,
+            "FP->TN": 32,
+            "TN->FP": 73,
+            "TP->FN": 16,
+            "TP->TP": 496
+          }
+        },
+        "held": {
+          "changed_types": 9,
+          "changed_unresolved": 11,
+          "classifications": {
+            "exact": 33,
+            "fn_only": 15,
+            "fp_only": 14,
+            "mixed_fp_fn": 7
+          },
+          "transitions": {
+            "both_correct": 31,
+            "both_wrong_changed": 3,
+            "both_wrong_same": 29,
+            "regression": 4,
+            "repair": 2
+          },
+          "type_events": {
+            "FN->FN": 20,
+            "FN->TP": 4,
+            "FP->FP": 19,
+            "FP->TN": 1,
+            "TN->FP": 3,
+            "TP->FN": 3,
+            "TP->TP": 50
+          }
+        },
+        "learning": {
+          "changed_types": 81,
+          "changed_unresolved": 97,
+          "classifications": {
+            "exact": 271,
+            "fn_only": 45,
+            "fp_only": 121,
+            "mixed_fp_fn": 38,
+            "protocol_failure": 1
+          },
+          "transitions": {
+            "both_correct": 248,
+            "both_wrong_changed": 37,
+            "both_wrong_same": 147,
+            "regression": 21,
+            "repair": 23
+          },
+          "type_events": {
+            "FN->FN": 76,
+            "FN->TP": 17,
+            "FP->FP": 140,
+            "FP->TN": 31,
+            "TN->FP": 70,
+            "TP->FN": 13,
+            "TP->TP": 446
+          }
+        }
+      },
+      "complement": {
+        "all": {
+          "all_branches": {
+            "added_unresolved_types": 507,
+            "child": {
+              "all_remaining_unresolved": 1414,
+              "eligible": 1582,
+              "rows": 1635,
+              "unresolved_branches": 1446,
+              "unresolved_types": 9978,
+              "valid": 1630
+            },
+            "parent": {
+              "all_remaining_unresolved": 1418,
+              "eligible": 1584,
+              "rows": 1635,
+              "unresolved_branches": 1453,
+              "unresolved_types": 10204,
+              "valid": 1631
+            },
+            "removed_unresolved_types": 733
+          },
+          "gold_branch": {
+            "added_unresolved_types": 164,
+            "child": {
+              "all_remaining_unresolved": 491,
+              "eligible": 540,
+              "rows": 545,
+              "unresolved_branches": 503,
+              "unresolved_types": 3410,
+              "valid": 544
+            },
+            "parent": {
+              "all_remaining_unresolved": 484,
+              "eligible": 541,
+              "rows": 545,
+              "unresolved_branches": 501,
+              "unresolved_types": 3439,
+              "valid": 543
+            },
+            "removed_unresolved_types": 193
+          }
+        },
+        "held": {
+          "all_branches": {
+            "added_unresolved_types": 64,
+            "child": {
+              "all_remaining_unresolved": 175,
+              "eligible": 200,
+              "rows": 207,
+              "unresolved_branches": 179,
+              "unresolved_types": 1185,
+              "valid": 206
+            },
+            "parent": {
+              "all_remaining_unresolved": 179,
+              "eligible": 199,
+              "rows": 207,
+              "unresolved_branches": 183,
+              "unresolved_types": 1268,
+              "valid": 205
+            },
+            "removed_unresolved_types": 147
+          },
+          "gold_branch": {
+            "added_unresolved_types": 24,
+            "child": {
+              "all_remaining_unresolved": 68,
+              "eligible": 69,
+              "rows": 69,
+              "unresolved_branches": 68,
+              "unresolved_types": 443,
+              "valid": 69
+            },
+            "parent": {
+              "all_remaining_unresolved": 64,
+              "eligible": 68,
+              "rows": 69,
+              "unresolved_branches": 66,
+              "unresolved_types": 424,
+              "valid": 68
+            },
+            "removed_unresolved_types": 5
+          }
+        },
+        "learning": {
+          "all_branches": {
+            "added_unresolved_types": 443,
+            "child": {
+              "all_remaining_unresolved": 1239,
+              "eligible": 1382,
+              "rows": 1428,
+              "unresolved_branches": 1267,
+              "unresolved_types": 8793,
+              "valid": 1424
+            },
+            "parent": {
+              "all_remaining_unresolved": 1239,
+              "eligible": 1385,
+              "rows": 1428,
+              "unresolved_branches": 1270,
+              "unresolved_types": 8936,
+              "valid": 1426
+            },
+            "removed_unresolved_types": 586
+          },
+          "gold_branch": {
+            "added_unresolved_types": 140,
+            "child": {
+              "all_remaining_unresolved": 423,
+              "eligible": 471,
+              "rows": 476,
+              "unresolved_branches": 435,
+              "unresolved_types": 2967,
+              "valid": 475
+            },
+            "parent": {
+              "all_remaining_unresolved": 420,
+              "eligible": 473,
+              "rows": 476,
+              "unresolved_branches": 435,
+              "unresolved_types": 3015,
+              "valid": 475
+            },
+            "removed_unresolved_types": 188
+          }
+        }
+      },
+      "quality": {
+        "absent": 0,
+        "invalid_branches": 5,
+        "raw_response_reparsed": 1635,
+        "same_P_allowed_audio_branches": 1635,
+        "unknown": 0
+      },
+      "cost": {
+        "card_hours": 0.9623826924959819,
+        "cards": 4,
+        "completed_requests": 1635,
+        "completed_samples": 545,
+        "instances": 1,
+        "money": null,
+        "remaining_seconds": 0,
+        "seconds_per_request": 0.5297519408234762,
+        "seconds_per_sample": 1.5892558224704287,
+        "total_samples": 545,
+        "usage": {
+          "completion_tokens": 69444,
+          "prompt_tokens": 7127862,
+          "total_tokens": 7197306
+        },
+        "wall_seconds": 866.1444232463837
+      },
+      "error_families": {
+        "all": {
+          "entity_role_person_relation_business_boundary:FN": 27,
+          "entity_role_person_relation_business_boundary:FP": 42,
+          "food_recipe_ingredient_or_modifier_boundary:FN": 9,
+          "food_recipe_ingredient_or_modifier_boundary:FP": 20,
+          "media_reference_or_descriptor_boundary:FN": 8,
+          "media_reference_or_descriptor_boundary:FP": 23,
+          "other_legal_type_presence:FN": 16,
+          "other_legal_type_presence:FP": 37,
+          "place_transport_channel_or_device_boundary:FN": 15,
+          "place_transport_channel_or_device_boundary:FP": 54,
+          "protocol_failure:PROTOCOL": 1,
+          "temporal_type_or_recurrence_boundary:FN": 20,
+          "temporal_type_or_recurrence_boundary:FP": 29,
+          "topic_name_or_generic_action_boundary:FN": 17,
+          "topic_name_or_generic_action_boundary:FP": 27
+        },
+        "held": {
+          "entity_role_person_relation_business_boundary:FN": 6,
+          "entity_role_person_relation_business_boundary:FP": 4,
+          "food_recipe_ingredient_or_modifier_boundary:FP": 2,
+          "media_reference_or_descriptor_boundary:FN": 1,
+          "media_reference_or_descriptor_boundary:FP": 2,
+          "other_legal_type_presence:FN": 4,
+          "other_legal_type_presence:FP": 2,
+          "place_transport_channel_or_device_boundary:FN": 1,
+          "place_transport_channel_or_device_boundary:FP": 5,
+          "temporal_type_or_recurrence_boundary:FN": 2,
+          "temporal_type_or_recurrence_boundary:FP": 4,
+          "topic_name_or_generic_action_boundary:FN": 9,
+          "topic_name_or_generic_action_boundary:FP": 3
+        },
+        "learning": {
+          "entity_role_person_relation_business_boundary:FN": 21,
+          "entity_role_person_relation_business_boundary:FP": 38,
+          "food_recipe_ingredient_or_modifier_boundary:FN": 9,
+          "food_recipe_ingredient_or_modifier_boundary:FP": 18,
+          "media_reference_or_descriptor_boundary:FN": 7,
+          "media_reference_or_descriptor_boundary:FP": 21,
+          "other_legal_type_presence:FN": 12,
+          "other_legal_type_presence:FP": 35,
+          "place_transport_channel_or_device_boundary:FN": 14,
+          "place_transport_channel_or_device_boundary:FP": 49,
+          "protocol_failure:PROTOCOL": 1,
+          "temporal_type_or_recurrence_boundary:FN": 18,
+          "temporal_type_or_recurrence_boundary:FP": 25,
+          "topic_name_or_generic_action_boundary:FN": 8,
+          "topic_name_or_generic_action_boundary:FP": 24
+        }
+      }
+    },
+    "type-projection": {
+      "status": "COMPLETE_ANALYZED",
+      "scores": {
+        "all": {
+          "F1": 0.7662721893491125,
+          "empty_false_positive_samples": 74,
+          "exact": 312,
+          "failures": 0,
+          "fn": 111,
+          "fp": 205,
+          "gold_empty_samples": 154,
+          "nonempty_all_gold_covered": 290,
+          "nonempty_samples": 391,
+          "precision": 0.7164591977869986,
+          "recall": 0.8235294117647058,
+          "resolved_type_exact": 28,
+          "samples": 545,
+          "tp": 518,
+          "unresolved_samples": 508
+        },
+        "held": {
+          "F1": 0.7341772151898734,
+          "empty_false_positive_samples": 10,
+          "exact": 36,
+          "failures": 0,
+          "fn": 19,
+          "fp": 23,
+          "gold_empty_samples": 19,
+          "nonempty_all_gold_covered": 32,
+          "nonempty_samples": 50,
+          "precision": 0.7160493827160493,
+          "recall": 0.7532467532467533,
+          "resolved_type_exact": 2,
+          "samples": 69,
+          "tp": 58,
+          "unresolved_samples": 66
+        },
+        "learning": {
+          "F1": 0.7705192629815746,
+          "empty_false_positive_samples": 64,
+          "exact": 276,
+          "failures": 0,
+          "fn": 92,
+          "fp": 182,
+          "gold_empty_samples": 135,
+          "nonempty_all_gold_covered": 258,
+          "nonempty_samples": 341,
+          "precision": 0.7165109034267912,
+          "recall": 0.8333333333333334,
+          "resolved_type_exact": 26,
+          "samples": 476,
+          "tp": 460,
+          "unresolved_samples": 442
+        }
+      },
+      "paired_clean": {
+        "all": {
+          "changed_types": 87,
+          "changed_unresolved": 113,
+          "classifications": {
+            "exact": 312,
+            "fn_only": 59,
+            "fp_only": 132,
+            "mixed_fp_fn": 42
+          },
+          "transitions": {
+            "both_correct": 278,
+            "both_wrong_changed": 27,
+            "both_wrong_same": 180,
+            "regression": 26,
+            "repair": 34
+          },
+          "type_events": {
+            "FN->FN": 99,
+            "FN->TP": 18,
+            "FP->FP": 155,
+            "FP->TN": 36,
+            "TN->FP": 50,
+            "TP->FN": 12,
+            "TP->TP": 500
+          }
+        },
+        "held": {
+          "changed_types": 10,
+          "changed_unresolved": 12,
+          "classifications": {
+            "exact": 36,
+            "fn_only": 12,
+            "fp_only": 15,
+            "mixed_fp_fn": 6
+          },
+          "transitions": {
+            "both_correct": 31,
+            "both_wrong_changed": 1,
+            "both_wrong_same": 28,
+            "regression": 4,
+            "repair": 5
+          },
+          "type_events": {
+            "FN->FN": 19,
+            "FN->TP": 5,
+            "FP->FP": 17,
+            "FP->TN": 3,
+            "TN->FP": 6,
+            "TP->TP": 53
+          }
+        },
+        "learning": {
+          "changed_types": 77,
+          "changed_unresolved": 101,
+          "classifications": {
+            "exact": 276,
+            "fn_only": 47,
+            "fp_only": 117,
+            "mixed_fp_fn": 36
+          },
+          "transitions": {
+            "both_correct": 247,
+            "both_wrong_changed": 26,
+            "both_wrong_same": 152,
+            "regression": 22,
+            "repair": 29
+          },
+          "type_events": {
+            "FN->FN": 80,
+            "FN->TP": 13,
+            "FP->FP": 138,
+            "FP->TN": 33,
+            "TN->FP": 44,
+            "TP->FN": 12,
+            "TP->TP": 447
+          }
+        }
+      },
+      "complement": {
+        "all": {
+          "all_branches": {
+            "added_unresolved_types": 529,
+            "child": {
+              "all_remaining_unresolved": 1398,
+              "eligible": 1575,
+              "rows": 1635,
+              "unresolved_branches": 1439,
+              "unresolved_types": 9959,
+              "valid": 1627
+            },
+            "parent": {
+              "all_remaining_unresolved": 1418,
+              "eligible": 1584,
+              "rows": 1635,
+              "unresolved_branches": 1453,
+              "unresolved_types": 10204,
+              "valid": 1631
+            },
+            "removed_unresolved_types": 774
+          },
+          "gold_branch": {
+            "added_unresolved_types": 198,
+            "child": {
+              "all_remaining_unresolved": 492,
+              "eligible": 540,
+              "rows": 545,
+              "unresolved_branches": 508,
+              "unresolved_types": 3514,
+              "valid": 545
+            },
+            "parent": {
+              "all_remaining_unresolved": 484,
+              "eligible": 541,
+              "rows": 545,
+              "unresolved_branches": 501,
+              "unresolved_types": 3439,
+              "valid": 543
+            },
+            "removed_unresolved_types": 123
+          }
+        },
+        "held": {
+          "all_branches": {
+            "added_unresolved_types": 51,
+            "child": {
+              "all_remaining_unresolved": 172,
+              "eligible": 199,
+              "rows": 207,
+              "unresolved_branches": 179,
+              "unresolved_types": 1189,
+              "valid": 206
+            },
+            "parent": {
+              "all_remaining_unresolved": 179,
+              "eligible": 199,
+              "rows": 207,
+              "unresolved_branches": 183,
+              "unresolved_types": 1268,
+              "valid": 205
+            },
+            "removed_unresolved_types": 130
+          },
+          "gold_branch": {
+            "added_unresolved_types": 13,
+            "child": {
+              "all_remaining_unresolved": 63,
+              "eligible": 68,
+              "rows": 69,
+              "unresolved_branches": 66,
+              "unresolved_types": 425,
+              "valid": 69
+            },
+            "parent": {
+              "all_remaining_unresolved": 64,
+              "eligible": 68,
+              "rows": 69,
+              "unresolved_branches": 66,
+              "unresolved_types": 424,
+              "valid": 68
+            },
+            "removed_unresolved_types": 12
+          }
+        },
+        "learning": {
+          "all_branches": {
+            "added_unresolved_types": 478,
+            "child": {
+              "all_remaining_unresolved": 1226,
+              "eligible": 1376,
+              "rows": 1428,
+              "unresolved_branches": 1260,
+              "unresolved_types": 8770,
+              "valid": 1421
+            },
+            "parent": {
+              "all_remaining_unresolved": 1239,
+              "eligible": 1385,
+              "rows": 1428,
+              "unresolved_branches": 1270,
+              "unresolved_types": 8936,
+              "valid": 1426
+            },
+            "removed_unresolved_types": 644
+          },
+          "gold_branch": {
+            "added_unresolved_types": 185,
+            "child": {
+              "all_remaining_unresolved": 429,
+              "eligible": 472,
+              "rows": 476,
+              "unresolved_branches": 442,
+              "unresolved_types": 3089,
+              "valid": 476
+            },
+            "parent": {
+              "all_remaining_unresolved": 420,
+              "eligible": 473,
+              "rows": 476,
+              "unresolved_branches": 435,
+              "unresolved_types": 3015,
+              "valid": 475
+            },
+            "removed_unresolved_types": 111
+          }
+        }
+      },
+      "quality": {
+        "absent": 0,
+        "invalid_branches": 8,
+        "raw_response_reparsed": 1635,
+        "same_P_allowed_audio_branches": 1635,
+        "unknown": 0
+      },
+      "cost": {
+        "card_hours": 0.9095497621430291,
+        "cards": 4,
+        "completed_requests": 1635,
+        "completed_samples": 545,
+        "instances": 1,
+        "money": null,
+        "remaining_seconds": 0,
+        "seconds_per_request": 0.5006695938401995,
+        "seconds_per_sample": 1.5020087815205985,
+        "total_samples": 545,
+        "usage": {
+          "completion_tokens": 70372,
+          "prompt_tokens": 6666762,
+          "total_tokens": 6737134
+        },
+        "wall_seconds": 818.5947859287262
+      },
+      "error_families": {
+        "all": {
+          "entity_role_person_relation_business_boundary:FN": 24,
+          "entity_role_person_relation_business_boundary:FP": 39,
+          "food_recipe_ingredient_or_modifier_boundary:FN": 11,
+          "food_recipe_ingredient_or_modifier_boundary:FP": 17,
+          "media_reference_or_descriptor_boundary:FN": 7,
+          "media_reference_or_descriptor_boundary:FP": 21,
+          "other_legal_type_presence:FN": 17,
+          "other_legal_type_presence:FP": 40,
+          "place_transport_channel_or_device_boundary:FN": 14,
+          "place_transport_channel_or_device_boundary:FP": 48,
+          "temporal_type_or_recurrence_boundary:FN": 22,
+          "temporal_type_or_recurrence_boundary:FP": 20,
+          "topic_name_or_generic_action_boundary:FN": 16,
+          "topic_name_or_generic_action_boundary:FP": 20
+        },
+        "held": {
+          "entity_role_person_relation_business_boundary:FN": 6,
+          "entity_role_person_relation_business_boundary:FP": 5,
+          "food_recipe_ingredient_or_modifier_boundary:FP": 2,
+          "media_reference_or_descriptor_boundary:FP": 2,
+          "other_legal_type_presence:FN": 4,
+          "other_legal_type_presence:FP": 2,
+          "place_transport_channel_or_device_boundary:FP": 6,
+          "temporal_type_or_recurrence_boundary:FN": 2,
+          "temporal_type_or_recurrence_boundary:FP": 3,
+          "topic_name_or_generic_action_boundary:FN": 7,
+          "topic_name_or_generic_action_boundary:FP": 3
+        },
+        "learning": {
+          "entity_role_person_relation_business_boundary:FN": 18,
+          "entity_role_person_relation_business_boundary:FP": 34,
+          "food_recipe_ingredient_or_modifier_boundary:FN": 11,
+          "food_recipe_ingredient_or_modifier_boundary:FP": 15,
+          "media_reference_or_descriptor_boundary:FN": 7,
+          "media_reference_or_descriptor_boundary:FP": 19,
+          "other_legal_type_presence:FN": 13,
+          "other_legal_type_presence:FP": 38,
+          "place_transport_channel_or_device_boundary:FN": 14,
+          "place_transport_channel_or_device_boundary:FP": 42,
+          "temporal_type_or_recurrence_boundary:FN": 20,
+          "temporal_type_or_recurrence_boundary:FP": 17,
+          "topic_name_or_generic_action_boundary:FN": 9,
+          "topic_name_or_generic_action_boundary:FP": 17
+        }
+      }
+    }
+  },
+  "denominator": {
+    "samples": 545,
+    "requests": 1635,
+    "learning": 476,
+    "held_report_only": 69
+  },
+  "models_frozen": true,
+  "audio_reencoded": 0,
+  "embeddings_recomputed": 0,
+  "new_audio_conclusions": false,
+  "labels_modified": false,
+  "future_candidate": "explicit content-reviewed ready event required; directory presence never admits",
+  "examples_only_design": {
+    "changed_packets": 96,
+    "reused_packets": 1539,
+    "snapshot": "original clean",
+    "selector": "global static TRAIN role coverage replaces original query-nearest",
+    "query_relevance_preserved": false,
+    "predeclared_risk": "Multi-type examples may induce extra types.",
+    "stacked_with_other_candidates": false
+  },
+  "cost_policy": "All attempts retained; per-arm complete model usage includes invalid responses; money unavailable."
+}
