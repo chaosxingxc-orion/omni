@@ -1,0 +1,13 @@
+{
+  "status": "PASS_STATIC_MODEL_VISIBLE_DIFF",
+  "counts": {
+    "rows": 476,
+    "full_wire_changed": 476,
+    "visible_text_changed": 476,
+    "knowledge_body_changed": 50,
+    "knowledge_body_unchanged_but_visible_context_changed": 426
+  },
+  "claim": "Snapshot provenance URI is serialized into user text; metadata-only is not model-input-identical. This is a confound, not proof that hashes caused accuracy changes.",
+  "recommendation": "Keep provenance in rails envelope/logs; use stable evidence IDs with role text in model messages. Separate successor candidate; do not mutate active frozen experiments.",
+  "new_model_calls": 0
+}

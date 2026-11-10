@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "groups": {
+    "learning": {
+      "samples": 476,
+      "exact": 271,
+      "tp": 463,
+      "fp": 210,
+      "fn": 89
+    },
+    "held": {
+      "samples": 69,
+      "exact": 33,
+      "tp": 54,
+      "fp": 22,
+      "fn": 23
+    },
+    "all": {
+      "samples": 545,
+      "exact": 304,
+      "tp": 517,
+      "fp": 232,
+      "fn": 112
+    }
+  },
+  "model_calls": 0
+}

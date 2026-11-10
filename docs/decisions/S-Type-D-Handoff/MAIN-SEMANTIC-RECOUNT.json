@@ -1,0 +1,67 @@
+{
+  "status": "PASS_INDEPENDENT_PAIRED_RECOUNT",
+  "source_sha256": "ffc94d048ff31d842bfd7fabda3b3a09ff2823cdad320a0b1bad2e45847beada",
+  "counts": {
+    "all": {
+      "parent": {
+        "samples": 545,
+        "type_exact": 304,
+        "tp": 512,
+        "fp": 191,
+        "fn": 117,
+        "complete_recall": 282,
+        "unresolved_samples": 501
+      },
+      "candidate": {
+        "samples": 545,
+        "type_exact": 320,
+        "tp": 506,
+        "fp": 163,
+        "fn": 123,
+        "complete_recall": 276,
+        "unresolved_samples": 6
+      }
+    },
+    "learning": {
+      "parent": {
+        "samples": 476,
+        "type_exact": 269,
+        "tp": 459,
+        "fp": 171,
+        "fn": 93,
+        "complete_recall": 253,
+        "unresolved_samples": 435
+      },
+      "candidate": {
+        "samples": 476,
+        "type_exact": 283,
+        "tp": 451,
+        "fp": 144,
+        "fn": 101,
+        "complete_recall": 247,
+        "unresolved_samples": 6
+      }
+    },
+    "held": {
+      "parent": {
+        "samples": 69,
+        "type_exact": 35,
+        "tp": 53,
+        "fp": 20,
+        "fn": 24,
+        "complete_recall": 29,
+        "unresolved_samples": 66
+      },
+      "candidate": {
+        "samples": 69,
+        "type_exact": 37,
+        "tp": 55,
+        "fp": 19,
+        "fn": 22,
+        "complete_recall": 29,
+        "unresolved_samples": 0
+      }
+    }
+  },
+  "scope": "Independent set arithmetic over archived paired gold-branch records; not a new raw-response replay."
+}

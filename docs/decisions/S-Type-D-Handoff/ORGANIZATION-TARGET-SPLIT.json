@@ -1,0 +1,20 @@
+{
+  "other_intents_metadata_changed": {
+    "n": 426,
+    "parent_exact": 249,
+    "child_exact": 249,
+    "parent_FP": 146,
+    "child_FP": 184,
+    "parent_FN": 77,
+    "child_FN": 73
+  },
+  "target_3_intents": {
+    "n": 50,
+    "parent_exact": 20,
+    "child_exact": 22,
+    "parent_FP": 25,
+    "child_FP": 26,
+    "parent_FN": 16,
+    "child_FN": 16
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "status": "PASS_CONTENT_REVIEW_PENDING_FIXED_CPU_AND_RUNTIME_BINDING",
+  "approved_for_NPU": false,
+  "candidate": "ace-1/organization-only",
+  "changes": [
+    {
+      "card": "play_music::slot-contract:artist_name",
+      "before_order": [
+        "music-role-axis",
+        "music-no-lexicon",
+        "music-genre-counterexample",
+        "music-coexist",
+        "music-unspecified"
+      ],
+      "after_order": [
+        "music-role-axis",
+        "music-unspecified",
+        "music-no-lexicon",
+        "music-genre-counterexample",
+        "music-coexist"
+      ]
+    },
+    {
+      "card": "cooking_recipe::slot-contract:food_type",
+      "before_order": [
+        "cooking-role-axis",
+        "cooking-role-not-word",
+        "cooking-cook-counterexample",
+        "cooking-coexist"
+      ],
+      "after_order": [
+        "cooking-role-axis",
+        "cooking-cook-counterexample",
+        "cooking-role-not-word",
+        "cooking-coexist"
+      ]
+    },
+    {
+      "card": "calendar_set::slot-contract:person",
+      "before_order": [
+        "calendar-role-axis",
+        "calendar-coexist",
+        "calendar-exception",
+        "calendar-unspecified",
+        "calendar-no-keyword-exclusion"
+      ],
+      "after_order": [
+        "calendar-role-axis",
+        "calendar-exception",
+        "calendar-no-keyword-exclusion",
+        "calendar-unspecified",
+        "calendar-coexist"
+      ]
+    }
+  ],
+  "new_assertions": 0,
+  "removed_assertions": 0,
+  "source_snapshot_sha256": "f2798cfbf0920247319bcd64ff6882f2d6068b4fea78e72073a63b639fbecf31",
+  "comparison": "against current organization-only A isolates reorder; against clean also includes common-boundary construction",
+  "teacher_prose_used": false
+}
