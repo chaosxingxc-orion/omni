@@ -1,0 +1,885 @@
+{
+  "clean-parent": {
+    "samples": 476,
+    "categories": {
+      "exact": 269,
+      "fn_only": 50,
+      "fp_only": 119,
+      "both_fp_fn": 37,
+      "protocol_invalid": 1
+    },
+    "FP_by_type": {
+      "place_name": 21,
+      "person": 20,
+      "event_name": 11,
+      "change_amount": 9,
+      "device_type": 8,
+      "artist_name": 8,
+      "business_name": 7,
+      "transport_type": 7,
+      "date": 6,
+      "time": 5,
+      "timeofday": 5,
+      "business_type": 4,
+      "song_name": 4,
+      "player_setting": 4,
+      "cooking_type": 4,
+      "order_type": 3,
+      "music_descriptor": 3,
+      "app_name": 3,
+      "alarm_type": 3,
+      "house_place": 3,
+      "personal_info": 3,
+      "ingredient": 3,
+      "movie_name": 2,
+      "news_topic": 2,
+      "weather_descriptor": 2,
+      "food_type": 2,
+      "drink_type": 2,
+      "list_name": 2,
+      "transport_descriptor": 2,
+      "media_type": 2,
+      "music_genre": 1,
+      "playlist_name": 1,
+      "time_zone": 1,
+      "color_type": 1,
+      "general_frequency": 1,
+      "audiobook_author": 1,
+      "podcast_name": 1,
+      "podcast_descriptor": 1,
+      "transport_agency": 1,
+      "transport_name": 1,
+      "joke_type": 1
+    },
+    "FN_by_type": {
+      "date": 12,
+      "place_name": 9,
+      "business_type": 7,
+      "relation": 7,
+      "media_type": 6,
+      "time": 5,
+      "person": 5,
+      "business_name": 4,
+      "order_type": 3,
+      "music_descriptor": 3,
+      "food_type": 3,
+      "house_place": 3,
+      "event_name": 3,
+      "ingredient": 3,
+      "list_name": 3,
+      "transport_type": 3,
+      "timeofday": 2,
+      "device_type": 2,
+      "news_topic": 2,
+      "movie_type": 2,
+      "music_genre": 1,
+      "song_name": 1,
+      "coffee_type": 1,
+      "time_zone": 1,
+      "audiobook_name": 1,
+      "cooking_type": 1
+    },
+    "by_intent": {
+      "datetime_convert": {
+        "samples": 11,
+        "exact": 7,
+        "fp": 3,
+        "fn": 1,
+        "tp": 12
+      },
+      "takeaway_query": {
+        "samples": 13,
+        "exact": 8,
+        "fp": 1,
+        "fn": 4,
+        "tp": 17
+      },
+      "news_query": {
+        "samples": 20,
+        "exact": 11,
+        "fp": 7,
+        "fn": 4,
+        "tp": 20
+      },
+      "takeaway_order": {
+        "samples": 22,
+        "exact": 15,
+        "fp": 5,
+        "fn": 6,
+        "tp": 36
+      },
+      "datetime_query": {
+        "samples": 23,
+        "exact": 20,
+        "fp": 2,
+        "fn": 1,
+        "tp": 25
+      },
+      "weather_query": {
+        "samples": 29,
+        "exact": 18,
+        "fp": 6,
+        "fn": 9,
+        "tp": 43
+      },
+      "audio_volume_up": {
+        "samples": 10,
+        "exact": 6,
+        "fp": 2,
+        "fn": 2,
+        "tp": 5
+      },
+      "audio_volume_mute": {
+        "samples": 5,
+        "exact": 0,
+        "fp": 5,
+        "fn": 0,
+        "tp": 0
+      },
+      "music_query": {
+        "samples": 14,
+        "exact": 9,
+        "fp": 5,
+        "fn": 0,
+        "tp": 2
+      },
+      "play_music": {
+        "samples": 14,
+        "exact": 5,
+        "fp": 7,
+        "fn": 5,
+        "tp": 18
+      },
+      "alarm_query": {
+        "samples": 6,
+        "exact": 5,
+        "fp": 3,
+        "fn": 0,
+        "tp": 3
+      },
+      "iot_wemo_off": {
+        "samples": 1,
+        "exact": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      },
+      "iot_hue_lightchange": {
+        "samples": 7,
+        "exact": 5,
+        "fp": 1,
+        "fn": 1,
+        "tp": 8
+      },
+      "audio_volume_down": {
+        "samples": 5,
+        "exact": 0,
+        "fp": 6,
+        "fn": 0,
+        "tp": 0
+      },
+      "iot_cleaning": {
+        "samples": 6,
+        "exact": 4,
+        "fp": 2,
+        "fn": 1,
+        "tp": 7
+      },
+      "music_likeness": {
+        "samples": 5,
+        "exact": 1,
+        "fp": 4,
+        "fn": 0,
+        "tp": 0
+      },
+      "iot_coffee": {
+        "samples": 4,
+        "exact": 3,
+        "fp": 0,
+        "fn": 1,
+        "tp": 5
+      },
+      "alarm_set": {
+        "samples": 9,
+        "exact": 7,
+        "fp": 0,
+        "fn": 2,
+        "tp": 16
+      },
+      "iot_hue_lightup": {
+        "samples": 3,
+        "exact": 1,
+        "fp": 2,
+        "fn": 1,
+        "tp": 1
+      },
+      "alarm_remove": {
+        "samples": 7,
+        "exact": 3,
+        "fp": 4,
+        "fn": 2,
+        "tp": 2
+      },
+      "email_sendemail": {
+        "samples": 19,
+        "exact": 7,
+        "fp": 14,
+        "fn": 5,
+        "tp": 13
+      },
+      "iot_hue_lightoff": {
+        "samples": 1,
+        "exact": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      },
+      "qa_factoid": {
+        "samples": 27,
+        "exact": 8,
+        "fp": 19,
+        "fn": 1,
+        "tp": 8
+      },
+      "music_settings": {
+        "samples": 1,
+        "exact": 0,
+        "fp": 1,
+        "fn": 0,
+        "tp": 0
+      },
+      "general_quirky": {
+        "samples": 33,
+        "exact": 26,
+        "fp": 6,
+        "fn": 3,
+        "tp": 2
+      },
+      "recommendation_locations": {
+        "samples": 8,
+        "exact": 2,
+        "fp": 4,
+        "fn": 3,
+        "tp": 8
+      },
+      "transport_ticket": {
+        "samples": 4,
+        "exact": 3,
+        "fp": 1,
+        "fn": 0,
+        "tp": 8
+      },
+      "calendar_set": {
+        "samples": 15,
+        "exact": 4,
+        "fp": 9,
+        "fn": 7,
+        "tp": 35
+      },
+      "calendar_query": {
+        "samples": 13,
+        "exact": 8,
+        "fp": 1,
+        "fn": 5,
+        "tp": 16
+      },
+      "calendar_remove": {
+        "samples": 3,
+        "exact": 3,
+        "fp": 0,
+        "fn": 0,
+        "tp": 3
+      },
+      "play_radio": {
+        "samples": 4,
+        "exact": 1,
+        "fp": 4,
+        "fn": 0,
+        "tp": 4
+      },
+      "play_audiobook": {
+        "samples": 5,
+        "exact": 1,
+        "fp": 3,
+        "fn": 3,
+        "tp": 3
+      },
+      "cooking_recipe": {
+        "samples": 21,
+        "exact": 11,
+        "fp": 9,
+        "fn": 4,
+        "tp": 21
+      },
+      "play_game": {
+        "samples": 3,
+        "exact": 3,
+        "fp": 0,
+        "fn": 0,
+        "tp": 3
+      },
+      "lists_remove": {
+        "samples": 7,
+        "exact": 5,
+        "fp": 1,
+        "fn": 2,
+        "tp": 4
+      },
+      "lists_query": {
+        "samples": 7,
+        "exact": 6,
+        "fp": 0,
+        "fn": 1,
+        "tp": 1
+      },
+      "lists_createoradd": {
+        "samples": 12,
+        "exact": 8,
+        "fp": 4,
+        "fn": 1,
+        "tp": 7
+      },
+      "play_podcasts": {
+        "samples": 2,
+        "exact": 1,
+        "fp": 2,
+        "fn": 1,
+        "tp": 3
+      },
+      "recommendation_events": {
+        "samples": 3,
+        "exact": 3,
+        "fp": 0,
+        "fn": 0,
+        "tp": 3
+      },
+      "recommendation_movies": {
+        "samples": 3,
+        "exact": 0,
+        "fp": 2,
+        "fn": 4,
+        "tp": 1
+      },
+      "transport_query": {
+        "samples": 21,
+        "exact": 9,
+        "fp": 11,
+        "fn": 4,
+        "tp": 37
+      },
+      "transport_traffic": {
+        "samples": 3,
+        "exact": 1,
+        "fp": 1,
+        "fn": 1,
+        "tp": 0
+      },
+      "transport_taxi": {
+        "samples": 2,
+        "exact": 1,
+        "fp": 2,
+        "fn": 1,
+        "tp": 3
+      },
+      "social_post": {
+        "samples": 24,
+        "exact": 14,
+        "fp": 5,
+        "fn": 6,
+        "tp": 32
+      },
+      "qa_maths": {
+        "samples": 1,
+        "exact": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 0
+      },
+      "general_joke": {
+        "samples": 1,
+        "exact": 0,
+        "fp": 1,
+        "fn": 0,
+        "tp": 0
+      },
+      "qa_currency": {
+        "samples": 1,
+        "exact": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 0
+      },
+      "qa_stock": {
+        "samples": 2,
+        "exact": 2,
+        "fp": 0,
+        "fn": 0,
+        "tp": 2
+      },
+      "social_query": {
+        "samples": 7,
+        "exact": 4,
+        "fp": 3,
+        "fn": 1,
+        "tp": 11
+      },
+      "email_querycontact": {
+        "samples": 4,
+        "exact": 2,
+        "fp": 2,
+        "fn": 0,
+        "tp": 6
+      },
+      "email_query": {
+        "samples": 5,
+        "exact": 4,
+        "fp": 1,
+        "fn": 0,
+        "tp": 3
+      }
+    }
+  },
+  "clean-strategy": {
+    "samples": 476,
+    "categories": {
+      "exact": 265,
+      "fn_only": 50,
+      "fp_only": 125,
+      "both_fp_fn": 34,
+      "protocol_invalid": 2
+    },
+    "FP_by_type": {
+      "person": 24,
+      "place_name": 21,
+      "event_name": 18,
+      "date": 10,
+      "device_type": 9,
+      "change_amount": 9,
+      "artist_name": 9,
+      "business_name": 7,
+      "transport_type": 7,
+      "time": 6,
+      "song_name": 5,
+      "business_type": 5,
+      "timeofday": 5,
+      "media_type": 5,
+      "app_name": 4,
+      "player_setting": 4,
+      "food_type": 4,
+      "ingredient": 4,
+      "cooking_type": 4,
+      "weather_descriptor": 3,
+      "order_type": 3,
+      "house_place": 3,
+      "relation": 3,
+      "personal_info": 3,
+      "movie_name": 2,
+      "music_descriptor": 2,
+      "alarm_type": 2,
+      "news_topic": 2,
+      "drink_type": 2,
+      "transport_name": 2,
+      "music_genre": 1,
+      "time_zone": 1,
+      "color_type": 1,
+      "audiobook_author": 1,
+      "list_name": 1,
+      "podcast_descriptor": 1,
+      "transport_agency": 1,
+      "transport_descriptor": 1,
+      "joke_type": 1,
+      "currency_name": 1,
+      "general_frequency": 1,
+      "email_folder": 1,
+      "meal_type": 1,
+      "email_address": 1
+    },
+    "FN_by_type": {
+      "place_name": 11,
+      "date": 11,
+      "business_type": 6,
+      "time": 6,
+      "relation": 6,
+      "person": 6,
+      "media_type": 5,
+      "event_name": 5,
+      "order_type": 3,
+      "music_descriptor": 3,
+      "food_type": 3,
+      "ingredient": 3,
+      "list_name": 3,
+      "transport_type": 3,
+      "business_name": 3,
+      "timeofday": 2,
+      "house_place": 2,
+      "device_type": 2,
+      "news_topic": 2,
+      "movie_type": 2,
+      "music_genre": 1,
+      "song_name": 1,
+      "coffee_type": 1,
+      "audiobook_name": 1,
+      "cooking_type": 1,
+      "podcast_name": 1
+    },
+    "by_intent": {
+      "datetime_convert": {
+        "samples": 11,
+        "exact": 9,
+        "fp": 3,
+        "fn": 0,
+        "tp": 13
+      },
+      "takeaway_query": {
+        "samples": 13,
+        "exact": 6,
+        "fp": 4,
+        "fn": 3,
+        "tp": 18
+      },
+      "news_query": {
+        "samples": 20,
+        "exact": 10,
+        "fp": 9,
+        "fn": 4,
+        "tp": 20
+      },
+      "takeaway_order": {
+        "samples": 22,
+        "exact": 15,
+        "fp": 5,
+        "fn": 6,
+        "tp": 36
+      },
+      "datetime_query": {
+        "samples": 23,
+        "exact": 20,
+        "fp": 2,
+        "fn": 1,
+        "tp": 25
+      },
+      "weather_query": {
+        "samples": 29,
+        "exact": 15,
+        "fp": 7,
+        "fn": 11,
+        "tp": 41
+      },
+      "audio_volume_up": {
+        "samples": 10,
+        "exact": 5,
+        "fp": 4,
+        "fn": 2,
+        "tp": 5
+      },
+      "audio_volume_mute": {
+        "samples": 5,
+        "exact": 2,
+        "fp": 3,
+        "fn": 0,
+        "tp": 0
+      },
+      "music_query": {
+        "samples": 14,
+        "exact": 9,
+        "fp": 6,
+        "fn": 0,
+        "tp": 2
+      },
+      "play_music": {
+        "samples": 14,
+        "exact": 6,
+        "fp": 7,
+        "fn": 5,
+        "tp": 18
+      },
+      "alarm_query": {
+        "samples": 6,
+        "exact": 5,
+        "fp": 3,
+        "fn": 0,
+        "tp": 3
+      },
+      "iot_wemo_off": {
+        "samples": 1,
+        "exact": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      },
+      "iot_hue_lightchange": {
+        "samples": 7,
+        "exact": 5,
+        "fp": 1,
+        "fn": 1,
+        "tp": 8
+      },
+      "audio_volume_down": {
+        "samples": 5,
+        "exact": 1,
+        "fp": 5,
+        "fn": 0,
+        "tp": 0
+      },
+      "iot_cleaning": {
+        "samples": 6,
+        "exact": 4,
+        "fp": 2,
+        "fn": 1,
+        "tp": 7
+      },
+      "music_likeness": {
+        "samples": 5,
+        "exact": 3,
+        "fp": 2,
+        "fn": 0,
+        "tp": 0
+      },
+      "iot_coffee": {
+        "samples": 4,
+        "exact": 3,
+        "fp": 0,
+        "fn": 1,
+        "tp": 5
+      },
+      "alarm_set": {
+        "samples": 9,
+        "exact": 4,
+        "fp": 1,
+        "fn": 4,
+        "tp": 14
+      },
+      "iot_hue_lightup": {
+        "samples": 3,
+        "exact": 1,
+        "fp": 3,
+        "fn": 0,
+        "tp": 2
+      },
+      "alarm_remove": {
+        "samples": 7,
+        "exact": 5,
+        "fp": 1,
+        "fn": 1,
+        "tp": 3
+      },
+      "email_sendemail": {
+        "samples": 19,
+        "exact": 7,
+        "fp": 27,
+        "fn": 5,
+        "tp": 13
+      },
+      "iot_hue_lightoff": {
+        "samples": 1,
+        "exact": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 1
+      },
+      "qa_factoid": {
+        "samples": 27,
+        "exact": 10,
+        "fp": 20,
+        "fn": 1,
+        "tp": 8
+      },
+      "music_settings": {
+        "samples": 1,
+        "exact": 0,
+        "fp": 1,
+        "fn": 0,
+        "tp": 0
+      },
+      "general_quirky": {
+        "samples": 33,
+        "exact": 21,
+        "fp": 12,
+        "fn": 3,
+        "tp": 2
+      },
+      "recommendation_locations": {
+        "samples": 8,
+        "exact": 2,
+        "fp": 4,
+        "fn": 3,
+        "tp": 8
+      },
+      "transport_ticket": {
+        "samples": 4,
+        "exact": 3,
+        "fp": 1,
+        "fn": 0,
+        "tp": 8
+      },
+      "calendar_set": {
+        "samples": 15,
+        "exact": 4,
+        "fp": 9,
+        "fn": 11,
+        "tp": 31
+      },
+      "calendar_query": {
+        "samples": 13,
+        "exact": 8,
+        "fp": 1,
+        "fn": 4,
+        "tp": 17
+      },
+      "calendar_remove": {
+        "samples": 3,
+        "exact": 3,
+        "fp": 0,
+        "fn": 0,
+        "tp": 3
+      },
+      "play_radio": {
+        "samples": 4,
+        "exact": 2,
+        "fp": 3,
+        "fn": 0,
+        "tp": 4
+      },
+      "play_audiobook": {
+        "samples": 5,
+        "exact": 2,
+        "fp": 2,
+        "fn": 2,
+        "tp": 4
+      },
+      "cooking_recipe": {
+        "samples": 21,
+        "exact": 10,
+        "fp": 11,
+        "fn": 4,
+        "tp": 21
+      },
+      "play_game": {
+        "samples": 3,
+        "exact": 3,
+        "fp": 0,
+        "fn": 0,
+        "tp": 3
+      },
+      "lists_remove": {
+        "samples": 7,
+        "exact": 5,
+        "fp": 1,
+        "fn": 2,
+        "tp": 4
+      },
+      "lists_query": {
+        "samples": 7,
+        "exact": 7,
+        "fp": 0,
+        "fn": 0,
+        "tp": 2
+      },
+      "lists_createoradd": {
+        "samples": 12,
+        "exact": 8,
+        "fp": 2,
+        "fn": 2,
+        "tp": 6
+      },
+      "play_podcasts": {
+        "samples": 2,
+        "exact": 0,
+        "fp": 1,
+        "fn": 2,
+        "tp": 2
+      },
+      "recommendation_events": {
+        "samples": 3,
+        "exact": 2,
+        "fp": 2,
+        "fn": 0,
+        "tp": 3
+      },
+      "recommendation_movies": {
+        "samples": 3,
+        "exact": 0,
+        "fp": 3,
+        "fn": 4,
+        "tp": 1
+      },
+      "transport_query": {
+        "samples": 21,
+        "exact": 9,
+        "fp": 12,
+        "fn": 3,
+        "tp": 38
+      },
+      "transport_traffic": {
+        "samples": 3,
+        "exact": 0,
+        "fp": 2,
+        "fn": 1,
+        "tp": 0
+      },
+      "transport_taxi": {
+        "samples": 2,
+        "exact": 1,
+        "fp": 2,
+        "fn": 1,
+        "tp": 3
+      },
+      "social_post": {
+        "samples": 24,
+        "exact": 15,
+        "fp": 7,
+        "fn": 5,
+        "tp": 33
+      },
+      "qa_maths": {
+        "samples": 1,
+        "exact": 1,
+        "fp": 0,
+        "fn": 0,
+        "tp": 0
+      },
+      "general_joke": {
+        "samples": 1,
+        "exact": 0,
+        "fp": 2,
+        "fn": 0,
+        "tp": 0
+      },
+      "qa_currency": {
+        "samples": 1,
+        "exact": 0,
+        "fp": 1,
+        "fn": 0,
+        "tp": 0
+      },
+      "qa_stock": {
+        "samples": 2,
+        "exact": 2,
+        "fp": 0,
+        "fn": 0,
+        "tp": 2
+      },
+      "social_query": {
+        "samples": 7,
+        "exact": 4,
+        "fp": 4,
+        "fn": 0,
+        "tp": 12
+      },
+      "email_querycontact": {
+        "samples": 4,
+        "exact": 2,
+        "fp": 2,
+        "fn": 0,
+        "tp": 6
+      },
+      "email_query": {
+        "samples": 5,
+        "exact": 4,
+        "fp": 1,
+        "fn": 0,
+        "tp": 3
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "ace": {
+    "messages_sha256": "68e0ed92a41f8258448e91d73f1a7797601aff7b8bed210623e7670ceb6ef65c",
+    "dynamic_bytes": 156351,
+    "representative_ids": 25,
+    "forbidden_partition_keys": [],
+    "all_query_ids_learning": true,
+    "model": "glm-5.3-flash",
+    "max_tokens": 131072,
+    "reasoning_target": 8192,
+    "timeout": 600,
+    "total_timeout": 2400
+  },
+  "tfgrpo": {
+    "messages_sha256": "d7496687eddb0e0e4f58a0c118f8c41302cd2c0c26f974c45d60fbc8c290b8bb",
+    "dynamic_bytes": 156351,
+    "representative_ids": 25,
+    "forbidden_partition_keys": [],
+    "all_query_ids_learning": true,
+    "model": "glm-5.3-flash",
+    "max_tokens": 131072,
+    "reasoning_target": 8192,
+    "timeout": 600,
+    "total_timeout": 2400
+  }
+}
