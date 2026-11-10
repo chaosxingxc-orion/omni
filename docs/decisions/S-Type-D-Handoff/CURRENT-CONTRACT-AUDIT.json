@@ -1,0 +1,977 @@
+{
+  "scope": "signed-relevance frozen request artifacts; lexical flags require source/semantic review; not proven error causation",
+  "manifest_sha256": "0b7549c0fcb1e2dd7e8ee8532d2265c2a64979b6e71eaec96090e5bcffa5a22c",
+  "counts": {
+    "branches": 1635,
+    "single_candidate": 1635,
+    "type_only_schema": 1635,
+    "type_only_demo_outputs": 3161,
+    "demo_outputs": 3161,
+    "out_of_scope_relation_directive_unique_intent_cards": 9,
+    "missing_intent_role_definition_unique_intent_cards": 40,
+    "unresolved_annotation_policy_unique_intent_cards": 4,
+    "out_of_scope_person_directive_unique_intent_cards": 4
+  },
+  "distinct_intent_cards": 401,
+  "findings": [
+    {
+      "finding": "out_of_scope_relation_directive",
+      "intent": "datetime_convert",
+      "card_id": "datetime_convert::slot-contract:person",
+      "card_sha256": "d020f4e1ca18c0fba84c78a359905d0ffaa051a7282bdb784497c2f2d5696605",
+      "allowed_types": [
+        "person",
+        "place_name",
+        "time",
+        "time_zone",
+        "timeofday"
+      ],
+      "matched_text": "mom is relation, not person"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "datetime_convert",
+      "card_id": "datetime_convert::slot-contract:time_zone",
+      "card_sha256": "2fbc838732729639e186b0cbce26ab6015f112891579c0028b7a0e21dd795356",
+      "allowed_types": [
+        "person",
+        "place_name",
+        "time",
+        "time_zone",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "datetime_query",
+      "card_id": "datetime_query::slot-contract:date",
+      "card_sha256": "a523a3a92d74320a4a012fb7c73549cf71e381ab5b008b264a4403933adc3c82",
+      "allowed_types": [
+        "date",
+        "event_name",
+        "place_name",
+        "time",
+        "time_zone",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "datetime_query",
+      "card_id": "datetime_query::slot-contract:place_name",
+      "card_sha256": "afbd47794c8fad92ff01cc88ba406d5d97fa9e50eaaee9bab2cf4a668dc3c676",
+      "allowed_types": [
+        "date",
+        "event_name",
+        "place_name",
+        "time",
+        "time_zone",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "datetime_query",
+      "card_id": "datetime_query::slot-contract:timeofday",
+      "card_sha256": "8d8b401e22deacc89f9441bf9dfc0005dab18fee8b621adea8d4aeecdea8ddd0",
+      "allowed_types": [
+        "date",
+        "event_name",
+        "place_name",
+        "time",
+        "time_zone",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "qa_factoid",
+      "card_id": "qa_factoid::slot-contract:food_type",
+      "card_sha256": "00a640f281a38b8c35a8050fc02b9a0e0365e6b093694d79e1a0f3ce560d33e2",
+      "allowed_types": [
+        "artist_name",
+        "date",
+        "event_name",
+        "food_type",
+        "movie_name",
+        "person",
+        "place_name",
+        "time"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "out_of_scope_relation_directive",
+      "intent": "qa_factoid",
+      "card_id": "qa_factoid::slot-contract:person",
+      "card_sha256": "0050caf36e2b3362d03eb5057a634f026097acabfdea5f1304c59d391dc74901",
+      "allowed_types": [
+        "artist_name",
+        "date",
+        "event_name",
+        "food_type",
+        "movie_name",
+        "person",
+        "place_name",
+        "time"
+      ],
+      "matched_text": "mom is relation, not person"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "general_quirky",
+      "card_id": "general_quirky::slot-contract:drink_type",
+      "card_sha256": "cb6356a8ca722719e76fe53348d42f0a6ac7f2237829930534a74f0d487e0f34",
+      "allowed_types": [
+        "artist_name",
+        "business_type",
+        "date",
+        "device_type",
+        "drink_type",
+        "event_name",
+        "food_type",
+        "meal_type",
+        "media_type",
+        "movie_name",
+        "news_topic",
+        "person",
+        "place_name",
+        "relation",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "general_quirky",
+      "card_id": "general_quirky::slot-contract:media_type",
+      "card_sha256": "b5879d66cd4fc658a285e5170ebb8d549206f78ccc3b3cc73afdb904e3449c95",
+      "allowed_types": [
+        "artist_name",
+        "business_type",
+        "date",
+        "device_type",
+        "drink_type",
+        "event_name",
+        "food_type",
+        "meal_type",
+        "media_type",
+        "movie_name",
+        "news_topic",
+        "person",
+        "place_name",
+        "relation",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "unresolved_annotation_policy",
+      "intent": "general_quirky",
+      "card_id": "general_quirky::slot-contract:news_topic",
+      "card_sha256": "daf7e91f46afdf2ee548ef95334c44c6c16601959e894e3b485824f27450c674",
+      "allowed_types": [
+        "artist_name",
+        "business_type",
+        "date",
+        "device_type",
+        "drink_type",
+        "event_name",
+        "food_type",
+        "meal_type",
+        "media_type",
+        "movie_name",
+        "news_topic",
+        "person",
+        "place_name",
+        "relation",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "the split is not fixed."
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "general_quirky",
+      "card_id": "general_quirky::slot-contract:timeofday",
+      "card_sha256": "8d8b401e22deacc89f9441bf9dfc0005dab18fee8b621adea8d4aeecdea8ddd0",
+      "allowed_types": [
+        "artist_name",
+        "business_type",
+        "date",
+        "device_type",
+        "drink_type",
+        "event_name",
+        "food_type",
+        "meal_type",
+        "media_type",
+        "movie_name",
+        "news_topic",
+        "person",
+        "place_name",
+        "relation",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "unresolved_annotation_policy",
+      "intent": "news_query",
+      "card_id": "news_query::slot-contract:news_topic",
+      "card_sha256": "b6cd3afb77937f097a35baa9686704cb7e92c2525aa5db59ea8e65280a11a007",
+      "allowed_types": [
+        "date",
+        "general_frequency",
+        "media_type",
+        "news_topic",
+        "person",
+        "place_name",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "the split is not fixed."
+    },
+    {
+      "finding": "out_of_scope_relation_directive",
+      "intent": "news_query",
+      "card_id": "news_query::slot-contract:person",
+      "card_sha256": "953c6c913d590ab7e06f92e851ef74d19487ebc6175b202a9b823326cfd34c07",
+      "allowed_types": [
+        "date",
+        "general_frequency",
+        "media_type",
+        "news_topic",
+        "person",
+        "place_name",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "mom is relation, not person"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "news_query",
+      "card_id": "news_query::slot-contract:person",
+      "card_sha256": "953c6c913d590ab7e06f92e851ef74d19487ebc6175b202a9b823326cfd34c07",
+      "allowed_types": [
+        "date",
+        "general_frequency",
+        "media_type",
+        "news_topic",
+        "person",
+        "place_name",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "weather_query",
+      "card_id": "weather_query::slot-contract:place_name",
+      "card_sha256": "afbd47794c8fad92ff01cc88ba406d5d97fa9e50eaaee9bab2cf4a668dc3c676",
+      "allowed_types": [
+        "date",
+        "event_name",
+        "general_frequency",
+        "meal_type",
+        "place_name",
+        "time",
+        "timeofday",
+        "weather_descriptor"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "audio_volume_other",
+      "card_id": "audio_volume_other::slot-contract:change_amount",
+      "card_sha256": "0e0feef0ccc7d9f2ee7e465a007a91929d948866337a5580e16969add1ac17e8",
+      "allowed_types": [
+        "change_amount"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "out_of_scope_relation_directive",
+      "intent": "music_query",
+      "card_id": "music_query::slot-contract:person",
+      "card_sha256": "559f94c874bc8e74b40ee74bf64da0e60f509d7daadccbbd4c7e444df886a560",
+      "allowed_types": [
+        "artist_name",
+        "date",
+        "music_genre",
+        "person",
+        "player_setting",
+        "song_name",
+        "timeofday"
+      ],
+      "matched_text": "mom is relation, not person"
+    },
+    {
+      "finding": "out_of_scope_person_directive",
+      "intent": "play_music",
+      "card_id": "play_music::slot-contract:artist_name",
+      "card_sha256": "c8fc9d9059f88902286233ea9d6bc47dc5a3af31ee3560361460fbcc49727d41",
+      "allowed_types": [
+        "app_name",
+        "artist_name",
+        "date",
+        "device_type",
+        "media_type",
+        "movie_name",
+        "music_descriptor",
+        "music_genre",
+        "player_setting",
+        "playlist_name",
+        "song_name",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "otherwise person."
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "music_likeness",
+      "card_id": "music_likeness::slot-contract:app_name",
+      "card_sha256": "f3966ee18aa68bd09acd2dc83d48f10d2102279f1c48bb0faab553d68707ba78",
+      "allowed_types": [
+        "app_name",
+        "artist_name",
+        "date",
+        "music_descriptor",
+        "music_genre",
+        "player_setting",
+        "playlist_name",
+        "song_name"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "out_of_scope_person_directive",
+      "intent": "music_likeness",
+      "card_id": "music_likeness::slot-contract:artist_name",
+      "card_sha256": "99ea92ecc0606200897fdcf3e2145d4e796fe4cc4457254fd0ce0d39b17f2243",
+      "allowed_types": [
+        "app_name",
+        "artist_name",
+        "date",
+        "music_descriptor",
+        "music_genre",
+        "player_setting",
+        "playlist_name",
+        "song_name"
+      ],
+      "matched_text": "otherwise person."
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "music_likeness",
+      "card_id": "music_likeness::slot-contract:date",
+      "card_sha256": "a523a3a92d74320a4a012fb7c73549cf71e381ab5b008b264a4403933adc3c82",
+      "allowed_types": [
+        "app_name",
+        "artist_name",
+        "date",
+        "music_descriptor",
+        "music_genre",
+        "player_setting",
+        "playlist_name",
+        "song_name"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "recommendation_events",
+      "card_id": "recommendation_events::slot-contract:business_name",
+      "card_sha256": "3aa1f95a3c5c58e1f30dc941b39d484deb2d5fe7797b953e73d4e610f46be1d2",
+      "allowed_types": [
+        "business_name",
+        "business_type",
+        "date",
+        "event_name",
+        "meal_type",
+        "movie_type",
+        "personal_info",
+        "place_name",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "recommendation_events",
+      "card_id": "recommendation_events::slot-contract:business_type",
+      "card_sha256": "a158f87ad8cf51fde13fce2e182fddb1ed80a16433c0b1e022f0648929c3f647",
+      "allowed_types": [
+        "business_name",
+        "business_type",
+        "date",
+        "event_name",
+        "meal_type",
+        "movie_type",
+        "personal_info",
+        "place_name",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "recommendation_events",
+      "card_id": "recommendation_events::slot-contract:meal_type",
+      "card_sha256": "7880172bb4565d23c80010f53b0bf834deabab0d5632123d217ab79c0d1dbf68",
+      "allowed_types": [
+        "business_name",
+        "business_type",
+        "date",
+        "event_name",
+        "meal_type",
+        "movie_type",
+        "personal_info",
+        "place_name",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "alarm_remove",
+      "card_id": "alarm_remove::slot-contract:relation",
+      "card_sha256": "315a443043913285f12116559a89461cc01f88edcd1bdeda7a012096866a86d8",
+      "allowed_types": [
+        "alarm_type",
+        "date",
+        "event_name",
+        "relation",
+        "time",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "out_of_scope_relation_directive",
+      "intent": "lists_query",
+      "card_id": "lists_query::slot-contract:person",
+      "card_sha256": "95ccdf00296cb753bcfbcc9a6aefc1e5897f12197dc04d6a9ac774215f2f0480",
+      "allowed_types": [
+        "business_name",
+        "date",
+        "device_type",
+        "list_name",
+        "music_genre",
+        "person",
+        "timeofday"
+      ],
+      "matched_text": "mom is relation, not person"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "transport_taxi",
+      "card_id": "transport_taxi::slot-contract:app_name",
+      "card_sha256": "f3966ee18aa68bd09acd2dc83d48f10d2102279f1c48bb0faab553d68707ba78",
+      "allowed_types": [
+        "app_name",
+        "business_name",
+        "business_type",
+        "date",
+        "event_name",
+        "person",
+        "place_name",
+        "time",
+        "timeofday",
+        "transport_agency",
+        "transport_name",
+        "transport_type"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "out_of_scope_relation_directive",
+      "intent": "transport_taxi",
+      "card_id": "transport_taxi::slot-contract:person",
+      "card_sha256": "527a517c3d5f627f7eb3fe76f386e47bb7d2fd3b27a435aaaaef7ed68b0ccc6b",
+      "allowed_types": [
+        "app_name",
+        "business_name",
+        "business_type",
+        "date",
+        "event_name",
+        "person",
+        "place_name",
+        "time",
+        "timeofday",
+        "transport_agency",
+        "transport_name",
+        "transport_type"
+      ],
+      "matched_text": "mom is relation, not person"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "music_settings",
+      "card_id": "music_settings::slot-contract:app_name",
+      "card_sha256": "f3966ee18aa68bd09acd2dc83d48f10d2102279f1c48bb0faab553d68707ba78",
+      "allowed_types": [
+        "app_name",
+        "artist_name",
+        "device_type",
+        "media_type",
+        "music_descriptor",
+        "music_genre",
+        "player_setting",
+        "song_name"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "out_of_scope_person_directive",
+      "intent": "music_settings",
+      "card_id": "music_settings::slot-contract:artist_name",
+      "card_sha256": "355127ebff1a115e4078e96aba6066b05eef1a5208f847a67e90118592722b8a",
+      "allowed_types": [
+        "app_name",
+        "artist_name",
+        "device_type",
+        "media_type",
+        "music_descriptor",
+        "music_genre",
+        "player_setting",
+        "song_name"
+      ],
+      "matched_text": "otherwise person."
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "music_settings",
+      "card_id": "music_settings::slot-contract:media_type",
+      "card_sha256": "b5879d66cd4fc658a285e5170ebb8d549206f78ccc3b3cc73afdb904e3449c95",
+      "allowed_types": [
+        "app_name",
+        "artist_name",
+        "device_type",
+        "media_type",
+        "music_descriptor",
+        "music_genre",
+        "player_setting",
+        "song_name"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "music_settings",
+      "card_id": "music_settings::slot-contract:music_genre",
+      "card_sha256": "11c7ef5906dd0f89b54a75faebd1edf3448d46922ccd3af9827235e29050015e",
+      "allowed_types": [
+        "app_name",
+        "artist_name",
+        "device_type",
+        "media_type",
+        "music_descriptor",
+        "music_genre",
+        "player_setting",
+        "song_name"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "out_of_scope_person_directive",
+      "intent": "play_audiobook",
+      "card_id": "play_audiobook::slot-contract:artist_name",
+      "card_sha256": "840f332f0f03c94a28694bb22180148c2b8a74dafa4220eaac1d62777c1080e0",
+      "allowed_types": [
+        "app_name",
+        "artist_name",
+        "audiobook_author",
+        "audiobook_name",
+        "date",
+        "media_type",
+        "player_setting",
+        "time"
+      ],
+      "matched_text": "otherwise person."
+    },
+    {
+      "finding": "out_of_scope_relation_directive",
+      "intent": "play_podcasts",
+      "card_id": "play_podcasts::slot-contract:person",
+      "card_sha256": "dd3ed0b06a5bc3be2e3974650748062b82bb083b5a090ec62275d772a200e6e1",
+      "allowed_types": [
+        "date",
+        "person",
+        "place_name",
+        "player_setting",
+        "podcast_descriptor",
+        "podcast_name",
+        "time",
+        "timeofday",
+        "transport_type"
+      ],
+      "matched_text": "mom is relation, not person"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "play_podcasts",
+      "card_id": "play_podcasts::slot-contract:place_name",
+      "card_sha256": "afbd47794c8fad92ff01cc88ba406d5d97fa9e50eaaee9bab2cf4a668dc3c676",
+      "allowed_types": [
+        "date",
+        "person",
+        "place_name",
+        "player_setting",
+        "podcast_descriptor",
+        "podcast_name",
+        "time",
+        "timeofday",
+        "transport_type"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "play_podcasts",
+      "card_id": "play_podcasts::slot-contract:podcast_name",
+      "card_sha256": "4ac54ee9eb89a400651e97d27ba0228bca172da9a2543ccecd99a1733e211607",
+      "allowed_types": [
+        "date",
+        "person",
+        "place_name",
+        "player_setting",
+        "podcast_descriptor",
+        "podcast_name",
+        "time",
+        "timeofday",
+        "transport_type"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "play_podcasts",
+      "card_id": "play_podcasts::slot-contract:transport_type",
+      "card_sha256": "0b961f11cd84393623449f283bbe9d7986c4d6420e0c8508118c8bf0d57ea057",
+      "allowed_types": [
+        "date",
+        "person",
+        "place_name",
+        "player_setting",
+        "podcast_descriptor",
+        "podcast_name",
+        "time",
+        "timeofday",
+        "transport_type"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "music_dislikeness",
+      "card_id": "music_dislikeness::slot-contract:music_descriptor",
+      "card_sha256": "7b64a127021a7c13e17bb390ed7488be71ee93ea2dea08d3976ba3cd4682a086",
+      "allowed_types": [
+        "music_descriptor"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "iot_hue_lightdim",
+      "card_id": "iot_hue_lightdim::slot-contract:color_type",
+      "card_sha256": "656b6973d83b4b4b2311aefb81e41ec8c973b7dfd2b1eda1a47b6d334843a27a",
+      "allowed_types": [
+        "change_amount",
+        "color_type",
+        "device_type",
+        "house_place"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "unresolved_annotation_policy",
+      "intent": "social_query",
+      "card_id": "social_query::slot-contract:news_topic",
+      "card_sha256": "5f51864cdc19882782643eabedbbf12477679457cfb703ff52e43147c96d0345",
+      "allowed_types": [
+        "date",
+        "event_name",
+        "media_type",
+        "news_topic",
+        "person",
+        "relation",
+        "time"
+      ],
+      "matched_text": "the split is not fixed."
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "social_query",
+      "card_id": "social_query::slot-contract:news_topic",
+      "card_sha256": "5f51864cdc19882782643eabedbbf12477679457cfb703ff52e43147c96d0345",
+      "allowed_types": [
+        "date",
+        "event_name",
+        "media_type",
+        "news_topic",
+        "person",
+        "relation",
+        "time"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "social_post",
+      "card_id": "social_post::slot-contract:business_type",
+      "card_sha256": "a158f87ad8cf51fde13fce2e182fddb1ed80a16433c0b1e022f0648929c3f647",
+      "allowed_types": [
+        "business_name",
+        "business_type",
+        "date",
+        "device_type",
+        "event_name",
+        "media_type",
+        "person",
+        "personal_info",
+        "place_name",
+        "relation"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "email_querycontact",
+      "card_id": "email_querycontact::slot-contract:event_name",
+      "card_sha256": "de85758eae9495111ad99f4368ed8795718f2e6a8f5721271d4f1bf6c496a841",
+      "allowed_types": [
+        "device_type",
+        "event_name",
+        "list_name",
+        "media_type",
+        "person",
+        "personal_info",
+        "place_name",
+        "relation"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "email_querycontact",
+      "card_id": "email_querycontact::slot-contract:place_name",
+      "card_sha256": "afbd47794c8fad92ff01cc88ba406d5d97fa9e50eaaee9bab2cf4a668dc3c676",
+      "allowed_types": [
+        "device_type",
+        "event_name",
+        "list_name",
+        "media_type",
+        "person",
+        "personal_info",
+        "place_name",
+        "relation"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "lists_remove",
+      "card_id": "lists_remove::slot-contract:meal_type",
+      "card_sha256": "7880172bb4565d23c80010f53b0bf834deabab0d5632123d217ab79c0d1dbf68",
+      "allowed_types": [
+        "date",
+        "event_name",
+        "list_name",
+        "meal_type",
+        "person",
+        "place_name",
+        "relation",
+        "song_name",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "lists_remove",
+      "card_id": "lists_remove::slot-contract:song_name",
+      "card_sha256": "33459990c0ec18e53af310244a8b46b28e59bae0dc64a26d657931aac8fb0207",
+      "allowed_types": [
+        "date",
+        "event_name",
+        "list_name",
+        "meal_type",
+        "person",
+        "place_name",
+        "relation",
+        "song_name",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "lists_remove",
+      "card_id": "lists_remove::slot-contract:timeofday",
+      "card_sha256": "8d8b401e22deacc89f9441bf9dfc0005dab18fee8b621adea8d4aeecdea8ddd0",
+      "allowed_types": [
+        "date",
+        "event_name",
+        "list_name",
+        "meal_type",
+        "person",
+        "place_name",
+        "relation",
+        "song_name",
+        "timeofday"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "unresolved_annotation_policy",
+      "intent": "qa_stock",
+      "card_id": "qa_stock::slot-contract:news_topic",
+      "card_sha256": "412d91b7e1d87346e6d12814dc6380f460f7d955e145f53e0bbd5fc1f6a1ef17",
+      "allowed_types": [
+        "business_name",
+        "currency_name",
+        "date",
+        "news_topic",
+        "person",
+        "time"
+      ],
+      "matched_text": "the split is not fixed."
+    },
+    {
+      "finding": "out_of_scope_relation_directive",
+      "intent": "qa_stock",
+      "card_id": "qa_stock::slot-contract:person",
+      "card_sha256": "01f8b3d80be228491ee7d116d9890070c4703e0ac738770c59dcb0172bad7a1c",
+      "allowed_types": [
+        "business_name",
+        "currency_name",
+        "date",
+        "news_topic",
+        "person",
+        "time"
+      ],
+      "matched_text": "mom is relation, not person"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "cooking_recipe",
+      "card_id": "cooking_recipe::slot-contract:app_name",
+      "card_sha256": "f3966ee18aa68bd09acd2dc83d48f10d2102279f1c48bb0faab553d68707ba78",
+      "allowed_types": [
+        "app_name",
+        "business_name",
+        "cooking_type",
+        "date",
+        "drink_type",
+        "food_type",
+        "ingredient"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "general_joke",
+      "card_id": "general_joke::slot-contract:business_type",
+      "card_sha256": "a158f87ad8cf51fde13fce2e182fddb1ed80a16433c0b1e022f0648929c3f647",
+      "allowed_types": [
+        "business_type",
+        "date",
+        "food_type",
+        "joke_type",
+        "person",
+        "relation"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "general_joke",
+      "card_id": "general_joke::slot-contract:date",
+      "card_sha256": "a523a3a92d74320a4a012fb7c73549cf71e381ab5b008b264a4403933adc3c82",
+      "allowed_types": [
+        "business_type",
+        "date",
+        "food_type",
+        "joke_type",
+        "person",
+        "relation"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "cooking_query",
+      "card_id": "cooking_query::slot-contract:food_type",
+      "card_sha256": "00a640f281a38b8c35a8050fc02b9a0e0365e6b093694d79e1a0f3ce560d33e2",
+      "allowed_types": [
+        "food_type"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "out_of_scope_relation_directive",
+      "intent": "lists_createoradd",
+      "card_id": "lists_createoradd::slot-contract:person",
+      "card_sha256": "6c4aad3776cad0ad9768f9dfca77f76052144be76c8ff161bcfe70e113925b87",
+      "allowed_types": [
+        "date",
+        "drink_type",
+        "event_name",
+        "list_name",
+        "person",
+        "place_name",
+        "time"
+      ],
+      "matched_text": "mom is relation, not person"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "qa_maths",
+      "card_id": "qa_maths::slot-contract:date",
+      "card_sha256": "a523a3a92d74320a4a012fb7c73549cf71e381ab5b008b264a4403933adc3c82",
+      "allowed_types": [
+        "date",
+        "general_frequency"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "qa_maths",
+      "card_id": "qa_maths::slot-contract:general_frequency",
+      "card_sha256": "0998f0a7ecfa353d5a3c10f53724d16e1a0bfcf9d7d1d2cfe231719c0a155d41",
+      "allowed_types": [
+        "date",
+        "general_frequency"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    },
+    {
+      "finding": "missing_intent_role_definition",
+      "intent": "general_greet",
+      "card_id": "general_greet::slot-contract:date",
+      "card_sha256": "a523a3a92d74320a4a012fb7c73549cf71e381ab5b008b264a4403933adc3c82",
+      "allowed_types": [
+        "date"
+      ],
+      "matched_text": "Intent-specific role assertion withheld pending source review"
+    }
+  ],
+  "model_calls": 0,
+  "runtime_changed": false
+}
