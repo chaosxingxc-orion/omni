@@ -43,6 +43,10 @@ def import_ready():
    cfg=read(R/t['config']);fit=read(R/t['budget']);assert fit['status']=='PASS_FIXED_IMAGE_CPU' and fit['manifest_sha256']==cfg['manifest_sha256'] and fit['rows']==cfg['expected_rows']
    update(t,status='ready',remaining_seconds_estimate=t.get('estimated_seconds',12000))
 
+def lane_admission_open(lane):
+ p=O.parent/'lane-policy.json'
+ return read(p).get('lanes',{}).get(lane,{}).get('admit_new_tasks',True) if p.exists() else True
+
 def dispatch_rank(task,lane):
  config=read(O.parent/'dispatch-priority.json') if (O.parent/'dispatch-priority.json').exists() else {}
  override=config.get('tasks',{}).get(task['task_id'],{});preferred=override.get('preferred_lane',task.get('preferred_lane'))
@@ -50,6 +54,7 @@ def dispatch_rank(task,lane):
 
 def prestage_ready():
  for lane in 'ABCD':
+  if not lane_admission_open(lane):continue
   host=HOSTS[lane];ready=[read(p)['task'] for p in (O/'tasks').glob('*.json') if read(p)['status']=='ready' and lane in read(p)['task'].get('allowed_lanes',list('ABCD'))]
   if not ready:continue
   t=sorted(ready,key=lambda t:dispatch_rank(t,lane))[0];key=(t['task_id'],host)
@@ -161,6 +166,7 @@ def score(lane,launch,cpu_attempt=1):
  except Exception as e:save(O/'scores'/(name+'-archive-error.json'),dict(error=str(e),at=time.time()))
 
 def choose(lane):
+ if not lane_admission_open(lane):return None
  with mutex:
   states=[read(p) for p in (O/'tasks').glob('*.json')];eligible=[]
   for s in states:
@@ -225,6 +231,8 @@ def lane_worker(lane):
      t=read(O/'tasks'/(launch['task_id']+'.json'))['task'];update(t,status='completed',terminal=term,exit=res);threading.Thread(target=score,args=(lane,launch),daemon=False).start();runtime=launch['runtime'];runtime_file=None
     save(O/'lanes'/(lane+'-CURRENT.json'),dict(status='completed',launch=launch,terminal=term));last_task=None
   while time.time()<WINDOW['end_epoch']:
+   if not lane_admission_open(lane):
+    save(O/'lanes'/(lane+'-DRAINED.json'),dict(at=time.time(),status='user_requested_drain',last_launch=launch));return
    if runtime_file:
     try:runtime=remote_json(host,['cat',runtime_file])
     except Exception:time.sleep(5);continue
