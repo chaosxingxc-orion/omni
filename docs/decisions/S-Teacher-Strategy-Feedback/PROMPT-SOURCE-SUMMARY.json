@@ -1,0 +1,184 @@
+{
+  "scope": "fixed476 learning; report69 excluded from optimization",
+  "metrics": {
+    "semantic-view": {
+      "samples": 476,
+      "exact": 283,
+      "tp": 451,
+      "fp": 144,
+      "fn": 101,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 247,
+      "empty_fp_samples": 54
+    },
+    "prompt2": {
+      "samples": 476,
+      "exact": 277,
+      "tp": 453,
+      "fp": 163,
+      "fn": 99,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 250,
+      "empty_fp_samples": 55
+    },
+    "source-eligibility": {
+      "samples": 476,
+      "exact": 281,
+      "tp": 452,
+      "fp": 149,
+      "fn": 100,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 246,
+      "empty_fp_samples": 54
+    }
+  },
+  "target_splits": {
+    "prompt2": {
+      "changed": {
+        "samples": 476,
+        "before": {
+          "samples": 476,
+          "exact": 283,
+          "tp": 451,
+          "fp": 144,
+          "fn": 101,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 247,
+          "empty_fp_samples": 54
+        },
+        "after": {
+          "samples": 476,
+          "exact": 277,
+          "tp": 453,
+          "fp": 163,
+          "fn": 99,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 250,
+          "empty_fp_samples": 55
+        },
+        "repairs": 21,
+        "regressions": 27
+      },
+      "same": {
+        "samples": 0,
+        "before": {
+          "samples": 0,
+          "exact": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "invalid": 0,
+          "nonempty": 0,
+          "complete_recall": 0,
+          "empty_fp_samples": 0
+        },
+        "after": {
+          "samples": 0,
+          "exact": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "invalid": 0,
+          "nonempty": 0,
+          "complete_recall": 0,
+          "empty_fp_samples": 0
+        },
+        "repairs": 0,
+        "regressions": 0
+      }
+    },
+    "source-eligibility": {
+      "changed": {
+        "samples": 2,
+        "before": {
+          "samples": 2,
+          "exact": 2,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "invalid": 0,
+          "nonempty": 0,
+          "complete_recall": 0,
+          "empty_fp_samples": 0
+        },
+        "after": {
+          "samples": 2,
+          "exact": 2,
+          "tp": 0,
+          "fp": 0,
+          "fn": 0,
+          "invalid": 0,
+          "nonempty": 0,
+          "complete_recall": 0,
+          "empty_fp_samples": 0
+        },
+        "repairs": 0,
+        "regressions": 0
+      },
+      "same": {
+        "samples": 474,
+        "before": {
+          "samples": 474,
+          "exact": 281,
+          "tp": 451,
+          "fp": 144,
+          "fn": 101,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 247,
+          "empty_fp_samples": 54
+        },
+        "after": {
+          "samples": 474,
+          "exact": 279,
+          "tp": 452,
+          "fp": 149,
+          "fn": 100,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 246,
+          "empty_fp_samples": 54
+        },
+        "repairs": 14,
+        "regressions": 16
+      }
+    }
+  },
+  "cost": {
+    "prompt2": {
+      "card_hours": 0.9470049116346572,
+      "cards": 4,
+      "instances": 1,
+      "money": null,
+      "seconds_per_sample": 1.5638613219654889,
+      "session_wall_seconds": 823.1472064800328,
+      "usage": {
+        "completion_tokens": 46738,
+        "prompt_tokens": 7426137,
+        "total_tokens": 7472875
+      },
+      "wall_seconds": 852.3044204711914
+    },
+    "source-eligibility": {
+      "card_hours": 0.8882387442058987,
+      "cards": 4,
+      "instances": 1,
+      "money": null,
+      "seconds_per_sample": 1.466816274835429,
+      "session_wall_seconds": 770.5521875900449,
+      "usage": {
+        "completion_tokens": 43564,
+        "prompt_tokens": 7014114,
+        "total_tokens": 7057678
+      },
+      "wall_seconds": 799.4148697853088
+    }
+  },
+  "promotion": false,
+  "source_eligibility": "source correctness evidence retained; no demonstrated accuracy gain"
+}

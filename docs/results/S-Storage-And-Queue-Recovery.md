@@ -6,7 +6,9 @@
 
 观察SSH与补充读取同时失败时，旧实现会把任务永久记为ERROR。新实现区分派发前与派发后：持久化派发意图之前可安全重试配置准备；意图存在后只能追踪原任务，不重复发送。远端明确错误、服务身份或guard变化仍显式阻断。只有完整终态、1635完成及unknown/absent为0，并通过身份核验后才释放后继；评分异步进行。
 
-固定镜像CPU故障注入复现4项旧错误，44项候选测试通过。已核验新本机队列进程和两主机helper字节一致。实际B任务中已中断本机SSH等待客户端，队列继续读取同一任务并归档344条响应，派发与启动记录未变；完整终态接续待验证。这个演练不覆盖服务器重启或持续网络分区，不能据此声称全部断链场景已完成。
+固定镜像CPU故障注入复现4项旧错误，44项候选测试通过。已核验新本机队列进程和两主机helper字节一致。实际B任务中已中断本机SSH等待客户端，队列继续读取同一任务并归档344条响应，派发与启动记录未变；B原任务随后完整完成1635有效、未知0；因恢复后轮询有延迟，主重启同代码CPU队列验证持久事件恢复，B同事件评分、C同launch继续，派发SHA均不变。这个演练不覆盖服务器重启或持续网络分区，不能据此声称全部断链场景已完成。
+
+随后将“成功observe后重新挂接同容器docker wait”的最小修正实际部署到新CPU队列，消除连接恢复后固定600秒的额外等待；wait仅作唤醒，仍需真实终态和身份核验。旧44项回归、12项新路径测试及5项安装测试通过，另4项复现旧延迟。模型服务和远端helper不变；新重挂路径目前为固定镜像故障注入证据，尚未额外做现场断链演练。[增量补丁](../operations/TFRL-Exploration-Queue/wait-reattach.patch)与[部署证据](../operations/TFRL-Exploration-Queue/wait-reattach-evidence.json)保留。
 
 [实际部署补丁](../operations/TFRL-Exploration-Queue/disconnect-recovery.patch)与[聚合校验记录](../operations/TFRL-Exploration-Queue/disconnect-recovery-evidence.json)已归档。补丁需匹配对应旧源码，不是独立队列发行包。当前实验结果和新任务状态以[教师策略反馈](../decisions/S-Teacher-Strategy-Feedback.md)为准，以下为历史存储事件记录。
 

@@ -1,0 +1,18 @@
+{
+  "status": "APPLIED_NEW_CPU_QUEUE_VERIFIED",
+  "at": 1794342439.0062397,
+  "service_sha256": "55147e46f7673db52e61a1ceac62f5ee72435806c7273e14d723418c6d5df18b",
+  "changed_files": [
+    "code/service.py"
+  ],
+  "legacy_candidate_tests": 44,
+  "reattach_candidate_tests": 12,
+  "installer_tests": 5,
+  "latency_reproductions": 4,
+  "historical_regressions": 4,
+  "models_restarted": false,
+  "bootstrap_changed": false,
+  "live_reattach_patch_drill": false,
+  "monitor_seconds": 600,
+  "scope": "only CPU queue service; actual live path drill pending"
+}

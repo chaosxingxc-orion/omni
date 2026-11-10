@@ -1,0 +1,74 @@
+{
+  "scope": "learning476, report69 excluded from optimization",
+  "metrics": {
+    "ace-role-v3": {
+      "samples": 476,
+      "exact": 277,
+      "tp": 455,
+      "fp": 158,
+      "fn": 97,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 251,
+      "empty_fp_samples": 53
+    },
+    "tfgrpo-rank32": {
+      "samples": 476,
+      "exact": 272,
+      "tp": 460,
+      "fp": 163,
+      "fn": 92,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 255,
+      "empty_fp_samples": 61
+    },
+    "fallback-relevance": {
+      "samples": 476,
+      "exact": 283,
+      "tp": 453,
+      "fp": 150,
+      "fn": 99,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 249,
+      "empty_fp_samples": 55
+    }
+  },
+  "cost": {
+    "card_hours": 0.8973229259914822,
+    "cards": 4,
+    "instances": 1,
+    "money": null,
+    "seconds_per_sample": 1.4818176759492367,
+    "session_wall_seconds": 778.4408578200382,
+    "usage": {
+      "completion_tokens": 41961,
+      "prompt_tokens": 7013333,
+      "total_tokens": 7055294
+    },
+    "wall_seconds": 807.590633392334
+  },
+  "completed_samples": 545,
+  "completed_branches": 1635,
+  "valid": 1635,
+  "unknown": 0,
+  "promotion": false,
+  "changed_learning": 335,
+  "positive_learning_unchanged": 26,
+  "changed_group": {
+    "repairs": 25,
+    "regressions": 15,
+    "exact_before": 180,
+    "exact_after": 190,
+    "fp_before": 126,
+    "fp_after": 112,
+    "fn_before": 66,
+    "fn_after": 74
+  },
+  "same_group": {
+    "samples": 141,
+    "exact_before": 92,
+    "exact_after": 93
+  }
+}

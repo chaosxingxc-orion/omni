@@ -1,0 +1,20 @@
+--- a/code/service.py
++++ b/code/service.py
+@@ -88,7 +88,17 @@
+      assert done['status']=='GENERATION_COMPLETE' and done['launch']==l,'TERMINAL_LAUNCH_MISMATCH'
+      assert term['status']=='COMPLETE' and term['completed']==1635 and term['unknown']==term['absent']==0,'UNVERIFIED_TERMINAL'
+      break
++    # A successful observe verified the same launch and found it still running.
++    # Reattach the terminal event wait; do not add a 600s poll delay on recovery.
++    phase='wait'
++    remote(s,['/usr/bin/docker','wait',l['container_id']])
++    # docker wait is only a wake-up: observe must still verify the real terminal.
++    continue
+    except subprocess.CalledProcessError as exc:
++    if phase=='wait':
++     pending('WAIT_TRANSPORT_UNAVAILABLE',exc)
++     time.sleep(600)
++     continue
+     try:failure=fetch(s,h)
+     except subprocess.CalledProcessError:pending('OBSERVE_AND_FETCH_UNAVAILABLE',exc)
+     else:
