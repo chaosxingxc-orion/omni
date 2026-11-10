@@ -1,0 +1,38 @@
+{
+  "scope": "frozen clean supply; lexical audit is not semantic causality proof",
+  "requests": {
+    "packets": 1635,
+    "single_intent": 1635,
+    "audio_first": 1635,
+    "duplicated_instruction": 1635,
+    "schema_no_values": 1635,
+    "example_output_type_only": 1635
+  },
+  "knowledge": {
+    "clean-parent": {
+      "cards": 401,
+      "file_sha256": "062459df379e22ff57464cbac1a6485d871d5323ac747de1c97027f63cf9e610",
+      "phrase_card_counts": {
+        "Admissible formats:": 401,
+        "never digits": 34,
+        "write the spoken words": 34,
+        "separate mentions": 66,
+        "spoken order": 30
+      }
+    },
+    "knowledge-candidate": {
+      "cards": 401,
+      "file_sha256": "3ed2b9236c25e6ce868b5298cbac8d1b2d9049319277c812c82f8cd2156f3d42",
+      "phrase_card_counts": {
+        "Admissible formats:": 0,
+        "never digits": 0,
+        "write the spoken words": 0,
+        "separate mentions": 66,
+        "spoken order": 30
+      }
+    }
+  },
+  "manifest_sha256": "048bed7f0cde8ccc029e241440e4eee3d42f1e7abec83fefa5891100f0ea71eb",
+  "model_calls": 0,
+  "live_runtime_changed": false
+}
