@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "full_learning_arms": 4,
+  "known_metric_recounts": "MATCH",
+  "negative_checks": [
+    "missing_learning",
+    "duplicate_learning",
+    "wrong_branch",
+    "foreign_learning",
+    "incomplete_rollout",
+    "unknown_transport",
+    "held_excluded",
+    "invalid_empty_not_rewarded"
+  ],
+  "same_score_zero_variance": "descriptive advantages checked finite/zero sum",
+  "new_model_calls": 0
+}
