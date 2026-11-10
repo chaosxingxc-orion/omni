@@ -78,22 +78,197 @@
       "wall_seconds": 829.8029103279114
     }
   },
-  "updated_epoch": 1794346309.0376558,
+  "updated_epoch": 1794347793.3451345,
   "successors": {
     "A": {
-      "status": "ACTUAL_RUNNING_MAIN_VERIFIED",
-      "total_samples": 545,
-      "total_branches": 1635,
-      "completed_samples": null,
-      "completed_branches": null,
-      "cards": 4,
-      "instances": 1,
-      "concurrency": 64,
-      "seconds_per_sample": null,
-      "ETA_seconds": null
+      "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
+      "scientific_parent": "signed-relevance",
+      "samples": 545,
+      "branches": 1635,
+      "valid_branches": 1635,
+      "learning": 476,
+      "report_only": 69,
+      "learning_comparison": {
+        "after": {
+          "complete_recall": 243,
+          "empty_fp_samples": 50,
+          "exact": 283,
+          "fn": 106,
+          "fp": 146,
+          "invalid": 0,
+          "nonempty": 341,
+          "samples": 476,
+          "tp": 446
+        },
+        "before": {
+          "complete_recall": 249,
+          "empty_fp_samples": 55,
+          "exact": 283,
+          "fn": 99,
+          "fp": 150,
+          "invalid": 0,
+          "nonempty": 341,
+          "samples": 476,
+          "tp": 453
+        },
+        "output_changes": 55,
+        "regressions": 17,
+        "repairs": 17,
+        "wire_changed": 6
+      },
+      "actual_changed_learning": {
+        "after": {
+          "complete_recall": 2,
+          "empty_fp_samples": 0,
+          "exact": 2,
+          "fn": 4,
+          "fp": 4,
+          "invalid": 0,
+          "nonempty": 6,
+          "samples": 6,
+          "tp": 12
+        },
+        "before": {
+          "complete_recall": 4,
+          "empty_fp_samples": 0,
+          "exact": 3,
+          "fn": 2,
+          "fp": 2,
+          "invalid": 0,
+          "nonempty": 6,
+          "samples": 6,
+          "tp": 14
+        },
+        "output_changes": 3,
+        "regressions": 1,
+        "repairs": 0,
+        "wire_changed": 6
+      },
+      "same_learning": {
+        "after": {
+          "complete_recall": 241,
+          "empty_fp_samples": 50,
+          "exact": 281,
+          "fn": 102,
+          "fp": 142,
+          "invalid": 0,
+          "nonempty": 335,
+          "samples": 470,
+          "tp": 434
+        },
+        "before": {
+          "complete_recall": 245,
+          "empty_fp_samples": 55,
+          "exact": 280,
+          "fn": 97,
+          "fp": 148,
+          "invalid": 0,
+          "nonempty": 335,
+          "samples": 470,
+          "tp": 439
+        },
+        "output_changes": 52,
+        "regressions": 16,
+        "repairs": 17,
+        "wire_changed": 0
+      },
+      "cost": {
+        "card_hours": 0.9008660499254862,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.4876687062989682,
+        "session_wall_seconds": 782.3458928499604,
+        "usage": {
+          "completion_tokens": 41644,
+          "prompt_tokens": 7013296,
+          "total_tokens": 7054940
+        },
+        "wall_seconds": 810.7794449329376
+      },
+      "promotion": false,
+      "limitations": [
+        "Single rollout; same-wire movement is not strategy gain.",
+        "All11 changes are positive-path; fallback1516 and teacher8 wires unchanged.",
+        "Epsilon0.02 references parent chosen second; all11 second relevance improves; epsilon benefit unproven.",
+        "Partial source annotations are not negatives. Source contrast does not establish query role recognition.",
+        "No model promotion, no TEST tuning, no final D value evaluation."
+      ]
     },
-    "B": "ACE context1 specifically approved; CPU compile/fixed preparation, launch not verified",
-    "C": "ACE context2 specifically approved; CPU compile/fixed preparation, launch not verified"
+    "B": {
+      "name": "context-dedup",
+      "status": "COMPLETE_STRICT_ORIGINAL_SCORE",
+      "completed_samples": 545,
+      "total_samples": 545,
+      "completed_branches": 1635,
+      "total_branches": 1635,
+      "valid_branches": 1635,
+      "unknown": 0,
+      "absent": 0,
+      "learning": {
+        "samples": 476,
+        "exact": 288,
+        "tp": 446,
+        "fp": 131,
+        "fn": 106,
+        "invalid": 0,
+        "nonempty": 341,
+        "complete_recall": 243,
+        "empty_fp_samples": 42
+      },
+      "cost": {
+        "card_hours": 0.8102951203452217,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.3381020335976137,
+        "session_wall_seconds": 700.9205955800135,
+        "usage": {
+          "completion_tokens": 38384,
+          "prompt_tokens": 6441127,
+          "total_tokens": 6479511
+        },
+        "wall_seconds": 729.2656083106995
+      },
+      "ETA_seconds": 0
+    },
+    "C": {
+      "name": "context-layout",
+      "status": "COMPLETE_STRICT_ORIGINAL_SCORE",
+      "completed_samples": 545,
+      "total_samples": 545,
+      "completed_branches": 1635,
+      "total_branches": 1635,
+      "valid_branches": 1632,
+      "unknown": 0,
+      "absent": 0,
+      "learning": {
+        "samples": 476,
+        "exact": 287,
+        "tp": 464,
+        "fp": 155,
+        "fn": 88,
+        "invalid": 2,
+        "nonempty": 341,
+        "complete_recall": 261,
+        "empty_fp_samples": 69
+      },
+      "cost": {
+        "card_hours": 0.8354767661624485,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.3796864028370708,
+        "session_wall_seconds": 723.1472314299899,
+        "usage": {
+          "completion_tokens": 46739,
+          "prompt_tokens": 6478688,
+          "total_tokens": 6525427
+        },
+        "wall_seconds": 751.9290895462036
+      },
+      "ETA_seconds": 0
+    }
   },
   "context_teacher": {
     "status": "COMPLETE",
@@ -105,5 +280,23 @@
     "total_tokens": 104103,
     "reasoning_target_soft": 8192,
     "resends": 0
-  }
+  },
+  "active_npu_experiments_verified": 0,
+  "cpu_successors": [
+    {
+      "task": "source-relation-extension",
+      "status": "FULL1635_COMPILED_FIXED_PREPARING",
+      "new_wire_branches": 16,
+      "new_learning_correct_intent_inputs": 7
+    },
+    {
+      "task": "intent-card-scope-ACE",
+      "status": "SOURCE_AUDIT_AND_TEACHER_PREPARING"
+    },
+    {
+      "task": "type-list-normalization",
+      "status": "ASSIGNED_TO_EXISTING_CONTEXT_OWNER_RAW_DUPLICATES_VERIFIED"
+    }
+  ],
+  "all_cards_busy_proven": false
 }

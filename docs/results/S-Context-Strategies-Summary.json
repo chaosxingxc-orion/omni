@@ -1,0 +1,98 @@
+{
+  "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
+  "scientific_parent": "signed-relevance",
+  "parent_learning": {
+    "exact": 283,
+    "tp": 453,
+    "fp": 150,
+    "fn": 99,
+    "complete_recall": 249,
+    "nonempty": 341
+  },
+  "candidates": [
+    {
+      "name": "context-dedup",
+      "status": "COMPLETE_STRICT_ORIGINAL_SCORE",
+      "completed_samples": 545,
+      "total_samples": 545,
+      "completed_branches": 1635,
+      "total_branches": 1635,
+      "valid_branches": 1635,
+      "unknown": 0,
+      "absent": 0,
+      "learning": {
+        "samples": 476,
+        "exact": 288,
+        "tp": 446,
+        "fp": 131,
+        "fn": 106,
+        "invalid": 0,
+        "nonempty": 341,
+        "complete_recall": 243,
+        "empty_fp_samples": 42
+      },
+      "cost": {
+        "card_hours": 0.8102951203452217,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.3381020335976137,
+        "session_wall_seconds": 700.9205955800135,
+        "usage": {
+          "completion_tokens": 38384,
+          "prompt_tokens": 6441127,
+          "total_tokens": 6479511
+        },
+        "wall_seconds": 729.2656083106995
+      },
+      "ETA_seconds": 0
+    },
+    {
+      "name": "context-layout",
+      "status": "COMPLETE_STRICT_ORIGINAL_SCORE",
+      "completed_samples": 545,
+      "total_samples": 545,
+      "completed_branches": 1635,
+      "total_branches": 1635,
+      "valid_branches": 1632,
+      "unknown": 0,
+      "absent": 0,
+      "learning": {
+        "samples": 476,
+        "exact": 287,
+        "tp": 464,
+        "fp": 155,
+        "fn": 88,
+        "invalid": 2,
+        "nonempty": 341,
+        "complete_recall": 261,
+        "empty_fp_samples": 69
+      },
+      "cost": {
+        "card_hours": 0.8354767661624485,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.3796864028370708,
+        "session_wall_seconds": 723.1472314299899,
+        "usage": {
+          "completion_tokens": 46739,
+          "prompt_tokens": 6478688,
+          "total_tokens": 6525427
+        },
+        "wall_seconds": 751.9290895462036
+      },
+      "ETA_seconds": 0
+    }
+  ],
+  "teacher_cost_counted_once": {
+    "input_tokens": 80788,
+    "output_tokens": 23315,
+    "reasoning_tokens": 20198,
+    "total_tokens": 104103,
+    "elapsed_seconds": 398.8828769400716
+  },
+  "promotion": false,
+  "protocol_finding": "Three layout responses duplicate legal time_zone; original strict scores retained, separate deterministic normalization repair pending",
+  "causal_limits": "Single rollout; layout composite; scientific parent and context1 ran on different services; no D end-to-end evidence"
+}
