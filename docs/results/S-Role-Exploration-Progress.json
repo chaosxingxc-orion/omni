@@ -2,24 +2,25 @@
   "lanes": [
     {
       "lane": "A",
-      "status": "RUNNING_ARCHIVED_SNAPSHOT_NOT_LIVE_COUNT",
+      "status": "COMPLETE_SCORED",
       "archive_epoch": 1794343938.7387543,
-      "completed_samples": 442,
+      "completed_samples": 545,
       "total_samples": 545,
-      "completed_branches": 1331,
+      "completed_branches": 1635,
       "total_branches": 1635,
-      "valid_archived_branches": 1331,
+      "valid_archived_branches": 1635,
       "cards": 4,
       "instances": 1,
       "concurrency": 64,
       "historical_seconds_per_complete_sample": 1.48,
-      "estimated_remaining_seconds_at_snapshot": 152,
+      "estimated_remaining_seconds_at_snapshot": 0,
       "usage_archived": {
-        "completion_tokens": 34353,
-        "prompt_tokens": 5570763,
-        "total_tokens": 5605116
+        "completion_tokens": 41747,
+        "prompt_tokens": 7017743,
+        "total_tokens": 7059490
       },
-      "estimate_not_guarantee": true
+      "estimate_not_guarantee": true,
+      "actual_seconds_per_sample": 1.5020025926992433
     },
     {
       "lane": "B",
@@ -43,5 +44,5 @@
       "estimate_not_guarantee": true
     }
   ],
-  "c_lane": "No new ready candidate"
+  "c_lane": "Renderer core approved; CPU preparing; no new NPU launch confirmed"
 }

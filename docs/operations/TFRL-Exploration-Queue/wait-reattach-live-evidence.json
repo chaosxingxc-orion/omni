@@ -1,10 +1,15 @@
 {
-  "status": "LIVE_AUTOMATIC_REATTACH_VERIFIED_TERMINAL_PENDING",
+  "status": "LIVE_AUTOMATIC_REATTACH_AND_FULL_TERMINAL_VERIFIED",
   "same_queue_process": true,
   "new_wait_client": true,
   "dispatch_launch_unchanged": true,
   "manual_queue_restart": false,
   "model_restarted": false,
   "scope": "post-launch observation connection loss; not server reboot or full network outage",
-  "terminal_verified": false
+  "terminal_verified": true,
+  "completed": 1635,
+  "valid": 1635,
+  "unknown": 0,
+  "absent": 0,
+  "queue_scored": true
 }

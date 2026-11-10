@@ -1,0 +1,284 @@
+{
+  "status": "COMPLETE",
+  "completed": 545,
+  "total": 545,
+  "completed_branches": 1635,
+  "valid_branches": 1635,
+  "unknown": 0,
+  "absent": 0,
+  "promotion": false,
+  "learning_metrics": {
+    "semantic-C": {
+      "complete_recall": 247,
+      "empty_fp_samples": 54,
+      "exact": 283,
+      "fn": 101,
+      "fp": 144,
+      "invalid": 0,
+      "nonempty": 341,
+      "samples": 476,
+      "tp": 451
+    },
+    "weather-binding": {
+      "complete_recall": 252,
+      "empty_fp_samples": 51,
+      "exact": 289,
+      "fn": 96,
+      "fp": 145,
+      "invalid": 0,
+      "nonempty": 341,
+      "samples": 476,
+      "tp": 456
+    }
+  },
+  "wire_split": {
+    "actual_changed_wire": {
+      "candidate": {
+        "complete_recall": 15,
+        "empty_fp_samples": 2,
+        "exact": 16,
+        "fn": 11,
+        "fp": 6,
+        "invalid": 0,
+        "nonempty": 26,
+        "samples": 29,
+        "tp": 41
+      },
+      "parent": {
+        "complete_recall": 15,
+        "empty_fp_samples": 3,
+        "exact": 14,
+        "fn": 12,
+        "fp": 9,
+        "invalid": 0,
+        "nonempty": 26,
+        "samples": 29,
+        "tp": 40
+      },
+      "regressions": 0,
+      "repairs": 2,
+      "samples": 29
+    },
+    "all_weather": {
+      "candidate": {
+        "complete_recall": 15,
+        "empty_fp_samples": 2,
+        "exact": 16,
+        "fn": 11,
+        "fp": 6,
+        "invalid": 0,
+        "nonempty": 26,
+        "samples": 29,
+        "tp": 41
+      },
+      "parent": {
+        "complete_recall": 15,
+        "empty_fp_samples": 3,
+        "exact": 14,
+        "fn": 12,
+        "fp": 9,
+        "invalid": 0,
+        "nonempty": 26,
+        "samples": 29,
+        "tp": 40
+      },
+      "regressions": 0,
+      "repairs": 2,
+      "samples": 29
+    },
+    "empty_gold": {
+      "candidate": {
+        "complete_recall": 0,
+        "empty_fp_samples": 51,
+        "exact": 84,
+        "fn": 0,
+        "fp": 58,
+        "invalid": 0,
+        "nonempty": 0,
+        "samples": 135,
+        "tp": 0
+      },
+      "parent": {
+        "complete_recall": 0,
+        "empty_fp_samples": 54,
+        "exact": 81,
+        "fn": 0,
+        "fp": 61,
+        "invalid": 0,
+        "nonempty": 0,
+        "samples": 135,
+        "tp": 0
+      },
+      "regressions": 5,
+      "repairs": 8,
+      "samples": 135
+    },
+    "other_intents": {
+      "candidate": {
+        "complete_recall": 237,
+        "empty_fp_samples": 49,
+        "exact": 273,
+        "fn": 85,
+        "fp": 139,
+        "invalid": 0,
+        "nonempty": 315,
+        "samples": 447,
+        "tp": 415
+      },
+      "parent": {
+        "complete_recall": 232,
+        "empty_fp_samples": 51,
+        "exact": 269,
+        "fn": 89,
+        "fp": 135,
+        "invalid": 0,
+        "nonempty": 315,
+        "samples": 447,
+        "tp": 411
+      },
+      "regressions": 13,
+      "repairs": 17,
+      "samples": 447
+    },
+    "same_wire": {
+      "candidate": {
+        "complete_recall": 237,
+        "empty_fp_samples": 49,
+        "exact": 273,
+        "fn": 85,
+        "fp": 139,
+        "invalid": 0,
+        "nonempty": 315,
+        "samples": 447,
+        "tp": 415
+      },
+      "parent": {
+        "complete_recall": 232,
+        "empty_fp_samples": 51,
+        "exact": 269,
+        "fn": 89,
+        "fp": 135,
+        "invalid": 0,
+        "nonempty": 315,
+        "samples": 447,
+        "tp": 411
+      },
+      "regressions": 13,
+      "repairs": 17,
+      "samples": 447
+    }
+  },
+  "weather_types": {
+    "date": {
+      "candidate": {
+        "fn": 3,
+        "fp": 1,
+        "gold_positive": 17,
+        "predicted": 15,
+        "tp": 14
+      },
+      "parent": {
+        "fn": 3,
+        "fp": 1,
+        "gold_positive": 17,
+        "predicted": 15,
+        "tp": 14
+      }
+    },
+    "event_name": {
+      "candidate": {
+        "fn": 0,
+        "fp": 1,
+        "gold_positive": 0,
+        "predicted": 1,
+        "tp": 0
+      },
+      "parent": {
+        "fn": 0,
+        "fp": 3,
+        "gold_positive": 0,
+        "predicted": 3,
+        "tp": 0
+      }
+    },
+    "place_name": {
+      "candidate": {
+        "fn": 5,
+        "fp": 2,
+        "gold_positive": 14,
+        "predicted": 11,
+        "tp": 9
+      },
+      "parent": {
+        "fn": 6,
+        "fp": 1,
+        "gold_positive": 14,
+        "predicted": 9,
+        "tp": 8
+      }
+    },
+    "time": {
+      "candidate": {
+        "fn": 2,
+        "fp": 0,
+        "gold_positive": 3,
+        "predicted": 1,
+        "tp": 1
+      },
+      "parent": {
+        "fn": 2,
+        "fp": 1,
+        "gold_positive": 3,
+        "predicted": 2,
+        "tp": 1
+      }
+    },
+    "timeofday": {
+      "candidate": {
+        "fn": 1,
+        "fp": 0,
+        "gold_positive": 1,
+        "predicted": 0,
+        "tp": 0
+      },
+      "parent": {
+        "fn": 1,
+        "fp": 0,
+        "gold_positive": 1,
+        "predicted": 0,
+        "tp": 0
+      }
+    },
+    "weather_descriptor": {
+      "candidate": {
+        "fn": 0,
+        "fp": 2,
+        "gold_positive": 17,
+        "predicted": 19,
+        "tp": 17
+      },
+      "parent": {
+        "fn": 0,
+        "fp": 3,
+        "gold_positive": 17,
+        "predicted": 20,
+        "tp": 17
+      }
+    }
+  },
+  "cost": {
+    "card_hours": 0.9095460144678752,
+    "cards": 4,
+    "instances": 1,
+    "money": null,
+    "seconds_per_sample": 1.5020025926992433,
+    "session_wall_seconds": 789.967214699951,
+    "usage": {
+      "completion_tokens": 41747,
+      "prompt_tokens": 7017743,
+      "total_tokens": 7059490
+    },
+    "wall_seconds": 818.5914130210876
+  },
+  "independent_main_compare": true
+}
