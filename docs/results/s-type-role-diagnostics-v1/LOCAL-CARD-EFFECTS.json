@@ -1,0 +1,4732 @@
+{
+  "learning_only": true,
+  "new_model_calls": 0,
+  "automatic_promotion": false,
+  "lanes": {
+    "ACE_ingredient": {
+      "status": "COMPLETE",
+      "target_intents": [
+        "cooking_recipe"
+      ],
+      "pair_labels": [
+        "food_type",
+        "ingredient"
+      ],
+      "groups": {
+        "all_learning": {
+          "parent": {
+            "samples": 476,
+            "tp": 465,
+            "fp": 177,
+            "fn": 87,
+            "exact": 276,
+            "valid": 474,
+            "invalid": 2,
+            "count_equal": 308,
+            "equal_count_wrong": 32,
+            "nonempty_samples": 341,
+            "nonempty_covered": 261,
+            "empty_samples": 135,
+            "empty_exact": 67,
+            "empty_false_positive_samples": 67,
+            "precision": 0.7242990654205608,
+            "recall": 0.842391304347826,
+            "F1": 0.7788944723618091,
+            "exact_rate": 0.5798319327731093,
+            "per_type": {
+              "alarm_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 5,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 6,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 40,
+                "fp": 6,
+                "fn": 2
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 3,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 4,
+                "fp": 6,
+                "fn": 0
+              },
+              "coffee_type": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "cooking_type": {
+                "tp": 3,
+                "fp": 2,
+                "fn": 2
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 77,
+                "fp": 5,
+                "fn": 12
+              },
+              "device_type": {
+                "tp": 9,
+                "fp": 11,
+                "fn": 2
+              },
+              "drink_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_address": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_folder": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 13,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 33,
+                "fp": 6,
+                "fn": 7
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 7,
+                "fp": 2,
+                "fn": 2
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 4
+              },
+              "meal_type": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "media_type": {
+                "tp": 28,
+                "fp": 2,
+                "fn": 5
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 4
+              },
+              "music_genre": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 2
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 2,
+                "fn": 3
+              },
+              "person": {
+                "tp": 26,
+                "fp": 24,
+                "fn": 4
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 60,
+                "fp": 23,
+                "fn": 5
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 7,
+                "fp": 0,
+                "fn": 5
+              },
+              "song_name": {
+                "tp": 4,
+                "fp": 5,
+                "fn": 0
+              },
+              "time": {
+                "tp": 23,
+                "fp": 6,
+                "fn": 6
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 6,
+                "fp": 4,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 5,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "candidate": {
+            "samples": 476,
+            "tp": 462,
+            "fp": 185,
+            "fn": 90,
+            "exact": 281,
+            "valid": 475,
+            "invalid": 1,
+            "count_equal": 315,
+            "equal_count_wrong": 34,
+            "nonempty_samples": 341,
+            "nonempty_covered": 259,
+            "empty_samples": 135,
+            "empty_exact": 69,
+            "empty_false_positive_samples": 66,
+            "precision": 0.714064914992272,
+            "recall": 0.8369565217391305,
+            "F1": 0.7706422018348624,
+            "exact_rate": 0.5903361344537815,
+            "per_type": {
+              "alarm_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 5,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 8,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 38,
+                "fp": 7,
+                "fn": 4
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 3,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 3,
+                "fp": 7,
+                "fn": 1
+              },
+              "coffee_type": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "cooking_type": {
+                "tp": 3,
+                "fp": 1,
+                "fn": 2
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 74,
+                "fp": 6,
+                "fn": 15
+              },
+              "device_type": {
+                "tp": 9,
+                "fp": 11,
+                "fn": 2
+              },
+              "drink_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_address": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_folder": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 16,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 35,
+                "fp": 4,
+                "fn": 5
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 7,
+                "fp": 2,
+                "fn": 2
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 4
+              },
+              "meal_type": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "media_type": {
+                "tp": 30,
+                "fp": 3,
+                "fn": 3
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 2,
+                "fp": 4,
+                "fn": 3
+              },
+              "music_genre": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 3
+              },
+              "person": {
+                "tp": 24,
+                "fp": 21,
+                "fn": 6
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 59,
+                "fp": 25,
+                "fn": 6
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 6
+              },
+              "song_name": {
+                "tp": 3,
+                "fp": 5,
+                "fn": 1
+              },
+              "time": {
+                "tp": 24,
+                "fp": 4,
+                "fn": 5
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 6,
+                "fp": 5,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 6,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "delta": {
+            "samples": 0,
+            "tp": -3,
+            "fp": 8,
+            "fn": 3,
+            "exact": 5,
+            "valid": 1,
+            "invalid": -1,
+            "count_equal": 7,
+            "equal_count_wrong": 2,
+            "nonempty_samples": 0,
+            "nonempty_covered": -2,
+            "empty_samples": 0,
+            "empty_exact": 2,
+            "empty_false_positive_samples": -1,
+            "precision": -0.01023415042828879,
+            "recall": -0.005434782608695565,
+            "F1": -0.008252270526946659,
+            "exact_rate": 0.010504201680672232
+          },
+          "repairs": 21,
+          "regressions": 16,
+          "confirmed_changed": 66
+        },
+        "target_intents": {
+          "parent": {
+            "samples": 21,
+            "tp": 20,
+            "fp": 10,
+            "fn": 5,
+            "exact": 11,
+            "valid": 21,
+            "invalid": 0,
+            "count_equal": 12,
+            "equal_count_wrong": 1,
+            "nonempty_samples": 19,
+            "nonempty_covered": 15,
+            "empty_samples": 2,
+            "empty_exact": 0,
+            "empty_false_positive_samples": 2,
+            "precision": 0.6666666666666666,
+            "recall": 0.8,
+            "F1": 0.7272727272727273,
+            "exact_rate": 0.5238095238095238,
+            "per_type": {
+              "cooking_type": {
+                "tp": 3,
+                "fp": 2,
+                "fn": 2
+              },
+              "drink_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "food_type": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              }
+            }
+          },
+          "candidate": {
+            "samples": 21,
+            "tp": 19,
+            "fp": 8,
+            "fn": 6,
+            "exact": 12,
+            "valid": 21,
+            "invalid": 0,
+            "count_equal": 14,
+            "equal_count_wrong": 2,
+            "nonempty_samples": 19,
+            "nonempty_covered": 14,
+            "empty_samples": 2,
+            "empty_exact": 1,
+            "empty_false_positive_samples": 1,
+            "precision": 0.7037037037037037,
+            "recall": 0.76,
+            "F1": 0.7307692307692307,
+            "exact_rate": 0.5714285714285714,
+            "per_type": {
+              "cooking_type": {
+                "tp": 3,
+                "fp": 1,
+                "fn": 2
+              },
+              "drink_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "food_type": {
+                "tp": 16,
+                "fp": 2,
+                "fn": 1
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              }
+            }
+          },
+          "delta": {
+            "samples": 0,
+            "tp": -1,
+            "fp": -2,
+            "fn": 1,
+            "exact": 1,
+            "valid": 0,
+            "invalid": 0,
+            "count_equal": 2,
+            "equal_count_wrong": 1,
+            "nonempty_samples": 0,
+            "nonempty_covered": -1,
+            "empty_samples": 0,
+            "empty_exact": 1,
+            "empty_false_positive_samples": -1,
+            "precision": 0.03703703703703709,
+            "recall": -0.040000000000000036,
+            "F1": 0.0034965034965034336,
+            "exact_rate": 0.04761904761904756
+          },
+          "repairs": 1,
+          "regressions": 0,
+          "confirmed_changed": 3
+        },
+        "other_intents": {
+          "parent": {
+            "samples": 455,
+            "tp": 445,
+            "fp": 167,
+            "fn": 82,
+            "exact": 265,
+            "valid": 453,
+            "invalid": 2,
+            "count_equal": 296,
+            "equal_count_wrong": 31,
+            "nonempty_samples": 322,
+            "nonempty_covered": 246,
+            "empty_samples": 133,
+            "empty_exact": 67,
+            "empty_false_positive_samples": 65,
+            "precision": 0.7271241830065359,
+            "recall": 0.8444022770398482,
+            "F1": 0.781387181738367,
+            "exact_rate": 0.5824175824175825,
+            "per_type": {
+              "alarm_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 5,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 6,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 40,
+                "fp": 6,
+                "fn": 2
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 3,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 4,
+                "fp": 6,
+                "fn": 0
+              },
+              "coffee_type": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 77,
+                "fp": 5,
+                "fn": 12
+              },
+              "device_type": {
+                "tp": 9,
+                "fp": 11,
+                "fn": 2
+              },
+              "email_address": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_folder": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 13,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 16,
+                "fp": 3,
+                "fn": 7
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 7,
+                "fp": 2,
+                "fn": 2
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 4
+              },
+              "meal_type": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "media_type": {
+                "tp": 28,
+                "fp": 2,
+                "fn": 5
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 4
+              },
+              "music_genre": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 2
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 2,
+                "fn": 3
+              },
+              "person": {
+                "tp": 26,
+                "fp": 24,
+                "fn": 4
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 60,
+                "fp": 23,
+                "fn": 5
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 7,
+                "fp": 0,
+                "fn": 5
+              },
+              "song_name": {
+                "tp": 4,
+                "fp": 5,
+                "fn": 0
+              },
+              "time": {
+                "tp": 23,
+                "fp": 6,
+                "fn": 6
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 6,
+                "fp": 4,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 5,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "candidate": {
+            "samples": 455,
+            "tp": 443,
+            "fp": 177,
+            "fn": 84,
+            "exact": 269,
+            "valid": 454,
+            "invalid": 1,
+            "count_equal": 301,
+            "equal_count_wrong": 32,
+            "nonempty_samples": 322,
+            "nonempty_covered": 245,
+            "empty_samples": 133,
+            "empty_exact": 68,
+            "empty_false_positive_samples": 65,
+            "precision": 0.714516129032258,
+            "recall": 0.8406072106261859,
+            "F1": 0.7724498692240628,
+            "exact_rate": 0.5912087912087912,
+            "per_type": {
+              "alarm_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 5,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 8,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 38,
+                "fp": 7,
+                "fn": 4
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 3,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 3,
+                "fp": 7,
+                "fn": 1
+              },
+              "coffee_type": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 74,
+                "fp": 6,
+                "fn": 15
+              },
+              "device_type": {
+                "tp": 9,
+                "fp": 11,
+                "fn": 2
+              },
+              "email_address": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_folder": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 16,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 19,
+                "fp": 2,
+                "fn": 4
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 7,
+                "fp": 2,
+                "fn": 2
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 4
+              },
+              "meal_type": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "media_type": {
+                "tp": 30,
+                "fp": 3,
+                "fn": 3
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 2,
+                "fp": 4,
+                "fn": 3
+              },
+              "music_genre": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 3
+              },
+              "person": {
+                "tp": 24,
+                "fp": 21,
+                "fn": 6
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 59,
+                "fp": 25,
+                "fn": 6
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 6
+              },
+              "song_name": {
+                "tp": 3,
+                "fp": 5,
+                "fn": 1
+              },
+              "time": {
+                "tp": 24,
+                "fp": 4,
+                "fn": 5
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 6,
+                "fp": 5,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 6,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "delta": {
+            "samples": 0,
+            "tp": -2,
+            "fp": 10,
+            "fn": 2,
+            "exact": 4,
+            "valid": 1,
+            "invalid": -1,
+            "count_equal": 5,
+            "equal_count_wrong": 1,
+            "nonempty_samples": 0,
+            "nonempty_covered": -1,
+            "empty_samples": 0,
+            "empty_exact": 1,
+            "empty_false_positive_samples": 0,
+            "precision": -0.012608053974277889,
+            "recall": -0.003795066413662229,
+            "F1": -0.008937312514304185,
+            "exact_rate": 0.00879120879120876
+          },
+          "repairs": 20,
+          "regressions": 16,
+          "confirmed_changed": 63
+        },
+        "same_wire": {
+          "parent": {
+            "samples": 455,
+            "tp": 445,
+            "fp": 167,
+            "fn": 82,
+            "exact": 265,
+            "valid": 453,
+            "invalid": 2,
+            "count_equal": 296,
+            "equal_count_wrong": 31,
+            "nonempty_samples": 322,
+            "nonempty_covered": 246,
+            "empty_samples": 133,
+            "empty_exact": 67,
+            "empty_false_positive_samples": 65,
+            "precision": 0.7271241830065359,
+            "recall": 0.8444022770398482,
+            "F1": 0.781387181738367,
+            "exact_rate": 0.5824175824175825,
+            "per_type": {
+              "alarm_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 5,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 6,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 40,
+                "fp": 6,
+                "fn": 2
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 3,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 4,
+                "fp": 6,
+                "fn": 0
+              },
+              "coffee_type": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 77,
+                "fp": 5,
+                "fn": 12
+              },
+              "device_type": {
+                "tp": 9,
+                "fp": 11,
+                "fn": 2
+              },
+              "email_address": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_folder": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 13,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 16,
+                "fp": 3,
+                "fn": 7
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 7,
+                "fp": 2,
+                "fn": 2
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 4
+              },
+              "meal_type": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "media_type": {
+                "tp": 28,
+                "fp": 2,
+                "fn": 5
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 4
+              },
+              "music_genre": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 2
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 2,
+                "fn": 3
+              },
+              "person": {
+                "tp": 26,
+                "fp": 24,
+                "fn": 4
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 60,
+                "fp": 23,
+                "fn": 5
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 7,
+                "fp": 0,
+                "fn": 5
+              },
+              "song_name": {
+                "tp": 4,
+                "fp": 5,
+                "fn": 0
+              },
+              "time": {
+                "tp": 23,
+                "fp": 6,
+                "fn": 6
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 6,
+                "fp": 4,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 5,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "candidate": {
+            "samples": 455,
+            "tp": 443,
+            "fp": 177,
+            "fn": 84,
+            "exact": 269,
+            "valid": 454,
+            "invalid": 1,
+            "count_equal": 301,
+            "equal_count_wrong": 32,
+            "nonempty_samples": 322,
+            "nonempty_covered": 245,
+            "empty_samples": 133,
+            "empty_exact": 68,
+            "empty_false_positive_samples": 65,
+            "precision": 0.714516129032258,
+            "recall": 0.8406072106261859,
+            "F1": 0.7724498692240628,
+            "exact_rate": 0.5912087912087912,
+            "per_type": {
+              "alarm_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 5,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 8,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 38,
+                "fp": 7,
+                "fn": 4
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 3,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 3,
+                "fp": 7,
+                "fn": 1
+              },
+              "coffee_type": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 74,
+                "fp": 6,
+                "fn": 15
+              },
+              "device_type": {
+                "tp": 9,
+                "fp": 11,
+                "fn": 2
+              },
+              "email_address": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_folder": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 16,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 19,
+                "fp": 2,
+                "fn": 4
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 7,
+                "fp": 2,
+                "fn": 2
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 4
+              },
+              "meal_type": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "media_type": {
+                "tp": 30,
+                "fp": 3,
+                "fn": 3
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 2,
+                "fp": 4,
+                "fn": 3
+              },
+              "music_genre": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 3
+              },
+              "person": {
+                "tp": 24,
+                "fp": 21,
+                "fn": 6
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 59,
+                "fp": 25,
+                "fn": 6
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 6
+              },
+              "song_name": {
+                "tp": 3,
+                "fp": 5,
+                "fn": 1
+              },
+              "time": {
+                "tp": 24,
+                "fp": 4,
+                "fn": 5
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 6,
+                "fp": 5,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 6,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "delta": {
+            "samples": 0,
+            "tp": -2,
+            "fp": 10,
+            "fn": 2,
+            "exact": 4,
+            "valid": 1,
+            "invalid": -1,
+            "count_equal": 5,
+            "equal_count_wrong": 1,
+            "nonempty_samples": 0,
+            "nonempty_covered": -1,
+            "empty_samples": 0,
+            "empty_exact": 1,
+            "empty_false_positive_samples": 0,
+            "precision": -0.012608053974277889,
+            "recall": -0.003795066413662229,
+            "F1": -0.008937312514304185,
+            "exact_rate": 0.00879120879120876
+          },
+          "repairs": 20,
+          "regressions": 16,
+          "confirmed_changed": 63
+        },
+        "changed_wire": {
+          "parent": {
+            "samples": 21,
+            "tp": 20,
+            "fp": 10,
+            "fn": 5,
+            "exact": 11,
+            "valid": 21,
+            "invalid": 0,
+            "count_equal": 12,
+            "equal_count_wrong": 1,
+            "nonempty_samples": 19,
+            "nonempty_covered": 15,
+            "empty_samples": 2,
+            "empty_exact": 0,
+            "empty_false_positive_samples": 2,
+            "precision": 0.6666666666666666,
+            "recall": 0.8,
+            "F1": 0.7272727272727273,
+            "exact_rate": 0.5238095238095238,
+            "per_type": {
+              "cooking_type": {
+                "tp": 3,
+                "fp": 2,
+                "fn": 2
+              },
+              "drink_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "food_type": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              }
+            }
+          },
+          "candidate": {
+            "samples": 21,
+            "tp": 19,
+            "fp": 8,
+            "fn": 6,
+            "exact": 12,
+            "valid": 21,
+            "invalid": 0,
+            "count_equal": 14,
+            "equal_count_wrong": 2,
+            "nonempty_samples": 19,
+            "nonempty_covered": 14,
+            "empty_samples": 2,
+            "empty_exact": 1,
+            "empty_false_positive_samples": 1,
+            "precision": 0.7037037037037037,
+            "recall": 0.76,
+            "F1": 0.7307692307692307,
+            "exact_rate": 0.5714285714285714,
+            "per_type": {
+              "cooking_type": {
+                "tp": 3,
+                "fp": 1,
+                "fn": 2
+              },
+              "drink_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "food_type": {
+                "tp": 16,
+                "fp": 2,
+                "fn": 1
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              }
+            }
+          },
+          "delta": {
+            "samples": 0,
+            "tp": -1,
+            "fp": -2,
+            "fn": 1,
+            "exact": 1,
+            "valid": 0,
+            "invalid": 0,
+            "count_equal": 2,
+            "equal_count_wrong": 1,
+            "nonempty_samples": 0,
+            "nonempty_covered": -1,
+            "empty_samples": 0,
+            "empty_exact": 1,
+            "empty_false_positive_samples": -1,
+            "precision": 0.03703703703703709,
+            "recall": -0.040000000000000036,
+            "F1": 0.0034965034965034336,
+            "exact_rate": 0.04761904761904756
+          },
+          "repairs": 1,
+          "regressions": 0,
+          "confirmed_changed": 3
+        }
+      },
+      "pair": {
+        "parent": {
+          "samples": 21,
+          "pair_exact": 13,
+          "confusion": [
+            {
+              "gold": "a_only",
+              "predicted": "a_only",
+              "count": 13
+            },
+            {
+              "gold": "a_only",
+              "predicted": "both",
+              "count": 3
+            },
+            {
+              "gold": "b_only",
+              "predicted": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "predicted": "neither",
+              "count": 1
+            },
+            {
+              "gold": "both",
+              "predicted": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "predicted": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "predicted": "both",
+              "count": 1
+            }
+          ]
+        },
+        "candidate": {
+          "samples": 21,
+          "pair_exact": 14,
+          "confusion": [
+            {
+              "gold": "a_only",
+              "predicted": "a_only",
+              "count": 13
+            },
+            {
+              "gold": "a_only",
+              "predicted": "b_only",
+              "count": 1
+            },
+            {
+              "gold": "a_only",
+              "predicted": "both",
+              "count": 2
+            },
+            {
+              "gold": "b_only",
+              "predicted": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "predicted": "neither",
+              "count": 1
+            },
+            {
+              "gold": "both",
+              "predicted": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "predicted": "both",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "predicted": "neither",
+              "count": 1
+            }
+          ]
+        },
+        "transitions": [
+          {
+            "gold": "a_only",
+            "parent": "a_only",
+            "candidate": "a_only",
+            "count": 13
+          },
+          {
+            "gold": "a_only",
+            "parent": "both",
+            "candidate": "b_only",
+            "count": 1
+          },
+          {
+            "gold": "a_only",
+            "parent": "both",
+            "candidate": "both",
+            "count": 2
+          },
+          {
+            "gold": "b_only",
+            "parent": "a_only",
+            "candidate": "a_only",
+            "count": 1
+          },
+          {
+            "gold": "b_only",
+            "parent": "neither",
+            "candidate": "neither",
+            "count": 1
+          },
+          {
+            "gold": "both",
+            "parent": "a_only",
+            "candidate": "a_only",
+            "count": 1
+          },
+          {
+            "gold": "neither",
+            "parent": "a_only",
+            "candidate": "neither",
+            "count": 1
+          },
+          {
+            "gold": "neither",
+            "parent": "both",
+            "candidate": "both",
+            "count": 1
+          }
+        ]
+      },
+      "per_target_intent": {
+        "cooking_recipe": {
+          "parent": {
+            "samples": 21,
+            "pair_exact": 13,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 13
+              },
+              {
+                "gold": "a_only",
+                "predicted": "both",
+                "count": 3
+              },
+              {
+                "gold": "b_only",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "neither",
+                "count": 1
+              },
+              {
+                "gold": "both",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "both",
+                "count": 1
+              }
+            ]
+          },
+          "candidate": {
+            "samples": 21,
+            "pair_exact": 14,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 13
+              },
+              {
+                "gold": "a_only",
+                "predicted": "b_only",
+                "count": 1
+              },
+              {
+                "gold": "a_only",
+                "predicted": "both",
+                "count": 2
+              },
+              {
+                "gold": "b_only",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "neither",
+                "count": 1
+              },
+              {
+                "gold": "both",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "both",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "neither",
+                "count": 1
+              }
+            ]
+          },
+          "transitions": [
+            {
+              "gold": "a_only",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 13
+            },
+            {
+              "gold": "a_only",
+              "parent": "both",
+              "candidate": "b_only",
+              "count": 1
+            },
+            {
+              "gold": "a_only",
+              "parent": "both",
+              "candidate": "both",
+              "count": 2
+            },
+            {
+              "gold": "b_only",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "parent": "neither",
+              "candidate": "neither",
+              "count": 1
+            },
+            {
+              "gold": "both",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "parent": "a_only",
+              "candidate": "neither",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "parent": "both",
+              "candidate": "both",
+              "count": 1
+            }
+          ]
+        }
+      }
+    },
+    "joint_roles": {
+      "status": "COMPLETE",
+      "target_intents": [
+        "calendar_set",
+        "email_query",
+        "email_querycontact",
+        "email_sendemail",
+        "general_quirky"
+      ],
+      "pair_labels": [
+        "person",
+        "relation"
+      ],
+      "groups": {
+        "all_learning": {
+          "parent": {
+            "samples": 476,
+            "tp": 465,
+            "fp": 177,
+            "fn": 87,
+            "exact": 276,
+            "valid": 474,
+            "invalid": 2,
+            "count_equal": 308,
+            "equal_count_wrong": 32,
+            "nonempty_samples": 341,
+            "nonempty_covered": 261,
+            "empty_samples": 135,
+            "empty_exact": 67,
+            "empty_false_positive_samples": 67,
+            "precision": 0.7242990654205608,
+            "recall": 0.842391304347826,
+            "F1": 0.7788944723618091,
+            "exact_rate": 0.5798319327731093,
+            "per_type": {
+              "alarm_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 5,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 6,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 40,
+                "fp": 6,
+                "fn": 2
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 3,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 4,
+                "fp": 6,
+                "fn": 0
+              },
+              "coffee_type": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "cooking_type": {
+                "tp": 3,
+                "fp": 2,
+                "fn": 2
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 77,
+                "fp": 5,
+                "fn": 12
+              },
+              "device_type": {
+                "tp": 9,
+                "fp": 11,
+                "fn": 2
+              },
+              "drink_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_address": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_folder": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 13,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 33,
+                "fp": 6,
+                "fn": 7
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 7,
+                "fp": 2,
+                "fn": 2
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 4
+              },
+              "meal_type": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "media_type": {
+                "tp": 28,
+                "fp": 2,
+                "fn": 5
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 4
+              },
+              "music_genre": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 2
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 2,
+                "fn": 3
+              },
+              "person": {
+                "tp": 26,
+                "fp": 24,
+                "fn": 4
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 60,
+                "fp": 23,
+                "fn": 5
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 7,
+                "fp": 0,
+                "fn": 5
+              },
+              "song_name": {
+                "tp": 4,
+                "fp": 5,
+                "fn": 0
+              },
+              "time": {
+                "tp": 23,
+                "fp": 6,
+                "fn": 6
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 6,
+                "fp": 4,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 5,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "candidate": {
+            "samples": 476,
+            "tp": 453,
+            "fp": 176,
+            "fn": 99,
+            "exact": 268,
+            "valid": 474,
+            "invalid": 2,
+            "count_equal": 297,
+            "equal_count_wrong": 29,
+            "nonempty_samples": 341,
+            "nonempty_covered": 249,
+            "empty_samples": 135,
+            "empty_exact": 67,
+            "empty_false_positive_samples": 67,
+            "precision": 0.7201907790143084,
+            "recall": 0.8206521739130435,
+            "F1": 0.7671464860287892,
+            "exact_rate": 0.5630252100840336,
+            "per_type": {
+              "alarm_type": {
+                "tp": 0,
+                "fp": 3,
+                "fn": 0
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 6,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 6,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 39,
+                "fp": 5,
+                "fn": 3
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 6,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 4,
+                "fp": 7,
+                "fn": 0
+              },
+              "coffee_type": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "cooking_type": {
+                "tp": 3,
+                "fp": 3,
+                "fn": 2
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 71,
+                "fp": 5,
+                "fn": 18
+              },
+              "device_type": {
+                "tp": 8,
+                "fp": 9,
+                "fn": 3
+              },
+              "drink_type": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 12,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 34,
+                "fp": 5,
+                "fn": 6
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "game_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 6,
+                "fp": 3,
+                "fn": 3
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 11,
+                "fp": 3,
+                "fn": 3
+              },
+              "meal_type": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "media_type": {
+                "tp": 27,
+                "fp": 3,
+                "fn": 6
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 3
+              },
+              "music_genre": {
+                "tp": 2,
+                "fp": 1,
+                "fn": 1
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 3
+              },
+              "person": {
+                "tp": 23,
+                "fp": 22,
+                "fn": 7
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 2,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 57,
+                "fp": 22,
+                "fn": 8
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 7,
+                "fp": 0,
+                "fn": 5
+              },
+              "song_name": {
+                "tp": 3,
+                "fp": 4,
+                "fn": 1
+              },
+              "time": {
+                "tp": 24,
+                "fp": 6,
+                "fn": 5
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 5,
+                "fp": 3,
+                "fn": 2
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 5,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "delta": {
+            "samples": 0,
+            "tp": -12,
+            "fp": -1,
+            "fn": 12,
+            "exact": -8,
+            "valid": 0,
+            "invalid": 0,
+            "count_equal": -11,
+            "equal_count_wrong": -3,
+            "nonempty_samples": 0,
+            "nonempty_covered": -12,
+            "empty_samples": 0,
+            "empty_exact": 0,
+            "empty_false_positive_samples": 0,
+            "precision": -0.004108286406252382,
+            "recall": -0.021739130434782594,
+            "F1": -0.011747986333019877,
+            "exact_rate": -0.01680672268907568
+          },
+          "repairs": 18,
+          "regressions": 26,
+          "confirmed_changed": 75
+        },
+        "target_intents": {
+          "parent": {
+            "samples": 76,
+            "tp": 64,
+            "fp": 38,
+            "fn": 10,
+            "exact": 43,
+            "valid": 76,
+            "invalid": 0,
+            "count_equal": 49,
+            "equal_count_wrong": 6,
+            "nonempty_samples": 42,
+            "nonempty_covered": 33,
+            "empty_samples": 34,
+            "empty_exact": 28,
+            "empty_false_positive_samples": 6,
+            "precision": 0.6274509803921569,
+            "recall": 0.8648648648648649,
+            "F1": 0.7272727272727273,
+            "exact_rate": 0.5657894736842105,
+            "per_type": {
+              "artist_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "business_name": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 0
+              },
+              "date": {
+                "tp": 16,
+                "fp": 2,
+                "fn": 2
+              },
+              "device_type": {
+                "tp": 0,
+                "fp": 3,
+                "fn": 0
+              },
+              "email_address": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_folder": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 11,
+                "fp": 7,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "meal_type": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "person": {
+                "tp": 20,
+                "fp": 10,
+                "fn": 2
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 3,
+                "fp": 3,
+                "fn": 1
+              },
+              "relation": {
+                "tp": 6,
+                "fp": 0,
+                "fn": 4
+              },
+              "time": {
+                "tp": 2,
+                "fp": 1,
+                "fn": 1
+              },
+              "timeofday": {
+                "tp": 2,
+                "fp": 1,
+                "fn": 0
+              }
+            }
+          },
+          "candidate": {
+            "samples": 76,
+            "tp": 58,
+            "fp": 33,
+            "fn": 16,
+            "exact": 44,
+            "valid": 75,
+            "invalid": 1,
+            "count_equal": 49,
+            "equal_count_wrong": 5,
+            "nonempty_samples": 42,
+            "nonempty_covered": 28,
+            "empty_samples": 34,
+            "empty_exact": 28,
+            "empty_false_positive_samples": 6,
+            "precision": 0.6373626373626373,
+            "recall": 0.7837837837837838,
+            "F1": 0.703030303030303,
+            "exact_rate": 0.5789473684210527,
+            "per_type": {
+              "business_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "business_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 15,
+                "fp": 2,
+                "fn": 3
+              },
+              "device_type": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "event_name": {
+                "tp": 11,
+                "fp": 7,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "meal_type": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "person": {
+                "tp": 17,
+                "fp": 10,
+                "fn": 5
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 2,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 2,
+                "fp": 4,
+                "fn": 2
+              },
+              "relation": {
+                "tp": 6,
+                "fp": 0,
+                "fn": 4
+              },
+              "time": {
+                "tp": 2,
+                "fp": 2,
+                "fn": 1
+              },
+              "timeofday": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              }
+            }
+          },
+          "delta": {
+            "samples": 0,
+            "tp": -6,
+            "fp": -5,
+            "fn": 6,
+            "exact": 1,
+            "valid": -1,
+            "invalid": 1,
+            "count_equal": 0,
+            "equal_count_wrong": -1,
+            "nonempty_samples": 0,
+            "nonempty_covered": -5,
+            "empty_samples": 0,
+            "empty_exact": 0,
+            "empty_false_positive_samples": 0,
+            "precision": 0.009911656970480465,
+            "recall": -0.08108108108108114,
+            "F1": -0.024242424242424288,
+            "exact_rate": 0.013157894736842146
+          },
+          "repairs": 4,
+          "regressions": 3,
+          "confirmed_changed": 16
+        },
+        "other_intents": {
+          "parent": {
+            "samples": 400,
+            "tp": 401,
+            "fp": 139,
+            "fn": 77,
+            "exact": 233,
+            "valid": 398,
+            "invalid": 2,
+            "count_equal": 259,
+            "equal_count_wrong": 26,
+            "nonempty_samples": 299,
+            "nonempty_covered": 228,
+            "empty_samples": 101,
+            "empty_exact": 39,
+            "empty_false_positive_samples": 61,
+            "precision": 0.7425925925925926,
+            "recall": 0.8389121338912134,
+            "F1": 0.787819253438114,
+            "exact_rate": 0.5825,
+            "per_type": {
+              "alarm_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 5,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 5,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 40,
+                "fp": 2,
+                "fn": 2
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 3,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 4,
+                "fp": 6,
+                "fn": 0
+              },
+              "coffee_type": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "cooking_type": {
+                "tp": 3,
+                "fp": 2,
+                "fn": 2
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 61,
+                "fp": 3,
+                "fn": 10
+              },
+              "device_type": {
+                "tp": 9,
+                "fp": 8,
+                "fn": 2
+              },
+              "drink_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 15,
+                "fp": 6,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 33,
+                "fp": 6,
+                "fn": 7
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "house_place": {
+                "tp": 7,
+                "fp": 2,
+                "fn": 2
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 4
+              },
+              "media_type": {
+                "tp": 28,
+                "fp": 2,
+                "fn": 5
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 4
+              },
+              "music_genre": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 2
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 2,
+                "fn": 3
+              },
+              "person": {
+                "tp": 6,
+                "fp": 14,
+                "fn": 2
+              },
+              "place_name": {
+                "tp": 57,
+                "fp": 20,
+                "fn": 4
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "song_name": {
+                "tp": 4,
+                "fp": 5,
+                "fn": 0
+              },
+              "time": {
+                "tp": 21,
+                "fp": 5,
+                "fn": 5
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 4,
+                "fp": 3,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 5,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "candidate": {
+            "samples": 400,
+            "tp": 395,
+            "fp": 143,
+            "fn": 83,
+            "exact": 224,
+            "valid": 399,
+            "invalid": 1,
+            "count_equal": 248,
+            "equal_count_wrong": 24,
+            "nonempty_samples": 299,
+            "nonempty_covered": 221,
+            "empty_samples": 101,
+            "empty_exact": 39,
+            "empty_false_positive_samples": 61,
+            "precision": 0.7342007434944238,
+            "recall": 0.8263598326359832,
+            "F1": 0.7775590551181102,
+            "exact_rate": 0.56,
+            "per_type": {
+              "alarm_type": {
+                "tp": 0,
+                "fp": 3,
+                "fn": 0
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 6,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 6,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 39,
+                "fp": 3,
+                "fn": 3
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 5,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 4,
+                "fp": 7,
+                "fn": 0
+              },
+              "coffee_type": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "cooking_type": {
+                "tp": 3,
+                "fp": 3,
+                "fn": 2
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 56,
+                "fp": 3,
+                "fn": 15
+              },
+              "device_type": {
+                "tp": 8,
+                "fp": 7,
+                "fn": 3
+              },
+              "drink_type": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "event_name": {
+                "tp": 15,
+                "fp": 5,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 34,
+                "fp": 5,
+                "fn": 6
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "game_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "house_place": {
+                "tp": 6,
+                "fp": 3,
+                "fn": 3
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 11,
+                "fp": 3,
+                "fn": 3
+              },
+              "media_type": {
+                "tp": 27,
+                "fp": 3,
+                "fn": 6
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 3
+              },
+              "music_genre": {
+                "tp": 2,
+                "fp": 1,
+                "fn": 1
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 3
+              },
+              "person": {
+                "tp": 6,
+                "fp": 12,
+                "fn": 2
+              },
+              "place_name": {
+                "tp": 55,
+                "fp": 18,
+                "fn": 6
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "song_name": {
+                "tp": 3,
+                "fp": 4,
+                "fn": 1
+              },
+              "time": {
+                "tp": 22,
+                "fp": 4,
+                "fn": 4
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 4,
+                "fp": 3,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 5,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "delta": {
+            "samples": 0,
+            "tp": -6,
+            "fp": 4,
+            "fn": 6,
+            "exact": -9,
+            "valid": 1,
+            "invalid": -1,
+            "count_equal": -11,
+            "equal_count_wrong": -2,
+            "nonempty_samples": 0,
+            "nonempty_covered": -7,
+            "empty_samples": 0,
+            "empty_exact": 0,
+            "empty_false_positive_samples": 0,
+            "precision": -0.008391849098168813,
+            "recall": -0.012552301255230214,
+            "F1": -0.0102601983200038,
+            "exact_rate": -0.022499999999999964
+          },
+          "repairs": 14,
+          "regressions": 23,
+          "confirmed_changed": 59
+        },
+        "same_wire": {
+          "samples": 0
+        },
+        "changed_wire": {
+          "parent": {
+            "samples": 476,
+            "tp": 465,
+            "fp": 177,
+            "fn": 87,
+            "exact": 276,
+            "valid": 474,
+            "invalid": 2,
+            "count_equal": 308,
+            "equal_count_wrong": 32,
+            "nonempty_samples": 341,
+            "nonempty_covered": 261,
+            "empty_samples": 135,
+            "empty_exact": 67,
+            "empty_false_positive_samples": 67,
+            "precision": 0.7242990654205608,
+            "recall": 0.842391304347826,
+            "F1": 0.7788944723618091,
+            "exact_rate": 0.5798319327731093,
+            "per_type": {
+              "alarm_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 5,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 6,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 40,
+                "fp": 6,
+                "fn": 2
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 3,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 4,
+                "fp": 6,
+                "fn": 0
+              },
+              "coffee_type": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "cooking_type": {
+                "tp": 3,
+                "fp": 2,
+                "fn": 2
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 77,
+                "fp": 5,
+                "fn": 12
+              },
+              "device_type": {
+                "tp": 9,
+                "fp": 11,
+                "fn": 2
+              },
+              "drink_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_address": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "email_folder": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 13,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 33,
+                "fp": 6,
+                "fn": 7
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 7,
+                "fp": 2,
+                "fn": 2
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 4
+              },
+              "meal_type": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "media_type": {
+                "tp": 28,
+                "fp": 2,
+                "fn": 5
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 1,
+                "fp": 2,
+                "fn": 4
+              },
+              "music_genre": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 2
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 2,
+                "fn": 3
+              },
+              "person": {
+                "tp": 26,
+                "fp": 24,
+                "fn": 4
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 60,
+                "fp": 23,
+                "fn": 5
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 7,
+                "fp": 0,
+                "fn": 5
+              },
+              "song_name": {
+                "tp": 4,
+                "fp": 5,
+                "fn": 0
+              },
+              "time": {
+                "tp": 23,
+                "fp": 6,
+                "fn": 6
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 6,
+                "fp": 4,
+                "fn": 1
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 5,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "candidate": {
+            "samples": 476,
+            "tp": 453,
+            "fp": 176,
+            "fn": 99,
+            "exact": 268,
+            "valid": 474,
+            "invalid": 2,
+            "count_equal": 297,
+            "equal_count_wrong": 29,
+            "nonempty_samples": 341,
+            "nonempty_covered": 249,
+            "empty_samples": 135,
+            "empty_exact": 67,
+            "empty_false_positive_samples": 67,
+            "precision": 0.7201907790143084,
+            "recall": 0.8206521739130435,
+            "F1": 0.7671464860287892,
+            "exact_rate": 0.5630252100840336,
+            "per_type": {
+              "alarm_type": {
+                "tp": 0,
+                "fp": 3,
+                "fn": 0
+              },
+              "app_name": {
+                "tp": 1,
+                "fp": 6,
+                "fn": 0
+              },
+              "artist_name": {
+                "tp": 9,
+                "fp": 6,
+                "fn": 0
+              },
+              "audiobook_author": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "audiobook_name": {
+                "tp": 2,
+                "fp": 0,
+                "fn": 1
+              },
+              "business_name": {
+                "tp": 39,
+                "fp": 5,
+                "fn": 3
+              },
+              "business_type": {
+                "tp": 8,
+                "fp": 6,
+                "fn": 5
+              },
+              "change_amount": {
+                "tp": 4,
+                "fp": 7,
+                "fn": 0
+              },
+              "coffee_type": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "color_type": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "cooking_type": {
+                "tp": 3,
+                "fp": 3,
+                "fn": 2
+              },
+              "currency_name": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "date": {
+                "tp": 71,
+                "fp": 5,
+                "fn": 18
+              },
+              "device_type": {
+                "tp": 8,
+                "fp": 9,
+                "fn": 3
+              },
+              "drink_type": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "event_name": {
+                "tp": 26,
+                "fp": 12,
+                "fn": 3
+              },
+              "food_type": {
+                "tp": 34,
+                "fp": 5,
+                "fn": 6
+              },
+              "game_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "game_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "general_frequency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "house_place": {
+                "tp": 6,
+                "fp": 3,
+                "fn": 3
+              },
+              "ingredient": {
+                "tp": 0,
+                "fp": 4,
+                "fn": 3
+              },
+              "joke_type": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "list_name": {
+                "tp": 11,
+                "fp": 3,
+                "fn": 3
+              },
+              "meal_type": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "media_type": {
+                "tp": 27,
+                "fp": 3,
+                "fn": 6
+              },
+              "movie_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "movie_type": {
+                "tp": 1,
+                "fp": 0,
+                "fn": 1
+              },
+              "music_descriptor": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 3
+              },
+              "music_genre": {
+                "tp": 2,
+                "fp": 1,
+                "fn": 1
+              },
+              "news_topic": {
+                "tp": 9,
+                "fp": 2,
+                "fn": 3
+              },
+              "order_type": {
+                "tp": 10,
+                "fp": 3,
+                "fn": 3
+              },
+              "person": {
+                "tp": 23,
+                "fp": 22,
+                "fn": 7
+              },
+              "personal_info": {
+                "tp": 2,
+                "fp": 2,
+                "fn": 0
+              },
+              "place_name": {
+                "tp": 57,
+                "fp": 22,
+                "fn": 8
+              },
+              "player_setting": {
+                "tp": 2,
+                "fp": 3,
+                "fn": 0
+              },
+              "playlist_name": {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1
+              },
+              "podcast_descriptor": {
+                "tp": true,
+                "fp": false,
+                "fn": false
+              },
+              "podcast_name": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "radio_name": {
+                "tp": 3,
+                "fp": 0,
+                "fn": 0
+              },
+              "relation": {
+                "tp": 7,
+                "fp": 0,
+                "fn": 5
+              },
+              "song_name": {
+                "tp": 3,
+                "fp": 4,
+                "fn": 1
+              },
+              "time": {
+                "tp": 24,
+                "fp": 6,
+                "fn": 5
+              },
+              "time_zone": {
+                "tp": 6,
+                "fp": 1,
+                "fn": 0
+              },
+              "timeofday": {
+                "tp": 5,
+                "fp": 3,
+                "fn": 2
+              },
+              "transport_agency": {
+                "tp": 1,
+                "fp": 1,
+                "fn": 0
+              },
+              "transport_descriptor": {
+                "tp": false,
+                "fp": true,
+                "fn": false
+              },
+              "transport_name": {
+                "tp": 0,
+                "fp": 2,
+                "fn": 0
+              },
+              "transport_type": {
+                "tp": 13,
+                "fp": 5,
+                "fn": 3
+              },
+              "weather_descriptor": {
+                "tp": 17,
+                "fp": 3,
+                "fn": 0
+              }
+            }
+          },
+          "delta": {
+            "samples": 0,
+            "tp": -12,
+            "fp": -1,
+            "fn": 12,
+            "exact": -8,
+            "valid": 0,
+            "invalid": 0,
+            "count_equal": -11,
+            "equal_count_wrong": -3,
+            "nonempty_samples": 0,
+            "nonempty_covered": -12,
+            "empty_samples": 0,
+            "empty_exact": 0,
+            "empty_false_positive_samples": 0,
+            "precision": -0.004108286406252382,
+            "recall": -0.021739130434782594,
+            "F1": -0.011747986333019877,
+            "exact_rate": -0.01680672268907568
+          },
+          "repairs": 18,
+          "regressions": 26,
+          "confirmed_changed": 75
+        }
+      },
+      "pair": {
+        "parent": {
+          "samples": 76,
+          "pair_exact": 62,
+          "confusion": [
+            {
+              "gold": "a_only",
+              "predicted": "a_only",
+              "count": 20
+            },
+            {
+              "gold": "a_only",
+              "predicted": "neither",
+              "count": 2
+            },
+            {
+              "gold": "b_only",
+              "predicted": "a_only",
+              "count": 2
+            },
+            {
+              "gold": "b_only",
+              "predicted": "b_only",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "predicted": "both",
+              "count": 5
+            },
+            {
+              "gold": "b_only",
+              "predicted": "neither",
+              "count": 2
+            },
+            {
+              "gold": "neither",
+              "predicted": "a_only",
+              "count": 3
+            },
+            {
+              "gold": "neither",
+              "predicted": "neither",
+              "count": 41
+            }
+          ]
+        },
+        "candidate": {
+          "samples": 76,
+          "pair_exact": 61,
+          "confusion": [
+            {
+              "gold": "a_only",
+              "predicted": "a_only",
+              "count": 17
+            },
+            {
+              "gold": "a_only",
+              "predicted": "invalid",
+              "count": 1
+            },
+            {
+              "gold": "a_only",
+              "predicted": "neither",
+              "count": 4
+            },
+            {
+              "gold": "b_only",
+              "predicted": "a_only",
+              "count": 4
+            },
+            {
+              "gold": "b_only",
+              "predicted": "b_only",
+              "count": 3
+            },
+            {
+              "gold": "b_only",
+              "predicted": "both",
+              "count": 3
+            },
+            {
+              "gold": "neither",
+              "predicted": "a_only",
+              "count": 3
+            },
+            {
+              "gold": "neither",
+              "predicted": "neither",
+              "count": 41
+            }
+          ]
+        },
+        "transitions": [
+          {
+            "gold": "a_only",
+            "parent": "a_only",
+            "candidate": "a_only",
+            "count": 17
+          },
+          {
+            "gold": "a_only",
+            "parent": "a_only",
+            "candidate": "invalid",
+            "count": 1
+          },
+          {
+            "gold": "a_only",
+            "parent": "a_only",
+            "candidate": "neither",
+            "count": 2
+          },
+          {
+            "gold": "a_only",
+            "parent": "neither",
+            "candidate": "neither",
+            "count": 2
+          },
+          {
+            "gold": "b_only",
+            "parent": "a_only",
+            "candidate": "a_only",
+            "count": 2
+          },
+          {
+            "gold": "b_only",
+            "parent": "b_only",
+            "candidate": "b_only",
+            "count": 1
+          },
+          {
+            "gold": "b_only",
+            "parent": "both",
+            "candidate": "a_only",
+            "count": 1
+          },
+          {
+            "gold": "b_only",
+            "parent": "both",
+            "candidate": "b_only",
+            "count": 2
+          },
+          {
+            "gold": "b_only",
+            "parent": "both",
+            "candidate": "both",
+            "count": 2
+          },
+          {
+            "gold": "b_only",
+            "parent": "neither",
+            "candidate": "a_only",
+            "count": 1
+          },
+          {
+            "gold": "b_only",
+            "parent": "neither",
+            "candidate": "both",
+            "count": 1
+          },
+          {
+            "gold": "neither",
+            "parent": "a_only",
+            "candidate": "a_only",
+            "count": 3
+          },
+          {
+            "gold": "neither",
+            "parent": "neither",
+            "candidate": "neither",
+            "count": 41
+          }
+        ]
+      },
+      "per_target_intent": {
+        "calendar_set": {
+          "parent": {
+            "samples": 15,
+            "pair_exact": 12,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 5
+              },
+              {
+                "gold": "a_only",
+                "predicted": "neither",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "both",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "neither",
+                "count": 7
+              }
+            ]
+          },
+          "candidate": {
+            "samples": 15,
+            "pair_exact": 12,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 4
+              },
+              {
+                "gold": "a_only",
+                "predicted": "neither",
+                "count": 2
+              },
+              {
+                "gold": "b_only",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "b_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "neither",
+                "count": 7
+              }
+            ]
+          },
+          "transitions": [
+            {
+              "gold": "a_only",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 4
+            },
+            {
+              "gold": "a_only",
+              "parent": "a_only",
+              "candidate": "neither",
+              "count": 1
+            },
+            {
+              "gold": "a_only",
+              "parent": "neither",
+              "candidate": "neither",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "parent": "both",
+              "candidate": "b_only",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "parent": "neither",
+              "candidate": "neither",
+              "count": 7
+            }
+          ]
+        },
+        "email_query": {
+          "parent": {
+            "samples": 5,
+            "pair_exact": 4,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 2
+              },
+              {
+                "gold": "neither",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "neither",
+                "count": 2
+              }
+            ]
+          },
+          "candidate": {
+            "samples": 5,
+            "pair_exact": 4,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 2
+              },
+              {
+                "gold": "neither",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "neither",
+                "count": 2
+              }
+            ]
+          },
+          "transitions": [
+            {
+              "gold": "a_only",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 2
+            },
+            {
+              "gold": "neither",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "parent": "neither",
+              "candidate": "neither",
+              "count": 2
+            }
+          ]
+        },
+        "email_querycontact": {
+          "parent": {
+            "samples": 4,
+            "pair_exact": 4,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 4
+              }
+            ]
+          },
+          "candidate": {
+            "samples": 4,
+            "pair_exact": 4,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 4
+              }
+            ]
+          },
+          "transitions": [
+            {
+              "gold": "a_only",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 4
+            }
+          ]
+        },
+        "email_sendemail": {
+          "parent": {
+            "samples": 19,
+            "pair_exact": 11,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 8
+              },
+              {
+                "gold": "a_only",
+                "predicted": "neither",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "b_only",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "both",
+                "count": 4
+              },
+              {
+                "gold": "b_only",
+                "predicted": "neither",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "neither",
+                "count": 2
+              }
+            ]
+          },
+          "candidate": {
+            "samples": 19,
+            "pair_exact": 11,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 7
+              },
+              {
+                "gold": "a_only",
+                "predicted": "invalid",
+                "count": 1
+              },
+              {
+                "gold": "a_only",
+                "predicted": "neither",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "a_only",
+                "count": 3
+              },
+              {
+                "gold": "b_only",
+                "predicted": "b_only",
+                "count": 2
+              },
+              {
+                "gold": "b_only",
+                "predicted": "both",
+                "count": 2
+              },
+              {
+                "gold": "neither",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "neither",
+                "count": 2
+              }
+            ]
+          },
+          "transitions": [
+            {
+              "gold": "a_only",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 7
+            },
+            {
+              "gold": "a_only",
+              "parent": "a_only",
+              "candidate": "invalid",
+              "count": 1
+            },
+            {
+              "gold": "a_only",
+              "parent": "neither",
+              "candidate": "neither",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "parent": "b_only",
+              "candidate": "b_only",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "parent": "both",
+              "candidate": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "parent": "both",
+              "candidate": "b_only",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "parent": "both",
+              "candidate": "both",
+              "count": 2
+            },
+            {
+              "gold": "b_only",
+              "parent": "neither",
+              "candidate": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "parent": "neither",
+              "candidate": "neither",
+              "count": 2
+            }
+          ]
+        },
+        "general_quirky": {
+          "parent": {
+            "samples": 33,
+            "pair_exact": 31,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "neither",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "neither",
+                "count": 30
+              }
+            ]
+          },
+          "candidate": {
+            "samples": 33,
+            "pair_exact": 30,
+            "confusion": [
+              {
+                "gold": "a_only",
+                "predicted": "neither",
+                "count": 1
+              },
+              {
+                "gold": "b_only",
+                "predicted": "both",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "a_only",
+                "count": 1
+              },
+              {
+                "gold": "neither",
+                "predicted": "neither",
+                "count": 30
+              }
+            ]
+          },
+          "transitions": [
+            {
+              "gold": "a_only",
+              "parent": "a_only",
+              "candidate": "neither",
+              "count": 1
+            },
+            {
+              "gold": "b_only",
+              "parent": "neither",
+              "candidate": "both",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "parent": "a_only",
+              "candidate": "a_only",
+              "count": 1
+            },
+            {
+              "gold": "neither",
+              "parent": "neither",
+              "candidate": "neither",
+              "count": 30
+            }
+          ]
+        }
+      }
+    }
+  },
+  "limits": [
+    "Same wire does not control host, service state or scheduling.",
+    "Unchanged-request variation must not be subtracted as a causal noise estimate.",
+    "Four states describe type sets, not same-mention semantic substitutions.",
+    "Target group is fixed by the modified knowledge, not by observed winners.",
+    "No held samples used for strategy selection."
+  ]
+}
