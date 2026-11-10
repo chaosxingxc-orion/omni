@@ -10,6 +10,6 @@
 
 B/C数据为约11:53的已知周期快照，不是12:04瞬时计数。A累计851.54秒、0.80秒/已知分支、2.43秒/三分支齐全样本，包含超时与部分样本开销。并发64，12条length无效；当前无法给出可靠恢复ETA。B/C为评价集，不进入教师调优。旧A结果和成本保留，未重发未知请求。
 
-CPU异步：OFF已知303条学习样本的诊断完成，正式全545结论尚缺；专属子进程恢复A未发送部分。新ACE教师请求已单次派发，最多三项源于根因和正反证的策略。ASR已备好545真实音频及1635文本模板，通过针对性固定镜像CPU检查，尚未实际NPU加载/推理。见[OFF结果](S-Nonthinking-Control)、[知识卡方案](S-Knowledge-Card-Optimization)、[ASR前端方案](S-ASR-Frontend-Comparison)。
+CPU异步：OFF已知子集诊断完成，但历史ON不得作正式对照；当前同工程基线的新ON/OFF双臂CPU准备已启动，未准入NPU。专属子进程恢复A未发送部分。新ACE教师请求已单次派发，最多三项源于根因和正反证的策略。用户要求Qwen3-ASR直接替换S模型，原转写串联方案已撤销；直接槽位接口与实验包正在CPU准备，未NPU加载或推理。见[OFF结果](S-Nonthinking-Control)、[知识卡方案](S-Knowledge-Card-Optimization)、[ASR前端方案](S-ASR-Frontend-Comparison)。
 
 当前没有持续AI Core超过80%或12小时高价值队列覆盖的证明。监测仍为600秒周期或终态事件；CPU工作不占模型队列。

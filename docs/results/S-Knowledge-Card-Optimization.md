@@ -19,11 +19,9 @@
 
 ## 模型选择
 
-Omni ON/OFF不能单独决定Omni与ASR谁更优。Qwen3-ASR候选应按“一次转写、缓存共享三条P分支、固定槽位抽取器”进行比较；NPU镜像兼容性与本任务收益尚未验证。
+按用户明确要求，Qwen3-ASR直接替换S节点的Omni，保持语音、P候选、知识卡、few-shot、输入顺序、槽位输出及评分任务一致；不使用ASR转写后再调用Omni的串联方案。先检查真实输入接口及小批量直接槽位能力，再做完整比较。
 
-比较完整槽位链路的精度、合法率、专名/数值覆盖和总耗时资源，WER/CER仅作辅助。未经实测不替换基线，不启用已释放实例。官方资料为QwenLM/Qwen3-ASR README与Qwen/Qwen3-ASR-1.7B模型卡，快照及hash另存。
-
-官方资料：[Qwen3-ASR](https://github.com/QwenLM/Qwen3-ASR)、[1.7B模型卡](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)。
+Omni ON/OFF也须在当前相同基线上重新运行双臂，历史ON只保留参考。当前没有Qwen3-ASR直接槽位推理结论，不能以模型名称或官方转写指标断言优劣。详见[直接替换对照](S-ASR-Frontend-Comparison)。
 
 ## 来源与新结果复核
 
