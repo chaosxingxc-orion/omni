@@ -1,0 +1,646 @@
+{
+  "status": "COMPLETE_SOURCE_REFERENCE_INVENTORY_NOT_COMPILED_POLICY",
+  "model_calls": 0,
+  "intents": 60,
+  "bindings": 402,
+  "legal_train": 5795,
+  "relations": 267,
+  "intents_with_relations": 50,
+  "relations_with_coexistence": 117,
+  "relations_with_both_single_positive_groups": 219,
+  "coverage": [
+    {
+      "intent": "alarm_query",
+      "types": 7,
+      "explicit_edges": 7,
+      "types_with_explicit_edge": 7,
+      "types_without_explicit_edge": [],
+      "legal_train": 52
+    },
+    {
+      "intent": "alarm_remove",
+      "types": 6,
+      "explicit_edges": 7,
+      "types_with_explicit_edge": 6,
+      "types_without_explicit_edge": [],
+      "legal_train": 24
+    },
+    {
+      "intent": "alarm_set",
+      "types": 9,
+      "explicit_edges": 8,
+      "types_with_explicit_edge": 7,
+      "types_without_explicit_edge": [
+        "order_type",
+        "time_zone"
+      ],
+      "legal_train": 80
+    },
+    {
+      "intent": "audio_volume_down",
+      "types": 2,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "change_amount",
+        "device_type"
+      ],
+      "legal_train": 7
+    },
+    {
+      "intent": "audio_volume_mute",
+      "types": 4,
+      "explicit_edges": 1,
+      "types_with_explicit_edge": 2,
+      "types_without_explicit_edge": [
+        "change_amount",
+        "device_type"
+      ],
+      "legal_train": 18
+    },
+    {
+      "intent": "audio_volume_other",
+      "types": 1,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "change_amount"
+      ],
+      "legal_train": 0
+    },
+    {
+      "intent": "audio_volume_up",
+      "types": 2,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "change_amount",
+        "device_type"
+      ],
+      "legal_train": 19
+    },
+    {
+      "intent": "calendar_query",
+      "types": 12,
+      "explicit_edges": 10,
+      "types_with_explicit_edge": 9,
+      "types_without_explicit_edge": [
+        "business_name",
+        "list_name",
+        "sport_type"
+      ],
+      "legal_train": 375
+    },
+    {
+      "intent": "calendar_remove",
+      "types": 10,
+      "explicit_edges": 8,
+      "types_with_explicit_edge": 8,
+      "types_without_explicit_edge": [
+        "app_name",
+        "list_name"
+      ],
+      "legal_train": 200
+    },
+    {
+      "intent": "calendar_set",
+      "types": 14,
+      "explicit_edges": 12,
+      "types_with_explicit_edge": 12,
+      "types_without_explicit_edge": [
+        "personal_info",
+        "sport_type"
+      ],
+      "legal_train": 573
+    },
+    {
+      "intent": "cooking_query",
+      "types": 1,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "food_type"
+      ],
+      "legal_train": 0
+    },
+    {
+      "intent": "cooking_recipe",
+      "types": 7,
+      "explicit_edges": 4,
+      "types_with_explicit_edge": 4,
+      "types_without_explicit_edge": [
+        "app_name",
+        "business_name",
+        "date"
+      ],
+      "legal_train": 32
+    },
+    {
+      "intent": "datetime_convert",
+      "types": 5,
+      "explicit_edges": 3,
+      "types_with_explicit_edge": 4,
+      "types_without_explicit_edge": [
+        "person"
+      ],
+      "legal_train": 17
+    },
+    {
+      "intent": "datetime_query",
+      "types": 6,
+      "explicit_edges": 6,
+      "types_with_explicit_edge": 6,
+      "types_without_explicit_edge": [],
+      "legal_train": 154
+    },
+    {
+      "intent": "email_addcontact",
+      "types": 5,
+      "explicit_edges": 3,
+      "types_with_explicit_edge": 4,
+      "types_without_explicit_edge": [
+        "list_name"
+      ],
+      "legal_train": 23
+    },
+    {
+      "intent": "email_query",
+      "types": 9,
+      "explicit_edges": 7,
+      "types_with_explicit_edge": 6,
+      "types_without_explicit_edge": [
+        "business_name",
+        "email_folder",
+        "personal_info"
+      ],
+      "legal_train": 241
+    },
+    {
+      "intent": "email_querycontact",
+      "types": 8,
+      "explicit_edges": 3,
+      "types_with_explicit_edge": 3,
+      "types_without_explicit_edge": [
+        "device_type",
+        "list_name",
+        "media_type",
+        "personal_info",
+        "place_name"
+      ],
+      "legal_train": 52
+    },
+    {
+      "intent": "email_sendemail",
+      "types": 14,
+      "explicit_edges": 13,
+      "types_with_explicit_edge": 12,
+      "types_without_explicit_edge": [
+        "business_name",
+        "email_folder"
+      ],
+      "legal_train": 238
+    },
+    {
+      "intent": "general_greet",
+      "types": 1,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "date"
+      ],
+      "legal_train": 2
+    },
+    {
+      "intent": "general_joke",
+      "types": 6,
+      "explicit_edges": 4,
+      "types_with_explicit_edge": 5,
+      "types_without_explicit_edge": [
+        "date"
+      ],
+      "legal_train": 19
+    },
+    {
+      "intent": "general_quirky",
+      "types": 16,
+      "explicit_edges": 13,
+      "types_with_explicit_edge": 13,
+      "types_without_explicit_edge": [
+        "device_type",
+        "media_type",
+        "movie_name"
+      ],
+      "legal_train": 305
+    },
+    {
+      "intent": "iot_cleaning",
+      "types": 5,
+      "explicit_edges": 4,
+      "types_with_explicit_edge": 5,
+      "types_without_explicit_edge": [],
+      "legal_train": 37
+    },
+    {
+      "intent": "iot_coffee",
+      "types": 7,
+      "explicit_edges": 4,
+      "types_with_explicit_edge": 5,
+      "types_without_explicit_edge": [
+        "coffee_type",
+        "device_type"
+      ],
+      "legal_train": 65
+    },
+    {
+      "intent": "iot_hue_lightchange",
+      "types": 5,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "change_amount",
+        "color_type",
+        "house_place",
+        "player_setting",
+        "time"
+      ],
+      "legal_train": 56
+    },
+    {
+      "intent": "iot_hue_lightdim",
+      "types": 4,
+      "explicit_edges": 1,
+      "types_with_explicit_edge": 2,
+      "types_without_explicit_edge": [
+        "change_amount",
+        "color_type"
+      ],
+      "legal_train": 28
+    },
+    {
+      "intent": "iot_hue_lightoff",
+      "types": 4,
+      "explicit_edges": 1,
+      "types_with_explicit_edge": 2,
+      "types_without_explicit_edge": [
+        "color_type",
+        "time"
+      ],
+      "legal_train": 84
+    },
+    {
+      "intent": "iot_hue_lighton",
+      "types": 2,
+      "explicit_edges": 1,
+      "types_with_explicit_edge": 2,
+      "types_without_explicit_edge": [],
+      "legal_train": 5
+    },
+    {
+      "intent": "iot_hue_lightup",
+      "types": 2,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "change_amount",
+        "house_place"
+      ],
+      "legal_train": 26
+    },
+    {
+      "intent": "iot_wemo_off",
+      "types": 2,
+      "explicit_edges": 1,
+      "types_with_explicit_edge": 2,
+      "types_without_explicit_edge": [],
+      "legal_train": 19
+    },
+    {
+      "intent": "iot_wemo_on",
+      "types": 2,
+      "explicit_edges": 1,
+      "types_with_explicit_edge": 2,
+      "types_without_explicit_edge": [],
+      "legal_train": 9
+    },
+    {
+      "intent": "lists_createoradd",
+      "types": 7,
+      "explicit_edges": 4,
+      "types_with_explicit_edge": 5,
+      "types_without_explicit_edge": [
+        "drink_type",
+        "list_name"
+      ],
+      "legal_train": 83
+    },
+    {
+      "intent": "lists_query",
+      "types": 7,
+      "explicit_edges": 1,
+      "types_with_explicit_edge": 2,
+      "types_without_explicit_edge": [
+        "business_name",
+        "device_type",
+        "list_name",
+        "music_genre",
+        "person"
+      ],
+      "legal_train": 94
+    },
+    {
+      "intent": "lists_remove",
+      "types": 9,
+      "explicit_edges": 5,
+      "types_with_explicit_edge": 6,
+      "types_without_explicit_edge": [
+        "list_name",
+        "place_name",
+        "song_name"
+      ],
+      "legal_train": 76
+    },
+    {
+      "intent": "music_dislikeness",
+      "types": 1,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "music_descriptor"
+      ],
+      "legal_train": 0
+    },
+    {
+      "intent": "music_likeness",
+      "types": 8,
+      "explicit_edges": 3,
+      "types_with_explicit_edge": 4,
+      "types_without_explicit_edge": [
+        "app_name",
+        "date",
+        "player_setting",
+        "playlist_name"
+      ],
+      "legal_train": 36
+    },
+    {
+      "intent": "music_query",
+      "types": 7,
+      "explicit_edges": 3,
+      "types_with_explicit_edge": 5,
+      "types_without_explicit_edge": [
+        "music_genre",
+        "player_setting"
+      ],
+      "legal_train": 61
+    },
+    {
+      "intent": "music_settings",
+      "types": 8,
+      "explicit_edges": 5,
+      "types_with_explicit_edge": 7,
+      "types_without_explicit_edge": [
+        "player_setting"
+      ],
+      "legal_train": 11
+    },
+    {
+      "intent": "news_query",
+      "types": 8,
+      "explicit_edges": 6,
+      "types_with_explicit_edge": 7,
+      "types_without_explicit_edge": [
+        "media_type"
+      ],
+      "legal_train": 236
+    },
+    {
+      "intent": "play_audiobook",
+      "types": 8,
+      "explicit_edges": 5,
+      "types_with_explicit_edge": 8,
+      "types_without_explicit_edge": [],
+      "legal_train": 53
+    },
+    {
+      "intent": "play_game",
+      "types": 3,
+      "explicit_edges": 1,
+      "types_with_explicit_edge": 2,
+      "types_without_explicit_edge": [
+        "device_type"
+      ],
+      "legal_train": 52
+    },
+    {
+      "intent": "play_music",
+      "types": 13,
+      "explicit_edges": 8,
+      "types_with_explicit_edge": 10,
+      "types_without_explicit_edge": [
+        "movie_name",
+        "player_setting",
+        "playlist_name"
+      ],
+      "legal_train": 411
+    },
+    {
+      "intent": "play_podcasts",
+      "types": 9,
+      "explicit_edges": 7,
+      "types_with_explicit_edge": 8,
+      "types_without_explicit_edge": [
+        "player_setting"
+      ],
+      "legal_train": 105
+    },
+    {
+      "intent": "play_radio",
+      "types": 12,
+      "explicit_edges": 9,
+      "types_with_explicit_edge": 12,
+      "types_without_explicit_edge": [],
+      "legal_train": 185
+    },
+    {
+      "intent": "qa_currency",
+      "types": 3,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "currency_name",
+        "date",
+        "place_name"
+      ],
+      "legal_train": 91
+    },
+    {
+      "intent": "qa_definition",
+      "types": 1,
+      "explicit_edges": 0,
+      "types_with_explicit_edge": 0,
+      "types_without_explicit_edge": [
+        "definition_word"
+      ],
+      "legal_train": 152
+    },
+    {
+      "intent": "qa_factoid",
+      "types": 8,
+      "explicit_edges": 5,
+      "types_with_explicit_edge": 6,
+      "types_without_explicit_edge": [
+        "food_type",
+        "movie_name"
+      ],
+      "legal_train": 331
+    },
+    {
+      "intent": "qa_maths",
+      "types": 2,
+      "explicit_edges": 1,
+      "types_with_explicit_edge": 2,
+      "types_without_explicit_edge": [],
+      "legal_train": 36
+    },
+    {
+      "intent": "qa_stock",
+      "types": 6,
+      "explicit_edges": 2,
+      "types_with_explicit_edge": 4,
+      "types_without_explicit_edge": [
+        "business_name",
+        "currency_name"
+      ],
+      "legal_train": 98
+    },
+    {
+      "intent": "recommendation_events",
+      "types": 10,
+      "explicit_edges": 7,
+      "types_with_explicit_edge": 8,
+      "types_without_explicit_edge": [
+        "movie_type",
+        "personal_info"
+      ],
+      "legal_train": 47
+    },
+    {
+      "intent": "recommendation_locations",
+      "types": 8,
+      "explicit_edges": 5,
+      "types_with_explicit_edge": 7,
+      "types_without_explicit_edge": [
+        "meal_type"
+      ],
+      "legal_train": 81
+    },
+    {
+      "intent": "recommendation_movies",
+      "types": 9,
+      "explicit_edges": 6,
+      "types_with_explicit_edge": 7,
+      "types_without_explicit_edge": [
+        "business_type",
+        "media_type"
+      ],
+      "legal_train": 27
+    },
+    {
+      "intent": "social_post",
+      "types": 10,
+      "explicit_edges": 5,
+      "types_with_explicit_edge": 6,
+      "types_without_explicit_edge": [
+        "date",
+        "device_type",
+        "personal_info",
+        "place_name"
+      ],
+      "legal_train": 120
+    },
+    {
+      "intent": "social_query",
+      "types": 7,
+      "explicit_edges": 6,
+      "types_with_explicit_edge": 6,
+      "types_without_explicit_edge": [
+        "media_type"
+      ],
+      "legal_train": 28
+    },
+    {
+      "intent": "takeaway_order",
+      "types": 9,
+      "explicit_edges": 5,
+      "types_with_explicit_edge": 6,
+      "types_without_explicit_edge": [
+        "app_name",
+        "meal_type",
+        "order_type"
+      ],
+      "legal_train": 36
+    },
+    {
+      "intent": "takeaway_query",
+      "types": 4,
+      "explicit_edges": 2,
+      "types_with_explicit_edge": 3,
+      "types_without_explicit_edge": [
+        "order_type"
+      ],
+      "legal_train": 31
+    },
+    {
+      "intent": "transport_query",
+      "types": 13,
+      "explicit_edges": 11,
+      "types_with_explicit_edge": 12,
+      "types_without_explicit_edge": [
+        "app_name"
+      ],
+      "legal_train": 105
+    },
+    {
+      "intent": "transport_taxi",
+      "types": 12,
+      "explicit_edges": 12,
+      "types_with_explicit_edge": 12,
+      "types_without_explicit_edge": [],
+      "legal_train": 43
+    },
+    {
+      "intent": "transport_ticket",
+      "types": 9,
+      "explicit_edges": 8,
+      "types_with_explicit_edge": 7,
+      "types_without_explicit_edge": [
+        "currency_name",
+        "relation"
+      ],
+      "legal_train": 53
+    },
+    {
+      "intent": "transport_traffic",
+      "types": 5,
+      "explicit_edges": 5,
+      "types_with_explicit_edge": 5,
+      "types_without_explicit_edge": [],
+      "legal_train": 58
+    },
+    {
+      "intent": "weather_query",
+      "types": 8,
+      "explicit_edges": 8,
+      "types_with_explicit_edge": 8,
+      "types_without_explicit_edge": [],
+      "legal_train": 295
+    }
+  ],
+  "limits": [
+    "Type-token references plus a rule-language cue identify candidate relations, not semantic contradictions; ordinary words can still cause false positives.",
+    "No edge does not prove no ambiguity. Natural-language references without the exact type identifier can be missed.",
+    "Unannotated neither is not a reliable negative label; missing coexistence does not prohibit it.",
+    "All statistics use source-legal TRAIN, never development gold or test.",
+    "Current source is frozen original definitions; clean-v5 applies to example sources; no runtime card promoted."
+  ]
+}
