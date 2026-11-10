@@ -10,7 +10,8 @@
     "incomplete_rollout",
     "unknown_transport",
     "held_excluded",
-    "invalid_empty_not_rewarded"
+    "invalid_empty_not_rewarded",
+    "identical_input_strategy_rejected"
   ],
   "same_score_zero_variance": "descriptive advantages checked finite/zero sum",
   "new_model_calls": 0

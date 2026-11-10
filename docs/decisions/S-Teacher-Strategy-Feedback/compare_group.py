@@ -90,6 +90,12 @@ def compare(config):
     baseline = load_arm(base_spec, allowed)
     gold = {sid: (r['gold_intent'], set(r['gold_types'])) for sid, r in baseline.items()}
     arms = {s['name']: load_arm(s, allowed, gold) for s in specs}
+    signatures = {}
+    for name, rows in arms.items():
+        signature = tuple(rows[sid]['wire_sha256'] for sid in sorted(allowed))
+        require(signature not in signatures,
+                'identical policy inputs: reuse results or analyze as repeats, not distinct strategies')
+        signatures[signature] = name
     paired = []
     for sid in sorted(allowed):
         rewards = {name: reward(rows[sid]) for name, rows in arms.items()}
