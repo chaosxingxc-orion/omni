@@ -1,0 +1,260 @@
+{
+  "units": "seconds per branch unless named per_sample",
+  "runs": {
+    "audio_last": {
+      "status": "COMPLETE",
+      "samples": 545,
+      "branches": 1635,
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "wall_seconds": 572.495612859726,
+      "throughput_seconds_per_sample": 1.0504506657976622,
+      "card_hours": 0.6361062365108067,
+      "tokens": {
+        "completion_tokens": 70491,
+        "prompt_tokens": 7136725,
+        "total_tokens": 7207216
+      },
+      "components": {
+        "admission_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.0019056594453535586,
+          "median_seconds": 0.0011861700331792235,
+          "p95_seconds": 0.0038402180187404157,
+          "max_seconds": 0.011730129946954548
+        },
+        "executor_queue_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.00013585587093373048,
+          "median_seconds": 0.00010931992437690496,
+          "p95_seconds": 0.00027868096949532593,
+          "max_seconds": 0.0008720000041648746
+        },
+        "new_http_seconds": {
+          "count": 1635,
+          "mean_seconds": 18.96808160119811,
+          "median_seconds": 18.992202329915017,
+          "p95_seconds": 26.786638947005848,
+          "max_seconds": 45.00694350001868
+        },
+        "postprocess_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.0033821659200377646,
+          "median_seconds": 0.0033139699371531606,
+          "p95_seconds": 0.004025881050620228,
+          "max_seconds": 0.008296469924971461
+        },
+        "prepare_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.028743505257463782,
+          "median_seconds": 0.025860950001515448,
+          "p95_seconds": 0.03619577398058027,
+          "max_seconds": 1.6736235299613327
+        },
+        "reported_latency_seconds": {
+          "count": 1635,
+          "mean_seconds": 18.96808160119811,
+          "median_seconds": 18.992202329915017,
+          "p95_seconds": 26.786638947005848,
+          "max_seconds": 45.00694350001868
+        }
+      },
+      "first_to_last_saved_row_seconds": 491.37846279144287
+    },
+    "BC": {
+      "status": "COMPLETE",
+      "samples": 545,
+      "branches": 1635,
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "wall_seconds": 925.6086204051971,
+      "throughput_seconds_per_sample": 1.6983644411104535,
+      "card_hours": 1.0284540226724412,
+      "tokens": {
+        "completion_tokens": 83970,
+        "prompt_tokens": 7599796,
+        "total_tokens": 7683766
+      },
+      "components": {
+        "admission_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.0014639798023478791,
+          "median_seconds": 0.0010079300263896585,
+          "p95_seconds": 0.003598220006097108,
+          "max_seconds": 0.007589149987325072
+        },
+        "executor_queue_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.00011618719365026244,
+          "median_seconds": 9.630003478378057e-05,
+          "p95_seconds": 0.0002250540186651049,
+          "max_seconds": 0.0011263600317761302
+        },
+        "new_http_seconds": {
+          "count": 1635,
+          "mean_seconds": 34.24613449423715,
+          "median_seconds": 33.94680743000936,
+          "p95_seconds": 45.79346970499027,
+          "max_seconds": 52.94725558999926
+        },
+        "postprocess_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.0032280522149443535,
+          "median_seconds": 0.003076600027270615,
+          "p95_seconds": 0.003934902977198363,
+          "max_seconds": 0.007883880054578185
+        },
+        "prepare_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.014642770903182162,
+          "median_seconds": 0.01221657998394221,
+          "p95_seconds": 0.016335414024069905,
+          "max_seconds": 1.5558132799342275
+        },
+        "reported_latency_seconds": {
+          "count": 1635,
+          "mean_seconds": 34.24613449423715,
+          "median_seconds": 33.94680743000936,
+          "p95_seconds": 45.79346970499027,
+          "max_seconds": 52.94725558999926
+        }
+      },
+      "first_to_last_saved_row_seconds": 886.1720020771027
+    },
+    "role_contrast": {
+      "status": "COMPLETE",
+      "samples": 545,
+      "branches": 1635,
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "wall_seconds": 958.8719265460968,
+      "throughput_seconds_per_sample": 1.7593980303598107,
+      "card_hours": 1.0654132517178854,
+      "tokens": {
+        "completion_tokens": 71152,
+        "prompt_tokens": 7090441,
+        "total_tokens": 7161593
+      },
+      "components": {
+        "admission_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.0014606476149775247,
+          "median_seconds": 0.0010030900011770427,
+          "p95_seconds": 0.003582856000866741,
+          "max_seconds": 0.007390149985440075
+        },
+        "executor_queue_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.00012181577388772497,
+          "median_seconds": 0.00010111002484336495,
+          "p95_seconds": 0.00020070900791324672,
+          "max_seconds": 0.0004286500043235719
+        },
+        "new_http_seconds": {
+          "count": 1635,
+          "mean_seconds": 33.34096916634148,
+          "median_seconds": 33.22144036000827,
+          "p95_seconds": 41.994348390999946,
+          "max_seconds": 54.73765771003673
+        },
+        "postprocess_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.0031824706114446945,
+          "median_seconds": 0.003138319996651262,
+          "p95_seconds": 0.0035116800281684846,
+          "max_seconds": 0.003936560009606183
+        },
+        "prepare_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.032186121760549975,
+          "median_seconds": 0.03054705000249669,
+          "p95_seconds": 0.04356962403398938,
+          "max_seconds": 1.2263777200132608
+        },
+        "reported_latency_seconds": {
+          "count": 1635,
+          "mean_seconds": 33.34096916634148,
+          "median_seconds": 33.22144036000827,
+          "p95_seconds": 41.994348390999946,
+          "max_seconds": 54.73765771003673
+        }
+      },
+      "first_to_last_saved_row_seconds": 864.2113039493561
+    },
+    "soft_selector": {
+      "status": "COMPLETE",
+      "samples": 545,
+      "branches": 1635,
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "wall_seconds": 913.1780662536621,
+      "throughput_seconds_per_sample": 1.6755560848691047,
+      "card_hours": 1.0146422958374024,
+      "tokens": {
+        "completion_tokens": 68935,
+        "prompt_tokens": 7136728,
+        "total_tokens": 7205663
+      },
+      "components": {
+        "admission_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.0016552591393772934,
+          "median_seconds": 0.0013442899798974395,
+          "p95_seconds": 0.004035591974388808,
+          "max_seconds": 0.008995199925266206
+        },
+        "executor_queue_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.00013009416863652635,
+          "median_seconds": 0.00010989001020789146,
+          "p95_seconds": 0.00023125904845073818,
+          "max_seconds": 0.0007541099330410361
+        },
+        "new_http_seconds": {
+          "count": 1635,
+          "mean_seconds": 32.82939206603039,
+          "median_seconds": 32.99724435003009,
+          "p95_seconds": 41.62558657103218,
+          "max_seconds": 52.669162180041894
+        },
+        "postprocess_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.0032344219313980016,
+          "median_seconds": 0.0031605398980900645,
+          "p95_seconds": 0.0038305300404317677,
+          "max_seconds": 0.009733410086482763
+        },
+        "prepare_seconds": {
+          "count": 1635,
+          "mean_seconds": 0.022858226079841226,
+          "median_seconds": 0.020114089944399893,
+          "p95_seconds": 0.027781445009168237,
+          "max_seconds": 1.4903965800767764
+        },
+        "reported_latency_seconds": {
+          "count": 1635,
+          "mean_seconds": 32.82939206603039,
+          "median_seconds": 32.99724435003009,
+          "p95_seconds": 41.62558657103218,
+          "max_seconds": 52.669162180041894
+        }
+      },
+      "first_to_last_saved_row_seconds": 851.0652008056641
+    },
+    "ACE_ingredient": {
+      "status": "AWAIT_COMPLETE",
+      "archived_rows": 0
+    }
+  },
+  "limits": [
+    "new_http_seconds includes engine queue and model inference; it is not NPU-only time.",
+    "Concurrent branch durations must not be summed into batch wall time.",
+    "A sample has three intent branches; wall/545 is throughput, not individual sample latency.",
+    "Timing fields may overlap; their sum is not an exact partition.",
+    "No AI Core utilization time series is provided by these records."
+  ]
+}

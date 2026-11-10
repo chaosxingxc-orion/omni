@@ -1,0 +1,44 @@
+{
+  "status": "COMPLETE_REUSED_RESPONSES",
+  "new_model_calls": 0,
+  "learning_only": true,
+  "included_responses": {
+    "parent": 476,
+    "complementary_B": 476,
+    "soft_A": 476,
+    "teacher_C": 476,
+    "combination_BC": 476
+  },
+  "exact_wire_groups": 662,
+  "distinct_samples_with_repeats": 450,
+  "groups_by_outcome": {
+    "all_exact": 344,
+    "always_wrong_same_output": 217,
+    "mixed_exactness": 65,
+    "always_wrong_varying_output": 36
+  },
+  "run_combinations": {
+    "complementary_B+parent+soft_A": 185,
+    "parent+soft_A": 225,
+    "complementary_B+parent": 27,
+    "complementary_B+soft_A": 13,
+    "combination_BC+teacher_C": 212
+  },
+  "limits": [
+    "Wire identity controls request content, not service state or cross-host scheduling.",
+    "Only naturally repeated configurations are represented; this is not a random experiment.",
+    "One sample may contribute different wire groups; group counts are not unique errors.",
+    "Do not route runtime samples by gold labels, agreement, or an oracle winner.",
+    "All-wrong means observed trials only, not proof the task is unsolvable.",
+    "Invalid responses remain failures, never valid empty predictions."
+  ],
+  "original_parent_wire_only": {
+    "distinct_samples": 437,
+    "groups_by_outcome": {
+      "all_exact": 231,
+      "always_wrong_same_output": 139,
+      "mixed_exactness": 42,
+      "always_wrong_varying_output": 25
+    }
+  }
+}
