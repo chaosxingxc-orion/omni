@@ -1,0 +1,64 @@
+{
+  "schema": "s-next-teacher-strategies-summary-v1",
+  "S_samples": 545,
+  "S_branches": 1635,
+  "learning": 476,
+  "report_only": 69,
+  "teacher": {
+    "TFGRPO": {
+      "seconds": 552.6186275598593,
+      "prompt_tokens": 44218,
+      "completion_tokens": 31054,
+      "reasoning_tokens": 26303,
+      "total_tokens": 75272
+    },
+    "ACE": {
+      "seconds": 462.89439671020955,
+      "prompt_tokens": 56240,
+      "completion_tokens": 26350,
+      "reasoning_tokens": 22760,
+      "total_tokens": 82590
+    }
+  },
+  "strategies": [
+    {
+      "name": "conditional-third-witness",
+      "changed_branches": 1429,
+      "token_delta_min": 0,
+      "token_delta_max": 54,
+      "token_delta_sum": 57329,
+      "status": "running_remote_verified"
+    },
+    {
+      "name": "redundant-second-swap",
+      "changed_branches": 433,
+      "token_delta_min": -11,
+      "token_delta_max": 18,
+      "token_delta_sum": 1293,
+      "status": "fixed_complete_planned_successor"
+    },
+    {
+      "name": "datetime-local-binding",
+      "changed_branches": 53,
+      "status": "running_remote_verified"
+    },
+    {
+      "name": "role-clause-order",
+      "changed_branches": 135,
+      "status": "running_remote_verified"
+    }
+  ],
+  "new_accuracy_available": false,
+  "all_cards_busy_proven": false,
+  "D_CPU": {
+    "samples": 545,
+    "branches": 1635,
+    "contract_checks": 28,
+    "native_checks": 5,
+    "passed": true,
+    "new_model_calls": 0,
+    "source_card_gaps": 3,
+    "D_accuracy_available": false
+  },
+  "all_three_jobs_running_verified": true
+}
