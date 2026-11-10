@@ -1,0 +1,314 @@
+{
+  "status": "COMPLETE_RENDERER_FULL545_1635_PAIRED",
+  "completed_samples": 545,
+  "total_samples": 545,
+  "completed_branches": 1635,
+  "total_branches": 1635,
+  "valid_branches": 1635,
+  "unknown": 0,
+  "absent": 0,
+  "remaining_seconds": 0,
+  "cards": 4,
+  "instances": 1,
+  "metrics": {
+    "ACE_v3": {
+      "all545": {
+        "complete_recall": 280,
+        "empty_fp_samples": 62,
+        "exact": 312,
+        "fn": 118,
+        "fp": 179,
+        "invalid": 0,
+        "nonempty": 391,
+        "samples": 545,
+        "tp": 511
+      },
+      "learning476": {
+        "complete_recall": 251,
+        "empty_fp_samples": 53,
+        "exact": 277,
+        "fn": 97,
+        "fp": 158,
+        "invalid": 0,
+        "nonempty": 341,
+        "samples": 476,
+        "tp": 455
+      },
+      "report69_only": {
+        "complete_recall": 29,
+        "empty_fp_samples": 9,
+        "exact": 35,
+        "fn": 21,
+        "fp": 21,
+        "invalid": 0,
+        "nonempty": 50,
+        "samples": 69,
+        "tp": 56
+      }
+    },
+    "rank32": {
+      "all545": {
+        "complete_recall": 286,
+        "empty_fp_samples": 71,
+        "exact": 307,
+        "fn": 111,
+        "fp": 185,
+        "invalid": 0,
+        "nonempty": 391,
+        "samples": 545,
+        "tp": 518
+      },
+      "learning476": {
+        "complete_recall": 255,
+        "empty_fp_samples": 61,
+        "exact": 272,
+        "fn": 92,
+        "fp": 163,
+        "invalid": 0,
+        "nonempty": 341,
+        "samples": 476,
+        "tp": 460
+      },
+      "report69_only": {
+        "complete_recall": 31,
+        "empty_fp_samples": 10,
+        "exact": 35,
+        "fn": 19,
+        "fp": 22,
+        "invalid": 0,
+        "nonempty": 50,
+        "samples": 69,
+        "tp": 58
+      }
+    },
+    "signed_relevance": {
+      "all545": {
+        "complete_recall": 279,
+        "empty_fp_samples": 63,
+        "exact": 320,
+        "fn": 119,
+        "fp": 170,
+        "invalid": 0,
+        "nonempty": 391,
+        "samples": 545,
+        "tp": 510
+      },
+      "learning476": {
+        "complete_recall": 249,
+        "empty_fp_samples": 55,
+        "exact": 283,
+        "fn": 99,
+        "fp": 150,
+        "invalid": 0,
+        "nonempty": 341,
+        "samples": 476,
+        "tp": 453
+      },
+      "report69_only": {
+        "complete_recall": 30,
+        "empty_fp_samples": 8,
+        "exact": 37,
+        "fn": 20,
+        "fp": 20,
+        "invalid": 0,
+        "nonempty": 50,
+        "samples": 69,
+        "tp": 57
+      }
+    },
+    "span_renderer": {
+      "all545": {
+        "complete_recall": 258,
+        "empty_fp_samples": 57,
+        "exact": 309,
+        "fn": 147,
+        "fp": 154,
+        "invalid": 0,
+        "nonempty": 391,
+        "samples": 545,
+        "tp": 482
+      },
+      "learning476": {
+        "complete_recall": 230,
+        "empty_fp_samples": 50,
+        "exact": 273,
+        "fn": 125,
+        "fp": 136,
+        "invalid": 0,
+        "nonempty": 341,
+        "samples": 476,
+        "tp": 427
+      },
+      "report69_only": {
+        "complete_recall": 28,
+        "empty_fp_samples": 7,
+        "exact": 36,
+        "fn": 22,
+        "fp": 18,
+        "invalid": 0,
+        "nonempty": 50,
+        "samples": 69,
+        "tp": 55
+      }
+    }
+  },
+  "cost": {
+    "card_hours": 0.9220032336976793,
+    "cards": 4,
+    "instances": 1,
+    "money": null,
+    "seconds_per_sample": 1.522574147390663,
+    "session_wall_seconds": 800.4791968800128,
+    "usage": {
+      "completion_tokens": 42405,
+      "prompt_tokens": 7028154,
+      "total_tokens": 7070559
+    },
+    "wall_seconds": 829.8029103279114
+  },
+  "teacher_cost": {
+    "candidate_accepted": false,
+    "elapsed_seconds": 141.3619893603027,
+    "finish_reasons": [
+      "stop"
+    ],
+    "http_status": 200,
+    "model": "glm-5.3-flash",
+    "request_id": null,
+    "response_sha256": "31aa12d88516561ffa21135db41ea0f948323ae785afc40f3348290c8b57d9ea",
+    "semantic_validation": "pending",
+    "state": "response_received",
+    "usage": {
+      "completion_tokens": 12360,
+      "completion_tokens_details": {
+        "reasoning_tokens": 9454
+      },
+      "prompt_tokens": 9448,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "total_tokens": 21808
+    }
+  },
+  "teacher_requests": 1,
+  "teacher_resends": 0,
+  "promotion": false,
+  "limitations": [
+    "One rollout per arm, no causal gain assigned to identical-wire output movement.",
+    "Historical same141 is not a runtime mask or halt criterion; actual new changed/same groups are separate.",
+    "Source annotations are partial; source conflicts and unmarked words are not negatives.",
+    "Renderer salience is a hypothesis, not an established capability improvement; source role does not determine query presence.",
+    "Report69 used only after frozen generation for reporting; test13078 not run; no audio listening or D value evaluation.",
+    "Historical ACE/rank32 are separate composite references, not the renderer runtime base."
+  ],
+  "scientific_parent": "signed-relevance",
+  "actual_changed_and_same": {
+    "learning_actual_changed_wire": {
+      "after": {
+        "complete_recall": 223,
+        "empty_fp_samples": 34,
+        "exact": 210,
+        "fn": 115,
+        "fp": 116,
+        "invalid": 0,
+        "nonempty": 324,
+        "samples": 387,
+        "tp": 417
+      },
+      "before": {
+        "complete_recall": 241,
+        "empty_fp_samples": 38,
+        "exact": 220,
+        "fn": 90,
+        "fp": 126,
+        "invalid": 0,
+        "nonempty": 324,
+        "samples": 387,
+        "tp": 442
+      },
+      "confirmed_type_set_changes": 73,
+      "full_output_changes": 76,
+      "regressions": 30,
+      "repairs": 20,
+      "wire_changed": 387
+    },
+    "learning_actual_same_wire": {
+      "after": {
+        "complete_recall": 7,
+        "empty_fp_samples": 16,
+        "exact": 63,
+        "fn": 10,
+        "fp": 20,
+        "invalid": 0,
+        "nonempty": 17,
+        "samples": 89,
+        "tp": 10
+      },
+      "before": {
+        "complete_recall": 8,
+        "empty_fp_samples": 17,
+        "exact": 63,
+        "fn": 9,
+        "fp": 24,
+        "invalid": 0,
+        "nonempty": 17,
+        "samples": 89,
+        "tp": 11
+      },
+      "confirmed_type_set_changes": 9,
+      "full_output_changes": 10,
+      "regressions": 4,
+      "repairs": 4,
+      "wire_changed": 0
+    }
+  },
+  "historical_event_retention": {
+    "new_fn": {
+      "actual_new_wire_changed": 19,
+      "historical_events": 22,
+      "recovered": 6,
+      "still_missed": 16
+    },
+    "new_fn_class:lost_distinguishing_role_example": {
+      "actual_new_wire_changed": 6,
+      "events": 8,
+      "recovered": 1
+    },
+    "new_fn_class:no_direct_type_role_either": {
+      "actual_new_wire_changed": 3,
+      "events": 3,
+      "recovered": 2
+    },
+    "new_fn_class:retained_but_less_reinforced_role": {
+      "actual_new_wire_changed": 2,
+      "events": 2,
+      "recovered": 1
+    },
+    "new_fn_class:retained_explicit_role": {
+      "actual_new_wire_changed": 7,
+      "events": 7,
+      "recovered": 2
+    },
+    "new_fn_class:retained_unannotated_or_ambiguous_role": {
+      "actual_new_wire_changed": 1,
+      "events": 2,
+      "recovered": 0
+    },
+    "new_fp": {
+      "actual_new_wire_changed": 15,
+      "historical_events": 17
+    },
+    "recovered_fn": {
+      "actual_new_wire_changed": 14,
+      "historical_events": 14,
+      "lost_again_fn": 7,
+      "still_present": 7
+    },
+    "removed_fp": {
+      "actual_new_wire_changed": 22,
+      "historical_events": 31,
+      "reintroduced_fp": 9,
+      "still_absent": 22
+    }
+  }
+}
