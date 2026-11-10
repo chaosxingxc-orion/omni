@@ -1,0 +1,171 @@
+{
+  "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
+  "samples": 545,
+  "branches": 1635,
+  "valid_branches": 1635,
+  "unknown": 0,
+  "absent": 0,
+  "learning": 476,
+  "report_only": 69,
+  "metrics": {
+    "signed-relevance": {
+      "samples": 476,
+      "exact": 283,
+      "tp": 453,
+      "fp": 150,
+      "fn": 99,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 249,
+      "empty_fp_samples": 55
+    },
+    "registry-extension": {
+      "samples": 476,
+      "exact": 284,
+      "tp": 451,
+      "fp": 148,
+      "fn": 101,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 247,
+      "empty_fp_samples": 54
+    },
+    "starved-gate": {
+      "samples": 476,
+      "exact": 287,
+      "tp": 449,
+      "fp": 138,
+      "fn": 103,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 246,
+      "empty_fp_samples": 48
+    }
+  },
+  "paired": {
+    "signed-relevance": {
+      "changed": {
+        "before": {
+          "samples": 7,
+          "exact": 3,
+          "tp": 6,
+          "fp": 6,
+          "fn": 1,
+          "invalid": 0,
+          "nonempty": 6,
+          "complete_recall": 5,
+          "empty_fp_samples": 1
+        },
+        "after": {
+          "samples": 7,
+          "exact": 3,
+          "tp": 7,
+          "fp": 5,
+          "fn": 0,
+          "invalid": 0,
+          "nonempty": 6,
+          "complete_recall": 6,
+          "empty_fp_samples": 1
+        },
+        "repairs": 0,
+        "regressions": 0
+      },
+      "same": {
+        "before": {
+          "samples": 469,
+          "exact": 280,
+          "tp": 447,
+          "fp": 144,
+          "fn": 98,
+          "invalid": 0,
+          "nonempty": 335,
+          "complete_recall": 244,
+          "empty_fp_samples": 54
+        },
+        "after": {
+          "samples": 469,
+          "exact": 284,
+          "tp": 442,
+          "fp": 133,
+          "fn": 103,
+          "invalid": 0,
+          "nonempty": 335,
+          "complete_recall": 240,
+          "empty_fp_samples": 47
+        },
+        "repairs": 18,
+        "regressions": 14
+      }
+    },
+    "registry-extension": {
+      "changed": {
+        "before": {
+          "samples": 6,
+          "exact": 2,
+          "tp": 12,
+          "fp": 4,
+          "fn": 4,
+          "invalid": 0,
+          "nonempty": 6,
+          "complete_recall": 2,
+          "empty_fp_samples": 0
+        },
+        "after": {
+          "samples": 6,
+          "exact": 1,
+          "tp": 12,
+          "fp": 3,
+          "fn": 4,
+          "invalid": 0,
+          "nonempty": 6,
+          "complete_recall": 2,
+          "empty_fp_samples": 0
+        },
+        "repairs": 0,
+        "regressions": 1
+      },
+      "same": {
+        "before": {
+          "samples": 470,
+          "exact": 282,
+          "tp": 439,
+          "fp": 144,
+          "fn": 97,
+          "invalid": 0,
+          "nonempty": 335,
+          "complete_recall": 245,
+          "empty_fp_samples": 54
+        },
+        "after": {
+          "samples": 470,
+          "exact": 286,
+          "tp": 437,
+          "fp": 135,
+          "fn": 99,
+          "invalid": 0,
+          "nonempty": 335,
+          "complete_recall": 244,
+          "empty_fp_samples": 48
+        },
+        "repairs": 19,
+        "regressions": 15
+      }
+    }
+  },
+  "cost": {
+    "card_hours": 0.8910216609636943,
+    "cards": 4,
+    "instances": 1,
+    "money": null,
+    "seconds_per_sample": 1.471411917187752,
+    "session_wall_seconds": 771.4353155400604,
+    "usage": {
+      "completion_tokens": 41818,
+      "prompt_tokens": 7013350,
+      "total_tokens": 7055168
+    },
+    "wall_seconds": 801.9194948673248
+  },
+  "promotion": false,
+  "caveat": "Changed7 vs signed are same input as extension; one person recovery is not caused by the added gate. All precision gains need separation from same-wire variance."
+}

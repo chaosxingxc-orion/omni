@@ -78,7 +78,7 @@
       "wall_seconds": 829.8029103279114
     }
   },
-  "updated_epoch": 1794350647.1581109,
+  "updated_epoch": 1794350776.1944425,
   "successors": {
     "A": {
       "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
@@ -281,7 +281,7 @@
     "reasoning_target_soft": 8192,
     "resends": 0
   },
-  "active_npu_experiments_verified": 1,
+  "active_npu_experiments_verified": 0,
   "cpu_successors": [
     {
       "task": "TFGRPO-consumption-next",
@@ -378,20 +378,37 @@
       "summary": "S-Card-Scope-Summary.json"
     },
     "A_gate": {
-      "card_hours_at_snapshot": 0.6327489195929633,
-      "cards": 4,
-      "completed_branches": 1278,
-      "completed_samples": 426,
-      "first_schema": "PASS_ACTUAL_RAW_TYPE_SCHEMA_BEFORE_FANOUT",
-      "instances": 1,
-      "observed_at": 1794350449.760636,
-      "remaining_seconds_estimate": 159.07842555963938,
-      "seconds_per_complete_sample_equivalent": 1.3367934920978097,
-      "status": "ARCHIVED_RUNNING_PARTIAL",
-      "total_branches": 1635,
+      "status": "COMPLETE_SCORED_MAIN_INDEPENDENT_RECOUNT",
+      "completed_samples": 545,
       "total_samples": 545,
-      "unknown_final": null,
-      "valid_branches": 1278
+      "completed_branches": 1635,
+      "total_branches": 1635,
+      "metrics": {
+        "samples": 476,
+        "exact": 287,
+        "tp": 449,
+        "fp": 138,
+        "fn": 103,
+        "invalid": 0,
+        "nonempty": 341,
+        "complete_recall": 246,
+        "empty_fp_samples": 48
+      },
+      "cost": {
+        "card_hours": 0.8910216609636943,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.471411917187752,
+        "session_wall_seconds": 771.4353155400604,
+        "usage": {
+          "completion_tokens": 41818,
+          "prompt_tokens": 7013350,
+          "total_tokens": 7055168
+        },
+        "wall_seconds": 801.9194948673248
+      },
+      "ETA_seconds": 0
     }
   },
   "capacity_recovery": "COMPLETE"
