@@ -1,0 +1,35 @@
+{
+  "host_roots": {
+    "npu2": "/srv/omni-local-state/s-rolling-12h-v1",
+    "npu": "/srv/omni-local-state/s-rolling-12h-v1"
+  },
+  "host": {
+    "code/host_driver.py": "H/host_driver.py (atomic; historical SHA copy retained)",
+    "code/terminal_handoff.py": "H/terminal_handoff.py (immutable; reject different existing bytes)",
+    "code/native-runtime/run_s_native.py": "H/handoff-native.py (immutable)",
+    "handoff-execution-code/train_runtime.py": "H/handoff-execution-code/train_runtime.py",
+    "handoff-execution-code/bind_train.py": "H/handoff-execution-code/bind_train.py",
+    "handoff-execution-code/train-runtime-v1/run_s_native.py": "H/handoff-execution-code/train-runtime-v1/run_s_native.py",
+    "handoff-execution-code/train-runtime-v1/native_resources.py": "H/handoff-execution-code/train-runtime-v1/native_resources.py",
+    "handoff-execution-code/resources/tiktoken-cache/9b5ad71b2ce5302211f9c61530b329a4922fc6a4": "H/handoff-execution-code/resources/tiktoken-cache/9b5ad71b2ce5302211f9c61530b329a4922fc6a4",
+    "evidence/ATTEMPT/HANDOFF-TRAIN-VERIFIED.json": "H/HANDOFF-TRAIN-VERIFIED.json (only fixed suite output)",
+    "config/terminal-handoff-policy.default.json": "H/terminal-handoff-policy.json (disabled; retain existing disabled config)"
+  },
+  "local": {
+    "code/scheduler.py": "delivery/s-single-intent-execution-v1/rolling-code/scheduler.py (only after old CPU owner and read-only waiters exit under existing owner guard)"
+  },
+  "unchanged": [
+    "H/execution-code",
+    "H/TRAIN96-VERIFIED.json",
+    "existing workspace/source/journals",
+    "NPU services/in-flight mounts"
+  ],
+  "order": [
+    "fixed suite",
+    "deploy files with policy disabled",
+    "main selects exact independent successor/failed pairs using existing allowlist schema",
+    "one CPU scheduler owner handover under existing mutex; adopt running containers",
+    "enable reviewed exact pairs"
+  ],
+  "entrypoint": "code/deploy_after_fixed_cpu.py"
+}

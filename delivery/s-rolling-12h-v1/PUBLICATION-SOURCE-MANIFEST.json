@@ -1,5 +1,5 @@
 {
-  "at": 1794269958.306212,
+  "at": 1794270425.6951933,
   "privacy_replacements": [
     "/workspace/omni",
     "/srv/omni-local-state",
@@ -8,8 +8,8 @@
   "files": [
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/scheduler.py",
-      "runtime_sha256": "f812074ac2f0fd02f6e7ee1b83ac97a5f1013e8fd0e004bd67a3a15a20bdd81b",
-      "publication_sha256": "f065351d8cf25fc9714f1d8216db9dfbbd21720d07c1a2225229367d470d7f44"
+      "runtime_sha256": "19036cd0b99269bce7a7d573f08c546755fbe83f1ce6de74db201f36ad8300d3",
+      "publication_sha256": "2643a1e4e1b9024a01bb1ddea8c00764c8e6acc2823c9c2bddf1165a419c8128"
     },
     {
       "path": "delivery/s-single-intent-execution-v1/rolling-code/host_driver.py",
@@ -310,6 +310,106 @@
       "path": "delivery/s-single-intent-execution-v1/code/paired_collector_local.py",
       "runtime_sha256": "1001c50548e6f9b3e4eaa1850d7d1629e80462eab06ef90e0d9765e2aabac76f",
       "publication_sha256": "595f5e740a2e48b35277fefdd57b854620fcda1e805cf0d79369320bfa1ea466"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/scheduler.py",
+      "runtime_sha256": "19036cd0b99269bce7a7d573f08c546755fbe83f1ce6de74db201f36ad8300d3",
+      "publication_sha256": "2643a1e4e1b9024a01bb1ddea8c00764c8e6acc2823c9c2bddf1165a419c8128"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/cpu_real_validation.py",
+      "runtime_sha256": "6354dd1d52e001d479eb2af7aec4babb79eb39e0a205bb86e187d47f2d7fe4a1",
+      "publication_sha256": "6354dd1d52e001d479eb2af7aec4babb79eb39e0a205bb86e187d47f2d7fe4a1"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/test_handoff.py",
+      "runtime_sha256": "56269d8319fa26fbbad1672358a14943bf94f50d7e5f06e39dadd1298e116f3e",
+      "publication_sha256": "56269d8319fa26fbbad1672358a14943bf94f50d7e5f06e39dadd1298e116f3e"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/deploy_after_fixed_cpu.py",
+      "runtime_sha256": "1de35a664b6cfb2e6baf24506de3d5f6e6d59995e1a31837b0f2e7f73f1694cb",
+      "publication_sha256": "1de35a664b6cfb2e6baf24506de3d5f6e6d59995e1a31837b0f2e7f73f1694cb"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/test_runtime_policy.py",
+      "runtime_sha256": "b064690c1aeb82c9ea34a7f79ea033a05f7f99b5b37aa47d87ec23734938440a",
+      "publication_sha256": "b064690c1aeb82c9ea34a7f79ea033a05f7f99b5b37aa47d87ec23734938440a"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/host_driver.py",
+      "runtime_sha256": "6bb78fb00b66c2fb26a3f980b5365cbe43340883be654005b6a5bf5397ba5df1",
+      "publication_sha256": "7ece3419b71c2898d7053fcc597e4dfd508e610d75089dcb133077ff19122b23"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/fixed_cpu_suite.py",
+      "runtime_sha256": "8ff51394920b3d27ac98f7c02cbb4a819a97037d10cdd241298ee62a3fa9f905",
+      "publication_sha256": "8ff51394920b3d27ac98f7c02cbb4a819a97037d10cdd241298ee62a3fa9f905"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/transport_manifest.py",
+      "runtime_sha256": "a843fbd8f65f2813281ac7e878729029af457088f470c013eea59b544c1b2475",
+      "publication_sha256": "a843fbd8f65f2813281ac7e878729029af457088f470c013eea59b544c1b2475"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/terminal_handoff.py",
+      "runtime_sha256": "65a744a0641af06d8a5d75a06bb4b9f70a73b0387aba339f721ec02a20e034e5",
+      "publication_sha256": "65a744a0641af06d8a5d75a06bb4b9f70a73b0387aba339f721ec02a20e034e5"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/test_fixed_cpu_dependencies.py",
+      "runtime_sha256": "d84e92c04217ffb4832064db7987b87c8df193d09c79596f4b80bab92a84d219",
+      "publication_sha256": "d84e92c04217ffb4832064db7987b87c8df193d09c79596f4b80bab92a84d219"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/train-runtime-v1/run_s_native.py",
+      "runtime_sha256": "238a0d3996759bae6fb0725d77886d72435be252715e4bb09b2e199e049bf4a2",
+      "publication_sha256": "238a0d3996759bae6fb0725d77886d72435be252715e4bb09b2e199e049bf4a2"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/native-runtime/run_s_native.py",
+      "runtime_sha256": "3ebfdeddf63a3a143decafca4236a8d76c40b1d4504459017b065707a5d1be41",
+      "publication_sha256": "3ebfdeddf63a3a143decafca4236a8d76c40b1d4504459017b065707a5d1be41"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/native-runtime/native_resources.py",
+      "runtime_sha256": "2a7dbec17a2e718b99e4929a92d5390687b2df1ab9c7fe18d198731e0998b14c",
+      "publication_sha256": "2a7dbec17a2e718b99e4929a92d5390687b2df1ab9c7fe18d198731e0998b14c"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/handoff-execution-code/bind_train.py",
+      "runtime_sha256": "172914488af0117760f54be174f4ebcf5ac967a98225783044870faaddb0be04",
+      "publication_sha256": "172914488af0117760f54be174f4ebcf5ac967a98225783044870faaddb0be04"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/handoff-execution-code/train_runtime.py",
+      "runtime_sha256": "9e6e6eaead9831d1e03e291abec5e44d9eaf315bf0a878aff6ebc915b5627890",
+      "publication_sha256": "9e6e6eaead9831d1e03e291abec5e44d9eaf315bf0a878aff6ebc915b5627890"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/handoff-execution-code/train-runtime-v1/run_s_native.py",
+      "runtime_sha256": "238a0d3996759bae6fb0725d77886d72435be252715e4bb09b2e199e049bf4a2",
+      "publication_sha256": "238a0d3996759bae6fb0725d77886d72435be252715e4bb09b2e199e049bf4a2"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/handoff-execution-code/train-runtime-v1/native_resources.py",
+      "runtime_sha256": "2a7dbec17a2e718b99e4929a92d5390687b2df1ab9c7fe18d198731e0998b14c",
+      "publication_sha256": "2a7dbec17a2e718b99e4929a92d5390687b2df1ab9c7fe18d198731e0998b14c"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/code/run_fixed_cpu.sh",
+      "runtime_sha256": "d6e75e69c43323dc63a761a226365f6a28066e9db4726028bc92711fb0d48646",
+      "publication_sha256": "d6e75e69c43323dc63a761a226365f6a28066e9db4726028bc92711fb0d48646"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/config/DEPLOYMENT-MAP.json",
+      "runtime_sha256": "079f3c3b25eeadaa7405db503a08ac74ad0bb8330e9d4e4994085409f59d1b55",
+      "publication_sha256": "45a2420bac392eca70690027ce52d521019c3966decfe9b6a5fb8091b750c157"
+    },
+    {
+      "path": "delivery/s-terminal-handoff-repair-v1/config/terminal-handoff-policy.default.json",
+      "runtime_sha256": "cdcd3bf075a242845713e46aa054fa8b32535abb784d00a7819a5883f08678f0",
+      "publication_sha256": "cdcd3bf075a242845713e46aa054fa8b32535abb784d00a7819a5883f08678f0"
     }
   ]
 }

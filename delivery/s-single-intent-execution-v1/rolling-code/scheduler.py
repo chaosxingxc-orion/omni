@@ -176,45 +176,46 @@ def choose(lane):
   if not staged:return None
   t=sorted(staged,key=lambda x:x[:-1])[0][-1];update(t,status='preparing',lane=lane);return t
 
+def failed_handoff(launch,terminal):
+ # Only an actual known failed terminal can authorize the host helper.
+ if terminal.get('status') not in ('FAILED','PAUSED'):
+  raise RuntimeError('BLOCKED_TERMINAL_HANDOFF: no known failed terminal; no resend')
+ for key in ('task_id','container_id','state','run_id','attempt_id','pid','runtime'):
+  if key not in launch:raise RuntimeError('BLOCKED_TERMINAL_HANDOFF: missing failed launch '+key)
+ return dict(launch=launch,terminal=terminal,no_resend=True)
+
+
 def lane_worker(lane):
- host=HOSTS[lane];hot=ROOTS[host];info=read(O/'initial-lanes.json')[lane];pred=info['predecessor'];launch=info.get('live_launch');runtime=info.get('runtime');runtime_file=info.get('runtime_file');last_task=None
+ host=HOSTS[lane];hot=ROOTS[host];info=read(O/'initial-lanes.json')[lane];pred=info['predecessor'];launch=info.get('live_launch');runtime=info.get('runtime');runtime_file=info.get('runtime_file');last_task=None;failed_evidence=None
  current=O/'lanes'/(lane+'-CURRENT.json')
- if current.exists():
-  previous=read(current)
-  if previous.get('status')=='running':launch=previous['launch']
-  elif previous.get('status')=='completed':
-   completed=previous['launch'];launch=None;pred=dict(container=completed['container_id'],terminal=completed['state']+'/run/TERMINAL.json')
-   runtime=completed.get('runtime',runtime);runtime_file=None
  try:
+  if current.exists():
+   previous=read(current)
+   if previous.get('status')=='running':launch=previous['launch']
+   elif previous.get('status')=='failed':
+    failed_evidence=failed_handoff(previous['launch'],previous['terminal']);launch=None
+    failed=failed_evidence['launch'];pred=dict(container=failed['container_id'],terminal=failed['state']+'/run/TERMINAL.json')
+    runtime=failed['runtime'];runtime_file=None
+   elif previous.get('status')=='completed':
+    completed=previous['launch'];launch=None;pred=dict(container=completed['container_id'],terminal=completed['state']+'/run/TERMINAL.json')
+    runtime=completed.get('runtime',runtime);runtime_file=None
   if launch:
    last_task=read(O/'tasks'/(launch['task_id']+'.json'))['task'] if launch.get('task_id') else None
    save(O/'lanes'/(lane+'-CURRENT.json'),dict(status='running',launch=launch,preserved=True))
-   try:
-    term,res=wait_container(lane,launch)
-   except AssertionError as e:
-    # A preserved attempt with unknown contacts is terminal evidence.  Never
-    # replay it; release the lane to an independent task from the immutable
-    # known-good predecessor instead.
-    if str(e) != 'UNKNOWN_NO_RESEND':
-     raise
-    if launch.get('task_id'):
-     old=read(O/'tasks'/(launch['task_id']+'.json'))['task']
-     update(old,status='failed',reason='UNKNOWN_NO_RESEND',terminal=read(O/'lanes'/(lane+'-LIVE.json')).get('terminal'))
-    save(O/'lanes'/(lane+'-FAILED-PRESERVED.json'),dict(at=time.time(),lane=lane,task_id=launch.get('task_id'),reason='UNKNOWN_NO_RESEND',launch=launch,no_resend=True))
-    launch=None;last_task=None;pred=info['predecessor'];runtime=info.get('runtime');runtime_file=info.get('runtime_file')
-    save(O/'lanes'/(lane+'-CURRENT.json'),dict(status='failed',launch=None,preserved_failure=True,no_resend=True))
-   if launch is None:
-    pass
-   elif term['status']=='PAUSED' and time.time()>=WINDOW['end_epoch']:
+   term,res=wait_container(lane,launch)
+   if term['status']=='PAUSED' and time.time()>=WINDOW['end_epoch']:
     save(O/'lanes'/(lane+'-DRAINED.json'),dict(at=time.time(),status='deadline drained',terminal=term));return
    elif term['status']!='COMPLETE' or term.get('unknown',0)!=0:
     if launch.get('task_id'):
      old=read(O/'tasks'/(launch['task_id']+'.json'))['task']
      update(old,status='failed',reason='KNOWN_TERMINAL_FAILURE',terminal=term)
     save(O/'lanes'/(lane+'-FAILED-PRESERVED.json'),dict(at=time.time(),lane=lane,task_id=launch.get('task_id'),reason='KNOWN_TERMINAL_FAILURE',terminal=term,launch=launch,no_resend=True))
-    launch=None;last_task=None;pred=info['predecessor'];runtime=info.get('runtime');runtime_file=info.get('runtime_file')
-    save(O/'lanes'/(lane+'-CURRENT.json'),dict(status='failed',launch=None,preserved_failure=True,no_resend=True))
+    failed_evidence=failed_handoff(launch,term)
+    pred=dict(container=launch['container_id'],terminal=launch['state']+'/run/TERMINAL.json');runtime=launch['runtime'];runtime_file=None
+    save(O/'lanes'/(lane+'-CURRENT.json'),dict(status='failed',launch=launch,terminal=term,preserved_failure=True,no_resend=True))
+    launch=None;last_task=None
    else:
+    if res['exit_code']!=0:raise RuntimeError('BLOCKED_TERMINAL_HANDOFF: COMPLETE with failed exit')
     if term['status']=='PAUSED' and time.time()>=WINDOW['end_epoch']:
      save(O/'lanes'/(lane+'-DRAINED.json'),dict(at=time.time(),status='deadline drained',terminal=term));return
     pred=dict(container=launch['container_id'],terminal=launch['state']+'/run/TERMINAL.json')
@@ -232,6 +233,7 @@ def lane_worker(lane):
    last_task=t
    try:
     w=stage(t,host);spec=dict(t,workspace=w,runtime=runtime,cards=list(range(0,4) if lane in 'AC' else range(4,8)),predecessor=pred,window_end_epoch=WINDOW['end_epoch'])
+    if failed_evidence:spec['failed_predecessor_evidence']=failed_evidence
     local=O/'specs'/(t['task_id']+'.json');save(local,spec);remote=hot+'/spec-'+t['task_id']+'.json';subprocess.run(['scp',str(local),host+':'+remote],check=True,capture_output=True)
     # Mutation is a remote systemd unit, so an SSH disconnect cannot abort admission.
     unit='omni-s12-launch-'+hashlib.sha256(t['task_id'].encode()).hexdigest()[:12]
@@ -244,7 +246,7 @@ def lane_worker(lane):
       if 'ActiveState=failed' in state or ('exited' in state and not state.strip().endswith(' 0')) or time.time()>deadline:raise RuntimeError('launch unit failed or unresolved; inspect '+unit+' '+state)
       time.sleep(2)
     update(t,status='running',launch=launch,lane=lane);save(O/'lanes'/(lane+'-CURRENT.json'),dict(status='running',launch=launch));save(O/'lanes'/(lane+'-FIRST-LAUNCH.json'),launch)
-    term,res=wait_container(lane,launch);update(t,status='completed' if term['status']=='COMPLETE' and res['exit_code']==0 else 'failed',terminal=term,exit=res)
+    term,res=wait_container(lane,launch);update(t,status='completed' if term['status']=='COMPLETE' and term.get('unknown',0)==0 and res['exit_code']==0 else 'failed',terminal=term,exit=res)
     threading.Thread(target=score,args=(lane,launch),daemon=False).start()
     if term['status']=='PAUSED' and time.time()>=WINDOW['end_epoch']:
      update(t,status='blocked',reason='deadline admission closed; absent contacts were not sent',terminal=term);save(O/'lanes'/(lane+'-DRAINED.json'),dict(at=time.time(),status='deadline drained',terminal=term));return
@@ -252,9 +254,12 @@ def lane_worker(lane):
      # Keep the failed attempt and move on to a new independent task.  The
      # failed request set is never replayed and its evidence remains durable.
      save(O/'lanes'/(lane+'-FAILED.json'),dict(at=time.time(),lane=lane,task_id=t['task_id'],reason='KNOWN_TERMINAL_FAILURE',terminal=term,launch=launch,no_resend=True))
-     pred=info['predecessor'];runtime=info.get('runtime');runtime_file=info.get('runtime_file');last_task=None
+     failed_evidence=failed_handoff(launch,term)
+     pred=dict(container=launch['container_id'],terminal=launch['state']+'/run/TERMINAL.json');runtime=launch['runtime'];runtime_file=None;last_task=None
      save(O/'lanes'/(lane+'-CURRENT.json'),dict(status='failed',launch=launch,terminal=term,no_resend=True))
      continue
+    if res['exit_code']!=0:raise RuntimeError('BLOCKED_TERMINAL_HANDOFF: COMPLETE with failed exit')
+    failed_evidence=None
     save(O/'lanes'/(lane+'-CURRENT.json'),dict(status='completed',launch=launch,terminal=term))
     pred=dict(container=launch['container_id'],terminal=launch['state']+'/run/TERMINAL.json');runtime=launch['runtime'];runtime_file=None;last_task=None
    except Exception as e:
@@ -284,12 +289,15 @@ def reserve():
  branches=sum(int(s['task'].get('branches',read(R/s['task']['config'])['expected_rows'])) for s in available)
  measured=[x['seconds_per_branch'] for x in lanes.values() if x.get('seconds_per_branch')]
  fast=min(measured) if measured else 3.0;slow=max(measured) if measured else 5.5
- pending=branches*fast/3600
+ capacity_ready=[s for s in available if s['task'].get('capacity_estimate_eligible',True)]
+ estimated_branches=sum(int(s['task'].get('branches',read(R/s['task']['config'])['expected_rows'])) for s in capacity_ready)
+ unknown_eta_task_ids=[s['task']['task_id'] for s in available if not s['task'].get('capacity_estimate_eligible',True)]
+ pending=estimated_branches*fast/3600
  for l in lanes:
-  own=sum(int(s['task'].get('branches',read(R/s['task']['config'])['expected_rows'])) for s in available if effective_lane(s)==l)
+  own=sum(int(s['task'].get('branches',read(R/s['task']['config'])['expected_rows'])) for s in capacity_ready if effective_lane(s)==l)
   lanes[l]['reserved_lane_hours_fast']=own*fast/3600
   lanes[l]['reserved_lane_hours_slow']=own*slow/3600
-  lanes[l]['next_staged']=any((O/'stage'/(s['task']['task_id']+'-'+HOSTS[l]+'.json')).exists() for s in available if effective_lane(s)==l)
+  lanes[l]['next_staged']=any((O/'stage'/(s['task']['task_id']+'-'+HOSTS[l]+'.json')).exists() for s in capacity_ready if effective_lane(s)==l)
  conditional=read(P/'SVALID-CPU-RESERVE.json').get('tasks',[]) if (P/'SVALID-CPU-RESERVE.json').exists() else []
  conditional=[t for t in conditional if t['task_id'] not in published]
  # A producer plan may contain a future/unmaterialized candidate. It is
@@ -301,7 +309,7 @@ def reserve():
    cpu_hours += float(t['estimated_seconds'])/3600
   elif cfg.exists():
    cpu_hours += float(read(cfg).get('expected_rows',0)*4)/3600
- d=dict(conditional_cpu_verified=len(conditional),conditional_cpu_verified_branches=sum(read(R/t['config'])['expected_rows'] for t in conditional),at=time.time(),window=WINDOW,remaining_window_hours=left/3600,ready_tasks=n,running_tasks=len(running),adopted_running_tasks=adopted,total_running=len(running)+adopted,cpu_preparing=len(cpu),estimated_ready_lane_hours=pending,estimated_running_residual_lane_hours=residual/3600,estimated_queue_wall_hours=(pending+residual/3600)/4,estimated_CPU_pending_lane_hours=cpu_hours,unmaterialized_plan_only=unmaterialized,ready_branches=branches,seconds_per_branch_range=[fast,slow],estimated_ready_lane_hours_range=[branches*fast/3600,branches*slow/3600],estimate_basis='ready expected_rows * measured fastest/slowest lane seconds_per_branch; cross-policy estimate not guarantee; running residual measured',lanes=lanes,minimum_simultaneous_ready_reserve=min(assigned.values()),minimum_cpu_reserve=min(cpu_by.values()),required_ready=4,required_cpu=4,coverage_12h='NOT_YET_PROVEN',money=None)
+ d=dict(conditional_cpu_verified=len(conditional),conditional_cpu_verified_branches=sum(read(R/t['config'])['expected_rows'] for t in conditional),at=time.time(),window=WINDOW,remaining_window_hours=left/3600,ready_tasks=n,running_tasks=len(running),adopted_running_tasks=adopted,total_running=len(running)+adopted,cpu_preparing=len(cpu),estimated_ready_lane_hours=pending,estimated_running_residual_lane_hours=residual/3600,estimated_queue_wall_hours=(pending+residual/3600)/4,estimated_CPU_pending_lane_hours=cpu_hours,unmaterialized_plan_only=unmaterialized,ready_branches=branches,seconds_per_branch_range=[fast,slow],unknown_eta_task_ids=unknown_eta_task_ids,capacity_estimate_branches=estimated_branches,estimated_ready_lane_hours_range=[estimated_branches*fast/3600,estimated_branches*slow/3600],estimate_basis='ready expected_rows * measured fastest/slowest lane seconds_per_branch; cross-policy estimate not guarantee; running residual measured',lanes=lanes,minimum_simultaneous_ready_reserve=min(assigned.values()),minimum_cpu_reserve=min(cpu_by.values()),required_ready=4,required_cpu=4,coverage_12h='NOT_YET_PROVEN',money=None)
  save(O/'RESERVE.json',d)
  if n<4 or min(assigned.values())<1 or min(cpu_by.values())<1 or pending+residual/3600<left*4/3600:
   save(P/'REQUESTS/QUEUE-DEFICIT.json',dict(**d,request='补齐每lane至少1 ready+1CPU预备；优先未处理已有正确P真实TRAIN与根因策略；既定8seed科学组不扩组填时长。不得重采P或重发unknown。'))

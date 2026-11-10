@@ -1,0 +1,6 @@
+{
+  "schema": "s-terminal-handoff-v1",
+  "enabled": false,
+  "allowlist": {},
+  "native_runner_sha256": "3ebfdeddf63a3a143decafca4236a8d76c40b1d4504459017b065707a5d1be41"
+}
