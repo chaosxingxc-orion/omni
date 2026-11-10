@@ -1,0 +1,47 @@
+{
+  "lanes": [
+    {
+      "lane": "A",
+      "status": "RUNNING_ARCHIVED_SNAPSHOT_NOT_LIVE_COUNT",
+      "archive_epoch": 1794343938.7387543,
+      "completed_samples": 442,
+      "total_samples": 545,
+      "completed_branches": 1331,
+      "total_branches": 1635,
+      "valid_archived_branches": 1331,
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "historical_seconds_per_complete_sample": 1.48,
+      "estimated_remaining_seconds_at_snapshot": 152,
+      "usage_archived": {
+        "completion_tokens": 34353,
+        "prompt_tokens": 5570763,
+        "total_tokens": 5605116
+      },
+      "estimate_not_guarantee": true
+    },
+    {
+      "lane": "B",
+      "status": "RUNNING_ARCHIVED_SNAPSHOT_NOT_LIVE_COUNT",
+      "archive_epoch": 1794343946.6557205,
+      "completed_samples": 37,
+      "total_samples": 545,
+      "completed_branches": 112,
+      "total_branches": 1635,
+      "valid_archived_branches": 112,
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "historical_seconds_per_complete_sample": 1.48,
+      "estimated_remaining_seconds_at_snapshot": 752,
+      "usage_archived": {
+        "completion_tokens": 2918,
+        "prompt_tokens": 421763,
+        "total_tokens": 424681
+      },
+      "estimate_not_guarantee": true
+    }
+  ],
+  "c_lane": "No new ready candidate"
+}

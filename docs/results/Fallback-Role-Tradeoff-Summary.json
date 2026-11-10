@@ -1,0 +1,269 @@
+{
+  "status": "COMPLETE",
+  "learning_samples": 476,
+  "changed_wire_samples": 335,
+  "groups": {
+    "all476": {
+      "after": {
+        "complete_recall": 249,
+        "empty_fp_samples": 55,
+        "exact": 283,
+        "fn": 99,
+        "fp": 150,
+        "invalid": 0,
+        "nonempty": 341,
+        "samples": 476,
+        "tp": 453
+      },
+      "before": {
+        "complete_recall": 255,
+        "empty_fp_samples": 61,
+        "exact": 272,
+        "fn": 92,
+        "fp": 163,
+        "invalid": 0,
+        "nonempty": 341,
+        "samples": 476,
+        "tp": 460
+      },
+      "confirmed_type_set_changes": 81,
+      "event_samples": {
+        "new_fn": 23,
+        "new_fp": 22,
+        "recovered_fn": 16,
+        "removed_fp": 35
+      },
+      "events": {
+        "new_fn": 23,
+        "new_fp": 22,
+        "recovered_fn": 16,
+        "removed_fp": 35
+      },
+      "full_output_changes": 86,
+      "regressions": 18,
+      "repairs": 29,
+      "samples": 476,
+      "unresolved_only_changes": 5
+    },
+    "changed335": {
+      "after": {
+        "complete_recall": 162,
+        "empty_fp_samples": 41,
+        "exact": 190,
+        "fn": 74,
+        "fp": 112,
+        "invalid": 0,
+        "nonempty": 231,
+        "samples": 335,
+        "tp": 301
+      },
+      "before": {
+        "complete_recall": 168,
+        "empty_fp_samples": 48,
+        "exact": 180,
+        "fn": 66,
+        "fp": 126,
+        "invalid": 0,
+        "nonempty": 231,
+        "samples": 335,
+        "tp": 309
+      },
+      "confirmed_type_set_changes": 70,
+      "event_samples": {
+        "new_fn": 22,
+        "new_fp": 17,
+        "recovered_fn": 14,
+        "removed_fp": 31
+      },
+      "events": {
+        "new_fn": 22,
+        "new_fp": 17,
+        "recovered_fn": 14,
+        "removed_fp": 31
+      },
+      "full_output_changes": 75,
+      "regressions": 15,
+      "repairs": 25,
+      "samples": 335,
+      "unresolved_only_changes": 5
+    },
+    "same141": {
+      "after": {
+        "complete_recall": 87,
+        "empty_fp_samples": 14,
+        "exact": 93,
+        "fn": 25,
+        "fp": 38,
+        "invalid": 0,
+        "nonempty": 110,
+        "samples": 141,
+        "tp": 152
+      },
+      "before": {
+        "complete_recall": 87,
+        "empty_fp_samples": 13,
+        "exact": 92,
+        "fn": 26,
+        "fp": 37,
+        "invalid": 0,
+        "nonempty": 110,
+        "samples": 141,
+        "tp": 151
+      },
+      "confirmed_type_set_changes": 11,
+      "event_samples": {
+        "new_fn": 1,
+        "new_fp": 5,
+        "recovered_fn": 2,
+        "removed_fp": 4
+      },
+      "events": {
+        "new_fn": 1,
+        "new_fp": 5,
+        "recovered_fn": 2,
+        "removed_fp": 4
+      },
+      "full_output_changes": 11,
+      "regressions": 3,
+      "repairs": 4,
+      "samples": 141,
+      "unresolved_only_changes": 0
+    }
+  },
+  "semantic_classes": {
+    "all476/new_fn": {
+      "lost_distinguishing_role_example": 8,
+      "no_direct_type_role_either": 3,
+      "retained_but_less_reinforced_role": 2,
+      "retained_explicit_role": 7,
+      "retained_unannotated_or_ambiguous_role": 2,
+      "same_wire_role_boundary": 1
+    },
+    "all476/new_fp": {
+      "gained_example_label": 2,
+      "lost_label_context_persists": 1,
+      "no_label_supply_either": 4,
+      "retained_explicit_role": 10,
+      "same_wire_variation": 5
+    },
+    "all476/recovered_fn": {
+      "gained_distinguishing_role_example": 1,
+      "lost_label_but_context_retained": 1,
+      "no_direct_type_role_either": 2,
+      "retained_explicit_role": 10,
+      "same_wire_role_boundary": 2
+    },
+    "all476/removed_fp": {
+      "lost_distinguishing_role_example": 3,
+      "lost_example_label": 14,
+      "no_label_supply_either": 11,
+      "retained_explicit_role": 3,
+      "same_wire_variation": 4
+    },
+    "changed335/new_fn": {
+      "lost_distinguishing_role_example": 8,
+      "no_direct_type_role_either": 3,
+      "retained_but_less_reinforced_role": 2,
+      "retained_explicit_role": 7,
+      "retained_unannotated_or_ambiguous_role": 2
+    },
+    "changed335/new_fp": {
+      "gained_example_label": 2,
+      "lost_label_context_persists": 1,
+      "no_label_supply_either": 4,
+      "retained_explicit_role": 10
+    },
+    "changed335/recovered_fn": {
+      "gained_distinguishing_role_example": 1,
+      "lost_label_but_context_retained": 1,
+      "no_direct_type_role_either": 2,
+      "retained_explicit_role": 10
+    },
+    "changed335/removed_fp": {
+      "lost_distinguishing_role_example": 3,
+      "lost_example_label": 14,
+      "no_label_supply_either": 11,
+      "retained_explicit_role": 3
+    },
+    "same141/new_fn": {
+      "same_wire_role_boundary": 1
+    },
+    "same141/new_fp": {
+      "same_wire_variation": 5
+    },
+    "same141/recovered_fn": {
+      "same_wire_role_boundary": 2
+    },
+    "same141/removed_fp": {
+      "same_wire_variation": 4
+    }
+  },
+  "changed_gold_type_coverage": {
+    "gained_label_supply": {
+      "gold_type_events": 6,
+      "missed_both": 2,
+      "newly_missed": 0,
+      "recovered": 1,
+      "still_detected": 3
+    },
+    "lost_all_label_supply": {
+      "gold_type_events": 51,
+      "missed_both": 15,
+      "newly_missed": 10,
+      "recovered": 1,
+      "still_detected": 25
+    },
+    "no_label_supply_either": {
+      "gold_type_events": 27,
+      "missed_both": 15,
+      "newly_missed": 3,
+      "recovered": 2,
+      "still_detected": 7
+    },
+    "retained_label_supply": {
+      "gold_type_events": 291,
+      "missed_both": 20,
+      "newly_missed": 9,
+      "recovered": 10,
+      "still_detected": 252
+    }
+  },
+  "data_disputes": {
+    "deleted": 0,
+    "events": 46,
+    "relabeled": 0,
+    "samples": 40
+  },
+  "actual_source_validation": {
+    "anchor_and_cards_unchanged": true,
+    "demo_wire_fields": [
+      "candidate_id",
+      "input",
+      "output"
+    ],
+    "distinct_train_sources": 831,
+    "frozen_clean_index_membership": true,
+    "original_sentence_annotation_and_output_match": true,
+    "span_annotations_visible_on_wire": false,
+    "strict_inverse_examples_and_demo_only": true
+  },
+  "runtime": {
+    "completed": 476,
+    "cpu_seconds": 2.63877948,
+    "model_cost": 0,
+    "monetary_cpu_cost": "unknown",
+    "remaining_seconds": 0,
+    "seconds_per_sample": 0.00586004981070663,
+    "total": 476,
+    "wall_seconds": 2.7893751496449113
+  },
+  "model_calls": 0,
+  "limitations": [
+    "Single rollout is descriptive, not causal.",
+    "Label presence is distinct from semantic role evidence.",
+    "Unannotated relations/modifiers are not negative evidence; disputes retained.",
+    "No audio listening; no claims about speech recognizability."
+  ],
+  "runtime_note": "Measured executable CPU audit only; excludes manual semantic review duration.",
+  "publication": "Aggregates only; raw queries, source identity and packet pins remain private."
+}

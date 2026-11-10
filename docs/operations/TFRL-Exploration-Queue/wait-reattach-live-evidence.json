@@ -1,0 +1,10 @@
+{
+  "status": "LIVE_AUTOMATIC_REATTACH_VERIFIED_TERMINAL_PENDING",
+  "same_queue_process": true,
+  "new_wait_client": true,
+  "dispatch_launch_unchanged": true,
+  "manual_queue_restart": false,
+  "model_restarted": false,
+  "scope": "post-launch observation connection loss; not server reboot or full network outage",
+  "terminal_verified": false
+}
