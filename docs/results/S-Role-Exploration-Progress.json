@@ -78,7 +78,7 @@
       "wall_seconds": 829.8029103279114
     }
   },
-  "updated_epoch": 1794349696.0832522,
+  "updated_epoch": 1794349886.1724296,
   "successors": {
     "A": {
       "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
@@ -281,11 +281,11 @@
     "reasoning_target_soft": 8192,
     "resends": 0
   },
-  "active_npu_experiments_verified": 2,
+  "active_npu_experiments_verified": 3,
   "cpu_successors": [
     {
       "task": "starved-role-pair-gate",
-      "status": "MAIN_FULL1635_CONTENT_APPROVED_FIXED_NATIVE_THEN_A",
+      "status": "ACTUAL_RUNNING_MAIN_REMOTE_VERIFIED",
       "changed_wire_branches": 18
     },
     {
@@ -375,6 +375,16 @@
       "ETA_seconds": null
     },
     "B": {
+      "status": "ACTUAL_RUNNING_DIRECT_DOCKER_VERIFIED",
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "total_samples": 545,
+      "total_branches": 1635,
+      "completed_samples": null,
+      "ETA_seconds": null
+    },
+    "A_gate": {
       "status": "ACTUAL_RUNNING_DIRECT_DOCKER_VERIFIED",
       "cards": 4,
       "instances": 1,
