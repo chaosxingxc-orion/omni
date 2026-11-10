@@ -78,10 +78,32 @@
       "wall_seconds": 829.8029103279114
     }
   },
-  "updated_epoch": 1794345977.763941,
+  "updated_epoch": 1794346309.0376558,
   "successors": {
-    "A": "approved bounded selector; execution worker active, new launch not yet verified",
-    "B": "ACE context request actually dispatched; no new NPU launch yet",
-    "C": "completed renderer; next candidate not yet assigned"
+    "A": {
+      "status": "ACTUAL_RUNNING_MAIN_VERIFIED",
+      "total_samples": 545,
+      "total_branches": 1635,
+      "completed_samples": null,
+      "completed_branches": null,
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "seconds_per_sample": null,
+      "ETA_seconds": null
+    },
+    "B": "ACE context1 specifically approved; CPU compile/fixed preparation, launch not verified",
+    "C": "ACE context2 specifically approved; CPU compile/fixed preparation, launch not verified"
+  },
+  "context_teacher": {
+    "status": "COMPLETE",
+    "calls": 1,
+    "elapsed_seconds": 398.8828769400716,
+    "input_tokens": 80788,
+    "output_tokens": 23315,
+    "reasoning_tokens": 20198,
+    "total_tokens": 104103,
+    "reasoning_target_soft": 8192,
+    "resends": 0
   }
 }
