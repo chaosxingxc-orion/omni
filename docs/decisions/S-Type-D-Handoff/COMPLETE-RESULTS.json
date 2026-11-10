@@ -1,0 +1,153 @@
+{
+  "at": 1794324142.5710256,
+  "S": {
+    "clean-parent": {
+      "status": "COMPLETE",
+      "completed": 545,
+      "total": 545,
+      "wall_seconds": 946.657576084137,
+      "seconds_per_sample": 1.736986378136031,
+      "cards": 4,
+      "instances": 1,
+      "usage": {
+        "completion_tokens": 69747,
+        "prompt_tokens": 7143144,
+        "total_tokens": 7212891
+      },
+      "groups": {
+        "learning": {
+          "samples": 476,
+          "exact": 269,
+          "tp": 459,
+          "fp": 171,
+          "fn": 93
+        },
+        "held": {
+          "samples": 69,
+          "exact": 35,
+          "tp": 53,
+          "fp": 20,
+          "fn": 24
+        },
+        "all": {
+          "samples": 545,
+          "exact": 304,
+          "tp": 512,
+          "fp": 191,
+          "fn": 117
+        }
+      }
+    },
+    "clean-strategy": {
+      "status": "COMPLETE",
+      "completed": 545,
+      "total": 545,
+      "wall_seconds": 1029.4401950836182,
+      "seconds_per_sample": 1.888881091896547,
+      "cards": 4,
+      "instances": 1,
+      "usage": {
+        "completion_tokens": 84209,
+        "prompt_tokens": 7885434,
+        "total_tokens": 7969643
+      },
+      "groups": {
+        "learning": {
+          "samples": 476,
+          "exact": 265,
+          "tp": 459,
+          "fp": 201,
+          "fn": 93
+        },
+        "held": {
+          "samples": 69,
+          "exact": 36,
+          "tp": 57,
+          "fp": 21,
+          "fn": 20
+        },
+        "all": {
+          "samples": 545,
+          "exact": 301,
+          "tp": 516,
+          "fp": 222,
+          "fn": 113
+        }
+      }
+    }
+  },
+  "P": {
+    "clean": {
+      "status": "COMPLETE",
+      "completed": 1072,
+      "total": 1072,
+      "cost": {
+        "usage": {
+          "prompt_tokens": 5376993,
+          "total_tokens": 5388678,
+          "completion_tokens": 11685
+        },
+        "snapshot_host_epoch": 1794322638.9630103,
+        "wall_seconds": 410.6225898900302,
+        "seconds_per_sample": 0.38304346071831175,
+        "card_hours": 0.45624732210003355,
+        "cards": 4,
+        "instances": 1,
+        "TP": 4,
+        "concurrency": 64,
+        "money": null
+      },
+      "metrics": {
+        "n": 1072,
+        "valid": 1072,
+        "invalid": 0,
+        "gold_supplied": 1072,
+        "current_top1": 899,
+        "baseline_top1": 907,
+        "top1_repair": 3,
+        "top1_regression": 11,
+        "current_top3": 1017,
+        "baseline_top3": 1016,
+        "top3_repair": 8,
+        "top3_regression": 7
+      }
+    },
+    "fewshot": {
+      "status": "COMPLETE",
+      "completed": 1072,
+      "total": 1072,
+      "cost": {
+        "usage": {
+          "prompt_tokens": 5377298,
+          "total_tokens": 5388999,
+          "completion_tokens": 11701
+        },
+        "snapshot_host_epoch": 1794323048.7382658,
+        "wall_seconds": 407.33051903999876,
+        "seconds_per_sample": 0.37997249910447645,
+        "card_hours": 0.45258946559999863,
+        "cards": 4,
+        "instances": 1,
+        "TP": 4,
+        "concurrency": 64,
+        "money": null
+      },
+      "metrics": {
+        "n": 1072,
+        "valid": 1072,
+        "invalid": 0,
+        "gold_supplied": 1072,
+        "current_top1": 901,
+        "baseline_top1": 899,
+        "top1_repair": 10,
+        "top1_regression": 8,
+        "current_top3": 1016,
+        "baseline_top3": 1017,
+        "top3_repair": 5,
+        "top3_regression": 6
+      }
+    }
+  },
+  "independent_S_recount": "PASS",
+  "new_model_requests": 0
+}
