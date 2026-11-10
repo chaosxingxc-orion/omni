@@ -78,7 +78,7 @@
       "wall_seconds": 829.8029103279114
     }
   },
-  "updated_epoch": 1794350313.782006,
+  "updated_epoch": 1794350647.1581109,
   "successors": {
     "A": {
       "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
@@ -285,11 +285,11 @@
   "cpu_successors": [
     {
       "task": "TFGRPO-consumption-next",
-      "status": "CLASS_FEEDBACK_PREPARING"
+      "status": "TEACHER_SINGLE_API_DISPATCHED"
     },
     {
       "task": "ACE-construction-next",
-      "status": "CLASS_FEEDBACK_PREPARING"
+      "status": "TEACHER_SINGLE_API_DISPATCHED"
     },
     {
       "task": "S-D-real-handoff",
@@ -378,11 +378,20 @@
       "summary": "S-Card-Scope-Summary.json"
     },
     "A_gate": {
-      "status": "RUNNING_LAST_DIRECT_VERIFIED",
-      "total_samples": 545,
+      "card_hours_at_snapshot": 0.6327489195929633,
+      "cards": 4,
+      "completed_branches": 1278,
+      "completed_samples": 426,
+      "first_schema": "PASS_ACTUAL_RAW_TYPE_SCHEMA_BEFORE_FANOUT",
+      "instances": 1,
+      "observed_at": 1794350449.760636,
+      "remaining_seconds_estimate": 159.07842555963938,
+      "seconds_per_complete_sample_equivalent": 1.3367934920978097,
+      "status": "ARCHIVED_RUNNING_PARTIAL",
       "total_branches": 1635,
-      "completed_samples": null,
-      "ETA_seconds": null
+      "total_samples": 545,
+      "unknown_final": null,
+      "valid_branches": 1278
     }
   },
   "capacity_recovery": "COMPLETE"
