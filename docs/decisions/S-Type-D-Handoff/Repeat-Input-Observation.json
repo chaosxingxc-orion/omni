@@ -1,0 +1,16 @@
+{
+  "status": "PASS_COMPLETE_FOUR_ARM_LEARNING_ONLY",
+  "samples": 476,
+  "arms": 4,
+  "repeated_input_groups": 721,
+  "repeated_input_unique_samples": 476,
+  "varying_groups": 108,
+  "correctness_flip_groups": 60,
+  "all_four_same_input_samples": 213,
+  "all_four_same_input_always_exact": 133,
+  "all_four_same_input_always_wrong": 59,
+  "all_four_same_input_correctness_flips": 21,
+  "all_four_same_input_output_varies": 33,
+  "new_model_calls": 0,
+  "limitation": "Exact wire identity only. Different batch scheduling/hosts/cache history are uncontrolled. Descriptive variation is not calibrated uncertainty or an estimate of a strategy effect. Gold is learning feedback only."
+}
