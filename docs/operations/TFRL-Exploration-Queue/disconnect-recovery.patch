@@ -1,0 +1,133 @@
+diff --git a/code/host_ops.py b/code/host_ops.py
+index dec6c02..3a5bad8 100644
+--- a/code/host_ops.py
++++ b/code/host_ops.py
+@@ -105,7 +105,9 @@ def main():
+    l=read(h/'jobs'/task['task_id']/'LAUNCH.json');save(h/'LAUNCH.json',l)
+   return
+  if a['action']=='observe':
+-  l=read(h/'LAUNCH.json');d=driver(w);st=d.inspect(l['container_id'])['State']
++  l=read(h/'LAUNCH.json')
++  if 'launch' in a:assert l==a['launch'],'KNOWN_LAUNCH_CHANGED'
++  d=driver(w);d.verify(l['runtime'],s['cards']);st=d.inspect(l['container_id'])['State']
+   if st['Running']:d.snapshot(types.SimpleNamespace(state=l['state']));return
+   term=read(Path(l['state'])/'run/TERMINAL.json');assert st['ExitCode']==0 and st['Pid']==0 and term['status']=='COMPLETE' and term['completed']==1635 and term['unknown']==term['absent']==0
+   # Verify journal/service/guard before allowing a successor; CPU scoring is separate.
+diff --git a/code/service.py b/code/service.py
+index 51f6594..6625c23 100644
+--- a/code/service.py
++++ b/code/service.py
+@@ -36,25 +36,67 @@ def score(e,p):
+ 
+ def execute(e,p,previous,resume=False):
+  local=O/'events'/e['event_id'];s=LANES[e['lane']];h=Path(p['host_root'])
++ def pending(phase,detail,retry='read-only same execute'):
++  save(local/'OBSERVE-ERROR.json',dict(at=time.time(),phase=phase,detail=str(detail),automatic_retry=retry,retry_seconds=600,unknown_resend=False))
++ def check_error(dest):
++  if (dest/'ERROR.json').exists():raise RuntimeError('KNOWN_REMOTE_ERROR: '+str(read(dest/'ERROR.json')))
++ def check_launch(l):
++  run='S-TEACHER-READY-'+e['event_id'];task=run.lower()
++  expected=dict(lane=e['lane'],run_id=run,attempt_id='ready-001',task_id=task,state=str(h/'jobs'/task),workspace=p['workspace'],cards=s['cards'],total=1635,concurrency=64)
++  assert all(l.get(k)==v for k,v in expected.items()),'LAUNCH_IDENTITY_MISMATCH'
++  assert l.get('container_id') and l.get('runtime',{}).get('shared_guard'),'LAUNCH_IDENTITY_MISSING'
++  if (local/'LAUNCH.json').exists():assert read(local/'LAUNCH.json')==l,'KNOWN_LAUNCH_CHANGED'
+  try:
+-  if not resume:start_controller(e,p,previous)
++  assert p['event']==e,'PREPARED_EVENT_MISMATCH'
++  # Config preparation is safe to retry only BEFORE the durable intent. The
++  # systemd RPC follows that intent; once present, only read-only observation.
++  while not resume and not (local/'DISPATCH-INTENT.json').exists():
++   try:start_controller(e,p,previous);break
++   except subprocess.CalledProcessError as exc:
++    if (local/'DISPATCH-INTENT.json').exists():pending('START_RPC_UNKNOWN',exc);break
++    pending('START_PREPARATION_UNAVAILABLE',exc,'safe config preparation before dispatch intent')
++    time.sleep(600)
+   # One host-local inotify wait; SSH is not polled for launch/progress.
+-  info=json.loads(op(s,h,Path(p['workspace']),'await_launch',event_id=e['event_id']))
+-  if 'ERROR.json' in info:raise RuntimeError(info['ERROR.json'])
+-  if 'LAUNCH.json' not in info:raise RuntimeError('UNKNOWN_DISPATCH_NO_RESEND: '+str(info))
+-  l=info['LAUNCH.json'];save(local/'LAUNCH.json',l)
++  while True:
++   try:
++    info=json.loads(op(s,h,Path(p['workspace']),'await_launch',event_id=e['event_id']))
++    if 'ERROR.json' in info:raise RuntimeError('KNOWN_REMOTE_ERROR: '+str(info['ERROR.json']))
++    if 'LAUNCH.json' in info:
++     l=info['LAUNCH.json'];check_launch(l);save(local/'LAUNCH.json',l);break
++    pending('DISPATCH_UNKNOWN_NO_RESEND',info)
++   except subprocess.CalledProcessError as exc:
++    # Non-255 means the helper failed remotely; only a successful read can
++    # distinguish that from a concurrent controller ERROR. SSH 255 is unknown.
++    try:dest=fetch(s,h)
++    except subprocess.CalledProcessError:pending('AWAIT_AND_FETCH_UNAVAILABLE',exc)
++    else:
++     check_error(dest)
++     if exc.returncode!=255:raise RuntimeError('KNOWN_REMOTE_AWAIT_FAILURE: '+str(exc)) from exc
++     pending('AWAIT_TRANSPORT_UNAVAILABLE',exc)
++   time.sleep(600)
+   # Separate SSH wait process survives network loss on the host; never kill inference.
+   try:remote(s,['/usr/bin/docker','wait',l['container_id']])
+   except subprocess.CalledProcessError:pass
+   # Read-only observe reconciles terminal; a disconnect cannot trigger dispatch.
+   while True:
++   phase='observe'
+    try:
+-    op(s,h,Path(p['workspace']),'observe');dest=fetch(s,h)
+-    if (dest/'GENERATION_COMPLETE.json').exists():break
+-   except subprocess.CalledProcessError:
+-    failure=fetch(s,h)
+-    if (failure/'ERROR.json').exists():raise RuntimeError(read(failure/'ERROR.json'))
+-    save(local/'OBSERVE-ERROR.json',dict(at=time.time(),automatic_retry='read-only terminal observation only'))
++    op(s,h,Path(p['workspace']),'observe',launch=l);phase='fetch';dest=fetch(s,h);check_error(dest)
++    assert read(dest/'LAUNCH.json')==l,'OBSERVED_LAUNCH_CHANGED'
++    if (dest/'GENERATION_COMPLETE.json').exists():
++     done=read(dest/'GENERATION_COMPLETE.json');term=done['terminal']
++     assert done['status']=='GENERATION_COMPLETE' and done['launch']==l,'TERMINAL_LAUNCH_MISMATCH'
++     assert term['status']=='COMPLETE' and term['completed']==1635 and term['unknown']==term['absent']==0,'UNVERIFIED_TERMINAL'
++     break
++   except subprocess.CalledProcessError as exc:
++    try:failure=fetch(s,h)
++    except subprocess.CalledProcessError:pending('OBSERVE_AND_FETCH_UNAVAILABLE',exc)
++    else:
++     check_error(failure)
++     # A terminal file alone cannot release the queue after failed observe:
++     # observe must verify boot/service/guard/journal on a successful attempt.
++     if phase=='observe' and exc.returncode!=255:raise RuntimeError('KNOWN_REMOTE_OBSERVE_FAILURE: '+str(exc)) from exc
++     pending('OBSERVE_TRANSPORT_UNAVAILABLE',exc)
+    time.sleep(600)
+   save(local/'GENERATION_COMPLETE.json',read(dest/'GENERATION_COMPLETE.json'))
+   # Set terminal first; next lane work does not depend on score/analysis.
+diff --git a/code/transport.py b/code/transport.py
+index 8c3b845..efb3c2a 100644
+--- a/code/transport.py
++++ b/code/transport.py
+@@ -1,6 +1,7 @@
+ from common_queue import *
+ import subprocess,shlex,tarfile,io,copy
+-LANES=read(O/'config/lanes.json')
++# Imported once. Explicit config is for a new CPU staging/service process.
++LANES=read(Path(os.environ.get('OMNI_READY_LANES_CONFIG',O/'config/lanes.json')))
+ def remote(s,argv,stdin=None):
+  if s['host']=='npu2':cmd=['sudo','-n']+list(map(str,argv))
+  else:
+diff --git a/config/lanes.json b/config/lanes.json
+index 7271190..190a768 100644
+--- a/config/lanes.json
++++ b/config/lanes.json
+@@ -8,7 +8,7 @@
+       3
+     ],
+     "host_root": "/srv/omni-local-state/s-teacher-ready-queue-v2",
+-    "base": "/srv/omni-local-state/s-temporal-eligibility-a-execution-v1/merged-workspace",
++    "base": "/var/tmp/omni-s-teacher-source-policy-v2-execution-cpu",
+     "predecessor": "/srv/omni-local-state/s-temporal-eligibility-a-execution-v1/LAUNCH.json",
+     "owner": "/srv/omni-local-state/s-temporal-eligibility-a-execution-v1/OWNER.json",
+     "owner_terminal": "/srv/omni-local-state/s-temporal-eligibility-a-execution-v1/CONTROLLER-TERMINAL.json",
+@@ -25,7 +25,7 @@
+       7
+     ],
+     "host_root": "/srv/omni-local-state/s-teacher-ready-queue-v2",
+-    "base": "/srv/omni-local-state/s-temporal-eligibility-a-execution-v1/merged-workspace",
++    "base": "/var/tmp/omni-s-teacher-source-policy-v2-execution-cpu",
+     "predecessor": "/srv/omni-local-state/s-tfgrpo-compatible-successors-v1/s2-b/LAUNCH.json",
+     "owner": "/srv/omni-local-state/s-tfgrpo-compatible-successors-v1/OWNER.json",
+     "owner_terminal": "/srv/omni-local-state/s-tfgrpo-compatible-successors-v1/CONTROLLER-TERMINAL.json",

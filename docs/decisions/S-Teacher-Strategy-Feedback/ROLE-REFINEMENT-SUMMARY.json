@@ -1,0 +1,138 @@
+{
+  "scope": "learning476; fixed S545x3; report69 not used for tuning",
+  "promotion": false,
+  "experiments": {
+    "stable-binding": {
+      "completed_samples": 545,
+      "total_samples": 545,
+      "completed_branches": 1635,
+      "unknown": 0,
+      "cost": {
+        "card_hours": 0.9031771885024177,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.4914852654168365,
+        "session_wall_seconds": 782.9518158900319,
+        "usage": {
+          "completion_tokens": 42935,
+          "prompt_tokens": 7016298,
+          "total_tokens": 7059233
+        },
+        "wall_seconds": 812.8594696521759
+      },
+      "comparisons": {
+        "role-context": {
+          "samples": 476,
+          "exact": 273,
+          "tp": 455,
+          "fp": 165,
+          "fn": 97,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 252,
+          "empty_fp_samples": 64
+        },
+        "stable-binding": {
+          "samples": 476,
+          "exact": 273,
+          "tp": 456,
+          "fp": 169,
+          "fn": 96,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 254,
+          "empty_fp_samples": 66
+        }
+      }
+    },
+    "rank32": {
+      "completed_samples": 545,
+      "total_samples": 545,
+      "completed_branches": 1635,
+      "unknown": 0,
+      "cost": {
+        "card_hours": 0.896068852212694,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.4797467284246322,
+        "session_wall_seconds": 777.8429754700046,
+        "usage": {
+          "completion_tokens": 43708,
+          "prompt_tokens": 7018811,
+          "total_tokens": 7062519
+        },
+        "wall_seconds": 806.4619669914246
+      },
+      "comparisons": {
+        "ace-role-v3": {
+          "samples": 476,
+          "exact": 277,
+          "tp": 455,
+          "fp": 158,
+          "fn": 97,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 251,
+          "empty_fp_samples": 53
+        },
+        "tfgrpo-rank32": {
+          "samples": 476,
+          "exact": 272,
+          "tp": 460,
+          "fp": 163,
+          "fn": 92,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 255,
+          "empty_fp_samples": 61
+        }
+      }
+    },
+    "coffee-strength": {
+      "completed_samples": 545,
+      "total_samples": 545,
+      "completed_branches": 1635,
+      "unknown": 0,
+      "cost": {
+        "card_hours": 0.9102341649267408,
+        "cards": 4,
+        "instances": 1,
+        "money": null,
+        "seconds_per_sample": 1.5031389879524162,
+        "session_wall_seconds": 790.6208223000285,
+        "usage": {
+          "completion_tokens": 41904,
+          "prompt_tokens": 7015642,
+          "total_tokens": 7057546
+        },
+        "wall_seconds": 819.2107484340668
+      },
+      "comparisons": {
+        "semantic-view": {
+          "samples": 476,
+          "exact": 283,
+          "tp": 451,
+          "fp": 144,
+          "fn": 101,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 247,
+          "empty_fp_samples": 54
+        },
+        "coffee-strength": {
+          "samples": 476,
+          "exact": 281,
+          "tp": 451,
+          "fp": 152,
+          "fn": 101,
+          "invalid": 0,
+          "nonempty": 341,
+          "complete_recall": 247,
+          "empty_fp_samples": 54
+        }
+      }
+    }
+  }
+}

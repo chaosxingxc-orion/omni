@@ -1,0 +1,20 @@
+{
+  "status": "APPLIED_AND_NEW_QUEUE_PROCESS_VERIFIED",
+  "deployed_source_sha256": {
+    "code/service.py": "ea15edfdaf08c76c63031b269f06f702d8689d7e25065db2817b42b805366476",
+    "code/host_ops.py": "03f67fc53f28f7ba113e2ea8d330f5299bcf494b9e3c6a6070c03ca60c51e88f",
+    "code/transport.py": "31b177422480f5e963a062c5e41f5f6344c83cca232f26d767966cace0ef071e",
+    "config/lanes.json": "b9d7c5faf15db51e6d69d64186d903e2962d1466b844bbda8d46e92114d8b1cd"
+  },
+  "patch_sha256": "f726899780b03b0351a9d1421a4098caa161195bab50b2da8dcf0f9c5ade4658",
+  "fixed_image_candidate_tests": 44,
+  "baseline_bug_reproductions": 4,
+  "model_services_restarted": false,
+  "monitor_seconds": 600,
+  "unknown_requests_resent": false,
+  "live_drill_scope": "Interrupt only post-launch local SSH docker-wait client; same task continued; complete terminal reconciliation pending",
+  "limitations": [
+    "No server reboot or sustained network partition drill",
+    "Not a self-contained queue release; patch requires matching before source"
+  ]
+}
