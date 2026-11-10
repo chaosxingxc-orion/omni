@@ -1,4 +1,4 @@
-> 最新优先级：先完成同条件S thinking ON/OFF并行对照。A保留当前ON，B接OFF，A原串行OFF已取消；其他新实验后置。以下较早计划中教师候选扩展暂不执行。详见 S-Thinking-ON-OFF-Priority。
+> 当前结论：同条件ON/OFF均已完整完成，用户锁定OFF。当前优先审查知识构建与意图条件槽位范围；旧实验后继关闭。详见S-Thinking-ON-OFF-Priority与S-Intent-Slot-Scope-Audit。下文为此前阶段记录，不代表实时运行状态。
 
 # 当前任务进度、实验配置与下一阶段计划
 

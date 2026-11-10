@@ -1,0 +1,33 @@
+{
+  "schema": "s-selected-baseline-v1",
+  "at": 1794296160.4056935,
+  "selection": "OFF",
+  "reason": "User explicit choice despite ON higher accuracy",
+  "enable_thinking": false,
+  "thinking_budget": null,
+  "source_pair_config": {
+    "path": "delivery/s-current-onoff-pair-v1/config/pair.json",
+    "sha256": "16155199b26ccd704991a9ca485cfdf79fb8c5bfc8e389a3ef1235d1514a1655"
+  },
+  "frozen_native_config": {
+    "path": "delivery/s-nonthinking-control-v1/prepared/single_intent_fewshot/native-UNBOUND.json",
+    "sha256": "62b80fb91319fd254c079b8d0bbf1414d37a806af2a2c868d42c68f05a422efb"
+  },
+  "run_id": "S-CURRENT-ONOFF-PAIR-V1-OFF",
+  "attempt_id": "pair-v1-off-001",
+  "runtime": {
+    "TP": 4,
+    "concurrency": 64,
+    "context_length": 65536,
+    "max_tokens": 4096,
+    "temperature": 0,
+    "seed": 20260913,
+    "http_timeout_seconds": 1200,
+    "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026"
+  },
+  "scope": "S independent per P top3 intent; 545=476 learning+69 held; gold-intent conditional metrics",
+  "no_resampling": true,
+  "hold_not_used_for_tuning": true,
+  "on_role": "diagnostic comparator only",
+  "next": "root-cause analysis of OFF; no broad new experiments"
+}
