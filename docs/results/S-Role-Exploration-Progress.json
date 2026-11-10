@@ -78,7 +78,7 @@
       "wall_seconds": 829.8029103279114
     }
   },
-  "updated_epoch": 1794349535.6176476,
+  "updated_epoch": 1794349696.0832522,
   "successors": {
     "A": {
       "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
@@ -281,7 +281,7 @@
     "reasoning_target_soft": 8192,
     "resends": 0
   },
-  "active_npu_experiments_verified": 1,
+  "active_npu_experiments_verified": 2,
   "cpu_successors": [
     {
       "task": "starved-role-pair-gate",
@@ -290,7 +290,7 @@
     },
     {
       "task": "intent-card-scope-ACE-two-candidates",
-      "status": "C_ACTUAL_RUNNING_B_STAGE_RECOVERY"
+      "status": "B_C_ACTUAL_RUNNING_DIRECT_REMOTE_VERIFIED"
     },
     {
       "task": "root-capacity-recovery",
@@ -375,8 +375,14 @@
       "ETA_seconds": null
     },
     "B": {
-      "status": "STAGE_RECOVERY_ROOT_DISK_FULL",
-      "actual_running_verified": false
+      "status": "ACTUAL_RUNNING_DIRECT_DOCKER_VERIFIED",
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "total_samples": 545,
+      "total_branches": 1635,
+      "completed_samples": null,
+      "ETA_seconds": null
     }
   }
 }
