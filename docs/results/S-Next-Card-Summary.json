@@ -1,0 +1,183 @@
+{
+  "status": "COMPLETE_LEARNING476",
+  "arms": {
+    "signed-relevance": {
+      "samples": 476,
+      "exact": 283,
+      "tp": 453,
+      "fp": 150,
+      "fn": 99,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 249,
+      "empty_fp_samples": 55
+    },
+    "datetime-local-binding": {
+      "samples": 476,
+      "exact": 289,
+      "tp": 452,
+      "fp": 143,
+      "fn": 100,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 250,
+      "empty_fp_samples": 53
+    },
+    "role-clause-order": {
+      "samples": 476,
+      "exact": 277,
+      "tp": 449,
+      "fp": 149,
+      "fn": 103,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 246,
+      "empty_fp_samples": 52
+    }
+  },
+  "target_split": {
+    "datetime-local-binding": {
+      "changed": {
+        "samples": 23,
+        "before": {
+          "samples": 23,
+          "exact": 21,
+          "tp": 25,
+          "fp": 1,
+          "fn": 1,
+          "invalid": 0,
+          "nonempty": 22,
+          "complete_recall": 21,
+          "empty_fp_samples": 0
+        },
+        "after": {
+          "samples": 23,
+          "exact": 21,
+          "tp": 24,
+          "fp": 1,
+          "fn": 2,
+          "invalid": 0,
+          "nonempty": 22,
+          "complete_recall": 20,
+          "empty_fp_samples": 0
+        },
+        "repairs": 0,
+        "regressions": 0
+      },
+      "same": {
+        "samples": 453,
+        "before": {
+          "samples": 453,
+          "exact": 262,
+          "tp": 428,
+          "fp": 149,
+          "fn": 98,
+          "invalid": 0,
+          "nonempty": 319,
+          "complete_recall": 228,
+          "empty_fp_samples": 55
+        },
+        "after": {
+          "samples": 453,
+          "exact": 268,
+          "tp": 428,
+          "fp": 142,
+          "fn": 98,
+          "invalid": 0,
+          "nonempty": 319,
+          "complete_recall": 230,
+          "empty_fp_samples": 53
+        },
+        "repairs": 16,
+        "regressions": 10
+      }
+    },
+    "role-clause-order": {
+      "changed": {
+        "samples": 41,
+        "before": {
+          "samples": 41,
+          "exact": 16,
+          "tp": 65,
+          "fp": 9,
+          "fn": 19,
+          "invalid": 0,
+          "nonempty": 40,
+          "complete_recall": 22,
+          "empty_fp_samples": 1
+        },
+        "after": {
+          "samples": 41,
+          "exact": 18,
+          "tp": 68,
+          "fp": 10,
+          "fn": 16,
+          "invalid": 0,
+          "nonempty": 40,
+          "complete_recall": 25,
+          "empty_fp_samples": 1
+        },
+        "repairs": 3,
+        "regressions": 1
+      },
+      "same": {
+        "samples": 435,
+        "before": {
+          "samples": 435,
+          "exact": 267,
+          "tp": 388,
+          "fp": 141,
+          "fn": 80,
+          "invalid": 0,
+          "nonempty": 301,
+          "complete_recall": 227,
+          "empty_fp_samples": 54
+        },
+        "after": {
+          "samples": 435,
+          "exact": 259,
+          "tp": 381,
+          "fp": 139,
+          "fn": 87,
+          "invalid": 0,
+          "nonempty": 301,
+          "complete_recall": 221,
+          "empty_fp_samples": 51
+        },
+        "repairs": 10,
+        "regressions": 18
+      }
+    }
+  },
+  "promotion": false,
+  "learning": 476,
+  "report_only": 69,
+  "cost": {
+    "datetime-local-binding": {
+      "samples": 545,
+      "branches": 1635,
+      "valid": 1635,
+      "unknown": 0,
+      "wall_seconds": 807.4795689582825,
+      "seconds_per_sample": 1.4816138879968486,
+      "tokens": 7056242,
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "card_hours": 0.8971995210647583
+    },
+    "role-clause-order": {
+      "samples": 545,
+      "branches": 1635,
+      "valid": 1635,
+      "unknown": 0,
+      "wall_seconds": 816.4464023113251,
+      "seconds_per_sample": 1.498066793231789,
+      "tokens": 7054504,
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "card_hours": 0.9071626692348056
+    }
+  }
+}

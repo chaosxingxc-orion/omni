@@ -1,0 +1,97 @@
+{
+  "status": "COMPLETE_LEARNING476",
+  "arms": {
+    "signed-relevance": {
+      "samples": 476,
+      "exact": 283,
+      "tp": 453,
+      "fp": 150,
+      "fn": 99,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 249,
+      "empty_fp_samples": 55
+    },
+    "third-witness": {
+      "samples": 476,
+      "exact": 284,
+      "tp": 461,
+      "fp": 155,
+      "fn": 91,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 256,
+      "empty_fp_samples": 60
+    }
+  },
+  "target_split": {
+    "changed": {
+      "samples": 389,
+      "before": {
+        "samples": 389,
+        "exact": 219,
+        "tp": 361,
+        "fp": 130,
+        "fn": 89,
+        "invalid": 0,
+        "nonempty": 273,
+        "complete_recall": 190,
+        "empty_fp_samples": 47
+      },
+      "after": {
+        "samples": 389,
+        "exact": 221,
+        "tp": 370,
+        "fp": 135,
+        "fn": 80,
+        "invalid": 0,
+        "nonempty": 273,
+        "complete_recall": 198,
+        "empty_fp_samples": 52
+      },
+      "repairs": 21,
+      "regressions": 19
+    },
+    "same": {
+      "samples": 87,
+      "before": {
+        "samples": 87,
+        "exact": 64,
+        "tp": 92,
+        "fp": 20,
+        "fn": 10,
+        "invalid": 0,
+        "nonempty": 68,
+        "complete_recall": 59,
+        "empty_fp_samples": 8
+      },
+      "after": {
+        "samples": 87,
+        "exact": 63,
+        "tp": 91,
+        "fp": 20,
+        "fn": 11,
+        "invalid": 0,
+        "nonempty": 68,
+        "complete_recall": 58,
+        "empty_fp_samples": 8
+      },
+      "repairs": 2,
+      "regressions": 3
+    }
+  },
+  "promotion": false,
+  "cost": {
+    "samples": 545,
+    "branches": 1635,
+    "valid": 1635,
+    "unknown": 0,
+    "wall_seconds": 826.6934998035431,
+    "seconds_per_sample": 1.5168688069789782,
+    "tokens": 7111965,
+    "cards": 4,
+    "instances": 1,
+    "concurrency": 64,
+    "card_hours": 0.9185483331150479
+  }
+}

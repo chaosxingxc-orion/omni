@@ -27,7 +27,7 @@
       "token_delta_min": 0,
       "token_delta_max": 54,
       "token_delta_sum": 57329,
-      "status": "running_remote_verified"
+      "status": "complete_recall_gain_FP_tradeoff_no_promotion"
     },
     {
       "name": "redundant-second-swap",
@@ -35,20 +35,20 @@
       "token_delta_min": -11,
       "token_delta_max": 18,
       "token_delta_sum": 1293,
-      "status": "fixed_complete_planned_successor"
+      "status": "running_successor"
     },
     {
       "name": "datetime-local-binding",
       "changed_branches": 53,
-      "status": "running_remote_verified"
+      "status": "complete_no_promotion"
     },
     {
       "name": "role-clause-order",
       "changed_branches": 135,
-      "status": "running_remote_verified"
+      "status": "complete_no_promotion"
     }
   ],
-  "new_accuracy_available": false,
+  "new_accuracy_available": true,
   "all_cards_busy_proven": false,
   "D_CPU": {
     "samples": 545,
@@ -58,7 +58,11 @@
     "passed": true,
     "new_model_calls": 0,
     "source_card_gaps": 3,
-    "D_accuracy_available": false
+    "D_accuracy_available": false,
+    "FIT_max_total_upper": 53349,
+    "output_tokens": 1024,
+    "continuation": "D_recovery_running_remote_verified",
+    "scoring": "counts_only_recompute_micro_null_extension"
   },
-  "all_three_jobs_running_verified": true
+  "all_three_jobs_running_verified": false
 }
