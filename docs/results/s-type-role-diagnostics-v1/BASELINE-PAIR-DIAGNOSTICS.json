@@ -1,0 +1,222 @@
+{
+  "scope": "learning476_gold_intent_only",
+  "causal_attribution": false,
+  "note": "Four-state projections are diagnostic signals, not proof of semantic substitution; pairs overlap and must not be summed as unique errors.",
+  "pairs": {
+    "calendar_set:person/relation": {
+      "A": "person",
+      "B": "relation",
+      "samples": 15,
+      "matrix": {
+        "A_only": {
+          "A_only": 5,
+          "neither": 1
+        },
+        "B_only": {
+          "A_only": 1,
+          "both": 1
+        },
+        "both": {},
+        "neither": {
+          "neither": 7
+        }
+      },
+      "opposite_single_type_predictions": 1,
+      "single_expanded_to_both": 1,
+      "coexistence_reduced_to_single": 0,
+      "neither_expanded": 0
+    },
+    "calendar_set:time/timeofday": {
+      "A": "time",
+      "B": "timeofday",
+      "samples": 15,
+      "matrix": {
+        "A_only": {
+          "neither": 1,
+          "A_only": 2
+        },
+        "B_only": {
+          "B_only": 2
+        },
+        "both": {},
+        "neither": {
+          "neither": 10
+        }
+      },
+      "opposite_single_type_predictions": 0,
+      "single_expanded_to_both": 0,
+      "coexistence_reduced_to_single": 0,
+      "neither_expanded": 0
+    },
+    "calendar_set:date/time": {
+      "A": "date",
+      "B": "time",
+      "samples": 15,
+      "matrix": {
+        "A_only": {
+          "A_only": 10
+        },
+        "B_only": {},
+        "both": {
+          "A_only": 1,
+          "both": 1,
+          "B_only": 1
+        },
+        "neither": {
+          "A_only": 1,
+          "neither": 1
+        }
+      },
+      "opposite_single_type_predictions": 0,
+      "single_expanded_to_both": 0,
+      "coexistence_reduced_to_single": 2,
+      "neither_expanded": 1
+    },
+    "play_music:artist_name/song_name": {
+      "A": "artist_name",
+      "B": "song_name",
+      "samples": 14,
+      "matrix": {
+        "A_only": {
+          "A_only": 2,
+          "both": 1
+        },
+        "B_only": {},
+        "both": {
+          "both": 4
+        },
+        "neither": {
+          "neither": 6,
+          "invalid": 1
+        }
+      },
+      "opposite_single_type_predictions": 0,
+      "single_expanded_to_both": 1,
+      "coexistence_reduced_to_single": 0,
+      "neither_expanded": 0
+    },
+    "play_music:artist_name/music_genre": {
+      "A": "artist_name",
+      "B": "music_genre",
+      "samples": 14,
+      "matrix": {
+        "A_only": {
+          "A_only": 7
+        },
+        "B_only": {
+          "B_only": 1,
+          "neither": 1,
+          "invalid": 1
+        },
+        "both": {},
+        "neither": {
+          "neither": 4
+        }
+      },
+      "opposite_single_type_predictions": 0,
+      "single_expanded_to_both": 0,
+      "coexistence_reduced_to_single": 0,
+      "neither_expanded": 0
+    },
+    "play_music:song_name/music_genre": {
+      "A": "song_name",
+      "B": "music_genre",
+      "samples": 14,
+      "matrix": {
+        "A_only": {
+          "A_only": 4
+        },
+        "B_only": {
+          "B_only": 1,
+          "neither": 1,
+          "invalid": 1
+        },
+        "both": {},
+        "neither": {
+          "neither": 6,
+          "A_only": 1
+        }
+      },
+      "opposite_single_type_predictions": 0,
+      "single_expanded_to_both": 0,
+      "coexistence_reduced_to_single": 0,
+      "neither_expanded": 1
+    },
+    "cooking_recipe:food_type/ingredient": {
+      "A": "food_type",
+      "B": "ingredient",
+      "samples": 21,
+      "matrix": {
+        "A_only": {
+          "both": 3,
+          "A_only": 13
+        },
+        "B_only": {
+          "neither": 1,
+          "A_only": 1
+        },
+        "both": {
+          "A_only": 1
+        },
+        "neither": {
+          "A_only": 1,
+          "both": 1
+        }
+      },
+      "opposite_single_type_predictions": 1,
+      "single_expanded_to_both": 3,
+      "coexistence_reduced_to_single": 1,
+      "neither_expanded": 2
+    },
+    "weather_query:time/timeofday": {
+      "A": "time",
+      "B": "timeofday",
+      "samples": 29,
+      "matrix": {
+        "A_only": {
+          "A_only": 1,
+          "neither": 2
+        },
+        "B_only": {
+          "neither": 1
+        },
+        "both": {},
+        "neither": {
+          "neither": 24,
+          "A_only": 1
+        }
+      },
+      "opposite_single_type_predictions": 0,
+      "single_expanded_to_both": 0,
+      "coexistence_reduced_to_single": 0,
+      "neither_expanded": 1
+    },
+    "weather_query:date/time": {
+      "A": "date",
+      "B": "time",
+      "samples": 29,
+      "matrix": {
+        "A_only": {
+          "A_only": 12,
+          "B_only": 1,
+          "neither": 2
+        },
+        "B_only": {
+          "neither": 1
+        },
+        "both": {
+          "both": 1,
+          "A_only": 1
+        },
+        "neither": {
+          "neither": 11
+        }
+      },
+      "opposite_single_type_predictions": 1,
+      "single_expanded_to_both": 0,
+      "coexistence_reduced_to_single": 1,
+      "neither_expanded": 0
+    }
+  },
+  "source": "delivery/s-type-successor-v1/evidence/live/parent-cpu-repair/type-scores.private.jsonl"
+}
