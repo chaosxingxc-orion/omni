@@ -1,0 +1,64 @@
+{
+  "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
+  "samples": 545,
+  "branches": 1635,
+  "valid_branches": 1635,
+  "unknown": 0,
+  "absent": 0,
+  "learning": 476,
+  "report_only": 69,
+  "metrics": {
+    "signed-relevance": {
+      "samples": 476,
+      "exact": 283,
+      "tp": 453,
+      "fp": 150,
+      "fn": 99,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 249,
+      "empty_fp_samples": 55
+    },
+    "bounded-role": {
+      "samples": 476,
+      "exact": 283,
+      "tp": 446,
+      "fp": 146,
+      "fn": 106,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 243,
+      "empty_fp_samples": 50
+    },
+    "registry-extension": {
+      "samples": 476,
+      "exact": 284,
+      "tp": 451,
+      "fp": 148,
+      "fn": 101,
+      "invalid": 0,
+      "nonempty": 341,
+      "complete_recall": 247,
+      "empty_fp_samples": 54
+    }
+  },
+  "cost": {
+    "card_hours": 0.9104699036810133,
+    "cards": 4,
+    "instances": 1,
+    "money": null,
+    "seconds_per_sample": 1.5035282813080955,
+    "session_wall_seconds": 790.4887365199393,
+    "usage": {
+      "completion_tokens": 41912,
+      "prompt_tokens": 7013315,
+      "total_tokens": 7055227
+    },
+    "wall_seconds": 819.422913312912
+  },
+  "promotion": false,
+  "limitations": [
+    "Single rollout; actual changed13 exact6 to5; same463 exact277 to279.",
+    "No evidence of net system improvement; D not evaluated."
+  ]
+}

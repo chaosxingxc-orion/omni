@@ -78,7 +78,7 @@
       "wall_seconds": 829.8029103279114
     }
   },
-  "updated_epoch": 1794347793.3451345,
+  "updated_epoch": 1794349535.6176476,
   "successors": {
     "A": {
       "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
@@ -281,22 +281,102 @@
     "reasoning_target_soft": 8192,
     "resends": 0
   },
-  "active_npu_experiments_verified": 0,
+  "active_npu_experiments_verified": 1,
   "cpu_successors": [
     {
-      "task": "source-relation-extension",
-      "status": "FULL1635_COMPILED_FIXED_PREPARING",
-      "new_wire_branches": 16,
-      "new_learning_correct_intent_inputs": 7
+      "task": "starved-role-pair-gate",
+      "status": "MAIN_FULL1635_CONTENT_APPROVED_FIXED_NATIVE_THEN_A",
+      "changed_wire_branches": 18
     },
     {
-      "task": "intent-card-scope-ACE",
-      "status": "SOURCE_AUDIT_AND_TEACHER_PREPARING"
+      "task": "intent-card-scope-ACE-two-candidates",
+      "status": "C_ACTUAL_RUNNING_B_STAGE_RECOVERY"
     },
     {
-      "task": "type-list-normalization",
-      "status": "ASSIGNED_TO_EXISTING_CONTEXT_OWNER_RAW_DUPLICATES_VERIFIED"
+      "task": "root-capacity-recovery",
+      "status": "CLI_ACTUAL_STARTED"
     }
   ],
-  "all_cards_busy_proven": false
+  "all_cards_busy_proven": false,
+  "registry_extension": {
+    "status": "COMPLETE_MAIN_INDEPENDENT_RECOUNT",
+    "samples": 545,
+    "branches": 1635,
+    "valid_branches": 1635,
+    "unknown": 0,
+    "absent": 0,
+    "learning": 476,
+    "report_only": 69,
+    "metrics": {
+      "signed-relevance": {
+        "samples": 476,
+        "exact": 283,
+        "tp": 453,
+        "fp": 150,
+        "fn": 99,
+        "invalid": 0,
+        "nonempty": 341,
+        "complete_recall": 249,
+        "empty_fp_samples": 55
+      },
+      "bounded-role": {
+        "samples": 476,
+        "exact": 283,
+        "tp": 446,
+        "fp": 146,
+        "fn": 106,
+        "invalid": 0,
+        "nonempty": 341,
+        "complete_recall": 243,
+        "empty_fp_samples": 50
+      },
+      "registry-extension": {
+        "samples": 476,
+        "exact": 284,
+        "tp": 451,
+        "fp": 148,
+        "fn": 101,
+        "invalid": 0,
+        "nonempty": 341,
+        "complete_recall": 247,
+        "empty_fp_samples": 54
+      }
+    },
+    "cost": {
+      "card_hours": 0.9104699036810133,
+      "cards": 4,
+      "instances": 1,
+      "money": null,
+      "seconds_per_sample": 1.5035282813080955,
+      "session_wall_seconds": 790.4887365199393,
+      "usage": {
+        "completion_tokens": 41912,
+        "prompt_tokens": 7013315,
+        "total_tokens": 7055227
+      },
+      "wall_seconds": 819.422913312912
+    },
+    "promotion": false,
+    "limitations": [
+      "Single rollout; actual changed13 exact6 to5; same463 exact277 to279.",
+      "No evidence of net system improvement; D not evaluated."
+    ]
+  },
+  "normalization_summary": "S-Type-Normalization-Summary.json",
+  "latest_card_candidates": {
+    "C": {
+      "status": "ACTUAL_RUNNING_DIRECT_DOCKER_VERIFIED",
+      "cards": 4,
+      "instances": 1,
+      "concurrency": 64,
+      "total_samples": 545,
+      "total_branches": 1635,
+      "completed_samples": null,
+      "ETA_seconds": null
+    },
+    "B": {
+      "status": "STAGE_RECOVERY_ROOT_DISK_FULL",
+      "actual_running_verified": false
+    }
+  }
 }

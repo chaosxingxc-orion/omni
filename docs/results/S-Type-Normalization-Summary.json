@@ -1,0 +1,191 @@
+{
+  "status": "COMPLETE_FIXED_CPU_REPLAY",
+  "replayed_branches": 4905,
+  "contract_tests": 26,
+  "newly_recovered": 3,
+  "new_model_calls": 0,
+  "original_valid_semantic_sets_preserved": 4902,
+  "strict_historical_artifacts_changed": false,
+  "arms": {
+    "ace-context-1": {
+      "strict": {
+        "all545": {
+          "exact": 323,
+          "tp": 499,
+          "fp": 149,
+          "fn": 130,
+          "nonempty_all_gold_covered": 270,
+          "empty_false_positive_samples": 49,
+          "failures": 0
+        },
+        "learning476": {
+          "exact": 288,
+          "tp": 446,
+          "fp": 131,
+          "fn": 106,
+          "nonempty_all_gold_covered": 243,
+          "empty_false_positive_samples": 42,
+          "failures": 0
+        },
+        "report69": {
+          "exact": 35,
+          "tp": 53,
+          "fp": 18,
+          "fn": 24,
+          "nonempty_all_gold_covered": 27,
+          "empty_false_positive_samples": 7,
+          "failures": 0
+        }
+      },
+      "normalized": {
+        "all545": {
+          "exact": 323,
+          "tp": 499,
+          "fp": 149,
+          "fn": 130,
+          "nonempty_all_gold_covered": 270,
+          "empty_false_positive_samples": 49,
+          "failures": 0
+        },
+        "learning476": {
+          "exact": 288,
+          "tp": 446,
+          "fp": 131,
+          "fn": 106,
+          "nonempty_all_gold_covered": 243,
+          "empty_false_positive_samples": 42,
+          "failures": 0
+        },
+        "report69": {
+          "exact": 35,
+          "tp": 53,
+          "fp": 18,
+          "fn": 24,
+          "nonempty_all_gold_covered": 27,
+          "empty_false_positive_samples": 7,
+          "failures": 0
+        }
+      }
+    },
+    "ace-context-2": {
+      "strict": {
+        "all545": {
+          "exact": 328,
+          "tp": 523,
+          "fp": 175,
+          "fn": 106,
+          "nonempty_all_gold_covered": 295,
+          "empty_false_positive_samples": 77,
+          "failures": 3
+        },
+        "learning476": {
+          "exact": 287,
+          "tp": 464,
+          "fp": 155,
+          "fn": 88,
+          "nonempty_all_gold_covered": 261,
+          "empty_false_positive_samples": 69,
+          "failures": 2
+        },
+        "report69": {
+          "exact": 41,
+          "tp": 59,
+          "fp": 20,
+          "fn": 18,
+          "nonempty_all_gold_covered": 34,
+          "empty_false_positive_samples": 8,
+          "failures": 1
+        }
+      },
+      "normalized": {
+        "all545": {
+          "exact": 330,
+          "tp": 526,
+          "fp": 177,
+          "fn": 103,
+          "nonempty_all_gold_covered": 297,
+          "empty_false_positive_samples": 78,
+          "failures": 0
+        },
+        "learning476": {
+          "exact": 289,
+          "tp": 467,
+          "fp": 155,
+          "fn": 85,
+          "nonempty_all_gold_covered": 263,
+          "empty_false_positive_samples": 69,
+          "failures": 0
+        },
+        "report69": {
+          "exact": 41,
+          "tp": 59,
+          "fp": 22,
+          "fn": 18,
+          "nonempty_all_gold_covered": 34,
+          "empty_false_positive_samples": 9,
+          "failures": 0
+        }
+      }
+    },
+    "signed-relevance": {
+      "strict": {
+        "all545": {
+          "exact": 320,
+          "tp": 510,
+          "fp": 170,
+          "fn": 119,
+          "nonempty_all_gold_covered": 279,
+          "empty_false_positive_samples": 63,
+          "failures": 0
+        },
+        "learning476": {
+          "exact": 283,
+          "tp": 453,
+          "fp": 150,
+          "fn": 99,
+          "nonempty_all_gold_covered": 249,
+          "empty_false_positive_samples": 55,
+          "failures": 0
+        },
+        "report69": {
+          "exact": 37,
+          "tp": 57,
+          "fp": 20,
+          "fn": 20,
+          "nonempty_all_gold_covered": 30,
+          "empty_false_positive_samples": 8,
+          "failures": 0
+        }
+      },
+      "normalized": {
+        "all545": {
+          "exact": 320,
+          "tp": 510,
+          "fp": 170,
+          "fn": 119,
+          "nonempty_all_gold_covered": 279,
+          "empty_false_positive_samples": 63,
+          "failures": 0
+        },
+        "learning476": {
+          "exact": 283,
+          "tp": 453,
+          "fp": 150,
+          "fn": 99,
+          "nonempty_all_gold_covered": 249,
+          "empty_false_positive_samples": 55,
+          "failures": 0
+        },
+        "report69": {
+          "exact": 37,
+          "tp": 57,
+          "fp": 20,
+          "fn": 20,
+          "nonempty_all_gold_covered": 30,
+          "empty_false_positive_samples": 8,
+          "failures": 0
+        }
+      }
+    }
+  }
+}
