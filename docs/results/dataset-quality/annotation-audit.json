@@ -1,0 +1,580 @@
+{
+  "scope": "all train/devel/test annotation rows; no audio listening or model calls",
+  "gold_changed": false,
+  "knowledge_changed": false,
+  "splits": {
+    "train": {
+      "utterances": 11514,
+      "recordings": 50628,
+      "normalized_identical_query_type_conflicts": 0,
+      "structural_issue_count": 0,
+      "structural_issue_kinds": {},
+      "same_intent_same_surface_multitype_groups": 44,
+      "focus": {
+        "calendar_set": {
+          "utterances": 810,
+          "recordings": 3270,
+          "entity_occurrences": {
+            "date": 423,
+            "person": 153,
+            "event_name": 531,
+            "relation": 65,
+            "time": 271,
+            "timeofday": 52,
+            "place_name": 50,
+            "general_frequency": 70,
+            "meal_type": 19,
+            "house_place": 1,
+            "media_type": 3,
+            "business_name": 3,
+            "sport_type": 1,
+            "personal_info": 1,
+            "song_name": 1,
+            "artist_name": 1
+          },
+          "utterances_with_type": {
+            "date": 413,
+            "person": 142,
+            "time": 259,
+            "relation": 64,
+            "event_name": 520,
+            "timeofday": 52,
+            "place_name": 50,
+            "general_frequency": 70,
+            "meal_type": 19,
+            "house_place": 1,
+            "media_type": 3,
+            "business_name": 3,
+            "sport_type": 1,
+            "personal_info": 1,
+            "song_name": 1,
+            "artist_name": 1
+          },
+          "same_surface_multitype_signals": 10
+        },
+        "cooking_recipe": {
+          "utterances": 207,
+          "recordings": 818,
+          "entity_occurrences": {
+            "food_type": 148,
+            "ingredient": 20,
+            "date": 1,
+            "business_name": 2,
+            "cooking_type": 17,
+            "drink_type": 4,
+            "meal_type": 4,
+            "app_name": 1,
+            "event_name": 1
+          },
+          "utterances_with_type": {
+            "food_type": 147,
+            "ingredient": 18,
+            "date": 1,
+            "business_name": 2,
+            "cooking_type": 17,
+            "drink_type": 4,
+            "meal_type": 2,
+            "app_name": 1,
+            "event_name": 1
+          },
+          "same_surface_multitype_signals": 3
+        },
+        "email_query": {
+          "utterances": 418,
+          "recordings": 1804,
+          "entity_occurrences": {
+            "time": 27,
+            "person": 127,
+            "date": 32,
+            "email_folder": 31,
+            "relation": 33,
+            "event_name": 5,
+            "business_name": 4,
+            "personal_info": 2,
+            "timeofday": 2
+          },
+          "utterances_with_type": {
+            "time": 27,
+            "person": 126,
+            "date": 32,
+            "email_folder": 31,
+            "relation": 33,
+            "event_name": 5,
+            "business_name": 4,
+            "personal_info": 2,
+            "timeofday": 2
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "email_querycontact": {
+          "utterances": 127,
+          "recordings": 521,
+          "entity_occurrences": {
+            "personal_info": 63,
+            "person": 90,
+            "relation": 13,
+            "place_name": 2,
+            "event_name": 3,
+            "media_type": 1,
+            "device_type": 1,
+            "list_name": 1
+          },
+          "utterances_with_type": {
+            "personal_info": 62,
+            "person": 90,
+            "relation": 13,
+            "place_name": 2,
+            "event_name": 3,
+            "media_type": 1,
+            "device_type": 1,
+            "list_name": 1
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "email_sendemail": {
+          "utterances": 354,
+          "recordings": 1321,
+          "entity_occurrences": {
+            "time": 18,
+            "relation": 90,
+            "date": 39,
+            "person": 165,
+            "event_name": 17,
+            "email_address": 18,
+            "place_name": 4,
+            "timeofday": 10,
+            "meal_type": 7,
+            "personal_info": 1,
+            "general_frequency": 3,
+            "email_folder": 1,
+            "business_name": 1,
+            "artist_name": 1
+          },
+          "utterances_with_type": {
+            "time": 12,
+            "date": 39,
+            "relation": 88,
+            "person": 163,
+            "event_name": 17,
+            "email_address": 17,
+            "place_name": 4,
+            "timeofday": 10,
+            "meal_type": 7,
+            "personal_info": 1,
+            "general_frequency": 3,
+            "email_folder": 1,
+            "business_name": 1,
+            "artist_name": 1
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "general_quirky": {
+          "utterances": 555,
+          "recordings": 2024,
+          "entity_occurrences": {
+            "person": 19,
+            "date": 92,
+            "place_name": 16,
+            "drink_type": 1,
+            "time": 7,
+            "event_name": 8,
+            "artist_name": 3,
+            "relation": 8,
+            "movie_name": 1,
+            "meal_type": 7,
+            "news_topic": 1,
+            "timeofday": 2,
+            "business_type": 3,
+            "media_type": 2,
+            "food_type": 3,
+            "device_type": 2
+          },
+          "utterances_with_type": {
+            "person": 18,
+            "date": 90,
+            "place_name": 13,
+            "drink_type": 1,
+            "time": 7,
+            "event_name": 8,
+            "artist_name": 3,
+            "relation": 8,
+            "movie_name": 1,
+            "meal_type": 7,
+            "news_topic": 1,
+            "timeofday": 2,
+            "business_type": 3,
+            "media_type": 2,
+            "food_type": 3,
+            "device_type": 2
+          },
+          "same_surface_multitype_signals": 0
+        }
+      }
+    },
+    "devel": {
+      "utterances": 2033,
+      "recordings": 8690,
+      "normalized_identical_query_type_conflicts": 0,
+      "structural_issue_count": 0,
+      "structural_issue_kinds": {},
+      "same_intent_same_surface_multitype_groups": 3,
+      "focus": {
+        "calendar_set": {
+          "utterances": 131,
+          "recordings": 464,
+          "entity_occurrences": {
+            "event_name": 90,
+            "relation": 11,
+            "place_name": 14,
+            "date": 69,
+            "time": 43,
+            "timeofday": 13,
+            "person": 23,
+            "meal_type": 8,
+            "general_frequency": 10,
+            "media_type": 1,
+            "business_type": 1
+          },
+          "utterances_with_type": {
+            "relation": 11,
+            "event_name": 88,
+            "date": 68,
+            "place_name": 14,
+            "timeofday": 13,
+            "time": 42,
+            "person": 19,
+            "meal_type": 8,
+            "general_frequency": 10,
+            "media_type": 1,
+            "business_type": 1
+          },
+          "same_surface_multitype_signals": 1
+        },
+        "cooking_recipe": {
+          "utterances": 41,
+          "recordings": 183,
+          "entity_occurrences": {
+            "time": 1,
+            "food_type": 27,
+            "drink_type": 1,
+            "media_type": 1,
+            "cooking_type": 2,
+            "ingredient": 4
+          },
+          "utterances_with_type": {
+            "time": 1,
+            "food_type": 27,
+            "drink_type": 1,
+            "media_type": 1,
+            "cooking_type": 2,
+            "ingredient": 3
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "email_query": {
+          "utterances": 73,
+          "recordings": 291,
+          "entity_occurrences": {
+            "date": 8,
+            "person": 21,
+            "email_folder": 6,
+            "time": 6,
+            "business_name": 2,
+            "relation": 4,
+            "event_name": 1
+          },
+          "utterances_with_type": {
+            "date": 8,
+            "person": 21,
+            "email_folder": 6,
+            "time": 6,
+            "business_name": 2,
+            "relation": 4,
+            "event_name": 1
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "email_querycontact": {
+          "utterances": 16,
+          "recordings": 60,
+          "entity_occurrences": {
+            "person": 8,
+            "personal_info": 9,
+            "relation": 3,
+            "device_type": 1,
+            "list_name": 1,
+            "date": 1,
+            "place_name": 1
+          },
+          "utterances_with_type": {
+            "person": 8,
+            "personal_info": 9,
+            "relation": 3,
+            "device_type": 1,
+            "list_name": 1,
+            "date": 1,
+            "place_name": 1
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "email_sendemail": {
+          "utterances": 63,
+          "recordings": 226,
+          "entity_occurrences": {
+            "relation": 18,
+            "person": 24,
+            "date": 7,
+            "meal_type": 2,
+            "email_address": 2,
+            "event_name": 4,
+            "timeofday": 2,
+            "business_name": 1
+          },
+          "utterances_with_type": {
+            "relation": 18,
+            "person": 22,
+            "date": 7,
+            "meal_type": 2,
+            "email_address": 2,
+            "event_name": 4,
+            "timeofday": 2,
+            "business_name": 1
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "general_quirky": {
+          "utterances": 105,
+          "recordings": 464,
+          "entity_occurrences": {
+            "relation": 2,
+            "place_name": 8,
+            "date": 15,
+            "time": 1,
+            "timeofday": 1,
+            "drink_type": 1,
+            "business_type": 2,
+            "event_name": 2,
+            "meal_type": 1,
+            "person": 1,
+            "artist_name": 1
+          },
+          "utterances_with_type": {
+            "relation": 2,
+            "place_name": 8,
+            "date": 15,
+            "time": 1,
+            "timeofday": 1,
+            "drink_type": 1,
+            "business_type": 2,
+            "event_name": 2,
+            "meal_type": 1,
+            "person": 1,
+            "artist_name": 1
+          },
+          "same_surface_multitype_signals": 0
+        }
+      }
+    },
+    "test": {
+      "utterances": 2974,
+      "recordings": 13078,
+      "normalized_identical_query_type_conflicts": 0,
+      "structural_issue_count": 0,
+      "structural_issue_kinds": {},
+      "same_intent_same_surface_multitype_groups": 8,
+      "focus": {
+        "calendar_set": {
+          "utterances": 209,
+          "recordings": 824,
+          "entity_occurrences": {
+            "event_name": 131,
+            "date": 96,
+            "person": 38,
+            "time": 72,
+            "business_name": 1,
+            "timeofday": 13,
+            "relation": 14,
+            "place_name": 14,
+            "meal_type": 8,
+            "general_frequency": 14
+          },
+          "utterances_with_type": {
+            "date": 94,
+            "event_name": 127,
+            "person": 36,
+            "time": 69,
+            "business_name": 1,
+            "timeofday": 13,
+            "relation": 13,
+            "place_name": 14,
+            "meal_type": 8,
+            "general_frequency": 14
+          },
+          "same_surface_multitype_signals": 2
+        },
+        "cooking_recipe": {
+          "utterances": 72,
+          "recordings": 289,
+          "entity_occurrences": {
+            "food_type": 50,
+            "meal_type": 2,
+            "timeofday": 1,
+            "media_type": 3,
+            "device_type": 1,
+            "date": 1,
+            "cooking_type": 8,
+            "ingredient": 5,
+            "list_name": 1,
+            "app_name": 1,
+            "event_name": 1
+          },
+          "utterances_with_type": {
+            "food_type": 49,
+            "timeofday": 1,
+            "meal_type": 2,
+            "media_type": 2,
+            "device_type": 1,
+            "date": 1,
+            "cooking_type": 8,
+            "ingredient": 5,
+            "list_name": 1,
+            "app_name": 1,
+            "event_name": 1
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "email_query": {
+          "utterances": 119,
+          "recordings": 451,
+          "entity_occurrences": {
+            "person": 33,
+            "email_folder": 5,
+            "relation": 6,
+            "business_name": 2,
+            "timeofday": 1,
+            "time": 10,
+            "date": 9,
+            "place_name": 1,
+            "event_name": 1
+          },
+          "utterances_with_type": {
+            "person": 32,
+            "email_folder": 5,
+            "relation": 6,
+            "business_name": 2,
+            "timeofday": 1,
+            "time": 10,
+            "date": 9,
+            "place_name": 1,
+            "event_name": 1
+          },
+          "same_surface_multitype_signals": 1
+        },
+        "email_querycontact": {
+          "utterances": 26,
+          "recordings": 101,
+          "entity_occurrences": {
+            "person": 15,
+            "personal_info": 13,
+            "relation": 2,
+            "place_name": 1,
+            "event_name": 1,
+            "date": 1,
+            "time": 1,
+            "business_name": 1
+          },
+          "utterances_with_type": {
+            "person": 15,
+            "personal_info": 13,
+            "relation": 2,
+            "place_name": 1,
+            "date": 1,
+            "event_name": 1,
+            "time": 1,
+            "business_name": 1
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "email_sendemail": {
+          "utterances": 114,
+          "recordings": 410,
+          "entity_occurrences": {
+            "relation": 29,
+            "person": 49,
+            "email_address": 7,
+            "event_name": 10,
+            "date": 7,
+            "business_name": 1,
+            "timeofday": 3,
+            "time": 1
+          },
+          "utterances_with_type": {
+            "person": 49,
+            "relation": 27,
+            "email_address": 7,
+            "event_name": 10,
+            "date": 7,
+            "business_name": 1,
+            "timeofday": 3,
+            "time": 1
+          },
+          "same_surface_multitype_signals": 0
+        },
+        "general_quirky": {
+          "utterances": 169,
+          "recordings": 619,
+          "entity_occurrences": {
+            "date": 33,
+            "news_topic": 2,
+            "person": 9,
+            "place_name": 7,
+            "timeofday": 2,
+            "time": 1,
+            "event_name": 10,
+            "relation": 4,
+            "food_type": 1,
+            "general_frequency": 1
+          },
+          "utterances_with_type": {
+            "date": 33,
+            "news_topic": 2,
+            "person": 9,
+            "place_name": 6,
+            "timeofday": 2,
+            "time": 1,
+            "event_name": 10,
+            "relation": 4,
+            "food_type": 1,
+            "general_frequency": 1
+          },
+          "same_surface_multitype_signals": 0
+        }
+      }
+    }
+  },
+  "source_pins": {
+    "train": "4a05a3de6c7f028aff298c4a90196e6a3fecd1938d96fb1c125d6fd10d5e301e",
+    "devel": "00d346b183ecc2d160853cd3dc20e8ccd207d9e1809cf6e2c05182076bd0ecc9",
+    "test": "fe3449af69b42fda7163345482556066c35a80f7e552a6d67e212a0e2f0783cc"
+  },
+  "interpretation": "Shared surface with different types is a screening signal, not a confirmed error rate.",
+  "manual_review": {
+    "cases": 5,
+    "high_confidence_type_inconsistency": 1,
+    "test_not_consistently_clean": true,
+    "population_error_rate": null,
+    "acoustic_correctness_evaluated": false,
+    "conclusion": "Test contains analogous inconsistencies; cannot use test split membership as correctness authority."
+  },
+  "test_signal_review": {
+    "all_screened_groups_reviewed": 8,
+    "high_confidence_type_inconsistency": 1,
+    "strong_annotation_conflict_candidate": 1,
+    "likely_ontology_inconsistency": 1,
+    "context_role_difference_or_information_shortage": 1,
+    "context_role_difference": 2,
+    "scope_or_label_ambiguity": 1,
+    "temporal_boundary_ambiguity": 1,
+    "not_population_error_rate": true
+  }
+}

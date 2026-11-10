@@ -1,0 +1,60 @@
+{
+  "version": "clean-v5",
+  "status": "CLEAN_VIEWS_BUILT_VERIFIED",
+  "source_hashes": {
+    "train": "4a05a3de6c7f028aff298c4a90196e6a3fecd1938d96fb1c125d6fd10d5e301e",
+    "devel": "00d346b183ecc2d160853cd3dc20e8ccd207d9e1809cf6e2c05182076bd0ecc9",
+    "test": "fe3449af69b42fda7163345482556066c35a80f7e552a6d67e212a0e2f0783cc",
+    "train_synthetic": "8394ac2573e1d72b3b736ceff8b342e7a6569243db84295aa568766aef0035db"
+  },
+  "decisions_sha256": "75f8efd6e0cdc3decc629660b9f0c8c5a35071ad551299291eedbff4564e585b",
+  "confirmed_decisions": 72,
+  "splits": {
+    "train": {
+      "original_utterances": 11514,
+      "excluded_utterances": 52,
+      "retained_utterances": 11462,
+      "original_recordings": 50628,
+      "excluded_recordings": 237,
+      "retained_recordings": 50391
+    },
+    "devel": {
+      "original_utterances": 2033,
+      "excluded_utterances": 0,
+      "retained_utterances": 2033,
+      "original_recordings": 8690,
+      "excluded_recordings": 0,
+      "retained_recordings": 8690
+    },
+    "test": {
+      "original_utterances": 2974,
+      "excluded_utterances": 20,
+      "retained_utterances": 2954,
+      "original_recordings": 13078,
+      "excluded_recordings": 68,
+      "retained_recordings": 13010
+    },
+    "train_synthetic": {
+      "original_utterances": 19711,
+      "excluded_utterances": 52,
+      "retained_utterances": 19659,
+      "original_recordings": 69253,
+      "excluded_recordings": 129,
+      "retained_recordings": 69124
+    }
+  },
+  "synthetic_propagation": "exact original annotation match, no label/similarity/sourcegroup propagation",
+  "current_s_roster_effect": {
+    "original_branches": 1635,
+    "retained_branches": 1635,
+    "original_samples": 545,
+    "retained_samples": 545,
+    "note": "Derivative roster only; frozen completed experiments retain their original denominators. No automatic runtime schema change."
+  },
+  "original_data_deleted": false,
+  "original_gold_modified": false,
+  "exhaustive_semantic_review_complete": false,
+  "coverage": "Inherited confirmed defects plus newly reviewed defects; continuing review remains pending.",
+  "attribution": "SLURP, Bastianelli et al., EMNLP 2020; textual data CC BY 4.0; audio CC BY-NC 4.0",
+  "audio_files_redistributed": false
+}
