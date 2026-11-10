@@ -17,19 +17,12 @@ prepare.py的project_rows只裁剪intent_bindings，保留其余extraction_cues�
 - 日期查询：相似示例third friday拆成friday/this month，而third monday保留完整长短语。当前query的last friday of the month被OFF缩成month，不能只断言模型不懂长短语。
 - 烹饪：drink_type列water为线索，ingredient又说与食物边界不一致；water to boil当前被OFF填成drink_type并漏掉boil。需要明确当前意图下的角色区分。
 
-## TRAIN全域覆盖
+## 来源复核结论
 
-按原数据scenario + action合成意图，审查本地锁定TRAIN元数据11514条、60类。原intent字段有162条仅含action，不能直接用于统计。
+原始TRAIN的432个关系与当前402个关系之间的30个差异，全部来自原Fold A/B隔离来源：29条语句中14条属于Fold A、15条属于Fold B。原合法构建池9354条语句、37407段录音恰好覆盖402个关系。复现原selector得到完全相同的803条slot支持和474条intent支持，再执行原知识编写函数得到完全相同的54张卡；采样丢关系0、编写丢关系0。
 
-当前54类槽位卡有402个意图—槽位关系；TRAIN实际观测432个。当前关系全部有TRAIN支持，但19个意图共缺30个关系，涉及29条语句。比如cooking_query缺meal_type，原句“what to cook for lunch”标meal_type:lunch；cooking_recipe缺meal_type/event_name。
+因此此前“全域覆盖缺口”的说法只描述原始TRAIN与构建池的差异，不能解释成工程漏建。保持当前402个关系，不从隔离来源补知识。真正待修的是按意图投影后仍残留的跨意图通用正文，以及卡—示例一致性。详细原来源、隔离命中和复现证据见s-slot-scope-source-review-v1交付。
 
-这些缺失不是当前545错例的解释。也不能自动补齐：其中chili被标为event_name等明显可疑记录，必须核实原标注、已有质量排除和构建来源后确定是合法漏建还是应排除的数据问题。未使用测试数据、未修改数据集或知识卡。
+## 下一步
 
-## 下一步修复顺序
-
-1. 预先锁定每个意图的合法槽位集合，并明确关系来源；核查上述30个差异，保留有理由的排除记录。
-2. 将语义角色、缺省、排斥与实体组合规则真正按intent×slot构建，移除当前意图不适用的通用线索；不要求所有合法槽位都出现。
-3. 同一意图的卡与few-shot执行一致性审查。对于标注本身不一致的模式记录争议，不把少数观察写成强规则。
-4. 在锁定OFF与原476学习集上先验证知识修复；69隔离只汇报，不参与策略选择。实体值覆盖哪些词的问题与合法槽位类型集合分别评价。
-
-详细审计与固定基线配置在仓库docs/results中保存；原始样本与请求保留在私有证据目录。
+保留402个合法构建关系与当前OFF基线；优先按intent×slot修正文语义，核卡—示例冲突。原545样本不变，69隔离不进入调优。
