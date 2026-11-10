@@ -13,3 +13,5 @@
 69条隔离source-group与这些学习样本及其示例无交集；不使用S_valid或TEST优化。CPU正式累计62.04秒，无NPU/教师调用。三组独立容器均正常退出，实际响应与原评分保持；源文件hash及正式结果104项清单已主审。
 
 后续按[知识卡优化方案](S-Knowledge-Card-Optimization)推进边界、编号与角色证据，不批量删除业务规则。
+
+咖啡20条正式配对已完成：全20 typed全对3→3；其中实际coffee gold4条全对1→1，目标TP/FN不变，唯一多词正例未恢复，不扩展。详见[S咖啡结果](S-Coffee-Card-Results)。

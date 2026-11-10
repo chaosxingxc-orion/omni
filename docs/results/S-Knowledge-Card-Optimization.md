@@ -24,3 +24,9 @@ Omni ON/OFF不能单独决定Omni与ASR谁更优。Qwen3-ASR候选应按“一�
 比较完整槽位链路的精度、合法率、专名/数值覆盖和总耗时资源，WER/CER仅作辅助。未经实测不替换基线，不启用已释放实例。官方资料为QwenLM/Qwen3-ASR README与Qwen/Qwen3-ASR-1.7B模型卡，快照及hash另存。
 
 官方资料：[Qwen3-ASR](https://github.com/QwenLM/Qwen3-ASR)、[1.7B模型卡](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)。
+
+## 来源与新结果复核
+
+既有合法来源池中音量槽9条正例均保留to/by，未找到at或裸值证据；同intent编号房间与独立方向映射尚缺正例，因此不直接写入新硬规则。来源池不等于全量TRAIN，未检出不能证明不存在。
+
+咖啡正式配对全20 typed全对3→3，实际coffee gold4条全对1→1，唯一多词正例未修复；F1上涨主要是错误碎片减少，不采用该修改。游戏名30对全对21→24、修3退0，属于可继续研究的局部证据。
