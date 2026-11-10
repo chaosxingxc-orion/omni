@@ -3,7 +3,7 @@
     {
       "lane": "A",
       "status": "COMPLETE_SCORED",
-      "archive_epoch": 1794343938.7387543,
+      "archive_epoch": null,
       "completed_samples": 545,
       "total_samples": 545,
       "completed_branches": 1635,
@@ -20,29 +20,46 @@
         "total_tokens": 7059490
       },
       "estimate_not_guarantee": true,
-      "actual_seconds_per_sample": 1.5020025926992433
+      "actual_seconds_per_sample": 1.5020025926992433,
+      "terminal_evidence": "S-Weather-Role-Summary.json"
     },
     {
       "lane": "B",
-      "status": "RUNNING_ARCHIVED_SNAPSHOT_NOT_LIVE_COUNT",
-      "archive_epoch": 1794343946.6557205,
-      "completed_samples": 37,
+      "status": "COMPLETE_SCORED",
+      "archive_epoch": null,
+      "completed_samples": 545,
       "total_samples": 545,
-      "completed_branches": 112,
+      "completed_branches": 1635,
       "total_branches": 1635,
-      "valid_archived_branches": 112,
+      "valid_archived_branches": 1635,
       "cards": 4,
       "instances": 1,
       "concurrency": 64,
       "historical_seconds_per_complete_sample": 1.48,
-      "estimated_remaining_seconds_at_snapshot": 752,
+      "estimated_remaining_seconds_at_snapshot": 0,
       "usage_archived": {
-        "completion_tokens": 2918,
-        "prompt_tokens": 421763,
-        "total_tokens": 424681
+        "completion_tokens": 43666,
+        "prompt_tokens": 7018778,
+        "total_tokens": 7062444
       },
-      "estimate_not_guarantee": true
+      "estimate_not_guarantee": true,
+      "actual_seconds_per_sample": 1.4714640822979288
     }
   ],
-  "c_lane": "Renderer core approved; CPU preparing; no new NPU launch confirmed"
+  "c_lane": {
+    "status": "ACTUAL_RUNNING_MAIN_CONTAINER_INSPECT_VERIFIED",
+    "verified_epoch": 1794345302.8959901,
+    "total_samples": 545,
+    "total_branches": 1635,
+    "completed_samples": null,
+    "completed_branches": null,
+    "cards": 4,
+    "instances": 1,
+    "concurrency": 64,
+    "actual_seconds_per_sample": null,
+    "ETA_seconds": null,
+    "historical_parent_seconds_per_sample": 1.4818176759492367,
+    "historical_parent_is_not_live_measurement": true
+  },
+  "updated_epoch": 1794345349.2702124
 }

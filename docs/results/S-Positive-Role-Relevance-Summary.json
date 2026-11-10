@@ -1,0 +1,153 @@
+{
+  "status": "COMPLETE_NOT_PROMOTED",
+  "completed_samples": 545,
+  "total_samples": 545,
+  "completed_branches": 1635,
+  "total_branches": 1635,
+  "unknown": 0,
+  "absent": 0,
+  "scientific_parent": "rank32",
+  "candidate": "positive-relevance",
+  "metrics": {
+    "rank32": {
+      "all545": {
+        "complete_recall": 286,
+        "empty_fp_samples": 71,
+        "exact": 307,
+        "exact_rate": 0.563302752293578,
+        "fn": 111,
+        "fp": 185,
+        "invalid": 0,
+        "mean_sample_type_f1": 0.7327741371778081,
+        "nonempty": 391,
+        "samples": 545,
+        "tp": 518,
+        "type_micro_f1": 0.7777777777777778,
+        "valid_samples": 545
+      },
+      "learning476": {
+        "complete_recall": 255,
+        "empty_fp_samples": 61,
+        "exact": 272,
+        "exact_rate": 0.5714285714285714,
+        "fn": 92,
+        "fp": 163,
+        "invalid": 0,
+        "mean_sample_type_f1": 0.7406762705082043,
+        "nonempty": 341,
+        "samples": 476,
+        "tp": 460,
+        "type_micro_f1": 0.7829787234042553,
+        "valid_samples": 476
+      },
+      "report69_only": {
+        "complete_recall": 31,
+        "empty_fp_samples": 10,
+        "exact": 35,
+        "exact_rate": 0.5072463768115942,
+        "fn": 19,
+        "fp": 22,
+        "invalid": 0,
+        "mean_sample_type_f1": 0.6782608695652171,
+        "nonempty": 50,
+        "samples": 69,
+        "tp": 58,
+        "type_micro_f1": 0.7388535031847133,
+        "valid_samples": 69
+      }
+    },
+    "positive-relevance": {
+      "all545": {
+        "complete_recall": 284,
+        "empty_fp_samples": 73,
+        "exact": 305,
+        "exact_rate": 0.5596330275229358,
+        "fn": 115,
+        "fp": 195,
+        "invalid": 0,
+        "mean_sample_type_f1": 0.7273001310616003,
+        "nonempty": 391,
+        "samples": 545,
+        "tp": 514,
+        "type_micro_f1": 0.7683109118086696,
+        "valid_samples": 545
+      },
+      "learning476": {
+        "complete_recall": 253,
+        "empty_fp_samples": 62,
+        "exact": 271,
+        "exact_rate": 0.569327731092437,
+        "fn": 96,
+        "fp": 171,
+        "invalid": 0,
+        "mean_sample_type_f1": 0.736579631852742,
+        "nonempty": 341,
+        "samples": 476,
+        "tp": 456,
+        "type_micro_f1": 0.7735368956743003,
+        "valid_samples": 476
+      },
+      "report69_only": {
+        "complete_recall": 31,
+        "empty_fp_samples": 11,
+        "exact": 34,
+        "exact_rate": 0.4927536231884058,
+        "fn": 19,
+        "fp": 24,
+        "invalid": 0,
+        "mean_sample_type_f1": 0.6632850241545891,
+        "nonempty": 50,
+        "samples": 69,
+        "tp": 58,
+        "type_micro_f1": 0.7295597484276729,
+        "valid_samples": 69
+      }
+    }
+  },
+  "changed_learning": {
+    "n": 26,
+    "exact": [
+      8,
+      7
+    ],
+    "repairs": 1,
+    "regressions": 2,
+    "FP": [
+      11,
+      14
+    ],
+    "FN": [
+      14,
+      14
+    ]
+  },
+  "same_learning": {
+    "n": 450,
+    "exact": [
+      264,
+      264
+    ],
+    "repairs": 12,
+    "regressions": 12,
+    "attributable_policy_gain": false
+  },
+  "cost": {
+    "card_hours": 0.891053249835968,
+    "cards": 4,
+    "instances": 1,
+    "money": null,
+    "seconds_per_sample": 1.4714640822979288,
+    "session_wall_seconds": 773.0256694799755,
+    "usage": {
+      "completion_tokens": 43666,
+      "prompt_tokens": 7018778,
+      "total_tokens": 7062444
+    },
+    "wall_seconds": 801.9479248523712
+  },
+  "model": "Qwen3-Omni-30B-A3B-Instruct",
+  "TP": 4,
+  "concurrency": 64,
+  "ETA_seconds": 0,
+  "new_teacher_calls": 0
+}
