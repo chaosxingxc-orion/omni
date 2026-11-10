@@ -91,3 +91,5 @@ game_name机制pilot已完成3样本/9分支、全合法，184.97秒、45423 tok
 最新教师消费轮完整返回，260.14秒、125344 tokens，零提案。其要求的跨槽重复与TRAIN合法多角色检查已交CPU子进程；另两子进程分析完整545回退与pilot机制效果。NPU执行与CPU分析独立。七个GRPO成员完成，seed08未知请求仍阻止完整八组优势计算。
 
 当前不需要新增用户决策。下一步按现有锁定口径分析错例、接续已部署ACE任务、用有独立证据的策略补充有效库存。实际进度与未来窗口容量统一见[S-Continuous-Queue-Plan](S-Continuous-Queue-Plan)及[S-Rolling-Experiment-Queue](S-Rolling-Experiment-Queue)。12小时满载与80% AI Core均未证明。
+
+完整修复/回退、症状拆解与成本见 [S-Compact-Paired-Results](S-Compact-Paired-Results)。下一教师准备已启动，专注具体卡与合法TRAIN冲突；CPU分析和NPU推理继续异步。
