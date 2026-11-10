@@ -1,0 +1,163 @@
+{
+  "status": "COMPLETE_SCORED_QUEUE_ADOPTED_RESERVATION_RELEASED",
+  "samples_per_arm": 545,
+  "branches_per_arm": 1635,
+  "cards": 4,
+  "instances": 1,
+  "concurrency": 64,
+  "no_promotion": true,
+  "arms": {
+    "old2048": {
+      "learning": {
+        "samples": 476,
+        "exact": 288,
+        "tp": 453,
+        "fp": 149,
+        "fn": 99,
+        "valid": 476,
+        "nonempty": 341,
+        "nonempty_all_gold_covered": 251,
+        "empty_fp_samples": 53,
+        "unresolved": 17,
+        "F1": 0.7850953206239168,
+        "categories": {
+          "exact": 288,
+          "fn_only": 53,
+          "fp_only": 98,
+          "both": 37
+        }
+      },
+      "seconds_per_sample": 1.5524159768305787,
+      "wall_seconds": 846.0667073726654,
+      "usage": {
+        "completion_tokens": 43617,
+        "prompt_tokens": 7013300,
+        "total_tokens": 7056917
+      },
+      "card_hours": 0.9400741193029616,
+      "phases": null
+    },
+    "8192": {
+      "learning": {
+        "samples": 476,
+        "exact": 281,
+        "tp": 449,
+        "fp": 151,
+        "fn": 103,
+        "valid": 476,
+        "nonempty": 341,
+        "nonempty_all_gold_covered": 247,
+        "empty_fp_samples": 54,
+        "unresolved": 1,
+        "F1": 0.7795138888888888,
+        "categories": {
+          "exact": 281,
+          "fn_only": 61,
+          "fp_only": 101,
+          "both": 33
+        }
+      },
+      "seconds_per_sample": 0.7357675477999066,
+      "wall_seconds": 400.9933135509491,
+      "usage": {
+        "completion_tokens": 41901,
+        "prompt_tokens": 7013300,
+        "total_tokens": 7055201
+      },
+      "card_hours": 0.4455481261677212,
+      "phases": {
+        "request_queue_time_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 2896.5575213505654,
+          "mean_seconds": 1.7715948142816913
+        },
+        "request_prefill_time_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 1794.0774281978374,
+          "mean_seconds": 1.0972950631179434
+        },
+        "request_decode_time_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 17605.258750949637,
+          "mean_seconds": 10.767742355320879
+        },
+        "request_inference_time_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 19399.336179147474,
+          "mean_seconds": 11.865037418438822
+        },
+        "time_to_first_token_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 5316.580622434616,
+          "mean_seconds": 3.2517312675441077
+        },
+        "e2e_request_latency_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 22919.618829250336,
+          "mean_seconds": 14.01811549189623
+        }
+      }
+    },
+    "fresh2048": {
+      "learning": {
+        "samples": 476,
+        "exact": 286,
+        "tp": 455,
+        "fp": 149,
+        "fn": 97,
+        "valid": 476,
+        "nonempty": 341,
+        "nonempty_all_gold_covered": 250,
+        "empty_fp_samples": 55,
+        "unresolved": 16,
+        "F1": 0.78719723183391,
+        "categories": {
+          "exact": 286,
+          "fn_only": 57,
+          "fp_only": 99,
+          "both": 34
+        }
+      },
+      "seconds_per_sample": 1.487231814970664,
+      "wall_seconds": 810.5413391590118,
+      "usage": {
+        "completion_tokens": 43614,
+        "prompt_tokens": 7013300,
+        "total_tokens": 7056914
+      },
+      "card_hours": 0.9006014879544576,
+      "phases": {
+        "request_queue_time_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 36524.30245181976,
+          "mean_seconds": 22.339022906311783
+        },
+        "request_prefill_time_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 1574.0575081192655,
+          "mean_seconds": 0.9627263046601012
+        },
+        "request_decode_time_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 10180.97016742127,
+          "mean_seconds": 6.226893068759186
+        },
+        "request_inference_time_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 11755.027675540536,
+          "mean_seconds": 7.189619373419288
+        },
+        "time_to_first_token_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 38447.59964323044,
+          "mean_seconds": 23.515351463749504
+        },
+        "e2e_request_latency_seconds": {
+          "requests": 1635.0,
+          "sum_request_seconds": 48627.37132310867,
+          "mean_seconds": 29.741511512604692
+        }
+      }
+    }
+  }
+}
