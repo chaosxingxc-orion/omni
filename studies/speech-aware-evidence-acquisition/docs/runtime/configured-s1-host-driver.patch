@@ -1,0 +1,17 @@
+--- a/host_driver_pair.py
++++ b/host_driver_pair.py
+@@ -172,2 +172,5 @@
+  mounts=['--mount',f'type=bind,src={W},dst={M},readonly','--mount',f'type=bind,src={W},dst={W},readonly','--mount',f'type=bind,src={H},dst={H}','--mount',f'type=bind,src={rt["container_lane"]},dst={rt["container_lane"]}','--mount',f'type=bind,src={rt["serving_root"]},dst={rt["serving_root"]},readonly']
++ from speech_aware_evidence_acquisition.rails.configured_s1_host import readonly_dependency_mounts
++ mounts += readonly_dependency_mounts(task.get('readonly_mounts', []),
++     [M, str(W), str(H), rt['container_lane'], rt['serving_root']])
+  subset_override=override and override.get('kind')=='subset_handoff'
+@@ -181,2 +184,3 @@
+  argv=['docker','run','--name',name+'-bind','--network','none']+common+[M+'/'+task.get('bind_script',PK+'/code/bind_execution.py'),'--config',str(state/'runtime-config.json'),'--state',str(state/'run'),'--output',str(state/'execution-config.json')]
++ save(state/'BIND-ARGV.json',dict(argv=argv))
+  r=subprocess.run(argv,capture_output=True,text=True);save(state/'BIND.json',dict(returncode=r.returncode,stdout=r.stdout,stderr=r.stderr,at=time.time()));assert r.returncode==0,r.stderr
+@@ -184,2 +188,4 @@
+  argv=['docker','run','-d','--name',name,'--network','host']+common+[M+'/'+task.get('runner',PK+'/code/run.py'),'run','--workspace',M,'--config',str(state/'runtime-config.json'),'--output',str(state/'run'),'--execution-config',str(state/'execution-config.json')]
++ if task.get('cpu_bind_only'):
++  save(state/'CPU-DRIVER-CHECK.json',dict(status='PASS_FORMAL_DRIVER_BIND',bind=read(state/'BIND.json'),run_argv=argv,model_calls=0));return
+  save(state/'launch-intent.json',dict(at=time.time(),argv=argv,task_id=task['task_id']))
