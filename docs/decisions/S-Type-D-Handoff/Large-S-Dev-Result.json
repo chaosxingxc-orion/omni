@@ -1,0 +1,39 @@
+{
+  "status": "MAIN_DEV_ARCHIVED_CONTENT_REPARSE",
+  "counts": {
+    "total": 1850,
+    "valid": 1850,
+    "exact": 1298,
+    "tp": 1498,
+    "fp": 385,
+    "fn": 314
+  },
+  "denominator": 1850,
+  "partial": false,
+  "batches": [
+    {
+      "task": "s-dev1850-batch000-v1",
+      "counts": {
+        "total": 1000,
+        "valid": 1000,
+        "exact": 704,
+        "tp": 775,
+        "fp": 210,
+        "fn": 157
+      }
+    },
+    {
+      "task": "s-dev1850-batch001-v1",
+      "counts": {
+        "total": 850,
+        "valid": 850,
+        "exact": 594,
+        "tp": 723,
+        "fp": 175,
+        "fn": 157
+      }
+    }
+  ],
+  "teacher_examples_exported": 0,
+  "model_calls": 0
+}
