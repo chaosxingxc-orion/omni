@@ -1,0 +1,41 @@
+{
+  "train": {
+    "multi_type_values": 170,
+    "only_between_intents": 137,
+    "within_at_least_one_intent": 33,
+    "multi_value_entity_mentions": 1617,
+    "value_intent_groups": 495,
+    "value_intent_groups_single_observation": 285,
+    "value_intent_groups_multiple_types": 33,
+    "empirical_H_type_given_value_bits": 0.48468039533815277,
+    "empirical_H_type_given_value_intent_bits": 0.06787554305444593,
+    "empirical_relative_entropy_reduction": 0.8599581420926043,
+    "limitation": "Descriptive in-sample entropy on multi-type values only. Sparse intent conditioning lowers entropy mechanically; not held-out accuracy, causality, or full-context dependence proof."
+  },
+  "test": {
+    "multi_type_values": 25,
+    "only_between_intents": 20,
+    "within_at_least_one_intent": 5,
+    "multi_value_entity_mentions": 103,
+    "value_intent_groups": 60,
+    "value_intent_groups_single_observation": 41,
+    "value_intent_groups_multiple_types": 5,
+    "empirical_H_type_given_value_bits": 0.7176192458018703,
+    "empirical_H_type_given_value_intent_bits": 0.1337324030176441,
+    "empirical_relative_entropy_reduction": 0.8136443471938785,
+    "limitation": "Descriptive in-sample entropy on multi-type values only. Sparse intent conditioning lowers entropy mechanically; not held-out accuracy, causality, or full-context dependence proof."
+  },
+  "pooled": {
+    "multi_type_values": 197,
+    "only_between_intents": 152,
+    "within_at_least_one_intent": 45,
+    "multi_value_entity_mentions": 2137,
+    "value_intent_groups": 586,
+    "value_intent_groups_single_observation": 327,
+    "value_intent_groups_multiple_types": 45,
+    "empirical_H_type_given_value_bits": 0.4548786634589182,
+    "empirical_H_type_given_value_intent_bits": 0.07281857625526122,
+    "empirical_relative_entropy_reduction": 0.8399164829989048,
+    "limitation": "Descriptive in-sample entropy on multi-type values only. Sparse intent conditioning lowers entropy mechanically; not held-out accuracy, causality, or full-context dependence proof."
+  }
+}

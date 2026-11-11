@@ -1,0 +1,122 @@
+{
+  "sources": {
+    "train": {
+      "path": "delivery/dataset-quality-release-v1/versions/clean-v7/metadata/train.jsonl",
+      "sha256": "1ad58f688d54deace851e484116d4b51b15ffcf9d099f95a453a6c5879bfaab1",
+      "utterances": 11460,
+      "recordings": 50388,
+      "entity_mentions": 11324,
+      "types": 55,
+      "noncanonical_raw_intent_rows": 161,
+      "intent_type_pairs": 429,
+      "unique_values": 3955
+    },
+    "test": {
+      "path": "delivery/dataset-quality-release-v1/versions/clean-v7/metadata/test.jsonl",
+      "sha256": "5332e0d6bdf34986d7d4398f29a9c4e382be3db5b2149a8a64a931465c3ac8f7",
+      "utterances": 2947,
+      "recordings": 12991,
+      "entity_mentions": 2799,
+      "types": 53,
+      "noncanonical_raw_intent_rows": 35,
+      "intent_type_pairs": 273,
+      "unique_values": 1467
+    }
+  },
+  "test_types_absent_train": [],
+  "train_types_absent_test": [
+    "game_type",
+    "sport_type"
+  ],
+  "test_unseen_intent_type_pairs": {
+    "pairs": 24,
+    "mentions": 26,
+    "utterances": 25,
+    "recordings": 102
+  },
+  "exact_multitype_values": {
+    "train": {
+      "groups": 170,
+      "same_intent_groups": 33,
+      "type_pairs": 115,
+      "mentions": 1617,
+      "utterances": 1532,
+      "recordings": 6359
+    },
+    "test": {
+      "groups": 25,
+      "same_intent_groups": 5,
+      "type_pairs": 21,
+      "mentions": 103,
+      "utterances": 101,
+      "recordings": 431
+    },
+    "pooled": {
+      "groups": 197,
+      "same_intent_groups": 45,
+      "type_pairs": 129,
+      "mentions": 2137,
+      "utterances": 2023,
+      "recordings": 8346
+    }
+  },
+  "test_value_type_coverage": {
+    "same_value_other_type_only": {
+      "mentions": 30,
+      "utterances": 30,
+      "recordings": 142
+    },
+    "same_value_same_type": {
+      "mentions": 2007,
+      "utterances": 1480,
+      "recordings": 6425
+    },
+    "unseen_value": {
+      "mentions": 762,
+      "utterances": 697,
+      "recordings": 2720
+    }
+  },
+  "identical_sentence_intent_cross_split": {
+    "shared_groups": 6,
+    "conflicting_groups": 1
+  },
+  "test_phrase_in_train_label_discrepancies": {
+    "same_intent/unannotated_span": {
+      "phrase_type_occurrences": 662,
+      "train_utterances": 607,
+      "distinct_value_type_pairs": 148
+    },
+    "same_intent/exact_span_other_type": {
+      "phrase_type_occurrences": 73,
+      "train_utterances": 73,
+      "distinct_value_type_pairs": 27
+    },
+    "same_intent/partial_or_larger_span": {
+      "phrase_type_occurrences": 1632,
+      "train_utterances": 1237,
+      "distinct_value_type_pairs": 275
+    },
+    "different_intent/unannotated_span": {
+      "phrase_type_occurrences": 3698,
+      "train_utterances": 2928,
+      "distinct_value_type_pairs": 260
+    },
+    "different_intent/exact_span_other_type": {
+      "phrase_type_occurrences": 391,
+      "train_utterances": 368,
+      "distinct_value_type_pairs": 92
+    },
+    "different_intent/partial_or_larger_span": {
+      "phrase_type_occurrences": 2236,
+      "train_utterances": 1593,
+      "distinct_value_type_pairs": 339
+    }
+  },
+  "lexical_neighbors": {
+    "metric": "RapidFuzz fuzz.ratio >=90; distinct NFKC/casefold/whitespace normalized values; each length>=4 characters; cross-type; unordered pairs",
+    "pairs": 77,
+    "distinct_values": 145,
+    "same_intent_cross_type_pairs": 14
+  }
+}

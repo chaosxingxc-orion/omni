@@ -1,5 +1,5 @@
 {
-  "version": "clean-v6",
+  "version": "clean-v7",
   "status": "CLEAN_VIEWS_BUILT_VERIFIED",
   "source_hashes": {
     "train": "4a05a3de6c7f028aff298c4a90196e6a3fecd1938d96fb1c125d6fd10d5e301e",
@@ -7,16 +7,16 @@
     "test": "fe3449af69b42fda7163345482556066c35a80f7e552a6d67e212a0e2f0783cc",
     "train_synthetic": "8394ac2573e1d72b3b736ceff8b342e7a6569243db84295aa568766aef0035db"
   },
-  "decisions_sha256": "b9def8399927a8b8ec4cf755764e6cbe0c0c48b71c2d8d00ac79c4b01913a3b9",
-  "confirmed_decisions": 76,
+  "decisions_sha256": "133466ee8139dda84c45c551ab4124caa3bf4d87bdc898565235ed170b7c6351",
+  "confirmed_decisions": 81,
   "splits": {
     "train": {
       "original_utterances": 11514,
-      "excluded_utterances": 52,
-      "retained_utterances": 11462,
+      "excluded_utterances": 54,
+      "retained_utterances": 11460,
       "original_recordings": 50628,
-      "excluded_recordings": 237,
-      "retained_recordings": 50391
+      "excluded_recordings": 240,
+      "retained_recordings": 50388
     },
     "devel": {
       "original_utterances": 2033,
@@ -28,19 +28,19 @@
     },
     "test": {
       "original_utterances": 2974,
-      "excluded_utterances": 24,
-      "retained_utterances": 2950,
+      "excluded_utterances": 27,
+      "retained_utterances": 2947,
       "original_recordings": 13078,
-      "excluded_recordings": 84,
-      "retained_recordings": 12994
+      "excluded_recordings": 87,
+      "retained_recordings": 12991
     },
     "train_synthetic": {
       "original_utterances": 19711,
-      "excluded_utterances": 54,
-      "retained_utterances": 19657,
+      "excluded_utterances": 59,
+      "retained_utterances": 19652,
       "original_recordings": 69253,
-      "excluded_recordings": 134,
-      "retained_recordings": 69119
+      "excluded_recordings": 151,
+      "retained_recordings": 69102
     }
   },
   "synthetic_propagation": "exact original annotation match, no label/similarity/sourcegroup propagation",
