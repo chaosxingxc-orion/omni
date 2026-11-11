@@ -1,0 +1,110 @@
+{
+  "scope": "Completed subset of first event archive; nonrandom early diagnostic, not full-set score or causal proof",
+  "counts": {
+    "samples": 229,
+    "positive_samples": 150,
+    "positive_covered": 140,
+    "exact": 8,
+    "tp": 204,
+    "extra": 1253,
+    "missing": 10,
+    "gold_types": 214,
+    "pred_types": 1457,
+    "empty_gold": 79,
+    "empty_correct": 6,
+    "samples_with_full_fold": 16,
+    "full_folds": 33,
+    "full_folds_in_card_order": 31,
+    "full_folds_without_gold": 33
+  },
+  "metrics": {
+    "exact": 0.034934497816593885,
+    "positive_complete_coverage": 0.9333333333333333,
+    "micro_precision": 0.1400137268359643,
+    "micro_recall": 0.9532710280373832,
+    "mean_predicted_types": 6.362445414847161,
+    "mean_extra_types": 5.471615720524017
+  },
+  "by_fold": {
+    "fold-00": {
+      "calls": 229,
+      "positive_calls": 30,
+      "empty_gold_calls": 199,
+      "all_types_selected": 2,
+      "all_types_selected_without_gold": 2,
+      "any_selected_without_gold": 124
+    },
+    "fold-01": {
+      "calls": 229,
+      "positive_calls": 31,
+      "empty_gold_calls": 198,
+      "all_types_selected": 1,
+      "all_types_selected_without_gold": 1,
+      "any_selected_without_gold": 95
+    },
+    "fold-02": {
+      "calls": 229,
+      "positive_calls": 45,
+      "empty_gold_calls": 184,
+      "all_types_selected": 0,
+      "all_types_selected_without_gold": 0,
+      "any_selected_without_gold": 121
+    },
+    "fold-03": {
+      "calls": 229,
+      "positive_calls": 28,
+      "empty_gold_calls": 201,
+      "all_types_selected": 2,
+      "all_types_selected_without_gold": 2,
+      "any_selected_without_gold": 95
+    },
+    "fold-04": {
+      "calls": 229,
+      "positive_calls": 20,
+      "empty_gold_calls": 209,
+      "all_types_selected": 4,
+      "all_types_selected_without_gold": 4,
+      "any_selected_without_gold": 103
+    },
+    "fold-05": {
+      "calls": 229,
+      "positive_calls": 9,
+      "empty_gold_calls": 220,
+      "all_types_selected": 9,
+      "all_types_selected_without_gold": 9,
+      "any_selected_without_gold": 72
+    },
+    "fold-06": {
+      "calls": 229,
+      "positive_calls": 21,
+      "empty_gold_calls": 208,
+      "all_types_selected": 4,
+      "all_types_selected_without_gold": 4,
+      "any_selected_without_gold": 119
+    },
+    "fold-07": {
+      "calls": 229,
+      "positive_calls": 10,
+      "empty_gold_calls": 219,
+      "all_types_selected": 4,
+      "all_types_selected_without_gold": 4,
+      "any_selected_without_gold": 121
+    },
+    "fold-08": {
+      "calls": 229,
+      "positive_calls": 10,
+      "empty_gold_calls": 219,
+      "all_types_selected": 2,
+      "all_types_selected_without_gold": 2,
+      "any_selected_without_gold": 117
+    },
+    "fold-09": {
+      "calls": 229,
+      "positive_calls": 8,
+      "empty_gold_calls": 221,
+      "all_types_selected": 5,
+      "all_types_selected_without_gold": 5,
+      "any_selected_without_gold": 91
+    }
+  }
+}
