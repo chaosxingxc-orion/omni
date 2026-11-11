@@ -1,0 +1,91 @@
+{
+  "schema": "s1-completed-baseline-summary-v1",
+  "generation_status": "COMPLETE",
+  "scoring_status": "PARTIAL",
+  "denominator": 6681,
+  "counts": {
+    "aggregate_protocol_error_samples": 0,
+    "all_sample_complete_coverage": 6316,
+    "complete_positive_coverage": 4136,
+    "complete_samples": 6680,
+    "count_match": 232,
+    "empty_gold_correct": 94,
+    "empty_gold_samples": 2180,
+    "fn": 379,
+    "fp": 36695,
+    "missing_types": 379,
+    "observed_positive_coverage": 4137,
+    "positive_samples": 4501,
+    "present_but_incomplete_samples": 1,
+    "present_samples": 6681,
+    "reference_unmatched": 36695,
+    "samples": 6681,
+    "tp": 6065,
+    "type_set_exact": 206
+  },
+  "metrics": {
+    "all_sample_complete_type_coverage": 0.9453674599610836,
+    "empty_gold_correct_rate": 0.043119266055045874,
+    "macro_supported_types_observed": {
+      "f1": 0.19663627946326986,
+      "precision": 0.12150127812904098,
+      "recall": 0.9485656831095504,
+      "supported_types": 54,
+      "zero_prediction_precision_convention": 0
+    },
+    "mean_missing_types": 0.05672803472534052,
+    "mean_reference_unmatched_candidates": 5.4924412513096845,
+    "micro_observed": {
+      "f1": 0.24652467279083,
+      "missing": 379,
+      "precision": 0.14183816651075773,
+      "recall": 0.9411855990068281,
+      "reference_unmatched": 36695,
+      "true_positive": 6065
+    },
+    "positive_complete_type_coverage": 0.9189069095756499,
+    "positive_observed_type_coverage": 0.9191290824261276,
+    "type_count_match_accuracy": 0.034725340517886547,
+    "type_set_exact_accuracy": 0.03083370752881305
+  },
+  "fold_status_counts": {
+    "incomplete": 1,
+    "valid_empty": 29017,
+    "valid_nonempty": 37792
+  },
+  "runtime": {
+    "states": {
+      "absent": 0,
+      "observed": 66810,
+      "unknown": 0
+    },
+    "usage": {
+      "completion_tokens": 557078,
+      "prompt_tokens": 34139897,
+      "total_tokens": 34696975
+    },
+    "finish_reasons": {
+      "length": 1,
+      "stop": 66809
+    },
+    "total_samples": 6681,
+    "total_requests": 66810,
+    "all_attempt_requests": 66840,
+    "card_hours": 4.960571240319146,
+    "all_attempt_card_hours": 5.066417011949751,
+    "wall_seconds": 1521.2811284065247,
+    "instances": 3,
+    "total_cards": 12
+  },
+  "limitations": [
+    "One length output retained in full denominator",
+    "TRAIN cohort selected historically by P success; not generalization",
+    "Old 30 rejected requests have unknown token usage",
+    "No sustained AI Core utilization result"
+  ],
+  "source_sha256": {
+    "SUMMARY.json": "238aefded034fb3787c10fcdfb7f455103dad3dd0caa171c2f21290195f70836",
+    "RESULTS.json": "7991aa59dacdc94f51a5d9de7a53bf2ec14a28e8275e1752b9dba04c50854b02",
+    "MAIN-FULL-RECOUNT.json": "81ee3e8b5107b115c1ce89ad86dc10ac366ad13e695695174952a1d252bb1544"
+  }
+}
