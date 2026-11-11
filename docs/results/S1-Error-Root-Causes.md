@@ -107,3 +107,9 @@ U/E/K严格遵循已有SELECTION-PROTOCOL：完整/unknown0；C/R差值配对CI�
 **LOST_WITH_OTHER_BUSINESS_OUTPUT**（none 44）：artist_name、date、device_type、event_name、food_type、house_place、list_name、media_type、music_descriptor、music_genre、news_topic、person、place_name、playlist_name、time。
 
 **PRIOR_TEXT_REFERENCE_TENSION_CASE_NOT_ALL_TYPES**（baseline 106, grounding 84, none 76, supply 89）：alarm_type、app_name、artist_name、audiobook_name、business_name、business_type、color_type、date、email_address、email_folder、event_name、game_name、game_type、general_frequency、house_place、joke_type、list_name、media_type、movie_name、movie_type、music_album、music_descriptor、music_genre、news_topic、person、personal_info、place_name、player_setting、playlist_name、podcast_descriptor、podcast_name、radio_name、relation、song_name、time、time_zone、timeofday、transport_descriptor、transport_name、weather_descriptor。
+
+## 冻结集合稀有类支持补核
+
+主线程已直接核对固定manifest与gold的sample_id集合及SHA，TRAIN6681和DEV1850成员一致，无重新采样或修改标注。game_type在TRAIN正样本0、DEV正样本1；music_album在TRAIN正样本1、DEV正样本0。这里统计的是类型出现的样本数，未读取DEV模型预测，不是模型性能评估。报告上文“冻结DEV1850支持未知”是早先教师检查范围，现由此补核解决。
+
+稀有类支持不足仍是限制：单个正例只能提供个案守卫，不能证明稳定召回；无正例的召回应为不可估计，不能填写为0或100%。保留类型与原有分母，不用删整类、改gold或重抽开发集制造提升。
