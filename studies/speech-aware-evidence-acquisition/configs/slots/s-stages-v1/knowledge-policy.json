@@ -165,5 +165,25 @@
     "email_address": [
       "Retain the spoken address; conversion of spoken at/dot into symbols requires an explicit output normalization policy."
     ]
+  },
+  "semantic_definitions": {
+    "game_type": {
+      "definition": "Kind or category of game expressed in the query. Identify the game category rather than requiring the title of a specific game.",
+      "source": "project-reviewed-type-card-v1:game_type",
+      "basis": "Existing frozen slot-type-descriptions-v1 defines game_type as kind of game; TRAIN 14210 supplies a real observed example. This is a project-maintained type definition, not a newly inferred intent constraint.",
+      "source_ids": [
+        14210
+      ],
+      "definition_depends_on_examples": false
+    },
+    "music_album": {
+      "definition": "Name or identifying reference of a music album or collection expressed in the query. A reference to music alone does not establish an album; preserve an album candidate when the query provides album or collection evidence.",
+      "source": "project-reviewed-type-card-v1:music_album",
+      "basis": "Conservative project-maintained reading of the locked TRAIN type name music_album. TRAIN 5056 is the sole observed annotation and is ambiguous; it does not establish that every theme song is an album. Not an official ontology definition.",
+      "source_ids": [
+        5056
+      ],
+      "definition_depends_on_examples": false
+    }
   }
 }

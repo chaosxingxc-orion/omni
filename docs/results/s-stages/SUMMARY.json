@@ -24,10 +24,7 @@
     "pattern": 4
   },
   "value_equals_type_mentions_retained": 1,
-  "definition_gaps": [
-    "game_type",
-    "music_album"
-  ],
+  "definition_gaps": [],
   "definition_conflicts": [],
   "empty_eligible_knowledge_types": [],
   "filtering": {

@@ -121,6 +121,22 @@ def build(rows, bundle, policy, *, forbidden_components=()):
                 reasons[pair].add('same_normalized_train_surface')
     folds = split_folds(types, edges, policy['max_types_per_fold'])
     definitions = definition_view(bundle, types)
+    for t, supplied in policy.get('semantic_definitions', {}).items():
+        if t not in definitions or not supplied.get('definition', '').strip() or not supplied.get('source'):
+            raise ValueError('semantic definition requires an observed type, text and provenance')
+        source_ids = supplied.get('source_ids', [])
+        current_ids = {str(r['slurp_id']) for r in rows}
+        if any(str(sid) not in current_ids or str(sid) not in sources for sid in source_ids):
+            raise ValueError('semantic definition references a missing TRAIN source')
+        components = sorted({sources[str(sid)] for sid in source_ids})
+        definitions[t] = {
+            'definition': supplied['definition'], 'definition_source': supplied['source'],
+            'definition_variants': [supplied['definition']],
+            'definition_status': 'configured_reviewed_card',
+            'definition_basis': supplied.get('basis', ''),
+            'support_source_ids': source_ids,
+            'definition_components': components if supplied.get('definition_depends_on_examples', True) else [],
+        }
     for t, definition in definitions.items():
         if blocked.intersection(definition['definition_components']):
             definition.update(definition=t.replace('_', ' '), definition_status='quarantined_semantic_definition')
@@ -152,7 +168,7 @@ def build(rows, bundle, policy, *, forbidden_components=()):
               'limitation': 'No configured/observed conflict edge within fold; unseen semantic confusion remains possible.',
               'kind_counts': dict(Counter(policy['kinds'].values())),
               'value_equals_type_mentions_retained': value_equals_type,
-              'definition_gaps': [t for t in types if cards[t]['definition_status'] != 'projected_locked_card'],
+              'definition_gaps': [t for t in types if cards[t]['definition_status'] not in ('projected_locked_card', 'configured_reviewed_card')],
               'definition_conflicts': [t for t in types if len(cards[t]['definition_variants']) > 1],
               'empty_eligible_knowledge_types': [t for t in types if not cards[t]['examples']],
               'filtering': dict(skipped), 'test_data_read': False,

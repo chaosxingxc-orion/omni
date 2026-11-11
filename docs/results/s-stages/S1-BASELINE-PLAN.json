@@ -1,0 +1,19 @@
+{
+  "status": "PREPARING",
+  "samples": 6681,
+  "requests": 66810,
+  "instances": 3,
+  "cards_per_instance": 4,
+  "request_concurrency_per_instance": 64,
+  "folds": 10,
+  "types": 55,
+  "positive_samples": 4501,
+  "empty_gold_samples": 2180,
+  "supported_types": 54,
+  "game_type_positive_support": 0,
+  "music_album_positive_support": 1,
+  "model_requests_so_far": 0,
+  "S2": false,
+  "D": false,
+  "teacher": false
+}
