@@ -129,6 +129,26 @@ class RailsTest(unittest.TestCase):
 
 
 class AsyncTest(unittest.IsolatedAsyncioTestCase):
+    async def test_s1_only_prepared_and_partial_fold(self):
+        calls = []
+        async def caller(p, after):
+            calls.append(p['stage'])
+            return after(p, {'text': '{"slot_types":[]}',
+                             'finish_reason': 'length' if p['branch'] == 'f1' else 'stop'})
+        rails = StageRails(knowledge(), CONFIG)
+        stages = SlotStages(rails, caller)
+        result = await stages.run_s1(query())
+        self.assertEqual(calls, ['S1', 'S1'])
+        self.assertEqual(result['schema'], 's1-handoff-v1')
+        self.assertFalse(result['complete'])
+        self.assertEqual([r['status'] for r in result['s1']], ['incomplete', 'valid_empty'])
+        prepared = [rails.before_model_call('S1', query(), f['fold_id']) for f in rails.knowledge['folds']]
+        with self.assertRaisesRegex(ValueError, 'identity/fold/wire'):
+            await stages.run_prepared_s1(query().sample_id, prepared[:1])
+        prepared[0]['wire']['temperature'] = 0.8
+        with self.assertRaisesRegex(ValueError, 'identity/fold/wire'):
+            await stages.run_prepared_s1(query().sample_id, prepared)
+
     async def test_parallel_folds_global_limit_and_stage_dependency(self):
         c = copy.deepcopy(CONFIG)
         c['max_inflight_requests'] = 2

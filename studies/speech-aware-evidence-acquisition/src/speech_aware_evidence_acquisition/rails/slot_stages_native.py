@@ -99,11 +99,12 @@ class JournalStageTransport:
     Passing an established owner admission object is mandatory. No queue or
     automatic retries are introduced by this adapter.
     """
-    def __init__(self, *, journal, post, observed_response, admission, check):
+    def __init__(self, *, journal, post, observed_response, admission, check, post_packet=None):
         if admission is None or not callable(check):
             raise ValueError('existing owner admission and FIT/lease check required')
         self.journal, self.post = journal, post
         self.observed_response, self.admission, self.check = observed_response, admission, check
+        self.post_packet = post_packet
 
     async def __call__(self, packet, contact):
         import hashlib
@@ -115,7 +116,9 @@ class JournalStageTransport:
                    'wire_sha256': packet['wire_sha256'], 'stage': packet['stage'],
                    'branch': packet['branch'], 'version': packet['version']}
         raw, latency, reused = await self.observed_response(
-            self.journal, custody, lambda: self.post(packet['wire']), admission=self.admission)
+            self.journal, custody,
+            lambda: self.post_packet(packet) if self.post_packet is not None else self.post(packet['wire']),
+            admission=self.admission)
         obj = json.loads(raw)
         choice = obj['choices'][0]
         message = choice['message']

@@ -224,6 +224,26 @@ class SlotStages:
                 'unfilled_selected_types': [r['branch'] for r in s2 if not r['entities']],
                 'd_policy': 'Resolve cross-type alternatives and intent-slot assembly. Unknown/failed branches are not absence.'}
 
+    async def run_s1(self, query):
+        """Type-only experiment using the same rails, caller and instance limit."""
+        prepared = [self.rails.before_model_call('S1', query, f['fold_id'])
+                    for f in self.rails.knowledge['folds']]
+        return await self.run_prepared_s1(query.sample_id, prepared)
+
+    async def run_prepared_s1(self, sample_id, prepared):
+        """Consume CPU-prepared packets without rebuilding prompts under a lease."""
+        expected = [f['fold_id'] for f in self.rails.knowledge['folds']]
+        if ([p['branch'] for p in prepared] != expected
+                or any(p['stage'] != 'S1' or p['sample_id'] != sample_id
+                       or p['version'] != self.rails.version
+                       or digest(p['wire']) != p['wire_sha256'] for p in prepared)):
+            raise ValueError('prepared S1 identity/fold/wire mismatch')
+        s1 = await self._drain(prepared)
+        return {'schema': 's1-handoff-v1', 'sample_id': sample_id,
+                'knowledge_id': self.rails.knowledge['knowledge_id'],
+                'complete': all(r['status'] in ('valid_empty', 'valid_nonempty') for r in s1),
+                's1': s1, 'selected_types': sorted({t for r in s1 for t in r['selected_types']})}
+
     async def _drain(self, packets):
         results = await asyncio.gather(*(self._call(p) for p in packets), return_exceptions=True)
         # Programming/transport exceptions stop this sample after peers settle.
