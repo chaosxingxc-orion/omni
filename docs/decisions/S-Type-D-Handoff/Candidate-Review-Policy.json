@@ -1,0 +1,31 @@
+{
+  "schema": "s-large-predeclared-candidate-review-v1",
+  "stage": "before_any_large_candidate_results",
+  "baseline": {
+    "exploration_rows": 6682,
+    "dev_rows": 1850,
+    "exploration_exact": 4596,
+    "dev_exact": 1298
+  },
+  "primary": "valid_type_set_exact",
+  "candidate_eligibility": {
+    "exploration_net_fixed_minus_regressed_minimum": 1,
+    "dev_net_fixed_minus_regressed_minimum": 0,
+    "new_protocol_failures_maximum": 0,
+    "complete_paired_roster_required": true,
+    "prespecified_target_net_gain_minimum": 1
+  },
+  "statistical_claim": {
+    "method": "paired_source_group_bootstrap_95",
+    "stable_generalization_gain_requires_dev_lower_bound_greater_than": 0,
+    "otherwise": "eligible candidate remains provisional; do not claim statistically established stable gain"
+  },
+  "regressions": {
+    "report_all_original_correct_losses": true,
+    "report_FP_FN_empty_nonempty_and_per_intent": true,
+    "no_automatic_deletion_or_denominator_change": true
+  },
+  "automatic_promotion": false,
+  "scope": "same frozen Instruct and actual P-gold branch; target classes and allowed changed dimensions fixed in candidate config",
+  "teacher_dev_examples": false
+}
