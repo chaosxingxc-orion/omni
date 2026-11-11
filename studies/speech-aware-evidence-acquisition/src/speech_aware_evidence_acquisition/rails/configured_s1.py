@@ -205,13 +205,27 @@ def schema_change(previous, current, baseline, policy, changed):
     require(current == expected, "schema differs outside declared control enum")
 
 
+def build_rails(root, task, knowledge, policy):
+    """Load the explicitly pinned supply once per rails instance, never per Fold."""
+    from .slot_stages import StageRails
+    if policy.get("s1_consumption") is None:
+        require("retrieval_cache" not in task and "provenance_root" not in task,
+                "supply inputs require an explicit S1 consumption policy")
+        return StageRails(knowledge, policy)
+    require("retrieval_cache" in task and "provenance_root" in task,
+            "consumption requires pinned cache and explicit provenance root")
+    cache = read(pinned(root, task["retrieval_cache"]))
+    provenance = resolve(root, task["provenance_root"])
+    return StageRails(knowledge, policy, retrieval_cache=cache, provenance_root=provenance)
+
+
 def prepare(root, output, task_path, lane_path, index_path, model_root):
     started = time.monotonic()
     task, lane, index, rows, policy, identity = context(root, task_path, lane_path, index_path)
     from .slot_stages import StageRails, Query
     from transformers import AutoTokenizer
     knowledge = read(pinned(root, task["knowledge"]))
-    rails = StageRails(knowledge, policy)
+    rails = build_rails(root, task, knowledge, policy)
     require(len(knowledge["folds"]) == task["folds"] and len(knowledge["cards"]) == task["types"], "knowledge dimensions")
     # Model files are indexed individually; never hash or load model weights.
     require(str(Path(model_root)) == task["model_root"], "explicit model root")
@@ -235,11 +249,18 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
          allowed_changes=changed,
          schemas=schemas, schema_set_sha256=sha(canonical(schemas)), evidence=task["grammar_evidence"],
          general_backend_capability_verified=False, limitation="declared schema diff only; separate actual backend compiler receipt required for new enum"))
+    if policy.get("s1_consumption") is not None:
+        save(output / "SUPPLY-RECEIPT.json", dict(
+            status="PINNED_SUPPLY_LOADED_ONCE", knowledge=task["knowledge"],
+            retrieval_cache=task["retrieval_cache"], provenance_root=task["provenance_root"],
+            knowledge_id=knowledge["knowledge_id"], cache_id=policy["s1_consumption"]["cache_id"],
+            dependency_index_sha256=file_sha(index_path), stage_version=rails.version,
+            runtime_packets="prepared_templates", new_encoder_calls=0, new_model_calls=0))
     fit_sources, jobs, maximum, audio_stats = {}, [], 0, []
     for n, row in enumerate(rows):
         audio = get_audio(row, root)
         audio_stats.append(dict(path=row["audio_source"]["path"], stat=stat_pin(resolve(root, row["audio_source"]["path"]))))
-        query = Query(row["sample_id"], audio, row["source_component"])
+        query = Query(row["sample_id"], audio, row["source_component"], row["audio_sha256"])
         budget = row["inherited_fit"]["budget"]
         if budget["path"] not in fit_sources:
             fit_sources[budget["path"]] = {r["sample_id"]: r for r in read(pinned(root, budget))["records"]}
@@ -314,7 +335,7 @@ def preflight(config, workspace):
     task = read(task_path)
     original = imports(root, task)
     from .slot_stages import StageRails, digest
-    rails = StageRails(read(pinned(root, c["knowledge"])), c["runtime_policy"])
+    rails = build_rails(root, task, read(pinned(root, c["knowledge"])), c["runtime_policy"])
     require(rails.version == c["stage_version"], "rails version changed")
     prepared = []
     for row in lines(resolve(root, c["manifest"])):
