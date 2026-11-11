@@ -1,0 +1,54 @@
+{
+  "status": "MAIN_CONTENT_REPARSE_AND_P_BRANCH_BINDING",
+  "counts": {
+    "total": 3328,
+    "valid": 3328,
+    "exact": 2293,
+    "tp": 2594,
+    "fp": 717,
+    "fn": 590
+  },
+  "exact_rate": 0.6890024038461539,
+  "full_denominator": 6682,
+  "partial": true,
+  "batches": [
+    {
+      "batch": 0,
+      "total": 256,
+      "valid": 256,
+      "exact": 167,
+      "tp": 193,
+      "fp": 59,
+      "fn": 45
+    },
+    {
+      "batch": 1,
+      "total": 1024,
+      "valid": 1024,
+      "exact": 718,
+      "tp": 826,
+      "fp": 207,
+      "fn": 178
+    },
+    {
+      "batch": 2,
+      "total": 1024,
+      "valid": 1024,
+      "exact": 707,
+      "tp": 801,
+      "fp": 223,
+      "fn": 177
+    },
+    {
+      "batch": 3,
+      "total": 1024,
+      "valid": 1024,
+      "exact": 701,
+      "tp": 774,
+      "fp": 228,
+      "fn": 190
+    }
+  ],
+  "scope": "Independent persisted content reparse and actual P branch binding; raw journal custody audited separately by analysis owner",
+  "new_model_calls": 0
+}
