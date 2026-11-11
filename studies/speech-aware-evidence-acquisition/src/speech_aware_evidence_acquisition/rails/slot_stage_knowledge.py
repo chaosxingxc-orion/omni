@@ -202,6 +202,187 @@ def build(rows, bundle, policy, *, forbidden_components=()):
     return artifact
 
 
+
+def source_document(root, reference, cache=None):
+    """Resolve a byte-pinned local JSON/JSONL source; never fetch a source."""
+    cache = {} if cache is None else cache
+    rel = Path(reference['path'])
+    if rel.is_absolute() or '..' in rel.parts:
+        raise ValueError('source path must be workspace relative')
+    key = (str(rel), reference['sha256'])
+    if key not in cache:
+        raw = (Path(root) / rel).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != reference['sha256']:
+            raise ValueError('source SHA mismatch: ' + str(rel))
+        cache[key] = ([json.loads(line) for line in raw.splitlines() if line.strip()]
+                      if rel.suffix == '.jsonl' else json.loads(raw))
+    value = cache[key]
+    pointer = reference.get('pointer', '')
+    if pointer and not pointer.startswith('/'):
+        raise ValueError('invalid JSON source pointer')
+    for part in pointer.split('/')[1:]:
+        part = part.replace('~1', '/').replace('~0', '~')
+        value = value[int(part)] if isinstance(value, list) else value[part]
+    return value
+
+
+def build_s1_supply(knowledge, bundle, rows, policy, root):
+    """Compile source-bound S1 cards/rules/whole-sentence retrieval inputs.
+
+    Does not access query transcripts, labels, embeddings, transports or TEST.
+    The caller supplies clean TRAIN construction rows and pinned source policy.
+    Consumer owns query-component exclusion; dependencies are never erased.
+    """
+    import copy
+    if knowledge['construction_split'] != 'train' or policy['construction_split'] != 'train':
+        raise ValueError('S1 supply construction requires TRAIN')
+    if policy['schema'] != 's1-knowledge-supply-policy-v1':
+        raise ValueError('unknown S1 supply policy')
+    cache = {}
+    def resolve(ref):
+        return source_document(root, ref, cache)
+    refs = policy['sources']
+    locked = resolve(refs['bundle'])
+    train = resolve(refs['train'])
+    support = resolve(refs['author_support'])['output']['slot_support']
+    if locked != bundle or train != rows:
+        raise ValueError('construction rows/bundle differ from pinned sources')
+    glossary = resolve(refs['generic'])
+    if glossary.get('schema') != 'saea-asrbias-slot-type-descriptions-v1':
+        raise ValueError('generic source is not the fixed type glossary')
+    types = set(knowledge['cards'])
+    root_dependencies = {t: set() for t in types}
+    for r in support:
+        uid = str(r['utterance_id'])
+        component = bundle['source_components'].get(uid)
+        if component is None:
+            raise ValueError('unmapped original author support')
+        for e in r['entities']:
+            if e['entity_type'] in types:
+                root_dependencies[e['entity_type']].add(component)
+    current = {str(r['slurp_id']) for r in rows}
+    removed = {c for sid,c in bundle['source_components'].items() if sid not in current}
+    blocked = set(bundle['bad_components']) | set(bundle['dev_components']) | removed
+    out = copy.deepcopy(knowledge)
+    rules = []
+    rule_audit = []
+    reviewed = policy.get('rule_scope_reviews', {})
+    variants = {}
+    for t in sorted(types):
+        selected = []
+        deps = set(root_dependencies[t])
+        for i,v in enumerate(bundle['snapshot']['values']):
+            if v['value_id'].endswith('slot-contract:' + t):
+                selected.append((i,v))
+                deps.update(bundle['source_components'][u] for u in bundle['original_sources'][v['value_id']])
+        variants[t] = len(selected)
+        card = out['cards'][t]
+        if policy.get('independent_definition_enabled', True) and t in glossary['types']:
+            ref = dict(refs['generic'], pointer='/types/' + t)
+            text = resolve(ref)
+            if not isinstance(text,str) or not text.strip():
+                raise ValueError('generic type meaning must be nonempty text')
+            card['independent_definition'] = dict(definition=text, source_refs=[ref],
+                source_components=[], scope='generic_type_meaning')
+        if not policy.get('discriminative_rules_enabled', True) or not selected:
+            continue
+        # First card is the original builder's selected source. Retain every
+        # original/root dependency, even if another card has the same text.
+        i,v = selected[0]
+        content = v['content']
+        cues = content.split('Extraction cues:\n',1)[1].split('\nMissing behavior:',1)[0].splitlines()
+        statements = [('extraction_boundary',line[2:]) for line in cues[1:] if line.startswith('- ')]
+        for label,kind in [('Ambiguity behavior:','ambiguity'),('Missing behavior:','presence')]:
+            if label in content:
+                statements.append((kind,content.split(label,1)[1].split('\n',1)[0].strip()))
+        seen = set()
+        for kind,text in statements:
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            ref = dict(refs['bundle'], pointer='/snapshot/values/' + str(i) + '/content')
+            if text not in resolve(ref):
+                raise ValueError('rule text is not literal pinned source text')
+            related = []
+            for other in sorted(types - {t}):
+                forms = [other, other.replace('_',' ')]
+                if any(re.search(r'(?<![a-z_])' + re.escape(f) + r'(?![a-z_])',text,flags=re.I) for f in forms):
+                    related.append(other)
+            rule_id = 's1-rule-' + digest([t,kind,text])[:20]
+            review = reviewed.get(rule_id)
+            if review is None or review.get('description_sha256') != hashlib.sha256(text.encode()).hexdigest():
+                raise ValueError('every extracted rule requires exact-text task scope review')
+            if review.get('status') not in ('applicable', 'inapplicable') or not review.get('reason'):
+                raise ValueError('scope review requires explicit status and reason')
+            rule_audit.append(dict(rule_id=rule_id,target_types=[t],description=text,kind=kind,
+                source_refs=[ref],source_components=sorted(deps),scope_review=copy.deepcopy(review)))
+            if review['status'] != 'applicable':
+                continue
+            rules.append(dict(rule_id=rule_id,target_types=[t],
+                related_types=related,description=text,source_refs=[ref],source_components=sorted(deps),
+                scope=dict(stage='S1',intent_independent=True,multi_candidate=True,condition='current_audio_evidence',final_adjudication=False),
+                kind=kind,source_mode='literal_locked_card_with_conservative_author_dependency_union'))
+    bank = []
+    if policy.get('retrieval_examples_enabled', True):
+        for i,r in enumerate(rows):
+            component = bundle['source_components'].get(str(r['slurp_id']))
+            if component is None or component in blocked:
+                continue
+            observed = sorted({e['type'] for e in r['entities']})
+            if not observed:
+                continue
+            if not set(observed) <= types:
+                raise ValueError('retrieval example outside global type inventory')
+            ref = dict(refs['train'], pointer='/' + str(i))
+            if resolve(ref) != r:
+                raise ValueError('retrieval example differs from pinned TRAIN source')
+            bank.append(dict(sample_id='slurp:train:' + str(r['slurp_id']).zfill(6),
+                source_id=r['slurp_id'],source_component=component,audio_sha256=None,
+                query=r['sentence'],observed_types=observed,source_refs=[ref],
+                recordings=[x['file'] for x in r.get('recordings',[])],
+                annotation_scope='observed positive types only; unmentioned types are not negatives'))
+    out['s1_discriminative_rules'] = rules
+    out['s1_rule_scope_audit'] = rule_audit
+    out['retrieval_examples'] = bank
+    procedural = []
+    for key in ('coexistence','inventory','demonstration','presence'):
+        ref = dict(refs['bundle'], pointer='/policy/'+key)
+        procedural.append(dict(description=resolve(ref),source_refs=[ref],source_components=[]))
+    out['knowledge_supply'] = dict(schema='s1-knowledge-supply-v1',policy=copy.deepcopy(policy),
+        blocked_components=sorted(blocked),procedural_rules=procedural,
+        fold_boundary_instruction='Select only types supported by the current audio in this Fold. Cross-Fold references do not impose mutual exclusion. When no business type is supported, use the configured empty-selection protocol. Its control label is not a business slot type.',
+        source_validation=dict(status='PASS_BYTE_SHA_AND_JSON_POINTER',files=len(cache),
+            rule_texts=len(rules),retrieval_rows=len(bank),test_data_read=False),
+        gaps=dict(independent_definition_missing=sorted(types-set(glossary['types'])),
+            locked_rules_missing=sorted(t for t,n in variants.items() if not n),
+            audio_hashes_pending=len(bank),minimal_sentence_dependencies_not_proven=True))
+    out.pop('knowledge_id', None)
+    out['knowledge_id'] = digest(out)
+    return out
+
+
+def supply_main(argv=None):
+    """Separate optional CPU compiler; the original build CLI is unchanged."""
+    p = argparse.ArgumentParser()
+    p.add_argument('--workspace', required=True, type=Path)
+    p.add_argument('--knowledge', required=True, type=Path)
+    p.add_argument('--policy', required=True, type=Path)
+    p.add_argument('--output', required=True, type=Path)
+    a = p.parse_args(argv)
+    policy = json.loads(a.policy.read_bytes())
+    bundle = source_document(a.workspace, policy['sources']['bundle'])
+    rows = source_document(a.workspace, policy['sources']['train'])
+    knowledge = json.loads(a.knowledge.read_bytes())
+    expected = policy['parent_knowledge']
+    if hashlib.sha256(a.knowledge.read_bytes()).hexdigest() != expected['sha256']:
+        raise ValueError('parent knowledge SHA mismatch')
+    result = build_s1_supply(knowledge,bundle,rows,policy,a.workspace)
+    a.output.parent.mkdir(parents=True,exist_ok=True)
+    a.output.write_text(json.dumps(result,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
+    print(json.dumps(dict(status='S1_SUPPLY_COMPILED',types=len(result['cards']),folds=len(result['folds']),
+        rules=len(result['s1_discriminative_rules']),retrieval_examples=len(result['retrieval_examples']),
+        model_calls=0,source_validation=result['knowledge_supply']['source_validation'])))
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--train', required=True, type=Path)
@@ -226,4 +407,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == 'supply':
+        supply_main(sys.argv[2:])
+    else:
+        main()
