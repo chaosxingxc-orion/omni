@@ -1,0 +1,25 @@
+{
+  "schema": "s1-functional-check-v1",
+  "runtime": {
+    "tests": 29,
+    "returncode": 0,
+    "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "network": "none",
+    "NPU_devices": 0,
+    "model_calls": 0,
+    "scope": "Native hooks, S1-only prepared folds, observed replay, unknown-no-resend, packet identity, supported schema and duplicate-type postprocessing"
+  },
+  "evaluation": {
+    "tests": 20,
+    "returncode": 0,
+    "scope": "Full denominator, nonempty coverage, exact sets, partial/unknown/truncation and archive custody; real roster audit 6681+1850"
+  },
+  "real_protocol_check": {
+    "known_http400": 30,
+    "unknown": 0,
+    "valid_samples": 0,
+    "root_cause": "Engine grammar does not implement uniqueItems; deterministic output deduplication belongs in after_model_call",
+    "recovery": "Remove unsupported field; new wire identity; preserve prior journal; no engine restart"
+  },
+  "not_evidence_of_model_accuracy": true
+}

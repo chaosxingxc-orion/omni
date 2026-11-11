@@ -1,5 +1,5 @@
 {
-  "status": "PREPARING",
+  "status": "RECOVERING_KNOWN_GRAMMAR_ERROR",
   "samples": 6681,
   "requests": 66810,
   "instances": 3,
@@ -12,8 +12,14 @@
   "supported_types": 54,
   "game_type_positive_support": 0,
   "music_album_positive_support": 1,
-  "model_requests_so_far": 0,
+  "model_requests_so_far": 30,
   "S2": false,
   "D": false,
-  "teacher": false
+  "teacher": false,
+  "known_http_400": 30,
+  "valid_samples": 0,
+  "unknown_requests": 0,
+  "max_total_input_output_upper": 35458,
+  "audio_encodes": 0,
+  "audio_transfers": 0
 }

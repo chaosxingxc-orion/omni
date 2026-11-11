@@ -120,6 +120,9 @@ class JournalStageTransport:
             lambda: self.post_packet(packet) if self.post_packet is not None else self.post(packet['wire']),
             admission=self.admission)
         obj = json.loads(raw)
+        if isinstance(obj, dict) and 'error' in obj:
+            raise ValueError('observed HTTP error; retained in contact journal: '
+                             + json.dumps(obj['error'], ensure_ascii=False, sort_keys=True))
         choice = obj['choices'][0]
         message = choice['message']
         text = message.get('content')

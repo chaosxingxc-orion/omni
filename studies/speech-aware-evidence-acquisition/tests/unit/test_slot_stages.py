@@ -68,6 +68,7 @@ class RailsTest(unittest.TestCase):
 
     def test_type_dedupe_retains_partial(self):
         p = self.rails.before_model_call('S1', query(), 'f1')
+        self.assertNotIn('uniqueItems', json.dumps(p['wire']['response_format']))
         r = self.rails.after_model_call(p, {'text': '{"slot_types":["person","person","alien"]}', 'finish_reason': 'stop'})
         self.assertEqual(r['status'], 'partial')
         self.assertEqual(r['selected_types'], ['person'])

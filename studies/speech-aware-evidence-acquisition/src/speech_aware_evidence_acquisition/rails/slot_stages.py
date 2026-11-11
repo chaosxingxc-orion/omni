@@ -126,7 +126,9 @@ class StageRails:
             fold = next(f for f in self.knowledge['folds'] if f['fold_id'] == branch)
             types = fold['types']
             schema = {'type': 'object', 'additionalProperties': False, 'required': ['slot_types'],
-                      'properties': {'slot_types': {'type': 'array', 'uniqueItems': True,
+                      # Current xgrammar rejects uniqueItems. The after rail
+                      # deduplicates types while retaining its repair audit.
+                      'properties': {'slot_types': {'type': 'array',
                                       'items': {'type': 'string', 'enum': types}}}}
         else:
             if branch not in self.cards:
