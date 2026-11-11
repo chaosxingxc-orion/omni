@@ -65,6 +65,11 @@ class StageRails:
         if self.s1_none_label is not None and (not isinstance(self.s1_none_label, str)
                 or not self.s1_none_label.strip() or self.s1_none_label in self.cards):
             raise ValueError('S1 control label must be nonempty and outside business ontology')
+        self.s1_candidate_presentation = config.get('s1_candidate_presentation', 'legacy')
+        if self.s1_candidate_presentation not in ('legacy', 'unified_candidates_v1'):
+            raise ValueError('unknown S1 candidate presentation')
+        if self.s1_candidate_presentation == 'unified_candidates_v1' and self.s1_none_label is None:
+            raise ValueError('unified S1 candidates require a control label')
         for k in ('max_inflight_requests', 's1_max_tokens', 's2_max_tokens'):
             if type(config[k]) is not int or config[k] < 1:
                 raise ValueError('positive configuration integer: ' + k)
@@ -161,7 +166,20 @@ class StageRails:
             schema = {'type': 'object', 'additionalProperties': False, 'required': ['values'],
                       'properties': {'values': {'type': 'array', 'items': {'type': ['string', 'null']}}}}
         content = {'stage': stage, 'cards': [self._card(t, component, stage) for t in types]}
-        if stage == 'S1' and self.s1_none_label is not None:
+        if stage == 'S1' and self.s1_candidate_presentation == 'unified_candidates_v1':
+            content['candidate_selection'] = {
+                'candidates': [{'label': t, 'kind': 'business_type', 'reference': 'cards'} for t in types] + [{
+                    'label': self.s1_none_label, 'display_name': 'Other slot type', 'kind': 'fold_complement',
+                    'definition': 'A fallback for slot types outside the specific candidates in this Fold, '
+                                  'selected when none of these specific candidates applies to the target audio. '
+                                  'The audio may support types in other Folds or no slot types at all; '
+                                  'proof of another Fold type is not required. This local fallback does not '
+                                  'assert that any slot exists and does not extend the business slot ontology.'}],
+                'instruction': 'Choose from this single candidate list: one or more business candidates '
+                               'supported by target-audio evidence, or only the other-slot-type fallback. '
+                               'This is multi-label selection, not forced single choice. A supported business '
+                               'type remains eligible when its value is unknown, generic, or equals its type name.'}
+        elif stage == 'S1' and self.s1_none_label is not None:
             content['empty_fold_control'] = {
                 'label': self.s1_none_label,
                 'instruction': 'When the target audio supports none of the business types in this Fold, '
@@ -189,7 +207,17 @@ class StageRails:
         parts = [{'type': 'text', 'text': text}]
         parts.insert(0 if self.config['audio_order'] == 'first' else len(parts), copy.deepcopy(query.audio))
         instruction = self.config[stage.lower() + '_instruction']
-        if stage == 'S1' and self.s1_none_label is not None:
+        if stage == 'S1' and self.s1_candidate_presentation == 'unified_candidates_v1':
+            instruction += ('\nS1 unified candidate-selection protocol: the candidate_selection list includes '
+                            'the business candidates described by cards and the other-slot-type fallback '
+                            + self.s1_none_label + '. In the same selection, return one or more business '
+                            'candidates with target-audio evidence, or only this control when no current-Fold '
+                            'business candidate applies. Other-Fold evidence is not required. '
+                            'Do not combine the fallback with specific type labels. Unknown, generic, or type-name-equal '
+                            'values do not disqualify an evidenced business type. '
+                            'Return only {"slot_types": [selected candidate labels]}. '
+                            'The control is not a business type and is removed before S2 or final adjudication.')
+        elif stage == 'S1' and self.s1_none_label is not None:
             instruction += ('\nS1 empty-Fold output protocol: ' + self.s1_none_label +
                             ' is a legal control label in slot_types, not a business slot type. '
                             'If no supplied business type has evidence in the target audio, return only '

@@ -319,8 +319,102 @@ class NoneControlTest(unittest.TestCase):
             StageRails(knowledge(), c)
 
 
+class OthersCandidateTest(unittest.TestCase):
+    def setUp(self):
+        self.c = dict(CONFIG, s1_none_label='OTHER_SLOT_TYPE',
+                      s1_candidate_presentation='unified_candidates_v1')
+        self.r = StageRails(knowledge(), self.c)
+        self.p = self.r.before_model_call('S1', query(), 'f1')
+
+    def after(self, labels, reason='stop'):
+        return self.r.after_model_call(self.p, {'text':json.dumps({'slot_types':labels}),
+                                              'finish_reason':reason})
+
+    def test_default_none_matches_independent_parent_wire_hashes(self):
+        # 在修改前从已提交父源码封存；不是新实现对比自身。
+        r = StageRails(knowledge(), dict(CONFIG, s1_none_label='NONE_OF_FOLD'))
+        expected = {'f1':'d8f17812f226fcef72bb74f631858e32a4dc9fec784a981170cfc395cd8699cd',
+                    'f2':'68b2be75ae816c756216bdba830670b8db99b65517cb35453957dbdb0835dfc1'}
+        for fold, sha in expected.items():
+            self.assertEqual(r.before_model_call('S1',query(),fold)['wire_sha256'], sha)
+
+    def test_unified_candidates_include_fold_complement_in_same_selection(self):
+        view = content(self.p)
+        self.assertNotIn('empty_fold_control', view)
+        selection = view['candidate_selection']
+        self.assertEqual([c['label'] for c in selection['candidates']], ['person','time','OTHER_SLOT_TYPE'])
+        complement = selection['candidates'][-1]
+        self.assertEqual(complement['kind'], 'fold_complement')
+        self.assertIn('proof of another Fold type is not required', complement['definition'])
+        self.assertIn('slot types outside the specific candidates', complement['definition'])
+        self.assertIn('does not assert that any slot exists', complement['definition'])
+        self.assertNotIn('general_quirky', json.dumps(view))
+        self.assertIn('unknown, generic, or equals its type name', selection['instruction'])
+        self.assertIn('not forced single choice', selection['instruction'])
+        self.assertEqual(self.p['allowed_types'], ['person','time'])
+        schema = self.p['wire']['response_format']['json_schema']['schema']
+        self.assertEqual(schema['properties']['slot_types']['items']['enum'], ['person','time','OTHER_SLOT_TYPE'])
+        for unsupported in ['uniqueItems','oneOf','maxItems']:
+            self.assertNotIn(unsupported, json.dumps(schema))
+
+    def test_only_mixed_multilabel_empty_repeated_and_invalid(self):
+        for labels, status, selected, conflict in [
+                (['OTHER_SLOT_TYPE'],'valid_empty',[],False),
+                (['OTHER_SLOT_TYPE','OTHER_SLOT_TYPE'],'valid_empty',[],False),
+                (['OTHER_SLOT_TYPE','person','time'],'valid_nonempty',['person','time'],True),
+                (['person','time'],'valid_nonempty',['person','time'],False),
+                ([], 'valid_empty',[],False),
+                (['alien'],'partial',[],False),
+                (['OTHER_SLOT_TYPE','alien'],'partial',[],False)]:
+            with self.subTest(labels=labels):
+                result = self.after(labels)
+                self.assertEqual(result['status'], status)
+                self.assertEqual(result['selected_types'], selected)
+                self.assertEqual(result['s1_control']['conflict'], conflict)
+                self.assertEqual(result['s1_control']['implicit_empty'], labels == [])
+        self.assertIn('deduplicated_control_label:OTHER_SLOT_TYPE',
+                      self.after(['OTHER_SLOT_TYPE','OTHER_SLOT_TYPE'])['repairs'])
+
+    def test_errors_and_truncation_do_not_claim_others(self):
+        for text, reason, status in [('bad','stop','protocol_error'),
+                ('{"slot_types":"OTHER_SLOT_TYPE"}','stop','protocol_error'),
+                ('{"slot_types":["OTHER_SLOT_TYPE"]}','length','incomplete'),
+                ('{"slot_types":["OTHER_SLOT_TYPE"]}',None,'incomplete')]:
+            with self.subTest(text=text,reason=reason):
+                result = self.r.after_model_call(self.p, {'text':text,'finish_reason':reason})
+                self.assertEqual(result['status'],status)
+                self.assertFalse(result['s1_control']['selected'])
+                self.assertFalse(result['s1_control']['implicit_empty'])
+
+    def test_s2_wire_and_values_equal_parent_and_no_control(self):
+        parent = StageRails(knowledge(), CONFIG)
+        for branch in ['person','time']:
+            packet = self.r.before_model_call('S2',query(),branch)
+            old = parent.before_model_call('S2',query(),branch)
+            self.assertEqual(packet['wire'],old['wire'])
+            self.assertNotIn('control_label',packet)
+            reply = {'text':'{"values":[null,"person"]}','finish_reason':'stop'}
+            result = self.r.after_model_call(packet,reply)
+            self.assertNotIn('s1_control',result)
+            self.assertEqual([x['filler'] for x in result['entities']],[None,'person'])
+        with self.assertRaises(ValueError):
+            self.r.before_model_call('S2',query(),'OTHER_SLOT_TYPE')
+
+    def test_presentation_is_explicit_and_validated(self):
+        for change in [dict(s1_candidate_presentation='typo'),dict(s1_none_label=None)]:
+            with self.assertRaises(ValueError):
+                StageRails(knowledge(),dict(self.c,**change))
+        legacy = StageRails(knowledge(),dict(CONFIG,s1_none_label='OTHER_SLOT_TYPE'))
+        packet = legacy.before_model_call('S1',query(),'f1')
+        self.assertIn('empty_fold_control',content(packet))
+        self.assertNotIn('candidate_selection',content(packet))
+
+
 @unittest.skipUnless(os.environ.get('S_STAGES_NATIVE_TEST') == '1', 'requires fixed openJiuwen image')
 class NativeControlTest(unittest.IsolatedAsyncioTestCase):
+    control_label = 'NONE_OF_FOLD'
+    presentation = 'legacy'
+
     async def test_ten_fold_native_before_after_preserves_control_and_receipt(self):
         from speech_aware_evidence_acquisition.rails.slot_stages_native import NativeStageCaller
         from speech_aware_evidence_acquisition.rails.core_client import CoreCompletion
@@ -329,13 +423,14 @@ class NativeControlTest(unittest.IsolatedAsyncioTestCase):
         template = copy.deepcopy(k['cards']['person'])
         k['cards'] = {f'type_{i}': {**copy.deepcopy(template), 'type':f'type_{i}'} for i in range(10)}
         k['folds'] = [{'fold_id':f'fold-{i:02}', 'types':[f'type_{i}']} for i in range(10)]
-        c = copy.deepcopy(CONFIG); c['s1_none_label'] = 'NONE_OF_FOLD'
+        c = copy.deepcopy(CONFIG); c['s1_none_label'] = self.control_label
+        c['s1_candidate_presentation'] = self.presentation
         c['s1_consumption'] = {'schema':'s1-consumption-policy-v1','policy_id':'native-fixture',
             'max_examples':2,'max_example_bytes':1000,'max_rules':2,'max_rule_bytes':1000}
         observed = []
         async def transport(packet, contact):
             observed.append(packet)
-            labels = ['NONE_OF_FOLD'] + (packet['allowed_types'] if packet['branch']=='fold-00' else [])
+            labels = [self.control_label] + (packet['allowed_types'] if packet['branch']=='fold-00' else [])
             text = json.dumps({'slot_types':labels})
             raw = canonical({'choices':[{'message':{'role':'assistant','content':text},'finish_reason':'stop'}],
                              'usage':{'prompt_tokens':5,'completion_tokens':3}})
@@ -350,6 +445,11 @@ class NativeControlTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sum(r['s1_control']['conflict'] for r in result['s1']),1)
         self.assertEqual(sum(r['s1_control']['selected'] for r in result['s1']),10)
         self.assertTrue(all(r['s1_consumption']['retrieval']['status']=='DEGRADED_NO_CACHE' for r in result['s1']))
+
+
+class NativeOthersTest(NativeControlTest):
+    control_label = 'OTHER_SLOT_TYPE'
+    presentation = 'unified_candidates_v1'
 
 
 if __name__ == '__main__':
