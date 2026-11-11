@@ -221,6 +221,24 @@ def schema_change(previous, current, baseline, policy, changed):
     require(current == expected, "schema differs outside declared control enum")
 
 
+def protocol_wire_change(previous, current, baseline, policy, changed):
+    """Verify a configured unified protocol edit against the actual frozen wire."""
+    if not set(changed) <= {'s1_instruction', 's1_unified_templates'}:
+        return
+    if baseline.get('s1_candidate_presentation') != 'unified_candidates_v1':
+        return
+    from .slot_stages import unified_templates
+    expected = copy.deepcopy(previous)
+    templates = unified_templates(policy)
+    expected['messages'][0]['content'] = policy['s1_instruction'] + templates['system_suffix'].replace(
+        '{control_label}', policy['s1_none_label'])
+    text = next(part for part in expected['messages'][1]['content'] if part['type'] == 'text')
+    body = json.loads(text['text'])
+    body['candidate_selection']['instruction'] = templates['user_instruction']
+    text['text'] = canonical(body).decode()
+    require(current == expected, 'wire differs outside configured S1 protocol text')
+
+
 def build_rails(root, task, knowledge, policy):
     """Load the explicitly pinned supply once per rails instance, never per Fold."""
     from .slot_stages import StageRails
@@ -262,9 +280,11 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
     schemas = []
     for fold in knowledge["folds"]:
         q = Query("schema-probe", {"type": "input_audio", "input_audio": {"data": "", "format": "wav"}})
-        current = rails.before_model_call("S1", q, fold["fold_id"])["wire"]["response_format"]
-        previous = old_rails.before_model_call("S1", q, fold["fold_id"])["wire"]["response_format"]
+        current_wire = rails.before_model_call("S1", q, fold["fold_id"])["wire"]
+        previous_wire = old_rails.before_model_call("S1", q, fold["fold_id"])["wire"]
+        current, previous = current_wire['response_format'], previous_wire['response_format']
         schema_change(previous, current, baseline, policy, changed)
+        protocol_wire_change(previous_wire, current_wire, baseline, policy, changed)
         schemas.append(current)
     save(output / "GRAMMAR-COMPATIBILITY.json", dict(status="DECLARED_CONTROL_ENUM_CHANGE" if "s1_none_label" in changed else "IDENTICAL_TO_SUCCESSFUL_BASELINE_SCHEMA",
          allowed_changes=changed,
@@ -277,6 +297,9 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
             knowledge_id=knowledge["knowledge_id"], cache_id=policy["s1_consumption"]["cache_id"],
             dependency_index_sha256=file_sha(index_path), stage_version=rails.version,
             runtime_packets="prepared_templates", new_encoder_calls=0, new_model_calls=0))
+    protocol_edit = (baseline.get('s1_candidate_presentation') == 'unified_candidates_v1'
+                     and set(changed) <= {'s1_instruction', 's1_unified_templates'})
+    audited_folds = 0
     fit_sources, jobs, maximum, audio_stats = {}, [], 0, []
     for n, row in enumerate(rows):
         audio = get_audio(row, root)
@@ -292,6 +315,10 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
         for fold in knowledge["folds"]:
             packet = rails.before_model_call("S1", query, fold["fold_id"])
             wire = packet["wire"]
+            if protocol_edit:
+                previous_wire = old_rails.before_model_call("S1", query, fold["fold_id"])["wire"]
+                protocol_wire_change(previous_wire, wire, baseline, policy, changed)
+                audited_folds += 1
             content = wire["messages"][1]["content"]
             ai = next(i for i, part in enumerate(content) if part["type"] == "input_audio")
             content[ai] = {"__reuse_audio__": True}
@@ -313,6 +340,11 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
         jobs.append(dict(**row, template=dict(path=str(path.relative_to(root)), sha256=file_sha(path))))
         if n % 500 == 0:
             print("PREPARED", lane["lane"], n, flush=True)
+    if protocol_edit:
+        save(output / "PROTOCOL-WIRE-AUDIT.json", dict(status="PASS_ACTUAL_PREPARED_WIRES",
+            samples=len(jobs), folds=audited_folds, allowed_changes=changed,
+            baseline_runtime=task["baseline_runtime_config"], runtime=task["runtime_config"],
+            schema_probes=task["folds"], model_calls=0))
     manifest = output / "manifest.private.jsonl"
     tmp = manifest.with_suffix(".tmp")
     with tmp.open("wb") as stream:

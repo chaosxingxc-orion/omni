@@ -35,6 +35,30 @@ def document(text):
     return json.loads(text, object_pairs_hook=unique)
 
 
+UNIFIED_SYSTEM_SUFFIX = '\nS1 unified candidate-selection protocol: the candidate_selection list includes the business candidates described by cards and the other-slot-type fallback {control_label}. In the same selection, return one or more business candidates with target-audio evidence, or only this control when no current-Fold business candidate applies. Other-Fold evidence is not required. Do not combine the fallback with specific type labels. Unknown, generic, or type-name-equal values do not disqualify an evidenced business type. Return only {"slot_types": [selected candidate labels]}. The control is not a business type and is removed before S2 or final adjudication.'
+UNIFIED_USER_INSTRUCTION = 'Choose from this single candidate list: one or more business candidates supported by target-audio evidence, or only the other-slot-type fallback. This is multi-label selection, not forced single choice. A supported business type remains eligible when its value is unknown, generic, or equals its type name.'
+
+
+def unified_templates(config):
+    """Explicit S1 protocol text; absent configuration preserves the historical wire."""
+    templates = config.get('s1_unified_templates')
+    defaults = {'system_suffix': UNIFIED_SYSTEM_SUFFIX, 'user_instruction': UNIFIED_USER_INSTRUCTION}
+    if templates is None:
+        return defaults
+    if config.get('s1_candidate_presentation') != 'unified_candidates_v1':
+        raise ValueError('S1 unified templates require unified candidate presentation')
+    if not isinstance(templates, dict) or set(templates) != set(defaults) | {'sha256'}:
+        raise ValueError('exact S1 unified template fields required')
+    texts = {key: templates[key] for key in defaults}
+    if any(not isinstance(value, str) or not value.strip() or len(value) > 6000 for value in texts.values()):
+        raise ValueError('bounded S1 unified template text required')
+    if texts['system_suffix'].count('{control_label}') != 1:
+        raise ValueError('S1 system template needs one control label placeholder')
+    if digest(texts) != templates['sha256']:
+        raise ValueError('S1 unified template SHA mismatch')
+    return texts
+
+
 @dataclass(frozen=True)
 class Query:
     sample_id: str
@@ -75,6 +99,7 @@ class StageRails:
         for k in ('max_inflight_requests', 's1_max_tokens', 's2_max_tokens'):
             if type(config[k]) is not int or config[k] < 1:
                 raise ValueError('positive configuration integer: ' + k)
+        self.s1_templates = unified_templates(config)
         self.s1_consumer = None
         if config.get('s1_consumption') is not None:
             from .slot_stage_selector import S1KnowledgeConsumer
@@ -190,10 +215,7 @@ class StageRails:
                                   'The audio may support types in other Folds or no slot types at all; '
                                   'proof of another Fold type is not required. This local fallback does not '
                                   'assert that any slot exists and does not extend the business slot ontology.'}],
-                'instruction': 'Choose from this single candidate list: one or more business candidates '
-                               'supported by target-audio evidence, or only the other-slot-type fallback. '
-                               'This is multi-label selection, not forced single choice. A supported business '
-                               'type remains eligible when its value is unknown, generic, or equals its type name.'}
+                'instruction': self.s1_templates['user_instruction']}
         elif stage == 'S1' and self.s1_none_label is not None:
             content['empty_fold_control'] = {
                 'label': self.s1_none_label,
@@ -229,15 +251,7 @@ class StageRails:
                             'All false is a valid empty Fold. Type presence does not require a recoverable value. '
                             'Do not return slot_types, control labels, transcripts, values, or explanations.')
         elif stage == 'S1' and self.s1_candidate_presentation == 'unified_candidates_v1':
-            instruction += ('\nS1 unified candidate-selection protocol: the candidate_selection list includes '
-                            'the business candidates described by cards and the other-slot-type fallback '
-                            + self.s1_none_label + '. In the same selection, return one or more business '
-                            'candidates with target-audio evidence, or only this control when no current-Fold '
-                            'business candidate applies. Other-Fold evidence is not required. '
-                            'Do not combine the fallback with specific type labels. Unknown, generic, or type-name-equal '
-                            'values do not disqualify an evidenced business type. '
-                            'Return only {"slot_types": [selected candidate labels]}. '
-                            'The control is not a business type and is removed before S2 or final adjudication.')
+            instruction += self.s1_templates['system_suffix'].replace('{control_label}', self.s1_none_label)
         elif stage == 'S1' and self.s1_none_label is not None:
             instruction += ('\nS1 empty-Fold output protocol: ' + self.s1_none_label +
                             ' is a legal control label in slot_types, not a business slot type. '
