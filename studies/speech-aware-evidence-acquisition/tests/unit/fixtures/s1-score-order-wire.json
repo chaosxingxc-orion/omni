@@ -1,0 +1,69 @@
+{
+  "source_pins": {
+    "slot_stages.py": "c74b8392894c2f3c1d5c5e98e7bd6cb3fb29d590f22d1e223d9d25a7d4105ee2",
+    "slot_stage_selector.py": "fe741946644d85a08d8707e2c42c127252a35778444f957c6f0d1ac53ad3af95"
+  },
+  "packet": {
+    "wire": {
+      "model": "qwen3-omni-30b-a3b-instruct",
+      "max_tokens": 256,
+      "temperature": 0,
+      "seed": 20260913,
+      "messages": [
+        {
+          "role": "system",
+          "content": "Listen to the original query. Independently mark which of the supplied slot types have evidence in this query. The fold is only a computational partition; none of these types is mandatory. Select zero or more types, once per type. A type can be present even when its value is unspecified or equal to its type name. Do not decide the intent, compare other folds, fill values, or infer missing information from demonstrations. Return only {\"slot_types\": [type names]}."
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"cards\":[{\"definition\":\"Meaning of person\",\"examples\":[],\"type\":\"person\"},{\"definition\":\"Meaning of time\",\"examples\":[],\"type\":\"time\"}],\"discriminative_rules\":[{\"description\":\"A sourced distinction, not exclusivity.\",\"related_types\":[\"artist_name\"],\"rule_id\":\"r1\",\"source_refs\":[{\"path\":\"s1-consumption-sources.json\",\"pointer\":\"/distinction\",\"sha256\":\"fa0c7387c9848f57c0f7d3aa610a82240825d5ac876418f6f8d97a10c89613d0\"}],\"target_types\":[\"person\"]}],\"procedural_rules\":[],\"reference_scope\":\"Cards, rules and examples are reference knowledge; only the target audio is evidence. Cross-type distinctions do not impose exclusivity. Return only supported types from this Fold.\",\"retrieved_examples\":[{\"annotation_scope\":\"Only observed TRAIN labels are shown; unlisted types are not negative evidence.\",\"observed_support_types\":[\"person\"],\"query\":\"whole TRAIN sentence\"},{\"annotation_scope\":\"Only observed TRAIN labels are shown; unlisted types are not negative evidence.\",\"observed_support_types\":[],\"query\":\"other complete sentence\"}],\"stage\":\"S1\"}"
+            },
+            {
+              "type": "input_audio",
+              "input_audio": {
+                "data": "fixture",
+                "format": "wav"
+              }
+            }
+          ]
+        }
+      ],
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "s1_slots",
+          "strict": true,
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "slot_types"
+            ],
+            "properties": {
+              "slot_types": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "person",
+                    "time"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "wire_sha256": "76e9d695d278747c7f55e82e95d365e023c946aa950ed4a450e57dbd1d9eccc5",
+    "request_id": "S1-041dbb16a8b2bc6a7a7d6fc8dd00a5bc95aa80853516c193c5e804400de37ccf",
+    "version": "dd60ff719a873e117b16bed714bcc512621dcf1b16e7f627857263e66fc3ae01",
+    "allowed_types": [
+      "person",
+      "time"
+    ]
+  }
+}

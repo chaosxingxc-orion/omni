@@ -1,0 +1,200 @@
+{
+  "parent_source_sha256": "39434a895891d250171c234cc797bc41512fcc1eaec999aac4e212eb982773e0",
+  "version": "37f64baed96d54a7bc6e890db5dc70de0d6bebec31c9aff188dd0a8cfe5aeb03",
+  "packets": {
+    "S1:f1": {
+      "sample_id": "slurp:train:000001:audio-x",
+      "stage": "S1",
+      "branch": "f1",
+      "version": "37f64baed96d54a7bc6e890db5dc70de0d6bebec31c9aff188dd0a8cfe5aeb03",
+      "wire_sha256": "7fc45d1cef2df976650cf2d4910e3fa4f03447003fe7ef382d2e656299f70fe8",
+      "request_id": "S1-0cd13fed859ef37b86bed3ef06be278ffda0d34f0d49b0f0efcc69ebd3cc728c",
+      "allowed_types": [
+        "person",
+        "time"
+      ],
+      "wire": {
+        "model": "qwen3-omni-30b-a3b-instruct",
+        "max_tokens": 256,
+        "temperature": 0,
+        "seed": 20260913,
+        "messages": [
+          {
+            "role": "system",
+            "content": "Listen to the original query. Independently mark which of the supplied slot types have evidence in this query. The fold is only a computational partition; none of these types is mandatory. Select zero or more types, once per type. A type can be present even when its value is unspecified or equal to its type name. Do not decide the intent, compare other folds, fill values, or infer missing information from demonstrations. Return only {\"slot_types\": [type names]}."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "{\"cards\":[{\"definition\":\"Meaning of person\",\"examples\":[{\"query\":\"fixture example\",\"supports_type\":\"person\"}],\"type\":\"person\"},{\"definition\":\"Meaning of time\",\"examples\":[{\"query\":\"fixture example\",\"supports_type\":\"time\"}],\"type\":\"time\"}],\"stage\":\"S1\"}"
+              },
+              {
+                "type": "input_audio",
+                "input_audio": {
+                  "data": "fixture",
+                  "format": "wav"
+                }
+              }
+            ]
+          }
+        ],
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "s1_slots",
+            "strict": true,
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "slot_types"
+              ],
+              "properties": {
+                "slot_types": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "person",
+                      "time"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "S1:f2": {
+      "sample_id": "slurp:train:000001:audio-x",
+      "stage": "S1",
+      "branch": "f2",
+      "version": "37f64baed96d54a7bc6e890db5dc70de0d6bebec31c9aff188dd0a8cfe5aeb03",
+      "wire_sha256": "cbfd0dcbb90fe7abc41af9b3b02d50ad7ede90f13e20622e3077038a47af7ab7",
+      "request_id": "S1-2d6b2ebe79ff3efd94fbdce75e6cf2cb4cc1ce36c4ca362934a6a748e7e1111f",
+      "allowed_types": [
+        "artist_name"
+      ],
+      "wire": {
+        "model": "qwen3-omni-30b-a3b-instruct",
+        "max_tokens": 256,
+        "temperature": 0,
+        "seed": 20260913,
+        "messages": [
+          {
+            "role": "system",
+            "content": "Listen to the original query. Independently mark which of the supplied slot types have evidence in this query. The fold is only a computational partition; none of these types is mandatory. Select zero or more types, once per type. A type can be present even when its value is unspecified or equal to its type name. Do not decide the intent, compare other folds, fill values, or infer missing information from demonstrations. Return only {\"slot_types\": [type names]}."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "{\"cards\":[{\"definition\":\"Meaning of artist_name\",\"examples\":[{\"query\":\"fixture example\",\"supports_type\":\"artist_name\"}],\"type\":\"artist_name\"}],\"stage\":\"S1\"}"
+              },
+              {
+                "type": "input_audio",
+                "input_audio": {
+                  "data": "fixture",
+                  "format": "wav"
+                }
+              }
+            ]
+          }
+        ],
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "s1_slots",
+            "strict": true,
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "slot_types"
+              ],
+              "properties": {
+                "slot_types": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "artist_name"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "S2:person": {
+      "sample_id": "slurp:train:000001:audio-x",
+      "stage": "S2",
+      "branch": "person",
+      "version": "37f64baed96d54a7bc6e890db5dc70de0d6bebec31c9aff188dd0a8cfe5aeb03",
+      "wire_sha256": "21a2fcf0c97cef95c963d2c5f3c5c8a9367aa44466d9a9d523b32e80a8fe4fad",
+      "request_id": "S2-d8dd36c279ca3a56f29fc76cb79431f981c5db177cf09f6f52f6ec9fa286850a",
+      "allowed_types": [
+        "person"
+      ],
+      "wire": {
+        "model": "qwen3-omni-30b-a3b-instruct",
+        "max_tokens": 512,
+        "temperature": 0,
+        "seed": 20260913,
+        "messages": [
+          {
+            "role": "system",
+            "content": "Listen to the original query and fill candidate values ONLY for the supplied selected slot type. Use its own definition, observed vocabulary and examples as reference, not as evidence that a value occurs. Observed vocabulary is not an exhaustive whitelist. Preserve each independent mention in order, including repeated equal values. If the selected type is supported but no value can be recovered, return one null value for that mention. If no evidence supports this type, return an empty values list; do not invent a value because S1 selected it. Return only {\"values\": [strings or null]}. Do not choose an intent, compare slot types, or assemble the final answer. Express values as heard, without guessing normalized dates or numbers."
+          },
+          {
+            "role": "user",
+            "content": [
+              {
+                "type": "text",
+                "text": "{\"cards\":[{\"closed_world\":false,\"definition\":\"Meaning of person\",\"examples\":[{\"query\":\"fixture example\",\"values\":[\"example\"]}],\"kind\":\"enumerated_observed\",\"missing_value_policy\":\"null if evidenced but unknown\",\"observed_vocabulary\":[[\"value\"]],\"type\":\"person\",\"value_output\":\"spoken_surface\",\"value_rules\":[],\"vocabulary_scope\":\"observed TRAIN variants, not exhaustive and not audio evidence\"}],\"stage\":\"S2\"}"
+              },
+              {
+                "type": "input_audio",
+                "input_audio": {
+                  "data": "fixture",
+                  "format": "wav"
+                }
+              }
+            ]
+          }
+        ],
+        "response_format": {
+          "type": "json_schema",
+          "json_schema": {
+            "name": "s2_slots",
+            "strict": true,
+            "schema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "values"
+              ],
+              "properties": {
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

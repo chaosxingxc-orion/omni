@@ -41,12 +41,13 @@ class Query:
     audio: dict
     # No intent, query transcript, expected types or reference values allowed.
     source_component: str | None = None
+    audio_sha256: str | None = None
 
 
 class StageRails:
     """Four distinct rails with no intent-aware filtering or adjudication."""
 
-    def __init__(self, knowledge, config):
+    def __init__(self, knowledge, config, *, retrieval_cache=None, provenance_root=None):
         self.knowledge = copy.deepcopy(knowledge)
         self.config = copy.deepcopy(config)
         self.cards = self.knowledge['cards']
@@ -60,10 +61,23 @@ class StageRails:
                 raise ValueError('empty fold')
         if config['audio_order'] not in ('first', 'last'):
             raise ValueError('audio_order must be first or last')
+        self.s1_none_label = config.get('s1_none_label')
+        if self.s1_none_label is not None and (not isinstance(self.s1_none_label, str)
+                or not self.s1_none_label.strip() or self.s1_none_label in self.cards):
+            raise ValueError('S1 control label must be nonempty and outside business ontology')
         for k in ('max_inflight_requests', 's1_max_tokens', 's2_max_tokens'):
             if type(config[k]) is not int or config[k] < 1:
                 raise ValueError('positive configuration integer: ' + k)
+        self.s1_consumer = None
+        if config.get('s1_consumption') is not None:
+            from .slot_stage_selector import S1KnowledgeConsumer
+            self.s1_consumer = S1KnowledgeConsumer(self.knowledge, config['s1_consumption'], retrieval_cache,
+                                                  provenance_root=provenance_root)
+        elif retrieval_cache is not None:
+            raise ValueError('retrieval cache requires an explicit S1 consumption policy')
         self.version = digest({'knowledge': self.knowledge, 'runtime': self.config})
+        if self.s1_consumer is not None:
+            self.version = digest({'base_version': self.version, 's1_consumer': self.s1_consumer.version})
 
     def _component(self, query):
         parts = query.sample_id.split(':')
@@ -98,7 +112,16 @@ class StageRails:
 
     def _card(self, slot_type, component, stage):
         c = self.cards[slot_type]
-        view = {'type': slot_type, 'definition': (slot_type.replace('_', ' ') if component in c.get('definition_components', []) else c['definition']),
+        excluded = component in c.get('definition_components', [])
+        definition = slot_type.replace('_', ' ') if excluded else c['definition']
+        independent = c.get('independent_definition') if stage == 'S1' else None
+        if excluded and self.s1_consumer is not None and independent is not None:
+            if (independent.get('scope') != 'generic_type_meaning' or not independent.get('source_refs')
+                    or 'source_components' not in independent or not independent.get('definition')):
+                raise ValueError('independent definition requires compiled provenance')
+            if not set(independent['source_components']).intersection(self.s1_consumer.blocked | {component}):
+                definition = independent['definition']
+        view = {'type': slot_type, 'definition': definition,
                 'examples': self._examples(c, component, stage)}
         if stage == 'S2':
             view.update(kind=c['kind'], closed_world=c['closed_world'], value_rules=c.get('value_rules', []),
@@ -125,11 +148,12 @@ class StageRails:
         if stage == 'S1':
             fold = next(f for f in self.knowledge['folds'] if f['fold_id'] == branch)
             types = fold['types']
+            output_labels = types + ([self.s1_none_label] if self.s1_none_label is not None else [])
             schema = {'type': 'object', 'additionalProperties': False, 'required': ['slot_types'],
                       # Current xgrammar rejects uniqueItems. The after rail
                       # deduplicates types while retaining its repair audit.
                       'properties': {'slot_types': {'type': 'array',
-                                      'items': {'type': 'string', 'enum': types}}}}
+                                      'items': {'type': 'string', 'enum': output_labels}}}}
         else:
             if branch not in self.cards:
                 raise ValueError('unknown selected slot type')
@@ -137,22 +161,65 @@ class StageRails:
             schema = {'type': 'object', 'additionalProperties': False, 'required': ['values'],
                       'properties': {'values': {'type': 'array', 'items': {'type': ['string', 'null']}}}}
         content = {'stage': stage, 'cards': [self._card(t, component, stage) for t in types]}
+        if stage == 'S1' and self.s1_none_label is not None:
+            content['empty_fold_control'] = {
+                'label': self.s1_none_label,
+                'instruction': 'When the target audio supports none of the business types in this Fold, '
+                               'return only this control label. It is mutually exclusive with business types. '
+                               'It is not a slot type and does not assert other Folds are empty. '
+                               'An empty array remains accepted for compatibility.'}
+        consumption_receipt = None
+        if stage == 'S1' and self.s1_consumer is not None:
+            reference, consumption_receipt = self.s1_consumer.before(query, types, component)
+            consumption_receipt['definition_sources'] = [{
+                'type': t, 'source_excluded': component in self.cards[t].get('definition_components', []),
+                'independent_supplied': content['cards'][i]['definition'] == self.cards[t].get('independent_definition', {}).get('definition'),
+                'source_refs': self.cards[t].get('independent_definition', {}).get('source_refs', [])
+            } for i, t in enumerate(types)]
+            if self.s1_consumer.policy.get('coverage_policy') == 'fold_supported_score_order':
+                self.s1_consumer.retain_static_examples(content['cards'], reference, consumption_receipt)
+            # Legacy score_order/type_round_robin retain their frozen wire.
+            elif consumption_receipt['retrieval']['status'] == 'READY':
+                for card in content['cards']:
+                    card['examples'] = []
+            content.update(reference)
+            consumption_receipt['retrieval'].setdefault('static_retained_types',
+                [card['type'] for card in content['cards'] if card['examples']])
         text = canonical(content).decode()
         parts = [{'type': 'text', 'text': text}]
         parts.insert(0 if self.config['audio_order'] == 'first' else len(parts), copy.deepcopy(query.audio))
+        instruction = self.config[stage.lower() + '_instruction']
+        if stage == 'S1' and self.s1_none_label is not None:
+            instruction += ('\nS1 empty-Fold output protocol: ' + self.s1_none_label +
+                            ' is a legal control label in slot_types, not a business slot type. '
+                            'If no supplied business type has evidence in the target audio, return only '
+                            '{"slot_types": [' + json.dumps(self.s1_none_label) + ']}. '
+                            'This explicit empty-Fold protocol replaces any instruction above to return an empty array. '
+                            'Do not combine the control label with business types; other Folds may still contain evidence.')
         wire = {'model': self.config['model'], 'max_tokens': self.config[stage.lower() + '_max_tokens'],
                 'temperature': self.config['temperature'], 'seed': self.config['seed'],
-                'messages': [{'role': 'system', 'content': self.config[stage.lower() + '_instruction']},
+                'messages': [{'role': 'system', 'content': instruction},
                              {'role': 'user', 'content': parts}],
                 'response_format': {'type': 'json_schema', 'json_schema': {'name': stage.lower() + '_slots',
                                                                          'strict': True, 'schema': schema}}}
         key = {'sample_id': query.sample_id, 'stage': stage, 'branch': branch,
                'version': self.version, 'wire_sha256': digest(wire)}
-        return {**key, 'request_id': stage + '-' + digest(key), 'allowed_types': types, 'wire': wire}
+        packet = {**key, 'request_id': stage + '-' + digest(key), 'allowed_types': types, 'wire': wire}
+        if consumption_receipt is not None:
+            packet['s1_consumption'] = consumption_receipt
+        if stage == 'S1' and self.s1_none_label is not None:
+            packet['control_label'] = self.s1_none_label
+        return packet
 
     def after_model_call(self, packet, reply):
         """Preserve paid invalid outputs and partial good items; no semantic decisions."""
         base = {k: packet[k] for k in ('sample_id', 'stage', 'branch', 'request_id', 'wire_sha256')}
+        if 's1_consumption' in packet:
+            base['s1_consumption'] = copy.deepcopy(packet['s1_consumption'])
+        control = packet.get('control_label') if packet['stage'] == 'S1' else None
+        if control is not None:
+            base['s1_control'] = {'label': control, 'selected': False, 'occurrences': 0,
+                                  'conflict': False, 'implicit_empty': False}
         base.update(raw_text=reply.get('text'), usage=reply.get('usage'), receipt=reply.get('receipt'),
                     finish_reason=reply.get('finish_reason'), repairs=[], rejected_items=[])
         if reply.get('finish_reason') != 'stop':
@@ -172,7 +239,12 @@ class StageRails:
             selected, entities = [], []
             for i, value in enumerate(obj[field]):
                 if packet['stage'] == 'S1':
-                    if not isinstance(value, str) or value not in packet['allowed_types']:
+                    if control is not None and value == control:
+                        base['s1_control']['occurrences'] += 1
+                        base['s1_control']['selected'] = True
+                        if base['s1_control']['occurrences'] > 1:
+                            base['repairs'].append('deduplicated_control_label:' + control)
+                    elif not isinstance(value, str) or value not in packet['allowed_types']:
                         base['rejected_items'].append({'index': i, 'value': value, 'reason': 'outside_fold'})
                     elif value in selected:
                         base['repairs'].append('deduplicated_type:' + value)
@@ -184,6 +256,11 @@ class StageRails:
                                      'local_mention_index': i, 'source_request_id': packet['request_id']})
                 else:
                     base['rejected_items'].append({'index': i, 'value': value, 'reason': 'invalid_value'})
+            if control is not None:
+                base['s1_control']['implicit_empty'] = not obj[field]
+                if base['s1_control']['selected'] and selected:
+                    base['s1_control']['conflict'] = True
+                    base['repairs'].append('control_conflict_preserved_business_types:' + control)
             status = 'partial' if base['rejected_items'] else 'valid_nonempty' if selected or entities else 'valid_empty'
             return {**base, 'status': status, 'selected_types': selected, 'entities': entities}
         except (ValueError, TypeError) as error:

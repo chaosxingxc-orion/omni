@@ -1,0 +1,33 @@
+{
+  "distinction": "A sourced distinction, not exclusivity.",
+  "definition": "Independent person meaning.",
+  "procedure": "A type can be present even if its value is unknown.",
+  "train": [
+    {
+      "slurp_id": 1,
+      "sentence": "must not show",
+      "entities": [
+        {
+          "type": "person"
+        }
+      ]
+    },
+    {
+      "slurp_id": 2,
+      "sentence": "whole TRAIN sentence",
+      "entities": [
+        {
+          "type": "person"
+        },
+        {
+          "type": "artist_name"
+        }
+      ]
+    },
+    {
+      "slurp_id": 3,
+      "sentence": "other complete sentence",
+      "entities": []
+    }
+  ]
+}
