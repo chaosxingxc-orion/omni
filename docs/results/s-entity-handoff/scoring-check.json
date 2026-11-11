@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "devices": [],
+  "network": "none",
+  "model_calls": 0,
+  "stdout": "{\"status\": \"PASS\", \"tests\": 13, \"data_partitions\": 2, \"source_samples\": 8531, \"real_P_branches_mapped\": 25593, \"model_calls\": 0}\n",
+  "wall_seconds": 4.393178224563599
+}
