@@ -66,10 +66,12 @@ class StageRails:
                 or not self.s1_none_label.strip() or self.s1_none_label in self.cards):
             raise ValueError('S1 control label must be nonempty and outside business ontology')
         self.s1_candidate_presentation = config.get('s1_candidate_presentation', 'legacy')
-        if self.s1_candidate_presentation not in ('legacy', 'unified_candidates_v1'):
+        if self.s1_candidate_presentation not in ('legacy', 'unified_candidates_v1', 'type_marking_v1'):
             raise ValueError('unknown S1 candidate presentation')
         if self.s1_candidate_presentation == 'unified_candidates_v1' and self.s1_none_label is None:
             raise ValueError('unified S1 candidates require a control label')
+        if self.s1_candidate_presentation == 'type_marking_v1' and self.s1_none_label is not None:
+            raise ValueError('S1 type marking uses business booleans without a control label')
         for k in ('max_inflight_requests', 's1_max_tokens', 's2_max_tokens'):
             if type(config[k]) is not int or config[k] < 1:
                 raise ValueError('positive configuration integer: ' + k)
@@ -159,6 +161,12 @@ class StageRails:
                       # deduplicates types while retaining its repair audit.
                       'properties': {'slot_types': {'type': 'array',
                                       'items': {'type': 'string', 'enum': output_labels}}}}
+            if self.s1_candidate_presentation == 'type_marking_v1':
+                schema = {'type': 'object', 'additionalProperties': False,
+                          'required': ['slot_type_presence'], 'properties': {
+                              'slot_type_presence': {'type': 'object', 'additionalProperties': False,
+                                  'required': list(types),
+                                  'properties': {t: {'type': 'boolean'} for t in types}}}}
         else:
             if branch not in self.cards:
                 raise ValueError('unknown selected slot type')
@@ -166,7 +174,14 @@ class StageRails:
             schema = {'type': 'object', 'additionalProperties': False, 'required': ['values'],
                       'properties': {'values': {'type': 'array', 'items': {'type': ['string', 'null']}}}}
         content = {'stage': stage, 'cards': [self._card(t, component, stage) for t in types]}
-        if stage == 'S1' and self.s1_candidate_presentation == 'unified_candidates_v1':
+        if stage == 'S1' and self.s1_candidate_presentation == 'type_marking_v1':
+            content['type_marking'] = {
+                'types': list(types),
+                'instruction': 'For every supplied type, return true if the target audio expresses '
+                               'that type, otherwise false. Include every type exactly once. '
+                               'All false means no current-Fold type is supported. '
+                               'A type may be present even when its value is unknown.'}
+        elif stage == 'S1' and self.s1_candidate_presentation == 'unified_candidates_v1':
             content['candidate_selection'] = {
                 'candidates': [{'label': t, 'kind': 'business_type', 'reference': 'cards'} for t in types] + [{
                     'label': self.s1_none_label, 'display_name': 'Other slot type', 'kind': 'fold_complement',
@@ -207,7 +222,13 @@ class StageRails:
         parts = [{'type': 'text', 'text': text}]
         parts.insert(0 if self.config['audio_order'] == 'first' else len(parts), copy.deepcopy(query.audio))
         instruction = self.config[stage.lower() + '_instruction']
-        if stage == 'S1' and self.s1_candidate_presentation == 'unified_candidates_v1':
+        if stage == 'S1' and self.s1_candidate_presentation == 'type_marking_v1':
+            instruction += ('\nS1 per-type marking protocol: in this single Fold response, return only '
+                            '{"slot_type_presence": {type_name: true_or_false, ...}}. '
+                            'Use JSON booleans for every supplied business type, with no missing or extra keys. '
+                            'All false is a valid empty Fold. Type presence does not require a recoverable value. '
+                            'Do not return slot_types, control labels, transcripts, values, or explanations.')
+        elif stage == 'S1' and self.s1_candidate_presentation == 'unified_candidates_v1':
             instruction += ('\nS1 unified candidate-selection protocol: the candidate_selection list includes '
                             'the business candidates described by cards and the other-slot-type fallback '
                             + self.s1_none_label + '. In the same selection, return one or more business '
@@ -233,6 +254,8 @@ class StageRails:
         key = {'sample_id': query.sample_id, 'stage': stage, 'branch': branch,
                'version': self.version, 'wire_sha256': digest(wire)}
         packet = {**key, 'request_id': stage + '-' + digest(key), 'allowed_types': types, 'wire': wire}
+        if stage == 'S1' and self.s1_candidate_presentation == 'type_marking_v1':
+            packet['s1_candidate_presentation'] = 'type_marking_v1'
         if consumption_receipt is not None:
             packet['s1_consumption'] = consumption_receipt
         if stage == 'S1' and self.s1_none_label is not None:
@@ -259,6 +282,17 @@ class StageRails:
             base['repairs'].append('removed_outer_code_fence')
         try:
             obj = document(text)
+            if packet.get('s1_candidate_presentation') == 'type_marking_v1':
+                if not isinstance(obj, dict) or set(obj) != {'slot_type_presence'}:
+                    raise ValueError('required slot_type_presence object only')
+                marks = obj['slot_type_presence']
+                if not isinstance(marks, dict) or set(marks) != set(packet['allowed_types']):
+                    raise ValueError('type marking requires every Fold type and no unknown types')
+                if any(type(v) is not bool for v in marks.values()):
+                    raise ValueError('type marking values must be JSON booleans')
+                selected = [t for t in packet['allowed_types'] if marks[t]]
+                return {**base, 'status': 'valid_nonempty' if selected else 'valid_empty',
+                        'selected_types': selected, 'entities': [], 'slot_type_presence': marks}
             field = 'slot_types' if packet['stage'] == 'S1' else 'values'
             if not isinstance(obj, dict) or field not in obj or not isinstance(obj[field], list):
                 raise ValueError('required array missing')

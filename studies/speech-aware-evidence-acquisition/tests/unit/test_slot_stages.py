@@ -129,7 +129,85 @@ class RailsTest(unittest.TestCase):
         self.assertEqual(k['cards']['person']['examples'][0]['values'], ['alice', 'alice'])
 
 
+class TypeMarkingTest(unittest.TestCase):
+    def setUp(self):
+        config = copy.deepcopy(CONFIG)
+        config.update(s1_candidate_presentation='type_marking_v1', s1_none_label=None)
+        self.rails = StageRails(knowledge(), config)
+        self.packet = self.rails.before_model_call('S1', query(), 'f1')
+
+    def reply(self, marks, **extra):
+        return self.rails.after_model_call(self.packet, {
+            'text': json.dumps({'slot_type_presence': marks}), 'finish_reason': 'stop',
+            'usage': {'completion_tokens': 19}, **extra})
+
+    def test_schema_requires_exact_boolean_keys(self):
+        schema = self.packet['wire']['response_format']['json_schema']['schema']
+        marks = schema['properties']['slot_type_presence']
+        self.assertEqual(marks['required'], ['person', 'time'])
+        self.assertEqual(marks['properties'], {'person': {'type': 'boolean'}, 'time': {'type': 'boolean'}})
+        self.assertFalse(marks['additionalProperties'])
+        self.assertNotIn('control_label', self.packet)
+        with self.assertRaises(ValueError):
+            StageRails(knowledge(), {**self.rails.config, 's1_none_label': 'NONE_OF_FOLD'})
+
+    def test_all_false_valid_empty_and_partial_true_in_fold_order(self):
+        self.assertEqual(self.reply({'person': False, 'time': False})['status'], 'valid_empty')
+        result = self.reply({'time': False, 'person': True})
+        self.assertEqual(result['selected_types'], ['person'])
+        self.assertEqual(result['status'], 'valid_nonempty')
+        self.assertEqual(result['entities'], [])
+
+    def test_missing_unknown_and_non_boolean_are_protocol_failures(self):
+        for marks in ({'person': False}, {'person': True, 'time': False, 'alien': False},
+                      {'person': True, 'time': None}, {'person': True, 'time': 0},
+                      {'person': 'true', 'time': False}, [], None):
+            with self.subTest(marks=marks):
+                result = self.reply(marks)
+                self.assertEqual(result['status'], 'protocol_error')
+                self.assertEqual(result['usage']['completion_tokens'], 19)
+
+    def test_duplicate_and_extra_fields_fail_closed(self):
+        for text in ('{"slot_type_presence":{"person":false,"person":true,"time":false}}',
+                     '{"slot_type_presence":{"person":false,"time":false},"slot_types":[]}',
+                     '{"slot_types":[]}', '{"slot_type_presence":'):
+            self.assertEqual(self.rails.after_model_call(self.packet, {
+                'text': text, 'finish_reason': 'stop'})['status'], 'protocol_error')
+
+    def test_length_never_valid_empty_and_raw_cost_retained(self):
+        result = self.reply({'person': False, 'time': False}, finish_reason='length')
+        self.assertEqual(result['status'], 'incomplete')
+        self.assertEqual(result['usage']['completion_tokens'], 19)
+        self.assertIn('slot_type_presence', result['raw_text'])
+
+    def test_s2_wire_unchanged_from_legacy(self):
+        old = StageRails(knowledge(), CONFIG).before_model_call('S2', query(), 'person')
+        new = self.rails.before_model_call('S2', query(), 'person')
+        self.assertEqual(old['wire'], new['wire'])
+        self.assertNotIn('s1_candidate_presentation', new)
+
+
 class AsyncTest(unittest.IsolatedAsyncioTestCase):
+    async def test_type_marking_union_s2_and_failed_fold_denominator(self):
+        config = {**CONFIG, 's1_candidate_presentation': 'type_marking_v1', 's1_none_label': None}
+        calls = []
+        async def caller(packet, after):
+            calls.append((packet['stage'], packet['branch']))
+            if packet['stage'] == 'S2':
+                self.assertEqual(packet['branch'], 'person')
+                text = '{"values":[null]}'
+            else:
+                marks = {'person': True, 'time': False} if packet['branch'] == 'f1' else {}
+                text = json.dumps({'slot_type_presence': marks})
+            return after(packet, {'text': text, 'finish_reason': 'stop'})
+        result = await SlotStages(StageRails(knowledge(), config), caller).run(query())
+        self.assertEqual(calls, [('S1', 'f1'), ('S1', 'f2'), ('S2', 'person')])
+        self.assertEqual(len(result['s1']), 2)
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['s1'][1]['status'], 'protocol_error')
+        self.assertEqual(result['selected_types'], ['person'])
+        self.assertIsNone(result['entities'][0]['filler'])
+
     async def test_s1_only_prepared_and_partial_fold(self):
         calls = []
         async def caller(p, after):

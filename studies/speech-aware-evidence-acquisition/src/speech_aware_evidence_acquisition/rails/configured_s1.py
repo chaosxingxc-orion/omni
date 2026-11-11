@@ -194,6 +194,22 @@ def scientific_changes(task, baseline, policy):
 
 def schema_change(previous, current, baseline, policy, changed):
     expected = copy.deepcopy(previous)
+    if policy.get("s1_candidate_presentation") == "type_marking_v1":
+        require(set(changed) == {"s1_candidate_presentation", "s1_instruction", "s1_none_label"},
+                "type marking exact policy changes")
+        require(baseline.get("s1_candidate_presentation", "legacy") == "legacy"
+                and baseline.get("s1_none_label") == "NONE_OF_FOLD"
+                and policy.get("s1_none_label") is None, "type marking None parent")
+        labels = expected["json_schema"]["schema"]["properties"]["slot_types"]["items"]["enum"]
+        require(labels[-1] == "NONE_OF_FOLD", "type marking parent enum")
+        types = labels[:-1]
+        expected["json_schema"]["schema"] = {
+            "type": "object", "additionalProperties": False, "required": ["slot_type_presence"],
+            "properties": {"slot_type_presence": {
+                "type": "object", "additionalProperties": False, "required": types,
+                "properties": {t: {"type": "boolean"} for t in types}}}}
+        require(current == expected, "type marking schema differs outside declared exact transformation")
+        return
     if "s1_none_label" in changed:
         old, new = baseline.get("s1_none_label"), policy.get("s1_none_label")
         labels = expected["json_schema"]["schema"]["properties"]["slot_types"]["items"]["enum"]
@@ -222,7 +238,7 @@ def build_rails(root, task, knowledge, policy):
 def prepare(root, output, task_path, lane_path, index_path, model_root):
     started = time.monotonic()
     task, lane, index, rows, policy, identity = context(root, task_path, lane_path, index_path)
-    from .slot_stages import StageRails, Query
+    from .slot_stages import Query, StageRails
     from transformers import AutoTokenizer
     knowledge = read(pinned(root, task["knowledge"]))
     rails = build_rails(root, task, knowledge, policy)
@@ -237,7 +253,12 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
     template_receipt = helper.bind_local_chat_template(tokenizer, model_root)
     baseline = read(pinned(root, task["baseline_runtime_config"]))
     changed = scientific_changes(task, baseline, policy)
-    old_rails = StageRails(knowledge, baseline)
+    # Supply inputs belong to the candidate task; a pre-supply parent keeps
+    # its original path without consuming the candidate's cache/provenance.
+    if baseline.get("s1_consumption") is None:
+        old_rails = StageRails(knowledge, baseline)
+    else:
+        old_rails = build_rails(root, task, knowledge, baseline)
     schemas = []
     for fold in knowledge["folds"]:
         q = Query("schema-probe", {"type": "input_audio", "input_audio": {"data": "", "format": "wav"}})
