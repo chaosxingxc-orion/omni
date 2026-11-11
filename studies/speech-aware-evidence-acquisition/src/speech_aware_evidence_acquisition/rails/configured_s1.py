@@ -177,6 +177,34 @@ def ensure_ready(root, output, task_path, lane_path, index_path, model_root):
         raise
 
 
+def scientific_changes(task, baseline, policy):
+    """Explicit policy changes; every unlisted field is frozen by default.
+
+    Legacy tasks retain their instruction-only contract. New tasks declare the
+    exact set to avoid silently admitting extra scientific interventions.
+    """
+    declared = task.get("allowed_changes", ["s1_instruction"])
+    require(isinstance(declared, list) and len(set(declared)) == len(declared)
+            and all(isinstance(k, str) for k in declared), "invalid allowed_changes")
+    changed = sorted(k for k in set(policy) | set(baseline)
+                     if (k in policy) != (k in baseline) or policy.get(k) != baseline.get(k))
+    require(changed == sorted(declared), "policy differs from declared allowed_changes")
+    return changed
+
+
+def schema_change(previous, current, baseline, policy, changed):
+    expected = copy.deepcopy(previous)
+    if "s1_none_label" in changed:
+        old, new = baseline.get("s1_none_label"), policy.get("s1_none_label")
+        labels = expected["json_schema"]["schema"]["properties"]["slot_types"]["items"]["enum"]
+        if old is not None:
+            require(labels[-1] == old, "parent control enum binding")
+            labels.pop()
+        if new is not None:
+            labels.append(new)
+    require(current == expected, "schema differs outside declared control enum")
+
+
 def prepare(root, output, task_path, lane_path, index_path, model_root):
     started = time.monotonic()
     task, lane, index, rows, policy, identity = context(root, task_path, lane_path, index_path)
@@ -194,19 +222,19 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
     helper = load("configured_s1_fit", resolve(root, task["fit_helper"]))
     template_receipt = helper.bind_local_chat_template(tokenizer, model_root)
     baseline = read(pinned(root, task["baseline_runtime_config"]))
-    changed = sorted(k for k in set(policy) | set(baseline) if policy.get(k) != baseline.get(k))
-    require(changed == ["s1_instruction"], "candidate may only change s1_instruction")
+    changed = scientific_changes(task, baseline, policy)
     old_rails = StageRails(knowledge, baseline)
     schemas = []
     for fold in knowledge["folds"]:
         q = Query("schema-probe", {"type": "input_audio", "input_audio": {"data": "", "format": "wav"}})
         current = rails.before_model_call("S1", q, fold["fold_id"])["wire"]["response_format"]
         previous = old_rails.before_model_call("S1", q, fold["fold_id"])["wire"]["response_format"]
-        require(current == previous, "schema differs from successful baseline")
+        schema_change(previous, current, baseline, policy, changed)
         schemas.append(current)
-    save(output / "GRAMMAR-COMPATIBILITY.json", dict(status="IDENTICAL_TO_SUCCESSFUL_BASELINE_SCHEMA",
+    save(output / "GRAMMAR-COMPATIBILITY.json", dict(status="DECLARED_CONTROL_ENUM_CHANGE" if "s1_none_label" in changed else "IDENTICAL_TO_SUCCESSFUL_BASELINE_SCHEMA",
+         allowed_changes=changed,
          schemas=schemas, schema_set_sha256=sha(canonical(schemas)), evidence=task["grammar_evidence"],
-         general_backend_capability_verified=False, limitation="schema equality only; no compiler or model invocation"))
+         general_backend_capability_verified=False, limitation="declared schema diff only; separate actual backend compiler receipt required for new enum"))
     fit_sources, jobs, maximum, audio_stats = {}, [], 0, []
     for n, row in enumerate(rows):
         audio = get_audio(row, root)
