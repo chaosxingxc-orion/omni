@@ -1,5 +1,5 @@
 {
-  "version": "clean-v5",
+  "version": "clean-v6",
   "status": "CLEAN_VIEWS_BUILT_VERIFIED",
   "source_hashes": {
     "train": "4a05a3de6c7f028aff298c4a90196e6a3fecd1938d96fb1c125d6fd10d5e301e",
@@ -7,8 +7,8 @@
     "test": "fe3449af69b42fda7163345482556066c35a80f7e552a6d67e212a0e2f0783cc",
     "train_synthetic": "8394ac2573e1d72b3b736ceff8b342e7a6569243db84295aa568766aef0035db"
   },
-  "decisions_sha256": "75f8efd6e0cdc3decc629660b9f0c8c5a35071ad551299291eedbff4564e585b",
-  "confirmed_decisions": 72,
+  "decisions_sha256": "b9def8399927a8b8ec4cf755764e6cbe0c0c48b71c2d8d00ac79c4b01913a3b9",
+  "confirmed_decisions": 76,
   "splits": {
     "train": {
       "original_utterances": 11514,
@@ -28,19 +28,19 @@
     },
     "test": {
       "original_utterances": 2974,
-      "excluded_utterances": 20,
-      "retained_utterances": 2954,
+      "excluded_utterances": 24,
+      "retained_utterances": 2950,
       "original_recordings": 13078,
-      "excluded_recordings": 68,
-      "retained_recordings": 13010
+      "excluded_recordings": 84,
+      "retained_recordings": 12994
     },
     "train_synthetic": {
       "original_utterances": 19711,
-      "excluded_utterances": 52,
-      "retained_utterances": 19659,
+      "excluded_utterances": 54,
+      "retained_utterances": 19657,
       "original_recordings": 69253,
-      "excluded_recordings": 129,
-      "retained_recordings": 69124
+      "excluded_recordings": 134,
+      "retained_recordings": 69119
     }
   },
   "synthetic_propagation": "exact original annotation match, no label/similarity/sourcegroup propagation",
