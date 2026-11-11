@@ -1,0 +1,12 @@
+{
+  "packets": 65,
+  "s1": 10,
+  "s2": 55,
+  "original_audio_preserved": true,
+  "s1_max_text_characters": 1818,
+  "s2_max_text_characters": 3298,
+  "s2_only_one_type": true,
+  "model_calls": 0,
+  "actual_audio_fit_verified": false,
+  "scope": "All real constructed knowledge views, offline placeholder audio only; not inference or FIT."
+}

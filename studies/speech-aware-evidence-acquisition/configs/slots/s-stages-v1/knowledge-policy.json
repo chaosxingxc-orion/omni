@@ -1,0 +1,169 @@
+{
+  "schema": "s-stages-policy-v1",
+  "max_types_per_fold": 8,
+  "train_value_overlap_edges": true,
+  "construction_split": "train",
+  "max_examples_per_type": 3,
+  "value_normalization": "NFKC+casefold+whitespace; retain every original surface and provenance; no punctuation deletion or fuzzy merge",
+  "closed_world_types": [],
+  "kinds": {
+    "alarm_type": "enumerated_observed",
+    "app_name": "open",
+    "artist_name": "open",
+    "audiobook_author": "open",
+    "audiobook_name": "open",
+    "business_name": "open",
+    "business_type": "enumerated_observed",
+    "change_amount": "pattern",
+    "coffee_type": "enumerated_observed",
+    "color_type": "enumerated_observed",
+    "cooking_type": "enumerated_observed",
+    "currency_name": "enumerated_observed",
+    "date": "pattern",
+    "definition_word": "open",
+    "device_type": "enumerated_observed",
+    "drink_type": "enumerated_observed",
+    "email_address": "open",
+    "email_folder": "enumerated_observed",
+    "event_name": "open",
+    "food_type": "enumerated_observed",
+    "game_name": "open",
+    "game_type": "enumerated_observed",
+    "general_frequency": "pattern",
+    "house_place": "enumerated_observed",
+    "ingredient": "enumerated_observed",
+    "joke_type": "enumerated_observed",
+    "list_name": "open",
+    "meal_type": "enumerated_observed",
+    "media_type": "enumerated_observed",
+    "movie_name": "open",
+    "movie_type": "enumerated_observed",
+    "music_album": "open",
+    "music_descriptor": "enumerated_observed",
+    "music_genre": "enumerated_observed",
+    "news_topic": "open",
+    "order_type": "enumerated_observed",
+    "person": "open",
+    "personal_info": "enumerated_observed",
+    "place_name": "open",
+    "player_setting": "enumerated_observed",
+    "playlist_name": "open",
+    "podcast_descriptor": "enumerated_observed",
+    "podcast_name": "open",
+    "radio_name": "open",
+    "relation": "enumerated_observed",
+    "song_name": "open",
+    "sport_type": "enumerated_observed",
+    "time": "pattern",
+    "time_zone": "enumerated_observed",
+    "timeofday": "enumerated_observed",
+    "transport_agency": "open",
+    "transport_descriptor": "enumerated_observed",
+    "transport_name": "open",
+    "transport_type": "enumerated_observed",
+    "weather_descriptor": "enumerated_observed"
+  },
+  "separation_groups": [
+    [
+      "date",
+      "time",
+      "timeofday",
+      "time_zone",
+      "general_frequency",
+      "change_amount"
+    ],
+    [
+      "person",
+      "relation",
+      "artist_name",
+      "audiobook_author",
+      "business_name",
+      "transport_agency"
+    ],
+    [
+      "song_name",
+      "music_album",
+      "playlist_name",
+      "podcast_name",
+      "radio_name",
+      "audiobook_name",
+      "movie_name",
+      "game_name",
+      "list_name",
+      "event_name"
+    ],
+    [
+      "food_type",
+      "ingredient",
+      "drink_type",
+      "coffee_type",
+      "meal_type",
+      "cooking_type",
+      "business_type"
+    ],
+    [
+      "place_name",
+      "house_place",
+      "business_name",
+      "transport_name"
+    ],
+    [
+      "music_genre",
+      "music_descriptor",
+      "movie_type",
+      "game_type",
+      "podcast_descriptor",
+      "news_topic",
+      "joke_type"
+    ],
+    [
+      "app_name",
+      "media_type",
+      "device_type",
+      "player_setting"
+    ],
+    [
+      "email_address",
+      "personal_info",
+      "email_folder"
+    ],
+    [
+      "transport_type",
+      "transport_agency",
+      "transport_name",
+      "transport_descriptor"
+    ]
+  ],
+  "separation_group_basis": "Reviewed semantic overlap hypotheses; graph constraints, not model accuracy evidence. Similar types go to DIFFERENT folds. Full query context remains; D resolves alternatives.",
+  "value_rules_by_kind": {
+    "enumerated_observed": [
+      "Use observed variants to recognize the spoken value, not to insert a frequent value.",
+      "An unlisted spoken value remains possible; this inventory is not a closed business ontology."
+    ],
+    "open": [
+      "Fill the expression identifying the entity in the original query.",
+      "Do not substitute a better-known name or copy a demonstration name."
+    ],
+    "pattern": [
+      "Examples illustrate expression forms; they do not enumerate possible values.",
+      "Preserve the expressed quantity, unit, recurrence or temporal qualifier; do not infer a missing reference date."
+    ]
+  },
+  "value_rules_by_type": {
+    "date": [
+      "Retain relative and calendar expressions as expressed; do not calculate a calendar date without a reference."
+    ],
+    "time": [
+      "Retain the spoken time or duration, including stated units and qualifiers."
+    ],
+    "change_amount": [
+      "Retain the stated quantity and unit; do not convert a relative change into an absolute result."
+    ],
+    "general_frequency": [
+      "Retain the expressed recurrence, including interval and qualifier where spoken."
+    ],
+    "email_address": [
+      "Retain the spoken address; conversion of spoken at/dot into symbols requires an explicit output normalization policy."
+    ]
+  }
+}

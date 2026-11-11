@@ -1,0 +1,107 @@
+[
+  {
+    "fold_id": "fold-00",
+    "types": [
+      "business_name",
+      "color_type",
+      "email_folder",
+      "event_name",
+      "food_type",
+      "game_type"
+    ]
+  },
+  {
+    "fold_id": "fold-01",
+    "types": [
+      "alarm_type",
+      "app_name",
+      "ingredient",
+      "list_name",
+      "person",
+      "transport_type"
+    ]
+  },
+  {
+    "fold_id": "fold-02",
+    "types": [
+      "artist_name",
+      "currency_name",
+      "date",
+      "definition_word",
+      "player_setting",
+      "playlist_name"
+    ]
+  },
+  {
+    "fold_id": "fold-03",
+    "types": [
+      "change_amount",
+      "coffee_type",
+      "music_genre",
+      "order_type",
+      "place_name",
+      "podcast_name"
+    ]
+  },
+  {
+    "fold_id": "fold-04",
+    "types": [
+      "device_type",
+      "house_place",
+      "news_topic",
+      "song_name",
+      "sport_type",
+      "time_zone"
+    ]
+  },
+  {
+    "fold_id": "fold-05",
+    "types": [
+      "general_frequency",
+      "joke_type",
+      "meal_type",
+      "radio_name",
+      "transport_agency"
+    ]
+  },
+  {
+    "fold_id": "fold-06",
+    "types": [
+      "audiobook_name",
+      "movie_type",
+      "relation",
+      "time",
+      "transport_descriptor"
+    ]
+  },
+  {
+    "fold_id": "fold-07",
+    "types": [
+      "audiobook_author",
+      "cooking_type",
+      "game_name",
+      "music_descriptor",
+      "timeofday"
+    ]
+  },
+  {
+    "fold_id": "fold-08",
+    "types": [
+      "business_type",
+      "movie_name",
+      "personal_info",
+      "podcast_descriptor",
+      "weather_descriptor"
+    ]
+  },
+  {
+    "fold_id": "fold-09",
+    "types": [
+      "drink_type",
+      "email_address",
+      "media_type",
+      "music_album",
+      "transport_name"
+    ]
+  }
+]

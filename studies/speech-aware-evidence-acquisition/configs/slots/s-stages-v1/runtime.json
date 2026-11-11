@@ -1,0 +1,20 @@
+{
+  "schema": "s-stages-runtime-v1",
+  "model": "qwen3-omni-30b-a3b-instruct",
+  "temperature": 0,
+  "seed": 20260913,
+  "max_inflight_requests": 64,
+  "s1_max_tokens": 256,
+  "s2_max_tokens": 512,
+  "audio_order": "last",
+  "include_values_for_s2": true,
+  "value_output": "spoken_surface",
+  "s1_instruction": "Listen to the original query. Independently mark which of the supplied slot types have evidence in this query. The fold is only a computational partition; none of these types is mandatory. Select zero or more types, once per type. A type can be present even when its value is unspecified or equal to its type name. Do not decide the intent, compare other folds, fill values, or infer missing information from demonstrations. Return only {\"slot_types\": [type names]}.",
+  "s2_instruction": "Listen to the original query and fill candidate values ONLY for the supplied selected slot type. Use its own definition, observed vocabulary and examples as reference, not as evidence that a value occurs. Observed vocabulary is not an exhaustive whitelist. Preserve each independent mention in order, including repeated equal values. If the selected type is supported but no value can be recovered, return one null value for that mention. If no evidence supports this type, return an empty values list; do not invent a value because S1 selected it. Return only {\"values\": [strings or null]}. Do not choose an intent, compare slot types, or assemble the final answer. Express values as heard, without guessing normalized dates or numbers.",
+  "s1_examples_per_type": 2,
+  "s2_examples_by_kind": {
+    "enumerated_observed": 2,
+    "open": 3,
+    "pattern": 6
+  }
+}

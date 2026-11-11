@@ -1,0 +1,428 @@
+{
+  "train_records": 11460,
+  "types": 55,
+  "folds": 10,
+  "fold_sizes": [
+    6,
+    6,
+    6,
+    6,
+    6,
+    5,
+    5,
+    5,
+    5,
+    5
+  ],
+  "separation_edges": 226,
+  "within_fold_constraint_violations": 0,
+  "semantic_orthogonality_proven": false,
+  "limitation": "No configured/observed conflict edge within fold; unseen semantic confusion remains possible.",
+  "kind_counts": {
+    "enumerated_observed": 30,
+    "open": 21,
+    "pattern": 4
+  },
+  "value_equals_type_mentions_retained": 1,
+  "definition_gaps": [
+    "game_type",
+    "music_album"
+  ],
+  "definition_conflicts": [],
+  "empty_eligible_knowledge_types": [],
+  "filtering": {
+    "blocked_or_unmapped_records": 23
+  },
+  "test_data_read": false,
+  "per_type": {
+    "alarm_type": {
+      "kind": "enumerated_observed",
+      "mentions": 9,
+      "observed_values": 4,
+      "eligible_values": 4,
+      "examples": 9
+    },
+    "app_name": {
+      "kind": "open",
+      "mentions": 51,
+      "observed_values": 14,
+      "eligible_values": 14,
+      "examples": 51
+    },
+    "artist_name": {
+      "kind": "open",
+      "mentions": 231,
+      "observed_values": 130,
+      "eligible_values": 130,
+      "examples": 227
+    },
+    "audiobook_author": {
+      "kind": "open",
+      "mentions": 6,
+      "observed_values": 6,
+      "eligible_values": 6,
+      "examples": 6
+    },
+    "audiobook_name": {
+      "kind": "open",
+      "mentions": 73,
+      "observed_values": 59,
+      "eligible_values": 59,
+      "examples": 73
+    },
+    "business_name": {
+      "kind": "open",
+      "mentions": 379,
+      "observed_values": 211,
+      "eligible_values": 211,
+      "examples": 374
+    },
+    "business_type": {
+      "kind": "enumerated_observed",
+      "mentions": 189,
+      "observed_values": 63,
+      "eligible_values": 63,
+      "examples": 188
+    },
+    "change_amount": {
+      "kind": "pattern",
+      "mentions": 49,
+      "observed_values": 37,
+      "eligible_values": 37,
+      "examples": 49
+    },
+    "coffee_type": {
+      "kind": "enumerated_observed",
+      "mentions": 22,
+      "observed_values": 15,
+      "eligible_values": 15,
+      "examples": 22
+    },
+    "color_type": {
+      "kind": "enumerated_observed",
+      "mentions": 100,
+      "observed_values": 25,
+      "eligible_values": 25,
+      "examples": 93
+    },
+    "cooking_type": {
+      "kind": "enumerated_observed",
+      "mentions": 16,
+      "observed_values": 10,
+      "eligible_values": 10,
+      "examples": 16
+    },
+    "currency_name": {
+      "kind": "enumerated_observed",
+      "mentions": 218,
+      "observed_values": 52,
+      "eligible_values": 52,
+      "examples": 117
+    },
+    "date": {
+      "kind": "pattern",
+      "mentions": 1819,
+      "observed_values": 288,
+      "eligible_values": 288,
+      "examples": 1768
+    },
+    "definition_word": {
+      "kind": "open",
+      "mentions": 224,
+      "observed_values": 179,
+      "eligible_values": 179,
+      "examples": 224
+    },
+    "device_type": {
+      "kind": "enumerated_observed",
+      "mentions": 226,
+      "observed_values": 75,
+      "eligible_values": 75,
+      "examples": 224
+    },
+    "drink_type": {
+      "kind": "enumerated_observed",
+      "mentions": 9,
+      "observed_values": 8,
+      "eligible_values": 8,
+      "examples": 9
+    },
+    "email_address": {
+      "kind": "open",
+      "mentions": 32,
+      "observed_values": 23,
+      "eligible_values": 23,
+      "examples": 31
+    },
+    "email_folder": {
+      "kind": "enumerated_observed",
+      "mentions": 32,
+      "observed_values": 5,
+      "eligible_values": 5,
+      "examples": 32
+    },
+    "event_name": {
+      "kind": "open",
+      "mentions": 992,
+      "observed_values": 348,
+      "eligible_values": 348,
+      "examples": 979
+    },
+    "food_type": {
+      "kind": "enumerated_observed",
+      "mentions": 294,
+      "observed_values": 155,
+      "eligible_values": 154,
+      "examples": 284
+    },
+    "game_name": {
+      "kind": "open",
+      "mentions": 87,
+      "observed_values": 62,
+      "eligible_values": 62,
+      "examples": 87
+    },
+    "game_type": {
+      "kind": "enumerated_observed",
+      "mentions": 1,
+      "observed_values": 1,
+      "eligible_values": 1,
+      "examples": 1
+    },
+    "general_frequency": {
+      "kind": "pattern",
+      "mentions": 84,
+      "observed_values": 32,
+      "eligible_values": 32,
+      "examples": 84
+    },
+    "house_place": {
+      "kind": "enumerated_observed",
+      "mentions": 198,
+      "observed_values": 38,
+      "eligible_values": 38,
+      "examples": 197
+    },
+    "ingredient": {
+      "kind": "enumerated_observed",
+      "mentions": 20,
+      "observed_values": 16,
+      "eligible_values": 16,
+      "examples": 18
+    },
+    "joke_type": {
+      "kind": "enumerated_observed",
+      "mentions": 35,
+      "observed_values": 16,
+      "eligible_values": 16,
+      "examples": 34
+    },
+    "list_name": {
+      "kind": "open",
+      "mentions": 191,
+      "observed_values": 79,
+      "eligible_values": 79,
+      "examples": 190
+    },
+    "meal_type": {
+      "kind": "enumerated_observed",
+      "mentions": 65,
+      "observed_values": 5,
+      "eligible_values": 5,
+      "examples": 63
+    },
+    "media_type": {
+      "kind": "enumerated_observed",
+      "mentions": 478,
+      "observed_values": 91,
+      "eligible_values": 91,
+      "examples": 474
+    },
+    "movie_name": {
+      "kind": "open",
+      "mentions": 16,
+      "observed_values": 11,
+      "eligible_values": 11,
+      "examples": 16
+    },
+    "movie_type": {
+      "kind": "enumerated_observed",
+      "mentions": 9,
+      "observed_values": 8,
+      "eligible_values": 8,
+      "examples": 9
+    },
+    "music_album": {
+      "kind": "open",
+      "mentions": 1,
+      "observed_values": 1,
+      "eligible_values": 1,
+      "examples": 1
+    },
+    "music_descriptor": {
+      "kind": "enumerated_observed",
+      "mentions": 45,
+      "observed_values": 40,
+      "eligible_values": 40,
+      "examples": 45
+    },
+    "music_genre": {
+      "kind": "enumerated_observed",
+      "mentions": 181,
+      "observed_values": 55,
+      "eligible_values": 55,
+      "examples": 179
+    },
+    "news_topic": {
+      "kind": "open",
+      "mentions": 183,
+      "observed_values": 122,
+      "eligible_values": 122,
+      "examples": 181
+    },
+    "order_type": {
+      "kind": "enumerated_observed",
+      "mentions": 105,
+      "observed_values": 17,
+      "eligible_values": 17,
+      "examples": 102
+    },
+    "person": {
+      "kind": "open",
+      "mentions": 866,
+      "observed_values": 468,
+      "eligible_values": 468,
+      "examples": 848
+    },
+    "personal_info": {
+      "kind": "enumerated_observed",
+      "mentions": 75,
+      "observed_values": 41,
+      "eligible_values": 41,
+      "examples": 74
+    },
+    "place_name": {
+      "kind": "open",
+      "mentions": 1084,
+      "observed_values": 482,
+      "eligible_values": 481,
+      "examples": 990
+    },
+    "player_setting": {
+      "kind": "enumerated_observed",
+      "mentions": 161,
+      "observed_values": 47,
+      "eligible_values": 47,
+      "examples": 155
+    },
+    "playlist_name": {
+      "kind": "open",
+      "mentions": 62,
+      "observed_values": 48,
+      "eligible_values": 48,
+      "examples": 62
+    },
+    "podcast_descriptor": {
+      "kind": "enumerated_observed",
+      "mentions": 68,
+      "observed_values": 18,
+      "eligible_values": 18,
+      "examples": 67
+    },
+    "podcast_name": {
+      "kind": "open",
+      "mentions": 56,
+      "observed_values": 45,
+      "eligible_values": 45,
+      "examples": 56
+    },
+    "radio_name": {
+      "kind": "open",
+      "mentions": 132,
+      "observed_values": 106,
+      "eligible_values": 106,
+      "examples": 129
+    },
+    "relation": {
+      "kind": "enumerated_observed",
+      "mentions": 251,
+      "observed_values": 81,
+      "eligible_values": 81,
+      "examples": 246
+    },
+    "song_name": {
+      "kind": "open",
+      "mentions": 127,
+      "observed_values": 103,
+      "eligible_values": 103,
+      "examples": 126
+    },
+    "sport_type": {
+      "kind": "enumerated_observed",
+      "mentions": 5,
+      "observed_values": 4,
+      "eligible_values": 4,
+      "examples": 5
+    },
+    "time": {
+      "kind": "pattern",
+      "mentions": 790,
+      "observed_values": 231,
+      "eligible_values": 231,
+      "examples": 749
+    },
+    "time_zone": {
+      "kind": "enumerated_observed",
+      "mentions": 54,
+      "observed_values": 19,
+      "eligible_values": 19,
+      "examples": 43
+    },
+    "timeofday": {
+      "kind": "enumerated_observed",
+      "mentions": 238,
+      "observed_values": 11,
+      "eligible_values": 11,
+      "examples": 238
+    },
+    "transport_agency": {
+      "kind": "open",
+      "mentions": 31,
+      "observed_values": 3,
+      "eligible_values": 3,
+      "examples": 31
+    },
+    "transport_descriptor": {
+      "kind": "enumerated_observed",
+      "mentions": 8,
+      "observed_values": 8,
+      "eligible_values": 8,
+      "examples": 8
+    },
+    "transport_name": {
+      "kind": "open",
+      "mentions": 9,
+      "observed_values": 8,
+      "eligible_values": 8,
+      "examples": 9
+    },
+    "transport_type": {
+      "kind": "enumerated_observed",
+      "mentions": 317,
+      "observed_values": 10,
+      "eligible_values": 10,
+      "examples": 313
+    },
+    "weather_descriptor": {
+      "kind": "enumerated_observed",
+      "mentions": 320,
+      "observed_values": 104,
+      "eligible_values": 104,
+      "examples": 307
+    }
+  },
+  "enum_vocabulary_entries": 1041,
+  "enum_surface_variants": 1042,
+  "enum_single_source_entries": 703,
+  "enum_cross_type_entries": 114
+}

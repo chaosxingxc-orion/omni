@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "tests": 18,
+  "fixed_image": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+  "model_calls": 0,
+  "devices": [],
+  "network": "none",
+  "source_pins": {
+    "src/speech_aware_evidence_acquisition/rails/slot_stages.py": "b94f82a302c857668c6d1facdd6703aa490ccd98ef61d325335a4e598c8143c2",
+    "src/speech_aware_evidence_acquisition/rails/slot_stage_knowledge.py": "2a78517f1f157f48cf3f935550c6c88cbc71e024b59db8c1f14b40cb881acae0",
+    "src/speech_aware_evidence_acquisition/rails/slot_stages_native.py": "84e9c5dce5e42926cbc61f37fab1053c0b4c0b1054de1b1c989270a4bdbea730",
+    "tests/unit/test_slot_stages.py": "c5933bff19424e05c3bc845961f3723c7770a0db1cb8aae4ae19a60bb636f879",
+    "configs/slots/s-stages-v1/runtime.json": "44c1e9d9f76f2dc5d2df4a9d41f972dc6b2a26311a3c9154d58487e6755a361f",
+    "configs/slots/s-stages-v1/knowledge-policy.json": "0b639c672d968e2db8a4932162620fa72ecafe6e2805779cbade73e89701765b"
+  },
+  "coverage": [
+    "S1 Fold fanout and global concurrency",
+    "S1/S2 source isolation",
+    "multiple values including null and repeated equal values",
+    "actual openJiuwen before/after hooks",
+    "original contact journal replay and unknown-no-resend"
+  ],
+  "limitations": [
+    "Model responses are fixtures; no accuracy or NPU throughput result.",
+    "Production audio FIT and owner queue admission remain required before experiment execution."
+  ]
+}
