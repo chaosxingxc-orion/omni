@@ -194,6 +194,14 @@ def scientific_changes(task, baseline, policy):
 
 def schema_change(previous, current, baseline, policy, changed):
     expected = copy.deepcopy(previous)
+    if policy.get('s1_candidate_presentation') == 'binary_marking_v1':
+        require(set(changed) == {'s1_candidate_presentation', 's1_instruction'},
+                'binary marking exact policy changes')
+        require(baseline.get('s1_candidate_presentation', 'legacy') in ('type_marking_v1', 'legacy')
+                and baseline.get('s1_none_label') is None and policy.get('s1_none_label') is None,
+                'binary marking frozen bool/list parent without control')
+        require(current == {'type': 'text'}, 'binary marking requires bare text')
+        return
     if policy.get("s1_candidate_presentation") == "type_marking_v1":
         require(set(changed) == {"s1_candidate_presentation", "s1_instruction", "s1_none_label"},
                 "type marking exact policy changes")
@@ -223,6 +231,31 @@ def schema_change(previous, current, baseline, policy, changed):
 
 def protocol_wire_change(previous, current, baseline, policy, changed):
     """Verify a configured unified protocol edit against the actual frozen wire."""
+    if policy.get('s1_candidate_presentation') == 'binary_marking_v1':
+        schema_change(previous['response_format'], current['response_format'], baseline, policy, changed)
+        expected = copy.deepcopy(previous)
+        text = next(part for part in expected['messages'][1]['content'] if part['type'] == 'text')
+        body = json.loads(text['text'])
+        if baseline.get('s1_candidate_presentation') == 'type_marking_v1':
+            types = body.pop('type_marking')['types']
+        else:
+            types = expected['response_format']['json_schema']['schema']['properties']['slot_types']['items']['enum']
+        from .slot_stages import StageRails, Query
+        # Use the public protocol renderer for an empty evidence fixture, then
+        # substitute only protocol fields. All actual cards and audio stay frozen.
+        fixture = {'cards': {t: {} for t in types}, 'folds': [{'fold_id': 'protocol', 'types': types}]}
+        protocol_policy = {k: v for k, v in policy.items() if k != 's1_consumption'}
+        rails = StageRails(fixture, protocol_policy)
+        rails._card = lambda t, component, stage: {}
+        probe = rails.before_model_call('S1', Query('protocol', {'type': 'input_audio'}), 'protocol')['wire']
+        protocol = json.loads(next(part['text'] for part in probe['messages'][1]['content'] if part['type'] == 'text'))
+        body['binary_marking'] = protocol['binary_marking']
+        text['text'] = canonical(body).decode()
+        expected['messages'][0]['content'] = probe['messages'][0]['content']
+        expected['response_format'] = {'type': 'text'}
+        expected['structured_outputs'] = {'regex': '[01]( [01]){' + str(len(types) - 1) + '}'}
+        require(current == expected, 'wire differs outside B to binary format protocol')
+        return
     if not set(changed) <= {'s1_instruction', 's1_unified_templates'}:
         return
     if baseline.get('s1_candidate_presentation') != 'unified_candidates_v1':
@@ -286,7 +319,7 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
         schema_change(previous, current, baseline, policy, changed)
         protocol_wire_change(previous_wire, current_wire, baseline, policy, changed)
         schemas.append(current)
-    save(output / "GRAMMAR-COMPATIBILITY.json", dict(status="DECLARED_CONTROL_ENUM_CHANGE" if "s1_none_label" in changed else "IDENTICAL_TO_SUCCESSFUL_BASELINE_SCHEMA",
+    save(output / "GRAMMAR-COMPATIBILITY.json", dict(status="DECLARED_BINARY_REGEX_PROTOCOL" if policy.get('s1_candidate_presentation') == 'binary_marking_v1' else "DECLARED_CONTROL_ENUM_CHANGE" if "s1_none_label" in changed else "IDENTICAL_TO_SUCCESSFUL_BASELINE_SCHEMA",
          allowed_changes=changed,
          schemas=schemas, schema_set_sha256=sha(canonical(schemas)), evidence=task["grammar_evidence"],
          general_backend_capability_verified=False, limitation="declared schema diff only; separate actual backend compiler receipt required for new enum"))
@@ -297,8 +330,9 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
             knowledge_id=knowledge["knowledge_id"], cache_id=policy["s1_consumption"]["cache_id"],
             dependency_index_sha256=file_sha(index_path), stage_version=rails.version,
             runtime_packets="prepared_templates", new_encoder_calls=0, new_model_calls=0))
-    protocol_edit = (baseline.get('s1_candidate_presentation') == 'unified_candidates_v1'
+    protocol_edit = ((baseline.get('s1_candidate_presentation') == 'unified_candidates_v1'
                      and set(changed) <= {'s1_instruction', 's1_unified_templates'})
+                     or policy.get('s1_candidate_presentation') == 'binary_marking_v1')
     audited_folds = 0
     fit_sources, jobs, maximum, audio_stats = {}, [], 0, []
     for n, row in enumerate(rows):

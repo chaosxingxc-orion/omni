@@ -90,11 +90,11 @@ class StageRails:
                 or not self.s1_none_label.strip() or self.s1_none_label in self.cards):
             raise ValueError('S1 control label must be nonempty and outside business ontology')
         self.s1_candidate_presentation = config.get('s1_candidate_presentation', 'legacy')
-        if self.s1_candidate_presentation not in ('legacy', 'unified_candidates_v1', 'type_marking_v1'):
+        if self.s1_candidate_presentation not in ('legacy', 'unified_candidates_v1', 'type_marking_v1', 'binary_marking_v1'):
             raise ValueError('unknown S1 candidate presentation')
         if self.s1_candidate_presentation == 'unified_candidates_v1' and self.s1_none_label is None:
             raise ValueError('unified S1 candidates require a control label')
-        if self.s1_candidate_presentation == 'type_marking_v1' and self.s1_none_label is not None:
+        if self.s1_candidate_presentation in ('type_marking_v1', 'binary_marking_v1') and self.s1_none_label is not None:
             raise ValueError('S1 type marking uses business booleans without a control label')
         for k in ('max_inflight_requests', 's1_max_tokens', 's2_max_tokens'):
             if type(config[k]) is not int or config[k] < 1:
@@ -199,7 +199,15 @@ class StageRails:
             schema = {'type': 'object', 'additionalProperties': False, 'required': ['values'],
                       'properties': {'values': {'type': 'array', 'items': {'type': ['string', 'null']}}}}
         content = {'stage': stage, 'cards': [self._card(t, component, stage) for t in types]}
-        if stage == 'S1' and self.s1_candidate_presentation == 'type_marking_v1':
+        if stage == 'S1' and self.s1_candidate_presentation == 'binary_marking_v1':
+            content['binary_marking'] = {
+                'ordered_types': list(types),
+                'positions': [{'position': i + 1, 'type': t} for i, t in enumerate(types)],
+                'instruction': 'Return exactly ' + str(len(types)) + ' binary marks separated by one ASCII space in the displayed order. '
+                               'Bit 1 means this type is expressed in the target audio; bit 0 means otherwise. '
+                               'All zeros is a valid empty Fold. A type with an unknown value still gets 1. '
+                               'Return only the space-separated 0/1 marks, without JSON or explanation.'}
+        elif stage == 'S1' and self.s1_candidate_presentation == 'type_marking_v1':
             content['type_marking'] = {
                 'types': list(types),
                 'instruction': 'For every supplied type, return true if the target audio expresses '
@@ -244,7 +252,13 @@ class StageRails:
         parts = [{'type': 'text', 'text': text}]
         parts.insert(0 if self.config['audio_order'] == 'first' else len(parts), copy.deepcopy(query.audio))
         instruction = self.config[stage.lower() + '_instruction']
-        if stage == 'S1' and self.s1_candidate_presentation == 'type_marking_v1':
+        if stage == 'S1' and self.s1_candidate_presentation == 'binary_marking_v1':
+            instruction += ('\nS1 positional binary protocol: output exactly ' + str(len(types)) +
+                            ' binary marks in binary_marking.ordered_types order, separated by one ASCII space. Use 1 for a supported type, '
+                            'including when its value is unknown, and 0 otherwise. All zeros is valid empty. '
+                            'Return only space-separated 0/1 marks: no JSON, labels, compact digit strings, '
+                            'values, transcript, code fence or explanation.')
+        elif stage == 'S1' and self.s1_candidate_presentation == 'type_marking_v1':
             instruction += ('\nS1 per-type marking protocol: in this single Fold response, return only '
                             '{"slot_type_presence": {type_name: true_or_false, ...}}. '
                             'Use JSON booleans for every supplied business type, with no missing or extra keys. '
@@ -265,11 +279,14 @@ class StageRails:
                              {'role': 'user', 'content': parts}],
                 'response_format': {'type': 'json_schema', 'json_schema': {'name': stage.lower() + '_slots',
                                                                          'strict': True, 'schema': schema}}}
+        if stage == 'S1' and self.s1_candidate_presentation == 'binary_marking_v1':
+            wire['response_format'] = {'type': 'text'}
+            wire['structured_outputs'] = {'regex': '[01]( [01]){' + str(len(types) - 1) + '}'}
         key = {'sample_id': query.sample_id, 'stage': stage, 'branch': branch,
                'version': self.version, 'wire_sha256': digest(wire)}
         packet = {**key, 'request_id': stage + '-' + digest(key), 'allowed_types': types, 'wire': wire}
-        if stage == 'S1' and self.s1_candidate_presentation == 'type_marking_v1':
-            packet['s1_candidate_presentation'] = 'type_marking_v1'
+        if stage == 'S1' and self.s1_candidate_presentation in ('type_marking_v1', 'binary_marking_v1'):
+            packet['s1_candidate_presentation'] = self.s1_candidate_presentation
         if consumption_receipt is not None:
             packet['s1_consumption'] = consumption_receipt
         if stage == 'S1' and self.s1_none_label is not None:
@@ -290,6 +307,20 @@ class StageRails:
         if reply.get('finish_reason') != 'stop':
             return {**base, 'status': 'incomplete', 'selected_types': [], 'entities': []}
         text = reply.get('text')
+        if packet.get('s1_candidate_presentation') == 'binary_marking_v1':
+            # Strict positional mapping: never repair missing bits into negative evidence.
+            types = packet['allowed_types']
+            text = text.strip() if isinstance(text, str) else None
+            bits = text.split(' ') if text is not None else None
+            if (not types or len(set(types)) != len(types) or bits is None
+                    or len(bits) != len(types) or any(bit not in ('0', '1') for bit in bits)):
+                return {**base, 'status': 'protocol_error', 'error': 'expected one ASCII-space-separated 0/1 mark per ordered Fold type',
+                        'selected_types': [], 'entities': []}
+            marks = {t: bit == '1' for t, bit in zip(types, bits)}
+            selected = [t for t in types if marks[t]]
+            return {**base, 'status': 'valid_nonempty' if selected else 'valid_empty',
+                    'selected_types': selected, 'entities': [], 'slot_type_presence': marks,
+                    'binary_marking': {'marks': bits, 'ordered_types': list(types)}}
         if isinstance(text, str) and text.strip().startswith('```') and text.strip().endswith('```'):
             lines = text.strip().splitlines()
             text = '\n'.join(lines[1:-1])
