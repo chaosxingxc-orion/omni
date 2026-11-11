@@ -1,0 +1,134 @@
+{
+  "status": "MAIN_COMPLETE6682_CONTENT_REPARSE_AND_P_BRANCH_BINDING",
+  "counts": {
+    "total": 6682,
+    "valid": 6682,
+    "exact": 4596,
+    "count_match": 4956,
+    "tp": 5275,
+    "fp": 1496,
+    "fn": 1171
+  },
+  "exact_rate": 0.6878180185573182,
+  "empty": {
+    "total": 2180,
+    "valid": 2180,
+    "exact": 1491,
+    "count_match": 1491,
+    "tp": 0,
+    "fp": 733,
+    "fn": 0
+  },
+  "nonempty": {
+    "total": 4502,
+    "valid": 4502,
+    "exact": 3105,
+    "count_match": 3465,
+    "tp": 5275,
+    "fp": 763,
+    "fn": 1171
+  },
+  "full_denominator": 6682,
+  "partial": false,
+  "roster_sha256": "a00212617c4ef58591558c83a2976f7f51fa620cb12e74c47d3ea7b8f32bbe3f",
+  "batches": [
+    {
+      "batch": 0,
+      "total": 256,
+      "valid": 256,
+      "exact": 167,
+      "count_match": 176,
+      "tp": 193,
+      "fp": 59,
+      "fn": 45
+    },
+    {
+      "batch": 1,
+      "total": 1024,
+      "valid": 1024,
+      "exact": 718,
+      "count_match": 773,
+      "tp": 826,
+      "fp": 207,
+      "fn": 178
+    },
+    {
+      "batch": 2,
+      "total": 1024,
+      "valid": 1024,
+      "exact": 707,
+      "count_match": 759,
+      "tp": 801,
+      "fp": 223,
+      "fn": 177
+    },
+    {
+      "batch": 3,
+      "total": 1024,
+      "valid": 1024,
+      "exact": 701,
+      "count_match": 763,
+      "tp": 774,
+      "fp": 228,
+      "fn": 190
+    },
+    {
+      "batch": 4,
+      "total": 1024,
+      "valid": 1024,
+      "exact": 704,
+      "count_match": 763,
+      "tp": 809,
+      "fp": 227,
+      "fn": 183
+    },
+    {
+      "batch": 5,
+      "total": 1024,
+      "valid": 1024,
+      "exact": 718,
+      "count_match": 772,
+      "tp": 854,
+      "fp": 234,
+      "fn": 154
+    },
+    {
+      "batch": 6,
+      "total": 1024,
+      "valid": 1024,
+      "exact": 686,
+      "count_match": 747,
+      "tp": 788,
+      "fp": 258,
+      "fn": 195
+    },
+    {
+      "batch": 7,
+      "total": 282,
+      "valid": 282,
+      "exact": 195,
+      "count_match": 203,
+      "tp": 230,
+      "fp": 60,
+      "fn": 49
+    }
+  ],
+  "usage": {
+    "completion_tokens": 174816,
+    "prompt_tokens": 29312478,
+    "total_tokens": 29487294
+  },
+  "card_hours": 4.17608636379242,
+  "seconds_per_sample": [
+    0.5778172658756375,
+    0.5411632466129959,
+    0.5662233757320791,
+    0.5518916982691735,
+    0.5509637643117458,
+    0.5833115747664124,
+    0.569793526083231,
+    0.590386486222558
+  ],
+  "scope": "Independent persisted content reparse and actual P branch binding; raw journal custody audited separately",
+  "new_model_calls": 0
+}
