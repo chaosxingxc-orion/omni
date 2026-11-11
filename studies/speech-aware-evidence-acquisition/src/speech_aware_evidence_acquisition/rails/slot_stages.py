@@ -107,6 +107,11 @@ class StageRails:
                                                   provenance_root=provenance_root)
         elif retrieval_cache is not None:
             raise ValueError('retrieval cache requires an explicit S1 consumption policy')
+        self.source_span_layout = None
+        if config.get('s1_reference_layout') is not None:
+            from .slot_stage_source_spans import PositiveSourceSpanLayout
+            self.source_span_layout = PositiveSourceSpanLayout(
+                self.knowledge, config['s1_reference_layout'], self.s1_consumer)
         self.version = digest({'knowledge': self.knowledge, 'runtime': self.config})
         if self.s1_consumer is not None:
             self.version = digest({'base_version': self.version, 's1_consumer': self.s1_consumer.version})
@@ -248,6 +253,8 @@ class StageRails:
             content.update(reference)
             consumption_receipt['retrieval'].setdefault('static_retained_types',
                 [card['type'] for card in content['cards'] if card['examples']])
+            if self.source_span_layout is not None:
+                self.source_span_layout.apply(content, consumption_receipt, component, query.sample_id)
         text = canonical(content).decode()
         parts = [{'type': 'text', 'text': text}]
         parts.insert(0 if self.config['audio_order'] == 'first' else len(parts), copy.deepcopy(query.audio))

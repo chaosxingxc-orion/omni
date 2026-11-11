@@ -194,6 +194,9 @@ def scientific_changes(task, baseline, policy):
 
 def schema_change(previous, current, baseline, policy, changed):
     expected = copy.deepcopy(previous)
+    if set(changed) == {'s1_reference_layout'}:
+        require(current == previous, 'reference layout cannot change schema')
+        return
     if policy.get('s1_candidate_presentation') == 'binary_marking_v1':
         require(set(changed) == {'s1_candidate_presentation', 's1_instruction'},
                 'binary marking exact policy changes')
@@ -231,6 +234,14 @@ def schema_change(previous, current, baseline, policy, changed):
 
 def protocol_wire_change(previous, current, baseline, policy, changed):
     """Verify a configured unified protocol edit against the actual frozen wire."""
+    if set(changed) == {'s1_reference_layout'}:
+        from .slot_stage_source_spans import strip_source_span_layout
+        require(baseline.get('s1_reference_layout') is None
+                and policy.get('s1_reference_layout', {}).get('layout') == 'positive_source_spans_v1',
+                'reference layout requires original parent and explicit positive spans')
+        require(strip_source_span_layout(current) == previous,
+                'wire differs outside reference positive source span layout')
+        return
     if policy.get('s1_candidate_presentation') == 'binary_marking_v1':
         schema_change(previous['response_format'], current['response_format'], baseline, policy, changed)
         expected = copy.deepcopy(previous)
@@ -332,7 +343,8 @@ def prepare(root, output, task_path, lane_path, index_path, model_root):
             runtime_packets="prepared_templates", new_encoder_calls=0, new_model_calls=0))
     protocol_edit = ((baseline.get('s1_candidate_presentation') == 'unified_candidates_v1'
                      and set(changed) <= {'s1_instruction', 's1_unified_templates'})
-                     or policy.get('s1_candidate_presentation') == 'binary_marking_v1')
+                     or policy.get('s1_candidate_presentation') == 'binary_marking_v1'
+                     or set(changed) == {'s1_reference_layout'})
     audited_folds = 0
     fit_sources, jobs, maximum, audio_stats = {}, [], 0, []
     for n, row in enumerate(rows):
