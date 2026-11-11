@@ -1,0 +1,72 @@
+{
+  "version": "s-candidate-entities-d-adjudication-v1",
+  "dataset_release": "clean-v7",
+  "stage": "baseline-preparation",
+  "model": "qwen3-omni-30b-a3b-instruct",
+  "thinking": false,
+  "upstream_P": "frozen_actual_top3",
+  "S": {
+    "role": "annotate_and_fill_candidate_entities",
+    "branch_mode": "independent_per_intent",
+    "output_fields": [
+      "candidate_id",
+      "entities"
+    ],
+    "entity_fields": [
+      "type",
+      "filler"
+    ],
+    "unknown_filler": null,
+    "preserve_mention_multiplicity": true,
+    "allow_evidence_supported_ambiguity": true,
+    "require_nonempty": false
+  },
+  "D": {
+    "role": "select_and_assemble_final_intent_entities",
+    "inputs": [
+      "P_top3",
+      "S_candidate_entities_by_intent",
+      "locked_knowledge",
+      "original_audio"
+    ],
+    "blind_copy_S": false,
+    "exclude_unresolved_from_schema": false
+  },
+  "evaluation": {
+    "S_primary": [
+      "positive_sample_complete_type_coverage",
+      "micro_reference_type_recall",
+      "one_to_one_type_value_candidate_coverage"
+    ],
+    "S_secondary": [
+      "candidate_count",
+      "reference_unmatched_candidate_count",
+      "null_count",
+      "invalid_count",
+      "empty_query_candidate_burden"
+    ],
+    "D": [
+      "intent_accuracy",
+      "final_type_exact",
+      "entity_exact",
+      "SLU_word_char_counts"
+    ],
+    "promotion": "no automatic promotion from S recall alone; report paired recall/burden tradeoff and require D end-to-end evidence"
+  },
+  "execution": {
+    "lanes": [
+      "A",
+      "B",
+      "C"
+    ],
+    "client_concurrency": 64,
+    "max_tokens": "pending_actual_entity_length_and_fixed_fit",
+    "new_inference_started": false
+  },
+  "cpu_baseline": {
+    "exploration_samples": 6681,
+    "dev_samples": 1850,
+    "source": "delivery/s-annotation-handoff-v1/BASELINE-ANNOTATION-METRICS.json",
+    "scope": "type-only historical diagnostic; not entity baseline"
+  }
+}
