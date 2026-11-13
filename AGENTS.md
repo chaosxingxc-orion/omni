@@ -20,7 +20,7 @@
 
 使用用户授权的NPU主机和实例，按部署配置调度实验资源。共享根为`/mnt/cephfs/xingchao/omni`。当前开发权威树为`work/dev/odd40-runtime-v1/studies/speech-aware-evidence-acquisition`；公开仓为`publish/omni`，Wiki为`publish/omni-wiki`。旧umbrella和封存执行树保留。
 
-正式测试在固定saea镜像内通过`work/scripts/port_py.sh`或等效固定镜像容器运行。服务、实验与队列须脱离SSH运行。按用户最新约束，181的项目文件统一使用`/mnt/cephfs/xingchao`，包括输入、输出、日志、缓存、临时文件、attempt、checkpoint与队列状态。旧本地热日志规则已撤销；共享存储故障不得自动降级本地写入。现存本地项目资产须排空活动请求、保存已知/未知状态、迁移核验后删除；不盲重发或边写边删。系统程序和驱动不在项目迁移范围内。
+正式测试在固定saea镜像内通过`work/scripts/port_py.sh`或等效固定镜像容器运行。服务、实验与队列须脱离SSH运行。模型、数据、冻结源码和归档保留共享盘；175/181热状态按本文首节写经挂载核验的本地持久盘并保留文件与父目录fsync。只能由已验收独立客户端拉取封闭提交归档；不从受影响主机写共享存储。清理保护活动热目录、锁和唯一恢复证据，不盲重发或边写边删。系统程序、驱动和全机Docker根不属于本项目清理范围。
 
 ## 统一业务模型基线
 
