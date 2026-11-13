@@ -10,3 +10,7 @@
 
 
 实施状态：规约已生效，旧Ceph热写配置不得启动；本地热写部署仍待适配验证。存储变化不改变Instruct/OFF、冻结数据和S2评分标准。D继续暂停，S2优先。
+
+## 服务入口
+
+服务启动复用 `scripts/experiments/service_from_config.py validate|start|status --config <配置>`。配置含固定镜像、已停止的前驱CID、原生Docker参数数组、本地目录和回执根。启动验证真实本地文件系统、只读Ceph挂载、模型参数与卡号不变；START意图先在本地持久化，重复启动拒绝并要求核实原回执。脚本启动不代表模型健康，必须另核models端点和业务响应。该入口不替代实验generation lease与原生断点规则。
