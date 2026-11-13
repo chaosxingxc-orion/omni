@@ -157,7 +157,7 @@ def load_config(filename):
     if "sha256" in dataset and (not isinstance(dataset["sha256"], str) or not HASH.fullmatch(dataset["sha256"])):
         raise ConfigError("experiment.dataset.sha256: invalid digest")
     execution = object_keys(cfg["execution"], {"network"},
-                            {"controller", "parallelism", "mode", "poll_seconds", "lanes"}, "execution")
+                            {"controller", "parallelism", "mode", "poll_seconds", "lanes", "bindings"}, "execution")
     string(execution["network"], "execution.network")
     execution.setdefault("controller", {"kind": "subprocess"})
     object_keys(execution["controller"], {"kind"}, set(), "execution.controller")
@@ -171,6 +171,19 @@ def load_config(filename):
     for resource in ("cpu", "npu"):
         number(parallelism.setdefault(resource, 1), f"parallelism.{resource}", integer=True)
     number(execution.setdefault("poll_seconds", 1), "execution.poll_seconds")
+    bindings = execution.get("bindings", [])
+    if not isinstance(bindings, list):
+        raise ConfigError("execution.bindings must be a list")
+    for binding in bindings:
+        object_keys(binding, {"path", "sha256", "matches"}, set(), "binding")
+        binding["path"] = path(binding["path"], "binding.path")
+        if not isinstance(binding["sha256"], str) or not HASH.fullmatch(binding["sha256"]):
+            raise ConfigError("binding.sha256 must pin the downstream configuration")
+        if not isinstance(binding["matches"], dict) or not binding["matches"]:
+            raise ConfigError("binding.matches must map JSON pointers to experiment JSON pointers")
+        for target, source_pointer in binding["matches"].items():
+            if not target.startswith("/") or not isinstance(source_pointer, str) or not source_pointer.startswith("/"):
+                raise ConfigError("binding paths must be JSON pointers")
     lanes = object_keys(execution.setdefault("lanes", {"npu": []}), set(), {"npu"}, "execution.lanes")
     if not isinstance(lanes.setdefault("npu", []), list):
         raise ConfigError("execution.lanes.npu: expected list")
@@ -229,6 +242,14 @@ def load_config(filename):
         if not isinstance(unknown, list) or any(type(v) is not int or not 1 <= v <= 255 for v in unknown):
             raise ConfigError(f"{tid}.unknown_exit_codes: expected nonzero exit codes")
     by_id = {t["id"]: t for t in tasks}
+    producers = []
+    for task in tasks:
+        for output in task["outputs"]:
+            current = Path(output)
+            for other, owner in producers:
+                if current == other or current.is_relative_to(other) or other.is_relative_to(current):
+                    raise ConfigError(f"overlapping output producers: {owner} and {task['id']}")
+            producers.append((current, task["id"]))
     visiting, visited, order = set(), set(), []
     def visit(tid):
         if tid in visiting:

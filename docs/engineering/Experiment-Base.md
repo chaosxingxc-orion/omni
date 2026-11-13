@@ -53,3 +53,15 @@ python3 -m pytest -q tests/experiments \
 ```
 
 本地测试中的 NPU 标记节点运行无模型 CPU fixture，仅验证调度语义，不能证明 NPU 性能、Ceph 跨主机锁行为或模型精度。远端恢复后的最后验收是：固定镜像内实际 import/挂载/权限检查、原任务只读核验，再以既定业务配置做小规模端到端接续。通过后扩大运行，不重复已完成数据准备和全量哈希。
+
+## 多轮对抗审查后的补充契约
+
+同一 experiment 只允许一个 controller。CPU/NPU 持续并行使用 `run --phase all`；`--phase cpu` 与 `--phase npu` 是串行分阶段入口，不能同时各启动一个 controller。控制器换代时，可观测仍存活的旧 worker 继续计入并发配额。
+
+退出回执必须与原 DISPATCH、配置身份一致；不匹配视为 UNKNOWN。status 使用原冻结配置，不能用修改后的模型设置给旧结果换身份。worker 在执行前复核输入 pin；PREPARE 必须与 CONFIG-LOCK 的原始输入摘要一致。产物不得多任务重复声明，验收时重新检查实际路径。此方案不把可写源树变为安全沙箱：部署仍须使用不可变只读 release。
+
+`execution.bindings` 显式绑定下层配置：每项含 `path`、`sha256` 和 `matches`，后者将下层 JSON pointer 映射到当前实验 JSON pointer。例如 `/image` 对 `/release/image_digest`，业务配置中的真实模型/thinking 字段对 `/experiment/model` 和 `/experiment/thinking`。prepare 和 worker 核 pin 与字段相等；未配置 bindings 的通用 argv 只记录元数据，不证明业务身份。模板包含待填写的字段映射，不能假定不同 workload 有统一字段名。
+
+release 的 CPU stage/prepare/register 模板使用 `workspace_role: prepare`，仅允许固定发布目录中的离线 preparation 脚本及有限模式，network 必须 none。它与后续 generation 的 admission 分开；generation 仍要求完整原准入，不得用 preparation 角色运行推理。
+
+新发布模板使用 `runtime_storage`，将 `/run/saea` 和 `/tmp` 映射到获准共享根，设置 HOME/tmp/cache，stdout/stderr 落共享文件，Docker log driver 为 none。旧配置保持兼容，其原 tmpfs 行为不等于符合新存储约束。真实容器的用户写权限、Ascend 导入和挂载仍待远端验收。固定镜像继承的驱动库路径保留，禁止通过任务环境覆盖 LD_LIBRARY_PATH；需要不同依赖应发布单独、可核验的镜像。

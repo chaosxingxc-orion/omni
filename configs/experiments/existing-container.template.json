@@ -28,7 +28,7 @@
     }
   },
   "execution": {
-    "network": "host; configured launcher owns container network",
+    "network": "host",
     "controller": {
       "kind": "subprocess"
     },
@@ -43,7 +43,25 @@
           "lock_path": "${run_root}/lanes/approved-service.guard"
         }
       ]
-    }
+    },
+    "bindings": [
+      {
+        "path": "${config_dir}/launch.json",
+        "sha256": "REPLACE_WITH_REAL_SHA256",
+        "matches": {
+          "/image": "/release/image_digest",
+          "/network": "/execution/network"
+        }
+      },
+      {
+        "path": "${config_dir}/workload.json",
+        "sha256": "REPLACE_WITH_REAL_WORKLOAD_SHA256",
+        "matches": {
+          "/REPLACE_WITH_ACTUAL_MODEL_FIELD": "/experiment/model",
+          "/REPLACE_WITH_ACTUAL_THINKING_FIELD": "/experiment/thinking"
+        }
+      }
+    ]
   },
   "tasks": [
     {

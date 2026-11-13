@@ -141,3 +141,9 @@ bash scripts/npu/npu_deploy.sh plan "$DEPLOYMENT_PROFILE_FILE"
 这是一段合并到共同字段后的配置片段，bridge为既有 `saea-checkpoint-image-release-v1` 合同，并要求外部逐项pin的 commit对象、tree、archive、release manifest、reference pins和**已提供**的 source review。执行器不生成review。实际precheck使用原生 `ImageReleaseCompatibility.precheck`，校验checkpoint hash/header、旧源码/配置、最终release清单及review，输出 `activation_authorized=false`；它不读写终态ledger以冒充 `verify`，也不授权部署或恢复。最终review须对应实际最终镜像来源，历史诊断review不具备该效力。
 
 停前先完成工程、最终镜像、真实配置、科学body、恢复和预算CPU验收；就绪后仅首臂正常drain与结算，以新attempt正式接续并在首个600秒或终态窗口测实际效率，再决定另一臂交接及升档。服务与worker镜像可分别绑定原receipt；停前不伪造ABORTED或最终checkpoint。
+
+## 对抗审查补充
+
+stage/prepare/register 模板显式配置 `workspace_role: prepare`，仅限固定 release 的离线 preparation 入口，不要求尚未生成的 generation admission。生产消费角色仍保持原准入要求。所有 launch 模板新增 runtime_storage：共享目录承载 tmp、HOME、cache、stdout/stderr，容器禁用 daemon 日志驱动，避免项目日志在本地重复落盘。layout 先创建这些目录；实际运行用户必须具有写权限。该功能已通过命令与模板回归，固定镜像内写入验证仍待主机恢复。
+
+容器 status 对比原 launch-result CID，禁止同名替代实例接管；required_inputs 同时核实际挂载投影，嵌套挂载不能覆盖已pin文件。release 禁止任务级 LD_LIBRARY_PATH 覆盖，保持镜像内原有驱动路径继承。

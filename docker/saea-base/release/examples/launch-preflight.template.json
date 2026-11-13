@@ -63,5 +63,9 @@
       "sha256": "<PREFLIGHT_FILE_SHA256>"
     }
   ],
-  "monitor_interval_seconds": 600
+  "monitor_interval_seconds": 600,
+  "runtime_storage": {
+    "host_root": "/REPLACE_WITH_OWNED_ROOT/release-example/custody/preflight/runtime",
+    "container_root": "/run/saea"
+  }
 }

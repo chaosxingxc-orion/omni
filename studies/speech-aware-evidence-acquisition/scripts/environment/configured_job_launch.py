@@ -75,7 +75,7 @@ def load_config(path):
     keys = {'schema', 'container_name', 'image', 'repo_path', 'expected_commit', 'receipt_dir',
             'argv', 'working_directory', 'network', 'pid_host', 'cpuset_cpus', 'environment',
             'mounts', 'create_directories', 'allowed_create_roots', 'required_inputs', 'monitor_interval_seconds'}
-    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access', 'user', 'external_admission', 'framework_runtime', 'hostname'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access', 'user', 'external_admission', 'framework_runtime', 'hostname', 'workspace_role', 'runtime_storage'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
     if 'hostname' in doc:
         require(isinstance(doc['hostname'], str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.-]{0,62}', doc['hostname']), 'invalid hostname')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
@@ -131,7 +131,16 @@ def load_config(path):
         for key in ('marker', 'data_root', 'workspace_manifest'):
             absolute(admission[key])
         require(re.fullmatch('[a-f0-9]{64}', admission['sha256']), 'external admission marker pin required')
-    if doc['environment'].get('SAEA_EXPERIMENT_WORKSPACE'):
+    preparation = doc.get('workspace_role') == 'prepare'
+    if 'workspace_role' in doc:
+        require(doc['workspace_role'] in ('prepare', 'consume'), 'invalid workspace role')
+    if preparation:
+        require(doc.get('source_identity') is not None and doc['network'] == 'none' and
+                len(doc['argv']) >= 3 and doc['argv'][1] == '/opt/saea-release/studies/speech-aware-evidence-acquisition/scripts/analysis/intent_slot_workload.py' and
+                doc['argv'][2] in ('stage', 'verify-stage', 'prepare', 'register') and
+                admission is None and 'generation_lease' not in doc,
+                'workspace preparation requires sealed offline preparation entrypoint')
+    if doc['environment'].get('SAEA_EXPERIMENT_WORKSPACE') and not preparation:
         require(admission is not None, 'workspace launch requires external admission marker')
         matches = [m for m in doc['mounts'] if Path(doc['environment']['SAEA_EXPERIMENT_WORKSPACE_MANIFEST']).is_relative_to(Path(m['target']))]
         require(matches, 'workspace manifest must be mounted')
@@ -163,7 +172,7 @@ def load_config(path):
         else:
             require(not source_mounts, 'release source cannot be mounted over')
     if identity is not None:
-        require(not any(k.startswith(('PYTHON', 'LD_', 'DYLD_')) and k not in ('PYTHONPATH', 'PYTHONDONTWRITEBYTECODE', 'LD_LIBRARY_PATH') for k in doc['environment']), 'release interpreter environment override forbidden')
+        require(not any(k.startswith(('PYTHON', 'LD_', 'DYLD_')) and k not in ('PYTHONPATH', 'PYTHONDONTWRITEBYTECODE') for k in doc['environment']), 'release interpreter environment override forbidden')
         if 'SAEA_EXPERIMENT_MANIFEST' in doc['environment']:
             asset=doc['environment']['SAEA_EXPERIMENT_MANIFEST'];absolute(asset)
             require(re.fullmatch('[a-f0-9]{64}',doc['environment'].get('SAEA_EXPERIMENT_MANIFEST_SHA256','')),'external experiment manifest pin required')
@@ -197,6 +206,17 @@ def load_config(path):
         mapped = output_path(doc, timing)
         require(any(mapped.resolve().is_relative_to(r) for r in roots),
                 'stage timing escapes owned roots')
+    if 'runtime_storage' in doc:
+        storage = doc['runtime_storage']
+        require(isinstance(storage, dict) and set(storage) == {'host_root', 'container_root'},
+                'exact runtime_storage required')
+        host, container = absolute(storage['host_root']), absolute(storage['container_root'])
+        require(any(host.resolve().is_relative_to(r) for r in roots), 'runtime storage escapes owned roots')
+        require(container == Path('/run/saea'), 'runtime storage container_root must be /run/saea')
+        for target, source in ((container, host), (Path('/tmp'), host / 'tmp')):
+            require(not any(m['target'] == str(target) for m in doc['mounts']), 'runtime storage mount conflict')
+        for key in ('HOME', 'TMPDIR', 'TMP', 'TEMP', 'XDG_CACHE_HOME', 'XDG_CONFIG_HOME', 'HF_HOME'):
+            require(key not in doc['environment'], 'runtime storage owns environment: ' + key)
     return doc
 
 
@@ -363,6 +383,9 @@ def preflight(doc):
     # Environment pins are consumed inside the container, independently of
     # required_inputs. Check the actual mount projection before any launch.
     env = doc['environment']
+    if 'runtime_storage' in doc:
+        for child in ('tmp', 'home', 'cache/huggingface', 'config'):
+            require((Path(doc['runtime_storage']['host_root']) / child).is_dir(), 'runtime storage layout required')
     for name in ('SAEA_EXPERIMENT_MANIFEST', 'SAEA_EXPERIMENT_WORKSPACE_MANIFEST'):
         digest_name = ('SAEA_EXPERIMENT_WORKSPACE_SHA256' if name.endswith('WORKSPACE_MANIFEST')
                        else name + '_SHA256')
@@ -401,6 +424,16 @@ def preflight(doc):
         require(checked.returncode == 0, 'release image/source manifest verification failed')
     for pin in doc['required_inputs']:
         require(Path(pin['path']).is_file() and digest(pin['path']) == pin['sha256'], 'required input absent or changed: ' + pin['path'])
+        # A nested bind can shadow a pinned file underneath a parent mount.
+        # Validate the bytes actually projected into each declared namespace.
+        source = Path(pin['path']).resolve()
+        for mount in doc['mounts']:
+            parent = Path(mount['source']).resolve()
+            if source.is_relative_to(parent):
+                logical = Path(mount['target']) / source.relative_to(parent)
+                actual = mapped_input(doc, logical)
+                require(actual.is_file() and digest(actual) == pin['sha256'],
+                        'required input shadowed by mount: ' + str(logical))
     mount_checks(doc)
     conflicts = fresh_output_conflicts(doc)
     require(not conflicts, 'fresh output conflicts; inspect and preserve prior attempts: '
@@ -414,7 +447,17 @@ def command(doc, config_sha, runner_sha, *, runtime_check=False):
     hostname = doc.get('hostname', 'saea-' + config_sha[:16])
     args += ['--hostname', hostname[:57] + '-check' if runtime_check else hostname]
     if doc.get('source_identity') is not None:
-        args += ['--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges']
+        args += ['--read-only', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges']
+        if 'runtime_storage' not in doc:
+            args += ['--tmpfs', '/tmp:rw,nosuid,nodev,size=1g']
+    if 'runtime_storage' in doc:
+        storage = doc['runtime_storage']
+        host, container = storage['host_root'], storage['container_root']
+        args += ['--log-driver', 'none', '--mount', f'type=bind,src={host},dst={container}',
+                 '--mount', f'type=bind,src={host}/tmp,dst=/tmp']
+        for key, relative in {'HOME': 'home', 'TMPDIR': 'tmp', 'TMP': 'tmp', 'TEMP': 'tmp',
+                              'XDG_CACHE_HOME': 'cache', 'XDG_CONFIG_HOME': 'config', 'HF_HOME': 'cache/huggingface'}.items():
+            args += ['-e', key + '=' + container + '/' + relative]
     if 'user' in doc:
         args += ['--user', doc['user']]
     if doc.get('process_access') == 'resident-identity-read-v1':
@@ -432,6 +475,11 @@ def command(doc, config_sha, runner_sha, *, runtime_check=False):
     if 'framework_runtime' in doc:
         entry = ['-c', FRAMEWORK_BOOTSTRAP, doc['framework_runtime']['log_directory'],
                  '--runtime-check' if runtime_check else '--run-script', *entry]
+    if 'runtime_storage' in doc:
+        # Constant shell program; user argv stays positional, never interpolated.
+        redirect = 'exec "$@" >> /run/saea/stdout.log 2>> /run/saea/stderr.log'
+        return args + ['-w', doc['working_directory'], '--entrypoint', '/bin/sh', doc['image'],
+                       '-c', redirect, 'saea-logged', doc['argv'][0], *entry]
     return args + ['-w', doc['working_directory'], '--entrypoint', doc['argv'][0], doc['image'], *entry]
 
 
@@ -448,6 +496,15 @@ def status(doc, config_sha, runner_sha):
     labels = container['Config'].get('Labels') or {}
     require(container['Image'] == doc['image'] and labels.get('saea.launch.config') == config_sha
             and labels.get('saea.launch.runner') == runner_sha, 'existing container identity differs')
+    launch = Path(doc['receipt_dir']) / 'launch-result.json'
+    if launch.exists():
+        result_record = json.loads(launch.read_bytes())
+        original_id = result_record.get('stdout', '').strip()
+        if result_record.get('returncode') == 0 and original_id:
+            require(container['Id'] == original_id, 'container ID changed since launch; no adoption by name')
+    if 'Hostname' in container['Config']:
+        require(container['Config']['Hostname'] == doc.get('hostname', 'saea-' + config_sha[:16]),
+                'container hostname differs from launch')
     state = container['State']
     return {'state': state['Status'], 'container_id': container['Id'], 'running': state['Running'],
             'exit_code': state['ExitCode'], 'started_at': state['StartedAt'], 'finished_at': state['FinishedAt'],
@@ -488,6 +545,9 @@ def execute(path, mode):
     if mode == 'layout':
         for p in sorted(doc['create_directories'], key=lambda p: len(Path(p).parts)):
             Path(p).mkdir(parents=True, exist_ok=True)
+        if 'runtime_storage' in doc:
+            for child in ('tmp', 'home', 'cache/huggingface', 'config'):
+                (Path(doc['runtime_storage']['host_root']) / child).mkdir(parents=True, exist_ok=True)
         mount_checks(doc)
         require(root.is_dir(), 'receipt directory must be explicitly created')
         return {'layout_ready': True, 'new_model_calls': 0}

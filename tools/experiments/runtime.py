@@ -56,6 +56,13 @@ def assert_frozen(doc):
     receipt = read_json(root / "PREPARE.json")
     if not receipt or receipt.get("config_sha256") != doc["sha256"]:
         raise ConfigError("prepare has not completed")
+    pinned = lock.get("artifact_sha256", {})
+    observed_pins = {entry["path"]: entry["sha256"] for entry in receipt["artifacts"]}
+    if not pinned or observed_pins != pinned:
+        raise ConfigError("prepare artifacts differ from immutable configuration lock")
+    manifest_source = doc["config"]["experiment"]["dataset"]["manifest"]
+    if receipt["manifest_sha256"] != pinned.get(manifest_source):
+        raise ConfigError("manifest receipt differs from immutable configuration lock")
     # Controls always hash; only large explicitly immutable assets may reuse
     # stat receipts. This does not enumerate directories or rehash dataset trees.
     for entry in receipt["artifacts"]:
@@ -64,11 +71,31 @@ def assert_frozen(doc):
     if stat_key(manifest) != receipt["manifest_copy_stat"]:
         raise ConfigError("frozen manifest copy changed")
     verified_file(manifest, receipt["manifest_sha256"])
+    verify_bindings(doc)
     return receipt
+
+
+def verify_bindings(doc):
+    """Bind launcher/workload fields to science metadata, without model calls."""
+    def pointer(value, key):
+        try:
+            for part in key.split("/")[1:]:
+                part = part.replace("~1", "/").replace("~0", "~")
+                value = value[int(part)] if isinstance(value, list) else value[part]
+            return value
+        except (KeyError, IndexError, TypeError, ValueError) as error:
+            raise ConfigError(f"binding pointer missing: {key}") from error
+    for binding in doc["config"]["execution"].get("bindings", []):
+        verified_file(binding["path"], binding["sha256"])
+        downstream = read_json(binding["path"])
+        for target, source in binding["matches"].items():
+            if canonical(pointer(downstream, target)) != canonical(pointer(doc["config"], source)):
+                raise ConfigError(f"downstream configuration mismatch: {binding['path']} {target} != {source}")
 
 
 def prepare(doc, phase="all"):
     cfg, root, store = doc["config"], run_path(doc), store_for(doc)
+    verify_bindings(doc)
     if not Path(cfg["storage"]["shared_root"]).is_dir():
         raise ConfigError("shared_root must already exist; no fallback storage")
     store.mkdir(root)
@@ -85,6 +112,7 @@ def prepare(doc, phase="all"):
         manifest = cfg["experiment"]["dataset"]
         requested = [{"path": manifest["manifest"], "sha256": manifest.get("sha256")}]
         requested += cfg["release"]["artifacts"]
+        requested += [{"path": b["path"], "sha256": b["sha256"]} for b in cfg["execution"].get("bindings", [])]
         for task in cfg["tasks"]:
             requested += task["artifacts"]
             if not Path(task["cwd"]).is_dir():
@@ -165,7 +193,19 @@ def task_status(doc, task):
     intent = read_json(root / "DISPATCH.json")
     exit_receipt = read_json(root / "EXIT.json")
     progress = read_json(root / "STATUS.json", {})
+    mismatch = bool(intent and intent.get("config_sha256") != doc["sha256"])
+    if start:
+        mismatch |= not intent or start.get("dispatch_id") != intent.get("dispatch_id")
     if exit_receipt:
+        mismatch |= (not intent or exit_receipt.get("dispatch_id") != intent.get("dispatch_id") or
+                     exit_receipt.get("config_sha256") != doc["sha256"] or
+                     exit_receipt.get("state") not in ("SUCCEEDED", "FAILED", "UNKNOWN"))
+        if exit_receipt.get("state") == "SUCCEEDED":
+            mismatch |= exit_receipt.get("returncode") != 0 or exit_receipt.get("contact_settled") is not True
+    if mismatch:
+        state = "UNKNOWN"
+        process = {"state": "unknown", "reason": "receipt identity mismatch"}
+    elif exit_receipt:
         state = exit_receipt["state"]
     elif intent or start:
         process = observe(start)
@@ -173,7 +213,7 @@ def task_status(doc, task):
     else:
         process = {"state": "unknown", "reason": "not dispatched"}
         state = "PENDING"
-    if exit_receipt:
+    if exit_receipt and not mismatch:
         process = observe(start)
     last_progress = max([v.get("at", 0) for v in (intent, start, exit_receipt, progress) if v] or [0]) or None
     return {"id": task["id"], "resource": task["resource"], "state": state,
@@ -184,6 +224,9 @@ def task_status(doc, task):
 
 def status(doc, phase="all"):
     root = run_path(doc)
+    lock = read_json(root / "CONFIG-LOCK.json")
+    if lock and lock.get("config_sha256") != doc["sha256"]:
+        raise ConfigError("status config differs from frozen run; use original CONFIG.json")
     summary = read_json(root / "STATUS.json", {})
     tasks = [task_status(doc, t) for t in selected_tasks(doc, phase)]
     states = {t["id"]: task_status(doc, t)["state"] for t in doc["config"]["tasks"]}
@@ -329,10 +372,8 @@ def controller(doc, cli, token, guard, phase):
                 tid, resource = task["id"], task["resource"]
                 if states[tid] != "PENDING" or any(states[d] != "SUCCEEDED" for d in task["depends_on"]):
                     continue
-                # Never overwrite outputs left by an unjournalled prior attempt.
-                if any(Path(output).exists() for output in task["outputs"]):
-                    raise ConfigError(f"{tid}: output already exists without dispatch; original attempt preserved")
-                running = sum(1 for key in active if next(t for t in tasks if t["id"] == key)["resource"] == resource)
+                running = sum(1 for candidate in tasks if candidate["resource"] == resource and
+                              (candidate["id"] in active or states[candidate["id"]] == "RUNNING"))
                 if running >= doc["config"]["execution"]["parallelism"][resource]:
                     continue
                 lane, lane_fd = None, None
@@ -418,9 +459,14 @@ def worker(doc, tid, dispatch_id, lane_fd=None):
     process = None
     state, code, reason = "UNKNOWN", None, None
     try:
+        # Queued tasks may start long after prepare/controller startup. Recheck
+        # the frozen inputs in the actual worker before any business invocation.
+        assert_frozen(doc)
         # Recheck containment of declared write paths immediately before execution.
         for output in task["outputs"]:
             store.checked(output)
+            if os.path.lexists(output):
+                raise ConfigError(f"{tid}: output already exists without dispatch; original attempt preserved")
         env = task_environment(doc, task)
         for key in MANAGED_ENV:
             store.mkdir(env[key])
@@ -441,6 +487,8 @@ def worker(doc, tid, dispatch_id, lane_fd=None):
                 if code in task["unknown_exit_codes"]:
                     state, reason = "UNKNOWN", "configured observation/transport error; no retry"
                 elif code == 0:
+                    for output in task["outputs"]:
+                        store.checked(output)
                     missing = [output for output in task["outputs"] if not Path(output).exists()]
                     state, reason = ("FAILED", f"missing declared outputs: {missing}") if missing else ("SUCCEEDED", None)
                 elif code < 0:
@@ -450,7 +498,7 @@ def worker(doc, tid, dispatch_id, lane_fd=None):
                 if task["resource"] == "npu" and state != "SUCCEEDED":
                     state = "UNKNOWN"
                     reason = (reason or "NPU task did not succeed") + "; contact-unsettled; lane retained"
-    except OSError as error:
+    except (OSError, ConfigError) as error:
         # Popen errors before spawn are definite local failures; after spawn remain unknown.
         state = "FAILED" if process is None else "UNKNOWN"
         reason = repr(error)
@@ -460,6 +508,7 @@ def worker(doc, tid, dispatch_id, lane_fd=None):
             if "contact-unsettled" not in (reason or ""):
                 reason = (reason or "NPU task interrupted") + "; contact-unsettled; lane retained"
         terminal = {"at": now(), "state": state, "dispatch_id": dispatch_id, "returncode": code,
+                    "config_sha256": doc["sha256"],
                     "contact_settled": state == "SUCCEEDED" and code == 0,
                     "reason": reason, "argv": task["argv"]}
         store.write(td / "EXIT.json", terminal, exclusive=True)

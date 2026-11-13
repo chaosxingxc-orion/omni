@@ -474,7 +474,7 @@ def test_release_rejects_unknown_identity_key(tmp_path):
     with pytest.raises(ValueError,match='identity'):m.load_config(path)
 
 
-@pytest.mark.parametrize('fault',['PYTHONHOME','PYTHONSTARTUP','LD_PRELOAD','mount-dependency','workdir','argv-empty','mount-malformed'])
+@pytest.mark.parametrize('fault',['PYTHONHOME','PYTHONSTARTUP','LD_PRELOAD','LD_LIBRARY_PATH','mount-dependency','workdir','argv-empty','mount-malformed'])
 def test_release_closed_execution_environment(tmp_path,fault):
     path,doc=configured(tmp_path)
     doc['repo_path']='/opt/saea-release/studies/speech-aware-evidence-acquisition';doc['working_directory']=doc['repo_path']
@@ -543,3 +543,58 @@ def test_run_waits_for_container_not_launch_only(tmp_path, monkeypatch):
     assert docker.launches == 1
     assert m.execute(path, 'run')['exit_code'] == 7
     assert docker.launches == 1
+
+
+@pytest.mark.parametrize('stage', ['stage', 'prepare', 'register'])
+def test_published_preparation_templates_validate_after_substitution(tmp_path, stage):
+    import re
+    template = Path(__file__).parents[4] / 'docker/saea-base/release/examples' / ('launch-' + stage + '.template.json')
+    raw = template.read_text().replace("/REPLACE_WITH_OWNED_ROOT", str(tmp_path / "shared"))
+    raw = raw.replace('<IMAGE_ID>', 'sha256:' + 'a' * 64).replace('<IMAGE_SOURCE_COMMIT>', 'b' * 40)
+    raw = raw.replace('<ALLOCATED_CPUSET>', '0-1')
+    raw = re.sub(r'<[^>]+>', 'c' * 64, raw)
+    path = tmp_path / 'launch.json'
+    path.write_text(raw)
+    doc = m.load_config(path)
+    assert doc['workspace_role'] == 'prepare'
+    assert doc['network'] == 'none'
+    doc['argv'][2] = 'worker'
+    path.write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match='preparation'): m.load_config(path)
+
+
+def test_replacement_container_with_matching_labels_is_not_adopted(tmp_path, monkeypatch):
+    path, doc = configured(tmp_path)
+    docker = Docker(doc)
+    monkeypatch.setattr(m, 'run', docker)
+    m.execute(path, 'layout'); m.execute(path, 'launch')
+    docker.container['Id'] = 'replacement'
+    with pytest.raises(ValueError, match='container ID changed'): m.execute(path, 'status')
+
+
+def test_nested_mount_cannot_shadow_pinned_input(tmp_path, monkeypatch):
+    path, doc = configured(tmp_path)
+    other = tmp_path / 'other.json'
+    other.write_text('{"changed":true}')
+    doc['mounts'].append({'source': str(other), 'target': '/data/input.json', 'readonly': True})
+    path.write_text(json.dumps(doc))
+    monkeypatch.setattr(m, 'run', Docker(doc))
+    with pytest.raises(ValueError, match='shadowed'): m.execute(path, 'plan')
+
+
+def test_runtime_storage_maps_tmp_cache_and_logs_to_owned_root(tmp_path):
+    path, doc = configured(tmp_path)
+    host = tmp_path / 'runtime'
+    doc['runtime_storage'] = {'host_root': str(host), 'container_root': '/run/saea'}
+    doc['argv'] = ['/usr/bin/python3', 'literal $(not-a-shell-command)']
+    path.write_text(json.dumps(doc))
+    m.execute(path, 'layout')
+    assert (host / 'cache/huggingface').is_dir()
+    argv = m.command(m.load_config(path), 'a' * 64, 'b' * 64)
+    assert '--tmpfs' not in argv
+    assert argv[argv.index('--log-driver') + 1] == 'none'
+    assert f'type=bind,src={host}/tmp,dst=/tmp' in argv
+    assert 'TMPDIR=/run/saea/tmp' in argv
+    assert argv[-2:] == doc['argv']
+    assert argv[argv.index('--entrypoint') + 1] == '/bin/sh'
+    assert 'exec "$@" >> /run/saea/stdout.log 2>> /run/saea/stderr.log' in argv

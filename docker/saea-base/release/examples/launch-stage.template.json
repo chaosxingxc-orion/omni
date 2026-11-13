@@ -74,5 +74,10 @@
       "sha256": "<WORKLOAD_FILE_SHA256>"
     }
   ],
-  "monitor_interval_seconds": 600
+  "monitor_interval_seconds": 600,
+  "workspace_role": "prepare",
+  "runtime_storage": {
+    "host_root": "/REPLACE_WITH_OWNED_ROOT/release-example/custody/stage/runtime",
+    "container_root": "/run/saea"
+  }
 }
