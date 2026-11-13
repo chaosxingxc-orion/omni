@@ -3,7 +3,7 @@ import argparse,hashlib,json,os,pathlib,subprocess
 p=argparse.ArgumentParser();p.add_argument('--repo',type=pathlib.Path,required=True);p.add_argument('--commit',required=True);p.add_argument('--out',type=pathlib.Path,required=True);a=p.parse_args()
 commit=subprocess.check_output(['git','-C',str(a.repo),'rev-parse',a.commit+'^{commit}'],text=True).strip()
 entries=subprocess.check_output(['git','-C',str(a.repo),'ls-tree','-r',commit],text=True).splitlines()
-prefixes=('studies/speech-aware-evidence-acquisition/src/','studies/speech-aware-evidence-acquisition/scripts/','studies/speech-aware-evidence-acquisition/configs/','studies/speech-aware-evidence-acquisition/docs/arms/','scripts/npu/','studies/speech-aware-evidence-acquisition/docs/receipts/rosters/')
+prefixes=('studies/speech-aware-evidence-acquisition/src/','studies/speech-aware-evidence-acquisition/scripts/','studies/speech-aware-evidence-acquisition/configs/','studies/speech-aware-evidence-acquisition/docs/arms/','scripts/npu/','scripts/experiments/','tools/experiments/','configs/experiments/','studies/speech-aware-evidence-acquisition/docs/receipts/rosters/')
 # The shipped lock-baseline compiler requires this admission record.
 exact={'studies/speech-aware-evidence-acquisition/docs/results/2026-09-30-slurp-a2-comp1b-dev2000-read.md','docs/datasets.lock.json','studies/speech-aware-evidence-acquisition/pyproject.toml','studies/speech-aware-evidence-acquisition/LICENSE', 'docker/saea-base/release/verify-release.py', 'docker/saea-base/release/install-source.py', 'docker/saea-base/release/Dockerfile', 'docker/saea-base/release/context.py', 'docker/saea-base/release/build-release.sh'}
 selected=[]

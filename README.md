@@ -1,8 +1,11 @@
 # omni
 
-Engineering base for reproducing the SAEA (speech-aware evidence acquisition) Thinking Fold B baseline
-`SAEA-SLURP-STAGE3-L338-LEVER-COLUMN-FOLD-B-V1` with Qwen3-Omni-30B-A3B-Thinking (BF16), served by vLLM on Ascend NPUs
-(vllm-ascend), with the openJiuwen agent base.
+Reusable engineering base for multimodal RSI experiments with openJiuwen and Qwen3-Omni on Ascend NPUs.
+The current business baseline is **Qwen3-Omni-30B-A3B-Instruct, thinking OFF**.
+Historical Thinking / Fold B configurations remain available for reproducing earlier results.
+
+New experiment execution uses the [configuration-driven runbook](docs/engineering/Experiment-Base.md).
+Deployment profiles choose the authorised instances and tensor parallelism; historical profiles are not current resource authorisation.
 
 Code only. Datasets, features, vectors, prepared knowledge and model weights are not in this repository; the
 download and preparation scripts that rebuild them are.
@@ -28,9 +31,8 @@ sha256 in the study's configs and receipts, so a rebuild is checked against the 
 
 ## Serving
 
-One resident deployment, declared by a profile in
-`studies/speech-aware-evidence-acquisition/configs/deployment/` (four instances x tensor-parallel 2 on 8 Ascend
-910B cards); `scripts/npu/npu_deploy.sh plan|up|status|down <profile>` refuses busy cards. Client concurrency comes
+Resident deployments are declared by profiles in
+`studies/speech-aware-evidence-acquisition/configs/deployment/`; `scripts/npu/npu_deploy.sh plan|up|status|down <profile>` refuses busy cards. Client concurrency comes
 from `scripts/serving/synthetic_sweep.py` (synthetic load only).
 
 ## Queue separation
@@ -48,4 +50,4 @@ python3 scripts/npu/dual_queue.py status \
   --state-dir ./dual-queue-state
 ```
 
-The NPU queue remains the only owner of card admission. SSH is used only to control and observe detached guardians; reconnect with the queue's explicit resume path after an interruption, and reconcile terminal or unknown identities before any retry.
+The existing NPU queue remains the owner of physical card admission. The new experiment CLI coordinates task dependencies and service-lane quotas; it does not replace this gate or the FlightRuntime generation lease. SSH is used only to control and observe detached guardians; reconnect with the queue's explicit resume path after an interruption, and reconcile terminal or unknown identities before any retry.

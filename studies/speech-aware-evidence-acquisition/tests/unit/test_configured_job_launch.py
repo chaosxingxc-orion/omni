@@ -509,3 +509,37 @@ def test_explicit_numeric_asset_owner(tmp_path):
     assert cmd[cmd.index('--user')+1]=='1008:1008'
     doc['user']='root';path.write_text(json.dumps(doc))
     with pytest.raises(ValueError,match='uid:gid'):m.load_config(path)
+
+
+def test_explicit_hostname_for_host_network_and_smoke(tmp_path):
+    path, doc = configured(tmp_path)
+    doc.update(network='host', hostname='experiment-worker')
+    path.write_text(json.dumps(doc))
+    loaded = m.load_config(path)
+    for check, expected in [(False, 'experiment-worker'), (True, 'experiment-worker-check')]:
+        argv = m.command(loaded, 'c' * 64, 'd' * 64, runtime_check=check)
+        assert argv[argv.index('--hostname') + 1] == expected
+
+
+@pytest.mark.parametrize('state,code,expected', [('exited', 0, 0), ('exited', 4, 4),
+    ('running', 0, 75), ('created', 0, 75), ('unresolved-launch-intent', 0, 75)])
+def test_foreground_terminal_exit_contract(state, code, expected):
+    assert m.completion_exit_code({'state': state, 'exit_code': code}) == expected
+
+
+def test_run_waits_for_container_not_launch_only(tmp_path, monkeypatch):
+    path, doc = configured(tmp_path)
+    docker = Docker(doc)
+    def terminal_docker(argv, **kwargs):
+        if argv[:2] == ['docker', 'wait']:
+            docker.container['State'].update(Status='exited', Running=False, ExitCode=7)
+            return SimpleNamespace(returncode=0, stdout='7', stderr='')
+        return docker(argv, **kwargs)
+    monkeypatch.setattr(m, 'run', terminal_docker)
+    m.execute(path, 'layout')
+    observed = m.execute(path, 'run')
+    assert observed['state'] == 'exited'
+    assert m.completion_exit_code(observed) == 7
+    assert docker.launches == 1
+    assert m.execute(path, 'run')['exit_code'] == 7
+    assert docker.launches == 1

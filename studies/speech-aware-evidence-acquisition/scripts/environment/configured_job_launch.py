@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import time
 
 SCHEMA = 'saea-configured-job-launch-v1'
@@ -74,7 +75,9 @@ def load_config(path):
     keys = {'schema', 'container_name', 'image', 'repo_path', 'expected_commit', 'receipt_dir',
             'argv', 'working_directory', 'network', 'pid_host', 'cpuset_cpus', 'environment',
             'mounts', 'create_directories', 'allowed_create_roots', 'required_inputs', 'monitor_interval_seconds'}
-    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access', 'user', 'external_admission', 'framework_runtime'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    require(isinstance(doc, dict) and set(doc) - {'generation_lease', 'fresh_outputs', 'source_identity', 'process_access', 'user', 'external_admission', 'framework_runtime', 'hostname'} == keys and doc['schema'] == SCHEMA, 'exact launcher schema required')
+    if 'hostname' in doc:
+        require(isinstance(doc['hostname'], str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.-]{0,62}', doc['hostname']), 'invalid hostname')
     for key, pattern in [('container_name', r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,100}'),
                          ('image', r'sha256:[a-f0-9]{64}'), ('expected_commit', r'[a-f0-9]{40}'),
                          ('cpuset_cpus', r'[0-9]+(?:[-,][0-9]+)*')]:
@@ -407,6 +410,9 @@ def preflight(doc):
 def command(doc, config_sha, runner_sha, *, runtime_check=False):
     args = ['docker', 'run', '-d', '--name', doc['container_name'] + ('-runtime-check' if runtime_check else ''), '--network', 'none' if runtime_check else doc['network'], '--cpuset-cpus', doc['cpuset_cpus'],
             '--label', 'saea.launch.config=' + config_sha, '--label', 'saea.launch.runner=' + runner_sha]
+    # Host networking may inherit the host name; it is never a container ID.
+    hostname = doc.get('hostname', 'saea-' + config_sha[:16])
+    args += ['--hostname', hostname[:57] + '-check' if runtime_check else hostname]
     if doc.get('source_identity') is not None:
         args += ['--read-only', '--tmpfs', '/tmp:rw,nosuid,nodev,size=1g', '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges']
     if 'user' in doc:
@@ -449,6 +455,13 @@ def status(doc, config_sha, runner_sha):
 
 
 def execute(path, mode):
+    if mode == 'run':
+        # Foreground seam for the experiment DAG. A successful detached launch
+        # is not completion: retain the original launch custody, then observe.
+        launched = execute(path, 'launch')
+        if launched['state'] in ('unresolved-launch-intent', 'not-launched'):
+            return launched
+        return execute(path, 'watch')
     doc = load_config(path)
     config_sha = hashlib.sha256(json.dumps(doc, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
     runner_sha = digest(__file__)
@@ -513,9 +526,19 @@ def execute(path, mode):
         return status(doc, config_sha, runner_sha)
 
 
+def completion_exit_code(observed):
+    """75 means contact state unknown; callers must preserve NPU ownership."""
+    if observed.get('state') == 'exited':
+        return int(observed.get('exit_code', 75))
+    return 75
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('plan', 'layout', 'launch', 'status', 'watch', 'runtime-check'))
+    parser.add_argument('mode', choices=('plan', 'layout', 'launch', 'run', 'status', 'watch', 'runtime-check'))
     parser.add_argument('--config', type=Path, required=True)
     args = parser.parse_args()
-    print(json.dumps(execute(args.config, args.mode), sort_keys=True))
+    observed = execute(args.config, args.mode)
+    print(json.dumps(observed, sort_keys=True))
+    if args.mode == 'run':
+        sys.exit(completion_exit_code(observed))

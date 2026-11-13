@@ -30,7 +30,7 @@ python3 docker/saea-base/release/context.py \
 
 `context.py` 输出实际 commit、文件数、manifest SHA256；上下文包含同 commit 的 Dockerfile、校验器与构建脚本。检查 allowlist 和选入内容，不放入凭据、私有数据、历史 runs 或请求轨迹。保留上下文清单与构建日志。
 
-将上下文放至获准构建主机的独立新目录 `$BUILD_ROOT/context`。现有 `build-release.sh` 要求 `$BUILD_ROOT` 为 `/var/tmp/omni-unified-release-<unique-version>`，tag 为 `saea-unified-release:<unique-version>`；该前缀是脚本接口，不是既有部署目录。脚本当前固定构建 CPU 240–243、builder 内存 8GiB、IO 权重 100，必须先确认构建主机拥有这些已分配资源，不要直接在任意主机执行。
+将上下文放至获准构建主机的独立新目录 `$BUILD_ROOT/context`。`build-release.sh` 要求 `$BUILD_ROOT` 位于显式配置的 `$OMNI_SHARED_ROOT` 内，tag 为 `saea-unified-release:<unique-version>`。通过 `OMNI_BUILD_CPUS` 指定已分配 CPU，`OMNI_BUILD_MEMORY` 指定 builder 内存（默认 8GiB）；不再硬编码本地临时目录和主机 CPU 编号。项目构建日志和回执留在共享构建目录；Docker daemon 的全局存储仍由系统管理。
 
 ```bash
 bash "$BUILD_ROOT/context/build-release.sh" "$BUILD_ROOT" "$UNIQUE_TAG"

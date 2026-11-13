@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "storage": {
+    "shared_root": "/REPLACE_WITH_OWNED_SHARED_ROOT",
+    "run_root": "${shared_root}/execution"
+  },
+  "release": {
+    "image_digest": "sha256:7e60208fb45e8af3f1ab777cf24df7a7a415d8d84e2972ee76def4daf5c0f026",
+    "artifacts": [
+      {
+        "path": "${config_dir}/launch.json",
+        "sha256": "REPLACE_WITH_REAL_SHA256"
+      }
+    ]
+  },
+  "experiment": {
+    "id": "REPLACE_WITH_NEW_APPROVED_ID",
+    "model": "qwen3-omni-30b-a3b-instruct",
+    "thinking": false,
+    "dataset": {
+      "manifest": "${shared_root}/manifests/REPLACE_WITH_LOCKED_MANIFEST.json",
+      "version": "REPLACE_WITH_LOCKED_VERSION"
+    },
+    "science": {
+      "node": "S2",
+      "split": "TRAIN6681",
+      "purpose": "existing approved workload; no new sampling; no TEST tuning"
+    }
+  },
+  "execution": {
+    "network": "host; configured launcher owns container network",
+    "controller": {
+      "kind": "subprocess"
+    },
+    "parallelism": {
+      "cpu": 2,
+      "npu": 1
+    },
+    "lanes": {
+      "npu": [
+        {
+          "id": "approved-service",
+          "lock_path": "${run_root}/lanes/approved-service.guard"
+        }
+      ]
+    }
+  },
+  "tasks": [
+    {
+      "id": "layout",
+      "resource": "cpu",
+      "argv": [
+        "/usr/bin/python3",
+        "${shared_root}/release/studies/speech-aware-evidence-acquisition/scripts/environment/configured_job_launch.py",
+        "layout",
+        "--config",
+        "${config_dir}/launch.json"
+      ],
+      "cwd": "${shared_root}/release"
+    },
+    {
+      "id": "inference",
+      "resource": "npu",
+      "depends_on": [
+        "layout"
+      ],
+      "lane": "approved-service",
+      "unknown_exit_codes": [
+        75
+      ],
+      "argv": [
+        "/usr/bin/python3",
+        "${shared_root}/release/studies/speech-aware-evidence-acquisition/scripts/environment/configured_job_launch.py",
+        "run",
+        "--config",
+        "${config_dir}/launch.json"
+      ],
+      "cwd": "${shared_root}/release"
+    }
+  ]
+}
