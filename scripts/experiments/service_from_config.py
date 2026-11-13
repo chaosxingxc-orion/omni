@@ -7,7 +7,11 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import urllib.request
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tools.experiments.local_runtime_storage import check_paths
 
 
 def inspect(cid):
@@ -48,10 +52,21 @@ def validate(config):
     assert argv[argv.index('--entrypoint') + 2] == config['image']
     roots = [local(p) for p in config['local_directories']]
     assert roots and local(config['receipt_root']) in roots
+    records = check_paths({str(i): p for i, p in enumerate(roots)})
+    budget = config['hot_workload_budget_bytes']
+    assert isinstance(budget, int) and budget > 0, 'explicit workload budget required'
+    for row in records:
+        stat = os.statvfs(next(p for p in [Path(row['path']), *Path(row['path']).parents] if p.exists()))
+        reserve = max(20 * 1024**3, stat.f_blocks * stat.f_frsize * 0.10)
+        assert row['free_bytes'] >= reserve + budget, 'workload exceeds free space after reserve'
     environment = dict(argv[i + 1].split('=', 1) for i, item in enumerate(argv) if item == '-e')
+    mandatory = {'HOME', 'TMPDIR', 'XDG_CACHE_HOME', 'HF_HOME', 'TORCHINDUCTOR_CACHE_DIR',
+                 'TRITON_CACHE_DIR', 'ASCEND_WORK_PATH', 'ASCEND_CACHE_PATH'}
+    assert mandatory <= environment.keys(), 'missing required runtime paths'
     for key in config.get('required_directory_env', []):
         assert key in environment, 'missing directory environment: ' + key
         assert local(environment[key]) in roots, 'directory must be explicitly created: ' + key
+    assert local(str(Path(environment['HOME']) / 'ascend/log')) in roots, 'default Ascend log directory missing'
     for i, arg in enumerate(argv):
         if arg == '-v':
             parts = argv[i + 1].split(':')

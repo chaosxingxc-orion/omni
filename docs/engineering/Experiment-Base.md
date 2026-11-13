@@ -1,6 +1,6 @@
 # 配置驱动的实验基座
 
-当前存储约束覆盖下方旧共享部署说明：未修复175/181采用本地持久热状态并保留fsync，通过受控归档同步Ceph；禁止Ceph热写和目标文件/目录fsync。旧模板未完成适配前不能启动。见[存储规约](Hot-State-Storage-Policy.md)。
+当前存储约束覆盖下方旧共享部署说明：未修复175/181采用本地持久热状态并保留fsync，由已修复或已验收的独立客户端拉取已封闭不可变提交归档Ceph；禁止Ceph热写和目标文件/目录fsync。旧模板未完成适配前不能启动。见[存储规约](Hot-State-Storage-Policy.md)。
 
 公共入口管理配置冻结、依赖调度、进程回执与状态观察；业务继续使用已有 FlightRuntime、TaskAdapter、ContactJournal 和官方评分器。它不替代模型服务，也不绕过 card_queue_guardian 或 generation lease。新增实验应提交配置差异，不能在 delivery 中复制旧 launcher、用源码字符串替换生成新程序。
 
