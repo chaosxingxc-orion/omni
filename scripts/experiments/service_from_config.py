@@ -48,6 +48,10 @@ def validate(config):
     assert argv[argv.index('--entrypoint') + 2] == config['image']
     roots = [local(p) for p in config['local_directories']]
     assert roots and local(config['receipt_root']) in roots
+    environment = dict(argv[i + 1].split('=', 1) for i, item in enumerate(argv) if item == '-e')
+    for key in config.get('required_directory_env', []):
+        assert key in environment, 'missing directory environment: ' + key
+        assert local(environment[key]) in roots, 'directory must be explicitly created: ' + key
     for i, arg in enumerate(argv):
         if arg == '-v':
             parts = argv[i + 1].split(':')
