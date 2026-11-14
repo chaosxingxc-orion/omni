@@ -10,11 +10,13 @@
 
 ## 轨迹构建
 
-一个episode包含一个query的完整P、全部S1 Fold、真实S2分支和D执行。并行节点以依赖图记录，不按返回顺序伪造时序。必须保存实际知识/示例、模型原始token、行为logprob、节点与adapter版本、rails变换、最终输出、奖励和失败成本；上游输出在后继prompt中属于观测，不能再次计入action loss。
+一个episode包含一个query的完整P、全部S1 Fold、真实S2分支和D执行。并行节点以依赖图记录，不按返回顺序伪造时序。必须保存每次调用的实际输入token、实际知识/示例、模型原始action token、行为logprob、节点与adapter版本、rails变换、最终输出、奖励和失败成本；上游输出在后继prompt中属于观测，不能再次计入action loss。
 
-系统学习从未按P命中筛选的训练来源开始，保留各节点失败与系统修复机会。历史TRAIN6681经过P@3筛选，只作条件化诊断；缺行为概率的历史greedy轨迹可用于分析或合格TRAIN的SFT候选，不能补概率伪装on-policy RL。
+系统学习从未按P命中筛选的训练来源开始，保留各节点失败与系统修复机会。历史TRAIN6681和DEV1850均经过P@3筛选，只作条件化诊断；后续还需固定无此筛选的训练与验证人口；缺行为概率的历史greedy轨迹可用于分析或合格TRAIN的SFT候选，不能补概率伪装on-policy RL。
 
 同一query先考虑G=4完整随机轨迹，组内冻结工程与策略版本。恒奖励组如实保留，不无限补采成功结果。业务greedy评估与随机训练采样分开配置。参考文本与gold仅离线使用，不注入audio-only业务输入。
+
+同文本重建不能替代原始token轨迹；首版每次调用独立训练，保留真实DAG。优势按完整episode归组，不按Fold或动态分支重复计算奖励。相同prompt的独立随机采样全部保留，不能仅按prompt哈希去重。
 
 ## 算法和适配器
 
@@ -40,6 +42,7 @@ clean合成数据有69102个录音引用。按原始完整DEV/TEST的ID或规范
 - [GRPO / DeepSeekMath](https://arxiv.org/abs/2402.03300v3)
 - [RLOO](https://arxiv.org/abs/2402.14740v2)
 - [Agent Lightning](https://arxiv.org/abs/2508.03680v1)
+- [Agent Lightning v1.0：实际调用轨迹与rollout级优势](https://arxiv.org/abs/2608.17528v1)
 - [Search-R1](https://arxiv.org/abs/2503.09516v5)
 - [ArCHer](https://arxiv.org/abs/2402.19446v1)
 
