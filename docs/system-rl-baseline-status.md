@@ -2,7 +2,7 @@
 
 Numerical calibration remains frozen: 98/98 language boundaries passed, with zero measured token/sequence log-probability difference using reference audio features. Natural-audio integration, optimizer updates and adapter export/reload remain separate acceptance items.
 
-The latest accelerator capture failed after producing retained P/S1/S2 responses: the response verifier omitted the configured sibling journal and wire directories. Original owners have terminated, the original service is restored, and accounting is reconciled with zero active unknown requests. Accepted optimizer updates remain zero; DEV improvement is unknown.
+Current runtime observation: the endpoint completed and its original closed-result reader verified 22 files. The original client and fresh parity-capture controller were confirmed running at 10:13 UTC. Accepted optimizer updates remain zero; DEV improvement is unknown. Earlier failures and recovery observations below are retained as history.
 
 ## Root causes and systematic checks
 
@@ -52,3 +52,14 @@ DEV/TEST transport closure remains incomplete: current traversal pulls in old tr
 Held-out consumer review update: the actual original controller source/config and policy-hook checks now run before preparation publishes READY. Fixed-image namespace validation found one missing pinned controller settings template, which was added without changing its historical identity. Preparation packages the current release and derives a new execution configuration, uses the existing target-local output-path generator, and checks the requested dataset against the actual held-out split. Eight positive/negative contract checks and nine original controller regressions pass. The fixed audit runner reuses launcher mounts, makes prior outputs read-only, and exposes only a fresh writable audit directory, with no network, devices or Docker socket. These changes remain an undeployed candidate; remote dependency closure and actual evaluation are not yet accepted.
 
 Latest runtime event: the active endpoint controller completed with exit code zero. The original client consumed a non-fixture complete response and automatically advanced to fresh parity capture. The original closed-result reader verified 22 files (323,210 bytes), without additional model calls. The next capture has not yet been confirmed started; accepted optimizer updates remain zero.
+
+
+## Current classification-driven self-check
+
+A complete CPU-only dependency audit aggregated 1,011 errors rather than stopping at the first missing file. These are error records, not 1,011 independent causes. The fixed configurable classifier retains every original chain and source index, without model calls.
+
+Actual consumer inspection showed that projection readers open shard tasks and bindings, while the business session restores sealed selected inputs without invoking the legacy collection constructor. Shared typed traversal now follows those readers. The original transport audit decreased from 1,011 to 133 errors and from 16,487 to 429 mappings. It still fails and is not eligible for deployment. Remaining groups are cache lineage (70), materializer lineage (36), held-out input views (13), an old endpoint fixture's evidence (5), and other dependencies (9).
+
+A separate lifecycle defect was found before remote execution: newly derived policy programs inherited a one-time failed-start migration restricted to an old run and budget. The candidate records that original lineage without replaying its migration; original predecessor terminal reconciliation, unknown-request checks and resource guards remain in force. Policy-derived programs retaining the obsolete migration are rejected before resource acquisition.
+
+Validation: six projection checks authenticate 128 shards and 256 runtime references, ten original held-out preparation/configuration checks pass, and nine original controller regressions pass. These CPU results do not establish remote evaluation or training success. The candidate remains undeployed. Numerical calibration, business model/prompts, knowledge and official evaluation denominators are unchanged.
