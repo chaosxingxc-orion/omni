@@ -1,5 +1,13 @@
 # System RL baseline and startup repair
 
+Current update (2026-11-18 15:05 UTC): the endpoint stage exited successfully and the original controller advanced to fresh diagnostic capture. The capture container is confirmed running. Endpoint completion to capture startup took about 127 seconds including closed-result verification, packaging and dispatch. Accepted optimizer updates remain zero; DEV gain remains unknown.
+
+The dependency-reuse candidate now distinguishes isolated CPU transport preparation from live execution and terminal waiting. Only those two live function bodies are outside the CPU preparation fingerprint; imports, constants, preparation and other functions remain checked. Thirteen checks pass. The actual two-release inventory comparison covered 1,053 sources in 0.173 seconds, and the original validator accepted same-input cross-release evidence in 0.311 seconds with zero model calls or consumer replays. This does not extend numerical acceptance scope.
+
+A sealed, undeployed candidate also passes the already reconstructed D runtime directly from hydration to its same-episode consumer, eliminating the second reconstruction. Eight targeted checks and four original sampling-controller scenarios pass. The running capture remains unchanged; actual accelerator validation of the candidate is pending.
+
+## Previous observations
+
 Current observation (2026-11-18 14:58 UTC): accepted optimizer updates remain zero; DEV gain is unknown. The previous capture is fully drained, original service restored, and all 58 new requests reconciled with no unknown outcome. The simplified successor passed isolated real/synthetic input preparation and exact retained four-node consumers. Its fixed client and remote endpoint controller are now running. This is startup, not a completed training update.
 
 Validation reuse correction: repeated CPU preparation was tied to the entire release identity, causing unchanged consumers to rerun after unrelated changes. A conservative dependency-contract implementation now reuses accepted CPU evidence across release identifiers when the image, accepted inputs and complete consumer source hashes match. Eleven positive/negative checks pass; the actual accepted release produced a 1,053-source reuse inventory with zero consumer replays and zero model calls. This candidate is not hotpatched into the running job. Finer separation of transport changes is still pending. Numerical results remain reusable within their original measured scope; CPU receipts do not certify natural-audio or updated-adapter execution.
