@@ -1,43 +1,11 @@
-# System RL 基线与当前验收状态
+# System RL baseline and first training feedback
 
-更新：2026-11-18 UTC。研究变量已经冻结，正式训练运行尚未验收。
+The numerical implementation already validated in the fixed language reference remains frozen. Its scope is 98/98 language boundaries and zero measured token/sequence log-probability difference with reference audio features. Training integration, natural audio and updated-adapter export/reload are separate acceptance items; completed layer calibration is not restarted.
 
-系统统一使用 Qwen3-Omni-30B-A3B-Instruct，thinking OFF。P 与独立的 S1 可并行，S1→S2，D 合并意图和槽位证据。三个阶段为系统设计搭建、冻结模型的 TFRL 优化、仅更新 LoRA 的 system RL。
+The current execution release passed a real endpoint request and entered fresh system trajectory capture. No accepted optimizer update or development-set improvement is claimed yet. CPU preparation continues independently of accelerator execution.
 
-## 数据与轨迹
+The final comparison uses the complete official TEST population of 13,078 recordings: A, a direct call to the unchanged Instruct model; B, the frozen TFRL-built system; C, the same system with a DEV-selected system-RL LoRA. All arms share original audio, labels, base-model identity and the official scorer. Report B−A, C−B and C−A for SLU-F1, intent accuracy, joint exact, valid-answer rate and cost. DEV has 8,690 recordings and selects the frozen candidate. Retrieval-based training eligibility never filters evaluation denominators. Direct system evaluation is not the direct-model baseline.
 
-官方 TRAIN 为 119881 个录音引用（真实50628、合成69253），DEV8690，TEST13078。每轮晋级后在全 TRAIN 上构造输入池；正确意图进入实际前置召回列表才具备训练资格，P 后续丢失正确意图仍属于可学习错误。DEV/TEST 保持完整人口。
+A CPU candidate extends the existing controller with frozen sampled-TRAIN membership and persistent window consumption. Original 80/20 sampling happens once for the entire selected dataset. Each window generates fresh behavior groups; zero-signal terminal groups count as processed without inventing optimizer updates. Unknown requests do not advance the cursor. Patience does not truncate unconsumed selected inputs. Storage and worker capacity must cover the entire configured dataset.
 
-初始采样5000个输入 draw，错误/正确80/20，各层内真实/合成按42.23%/57.77%配比，并控制同一语义来源的重复权重。每个输入生成4条真实新策略轨迹；标注生成的目标独立保存，不能伪造行为、token 或概率。元数据普查不等于实际轨迹生成。
-
-## 学习与评测
-
-复用一套 verl/FSDP 与 vLLM Ascend 工程，通过配置切换节点和系统目标。GRPO主线、RLOO对照；共享r8 q/k/v/o LoRA作为工程起点，基础权重、多模态塔及投影冻结。节点独立适配器与更大共享适配器待后续实测。
-
-节点目标分别覆盖P候选筛选、S1类型判断、S2值填充、D综合判决。系统奖励采用逐样本联合正确性及槽位F1，辅助节点权重按成功optimizer step退火；最终选模使用完整DEV官方SLU、意图和联合正确率，冻结后完整TEST验收。
-
-## 系统性修复进展（2026-11-18）
-
-反复故障集中在六类边界：内容身份被路径/设备号替代、静态封包未验证实际消费者、定制引擎启动漏掉原生生命周期、历史数据策略与官方全TRAIN入口错配、总任务限制与单操作超时耦合、组件通过被误用作系统验收。
-
-已将音频和同内容契约的可迁移身份、独立传输超时、官方TRAIN Session接入、相对资产路径解析集中到同一候选。原启动器新增精确发布/镜像的CPU消费证据绑定，审计源码按运行封闭，批处理保留全部失败。没有新建控制器或改变模型、知识、奖励及采样科学基线。
-
-最新真实运行的endpoint witness通过，后续业务准备因相对路径依赖工作目录失败；原服务已恢复且配置一致，未知请求已对账归零。新候选的固定准备、9项控制器回归与3项路径回归通过；真实/合成TRAIN各64条及历史S2/D消费审计仍在执行。它们不替代真实模型生成、自然音频概率、LoRA更新与导出重载验收。
-
-已验收Omni更新为0，DEV收益未知。停止“修首错即重启NPU”的节奏，先在同一候选中汇总可由CPU暴露的问题，再按原失败路径进行真实验收。
-
-## 历史证据与缺口
-
-- 运行策略改为按配置指定的采样集完成度结束，不设总时长、token或请求额度；单请求/传输超时、存储保护、原租约和未知请求对账保留。旧数值接口已加入兼容，历史成本不清零。运行策略8项、原控制器9项通过。
-- 实际启动暴露总期限被误用作单次SSH超时的问题，已将传输超时分离，原CPU接收/断点检查9项通过。失败在远端模型启动前，未新增模型调用。修复后的真实执行客户端已启动，仍处于验收流程。
-- 合成TRAIN的域限制已修复，前期独立消费者通过2合成+2真实。扩大到128条时发现增量向量缺配套任务绑定，现已携带经过来源、音频及编码器验证的绑定，并兼容在线样本不携带物理音频路径的契约。修复后128条CPU输入检查与NPU验收独立推进，结果尚未完整返回。
-
-- 原固定启动器已通过配置化CPU输入准备验收：输入清单固定摘要，只读视图保留封存源码，热缓存/日志显式配置。其生成的传输包在独立、无网络/设备/工作区兜底的消费者中通过两条真实TRAIN的音频准备、特征恢复、实际召回及P1/S1十Fold请求构造。输入检查6项和原控制器9项通过。仍未调用模型，不代表合成全域、S2/D新生成、自然音频概率对齐或训练完成。
-
-- 固定语言诊断的98个边界一致，但使用了参考音频特征干预，不能代表自然音频全模型验收。
-- 真实四卡服务已成功返回HTTP200，包含4660个输入token、13个生成token及13个逐位置概率；原解析器确认概率与动作对应。
-- 已修复历史请求缺少显式thinking OFF字段的问题；7项请求检查、9项控制器回归及4项账本接续检查通过。真实复验的endpoint witness已经通过模型身份、显式OFF、实际token和概率验证，协调器退出0。仍需四节点完整概率采集及训练侧重算。
-- 自然音频跨后端概率、更新后LoRA导出加载及真实FSDP更新仍待完成。已验收Omni更新数为0，DEV收益未知。
-- 当前约0.3 token/s来自包含双重算术的精度诊断，不能作为生产效率基线。整数排序的AI CPU回退是线索，尚未通过分项计时确认其贡献。
-
-运行入口按原始数据集、不可变系统版本及配置驱动；保留实际请求日志、历史成本和未知请求状态。只有完整证据通过后才晋级训练版本。
+Validation: nine existing controller checks, nine sampler/window checks and two completion-path fixtures passed; the original official paired scorer passed 15 checks and the three-arm wrapper passed five provenance checks. These CPU results are not numerical-training or business-gain evidence. The new completion candidate has not replaced the active execution release. Full training, direct-model population binding and three-arm TEST results remain outstanding.
