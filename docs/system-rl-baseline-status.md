@@ -2,7 +2,19 @@
 
 Numerical calibration remains frozen: 98/98 language boundaries passed, with zero measured token/sequence log-probability difference using reference audio features. Natural-audio integration, optimizer updates and adapter export/reload remain separate acceptance items.
 
-Current runtime observation: the endpoint completed and its original closed-result reader verified 22 files. The original client and fresh parity-capture controller were confirmed running at 10:13 UTC. Accepted optimizer updates remain zero; DEV improvement is unknown. Earlier failures and recovery observations below are retained as history.
+Current runtime observation: the endpoint completed and its original closed-result reader verified 22 files. The original client and fresh parity-capture controller were confirmed running at 10:58 UTC. Accepted optimizer updates remain zero; DEV improvement is unknown. Earlier failures and recovery observations below are retained as history.
+
+## Latest classification-first repair
+
+The current runtime client and capture controller were confirmed running at 10:58 UTC. No candidate replaced the active release. Successful optimizer updates remain zero; DEV improvement remains unknown.
+
+The shared cause is inconsistent boundaries across templates, derived execution configurations, dependency transport and acceptance. Inspection proceeds by six classes: dependency closure, final configuration, identity/location, data domains, lifecycle, and evidence scope. Every class requires original failure evidence, producer/consumer coverage, a reusable repair, positive/negative checks, and replay through the original failure entry.
+
+Typed cache/materializer consumption passed five positive and nineteen missing-field checks. Explicit read-only input views supply closed endpoint evidence and held-out data without modifying sealed source. The original transport error counts progressed 1,011 → 133 → 32 → 22 → 26; the latest expansion exposed additional stale executable references. These are error records, not independent causes. Current breakdown: 17 missing inputs, four executable identity mismatches, two input identity mismatches and three read-only identity mismatches. Transport remains failed and undeployed.
+
+The original policy derivation passes ten contract checks and seven executable/data-invariance checks. Knowledge, datasets, DAG and historical evidence are preserved. Remaining dependency work must distinguish template provenance from the actual derived execution graph while retaining real module imports and predecessor reconciliation.
+
+A lifecycle defect was also repaired: release manifests appeared before durable tree persistence completed. One shared publication protocol now requires intent, durable persistence, and a hash-bound completion marker. Both build paths, normal/resume launch, startup checks, staged acceptance and held-out audit use this boundary. Thirteen CPU checks cover interrupted persistence, missing markers, manifest drift and actual launcher rejection before Docker actions. A real successor build exited successfully and its completion receipt was verified in the fixed image. This candidate is not deployed and does not certify held-out evaluation or training gains.
 
 ## Root causes and systematic checks
 
