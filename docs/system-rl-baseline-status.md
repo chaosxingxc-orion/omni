@@ -1,125 +1,13 @@
-# System RL baseline and startup repair
+# 系统 RL 当前状态
 
-Current update (2026-11-18): v194 terminated before the last business request because its stage budget counted 32 business calls but omitted the additional active-service endpoint probe. All owners are terminal and the original service is restored. Original journal and ledger reconciliation confirms 32 completed HTTP responses (31 business + one probe), zero unresolved requests and no replay. Seven of eight episodes are closed: 28 calls, 854 generated tokens, 22 protocol errors, four valid calls and two length terminations; three more business calls belong to the incomplete episode. Accepted optimizer updates remain zero; DEV gain remains unknown.
+当前仍无已验收 optimizer update，DEV 收益未知。此前有限运行已终态对账，32 个 HTTP 响应完成、零未知请求、无重放；原服务已恢复。不能将工程检查或普通推理诊断当作训练成功。
 
-The undeployed v201 candidate includes active-service proof overhead in the original stage budget for capture, DEV, screen and TEST. A CPU regression using the original SQLite admission hook reproduces the historical rejection at 32 requests and 737,664 cost units, then accepts the complete 33-request sequence with the fix and still rejects excess requests. Four admission checks and four original controller scenarios pass. This is not an NPU rerun acceptance. The separate audio-generation anomaly remains unresolved.
+数据工程已实现候选：历史 references 内容寻址、精简采样清单、当前窗口按需读取/传输、阶段上下文一次绑定、精确新动作的 reference 概率缓存。19 条真实保留记录验证清单 64,287→5,364 bytes，减少约91.7%；不是全 TRAIN 完成或吞吐收益证明。
 
-The undeployed v200 candidate fixes formal node startup incorrectly entering a P-only finite training constructor. P/S1/S2/D now retain their own node masks, auxiliary losses, Clocks and cumulative costs; diagnostic evidence is derived separately. Already prepared retained audio is reused instead of materializing a second PCM copy. Unscreened startup input cannot enter ordinary capture; the original full-TRAIN screen transition preserves startup lineage. Nineteen original startup/diagnostic integration checks, seven screen-transition checks, six node-Clock checks and four original controller scenarios pass in the fixed image without model calls. This is not native multi-adapter or full-TRAIN acceptance.
+五任务结构是公共准备之后独立优化 P/S1/S2/D，再组合优化系统。四分支必须分别维护 adapter、optimizer 和更新 Clock。当前单分支配置和 CPU 消费接线已验证，原生多 adapter 路由/组合仍未验收。完整 TRAIN 准入只看正确意图是否进入实际前置召回列表。系统首轮建议组合后在 TRAIN 挖掘1,000难例+250成功样本，完整DEV选模后冻结TEST；不缩减已经采样的数据完成要求。
 
-The v199 compact data/cache changes remain inherited. Full formal request/storage/context admission, native multi-adapter composition, node-specific difficulty sampling, full TRAIN references and compact remote consumption remain pending. No live arithmetic or service configuration was changed.
+最新输入诊断定位到空 OFF think 后缀：同一复杂文本在两个普通实例上保留后缀时产生角色/回声，移除后缀后均返回排序索引。真实音频/文本 P 与转写六次 continuation 对照恢复对应输出；再用原 temperature=1 的两条真实样本×四节点×两实例完成16次请求，全部正常stop，首token角色标记0/16。D仍有代码围栏与引用格式问题，尚未证明业务全部正确。实际actor预处理与16份HTTP prompt token序列逐项一致。普通服务镜像与校准服务不同，这不是数值或训练验收。
 
-Generation diagnosis: inspected P/D raw logits favor special markers; lowering temperature alone would not correct those inspected first-token decisions. A separate six-request text-only control across two ordinary services returns the expected answer for chat, exactly rendered OFF prompts, and prompts without the empty-think suffix. The deployed template matches the official Instruct template. Ordinary audio requests also showed malformed outputs, so a precision-overlay-only explanation is not established. The audio-request cause remains unresolved; this text control does not certify multimodal precision or training readiness.
+v202 引入显式可配置 Instruct assistant 正文前缀，训推共用一份输入契约，OFF保持不变，历史记录保持原样。原CaptureLease九项检查通过。v203修复继承配置中父binding/closure引用未随源码更新的问题：仅刷新指定执行CONFIG的依赖，业务数值与历史证据不变；五项检查与原endpoint/capture传输通过。完整隔离消费者检查尚在执行，候选未派发正式训练。
 
-
-The concrete startup failure was capacity disagreement. Exact CPU processing of two retained TRAIN records measured P at 4,660/5,241 tokens, S1 at 2,233/2,221, S2 at 510/701 and D at 20,378/19,395. D exceeded the old 8,192-token capture/training bound; the experimental service was also limited to 16,384. The candidate uses separate node prompt bounds (6,144 / 3,072 / 1,024 / 20,480) and a 24,576-token diagnostic consumer/service context. Teacher-forcing reservation is bound consistently between stage admission and the training package. No prompts were truncated and NPU memory acceptance is still pending.
-
-Eleven capacity/accounting checks pass, six independent-node configuration/Clock checks pass, and the original fixed-image staged consumer passes: both retained records cover P/S1/S2/D (eight measured inputs), with two real and two synthetic TRAIN preparation records. The domain preparation component took 124.28 seconds; this is CPU preparation cost, not model latency or total training throughput. A bug in the new audit report writer was repaired: immutable per-record reports now precede a single aggregate commit. The original failed report remains preserved.
-
-Selected frozen upstream inputs are cached once during dataset preparation; windows no longer rescan the upstream pool. Twenty sampler/recovery checks and four length-cache checks previously passed. The real 19-record selection roundtrip reduces logical metadata from 64,287 to 5,364 bytes (91.7%) without deleting labels or historical payloads. This does not establish a corresponding NPU throughput gain. Exact-action reference-policy scores are computed after fresh action generation, before updates; historical answer scores cannot replace them.
-
-Four independent node tasks plus one system task reuse the same framework. Actual native multi-adapter composition, full sampled TRAIN completion and DEV improvement remain outstanding. The proposed first system cohort is 1,000 TRAIN errors plus 250 successes, selected after composing the improved nodes; it does not truncate the already sampled training set. See [five-task design](system-rl-five-task-training.md).
-
-The compact capture/endpoint transport preparation test passed; an isolated diagnostic-runtime fixture still invokes the bounded historical selector and requests omitted full-audit lineage. That fixture is not accepted as proof of compact runtime readiness. The real launch uses the original noncompact diagnostic path; full formal compact runtime acceptance remains pending.
-
-Compact inputs now pass the original isolated transport for both capture and endpoint stages. A deliberately missing out-of-window record is not read or staged. Initial testing exposed endpoint recursion into the entire selected history; the same transport implementation now handles that boundary as well. Full selection metadata remains authenticated and only current-window reference payloads are expanded. This does not establish full-corpus readiness or model throughput.
-
-A two-process Gloo test verifies reference-cache collective behavior: each rank performs one reference computation, recovery hits the saved result, and a changed score is rejected on both ranks. NPU/FSDP arithmetic and actual model execution remain unverified for this candidate.
-
-The original runtime builder can now select independent P, S1, S2 or D tasks. Each branch still owns one default LoRA, optimizer and Clock; configuration changes its single-node mask and shifts the existing coefficient curves to the branch's local successful-update count. Six original-Clock/configuration checks and four controller scenarios pass. This is not simultaneous resident multi-adapter training or composed inference acceptance. Per-node adapter routing/publication and actual training remain outstanding.
-
-The earlier real-record check preserves all 19 bounded records exactly and reduces logical sampling metadata from 64,287 to 5,364 bytes (91.7%); historical payloads remain retained. Cached reference probabilities are exact-action scores, never replacement behavior probabilities.
-
-See [five-task design](system-rl-five-task-training.md). Four independent node tasks precede system optimization; the proposed first system round uses 1,000 difficult TRAIN records plus 250 success controls, full DEV selection and frozen full TEST comparison. Final difficulty-set size is an experimental choice, not a convergence guarantee.
-
-## Previous observations
-
-Current observation (2026-11-18 14:58 UTC): accepted optimizer updates remain zero; DEV gain is unknown. The previous capture is fully drained, original service restored, and all 58 new requests reconciled with no unknown outcome. The simplified successor passed isolated real/synthetic input preparation and exact retained four-node consumers. Its fixed client and remote endpoint controller are now running. This is startup, not a completed training update.
-
-Validation reuse correction: repeated CPU preparation was tied to the entire release identity, causing unchanged consumers to rerun after unrelated changes. A conservative dependency-contract implementation now reuses accepted CPU evidence across release identifiers when the image, accepted inputs and complete consumer source hashes match. Eleven positive/negative checks pass; the actual accepted release produced a 1,053-source reuse inventory with zero consumer replays and zero model calls. This candidate is not hotpatched into the running job. Finer separation of transport changes is still pending. Numerical results remain reusable within their original measured scope; CPU receipts do not certify natural-audio or updated-adapter execution.
-
-The current startup incorporates incremental accounting, target-node filtering, independent frozen-node diagnostic inputs and terminal-event wakeup for ordinary remote jobs. Remaining first-update work is fresh diagnostic generation, eight-device actor acceptance, the eight-call P training cohort, same-action scoring/finalization and the optimizer step. Diagnostic generation still involves 120 calls; only 16 carry full-logits observations. Resident initial-command polling and duplicate operator control work remain known costs. Actual optimizer timing has not been measured.
-
-
-## Earlier observations (historical)
-
-Numerical calibration remains frozen: 98/98 language boundaries passed, with zero measured token/sequence log-probability difference using reference audio features. Natural-audio integration, optimizer updates and adapter export/reload remain separate acceptance items.
-
-Current observation (2026-11-18 13:58 UTC): fresh diagnostic capture has closed 4 of 8 planned episodes and 1 of 2 groups. Closed episodes contain 50 calls (P 4, S1 40, S2 6, D 0), 3,796 output tokens, 17 valid terminals, 22 protocol errors and 11 length truncations. Incomplete episodes are excluded. Accepted optimizer updates remain zero; DEV reward gain is unknown. A subsequent resource observation found all eight training-host AI Cores at 0%, with two ordinary services still resident.
-
-## Critical path to the first update
-
-A controlled handoff is now underway: the original lease drain has closed new capture admission without killing or replaying the in-flight request. The coordinator has exited through the original fence, the diagnostic service exited successfully, and the original service has restarted; restoration certification and ledger reconciliation are still pending. A sealed successor adds terminal-event wakeup for ordinary remote stages, retaining the original closed-result verifier and 900-second backoff on observation failure. Five wakeup checks and nine original controller checks pass; resident first-command polling is unchanged. A fixed journal-inventory script reproduces the same 13 historical actual requests with zero unresolved outcomes and no ledger mutation. No optimizer update is claimed.
-
-The current controller has five remaining stages: close diagnostic generation, run the eight-device actor diagnostic, generate the eight-call P training cohort, finalize current/reference same-action scores, then perform the optimizer update. Adapter export/reload and updated-policy acceptance follow. This is finite engineering acceptance, not completion of the frozen 5,000-draw training dataset. Actual actor-diagnostic/finalize/update timings are not yet available.
-
-The dominant scheduling defect is that numerical diagnostics force a complete system rollout, while D generation depends on successful upstream business output. Independent frozen-node input mode is now explicitly configured in a sealed successor. The original selector, Clock, official annotation checks and endpoint/capture transport preparation pass in the fixed image (70.221 seconds). Isolated original consumers also regenerate all four node inputs exactly for two actual TRAIN records: P1/S1 10/S2 4/D1 and P1/S1 10/S2 2/D1. No historical response is substituted for fresh behavior. This mode still implies 120 fresh calls at G4; the 16-call full-logits quota is an observation quota, not the total sampling workload. The successor is not deployed, and fresh accelerator generation/update remain unaccepted. Original request completion and reconciliation must precede service handoff.
-
-A sealed, undeployed simplification candidate passes 22 targeted fixed-image checks: lease-local incremental accounting replaces per-request historical packet rescans; bounded prompt-length caching avoids repeated processing of identical audio/messages; node training filters its target packets before hydration and avoids unrelated S2/D consumers; diagnostic selection now matches the existing finite-versus-strict coverage gate. Original request reconciliation, durable writes, numerical thresholds and strict coverage remain enforced. These CPU checks do not prove accelerator speedup or training success.
-
-Source inspection confirms duplicate original-control operator work, synchronization, and serialized diagnostic generation. Full-vocabulary capture is already restricted to parity requests, not all training calls. No infinite MoE wrapper recursion was found. Historical dependency traversal and repeated source-tree copying are separate engineering costs. Disabling control computation requires output and state/cache equivalence checks; it has not been done.
-
-Two otherwise idle four-device ordinary services completed a ten-request efficiency measurement with the same real audio input: two simultaneous requests took 1.539 seconds, then eight warm-cache requests took 0.675 seconds (individual latency 0.433–0.642 seconds). Services were not modified. Different arithmetic/image settings and repeated warm input prevent interpreting this as an aligned-runtime speedup or quality result. The active diagnostic service still reports approximately 0.3–0.4 output tokens/s with one running request.
-
-The held-out transport candidate passes with zero closure errors, 596 mappings and 178 read-only inputs. Fresh child processes restore closed inputs and preserve control-host placement. Actual full held-out evaluation remains pending. Frozen numerical evidence remains valid only within its measured scope.
-
-The comparison contract is A: direct Instruct, B: frozen TFRL system, C: the same system with DEV-selected LoRA. DEV uses all 8,690 recordings and final TEST all 13,078. Full TEST comparison is not a prerequisite for the first finite optimizer update.
-
-## Root causes and systematic checks
-
-|Class|Verified failure pattern|Repair and verification|
-|---|---|---|
-|Dependency closure|Dynamic imports and host-only package references missing from remote bundles|Sealed packages; actual fixed-image imports and isolated consumers|
-|Final configuration|Validated release differed from the final template; input representations confused|Original launcher validates resolved deployment and snapshots the HTTP template|
-|Content identity|Working-directory dependence and cross-host inode/device mismatches|Explicit roots; content/source identity separated from local read stability|
-|Data contracts|Real-only assumptions and missing synthetic/incremental bindings|Unified domain bindings; real/synthetic and held-out identity checks|
-|Lifecycle|Aggregate budgets leaked into operation timeouts; terminal states inconsistently consumed|Independent operation timeouts; consistent terminal accounting; unknown responses never replayed|
-|Acceptance scope|Component checks were treated as whole-pipeline proof|Explicit static, CPU-consumer, accelerator, update and DEV evidence boundaries|
-
-The main integration-verification design allowed CPU-detectable defects to reach accelerator startup. The revised fixed regression entry aggregates failures by category. The original eight groups comprising 69 checks passed in the actual fixed image: final configuration, journal imports, index relocation, controller, terminal accounting, domain handling, receipt binding and training API imports. Initial checker failures remain recorded; incorrect source paths and incomplete import environments were repaired. Import tests map no devices and load no model; vendor libraries may query device availability. These results do not prove accelerator kernels or training gains.
-
-The original configuration compiler and launcher also completed isolated preparation successfully. The HTTP template is copied into immutable launch inputs and consumed by the original preparation path. No second scheduler was introduced. Remote end-to-end training and long-run capacity admission are still outstanding.
-
-## Data and final comparison
-
-TRAIN contains 119,881 recordings across real and synthetic domains. Training admission requires the gold intent to be present in the actual pre-P retrieval result. The frozen 5,000-draw design uses 80% error trajectories and 20% successful trajectories, with fresh behavior groups. It has not completed training. The expanded CPU preparation audit covered 128 records: 127 initially passed and one failed case passed a targeted repair; original failures are preserved.
-
-DEV uses all 8,690 recordings for selection. Final TEST uses all 13,078 recordings and compares A: direct unchanged Instruct, B: frozen TFRL system, and C: the same system with DEV-selected LoRA. Report SLU-F1, intent accuracy, joint exact, valid-answer rate and cost, including B−A, C−B and C−A. Training eligibility does not filter evaluation denominators. The direct-model full-population backend and final results remain pending.
-
-## Storage boundary
-
-Full sampled-training diagnostic capacity is still not admitted. Excess storage is diagnostic logits, not repeated base-model checkpoints. Candidate retention and verified restoration mechanisms have CPU evidence, but resident-source retirement and permanent archive capacity remain incomplete. No production deletion or reclaimed-capacity credit is claimed. A finite first-update recovery remains separate from full sampled-training capacity admission.
-
-## Classified repair follow-through
-
-The fixed suite now includes a ninth group that consumes 12 retained actual P/S1/S2 responses and rejects paths outside the configured journal roots. D coverage is explicitly a fixture. All nine CPU groups passed on the integrated repair candidate; this does not certify fresh D generation or an optimizer update.
-
-Actual transport preparation exposed another configuration/identity defect before accelerator dispatch: active business code pins still referenced the previous release. The original runtime builder now derives executable pins from the sealed source manifest, preserves external frozen-package/data/knowledge identities, and records a migration receipt. Six targeted checks passed. A related transport fix treats the frozen system document as identity evidence during capture while validating the actual derived business dependency graph. The latest candidate completed fixed preparation; actual transport and isolated consumer validation are ongoing. Original failures are retained, and no incomplete release is promoted.
-
-The next local launch exposed the same frozen-system pin issue in endpoint preparation before any remote stage or model request. Endpoint and capture identity handling are now unified, and the fixed preparation checker exercises both transport graphs. Both pass on the current recovery candidate, as do nine classified CPU groups. The current isolated real/synthetic consumer check is still running; no optimizer update is claimed.
-
-The same-category review also found stale executable references in the DEV/TEST policy derivation. A separate candidate reuses the sealed executable binder for business, system and module references; seven checks on actual frozen configurations and nine original controller checks pass. This candidate is not deployed. Fourteen original resident lifecycle checks also pass after updating stale test fixtures to the current phase contract; this is CPU evidence and gives no production storage-reclamation credit.
-
-Current recovery update: the exact isolated real/synthetic consumer check passed. The fixed launcher staged and started the remote endpoint controller successfully, and remote Docker state confirms it is running. This passes the previous pre-start failure point. Accepted optimizer updates remain zero and DEV gain remains unknown; routine progress observation uses the configured 15-minute cadence.
-
-## Classification-first review update
-
-The common failure mechanism is disagreement between preparation, transport, execution and response-consumption dependency boundaries. Repairs are tracked by dependency closure, final configuration, content identity, data contracts, lifecycle and acceptance scope; a component pass does not close an entire category.
-
-A DEV preparation audit exposed an additional configuration defect in the audit itself: its interpreter used a newer release than its configured dispatch bundle. The CPU-only audit was stopped after traversing 33,800 historical references, with partial evidence retained and no remote dispatch. A candidate guard now compares 145 execution modules, source manifests and runtime configuration against the dispatch bundle before dependency traversal or accounting snapshots. Seven checks pass, including the original packer and actual mixed-release rejection; nine original controller checks also pass. The original preparation entry now rejects the mismatch before traversing history. This candidate is not deployed and does not change frozen numerical calibration.
-
-DEV/TEST transport closure remains incomplete: current traversal pulls in old training artifacts. Its repair must preserve actual business/knowledge consumers, predecessor terminal reconciliation and resource guards. Simply treating all references as leaves would hide missing dependencies. Full held-out evaluation, a real optimizer update, adapter export/reload and permanent diagnostic-capacity admission remain outstanding.
-
-Held-out consumer review update: the actual original controller source/config and policy-hook checks now run before preparation publishes READY. Fixed-image namespace validation found one missing pinned controller settings template, which was added without changing its historical identity. Preparation packages the current release and derives a new execution configuration, uses the existing target-local output-path generator, and checks the requested dataset against the actual held-out split. Eight positive/negative contract checks and nine original controller regressions pass. The fixed audit runner reuses launcher mounts, makes prior outputs read-only, and exposes only a fresh writable audit directory, with no network, devices or Docker socket. These changes remain an undeployed candidate; remote dependency closure and actual evaluation are not yet accepted.
-
-Latest runtime event: the active endpoint controller completed with exit code zero. The original client consumed a non-fixture complete response and automatically advanced to fresh parity capture. The original closed-result reader verified 22 files (323,210 bytes), without additional model calls. The next capture has not yet been confirmed started; accepted optimizer updates remain zero.
-
-
-## Current classification-driven self-check
-
-A complete CPU-only dependency audit aggregated 1,011 errors rather than stopping at the first missing file. These are error records, not 1,011 independent causes. The fixed configurable classifier retains every original chain and source index, without model calls.
-
-Actual consumer inspection showed that projection readers open shard tasks and bindings, while the business session restores sealed selected inputs without invoking the legacy collection constructor. Shared typed traversal now follows those readers. The original transport audit decreased from 1,011 to 133 errors and from 16,487 to 429 mappings. It still fails and is not eligible for deployment. Remaining groups are cache lineage (70), materializer lineage (36), held-out input views (13), an old endpoint fixture's evidence (5), and other dependencies (9).
-
-A separate lifecycle defect was found before remote execution: newly derived policy programs inherited a one-time failed-start migration restricted to an old run and budget. The candidate records that original lineage without replaying its migration; original predecessor terminal reconciliation, unknown-request checks and resource guards remain in force. Policy-derived programs retaining the obsolete migration are rejected before resource acquisition.
-
-Validation: six projection checks authenticate 128 shards and 256 runtime references, ten original held-out preparation/configuration checks pass, and nine original controller regressions pass. These CPU results do not establish remote evaluation or training success. The candidate remains undeployed. Numerical calibration, business model/prompts, knowledge and official evaluation denominators are unchanged.
+仍需完成：校准运行的生成→actor/reference→optimizer原路径；全TRAIN references和正式窗口容量；节点特定错误采样；四adapter组合及组合后困难样本采样；真实有效吞吐和DEV收益。所有效率报告区分CPU准备、生成、reference评分、更新和发布，不以AI Core利用率替代有效更新/小时。
