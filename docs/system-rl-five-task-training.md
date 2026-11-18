@@ -51,4 +51,4 @@ P 的排序、S1 的二元选择、S2 的监督填充、D 的选择辅助项复�
 
 缓存正确性与原消费者的输出一致性先用 CPU 验证。NPU 报告有效样本/秒、有效更新/小时、生成 tokens/秒、reference 命中率、各阶段墙钟与峰值显存；AI Core 高占用不能代替有效吞吐。没有实际同负载测量，不称“效率最优”。
 
-已实现候选：精简采样清单/窗口、按需展开、同动作 reference 概率缓存、节点清单单次提交恢复修复。未完成：独立四 adapter 后端、组合发布与系统难例自动采样接线、真实更新/DEV 收益、生产吞吐测量。已有运行未被热修改。
+已实现候选：精简采样清单/窗口、按需展开、同动作 reference 概率缓存、节点清单单次提交恢复修复；跨主机仅展开当前窗口引用；runtime_construction.node_training_task 选择四个独立分支，复用单 default LoRA worker，分别维护原运行/Clock。配置片段在 rl-ready-window-configuration/config-fragments/node-{P,S1,S2,D}.json，需合入同一宏解析后的运行配置，每个分支使用独立输出根与原资源调度。原 Clock 与本地 annealing 的六项 CPU 检查通过，实际四路训练/组合发布尚未验收。未完成：独立四 adapter 后端、组合发布与系统难例自动采样接线、真实更新/DEV 收益、生产吞吐测量。已有运行未被热修改。
