@@ -1,5 +1,14 @@
 # System RL baseline and startup repair
 
+Current observation (2026-11-18 14:58 UTC): accepted optimizer updates remain zero; DEV gain is unknown. The previous capture is fully drained, original service restored, and all 58 new requests reconciled with no unknown outcome. The simplified successor passed isolated real/synthetic input preparation and exact retained four-node consumers. Its fixed client and remote endpoint controller are now running. This is startup, not a completed training update.
+
+Validation reuse correction: repeated CPU preparation was tied to the entire release identity, causing unchanged consumers to rerun after unrelated changes. A conservative dependency-contract implementation now reuses accepted CPU evidence across release identifiers when the image, accepted inputs and complete consumer source hashes match. Eleven positive/negative checks pass; the actual accepted release produced a 1,053-source reuse inventory with zero consumer replays and zero model calls. This candidate is not hotpatched into the running job. Finer separation of transport changes is still pending. Numerical results remain reusable within their original measured scope; CPU receipts do not certify natural-audio or updated-adapter execution.
+
+The current startup incorporates incremental accounting, target-node filtering, independent frozen-node diagnostic inputs and terminal-event wakeup for ordinary remote jobs. Remaining first-update work is fresh diagnostic generation, eight-device actor acceptance, the eight-call P training cohort, same-action scoring/finalization and the optimizer step. Diagnostic generation still involves 120 calls; only 16 carry full-logits observations. Resident initial-command polling and duplicate operator control work remain known costs. Actual optimizer timing has not been measured.
+
+
+## Earlier observations (historical)
+
 Numerical calibration remains frozen: 98/98 language boundaries passed, with zero measured token/sequence log-probability difference using reference audio features. Natural-audio integration, optimizer updates and adapter export/reload remain separate acceptance items.
 
 Current observation (2026-11-18 13:58 UTC): fresh diagnostic capture has closed 4 of 8 planned episodes and 1 of 2 groups. Closed episodes contain 50 calls (P 4, S1 40, S2 6, D 0), 3,796 output tokens, 17 valid terminals, 22 protocol errors and 11 length truncations. Incomplete episodes are excluded. Accepted optimizer updates remain zero; DEV reward gain is unknown. A subsequent resource observation found all eight training-host AI Cores at 0%, with two ordinary services still resident.
