@@ -1,10 +1,16 @@
 # System RL baseline and startup repair
 
-Current update (2026-11-18 15:05 UTC): the endpoint stage exited successfully and the original controller advanced to fresh diagnostic capture. The capture container is confirmed running. Endpoint completion to capture startup took about 127 seconds including closed-result verification, packaging and dispatch. Accepted optimizer updates remain zero; DEV gain remains unknown.
+Current update (2026-11-18 15:54 UTC): the existing diagnostic capture remains running. No complete episode/group was closed at the last observation; partial requests are excluded from that counter. Accepted optimizer updates remain zero and DEV gain is unknown. The new candidate has not replaced the active run.
 
-The dependency-reuse candidate now distinguishes isolated CPU transport preparation from live execution and terminal waiting. Only those two live function bodies are outside the CPU preparation fingerprint; imports, constants, preparation and other functions remain checked. Thirteen checks pass. The actual two-release inventory comparison covered 1,053 sources in 0.173 seconds, and the original validator accepted same-input cross-release evidence in 0.311 seconds with zero model calls or consumer replays. This does not extend numerical acceptance scope.
+The reference-data candidate now stores historical records once and uses compact sampling descriptors and offset-only windows. The original sampler still controls membership, probabilities and ordering. All 19 records in an explicitly bounded closed real-data pool round-trip unchanged: the logical selection JSON falls from 64,287 to 5,364 bytes (91.7%). Reference payloads remain retained; this is selection I/O reduction, not measured accelerator speedup or full-population acceptance.
 
-A sealed, undeployed candidate also passes the already reconstructed D runtime directly from hydration to its same-episode consumer, eliminating the second reconstruction. Eight targeted checks and four original sampling-controller scenarios pass. The running capture remains unchanged; actual accelerator validation of the candidate is pending.
+Reference-policy probabilities are cached for exact sampled actions before optimization, independently of the group completion marker. Recovery reuses scores only with matching input, reference model, action tokens, processor and runtime identity. This first implementation is cohort-local. New actions still require reference scoring, and cached reference probabilities never replace sampled behavior probabilities. Actual distributed-worker validation remains pending.
+
+Ten reference/cache checks, sixteen original sampling/recovery checks and four controller scenarios pass in the fixed CPU image. The regression suite exposed and repaired a pre-existing double-commit bug in frozen-node selection: restart now preserves the final upstream-bound selection. A separate real-record check passed. None of these CPU checks constitutes training success.
+
+The proposed workflow has four independently optimized nodes (P, S1, S2, D), followed by system optimization on TRAIN-mined errors. True independent concurrency requires separate adapters/optimizers and node routing. The current native backend supports shared/default LoRA only; routed adapter composition is not yet implemented or accepted. A proposed first system round uses 1,000 difficult TRAIN records plus 250 successful controls, followed by full DEV selection and frozen full TEST comparison. This is an initial size, not a convergence guarantee.
+
+See [five-task design](system-rl-five-task-training.md). Remaining work includes native node adapter routing/publication, exact rollout integration, real optimizer updates, DEV gains and throughput measurement.
 
 ## Previous observations
 
